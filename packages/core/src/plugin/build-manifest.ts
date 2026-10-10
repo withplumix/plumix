@@ -1,12 +1,3 @@
-// Build-time manifest projection — the build half of the plugin system. Reads a
-// `PluginRegistry` snapshot and projects it into the wire `PlumixManifest`
-// (`manifest-types.ts`) the admin bundle consumes: `buildManifest`, the
-// `to*Entry` projectors (the per-field one lives in
-// `fields/manifest-entry.ts`), the registration-time assertions, admin-slug
-// derivation and admin-nav assembly. Its build-time caller is the plumix Vite
-// plugin; the runtime reads `collectContributedBlocks` and `deriveAdminSlug`.
-// Re-exported unchanged from the public `@plumix/core/manifest` barrel.
-
 import type {
   Capability,
   CapabilityNamespaces,
@@ -90,12 +81,8 @@ import {
 import { pluginCatalogUrl } from "./plugin-catalog-path.js";
 import { ENTRY_MENU_ICONS, TAXONOMY_MENU_ICONS } from "./registry.js";
 
-// Runtime lookups for `resolveEntryMenuIcon`/`resolveTaxonomyMenuIcon` below,
-// built from the same rosters `EntryTypeOptions.menuIcon` and
-// `TermTaxonomyOptions.menuIcon` are typed against (`registry.ts`) — the type
-// and the fallback check can't drift apart. Names outside these sets fall
-// back to a sensible default at projection time (a stale-compiled plugin can
-// still emit one at runtime despite the closed type).
+// Checked at runtime too: a stale-compiled plugin can emit a name outside the
+// closed type, which falls back to a default.
 const ENTRY_MENU_ICON_SET: ReadonlySet<EntryMenuIcon> = new Set(
   ENTRY_MENU_ICONS,
 );
@@ -104,18 +91,16 @@ const TAXONOMY_MENU_ICON_SET: ReadonlySet<TaxonomyMenuIcon> = new Set(
 );
 
 /**
- * The single source of contributed (non-core) block specs: plugin blocks
- * registered via `ctx.registerBlock` plus theme blocks from the `defineTheme`
- * `blocks` field, at precedence plugin < theme (the theme, being the most
- * site-specific layer, wins a name clash). Both the per-app block registry
- * (`buildApp`) and the admin manifest read from here, so the two never diverge.
+ * Theme specs win a name clash over plugin specs, matching the runtime block
+ * registry.
  */
 export function collectContributedBlocks(
   registeredBlocks: Iterable<RegisteredBlock>,
   themeBlocks: readonly BlockSpec[] = [],
 ): readonly BlockSpec[] {
   // Deduped by name, theme last so it wins a clash — matching the last-write-
-  // wins the runtime registry gives it, so `buildManifest` and `buildApp` agree.
+  // wins the runtime registry gives it, so `buildManifest` and `buildApp`
+  // agree.
   const byName = new Map<string, BlockSpec>();
   for (const { spec } of registeredBlocks) byName.set(spec.name, spec);
   for (const spec of themeBlocks) byName.set(spec.name, spec);
@@ -123,16 +108,9 @@ export function collectContributedBlocks(
 }
 
 /**
- * Project a registry snapshot into its manifest form — the subset that ships
- * to the admin bundle. Every surface with a `priority?: number` field —
- * entry types, entry/term/user meta boxes, settings pages, settings groups —
- * is sorted by `priority` ascending; ties break by `name` / `id`
- * alphabetical so the shipped order is deterministic regardless of
- * plugin install order.
- *
- * Throws `DuplicateAdminSlugError` if two post types resolve to the same
- * admin slug — the admin router can't disambiguate `/entries/$slug` in that
- * case, and catching it at build time is cheaper than a 404 at runtime.
+ * Prioritised surfaces sort by `priority`, ties by name/id, so order ignores
+ * install order. Throws `DuplicateAdminSlugError` when two entry types share an
+ * admin slug.
  */
 export function buildManifest(
   registry: PluginRegistry,
@@ -148,10 +126,7 @@ export function buildManifest(
       Record<string, readonly NamedTemplateChoice[]>
     >;
     /**
-     * Theme-contributed block specs (the `defineTheme` `blocks` field). Routed
-     * through options — like `namedTemplates` — because they live on the theme
-     * descriptor, not the plugin registry. Merged with plugin blocks by
-     * {@link collectContributedBlocks} so the manifest lists both.
+     * Theme `blocks`; they win a name clash with plugin blocks.
      */
     readonly blocks?: readonly BlockSpec[];
     readonly i18n?: ResolvedI18n;
@@ -159,14 +134,10 @@ export function buildManifest(
       readonly id: string;
       readonly i18n?: PluginI18nSlot;
     }[];
-    /** Plugin ids whose catalogs admin already bakes into its bundle
-     *  via `import.meta.glob("../../../plugins/*"/locales/*.mjs")` —
-     *  emitting URLs for them double-loads at runtime. The plumix
-     *  vite plugin computes this set by inspecting which plugins
-     *  resolve through the `@plumix/plugin-<id>` convention against
-     *  the consumer's `node_modules`. Empty / omitted means every
-     *  i18n-slot plugin gets a URL. Only consulted alongside
-     *  `plugins`; passing this set without `plugins` is a no-op. */
+    /**
+     * Plugins whose catalogs the admin bundle already bakes in; emitting URLs
+     * for them would double-load. Read only alongside `plugins`.
+     */
     readonly adminBundledPluginIds?: ReadonlySet<string>;
     /** Routed through options — like `tokens` — because slot presence is
      *  read off the site config, not the plugin registry. Omitted means no
@@ -314,10 +285,7 @@ function projectPluginI18n(
     const catalogs: Record<string, string> = {};
     for (const locale of plugin.i18n.locales) {
       if (locale === plugin.i18n.sourceLocale) continue;
-      // Site-locale intersection: when the site declares i18n,
-      // emit URLs only for locales it has enabled. With no site
-      // i18n configured, trust the plugin's list so tests without
-      // site config still exercise the URL shape.
+      // With no site i18n, keep the plugin's full locale list.
       if (siteLocales.size > 0 && !siteLocales.has(locale)) continue;
       catalogs[locale] = pluginCatalogUrl(plugin.id, locale);
     }
@@ -338,14 +306,9 @@ interface MutableAdminNavGroup {
   items: AdminNavItem[];
 }
 
-// Built-in items core seeds into the projection. Each row is keyed by
-// the group id it lands in; capability gating is admin-side at render
-// time (the manifest projection ships every item, the sidebar drops
-// what the user can't see). A row naming a `slot` is dropped here when
-// the deployment doesn't fill it: the user may, but the site can't. A
-// row naming an `area` is dropped, for the same reason, when the runtime
-// refuses that area. A row marked `settingsPages` is dropped when no settings page is
-// registered, since its page would have nothing to show.
+// Capability gating happens in the admin. A `slot`, `area` or `settingsPages`
+// row is dropped when the deployment can't serve it: the user may, but the site
+// can't.
 const CORE_NAV_ITEMS: readonly {
   groupId: string;
   slot?: InfrastructureSlot;
@@ -609,13 +572,7 @@ function projectAdminNav(
 const USER_SCOPE = ["user"] as const;
 const getUserScope = (): readonly string[] => USER_SCOPE;
 
-/**
- * Two meta boxes on the same `(scope, field.key)` pair would silently
- * write to the same storage key — a plugin-author footgun. Fail loudly
- * at manifest-build time. `scope` is the entry type (for entry boxes)
- * or termTaxonomy (for term boxes); user boxes collapse to one synthetic
- * scope because the user keyspace is flat.
- */
+// Two boxes on one `(scope, field.key)` would silently share a storage key.
 function assertUniqueFieldKeysPerScope<
   TBox extends {
     readonly id: string;
@@ -647,11 +604,8 @@ function assertUniqueFieldKeysPerScope<
   }
 }
 
-// A meta box referencing an unregistered scope ("catagory" typo, a
-// termTaxonomy removed behind the plugin's back, etc.) is dead code — the
-// box never renders and never writes. Fail at manifest build so the
-// plugin author sees it on boot, not at first admin click. Matches the
-// settings-page→group reference check.
+// A box on an unregistered scope never renders or writes; fail at boot rather
+// than at first admin click.
 function assertMetaBoxScopesExist<TBox extends { readonly id: string }>(
   boxes: readonly TBox[],
   getScopes: (box: TBox) => readonly string[],
@@ -673,10 +627,7 @@ function assertMetaBoxScopesExist<TBox extends { readonly id: string }>(
   }
 }
 
-// Surfacing a clear error at manifest-build time beats a runtime
-// "unknown group" in the admin route. Pages reference groups by name;
-// if a group name doesn't resolve, the plugin author has a typo or
-// order-of-registration problem.
+// Catch a typo'd group name at build, not as an "unknown group" in the admin.
 function assertSettingsPageGroupsExist(
   pages: readonly SettingsPageManifestEntry[],
   groups: ReadonlyMap<string, RegisteredSettingsGroup>,
@@ -711,12 +662,8 @@ function assertUniqueAdminSlugs(
 }
 
 /**
- * Derive the URL-safe admin slug for a post type. Prefers `plural` when
- * set (allows "fish" → `fish`, "children" → `children`, etc.), falls back
- * to `${name}s` which is English-biased but matches the common case.
- * Non-alphanumerics collapse to single dashes; leading/trailing dashes
- * are trimmed. Empty results throw — an empty slug would shadow
- * `/entries/` itself in TanStack Router.
+ * Falls back to `${name}s` without `plural`. Throws when the slug is empty,
+ * since it would shadow `/entries/` itself.
  */
 export function deriveAdminSlug(name: string, plural?: string): string {
   const source = plural ?? `${name}s`;
@@ -731,11 +678,8 @@ export function deriveAdminSlug(name: string, plural?: string): string {
   return slug;
 }
 
-// Hand-rolled single-pass slugifier rather than chained `.replace()` calls.
-// The regex form (`/[^a-z0-9]+/g` plus a trim) trips CodeQL's polynomial-
-// regex detector on library-exposed inputs; this loop is provably O(n),
-// regex-free, and produces the same output: lowercase ASCII alphanumerics
-// separated by single dashes, no leading/trailing dashes.
+// A loop, not `/[^a-z0-9]+/g` plus a trim: CodeQL flags that regex as
+// polynomial on library-exposed input.
 function slugify(input: string): string {
   const lower = input.toLowerCase();
   let result = "";
@@ -755,12 +699,8 @@ function slugify(input: string): string {
   return result;
 }
 
-// Explicit allowlist — only the destructured keys ship to the browser.
-// Adding a field to `EntryTypeOptions` / `RegisteredEntryType` does NOT
-// automatically leak it; it must be added here AND to `EntryTypeManifestEntry`
-// to surface in the admin. `registeredBy`, `rewrite`, `capabilities` and
-// `excludeFromSearch` stay server-side;
-// `capabilities` is authorization metadata.
+// Allowlist, so a new `RegisteredEntryType` field reaches the browser only when
+// added here.
 function toEntryTypeManifest(
   pt: RegisteredEntryType,
   namedTemplates?: readonly NamedTemplateChoice[],
@@ -811,9 +751,8 @@ function toEntryTypeManifest(
   };
 }
 
-// Project the editor-selectable policies to `{ key, label }` — the resolver
-// stays server-side. Omitted entirely when the type declares no selectable
-// space, so the admin picker only appears where there's a real choice.
+// Omitted when no policy is selectable, so the admin picker appears only with a
+// real choice.
 function accessPoliciesManifest(access: EntryTypeAccess | undefined): {
   accessPolicies?: readonly AccessPolicyChoice[];
 } {
@@ -824,10 +763,8 @@ function accessPoliciesManifest(access: EntryTypeAccess | undefined): {
   };
 }
 
-// Versioning is derived: if the type opts into `supports: ['revisions']`,
-// fill in defaults the admin can read without nil-checking. If the
-// type doesn't support revisions, `versioning` stays undefined and
-// the editor knows to skip the Revisions Sheet entirely.
+// Defaults let the admin read versioning without nil-checks; undefined tells
+// the editor to skip the Revisions sheet.
 function deriveVersioning(
   supports: readonly string[] | undefined,
   declared: EntryTypeManifestEntry["versioning"] | undefined,
@@ -915,12 +852,8 @@ function toEntryMetaBoxFieldEntry(
   return entry;
 }
 
-// Allowlist for entry meta box entries — same rationale as
-// `toEntryTypeManifest`. `registeredBy` is intentionally excluded
-// (server-only debug metadata). `sanitize` on each field is stripped
-// via `toEntryMetaBoxFieldEntry` — it's a server-side callback. `span`
-// is also stripped: the editor rail renders every entry field at full
-// width, and shipping a hint the renderer ignores just bloats the wire.
+// Allowlist like `toEntryTypeManifest`. `span` is stripped: the editor rail
+// renders every entry field full width.
 function toEntryMetaBoxEntry(
   box: RegisteredEntryMetaBox,
   registry: CapabilityNamespaces,

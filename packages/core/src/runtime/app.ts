@@ -84,9 +84,8 @@ import { assembleShortcodeRegistry } from "./shortcode-registry.js";
 export type { AuthMethodsSummary } from "../auth/contract/auth-methods.js";
 
 /**
- * Project the enabled auth methods from resolved config. Pure: the same config
- * always yields the same summary, so a theme login page rendered from it never
- * drifts from what the endpoints actually accept.
+ * Pure, so a login page rendered from it never drifts from what the endpoints
+ * accept.
  */
 export function resolveAuthMethods(
   authConfig: PlumixAuthConfig,
@@ -107,58 +106,39 @@ export interface PlumixApp {
   readonly hooks: HookRegistry;
   readonly plugins: PluginRegistry;
   /**
-   * Lazily builds (and memoizes) the merged oRPC handler on first call. Cold-
-   * path-only — deferred so the heavy procedure graph + oRPC runtime never
-   * evaluate on the public render cold-start path. The dispatcher awaits this
-   * on an RPC request; nothing on the public path touches it.
+   * Memoized; deferred so the procedure graph stays off the public render cold
+   * start.
    */
   readonly loadRpcHandler: () => Promise<RPCHandler<AppContext>>;
   /**
-   * Lazily builds (and memoizes) the REST dispatcher on first call. Cold-path-
-   * only and gated by `config.api` — deferred so the `@orpc/openapi` handler,
-   * its router, and the spec generator never evaluate on the public render
-   * cold-start path. Mirrors `loadRpcHandler`.
+   * Memoized; deferred so `@orpc/openapi` stays off the public render cold
+   * start.
    */
   readonly loadRestHandler: () => Promise<RestDispatch>;
   /**
-   * Lazily loads (and memoizes) the MCP request handler on first call. Cold-
-   * path-only and gated by `config.mcp` — deferred so the MCP SDK and the tool
-   * registry never evaluate on the public render cold-start path. Mirrors
-   * `loadRestHandler`.
+   * Memoized; deferred so the MCP SDK stays off the public render cold start.
    */
   readonly loadMcpHandler: () => Promise<McpHandler>;
   /**
-   * Canonical site origin (e.g. `https://cms.example.com`). Sourced from
-   * the passkey config for now since that's the only place it lives in
-   * user-facing config; exposed at the top level so CSRF / admin / future
-   * features don't have to reach into `passkey.*` to learn it. An `EnvInput`
-   * because `passkey.origin` may be an `(env) => …` resolver — resolved into
-   * the per-request `ctx.origin` where the runtime `env` is available.
+   * Sourced from `passkey.origin`; resolved per request into `ctx.origin`,
+   * where `env` is available.
    */
   readonly origin: EnvInput<string>;
   /**
-   * `config.dev`, resolved once — every per-request `ctx.dev` is this
-   * instance, so the bar, the history read routes and the two dev MCP tools
-   * share one request-history ring the app configured rather than a module
-   * binding reachable by everyone and configurable by no one (#2442).
-   * `undefined` outside the dev gate, so a production build has no dev object
-   * at all, and its presence is the dev-server signal (ADR 0003).
+   * Every `ctx.dev` is this instance. `undefined` outside the dev gate, so its
+   * presence is the dev-server signal.
    */
   readonly dev?: DevRuntime;
   readonly passkey: PasskeyRuntimeConfig;
   readonly sessionPolicy: SessionPolicy;
   /**
-   * Resolved request authenticator. Defaults to the session-cookie
-   * guard; an operator override (e.g. `cfAccess()`) replaces it. The
-   * dispatcher and RPC middleware both call this on every authed
-   * request to map request → user.
+   * Defaults to the session-cookie guard; an operator override such as
+   * `cfAccess()` replaces it.
    */
   readonly authenticator: RequestAuthenticator;
   /**
-   * Resolved boolean form of `auth.bootstrapVia`. True when external
-   * sign-in flows (magic-link, OAuth, custom guard) may mint the very
-   * first admin on a fresh deploy; false (default) keeps the bootstrap
-   * rail passkey-only.
+   * Whether non-passkey sign-in flows may mint the first admin on a fresh
+   * deploy.
    */
   readonly bootstrapAllowed: boolean;
   /**
@@ -178,7 +158,8 @@ export interface PlumixApp {
   readonly rawRoutes: readonly RegisteredRawRoute[];
   /**
    * Plugin routes mounted at the site root, compiled at boot. Matched ahead of
-   * the redirect table and the content route map; see {@link compilePublicRoutes}.
+   * the redirect table and the content route map; see {@link
+   * compilePublicRoutes}.
    */
   readonly publicRoutes: PublicRouteTable;
   readonly capabilityResolver: CapabilityResolver;
@@ -201,18 +182,11 @@ export interface PlumixApp {
    */
   readonly blocks: BlockRegistry;
   /**
-   * Aggregated mark catalogue: the 13 core marks from `blocks/` +
-   * plugin contributions from `ctx.registerMark`. Surfaces in the manifest
-   * + admin bubble menu; the rendering path uses the hardcoded
-   * `renderInline` walker, not a per-spec component dispatch.
+   * Manifest only: rendering uses the hardcoded `renderInline` walker, not a
+   * per-spec dispatch.
    */
   readonly marks: readonly MarkSpec[];
-  /**
-   * Merged shortcode registry the public render path threads into the
-   * block walker (rich-text body expansion) and the resolve step (entry
-   * title expansion): `coreShortcodes` < plugin `registerShortcode` <
-   * `theme.shortcodes`, last-wins, built once at boot.
-   */
+  /** Last-wins precedence: core < plugin < theme. */
   readonly shortcodes: ShortcodeRegistry;
   /**
    * Every declared mail by name — core's and each plugin's `mails` — with the
@@ -229,31 +203,23 @@ export interface PlumixApp {
    */
   readonly htmlAllowlist: HtmlAllowlist;
   /**
-   * Document manifest after the `theme:document` filter chain runs.
-   * Resolved once at boot from `config.theme.document ?? {}` so plugin
-   * contributions surface in every SSR render without per-request merge
-   * cost. Frozen post-resolution to keep the contract immutable.
+   * After the `theme:document` filter chain, resolved once at boot and
+   * deep-frozen.
    */
   readonly document: DocumentManifest;
-  /**
-   * Vite-emitted asset manifest baked into the worker bundle via
-   * `virtual:plumix/asset-manifest`. The renderer reads this to inject
-   * `<link rel="stylesheet">` tags for bundled theme CSS. Empty `{}`
-   * in dev (Vite serves source directly) and when no client entries
-   * exist (e.g. tests that don't run a full Vite build).
-   */
+  /** Empty in dev, where Vite serves source, and without a full Vite build. */
   readonly assetManifest: AssetManifest;
-  /** The bundled render environment the dispatcher threads per render; see {@link RenderEnv}. */
+  /**
+   * The bundled render environment the dispatcher threads per render; see
+   * {@link RenderEnv}.
+   */
   readonly renderEnv: RenderEnv;
 }
 
-// Runtime-only state the generated entry injects at boot — values
-// resolved by the Vite plugin from virtual modules (asset manifest).
-// Kept internal: consumers (tests + the generated worker) pass an
-// inline object literal that structurally satisfies the type.
+// Resolved by the Vite plugin from virtual modules and injected by the
+// generated entry.
 interface RuntimeContext {
   readonly assetManifest?: AssetManifest;
-  /** `virtual:plumix/plugin-catalogs`: each plugin's compiled catalogs, by locale. */
   readonly pluginCatalogs?: PluginCatalogs;
 }
 
@@ -263,19 +229,12 @@ export async function buildApp(
 ): Promise<PlumixApp> {
   const hooks = new HookRegistry();
   registerCoreAdminBarContributors(hooks);
-  // Dev-only debug panels. `process.env.PLUMIX_DEV` is Vite-substituted at
-  // bundle time (empty in `plumix build`), so this dead branch — and, with
-  // core's `sideEffects: false`, the whole debug-panels module — is tree-shaken
-  // from prod, matching the injection site in render-template.
   if (process.env.PLUMIX_DEV) {
     registerCoreDebugPanels(hooks);
     registerCoreErrorHints(hooks);
   }
-  // Same gate, same reason: the dev object, the ring it holds, its writer and
-  // the sanitizer behind it never enter a production bundle. Read here once,
-  // at build time — the writer's registration and the read routes' mount read
-  // the gate per request, and both no-op without a dev object, so `PLUMIX_DEV`
-  // has to be set before `buildApp` for capture to happen at all.
+  // `PLUMIX_DEV` must be set before `buildApp`; without a dev object, capture
+  // no-ops.
   const dev = process.env.PLUMIX_DEV ? createDevRuntime(config.dev) : undefined;
   registerCoreSearchHandlers(hooks);
   // Unconditional: the request memo drops what a write announced whether or
@@ -326,11 +285,9 @@ export async function buildApp(
     }
   }
 
-  // Reject plugin ids that collide with a core RPC namespace at boot, against
-  // the light name set — so validation stays eager while the merge + heavy
-  // router graph defer to `loadRpcHandler`. The `Object.hasOwn` arm also rejects
-  // "constructor" (the one Object.prototype key matching the plugin-id pattern),
-  // which would otherwise shadow a member of the merged router object.
+  // Against the light name set, so the router graph stays deferred.
+  // `Object.hasOwn` also rejects "constructor", which would shadow a router
+  // member.
   for (const pluginId of registry.rpcRouters.keys()) {
     if (
       CORE_RPC_NAMESPACES.has(pluginId) ||
@@ -340,10 +297,8 @@ export async function buildApp(
     }
   }
 
-  // Plugin REST resources share the flat `/_plumix/api/v1/` namespace. Reject,
-  // at boot, any resource that overlaps a reserved core route or another
-  // plugin's resource (overlap, not string equality — the matcher prefers
-  // static segments, so a literal path could otherwise shadow a param route).
+  // Overlap, not equality: the matcher prefers static segments, so a literal
+  // path could shadow a param route.
   const seenRestRoutes: { pluginId: string; route: RestRoute }[] = [];
   for (const resource of registry.restResources) {
     const route = { method: resource.method, path: resource.path };
@@ -368,11 +323,8 @@ export async function buildApp(
     seenRestRoutes.push({ pluginId: resource.pluginId, route });
   }
 
-  // A task's cron arrives as a free-form string — `auditLog({ retention: {
-  // purgeAt } })` hands one straight through — and nothing downstream can tell
-  // an unfireable schedule from one that simply has not come round yet. Parse
-  // every one at boot, on every runtime, so the failure is an error at deploy
-  // rather than a task that quietly never runs.
+  // Nothing downstream can tell an unfireable cron from one not yet due, so
+  // fail at boot rather than never run.
   for (const task of registry.scheduledTasks) {
     if (task.cron === undefined) continue;
     try {
@@ -393,10 +345,7 @@ export async function buildApp(
     config.auth.authenticator ?? defaultAuthenticator(sessionPolicy);
   const bootstrapAllowed = config.auth.bootstrapVia === "first-method-wins";
 
-  // Aggregate `blocks/` core specs + plugin + theme contributions into
-  // the per-app registry. `collectContributedBlocks` is the single source the
-  // admin manifest also reads; `createBlockRegistry`'s last-write-wins semantics
-  // give the precedence core < plugin < theme (the most site-specific layer wins).
+  // Last-write-wins gives core < plugin < theme.
   const blocks = createBlockRegistry([
     ...coreBlocks,
     ...collectContributedBlocks(
@@ -506,13 +455,8 @@ export async function buildApp(
   };
 }
 
-// Run the `theme:document` filter chain once at boot. Plugins spread + add
-// onto a `{}` seed when the theme has no `document` of its own, so authors
-// never need null-checks. The post-filter result is validated for shape
-// (renderer can't recover from missing `link.rel` or empty `<script>`)
-// then deep-frozen so per-request renders treat it as the immutable contract
-// — a shallow freeze would still let a plugin mutate `app.document.meta`
-// after boot and corrupt state across requests.
+// Deep-frozen: a shallow freeze would let a plugin mutate `app.document.meta`
+// and corrupt later requests.
 async function resolveDocumentManifest(
   hooks: HookRegistry,
   themeManifest: DocumentManifest | undefined,

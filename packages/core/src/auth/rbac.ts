@@ -46,16 +46,13 @@ export function createCapabilityResolver(
   };
 }
 
-// The resolver is a pure function of the plugin registry, which has stable
-// per-app identity — so one resolver serves an app for its whole lifetime.
-// Weak-keyed so a discarded registry (e.g. a torn-down test app) frees its
-// resolver with it.
+// The registry has stable per-app identity; weak keys free the resolver with a
+// discarded registry.
 const RESOLVER_BY_REGISTRY = new WeakMap<PluginRegistry, CapabilityResolver>();
 
 /**
- * Every construction site — app build, context creation, user upgrade,
- * plugin-raw-route dispatch — routes through here, so an authentication upgrade
- * reuses the app's resolver instead of rebuilding an identical one.
+ * Returns the same resolver for the same registry, so callers never rebuild
+ * one.
  */
 export function getCapabilityResolver(
   plugins: PluginRegistry,
@@ -69,24 +66,14 @@ export function getCapabilityResolver(
 }
 
 /**
- * Flatten every capability the given role is granted — core plus every
- * plugin-registered capability (including the derived `{type}:{action}`
- * entries). Sorted for deterministic output so wire payloads are stable
- * across identical inputs (tests, caching, etc.).
- *
- * The returned list is intended for shipping to the admin on `auth.session`
- * so client code can gate nav items and actions without knowing the
- * role-hierarchy rules.
+ * Sorted and deduplicated, so the wire payload is stable for identical inputs.
  */
 export function capabilitiesForRole(
   role: UserRole,
   plugins: PluginRegistry,
 ): readonly string[] {
   const level = roleLevel(role);
-  // Set — a plugin registering an entry type with `capabilityType: 'post'`
-  // duplicates the derived `entry:post:read` etc. caps into `plugins.capabilities`
-  // on top of the entries already present in CORE_CAPABILITIES. Dedupe so
-  // the wire payload doesn't carry `["entry:post:read", "entry:post:read", ...]`.
+  // `capabilityType: 'post'` re-registers caps already in CORE_CAPABILITIES.
   const granted = new Set<string>();
   for (const [name, minRole] of Object.entries(CORE_CAPABILITIES)) {
     if (roleLevel(minRole) <= level) granted.add(name);

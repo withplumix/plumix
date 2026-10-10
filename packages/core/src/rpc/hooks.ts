@@ -29,10 +29,8 @@ import type {
   UserUpdateInput,
 } from "./procedures/user/schemas.js";
 
-// `entry.get` enriches the row with the assigned term ids per
-// taxonomy. Plugins editing the output filter receive this shape.
-// In preview mode the row also carries `_preview` so editor clients
-// can distinguish autosave-overlaid responses from straight live reads.
+// `_preview` lets editor clients tell autosave-overlaid responses from
+// live reads.
 type EntryWithTerms = WithResolvedMeta<Entry> & {
   readonly terms: Record<string, readonly number[]>;
   readonly _preview?: {
@@ -135,10 +133,8 @@ declare module "../hooks/types.js" {
 
     "rpc:settings.get:input": (input: SettingsGetInput) => SettingsGetInput;
     /**
-     * Output filter for the `settings.get` bag. Plugins can decorate
-     * (inject derived keys), redact secrets, or replace the bag
-     * entirely. Second argument carries the group name so one filter
-     * can branch on scope.
+     * Plugins can decorate, redact or replace the bag; the second argument
+     * carries the group so one filter can branch on scope.
      */
     "rpc:settings.get:output": (
       output: SettingsBag,
@@ -171,13 +167,12 @@ declare module "../hooks/types.js" {
   }
 
   // Every action below hands its handler the context it fired from, last, so a
-  // handler accepts what it depends on rather than reaching for the ambient one.
+  // handler accepts what it depends on rather than reaching for the ambient
+  // one.
   interface ActionRegistry {
     /**
-     * Entry lifecycle. `entry:<event>` fires for every entry regardless
-     * of type; `entry:<type>:<event>` also fires so plugins can target
-     * one entry type without re-filtering inside a generic handler.
-     * Both always fire — subscribe to whichever granularity you need.
+     * Both `entry:<event>` and `entry:<type>:<event>` always fire, so a plugin
+     * can target one entry type without re-filtering.
      */
     "entry:published": (entry: Entry, ctx: AppContext) => void | Promise<void>;
     "entry:updated": (
@@ -221,11 +216,8 @@ declare module "../hooks/types.js" {
     ) => void | Promise<void>;
 
     /**
-     * Revision lifecycle. Fires after a successful entry.update on a
-     * type with `supports: ['revisions']`. `revision_created` lands
-     * once per update; `revision_pruned` fires only when the new
-     * snapshot pushed past the per-type `maxRevisions` cap and oldest
-     * rows were deleted.
+     * Fire only on types with `supports: ['revisions']`. `revision_pruned`
+     * fires only when the new snapshot pushed past `maxRevisions`.
      */
     "entry:revision_created": (
       revision: Entry,
@@ -249,12 +241,9 @@ declare module "../hooks/types.js" {
     ) => void | Promise<void>;
 
     /**
-     * Autosave lifecycle. Fires after `entry.update({ saveAs: 'draft' })`
-     * writes to the caller's autosave row (NOT the live row) and after
-     * `entry.discardDraft` removes it. Subscribers can sync editor
-     * sessions, drive co-author awareness, or log activity. The generic
-     * `entry:updated` hook deliberately does NOT fire on autosave writes
-     * — cache invalidators / RSS / sitemap should ignore pending drafts.
+     * Autosave writes go to the caller's autosave row, not live, and
+     * deliberately do NOT fire `entry:updated`, so cache invalidators ignore
+     * pending drafts.
      */
     "entry:autosave_saved": (
       autosave: Entry,
@@ -278,12 +267,8 @@ declare module "../hooks/types.js" {
     ) => void | Promise<void>;
 
     /**
-     * Fires when a user restores a past revision. For types that
-     * opt into `supports: ['autosave']` the restore lands on the
-     * caller's autosave row (paired with `entry:autosave_saved`).
-     * For non-autosave types the restore writes directly to live
-     * (paired with `entry:updated` via the same revision-on-write
-     * flow as a normal `entry.update`).
+     * On `supports: ['autosave']` types the restore lands on the caller's
+     * autosave row; otherwise it writes live and also fires `entry:updated`.
      */
     "entry:revision_restored": (
       revision: Entry,
@@ -309,18 +294,9 @@ declare module "../hooks/types.js" {
     ) => void | Promise<void>;
 
     /**
-     * Fires after `user.invite` persists the pending user + token. Main
-     * consumer is an email-delivery plugin composing the invite link
-     * from `inviteToken`. Payload matches WP's `user_register` plus
-     * invite-specific fields — plugins listening on both `user:invited`
-     * and `user:registered` can tell "invite sent" from "invite taken".
-     *
-     * SECURITY: `inviteToken` is the raw plaintext (the DB stores only a
-     * hash). Treat it as a credential — do NOT log it, persist it
-     * outside the consuming plugin's scope, or forward it to analytics /
-     * error-tracking services. A leaked token grants anyone the ability
-     * to complete registration as the invited user until it's consumed
-     * or expires (7 days).
+     * SECURITY: `inviteToken` is the raw plaintext credential (the DB stores a
+     * hash). Never log or forward it; it completes registration until consumed
+     * or expired (7 days).
      */
     "user:invited": (
       user: User,
@@ -333,32 +309,14 @@ declare module "../hooks/types.js" {
     ) => void | Promise<void>;
 
     /**
-     * Fires after a user completes invite acceptance (passkey persisted,
-     * invite token consumed, session created). Parallel to WordPress's
-     * `user_register` when the user comes online for the first time.
-     * Use this (not `user:invited`) for onboarding flows like welcome
-     * emails or default-content seeding.
-     *
-     * PII: payload carries `email`, `name`, `role`. Don't ship the full
-     * row to third-party log/analytics services without the user's
-     * consent. Same caveat applies to all `user:*` actions below.
+     * Fires on invite acceptance, not on `user:invited`. PII: the payload
+     * carries `email`, `name` and `role`, as do all `user:*` actions.
      */
     "user:registered": (user: User, ctx: AppContext) => void | Promise<void>;
 
     /**
-     * Fires after a successful `user.update` row-columns write. Payload
-     * carries the post-write row and the pre-write row for diffing —
-     * matches WP's `profile_update(user_id, old_user_data)` signature.
-     * Use this instead of the output filter when you need to know what
-     * actually changed (role demotion, email swap, etc.).
-     *
-     * Only fires when row columns changed. A meta-only update does NOT
-     * fire `user:updated`; subscribe to `user:meta_changed` for that.
-     * The `user.meta` on the payload is the row's `.returning()` value
-     * captured *before* the meta write — so when the same RPC writes
-     * both row columns and meta, `user.meta` here is deterministically
-     * stale. Always subscribe to `user:meta_changed` for the
-     * authoritative meta diff.
+     * Fires only when row columns changed. `user.meta` here predates any meta
+     * write in the same RPC, so use `user:meta_changed` for meta.
      */
     "user:updated": (
       user: User,
@@ -379,10 +337,8 @@ declare module "../hooks/types.js" {
     ) => void | Promise<void>;
 
     /**
-     * Fires on both disable (`enabled: false`) and re-enable
-     * (`enabled: true`). One surface so "account state changed" is a
-     * single subscription, instead of two. Sessions for the affected
-     * user are already invalidated by the time this fires.
+     * Fires on both disable and re-enable. The user's sessions are already
+     * invalidated when it fires.
      */
     "user:status_changed": (
       user: User,
@@ -390,12 +346,7 @@ declare module "../hooks/types.js" {
       ctx: AppContext,
     ) => void | Promise<void>;
 
-    /**
-     * Fires after a successful `user.delete`. `reassignedTo` is the
-     * user id that inherited this account's entries, or `null` if the
-     * deleted user had no entries (so no reassignment happened). Mirrors
-     * WP's `deleted_user(user_id, reassign_to)`.
-     */
+    /** `reassignedTo` is `null` when the deleted user had no entries. */
     "user:deleted": (
       user: User,
       context: { readonly reassignedTo: number | null },
@@ -406,16 +357,8 @@ declare module "../hooks/types.js" {
     "term:created": (term: Term, ctx: AppContext) => void | Promise<void>;
 
     /**
-     * Fires after a successful `term.update` row-columns write. Payload
-     * carries the post-write row and the pre-write row for diffing —
-     * parallel to `entry:updated` / `user:updated`.
-     *
-     * Only fires when the row columns changed. A meta-only update does
-     * NOT fire `term:updated`; subscribe to `term:meta_changed` for
-     * that. The `term.meta` here reflects the row read right after the
-     * column write and may lag a meta write that happens in the same
-     * RPC call — use `term:meta_changed` for the authoritative meta
-     * diff.
+     * Fires only when row columns changed. `term.meta` may lag a meta write in
+     * the same RPC, so use `term:meta_changed` for meta.
      */
     "term:updated": (
       term: Term,
@@ -438,13 +381,6 @@ declare module "../hooks/types.js" {
       ctx: AppContext,
     ) => void | Promise<void>;
 
-    /**
-     * Fires after a successful `settings.upsert`. Payload carries the
-     * group name plus the per-request `set` upserts and `removed`
-     * keys — shape mirrors `entry:meta_changed` so plugins can adopt
-     * the same pattern across bags. Subscribe for audit logs,
-     * cache-invalidators, derived-setting backfills.
-     */
     "settings:group_changed": (
       changes: {
         readonly group: string;
@@ -454,33 +390,14 @@ declare module "../hooks/types.js" {
       ctx: AppContext,
     ) => void | Promise<void>;
 
-    // ──────────────────────────────────────────────────────────────────
-    // Auth / sign-in events.
-    //
-    // These mirror the WP `wp_login` / `wp_logout` surface but adopt
-    // the plumix `entity:event` shape and split sign-in by `method`
-    // so an audit-log plugin can attribute "via passkey" vs "via
-    // OAuth (github)" without sniffing call paths.
-    //
-    // The audit-log story: subscribe to `auth:*`, `session:*`,
-    // `credential:*`, `api_token:*`, `device_code:*` and write one
-    // row per emission. No `revoked_by` columns anywhere — the actor
-    // travels in `context.actor`. Avoids schema bloat that becomes
-    // dead weight once the audit table lands.
-    // ──────────────────────────────────────────────────────────────────
+    // Sign-in is split by `method` so an audit log can attribute it without
+    // sniffing call paths. The actor travels in `context.actor`, not in
+    // `revoked_by` columns.
 
     /**
-     * A user just signed in. Fires from every sign-in path:
-     * passkey, magic-link, OAuth callback, invite-accept, and any
-     * external IdP authenticator (cfAccess, etc.) on its first
-     * authenticated request.
-     *
-     * `method` distinguishes the surface; `provider` is set only for
-     * `oauth` so subscribers can branch on `github` vs `google` etc.
-     * `firstSignIn` is true when the sign-in enrolled the user — a
-     * magic-link or OAuth signup, the bootstrap passkey, an accepted
-     * invite — and false for every later sign-in, including an
-     * existing user registering another (or their first) passkey.
+     * Also fires on an external authenticator's first authenticated request.
+     * `firstSignIn` is true only when this sign-in enrolled the user, not when
+     * an existing user adds a passkey.
      */
     "user:signed_in": (
       user: User,
@@ -500,10 +417,8 @@ declare module "../hooks/types.js" {
     "user:signed_out": (user: User, ctx: AppContext) => void | Promise<void>;
 
     /**
-     * Fires after `user.requestEmailChange` writes the verification
-     * token + sends the confirmation mail. `actor` may differ from
-     * `user` when an admin requests the change for another user.
-     * Email is NOT changed yet — see `user:email_changed`.
+     * The email is NOT changed yet; see `user:email_changed`. `actor` differs
+     * from `user` when an admin requests the change.
      */
     "user:email_change_requested": (
       user: User,
@@ -516,12 +431,8 @@ declare module "../hooks/types.js" {
     ) => void | Promise<void>;
 
     /**
-     * Fires after the verification link is clicked and the email
-     * commit lands. Payload has the post-write user (with new
-     * email + reset `emailVerifiedAt`) and the previous email for
-     * diff. Sessions for this user are invalidated by the time this
-     * fires — subscribers should not assume the actor's session
-     * still exists.
+     * The user's sessions are already invalidated when this fires, so don't
+     * assume the actor's session still exists.
      */
     "user:email_changed": (
       user: User,
@@ -530,10 +441,8 @@ declare module "../hooks/types.js" {
     ) => void | Promise<void>;
 
     /**
-     * A passkey was registered. Fires on first signup, invite-accept,
-     * and the "add another passkey" flow. Payload omits the public-key
-     * blob to keep wire-friendly subscribers small; pull from `context.db`
-     * if you need the full row.
+     * Also fires on first signup and invite-accept. The payload omits the
+     * public key; read the full row from `context.db`.
      */
     "credential:created": (
       credential: Pick<
@@ -566,11 +475,8 @@ declare module "../hooks/types.js" {
     ) => void | Promise<void>;
 
     /**
-     * A browser session was explicitly revoked via `auth.sessions.revoke`
-     * or `auth.sessions.revokeOthers`. `mode` distinguishes single-row
-     * revoke from "everywhere except this browser" so the audit log
-     * can render either as one event or N. Cross-user revocation isn't
-     * exposed — sessions are second-factor security primitives.
+     * Only the caller's own sessions can be revoked. `mode` tells a single
+     * revoke from "everywhere except this browser".
      */
     "session:revoked": (
       session: { readonly id: string; readonly userId: number },
@@ -597,10 +503,8 @@ declare module "../hooks/types.js" {
     ) => void | Promise<void>;
 
     /**
-     * A personal access token was revoked. `mode: "self"` for the
-     * owner using `auth.apiTokens.revoke`; `mode: "admin"` for an
-     * admin-with-`user:manage_tokens` using `adminRevoke`. Audit log
-     * uses `mode` to pick copy ("you revoked" vs "admin X revoked").
+     * `mode: "self"` for the owner's `revoke`, `mode: "admin"` for
+     * `adminRevoke`.
      */
     "api_token:revoked": (
       token: { readonly id: string; readonly userId: number },
@@ -612,10 +516,8 @@ declare module "../hooks/types.js" {
     ) => void | Promise<void>;
 
     /**
-     * A device-flow session was approved via `auth.deviceFlow.approve`.
-     * The polling client's next exchange will mint the API token; this
-     * fires at approval time so the audit log captures the human's
-     * decision separately from the token mint.
+     * Fires at approval, before the polling client mints the token, so the
+     * human's decision is recorded separately from the mint.
      */
     "device_code:approved": (
       deviceCode: {

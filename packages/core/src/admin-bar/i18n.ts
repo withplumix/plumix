@@ -1,11 +1,5 @@
-// Admin-bar strings live in `locales/admin-bar-*.po` like every other
-// plumix surface — `plumix i18n verify` gates the descriptor↔catalog
-// drift and translators never have to find a second system. Catalogs
-// compile to static modules (worker-safe, no fs) imported via the
-// package's own `./locales/*` subpath; the SSR render does a direct
-// per-request lookup, never a shared-singleton `activate()`. The
-// `admin-bar-` prefix keeps this surface's catalog distinct from a
-// later debug-bar catalog in the same flat locales/ dir.
+// Catalogs compile to static modules (worker-safe, no fs), looked up per
+// request rather than through a shared `activate()` singleton.
 
 import { messages as arMessages } from "@plumix/core/locales/admin-bar-ar";
 import { messages as deMessages } from "@plumix/core/locales/admin-bar-de";
@@ -55,21 +49,9 @@ export interface BarStrings {
 const KNOWN: ReadonlySet<string> = new Set(Object.keys(CATALOGS));
 
 /**
- * Resolves the admin user's bar locale from `meta.locale` (per WP semantics —
- * `get_user_locale()`, not `get_locale()`). Falls back to English when the
- * user has no stored locale or stored a locale we don't ship strings for.
- *
- * Deliberately NOT the unified `resolveLocale` (`i18n/resolve-locale.ts`):
- * that resolver path-gates `meta.locale`/Accept-Language/cookie to
- * `/_plumix/*` so public HTML stays byte-identical per URL for the CDN
- * cache. The admin bar is the documented exception — it must localize
- * per authenticated user *on public routes*, and that's cache-safe
- * precisely because the bar only renders when a session cookie is
- * present, and session-bearing responses are private/uncacheable
- * anyway. Anonymous (cacheable) visitors get no bar and the default
- * locale. The locale cookie can't help here regardless: it's
- * `Path=/_plumix/`, so the browser never sends it on the front end.
- * Fold this into `resolveLocale` and per-user bar localization breaks.
+ * Not `resolveLocale`, which ignores `meta.locale` on public routes for the
+ * CDN. The bar only renders with a session, so its response is uncacheable
+ * anyway.
  */
 export function resolveBarLocale(user: {
   readonly meta: ResolvedMeta;

@@ -1,9 +1,8 @@
 import type { MessageDescriptor } from "@lingui/core";
 import * as v from "valibot";
 
-// The wire shape both RPC clients throw. A procedure that sets no message
-// still gets one — oRPC fills `.message` with its own English text for the
-// code — so the only fields worth reading are these two.
+// oRPC fills `.message` with its own English text, so only these two fields
+// are worth reading.
 const RpcErrorCode = v.object({ code: v.string() });
 const RpcErrorReason = v.object({ data: v.object({ reason: v.string() }) });
 
@@ -18,10 +17,8 @@ export function rpcErrorReason(error: unknown): string | undefined {
 }
 
 /**
- * The descriptor the admin shows for a failed call: the table's entry for the
- * error's `data.reason`, else `fallback`. The error's `message` is never read
- * (ADR 0018). A fallback loses the detail on screen, so the original is logged
- * for whoever is debugging.
+ * Never reads the error's `message`. A fallback loses the detail on screen,
+ * so the original is logged.
  */
 export function describeRpcError(
   error: unknown,

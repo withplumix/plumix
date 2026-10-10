@@ -1,15 +1,5 @@
-/**
- * Pagination math shared by the archive and taxonomy resolvers. Pure
- * function so the two resolvers can't drift on boundary conditions —
- * any rule about "what counts as out of range" lives here, in one place,
- * with a single set of tests.
- *
- * `total === 0` is intentionally **not** out of range when `page === 1`
- * — an empty archive renders the 200 empty-state page, mirroring how
- * #224's taxonomy resolver treats a term that exists but has no entries
- * tagged with it. A date archive is the exception: it answers 404 when
- * empty (ADR 0029).
- */
+// An empty archive's page 1 is in range and renders the 200 empty state; date
+// archives instead 404 when empty.
 
 interface PaginateInput {
   readonly page: number;

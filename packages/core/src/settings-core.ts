@@ -3,11 +3,8 @@ import { SITE_SETTINGS_DESCRIPTORS } from "./i18n/site-settings-descriptors.js";
 
 const D = SITE_SETTINGS_DESCRIPTORS;
 
-// Built-in site-identity settings. Seeded before plugin `setup()` (like
-// the core template deps / lookup adapters) so every install has a
-// canonical home for title / tagline / social links — themes read it via
-// the `settings` template dep (`defineTemplate({ settings: ["site"] })`)
-// and `@plumix/plugin-seo` layers on top.
+// Seeded before plugin `setup()` so every install has a canonical home for
+// site identity that themes and the SEO plugin build on.
 export function registerCoreSettings(registry: MutablePluginRegistry): void {
   registry.settingsGroups.set("site", {
     name: "site",

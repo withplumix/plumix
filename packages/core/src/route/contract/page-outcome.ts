@@ -13,11 +13,8 @@ type OutcomeFields =
     };
 
 /**
- * How a page step ends the request (ADR 0032): an archive type's `resolve`, a
- * template dep, a block loader on the page's own content, or the template's
- * `document()` throws one, and the dispatcher answers with it instead of the
- * page. An `Error`, so it can be thrown wherever an error can; thrown anywhere
- * else it is one.
+ * Thrown from a page step to answer the request with this instead of the page.
+ * Thrown anywhere else, it is an ordinary `Error`.
  */
 export type PageOutcome = Error & { readonly [BRAND]: true } & OutcomeFields;
 
@@ -27,7 +24,9 @@ function outcome(message: string, fields: OutcomeFields): PageOutcome {
   return Object.assign(error, { [BRAND]: true as const }, fields);
 }
 
-/** Throw it to answer the page with the theme's 404, as a `null` resolve does. */
+/**
+ * Throw it to answer the page with the theme's 404, as a `null` resolve does.
+ */
 export function pageNotFound(): PageOutcome {
   return outcome("pageNotFound() thrown outside a page step", {
     kind: "not-found",
@@ -35,9 +34,8 @@ export function pageNotFound(): PageOutcome {
 }
 
 /**
- * Throw it to answer the page with a redirect to `location`, used as given. It
- * defaults to 302, and is never stored by a cache, because what sends a
- * visitor elsewhere is usually their session or state.
+ * Throw it to redirect to `location`, used as given. Defaults to 302 and is
+ * never cached, since a redirect usually depends on session or state.
  */
 export function redirectTo(
   location: string,

@@ -39,12 +39,13 @@ export interface UnsettledKeyCount {
   readonly key: string;
   /** Rows holding a value the write path would store in another form. */
   readonly settleable: number;
-  /** Rows holding a value no declared type accepts — reported, never touched. */
+  /**
+   * Rows holding a value no declared type accepts — reported, never touched.
+   */
   readonly unconvertible: number;
   /**
-   * Ids of the rows behind `unconvertible`, up to {@link MAX_UNCONVERTIBLE_IDS}
-   * — enough for a human to find and fix them. Settings rows have no id, so
-   * their key alone says where to look.
+   * Capped at {@link MAX_UNCONVERTIBLE_IDS}. Settings rows have no id; their
+   * key alone says where to look.
    */
   readonly unconvertibleIds: readonly number[];
 }
@@ -55,9 +56,8 @@ export interface MetaSweepCursor {
   /** For entries, terms and users: the id of the last row walked. */
   readonly after: number;
   /**
-   * For settings, which have no id: the last row walked, by its key. A key
-   * rather than a position, so a row removed between two calls can't shift the
-   * walk past one it never reached.
+   * Settings have no id, so the cursor is the last key walked; a key, not a
+   * position, so a row removed between calls can't shift the walk.
    */
   readonly setting?: { readonly group: string; readonly key: string };
 }
@@ -70,10 +70,8 @@ export interface MetaSweep {
   readonly next: MetaSweepCursor | null;
 }
 
-// D1 caps the queries one Worker invocation may make — 50 on the free plan —
-// and every settled row costs a write plus whatever its announcement's hooks
-// do. Half the cap leaves room for those, so a call on the admin's settle
-// button never dies partway; the caller loops on `next` instead.
+// D1 caps queries per Worker invocation (50 on the free plan). Half leaves
+// room for each settled row's hook work, so a call never dies partway.
 const QUERY_BUDGET = 25;
 
 // Rows per read: reporting a large site takes a read per page, and holding a
@@ -83,22 +81,9 @@ const PAGE = 500;
 export const MAX_UNCONVERTIBLE_IDS = 20;
 
 /**
- * Find — and, with `write`, settle — unsettled meta values across the site:
- * entry, term and user meta, and settings.
- *
- * A call spends at most {@link QUERY_BUDGET} queries and hands back `next` when
- * it stops short; pass it as `cursor` to carry on. Counts are for the rows this
- * call walked, so a caller walking the whole site adds them up.
- *
- * Settling writes and announces through the same step the admin's read heal
- * uses, so a row the sweep writes is exactly what opening it would have
- * written, and the announcement is what purges its render from the CDN. A
- * value no declared type accepts is counted and left as stored; a key no
- * registered field owns is neither counted nor touched.
- *
- * Autosave and revision rows are skipped. An autosave is the author's edits,
- * run through the field pipeline when publish promotes them; a revision is a
- * record of what the row held, not live content.
+ * Spends at most {@link QUERY_BUDGET} queries and returns `next` when it stops
+ * short. Counts cover only rows walked. Skips autosave and revision rows and
+ * keys no field owns.
  */
 export async function sweepUnsettledMeta(
   ctx: AppContext,
@@ -118,11 +103,7 @@ export async function sweepUnsettledMeta(
   return walk.result(null);
 }
 
-/**
- * Run the sweep from the start until it reports done, adding up what each call
- * found — for a caller with no per-invocation cap to stay under, such as the
- * command line.
- */
+/** For callers with no per-invocation query cap, such as the CLI. */
 export async function sweepAllUnsettledMeta(
   ctx: AppContext,
   options: { readonly write: boolean },
@@ -224,9 +205,8 @@ const STORES: Readonly<Record<MetaStore, StoreWalk>> = {
   settings: sweepSettings,
 };
 
-// Settings are one row per key rather than a bag per row, and a site holds a
-// handful of groups, so what is left of them is read in one query. Each settled
-// group is announced once, as a settings save would.
+// Settings are one row per key and a site holds few groups, so the rest are
+// read in one query. Each settled group is announced once, as a save would.
 async function sweepSettings(
   walk: Walk,
   from: MetaSweepCursor | null,
@@ -316,7 +296,6 @@ interface SweptRow {
   readonly write: (patch: SettledMeta["patch"]) => Promise<boolean>;
 }
 
-/** One call's walk: its budget, what it has counted, and how it writes. */
 class Walk {
   readonly tally = new Tally();
   #queriesLeft = QUERY_BUDGET;
@@ -326,18 +305,14 @@ class Walk {
     readonly write: boolean,
   ) {}
 
-  /** Take one query from the budget; `false` when there is none left. */
   spend(): boolean {
     if (this.#queriesLeft === 0) return false;
     this.#queriesLeft -= 1;
     return true;
   }
 
-  /**
-   * Walk a store by id, a page at a time, stopping short when the budget runs
-   * out. Stopping before a row leaves `after` on the one before it, so the next
-   * call starts at the row this one never reached.
-   */
+  // Stopping before a row leaves `after` on the one before it, so the next
+  // call starts at the row this one never reached.
   async pages<Row extends { readonly id: number; readonly meta: JsonObject }>(
     store: MetaStore,
     from: MetaSweepCursor | null,

@@ -1,10 +1,3 @@
-/**
- * The template binding of the shared tier/matcher resolution in
- * `rule-resolver.ts`: `resolveTemplate` / `resolveErrorTemplate` pin that
- * resolver to `TemplateRule`, and `explainTemplateResolution` replays the walk
- * for the debug bar.
- */
-
 import type { TemplateData, TemplateRule } from "../../theme.js";
 import type { ResolvedNode } from "./rule-resolver.js";
 import {
@@ -41,13 +34,10 @@ export function resolveErrorTemplate(
   return resolveErrorRule(rules, tier);
 }
 
-/** What happened to a rule during resolution. */
 type ResolutionStatus = "matched" | "skipped" | "never-evaluated";
 
-// Spelled as `Readonly<{…}>` rather than as interfaces so they satisfy
-// `JsonObject` — the trace's only consumer is the debug bar, which reads it
-// back off a telemetry span attribute, and TypeScript withholds the implicit
-// index signature from `interface` declarations (see the note on `JsonObject`).
+// `Readonly<{…}>`, not interfaces: a telemetry span attribute must satisfy
+// `JsonObject`, and interfaces lack the implicit index signature.
 export type ResolutionStep = Readonly<{
   label: string;
   status: ResolutionStatus;
@@ -65,11 +55,7 @@ export type ResolutionTrace = Readonly<{
   winner: string | null;
 }>;
 
-/**
- * What the renderer writes to the `template` span's `resolution` attribute:
- * the trace plus the label of the node it resolved. The debug bar's Template
- * panel reads it straight back off the span.
- */
+/** The `template` span's `resolution` attribute, read back by the debug bar. */
 export type TemplateResolution = ResolutionTrace &
   Readonly<{
     /** Human label for the resolved route node, e.g. "post: hello-world". */
@@ -77,10 +63,8 @@ export type TemplateResolution = ResolutionTrace &
   }>;
 
 /**
- * Replay `resolveTemplate` and classify every rule for the debug bar: which one
- * won, which targeted rules were evaluated-but-skipped (with their predicate
- * result), and which were never reached because an earlier zone already won.
- * Dev-only — `resolveRule` stays allocation-free on the render hot path.
+ * A separate replay so `resolveRule` stays allocation-free on the render hot
+ * path.
  */
 export function explainTemplateResolution(
   rules: readonly TemplateRule[],

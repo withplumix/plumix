@@ -1,11 +1,5 @@
-// Plugin authors and core hooks both extend these registries via TypeScript
-// module augmentation: a `declare module` block colocated with the code that
-// fires each hook adds its name and handler signature here. Core's public hooks
-// are anchored into the published declaration graph by `./public-hooks.ts` so a
-// consumer's registry carries them (see that file and issue #1698); third-party
-// plugins augment `"plumix"` from their own modules.
-//
-// Each registry value is the handler signature for that hook name.
+// Extended by module augmentation colocated with the code firing each hook;
+// third-party plugins augment `"plumix"`.
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface FilterRegistry {}
@@ -30,8 +24,8 @@ export type FilterFn<TName extends FilterName> = FilterRegistry[TName] extends (
   : never;
 
 // Filter input type = first parameter type. Rest params = everything else.
-// Extracted via Parameters<T> + tuple slicing so `applyFilter(name, input, ...rest)`
-// is type-safe at the call site.
+// Extracted via Parameters<T> + tuple slicing so `applyFilter(name, input,
+// ...rest)` is type-safe at the call site.
 export type FilterInput<TName extends FilterName> = Parameters<
   FilterRegistry[TName]
 >[0];

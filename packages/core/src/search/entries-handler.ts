@@ -6,22 +6,13 @@ import { entrySearchCondition } from "../db/search-conditions.js";
 import { adminEntryScope, entryGroups } from "./admin-entry-scope.js";
 import { tokenizeSearchQuery } from "./contract/search-terms.js";
 
-// Max rows scanned across all types for one query. Title+excerpt LIKE has
-// no relevance ranking, so we take the most recently updated matches and
-// bucket them; a search plugin claims the groups it can rank instead.
+// LIKE has no relevance ranking, so the most recently updated matches are
+// taken and bucketed.
 const SCAN_LIMIT = 50;
 
 /**
- * `admin:search:results` handler for the `entries` domain. Matches
- * title+excerpt (LIKE) across every entry type the caller can read, in a
- * single query, and returns one group per type. Which unpublished rows a
- * caller is shown is `adminEntryScope`'s call; everything is capped per group.
- *
- * Stays registered when a search plugin is installed, and keeps answering
- * for whatever the plugin's index does not hold — a type under an access
- * policy, which never enters that index, and every type at all when the
- * index is missing. Which is why this is the cheap query rather than a
- * better one: it is the floor, not the ceiling.
+ * Stays registered beside a search plugin, answering for whatever its index
+ * doesn't hold. It is the floor, which is why it is the cheap query.
  */
 export async function entriesSearchHandler(
   input: AdminSearchInput,

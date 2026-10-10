@@ -81,16 +81,13 @@ function normalizeEntry(entry: string | LocaleInput): ResolvedLocale {
 }
 
 function textInfoDirection(locale: Intl.Locale): LocaleDirection {
-  // Safety: `getTextInfo` exists on `Intl.Locale` in every runtime plumix
-  // targets (V8 — Node, Bun, Workers); the shim names the one method read,
-  // and `validateDirection` re-checks the returned value before anything
-  // uses it, so the assertion buys reachability and no trust.
+  // Safety: `getTextInfo` exists on `Intl.Locale` in every V8 runtime plumix
+  // targets, and `validateDirection` re-checks the value.
   return (locale as unknown as LocaleWithTextInfo).getTextInfo().direction;
 }
 
-// `direction` is the only registry field that flows raw into rendered HTML
-// (`<html dir="${direction}">`). Validate at the type seam so a misuse of the
-// union via `as any` can't punch out of the attribute.
+// `direction` flows raw into `<html dir>`, so an `as any` misuse must not
+// punch out of the attribute.
 function validateDirection(raw: unknown, code: string): LocaleDirection {
   if (raw === "ltr" || raw === "rtl") return raw;
   throw I18nConfigError.invalidDirection(code, raw);
@@ -108,11 +105,7 @@ function canonicalizeLocaleCode(raw: string): string {
   return canonicalize(raw).toString();
 }
 
-/**
- * Match a code from an untrusted source (user.meta, override return) against
- * the registry. Canonicalizes the input so `"en_US"` / `"en-us"` still find
- * an `"en-US"` entry. Returns the registry entry only if it's enabled.
- */
+/** Canonicalizes, so `"en_US"` finds `"en-US"`. Only enabled entries match. */
 export function findEnabledLocale(
   i18n: LocaleRegistry,
   rawCode: string,
@@ -126,10 +119,8 @@ export function findEnabledLocale(
   return i18n.locales.find((l) => l.code === code && l.enabled) ?? null;
 }
 
-// `Intl.DisplayNames` rejects some valid BCP 47 tags its constructor doesn't
-// recognize (Unicode extensions like `en-u-ca-gregory`, private-use `-x-…`),
-// and `.of()` returns undefined when the active ICU build lacks the
-// language — fall back to the bare code in both cases.
+// `Intl.DisplayNames` rejects some valid tags (Unicode extensions, private
+// use), and `.of()` is undefined when ICU lacks the language.
 function labelFor(locale: Intl.Locale): string {
   const code = locale.toString();
   try {

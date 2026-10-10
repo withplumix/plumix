@@ -28,25 +28,12 @@ import {
 
 const publishInput = v.object({
   id: idParam,
-  // Required for the publish path — promoting a pending draft over a
-  // live row is the canonical concurrency battleground. Callers must
-  // round-trip the live `updatedAt` they observed when loading the
-  // editor; mismatched tokens fail loudly rather than silently
-  // clobbering a parallel write.
+  // Required here, unlike `entry.update`: promoting a draft over live must fail
+  // loudly rather than clobber a parallel write.
   expectedLiveUpdatedAt: v.date(),
 });
 
-// Promotes the caller's autosave row onto the live entry. Mirrors the
-// transactional shape of `entry.update` minus the pre-save filter
-// (the autosave was already filtered when it was written): copy the
-// pending fields onto live, capture a revision via the existing
-// revisions-on-live-write semantics, delete the autosave.
-//
-// Errors:
-//   CONFLICT { reason: "stale_expected_updated_at" }
-//   NOT_FOUND  - no live entry / reserved-type row
-//   FORBIDDEN  - missing publish capability
-//   NO_PENDING_DRAFT - caller has no autosave for this entry
+// Skips the pre-save filter: the autosave was filtered when written.
 export const publish = base
   .use(authenticated)
   .input(publishInput)
@@ -78,18 +65,13 @@ export const publish = base
       throw errors.BAD_REQUEST({ data: { reason: "no_pending_draft" } });
     }
 
-    // Copy the autosave's drafted fields onto the live row. Title, slug, and
-    // parentId stay anchored to live — title is a live-only field (the editor
-    // writes it straight to live and publish never promotes it), and the
-    // autosave envelope carries slug/parentId only for restore-from-revision,
-    // not publish (which promotes content onto an already-existing slug).
+    // Title, slug and parentId stay on live: title is live-only, and the
+    // autosave carries slug and parentId only for restore-from-revision.
     const patch = {
       content: autosave.content,
       excerpt: autosave.excerpt,
-      // The bag that goes live is the author's edits laid over the live row.
-      // Strict-validate all of it: autosaves are draft-lenient, so publish is
-      // where required fields, bounds, and formats are finally enforced — a
-      // violation rejects the publish with per-field errors the admin surfaces.
+      // Autosaves are draft-lenient, so publish is where the merged bag is
+      // finally strict-validated, rejecting with per-field errors.
       meta: await sanitizePromotedEntryMeta(
         context,
         live.type,

@@ -20,12 +20,6 @@ import {
   snapshotAsRevision,
 } from "../../../revisions/repository.js";
 
-// Each lifecycle event fan-outs to two hook names: the type-scoped form
-// `entry:<type>:<event>` (targets one entry type) and the generic
-// `entry:<event>` (fires for every entry regardless of type). Plugins
-// subscribe to whichever granularity they need — no need to re-filter by
-// type inside a generic handler.
-
 export async function applyEntryBeforeSave(
   ctx: AppContext,
   type: string,
@@ -62,11 +56,8 @@ export async function fireEntryPublished(
 }
 
 /**
- * The `publishedAt` to stamp when an entry transitions to `published`, or
- * `undefined` to leave the existing one. Stamps `now` when there's no publish
- * time yet, or when promoting a scheduled entry whose time is still in the
- * future (a future date would sort it to the top of feeds). Shared by the
- * editor update and revision-restore publish paths so they can't diverge.
+ * Stamps `now` when there's no publish time yet, or when the scheduled time
+ * is still in the future, which would sort it to the top of feeds.
  */
 export function publishedAtForTransition(
   existing: Date | null,
@@ -108,10 +99,7 @@ export async function fireEntryDeleted(
   await ctx.hooks.doAction("entry:deleted", entry, ctx);
 }
 
-// Type-specific event keys on the live entry's type — the autosave row
-// itself carries `type='autosave'`, but subscribers care about the
-// type of the entry being edited (e.g. `entry:post:autosave_saved`),
-// not the framework storage type.
+// Keyed on the live entry's type, not the autosave row's `type='autosave'`.
 export async function fireEntryAutosaveSaved(
   ctx: AppContext,
   autosave: Entry,
@@ -140,11 +128,8 @@ export async function fireEntryAutosaveDiscarded(
   await ctx.hooks.doAction("entry:autosave_discarded", live, authorId, ctx);
 }
 
-// `destination` is the row the snapshot landed on — autosave for
-// autosave-supporting types, live otherwise. `liveType` is always the
-// public entry type (the destination's type is `'autosave'` for
-// per-user pending edits) so subscribers fire under the same namespace
-// regardless of where the snapshot landed.
+// `liveType` is the public type even when the snapshot landed on an
+// autosave row, so subscribers fire under the same namespace.
 export async function fireEntryRevisionRestored(
   ctx: AppContext,
   revision: Entry,
@@ -165,20 +150,13 @@ export async function fireEntryRevisionRestored(
   );
 }
 
-/**
- * Shared prelude for the trash-lifecycle procedures (trash / restore /
- * deletePermanent): load-or-404, then gate on `canDeleteEntry` — the
- * `delete` capability plus author-or-`edit_any`. Deliberately distinct from
- * the edit gate (`canEditEntry`) — don't unify them.
- */
+// The trash gate is deliberately distinct from `canEditEntry`; don't unify
+// them.
 interface DeletableGuards {
   readonly notFound: (id: number) => never;
   readonly errors: GatedLookupErrors;
 }
 
-// The trash-lifecycle procedures (single + bulk) all translate a missing
-// row into NOT_FOUND and a failed cap into FORBIDDEN. `errors` is the
-// per-handler oRPC builder, so this is a thin shared adapter.
 export function entryDeletableGuards(
   errors: GatedLookupErrors,
 ): DeletableGuards {
@@ -211,10 +189,8 @@ export async function loadDeletableEntry(
 }
 
 /**
- * Batched sibling of `loadDeletableEntry` for the bulk procedures: one
- * `WHERE id IN (…)` read (no N+1), then per-row gating in memory.
- * Fail-all — any missing id or any forbidden row throws, so a bulk op
- * never half-applies across a mix of permitted and forbidden entries.
+ * Fail-all: any missing or forbidden id throws, so a bulk op never
+ * half-applies.
  */
 export async function loadDeletableEntries(
   ctx: AuthenticatedAppContext,
@@ -237,15 +213,8 @@ export async function loadDeletableEntries(
 }
 
 /**
- * Walk the parent chain upward from `candidateParentId` and decide whether
- * pointing `entryId` at it would create a cycle — i.e. whether entryId already
- * appears in the chain above candidateParentId. Returns true on any cycle
- * (including a pre-existing one walked into on the way up) or when the chain
- * exceeds a sanity limit; callers should treat true as "reject".
- *
- * Necessary because update.ts alone can't catch cycles of depth > 1
- * (A→B→A) from a self-id check; admin UI tree views will infinite-loop on
- * any such cycle left in the DB.
+ * Also returns true when the chain exceeds the depth cap or walks into a
+ * pre-existing cycle; treat true as reject.
  */
 export async function wouldCreateParentCycle(
   ctx: AuthenticatedAppContext,

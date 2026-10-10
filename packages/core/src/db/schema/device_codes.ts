@@ -7,49 +7,9 @@ import { users } from "./users.js";
 export const DEVICE_CODE_STATUSES = ["pending", "approved", "denied"] as const;
 export type DeviceCodeStatus = (typeof DEVICE_CODE_STATUSES)[number];
 
-// OAuth 2.0 Device Authorization Grant rows (RFC 8628). Distinct from
-// `auth_tokens` (single-use, consume-then-delete: invites, magic links,
-// PKCE state) — device flow has its own lifecycle: pending → approved
-// → exchanged-then-deleted, with separate human-typed and machine-polled
-// secrets.
-//
-// Storage shape, Copenhagen Book §"Token storage" aligned:
-//   id        = SHA-256(device_code)        — PK; the actual secret is
-//                                             never stored at rest.
-//   userCode  = "ABCD-EFGH" (plaintext)     — 30-bit, indexed for the
-//                                             admin's lookup-by-typed-code
-//                                             path. Plaintext is OK
-//                                             because (a) it's already
-//                                             low-entropy by design and
-//                                             (b) approval requires an
-//                                             authenticated browser
-//                                             session, so a leaked
-//                                             user_code without that
-//                                             session is useless.
-//   userId    = null until approved         — also flips the row from
-//                                             "pending" to "approved"
-//                                             on the polling client's
-//                                             next exchange.
-//   tokenName = approver-chosen name        — applied to the minted
-//                                             api_tokens row when the
-//                                             polling client exchanges.
-//
-// `status` carries the terminal state explicitly:
-//   pending  — newly issued, awaiting human action
-//   approved — `userId` bound, polling client's next exchange consumes
-//   denied   — human pressed "Deny" on the approval page; polling
-//              client sees `access_denied` (RFC 8628 §3.5) and gives
-//              up immediately rather than waiting out the TTL
-//
-// Privacy note: surfacing `denied` does leak "user is online and
-// rejected this prompt" to the polling client. We accept that tradeoff
-// for the UX win of fast feedback — operators concerned about the
-// signal can simply not surface a Deny button (the approval row
-// expires naturally).
-//
-// Compared to emdash's reference shape: their `device_code` PK is
-// stored plaintext. We hash the device_code at rest (DB leak ≠ secret
-// leak) and otherwise carry the same status enum.
+// RFC 8628 device grant. `id` is SHA-256(device_code), so a DB leak isn't a
+// secret leak. `userCode` stays plaintext: low-entropy by design, and approval
+// needs an authenticated session.
 export const deviceCodes = sqliteTable(
   "device_codes",
   (t) => ({
@@ -81,7 +41,10 @@ export const deviceCodes = sqliteTable(
      * semantics as `api_tokens.scopes`.
      */
     scopes: t.text({ mode: "json" }).$type<readonly string[]>(),
-    /** RFC 8628 §3.5 default 600s. Past this the polling client gets `expired_token`. */
+    /**
+     * RFC 8628 §3.5 default 600s. Past this the polling client gets
+     * `expired_token`.
+     */
     expiresAt: t.integer({ mode: "timestamp" }).notNull(),
     createdAt: t
       .integer({ mode: "timestamp" })
@@ -89,12 +52,8 @@ export const deviceCodes = sqliteTable(
       .default(sql`(unixepoch())`),
   }),
   (table) => [
-    // user_code has a unique constraint (its own lookup index).
-    // expires_at: prune-expired sweep.
-    // user_id: SQLite doesn't auto-index FK columns, so the
-    //   `onDelete: "cascade"` cleanup would full-scan without this.
-    //   Also enables future "list device-flow approvals by user"
-    //   queries without a table scan.
+    // SQLite doesn't auto-index FK columns, so the cascade would full-scan
+    // without `user_id`'s index.
     index("device_codes_expires_at_idx").on(table.expiresAt),
     index("device_codes_user_id_idx").on(table.userId),
   ],

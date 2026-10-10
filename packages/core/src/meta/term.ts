@@ -121,11 +121,8 @@ export async function resolveTermsMeta(
 }
 
 /**
- * Settle one term's stored bag and return the bag a reader should decode —
- * the term counterpart of `settleEntryMeta`, which says why the settle hangs
- * off the single-item read and not the decode. The public renderer reads term
- * meta through `page-data.ts` and `resolve-entry-list.ts`, neither of
- * which comes through here.
+ * Writes, so never call it from a read an anonymous caller can reach. The
+ * public renderer reads term meta elsewhere.
  */
 export async function settleTermMeta(
   ctx: AppContext,
@@ -142,11 +139,7 @@ export async function settleTermMeta(
   };
 }
 
-/**
- * Write back a settle already computed from `stored`, and announce it if it
- * landed — the step the bulk sweep shares with the read heal, so both write and
- * announce the same way.
- */
+/** Announces the settle only if it landed. */
 export async function writeSettledTermMeta(
   ctx: AppContext,
   term: { readonly id: number; readonly taxonomy: string },

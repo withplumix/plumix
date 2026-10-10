@@ -14,9 +14,8 @@ import { base } from "./base.js";
 import { entryNotFound } from "./entries-resource.js";
 import { resolvePublicEntryType } from "./rest-base.js";
 
-// Enforce the declarative route-auth model before a plugin handler runs:
-// `public` is open; `authenticated` requires a real bearer principal (not the
-// anonymous public one); a capability gate defers to the principal's grants.
+// `authenticated` requires a real bearer principal, not the anonymous public
+// one.
 function enforceRestAuth(
   auth: RestResourceAuth,
   context: RestContext,
@@ -36,7 +35,6 @@ function enforceRestAuth(
 
 const EMPTY_INPUT = v.object({});
 
-/** The path segments core binds on a plugin resource, by reserved name. */
 const BOUND_SEGMENTS = ["collection", "entry"] as const;
 type BoundSegment = (typeof BOUND_SEGMENTS)[number];
 
@@ -45,11 +43,8 @@ interface Bindings {
   entry?: Entry;
 }
 
-// `{collection}` resolves through the resolver core's own collection routes
-// use, so the two never disagree on a name. `{entry}` resolves through core's
-// entry-read rule for the requesting principal, scoped to the collection's
-// type when the path has both. Every way an entry fails to bind answers the
-// same NOT_FOUND, so a stranger can't tell which ids exist.
+// Resolved through core's own collection and entry-read rules so they never
+// disagree. Every bind failure is the same NOT_FOUND, so ids can't be probed.
 async function bindSegments(
   params: Partial<Record<BoundSegment, string>>,
   context: RestContext,
@@ -87,9 +82,8 @@ function boundSegmentsOf(path: string): readonly BoundSegment[] {
   return BOUND_SEGMENTS.filter((name) => path.includes(`{${name}}`));
 }
 
-// The resource's input schema covers only its own params, query and body; the
-// bound segments join it here so oRPC routes them and the spec documents them
-// as path params, and are split back out before the handler sees `input`.
+// Bound segments join the schema so oRPC routes and documents them, then are
+// split back out before the handler sees `input`.
 /* eslint-disable @typescript-eslint/no-explicit-any -- a resource's input is any plugin's valibot schema */
 function inputSchemaOf(
   resource: RegisteredRestResource,
@@ -105,12 +99,8 @@ function inputSchemaOf(
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
-/**
- * A bound resource's parsed input: its own schema's output joined with the
- * bound segments, keyed by the resource's params, query and body fields. Not
- * JSON: the values are whatever the plugin's schema decodes them to, `Date`s
- * and `File`s included.
- */
+// Not JSON: values are whatever the plugin's schema decodes them to, `Date`s
+// and `File`s included.
 type BoundResourceInput = Record<string, unknown>;
 
 // Split the bound segments' raw values out of the parsed input.
@@ -130,11 +120,8 @@ function splitBound(
   return { params, own };
 }
 
-/**
- * An oRPC router assembled from a plugin's registered REST resources, keyed by
- * index. Not JSON: the values are live oRPC procedures — handler closures with
- * their route metadata attached.
- */
+// Not JSON: the values are live oRPC procedures, handler closures with route
+// metadata attached.
 type PluginRestRouter = Record<string, unknown>;
 
 // Build oRPC procedures for plugin resources, keyed by index (OpenAPI routing

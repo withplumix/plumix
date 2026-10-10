@@ -4,10 +4,8 @@ import type { JsonObject } from "../json.js";
 // too — that module sits below `render-block-tree.ts` in the import graph.
 
 /**
- * The queried entry, spread flat so a block or shortcode can look a field up
- * by name. Not JSON: it arrives already hydrated by the field adapters, so a
- * `.returns("date")` field reads back as a `Date` and a reference as the
- * entity it points at.
+ * Not JSON: already hydrated by the field adapters, so a date field reads as
+ * a `Date` and a reference as its entity.
  */
 export type HydratedEntry = Readonly<Record<string, unknown>>;
 

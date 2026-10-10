@@ -33,12 +33,7 @@ export class GroupFieldSeed<K extends string = string> {
     this.#key = key;
   }
 
-  /**
-   * Declare the group's member fields — infers the typed nested record.
-   * Members may be any registered field type, including nested
-   * repeaters and further groups; types recurse. Validated eagerly (key
-   * shape, uniqueness, prototype-pollution guard).
-   */
+  /** Validated eagerly: key shape, uniqueness, prototype-pollution guard. */
   fields<const F extends readonly MetaBoxFieldInput[]>(
     fields: F,
   ): GroupFieldBuilder<F, K> {
@@ -49,14 +44,8 @@ export class GroupFieldSeed<K extends string = string> {
 }
 
 /**
- * Fluent chain for group fields — namespaces its members into a typed
- * nested object stored under the group's own key (no key-flattening).
- * Immutable — every call returns a fresh instance.
- *
- * `F` is the declared member tuple (drives the recursive record type);
- * `K` is the literal field key; `V` is the phantom read type —
- * `InferFields<F> | undefined`, narrowed by `.required()`; `S` is the
- * phantom stored shape (`InferStoredFields<F>`). All purely type-level.
+ * Stores members as a nested object under the group's own key, never
+ * flattened. Immutable: every call returns a fresh instance.
  */
 export class GroupFieldBuilder<
   F extends readonly MetaBoxFieldInput[],
@@ -99,14 +88,9 @@ export class GroupFieldBuilder<
   }
 
   /**
-   * The value a new entity starts with — written into its meta when it is
-   * created; a cleared group stays empty. Typed
-   * against the declared members in their STORED spelling — an ISO string,
-   * a bare reference id — because it is stored with no conversion. Partial
-   * by design; a misspelled key is a compile error. Without one, the group
-   * starts from its members' defaults.
-   *
-   * Leaves the read type as it is; `.required()` narrows it.
+   * The value a new entity starts with, in the STORED spelling (ISO string,
+   * bare id) because it is stored unconverted. Without one, members' defaults
+   * apply.
    */
   default(value: Partial<InferStoredFields<F>>): GroupFieldBuilder<F, K, V, S> {
     return this.#fork({ default: value });
@@ -168,14 +152,9 @@ export class GroupFieldBuilder<
   }
 
   /**
-   * Reshape the whole member object before persistence — derive one
-   * member from another, or drop a member. Runs once, after every member
-   * has been settled, which is why it is typed against the stored shape:
-   * a reference member is a bare id here, not the hydrated summary a read
-   * returns. Members are not re-validated afterwards, but the
-   * blank-member check and the security gates do re-run over the output,
-   * so a sanitizer cannot write a value into a member that the member's
-   * own field would have refused. Returning no members clears the field.
+   * Runs after every member settled, so it sees the stored shape (references
+   * are bare ids). Blank-member and security checks re-run on the output;
+   * returning no members clears the field.
    */
   sanitize(
     sanitize: (members: NonNullable<S>) => Partial<InferStoredFields<F>>,
@@ -184,11 +163,8 @@ export class GroupFieldBuilder<
   }
 
   /**
-   * Cross-member rule — returns `true` or the failure message (sync or
-   * async), reported against the group itself. Runs last: after every
-   * member passed and after `.sanitize()`, so a rule relating two members
-   * sees exactly what will be stored. Skipped when any member failed,
-   * when the group is empty (that is a deletion), and on a draft save.
+   * Reported against the group. Runs last, after the members and `.sanitize()`;
+   * skipped when a member failed, the group is empty, or on a draft save.
    */
   validate(
     validate: (members: NonNullable<S>) => true | Label | Promise<true | Label>,

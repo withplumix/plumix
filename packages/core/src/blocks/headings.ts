@@ -1,7 +1,5 @@
-// The heading levels the unified Text block (core/rich-text) supports — the
-// single source of truth shared by the Tiptap editor (extension config + format
-// control) and the sanitiser allowlist, so the editor can never produce a
-// heading the renderer would strip, and vice versa.
+// Shared by the editor and the sanitiser allowlist so the editor can never
+// produce a heading the renderer would strip.
 export const HEADING_LEVELS = [1, 2, 3, 4, 5, 6] as const;
 
 export type HeadingLevel = (typeof HEADING_LEVELS)[number];

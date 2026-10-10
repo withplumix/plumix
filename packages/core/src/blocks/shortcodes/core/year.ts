@@ -1,9 +1,8 @@
 import { defineShortcode } from "../types.js";
 
 /**
- * `[year]` → the current year in the site's locale and numeral system
- * (Arabic locale → ٢٠٢٦). Reads `new Date()` directly: public HTML renders
- * fresh per request, so the year re-evaluates every render with no cache.
+ * Uses the site locale's numeral system (Arabic → ٢٠٢٦). Reads `new Date()`
+ * per render, uncached.
  */
 export const yearShortcode = defineShortcode({
   name: "year",

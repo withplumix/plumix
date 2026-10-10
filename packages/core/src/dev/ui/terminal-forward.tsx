@@ -1,31 +1,27 @@
 /// <reference lib="dom" />
-// Browser-errors-to-terminal forwarding (#1604, decisions #1573/#1579). A
-// dev-only catch net that mirrors the island overlay's producers — uncaught
-// exceptions (`error` / `unhandledrejection`), and the island renderer's
-// `plumix:island-error` / `plumix:hydration-error` events — and additionally
-// patches `console.error` / `console.warn`. The opt-in `log` level (#1625) also
-// patches `console.log` / `console.info` / `console.debug`; it is off by default
-// because plain logs are noisy. Each captured entry is batched and POSTed to the
-// dev server, which sourcemaps it and prints it into the `plumix dev` terminal
-// tagged `[browser]`, so client failures show up where the developer is already
-// working. On by default, tunable via the level, and — like the overlay — pulled
-// in only under the dev gate, so it tree-shakes out of production island bundles.
+// `log` level is opt-in because plain logs are noisy. Load only under the dev
+// gate, so this tree-shakes out of production island bundles.
 
 import { deriveLabel, detailOf } from "../../blocks/island-events.js";
 import { DEV_ERROR_TERMINAL_ENDPOINT } from "./frames.js";
 
 /**
  * How much client output forwards, from least to most verbose: `error`, `warn`
- * (default — errors + warnings), then `log` (adds `console.log`/`info`/`debug`).
+ * (default — errors + warnings), then `log` (adds
+ * `console.log`/`info`/`debug`).
  */
 export type ForwardLevel = "off" | "error" | "warn" | "log";
 
 /** One client failure forwarded to the terminal. Shared wire shape with the
  * Node-side printer (`plumix/vite`), which resolves {@link stack} to frames. */
 export interface ForwardedLog {
-  /** `exception` for an uncaught throw; `console` for a patched console method. */
+  /**
+   * `exception` for an uncaught throw; `console` for a patched console method.
+   */
   readonly kind: "console" | "exception";
-  /** The console method for a `console` log; always `error` for an exception. */
+  /**
+   * The console method for a `console` log; always `error` for an exception.
+   */
   readonly level: "error" | "warn" | "log" | "info" | "debug";
   /** The human message — for an exception, `Name: message`. */
   readonly message: string;
@@ -40,18 +36,17 @@ export interface TerminalForwardOptions {
   readonly level?: ForwardLevel;
   readonly endpoint?: string;
   /**
-   * Schedule a batch flush. Defaults to a `setTimeout(0)` so a synchronous
-   * burst of errors coalesces into one POST — and, unlike
-   * `requestAnimationFrame`, it still fires when the tab is backgrounded.
-   * Injected in tests to flush deterministically.
+   * Defaults to `setTimeout(0)`, which coalesces a synchronous burst into one
+   * POST and, unlike `requestAnimationFrame`, still fires in a background tab.
    */
   readonly schedule?: (flush: () => void) => void;
 }
 
 /**
- * Resolve the `PLUMIX_FORWARD_ERRORS` env value to a level. Default (unset/empty)
- * is `warn` — uncaught errors plus `console.error`/`console.warn`. `off`/`false`
- * disables forwarding; `error` drops warnings; `log` additionally forwards
+ * Resolve the `PLUMIX_FORWARD_ERRORS` env value to a level. Default
+ * (unset/empty) is `warn` — uncaught errors plus
+ * `console.error`/`console.warn`. `off`/`false` disables forwarding; `error`
+ * drops warnings; `log` additionally forwards
  * `console.log`/`console.info`/`console.debug`.
  */
 export function parseForwardLevel(raw: string | undefined): ForwardLevel {
@@ -62,13 +57,8 @@ export function parseForwardLevel(raw: string | undefined): ForwardLevel {
   return "warn";
 }
 
-/**
- * Install terminal forwarding on `window`. Returns a teardown that restores the
- * patched console methods and removes the listeners. A `level` of `off` is a
- * no-op that returns an empty teardown. Idempotent: a second call before teardown
- * returns the existing forwarder's teardown, so an HMR re-run of the islands
- * bootstrap never double-patches console or stacks listeners.
- */
+// Idempotent: a second install before teardown returns the existing teardown,
+// so an HMR re-run never double-patches console or stacks listeners.
 let active: TerminalForwarder | null = null;
 
 export function installTerminalForwarding(
@@ -127,17 +117,14 @@ class TerminalForwarder {
   private patchConsole(method: ConsoleMethod): void {
     // `console` lives on the global scope, not the `Window` interface itself.
     const console = (this.target as Window & typeof globalThis).console;
-    // Keep the exact original reference so teardown restores it identically
-    // (a `.bind` copy would leave a different function behind); it is only ever
-    // invoked with `.apply(console, …)`, so the unbound extraction is safe.
+    // Keep the original reference so teardown restores it identically; it is
+    // only invoked with `.apply(console, …)`, so the unbound extraction is safe.
     // eslint-disable-next-line @typescript-eslint/unbound-method
     const original = console[method];
     const patched = (...args: unknown[]): void => {
       original.apply(console, args);
-      // Skip the framework's own re-log of an error already forwarded as an
-      // exception — the island renderer dispatches `plumix:island-error` and
-      // then `console.error(error)` for the same object, which would otherwise
-      // print the same failure twice.
+      // The island renderer re-logs an error it already dispatched as
+      // `plumix:island-error`; skip it so the failure isn't printed twice.
       if (args.some((arg) => this.alreadyForwarded(arg))) return;
       this.enqueue({
         kind: "console",
@@ -182,10 +169,8 @@ class TerminalForwarder {
     );
   }
 
-  // Dedup only by object identity — the one real double is a single thrown error
-  // reaching two producers (the island event and the window `error` handler).
-  // Primitive throws never overlap producers, so they forward every time and the
-  // server collapses genuine consecutive repeats into a `(×N)` count.
+  // Dedup only by identity: the one real double is a thrown error reaching two
+  // producers. The server collapses consecutive primitive repeats into `(×N)`.
   private isDuplicate(error: unknown): boolean {
     if (error === null || typeof error !== "object") return false;
     if (this.seenObjects.has(error)) return true;
@@ -251,9 +236,8 @@ function formatArg(arg: unknown): string {
   }
 }
 
-// The call-site stack for a console message, with our own wrapper frame omitted
-// where V8 supports it (`Error.captureStackTrace`); other engines keep the raw
-// stack, whose top frame is this module — the server drops vendor frames anyway.
+// `Error.captureStackTrace` omits our wrapper frame where V8 supports it;
+// elsewhere the server drops it as a vendor frame anyway.
 function callSiteStack(
   origin: (...args: unknown[]) => void,
 ): string | undefined {

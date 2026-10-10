@@ -130,13 +130,8 @@ export type {
 } from "./validation-errors.js";
 
 // ─── Style emission + theme tokens ──────────────────────────────────────────
-// The token↔CSS-var codec (`tokenIdToCssVar`, `tokenIdFromCssVar`,
-// `tokenCssVar`, `tokenCategoryForProperty`, `normalizeStyleValue`) is
-// package-internal — it stays behind `createStyleField`/`createStyleFields`,
-// the SSR `emitBlockStyleCss` and `emitThemeTokenCss`, so no consumer parses or
-// builds a `var()` string. `emitThemeTokenCss` writes the other side of that
-// codec — the custom properties those references resolve against — for a
-// surface rendering away from the page, where the theme's own CSS never loads.
+// The token↔CSS-var codec stays internal so no consumer parses or builds a
+// `var()` string.
 export {
   DEFAULT_BREAKPOINTS,
   emitBlockStyleCss,

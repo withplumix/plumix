@@ -5,16 +5,8 @@ import { mailerTestSendInputSchema } from "./schemas.js";
 
 const CAPABILITY = "settings:manage";
 
-// Operator sanity check: send a one-shot test email through the
-// configured mailer adapter. Used post-deploy to confirm the magic-link
-// flow will actually deliver. Distinct from the magic-link request
-// path — that one swallows mailer failures (always-success contract);
-// this one reports the mailer's error verbatim so the operator can
-// debug the adapter.
-//
-// Capability-gated to `settings:manage` (admin-equivalent in the
-// default RBAC) — the recipient is operator-supplied input, so we
-// don't want every authed user able to fire emails.
+// Unlike the magic-link path, which swallows mailer failures, this reports
+// the mailer's error verbatim. Gated because the recipient is caller input.
 export const testSend = base
   .use(authenticated)
   .use(requireCapability(CAPABILITY))

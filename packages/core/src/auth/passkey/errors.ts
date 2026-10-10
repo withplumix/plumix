@@ -1,10 +1,5 @@
-// challenge_expired is folded into challenge_not_found — `consumeChallenge`
-// returns null whether the row was missing or just expired, since the
-// distinction is meaningless to the caller (and leaking it would help
-// timing-distinguish stale from never-issued).
-//
-// Admin's `passkey-errors.ts` mirrors this tuple via a compile-time
-// assertion; changing it will trip an admin typecheck failure.
+// No challenge_expired: telling stale from never-issued apart would leak timing
+// information.
 export const PASSKEY_ERROR_CODES = [
   "challenge_not_found",
   "invalid_client_data",

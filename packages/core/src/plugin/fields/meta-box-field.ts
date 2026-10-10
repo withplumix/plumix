@@ -1,9 +1,3 @@
-// Meta-box field vocabulary — the `MetaBoxField` discriminated union, its
-// per-variant shapes, the temporal value helpers, and `compileMetaBoxFields`.
-// Extracted from `../manifest.js` so the fluent field builders in this
-// directory depend on their variant types directly, breaking the former
-// `fields/* → manifest` import cycle. Re-exported unchanged from the public
-// `@plumix/core/manifest` barrel.
 import type { Capability } from "../../access/contract/capability.js";
 import type { Label } from "../../i18n/label.js";
 import type { ImageRoleName } from "../../images/contract/role-images.js";
@@ -12,19 +6,15 @@ import type { MetaFieldCondition } from "./condition.js";
 import type { StringInputType, TemporalInputType } from "./roster.js";
 import { TEMPORAL_INPUT_TYPES } from "./roster.js";
 
-// The string / temporal input-type unions derive from the runtime roster
-// arrays (see `./roster.js`) so a family's value list and its type share
-// one source. Re-exported here to keep the `plumix/fields` barrel and the
-// builder re-export chain pointing at `meta-box-field.js` unchanged.
+// Re-exported so the builder re-export chain keeps resolving through this
+// module.
 export type { StringInputType, TemporalInputType };
 
 export type MetaScalarType = "string" | "number" | "boolean" | "json";
 
 /**
- * Stored shape of a field's `.validate()` callback. Sync or async;
- * `true` means valid, a `Label` is the failure message surfaced to the
- * editor. The fluent chain types the parameter with the field's
- * narrowed value type; the definition stores it broad.
+ * `true` means valid; a `Label` is the failure message shown to the editor.
+ * Stored broad; the fluent chain narrows the parameter.
  */
 export type MetaBoxFieldValidate = (
   value: unknown,
@@ -36,13 +26,9 @@ export interface MetaBoxFieldOption {
 }
 
 /**
- * Column span for a field within its meta box's 12-column grid. A plain
- * number applies from the smallest breakpoint up. The object form is
- * mobile-first: `base` is the default, `sm` / `md` / `lg` override upward.
- * Breakpoints key off the card's own width (Tailwind container queries,
- * `@sm` / `@md` / `@lg`) so the same `span` renders consistently whether
- * the box lands in a full-width route or a narrow sidebar. Values outside
- * 1..12 are clamped at render time. Omitted span means full width (12).
+ * The object form is mobile-first. Breakpoints key off the card's own width
+ * (container queries), not the viewport. Values outside 1..12 are clamped;
+ * omitted means full width.
  */
 export type MetaBoxFieldSpan =
   | number
@@ -62,11 +48,8 @@ export interface MetaBoxFieldBase {
   readonly key: string;
   readonly label: Label;
   /**
-   * Storage type. Drives server-side sanitization on write, which is the
-   * only place it is enforced: a value is settled into this type on the way
-   * in, and read back as the `entry.meta` / `term.meta` column holds it.
-   * A row that bypassed the write pipeline therefore reads as whatever it
-   * stores, not as this type. `json` accepts any JSON-serialisable value.
+   * Enforced only on write: a row that bypassed the write pipeline reads as
+   * whatever it stores, not as this type.
    */
   readonly type: MetaScalarType;
   /**
@@ -93,34 +76,19 @@ export interface MetaBoxFieldBase {
    */
   readonly span?: MetaBoxFieldSpan;
   /**
-   * Capability gate for the individual field. When set, the admin hides
-   * the field from viewers whose capability set lacks it. The server
-   * rejects entry/term/user writes that include the field's key — both
-   * upserts and deletes count, so a viewer can't blank a value they
-   * can't see. Gating applies at the top-level field only; capabilities
-   * on repeater subfields are ignored (a row's gate is the parent
-   * repeater field's gate). Defaults to no gating.
+   * Hidden in the admin from viewers lacking it; the server rejects writes
+   * (including deletes) to the key. Top-level only: repeater subfield
+   * capabilities are ignored.
    */
   readonly capability?: Capability;
   /**
-   * Expose this field's value on the public REST API. Default-deny: meta is
-   * hidden from REST responses unless a field opts in with `showInApi: true`,
-   * so internal fields never leak by default. Has no effect on the admin RPC.
-   *
-   * The `meta` map is keyed by top-level field, so the flag reaches it only
-   * from one. A role field is addressed by its role rather than by a key, so
-   * `images.<role>` reads the flag off the field carrying the role wherever
-   * it sits — a role field inside a group opts its own image in, and does not
-   * inherit the group's answer in either direction.
+   * Public REST only; default-deny. A role field's `images.<role>` reads its
+   * own flag wherever it sits, never inheriting a parent group's.
    */
   readonly showInApi?: boolean;
   /**
-   * Opt this field's value into the site's full-text index. Default-deny, the
-   * way `showInApi` is: meta holds plugin bookkeeping and internal keys as
-   * often as it holds prose, and indexing all of it is the mistake
-   * ElasticPress spent a decade on before reversing it. Server-only —
-   * omitted from the wire manifest, and inert without a search plugin
-   * installed to read it.
+   * Default-deny: meta holds plugin bookkeeping as often as prose. Server-only,
+   * omitted from the wire manifest, and inert without a search plugin.
    */
   readonly searchable?: boolean;
   /**
@@ -130,39 +98,20 @@ export interface MetaBoxFieldBase {
    * `isFieldVisible`.
    */
   readonly visibleWhen?: MetaFieldCondition;
-  /**
-   * The image role this media field fills for its entry, term or user — see
-   * {@link ImageRoleName}. Core registers `"featured"` (the representative image)
-   * and `"ogImage"` (a social-share override); `registerImageRole` adds more.
-   * Server-only — omitted from the wire manifest. Set via the media builder's
-   * `.role()`, or its `.featured()` / `.ogImage()` sugar.
-   */
+  /** Server-only; omitted from the wire manifest. */
   readonly role?: ImageRoleName;
 }
 
-/**
- * Static text beside an input, which is how a unit suffix or a currency
- * symbol gets there without becoming part of the stored value. Carried
- * only by the variants whose admin control renders it.
- */
+// Carried only by the variants whose admin control renders it.
 interface MetaBoxFieldAdornments {
-  /** Rendered before the input (e.g. a URL scheme). */
   readonly prepend?: Label;
-  /** Rendered after the input (e.g. a unit suffix). */
   readonly append?: Label;
 }
 
 /**
- * Shared shape of the five string scalar variants produced by the
- * fluent builders exported from `plumix/fields` — they differ only in
- * their `inputType` literal. Downstream consumers rely on the narrowed
- * shape via the `inputType` discriminator.
- *
- * `I` is not bound to {@link StringInputType}: a plugin contributing a
- * string-shaped input through `registerFieldType` (`tel`, say) reuses
- * this shape and the builder over it rather than restating either. Such
- * a field lands in the union as a {@link LegacyMetaBoxField}, which is
- * what keeps the name out of the built-in roster.
+ * `I` is not bound to {@link StringInputType}: a plugin string input (`tel`,
+ * say) reuses this shape and lands in the union as a {@link
+ * LegacyMetaBoxField}.
  */
 export interface StringMetaBoxField<I extends string = StringInputType>
   extends MetaBoxFieldBase, MetaBoxFieldAdornments {
@@ -203,18 +152,9 @@ export interface NumberMetaBoxField
 }
 
 /**
- * Shared shape of the three temporal variants produced by the fluent
- * builders — they differ only in their `inputType` literal and the
- * ISO shape of the stored string. `min` / `max` bounds use the same
- * format as the stored value; the constraint walker enforces them
- * server-side (ISO shapes compare lexicographically in temporal
- * order).
- *
- * `returns: "date"` opts the field's reads into a decode-time
- * projection: the stored ISO string is handed to consumers as a JS
- * `Date` with its wall-clock components anchored to UTC (a `time`
- * value anchors to 1970-01-01 UTC). Storage and the write contract
- * stay ISO strings either way.
+ * ISO strings compare lexicographically in temporal order, so `min` / `max`
+ * share the stored format. `returns: "date"` reads a UTC-anchored `Date`; a
+ * `time` anchors to 1970-01-01.
  */
 export interface TemporalMetaBoxField<
   I extends TemporalInputType = TemporalInputType,
@@ -227,11 +167,8 @@ export interface TemporalMetaBoxField<
 }
 
 /**
- * Format a UTC-anchored `Date` into the ISO string shape a temporal
- * field stores (`YYYY-MM-DD`, `YYYY-MM-DDTHH:MM[:SS]`, `HH:MM[:SS]`).
- * Seconds appear only when nonzero, mirroring what the native inputs
- * emit. Shared by the server-side meta write encoder and the admin's
- * input prefill so the two can't drift; callers guard invalid Dates.
+ * Seconds appear only when nonzero, matching native inputs. Callers guard
+ * invalid Dates.
  */
 export function formatTemporalValue(
   inputType: TemporalInputType,
@@ -263,11 +200,8 @@ const TEMPORAL_SHAPES: Record<TemporalInputType, RegExp> = {
 };
 
 /**
- * Anchor a stored temporal string to a UTC-parseable form — `date` at
- * UTC midnight, `time` on 1970-01-01 UTC. The single source of the
- * anchoring rule shared by the read-side `Date` projection and the
- * write-side validity check, which must stay exact inverses of
- * `formatTemporalValue`.
+ * Must stay the exact inverse of `formatTemporalValue`: `date` anchors at UTC
+ * midnight, `time` on 1970-01-01 UTC.
  */
 export function anchorTemporalUtc(
   inputType: TemporalInputType,
@@ -300,12 +234,8 @@ export function isValidTemporalValue(
 export type DateMetaBoxField = TemporalMetaBoxField<"date">;
 
 /**
- * Date + time field. Stored as a partial ISO 8601 string
- * (`YYYY-MM-DDTHH:MM` with optional `:SS`) reflecting whatever the
- * author's browser produced via `<input type="datetime-local">` —
- * naive local time, no timezone offset baked in. Consumers who need
- * timezone semantics anchor explicitly via `parseMetaDate` + their
- * own `Temporal.ZonedDateTime` shaping.
+ * Naive local time from `<input type="datetime-local">`, no offset; consumers
+ * needing timezones anchor explicitly.
  */
 export type DateTimeMetaBoxField = TemporalMetaBoxField<"datetime">;
 
@@ -351,24 +281,15 @@ export interface JsonMetaBoxField extends MetaBoxFieldBase {
 }
 
 /**
- * Reference target descriptor carried on every reference field
- * variant (`user`, `entry`, `term`, `media`, plugin-registered
- * custom kinds). The `kind` matches a registered `LookupAdapter`;
- * the adapter interprets `scope` according to its own contract.
- *
- * Reading the manifest, the admin dispatches to a generic picker
- * that calls the lookup RPC with `{ kind, scope }` — picker UI is
- * one component, target-specific knowledge lives in the adapter.
- */
-/**
- * Read-projection opt-out carried on a reference field. `"id"` makes the
- * field's reads yield the bare stored id(s) instead of the resolved
- * summary — the read pipeline skips the batched resolution join (and its
- * orphan-stripping) for that field. Storage and the write contract are
- * unaffected. Authored via the builder's `.returns("id")`.
+ * `"id"` skips the read-time resolution join and its orphan-stripping; storage
+ * and writes are unaffected.
  */
 export type ReferenceReadProjection = "id";
 
+/**
+ * `kind` names a registered `LookupAdapter`, which interprets `scope` by its
+ * own contract.
+ */
 export interface ReferenceTarget<TScope = unknown> {
   readonly kind: string;
   readonly scope?: TScope;
@@ -382,65 +303,64 @@ export interface ReferenceTarget<TScope = unknown> {
 }
 
 /**
- * Single user reference. Storage is the bare user id as a string
- * (`"42"` → `users.id = 42`); reads return `null` when the user is
- * gone or no longer matches scope. The `referenceTarget.scope`
- * accepts the user adapter's scope shape (roles + disabled-state).
+ * Stored as the bare user id string; reads return `null` when the user is gone
+ * or no longer matches scope.
  */
 export interface UserMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "user";
   readonly type: "string";
   readonly referenceTarget: ReferenceTarget;
-  /** `.returns("id")`: reads yield the bare stored id, skipping the read-time resolution join. See {@link ReferenceReadProjection}. */
+  /**
+   * `.returns("id")`: reads yield the bare stored id, skipping the read-time
+   * resolution join. See {@link ReferenceReadProjection}.
+   */
   readonly returns?: ReferenceReadProjection;
 }
 
 /**
- * Multi user reference. Storage is a JSON array of bare user ids
- * (`["42", "43"]`); reads filter out orphans (the bag's array stays
- * dense — missing IDs are dropped, not nulled, so consumers iterate
- * without branching). `referenceTarget.multiple` is `true`; `max`
- * caps the array length at write time.
+ * Reads drop orphans rather than nulling them, so the array stays dense; `max`
+ * caps its length at write time.
  */
 export interface UserListMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "userList";
   readonly type: "json";
   readonly referenceTarget: ReferenceTarget;
-  /** `.returns("id")`: reads yield the bare stored id, skipping the read-time resolution join. See {@link ReferenceReadProjection}. */
+  /**
+   * `.returns("id")`: reads yield the bare stored id, skipping the read-time
+   * resolution join. See {@link ReferenceReadProjection}.
+   */
   readonly returns?: ReferenceReadProjection;
   /** Max items allowed in the array. Omitted = unbounded. */
   readonly max?: number;
 }
 
 /**
- * Single entry reference. Storage is the bare entry id as a string;
- * reads return `null` when the entry is gone, scope-mismatched, or
- * trashed. `referenceTarget.scope` carries `entryTypes` (the only
- * entry-type names this field accepts).
- *
- * Naming note: the `Reference` infix keeps the name clear of the
- * entry-meta-box option types (`EntryMetaBoxOptions` and friends).
+ * Reads return `null` when the entry is gone, scope-mismatched, or trashed.
+ * The `Reference` infix avoids clashing with `EntryMetaBoxOptions`.
  */
 export interface EntryReferenceMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "entry";
   readonly type: "string";
   readonly referenceTarget: ReferenceTarget;
-  /** `.returns("id")`: reads yield the bare stored id, skipping the read-time resolution join. See {@link ReferenceReadProjection}. */
+  /**
+   * `.returns("id")`: reads yield the bare stored id, skipping the read-time
+   * resolution join. See {@link ReferenceReadProjection}.
+   */
   readonly returns?: ReferenceReadProjection;
 }
 
 /**
- * Multi entry reference. Storage is a JSON array of bare entry ids;
- * reads filter out orphans (the array stays dense — missing IDs are
- * dropped, not nulled). `referenceTarget.multiple` is `true`; `max`
- * caps the array length at write time. Scope rules match
- * `EntryReferenceMetaBoxField` — `entryTypes` is required.
+ * Reads drop orphans, keeping the array dense; `max` caps its length at write
+ * time. `entryTypes` scope is required.
  */
 export interface EntryListMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "entryList";
   readonly type: "json";
   readonly referenceTarget: ReferenceTarget;
-  /** `.returns("id")`: reads yield the bare stored id, skipping the read-time resolution join. See {@link ReferenceReadProjection}. */
+  /**
+   * `.returns("id")`: reads yield the bare stored id, skipping the read-time
+   * resolution join. See {@link ReferenceReadProjection}.
+   */
   readonly returns?: ReferenceReadProjection;
   /** Max items allowed in the array. Omitted = unbounded. */
   readonly max?: number;
@@ -456,82 +376,66 @@ export interface TermReferenceMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "term";
   readonly type: "string";
   readonly referenceTarget: ReferenceTarget;
-  /** `.returns("id")`: reads yield the bare stored id, skipping the read-time resolution join. See {@link ReferenceReadProjection}. */
+  /**
+   * `.returns("id")`: reads yield the bare stored id, skipping the read-time
+   * resolution join. See {@link ReferenceReadProjection}.
+   */
   readonly returns?: ReferenceReadProjection;
 }
 
 /**
- * Multi term reference. Storage is a JSON array of bare term ids;
- * reads filter out orphans the same way `EntryListMetaBoxField`
- * does. `referenceTarget.multiple` is `true`; `max` caps array
- * length. Scope rules match `TermReferenceMetaBoxField` —
- * `termTaxonomies` is required.
+ * Reads drop orphans, keeping the array dense; `max` caps its length.
+ * `termTaxonomies` scope is required.
  */
 export interface TermListMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "termList";
   readonly type: "json";
   readonly referenceTarget: ReferenceTarget;
-  /** `.returns("id")`: reads yield the bare stored id, skipping the read-time resolution join. See {@link ReferenceReadProjection}. */
+  /**
+   * `.returns("id")`: reads yield the bare stored id, skipping the read-time
+   * resolution join. See {@link ReferenceReadProjection}.
+   */
   readonly returns?: ReferenceReadProjection;
   /** Max items allowed in the array. Omitted = unbounded. */
   readonly max?: number;
 }
 
 /**
- * Single media reference. Storage is the bare media id as a string;
- * reads return `null` for orphans / scope mismatches, and admin
- * renders resolve labels through the lookup path.
- *
- * Lives in core so the typed builder narrows correctly at call
- * sites — same convention as `entry` / `term`. The actual builder
- * + adapter are in `@plumix/plugin-media`.
+ * Reads return `null` for orphans or scope mismatches. Declared in core so the
+ * builder narrows; `@plumix/plugin-media` ships the builder and adapter.
  */
 export interface MediaMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "media";
   readonly type: "json";
   readonly referenceTarget: ReferenceTarget;
-  /** `.returns("id")`: reads yield the bare stored id, skipping the read-time resolution join. See {@link ReferenceReadProjection}. */
+  /**
+   * `.returns("id")`: reads yield the bare stored id, skipping the read-time
+   * resolution join. See {@link ReferenceReadProjection}.
+   */
   readonly returns?: ReferenceReadProjection;
 }
 
 /**
- * Multi media reference. Storage is a JSON array of bare media ids;
- * reads filter out orphans the same way `EntryListMetaBoxField`
- * does. `referenceTarget.multiple` is `true`; `max` caps the array
- * length at write time.
+ * Reads drop orphans, keeping the array dense; `max` caps its length at write
+ * time.
  */
 export interface MediaListMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "mediaList";
   readonly type: "json";
   readonly referenceTarget: ReferenceTarget;
-  /** `.returns("id")`: reads yield the bare stored id, skipping the read-time resolution join. See {@link ReferenceReadProjection}. */
+  /**
+   * `.returns("id")`: reads yield the bare stored id, skipping the read-time
+   * resolution join. See {@link ReferenceReadProjection}.
+   */
   readonly returns?: ReferenceReadProjection;
   /** Max items allowed in the array. Omitted = unbounded. */
   readonly max?: number;
 }
 
 /**
- * Richtext field — Tiptap ProseMirror JSON storage. `marks`, `nodes`,
- * and `blocks` are strict allowlists: omitted entries are denied even
- * if they're standard Tiptap extensions. `doc`/`paragraph`/`text` are
- * always included implicitly because ProseMirror requires them for
- * any document to parse.
- *
- * `marks` are inline formatters (`bold`, `italic`, `link`, …).
- * `nodes` are block-level Tiptap nodes (`heading`, `bulletList`,
- * `codeBlock`, …). `blocks` is a forward-compatible allowlist of
- * custom node names — the validator accepts documents containing them,
- * leaving the theme-side block render registry (planned) responsible
- * for actually drawing them.
- *
- * Server-side validator (`walkRichtextDoc`) walks the saved doc and
- * rejects any node/mark/block name outside the allowlist. The admin
- * toolbar surfaces only the buttons that match the allowlist.
- *
- * Replaces the dropped `markdown` and `code` standalone field types —
- * `richtext("body").nodes(["codeBlock"])` covers code-in-meta;
- * `richtext("body").marks(["bold","italic","link"]).nodes(["bulletList","orderedList"])`
- * covers markdown-shaped formatting.
+ * `marks`, `nodes` and `blocks` are strict allowlists: anything omitted is
+ * denied, even standard Tiptap extensions. `doc` / `paragraph` / `text` are
+ * always implied.
  */
 export interface RichtextMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "richtext";
@@ -542,35 +446,18 @@ export interface RichtextMetaBoxField extends MetaBoxFieldBase {
 }
 
 /**
- * Admin layout for a repeater's rows. `block` (the default) stacks each
- * row's fields vertically in a bordered card; `row` lays a single row's
- * fields out inline on one line; `table` renders the rows as aligned
- * table lines with a shared subfield header. A pure-UI axis — the
- * stored value shape is identical across layouts.
+ * Pure UI: the stored value shape is identical across layouts. `block` is the
+ * default.
  */
 export type RepeaterLayout = "block" | "row" | "table";
 
-/**
- * Width of the admin row-editor dialog. A pure-UI hint: `sm` suits a
- * couple of narrow fields, `md` (the default) the common case, `lg` a
- * dense multi-column row. Maps to a max-width in the admin; the stored
- * row shape is unaffected.
- */
+/** Pure UI: the stored row shape is unaffected. `md` is the default. */
 export type RepeaterDialogSize = "sm" | "md" | "lg";
 
 /**
- * List of structured rows. Each row carries the same fixed schema
- * declared via `subFields`; mixed-row "flexible content" is explicitly
- * out of scope. Subfields may be any registered field type, including
- * nested repeaters and groups — types recurse through arbitrarily
- * nested rows.
- *
- * Storage rides on the `json` primitive so any JSON-serialisable row
- * shape survives the wire. The constraint walker drops rows where
- * every subfield value is empty (`null` / `undefined` / `""`), then
- * enforces optional `min` / `max` row counts. "Empty" is strictly
- * those three: a row whose only populated subfield is `0` (number) or
- * `false` (toggle) survives — those are real values.
+ * Fixed row schema; mixed-row flexible content is out of scope. Rows whose
+ * every subfield is `null`, `undefined` or `""` are dropped; `0` and `false`
+ * count as values.
  */
 export interface RepeaterMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "repeater";
@@ -588,16 +475,15 @@ export interface RepeaterMetaBoxField extends MetaBoxFieldBase {
    * chosen sub-field's value as its summary.
    */
   readonly collapsed?: string;
-  /** Row-editor dialog width — see {@link RepeaterDialogSize}. Defaults to `md`. */
+  /**
+   * Row-editor dialog width — see {@link RepeaterDialogSize}. Defaults to `md`.
+   */
   readonly dialogSize?: RepeaterDialogSize;
 }
 
 /**
- * A named group of fields stored as a nested object under the group's
- * own key — no key-flattening. `fields` declares the members; each
- * member may be any registered field type, including nested repeaters
- * and further groups (types recurse). Storage rides on the `json`
- * primitive as a plain record keyed by member field key.
+ * Stored as a nested object under the group's own key; member keys are not
+ * flattened.
  */
 export interface GroupMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "group";
@@ -606,12 +492,8 @@ export interface GroupMetaBoxField extends MetaBoxFieldBase {
 }
 
 /**
- * Pure-UI control axis for choice fields. Maps to the admin's existing
- * controls — dropdown, radio group, toggle-button group, checkbox
- * list — and never changes the value shape. Cardinality restricts the
- * legal values (`radio` is single-only, `checkboxes` multi-only); the
- * fluent builder enforces that at compile time. Absent means the
- * cardinality default: dropdown for single, buttons for multiple.
+ * Pure UI: never changes the value shape. Absent means the cardinality
+ * default: dropdown for single, buttons for multiple.
  */
 export type SelectAppearance = "select" | "radio" | "buttons" | "checkboxes";
 
@@ -659,17 +541,9 @@ export interface ToggleMetaBoxField extends MetaBoxFieldBase {
   readonly offText?: Label;
 }
 
-/**
- * Stored value of a `link` field — a CTA-shaped destination. `url` is
- * either an internal path (starts with `/`, produced by the admin's
- * entry picker resolving an entry to its permalink) or an external
- * absolute URL. `label` is the optional link text; `newTab` opts the
- * rendered anchor into `target="_blank"`.
- */
-// Spelled as a `type`, not an `interface`: TypeScript withholds the implicit
-// index signature from an interface, so an interface never assigns to
-// `JsonObject` however JSON-shaped its members are — and a link value is
-// stored in the meta bag and sanitized as JSON on the way in.
+/** `url` is an internal path (starting `/`) or an external absolute URL. */
+// A `type`: interfaces lack the implicit index signature, so can't assign to
+// `JsonObject`.
 export type LinkValue = Readonly<{
   url: string;
   label?: string;
@@ -688,15 +562,7 @@ export interface LinkMetaBoxField
   readonly placeholder?: Label;
 }
 
-/**
- * Catch-all variant for any `inputType` not narrowed into a dedicated
- * variant above — primarily plugin-registered custom types arriving via
- * `registerFieldType`. Object-literal registrations using built-in
- * input-type strings (e.g. `inputType: "text"`) still type-check
- * against the narrowed variant when their option shape matches; this
- * variant exists so authoring patterns and plugin extensions don't
- * regress.
- */
+/** Catch-all for plugin-registered `inputType`s from `registerFieldType`. */
 export interface LegacyMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: string;
   readonly placeholder?: Label;
@@ -708,28 +574,15 @@ export interface LegacyMetaBoxField extends MetaBoxFieldBase {
 }
 
 /**
- * A field inside a meta box — the single source of truth for both the
- * admin UI renderer and the server-side storage contract. Declaring a
- * meta box is the only way to register a meta key; there is no separate
- * `registerMeta` step.
- *
- * Modelled as a discriminated union keyed on `inputType`. Each built-in
- * input type has its own narrowed variant produced by a builder helper
- * exported from `plumix/fields`; `LegacyMetaBoxField` keeps custom
- * `registerFieldType` registrations and broad object-literal authoring
- * compiling unchanged.
+ * Declaring a meta box is the only way to register a meta key; there is no
+ * separate `registerMeta` step.
  */
 export type MetaBoxField = CanonicalMetaBoxField | LegacyMetaBoxField;
 
 /**
- * The narrowed variants only — every built-in with a literal `inputType`
- * discriminant, excluding the `LegacyMetaBoxField` catch-all (whose
- * `inputType: string` would otherwise widen the union's discriminant to
- * `string`). Keeping this split lets `CanonicalMetaBoxField["inputType"]`
- * yield the exact literal set the field-type roster's exhaustiveness guard
- * binds itself to (see `./roster.js`). `Media*` variants are members here
- * even though they are not roster entries — the roster is a subset of the
- * union (`roster ⊆ union`), the media plugin owning those names.
+ * Excludes `LegacyMetaBoxField`, whose `inputType: string` would widen the
+ * discriminant. `Media*` variants belong here though the media plugin, not the
+ * roster, owns them.
  */
 export type CanonicalMetaBoxField =
   | StringMetaBoxField
@@ -754,12 +607,9 @@ export type CanonicalMetaBoxField =
   | LinkMetaBoxField;
 
 /**
- * A fluent field builder — an immutable chain that compiles to a
- * narrowed `MetaBoxField` variant. Chain method names (`label`,
- * `default`, `sanitize`, …) collide with the definition's data
- * properties, so a builder can't structurally *be* its definition;
- * registration surfaces accept either shape and call `build()` on
- * builders at registration time.
+ * Chain method names collide with the definition's data properties, so a
+ * builder can't structurally be its definition; registration surfaces call
+ * `build()`.
  */
 export interface FieldBuilder<F extends MetaBoxField = MetaBoxField> {
   build(): F;
@@ -772,7 +622,10 @@ export interface FieldBuilder<F extends MetaBoxField = MetaBoxField> {
  */
 export type MetaBoxFieldInput = MetaBoxField | FieldBuilder;
 
-/** Compile a `fields` array down to definitions — builders build, plain definitions pass through. */
+/**
+ * Compile a `fields` array down to definitions — builders build, plain
+ * definitions pass through.
+ */
 export function compileMetaBoxFields(
   fields: readonly MetaBoxFieldInput[],
 ): readonly MetaBoxField[] {

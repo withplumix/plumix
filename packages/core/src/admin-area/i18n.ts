@@ -1,8 +1,6 @@
-// Admin-area labels follow the admin-bar pattern: hand-authored
-// `locales/admin-area-*.po` catalogs compiled to static modules and looked up
-// per call server-side (no `activate()` singleton). `plumix i18n verify` gates
-// descriptor↔catalog drift. A runtime adapter that refuses areas names them to
-// its visitors outside the admin, where no Lingui instance runs.
+// Looked up per call server-side, not via an `activate()` singleton: a runtime
+// adapter names areas to visitors outside the admin, where no Lingui instance
+// runs.
 
 import { messages as arMessages } from "@plumix/core/locales/admin-area-ar";
 import { messages as deMessages } from "@plumix/core/locales/admin-area-de";

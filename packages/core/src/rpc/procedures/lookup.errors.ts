@@ -5,10 +5,8 @@ type LookupScopeErrorCode =
   | "reserved_entry_type";
 
 /**
- * A lookup adapter was called without the scope filter that enforces
- * per-type / per-taxonomy read scoping. Thrown at runtime (not just the
- * builder's TS level) because a wire-side caller could omit it and turn the
- * picker into an unscoped enumeration channel. Named-error convention (#232).
+ * Thrown at runtime, not only at the type level, because a wire caller could
+ * omit the scope and turn the picker into an unscoped enumeration channel.
  */
 export class LookupScopeError extends Error {
   static {

@@ -20,9 +20,8 @@ export const get = base
     );
 
     try {
-      // The editor's read heals the row: an unsettled value is settled and
-      // written back here, where a human is about to see and overwrite it. The
-      // public read paths — the renderer, the REST API — never write.
+      // Only the editor's read heals the row, since a human is about to see and
+      // overwrite it. Public read paths never write.
       const row = await findReadableEntry(context, filtered);
       const { bag } = await settleEntryMeta(context, row, row.meta);
       const live = await resolveEntryRead(context, row, bag);
@@ -35,18 +34,15 @@ export const get = base
       // pending draft is an editor concern.
       assertCanEditEntry(context, live, errors);
 
-      // No live row passed: `live` here is already resolved, and the merge
-      // needs the stored bag — a hydrated reference laid under the edits would
-      // be promoted back as whatever the lookup adapter returned.
+      // No live row passed: `live` is already resolved, and a hydrated
+      // reference under the edits would be promoted back as the lookup
+      // adapter's output.
       const autosave = await getAutosave(context.db, {
         entryId: live.id,
         authorId: context.user.id,
       });
-      // Overlay only the drafted fields. `title` (and `slug` / `parentId`) are
-      // live-only fields — the editor writes them straight to the live row and
-      // publish never promotes them — so they stay on `live`, keeping this
-      // reference resolution consistent with the public `?preview=` render
-      // and publish.
+      // `title`, `slug` and `parentId` are live-only, so they stay on `live`,
+      // consistent with the `?preview=` render and publish.
       const overlaid = autosave
         ? {
             ...live,

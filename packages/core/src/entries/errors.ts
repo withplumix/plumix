@@ -1,9 +1,4 @@
-/**
- * Domain error the entries read service throws. The `data` discriminant carries
- * exactly what each transport needs to render it — oRPC maps it to a typed error
- * via {@link toRpcEntryReadError}. Mirrors the per-domain error pattern in
- * `src/revisions/errors.ts`.
- */
+/** Map it to a typed oRPC error with {@link toRpcEntryReadError}. */
 export class EntryReadError extends Error {
   static {
     EntryReadError.prototype.name = "EntryReadError";
@@ -42,10 +37,8 @@ export class EntryReadError extends Error {
 }
 
 /**
- * A query that cannot be built or compiled as asked: one `entryQuery` did not
- * mint, or an order naming a meta key with no JSON path. Neither is a domain
- * outcome, and neither is mapped to a transport — each says the code that
- * wrote the query is wrong, not that the request was.
+ * Not mapped to a transport: it means the code that wrote the query is wrong,
+ * not the request.
  */
 export class EntryQueryError extends Error {
   static {

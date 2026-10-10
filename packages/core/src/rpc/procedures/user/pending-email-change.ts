@@ -8,19 +8,8 @@ import { userPendingEmailChangeInputSchema } from "./schemas.js";
 const EDIT_OWN_CAPABILITY = "user:edit_own";
 const EDIT_CAPABILITY = "user:edit";
 
-// Surface the pending email-change request for a user, if any. Used
-// by the admin UI's `/users/$id/edit` to render a "pending change to
-// X (cancel?)" banner so the operator knows there's a verification
-// in flight before they request a new one.
-//
-// Returns the new email + expiresAt without exposing the raw token —
-// the verification link is deliberately one-shot to the recipient's
-// inbox; surfacing the token to the admin UI would defeat the
-// "verify-at-new-address" guarantee.
-//
-// Auth: `user:edit_own` for self, `user:edit` for other (admin-only
-// surfaces don't need a separate capability — same gating as
-// requestEmailChange).
+// Never returns the token: surfacing it would defeat the
+// verify-at-new-address guarantee.
 export const pendingEmailChange = base
   .use(authenticated)
   .input(userPendingEmailChangeInputSchema)

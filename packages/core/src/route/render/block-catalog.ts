@@ -1,10 +1,5 @@
-// Block render strings resolve through `BlockContext.t` against one compiled
-// catalog per request locale: core's blocks catalog (core-block and
-// renderer strings) under every installed plugin's. Plugin catalogs reach the
-// Worker through `virtual:plumix/plugin-catalogs`, which the Vite plugin
-// generates from each plugin's `i18n` slot — there's no fs at request time.
-// Unit tests resolve these static imports to empty catalogs, so an unwired
-// locale renders the descriptors' English source.
+// Plugin catalogs arrive via `virtual:plumix/plugin-catalogs` because there's
+// no fs at request time.
 
 import { messages as arMessages } from "@plumix/core/locales/blocks-ar";
 import { messages as deMessages } from "@plumix/core/locales/blocks-de";
@@ -22,7 +17,7 @@ const BLOCKS_CATALOGS: Readonly<Record<string, CompiledCatalog>> = {
   "zh-CN": zhCnMessages,
 };
 
-/** A compiled catalog module, as `lingui compile --namespace es` emits it. */
+// As `lingui compile --namespace es` emits it.
 interface CatalogModule {
   readonly messages: CompiledCatalog;
 }

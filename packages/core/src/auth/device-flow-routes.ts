@@ -9,14 +9,10 @@ import { exchangeDeviceCode, requestDeviceCode } from "./device-flow.js";
 // RFC 8628 §3.4 grant_type identifier.
 const DEVICE_CODE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code";
 
-// Path that the CLI prints to the user. Lands on the admin SPA, which
-// renders the approve flow at the same route. Keep aligned with the
-// admin router's `/auth/device` page.
+// Must match the admin router's `/auth/device` page.
 const VERIFICATION_PATH = "/_plumix/admin/auth/device";
 
-// Default name applied to the minted token when the approver didn't
-// type one — we do require it in the approval form, so this is just a
-// belt-and-braces fallback for the row's payload.
+// Only a fallback: the approval form requires a token name.
 const DEFAULT_TOKEN_NAME = "CLI";
 
 // Defensive bound on the inbound `device_code` body field. Our generator
@@ -30,15 +26,8 @@ const exchangeInputSchema = v.object({
 });
 
 /**
- * POST /_plumix/auth/device/code — RFC 8628 §3.1.
- *
- * Public endpoint a CLI hits to begin a device-flow session. No body
- * required, no client auth, no caller identity. Returns the
- * device_code (machine-side polling secret) + user_code (human-typed
- * approval anchor) + the URI the human should visit to approve.
- *
- * Dispatcher's CSRF gate fires first (custom header + Origin check);
- * CLIs are not browsers and trivially set `X-Plumix-Request: 1`.
+ * RFC 8628 §3.1. Public and unauthenticated; CLIs pass the CSRF gate by sending
+ * `X-Plumix-Request: 1`.
  */
 export async function handleDeviceCodeRequest(
   ctx: AppContext,
@@ -65,16 +54,8 @@ export async function handleDeviceCodeRequest(
 }
 
 /**
- * POST /_plumix/auth/device/token — RFC 8628 §3.4.
- *
- * Public endpoint the CLI polls until the human approves on the admin.
- * Standard OAuth 2.0 token-endpoint shape with the device-code grant.
- * Errors follow §3.5: `authorization_pending` while waiting,
- * `access_denied` if the human pressed Deny, `expired_token` past
- * the TTL, `invalid_grant` for unknown device_codes,
- * `invalid_request` for malformed bodies. We don't emit `slow_down`
- * — we don't track per-client cadence, the polling client just
- * keeps the spec-default 5s interval.
+ * RFC 8628 §3.4, errors per §3.5. Never emits `slow_down`: per-client poll
+ * cadence isn't tracked.
  */
 export async function handleDeviceTokenExchange(
   ctx: AppContext,

@@ -6,42 +6,28 @@ import type {
 } from "../../template-registry.js";
 import type { MetaBoxFieldInput } from "./meta-box-field.js";
 
-/**
- * The typed-meta contribution registries. A meta box (or settings
- * group) registration is runtime-only — a `register*` call can't
- * augment a global interface — so typed reads cost one derived
- * declaration per box, merged from any package. The `EntryMeta` /
- * `TermMeta` / `UserMeta` / `SettingsMeta` helpers author that
- * declaration (see {@link EntryMeta} for the end-to-end walkthrough):
- *
- * ```ts
- * const articleFields = [text("subtitle").maxLength(120)];
- * declare module "plumix" {
- *   interface EntryMetaContributions {
- *     article: EntryMeta<"post", typeof articleFields>;
- *   }
- * }
- * ```
- *
- * `MetaOf<K>` then folds every contribution whose target set includes
- * `K` into one closed record — no open index fallback, so a mistyped
- * field name is a compile error at the read site. A box registered
- * without a declaration simply doesn't contribute (its fields read as
- * absent); any downstream package can supply the missing declaration
- * via interface merging. When a declaration exists, the matching
- * `register*` call is typechecked against it, so declaration and
- * runtime can't drift silently.
- */
+// A `register*` call can't augment a global interface, so typed reads need one
+// declaration per box. `MetaOf<K>` folds them with no open index, so a typo
+// fails to compile.
 
-/** Entry meta-box contributions, keyed by box id. `entryTypes` is a union of registered entry-type names. */
+/**
+ * Entry meta-box contributions, keyed by box id. `entryTypes` is a union of
+ * registered entry-type names.
+ */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- intentional augmentation seam
 export interface EntryMetaContributions {}
 
-/** Term meta-box contributions, keyed by box id. `termTaxonomies` is a union of registered taxonomy names. */
+/**
+ * Term meta-box contributions, keyed by box id. `termTaxonomies` is a union of
+ * registered taxonomy names.
+ */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- intentional augmentation seam
 export interface TermMetaContributions {}
 
-/** User meta-box contributions, keyed by box id. Users have a flat keyspace — every contribution applies. */
+/**
+ * User meta-box contributions, keyed by box id. Users have a flat keyspace —
+ * every contribution applies.
+ */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- intentional augmentation seam
 export interface UserMetaContributions {}
 
@@ -50,45 +36,8 @@ export interface UserMetaContributions {}
 export interface SettingsContributions {}
 
 /**
- * The shape of one entry meta-box contribution: the target entry type(s)
- * plus the fields array. A named alias so authors reach for a checked
- * two-generic helper instead of hand-writing the `{ entryTypes; fields }`
- * object — misspelling a property (`entryType`) would otherwise leave the
- * contribution structurally valid but silently unmatched by the fold, so
- * the fields read as *absent* with no error. `EntryTypes` is constrained
- * to registered names, so an unknown entry type errors at the declaration
- * itself rather than only at the `registerEntryMetaBox` call.
- *
- * The full path from declaring fields to typed template reads:
- *
- * ```ts
- * import { text } from "plumix/fields";
- * import type { EntryMeta } from "plumix";
- *
- * // 1. Author the fields as a named const so both the declaration and
- * //    the registration reference one source of truth.
- * const articleFields = [text("subtitle"), text("heroCredit").required()];
- *
- * // 2. Declare the contribution — this is what crosses package
- * //    boundaries so a theme in another package sees the meta shape.
- * declare module "plumix" {
- *   interface EntryMetaContributions {
- *     article: EntryMeta<"post", typeof articleFields>;
- *   }
- * }
- *
- * // 3. Register the box; the call is typechecked against the declaration
- * //    above (anti-drift), so the two can't diverge silently.
- * ctx.registerEntryMetaBox("article", {
- *   label: "Article",
- *   entryTypes: ["post"],
- *   fields: articleFields,
- * });
- *
- * // 4. In the theme, a targeted template reads typed meta:
- * //    `forEntryType("post").template(({ entry }) => entry.meta.subtitle)`
- * //    — `subtitle` is `string | undefined`, a typo is a compile error.
- * ```
+ * Use this alias rather than a hand-written object: a misspelled property would
+ * leave the contribution silently unmatched, reading its fields as absent.
  */
 export interface EntryMeta<
   EntryTypes extends EntryTypeName,
@@ -155,10 +104,8 @@ export type InferFields<F extends readonly MetaBoxFieldInput[]> = InferShape<
 >;
 
 /**
- * The stored-shape record a fields array declares — what actually sits
- * in the meta JSON. Distinct from {@link InferFields}: reference/temporal
- * fields store ids / ISO strings rather than hydrated values. Both narrow
- * on `.required()` alone.
+ * Distinct from {@link InferFields}: reference and temporal fields store ids
+ * and ISO strings, not hydrated values.
  */
 export type InferStoredFields<F extends readonly MetaBoxFieldInput[]> =
   InferShape<F, "_stored">;
@@ -205,12 +152,18 @@ type AllRecords<Contributions, Prop extends "_value" | "_stored"> = {
     : never;
 }[keyof Contributions];
 
-/** The folded read-shape meta record for an entry type. Types template `data.entry.meta` reads. */
+/**
+ * The folded read-shape meta record for an entry type. Types template
+ * `data.entry.meta` reads.
+ */
 export type MetaOf<K extends EntryTypeName> = FoldRecords<
   ScopedRecords<EntryMetaContributions, K, "entryTypes", "_value">
 >;
 
-/** The folded stored-shape meta record for an entry type. Types `whereMeta` keys and values. */
+/**
+ * The folded stored-shape meta record for an entry type. Types `whereMeta` keys
+ * and values.
+ */
 export type StoredMetaOf<K extends EntryTypeName> = FoldRecords<
   ScopedRecords<EntryMetaContributions, K, "entryTypes", "_stored">
 >;
@@ -220,12 +173,17 @@ export type TermMetaOf<K extends TermTaxonomyName> = FoldRecords<
   ScopedRecords<TermMetaContributions, K, "termTaxonomies", "_value">
 >;
 
-/** The folded stored-shape meta record for a taxonomy. Types term `whereMeta`. */
+/**
+ * The folded stored-shape meta record for a taxonomy. Types term `whereMeta`.
+ */
 export type StoredTermMetaOf<K extends TermTaxonomyName> = FoldRecords<
   ScopedRecords<TermMetaContributions, K, "termTaxonomies", "_stored">
 >;
 
-/** The folded read-shape user meta record — users have a flat keyspace, so every contribution applies. */
+/**
+ * The folded read-shape user meta record — users have a flat keyspace, so every
+ * contribution applies.
+ */
 export type UserMetaOf = FoldRecords<
   AllRecords<UserMetaContributions, "_value">
 >;
@@ -263,14 +221,8 @@ type FieldsDrift<
     : { "drift — fields do not match the declared contribution": F };
 
 /**
- * The compile-time drift check `registerEntryMetaBox` intersects onto
- * its options. With no declaration for `Id` it vanishes (`unknown`);
- * with one, a mismatched target set or field set demands an impossible
- * `"drift — …"` property, failing the call with a readable message.
- * The comparison is over the inferred read + stored shapes, so the
- * registration must pass literally-typed fields (the declared array
- * itself, or an equivalent inline chain) — options widened to the base
- * interface lose the phantoms and fail the check.
+ * `unknown` when `Id` has no declaration. The fields must stay literally typed:
+ * options widened to the base interface lose the phantoms and fail the check.
  */
 export type EntryMetaBoxDrift<
   Id extends string,
@@ -303,7 +255,10 @@ export type EntryMetaBoxDrift<
     : unknown
   : unknown;
 
-/** The `registerTermMetaBox` analogue of {@link EntryMetaBoxDrift}, over `termTaxonomies`. */
+/**
+ * The `registerTermMetaBox` analogue of {@link EntryMetaBoxDrift}, over
+ * `termTaxonomies`.
+ */
 export type TermMetaBoxDrift<
   Id extends string,
   O extends {
@@ -360,12 +315,8 @@ export type SettingsGroupDrift<
 > = FieldsOnlyDrift<SettingsContributions, Name, O>;
 
 /**
- * The entry a targeted template receives: the registered projection with
- * both meta bags replaced by their folded typed records, so a `.where()`
- * predicate reads either at the shape `whereMeta` is typed against.
- * Replacement (not intersection) is what makes a mistyped field name a
- * compile error — intersecting would keep the base open
- * `Record<string, unknown>` index and read typos as `unknown`.
+ * Meta bags are replaced, not intersected, so a mistyped field name is a
+ * compile error instead of reading as `unknown`.
  */
 export type ResolvedEntryFor<K extends EntryTypeName> = Omit<
   EntryProjection<K>,

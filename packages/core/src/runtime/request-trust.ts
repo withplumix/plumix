@@ -13,10 +13,8 @@ export interface Connection {
 
 export interface RequestTrustOptions {
   /**
-   * Read scheme, host and client address from `x-forwarded-proto`,
-   * `x-forwarded-host` and the rightmost `x-forwarded-for` entry — what a
-   * TLS-terminating proxy in front of the process appends. Off by default, so
-   * a visitor reaching the process directly cannot forge them.
+   * Reads `x-forwarded-proto`, `-host` and the rightmost `-for`. Off by
+   * default, so a direct visitor can't forge them.
    */
   readonly trustProxy?: boolean;
 }
@@ -33,11 +31,7 @@ function header(request: Request, name: string): string | undefined {
   return value === null || value === "" ? undefined : value;
 }
 
-/**
- * The URL and client address a self-hosted runtime hands its handler: the
- * request's own path and query under the origin the trust rules decide.
- * Throws when the host is not one a URL can carry.
- */
+/** Throws when the host is not one a URL can carry. */
 export function trustRequest(
   request: Request,
   connection: Connection,

@@ -4,9 +4,8 @@ import type { BlockNode } from "./render-block-tree.js";
 import { blockSlotKeys } from "./block-slots.js";
 import { isBlockNodeArray } from "./render-block-tree.js";
 
-// `blocks/` sits in the foundation layer, below `context/`, so `AppContext`
-// can't be named here. The `plumix/blocks` façade fills this registry with it;
-// a program that never loads the façade — core's own — sees `unknown`.
+// `blocks/` sits below `context/`, so `AppContext` can't be named here; the
+// `plumix/blocks` façade fills this in, and without it the type is `unknown`.
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- module-augmentation seam; only the `plumix/blocks` façade fills it.
 export interface BlockLoaderContextRegistry {}
 
@@ -17,11 +16,9 @@ export type BlockLoaderContext = BlockLoaderContextRegistry extends {
   : unknown;
 
 /**
- * What a block's loader receives. A loader on the page's own content can end
- * the request by throwing `pageNotFound()` or `redirectTo()` from
- * `plumix/support` (ADR 0032). On an archive listing, under `?plumix.edit` and
- * in the editor's loader refresh, it is an ordinary rejection, isolated to its
- * block like any other.
+ * Throwing `pageNotFound()` or `redirectTo()` ends the request only for the
+ * page's own content; elsewhere it is an ordinary rejection isolated to its
+ * block.
  */
 export interface BlockLoaderArgs {
   /**
@@ -33,10 +30,8 @@ export interface BlockLoaderArgs {
   readonly attrs: JsonObject;
 }
 
-// The bound a loader record is stored under, where which loader this is has
-// been erased. A block's own loaders keep their concrete types through
-// inference, and `ResolvedLoaders` reads them back off the literal — nothing
-// calls a loader through this type.
+// Type-erased storage bound only: blocks keep concrete loader types through
+// inference, and nothing calls a loader through this type.
 // eslint-disable-next-line plumix/no-unknown-return
 export type BlockLoaderFn = (args: BlockLoaderArgs) => Promise<unknown>;
 export type BlockLoaderRecord = Readonly<Record<string, BlockLoaderFn>>;
@@ -55,10 +50,8 @@ export interface LoaderEntry {
 }
 
 /**
- * What a block's loaders resolved to, keyed by loader name. Not JSON: a loader
- * returns whatever it returns, and the block reads it in the same process.
- * Only the edit page's seeded copy crosses a wire, and that one is lossy by
- * design (see `serializeLoaderData`).
+ * Not JSON: the block reads it in the same process. Only the edit page's
+ * seeded copy crosses a wire, lossily.
  */
 export type LoaderResults = Readonly<Record<string, unknown>>;
 
@@ -104,12 +97,9 @@ export interface LoaderErrorEvent {
   readonly error: unknown;
 }
 
-// Escalation wrapper for a rejected block loader (#1600); the render seam
-// throws it under the dev gate. The message embeds the block name, loader key,
-// and underlying failure text so the dev error page's hint matchers keep
-// working across the loader boundary; `cause` preserves the original for the
-// console chain, and the cause's stack is adopted so frames resolve to the
-// loader's failure site, not this wrapper.
+// The message embeds block, loader key and failure text so the dev error
+// page's hint matchers still match; the cause's stack is adopted so frames
+// point at the loader.
 export class BlockLoaderError extends Error {
   static {
     BlockLoaderError.prototype.name = "BlockLoaderError";
@@ -129,17 +119,13 @@ export class BlockLoaderError extends Error {
 }
 
 export interface ResolveBlockLoadersOptions {
-  // Fires once per rejected loader (not once per block). Used by the
-  // core dispatcher to bridge into the `blocks:loader:error` filter —
-  // blocks can't depend on core's hook system, so the wire-up lives at
-  // the dispatcher layer.
+  // Blocks can't depend on core's hook system, so the dispatcher bridges this
+  // into `blocks:loader:error`. Fires once per rejected loader.
   readonly onLoaderError?: (event: LoaderErrorEvent) => void;
 }
 
-// Walks the block tree, fires every declared loader in parallel, and
-// returns a map keyed by node id. Per-block isolation: one rejected
-// loader doesn't fail siblings — its block ends up with `loaders: {}`
-// and `error: <first-rejection-in-declaration-order>`.
+// One rejected loader doesn't fail siblings: its block gets `loaders: {}` and
+// the first rejection in declaration order.
 export async function resolveBlockLoaders(
   nodes: readonly BlockNode[],
   registry: BlockRegistry,
@@ -162,12 +148,8 @@ async function resolveEntry(
   ctx: BlockLoaderContext,
   onLoaderError: ((event: LoaderErrorEvent) => void) | undefined,
 ): Promise<ResolvedBlockLoaderData> {
-  // `Promise.resolve().then(...)` traps a synchronous throw from `fn`
-  // and re-routes it through `.then`'s rejection branch. Without this,
-  // a sync throw escapes the `Promise.all` below and rejects the entire
-  // `resolveBlockLoaders` call — breaking the per-block isolation
-  // contract. Order-preserving: `firstError` is the first rejection in
-  // declaration order, not first-by-time.
+  // `Promise.resolve().then` turns a sync throw into a rejection so it can't
+  // escape `Promise.all` and break per-block isolation.
   const settled = await Promise.all(
     Object.entries(entry.spec.loaders ?? {}).map(([key, fn]) =>
       Promise.resolve()

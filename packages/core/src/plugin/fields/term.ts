@@ -8,24 +8,15 @@ import { ReferenceFieldBuilder } from "./reference.js";
  */
 export interface TermFieldScope {
   /**
-   * Restrict matches to these taxonomies. Required at the field
-   * level — term references without a taxonomy filter would surface
-   * tags + categories + custom taxonomies in one indistinct list.
-   * Seeded from the `term()` constructor argument.
+   * Required: without a taxonomy filter a picker would mix every taxonomy in
+   * one list.
    */
   readonly termTaxonomies: readonly string[];
 }
 
 /**
- * Build a typed `term` reference field —
- * `term("primary", ["category"])`. The required taxonomy scope is the
- * constructor's second argument; `.multiple()` flips to an id array.
- *
- * Storage is the bare term id (an id array under `.multiple()`). Reads
- * hydrate to the term summary by default (`.returns("id")` opts back
- * to the bare id); single reads stay optional (a target can orphan).
- * The admin renders a picker that calls the lookup RPC with
- * `{ kind: "term", scope }`.
+ * Stores the bare term id. Reads hydrate to the term summary unless
+ * `.returns("id")`; single reads stay optional because a target can orphan.
  */
 export function term<K extends string>(
   key: K,

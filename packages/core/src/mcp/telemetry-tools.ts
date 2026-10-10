@@ -3,9 +3,8 @@ import * as v from "valibot";
 import type { McpTool } from "../context/mcp-tool.js";
 import { McpToolError } from "./errors.js";
 
-// Both tools read the dev request-history ring the debug bar already writes to
-// — no new capture. The dev gate lives in `buildMcpToolRegistry`, which is the
-// module's only importer, so this whole graph tree-shakes from production.
+// The dev gate lives in `buildMcpToolRegistry`, this module's only importer,
+// so the graph tree-shakes from production.
 
 const requestsListInput = v.object({});
 
@@ -60,7 +59,9 @@ export const telemetryRequestGetTool: McpTool<typeof requestGetInput> = {
   },
 };
 
-/** The dev-only tracing tools, joined into the MCP registry under the dev gate. */
+/**
+ * The dev-only tracing tools, joined into the MCP registry under the dev gate.
+ */
 export const telemetryMcpTools: readonly McpTool[] = [
   telemetryRequestsListTool,
   telemetryRequestGetTool,

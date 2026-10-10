@@ -10,11 +10,8 @@ import { listEnvelope } from "./envelope.js";
 import { apiVisibleMetaKeys, projectEntry } from "./projection.js";
 import { readPagination } from "./schemas.js";
 
-// Every entry-read failure mode (missing, reserved-type, forbidden, an
-// unpublished status the public principal can't see) collapses to 404 so the
-// existence of unreadable content stays hidden. `undefined` for a
-// non-EntryReadError, which is unexpected: the caller rethrows it for the
-// dispatcher to surface as a 500.
+// Every failure collapses to 404 so unreadable content stays hidden.
+// `undefined` for anything else, which the caller rethrows as a 500.
 export function entryNotFound(
   error: unknown,
   errors: RestErrors,
@@ -26,7 +23,8 @@ export function entryNotFound(
 }
 
 // Pagination params own these query keys; a taxonomy that happens to share a
-// name with one is skipped as a filter so `?page=2` can't double as a term query.
+// name with one is skipped as a filter so `?page=2` can't double as a term
+// query.
 const RESERVED_QUERY_PARAMS = new Set(["page", "per_page"]);
 
 // Map `?<taxonomy>=slug,slug` query params onto the service's term filter. Only
@@ -72,8 +70,7 @@ export async function listEntriesEnvelope(
   const rows = hasNext ? fetched.slice(0, perPage) : fetched;
 
   // The same resolution a public page gets, so a title reads as it does
-  // there. It replaces the resource's own author and term reads: one batch
-  // of each for the page.
+  // there.
   const resolved = await resolveEntryList(context, rows);
   const visibleMeta = apiVisibleMetaKeys(context.plugins, entryType.name);
   const data = resolved.map((entry) =>

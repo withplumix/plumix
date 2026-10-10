@@ -18,12 +18,8 @@ const TOKEN = new RegExp(
 const ATTR = /([a-z0-9-]+)=(?:"([^"]*)"|'([^']*)'|([^\s\]'"]+))/g;
 
 /**
- * Expand registered `[tag]` macros in authored text to escaped text.
- *
- * Single pass: the global `replace` walks left-to-right and never re-scans
- * its own output, so a shortcode returning `[year]` stays literal and
- * infinite expansion is structurally impossible. Unknown tags pass through
- * verbatim; `[[tag …]]` renders the literal `[tag …]`.
+ * Single pass, so a shortcode returning `[year]` stays literal. Unknown tags
+ * pass through verbatim; `[[tag …]]` renders the literal `[tag …]`.
  */
 export function expandShortcodes(
   text: string,

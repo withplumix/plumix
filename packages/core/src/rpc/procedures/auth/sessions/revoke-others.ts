@@ -6,24 +6,8 @@ import { authenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
 import { sessionsRevokeOthersInputSchema } from "./schemas.js";
 
-// Revoke every plumix session for the current user *except* the one
-// making the call. Used by the "Sign out other devices" button on the
-// profile page — the security-incident-response workflow.
-//
-// Two semantics worth flagging:
-//
-//   - Self-scoped. The WHERE clause pins `userId = ctx.user.id`; we
-//     never touch other users' sessions. The "sign out everyone in
-//     this org" workflow is `invalidateAllSessionsForUser` (admin-only,
-//     not surfaced via this proc).
-//
-//   - External authenticators (cfAccess, custom guards) don't mint
-//     plumix `sessions` rows — the IdP owns the session. The proc
-//     still runs (the user passed the `authenticated` middleware), but
-//     `readSessionCookie` returns null and there's nothing to delete.
-//     We return `{ revoked: 0 }` rather than erroring; the admin's UI
-//     can show "no plumix-managed sessions to revoke" and the operator
-//     uses the IdP's own session-management surface.
+// External authenticators mint no session rows; the IdP owns the session,
+// so this returns `{ revoked: 0 }` rather than erroring.
 export const revokeOthers = base
   .use(authenticated)
   .input(sessionsRevokeOthersInputSchema)

@@ -26,10 +26,9 @@ function firstSegment(url: URL): string | undefined {
   return url.pathname.split("/").find(Boolean);
 }
 
-// Provider ids/handles only ever contain url-safe word chars and
-// hyphens. Validating before interpolation keeps a crafted path
-// (traversal, extra segments) from producing a malformed embed `src`
-// instead of relying on the iframe origin staying fixed as the backstop.
+// Validated before interpolation so a crafted path (traversal, extra segments)
+// can't produce a malformed `src`, rather than trusting the fixed iframe
+// origin.
 const SAFE_SEGMENT = /^[\w-]+$/;
 const YOUTUBE_ID = /^[\w-]{11}$/;
 

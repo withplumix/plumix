@@ -14,28 +14,14 @@ const CACHEABLE_INTENTS: ReadonlySet<RouteIntent["kind"]> = new Set([
 
 interface CacheableRequest {
   readonly method: string;
-  /**
-   * The resolved audience segment this render belongs to. Every non-`private`
-   * segment is a shared, cacheable document keyed by the segment; `private` is
-   * the escape hatch whose render is per-visitor and never touches the shared
-   * CDN. The un-policied default maps a privileged request to `private` and
-   * an anonymous one to `anonymous`, preserving today's behavior exactly.
-   */
+  // Every non-`private` segment is a shared document keyed by the segment.
   readonly segment: Segment;
   readonly intentKind: RouteIntent["kind"];
-  /**
-   * For a plugin-registered page — an `archiveType` or a `view` — whether it
-   * opted into CDN caching via `cacheable: true` on its registration. Core
-   * can't know such a page's content dependencies, so it caches only on this
-   * opt-in. Ignored for the built-in intents, whose cacheability is fixed by
-   * {@link CACHEABLE_INTENTS}.
-   */
+  // Core can't know a plugin page's content dependencies, so it caches only on
+  // this opt-in.
   readonly registeredPageCacheable?: boolean;
-  /**
-   * Whether the bound provider can separate one audience segment's copy from
-   * another's. Named for the capability rather than for the store, because a
-   * vendor that varies on a named cookie satisfies it by a different route.
-   */
+  // Named for the capability: a vendor varying on a named cookie satisfies it
+  // differently.
   readonly canKeySegments: boolean;
 }
 
@@ -45,19 +31,9 @@ const PREVIEW_PARAM = "preview";
 const EDIT_PARAM = "plumix.edit";
 
 /**
- * Whether a request carries elevated visibility: an authenticated session or
- * bearer credential, or a `?preview=<token>` draft grant. Any of these can
- * make the render differ from the shared anonymous document — a logged-in
- * editor's view, or a draft visible only to a preview-link holder — so such
- * requests must bypass the CDN entirely. The preview case is the load-bearing
- * one: a draft render carries no session yet must never be cached, or it would
- * outlive the token's authorization window in the CDN.
- *
- * `hasSession` is the caller's authenticator verdict (`requestHasSession`) —
- * only the authenticator knows what signal a session rides on (#2264). The
- * bearer arm stands on its own: `apiTokenAuthenticator` reports no session, so
- * that a GET never bumps `lastUsedAt`, yet its render is privileged all the
- * same.
+ * A preview render carries no session yet must never be cached, or it outlives
+ * the token. The bearer arm stands alone: the API-token authenticator reports
+ * no session.
  */
 export function requestIsPrivileged(
   request: Request,
@@ -69,19 +45,9 @@ export function requestIsPrivileged(
 }
 
 /**
- * Whether the request carries an *ephemeral, per-request* render grant — a
- * `?preview=<token>` draft link or a `?plumix.edit` editor session — rather than
- * a durable audience membership. Its render is authorized only for this request
- * (a preview token, edit rights) and must never enter the shared CDN, even on
- * a policied route whose resolved segment is otherwise cacheable: a stored draft
- * (or an editor's autosave render) would outlive that grant.
- *
- * The un-policied CDN path gets this for free through {@link
- * requestIsPrivileged} (whose session arm bypasses every authenticated
- * request); the policied path keys on the segment — an authenticated audience
- * member always carries a session — so it must exclude these grants explicitly.
- * Keyed on the marker's presence, not a validated token: an invalid grant then
- * renders live-but-uncached, which is safe.
+ * A per-request grant must never enter the shared CDN, even on a cacheable
+ * segment. Keyed on the marker, not a validated token: an invalid grant renders
+ * uncached, which is safe.
  */
 export function requestCarriesEphemeralGrant(request: Request): boolean {
   const params = new URL(request.url).searchParams;
@@ -93,24 +59,15 @@ export type CdnBypassReason =
   "method" | "private" | "segment-unsupported" | "intent";
 
 /**
- * The variant marker folded into a cache-key URL for a non-anonymous segment.
- * Framework-reserved (the `__plumix_` namespace) so it can't collide with a
- * real query parameter; stripped from any incoming request before the
- * server-chosen segment is applied, so a crafted query can't poison a variant.
+ * Stripped from incoming requests before the server-chosen segment is applied,
+ * so a crafted query can't poison a variant.
  */
 export const SEGMENT_KEY_PARAM = "__plumix_segment";
 
 /**
- * The cache-key request for a render in `segment`. The CDN backs onto
- * the request URL, so a distinct segment must produce a distinct key: the
- * `anonymous` segment keys under the plain URL (un-policied pages, and an
- * explicit `anonymous` grant, share exactly today's entry), and every other
- * segment folds its label into the URL as a reserved query parameter.
- *
- * The Cookie header is stripped from the key so that two visitors in the same
- * segment collapse onto one entry even though their session cookies differ,
- * while the stored response's `Vary: Cookie` still keeps a downstream shared
- * cache from serving one visitor's variant to another.
+ * `anonymous` keys under the plain URL. The cookie is dropped so a segment's
+ * visitors share one entry; the stored `Vary: Cookie` still protects downstream
+ * caches.
  */
 export function segmentCdnKey(request: Request, segment: Segment): Request {
   const url = new URL(request.url);
@@ -141,10 +98,7 @@ export function methodIsCacheable(method: string): boolean {
 }
 
 /**
- * The gate for whether the CDN may participate in this request at all —
- * both reading a stored response and storing a fresh one. Returns `null` when
- * the request is cacheable, otherwise the first failing check — the reason the
- * telemetry `cdn` record carries.
+ * Gates both reading and storing; returns the first failing check, or `null`.
  */
 export function cdnBypassReason(req: CacheableRequest): CdnBypassReason | null {
   if (!methodIsCacheable(req.method)) return "method";
@@ -162,15 +116,8 @@ export function cdnBypassReason(req: CacheableRequest): CdnBypassReason | null {
 }
 
 /**
- * Whether a response left itself storable in a *shared* cache: `no-store`
- * forbids storing it at all, `private` forbids anyone but its own visitor
- * holding it. Read on the plugin-route path, where the handler's own directive
- * is the one signal core has that a particular response came out personalized
- * — the route may still be worth caching on every other request.
- *
- * The page path deliberately doesn't ask. Core stamps `private, no-store` on a
- * segment variant's client copy precisely so no intermediary reuses it, while
- * the segment-keyed edge copy it stores alongside is shared on purpose.
+ * The page path deliberately doesn't ask: core stamps `private, no-store` on a
+ * segment variant's client copy while its segment-keyed edge copy is shared.
  */
 export function responseAllowsSharedStorage(response: Response): boolean {
   const declared = response.headers.get("cache-control");
@@ -184,9 +131,7 @@ export function responseAllowsSharedStorage(response: Response): boolean {
 }
 
 /**
- * Whether a rendered response is a complete public document a shared cache may
- * hold: only a `200`, never a redirect or an error. The gate on decoration, so
- * a transient 500 never leaves carrying the site's page freshness.
+ * Gates decoration, so a transient 500 never leaves carrying page freshness.
  */
 export function responseIsShareable(status: number): boolean {
   return status === 200;

@@ -8,12 +8,8 @@ export interface DescribedParam {
 }
 
 /**
- * Describe a bound SQL parameter for the Database panel: its `kind` (for
- * per-type coloring) and display `text` (strings quoted, numbers/booleans/null
- * as literals, long strings truncated) — the `?`-form SQL stays copyable.
- * Params arrive as span-attribute `JsonValue`s (driver values like blobs and
- * bigints were already degraded to strings at record time). One pass so the
- * kind and text can't drift apart.
+ * Long strings are truncated. One pass so the kind and text can't drift
+ * apart.
  */
 export function describeSqlParam(value: unknown): DescribedParam {
   if (value === null || value === undefined)

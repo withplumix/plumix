@@ -1,8 +1,6 @@
 /**
- * Parse a single named cookie out of a request's Cookie header. We accept
- * the cookie ONLY from the Cookie header — never from URL or form (Copenhagen
- * Book explicit rule: session IDs must not be readable from form submissions
- * or query parameters).
+ * Reads the Cookie header only, never URL or form: session ids must not be
+ * readable from form submissions or query parameters.
  */
 export function readCookie(request: Request, name: string): string | null {
   const header = request.headers.get("cookie");

@@ -1,23 +1,6 @@
-// The SSR-time runtime the Vite `"use client"` transform delegates to.
-// It owns the island boundary decision so that logic lives in real,
-// testable code rather than a generated string.
-//
-// The boundary rule (see issue #1702): a `"use client"` component becomes
-// an island when it carries an explicit hydration directive (`client=…`)
-// OR it is the outermost such component in the render (no island
-// ancestor). A non-directive `"use client"` component rendered *inside*
-// an island renders inline — bundled into the parent island, its props
-// never re-serialized. `InsideIslandContext` is the runtime signal a
-// static per-module transform cannot compute at build time; it
-// propagates through the SSR render tree exactly like any React context.
-//
-// Why this matters: shared design-system primitives (shadcn/Radix Tabs,
-// etc.) ship `"use client"` per the RSC convention and thread React
-// Context objects — which are genuinely cyclic — through their internals.
-// Re-serializing every nested `"use client"` render walked into those
-// cycles and threw `IslandPropSerializationError`. Serializing exactly
-// once, at the outermost boundary, is what every RSC/islands framework
-// (React, Astro, Nuxt) relies on.
+// Props serialize only at the outermost `"use client"` boundary: shared
+// primitives like Radix thread cyclic React contexts through nested client
+// components.
 
 import type { ComponentType, ReactElement, ReactNode } from "react";
 import { createContext, createElement, useContext } from "react";
@@ -26,10 +9,8 @@ import type { SerializedProps } from "./serialize.js";
 import { serializeProps } from "./serialize.js";
 
 /**
- * Marks "we are already inside a hydrated island subtree". An island
- * provides `true` to the component it renders; nested shims read it to
- * decide inline-vs-island. Defaults to `false` so a top-level render is
- * treated as the outermost boundary.
+ * `true` inside a hydrated island subtree, where a directive-less client
+ * component renders inline.
  */
 export const InsideIslandContext = createContext(false);
 
@@ -55,11 +36,8 @@ export interface IslandShimProps {
   readonly props: SerializedProps;
 }
 
-// Deliberately broad: any object carrying a symbol `$$typeof` (elements,
-// portals, lazy, …) — not React's narrower `isValidElement`. Everything it
-// matches is bridged as a slot rather than serialized; anything it misses
-// falls into `rest` and would hit the serializer. Mirrors the check the old
-// generated shim used.
+// Broader than `isValidElement` on purpose: portals and lazy must be bridged as
+// slots, not serialized.
 function isReactElementValue(value: unknown): value is ReactElement {
   return (
     value != null &&
@@ -75,11 +53,6 @@ export function IslandShim(shim: IslandShimProps): ReactNode {
   const client = typeof rawClient === "string" ? rawClient : undefined;
   const hasDirective = client !== undefined;
 
-  // Shared client primitive rendered *within* an island (e.g. shadcn/Radix
-  // Tabs inside an author's island): render inline, bundled into the parent
-  // island. No new boundary, no prop serialization — the idempotent-boundary
-  // rule that keeps Radix context internals away from the serializer.
-  // `forwarded` drops the strategy props so they don't leak onto the DOM.
   if (insideIsland && !hasDirective) {
     return createElement(Component, forwarded);
   }
@@ -93,11 +66,8 @@ export function IslandShim(shim: IslandShimProps): ReactNode {
   for (const [key, value] of Object.entries(forwarded)) {
     if (isReactElementValue(value)) {
       slots.push(key);
-      // Children/slots are composed in the *outer* scope and passed in — they
-      // belong to the enclosing boundary, not this island's bundle (the RSC
-      // rule: passed children are bridged, never bundled). Reset the context
-      // to `false` so a `"use client"` child becomes its own island and
-      // hydrates, instead of inlining into frozen slot HTML.
+      // Passed children belong to the outer scope, so a client child must
+      // become its own island, not frozen slot HTML.
       wrapped[key] = createElement(
         "plumix-static-slot",
         { "data-plumix-slot": key },

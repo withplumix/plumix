@@ -7,12 +7,8 @@ import type { DebugPanel } from "./types.js";
 const DEFAULT_PANEL_ORDER = Number.MAX_SAFE_INTEGER;
 
 /**
- * Gathers the request's debug panels: runs the `debug:panels` filter
- * chain — isolating each handler so a throw or non-array return during
- * *collection* can't take down the bar — then drops denylisted ids, dedupes
- * by id (last contributor wins), and returns them ordered by ascending
- * `order`. A panel throwing from its own `render` is a separate concern the
- * collector can't see.
+ * Isolates each `debug:panels` handler so a throw during collection can't take
+ * down the bar. A throw from a panel's own `render` is not caught here.
  */
 export function collectDebugPanels(
   hooks: HookExecutor,

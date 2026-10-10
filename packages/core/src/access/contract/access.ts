@@ -2,19 +2,15 @@ import type { UserRole } from "../../db/schema/users.js";
 import type { PRIVATE_SEGMENT } from "./segments.js";
 
 /**
- * Audience segments derived for free from the loaded principal — no extra
- * lookup. `entitlement:<label>` and other custom labels come only from a
- * developer `grant()` and are declared in the policy's `segments` space.
- * `private` is the reserved never-cached escape hatch.
+ * Segments derived from the loaded principal with no extra lookup. Custom
+ * labels come only from `grant()`. `private` is never cached.
  */
 export type BuiltinSegment =
   "anonymous" | "authenticated" | typeof PRIVATE_SEGMENT | `role:${UserRole}`;
 
 /**
- * The membership / paywall segment family — a developer-defined `<label>` (a
- * membership, plan, or tier) resolved by their entitlement check and declared
- * in the policy's `segments` space. Open-ended by design, so unlike the closed
- * `role:` family it is not a built-in: each label must be declared.
+ * A membership or paywall label. Open-ended, unlike `role:`, so each label must
+ * be declared in the policy's `segments` space.
  */
 export type EntitlementSegment = `entitlement:${string}`;
 
@@ -31,11 +27,8 @@ export type Gate =
   /** Redirect an anonymous visitor to sign-in, returning them afterwards. */
   | { readonly type: "redirect" }
   /**
-   * An unmet requirement. A *hard* challenge (`soft` absent/false) blocks — a
-   * terminal 402 upsell or 403 denial, no content sent. A *soft* challenge lets
-   * the render proceed at 200 so the theme can serve a teaser (or client-locked
-   * full content) at the same URL, cached under the visitor's own segment as a
-   * variant distinct from the entitled full render.
+   * A hard challenge ends in a 402 or 403 with no content. A `soft` one renders
+   * at 200 so the theme can serve a teaser, cached under the visitor's segment.
    */
   | {
       readonly type: "challenge";

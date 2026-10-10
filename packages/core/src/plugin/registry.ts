@@ -1,10 +1,3 @@
-// Plugin registry container — the runtime half of the plugin system. Holds
-// every `Registered*` shape, the registration `*Options` inputs they extend,
-// the visibility resolvers, the `PluginRegistry` map bag + `createPluginRegistry`,
-// and the meta-field lookup helpers. This is what the runtime importers
-// traverse; the build-time `build-manifest.ts` reads a snapshot of it.
-// Re-exported unchanged from the public `@plumix/core/manifest` barrel.
-
 import type {
   AnyRouter,
   InferRouterInputs,
@@ -46,28 +39,8 @@ import type { RegisteredLookupAdapter } from "./lookup.js";
 import { resolveFrameworkRoutes } from "../route/contract/framework-routes.js";
 
 /**
- * WP-style per-type chrome labels shared between `EntryTypeOptions.labels`
- * and `EntryTypeManifestEntry.labels`. Every field is optional on the
- * options side; admin consumers resolve the cascade client-side via
- * `entryTypeLabel(entry, key)`, which falls back to
- * `GENERIC_ENTRY_TYPE_LABELS[key]` when a plugin left a key unset — so a
- * call site reads `entryTypeLabel(entry, "editItem")` directly rather than
- * inlining its own fallback.
- *
- * Key set mirrors WP's `register_post_type()` labels table where the
- * mental model carries (`searchItems`, `notFound`, `addNewItem`, etc.)
- * plus plumix-specific SPA chrome (`loadingItems`, `loadErrorItems`,
- * `untitledItem`, `noMatch`) that PHP-WP doesn't need. Deliberately
- * excludes `menu_name` (already covered by `label`/`plural`),
- * `name_admin_bar` (plumix has no admin bar), media-specific keys
- * (`featured_image`, `insert_into_item`, …) that belong on the media
- * plugin, and tag-cloud affordances (`popular_items`, `most_used`)
- * that plumix's picker UX doesn't surface. Also excludes the WP-parity
- * status-toast family (`item_updated`, `item_published`, …) and the
- * SR-only list-region labels (`items_list`, `items_list_navigation`,
- * `filter_items_list`): the editor's publish/save toasts and the
- * list-table's ARIA labels each carry their own hardcoded strings, so
- * declaring an override here would silently do nothing.
+ * Per-type admin labels, modelled on WordPress's `register_post_type()` labels.
+ * An unset key falls back to a generic catalog string.
  */
 export interface EntryTypeLabels {
   // Identity
@@ -113,13 +86,7 @@ export interface EntryTypeLabels {
   readonly moveToTrash?: Label;
 }
 
-/**
- * Closed set of icon names `EntryTypeOptions.menuIcon` accepts. The admin
- * maps each to a lucide component at render time (`core-icon.tsx`); the
- * runtime projection falls back to `"content"` for a value outside this
- * set — see `resolveEntryMenuIcon` in `build-manifest.ts`, which
- * derives its own allowlist from this same array so the two can't drift.
- */
+/** A value outside this set falls back to `"content"` in the manifest. */
 export const ENTRY_MENU_ICONS = [
   "content",
   "file-text",
@@ -136,26 +103,18 @@ export type TaxonomyMenuIcon = (typeof TAXONOMY_MENU_ICONS)[number];
 export interface EntryTypeOptions {
   readonly label: Label;
   /**
-   * Human-readable label variants. `plural` also drives the admin URL slug
-   * (`/entries/<slugified-plural>`) unless overridden; omit it and the slug
-   * falls back to `${name}s`, which is acceptable for English-named types
-   * but surfaces an "anglos" for `name: "angle"` etc. — plugins with
-   * irregular plurals should set `labels.plural` explicitly.
-   *
-   * The other keys mirror WordPress's `register_post_type()` labels table:
-   * per-type chrome strings the admin would otherwise produce by
-   * lowercase-noun substitution. Substitution breaks in languages with
-   * gender/case agreement (DE, RU, PL, UK, AR), and lowercasing translated
-   * nouns is wrong in DE (Beiträge → beiträge is a typo). Each label is
-   * optional and the admin falls back to a generic noun-less catalog
-   * string when missing.
+   * `plural` also drives the admin URL slug; without it the slug is `${name}s`,
+   * so set it for irregular plurals.
    */
   readonly labels?: EntryTypeLabels;
   readonly description?: Label;
   readonly supports?: readonly string[];
   readonly termTaxonomies?: readonly string[];
   readonly isHierarchical?: boolean;
-  /** Master visibility switch; defaults to `true`. Cascades to `showUI`/`showInSidebar`/`excludeFromSearch` when those are unset. */
+  /**
+   * Master visibility switch; defaults to `true`. Cascades to
+   * `showUI`/`showInSidebar`/`excludeFromSearch` when those are unset.
+   */
   readonly isPublic?: boolean;
   readonly showUI?: boolean;
   readonly showInSidebar?: boolean;
@@ -172,10 +131,8 @@ export interface EntryTypeOptions {
   /** Synonyms the command palette matches in addition to the sidebar label. */
   readonly keywords?: readonly Label[];
   /**
-   * Per-type versioning policy. Only honored when `supports` includes
-   * `"revisions"`. `maxRevisions` caps how many revision rows are
-   * retained per live entry (default 25); `autosaveIntervalSeconds`
-   * shapes the editor's autosave cadence (default 60).
+   * Honored only when `supports` includes `"revisions"`. Defaults:
+   * `maxRevisions` 25, `autosaveIntervalSeconds` 60.
    */
   readonly versioning?: {
     readonly maxRevisions?: number;
@@ -184,48 +141,28 @@ export interface EntryTypeOptions {
   /** Page size for this type's archive route. Default 20. */
   readonly archivePerPage?: number;
   /**
-   * Access-control policy space for entries of this type. `default` gates
-   * every entry's own routes (its `entry` and `entryType` intents); `policies`
-   * is the closed set an editor may later assign per-entry. Absent ⇒ the global
-   * `anonymous` default (un-policied — cached and rendered exactly as today).
-   *
-   * Scope boundary (this slice): the policy gates only the entry's *own* single
-   * and archive routes. It does NOT yet filter the entry out of aggregate
-   * surfaces it also appears on — the front page, taxonomy / author / date
-   * archives, search, RSS/Atom feeds, or the sitemap. So a gated entry's title
-   * / excerpt (and, via a feed, its body) can still surface anonymously there.
-   * That is intentional for the soft-paywall case (a teaser must stay indexable)
-   * and the teaser-vs-exclude decision needs the segment / soft-gate model — so
-   * cross-surface filtering lands with segment-keyed caching + the soft gate
-   * (follow-up slices). Do not rely on `access` alone to make a type fully
-   * private across every surface until then.
+   * Gates only the entry's own single and archive routes. A gated entry still
+   * surfaces on aggregates (front page, archives, search, feeds, sitemap).
    */
   readonly access?: EntryTypeAccess;
 }
 
 export interface EntryTypeAccess {
   /**
-   * Applied to every entry of this type until a per-entry choice overrides it
-   * with one of {@link policies} (see {@link ACCESS_POLICY_META_KEY}). Also the
-   * fallback when an entry's stored choice names a key no longer in the space.
+   * Also applies when an entry's stored choice names a key no longer in {@link
+   * policies}.
    */
   readonly default: AccessPolicyFor<AppContext>;
   /**
-   * The closed set of policies an editor may assign per-entry. `default` is
-   * always implicitly part of the space (selecting nothing ⇒ `default`); list
-   * the additional selectable policies here. Absent ⇒ `default` is the only
-   * option and no per-entry override is possible.
+   * Policies an editor may assign per entry, in addition to the implicit
+   * `default`.
    */
   readonly policies?: readonly SelectableAccessPolicy[];
 }
 
 /**
- * A developer-declared, editor-selectable access policy for an entry type.
- * `key` is the stable identifier persisted on the entry (under
- * {@link ACCESS_POLICY_META_KEY}); `label` names the option in the editor's
- * visibility picker; `policy` is the gate applied when an entry selects `key`.
- * The resolver stays server-side — only {@link AccessPolicyChoice} (`key` +
- * `label`) is projected to the admin manifest.
+ * `key` is persisted on the entry, so it must stay stable. `policy` never
+ * leaves the server.
  */
 export interface SelectableAccessPolicy {
   readonly key: string;
@@ -234,10 +171,8 @@ export interface SelectableAccessPolicy {
 }
 
 /**
- * WP-style per-type chrome labels for term taxonomies. Same cascade
- * semantics as `EntryTypeLabels` — admin consumers resolve it client-side
- * via `termTaxonomyLabel(taxonomy, key)`. Terms always have a
- * server-supplied `name` so `untitledItem` doesn't apply here.
+ * Per-taxonomy admin labels; an unset key falls back to a generic catalog
+ * string.
  */
 export interface TermTaxonomyLabels {
   readonly singular?: Label;
@@ -297,10 +232,10 @@ export interface TermTaxonomyOptions {
   readonly isPublic?: boolean;
   readonly showUI?: boolean;
   readonly showInSidebar?: boolean;
-  /** Keep this taxonomy's terms out of public search results. Defaults from
-   *  `isPublic`, so a navigation-menu taxonomy is excluded without a second
-   *  declaration. The admin command palette ignores it — an editor searches
-   *  what they can read, not what a visitor can. */
+  /**
+   * Defaults to `!isPublic`. Public search only; the admin command palette
+   * ignores it.
+   */
   readonly excludeFromSearch?: boolean;
   readonly isInQuickEdit?: boolean;
   readonly hasAdminColumn?: boolean;
@@ -353,7 +288,9 @@ export function toRegisteredEntryType(
   };
 }
 
-/** The registered shape of a term taxonomy; see {@link toRegisteredEntryType}. */
+/**
+ * The registered shape of a term taxonomy; see {@link toRegisteredEntryType}.
+ */
 export function toRegisteredTermTaxonomy(
   name: string,
   options: TermTaxonomyOptions,
@@ -368,22 +305,8 @@ export function toRegisteredTermTaxonomy(
 }
 
 /**
- * Shared base for every "card of fields" registration surface — entry
- * meta boxes, term meta boxes, user meta boxes, and settings groups.
- * Each concrete surface extends this with its scope specifier (if any)
- * and any surface-specific layout hints (`location` on entry boxes).
- *
- * Semantics shared across every extender:
- * - `priority` orders cards within their region; lower first,
- *   unspecified sorts last, ties break by `id` / `name` alphabetical.
- * - `capability` is a UI-only filter — the admin hides cards the
- *   viewer lacks the capability for. The server enforces only the
- *   entity-level write gate (`<entryType>:edit*`, `<termTaxonomy>:edit`,
- *   `user:edit`, `settings:manage`). Do NOT use `capability` for
- *   secrets; any user with the entity write gate can write any
- *   registered field via the raw RPC.
- * - `fields` carry `MetaBoxField.sanitize` which runs server-side only
- *   — the manifest wire contract strips callbacks before shipping.
+ * `capability` only hides the card in the admin. The server enforces the
+ * entity's write gate, so never rely on it to protect secrets.
  */
 export interface MetaBoxBaseOptions {
   readonly label: Label;
@@ -394,51 +317,32 @@ export interface MetaBoxBaseOptions {
 }
 
 /**
- * Meta box shown on the entry editor. Scoped by `entryTypes`. Renders
- * as a collapsible section in the editor's document rail, which is
- * fixed at 256px — fields always occupy the full row. `span` is
- * accepted like on every other surface but ignored at render (a
- * universal hint narrow surfaces don't honor), and stripped from the
- * entry wire projection.
+ * Fields' `span` is ignored here: the editor rail is too narrow, so every field
+ * takes the full row.
  */
 export interface EntryMetaBoxOptions extends MetaBoxBaseOptions {
-  /**
-   * @deprecated The entry editor no longer partitions meta boxes by
-   * location — every registered box renders as a collapsible section in
-   * the right rail regardless of this flag. Declared for backward
-   * compatibility with plugins that still set it; safe to remove from
-   * new code.
-   */
+  /** @deprecated Ignored: every entry meta box renders in the editor rail. */
   readonly location?: "bottom" | "sidebar";
   readonly entryTypes: readonly string[];
 }
 
-/** Meta box shown on the termTaxonomy term edit form. Scoped by `termTaxonomies`. */
+/**
+ * Meta box shown on the termTaxonomy term edit form. Scoped by
+ * `termTaxonomies`.
+ */
 export interface TermMetaBoxOptions extends MetaBoxBaseOptions {
   readonly termTaxonomies: readonly string[];
 }
 
-/**
- * Meta box shown on the user edit form. User meta is a flat keyspace
- * (no scope analogue to entry types or termTaxonomies), so the base shape
- * is everything an author needs.
- */
 export type UserMetaBoxOptions = MetaBoxBaseOptions;
 
 /**
- * A self-contained group of fields on a settings page — storage unit
- * AND visual unit. Each group gets its own Save button (independent
- * storage, unlike entity meta which rides the entity's single Save).
- * Surfaced via `registerSettingsPage.groups: string[]`.
+ * A settings group is both a storage unit and a visual unit, saved
+ * independently of other groups.
  */
 export type SettingsGroupOptions = MetaBoxBaseOptions;
 
-/**
- * A UI-level composition of groups rendered at `/settings/<page>` in the
- * admin. Pages are not stored — they're pure registration metadata. A
- * page lists the groups it wants to surface by name (each group can be
- * referenced from multiple pages if useful).
- */
+/** Pages are not stored; a group may appear on several pages. */
 export interface SettingsPageOptions {
   readonly label: Label;
   readonly description?: Label;
@@ -511,12 +415,8 @@ export interface RegisteredCapability {
   readonly name: string;
   readonly minRole: UserRole;
   /**
-   * Additional roles explicitly granted the capability, independent of
-   * hierarchy. Complements `minRole`: a role satisfies the capability
-   * if it meets `minRole` OR appears here. Useful for non-contiguous
-   * grants ("editors and authors but not admins in between" stays
-   * impossible; "admin by hierarchy + author explicitly" becomes
-   * expressible). Sorted + deduped at registration.
+   * Roles granted the capability regardless of hierarchy: a role qualifies if
+   * it meets `minRole` or appears here.
    */
   readonly defaultGrants?: readonly UserRole[];
   readonly registeredBy: string | null;
@@ -529,50 +429,38 @@ export interface RegisteredRewriteRule {
   readonly registeredBy: string | null;
 }
 
-/** The render payload an archive-type resolver produces, or `null` for a 404. */
+/**
+ * The render payload an archive-type resolver produces, or `null` for a 404.
+ */
 export interface CustomArchiveResolution {
   readonly data: ArchiveTypeData;
   readonly title: string;
   /**
-   * CDN tags for the content this archive lists — typically `t:<type>`
-   * for each entry type it draws from (see {@link typeTag}). When the archive
-   * is `cacheable`, a publish of any listed type purges the stored page, the
-   * same coarse invalidation the built-in archives get. Ignored when the
-   * archive hasn't opted into caching.
+   * CDN tags for the content this archive lists, typically {@link typeTag} per
+   * entry type. Ignored unless the archive is `cacheable`.
    */
   readonly tags?: readonly string[];
 }
 
 /**
- * What a listed archive's resolver adds to the page core already built: the
- * subject it had to load. `null` is a 404, as it is for an archive that
- * resolves its own payload.
- *
- * `data` is merged under core's `entries` and `pagination`, so it carries the
- * archive's own fields only — write it `satisfies Omit<MyArchiveData,
- * "entries" | "pagination">` to have the compiler hold it to the shape the
- * theme was promised.
+ * `data` is merged under core's `entries` and `pagination`, so it carries only
+ * the archive's own fields.
  */
 export interface ListingArchiveResolution {
   readonly data?: ArchiveTypeData;
 }
 
 /**
- * The same, from a resolver on an archive that declared no `title`: having
- * loaded the subject, it is the only thing that can name the page.
+ * For an archive that declared no `title`: only the resolver, having loaded the
+ * subject, can name the page.
  */
 export interface TitledListingArchiveResolution extends ListingArchiveResolution {
   readonly title: string;
 }
 
 /**
- * The entries an archive is: a query narrowed from the one core hands in,
- * already holding nothing but public entries, or `null` for params that name
- * no archive at all (a 404).
- *
- * Synchronous, and it runs no queries — it records what to narrow by, so a
- * page render can ask what the archive contains without paying for the
- * answer. The term slug in `inTerm` is resolved when the query is compiled.
+ * Narrows the query core hands in; `null` is a 404. Must stay synchronous and
+ * query-free, so a render can ask what an archive contains for free.
  */
 export type ArchiveEntries = (
   q: EntryQuery,
@@ -593,75 +481,53 @@ export interface ArchiveTypeOptions {
   /** Route priority (lower wins); defaults to the rewrite-rule priority. */
   readonly priority?: number;
   /**
-   * Opt this archive's anonymous GET renders into the built-in CDN.
-   * Off by default: core can't know an archive type's content dependencies,
-   * so caching without a tag contribution would risk stale pages. An archive
-   * that declares `entries` needs nothing further — core tags it with the
-   * types its query can list. One that resolves its own payload pairs this
-   * with {@link CustomArchiveResolution.tags}.
+   * Off by default: core can't know a custom archive's dependencies. An archive
+   * with `entries` is tagged by core; one without must return {@link
+   * CustomArchiveResolution.tags}.
    */
   readonly cacheable?: boolean;
-  /**
-   * Access-control policy gating this custom (route-level) archive. Absent ⇒
-   * the global `anonymous` default. A policied archive renders live (it opts
-   * out of the CDN in this slice, like any other policied route).
-   */
+  /** A policied archive always renders live, bypassing the CDN. */
   readonly access?: AccessPolicyFor<AppContext>;
 }
 
 /**
- * The half of a listing archive's declaration that says what it lists, and
- * the seam for an option that reads the archive's entries:
- * `@plumix/plugin-feeds` adds `feed` here. An augmentation that adds one also
- * refuses it on {@link UnlistedArchiveTypeOptions}, as `field?: undefined` —
- * that is what makes the option fail to compile on an archive with no
- * `entries` rather than be quietly ignored.
+ * An augmentation adding an option here must also add it as `field?: undefined`
+ * on {@link UnlistedArchiveTypeOptions}, so it fails to compile there.
  */
 export interface ListingArchiveTypeOptions extends ArchiveTypeOptions {
   readonly entries: ArchiveEntries;
   /**
-   * Entries per page. Core derives the `/page/:page` form of every declared
-   * route from it and 404s past the last page. Defaults to the same 20 the
-   * built-in archives use.
+   * Core derives a `/page/:page` form of every route and 404s past the last
+   * page. Defaults to 20.
    */
   readonly perPage?: number;
 }
 
-/**
- * A listed archive's resolver. It is handed the finished page rather than
- * building one, and is left with what only it can do: load a subject the route
- * names, and add fields of its own. `null` is a 404; it may instead throw
- * `pageNotFound()` or `redirectTo()` from `plumix/support` (ADR 0032).
- */
 type ListingArchiveResolve<TResolution extends ListingArchiveResolution> = (
   ctx: AppContext,
   params: Record<string, string>,
   listing: EntryListing,
 ) => Promise<TResolution | null> | TResolution | null;
 
-/** A listed archive titled by its options; `resolve` only adds data. */
 interface TitledListingArchiveOptions extends ListingArchiveTypeOptions {
   readonly title: ArchiveTitle;
   readonly resolve?: ListingArchiveResolve<ListingArchiveResolution>;
 }
 
-/** A listed archive whose resolver names the page, having loaded its subject. */
 interface ResolvedListingArchiveOptions extends ListingArchiveTypeOptions {
   readonly title?: undefined;
   readonly resolve: ListingArchiveResolve<TitledListingArchiveResolution>;
 }
 
 /**
- * An archive core cannot list, because its results are a match rather than a
- * set — search is the one in the tree. It resolves its own payload and cannot
- * have a feed.
+ * For an archive whose results are a match rather than a set, such as search.
+ * It cannot have a feed.
  */
 export interface UnlistedArchiveTypeOptions extends ArchiveTypeOptions {
   readonly entries?: undefined;
   /**
-   * The whole payload, or `null` for a 404. It may instead throw
-   * `pageNotFound()` or `redirectTo()` from `plumix/support` to end the
-   * request, reading the session off `ctx` (ADR 0032).
+   * `null` is a 404. May throw `pageNotFound()` or `redirectTo()` from
+   * `plumix/support`.
    */
   readonly resolve: (
     ctx: AppContext,
@@ -670,13 +536,8 @@ export interface UnlistedArchiveTypeOptions extends ArchiveTypeOptions {
 }
 
 /**
- * `registerArchiveType` options — a URL pattern set plus either the entries
- * the archive is, which core lists, pages, orders and tags, or a resolver
- * that produces the whole payload itself.
- *
- * An archive that declares `entries` must still name its page, through
- * `title` or through a `resolve` that returns one; the three shapes below are
- * what stops a third possibility compiling.
+ * An archive that declares `entries` must still name its page, through `title`
+ * or a `resolve` that returns one.
  */
 export type ArchiveTypeDeclaration =
   | TitledListingArchiveOptions
@@ -696,37 +557,26 @@ export type RegisteredArchiveType = ArchiveTypeDeclaration & {
 export interface ViewResolution<TData = unknown> {
   readonly data: TData;
   readonly title: string;
-  /**
-   * CDN tags for what this view read (see {@link typeTag}). Only consumed when
-   * the view is `cacheable`; ignored otherwise.
-   */
+  /** Ignored unless the view is `cacheable`. */
   readonly tags?: readonly string[];
 }
 
 /**
- * `registerView` options. A view is a per-visitor app page — a sign-in form,
- * an account page, a shared comparison — rendered through the theme like any
- * other page but listing nothing, so it has no `entries`, no paging and no
- * feed (ADR 0035).
+ * A per-visitor page (sign-in, account) rendered through the theme; it lists
+ * nothing, so has no entries, paging or feed.
  */
 export interface ViewOptions<TData = unknown> {
   /** URLPattern pathnames that dispatch to this view (`/compare/:id`). */
   readonly routes: readonly string[];
-  /**
-   * Access-control policy gating the view, as on an archive type. Absent ⇒
-   * the global `anonymous` default.
-   */
   readonly access?: AccessPolicyFor<AppContext>;
   /**
-   * Opt this view's anonymous GET renders into the built-in CDN. Off by
-   * default: a view is usually different for every visitor. Pair it with
-   * {@link ViewResolution.tags} so a change purges the stored page.
+   * Off by default because a view usually differs per visitor. Pair it with
+   * {@link ViewResolution.tags}.
    */
   readonly cacheable?: boolean;
   /**
-   * The view's data and title, or `null` for a 404. It may instead throw
-   * `pageNotFound()` or `redirectTo()` from `plumix/support` to end the
-   * request, reading the session off `ctx` (ADR 0032).
+   * `null` is a 404. May throw `pageNotFound()` or `redirectTo()` from
+   * `plumix/support`.
    */
   readonly resolve: (
     ctx: AppContext,
@@ -739,28 +589,12 @@ export type RegisteredView = ViewOptions & {
   readonly registeredBy: string | null;
 };
 
-/**
- * Reference to a React component contributed by a plugin. The string is
- * the export name on the plugin's `adminEntry` module — the plumix vite
- * pipeline namespace-imports each plugin's entry and emits the matching
- * `window.plumix.registerPlugin{Page,FieldType}` calls into the
- * synthesised admin chunk, so plugin authors only need `export const
- * MyComponent = ...` and a single registration call to `ctx.register*`.
- *
- * No `package` field is needed: the plugin id (implicit from
- * registration context) keys the namespace import the export resolves
- * against. Drop-in for the previous `{ package, export }` shape; bumped
- * pre-release so consumers can update in one pass.
- */
+/** An export name on the registering plugin's `adminEntry` module. */
 export type PluginComponentRef = string;
 
 /**
- * How an admin page slots into the sidebar. `group` is either a bare
- * id (string) or an object that declares group metadata inline — first
- * page using a given id sets the label/priority for that group; later
- * pages can use the bare-string form to attach to it. Core group ids
- * (`overview` / `content` / `term-taxonomies` / `management`) carry
- * their own label/priority and ignore inline metadata.
+ * The first page using a group id sets its label and priority. Core group ids
+ * ignore inline metadata.
  */
 export type AdminNavGroupRef =
   | string
@@ -806,15 +640,8 @@ export interface RegisteredDashboardWidget extends DashboardWidgetOptions {
 }
 
 /**
- * Plugin-contributed form field renderer. The admin's form dispatcher
- * falls through to a plain text input on unknown `inputType` values
- * (with a dev-mode warning); registering a type here swaps in a
- * plugin React component that renders the custom UI.
- *
- * The `type` string must match a field's `inputType` — registering
- * `type: "media_picker"` means any field (entry meta, term meta,
- * user meta, settings group) with `inputType: "media_picker"`
- * renders through the plugin's component.
+ * Renders every field whose `inputType` equals `type`, on any surface.
+ * Unregistered input types fall back to a text input.
  */
 export interface FieldTypeOptions {
   readonly type: string;
@@ -829,13 +656,9 @@ export type PluginRouteMethod =
   "GET" | "HEAD" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS" | "*";
 
 /**
- * How the dispatcher gates a registered route before its handler runs.
- * `"development"` is the dev-surface gate (#2007): the route exists only while
- * `plumix dev` is running *and* the request arrived over loopback, and it 404s
- * otherwise — the route's existence being itself dev-only detail. Take it for
- * anything that renders authoring-time internals; `"public"` on such a route
- * leaves the environment variable as the only boundary, which a tunnel, a
- * container on `0.0.0.0` or a forwarded codespace port all walk straight past.
+ * `"development"` 404s unless `plumix dev` runs and the request is loopback.
+ * Use it for authoring internals; a tunnel or forwarded port bypasses
+ * `"public"`.
  */
 export type PluginRouteAuth =
   | "public"
@@ -848,16 +671,8 @@ export interface RegisteredRawRoute {
   readonly method: PluginRouteMethod;
   readonly path: string;
   readonly auth: PluginRouteAuth;
-  /**
-   * Whether the route opted into the CDN — see `registerRoute`, which
-   * documents what taking it claims and rejects it on a gated route.
-   */
   readonly cacheable?: boolean;
-  /**
-   * Whether the route dropped the CSRF header requirement so a plain HTML form
-   * can post to it — see `registerRoute`, which documents what taking it means
-   * and rejects it on a gated route.
-   */
+  /** Drops the CSRF header requirement so a plain HTML form can post. */
   readonly formPost?: boolean;
   readonly handler: (
     request: Request,
@@ -865,26 +680,20 @@ export interface RegisteredRawRoute {
   ) => Response | Promise<Response>;
 }
 
-/**
- * A route a plugin owns at the site root — see `registerPublicRoute`, which
- * documents what owning one means.
- */
 export interface PublicRouteOptions {
-  /** An exact pathname, or a URLPattern pathname (`/sitemap-post-:page.xml`). */
-  readonly path: string;
   /**
-   * Whether the route opted into the CDN — see `registerRoute`, which
-   * documents what taking it claims.
+   * An exact pathname, or a URLPattern pathname (`/sitemap-post-:page.xml`).
    */
+  readonly path: string;
   readonly cacheable?: boolean;
   /**
-   * Access-control policy gating this route. Absent ⇒ the route answers every
-   * visitor alike, ahead of the principal loader. A policied route renders
-   * live per reader: it never reads from or writes to the CDN, `cacheable`
-   * notwithstanding.
+   * A policied route renders live per reader and never touches the CDN, even
+   * when `cacheable`.
    */
   readonly access?: AccessPolicyFor<AppContext>;
-  /** `params` carries the pattern's captured groups; `{}` for a literal path. */
+  /**
+   * `params` carries the pattern's captured groups; `{}` for a literal path.
+   */
   readonly handler: (
     request: Request,
     ctx: AppContext,
@@ -899,34 +708,26 @@ export interface RegisteredPublicRoute extends PublicRouteOptions {
 export type RestResourceMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 /**
- * `registerRestResource`'s gate. The same model as a raw route minus
- * `"development"`: a REST resource is part of the documented public API and
- * appears in `openapi.json`, so a dev-only one has nowhere to be published.
+ * No `"development"`: a REST resource is published in `openapi.json`, so a
+ * dev-only one has nowhere to live.
  */
 export type RestResourceAuth = Exclude<PluginRouteAuth, "development">;
 
-/** Whether a REST resource path contains the reserved `{name}` segment. */
 type HasPathSegment<
   Path extends string,
   Name extends string,
 > = Path extends `${string}{${Name}}${string}` ? true : false;
 
-/** What core binds a resource's `{collection}` segment to. */
 interface RestResourceBoundEntryType {
-  /** The public entry type the `{collection}` segment names. */
   readonly entryType: RegisteredEntryType;
 }
 
-/** What core binds a resource's `{entry}` segment to. */
 interface RestResourceBoundEntry {
-  /**
-   * The entry the `{entry}` segment names, readable by the requester and, when
-   * the path also has `{collection}`, of that collection's entry type.
-   */
+  // Already checked readable by the requester and, with `{collection}`, of that
+  // entry type.
   readonly entry: Entry;
 }
 
-/** The bindings a handler receives for a given resource `path`. */
 type RestResourceBindings<Path extends string> = (HasPathSegment<
   Path,
   "collection"
@@ -938,10 +739,8 @@ type RestResourceBindings<Path extends string> = (HasPathSegment<
     : unknown);
 
 /**
- * What a REST resource's handler receives. `input` is the resource's own
- * params, query and body; the reserved `{collection}` and `{entry}` segments
- * arrive bound, as `entryType` and `entry`, only when `Path` has them.
- * `errors` is core's REST error set, so a refusal answers in core's shape.
+ * `entryType` and `entry` are present only when `Path` has the reserved
+ * `{collection}` / `{entry}` segments.
  */
 export type RestResourceHandlerArgs<Path extends string = string> = {
   /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- one registry slot holds every plugin's heterogeneous valibot schemas */
@@ -951,15 +750,9 @@ export type RestResourceHandlerArgs<Path extends string = string> = {
 } & RestResourceBindings<Path>;
 
 /**
- * A REST resource a plugin contributes into the shared `/_plumix/api/v1/`
- * namespace. `path` is relative to that prefix (e.g.
- * `/{collection}/{entry}/comments`) and uses `{param}` segments. Core binds the
- * reserved `{collection}` and `{entry}` segments before the handler runs: an
- * unknown collection, or an entry the requester can't read or of another
- * type, is core's `NOT_FOUND` and the handler never runs. `auth` reuses the
- * declarative route model; core enforces it before binding. `input`/`output`
- * are valibot schemas — the `output` schema is the public allowlist and feeds
- * the generated spec.
+ * `path` is relative to `/_plumix/api/v1/`. An unbindable `{collection}` or
+ * `{entry}` is a `NOT_FOUND` before the handler runs. `output` is the public
+ * allowlist.
  */
 export interface RestResourceOptions<Path extends string = string> {
   readonly method?: RestResourceMethod;
@@ -988,34 +781,20 @@ export interface RegisteredRestResource extends Omit<
 }
 
 /**
- * Tiny `{ key, label, href }` blob a plugin attaches so the standard
- * login screen can render a button for the sign-in flow it ships. The
- * actual flow (start route, callback route, identity resolution) is
- * registered separately via `registerRoute` + `resolveExternalIdentity`;
- * this is purely the UI affordance that points the user at it.
+ * Only the login-screen button; the flow itself is registered separately with
+ * `registerRoute` and `resolveExternalIdentity`.
  */
 export interface LoginLinkOptions {
   /**
-   * Stable key, scoped per-plugin. The wire id surfaced to the admin
-   * (and used as its React key) is `${pluginId}:${key}`, so the bare
-   * `key` you pass only needs to be unique within your own plugin —
-   * two different plugins can both register a `key: "default"`.
-   *
-   * Lowercase alphanum + dash/underscore, must start with a letter,
-   * 1–32 chars total. Same shape as `OAUTH_PROVIDER_KEY_PATTERN`.
+   * Unique within the plugin only. Lowercase alphanumerics, `-` or `_`,
+   * starting with a letter, 1–32 characters.
    */
   readonly key: string;
-  /**
-   * Button text shown on the login screen ("Sign in with Microsoft",
-   * "Continue with Okta"). No CR/LF — see `siteName` for rationale.
-   */
+  /** Must not contain CR or LF. */
   readonly label: string;
   /**
-   * URL the button points at — typically the plugin's own start route,
-   * e.g. `/_plumix/saml-microsoft/start`. Must be a relative path
-   * starting with `/` or an `https://` absolute URL; arbitrary schemes
-   * are rejected so a malicious or misconfigured plugin can't surface
-   * a `javascript:` link.
+   * A `/`-relative path or an `https://` URL; other schemes are rejected so a
+   * plugin can't surface a `javascript:` link.
    */
   readonly href: string;
 }
@@ -1025,20 +804,12 @@ export interface RegisteredLoginLink extends LoginLinkOptions {
 }
 
 /**
- * Plugin-registered work that fires on the runtime's scheduled trigger
- * (Cloudflare cron, future Node/Bun timers). The handler receives a
- * synthetic-request `AppContext` — same `db` / `hooks` / `logger` /
- * `defer` as a normal request, but `user` is `null` and `request` is
- * an internal marker.
- *
- * `cron` is the task's declared schedule; the runtime is responsible for
- * firing it. A task with a `cron` runs only on the invocation whose fired
- * schedule (`event.cron`) byte-matches it; a task without one runs on every
- * invocation.
+ * The handler's context has no `user` and a synthetic `request`. A task with
+ * `cron` runs only when the fired schedule byte-matches it; without one, on
+ * every trigger.
  */
 export interface ScheduledTask {
   readonly id: string;
-  /** The task's declared cron schedule; the runtime is responsible for firing it. */
   readonly cron?: string;
   readonly handler: (ctx: AppContext) => void | Promise<void>;
 }
@@ -1048,24 +819,11 @@ export interface RegisteredScheduledTask extends ScheduledTask {
 }
 
 /**
- * The shape `registerRpcRouter` accepts: procedures keyed by the name each is
- * called under, nested to any depth (`menu.locations.list` is a `locations`
- * router holding a `list`). Core's own name for oRPC's `AnyRouter`, so a plugin
- * can say what its router-building function returns without taking a direct
- * dependency on `@orpc/server`.
- *
- * Name a router's shape with a `type` and not an `interface` — TypeScript
- * withholds the implicit index signature from interface declarations, so an
- * interface never assigns here. `json.ts` carries the same caveat.
+ * Declare a router's shape with `type`, not `interface`: interfaces get no
+ * implicit index signature, so they never assign here.
  */
 export type PluginRpcRouter = AnyRouter;
 
-/**
- * What `createPluginRpcClient<TRouter>` hands a plugin's admin chunk: one
- * async function per procedure, nested the way the router is, taking the
- * procedure's input and resolving to its output. A renamed procedure or a
- * reshaped output on the server is a type error at every call site.
- */
 export type PluginRpcClient<TRouter extends PluginRpcRouter> =
   RouterClient<TRouter>;
 
@@ -1134,11 +892,8 @@ export interface PluginRegistry {
   readonly scheduledTasks: readonly RegisteredScheduledTask[];
   readonly templateDeps: ReadonlyMap<string, RegisteredTemplateDep>;
   readonly imageRoles: ReadonlyMap<string, RegisteredImageRole>;
-  /**
-   * Which framework route families the site keeps, from its `routes` config.
-   * Set when the registry is created, before any plugin runs, so every
-   * compile of the route map reads the same answer.
-   */
+  // Fixed before any plugin runs, so every compile of the route map reads the
+  // same answer.
   readonly frameworkRoutes: FrameworkRoutes;
 }
 
@@ -1208,8 +963,7 @@ export function createPluginRegistry(
     lookupAdapters: new Map(),
     scheduledTasks: [],
     templateDeps: new Map(),
-    // The roles more than one independent plugin reads, so none of them can own
-    // one (ADR 0004).
+    // Read by several independent plugins, so no plugin can own them.
     imageRoles: new Map([
       ["featured", { name: "featured", single: true, registeredBy: null }],
       ["ogImage", { name: "ogImage", single: false, registeredBy: null }],
@@ -1219,9 +973,8 @@ export function createPluginRegistry(
 }
 
 /**
- * The public, non-hierarchical entry types — a site's posts, not its standalone
- * pages. The front page, author archives, and date archives all list this set,
- * so it is also the set of `t:<type>` tags those pages are stored under.
+ * Public, non-hierarchical types: what the front page, author and date archives
+ * list, so also the tags they are stored under.
  */
 export function listedEntryTypeNames(
   registry: PluginRegistry,
@@ -1232,11 +985,8 @@ export function listedEntryTypeNames(
 }
 
 /**
- * The entry types a taxonomy's term pages depend on: the types the taxonomy
- * lists, or — when it lists none — every public type, since a term's feed still
- * lists whatever public entries are attached to it. Term archives are stored
- * under these types' tags and term changes purge the same ones, so both read
- * this rule rather than keeping two answers that can drift.
+ * A taxonomy listing no entry types depends on every public type, since its
+ * term feed lists any attached public entry.
  */
 export function termPageEntryTypeNames(
   registry: PluginRegistry,
@@ -1247,11 +997,6 @@ export function termPageEntryTypeNames(
   return publicEntryTypeNames(registry);
 }
 
-/**
- * Every public entry type, hierarchical or not. Any public entry renders its
- * author, so a change to a user can touch a page stored under any of these
- * types' tags — the set a user purge has to reach.
- */
 export function publicEntryTypeNames(
   registry: PluginRegistry,
 ): readonly string[] {
@@ -1260,13 +1005,6 @@ export function publicEntryTypeNames(
     .map((type) => type.name);
 }
 
-/**
- * Look up the `MetaBoxField` declaration for a meta key within the
- * entry meta surface, scoped to a given entry type. Returns the first
- * matching field across all registered entry meta boxes — key
- * uniqueness per (entryType, key) is enforced at registration time,
- * so "first match" is the only match.
- */
 export function findEntryMetaField(
   registry: PluginRegistry,
   entryType: string,
@@ -1280,13 +1018,6 @@ export function findEntryMetaField(
   return undefined;
 }
 
-/**
- * Every `MetaBoxField` registered for an entry type, across all its meta
- * boxes. Used by the publish gate to validate a promoted bag against the
- * full schema — so a required field ABSENT from the bag is caught, not
- * just one stored empty. Key uniqueness per (entryType, key) holds at
- * registration, so no de-duplication is needed.
- */
 export function listEntryMetaFields(
   registry: PluginRegistry,
   entryType: string,
@@ -1299,9 +1030,6 @@ export function listEntryMetaFields(
   return fields;
 }
 
-/**
- * Like `findEntryMetaField`, but for term meta. Scoped by termTaxonomy.
- */
 export function findTermMetaField(
   registry: PluginRegistry,
   termTaxonomy: string,
@@ -1338,12 +1066,6 @@ export function listUserMetaFields(
   return fields;
 }
 
-/**
- * Like `findEntryMetaField`, but for user meta. Users have a flat
- * keyspace (no entry-type / termTaxonomy analogue), so no scope argument —
- * key uniqueness across all user meta boxes is enforced at manifest-
- * build time.
- */
 export function findUserMetaField(
   registry: PluginRegistry,
   key: string,

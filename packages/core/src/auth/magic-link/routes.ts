@@ -40,23 +40,15 @@ const requestInputSchema = v.object({
 });
 
 /**
- * POST /_plumix/auth/magic-link/request — JSON body `{ email }`.
- *
- * Always responds with 200 and a generic "If an account exists…"
- * message regardless of whether the recipient is registered. The
- * dispatcher's CSRF gate fires before this handler (custom header +
- * Origin check); we don't need additional CSRF here.
+ * Always 200 with a generic message, registered or not. The dispatcher's CSRF
+ * gate runs first.
  */
 export async function handleMagicLinkRequest(
   ctx: AppContext,
   app: AuthFlowApp,
 ): Promise<Response> {
-  // 503 distinguishes "plumix doesn't have magic-link wired up" (operator
-  // omission, should fail loudly) from "this email isn't registered"
-  // (always-success contract, intentionally silent). Don't fold them.
-  // The cross-field check in `plumix()` prevents `magicLink` from being
-  // configured without a top-level mailer, so `ctx.mailer` is reliably
-  // present here when `magicLink` is. Belt + braces: re-check both.
+  // A missing config is an operator omission and fails loudly, unlike the
+  // silent unknown-email path.
   if (!app.config.auth.magicLink || !ctx.mailer) {
     return jsonResponse(
       { error: "magic_link_not_configured" },
@@ -94,12 +86,8 @@ export async function handleMagicLinkRequest(
       selfSignupOpen: app.config.auth.selfSignup !== undefined,
     });
   } catch (error) {
-    // requestMagicLink swallows mailer errors internally; anything that
-    // reaches here is a programming error (DB outage, etc.). The
-    // always-success contract is non-negotiable — distinguishing
-    // success from "DB blew up while looking up your email" would let
-    // an attacker fingerprint the registered set via response codes.
-    // Log server-side; respond identically.
+    // Respond identically: a distinct error code would let an attacker
+    // fingerprint registered emails.
     ctx.logger.error("magic_link_request_failed", { error });
   }
 

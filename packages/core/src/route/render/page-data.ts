@@ -58,7 +58,6 @@ declare module "../../hooks/types.js" {
 
 export const DEFAULT_ARCHIVE_PER_PAGE = 20;
 
-/** Every page kind that lists entries: the payload half of what core renders. */
 type ListingPageData =
   | FrontPageData
   | EntryTypeArchiveData
@@ -135,10 +134,8 @@ export async function archiveData(
 }
 
 /**
- * `url` is the term's canonical URL, taken from the caller because the term
- * page already built it to decide whether to redirect. `params` carries the
- * capture its page was resolved from, so compiling the listing's `inTerm`
- * replays that lookup.
+ * `url` comes from the caller, which already built it to decide on a redirect.
+ * `params` lets `inTerm` replay the page's lookup.
  */
 export async function termData(
   ctx: AppContext,
@@ -242,11 +239,8 @@ export async function dateData(
 }
 
 /**
- * One entry's page data, from a row the caller has already fetched and gated —
- * the entry-shaped sibling of {@link resolveListingPage}, and the call core's
- * own single-entry route makes. Takes a row rather than an id because who may
- * see which version of an entry differs by caller: the public route gates on
- * status and a preview token, an admin preview on the editor's session.
+ * Takes an already-gated row, not an id, because who may see which version
+ * differs by caller.
  */
 export async function resolveEntryData(
   ctx: AppContext,
@@ -261,9 +255,8 @@ export async function resolveEntryData(
     kind: "entry",
     entry,
   });
-  // A title a subscriber rewrote is expanded as one an author wrote. An
-  // untouched one was expanded at mint, and expanding it again would unescape
-  // a literal `[[tag]]` into a live one.
+  // An untouched title was expanded at mint; expanding again would turn a
+  // literal `[[tag]]` live.
   if (data.entry.title === entry.title) return data;
   return {
     ...data,
@@ -272,13 +265,8 @@ export async function resolveEntryData(
 }
 
 /**
- * A listing page named by what it is about rather than by the URL it sits at:
- * the front page, an entry type's archive, a term, an author, or a date.
- *
- * Only the pages core itself routes — a `registerArchiveType` archive resolves
- * through the plugin that registered it, from route parameters this vocabulary
- * has no way to name. Search is absent for the same reason a card is never
- * minted for one: its subject is whatever the caller typed.
+ * Only pages core routes: plugin archives need route params this can't name,
+ * and search has no fixed subject.
  */
 export type ListingPageTarget =
   | { readonly kind: "frontPage" }
@@ -287,15 +275,7 @@ export type ListingPageTarget =
   | { readonly kind: "author"; readonly id: number }
   | ({ readonly kind: "date" } & DateTarget);
 
-/**
- * Resolve a listing page from its identity — what a plugin holds when it is
- * addressing a page it did not route to, such as a social card served at a URL
- * of its own. Null when no such public page exists.
- *
- * Always the first page: a caller naming a page kind is naming the archive, not
- * one paginated slice of it, and `pagination.page` is the only field that would
- * differ between the two.
- */
+/** Null when no such public page exists. Always resolves the first page. */
 export async function resolveListingPage(
   ctx: AppContext,
   target: ListingPageTarget,
@@ -368,10 +348,7 @@ function dateTitle(
   return `${String(year)}-${pad2(month)}-${pad2(day)}`;
 }
 
-// The `entries` + `pagination` half every listing payload shares. Null is a
-// page no archive answers — past the last page, a date that does not exist,
-// or params that place no archive — which each caller answers with its own
-// 404 reason.
+// Null when no archive answers, so each caller can pick its own 404 reason.
 async function listingFor(
   ctx: AppContext,
   query: EntryQuery | null,
@@ -385,13 +362,8 @@ async function listingFor(
 }
 
 /**
- * The paginated-entries query under the listing reader and the search page.
- * Returns `{ outOfRange: true }` so the caller can pick the 404 reason.
- * `where === null` short-circuits to an empty result with no DB round-trip —
- * a site routing no public type at all, or a search with nothing to match.
- *
- * `order` defaults to newest first, which is what search is read in; an entry
- * query passes the order it carries.
+ * `where === null` yields an empty result with no DB round-trip. `order`
+ * defaults to newest first.
  */
 export async function paginatedEntries(
   ctx: AppContext,

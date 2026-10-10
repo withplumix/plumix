@@ -7,17 +7,16 @@ import { users } from "../../db/schema/users.js";
 import { generateToken, hashToken } from "../tokens.js";
 import { EmailChangeError } from "./errors.js";
 
-// 24-hour TTL — the link goes to the user's *new* mailbox, which they
-// may need a few hours to access (corporate inboxes, password managers,
-// MX delays, etc.). Magic-link uses 15 minutes because that's a sign-in
-// where the user is at-keyboard waiting for the email; an email change
-// is async — the human submits, lives life, opens the email later.
+// Far longer than magic-link's: the user may not reach the new mailbox for
+// hours.
 const EMAIL_CHANGE_TTL_SECONDS = 24 * 60 * 60;
 
 export interface RequestEmailChangeInput {
   /** The user whose email is changing. Self or admin-driven. */
   readonly userId: number;
-  /** The new email to verify. Already lowercase + valibot-trimmed by the caller. */
+  /**
+   * The new email to verify. Already lowercase + valibot-trimmed by the caller.
+   */
   readonly newEmail: string;
   /** `${origin}/_plumix/auth/verify-email?token=…` for the recipient. */
   readonly origin: string;
@@ -38,7 +37,9 @@ export interface RequestEmailChangeInput {
 }
 
 export interface RequestEmailChangeResult {
-  /** The user row read at request time, used by the caller for the hook payload. */
+  /**
+   * The user row read at request time, used by the caller for the hook payload.
+   */
   readonly user: User;
   /** Server-side only; the token surfaces to the user via email. */
   readonly token: string;
@@ -46,23 +47,8 @@ export interface RequestEmailChangeResult {
 }
 
 /**
- * Persist a pending email-change verification + send the confirmation
- * mail to the *new* address. Mirrors WordPress's
- * `send_confirmation_on_profile_email()` but harder:
- *
- *   - Token is hashed at rest (WP stores plaintext in user_meta).
- *   - Single in-flight request per user — older pending tokens are
- *     deleted before the new one lands. Avoids "I clicked the wrong
- *     link" confusion when the user requests twice.
- *   - Pre-checks email uniqueness so we don't bother mailing a doomed
- *     verification. The DB unique constraint is the authoritative
- *     guard at commit time (see verify.ts).
- *
- * The verify route resolves the user via the token's `userId`, so a
- * stolen request token without the matching user is harmless. Sessions
- * are NOT invalidated here — they're invalidated at the verify step,
- * after the email actually changes (cancelling on the *request* would
- * make the cancel button a footgun).
+ * Replaces any pending request for the user. Sessions are invalidated only at
+ * verify, once the email actually changes, so cancelling stays harmless.
  */
 export async function requestEmailChange(
   db: Db,

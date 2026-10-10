@@ -1,23 +1,6 @@
-// `visible` strategy — hydrate (or prefetch) when the island scrolls near
-// the viewport. Adapted from Astro's `client:visible` and Nuxt's
-// `hydrateOnVisible`, with three deliberate improvements:
-//
-//   - Astro observes `el.children`, not the element, because
-//     `<astro-island>` is `display: contents` (zero box → the observer
-//     never fires). A pass-through component that renders only its children
-//     then has nothing observable and stays forever un-hydrated
-//     (withastro/astro#4103, #5309). `<plumix-island>` has a normal box, so
-//     we observe the element directly and dodge that blind spot.
-//   - Both Astro and Nuxt default `rootMargin` to the browser's `"0px"`, so
-//     the chunk fetch only starts once the island is literally on-screen —
-//     a flash on slow connections. We default to `"200px"` so it warms just
-//     before entering view; override via `opts.rootMargin`.
-//   - We return a teardown that disconnects the observer. Astro and Nuxt
-//     leak the observer if the island is removed before it ever intersects;
-//     the element calls this on `disconnectedCallback`.
-//
-// The synchronous already-in-viewport pre-check (Nuxt's) fires `loadFn`
-// without ever constructing an observer for an above-the-fold island.
+// Observes the element itself, not its children, so a children-only component
+// stays observable (withastro/astro#4103). The 200px margin warms the chunk
+// before it enters view.
 
 import type { IslandStrategy } from "../island-element.js";
 import { publishIslandStrategy } from "../island-global.js";

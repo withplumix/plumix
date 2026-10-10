@@ -4,13 +4,8 @@ import { eq } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
 
 /**
- * Follow the parent chain from `candidateParentId` toward the root.
- * Returns true iff `selfId` appears in the chain — i.e., setting
- * selfId.parentId = candidateParentId would create a cycle.
- * Caps traversal depth so a pre-existing cycle can't spin forever;
- * returns true on cap-hit as a conservative default (refuse the change
- * rather than risk extending a corrupt cycle we couldn't finish walking).
- * Explicit annotation on `row` works around a drizzle recursive-type quirk.
+ * Returns true on hitting the depth cap, refusing rather than extending a
+ * pre-existing corrupt cycle.
  */
 export async function parentWouldCreateCycle(
   db: Db,
@@ -21,6 +16,7 @@ export async function parentWouldCreateCycle(
   let currentId: number | null = candidateParentId;
   for (let hop = 0; hop < MAX_DEPTH && currentId !== null; hop++) {
     if (currentId === selfId) return true;
+    // Explicit annotation works around a drizzle recursive-type quirk.
     const row: Pick<Term, "parentId"> | undefined =
       await db.query.terms.findFirst({
         columns: { parentId: true },

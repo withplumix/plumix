@@ -1,9 +1,4 @@
-// AWS SigV4 in both of its forms: query-string presigning, where a browser
-// PUTs straight to the returned URL, and header signing, which the `s3()` slot
-// uses for its own requests. Hand-rolled on Web Crypto so a bundle that only
-// needs to mint a URL does not pull the AWS SDK (~40 KB gz).
-//
-// References:
+// Hand-rolled on Web Crypto so minting a URL doesn't pull the AWS SDK.
 // https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html
 // https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-auth-using-authorization-header.html
 
@@ -12,7 +7,10 @@ import { SigV4Error } from "./errors.js";
 export interface SigV4Credentials {
   readonly accessKeyId: string;
   readonly secretAccessKey: string;
-  /** Temporary (STS) credentials carry one; it travels as `X-Amz-Security-Token`. */
+  /**
+   * Temporary (STS) credentials carry one; it travels as
+   * `X-Amz-Security-Token`.
+   */
   readonly sessionToken?: string;
   /** The signing region — `auto` for R2, the bucket's region on AWS. */
   readonly region: string;
@@ -326,7 +324,8 @@ function bytesToHex(bytes: Uint8Array): string {
   return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-// AWS UTC stamp `YYYYMMDDTHHMMSSZ`: ISO 8601 with separators and millis dropped.
+// AWS UTC stamp `YYYYMMDDTHHMMSSZ`: ISO 8601 with separators and millis
+// dropped.
 function formatAmzDate(d: Date): string {
   return d.toISOString().replace(/[-:]|\.\d{3}/g, "");
 }
@@ -340,9 +339,8 @@ export function rfc3986Encode(s: string): string {
   );
 }
 
-// Object keys keep `/` as a literal separator (it survives in S3 paths). A
-// `.` or `..` segment is refused: `new URL` and every fetch resolve it away,
-// so the request would go to a path other than the one the key names.
+// A `.` or `..` segment is refused: `new URL` resolves it away, sending the
+// request to another path.
 export function encodePath(key: string): string {
   const segments = key.split("/");
   if (segments.some((s) => s === "." || s === "..")) {

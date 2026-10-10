@@ -25,9 +25,8 @@ export interface GetTermInput {
 }
 
 /**
- * List terms in a taxonomy the caller may read. The taxonomy must be
- * registered and the caller must hold its read capability; both checks live
- * here so every transport reads through one policy. Throws {@link TermReadError}.
+ * Throws {@link TermReadError} for an unregistered taxonomy or a missing read
+ * capability.
  */
 export async function listTerms(
   ctx: AppContext,

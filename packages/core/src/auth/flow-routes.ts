@@ -1,12 +1,5 @@
-/**
- * Aggregates every auth-flow route handler (passkey, invite, magic-link,
- * device-flow, OAuth, email-change) into one chunk the dispatcher loads via a
- * single memoized dynamic import — see `loadAuthFlowRoutes` for why.
- *
- * `parseOAuthPath` is deliberately NOT re-exported here: the dispatcher matches
- * OAuth paths eagerly from `./oauth/match.js`, and re-exporting it would drag
- * the heavy handler graph back onto the eager path.
- */
+// `parseOAuthPath` stays out: the dispatcher imports it eagerly, and
+// re-exporting it here would pull these handlers onto the eager path.
 export {
   handleInviteRegisterOptions,
   handleInviteRegisterVerify,

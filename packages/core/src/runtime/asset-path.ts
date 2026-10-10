@@ -1,4 +1,3 @@
-/** Content types for what a Vite client build emits and a site's `public/` may add. */
 const CONTENT_TYPES: Readonly<Record<string, string>> = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -39,10 +38,8 @@ function contentType(name: string): string {
   return CONTENT_TYPES[extension] ?? "application/octet-stream";
 }
 
-// Dotfiles are refused throughout the tree, `.well-known` aside: an `.env`
-// dropped into `public/` must never become a URL. That takes `.` and `..`
-// with it, so no segment can climb; a backslash is refused because Windows
-// reads it as a separator the `/` split never saw.
+// An `.env` in `public/` must never become a URL; this also blocks `..`.
+// Windows reads a backslash as a separator.
 function refused(segment: string): boolean {
   return (
     (segment.startsWith(".") && segment !== ".well-known") ||
@@ -51,12 +48,8 @@ function refused(segment: string): boolean {
 }
 
 /**
- * The file a URL path names under a static root, with the headers it is
- * served with, or `null` when a self-hosted runtime's assets layer does not
- * hold it. A directory is held only through its trailing-slash form, which
- * names its `index.html` — the shape the admin shell is fetched by. The rule
- * does no I/O: the runtime opens the file, and a path naming a directory
- * without the slash is refused there, when the file is found not to be one.
+ * Does no I/O. A directory resolves only with a trailing slash, to its
+ * `index.html`; the runtime must refuse a slashless directory.
  */
 export function resolveAssetPath(
   root: string,

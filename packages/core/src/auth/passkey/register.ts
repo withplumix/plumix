@@ -58,7 +58,8 @@ export async function beginRegistration(
     pubKeyCredParams: [
       // ES256 first — covers Apple, Android, Windows Hello, YubiKey.
       { type: "public-key", alg: coseAlgorithmES256 },
-      // Advertise RS256 for older Windows Hello, but reject in verify (v1 = ES256 only).
+      // Advertise RS256 for older Windows Hello, but reject in verify (v1 =
+      // ES256 only).
       { type: "public-key", alg: coseAlgorithmRS256 },
     ],
     timeout: 60_000,
@@ -77,11 +78,10 @@ export async function beginRegistration(
 
 interface VerifiedRegistration {
   readonly credentialId: string;
-  /** SEC1-uncompressed P-256 public key, ready for storage. */
   readonly publicKey: Uint8Array;
   readonly signatureCounter: number;
   readonly transports: readonly CredentialTransport[];
-  /** User the original challenge was issued for. Null for discoverable-cred flows. */
+  // Null for discoverable-credential flows.
   readonly userId: number | null;
   readonly ceremony: RegistrationCeremony | null;
 }
@@ -215,11 +215,8 @@ export async function persistCredential(
     .values({
       id: input.verified.credentialId,
       userId: input.userId,
-      // Drizzle's `blob({ mode: "buffer" })` types this column as `Buffer`.
-      // The cast is only for the type checker — at runtime the libsql / D1
-      // driver accepts a Uint8Array (Buffer is a Uint8Array subclass). When
-      // the cloudflare adapter lands in Phase 4 we may switch the schema
-      // mode so this dance is unnecessary.
+      // Drizzle types the blob column as `Buffer`; the drivers accept a plain
+      // Uint8Array at runtime.
       publicKey: input.verified.publicKey as Buffer,
       counter: input.verified.signatureCounter,
       // Backup-eligible flag parsing isn't exposed by @oslojs/webauthn yet;
@@ -236,12 +233,9 @@ export async function persistCredential(
   return row;
 }
 
-// COSE delivers x/y as fixed 32-byte wire values, but oslojs's parser
-// hands them back as bigints, and its `encodeSEC1Uncompressed` places
-// a minimal-length Y at a fixed offset — a Y with a leading zero byte
-// (~1/256 of P-256 keys) comes out left-shifted, silently storing a
-// corrupted key that fails every future assertion. Encode with fixed
-// 32-byte big-endian slots instead (RFC 5480 §2.2).
+// Works around oslojs `encodeSEC1Uncompressed`, which left-shifts a Y with a
+// leading zero byte (~1/256 of keys) and corrupts the stored key. RFC 5480
+// §2.2.
 function encodeSec1Uncompressed(x: bigint, y: bigint): Uint8Array {
   const out = new Uint8Array(65);
   out[0] = 0x04;

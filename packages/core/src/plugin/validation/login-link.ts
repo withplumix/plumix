@@ -1,11 +1,8 @@
 import type { LoginLinkOptions } from "../manifest.js";
 import { PluginContextError } from "../errors.js";
 
-// Lowercase alphanum + dash/underscore, 1–32 chars, must start with a
-// letter. Matches `OAUTH_PROVIDER_KEY_PATTERN` exactly so keys read
-// consistently across login-button surfaces. Leading-letter constraint
-// keeps the wire id `${pluginId}:${key}` from looking like an opaque
-// numeric identifier in logs.
+// Matches `OAUTH_PROVIDER_KEY_PATTERN` so keys read consistently across
+// login-button surfaces.
 const LOGIN_LINK_KEY_RE = /^[a-z][a-z0-9_-]{0,31}$/;
 
 export function assertValidLoginLink(

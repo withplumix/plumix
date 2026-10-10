@@ -3,10 +3,8 @@ import type { SettingsBag } from "../db/schema/settings.js";
 import { settingsLoader } from "../template-deps-core.js";
 
 /**
- * Settings groups as flat `key → value` bags of what storage holds, keyed by
- * group name; a group with no rows is absent. One query for the lot, memoized per group for the
- * request — so asking for several at once is what keeps a render on a single
- * round-trip.
+ * A group with no rows is absent. Ask for several at once: one memoized query
+ * keeps a render on a single round-trip.
  */
 export async function loadSettingsGroups(
   ctx: AppContext,

@@ -7,22 +7,10 @@ import { buildSessionCookie, isSecureRequest } from "./cookies.js";
 import { createSession, readClientMeta } from "./sessions.js";
 
 interface MintedSession {
-  /** Raw session token — same value the cookie carries. */
   readonly token: string;
-  /** Ready-to-set `Set-Cookie` header value. */
   readonly cookieHeader: string;
 }
 
-/**
- * Compose the four steps every successful sign-in shares: read request
- * meta, create the session row, derive the secure-context flag, and
- * build the `Set-Cookie` header from the configured `sessionPolicy`.
- *
- * Every auth flow that mints a session for the user (magic-link, oauth,
- * passkey register/login/invite-accept) calls this — cookie attribute
- * policy lives here so a change to `SameSite`, `Secure`, or `Max-Age`
- * applies uniformly without scanning five call sites.
- */
 export async function mintSessionAndCookie(
   ctx: AppContext,
   app: AuthFlowApp,
@@ -45,10 +33,9 @@ export async function mintSessionAndCookie(
 }
 
 /**
- * The one place `user:signed_in` fires for the built-in flows. Each flow
- * takes `firstSignIn` from its own ceremony, never from stored rows:
- * sessions are deleted on sign-out, and a credential count can't tell a
- * new user from an existing one adding their first passkey.
+ * Flows take `firstSignIn` from their own ceremony: sessions are deleted on
+ * sign-out, and a credential count can't tell a new user from one adding a
+ * passkey.
  */
 export async function announceSignIn(
   ctx: AppContext,

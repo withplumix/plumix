@@ -7,11 +7,8 @@ export function readPreviewToken(ctx: AppContext): string | null {
 }
 
 /**
- * True when a `?preview=<token>` token on the request grants public
- * visibility to this exact entry. Entry-scoped: the token must have been
- * minted for `entry.id`. Trash is never previewable. Shared by the flat
- * (`findEntryForSingle`) and hierarchical (`findEntryByPath`) resolvers so
- * the one draft-visibility rule lives in a single place.
+ * Whether the request's `?preview=` token was minted for this exact entry.
+ * Trash is never previewable.
  */
 export async function previewTokenGrantsEntry(
   ctx: AppContext,

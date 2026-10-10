@@ -1,20 +1,5 @@
-/**
- * Browser-safe entry point that installs plumix's dev-only client error
- * surfaces from ONE place — the plumix client bootstrap — inverting the old
- * arrangement where the blocks island runtime installed the overlays itself.
- *
- * `blocks/` now only hydrates islands and dispatches `plumix:island-*`
- * events; this module is the single listener/installer. It imports ONLY the
- * browser-safe `core/dev/ui` implementations — never core server internals — so
- * the `@plumix/core/dev-client` subpath carries no `node:async_hooks` into the
- * client bundle. The island event contract it reads lives in
- * `blocks/island-events.ts`, consumed dev-client → blocks.
- *
- * Everything is gated so it tree-shakes out of production: the caller wraps the
- * dynamic import in `import.meta.hot` (undefined in a build), and the island
- * dialog + terminal forwarder additionally check `process.env.PLUMIX_DEV`
- * (Vite-substituted to an empty string in a build).
- */
+// Import only browser-safe `dev/ui` code here, never core server internals, so
+// this subpath carries no `node:async_hooks` into the client bundle.
 
 import type { HmrClient, InstallOptions } from "../dev/ui/index.js";
 import {
@@ -26,10 +11,7 @@ import {
 
 export type { HmrClient, ViteErrorPayload } from "../dev/ui/index.js";
 
-// Re-exported for the plumix Vite plugin — the dev-server side of these
-// endpoints, the one external consumer that used to reach them through
-// `@plumix/blocks/dev-error`. They are the browser↔dev-server contract: the
-// client posts to these endpoints carrying these payload shapes.
+// The plumix Vite plugin serves these endpoints, so it shares the contract.
 export {
   DEV_ERROR_CLIENT_ERRORS_ENDPOINT,
   DEV_ERROR_SOURCE_ENDPOINT,
@@ -39,27 +21,17 @@ export {
 export type { DevErrorFrame, ForwardedLog } from "../dev/ui/index.js";
 
 export interface DevClientOptions {
-  /**
-   * The Vite HMR client (`import.meta.hot`). When present, the compile/import
-   * error overlay is installed and subscribes to `vite:error`; when omitted, the
-   * compile overlay is skipped (there is no HMR channel to observe).
-   */
+  /** Without it the compile/import error overlay is not installed. */
   readonly hot?: HmrClient;
   /**
-   * A `vite:error` payload the caller buffered before this module finished
-   * loading — the page was served onto an already-broken module, so the event
-   * raced this (lazily-imported) install. Replayed into the compile overlay so
-   * the error isn't lost now that Vite's own overlay is disabled.
+   * A `vite:error` that fired before this lazy install loaded. Vite's own
+   * overlay is disabled, so without the replay the error is lost.
    */
   readonly initialCompileError?: InstallOptions["initialError"];
 }
 
 /**
- * Install the dev-only client error tools: the island error dialog, the
- * browser-errors-to-terminal forwarder, and — when a Vite HMR client is
- * supplied — the compile/import error overlay. Returns a teardown that
- * uninstalls every piece it installed (idempotent installs return their
- * existing teardown, so an HMR re-run of the bootstrap never stacks listeners).
+ * Each piece installs idempotently, so an HMR re-run never stacks listeners.
  */
 export function installDevClient(options: DevClientOptions = {}): () => void {
   const teardowns: (() => void)[] = [];

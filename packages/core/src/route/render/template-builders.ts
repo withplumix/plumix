@@ -50,17 +50,12 @@ import {
 
 export { NAMED_TEMPLATE_META_KEY };
 
-/** What every builder ends in — the template, whatever selected it. */
 interface TemplateSelector<Data extends TemplateData> {
-  /** Bind the template for the selection. */
   template(t: TemplateEntry<Data>): TemplateRule;
 }
 
-// The per-tier data type is erased on the way into the rule. Each builder types
-// its input to the tier's data shape (so `data.entry`/`data.term` are typed at
-// the call site), then erases on output — the resolver only ever invokes a
-// rule's template with the matching node's data, so the erasure is sound and it
-// keeps the `templates` array a homogeneous element type.
+// Erasing the per-tier data type is sound: the resolver only invokes a template
+// with its matching node's data.
 function selector<Data extends TemplateData>(
   where: TierMatchRule,
 ): TemplateSelector<Data> {
@@ -144,18 +139,16 @@ export function serverError(template: TemplateEntry<ErrorData>): TemplateRule {
 export function templateRules(
   templates: ThemeDescriptor["templates"],
 ): readonly TemplateRule[] {
-  // `Array.isArray` widens a `readonly T[]` to `any[]`, so re-assert the element
-  // type on the array branch rather than leaning on the narrowing.
+  // `Array.isArray` widens a `readonly T[]` to `any[]`, so re-assert the
+  // element type on the array branch rather than leaning on the narrowing.
   return Array.isArray(templates)
     ? (templates as readonly TemplateRule[])
     : [fallback(templates as TemplateEntry<TemplateData>)];
 }
 
 /**
- * Extract the theme's `named` entry templates grouped by entry-type name, for
- * the editor's template picker. Only content (entry) rules are collected —
- * term/author/archive named templates aren't author-selectable per entry.
- * Duplicate ids within a type keep the first declaration (resolution order).
+ * Entry rules only. A duplicate id within a type keeps the first declaration,
+ * matching resolution order.
  */
 export function collectNamedTemplates(
   templates: ThemeDescriptor["templates"],
@@ -172,11 +165,8 @@ export function collectNamedTemplates(
   return out;
 }
 
-// ── Targeted builders ───────────────────────────────────────────────────────
-// The selection vocabulary lives in `rule-selectors.ts`, shared with every
-// other rule kind declared against the hierarchy. `named` is the exception it
-// leaves to us: the id is half a contract with the editor's template picker,
-// which writes it to entry meta for `collectNamedTemplates` to read back.
+// `named` lives here, not in `rule-selectors.ts`: its id is half a contract
+// with the editor's template picker.
 
 type EntrySelector<K extends EntryTypeName> = TemplateSelector<
   EntryData<ResolvedEntryFor<K>>
@@ -194,7 +184,7 @@ interface EntryTypeBuilder<K extends EntryTypeName>
   extends
     EntrySelector<K>,
     EntryTypeTargets<K, EntrySelector<K>, EntryArchiveSelector<K>> {
-  /** Register an author-selectable template, matched from stored entry meta. */
+  // Matched from stored entry meta.
   named(id: string, label: string): EntrySelector<K>;
 }
 
@@ -224,7 +214,7 @@ export function forEntryType<K extends EntryTypeName>(
 
 interface TermTaxonomyBuilder<K extends TermTaxonomyName>
   extends TaxonomySelector<K>, TermTaxonomyTargets<K, TaxonomySelector<K>> {
-  /** Register an author-selectable template, matched from stored term meta. */
+  // Matched from stored term meta.
   named(id: string, label: string): TaxonomySelector<K>;
 }
 
@@ -252,32 +242,19 @@ interface AuthorBuilder
     TemplateSelector<AuthorArchiveData>,
     AuthorTargets<TemplateSelector<AuthorArchiveData>> {}
 
-/**
- * Target author archives. There is a single author "kind" (no registry to
- * autocomplete), so `forAuthor()` takes no name — chain `.slug(...)` / `.id(...)`
- * to narrow to one author, mirroring `forEntryType` / `forTermTaxonomy`. The
- * bare `.template()` matches every author archive (like the `author()` tier).
- */
+/** The bare `.template()` matches every author archive. */
 export function forAuthor(): AuthorBuilder {
   return authorTargets(selector<AuthorArchiveData>);
 }
 
 /**
- * Target one date archive. Date components are hierarchical (a month has no
- * meaning without a year), so `forDate` takes them positionally and matches the
- * archive of that exact granularity: `forDate(2026)` → the year archive,
- * `forDate(2026, 7)` → that month, `forDate(2026, 7, 21)` → that day. The
- * generic `date()` tier styles every date archive.
+ * Matches exact granularity: `forDate(2026)` is the year archive only, not its
+ * months or days.
  */
 export const forDate: DateTargets<TemplateSelector<DateArchiveData>> =
   dateTargets(selector<DateArchiveData>);
 
-/**
- * Target a plugin-registered archive type (`registerArchiveType`). `name`
- * autocompletes against `ArchiveTypeRegistry` and types the template's `data`
- * from the registered projection — the same shape as `forEntryType` /
- * `forTermTaxonomy`, for archives that live in a plugin rather than core.
- */
+/** Targets a `registerArchiveType` archive. */
 export function forArchiveType<K extends ArchiveTypeName>(
   name: K,
 ): TemplateSelector<ArchiveDataOf<K>> {
@@ -285,9 +262,8 @@ export function forArchiveType<K extends ArchiveTypeName>(
 }
 
 /**
- * Target a plugin-registered view (`registerView`). Any name is accepted; one
- * declared in `ViewRegistry` types the template's `data.data`. A view with no
- * rule of its own renders through `fallback` — views have no generic tier.
+ * Any name is accepted. A view with no rule renders through `fallback`: views
+ * have no generic tier.
  */
 export function forView<K extends string>(
   name: K,

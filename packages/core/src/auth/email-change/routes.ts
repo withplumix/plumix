@@ -13,18 +13,8 @@ import { verifyEmailChange } from "./verify.js";
 const MAX_TOKEN_LENGTH = 256;
 
 /**
- * GET `/_plumix/auth/verify-email?token=…`
- *
- * Top-level navigation from the user's email client. Consumes the
- * single-use email-change token, atomically commits the new email
- * + resets `emailVerifiedAt`, invalidates every session for the
- * affected user, and redirects to `auth.loginPath` with
- * `email_change_success=1` (the user re-auths via passkey /
- * magic-link / OAuth using the new email).
- *
- * Errors redirect to `auth.loginPath` with a typed
- * `email_change_error=<code>` so the login screen can render
- * actionable copy.
+ * Invalidates every session of the user, so they sign in again with the new
+ * email.
  */
 export async function handleEmailChangeVerify(
   ctx: AppContext,
@@ -47,14 +37,8 @@ export async function handleEmailChangeVerify(
     return loginError(app, "token_invalid");
   }
 
-  // The change is COMMITTED at this point — email + emailVerifiedAt
-  // are written, sessions are invalidated, the token is consumed.
-  // A throwing audit-log subscriber must NOT make us redirect to
-  // `?email_change_error=…`: the user would type the old email on
-  // the login screen while the row already moved. Log the hook
-  // failure server-side and report success regardless. Same shape
-  // applies to any "hook fires after a committed write" surface;
-  // observers can record the outcome but can't fake it.
+  // The change is committed, so a throwing subscriber must not report an error
+  // and send the user back to their old email.
   try {
     await ctx.hooks.doAction(
       "user:email_changed",

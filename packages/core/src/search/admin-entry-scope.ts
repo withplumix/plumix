@@ -20,15 +20,8 @@ export interface AdminEntryGroup extends Omit<SearchGroup, "items"> {
 }
 
 /**
- * How much of an entry a surface intends to show, which decides which types
- * belong in the scope.
- *
- * `read` is every type the caller may read — the reach a list of titles has.
- * `edit` narrows to the types they may also edit, and is what a surface
- * showing more than a title has to ask for: `entry:<type>:read` bottoms out
- * at the subscriber tier, so on a site with open signup every reader holds it
- * for every registered type, including the ones that are never rendered
- * publicly.
+ * A surface showing more than a title asks for `edit`: `entry:<type>:read`
+ * reaches subscribers, so with open signup every reader holds it.
  */
 export interface AdminEntryScopeOptions {
   readonly reach?: "read" | "edit";
@@ -39,30 +32,15 @@ export interface AdminEntryScope {
   /** The groups they may be shown, in the order the palette shows them. */
   readonly groups: readonly AdminEntryGroup[];
   /**
-   * Which rows they may be shown, across every one of those types. Already
-   * parenthesized, so a caller can `AND` it onto a predicate of its own
-   * without the disjunction inside it swallowing that predicate.
+   * Parenthesized, so the disjunction inside can't swallow a caller's own
+   * predicate.
    */
   readonly visible: SQL;
 }
 
 /**
- * The reach an admin browse surface gives this caller over `entries`.
- *
- * One seam rather than a clause per surface: the palette's own handler and a
- * search plugin's ranked replacement have to agree exactly on who may see
- * what and on what each group is called, and a second copy of these rules is
- * a second place for a draft to leak from.
- *
- * `readableEntryRows` minus trash — a browse surface hides the bin, the way
- * the entries list does by default.
- *
- * Group order does not follow `reach`: a group is numbered by where its type
- * sits among every type the caller may read, so two surfaces at different
- * reaches place the same group in the same spot.
- *
- * Null when nothing is in reach, so a caller with nothing to search stops
- * before touching the database.
+ * Shared so the palette and a search plugin agree exactly on who sees what.
+ * Hides trash. Group order ignores `reach`. Null when nothing is in reach.
  */
 export function adminEntryScope(
   ctx: Pick<AppContext, "user" | "auth" | "plugins">,
@@ -99,14 +77,8 @@ export interface MatchedEntry {
 }
 
 /**
- * Bucket matched rows into the groups this caller may be shown, capped at
- * `limit` per group and dropping the groups nothing matched.
- *
- * Shared with the scope itself so a handler supplies a query and nothing
- * else: what a group is keyed and labelled by, how many rows one holds, and
- * how a row becomes an item are the palette's business rather than each
- * handler's. Rows are taken in the order the query returned them, so a
- * ranked query keeps its ranking and a dated one keeps its dates.
+ * Keeps the rows in query order, so a ranked query keeps its ranking. Groups
+ * nothing matched are dropped.
  */
 export function entryGroups(
   scope: AdminEntryScope,

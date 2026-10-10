@@ -7,12 +7,8 @@ export interface BlockSpecLookup {
 }
 
 /**
- * The attr keys of `node` that hold child blocks: exactly the inputs its spec
- * declares with `type: "slot"`, in declaration order. The stored values never
- * decide it, because an empty slot and an empty data array are both `[]`. A
- * declared slot is listed whether its value is filled, `[]` or missing.
- *
- * `spec` is `undefined` for an unregistered block, which has no slots.
+ * Decided by the spec's `slot` inputs, never the stored values: an empty slot
+ * and an empty data array are both `[]`.
  */
 export function blockSlotKeys(
   node: BlockNode,

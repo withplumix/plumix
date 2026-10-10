@@ -1,17 +1,7 @@
 import type { MessageDescriptor } from "@lingui/core";
 
-/**
- * Descriptors behind the constraint walker's `{ path, message }`
- * rejections. Inline literals (not `defineMessage`) because core
- * builds with plain `tsc`, no Lingui macro pass — admin's extraction
- * mirror (`meta-field-i18n.ts`) re-declares these ids for
- * `lingui extract` and a lockstep test guards the pairing.
- *
- * Messages interpolate simple `{name}` placeholders only (no ICU
- * plurals) — the admin resolves them with the descriptor's `values`
- * shipped on the wire, falling back to runtime compilation when an id
- * is missing from the active catalog.
- */
+// Inline literals, not `defineMessage`: core builds with plain `tsc` and no
+// Lingui macro pass. Placeholders are simple `{name}` only, no ICU plurals.
 export const META_FIELD_MESSAGES = {
   required: {
     id: "metaField.required",

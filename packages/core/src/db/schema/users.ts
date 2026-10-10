@@ -19,10 +19,7 @@ export const users = sqliteTable(
   (t) => ({
     id: t.integer().primaryKey({ autoIncrement: true }),
     email: t.text().notNull().unique(),
-    // URL-safe author-archive identifier (`/authors/{slug}`). Derived from
-    // `name` at creation and stable thereafter — a name edit never rewrites
-    // it, so author permalinks don't break. Globally unique via the index
-    // below (users have no parent to scope by, unlike terms/entries).
+    // Stable after creation, so a name edit never breaks author permalinks.
     slug: t.text().notNull(),
     name: t.text(),
     avatarUrl: t.text(),

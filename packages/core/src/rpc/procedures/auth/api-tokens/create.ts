@@ -5,15 +5,9 @@ import { apiTokensCreateInputSchema } from "./schemas.js";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-// Mints a new personal access token for the calling user. The raw
-// secret is returned in the response *exactly once* — the admin UI
-// shows a copy-to-clipboard panel and warns the user it won't be
-// shown again. The DB stores only the SHA-256 hash + a short
-// recognisable prefix fragment.
-//
-// Self-scoped: no capability check beyond `authenticated`. Tokens
-// inherit the user's current role/capabilities at request time, so
-// minting requires no extra privilege beyond being authed.
+// The raw secret is returned exactly once; the DB stores only its hash and
+// prefix. No capability beyond `authenticated`: tokens inherit the user's
+// role at request time.
 export const create = base
   .use(authenticated)
   .input(apiTokensCreateInputSchema)

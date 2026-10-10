@@ -1,15 +1,7 @@
 import type { Label } from "./label.js";
 
-// Generic noun-less descriptors used as the cascade fallback for both
-// `EntryTypeLabels` and `TermTaxonomyLabels`. `buildManifest` resolves
-// the cascade server-side: every key the plugin author left unset is
-// populated with the corresponding descriptor below, so consumers can
-// read `entry.labels.editItem` directly without per-call-site
-// fallback boilerplate. Substitution patterns like
-// "Search {pluralLower}…" are deliberately excluded — they break in
-// languages with case/gender agreement (DE/RU/PL/UK/AR) and translated
-// nouns can't be safely lowercased. Plugin authors who want per-type
-// translations declare them explicitly.
+// No "Search {pluralLower}…" substitution patterns: they break under case or
+// gender agreement, and translated nouns can't be safely lowercased.
 
 export const GENERIC_ENTRY_TYPE_LABELS = {
   // Identity

@@ -5,33 +5,20 @@ import type { RegisteredLookupAdapter } from "../../../plugin/lookup.js";
 import type { GatedLookupErrors } from "../../../rpc-errors.js";
 import { resolveCapability } from "../../../access/contract/capability.js";
 
-// `kind` matches the discriminator a reference field carries on its
-// `referenceTarget.kind`. Valid kinds are checked against the
-// adapter registry at handler time, so the schema only enforces a
-// shape (lowercase alphanum + dash/underscore, ≤ 64 chars) the
-// registry contract can store.
+// Valid kinds are checked against the adapter registry at handler time.
 const kindSchema = v.pipe(v.string(), v.regex(/^[a-z][a-z0-9_-]{0,63}$/i));
 
 const querySchema = v.pipe(v.string(), v.trim(), v.maxLength(200));
 
-// Scope rides through to the adapter as an opaque JSON object.
-// Per-kind validation lives in the adapter (e.g. `user` validates
-// `roles` against `USER_ROLES`); the RPC schema only confirms the
-// shape isn't an array or scalar.
+// Per-kind validation lives in the adapter; here only the object shape.
 const scopeSchema = v.optional(v.record(v.string(), v.unknown()));
 
-// Realistic upper bound on a single id string. UUIDs are 36 chars;
-// `Number.MAX_SAFE_INTEGER` is 16 digits. 64 covers both with room
-// for plugin-supplied id formats (slug-like, prefixed) while
-// preventing CPU amplification on the regex parsers each adapter
-// runs against incoming ids.
+// Fits UUIDs and safe integers with room for plugin formats, while bounding
+// the regex work each adapter runs on incoming ids.
 const ID_MAX_LENGTH = 64;
 
-// `ids` is the resolve-by-id batch path: when set, the adapter
-// returns rows matching any of these ids (still scope-filtered) in
-// a single query. Capped at 100 to match the meta pipeline's
-// `HARD_MULTI_REFERENCE_LIMIT` — the picker can't ship a wider
-// selection through to the validator anyway.
+// Capped at 100 to match `HARD_MULTI_REFERENCE_LIMIT`; the validator rejects
+// a wider selection anyway.
 const lookupListIdsSchema = v.pipe(
   v.array(v.pipe(v.string(), v.maxLength(ID_MAX_LENGTH))),
   v.maxLength(100),
@@ -56,12 +43,9 @@ export function requireAdapter(
   if (!registered) {
     throw errors.NOT_FOUND({ data: { kind: "lookup_adapter", id: kind } });
   }
-  // Picker-facing surface: the adapter's owner declared which
-  // capability gates lookup. Without it, any authenticated user
-  // could enumerate the adapter's universe (emails for `user`,
-  // titles for future `entry`, etc.) at a lower privilege than the
-  // matching list RPC enforces. Adapters that opt out (`null`) are
-  // public — make that an explicit decision per kind.
+  // Without the declared capability any authenticated user could enumerate
+  // the adapter's universe below the matching list RPC's privilege. `null`
+  // is an explicit per-kind opt-out.
   const { capability } = registered;
   if (capability !== null && !context.auth.can(capability)) {
     throw errors.FORBIDDEN({

@@ -1,8 +1,6 @@
 /**
- * Discriminated union describing what a matched URL represents. Resolved
- * into a Response by the public-route resolver. URL params (slug, term,
- * page) live on `RouteMatch.params`, not on the intent itself — the
- * intent describes the *route shape*, the match carries the request.
+ * What a matched URL represents. It describes the route shape; params live on
+ * `RouteMatch.params`.
  */
 export type RouteIntent =
   // `slug` names one fixed entry, found whatever the URL captured; without it
@@ -37,10 +35,9 @@ export interface RouteRule {
   readonly intent: RouteIntent;
   readonly priority: number;
   /**
-   * Compiled by core from a registration's permalink configuration, so the
-   * URLs it matches are ones core also emits and core owns their canonical
-   * form. A plugin's `registerRewriteRule` is its own canon; `registeredBy`
-   * cannot tell the two apart, as it is set on auto rules too.
+   * Compiled from a registration's permalink configuration, so core emits and
+   * canonicalizes its URLs. `registeredBy` can't tell this apart, as auto rules
+   * set it too.
    */
   readonly isPermalinkRoute: boolean;
 }

@@ -9,11 +9,8 @@ export interface CurrentRequest {
 }
 
 /**
- * One option in the bar's request switcher. `status`/`durationMs` are `null`
- * for the current request — its response hasn't finished when the inline bar
- * renders — and carry the captured outcome for a past request. `status === null`
- * is thus the sole marker of the in-flight request (it's pre-selected via the
- * <select>'s `defaultValue`, not a flag here).
+ * `status === null` is the sole marker of the in-flight request: its
+ * response hasn't finished when the inline bar renders.
  */
 export interface SwitcherEntry {
   readonly id: string;
@@ -24,11 +21,8 @@ export interface SwitcherEntry {
 }
 
 /**
- * The newest-first switcher list: the current (in-flight) request first, then
- * captured history. `history` is already newest-first (the store's `get()`);
- * the current request is deduped out of it so it never appears twice — it isn't
- * captured until request-end, but a race (or a store that already holds it)
- * shouldn't double it.
+ * `history` must already be newest-first. The current request is deduped out
+ * in case the store already holds it.
  */
 export function buildSwitcherEntries(
   current: CurrentRequest,
@@ -56,13 +50,8 @@ export function switcherOptionLabel(entry: SwitcherEntry): string {
   return `${head} · ${entry.status} · ${entry.durationMs}ms`;
 }
 
-// The switcher's only client-side concession, kept minimal (listen → fetch →
-// swap) and dev-only: it lives inside the debug-bar module, which is tree-shaken
-// from production, so no script reaches a prod page. It reads the endpoint off
-// the wrapper's data attribute (base-path aware, resolved at render), fetches
-// the selected request's pre-rendered `?format=html` panels, and swaps them in.
-// Fail-soft is the invariant: a non-OK response or a thrown fetch leaves the
-// current panels — and the host page the bar is injected into — untouched.
+// Fail-soft: a non-OK response or a thrown fetch leaves the current panels,
+// and the host page the bar is injected into, untouched.
 export const DEBUG_SWITCHER_SCRIPT = `
 (function () {
   var root = document.querySelector("[data-plumix-debug-switch]");

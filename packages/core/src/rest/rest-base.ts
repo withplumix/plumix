@@ -4,7 +4,8 @@ import type {
   RegisteredTermTaxonomy,
 } from "../plugin/manifest.js";
 
-// Naive pluralization; an explicit per-type rest_base override is a later concern.
+// Naive pluralization; an explicit per-type rest_base override is a later
+// concern.
 function pluralize(name: string): string {
   if (name.endsWith("y") && !/[aeiou]y$/.test(name)) {
     return `${name.slice(0, -1)}ies`;
@@ -14,9 +15,8 @@ function pluralize(name: string): string {
 }
 
 /**
- * Resolve a collection rest_base (e.g. `posts`) to its registered public entry
- * type. Non-public and unknown bases resolve to null so the caller can 404 —
- * the existence of a non-public type stays hidden.
+ * Null for non-public and unknown bases alike, so a non-public type's existence
+ * stays hidden.
  */
 export function resolvePublicEntryType(
   registry: PluginRegistry,
@@ -31,9 +31,8 @@ export function resolvePublicEntryType(
 }
 
 /**
- * Resolve a collection rest_base (e.g. `categories`) to its registered public
- * taxonomy. Entry types and taxonomies share the top-level rest_base namespace
- * (siblings, as in WordPress), so the dispatcher tries this after entry types.
+ * Entry types and taxonomies share the rest_base namespace, so try this after
+ * entry types.
  */
 export function resolvePublicTaxonomy(
   registry: PluginRegistry,

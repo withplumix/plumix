@@ -1,9 +1,7 @@
 import * as v from "valibot";
 
-// User_code shape: 8 alphanumeric chars in two groups of 4, separated
-// by a dash. We accept either case + missing dash (paste-friendliness)
-// and normalise on the way in. The server-side primitive expects the
-// canonical "ABCD-EFGH" form.
+// Accepts either case and a missing dash for pasting, then normalises to
+// the canonical "ABCD-EFGH" the server primitive expects.
 const userCodeSchema = v.pipe(
   v.string(),
   v.trim(),
@@ -27,12 +25,6 @@ const tokenNameSchema = v.pipe(
   v.regex(/^[^\r\n]+$/, "name must not contain newlines"),
 );
 
-// Capability strings — `entry:post:read`, `settings:manage`, etc.
-// Conservatively bounded: capability namespaces are typically short
-// and bounded by `${prefix}:${subject}:${action}` so 96 chars is
-// generous. Reject empty strings and obvious junk via the regex —
-// no whitespace or newlines, only printable ASCII that capabilities
-// in core/plugin code use.
 const capabilitySchema = v.pipe(
   v.string(),
   v.minLength(1, "capability must be non-empty"),
@@ -40,14 +32,9 @@ const capabilitySchema = v.pipe(
   v.regex(/^[A-Za-z0-9_:.\-*]+$/, "capability uses [A-Za-z0-9_:.\\-*] only"),
 );
 
-// Per-token scope whitelist. null = inherit role caps (default);
-// non-null = the minted token is narrowed to the intersection of
-// these caps with the user's role. Cap the array so a hostile
-// approver can't store an arbitrarily-large scope list.
-//
-// Empty array `[]` is legal — same semantic as `api_tokens.scopes`
-// (token authenticates but grants no caps). See that schema's
-// header for the audit-log continuity rationale.
+// `null` inherits the role's caps; an array narrows the token to its
+// intersection with the role. `[]` is legal, as in `api_tokens.scopes`.
+// Capped against a hostile approver.
 const scopesSchema = v.optional(
   v.union([
     v.null(),

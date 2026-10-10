@@ -5,9 +5,8 @@
 import type { JsonObject, JsonValue } from "../../json.js";
 
 /**
- * The members of a field `startingMeta` reads. A group's members are `fields`
- * on the server and `subFields` on the wire; a repeater's `subFields` matter
- * only to its builder, which completes the default rows when it is declared.
+ * A group's members are `fields` on the server and `subFields` on the wire; a
+ * repeater's `subFields` matter only to its builder.
  */
 export interface StartingMetaField {
   readonly key: string;
@@ -18,10 +17,8 @@ export interface StartingMetaField {
 }
 
 /**
- * The starting meta for a set of meta-box fields, in stored shape: each
- * field's `.default()`, and for a group without one, its members' starting
- * meta. A field with no starting value is left out. Written into an entity
- * when it is created (ADR 0026).
+ * For a group without a `.default()`, its members' starting meta. A field with
+ * no starting value is left out.
  */
 export function startingMeta(fields: readonly StartingMetaField[]): JsonObject {
   const bag: Record<string, JsonValue> = {};

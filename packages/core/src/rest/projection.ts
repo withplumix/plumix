@@ -11,9 +11,8 @@ export function projectTerm(
   return { id: term.id, name: term.name, slug: term.slug };
 }
 
-// The meta keys an entry type opts into exposing (`showInApi`). Default-deny:
-// a key absent from any registered field, or registered without the flag, is
-// never returned — adding a field can't leak it.
+// Default-deny: only fields registered with `showInApi`, so adding a field
+// can't leak it.
 export function apiVisibleMetaKeys(
   registry: PluginRegistry,
   entryType: string,
@@ -40,12 +39,8 @@ function projectMeta(
 }
 
 /**
- * Explicit allowlist — default-deny. Privileged columns (authorId, sortOrder,
- * parentId, meta) and the author's email/role never appear because they are
- * not copied here; adding a column to the entries table does not leak it. The
- * shape is pinned to `publicEntrySchema`, the surface's documented contract.
- * Projected from the entry every public page renders, so `title` carries the
- * same shortcode expansion.
+ * An explicit allowlist, so a new entries column never leaks. `title` carries
+ * the same shortcode expansion a public page renders.
  */
 export function projectEntry(
   registry: PluginRegistry,
@@ -90,9 +85,7 @@ function projectEntryTerms(
   return grouped;
 }
 
-// `RoleImages` keys every role optionally — a role is there or it isn't. The
-// response shape says the same thing with a plain map, so the roles that did
-// come back are copied across; `?? null` only satisfies the optional type.
+// `?? null` only satisfies the optional type of `RoleImages`.
 function projectApiImages(
   registry: PluginRegistry,
   entry: ResolvedEntry,

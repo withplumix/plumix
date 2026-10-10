@@ -12,23 +12,13 @@ export interface EntryChange {
   readonly kind: EntryChangeKind;
 }
 
-/** Narrow enough that any drizzle db satisfies it, however a plugin has
- *  widened its schema — the feed's two accesses are all this needs. */
+// Narrow enough that any drizzle db satisfies it, however a plugin widened
+// its schema.
 type ChangeFeedDb = Pick<Db, "select" | "delete">;
 
 /**
- * Cost tracks the batch, not the corpus: the rows come back in primary-key
- * order off a limited scan, so a feed holding a full reindex drains at the
- * same rate as one holding a handful.
- *
- * An entry saved several times between drains appears once per save, so a
- * consumer collapsing the batch by `entryId` has to keep the highest `id` per
- * entry, not the first row it meets.
- *
- * `INSERT OR REPLACE` is the one write the feed cannot describe. With
- * `recursive_triggers` off — the default on D1 and libsql — the displaced row
- * fires no delete trigger, so the new row gets an `upsert` and the id it
- * replaced gets no tombstone. A consumer's projection of that id is stranded.
+ * An entry saved several times appears once per save; collapse by keeping the
+ * highest `id`. `INSERT OR REPLACE` leaves the replaced id without a tombstone.
  */
 export function readEntryChanges(
   db: ChangeFeedDb,
@@ -46,10 +36,8 @@ export function readEntryChanges(
 }
 
 /**
- * Deliberately separate from {@link readEntryChanges}, and deliberately by row
- * id: acknowledging after the work rather than before is what makes an isolate
- * that dies mid-drain leave its batch for the next one, and matching on ids
- * leaves a change enqueued since the read untouched.
+ * Ack after the work, by row id: an isolate dying mid-drain leaves its batch,
+ * and changes enqueued since the read stay untouched.
  */
 export async function ackEntryChanges(
   db: ChangeFeedDb,

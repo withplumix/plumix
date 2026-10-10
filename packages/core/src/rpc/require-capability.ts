@@ -3,16 +3,8 @@ import { resolveCapability } from "../access/contract/capability.js";
 import { base } from "./base.js";
 
 /**
- * Gate a procedure on a single capability known at router-definition time.
- * Compose after `authenticated`: `base.use(authenticated).use(requireCapability(cap))`.
- * Placed before `.input()` at every call site, so an unauthorized caller
- * gets FORBIDDEN even when their input also fails schema validation.
- *
- * A reference (`entryCapability(type, action)`) is resolved per request, since
- * the router is built before any registry exists to resolve it against.
- *
- * Doesn't fit procedures whose capability depends on a row fetched inside the
- * handler (e.g. an entry's type) — those stay hand-checked.
+ * Place before `.input()` so an unauthorized caller gets FORBIDDEN even when
+ * the input also fails validation. A capability reference resolves per request.
  */
 export const requireCapability = (capability: Capability) =>
   base.middleware(async ({ context, next, errors }) => {

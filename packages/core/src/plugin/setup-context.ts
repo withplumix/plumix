@@ -581,12 +581,8 @@ function withExtensions<TContext extends PluginSetupContextBase>(
   return ctx as TContext & PluginContextExtensions;
 }
 
-// Three meta-box registrations (entry/term/user) only differ in their
-// target Map and the human-facing kind label — extracted into a
-// factory so the call sites read as data, not three near-identical
-// blocks. Fluent builders in `options.fields` compile to plain
-// definitions here, so the registered shape (and everything
-// downstream) carries `MetaBoxField` only.
+// Fluent builders compile to plain definitions here, so everything downstream
+// carries `MetaBoxField` only.
 function makeMetaBoxRegistrar<R extends Owned & { readonly id: string }>(
   map: Map<string, R>,
   kind: string,
@@ -599,11 +595,8 @@ function makeMetaBoxRegistrar<R extends Owned & { readonly id: string }>(
     claimKey(map, kind, id, pluginId, () => {
       const fields = compileMetaBoxFields(options.fields);
       assertMetaBoxFields(kind, id, fields);
-      // Safety: every member `R` declares is present on the value — `id`,
-      // `registeredBy` and `fields` are written here, and `R`'s remaining
-      // members ride in on `options`, which the caller passes whole. The
-      // compiler can't see the second half because the parameter is typed down
-      // to the one field this factory reads.
+      // Safety: `R`'s remaining members ride in on `options`, which the caller
+      // passes whole; the parameter type narrows to the one field read here.
       return {
         ...options,
         fields,

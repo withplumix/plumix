@@ -1,10 +1,6 @@
-// Inline CSS for the admin bar — emitted once per page render via a
-// `<style>` tag inside the bar. All selectors scoped under a single stable
-// `.plumix-admin-bar` class so the theme's own CSS is untouchable. Font
-// stack covers Latin / Cyrillic / Arabic / CJK without a webfont request
-// (see [[plumix-admin-bar/issue-668]] for rationale). Multi-script glyph
-// rendering falls through `system-ui` to the OS UI font; missing-glyph
-// fallback is the browser's responsibility.
+// Scoped under `.plumix-admin-bar` so the theme's CSS can't reach it. The
+// system font stack covers Latin, Cyrillic, Arabic and CJK without a webfont
+// request.
 
 import { css } from "../css-tag.js";
 
@@ -212,11 +208,8 @@ export const ADMIN_BAR_BODY_OFFSET_CSS = css`
   }
 `;
 
-// Inline sign-out island — the bar's one concession to JS. The signout
-// endpoint is CSRF-gated on the custom `X-Plumix-Request` header (a plain
-// link/form can't set it) and answers with JSON, so a button + fetch is
-// the minimal wiring. `redirectTo` is honored for external-IdP logout;
-// otherwise the current page reloads, now unauthenticated (no bar).
+// The signout endpoint needs the `X-Plumix-Request` header and answers JSON,
+// so a button plus fetch. `redirectTo` is honored for external-IdP logout.
 export const ADMIN_BAR_SIGNOUT_SCRIPT = `
 (function () {
   var sel = "[data-plumix-signout]";

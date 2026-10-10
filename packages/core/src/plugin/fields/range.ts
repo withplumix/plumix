@@ -20,10 +20,8 @@ interface RangeFieldState extends UniversalFieldState {
 }
 
 /**
- * Entry point of the `range()` chain — only `.bounds()` is available
- * until the slider's `[min, max]` track is declared, so a range without
- * bounds can't reach `build()` (registration surfaces require a `build`
- * method). Forgetting the bounds is a compile error, not a runtime throw.
+ * Only `.bounds()` is available until the track is declared, so forgetting the
+ * bounds is a compile error rather than a runtime throw.
  */
 export class RangeFieldSeed<K extends string = string> {
   readonly #key: K;
@@ -42,11 +40,8 @@ export class RangeFieldSeed<K extends string = string> {
 }
 
 /**
- * Fluent chain for the `range` slider field. Its `[min, max]` track is
- * fixed by `.bounds()` on the seed (so the bounds are always present here);
- * `min <= max` is enforced when the chain compiles at registration.
- * `build()` injects a default sanitizer that rejects values outside
- * `[min, max]` on write; a custom `.sanitize()` replaces it entirely.
+ * `min <= max` is enforced at registration. `build()` injects a sanitizer that
+ * rejects out-of-range writes; a custom `.sanitize()` replaces it entirely.
  */
 export class RangeFieldBuilder<
   K extends string = string,
@@ -94,7 +89,9 @@ export class RangeFieldBuilder<
     return this.#fork({ default: value });
   }
 
-  /** Mark the field required — narrows the read and stored types to `number`. */
+  /**
+   * Mark the field required — narrows the read and stored types to `number`.
+   */
   required(): RangeFieldBuilder<K, number, number> {
     return this.#fork<number, number>({ required: true });
   }
@@ -209,13 +206,7 @@ export class RangeFieldBuilder<
   }
 }
 
-/**
- * Bounded numeric slider — `range("opacity").bounds(0, 100)`. The
- * `[min, max]` track is required: only `.bounds()` is available on the
- * bare constructor, so omitting it is a compile error. `min <= max` is
- * enforced at registration; bounds are enforced server-side by the
- * constraint walker.
- */
+/** `min <= max` is enforced at registration, and the bounds server-side. */
 export function range<K extends string>(key: K): RangeFieldSeed<K> {
   return new RangeFieldSeed(key);
 }

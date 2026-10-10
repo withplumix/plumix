@@ -7,38 +7,14 @@ import { blockSlotKeys } from "./block-slots.js";
 import { isBlockNodeArray } from "./render-block-tree.js";
 
 /**
- * Augmentable registry mapping block name → attrs shape. Plugins and
- * themes extend it via `declare module "plumix"` so the `block()`
- * helper can narrow attrs at compile time for known block names.
- *
- * Unknown names fall back to `JsonObject` — see `AttrsFor` below — so call
- * sites with names the registry hasn't seen still compile. An augmentation's
- * value type has to be JSON-assignable.
- *
- * ```ts
- * declare module "plumix" {
- *   interface BlockTypeRegistry {
- *     "acme/hero": { heading: string };
- *   }
- * }
- * ```
+ * Augment via `declare module "plumix"` to narrow `block()` attrs. Unknown
+ * names fall back to `JsonObject`; an augmentation's value type must be
+ * JSON-assignable.
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- module-augmentation seam; consumers extend via `declare module`.
 export interface BlockTypeRegistry {}
 
-/**
- * Augmentable registry of pattern category slugs. The 8 default
- * categories ship as the seed; plugins / themes augment via
- * `declare module "plumix"` to add their own.
- *
- * ```ts
- * declare module "plumix" {
- *   interface PatternCategoryRegistry {
- *     newsletter: true;
- *   }
- * }
- * ```
- */
+/** Augment via `declare module "plumix"` to add categories. */
 export interface PatternCategoryRegistry {
   readonly hero: true;
   readonly cta: true;
@@ -107,10 +83,8 @@ export function block<TName extends string>(
 }
 
 /**
- * Number every blank id in a pattern body `p1, p2, ...` in document order,
- * descending into the slots `blocks` declares on each node. An id the author
- * wrote is kept. Run where the block registry is known, which a pattern's
- * definition is not.
+ * Ids the author wrote are kept. Run where the block registry is known, which
+ * a pattern's definition is not.
  */
 export function assignPatternIds(
   nodes: readonly BlockNode[],

@@ -3,9 +3,7 @@ import { and, eq } from "../db/index.js";
 import { authTokens } from "../db/schema/auth_tokens.js";
 import { generateToken, hashToken } from "./tokens.js";
 
-// Preview links are meant to outlive a single review sitting but not
-// linger indefinitely; entry-scoped + expiring is the whole security
-// model. Reusable until expiry (unlike single-use magic links) so a
+// Entry scope plus expiry is the whole security model; reusable until then so a
 // reviewer can refresh and re-share.
 const PREVIEW_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -36,12 +34,7 @@ export async function createPreviewToken(
   return token;
 }
 
-/**
- * Resolve a raw preview token to the grant it carries (entry id + minting
- * user), or null when the token is missing, the wrong type, expired, or
- * malformed. Does not consume the token — preview links stay valid until
- * they expire.
- */
+/** Does not consume the token: preview links stay valid until they expire. */
 export async function verifyPreviewGrant(
   db: Db,
   rawToken: string,

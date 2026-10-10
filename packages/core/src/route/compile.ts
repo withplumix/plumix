@@ -35,14 +35,9 @@ function isPaginatedRoute(route: string): boolean {
 const derivedRoutes = new WeakMap<RegisteredArchiveType, readonly string[]>();
 
 /**
- * Every pathname an archive dispatches at, which for one that declares
- * `entries` is more than it wrote down: core owns what a later page of a
- * listing means, down to answering 404 past the end, so it derives the
- * `/page/:page` form and the plugin has no version of it left to write.
- *
- * Anything reasoning about an archive's URL space — which of them is a later
- * page, what a feed sits under — asks this rather than reading `routes`, or it
- * sees only the half the plugin declared.
+ * Every pathname an archive dispatches at, including the `/page/:page` forms
+ * core derives when it declares `entries`. Ask this rather than reading
+ * `routes`.
  */
 export function archiveRoutes(
   archive: RegisteredArchiveType,
@@ -66,10 +61,8 @@ export const FRAMEWORK_SEARCH_PAGINATED_PATTERN = `${FRAMEWORK_SEARCH_QUERY_PATT
 export const FRAMEWORK_AUTHOR_PATTERN = "/authors/:slug";
 export const FRAMEWORK_AUTHOR_PAGINATED_PATTERN = `${FRAMEWORK_AUTHOR_PATTERN}${FRAMEWORK_PAGINATION_SUFFIX}`;
 
-// Date archives: bare numeric segments, so each is constrained (`\d{4}`/`\d{2}`)
-// to only match date-shaped URLs. These sort at framework priority, so `/2026`
-// resolves to the year archive — a post slugged "2026" is shadowed (WP reserves
-// date-archive URL space the same way) unless the site turns `routes.date` off.
+// These sort at framework priority, so `/2026` shadows a post slugged "2026"
+// (as WP reserves date URLs) unless the site turns `routes.date` off.
 const YEAR = ":year(\\d{4})";
 const MONTH = ":month(\\d{2})";
 const DAY = ":day(\\d{2})";
@@ -82,18 +75,14 @@ export const FRAMEWORK_DATE_DAY_PAGINATED_PATTERN = `/${YEAR}/${MONTH}/${DAY}${F
 
 interface CompiledRule extends RouteRule {
   readonly registeredBy: string | null;
-  /**
-   * Set on auto rules, whose URLs core also emits as permalinks: the error to
-   * raise when a framework rule would answer those URLs first.
-   */
+  // Set on auto rules, whose URLs core emits as permalinks: raised when a
+  // framework rule answers them first.
   readonly onFrameworkCapture?: (frameworkPattern: string) => RouteCompileError;
 }
 
 /**
- * Compile the route map from the plugin registry. Auto-generates single +
- * archive rules for each public post type, appends explicit
- * `registerRewriteRule` entries, sorts ascending by priority. Identical raw
- * patterns throw — the error names both offending plugins.
+ * Compile the registry's route map, sorted ascending by priority. Throws when
+ * two owners claim the same raw pattern.
  */
 export function compileRouteMap(
   registry: PluginRegistry,
@@ -103,11 +92,9 @@ export function compileRouteMap(
     // `(\d+)` lets a hierarchical pages plugin keep `/page/:path+`.
     // The front page's later pages: the pagination suffix under the root.
     ...frameworkRules({ kind: "frontPage" }, [FRAMEWORK_PAGINATION_SUFFIX]),
-    // A family the site turned off is never compiled, not even as a redirect,
-    // so its URLs are free for whatever else matches (ADR 0029).
-    // Paginated variant goes first so `/search/foo/page/2` doesn't
-    // accidentally match the bare-query rule with `:query = "foo/page/2"`
-    // when URLPattern relaxes its segment captures.
+    // A family the site turned off is never compiled, leaving its URLs free.
+    // Paginated first: URLPattern would otherwise capture `foo/page/2` as
+    // `:query`.
     ...(frameworkRoutes.search
       ? frameworkRules({ kind: "search" }, [
           FRAMEWORK_SEARCH_PAGINATED_PATTERN,
@@ -137,11 +124,8 @@ export function compileRouteMap(
       : []),
   ];
 
-  // Taxonomies emit before entry types so that a slug collision (e.g. a
-  // post type with `rewrite.slug: 'category'` shadowing a `category`
-  // taxonomy) resolves taxonomy-first under the stable-sort tie-break.
-  // WP-faithful: `\$wp_rewrite->rules` orders taxonomy archives ahead of
-  // post-type singles.
+  // Taxonomies emit first so a slug collision resolves taxonomy-first under the
+  // stable sort, as WP orders taxonomy archives ahead of post-type singles.
   for (const taxonomy of registry.termTaxonomies.values()) {
     if (!taxonomy.isPublic) continue;
     for (const rule of autoRulesForTermTaxonomy(taxonomy)) rules.push(rule);
@@ -164,8 +148,8 @@ export function compileRouteMap(
   }
 
   // Plugin-registered archive types (`registerArchiveType`): each route becomes
-  // a rule carrying the `archiveType` intent that `resolvePublicRoute` looks the
-  // resolver up by. Default to the rewrite-rule priority.
+  // a rule carrying the `archiveType` intent that `resolvePublicRoute` looks
+  // the resolver up by. Default to the rewrite-rule priority.
   for (const archive of registry.archiveTypes.values()) {
     // Later pages first, as the auto rules order them: a multi-segment capture
     // in the listing route (`/docs/:path+`) would otherwise swallow `/page/2`.
@@ -223,12 +207,7 @@ function frameworkRules(
   }));
 }
 
-/**
- * The slug this type's archive is routed at, or null where it has none — the
- * question `compileRoutes` asks before it emits an archive route at all.
- * Exported so anything addressing an archive off the routing path can ask the
- * same question rather than restate a near-miss of it.
- */
+/** The slug this type's archive is routed at, or null where it has none. */
 export function archiveSlugForEntryType(
   entryType: RegisteredEntryType,
 ): string | null {
@@ -280,10 +259,6 @@ function autoRulesForEntryType(entryType: RegisteredEntryType): CompiledRule[] {
     });
   }
 
-  // Hierarchical entry types match nested URLs like /about/team/leadership
-  // via URLPattern's `:path+` catch-all. Plugins can opt out per-type
-  // (rewrite.isHierarchical: false), which keeps the flat `:slug` pattern
-  // even when the data is hierarchical.
   const capture = exposesHierarchicalUrls(entryType) ? ":path+" : ":slug";
   const singlePattern =
     baseSlug === "" ? `/${capture}` : `/${baseSlug}/${capture}`;
@@ -301,11 +276,9 @@ function autoRulesForEntryType(entryType: RegisteredEntryType): CompiledRule[] {
 }
 
 /**
- * True when a registered entry type or taxonomy exposes nested URLs via
- * `:path+`. `isHierarchical: true` is the data flag (the tree exists);
- * `rewrite.isHierarchical: false` opts URLs back to the flat single-
- * segment pattern even when the data is hierarchical. The outbound permalink
- * helpers ask this too, so the URLs they build are the shape compiled here.
+ * Whether nested `:path+` URLs are exposed: `rewrite.isHierarchical: false`
+ * keeps flat URLs over hierarchical data. Outbound permalink helpers ask this
+ * so their URLs match the compiled shape.
  */
 export function exposesHierarchicalUrls(spec: {
   readonly isHierarchical?: boolean;
@@ -354,20 +327,9 @@ function autoRulesForTermTaxonomy(
   ];
 }
 
-/**
- * A base is one or more lowercase kebab-case segments joined by `/`. URL-pattern
- * syntax such as `:x` or `*` would widen the compiled rule into a catch-all
- * over every other plugin's URLs.
- *
- * The empty string is the one shape `baseSlugProblem` rejects but the compiler
- * accepts, and only for entry types — it mounts the type at the URL root, which
- * `@plumix/plugin-pages` relies on. A taxonomy has no root branch, so `""`
- * there would compile to `//:term`.
- *
- * Only the slug is checked. The registered name it falls back to is also the
- * stored `type` / `taxonomy` column value, so its shape is a registration-time
- * question with constraints of its own rather than a routing one.
- */
+// URL-pattern syntax in a slug would widen the rule into a catch-all. `""` is
+// allowed only for entry types (root mount); a taxonomy would compile
+// `//:term`.
 function baseSlugFor(
   spec: RegisteredEntryType | RegisteredTermTaxonomy,
   registration: RegistrationKind,
@@ -420,17 +382,8 @@ function archiveSlugFor(
   return baseSlug;
 }
 
-/**
- * One pattern, one owner — except that a plugin may deliberately shadow a
- * *framework* route by claiming its pattern at a priority that actually beats
- * it. ADR 0002 makes that a supported move and the priority table documents
- * it, but the collision fired before priority was ever consulted, so the two
- * could never be spelled together.
- *
- * The shadowing rule takes ownership, so a second plugin claiming the pattern
- * collides with the shadow rather than slipping past core. Runs before the
- * sort, so the framework rule is always the one already seen.
- */
+// A plugin may shadow a framework route at a priority that beats it, and then
+// owns the pattern. Runs before the sort, so the framework rule is seen first.
 function assertUniquePatterns(rules: readonly CompiledRule[]): void {
   const owner = new Map<string, CompiledRule>();
   for (const rule of rules) {
@@ -463,14 +416,9 @@ function samplePathFor(rawPattern: string): string {
   );
 }
 
-/**
- * The permalink builders emit every auto rule's URLs, so a framework rule
- * that answers one of them first sends sitemaps, canonicals and menus to a
- * page that is not the one they name. Probing the sorted rules rather than
- * comparing patterns lets a plugin that shadows the framework rule keep the
- * URL space it won. Explicit rewrites and archive types may shadow auto rules
- * deliberately (ADR 0002), so only a framework winner is an error.
- */
+// Permalink builders emit auto rules' URLs, so a framework rule answering one
+// first misdirects sitemaps and canonicals. Probing sorted rules lets a
+// deliberate shadow keep its URLs.
 function assertAutoUrlsResolveToThemselves(
   sorted: readonly CompiledRule[],
 ): void {

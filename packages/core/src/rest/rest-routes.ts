@@ -12,11 +12,8 @@ function isParam(segment: string): boolean {
 }
 
 /**
- * Two routes overlap when some URL would match both: same method, same segment
- * count, and every position is either an exact literal match or a `{param}` on
- * either side. The matcher ranks static segments above params, so a literal
- * plugin path inside core's `/{collection}` space would silently shadow it —
- * overlap (not string equality) is what makes "core paths reserved" real.
+ * Overlap, not equality: the matcher ranks literals above params, so a literal
+ * plugin path inside core's `/{collection}` space would silently shadow it.
  */
 export function routesOverlap(a: RestRoute, b: RestRoute): boolean {
   if (a.method !== b.method) return false;
@@ -30,7 +27,8 @@ export function routesOverlap(a: RestRoute, b: RestRoute): boolean {
 }
 
 // Core's reserved routes. Core owns the entire 1- and 2-segment collection
-// space, so plugin resources must nest deeper (e.g. `/{collection}/{entry}/comments`).
+// space, so plugin resources must nest deeper (e.g.
+// `/{collection}/{entry}/comments`).
 export const CORE_REST_ROUTES: readonly RestRoute[] = [
   { method: "GET", path: "/{collection}" },
   { method: "GET", path: "/{collection}/{id}" },

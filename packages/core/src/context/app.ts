@@ -77,12 +77,6 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly clientAddress?: string;
   readonly hooks: HookExecutor;
   readonly plugins: PluginRegistry;
-  /**
-   * Optional; defaults to an empty registry / mark list so call sites
-   * that don't exercise content validation (defer tests, narrow utility
-   * paths) can omit them. Production callers (`buildApp` + dispatcher)
-   * always pass real values.
-   */
   readonly blocks?: BlockRegistry;
   readonly marks?: readonly MarkSpec[];
   readonly shortcodes?: ShortcodeRegistry;
@@ -101,19 +95,11 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly authenticator?: RequestAuthenticator;
   readonly bootstrapAllowed?: boolean;
   /**
-   * The mails `ctx.mail` sends and the catalogs they render against, which
-   * `buildApp` resolves once (`app.mails`, `app.mailCatalogs`). Without them
-   * the context declares the mails of `config` itself and renders against
-   * core's catalog alone.
+   * Without them the context declares the mails of `config` itself and renders
+   * against core's catalog alone.
    */
   readonly mails?: DeclaredMails;
   readonly mailCatalogs?: MailCatalogs;
-  /**
-   * Plugin-contributed `extendAppContext` entries — usually piped
-   * directly from `installPlugins(...).appContextExtensions`. Each
-   * entry's `value` lands at `ctx[key]` so handlers and hook
-   * listeners read them as `ctx.<key>`.
-   */
   readonly appContextExtensions?: ReadonlyMap<
     string,
     { readonly value: unknown }
@@ -133,11 +119,8 @@ function logRejection(logger: Logger, error: unknown): void {
 }
 
 function wrapDefer(logger: Logger, target: DeferFn | undefined): DeferFn {
-  // Wrap the caller's `defer` so the inner promise's rejection is
-  // logged through the configured logger before the runtime sees it.
-  // Runtimes (cloudflare, tests) only handle the success path —
-  // logging is centralised here so an operator's structured logger
-  // always wins.
+  // Runtimes only handle the success path, so rejections are logged here
+  // where the operator's logger is known.
   return (promise) => {
     const handled = promise.catch((error: unknown) => {
       logRejection(logger, error);
@@ -161,11 +144,8 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     i18n: args.config.i18n,
   });
   const mailer = resolveMailer(args.config.mailer, args.env);
-  // Best-effort fallback for tests / runtimes that don't pass an explicit
-  // origin: derive from the inbound request URL. Production always passes the
-  // canonical operator-set origin so URLs in outgoing email are stable across
-  // worker geos. The origin may be an `(env) => …` resolver — resolve it here,
-  // where the runtime env exists.
+  // The request URL is a fallback for contexts built without an app; it is
+  // resolved here because an `(env) => …` origin needs the runtime env.
   const origin =
     args.origin !== undefined
       ? resolveEnvInput(args.origin, args.env)
@@ -229,30 +209,20 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     access: null,
     origin,
     dev: args.dev,
-    // Provisional no-op — swapped for the real collector below iff a consumer
-    // votes to sample this request. Consumers see the assembled context when
-    // voting, so `telemetry` must exist (inactive) before the vote runs.
+    // Consumers vote on the assembled context, so `telemetry` must exist
+    // before the vote; the real collector replaces it below.
     telemetry: NOOP_TELEMETRY,
     // Reads `base.telemetry` per call, so the post-vote collector swap below
     // is observed without rebinding.
     fetch: createTracedFetch(() => base.telemetry),
   };
-  // Spread plugin-contributed entries onto the base — the seam between an open
-  // `Record`-of-unknown registry and the `AppContextExtensions` declaration-
-  // merge type: plugin authors augment the latter, the dispatcher feeds the
-  // former.
   if (args.appContextExtensions !== undefined) {
-    // Safety: the write is keyed, never structural — every key is rejected
-    // below if it already exists, so no declared field of the context can be
-    // reached through this view, and each value arrives typed from the
-    // registration that produced it.
+    // Safety: every key that already exists is rejected below, so no declared
+    // context field is reachable through this view.
     const target = base as unknown as Record<string, unknown>;
     for (const [key, entry] of args.appContextExtensions) {
-      // Defense in depth — `extendAppContext` already rejects these at
-      // registration time. Throwing here means a malformed map (built
-      // by a test or dev tool that bypasses the registration guard)
-      // fails fast on the first request rather than silently
-      // corrupting `db` / `auth` / etc. for the rest of the process.
+      // `extendAppContext` already rejects these; a map built around it must
+      // not silently overwrite `db` or `auth`.
       if (key in target) {
         throw ContextError.appContextExtensionShadowsBuiltin(key);
       }
@@ -260,9 +230,8 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     }
   }
   const ctx = base as AppContext<TSchema>;
-  // Safety: `TSchema` reaches only `ctx.db`, which the vote never touches —
-  // consumers see the same context shape whatever schema the site declared,
-  // so erasing to the core-schema view drops nothing a consumer can read.
+  // Safety: `TSchema` reaches only `ctx.db`, which the vote never touches, so
+  // the core-schema view drops nothing a consumer reads.
   const coreSchemaView = ctx as unknown as AppContext;
   const sampled = sampleTelemetryConsumers(
     coreSchemaView,
@@ -282,16 +251,8 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
   return ctx;
 }
 
-/**
- * The gate: which registered consumers want this request collected. In dev the
- * request-history writer registers unconditionally — its readers (the bar, the
- * history read routes, the MCP tracing and error tools, the dev error page) are
- * reached by separate switches, so gating the one writer on any of them leaves
- * the rest empty (#2369, #1574). The `PLUMIX_DEV` branch is Vite-empty in a
- * build, so neither the writer nor the bar's config reaches production. The bar
- * needs no writer of its own — it reads the live collector while rendering.
- * Config consumers follow. A consumer without `sample` always votes yes.
- */
+// The history writer registers unconditionally in dev: its readers sit behind
+// separate switches, so gating it on any one of them would starve the rest.
 function sampleTelemetryConsumers(
   ctx: AppContext,
   dev: DevRuntime | undefined,

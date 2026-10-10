@@ -21,31 +21,20 @@ import type {
 import type { UniversalFieldState } from "./universal.js";
 import { humanizeFieldKey } from "./builder.js";
 
-/**
- * The hydrated read shape for a reference `kind`, sourced from the
- * shared {@link ReferenceHydrationShapes} registry so the builder's
- * default read type tracks whatever the adapter actually resolves.
- * Plugin-registered kinds augment that registry; an unregistered kind
- * folds to `never`.
- */
+// Plugin-registered kinds augment `ReferenceHydrationShapes`; an unregistered
+// kind folds to `never`.
 type ReferenceSummaryOf<Kind extends string> =
   Kind extends keyof ReferenceHydrationShapes
     ? ReferenceHydrationShapes[Kind]
     : never;
 
-/** One read element: the hydrated summary by default, the bare id after `.returns("id")`. */
 type ReferenceReadItem<
   Summary,
   Returns extends "id" | "hydrated",
 > = Returns extends "id" ? string : Summary;
 
-/**
- * The phantom read type. Single references are *always* optional — a
- * live target can be deleted after the id is written, so even a
- * `.required()` field reads `undefined` for an orphan. Multi references
- * read a dense array (orphans drop out); the array itself is present
- * once `.required()` guarantees a write, optional otherwise.
- */
+// Single references are always optional: a target can be deleted after the id
+// is written, so even a `.required()` field reads `undefined` for an orphan.
 type ReferenceReadValue<
   Summary,
   Multiple extends boolean,
@@ -57,11 +46,6 @@ type ReferenceReadValue<
     : readonly ReferenceReadItem<Summary, Returns>[] | undefined
   : ReferenceReadItem<Summary, Returns> | undefined;
 
-/**
- * The phantom stored shape — bare ids, what `whereMeta` addresses.
- * `.required()` narrows away `undefined` (write-enforced); the read
- * projection (`.returns()`) never touches it.
- */
 type ReferenceStoredValue<
   Multiple extends boolean,
   Required extends boolean,
@@ -73,7 +57,6 @@ type ReferenceStoredValue<
     ? string
     : string | undefined;
 
-/** The compiled field variant a `(kind, cardinality)` pair builds to. */
 type ReferenceFieldOf<
   Kind extends string,
   Multiple extends boolean,
@@ -99,24 +82,8 @@ interface ReferenceFieldState extends UniversalFieldState {
 }
 
 /**
- * Fluent chain shared by the core reference fields (`entry`, `term`,
- * `user`). Immutable — every call returns a fresh instance. The type
- * parameters are the declaration's compile-time state:
- *
- * - `Kind` selects the adapter and, through {@link ReferenceSummaryOf},
- *   the hydrated read shape; it also gates the kind-specific scope
- *   chains (`.roles()` on `user`, `.status()` / `.includeTrashed()` on
- *   `entry`);
- * - `K` is the literal field key;
- * - `Multiple` flips storage + read type to arrays (`.multiple()`);
- * - `Required` narrows the stored shape and, for multi fields, the read
- *   type (`.required()`);
- * - `Returns` swaps the hydrated read for the bare id (`.returns("id")`).
- *
- * All phantom — nothing at runtime carries them. Reads default to the
- * hydrated summary so the typed value never lies about what the read
- * pipeline resolves. The scope object lives on the runtime instance,
- * seeded by the factory and refined by the scope chains.
+ * Immutable: every call returns a fresh instance. The type parameters are
+ * phantom; nothing at runtime carries them.
  */
 export class ReferenceFieldBuilder<
   Kind extends string,
@@ -127,7 +94,9 @@ export class ReferenceFieldBuilder<
 > implements FieldBuilder {
   /** Phantom literal key of the field — type-level only, never assigned. */
   declare readonly _key: K;
-  /** Phantom read type — hydrated summary by default, id after `.returns("id")`. */
+  /**
+   * Phantom read type — hydrated summary by default, id after `.returns("id")`.
+   */
   declare readonly _value: ReferenceReadValue<
     ReferenceSummaryOf<Kind>,
     Multiple,
@@ -136,7 +105,10 @@ export class ReferenceFieldBuilder<
   >;
   /** Phantom stored shape — bare ids; `.required()` narrows optionality. */
   declare readonly _stored: ReferenceStoredValue<Multiple, Required>;
-  /** Phantom cardinality marker backing the compile-time gate on `.multiple()` / `.max()`. */
+  /**
+   * Phantom cardinality marker backing the compile-time gate on `.multiple()` /
+   * `.max()`.
+   */
   declare readonly _multiple: Multiple;
 
   readonly #kind: Kind;
@@ -173,10 +145,8 @@ export class ReferenceFieldBuilder<
   }
 
   /**
-   * Store an array of ids instead of a single one (`type` flips to
-   * `json`, reads become a dense array). Declare cardinality before
-   * `.required()` narrows the shapes — the `this`-type gate keeps a
-   * post-narrowing `.multiple()` from compiling.
+   * Declare before `.required()`; the `this`-type gate rejects a later
+   * `.multiple()`.
    */
   multiple(
     this: ReferenceFieldBuilder<Kind, K, false, false, Returns>,
@@ -264,9 +234,8 @@ export class ReferenceFieldBuilder<
   }
 
   /**
-   * The value a new entity starts with — a stored id (or id array for
-   * multi fields), written into its meta when it is created; a cleared field stays empty. Leaves the read type as
-   * it is; `.required()` narrows it.
+   * The value a new entity starts with; a cleared field stays empty. Leaves
+   * the read type as it is.
    */
   default(
     value: Multiple extends true ? readonly string[] : string,

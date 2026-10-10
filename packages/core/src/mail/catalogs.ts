@@ -1,8 +1,5 @@
-// Mail strings resolve against one catalog per locale: core's mail catalog
-// under every installed plugin's, the way block render strings do (see
-// `route/render/block-catalog.ts`). Unit tests resolve these static imports to
-// empty catalogs, so a test of translated output hands the `.po` in as a
-// plugin catalog.
+// Unit tests resolve these static imports to empty catalogs, so a test of
+// translated output hands the `.po` in as a plugin catalog.
 
 import { messages as arMessages } from "@plumix/core/locales/mail-ar";
 import { messages as deMessages } from "@plumix/core/locales/mail-de";

@@ -37,11 +37,8 @@ export function registerCoreTemplateDeps(
 }
 
 /**
- * The row a settings group's first save writes, marking the group as created
- * (ADR 0026). Until it exists, `settings.get` answers with the group fields'
- * starting values under whatever is stored; once it does, storage alone holds
- * the group. Part of the framework-reserved `__plumix_*` namespace, and no read
- * hands it over.
+ * Until a group's first save writes this, `settings.get` serves the fields'
+ * starting values under what is stored. No read hands it over.
  */
 export const SETTINGS_CREATED_KEY = "__plumix_created";
 
@@ -52,11 +49,8 @@ export interface SettingsRow {
 }
 
 /**
- * A settings group as the settings form loads it. A group counts as created
- * once its first save has written the `__plumix_created` marker (ADR 0026).
- * Until then its fields' starting values stand in where storage has no key; after it,
- * storage alone is the truth and a cleared setting stays absent. The marker
- * itself is never part of the bag.
+ * Starting values stand in only until the group is created; after that a
+ * cleared setting stays absent.
  */
 export function settingsGroupBag(
   rows: readonly SettingsRow[],
@@ -77,16 +71,11 @@ export async function settingsLoader(
 ): Promise<Record<string, SettingsBag>> {
   const unique = [...new Set(groups)];
   if (unique.length === 0) return {};
-  // A response that printed a group is stored under its tag, so saving the
-  // group purges it — a group with no rows included, since its first save
-  // changes what the page shows.
+  // A group with no rows is tagged too, since its first save changes what the
+  // page shows.
   declarePageTags(ctx, unique.map(settingsTag));
-  // Per-group memo (#1493): head defaults, SEO surfaces, and the template
-  // dep all read `group='site'` in one request — only the first pays a
-  // query. The lazy batch queries every requested group in one `IN(...)`;
-  // a group with no rows memoizes as `null` and stays absent from the
-  // result so the caller's `loadTemplateDeps` still fills missing slugs
-  // with `null`.
+  // Several surfaces read `group='site'` per request; only the first pays.
+  // A group with no rows memoizes as `null` and stays absent from the result.
   const bags = await memoBatch(
     ctx.memo,
     unique,

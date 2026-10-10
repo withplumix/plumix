@@ -1,10 +1,8 @@
 import type { MessageDescriptor } from "@lingui/core";
 
 /**
- * A Lingui-compiled catalog as `lingui compile` emits it: a lone string for a
- * plain message, otherwise a token array where a `[name]` tuple is a
- * placeholder. Wider than the `.d.mts` the compile step declares so Lingui's
- * own `Messages` record assigns to it.
+ * Wider than the `.d.mts` the compile step declares so Lingui's own
+ * `Messages` record assigns to it.
  */
 export type CompiledCatalog = Readonly<
   Record<string, string | readonly (string | readonly unknown[])[]>
@@ -15,9 +13,9 @@ export type MessageValues = Readonly<Record<string, string>>;
 
 const PLACEHOLDER = /\{(\w+)\}/g;
 
-// Plain object access, not Lingui's runtime: blocks render on the Worker, in
-// the canvas iframe and in the admin alike, and load no Lingui runtime. Only simple `{name}` placeholders are supported — a
-// token this can't read (plural/select) drops to the English source.
+// Plain object access: blocks render on the Worker, in the canvas iframe and
+// in the admin, none with a Lingui runtime. Plural/select tokens drop to the
+// English source.
 function fromCatalog(
   value: CompiledCatalog[string] | undefined,
   values: MessageValues | undefined,

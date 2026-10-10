@@ -13,14 +13,13 @@ import { DebugPanelTabs } from "./debug-panels/panels-view.js";
 import { renderDebugPanels } from "./debug-panels/render-panels.js";
 import { DEBUG_REQUESTS_PATH } from "./request-history/path.js";
 
-/** The newest-first metadata a `GET /_plumix/debug/requests` list item carries. */
 interface DebugRequestListItem {
   readonly id: string;
   readonly method: string;
   readonly path: string;
   readonly status: number;
   readonly durationMs: number;
-  /** When the request began (epoch ms). */
+  // Epoch ms.
   readonly timestamp: number;
 }
 
@@ -36,22 +35,8 @@ function toListItem(entry: DebugHistoryEntry): DebugRequestListItem {
 }
 
 /**
- * Serves the dev request-history over HTTP so the bar's switcher can list and
- * replay past requests. One of the store's surfaces, not its owner — the two
- * dev MCP tools read the same ring in-process rather than through here. JSON
- * is canonical; HTML is a rendering over it:
- *
- * - `GET /_plumix/debug/requests` → newest-first metadata list, bounded to the
- *   store's ring size.
- * - `GET /_plumix/debug/requests/<id>` → that request's {@link DebugSnapshot}.
- * - `GET /_plumix/debug/requests/<id>?format=html` → the same snapshot rendered
- *   to the bar's panel markup ({@link renderDebugPanels}) for the switcher to
- *   swap in.
- *
- * The dispatcher mounts this only under the `PLUMIX_DEV` gate, so the route —
- * and this whole module — is absent from production builds. The dev object is
- * passed in already narrowed: the dispatcher hands over the app's, a test
- * hands over its own.
+ * Mount only under the `PLUMIX_DEV` gate, so the route and this module are
+ * absent from production builds.
  */
 export function handleDebugRequests(
   ctx: AppContext,
@@ -69,7 +54,8 @@ export function handleDebugRequests(
     return jsonResponse(dev.history.get().map(toListItem));
   }
 
-  // `rest` starts with `/` here — the empty/`"/"` collection case returned above.
+  // `rest` starts with `/` here — the empty/`"/"` collection case returned
+  // above.
   const id = decodeURIComponent(rest.slice(1));
   const entry = dev.history.find(id);
   if (entry === undefined) return notFound("debug-request-not-found");
@@ -82,10 +68,8 @@ export function handleDebugRequests(
   return jsonResponse(entry.snapshot);
 }
 
-// Render the stored snapshot through the same panels the inline bar collects
-// for this request. Panels render purely from the snapshot (never live ctx),
-// so a past request replays faithfully; `ctx` and `dev` supply only the panel
-// set.
+// Panels render purely from the snapshot, never live ctx, so a past request
+// replays faithfully; `ctx` and `dev` supply only the panel set.
 function renderPanelsHtml(
   ctx: AppContext,
   dev: NonNullable<AppContext["dev"]>,

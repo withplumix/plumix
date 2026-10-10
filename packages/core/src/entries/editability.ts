@@ -7,18 +7,14 @@ import {
 } from "../access/contract/entry-capabilities.js";
 
 /**
- * What the edit rule reads off a row. Derived from the read side's shape so a
- * column added there cannot silently diverge, minus `status`: unlike reading,
- * editing does not depend on where the row sits in its lifecycle.
+ * Without `status`: unlike reading, editing doesn't depend on the row's
+ * lifecycle.
  */
 export type EntryEditRow = Omit<EntryRow, "status">;
 
 /**
- * Whether this caller may edit this entry row: their own with `edit_own`, or
- * anyone's with `edit_any`. The one answer for every write surface, as
- * `canReadEntry` is for every read one — and the reason neither core nor a
- * plugin spells an `entry:<type>:*` capability by hand, which would miss the
- * namespace a pooled type gates under.
+ * Use this rather than spelling an `entry:<type>:*` capability, which would
+ * miss the namespace a pooled type gates under.
  */
 export function canEditEntry(ctx: EntryViewer, entry: EntryEditRow): boolean {
   const namespace = entryCapabilityNamespace(ctx.plugins, entry.type);
@@ -33,12 +29,8 @@ export function canEditEntry(ctx: EntryViewer, entry: EntryEditRow): boolean {
 export type EntryEditErrors = CapabilityErrors;
 
 /**
- * `canEditEntry` as a procedure's gate.
- *
- * Every denial reports `edit_any`, the row's author included. Reporting
- * `edit_own` to an author and `edit_any` to everyone else would answer "did I
- * write this?" for a caller who cannot see the row, so the payload is the same
- * sentence regardless of who asks.
+ * Every denial reports `edit_any`, the author included, so the payload can't
+ * answer "did I write this?" for a caller who can't see the row.
  */
 export function assertCanEditEntry(
   ctx: EntryViewer,
@@ -64,10 +56,8 @@ function deleteDenial(ctx: EntryViewer, entry: EntryEditRow): string | null {
 }
 
 /**
- * Whether this caller may delete this entry row — trash it, restore it or
- * purge it: `delete`, and for anyone else's row `edit_any` as well. Distinct
- * from `canEditEntry` by design, since `edit_own` alone deletes nothing and
- * `delete` alone edits nothing.
+ * Trash, restore or purge. Needs `delete`, plus `edit_any` for another's row;
+ * `edit_own` alone deletes nothing.
  */
 export function canDeleteEntry(ctx: EntryViewer, entry: EntryEditRow): boolean {
   return deleteDenial(ctx, entry) === null;

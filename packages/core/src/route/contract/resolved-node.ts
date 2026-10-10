@@ -1,7 +1,6 @@
 /**
- * The page a request resolved to, as the rules declared against the node
- * hierarchy match on it: its kind plus the identity a matcher narrows by
- * (type + slug/id). A contract, so the theme's matcher can name its kinds.
+ * The page a request resolved to, as node-hierarchy rules match on it: its
+ * kind plus the identity a matcher narrows by.
  */
 export type ResolvedNode =
   | ResolvedTermNode
@@ -36,13 +35,11 @@ interface ResolvedDateNode {
 
 interface ResolvedArchiveTypeNode {
   readonly kind: "archiveType";
-  /** The registered archive-type name (`registerArchiveType`). */
   readonly name: string;
 }
 
 interface ResolvedViewNode {
   readonly kind: "view";
-  /** The registered view name (`registerView`). */
   readonly name: string;
 }
 

@@ -43,11 +43,8 @@ interface SnapshotInput {
   readonly authorId: number;
 }
 
-// Stores the live slug + parentId in `meta.__plumix_snapshot` so a
-// future "restore" slice can rehydrate without an extra round-trip.
-// Retries once ONLY on a unique-index collision (nanoid coincidence);
-// any other insert failure bubbles up unchanged so we don't mask
-// schema/FK/NOT NULL bugs as "retry candidates".
+// Retries only on a unique-index collision (a nanoid coincidence), so schema
+// or FK bugs aren't masked as retry candidates.
 export async function snapshotAsRevision(
   db: Db,
   input: SnapshotInput,
@@ -108,12 +105,8 @@ function decodeCursor(raw: string | null | undefined): number | null {
   return Number.isInteger(id) && id > 0 ? id : null;
 }
 
-// Slug shape is `revision:<entryId>:<nanoid>`; the `<entryId>:`
-// segment + leading-anchor `LIKE` gives a deterministic per-entry
-// predicate at the SQL layer. Without this, a JS-level filter after
-// a `type='revision'` query would silently lose rows for any entry
-// other than the most-recently-written one (limit window saturates
-// on noisy neighbours).
+// Filtering in SQL, not JS after a `type='revision'` query, which would lose
+// rows once the limit window saturates on noisy neighbours.
 function entryRevisionPrefix(entryId: number): string {
   return `revision:${String(entryId)}:%`;
 }
@@ -155,10 +148,8 @@ export async function getRevision(
 }
 
 interface UpsertAutosaveInput {
-  // The live entry whose identity (id, slug, parentId) the autosave
-  // tracks. The slug + parentId get snapshotted into the autosave's
-  // meta envelope so `entry.publish` can restore them onto live
-  // without a separate roundtrip.
+  // Its slug and parentId are snapshotted so `entry.publish` can restore them
+  // without a round trip.
   readonly entry: Entry;
   // The user editing. Combined with `entry.id` to produce the
   // deterministic slug — UNIQUE (type, slug) enforces "one autosave
@@ -175,11 +166,8 @@ interface UpsertAutosaveInput {
   };
 }
 
-// Writes the per-user pending edit, inserting on first call and
-// upserting on subsequent ones. Returns the post-write row so callers
-// can read back `updatedAt` (used as the optimistic-concurrency token
-// for the next save). `meta.__plumix_snapshot` stays load-bearing —
-// the publish path reads it to recover the live slug + parentId.
+// Returns the row so callers can read `updatedAt`, the optimistic-concurrency
+// token for the next save.
 export async function upsertAutosave(
   db: Db,
   input: UpsertAutosaveInput,
@@ -211,11 +199,8 @@ export async function upsertAutosave(
     })
     .onConflictDoUpdate({
       target: [entries.type, entries.slug],
-      // The autosave row's identity (type / slug / authorId) is
-      // fixed by the deterministic-slug contract; only the editable
-      // fields + the snapshot envelope can change. `excluded.*`
-      // references the conflicting insert's values per SQLite's
-      // upsert dialect.
+      // Identity (type, slug, authorId) is fixed by the deterministic slug;
+      // only editable fields and the envelope change.
       set: {
         title: patch.title,
         content: patch.content,
@@ -236,17 +221,14 @@ export interface AutosavePairInput {
 }
 
 /**
- * The pending draft as a whole row: the author's edits laid over the live entry
- * (ADR 0003). Every surface that renders a draft wants this — a preview is a
- * page, not a diff. Use {@link getAutosaveEdits} on the write path, where which
- * keys the author touched is the question being asked.
+ * The author's edits laid over the live entry, since a preview is a page, not
+ * a diff. Use {@link getAutosaveEdits} on the write path.
  */
 export async function getAutosave(
   db: Db,
   input: AutosavePairInput,
-  // Pass the live row to spare the round trip. Stored, not resolved: the merge
-  // lays edits over the bag as the column holds it, so a caller holding a
-  // resolved row omits this and lets the fetch below get the stored one.
+  // Stored, not resolved: the merge lays edits over the column's bag, so a
+  // caller holding a resolved row omits this.
   storedLive?: Entry,
 ): Promise<Entry | undefined> {
   const edits = await getAutosaveEdits(db, input);
@@ -256,32 +238,15 @@ export async function getAutosave(
     (await db.query.entries.findFirst({
       where: eq(entries.id, input.entryId),
     }));
-  // An autosave outliving its entry has no draft to show: there is no bag to
-  // lay the edits over, and handing back the bare patch would read as a whole
-  // row that happens to be missing most of its fields.
+  // An autosave outliving its entry has no bag to lay the edits over.
   if (!liveRow) return undefined;
   return asDraftRow(liveRow, edits);
 }
 
 /**
- * The live row as a preview of `autosave` renders it — the one overlay every
- * preview goes through, so a preview never reads a row the page it previews
- * would not. Whose autosave, and whether the caller may see it, stay with the
- * caller.
- *
- * Only the drafted fields come from the autosave. `title`, `slug`, `parentId`
- * and terms are live fields (the editor writes them with `saveAs: "live"`), and
- * the autosave's `title` column is a snapshot frozen at its last write. Reserved
- * `__plumix_*` meta is stripped so the bag matches a live row's shape, except
- * the named-template pick, so an unsaved choice still drives resolution.
- *
- * The live access choice replaces the draft's: the gate resolves policy from
- * the persisted row, so a bag reporting the draft's pick would tell the page one
- * thing about its own visibility and the gate another — and anything published
- * on the entry's behalf, a social card above all, would be decided against a
- * choice that gates nothing.
- *
- * A trashed entry passes through: it has no draft to preview.
+ * Only drafted fields come from the autosave; `title`, `slug`, `parentId`,
+ * terms and the access choice stay live, since the gate reads the persisted
+ * row. A trashed entry passes through.
  */
 export function overlayAutosave(live: Entry, autosave: Entry): Entry {
   if (live.status === "trash") return live;
@@ -298,11 +263,7 @@ export function overlayAutosave(live: Entry, autosave: Entry): Entry {
   };
 }
 
-/**
- * The autosave row as stored — its meta is the author's edits, not the whole
- * bag. Promotion runs the field pipeline over exactly these keys, so a value
- * nobody submitted is never re-decoded.
- */
+/** Its meta is the author's edits only, not the whole bag. */
 export async function getAutosaveEdits(
   db: Db,
   input: AutosavePairInput,
@@ -333,10 +294,7 @@ export async function deleteAutosave(
 
 interface ListActiveAutosavesInput {
   readonly entryId: number;
-  // Drop autosave rows whose `updatedAt` is older than this. Five
-  // minutes matches #293's "actively editing" threshold; the
-  // repository takes it as a parameter so tests can pin it to a
-  // fixture time.
+  // A parameter so tests can pin it to a fixture time.
   readonly notOlderThan: Date;
   // Exclude the calling user — every viewer should see their
   // co-authors, not themselves.
@@ -350,11 +308,8 @@ function entryAutosavePrefix(entryId: number): string {
   return `autosave:${String(entryId)}:%`;
 }
 
-// Returns the autosave rows currently active on `entryId` — i.e.
-// touched within `notOlderThan` and not authored by the caller. The
-// RPC layer joins users on top for the wire surface; this returns
-// the raw rows so the join policy can change without touching the
-// repository.
+// Raw rows, so the RPC layer's user-join policy can change without touching
+// the repository.
 export async function listActiveAutosaves(
   db: Db,
   input: ListActiveAutosavesInput,
@@ -430,9 +385,8 @@ export async function pruneOldRevisions(
   return excess.length;
 }
 
-// Revisions and autosaves are linked to their entry only through their encoded
-// slugs, not an FK, so deleting entries leaves them behind unless this runs
-// first. One statement for every id.
+// History links to its entry only through the encoded slug, not an FK, so
+// deleting entries leaves it behind unless this runs first.
 export async function deleteEntriesHistory(
   db: Db,
   entryIds: readonly number[],

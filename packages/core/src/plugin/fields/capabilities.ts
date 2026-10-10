@@ -1,20 +1,6 @@
-// The builder capability matrix — which fluent chain offers which
-// cross-cutting method, declared once instead of inferred by reading
-// thirteen builder files side by side.
-//
-// The builders are deliberately not a class hierarchy: every chain method
-// returns its own concrete builder type so the phantom key / value /
-// stored parameters survive the call, and a shared supertype either loses
-// that narrowing or collides with the `this`-parameter narrowing the
-// multi-value-only rule factories use. The cost of hand-written chains is
-// that parity is a convention, and conventions drift — `group` and
-// `repeater` went without `.validate()` for as long as nobody compared the
-// files. This matrix is what replaces the comparison: the guard at the
-// foot binds it to the builder types, so a chain that does not offer a
-// capability its row claims fails `pnpm typecheck`.
-//
-// Adding a builder: add its row here and its type to `BuilderTypes`. The
-// guard fails until the row and the chain agree.
+// Builders aren't a class hierarchy: each chain method returns its concrete
+// builder so phantom types survive. The guard below fails typecheck when a
+// chain lacks a capability its row claims.
 
 import type {
   ColorFieldBuilder,
@@ -33,11 +19,7 @@ import type {
   ToggleFieldBuilder,
 } from "./index.js";
 
-/**
- * The chain every builder carries, whatever it stores — the field's
- * label and layout, its capability gate, its visibility condition, and
- * the compile step. A builder missing one of these is never intentional.
- */
+/** Methods every builder carries, whatever it stores. */
 export const UNIVERSAL_CAPABILITIES = [
   "label",
   "description",
@@ -53,10 +35,8 @@ export const UNIVERSAL_CAPABILITIES = [
 ] as const;
 
 /**
- * Capabilities that could belong to more than one builder, and so can
- * silently drift out of step. Per-type options (`.marks()`, `.layout()`,
- * `.step()`) are deliberately absent: they answer to one input type, so
- * there is no parity to keep.
+ * Capabilities more than one builder offers, so they can drift. Per-type
+ * options (`.marks()`, `.step()`) are absent: they answer to one input type.
  */
 export const CROSS_CUTTING_CAPABILITIES = [
   "default",
@@ -118,10 +98,8 @@ export const BUILDER_CAPABILITIES = {
 export type BuilderName = keyof typeof BUILDER_CAPABILITIES;
 
 /**
- * A cell a reader would expect the matrix to fill and it does not. Only
- * surprising absences belong here: `.searchable()` is missing from
- * `number` because a number is not text, which needs no defence, while
- * rich text holds text and still refuses it, which does.
+ * Cells a reader would expect filled that are not. Only surprising absences
+ * belong here.
  */
 export const CAPABILITY_EXCEPTIONS = [
   {
@@ -161,11 +139,8 @@ export const CAPABILITY_EXCEPTIONS = [
 }[];
 
 /**
- * Notes that resist the matrix's shape: a capability whose reach is a
- * family rather than a cell, or one that is present but does not mean
- * quite what the column header suggests. They are data for the same
- * reason the exceptions are — so the answer lives in one place instead of
- * being rediscovered by reading thirteen builders.
+ * Notes that don't fit a cell: a capability spanning a family, or one whose
+ * meaning differs from its column header.
  */
 export const CAPABILITY_CAVEATS = [
   {
@@ -183,14 +158,8 @@ export const CAPABILITY_CAVEATS = [
   readonly reason: string;
 }[];
 
-// --- the guard ----------------------------------------------------------
-//
-// Binds the matrix above to the builder types. `MissingCapabilities`
-// subtracts each builder's actual methods from the capabilities its row
-// claims, so every entry should be `never`; `AssertNoMissingCapabilities`
-// accepts nothing else, and the failing property names the builder that
-// drifted. This is the check that makes the matrix a contract rather than
-// a comment.
+// Every `MissingCapabilities` entry must be `never`; a failing property names
+// the builder that drifted and its type names the missing method.
 
 type AnyFields = readonly MetaBoxFieldInput[];
 
@@ -215,12 +184,6 @@ type Assert<T extends true> = T;
 type CapabilitiesOf<N extends BuilderName> =
   (typeof BUILDER_CAPABILITIES)[N][number];
 
-/**
- * Per builder, the capabilities its row claims that the chain does not
- * actually offer. Every entry should be `never`; anything else is the
- * drift, and it surfaces named — the failing property is the builder and
- * its type is the missing method.
- */
 type MissingCapabilities = {
   readonly [N in BuilderName]: Exclude<
     UniversalCapability | CapabilitiesOf<N>,
@@ -228,12 +191,7 @@ type MissingCapabilities = {
   >;
 };
 
-/**
- * Accepts a {@link MissingCapabilities} map only when every builder's
- * entry is `never`. Exported so the suite can demonstrate the guard
- * biting on a fabricated row — a guard nobody has seen fail is a guard
- * nobody knows works.
- */
+/** Exported so the suite can show the guard failing on a fabricated row. */
 export type AssertNoMissingCapabilities<T extends Record<BuilderName, never>> =
   T;
 

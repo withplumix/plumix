@@ -1,21 +1,5 @@
-/**
- * Query tokenizer + LIKE-escape for post search.
- *
- * Mirrors WordPress's default search parsing shape (see
- * https://developer.wordpress.org/reference/classes/wp_query/parse_search/):
- *
- * - Double-quoted substrings become a single phrase term, verbatim
- *   (whitespace preserved, wildcards NOT interpreted).
- * - Bare tokens split on whitespace, each is its own term.
- * - A leading `-` on a bare token flags exclusion (NOT LIKE). Inside
- *   quotes, `-` is literal.
- * - Stopwords / sentence-mode fallback from WP are deliberately skipped —
- *   they're English-biased and can be added later via a search plugin.
- *
- * The handler side joins terms with AND and joins column matches for each
- * term with OR (`title OR excerpt`). This module owns the parsing and
- * escaping only; it doesn't construct SQL.
- */
+// Mirrors WordPress's search parsing, minus its English-biased stopwords:
+// https://developer.wordpress.org/reference/classes/wp_query/parse_search/
 
 // Unicode-aware: matches NBSP, em-space, etc. Shared between the outer
 // skip and the inner token-end scan so a non-ASCII whitespace char can
@@ -30,15 +14,8 @@ export interface SearchTerm {
 }
 
 /**
- * Tokenize a raw search string into phrases and terms.
- *
- * - Quoted phrases (`"a b"`) become a single term; the outer quotes are
- *   stripped, inner content is preserved verbatim. An unterminated opening
- *   quote consumes to end of input — matches WP's tolerant behavior.
- * - Bare runs of non-whitespace are individual terms.
- * - A leading `-` on a bare term marks exclusion; a bare `-` with no
- *   following characters is dropped.
- * - Empty / whitespace-only input yields an empty array.
+ * Quoted phrases stay verbatim; an unterminated quote runs to the end, as in
+ * WP. A leading `-` on a bare term marks exclusion.
  */
 export function tokenizeSearchQuery(raw: string): readonly SearchTerm[] {
   const terms: SearchTerm[] = [];
@@ -72,13 +49,7 @@ export function tokenizeSearchQuery(raw: string): readonly SearchTerm[] {
   return terms;
 }
 
-/**
- * Escape a raw term for use inside a SQL `LIKE` pattern.
- *
- * The handler pairs each `LIKE ?` with `ESCAPE '\\'`, so this function
- * backslash-escapes the three wildcard characters `\ % _`. Without this,
- * a user searching for `50%` would match every post.
- */
+/** For a `LIKE ?` paired with `ESCAPE '\\'`. */
 export function escapeLikePattern(term: string): string {
   return term.replace(/[\\%_]/g, "\\$&");
 }

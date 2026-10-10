@@ -1,16 +1,12 @@
-// No client directive here: the island transform shims every export of a
-// directive-carrying module into a component, so a hook would stop running.
-// The directive belongs on the theme component that calls this — see
-// VitePluginError.islandExportIsHook.
+// No client directive: the island transform shims every export into a
+// component, so a hook would stop running.
 import { useEffect, useState } from "react";
 
 import { CSRF_HEADER_NAME, CSRF_HEADER_VALUE } from "../../csrf-header.js";
 import { documentBasePath } from "./document-base-path.js";
 
-// Mirrors core's `AuthSessionUser` (the `auth.session` output). `blocks/` sits
-// in the foundation layer, below `auth/`, so we restate the shape here rather
-// than import it — the same reason `RendererUser` is mirrored in
-// `context.tsx`.
+// Restates `AuthSessionUser` because `blocks/` sits below `auth/` and can't
+// import it.
 export interface AuthUser {
   readonly id: number;
   readonly email: string;
@@ -27,13 +23,8 @@ export interface UseAuthResult {
   readonly loading: boolean;
 }
 
-// The oRPC `auth.session` procedure — the same whoami the admin boots from, so
-// admin and theme share one source of truth. We POST the RPC envelope directly
-// rather than pull in `@orpc/client`: `blocks/` sits below `rpc/` and so
-// cannot borrow the admin's typed client, and `auth.session`'s output is JSON-native, so its response is
-// a plain `{ json: <value> }` with no oRPC `meta` type-hints to decode. This
-// keeps the theme transport dependency-free; if the procedure ever returned a
-// non-plain value (a `Date`, a `bigint`), it would need the real client.
+// Raw envelope, not `@orpc/client`: `blocks/` sits below `rpc/`. Safe while the
+// output stays JSON-native; a `Date` would need the real client.
 const SESSION_PATH = "/_plumix/rpc/auth/session";
 
 interface SessionEnvelope {
@@ -58,14 +49,8 @@ async function fetchSessionUser(signal: AbortSignal): Promise<AuthUser | null> {
 }
 
 /**
- * Resolves the current visitor client-side via the existing `auth.session`
- * RPC, so a theme island (a user menu, a personalized greeting) can hydrate on
- * a page whose HTML was served from the shared edge cache. The server render is
- * cache-shared and anonymous; personalization is entirely client-side.
- *
- * Fails closed: an aborted, offline, or non-2xx probe resolves to the
- * signed-out state (`user: null`) rather than throwing, so a user menu renders
- * its logged-out affordance instead of crashing the island.
+ * Client-side, so an island can personalize a page served anonymously from the
+ * edge cache. Never throws: any failed probe resolves to signed out.
  */
 export function useAuth(): UseAuthResult {
   const [state, setState] = useState<UseAuthResult>({
@@ -75,9 +60,6 @@ export function useAuth(): UseAuthResult {
 
   useEffect(() => {
     const controller = new AbortController();
-    // `fetchSessionUser` already fails closed to `null` for a non-2xx body;
-    // `.catch` folds an aborted/offline/parse rejection into the same path, so
-    // the hook settles once, to a user or to signed-out — never throwing.
     void fetchSessionUser(controller.signal)
       .catch(() => null)
       .then((user) => {

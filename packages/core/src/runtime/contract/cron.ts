@@ -1,22 +1,14 @@
-/**
- * The cron dialect Plumix speaks, and the only one it speaks.
- *
- * Runtimes disagree about cron. Cloudflare reads the day-of-week field
- * Quartz-style — `1-7`, where 1 is Sunday — and also takes `L`, `W` and `#`;
- * Unix cron reads `0-6`, where 0 is Sunday. So `0 0 * * 1` means Sunday on one
- * and Monday on the other. Rather than pick a side and silently move a site's
- * job by a day when its runtime changes, this parser accepts only the subset
- * that means the same thing everywhere: weekdays and months by name, and no
- * Quartz extensions. Everything it rejects, it rejects loudly at boot.
- */
+// Cloudflare reads day-of-week Quartz-style (1-7, 1 = Sunday), Unix 0-6. Only
+// the subset meaning the same everywhere is accepted: names, no Quartz
+// extensions.
 
 interface Field {
   readonly name: string;
   readonly min: number;
   readonly max: number;
-  /** Names accepted in place of a number, lowest value first. */
+  // Lowest value first.
   readonly names?: readonly string[];
-  /** Set when a bare number would mean different days on different runtimes. */
+  // A bare number means different days on different runtimes.
   readonly numbersAreAmbiguous?: boolean;
 }
 
@@ -70,9 +62,8 @@ export interface CronSchedule {
 }
 
 /**
- * Parse a cron expression, or throw {@link CronSyntaxError} naming the fix.
- * Matching is always UTC — the runtime a site deploys to sets the process
- * timezone, and a schedule must not move with it.
+ * Throws {@link CronSyntaxError} naming the fix. Matching is always UTC, so a
+ * schedule doesn't move with the host timezone.
  */
 export function parseCron(expression: string): CronSchedule {
   const parts = expression.trim().split(/\s+/).filter(Boolean);
@@ -97,11 +88,8 @@ export function parseCron(expression: string): CronSchedule {
   const months = parseField(expression, monthRaw, MONTH);
   const daysOfWeek = parseField(expression, dowRaw, DAY_OF_WEEK);
 
-  // Standard cron: when both day fields are restricted the match is an OR —
-  // "the 1st, or any Monday", not "Mondays that fall on the 1st".
-  // Vixie cron decides this on the field's first character, so `*/2` counts as
-  // unrestricted and the two day fields AND. Matching that keeps an expression
-  // meaning the same thing here as in the crontab it was copied from.
+  // Both day fields restricted means OR. Like Vixie cron, judged on the first
+  // character, so `*/2` counts as unrestricted.
   const domRestricted = !domRaw.startsWith("*");
   const dowRestricted = !dowRaw.startsWith("*");
 
@@ -187,11 +175,8 @@ function parseValue(expression: string, token: string, field: Field): number {
     throw new CronSyntaxError(expression, unportable(token, field));
   }
   if (field.numbersAreAmbiguous) {
-    // The whole reason this parser exists. Name the replacement so the fix is
-    // the error message, not a docs hunt.
-    // Deliberately no single replacement: Cloudflare reads this field 1-7 with
-    // 1 = Sunday, Unix cron 0-6 with 0 = Sunday, so the two readings differ by
-    // a day. Naming one would hand back the very off-by-one this rejects.
+    // Both readings are named, since picking one would hand back the off-by-one
+    // this rejects.
     const digit = Number(token);
     const unix = WEEKDAYS[digit];
     const quartz = WEEKDAYS[digit - 1];
@@ -214,7 +199,6 @@ function parseValue(expression: string, token: string, field: Field): number {
   return value;
 }
 
-/** Names a weekday index, or says there is no such day. */
 function label(day: string | undefined): string {
   return day === undefined ? "no day at all" : day.toUpperCase();
 }

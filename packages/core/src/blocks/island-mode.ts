@@ -1,6 +1,4 @@
-// Pure decisions for how an island behaves under the page's render mode,
-// read by the React-free island custom element. Kept standalone so the
-// element chunk never imports the renderer (which would drag in React).
+// Standalone so the React-free element chunk never imports the renderer.
 
 /** The page render mode, mirrored from the renderer's `PlumixRenderMode`.
  *  `null` is the ordinary page (no editor marker present). */

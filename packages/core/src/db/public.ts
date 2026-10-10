@@ -1,13 +1,8 @@
-// The `@plumix/core/db` (and `plumix/db`) surface: everything a plugin needs to
-// write directly to `ctx.db` and invalidate the CDN, in one import, so it
-// never takes its own `drizzle-orm` dependency. Direct writes bypass core's
-// entry-mutation service — no `entry:*`/`term:*` action fires, so no auto-purge
-// — hence the write helpers and the purge vocabulary belong together here.
-// The tables these run against live on `@plumix/core/schema` / `plumix/schema`
-// alone, so a table has one import path (#2493). None of it is re-exported
-// from the flat `@plumix/core` / `plumix` root barrel anymore (#1766).
+// Direct writes fire no `entry:*`/`term:*` action and so no auto-purge, which
+// is why the write helpers and the purge vocabulary share this import.
 
-// Query operators, table-introspection helpers, unique-constraint guards, types.
+// Query operators, table-introspection helpers, unique-constraint guards,
+// types.
 export * from "./index.js";
 // CDN tag vocabulary (PRD #1080): build the coarse `t:<type>`/`e:<id>`
 // tags core would and enqueue them for the post-request / scheduled flush.
@@ -18,10 +13,8 @@ export {
   typeTag,
 } from "../cdn/contract/tags.js";
 export { enqueuePurgeTags } from "../cdn/purge.js";
-// What core's own entry search means — how a query parses, and what matching
-// title and excerpt with `LIKE` involves — so a plugin that replaces the search
-// page can degrade to core's own query rather than restate it and disagree
-// about the details (#2127).
+// So a plugin replacing the search page can degrade to core's own query rather
+// than restate it.
 export { entrySearchCondition } from "./search-conditions.js";
 export { tokenizeSearchQuery } from "../search/contract/search-terms.js";
 export type { SearchTerm } from "../search/contract/search-terms.js";
@@ -31,14 +24,11 @@ export { settleMeta } from "../meta/settle-meta.js";
 export type { MetaOwner } from "../meta/settle-meta.js";
 export { readVisitorMeta } from "./visitor-meta.js";
 export type { VisitorMeta, VisitorMetaOptions } from "./visitor-meta.js";
-// A description of a set of entries that composes by narrowing, built from the
-// same operators as the search conditions above, so a surface can hand a plugin
-// a query already restricted to what it may show and the plugin has no way to
-// widen it (#2487).
+// So a surface can hand a plugin a query already restricted to what it may
+// show, with no way to widen it.
 export { compileEntryQuery, entryQuery } from "../entries/query.js";
-// What every archive's query is born holding, for a surface that reads an
-// archive's entries outside core's listing reader and has to apply the same
-// rule when it compiles one (ADR 0008).
+// What every archive's query is born holding, for a surface reading archive
+// entries outside core's listing reader.
 export { publicEntryRows } from "../entries/visibility.js";
 // Load an entry by id the way core does: a revision or autosave row answers as
 // missing, so a plugin taking an id from a visitor cannot reach editor history.

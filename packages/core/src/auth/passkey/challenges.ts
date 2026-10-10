@@ -7,37 +7,28 @@ import { generateToken, hashToken } from "../tokens.js";
 
 const CHALLENGE_TYPE = "webauthn_challenge" as const;
 
-/**
- * Which registration ceremony issued a challenge. Each register-verify route
- * accepts only its own kind, so an attestation cannot be redirected to the
- * route that skips that ceremony's checks (#2402).
- */
+// Each register-verify route accepts only its own ceremony, so an attestation
+// can't be redirected past that ceremony's checks.
 const ceremonySchema = v.picklist(["bootstrap", "add-device", "invite"]);
 export type RegistrationCeremony = v.InferOutput<typeof ceremonySchema>;
 
-// Run the opportunistic sweep on a fraction of issueChallenge calls so the
-// amortised cost is ~O(1) per request while still bounding table growth.
-// At 10% we expect the sweep to fire ~1 in 10 registrations/logins.
+// Sampling keeps the sweep's amortised cost low while still bounding table
+// growth.
 const OPPORTUNISTIC_PRUNE_PROBABILITY = 0.1;
 
 interface IssuedChallenge {
-  /** Raw challenge (sent to the browser, base64url). */
   readonly challenge: string;
   readonly expiresAt: Date;
 }
 
 interface ChallengeRecord {
   readonly userId: number | null;
-  /** Null for authentication challenges, which no registration route accepts. */
+  // Null for authentication challenges, which no registration route accepts.
   readonly ceremony: RegistrationCeremony | null;
   readonly expiresAt: Date;
 }
 
-/**
- * Persist a single-use WebAuthn challenge. We hash the raw challenge and
- * store the hash so a DB read does not yield a usable challenge to an
- * attacker (defence in depth — the challenge is also short-lived).
- */
+/** Stores only the hash, so a DB read doesn't yield a usable challenge. */
 export async function issueChallenge(
   db: Db,
   ttlMs: number,
@@ -63,10 +54,8 @@ export async function issueChallenge(
 }
 
 /**
- * Delete every auth_tokens row whose expiresAt is in the past. Safe to call
- * at any time — consumed rows are deleted by consumeChallenge, so expired
- * rows are the only thing this ever removes. Called opportunistically from
- * issueChallenge until a scheduled-task plugin can run it on a cron.
+ * Deletes expired rows of every token type, not just challenges. Safe to call
+ * at any time.
  */
 export async function pruneExpiredAuthTokens(db: Db): Promise<void> {
   await db.delete(authTokens).where(lt(authTokens.expiresAt, new Date()));

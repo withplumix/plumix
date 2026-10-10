@@ -1,44 +1,13 @@
-// `interaction` strategy — the headline trigger. Hydration is deferred
-// until the user actually engages with the island, then the triggering
-// event is *replayed* onto the hydrated component so the first
-// click/keypress isn't lost. Paired with `prefetch: "visible"` (the
-// default), the chunk is already warm when the user clicks, so hydrate →
-// replay feels instant.
-//
-// This is where Astro and Nuxt fall short and we improve:
-//   - Astro replays nothing — the first interaction during the SSR-only
-//     window is silently dropped (inherent to its hydrate-from-scratch
-//     model).
-//   - Nuxt replays, but only the *first* event and via a synthetic
-//     re-dispatch; a click that arrives while the chunk is still loading
-//     (e.g. after a `pointerenter` trigger) is lost (vuejs/core), and its
-//     reconstruction loses keyboard state.
-//
-// The mechanism mirrors TanStack Start's `interaction.ts`: a single
-// document-level *capture-phase* listener (registered once), walk to the
-// nearest island marker, `preventDefault` + stop propagation so the dead
-// DOM does nothing, encode a positional path to the real target, and after
-// hydration `requestAnimationFrame` → re-dispatch. We diverge from TanStack
-// on three correctness points it gets wrong:
-//   1. Reconstruct with `event.constructor`, not a hardcoded
-//      MouseEvent/FocusEvent ladder — so `KeyboardEvent` (key/code/
-//      modifiers) survives the replay. TanStack drops it.
-//   2. After replaying a focus event, call `.focus()` on the target —
-//      re-dispatching a `FocusEvent` does not move `document.activeElement`,
-//      so the native side-effect `preventDefault` suppressed is restored.
-//   3. Queue *every* matching event between the trigger and hydration, not
-//      just the first, and replay them in order — so the hover→click race
-//      that loses Nuxt's click is handled.
+// Every event between trigger and hydration is queued and replayed in order,
+// so a click that lands while the chunk loads after a hover isn't lost.
 
 import type { JsonObject } from "../../json.js";
 import type { IslandStrategy, PlumixIslandElement } from "../island-element.js";
 import { isJsonArray } from "../../json.js";
 import { publishIslandStrategy } from "../island-global.js";
 
-// The superset the single document listener subscribes to. An island's
-// `opts.events` (if any) must be a subset; `pointerenter` is a trigger only
-// — it doesn't bubble, so it's never replayed (only its bubbling cousins
-// are), matching browser event semantics.
+// `pointerenter` doesn't bubble, so it can trigger hydration but is never
+// replayed.
 const SUPPORTED_EVENTS = [
   "pointerenter",
   "focusin",
@@ -150,11 +119,8 @@ function replay(marker: PlumixIslandElement, reg: Registration): void {
   requestAnimationFrame(() => {
     for (const queued of reg.queue) {
       const node = resolvePath(marker, queued.path);
-      // A focus event can't be faithfully replayed by dispatch: re-
-      // dispatching a `FocusEvent` doesn't move `document.activeElement`,
-      // and doing both `.focus()` AND `dispatchEvent` would fire the
-      // component's focus handler twice. `.focus()` alone produces the
-      // genuine native focus → focusin sequence the component expects.
+      // A dispatched `FocusEvent` doesn't move `activeElement`, and dispatching
+      // too would fire the handler twice.
       if (
         (queued.type === "focusin" || queued.type === "focus") &&
         node instanceof HTMLElement
@@ -192,11 +158,8 @@ function resolvePath(marker: Element, path: readonly number[]): Element {
   return node;
 }
 
-// Re-construct via the original event's own constructor so subtype data
-// (MouseEvent coordinates, KeyboardEvent key/code/modifiers, PointerEvent
-// pressure) is preserved — the event itself is a valid init dict for its
-// own constructor. Falls back to a plain bubbling Event if the subtype
-// isn't constructible in this environment.
+// The event is a valid init dict for its own constructor, which keeps subtype
+// data like keyboard modifiers.
 type EventConstructor = new (type: string, init: Event) => Event;
 
 function reconstruct(event: Event): Event {

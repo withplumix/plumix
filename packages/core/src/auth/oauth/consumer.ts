@@ -13,12 +13,7 @@ interface BuildAuthorizeUrlInput {
   readonly providerKey: string;
   readonly provider: OAuthProviderClient;
   readonly redirectUri: string;
-  /** Request env, for resolving a `client` that's an `(env) => …` resolver. */
   readonly env: PlumixEnv;
-  /**
-   * Validated same-origin path to return to after callback. Carried in the
-   * server-side state payload; the callback re-validates before honouring it.
-   */
   readonly redirectTo?: string;
 }
 
@@ -27,11 +22,6 @@ interface BuiltAuthorizeUrl {
   readonly state: string;
 }
 
-/**
- * Mint a PKCE verifier + state, persist them under `oauth_state`, and
- * return the authorize URL. State is what the provider echoes back; it's
- * the only way the callback ties the response to a verifier we can replay.
- */
 export async function buildAuthorizeUrl(
   input: BuildAuthorizeUrlInput,
 ): Promise<BuiltAuthorizeUrl> {
@@ -66,13 +56,11 @@ interface ExchangeAndFetchInput {
   readonly code: string;
   readonly redirectUri: string;
   readonly codeVerifier: string;
-  /** Request env, for resolving a `client` that's an `(env) => …` resolver. */
   readonly env: PlumixEnv;
 }
 
-// Only the field the exchange actually consumes. The response carries
-// `id_token` / `token_type` too, and a provider is free to send them as null;
-// naming them here would turn a field nothing reads into a login failure.
+// Providers may send unread fields like `id_token` as null; validating them
+// would fail the login.
 const tokenResponseSchema = v.looseObject({ access_token: v.string() });
 
 type TokenResponse = v.InferOutput<typeof tokenResponseSchema>;
@@ -104,12 +92,8 @@ export async function exchangeAndFetchProfile(
 
   return {
     providerAccountId: profile.providerAccountId,
-    // Trim before lowercasing — a provider returning whitespace-padded
-    // values (or `email: " alice@example.com "`) would otherwise miss
-    // the `users.email` lookup at lookup time, fall into the signup
-    // path, hit the UNIQUE constraint at insert, and surface as a
-    // confusing OAuthError. Mirrors the normalisation magic-link does
-    // at `request.ts` and cfAccess at `extractEmail`.
+    // A padded email would miss the `users.email` lookup and then hit the
+    // UNIQUE constraint on signup.
     email: email.trim().toLowerCase(),
     emailVerified,
     name: profile.name,
@@ -122,10 +106,8 @@ async function exchangeCode(
 ): Promise<TokenResponse> {
   const { provider } = input;
   const client = resolveEnvInput(provider.client, input.env);
-  // RFC 6749 §2.3.1 / Copenhagen Book: client credentials go in the
-  // Authorization header (HTTP Basic). client_id stays in the body for
-  // providers (like Google) whose docs require it on the form too —
-  // harmless when also present in the header.
+  // RFC 6749 §2.3.1 puts credentials in HTTP Basic; client_id stays in the body
+  // because Google requires it there too.
   const body = new URLSearchParams({
     grant_type: "authorization_code",
     code: input.code,

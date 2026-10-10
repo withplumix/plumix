@@ -69,7 +69,6 @@ function htmlResponseOrNotFound(html: string | null, reason: string): Response {
   });
 }
 
-/** Every listing page renders the same way once its data is resolved. */
 async function renderListing(
   ctx: AppContext,
   renderEnv: RenderEnv,
@@ -308,11 +307,8 @@ async function resolveCustom(
   const result = await archive.resolve(ctx, params);
   if (result === null) return notFound("public-custom-archive-not-found");
 
-  // Contribute the archive's cache tags through the same per-request
-  // accumulator the public read-through folds into the stored response's
-  // tags (#1508). A publish of any listed type then purges this page — the
-  // coarse invalidation the built-in archives get. Only consumed when the
-  // archive opted into caching (`cacheable`); harmless otherwise.
+  // Declared through the read-through's tag accumulator, so a publish of any
+  // listed type purges this page, as for built-in archives.
   if (result.tags) declarePageTags(ctx, result.tags);
 
   const html = await renderThroughTheme({
@@ -360,16 +356,11 @@ async function resolveView(
   return htmlResponseOrNotFound(html, "public-view-no-template");
 }
 
-/** An archive that declared its entries, with the two listing arms kept apart. */
 type ListingArchiveType = Extract<
   RegisteredArchiveType,
   { entries: ArchiveEntries }
 >;
 
-/**
- * An archive core lists: `entries` says which entries it is, and core pages,
- * orders, titles and tags them.
- */
 async function resolveListingArchive(
   ctx: AppContext,
   archive: ListingArchiveType,
@@ -388,9 +379,8 @@ async function resolveListingArchive(
     page,
     perPage: archive.perPage ?? DEFAULT_ARCHIVE_PER_PAGE,
   });
-  // Three distinct 404s, and a developer reading the hint is looking at three
-  // different bugs: params the archive declined, a query naming a term or an
-  // author nothing answers to, and a page past the end.
+  // Three distinct 404 hints, because each is a different bug: declined params,
+  // an unresolved term or author, a page past the end.
   if (listing === null) {
     return notFound("public-custom-archive-query-unresolved");
   }
@@ -423,10 +413,8 @@ async function resolveListingArchive(
   return htmlResponseOrNotFound(html, "public-custom-archive-no-template");
 }
 
-// The two ways a listed archive gets its title, asked separately because that
-// is what keeps "it has one" something the types settled rather than a
-// fallback invented here. There is no precedence to learn: the arm that
-// declares a `title` is the arm whose resolver cannot return one.
+// Asked per arm so the types guarantee a title exists; the arm that declares a
+// `title` is the arm whose resolver cannot return one.
 async function nameListingPage(
   ctx: AppContext,
   archive: ListingArchiveType,
@@ -453,7 +441,8 @@ async function resolveSingle(
   const baseRow = await resolveSingleEntry(ctx, intent, params);
   if (!baseRow) return notFound("public-post-not-found");
   // A preview link renders the minting author's in-progress autosave, so the
-  // "Preview current draft" action shows pending edits rather than the live row.
+  // "Preview current draft" action shows pending edits rather than the live
+  // row.
   const overlaid = await overlayPreviewAutosave(ctx, baseRow);
   const row = overlaid ?? baseRow;
 
@@ -495,9 +484,8 @@ async function resolveArchive(
   params: Record<string, string>,
   renderEnv: RenderEnv,
 ): Promise<Response> {
-  // Set before the listing resolves, as the taxonomy and author routes set
-  // theirs: a `resolve:archive:data` subscriber reads the entity off ctx, and
-  // it is this route's own intent rather than anything the query returns.
+  // Set before the listing resolves: a `resolve:archive:data` subscriber reads
+  // the entity off ctx.
   ctx.resolvedEntity = { kind: "entryType", entryType: intent.entryType };
 
   const page = await archiveData(
@@ -510,19 +498,14 @@ async function resolveArchive(
   return renderListing(ctx, renderEnv, page, "public-archive-no-template");
 }
 
-// URL :page captures are always strings; invalid input (non-numeric,
-// negative, zero) coerces to NaN/<1 and flows into paginate() which
-// marks it out-of-range and triggers a 404. Default 1 when the bare
-// archive matched (no /page/N).
+// Invalid input coerces to NaN or <1, which paginate() marks out of range for a
+// 404.
 function parsePageParam(raw: string | undefined): number {
   return raw === undefined ? 1 : Number(raw);
 }
 
-/**
- * When a valid `?preview=` token grants this exact entry, overlay the token
- * author's autosave onto the live row for render (see {@link overlayAutosave}).
- * Null on the common no-token / no-autosave paths, where the live row renders.
- */
+// Null when no token grants the entry or there is no autosave, so the live row
+// renders.
 async function overlayPreviewAutosave(
   ctx: AppContext,
   entry: Entry,

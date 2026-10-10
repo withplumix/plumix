@@ -1,12 +1,3 @@
-/**
- * Public-route redirects and 410 Gone. A precedence-ordered list of rules,
- * each mapping a request URL to a redirect target (301/302/307/308) or a
- * `gone` (410). Matched by the dispatcher ahead of the content route map, so a
- * redirect shadows a would-be content page. Rules are contributed by the site
- * (`config.redirects`), plugins (`registerRedirects`), and the theme
- * (`redirects` on the descriptor) — see {@link assembleRedirects}.
- */
-
 import type {
   RedirectRule,
   RedirectStatus,
@@ -22,7 +13,7 @@ export type RedirectResolution =
     }
   | { readonly kind: "gone" };
 
-/** Status applied when a rule omits one — the SEO-conventional permanent move. */
+// The SEO-conventional permanent move.
 const DEFAULT_REDIRECT_STATUS: RedirectStatus = 301;
 
 interface CompiledRedirect {
@@ -42,9 +33,8 @@ function resolveTarget(
 ): RedirectResolution {
   if ("gone" in target) return { kind: "gone" };
   const location = interpolate(target.to);
-  // Carry the request query onto a target that states neither its own query nor
-  // a fragment (appending after a `#` would fold the query into the fragment),
-  // unless the rule opts out.
+  // Appending after a `#` would fold the query into the fragment, so a target
+  // with its own query or fragment keeps it as is.
   const withQuery =
     (target.preserveQuery ?? true) && url.search && !/[?#]/.test(location)
       ? location + url.search
@@ -79,10 +69,8 @@ function compileStringRule(
   };
 }
 
-// Substitute RegExp backreferences (`$1`, `$<name>`) captured from `from` into
-// `to`; `$$` is a literal dollar. Mirrors Apache/nginx redirect syntax. One
-// pass over `to` so an escaped `$$1` stays literal and captured text is never
-// rescanned as a further backref.
+// Mirrors Apache/nginx backref syntax. One pass, so an escaped `$$1` stays
+// literal and captured text is never rescanned.
 function substituteBackrefs(to: string, match: RegExpExecArray): string {
   return to.replace(
     /\$\$|\$<(\w+)>|\$(\d+)/g,
@@ -117,8 +105,9 @@ export function compileRedirects(
   rules: readonly RedirectRule[],
   defaultPriority = 10,
 ): CompiledRedirects {
-  // Stable sort (V8 guarantees it) so lower `priority` wins while equal-priority
-  // rules keep their listed order — the first match at a given priority wins.
+  // Stable sort (V8 guarantees it) so lower `priority` wins while
+  // equal-priority rules keep their listed order — the first match at a given
+  // priority wins.
   return rules
     .map((rule) => ({
       priority: rule.priority ?? defaultPriority,
@@ -146,9 +135,8 @@ function compileRule(
 }
 
 /**
- * Default precedence per producer surface (lower wins). A rule's explicit
- * `priority` overrides its source default, so a theme can force a rule ahead of
- * the site's config when it deliberately owns that URL.
+ * Default precedence per producer (lower wins); a rule's explicit `priority`
+ * overrides it.
  */
 export const REDIRECT_SOURCE_PRIORITY = {
   config: 10,
@@ -157,10 +145,8 @@ export const REDIRECT_SOURCE_PRIORITY = {
 } as const;
 
 /**
- * Merge the three redirect producer surfaces into one precedence-ordered set:
- * the site's `config.redirects`, plugins' `registerRedirects`, and the theme's
- * declarative `redirects`. Each source seeds a default priority; explicit
- * per-rule priorities still win.
+ * Merge the redirect producers into one precedence-ordered set; explicit
+ * per-rule priorities beat each source's default.
  */
 export function assembleRedirects(sources: {
   readonly config?: readonly RedirectRule[];

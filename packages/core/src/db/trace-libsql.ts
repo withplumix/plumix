@@ -44,25 +44,14 @@ function wrapQueryTarget<T extends QueryTarget>(target: T): T {
 }
 
 /**
- * Wraps a libsql client so every query — `execute`, `batch`, and statements
- * inside an interactive `transaction` — runs through {@link traceDbQuery} /
- * {@link traceDbBatch}: one timed `db: <kind>` span each, with sql/params/rows
- * attributes. Applied unconditionally at adapter construction; without an
- * active collector the spans are no-ops, so production with no telemetry
- * consumer pays nothing.
- *
- * Assumes drizzle's single-argument call convention (`execute(stmt)`,
- * `batch(stmts)`); it forwards only that first argument, so a direct
- * `execute(sql, args)` call would drop its params.
+ * Forwards only the first argument, drizzle's convention, so a direct
+ * `execute(sql, args)` would drop its params.
  */
 export function traceSqlClient(client: Client): Client {
   wrapQueryTarget(client);
 
-  // drizzle runs in-transaction statements through the Transaction object's
-  // own execute/batch — wrap each transaction as it opens.
-  // Only libsql's zero-argument `transaction()` overload is deprecated; the
-  // `transaction(mode)` one this forwards to is current. A bare reference
-  // can't pick an overload, so the rule sees the whole symbol as deprecated.
+  // Only the zero-argument `transaction()` overload is deprecated, but a bare
+  // reference can't pick an overload.
   /* eslint-disable @typescript-eslint/no-deprecated */
   const rawTransaction = client.transaction.bind(client);
   client.transaction = async (mode?: TransactionMode) =>

@@ -8,9 +8,7 @@ import { welcomeTheme } from "../welcome-theme.js";
 // Resolves the config shapes `config.ts` declares. Here rather than beside
 // them because the default theme is a surface, which no contract may import.
 export function plumix(config: PlumixConfigInput): PlumixConfig {
-  // Cross-field invariant: features that require email (magic-link
-  // today) need a configured mailer at the top level. Surface this at
-  // app build time rather than letting it crash on the first request.
+  // Fail at build time rather than crash on the first request.
   if (config.auth.magicLink && !config.mailer) {
     throw ConfigError.magicLinkRequiresMailer();
   }

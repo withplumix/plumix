@@ -10,29 +10,17 @@ import { EmailChangeError } from "./errors.js";
 export interface VerifyEmailChangeResult {
   /** The user row post-commit (new email, fresh `emailVerifiedAt`). */
   readonly user: User;
-  /** What the email used to be — passed through to the `user:email_changed` hook. */
+  /**
+   * What the email used to be — passed through to the `user:email_changed`
+   * hook.
+   */
   readonly previousEmail: string;
 }
 
 /**
- * Consume an email-change verification token and commit the change
- * atomically. Mirrors `verifyMagicLink`'s atomic compare-and-delete
- * shape — a concurrent second click can't double-commit.
- *
- * On success:
- *   - users.email = the row's stored newEmail
- *   - users.emailVerifiedAt = now (the click is the verification)
- *   - all sessions for the user are invalidated (security: an
- *     attacker holding a hijacked session that triggered the change
- *     loses access at commit time)
- *   - the verification token row is gone
- *
- * Errors:
- *   - `token_invalid` — unknown token, wrong type, or already consumed
- *   - `token_expired` — past TTL
- *   - `email_taken` — racey commit, the new email got taken between
- *     request-time pre-check and now (DB unique-constraint)
- *   - `account_disabled` — user was disabled after request was issued
+ * Invalidates all the user's sessions, so a hijacked session that requested the
+ * change loses access. Throws `EmailChangeError`; `email_taken` means the
+ * address was claimed after the request.
  */
 export async function verifyEmailChange(
   db: Db,
@@ -67,12 +55,8 @@ export async function verifyEmailChange(
 
   let updated: User;
   try {
-    // Atomic guard: pin `disabledAt IS NULL` into the WHERE clause so
-    // an admin disabling the account between the read and the write
-    // can't slip a commit through. Zero rows updated → either the
-    // user vanished or got disabled mid-flight; both surface as
-    // `account_disabled` (no point distinguishing — the token is
-    // already consumed and the response is "you can't do this").
+    // `disabledAt IS NULL` in the WHERE, so a disable between the read and the
+    // write can't slip a commit through.
     const [row] = await db
       .update(users)
       .set({ email: tokenRow.email, emailVerifiedAt: new Date() })
@@ -87,10 +71,7 @@ export async function verifyEmailChange(
     throw error;
   }
 
-  // Invalidate every session for this user — the new email is now
-  // canonical, any cached AuthenticatedUser carries the stale email.
-  // Forces every device to re-authenticate; magic-link / OAuth flows
-  // resolve to the new email automatically.
+  // Every cached AuthenticatedUser carries the stale email.
   await db.delete(sessions).where(eq(sessions.userId, target.id));
 
   return { user: updated, previousEmail: target.email };

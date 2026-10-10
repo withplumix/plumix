@@ -29,10 +29,8 @@ export function roleLevel(role: UserRole): number {
 }
 
 /**
- * Lowest role that may use the admin shell. `subscriber` is the theme-only
- * visitor tier (the open-signup default); every role from `contributor` up is
- * staff. Keying the admin-lockout guard on this rather than a bespoke
- * capability keeps "who is staff" a single named boundary.
+ * Lowest role that may use the admin shell; `subscriber` is the theme-only
+ * open-signup tier.
  */
 export const STAFF_MIN_ROLE: UserRole = "contributor";
 

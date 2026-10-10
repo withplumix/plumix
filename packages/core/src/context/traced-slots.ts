@@ -8,13 +8,8 @@ import type {
 } from "../runtime/contract/slots.js";
 import type { TelemetryCollector } from "./telemetry.js";
 
-/**
- * Platform I/O slot tracing — the counterpart of `createTracedFetch` for the
- * remaining context slots (#1494). Each wrapper is applied once at context
- * assembly; the collector is read per call so the post-vote swap in
- * `createAppContext` is always observed, and with no consumer sampled every
- * span() is the no-op pass-through.
- */
+// Read per call so the post-vote collector swap in `createAppContext` is
+// observed.
 type GetTelemetry = () => TelemetryCollector;
 
 function traceCdnStore(store: CdnStore, getTelemetry: GetTelemetry): CdnStore {

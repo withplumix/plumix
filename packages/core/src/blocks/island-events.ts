@@ -1,10 +1,5 @@
-// The island-fault event contract: `blocks/` owns "what an island fault looks
-// like" and fires `plumix:island-*` events; core's dev tools consume this to
-// read them (dev → blocks, the allowed direction). Both consumers of the
-// same signal — the island error overlay (#1603) and the terminal forwarder
-// (#1604), now in `@plumix/core/dev` — read the detail through here, so the
-// `component-export` attribute name and the detail shape live in one place and
-// can't drift.
+// Every reader of `plumix:island-*` events goes through here, so the detail
+// shape and attribute name can't drift.
 
 export interface ErrorDetail {
   readonly error?: unknown;
@@ -25,7 +20,9 @@ export function detailOf(event: Event): ErrorDetail {
   return detail !== null && typeof detail === "object" ? detail : {};
 }
 
-/** The island's component name as `<Name>`, from its `component-export` attr. */
+/**
+ * The island's component name as `<Name>`, from its `component-export` attr.
+ */
 export function deriveLabel(element?: HTMLElement): string | undefined {
   const name = element?.getAttribute("component-export");
   return name ? `<${name}>` : undefined;

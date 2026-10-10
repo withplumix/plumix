@@ -90,11 +90,8 @@ export async function resolveUserMeta(
 }
 
 /**
- * Settle one user's stored bag and return the bag a reader should decode —
- * the user counterpart of `settleEntryMeta`, which says why the settle hangs
- * off the single-item read. The public render path reads user meta for an
- * author's role images and does not come through here, so it reads the stored
- * column as it finds it — see `storedId` in `images/role-images.ts`.
+ * The public render path reads author meta without coming through here, so
+ * it sees the stored column unsettled.
  */
 export async function settleUserMeta(
   ctx: AppContext,
@@ -112,9 +109,8 @@ export async function settleUserMeta(
 }
 
 /**
- * Write back a settle already computed from `stored`, and announce it if it
- * landed — the step the bulk sweep shares with the read heal, so both write and
- * announce the same way.
+ * Shared by the bulk sweep and the read heal so both write and announce the
+ * same way.
  */
 export async function writeSettledUserMeta(
   ctx: AppContext,

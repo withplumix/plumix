@@ -5,27 +5,17 @@ import type { PlumixEnv } from "../runtime/contract/bindings.js";
 import type { AssetsBinding } from "../runtime/contract/slots.js";
 import type { AppContext } from "./app-context.js";
 
-/**
- * What the runtime knows about one call into the handler. An adapter builds
- * it from its platform's serve API — the Worker's positional `(env, ctx)`,
- * a `Bun.serve` request, a Lambda event — so core never sees the platform
- * shape.
- */
 export interface Invocation {
   /** The runtime's configuration bag: bindings, secrets and plain vars. */
   readonly env: PlumixEnv;
   /**
-   * Keep the runtime alive until the promise settles. Deferred work (telemetry
-   * delivery, cache purges) routes through it when supplied; an adapter that
-   * omits it owes its platform a {@link PlumixHandler.dispose} call at
-   * shutdown instead, which also releases the database connection the
-   * handler bound.
+   * An adapter that omits it must call {@link PlumixHandler.dispose} at
+   * shutdown.
    */
   readonly waitUntil?: (promise: Promise<unknown>) => void;
   /**
-   * The client address as the runtime's trusted proxy reports it. Carried on
-   * the contract so the adapter that knows its proxy supplies the value and
-   * core never parses a forwarding header (#2171).
+   * As the runtime's trusted proxy reports it; core never parses a forwarding
+   * header.
    */
   readonly clientAddress?: string;
 }
@@ -35,7 +25,10 @@ export interface DisposeOptions {
   readonly timeoutMs?: number;
 }
 
-/** What `dispose()` gave up on once its deadline passed; zero when the drain completed. */
+/**
+ * What `dispose()` gave up on once its deadline passed; zero when the drain
+ * completed.
+ */
 export interface DisposeResult {
   readonly abandoned: number;
 }
@@ -46,21 +39,9 @@ export interface ScheduledEvent {
 }
 
 /**
- * The one object a runtime adapter produces; the entry hands it every call.
- * Property functions rather than methods, so an adapter cannot narrow the
- * invocation it accepts and still conform.
- */
-/**
- * What one firing did.
- *
- * A failing task is caught so its siblings still run, so without this a caller
- * outside the process — `plumix cron run` under a CronJob — cannot tell a run
- * where everything worked from one where nothing did, and would report success
- * either way.
- *
- * A union rather than one shape with an optional `aborted`, so "aborted means
- * nothing ran" is a thing the compiler checks rather than a sentence an adapter
- * can contradict.
+ * Task failures are caught so siblings run; this report is how an outside
+ * caller tells success from failure. A union, so "aborted means nothing ran"
+ * is compiler-checked.
  */
 export type ScheduledRunReport =
   | {
@@ -78,70 +59,49 @@ export type ScheduledRunReport =
       readonly ran: 0;
       readonly failed: readonly [];
       /**
-       * Why the run never reached its tasks — a database that will not
-       * connect, a binding that is missing. A caller that conflated this with
-       * `failed` would send an operator looking for a task that never started.
+       * Why the run never reached its tasks, such as a database that will not
+       * connect.
        */
       readonly aborted: string;
     };
 
+/**
+ * Property functions rather than methods, so an adapter cannot narrow the
+ * invocation it accepts and still conform.
+ */
 export interface PlumixHandler {
   readonly fetch: (
     request: Request,
     invocation: Invocation,
   ) => Response | Promise<Response>;
   /**
-   * Fire the site's scheduled tasks for one schedule. An adapter that answers
-   * nothing still conforms; its caller then knows only that the run was
-   * attempted. See {@link ScheduledRunReport}.
+   * Returning nothing conforms; the caller then knows only that the run was
+   * attempted.
    */
   readonly scheduled?: (
     event: ScheduledEvent,
     invocation: Invocation,
   ) => void | Promise<void | ScheduledRunReport>;
   /**
-   * Run one piece of core work against the site from outside a request — a
-   * CLI command that settles stored meta, for one. The work gets the context a
-   * request would: the site's database, its plugins, its bound slots. It ends
-   * the way a request does, committing the scoped write and flushing the CDN
-   * purges the work enqueued.
-   *
-   * Throws when the site's database can't be reached from here — a binding
-   * that only exists inside the platform, like D1 from a Node process.
+   * Runs work outside a request with a request's context, committing and
+   * flushing purges like one. Throws when the database is unreachable from
+   * here, like D1 from Node.
    */
   readonly run?: <T>(
     work: (ctx: AppContext) => Promise<T>,
     invocation: Invocation,
   ) => Promise<T>;
   /**
-   * Drain the deferred work no `waitUntil` took. A long-lived process calls it
-   * on `SIGTERM` so telemetry delivery and cache purges finish instead of
-   * dying with the process; a runtime whose invocations carry `waitUntil` has
-   * nothing to drain and resolves at once.
-   *
-   * Bounded, and the bound is absolute: work still unsettled after
-   * `disposeTimeoutMs` (five seconds by default) is abandoned rather than
-   * held onto, so a stuck task cannot keep a shutdown open. A call may pass
-   * the time it has left instead, so a shutdown that first waited for in-flight
-   * responses spends one deadline, not two. Resolves how many tasks were
-   * abandoned, so a process runtime can exit non-zero over them.
-   *
-   * Also releases the database connection the handler bound, after the drain.
-   *
-   * Deliberately not terminal: a `fetch` arriving after `dispose()` returns
-   * reconnects rather than failing. A disposed handler stays usable — at the
-   * cost of a fresh connection — so a long-lived host may call this to drain
-   * outstanding work without discarding the handler it drained. The only
-   * caller today (a process runtime's `SIGTERM` path) exits right after, so
-   * this only matters the moment a second caller wants a mid-life drain.
+   * Drains deferred work no `waitUntil` took, abandoning what outlasts the
+   * deadline, then releases the database. Not terminal: a later `fetch`
+   * reconnects.
    */
   readonly dispose?: (options?: DisposeOptions) => Promise<DisposeResult>;
 }
 
 /**
- * What a command reads off the built app. The CLI hands a command the whole
- * app, so a command that needs more — one that builds the site's handler —
- * declares it with {@link CommandDefinition}'s type parameter.
+ * The CLI hands over the whole app; a command needing more declares it via
+ * {@link CommandDefinition}'s type parameter.
  */
 export interface CommandApp {
   readonly config: PlumixConfig;
@@ -155,10 +115,7 @@ export interface CommandContext<App extends CommandApp = CommandApp> {
   readonly configPath: string;
   readonly argv: readonly string[];
   /**
-   * How the active runtime opens its database for `plumix migrate`. The CLI
-   * populates this from the runtime's commands module
-   * (`export const migrations: RuntimeMigrations`); absent when the runtime
-   * declares none.
+   * From the runtime's commands module; absent when the runtime declares none.
    */
   readonly runtimeMigrations?: RuntimeMigrations;
 }
@@ -225,14 +182,8 @@ export interface RuntimeMigrations {
 export interface CommandDefinition<App extends CommandApp = CommandApp> {
   readonly describe: string;
   /**
-   * Skip the CLI's eager, Node-side `buildApp` and hand the command a throwing
-   * `ctx.app` sentinel instead. Set by commands that construct the app in their
-   * own runtime rather than consuming the pre-built one — `dev`, whose worker
-   * builds the app itself, so a config/registration failure surfaces through the
-   * worker's dev boot-error page in the browser instead of rejecting in Node and
-   * aborting the terminal before the dev server is listening. Left unset by
-   * `build`/`deploy`, where the eager build doubles as fail-fast config
-   * validation before a bundle ships.
+   * Skips the eager Node-side `buildApp`; `ctx.app` then throws. For commands
+   * that build the app in their own runtime, so failures surface there.
    */
   readonly deferApp?: boolean;
   run(ctx: CommandContext<App>): Promise<void> | void;
@@ -240,7 +191,9 @@ export interface CommandDefinition<App extends CommandApp = CommandApp> {
 
 export type CommandRegistry = Readonly<Record<string, CommandDefinition>>;
 
-/** What the build tells an adapter about the site it is generating an entry for. */
+/**
+ * What the build tells an adapter about the site it is generating an entry for.
+ */
 export interface EntrySourceOptions {
   /**
    * Specifier the entry imports the user's `plumix.config.ts` from, relative
@@ -250,11 +203,7 @@ export interface EntrySourceOptions {
   readonly configModule: string;
 }
 
-/**
- * What a runtime adds to the handler core builds for it: only the reads its
- * platform can answer. Core composes the handler (`createRuntimeHandler`), so
- * the adapter never holds the composed app.
- */
+/** Only the reads a platform can answer; core composes the handler itself. */
 export interface RuntimeHandlerSpec {
   /**
    * Resolve the static-asset fetcher for an invocation. Without one the admin
@@ -263,11 +212,7 @@ export interface RuntimeHandlerSpec {
   readonly assets?: (env: PlumixEnv) => AssetsBinding | undefined;
   /** How long `dispose()` waits for deferred work; five seconds by default. */
   readonly disposeTimeoutMs?: number;
-  /**
-   * The client address the platform reports for a request. It replaces the
-   * one on the invocation, absent included: a runtime that reads it here is
-   * the only authority on where a request came from.
-   */
+  /** Replaces the invocation's address, even when it returns undefined. */
   readonly clientAddress?: (request: Request) => string | undefined;
   /**
    * One-off setup, run once per handler before its first request: a platform
@@ -275,9 +220,8 @@ export interface RuntimeHandlerSpec {
    */
   readonly prepare?: (hooks: HookRegistry) => void;
   /**
-   * Put the platform's own routing in front of the built handler — the demo
-   * runtime answers its session routes before the site does. Receives the
-   * config because what a wrapper supports can depend on the other slots.
+   * Platform routing in front of the site; gets the config because support can
+   * depend on other slots.
    */
   readonly wrap?: (
     handler: PlumixHandler,
@@ -286,10 +230,7 @@ export interface RuntimeHandlerSpec {
 }
 
 /**
- * An admin area a deployment can refuse whatever the user's role: each names
- * the credential or the email its actions would produce. The admin hides
- * every surface of a refused area (ADR 0014). A new area joins this union, and
- * the admin's roster fails typecheck until it names the area's surfaces.
+ * Refusable whatever the role; the admin hides every surface of a refused area.
  */
 export type AdminArea =
   | "apiTokens"
@@ -300,42 +241,26 @@ export type AdminArea =
 
 export interface RuntimeAdapter {
   readonly name: string;
-  /** How core builds the handler the entry calls; see {@link RuntimeHandlerSpec}. */
+  /**
+   * How core builds the handler the entry calls; see {@link
+   * RuntimeHandlerSpec}.
+   */
   readonly handler: RuntimeHandlerSpec;
   /**
-   * Source of the entry module the build serves — the few lines that adapt the
-   * platform's serve API to {@link PlumixHandler}: a Workers default export,
-   * `Bun.serve`, a `node:http` bridge, a Lambda handler. The plumix Vite
-   * plugin pre-emits it, so the entry may import `virtual:plumix/*` modules
-   * the plugin resolves.
-   *
-   * Unlike {@link RuntimeAdapter.commandsModule}, this is a live function on
-   * the adapter the config constructs, so it is reachable from the serving
-   * bundle and everything it imports is bundled with it. Build the source from
-   * literals; a `node:*` import at module scope here is a load-time failure on
-   * a runtime that has no Node built-ins.
+   * Bundled with the server, so build the source from literals: a module-scope
+   * `node:*` import fails on runtimes without Node built-ins. The entry may
+   * import `virtual:plumix/*`.
    */
   generateEntry(options: EntrySourceOptions): string;
   /**
-   * Module specifiers whose named exports must be re-exported from the
-   * generated Worker entry. Cloudflare requires a Durable Object class to
-   * be a named export of the entry module, but that entry is codegen'd by
-   * {@link RuntimeAdapter.generateEntry} — so a DO-backed feature contributes
-   * its class module here, and the plumix Vite plugin surfaces it through the
-   * `virtual:plumix/worker-exports` module. Omit when the runtime
-   * contributes no worker-level exports (the common case).
+   * Modules re-exported from the generated entry, because Cloudflare requires a
+   * Durable Object class to be a named export of the entry module.
    */
   readonly workerExports?: readonly string[];
   /**
-   * Module specifier imported by the CLI to load runtime-contributed
-   * commands. Kept out of the worker-facing adapter so dev/build/deploy
-   * tooling never ends up in the worker bundle.
+   * A specifier, not a module, so CLI tooling never lands in the worker bundle.
    */
   readonly commandsModule?: string;
-  /**
-   * The admin areas this deployment refuses, whoever is signed in. The plumix
-   * Vite plugin carries them into the plugin manifest, and the admin hides
-   * their surfaces. Omit when the runtime refuses none (the common case).
-   */
+  /** Refused whoever is signed in; the admin hides their surfaces. */
   readonly refusedAdminAreas?: readonly AdminArea[];
 }

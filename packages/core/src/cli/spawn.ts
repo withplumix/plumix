@@ -32,9 +32,8 @@ export function spawnInherit(
 }
 
 /**
- * Like {@link spawnInherit}, but the child's stderr is teed — forwarded
- * to ours as it arrives and returned once the child is done — for
- * children whose exit code cannot be trusted to report failure.
+ * Tees stderr, for children whose exit code cannot be trusted to report
+ * failure.
  */
 export function spawnCapturingStderr(
   command: string,

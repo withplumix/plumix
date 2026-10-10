@@ -180,12 +180,9 @@ function WelcomeScreen({
 }
 
 /**
- * Built-in theme served when a site registers no `theme`. `plumix()`
- * substitutes it at config resolution, so to all downstream code a
- * theme-less site is indistinguishable from one with a user theme.
- *
- * The sole `fallback` template uses `defineTemplate` (not a plain function) so
- * its render receives `ctx` — needed for the basePath-aware admin link.
+ * Substituted at config resolution when a site registers no `theme`.
+ * `defineTemplate` so the render receives `ctx` for the basePath-aware admin
+ * link.
  */
 export const welcomeTheme = defineTheme({
   templates: [

@@ -7,19 +7,16 @@ const RESERVED_META_PREFIX = "__plumix_";
 
 export const SNAPSHOT_META_KEY = "__plumix_snapshot";
 
-// Author-supplied label for a revision (Builder.io's "Comment" icon).
-// Lives under a separate envelope key so it can be patched in isolation
-// — no need to round-trip the whole snapshot envelope on every edit.
+// A separate key so it can be patched without round-tripping the snapshot
+// envelope.
 export const REVISION_MESSAGE_META_KEY = "__plumix_revision_message";
 
 // Soft cap on author-typed labels. Long enough for one sentence, short
 // enough to render inline without truncating the row UI.
 export const REVISION_MESSAGE_MAX_LENGTH = 280;
 
-// Spelled as a `type`, not an `interface`: TypeScript withholds the implicit
-// index signature from an interface, so an interface never assigns to
-// `JsonObject` however JSON-shaped its members are — and this envelope rides
-// inside the stored meta bag.
+// A `type`, not an `interface`, so it assigns to `JsonObject` inside the
+// stored meta bag.
 type SnapshotEnvelope = Readonly<{
   slug: string;
   parentId: number | null;
@@ -29,9 +26,8 @@ type SnapshotEnvelope = Readonly<{
   deletes: readonly string[];
 }>;
 
-// As it sits in the column. `deletes` is absent rather than empty on a revision,
-// which is a whole snapshot and so has nothing to clear — that is also the shape
-// every envelope written before ADR 0003 already has, so neither needs rewriting.
+// `deletes` is absent on a revision, which is a whole snapshot with nothing to
+// clear, and on older envelopes.
 type StoredSnapshotEnvelope = Readonly<{
   slug: string;
   parentId: number | null;
@@ -71,20 +67,15 @@ export function decodeSnapshotEnvelope(
   return {
     slug,
     parentId,
-    // An envelope written before ADR 0003 has no `deletes`, and its meta is a
-    // whole copy of the row rather than a patch — every key reads as touched,
-    // which is the pre-ADR behaviour, and it clears as the draft is published.
+    // An older envelope's meta is a whole copy of the row, so every key reads
+    // as touched.
     deletes: Array.isArray(deletes) ? deletes.filter(isString) : [],
   };
 }
 
 /**
- * Lay an autosave's edits over the live row's meta: the keys the author cleared
- * come out, the keys they touched go on top. Reserved keys ride along from the
- * autosave, so an unsaved template pick still drives a preview.
- *
- * This is what makes an autosave readable as a whole draft row even though it
- * stores only a patch — see {@link getAutosave}, which is where callers get it.
+ * Cleared keys come out and touched keys go on top. Reserved keys ride along
+ * from the autosave, so an unsaved template pick still drives a preview.
  */
 export function mergeAutosaveMeta(
   liveMeta: JsonObject,
@@ -98,9 +89,8 @@ export function mergeAutosaveMeta(
 }
 
 /**
- * An autosave row read as the draft it represents, with its edits laid over the
- * live entry. Everything that renders or returns a pending draft goes through
- * here, so one row never reaches two surfaces meaning different things.
+ * Everything rendering a pending draft goes through here, so one row never
+ * means two things.
  */
 export function asDraftRow<T extends { readonly meta: JsonObject }>(
   live: { readonly meta: JsonObject },
@@ -110,13 +100,8 @@ export function asDraftRow<T extends { readonly meta: JsonObject }>(
 }
 
 /**
- * The meta keys an autosave's author actually wrote — the ones they set and the
- * ones they cleared. Promotion runs the field pipeline over exactly these, so a
- * value nobody submitted is never re-decoded (ADR 0003).
- *
- * Reserved keys are excluded: no meta-box field can be named under the
- * `__plumix_*` prefix, so naming one here would claim an authored key that
- * cannot exist.
+ * Set and cleared keys, excluding reserved `__plumix_*` ones, which no
+ * meta-box field can be named.
  */
 export function autosaveTouchedKeys(autosaveMeta: JsonObject): Set<string> {
   const cleared = decodeSnapshotEnvelope(autosaveMeta)?.deletes ?? [];
@@ -127,11 +112,8 @@ export function autosaveTouchedKeys(autosaveMeta: JsonObject): Set<string> {
 }
 
 /**
- * Drop the framework-reserved `__plumix_*` keys (snapshot envelope, revision
- * message) so an autosave's meta matches the live row's user-meta shape —
- * used when overlaying an autosave onto a row for preview render. Keys named
- * in `keep` are exempted: the preview path keeps `__plumix_template` so an
- * unsaved named-template choice still drives template resolution.
+ * Keys in `keep` are exempted, as preview keeps `__plumix_template` so an
+ * unsaved template choice still drives resolution.
  */
 export function stripReservedMeta(
   meta: JsonObject,

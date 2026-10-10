@@ -1,9 +1,7 @@
 import { PluginContextError } from "../errors.js";
 
-// Shared `/`-anchored path validation: must start with /, no `//` or
-// `..` traversal, no `?` / `#` (we match on pathname only). The
-// admin-page and plugin-route validators diverge after this on how
-// they handle `*`, so the wildcard rule stays at each call site.
+// The wildcard rule stays at each call site because admin pages and plugin
+// routes handle `*` differently.
 function assertValidPathPrefix(
   pluginId: string,
   path: string,

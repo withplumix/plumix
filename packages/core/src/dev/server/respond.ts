@@ -6,14 +6,8 @@ import { collectDevErrorPanels } from "./panels/collect.js";
 import { devErrorJson, renderDevErrorPage } from "./render.js";
 
 /**
- * The dev error surface's answer to a caught failure: the standalone error
- * page, which is theme-independent so it renders even when the theme is what
- * threw, or the exception as JSON for a caller that can't use a document
- * (#1599). Null when the surface itself broke, so the caller's own 500 still
- * answers (#1582).
- *
- * Callers gate on `process.env.PLUMIX_DEV` and a trusted request before calling,
- * which is what drops this module from a production build.
+ * Null when the error surface itself broke, so the caller's own 500 still
+ * answers. Call only under `PLUMIX_DEV` and for a trusted request.
  */
 export function devErrorResponse(
   ctx: AppContext,

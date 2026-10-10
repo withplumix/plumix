@@ -7,15 +7,8 @@ import { apiTokensAdminRevokeInputSchema } from "./schemas.js";
 
 const ADMIN_CAPABILITY = "user:manage_tokens";
 
-// Admin-only revoke for any user's token. Soft-delete (sets
-// `revokedAt`) so the row stays for the future audit-log surface.
-//
-// Distinct from the self-scope `revoke` procedure — same underlying
-// table mutation, but a separate procedure name lets future
-// telemetry/audit cleanly distinguish "user X revoked their own
-// token" from "admin Y revoked user X's token". Idempotent: a row
-// already in `revokedAt IS NOT NULL` is filtered by the WHERE
-// clause and surfaces as NOT_FOUND.
+// Separate from self-scope `revoke` so audit can tell an admin revoke from
+// an owner's. Soft-deletes; an already-revoked row surfaces as NOT_FOUND.
 export const adminRevoke = base
   .use(authenticated)
   .use(requireCapability(ADMIN_CAPABILITY))

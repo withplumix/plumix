@@ -21,12 +21,7 @@ interface NumberFieldState extends UniversalFieldState {
   readonly step?: number;
 }
 
-/**
- * Fluent chain for the `number` field. Mirrors `StringFieldBuilder` —
- * immutable, phantom-typed (`K` literal key, `V` read type, `S`
- * stored shape). `step` defaults to `1` (integer input) at the
- * renderer when omitted; the definition stays minimal.
- */
+/** The renderer defaults an omitted `step` to `1` (integer input). */
 export class NumberFieldBuilder<
   K extends string = string,
   V extends number | undefined = number | undefined,
@@ -87,7 +82,9 @@ export class NumberFieldBuilder<
     return this.#fork({ default: value });
   }
 
-  /** Mark the field required — narrows the read and stored types to `number`. */
+  /**
+   * Mark the field required — narrows the read and stored types to `number`.
+   */
   required(): NumberFieldBuilder<K, number, number> {
     return this.#fork<number, number>({ required: true });
   }

@@ -64,10 +64,8 @@ async function writeUserColumns(
   demotingAdmin: boolean,
   guards: UserWriteGuards,
 ): Promise<User> {
-  // Last-admin guard inlined into the UPDATE WHERE clause: the row only
-  // updates if another active admin still exists at write time. Closes a
-  // TOCTOU race where two concurrent demotions could each pass a separate
-  // "isLastActiveAdmin" check and both succeed, locking everyone out.
+  // The last-admin guard sits in the UPDATE's WHERE so two concurrent
+  // demotions can't both pass and lock everyone out.
   const whereClause = demotingAdmin
     ? and(
         eq(users.id, existing.id),
@@ -83,10 +81,8 @@ async function writeUserColumns(
       .where(whereClause)
       .returning();
   } catch (error) {
-    // Two unique columns can trip here — an explicit slug edit collides on
-    // `users.slug`, so map that first. `users.email` isn't writable via this
-    // RPC (email goes through the confirmation flow), but keep the fallback
-    // defensive against a plugin filter that reintroduces it.
+    // `users.email` isn't writable here, but a plugin filter could reintroduce
+    // it.
     if (isUniqueConstraintErrorOn(error, "users.slug")) guards.slugTaken();
     if (isUniqueConstraintError(error)) guards.emailTaken();
     throw error;
@@ -197,9 +193,8 @@ export const update = base
       meta = await resolveUserMeta(context, updated.meta);
     }
 
-    // Any role change → existing sessions carry a cached role via AppContext
-    // until they expire. Invalidate so the next request re-auths and picks up
-    // the new role (tightens demotions immediately; upgrades, too).
+    // Sessions cache the role until they expire, so invalidate them to apply
+    // any role change immediately.
     if (wantsRoleChange) {
       await invalidateAllSessionsForUser(context.db, updated.id);
     }

@@ -56,15 +56,11 @@ const loginOptionsInputSchema = v.object({
 // We cap generously to protect the hashToken path from pathological inputs.
 const inviteTokenSchema = v.pipe(v.string(), v.minLength(16), v.maxLength(256));
 
-// Defensive upper bound for credential IDs from untrusted WebAuthn responses.
-// Real credential IDs are typically tens to a few hundred bytes; 1 KiB
-// preserves compatibility while blocking pathological payloads from reaching
-// deeper parsing paths.
+// Real credential IDs are at most a few hundred bytes; the cap blocks
+// pathological payloads.
 const MAX_CREDENTIAL_ID_LENGTH = 1024;
-// Defensive cap for large binary WebAuthn fields that arrive base64url-encoded
-// in JSON — clientDataJSON, attestationObject, authenticatorData, signature.
-// 64 KiB is intentionally generous for interoperability while bounding memory
-// and CPU on oversized inputs so they can't reach the oslo parsers at all.
+// Generous for interoperability, but stops oversized binary fields reaching the
+// oslo parsers.
 const MAX_WEBAUTHN_FIELD_LENGTH = 65_536;
 
 const base64urlField = (max: number) =>
@@ -391,15 +387,12 @@ export async function handleSignout(
   const cookie = buildSessionDeletionCookie({
     secure: isSecureRequest(ctx.request),
     sameSite: "Lax",
-    // Must match the Path the session was minted with (see mintSessionAndCookie)
-    // or the browser won't clear it.
+    // Must match the Path the session was minted with (see
+    // mintSessionAndCookie) or the browser won't clear it.
     path: withBasePath("/", ctx.config.basePath),
   });
-  // If the configured authenticator runs an external session (CF
-  // Access, SAML), surface the IdP logout URL so the admin client can
-  // navigate there after clearing the local cookie. Without this, the
-  // next request would carry the same IdP credential and silently
-  // re-auth the user.
+  // Without the IdP logout URL, an external session (CF Access, SAML) would
+  // silently re-authenticate the next request.
   const redirectTo = sanitiseSignOutUrl(
     ctx.authenticator.signOutUrl?.(ctx.request),
   );
@@ -409,12 +402,8 @@ export async function handleSignout(
   );
 }
 
-// Defense-in-depth: the authenticator interface is operator-trusted
-// (set at config time, never request-injected), but we still validate
-// the URL shape before shipping it to the admin client. A buggy or
-// malicious authenticator returning `javascript:`, a protocol-relative
-// URL, or a string with embedded CR/LF would otherwise become a
-// trusted navigation target.
+// The authenticator is operator-trusted, but a buggy one returning
+// `javascript:` or CR/LF would become a trusted navigation target.
 function sanitiseSignOutUrl(value: string | null | undefined): string | null {
   if (typeof value !== "string" || value.length === 0) return null;
   if (/[\r\n]/.test(value)) return null;
@@ -423,24 +412,8 @@ function sanitiseSignOutUrl(value: string | null | undefined): string | null {
   return sameOriginPath || httpsAbsolute ? value : null;
 }
 
-// Invite acceptance — two routes paired with the passkey register flow.
-// An invite token (from user.invite in Phase 9) unlocks registration for
-// a user row that otherwise can't sign up because decideRegistrationPolicy
-// returns "registration_closed" for post-bootstrap unauthenticated callers.
-//
-// Security model:
-//   - Token is hashed in DB (Phase 9 writes SHA-256; see auth/tokens.ts).
-//   - Single-use: consumed after the credential is persisted.
-//   - TTL checked at both options and verify time — a token could expire
-//     between the two calls on a slow client.
-//   - Target user must still exist and not be disabled — admins can cancel
-//     an invite by disabling or deleting the row.
-//   - Refuse if the user already has any credentials — the invite isn't
-//     for a re-registration; an active user should use /passkey/register
-//     (add-device) while authenticated.
-//   - Challenge binding defends against a cross-user replay: the WebAuthn
-//     challenge issued by beginRegistration is keyed to the invited user's
-//     id, so a response captured for a different user can't complete here.
+// An invite unlocks registration that is otherwise closed after bootstrap. TTL
+// is rechecked at verify because a slow client can outlast it.
 
 const inviteRegisterOptionsInputSchema = v.object({
   token: inviteTokenSchema,
@@ -503,10 +476,7 @@ export async function handleInviteRegisterVerify(
     });
     await consumeInviteToken(ctx.db, invite.tokenHash);
     const { cookieHeader } = await mintSessionAndCookie(ctx, app, user.id);
-    // User is fully enrolled (credential persisted, token consumed,
-    // session created). Fire after the session exists so handlers that
-    // hit the DB can rely on the user being in a stable post-invite
-    // state — matches WP's `user_register` firing post-save.
+    // Fired after the session exists so handlers see a fully enrolled user.
     await ctx.hooks.doAction("user:registered", user, ctx);
     await ctx.hooks.doAction(
       "credential:created",
@@ -553,12 +523,7 @@ async function resolveInvite(
   }
 }
 
-/**
- * Fully resolve an invite-accept target: validate the token, load the user,
- * verify they're still enrollable (exists, not disabled, no existing
- * credentials). Returns either a typed `{invite, user}` pair or an already-
- * formed error Response that callers pass straight through.
- */
+// A user with any credential is refused: an invite is not for re-registration.
 async function resolveInviteTarget(
   ctx: AppContext,
   rawToken: string,

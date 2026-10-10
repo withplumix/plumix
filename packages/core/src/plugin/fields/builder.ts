@@ -35,17 +35,9 @@ export interface StringFieldState extends UniversalFieldState {
 }
 
 /**
- * Fluent chain for the string scalar fields (`text`, `textarea`,
- * `email`, `url`, `password`). Immutable — every call returns a fresh
- * instance, so a shared base chain can be forked without aliasing.
- * `Input` is the `inputType` literal — one of the built-in five, or a
- * plugin-contributed string input registered through `registerFieldType`.
- * `K` is the literal field key; `V` is the phantom value type the
- * field reads as: `string | undefined` unadorned, narrowed to `string`
- * by `.required()`; `S` is the phantom stored shape, which `.required()`
- * narrows too (write-enforced). `.default()` narrows neither: it is a new
- * entity's starting value, and a cleared field stays empty.
- * Purely type-level — nothing at runtime carries them.
+ * Immutable: every call returns a fresh instance, so a shared base chain can
+ * be forked. `.default()` narrows neither `V` nor `S`, because a cleared field
+ * stays empty.
  */
 export class StringFieldBuilder<
   Input extends string = StringInputType,
@@ -114,7 +106,9 @@ export class StringFieldBuilder<
     return this.#fork({ default: value });
   }
 
-  /** Mark the field required — narrows the read and stored types to `string`. */
+  /**
+   * Mark the field required — narrows the read and stored types to `string`.
+   */
   required(): StringFieldBuilder<Input, K, string, string> {
     return this.#fork<string, string>({ required: true });
   }

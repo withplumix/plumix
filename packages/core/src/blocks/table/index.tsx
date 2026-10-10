@@ -45,12 +45,8 @@ const ALIGN_INPUT: BlockInput = {
   ],
 };
 
-// Baseline table styling as theme-overridable `var(--plumix-table-*, fallback)`
-// CSS — header and body cells share one padding/border rule so they read as one
-// consistent grid (the browser gives <th>/<td> no padding on their own). Emitted
-// with the block; React 19 dedupes the `href`+`precedence` style in the editor's
-// client render, while the public string render emits one inline copy per table
-// (identical rules, harmless). A theme restyles every table via the vars.
+// React 19 dedupes this in the editor, but the public string render emits one
+// identical copy per table, which is harmless.
 const TABLE_THEME_CSS = [
   "table{border-collapse:collapse;width:var(--plumix-table-width,100%)}",
   "th,td{border:var(--plumix-table-border,1px solid #d0d7de);padding:var(--plumix-table-cell-padding,0.5rem 0.75rem);text-align:left;vertical-align:top}",
@@ -59,10 +55,8 @@ const TABLE_THEME_CSS = [
   "th[data-align=right],td[data-align=right]{text-align:right}",
 ].join("");
 
-// A container in defaultChildren must spell out its whole subtree — slot seeding
-// doesn't recurse into a nested slot's own defaultChildren — so each seeded row
-// lists its cells. Cells carry placeholder text so a dropped table reads as a
-// real grid, not an empty strip; the text is ordinary content the user edits.
+// Slot seeding doesn't recurse into a nested slot's defaultChildren, so each
+// row lists its cells. Placeholder text makes a dropped table read as a grid.
 function seedCells(
   rowId: string,
   cell: string,
@@ -75,8 +69,8 @@ function seedCells(
   }));
 }
 
-// A header row + two body rows, so a freshly dropped table reads as an editable,
-// filled grid and shows both row types up front.
+// A header row + two body rows, so a freshly dropped table reads as an
+// editable, filled grid and shows both row types up front.
 const DEFAULT_ROWS: readonly BlockNode[] = [
   {
     id: "row-header",
@@ -129,10 +123,8 @@ export const tableBlock = defineBlock({
   defaults: {},
   render: ({ attrs }): ReactNode => {
     const Rows = attrs.rows as (() => ReactNode) | undefined;
-    // Rows render straight into a <tbody> — browsers inject one anyway, so
-    // emitting it ourselves keeps the DOM React hydrates against valid (no
-    // <tr> directly under <table>). Header rows live here too; `scope="col"`
-    // on their cells is what marks them as headers.
+    // Browsers inject a <tbody> anyway, so emitting it keeps the hydrated DOM
+    // valid. Header rows live here too; `scope="col"` marks them.
     return (
       <>
         <style href="plumix-table-theme" precedence="default">

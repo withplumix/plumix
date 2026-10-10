@@ -30,12 +30,8 @@ export const sectionBlock = defineBlock({
     },
   ],
   defaults: { maxWidth: "1200px" },
-  // A full-width band (a block <section> already fills its container) with its
-  // content centered at maxWidth; vertical padding is seeded as editable Styles
-  // values. Not viewport full-bleed by default: `width: 100vw` breaks out of
-  // the container but overflows by the scrollbar's width unless an ancestor
-  // clips the x-axis, adding a horizontal scrollbar in the canvas and on the
-  // page. Edge-to-edge bleed stays opt-in via the Styles tab.
+  // Not `width: 100vw` full-bleed by default: it overflows by the scrollbar's
+  // width unless an ancestor clips the x-axis, adding a horizontal scrollbar.
   defaultStyles: {
     large: {
       paddingTop: "3rem",

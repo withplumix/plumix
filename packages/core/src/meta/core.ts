@@ -43,46 +43,25 @@ import {
   runFieldPipeline,
 } from "./field-pipeline.js";
 
-// Shared meta plumbing for every entity that stores a `meta` JSON
-// column (entries, terms, and — eventually — users). The storage
-// contract: writes merge into the bag via SQLite `json_set` /
-// `json_remove`; reads come back already-parsed via drizzle's
-// `mode: "json"`. Per-entity specializations in `procedures/{entry,
-// term}/meta.ts` thread the right table + action name through these
-// helpers.
-
-/** Per-value byte cap after JSON encoding. 256 KiB fits any realistic
- *  plugin config while bounding adversarial payloads. */
+// 256 KiB fits any realistic plugin config while bounding adversarial payloads.
 const MAX_META_VALUE_BYTES = 256 * 1024;
 
 /**
- * Meta as a caller sends it: object-shaped and nothing more. Not JSON — not
- * yet: values stay unproven until the field pipeline normalizes them, and it
- * is that pass which turns the bag into the stored `JsonObject`.
+ * Not JSON: values stay unproven until the field pipeline normalizes them into
+ * the stored `JsonObject`.
  */
 export type MetaInput = Readonly<Record<string, unknown>>;
 
 /**
- * Validated meta patch produced by `sanitizeMetaInput`. Values in
- * `upserts` are the *decoded* post-sanitization objects — filter hooks
- * see this shape, so keeping decoded values here means a plugin
- * doesn't have to double-parse. `applyMetaPatch` JSON-encodes at the
- * last moment, before the UPDATE.
- *
- * `upserts` is mutable: `validateMetaReferences` normalizes reference
- * values to the plain-id storage form (a legacy `{ id, ... }` object
- * self-heals to its id). Other callers should treat it as read-only.
+ * `upserts` holds decoded values. `validateMetaReferences` mutates it to
+ * normalize references; every other caller treats it as read-only.
  */
 export interface MetaPatch {
   readonly upserts: Map<string, JsonValue>;
   readonly deletes: readonly string[];
 }
 
-/**
- * Reason codes are part of the RPC error `data.reason` surface — admin
- * UIs and plugin tests match on these strings, so treat them as a
- * public contract.
- */
+// A public contract: admin UIs and plugin tests match on `data.reason`.
 type MetaSanitizationReason =
   "not_registered" | "invalid_value" | "value_too_large";
 
@@ -124,11 +103,8 @@ export interface MetaChanges {
 }
 
 /**
- * The whole-patch rejection produced by `sanitizeMetaInput` when any
- * field's pipeline reports errors: every `{ path, message }` across
- * every key of the request, so the admin form can address each
- * offending input in one round-trip. Nothing is written when this
- * throws.
+ * Carries every `{ path, message }` across the patch so the admin form can
+ * address each input in one round-trip. Nothing is written when this throws.
  */
 export class MetaValidationError extends Error {
   static {
@@ -146,14 +122,9 @@ export class MetaValidationError extends Error {
 }
 
 /**
- * Validate an incoming meta map against a field-lookup fn produced by
- * the caller (entry vs term differ only in which registry they walk).
- * `null` / `undefined` values are deletion requests; everything else
- * runs the per-field pipeline (coercion → `.sanitize()` → declarative
- * constraints → `.validate()`). Pipeline rejections aggregate across
- * the whole patch into one `MetaValidationError`; unregistered keys
- * and oversized values keep the legacy fail-fast
- * `MetaSanitizationError` surface.
+ * `null`/`undefined` values are deletion requests. Pipeline rejections
+ * aggregate into one `MetaValidationError`; unregistered keys and oversized
+ * values fail fast with `MetaSanitizationError`.
  */
 export async function sanitizeMetaInput(
   findField: (key: string) => MetaBoxField | undefined,
@@ -175,10 +146,8 @@ export async function sanitizeMetaInput(
   for (const [key, rawValue] of Object.entries(input)) {
     const field = findField(key);
     if (!field) {
-      // A delete request (null/undefined) for a key the field system doesn't
-      // own is a harmless no-op — never fail the whole write over an untracked
-      // foreign key (e.g. one written by another plugin). Unknown *upserts*
-      // still reject so junk can't enter through this gate.
+      // Deleting a key the field system doesn't own is a harmless no-op;
+      // unknown upserts still reject.
       if (rawValue === null || rawValue === undefined) continue;
       throw MetaSanitizationError.notRegistered({ key });
     }
@@ -197,10 +166,8 @@ export async function sanitizeMetaInput(
       deletes.push(key);
       continue;
     }
-    // A `.sanitize()` callback returning `undefined` leaves nothing to write.
-    // The pre-#1817 path bound that `undefined` into the `json_set` update,
-    // which the driver rejects — skipping the key is that write minus the
-    // crash.
+    // The driver rejects binding `undefined` into `json_set`, so a
+    // `.sanitize()` returning `undefined` skips the key.
     if (result.value === undefined) continue;
     assertEncodedSize(key, result.value);
     upserts.set(key, result.value);
@@ -220,9 +187,8 @@ export async function sanitizeMetaInput(
 }
 
 /**
- * Where a patch lands and who is writing it. A condition cannot be judged from
- * a patch alone — a driver it omits is whatever the stored meta holds — and
- * `auth` limits which of those fields the author can be held to.
+ * A condition can't be judged from a patch alone: a driver it omits is whatever
+ * `stored` holds, and `auth` limits which fields the author answers for.
  */
 export interface MetaPatchTarget {
   readonly stored: JsonObject;
@@ -230,8 +196,8 @@ export interface MetaPatchTarget {
   readonly auth: { can(capability: Capability): boolean };
 }
 
-// The stored meta with the patch laid over it, as conditions will see it; a null
-// or undefined value is a deletion.
+// The stored meta with the patch laid over it, as conditions will see it; a
+// null or undefined value is a deletion.
 function overlayMetaPatch(
   target: MetaPatchTarget,
   input: MetaInput,
@@ -244,13 +210,9 @@ function overlayMetaPatch(
   return next;
 }
 
-/**
- * The patch as storage will hold it, for judging conditions. Input arrives raw
- * (a number input posts `"10"`, a date input a `Date`), but the row and so the
- * publish gate hold the settled value; a condition judged on the raw form would
- * disagree with the gate. Settled leniently: a key that fails stays raw, and
- * the real pass reports it.
- */
+// Conditions judge the settled value, as the publish gate does; a raw `"10"`
+// would disagree with it. A key that fails to settle stays raw for the real
+// pass.
 async function settleForConditions(
   findField: (key: string) => MetaBoxField | undefined,
   input: MetaInput,
@@ -272,15 +234,9 @@ async function settleForConditions(
   return settled;
 }
 
-/**
- * The patched keys whose fields are hidden once the patch lands — and so are
- * dropped. A dropped write cannot hide anything else: judged against the patch
- * as sent, a hidden driver's discarded value could hide a field that is visible
- * under what actually gets stored, and that field's write would vanish without
- * an error. So the hidden set is settled to a fixpoint, with each round laying
- * only the surviving writes over the row. A chain settles within one round per
- * key; a set that has not settled by then never will.
- */
+// Settled to a fixpoint: a dropped write's discarded value must not hide a
+// field visible under what actually gets stored. A chain settles within one
+// round per key.
 function hiddenPatchKeys(
   target: MetaPatchTarget,
   findField: (key: string) => MetaBoxField | undefined,
@@ -307,29 +263,20 @@ function hiddenPatchKeys(
     }
     hidden = next;
   }
-  // Never settled: the conditions form a cycle — an either/or pair each hiding
-  // the other — so no choice of dropped writes agrees with the row it leaves.
-  // Drop nothing; every write then answers to the full pipeline instead of
-  // vanishing without an error.
+  // Never settled: the conditions form a cycle, so drop nothing and let every
+  // write answer to the full pipeline.
   return new Set();
 }
 
-/**
- * A strict edit validates only its own keys, so a co-author's older drift on
- * some other field cannot block it. That covers drift the edit finds, not drift
- * it makes: changing a driver can switch another field visible, and a field it
- * switches on without supplying is this edit's to fix. Only a driver whose value
- * actually changes counts — re-sending the value it already holds makes nothing
- * newly visible.
- */
+// A field a changed driver switches visible without being supplied is this
+// edit's to fix; a co-author's older drift elsewhere is not.
 async function validateConditionDependents(
   target: MetaPatchTarget,
   input: MetaInput,
   outcome: MetaPatch,
 ): Promise<MetaFieldError[]> {
-  // Judged by what the edit stores, not by what it sent: a write to a hidden
-  // field is dropped, so it switches nothing on. Each key is compared as it
-  // reads before and after.
+  // Judged by what the edit stores: a write to a hidden field is dropped, so
+  // it switches nothing on.
   const written: Record<string, unknown> = Object.fromEntries(outcome.upserts);
   for (const key of outcome.deletes) written[key] = null;
   const before = overlayMetaPatch(target, {});
@@ -363,18 +310,8 @@ async function validateConditionDependents(
 }
 
 /**
- * Thin wrapper that translates thrown meta errors into the RPC
- * handler's CONFLICT envelope. Pipeline rejections ship their
- * `{ path, message }` list under `data.errors` (with `key` pointing
- * at the first error's top-level field for legacy consumers); the
- * fail-fast `MetaSanitizationError` reasons keep their existing
- * `data.reason`/`data.key` shape.
- */
-/**
- * Map a whole-patch meta validation failure onto the RPC `CONFLICT`
- * envelope — one place so the wire shape (`key` at the first error's
- * top-level field, the full `errors` list) can't drift between the write
- * path and the publish gate.
+ * One place, so the wire shape can't drift between the write path and the
+ * publish gate.
  */
 export function metaValidationConflict(
   error: MetaValidationError,
@@ -412,28 +349,9 @@ export async function sanitizeMetaForRpc(
 }
 
 /**
- * Strict publish gate: validate a whole *stored* meta bag against the full
- * field list before `entry.publish` promotes it onto the live row. Draft
- * autosaves are lenient (business rules skipped so work-in-progress always
- * saves), so publish is where required fields, bounds, formats, option
- * membership, and row counts are finally enforced. It walks the field
- * *definitions*, not just the bag, so a required field ABSENT from the bag
- * is caught as well as one stored empty — `runFieldPipeline` sees
- * `undefined` and rejects it in strict mode.
- *
- * Rejections aggregate across the bag into one `MetaValidationError` the
- * RPC layer maps onto the admin inputs, blocking the publish. A conditionally-
- * hidden field can't be required, so it's skipped; keys the field system
- * doesn't own (e.g. from an uninstalled plugin) pass through untouched,
- * matching the read path. Field capabilities and reference existence are not
- * re-checked here — a whole-bag gate would block a publisher over a co-author's
- * field, and both were already enforced at write time.
- *
- * `touched` names the keys the author actually submitted, and only those come
- * back re-run through `.sanitize()`. Everything else is validated and returned
- * as stored: the pipeline decodes input, and the rest of the bag is not input
- * (ADR 0003). Pass every key the caller is promoting to get the whole bag
- * settled.
+ * Walks field definitions, so a required field absent from the bag is caught.
+ * Only `touched` keys are re-run through `.sanitize()`; the rest return as
+ * stored.
  */
 export async function validateAndPromoteMetaBag(
   fields: readonly MetaBoxField[],
@@ -445,10 +363,8 @@ export async function validateAndPromoteMetaBag(
   const fieldErrors: MetaFieldError[] = [];
   for (const field of fields) {
     owned.add(field.key);
-    // A hidden field is inactive, so it can't be required — but its stored
-    // value is kept untouched (not validated, not dropped), or the value a
-    // driver hides would be lost on publish and gone when the driver flips
-    // back. Judged against the stored bag, as the editor and the page read it.
+    // A hidden field can't be required, but its stored value is kept
+    // untouched, or it would be lost when the driver flips back.
     if (!isFieldVisible(field, bag)) {
       const stored = bag[field.key];
       if (stored !== undefined) out[field.key] = stored;
@@ -459,9 +375,8 @@ export async function validateAndPromoteMetaBag(
       fieldErrors.push(...result.errors);
       continue;
     }
-    // Validated above, so skipping the rewrite here costs the publish gate no
-    // coverage. What it skips is a decode: the pipeline reads *input*, and a
-    // key the author never sent is not input (ADR 0003).
+    // The pipeline decodes input, and a key the author never sent is not
+    // input.
     if (!touched.has(field.key)) {
       const stored = bag[field.key];
       if (stored !== undefined) out[field.key] = stored;
@@ -478,22 +393,9 @@ export async function validateAndPromoteMetaBag(
 }
 
 /**
- * Walk a sanitized patch, group every reference upsert by
- * `(kind, scope)`, and issue one `LookupAdapter.list({ ids })`
- * query per group to confirm all upserted IDs are real and in
- * scope **at validation time**. Throws `invalid_value` for any id
- * missing from its group's live-id set — same surface whether the
- * adapter is unregistered, the target is gone, or scope rejected
- * it. Sync `sanitize` callbacks can't run DB queries, so this is a
- * separate async step the RPC procedures invoke between
- * sanitisation and `applyMetaPatch`.
- *
- * TOCTOU note: validate runs in a separate query from the eventual
- * `applyMetaPatch`, and callers don't share a transaction. A
- * concurrent delete between validate and apply leaves an orphan id
- * in the meta bag; `resolveMetaBags` masks it on read. Wrap the
- * validate/apply pair in `ctx.db.transaction()` if a caller needs
- * serializable consistency.
+ * Throws `invalid_value` for any id that is gone or out of scope. Runs in a
+ * separate query from `applyMetaPatch`; wrap both in `ctx.db.transaction()`
+ * if a concurrent delete matters.
  */
 export async function validateMetaReferences(
   ctx: AppContext,
@@ -515,11 +417,8 @@ export async function validateMetaReferences(
         target,
         fieldMax(field),
       );
-      // Normalize eagerly — a validation failure below aborts the whole
-      // save, so a rewritten patch never persists on the failure path. A
-      // single-target ref always yields exactly one id (the id extractor
-      // throws rather than returning none), so the guard only narrows the
-      // index access.
+      // Normalize eagerly: a validation failure below aborts the whole save,
+      // so a rewritten patch never persists on the failure path.
       const normalized = target.multiple ? ids : ids[0];
       if (normalized !== undefined) patch.upserts.set(key, normalized);
       const group = upsertGroup(groups, target, registered);
@@ -527,12 +426,8 @@ export async function validateMetaReferences(
       group.contributions.push({ errorKey: key, ids });
       continue;
     }
-    // Composite fields (repeater / group) don't carry a
-    // `referenceTarget` themselves but their rows / members can, at any
-    // nesting depth. Walk them so nested `entry` / `term` / `user` /
-    // `media` refs flow through the same `(kind, scope)` batch as
-    // top-level fields. Errors attribute to the top-level key — the
-    // dotted sub-path lives in the developer log, not the wire response.
+    // Composite rows and members can hold references at any depth; errors
+    // attribute to the top-level key.
     if (isRepeaterField(field) || isGroupField(field)) {
       collectCompositeReferences(ctx, key, key, field, value, groups);
     }
@@ -550,12 +445,9 @@ export async function validateMetaReferences(
       for (const id of contribution.ids) {
         if (!liveIds.has(id)) {
           if (contribution.diagnostic !== undefined) {
-            // Wire error keys on the top-level field; this log line
-            // is the only place the nested sub-path surfaces, so an
-            // engineer debugging a `meta_invalid_value` on a composite
-            // field can locate the offending cell without bisecting the
-            // saved bag. `JSON.stringify` escapes control characters so
-            // a user-supplied id with newlines can't poison the log.
+            // The only place the nested sub-path surfaces. `JSON.stringify`
+            // escapes control characters so a user-supplied id can't poison
+            // the log.
             console.error(
               `[plumix] meta composite ${JSON.stringify(contribution.errorKey)} ` +
                 `at ${JSON.stringify(contribution.diagnostic.path)} ` +
@@ -571,11 +463,6 @@ export async function validateMetaReferences(
   }
 }
 
-// Walk a composite field's live value, collecting + normalizing every
-// nested reference in place. `path` is the dotted address of `field`
-// from the top-level key (developer-log only). Recurses through nested
-// repeaters and groups, so a reference at any depth flows through the
-// same `(kind, scope)` batch and is orphan-checked at write time.
 function collectCompositeReferences(
   ctx: AppContext,
   topKey: string,
@@ -686,42 +573,21 @@ interface ReferenceGroup {
 }
 
 interface ReferenceContribution {
-  /** The top-level key surfaced in `MetaSanitizationError`. */
   readonly errorKey: string;
   readonly ids: readonly string[];
-  /**
-   * Diagnostic only — set for nested (repeater row / group member)
-   * contributions so server logs identify the offending cell by its
-   * dotted sub-path (e.g. `sections.2.hero`). The wire error always
-   * keys on the top-level field, but engineers debugging a save need to
-   * know which cell.
-   */
+  // Diagnostic only: the wire error keys on the top-level field, but server
+  // logs name the offending cell.
   readonly diagnostic?: {
     readonly path: string;
   };
 }
 
-// Defense-in-depth ceiling on the internal-aggregated id-batch size.
-// Above this, the live-id fetch throws rather than silently truncating.
-// The wire cap (100) and per-field cap (`HARD_MULTI_REFERENCE_LIMIT`,
-// 100) keep external + per-field batches small; this ceiling only
-// kicks in if many fields share `(kind, scope)` and aggregate.
+// Above this the live-id fetch throws rather than silently truncating; only
+// reached when many fields share `(kind, scope)`.
 const MAX_REFERENCE_GROUP_BATCH = 1000;
 
-// Same kind + same scope = same SQL filter, so they batch into one
-// `list({ ids })` call. JSON.stringify is good enough for the scope
-// shapes we ship (`UserFieldScope`, `EntryFieldScope`,
-// `TermFieldScope` are all simple objects with stable key order at
-// build time). Plugin authors who construct scopes with non-stable
-// key order get separate groups — extra query, no correctness issue.
-//
-// `::` separator is collision-safe by construction: `kind` is
-// constrained to `[a-z][a-z0-9_-]{0,63}` (no colons) by the lookup
-// RPC schema, and core registers `user`/`entry`/`term` directly.
-//
-// `LookupAdapter` requires JSON-serializable scope; rethrow with a
-// clear message if `JSON.stringify` rejects (BigInt, cycle, function)
-// rather than letting the downstream read crash with a generic.
+// `::` can't collide: lookup kinds are constrained to `[a-z][a-z0-9_-]{0,63}`.
+// A scope with unstable key order only costs an extra query.
 export function referenceGroupKey(target: ReferenceTarget): string {
   try {
     return `${target.kind}::${JSON.stringify(target.scope ?? null)}`;
@@ -730,12 +596,8 @@ export function referenceGroupKey(target: ReferenceTarget): string {
   }
 }
 
-// Run one `list({ ids })` per group, throwing if the aggregated batch
-// blew past `MAX_REFERENCE_GROUP_BATCH`. The wire schema caps `ids` at
-// 100 per-request and `HARD_MULTI_REFERENCE_LIMIT` caps each field at
-// 100, so we only hit the ceiling when many fields share `(kind, scope)`
-// and aggregate — at which point throwing beats silent truncation
-// (truncation would either reject valid writes or hide live targets).
+// Throwing beats truncation, which would either reject valid writes or hide
+// live targets.
 async function fetchLiveIds(
   ctx: AppContext,
   registered: { readonly adapter: LookupAdapter },
@@ -759,20 +621,12 @@ async function fetchLiveIds(
   return new Set(rows.map((row) => row.id));
 }
 
-// Defensive upper bound on multi-reference array length, applied
-// per-field before grouping. Even with the batched `list({ ids })`
-// path, an unbounded array still pulls 10k rows in one query — the
-// cap protects the wire / response size. 100 covers any realistic
-// multi-reference field (authors, tags, related entries); fields
-// can declare a lower `max` and the validator picks the smaller.
+// Bounds one query's row count and response size; a field may declare a
+// lower `max`.
 const HARD_MULTI_REFERENCE_LIMIT = 100;
 
-// Validates the wire shape of a reference value and returns the ids
-// to feed into the group's batched `list({ ids })` call. Storage is
-// plain ids — a bare string (single) or string[] (multi) — but each
-// slot leniently accepts the retired cached-object shape
-// (`{ id, ... }`) so legacy values self-heal to the plain form on
-// the entity's next save.
+// Storage is plain ids, but each slot still accepts the retired `{ id, ... }`
+// shape so legacy values self-heal on the next save.
 function referenceIdsForValidation(
   key: string,
   value: unknown,
@@ -838,48 +692,21 @@ export async function validateMetaReferencesForRpc(
   }
 }
 
-// The read-time resolution + orphan pass. `resolveMetaBags` resolves
-// reference fields across every bag in a response in one traversal:
-// stored ids become the adapter's hydrated shapes (media item with
-// URL, entry/term/user summaries), and any id whose target is gone or
-// out of scope reads as absent — single refs `null`, multi refs
-// dropped from the array (which stays dense, in order). Ids aggregate
-// across all reference fields of all bags, then resolve with one
-// in-query per `(kind, scope)` group regardless of entry/field count.
-// Adapter `hydrate`/`list` honours `scope` (`entryTypes`,
-// `termTaxonomies`, `roles`, …) so out-of-scope ids fall out of the
-// result naturally and read as orphans. Callers pass freshly-decoded
-// bags (from `decodeMetaBag`); returned bags are shallow copies.
-// Non-reference keys pass through untouched.
-/** A path segment from the bag root: object key (string) or array index (number). */
 type PathSegment = string | number;
 
 interface ReferenceOccurrence {
-  /**
-   * Full path from the bag root to the reference slot. `[key]` for a
-   * top-level field; `[key, rowIdx, subKey, …]` for references nested
-   * in repeater rows and groups at any depth. The last segment is
-   * always the leaf object key.
-   */
+  // `[key, rowIdx, subKey, …]` for nested references; the last segment is
+  // always the leaf object key.
   readonly path: readonly PathSegment[];
   readonly target: ReferenceTarget;
   readonly value: unknown;
 }
 
-// A reference field authored with `.returns("id")` reads the bare
-// stored id — the resolution walk skips it so no lookup query runs and
-// the id survives untouched. `"returns" in field` narrows to the field
-// variants that carry the flag (temporal's `"date"` never matches).
+// `.returns("id")` reads the bare stored id, so the walk skips it.
 function readsRawReferenceId(field: MetaBoxField | undefined): boolean {
   return field !== undefined && "returns" in field && field.returns === "id";
 }
 
-/**
- * Yield every reference-field occurrence in a decoded meta bag: top-level
- * reference fields, plus references nested inside repeater rows and
- * groups at any depth. One structural walk so the resolution pass doesn't
- * reinline the traversal twice.
- */
 function* referenceOccurrences(
   entries: Iterable<readonly [string, unknown]>,
   findField: (key: string) => MetaBoxField | undefined,
@@ -948,14 +775,8 @@ export async function resolveMetaReferences(
   return bag ?? decoded;
 }
 
-/**
- * How a `(kind, scope)` group resolved in Pass 2: adapters with the
- * `hydrate` contract yield payloads keyed by id (values become the
- * hydrated shapes); adapters without it yield the live-id set only
- * (values stay plain ids, orphan-stripped — the pre-hydration read).
- * Either way, an id absent from the result reads as an orphan:
- * single refs null, multi refs drop the item (array stays dense).
- */
+// Adapters without `hydrate` yield only the live-id set. Either way, an id
+// absent from the result is an orphan.
 type GroupResolution =
   | {
       readonly kind: "hydrated";
@@ -967,16 +788,11 @@ export async function resolveMetaBags(
   ctx: AppContext,
   bags: readonly ResolvableBag[],
 ): Promise<ResolvedMeta[]> {
-  // Pass 1: shallow-copy each bag into its output slot, classify each
-  // reference occurrence, and accumulate ids per `(kind, scope)`
-  // group. Candidates carry their bag references so Pass 3 is a
-  // straight walk with no findField / registry re-lookups.
+  // Pass 1. Candidates carry their bags so Pass 3 needs no registry re-lookups.
   interface Candidate {
-    /** The shallow output copy of the candidate's bag. */
     readonly outBag: ResolvedMeta;
-    /** The caller's original decoded bag (for lazy copy-on-write). */
+    // Kept for lazy copy-on-write.
     readonly decoded: ResolvedMeta;
-    /** Full path from the bag root to the reference slot. */
     readonly path: readonly PathSegment[];
     readonly multiple: boolean;
     readonly groupKey: string;
@@ -991,10 +807,6 @@ export async function resolveMetaBags(
       readonly ids: Set<string>;
     }
   >();
-  // Top-level refs and nested (repeater / group) refs get identical
-  // treatment, so the single `referenceOccurrences` walk feeds both.
-  // Every candidate carries its full path; Pass 3 rewrites the slot in a
-  // per-path copy-on-write so callers' bags stay untouched.
   const out: ResolvedMeta[] = [];
   for (const bag of bags) {
     const outBag: ResolvedMeta = { ...bag.decoded };
@@ -1045,10 +857,8 @@ export async function resolveMetaBags(
     ),
   );
 
-  // Pass 3: apply. Hydrated groups replace ids with their payloads;
-  // id-only groups keep ids. Multi refs stay dense and in stored
-  // order; single refs null on missing. Nested candidates copy-on-write
-  // each container down their path so callers' bags stay untouched.
+  // Pass 3. Multi refs stay dense and in stored order; nested slots
+  // copy-on-write so callers' bags stay untouched.
   const emptyResolution: GroupResolution = { kind: "ids", liveIds: new Set() };
   for (const candidate of candidates) {
     const { outBag, decoded, path, multiple, groupKey, ids } = candidate;
@@ -1061,20 +871,9 @@ export async function resolveMetaBags(
 }
 
 /**
- * Batched, tag-accounted resolution of a raw id set for one reference kind
- * — the theme-facing counterpart to the meta pipeline's resolution (#1508).
- * A theme holding an id-only reference field (a field declared
- * `.returns("id")`, or one contributed by a third-party plugin) resolves
- * it here instead of hand-rolled per-item fetches: ids resolve through the
- * adapter's batched `hydrate` (chunked, one in-query per chunk) and every
- * resolved entity folds its cache tag into the page through the same
- * accumulator the meta pipeline uses, so the page is purged when an
- * embedded entity changes.
- *
- * Returns the resolved payloads dense and in the requested id order — ids
- * that are gone or out of scope are dropped, mirroring multi-reference
- * field resolution. An unregistered kind, an adapter without the `hydrate`
- * contract, or an empty id set yields `[]`.
+ * Resolves through the adapter's batched `hydrate` and folds each entity's
+ * cache tag into the page. Gone or out-of-scope ids are dropped; an
+ * unregistered kind or an adapter without `hydrate` yields `[]`.
  */
 export async function resolveReferences<
   K extends keyof ReferenceHydrationShapes,
@@ -1101,11 +900,8 @@ export async function resolveReferences<
 }
 
 /**
- * Hydrate one `(kind, scope)` group's ids, keyed for lookup — what a reader
- * holding stored ids from many bags needs, where `resolveReferences` serves
- * one caller-ordered list. Same batching: one in-query per chunk, cache tags
- * accumulated. An unregistered kind, or an adapter without `hydrate`, yields
- * an empty map, so every id in the group reads as an orphan.
+ * An unregistered kind, or an adapter without `hydrate`, yields an empty map,
+ * so every id in the group reads as an orphan.
  */
 export async function hydrateReferenceGroup(
   ctx: AppContext,
@@ -1118,28 +914,16 @@ export async function hydrateReferenceGroup(
   return resolution.kind === "hydrated" ? resolution.byId : new Map();
 }
 
-// What an adapter's `hydrate` may answer differently for — the entry
-// adapter clamps unpublished rows on `edit_any`, and on `edit_own` over the
-// asker's own rows, so a payload is the asker's view of the row, not the
-// row, and varies by `user.id` and not merely by capability. `ctx.memo` is shared by every
-// context derived from this one (`withUser`, and the principal-stripped
-// one an access policy is resolved against), so naming the asker in the
-// key is how this loader meets the principal-invariance the memo asks of
-// every loader. Scopes are sorted because they narrow as a set.
+// `ctx.memo` is shared by every derived context, and `hydrate` clamps rows by
+// `user.id`, so the asker belongs in the key. Scopes are sorted because they
+// narrow as a set.
 function principalKey(ctx: AppContext): string {
   const scopes = ctx.tokenScopes === null ? null : [...ctx.tokenScopes].sort();
   return JSON.stringify([ctx.user?.id ?? null, scopes]);
 }
 
-// Resolve one `(kind, scope)` group's aggregated ids. Chunked at
-// `HYDRATION_QUERY_ID_LIMIT` per in-query: a response-level group can
-// legitimately aggregate more ids than one query may carry (a
-// 100-entry archive × multi-reference fields), and a read-path throw
-// would kill the render — unlike the write-side `fetchLiveIds`, which
-// keeps throwing because a single patch exceeding the ceiling is a
-// caller bug. Ids are de-duped before chunking, so per-query batches
-// stay bounded and nothing is truncated. Only the `hydrate` arm dedupes
-// across batches: #2506 memoizes payloads, and left `list` alone.
+// Chunked rather than thrown: a response-level group can legitimately exceed
+// one query's id limit, and a read-path throw would kill the render.
 async function resolveGroup(
   ctx: AppContext,
   adapter: LookupAdapter,
@@ -1152,13 +936,9 @@ async function resolveGroup(
     // Bound, not destructured: `hydrate` is declared as a method, so an
     // adapter may reach for `this`.
     const hydrate = adapter.hydrate.bind(adapter);
-    // One request runs several resolve batches — an entry page and its
-    // related posts, a listing's head re-resolving its first page, an
-    // entry's meta beside the attached terms'. Each dedupes only its own
-    // ids, so the memo is what keeps a later batch from re-hydrating what
-    // an earlier one already has (#2506). The key is a JSON tuple rather
-    // than joined text: a scope serializes into `groupKey`, so a
-    // concatenation would let one scope's text spill into the id.
+    // The memo keeps a later batch in the same request from re-hydrating ids.
+    // A JSON tuple key, because a scope serialized into `groupKey` could
+    // spill into joined text.
     const key = principalKey(ctx);
     const groupKey = referenceGroupKey(target);
     // Tagged by id, so the entity's own write in this request drops the
@@ -1182,20 +962,13 @@ async function resolveGroup(
     );
     const byId = new Map<string, HydratedReference>();
     for (const [index, id] of idList.entries()) {
-      // `null` is the memoized miss — an orphan stays an orphan for the
-      // rest of the request instead of being re-queried by a later batch,
-      // until a write announces its id.
-      // `undefined` cannot happen (one answer per id) but the index read
-      // is checked.
+      // `null` is the memoized miss: an orphan stays an orphan for the rest
+      // of the request, until a write announces its id.
       const payload = payloads[index];
       if (payload === null || payload === undefined) continue;
       byId.set(id, payload);
-      // Fold this embedded entity's cache tag into the page's tags so a
-      // change to it purges the page that hydrated it (#1508). Runs on
-      // every read surface; only the read-throughs read the accumulator
-      // back, so admin/REST reads populate it harmlessly.
-      // Folded here rather than at the hydrate, so a batch answered from
-      // the memo tags the page exactly as the batch that loaded it did.
+      // Folded here rather than at the hydrate, so a batch answered from the
+      // memo tags the page exactly as the batch that loaded it did.
       declarePageTags(ctx, tagsFor(id));
     }
     return { kind: "hydrated", byId };
@@ -1239,14 +1012,9 @@ function applyResolutionToSlot(
   if (!resolution.liveIds.has(singleId)) slot[key] = null;
 }
 
-// Walk the candidate's path from the output bag to the parent container
-// of its leaf slot, copy-on-writing each container the first time it's
-// descended so the caller's `decoded` bag stays untouched. Containers
-// cloned by an earlier candidate (identity no longer matches `decoded`)
-// are reused, so sibling references in the same row/group land in one
-// clone. Returns the writable parent object and the leaf key, or null if
-// any segment's runtime shape doesn't match the declared structure
-// (hand-edited / migrated bags).
+// Containers cloned by an earlier candidate are reused, so sibling references
+// land in one clone. Null when a hand-edited or migrated bag doesn't match the
+// declared structure.
 function takeWritableSlot(
   outBag: ResolvedMeta,
   decoded: ResolvedMeta,
@@ -1279,12 +1047,10 @@ function takeWritableSlot(
   return { parent: outContainer, leafKey: leaf };
 }
 
-/** An addressable node inside a meta bag — what a path segment descends into. */
 type MetaContainer = unknown[] | ResolvedMeta;
 
-// Every segment but the last addresses a container, so a leaf (or a missing
-// key) reads back as `undefined` and the walk gives up on it — the storage
-// shape no longer matches the declared structure.
+// A leaf or missing key reads as `undefined`: the storage shape no longer
+// matches the declared structure.
 function readContainer(
   container: unknown,
   seg: PathSegment,
@@ -1329,12 +1095,8 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-// Returns `null` to mean "no candidates from this key" (skip), or
-// the ids to feed into the group's batch query. Mirrors the storage-
-// shape guards in the apply step so we don't enqueue work that's
-// going to be skipped. Callers pass values already decoded through
-// `decodeMetaBag`, so legacy object shapes have been healed to plain
-// ids by the time this runs.
+// Mirrors the apply step's storage-shape guards so no work is enqueued that
+// would be skipped.
 function referenceCandidateIds(
   target: ReferenceTarget,
   value: unknown,
@@ -1384,14 +1146,9 @@ export function metaScopeCache(
 }
 
 /**
- * Decode a raw meta bag (as returned by drizzle's JSON-mode column)
- * into the plugin-typed shape RPC consumers expect. Unregistered keys
- * pass through untouched — the row exists in the DB but the plugin
- * that wrote it is no longer installed; we don't pretend to know its
- * shape.
- *
- * Reads storage alone: a key storage lacks reads as absent, whatever the
- * field's `.default()` (ADR 0026).
+ * Unregistered keys pass through untouched: the plugin that wrote them may be
+ * uninstalled. A key storage lacks reads as absent, whatever the field's
+ * `.default()`.
  */
 export function decodeMetaBag(
   scope: MetaScope,
@@ -1400,12 +1157,6 @@ export function decodeMetaBag(
   return decodeBag(scope, raw ?? {});
 }
 
-/**
- * Decode one bag against the schema that governs it. The top-level meta bag,
- * a repeater row and a group value are the same thing at different depths —
- * a set of declared members plus whatever keys nobody claims — so they share
- * this, and nesting falls out of the recursion through `decodeFieldValue`.
- */
 function decodeBag(scope: MetaScope, raw: JsonObject): ResolvedMeta {
   const out: ResolvedMeta = {};
   for (const [key, value] of Object.entries(raw)) {
@@ -1415,20 +1166,11 @@ function decodeBag(scope: MetaScope, raw: JsonObject): ResolvedMeta {
   return out;
 }
 
-// Reference storage is plain ids, but bags written before the
-// write-time snapshot machinery was removed may hold `{ id, ... }`
-// objects. Reads yield the id; the next save persists the plain form
-// (`referenceItemId` accepts the legacy shape on write).
-/**
- * One field's value after decode. Wider than the stored JSON because decoding
- * is what moves a value away from it: `.returns("date")` yields a `Date`, and
- * a repeater row or group yields a bag whose members had the same treatment.
- * The field's own `_value` narrows this to the declared read type.
- */
+// Wider than stored JSON: `.returns("date")` yields a `Date`, and a repeater
+// row or group yields a decoded bag.
 type DecodedValue =
   JsonValue | Date | DecodedRow | readonly DecodedRow[] | undefined;
 
-/** One repeater row, or a group's members: the sub-schema's read shape. */
 type DecodedRow = JsonValue | ResolvedMeta;
 
 function decodeFieldValue(field: MetaBoxField, value: JsonValue): DecodedValue {
@@ -1447,12 +1189,8 @@ function decodeFieldValue(field: MetaBoxField, value: JsonValue): DecodedValue {
   if (isTemporalField(field) && field.returns === "date") {
     return projectTemporalDate(field.inputType, value);
   }
-  // Everything reaching here reads as it is stored, scalars included. Three
-  // readers cannot decode — a `WHERE` over the JSON column, a raw row off a
-  // lifecycle event, and `storedMeta` behind `whereMeta` — so widening a
-  // value to its declared type would answer the other way from all three.
-  // The write path settles every form it accepts, so only a row that bypassed
-  // it holds an off-schema value, and the next save settles that.
+  // Reads are literal: a `WHERE` over the JSON column, a raw lifecycle row
+  // and `storedMeta` can't decode, so widening here would disagree with them.
   return value;
 }
 
@@ -1465,30 +1203,16 @@ export interface SettledMeta {
    */
   readonly patch: MetaPatch;
   /**
-   * Top-level keys holding a value — at that key or anywhere inside it — that
-   * no declared type accepts. They are left as stored: there is no settled form
-   * to pick, and a human has to decide what the value should have been.
+   * Keys holding a value no declared type accepts, left as stored: a human has
+   * to decide what it should have been.
    */
   readonly unconvertible: readonly string[];
 }
 
 /**
- * Settle a stored bag into the shape its fields declare.
- *
- * Reads are literal (see `decodeFieldValue`), so a row holding an **unsettled
- * value** (`GLOSSARY.md`) reads as something its declared type doesn't describe.
- * Settling is what makes the declared type true of the data rather than of the
- * decode.
- *
- * It settles through the write path's own `coerceValue`, so a value lands on
- * exactly what storing it would have produced — there is no second notion of
- * what correct means. A value `coerceValue` rejects is left alone: no schema
- * accepts it, so there is nothing to settle it to, and dropping it would lose
- * data this has no mandate to delete.
- *
- * The recursion mirrors `decodeFieldValue`'s. A repeater row and a group are
- * `json` at the top, so walking only the surface would leave the same class
- * alive one level down.
+ * Settles through the write path's own `coerceValue`, so a value lands on what
+ * storing it would have produced. A value `coerceValue` rejects is left alone,
+ * never dropped.
  */
 export function settleStoredMeta(
   scope: MetaScope,
@@ -1558,10 +1282,8 @@ function settleFieldValue(field: MetaBoxField, value: JsonValue): SettledValue {
       unconvertible: settled.unconvertible.length > 0,
     };
   }
-  // `json` covers the containers and the multi-reference, and accepts any JSON
-  // — asking it to settle would only re-encode what is already stored.
-  // A stored `null` is a value someone chose, read as "no value" — nothing to
-  // settle and nothing a human needs to resolve.
+  // `json` accepts any JSON, so settling would only re-encode it. A stored
+  // `null` is a chosen "no value", with nothing to resolve.
   if (field.type === "json" || value === null) {
     return { value, unconvertible: false };
   }
@@ -1579,17 +1301,9 @@ function isTemporalField(field: MetaBoxField): field is TemporalMetaBoxField {
   );
 }
 
-// `.returns("date")` decode projection. All three variants anchor to
-// UTC — `date` at UTC midnight, `time` on 1970-01-01 UTC — so the
-// wall-clock components survive every server/browser timezone
-// combination (decode runs server-side, often UTC on Workers, while
-// the admin formats in the viewer's browser). Consumers read the
-// parts back with `getUTC*` or `timeZone: "UTC"` formatting; the
-// projection is the exact inverse of the write-side `Date` encoding
-// (`formatTemporalValue`). An unparseable stored value rounds to "no
-// value": unlike a scalar, a `.returns("date")` field has no honest way
-// to hand one back, since its read type is `Date` and the projection is
-// the whole reason the bag is not the stored JSON here.
+// Anchored to UTC so wall-clock components survive any server/browser
+// timezone pair; the inverse of `formatTemporalValue`. An unparseable value
+// reads as no value, since the read type is `Date`.
 function projectTemporalDate(
   inputType: TemporalInputType,
   value: unknown,
@@ -1606,12 +1320,8 @@ export function isEmptyMetaPatch(patch: MetaPatch | null): boolean {
 }
 
 /**
- * Merge a validated patch into the given `meta` JSON column for the
- * row identified by `idColumn = id`. Uses SQLite `json_set` /
- * `json_remove` so concurrent updaters touching disjoint keys don't
- * clobber each other at the row level. Deletes nest inside sets so a
- * caller clearing + re-setting the same key in one request behaves
- * predictably.
+ * Uses `json_set`/`json_remove` so concurrent updaters touching disjoint keys
+ * don't clobber each other.
  */
 export async function applyMetaPatch(
   ctx: AppContext,
@@ -1637,33 +1347,17 @@ export async function applyMetaPatch(
   }
 
   await ctx.db
-    // drizzle's `update(table)` wants an `AnyTable` shape; our generic
-    // constraint only pins `meta`, so the update helper accepts any
-    // sqlite table via structural matching. Cast keeps the helper
-    // reusable across tables without widening the public types.
+    // drizzle wants an `AnyTable`; the generic only pins `meta`, and the cast
+    // keeps the helper reusable without widening the public types.
     .update(table as never)
     .set({ meta: expr })
     .where(eq(idColumn, id));
 }
 
 /**
- * Write a settle back, and only over the values it was settled from.
- *
- * Unlike `applyMetaPatch`, which applies what a caller asked for, this applies
- * what a reader computed from a snapshot. A save landing between that read and
- * this write would otherwise be overwritten with the stale value, so each moved
- * key is guarded: the row is written only while every one still holds what was
- * read, and otherwise left for its next read to settle. `json_extract` on both
- * sides compares scalars by value; a container compares as its JSON text, so
- * one whose spelling doesn't survive a parse (`1.0`) fails closed — left as
- * stored and reported again — rather than risk overwriting a save.
- *
- * `updatedAt` is held where it was. A settle is a normalization, not an edit:
- * moving it would float a row to the top of "recently updated" for having been
- * opened, and hand an editor a lock token the row no longer carries.
- *
- * Returns whether the row was written, which is what decides whether anything
- * gets announced.
+ * Writes only while every moved key still holds what was read, so a save in
+ * between is never overwritten. Leaves `updatedAt` alone: a settle is not an
+ * edit.
  */
 export async function writeSettledMeta(
   ctx: AppContext,
@@ -1718,9 +1412,8 @@ export async function loadMeta(
 
 // --- internals below ---------------------------------------------------
 
-// The RPC input schema already rejects `"` and `\`, but belt-and-braces
-// matters here because non-RPC callers (tests, hook listeners, future
-// surfaces) could bypass that schema and reach a write with such a key.
+// Non-RPC callers such as hook listeners bypass the RPC schema that rejects
+// `"` and `\`.
 function requireMetaJsonPath(key: string): string {
   const path = metaJsonPath(key);
   if (path === null) throw MetaReferenceError.metaKeyForbiddenChars(key);

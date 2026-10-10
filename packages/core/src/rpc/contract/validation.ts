@@ -11,17 +11,9 @@ export { setI18nResolver, vMessage } from "./vmessage.js";
 export type { I18nResolver } from "./vmessage.js";
 export { META_FIELD_MESSAGES } from "../../meta/contract/field-messages.js";
 
-// Shared leaf-level field schemas. Consumed server-side by RPC procedure
-// input schemas AND client-side by admin forms — same rules on both ends so
-// a submit that passes client validation can't then fail server validation
-// on shape alone. Messages flow through `vMessage` so admin's `bootI18n`
-// resolver can translate them; descriptors are inlined plain literals (not
-// `defineMessage(...)`) because core builds with plain `tsc`, no Lingui
-// macro pass.
-//
-// Per-callsite procedure schemas (`procedures/auth/**/schemas.ts`) stay in
-// English — they only surface to direct RPC consumers, not admin forms,
-// which build their own client-side schemas with locally-wrapped messages.
+// Shared by RPC input schemas and admin forms so both validate the same
+// shape. Descriptors are plain literals because core builds with plain `tsc`,
+// without Lingui macros.
 
 /**
  * The descriptors behind the shared field schemas. Exported so admin's
@@ -69,12 +61,8 @@ export const nameField = v.pipe(
 );
 
 /**
- * Canonical slug bounds — lowercase ASCII alphanumerics in single-dash
- * groups, no leading/trailing/double dashes, non-empty, capped length.
- * Exported as raw building blocks (not a full schema) so the server
- * `slugSchema` (`procedures/schemas.ts`) and the admin client forms
- * (`lib/slug.ts`) validate identical rules from one source — a drift here
- * would let a client-valid slug fail server validation on shape alone.
+ * Raw building blocks, not a schema, so the server `slugSchema` and admin
+ * forms validate identical rules.
  */
 export const SLUG_MAX_LENGTH = 200;
 export const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -92,10 +80,8 @@ export const idParam = v.pipe(
 );
 
 /**
- * String-to-int coercer for URL path params. The regex is tighter than
- * `Number()` — it rejects hex (`"0x1F"`), exponential (`"5e2"`), signed,
- * whitespace-wrapped, leading-zero, and empty strings, all of which
- * `Number()` would otherwise coerce to a valid positive int.
+ * Stricter than `Number()`: rejects hex, exponential, signed,
+ * whitespace-wrapped, leading-zero and empty strings.
  */
 export const idPathParam = v.pipe(
   v.string(),
@@ -107,9 +93,8 @@ export const idPathParam = v.pipe(
   v.maxValue(Number.MAX_SAFE_INTEGER),
 );
 
-// A defensive cap on meta keys per request so a malformed client can't ship a
-// huge object at us. Not translated: these outer-shape errors surface only to
-// direct RPC consumers, never admin forms (which build their own client schemas).
+// Not translated: outer-shape errors reach only direct RPC consumers, never
+// admin forms.
 const MAX_META_KEYS_PER_REQUEST = 200;
 
 const metaKeySchema = v.pipe(
@@ -121,10 +106,8 @@ const metaKeySchema = v.pipe(
 );
 
 /**
- * The `meta` bag accepted by the `entry` / `term` / `user` inputs that carry
- * one. Per-key value validation runs in each handler against that entity's
- * registered meta box types; here we enforce only the outer shape and the key
- * cap. Values stay `unknown` because the registry drives their shape.
+ * Checks only the outer shape and key cap; each handler validates values
+ * against the entity's registered meta box types.
  */
 export const metaInputSchema = v.pipe(
   v.record(metaKeySchema, v.unknown()),

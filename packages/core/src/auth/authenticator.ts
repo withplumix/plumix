@@ -17,16 +17,8 @@ export type {
 } from "../context/authenticator.js";
 
 /**
- * Default authenticator — reads the `plumix_session` cookie, validates
- * the row, returns the user. Same logic the dispatcher used inline
- * before this contract existed; isolating it here makes it swappable.
- *
- * Resolves a `"session"` credential — a browser session inherits the full
- * role caps. PAT-style scoping doesn't apply here.
- *
- * Pass the same policy as `auth.sessions` when composing this yourself;
- * the cookie's `Max-Age` follows that setting, so a mismatch here leaves
- * the server enforcing a different lifetime than the browser.
+ * Pass the same policy as `auth.sessions`: the cookie's `Max-Age` follows that
+ * setting, so a mismatch makes server and browser lifetimes disagree.
  */
 export function sessionAuthenticator(
   policy: SessionPolicy = DEFAULT_SESSION_POLICY,
@@ -45,12 +37,6 @@ export function sessionAuthenticator(
   };
 }
 
-/**
- * Run an authenticator inside an `auth` telemetry span, so session/token
- * resolution shows up in the request's span tree with its outcome. The
- * single traced entry point for every auth choke point — public render,
- * admin shell, RPC middleware, and the bearer surfaces (MCP, REST).
- */
 export function authenticateTraced(
   ctx: AppContext,
   authenticator: RequestAuthenticator,
@@ -66,10 +52,9 @@ export function authenticateTraced(
 }
 
 /**
- * Resolve the caller through the request's configured authenticator, but only
- * when they hold a session. An API-token caller, or a result naming any other
- * credential kind, reads as anonymous. A surface that creates a credential or
- * a session for the caller resolves them here (ADR 0024).
+ * Any caller not holding a session, an API-token caller included, reads as
+ * anonymous. Surfaces that mint a credential or session must resolve the caller
+ * here.
  */
 export async function authenticateSession(
   ctx: AppContext,
@@ -87,10 +72,8 @@ export function tokenScopesOf(result: AuthResult): readonly string[] | null {
 }
 
 /**
- * Whether a request carries a session this authenticator would resolve on a
- * public render. Defaults to "the standard `plumix_session` cookie is present"
- * for an authenticator that doesn't declare its own signal, preserving the historical
- * behaviour for authenticators written before this predicate existed.
+ * Falls back to the `plumix_session` cookie's presence when the authenticator
+ * declares no `hasSession`.
  */
 export function requestHasSession(
   authenticator: RequestAuthenticator,
@@ -101,17 +84,6 @@ export function requestHasSession(
   );
 }
 
-/**
- * Personal-access-token authenticator. Reads the
- * `Authorization: Bearer pl_pat_…` header, hashes it, looks up the
- * row in `api_tokens`, and bumps `lastUsedAt`. Used by CLIs / MCP
- * servers / any non-browser client.
- *
- * Composed with `sessionAuthenticator()` by default (see
- * `defaultAuthenticator()`) so a single plumix install supports both
- * cookie-authed admin browsing AND bearer-authed API access without
- * any operator config.
- */
 export function apiTokenAuthenticator(): RequestAuthenticator {
   return {
     async authenticate(request, db) {
@@ -124,31 +96,18 @@ export function apiTokenAuthenticator(): RequestAuthenticator {
       return {
         user: validated.user,
         credential: "api-token",
-        // null = unrestricted (token inherits role caps); array =
-        // narrow to that intersection. `auth.can()` enforces.
         tokenScopes: validated.token.scopes ?? null,
       };
     },
-    // A bearer token is an API client, not a browser session: opt out of
-    // public-render authentication so a cross-site GET navigation carrying an
-    // Authorization header doesn't bump the token's `lastUsedAt` on every hit.
+    // Opted out of public-render auth so cross-site GETs carrying the header
+    // don't bump `lastUsedAt` on every hit.
     hasSession() {
       return false;
     },
   };
 }
 
-/**
- * Compose multiple authenticators into a first-match-wins chain. The
- * first one to return a non-null user decides the request. `signOutUrl`
- * is taken from the first authenticator that returns one for the request —
- * the chain is a list, and the head wins when both could speak.
- *
- * Used to wire the default plumix install: the cookie-session authenticator
- * in front of the API-token authenticator, so browser requests resolve via
- * the existing path and bearer-auth API clients don't need any
- * operator config.
- */
+/** First match wins, for both the user and `signOutUrl`. */
 export function chainAuthenticators(
   ...authenticators: readonly RequestAuthenticator[]
 ): RequestAuthenticator {
@@ -174,11 +133,8 @@ export function chainAuthenticators(
 }
 
 /**
- * Out-of-the-box authenticator: cookie-session + API token. Plumix
- * uses this when `auth.authenticator` is omitted from config; the
- * existing `sessionAuthenticator()` direct usage is preserved as the
- * intentional "no API tokens" path for ops who want to disable
- * bearer-auth at the runtime level.
+ * Session cookie, then API token. Use `sessionAuthenticator()` alone to turn
+ * API tokens off.
  */
 export function defaultAuthenticator(
   policy: SessionPolicy = DEFAULT_SESSION_POLICY,

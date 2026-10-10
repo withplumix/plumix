@@ -67,11 +67,8 @@ const isNonEmptyString = (val: unknown): boolean =>
 const hasNonEmptyString = (val: unknown, key: string): boolean =>
   isPlainObject(val) && isNonEmptyString(val[key]);
 
-// The host an allowedOrigins entry accepts: the base of a `https://*.base`
-// wildcard, or the hostname of an exact https origin. null for anything the
-// runtime matcher could never honor — non-https, a nested wildcard, or (for an
-// exact entry) any form other than a bare origin, since `originAllowed` matches
-// exact entries by full-string equality.
+// null for entries the runtime matcher could never honor; exact entries must be
+// bare origins since `originAllowed` compares full strings.
 function allowedOriginHost(entry: string): string | null {
   if (entry.startsWith(HTTPS_WILDCARD_PREFIX)) {
     const base = entry.slice(HTTPS_WILDCARD_PREFIX.length);
@@ -103,9 +100,8 @@ const isUrl = (value: string): boolean => {
 const isStringArray = (value: unknown): value is readonly string[] =>
   Array.isArray(value) && value.every((entry) => typeof entry === "string");
 
-// origin / allowedOrigins accept an `(env) => …` resolver (validated at runtime,
-// like secret slots) or a literal validated here. A bare `v.custom` per field
-// keeps the error message precise — a `v.union` would collapse it.
+// `v.custom`, not `v.union`, so the error message stays precise; resolvers are
+// validated at runtime.
 const passkeySchema = v.pipe(
   v.object({
     rpName: v.pipe(v.string(), v.nonEmpty("rpName must be a non-empty string")),
@@ -122,10 +118,8 @@ const passkeySchema = v.pipe(
       ),
     ),
   }),
-  // Cross-field: every literal accepted origin must keep rpId as a registrable
-  // suffix, so a credential bound to rpId stays valid on it. Resolver forms are
-  // deferred to runtime. Forwarded onto the allowedOrigins path so the issue
-  // points at the offending field.
+  // Every literal origin must keep rpId as a registrable suffix, or credentials
+  // bound to rpId fail there.
   v.forward(
     v.check(
       (cfg) =>
@@ -165,22 +159,16 @@ const sessionPolicySchema = v.pipe(
   ),
 );
 
-// Provider clients are user-supplied factory output — we shape-check the
-// minimum required fields so a malformed entry surfaces at config time
-// rather than at the first sign-in attempt. Anything beyond these (the
-// `parseProfile` impl, optional hooks) is the provider author's contract.
+// Shape-checked here so a malformed provider fails at config time, not at the
+// first sign-in.
 const oauthProviderClientSchema = v.object({
   label: v.pipe(v.string(), v.nonEmpty("provider label must be non-empty")),
   authorizeUrl: v.pipe(v.string(), v.url("authorizeUrl must be a valid URL")),
   tokenUrl: v.pipe(v.string(), v.url("tokenUrl must be a valid URL")),
   userInfoUrl: v.pipe(v.string(), v.url("userInfoUrl must be a valid URL")),
   scopes: v.array(v.string()),
-  // Literal credentials, or an `(env) => OAuthClientConfig` resolver (the
-  // secret is read from the request env at token exchange). A resolver's
-  // return is validated at use, not here — env isn't available at config
-  // time — so the field checks below short-circuit for functions. A bare
-  // pipe (not `v.union`) keeps the literal path's field errors precise:
-  // a union would collapse them into "Expected (Object | unknown)".
+  // Resolvers are validated at use since env isn't available here. A pipe, not
+  // `v.union`, keeps field errors precise.
   client: v.pipe(
     v.unknown(),
     v.check(
@@ -248,10 +236,8 @@ const magicLinkSchema = v.object({
   siteName: v.pipe(
     v.string(),
     v.nonEmpty("siteName must be non-empty"),
-    // Defense-in-depth: siteName flows into the email Subject header. Today
-    // it's operator config (not request input) so safe, but if a future
-    // settings UI ever lets it become user-input, blocking CR/LF here
-    // prevents header injection at the boundary.
+    // siteName flows into the email Subject header; CR/LF would allow header
+    // injection.
     v.regex(/^[^\r\n]+$/, "siteName must not contain newlines"),
   ),
   ttlSeconds: v.optional(
@@ -279,10 +265,8 @@ const authInputSchema = v.object({
   bootstrapVia: v.optional(v.picklist(["passkey", "first-method-wins"])),
   selfSignup: v.optional(selfSignupSchema),
   loginPath: v.optional(
-    // Reuse the single redirect trust boundary rather than a second, weaker
-    // regex: rejects protocol-relative (`//…`), backslashes, control chars,
-    // absolute URLs, and over-length values — the same guard the flows run a
-    // request `redirectTo` through before honouring it.
+    // The same guard request `redirectTo` values pass, rather than a second,
+    // weaker regex.
     v.pipe(
       v.string(),
       v.check(

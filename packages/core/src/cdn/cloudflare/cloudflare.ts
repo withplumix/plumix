@@ -10,9 +10,8 @@ import { responseAllowsSharedStorage } from "../decision.js";
 import { CloudflareCdnError } from "./errors.js";
 
 /**
- * Cloudflare CDN policy. `ttl` is the edge freshness window in seconds
- * (`s-maxage`); `staleWhileRevalidate` lets a colo serve a stale copy for that
- * many seconds after expiry while it refreshes in the background.
+ * `ttl` is the edge freshness in seconds (`s-maxage`); `staleWhileRevalidate`
+ * is how many seconds past expiry a colo may serve stale while refreshing.
  */
 export interface CloudflareCdnConfig {
   readonly ttl: number;
@@ -48,15 +47,9 @@ function pageCacheControl(config: CloudflareCdnConfig): string {
   return directives.join(", ");
 }
 
-// The caller's own freshness where it declared one a shared cache may act on —
-// a content-addressed asset asking for `max-age=31536000, immutable` keeps
-// exactly that — and the site-wide page TTL otherwise. `private` and `no-store`
-// never survive: they address the copy going back to the visitor rather than a
-// shared one. A segment variant sends them so no intermediary reuses its
-// render, while its edge entry is deliberately shared, and honoring them on
-// that entry would leave the page uncacheable. Which is why only `forStorage`
-// may reach this arm — widening is safe on a separately keyed copy and nowhere
-// else.
+// Drops `private`/`no-store`: a segment variant sends them for intermediaries,
+// yet its separately keyed edge entry is deliberately shared. Only `forStorage`
+// may widen like this.
 function sharedCacheControl(
   response: Response,
   config: CloudflareCdnConfig,
@@ -88,13 +81,8 @@ function withHeaders(response: Response, headers: Headers): Response {
   });
 }
 
-/**
- * The copy the visitor receives. Two responses leave exactly as they arrived,
- * untouched and untagged: one whose own directive already refused shared
- * storage, and one carrying a `Set-Cookie` — that cookie cannot be stripped the
- * way the stored copy's is, and stamping shared freshness beside it would hand
- * one visitor's cookie to everyone behind the CDN.
- */
+// A visitor's `Set-Cookie` can't be stripped here as on the stored copy;
+// stamping shared freshness beside it would hand that cookie to everyone.
 function decorate(
   response: Response,
   config: CloudflareCdnConfig,
@@ -105,9 +93,8 @@ function decorate(
   return withHeaders(response, cdnHeaders(response, config, tags));
 }
 
-// A shared cache entry must never carry a per-request cookie, and the Workers
-// Cache API rejects a response that does. Deleted on the copied `Headers`,
-// before the `Response` whose header guard would make the delete a no-op.
+// The Workers Cache API rejects a response carrying `Set-Cookie`. Delete before
+// building the `Response`, whose header guard would make the delete a no-op.
 function forStorage(
   response: Response,
   config: CloudflareCdnConfig,
@@ -187,25 +174,9 @@ function credential(
 }
 
 /**
- * Cloudflare CDN provider: freshness and cache tags on every public response,
- * and purge by cache tag through the zone API — both of which work from any
- * host behind the zone, a Worker, a container or a VM alike. On Workers it
- * additionally stores through the Cache API, because a Worker runs in front of
- * its own zone's cache and the zone never holds what the Worker returns. The
- * store is discovered rather than configured.
- *
- * Inert (`connect` returns `null`, pages render live) when either credential
- * resolves to nothing on this deploy — a `workers.dev` host, a container with
- * no token yet. Emitting freshness that could never be purged is the worse
- * failure, and nothing cached can go stale, so it is silent: the debug bar's
- * slot row is where it shows.
- *
- * Note that Cloudflare does not cache HTML without a Cache Rule on the zone. A
- * deploy that emits perfect headers still caches nothing until that rule exists.
- *
- * Workers Caching (`cache.enabled` in wrangler config) honours the same headers
- * but is purged only through its own binding, so a deploy that enables it holds
- * pages this provider cannot invalidate (#2265).
+ * Silently inert when either credential resolves empty. Cloudflare caches no
+ * HTML without a zone Cache Rule, and pages held by Workers Caching
+ * (`cache.enabled`) are beyond this provider's purge.
  */
 export function cloudflare(config: CloudflareCdnConfig): CdnProvider {
   return {

@@ -3,9 +3,8 @@ import type { SessionPolicy } from "./contract/sessions.js";
 import type { PasskeyRuntimeConfig } from "./passkey/config.js";
 
 /**
- * What the auth-flow route handlers read from the composed app. Named here
- * rather than taken from `PlumixApp`, which sits in the composition root that
- * nothing below it may import; the app satisfies it structurally.
+ * Not `PlumixApp`: the composition root can't be imported from this layer, so
+ * the app satisfies this structurally.
  */
 export interface AuthFlowApp {
   readonly config: PlumixConfig;

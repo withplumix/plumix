@@ -1,7 +1,5 @@
-// Container tags a block's root element may be rendered as (Builder's tag-name
-// control). Restricted to generic/sectioning containers — no interactive, void,
-// table, or script-ish elements — so an author override can't break layout or
-// smuggle behavior. A value outside this set falls back to the block's default.
+// Only generic/sectioning containers, so an author's tag override can't break
+// layout or smuggle behavior.
 export const ROOT_TAGS = [
   "div",
   "section",

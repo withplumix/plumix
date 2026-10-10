@@ -11,10 +11,8 @@ import { matchRoute } from "./match.js";
 import { publicEntriesQuery } from "./render/entry-listing.js";
 
 /**
- * An archive described by an entry query, named by the route intent that
- * reaches it: one of core's built-in listings, or a plugin archive. Search is
- * not one — its results are a match, not a set — and neither is a plugin
- * archive that declared no `entries`, nor a view, which lists nothing.
+ * An archive described by an entry query. Search, views, and plugin archives
+ * without `entries` are not one.
  */
 export type EntryArchive = Exclude<
   RouteIntent,
@@ -24,12 +22,9 @@ export type EntryArchive = Exclude<
 declare module "../hooks/types.js" {
   interface FilterRegistry {
     /**
-     * Narrow an archive's entries. Handed the archive's query, which archive
-     * it is, and what its URL captured, and runs wherever the query is read —
-     * so the archive's page and its feed change together. A query only
-     * narrows, and the public-entries rule is applied again when it compiles,
-     * so a handler can hide an entry but never reveal one. Synchronous: the
-     * query records intent, and asking for it must not cost a round-trip.
+     * Narrow an archive's entries wherever its query is read, so page and feed
+     * agree. The public-entries rule reapplies, so a handler can hide an entry
+     * but never reveal one.
      */
     "archive:entries": (
       query: EntryQuery,
@@ -39,19 +34,16 @@ declare module "../hooks/types.js" {
   }
 }
 
-/** What reading an archive's query needs: its definition, and its narrowings. */
+/**
+ * What reading an archive's query needs: its definition, and its narrowings.
+ */
 export type ArchiveReader = Pick<AppContext, "plugins" | "hooks">;
 
-/**
- * The front page: public entries of every non-hierarchical type. The author
- * and date archives narrow it, because all three are a stream of posts — a
- * standalone page leaves them, and their feeds with them.
- */
+// Author and date archives narrow this, since all three are a stream of posts.
 function frontPageEntries(plugins: PluginRegistry): EntryQuery {
   return publicEntriesQuery(plugins).ofTypes(...listedEntryTypeNames(plugins));
 }
 
-/** An entry type's archive: its public entries, hierarchical or not. */
 function entryTypeEntries(
   plugins: PluginRegistry,
   entryType: string,
@@ -59,11 +51,7 @@ function entryTypeEntries(
   return publicEntriesQuery(plugins).ofTypes(entryType);
 }
 
-/**
- * A term's archive: public entries attached to the term. `ofTypes` names the
- * types the page is tagged under, and the public-entries rule it narrows
- * leaves out any of them that is not public.
- */
+// The public-entries rule leaves out any tagged type that is not public.
 function termEntries(
   plugins: PluginRegistry,
   taxonomy: string,
@@ -74,12 +62,10 @@ function termEntries(
     .inTerm(taxonomy, slug);
 }
 
-/** An author's archive: their public entries of non-hierarchical types. */
 function authorEntries(plugins: PluginRegistry, slug: string): EntryQuery {
   return frontPageEntries(plugins).byAuthor(slug);
 }
 
-/** A date archive: public entries of non-hierarchical types in the period. */
 function dateEntries(
   plugins: PluginRegistry,
   year: number,
@@ -90,11 +76,9 @@ function dateEntries(
 }
 
 /**
- * The entry query of the archive at these route params, run through the
- * `archive:entries` filter, or `null` where the params place no archive: a
- * term or author capture that is missing, or a plugin archive that has no
- * `entries` or declined the params. The archive's page and
- * {@link archiveAtPath} both ask this, so they cannot disagree.
+ * The archive's entry query after the `archive:entries` filter, or `null`
+ * where the params place no archive. Its page and {@link archiveAtPath} share
+ * it so they agree.
  */
 export function archiveEntries(
   { plugins, hooks }: ArchiveReader,
@@ -142,9 +126,8 @@ function definedEntries(
 }
 
 /**
- * The slug of the term a taxonomy route captured: the last segment of a
- * `:path+` capture, else the `:term` capture. The ancestors a nested URL spells
- * out are decoration — a slug names one term in its taxonomy (ADR 0012).
+ * The slug of the term a taxonomy route captured. A nested URL's ancestors are
+ * decoration: a slug names one term in its taxonomy.
  */
 export function termSlugParam(params: Record<string, string>): string | null {
   if (params.path !== undefined && params.path !== "") {
@@ -203,18 +186,9 @@ function isEntryArchive(
 const FRONT_PAGE_ROOT = "/";
 
 /**
- * Which archive owns this path, and what its entry query is — for a package
- * that needs an archive's set without rendering its page. The path is a
- * pathname as the router reads it, with no base path, and redirects are not
- * consulted — a path a redirect answers first is still matched. `null` for anything
- * that is not an entry-query archive: a single entry, the search page, a
- * plugin archive without `entries`, a path no route answers, and params the
- * archive declines.
- *
- * Building the query costs nothing: a term or an author it names is looked up
- * when the query is compiled, not here. So a query can still fail to resolve
- * — a term or author nobody holds, a date that does not exist — where the
- * archive's page answers 404.
+ * Which entry-query archive owns this pathname (no base path; redirects
+ * ignored), and its query. A missing term, author or date fails only when the
+ * query compiles.
  */
 export function archiveAtPath(
   reader: ArchiveReader,
@@ -244,10 +218,9 @@ function archiveWithQuery(
 }
 
 /**
- * Every route an entry-query archive is listed at, without its later pages,
- * in the order the router matches them — so another package can put something
- * beside each archive (a feed at `<route>/feed`) and have it follow the
- * archive wherever the permalink configuration moved it.
+ * Every route an entry-query archive is listed at, excluding later pages, in
+ * match order, so a sibling (a feed at `<route>/feed`) follows the archive's
+ * permalink configuration.
  */
 export function archiveBaseRoutes(
   plugins: PluginRegistry,

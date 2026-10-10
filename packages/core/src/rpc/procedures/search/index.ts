@@ -13,12 +13,7 @@ const searchInputSchema = v.object({
   ),
 });
 
-/**
- * Cross-domain admin search for the command palette. Fans out across the
- * registered `admin:search:results` domains (entries, terms, users, and
- * plugin-contributed ones) and returns grouped results. Each domain
- * enforces its own capabilities server-side.
- */
+// Each domain enforces its own capabilities server-side.
 const query = base
   .use(authenticated)
   .input(searchInputSchema)

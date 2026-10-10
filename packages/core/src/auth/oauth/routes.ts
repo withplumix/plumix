@@ -18,10 +18,8 @@ import { consumeOAuthState } from "./state.js";
 const ADMIN_PATH = "/_plumix/admin";
 const BOOTSTRAP_PATH = "/_plumix/admin/bootstrap";
 
-// Defensive bound on `code` from the provider's redirect. GitHub's codes
-// are ~20 chars; Google's a few hundred. 4 KiB is generous for any
-// current provider while bounding URL/body amplification on a malformed
-// callback.
+// Real codes are at most a few hundred chars; the bound limits amplification on
+// a malformed callback.
 const MAX_CODE_LENGTH = 4096;
 
 export async function handleOAuthStart(
@@ -32,12 +30,8 @@ export async function handleOAuthStart(
   const provider = pickProvider(app, providerKey);
   if (!provider) return loginError(app, "provider_not_configured");
 
-  // Block OAuth on a fresh deploy when the operator left bootstrap on
-  // the passkey rail. An OAuth signup before any user exists would
-  // either fail with a confusing domain_not_allowed (no rows) or — if
-  // domains were pre-seeded — mint a non-admin who can't do anything.
-  // Send to /bootstrap. With `bootstrapVia: "first-method-wins"` the
-  // OAuth flow is the bootstrap; let it through.
+  // A signup before any user exists would fail confusingly or mint a powerless
+  // non-admin.
   if (!ctx.bootstrapAllowed) {
     const userCount = await ctx.db.$count(users);
     if (userCount === 0) {
@@ -51,10 +45,7 @@ export async function handleOAuthStart(
     providerKey,
   );
 
-  // A theme-owned "Continue with <provider>" link carries `?redirectTo=` so
-  // the visitor lands back on the page they started from. Only stash it when
-  // it's a safe same-origin path — the callback re-validates as well, but
-  // filtering here keeps a junk value out of the state row entirely.
+  // Filtered here to keep junk out of the state row; the callback re-validates.
   const requested = new URL(ctx.request.url).searchParams.get("redirectTo");
   const redirectToPath = isSafeRedirect(requested) ? requested : undefined;
 
@@ -132,10 +123,7 @@ export async function handleOAuthCallback(
       firstSignIn: created,
     });
 
-    // Return to the theme page the sign-in started from when a safe
-    // `redirectTo` rode through the state payload; otherwise the admin, as
-    // before. The path is already root-relative and includes any basePath
-    // (the browser sent its own location), so it's honoured verbatim.
+    // Already root-relative and includes any basePath, so honoured verbatim.
     const destination = resolveSafeRedirect(
       stored.redirectTo,
       withBasePath(ADMIN_PATH, app.config.basePath),
@@ -160,21 +148,15 @@ function pickProvider(
   app: AuthFlowApp,
   key: string,
 ): OAuthProviderClient | null {
-  // `OAUTH_PROVIDER_KEY_PATTERN` rejects most prototype-chain keys at the
-  // path layer (`__proto__`, `hasOwnProperty`, …), but `constructor`
-  // matches the regex. `Object.hasOwn` keeps the lookup confined to the
-  // operator's `auth.oauth.providers` object instead of walking the
-  // prototype chain.
+  // `constructor` passes the key pattern; `Object.hasOwn` stops the lookup
+  // walking the prototype chain.
   const providers = app.config.auth.oauth?.providers;
   if (!providers || !Object.hasOwn(providers, key)) return null;
   return providers[key] ?? null;
 }
 
-// `ctx.origin` is the resolved canonical site origin — pinning the callback
-// URL there means the value the provider sees at authorize time is identical
-// at token-exchange time even if a load balancer or custom adapter rewrites
-// Host on the way in. (Cloudflare Workers binds `request.url` to the connection
-// hostname, but other adapters may not.)
+// Pinned to the canonical origin so authorize and token exchange send the same
+// URL even if a proxy rewrites Host.
 function oauthCallbackUrl(
   origin: string,
   basePath: string,

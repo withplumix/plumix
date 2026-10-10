@@ -1,10 +1,5 @@
-// Welcome-screen strings follow the admin-bar pattern: hand-authored
-// `locales/welcome-*.po` catalogs compiled to static modules and looked up
-// per-request server-side (no `activate()` singleton). `plumix i18n verify`
-// gates descriptor↔catalog drift. Non-English catalogs ship untranslated;
-// `lingui compile` (no `--strict`) backfills missing entries with the English
-// source, so an untranslated locale renders English until a translator fills
-// its `.po`. The `welcome-` prefix keeps this surface distinct in the flat dir.
+// Non-English catalogs ship untranslated; `lingui compile` without `--strict`
+// backfills English until a translator fills the `.po`.
 
 import { messages as arMessages } from "@plumix/core/locales/welcome-ar";
 import { messages as deMessages } from "@plumix/core/locales/welcome-de";

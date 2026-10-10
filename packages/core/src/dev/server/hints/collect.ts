@@ -5,13 +5,8 @@ import type { DevErrorHint } from "../../ui/index.js";
 import "./types.js";
 
 /**
- * Gathers the "how to fix" hints for a caught error: runs the
- * `error_page:hints` filter chain — isolating each handler so a throwing or
- * non-array-returning subscriber can't sink the rest or take down the dev error
- * page — and returns the matched hints in filter order (typed core hints first,
- * then untyped, then plugin contributions, unless a plugin reorders them). An
- * empty result means nothing recognized the error, and the page renders no hint
- * card.
+ * Isolates each `error_page:hints` handler so a throwing subscriber can't sink
+ * the rest or take down the dev error page.
  */
 export function collectDevErrorHints(
   hooks: HookExecutor,

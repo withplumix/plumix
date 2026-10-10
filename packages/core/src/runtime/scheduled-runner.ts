@@ -42,14 +42,8 @@ export interface ScheduledRunnerOptions {
 }
 
 /**
- * Build and start the scheduler for a self-hosted deploy, with its run guard
- * wired to the site's own database.
- *
- * The guard belongs in the database rather than in this process because the
- * database is the only thing two replicas share — and sharing one is a
- * supported configuration today, since `plumix/db/libsql` points a self-hosted deploy
- * at Turso. A lock held in memory, or in a file beside the process, would be
- * silently wrong there.
+ * The run guard lives in the database, the only thing replicas share; an
+ * in-memory or file lock would be silently wrong.
  */
 export function startScheduledRunner({
   app,

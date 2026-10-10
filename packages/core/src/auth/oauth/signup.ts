@@ -12,46 +12,17 @@ import { OAuthError } from "./errors.js";
 interface ResolveOAuthUserInput {
   readonly provider: string;
   readonly profile: OAuthProfile;
-  /**
-   * When true, allow this OAuth callback to mint the very first admin
-   * (forwarded to `resolveExternalIdentity`). The route handler reads
-   * this from `ctx.bootstrapAllowed`, which is derived from
-   * `auth.bootstrapVia`. Default false keeps the bootstrap rail
-   * passkey-only.
-   */
   readonly bootstrapAllowed?: boolean;
-  /**
-   * Open self-signup (from `auth.selfSignup`). Present bypasses the domain
-   * allowlist and grants `defaultRole`; absent keeps domain-gated signup.
-   */
   readonly selfSignup?: PlumixSelfSignupConfig;
-  /** The meta a user this callback signs up starts with — see `resolveExternalIdentity`. */
   readonly meta: JsonObject;
 }
 
 interface ResolvedOAuthUser {
   readonly user: User;
-  /** True when this call provisioned a new user row. */
   readonly created: boolean;
-  /** True when this call linked an existing user to the OAuth account. */
   readonly linked: boolean;
 }
 
-/**
- * Decide who an OAuth callback maps to:
- *
- *   1. If `oauth_accounts(provider, providerAccountId)` already points
- *      at a user, that's the answer (modulo disabled / dangling-link).
- *   2. Else delegate to `resolveExternalIdentity` for the lookup-or-
- *      provision dance shared with magic-link signup. On success, write
- *      the `oauth_accounts` link row.
- *
- * OAuth-specific concerns (link table, dangling-link detection) stay
- * here. The generic identity-resolution logic (verified-email gate,
- * disabled-account gate, allowed-domains gate, bootstrap rail, race-on-
- * insert retry) lives in `auth/identity.ts` and is shared with every
- * external flow.
- */
 export async function resolveOAuthUser(
   db: Db,
   input: ResolveOAuthUserInput,
@@ -68,10 +39,8 @@ export async function resolveOAuthUser(
     const linked = await db.query.users.findFirst({
       where: eq(users.id, existingLink.userId),
     });
-    // A dangling oauth_accounts row means the cascade-on-delete didn't
-    // fire (FK enforcement off, or hand-rolled SQL). Surface a distinct
-    // code so the friendly-message map can say "support" rather than
-    // "your account is disabled" — the row is gone, not paused.
+    // The cascade didn't fire; a distinct code tells the user to contact
+    // support, not that they're disabled.
     if (!linked) throw OAuthError.linkBroken();
     if (linked.disabledAt) throw OAuthError.accountDisabled();
     return { user: linked, created: false, linked: false };
@@ -85,9 +54,6 @@ export async function resolveOAuthUser(
       name: profile.name,
       avatarUrl: profile.avatarUrl,
       bootstrapAllowed: input.bootstrapAllowed,
-      // Open self-signup bypasses the domain allowlist; otherwise
-      // `allowed_domains` still gates signup. Either way the
-      // `oauth_accounts` link row is written below.
       allowedDomainsGate: input.selfSignup === undefined,
       defaultRole: input.selfSignup?.defaultRole,
       meta: input.meta,
@@ -108,9 +74,8 @@ export async function resolveOAuthUser(
     throw error;
   }
 
-  // Write the OAuth link row. Race retry is its own concern: a
-  // concurrent OAuth callback for the same `(provider, providerAccountId)`
-  // could fire between our `existingLink` check and this insert.
+  // A concurrent callback for the same account can insert between the
+  // `existingLink` check and here.
   try {
     await db.insert(oauthAccounts).values({
       provider,
@@ -119,10 +84,7 @@ export async function resolveOAuthUser(
     });
   } catch (error) {
     if (!isUniqueConstraintError(error)) throw error;
-    // Another callback won the race; the link already exists pointing
-    // at the same userId (provider + providerAccountId is the PK and
-    // resolveExternalIdentity returned the same email-keyed user).
-    // Fall through — sign-in succeeds.
+    // The winner linked the same email-keyed user, so sign-in still succeeds.
   }
 
   return {

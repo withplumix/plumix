@@ -7,9 +7,8 @@ const IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 export interface RenderedAssetArgs {
   readonly request: Request;
   /**
-   * Where the bytes live. Content-addressed by contract: the caller folds
-   * every input that changes the output into it, so a changed input lands on
-   * a new key instead of needing an invalidation pass.
+   * Content-addressed: fold every input that changes the output into it, so
+   * no invalidation pass is needed.
    */
   readonly key: string;
   /**
@@ -23,7 +22,10 @@ export interface RenderedAssetArgs {
    * since a content-addressed key makes the write idempotent.
    */
   readonly render: () => Promise<Uint8Array>;
-  /** Absent when the deploy declared no `storage:` slot — the asset then renders every request. */
+  /**
+   * Absent when the deploy declared no `storage:` slot — the asset then renders
+   * every request.
+   */
   readonly storage?: ConnectedObjectStorage;
   /** Freshness for the served bytes. Defaults to a year, `immutable`. */
   readonly cacheControl?: string;
@@ -79,19 +81,13 @@ export async function serveRenderedAsset(
   return respond(bytes.slice(), bytes.byteLength);
 }
 
-// The key is the one identity both paths share — a digest over the payload
-// would disagree with whatever ETag the storage backend minted for the same
-// bytes, and revalidation would then never match. Percent-encoding is what
-// makes an arbitrary key a legal entity-tag: RFC 9110 gives the grammar no
-// escape at all, so a quote or a comma has to leave rather than be escaped.
+// A payload digest would disagree with the backend's own ETag. Percent-encoding
+// because RFC 9110 gives entity-tags no escape.
 function etagForKey(key: string): string {
   return `"${encodeURIComponent(key)}"`;
 }
 
-// `If-None-Match` is a comma-separated list, and either side may be weak. The
-// `*` form is not honoured: it asks whether the resource has any current
-// representation, which the render path cannot answer without a storage read
-// the served ETag has already made unnecessary.
+// `*` isn't honoured: answering it would need a storage read.
 function etagMatches(ifNoneMatch: string | null, etag: string): boolean {
   if (!ifNoneMatch) return false;
   const normalize = (tag: string): string => tag.trim().replace(/^W\//, "");

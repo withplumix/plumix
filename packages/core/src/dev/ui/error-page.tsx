@@ -25,19 +25,9 @@ import {
 } from "./panel-primitives.js";
 
 /**
- * The shared dev-error renderer (#1580). Theme-independent: it renders the
- * exception header and — when the stack parsed into frames — a stack view with
- * each frame's original `file:line`, application frames expanded and framework
- * frames collapsed behind a toggle, plus an excerpt panel the client
- * enhancement fills by lazy-fetching source from the dev resolver (#1596). It
- * works even when the theme, layout, or document is what threw.
- *
- * This is the full server page (core SSRs it into a standalone HTML document
- * with the token sheet inlined): the shared {@link DevErrorContent} plus the
- * request-scoped {@link context} sections and plugin {@link panels}. The client
- * island overlay (#1678) instead composes {@link DevErrorContent} alone inside
- * its dialog — the server-only sections have no data on the client — so this
- * full page is never mounted in an overlay.
+ * Theme-independent, so it renders even when the theme, layout, or document
+ * threw. The client overlays compose `DevErrorBody` instead, since the
+ * server-only sections have no data there.
  */
 export function DevErrorPage({
   error,
@@ -54,25 +44,12 @@ export function DevErrorPage({
    */
   readonly context?: DevErrorContext;
   /**
-   * Plugin-contributed panels, already rendered to isolated HTML (#1626).
-   * Shown as their own sections below the built-in context. Absent on surfaces
-   * with no live app to run the `error_page:panels` filter — the client overlay
-   * and the boot-error fallback.
+   * Already rendered to isolated HTML. Absent where no live app runs the
+   * `error_page:panels` filter: the client overlay and the boot fallback.
    */
   readonly panels?: readonly RenderedDevErrorPanel[];
-  /**
-   * The resolved open-in-editor URL template (#1581) — from `PLUMIX_EDITOR`,
-   * built by {@link resolveEditorTemplate}. When present, each frame renders an
-   * "Open in editor" link built from it; absent (no editor configured) drops the
-   * link and leaves the frame as a source-viewing button only.
-   */
+  /** Without it, frames render no "Open in editor" link. */
   readonly editor?: string;
-  /**
-   * An optional from→to path-prefix remap for the editor links (#1627) — from
-   * `PLUMIX_EDITOR_PATH_MAP`, parsed by {@link resolveEditorPathMap}. Applied to
-   * each frame's path so links resolve on the editor host when the dev server
-   * runs in a container or on a remote box with a different filesystem layout.
-   */
   readonly editorPathMap?: EditorPathMap;
 }): ReactElement {
   return (
@@ -88,13 +65,6 @@ export function DevErrorPage({
   );
 }
 
-/**
- * The slim client dialog body (#1678): the shared {@link DevErrorContent} inside
- * the `.plumix-dev-error` wrapper the token sheet scopes onto, with none of the
- * server-only context or panel sections. Both client overlays — the compile
- * error overlay and the island hydration dialog — render this, so neither mounts
- * the full {@link DevErrorPage}.
- */
 export function DevErrorBody({
   error,
 }: {
@@ -107,39 +77,26 @@ export function DevErrorBody({
   );
 }
 
-/**
- * The shared dev-error body nodes: the exception header, how-to-fix hints, the
- * stack view (resolved frames or the raw fallback), the hydration diff, and — as
- * a fallback — the React component stack. This is everything every dev surface
- * shows. The full {@link DevErrorPage} wraps it with the server-only context and
- * panel sections; the client {@link DevErrorBody} wraps it alone.
- *
- * Returns the nodes without the outer `.plumix-dev-error` element so the page can
- * place the context/panel sections as siblings inside that same wrapper.
- */
+// Returns the nodes without the outer `.plumix-dev-error` element so the page
+// can place its context and panel sections as siblings inside that wrapper.
 function DevErrorContent({
   error,
   editor,
   editorPathMap,
 }: {
   readonly error: DevErrorInfo;
-  /** The resolved open-in-editor template; when set, renders the editor link. */
   readonly editor?: string;
-  /** The optional from→to path remap applied to each frame path (#1627). */
   readonly editorPathMap?: EditorPathMap;
 }): ReactElement {
   const frames = error.frames ?? [];
   const appFrames = frames.filter((frame) => !frame.isVendor);
   const vendorFrames = frames.filter((frame) => frame.isVendor);
-  // Show paths relative to the project root, derived from the frames so the
-  // long absolute prefix doesn't dominate every line. Shared with the client
-  // enhancement (which relativizes the excerpt header) via `data-base`.
+  // Shared with the client enhancement, which relativizes the excerpt header,
+  // via `data-base`.
   const base = commonBaseDir(frames);
   const hints = error.hints ?? [];
-  // With no frames, fall back to the raw stack — unless the only signal is a
-  // component stack (a hydration mismatch, #1667), in which case the
-  // "(no stack available)" block is redundant noise above the component-stack
-  // section that names the offending island.
+  // When the only signal is a component stack (a hydration mismatch), the
+  // "(no stack available)" block is noise above the section naming the island.
   const showStackFallback =
     error.stack !== undefined || error.componentStack === undefined;
 
@@ -239,9 +196,7 @@ function DevErrorContent({
       ) : null}
       {error.componentStack && frames.length === 0 ? (
         // Resolved frames already point at the failing component, so the raw
-        // React component stack is only useful as a fallback when none resolved.
-        // It sits below the hydration diff (#1668) — the diff shows *what*
-        // diverged and is the actionable signal; the stack is the fallback.
+        // component stack is only a fallback.
         <section
           className="plumix-dev-error__component-stack"
           data-testid="plumix-dev-error-component-stack"
@@ -257,13 +212,8 @@ function DevErrorContent({
   );
 }
 
-/**
- * The server-vs-client render pair for a hydration mismatch (#1668). Shows the
- * island's captured markup before `hydrateRoot` against its markup after React's
- * recovery re-render, so the developer sees *what* diverged, not just that it
- * did. Both strings are the island's own HTML, rendered as React-escaped text —
- * never re-parsed — so a diverging `<script>` can't run inside the overlay.
- */
+// Rendered as React-escaped text, never re-parsed, so a diverging `<script>`
+// can't run inside the overlay.
 function HydrationDiff({
   diff,
 }: {
@@ -300,13 +250,8 @@ function HydrationDiff({
   );
 }
 
-/**
- * The plugin-contributed panels (#1626), each rendered in its own section below
- * the built-in context. The HTML is the plugin's own isolated SSR output —
- * core renders it panel-by-panel so a throw yields a fallback rather than
- * crashing this page — and is inlined verbatim; only the plugin-supplied
- * {@link RenderedDevErrorPanel.title} is React-escaped as text.
- */
+// The panel HTML is inlined verbatim; only the plugin-supplied title is
+// React-escaped.
 function PanelSections({
   panels,
 }: {
@@ -332,13 +277,8 @@ function PanelSections({
   );
 }
 
-/**
- * The request-scoped context, read from the same collectors the debug bar uses
- * but rendered by this page's own sections — the debug bar is never shown here.
- * Each section degrades on its own: the request always has a method and URL, so
- * it always renders; the data-driven ones show an explicit empty note when
- * their collector recorded nothing.
- */
+// The request section always renders, since a request always has a method and
+// URL; the others show an explicit empty note.
 function ContextSections({
   context,
 }: {
@@ -591,9 +531,7 @@ function FrameButton({
 }: {
   readonly frame: DevErrorFrame;
   readonly base: string;
-  /** The resolved open-in-editor template; when set, renders the editor link. */
   readonly editor?: string;
-  /** The optional from→to path remap applied to the frame path (#1627). */
   readonly editorPathMap?: EditorPathMap;
 }): ReactElement {
   const location = `${relativeFramePath(frame.file, base)}:${frame.line}`;

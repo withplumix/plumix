@@ -6,14 +6,8 @@ import type {
 } from "../contract/resolved-entry.js";
 
 /**
- * What a page *is*, normalized across every render payload: a consumer that
- * reasons about the page — an SEO plugin deciding indexability, a feed naming
- * its scope — reads one record rather than re-deriving the same projection off
- * each arm of the payload union.
- *
- * Every subject is null on a page that has none: only a single entry has
- * timestamps, only a term archive has a term, and only an entry or an author
- * archive has an author.
+ * What a page is, normalized across every render payload. Each subject is null
+ * on a page that has none.
  */
 export interface PageFacts {
   readonly kind: TemplateData["kind"];
@@ -25,19 +19,11 @@ export interface PageFacts {
   readonly author: ResolvedAuthor | null;
   readonly term: ResolvedTerm | null;
   readonly entry: ResolvedEntry | null;
-  /**
-   * The entry type an entry-type archive lists, and null everywhere else —
-   * including on a single entry, whose own type is on `entry`.
-   *
-   * A date or author archive spans every type, and a plugin archive's payload
-   * is its own, so neither names one.
-   */
+  /** Set only on an entry-type archive; a single entry's type is on `entry`. */
   readonly contentType: string | null;
   /**
-   * What the visitor typed, on a page that answers a query they supplied —
-   * core's search page, and a plugin archive that states one. Null on a page
-   * that answers none, which is not the same as the empty string a search
-   * submitted with nothing in the box carries.
+   * What the visitor typed. Null on a page that answers no query, unlike the
+   * empty string of a blank search.
    */
   readonly query: string | null;
   /**
@@ -58,14 +44,8 @@ const NO_SUBJECT = {
   view: null,
 } as const;
 
-/**
- * Read {@link PageFacts} off a render payload.
- *
- * Discriminates on `kind` rather than field presence: a plugin archive's
- * payload is arbitrary, so an `"entry" in data` check would read one plugin's
- * field as core's subject. The two fields it does read off such a payload are
- * core's own — `ArchiveTypeData` declares them for an archive to state.
- */
+// Discriminates on `kind`, not field presence: a plugin archive's payload is
+// arbitrary.
 export function pageFacts(data: TemplateData): PageFacts {
   switch (data.kind) {
     case "entry":

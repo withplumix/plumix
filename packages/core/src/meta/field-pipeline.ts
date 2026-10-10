@@ -29,10 +29,8 @@ import { coerceValue, decodeJsonValue, extractStringId } from "./coerce.js";
 import { META_FIELD_MESSAGES } from "./contract/field-messages.js";
 
 /**
- * A single write-rejection addressed to the exact field input — `path`
- * is dot-joined from the top-level meta key down into nested repeater
- * cells (`sections.2.heading`); `message` is i18n-able (descriptors
- * resolve through the admin catalog, plain strings pass through).
+ * `path` is dot-joined from the top-level key into nested cells
+ * (`sections.2.heading`); `message` may be a catalog descriptor.
  */
 export interface MetaFieldError {
   readonly path: string;
@@ -48,22 +46,15 @@ export interface FieldPipelineResult {
 }
 
 /**
- * Validation strictness. `strict` (the default) enforces every declared
- * constraint. `draft` skips the business-rule layer — required, numeric /
- * temporal bounds, `maxLength`, option membership, format checks, repeater /
- * group row counts, and `.validate()` — so an autosave of work-in-progress
- * never fails; the structural + security gates (coercion, shape
- * normalization, `.sanitize()`, temporal validity, url safe-href) still run,
- * so a draft can never persist corrupt or unsafe data. Publish re-runs the
- * bag in `strict` mode.
+ * `draft` skips the business rules (required, bounds, formats, row counts,
+ * `.validate()`) so autosaves never fail, but still runs coercion,
+ * `.sanitize()` and the safety gates.
  */
 export type FieldPipelineMode = "draft" | "strict";
 
 /**
- * Run one value through the per-field write pipeline: coercion →
- * `.sanitize()` → declarative constraints → `.validate()`. Never
- * throws for value problems — they come back as `{ path, message }`
- * errors the RPC layer aggregates across the whole patch.
+ * Never throws for value problems: they come back as `{ path, message }`
+ * errors.
  */
 export async function runFieldPipeline(
   field: MetaBoxField,
@@ -77,21 +68,16 @@ export async function runFieldPipeline(
     }
     return { errors: [], isDeletion: true };
   }
-  // `.returns("date")` hands the admin form a `Date`, and an untouched
-  // field comes back as one on save — encode it to the field's stored
-  // ISO shape (from UTC components) before the string coercion
-  // rejects it.
+  // An untouched `.returns("date")` field comes back as a `Date`; encode it to
+  // the stored ISO shape before string coercion rejects it.
   if (raw instanceof Date && isTemporalInputType(field.inputType)) {
     if (Number.isNaN(raw.getTime())) {
       return { errors: [{ path, message: META_FIELD_MESSAGES.invalid }] };
     }
     raw = formatTemporalValue(field.inputType, raw);
   }
-  // Same round-trip reality for references: reads hydrate to
-  // `{ id, ... }` payloads and untouched fields come back as them —
-  // heal to the stored plain-id shape before coercion rejects the
-  // object. Repeater cells recurse through here, so nested refs heal
-  // too.
+  // Untouched references come back as hydrated `{ id, ... }` payloads; heal
+  // them to plain ids before coercion rejects the object.
   const target = referenceTargetOf(field);
   if (target) {
     // Decode before healing: the bag arrives unproven, and every scalar
@@ -134,10 +120,8 @@ export async function runFieldPipeline(
     // A callback that returns nothing leaves nothing to persist; the key is
     // left alone rather than written as `undefined` (see `sanitizeMetaInput`).
     if (transformed === undefined) return { errors: [] };
-    // Re-decode and re-normalize the callback's output. The descriptor types
-    // the return as `JsonValue` but nothing enforces that at runtime, so the
-    // transform clears the same gates its input did: the storage shape, then
-    // the declared ones (link URL safety, hex format, option-array shape).
+    // The descriptor types the return as `JsonValue`, but nothing enforces it
+    // at runtime, so the output clears the same gates its input did.
     const recoerced = coerceValue(field.type, transformed);
     if (!recoerced.ok) {
       return { errors: [{ path, message: META_FIELD_MESSAGES.invalid }] };
@@ -170,9 +154,8 @@ export async function runFieldPipeline(
 
 // --- repeater rows ------------------------------------------------------
 
-// Hard ceiling on row count regardless of field-level `max`. The 256 KiB
-// meta byte cap doesn't bound work pre-walk: a payload of N empty rows
-// allocates O(N) before the byte cap measures the post-strip output.
+// The 256 KiB byte cap doesn't bound work pre-walk: N empty rows allocate O(N)
+// before it measures the stripped output.
 const MAX_REPEATER_ROWS = 1000;
 
 export function isRepeaterField(
@@ -189,13 +172,7 @@ export function isGroupField(
 
 // --- group members ------------------------------------------------------
 
-/**
- * Recurse the pipeline into each member of a group, addressing errors
- * by `${path}.${memberKey}` (nested repeaters/groups extend the path
- * further). A group all of whose members read empty is dropped (a
- * deletion) unless the group is `.required()`. Members are stored back
- * as a nested object keyed by member field key — no key-flattening.
- */
+// A group whose members all read empty is dropped unless `.required()`.
 async function runGroupPipeline(
   field: GroupMetaBoxField,
   value: JsonValue,
@@ -219,12 +196,9 @@ async function runGroupPipeline(
       path,
     );
     if (sanitized.result) return sanitized.result;
-    // The blank check re-runs in the CALLER's mode, so clearing a
-    // `.required()` group through a sanitizer is the same rejection as
-    // clearing it by hand. The members below are re-walked in draft: the
-    // security gates (safe href, the rich-text allowlist) bind whatever
-    // ends up stored, whoever put it there, while the business rules stay
-    // skipped — that is what "members are not re-validated" means.
+    // Blank check in the caller's mode: a sanitizer clearing a required group
+    // rejects like a manual clear. Members re-walk in draft so safety gates
+    // bind.
     const clearedBlank = checkGroupBlank(field, sanitized.value, path, mode);
     if (clearedBlank) return clearedBlank;
     const resettled = await settleGroupMembers(
@@ -240,15 +214,8 @@ async function runGroupPipeline(
   return runCompositeValidate(field, members, path, mode);
 }
 
-/**
- * A group all of whose members read empty is an authoring affordance, not
- * data, so it is dropped (optional) or rejected at the group path
- * (required) without ever validating members. Runs BEFORE member
- * validation: otherwise a `.required()` member on an untouched optional
- * group would error and make the group impossible to clear. "Empty" is
- * strictly `null` / `undefined` / `""` per `isBlankRow`; `0` / `false`
- * are real values.
- */
+// Runs before member validation, or a required member of an untouched optional
+// group would make the group impossible to clear. `0` and `false` are values.
 function checkGroupBlank(
   field: GroupMetaBoxField,
   value: Readonly<Record<string, JsonValue>>,
@@ -262,7 +229,6 @@ function checkGroupBlank(
   return { errors: [], isDeletion: true };
 }
 
-/** One pass over the members, each settled at its own path. */
 async function settleGroupMembers(
   field: GroupMetaBoxField,
   value: Readonly<Record<string, JsonValue>>,
@@ -272,9 +238,7 @@ async function settleGroupMembers(
   readonly result?: FieldPipelineResult;
   readonly members: Record<string, JsonValue>;
 }> {
-  // A populated group keeps every member (blank cells included) and
-  // validates each — a required member left empty in a non-empty group
-  // is a real error, just as in a non-blank repeater row.
+  // A required member left empty in a non-empty group is a real error.
   const errors: MetaFieldError[] = [];
   const members: Record<string, JsonValue> = {};
   for (const member of field.fields) {
@@ -295,16 +259,9 @@ async function settleGroupMembers(
 
 // --- composite hooks ----------------------------------------------------
 
-/**
- * The parent `.sanitize()` of a group or repeater. Runs terminally —
- * after every sub-field has been settled — so the callback sees the
- * value that would otherwise have been stored, rather than raw input
- * where a cell could still be a `Date` or a hydrated reference payload.
- *
- * Checks the output's shape and its declared keys only. Re-settling the
- * cells is the caller's job, because what "settle" means differs between
- * the two composites.
- */
+// Runs after every sub-field settled, so the callback sees what would be
+// stored rather than raw `Date`s or reference payloads. Re-settling cells is
+// the caller's job.
 function applyCompositeSanitize<T extends JsonValue>(
   field: RepeaterMetaBoxField | GroupMetaBoxField,
   sanitize: (value: unknown) => JsonValue,
@@ -331,26 +288,14 @@ function applyCompositeSanitize<T extends JsonValue>(
       value: assembled,
     };
   }
-  // Safety: `isCompositeShape` has just proved `decoded` is the
-  // composite's own shape, which is what `T` is instantiated with at both
-  // call sites — an array of rows for a repeater, one member object for a
-  // group.
+  // Safety: `isCompositeShape` just proved `decoded` is the composite's own
+  // shape, which is what `T` is at both call sites.
   return { value: decoded as T };
 }
 
-/**
- * The parent `.validate()` of a group or repeater. Runs last of all:
- * after the sub-fields, after `.sanitize()`, and after the composite's
- * own count bounds, so a cross-row or cross-member rule reasons about
- * exactly what will be stored. Strict-mode only, like every other
- * `.validate()` — a draft may be mid-authoring.
- *
- * One consequence worth knowing: a condition-hidden cell inside the
- * composite was only draft-checked (see `cellMode`), so the value handed
- * to a parent validator may contain cells that never met their own strict
- * constraints. That is already true of what gets stored; the hook only
- * makes it reachable.
- */
+// Runs last, so cross-row rules see exactly what will be stored. Condition-
+// hidden cells were only draft-checked, so the value may hold cells that never
+// met their strict constraints.
 async function runCompositeValidate(
   field: RepeaterMetaBoxField | GroupMetaBoxField,
   value: JsonValue,
@@ -367,11 +312,8 @@ async function runCompositeValidate(
   return { errors: [], value };
 }
 
-/**
- * A buggy callback rounds to a generic `invalid` for the editor, which
- * has no vocabulary for "the plugin threw"; the diagnostic trail stays in
- * the server log.
- */
+// The editor has no vocabulary for "the plugin threw"; the diagnostic trail
+// stays in the server log.
 function callbackFailed(
   kind: "sanitize" | "validate",
   path: string,
@@ -384,12 +326,8 @@ function callbackFailed(
   return { errors: [{ path, message: META_FIELD_MESSAGES.invalid }] };
 }
 
-/**
- * Whether a sanitizer's output still has the composite's declared shape:
- * an array of rows for a repeater, one object for a group, every key
- * belonging to the declared schema. The row ceiling is re-applied because
- * a sanitizer can grow the list after the pre-walk bound was measured.
- */
+// The row ceiling is re-applied because a sanitizer can grow the list after
+// the pre-walk bound was measured.
 function isCompositeShape(
   field: RepeaterMetaBoxField | GroupMetaBoxField,
   value: JsonValue,
@@ -450,20 +388,9 @@ export function healReferenceValue(
   return extractStringId(value) ?? value;
 }
 
-/**
- * The mode a cell of a row / group runs under: `draft` when the bag's own
- * values hide it, so business rules can't fail on an input nobody can open —
- * while coercion, `.sanitize()` and the safety gates still run, and the value
- * is kept rather than dropped. Losing it would be worse than at box level,
- * where a hidden key's stored value survives untouched: a row is rewritten
- * whole on every save, so a dropped cell is gone for good.
- *
- * Visibility is `isFieldVisible`, not `isConditionHidden`: a row is always a
- * complete object, so an absent driver key means unset, and the admin judges
- * the same rows with the same function. `isConditionHidden`'s bail-out on a
- * missing driver is for partial box-level patches, and here it would validate
- * the very cells the admin hides.
- */
+// Hidden cells run in draft and are kept, not dropped: a row is rewritten whole
+// on every save. `isFieldVisible` because a row is complete, so an absent
+// driver means unset.
 function cellMode(
   field: MetaBoxField,
   bag: ResolvedMeta,
@@ -472,10 +399,8 @@ function cellMode(
   return isFieldVisible(field, bag) ? mode : "draft";
 }
 
-// A row every cell of which reads empty is an authoring affordance, not
-// data the caller meant to persist — stripped before validation, so a
-// required subfield never blocks saving over a blank row. `0` and
-// `false` are real values; only `null` / `undefined` / `""` are blank.
+// Blank rows are an authoring affordance, stripped before validation so a
+// required subfield never blocks the save. `0` and `false` are values.
 function isBlankRow(
   subFields: readonly MetaBoxField[],
   row: ResolvedMeta,
@@ -486,17 +411,8 @@ function isBlankRow(
   });
 }
 
-/**
- * Recurse the pipeline into each kept row's cells, then the composite
- * hooks. Error paths use the caller's ORIGINAL row indices — the admin
- * form still shows the blank rows the strip removed, so a post-strip
- * index would address the wrong input.
- *
- * Row-count bounds are checked over the rows that will actually be
- * stored, so they hold whether the rows came straight from the strip or
- * from a `.sanitize()` that trimmed or padded them. The empty case is
- * settled ahead of the hooks so that neither runs on a deletion.
- */
+// Error paths use the original row indices: the admin form still shows the
+// blank rows the strip removed.
 async function runRepeaterPipeline(
   field: RepeaterMetaBoxField,
   value: JsonValue,
@@ -509,10 +425,8 @@ async function runRepeaterPipeline(
   const settled = await settleRepeaterRows(field, value, path, mode);
   if (settled.result) return settled.result;
   let rows = settled.rows;
-  // Only the EMPTY case is settled before the hooks, so neither runs on a
-  // deletion. The bounds themselves wait: a sanitizer that trims to
-  // `.max()` or pads to `.min()` is exactly what the hook is for, and
-  // judging its input would make both unwritable.
+  // Only the empty case settles before the hooks. A sanitizer trimming to
+  // `.max()` or padding to `.min()` is what the hook is for.
   if (rows.length === 0) {
     const emptied = checkRowCount(field, rows, path, mode);
     if (emptied) return emptied;
@@ -521,12 +435,8 @@ async function runRepeaterPipeline(
   if (field.sanitize) {
     const sanitized = applyCompositeSanitize(field, field.sanitize, rows, path);
     if (sanitized.result) return sanitized.result;
-    // Re-settle in the same shape the input got: the blank strip and the
-    // security gates (safe href, the rich-text allowlist) bind whatever
-    // ends up stored, whoever put it there, while the business rules stay
-    // skipped — that is what "cells are not re-validated" means. The row
-    // counts are then re-checked in the CALLER's mode, so `.min()` still
-    // binds a list a de-dupe cut down.
+    // Cells re-settle so the security gates bind whatever is stored. Row counts
+    // re-check in the caller's mode, so `.min()` still binds a de-duped list.
     const resettled = await settleRepeaterRows(
       field,
       sanitized.value,
@@ -544,20 +454,8 @@ async function runRepeaterPipeline(
   return runCompositeValidate(field, rows, path, mode);
 }
 
-/**
- * One pass over the rows: drop the blank ones, settle each kept row's
- * cells.
- *
- * `addressable` says whether row positions still name something the
- * caller sent. On the first pass they do, so a cell error carries
- * `${path}.${index}.${key}` and the admin can open the offending row —
- * using the ORIGINAL index, because the form still shows the blank rows
- * the strip removed. After a `.sanitize()` they do not: a reorder or a
- * de-dupe has moved everything, so an indexed path would highlight the
- * wrong row and show the author a value that is fine. Those errors
- * anchor on the repeater itself, the same treatment a non-object row
- * gets and for the same reason.
- */
+// After a `.sanitize()` row positions no longer name what the caller sent, so
+// cell errors anchor on the repeater rather than highlight the wrong row.
 async function settleRepeaterRows(
   field: RepeaterMetaBoxField,
   value: readonly JsonValue[],
@@ -598,20 +496,8 @@ async function settleRepeaterRows(
   return { rows };
 }
 
-/**
- * The repeater's count bounds, and the deletion an empty list resolves
- * to. Returns a `result` when the field is settled without a value —
- * bounds errors, or the deletion — and `undefined` when the rows stand.
- *
- * The deletion sits AFTER the bounds on purpose: `.min()` binds an
- * optional field too, so short-circuiting first would discard a declared
- * constraint. An emptied repeater is the same authoring gesture the
- * group's all-blank value has always been.
- *
- * Row counts are business rules — a draft may be mid-authoring with too
- * few (or a transient too many) rows. Cell-level structural errors still
- * surface in draft mode.
- */
+// The deletion sits after the bounds on purpose: `.min()` binds an optional
+// field too. Row counts are business rules, skipped in draft.
 function checkRowCount(
   field: RepeaterMetaBoxField,
   rows: readonly unknown[],

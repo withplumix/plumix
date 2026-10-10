@@ -26,19 +26,8 @@ interface TermArchiveSource {
 }
 
 /**
- * Reverse of `compileRouteMap` — given an entry, produce its public URL.
- * Symmetric to `match.ts` (URL → entity); used by sitemap, RSS, canonical
- * tags, the menu plugin's resolver, and any reference-field "go to source"
- * link.
- *
- * Non-hierarchical types: pure substitution into the registered rewrite
- * pattern, no DB hit. Hierarchical types: one recursive CTE walks the
- * `parent_id` chain and prepends each ancestor's slug. Pass
- * `ancestorSlugs` to skip the CTE when the caller already has the chain
- * loaded (e.g. a breadcrumb renderer that just walked it).
- *
- * Returns `null` when the entry type is `isPublic: false` (no public
- * surface exists) or when the type isn't registered.
+ * An entry's public URL, or `null` when its type is unregistered or not
+ * public. Hierarchical types cost one CTE unless `ancestorSlugs` is passed.
  */
 export async function buildEntryPermalink(
   ctx: PermalinkContext,
@@ -174,7 +163,7 @@ interface NestedEntry {
   readonly parentId: number;
 }
 
-/** The public type and parent to walk from, or `null` when the URL needs no walk. */
+// `null` when the URL needs no ancestor walk.
 function nestedEntry(
   ctx: Pick<AppContext, "plugins">,
   entry: EntryPermalinkSource,
@@ -240,12 +229,8 @@ function shouldNestUnderTermParent(
   return parentId !== null && exposesHierarchicalUrls(taxonomy);
 }
 
-/**
- * Build a URL pathname from segment-shaped inputs. Splits on internal `/`
- * (so a slug stored as `"a/b"` produces two segments rather than embedding
- * the slash literally and shadowing a sibling route), drops empty parts
- * and `.` / `..` traversal markers.
- */
+// Splitting on internal `/` keeps a slug stored as `a/b` from shadowing a
+// sibling route; traversal markers are dropped.
 function joinSegments(
   segments: readonly (string | null | undefined)[],
 ): string {
@@ -266,10 +251,8 @@ interface ChainRow {
   readonly slug: string;
 }
 
-// `parent_id` is a self-FK with no DB-level cycle prevention. Cap recursion
-// depth so a malformed chain (a→b, b→a) returns truncated rather than
-// hitting SQLite's default 1000-deep limit and bubbling as a 500. Real
-// content trees stay well under 50 levels.
+// `parent_id` has no DB cycle prevention; the cap truncates a cyclic chain
+// instead of hitting SQLite's 1000-deep limit as a 500.
 const MAX_ANCESTOR_DEPTH = 50;
 
 /**
@@ -293,11 +276,7 @@ export async function loadTermAncestorSlugs(
   return chains.get(leafParentId) ?? [];
 }
 
-/**
- * Root-first slug chain for each id, keyed by that id, including the id's own
- * slug. One recursive CTE per D1 chunk of distinct ids; an id with no row is
- * absent from the map.
- */
+// Root-first, including the id's own slug; one recursive CTE per D1 chunk.
 async function loadAncestorChains(
   ctx: Pick<AppContext, "db">,
   table: typeof entries | typeof terms,

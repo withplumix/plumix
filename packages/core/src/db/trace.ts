@@ -56,13 +56,8 @@ function setQueryAttributes(s: TelemetrySpanHandle, query: TracedQuery): void {
 }
 
 /**
- * Times one driver-level query as a `db: <kind>` span with the SQL, bound
- * params, and row count as attributes — the mechanism behind every async
- * `ctx.db` driver wrap (libsql, D1, demo proxy); {@link traceDbQuerySync} is
- * its synchronous twin. A no-op outside a request; with an inactive collector
- * the span passes through and the lazy params are never serialized.
- * `countRows` reads the driver's result shape: rows returned, or rows affected
- * for a write.
+ * A no-op outside a request; with an inactive collector the lazy params are
+ * never serialized.
  */
 export function traceDbQuery<T>(
   query: TracedQuery,
@@ -97,9 +92,8 @@ export function traceDbQuerySync<T>(
 }
 
 /**
- * Times a driver-level batch — one round-trip, so one span (labelled by kind
- * when uniform, `db: batch` otherwise), with the per-statement sql/params under
- * a `db.batch` attribute and the row counts summed across results.
+ * One round-trip, so one span; labelled by kind when uniform, `db: batch`
+ * otherwise.
  */
 export function traceDbBatch<R>(
   queries: readonly TracedQuery[],

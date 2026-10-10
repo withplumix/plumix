@@ -24,10 +24,7 @@ export interface AdminBarNode {
   readonly parent?: string;
   readonly position?: number;
   /**
-   * Marks a node as a client action rather than a navigation link. The
-   * bar is otherwise zero-JS server chrome; `"signout"` is the single
-   * exception, rendered as a `<button>` wired to the inline sign-out
-   * island instead of an `<a>`/`<span>`.
+   * Rendered as a `<button>` wired to the sign-out island, the bar's only JS.
    */
   readonly action?: "signout";
 }
@@ -40,10 +37,8 @@ export interface BarRenderContext {
   readonly user: AuthenticatedUser;
   readonly queriedEntry: ResolvedEntity | null;
   /**
-   * Pre-resolved details for `queriedEntry.kind === "entry"`, populated by
-   * the renderer before the bar collects nodes. `canEdit` is `canEditEntry`'s
-   * answer for this caller and this row: any contributor offering an edit
-   * action reads it, so no contributor rebuilds the rule from capabilities.
+   * `canEdit` is `canEditEntry`'s answer, so no contributor rebuilds the rule
+   * from capabilities.
    */
   readonly queriedEntryDetails?: {
     readonly type: string;
@@ -59,10 +54,8 @@ export interface BarRenderContext {
    */
   readonly entryTypes: ReadonlyMap<string, RegisteredEntryType>;
   /**
-   * Resolved bar locale (WP-style — read from `user.meta.locale`, falls
-   * back to `en` for unrecognised values). Core contributors translate
-   * their literals through this; plugin contributors stay responsible
-   * for their own catalogs and pass already-translated `title` strings.
+   * Core contributors translate through this; plugin contributors pass
+   * already-translated `title` strings.
    */
   readonly locale: BarLocale;
   /** Text direction for the bar element — `rtl` for `ar`, `ltr` elsewhere. */

@@ -9,10 +9,8 @@ function escapeAttr(value: string): string {
 }
 
 /**
- * Tiptap / ProseMirror JSON → HTML walker. Renders the parsed document
- * against an allowlist of node and mark types. Unknown types render empty
- * — the walker is the trust boundary that keeps public HTML free of
- * injection regardless of what reaches the column.
+ * Unknown node and mark types render empty: this walker is the trust boundary
+ * for public HTML.
  */
 export function renderTiptapContent(input: unknown): string {
   if (input === null || input === undefined) return "";
@@ -126,10 +124,8 @@ function clampHeadingLevel(level: unknown): 1 | 2 | 3 | 4 | 5 | 6 {
   return Math.trunc(level) as 1 | 2 | 3 | 4 | 5 | 6;
 }
 
-// Final server-side href gate — independent of the admin editor's allow-
-// list so rendered HTML is safe even when content reaches the column
-// via non-admin paths (seeds, scripts, future imports). Blocks
-// javascript:, data:, vbscript:, file: and their variants.
+// Independent of the editor's allowlist: content also reaches the column via
+// seeds and scripts.
 const SAFE_HREF = /^(https?:\/\/|mailto:|tel:|\/|#|\?|\.\.?\/)/i;
 
 function sanitizeHref(href: unknown): string | null {

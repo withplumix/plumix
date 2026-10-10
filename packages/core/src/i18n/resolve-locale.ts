@@ -17,10 +17,8 @@ interface ResolveLocaleArgs<TUser extends LocaleUser> {
   readonly i18n: ResolvedI18nFor<TUser>;
 }
 
-// Single source of truth for admin SSR, RPC, and public-route surfaces.
-// The override now fires on admin SSR too (pre-merge admin-shell skipped
-// it); operators who want admin to ignore the override should narrow it
-// on the request path themselves.
+// The override fires on admin SSR too; operators who want admin to ignore it
+// narrow it on the request path.
 export function resolveLocale<TUser extends LocaleUser>({
   request,
   user,
@@ -33,11 +31,8 @@ export function resolveLocale<TUser extends LocaleUser>({
 
   const override = i18n.resolveLocale?.(request, user);
   const url = new URL(request.url);
-  // Path-gate to `/_plumix/*` so public-route HTML stays identical per URL —
-  // CDN cache keys must not fragment by browser locale or admin-user prefs,
-  // and the public site is the WP-style frontend zone where user.meta.locale
-  // is irrelevant. The cookie is already path-gated by the browser via its
-  // `Path=/_plumix/` attribute; we don't re-check the URL for it.
+  // Public HTML must stay identical per URL so CDN cache keys don't fragment.
+  // The browser already path-gates the cookie.
   const onInternalPath = url.pathname.startsWith("/_plumix/");
   const userLocale =
     onInternalPath && typeof user?.meta.locale === "string"

@@ -7,17 +7,9 @@ import { base } from "../../../base.js";
 import { assertLookupOk } from "./lookup-helpers.js";
 import { deviceFlowDenyInputSchema } from "./schemas.js";
 
-// Explicitly reject a pending device-flow approval. The polling
-// client gets `access_denied` (RFC 8628 §3.5) on its next exchange
-// and stops polling — faster feedback than waiting out the TTL.
-//
-// Privacy tradeoff: surfacing `denied` does leak "user is online and
-// rejected this prompt" to the polling client. We accept it for the
-// UX win — operators concerned about the signal can simply not
-// expose a Deny button (the row expires naturally).
-//
-// Same lookup-then-act shape as approve so a code that expired
-// between page render and click surfaces the right error.
+// Surfacing `access_denied` leaks that the user rejected the prompt; we take
+// that for faster CLI feedback. Operators can omit the Deny button and let
+// the row expire.
 export const deny = base
   .use(authenticated)
   .input(deviceFlowDenyInputSchema)

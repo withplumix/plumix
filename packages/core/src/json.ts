@@ -8,13 +8,9 @@ export type JsonValue =
   string | number | boolean | null | readonly JsonValue[] | JsonObject;
 
 /**
- * The object arm of {@link JsonValue}.
- *
- * Only an anonymous object type or a `type` alias of one satisfies this.
- * TypeScript withholds the implicit index signature from `interface`
- * declarations, so a named interface fails to assign however JSON-shaped its
- * members are — and aliasing an interface inherits the same gap. Declare such
- * shapes as a `type` over an object literal if they have to travel as JSON.
+ * A named `interface` never satisfies this: TypeScript withholds its implicit
+ * index signature. Declare JSON-bound shapes as a `type` over an object
+ * literal.
  */
 export interface JsonObject {
   readonly [key: string]: JsonValue;

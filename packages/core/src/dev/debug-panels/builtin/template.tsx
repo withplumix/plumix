@@ -23,7 +23,6 @@ function findResolutionSpan(
   return undefined;
 }
 
-/** How a predicate reads in the table — or an em dash when the rule has none. */
 function predicateCell(predicate: ResolutionStep["predicate"]): string {
   if (predicate === undefined) return "—";
   // `fired` false means identity didn't match (or no data), so it never ran.
@@ -31,11 +30,7 @@ function predicateCell(predicate: ResolutionStep["predicate"]): string {
   return predicate.result ? "passed" : "failed";
 }
 
-/**
- * The Template panel: the full resolution walk for this request — every rule in
- * the theme's `templates` array, which one matched, which were skipped, and
- * which were never reached. Empty on error pages, which don't resolve a node.
- */
+/** Empty on error pages, which don't resolve a node. */
 export const templatePanel: DebugPanel = {
   id: TEMPLATE_PANEL_ID,
   title: "Template",

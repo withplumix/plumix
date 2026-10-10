@@ -18,25 +18,16 @@ export * from "./context/index.js";
 export { consoleLogger, createAppContext } from "./context/app.js";
 export type { CreateAppContextArgs } from "./context/app.js";
 export { withUser } from "./auth/with-user.js";
-// The drizzle query operators (`./db/index.js`) and schema tables
-// (`./db/schema/index.js`) are deliberately NOT re-exported here. Direct DB
-// writes are a specialized concern with a dedicated seam: operators +
-// introspection + purge on `@plumix/core/db` (`plumix/db`), tables on
-// `@plumix/core/schema` (`plumix/schema`). Surfacing them on the root barrel
-// too gave newcomers two ways to import the same thing with no signal about
-// which is canonical (#1766). The `traceDbQuery*`/`traceDbBatch` helpers below
-// aren't part of that direct-write toolkit, so they stay on root.
-// Driver-agnostic query-span helpers — runtime adapters (D1, node:sqlite,
-// demo) wrap their driver's execution path with these so every `ctx.db` query
-// is traced.
+// Drizzle operators and schema tables live on `plumix/db` and `plumix/schema`
+// only, so direct writes have one canonical import. The trace helpers are for
+// runtime adapters, not direct writes.
 export { traceDbBatch, traceDbQuery, traceDbQuerySync } from "./db/trace.js";
 export type { TracedQuery } from "./db/trace.js";
 export * from "./hooks/index.js";
 export * from "./i18n/index.js";
 export type { JsonObject, JsonValue } from "./json.js";
-// The narrowings that go with them: anything reading stored meta, a telemetry
-// record or a block prop is handed a `JsonValue` and has to narrow it before it
-// can read a field.
+// Stored meta, telemetry records and block props are `JsonValue` until
+// narrowed.
 export { isJsonArray, isJsonObject } from "./json.js";
 export { defineMail } from "./mail/contract/define.js";
 export { MailerNotConfigured } from "./mail/contract/errors.js";
@@ -173,10 +164,8 @@ export type {
 } from "./runtime/scheduler.js";
 export type * from "./runtime/contract/slots.js";
 export { slugify } from "./slugify.js";
-// The page data core renders, for a plugin serving something of its own
-// *about* a page it did not route to, such as a social card at a URL of its
-// own (#1981): one entry from a row the caller gated, a batch of entries, or a
-// listing page resolved from an identity rather than from a URL (ADR 0015).
+// For a plugin serving something about a page it did not route to, such as a
+// social card at its own URL.
 export { resolveEntryList } from "./route/render/resolve-entry-list.js";
 export {
   resolveEntryData,
@@ -223,10 +212,8 @@ export type { EntryChange } from "./entries/change-feed.js";
 export type { EntryChangeKind } from "./db/schema/entry_changes.js";
 export { memoBatch } from "./context/memo.js";
 export type { RequestMemo } from "./context/memo.js";
-// CDN tag vocabulary (PRD #1080). Exposed so a plugin that writes
-// directly to `ctx.db` — bypassing the entry-mutation service, so no
-// `entry:*`/`term:*` action fires — can enqueue the same coarse purge core
-// would, instead of hand-restating the `t:<type>`/`e:<id>` scheme (#1700).
+// For a plugin writing straight to `ctx.db`, which fires no `entry:*` action,
+// to enqueue the purge core would without restating the tag scheme.
 export {
   entryPurgeTags,
   entryTag,
@@ -234,19 +221,16 @@ export {
   typeTag,
 } from "./cdn/contract/tags.js";
 export { enqueuePurgeTags } from "./cdn/purge.js";
-// Exposed for a `cacheable: true` plugin route, which is the only party that
-// knows what its own response read. Core tags a page from its resolved intent;
-// a raw route has none, so it names its own tags in the same vocabulary and the
-// publish purge that clears the page clears the route's entry with it.
+// A raw `cacheable: true` route has no resolved intent, so it names its own
+// tags and the publish purge clears it with the page.
 export { tagCdnEntry } from "./cdn/route-tags.js";
 // Exposed for plugin routes that own an expensive-to-produce payload — a
 // generated social card, a derived image — so each route doesn't restate the
 // storage and ETag round-trips (#1958).
 export { serveRenderedAsset } from "./storage/rendered-asset.js";
 export type { RenderedAssetArgs } from "./storage/rendered-asset.js";
-// The page's canonical URL — the same value core's `<link rel=canonical>` and
-// its redirect normalizer resolve, so a plugin naming the page (`og:url`, a
-// sitemap `<loc>`) cannot disagree with where core sends traffic.
+// So a plugin naming the page (`og:url`, a sitemap `<loc>`) cannot disagree
+// with where core sends traffic.
 export { canonicalUrl } from "./seo/canonical.js";
 // The social image an entry's role-tagged field resolves to, for the plugin
 // that owns the chain the roles feed.
@@ -255,23 +239,13 @@ export type { OgImage } from "./seo/og-image.js";
 // options the REST projection narrows it with.
 export type { ProjectImageRolesOptions } from "./images/role-images.js";
 export type { RoleImages } from "./images/contract/role-images.js";
-// The debug bar's presentational primitives, so a plugin panel contributed
-// through `debug:panels` reads like the ones core registers instead of
-// re-spelling their class names. Dev-only in effect — nothing collects
-// outside the `PLUMIX_DEV` gate — but exported here because a plugin's panel
-// module is its own, and it has nowhere else to import them from.
-// The dev-surface host gate (#2007), for the Vite plugin's own dev middlewares:
-// they answer ahead of the worker proxy, so they hold a Node `req` rather than
-// a Request and apply the check themselves. Only `configureServer` calls it,
-// which is why it carries no `PLUMIX_DEV` gate of its own.
+// The Vite plugin's dev middlewares answer ahead of the worker proxy, so they
+// apply the host check themselves; only `configureServer` calls it.
 export { isTrustedDevHost } from "./dev/trust.js";
 export { DebugKV, DebugSection } from "./dev/debug-panels/primitives.js";
 export type { DebugKVRow } from "./dev/debug-panels/primitives.js";
 export type { DebugPanel } from "./dev/debug-panels/types.js";
-// `DebugPanelRegistry` is the interface a plugin augments to make its panel
-// nameable in `dev.panels`; `DebugPanelsInput` is what that augmentation
-// produces. `DebugPanelId` stays internal — it is `keyof DebugPanelRegistry`,
-// derivable by anyone who wants it.
+// `DebugPanelId` stays internal: it is `keyof DebugPanelRegistry`.
 export type {
   DebugPanelRegistry,
   DebugPanelsInput,
@@ -303,53 +277,37 @@ export {
   DevErrorFacts,
   DevErrorSubhead,
 } from "./dev/ui/panel-primitives.js";
-// The two ways to ask for an entity's role images: `projectImageRoles` off a
-// bag the caller already hydrated, `resolveImageRoles` for a bulk path holding
-// raw stored bags — one hydration per `(kind, scope)` group per chunk.
+// `projectImageRoles` reads a hydrated bag; `resolveImageRoles` batches raw
+// stored bags.
 export { projectImageRoles, resolveImageRoles } from "./images/role-images.js";
-// The `site` settings bag, and the general reader behind it. Both memoize per
-// request alongside the template dep that reads the same rows — so a plugin
-// asking for a settings group joins that read instead of opening a second
-// query for a bag already in hand. `nonEmpty` is the reader for one value: a
-// settings value is `unknown` until something narrows it, and every caller
-// wants the same "a string with something in it, or nothing" answer.
+// Both memoize per request alongside the template dep reading the same rows,
+// so a plugin joins that read instead of opening a second query.
 export { loadSettingsGroups, loadSiteSettings } from "./seo/site-settings.js";
 export { nonEmpty } from "./non-empty.js";
 // XML element-text escaping, for a plugin serializing a feed or a sitemap.
 // Core's own serializers use it; exported so two plugins don't each ship the
 // same five-character table.
 export { xmlEscape } from "./seo/contract/xml.js";
-// HTML element-content escaping, for a plugin putting text it did not author
-// into a page — a search snippet, most of all, since FTS5 splices highlight
-// markers into indexed content without escaping anything around them. Safe for
-// element children, NOT for an attribute value: it leaves quotes alone.
+// FTS5 splices highlight markers without escaping around them. Safe for
+// element children, not attribute values: quotes are left alone.
 export { escapeHtml } from "./escape-html.js";
-// The reverse-routing vocabulary, for a plugin that answers at the site root
-// (`registerPublicRoute`) and has to address the same URL space the router
-// compiled. A feed or a sitemap that spelled any of these itself would drift
-// from the pages it points at the first time a rewrite option moved one.
+// A feed or sitemap spelling these itself would drift from the pages the first
+// time a rewrite option moved one.
 export { dateRange } from "./entries/date-range.js";
 export {
   archiveRoutes,
   archiveSlugForEntryType,
   exposesHierarchicalUrls,
-  // What it takes to replace the search page: the patterns core compiled, so a
-  // plugin claims the same URL space rather than a near-miss of it that drifts
-  // the moment core paginates or renames a capture.
+  // So a plugin replacing the search page claims exactly the URL space core
+  // compiled.
   FRAMEWORK_SEARCH_PAGINATED_PATTERN,
   FRAMEWORK_SEARCH_QUERY_PATTERN,
-  // So a plugin archive declares its later pages in the shape core's own
-  // listings use — or, where core derived them, asks `archiveRoutes` which
-  // pathnames the archive really answers at rather than reading `routes`.
+  // So a plugin archive's later pages take the shape core's listings use.
   FRAMEWORK_PAGINATION_SUFFIX,
 } from "./route/compile.js";
-// Which archive owns a URL and what its entry query is, and the routes every
-// such archive is listed at — so a package that shows an archive another way
-// (a feed) reads the same set of entries the page does (ADR 0008).
+// So a feed reads the same entries the archive page does.
 export { archiveAtPath, archiveBaseRoutes } from "./route/archive-entries.js";
-// Which public route the dispatcher answers a path with, for a plugin that
-// advertises a URL one of its routes serves and has to know no other route
-// answers it first.
+// For a plugin advertising a URL, to know no other route answers it first.
 export { publicRouteAt } from "./route/public-routes.js";
 export type { PublicRouteMatch } from "./route/public-routes.js";
 export type {
@@ -365,12 +323,8 @@ export {
   buildTermArchiveUrls,
   termTaxonomyBaseSlug,
 } from "./route/permalink.js";
-// What it takes to replace an admin command palette domain: which groups a
-// caller may be shown, the clause bounding which rows of them they may see,
-// and the bucketing that turns matched rows into those groups. A plugin
-// ranking entries registers its `admin:search:results` handler ahead of
-// core's and supplies a query and nothing else, so "who may see which draft"
-// and "what a group is called" each have one definition.
+// A plugin ranking entries supplies only the query, so "who may see which
+// draft" and group naming each keep one definition.
 export { adminEntryScope, entryGroups } from "./search/admin-entry-scope.js";
 export type {
   AdminEntryGroup,
@@ -382,14 +336,11 @@ export type {
   SearchGroup,
   SearchResultItem,
 } from "./search/admin-search.js";
-// The caller's pending autosave for an entry. A surface that renders what an
-// author is editing has to overlay it the way `entry.get`'s preview mode does;
-// reading the live row alone shows a published entry's pre-edit state.
+// Reading the live row alone shows a published entry's pre-edit state.
 export { getAutosave } from "./revisions/repository.js";
 export type { AutosavePairInput } from "./revisions/repository.js";
-// Exposed for a `cdn:` provider: which responses a shared cache may hold is
-// framework policy, not the runtime's, and a provider's `put` reads the same
-// rule core does when it decides whether to store at all.
+// Which responses a shared cache may hold is framework policy, so a provider's
+// `put` reads core's rule.
 export { responseAllowsSharedStorage } from "./cdn/decision.js";
 export {
   author,
@@ -413,12 +364,8 @@ export {
   templateRules,
 } from "./route/render/template-builders.js";
 export type { NamedTemplateChoice } from "./route/contract/named-template.js";
-// The selection half of the hierarchy, public for the same reason `TierMatchRule`
-// and `TargetMatcher` are: a plugin declaring its own rule kind against the node
-// hierarchy (the OG plugin's `ogCards`) builds its selectors out of these rather
-// than restating core's matchers. The `*Match` and `*Equals` constructors are
-// the same vocabulary one level down, for the narrowing a rule kind adds of its
-// own — `named` is what core builds out of them.
+// A plugin declaring its own rule kind (the OG plugin's `ogCards`) builds
+// selectors from these rather than restating core's matchers.
 export {
   archiveTypeTargets,
   authorTargets,
@@ -482,10 +429,7 @@ export {
   resolveErrorTemplate,
   resolveTemplate,
 } from "./route/render/template-hierarchy.js";
-// What a page is, normalized: kind, pagination index, timestamps and
-// subjects. The projection is what a plugin cannot restate — core's `is*`
-// guards already answer the kind — so it reads core's answer rather than
-// walking the payload union itself.
+// A plugin reads core's answer rather than walking the payload union itself.
 export { pageFacts } from "./route/render/page-facts.js";
 export type { PageFacts } from "./route/render/page-facts.js";
 export type {

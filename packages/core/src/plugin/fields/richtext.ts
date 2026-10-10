@@ -18,12 +18,9 @@ interface RichtextFieldState extends UniversalFieldState {
 }
 
 /**
- * Fluent chain for the `richtext` field. Storage is Tiptap's
- * ProseMirror JSON shape, round-tripped through the `json` storage
- * primitive. The constraint walker rejects nodes/marks/blocks outside
- * the allowlist (and unsafe link hrefs) server-side — there is
- * deliberately no `.sanitize()` on this chain, so a custom callback
- * can never bypass that enforcement.
+ * The server rejects nodes, marks and blocks outside the allowlist, and unsafe
+ * link hrefs. There is deliberately no `.sanitize()`, so no callback can bypass
+ * that.
  */
 export class RichtextFieldBuilder<
   K extends string = string,
@@ -137,7 +134,10 @@ export class RichtextFieldBuilder<
     return this.#fork({ marks });
   }
 
-  /** Node allowlist (`heading`, `bulletList`, …). Omitted = deny all but doc/paragraph/text. */
+  /**
+   * Node allowlist (`heading`, `bulletList`, …). Omitted = deny all but
+   * doc/paragraph/text.
+   */
   nodes(nodes: readonly string[]): RichtextFieldBuilder<K> {
     return this.#fork({ nodes });
   }

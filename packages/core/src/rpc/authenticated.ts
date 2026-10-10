@@ -4,11 +4,8 @@ import { base } from "./base.js";
 
 export const authenticated = base.middleware(
   async ({ context, next, errors }) => {
-    // Delegates to whatever `RequestAuthenticator` the operator wired
-    // up — session cookie by default, `cfAccess()` (or any other
-    // implementation) when overridden. RPC enforces the same guard the
-    // raw routes do, so a request that's authed for one path is authed
-    // for the other.
+    // Same authenticator the raw routes use, so a request authed for one path
+    // is authed for the other.
     const result = await authenticateTraced(context, context.authenticator);
     if (!result) throw errors.UNAUTHORIZED();
 

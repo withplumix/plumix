@@ -1,10 +1,8 @@
 import type { MarkSpec } from "../types.js";
 
 /**
- * The canonical inline marks shipped in `blocks/`, in bubble-menu order.
- * Tiptap-free so the server graph that reads the catalogue (manifest + richtext
- * validation allowlist) never drags the editor's ProseMirror graph into the
- * worker bundle (#1205). Matching Tiptap extensions live in `./extensions.js`.
+ * In bubble-menu order. Tiptap-free so reading the catalogue never drags the
+ * editor's ProseMirror graph into the worker bundle.
  */
 export const coreMarks: readonly MarkSpec[] = Object.freeze([
   {

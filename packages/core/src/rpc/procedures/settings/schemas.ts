@@ -29,21 +29,12 @@ const settingsValueKeySchema = v.pipe(
   v.regex(META_FIELD_KEY_RE, "settings value key must match [a-zA-Z0-9_:-]+"),
 );
 
-// One round-trip per group is the primary read pattern (admin card
-// loads one group). Returning the bag lets the admin form seed its
-// state; fields absent from the bag fall back to their registered
-// `default`.
 export const settingsGetInputSchema = v.object({
   group: settingsNameSchema,
 });
 
-// Null values in an upsert are deletions; everything else is an
-// upsert. Cap on keys per request blocks accidental fan-out from
-// callers that iterate on untrusted input; cap on encoded-value size
-// lives in the handler. Settings are typically short form fields —
-// 64 KiB per value comfortably fits any realistic string / JSON blob
-// a plugin would want to store as a setting and matches the WP
-// `wp_options` convention.
+// Caps keys per request against fan-out from callers iterating untrusted
+// input. 64 KiB per value matches the WP `wp_options` convention.
 const MAX_SETTINGS_VALUE_BYTES = 64 * 1024;
 const MAX_SETTINGS_KEYS_PER_UPSERT = 200;
 

@@ -17,41 +17,27 @@ export type TemplateDepKeys<TKind extends keyof TemplateDepRegistry> = {
   ]: readonly TemplateDepRegistry[TKind][F][];
 };
 
-/**
- * Loader signature for a template dep. Receives the keys declared by
- * the picked template for this kind on the current request and the
- * per-request `AppContext`. Returns a record keyed by those keys; keys
- * not present in it render as `null` in the deps passed to the
- * template's render function.
- */
+/** Keys missing from the returned record render as `null`. */
 export type TemplateDepLoader<TKind extends keyof TemplateDepRegistry> = (
   keys: TemplateDepKeys<TKind>,
   ctx: AppContext,
 ) => Promise<Record<string, TemplateDepRegistry[TKind]["result"] | null>>;
 
-/**
- * What one dep kind resolves to for the keys a request asked for, keyed by
- * key. Not JSON: a loader returns whatever its kind is about — a menu tree, a
- * settings bag, a queried row — and the value reaches the template untouched.
- */
+// Not JSON: a loader returns whatever its kind is about, a menu tree or a
+// queried row, and it reaches the template untouched.
 type DepResults = Record<string, unknown>;
 
 /** Every dep kind's results for one request, keyed by kind. */
 export type LoadedTemplateDeps = Record<string, DepResults>;
 
 /**
- * A template or theme read only for its dep-kind declarations —
- * `{ settings: ["site"] }`. Not JSON: it is the live descriptor, `render`
- * function and all; only the keys naming a registered dep kind are read.
+ * Not JSON: it is the live descriptor, `render` function and all; only keys
+ * naming a registered dep kind are read.
  */
 export type DepDeclarations = Readonly<Record<string, unknown>>;
 
-// Untyped flavor used inside the framework's registry storage — the
-// per-kind generic narrows are recovered when the loader is invoked
-// against a declared kind in `defineTemplate`. Keeping the registry
-// loose lets us store loaders for kinds the typed registry hasn't
-// been augmented with yet (e.g. early plugin boot before module
-// augmentation merges).
+// Untyped so the registry can store loaders for kinds the typed registry
+// hasn't been augmented with yet.
 type UntypedTemplateDepLoader = (
   keys: readonly string[],
   ctx: AppContext,
@@ -64,11 +50,8 @@ export interface RegisteredTemplateDep {
   readonly registeredBy: string | null;
 }
 
-// Framework-owned keys on a theme or template object — `mergeTemplate…`
-// must skip them so values like `render` (a function on every template)
-// and `css` (an array on every theme) don't accidentally read as
-// dep-kind declarations. `registerTemplateDep` rejects these as kinds
-// too, so the runtime is the single source of truth for the policy.
+// Framework-owned keys, skipped so `render` or `css` never read as dep-kind
+// declarations. `registerTemplateDep` rejects them as kinds too.
 const RESERVED_THEME_KEYS = new Set(["templates", "document", "tokens", "css"]);
 const RESERVED_TEMPLATE_KEYS = new Set([
   "render",
@@ -81,10 +64,8 @@ export const RESERVED_DEP_KIND_NAMES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Combine theme + template dep declarations. The template's own
- * declaration for a kind replaces the theme's; absent declarations
- * inherit. Extending the inherited set is opt-in via the function
- * form (`menus: (prev) => [...prev, "x"]`).
+ * The template's declaration for a kind replaces the theme's; extending it is
+ * opt-in via the function form.
  */
 export function mergeTemplateDepDeclarations(
   themeDeps: TemplateDepDeclarations | undefined,
@@ -111,17 +92,8 @@ export function mergeTemplateDepDeclarations(
 }
 
 /**
- * Per-request dep loader. Reads the picked template's declared dep
- * slugs, fires every registered loader in parallel via `Promise.all`,
- * and assembles the results object passed into the render function.
- *
- * Loader failures don't break the render: the dep's result becomes
- * `{}` (empty per-slug map), the failure is logged via
- * `ctx.logger.error("template_dep_load_failed", { kind, slugs, err })`,
- * and the response stays 200.
- *
- * Slugs not present in a loader's returned record render as `null` in
- * the deps map — themes use optional chaining (`settings?.["site"]`).
+ * A failing loader doesn't break the render: its result becomes `{}`, it is
+ * logged as `template_dep_load_failed`, and the response stays 200.
  */
 export async function loadTemplateDeps(
   template: DepDeclarations,

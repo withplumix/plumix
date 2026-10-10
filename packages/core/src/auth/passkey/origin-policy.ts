@@ -1,22 +1,9 @@
-/**
- * Runtime-neutral origin acceptance for the WebAuthn ceremony.
- *
- * A passkey is bound to an `rpId`; the browser reports the page `origin` in
- * clientDataJSON. Verification checks that origin against a declared policy —
- * the canonical `origin` plus any operator-declared `allowedOrigins`. `rpId`
- * is never derived from the request, so a policy can only *accept* origins the
- * operator listed, never widen the set from an attacker-chosen Host.
- *
- * An `allowedOrigins` entry is either an exact origin (`https://www.example.com`)
- * or a subdomain wildcard (`https://*.acme.workers.dev`) — the only shape that
- * can span the unbounded per-branch preview hosts Cloudflare (or any platform)
- * generates. Wildcards match strictly: https only, a real subdomain label, on
- * the default port, dot-boundary anchored.
- */
 export interface OriginPolicy {
-  /** Canonical origin the deploy is primarily served on. */
   readonly origin: string;
-  /** Extra origins accepted at verification — exact or `https://*.base`. */
+  /**
+   * Exact origins or `https://*.base` wildcards, which match https only, a real
+   * subdomain label, default port.
+   */
   readonly allowedOrigins?: readonly string[];
 }
 

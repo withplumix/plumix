@@ -22,15 +22,12 @@ import { humanizeFieldKey } from "./builder.js";
  */
 export type SelectOptionInput = string | MetaBoxFieldOption;
 
-/** Literal value union inferred from an `.options()` array. */
 type OptionValue<T extends SelectOptionInput> = T extends string
   ? T
   : T extends MetaBoxFieldOption
     ? T["value"]
     : never;
 
-/** Appearances legal for the given cardinality — radio and the dropdown
- *  are single-only, checkboxes multi-only, buttons works on both. */
 type AppearanceFor<Multiple extends boolean> = Multiple extends true
   ? "buttons" | "checkboxes"
   : "select" | "radio" | "buttons";
@@ -44,10 +41,8 @@ interface SelectFieldState extends UniversalFieldState {
 }
 
 /**
- * Entry point of the `select()` chain — only `.options()` is available
- * until the option list is declared, so a choice field without choices
- * can't reach `build()` (registration surfaces require a `build`
- * method).
+ * Only `.options()` is available here, so a choice field without choices
+ * can't reach `build()`.
  */
 export class SelectFieldSeed<K extends string = string> {
   readonly #key: K;
@@ -71,18 +66,9 @@ export class SelectFieldSeed<K extends string = string> {
 }
 
 /**
- * Fluent chain for choice fields. Immutable — every call returns a
- * fresh instance, so a shared base chain can be forked without
- * aliasing.
- *
- * Type parameters are the declaration's compile-time state: `O` is the
- * option literal union inferred by `.options()`; `Multiple` is the
- * cardinality (`.multiple()` flips it and the stored shape); `A` is
- * the chosen appearance, tracked so cardinality-illegal combinations
- * (radio + multiple) fail to compile in either call order; `V` is the
- * phantom read type — `O | undefined` unadorned, an array after
- * `.multiple()`, narrowed by `.required()`; `D` records that
- * `.default()` ran. All purely type-level — nothing at runtime carries them.
+ * Immutable: every call returns a fresh instance, so a shared base chain forks
+ * without aliasing. `A` is tracked so radio + multiple fails in either call
+ * order.
  */
 export class SelectFieldBuilder<
   O extends string,
@@ -132,18 +118,13 @@ export class SelectFieldBuilder<
   }
 
   /**
-   * Store an array of selected option values instead of a single one
-   * (`type` flips to `json`). A type-level gate keeps it legal:
-   * declare cardinality right after `.options()` — before `.default()`
-   * / `.required()` narrow the value — and never after a single-only
-   * `.appearance()` (`"select"` / `"radio"`).
+   * Declare right after `.options()`: the type-level gate rejects it after
+   * `.default()`, `.required()` or a single-only `.appearance()`.
    */
   multiple(
-    // `undefined extends V` proves `.required()` has not run, and a `false`
-    // `D` that `.default()` has not — the stored default/read shapes are
-    // still scalar, so flipping to an array is safe. `_value` is covariant,
-    // so a plain `O | undefined` this-type alone wouldn't reject a narrowed
-    // receiver.
+    // `undefined extends V` proves `.required()` has not run; `_value` is
+    // covariant, so a plain `O | undefined` this-type alone wouldn't reject a
+    // narrowed receiver.
     this: undefined extends V
       ? SelectFieldBuilder<O, K, false, "buttons" | undefined, V, S>
       : never,
@@ -155,11 +136,8 @@ export class SelectFieldBuilder<
     readonly O[] | undefined,
     readonly O[] | undefined
   > {
-    // The conditional this-type erases the class shape inside the body;
-    // restore it to reach the private #fork.
-    // Safety: the receiver is this builder — the conditional this-type only
-    // constrains which receivers may call the method, and every one it admits
-    // is a `SelectFieldBuilder` with exactly these arguments.
+    // Safety: the conditional this-type erases the class shape; every receiver
+    // it admits is a `SelectFieldBuilder` with these arguments.
     const self = this as unknown as SelectFieldBuilder<O, K, false, A, V, S>;
     return self.#fork<
       true,
@@ -182,11 +160,9 @@ export class SelectFieldBuilder<
   }
 
   /**
-   * Pick the admin control rendering the option list — the pure-UI
-   * axis; the value shape never changes. Single-value fields accept
-   * `"select"` (dropdown, the default), `"radio"`, and `"buttons"`;
-   * multi-value fields accept `"buttons"` (the default) and
-   * `"checkboxes"`.
+   * Pure UI: the value shape never changes. Single-value fields accept
+   * `"select"` (default), `"radio"`, `"buttons"`; multi-value fields
+   * `"buttons"` (default) and `"checkboxes"`.
    */
   appearance<A2 extends AppearanceFor<Multiple>>(
     appearance: A2,
@@ -250,10 +226,10 @@ export class SelectFieldBuilder<
     return this.#fork({ showInApi: true });
   }
 
-  /** Rule factory: this field's value equals `value` — pass the rule
-   *  to a dependent field's `.visibleWhen()`. The comparand is typed
-   *  by the chain's cardinality: one option value, or the exact
-   *  selection array after `.multiple()`. */
+  /**
+   * Rule factory for a dependent field's `.visibleWhen()`. After `.multiple()`
+   * the comparand is the exact selection array.
+   */
   is(value: NonNullable<S>): MetaFieldConditionRule {
     return { key: this.#key, op: "eq", value };
   }
@@ -281,7 +257,9 @@ export class SelectFieldBuilder<
     return { key: this.#key, op: "contains", value };
   }
 
-  /** Rule factory: the selection does not include `value` — multi-value only. */
+  /**
+   * Rule factory: the selection does not include `value` — multi-value only.
+   */
   notContains(
     this: SelectFieldBuilder<O, K, true, A, V, S, D>,
     value: O,
@@ -372,11 +350,8 @@ export class SelectFieldBuilder<
 }
 
 /**
- * Choice field over a fixed option list —
- * `select("size").options(["s", "m", "l"])`. Single-value by default;
- * `.multiple()` stores an array, `.appearance()` picks the admin
- * control. The option list is required: only `.options()` is available
- * on the bare constructor.
+ * Only `.options()` is available on the bare constructor, so a choice field
+ * always declares its list.
  */
 export function select<K extends string>(key: K): SelectFieldSeed<K> {
   return new SelectFieldSeed(key);

@@ -15,12 +15,8 @@ import { toToolInputJsonSchema } from "./schema-projection.js";
 
 const SERVER_INFO = { name: "plumix", version: "0.1.0" } as const;
 
-/** Build a low-level MCP `Server` over a tool registry, closing over the
- *  bearer-authed `ctx` that each tool's `run` receives. */
-// The SDK deprecates `Server` in favour of `McpServer` but exempts advanced
-// use, which is what this is: tools come from a runtime registry and every
-// call is wrapped in a telemetry span, neither of which `McpServer`'s static
-// `registerTool` surface expresses.
+// `Server` is deprecated but exempt for advanced use: tools come from a
+// runtime registry and every call is wrapped in a telemetry span.
 export function buildMcpServer(
   ctx: AppContext,
   tools: ReadonlyMap<string, McpTool>,

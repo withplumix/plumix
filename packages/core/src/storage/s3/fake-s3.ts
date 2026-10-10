@@ -1,10 +1,5 @@
-// Test support: an in-memory S3 reachable through `fetch`, and the SigV4
-// verifier it authenticates with. The verifier recomputes every signature
-// from the request as received — the way a real bucket does — with its own
-// reading of the AWS spec rather than anything from `sigv4.ts`, so a signer
-// bug and a matching verifier bug cannot cancel out. Published on
-// `plumix/test/conformance`, so a runtime's own S3 client is held to the same
-// bucket as core's signer.
+// The verifier reads the AWS spec independently of `sigv4.ts`, so a signer bug
+// and a matching verifier bug cannot cancel out.
 
 import { toFreshArrayBuffer } from "../body.js";
 
@@ -324,7 +319,9 @@ export interface FakeS3 {
   /** Stands in for the global `fetch`; hand it to `s3({ fetch })`. */
   readonly fetch: typeof fetch;
   readonly store: Map<string, FakeS3Object>;
-  /** Every request received, in order — the last one is what a test inspects. */
+  /**
+   * Every request received, in order — the last one is what a test inspects.
+   */
   readonly requests: readonly Request[];
 }
 

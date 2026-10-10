@@ -46,10 +46,8 @@ const FORWARD = JSON.stringify(viewTransitionTypes.forward);
 const BACK = JSON.stringify(viewTransitionTypes.back);
 const REPLACE = JSON.stringify(viewTransitionTypes.replace);
 
-// Inline and classic, so it is registered before the first frame, when
-// `pagereveal` fires. Without the Navigation API (Safari 18.2 to 26.1) it adds
-// no type and the base animation runs. Reloads never animate, so a `reload`
-// activation never arrives with a view transition.
+// Inline and classic, so it registers before the first frame's `pagereveal`.
+// Without the Navigation API (Safari 18.2 to 26.1) the base animation runs.
 const DIRECTION_SCRIPT =
   'addEventListener("pagereveal",function(e){' +
   "var t=e.viewTransition,a=window.navigation&&navigation.activation;" +

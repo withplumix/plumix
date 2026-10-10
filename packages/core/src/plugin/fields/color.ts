@@ -18,10 +18,8 @@ interface ColorFieldState extends UniversalFieldState {
 export const HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
 
 /**
- * Fluent chain for the `color` field. Storage is the hex string the
- * native `<input type="color">` produces (`#rrggbb`). The constraint
- * walker enforces the hex shape (and lowercases) server-side — a
- * custom `.sanitize()` transforms but can never bypass that gate.
+ * Stores `#rrggbb`. The server enforces the hex shape and lowercases it; a
+ * custom `.sanitize()` cannot bypass that.
  */
 export class ColorFieldBuilder<
   K extends string = string,
@@ -63,15 +61,16 @@ export class ColorFieldBuilder<
   }
 
   /**
-   * The value a new entity starts with — a hex string `#xxxxxx` (or
-   * `#xxx` shorthand), written into its meta when it is created; a cleared field stays empty. Leaves the read
-   * type as it is; `.required()` narrows it.
+   * The value a new entity starts with, `#xxxxxx` or `#xxx`; a cleared field
+   * stays empty. Leaves the read type as it is.
    */
   default(value: string): ColorFieldBuilder<K, V, S> {
     return this.#fork({ default: value });
   }
 
-  /** Mark the field required — narrows the read and stored types to `string`. */
+  /**
+   * Mark the field required — narrows the read and stored types to `string`.
+   */
   required(): ColorFieldBuilder<K, string, string> {
     return this.#fork<string, string>({ required: true });
   }

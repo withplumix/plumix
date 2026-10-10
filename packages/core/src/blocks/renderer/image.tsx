@@ -25,11 +25,8 @@ export type ImageProps = ImgAttrs & {
 
 export function Image(props: ImageProps): ReactNode {
   const { imageResolver, imageRemotePatterns } = useImageConfig();
-  // `densities`/`quality`/`format`/`priority` are component inputs, not DOM
-  // attributes — pull them out so they don't leak onto the <img>.
-  // `loading`/`decoding`/`fetchPriority` are pulled out too so `...rest` can't
-  // clobber the priority-aware defaults applied below (a caller value still
-  // wins via the `??`).
+  // `loading`/`decoding`/`fetchPriority` are pulled out so `...rest` can't
+  // clobber the priority-aware defaults below.
   const {
     src,
     alt,

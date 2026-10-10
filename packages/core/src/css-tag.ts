@@ -1,8 +1,5 @@
-// No-op tagged-template marker: returns the interpolated string verbatim. Its
-// only job is to let vscode-styled-components + stylelint syntax-highlight and
-// lint the inline CSS the tsc-only bars (admin bar, debug bar) emit — those
-// surfaces have no bundler CSS pipeline, so their styles live as template
-// strings rather than a separate stylesheet request.
+// Lets editors and stylelint highlight and lint the inline CSS of the tsc-only
+// bars, which have no bundler CSS pipeline.
 export function css(
   strings: TemplateStringsArray,
   ...values: readonly string[]

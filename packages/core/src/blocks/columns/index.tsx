@@ -29,9 +29,8 @@ function pickStackAt(raw: unknown): StackAt {
     : "tablet";
 }
 
-// A scoped media query that flips the row to a stacked column at the chosen
-// breakpoint (Builder's stackColumnsAt). Emitted by the block itself — theme
-// breakpoints in, per-instance class out — so it respects a theme's viewports.
+// Emitted by the block rather than a stylesheet so it follows the theme's
+// breakpoints.
 function stackStyleCss(
   nodeId: string,
   stackAt: StackAt,
@@ -103,7 +102,8 @@ export const columnsBlock = defineBlock({
       defaultChildren: DEFAULT_COLUMNS,
     },
   ],
-  // Seeds the inspector control; keep in sync with pickStackAt's render default.
+  // Seeds the inspector control; keep in sync with pickStackAt's render
+  // default.
   defaults: { stackAt: "tablet" },
   // A flex row with a gap. Responsive stacking rides a scoped media query keyed
   // off `stackAt` (see render), not a seeded bucket, so the preset owns it.

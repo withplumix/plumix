@@ -16,14 +16,8 @@ export interface HtmlAllowlist {
 }
 
 /**
- * Baseline allowlist — the set every plumix deploy gets when the
- * operator doesn't override and the schema-derived builder isn't
- * wired through. `sanitize-html` ships on workers (pure-JS
- * htmlparser2) so this runs in both admin and SSR.
- *
- * Anchors deliberately omit `target` / `rel` (reverse-tabnabbing
- * surface). Span has no `data-*` wildcard (framework-binding
- * injection surface). `data:` and `javascript:` schemes blocked.
+ * Anchors omit `target` / `rel` (reverse tabnabbing) and span has no `data-*`
+ * wildcard (framework-binding injection).
  */
 export const BASELINE_HTML_ALLOWLIST: HtmlAllowlist = Object.freeze({
   allowedTags: [
@@ -63,10 +57,8 @@ export const BASELINE_HTML_ALLOWLIST: HtmlAllowlist = Object.freeze({
 });
 
 /**
- * Sanitize an HTML string against an allowlist. `raw` non-string
- * input returns `""`; empty string passes through unchanged. The
- * allowlist defaults to the baseline so callers that haven't wired
- * the registry-derived builder still get a safe-by-default render.
+ * Non-string input returns `""`. The floors apply to any allowlist passed,
+ * hand-built or not.
  */
 export function sanitizeHtml(
   raw: unknown,
@@ -82,10 +74,8 @@ export function sanitizeHtml(
         [...attrs],
       ]),
     ),
-    // The floor propagates an absent scheme list rather than inventing
-    // one, so this fallback is the one list it never inspects — kept in
-    // step with `BASELINE_HTML_ALLOWLIST` above and with the shim's own
-    // default, and floor-clean because it names none of the denied four.
+    // The floors never inspect this fallback, so it must stay free of
+    // `HARD_DENIED_SCHEMES` and match the baseline and the shim's default.
     allowedSchemes: floored.allowedSchemes
       ? [...floored.allowedSchemes]
       : ["http", "https", "mailto", "tel"],

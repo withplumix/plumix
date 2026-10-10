@@ -24,10 +24,8 @@ import typescript from "highlight.js/lib/languages/typescript";
 import xml from "highlight.js/lib/languages/xml";
 import yaml from "highlight.js/lib/languages/yaml";
 
-// highlight.js core + only the grammars for the curated `CODE_LANGUAGES`, so
-// the bundle carries no more than the block can produce. Runs identically at
-// SSR (public, zero client JS — the block isn't an island) and in the editor
-// canvas (live re-highlight when the language changes).
+// Only the grammars for `CODE_LANGUAGES`, so the bundle carries no more than
+// the block can produce.
 for (const [name, grammar] of [
   ["bash", bash],
   ["c", c],
@@ -66,10 +64,8 @@ const LANGUAGE_TO_GRAMMAR: Readonly<Record<string, string>> = {
 };
 
 /**
- * Highlight `code` for a normalized language id, returning the inner HTML of
- * the `<code>` element (highlight.js escapes the source and wraps tokens in
- * `hljs-*` spans). Returns `null` for a language no grammar covers, so the
- * caller falls back to plain text.
+ * Returns escaped inner HTML for the `<code>` element, or `null` for a
+ * language no grammar covers.
  */
 export function highlightCode(code: string, language: string): string | null {
   const grammar = LANGUAGE_TO_GRAMMAR[language] ?? language;
@@ -78,11 +74,8 @@ export function highlightCode(code: string, language: string): string | null {
     .value;
 }
 
-// Token colours for the `hljs-*` classes, as theme-overridable CSS variables
-// (`var(--plumix-code-*, fallback)`) — the same override model as block
-// defaultStyles. Emitted once alongside a highlighted block so the styles
-// travel with the markup into both the editor iframe and the public page,
-// with no separate stylesheet to coordinate.
+// Emitted alongside the highlighted markup so the styles reach both the editor
+// iframe and the public page with no separate stylesheet.
 export const CODE_THEME_CSS = [
   ".hljs{color:var(--plumix-code-fg,#24292e)}",
   ".hljs-comment,.hljs-quote{color:var(--plumix-code-comment,#6a737d);font-style:italic}",

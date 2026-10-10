@@ -1,7 +1,5 @@
-// Editor bridge primitives shared by the admin shell (parent) and the
-// canvas runtime (iframe). No transport here — the caller injects `post`
-// and feeds inbound data in, so the protocol is testable without an iframe.
-// The frames they carry are typed in ./editor-protocol.
+// No transport here: the caller injects `post`, so the protocol is testable
+// without an iframe.
 
 import type {
   EditorBridgeMessage,
@@ -22,17 +20,17 @@ export type HandshakeRole = "initiator" | "responder";
 export interface Handshake {
   /** Feed an inbound handshake message (hello/ack). */
   onMessage(message: HandshakeMessage): void;
-  /** Re-post hello while still waiting for ack (driven by the caller's timer). */
+  /**
+   * Re-post hello while still waiting for ack (driven by the caller's timer).
+   */
   retry(): void;
   isReady(): boolean;
   whenReady(): Promise<void>;
 }
 
 /**
- * Connection handshake over an injected `post`. The initiator posts `hello`
- * and re-posts on each `retry()` until it receives `ack`; the responder
- * replies `ack` to a `hello`. Both resolve `whenReady` exactly once. No
- * timers here — the caller drives `retry()` so the logic stays testable.
+ * Owns no timers: the caller drives `retry()`. `whenReady` resolves exactly
+ * once.
  */
 export function createHandshake({
   role,
@@ -81,14 +79,8 @@ export function isHandshakeFrame(
 }
 
 /**
- * Unwraps an inbound `postMessage` payload, or null if it isn't one of ours.
- *
- * The returned message is typed but not decoded — what earns that is the
- * checks above it. Only the paired frame is served from `expectedOrigin` and
- * only the two halves of this bridge post on this channel, so an envelope
- * passing both came from code that posts `EditorBridgeMessage`. The payload
- * is still confirmed to be an object, because every caller reads a
- * discriminant off it and a primitive would throw rather than fall through.
+ * Typed, not decoded: only this bridge posts on the channel from
+ * `expectedOrigin`. Returns null for anything that isn't ours.
  */
 export function parseEnvelope(
   channel: string,

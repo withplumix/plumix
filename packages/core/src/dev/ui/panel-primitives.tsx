@@ -2,16 +2,8 @@ import type { ReactElement, ReactNode } from "react";
 
 import type { DevErrorFact } from "./contract.js";
 
-/**
- * Presentational primitives shared by the dev error page's own sections and by
- * plugin panels contributed through `error_page:panels`, so every panel reads
- * uniformly. Panels may drop to raw markup; these give them the page's look for
- * free.
- *
- * There is no section wrapper among them on purpose — the page renders each
- * panel's `<section>` and its heading around whatever the panel returns, so a
- * panel starts one level in.
- */
+// No section wrapper on purpose: the page renders each panel's `<section>` and
+// heading around what the panel returns.
 
 export function DevErrorFacts({
   facts,

@@ -24,11 +24,6 @@ export interface TimelineGeometry {
   readonly rects: readonly TimelineRect[];
 }
 
-/**
- * Maps a {@link Timeline} to SVG rectangle coordinates for the waterfall. Pure
- * and dimensionless of any DOM — one row per span, stacked top to bottom, each
- * bar positioned and scaled against the window. The panel renders the rects.
- */
 export function timelineGeometry(
   timeline: Timeline,
   options: TimelineRectOptions,

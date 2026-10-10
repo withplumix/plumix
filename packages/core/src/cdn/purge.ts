@@ -14,25 +14,13 @@ import {
   userTag,
 } from "./contract/tags.js";
 
-// Per-request purge accumulator. Entry hooks fire one at a time during a
-// request (a bulk publish fires N), each adding tags here; the dispatcher
-// flushes once after the request so the whole mutation costs a single
-// purge call.
-//
-// Keyed on the request's memo rather than on the context itself, for the reason
-// `route-tags.ts` is: core derives contexts by spreading (basePath stripping,
-// `withUser`, the formPost session swap), and the flush runs against the
-// outermost one — so a listener that enqueued against a derived context would
-// fill a set nothing reads, and skip the purge with no way to notice. The memo
-// is one object per request, carried by reference through every derivation, and
-// GC'd with it.
+// Keyed on the request memo, not the context: the flush runs against the
+// outermost context, so a derived spread would fill a set nothing reads.
 const pending = new WeakMap<RequestMemo, Set<string>>();
 
 /**
- * Announce that a write changed what `tags` describe. The request memo drops
- * its entries carrying any of them straight away — a later read in the same
- * execution loads the written row (#2517) — and, where the CDN can purge by
- * tag, the tags accumulate for the post-request flush.
+ * Drops matching request-memo entries immediately, so a later read sees the
+ * write; the CDN purge waits for the post-request flush.
  */
 export function enqueuePurgeTags(
   ctx: AppContext,
@@ -50,11 +38,8 @@ export function enqueuePurgeTags(
   for (const tag of tags) set.add(normalizeTag(tag));
 }
 
-/**
- * Runs through `ctx.defer` so the purge never blocks the response, and
- * `defer`'s own rejection handler logs a failed purge — a publish never fails
- * because Cloudflare's purge API hiccupped; TTL/SWR is the backstop.
- */
+// Deferred and logged on failure: a publish never fails on a purge hiccup;
+// TTL/SWR is the backstop.
 export function flushPurgeTags(ctx: AppContext): void {
   const set = pending.get(ctx.memo);
   if (set === undefined) return;
@@ -65,19 +50,8 @@ export function flushPurgeTags(ctx: AppContext): void {
 }
 
 /**
- * Register core's roster of writes: each lifecycle action becomes the tags of
- * what it changed. Each entry mutation enqueues `t:<type>` + `e:<id>`, each
- * term mutation `t:<type>` for the taxonomy's entry types, each user mutation
- * every public type's tag, each settings write its group's `s:<group>`.
- *
- * One roster, two consumers: the CDN purge and the request memo both read what
- * {@link enqueuePurgeTags} is handed, so they cannot disagree about which
- * write means which tag. A user write also names `u:<id>`, a tag no page is
- * stored under, so it goes to the memo alone rather than costing a site a
- * purge that could clear nothing. Registered at every boot, CDN or not — the
- * memo needs it everywhere, and without a CDN the purge half accumulates
- * nothing. Every handler is synchronous for the memo's
- * sake; see `RequestMemo.invalidate`.
+ * Registered at every boot, CDN or not: the request memo reads the same tags.
+ * Handlers stay synchronous for the memo's sake (see `RequestMemo.invalidate`).
  */
 export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
   // Entry lifecycle actions that change what the public sees — published,
@@ -109,9 +83,7 @@ export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
   hooks.addAction("user:updated", (user, _previous, ctx) => onUser(user, ctx));
   hooks.addAction("user:deleted", (user, _deletion, ctx) => onUser(user, ctx));
 
-  // Term lifecycle actions whose payload's leading arg carries `{ taxonomy }`.
-  // A term archive is stored under the `t:<type>` tags of its taxonomy's entry
-  // types, so creating, renaming, meta-changing, or deleting a term purges those.
+  // A term archive is stored under its taxonomy's entry types' `t:<type>` tags.
   const onTerm = (
     term: { readonly taxonomy: string },
     ctx: AppContext,

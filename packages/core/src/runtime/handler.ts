@@ -117,15 +117,8 @@ export function createPlumixHandler(
     return { db: boundDb.db, commit: (response) => response };
   };
 
-  // After the drain, not before it: deferred work is still querying through
-  // this connection until `dispose` returns. Best effort — a driver that
-  // throws on close (a handle already closed, a socket already gone) must not
-  // become an unhandled rejection on the one path whose job is a clean
-  // shutdown.
-  //
-  // Deliberately re-arms rather than latching a disposed flag: clearing
-  // `boundDb` is what makes `connectDatabase` reconnect on the next `fetch`,
-  // per the decision recorded on `PlumixHandler.dispose`.
+  // After the drain, since deferred work still queries. Best effort on close;
+  // clearing `boundDb` re-arms a reconnect on the next `fetch`.
   const releaseDatabase = (): void => {
     try {
       boundDb?.close?.();
@@ -135,9 +128,8 @@ export function createPlumixHandler(
     boundDb = undefined;
   };
 
-  // What a scheduled run and `run` both need: work outside a request still
-  // writes (a purge mutates state), so a deploy that routes writes to a primary
-  // does so here too, and it gets a context built exactly as a request's is.
+  // Work outside a request still writes, so it gets a context built exactly as
+  // a request's is.
   const openInternalContext = (
     invocation: Invocation,
     request: Request,
@@ -193,9 +185,8 @@ export function createPlumixHandler(
         options.disposeTimeoutMs ??
         DEFAULT_DISPOSE_TIMEOUT_MS;
       const deadline = Date.now() + timeoutMs;
-      // Deferred work defers more work — a telemetry consumer purging a tag,
-      // say — so the drain follows what lands mid-drain. The deadline is
-      // absolute, so a chain of quick tasks cannot extend a shutdown at will.
+      // Deferred work defers more; the absolute deadline stops a chain of quick
+      // tasks extending shutdown.
       while (pending.size > 0 && Date.now() < deadline) {
         await settleWithin([...pending], deadline - Date.now());
       }
@@ -239,9 +230,8 @@ export function createPlumixHandler(
       let scoped: RequestScopedDb;
       let ctx: AppContext;
       try {
-        // Inside the try, not above it: a missing binding is exactly the
-        // "the run never started" case the report below exists to name, and
-        // outside it the throw escaped `scheduled` altogether.
+        // Inside the try so a missing binding is reported as a run that never
+        // started.
         ({ scoped, ctx } = openInternalContext(
           invocation,
           syntheticRequest(
@@ -279,7 +269,6 @@ export function createPlumixHandler(
   };
 }
 
-/** Waits for `work` to settle, returning early once `timeoutMs` has passed. */
 async function settleWithin(
   work: readonly Promise<unknown>[],
   timeoutMs: number,
@@ -329,7 +318,6 @@ export function bindSlots(app: PlumixApp, env: PlumixEnv): BoundSlots {
   };
 }
 
-/** What one request varies; everything else comes from the app. */
 interface RequestContextInput {
   readonly app: PlumixApp;
   readonly env: PlumixEnv;
@@ -341,11 +329,8 @@ interface RequestContextInput {
   readonly slots: BoundSlots;
 }
 
-/**
- * Every argument `createAppContext` takes, each one named. The handler and the
- * dispatcher test harness both build their contexts from this, so a slot added
- * to the context fails to compile here instead of reaching only one of them.
- */
+// Shared with the dispatcher test harness, so a new context slot fails to
+// compile rather than reach only one.
 type RequestContextArgs = {
   readonly [
     K in keyof Required<CreateAppContextArgs<CoreSchema>>
@@ -450,9 +435,8 @@ function validateBindings(app: PlumixApp, env: PlumixEnv): void {
     if (slot?.requiredBindings) required.push(...slot.requiredBindings);
   }
   if (required.length === 0) return;
-  // The bindings are read by the names the slots declared, not by any key the
-  // `PlumixEnv` augmentation knows; a malformed caller may hand in no bag at
-  // all, and a null-valued binding is as broken as an unset one.
+  // Read by the slots' declared names, not `PlumixEnv` keys; a null binding is
+  // as broken as an unset one.
   const bag = env as Readonly<Record<string, unknown>> | undefined;
   const missing = required.filter((name) => bag?.[name] == null);
   if (missing.length > 0) {

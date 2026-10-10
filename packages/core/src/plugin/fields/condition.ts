@@ -1,11 +1,3 @@
-// Conditional-visibility rule model for meta-box fields. Rules are
-// plain wire objects addressing driver fields by key — authored via
-// the typed condition factories on each fluent builder, serialized
-// into the manifest untouched, and evaluated by the same
-// `isFieldVisible` on both sides: the admin form (live show/hide as
-// driver values change) and the server write pipeline (hidden fields
-// skip validation).
-
 /** Comparison applied between a driver field's value and the rule. */
 export type MetaFieldConditionOperator =
   | "eq"
@@ -38,19 +30,14 @@ export interface MetaFieldConditionRule {
 export type MetaFieldCondition = readonly (readonly MetaFieldConditionRule[])[];
 
 /**
- * The sibling values a condition is judged against — admin form state on the
- * client, the incoming meta bag on the server. Not JSON: on the admin side
- * these are the field controls' live values, which include `Date` instances
- * for date fields and hydrated entities for references.
+ * Not JSON: on the admin side these are live control values, including `Date`
+ * instances and hydrated reference entities.
  */
 export type MetaFieldValues = Readonly<Record<string, unknown>>;
 
 /**
- * The first `visibleWhen` rule naming a key outside `known`, if any. One pass
- * over the whole list rather than per field, so a driver may be declared after
- * the field that reads it. Both scopes that validate conditions — a box's
- * fields and a repeater row's / group's — check the same way and differ only
- * in the error they raise.
+ * Checks the whole list in one pass, so a driver may be declared after the
+ * field that reads it.
  */
 export function findUnknownConditionDriver(
   fields: readonly {
@@ -71,11 +58,7 @@ export function findUnknownConditionDriver(
   return undefined;
 }
 
-/**
- * Evaluate a field's visibility against the sibling values of its box
- * (form values in the admin, the incoming meta bag on the server). A
- * field without a condition is always visible.
- */
+/** A field without a condition is always visible. */
 export function isFieldVisible(
   field: { readonly visibleWhen?: MetaFieldCondition },
   values: MetaFieldValues,
@@ -88,17 +71,9 @@ export function isFieldVisible(
 }
 
 /**
- * Write-side companion to `isFieldVisible`: whether a field's key
- * should be dropped from an incoming write. Condition-hidden fields
- * skip validation entirely, because an editor can never fix a value
- * behind an input they cannot see. Visibility is judged from the
- * incoming bag alone, and only when the bag carries every referenced
- * driver: a partial patch that omits a driver is validated as if
- * visible rather than silently dropped on unknown driver state.
- *
- * For callers with no stored bag to judge against — a settings group,
- * which is saved whole. Meta writes know the row they land on and judge
- * visibility against it instead (`MetaPatchTarget`).
+ * Hidden fields skip validation: an editor can't fix what they can't see. A
+ * patch missing a driver counts as visible. Meta writes judge against the
+ * stored row instead.
  */
 export function isConditionHidden(
   field: { readonly visibleWhen?: MetaFieldCondition },

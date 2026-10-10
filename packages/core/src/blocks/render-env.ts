@@ -6,10 +6,8 @@ import type { ThemeTokens } from "./styles/types.js";
 import { isJsonArray, isJsonObject } from "../json.js";
 
 /**
- * Where each render input stands against the edit page's render-env embed:
- * `true` when the embed carries it into the canvas, otherwise the reason the
- * canvas goes without it. Keyed by every field of the context, so a new one is
- * a compile error here until somebody decides.
+ * `true` when the embed carries the field into the canvas, otherwise the reason
+ * it doesn't. A new context field fails to compile until someone decides.
  */
 export type RenderEnvPolicy<TContext> = {
   readonly [K in keyof TContext]-?: true | string;
@@ -67,22 +65,16 @@ const CARRIED_KEYS = Object.keys(RENDER_ENV_POLICY).filter(
 );
 
 /**
- * What the canvas — a fresh React tree with no server context — learns from
- * the SSR: the context fields {@link RENDER_ENV_POLICY} carries, plus the html
- * allowlist, which travels in its own React context rather than this one.
+ * `htmlAllowlist` travels here but lives in its own React context in the
+ * canvas.
  */
 export type RenderEnv = {
   readonly [K in CarriedKey]?: PlumixContextValue[K];
 } & { readonly htmlAllowlist?: HtmlAllowlist };
 
 /**
- * Serialize the render env for the edit page's `data-plumix-render-env` embed.
- *
- * This is the seam where the not-JSON in-process `entry` becomes JSON, and it
- * is lossy by design: a `.returns("date")` field arrives as its ISO string, a
- * reference as the plain fields of the entity it pointed at, and whatever else
- * `JSON.stringify` can't carry is gone on the other side. `parseRenderEnv` is
- * that other side.
+ * Lossy by design: a date field arrives as its ISO string, a reference as the
+ * entity's plain fields, and anything `JSON.stringify` can't carry is dropped.
  */
 export function serializeRenderEnv(
   ctx: PlumixContextValue,
@@ -93,10 +85,10 @@ export function serializeRenderEnv(
   return JSON.stringify({ ...env, htmlAllowlist });
 }
 
-/** Parse the embedded render env. Absent, malformed or non-object input —
- *  and any field of the wrong kind — is dropped, so the canvas renders without
- *  that input rather than throwing: it has no error boundary, and a throw
- *  there takes the whole editor down, not one block. */
+/**
+ * Never throws: malformed input or fields are dropped, since a throw in the
+ * canvas takes the whole editor down.
+ */
 export function parseRenderEnv(json: string): RenderEnv {
   let parsed: JsonValue;
   try {
@@ -108,9 +100,8 @@ export function parseRenderEnv(json: string): RenderEnv {
   const { tokens, breakpoints, htmlAllowlist, locale, entry, siteSettings } =
     parsed;
   return {
-    // Only the token entries' shape goes unchecked: our own SSR wrote them from
-    // typed theme config on this page load, and the style emitter reads every
-    // value as a CSS string it sanitizes anyway.
+    // Unchecked: our SSR wrote them from typed config, and the style emitter
+    // sanitizes every value.
     tokens: isObject(tokens) ? (tokens as ThemeTokens) : undefined,
     breakpoints: decodeBreakpoints(breakpoints),
     htmlAllowlist: decodeHtmlAllowlist(htmlAllowlist),

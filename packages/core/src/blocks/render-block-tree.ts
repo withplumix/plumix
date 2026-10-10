@@ -47,19 +47,13 @@ export interface BlockContext {
   /** True inside the editor canvas — lets a block render edit-only affordances
    *  (e.g. an empty-state placeholder) that don't ship to the public page. */
   readonly editing: boolean;
-  /**
-   * Resolves a message descriptor to the active locale's string — how a
-   * block's `render` localizes the text it emits. Hosts pass catalogs, never
-   * strings; with no catalog wired it returns the descriptor's English source.
-   */
+  /** With no catalog wired, returns the descriptor's English source. */
   readonly t: (descriptor: MessageDescriptor, values?: MessageValues) => string;
 }
 
 /**
- * One node of the stored block tree — what the entry's content column holds and
- * what the editor round-trips. A slot attr holds its own children, so the whole
- * node has to be readable as a {@link JsonValue}; see the note on
- * {@link JsonObject} for why that rules out an `interface`.
+ * A type alias, not an `interface`: slot attrs hold children, so the whole node
+ * must be readable as a {@link JsonValue}.
  */
 export type BlockNode = Readonly<{
   id: string;
@@ -87,22 +81,14 @@ export type BlockNode = Readonly<{
 }>;
 
 /**
- * `BlockNode.attrs` as a block's `render` sees them: the stored bag with every
- * slot key replaced by the component that renders that slot's children. A slot
- * value is a function, so this bag is not JSON — {@link materializeSlots} is
- * the only thing that puts a non-JSON value into an attr bag.
+ * Not JSON: every slot key holds the component that renders that slot's
+ * children.
  */
 export type MaterializedAttrs = Readonly<Record<string, unknown>>;
 
 /**
- * Walker-traversal hooks, fired at tree-construction time (NOT post-order).
- * Both callbacks fire synchronously around each `BlockNode`'s React element
- * construction — `beforeRender` immediately before, `afterRender` immediately
- * after. Slot children render lazily inside React (the slot's `<Content />`
- * invocation), so a parent's `afterRender` fires before its children's
- * `beforeRender`. For plugins that need post-order semantics (decorate around
- * children), this contract isn't the right primitive — observe the React
- * tree directly instead.
+ * Not post-order: slot children render lazily inside React, so a parent's
+ * `afterRender` fires before its children's `beforeRender`.
  */
 export interface BlockRenderHooks {
   readonly beforeRender?: (node: BlockNode, context: BlockContext) => void;
@@ -110,12 +96,8 @@ export interface BlockRenderHooks {
 }
 
 /**
- * Decorate-or-replace filters fired around a single block's React element.
- * Unlike {@link BlockRenderHooks} (observational, fired around the whole node),
- * these transform the element itself — the bridge for the framework's
- * `block:before_render` / `block:after_render` filters. `beforeRender` sees
- * the block's own rendered output before the seam wrapper is applied;
- * `afterRender` sees the fully-wrapped element about to be returned.
+ * `beforeRender` sees the block's output before the seam wrapper is applied;
+ * `afterRender` sees the fully wrapped element.
  */
 export interface BlockRenderFilters {
   readonly beforeRender?: (
@@ -131,7 +113,9 @@ export interface BlockRenderFilters {
 }
 
 export interface RenderBlockTreeOptions {
-  /** Theme breakpoints driving the emitter's @media maxima (default 991/640). */
+  /**
+   * Theme breakpoints driving the emitter's @media maxima (default 991/640).
+   */
   readonly breakpoints?: ThemeBreakpoints;
   readonly hooks?: BlockRenderHooks;
   readonly renderFilters?: BlockRenderFilters;
@@ -142,18 +126,21 @@ export interface RenderBlockTreeOptions {
   readonly shortcodes?: ShortcodeRegistry;
   /** Queried entry, exposed to shortcodes via `BlockContext.entry`. */
   readonly entry?: HydratedEntry | null;
-  /** The site's `site` settings group, exposed via `BlockContext.siteSettings`. */
+  /**
+   * The site's `site` settings group, exposed via `BlockContext.siteSettings`.
+   */
   readonly siteSettings?: SiteSettings;
-  /** Edit mode: tag each block wrapper with `data-plumix-id` for canvas selection. */
+  /**
+   * Edit mode: tag each block wrapper with `data-plumix-id` for canvas
+   * selection.
+   */
   readonly editing?: boolean;
   /** The compiled catalog for `locale`, which `BlockContext.t` reads. Absent,
    *  every descriptor resolves to its English source. */
   readonly catalog?: CompiledCatalog;
 }
 
-/** The framework seam keys a block spreads onto its root element. Both
- *  `data-plumix-*` markers are edit-only (canvas selection + X-ray); the public
- *  page ships neither. */
+// Both `data-plumix-*` markers are edit-only; the public page ships neither.
 interface BlockSeamProps {
   readonly "data-plumix-block"?: string;
   readonly "data-plumix-id"?: string;
@@ -171,7 +158,9 @@ export interface BlockNodeRenderProps<
   readonly attrs: Attrs;
   readonly context: BlockContext;
   readonly loaders: ResolvedLoaders<Loaders>;
-  /** Seam attributes for `selfSeam` blocks to spread onto their root element. */
+  /**
+   * Seam attributes for `selfSeam` blocks to spread onto their root element.
+   */
   readonly blockProps: BlockProps;
   /** The author's allowlisted root-element override, or `undefined`. A
    *  `selfSeam` container block should render `tagName ?? <its default>`. */
@@ -179,7 +168,10 @@ export interface BlockNodeRenderProps<
   /** The node's render-safe id (absent for an unsafe id), for a block that emits
    *  its own per-instance scoped CSS (e.g. `.plumix-<x>-${nodeId}` in a `<style>`). */
   readonly nodeId?: string;
-  /** Active theme breakpoints, for a block emitting its own responsive `<style>`. */
+  /**
+   * Active theme breakpoints, for a block emitting its own responsive
+   * `<style>`.
+   */
   readonly breakpoints?: ThemeBreakpoints;
 }
 
@@ -240,11 +232,8 @@ function isDevMode(): boolean {
 }
 
 /**
- * Whether `value` is shaped like a block tree: an array whose every item has a
- * string `id` and `name`. The check for a whole stored tree (an entry's
- * `blocks`, a clipboard payload). It does not decide whether an attr is a
- * slot: `[]` and a data array of `{ id, name }` objects pass it too. A node's
- * slots are the ones {@link blockSlotKeys} reads from its spec.
+ * Not a slot test: `[]` and a data array of `{ id, name }` objects pass too.
+ * A node's slots come from {@link blockSlotKeys}.
  */
 export function isBlockNodeArray(
   value: unknown,
@@ -268,9 +257,8 @@ function materializeSlots(
   const spec = env.registry.get(node.name);
   const inputs = spec?.inputs;
 
-  // Every declared slot is materialized, an unset one as an empty slot, so in
-  // edit mode it still renders its placeholder + "Add a block" affordance.
-  // Every other attr reaches the block as stored, arrays included.
+  // An unset slot is materialized too, so edit mode still renders its "Add a
+  // block" affordance.
   const slotKeys = blockSlotKeys(node, spec);
   if (slotKeys.length === 0) return attrs;
 
@@ -284,11 +272,8 @@ function materializeSlots(
     materialized[key] = function SlotComponent() {
       const rendered = renderNodes(children, env, childContext);
       if (!env.editing || rawSlot) return rendered;
-      // Tag the slot so the canvas can resolve a nested drop to it. The
-      // wrapper is display:contents — zero layout impact, the children flow
-      // as if it weren't there. Parent id + slot key are separate attrs (not
-      // one delimited string) so an id never needs charset-escaping. An empty
-      // slot gets a min-height placeholder so it stays a measurable target.
+      // Tagged so the canvas resolves nested drops. Separate attrs so an id
+      // never needs escaping; an empty slot keeps a measurable height.
       return createElement(
         "div",
         {
@@ -341,19 +326,11 @@ function renderNodes(
 }
 
 interface BlockPresentation {
-  /** The node id when it's a safe CSS/attribute identifier, else null.
-   *  Returned so the caller can pass it through as the block's `nodeId`. */
   readonly safeId: string | null;
-  /** Root-element attributes: allowlisted htmlAttrs, editing markers, class. */
   readonly blockProps: BlockProps;
-  /** The generated `<style>` sibling, or null when the node emits no CSS. */
   readonly styleTag: ReactNode;
 }
 
-// The node's presentation layer: a per-block style class (+ its `<style>`),
-// merged with author classes and allowlisted HTML attributes, into the props
-// the block's root element carries. Split out of `renderNode` so the walk reads
-// as materialize → present → render → wrap.
 function resolveBlockPresentation(
   node: BlockNode,
   env: WalkerEnv,
@@ -435,10 +412,8 @@ function renderNode(
     rendered = env.renderFilters.beforeRender(rendered, node, context);
   }
 
-  // selfSeam: the block spread `blockProps` onto its own root element, so the
-  // seam needs no wrapper div (which `<td>`/`<tr>` can't have, and which would
-  // make a style class only inherit rather than win). The `<style>` rides as a
-  // fragment sibling.
+  // selfSeam skips the wrapper div, which `<td>`/`<tr>` can't have and which
+  // would make a style class merely inherit.
   let final: ReactNode;
   if (spec.selfSeam) {
     final = createElement(Fragment, { key: node.id }, styleTag, rendered);

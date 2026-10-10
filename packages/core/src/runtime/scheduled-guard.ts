@@ -8,14 +8,11 @@ import {
   scheduledTaskLeases,
 } from "../db/schema/scheduled_runs.js";
 
-/**
- * The lease key when every schedule must serialise against every other. That is
- * the safe default because a task that declares no cron runs on *every* firing,
- * so two schedules running at once would run that one task twice at once.
- */
+// A task with no cron runs on every firing, so concurrent schedules would run
+// it twice at once.
 const SHARED_LEASE_KEY = "scheduled";
 
-/** Five minutes: ~10x the worst plausible synchronous purge, and one publish cycle. */
+// ~10x the worst plausible synchronous purge, and one publish cycle.
 const DEFAULT_LEASE_TTL_MS = 300_000;
 
 export type ScheduledRunOutcome =
@@ -32,17 +29,14 @@ export interface ScheduledRunGuardOptions {
    * identity is a UUID, so this need not be unique. */
   readonly holder: string;
   /**
-   * Whether to take the lease as well as the claim. Off for a single-process
-   * deploy — `plumix dev` above all, where a minutes-long expiry would outlive
-   * a process that restarts every few seconds and leave cron looking dead.
+   * Off for single-process deploys: under `plumix dev`, a minutes-long lease
+   * outlives restarts and leaves cron looking dead.
    */
   readonly lease: boolean;
   readonly ttlMs?: number;
   /**
-   * `"shared"` (the default) makes every schedule contend for one lease.
-   * `"schedule"` gives each its own, which a site with no untagged task may do
-   * safely and which stops a slow schedule from shutting out an unrelated one —
-   * a daily task blocked at its only matching minute waits a whole day.
+   * `"schedule"` is safe only without untagged tasks, and stops a slow schedule
+   * shutting out a daily one for a whole day.
    */
   readonly leaseScope?: "shared" | "schedule";
 }
@@ -60,18 +54,9 @@ export interface ScheduledRunGuard {
 }
 
 /**
- * The guard that makes "two firings never run the same task concurrently" true
- * across replicas as well as within one process.
- *
- * Two rows, because they answer different questions. The claim gives at most
- * one run per schedule per minute and survives a holder being killed, since it
- * has no expiry to strand. The lease gives no overlap in time, which the claim
- * cannot: minute N+1 is a different claim, so without a lease a run that
- * outlives its own schedule is overlapped by the next firing.
- *
- * Both writes end in `RETURNING`, whose row count is the same on libsql, D1 and
- * `node:sqlite` — the drivers disagree about where an update count lives, but
- * they all agree about returned rows.
+ * The claim allows one run per schedule-minute; the lease prevents a long run
+ * overlapping the next minute. Writes use `RETURNING`, since drivers disagree
+ * on update counts.
  */
 export function createScheduledRunGuard({
   db,
@@ -105,10 +90,8 @@ export function createScheduledRunGuard({
 
       const leaseKey =
         leaseScope === "shared" ? SHARED_LEASE_KEY : `scheduled:${schedule}`;
-      // A run identity, not a process one: hostname and pid repeat across
-      // containers and restarts, and a stale token equal to a live one would
-      // let a finished run delete the lease a running one holds. The holder
-      // rides along so the row says which replica is working.
+      // Per run, not per process: hostname and pid repeat across containers,
+      // letting a finished run delete a live lease.
       const token = `${holder}:${crypto.randomUUID()}`;
       const now = Date.now();
       const held = await db
@@ -122,16 +105,12 @@ export function createScheduledRunGuard({
           setWhere: lte(scheduledTaskLeases.expiresAt, now),
         })
         .returning({ key: scheduledTaskLeases.key });
-      // Before the claim, deliberately. Claiming first would burn the minute on
-      // a firing that then loses the lease and never runs — and a schedule that
-      // matches once a day would lose the whole day.
+      // Before the claim, or a firing that loses the lease burns the minute,
+      // and a daily schedule its day.
       if (held.length === 0) return "leased";
 
-      // Renews the lease while the run works, so a run that legitimately
-      // outlives the TTL is not overtaken. It is a refinement, not the
-      // guarantee: a task that blocks the event loop — `node:sqlite` is
-      // synchronous, so a large delete does — blocks this timer too, which is
-      // why the TTL itself is sized above any plausible run.
+      // A refinement, not the guarantee: a synchronous `node:sqlite` delete
+      // blocks this timer too, so the TTL exceeds any plausible run.
       const heartbeat = setInterval(
         () => {
           // A drizzle builder runs only once something subscribes, so the
@@ -153,9 +132,7 @@ export function createScheduledRunGuard({
         },
         Math.max(1, Math.floor(ttlMs / 3)),
       );
-      // A pending renewal must not be what keeps a process alive. `unref` is
-      // Node's timer handle; a runtime whose `setInterval` returns a number
-      // has no event loop for it to hold open.
+      // A pending renewal must not keep the process alive.
       (heartbeat as { unref?: () => void }).unref?.();
 
       try {
@@ -164,10 +141,8 @@ export function createScheduledRunGuard({
         return "ran";
       } finally {
         clearInterval(heartbeat);
-        // Scoped to the token: a lease this run already lost to a successor
-        // must not be deleted out from under them. Failures are swallowed so
-        // the release cannot replace the task's own error, or its result, with
-        // a database one — the TTL frees the row regardless.
+        // Token-scoped so a successor's lease survives. Failures are swallowed
+        // so they can't mask the task's outcome; the TTL frees the row.
         await db
           .delete(scheduledTaskLeases)
           .where(
@@ -185,14 +160,7 @@ export function createScheduledRunGuard({
   };
 }
 
-/**
- * The lease scope a site's declared tasks call for, shared by the in-process
- * scheduler and `plumix cron run` (#2372).
- *
- * A task that declares no cron runs on every firing, so its schedules have to
- * serialise against each other; without one, each schedule can hold its own
- * lease and a slow schedule cannot shut an unrelated one out of its minute.
- */
+/** `"shared"` when any task declares no cron, since it runs on every firing. */
 export function scheduledLeaseScope(
   app: Pick<PlumixApp, "scheduledTasks">,
 ): "shared" | "schedule" {
@@ -208,12 +176,8 @@ export interface ConnectedScheduledDb {
 }
 
 /**
- * Connect the database a scheduled run writes through, outside any request.
- *
- * A scheduled run always writes, so a deploy that routes writes to a primary
- * does so for the guard's own rows too. The request is a marker rather than an
- * inbound one — the same URL core's scheduled handler builds, so an adapter
- * that routes on it sees one shape however the run was triggered.
+ * The request is a marker matching core's scheduled handler URL, so an adapter
+ * routing on it sees one shape.
  */
 export function connectScheduledDb(
   app: Pick<PlumixApp, "schema"> & {

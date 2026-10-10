@@ -1,19 +1,5 @@
-/**
- * Inbound counterpart to `permalink.ts` — given the segments captured
- * by a `:path+` URLPattern match, find the entry whose parent chain
- * exactly matches the URL. A term needs no chain: its slug is its address.
- *
- * The leaf is looked up by `(table, slug)` (single indexed lookup); for
- * multi-segment URLs the leaf's ancestor chain is then loaded via the
- * same recursive CTE `buildEntryPermalink` / `buildTermArchiveUrl` use
- * to produce nested URLs in the outbound direction. The two sides
- * round-trip on the same data.
- *
- * Returns `null` on any chain mismatch (extra segments, missing
- * intermediate, wrong ancestor slug). The route matcher falls through
- * to the next rule rather than 404'ing — WordPress's first-match-wins
- * semantics.
- */
+// A chain mismatch returns null so the matcher falls through to the next rule
+// rather than 404ing (WordPress first-match-wins).
 
 import type { AppContext } from "../context/app-context.js";
 import type { Entry } from "../db/schema/entries.js";
@@ -28,10 +14,8 @@ export async function findEntryByPath(
   segments: readonly string[],
 ): Promise<Entry | null> {
   if (segments.length === 0) return null;
-  // Reject any empty segment — malformed URLs like /page/a//b split to
-  // ["a", "", "b"] which could match against a hypothetical empty-slug
-  // entry. Defense-in-depth: the slug columns are NOT NULL but don't
-  // forbid the empty string.
+  // Reject empty segments (`/a//b`): slug columns are NOT NULL but allow the
+  // empty string.
   if (segments.some((segment) => segment === "")) return null;
   const leafSlug = segments[segments.length - 1];
   if (leafSlug === undefined) return null;

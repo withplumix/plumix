@@ -1,12 +1,7 @@
 import { formats } from "@lingui/core";
 
-// Lingui already ships `formats.date()` and `formats.number()` with the
-// (locale, value, options) shape we want — re-export under narrowed
-// signatures (string locale, no Lingui-internal types in our public
-// surface) and implement only `formatRelative` (Lingui doesn't ship a
-// relative-time formatter). All three are pure functions; the React
-// `useFormatters()` hook lives next to the consumer (admin) where
-// Lingui's React context is available.
+// Lingui ships no relative-time formatter. The others are re-exported under
+// narrowed signatures to keep Lingui-internal types off the public surface.
 
 export const formatDate: (
   locale: string,

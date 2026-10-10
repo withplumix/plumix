@@ -9,51 +9,36 @@ import type {
 import type { DevErrorFrame } from "../dev/ui/index.js";
 import { DEV_ERROR_CLIENT_ERRORS_ENDPOINT } from "../dev/ui/index.js";
 
-// The dev-only error surface: server 5xx failures (projected from the same
-// request-history ring the tracing tools read — no new capture) merged with
-// client/browser failures (fetched from the dev read endpoint; see
-// `clientErrors`). The dev gate lives in `buildMcpToolRegistry`, this module's
-// only importer, so the whole graph tree-shakes from production.
+// The dev gate lives in `buildMcpToolRegistry`, this module's only importer,
+// so the graph tree-shakes from production.
 
-/** One server failure as a connected agent reads it: what broke, and the id to
- *  pivot into `telemetry_request_get` for what led to it. */
 interface ServerErrorEntry {
   readonly source: "server";
   readonly level: "error";
   readonly message: string;
   readonly stack?: string;
   readonly path: string;
-  /** When the failing request began (epoch ms). */
   readonly timestamp: number;
-  /** The originating request id — resolves in `telemetry_request_get`. */
+  // Resolves in `telemetry_request_get`.
   readonly requestId: string;
 }
 
-/** One browser failure as a connected agent reads it — fetched from the dev
- *  client-error read endpoint (#1656) and merged into the same stream. A client
- *  error has no server request behind it, so it carries no request id: an
- *  uncaught exception, unhandled rejection, island, or hydration error names its
- *  component/island in `label` rather than a request path. */
+// A client error has no server request behind it, so `label` names its
+// component or island instead of a request id.
 interface ClientErrorEntry {
   readonly source: "client";
   readonly level: string;
   readonly message: string;
-  /** Already sourcemapped to original-source frames on the Vite/Node side. */
+  // Already sourcemapped on the Vite/Node side.
   readonly stack: readonly DevErrorFrame[];
-  /** The island/component the failure named (a hydration error's component). */
   readonly label?: string;
 }
 
 type ErrorEntry = ServerErrorEntry | ClientErrorEntry;
 
-/**
- * The error that ended a failed request. An uncaught throw propagates up to the
- * outermost span, and the collector captures the same `{name, message, stack}`
- * on every span it unwinds through — so the shallowest errored span carries the
- * failure that produced the 5xx, while a *deeper* errored span may be an
- * unrelated error caught below it. Search shallowest-first so a recovered inner
- * error never masquerades as the cause.
- */
+// The collector records an uncaught throw on every span it unwinds, so the
+// shallowest errored span is the cause; a deeper one may be caught and
+// unrelated.
 function fatalError(
   spans: readonly TelemetrySpan[],
 ): TelemetrySpanError | undefined {
@@ -81,8 +66,6 @@ export const errorListTool: McpTool<typeof errorListInput> = {
   },
 };
 
-/** Project the 5xx responses in the request-history ring into server entries.
- *  The ring is already newest-first. */
 function serverErrors(ctx: AppContext): ServerErrorEntry[] {
   return (ctx.dev?.history.get() ?? [])
     .filter((entry) => entry.status >= 500)
@@ -100,14 +83,9 @@ function serverErrors(ctx: AppContext): ServerErrorEntry[] {
     });
 }
 
-/**
- * Fetch the retained, already-sourcemapped client failures from the dev read
- * endpoint (#1656) — the cross-process bridge: client errors are captured and
- * sourcemapped on the Vite/Node side, and the worker reads them back over its own
- * dev origin (derived from the inbound request). Degrades to an empty list on any
- * failure — the endpoint being unreachable must never sink the server errors the
- * tool always produces locally.
- */
+// Client errors are captured on the Vite/Node side and read back over the dev
+// origin. Any failure degrades to an empty list, never sinking the server
+// errors.
 async function clientErrors(ctx: AppContext): Promise<ClientErrorEntry[]> {
   try {
     const url = new URL(DEV_ERROR_CLIENT_ERRORS_ENDPOINT, ctx.request.url);
@@ -123,10 +101,8 @@ async function clientErrors(ctx: AppContext): Promise<ClientErrorEntry[]> {
   }
 }
 
-// Project one endpoint row into the merge shape. The read endpoint is first-party
-// and same-machine, but it is still cross-process JSON, so pick only the contract
-// fields — which also guarantees no server-only field (a request id) leaks onto a
-// client entry — and drop a row missing the essentials.
+// Cross-process JSON, so only contract fields are picked, which also keeps a
+// server-only request id off a client entry.
 function toClientEntry(value: unknown): ClientErrorEntry | null {
   if (value === null || typeof value !== "object") return null;
   const row = value as Record<string, unknown>;
@@ -144,5 +120,7 @@ function toClientEntry(value: unknown): ClientErrorEntry | null {
   };
 }
 
-/** The dev-only error tools, joined into the MCP registry under the dev gate. */
+/**
+ * The dev-only error tools, joined into the MCP registry under the dev gate.
+ */
 export const errorMcpTools: readonly McpTool[] = [errorListTool];

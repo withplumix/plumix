@@ -20,14 +20,6 @@ export type DebugContextSource = Pick<
   | "plugins"
 >;
 
-/**
- * Projects the telemetry data and a fixed slice of the request context into a
- * {@link DebugSnapshot}. Pure: no transport, no store, no mutation — it reads
- * `ctx` and returns inert data. The telemetry argument is the completed
- * request's {@link TelemetrySnapshot} at request-end, or the live collector's
- * `getSpans()`/`getRecords()` reads mid-request for the inline bar; only its
- * spans and records are consumed.
- */
 export function projectDebugSnapshot(
   telemetry: Pick<TelemetrySnapshot, "spans" | "records">,
   ctx: DebugContextSource,

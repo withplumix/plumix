@@ -1,11 +1,10 @@
 import type { TelemetrySpan } from "../../context/telemetry.js";
 
-/** A span flattened into a single waterfall row. */
 interface TimelineRow {
   readonly name: string;
-  /** Nesting depth; 0 for a root span. */
+  // 0 for a root span.
   readonly depth: number;
-  /** Start offset from the timeline window's start, in ms. */
+  // From the timeline window's start, in ms.
   readonly offsetMs: number;
   readonly durationMs: number;
 }
@@ -16,11 +15,6 @@ export interface Timeline {
   readonly totalMs: number;
 }
 
-/**
- * Flattens a trace-span tree into an ordered list of waterfall rows, each
- * positioned relative to the request's overall time window. Pure — the panel
- * feeds it {@link TelemetrySpan} roots from the collector and renders the result.
- */
 export function buildTimeline(roots: readonly TelemetrySpan[]): Timeline {
   let windowStart = Infinity;
   let windowEnd = -Infinity;

@@ -5,17 +5,8 @@ import { ACCESS_POLICY_META_KEY } from "../access/contract/meta-key.js";
 import { NAMED_TEMPLATE_META_KEY } from "../route/contract/named-template.js";
 
 /**
- * Fold a `named`-template choice into a meta patch under the reserved
- * `__plumix_template` key. The picker's choice can't ride the plugin meta
- * sanitizer (the key is reserved and has no registered field), so the entry
- * create/update handlers merge it here after the plugin patch is validated.
- *
- * - `undefined` — no change (caller didn't touch the template).
- * - `null` — clear the choice (delete the key → theme-default resolution).
- * - a string — set the choice.
- *
- * Returns a fresh patch (never mutates the input) or `null` when there was no
- * plugin patch and nothing to write.
+ * `undefined` leaves the choice, `null` clears it to the theme default.
+ * Returns a fresh patch, or `null` when there was nothing to write.
  */
 export function withTemplateChoice(
   patch: MetaPatch | null,
@@ -35,18 +26,8 @@ export function withTemplateChoice(
 }
 
 /**
- * Fold a per-entry access-policy choice into a meta patch under the reserved
- * `__plumix_access` key. Like the template choice, the key is reserved with no
- * registered field, so the create/update handlers merge it after the plugin
- * meta patch is validated (and after {@link assertAccessChoiceDeclared} has
- * confirmed the key is one the type declares).
- *
- * - `undefined` — no change.
- * - `null` — clear the choice (delete the key → type-default gating).
- * - a string — set the choice to that policy key.
- *
- * Returns a fresh patch (never mutates the input) or `null` when there was no
- * plugin patch and nothing to write.
+ * `undefined` leaves the choice, `null` clears it to the type default.
+ * Returns a fresh patch, or `null` when there was nothing to write.
  */
 export function withAccessChoice(
   patch: MetaPatch | null,
@@ -66,12 +47,8 @@ export function withAccessChoice(
 }
 
 /**
- * Reject a per-entry access `key` the entry type doesn't declare — the
- * enforcement behind "an editor cannot select a policy the developer didn't
- * declare". `undefined` (no change) and `null` (clear to type default) always
- * pass; any other value must match a declared {@link SelectableAccessPolicy}.
- * Takes the procedure's `errors` and throws directly, mirroring
- * `assertContentWithinByteCap`.
+ * Throws `BAD_REQUEST` for a key the type doesn't declare; `undefined` and
+ * `null` always pass.
  */
 export function assertAccessChoiceDeclared(
   policies: readonly SelectableAccessPolicy[] | undefined,

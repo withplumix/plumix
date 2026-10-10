@@ -16,9 +16,8 @@ export interface LibsqlConfig {
 }
 
 /**
- * Literal connection config, or an `(env) => LibsqlConfig` resolver for the
- * Workers case where the auth token only exists in the per-request `env`. See
- * {@link EnvInput} for the shared union + the typed `env`.
+ * The resolver form serves Workers, where the auth token exists only in the
+ * per-request `env`.
  */
 export type LibsqlConfigInput = EnvInput<LibsqlConfig>;
 
@@ -27,13 +26,8 @@ export interface LibsqlDatabaseAdapter extends DatabaseAdapter {
 }
 
 /**
- * Database adapter for any libSQL-compatible SQLite endpoint. Lives behind
- * the `@plumix/core/db/libsql` subpath so the driver only loads when this
- * adapter is imported — D1 deployments never pull it into their bundle.
- *
- * Single endpoint, strong consistency: no `connectRequest` read-replica hook
- * (that's D1's Sessions API), and no `requiredBindings` since the connection
- * comes from config rather than a runtime env binding.
+ * Behind its own subpath so D1 deployments never bundle the driver. No
+ * read-replica hook and no `requiredBindings`: config supplies the connection.
  */
 export function libsql(config: LibsqlConfigInput): LibsqlDatabaseAdapter {
   return {

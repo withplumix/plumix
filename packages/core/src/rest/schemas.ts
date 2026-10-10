@@ -3,10 +3,8 @@ import * as v from "valibot";
 const MAX_PER_PAGE = 100;
 const DEFAULT_PER_PAGE = 20;
 
-// Path params only. Entry types and taxonomies share the top-level
-// `{collection}` rest_base namespace. Pagination is read from the query string
-// directly (see `readPagination`) so the surface doesn't depend on per-adapter
-// query coercion.
+// Pagination is read from the query string directly, so the surface doesn't
+// depend on per-adapter query coercion.
 export const collectionParamsSchema = v.object({ collection: v.string() });
 export const collectionItemParamsSchema = v.object({
   collection: v.string(),
@@ -22,7 +20,8 @@ export const publicAuthorSchema = v.object({
   avatarUrl: v.nullable(v.string()),
 });
 
-// Compact term shape, used both as a top-level resource and embedded on entries.
+// Compact term shape, used both as a top-level resource and embedded on
+// entries.
 export const publicTermSchema = v.object({
   id: v.number(),
   name: v.string(),
@@ -52,7 +51,8 @@ export const publicEntrySchema = v.object({
   author: v.nullable(publicAuthorSchema),
   // Associations are embedded, never nested as their own sub-resource.
   terms: v.record(v.string(), v.array(publicTermSchema)),
-  // Only meta fields whitelisted with `showInApi` reach this map (default-deny).
+  // Only meta fields whitelisted with `showInApi` reach this map
+  // (default-deny).
   meta: v.record(v.string(), v.unknown()),
   // Image roles, one key per role whose field opted in with `showInApi` — the
   // same default-deny gate `meta` runs under. `null` is a role whose field
