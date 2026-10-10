@@ -124,9 +124,8 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-      # Catalogs are gitignored build output; generate them so core's
-      # static catalog imports resolve before knip walks the graph.
-      - run: pnpm exec turbo run i18n:compile
+        with:
+          turbo-cache: "false"
       - run: pnpm knip
 
   migrations:

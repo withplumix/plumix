@@ -270,12 +270,9 @@ const config: KnipConfig = {
         // The documentation capture: same rig, run by the playwright CLI
         // under its own project rather than by an import.
         "screenshots/*.spec.ts",
-        // Lingui CLI config + compiled catalogs. `lingui.config.ts` is
-        // loaded by the `@lingui/cli` binary (extract/compile) — never
-        // imported. Compiled `.mjs` catalogs are loaded by `i18n-boot`
-        // via a template-literal dynamic import that knip can't follow.
+        // `lingui.config.ts` is loaded by the `@lingui/cli` binary
+        // (extract/compile) — never imported.
         "lingui.config.ts",
-        "locales/*.mjs",
         // Catalog-extractor mirror for `@plumix/core` chrome descriptors
         // (CORE_NAV_GROUPS + CORE_NAV_ITEMS). Exists so `lingui extract`
         // picks the ids into admin's `.po`; never imported at runtime.
@@ -307,7 +304,6 @@ const config: KnipConfig = {
         // (extract/compile) — never statically imported. Same pattern
         // as the `packages/admin` entry above.
         "lingui.config.ts",
-        "locales/*.mjs",
       ],
       // @plumix/runtime-cloudflare is consumed by the plugin's playground
       // (a sibling workspace), not by `src/`. Declared as a devDep so
@@ -323,15 +319,12 @@ const config: KnipConfig = {
     // imports knip can follow. The `./server` subpath is consumer-
     // facing (themes import server-only helpers from there); listed
     // so knip auto-discovery doesn't miss the subdir-index layout.
-    // Core's lingui config + compiled catalogs are loaded by the i18n
-    // pipeline and the self-referencing `./locales/*` subpath — knip
-    // can't see either consumer.
+    // Core's lingui config is loaded by the i18n pipeline, which knip
+    // can't see.
     "packages/core": {
-      entry: ["lingui.config.ts", "locales/*.mjs", ...coreExportEntries],
+      entry: ["lingui.config.ts", ...coreExportEntries],
     },
-    // The editor's lingui config + compiled catalogs are loaded by the CLI
-    // and merged into admin's i18n at runtime (i18n-boot glob) — knip can't
-    // see either consumer.
+    // The editor's lingui config is loaded by the CLI, which knip can't see.
     "packages/admin-editor": {
       entry: [
         // The library API entry. Listed explicitly because adding vite.config.ts
@@ -339,7 +332,6 @@ const config: KnipConfig = {
         // build inputs, which otherwise drops the package.json `exports` entry.
         "src/index.ts",
         "lingui.config.ts",
-        "locales/*.mjs",
         // Visual e2e for the standalone editor playground. With the playwright
         // plugin off (below), list the config + specs so they aren't flagged;
         // the Vite playground entries (vite.config.ts, the HTML script modules)
@@ -359,7 +351,6 @@ const config: KnipConfig = {
         "e2e/globalSetup.ts",
         "e2e/*.spec.ts",
         "lingui.config.ts",
-        "locales/*.mjs",
       ],
       ignoreDependencies: [PLUGIN_LINGUI_CLI, "@plumix/runtime-cloudflare"],
       playwright: false,
@@ -376,7 +367,6 @@ const config: KnipConfig = {
         "e2e/globalSetup.ts",
         "e2e/*.spec.ts",
         "lingui.config.ts",
-        "locales/*.mjs",
       ],
       ignoreDependencies: [PLUGIN_LINGUI_CLI, "@plumix/runtime-cloudflare"],
       playwright: false,
@@ -390,7 +380,6 @@ const config: KnipConfig = {
         "e2e/globalSetup.ts",
         "e2e/*.spec.ts",
         "lingui.config.ts",
-        "locales/*.mjs",
       ],
       ignoreDependencies: [PLUGIN_LINGUI_CLI, "@plumix/runtime-cloudflare"],
       playwright: false,
@@ -405,7 +394,6 @@ const config: KnipConfig = {
         "e2e/globalSetup.ts",
         "e2e/*.spec.ts",
         "lingui.config.ts",
-        "locales/*.mjs",
       ],
       // Playground-only devDeps; see packages/plugins/media above. Blog is
       // here because the playground needs an entry type to hang a box off.
@@ -425,7 +413,6 @@ const config: KnipConfig = {
         "e2e/globalSetup.ts",
         "e2e/*.spec.ts",
         "lingui.config.ts",
-        "locales/*.mjs",
       ],
       ignoreDependencies: [PLUGIN_LINGUI_CLI, "@plumix/runtime-cloudflare"],
       // See packages/admin above for why the playwright plugin is off.
@@ -444,7 +431,6 @@ const config: KnipConfig = {
         "e2e/globalSetup.ts",
         "e2e/*.spec.ts",
         "lingui.config.ts",
-        "locales/*.mjs",
       ],
       // Playground-only devDeps; see packages/plugins/media above. Blog is
       // here because the playground needs an entry type to hang a card off.
@@ -470,7 +456,6 @@ const config: KnipConfig = {
         "e2e/globalSetup.ts",
         "e2e/*.spec.ts",
         "lingui.config.ts",
-        "locales/*.mjs",
       ],
       // Playground-only devDeps; see packages/plugins/media above. Pages
       // is here because the playground composes it for the `page` entry
@@ -495,7 +480,6 @@ const config: KnipConfig = {
         "e2e/globalSetup.ts",
         "e2e/*.spec.ts",
         "lingui.config.ts",
-        "locales/*.mjs",
       ],
       // Playground-only devDeps; see packages/plugins/media above. Blog is
       // here because this is the one playground that composes a second
