@@ -16,9 +16,8 @@ export type RequestHandler = (
 
 export interface BridgeOptions extends RequestTrustOptions {
   /**
-   * Bytes a request body may carry, 1 GiB by default. Enforced as the body
-   * streams, so an oversized upload fails when the handler consumes it rather
-   * than after the process has buffered it.
+   * 1 GiB by default. Enforced as the body streams, so an oversized upload
+   * fails before it is buffered.
    */
   readonly bodySizeLimit?: number;
 }
@@ -47,9 +46,8 @@ function requestHeaders(req: IncomingMessage): Headers {
 }
 
 /**
- * The URL and client address the shared trust rules decide for a request.
- * Throws on a path fetch could not route, and on a `Host` a URL cannot carry;
- * the listener answers 400.
+ * Throws on a path fetch could not route or a `Host` a URL cannot carry; the
+ * listener answers 400.
  */
 export function trustedRequest(
   req: IncomingMessage,
@@ -76,12 +74,8 @@ export function trustedRequest(
   );
 }
 
-/**
- * The request body as a stream the handler pulls, counted against the limit
- * as it arrives. Whatever the handler leaves unread is drained once the
- * response is out: Node dumps an unconsumed body itself, but not one a reader
- * started on, and the next request on a keep-alive connection sits behind it.
- */
+// Unread body is drained after the response: Node dumps an unconsumed body but
+// not a started one, which blocks the next keep-alive request.
 function requestBody(
   req: IncomingMessage,
   res: ServerResponse,
@@ -125,10 +119,8 @@ function requestBody(
   return stream;
 }
 
-// Tied to the socket rather than the response: `res` emits `close` after a
-// normal finish too, while a socket closing mid-request is the client gone.
-// The listener comes off on finish so a keep-alive connection serving many
-// requests does not collect one per request.
+// On the socket, not `res`, which emits `close` after a normal finish too.
+// Removed on finish so keep-alive connections don't accumulate listeners.
 function abortOnDisconnect(
   req: IncomingMessage,
   res: ServerResponse,
@@ -175,7 +167,10 @@ function responseHeaders(
   return headers;
 }
 
-/** Write a `Response` to the wire; `pipeline` cancels its body if the client leaves. */
+/**
+ * Write a `Response` to the wire; `pipeline` cancels its body if the client
+ * leaves.
+ */
 export async function writeResponse(
   response: Response,
   req: IncomingMessage,

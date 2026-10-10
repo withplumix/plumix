@@ -31,12 +31,7 @@ interface Held {
   readonly headers: Readonly<Record<string, string>>;
 }
 
-/**
- * The file a URL path names under the root, or `null` when the layer does not
- * hold it. The shared rules decide what a path may name; the disk decides
- * whether it is a file, so a directory without its trailing slash is refused
- * here.
- */
+// A directory without its trailing slash is refused here.
 async function locate(root: string, pathname: string): Promise<Held | null> {
   const asset = resolveAssetPath(root, pathname);
   if (asset === null) return null;

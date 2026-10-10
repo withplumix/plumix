@@ -1,19 +1,6 @@
-// Drizzle 0.45 ships no `node:sqlite` driver. Its 1.0 line does —
-// `drizzle-orm/node-sqlite` — and replaces this file on that upgrade, which
-// will need the `traceDbQuerySync` wrap below re-homed onto it. Until
-// then, a client shaped like better-sqlite3's carries `node:sqlite` into
-// drizzle's public better-sqlite3 session: `prepare` and the four statement
-// members the session calls, nothing more. No `transaction`: core never calls
-// `db.transaction`, and the migrator runs raw BEGIN/COMMIT.
-//
-// Nothing here is checked against drizzle's types — its session imports them
-// from `better-sqlite3`, which is not installed, so they collapse to `any`.
-// The contract is pinned by this package's tests, which reach every branch
-// of drizzle's prepared query. Column-mapped values arrive as 0/1 and
-// numbers; a boolean or Date interpolated into a raw `sql` template arrives
-// untouched, and `node:sqlite` binds neither: a boolean throws, and a
-// leading Date is taken for the named-parameter object, so the positional
-// values shift left and the last `?` binds NULL.
+// Drizzle 0.45 ships no `node:sqlite` driver; 1.0's `drizzle-orm/node-sqlite`
+// replaces this file. Drizzle's types collapse to `any` here, so this package's
+// tests pin the contract.
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -70,25 +57,18 @@ const bind = (params: BindValue[]): SQLInputValue[] =>
     return value;
   });
 
-// Row counts as the libsql wrap reports them: rows returned for a read, rows
-// affected for a write. The two diverge on a `db.run` of a select — SQLite
-// leaves `changes` at 0 where libsql falls back to the row count — which no
-// call site does today, every `db.run` in the repo being DDL or a write.
+// SQLite leaves `changes` at 0 for a `db.run` of a select, where libsql reports
+// the row count.
 const rowsReturned = (rows: readonly unknown[]): number => rows.length;
 const rowOrNone = (row: unknown): number => (row === undefined ? 0 : 1);
 const rowsChanged = (result: StatementResultingChanges): number =>
   Number(result.changes);
 
-// Every statement drizzle's session issues lands on one of the members below,
-// so this is where the shim earns its query spans. `database.exec` — the boot
-// PRAGMAs and the migrator's raw BEGIN/COMMIT — stays outside, as it does for
-// every other adapter's request-scoped bar. Spans carry the params as the
-// caller bound them, not as `bind` coerced them: that is what the libsql wrap
-// records, and a Date reads better than its epoch value in the debug bar.
+// `database.exec` stays untraced, as for every other adapter. Spans carry
+// params as bound by the caller, not as `bind` coerced them.
 function statement(stmt: StatementSync, sql: string): NodeSqliteStatement {
-  // Array mode is sticky on the shared statement, so each read sets it before
-  // running. That flip belongs to the read rather than the query, hence its
-  // place outside the timed closure.
+  // Array mode is sticky on the shared statement, so each read sets it, outside
+  // the timed closure.
   const allRows = (asArrays: boolean) => (params: BindValue[]) => {
     stmt.setReturnArrays(asArrays);
     return traceDbQuerySync(
