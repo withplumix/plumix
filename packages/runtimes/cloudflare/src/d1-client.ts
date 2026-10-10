@@ -1,12 +1,6 @@
-// D1 differs from the other SQLite drivers in two places the database
-// contract holds every adapter to, and this wrapper closes both:
-//
-// - `meta.changes` counts the rows a trigger wrote, so a one-row `UPDATE` of
-//   an entry reports 2 once its change-feed trigger fires. SQL's `changes()`
-//   counts only the statement's own rows, and read in the same batch — one
-//   transaction on one connection — nothing else can write in between.
-// - A Date bound as a parameter is refused ("Type 'object' not supported").
-//   It binds as epoch milliseconds instead, as libsql's `valueToSql` does.
+// D1's `meta.changes` counts trigger-written rows, so SQL's `changes()` is read
+// in the same batch. D1 refuses a bound Date, so it binds as epoch
+// milliseconds.
 
 import { D1Error } from "./errors.js";
 
@@ -73,11 +67,7 @@ function wrapStatement(
   return wrapped;
 }
 
-/**
- * Wraps a D1 binding (or session) so the statements drizzle runs through it
- * report exact row counts and bind a Date. Non-mutating, like the tracer that
- * wraps it in turn: the binding is isolate-shared.
- */
+/** Non-mutating: the binding is isolate-shared. */
 export function d1Client<T extends D1QueryTarget>(target: T): T {
   const wrapper: D1QueryTarget = {
     prepare: (sql) => wrapStatement(target, target.prepare(sql)),

@@ -5,33 +5,22 @@ import { readEnvString } from "./read-env.js";
 
 export interface ImagesConfig {
   /**
-   * Hostname of a Cloudflare zone that has Image Transformations enabled
-   * and serves your bucket (typically R2 fronted by a custom domain).
-   * No protocol or path — just the host: `"media.example.com"`.
-   *
-   * Optional: when omitted, the zone is resolved at request time from the
-   * `MEDIA_PUBLIC_URL_BASE` env key, so a bare `images()` no-ops until that
-   * host is attached. This assumes the storage binding is named `MEDIA`; a
-   * differently-named bucket won't pair automatically.
+   * Host only: `"media.example.com"`. Omitted, it resolves from
+   * `MEDIA_PUBLIC_URL_BASE` at request time, assuming the storage binding is
+   * named `MEDIA`.
    */
   readonly zone?: string;
 }
 
 /**
- * Cloudflare Image Transformations URL builder. Pairs with `r2(...)` to
- * resize / format-convert images on the fly via `/cdn-cgi/image/<opts>/<src>`.
- *
- * Note: this is *Image Transformations* (cheap on-the-fly resizer over R2),
- * not the separate *Cloudflare Images* ingestion product. The zone must
- * already have Image Transformations enabled in the dashboard.
+ * Image Transformations, not the Cloudflare Images product; the zone must have
+ * it enabled.
  *
  * @example
- * ```ts
- * plumix({
+ * ```ts plumix({
  *   storage: r2({ binding: "MEDIA", publicUrlBase: "https://media.example.com" }),
  *   imageDelivery: images({ zone: "media.example.com" }),
- * });
- * ```
+ * }); ```
  */
 export function images(config: ImagesConfig = {}): ImageDelivery {
   const rawZone = config.zone;
@@ -59,9 +48,8 @@ export function images(config: ImagesConfig = {}): ImageDelivery {
 }
 
 function resolveSource(sourceUrl: string, zonePrefix: string): string {
-  // Same-zone absolute URL — strip host so the transform points at the path
-  // on the bucket. External URLs pass through verbatim and are only resolved
-  // by the CDN if the zone allows external sources (off by default).
+  // External URLs pass through and resolve only if the zone allows external
+  // sources (off by default).
   if (sourceUrl.startsWith(zonePrefix))
     return sourceUrl.slice(zonePrefix.length);
   if (sourceUrl.startsWith("/")) return sourceUrl.slice(1);

@@ -17,16 +17,8 @@ export interface DemoPresetConfig {
 }
 
 /**
- * The demo sandbox as a single opt-in. Spread into a config's top level to
- * swap in the per-session Durable Object database, the synthetic-admin
- * authenticator, and the demo runtime wrapper. All three move together so a
- * deploy can't half-configure the demo (e.g. fake admin without the DO).
- *
- * Real auth flows are blocked in demo mode and the authenticator owns who the
- * user is, so the passkey config is a placeholder — except its `origin`, which
- * is also the site origin every absolute URL (canonical, og:url) is built from.
- * It reads `PUBLIC_ORIGIN`, which the demo runtime fills with the request's own
- * origin when the deploy sets none.
+ * All three pieces move together so a deploy can't half-configure the demo.
+ * The passkey `origin` is real: it reads `PUBLIC_ORIGIN` for absolute URLs.
  */
 export function demoPreset(config: DemoPresetConfig) {
   const { binding, loadSql, turnstile } = config;

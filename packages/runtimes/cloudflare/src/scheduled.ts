@@ -3,12 +3,8 @@ import type { ScheduledRunReport } from "plumix";
 import { ScheduledRunError } from "./errors.js";
 
 /**
- * What this needs of the Workers `ScheduledController` — the object the entry
- * receives as `scheduled`'s first argument.
- *
- * Named structurally rather than taken as `ScheduledController` so the public
- * declaration does not depend on `@cloudflare/workers-types` being configured
- * in the consumer that reads it.
+ * Structural rather than `ScheduledController`, so the declaration doesn't need
+ * `@cloudflare/workers-types`.
  */
 export interface ScheduledFiring {
   /** The schedule Cloudflare fired, as written in `triggers.crons`. */
@@ -18,27 +14,9 @@ export interface ScheduledFiring {
 }
 
 /**
- * Mark the Worker invocation failed when the firing did not do its job.
- *
- * Core reports rather than throws, for the reasons {@link ScheduledRunReport}
- * gives, which leaves the invocation's own outcome — the Cron Trigger Past
- * Events table, Workers analytics, and anything alerting on them — saying a
- * firing where everything failed went fine. Throwing here corrects that.
- *
- * Any failed task fails the firing, not only a firing where all of them failed:
- * `plumix cron run` already exits non-zero over one, and two runtimes
- * disagreeing about what a failed firing is costs more than either rule.
- *
- * Whether Cloudflare may replay the firing turns on `ran`. Workers replays the
- * whole handler, not the tasks that failed, and nothing here deduplicates that:
- * the run guard is a Node and CLI concern. So a firing that got no work done
- * keeps its retry, which is the transient case a retry is for. An aborted run
- * reports `ran: 0` by construction, so the check below reaches `noRetry` only
- * for a run whose tasks did work and then failed.
- *
- * Deferred work is unaffected either way: the purges and telemetry core hands
- * to `waitUntil` still settle after an uncaught throw here — verified against
- * workerd, whose cron invocation records the error and delivers them both.
+ * Any failed task fails the firing, matching `plumix cron run`. Only a firing
+ * that did no work keeps Cloudflare's retry, since Workers replays the whole
+ * handler.
  */
 export function surfaceScheduledFailure(
   report: ScheduledRunReport | void,

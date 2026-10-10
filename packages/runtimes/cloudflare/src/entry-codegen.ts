@@ -7,25 +7,19 @@ export function generateEntry({ configModule }: EntrySourceOptions): string {
     "// Regenerated from plumix.config.ts on each build.",
     "",
     'import { buildApp, createRuntimeHandler, renderDevBootErrorResponse } from "plumix/runtime";',
-    // The rule that decides whether a firing failed the invocation, and
-    // whether Workers may replay it. Imported rather than spelled out: this
-    // entry is a string literal, so anything written here is unreachable to
-    // the compiler, the linter and every test (#2320).
+    // Imported rather than spelled out: string-literal code is unreachable to
+    // the compiler, linter and tests.
     'import { surfaceScheduledFailure } from "@plumix/runtime-cloudflare";',
-    // The plumix Vite plugin resolves this virtual module — in dev it's
-    // `{}`; in build it's the parsed `.vite/manifest.json` Vite emitted
-    // for the client environment. The SSR renderer reads it to inject
-    // hashed `<link rel="stylesheet">` tags after the theme's `link[]`.
+    // `{}` in dev; in build, the client environment's parsed
+    // `.vite/manifest.json`.
     'import assetManifest from "virtual:plumix/asset-manifest";',
     // Each plugin's compiled catalogs by locale, lazy-imported, so SSR block
     // renders resolve plugin strings for the request locale.
     'import pluginCatalogs from "virtual:plumix/plugin-catalogs";',
     `import config from ${JSON.stringify(configModule)};`,
     "",
-    // Re-export named worker-level exports (e.g. Durable Object classes)
-    // that config slots contribute. The plumix Vite plugin resolves this
-    // virtual module from `runtime.workerExports`; it's an empty module
-    // when nothing is contributed, so this line is inert for most sites.
+    // Empty when no config slot contributes a worker export, such as a Durable
+    // Object class.
     'export * from "virtual:plumix/worker-exports";',
     "",
     // buildApp derives its dev object from `process.env.PLUMIX_DEV` (the
@@ -47,12 +41,8 @@ export function generateEntry({ configModule }: EntrySourceOptions): string {
     "    try {",
     "      app = await appPromise;",
     "    } catch (bootError) {",
-    // Dev-only: app construction failed (invalid theme registration, plugin
-    // setup error, …). Serve the dev error page — with the typed error's hint —
-    // for every request instead of an opaque crash. The gate is statically
-    // false in prod, so this collapses to `throw bootError;` and the branch (and
-    // the imported renderer) tree-shake out — production's boot path is
-    // unchanged (#1601).
+    // Statically false in production, so this collapses to `throw bootError;`
+    // and the renderer tree-shakes out.
     "      if (process.env.PLUMIX_DEV) {",
     "        return renderDevBootErrorResponse(bootError);",
     "      }",

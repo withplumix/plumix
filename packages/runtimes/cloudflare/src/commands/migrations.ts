@@ -57,9 +57,8 @@ function chooseBinding(
   return { config, entry };
 }
 
-// A config holding only the binding to migrate, so the proxy starts nothing
-// else the site declares; marked `remote` for `--remote`, which is how
-// wrangler's remote bindings reach the deployed database.
+// Only the binding to migrate, so the proxy starts nothing else; `remote` is
+// how wrangler reaches the deployed database.
 function proxyOptions(
   cwd: string,
   configDir: string,

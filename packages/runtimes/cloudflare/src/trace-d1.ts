@@ -53,14 +53,8 @@ interface D1QueryTarget {
 }
 
 /**
- * Wraps a D1 binding (or session) so every statement drizzle prepares runs
- * through {@link traceDbQuery} / {@link traceDbBatch} — one timed `db: <kind>`
- * span per query with sql/params/rows attributes, including the begin/commit
- * statements of drizzle's emulated transactions. Non-mutating (the env-owned
- * binding is isolate-shared): returns a fresh wrapper exposing the two members
- * drizzle's d1 session calls. Without an active collector every span is a no-op.
- * D1 access that bypasses `ctx.db` (e.g. a raw `env` binding) is an untraced
- * platform boundary.
+ * Non-mutating: the binding is isolate-shared. D1 access bypassing `ctx.db` is
+ * untraced.
  */
 export function traceD1Client<T extends D1QueryTarget>(target: T): T {
   const wrapper: D1QueryTarget = {

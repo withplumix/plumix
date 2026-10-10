@@ -10,11 +10,7 @@ import { registerCloudflareErrorHints } from "./dev-hints.js";
 import { generateEntry } from "./entry-codegen.js";
 import { PlumixRuntimeConfigError } from "./errors.js";
 
-// Cloudflare Workers Assets exposes a Fetcher on env.ASSETS when the
-// wrangler config declares `assets.binding: "ASSETS"`. Consumers using a
-// different binding name here get no admin serving — the core dispatcher
-// falls back to `admin-not-available` for /_plumix/admin/*. Convention
-// over config; `ASSETS` is what `apps/demo/wrangler.jsonc` ships.
+// Convention over config: a binding not named `ASSETS` gets no admin serving.
 function readAssetsBinding(env: PlumixEnv): AssetsBinding | undefined {
   const candidate = (env as { readonly ASSETS?: unknown }).ASSETS;
   if (
@@ -34,17 +30,15 @@ const handler: RuntimeHandlerSpec = {
   assets: readAssetsBinding,
   clientAddress: readClientAddress,
   prepare: (hooks) => {
-    // Defense in depth: the `node:async_hooks` import above already fails at
-    // module-load time without `nodejs_compat`, but if the runtime ships a
-    // stubbed symbol (some edge-runtime shims do) the cryptic error bubbles up
-    // from the first AsyncLocalStorage.run() call. Fail fast with a useful hint.
+    // Some edge-runtime shims stub the symbol, which would fail cryptically at
+    // the first `run()`.
     if (typeof AsyncLocalStorage !== "function") {
       throw PlumixRuntimeConfigError.asyncLocalStorageMissing();
     }
 
     // Mirrors core's own `PLUMIX_DEV` gate around `registerCoreErrorHints` —
-    // Vite-substituted at bundle time, so this and `registerCloudflareErrorHints`
-    // tree-shake out of a production build.
+    // Vite-substituted at bundle time, so this and
+    // `registerCloudflareErrorHints` tree-shake out of a production build.
     if (process.env.PLUMIX_DEV) {
       registerCloudflareErrorHints(hooks);
     }
@@ -52,13 +46,9 @@ const handler: RuntimeHandlerSpec = {
 };
 
 /**
- * Build the Cloudflare runtime adapter.
- *
  * @remarks
- * Requires the `nodejs_compat` compatibility flag in `wrangler.toml` — Plumix's
- * request-scoped context is backed by `node:async_hooks.AsyncLocalStorage`.
- * Without the flag the bundle fails to load with a cryptic
- * `module not found: node:async_hooks` error at first request.
+ * Requires the `nodejs_compat` compatibility flag; without it the bundle fails
+ * at first request with `module not found: node:async_hooks`.
  *
  * @example
  * ```toml
@@ -75,17 +65,8 @@ export function cloudflare(): RuntimeAdapter {
   };
 }
 
-/**
- * The client address Cloudflare's edge puts on every request it forwards. It is
- * the one forwarding header a Worker may trust: the edge overwrites it, so a
- * visitor who sets their own is not believed. `x-forwarded-for` gets no such
- * treatment and is never read.
- *
- * This wins over an address the caller put on the invocation, absent header
- * included. On Cloudflare the edge is the only authority on where a request
- * came from, and honouring a caller's value would reopen the injection path
- * reading the header here exists to close.
- */
+// The edge overwrites this header, so it wins over a caller-supplied address,
+// absent header included. `x-forwarded-for` is forgeable and never read.
 function readClientAddress(request: Request): string | undefined {
   return request.headers.get("cf-connecting-ip") ?? undefined;
 }

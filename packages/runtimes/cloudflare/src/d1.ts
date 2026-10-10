@@ -21,14 +21,9 @@ type D1SessionMode = "disabled" | "auto" | "primary-first";
 export interface D1Config {
   readonly binding: string;
   /**
-   * D1 Sessions API mode for read replication:
-   * - "disabled" (default) — raw binding, no session wrapper. Strong
-   *   consistency; reads always hit the primary.
-   * - "auto" — writes go to primary; authenticated reads resume a prior
-   *   bookmark when the client sent one; anonymous reads use the nearest
-   *   replica (`first-unconstrained`).
-   * - "primary-first" — session-wrapped but defaults to `first-primary`.
-   *   Opt into Sessions-API semantics without nearest-replica routing.
+   * `"disabled"` (default) always reads the primary. `"auto"` routes anonymous
+   * reads to the nearest replica. `"primary-first"` wraps sessions but defaults
+   * to `first-primary`.
    */
   readonly session?: D1SessionMode;
   /** Bookmark cookie name. Default: `__plumix_d1_bookmark`. */
@@ -39,10 +34,8 @@ export interface D1DatabaseAdapter extends DatabaseAdapter {
   readonly config: D1Config;
 }
 
-// A response the `cdn:` provider stamped on the way out: it declares a
-// freshness a shared cache may act on. `responseAllowsSharedStorage` alone is
-// not the question — it is true of a response that declared nothing at all,
-// and a bookmark must not ride out on one of those.
+// `responseAllowsSharedStorage` alone is true of a response that declared
+// nothing, and a bookmark must not ride out on one.
 function isSharedCacheable(response: Response): boolean {
   return (
     response.headers.has("cache-control") &&
@@ -82,11 +75,8 @@ function connectRequestScoped(
       ? "first-primary"
       : "first-unconstrained";
 
-  // Any write — authenticated or not — must hit primary; we don't want a
-  // write plus a follow-up read racing across replicas. Authenticated reads
-  // resume from a prior bookmark when one is present and well-formed.
-  // Everything else (anonymous reads — the whole point of read replicas)
-  // uses the configured default.
+  // Writes hit the primary so a write and follow-up read can't race across
+  // replicas.
   let constraint: string = defaultConstraint;
   if (args.isWrite) {
     constraint = "first-primary";
@@ -122,13 +112,8 @@ function connectRequestScoped(
       // Guards against Set-Cookie injection if D1 ever surfaces a bookmark
       // containing `;`, CR/LF, or other header-separator chars.
       if (!newBookmark || !isValidBookmark(newBookmark)) return response;
-      // `commit` runs after the dispatcher, so a public page has already been
-      // stamped shared-cacheable by the `cdn:` provider. Appending a
-      // per-visitor cookie there would invite the CDN to hold one reader's
-      // bookmark and hand it to everyone — and the bookmark is only ever an
-      // optimisation, so the shared page keeps its cacheability instead. A
-      // policy that grants `anonymous` to a signed-in visitor is exactly the
-      // shape that reaches here with both.
+      // A shared-cacheable page must not carry a per-visitor cookie the CDN
+      // would hand to everyone; the bookmark is only an optimisation.
       if (isSharedCacheable(response)) return response;
       const next = new Response(response.body, response);
       next.headers.append(

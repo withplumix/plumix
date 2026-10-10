@@ -6,29 +6,25 @@ import { ExternalIdentityError, resolveExternalIdentity } from "plumix/auth";
 
 import { CfAccessError } from "./errors.js";
 
-// Header CF Access sets on every request that passed the application's
-// policy. Documented in `https://developers.cloudflare.com/cloudflare-one/identity/authorization-cookie/application-token/`.
+// Header CF Access sets on every request that passed the application's policy.
+// Documented in
+// `https://developers.cloudflare.com/cloudflare-one/identity/authorization-cookie/application-token/`.
 const CF_ACCESS_HEADER = "cf-access-jwt-assertion";
 
 // Cookie CF Access sets host-wide after login, carrying the same signed
-// application token. Paths the Access application doesn't cover get no
-// header, but still carry this cookie. Documented in
+// application token. Paths the Access application doesn't cover get no header,
+// but still carry this cookie. Documented in
 // `https://developers.cloudflare.com/cloudflare-one/identity/authorization-cookie/`.
 const CF_ACCESS_COOKIE = "CF_Authorization";
 
 // CF's logout endpoint clears both the global session cookie and the
-// per-application session. The plumix logout handler should redirect
-// here when the cfAccess() guard is in use; documented in
+// per-application session. The plumix logout handler should redirect here when
+// the cfAccess() guard is in use; documented in
 // `https://developers.cloudflare.com/cloudflare-one/identity/users/session-management/`.
 const CF_ACCESS_LOGOUT_PATH = "/cdn-cgi/access/logout";
 
-// `<team-name>.cloudflareaccess.com` — CF Access only issues team
-// domains under this suffix. Validating the suffix at boot fails fast
-// on typos like `https://team.cloudflareaccess.com` (would produce
-// `https://https://...` after concatenation) or `team.com` (probably
-// the operator's own domain mistakenly pasted instead of the team
-// domain). Custom CNAME team domains aren't supported by CF Access,
-// so the suffix check doesn't false-reject valid setups.
+// CF Access issues team domains only under this suffix, so the check catches
+// pasted URLs or the operator's own domain without rejecting valid setups.
 const CF_TEAM_DOMAIN_RE = /^[a-z0-9-]+\.cloudflareaccess\.com$/;
 
 export interface CfAccessConfig {
@@ -39,94 +35,26 @@ export interface CfAccessConfig {
    */
   readonly teamDomain: string;
   /**
-   * The CF Access application's AUD tag, or a list of them. Found on the
-   * application's Overview page in the CF Access dashboard. Validated
-   * against the JWT's `aud` claim — without this check, a JWT issued for
-   * a *different* app on the same team domain would be accepted. Pass a
-   * list when hostnames (preview, production) sit under separate Access
-   * applications; a JWT matching any entry is accepted.
+   * Checked against the JWT's `aud`, or a JWT for another app on the same team
+   * would pass. A list accepts any entry, for separate preview/production apps.
    */
   readonly audience: string | readonly string[];
   /**
-   * Role for users provisioned via CF Access. The CF Access JWT carries
-   * email + idp claims, but no plumix role — operators decide here. To
-   * differentiate further (e.g. one IdP group → admin, another →
-   * editor), wrap `cfAccess()` and inspect the JWT yourself. Required.
+   * The CF Access JWT carries no plumix role; wrap `cfAccess()` to map IdP
+   * groups to roles.
    */
   readonly defaultRole: UserRole;
   /**
-   * When true, the very first user authenticated via CF Access becomes
-   * admin (atomic CASE-WHEN-COUNT in `provisionUser`). Default false.
-   *
-   * This flag is *independent* of `auth.bootstrapVia` — the latter
-   * gates plumix's built-in flows (passkey/oauth/magic-link), this one
-   * gates the CF Access guard. To open both paths to the first-admin
-   * election, set `auth.bootstrapVia: 'first-method-wins'` AND pass
-   * `bootstrapAllowed: true` here. To keep CF Access as the *only*
-   * bootstrap path (block built-in flows entirely), leave
-   * `bootstrapVia` at its default and set this to true.
+   * Makes the first CF Access user admin. Independent of `auth.bootstrapVia`,
+   * which gates only the built-in flows. Default false.
    */
   readonly bootstrapAllowed?: boolean;
 }
 
 /**
- * Cloudflare Access authenticator — validates the
- * `Cf-Access-Jwt-Assertion` header against the team's JWKS, maps the
- * `email` claim to a plumix user, and provisions on first sight.
- *
- * Returns a `RequestAuthenticator` for `auth.authenticator:` in the
- * plumix config. Pair with `auth.bootstrapVia: 'first-method-wins'`
- * if CF Access is the bootstrap path; otherwise the first-admin still
- * has to enrol via passkey before CF Access starts working.
- *
- *   import { cfAccess } from "@plumix/runtime-cloudflare";
- *
- *   plumix({
- *     auth: auth({
- *       passkey: { ... },
- *       authenticator: cfAccess({
- *         teamDomain: "yourteam.cloudflareaccess.com",
- *         audience: env.CF_ACCESS_AUD,
- *         defaultRole: "editor",
- *       }),
- *       bootstrapVia: "first-method-wins",
- *     }),
- *     ...
- *   });
- *
- * `jose`'s `createRemoteJWKSet` caches the keys per isolate so the
- * JWKS round-trip happens once per cold start, not per request.
- *
- * Two operator-config notes:
- *
- *   - `allowed_domains` is *bypassed*. CF Access is the gate — its IdP
- *     policy decides who reaches plumix, and `allowedDomainsGate:
- *     false` is forwarded to `resolveExternalIdentity`. If an operator
- *     wants per-domain role decisions on top of CF Access, wrap this
- *     factory and inspect the JWT yourself.
- *
- *   - The IdP-group → role mapping is your problem. The CF Access JWT
- *     carries the user's email and the IdP claims, but no plumix role.
- *     `defaultRole` is a single operator decision applied to every CF-
- *     Access-authenticated signup; for "Admins group → admin, others →
- *     editor", clone this implementation and inspect the JWT payload
- *     before calling `resolveExternalIdentity`.
- *
- * The authenticator returns `null` when:
- *   - the header is missing (the request didn't traverse CF Access)
- *   - the JWT is malformed, expired, or signed by an unknown key
- *   - the email claim is missing or empty
- *   - the inferred user is disabled
- *
- * `null` means "no auth" to the dispatcher, which serves the standard
- * not-authenticated response. We deliberately don't 401 inside the
- * authenticator: the dispatcher already maps `null` → 401 for protected
- * routes and `null` → anonymous for public routes.
- *
- * Throws at config time if `teamDomain` or `audience` are malformed —
- * preferable to silently producing a guard that accepts every JWT
- * (empty audience disables jose's audience-equality check) or that
- * fetches JWKS from a misshapen URL.
+ * Bypasses `allowed_domains`: the Access policy is the gate. Returns `null`
+ * rather than 401 on any failed check. Throws at config time on a malformed
+ * `teamDomain` or empty `audience`.
  */
 export function cfAccess(config: CfAccessConfig): RequestAuthenticator {
   validateConfig(config);
@@ -134,15 +62,15 @@ export function cfAccess(config: CfAccessConfig): RequestAuthenticator {
   const audience = [config.audience].flat();
   const jwks = createRemoteJWKSet(new URL(`/cdn-cgi/access/certs`, issuer));
   return {
-    // Only a request that carries an Access credential signed in through
-    // Access, so only it is sent to the Access logout. Chained after the
-    // default authenticator, members keep their own sign-out.
+    // Only a request signed in through Access goes to the Access logout;
+    // members keep their own.
     signOutUrl(request: Request): string | null {
       return readAccessToken(request) === null
         ? null
         : cfAccessLogoutUrl(config.teamDomain);
     },
-    // CF Access identity rides its own header or cookie, not the session cookie.
+    // CF Access identity rides its own header or cookie, not the session
+    // cookie.
     hasSession(request: Request): boolean {
       return readAccessToken(request) !== null;
     },
@@ -167,10 +95,8 @@ export function cfAccess(config: CfAccessConfig): RequestAuthenticator {
       try {
         const { user } = await resolveExternalIdentity(db, {
           email,
-          // CF Access only forwards the JWT once the IdP returned a
-          // verified email, so the verified-email gate is implicitly
-          // satisfied. Hard-code true so the helper's emailVerified
-          // check is never the failure path here.
+          // CF Access forwards the JWT only after the IdP returned a verified
+          // email.
           emailVerified: true,
           // CF Access is the gate — the allowed_domains lookup is
           // irrelevant. Operator-supplied defaultRole decides the role.
@@ -200,11 +126,8 @@ function validateConfig(config: CfAccessConfig): void {
   if (!CF_TEAM_DOMAIN_RE.test(config.teamDomain)) {
     throw CfAccessError.invalidTeamDomain({ teamDomain: config.teamDomain });
   }
-  // Empty audience silently disables jose's audience equality check
-  // (truthy guard at jwt_claims_set.js): every JWT for the team domain
-  // would be accepted, including ones issued for adjacent CF Access
-  // applications. Fail-fast on missing config (e.g.
-  // `audience: env.CF_ACCESS_AUD ?? ""` after a missing binding).
+  // An empty audience silently disables jose's audience check, accepting any
+  // JWT for the team.
   const audiences = [config.audience].flat();
   if (audiences.length === 0 || audiences.some((aud) => aud.length === 0)) {
     throw CfAccessError.audienceEmpty();
@@ -212,22 +135,15 @@ function validateConfig(config: CfAccessConfig): void {
 }
 
 /**
- * Build the CF Access logout URL for a given team domain. Plumix's
- * logout handler should redirect here when `cfAccess()` is the
- * configured authenticator — without this, plumix can clear its own
- * cookie but the next request still carries the CF Access JWT and the
- * user is silently re-signed-in.
- *
- * Operators wire this into a route or use it directly in a logout
- * button's href.
+ * Redirect logout here when `cfAccess()` authenticates, or the next request
+ * still carries the CF Access JWT and silently signs the user back in.
  */
 export function cfAccessLogoutUrl(teamDomain: string): string {
   return `https://${teamDomain}${CF_ACCESS_LOGOUT_PATH}`;
 }
 
-// The header wins when present, even when it fails to verify: Cloudflare
-// prefers it because the cookie "is not guaranteed to be passed". The cookie
-// is only the credential on a request with no header.
+// The header wins even when invalid: Cloudflare says the cookie "is not
+// guaranteed to be passed".
 function readAccessToken(request: Request): string | null {
   return request.headers.get(CF_ACCESS_HEADER) ?? readCookie(request);
 }

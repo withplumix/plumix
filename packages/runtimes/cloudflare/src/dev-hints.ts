@@ -16,10 +16,8 @@ export interface ErrorHintHooks {
 }
 
 /**
- * Registers the Cloudflare-specific dev error hint through core's
- * `error_page:hints` filter. Kept out of core so a non-Cloudflare deploy
- * never sees `wrangler.jsonc` in an error page (#2166) — the wiring mirrors
- * `registerCoreErrorHints`, just from this runtime package instead.
+ * Kept out of core so a non-Cloudflare deploy never sees `wrangler.jsonc` in an
+ * error page.
  */
 export function registerCloudflareErrorHints(hooks: ErrorHintHooks): void {
   hooks.addFilter(
