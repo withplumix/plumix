@@ -1,22 +1,6 @@
-// Public `ctx.audit.log()` API. Exposed via the plugin's `provides()`
-// callback as a declaration-merge contribution to `AppContextExtensions`
-// — third-party plugins call `ctx.audit?.log(ctx, {...})` from RPC
-// handlers, route handlers, or hook listeners and the row joins the same
-// buffered flush that the internal entry/user/term/settings listeners use.
-//
-// The row is recorded against the context the caller hands over, never
-// the ambient one: the ambient context is built before authentication,
-// and an authenticated procedure or route runs on a signed-in copy that
-// never enters the request store (#2343). Taking an
-// `AuthenticatedAppContext` is also what enforces "no anonymous events in
-// the admin activity log" — a listener on a hook that can fire for a
-// visitor has to narrow on `ctx.user` before it can call this.
-//
-// Contract:
-//   - Returns void (not Promise<void>) so callers can't accidentally
-//     await the deferred storage write.
-//   - Multiple calls in one request batch into the same flush as the
-//     internal hook listeners (same WeakMap key, same `ctx.defer`).
+// Records against the caller's context, not the ambient one, which is built
+// before authentication. Returns void so callers can't await the deferred
+// write.
 
 import type { JsonObject } from "plumix";
 import type { AuthenticatedAppContext } from "plumix/plugin";

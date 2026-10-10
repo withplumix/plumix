@@ -26,9 +26,9 @@ const MAX_DIFF_PREVIEW_FIELDS = 3;
 // carries a sentinel that maps back to "" (no filter) on change.
 const ANY_VALUE = "__any__";
 
-// Descriptors that need runtime indirection — used outside JSX
-// (placeholder attribute, option labels, the load-failure copy). JSX-text strings stay inline at their `<Trans>` callsite for
-// extraction discoverability.
+// Descriptors that need runtime indirection — used outside JSX (placeholder
+// attribute, option labels, the load-failure copy). JSX-text strings stay
+// inline at their `<Trans>` callsite for extraction discoverability.
 const M = {
   loadFailed: {
     id: "plugin.auditLog.shell.loadFailed",
@@ -496,10 +496,6 @@ function DiffPreview({
 }
 
 function formatTimestamp(locale: string, iso: string): string {
-  // The list procedure serializes `occurredAt` to an ISO string. Delegate
-  // to plumix's locale-aware formatter so a German viewer sees German
-  // month abbreviations and a 24h clock automatically; falls back to the
-  // raw ISO on parse failure.
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
   return formatDate(locale, date, { dateStyle: "medium", timeStyle: "medium" });

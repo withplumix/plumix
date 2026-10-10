@@ -1,15 +1,3 @@
-// Hand-rolled oRPC router for the audit-log plugin. v0.1 ships
-// `auditLog.list` with filter + cursor pagination (slice #180).
-//
-// Filter semantics:
-// - All filter params optional, combinable.
-// - `cursor` is opaque base64 from a previous page's `nextCursor`.
-// - `limit` defaults to 50, clamps silently at 200 (values above don't
-//   error — admin pages frequently pass through user input that we
-//   don't want to surface as 4xx).
-// - Tampered cursors decode-fail in storage and surface as a typed
-//   `BAD_REQUEST` (`reason: "invalid_cursor"`), never a 5xx.
-
 import { authenticated, base, requireCapability } from "plumix/plugin";
 import * as v from "valibot";
 
@@ -23,6 +11,8 @@ import { CursorError } from "./server/cursor.js";
 const AUDIT_LOG_READ_CAPABILITY = "audit_log:read";
 
 const DEFAULT_LIMIT = 50;
+// Clamped silently, not rejected: admin pages pass user input through, and it
+// shouldn't surface as a 4xx.
 const MAX_LIMIT = 200;
 
 const listInputSchema = v.optional(
@@ -38,10 +28,6 @@ const listInputSchema = v.optional(
   }),
 );
 
-/**
- * A page row over the wire — the storage row with `occurredAt` serialized
- * to an ISO string.
- */
 type AuditLogRowDTO = Omit<AuditLogRow, "occurredAt"> & {
   readonly occurredAt: string;
 };

@@ -4,25 +4,10 @@ import { index, sqliteTable } from "drizzle-orm/sqlite-core";
 import type { AuditProperties } from "../types.js";
 
 /**
- * Activity-log row. Denormalized by design — every label that the
- * admin feed needs to render lives in the row itself, so the source
- * entity can be hard-deleted without losing the history. The audit
- * log is a time machine; resolving a stale id at read time would
- * defeat the purpose.
+ * Denormalized so the source entity can be hard-deleted without losing history.
  *
- * Columns:
- * - `event`         dotted action name (`entry:published`, `user:invited`, …)
- * - `subject_*`     the thing acted on; `subject_label` is the
- *                   human-friendly snapshot (entry title, user email).
- * - `actor_*`       who did it; `actor_id` is `null` for system / cron /
- *                   anonymous actions.
- * - `properties`    free-form JSON — currently `{ diff: { field: [old, new] } }`
- *                   for entry mutations; future events may add their own keys.
- *
- * Not JSON: the diff half of the envelope is built from entity columns and
- * still holds live `Date` values. `auditService` runs `JSON.stringify` over it
- * and drops the row when that throws — which proves it doesn't throw, not that
- * it round-trips: a `Date` coerces to a string and a `Map` to `{}`.
+ * Not JSON: the diff holds live `Date` values, which `JSON.stringify` coerces
+ * to strings rather than refusing.
  */
 export const auditLog = sqliteTable(
   "audit_log",

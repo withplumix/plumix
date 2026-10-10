@@ -1,14 +1,5 @@
-// Cursor codec for `auditLog.list` pagination. The cursor encodes the
-// (occurred_at, id) of the last row from the previous page so the next
-// query can resume on `(occurred_at, id) < (cursor.occurredAt, cursor.id)`.
-// Stable ordering even under concurrent writes because `id` is
-// monotonically increasing.
-//
-// On-wire form: base64url (no padding) of `${occurredAt}.${id}` — readable
-// enough to debug from the network tab without giving away anything
-// useful for tampering. A tampered or malformed cursor lands on the
-// `CursorError` branch in the RPC layer and surfaces as a typed
-// `INVALID_CURSOR` to the caller.
+// Resumes on `(occurred_at, id) < cursor`; `id` is monotonic, so ordering stays
+// stable under concurrent writes.
 
 import {
   decodeBase64urlIgnorePadding,
@@ -66,10 +57,8 @@ export function decodeCursor(encoded: string): CursorPosition {
   if (!Number.isInteger(occurredAt) || !Number.isInteger(id)) {
     throw CursorError.malformed();
   }
-  // Audit rows have positive auto-increment ids and non-negative
-  // occurredAt (unix epoch). A cursor outside that range is either
-  // tampering or an upstream bug — treat as malformed so the RPC
-  // returns a typed BAD_REQUEST instead of silently returning 0 rows.
+  // Out of range means tampering or a bug; malformed gives a typed BAD_REQUEST
+  // instead of silently returning 0 rows.
   if (occurredAt < 0 || id <= 0) {
     throw CursorError.malformed();
   }

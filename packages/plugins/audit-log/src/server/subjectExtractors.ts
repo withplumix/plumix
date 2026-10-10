@@ -40,10 +40,8 @@ const userExtractor: SubjectExtractor = (entity) => ({
   label: nonEmpty(entity.name) ?? nonEmpty(entity.email) ?? FALLBACK_LABEL,
 });
 
-// Slice 179 surface — per-subject extractors covering everything the
-// audit log subscribes to. Subjects that lack a human label (sessions,
-// device codes) deliberately resolve to `subject_id` via the
-// FALLBACK; the feed renders that as a numeric breadcrumb.
+// Subjects without a human label (sessions, device codes) resolve to
+// `subject_id` via the FALLBACK.
 const termExtractor: SubjectExtractor = (entity) => ({
   type: "term",
   id: String(entity.id),
@@ -80,10 +78,8 @@ const sessionExtractor: SubjectExtractor = (entity) => ({
 const deviceCodeExtractor: SubjectExtractor = (entity) => ({
   type: "device_code",
   id: String(entity.id),
-  // The device code's user-facing label is the user_code (8-letter
-  // grouping like `ABCD-WXYZ`). When provided via the input.title
-  // field by the listener (we map `userCode` → `title` at the call
-  // site), use it; else fall through.
+  // `title` carries the user_code (`ABCD-WXYZ`); the listener maps `userCode`
+  // onto it.
   label: nonEmpty(entity.title) ?? FALLBACK_LABEL,
 });
 

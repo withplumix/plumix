@@ -1,17 +1,5 @@
-// Declarative source of truth for what this plugin audits.
-//
-// Each row in `auditEvents` pairs a hook name with `subject` /
-// `actor` / `diff` / `extra` strategies; `registerAuditEvents` walks
-// the table and registers one `ctx.addAction(...)` listener per row.
-// Adding a new audit event means adding a row; the per-listener
-// boilerplate (resolve appCtx → resolve subject + actor → call
-// `service.record`) lives in one interpreter loop, not 28 closures.
-//
-// `assertRedactionInvariants` runs as a test against this table and
-// `SUBJECT_REQUIRED_REDACTIONS`, so any row that audits a subject
-// type carrying a known sensitive field (today: `user.passwordHash`)
-// must include that field in `diff.omit` or the test fails — drift
-// is caught at CI time, not in review.
+// A test runs `assertRedactionInvariants` over this table, so a row auditing a
+// subject with a sensitive field must list that field in `diff.omit`.
 
 import type { ActionArgs, ActionName, JsonObject } from "plumix";
 import type {
@@ -50,7 +38,7 @@ type SubjectStrategy =
   | {
       readonly kind: "extract";
       readonly type: string;
-      /** Optional payload → extractor-input transform. Defaults to identity. */
+      // Defaults to identity.
       readonly from?: (payload: never, context: never) => SubjectInput;
     }
   | {
@@ -66,7 +54,10 @@ type ActorStrategy =
   | { readonly kind: "ctx" }
   /** `context.actor` is a `User`-shaped object passed by the hook firer. */
   | { readonly kind: "context-actor" }
-  /** Payload itself is the user being acted on AND the actor (sign-in / sign-out / register — ctx.user is null at that point). */
+  /**
+   * Payload itself is the user being acted on AND the actor (sign-in / sign-out
+   * / register — ctx.user is null at that point).
+   */
   | { readonly kind: "self" }
   | {
       readonly kind: "custom";
@@ -89,7 +80,10 @@ export interface AuditEventDef {
   readonly event: ContextualAction;
   readonly subject: SubjectStrategy;
   readonly actor: ActorStrategy;
-  /** Diff the top-level columns of `payload` (next) vs. `context` (previous), omitting these keys. */
+  /**
+   * Diff the top-level columns of `payload` (next) vs. `context` (previous),
+   * omitting these keys.
+   */
   readonly diff?: { readonly omit: readonly string[] };
   /** Extra properties merged into the row's `properties` envelope. Every
    *  definition below already converts a `Date` by hand. */
@@ -221,11 +215,8 @@ function buildRow(
 // ──────────────────────────────────────────────────────────────────
 
 /**
- * Keys that MUST appear in every `diff.omit` for any row whose subject
- * is the given type. `passwordHash` is the canonical example — a
- * `user`-subject row that fails to omit it would leak the hash into
- * the audit table on every `user:updated`. New sensitive columns
- * gain a one-line entry here.
+ * Keys every `diff.omit` must include for a row of this subject type, or
+ * `user:updated` would leak `passwordHash` into the audit table.
  */
 export const SUBJECT_REQUIRED_REDACTIONS: Readonly<
   Record<string, readonly string[]>
@@ -234,10 +225,8 @@ export const SUBJECT_REQUIRED_REDACTIONS: Readonly<
 };
 
 /**
- * Throws if any row in `events` audits a subject type listed in
- * `required` and fails to include all of the required keys in
- * `diff.omit`. Runs as a test against the live table; the failure
- * names the offending event so the fix is obvious.
+ * Throws, naming the event, when a row's `diff.omit` misses a key `required`
+ * lists for its subject type.
  */
 export function assertRedactionInvariants(
   events: readonly AuditEventDef[],
@@ -371,10 +360,8 @@ export const auditEvents: readonly AuditEventDef[] = [
   {
     event: "user:invited",
     subject: { kind: "extract", type: "user" },
-    // The admin who initiated the invite is the actor. When the admin
-    // is also the request's ctx.user, prefer their email as the label;
-    // for CLI-initiated invites where ctx.user differs, fall back to
-    // id-as-string. SECURITY: `inviteToken` is never recorded.
+    // A CLI-initiated invite has no matching ctx.user, so the label falls back
+    // to the id. SECURITY: `inviteToken` is never recorded.
     actor: {
       kind: "custom",
       resolve: (
@@ -608,10 +595,8 @@ export const auditEvents: readonly AuditEventDef[] = [
   // ─── Settings surface ───
   {
     event: "settings:group_changed",
-    // SECURITY: settings values can carry secrets (SMTP password,
-    // OAuth client secret, API keys). Record only the changed key
-    // names — never the values — so the audit table doesn't become
-    // a credential mirror.
+    // SECURITY: settings values can carry secrets (SMTP password, API keys), so
+    // record only the changed key names.
     subject: {
       kind: "inline",
       type: "settings_group",

@@ -11,10 +11,8 @@ import type { NewAuditLogRow } from "./db/schema.js";
 export type AuditEntityRow = Record<string, unknown>;
 
 /**
- * The stored `properties` envelope: a diff over two {@link AuditEntityRow}s
- * plus whatever the event merged in. Not JSON on the way in, for the reason
- * given there — `auditService` runs `JSON.stringify` over it, which coerces a
- * `Date` to a string rather than refusing it. It reads back parsed.
+ * Not JSON: diffs {@link AuditEntityRow}s holding live `Date`s, which
+ * `JSON.stringify` coerces to strings rather than refusing. Reads back parsed.
  */
 export type AuditProperties = Record<string, unknown>;
 
@@ -31,7 +29,9 @@ export interface AuditLogRow {
 }
 
 export interface AuditLogQueryFilter {
-  /** Result cap. Defaults to 50; storage adapters clamp at their own ceiling. */
+  /**
+   * Result cap. Defaults to 50; storage adapters clamp at their own ceiling.
+   */
   readonly limit?: number;
   /** Restrict to rows whose `actor_id` matches. */
   readonly actorId?: number;
@@ -51,7 +51,9 @@ export interface AuditLogQueryFilter {
 
 export interface AuditLogQueryResult {
   readonly rows: readonly AuditLogRow[];
-  /** Opaque cursor for the next page; `null` when the current page is the last. */
+  /**
+   * Opaque cursor for the next page; `null` when the current page is the last.
+   */
   readonly nextCursor: string | null;
 }
 
@@ -70,12 +72,20 @@ export interface AuditLogStorage {
   readonly schema?: {
     /** Drizzle module runtime queries bind against. */
     readonly module: SchemaModule;
-    /** Specifier `plumix migrate` resolves to find the tables' migration history. */
+    /**
+     * Specifier `plumix migrate` resolves to find the tables' migration
+     * history.
+     */
     readonly specifier: string;
   };
-  /** Batch insert. The audit-log service buffers per-request and calls this once. */
+  /**
+   * Batch insert. The audit-log service buffers per-request and calls this
+   * once.
+   */
   write(ctx: AppContext, rows: readonly NewAuditLogRow[]): Promise<void>;
-  /** Latest-first read for the admin feed; honors filter + cursor pagination. */
+  /**
+   * Latest-first read for the admin feed; honors filter + cursor pagination.
+   */
   query(
     ctx: AppContext,
     filter: AuditLogQueryFilter,
