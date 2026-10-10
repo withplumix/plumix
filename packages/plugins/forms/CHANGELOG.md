@@ -1,5 +1,17 @@
 # @plumix/plugin-forms
 
+## 0.3.0
+
+### Minor Changes
+
+- [#2901](https://github.com/withplumix/plumix/pull/2901) [`1df6458`](https://github.com/withplumix/plumix/commit/1df6458c210daa8ff69ccaa76e7f2ac26e769561) Thanks [@nasyrov](https://github.com/nasyrov)! - Ships the plugin's migration history
+
+- [#2887](https://github.com/withplumix/plumix/pull/2887) [`33a6a22`](https://github.com/withplumix/plumix/commit/33a6a22c964f78ac881e6bb73b0ddeb7bfb18275) Thanks [@nasyrov](https://github.com/nasyrov)! - Requires React 19.3. Move `react`, `react-dom`, `@types/react` and `@types/react-dom` in your site to `^19.3.0`; new projects from `create-plumix-app` start on it.
+
+### Patch Changes
+
+- [#2969](https://github.com/withplumix/plumix/pull/2969) [`6e44a7d`](https://github.com/withplumix/plumix/commit/6e44a7dddb710bf3f65ad47066e31475c7d4ade8) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `valibot` to 1.5.0 in the framework and the first-party plugins, `@valibot/to-json-schema` to 1.8.0, `@sindresorhus/slugify` to 3.0.1, `lucide-react` to 1.49.0 and `react-colorful` to 5.8.1 in the framework, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.62.4, `wrangler` 4.146, `@cloudflare/workers-types` 5.20261001.1) in `@plumix/runtime-cloudflare`.
+
 ## 0.2.2
 
 ### Patch Changes

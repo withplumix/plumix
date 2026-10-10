@@ -1,5 +1,11 @@
 # @plumix/runtime-bun
 
+## 0.2.0
+
+### Minor Changes
+
+- [#2959](https://github.com/withplumix/plumix/pull/2959) [`46ce5f4`](https://github.com/withplumix/plumix/commit/46ce5f4246df6180e22005928cdb9a6e0915f9ce) Thanks [@nasyrov](https://github.com/nasyrov)! - Supports the new `plumix migrate`, which applies core's and each plugin's shipped migrations, and removes `plumix migrate apply`. On Cloudflare it opens the site's D1 binding through wrangler's `getPlatformProxy`: the local database `plumix dev` uses, or the deployed one with `--remote`. Pass `--binding <name>` when the wrangler config declares several D1 databases. It no longer runs `wrangler d1 migrations apply`, so `migrations_dir` is no longer needed. On Node and Bun it opens the configured SQLite file, and `--remote` is an error. The Bun scaffold's `migrate:apply` script is now `migrate`.
+
 ## 0.1.0
 
 ### Minor Changes

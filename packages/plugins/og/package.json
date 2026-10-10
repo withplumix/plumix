@@ -1,6 +1,6 @@
 {
   "name": "@plumix/plugin-og",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "type": "module",
   "description": "Social cards for Plumix pages, rendered and served by the site.",
   "license": "MIT",

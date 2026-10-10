@@ -1,5 +1,21 @@
 # @plumix/runtime-cloudflare
 
+## 0.14.0
+
+### Minor Changes
+
+- [#2904](https://github.com/withplumix/plumix/pull/2904) [`da3d369`](https://github.com/withplumix/plumix/commit/da3d36944843adf3d34f71b7ed423d3b21bcfb04) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds a `CF_Authorization` cookie fallback to `cfAccess()`, so an Access application covering only `/_plumix/admin` also authenticates the admin's RPC calls. `audience` now accepts a list of AUD tags, and the Access logout is advertised only to a sign-out request that carries an Access credential, so members chained through `defaultAuthenticator()` keep their own sign-out. Requires `plumix` 0.25.0 or later.
+
+- [#2960](https://github.com/withplumix/plumix/pull/2960) [`d260d02`](https://github.com/withplumix/plumix/commit/d260d025845470dcc5b5aa9460454e1f6af2084b) Thanks [@nasyrov](https://github.com/nasyrov)! - Narrows the demo gate to what reaches past a visitor's sandbox: API tokens, device sign-in, passkeys, OAuth sign-in and anything that sends email are still refused, while users, sessions, allowed domains and the language setting now work in the demo. The demo admin no longer shows the refused surfaces, and the demo pill lists what's off in the visitor's language. Requires `plumix` 0.25.0 or later.
+
+- [#2959](https://github.com/withplumix/plumix/pull/2959) [`46ce5f4`](https://github.com/withplumix/plumix/commit/46ce5f4246df6180e22005928cdb9a6e0915f9ce) Thanks [@nasyrov](https://github.com/nasyrov)! - Supports the new `plumix migrate`, which applies core's and each plugin's shipped migrations, and removes `plumix migrate apply`. On Cloudflare it opens the site's D1 binding through wrangler's `getPlatformProxy`: the local database `plumix dev` uses, or the deployed one with `--remote`. Pass `--binding <name>` when the wrangler config declares several D1 databases. It no longer runs `wrangler d1 migrations apply`, so `migrations_dir` is no longer needed. On Node and Bun it opens the configured SQLite file, and `--remote` is an error. The Bun scaffold's `migrate:apply` script is now `migrate`.
+
+### Patch Changes
+
+- [#2912](https://github.com/withplumix/plumix/pull/2912) [`3f338ee`](https://github.com/withplumix/plumix/commit/3f338ee01f03ad50f98c90faddd89e9c517ab814) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `@modelcontextprotocol/sdk` to 1.31.0 and `@lingui/*` to 6.8.0 in the framework, `smol-toml` to 1.9.0 and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.62, `wrangler` 4.143) in `@plumix/runtime-cloudflare`, and the optional `sharp` peer to 0.35.5 in `@plumix/runtime-node`.
+
+- [#2969](https://github.com/withplumix/plumix/pull/2969) [`6e44a7d`](https://github.com/withplumix/plumix/commit/6e44a7dddb710bf3f65ad47066e31475c7d4ade8) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `valibot` to 1.5.0 in the framework and the first-party plugins, `@valibot/to-json-schema` to 1.8.0, `@sindresorhus/slugify` to 3.0.1, `lucide-react` to 1.49.0 and `react-colorful` to 5.8.1 in the framework, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.62.4, `wrangler` 4.146, `@cloudflare/workers-types` 5.20261001.1) in `@plumix/runtime-cloudflare`.
+
 ## 0.13.1
 
 ### Patch Changes

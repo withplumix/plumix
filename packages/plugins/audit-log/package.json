@@ -1,6 +1,6 @@
 {
   "name": "@plumix/plugin-audit-log",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "type": "module",
   "description": "An activity feed for Plumix that records entry, user, term and settings events and lets you query them.",
   "license": "MIT",

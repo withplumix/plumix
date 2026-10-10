@@ -1,5 +1,17 @@
 # create-plumix-app
 
+## 0.8.0
+
+### Minor Changes
+
+- [#2959](https://github.com/withplumix/plumix/pull/2959) [`46ce5f4`](https://github.com/withplumix/plumix/commit/46ce5f4246df6180e22005928cdb9a6e0915f9ce) Thanks [@nasyrov](https://github.com/nasyrov)! - Sets up the local database with `plumix migrate` in place of `migrate generate` and `migrate apply`. Its next steps print `pnpm dev` and no migration command, and the Cloudflare `wrangler.jsonc` no longer sets `migrations_dir`.
+
+### Patch Changes
+
+- [#2887](https://github.com/withplumix/plumix/pull/2887) [`33a6a22`](https://github.com/withplumix/plumix/commit/33a6a22c964f78ac881e6bb73b0ddeb7bfb18275) Thanks [@nasyrov](https://github.com/nasyrov)! - Requires React 19.3. Move `react`, `react-dom`, `@types/react` and `@types/react-dom` in your site to `^19.3.0`; new projects from `create-plumix-app` start on it.
+
+- [#2993](https://github.com/withplumix/plumix/pull/2993) [`aeeaf16`](https://github.com/withplumix/plumix/commit/aeeaf16c642f64fd9aeabf1bd3ef34023fed1d52) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `pnpm install` in a new Cloudflare or Node.js project. The project now ships a `pnpm-workspace.yaml` that declines the esbuild and workerd build scripts, so pnpm 10 no longer warns about ignored build scripts and pnpm 11 no longer refuses to install.
+
 ## 0.7.0
 
 ### Minor Changes

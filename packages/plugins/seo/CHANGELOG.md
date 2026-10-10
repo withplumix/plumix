@@ -1,5 +1,25 @@
 # @plumix/plugin-seo
 
+## 0.4.0
+
+### Minor Changes
+
+- [#2887](https://github.com/withplumix/plumix/pull/2887) [`33a6a22`](https://github.com/withplumix/plumix/commit/33a6a22c964f78ac881e6bb73b0ddeb7bfb18275) Thanks [@nasyrov](https://github.com/nasyrov)! - Requires React 19.3. Move `react`, `react-dom`, `@types/react` and `@types/react-dom` in your site to `^19.3.0`; new projects from `create-plumix-app` start on it.
+
+- [#2905](https://github.com/withplumix/plumix/pull/2905) [`57c136d`](https://github.com/withplumix/plumix/commit/57c136ddad5fd5e31816e1a52b3b741c1e0eca84) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `ctx.registerSitemap(name, source)`, so a plugin can list a URL space of its own in `/sitemap.xml` with no archive behind it, and adds `<lastmod>` to the index's entries: an entry type's page carries the newest `updatedAt` on it, and a contributed page carries what its source's `lastmod` answers. Breaking: `ArchiveTypeOptions.sitemap` and the `ArchiveTypeSitemap` type are removed; an archive that wants a sitemap calls `registerSitemap` under its name, with the same `count`, `urls` and `tags`. A contributed sitemap is no longer held out for an `access` policy on an archive of the same name, since seo no longer reads the archive: a source whose URLs are not public does not list them.
+
+- [#2958](https://github.com/withplumix/plumix/pull/2958) [`f6629aa`](https://github.com/withplumix/plumix/commit/f6629aa52a77256533ea7314cbd0cfaed18f7931) Thanks [@nasyrov](https://github.com/nasyrov)! - Honours `canonical: false` in a page's `document`: the page gets no canonical link, no `og:url` and no `url` on its structured-data `WebPage`, unless it declares its own canonical in `link` or an editor set a canonical override, which all three then follow.
+
+- [#2966](https://github.com/withplumix/plumix/pull/2966) [`0b3f04e`](https://github.com/withplumix/plumix/commit/0b3f04e45ca4a1597e0cfa84246d7886a374d83b) Thanks [@nasyrov](https://github.com/nasyrov)! - Marks every view (`registerView`) `noindex` and leaves it out of the sitemap and llms.txt. Adds an `indexViews` option, so `seo({ indexViews: ["compareShare"] })` offers the named views to search engines. A name no plugin registered fails the boot. The indexability reason for a held-out view is `view`.
+
+- [#2897](https://github.com/withplumix/plumix/pull/2897) [`993fe7b`](https://github.com/withplumix/plumix/commit/993fe7bb9cbd0326b9fd5cd88b3ef61faee99d7f) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `llmsTxt`, `articleTags` and `structuredData` options to `seo()`. Set any of them to `false` to drop `/llms.txt`, the `article:*` tags or the JSON-LD graph. A page that was not found now carries only the robots directive: no description, Open Graph, Twitter or verification tags.
+
+- [#2899](https://github.com/withplumix/plumix/pull/2899) [`d9a98d9`](https://github.com/withplumix/plumix/commit/d9a98d9563fdeeb4b4c54db954cc76797f3b6b29) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `changefreq` and `priority` to sitemap URLs, and a `sitemaps` option on `seo()` where a site drops any scope from the sitemap or sets its URLs' defaults. Breaking: sub-sitemaps move to `/sitemap-entries-<type>-<page>.xml` and `/sitemap-terms-<taxonomy>-<page>.xml` (an entry type and a taxonomy sharing a name now both get one), and the `seo:sitemap:urls` filter receives the scope as `{ kind, name }` instead of its bare name. An archive `sitemap` named `entries` or `terms`, or starting `entries-` or `terms-`, fails the boot.
+
+### Patch Changes
+
+- [#2969](https://github.com/withplumix/plumix/pull/2969) [`6e44a7d`](https://github.com/withplumix/plumix/commit/6e44a7dddb710bf3f65ad47066e31475c7d4ade8) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `valibot` to 1.5.0 in the framework and the first-party plugins, `@valibot/to-json-schema` to 1.8.0, `@sindresorhus/slugify` to 3.0.1, `lucide-react` to 1.49.0 and `react-colorful` to 5.8.1 in the framework, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.62.4, `wrangler` 4.146, `@cloudflare/workers-types` 5.20261001.1) in `@plumix/runtime-cloudflare`.
+
 ## 0.3.0
 
 ### Minor Changes
