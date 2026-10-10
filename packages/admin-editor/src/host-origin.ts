@@ -1,6 +1,7 @@
-// The editor iframe must know the host (admin shell) origin to pin bridge
-// messages. Same-origin deployments fall back to the page's own origin;
-// cross-origin dev passes it explicitly via the `plumix.host` query param.
+/**
+ * Cross-origin dev passes the host origin via `plumix.host`; same-origin
+ * deployments use the page's own.
+ */
 export function resolveHostOrigin(
   search: string,
   currentOrigin: string,

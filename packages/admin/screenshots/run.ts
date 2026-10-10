@@ -1,6 +1,5 @@
-// `pnpm docs:screenshots`. Starts the pinned browser, points the capture
-// project at it, and takes the container down again whichever way the run ends
-// — the browser is detached, so nothing else would.
+// The browser container is detached, so this tears it down however the run
+// ends.
 import { spawn } from "node:child_process";
 
 import {

@@ -15,12 +15,8 @@ export default mergeConfig(
     resolve: {
       alias: {
         "@": fileURLToPath(new URL("./src", import.meta.url)),
-        // Production builds transform `defineMessage(...)` calls via
-        // `@lingui/vite-plugin` + `@rolldown/plugin-babel` (see
-        // `vite.config.ts`). Vitest's vite-node transform doesn't run
-        // that preset on `.ts` imports, so the real macro entrypoint
-        // throws at load. Alias to a runtime passthrough that mirrors
-        // what Babel produces — `test/lingui-macro-stub.ts`.
+        // Vitest doesn't run the Lingui Babel preset, so the real macro
+        // throws at load; this stub mirrors what Babel produces.
         "@lingui/core/macro": fileURLToPath(
           new URL("./test/lingui-macro-stub.ts", import.meta.url),
         ),

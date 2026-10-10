@@ -11,17 +11,12 @@ export interface DemoDatabaseConfig {
 }
 
 /**
- * Routes queries to a demo Durable Object: the visitor's own per-session DO
- * (from the session cookie), or the shared read-only showcase DO for
- * cookieless traffic. A drizzle `sqlite-proxy` driver RPCs each statement to
- * the DO's SQLite; the DO is migrated + seeded by the demo runtime before any
- * query runs, so `connect` only wires the proxy — it never migrates.
+ * The demo runtime migrates and seeds each DO before any query, so `connect`
+ * never migrates.
  */
 export function demoDatabase(config: DemoDatabaseConfig): DatabaseAdapter {
   const { binding } = config;
-  // Every visitor gets their own DO, so the routing genuinely varies per
-  // request — `connectRequest` is the seam that still runs per request,
-  // while `connect` is bound once for the handler's life.
+  // Every visitor has their own DO, so routing varies per request.
   const connect = (
     env: PlumixEnv,
     request: Request,
@@ -33,11 +28,8 @@ export function demoDatabase(config: DemoDatabaseConfig): DatabaseAdapter {
     // otherwise; DemoDB.query/batch already return positional rows.
     const shape = (rows: SqlStorageValue[][], method: string) => {
       if (method !== "get") return rows;
-      // `get` must yield `undefined` (not `[]`) on a miss, or drizzle's
-      // `if (!row) return undefined` guard is defeated and it maps a phantom
-      // row of `undefined` columns. The driver's callback type doesn't model
-      // that `undefined`; narrowing it trips a rule that wants `!`, which the
-      // repo bans — so assert here. drizzle handles the runtime `undefined`.
+      // `undefined` (not `[]`) on a miss, or drizzle maps a phantom row. The callback type doesn't
+      // model it, and the repo bans `!`.
       // eslint-disable-next-line @typescript-eslint/non-nullable-type-assertion-style
       return rows.at(0) as SqlStorageValue[];
     };

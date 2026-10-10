@@ -171,11 +171,8 @@ describe("sqlite() storage adapter — filter + cursor pagination", () => {
       limit: 10,
       cursor: page1.nextCursor ?? undefined,
     });
-    // Page 2 must include both the original 2,1 AND the new concurrent
-    // row that lands at 5-01 12:00 — between 5-01 00:00 (id=1) and
-    // 5-02 00:00 (id=2). The new row gets a fresh id (=5) > cursor's id,
-    // but its occurredAt is BEFORE the cursor's, so the strict-less
-    // comparison must use the row tuple, not OR of single columns.
+    // The concurrent row has a newer id but an older occurredAt than the
+    // cursor, so the comparison must use the row tuple, not an OR of columns.
     const ids = page2.rows.map((r) => r.subjectId).sort();
     expect(ids).toContain("concurrent");
     expect(ids).toContain("2");

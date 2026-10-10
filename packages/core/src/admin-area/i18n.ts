@@ -1,8 +1,6 @@
-// Admin-area labels follow the admin-bar pattern: hand-authored
-// `locales/admin-area-*.po` catalogs compiled to static modules and looked up
-// per call server-side (no `activate()` singleton). `plumix i18n verify` gates
-// descriptor↔catalog drift. A runtime adapter that refuses areas names them to
-// its visitors outside the admin, where no Lingui instance runs.
+// Looked up per call server-side, not via an `activate()` singleton: a runtime
+// adapter names areas to visitors outside the admin, where no Lingui instance
+// runs.
 
 import { messages as arMessages } from "@plumix/core/locales/admin-area-ar";
 import { messages as deMessages } from "@plumix/core/locales/admin-area-de";
@@ -22,8 +20,10 @@ const CATALOGS: Readonly<Record<string, CompiledCatalog>> = {
   "zh-CN": zhCnMessages,
 };
 
-// Source descriptors — `plumix i18n verify` matches these against the po
-// catalogs; `message` is the English source and the runtime fallback.
+/**
+ * Source descriptors — `plumix i18n verify` matches these against the po
+ * catalogs; `message` is the English source and the runtime fallback.
+ */
 const M = {
   apiTokens: { id: "core.adminArea.apiTokens", message: "API tokens" },
   deviceAuthorization: {
@@ -38,12 +38,16 @@ const M = {
   },
 } as const satisfies Record<AdminArea, { id: string; message: string }>;
 
-// Real Accept-Language headers carry 1–4 entries; cap what a hostile client
-// can make us parse.
+/**
+ * Real Accept-Language headers carry 1–4 entries; cap what a hostile client
+ * can make us parse.
+ */
 const MAX_ACCEPT_LANGUAGE_ENTRIES = 16;
 
-// The first locale in `acceptLanguage` a catalog ships for, matched by exact
-// tag and then by language (`de-AT` → `de`, `zh` → `zh-CN`); English otherwise.
+/**
+ * The first locale in `acceptLanguage` a catalog ships for, matched by exact
+ * tag and then by language (`de-AT` → `de`, `zh` → `zh-CN`); English otherwise.
+ */
 function matchLocale(acceptLanguage: string | null): string {
   const shipped = Object.keys(CATALOGS);
   for (const entry of (acceptLanguage ?? "").split(

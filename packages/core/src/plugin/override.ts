@@ -1,15 +1,8 @@
-/**
- * Replace an array-valued field, or compose it against the plugin's default.
- * Same `(prev) => next` convention core uses for template-dep slugs.
- */
 type Composable<T> = T | ((prev: T) => T);
 
 /**
- * A partial of the registration options, derived from them rather than
- * hand-listed — a field added to `EntryTypeOptions` becomes overridable with no
- * edit here, and one removed stops compiling. The registered *name* is absent
- * by construction: it is the `registerEntryType` argument, not an option, which
- * is what keeps `entries.type` rows and `forEntryType("post")` valid.
+ * The registered name can't be overridden: it is the `registerEntryType`
+ * argument, which keeps `entries.type` rows and `forEntryType("post")` valid.
  */
 export type Overridable<O> = {
   readonly [K in keyof O]?: O[K] extends readonly unknown[] | undefined
@@ -18,10 +11,8 @@ export type Overridable<O> = {
 };
 
 /**
- * Fold a site override over the plugin's registration, one level of merge per
- * field: object-valued fields (`labels`, `rewrite`, `versioning`) merge
- * key-by-key so overriding one label doesn't drop the rest; arrays and scalars
- * replace, or compose via `(prev) => next`.
+ * Object-valued fields merge one level deep, so overriding one label keeps the
+ * rest; arrays and scalars replace, or compose via `(prev) => next`.
  */
 export function applyOverride<O extends object>(
   defaults: O,

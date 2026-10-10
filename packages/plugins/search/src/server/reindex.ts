@@ -9,17 +9,14 @@ import { indexableEntryTypes, searchableTaxonomies } from "./document.js";
 import { indexEntries, indexTerms } from "./index-writer.js";
 
 /**
- * How much of the corpus one invocation rebuilds. Backfill was measured at
- * roughly 1 300 sources a second, so this is well under a second of work and
- * leaves the invocation to whatever else it was scheduled for.
+ * Well under a second of work: backfill was measured at roughly 1 300 sources a
+ * second.
  */
 export const SOURCES_PER_INVOCATION = 200;
 
-// The order the kinds are walked in. Entries first because they are the bulk
-// of any corpus, so a run's progress number means something early.
+/** Entries first: they are the bulk, so progress means something early. */
 const KIND_ORDER: readonly SearchSourceType[] = ["entry", "term"];
 
-/** The kind taken up once this one is exhausted, or nothing when done. */
 function kindAfter(kind: SearchSourceType): SearchSourceType | undefined {
   return KIND_ORDER[KIND_ORDER.indexOf(kind) + 1];
 }
@@ -44,12 +41,8 @@ async function activeReindex(
 }
 
 /**
- * Begin a rebuild, or answer with the one already going.
- *
- * Starting is deliberately idempotent rather than an error: an operator who
- * presses the button twice, and a schedule that fires while a rebuild is under
- * way, both mean "make sure this is happening" — and a second concurrent walk
- * over the same corpus would only undo the first one's progress.
+ * Returns the active run if there is one; a second concurrent walk would undo
+ * its progress.
  */
 export async function startReindex(ctx: AppContext): Promise<SearchReindexRun> {
   const active = await activeReindex(ctx);
@@ -63,18 +56,8 @@ export async function startReindex(ctx: AppContext): Promise<SearchReindexRun> {
 }
 
 /**
- * Do one invocation's worth of the active run, and answer with how many
- * sources it got through. Zero when there is no run.
- *
- * The index is never emptied first: each source is re-projected in place, so
- * every document the walk has not reached yet is the one it always was and
- * search keeps answering throughout. That is the whole reason a rebuild is a
- * walk rather than a truncate-and-fill.
- *
- * A source that cannot be projected is counted rather than thrown, so one bad
- * row cannot stop the rest of the corpus — the run says
- * `completed_with_errors` at the end, which is a different thing to tell an
- * operator than `failed`.
+ * Re-projects in place, never emptying the index, so search keeps answering.
+ * A source that cannot be projected is counted, not thrown.
  */
 export async function advanceReindex(
   ctx: AppContext,
@@ -85,9 +68,8 @@ export async function advanceReindex(
   try {
     return await walk(ctx, run, chunk);
   } catch (error) {
-    // A run that threw has to end, not stay running: starting is idempotent,
-    // so a run stuck at `running` would refuse every replacement an operator
-    // asked for. `failed` is the answer that lets them start again.
+    // Must end: a run stuck at `running` would block every restart, since
+    // starting is idempotent.
     ctx.logger.error("[plumix/plugin-search] reindex failed", { error });
     await ctx.db
       .update(searchReindexRuns)
@@ -134,9 +116,8 @@ async function walk(
     .set({
       cursorType,
       cursorId,
-      // Added in SQL rather than in JavaScript: the row is the whole
-      // durability story, and two invocations that overlapped would otherwise
-      // each write the other's progress away.
+      // Added in SQL so overlapping invocations do not overwrite each other's
+      // progress.
       processed: sql`${searchReindexRuns.processed} + ${processed}`,
       failed: sql`${searchReindexRuns.failed} + ${failed}`,
       ...(completed && {
@@ -149,13 +130,8 @@ async function walk(
 }
 
 /**
- * Project a batch, and answer with how much of it landed.
- *
- * A batch that throws is retried one source at a time rather than written off
- * whole: the projection sub-chunks internally, so a single bad row would
- * otherwise take up to two hundred healthy ones with it — counted as failed,
- * stepped over by the cursor, and never looked at again. Isolating costs one
- * statement per source, and only on the batches that actually failed.
+ * A failed batch is retried per source, so one bad row does not take healthy
+ * ones with it past the cursor.
  */
 async function projectBatch(
   ctx: AppContext,
@@ -184,7 +160,6 @@ async function projectBatch(
   }
 }
 
-/** The next ids of this kind after the cursor, in the order the walk takes. */
 async function nextSources(
   ctx: AppContext,
   kind: SearchSourceType,
@@ -200,12 +175,8 @@ async function nextSources(
       .where(and(gt(entries.id, after), inArray(entries.type, types)))
       .orderBy(asc(entries.id))
       .limit(limit);
-    // An entry the feed still owes is one somebody has written since this walk
-    // started reading. Projecting it here would race the drain and could put
-    // the older text back — the walk reads, the editor saves, the drain writes
-    // the new text and clears the row, and then the walk's write lands on top
-    // with what it read. Whatever the feed holds is the fresher answer, so the
-    // walk steps over it and lets the drain have it.
+    // Skip entries the feed still owes: projecting them would race the drain
+    // and could write older text over newer.
     return await withoutPendingChanges(
       ctx,
       rows.map((row) => row.id),

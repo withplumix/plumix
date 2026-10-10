@@ -14,12 +14,7 @@ interface JsonFieldState extends UniversalFieldState {
   readonly default?: unknown;
 }
 
-/**
- * Fluent chain for the free-form `json` field. Storage round-trips
- * through `JSON.stringify` so any value that survives serialisation
- * survives the wire. Values read and store as `unknown` — the field
- * carries no schema for the type layer to narrow.
- */
+/** Reads and stores `unknown`: the field carries no schema to narrow. */
 export class JsonFieldBuilder<
   K extends string = string,
 > implements FieldBuilder<JsonMetaBoxField> {

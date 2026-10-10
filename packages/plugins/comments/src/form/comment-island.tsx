@@ -24,10 +24,10 @@ interface CommentIslandProps {
   readonly requireEmail: boolean;
 }
 
-// A held comment is not in the thread when the visitor looks for it, so
-// saying only "posted" would read as having lost it. `spam` and `trash`
-// are told the same thing an approved-but-held comment is: which of them
-// a submission was filed as is not the sender's to learn.
+/**
+ * A held comment isn't in the thread yet, so "posted" would read as lost.
+ * Spam and trash get the held message: the filing isn't the sender's to learn.
+ */
 const confirmationFor = (status: CommentStatus): string =>
   labelSourceText(status === "approved" ? POSTED : HELD);
 
@@ -43,16 +43,8 @@ const readValues = (form: HTMLFormElement): CommentFormValues => {
 };
 
 /**
- * The comment form, upgraded: a submit that does not leave the page,
- * refusals rendered against the controls that produced them, and an
- * answer that can say a comment was held for review — which the
- * no-JavaScript path cannot, because a redirect carries no state and
- * putting the outcome in the URL would fork the page's edge-cache entry
- * per outcome.
- *
- * It renders the same {@link CommentMarkup} the server already sent, so what
- * a visitor without JavaScript keeps working with is the thing this builds
- * on rather than a placeholder it replaces.
+ * Can say a comment was held, which the no-JavaScript path cannot: a redirect
+ * carries no state, and an outcome in the URL would fork the edge-cache entry.
  */
 export function CommentIsland({
   action,
@@ -69,15 +61,12 @@ export function CommentIsland({
   const summary = useRef<HTMLDivElement>(null);
   const confirmed = useRef<HTMLDivElement>(null);
 
-  // A ref rather than the `busy` state: a second press landing in the same
-  // tick reads the state the first has not re-rendered yet, and the cost
-  // of letting it through is two rows for one comment.
+  // A ref, not `busy` state: a second press in the same tick reads stale state
+  // and would insert two rows.
   const inFlight = useRef(false);
 
-  // Focus follows the outcome, so a visitor who cannot see the page is
-  // told what happened instead of being left at a button that appeared to
-  // do nothing. Every failure sets a fresh array, so a second submit
-  // failing the same way moves focus again.
+  // Focus follows the outcome for screen readers. Every failure sets a fresh
+  // array, so a repeat failure moves focus again.
   useEffect(() => {
     if (errors.length > 0) summary.current?.focus();
   }, [errors]);
@@ -133,9 +122,8 @@ export function CommentIsland({
       enhanced={live}
       busy={busy}
       onSubmit={(event) => {
-        // Only once the island is live. The handler is attached from the
-        // first client render, a frame before hydration has finished, and
-        // a submit caught there is one the plain form could have made.
+        // The handler attaches a frame before hydration finishes; a submit
+        // caught then is one the plain form can make.
         if (!live) return;
         event.preventDefault();
         void submit(event.currentTarget);

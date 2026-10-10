@@ -11,9 +11,8 @@ import { createVariantCache } from "./image-cache.js";
 
 export interface ImagesConfig {
   /**
-   * The widths a variant may have; a request snaps up to the next entry and
-   * past the largest takes it. Bounds what a visitor can make the process
-   * render and cache.
+   * A request snaps up to the next width; bounds what a visitor can make the
+   * process render.
    */
   readonly widths?: readonly number[];
   /**
@@ -80,9 +79,8 @@ function resolveConfig(config: ImagesConfig): ResolvedImagesConfig {
 const ownRequire = createRequire(import.meta.url);
 
 /**
- * `sharp` is an optional peer: a site without images() must install nothing
- * native, so it is required here, on first use, and a missing package is
- * named rather than surfacing as a resolution error deep in a request.
+ * `sharp` is an optional peer, so a site without images() installs nothing
+ * native; a missing package is named on first use.
  */
 function loadSharp(): typeof SharpModule {
   let loaded: typeof SharpModule;
@@ -101,11 +99,8 @@ function loadSharp(): typeof SharpModule {
 }
 
 /**
- * The `imageDelivery` slot on Node: `url()` is URL math onto
- * `/_plumix/image`, which the entry's pre-handler layer serves through
- * `sharp`. A same-origin source is resolved through the site's own handler,
- * so the media plugin's gating applies; a remote one must match
- * `remotePatterns`.
+ * A same-origin source resolves through the site's handler, so media gating
+ * applies; a remote one must match `remotePatterns`.
  *
  * @example
  * ```ts
@@ -127,10 +122,8 @@ export function images(config: ImagesConfig = {}): NodeImageDelivery {
     purge: (sourceUrl) => slot.cache.purge(imageSourceKey(sourceUrl)),
     url: (sourceUrl, opts) =>
       imageTransformUrl({ ...resolved, basePath: "" }, sourceUrl, opts),
-    // Returns a distinct object per basePath rather than mutating `slot`, so
-    // one `images()` instance connected more than once — a test constructing
-    // several sites, a dev-server reconnect — never has one connection's
-    // basePath leak into another's.
+    // A distinct object per connection, so one connection's basePath never
+    // leaks into another's.
     connect(_env, ctx) {
       slot.sharp();
       const basePath = ctx?.basePath ?? "";

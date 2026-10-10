@@ -43,17 +43,14 @@ export interface EditorState {
   readonly items: readonly EditorItem[];
   readonly selectedKey: ItemKey | null;
   /**
-   * When non-null, the picker is in re-link mode for that item.
-   * Custom URL panel's primary action becomes "Replace link" instead
-   * of "Add to menu" and dispatches `relinkItem` on the named key.
+   * Non-null puts the picker in re-link mode, where the custom URL panel
+   * dispatches `relinkItem` for this key.
    */
   readonly relinkTargetKey: ItemKey | null;
   readonly dirty: boolean;
   /**
-   * Monotonic counter for new-item keys. `state.items.length` would
-   * collide after add/add/remove/add — the third add would reuse the
-   * surviving item's tmp key. Carrying a counter on state side-steps
-   * that without needing a global.
+   * A counter, not `items.length`, which would reuse a surviving tmp key after
+   * add/add/remove/add.
    */
   readonly nextTmpId: number;
 }
@@ -106,12 +103,8 @@ export type EditorAction =
         readonly version: number;
         readonly itemIds: readonly number[];
         /**
-         * Editor item keys captured at save-mutation time. Without
-         * this, ids would be zipped positionally against the current
-         * items list — which drifts if the user removed/added items
-         * while the save was in flight. The matched `snapshotKeys[i]`
-         * receives `itemIds[i]`; keys no longer in state are skipped.
-         * Optional for callers that build payloads in a single render.
+         * Keys captured at save time, so ids aren't zipped against items edited
+         * while the save was in flight.
          */
         readonly snapshotKeys?: readonly ItemKey[];
       };
@@ -235,14 +228,11 @@ export function editorReducer(
     case "moveItem": {
       const target = state.items.find((item) => item.key === action.key);
       if (!target) return state;
-      // Defense in depth: unauthorized items shouldn't be reorderable.
-      // The drag handle is hidden in the UI, but dnd-kit's pointer
-      // listeners can still fire on the row, so we also reject here.
+      // dnd-kit's pointer listeners fire on the row even with the drag handle
+      // hidden.
       if (target.state === "unauthorized") return state;
-      // Guard against cycles: dragging an item onto itself or onto one
-      // of its descendants would write a parent chain that has no path
-      // to root. `rebuildDfsOrder` walks from null and would produce []
-      // — the entire menu silently disappears.
+      // A cycle has no path to root, and `rebuildDfsOrder` would then drop the
+      // whole menu.
       if (action.newParentKey !== null) {
         const subtree = collectSubtreeKeys(state.items, action.key);
         if (subtree.has(action.newParentKey)) return state;
@@ -489,12 +479,9 @@ function flattenServerItems(rows: readonly ServerItemRow[]): EditorItem[] {
         parentKey,
         sortOrder: row.sortOrder,
         title: row.title === "" ? null : row.title,
-        // A row whose stored meta didn't parse arrives already marked broken.
-        // Stand it up as an empty custom item so it stays visible, stays
-        // fixable, and no longer sinks the whole save payload on the item
-        // schema — the previous behaviour left the menu unsaveable until the
-        // row was deleted. The trade is that saving replaces the unreadable
-        // JSON, which no consumer could interpret in the first place.
+        // Unparseable meta becomes an empty custom item so the row stays
+        // fixable and doesn't make the menu unsaveable; saving replaces the
+        // unreadable JSON.
         meta: row.meta ?? { kind: "custom", url: "" },
         state: row.resolved.state,
         resolvedLabel: row.resolved.label,

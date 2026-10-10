@@ -10,22 +10,9 @@ import { commentFormIdBase } from "./paths.js";
 export type { CommentFormError, CommentFormValues } from "./types.js";
 
 /**
- * The comment form, dropped straight into a theme template:
- *
- *     h(PlumixCommentForm, { entryId: data.entry.id })
- *
- * Server-rendered markup that posts to the plugin's own endpoint with no
- * JavaScript at all, upgraded in place by an island where there is some.
- * A refused comment comes back as this same form with the visitor's words
- * still in it, which is the whole reason the plugin renders markup rather
- * than leaving it to the theme.
- *
- * A theme that wants its own controls writes them and calls
- * `usePlumixCommentForm` from `@plumix/plugin-comments/hooks` instead —
- * `loadThread` and a hand-written form stay fully supported.
- *
- * Mirrors `PlumixForm` from `@plumix/plugin-forms/theme`, deliberately: a
- * theme author who has met one has met both.
+ * Posts with no JavaScript and is upgraded in place by an island. A theme
+ * wanting its own controls calls `usePlumixCommentForm` from
+ * `@plumix/plugin-comments/hooks`.
  */
 export function PlumixCommentForm({
   entryId,
@@ -37,18 +24,13 @@ export function PlumixCommentForm({
   /** Set when this is the reply box under an existing comment. */
   readonly parentId?: number | null;
   /**
-   * Where to send the browser once the comment is in. The endpoint falls
-   * back to the request's `Referer`, which is the post in the ordinary
-   * case; pass this where a referrer policy strips it, or to land the
-   * visitor on the thread rather than the top of the page.
+   * Defaults to the request's `Referer`; pass this where a referrer policy
+   * strips it.
    */
   readonly returnTo?: string;
   /**
-   * What tells two forms on one page apart — the thread's own box and a
-   * reply box under a comment. Control ids are built from it, and a label
-   * points at its control by id, so without one each the second form's
-   * labels address the first form's controls. Defaults to the entry id,
-   * which is enough for the one form a template usually renders.
+   * Seeds control ids, so two forms on one page need distinct values. Defaults
+   * to the entry id.
    */
   readonly id?: string;
 }): ReactNode {
@@ -65,12 +47,8 @@ export function PlumixCommentForm({
     idBase: commentFormIdBase(id ?? entryId),
     requireEmail: config.requireEmail,
   };
-  // In the visual editor the form is a thing being arranged rather than
-  // filled in, so it stays as the markup — the same rule the islands
-  // runtime applies to an island on a page it is editing. The canvas
-  // renders components directly rather than through the island element,
-  // so without this the island would run there and take over a submit
-  // nobody meant to make.
+  // The canvas renders components directly, not through the island element, so
+  // an island there would hijack submits while the form is being arranged.
   if (editing) return <CommentMarkup {...form} />;
   // `client="load"` because the form is often the reason the visitor
   // scrolled this far: it upgrades as soon as the chunk lands.

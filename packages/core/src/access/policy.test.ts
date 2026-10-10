@@ -31,8 +31,10 @@ beforeAll(async () => {
   db = await createTestDb();
 });
 
-// One request's context per call — its memo is the request-scoped one the
-// entitlement resolvers read through.
+/**
+ * One request's context per call — its memo is the request-scoped one the
+ * entitlement resolvers read through.
+ */
 function ctx(u: AuthenticatedUser | null): AppContext {
   return createTestContext({ db, user: u });
 }

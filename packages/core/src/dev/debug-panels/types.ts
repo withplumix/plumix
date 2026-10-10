@@ -16,11 +16,8 @@ export interface DebugPanel {
   /** Ascending; unset sorts after ordered panels (see DEFAULT_PANEL_ORDER). */
   readonly order?: number;
   /**
-   * Rendered in isolation (its own SSR pass) so a throw can't crash the host
-   * page. Read request data off the {@link DebugSnapshot} — its context
-   * projection and, for your own recorded entries, `snapshot.records[id]`.
-   * Outer React context providers are NOT visible across the isolated render,
-   * so don't rely on `useContext` from the page tree.
+   * Rendered in its own SSR pass, so outer React context providers are not
+   * visible; read request data off the snapshot, not `useContext`.
    */
   readonly render: (snapshot: DebugSnapshot) => ReactNode;
 }

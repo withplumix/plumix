@@ -6,9 +6,8 @@ import { definePlugin } from "../plugin/define.js";
 import { createTracedContext } from "../test/traced-context.js";
 import { findAuthorBySlug, findTermBySlug } from "./slug-lookups.js";
 
-// Both lookups are memoized per request, a miss like a hit. A write in the
-// same request announces itself through its lifecycle action, and the memo
-// drops what that write made stale (#2517).
+// Both lookups memoize misses too, so a write in the same request must drop
+// what it made stale.
 describe("slug lookups after a write in the same request", () => {
   // A miss has no id to be tagged by, so both lookups carry the public types'
   // tags every user and term write announces — a site needs a public type.

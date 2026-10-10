@@ -18,9 +18,11 @@ interface FilterEntry {
   readonly plugin: string | null;
   readonly priority: number;
   readonly insertOrder: number;
-  // One map holds every filter name, which is an existential TypeScript can't
-  // spell. The erasure is undone once, where each pipeline returns through
-  // `as FilterInput<TName>`, and never reaches a caller.
+  /**
+   * One map holds every filter name, which is an existential TypeScript can't
+   * spell. The erasure is undone once, where each pipeline returns through
+   * `as FilterInput<TName>`, and never reaches a caller.
+   */
   // eslint-disable-next-line plumix/no-unknown-return
   readonly fn: (value: unknown, ...rest: unknown[]) => unknown;
 }
@@ -29,7 +31,7 @@ interface ActionEntry {
   readonly plugin: string | null;
   readonly priority: number;
   readonly insertOrder: number;
-  // Actions are fire-and-forget by contract — see `ActionFn`.
+  /** Actions are fire-and-forget by contract — see `ActionFn`. */
   readonly fn: (...args: unknown[]) => void | Promise<void>;
 }
 
@@ -40,12 +42,8 @@ export interface HookExecutor {
     ...rest: FilterRest<TName>
   ): Promise<FilterInput<TName>>;
   /**
-   * Synchronous filter pipeline for hooks that fire inside React render
-   * (e.g. `block:before_render`). Skips the structured-clone step the
-   * async path performs — React elements are not structured-cloneable —
-   * so handlers must treat the value as read-only by convention. Throws
-   * if a registered handler returns a Promise so async-in-sync misuse
-   * surfaces immediately instead of leaking a rejected value downstream.
+   * Skips the structured clone (React elements can't be cloned), so handlers
+   * must treat the value as read-only. Throws if a handler returns a Promise.
    */
   applyFilterSync<TName extends FilterName>(
     name: TName,
@@ -53,13 +51,9 @@ export interface HookExecutor {
     ...rest: FilterRest<TName>
   ): FilterInput<TName>;
   /**
-   * Synchronous array-accumulating filter pipeline with per-handler error
-   * isolation: a handler that throws or returns a non-array is logged and
-   * skipped, and the chain continues from the last good value. Used by the
-   * collector surfaces (admin bar, debug bar) that gather contributions and
-   * must not let one misbehaving plugin take down the whole bar. Only valid
-   * for array-valued filters — the runtime treats a non-array return as the
-   * skip signal, so a scalar filter's every return would be discarded.
+   * A handler that throws or returns a non-array is logged and skipped. Only
+   * for array-valued filters: a scalar filter's every return would be
+   * discarded.
    */
   applyFilterIsolated<TName extends FilterName>(
     name: TName,
@@ -67,10 +61,8 @@ export interface HookExecutor {
     ...rest: FilterRest<TName>
   ): FilterInput<TName>;
   /**
-   * Sorted snapshot of a filter's registered handlers — for surfaces that
-   * run the handlers themselves rather than as an accumulating pipeline.
-   * `admin-search` is the consumer: it fans the handlers out in parallel
-   * (`Promise.all`) instead of threading one result into the next.
+   * For surfaces that run handlers themselves, e.g. in parallel, rather than as
+   * a pipeline.
    */
   getFilterHandlers<TName extends FilterName>(
     name: TName,
@@ -260,13 +252,8 @@ export class HookRegistry implements HookExecutor {
 }
 
 /**
- * A filter's own copy of the value, so mutating it cannot reach the next
- * handler.
- *
- * A payload that carries a function is handed over as it stands: a document
- * manifest holds the theme's `titleTemplate` callback, and there is no clone
- * of that to make. Isolation is what such a payload loses — refusing to run
- * the filter at all would cost the page.
+ * A payload carrying a function (the theme's `titleTemplate`) can't be cloned,
+ * so it goes uncopied rather than failing the page.
  */
 function isolate<T>(value: T): T {
   try {
@@ -278,15 +265,18 @@ function isolate<T>(value: T): T {
   }
 }
 
-// The registry is app-scoped while telemetry is request-scoped; the request
-// context store bridges the two. Outside a request (build time, tests calling
-// hooks directly) the no-op collector applies and handlers run untraced.
+/**
+ * The registry is app-scoped but telemetry is request-scoped; outside a request
+ * handlers run untraced.
+ */
 function requestTelemetry(): TelemetryCollector {
   return tryGetContext()?.telemetry ?? NOOP_TELEMETRY;
 }
 
-// One handler execution = one `hook:` span wrapping the existing hookStore
-// frame — shared by the traced pipelines (applyFilter, doAction).
+/**
+ * One handler execution = one `hook:` span wrapping the existing hookStore
+ * frame — shared by the traced pipelines (applyFilter, doAction).
+ */
 function runHandlerTraced<T>(
   telemetry: TelemetryCollector,
   name: string,

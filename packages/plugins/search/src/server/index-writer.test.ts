@@ -25,8 +25,10 @@ let ctx: AppContext;
 let plugins: MutablePluginRegistry;
 let authorId: number;
 
-// An entry type nothing may index: `policyForMatch` reads the type's own
-// policy first, so gating is total at the type level.
+/**
+ * An entry type nothing may index: `policyForMatch` reads the type's own
+ * policy first, so gating is total at the type level.
+ */
 const GATED = {
   access: {
     default: {

@@ -1,18 +1,3 @@
-/**
- * The hard gate — wiring the pure access resolution into the public render
- * path. {@link policyForMatch} finds the policy attached to a matched route
- * (the entry's per-entry choice for an `entry` intent, the entry-type default for
- * an `entryType` intent, the route-level policy for an archive type, else none); the
- * dispatcher resolves it against the loaded principal once (reading the segment
- * for the cache key), and
- * {@link gateToResponse} turns a non-`allow` gate into an HTTP response — a 302
- * to sign-in (with a `returnTo`), or a terminal challenge response.
- *
- * {@link entryAllowsAnonymousAccess} asks the same question off that path, for
- * a public artefact a site publishes about an entry rather than for the entry's
- * own page.
- */
-
 import type { AppContext } from "../context/app-context.js";
 import type { JsonObject } from "../json.js";
 import type { ResolvedMeta } from "../meta/contract/bags.js";
@@ -26,35 +11,16 @@ import { redirectTo } from "../runtime/contract/http.js";
 import { ACCESS_POLICY_META_KEY } from "./contract/meta-key.js";
 import { resolveAccess } from "./policy.js";
 
-// Challenge kind → terminal HTTP status. A role denial is a 403 (the visitor
-// is signed in; re-authenticating wouldn't help), every other challenge is the
-// 402 paywall default. A *soft* challenge never reaches here — it renders a
-// teaser at 200 (see `gateToResponse`).
+/**
+ * A role denial is 403 because re-authenticating wouldn't help; every other
+ * challenge is the 402 paywall default.
+ */
 const CHALLENGE_STATUS: Readonly<Record<string, number>> = { forbidden: 403 };
 
 /**
- * The access policy attached to a matched route, or `null` when the route is
- * un-policied (the global `anonymous` default — behaves exactly as today).
- *
- * Precedence is per-entry › entry-type › global. An `entry` intent resolves the
- * addressed entry and honours its stored per-entry choice ({@link selectEntryPolicy})
- * when the type declares a selectable space, otherwise the type's
- * `access.default`; an `entryType` intent always uses the type's `access.default`
- * (per-entry visibility is a property of the entry's own page, not the listing);
- * an archive type carries its own route-level `access`; every other intent
- * (taxonomy, author, date, front page, search) and an unmatched route are
- * un-policied.
- *
- * The per-entry lookup runs only for a type that declares a non-empty
- * `access.policies` space — an un-policied type, or one with only a `default`,
- * still resolves without touching the database, so the hot path is unchanged.
- * A would-be-404 single (no matching entry) resolves to the type default, so
- * gating stays fail-closed by type and never leaks which slugs exist.
- *
- * A `?preview=`-revealed draft is gated by its own stored per-entry choice too
- * (the resolver returns the draft row; the gate reads its persisted meta) — a
- * preview link honours per-entry visibility rather than bypassing it, matching
- * the fail-closed stance the type-level gate already takes for preview traffic.
+ * Reads the database only for a type with a non-empty `access.policies` space.
+ * A missing entry gets the type default, so gating never leaks which slugs
+ * exist.
  */
 export async function policyForMatch(
   ctx: AppContext,
@@ -86,15 +52,8 @@ export async function policyForMatch(
 }
 
 /**
- * Resolve an entry type's effective policy for one entry: the policy whose key
- * the entry stored, else the type `default`. A stored key outside the declared
- * space (a policy the developer removed) falls back to `default` — a stale
- * selection never grants less than the type baseline. Pure.
- *
- * Operator note: because a stale key resolves to `default`, *removing* a
- * selectable policy that was more restrictive than `default` relaxes every
- * entry that had selected it — there is no migration signal. Rename/replace
- * in place rather than delete when tightening isn't intended.
+ * A stale stored key falls back to `default`, so removing a policy stricter
+ * than `default` silently relaxes every entry that selected it.
  */
 export function selectEntryPolicy(
   access: EntryTypeAccess,
@@ -111,41 +70,24 @@ export function selectEntryPolicy(
 export interface EntryAccessSubject {
   readonly type: string;
   /**
-   * Where a per-entry policy choice lives. Either form is read: the stored
-   * `JsonObject`, or the decoded {@link ResolvedMeta} a read surface hands to a
-   * template — the reserved access key is a plain string and survives decoding
-   * untouched, so both spell the choice the same way.
+   * Either form works: the access key is a plain string that survives decoding.
    */
   readonly meta?: JsonObject | ResolvedMeta | null;
 }
 
-// The per-entry access choice stored under the reserved meta key, or `undefined`
-// when unset (or stored as a non-string by some out-of-band write).
+/**
+ * The per-entry access choice stored under the reserved meta key, or
+ * `undefined` when unset (or stored as a non-string by some out-of-band write).
+ */
 function readAccessKey(meta: EntryAccessSubject["meta"]): string | undefined {
   const value = meta?.[ACCESS_POLICY_META_KEY];
   return typeof value === "string" ? value : undefined;
 }
 
 /**
- * Whether an entry's own page is open to a visitor carrying no session.
- *
- * This is the question a *public artefact about an entry* has to ask — a
- * generated social card, and anything else a site publishes on an entry's
- * behalf. Not "may the caller read it": such an artefact is advertised in the
- * page's head, fetched by a scraper that carries no session, and served from a
- * shared cache. So the policy is resolved against an anonymous principal
- * whoever is asking, which is what keeps the answer principal-invariant — and
- * what lets the artefact carry a `public` `cache-control` at all.
- *
- * Only the access policy is weighed. Whether the entry is published, and
- * whether its type has a public page in the first place, stay the caller's
- * questions.
- *
- * Costs one resolver run, and cannot reuse the one the dispatcher already made
- * for the page: that answered for the actual principal, this answers for a
- * scraper. A policied type whose resolver reaches for an external entitlement
- * check therefore pays for it twice on a page that advertises a card. An
- * un-policied type — every type by default — returns before resolving anything.
+ * Resolves against an anonymous principal whoever asks, so a publicly cached
+ * artefact gets a principal-invariant answer. Weighs only the access policy,
+ * not publication status.
  */
 export async function entryAllowsAnonymousAccess(
   ctx: AppContext,
@@ -158,17 +100,11 @@ export async function entryAllowsAnonymousAccess(
   return gateAllowsRender(gate);
 }
 
-// The context as a visitor with no session sees it — the inverse of `withUser`,
-// and applied whether or not there is a principal to drop, so a resolver cannot
-// tell the two askers apart. Everything the principal confers goes together:
-// `auth.can`, or a resolver reading a capability rather than `ctx.user` would
-// decide on the asker's privileges; the token scopes narrowing it; the locale
-// they selected; and the decision the dispatcher already reached for them.
-//
-// `ctx.request` still carries their session cookie, so a resolver that
-// re-authenticates from it out of band sees through this. Nothing shipped does,
-// and stripping the request would take the URL and headers a policy legitimately
-// reads with it.
+/**
+ * Drops everything the principal confers, or a capability check would use the
+ * asker's privileges. `ctx.request` keeps the cookie because policies read its
+ * URL and headers.
+ */
 function asAnonymous(ctx: AppContext): AppContext {
   return {
     ...ctx,
@@ -184,9 +120,6 @@ function asAnonymous(ctx: AppContext): AppContext {
   };
 }
 
-// Whether a resolved gate lets content render at all: an `allow`, or a *soft*
-// challenge (which serves a teaser at 200). A redirect and a hard challenge
-// both send none. `gateToResponse` is the same rule, turned into a response.
 function gateAllowsRender(gate: Gate): boolean {
   return (
     gate.type === "allow" || (gate.type === "challenge" && gate.soft === true)
@@ -195,18 +128,13 @@ function gateAllowsRender(gate: Gate): boolean {
 
 interface GateResponseArgs {
   readonly ctx: Pick<AppContext, "config">;
-  /** The current (base-stripped) request URL — the `returnTo` destination. */
   readonly url: URL;
   readonly loginPath: string;
 }
 
 /**
- * Turn an already-resolved {@link Gate} into a short-circuit `Response` — a 302
- * to sign-in for `redirect`, a terminal challenge response for a *hard*
- * `challenge`, or `null` for `allow` and a *soft* `challenge` (let the render
- * proceed — a soft gate serves a teaser at 200). Split from resolution so the
- * dispatcher can resolve access once — reading the segment for the cache key
- * and the gate for enforcement from a single, possibly I/O-bearing, run.
+ * `null` for `allow` and a soft `challenge`. Split from resolution so one
+ * possibly I/O-bearing run yields both the cache segment and the gate.
  */
 export function gateToResponse(
   gate: Gate,
@@ -216,10 +144,8 @@ export function gateToResponse(
     case "allow":
       return null;
     case "redirect":
-      // Same `private, no-store` + `Vary: cookie` the allow/challenge paths
-      // carry: the 302 is anonymous-only and per-visitor, so a heuristically
-      // caching intermediary must never store it and bounce a signed-in user
-      // to login. A bare 302 isn't cacheable by default — this is belt-and-suspenders.
+      // A heuristically caching intermediary must never store this per-visitor
+      // 302 and bounce a signed-in user to login.
       return redirectTo(
         loginRedirect(args.loginPath, args.url, args.ctx.config.basePath),
         { "cache-control": "private, no-store", vary: "cookie" },
@@ -229,9 +155,11 @@ export function gateToResponse(
   }
 }
 
-// Build the sign-in `Location`: the (base-prefixed) login path carrying a
-// `redirectTo` of the (base-prefixed) current path, so the honouring flow —
-// #1735's OAuth/magic-link `redirectTo` threading — returns the visitor here.
+/**
+ * Build the sign-in `Location`: the (base-prefixed) login path carrying a
+ * `redirectTo` of the (base-prefixed) current path, so the honouring flow —
+ * #1735's OAuth/magic-link `redirectTo` threading — returns the visitor here.
+ */
 function loginRedirect(loginPath: string, url: URL, basePath: string): string {
   const returnTo = withBasePath(`${url.pathname}${url.search}`, basePath);
   const target = new URL(withBasePath(loginPath, basePath), url);
@@ -240,8 +168,10 @@ function loginRedirect(loginPath: string, url: URL, basePath: string): string {
   return `${target.pathname}${target.search}`;
 }
 
-// Hard gate: the protected content is never sent — only the challenge status.
-// `private, no-store` keeps the terminal response out of every cache.
+/**
+ * Hard gate: the protected content is never sent — only the challenge status.
+ * `private, no-store` keeps the terminal response out of every cache.
+ */
 function challengeResponse(kind: string): Response {
   const status = CHALLENGE_STATUS[kind] ?? 402;
   return new Response(status === 403 ? "Forbidden" : "Payment Required", {

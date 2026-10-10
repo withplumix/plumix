@@ -23,10 +23,12 @@ export { DEFAULT_ACCEPTED_TYPES };
 /** Default max upload size — 25 MiB. */
 export const DEFAULT_MAX_UPLOAD_SIZE = 25 * 1024 * 1024;
 
-// Per-entity label table; `satisfies EntryTypeLabels` catches typo-
-// renames at compile time. See `plugin-pages/src/index.ts` for the
-// "no Babel macro server-side" rationale on the literal `{id,message}`
-// shape.
+/**
+ * Per-entity label table; `satisfies EntryTypeLabels` catches typo-
+ * renames at compile time. See `plugin-pages/src/index.ts` for the
+ * "no Babel macro server-side" rationale on the literal `{id,message}`
+ * shape.
+ */
 const MEDIA_LABELS = {
   singular: { id: "plugin.media.media.singular", message: "Asset" },
   plural: { id: "plugin.media.media.plural", message: "Media" },
@@ -78,8 +80,10 @@ const MEDIA_DESCRIPTION = {
   message: "Uploaded files — images, video, documents",
 };
 
-// Admin-page chrome (separate from per-type labels because the
-// "Media Library" page heading isn't an entry-type label).
+/**
+ * Admin-page chrome (separate from per-type labels because the
+ * "Media Library" page heading isn't an entry-type label).
+ */
 const MEDIA_LIBRARY_LABEL: Label = {
   id: "plugin.media.adminPage.title",
   message: "Media Library",
@@ -90,49 +94,23 @@ const LIBRARY_GROUP_LABEL: Label = {
 };
 
 interface MediaPluginOptions {
-  /**
-   * MIME types accepted by `media.createUploadUrl`. The browser sends a
-   * proposed `contentType`; anything outside the allowlist is rejected
-   * before a presigned URL is minted. Defaults to {@link DEFAULT_ACCEPTED_TYPES}.
-   */
   readonly acceptedTypes?: readonly string[];
   /**
-   * Maximum upload size in bytes. The browser-declared `size` in
-   * `media.createUploadUrl` is rejected up front if it exceeds this
-   * cap. A presigned PUT is signed for exactly that `size` as
-   * `Content-Length`, so the bucket refuses a body of any other length;
-   * the worker-routed upload refuses a request with no `Content-Length`
-   * or one above the declared `size`. `media.confirm` then checks the
-   * stored size against the declared one. Defaults to 25 MiB.
+   * Bytes. Caps the declared `size`; the presigned PUT is signed for exactly
+   * that `Content-Length`, so storage refuses any other body length.
    */
   readonly maxUploadSize?: number;
 }
 
 /**
- * Lexical path the plumix vite plugin uses to locate this package's admin
- * chunk. Stays inside the consumer's project tree (`node_modules/...`) so
- * the build-time containment check passes; esbuild follows the symlink to
- * the workspace source under the hood. Override `adminEntry` in
- * `definePlugin` if your install layout differs (e.g. pnpm hoisting tweaks).
+ * Lexical, inside the consumer's `node_modules`, so the build-time containment
+ * check passes; esbuild follows the symlink to the source.
  */
 const ADMIN_ENTRY_PATH = pluginAdminEntryPath("@plumix/plugin-media");
 
 /**
- * Media plugin — registers the `media` entry type, the `media.*` RPC
- * router, and the admin Media Library page.
- *
- * Uploads use the two-phase signed-URL flow:
- *
- *   1. `media.createUploadUrl({ filename, contentType, size })` →
- *      creates a `draft` entry, returns a presigned PUT URL the browser
- *      uses to upload bytes directly to storage.
- *   2. `media.confirm({ id })` → flips the entry from `draft` to
- *      `published` once the browser-PUT succeeded.
- *
- * Bytes never traverse the worker. Requires a storage adapter whose
- * `presignPut` is implemented (e.g. `r2({ s3: { ... } })`).
- *
- * Pairs with `imageDelivery:` for on-the-fly resizing.
+ * Browsers upload straight to storage through a presigned URL when the storage
+ * adapter implements `presignPut`, and through a worker route otherwise.
  *
  * @example
  * ```ts
@@ -161,7 +139,8 @@ export function media(options: MediaPluginOptions = {}): PluginDescriptor {
   return definePlugin(
     "media",
     (ctx) => {
-      // Media blocks (`media/image`, `media/file`) under the `media/` namespace.
+      // Media blocks (`media/image`, `media/file`) under the `media/`
+      // namespace.
       ctx.registerBlocks(mediaBlocks);
 
       for (const fieldType of MEDIA_FIELD_TYPES) {
@@ -173,11 +152,8 @@ export function media(options: MediaPluginOptions = {}): PluginDescriptor {
         labels: MEDIA_LABELS,
         description: MEDIA_DESCRIPTION,
         supports: ["title", "excerpt"],
-        // `isPublic: false` cascades to `showUI: false` and
-        // `showInSidebar: false`. Both are load-bearing here:
-        // the plugin renders its own admin page (registered below)
-        // — we don't want the generic entries list, sidebar item,
-        // or dashboard quick-card auto-registered too.
+        // Also hides the generic entries list, sidebar item and dashboard
+        // card: the plugin renders its own admin page.
         isPublic: false,
         hasArchive: false,
         menuIcon: "image",
@@ -202,22 +178,15 @@ export function media(options: MediaPluginOptions = {}): PluginDescriptor {
       ctx.registerMcpTool(mediaListTool);
       ctx.registerMcpTool(mediaGetTool);
 
-      // Reference-field surface: any `media({ ... })` field calls
-      // through `lookup.list({ kind: "media", ids })` for write
-      // validation + read-time orphan filter, and through the same
-      // RPC for picker label resolution. Capability matches the
-      // existing media library page gate.
+      // Capability matches the media library page gate.
       ctx.registerLookupAdapter({
         kind: "media",
         adapter: mediaLookupAdapter,
         capability: MEDIA_READ_CAPABILITY,
       });
 
-      // Worker-routed upload fallback. `media.createUploadUrl` returns
-      // this URL when `storage.presignPut` isn't configured (e.g. the
-      // R2 binding is attached but no S3 credentials are wired up). The
-      // browser PUTs bytes here, the dispatcher authenticates the
-      // session, and the handler streams them through to storage.
+      // Upload fallback `media.createUploadUrl` hands out when the storage
+      // adapter has no `presignPut` (an R2 binding without S3 credentials).
       ctx.registerRoute({
         method: "PUT",
         path: "/upload/*",
@@ -225,10 +194,8 @@ export function media(options: MediaPluginOptions = {}): PluginDescriptor {
         handler: handleWorkerUpload,
       });
 
-      // Worker-proxied media serve. When the storage adapter has no
-      // public URL base (private bucket without a custom domain),
-      // `r2.url()` returns a relative URL pointing here. Public so
-      // published media can be embedded in pages/posts.
+      // Storage without a public URL base points here. Public so published
+      // media can be embedded in pages.
       ctx.registerRoute({
         method: "GET",
         path: "/serve/*",

@@ -10,10 +10,6 @@ import { fireEntryAutosaveDiscarded } from "./lifecycle.js";
 
 const discardDraftInput = v.object({ id: idParam });
 
-// Removes the caller's own pending autosave for an entry.
-// Returns `{ discarded }` so the client can distinguish "we cleaned
-// up your row" from "there was nothing to clean up" — both happy
-// paths, neither an error.
 export const discardDraft = base
   .use(authenticated)
   .input(discardDraftInput)

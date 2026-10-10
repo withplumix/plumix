@@ -125,8 +125,10 @@ export class AppBootError extends Error {
     );
   }
 
-  // Boot is the last place to catch a bad schedule. Past here the task simply
-  // never fires, on every runtime, with nothing to see in a log.
+  /**
+   * Boot is the last place to catch a bad schedule. Past here the task simply
+   * never fires, on every runtime, with nothing to see in a log.
+   */
   static invalidScheduledTaskCron(ctx: {
     pluginId: string;
     taskId: string;
@@ -153,8 +155,10 @@ export class AppBootError extends Error {
     );
   }
 
-  // A theme has no id, so the culprit is named by the field it came from and
-  // the render functions it replaces.
+  /**
+   * A theme has no id, so the culprit is named by the field it came from and
+   * the render functions it replaces.
+   */
   static mailOverrideUndeclared(ctx: {
     overriddenBy: "site" | "theme";
     mail: string;

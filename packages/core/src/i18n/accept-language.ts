@@ -1,13 +1,17 @@
 import type { LocaleRegistry, ResolvedLocale } from "./locale-registry.js";
 import { findEnabledLocale } from "./locale-registry.js";
 
-// Real Accept-Language headers carry 1–4 entries; cap defensively so a
-// hostile client can't burn CPU on N×`Intl.Locale` allocations per GET.
+/**
+ * Real Accept-Language headers carry 1–4 entries; cap defensively so a
+ * hostile client can't burn CPU on N×`Intl.Locale` allocations per GET.
+ */
 const MAX_ACCEPT_LANGUAGE_ENTRIES = 16;
 
-// 3-tier matcher: exact canonical → script-mapped (`zh-Hant` → `zh-TW`) →
-// base-language-mapped (`pt-PT` → `pt-BR`). Browsers emit q-sorted entries,
-// so first-match-wins over iteration order is enough.
+/**
+ * 3-tier matcher: exact canonical → script-mapped (`zh-Hant` → `zh-TW`) →
+ * base-language-mapped (`pt-PT` → `pt-BR`). Browsers emit q-sorted entries,
+ * so first-match-wins over iteration order is enough.
+ */
 export function matchAcceptLanguage(
   request: Request,
   i18n: LocaleRegistry,

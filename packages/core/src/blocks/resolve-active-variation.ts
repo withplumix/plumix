@@ -23,13 +23,9 @@ export function resolveActiveVariation(
       continue;
     }
     const matchAttrs = variation.attrs ?? {};
-    // Constraining keys: a key listed in `isActive` only counts when
-    // the variation actually declares a value for it. Keys that aren't
-    // declared on either side would otherwise inflate specificity via
-    // `undefined === undefined`. Structural compare (JSON-serialised)
-    // catches nested-object attrs whose references differ across
-    // renders — entry content is JSON anyway, so deep equality is the
-    // honest baseline.
+    // Only keys the variation declares count, else `undefined === undefined`
+    // inflates specificity. JSON compare catches nested attrs whose references
+    // differ across renders.
     const constraining = matcher.filter((key) => key in matchAttrs);
     if (constraining.length === 0) continue;
     const allMatch = constraining.every((key) =>

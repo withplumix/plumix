@@ -28,7 +28,7 @@ const TREE: readonly BlockNode[] = [
   { id: "s1", name: "core/spacer" },
 ];
 
-// Selects a block on mount so the block view has something to show.
+/** Selects a block on mount so the block view has something to show. */
 function Selector({ id }: { readonly id?: string }): null {
   const api = useEditorStoreApi();
   useEffect(() => {
@@ -79,7 +79,7 @@ describe("JsonInspector", () => {
   });
 });
 
-// Opens the source dialog on mount so its (portalled) content renders.
+/** Opens the source dialog on mount so its (portalled) content renders. */
 function Opener(): null {
   const api = useEditorStoreApi();
   useEffect(() => {

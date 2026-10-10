@@ -7,27 +7,24 @@ import { readSeoOverrides } from "./overrides.js";
 import { isCrawlableType } from "./scope.js";
 import { loadSeoSettings } from "./settings.js";
 
-// The shared endpoint: one submission reaches every participating engine, so a
-// site does not hold a key per search engine.
+/**
+ * The shared endpoint: one submission reaches every participating engine, so a
+ * site does not hold a key per search engine.
+ */
 const ENDPOINT = "https://api.indexnow.org/indexnow";
 
 /**
- * Where the key file answers. IndexNow proves ownership by fetching a file
- * containing the key; the submission names this path as `keyLocation`, which
- * is what lets it live at a fixed path rather than at `<key>.txt` — a route
- * this plugin could not claim, since the key is a runtime answer and routes
- * are registered at boot.
+ * Fixed and named as `keyLocation`, since `<key>.txt` can't be routed: the key
+ * is runtime data and routes register at boot.
  */
 const INDEXNOW_KEY_PATH = "/indexnow-key.txt";
 
-// Long enough for a slow endpoint, short enough that a stalled submission
-// cannot hold a worker open until the platform kills it.
+/**
+ * Long enough for a slow endpoint, short enough that a stalled submission
+ * cannot hold a worker open until the platform kills it.
+ */
 const TIMEOUT_MS = 5000;
 
-/**
- * `GET /indexnow-key.txt` — the ownership proof the submission points at. A
- * site with no key has nothing to prove, so the path is not a document.
- */
 async function handleIndexNowKey(ctx: AppContext): Promise<Response> {
   const { indexNowKey } = await loadSeoSettings(ctx);
   if (indexNowKey === null) return new Response("Not found", { status: 404 });
@@ -37,11 +34,8 @@ async function handleIndexNowKey(ctx: AppContext): Promise<Response> {
 }
 
 /**
- * Tell the search engines an entry moved, if it is one they may have. Every
- * gate the head and the sitemap apply is applied here too — a page nobody may
- * index is a page nobody is told about. The agreement table in
- * `routes.test.ts` holds these gates to theirs, except the access one: its
- * rows all expect a page that renders, which a gated one does not.
+ * Applies every gate the head and sitemap apply: a page nobody may index is a
+ * page nobody is told about.
  */
 async function submit(ctx: AppContext, entry: Entry): Promise<void> {
   if (entry.status !== "published") return;
@@ -70,9 +64,8 @@ async function submit(ctx: AppContext, entry: Entry): Promise<void> {
       urlList: [`${ctx.origin}${path}`],
     }),
   });
-  // A key the engines cannot verify comes back as a refusal, not as a thrown
-  // request — the one failure an operator has to be told about, since nothing
-  // else reveals that notification has been silently doing nothing.
+  // An unverifiable key comes back as a refusal, and nothing else would reveal
+  // that notification is silently doing nothing.
   if (!response.ok) {
     ctx.logger.warn("indexnow submission was refused", {
       status: response.status,
@@ -95,12 +88,8 @@ function notify(entry: Entry, ctx: AppContext): void {
 }
 
 /**
- * Notify the engines that an entry published or changed, and serve the key
- * file that proves the site is allowed to.
- *
- * The submission is deferred, so it never joins the request the editor is
- * waiting on, and every failure is swallowed into a log line: an unreachable
- * endpoint is a missed notification, not a failed publish.
+ * Submissions are deferred and failures only logged: an unreachable endpoint is
+ * a missed notification, not a failed publish.
  */
 export function registerIndexNow(ctx: PluginSetupContext): void {
   ctx.registerPublicRoute({

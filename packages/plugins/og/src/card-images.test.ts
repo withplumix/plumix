@@ -16,13 +16,17 @@ import {
   seedMedia,
 } from "./test/harness.js";
 
-// Stands in for an uploaded file: what it decodes to does not matter to the
-// walk, only that the bytes the bucket holds are the bytes the renderer gets.
+/**
+ * Stands in for an uploaded file: what it decodes to does not matter to the
+ * walk, only that the bytes the bucket holds are the bytes the renderer gets.
+ */
 const HERO_KEY = "media/2026/hero.png";
 const HERO_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a]);
 
-// A 1x1 transparent GIF — small enough to write inline, which is the case data
-// URIs exist for.
+/**
+ * A 1x1 transparent GIF — small enough to write inline, which is the case data
+ * URIs exist for.
+ */
 const DATA_URI =
   "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 
@@ -104,11 +108,8 @@ describe("an image a card references", () => {
     expect(fake.inputs[0]?.images).toEqual([{ src, data: HERO_BYTES }]);
   });
 
-  // The whole guard on that branch: the key is sliced out of the `src`, and the
-  // slot has to mint that exact URL back for it. Here it does not — the bucket
-  // percent-encodes the separators — so a real key that a real object sits at
-  // is still refused, because the URL naming it was not one the bucket would
-  // have published.
+  // The bucket percent-encodes separators, so it never mints this URL for the
+  // key; a real key is still refused.
   test("is refused when the bucket does not mint that URL for the key", async () => {
     const storage = seededBucket();
     const fake = createFakeRenderer();
@@ -197,11 +198,8 @@ describe("an image a card references", () => {
     expect(fake.inputs[0]?.images).toEqual([]);
   });
 
-  // The root cause of all three advisories the no-fetch rule answers was a
-  // render option taken from the URL. The server derives every one of them: the
-  // URL names a card and carries nothing else — so a query string is not
-  // ignored, it is refused, since the edge keys on the whole URL and answering
-  // one would mint an entry per parameter a caller invents.
+  // A query string is refused, not ignored: the edge keys on the whole URL, so
+  // answering one mints an entry per invented parameter.
   test("cannot be steered by anything in the request URL", async () => {
     const fake = createFakeRenderer();
     const harness = await createHarness({ renderer: fake.renderer });

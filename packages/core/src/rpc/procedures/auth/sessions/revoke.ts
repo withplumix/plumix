@@ -6,16 +6,10 @@ import { authenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
 import { sessionsRevokeInputSchema } from "./schemas.js";
 
-// Revoke a single session by id, scoped to the calling user. The
-// per-row complement to `revokeOthers` — used by the per-device list
-// in the admin profile when the user wants to sign out one specific
-// device.
-//
-// Refuses to revoke the current session (the cookie's session) so the
-// user doesn't accidentally lock themselves out mid-flow; "sign out
-// here" goes through `/_plumix/auth/signout` instead, which also
-// surfaces the IdP logout redirect. NOT_FOUND for cross-user attempts
-// — the WHERE pins both `id` and `userId`.
+/**
+ * Refuses the current session: signing out here goes through
+ * `/_plumix/auth/signout`, which also handles the IdP logout redirect.
+ */
 export const revoke = base
   .use(authenticated)
   .input(sessionsRevokeInputSchema)

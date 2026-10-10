@@ -1,18 +1,6 @@
 /// <reference lib="dom" />
-// The client island error overlay (#1603). A dev-only catch net for island
-// failures: it consumes the framework's `plumix:hydration-error` event
-// (hydration/mount), the `plumix:island-error` event that the island renderer's
-// React root callbacks emit (post-hydration render/effect errors), and the
-// global `error` / `unhandledrejection` events (async + event-handler leaks).
-// Errors are counted on a small, non-blocking bottom-left indicator that opens a
-// slim client dialog — the shared error body inside the shared overlay shell
-// (#1678), a centered modal over a dimmed backdrop (the Next.js dev-overlay
-// shape), inside a Shadow DOM root; Escape, the close button, or a backdrop
-// click returns to the indicator, and the page stays visible behind — the
-// server-rendered HTML is the floor. The whole module is
-// pulled in only under the dev gate (a lazy `import()` in the islands
-// bootstrap), so it tree-shakes out of production island bundles along with the
-// React DOM client weight it carries.
+// Load only under the dev gate, so this module and its React DOM client weight
+// tree-shake out of production island bundles.
 
 import type { ReactElement } from "react";
 import type { Root } from "react-dom/client";
@@ -33,18 +21,15 @@ import { DEV_ERROR_CSS } from "./tokens.js";
 
 const HOST_TAG = "plumix-dev-error-overlay";
 
-/** One captured island failure: the resolved error plus the island it came from. */
 interface CapturedError {
   readonly info: DevErrorInfo;
-  /** The island's component name, when the error carried its element. */
+  /** Set when the error carried its island element. */
   readonly label?: string;
 }
 
 /**
- * Install the island error overlay on `target` (defaults to `window`). Wires the
- * catch net and returns a teardown that removes the listeners and the mounted
- * host. Idempotent: a second call before teardown returns the existing overlay's
- * teardown, so an HMR re-run of the islands bootstrap never stacks listeners.
+ * Idempotent: a second install before teardown returns the existing teardown,
+ * so an HMR re-run of the islands bootstrap never stacks listeners.
  */
 let active: IslandErrorOverlay | null = null;
 
@@ -57,21 +42,29 @@ export function installIslandErrorOverlay(target: Window = window): () => void {
 }
 
 class IslandErrorOverlay {
-  // Replaced (not mutated) on each change so React and the `ErrorBody` effect
-  // see a new reference and reconcile the resolved frames when they arrive.
+  /**
+   * Replaced (not mutated) on each change so React and the `ErrorBody` effect
+   * see a new reference and reconcile the resolved frames when they arrive.
+   */
   private errors: CapturedError[] = [];
-  // Identity dedup so a render loop or a doubly-dispatched failure (e.g. the
-  // hydration path and the window `error` handler both seeing it) counts once.
+  /**
+   * Identity dedup so a render loop or a doubly-dispatched failure (e.g. the
+   * hydration path and the window `error` handler both seeing it) counts once.
+   */
   private readonly seenObjects = new WeakSet();
   private readonly seenPrimitives = new Set<string>();
   private active = 0;
-  // Set by a genuine capture and consumed (reset) by the next `render`, so only
-  // that render pulses the count circle — not a reopen on a settled count.
+  /**
+   * Set by a genuine capture and consumed (reset) by the next `render`, so only
+   * that render pulses the count circle — not a reopen on a settled count.
+   */
   private pulseNext = false;
   private expanded = false;
   private host: HTMLElement | null = null;
   private root: Root | null = null;
-  // Set on teardown so a late `resolveFrames` POST can't remount the overlay.
+  /**
+   * Set on teardown so a late `resolveFrames` POST can't remount the overlay.
+   */
   private torndown = false;
   private readonly listeners: (() => void)[] = [];
 
@@ -90,10 +83,8 @@ class IslandErrorOverlay {
       this.capture(error, element, componentStack);
     });
     this.on("plumix:island-hydration-mismatch", (event) => {
-      // A dev-hydrating island whose server and client renders disagreed
-      // (#1667). No thrown error — React recovered — so this renders as its own
-      // synthesized entry rather than through `toDevErrorInfo`. The captured
-      // server/client pair (#1668) recombines into the diff the page renders.
+      // No thrown error, since React recovered, so this is a synthesized entry
+      // rather than one built by `toDevErrorInfo`.
       const { element, componentStack, server, client } = detailOf(event);
       const diff =
         server !== undefined && client !== undefined
@@ -135,10 +126,10 @@ class IslandErrorOverlay {
     void this.resolveFrames(entry);
   }
 
-  // A hydration mismatch (#1667) carries no thrown error and no JS stack —
-  // React's component stack is the signal — so it maps straight into the shared
-  // resolved-error contract and skips frame resolution. The captured server/
-  // client HTML pair (#1668), when present, becomes the diff the page renders.
+  /**
+   * A hydration mismatch has no thrown error and no JS stack, so it skips frame
+   * resolution; React's component stack is the signal.
+   */
   private captureMismatch(
     element?: HTMLElement,
     componentStack?: string,
@@ -158,15 +149,16 @@ class IslandErrorOverlay {
     this.addEntry(info, element);
   }
 
-  // Push a resolved entry, point the overlay at it, and pulse the count. Shared
-  // by the error-capture paths (thrown errors, hydration mismatches).
+  /**
+   * Push a resolved entry, point the overlay at it, and pulse the count. Shared
+   * by the error-capture paths (thrown errors, hydration mismatches).
+   */
   private addEntry(info: DevErrorInfo, element?: HTMLElement): CapturedError {
     const label = deriveLabel(element);
     const entry: CapturedError = { info, ...(label ? { label } : {}) };
     this.errors = [entry, ...this.errors];
-    // Newest error lands at index 0. A collapsed overlay points at it; an
-    // expanded panel follows the entry the developer is reading as it shifts
-    // down by one, so the panel never swaps out from under them.
+    // An expanded panel follows the entry being read as it shifts down, so the
+    // panel never swaps out from under the developer.
     if (this.expanded) this.active += 1;
     else this.active = 0;
     // A genuine new error just landed — let the next render pulse the circle.
@@ -175,10 +167,10 @@ class IslandErrorOverlay {
     return entry;
   }
 
-  // Browser stacks are unmapped — they point at Vite's served module URLs, not
-  // original source — so POST the raw stack to the dev resolver (#1572) and swap
-  // in the original `file:line` frames when they return, giving the overlay the
-  // same frame view the (already-sourcemapped) server page shows.
+  /**
+   * Browser stacks point at Vite's served module URLs, so the dev resolver maps
+   * them back to the original `file:line` frames.
+   */
   private async resolveFrames(entry: CapturedError): Promise<void> {
     const { stack } = entry.info;
     if (!stack) return;
@@ -248,9 +240,8 @@ class IslandErrorOverlay {
     shadow.append(style, mount);
     this.target.document.body.appendChild(host);
     this.host = host;
-    // React 19 attaches its listeners to the mount container, so click handlers
-    // work across the shadow boundary. A stray render error in the overlay must
-    // not feed back into the catch net, so it is reported to the console only.
+    // A render error in the overlay must not feed back into the catch net, so
+    // it goes to the console only.
     this.root = createRoot(mount, {
       onUncaughtError: (err) => console.error(err),
     });
@@ -296,8 +287,10 @@ function Overlay({
 }: {
   readonly errors: readonly CapturedError[];
   readonly active: number;
-  // True only on the render that follows a genuine new capture, so the count
-  // circle animates the tick-up but a reopen on a settled count does not.
+  /**
+   * True only on the render that follows a genuine new capture, so the count
+   * circle animates the tick-up but a reopen on a settled count does not.
+   */
   readonly pulse: boolean;
   readonly expanded: boolean;
   readonly shadowRoot: ShadowRoot | null;
@@ -316,9 +309,7 @@ function Overlay({
         onClick={onExpand}
       >
         {/* Keyed on the count so each new error remounts the circle and replays
-            the pulse animation; `pulse` gates whether this render is a genuine
-            tick-up — the burst signal lives on the number itself, no second
-            element. */}
+            the pulse animation. */}
         <span
           key={count}
           className={
@@ -380,11 +371,6 @@ function Overlay({
   );
 }
 
-// The island dialog body: renders one captured island failure through the shared
-// slim {@link DevErrorBody} — the label, the error, and the hydration diff, none
-// of the server-only context sections. Once the resolved frames have arrived and
-// committed, it wires frame-click → source excerpt against the shadow root (the
-// same enhancer the server page runs against `document`).
 function ClientErrorBody({
   entry,
   shadowRoot,
@@ -393,8 +379,9 @@ function ClientErrorBody({
   readonly shadowRoot: ShadowRoot | null;
 }): ReactElement {
   const { frames } = entry.info;
-  // The enhancer wires click listeners and fires the first excerpt fetch; run it
-  // exactly once (a StrictMode double-invoke or dep change must not double-wire).
+  // The enhancer wires click listeners and fires the first excerpt fetch; run
+  // it exactly once (a StrictMode double-invoke or dep change must not
+  // double-wire).
   const enhanced = useRef(false);
   useEffect(() => {
     if (enhanced.current) return;
@@ -406,18 +393,16 @@ function ClientErrorBody({
   return <DevErrorBody error={entry.info} />;
 }
 
-// The synthesized message for a hydration mismatch — React's own recoverable-
-// error wording is an internal we don't surface. A dev-only English string,
-// matching the framework's error voice, that names the usual culprit.
+/** React's own recoverable-error wording is an internal we don't surface. */
 const HYDRATION_MISMATCH_MESSAGE =
   "The island's server and client renders disagreed. React recovered by " +
   "re-rendering it on the client; the usual cause is a non-deterministic " +
   "render — a Date.now(), Math.random(), or locale/timezone read.";
 
-// Any value can be thrown; a non-`Error` degrades to a named exception carrying
-// its string form. Browser stacks arrive raw (unlike the already-sourcemapped
-// server stacks), so this keeps the raw stack string rather than parsing frames
-// that would point at transformed positions — the renderer shows it verbatim.
+/**
+ * Browser stacks arrive raw, so keep the stack string rather than parse frames
+ * that would point at transformed positions.
+ */
 function toDevErrorInfo(error: unknown, componentStack?: string): DevErrorInfo {
   const componentPart = componentStack !== undefined ? { componentStack } : {};
   if (error instanceof Error) {
@@ -431,12 +416,10 @@ function toDevErrorInfo(error: unknown, componentStack?: string): DevErrorInfo {
   return { name: "UnknownError", message: String(error), ...componentPart };
 }
 
-// The island-only chrome: the small bottom-left indicator that opens the shared
-// overlay shell (#1678). Expanding it mounts {@link DevOverlayShell} — the
-// centered, bounded modal over a dimmed backdrop, so the server-rendered page
-// stays visible behind it and closing returns to the indicator. The badge reuses
-// the shell's palette (inherited from `:host` via `DEV_OVERLAY_CSS`); only its
-// layout and the count-pulse animation live here.
+/**
+ * The badge reuses the shell's palette, inherited from `:host`; only its layout
+ * and the count-pulse animation live here.
+ */
 const BADGE_CSS = `
 .plumix-island-overlay__badge {
   position: fixed;

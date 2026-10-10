@@ -93,9 +93,8 @@ describe("cfAccess — config validation", () => {
 });
 
 describe("cfAccess — signOutUrl", () => {
-  // Chained beside the default authenticator, the Access logout must only
-  // reach a request that carries an Access credential, or a member signed in
-  // by magic link would be sent to the Access logout too.
+  // The Access logout must only reach a request carrying an Access
+  // credential, or a magic-link member would be sent there too.
   async function signOutRedirect(cookie: string): Promise<string | null> {
     const h = await createDispatcherHarness({
       config: {
@@ -147,10 +146,8 @@ describe("cfAccess — signOutUrl", () => {
 });
 
 describe("cfAccess — hasSession", () => {
-  // Regression: CF Access identity rides the `cf-access-jwt-assertion` header,
-  // not the standard session cookie. If the guard didn't declare it carries a
-  // session, public renders would skip authentication and the visual editor
-  // (a capability-gated render) would never boot for a CF Access operator.
+  // CF Access identity rides a header, not the session cookie; without
+  // declaring a session, public renders skip auth and the editor never boots.
   test("carries a session when the CF Access header is present", () => {
     const guard = cfAccess({
       teamDomain: TEAM_DOMAIN,
@@ -396,10 +393,8 @@ describe("cfAccess.authenticate — full crypto path", () => {
       const url = typeof arg === "string" ? arg : (arg as Request).url;
       return url.includes("/cdn-cgi/access/certs");
     });
-    // jose's createRemoteJWKSet caches the keyset per construction, so
-    // a single guard instance should hit the JWKS endpoint exactly
-    // once across many authenticate calls. Regression here = perf
-    // disaster (one round-trip per request).
+    // jose's createRemoteJWKSet caches the keyset per construction; one
+    // round-trip per request would be a perf disaster.
     expect(jwksFetches).toHaveLength(1);
   });
 

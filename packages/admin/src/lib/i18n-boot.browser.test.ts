@@ -6,9 +6,11 @@ import { setI18nResolver, vMessage } from "@plumix/core/validation";
 import type { AdminCatalogs } from "./i18n-boot.js";
 import { bootI18n } from "./i18n-boot.js";
 
-// The bundled catalog set is whatever `i18n:compile` last wrote to disk, so
-// these tests state their own: English + German present, nothing else — enough
-// to drive the activate / region-strip / fallback logic.
+/**
+ * The bundled catalog set is whatever `i18n:compile` last wrote to disk, so
+ * these tests state their own: English + German present, nothing else — enough
+ * to drive the activate / region-strip / fallback logic.
+ */
 const catalog = () => Promise.resolve({ messages: {} });
 const SHIPPED: AdminCatalogs = {
   admin: {

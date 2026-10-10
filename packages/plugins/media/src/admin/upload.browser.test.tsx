@@ -11,10 +11,10 @@ import { MediaLibrary } from "./MediaLibrary.js";
 i18n.load({ en: {} });
 i18n.activate("en");
 
-// A plugin's admin test renders its component and sends a `File` through a
-// stubbed procedure in the same file (#2432): the browser tier's `fetch`,
-// `FormData` and `File` all come from the one page, so the multipart body
-// oRPC's link builds reaches the stub intact.
+/**
+ * The browser tier's `fetch`, `FormData` and `File` come from one page, so
+ * the multipart body oRPC's link builds reaches the stub intact.
+ */
 let seen: unknown;
 
 beforeEach(() => {

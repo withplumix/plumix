@@ -1,7 +1,6 @@
 /**
- * Content-list rows in the admin, for a worker-driven spec asserting on what
- * it created. Title links carry `content-list-row-<id>`; the actions strip
- * and trash button reuse the prefix, so they are excluded.
+ * Admin content-list title links; the actions strip and trash button reuse the
+ * `content-list-row-` prefix, so they are excluded.
  */
 export const CONTENT_LIST_ROWS =
   "[data-testid^='content-list-row-']:not([data-testid*='-actions-']):not([data-testid*='-trash-'])";

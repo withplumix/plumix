@@ -18,21 +18,21 @@ import { SEED_BLOCKS, SEED_PATTERNS } from "./seed.js";
 
 import "./playground.css";
 
-// Load the package's compiled catalogs, exactly as the admin shell does. A
-// production build (what e2e previews) won't runtime-compile a raw default
-// message, so an empty catalog would render ICU like "{count} selected"
-// literally — loading the compiled `en` catalog keeps the harness faithful.
-// `playground`/`playground:build` compile them first through core's
-// `plumix-compile-catalogs` bin — the compile `plumix i18n compile` runs.
+/**
+ * A production build won't runtime-compile a raw default message, so without
+ * the compiled catalog ICU like "{count} selected" renders literally.
+ */
 const CATALOGS = import.meta.glob<{ messages: Messages }>("../locales/*.mjs", {
   eager: true,
 });
 i18n.load("en", CATALOGS["../locales/en.mjs"]?.messages ?? {});
 i18n.activate("en");
 
-// Core blocks ship no variations, so augment core/group with an inserter
-// variation here — the harness needs one to exercise the catalog's
-// blocks-plus-variations rendering.
+/**
+ * Core blocks ship no variations, so augment core/group with an inserter
+ * variation here — the harness needs one to exercise the catalog's
+ * blocks-plus-variations rendering.
+ */
 const withVariations = coreBlocks.map((spec): BlockSpec =>
   spec.name === "core/group"
     ? {
@@ -52,7 +52,9 @@ const withVariations = coreBlocks.map((spec): BlockSpec =>
 );
 const registry = createBlockRegistry([...withVariations, feedSpec]);
 
-// Seed theme tokens so the Styles tab's token-or-custom controls have options.
+/**
+ * Seed theme tokens so the Styles tab's token-or-custom controls have options.
+ */
 const SEED_TOKENS = {
   color: {
     primary: { value: "#2563eb", label: "Primary" },
@@ -84,11 +86,13 @@ const params = new URLSearchParams(window.location.search);
 if (params.get("theme") === "dark") {
   document.documentElement.classList.add("dark");
 }
-// `?readonly` exercises preview mode: read-only canvas, editing chrome hidden,
-// a host-supplied banner standing in for the revision/restore overlay.
+/**
+ * `?readonly` exercises preview mode: read-only canvas, editing chrome hidden,
+ * a host-supplied banner standing in for the revision/restore overlay.
+ */
 const readOnly = params.has("readonly");
 
-// A stand-in for the admin's revision/share preview banner.
+/** A stand-in for the admin's revision/share preview banner. */
 function PreviewBannerStub(): ReactElement {
   return (
     <div

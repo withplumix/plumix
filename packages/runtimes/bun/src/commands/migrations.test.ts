@@ -43,7 +43,7 @@ function open(
   });
 }
 
-// Core's shipped history, read from the workspace.
+/** Core's shipped history, read from the workspace. */
 const CORE = {
   migrationsFolder: fileURLToPath(
     new URL("../../../../core/migrations", import.meta.url),

@@ -2,7 +2,10 @@ import { spawn } from "node:child_process";
 
 import type { PackageManager } from "./package-manager.js";
 
-/** Runs a command in a directory; `ok` is false on a non-zero exit or spawn error. */
+/**
+ * Runs a command in a directory; `ok` is false on a non-zero exit or spawn
+ * error.
+ */
 export interface CommandRunner {
   run(
     command: string,
@@ -18,7 +21,6 @@ interface PostScaffoldOptions {
   readonly db: boolean;
   readonly git: boolean;
   readonly runner: CommandRunner;
-  /** The runtime's own prefix for the `plumix` CLI, when it declares one. */
   readonly cli?: string;
 }
 
@@ -30,7 +32,7 @@ export interface PostScaffoldResult {
   readonly gitInitialized: boolean;
 }
 
-// How each package manager runs a locally-installed bin (`plumix`).
+/** How each package manager runs a locally-installed bin (`plumix`). */
 function pmExec(pm: PackageManager): readonly [string, ...string[]] {
   switch (pm) {
     case "npm":
@@ -44,8 +46,10 @@ function pmExec(pm: PackageManager): readonly [string, ...string[]] {
   }
 }
 
-// A runtime's declared prefix is static scaffold metadata with no quoting, so
-// splitting on spaces recovers its argv.
+/**
+ * A runtime's declared prefix is static scaffold metadata with no quoting, so
+ * splitting on spaces recovers its argv.
+ */
 function plumixCommand(
   pm: PackageManager,
   cli: string | undefined,
@@ -56,12 +60,8 @@ function plumixCommand(
 }
 
 /**
- * Run the optional post-scaffold steps: install dependencies, set up the
- * local database (`plumix migrate` applies core's and each selected plugin's
- * shipped migrations to the local dev DB), then initialize git with one
- * commit (skipped inside an existing repo). Every failure is reported, never
- * thrown — the generated project still stands and the caller prints manual
- * recovery.
+ * Every failure is reported, never thrown: the generated project still stands
+ * and the caller prints manual recovery. Skips git inside an existing repo.
  */
 export async function runPostScaffold({
   targetDir,

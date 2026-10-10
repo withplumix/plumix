@@ -11,23 +11,11 @@ import { userRequestEmailChangeInputSchema } from "./schemas.js";
 const EDIT_OWN_CAPABILITY = "user:edit_own";
 const EDIT_CAPABILITY = "user:edit";
 
-// Initiate an email change for a user. The new email is NOT committed
-// yet — a confirmation link goes to the *new* address; only the click
-// commits. See `auth/email-change/request.ts` for the rationale, and
-// `verify-email` route for the commit-side.
-//
-// Authorization:
-//   - self  (id === ctx.user.id): require `user:edit_own`
-//   - other (id !== ctx.user.id): require `user:edit`
-//
-// Mailer + magic-link config gate: the same `auth.magicLink` block
-// that wires the magic-link site name + mailer is required here so
-// the verification email can address the user with the same site
-// branding. If `magicLink` isn't configured the procedure returns
-// CONFLICT/mailer_not_configured rather than 503 — RPC layer
-// distinguishes "not implemented" (FORBIDDEN with a config-hint
-// reason is wrong) from "operator config missing" (CONFLICT is the
-// right shape; 503 lives at the route layer).
+/**
+ * The new email commits only when the link sent to it is clicked. Missing
+ * mailer config is CONFLICT `mailer_not_configured`; 503 belongs to the route
+ * layer.
+ */
 export const requestEmailChangeProc = base
   .use(authenticated)
   .input(userRequestEmailChangeInputSchema)
@@ -45,11 +33,8 @@ export const requestEmailChangeProc = base
       throw errors.NOT_FOUND({ data: { kind: "user", id: input.id } });
     }
 
-    // Email change reuses the magic-link mailer + siteName config —
-    // operators that disable magic-link (no top-level mailer) also
-    // disable email change. The cross-field check in `plumix()` pins
-    // these together; `ctx.mail` names the site from
-    // `config.auth.magicLink`.
+    // Email change reuses the magic-link mailer and site name; `plumix()` pins
+    // the two configs together.
     if (!context.mailer || !context.config.auth.magicLink) {
       throw errors.CONFLICT({ data: { reason: "mailer_not_configured" } });
     }

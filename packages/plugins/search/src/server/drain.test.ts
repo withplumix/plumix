@@ -30,12 +30,8 @@ beforeEach(async () => {
 });
 
 /**
- * Publish `count` entries, none of them indexed, and clear the change feed.
- *
- * The feed is what a live site's drain has already emptied; leaving rows on it
- * would mean these entries are owed to the drain, which the rebuild walk
- * deliberately steps over. What is left is the state a rebuild exists for:
- * sources whose documents are missing or wrong, with nothing pending.
+ * Publish `count` unindexed entries and clear the change feed, since the
+ * rebuild walk deliberately steps over entries still owed to the drain.
  */
 async function publish(count: number): Promise<readonly number[]> {
   const ids: number[] = [];
@@ -60,7 +56,7 @@ async function advanceOnce(): Promise<void> {
 }
 
 describe("repairStaleEntries", () => {
-  /** Age every document, the way an older roster would have left them. */
+  // Age every document, the way an older roster would have left them.
   async function age(): Promise<void> {
     await db.run(
       sql`UPDATE search_documents SET extractor_version = 'an-older-roster'`,
@@ -120,9 +116,8 @@ describe("repairStaleEntries", () => {
   });
 
   test("re-tokenizes only the entries whose text actually moved", async () => {
-    // The roster hash is one number over every block, so a declaration change
-    // makes every document stale at once — but only the ones whose extracted
-    // text differs should cost the index a rewrite.
+    // One roster hash covers every block, so a change stales every document,
+    // but only those whose text differs should cost a rewrite.
     const moved = await factoriesFor(db).entry.create({
       authorId,
       status: "published",
@@ -162,7 +157,7 @@ describe("repairStaleEntries", () => {
 });
 
 describe("the term sweep", () => {
-  /** A category the index already holds, the way a lifecycle action left it. */
+  // A category the index already holds, the way a lifecycle action left it.
   async function indexedTerm(name: string, description?: string) {
     const term = await factoriesFor(db).term.create({
       taxonomy: "category",

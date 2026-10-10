@@ -140,9 +140,8 @@ describe("core/table family", () => {
       tree,
     );
 
-    // The rows/cells nest directly (selfSeam → no wrapper divs between them);
-    // only the per-block seam attribute rides on each element. Rows sit in a
-    // <tbody> so `<tr>` is never a direct child of `<table>` (invalid HTML).
+    // Rows sit in a <tbody> so `<tr>` is never a direct child of `<table>`,
+    // which is invalid HTML.
     expect(html).toContain(
       '<table><tbody><tr data-header="">' +
         '<th scope="col">Col 1</th></tr>' +

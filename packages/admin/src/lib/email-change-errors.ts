@@ -45,6 +45,8 @@ const registry = createNullableErrorDescriptorRegistry(MESSAGES, FALLBACK);
 export const emailChangeErrorDescriptor = registry.descriptor;
 export const useEmailChangeErrorMessage = registry.useMessage;
 
-// Test-only export so the unit test can assert every code in
-// `EMAIL_CHANGE_ERROR_CODES` is mapped (no silent fallbacks).
+/**
+ * Test-only export so the unit test can assert every code in
+ * `EMAIL_CHANGE_ERROR_CODES` is mapped (no silent fallbacks).
+ */
 export const EMAIL_CHANGE_ERROR_MESSAGES = registry._messages;

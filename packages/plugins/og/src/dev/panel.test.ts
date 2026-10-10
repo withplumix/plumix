@@ -12,12 +12,8 @@ import {
 
 const PANEL = 'data-testid="plumix-debug-panel-og"';
 
-// This plugin's `DebugPanelRegistry` augmentation is spelled against the
-// `plumix` façade, which is the specifier a plugin author writes. The
-// positive case names a core id beside this plugin's own: a shadowing
-// interface holding only `og` would reject `database`, so only a real merge
-// satisfies it. `tsc` fails on an unused `@ts-expect-error`, so the negative
-// case stops being satisfied the moment the key set reopens.
+// Names a core id beside `og` so only a real merge, not a shadowing interface,
+// passes; tsc fails an unused expect-error once the key set reopens.
 describe("the og panel is nameable in dev.panels", () => {
   test("its declared id type-checks beside core's", () => {
     const input: DebugPanelsInput = { database: false, og: false };
@@ -45,7 +41,9 @@ afterEach(() => {
   else process.env.PLUMIX_DEV = original;
 });
 
-// The format a fresh install ships, and the only kind a card is advertised in.
+/**
+ * The format a fresh install ships, and the only kind a card is advertised in.
+ */
 const rasterRenderer = (): CardRenderer =>
   createFakeRenderer({ contentType: "image/png" }).renderer;
 
@@ -101,9 +99,8 @@ describe("the og:image debug panel", () => {
     await seedEntry(harness, { slug: "locked", type: "gated" });
     const member = await harness.seedUser("subscriber");
 
-    // The page renders for this reader; the card URL it would name is fetched
-    // by an anonymous scraper the gate turns away. Without the panel the only
-    // symptom is a head that quietly kept the site-wide default.
+    // The reader sees the page, but the anonymous scraper fetching the card is
+    // gated; without the panel the head silently keeps the default.
     const response = await harness.dispatch(
       await harness.authenticateRequest(
         new Request(`${DEV_ORIGIN}/gated/locked`),

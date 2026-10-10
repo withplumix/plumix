@@ -1,12 +1,7 @@
-// "stale" means the user's pending autosave was anchored against an
-// older version of the live row than what's on the server now —
-// somebody else published or edited live in between. The editor
-// surfaces a three-action dialog (Use mine / Use theirs / Compare)
-// at mount when this returns `'stale'` so the author resolves the
-// fork before their next save lands on top of a newer live row.
-//
-// `'none'` short-circuits the dialog flow when the user has nothing
-// pending in the first place.
+/**
+ * "stale": the pending autosave was anchored to an older live row than the
+ * server's. "none": nothing pending.
+ */
 type StaleAutosaveState = "fresh" | "stale" | "none";
 
 export function detectStaleAutosave(

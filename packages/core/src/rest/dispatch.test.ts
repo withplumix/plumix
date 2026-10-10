@@ -71,8 +71,10 @@ const blog = definePlugin("test-blog", (ctx) => {
   });
 });
 
-// A custom public type plus a non-public one, to prove custom types light up
-// automatically and non-public types stay hidden.
+/**
+ * A custom public type plus a non-public one, to prove custom types light up
+ * automatically and non-public types stay hidden.
+ */
 const catalog = definePlugin("test-catalog", (ctx) => {
   ctx.registerEntryType("book", {
     label: "Books",
@@ -116,7 +118,7 @@ function apiGet(path: string): Request {
   return new Request(`https://cms.example${path}`);
 }
 
-// Every `properties` map in a JSON Schema document, however deeply nested.
+/** Every `properties` map in a JSON Schema document, however deeply nested. */
 function schemaPropertyMaps(node: JsonValue | undefined): JsonObject[] {
   if (Array.isArray(node)) return node.flatMap(schemaPropertyMaps);
   if (node === undefined || !isJsonObject(node)) return [];
@@ -233,9 +235,8 @@ describe("REST API — entries get", () => {
     expect(body.updatedAt).toBe(entry.updatedAt.toISOString());
   });
 
-  // Settling stored meta writes, and a write — with the CDN purge behind it —
-  // must never sit behind an anonymous read. The editor's own read heals a row;
-  // the public API reads it as stored.
+  // Settling writes, and a write with its CDN purge must never sit behind an
+  // anonymous read.
   test("an anonymous read leaves an unsettled value as stored", async () => {
     const h = await restHarness();
     const author = await h.factory.user.create({ role: "author" });
@@ -411,9 +412,7 @@ describe("REST API — public projection (default-deny)", () => {
     const res = await h.dispatch(apiGet(`/_plumix/api/v1/posts/${entry.id}`));
 
     const body = (await res.json()) as Record<string, unknown>;
-    // The allowlist omits raw authorId, sortOrder, and parentId — adding a
-    // column to the entries table cannot leak it through this surface. Meta is
-    // present but default-deny (empty until a field opts in via showInApi).
+    // An allowlist, so a new entries column cannot leak through this surface.
     expect(body).not.toHaveProperty("authorId");
     expect(body).not.toHaveProperty("sortOrder");
     expect(body).not.toHaveProperty("parentId");
@@ -489,8 +488,10 @@ describe("REST API — type exposure", () => {
 
 const OK_OUTPUT = v.object({ ok: v.boolean() });
 
-// Plugin that contributes resources at every auth level. Core owns the 1- and
-// 2-segment collection space, so plugin resources nest deeper.
+/**
+ * Plugin that contributes resources at every auth level. Core owns the 1- and
+ * 2-segment collection space, so plugin resources nest deeper.
+ */
 const apiPlugin = definePlugin("test-api-plugin", (ctx) => {
   ctx.registerRestResource({
     path: "/system/diag/ping",

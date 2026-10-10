@@ -7,10 +7,8 @@ import { createPluginRegistry, definePlugin } from "@plumix/core";
 
 import { assemblePluginAdminBundle } from "./admin-plugin-bundle.js";
 
-// A build test (`*.build.test.ts`, run by `test:build`): it compiles Tailwind
-// over plugin source and imports the shared `theme.css` from `@plumix/admin`'s
-// built output, so it needs a real build — unlike the assembler's other cases,
-// which are pure and live in `admin-plugin-bundle.test.ts`.
+// Imports `theme.css` from `@plumix/admin`'s built output, so it needs a real
+// build.
 
 type AssemblerPlugin = Parameters<
   typeof assemblePluginAdminBundle
@@ -27,12 +25,8 @@ const plugin = (entry: string) =>
 
 describe("assemblePluginAdminBundle — Tailwind sidecar", () => {
   test("emits a Tailwind sidecar CSS for utility classes referenced by plugin source", async () => {
-    // Regression: plugin admin chunks live outside the admin's Vite/
-    // Tailwind scan, so unusual utility classes (`size-12`, `py-16`,
-    // `bg-card`) silently produced no CSS. The assembler now compiles
-    // Tailwind v4 over each plugin's source dir into a sibling
-    // site-bundle.css; verify the load-bearing classes used by the
-    // built-in media plugin land in the sidecar.
+    // Plugin admin chunks live outside the admin's Tailwind scan, so their
+    // utilities need the sidecar.
     const pkgDir = resolve(workspace, "node_modules/@fixture/plugin-css");
     await mkdir(pkgDir, { recursive: true });
     await writeFile(
@@ -82,11 +76,8 @@ describe("assemblePluginAdminBundle — Tailwind sidecar", () => {
     expect(css).toContain("var(--card)");
     expect(css).toContain("var(--destructive)");
     expect(css).toContain(".border-dashed");
-    // Utilities must land in the dedicated `plumix-plugins` cascade layer
-    // (the admin's globals.css orders it lowest), NOT the shared `utilities`
-    // layer. Otherwise a plugin re-emitting a base utility like `.hidden`
-    // loads after the admin CSS and overrides its own responsive utilities —
-    // the cascade collision that collapsed the admin sidebar.
+    // In the shared `utilities` layer, a plugin's `.hidden` would load after
+    // the admin CSS and collapse the admin sidebar.
     expect(css).toMatch(/@layer plumix-plugins\s*\{/);
     expect(css).not.toMatch(/@layer utilities\s*\{/);
   });

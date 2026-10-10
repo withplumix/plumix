@@ -79,12 +79,8 @@ function buildConditions(filter: AuditLogQueryFilter) {
     out.push(eq(auditLog.subjectId, filter.subjectId));
   }
   if (filter.eventPrefix !== undefined && filter.eventPrefix !== "") {
-    // The `event` index serves this as a prefix range scan. We don't
-    // ESCAPE `%`/`_` because the input is trusted: it comes from an
-    // admin-only RPC (capability-gated) and the admin UI selects from
-    // a fixed namespace list (`entry:`, `user:`, …). A future call
-    // path that funnels untrusted input here MUST sanitize the prefix
-    // before reaching this builder.
+    // No ESCAPE of `%`/`_`: the prefix comes from an admin-only RPC. Untrusted
+    // input routed here MUST be sanitized first.
     out.push(like(auditLog.event, `${filter.eventPrefix}%`));
   }
   if (filter.occurredAfter !== undefined) {
@@ -99,11 +95,10 @@ function buildConditions(filter: AuditLogQueryFilter) {
   return out;
 }
 
-// Strict row-tuple comparison `(occurred_at, id) < (cursor.occurredAt, cursor.id)`
-// expressed via the equivalent OR of: row's occurred_at strictly less, OR
-// equal occurred_at with strictly less id. Using two predicates keeps the
-// query planner happy across drivers; the `audit_log_occurred_at_idx`
-// covers it.
+/**
+ * Row-tuple `<` spelled as two predicates, which planners handle across
+ * drivers; `audit_log_occurred_at_idx` covers it.
+ */
 function cursorCondition(cursor: string) {
   // CursorError propagates up to the RPC layer where it's mapped to a
   // typed error response.

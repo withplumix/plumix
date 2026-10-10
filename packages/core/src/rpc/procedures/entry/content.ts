@@ -7,8 +7,10 @@ import type {
 import { isEntryContent, validateEntryContent } from "../../../blocks/index.js";
 import { MAX_CONTENT_BYTES } from "./schemas.js";
 
-// valibot can't measure the post-serialize size of a structural payload,
-// so the cap lives here instead of on the schema.
+/**
+ * valibot can't measure the post-serialize size of a structural payload,
+ * so the cap lives here instead of on the schema.
+ */
 export function assertContentWithinByteCap(
   content: EntryContent | null | undefined,
   errors: ConflictErrors,

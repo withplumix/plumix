@@ -25,9 +25,8 @@ export interface DatabaseContractBinding {
 
 export interface DatabaseContractOptions {
   /**
-   * Bind a database for one case. Every case gets its own, so the database
-   * the adapter connects to must start empty and must not share tables with
-   * a previously returned one.
+   * Bind a fresh, empty database for one case, sharing no tables with any
+   * previously returned one.
    */
   readonly connect: () =>
     DatabaseContractBinding | Promise<DatabaseContractBinding>;
@@ -35,8 +34,10 @@ export interface DatabaseContractOptions {
 
 type Case = ContractCase<DatabaseContractOptions>;
 
-// Lands in `users.email_verified_at`, whose name differs between the schema
-// and the table, stored in seconds.
+/**
+ * Lands in `users.email_verified_at`, whose name differs between the schema
+ * and the table, stored in seconds.
+ */
 const VERIFIED_AT = new Date(Date.UTC(2030, 0, 1));
 
 async function withDb(
@@ -66,8 +67,10 @@ function withCoreSchema(
   });
 }
 
-// Core's shipped history as drizzle's migrator reads it: one statement per
-// breakpoint, in journal order. Every drizzle migrator runs a statement whole.
+/**
+ * Core's shipped history as drizzle's migrator reads it: one statement per
+ * breakpoint, in journal order. Every drizzle migrator runs a statement whole.
+ */
 function shippedMigrationStatements(): string[] {
   return readMigrationFiles({ migrationsFolder: CORE_MIGRATIONS }).flatMap(
     (migration) => migration.sql,
@@ -83,7 +86,10 @@ async function applyStatements(
   }
 }
 
-/** Every case of the database contract, for guard tests that run them outside vitest. */
+/**
+ * Every case of the database contract, for guard tests that run them outside
+ * vitest.
+ */
 export const databaseContractCases: readonly Case[] = [
   {
     name: "a camelCase field is written to and read from its snake_case column",

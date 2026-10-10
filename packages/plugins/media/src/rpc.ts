@@ -67,9 +67,10 @@ export interface UpdateResponse {
   readonly alt: string | null;
 }
 
-// Reject control characters and whitespace. Browsers send a bare
-// `Content-Type: image/png` (no space, no parameters) when uploading
-// a File via XHR; anything else here is a sign of a malformed client.
+/**
+ * No whitespace or control characters: browsers send a bare `image/png` for an
+ * XHR File upload, so anything else is a malformed client.
+ */
 const CONTENT_TYPE_RE = /^[\x21-\x7E]+$/;
 
 interface MediaRpcErrors {
@@ -79,7 +80,7 @@ interface MediaRpcErrors {
   readonly FORBIDDEN: (opts: { data: { capability: string } }) => Error;
 }
 
-/** Load a media-entry row, or 404. Each caller applies its own gate. */
+/** Each caller applies its own gate. */
 async function loadMediaRow(
   context: AuthenticatedAppContext,
   id: number,
@@ -99,12 +100,8 @@ async function loadMediaRow(
 export function createMediaRouter(options: MediaRpcOptions) {
   const acceptedTypeSet = new Set(options.acceptedTypes);
 
-  // Capability gating already keeps media `create` to the
-  // contributor+ tier (`registerEntryType` derives it). For at-scale
-  // deployments add a per-user quota or rate limit on this procedure —
-  // a single contributor can otherwise mint as many presigned URLs as
-  // they like and fill the bucket. Tracked as follow-up work; the
-  // server-side draft GC + KV-backed counter belong here.
+  // No per-user quota yet: any contributor can mint unlimited presigned URLs
+  // and fill the bucket.
   const createUploadUrl = base
     .use(authenticated)
     .use(requireCapability(MEDIA_CREATE_CAPABILITY))
@@ -127,11 +124,8 @@ export function createMediaRouter(options: MediaRpcOptions) {
             data: { limit: options.maxUploadSize, received: input.size },
           });
         }
-        // Normalize once at the entry point: strip parameters
-        // (`; charset=utf-8`), lowercase. We compare against the
-        // bare-mime allowlist; the worker-route's content-type check
-        // also splits on `;`, so storing the bare form keeps both
-        // sides in agreement.
+        // Stored bare because the worker route's content-type check also
+        // strips parameters, so both sides agree.
         const normalizedMime = normalizeMime(input.contentType);
         if (!acceptedTypeSet.has(normalizedMime)) {
           throw errors.UNSUPPORTED_MEDIA_TYPE({
@@ -259,7 +253,8 @@ export function createMediaRouter(options: MediaRpcOptions) {
       }
 
       // Size check — a presigned PUT is signed for exactly `meta.size`; the
-      // worker-routed upload leaves it a claim. head() verifies the stored bytes.
+      // worker-routed upload leaves it a claim. head() verifies the stored
+      // bytes.
       const head = await storage.head(meta.storageKey);
       if (!head) {
         throw errors.CONFLICT({ data: { reason: "object_not_found" } });
@@ -271,11 +266,8 @@ export function createMediaRouter(options: MediaRpcOptions) {
         });
       }
 
-      // Verify the bytes match the claimed mime via magic-byte sniff.
-      // Delete on mismatch so an attacker can't force-leave junk in
-      // the bucket between a forged claim and our detection. The same
-      // sample feeds the dimension probe below, so read the larger of
-      // the two windows in one range request.
+      // Delete on mismatch so a forged claim leaves no junk in the bucket. One
+      // range request serves both the sniff and the dimension probe.
       const sampleObj = await storage.get(meta.storageKey, {
         range: {
           offset: 0,
@@ -299,11 +291,8 @@ export function createMediaRouter(options: MediaRpcOptions) {
         height: dimensions?.height ?? null,
       };
 
-      // CAS the draft → published transition: the WHERE clause
-      // includes `status = 'draft'`. Two concurrent confirms on the
-      // same draft will race the sniff but exactly one will flip the
-      // row; the loser sees `already_confirmed` instead of double-
-      // publishing or stomping `publishedAt`.
+      // CAS on `status = 'draft'`: of two concurrent confirms exactly one flips
+      // the row; the loser sees `already_confirmed`.
       const [published] = await context.db
         .update(entries)
         .set({
@@ -395,11 +384,8 @@ export function createMediaRouter(options: MediaRpcOptions) {
       const row = await loadMediaRow(context, input.id, errors);
       assertCanDeleteEntry(context, row, errors);
 
-      // Delete the row first, then the bytes. If the storage delete
-      // fails we'd rather leave an orphan in the bucket (admin can
-      // sweep) than a row pointing at a deleted file (which would
-      // surface as a permanent broken card). DB delete is the
-      // authoritative state.
+      // Row first: a failed storage delete then leaves a sweepable orphan, not
+      // a row pointing at a deleted file.
       const [deleted] = await context.db
         .delete(entries)
         .where(eq(entries.id, input.id))
@@ -426,8 +412,10 @@ export function createMediaRouter(options: MediaRpcOptions) {
   return { createUploadUrl, confirm, list, update, delete: remove };
 }
 
-// Map a media-read domain error to the oRPC typed error to throw; `undefined`
-// for anything else, which the caller rethrows as it caught it.
+/**
+ * Map a media-read domain error to the oRPC typed error to throw; `undefined`
+ * for anything else, which the caller rethrows as it caught it.
+ */
 function mapMediaReadError(
   error: unknown,
   errors: MediaRpcErrors,

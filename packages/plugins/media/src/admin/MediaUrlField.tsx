@@ -12,14 +12,16 @@ import type { MediaSelection } from "./MediaLibrary.js";
 // picker wants the same copy; no separate catalog namespace is warranted.
 import { M, MediaPickerModal, readAccept } from "./MediaPickerField.js";
 
-// An empty control is what a cleared field already shows, so anything the
-// stored value turns out to be other than a string reads as unset.
+/**
+ * An empty control is what a cleared field already shows, so anything the
+ * stored value turns out to be other than a string reads as unset.
+ */
 const storedUrlSchema = v.fallback(v.string(), "");
 
-// `mediaUrl` field renderer: the value is a bare url string, not the
-// `{ id, url, ... }` composite the `media` field stores. Used by the Styles
-// tab's background control, which persists a CSS `url("…")`. Picks/uploads
-// through the same shared library modal; on select it writes the asset's url.
+/**
+ * Stores a bare url string, not the `media` field's `{ id, url, ... }`
+ * composite: the Styles tab's background control persists a CSS `url("…")`.
+ */
 export function MediaUrlField({
   field,
   rhf,

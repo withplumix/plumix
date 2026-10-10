@@ -55,9 +55,8 @@ describe("the roster", () => {
     for (const shortcut of EDITOR_SHORTCUTS) {
       if (!shortcut.forwarded) continue;
       for (const chord of shortcut.chords) {
-        // `matchesChord` returns on `key` when there is one and never reads
-        // `code`, so nothing else would catch a typo in the token the iframe
-        // sends. The host can only ever resolve it back by code + shift.
+        // `matchesChord` never reads `code` when there is a `key`, so nothing
+        // else would catch a typo in the token the iframe sends.
         expect(chord.code).toBeTypeOf("string");
         expect(
           forwardedShortcutId(chord.code ?? "", chord.shift ?? false),
@@ -66,10 +65,8 @@ describe("the roster", () => {
     }
   });
 
-  // The bindings the roster describes but does not own — see EDITOR_SHORTCUTS.
-  // Cmd+B is the vendored sidebar's and collides with the bold mark: only the
-  // typing target tells them apart, which a chord can't express, so the roster
-  // still reads it as a collision and the cheatsheet lists both spellings.
+  // Cmd+B is the vendored sidebar's and collides with bold; only the typing
+  // target tells them apart, which a chord can't express.
   const KNOWN_COLLISIONS: readonly EditorShortcutId[] = ["panels.toggle"];
 
   test("no two bindings answer the same keypress", () => {

@@ -94,9 +94,8 @@ function plain(res: ServerResponse, status: number, text: string): void {
 }
 
 /**
- * Vite's dev server speaks `node:http`, which Bun implements, while the site
- * and the assets layer speak fetch: this carries a request across, through
- * the shared trust rules, and the answer back. A `null` answer calls `next`.
+ * Vite's dev server speaks `node:http`, the site speaks fetch. A `null` answer
+ * calls `next`.
  */
 export function createDevMiddleware(
   handle: DevHandler,

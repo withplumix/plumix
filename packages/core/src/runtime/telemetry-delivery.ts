@@ -2,15 +2,8 @@ import type { AppContext } from "../context/app-context.js";
 import type { TelemetrySnapshot } from "../context/telemetry.js";
 
 /**
- * Post-execution seam: hand each sampled consumer the finished snapshot via
- * `ctx.defer` (CF Workers' `waitUntil`), so awaited export I/O never blocks
- * the response. Consumers are isolated — one rejecting doesn't starve the
- * rest, and `wrapDefer` logs the rejection. Runs on the error path too: a
- * 500 is exactly the request a consumer wants to see.
- *
- * Shared by every execution path that finishes a collected trace: the request
- * dispatcher (real response status) and the scheduled runner (synthetic 200 —
- * task failures live in the span tree, not the envelope).
+ * Deferred, so export I/O never blocks the response; one consumer rejecting
+ * doesn't starve the rest. Call it on error paths too.
  */
 export function deliverTelemetrySnapshot(
   ctx: AppContext,
@@ -30,10 +23,8 @@ export function deliverTelemetrySnapshot(
       startedAt,
       durationMs: Date.now() - startedAt,
     },
-    // getRecords/getDropped return copies; spans are copied here because
-    // getSpans stays the live mid-request read (the debug bar's). Detachment
-    // matters: post-response work through the same ctx must not grow the
-    // arrays a consumer is serializing.
+    // `getSpans` is the live read, so copy it: post-response work must not grow
+    // an array a consumer is serializing.
     spans: [...ctx.telemetry.getSpans()],
     records: ctx.telemetry.getRecords(),
     dropped: ctx.telemetry.getDropped(),

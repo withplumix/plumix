@@ -226,9 +226,8 @@ describe("StylesTab", () => {
   });
 
   test("a control whose category has no theme tokens shows its custom input directly", () => {
-    // letterSpacing has a token category, but the test theme declares no
-    // letterSpacing tokens — so it must start in custom mode (an empty token
-    // dropdown is useless), with the raw input shown without a mode toggle.
+    // The test theme declares no letterSpacing tokens, and an empty token
+    // dropdown is useless.
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
 
     fireEvent.change(getByTestId("style-control-letterSpacing-custom"), {

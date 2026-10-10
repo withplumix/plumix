@@ -332,11 +332,9 @@ describe("resolveThemeTokens", () => {
   });
 
   test("writes an own property for a category or slug named __proto__", () => {
-    // Through JSON rather than a literal, where `__proto__:` would set the
-    // prototype instead of a key — which is how a descriptor loaded from data
-    // rather than written by hand arrives. `defineTheme` never sees this one:
-    // it validates slugs but not category keys, and a descriptor reaches the
-    // runtime without having passed through it at all.
+    // Through JSON, where `__proto__` is a key rather than the prototype, as a
+    // descriptor loaded from data arrives; it never passes through
+    // `defineTheme`.
     const tokens = JSON.parse(
       '{"__proto__":{"gutter":{"value":"72px"}},"color":{"__proto__":{"value":"#b5472d"}}}',
     ) as ThemeTokens;

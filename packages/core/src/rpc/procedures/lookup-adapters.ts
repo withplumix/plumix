@@ -20,12 +20,9 @@ export function registerCoreLookupAdapters(
   registry.lookupAdapters.set("entry", {
     kind: "entry",
     adapter: entryLookupAdapter,
-    // Picker enumerates entry titles across the requested
-    // `entryTypes`. `entry:read` is granted to subscribers, so this
-    // doesn't gate the picker tighter than the `entry.list` RPC does.
-    // The scope names the types but does not admit them: the adapter
-    // narrows each one to the rows the viewer may see, because a
-    // caller-supplied scope is not a permission.
+    // Ungated like `entry.list`. The scope names types but doesn't admit them:
+    // a caller-supplied scope isn't a permission, so the adapter narrows each
+    // type to rows the viewer may see.
     capability: null,
     registeredBy: null,
   });

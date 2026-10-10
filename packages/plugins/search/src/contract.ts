@@ -1,7 +1,6 @@
 /**
- * Who may rebuild the index. Registered at `admin` because a rebuild is an
- * operator's recovery tool — it is bounded and safe to repeat, but it is the
- * answer to "the import went wrong", not something an editor reaches for.
+ * Registered at `admin`: a rebuild is an operator's recovery tool, not
+ * something an editor reaches for.
  */
 export const REINDEX_CAPABILITY = "search:reindex";
 

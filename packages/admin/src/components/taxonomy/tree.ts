@@ -3,20 +3,8 @@ import type { Term as StoredTerm } from "@plumix/core/schema";
 
 type Term = WithResolvedMeta<StoredTerm>;
 
-/**
- * Hierarchical-taxonomy helpers. WordPress renders hierarchical term
- * admin as a flat list with parent-id badges; we build an actual tree
- * so the UI shows the structure at a glance (indent in the list,
- * breadcrumb in the parent picker) and client-side cycle prevention is
- * possible.
- *
- * These are pure utilities — no React, no I/O. The list route passes
- * in whatever page `term.list` returned; the tree only reflects
- * whatever's in that payload. Orphans (children whose parent isn't in
- * the set) are promoted to roots so they still render rather than
- * vanishing silently. Callers that need the full tree should fetch
- * enough rows (via a large limit) before calling these helpers.
- */
+// The tree reflects only the rows passed in; orphans are promoted to roots
+// rather than vanishing.
 
 interface TermNode {
   readonly term: Term;
@@ -74,13 +62,7 @@ export function flattenTree(
   return out;
 }
 
-/**
- * Collect the ids of `root` + every descendant. Used to exclude a term
- * and its subtree from the parent-picker in the edit form — setting
- * your parent to yourself or one of your descendants creates a cycle
- * the server would reject anyway, but surfacing the constraint in the
- * picker is kinder than a round-trip to a CONFLICT.
- */
+/** Includes `root` itself. */
 export function descendantIds(
   terms: readonly Term[],
   rootId: number,
@@ -109,12 +91,8 @@ export function descendantIds(
 }
 
 /**
- * Build labelled options for a `<select>` parent-picker: the term's
- * name prefixed with depth indentation (`— — Name`) so nesting is
- * visible in the flat `<option>` list. WordPress does something
- * similar but uses `&nbsp;` spaces which don't copy cleanly; we use
- * em-dashes which render identically across browsers and transcribe
- * sensibly for screen readers.
+ * Em-dash indentation, not `&nbsp;`, so labels copy cleanly and read sensibly
+ * aloud.
  */
 export function parentPickerOptions(
   terms: readonly Term[],

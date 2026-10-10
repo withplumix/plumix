@@ -6,27 +6,20 @@ import { parse as parseYaml } from "yaml";
 import { parseBody } from "./body-shape";
 
 /**
- * Parsed YAML frontmatter. Not JsonObject: the guard below proves only that
- * `parseYaml` returned an object, so no value has been checked — and YAML's
- * core schema reads `.nan` / `.inf` as `NaN` / `Infinity`, which `JSON`
- * cannot carry but TypeScript counts as plain numbers.
+ * Not JsonObject: values are unchecked, and YAML reads `.nan` / `.inf` as `NaN`
+ * / `Infinity`, which JSON cannot carry.
  */
 type Frontmatter = Readonly<Record<string, unknown>>;
 
 /**
- * What the site does with a file, which decides which checks may hold it to
- * what.
- *
- * - `page` — Starlight publishes it at a URL of its own.
- * - `fragment` — a partial. The collection glob excludes it, so it has no URL
- *   and no page template applies to it; the markdown pipeline still processes
- *   it, and whatever it holds renders inside every page that imports it.
+ * A `fragment` has no URL, so no page template applies, but it still renders
+ * inside every page that imports it.
  */
 type ContentKind = "page" | "fragment";
 
 /** One content file, read once and shared by every check in the suite. */
 export interface ContentFile {
-  /** Path relative to the content root, POSIX-separated: `fields/text.mdx`. */
+  /** POSIX-separated, relative to the content root: `fields/text.mdx`. */
   readonly path: string;
   readonly kind: ContentKind;
   /** Parsed YAML frontmatter; empty when the file carries none. */
@@ -34,31 +27,22 @@ export interface ContentFile {
   /** Everything below the frontmatter block. */
   readonly body: string;
   /**
-   * The body parsed as MDX, or `undefined` when it does not parse — which
-   * `checkParsable` reports. Parsed during the traversal rather than by each
-   * check, or four checks reading one tree would be four parses of every file.
+   * `undefined` when the body does not parse as MDX. Parsed once, shared by
+   * every check.
    */
   readonly mdast: Root | undefined;
 }
 
 /**
- * Every extension Starlight's `docsLoader()` publishes, which is wider than
- * the `{md,mdx}` this site's own glob narrows to. Deliberate: the traversal
- * reads the wider set so nothing the pipeline might process escapes the sample
- * check, and `kindOf` decides separately which of them the site publishes.
+ * Wider than the site's `{md,mdx}` glob on purpose: matches Starlight's
+ * `docsLoader()` so nothing the pipeline processes escapes the sample check.
  */
 const MARKDOWN_EXTENSION = /\.(?:markdown|mdown|mkdn|mkd|mdwn|mdx?)$/;
 
-/** The extensions `docsPattern` admits — the `{md,mdx}` half of the glob. */
 const PUBLISHED_EXTENSION = /\.mdx?$/;
 
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---[^\S\r\n]*(?:\r?\n|$)/;
 
-/**
- * Walk a content root once and read every file the markdown pipeline
- * processes. The root is a parameter so the suite can point the checks at
- * fixtures; production points them at `src/content/docs`.
- */
 export function readContentTree(root: string): ContentFile[] {
   return collect(root, "").map((relativePath) => {
     const { frontmatter, body } = split(
@@ -88,15 +72,9 @@ function collect(root: string, prefix: string): string[] {
 }
 
 /**
- * Whether the collection glob in `src/content.config.ts` would publish this
- * path — the whole glob, not only its underscore half. It excludes any
- * `_`-prefixed segment, file or directory; tinyglobby excludes dot-prefixed
- * ones by default; and it admits only `{md,mdx}`. A file failing any of those
- * has no URL, so the page template cannot apply to it, and the checks that do
- * apply are the ones that read what renders rather than what publishes.
- *
- * Read from the path rather than from where the file sits, so a partial is
- * spotted by the rule that makes it one.
+ * Mirrors the collection glob in `src/content.config.ts`: it excludes
+ * `_`-prefixed segments, tinyglobby excludes dot-prefixed ones by default, and
+ * only `{md,mdx}` publish.
  */
 function kindOf(relativePath: string): ContentKind {
   const segments = relativePath.split("/");

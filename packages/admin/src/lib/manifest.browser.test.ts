@@ -32,10 +32,7 @@ import {
   visibleUserMetaBoxes,
 } from "./manifest.js";
 
-// Parses a manifest through the real production path: core's `buildManifest`
-// projection, `injectManifestIntoHtml` serialization, an HTML parse, and the
-// admin's `readManifest`. Unlike the `source` param every query function
-// accepts, this is the one route that actually exercises the normalizer.
+/** The only path that exercises the normalizer; the `source` param skips it. */
 function readManifestAcrossTheWire(manifest: PlumixManifest): PlumixManifest {
   const html = injectManifestIntoHtml(
     `<script id="${MANIFEST_SCRIPT_ID}" type="application/json"></script>`,
@@ -377,12 +374,8 @@ describe("visibleEntryTypes", () => {
   });
 
   test("hides entry types whose `showInSidebar` is false", () => {
-    // The dashboard quick-card grid should mirror sidebar visibility:
-    // a type that opted out of the sidebar (e.g. media — it has its
-    // own custom admin page) doesn't want a generic "Browse media"
-    // tile auto-generated either. Capability gate alone isn't enough,
-    // since contributors do have `entry:media:edit_own` but the type
-    // shouldn't show up here.
+    // Contributors hold `entry:media:edit_own`, so the capability gate alone
+    // would still show a type that opted out of the sidebar.
     const sourceWithHidden: PlumixManifest = {
       entryTypes: [
         {

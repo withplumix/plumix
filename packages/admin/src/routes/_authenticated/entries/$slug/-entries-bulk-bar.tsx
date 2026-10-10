@@ -16,10 +16,7 @@ import {
 } from "@plumix/admin-ui/alert-dialog";
 import { Button } from "@plumix/admin-ui/button";
 
-// View-scoped bulk action bar (WordPress model): the Trash view offers
-// Restore + Delete permanently; every other view offers Trash. Keying off
-// the active view sidesteps mixed-status selections entirely. Rendered
-// only when at least one row is selected.
+/** Actions key off the active view, which sidesteps mixed-status selections. */
 const M = {
   selected: defineMessage({
     id: "entries.list.bulk.selected",

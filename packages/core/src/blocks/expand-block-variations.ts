@@ -12,11 +12,15 @@ export interface InsertableBlockEntry {
   readonly icon?: string;
   readonly keywords?: readonly Label[];
   readonly attrs?: JsonObject;
-  // Default body for the parent block's conventional `content` slot.
-  // Caller deep-clones + ID-rewrites before merging into a block instance.
+  /**
+   * Default body for the parent block's conventional `content` slot.
+   * Caller deep-clones + ID-rewrites before merging into a block instance.
+   */
   readonly innerBlocks?: readonly BlockNode[];
-  // Preview-only override for inserter card / picker card rendering.
-  // Insertion paths still use `attrs` + `innerBlocks` above.
+  /**
+   * Preview-only override for inserter card / picker card rendering.
+   * Insertion paths still use `attrs` + `innerBlocks` above.
+   */
   readonly example?: BlockVariationExample;
 }
 
@@ -44,10 +48,8 @@ export function expandBlockVariations(
         example: v.example,
       });
     }
-    // The parent block becomes its own inserter card when:
-    //   - no variations exist (the original baseline), or
-    //   - at least one variation is block-scoped (so the user can land
-    //     on a picker that lists the layout choices).
+    // A block-scoped variation keeps the parent's own card so the user can land
+    // on the picker.
     if (variations.length === 0 || hasBlockScoped) {
       out.push({
         name: spec.name,
@@ -63,21 +65,22 @@ export function expandBlockVariations(
   return out;
 }
 
-// Structural shape shared by InsertableBlockEntry and BlockVariation —
-// both carry runtime `attrs`/`innerBlocks` plus an optional `example`
-// preview override. Typing the helper against the shape (not the
-// concrete entry type) lets the block-scope picker thumbnail resolve
-// previews straight from a BlockVariation.
+/**
+ * Typed against the shape, not the entry type, so the block-scope picker can
+ * resolve previews straight from a BlockVariation.
+ */
 export interface VariationPreviewSource {
   readonly attrs?: JsonObject;
   readonly innerBlocks?: readonly BlockNode[];
   readonly example?: BlockVariationExample;
 }
 
-// Resolves the preview data for a variation: example overrides applied
-// on top of the runtime attrs/innerBlocks. Used by preview surfaces
-// (inserter cards, block-scope picker thumbnails) — never by insertion
-// paths.
+/**
+ * Resolves the preview data for a variation: example overrides applied
+ * on top of the runtime attrs/innerBlocks. Used by preview surfaces
+ * (inserter cards, block-scope picker thumbnails) — never by insertion
+ * paths.
+ */
 export function resolveVariationPreview(source: VariationPreviewSource): {
   readonly attrs: JsonObject;
   readonly innerBlocks: readonly BlockNode[];

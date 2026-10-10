@@ -38,11 +38,8 @@ import type { CardNode } from "./renderer.js";
 import { CARD_HEIGHT, CARD_WIDTH } from "./renderer.js";
 
 /**
- * A card's render arguments: a template's render arguments, plus the theme's
- * tokens resolved to values for the decisions a card makes in JavaScript.
- * Styling goes through CSS — the same tokens reach the renderer as a
- * stylesheet, so a card's `var()` references resolve without passing through
- * here.
+ * `tokens` are for decisions made in JavaScript; for styling, `var()` resolves
+ * against the same tokens as a stylesheet.
  */
 export type CardArgs<TData extends TemplateData> = TemplateRenderArgs<TData> & {
   readonly tokens: ResolvedThemeTokens;
@@ -55,9 +52,8 @@ export type CardArgs<TData extends TemplateData> = TemplateRenderArgs<TData> & {
 export type CardMode = "auto" | "card";
 
 /**
- * Template deps a card declares. Only the literal form: a card is not
- * inherited from, so the `(prev) => next` form templates use to extend what
- * their theme declared would have nothing to extend.
+ * Literal form only: a card has nothing to inherit, so `(prev) => next` would
+ * have nothing to extend.
  */
 type CardDeps = {
   readonly [K in keyof TemplateDepRegistry]?: readonly TemplateDepKey<K>[];
@@ -65,21 +61,14 @@ type CardDeps = {
 
 export interface CardDefinition<TData extends TemplateData> extends CardDeps {
   /**
-   * Everything the card reads, named. Required rather than derived: a card
-   * reading a setting, a dep or the clock has an input no derivation can see,
-   * and the type system cannot say which. {@link CardKey} helpers keep the
-   * common case to one line and emit the URL hash and the cache tag together.
+   * Must name everything the card reads: a setting, dep or the clock is an
+   * input no derivation can see.
    */
   readonly key: (args: CardArgs<TData>) => CardKey;
   readonly render: (args: CardArgs<TData>) => CardNode;
   /**
-   * What this card does on an entry that carries a `.featured()` photo.
-   * `"auto"` — the default, and the same as leaving this out — steps aside for
-   * the photo, cropped to this card's own size. `"card"` shares the card
-   * anyway, for a theme whose share image is branded rather than the picture.
-   *
-   * A setting rather than a flag because a per-entry select will later refine
-   * this same one, rather than open a second precedence authority beside it.
+   * On an entry with a `.featured()` photo, `"auto"` (default) steps aside for
+   * the photo cropped to this card's size; `"card"` shares the card anyway.
    */
   readonly mode?: CardMode;
   /** Stylesheets the card's class names are written against. */
@@ -93,11 +82,7 @@ export interface CardSize {
   readonly height: number;
 }
 
-/**
- * A card's own size, or the one every major scraper lays out for. One function
- * because the size the storage key describes has to be the size that was
- * rendered, which has to be the size the head advertised.
- */
+/** The one source of size for the storage key, the render and the head. */
 export function cardSize(card: CardDefinition<TemplateData>): CardSize {
   return {
     width: card.width ?? CARD_WIDTH,
@@ -105,11 +90,7 @@ export function cardSize(card: CardDefinition<TemplateData>): CardSize {
   };
 }
 
-/**
- * One entry in a theme's `ogCards` array: a card bound to either a generic
- * `tier` or a targeted `match`, exactly like a `templates` entry. Resolution
- * therefore runs through core's `resolveRule` rather than a second walk.
- */
+/** Resolved through core's `resolveRule`, exactly like a `templates` entry. */
 export interface CardRule extends TierMatchRule {
   readonly card: CardDefinition<TemplateData>;
 }
@@ -129,8 +110,10 @@ export interface CardSelector<TData extends TemplateData> {
   define(definition: CardDefinition<TData>): CardRule;
 }
 
-// The per-tier data type is erased on the way into the rule, the way the
-// template builders erase theirs, so `ogCards` stays a homogeneous array.
+/**
+ * The per-tier data type is erased on the way into the rule, the way the
+ * template builders erase theirs, so `ogCards` stays a homogeneous array.
+ */
 function selector<TData extends TemplateData>(
   where: TierMatchRule,
 ): CardSelector<TData> {
@@ -143,10 +126,8 @@ function selector<TData extends TemplateData>(
   };
 }
 
-// The narrowings below come from core's shared selection vocabulary — the same
-// one the template builders compose — so a matcher core adds or fixes reaches
-// cards without being mirrored here. `named` is not among them: it is half a
-// contract with the editor's template picker, and there is no card picker.
+// `named` is left out: it pairs with the editor's template picker, and there is
+// no card picker.
 
 type CardEntrySelector<K extends EntryTypeName> = CardSelector<
   EntryData<ResolvedEntryFor<K>>
@@ -203,11 +184,8 @@ const forDate: DateTargets<CardSelector<DateArchiveData>> = dateTargets(
 );
 
 /**
- * Builders for a theme's `ogCards`, one per template builder: a generic tier
- * (`card.entry()`, `card.frontPage()`, `card.fallback()`) or a targeted matcher
- * (`card.forEntryType("post")`), then `.define(...)`. Two keep their own names:
- * `card.archive()` is the `entryType` tier and `card.taxonomy()` the `term`
- * tier.
+ * Mirrors the template builders, except `card.archive()` is the `entryType`
+ * tier and `card.taxonomy()` the `term` tier.
  *
  * @example
  * ```ts
@@ -241,7 +219,9 @@ export const card = {
   frontPage: (): CardSelector<FrontPageData> => selector({ tier: "frontPage" }),
   /** Search results. */
   search: (): CardSelector<SearchData> => selector({ tier: "search" }),
-  /** Target a registered entry type — `name` autocompletes and rejects typos. */
+  /**
+   * Target a registered entry type — `name` autocompletes and rejects typos.
+   */
   forEntryType,
   /** Target a registered taxonomy — `name` autocompletes and rejects typos. */
   forTermTaxonomy,

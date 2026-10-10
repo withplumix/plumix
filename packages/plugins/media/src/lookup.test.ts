@@ -5,8 +5,10 @@ import { describe, expect, test } from "vitest";
 import { media } from "./index.js";
 import { mediaLookupAdapter } from "./lookup.js";
 
-// Seed a published `media` entry directly (not via media.createUploadUrl /
-// confirm) so the adapter's contract is exercised in isolation.
+/**
+ * Seed a published `media` entry directly (not via media.createUploadUrl /
+ * confirm) so the adapter's contract is exercised in isolation.
+ */
 interface SeedOptions {
   readonly title: string;
   readonly mime: string;
@@ -171,12 +173,8 @@ describe("mediaLookupAdapter", () => {
   });
 
   test("browse path with `accept` set: LIMIT counts only matching rows (no silent under-fill)", async () => {
-    // Mixed library: more PDFs than the LIMIT, plus a single image.
-    // With JS post-filter the picker would fetch 3 rows, drop the
-    // PDFs, and return 1 item — looking like "no more results" even
-    // though more images exist further back. With SQL post-filter
-    // the LIMIT counts only matching rows, so the picker sees the
-    // image and the limit is respected.
+    // More PDFs than the LIMIT plus one image: a JS post-filter would drop the
+    // PDFs and look like "no more results"; SQL filtering counts matches only.
     const h = await harnessWithMediaPlugin();
     for (let i = 0; i < 5; i++) {
       await seedMedia(h, {

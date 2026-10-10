@@ -5,8 +5,10 @@ interface EntryNode {
   readonly children: readonly EntryNode[];
 }
 
-// Orphans (children whose parent isn't in the input set) get promoted
-// to roots so a paginated `entry.list` page never silently drops rows.
+/**
+ * Orphans (children whose parent isn't in the input set) get promoted
+ * to roots so a paginated `entry.list` page never silently drops rows.
+ */
 export function buildEntryTree(
   entries: readonly Entry[],
 ): readonly EntryNode[] {
@@ -85,15 +87,7 @@ interface ParentPickerOption {
   readonly label: string;
 }
 
-/**
- * Build labelled options for an entry parent-picker. Caller passes
- * `untitledLabel` (a pre-resolved string) for entries with empty or
- * whitespace-only titles; this module is logic-only, so localization
- * stays at the consumer boundary.
- *
- * Options-object shape so future flags (e.g. `maxDepth`) compose
- * without the positional-placeholder trap.
- */
+/** `untitledLabel` must be pre-localized; this module is logic-only. */
 export function parentPickerOptions(
   entries: readonly Entry[],
   options: {

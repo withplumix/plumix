@@ -4,10 +4,10 @@ import { FIXTURES_ROOT } from "../../test/fixtures-root";
 import { readContentTree } from "./content-tree";
 import { CONTENT_ROOT, runContentChecks } from "./index";
 
-// One TypeScript program over every fenced sample in the tree, per call. Each
-// runs while the file is collected, where no test timer is running: the tests
-// are synchronous, so a timeout could never interrupt one, only fail a slow
-// pass after the fact.
+/**
+ * Runs at collection, where no test timer runs: the tests are synchronous, so
+ * a timeout could only fail a slow pass after the fact.
+ */
 const findings = runContentChecks(FIXTURES_ROOT);
 const rosterFindings = runContentChecks(FIXTURES_ROOT, [
   { page: "rosters/roles.mdx", items: ["subscriber", "contributor"] },

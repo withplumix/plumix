@@ -8,15 +8,10 @@ import { userCancelEmailChangeInputSchema } from "./schemas.js";
 const EDIT_OWN_CAPABILITY = "user:edit_own";
 const EDIT_CAPABILITY = "user:edit";
 
-// Cancel an outstanding email-change verification. Idempotent — a
-// user with no pending request gets `{ cancelled: 0 }`. Same auth
-// gating as `requestEmailChange`: self via `user:edit_own`, other
-// via `user:edit`.
-//
-// No hook fires for cancellation — the audit log can derive it
-// from the absence of a `user:email_changed` between two adjacent
-// `user:email_change_requested` events. Lower noise on the audit
-// surface.
+/**
+ * No hook fires: audit can infer a cancel from two adjacent
+ * `user:email_change_requested` events with no `user:email_changed` between.
+ */
 export const cancelEmailChangeProc = base
   .use(authenticated)
   .input(userCancelEmailChangeInputSchema)

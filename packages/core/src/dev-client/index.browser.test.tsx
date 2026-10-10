@@ -3,13 +3,17 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { installDevClient } from "./index.js";
 
-// The island error dialog mounts under this custom-element host (owned by
-// `blocks/`). Its presence in the DOM is the proof that core installed
-// the blocks-side overlay through the event seam.
+/**
+ * The island error dialog mounts under this custom-element host (owned by
+ * `blocks/`). Its presence in the DOM is the proof that core installed
+ * the blocks-side overlay through the event seam.
+ */
 const OVERLAY_HOST = "plumix-dev-error-overlay";
 
-// Only for the "nothing should have happened" assertions: there is no condition
-// to poll for, so let pending work run and then assert the absence.
+/**
+ * Only for the "nothing should have happened" assertions: there is no condition
+ * to poll for, so let pending work run and then assert the absence.
+ */
 function flush(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }

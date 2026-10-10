@@ -35,21 +35,18 @@ const submitInputSchema = v.object({
   website: v.optional(v.string(), ""),
 });
 
-/** The controls a schema refusal can be shown against. */
 const NAMEABLE = ["name", "email", "body"] as const;
 
-/**
- * The control a schema refusal belongs to, where it belongs to one. A
- * refusal about `entryId` or `parentId` has no control a visitor can
- * correct, so it stays a refusal about the submission.
- */
+/** `entryId` and `parentId` have no control a visitor can correct. */
 function refusedField(issues: readonly v.BaseIssue<unknown>[]): string {
   const key = issues[0]?.path?.[0]?.key;
   return NAMEABLE.some((name) => name === key) ? String(key) : "";
 }
 
-// `no-store` on every answer: the page carrying the form is edge-cached,
-// and each of these is about one visitor's comment.
+/**
+ * `no-store` on every answer: the page carrying the form is edge-cached,
+ * and each of these is about one visitor's comment.
+ */
 function noStore(body: unknown, status: number): Response {
   return jsonResponse(body, {
     status,
@@ -66,30 +63,9 @@ function isClosed(
 }
 
 /**
- * The public comment-submission handler. Mounted at
- * `POST /_plumix/comments/submit` as a `formPost` route, so a plain
- * `<form method="post">` reaches it without the `X-Plumix-Request` header
- * a browser cannot set on an ordinary submit; the dispatcher's Origin
- * check is then the whole gate. Pipeline: validate → honeypot → resolve +
- * gate the entry → identity (logged-in fast path) → salted ip hash + rate
- * limit → trust baseline + `comment:moderate` chain → insert → fire
- * `comment:created`.
- *
- * One endpoint, two answer shapes, negotiated on what was *sent* rather
- * than on `Accept`: a JSON body is a scripted caller by construction, and
- * `fetch` with no `Accept` header of its own is the ordinary way to make
- * one — negotiating on `Accept` would have flipped every existing caller
- * to the redirect. Every exit goes through `accepted` or `fail`, including
- * the honeypot's fake success: answering a trapped submission differently
- * from a real one is how a bot learns it was caught.
- *
- * The request that took the `formPost` exemption arrives with no session
- * to read — core hands it an authenticator that resolves nobody — so a
- * signed-in author posting without JavaScript is treated as the anonymous
- * commenter they are indistinguishable from. Under the default
- * `first_time` mode that costs them their first comment's fast path and
- * its `authorUserId` link, and only their first: the prior-approved count
- * carries them from the second on.
+ * Answer shape is negotiated on what was sent, not `Accept`, which `fetch`
+ * omits. A `formPost` request carries no session, so a signed-in author
+ * without JavaScript is treated as anonymous.
  */
 export function createSubmitHandler(config: ResolvedCommentsConfig) {
   return async (request: Request, ctx: AppContext): Promise<Response> => {
@@ -108,10 +84,8 @@ export function createSubmitHandler(config: ResolvedCommentsConfig) {
       const refusal = REFUSALS[code];
       if (!form) return noStore({ error: code }, refusal.status);
       return rejectPage(ctx, {
-        // A body carrying no readable entry comes back as a form pointing
-        // at no entry, which the retry is refused for. There is nothing
-        // better to put here: the alternative is a bare page, and that
-        // loses the visitor's words as well as the entry.
+        // No readable entry: the retry will be refused, but a bare page would
+        // also lose the visitor's words.
         entryId: echoed.entryId ?? 0,
         parentId: echoed.parentId ?? null,
         returnTo,
@@ -146,10 +120,8 @@ export function createSubmitHandler(config: ResolvedCommentsConfig) {
       return fail("comments_closed");
     }
 
-    // Public route — the dispatcher doesn't authenticate it, so check for a
-    // session here to give logged-in commenters the trust fast path. On a
-    // request that took the `formPost` exemption this resolves nobody, by
-    // design; reading the session back another way would defeat the guard.
+    // A `formPost` request resolves nobody here, by design; reading the session
+    // another way would defeat the guard.
     const auth = await ctx.authenticator.authenticate(request, ctx.db, {
       startingUserMeta: startingMeta(listUserMetaFields(ctx.plugins)),
     });
@@ -160,10 +132,9 @@ export function createSubmitHandler(config: ResolvedCommentsConfig) {
     if (config.requireEmail && email.length === 0)
       return fail("email_required");
 
-    // On a runtime that reports no address every commenter hashes into one
-    // bucket, so the limiter stops counting one flooder and starts closing
-    // comments for everyone. Edge/WAF rules are the flood defence there; this
-    // limiter assumes an adapter that supplies `ctx.clientAddress`.
+    // Without `ctx.clientAddress` every commenter shares one bucket and the
+    // limiter closes comments for everyone; edge/WAF rules must defend floods
+    // there.
     const { ipHash, userAgent } = await readVisitorMeta(ctx, {
       namespace: "comments",
     });

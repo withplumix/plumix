@@ -120,10 +120,8 @@ interface PasskeyWire {
 
 interface PasskeysCardProps {
   /**
-   * The viewer's email — required by `registerWithPasskey` for the
-   * add-device WebAuthn challenge. The server enforces
-   * `authed.email === input.email` so passing `target.email` from a
-   * self-edit screen is the contract.
+   * The server enforces `authed.email === input.email` for the add-device
+   * challenge.
    */
   readonly userEmail: string;
 }
@@ -503,11 +501,8 @@ function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
 function pickTransportDescriptor(cred: PasskeyWire): MessageDescriptor | null {
   const transports = cred.transports;
   if (!transports || transports.length === 0) return null;
-  // Map WebAuthn transport tokens to readable copy. "internal" = platform
-  // authenticator (Touch ID / Windows Hello); "hybrid" = QR-paired phone
-  // ceremony; everything else (`usb`, `nfc`, `ble`) is some flavour of
-  // hardware security key — collapse to one bucket rather than expose
-  // raw transport tokens to end users.
+  // "internal" is a platform authenticator, "hybrid" a QR-paired phone; every
+  // other transport is a hardware key.
   if (transports.includes("internal")) return M.transportInternal;
   if (transports.includes("hybrid")) return M.transportHybrid;
   return M.transportSecurityKey;
@@ -524,11 +519,7 @@ function formatDeleteError(err: unknown): MessageDescriptor {
   return describeRpcError(err, {}, M.deleteFallback);
 }
 
-// Surface-specific copy for `registerWithPasskey` failures during add-
-// device. Mirrors the login screen's PasskeyError → friendly-message
-// table but tuned to the "you're already signed in, adding a device"
-// flow (no `registration_closed` because authed users always pass that
-// check).
+/** No `registration_closed`: signed-in users always pass that check. */
 function formatPasskeyEnrollError(err: unknown): MessageDescriptor {
   if (err instanceof PasskeyError) {
     switch (err.code) {

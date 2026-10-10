@@ -92,12 +92,9 @@ describe("edit gate through the public render", () => {
   });
 });
 
-// The cases above authenticate with the default session cookie, so they only
-// prove the gate for `plumix_session`. The editor-dead bug shipped because a
-// custom authenticator whose session rides a *different* signal — the demo's
-// `plumix_demo` cookie, an IdP JWT header — was skipped on the public render,
-// so an authed editor got a read-only canvas with no runtime. These pin the
-// gate for that shape, at the render seam the behavior suites never cross.
+// The default-cookie cases above miss a custom authenticator whose session
+// rides another signal; skipping it on the public render left editors a
+// canvas without a runtime.
 describe("edit gate with a custom (non-cookie) authenticator", () => {
   const CUSTOM_COOKIE = "x_custom_session";
   const hasCustomCookie = (request: Request): boolean =>
@@ -148,10 +145,8 @@ describe("edit gate with a custom (non-cookie) authenticator", () => {
     expect(await res.text()).toContain("data-plumix-editor");
   });
 
-  // The contract this fix rests on: a non-cookie guard MUST declare
-  // `hasSession`. Without it the public render falls back to the standard
-  // cookie (absent here), skips auth, and the editor never boots — exactly the
-  // failure that shipped.
+  // A non-cookie guard must declare `hasSession`, or the public render falls
+  // back to the standard cookie and skips auth.
   test("omits hasSession → the public render skips it, no runtime injected", async () => {
     const h = await seedWithGuard(false);
 

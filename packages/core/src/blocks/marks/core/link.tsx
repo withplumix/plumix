@@ -1,7 +1,9 @@
 import { Mark, mergeAttributes } from "@tiptap/core";
 
-// Same allowlist `renderInline` uses; kept in sync deliberately so a
-// pasted `javascript:` URL never reaches the editor doc.
+/**
+ * Same allowlist `renderInline` uses; kept in sync deliberately so a
+ * pasted `javascript:` URL never reaches the editor doc.
+ */
 const SAFE_HREF = /^(https?:\/\/|mailto:|tel:|\/|#|\?|\.\.?\/)/i;
 
 function sanitizeHref(raw: unknown): string | undefined {

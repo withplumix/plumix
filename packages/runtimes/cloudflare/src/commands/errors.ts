@@ -6,8 +6,10 @@ type CloudflareCliErrorCode =
   | "migrate_ambiguous_binding"
   | "migrate_unknown_binding";
 
-// D1 and wrangler vocabulary, which core's runtime-agnostic `CliError` does
-// not carry.
+/**
+ * D1 and wrangler vocabulary, which core's runtime-agnostic `CliError` does
+ * not carry.
+ */
 export class CloudflareCliError extends CliError<CloudflareCliErrorCode> {
   static migrateNoWranglerConfig(ctx: { cwd: string }): CloudflareCliError {
     return new CloudflareCliError(

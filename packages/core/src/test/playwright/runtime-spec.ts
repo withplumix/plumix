@@ -7,10 +7,9 @@ const POST_TITLE = "Hello from the runtime spec";
 const POST_SLUG = "hello-from-the-runtime-spec";
 
 /**
- * A passkey the browser holds itself, so the bootstrap ceremony runs
- * end-to-end with no hardware and no prompt. Chromium's virtual
- * authenticator answers `navigator.credentials.create` the way a platform
- * authenticator would; the server sees a real attestation.
+ * A browser-held passkey via Chromium's virtual authenticator, so the bootstrap
+ * ceremony runs end-to-end with no hardware and the server sees a real
+ * attestation.
  */
 async function installVirtualPasskey(
   context: BrowserContext,
@@ -37,16 +36,9 @@ function entryUpdated(page: Page): Promise<unknown> {
 }
 
 /**
- * The spec every runtime playground runs: bootstrap the first admin, create
- * and publish an entry, read it on the public page, upload a media item,
- * sign out. Imported by each runtime's playground suite rather than copied,
- * so two runtimes are proven by the same assertions.
- *
- * Expects a playground with the blog and media plugins, a theme whose
- * single-entry template renders the title under `data-testid="post-title"`,
- * and `seedAdminSession: false` — the first step is the bootstrap itself.
- * One test rather than a serial describe: the session lives in the page's
- * context, and a retry restarts from the pre-bootstrap database anyway.
+ * The spec every runtime playground imports: bootstrap, publish, read publicly,
+ * upload, sign out. Needs blog and media plugins, a `post-title` testid and
+ * `seedAdminSession: false`.
  */
 export function runtimeSpec(): void {
   test("bootstrap → publish an entry → read it → upload media → sign out", async ({
@@ -84,10 +76,9 @@ export function runtimeSpec(): void {
       const published = entryUpdated(page);
       await page.getByTestId("plumix-editor-publish-button").click();
       await published;
-      // Once the refetched entry reads published, a post edits through a
-      // draft, so the header swaps to the draft Publish — disabled with
-      // nothing pending. That is the editor's receipt; the first button only
-      // stays mounted until the refetch lands, which a fast runtime beats.
+      // A published post edits through a draft, so the disabled draft Publish
+      // is the receipt; the first button may unmount before a fast runtime's
+      // refetch.
       await expect(page.getByTestId("editor-draft-publish")).toBeDisabled();
 
       await page.goto("entries/posts?status=published");

@@ -1,7 +1,7 @@
-// Revision rows reuse the `entries` table with reserved `type='revision'`
-// and a `revision:<entryId>:<nanoid>` slug — the `<entryId>` segment
-// lets the repository scope queries without a JOIN, the `<nanoid>`
-// segment dodges the `(type, slug)` unique index.
+/**
+ * The `<entryId>` segment scopes queries without a JOIN; the `<nanoid>` dodges
+ * the `(type, slug)` unique index.
+ */
 export const REVISION_TYPE = "revision";
 
 const REVISION_SLUG_PATTERN = /^revision:(\d+):([^:]+)$/;
@@ -31,11 +31,10 @@ export function isRevisionType(type: unknown): type is typeof REVISION_TYPE {
   return type === REVISION_TYPE;
 }
 
-// Per-user pending edit on a published entry. Same table as the live
-// row + revision row, distinguished by `type='autosave'` and a slug of
-// `autosave:<entryId>:<authorId>`. The deterministic shape lets the
-// existing `UNIQUE (type, slug)` index enforce one autosave per
-// (entry, user) — no separate dedup query at write time.
+/**
+ * The deterministic `autosave:<entryId>:<authorId>` slug lets `UNIQUE (type,
+ * slug)` enforce one autosave per entry and user.
+ */
 export const AUTOSAVE_TYPE = "autosave";
 
 const AUTOSAVE_SLUG_PATTERN = /^autosave:(\d+):(\d+)$/;
@@ -67,11 +66,6 @@ export function isAutosaveType(type: unknown): type is typeof AUTOSAVE_TYPE {
   return type === AUTOSAVE_TYPE;
 }
 
-// Reserved-type guard for entry CRUD: both revision and autosave rows
-// live in the same table as public entries but are off-limits to
-// callers — they're written by framework code only. Use this at every
-// write surface (`entry.create`, `entry.update`) to reject the type
-// before it can land in the database.
 /** The types the editor owns inside `entries`. The change-feed triggers
  *  inline these values, so a type added here without a matching migration
  *  would land on the feed as content. */

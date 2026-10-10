@@ -92,10 +92,8 @@ describe("formatSubmission", () => {
     );
   });
 
-  // The shapes below are not what the form path produces — a repeater
-  // stores one object per row — but `formatSubmission` is public and reads
-  // whatever the answers column holds, so what it does with them is pinned
-  // rather than left to the next refactor to decide.
+  // Not shapes the form path produces, but `formatSubmission` is public and
+  // reads whatever the answers column holds.
   test("numbers a repeater row that is a bare value, like every other row", () => {
     const text = formatSubmission({
       answers: { references: [{ name: "Grace" }, "Alan"] },

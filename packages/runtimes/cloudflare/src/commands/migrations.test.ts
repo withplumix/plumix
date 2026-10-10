@@ -23,7 +23,7 @@ import { getPlatformProxy } from "wrangler";
 
 import { migrations, migrationsDeps } from "./migrations.js";
 
-// Core's shipped history, read from the workspace.
+/** Core's shipped history, read from the workspace. */
 const CORE = {
   migrationsFolder: fileURLToPath(
     new URL("../../../../core/migrations", import.meta.url),
@@ -69,7 +69,7 @@ function writeWrangler(d1: readonly object[]): void {
 const open = (location: MigrationLocation, binding?: string) =>
   migrations.open({ cwd: dir, app, location, binding });
 
-// The glob the playground's e2e reads its database from.
+/** The glob the playground's e2e reads its database from. */
 const localDatabases = () =>
   globSync(".wrangler/state/v3/d1/miniflare-D1DatabaseObject/*.sqlite", {
     cwd: dir,

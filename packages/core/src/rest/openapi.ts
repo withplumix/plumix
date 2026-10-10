@@ -4,16 +4,20 @@ import type { OverrideSchemaContext } from "@valibot/to-json-schema";
 import { OpenAPIGenerator } from "@orpc/openapi";
 import { experimental_ValibotToJsonSchemaConverter } from "@orpc/valibot";
 
-// `v.date()` has no JSON Schema form, so the converter emits `{}`; on the wire
-// a Date serializes as its ISO string, which is what the spec should promise.
+/**
+ * `v.date()` has no JSON Schema form, so the converter emits `{}`; on the wire
+ * a Date serializes as its ISO string, which is what the spec should promise.
+ */
 function dateAsDateTime({ valibotSchema }: OverrideSchemaContext) {
   return valibotSchema.type === "date"
     ? { type: "string" as const, format: "date-time" }
     : undefined;
 }
 
-// Generated from the merged router (core + plugin resources) so plugin
-// endpoints appear in the spec automatically.
+/**
+ * Generated from the merged router (core + plugin resources) so plugin
+ * endpoints appear in the spec automatically.
+ */
 export function generateOpenApiDocument(
   router: AnyRouter,
 ): Promise<OpenAPI.Document> {

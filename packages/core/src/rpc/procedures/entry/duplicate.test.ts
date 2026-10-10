@@ -8,8 +8,10 @@ import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { toRegisteredTermTaxonomy } from "../../../plugin/registry.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
-// Minimal taxonomy registry so `entry.update` accepts a `category`
-// term patch — mirrors the scaffold in terms.test.ts.
+/**
+ * Minimal taxonomy registry so `entry.update` accepts a `category`
+ * term patch — mirrors the scaffold in terms.test.ts.
+ */
 function categoryRegistry() {
   const registry = createPluginRegistry();
   const name = "category";
@@ -155,9 +157,8 @@ describe("entry.duplicate", () => {
   });
 
   test("cannot duplicate another author's unreadable draft (404, no content leak)", async () => {
-    // An author holds create + read, but a peer's *draft* isn't readable
-    // to them (read of non-published needs edit_any or author+edit_own).
-    // Duplicating it must 404 rather than hand back a copy of its content.
+    // Reading a non-published row needs edit_any or authorship plus edit_own,
+    // so an author can't read a peer's draft.
     const h = await createRpcHarness({ authAs: "author" });
     const peer = await h.factory.author.create();
     const secret = await h.factory.draft.create({

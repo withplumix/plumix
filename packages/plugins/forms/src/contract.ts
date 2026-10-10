@@ -6,27 +6,15 @@
 export const FORM_SLUG_FIELD = "__plumix_form";
 export const HONEYPOT_FIELD = "__plumix_hp";
 export const TOKEN_FIELD = "__plumix_token";
-/**
- * What a bound form was rendered on, signed — see `signBound`. It is the
- * only carrier: the bound value never appears in the markup on its own,
- * so editing it in devtools produces a token nothing signed.
- */
+/** The bound value never appears unsigned in the markup. */
 export const BOUND_FIELD = "__plumix_bound";
 /**
- * The page the form was on, carried by the re-rendered form the
- * no-JavaScript path answers a rejected submit with. The document URL is
- * the endpoint by then, so the visitor's own `Referer` would send their
- * retry back to the endpoint rather than to the page.
+ * Needed on a no-JavaScript retry, where `Referer` is the endpoint rather
+ * than the page.
  */
 export const RETURN_FIELD = "__plumix_return";
 
-/**
- * Where a wizard keeps how far the visitor has got, under the block
- * node's own id so two forms on one page cannot read each other's. In
- * session storage: it is the visitor's own half-finished answers, and it
- * belongs to the tab they are filling the form in rather than to the
- * browser.
- */
+/** Session storage, so progress belongs to the tab, not the browser. */
 export const PROGRESS_KEY_PREFIX = "plumix-form:";
 
 /** Mounted by `registerRoute` at `/_plumix/<pluginId><path>`. */
@@ -42,22 +30,14 @@ export const EXPORT_ROUTE_PATH = "/export";
 export const EXPORT_PATH = `/_plumix/forms${EXPORT_ROUTE_PATH}`;
 
 /**
- * What Cloudflare's widget posts the solved challenge under, and what
- * the markup asks it to. It is outside the `__plumix_` reserved space
- * because Cloudflare chose the name; setting `data-response-field-name`
- * explicitly is what keeps the renderer and the handler on one spelling.
+ * Cloudflare's name, set explicitly via `data-response-field-name` so the
+ * renderer and handler agree.
  */
 export const TURNSTILE_FIELD = "cf-turnstile-response";
 
 /**
- * What the submissions inbox is gated on. Editor by default: reading
- * submissions is reading what visitors typed, which is nobody's business
- * below the people who answer them.
- *
- * Here rather than beside the router it guards, because the package
- * entry re-exports it and nothing on that entry may reach `rpc.ts` — an
- * oRPC router's inferred type names `@orpc/server` and core's schema, and
- * a consumer resolving the published `.d.ts` has neither.
+ * Lives here, not beside the router: the package entry re-exports it, and
+ * the router's inferred type names packages consumers don't have.
  */
 export const SUBMISSION_MODERATE_CAPABILITY = "form_submission:moderate";
 
@@ -72,23 +52,12 @@ export const SUBMISSIONS_SHELL_COMPONENT = "SubmissionsShell";
 /** The block the editor places. */
 export const FORM_BLOCK_NAME = "forms/form";
 
-/**
- * The one field type this plugin contributes to the host's field
- * vocabulary. Core deliberately has no `tel` — the roster stays the set
- * of types the admin renders itself — so the plugin registers the name,
- * ships the admin renderer under {@link TEL_FIELD_COMPONENT}, and
- * exports the `tel()` builder from `@plumix/plugin-forms/fields`.
- */
+/** Core has no `tel`; this plugin registers it. */
 export const TEL_INPUT_TYPE = "tel";
 
 export const TEL_FIELD_COMPONENT = "TelField";
 
-/**
- * The field input types a form may declare, at the top level and inside
- * a group or a repeater row alike. A form declaring anything else fails
- * at definition rather than rendering a control that cannot carry the
- * answer.
- */
+/** Any other type fails at definition, at every nesting level. */
 export const SUPPORTED_INPUT_TYPES = [
   "text",
   "textarea",
@@ -112,16 +81,9 @@ export function isSupportedInputType(
 }
 
 /**
- * How many rows a repeater accepts when it declares no `.max()`. A body
- * is the visitor's to write, so a repeater is bounded either way — a
- * ceiling nobody asked for is still a ceiling, and it is stated in the
- * refusal rather than silently truncating the rows past it.
+ * For a repeater with no `.max()`: the body is visitor-written, so it is
+ * bounded either way, and exceeding it is refused rather than truncated.
  */
 export const MAX_REPEATER_ROWS = 100;
 
-/**
- * The locale every message in this plugin is authored in. Shared so the
- * plugin's `i18n` slot and the formatter that renders an ICU source
- * message cannot disagree about which language's plural rules apply.
- */
 export const SOURCE_LOCALE = "en";

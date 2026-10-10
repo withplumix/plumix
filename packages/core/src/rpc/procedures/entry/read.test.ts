@@ -590,10 +590,8 @@ describe("entry.get", () => {
     expect(got.id).toBe(theirs.id);
   });
 
-  // `preview` overlays the caller's pending draft, so it asks the editor's
-  // gate rather than the read one. Denials name `edit_any` like every other
-  // edit-gated procedure — telling an author `edit_own` and a stranger
-  // `edit_any` would answer "did I write this?" for a row they cannot see.
+  // Preview overlays a pending draft, so it uses the edit gate. Denials always
+  // name `edit_any`, or the message would reveal authorship of an unseen row.
   test("a subscriber asking to preview their own published row is told edit_any", async () => {
     const h = await createRpcHarness({ authAs: "subscriber" });
     const mine = await h.factory.published.create({ authorId: h.user.id });

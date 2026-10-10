@@ -1,9 +1,5 @@
-// Typed message contract for the editor bridge, shared by the admin shell
-// (parent) and the SSR-injected canvas runtime (iframe). The parent owns
-// the canonical tree and pushes it down; the canvas renders what it's told
-// and reports user intent back. Every frame that crosses the channel is
-// described here, including the handshake ones; the transport that carries
-// them lives in ./bridge.
+// The parent owns the canonical tree; the canvas renders what it's told and
+// reports user intent back.
 
 import type { JsonObject } from "../../json.js";
 import type { CompiledCatalog } from "../i18n-label.js";
@@ -36,9 +32,10 @@ export interface SlotRect {
   readonly height: number;
 }
 
-/** The host's active locale and its merged compiled catalog, which the canvas
- *  threads into its render so every block resolves strings the way SSR does.
- *  The host passes catalogs, never resolved strings. */
+/**
+ * Catalogs, never resolved strings, so the canvas resolves every block string
+ * the way SSR does.
+ */
 export interface CanvasConfig {
   readonly locale: string;
   readonly catalog: CompiledCatalog;
@@ -48,19 +45,25 @@ export interface CanvasConfig {
 export type HostMessage =
   | { readonly type: "host:tree"; readonly tree: readonly BlockNode[] }
   | ({
-      // The locale the canvas renders at (it has no i18n runtime of its own).
-      // Sent once the canvas is ready and again if the locale changes.
+      /**
+       * The locale the canvas renders at (it has no i18n runtime of its own).
+       * Sent once the canvas is ready and again if the locale changes.
+       */
       readonly type: "host:config";
     } & CanvasConfig)
   | {
-      // A scoped refresh's re-resolved loader data, node-keyed (same shape
-      // `serializeLoaderData` emits). The canvas merges it into its loader map.
+      /**
+       * A scoped refresh's re-resolved loader data, node-keyed (same shape
+       * `serializeLoaderData` emits). The canvas merges it into its loader map.
+       */
       readonly type: "host:loader-data";
       readonly data: SerializedLoaderData;
     }
   | {
-      // X-ray view toggle — the canvas outlines every block while on. Pushed on
-      // change and once the canvas is ready (initial sync).
+      /**
+       * X-ray view toggle — the canvas outlines every block while on. Pushed on
+       * change and once the canvas is ready (initial sync).
+       */
       readonly type: "host:xray";
       readonly enabled: boolean;
     };
@@ -71,23 +74,25 @@ export type CanvasMessage =
   | {
       readonly type: "canvas:select";
       readonly id: string;
-      /** Add to the current selection instead of replacing it (shift/cmd-click). */
+      /**
+       * Add to the current selection instead of replacing it (shift/cmd-click).
+       */
       readonly additive?: boolean;
     }
   | { readonly type: "canvas:hover"; readonly id: string | null }
   | {
       readonly type: "canvas:geometry";
       readonly rects: readonly BlockRect[];
-      /** Container slot regions, for resolving a drag to a nested drop target. */
+      /**
+       * Container slot regions, for resolving a drag to a nested drop target.
+       */
       readonly slots?: readonly SlotRect[];
     }
   | {
-      // A wheel/trackpad gesture over the canvas, forwarded so the host can
-      // pan/zoom the free canvas (events over the iframe never reach the parent
-      // stage). `zoomIntent` is ctrl/⌘ held — which is also how trackpad pinch
-      // arrives — so the host zooms toward the cursor instead of panning.
-      // `clientX/Y` are the iframe-local pointer coords; the host maps them to
-      // its own space via the live iframe rect + zoom.
+      /**
+       * Wheel events over the iframe never reach the parent. `zoomIntent` is
+       * ctrl/⌘ held, which is also how trackpad pinch arrives.
+       */
       readonly type: "canvas:wheel";
       readonly deltaX: number;
       readonly deltaY: number;
@@ -96,11 +101,10 @@ export type CanvasMessage =
       readonly clientY: number;
     }
   | {
-      // A canvas-view keyboard event (space to pan, shift+digit to zoom),
-      // forwarded so the shortcuts work while the iframe holds focus. Only the
-      // view keys are forwarded — typing in the canvas is unaffected.
-      // NB: no `kind` field — the bridge's handshake frames are discriminated
-      // by a string `kind`, so a `kind` here would be mistaken for one.
+      /**
+       * No `kind` field: handshake frames are discriminated by `kind`, so this
+       * would be mistaken for one.
+       */
       readonly type: "canvas:key";
       readonly down: boolean;
       /** Layout-independent physical key, e.g. "Space", "Digit1". */
@@ -108,30 +112,31 @@ export type CanvasMessage =
       readonly shiftKey: boolean;
     }
   | {
-      // An in-canvas "Add a block" affordance was clicked (empty root document,
-      // or an empty child slot identified by parentId+slotKey). The host owns
-      // the tree, so it resolves the actual insert.
+      /**
+       * An in-canvas "Add a block" affordance was clicked (empty root document,
+       * or an empty child slot identified by parentId+slotKey). The host owns
+       * the tree, so it resolves the actual insert.
+       */
       readonly type: "canvas:requestAdd";
       readonly parentId?: string;
       readonly slotKey?: string;
     }
   | {
-      // A clipboard shortcut (Cmd/Ctrl+C/X/V) fired while focus was inside the
-      // iframe. The host owns the tree + clipboard, so the canvas just forwards
-      // the intent and the host performs it.
+      /**
+       * A clipboard shortcut (Cmd/Ctrl+C/X/V) fired while focus was inside the
+       * iframe. The host owns the tree + clipboard, so the canvas just forwards
+       * the intent and the host performs it.
+       */
       readonly type: "canvas:clipboard";
       readonly op: "copy" | "cut" | "paste";
     };
 
-/** Connection frames, in both directions. Not part of either half of the
- *  protocol — they open the channel rather than say anything on it — but they
- *  travel the same envelopes, so the wire union covers them and
- *  `isHandshakeFrame` splits them back out on arrival. */
+/**
+ * Travel the same envelopes as protocol messages; `isHandshakeFrame` splits
+ * them back out.
+ */
 export type HandshakeMessage =
   { readonly kind: "hello" } | { readonly kind: "ack" };
 
-/** Everything the bridge carries. One union, shared by both endpoints: the
- *  sender's `post` narrows it to the half it may send, and the receiver
- *  switches on the discriminant rather than asserting a shape. */
 export type EditorBridgeMessage =
   HostMessage | CanvasMessage | HandshakeMessage;

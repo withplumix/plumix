@@ -22,22 +22,12 @@ import { renderLookupListBody } from "./lookup/list-body.js";
 import { useLookupSearch } from "./lookup/use-lookup-search.js";
 import { useReferenceResolve } from "./lookup/use-reference-resolve.js";
 
-// Generic picker for reference fields (`user`, future `entry` /
-// `term` / `media`). The field's `referenceTarget.kind` selects the
-// adapter; `referenceTarget.scope` rides through to the lookup RPC
-// untouched. Same component, same UX, regardless of target.
-//
-// Storage is the bare ID string; the picker's job is to swap the
-// admin-side display from "42" to a human-readable label without
-// changing what the form submits. The search box + selected-label
-// resolution are the shared `useLookupSearch` / `useReferenceResolve`
-// hooks — this component is the single-value presentation over them.
+// Stores the bare id; only the display becomes a label.
 
-// User-facing copy for the picker. The dialog description and the
-// search placeholder both interpolate `{kind}` verbatim (the wire
-// identifier — `user`, `entry`, `term`, `media`). Real localization
-// of those nouns would need a kind→descriptor table; deferred under
-// the same manifest-label widening tracked in #730.
+/**
+ * `{kind}` interpolates the raw wire identifier; there's no localized noun map
+ * yet.
+ */
 const M = {
   selectIdle: defineMessage({
     id: "metaBox.reference.selectIdle",
@@ -81,12 +71,7 @@ interface ReferencePickerProps {
   readonly required?: boolean;
   readonly label: string;
   readonly testId: string;
-  /**
-   * The read-time-hydrated summary for the initial `value`, when the
-   * form loaded one (reference reads hydrate by default, #1507). Used
-   * to paint the selected label on first render — no resolve round-trip
-   * while the initial id is unchanged.
-   */
+  /** Skips the resolve round-trip while the initial id is unchanged. */
   readonly initialSelected?: LookupItem | null;
 }
 

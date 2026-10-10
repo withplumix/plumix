@@ -13,7 +13,10 @@ beforeAll(async () => {
   db = await createTestDb();
 });
 
-// A consumer without `sample` votes yes, so the context carries a live collector.
+/**
+ * A consumer without `sample` votes yes, so the context carries a live
+ * collector.
+ */
 const sampledContext = (): AppContext =>
   createTestContext({
     db,

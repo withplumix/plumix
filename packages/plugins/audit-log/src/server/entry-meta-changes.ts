@@ -1,7 +1,5 @@
-// Re-typing the shape we observe on `entry:meta_changed` so the hooks
-// file can stay free of plumix internals. Matches `MetaChanges` in
-// core's meta/core.ts — including `set` being the normalized, stored bag
-// rather than the hydrated read one.
+// Re-typed to keep plumix internals out. Matches core's `MetaChanges`, where
+// `set` is the stored bag, not the hydrated one.
 
 import type { JsonObject } from "plumix";
 

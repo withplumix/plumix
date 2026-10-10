@@ -4,10 +4,8 @@ import type { User } from "plumix/schema";
 import { hasDemoSession, readDemoToken } from "./session.js";
 
 /**
- * Identity of the demo admin. `id` is 1 to line up with the first user
- * the demo seed creates, so seeded content authored by that user shows as
- * the current user's in the editor. Kept in one place so the synthetic
- * session and any seed row that references it can't drift.
+ * `id` 1 matches the first user the demo seed creates, so seeded content shows
+ * as the current user's.
  */
 export const DEMO_ADMIN = {
   id: 1,
@@ -15,17 +13,15 @@ export const DEMO_ADMIN = {
   name: "Demo Editor",
 } as const;
 
-// Stable synthetic timestamps: the demo admin isn't a real account, so its
-// "created"/"verified" instants shouldn't advance on every request.
+/**
+ * Stable synthetic timestamps: the demo admin isn't a real account, so its
+ * "created"/"verified" instants shouldn't advance on every request.
+ */
 const DEMO_ADMIN_TIMESTAMP = new Date();
 
 /**
- * A `RequestAuthenticator` that treats a visitor who started a demo session
- * (has the session cookie) as a logged-in admin — no real login, no database
- * read. Cookieless traffic (bots and drive-by visitors browsing the shared
- * read-only showcase) stays anonymous, so it can't edit shared content. The
- * demo is pre-seeded with the matching admin row, and the demo runtime blocks
- * the real auth flows, so nothing here can leak into a normal deployment.
+ * Any visitor with the session cookie is admin, with no database read.
+ * Cookieless traffic stays anonymous so it can't edit the shared showcase.
  */
 export function demoAuthenticator(): RequestAuthenticator {
   return {

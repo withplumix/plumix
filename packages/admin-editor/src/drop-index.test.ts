@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import { dropIndexFromPointer, dropPlacement } from "./drop-index.js";
 
-// Three stacked blocks, 100px tall each: midpoints at 50, 150, 250.
+/** Three stacked blocks, 100px tall each: midpoints at 50, 150, 250. */
 const SPANS = [
   { y: 0, height: 100 },
   { y: 100, height: 100 },

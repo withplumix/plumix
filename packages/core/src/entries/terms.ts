@@ -5,9 +5,11 @@ import { and, eq, inArray } from "../db/index.js";
 import { entryTerm } from "../db/schema/entry_term.js";
 import { terms } from "../db/schema/terms.js";
 
-// Errors a `terms` patch can raise. Helpers receive callable throwers
-// so the orpc-typed `errors` map at the handler call-site doesn't have
-// to leak its concrete shape into shared code.
+/**
+ * Errors a `terms` patch can raise. Helpers receive callable throwers
+ * so the orpc-typed `errors` map at the handler call-site doesn't have
+ * to leak its concrete shape into shared code.
+ */
 interface TermPatchThrowers {
   taxonomyNotFound(taxonomy: string): never;
   forbidden(capability: string): never;
@@ -15,11 +17,8 @@ interface TermPatchThrowers {
 }
 
 /**
- * Build the standard guard-callback bundle entry create / update both
- * pass to `assertTermsPatchValid`: NOT_FOUND for unknown taxonomies,
- * FORBIDDEN for missing assign capability, CONFLICT for cross-taxonomy
- * mismatch. Centralizes the rpc-error shapes shared between the two
- * procedures so a future error-payload tweak only changes here.
+ * NOT_FOUND for unknown taxonomies, FORBIDDEN without assign capability,
+ * CONFLICT on a cross-taxonomy mismatch.
  */
 export function buildTermsPatchGuards(
   errors: TermsPatchErrors,
@@ -40,16 +39,8 @@ export function buildTermsPatchGuards(
 }
 
 /**
- * Validate a `terms` patch from an entry create/update payload:
- * - every taxonomy must be registered with core
- * - the caller must hold `term:<taxonomy>:assign` for each taxonomy
- *   that appears in the patch
- * - each (taxonomy, termId) pair must reference an existing term in
- *   that taxonomy (catches cross-taxonomy id reuse and stale ids)
- *
- * Pure validation — no writes happen here. Callers run this before
- * inserting the entry row so a bad patch fails up-front rather than
- * leaving an orphaned entry behind.
+ * Writes nothing. Run before inserting the entry row so a bad patch fails
+ * up-front rather than leaving an orphaned entry.
  */
 export async function assertTermsPatchValid(
   context: AppContext,
@@ -77,10 +68,8 @@ export async function assertTermsPatchValid(
 }
 
 /**
- * Replace `entry_term` rows for every (entryId, taxonomy) pair in the
- * patch. Each taxonomy is rewritten independently — taxonomies absent
- * from the patch keep their existing assignments. An empty array
- * clears the taxonomy's assignments without touching the others.
+ * Taxonomies absent from the patch keep their assignments; an empty array
+ * clears just that taxonomy.
  */
 export async function applyTermPatch(
   context: AppContext,
@@ -107,9 +96,8 @@ export async function applyTermPatch(
     }
 
     if (unique.length > 0) {
-      // onConflictDoNothing handles the race where a concurrent write beat us
-      // to inserting the same (entryId, termId) row — the desired end state
-      // (row exists) is reached regardless of which request inserted it.
+      // A concurrent write may have inserted the same row first; the end
+      // state is the same.
       await context.db
         .insert(entryTerm)
         .values(

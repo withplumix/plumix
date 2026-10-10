@@ -1,8 +1,3 @@
-// Focused unit tests for the SigV4 signer in both forms. The `s3()` slot and
-// the Cloudflare `r2()` slot cover their integrations; these pin the algorithm
-// itself, with the fake's verifier standing in for the server that recomputes
-// every signature from the request it actually receives.
-
 import { describe, expect, test } from "vitest";
 
 import { verifySigV4 } from "./fake-s3.js";
@@ -31,7 +26,9 @@ const BASE_PARAMS = {
   now: FIXED_NOW,
 } as const;
 
-// Exactly `BASE_PARAMS.contentLength` bytes, the body the signed URL is for.
+/**
+ * Exactly `BASE_PARAMS.contentLength` bytes, the body the signed URL is for.
+ */
 const BODY = "jpeg bytes";
 
 describe("presignPutUrl", () => {
@@ -184,10 +181,8 @@ describe("presignPutUrl against a server recomputing the signature", () => {
   });
 });
 
-// AWS's published SigV4 examples for S3 (Examples: Signature Calculations in
-// AWS Signature Version 4, Authorization header) — an oracle this repo did not
-// write, so the signer and the verifier cannot agree on a misreading of the
-// spec and both pass.
+// AWS's published SigV4 examples: an oracle this repo didn't write, so signer
+// and verifier can't share a misreading of the spec.
 describe("signRequest against AWS's published example signatures", () => {
   const credentials = {
     accessKeyId: "AKIAIOSFODNN7EXAMPLE",

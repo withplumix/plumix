@@ -18,10 +18,10 @@ import {
   termTaxonomyTargets,
 } from "./rule-selectors.js";
 
-// A rule kind that is neither of the two in the repo: its selector keeps the
-// selected match and carries no payload at all. What these tests read is the
-// vocabulary the constructors publish, rather than what a template or a card
-// happens to do with it — the contract a third-party rule kind builds against.
+/**
+ * A rule kind with no payload, so the tests read the published vocabulary a
+ * third-party rule kind builds against.
+ */
 interface Probe {
   readonly selected: TierMatchRule;
 }
@@ -97,9 +97,8 @@ describe("entryTypeTargets", () => {
     });
   });
 
-  // `named` is one half of a contract with the editor's template picker, so it
-  // is minted by the template builders rather than here. A rule kind with no
-  // picker behind it must not receive it by default.
+  // `named` is half of a contract with the editor's template picker, so a
+  // rule kind with no picker must not receive it.
   test("no named narrowing reaches a rule kind that did not ask for one", () => {
     expect("named" in widget).toBe(false);
   });
@@ -153,10 +152,8 @@ describe("authorTargets", () => {
 describe("dateTargets", () => {
   const forDate = dateTargets(probe);
 
-  // `matchesIdentity` compares `match.month ?? null` against the node's, so an
-  // unset component has to be absent rather than present-and-undefined: a year
-  // matcher that carried `month: undefined` would still read as unset, but one
-  // that carried `month: null` or a key set from a spread would not.
+  // `matchesIdentity` compares `match.month ?? null`, so a spread could carry
+  // a present key that no longer reads as unset.
   test("an unset component is absent from the match, not undefined", () => {
     const year = forDate(2026).selected.match;
     expect(year).toEqual({ nodeKind: "date", type: "date", year: 2026 });
@@ -189,9 +186,8 @@ describe("archiveTypeTargets", () => {
   });
 });
 
-// The pieces a rule kind mints a narrowing of its own from, once the five
-// constructors above have run out. They are public for that, so what they mint
-// is a contract rather than an implementation detail of `named`.
+// Public so a rule kind can mint its own narrowing, which makes what they
+// mint a contract.
 describe("the match constructors", () => {
   test("entryTypeMatch is the prefix a bare entry-type selector carries", () => {
     expect(entryTypeMatch("widget")).toEqual(
@@ -223,9 +219,10 @@ describe("the match constructors", () => {
   });
 });
 
-// Both read the stored bag. A fixture fills the decoded sibling to match, so
-// only the test below turns on the split; `resolve-entry-list.test.ts`
-// runs the same pair off a real row, where the two genuinely differ.
+/**
+ * The fixture fills the decoded sibling to match, so only the test below
+ * turns on the split.
+ */
 const entryData = (meta: Record<string, unknown>) =>
   ({ entry: { meta, storedMeta: meta } }) as unknown as TemplateData;
 const termData = (meta: Record<string, unknown>) =>

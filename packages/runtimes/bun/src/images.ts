@@ -10,9 +10,8 @@ import { createVariantCache } from "./image-cache.js";
 
 export interface ImagesConfig {
   /**
-   * The widths a variant may have; a request snaps up to the next entry and
-   * past the largest takes it. Bounds what a visitor can make the process
-   * render and cache.
+   * A request snaps up to the next width; bounds what a visitor can make the
+   * process render.
    */
   readonly widths?: readonly number[];
   /**
@@ -26,10 +25,8 @@ export interface ImagesConfig {
 }
 
 interface ResolvedImagesConfig {
-  /** Ascending, deduplicated. */
   readonly widths: readonly number[];
   readonly remotePatterns: readonly RemotePattern[];
-  /** Absolute. */
   readonly cacheDir: string;
 }
 
@@ -51,7 +48,7 @@ export interface BunImageDelivery extends ImageDelivery {
 const DEFAULT_WIDTHS = [320, 640, 768, 1024, 1280, 1536, 1920];
 const DEFAULT_CACHE_DIR = ".cache/plumix/images";
 const PROBED: readonly ImageFormat[] = ["jpeg", "webp", "avif"];
-// A 1×1 PNG, the smallest input every encoder can be asked to take.
+/** A 1×1 PNG, the smallest input every encoder can be asked to take. */
 const PIXEL = Uint8Array.from(
   atob(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
@@ -95,8 +92,10 @@ export function encodeAs(
   }
 }
 
-// A format the host cannot encode rejects at the terminal, whatever the
-// input, so one pixel through each encoder is the whole probe.
+/**
+ * A format the host cannot encode rejects at the terminal, whatever the
+ * input, so one pixel through each encoder is the whole probe.
+ */
 async function probeEncodable(): Promise<readonly ImageFormat[]> {
   const results = await Promise.all(
     PROBED.map((format) =>
@@ -112,10 +111,8 @@ async function probeEncodable(): Promise<readonly ImageFormat[]> {
 }
 
 /**
- * The `imageDelivery` slot on Bun: `url()` is URL math onto
- * `/_plumix/image`, which the serve path answers through `Bun.Image`. A
- * same-origin source is resolved through the site's own handler, so the
- * media plugin's gating applies; a remote one must match `remotePatterns`.
+ * A same-origin source resolves through the site's handler, so media gating
+ * applies; a remote one must match `remotePatterns`.
  *
  * @example
  * ```ts

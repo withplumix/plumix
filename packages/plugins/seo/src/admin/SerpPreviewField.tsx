@@ -7,11 +7,8 @@ import { SEO_META_KEYS } from "../meta-keys.js";
 import { SerpPreviewPanel } from "./SerpPreviewPanel.js";
 
 /**
- * The preview as the meta box mounts it.
- *
- * Two things the panel cannot work out for itself: which entry is open, read
- * off the editor's own route, and the three answers the author is holding in
- * the fields under it, handed down by the host as the box's sibling values.
+ * Reads the open entry off the editor's route and the unsaved SEO answers from
+ * the box's sibling values.
  */
 export function SerpPreviewField({
   disabled,
@@ -32,7 +29,7 @@ export function SerpPreviewField({
   );
 }
 
-/** The open entry, or null on the create form — where no row exists yet. */
+/** Null on the create form, where no row exists yet. */
 function useEntryId(): number | null {
   const params: Record<string, string | undefined> = useParams({
     strict: false,
@@ -41,9 +38,10 @@ function useEntryId(): number | null {
   return Number.isSafeInteger(id) && id > 0 ? id : null;
 }
 
-// The same three keys the head reads, off the live form rather than the row.
-// Anything but a stored `true` leaves the page where it was, matching
-// `readSeoOverrides` on the server.
+/**
+ * Anything but a stored `true` leaves the page as it was, matching
+ * `readSeoOverrides` on the server.
+ */
 function readOverrides(siblings: SeoMetaBag): SerpOverrides {
   const bag = siblings ?? {};
   return {

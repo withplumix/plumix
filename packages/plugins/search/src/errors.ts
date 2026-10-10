@@ -13,10 +13,8 @@ export class SearchError extends Error {
   }
 
   /**
-   * The insert that opens a rebuild returned nothing. Not reachable through
-   * any input — the row is written and read back in one statement — so this
-   * says the database refused a write, which the caller cannot recover from
-   * by trying a different rebuild.
+   * Unreachable through input (the row is written and read back in one
+   * statement), so the database refused the write.
    */
   static reindexInsertReturnedNoRow(): SearchError {
     return new SearchError(

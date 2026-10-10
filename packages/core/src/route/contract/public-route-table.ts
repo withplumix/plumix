@@ -21,9 +21,9 @@ export interface PublicRouteMatchFor<TRoute> {
 }
 
 /**
- * The public route that owns this pathname, or null. A literal path wins over a
- * pattern that would also match it — the more specific claim, and independent
- * of install order; patterns are tried in registration order.
+ * The public route that owns this pathname, or null. A literal path beats a
+ * matching pattern regardless of install order; patterns are tried in
+ * registration order.
  */
 export function matchPublicRoute<TRoute>(
   table: PublicRouteTableFor<TRoute>,

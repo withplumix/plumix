@@ -15,8 +15,10 @@ import { tagCdnEntry } from "../cdn/route-tags.js";
 import { definePlugin } from "../plugin/define.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 
-// A plugin that owns a path at the site root, the way `@plumix/plugin-feeds`
-// owns `/feed` and `@plumix/plugin-seo` owns `/robots.txt` and the sitemap.
+/**
+ * A plugin that owns a path at the site root, the way `@plumix/plugin-feeds`
+ * owns `/feed` and `@plumix/plugin-seo` owns `/robots.txt` and the sitemap.
+ */
 function owner(path: string, body = "owned", pluginId = "feeds") {
   return definePlugin(pluginId, (ctx) => {
     ctx.registerPublicRoute({
@@ -117,9 +119,8 @@ describe("public route dispatch", () => {
   });
 
   test("a route registered from afterSetup is served", async () => {
-    // The registration point the seam is designed around: by `afterSetup`
-    // every entry type and taxonomy is known, so a plugin enumerates them and
-    // claims concrete paths instead of matching a pattern per request.
+    // By `afterSetup` every entry type and taxonomy is known, so a plugin can
+    // claim concrete paths instead of matching per request.
     const feeds = definePlugin("feeds", {
       setup: () => undefined,
       afterSetup: (ctx) => {

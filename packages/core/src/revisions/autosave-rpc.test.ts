@@ -51,7 +51,7 @@ function registryWithMetaField(field: MetaBoxField) {
   return registryWithMetaFields([field]);
 }
 
-// A bounded number field the draft-lenient / publish-strict tests share.
+/** A bounded number field the draft-lenient / publish-strict tests share. */
 const RATING_FIELD: MetaBoxField = {
   key: "rating",
   label: "Rating",
@@ -98,10 +98,8 @@ describe("entry.update saveAs", () => {
       id: h.entryId,
       excerpt: "Draft excerpt",
     });
-    // The returned row is the autosave (different id from live; type
-    // `autosave`). Client can't see this directly because the type
-    // declaration is `Entry` and `type` is a string — but the test
-    // can read the persisted shape.
+    // The declared type is `Entry` with a string `type`, so only the
+    // persisted shape shows this is the autosave row.
     expect(result.type).toBe("autosave");
     expect(result.excerpt).toBe("Draft excerpt");
     // Live is unchanged.
@@ -122,9 +120,8 @@ describe("entry.update saveAs", () => {
     expect(live.meta[NAMED_TEMPLATE_META_KEY]).toBeUndefined();
   });
 
-  // Clearing a pick is an edit like any other, and the reserved keys ride
-  // outside the meta-box patch — so the draft has to name them as cleared or
-  // the merge reads them as untouched and hands back the live row's pick.
+  // The reserved keys ride outside the meta-box patch, so the draft must name
+  // them as cleared or the merge hands back the live pick.
   test("clearing a named-template pick in a draft survives the merge and the publish", async () => {
     const h = await publishedPostFixture();
     await h.context.db
@@ -249,12 +246,8 @@ describe("entry.update saveAs", () => {
     expect(promoted.meta.accent_color).toBe("#ffa500");
   });
 
-  // An unsettled value the author never submitted stays as stored: promotion
-  // runs the field pipeline over the keys the patch carries, and re-running an
-  // input decoder over the rest would re-interpret a value nobody sent. What
-  // the author saw (unset, per `coerceOnRead`) is what publishing leaves.
-  // Settling is the read heal's job and the bulk sweep's, never publish's — so
-  // this reads storage directly: `entry.get` would heal the row itself.
+  // Re-running a decoder over keys nobody sent would re-interpret them.
+  // Reads storage directly because `entry.get` would heal the row itself.
   test("publishing an unrelated edit leaves an untouched unsettled value as stored", async () => {
     const h = await publishedPostFixture(
       registryWithMetaField({
@@ -399,9 +392,8 @@ describe("entry.update saveAs", () => {
   });
 
   test("consecutive partial draft writes accumulate (a later patch keeps an earlier key)", async () => {
-    // The editor autosaves only what changed, so a later meta patch carries a
-    // different key than an earlier one. The draft must accumulate both rather
-    // than rebase each patch on the live row (which would drop the earlier key).
+    // The editor autosaves only what changed, so rebasing each patch on the
+    // live row would drop the earlier key.
     const h = await publishedPostFixture(
       registryWithMetaFields([
         {
@@ -424,10 +416,8 @@ describe("entry.update saveAs", () => {
   });
 
   test("a draft write mirrors the current live title into the snapshot", async () => {
-    // Title is a live-only field: the editor writes it straight to the live
-    // row and publish never promotes it. Each draft write re-anchors the
-    // snapshot column to the *current* live title, so the pending draft row
-    // stays coherent even after a live title edit.
+    // Title is live-only, so each draft write re-anchors the snapshot to the
+    // current live title.
     const h = await publishedPostFixture(
       registryWithMetaField({
         key: "subtitle",
@@ -489,10 +479,8 @@ describe("entry.get preview", () => {
   });
 
   test("preview reads the live title, not a stale autosave snapshot", async () => {
-    // Title is a live-only field. A draft written before a live title edit
-    // holds a stale title snapshot; the preview overlay must show the current
-    // live title — consistent with the public `?preview=` render — rather than
-    // the frozen snapshot.
+    // Title is live-only, so the overlay matches the public `?preview=`
+    // render rather than the frozen snapshot.
     const h = await publishedPostFixture();
     await h.client.entry.update({ id: h.entryId, excerpt: "draft excerpt" });
     await h.client.entry.update({
@@ -566,10 +554,8 @@ describe("entry.publish", () => {
     expect(revisions.revisions.length).toBeGreaterThanOrEqual(1);
   });
 
-  // The write-time gate (#1533) only canonicalizes autosaves written
-  // *after* it deployed. `upsertAutosave` stores the raw bag verbatim,
-  // so it stands in for a draft persisted *before* the gate existed —
-  // exactly the rows publish must re-sanitize.
+  // `upsertAutosave` stores the raw bag verbatim, so it stands in for a
+  // draft persisted before the write-time gate existed.
   async function stalePendingAutosave(
     h: Awaited<ReturnType<typeof publishedPostFixture>>,
     meta: JsonObject,
@@ -593,10 +579,8 @@ describe("entry.publish", () => {
     return live;
   }
 
-  // A draft written before an autosave stored edits held a whole copy of the
-  // row. Read as edits, every key in it is simply touched — the pre-ADR-0003
-  // reading — so it still merges and publishes, and the shape clears itself as
-  // open drafts are published or discarded.
+  // Older drafts held a whole-row copy; read as edits, every key is simply
+  // touched, so they still publish.
   test("publishes an autosave stored as a whole-row copy", async () => {
     const h = await publishedPostFixture(
       registryWithMetaField({
@@ -674,10 +658,8 @@ describe("entry.publish", () => {
   });
 
   test("aborts the publish when the promoted bag violates a constraint", async () => {
-    // Autosave is draft-lenient, so a draft can carry an out-of-bounds
-    // value. Publish is the strict gate: promoting the bag re-runs every
-    // constraint, so an invalid value rejects the publish with a per-field
-    // error the admin surfaces — invalid content never reaches the live row.
+    // Autosave is draft-lenient; publish re-runs every constraint, so invalid
+    // content never reaches the live row.
     const h = await publishedPostFixture(registryWithMetaField(RATING_FIELD));
     const live = await stalePendingAutosave(h, { rating: 99 });
     await expect(
@@ -692,10 +674,8 @@ describe("entry.publish", () => {
   });
 
   test("keeps a title edited on live when publishing a draft written before that edit", async () => {
-    // The latent revert: draft a field (freezing the snapshot's title at the
-    // then-current live title), edit the title straight to live, then publish
-    // without touching the draft again. Title is a live-only field, so publish
-    // must leave the live title intact rather than promoting the stale snapshot.
+    // Title is live-only, so publishing an older draft must not revert a
+    // later live title edit with the stale snapshot.
     const h = await publishedPostFixture();
     await h.client.entry.update({ id: h.entryId, excerpt: "draft excerpt" });
     const live = await h.client.entry.update({

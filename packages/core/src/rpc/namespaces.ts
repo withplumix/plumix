@@ -1,10 +1,10 @@
 import type { AppRouter } from "./router.js";
 
-// The core RPC namespaces (the top-level keys of `appRouter`) as a light,
-// value-level set, so `buildApp` and plugin registration can reject plugin-id
-// collisions without importing the heavy procedure graph `appRouter` pulls in.
-// The `Record<keyof AppRouter, …>` source fails the build if it drifts from
-// `appRouter`'s keys in either direction.
+/**
+ * A value-level copy of `appRouter`'s keys, so plugin-id collision checks
+ * don't import the heavy procedure graph. The `Record<keyof AppRouter, …>`
+ * type fails the build on drift.
+ */
 const NAMESPACE_FLAGS: Record<keyof AppRouter, true> = {
   auth: true,
   entry: true,

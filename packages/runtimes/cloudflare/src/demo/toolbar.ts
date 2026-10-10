@@ -1,11 +1,12 @@
 import { DEMO_EXPIRES_COOKIE_NAME } from "./session.js";
 
-/** Where "Deploy your own" sends the visitor. */
 const DEPLOY_URL = "https://github.com/withplumix/plumix";
 
-// Shared chrome for both pill variants: the dark rounded bar pinned bottom
-// centre. `.pdt-note` is the anonymous tagline; `.pdt-time` the session
-// countdown (tabular so it doesn't jitter as digits change).
+/**
+ * Shared chrome for both pill variants: the dark rounded bar pinned bottom
+ * centre. `.pdt-note` is the anonymous tagline; `.pdt-time` the session
+ * countdown (tabular so it doesn't jitter as digits change).
+ */
 const TOOLBAR_STYLE = `
 <style>
   #plumix-demo-toolbar {
@@ -44,9 +45,10 @@ const TOOLBAR_STYLE = `
   }
 </style>`;
 
-// Session-holder pill: a live countdown to expiry, what's off in the demo, a
-// reset control, and a deploy CTA. The countdown is client-side — it reads the
-// readable `plumix_demo_expires` cookie rather than any server-rendered time.
+/**
+ * The countdown reads the `plumix_demo_expires` cookie client-side, not a
+ * server-rendered time.
+ */
 function sessionToolbar(off: string): string {
   return `
 <div id="plumix-demo-toolbar" role="region" aria-label="Plumix demo">
@@ -79,8 +81,10 @@ function sessionToolbar(off: string): string {
 </script>`;
 }
 
-// Anonymous pill: the read-only showcase's single entry point into the editor.
-// "Try the editor" hits `/demo`, which mints a session and redirects to admin.
+/**
+ * Anonymous pill: the read-only showcase's single entry point into the editor.
+ * "Try the editor" hits `/demo`, which mints a session and redirects to admin.
+ */
 const ANONYMOUS_TOOLBAR = `
 <div id="plumix-demo-toolbar" role="region" aria-label="Plumix demo">
   <span class="pdt-brand">Demo</span>
@@ -97,13 +101,7 @@ function escapeHtml(text: string): string {
     .replaceAll('"', "&quot;");
 }
 
-/**
- * A floating pill injected into the demo's HTML responses. Plain HTML + inline
- * styles + a small script — no dependencies. A session holder gets the
- * countdown/off/reset/deploy pill, where `off` is the localized list of the
- * admin areas the demo refuses; an anonymous visitor on the read-only
- * showcase gets the "Try the editor" CTA.
- */
+/** `off` is the localized list of admin areas the demo refuses. */
 export function renderDemoToolbar(hasSession: boolean, off: string): string {
   return `${TOOLBAR_STYLE}${
     hasSession
@@ -126,14 +124,8 @@ export function injectDemoToolbar(
 }
 
 /**
- * Whether the floating demo toolbar belongs on this request's document. It's a
- * public-site affordance (the CTA for anonymous visitors, the session pill for
- * session holders), so it's skipped only for:
- *   - the admin (`/_plumix/*`);
- *   - the editor's canvas iframe — that loads the entry's *public* route with
- *     `?plumix.edit`, so it isn't under `/_plumix/*`, yet a fixed pill would
- *     float inside the editing surface. This is the load-bearing case: without
- *     the `plumix.edit` check the pill leaks into the visual editor.
+ * Skipped in the editor's canvas iframe too: it loads the public route with
+ * `?plumix.edit`, outside `/_plumix/*`, and the pill would float in the editor.
  */
 export function shouldInjectDemoToolbar(request: Request): boolean {
   const url = new URL(request.url);

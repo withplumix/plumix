@@ -24,9 +24,11 @@ import {
 
 const CAPABILITY = "settings:manage";
 
-// Single endpoint for all group writes. Keys mapped to `null` or
-// `undefined` are deletions; anything else is an upsert. Unmentioned
-// keys are left alone — same partial-patch semantic as `entry.meta`.
+/**
+ * Single endpoint for all group writes. Keys mapped to `null` or
+ * `undefined` are deletions; anything else is an upsert. Unmentioned
+ * keys are left alone — same partial-patch semantic as `entry.meta`.
+ */
 export const upsert = base
   .use(authenticated)
   .use(requireCapability(CAPABILITY))
@@ -40,18 +42,13 @@ export const upsert = base
       throw errors.BAD_REQUEST({ data: { reason: "settings_group_private" } });
     }
 
-    // A registered field's declared type is what the column ends up
-    // holding, so every value it owns goes through the same write
-    // pipeline as entry/term meta — coercion, `.sanitize()`, declared
-    // constraints. Condition-hidden fields are dropped before that: a
-    // value the editor cannot see must not persist.
+    // Registered fields go through the meta write pipeline. Condition-hidden
+    // fields are dropped first: a value the editor cannot see must not persist.
     const group = context.plugins.settingsGroups.get(filtered.group);
     const groupFields = new Map((group?.fields ?? []).map((f) => [f.key, f]));
 
-    // A registered group counts as created on its first save (ADR 0026). That
-    // save writes every field: a key neither sent nor already stored takes its
-    // starting value, and a marker row records that the group exists, so from
-    // then on a cleared setting stays absent.
+    // A group counts as created on its first save, which writes every field and
+    // a marker row, so from then on a cleared setting stays absent.
     let values = filtered.values;
     let creating = false;
     if (group) {
@@ -97,10 +94,8 @@ export const upsert = base
         }
         stored = result.value;
       } else {
-        // No field declares what an unregistered key holds — an orphan left
-        // by an uninstalled plugin, or a group nobody declared — so the write
-        // stays laissez-faire. The column still names what it holds, which
-        // makes JSON the one thing the value has to be.
+        // No field declares what an orphan key holds, so the only constraint
+        // left is that the value is JSON.
         if (value === null || value === undefined) {
           deletes.push(key);
           continue;
@@ -119,10 +114,8 @@ export const upsert = base
       if (stored === undefined) continue;
       upsertRows.push({ group: filtered.group, key, value: stored });
     }
-    // Nothing is written when any key fails — the admin form addresses
-    // every offending input in one round-trip, as it does for meta. This
-    // runs before the size check so a validation failure is never masked
-    // by an oversized sibling.
+    // Runs before the size check so a validation failure is never masked by an
+    // oversized sibling.
     const [firstError] = fieldErrors;
     if (firstError) {
       throw errors.CONFLICT({
@@ -197,9 +190,11 @@ export const upsert = base
     );
   });
 
-// Values that blow past the per-value cap in `schemas.ts` translate to a
-// CONFLICT with a keyed `reason` so admin UIs surface which field hit
-// the limit.
+/**
+ * Values that blow past the per-value cap in `schemas.ts` translate to a
+ * CONFLICT with a keyed `reason` so admin UIs surface which field hit
+ * the limit.
+ */
 function assertEncodedSize(
   group: string,
   key: string,

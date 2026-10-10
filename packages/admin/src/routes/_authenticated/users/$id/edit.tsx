@@ -88,11 +88,6 @@ import {
 
 type User = WithResolvedMeta<StoredUser>;
 
-// Descriptors needed outside their natural `<Trans>` callsite — pending
-// / error component aria labels, state setters, `mapUserError` fallbacks.
-// The three per-surface error bundles (`UPDATE_/STATUS_/DELETE_ERROR_MESSAGES`)
-// hold their own reason-specific descriptors directly. Chrome strings
-// stay inline at their `<Trans>` callsite.
 const M = {
   loadingAria: defineMessage({
     id: "userEdit.loading.aria",
@@ -136,8 +131,10 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-// Radix Select forbids an empty-string item value, so "keep entries as-is"
-// carries a sentinel that maps back to `null` (no reassignment) on change.
+/**
+ * Radix Select forbids an empty-string item value, so "keep entries as-is"
+ * carries a sentinel that maps back to `null` (no reassignment) on change.
+ */
 const KEEP_AS_IS_VALUE = "__keep__";
 
 async function invalidateUserCaches(
@@ -172,11 +169,8 @@ export const Route = createFileRoute("/_authenticated/users/$id/edit")({
       return { id: result.output };
     },
   },
-  // More permissive than `/users/` — a user without `user:list` can
-  // still edit their OWN row, so this screen doubles as `/profile`
-  // (which redirects here). Other-user edits require `user:list`; the
-  // server's own `user:edit_own` / `user:edit` checks are the final
-  // word, but surfacing the right screen is half the UX.
+  // A user without `user:list` can still edit their own row (`/profile`
+  // redirects here).
   beforeLoad: ({ context, params }) => {
     const isSelf = params.id === context.user.id;
     const canEditAny = hasCap(context.user.capabilities, "user:list");
@@ -226,9 +220,7 @@ function UserEditRoute(): ReactNode {
   const canDisable = otherUserCap("user:edit");
   const canDelete = otherUserCap("user:delete");
   const canManageOtherTokens = otherUserCap("user:manage_tokens");
-  // Match the server's actual write permission — editors can view the
-  // edit screen (via `user:list`) but don't get `user:edit`, so we
-  // disable Save / Name input instead of letting them hit a server 403.
+  // Editors can view via `user:list` without `user:edit`.
   const canSave = isSelf
     ? hasCap(session.capabilities, "user:edit_own")
     : hasCap(session.capabilities, "user:edit");
@@ -588,11 +580,7 @@ function UserEditForm({
       {canDisable ? <StatusCard target={target} /> : null}
       {canDelete ? <DeleteCard target={target} /> : null}
 
-      {/* Self-service auth surface — only the user themselves manages
-          their own credentials and signs out their other devices.
-          Cross-user passkey/session management is intentionally not
-          available, even to admins, since both surfaces are second-
-          factor security primitives. */}
+      {/* Self only, even for admins: passkeys and sessions are security primitives. */}
       {isSelf ? <LanguageCard userLocale={target.meta.locale} /> : null}
       {isSelf && isSurfaceOffered("passkeysCard") ? (
         <PasskeysCard userEmail={target.email} />
@@ -713,10 +701,7 @@ function DeleteCard({ target }: { target: User }): ReactNode {
     null,
   );
 
-  // Everyone except the user being deleted — populates the reassign
-  // dropdown. 100-item cap is fine for the single-site MVP; larger
-  // deployments will want a typeahead, which we can slot in later by
-  // swapping this query for a debounced search list.
+  // Capped at 100; a larger site needs a typeahead.
   const candidates = useQuery({
     ...orpc.user.list.queryOptions({ input: { limit: 100 } }),
     enabled: confirming,
@@ -884,10 +869,6 @@ function DeleteCard({ target }: { target: User }): ReactNode {
 
 type ErrorMessages = Partial<Record<string, MessageDescriptor>>;
 
-// CONFLICT→friendly-copy lookup for user-mutation surfaces. Each caller
-// passes its own `overrides` for per-action phrasing (the `last_admin`
-// message reads differently depending on whether you're demoting,
-// disabling, or deleting) plus a `fallback` for unmapped errors.
 function mapUserError(
   err: unknown,
   overrides: ErrorMessages,
@@ -901,9 +882,7 @@ function mapUserError(
   return descriptor ?? fallback;
 }
 
-// Per-surface message bundles. Kept near the call sites (not inline at
-// `onError`) so adding a new reason is a one-line edit per surface.
-// `last_admin` reads differently per action, hence the three records.
+/** `last_admin` reads differently per action, hence three records. */
 const UPDATE_ERROR_MESSAGES: ErrorMessages = {
   last_admin: defineMessage({
     id: "userEdit.error.lastAdmin.update",

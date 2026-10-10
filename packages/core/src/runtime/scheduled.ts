@@ -7,26 +7,9 @@ import { scheduledTasksFor } from "./contract/schedules.js";
 import { deliverTelemetrySnapshot } from "./telemetry-delivery.js";
 
 /**
- * Run the registered scheduled tasks against the given `AppContext`, and report
- * what they did. Each task is wrapped in its own `try/catch` so a single
- * failure can't abort siblings: the report's `failed` is where a failure
- * surfaces, and the log is secondary — it is best-effort, because a logger that
- * throws must not cost the run the accounting it has already done. The epilogue
- * below is guarded for the same reason.
- *
- * Never returns the report's `aborted` arm. Reaching this function means the
- * run reached its tasks, which is precisely what that arm denies; only the
- * handler, which does the setup that can fail first, can produce one.
- *
- * `firedCron` is the schedule that triggered this invocation (Cloudflare's
- * `event.cron`). A task with a declared `cron` runs only when it matches; a
- * task with no `cron` runs on every invocation. When `firedCron` is omitted
- * (tests, runtimes that don't surface it), every task runs.
- *
- * The default handler factory calls this from its `scheduled` path after
- * constructing a scheduled-flavor `AppContext`. Owns the run's telemetry
- * snapshot delivery, so it must not be invoked inside a dispatched request —
- * the dispatcher would deliver the same collector a second time.
+ * Never returns the `aborted` arm. Omitting `firedCron` runs every task. Must
+ * not run inside a dispatched request: it delivers the telemetry snapshot
+ * itself.
  */
 export async function runScheduledTasks(
   app: Pick<PlumixApp, "scheduledTasks">,

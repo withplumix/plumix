@@ -51,10 +51,9 @@ export function findParentId(
 }
 
 /**
- * The top-level index just after `activeId`'s top-level ancestor (itself when
- * top-level), or the end of the tree when nothing is active or it's absent.
- * Where an insert lands with a selection: next to what the author is looking
- * at, but never inside a nested slot whose allowedBlocks it can't honor.
+ * Lands an insert next to the selection's top-level ancestor, never inside a
+ * nested slot whose allowedBlocks it can't honor. The end of the tree when
+ * nothing is active.
  */
 export function topLevelIndexAfter(
   tree: readonly BlockNode[],
@@ -74,7 +73,9 @@ export function topLevelIndexAfter(
 export interface FlatNode {
   readonly id: string;
   readonly name: string;
-  /** Author-given instance label, or undefined to fall back to the type title. */
+  /**
+   * Author-given instance label, or undefined to fall back to the type title.
+   */
   readonly label?: string;
   /** Nesting depth; 0 for top-level blocks. */
   readonly depth: number;
@@ -82,15 +83,15 @@ export interface FlatNode {
   readonly parentId: string | null;
   /** Which of the parent's slots holds this block, or null at the top level. */
   readonly slotKey: string | null;
-  /** Whether this block can hold children (has a slot) — gates nesting onto it. */
+  /**
+   * Whether this block can hold children (has a slot) — gates nesting onto it.
+   */
   readonly hasSlot: boolean;
 }
 
 /**
- * Flatten the nested tree to a depth-first outline (a node immediately
- * followed by its children), the shape the Layers list renders. A multi-slot
- * block lists each slot's children in turn, in declaration order; `slotKey`
- * tells them apart so a drag lands back in the slot it was dropped among.
+ * Depth-first; a multi-slot block lists each slot's children in declaration
+ * order, told apart by `slotKey`.
  */
 export function flattenTree(
   tree: readonly BlockNode[],
@@ -136,10 +137,8 @@ function arrayMove(
 }
 
 /**
- * Resolve a tree drag (active dropped over `overId`, dragged `offsetX` pixels
- * horizontally) to a move target. The horizontal offset picks a depth — the
- * standard flattened-tree projection — clamped between the row below (its
- * depth) and one past the row above. Returns null when the active row is gone.
+ * `offsetX` picks a depth, clamped between the row below's depth and one past
+ * the row above. Null when the active row is gone.
  */
 export function projectMove(
   items: readonly FlatNode[],
@@ -158,9 +157,7 @@ export function projectMove(
   const prev = moved[overIndex - 1];
   const next = moved[overIndex + 1];
   const projected = active.depth + Math.round(offsetX / indentWidth);
-  // Only nest one level deeper than the row above when that row can actually
-  // hold children — otherwise the projection would name a slotless leaf as
-  // parent and the move would silently no-op.
+  // Nesting under a slotless leaf would make the move silently no-op.
   const maxDepth = prev ? (prev.hasSlot ? prev.depth + 1 : prev.depth) : 0;
   const minDepth = next ? next.depth : 0;
   const depth = Math.max(minDepth, Math.min(projected, maxDepth));
@@ -177,8 +174,10 @@ export function projectMove(
   return { ...slot, index };
 }
 
-// Nesting under the row above targets its first slot; adopting a row's parent
-// also adopts the slot that row sits in.
+/**
+ * Nesting under the row above targets its first slot; adopting a row's parent
+ * also adopts the slot that row sits in.
+ */
 function projectedSlot(
   moved: readonly FlatNode[],
   overIndex: number,
@@ -211,13 +210,9 @@ export interface MoveTarget {
 }
 
 /**
- * Move a block to a new parent + slot + index, immutably. Handles reorder (same
- * parent), nest (into a named slot) and un-nest (to the top level). Returns the
- * same tree reference when the move is invalid — source missing, dropping into
- * itself or its own descendant, the target slot absent, or `allowed` given and
- * the source's name not in it — so a bad drag is a safe no-op, never a lost
- * subtree. `allowed` is the slot's `allowedBlocks` list (the caller resolves it
- * from the registry); undefined permits any block.
+ * Returns the same tree reference for an invalid move (missing source, into its
+ * own subtree, absent slot, block not in `allowed`), so a bad drag never loses
+ * a subtree.
  */
 export function moveBlock(
   tree: readonly BlockNode[],
@@ -240,10 +235,7 @@ export function moveBlock(
   return insertNode(removeNode(tree, sourceId, blocks), source, target, blocks);
 }
 
-// Whether `target` names a real slot on a real parent. The top level always
-// exists; a nested target needs the parent present and the key one of its
-// declared slots, either already populated or unset — an unset slot is simply
-// empty, and insertNode creates its array.
+/** An unset declared slot counts as existing; insertNode creates its array. */
 function slotTargetExists(
   tree: readonly BlockNode[],
   target: MoveTarget,
@@ -260,10 +252,8 @@ function slotTargetExists(
 }
 
 /**
- * Insert a (new) block at a parent + slot + index, immutably. Mirrors
- * moveBlock's validation for an insert rather than a relocation: a no-op (same
- * tree) when the target slot is absent, or `allowed` is given and the block's
- * name isn't in it. `parentId: null` inserts at the top level.
+ * Returns the same tree when the target slot is absent or the block isn't in
+ * `allowed`.
  */
 export function insertBlockAt(
   tree: readonly BlockNode[],
@@ -308,9 +298,8 @@ export function removeBlocks(
 }
 
 /**
- * Insert a fresh-id clone of `id` immediately after it within its own parent
- * slot. Ids are rewritten through the whole subtree so the duplicate is fully
- * independent. Returns the same tree and a null id when the source is absent.
+ * Ids are rewritten through the whole subtree. Returns the same tree and a null
+ * id when the source is absent.
  */
 export function duplicateBlock(
   tree: readonly BlockNode[],
@@ -329,10 +318,7 @@ export function duplicateBlock(
   };
 }
 
-// The children of a block's sole slot, or null when it isn't a single-slot
-// container with content. Ungroup only unwraps these: a multi-slot block (e.g.
-// columns) has no unambiguous "the" slot, and unwrapping one would silently
-// drop the others when the node is removed.
+/** Unwrapping one slot of a multi-slot block would silently drop the others. */
 function soleSlotChildren(
   node: BlockNode,
   blocks: BlockSpecLookup,
@@ -344,10 +330,9 @@ function soleSlotChildren(
   return isBlockNodeArray(slot) && slot.length > 0 ? slot : null;
 }
 
-/** Whether {@link ungroupBlock} can unwrap this block — a single-slot container
- *  with children. The toolbar gates the Ungroup button on this. */
-/** Whether `groupBlocks` would do anything: the selection's roots must all
- *  share one slot of one parent, since a group can't span containers. */
+/**
+ * A group can't span containers, so the selection's roots must share one slot.
+ */
 export function canGroupSelection(
   tree: readonly BlockNode[],
   selectedIds: ReadonlySet<string>,
@@ -369,13 +354,8 @@ export function canUngroupBlock(
 }
 
 /**
- * Replace a single-slot container with its children, spliced into the block's
- * own parent at its position. Returns `null` when the block is missing, has no
- * children, or has more than one slot. Children keep their ids.
- *
- * The children move into the group's own parent slot; allowedBlocks /
- * requiresParent aren't re-validated here. Today nothing can nest a container in
- * a restricted slot, so it can't be violated — tracked with paste's follow-up.
+ * Returns `null` when the block is missing, empty, or multi-slot. Doesn't
+ * re-validate allowedBlocks / requiresParent in the parent slot.
  */
 export function ungroupBlock(
   tree: readonly BlockNode[],
@@ -396,10 +376,8 @@ export function ungroupBlock(
 }
 
 /**
- * Wrap the selected blocks in a new `core/group` at the position of the first.
- * Only groups a selection whose roots are siblings (share one slot of one
- * parent) — returns `null` otherwise (or when nothing is selected), since a group can't span
- * containers. Children keep their ids; the group takes `groupId`.
+ * Returns `null` when nothing is selected or the selection's roots aren't
+ * siblings.
  */
 export function groupBlocks(
   tree: readonly BlockNode[],
@@ -430,9 +408,8 @@ export function groupBlocks(
 }
 
 /**
- * Collect the selected blocks as whole nodes, reduced to selection roots and
- * returned in document order (so a copy preserves the original sequence, unlike
- * the set-insertion order of {@link selectionRoots}). For clipboard copy.
+ * Returns selection roots in document order, unlike {@link selectionRoots}'s
+ * insertion order.
  */
 export function collectBlocks(
   tree: readonly BlockNode[],
@@ -455,10 +432,8 @@ export function collectBlocks(
 }
 
 /**
- * Insert fresh-id clones of `nodes` after `afterId` (within its parent slot),
- * or appended to the root when `afterId` is null. Ids are rewritten through each
- * subtree so a paste is independent of its source and of repeated pastes.
- * Returns the new tree and the inserted roots' ids.
+ * Ids are rewritten through each subtree, so repeated pastes stay independent.
+ * A null `afterId` appends to the root.
  */
 export function pasteBlocks(
   tree: readonly BlockNode[],
@@ -482,9 +457,7 @@ export function pasteBlocks(
 }
 
 /**
- * Reduce a selection to its roots: ids that have no selected ancestor. Used by
- * bulk duplicate so a block isn't cloned twice when both it and its container
- * are selected (the container's clone already carries a copy of the child).
+ * Drops ids with a selected ancestor, so bulk ops don't touch a child twice.
  */
 export function selectionRoots(
   tree: readonly BlockNode[],
@@ -530,12 +503,7 @@ function cellsOf(row: BlockNode): readonly BlockNode[] {
   return isBlockNodeArray(cells) ? cells : [];
 }
 
-/**
- * The id of the table enclosing `id` — `id` itself if it's a core/table, else
- * its nearest table ancestor (so a selected row or cell resolves to its table),
- * or null when nothing in the chain is a table. Lets the inspector keep the
- * table controls in reach while the editor is working inside a cell.
- */
+/** `id` itself when it's a core/table, else its nearest table ancestor. */
 export function enclosingTableId(
   tree: readonly BlockNode[],
   id: string,
@@ -549,17 +517,16 @@ export function enclosingTableId(
   return null;
 }
 
-// A table's column count is its widest row's cell count, so a new row/column
-// keeps the grid rectangular even when existing rows disagree.
+/**
+ * A table's column count is its widest row's cell count, so a new row/column
+ * keeps the grid rectangular even when existing rows disagree.
+ */
 function columnCount(rows: readonly BlockNode[]): number {
   return rows.reduce((max, row) => Math.max(max, cellsOf(row).length), 0);
 }
 
 /**
- * Append a column to a table: a fresh cell at the end of every row's `cells`
- * slot — a `<th>` in the header row, a `<td>` in body rows. One immutable
- * transform, so it's a single undo step. A no-op (same tree ref) when `tableId`
- * isn't a core/table or the table has no rows.
+ * Returns the same tree when `tableId` isn't a core/table or has no rows.
  */
 export function appendTableColumn(
   tree: readonly BlockNode[],
@@ -579,9 +546,7 @@ export function appendTableColumn(
 }
 
 /**
- * Append a body row to a table, with one cell per existing column so the grid
- * stays rectangular (at least one cell when the table is empty). One transform.
- * A no-op when `tableId` isn't a core/table.
+ * Returns the same tree when `tableId` isn't a core/table.
  */
 export function appendTableRow(
   tree: readonly BlockNode[],
@@ -605,10 +570,8 @@ export function appendTableRow(
 }
 
 /**
- * Remove a table's last column — drop the trailing cell from every row. One
- * transform (a single undo step). A no-op (same tree ref) when `tableId` isn't a
- * core/table or the table is already down to a single column, so it never leaves
- * a column-less table.
+ * Returns the same tree when `tableId` isn't a core/table or has one column
+ * left.
  */
 export function removeTableColumn(
   tree: readonly BlockNode[],
@@ -646,8 +609,10 @@ export function removeTableRow(
   return setTableRows(tree, tableId, rows.slice(0, -1), blocks);
 }
 
-// Replace a table's `rows` slot, descending through slots so a nested table is
-// reachable. Untouched branches keep their reference for React.
+/**
+ * Replace a table's `rows` slot, descending through slots so a nested table is
+ * reachable. Untouched branches keep their reference for React.
+ */
 function setTableRows(
   nodes: readonly BlockNode[],
   tableId: string,
@@ -672,9 +637,7 @@ function setTableRows(
 }
 
 interface SiblingSlot {
-  /** The blocks sharing the node's slot, the node included. */
   readonly siblings: readonly BlockNode[];
-  /** The slot as a move target, missing only its index. */
   readonly at: Omit<MoveTarget, "index">;
 }
 
@@ -682,9 +645,10 @@ function topLevelSlot(tree: readonly BlockNode[]): SiblingSlot {
   return { siblings: tree, at: { parentId: null } };
 }
 
-// The slot that directly holds `id` — whichever of its parent's slots that is,
-// so an op relative to a node stays in that node's slot. An absent id resolves
-// to the top level, where a sibling-relative op finds nothing to act on.
+/**
+ * An absent id resolves to the top level, where a sibling-relative op finds
+ * nothing.
+ */
 function siblingsOf(
   tree: readonly BlockNode[],
   id: string,
@@ -712,8 +676,10 @@ function slotKeys(node: BlockNode, blocks: BlockSpecLookup): readonly string[] {
   return blockSlotKeys(node, blocks.get(node.name));
 }
 
-// The children held in each of the node's slots, in declaration order. A slot
-// that is unset, or holds something other than nodes, has none to walk.
+/**
+ * The children held in each of the node's slots, in declaration order. A slot
+ * that is unset, or holds something other than nodes, has none to walk.
+ */
 function slotChildren(
   node: BlockNode,
   blocks: BlockSpecLookup,
@@ -726,7 +692,6 @@ function slotChildren(
   return out;
 }
 
-/** Whether `id` is `node` itself or anywhere in its subtree. */
 function containsBlock(
   node: BlockNode,
   id: string,

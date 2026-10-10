@@ -9,9 +9,7 @@ import {
   pluginAdminEntryPath,
 } from "plumix/plugin";
 
-// Side-effect import: the hook augmentations live beside the code that
-// fires them, and this is the edge tsc keeps so they reach a consumer's
-// registry (core's `hooks/public-hooks.ts` does the same for its own).
+// Side-effect import keeps the hook augmentations in the declaration graph.
 import "./server/hooks.js";
 
 import type { FormDefinition } from "./define-form.js";
@@ -78,8 +76,10 @@ export type {
 } from "./types.js";
 export { BOUND_TYPES, SUBMISSION_STATUSES } from "./types.js";
 
-// Checked here rather than in the registry: the message has to name the
-// site that wrote the number.
+/**
+ * Checked here rather than in the registry: the message has to name the
+ * site that wrote the number.
+ */
 function retentionDefault(days: number | undefined): number {
   if (days === undefined) return 0;
   if (!isRetentionPeriod(days)) {
@@ -88,8 +88,10 @@ function retentionDefault(days: number | undefined): number {
   return days;
 }
 
-// A plain descriptor literal — plugin source runs server-side without the
-// Babel macro pipeline, so the manifest payload is authored by hand.
+/**
+ * A plain descriptor literal — plugin source runs server-side without the
+ * Babel macro pipeline, so the manifest payload is authored by hand.
+ */
 const SUBMISSIONS_TITLE: Label = {
   id: "plugin.forms.adminPage.title",
   message: "Form submissions",
@@ -99,16 +101,8 @@ export interface FormsConfig {
   /** The site's own forms. Contributed as `"config"` for slug collisions. */
   readonly forms?: readonly FormDefinition[];
   /**
-   * How many days a form that declares no `retentionDays` of its own
-   * keeps its submissions for. Nothing by default — indefinitely, the
-   * only answer that cannot lose an enquiry nobody asked to lose.
-   *
-   * It is the one place a site says how long it is entitled to what its
-   * forms collect, so a form has to opt out of it rather than into it. A
-   * form declaring its own period keeps that one, `0` included. It
-   * reaches every registered form, including one another plugin
-   * contributed through `registerForm` — a site's retention policy is
-   * the site's, not each contributor's.
+   * For forms with no `retentionDays` of their own, including ones other
+   * plugins contribute. Absent keeps submissions indefinitely.
    */
   readonly retentionDays?: number;
 }
@@ -116,15 +110,8 @@ export interface FormsConfig {
 declare module "plumix" {
   interface PluginContextExtensions {
     /**
-     * Contribute a form from another plugin, so a signup form can be part
-     * of what that plugin distributes. Slug collisions throw at boot,
-     * naming both contributors — which is why this is a method call on
-     * the setup context and not a free function: `this` is how the
-     * registry learns which plugin the form came from. So call it on
-     * `ctx`: detached, it has no caller to attribute the form to. Both
-     * ways to detach one are compile errors — TypeScript rejects
-     * `const { registerForm } = ctx`, `unbound-method` rejects
-     * `forms.forEach(ctx.registerForm)`.
+     * Call it on `ctx`: `this` names the contributor in a slug-collision
+     * error, which throws at boot.
      */
     registerForm(this: { readonly id: string }, form: FormDefinition): void;
   }
@@ -142,23 +129,11 @@ declare module "plumix" {
 type RegisterForm = PluginContextExtensions["registerForm"];
 
 /**
- * Each install's registry, keyed by the `registerForm` its `provides` handed
- * out — core puts that same function on the setup context, which is how
- * `setup` finds its own install's registry.
+ * Keyed by the install's `registerForm`, which core also puts on the setup
+ * context.
  */
 const registries = new WeakMap<RegisterForm, FormRegistry>();
 
-/**
- * `@plumix/plugin-forms` — forms declared in code, not stored as rows.
- *
- *     forms({ forms: [defineForm("contact", { fields: [text("name")] })] })
- *
- * A form deploys with the repository that declares it, so local, staging
- * and production cannot drift apart, and a bad change reverts with
- * `git revert`. The block renders it as static markup that submits with
- * JavaScript disabled; the answers land in `form_submissions` with a
- * snapshot of what every field was called at the time.
- */
 export function forms(options: FormsConfig = {}) {
   const defaultRetentionDays = retentionDefault(options.retentionDays);
   return definePlugin("forms", {
@@ -171,10 +146,8 @@ export function forms(options: FormsConfig = {}) {
     schemaModule: "@plumix/plugin-forms/schema",
     i18n: PLUGIN_I18N_SLOT,
     provides: (ctx) => {
-      // One registry per install rather than per `forms()` call: a
-      // descriptor is a value, installed more than once per build and
-      // possibly into more than one app. Core runs every `provides` before
-      // any `setup`, so a form another plugin contributes lands in it.
+      // Per install, not per `forms()` call: a descriptor may be installed
+      // into more than one app.
       const registry = createFormRegistry(defaultRetentionDays);
       const registerForm: RegisterForm = function registerForm(form) {
         registry.register(form, this.id);
@@ -188,10 +161,7 @@ export function forms(options: FormsConfig = {}) {
       const registry = registries.get(ctx.registerForm);
       if (registry === undefined) throw FormsError.setupWithoutProvides();
       for (const form of options.forms ?? []) registry.register(form, "config");
-      // `tel` is the plugin's own contribution to the field vocabulary,
-      // not a core built-in — a form may declare one, and so may any meta
-      // box on the site, because the admin resolves the renderer from
-      // this registration rather than from the plugin that asked.
+      // Site-wide: any meta box can use `tel` too.
       ctx.registerFieldType({
         type: TEL_INPUT_TYPE,
         component: TEL_FIELD_COMPONENT,
@@ -223,10 +193,8 @@ export function forms(options: FormsConfig = {}) {
         method: "POST",
         path: SUBMIT_ROUTE_PATH,
         auth: "public",
-        // A browser cannot set the `X-Plumix-Request` header on an
-        // ordinary form submit, so without this there is no no-JavaScript
-        // path at all. The Origin check becomes the whole control; the
-        // handler reads no session and acts on nobody's behalf.
+        // A plain form submit can't set `X-Plumix-Request`. Safe because
+        // the handler reads no session.
         formPost: true,
         handler: createSubmitHandler(registry),
       });
@@ -242,10 +210,8 @@ export function forms(options: FormsConfig = {}) {
         auth: "public",
         handler: tokenHandler,
       });
-      // One task for the whole site, registered whether or not a form
-      // declares a period today: a plugin contributing a form runs its
-      // own `setup` after this one, and the registry is read when the
-      // task fires rather than now.
+      // Registered unconditionally: contributed forms arrive later, and the
+      // registry is read when the task fires.
       ctx.registerScheduledTask({
         id: "retention-purge",
         cron: RETENTION_CRON,

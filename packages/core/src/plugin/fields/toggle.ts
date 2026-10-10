@@ -18,11 +18,8 @@ interface ToggleFieldState extends UniversalFieldState {
 }
 
 /**
- * Fluent chain for the boolean switch field. Immutable — every call
- * returns a fresh instance, so a shared base chain can be forked
- * without aliasing. `V` is the phantom read type: `boolean |
- * undefined` unadorned, narrowed to `boolean` by `.required()`.
- * Purely type-level — nothing at runtime carries it.
+ * Immutable: every call returns a fresh instance, so a shared base chain can be
+ * forked.
  */
 export class ToggleFieldBuilder<
   K extends string = string,

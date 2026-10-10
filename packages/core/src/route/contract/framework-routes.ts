@@ -1,8 +1,6 @@
 /**
- * The framework routes a site keeps, keyed by the page kind each family
- * renders. Root pagination is not among them: it is the front page's, and a
- * site always has one. A family set to `false` is never compiled, so its URLs
- * fall through to whatever else matches, or to 404 (ADR 0029).
+ * The framework routes a site keeps, keyed by page kind. A family set to
+ * `false` is never compiled, so its URLs fall through to other rules or 404.
  */
 export interface FrameworkRoutesInput {
   /** `/authors/:slug` and its later pages. Defaults to `true`. */

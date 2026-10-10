@@ -1,16 +1,10 @@
 import type { MetaBoxFieldInput } from "plumix/fields";
 
-/**
- * The field type the SERP preview renders under. The server names it on the
- * meta box's first field and the admin chunk registers a renderer for it; both
- * read it from here, since a mismatch degrades silently to a text input.
- */
+/** Shared by server and admin: a mismatch silently degrades to a text input. */
 export const SERP_PREVIEW_INPUT_TYPE = "seoSerpPreview";
 
 /**
- * The meta key the preview field occupies. It stores nothing — the renderer
- * never writes a value — but a meta box is a set of fields, so the preview
- * needs one to hang off. Prefixed like every other key this plugin owns.
+ * Stores nothing; a meta box is a set of fields, so the preview needs a key.
  */
 export const SERP_PREVIEW_FIELD_KEY = "seo_preview";
 

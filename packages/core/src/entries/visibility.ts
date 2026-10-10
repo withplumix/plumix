@@ -15,8 +15,10 @@ import { publicEntryTypeNames } from "../plugin/registry.js";
 
 export type EntryViewer = Pick<AppContext, "user" | "auth" | "plugins">;
 
-// `authorId` admits `null` so a caller can ask about a hypothetical row "by
-// the current user", who may be nobody.
+/**
+ * `authorId` admits `null` so a caller can ask about a hypothetical row "by
+ * the current user", who may be nobody.
+ */
 export interface EntryRow {
   readonly type: Entry["type"];
   readonly status: Entry["status"];
@@ -24,10 +26,8 @@ export interface EntryRow {
 }
 
 /**
- * May this caller see this entry row? The one answer for every read surface.
- * Trash is a status like any other here — a surface that hides the bin says
- * so itself. `readableEntryRows` is the same rule as SQL; its tests hold the
- * two to the same rows, so a change to one fails until the other follows.
+ * Trash is a status like any other here. `readableEntryRows` is the same rule
+ * as SQL, and their tests hold the two to the same rows.
  */
 export function canReadEntry(ctx: EntryViewer, entry: EntryRow): boolean {
   const namespace = entryCapabilityNamespace(ctx.plugins, entry.type);
@@ -54,9 +54,8 @@ export function canReadUnpublished(ctx: EntryViewer, type: string): boolean {
 }
 
 /**
- * `canReadEntry` over the rows of one `type`, as a WHERE clause, or `null`
- * when the caller may not read the type at all. Parenthesized, so it can be
- * `AND`ed onto a caller's own predicate.
+ * `null` when the caller may not read the type at all. Parenthesized, so it
+ * can be `AND`ed onto a caller's predicate.
  */
 export function readableEntryRows(ctx: EntryViewer, type: string): SQL | null {
   const namespace = entryCapabilityNamespace(ctx.plugins, type);
@@ -65,16 +64,8 @@ export function readableEntryRows(ctx: EntryViewer, type: string): SQL | null {
 }
 
 /**
- * The rows of one `type` a *reference* to it may resolve to: the published
- * ones, plus the unpublished ones this caller has earned.
- *
- * {@link readableEntryRows} with the `read` gate not asked, and the one place
- * that difference is right. A reference is hydrated inline inside someone
- * else's page — the referenced type often has no page of its own, so no
- * reader of it holds a capability over it, and `buildEntryPermalink` already
- * answers `null` for such a type rather than treating it as a mistake.
- * Publication is the whole gate on that half. The unpublished half still runs
- * through the same earning `canReadEntry` requires.
+ * Skips the `read` gate: a referenced type often has no page, so no reader
+ * holds a capability over it. Publication gates the published half.
  */
 export function referenceableEntryRows(ctx: EntryViewer, type: string): SQL {
   const ofType = eq(entries.type, type);
@@ -85,11 +76,7 @@ export function referenceableEntryRows(ctx: EntryViewer, type: string): SQL {
     : sql`(${or(published, earned)})`;
 }
 
-/**
- * The rows of `type` this caller may see *unpublished*, or `null` where none
- * are: the SQL half of {@link canReadUnpublished}, under the same `read` gate
- * every other unpublished read runs through.
- */
+/** The SQL half of `canReadUnpublished`, under the same `read` gate. */
 function earnedUnpublishedRows(ctx: EntryViewer, type: string): SQL | null {
   const namespace = entryCapabilityNamespace(ctx.plugins, type);
   if (!ctx.auth.can(namespacedEntryCapability(namespace, "read"))) return null;
@@ -102,14 +89,8 @@ function earnedUnpublishedRows(ctx: EntryViewer, type: string): SQL | null {
 }
 
 /**
- * The public entries — published, with a publish date, of a public type — as a
- * WHERE clause, or `null` where the site routes no public type at all and
- * there is nothing an anonymous reader could be shown.
- *
- * Deliberately not `readableEntryRows`: that is the viewer's set, and it
- * varies per user. This one is the same for everybody, which is what lets an
- * archive page be stored in a CDN and read by a feed. Parenthesized, so it can
- * be `AND`ed onto a caller's own predicate.
+ * Not `readableEntryRows`: this set is the same for everybody, so an archive
+ * page can be cached and read by a feed. `null` when no type is public.
  */
 export function publicEntryRows(plugins: PluginRegistry): SQL | null {
   const types = publicEntryTypeNames(plugins);
@@ -122,11 +103,8 @@ export function publicEntryRows(plugins: PluginRegistry): SQL | null {
 }
 
 /**
- * Load the parent referenced by a user-supplied parentId and verify it
- * (a) exists, (b) shares the child's entry type, and (c) is visible to the
- * caller. Returns null when any check fails — deliberately undistinguished so
- * a caller can't probe for entry existence by reparenting. Callers should
- * translate null into a 404.
+ * Null when the parent is missing, of another type, or unreadable, all alike
+ * so reparenting can't probe for existence. Translate null into a 404.
  */
 export async function loadReadableParent(
   ctx: AuthenticatedAppContext,

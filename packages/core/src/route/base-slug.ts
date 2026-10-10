@@ -1,5 +1,5 @@
 const SEGMENT_RE = /^[a-z0-9][a-z0-9-]*$/;
-// What a URLPattern pathname reads as more than a literal character.
+/** What a URLPattern pathname reads as more than a literal character. */
 const PATTERN_SYNTAX_RE = /[*:(){}?+]/;
 
 function segmentProblem(slug: string): string | null {
@@ -35,8 +35,10 @@ function slashProblem(slug: string, trimmed: string): string {
   return `drop the trailing slash and write "${trimmed}"`;
 }
 
-// An index scan, not `/^\/+|\/+$/`: that regex retries `\/+$` from every
-// slash of an inner run, so a base with a long one stalls boot.
+/**
+ * An index scan, not `/^\/+|\/+$/`: that regex retries `\/+$` from every
+ * slash of an inner run, so a base with a long one stalls boot.
+ */
 function trimSlashes(slug: string): string {
   let start = 0;
   let end = slug.length;
@@ -46,14 +48,9 @@ function trimSlashes(slug: string): string {
 }
 
 /**
- * What is wrong with a URL base — a `rewrite.slug` or a string `hasArchive` —
- * as a clause the boot error quotes, or null when it is one or more
- * lowercase kebab-case segments joined by `/`. The caller decides whether
- * `""` is allowed before asking.
- *
- * A stray leading or trailing slash on an otherwise valid base is answered
- * with the value to write; when the segments themselves are wrong, the
- * problem names the first bad segment instead.
+ * What is wrong with a URL base (`rewrite.slug` or string `hasArchive`), as a
+ * clause for the boot error, or null when valid. The caller decides whether
+ * `""` is allowed.
  */
 export function baseSlugProblem(slug: string): string | null {
   if (slug === "") return "it is empty";

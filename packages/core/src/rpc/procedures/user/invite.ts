@@ -73,10 +73,8 @@ export const invite = base
       expiresAt,
     });
 
-    // Fires before the output filter so plugins observing invites see the
-    // raw created user + token — e.g. an email-delivery plugin needs the
-    // token here to compose the invite URL. Parallel to WordPress's
-    // `user_register` action hook.
+    // Fires before the output filter so an email-delivery plugin still sees the
+    // raw token.
     await context.hooks.doAction(
       "user:invited",
       created,

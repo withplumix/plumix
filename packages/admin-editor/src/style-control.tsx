@@ -16,35 +16,29 @@ import { cn } from "@plumix/admin-ui/utils";
 
 import { useStyleField } from "./use-style-field.js";
 
-// Native `<input type="color">` only round-trips 6-digit hex; anything else
-// (a token var(), `transparent`, rgba) leaves the swatch on a safe default.
+/**
+ * Native `<input type="color">` only round-trips 6-digit hex; anything else
+ * (a token var(), `transparent`, rgba) leaves the swatch on a safe default.
+ */
 export const HEX6 = /^#[0-9a-fA-F]{6}$/;
 
-// Radix Select forbids an empty-string item value, so the "clear" choice
-// carries a sentinel that maps back to `null` on change.
+/**
+ * Radix Select forbids an empty-string item value, so the "clear" choice
+ * carries a sentinel that maps back to `null` on change.
+ */
 const NONE_VALUE = "__none__";
 
 interface StyleControlProps {
   readonly label: string;
-  /** CSS property (camelCase), used for ids and the store write. */
   readonly property: string;
-  /** Token scale offered in token mode; omit for a custom-value-only control. */
+  /** Omit for a custom-value-only control. */
   readonly category?: TokenCategory;
   readonly value: string | undefined;
   /** The wider device's value this one renders while unset. */
   readonly inherited?: string;
-  /** Emits the next CSS value string, or null to clear the property. */
   readonly onChange: (value: string | null) => void;
 }
 
-/**
- * One style property edited as a theme token OR a custom value. Both store a
- * plain CSS value string: token mode writes the token's `var(--plumix-…,
- * fallback)` (a theme reskins it by redefining the variable), custom mode
- * writes a raw literal. A control without a `category` is custom-only. The
- * token/literal encoding and the Token/Custom mode machine live in
- * {@link useStyleField} — this component only renders and dispatches.
- */
 export function StyleControl({
   label,
   property,

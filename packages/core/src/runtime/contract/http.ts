@@ -1,5 +1,7 @@
-// Clone a response, preserving its body/status, with mutated headers — for
-// adding headers to a response produced elsewhere (CORS, cache directives).
+/**
+ * Clone a response, preserving its body/status, with mutated headers — for
+ * adding headers to a response produced elsewhere (CORS, cache directives).
+ */
 export function withHeaders(
   response: Response,
   mutate: (headers: Headers) => void,
@@ -43,11 +45,10 @@ export function methodNotAllowed(allowed: readonly string[]): Response {
   });
 }
 
-// The platform's own JSON interfaces answer per caller and carry no cache tag,
-// so a shared copy could never be purged when what is behind it changes. Their
-// refusals declare it too: 404 and 405 are heuristically cacheable, so an
-// undeclared refusal is one an intermediary is entitled to keep. No `private`
-// beside it — `no-store` already binds every cache, shared and private alike.
+/**
+ * Per-caller and untagged, so a shared copy could never be purged. Refusals
+ * too: 404 and 405 are heuristically cacheable.
+ */
 export function withNoStore(response: Response): Response {
   return withHeaders(response, (h) => h.set("cache-control", "no-store"));
 }

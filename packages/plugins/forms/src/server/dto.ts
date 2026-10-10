@@ -1,11 +1,6 @@
 import type { StoredSubmission } from "../db/schema.js";
 import type { SubmissionDTO } from "../types.js";
 
-/**
- * One stored row as everything outside the database reads it — the inbox
- * over RPC and the export route alike, so the shape an administrator
- * sees on the page is the shape they get in a file.
- */
 export function toSubmissionDto(row: StoredSubmission): SubmissionDTO {
   return {
     id: row.id,

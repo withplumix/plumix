@@ -2,7 +2,9 @@ import type { ReactNode } from "react";
 
 import { SectionHeading } from "./SectionHeading";
 
-// Named by config slot, not by host: the adapter list grows, the slots don't.
+/**
+ * Named by config slot, not by host: the adapter list grows, the slots don't.
+ */
 const SLOTS = [
   {
     slot: "runtime",

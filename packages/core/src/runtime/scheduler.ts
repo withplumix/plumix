@@ -7,7 +7,7 @@ import { declaredSchedules } from "./contract/schedules.js";
 
 const MINUTE_MS = 60_000;
 
-/** The catch-all schedule, so tasks that declared no cron still have a firing. */
+/** So tasks that declared no cron still have a firing. */
 const EVERY_MINUTE = "* * * * *";
 
 export interface SchedulerClock {
@@ -34,9 +34,8 @@ export interface SchedulerOptions {
   readonly clock?: SchedulerClock;
   readonly logger?: SchedulerLogger;
   /**
-   * Decides whether this process may run a given firing. Serialising the loop
-   * keeps a process from overlapping itself; only the guard, which lives in the
-   * database, can speak for replicas this process cannot see.
+   * Only the database guard can prevent overlap with replicas this process
+   * cannot see.
    */
   readonly guard?: ScheduledRunGuard;
 }
@@ -57,27 +56,14 @@ const systemClock: SchedulerClock = {
   sleep: (ms) =>
     new Promise((resolve) => {
       const timer = setTimeout(resolve, ms);
-      // A pending tick must not be what keeps the process alive. `unref` is
-      // Node's and Bun's timer handle; a runtime whose `setTimeout` returns a
-      // number has no event loop for it to hold open.
+      // A pending tick must not keep the process alive.
       (timer as { unref?: () => void }).unref?.();
     }),
 };
 
 /**
- * Fires a site's scheduled tasks in a self-hosted process — the loop the Node
- * and Bun runtimes both run, so a schedule means the same minute on each.
- *
- * The schedules come from `app.scheduledTasks`, never from a list here: they
- * are contributed by plugins, so any list a runtime kept would go stale the
- * moment a site installed one — the trap a Cloudflare deploy already has, where
- * a task whose cron does not byte-match a declared trigger silently never runs.
- *
- * Firings are serialised and awaited, so this loop cannot overlap itself; a run
- * longer than its own schedule costs skipped minutes, which are reported, not a
- * second concurrent run. Overlap *between processes* is not this loop's to
- * solve — that is the run guard's, in the database, so it holds for replicas
- * this process cannot see.
+ * Firings are serialised: a run longer than its schedule costs reported skipped
+ * minutes, not a concurrent run.
  */
 export function createScheduler({
   app,
@@ -89,10 +75,7 @@ export function createScheduler({
   const schedules = deriveSchedules(app);
 
   let stopped = false;
-  // Read through a call, not the binding: TypeScript narrows `stopped` to
-  // false inside `while (!stopped)` and does not widen it across an await, so
-  // the re-checks below would read as always-false and trip
-  // no-unnecessary-condition.
+  // A call, because TypeScript keeps `stopped` narrowed to false across awaits.
   const isStopped = (): boolean => stopped;
   let inFlight: Promise<void> | undefined;
 
@@ -159,13 +142,8 @@ export function createScheduler({
         if (wall <= last) continue;
         const missed = (wall - last) / MINUTE_MS - 1;
         if (missed > 0) {
-          // Not replayed on purpose. A suspended laptop or a long run would
-          // otherwise wake to a stampede of catch-up firings, all of them
-          // doing work whose moment has passed.
-          //
-          // Inside the try because `start()` is voided by its callers: a
-          // throwing logger here would end the loop through an unhandled
-          // rejection nothing is watching.
+          // Not replayed, or a suspended laptop wakes to a stampede. In the try
+          // because `start()` is voided, so a throw would go unwatched.
           try {
             logger.warn(
               `[plumix] cron missed ${String(missed)} minute(s) before ${new Date(wall).toISOString()}; not replaying them`,
@@ -207,13 +185,8 @@ export function createScheduler({
 }
 
 /**
- * The distinct schedules a firing loop has to cover. A task that declared no
- * cron runs on every firing, so a site whose only tasks are untagged still
- * needs a heartbeat to carry them.
- *
- * Every expression here parsed at boot — `buildApp` rejects a site whose task
- * declares one this runtime cannot fire — so a throw at this point is a bug
- * rather than a config error.
+ * `buildApp` already parsed every expression, so a throw here is a bug, not a
+ * config error.
  */
 function deriveSchedules(
   app: Pick<PlumixApp, "scheduledTasks">,

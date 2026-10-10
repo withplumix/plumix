@@ -21,9 +21,11 @@ import {
   mediaAcceptSchema,
 } from "./accept.js";
 
-// "heroImage" → "Hero image". Derived default for fields authored
-// without `.label()`. Kept local — the plugin can't reach core's
-// private `humanizeFieldKey`, and the rule is a one-liner.
+/**
+ * "heroImage" → "Hero image". Derived default for fields authored
+ * without `.label()`. Kept local — the plugin can't reach core's
+ * private `humanizeFieldKey`, and the rule is a one-liner.
+ */
 function humanizeFieldKey(key: string): string {
   const spaced = key
     .replaceAll(/([a-z0-9])([A-Z])/g, "$1 $2")
@@ -33,15 +35,13 @@ function humanizeFieldKey(key: string): string {
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
-/** One read element: the hydrated `MediaReference`, or the bare id after `.returns("id")`. */
 type MediaReadItem<Returns extends "id" | "hydrated"> = Returns extends "id"
   ? string
   : MediaReference;
 
 /**
- * The phantom read type. A single reference is always optional (a
- * target can be deleted after the id is written); a multi reference
- * reads a dense array, present once `.required()` guarantees a write.
+ * A single reference is always optional: its target can be deleted after the
+ * id is written.
  */
 type MediaReadValue<
   Multiple extends boolean,
@@ -53,7 +53,6 @@ type MediaReadValue<
     : readonly MediaReadItem<Returns>[] | undefined
   : MediaReadItem<Returns> | undefined;
 
-/** The phantom stored shape — bare ids; `.required()` narrows optionality. */
 type MediaStoredValue<
   Multiple extends boolean,
   Required extends boolean,
@@ -83,16 +82,8 @@ interface MediaFieldState {
 }
 
 /**
- * Fluent chain for the `media` reference field —
- * `media("hero").accept("image/")`. Mirrors the core reference
- * builders (`entry` / `term` / `user`): `.accept()` refines the picker
- * MIME filter, `.multiple()` flips to an id array, `.returns("id")`
- * opts out of read-time hydration. Immutable — every call returns a
- * fresh instance.
- *
- * Storage is the bare media id (an id array under `.multiple()`); reads
- * hydrate to the {@link MediaReference} summary by default so themes
- * render a media field (URL included) without a manual fetch.
+ * Immutable: every call returns a fresh instance. Stores bare media ids; reads
+ * hydrate to {@link MediaReference} unless `.returns("id")`.
  */
 export class MediaFieldBuilder<
   K extends string = string,
@@ -102,11 +93,17 @@ export class MediaFieldBuilder<
 > implements FieldBuilder {
   /** Phantom literal key of the field — type-level only, never assigned. */
   declare readonly _key: K;
-  /** Phantom read type — hydrated `MediaReference` by default, id after `.returns("id")`. */
+  /**
+   * Phantom read type — hydrated `MediaReference` by default, id after
+   * `.returns("id")`.
+   */
   declare readonly _value: MediaReadValue<Multiple, Required, Returns>;
   /** Phantom stored shape — bare ids; `.required()` narrows optionality. */
   declare readonly _stored: MediaStoredValue<Multiple, Required>;
-  /** Phantom cardinality marker backing the compile-time gate on `.multiple()` / `.max()`. */
+  /**
+   * Phantom cardinality marker backing the compile-time gate on `.multiple()` /
+   * `.max()`.
+   */
   declare readonly _multiple: Multiple;
 
   readonly #key: string;
@@ -195,17 +192,17 @@ export class MediaFieldBuilder<
     return this.#fork<Multiple, Required, "id">({ returns: shape });
   }
 
-  /** Mark the field required — enforced at write time by the constraint walker. */
+  /**
+   * Mark the field required — enforced at write time by the constraint walker.
+   */
   required(): MediaFieldBuilder<K, Multiple, true, Returns> {
     return this.#fork<Multiple, true>({ required: true });
   }
 
   /**
-   * Put this field in an image role, so readers find it by the role's name
-   * rather than its key. Core registers `featured` and `ogImage`; any other
-   * name needs `registerImageRole` and an `ImageRoles` augmentation. A role
-   * field holds one image: with no `.accept()` it takes `"image/"`, and an
-   * accept admitting anything else throws.
+   * Core registers `featured` and `ogImage`; any other name needs
+   * `registerImageRole` and an `ImageRoles` augmentation. Defaults `.accept()`
+   * to `"image/"`; an accept admitting non-images throws.
    */
   role(
     this: MediaFieldBuilder<K, false, Required, Returns>,
@@ -367,15 +364,17 @@ export class MediaFieldBuilder<
   }
 }
 
-// The lookup reads an empty accept as no filter at all.
+/** The lookup reads an empty accept as no filter at all. */
 function hasAcceptFilter(
   accept: string | readonly string[] | undefined,
 ): accept is string | readonly string[] {
   return accept !== undefined && accept.length > 0;
 }
 
-// A string accept is a prefix, a list is exact MIME types, as the lookup reads
-// them — so a listed `"image/"` matches no file at all.
+/**
+ * A string accept is a prefix, a list is exact MIME types, as the lookup reads
+ * them — so a listed `"image/"` matches no file at all.
+ */
 function admitsOnlyImages(accept: string | readonly string[]): boolean {
   if (typeof accept === "string") return accept.startsWith("image/");
   return accept.every((type) => /^image\/.+/.test(type));

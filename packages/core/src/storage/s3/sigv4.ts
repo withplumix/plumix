@@ -1,9 +1,4 @@
-// AWS SigV4 in both of its forms: query-string presigning, where a browser
-// PUTs straight to the returned URL, and header signing, which the `s3()` slot
-// uses for its own requests. Hand-rolled on Web Crypto so a bundle that only
-// needs to mint a URL does not pull the AWS SDK (~40 KB gz).
-//
-// References:
+// Hand-rolled on Web Crypto so minting a URL doesn't pull the AWS SDK.
 // https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html
 // https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-auth-using-authorization-header.html
 
@@ -12,7 +7,10 @@ import { SigV4Error } from "./errors.js";
 export interface SigV4Credentials {
   readonly accessKeyId: string;
   readonly secretAccessKey: string;
-  /** Temporary (STS) credentials carry one; it travels as `X-Amz-Security-Token`. */
+  /**
+   * Temporary (STS) credentials carry one; it travels as
+   * `X-Amz-Security-Token`.
+   */
   readonly sessionToken?: string;
   /** The signing region — `auto` for R2, the bucket's region on AWS. */
   readonly region: string;
@@ -42,9 +40,11 @@ export interface PresignPutInput {
 const MIN_EXPIRES_IN = 1;
 const MAX_EXPIRES_IN = 604_800; // 7 days, the AWS-spec ceiling.
 
-// Tight default — same-page XHR PUTs land in seconds; a longer window is a
-// replay surface (logs, browser history). Callers extend via `expiresIn` when
-// they actually need it (e.g. resumable uploads).
+/**
+ * Tight default — same-page XHR PUTs land in seconds; a longer window is a
+ * replay surface (logs, browser history). Callers extend via `expiresIn` when
+ * they actually need it (e.g. resumable uploads).
+ */
 export const DEFAULT_PRESIGN_TTL_SECONDS = 60;
 
 export interface PresignedPut {
@@ -239,8 +239,10 @@ async function sign(
   return bytesToHex(new Uint8Array(await hmac(key, stringToSign)));
 }
 
-// The query as sent, split back into pairs so the canonical form can re-encode
-// each one the AWS way regardless of how the caller encoded it.
+/**
+ * The query as sent, split back into pairs so the canonical form can re-encode
+ * each one the AWS way regardless of how the caller encoded it.
+ */
 function parseQuery(search: string): Record<string, string> {
   const params: Record<string, string> = {};
   if (search.length <= 1) return params;
@@ -262,8 +264,10 @@ export function canonicalQueryString(
     .join("&");
 }
 
-// Values are trimmed and inner whitespace runs collapsed — the canonical form
-// only; the header goes on the wire as given.
+/**
+ * Values are trimmed and inner whitespace runs collapsed — the canonical form
+ * only; the header goes on the wire as given.
+ */
 function canonicalHeaderBlock(
   headers: Readonly<Record<string, string>>,
 ): string {
@@ -278,8 +282,10 @@ function canonicalHeaderBlock(
   );
 }
 
-// S3 encodes each path segment exactly once, whatever the request encoded:
-// `/test$file` and `/test%24file` both canonicalise to the latter.
+/**
+ * S3 encodes each path segment exactly once, whatever the request encoded:
+ * `/test$file` and `/test%24file` both canonicalise to the latter.
+ */
 function canonicalPath(pathname: string): string {
   return pathname
     .split("/")
@@ -313,8 +319,10 @@ async function hmac(
 
 const TEXT_ENCODER = new TextEncoder();
 
-// Copied into a fresh ArrayBuffer: `TextEncoder.encode()` returns
-// `Uint8Array<ArrayBufferLike>`, which Web Crypto's `BufferSource` rejects.
+/**
+ * Copied into a fresh ArrayBuffer: `TextEncoder.encode()` returns
+ * `Uint8Array<ArrayBufferLike>`, which Web Crypto's `BufferSource` rejects.
+ */
 function encodeUtf8(data: string): ArrayBuffer {
   const view = TEXT_ENCODER.encode(data);
   const out = new ArrayBuffer(view.byteLength);
@@ -326,13 +334,18 @@ function bytesToHex(bytes: Uint8Array): string {
   return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-// AWS UTC stamp `YYYYMMDDTHHMMSSZ`: ISO 8601 with separators and millis dropped.
+/**
+ * AWS UTC stamp `YYYYMMDDTHHMMSSZ`: ISO 8601 with separators and millis
+ * dropped.
+ */
 function formatAmzDate(d: Date): string {
   return d.toISOString().replace(/[-:]|\.\d{3}/g, "");
 }
 
-// AWS canonical encoding: `encodeURIComponent` plus the four RFC 3986 reserved
-// characters it leaves alone.
+/**
+ * AWS canonical encoding: `encodeURIComponent` plus the four RFC 3986 reserved
+ * characters it leaves alone.
+ */
 export function rfc3986Encode(s: string): string {
   return encodeURIComponent(s).replace(
     /[!'()*]/g,
@@ -340,9 +353,10 @@ export function rfc3986Encode(s: string): string {
   );
 }
 
-// Object keys keep `/` as a literal separator (it survives in S3 paths). A
-// `.` or `..` segment is refused: `new URL` and every fetch resolve it away,
-// so the request would go to a path other than the one the key names.
+/**
+ * A `.` or `..` segment is refused: `new URL` resolves it away, sending the
+ * request to another path.
+ */
 export function encodePath(key: string): string {
   const segments = key.split("/");
   if (segments.some((s) => s === "." || s === "..")) {

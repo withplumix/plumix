@@ -6,15 +6,8 @@ import {
 import { useLabel } from "@/lib/use-label.js";
 
 /**
- * Resolve a localized "Untitled" label for a `LookupResult` row whose
- * server-supplied label is `null`. When `targetType` resolves to a
- * registered entry type, the cascade picks up `labels.untitledItem`
- * from the manifest; otherwise (term taxonomies, unknown types,
- * `targetType` omitted) the noun-less generic descriptor fills in.
- *
- * Returns a stable resolver function `(value, targetType) => string`
- * so consumers can render labels for many list rows from a single
- * hook call without per-row React tree allocations.
+ * Uses the entry type's `labels.untitledItem` when `targetType` names one, else
+ * a generic.
  */
 export function useUntitledLabel(): (
   value: string | null,

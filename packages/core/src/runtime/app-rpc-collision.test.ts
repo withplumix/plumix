@@ -19,9 +19,7 @@ const stubAuth = auth({
 const stubTheme = defineTheme({ templates: [fallback(() => null)] });
 
 describe("buildApp — RPC plugin-id collisions", () => {
-  // `constructor` passes registration (it's not a core namespace) but would
-  // shadow a member of the merged router object, so buildApp must reject it —
-  // the boot-time guard that replaced the old `pluginId in appRouter` check.
+  // `constructor` is not a core namespace, so registration passes it.
   test("rejects plugin id `constructor`, which would shadow the merged router", async () => {
     const plugin = definePlugin("constructor", (ctx) => {
       ctx.registerRpcRouter({});

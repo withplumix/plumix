@@ -34,29 +34,24 @@ export interface R2S3Credentials {
   readonly accountId: string;
   readonly accessKeyId: string;
   readonly secretAccessKey: string;
-  /** Custom endpoint override. Defaults to `<accountId>.r2.cloudflarestorage.com`. */
+  /**
+   * Custom endpoint override. Defaults to
+   * `<accountId>.r2.cloudflarestorage.com`.
+   */
   readonly endpoint?: string;
 }
 
 export interface R2Config {
   readonly binding: string;
   /**
-   * Public base URL for bucket objects (a custom domain fronting R2). When
-   * omitted, read from the `<BINDING>_PUBLIC_URL_BASE` request-env key so a
-   * bare `r2({ binding })` still resolves public URLs once a domain is
-   * attached. Absent both, `url()` returns `null`.
+   * Omitted, read from `<BINDING>_PUBLIC_URL_BASE`; absent both, `url()`
+   * returns `null`.
    */
   readonly publicUrlBase?: string;
   /**
-   * S3-compatible credentials for presigned PUT URLs. R2 native bindings
-   * cannot mint presigned URLs — that's an S3-API-only capability — so
-   * `presignPut` is exposed only when credentials are available.
-   *
-   * Either literal credentials or an `(env) => R2S3Credentials` resolver, both
-   * evaluated at presign (request) time. When omitted, credentials are read
-   * from conventional request-env keys — `CF_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`,
-   * `R2_SECRET_ACCESS_KEY`, and the binding-derived `<BINDING>_BUCKET` — and
-   * `presignPut` stays undefined until all four are present.
+   * R2 bindings can't presign, so `presignPut` exists only with credentials.
+   * Omitted, read from `CF_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`,
+   * `R2_SECRET_ACCESS_KEY` and `<BINDING>_BUCKET`.
    */
   readonly s3?: EnvInput<R2S3Credentials>;
 }
@@ -65,9 +60,9 @@ export interface R2ObjectStorage extends ObjectStorage {
   readonly config: R2Config;
 }
 
-// The slice of the binding this adapter calls, and only that: `put` resolves
-// to an object the adapter never reads, so the mirror says `void` rather than
-// describing a shape nothing here checks.
+/**
+ * `put` resolves to an object the adapter never reads, so it is typed `void`.
+ */
 interface R2Bucket {
   put(
     key: string,
@@ -134,9 +129,8 @@ function readR2Binding(env: unknown, bindingName: string): R2Bucket {
   ) {
     throw R2Error.bindingMissing({ binding: bindingName });
   }
-  // Safety: the binding is a live Workers object the runtime injected, not
-  // data — its shape is fixed by the platform, and the `put` probe above is
-  // what distinguishes it from a name bound to something else.
+  // Safety: a live Workers object the runtime injected, its shape fixed by the
+  // platform and confirmed by the `put` probe above.
   return bucket as unknown as R2Bucket;
 }
 
@@ -172,7 +166,8 @@ export function r2(config: R2Config): R2ObjectStorage {
           return {
             body: obj.body,
             size: obj.size,
-            // S3-shape quoted etag matches HTTP `If-None-Match` echoes verbatim.
+            // S3-shape quoted etag matches HTTP `If-None-Match` echoes
+            // verbatim.
             etag: obj.httpEtag || obj.etag,
             contentType: obj.httpMetadata?.contentType,
             customMetadata: obj.customMetadata,
@@ -215,21 +210,14 @@ export function r2(config: R2Config): R2ObjectStorage {
         },
         // eslint-disable-next-line @typescript-eslint/require-await
         async url(key, _opts?: UrlOptions): Promise<string | null> {
-          // Bucket-level public URL only — without a custom domain or
-          // CDN base, returning the storage key directly would leak
-          // unguessable-but-static keys publicly with no published-
-          // status check. The consumer (media plugin) mints a
-          // worker-proxied URL keyed on the entry id instead.
+          // Without a public base, a raw storage key would leak publicly with
+          // no published-status check; media proxies instead.
           if (!publicUrlBase) return null;
           const base = publicUrlBase.replace(/\/$/, "");
           return `${base}/${encodePath(key)}`;
         },
       };
 
-      // Attach `presignPut` only when S3 credentials are available —
-      // R2 native bindings can't mint presigned URLs, so the optional
-      // slot stays `undefined` when neither an explicit `s3` block nor a
-      // complete set of conventional env keys is present.
       if (s3) {
         const resolvedS3 = resolveEnvInput(s3, env);
         connected.presignPut = async (
@@ -261,12 +249,15 @@ export function r2(config: R2Config): R2ObjectStorage {
   };
 }
 
-// `/` separators in keys survive — R2 stores them as literal chars.
+/** `/` separators in keys survive — R2 stores them as literal chars. */
 function encodePath(key: string): string {
   return key.split("/").map(encodeURIComponent).join("/");
 }
 
-// All four or none: a partial set stays undefined (presign disabled), not a throw.
+/**
+ * All four or none: a partial set stays undefined (presign disabled), not a
+ * throw.
+ */
 function readConventionalS3(
   env: unknown,
   binding: string,

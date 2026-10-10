@@ -8,15 +8,10 @@ import { apiTokensAdminListInputSchema } from "./schemas.js";
 
 const ADMIN_CAPABILITY = "user:manage_tokens";
 
-// Cross-user token oversight. Returns paginated rows joined with the
-// owning user (id, email, name) so the admin UI can render a single
-// table without N+1-ing back to user.list. Optional `userId` filter
-// for a per-user drilldown.
-//
-// Joins on `apiTokens.userId` → `users.id` (PK + indexed); cheap.
-// `includeRevoked` toggles whether soft-deleted rows are surfaced —
-// the default-false matches the "active tokens" UX, the true case
-// is the audit view.
+/**
+ * Joins the owning user so the admin table needs no per-row `user.list`
+ * call. `includeRevoked` is the audit view.
+ */
 export const adminList = base
   .use(authenticated)
   .use(requireCapability(ADMIN_CAPABILITY))
@@ -28,10 +23,6 @@ export const adminList = base
     ].filter((c): c is NonNullable<typeof c> => c !== null);
     const where = filters.length > 0 ? and(...filters) : undefined;
 
-    // Two queries (rows + total) so the UI can page without re-counting
-    // client-side. `total` reflects the same WHERE — accurate for the
-    // active filter set. SQLite handles count(*) over filtered rows
-    // efficiently with the userId/revokedAt indexes already present.
     const [items, totalRow] = await Promise.all([
       context.db
         .select({

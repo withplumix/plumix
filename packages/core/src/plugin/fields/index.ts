@@ -1,24 +1,5 @@
-// Typed builder helpers for meta-box field registration. The scalar
-// fields (string, numeric, temporal, color, richtext, json), `link`,
-// the choice field (`select` — `.multiple()` for arrays,
-// `.appearance()` for the control), the boolean switch (`toggle`), and
-// the reference fields (`entry` / `term` / `user` — `.multiple()` for
-// id arrays, `.returns("id")` to opt out of read-time resolution) are
-// fluent builders: the constructor takes the key (plus a required
-// scope for `entry` / `term`) and every option is a chained call
-// (`text("subtitle").maxLength(120)`, `entry("hero", ["post"]).required()`),
-// each returning a fresh immutable instance that compiles to the
-// narrowed `MetaBoxField` variant at registration.
-//
-// Re-exported as a public surface from `plumix/fields`.
-
-// The same compile + check + project trio every `register*MetaBox` surface
-// runs internally, published so a plugin rendering its own fields doesn't
-// reimplement it. `assertMetaBoxFields` is the check `toMetaBoxFieldEntry`
-// documents as the caller's to own: key shape, the reserved `__plumix_`
-// prefix, duplicates, the field cap, and conditions naming a sibling that
-// exists. `kind` and `id` name the surface in the error, so a caller that
-// is not a meta box says what it is.
+// Published so a plugin rendering its own fields doesn't reimplement the
+// compile, check and project steps every `register*MetaBox` surface runs.
 export { compileMetaBoxFields } from "./meta-box-field.js";
 export { assertMetaBoxFields } from "../validation/meta-box-fields.js";
 export type {

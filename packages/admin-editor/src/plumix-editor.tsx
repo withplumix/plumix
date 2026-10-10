@@ -48,19 +48,23 @@ import { StarterModal } from "./starter-modal.js";
 import { StylesTab } from "./styles-tab.js";
 
 const NO_CAPABILITIES: ReadonlySet<string> = new Set();
-// A stable empty-tokens default, so an editor mounted without a theme doesn't
-// hand the config provider a fresh `{}` each render (which would defeat its
-// memo and re-render every panel). Mirrors NO_CAPABILITIES above.
+/**
+ * Stable so a fresh `{}` doesn't defeat the config provider's memo each render.
+ */
 const NO_TOKENS: ThemeTokens = {};
 
 export interface PlumixEditorProps {
   /** Seed content; the editor owns state thereafter (uncontrolled). */
   readonly defaultValue?: EntryContent;
-  /** URL the canvas iframe loads — the entry's real route with `?plumix.edit`. */
+  /**
+   * URL the canvas iframe loads — the entry's real route with `?plumix.edit`.
+   */
   readonly previewUrl: string;
   /** Origin of that route, for bridge message pinning. */
   readonly origin: string;
-  /** Core + plugin block registry, supplying the inspector + catalog schemas. */
+  /**
+   * Core + plugin block registry, supplying the inspector + catalog schemas.
+   */
   readonly registry: BlockRegistry;
   /** Viewer capabilities, gating which blocks the catalog offers. */
   readonly capabilities?: ReadonlySet<string>;
@@ -77,9 +81,13 @@ export interface PlumixEditorProps {
   /** Preview mode: render the canvas read-only with the editing chrome hidden
    *  (used to view a past revision or a shared draft). */
   readonly readOnly?: boolean;
-  /** Banner shown above the canvas in preview mode (e.g. revision + restore). */
+  /**
+   * Banner shown above the canvas in preview mode (e.g. revision + restore).
+   */
   readonly previewBanner?: ReactNode;
-  /** A shareable `?preview=…` URL; surfaces "View current draft" in the header. */
+  /**
+   * A shareable `?preview=…` URL; surfaces "View current draft" in the header.
+   */
   readonly previewLink?: string;
   /** Public permalink for "View live entry"; absent until first published. */
   readonly liveUrl?: string;
@@ -106,20 +114,15 @@ export interface PlumixEditorProps {
   readonly onOpenRevisions?: () => void;
   /** Host-rendered overlay (e.g. the stale-draft resolution dialog). */
   readonly overlay?: ReactNode;
-  /** Re-run the active block's loader(s) server-side (host orpc call). When set,
-   *  a loader-backed block gets a "Refresh data" control; the returned data is
-   *  pushed to the canvas. orpc lives in the app, never in this package. */
+  /** When set, a loader-backed block gets a "Refresh data" control. */
   readonly onRefreshBlockLoader?: (
     blockId: string,
   ) => Promise<SerializedLoaderData>;
-  /** Monotonic token the host bumps after autosaving a template-rendered entry
-   *  field (title / excerpt / meta / …); each change reloads the canvas so
-   *  those fields refresh. Block content syncs over the bridge and needs no
-   *  reload. */
+  /**
+   * Bump after saving a template-rendered entry field; each change reloads the
+   * canvas.
+   */
   readonly previewRefreshToken?: number;
-  /** Resolves plugin-registered block-input types (e.g. the media picker) to a
-   *  control, wired from the app's field-type registry. Kept as a prop so this
-   *  package stays decoupled from the registry. */
   readonly resolvePluginFieldType?: ResolvePluginFieldType;
 }
 
@@ -293,10 +296,7 @@ export function PlumixEditor({
   );
 }
 
-/**
- * The right inspector rail (Block / Styles / Page). Its tab is store-controlled
- * so selections can steer which panel is shown.
- */
+/** Store-controlled tab so selections can steer which panel is shown. */
 function RightRail({
   documentPanel,
   onRefreshBlockLoader,
@@ -362,12 +362,7 @@ function RightRail({
   );
 }
 
-/**
- * Subscribes to canonical-tree changes and emits the content envelope. Kept a
- * child of EditorProvider so it can reach the store; the latest `onChange` is
- * held in a ref so re-subscribing isn't needed when the callback identity
- * changes between renders.
- */
+/** Must render inside EditorProvider. */
 export function TreeChangeEmitter({
   onChange,
 }: {

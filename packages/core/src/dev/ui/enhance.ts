@@ -1,13 +1,7 @@
 /// <reference lib="dom" />
-// The client enhancement for the dev error page's stack view (#1596). It is
-// deliberately self-contained — no imports, no references outside its own
-// scope — because core inlines it into the standalone page via
-// `enhanceDevError.toString()`, where module bindings don't exist (the client
-// island overlay imports it directly and runs it against its shadow root). The
-// zero-JS baseline already lists every frame with its original `file:line` and
-// hides vendor frames behind a `<details>`; this layer adds selecting a frame to
-// lazy-fetch and highlight its source excerpt from the dev resolver, reading the
-// endpoint straight off the DOM (`data-endpoint`).
+// Must stay self-contained, with no imports or outer references: core inlines
+// it into the standalone page via `enhanceDevError.toString()`, where module
+// bindings don't exist.
 
 interface ExcerptResponse {
   readonly file: string;

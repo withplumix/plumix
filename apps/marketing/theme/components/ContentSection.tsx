@@ -6,8 +6,10 @@ import { Chips } from "./Chips";
 import { CodePanel } from "./CodePanel";
 import { SectionHeading } from "./SectionHeading";
 
-// The single-value builders from core's field-type roster, plus the media
-// plugin's `media`. The `*List` variants are left out to keep the row short.
+/**
+ * The single-value builders from core's field-type roster, plus the media
+ * plugin's `media`. The `*List` variants are left out to keep the row short.
+ */
 const FIELD_TYPES = [
   "text",
   "textarea",

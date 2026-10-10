@@ -5,7 +5,7 @@ import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { toRegisteredEntryType } from "../../../plugin/registry.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
-// buildEntryPermalinkSync needs the type registered + public to form a URL.
+/** buildEntryPermalinkSync needs the type registered + public to form a URL. */
 function postRegistry() {
   const registry = createPluginRegistry();
   registry.entryTypes.set(

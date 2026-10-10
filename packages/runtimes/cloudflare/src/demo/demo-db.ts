@@ -6,9 +6,8 @@ import { dropDemoTables, initializeDemoStorage } from "./storage.js";
 /** Result of a single statement executed over the DO's SQLite. */
 export interface DemoQueryResult {
   /**
-   * Rows as positional value arrays — the shape drizzle's `sqlite-proxy`
-   * driver consumes (it maps columns by ordinal, not by name). Typed as
-   * `SqlStorageValue` so the result stays serializable across the DO RPC.
+   * Positional, as drizzle's `sqlite-proxy` maps columns by ordinal;
+   * serializable across DO RPC.
    */
   readonly rows: SqlStorageValue[][];
   /** Rows written; only meaningful for writes. */
@@ -22,11 +21,8 @@ export interface DemoStatement {
 }
 
 /**
- * Per-session demo database. Each visitor's session cookie maps to one
- * `DemoDB` instance (`idFromName(token)`), giving isolated, ephemeral
- * SQLite storage. The Worker reaches this over RPC through a drizzle
- * `sqlite-proxy` driver (wired in the demo database adapter); this class
- * owns only storage access and the session lifecycle.
+ * One instance per session token (`idFromName(token)`), giving isolated,
+ * ephemeral SQLite.
  */
 export class DemoDB extends DurableObject {
   #sql: DemoSqlExecutor = {

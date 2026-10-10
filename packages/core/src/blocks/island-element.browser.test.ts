@@ -71,9 +71,7 @@ describe("PlumixIslandElement lifecycle", () => {
   afterEach(async () => {
     restoreImport();
     restoreRenderer();
-    // Detach any islands the test mounted so the React scheduler
-    // unmounts their roots before the next test. React 19's scheduler
-    // queues work via MessageChannel, so without a clean unmount and a
+    // React 19 schedules via MessageChannel, so without an unmount and a
     // macrotask drain a deferred render can outlive the test that queued it.
     document.body.innerHTML = "";
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -114,12 +112,8 @@ describe("PlumixIslandElement lifecycle", () => {
   });
 
   test("disconnectedCallback dispatches `plumix:unmount` on window with element in detail", async () => {
-    // Forward-compat with future view-transitions / client-side
-    // navigation: when an island is removed from the DOM (e.g. a route
-    // swap unmounts the page), themes can listen for `plumix:unmount`
-    // to clean up subscriptions before React's `root.unmount()` runs.
-    // Dispatched on window because the element is already detached
-    // when disconnectedCallback fires.
+    // Dispatched on window because the element is already detached when
+    // disconnectedCallback fires.
     stubStrategies();
     let renders = 0;
     restoreImport = setDynamicImport(() =>
@@ -152,14 +146,8 @@ describe("PlumixIslandElement lifecycle", () => {
   });
 
   test("a never-hydrated (deferred) island that disconnects does NOT emit `plumix:unmount`", async () => {
-    // A nested child blocked on the parent's `ssr` attribute that gets
-    // detached before its parent ever hydrates. No mount happened, so
-    // no unmount event should fire — listeners pair the two.
-    //
-    // Strategy captures loadFn without invoking it so neither parent
-    // nor child ever progresses past `start()` — keeps the test focused
-    // on the unmount-event contract without leaking an in-flight
-    // `dynamicImport` into the next test.
+    // The strategy never calls loadFn, so neither island gets past `start()`
+    // and no in-flight `dynamicImport` leaks into the next test.
     stubStrategies(() => undefined);
     const listener = vi.fn();
     window.addEventListener("plumix:unmount", listener);
@@ -187,11 +175,8 @@ describe("PlumixIslandElement lifecycle", () => {
   });
 
   test("a nested island defers its strategy until the parent island clears its `ssr` attribute", async () => {
-    // SSR'd structure: <plumix-island ssr><...inner content with another
-    // <plumix-island ssr>...></plumix-island>. The child must NOT
-    // hydrate while the parent is still marked SSR — Astro's top-down
-    // contract. Walker emits both with `ssr=""`; each clears its own
-    // attribute after its `hydrate()` runs.
+    // Astro's top-down contract: a child must not hydrate while its parent
+    // still carries `ssr`.
     const strategy = vi.fn<IslandStrategy>((loadFn) => loadFn());
     stubStrategies(strategy);
     const importer = vi.fn(() => Promise.resolve({ default: () => null }));
@@ -408,11 +393,6 @@ describe("PlumixIslandElement lifecycle", () => {
   });
 
   test("extracts SSR'd slot HTML and forwards it as a React-element prop on hydrate", async () => {
-    // When the SSR shim wraps a React-element prop in <plumix-static-slot>,
-    // the wrapper carries a `slots="<name>,<name>"` attribute listing
-    // those props. On hydrate the custom element finds each matching
-    // descendant and feeds its innerHTML back as a StaticHtml element
-    // bridged into the same prop slot.
     const seen: Readonly<Record<string, unknown>>[] = [];
     const Component = (props: Readonly<Record<string, unknown>>) => {
       seen.push(props);
@@ -442,10 +422,6 @@ describe("PlumixIslandElement lifecycle", () => {
   });
 
   test("nested-island slot is NOT claimed by the parent island", async () => {
-    // A nested <plumix-island> has its own <plumix-static-slot> child.
-    // The parent island's slot collector must filter via
-    // `closest('plumix-island') === this` so the inner slot doesn't get
-    // stolen and the nested island's children stay intact.
     const seen: Readonly<Record<string, unknown>>[] = [];
     const Component = (props: Readonly<Record<string, unknown>>) => {
       seen.push(props);

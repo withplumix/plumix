@@ -31,10 +31,8 @@ describe("resolveIslandChunkUrl", () => {
     });
 
     test("looks up the hashed chunk URL from Vite's manifest by source path relative to root", () => {
-      // Vite stores manifest entries keyed by source path relative to
-      // the project root — the rollupOptions.input name we registered
-      // (`island-<slug>-<hash>`) is only used as the chunk's `.name`,
-      // not as the manifest lookup key.
+      // Vite keys manifest entries by source path, not the registered input
+      // name.
       const id = join(root, "src", "counter.tsx");
       const manifestDir = join(root, "dist", "client", ".vite");
       mkdirSync(manifestDir, { recursive: true });

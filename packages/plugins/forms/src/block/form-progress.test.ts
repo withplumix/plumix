@@ -10,9 +10,10 @@ import {
   writeProgress,
 } from "./form-progress.js";
 
-// The platform boundary, stubbed rather than mocked away: these are the
-// four calls the plugin makes against session storage, and a browser
-// that refuses them is the case the island has to survive.
+/**
+ * Stubbed, not mocked away: a browser refusing session storage is a case the
+ * island must survive.
+ */
 function stubStorage(entries: Record<string, string> = {}): void {
   const held = new Map(Object.entries(entries));
   vi.stubGlobal("sessionStorage", {
@@ -129,10 +130,8 @@ describe("progress across a reload", () => {
   });
 });
 
-// A Turnstile token is spent the moment the server verifies it, so
-// carrying one into the next submission gets it refused as a duplicate —
-// which reads as a captcha the visitor failed rather than one they never
-// re-solved.
+// A Turnstile token is spent once verified, so carrying it into the next
+// submission gets refused as a duplicate.
 describe("withoutCaptcha", () => {
   test("drops the spent challenge and keeps every answer", () => {
     const kept = withoutCaptcha(

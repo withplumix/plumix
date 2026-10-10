@@ -64,8 +64,10 @@ export function usePickerTabs(): UseQueryResult<MenuOutputs["pickerTabs"]> {
   });
 }
 
-// Keyed on the trimmed query and fetched on every change with no debounce,
-// like the admin's own lookup search: a blank query lists the first page.
+/**
+ * Keyed on the trimmed query and fetched on every change with no debounce,
+ * like the admin's own lookup search: a blank query lists the first page.
+ */
 export function useSearchTargets({
   kind,
   target,
@@ -88,7 +90,8 @@ export function useMenuGet(
 ): UseQueryResult<MenuGetResponse> {
   return useQuery({
     queryKey: ["menu", "get", termId] as const,
-    // `skipToken` rather than `enabled`: it narrows `termId` for the typed call.
+    // `skipToken` rather than `enabled`: it narrows `termId` for the typed
+    // call.
     queryFn: termId === null ? skipToken : () => rpc.get({ termId }),
   });
 }

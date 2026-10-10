@@ -6,8 +6,10 @@ import { createScheduler } from "./scheduler.js";
 
 type TaskFields = Omit<PlumixApp["scheduledTasks"][number], "handler">;
 
-// The real roster: core's two, a plugin's, and one that declares no cron and so
-// runs on every firing.
+/**
+ * The real roster: core's two, a plugin's, and one that declares no cron and so
+ * runs on every firing.
+ */
 const TASKS: readonly TaskFields[] = [
   { id: "session-cleanup", cron: "0 3 * * *", registeredBy: "core" },
   { id: "publish-scheduled", cron: "*/5 * * * *", registeredBy: "core" },
@@ -15,7 +17,10 @@ const TASKS: readonly TaskFields[] = [
   { id: "index-drain", registeredBy: "search" },
 ];
 
-// The scheduler only reads when each task fires; `fire` stands in for running it.
+/**
+ * The scheduler only reads when each task fires; `fire` stands in for running
+ * it.
+ */
 const appWith = (
   tasks: readonly TaskFields[],
 ): Pick<PlumixApp, "scheduledTasks"> => ({

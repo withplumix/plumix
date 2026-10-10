@@ -7,12 +7,9 @@ import { entries, users } from "plumix/schema";
 import { COMMENT_STATUSES } from "../types.js";
 
 /**
- * A comment on an entry. Author identity is snapshotted (name/email
- * captured at write time) so the row survives a user rename or delete —
- * `author_user_id` links a logged-in commenter but display never joins
- * live user data. `author_email` is private: it drives trust lookups,
- * Gravatar, and notifications but is never serialized into the public
- * payload. `ip_hash` is a salted SHA-256, never a cleartext address.
+ * Author identity is snapshotted at write time so the row survives a user
+ * rename or delete. `author_email` is never serialized publicly; `ip_hash` is a
+ * salted SHA-256.
  */
 export const comments = sqliteTable(
   "comments",
@@ -22,10 +19,8 @@ export const comments = sqliteTable(
       .integer()
       .notNull()
       .references(() => entries.id, { onDelete: "cascade" }),
-    // Threading parent. Clamped at write time so stored depth never
-    // exceeds the configured cap. Cascade is the entry-delete safety
-    // net; comment-level deletes go through the service (tombstone in
-    // #963), not raw cascade.
+    // Clamped at write time so stored depth never exceeds the configured cap.
+    // Comment-level deletes go through the service, not this cascade.
     parentId: t
       .integer()
       .references((): AnySQLiteColumn => comments.id, { onDelete: "cascade" }),

@@ -13,8 +13,10 @@ function isThenable(value: unknown): value is PromiseLike<unknown> {
   );
 }
 
-// `String(x)` itself throws for e.g. `Object.create(null)`; the serializer
-// must never replace the original failure with its own.
+/**
+ * `String(x)` itself throws for e.g. `Object.create(null)`; the serializer
+ * must never replace the original failure with its own.
+ */
 function describeThrown(error: unknown): { name: string; message: string } {
   try {
     return { name: "Error", message: String(error) };
@@ -23,18 +25,13 @@ function describeThrown(error: unknown): { name: string; message: string } {
   }
 }
 
-// Hard per-request caps so a pathological path (a runaway loop, an extreme
-// N+1) can't accumulate unbounded memory. Overflow is never silent: it counts
-// into getDropped(). Fixed on purpose — no config knob.
+/**
+ * Bounds memory on a runaway loop or extreme N+1; overflow counts into
+ * getDropped(), never silently.
+ */
 const MAX_SPANS = 2000;
 const MAX_RECORDS_PER_NAMESPACE = 1000;
 
-/**
- * The real telemetry collector. Accumulates per-namespace entries and a span
- * tree for the request. Always present in production bundles; created only
- * when at least one registered consumer votes to sample the request, so a
- * site with no consumers stays on the no-op and pays nothing.
- */
 export function createTelemetryCollector(): TelemetryCollector {
   const entries = new Map<string, TelemetryRecord[]>();
   const roots: TelemetrySpan[] = [];

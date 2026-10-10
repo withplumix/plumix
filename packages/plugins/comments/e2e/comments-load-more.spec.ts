@@ -2,8 +2,10 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, test } from "plumix/test/playwright";
 
-// Seeded by globalSetup: one approved root more than a page holds, so the
-// oldest is only reachable through the load-more island.
+/**
+ * Seeded by globalSetup: one approved root more than a page holds, so the
+ * oldest is only reachable through the load-more island.
+ */
 interface Fixtures {
   readonly loadMoreSlug: string;
   readonly oldestRootId: number;
@@ -12,8 +14,10 @@ const fixtures = JSON.parse(
   readFileSync(resolve(process.cwd(), "e2e-fixtures.json"), "utf8"),
 ) as Fixtures;
 
-// Absolute, because the rig's `baseURL` is the admin SPA's own root and
-// this is a public page the worker renders.
+/**
+ * Absolute, because the rig's `baseURL` is the admin SPA's own root and
+ * this is a public page the worker renders.
+ */
 const post = (slug: string) => `/posts/${slug}`;
 
 test("loads the older root comments the first page left out", async ({

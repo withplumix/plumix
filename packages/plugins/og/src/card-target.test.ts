@@ -8,8 +8,10 @@ import {
   parseCardTargetPath,
 } from "./card-target.js";
 
-// Every fixture is a partial page: these functions read one or two fields, and
-// spelling a whole `TemplateData` would bury which ones under the rest.
+/**
+ * Every fixture is a partial page: these functions read one or two fields, and
+ * spelling a whole `TemplateData` would bury which ones under the rest.
+ */
 function page(fields: object): TemplateData {
   return { pagination: { page: 1 }, ...fields } as unknown as TemplateData;
 }

@@ -448,9 +448,8 @@ describe("scaffold — every runtime's env file", () => {
   });
 });
 
-// pnpm 10 warns about every dependency build script nobody decided on, and
-// pnpm 11 refuses to install until each is decided. The platform binaries
-// these scripts would fetch already arrive as optional dependencies.
+// pnpm 10 warns about undecided dependency build scripts and pnpm 11 refuses
+// to install; their platform binaries already arrive as optional dependencies.
 describe("scaffold — install-script decisions for pnpm", () => {
   let tmp: string;
 

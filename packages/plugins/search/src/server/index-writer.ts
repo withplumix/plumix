@@ -23,17 +23,16 @@ import {
 } from "./document.js";
 import { metaTextVersion, searchableMetaRoster } from "./meta-text.js";
 
-// libsql — every test here — enforces no cap at all, so the ceiling is
-// invisible until production. Kept below `D1_MAX_BOUND_PARAMETERS` rather
-// than on it: a chunk of ids binds one per id plus the `source_type` the
-// delete adds (91), and a document binds its five columns (90). A sixth
-// column or a second predicate then has room to be wrong.
+/**
+ * libsql, which every test uses, enforces no cap. Headroom below D1's limit
+ * covers the delete's extra `source_type` bind and a future column.
+ */
 const IDS_PER_STATEMENT = D1_MAX_BOUND_PARAMETERS - 10;
 
-// A term has no blocks and no searchable meta, so neither roster says anything
-// about how its text was projected. Stamping their hash on it would mark every
-// term stale whenever any block or field changed a declaration a term cannot
-// be affected by.
+/**
+ * Not the roster hash: terms have no blocks or meta, and that hash would mark
+ * every term stale on any declaration change.
+ */
 const TERM_EXTRACTOR_VERSION = "term/1";
 const DOCUMENTS_PER_STATEMENT = 18;
 
@@ -48,9 +47,7 @@ interface Extractor {
   readonly version: string;
 }
 
-// Merging the roster and hashing it walks every registered block, so it is
-// done once per registry rather than once per entry. Keyed on the registry,
-// which is built at boot and never mutated, and collected with the app.
+/** Keyed on the registry, which is built at boot and never mutated. */
 const blockExtractors = new WeakMap<BlockRegistry, BlockExtractor>();
 
 function blockExtractorFor(blocks: BlockRegistry): BlockExtractor {
@@ -66,12 +63,8 @@ function blockExtractorFor(blocks: BlockRegistry): BlockExtractor {
 }
 
 /**
- * Everything an entry's document is derived from, and one tag naming the pair.
- *
- * The meta half is read fresh rather than cached beside the block half: it
- * walks the registered meta boxes, which is a much smaller thing than every
- * block's slot tree, and a mutable registry — which is what a test has — would
- * otherwise answer with a roster it no longer holds.
+ * Meta is read fresh, not cached: it is cheap, and a test's mutable registry
+ * would otherwise get a stale roster.
  */
 function extractorFor(ctx: AppContext): Extractor {
   const { roster, version } = blockExtractorFor(ctx.blocks);
@@ -94,16 +87,8 @@ export function currentExtractorVersion(ctx: AppContext): string {
 }
 
 /**
- * Bring the projection — and through its triggers, the index — up to date
- * with what the database currently says about these entries.
- *
- * Reads the entries rather than taking them from a caller, so the two paths
- * that call this need not agree on anything but a list of ids: a lifecycle
- * action knows an entry changed, a drained feed row knows only its id, and
- * a tombstone's entry is already gone. An id whose row has vanished, and an
- * id whose type is no longer indexable, are the same instruction — drop
- * whatever the projection holds for it — which is what makes gating an entry
- * type take effect on the next write rather than needing a sweep of its own.
+ * Drops the document of an id whose row is gone or whose type is no longer
+ * indexable.
  */
 export async function indexEntries(
   ctx: AppContext,
@@ -138,11 +123,6 @@ export async function indexEntries(
   });
 }
 
-/**
- * Bring the projection up to date with what the database says about these
- * terms. A term carries far less than an entry: its name, and the description
- * its archive shows.
- */
 export async function indexTerms(
   ctx: AppContext,
   termIds: Iterable<number>,
@@ -170,15 +150,8 @@ export async function indexTerms(
 }
 
 /**
- * Walk the ids in statement-sized chunks, write what `documentsFor` produced,
- * and drop whatever it did not.
- *
- * The reconciliation is the load-bearing half, and it is shared rather than
- * written per kind so the two cannot drift: an id the read did not return —
- * because the row is gone, or because its type or taxonomy no longer belongs
- * in the projection — is the same instruction either way, drop what the
- * projection holds for it. That is what makes gating a type take effect on
- * the next write rather than needing a sweep of its own.
+ * Shared so entries and terms cannot drift: an id `documentsFor` did not
+ * return is dropped, so gating a type takes effect on the next write.
  */
 async function project(
   ctx: AppContext,
@@ -201,14 +174,8 @@ async function project(
 }
 
 /**
- * `DO UPDATE … WHERE` rather than an unconditional one: a save that left the
- * text where it was leaves the row untouched, no `AFTER UPDATE` fires, and
- * the document is not tokenized again. That is what keeps a bulk status
- * change, or a save that only moved meta nothing indexes, off the index's
- * write path.
- *
- * `IS NOT` rather than `<>`, so clearing an excerpt — or writing one for the
- * first time — reads as the change it is instead of as SQL's null.
+ * Conditional so unchanged text fires no `AFTER UPDATE` and is not
+ * re-tokenized. `IS NOT` rather than `<>` so a null-to-text change counts.
  */
 async function writeDocuments(
   ctx: AppContext,
@@ -225,10 +192,8 @@ async function writeDocuments(
           body: sql`excluded.body`,
           extractorVersion: sql`excluded.extractor_version`,
         },
-        // Text only. A document whose extractor version moved but whose text
-        // did not is stamped below instead, which the column-scoped update
-        // trigger ignores — so a block changing its declaration re-tokenizes
-        // the entries it actually changed rather than the whole corpus.
+        // Text only; a version-only change is stamped separately, which the
+        // column-scoped trigger ignores.
         setWhere: sql`
           ${searchDocuments.title} IS NOT excluded.title
           OR ${searchDocuments.body} IS NOT excluded.body
@@ -238,13 +203,8 @@ async function writeDocuments(
 }
 
 /**
- * Bring every document in this batch up to the version that produced it.
- *
- * A separate statement because it must not look like a change to the text:
- * the update trigger is scoped to `title` and `body`, so this moves a stale
- * document off the repair list without re-tokenizing it. Rows the upsert
- * above already rewrote are matched too and cost nothing — they carry the
- * version by then, and SQLite skips a write that changes nothing.
+ * Separate from the upsert so the `title`/`body`-scoped trigger does not
+ * re-tokenize a document whose text did not change.
  */
 async function stampVersion(
   ctx: AppContext,

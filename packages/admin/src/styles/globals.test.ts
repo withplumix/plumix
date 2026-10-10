@@ -2,14 +2,11 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, test } from "vitest";
 
-// Contract with the plugin CSS sidecar (packages/plumix/src/vite/
-// admin-plugin-bundle.ts): it emits plugin utilities into a `plumix-plugins`
-// cascade layer. This file must order that layer ABOVE base/components (so
-// Tailwind's preflight doesn't strip plugin-page styling) but BELOW the
-// admin's own `utilities` (so a plugin re-emitting `.hidden` can't beat the
-// admin's responsive `md:block` and collapse the sidebar) — and declare it
-// before the Tailwind import so the cross-stylesheet layer order is fixed.
-// vitest runs with cwd at the package root.
+/**
+ * `plumix-plugins` sits above base/components so preflight doesn't strip
+ * plugin styles, below `utilities` so a plugin `.hidden` can't beat
+ * `md:block`.
+ */
 const css = readFileSync(
   resolve(process.cwd(), "src/styles/globals.css"),
   "utf8",

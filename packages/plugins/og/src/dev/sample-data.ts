@@ -8,11 +8,7 @@ import type {
   TierMatchRule,
 } from "plumix";
 
-/**
- * Stand-in content for the preview surface. A pangram, so a preview shows every
- * letter of the face a card renders with, and long enough that a title which
- * only fits at one length is visibly wrong.
- */
+/** A pangram, so the preview shows every letter of the face. */
 const SAMPLE_TITLE = "The quick brown fox jumps over the lazy dog";
 const SAMPLE_EXCERPT =
   "Sample copy, so a card is judged at the length real writing arrives in " +
@@ -21,17 +17,13 @@ const SAMPLE_SLUG = "sample-entry";
 const SAMPLE_TERM_SLUG = "sample-term";
 const SAMPLE_QUERY = "sample search";
 
-// Fixed rather than `Date.now()`: a preview that re-renders on every refresh
-// must differ only by what the developer changed.
+/**
+ * Fixed rather than `Date.now()`: a preview that re-renders on every refresh
+ * must differ only by what the developer changed.
+ */
 const SAMPLE_DATE = new Date("2026-01-15T09:30:00.000Z");
 const SAMPLE_ID = 1;
 
-/**
- * The page a preview invents, named the way the rule that asked for it names
- * things. Flat rather than a `TemplateData` of its own, so the two switches
- * below split by responsibility — reading a rule, then building a page — and
- * neither repeats the other's literals.
- */
 interface SampleTarget {
   readonly kind: TemplateData["kind"];
   /** Entry type, taxonomy, or registered archive-type or view name. */
@@ -52,19 +44,14 @@ const DEFAULT_TARGET: SampleTarget = {
 };
 
 /**
- * The page a rule would be resolved for, invented rather than looked up. The
- * preview answers "what does my card look like" on a site with no content in it
- * yet, so nothing here reaches the database — and a rule's `match` contributes
- * the names it narrows on (`forEntryType("recipe")` previews a recipe), which
- * is what makes two rules of the same tier tell each other apart.
+ * Never reads the database, so it works on an empty site. A rule's `match`
+ * names feed the sample, so `forEntryType("recipe")` previews a recipe.
  */
 export function sampleDataFor(rule: TierMatchRule): TemplateData {
   return pageFor(targetFor(rule));
 }
 
-// Tier first, then the matcher — the order `resolveRule`'s own `ruleLabel`
-// reads a rule in, so a preview's caption and its picture cannot disagree about
-// which half of a rule named it.
+/** Same order as `ruleLabel`, so caption and picture agree. */
 function targetFor(rule: TierMatchRule): SampleTarget {
   if (rule.tier === undefined) {
     return rule.match === undefined
@@ -79,16 +66,15 @@ function targetFor(rule: TierMatchRule): SampleTarget {
     case "frontPage":
     case "search":
       return { ...DEFAULT_TARGET, kind: rule.tier };
-    // `entry`, `fallback` and the error tiers all preview as a single entry:
-    // it is the page kind every card is written for first, and the one whose
-    // sample carries a title.
     default:
       return DEFAULT_TARGET;
   }
 }
 
-// A matcher's `nodeKind` names the same page kinds the page data does; what
-// differs per kind is which of the matcher's narrowings the sample takes.
+/**
+ * A matcher's `nodeKind` names the same page kinds the page data does; what
+ * differs per kind is which of the matcher's narrowings the sample takes.
+ */
 function targetForMatch(match: TargetMatcher): SampleTarget {
   const named = {
     ...DEFAULT_TARGET,
@@ -165,9 +151,7 @@ const PAGINATION: Pagination = {
   pageCount: 1,
 };
 
-// The permalink a real entry carries comes off the rewrite rules its type was
-// registered with; a sample has no type to read those from, so the preview
-// shows the unrewritten shape.
+/** A sample has no registered type, so its permalink isn't rewritten. */
 function sampleEntry(target: SampleTarget): ResolvedEntry {
   const type = target.kind === "entry" ? target.type : DEFAULT_TARGET.type;
   return {

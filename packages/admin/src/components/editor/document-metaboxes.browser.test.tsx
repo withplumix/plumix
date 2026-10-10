@@ -30,11 +30,8 @@ const box: EntryMetaBoxManifestEntry = {
 };
 
 describe("DocumentMetaBoxes foreign-key retention", () => {
-  // The autosave diff only sends changed keys; that hinges on the metabox form
-  // carrying untouched foreign keys (e.g. `featuredImage`, written by another
-  // plugin and never rendered here) through every emitted value. If that ever
-  // regressed, the diff would emit `{ featuredImage: null }` and the server
-  // would reject the whole write — re-breaking the original bug. Pin it.
+  // If the form dropped foreign keys, the diff would emit
+  // `{ featuredImage: null }` and the server would reject the whole write.
   test("editing a registered field leaves a foreign key untouched, so the diff omits it", async () => {
     const initialMeta = {
       subtitle: "old",
@@ -73,9 +70,6 @@ describe("DocumentMetaBoxes foreign-key retention", () => {
     expect("featuredImage" in patch).toBe(false);
   });
 
-  // The route seeds `initialMeta`, `metaRef`, and the diff baseline from the
-  // same stored bag, so a freshly-opened entry (no user edit) must produce an
-  // empty diff — otherwise opening an entry would autosave a spurious "change".
   test("mounting with the stored meta emits it unchanged, so the diff is empty", () => {
     const seeded = { subtitle: "old", accent: "#3366ff" };
     const onMetaChange = vi.fn<(next: Record<string, unknown>) => void>();
@@ -96,10 +90,8 @@ describe("DocumentMetaBoxes foreign-key retention", () => {
   });
 });
 
-// A plugin field renderer that only *shows* something — @plumix/plugin-og's
-// card preview is the first — still needs a field to hang off, so it occupies
-// a meta key it never writes to. Opening an entry must not therefore emit a
-// key the diff reads as a change and autosaves on sight.
+// A display-only renderer still occupies a meta key it never writes, which
+// must not read as a change on open.
 describe("DocumentMetaBoxes display-only fields", () => {
   test("a renderer that never writes leaves the diff empty", () => {
     registerPluginFieldType("previewOnly", () => <p>nothing to write</p>);

@@ -2,10 +2,10 @@ import type { AppContext, AuthenticatedUser } from "../context/app-context.js";
 import { authenticateBearer, hasBearerToken } from "../auth/bearer.js";
 import { withUser } from "../auth/with-user.js";
 
-// The lowest role: reads published content, holds no edit/admin capability.
-// An anonymous REST request reads through this principal, so the entry
-// services' existing status-clamping and hide-existence (404) policy applies
-// unchanged — no REST-specific status filtering.
+/**
+ * Anonymous requests read through the lowest role, so the entry services'
+ * status clamping and hide-existence policy apply unchanged.
+ */
 const PUBLIC_PRINCIPAL: AuthenticatedUser = {
   id: 0,
   email: "",
@@ -19,11 +19,8 @@ export type RestPrincipal =
   | { readonly kind: "unauthorized" };
 
 /**
- * Resolve the principal for a REST request. No bearer token → anonymous
- * read-only public principal. A bearer token must be valid: an expired /
- * revoked / disabled-user / malformed token is rejected outright (`unauthorized`)
- * rather than silently downgraded to anonymous, so a caller learns its
- * credential failed.
+ * An invalid bearer token is rejected (`unauthorized`) rather than downgraded
+ * to anonymous, so a caller learns its credential failed.
  */
 export async function resolveRestPrincipal(
   ctx: AppContext,

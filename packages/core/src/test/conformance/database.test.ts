@@ -7,9 +7,10 @@ import type { DatabaseAdapter } from "../../runtime/contract/slots.js";
 import { failingCases } from "./case.js";
 import { databaseContractCases } from "./database.js";
 
-// libsql is the reference driver the suite is proved green against, in the
-// adapter's own suite. Each adapter below breaks it in one way a real driver
-// has been seen to.
+/**
+ * libsql is the reference driver; each adapter below breaks it in one way a
+ * real driver has been seen to.
+ */
 function adapterOver(client: Client): DatabaseAdapter {
   return {
     kind: "broken",
@@ -20,8 +21,10 @@ function adapterOver(client: Client): DatabaseAdapter {
   };
 }
 
-// Reports how far `total_changes()` moved across the statement, which is how
-// D1 counted: rows a trigger wrote are counted as the statement's own.
+/**
+ * Reports how far `total_changes()` moved across the statement, which is how
+ * D1 counted: rows a trigger wrote are counted as the statement's own.
+ */
 function triggerCountingClient(): Client {
   const client = createClient({ url: ":memory:" });
   const total = async (): Promise<number> =>
@@ -42,9 +45,11 @@ function triggerCountingClient(): Client {
   });
 }
 
-// Leaves foreign keys off, as a driver that never turns them on does.
-// libsql's own `migrate` turns them back on when it finishes, so they go off
-// again after it.
+/**
+ * Leaves foreign keys off, as a driver that never turns them on does.
+ * libsql's own `migrate` turns them back on when it finishes, so they go off
+ * again after it.
+ */
 function foreignKeysOffClient(): Client {
   const client = createClient({ url: ":memory:" });
   const migrate = async (statements: InStatement[]) => {

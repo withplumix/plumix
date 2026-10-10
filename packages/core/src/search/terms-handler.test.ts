@@ -28,9 +28,8 @@ describe("termsSearchHandler", () => {
   });
 
   test("finds a term whose taxonomy is excluded from public search", async () => {
-    // The palette answers an editor, who searches what they can read — not a
-    // visitor, whose reach `excludeFromSearch` bounds. A nav-menu taxonomy is
-    // hidden from the site and still has to be findable here.
+    // The palette answers an editor, not a visitor, so a taxonomy hidden from
+    // the site must still be findable.
     const db = await createTestDb();
     const plugins = createPluginRegistry();
     // Both ways a taxonomy is excluded: derived from `isPublic`, and declared

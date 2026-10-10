@@ -1,13 +1,3 @@
-/**
- * Public `plumix/blocks/renderer` surface.
- *
- * The render-time component primitives (`Image`, `Link`) and provider/hooks
- * that plugins and themes use inside block and template render. Re-exports the
- * curated public API from the workspace-internal `@plumix/core/blocks/renderer`
- * subpath; `@plumix/core` is never a direct dependency in a consumer's
- * `package.json`.
- */
-
 export {
   Image,
   Link,

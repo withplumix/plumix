@@ -6,31 +6,13 @@ import { readBodyShape } from "./body-shape";
 export interface Roster {
   /** Path of the roster page, relative to the content root. */
   readonly page: string;
-  /**
-   * Every item id the page owes its reader. Held once, in `rosters.ts`, and
-   * bound to the source there — see that file for the pattern.
-   */
   readonly items: readonly string[];
 }
 
 /**
- * Report roster pages that disagree with their source: an item the source
- * lists and the page never documents, or an item the page documents that the
- * source has never had.
- *
- * On a roster page every `###` heading is an item — that is what makes the
- * second direction checkable at all. Structure inside an item nests deeper.
- *
- * A roster whose page is not in the tree yet is not drift. Most of the site is
- * unwritten, and a guard that fires on every unwritten page reports nothing
- * useful — the binding takes hold the moment the page exists. The cost of that
- * is a mistyped path looking exactly like an unwritten page, which is why a
- * written roster page no entry claims is reported in its own right.
- *
- * Pages only. A roster is a page's promise to its reader that this is all of
- * them, and a fragment has no reader of its own to promise anything to — so a
- * roster enumerates its items in its own body rather than assembling them out
- * of partials, and the `###` headings read here are the page's own.
+ * Every `###` on a roster page is an item. A roster whose page does not exist
+ * yet is skipped, so a written `roster: true` page no entry claims is reported
+ * instead.
  */
 export function checkRosterDrift(
   files: readonly ContentFile[],

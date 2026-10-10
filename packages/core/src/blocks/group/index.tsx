@@ -7,10 +7,8 @@ export const groupBlock = defineBlock({
   title: { id: "block.core.group.title", message: "Box" },
   icon: "Box",
   category: "layout",
-  // selfSeam so the block class (author styles: display/flex/gap set in the
-  // Styles tab's Layout section) lands on the box's own div, making its slot
-  // children the flex/grid items. An unopinionated container — no `layout`
-  // prop; every layout decision is a style, like Builder's Box.
+  // Author layout styles land on the box's own div so its slot children are the
+  // flex/grid items; there is no `layout` prop, like Builder's Box.
   selfSeam: true,
   inputs: [
     {

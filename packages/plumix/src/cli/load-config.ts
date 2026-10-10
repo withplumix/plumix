@@ -22,20 +22,16 @@ export interface LoadedConfig {
 
 export interface LoadConfigOptions {
   /**
-   * Bypass the cache and re-evaluate the config module, then refresh the cached
-   * entry. The dev file-watcher passes this so an edit to `plumix.config.ts`
-   * hot-reloads; cold-start callers omit it and share one evaluation.
+   * Bypass the cache and re-evaluate the config module, refreshing the cached
+   * entry.
    */
   readonly fresh?: boolean;
 }
 
-// One cold start fans `loadConfig` out across the CLI dispatch, the runtime
-// adapter's pre-vite source emit, and the Vite plugin's `config()` +
-// `buildStart()` hooks (the latter once per build environment) — ~8 calls for a
-// build, each re-evaluating the config's whole JSX theme graph (`moduleCache:
-// false`), ~12ms+ apiece. They all resolve to the same file in one process, so
-// cache by absolute path. The watcher invalidates via `fresh` (see #1102), so
-// config hot-reload still works — this is a watch-aware cache, not a plain memo.
+/**
+ * One build calls `loadConfig` ~8 times, each re-evaluating the JSX theme
+ * graph; cache by absolute path, invalidated through `fresh` for hot reload.
+ */
 const cache = new Map<string, LoadedConfig>();
 
 export async function loadConfig(
@@ -60,16 +56,11 @@ async function evaluateConfig(
 ): Promise<LoadedConfig> {
   const jiti = createJiti(pathToFileURL(configPath).href, {
     interopDefault: true,
-    // Re-evaluate the module every load so the dev watcher hot-reloads config
-    // edits. This disables only the eval cache — jiti's on-disk transform cache
-    // (`fsCache`) is left at its default-on, so the config + theme TS/JSX→JS
-    // transform is still reused across runs (node_modules/.cache/jiti), ~200ms
-    // off a warm cold start (#1205). Don't set `fsCache: false`.
+    // Disables only the eval cache so config edits hot-reload. Keep jiti's
+    // `fsCache` on: it saves ~200ms off a warm cold start.
     moduleCache: false,
-    // Themes author templates as JSX, so the config's component graph must
-    // parse at load time. jiti's transform is TS-only by default; enable its
-    // JSX plugin (classic runtime — theme files import React, matching the
-    // worker bundle's esbuild transform).
+    // Themes author templates as JSX; classic runtime because theme files
+    // import React.
     jsx: true,
     // The config imports the theme and every plugin, so a `~/` or `@/` import
     // anywhere in that graph has to resolve here, before Vite starts, exactly
@@ -110,10 +101,10 @@ export function resolveConfigPath(cwd: string, explicit?: string): string {
   throw PlumixCliError.configNotFoundDefault({ cwd });
 }
 
-// The load-bearing corner of an evaluated config module — enough to tell a
-// real config from whatever else a file may have exported, not a restatement
-// of `PlumixConfig`. Only a predicate: the module itself is what gets returned,
-// functions, adapters and all, so nothing here has to describe the rest of it.
+/**
+ * Only enough to tell a config from another export; the module itself is
+ * returned, not this shape.
+ */
 const configShapeSchema = v.looseObject({
   runtime: v.looseObject({
     name: v.string(),

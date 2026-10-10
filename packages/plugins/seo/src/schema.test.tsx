@@ -27,8 +27,10 @@ const blogPlugin = definePlugin("blog", (ctx) => {
 
 const theme = defineTheme({ templates: [fallback(() => null)] });
 
-// The trail as a theme would draw it, so one render carries both the rendered
-// crumbs and the `BreadcrumbList` that claims them.
+/**
+ * The trail as a theme would draw it, so one render carries both the rendered
+ * crumbs and the `BreadcrumbList` that claims them.
+ */
 const trailTheme = defineTheme({
   templates: [
     fallback(({ data }: { readonly data: TemplateData }) => (
@@ -557,9 +559,8 @@ describe("breadcrumbs", () => {
   });
 
   test("a type with no route of its own contributes no step", async () => {
-    // Public enough to render through a plugin's own route, but with no
-    // archive route for a crumb to link: the router skips a non-public type
-    // before it ever asks about `hasArchive`.
+    // The router skips a non-public type before asking about `hasArchive`, so
+    // no archive crumb exists.
     const hidden = definePlugin("hidden", (ctx) => {
       ctx.registerEntryType("secret", {
         label: "Secrets",

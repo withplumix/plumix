@@ -78,10 +78,8 @@ describe("isTrustedDevHost", () => {
     expect(isTrustedDevHost("x.trycloudflare.com")).toBe(true);
   });
 
-  // Its callers are Vite middlewares, which cannot exist in a build — and where
-  // `PLUMIX_DEV` is unset regardless, being a bundle define rather than
-  // something the dev server's own Node process carries. Gating on it there
-  // would close the dev error page in every session.
+  // Its callers are Vite middlewares, whose Node process never carries the
+  // bundle define, so gating on it would close the dev error page.
   test("does not read the build gate, unlike isTrustedDevRequest", () => {
     vi.stubEnv("PLUMIX_DEV", "");
 

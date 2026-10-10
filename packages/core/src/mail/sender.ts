@@ -18,9 +18,8 @@ interface CreateMailSenderInput {
   readonly mails: DeclaredMails;
   readonly catalogs: MailCatalogs;
   readonly mailer: Mailer | undefined;
-  /** Where an address is looked up to find the user it belongs to. */
   readonly db: Db;
-  /** The site's locales, which a recipient's stored locale must be one of. */
+  /** A recipient's stored locale counts only if it is one of these. */
   readonly i18n: LocaleRegistry;
   /** The request's resolved locale, the site default when it has none. */
   readonly locale: string;
@@ -59,8 +58,10 @@ export function createMailSender(input: CreateMailSenderInput): MailSender {
   };
 }
 
-// The recipient's stored locale when the recipient is a user, or the address
-// belongs to one, and the site enables it; otherwise the request's.
+/**
+ * The recipient's stored locale when the recipient is a user, or the address
+ * belongs to one, and the site enables it; otherwise the request's.
+ */
 async function recipientLocale(
   input: CreateMailSenderInput,
   recipient: MailRecipient,

@@ -25,10 +25,8 @@ type SubmissionSeed = Omit<
 };
 
 /**
- * Seeds one `form_submissions` row. `form` is required — a submission
- * belongs to a form — and everything else has a default. `labels` is
- * taken as the snapshot itself rather than as its digest: the row points
- * at one, and the seed writes it the same way a submission does.
+ * `labels` is the snapshot itself, not its digest, written the same way a
+ * submission writes it.
  */
 export const submissionFactory = Factory.define<
   SubmissionSeed,
@@ -75,9 +73,8 @@ export const submissionFactory = Factory.define<
 });
 
 /**
- * One submission dated to a named day, for the reads that filter on when
- * it arrived — `insertSubmission` stamps its own date, so only a seeded
- * row can sit anywhere but now.
+ * `insertSubmission` stamps its own date, so only a seeded row can sit anywhere
+ * but now.
  */
 export function seedSubmissionOn(
   db: FormsTestDb,

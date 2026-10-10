@@ -4,24 +4,15 @@ import type {
   RegisteredEntryType,
 } from "plumix/plugin";
 
-/**
- * The archive a feed syndicates, as core's archive lookup names it — one of
- * the built-in listings (`frontPage`, `entryType`, `term`, `author`,
- * `date`) or a plugin archive (`archiveType`) — and the params its route captured.
- */
 export interface FeedScope {
   readonly archive: EntryArchive;
   readonly params: Record<string, string>;
 }
 
 /**
- * Whether a feed may carry this type's entries at all.
- *
- * A feed is fetched by a reader carrying no session and served from a shared
- * cache, so there is no principal to resolve a policy against — which leaves
- * excluding the type, the same answer `plugin-search` reaches for its index.
- * Coarser than the per-entry question: a type declaring `access` is out even
- * where an individual entry's policy would have admitted anyone.
+ * A type declaring `access` is excluded even where an entry's policy would
+ * admit anyone: feeds are sessionless and shared-cached, so there's no
+ * principal.
  */
 export function isSyndicatableEntryType(
   type: RegisteredEntryType | undefined,

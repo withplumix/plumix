@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { MenusShell } from "./MenusShell.js";
 
-// What the server's resolver attaches to every row it sends back.
+/** What the server's resolver attaches to every row it sends back. */
 function okResolved(label: string): JsonValue {
   return { state: "ok", label, href: null, lastHref: null };
 }
@@ -38,8 +38,10 @@ interface SearchTargetsInput {
   readonly query?: string;
 }
 
-// Serves `searchTargets` the way the server does: a case-insensitive
-// substring match over the tab's own targets.
+/**
+ * Serves `searchTargets` the way the server does: a case-insensitive
+ * substring match over the tab's own targets.
+ */
 function searchTargetsFrom(
   byTarget: Record<string, readonly { id: string; label: string | null }[]>,
 ): (input: unknown) => JsonValue {
@@ -258,11 +260,8 @@ describe("MenusShell", () => {
     });
 
     test("each select reflects its own persisted binding when every location is assigned", async () => {
-      // Regression for the blog example: both Primary and Footer were
-      // bound (and rendered on the frontend) yet both selects showed
-      // "— Unassigned —". The fix persists the binding in settings so
-      // `boundTermId` arrives; the select must pre-select per row, not
-      // collapse to the first / to empty.
+      // Both bound menus showed "Unassigned"; each row must pre-select
+      // its own `boundTermId`.
       window.history.replaceState(
         {},
         "",
@@ -371,10 +370,8 @@ describe("MenusShell", () => {
 
   describe("edit tab — item editor", () => {
     test("on version_mismatch CONFLICT renders a reload banner that refetches menu.get", async () => {
-      // The server returns 409 with `data.reason: 'version_mismatch'`
-      // when another tab saved between this editor's load and this
-      // save. Acceptance: surface the conflict as a visible banner with
-      // a reload action; no silent data loss.
+      // A 409 version_mismatch means another tab saved first; it must
+      // surface as a banner with a reload action, not silent data loss.
       window.history.replaceState(
         {},
         "",
@@ -389,10 +386,7 @@ describe("MenusShell", () => {
         pickerTabs: () => [{ kind: "custom", tabLabel: "Custom URL" }],
         get: () => {
           getCallCount += 1;
-          // First fetch returns v1 (editor's starting point); after the
-          // user clicks Reload, refetch returns v2 with a fresh item —
-          // so the test can assert state actually mirrored the new
-          // server data.
+          // Reload refetches v2 so the test can see state mirror the server.
           return getCallCount === 1
             ? {
                 id: 7,
@@ -443,16 +437,9 @@ describe("MenusShell", () => {
       await vi.waitFor(() => {
         expect(getCallCount).toBeGreaterThan(initialGetCount);
       });
-      // The acceptance is "no silent data loss" — the user clicked
-      // Reload and must actually see the new server state, not the
-      // stale local one. The fresh fixture has a new row with id 42.
       expect(await screen.findByTestId("menu-item-row-42")).toBeInTheDocument();
 
-      // The banner must re-arm after the reload + a SECOND racing save
-      // also hits version_mismatch (different editor took a third bite).
-      // Earlier `dismissed` boolean stayed `true` forever after the first
-      // reload click and suppressed every subsequent banner — that's the
-      // silent-data-loss regression this assertion guards.
+      // The banner must re-arm for a second racing save after a reload.
       await user.click(await screen.findByTestId("menu-save-button"));
       expect(
         await screen.findByTestId("menu-conflict-banner"),
@@ -1328,10 +1315,6 @@ describe("MenusShell", () => {
 
   describe("broken-ref handling", () => {
     test("renders broken items with a warning, Re-link, and Convert-to-Custom buttons", async () => {
-      // Slice 11: server enriches each item with `resolved.state`. The
-      // editor renders broken rows distinctly and offers inline actions
-      // — Re-link opens the picker in re-link mode, Convert rewrites
-      // meta.kind to 'custom' seeded with the last-known href.
       window.history.replaceState(
         {},
         "",
@@ -1575,10 +1558,7 @@ describe("MenusShell", () => {
 
   describe("max-depth setting", () => {
     test("typing in the max-depth input updates the value the next save sends", async () => {
-      // Acceptance: per-menu maxDepth surfaces in the settings panel and
-      // round-trips through save. The reducer guards against lowering
-      // below the deepest current item — fixture sits at depth 1 so a
-      // bump to 3 is accepted.
+      // Fixture sits at depth 1, so the reducer accepts a bump to 3.
       window.history.replaceState(
         {},
         "",
@@ -1646,10 +1626,8 @@ describe("MenusShell", () => {
     });
 
     test("typing a value below the deepest item shows an inline error and saves the accepted value", async () => {
-      // Regression: the reducer no-ops `updateMaxDepth` below the
-      // deepest-existing depth. Without an inline error the component
-      // silently kept showing the rejected draft and let the user think
-      // the change took — the save then sent the still-accepted value.
+      // Without an inline error the rejected draft stays visible and the
+      // user believes the change took.
       window.history.replaceState(
         {},
         "",

@@ -1,9 +1,8 @@
 import { describe, expect, test } from "vitest";
 
 /**
- * One assertion of a slot contract. Kept as data rather than a bare `test`
- * call so a guard test can run the same case outside vitest's collector and
- * prove the suite is able to go red — see {@link failingCases}.
+ * One assertion of a slot contract, kept as data so a guard test can run it
+ * outside vitest and prove the suite can go red.
  */
 export interface ContractCase<TOptions> {
   readonly name: string;
@@ -42,9 +41,8 @@ export function describeContract<TOptions>(
 }
 
 /**
- * Names of the applicable cases a factory fails. Guard tests use it to assert
- * a deliberately broken implementation is caught, which is the only way to
- * know a passing suite means anything.
+ * Names of the applicable cases a factory fails, so a guard test can prove a
+ * deliberately broken implementation is caught.
  */
 export async function failingCases<TOptions>(
   cases: readonly ContractCase<TOptions>[],
@@ -70,9 +68,8 @@ export interface KeyPage {
 }
 
 /**
- * Page a listing to exhaustion, failing on a key seen twice so a backend whose
- * cursor restarts the scan — the classic Redis SCAN clamp — is caught here
- * rather than by a caller that silently processes a key a second time.
+ * Page a listing to exhaustion, failing on a repeated key, so a backend whose
+ * cursor restarts the scan (the Redis SCAN clamp) is caught.
  */
 export async function drainKeys(
   page: (cursor: string | undefined) => Promise<KeyPage>,

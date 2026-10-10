@@ -22,9 +22,10 @@ import { feeds } from "./index.js";
 import { FEED_LIMIT } from "./items.js";
 import { FEED_TAG } from "./respond.js";
 
-// Every suite below installs the plugin over the host plugin it syndicates:
-// the plugin claims its routes in `afterSetup`, so what it serves is decided
-// by what the site registered, not by what the request path looks like.
+/**
+ * The plugin claims its routes in `afterSetup`, so what it serves is decided
+ * by what the site registered, not by the request path.
+ */
 function harness(
   ...plugins: readonly AnyPluginDescriptor[]
 ): Promise<DispatcherHarness> {
@@ -33,7 +34,7 @@ function harness(
   });
 }
 
-// `plumix` exports no span type; this is the part of one these tests read.
+/** `plumix` exports no span type; this is the part of one these tests read. */
 interface SpanTree {
   readonly name: string;
   readonly attributes: Readonly<Record<string, JsonValue>>;
@@ -44,7 +45,7 @@ function flattenSpans(spans: readonly SpanTree[]): SpanTree[] {
   return spans.flatMap((span) => [span, ...flattenSpans(span.children)]);
 }
 
-// The SQL each database span ran, in the order it ran.
+/** The SQL each database span ran, in the order it ran. */
 function sqlOf(spans: readonly SpanTree[]): string[] {
   return flattenSpans(spans).flatMap((span) => {
     const sql = span.attributes["db.sql"];
@@ -57,10 +58,10 @@ function countDbSpans(spans: readonly SpanTree[]): number {
     .length;
 }
 
-// A members-only gate that answers terminally. The challenge is hard, not
-// soft: a soft one still renders, so it would gate nothing. And
-// `authenticatedPolicy` would redirect to a sign-in page this harness does
-// not route, which is not what the test is about either.
+/**
+ * Hard, not soft: a soft challenge still renders. `authenticatedPolicy` would
+ * redirect to a sign-in page this harness does not route.
+ */
 const membersOnlyPolicy = definePolicy({
   segments: ["members"],
   resolve: (ctx) => (ctx.user ? grant("members") : challenge("subscribe")),
@@ -171,12 +172,8 @@ describe("feed routes", () => {
   });
 
   test("an access-policied entry type stays out of every feed", async () => {
-    // The entry's own page is gated, so nothing about it may ride out on a
-    // feed either: a feed is fetched by a reader carrying no session and
-    // served from a shared cache, so there is no principal to gate it for.
-    // The policy answers terminally rather than redirecting to sign-in —
-    // this harness routes no sign-in page, and where the gate sends the
-    // reader is not what is under test.
+    // A feed is fetched without a session and served from a shared cache, so
+    // nothing of a gated entry may ride out on one.
     const membersOnly = definePlugin("members", (ctx) => {
       ctx.registerEntryType("post", {
         label: "Posts",
@@ -208,8 +205,8 @@ describe("feed routes", () => {
     expect(site).toContain("Open Post");
     expect(site).not.toContain("Members Only Lesson");
 
-    // And the type has no feed of its own to be asked for. Whatever the gate
-    // answers at that URL once the feed route is gone, it is not a feed.
+    // Whatever the gate answers at that URL once the feed route is gone, it is
+    // not a feed.
     const typeFeed = await h.fetch("/lesson/feed");
     expect(typeFeed.headers.get("content-type")).not.toContain("xml");
   });
@@ -368,10 +365,8 @@ describe("feed routes", () => {
   });
 });
 
-// A feed is its archive's own entry query (ADR 0008). Each archive below
-// narrows, and each seed is one some archive's query leaves out: another
-// author, another year, an untagged entry, a hierarchical page, a non-public
-// type, an entry with no publish date.
+// Each archive below narrows, and each seed is one some archive's query
+// leaves out.
 describe("a feed is its archive's entry query", () => {
   const site = definePlugin("site", (ctx) => {
     ctx.registerEntryType("post", {
@@ -737,9 +732,8 @@ describe("term feed routes", () => {
     nested.assertStatus(200);
     expect(await nested.text()).toContain("Paris Post");
 
-    // A term is addressed by its slug (ADR 0012), so the bare slug names the
-    // same term. The feed is this plugin's own route, which serves where it
-    // matched rather than redirecting to the nested path.
+    // A term is addressed by its slug, and the feed serves where it matched
+    // rather than redirecting to the nested path.
     const bare = await h.fetch("/region/france/feed");
     bare.assertStatus(200);
     expect(await bare.text()).toContain("Paris Post");
@@ -991,9 +985,8 @@ describe("what the plugin does not claim", () => {
 });
 
 describe("non-canonical feed URLs", () => {
-  // The 301 normalizer exempts a *registered* path. A trailing-slash variant
-  // is not one, so it normalizes onto the feed rather than falling through to
-  // the content router's 404 — for every scope, not just the site's.
+  // The 301 normalizer exempts only a registered path, so a trailing-slash
+  // variant normalizes onto the feed rather than 404ing, for every scope.
   test.each([
     ["the site feed", "/feed", "/feed/"],
     ["a type feed", "/post/feed", "/post/feed/"],
@@ -1084,11 +1077,9 @@ describe("archive-type feeds", () => {
   });
 
   test("a non-public type cannot crowd a public entry out of the feed window", async () => {
-    // The permalink step already drops a row of a type with no public route,
-    // so leaving one out of the rendered feed proves nothing about the guard.
-    // What the guard's type half keeps is the window: without it, enough
-    // newer rows of a non-public type fill every slot and are then dropped,
-    // and the public entry the feed owed its reader never appears.
+    // The permalink step already drops non-public rows; the guard keeps the
+    // window, or newer non-public rows fill every slot and the public entry
+    // never appears.
     const crowded = definePlugin("crowded", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
       ctx.registerEntryType("note", { label: "Notes", isPublic: false });
@@ -1131,9 +1122,8 @@ describe("archive-type feeds", () => {
   });
 
   test("a scope that discards the query it was handed is still guarded", async () => {
-    // The seeded query is one half of the guard; this is the other. A scope
-    // building its own query from scratch has dropped what it was given, and
-    // the feed still owes a reader nothing but published, public-type entries.
+    // A scope rebuilding its query from scratch still owes a reader nothing
+    // but published, public-type entries.
     const rebuilds = definePlugin("rebuilds", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
       ctx.registerArchiveType("event-series", {
@@ -1158,9 +1148,8 @@ describe("archive-type feeds", () => {
   });
 
   test("a scope reaching for raw SQL still cannot widen the feed", async () => {
-    // `where` is the escape hatch, and an escape hatch that can widen would put
-    // the whole guarantee back where it started. A top-level `OR` is the shape
-    // that does it, because it binds looser than the `AND`s around it.
+    // An escape hatch that can widen voids the guarantee; a top-level `OR`
+    // binds looser than the surrounding `AND`s.
     const sneaky = definePlugin("sneaky", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
       ctx.registerArchiveType("event-series", {
@@ -1186,10 +1175,8 @@ describe("archive-type feeds", () => {
   });
 
   test("an archive behind an access policy has no feed at all", async () => {
-    // A feed is a registered public route, which core answers ahead of the
-    // access gate and the principal loader, so there is no reader to check it
-    // against. Until a public route can carry a policy (#2520), a policied
-    // archive gets no feed rather than an ungated one.
+    // Core answers a registered public route ahead of the access gate, so a
+    // policied archive gets no feed rather than an ungated one.
     const gated = definePlugin("gated", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
       ctx.registerArchiveType("event-series", {
@@ -1216,10 +1203,8 @@ describe("archive-type feeds", () => {
   });
 
   test("deciding whether a page advertises its feed resolves nothing", async () => {
-    // An archive's query records intent instead of resolving it, which is what
-    // lets every page ask "would the feed answer for these params?" without
-    // paying for a lookup. The page's own listing looks its term up; asking
-    // about the feed must not add a second read of the `terms` table.
+    // An archive's query records intent instead of resolving it, so asking
+    // about the feed must not add a second read of `terms`.
     let statements: readonly string[] = [];
     const plugin = definePlugin("term-scoped", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
@@ -1333,9 +1318,8 @@ describe("archive-type feeds", () => {
   // `plumix/test` exports no user type; this is what `seedUser` hands back.
   type SeededUser = Awaited<ReturnType<DispatcherHarness["seedUser"]>>;
 
-  // The `<link rel="alternate">` feed hrefs a rendered page advertises. `as`
-  // is for a page behind an access policy, which an anonymous reader is
-  // redirected away from before any head is rendered.
+  // `as` is for a page behind an access policy, whose anonymous reader is
+  // redirected before any head renders.
   async function advertised(
     h: DispatcherHarness,
     path: string,
@@ -1473,9 +1457,8 @@ describe("archive-type feeds", () => {
   });
 
   test("the same holds where core derived the later-page route", async () => {
-    // An archive that declares `entries` does not register its `/page/:page`
-    // form — core derives it — so reading the later pages off `routes` finds
-    // none, and every page of the archive would answer as a feed of its own.
+    // Core derives an `entries` archive's `/page/:page` form, so reading pages
+    // off `routes` would let every page answer as a feed of its own.
     const docs = definePlugin("docs", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
       ctx.registerArchiveType("doc-section", {
@@ -1491,11 +1474,9 @@ describe("archive-type feeds", () => {
   });
 
   test("a feed URL whose route belongs to another archive than the page there is nobody's feed", async () => {
-    // `/:section` outranks the `news` type's `/news`, so the page at `/news` is
-    // the section's. Core's dispatcher answers `/news/feed` with the literal
-    // route, which is the type's, so neither archive's feed can be served
-    // there without one archive's entries going out under the other's
-    // handler — and the page advertises nothing rather than a 404.
+    // `/:section` outranks `/news`, but core answers `/news/feed` with the
+    // type's literal route, so neither feed can be served there and the page
+    // advertises nothing.
     const sections = definePlugin("sections", (ctx) => {
       ctx.registerEntryType("news", {
         label: "News",

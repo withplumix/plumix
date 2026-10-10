@@ -48,9 +48,10 @@ async function createApp(
   return buildApp(config);
 }
 
-// Build app → `createRuntimeHandler` → `fetch(request, invocation)`: the seam every
-// runtime adapter conforms to. `env` is `unknown` because the tests hand the
-// handler deliberately broken bags (a null binding, no object at all).
+/**
+ * `env` is `unknown` because the tests hand the handler deliberately broken
+ * bags (a null binding, no object at all).
+ */
 async function invoke(
   request: Request,
   env: unknown,
@@ -64,10 +65,8 @@ async function invoke(
 }
 
 /**
- * The assets layer as core receives it, captured off `ctx.assets` in a plugin
- * route. `readAssetsBinding` hands the binding through unchanged today, so the
- * conformance run below pins the pass-through and the shape guard in front of
- * it — not the layer's own behaviour, which no local pool can execute.
+ * Pins only the pass-through and the shape guard: the assets layer's own
+ * behaviour is something no local pool can execute.
  */
 async function assetsFromContext(
   ASSETS: AssetsBinding,
@@ -609,11 +608,10 @@ const ADMIN_SHELL = "<!doctype html><title>admin</title>";
 const ADMIN_SHELL_PATH = "/_plumix/admin/";
 const ADMIN_ASSET_PATH = "/_plumix/admin/assets/index-abc123.js";
 
-// Workers Assets in both configurations this repo deploys: `not_found_handling:
-// "none"` (the scaffold, so an unmatched path reaches the Worker) answers 404,
-// and `"single-page-application"` (several plugin playgrounds) answers with the
-// shell. The contract is run against both, because the adapter hands core the
-// binding either way.
+/**
+ * Both `not_found_handling` configurations this repo deploys: `"none"` answers
+ * 404, `"single-page-application"` answers with the shell.
+ */
 function workersAssets(notFound: AssetsNotFound): AssetsBinding {
   const files: Readonly<Record<string, { body: string; type: string }>> = {
     [ADMIN_SHELL_PATH]: { body: ADMIN_SHELL, type: "text/html; charset=utf-8" },

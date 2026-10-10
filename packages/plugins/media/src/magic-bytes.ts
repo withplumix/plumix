@@ -1,14 +1,5 @@
-// Lightweight magic-byte detector for the MIME types the media plugin
-// accepts. The presigned PUT pins a `Content-Type` the bucket stores
-// verbatim — but R2 doesn't sniff bytes, so a malicious user can claim
-// `image/png` and upload arbitrary content (HTML, executables, polyglot
-// payloads). We re-fetch the first ~64 bytes after upload and verify
-// the header matches the claimed type. On mismatch the caller deletes
-// the object and rejects the confirm.
-//
-// Returns `true` when the buffer's prefix matches the claimed MIME, OR
-// when we have no matcher for that MIME (e.g. `text/plain` — no reliable
-// magic bytes). Returns `false` only when a known signature mismatches.
+// R2 stores the claimed `Content-Type` without sniffing bytes, so an upload
+// claiming `image/png` could be HTML. A MIME with no matcher passes.
 
 type Matcher = (bytes: Uint8Array) => boolean;
 
@@ -29,8 +20,10 @@ const anyOf =
   (b) =>
     m.some((f) => f(b));
 
-// `RIFF...<tag>` containers — `tag` lives at offset 8 after `RIFF` + size.
-// Used by image/webp + audio/wav.
+/**
+ * `RIFF...<tag>` containers — `tag` lives at offset 8 after `RIFF` + size.
+ * Used by image/webp + audio/wav.
+ */
 const riffWith = (...tag: readonly number[]): Matcher => {
   const head = startsWith(0x52, 0x49, 0x46, 0x46); // RIFF
   const tail = sigAt(8, ...tag);
@@ -47,10 +40,10 @@ const isXmlOrSvg: Matcher = (b) => {
   return trimmed.startsWith("<?xml") || trimmed.startsWith("<svg");
 };
 
-// `text/*` payloads must not look like HTML. Authors stash HTML in
-// `.txt` to bypass the image allowlist and have CDNs serve it as
-// content. Magic bytes can't fully prove "this is plain text", but we
-// can reject obvious HTML markers and require UTF-8 decodability.
+/**
+ * HTML stashed in `.txt` bypasses the image allowlist. Plain text can't be
+ * proven, so reject obvious markup and require valid UTF-8.
+ */
 const isPlainText: Matcher = (b) => {
   let text: string;
   try {
@@ -74,19 +67,19 @@ const isPlainText: Matcher = (b) => {
   );
 };
 
-// `ftyp` at offset 4 covers MP4, MOV, AVIF, HEIC, etc. We only need to
-// detect "is this an isobmff container", not which brand exactly.
+/**
+ * `ftyp` at offset 4 covers MP4, MOV, AVIF, HEIC, etc. We only need to
+ * detect "is this an isobmff container", not which brand exactly.
+ */
 const isISOBMFF: Matcher = sigAt(4, 0x66, 0x74, 0x79, 0x70);
 
-// PKZIP local-file header — also matches DOCX/XLSX/PPTX (they're zip
-// archives) and odt/ods/odp. We sniff "is this a zip container", NOT
-// "is this the right Office subtype". A `.docx` claimed as xlsx still
-// passes — verifying via the OOXML `[Content_Types].xml` is out of
-// scope; the inline-safe allowlist excludes all of these so the
-// serve route force-downloads regardless of subtype.
+/**
+ * Any zip passes for every Office/ODF subtype; harmless because none is
+ * inline-safe, so the serve route force-downloads them all.
+ */
 const isZipContainer: Matcher = startsWith(0x50, 0x4b, 0x03, 0x04);
 
-// OLE2 compound document — legacy Office (.doc/.xls/.ppt).
+/** OLE2 compound document — legacy Office (.doc/.xls/.ppt). */
 const isOle2: Matcher = startsWith(0xd0, 0xcf, 0x11, 0xe0);
 
 const MATCHERS: Readonly<Record<string, Matcher>> = {

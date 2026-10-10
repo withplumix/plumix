@@ -6,8 +6,10 @@ interface SupportsInput {
   readonly supports?: readonly string[];
 }
 
-// Whether the type opts into the visual canvas. Missing manifest entry →
-// default true (legacy types predate the `supports` list).
+/**
+ * Whether the type opts into the visual canvas. Missing manifest entry →
+ * default true (legacy types predate the `supports` list).
+ */
 export function supportsEditor(entryType: SupportsInput | undefined): boolean {
   return entryType?.supports ? entryType.supports.includes("editor") : true;
 }
@@ -19,9 +21,11 @@ export function supportsRevisions(
 }
 
 interface ResolveEditorModeInput {
-  // The entry type from the manifest, or `undefined` if the slug
-  // doesn't resolve (stale URL / manifest race). Missing → safe
-  // default `edit-live`.
+  /**
+   * The entry type from the manifest, or `undefined` if the slug
+   * doesn't resolve (stale URL / manifest race). Missing → safe
+   * default `edit-live`.
+   */
   readonly entryType:
     | {
         readonly name: string;
@@ -29,22 +33,22 @@ interface ResolveEditorModeInput {
         readonly supports?: readonly string[];
       }
     | undefined;
-  // Current `entries.status` value. `published` or `scheduled` route
-  // through draft mode (when the type opts in); everything else goes
-  // straight to live.
+  /**
+   * Current `entries.status` value. `published` or `scheduled` route
+   * through draft mode (when the type opts in); everything else goes
+   * straight to live.
+   */
   readonly currentStatus: string;
-  // Whether the calling user authored the entry. Matters for the
-  // edit_own gate — authors of their own post still get the draft
-  // flow, even without edit_any.
+  /**
+   * Whether the calling user authored the entry. Matters for the
+   * edit_own gate — authors of their own post still get the draft
+   * flow, even without edit_any.
+   */
   readonly isAuthor: boolean;
   readonly capabilities: ReadonlySet<string>;
 }
 
-// Maps (entry, viewer) → which editor experience to mount. Mirrors the
-// server's `entry.update` saveAs defaulting (a published row of an
-// autosave-supporting type whose viewer can edit gets draft routing);
-// the dispatcher logic lives here so unit tests can run the truth
-// table without booting the editor.
+/** Must mirror the server's `entry.update` saveAs defaulting. */
 export function resolveEditorMode({
   entryType,
   currentStatus,

@@ -15,11 +15,10 @@ export interface BreadcrumbItem {
   readonly name: string;
 }
 
-// The three reader-facing strings this module writes — the first crumb, a
-// search page's name and the landmark label — are English, matching core's own
-// `page-data.ts` and `resolve.ts` spellings for the same pages. Public-route
-// content i18n is a deferred userland seam in core too; a theme wanting a
-// translated trail renders `breadcrumbTrail` itself.
+/**
+ * English, like core's own public-route strings; a theme wanting a translated
+ * trail renders `breadcrumbTrail` itself.
+ */
 const HOME = "Home";
 
 function absolute(ctx: AppContext, path: string): string {
@@ -27,10 +26,8 @@ function absolute(ctx: AppContext, path: string): string {
 }
 
 /**
- * The site root, which is both the first crumb's href and the base every
- * site-scoped `@id` in the structured-data graph hangs off — one derivation, so
- * the two cannot drift. Carries no trailing slash under a base path, where the
- * root is the prefix itself.
+ * Also the base of every site-scoped `@id` in the structured-data graph. No
+ * trailing slash under a base path.
  */
 export function siteRoot(ctx: AppContext): string {
   return absolute(ctx, "/");
@@ -40,7 +37,9 @@ function pad2(value: number): string {
   return String(value).padStart(2, "0");
 }
 
-// Spelled the way core titles a date archive, so the crumb reads like the page.
+/**
+ * Spelled the way core titles a date archive, so the crumb reads like the page.
+ */
 function dateName(
   year: number,
   month: number | null,
@@ -52,13 +51,8 @@ function dateName(
 }
 
 /**
- * The step for an entry type's own archive, or null where the type has none.
- *
- * Both halves of the router's own test, in its order: it skips a non-public
- * type before it asks about `hasArchive` at all (`compile.ts`), and
- * `archiveSlugForEntryType` answers only the second half — so asking it alone
- * would link `/secret` for a type that has no route. A non-public type can
- * still reach a render through a plugin's own public route.
+ * Mirrors the router: a non-public type has no archive route even with
+ * `hasArchive`, so `archiveSlugForEntryType` alone would link a dead URL.
  */
 function archiveStep(ctx: AppContext, type: string): BreadcrumbItem | null {
   const registered = ctx.plugins.entryTypes.get(type);
@@ -72,16 +66,9 @@ function archiveStep(ctx: AppContext, type: string): BreadcrumbItem | null {
 }
 
 /**
- * Everything below Home, or null on a page that has no trail worth drawing:
- * the front page (Home is already where you are) and an error page.
- *
- * A plugin archive is null: core does not define that payload past the facts
- * it declares, so the archive's hierarchy is the owning plugin's to describe
- * through `seo:schema:piece`.
- *
- * Ancestors of a hierarchical entry or a nested term are not walked: both
- * would be a per-render DB round-trip, and both types already carry their own
- * pre-resolved `url`.
+ * A plugin archive's hierarchy is its owner's to describe via
+ * `seo:schema:piece`. Ancestors aren't walked: that would cost a DB round-trip
+ * per render.
  */
 function trailBelowHome(
   ctx: AppContext,
@@ -114,12 +101,8 @@ function trailBelowHome(
 }
 
 /**
- * The trail for this page, Home first, the current page last and unlinked.
- * Empty where there is no trail to draw.
- *
- * One source for both the `BreadcrumbList` in the structured-data graph and
- * the {@link Breadcrumbs} a theme renders, so the trail in the page and the
- * trail in search results cannot disagree.
+ * Home first, the current page last and unlinked; empty where there is no
+ * trail. Shared by the `BreadcrumbList` and {@link Breadcrumbs} so they agree.
  */
 export function breadcrumbTrail(
   ctx: AppContext,
@@ -136,8 +119,8 @@ export function breadcrumbTrail(
 }
 
 /**
- * The trail, rendered. Drop it in a theme template and the page shows what the
- * `BreadcrumbList` in its head already claims:
+ * Renders nothing on a page with no trail. Style it through the
+ * `data-plumix-breadcrumbs` attribute; there is no class-name API.
  *
  * ```tsx
  * import { Breadcrumbs } from "@plumix/plugin-seo";
@@ -151,10 +134,6 @@ export function breadcrumbTrail(
  *   );
  * }
  * ```
- *
- * Renders nothing on a page with no trail. Style it through the
- * `data-plumix-breadcrumbs` attribute; there is no class-name API to keep in
- * step with.
  */
 export function Breadcrumbs({
   data,

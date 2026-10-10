@@ -1,16 +1,6 @@
 import type { JSX } from "react";
 
-// The document a theme and its templates contribute to: the `<html>` and
-// `<body>` attributes and the `<head>` tags. Below the theme contract, so the
-// merge that combines a theme's manifest with a template's needs nothing above
-// foundation.
-
-/**
- * Strip React-isms that don't belong in HTML attribute descriptors:
- * `key`/`ref` are React infrastructure; `on*` handlers don't apply
- * to SSR'd strings; `children` and `dangerouslySetInnerHTML` are kept
- * only for `<script>` (inline content).
- */
+/** `children` and `dangerouslySetInnerHTML` are kept only for `<script>`. */
 type DocumentTag<T extends keyof JSX.IntrinsicElements> = Omit<
   JSX.IntrinsicElements[T],
   "key" | "ref" | `on${string}`
@@ -26,10 +16,10 @@ export type DocumentMeta = Omit<
   "children" | "dangerouslySetInnerHTML"
 >;
 
-// `children` and `dangerouslySetInnerHTML` are narrowed to plain strings:
-// SSR'd inline script bodies, not React nodes or browser-native trusted-type
-// values. JSX would otherwise allow `ReactNode`/`TrustedHTML` here, which
-// can't be safely stringified into HTML.
+/**
+ * Plain strings: JSX would allow `ReactNode`/`TrustedHTML`, which can't be
+ * safely stringified into HTML.
+ */
 export type DocumentScript = Omit<
   DocumentTag<"script">,
   "children" | "dangerouslySetInnerHTML"
@@ -40,10 +30,8 @@ export type DocumentScript = Omit<
 };
 
 /**
- * The attribute bag on any of the document tags, as `renderAttrs` reads it.
- * Not JSON: an author writes these as JSX props, so a key can carry `style` as
- * a `CSSProperties` object, and an absent attribute is spelled as a present
- * key holding `undefined` — a state `JsonObject` says cannot happen.
+ * Not JSON: written as JSX props, so `style` can be a `CSSProperties` object
+ * and an absent attribute is a key holding `undefined`.
  */
 export type DocumentAttrs = Readonly<Record<string, unknown>>;
 
@@ -62,10 +50,8 @@ export interface DocumentManifest {
   readonly title?: string;
   readonly titleTemplate?: string | ((title: string | undefined) => string);
   /**
-   * `false` opts the page out of the automatic `<link rel="canonical">` (and
-   * the tags a plugin derives from it). A canonical the page declares in
-   * `link` still renders. Only `false`: the automatic tag is the default, so
-   * there is nothing for `true` to turn back on.
+   * `false` opts out of the automatic `<link rel="canonical">`; one declared
+   * in `link` still renders.
    */
   readonly canonical?: false;
 }

@@ -1,12 +1,7 @@
 import type { MessageDescriptor } from "@lingui/core";
 import { defineMessage } from "@lingui/core/macro";
 
-// Extraction mirror for core's built-in site-settings labels (see
-// `core-nav-i18n.ts` / `core-type-labels-i18n.ts` for the pattern).
-// Rendering reads the descriptor off the manifest via `i18n._`; these
-// `defineMessage` calls only exist so admin's `lingui extract` pulls the
-// ids into `locales/*.po`. Lockstep with
-// `@plumix/core`'s `SITE_SETTINGS_DESCRIPTORS` is test-guarded.
+/** Exists only so `lingui extract` sees core's site-settings ids. */
 export const CORE_SETTINGS_DESCRIPTORS = {
   groupLabel: defineMessage({
     id: "core.settings.site.label",

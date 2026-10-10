@@ -4,8 +4,10 @@ import { describe, expect, test } from "vitest";
 
 import { transitionName, viewTransitionTypes } from "./view-transition.js";
 
-// The value a browser reads from `view-transition-name: <name>`: the name
-// must tokenize as exactly one ident token, and this is its unescaped value.
+/**
+ * The value a browser reads from `view-transition-name: <name>`: the name
+ * must tokenize as exactly one ident token, and this is its unescaped value.
+ */
 function identValue(name: string): string {
   const [token, eof, ...rest] = tokenize({ css: name });
   expect(rest).toEqual([]);

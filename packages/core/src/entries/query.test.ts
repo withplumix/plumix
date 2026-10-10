@@ -123,9 +123,8 @@ describe("entryQuery", () => {
   });
 
   test("a where condition cannot widen the query around it", async () => {
-    // `and` parenthesizes the conjunction but not its operands, so a top-level
-    // `OR` inside one condition would otherwise bind looser than the `AND`
-    // joining it to the rest and admit rows every other narrowing excluded.
+    // `and` doesn't parenthesize its operands, so a top-level `OR` would bind
+    // looser than the joining `AND` and admit excluded rows.
     const widening = sql`${entries.type} = 'event' OR 1 = 1`;
     expect(
       await selected(entryQuery().ofTypes("page").where(widening)),
@@ -200,10 +199,8 @@ describe("entryQuery", () => {
   });
 
   test("under terminates on a cycle in the parent chain", async () => {
-    // `entries.parentId` has no constraint against a cycle and `plumix/db` is a
-    // documented direct-write surface, so a pair of rows pointing at each other
-    // is reachable. A recursive walk that never ends is a CPU kill on every
-    // request that compiles this narrowing.
+    // Nothing prevents a `parentId` cycle and `plumix/db` allows direct
+    // writes, so an unbounded recursive walk would be reachable.
     const cyclic = await createTestDb();
     const factory = factoriesFor(cyclic);
     const author = await factory.admin.create();
@@ -232,10 +229,7 @@ describe("entryQuery", () => {
   });
 
   test("a query nobody built cannot be compiled, so narrowings cannot be forged", async () => {
-    // The narrowings are not on the query, so there is no `{ ...given,
-    // narrowings: [] }` that drops what a surface handed out. A structural
-    // copy carries the methods and satisfies the type, and is still not a
-    // query anyone built.
+    // A structural copy satisfies the type but is not a query anyone built.
     const forged: EntryQuery = { ...entryQuery().ofTypes("page") };
     await expect(compileEntryQuery(ctx, forged)).rejects.toThrow(/entryQuery/);
   });
@@ -250,16 +244,14 @@ describe("entryQuery", () => {
   });
 
   test("ofTypes with no names narrows to nothing rather than to everything", async () => {
-    // A surface doing `ofTypes(...allowed)` over an empty roster must not get
-    // an unconstrained query out of it. Pinned because the answer comes from
-    // drizzle's handling of an empty `inArray`, not from code here.
+    // The answer comes from drizzle's handling of an empty `inArray`, not
+    // from code here.
     expect(await selected(entryQuery().ofTypes())).toEqual([]);
   });
 
   test("an unresolvable narrowing outranks none, whichever order they arrive in", async () => {
-    // The two answers a route surface tells apart: 404 and an empty page. A
-    // query that names a term nothing answers to has no answer to give, and
-    // saying "nothing matches" alongside it does not supply one.
+    // A route surface tells 404 from an empty page; a term nothing answers to
+    // has no answer, and "nothing matches" does not supply one.
     const missing = entryQuery().inTerm("category", ["missing"]);
     expect(await selected(missing.none())).toBeNull();
     expect(
@@ -309,7 +301,7 @@ describe("entryQuery ordering", () => {
     orderCtx = createTestContext({ db });
   });
 
-  /** The slugs a query selects, in the order it asks for. */
+  // The slugs a query selects, in the order it asks for.
   async function ordered(query: EntryQuery): Promise<readonly string[]> {
     const condition = await compileEntryQuery(orderCtx, query);
     if (condition === null) throw new Error("query did not resolve");
@@ -406,9 +398,8 @@ describe("entryQuery ordering", () => {
   });
 
   test("the types a query can list are what its ofTypes calls agree on", () => {
-    // What the CDN tagging reads: a page listing only `post` is stored under
-    // `t:post` alone, and one that names no type is stored under every
-    // public type's tag, because a publish of any of them could change it.
+    // A query naming no type is tagged with every public type, since a
+    // publish of any of them could change it.
     expect(entryQueryTypeNames(entryQuery())).toBeNull();
     expect(entryQueryTypeNames(entryQuery().ofTypes("post", "page"))).toEqual([
       "post",

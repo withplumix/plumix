@@ -79,9 +79,11 @@ interface RevisionListItem {
   readonly authorId: number;
   readonly authorName: string | null;
   readonly authorEmail: string | null;
-  // Author-supplied label for the revision. `null` when unset; the
-  // row UI renders an em dash placeholder so existing rows pre-#289
-  // slice 3 stay legible.
+  /**
+   * Author-supplied label for the revision. `null` when unset; the
+   * row UI renders an em dash placeholder so existing rows pre-#289
+   * slice 3 stay legible.
+   */
   readonly message: string | null;
 }
 
@@ -100,35 +102,47 @@ interface DiffSnapshot {
 
 interface RevisionsSheetProps {
   readonly entryId: number;
-  // Trigger presentation. `text` (default) is the labelled outline button the
-  // plain-form editor uses; `icon` is the compact icon-only button for the
-  // visual editor's icon-heavy header.
+  /**
+   * Trigger presentation. `text` (default) is the labelled outline button the
+   * plain-form editor uses; `icon` is the compact icon-only button for the
+   * visual editor's icon-heavy header.
+   */
   readonly triggerVariant?: "text" | "icon";
   readonly fetchPage: (input: {
     readonly entryId: number;
     readonly cursor: string | null;
   }) => Promise<RevisionPage>;
-  // Injected so the admin can plug in its own intl helper and tests
-  // can stub it deterministically (must return a stable string).
+  /**
+   * Injected so the admin can plug in its own intl helper and tests
+   * can stub it deterministically (must return a stable string).
+   */
   readonly relativeTime: (date: Date) => string;
-  // Modal-only fetchers — the dev-mode JSON diff dialog reads from
-  // these. The inline diff panel was removed in slice 2; previews
-  // now live on the editor route via `?revision=<id>`.
+  /**
+   * Modal-only fetchers — the dev-mode JSON diff dialog reads from
+   * these. The inline diff panel was removed in slice 2; previews
+   * now live on the editor route via `?revision=<id>`.
+   */
   readonly fetchRevision: (revisionId: number) => Promise<DiffSnapshot>;
   readonly fetchCurrent: (entryId: number) => Promise<DiffSnapshot>;
-  // Fires when the user clicks a row body — caller is expected to
-  // navigate to the preview URL. The sheet closes itself afterwards
-  // so the editor surface is unobstructed.
+  /**
+   * Fires when the user clicks a row body — caller is expected to
+   * navigate to the preview URL. The sheet closes itself afterwards
+   * so the editor surface is unobstructed.
+   */
   readonly onPreview: (revisionId: number) => void;
-  // PATCHes `revision.message`. `null` clears the comment. The sheet
-  // owns the optimistic-update path so callers don't have to wire
-  // cache invalidation per render.
+  /**
+   * PATCHes `revision.message`. `null` clears the comment. The sheet
+   * owns the optimistic-update path so callers don't have to wire
+   * cache invalidation per render.
+   */
   readonly onSaveMessage: (input: {
     readonly revisionId: number;
     readonly message: string | null;
   }) => Promise<void>;
-  // Controlled: `useRevisionsTrigger` owns the open state so the editor
-  // command palette can raise the sheet without its trigger being clicked.
+  /**
+   * Controlled: `useRevisionsTrigger` owns the open state so the editor
+   * command palette can raise the sheet without its trigger being clicked.
+   */
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
 }
@@ -231,9 +245,7 @@ export function RevisionsSheet({
           );
           return (
             <Tabs defaultValue="all" className="mt-2">
-              {/* The tab strip carries its own horizontal inset so it lines up
-                  with the header (p-4) and the row list (px-4); padding the Tabs
-                  root instead would double up the list's own px-4. */}
+              {/* Padding the Tabs root would double up the list's own px-4. */}
               <div className="px-4">
                 <TabsList className="w-full">
                   <TabsTrigger value="all" data-testid="revisions-tab-all">
@@ -393,10 +405,7 @@ function RevisionRow({
   const [draft, setDraft] = useState(revision.message ?? "");
   const [saving, setSaving] = useState(false);
 
-  // Toggle: re-clicking the icon while the editor is open closes it
-  // (without destroying the draft for the *next* open — `openEditor`
-  // re-seeds from the current message on each open). Without this,
-  // a second click would silently reset the in-progress text.
+  // A second click would otherwise silently reset the in-progress text.
   function toggleEditor(): void {
     if (editing) {
       setEditing(false);

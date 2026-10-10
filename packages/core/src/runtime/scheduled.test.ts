@@ -23,10 +23,10 @@ beforeAll(async () => {
   db = await createTestDb();
 });
 
-// Returns the context alongside the `error` spy as a standalone handle. Asserting
-// on the handle rather than `ctx.logger.error` keeps `unbound-method` happy —
-// `AppContext.logger.error` is a method type, so reading it back off the object
-// reads as an unbound method reference.
+/**
+ * A standalone `error` handle, because reading the method back off
+ * `ctx.logger` trips `unbound-method`.
+ */
 function fakeCtx() {
   const error = vi.fn();
   const ctx = createTestContext({ db, logger: { ...silentLogger, error } });
@@ -111,10 +111,8 @@ describe("runScheduledTasks", () => {
   });
 
   test("a logger that throws does not cost the run its accounting", async () => {
-    // An operator's sink can throw — a dead transport, a payload it cannot
-    // stringify. It is reached only after a task has failed, so letting it out
-    // would discard what every task did on the way there, and leave the
-    // handler with no report to return.
+    // The sink runs only after a task failed, so letting it throw would
+    // discard every task's work and the report.
     const tasks: RegisteredScheduledTask[] = [
       { id: "ok", registeredBy: "p", handler: () => undefined },
       {

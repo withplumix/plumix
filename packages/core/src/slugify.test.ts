@@ -25,10 +25,6 @@ describe("slugify", () => {
   });
 
   test("transliterates Cyrillic / Arabic / Turkish / Vietnamese", () => {
-    // Motivating case: a Russian editor creating a post titled
-    // "Новости" gets a usable slug instead of an empty string.
-    // The underlying transliterate lib covers European, Cyrillic,
-    // Greek, Arabic, Turkish, and Vietnamese scripts.
     expect(slugify("Новости")).toBe("novosti");
     expect(slugify("Привет мир")).toBe("privet-mir");
     expect(slugify("مرحبا")).toBe("mrhba");
@@ -37,10 +33,8 @@ describe("slugify", () => {
   });
 
   test("CJK falls back to empty — user types a slug manually", () => {
-    // `@sindresorhus/transliterate` doesn't ship a CJK lookup table;
-    // Japanese/Chinese titles resolve to empty and the form's
-    // `slugSchema.minLength(1)` prompts the author to type one. If
-    // CJK support becomes a priority, pair this with `pinyin-pro`.
+    // `@sindresorhus/transliterate` ships no CJK table; the form's
+    // `slugSchema.minLength(1)` makes the author type one.
     expect(slugify("日本語")).toBe("");
     expect(slugify("你好")).toBe("");
   });

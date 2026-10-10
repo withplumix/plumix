@@ -15,9 +15,11 @@ const HELD_FILES: Readonly<Record<string, { body: string; type: string }>> = {
   [ASSET_PATH]: { body: CHUNK, type: "text/javascript" },
 };
 
-// A path-keyed map stands in for the runtime's asset layer — `env.ASSETS` on
-// Workers, a static directory on a process runtime. `notFound` picks which of
-// the two documented behaviours it models.
+/**
+ * A path-keyed map stands in for the runtime's asset layer — `env.ASSETS` on
+ * Workers, a static directory on a process runtime. `notFound` picks which of
+ * the two documented behaviours it models.
+ */
 function mapAssets(notFound: AssetsNotFound): AssetsBinding {
   return {
     fetch: (request) => {

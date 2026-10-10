@@ -656,8 +656,10 @@ function describeRoleScope(scope: ImageRoleScope): string {
   }
 }
 
-// The structured fields a role error carries, so a caller can match the scope
-// without parsing the message.
+/**
+ * The structured fields a role error carries, so a caller can match the scope
+ * without parsing the message.
+ */
 function roleScopeFields(scope: ImageRoleScope): {
   scopeKind: ImageRoleScope["kind"];
   scope?: string;

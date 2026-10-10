@@ -1,13 +1,6 @@
 /**
- * Synthesize the client entry that Vite bundles for the theme's
- * `css: []` array. This is the Nuxt pattern — the strings declared on
- * `ThemeDescriptor.css` never enter jiti's module graph (jiti can't
- * resolve CSS / image imports), but the generated file IS in Vite's
- * graph, so Vite resolves and hashes them like any other import.
- *
- * The generated module exports nothing — every import is a side
- * effect, exactly as if a hand-written client entry did
- * `import "./global.css"`.
+ * Theme CSS strings never enter jiti's graph, which can't resolve CSS, but
+ * this generated file is in Vite's graph, so Vite resolves and hashes them.
  */
 export function generateClientEntrySource(themeCss: readonly string[]): string {
   const lines = [
@@ -24,25 +17,18 @@ export function generateClientEntrySource(themeCss: readonly string[]): string {
   // install point (#1676).
   lines.push("", DEV_CLIENT_INSTALL);
   if (themeCss.length === 0) {
-    // Empty `export` keeps this file a module (TypeScript / Vite both
-    // treat a bare file with zero statements as a script, which would
-    // leak globals — the dynamic `import()` below is an expression, not a
-    // static import declaration, so it does not make the file a module).
+    // Keeps the file a module: a dynamic `import()` alone does not, and a
+    // script would leak globals.
     lines.push("", "export {};");
   }
   return lines.join("\n") + "\n";
 }
 
-// `import.meta.hot` is the dev gate: Vite replaces it with `undefined` in a
-// production build, so this whole block — and the dynamic import it guards,
-// which carries the client tools' React DOM weight — is dead-code-eliminated
-// from the built client bundle. The install runs lazily through the single
-// core-owned entry point (`@plumix/core/dev-client`, reached via the `plumix`
-// package), which wires up the island dialog, terminal forwarder, and compile
-// overlay. A `vite:error` Vite already broadcast (the page loaded onto a broken
-// module) would race the import and be lost now that Vite's own overlay is
-// disabled, so a synchronous listener buffers that error and hands it over to
-// replay on install.
+/**
+ * `import.meta.hot` is undefined in production, so this block tree-shakes out.
+ * With Vite's overlay disabled, a sync listener buffers an already-broadcast
+ * `vite:error` for replay.
+ */
 const DEV_CLIENT_INSTALL = [
   "if (import.meta.hot) {",
   "  const hot = import.meta.hot;",
@@ -56,13 +42,10 @@ const DEV_CLIENT_INSTALL = [
   "}",
 ].join("\n");
 
-// Convert a theme-author path to one Vite resolves against the project
-// root rather than against `.plumix/client-entry.ts`. Vite treats a
-// leading `/` as project-root-relative; absolute paths and aliased
-// specifiers (`~/...`, `@/...`, scoped npm packages like `@plumix/...`)
-// already resolve correctly and pass through untouched. `../` also
-// passes through — the rare case of pointing above the project root
-// stays as a relative escape hatch from `.plumix/client-entry.ts`.
+/**
+ * Vite reads a leading `/` as project-root-relative; absolute, aliased and
+ * `../` paths pass through.
+ */
 function toClientEntryImport(path: string): string {
   if (path.startsWith("/") || path.startsWith("~") || path.startsWith("@")) {
     return path;

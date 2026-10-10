@@ -56,9 +56,8 @@ const M = {
 } satisfies Record<string, MessageDescriptor>;
 
 /**
- * The Mailer screen. The test send needs an outbound transport, so without a
- * `mailer` slot the page explains how to configure one instead of offering a
- * send that can only fail.
+ * Without a `mailer` slot it explains setup rather than offer a send that can
+ * only fail.
  */
 export function MailerPage({
   defaultRecipient,

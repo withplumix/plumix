@@ -35,10 +35,8 @@ describe("registerCoreSettings", () => {
   });
 
   test("every field key is RPC-writable (matches the meta key regex)", () => {
-    // registerCoreSettings writes the registry directly, bypassing
-    // assertMetaBoxFields — so guard the keys against the same regex the
-    // settings.upsert write path enforces, or a key with a stray char
-    // would be a silently dead, unwritable field.
+    // registerCoreSettings bypasses assertMetaBoxFields, so a key the upsert
+    // regex rejects would be a silently unwritable field.
     const registry = createPluginRegistry();
     registerCoreSettings(registry);
     for (const field of registry.settingsGroups.get("site")?.fields ?? []) {

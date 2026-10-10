@@ -26,7 +26,7 @@ const TASKS: readonly TaskFields[] = [
   { id: "index-drain", registeredBy: "search" },
 ];
 
-// The command reads the roster; running a task is the handler's job.
+/** The command reads the roster; running a task is the handler's job. */
 const withHandlers = (tasks: readonly TaskFields[]) =>
   tasks.map((task) => ({ ...task, handler: () => undefined }));
 
@@ -75,7 +75,8 @@ async function context(
   return {
     app,
     // A real directory: `runSchedule` chdirs to it so a database path resolves
-    // from where the config was loaded, not from where the shell happened to be.
+    // from where the config was loaded, not from where the shell happened to
+    // be.
     cwd: process.cwd(),
     configPath: `${process.cwd()}/plumix.config.ts`,
     argv,
@@ -348,9 +349,8 @@ describe("plumix cron run — reporting task failures", () => {
 
 describe("plumix cron run — a run that never started", () => {
   test("says nothing ran, rather than naming a task that never did", async () => {
-    // A missing binding or an unreachable database aborts before any task. The
-    // old shape reported a synthetic `plumix:Error` in `failed`, which sent an
-    // operator looking for a task by that name.
+    // A synthetic `plumix:Error` in `failed` would send an operator looking
+    // for a task by that name.
     const scheduled = vi.fn(() =>
       Promise.resolve({ ran: 0, failed: [], aborted: "no such binding: DB" }),
     );
@@ -415,10 +415,8 @@ describe("plumix cron run — releasing the database", () => {
 
 describe("plumix cron run — both connections, composed", () => {
   test("releases the guard's connection and the handler's own", async () => {
-    // The seam-level tests above each cover one half with the other stubbed,
-    // which is how the reverted attempt in #2255 passed while releasing only
-    // one connection. This drives the real handler core builds, so the count
-    // is of connections the command actually caused.
+    // The seam tests each stub one half, which let a fix releasing only one
+    // connection pass; this drives the real handler.
     const db = await createTestDb();
     const opened: number[] = [];
     const closed: number[] = [];

@@ -44,21 +44,14 @@ import { useCanvasKeys } from "./use-canvas-keys.js";
 import { usePanZoom } from "./use-pan-zoom.js";
 
 interface CanvasFrameProps {
-  /** URL the iframe loads — the entry's real route with `?plumix.edit`. */
+  /** The entry's real route with `?plumix.edit`. */
   readonly previewUrl: string;
-  /** Origin of that route, for bridge message pinning. */
   readonly origin: string;
-  /** The entry type being authored, scoping the in-canvas inserter's palette. */
   readonly entryType?: string;
-  /** Preview mode: still render the pushed tree, but draw no selection /
-   *  hover overlays, toolbar, drop indicators, or empty-state affordance. */
   readonly readOnly?: boolean;
   /**
-   * Monotonic token the host bumps after autosaving an entry field the theme
-   * template renders (title, excerpt, meta, …). Each change reloads the
-   * iframe so those fields — which live in the server-rendered shell around
-   * the block-content island, not in the block store — refresh. Block content
-   * is pushed over the bridge and needs no reload.
+   * Each bump reloads the iframe: entry fields live in the server-rendered
+   * shell around the block island, which the bridge doesn't push.
    */
   readonly previewRefreshToken?: number;
 }
@@ -67,12 +60,6 @@ const SELECTED_OUTLINE = "outline-canvas-selection";
 const MEMBER_OUTLINE = "outline-canvas-selection/50";
 const HOVER_OUTLINE = "outline-canvas-selection/40";
 
-/**
- * Host-side canvas: loads the real route in an iframe, drives it via the
- * bridge, draws selection/hover overlays in the shell's coordinate space, and
- * resolves catalog drags into top-level inserts (a drop indicator follows the
- * pointer; releasing over the canvas inserts at that position).
- */
 export function CanvasFrame({
   previewUrl,
   origin,
@@ -148,8 +135,8 @@ export function CanvasFrame({
       frameWindow,
       origin,
       onGeometry: applyReport,
-      // Forwarded from the iframe: clientX/Y are iframe-local (unscaled), so the
-      // cursor in container space is the frame's pan offset plus the scaled
+      // Forwarded from the iframe: clientX/Y are iframe-local (unscaled), so
+      // the cursor in container space is the frame's pan offset plus the scaled
       // local position.
       onWheel: ({ deltaX, deltaY, zoomIntent, clientX, clientY }) => {
         const { panX, panY, zoom } = camera.getState();
@@ -165,11 +152,8 @@ export function CanvasFrame({
         keyHandlerRef.current?.(down, code, shiftKey),
       onRequestAdd: ({ parentId, slotKey }) => requestAdd(parentId, slotKey),
       onClipboard: (op) => void clipboard.run(op),
-      // The canvas has no i18n runtime, so hand it the locale and the catalog
-      // the admin already merged (its own, the editor's, every workspace
-      // plugin's and the blocks package's); blocks resolve their strings from
-      // it. Read here, not as a dep: Lingui hands back a fresh `{}` for a
-      // locale with nothing loaded, which would reconnect on every render.
+      // The canvas has no i18n runtime. Not a dep: Lingui returns a fresh `{}`
+      // for an unloaded locale, which would reconnect on every render.
       config: { locale, catalog: i18n.messages },
     });
     // Expose the loader-data push to the inspector's refresh control.
@@ -192,19 +176,14 @@ export function CanvasFrame({
     clipboard,
   ]);
 
-  // Bring the selection into view whenever the store asks (a palette go-to or
-  // insert). Panning, not framing: a jump shouldn't also change the zoom. The
-  // seed value never fires — only a bump does.
+  // Pans without zooming: a jump shouldn't also change the zoom.
   useEffect(() => {
     if (frameRequest === 0) return;
     centerSelection();
   }, [frameRequest, centerSelection]);
 
-  // Reloading is safe (see the prop for why a reload is the mechanism): the
-  // iframe's WindowProxy survives the same-origin reload, so the bridge
-  // re-handshakes on the reloaded document's `canvas:ready` and the host
-  // re-pushes the current block tree — in-flight block edits aren't lost. The
-  // iframe keeps its measured height, so the canvas holds its scroll position.
+  // Safe: the WindowProxy survives a same-origin reload, so the bridge
+  // re-handshakes and the host re-pushes the tree without losing edits.
   const reloadedTokenRef = useRef(previewRefreshToken);
   useEffect(() => {
     if (reloadedTokenRef.current === previewRefreshToken) return;
@@ -212,9 +191,7 @@ export function CanvasFrame({
     iframeRef.current?.contentWindow?.location.reload();
   }, [previewRefreshToken]);
 
-  // Block clipboard shortcuts while focus is on the host chrome (the iframe
-  // forwards its own via the bridge). Defers to native copy on a text selection
-  // and to fields while typing.
+  // Defers to native copy on a text selection and to fields while typing.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent): void => {
       const op = clipboardOpFromEvent(e);
@@ -294,18 +271,12 @@ export function CanvasFrame({
     <div
       ref={containerRef}
       data-testid="plumix-canvas-frame"
-      // A Figma-style pannable stage: the device frame floats in this surface
-      // and is panned/zoomed via a transform (no scrollbars). `overflow:hidden`
-      // clips the off-stage frame; `touch-action:none` lets us own wheel/touch
-      // gestures. `bg-muted` reads as canvas, not a void.
+      // `touch-action:none` lets the stage own wheel/touch gestures.
       className={`bg-muted relative flex-1 touch-none overflow-hidden ${
         panReady ? "cursor-grab" : "cursor-default"
       }`}
     >
-      {/* The stage: positioned at the container origin and moved as a whole by
-          `translate(pan) scale(zoom)`. The iframe sits at natural size; the
-          transform does the panning + zooming, and the overlays track it by
-          re-reading the iframe's live on-screen rect. */}
+      {/* Overlays track the transform by re-reading the iframe's live rect. */}
       <div
         ref={stageRef}
         data-testid="plumix-canvas-stage"
@@ -340,12 +311,8 @@ export function CanvasFrame({
           }`}
         />
       </div>
-      {/* Clip layer pinned over the visible canvas column. Its overflow:hidden
-          keeps the absolutely-positioned overlays + toolbar from spilling onto
-          the side rails when the iframe renders wider than the column. Hidden
-          mid-gesture: the overlays read stale geometry while the transform is
-          live, and re-measuring per frame is the cost we're avoiding. They snap
-          back on commit. */}
+      {/* Hidden mid-gesture: overlays read stale geometry while the transform is
+          live, and re-measuring per frame is too costly. */}
       {!readOnly && container && !gesturing && (
         <div
           data-testid="plumix-overlay-clip"
@@ -419,9 +386,6 @@ export function CanvasFrame({
         </div>
       )}
 
-      {/* Slot-scoped inserter: opened by the in-canvas "Add a block" affordance,
-          anchored over the slot, listing only that slot's permitted blocks. A
-          pick inserts into the slot (or at the root) and closes it. */}
       {!readOnly && pendingAdd && (
         <Popover
           open
@@ -479,9 +443,6 @@ export function CanvasFrame({
   );
 }
 
-/** The draggable device-label strip that rides just above the device frame.
- *  It lives inside the stage, so it pans and zooms with the frame, and sits
- *  its own height plus a gap above the frame's top edge. */
 function CanvasHandle({
   device,
   onPointerDown,
@@ -505,7 +466,7 @@ function CanvasHandle({
   );
 }
 
-// Shift a window-space overlay box into the clip layer's local space.
+/** Shift a window-space overlay box into the clip layer's local space. */
 function clipRelative(box: OverlayBox, container: OverlayBox): OverlayBox {
   return {
     ...box,

@@ -47,12 +47,6 @@ const INDENT_WIDTH = 16;
 
 type RowAction = "copy" | "paste" | "duplicate" | "delete";
 
-/**
- * Layers outline: the nested tree as a flat, indented list. Clicking a row
- * selects the block (the canvas overlay follows); dragging reorders and nests
- * via the projection, writing through the store's move action so the canvas
- * reflects it live and it persists.
- */
 export function LayersTab(): ReactElement {
   const { registry } = useEditorConfig();
   const { i18n } = useLingui();
@@ -116,7 +110,8 @@ export function LayersTab(): ReactElement {
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
 
-  // The block type's display name, the fallback when a node has no instance label.
+  // The block type's display name, the fallback when a node has no instance
+  // label.
   const typeLabel = (name: string): string => {
     const spec = registry.get(name);
     return spec?.title != null ? resolveLabel(spec.title, i18n) : name;
@@ -193,7 +188,6 @@ interface LayerRowProps {
   readonly detail: string | null;
   readonly active: boolean;
   readonly onSelect: () => void;
-  /** Commits a new instance label (empty string clears it). */
   readonly onRename: (label: string) => void;
   readonly onAction: (action: RowAction) => void;
 }
@@ -374,8 +368,10 @@ function LayerRow({
   );
 }
 
-// The row that takes `id`'s place once it and its nested rows are gone: the
-// next row past its subtree, else the one before it.
+/**
+ * The row that takes `id`'s place once it and its nested rows are gone: the
+ * next row past its subtree, else the one before it.
+ */
 function rowAfterRemoving(
   items: readonly FlatNode[],
   id: string,

@@ -32,26 +32,14 @@ import { isPageBreak } from "./steps.js";
 export type FormElementInput = MetaBoxFieldInput | FormPageBreak;
 
 /**
- * What a form carries from the page it is placed on, and nothing when
- * the page is anything else. One kind rather than a list, and never
- * "whatever this page is": an author writing `"entry"` means the entry,
- * and a term id would be a value their handler reads as an entry.
- *
- * Spelled here as well as in {@link BoundType} because this is the name
- * a form author writes.
+ * One kind, never "whatever this page is": a term id would be read as an
+ * entry by a handler expecting one.
  */
 export type FormBinding = BoundType;
 
 /**
- * The half of a Turnstile configuration a visitor's browser is given.
- * The site key is public by design — the widget renders from it, and it
- * identifies the site to Cloudflare rather than authenticating it.
- *
- * `secret?: never` is the guard, not decoration: without it a whole
- * {@link TurnstileConfig} is structurally a `TurnstileWire`, and any
- * caller handing a {@link FormDefinition} to a client boundary would
- * serialize the secret into the page. With it, only what
- * {@link toFormWire} built can go there, and the compiler says so.
+ * `secret?: never` stops a whole {@link TurnstileConfig} passing as this
+ * and serializing the secret into the page.
  */
 export interface TurnstileWire {
   readonly siteKey: string;
@@ -59,57 +47,33 @@ export interface TurnstileWire {
 }
 
 /**
- * Cloudflare Turnstile, opted into by one form — see the `turnstile`
- * slot on {@link FormDefinitionInput}.
- *
- * `secret` takes core's environment-input union, so on Workers — where
- * the config module is evaluated before any request and secrets arrive
- * on the per-request `env` — it is written `(env) => env.MY_SECRET`.
- * Resolution is memoized per isolate, so a rotated secret is picked up
- * when the isolate recycles rather than on the next request.
+ * The resolved `secret` is memoized per isolate, so a rotated secret
+ * applies when the isolate recycles.
  */
 export interface TurnstileConfig {
   readonly siteKey: string;
   readonly secret: EnvInput<string>;
 }
 
-// The fields among a form's elements, at the type level — what the
-// answers shape is inferred from. A page break carries no answer and is
-// not a `MetaBoxFieldInput`, so `Extract` drops it.
+/** `Extract` drops page breaks, which carry no answer. */
 type FormFieldInputs<Elements extends readonly FormElementInput[]> = Extract<
   Elements[number],
   MetaBoxFieldInput
 >[];
 
 /**
- * The answers a callback written against no particular form sees, and
- * what the two callback types default to. Values are optional because a
- * form's own inferred answers are — which is what keeps the widening in
- * `defineForm` a single assertion rather than one through `unknown`:
- * `InferStoredFields` is assignable to this, and not to `FormAnswers`,
- * whose values exclude `undefined`. The assertion is still an assertion:
- * `strictFunctionTypes` checks a callback's parameter contravariantly,
- * so it cannot be dropped.
+ * Values allow `undefined` so `InferStoredFields` is assignable here,
+ * keeping `defineForm`'s widening a single assertion.
  */
 type AnyAnswers = Readonly<Record<string, JsonValue | undefined>>;
 
 /**
- * What a form's own `validate` and `onSubmit` are handed. `answers` is
- * the payload as it will be stored — the fields the submitted answers
- * left visible, in the shape each field stores — so a callback reads the
- * same values the row does rather than raw strings off the body. It is
- * the object that goes on to be stored, not a copy: `readonly` is a
- * compile-time promise, and a callback that mutates it changes the row.
+ * `answers` is the object that gets stored, not a copy: mutating it
+ * despite `readonly` changes the row.
  */
 export interface FormValidateEvent<Answers> {
   readonly answers: Answers;
-  /**
-   * What the form was placed on, for a form that declared a `bind` and
-   * was rendered on that kind of page — the whole point of binding is
-   * that a handler can act on it. `null` for a form that binds nothing,
-   * and for one that binds but was rendered somewhere with nothing to
-   * bind.
-   */
+  /** Also `null` when the page isn't the kind the form binds. */
   readonly bound: FormBound | null;
   readonly ctx: AppContext;
 }
@@ -117,15 +81,13 @@ export interface FormValidateEvent<Answers> {
 export interface FormSubmitEvent<Answers> extends FormValidateEvent<Answers> {
   /** What each field and option was called, for {@link formatSubmission}. */
   readonly labels: FormLabelSnapshot;
-  /** The row, already written — `null` when the form declared `store: false`. */
+  /**
+   * The row, already written — `null` when the form declared `store: false`.
+   */
   readonly submission: StoredSubmission | null;
 }
 
-/**
- * A form's own check, run once every field-level rule has passed. The
- * errors it returns are answered exactly like the built-in ones, so name
- * each against the field that produced it.
- */
+/** Runs after field-level rules pass. Name each error by its field. */
 export type FormValidator<Answers = AnyAnswers> = (
   event: FormValidateEvent<Answers>,
 ) =>
@@ -141,96 +103,38 @@ export interface FormDefinitionInput<
 > {
   readonly title?: Label;
   readonly submitLabel?: Label;
-  /**
-   * The form's questions, written with the same field builders meta boxes
-   * use. Folded to the wire projection at definition time — the renderer,
-   * the submit handler and the label snapshot all read that one shape.
-   * A `pageBreak()` written among them turns the form into a wizard for
-   * a visitor whose browser runs the island.
-   */
+  /** A `pageBreak()` among them makes a wizard when JavaScript runs. */
   readonly fields: Fields;
-  /**
-   * What this form carries from the page it is placed on. Declared here;
-   * resolved for you at render, so nothing has to thread an id through
-   * the block, the template or the theme. The resolved value is signed
-   * and stored in its own columns, and a page the binding does not apply
-   * to — a front page, an archive — simply carries nothing.
-   */
+  /** Resolved and signed at render; a page of another kind carries nothing. */
   readonly bind?: FormBinding;
   /**
-   * The checks the field builders cannot express — a date that has to be
-   * in the future, an address already on the list. Runs on the server
-   * only, after every field-level rule has passed, so it reads answers
-   * that are already the right shape — but before the spam floor, so it
-   * runs for trapped submissions too.
+   * Server-only, after field-level rules but before the spam floor, so it
+   * also runs for trapped submissions.
    */
   readonly validate?: FormValidator<InferStoredFields<FormFieldInputs<Fields>>>;
-  /**
-   * What to do with an accepted submission: send the notification, call
-   * the CRM, write the developer's own row. Runs once the submission is
-   * stored — see `runHandler` for what a throw here costs, which is
-   * deliberately not the submission.
-   */
+  /** Runs after the submission is stored; a throw doesn't lose it. */
   readonly onSubmit?: FormHandler<InferStoredFields<FormFieldInputs<Fields>>>;
   /**
-   * Whether to store the submission. On by default: with no notification
-   * subsystem, the stored row is the reliability story. Turn it off for a
-   * form that owns its own destination — one whose `onSubmit` writes to
-   * your table — and it still validates, still meets the spam floor, and
-   * still runs its handler, with nothing left in `form_submissions`.
-   * Turning it off without an `onSubmit` throws: that form would discard
-   * every submission it accepted.
+   * Off still validates, applies the spam floor and runs `onSubmit`.
+   * Throws when off without an `onSubmit`, which would discard everything.
    */
   readonly store?: boolean;
   /**
-   * How many days this form's submissions are kept before the nightly
-   * task deletes them, whatever status they are under. Declaring none
-   * leaves the answer to the site's own `retentionDays`, which is itself
-   * nothing by default — and keeping them indefinitely is the only
-   * default that cannot lose an enquiry nobody asked to lose. Zero is a
-   * declaration rather than an absence: it is how one form keeps its
-   * submissions forever under a site that set a period for the rest.
-   *
-   * It is the answer to holding personal data forever because nobody
-   * chose a number: a form asking for a phone number and an address
-   * declares how long the site is entitled to them, beside the fields
-   * that collect them, in the repository that deploys them.
+   * Deleted nightly whatever their status. Absent defers to the site's
+   * `retentionDays`; `0` keeps them forever regardless.
    */
   readonly retentionDays?: number;
-  /**
-   * Put Cloudflare Turnstile in front of this form's submit button — for
-   * the one form actually being attacked, rather than for every form on
-   * the site. The honeypot and timing floor every form already meets are
-   * unaffected, and a form that declares nothing here loads nothing from
-   * Cloudflare. See {@link TurnstileConfig}.
-   *
-   * The widget needs JavaScript, so a form that declares one can only be
-   * completed with it enabled — the one place this plugin's no-script
-   * path stops, and the visitor is told so rather than left at a box
-   * that never fills in.
-   */
+  /** The form then requires JavaScript to complete. */
   readonly turnstile?: TurnstileConfig;
 }
 
-/**
- * The half of a form the browser is given: what the markup renders from,
- * and nothing else. The island's props cross the wire as JSON, which
- * would drop a callback silently — so the callbacks are not on this
- * shape at all, and no server-only closure is handed to a client
- * boundary in the first place.
- */
+/** Carries no callbacks, so no server-only closure reaches the client. */
 export interface FormWire {
   readonly slug: string;
   readonly title: Label | undefined;
   readonly submitLabel: Label | undefined;
   readonly fields: readonly MetaBoxFieldManifestEntry[];
-  /**
-   * Where the field list was broken into steps. Empty for a form
-   * declaring no page break — which is every form until one does, and
-   * why nothing downstream branches on whether a form is a wizard. It is
-   * on the wire because the wizard is the browser's: the server renders
-   * every step as one form, and the island is what pages through them.
-   */
+  /** Empty for a form with no page break; only the island pages through. */
   readonly pageBreaks: readonly FormPageBreakEntry[];
   /** A guarded form's site key — see {@link TurnstileWire}. */
   readonly turnstile: TurnstileWire | undefined;
@@ -240,11 +144,8 @@ export interface FormDefinition<
   Fields extends readonly FormElementInput[] = readonly FormElementInput[],
 > extends Omit<FormWire, "turnstile"> {
   /**
-   * The callbacks are held against the widened answers rather than this
-   * form's own, so a form is still a `FormDefinition` once the
-   * registry has widened it away from its fields. The author writes them
-   * against the narrow shape — {@link FormDefinitionInput} is where the
-   * inference lives — and `defineForm` widens on the way in.
+   * Typed against widened answers so the registry can hold any form;
+   * {@link FormDefinitionInput} carries the narrow types.
    */
   readonly validate: FormValidator | undefined;
   readonly onSubmit: FormHandler | undefined;
@@ -267,26 +168,11 @@ export interface FormDefinition<
 }
 
 /**
- * What one submission of `F` stores: a property per field, typed by what
- * the field stores and `| undefined` unless `.required()`. Renaming a
- * field therefore breaks the build at every reader rather than in
- * production.
- *
- * It describes what the form declares, not what any one row holds: an
- * answer the visitor never gave is absent, and so is every field its own
- * condition hid — including a `.required()` one, which skips its
- * constraint precisely because it was hidden. Read a conditional field's
- * answer as though it were optional whatever its type says.
+ * A field its condition hid is absent even if `.required()`, so treat a
+ * conditional field as optional whatever its type says.
  */
 export type FormAnswersOf<F extends FormDefinition> = F["_answers"];
 
-/**
- * Every field a form declares is one this release can render and store —
- * a group's members and a repeater's row schema included, since they
- * reach a visitor as controls exactly as a top-level field does. Named by
- * the wire name so the refusal points at the field inside the container
- * rather than at a bare key two levels down.
- */
 function assertSupportedFields(
   slug: string,
   fields: readonly MetaBoxFieldManifestEntry[],
@@ -306,26 +192,16 @@ function assertSupportedFields(
   }
 }
 
-/**
- * Declare a form. The slug is its identity — submissions carry it and
- * nothing else links them back, so renaming one orphans its history.
- */
-/**
- * Whether a number is a retention period at all. A form and the site
- * declare one the same way and refuse a bad one differently, so the rule
- * lives here once and each site of the check names its own author.
- */
 export function isRetentionPeriod(days: number): boolean {
   return Number.isInteger(days) && days >= 0;
 }
 
+/** Renaming the slug orphans its submissions: nothing else links them back. */
 export function defineForm<const Fields extends readonly FormElementInput[]>(
   slug: string,
   input: FormDefinitionInput<Fields>,
 ): FormDefinition<Fields> {
-  // The one pass that flattens the authored list: fields keep their
-  // order, and each break records how many of them precede it — which is
-  // the index the step after it starts at.
+  // Each break records how many fields precede it: the next step's start.
   const declared: MetaBoxFieldInput[] = [];
   const pageBreaks: FormPageBreakEntry[] = [];
   for (const element of input.fields) {
@@ -336,12 +212,8 @@ export function defineForm<const Fields extends readonly FormElementInput[]>(
     }
   }
   const compiled = compileMetaBoxFields(declared);
-  // The checks a `register*MetaBox` call would have run. A form is not
-  // registered, so nothing else runs them — and each one it skipped fails
-  // silently at submit: a field keyed `__plumix_hp` shadows the honeypot
-  // and files every answer as spam, a duplicate key drops one of the two
-  // answers, and a condition naming a field the form does not declare
-  // hides its own field for good.
+  // A form isn't registered as a meta box, so nothing else runs these, and
+  // each skipped check would fail silently at submit.
   assertMetaBoxFields("form", slug, compiled);
   const fields = compiled.map(toMetaBoxFieldEntry);
   assertSupportedFields(slug, fields, undefined);
@@ -351,9 +223,7 @@ export function defineForm<const Fields extends readonly FormElementInput[]>(
   if (retentionDays !== undefined && !isRetentionPeriod(retentionDays)) {
     throw FormsError.invalidRetention({ slug, retentionDays });
   }
-  // `_answers` is type-level only, so the value is everything but it and
-  // the cast is what carries the inferred shape onto a form nobody can
-  // read that key off at runtime.
+  // `_answers` is type-level only; the cast carries the inferred shape.
   const definition: Omit<FormDefinition<Fields>, "_answers"> = {
     slug,
     title: input.title,

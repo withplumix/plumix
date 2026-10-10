@@ -9,11 +9,7 @@ export interface SimpleMarkExtensionOptions {
 }
 
 /**
- * Most marks are zero-attr "wrap children in a fixed HTML element". This
- * builds the Tiptap extension for that pattern: the canonical HTML tag plus
- * the parseHTML aliases (so pasted `<b>` rolls up into `bold`, etc.).
- *
- * Schema name and spec name are kept identical — the walker dispatches on
+ * Schema name equals spec name because the walker dispatches on
  * `mark.type === schema.name`.
  */
 export function createSimpleMarkExtension(

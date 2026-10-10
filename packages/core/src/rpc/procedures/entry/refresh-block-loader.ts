@@ -12,12 +12,11 @@ import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { entryRefreshBlockLoaderInputSchema } from "./schemas.js";
 
-// Re-run a single block's loader(s) on demand — the editor's scoped refresh.
-// Loaders are server functions (db / ctx), so a refresh round-trips here rather
-// than running client-side. Resolves against the caller's current content (the
-// autosave overlay when present, else live), isolated to the target block's
-// subtree so siblings' loaders don't re-run. Returns a node-keyed map of the
-// re-resolved data, which the editor merges into the canvas's loader data.
+/**
+ * Loaders are server functions, so the editor's scoped refresh round-trips
+ * here. Isolated to the target block's subtree so siblings' loaders don't
+ * re-run.
+ */
 export const refreshBlockLoader = base
   .use(authenticated)
   .input(entryRefreshBlockLoaderInputSchema)

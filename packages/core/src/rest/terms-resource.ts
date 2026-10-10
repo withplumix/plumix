@@ -8,12 +8,10 @@ import { listEnvelope } from "./envelope.js";
 import { projectTerm } from "./projection.js";
 import { readPagination } from "./schemas.js";
 
-// The public gate lives in `resolvePublicTaxonomy` (the dispatcher), not in the
-// term service — `term:<taxonomy>:read` is granted to subscriber for every
-// taxonomy, public or not. Only route public taxonomies here.
-//
-// Term reads hide existence the same way entry reads do: a missing term, an
-// unreadable taxonomy, or a wrong-taxonomy lookup all collapse to 404.
+/**
+ * Only route public taxonomies here: subscribers hold `term:<taxonomy>:read`
+ * for every taxonomy. Every failure collapses to 404.
+ */
 function termNotFound(error: unknown, errors: RestErrors): Error | undefined {
   if (error instanceof TermReadError) {
     return errors.NOT_FOUND({ data: { kind: "term" } });
@@ -21,7 +19,7 @@ function termNotFound(error: unknown, errors: RestErrors): Error | undefined {
   return undefined;
 }
 
-// A paginated envelope of a public taxonomy's terms.
+/** A paginated envelope of a public taxonomy's terms. */
 export async function listTermsEnvelope(
   context: AppContext,
   taxonomy: RegisteredTermTaxonomy,
@@ -39,7 +37,9 @@ export async function listTermsEnvelope(
   return listEnvelope(rows.map(projectTerm), { url, page, perPage, hasNext });
 }
 
-// One term. A term in another taxonomy is hidden (404) rather than revealed.
+/**
+ * One term. A term in another taxonomy is hidden (404) rather than revealed.
+ */
 export async function getTermItem(
   context: AppContext,
   taxonomy: RegisteredTermTaxonomy,

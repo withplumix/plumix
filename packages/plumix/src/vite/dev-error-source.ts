@@ -1,11 +1,7 @@
 import { isAbsolute, resolve, sep } from "node:path";
 
-// The dev source-frame resolver (#1583): the Node-side half of the excerpt
-// mechanism. The worker has no `fs`, so the dev error page ships resolved
-// `file:line` positions (free from the sourcemapped stack) and the client
-// lazy-fetches each frame's excerpt from this resolver, mounted as a Vite
-// dev-server middleware. All logic here is pure over an injected `readFile`,
-// so it tests without touching disk or standing up a server.
+// The worker has no `fs`, so the dev error page lazy-fetches each frame's
+// excerpt from this Node-side resolver.
 
 /** One line of a source excerpt; `highlighted` marks the offending line. */
 export interface ExcerptLine {
@@ -50,14 +46,9 @@ export function sliceExcerpt(
 }
 
 /**
- * Resolve a `{ file, line }` request into a highlighted source excerpt, or
- * `null` when the request is malformed, the path is out of bounds, or the file
- * can't be read. Reads are confined to `allow` — the dev server's own fs
- * allowlist (`server.config.server.fs.allow`), which spans the workspace root
- * and so already covers both symlinked monorepo packages and their hoisted
- * `node_modules`. Mirroring Vite's own transform guard keeps a crafted request
- * from exfiltrating files outside the served tree, even though this only ever
- * runs in dev on localhost.
+ * Returns `null` for a malformed request, an unreadable file, or a path outside
+ * `allow`, the dev server's fs allowlist, so a crafted request can't exfiltrate
+ * files.
  */
 export async function resolveSourceExcerpt(
   query: { file: string | null; line: number | null; allow: readonly string[] },
@@ -83,12 +74,6 @@ export async function resolveSourceExcerpt(
   return { file: resolved, line, lines: sliceExcerpt(source, line) };
 }
 
-/**
- * Adapt a raw request URL (`/@plumix-dev-error-source?file=…&line=…`) into a
- * status + JSON body, so the Vite middleware is a trivial `res.end(body)`
- * adapter over this. Kept free of `node:http` types so it tests as a pure
- * function.
- */
 export async function handleDevErrorSourceRequest(
   rawUrl: string,
   allow: readonly string[],

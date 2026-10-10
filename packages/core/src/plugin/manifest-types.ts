@@ -1,11 +1,5 @@
-// Admin-facing manifest wire shape — the half of the plugin manifest the
-// precompiled admin and admin-editor read: the `PlumixManifest` payload and
-// its `*ManifestEntry` types, the core nav-group roster, the `<script>` id the
-// payload travels under, and the pure helpers the admin shares with the build
-// (`emptyManifest`, `byPriorityThen`, `seedFromMetaBoxes`, `startingMeta`,
-// `configuredSlotsOf`). Kept free of registry projection and HTML handling so
-// neither ships to the admin.
-// Re-exported unchanged from the public `@plumix/core/manifest` barrel.
+// Shipped to the admin bundle: keep registry projection and HTML handling out
+// of this module.
 
 import type {
   PostCapabilityAction,
@@ -43,10 +37,12 @@ import { DEFAULT_BREAKPOINTS } from "../blocks/index.js";
 export { startingMeta } from "./fields/starting-meta.js";
 export type { StartingMetaField } from "./fields/starting-meta.js";
 
-// Wire shape intentionally equals DashboardWidgetOptions (minus
-// registeredBy) — unlike e.g. FieldTypeManifestEntry, a widget's options
-// carry nothing server-only to drop, so the manifest entry just mirrors
-// them as the admin-facing boundary.
+/**
+ * Wire shape intentionally equals DashboardWidgetOptions (minus
+ * registeredBy) — unlike e.g. FieldTypeManifestEntry, a widget's options
+ * carry nothing server-only to drop, so the manifest entry just mirrors
+ * them as the admin-facing boundary.
+ */
 export interface DashboardWidgetManifestEntry {
   readonly id: string;
   readonly title: Label;
@@ -56,10 +52,8 @@ export interface DashboardWidgetManifestEntry {
 }
 
 /**
- * Built-in nav-icon names that core nav items reference. The admin maps
- * each value to a lucide component at render time — keeps the wire
- * payload free of package identifiers and makes the union exhaustive at
- * the type level.
+ * The admin maps each name to a lucide icon, keeping package identifiers off
+ * the wire.
  */
 export type CoreIconName =
   | EntryMenuIcon
@@ -72,18 +66,8 @@ export type CoreIconName =
   | "key";
 
 /**
- * Built-in nav groups core ships. Plugins target their items at these
- * ids via `nav.group`, and can interleave their own groups by picking
- * priorities between or around these defaults. Labels are
- * `MessageDescriptor`s so the sidebar localizes at render time via
- * the admin's `useLabel` hook.
- *
- * Convention: plugin-declared groups keep their label descriptor id
- * under the same `core.adminNav.<groupId>` namespace (see
- * `@plumix/plugin-menu` → `appearance`, `@plumix/plugin-media` →
- * `library`, `@plumix/plugin-audit-log` → `tools`). The id space is
- * the concept, not the owner — translators see one "Appearance"
- * entry rather than one per plugin sharing the group.
+ * Plugin-declared groups put their label id under `core.adminNav.<groupId>`
+ * too, so translators see one entry per group, not per plugin.
  */
 export const CORE_NAV_GROUPS: readonly {
   readonly id: string;
@@ -113,16 +97,9 @@ export const CORE_NAV_GROUPS: readonly {
 ];
 
 /**
- * Shape serialised into the admin's `<script id="plumix-manifest">` payload.
- * Intentionally a strict subset of `RegisteredEntryType`: drops
- * `registeredBy` (plugin attribution is server-only debug metadata) and
- * `rewrite` (URL mapping is evaluated server-side). Add fields only when the
- * admin UI needs them.
- *
- * `adminSlug` is derived at build time (see `buildManifest`) and is what the
- * admin router uses for `/entries/$slug`. Keeping it in the manifest rather
- * than re-deriving client-side lets the collision check run once on the
- * server and ships the final routing key as authoritative.
+ * Strict subset of `RegisteredEntryType`; add fields only when the admin needs
+ * them. `adminSlug` ships precomputed so the collision check runs once, on the
+ * server.
  */
 export interface EntryTypeManifestEntry {
   readonly name: string;
@@ -141,37 +118,31 @@ export interface EntryTypeManifestEntry {
   readonly showUI: boolean;
   readonly showInSidebar: boolean;
   readonly hasArchive?: boolean | string;
-  /** The namespace the type's `entry:<capabilityType>:*` capabilities live under. */
+  /**
+   * The namespace the type's `entry:<capabilityType>:*` capabilities live
+   * under.
+   */
   readonly capabilityType: string;
   readonly priority?: number;
   readonly menuIcon?: string;
   /** Synonyms the command palette matches in addition to the sidebar label. */
   readonly keywords?: readonly Label[];
   /**
-   * Per-type versioning policy. Populated when the entry type opts
-   * into `supports: ['revisions']`. `maxRevisions` caps how many
-   * revision rows are retained per live entry — oldest pruned past
-   * the cap on each successful update. `autosaveIntervalSeconds`
-   * shapes the editor's autosave cadence in a later slice; defaults
-   * to 60 here so themes can read it without nil-checking.
+   * Set only when the type supports `revisions`. `maxRevisions` caps retained
+   * revisions per entry, pruning the oldest on each update.
    */
   readonly versioning?: {
     readonly maxRevisions: number;
     readonly autosaveIntervalSeconds: number;
   };
   /**
-   * Theme-registered `named` templates selectable for this entry type,
-   * surfaced to the editor's template picker. Sourced from the theme's
-   * `templates` rules (not the plugin registry) and threaded in via
-   * `buildManifest` options — the precompiled admin can't import the theme.
-   * Omitted when the theme registers none for this type.
+   * From the theme's `templates` rules, passed via `buildManifest` options
+   * because the precompiled admin can't import the theme. Omitted when none
+   * target this type.
    */
   readonly namedTemplates?: readonly NamedTemplateChoice[];
   /**
-   * Editor-selectable per-entry access policies for this type — the `key` +
-   * `label` of each {@link SelectableAccessPolicy} in `access.policies`, with
-   * the resolver stripped. Feeds the editor's visibility picker. Omitted when
-   * the type declares no selectable policies (the default is the only option).
+   * `access.policies` without resolvers. Omitted when the type declares none.
    */
   readonly accessPolicies?: readonly AccessPolicyChoice[];
 }
@@ -187,14 +158,7 @@ export interface AccessPolicyChoice {
 }
 
 /**
- * Shared base for every "card of fields" serialised entry. Each
- * concrete projection extends with its identifier + any surface-
- * specific layout + scope fields.
- */
-/**
- * Entry-box wire field — drops `span` from the shared
- * `MetaBoxFieldManifestEntry`. The editor rail can't honor the hint
- * (see `EntryMetaBoxOptions`), so shipping it would just bloat the wire.
+ * Omits `span`: the editor rail renders every field full width.
  */
 export type EntryMetaBoxFieldManifestEntry = Omit<
   MetaBoxFieldManifestEntry,
@@ -215,9 +179,7 @@ export interface EntryMetaBoxManifestEntry extends Omit<
 > {
   readonly id: string;
   /**
-   * @deprecated Ignored by the admin editor — all entry meta boxes
-   * render in the document rail as collapsible sections. Kept on the
-   * wire so older plugins that set it don't fail manifest validation.
+   * @deprecated Ignored by the admin editor; kept so plugins that set it still validate.
    */
   readonly location?: "bottom" | "sidebar";
   readonly entryTypes: readonly string[];
@@ -234,12 +196,8 @@ export interface UserMetaBoxManifestEntry extends MetaBoxBaseManifestEntry {
 }
 
 /**
- * Shape serialised for termTaxonomies in the manifest. Strict allowlist
- * projection of `RegisteredTermTaxonomy` — drops `registeredBy` (server-only
- * debug metadata) and server-only operational flags (`isInQuickEdit`,
- * `hasAdminColumn`, `rewrite`) that don't affect the admin UI today.
- * `entryTypes` is kept so future admin surfaces (term-picker on post
- * editor) can filter by post type without a second round-trip.
+ * Strict allowlist of `RegisteredTermTaxonomy`; server-only fields stay off the
+ * wire.
  */
 export interface TermTaxonomyManifestEntry {
   readonly name: string;
@@ -258,12 +216,6 @@ export interface TermTaxonomyManifestEntry {
   readonly keywords?: readonly Label[];
 }
 
-/**
- * Shape serialised for settings groups in the manifest. Same shared
- * shape as every other meta surface; the storage key `name` replaces
- * the meta-box `id`. Fields use the same `MetaBoxFieldManifestEntry`
- * type — one field contract for plugin authors.
- */
 export interface SettingsGroupManifestEntry extends MetaBoxBaseManifestEntry {
   readonly name: string;
 }
@@ -282,20 +234,8 @@ export interface SettingsPageManifestEntry {
 }
 
 /**
- * One row in the assembled admin sidebar tree. Sources contributing
- * items: core (Dashboard, Users, Settings), entry types (auto-projected
- * to the `content` group), term taxonomies (auto-projected to the
- * `term-taxonomies` group), and plugin-registered admin pages with
- * `nav` set.
- *
- * Exactly one of `icon` (plugin-supplied React component ref) or
- * `coreIcon` (built-in lucide name) is set per item; admin picks a
- * generic fallback when neither is provided.
- *
- * `component` is set only for plugin-rendered routes — the admin's
- * `/p/$` catch-all looks up this ref to render the page. Items that
- * point at core admin routes (`/`, `/users`, `/settings`,
- * `/entries/<slug>`, etc.) leave it undefined.
+ * At most one of `icon` and `coreIcon` is set. `component` is set only for
+ * plugin pages, which the admin's `/p/$` catch-all renders.
  */
 export interface AdminNavItem {
   readonly to: string;
@@ -342,7 +282,10 @@ export interface MarkManifestEntry {
   readonly keyboardShortcut?: string;
   readonly bubbleMenuLabel?: string;
   readonly bubbleMenuIcon?: string;
-  /** Export name on the plugin's `adminEntry` module — see `MarkSpec.adminSchema`. */
+  /**
+   * Export name on the plugin's `adminEntry` module — see
+   * `MarkSpec.adminSchema`.
+   */
   readonly adminSchema?: string;
 }
 
@@ -359,10 +302,8 @@ export interface PatternManifestEntry {
 }
 
 /**
- * Wire-shipped manifest payload. Every field is optional on the type
- * so test fixtures can declare just the slice they exercise; the
- * server's `buildManifest` always populates all of them and consumers
- * coerce missing fields to `[]` at the read site.
+ * All optional so fixtures can declare one slice; `buildManifest` fills every
+ * field, and readers default missing ones to `[]`.
  */
 export interface PlumixManifest {
   readonly entryTypes?: readonly EntryTypeManifestEntry[];
@@ -397,19 +338,14 @@ export interface PlumixManifest {
    */
   readonly i18n?: I18nManifest;
   /**
-   * Per-plugin catalog URL maps for the i18n runtime registry (#697).
-   * Admin fetches `pluginI18n[id].catalogs[locale]` at boot, merges the
-   * loaded `messages` into the active Lingui instance. The source
-   * locale never has an entry (Lingui returns `descriptor.message`
-   * when active === source). Locales are intersected with the site's
-   * enabled list before emission. Plugins without an `i18n` slot
-   * don't appear here.
+   * Admin fetches `pluginI18n[id].catalogs[locale]` at boot. Locales are
+   * limited to the site's enabled ones; the source locale never appears, as
+   * Lingui falls back to `descriptor.message`.
    */
   readonly pluginI18n?: PluginI18nManifest;
   /**
-   * Which infrastructure slots the site's `plumix()` config fills. Fixed at
-   * build time, so it rides the manifest: an admin surface backed by a slot
-   * hides itself when the deployment can't do what it offers (ADR 0014).
+   * Fixed at build time, so it rides the manifest: the admin hides a
+   * slot-backed surface the deployment can't serve.
    */
   readonly configuredSlots?: ConfiguredSlots;
   /**
@@ -426,7 +362,7 @@ export interface PlumixManifest {
   readonly frameworkRoutes?: Pick<FrameworkRoutes, "author">;
 }
 
-// Constrains each slot name to a key of the config it is read off.
+/** Constrains each slot name to a key of the config it is read off. */
 type ConfigKey<K extends keyof PlumixConfig> = K;
 
 /**
@@ -468,10 +404,8 @@ export interface I18nManifest {
 }
 
 /**
- * Strict manifest shape — every slice is populated. `buildManifest`
- * returns this; tests reading from it don't need `?.` everywhere. The
- * wider `PlumixManifest` (all-optional) is what flows over the wire
- * and what test fixtures construct.
+ * What `buildManifest` returns: every slice populated. The all-optional
+ * `PlumixManifest` is the wire and fixture shape.
  */
 export type BuiltManifest = {
   readonly [K in keyof PlumixManifest]-?: NonNullable<PlumixManifest[K]>;
@@ -526,12 +460,8 @@ export function emptyManifest(): PlumixManifest {
 }
 
 /**
- * Shared comparator: `priority` ascending (unspecified sorts last),
- * ties broken by a caller-supplied stable key (id / name) in
- * alphabetical order. Used by `buildManifest` server-side AND the
- * admin's in-memory filter helpers so the shipped manifest and the
- * admin filter paths agree on order regardless of registration
- * sequence.
+ * Unset `priority` sorts last; ties break alphabetically by `getKey`. The
+ * server build and admin filters share it so their orders agree.
  */
 export function byPriorityThen<T extends { readonly priority?: number }>(
   getKey: (item: T) => string,
@@ -545,11 +475,8 @@ export function byPriorityThen<T extends { readonly priority?: number }>(
 }
 
 /**
- * Seed per-field values from a server meta bag: the stored value of each
- * registered key, and nothing for a key storage lacks, whatever the field's
- * `.default()` (ADR 0026). Shared by every admin form that owns meta state
- * (term edit route, user edit route, settings group card) — one shape, one
- * behaviour.
+ * Seeds each registered key with its stored value; a key storage lacks gets
+ * nothing, whatever the field's `.default()`.
  */
 export function seedFromMetaBoxes(
   boxes: readonly {

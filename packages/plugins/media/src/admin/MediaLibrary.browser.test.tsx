@@ -31,7 +31,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// What the admin shell publishes on `window.plumix` from the manifest.
+/** What the admin shell publishes on `window.plumix` from the manifest. */
 function seedSlots(storage: boolean): void {
   vi.stubGlobal("plumix", {
     configuredSlots: {
@@ -57,8 +57,10 @@ function renderLibrary(mode: MediaLibraryProps["mode"]): void {
   );
 }
 
-// The upload PUT goes through XMLHttpRequest for its progress events, so the
-// browser boundary is stubbed here rather than fetch.
+/**
+ * The upload PUT goes through XMLHttpRequest for its progress events, so the
+ * browser boundary is stubbed here rather than fetch.
+ */
 function stubPutStatus(status: number): void {
   class FakeXhr {
     status = 0;
@@ -75,7 +77,7 @@ function stubPutStatus(status: number): void {
   vi.stubGlobal("XMLHttpRequest", FakeXhr);
 }
 
-// Returns whether the page claimed the drop (`preventDefault`).
+/** Returns whether the page claimed the drop (`preventDefault`). */
 function dropFile(): boolean {
   const dataTransfer = new DataTransfer();
   dataTransfer.items.add(new File(["x"], "cat.png", { type: "image/png" }));

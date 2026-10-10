@@ -8,7 +8,6 @@ import type { IslandProps } from "../island-props.js";
 interface EmbedFacadeProps {
   readonly src: string;
   readonly title: string;
-  /** The facade button's accessible name, localized by the block's render. */
   readonly loadLabel: string;
   readonly caption: string;
   readonly provider: string;
@@ -19,11 +18,8 @@ interface EmbedFacadeProps {
 }
 
 /**
- * Click-to-load facade for the `core/embed` block. The server renders
- * only a placeholder + play affordance — no `<iframe>`, so a visitor's
- * browser makes no third-party connection until they opt in. Hydrated
- * with `client="interaction"`, the first click replays through to mount
- * the real (still sandboxed) iframe.
+ * Renders no `<iframe>` on the server, so the visitor's browser makes no
+ * third-party connection until the first click mounts it.
  */
 export function EmbedFacade(
   props: IslandProps<EmbedFacadeProps>,

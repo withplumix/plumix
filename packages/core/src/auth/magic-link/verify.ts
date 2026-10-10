@@ -10,51 +10,19 @@ import { hashToken } from "../tokens.js";
 import { MagicLinkError } from "./errors.js";
 
 interface VerifyMagicLinkOptions {
-  /**
-   * When true, allow this magic-link verify to mint the very first
-   * admin (forwarded to `resolveExternalIdentity`). The route handler
-   * reads this from `ctx.bootstrapAllowed`, derived from
-   * `auth.bootstrapVia`. Default false keeps the bootstrap rail
-   * passkey-only.
-   */
   readonly bootstrapAllowed?: boolean;
-  /**
-   * Open self-signup (from `auth.selfSignup`). Present bypasses the domain
-   * allowlist and grants `defaultRole`; absent keeps domain-gated signup.
-   */
   readonly selfSignup?: PlumixSelfSignupConfig;
-  /** The meta a user this click signs up starts with — see `resolveExternalIdentity`. */
   readonly meta: JsonObject;
 }
 
 interface VerifyMagicLinkResult {
   readonly user: User;
-  /**
-   * True when the click provisioned a brand-new user (signup path);
-   * false when the token bound to an existing user (sign-in path).
-   * The caller forwards this to `user:signed_in`'s `firstSignIn`
-   * field so audit logs and onboarding handlers can branch on
-   * first-vs-returning. Mirrors `resolveOAuthUser`'s `created`.
-   */
   readonly created: boolean;
 }
 
 /**
- * Consume a magic-link token and return the matching user + whether
- * it was just created (signup) or pre-existing (sign-in).
- *
- *   userId set in the token row → sign-in; created=false.
- *   userId null in the token row → signup; created comes from
- *     `resolveExternalIdentity` (true on a fresh row, false when the
- *     helper linked an existing user via verified-email match).
- *
- * Atomic compare-and-delete via `DELETE … RETURNING` — a concurrent
- * second verify of the same token sees an empty result, never the same
- * row twice. Scoped by `type='magic_link'` so a hash collision with
- * another token type can't accidentally consume that row.
- *
- * The link click implicitly verifies that the user has access to the
- * email's inbox — we always pass `emailVerified: true` to the helper.
+ * Consumes the token atomically, so a concurrent second verify throws
+ * `tokenInvalid`.
  */
 export async function verifyMagicLink(
   db: Db,

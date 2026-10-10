@@ -33,7 +33,9 @@ export type S3Credentials = Omit<SigV4Credentials, "region">;
 
 export interface S3Config {
   readonly bucket: string;
-  /** The signing region: `auto` for R2, `us-east-1` for MinIO and GCS interop. */
+  /**
+   * The signing region: `auto` for R2, `us-east-1` for MinIO and GCS interop.
+   */
   readonly region: string;
   /**
    * Service origin — `https://s3.eu-west-1.amazonaws.com`,
@@ -43,10 +45,8 @@ export interface S3Config {
    */
   readonly endpoint: string;
   /**
-   * Literal credentials, or an `(env) => S3Credentials` resolver read from the
-   * handler's env on connect — the form to use when the key pair is a secret.
-   * On AWS the key needs `s3:ListBucket` as well as object permissions: without
-   * it a missing object answers 403, which surfaces as an error, not `null`.
+   * On AWS the key needs `s3:ListBucket` too, or a missing object answers 403,
+   * which surfaces as an error rather than `null`.
    */
   readonly credentials: EnvInput<S3Credentials>;
   /**
@@ -241,15 +241,19 @@ function metadataOf(response: Response): HeadResult {
   };
 }
 
-// Only the `<Code>` element is read off an error document. The rest of the
-// body is the bucket's prose and never makes it into a message.
+/**
+ * Only the `<Code>` element is read off an error document. The rest of the
+ * body is the bucket's prose and never makes it into a message.
+ */
 async function errorCodeOf(response: Response): Promise<string | undefined> {
   const text = await response.text().catch(() => "");
   return elementText(text, "Code") || undefined;
 }
 
-// ListObjectsV2 answers in XML and no server runtime ships a parser for it;
-// the document is flat enough that element extraction is the whole job.
+/**
+ * ListObjectsV2 answers in XML and no server runtime ships a parser for it;
+ * the document is flat enough that element extraction is the whole job.
+ */
 function parseListing(xml: string): ListResult {
   const items: ListItem[] = [];
   for (const match of xml.matchAll(/<Contents>([\s\S]*?)<\/Contents>/g)) {

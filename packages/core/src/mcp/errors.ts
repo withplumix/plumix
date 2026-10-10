@@ -2,8 +2,9 @@ type McpToolErrorCode = "not_found" | "forbidden" | "bad_input";
 
 /**
  * Domain error a tool's `run` throws to signal a caller-facing condition. The
- * call-tool handler maps these to MCP error envelopes ({@link toToolErrorResult});
- * anything else propagates as a protocol-level JSON-RPC error.
+ * call-tool handler maps these to MCP error envelopes ({@link
+ * toToolErrorResult}); anything else propagates as a protocol-level JSON-RPC
+ * error.
  */
 export class McpToolError extends Error {
   static {
@@ -39,11 +40,7 @@ interface McpToolErrorResult {
   readonly [key: string]: unknown;
 }
 
-/**
- * Map a domain error to an MCP tool-result envelope (`isError: true`) so the
- * client sees a clear, non-crashing failure. The code is prefixed so an agent
- * can branch on it; the message carries the human-readable detail.
- */
+/** Codes are prefixed so an agent can branch on them. */
 export function toToolErrorResult(error: McpToolError): McpToolErrorResult {
   return {
     isError: true,

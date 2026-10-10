@@ -11,17 +11,9 @@ import { idParam } from "../../contract/validation.js";
 
 const listInput = v.object({ entryId: idParam });
 
-// Five-minute "actively editing" window per #293. Pure HTTP polling,
-// not real-time presence — admin clients poll every ~30 s with a
-// short `staleTime`. The window is forward-compatible with a future
-// SSE upgrade since the wire shape is just the user list.
+/** Polled over HTTP by admin clients, not real-time presence. */
 const ACTIVE_WINDOW_MS = 5 * 60 * 1000;
 
-// Returns the users currently editing `entryId` — autosave rows
-// touched within the last five minutes — excluding the caller. Empty
-// list when no co-authors are active. Polled by the editor header to
-// surface a "X is also editing this" indicator before the user
-// hits Publish.
 export const list = base
   .use(authenticated)
   .input(listInput)
@@ -50,10 +42,8 @@ export const list = base
       notOlderThan,
       excludeAuthorId: context.user.id,
     });
-    // Inline element shape — naming the interface here would force
-    // an `export` (so the router-output type can name it), and knip
-    // flags unused exports. The anonymous literal lets TS infer the
-    // shape into the router type without a top-level export.
+    // Inline so TS infers the shape into the router type without a top-level
+    // export, which knip would flag as unused.
     const items: {
       id: number;
       name: string | null;

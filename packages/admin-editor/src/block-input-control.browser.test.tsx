@@ -140,9 +140,8 @@ describe("BlockInputControl", () => {
       },
       undefined,
     );
-    // Unlike a native <select> (which silently shows the first option), the
-    // Radix trigger stays blank until a real value is set — blocks seed a
-    // default, so this only surfaces for an unspecified attribute.
+    // The Radix trigger stays blank until a value is set, unlike a native
+    // <select>.
     expect(getByTestId("block-input-stackAt").textContent).toBe("");
   });
 
@@ -272,10 +271,8 @@ describe("BlockInputControl", () => {
     expect(queryByTestId("block-input-tag-create")).toBeNull();
   });
 
-  // The Tiptap + ProseMirror lazy chunk is heavy; under a loaded CI box it can
-  // resolve past the 1s findBy default. Raise the findBy margin to 5s and the
-  // test timeout above it, so a real failure surfaces the informative findBy
-  // error instead of racing vitest's (default 5s) test timeout.
+  // The heavy Tiptap chunk can resolve past the 1s findBy default on a loaded
+  // CI box; the test timeout sits above the raised findBy margin.
   test(
     "richtext lazy-loads the Tiptap toolbar and editable surface",
     { timeout: 15_000 },
@@ -303,9 +300,8 @@ describe("BlockInputControl", () => {
       expect(editor.getAttribute("contenteditable")).toBe("true");
       expect(editor.textContent).toContain("Hello");
 
-      // Quotes are folded in too: the blockquote toggle wraps the block.
-      // Asserted before the format dropdown — opening the Radix Select portal
-      // steals the editor selection, so exercise the editor toggles first.
+      // Before the format dropdown: opening the Radix Select portal steals the
+      // editor selection.
       fireEvent.click(getByTestId("block-input-body-blockquote"));
       expect(onChange).toHaveBeenCalledWith(
         expect.stringContaining("<blockquote"),

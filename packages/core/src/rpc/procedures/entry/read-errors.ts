@@ -2,9 +2,8 @@ import type { EntryReadErrors } from "../../../rpc-errors.js";
 import { EntryReadError } from "../../../entries/errors.js";
 
 /**
- * Translate an entries-read domain error into the oRPC typed error to throw,
- * preserving the wire contract the SPA already handles. `undefined` means this
- * error is not ours to translate — the caller rethrows what it caught.
+ * `undefined` means the error is not an entries-read error; the caller
+ * rethrows what it caught.
  */
 export function toRpcEntryReadError(
   error: unknown,

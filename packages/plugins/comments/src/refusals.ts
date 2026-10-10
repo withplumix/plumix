@@ -1,14 +1,8 @@
 import type { Label } from "plumix/i18n";
 
 /**
- * One refusal: the status it answers with, the control it is about by
- * default, and what the visitor is told. The `error` code keyed here is
- * what the JSON path has always answered with, so a scripted caller reads
- * exactly what it read before — and the island turns that code back into
- * this message rather than carrying a second copy of the wording.
- *
- * Statuses live here rather than at each exit of the handler because one
- * table is what lets every exit go through one `fail`.
+ * `error` codes are the JSON path's established wire values, and the island
+ * maps them back to this message.
  */
 export interface CommentRefusal {
   readonly status: number;

@@ -12,16 +12,9 @@ import { useMediaLabels } from "./rpc.js";
 
 export { M } from "./messages.js";
 
-// `media` field admin renderer. The bundler registers it with the host
-// admin from the `ctx.registerFieldType` declaration in `field-types.ts`,
-// dispatched from the meta-box-field renderer's plugin path.
-//
-// Meta storage is the plain media id — the preview resolves its label
-// through the lookup path. Block attrs keep the full `MediaSelection`
-// snapshot (`{ id, url, alt, ... }`) for render, so object values
-// display straight from the snapshot. The "Select" / "Change" button
-// opens a fixed-position modal containing
-// `<MediaLibrary mode="picker" accept={accept} />`.
+// Meta storage is the plain media id, so the preview looks its label up. Block
+// attrs keep the full `MediaSelection` snapshot for render, so object values
+// display straight from it.
 
 interface MediaValue {
   readonly id: string;
@@ -47,8 +40,10 @@ export function normalizeValue(raw: unknown): MediaValue | null {
   };
 }
 
-// Metabox fields store the plain id; block-attr fields keep the full
-// snapshot — the block renderer reads `url`/`alt` directly from attrs.
+/**
+ * Metabox fields store the plain id; block-attr fields keep the full
+ * snapshot — the block renderer reads `url`/`alt` directly from attrs.
+ */
 export function selectionWriteValue(
   selection: MediaSelection,
   inBlockEditor: boolean,
@@ -56,9 +51,10 @@ export function selectionWriteValue(
   return inBlockEditor ? selection : selection.id;
 }
 
-// Clear is offered only for standalone metabox fields. In the block editor
-// (signalled by the sibling `attrs` the block passes down) the block itself is
-// the unit an author removes, so a per-field Clear is redundant clutter.
+/**
+ * In the block editor the block itself is the unit an author removes, so a
+ * per-field Clear would be redundant.
+ */
 export function offersClear(
   hasValue: boolean,
   required: boolean,
@@ -89,9 +85,11 @@ export function MediaPickerField({
 }: {
   readonly field: MetaBoxFieldManifestEntry;
   readonly rhf: {
-    // Not JSON: in a metabox this is RHF's own controller value, which can be a
-    // `Date` (see the temporal branch in admin's `meta-box-field`). Only the
-    // write half is provably JSON.
+    /**
+     * Not JSON: in a metabox this is RHF's own controller value, which can be a
+     * `Date` (see the temporal branch in admin's `meta-box-field`). Only the
+     * write half is provably JSON.
+     */
     readonly value: unknown;
     readonly onChange: (next: JsonValue) => void;
     readonly onBlur: () => void;
@@ -99,8 +97,10 @@ export function MediaPickerField({
   };
   readonly disabled: boolean;
   readonly testId: string;
-  // Present only in the block inspector (the block's sibling attributes);
-  // absent in metaboxes. Used purely to know which context we're rendering in.
+  /**
+   * Present only in the block inspector (the block's sibling attributes);
+   * absent in metaboxes. Used purely to know which context we're rendering in.
+   */
   readonly attrs?: JsonObject;
 }): ReactNode {
   const { i18n } = useLingui();
@@ -199,9 +199,11 @@ function MediaPreview({
   );
 }
 
-// Own component so the lookup query only mounts for id-shaped values.
-// While loading — or when the target is gone — fall back to the
-// "Selected (id N)" placeholder.
+/**
+ * Own component so the lookup query only mounts for id-shaped values.
+ * While loading — or when the target is gone — fall back to the
+ * "Selected (id N)" placeholder.
+ */
 function ResolvedPreview({
   id,
   testId,
@@ -234,11 +236,10 @@ function ResolvedPreview({
   );
 }
 
-// Modal hosting the MediaLibrary in picker mode, built on the shared
-// `Dialog` from `plumix/admin/ui` — radix handles the focus trap, Escape,
-// and backdrop dismiss that this used to wire by hand. Mounted only while
-// open (parent renders conditionally), so closing routes through
-// `onOpenChange` → `onCancel`.
+/**
+ * Mounted only while open (the parent renders it conditionally), so closing
+ * routes through `onOpenChange` → `onCancel`.
+ */
 export function MediaPickerModal({
   accept,
   onSelect,

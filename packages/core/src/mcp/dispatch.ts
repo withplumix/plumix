@@ -12,17 +12,8 @@ import { buildMcpToolRegistry } from "./registry.js";
 export type McpHandler = (ctx: AppContext) => Promise<Response>;
 
 /**
- * Serve the first-party MCP endpoint. Mounted ahead of the `/_plumix/` CSRF
- * gate and authenticated by bearer PAT (CSRF-immune). POST-only; the transport
- * itself would turn a GET into an SSE stream, so the method check lives here.
- *
- * In dev over loopback the endpoint trusts the local developer with no token
- * (see {@link resolveMcpDevTrust}); production and non-loopback dev binds keep
- * the bearer-PAT requirement unchanged.
- *
- * The MCP SDK and the valibot→JSON-Schema converter load via dynamic import so
- * public/cold-start paths never evaluate them — only the lightweight tool
- * registry stays in the main graph.
+ * Mounted ahead of the CSRF gate: bearer tokens are CSRF-immune. POST-only
+ * because the transport would turn a GET into an SSE stream.
  */
 export async function handleMcpRequest(ctx: AppContext): Promise<Response> {
   if (ctx.request.method !== "POST") return methodNotAllowed(["POST"]);

@@ -298,10 +298,9 @@ describe("verifyMagicLink — signup branch (userId null)", () => {
   });
 
   test("falls through to sign-in if a user with this email exists at verify time", async () => {
-    // Race: two paths created the same user during the 15-min window —
-    // OAuth signup completed while the magic-link signup token was
-    // pending. The link click should sign the user into the now-
-    // existing row, not refuse and not duplicate.
+    // OAuth signup completed while the magic-link signup token was pending;
+    // the click signs into the existing row rather than refusing or
+    // duplicating.
     const db = await createTestDb();
     await userFactory.transient({ db }).create({ role: "admin" });
     const raced = await userFactory.transient({ db }).create({

@@ -10,11 +10,10 @@ import { listEnvelope } from "./envelope.js";
 import { apiVisibleMetaKeys, projectEntry } from "./projection.js";
 import { readPagination } from "./schemas.js";
 
-// Every entry-read failure mode (missing, reserved-type, forbidden, an
-// unpublished status the public principal can't see) collapses to 404 so the
-// existence of unreadable content stays hidden. `undefined` for a
-// non-EntryReadError, which is unexpected: the caller rethrows it for the
-// dispatcher to surface as a 500.
+/**
+ * Every failure collapses to 404 so unreadable content stays hidden.
+ * `undefined` for anything else, which the caller rethrows as a 500.
+ */
 export function entryNotFound(
   error: unknown,
   errors: RestErrors,
@@ -25,12 +24,17 @@ export function entryNotFound(
   return undefined;
 }
 
-// Pagination params own these query keys; a taxonomy that happens to share a
-// name with one is skipped as a filter so `?page=2` can't double as a term query.
+/**
+ * Pagination params own these query keys; a taxonomy that happens to share a
+ * name with one is skipped as a filter so `?page=2` can't double as a term
+ * query.
+ */
 const RESERVED_QUERY_PARAMS = new Set(["page", "per_page"]);
 
-// Map `?<taxonomy>=slug,slug` query params onto the service's term filter. Only
-// registered public taxonomies are honored, so any other query key is ignored.
+/**
+ * Map `?<taxonomy>=slug,slug` query params onto the service's term filter. Only
+ * registered public taxonomies are honored, so any other query key is ignored.
+ */
 function readTermFilters(
   context: AppContext,
   url: URL,
@@ -49,8 +53,10 @@ function readTermFilters(
   return Object.keys(filters).length > 0 ? filters : undefined;
 }
 
-// A paginated envelope of a public content type's entries: published ones,
-// plus whatever unpublished rows the caller's own token may see.
+/**
+ * A paginated envelope of a public content type's entries: published ones,
+ * plus whatever unpublished rows the caller's own token may see.
+ */
 export async function listEntriesEnvelope(
   context: AppContext,
   entryType: RegisteredEntryType,
@@ -72,8 +78,7 @@ export async function listEntriesEnvelope(
   const rows = hasNext ? fetched.slice(0, perPage) : fetched;
 
   // The same resolution a public page gets, so a title reads as it does
-  // there. It replaces the resource's own author and term reads: one batch
-  // of each for the page.
+  // there.
   const resolved = await resolveEntryList(context, rows);
   const visibleMeta = apiVisibleMetaKeys(context.plugins, entryType.name);
   const data = resolved.map((entry) =>
@@ -83,7 +88,7 @@ export async function listEntriesEnvelope(
   return listEnvelope(data, { url, page, perPage, hasNext });
 }
 
-// One published entry. Unviewable or missing content is 404, never 403.
+/** One published entry. Unviewable or missing content is 404, never 403. */
 export async function getEntryItem(
   context: AppContext,
   entryType: RegisteredEntryType,

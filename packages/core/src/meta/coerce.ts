@@ -33,22 +33,16 @@ const booleanSchema = v.union([
   ),
 ]);
 
-// Both halves of the round-trip are under-typed by the standard library, and
-// naming their real contracts once here is what keeps every caller below free
-// of assertions. `JSON.stringify` is declared as returning `string` but hands
-// back `undefined` for a value it cannot represent at all; `JSON.parse` is
-// declared as returning `any`, though what comes out of a string this module
-// just produced is JSON by construction. Walking the result with a schema
-// would restate that second contract at a per-node cost and could only ever
-// agree with it.
+/**
+ * The standard library under-types both: `stringify` can return `undefined`,
+ * and `parse` of a string this module produced is JSON by construction.
+ */
 const stringifyJson: (value: unknown) => string | undefined = JSON.stringify;
 const parseJson: (text: string) => JsonValue = JSON.parse;
 
 /**
- * Decode any value into the JSON it serializes to, or `undefined` when it has
- * no serialization — `JSON.stringify` throws on a BigInt and yields nothing
- * for a function or a Symbol, and a reader handed back `undefined` for
- * something a plugin thought it stored is worse than a rejected write.
+ * `undefined` when the value has no serialization (BigInt, function, Symbol)
+ * rather than storing something a reader can't get back.
  */
 export function decodeJsonValue(value: unknown): JsonValue | undefined {
   let encoded: string | undefined;
@@ -60,7 +54,6 @@ export function decodeJsonValue(value: unknown): JsonValue | undefined {
   return encoded === undefined ? undefined : parseJson(encoded);
 }
 
-/** A decoded value, or the fact that nothing decoded it. */
 type Coerced =
   { readonly ok: true; readonly value: JsonValue } | { readonly ok: false };
 
@@ -82,8 +75,10 @@ export function coerceValue(type: MetaScalarType, value: unknown): Coerced {
   return result.success ? { ok: true, value: result.output } : COERCE_FAIL;
 }
 
-// A hydrated reference payload as it comes back off a read: the lookup
-// adapter's row, of which only the id is ever stored.
+/**
+ * A hydrated reference payload as it comes back off a read: the lookup
+ * adapter's row, of which only the id is ever stored.
+ */
 const referencePayloadSchema = v.object({ id: v.string() });
 
 /**

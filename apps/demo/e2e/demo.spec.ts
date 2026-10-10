@@ -1,18 +1,15 @@
-// Full demo-sandbox funnel against the real worker (`plumix dev`) with the
-// per-session Durable Object as the database. No globalSetup / storageState:
-// the demo mints its own session at `/demo` and the synthetic authenticator
-// provides identity, so the spec drives the same path a visitor does —
-// public showcase → CTA → provision → admin → create → persist → refused.
+// No globalSetup / storageState: the demo mints its own session at `/demo`,
+// so the spec drives the same path a visitor does.
 
 import { expect, test } from "@playwright/test";
 import { CONTENT_LIST_ROWS } from "plumix/test/playwright";
 
 const POST_TITLE = "A post I made in the demo";
 
-// The seeded typography showcase — the richest seeded entry, so it's a reliable
-// target for opening the editor and rendering tagged blocks. The seed pins it to
-// a fixed id (`POST_BASE_ID + 0` in seed/generate.mjs), so open it directly
-// rather than hunting a date-sorted, paginated list where it sits last.
+/**
+ * The richest seeded entry, pinned to a fixed id by the seed, so it's opened
+ * directly rather than hunted in a paginated list.
+ */
 const SHOWCASE_ID = 200;
 const SHOWCASE_SLUG = "typography-and-elements-a-theme-test-sheet";
 
@@ -62,11 +59,6 @@ test("visitor enters the demo, creates a post, and it persists", async ({
   expect(blocked.status()).toBe(403);
 });
 
-// Regression: the visual editor was dead in the demo runtime (public renders
-// authenticated only `plumix_session`, so a `plumix_demo` visitor rendered
-// anonymous → no editor runtime → no bridge) and the demo pill leaked into the
-// canvas. Nothing opened the editor in the real demo runtime, so nothing caught
-// it — this does.
 const CANVAS_FRAME = '[data-testid="plumix-canvas-frame"] iframe';
 
 test("the visual editor boots inside the demo — blocks are selectable, no demo pill in the canvas", async ({
@@ -81,19 +73,15 @@ test("the visual editor boots inside the demo — blocks are selectable, no demo
   await page.goto(`entries/posts/${String(SHOWCASE_ID)}/edit`);
   await page.waitForURL(/\/entries\/posts\/\d+\/edit/);
 
-  // The canvas iframe loads the entry's public route with `?plumix.edit`. If the
-  // editor runtime booted (the fix), edit mode is entered and the seeded blocks
-  // render tagged. Before the fix the render fell through to read-only, so no
-  // `data-plumix-mode="edit"` and no tagged blocks.
+  // A booted editor runtime enters edit mode and renders the seeded blocks
+  // tagged; a read-only render has neither.
   const canvas = page.frameLocator(CANVAS_FRAME);
   await expect(canvas.locator('[data-plumix-mode="edit"]')).toBeAttached();
   await expect(canvas.locator("[data-plumix-id]").first()).toBeVisible();
 
-  // Selecting a block from the Layers tab draws the host-side overlay — which
-  // is positioned from geometry the canvas reports back over the bridge. So the
-  // overlay appearing proves the in-iframe editor runtime booted AND the bridge
-  // is live (the whole path canEdit → runtime → bridge). Driving it from the
-  // rail rather than a canvas click keeps it off the CSS-scaled canvas surface.
+  // The host-side overlay is positioned from geometry the canvas reports over
+  // the bridge, so it proves runtime and bridge are live. The rail avoids the
+  // CSS-scaled canvas surface.
   await page.getByTestId("plumix-tab-layers").click();
   await page.locator("[data-testid^='layer-']").first().click();
   await expect(page.getByTestId("plumix-overlay-selected")).toBeVisible();
@@ -103,9 +91,8 @@ test("the visual editor boots inside the demo — blocks are selectable, no demo
   await expect(canvas.locator("#plumix-demo-toolbar")).toHaveCount(0);
 });
 
-// Regression: a new entry has no content, and the theme skipped `BlockRenderer`
-// for it, so the canvas had no root to mount into — inserted blocks landed in
-// the editor's tree but never rendered.
+// A new entry has no content, yet the canvas still needs a root to mount
+// inserted blocks into.
 test("a block inserted into a new post renders in the canvas", async ({
   page,
 }) => {
@@ -151,7 +138,8 @@ test("the author byline links to the author archive of the author's posts", asyn
   await expect(byline).toHaveText("The Plumix Editors");
   await byline.click();
 
-  // Lands on the author archive, which renders the heading + the author's posts.
+  // Lands on the author archive, which renders the heading + the author's
+  // posts.
   await page.waitForURL(/\/authors\/the-plumix-editors/);
   await expect(page.getByTestId("post-list")).toContainText(
     "Posts by The Plumix Editors",
@@ -267,8 +255,7 @@ test("deleting a media item from the library removes its card", async ({
 });
 
 // The demo refuses what reaches past the visitor's sandbox (a credential, a
-// real email) and the admin hides it; everything left in users and the profile
-// acts on the sandbox and succeeds.
+// real email), and the admin hides it.
 test("users and the profile offer only what the demo serves, and each of it succeeds", async ({
   page,
 }) => {

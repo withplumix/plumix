@@ -75,8 +75,10 @@ export interface NodeSiteHandler {
   ) => Promise<void | ScheduledRunReport>;
 }
 
-// `db` is the runner's test seam; an embedder's cron writes to the site's own
-// database.
+/**
+ * `db` is the runner's test seam; an embedder's cron writes to the site's own
+ * database.
+ */
 export type CronOverrides = Omit<
   ScheduledRunnerOptions,
   "app" | "env" | "fire" | "db"
@@ -90,36 +92,24 @@ export interface NodeSite {
    */
   readonly listener: RequestListener;
   /**
-   * Start firing this site's scheduled tasks, returning a handle whose
-   * `stop()` waits for the run in flight. An embedder calls it when it wants
-   * cron, so building the site starts no background work on its own.
+   * `stop()` waits for the run in flight. Building the site starts no
+   * background work.
    */
   readonly startCron: (overrides?: CronOverrides) => Promise<Scheduler>;
   /**
-   * Drain the deferred work no invocation carried away — telemetry delivery,
-   * cache purges — and release the handler's database connection. A host
-   * embedding `listener` owes the site this on its own shutdown; the process
-   * `serveWhenMain` runs calls it on `SIGTERM`. Resolves how many tasks were
-   * abandoned. Not terminal: a later request rebinds what this released.
+   * A host embedding `listener` owes the site this on shutdown. Resolves how
+   * many tasks were abandoned. Not terminal: a later request rebinds.
    */
   readonly dispose: (options?: DisposeOptions) => Promise<DisposeResult>;
   /**
-   * Run the site as a process — an `http` server in front of `listener`, cron
-   * unless the config turned it off, and the shutdown protocol — when `main`
-   * says this module is the process's entry point. A no-op otherwise, so
-   * importing the entry to embed it serves nothing.
+   * A no-op unless `main`, so importing the entry to embed it serves nothing.
    */
   readonly serveWhenMain: (main: boolean) => ServingProcess | undefined;
 }
 
 /**
- * Everything the generated Node entry does beyond importing and calling.
- *
- * The rule the generator now follows: a generated entry holds imports and
- * calls, never control flow. Orchestration written as string literals is
- * neither type-checked nor linted nor reachable by a test, which is how the
- * entry came to drop `handler.scheduled`'s report and silence every cron
- * failure (#2303).
+ * A generated entry holds imports and calls only: orchestration in string
+ * literals is never type-checked, linted or tested.
  */
 export function createNodeSite({
   config,
@@ -217,10 +207,8 @@ export function createNodeSite({
 }
 
 /**
- * Load `.env` from the working directory into the process env when `main`
- * says this module is the process's entry point. A variable the environment
- * already set wins, so a stray file cannot override a platform's injected
- * secrets; a missing file loads nothing.
+ * A variable the environment already set wins, so a stray file can't override
+ * injected secrets.
  */
 export function loadEnvFileWhenMain(main: boolean): void {
   if (!main) return;
@@ -250,8 +238,10 @@ export interface ServingProcess {
   readonly server: Server;
 }
 
-// Not on the barrel: `serveWhenMain` is the door, and this is what a test
-// drives to reach the drain without ending the runner.
+/**
+ * Not on the barrel: `serveWhenMain` is the door, and this is what a test
+ * drives to reach the drain without ending the runner.
+ */
 export function serveProcess({
   listener,
   startCron,
@@ -271,10 +261,8 @@ export function serveProcess({
     console.log(`plumix: listening on http://${host}:${String(bound)}`);
   });
 
-  // Scheduled tasks are the site's own work, so they run wherever the site
-  // runs. Started after `listen` and never awaited by it: building the app
-  // must not delay serving, and a scheduler that cannot start must not take
-  // down a process that is already answering requests.
+  // Never awaited by `listen`: a scheduler failing to start must not take down
+  // a serving process.
   let scheduler: Scheduler | undefined;
   let stopping = false;
   if (cron) {
@@ -302,10 +290,8 @@ export function serveProcess({
       server.close(() => settle(true)),
     );
     server.closeIdleConnections();
-    // Before the drain, not during it: `dispose()` waits for deferred work,
-    // and a firing that started behind it would hand it more. Bounded by the
-    // same budget the drain then spends, so a long task cannot hold the whole
-    // shutdown open and leave `dispose()` nothing.
+    // Before the drain: a firing started behind it would hand `dispose()` more
+    // deferred work.
     stopping = true;
     const cronSettled =
       (await scheduler?.stop({ timeoutMs: remainingMs(deadline) })) ?? true;
@@ -346,8 +332,8 @@ function remainingMs(deadline: number): number {
 }
 
 /**
- * `??` alone would read an empty `PORT=` as port 0; `||` is what this wants but
- * `prefer-nullish-coalescing` refuses it on a `string | undefined`.
+ * `??` would read an empty `PORT=` as port 0, and `prefer-nullish-coalescing`
+ * refuses `||` here.
  */
 function envOr(value: string | undefined, fallback: string): string {
   return value === undefined || value === "" ? fallback : value;

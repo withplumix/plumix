@@ -3,9 +3,7 @@
 // them. See ADR 0004.
 
 /**
- * The image roles a field may carry, keyed by name. Core declares `featured`
- * and `ogImage`; a plugin or theme that registers another with
- * `registerImageRole` augments this interface so `.role()` accepts the name:
+ * Augment it alongside `registerImageRole` so `.role()` accepts the name.
  *
  * ```ts
  * declare module "plumix" {
@@ -20,11 +18,7 @@ export interface ImageRoles {
 
 export type ImageRoleName = keyof ImageRoles;
 
-/**
- * An image read off a hydrated reference by the adapter that produced it.
- * `width`/`height` travel as a pair or not at all: one axis alone tells a
- * layout nothing it can use.
- */
+/** `width`/`height` travel as a pair or not at all. */
 export type ResolvedImage = {
   readonly url: string;
   readonly alt: string | null;
@@ -34,9 +28,8 @@ export type ResolvedImage = {
 );
 
 /**
- * Every image role an entity carries, keyed by role name. A role is present
- * when the entity's scope declares a field in it, and `null` when no field in
- * it resolved to an image — an orphaned reference, or one the adapter refuses.
+ * Present when the scope declares a field in the role; `null` when none
+ * resolved to an image.
  */
 export type RoleImages = Readonly<
   Partial<Record<ImageRoleName, ResolvedImage | null>>

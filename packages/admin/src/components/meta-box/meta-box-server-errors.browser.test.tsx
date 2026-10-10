@@ -49,9 +49,11 @@ describe("extractMetaFieldErrors", () => {
   });
 });
 
-// Mounts fields under an RHF form, applies server errors, and asserts
-// the message lands inline on the addressed input — the admin half of
-// the path-addressed write-rejection contract.
+/**
+ * Mounts fields under an RHF form, applies server errors, and asserts
+ * the message lands inline on the addressed input — the admin half of
+ * the path-addressed write-rejection contract.
+ */
 function Harness({
   fields,
   initial,

@@ -27,7 +27,7 @@ export interface FeedChannel {
   readonly updated: string;
 }
 
-// RSS2 timestamps are RFC-822; `toUTCString()` produces exactly that shape.
+/** RSS2 timestamps are RFC-822; `toUTCString()` produces exactly that shape. */
 function rfc822(iso: string): string {
   return new Date(iso).toUTCString();
 }

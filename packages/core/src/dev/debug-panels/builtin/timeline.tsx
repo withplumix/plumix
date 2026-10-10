@@ -10,9 +10,9 @@ import { buildTimeline } from "../timeline-model.js";
 /** Panel id, also the disable-denylist key and tab testid suffix. */
 export const TIMELINE_PANEL_ID = "timeline";
 
-// SVG is drawn in a nominal coordinate space and scaled to 100% width by the
-// viewBox. A fixed left gutter holds the (depth-indented) span names, a fixed
-// right column holds right-aligned durations, and bars scale into the middle.
+/**
+ * Drawn in a nominal coordinate space that the viewBox scales to full width.
+ */
 const VIEW_WIDTH = 400;
 const GUTTER = 132;
 const MS_COL = 34;
@@ -74,12 +74,6 @@ function TimelineChart({
   );
 }
 
-/**
- * The Timeline panel: a zero-JS SVG waterfall of the request's spans (dispatch,
- * resolve, render, and each database query), read from the collector's span
- * tree. Empty when nothing was timed — e.g. a route that touches no database
- * and isn't instrumented, or the panel's own collection disabled.
- */
 export const timelinePanel: DebugPanel = {
   id: TIMELINE_PANEL_ID,
   title: "Timeline",

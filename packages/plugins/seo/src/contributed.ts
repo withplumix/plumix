@@ -12,22 +12,20 @@ import { SeoError } from "./errors.js";
 export interface SitemapSource {
   /** Published URL count — drives index pagination without a full URL scan. */
   readonly count: (ctx: AppContext) => Promise<number> | number;
-  /** URLs for one 1-based page, windowed to `SITEMAP_PAGE_SIZE` as the index expects. */
+  /**
+   * URLs for one 1-based page, windowed to `SITEMAP_PAGE_SIZE` as the index
+   * expects.
+   */
   readonly urls: (
     ctx: AppContext,
     page: number,
   ) => Promise<readonly SitemapUrl[]> | readonly SitemapUrl[];
   /**
-   * Cache tags this scope's pages are stored under. Core's own scopes carry
-   * the `t:<type>` tags a publish already purges; a source drawn from other
-   * tables names its own, or names none and rides its cache-control window.
+   * With none, the scope's pages are never purged and ride their cache-control
+   * window.
    */
   readonly tags?: readonly string[];
-  /**
-   * The ISO-8601 time the newest URL on one 1-based page changed, written as
-   * that page's `<lastmod>` in the index. Absent, or `undefined` for a page,
-   * and the index entry carries none.
-   */
+  /** ISO-8601 `<lastmod>` for one 1-based page; `undefined` writes none. */
   readonly lastmod?: (
     ctx: AppContext,
     page: number,
@@ -37,10 +35,8 @@ export interface SitemapSource {
 declare module "plumix" {
   interface PluginContextExtensions {
     /**
-     * Fold a URL space into the sitemap index as a contributed scope at
-     * `/sitemap-<name>-<page>.xml`, under the site's `sitemaps.<name>`
-     * policy. Call it on `ctx` during `setup`: `this` is how seo learns
-     * which plugin the scope came from.
+     * Serves `/sitemap-<name>-<page>.xml`. Call it on `ctx` during `setup`:
+     * `this` is how seo learns which plugin the scope came from.
      */
     registerSitemap(
       this: { readonly id: string },
@@ -57,9 +53,10 @@ export interface ContributedSitemap {
   readonly source: SitemapSource;
 }
 
-// Seo's own scope kinds, which own every stem starting with their name — so a
-// contributed scope by one of these names would answer for an entry type's or
-// a taxonomy's sub-sitemap.
+/**
+ * These own every stem starting with their name, so a contributed scope by one
+ * would answer for an entry type's or taxonomy's sub-sitemap.
+ */
 const RESERVED_SCOPE_KINDS = ["entries", "terms"] as const;
 
 function assertContributable(name: string, pluginId: string): void {
@@ -73,9 +70,8 @@ function assertContributable(name: string, pluginId: string): void {
 type RegisterSitemap = PluginContextExtensions["registerSitemap"];
 
 /**
- * Each install's contributions, keyed by the `registerSitemap` its `provides`
- * handed out — core puts that same function on every setup context, which is
- * how `afterSetup` finds its own install's list.
+ * Keyed by the install's `registerSitemap`: core puts that same function on
+ * every setup context, which is how `afterSetup` finds its install's list.
  */
 const contributions = new WeakMap<RegisterSitemap, ContributedSitemap[]>();
 
@@ -101,7 +97,9 @@ export function createRegisterSitemap(): RegisterSitemap {
   return registerSitemap;
 }
 
-/** What every plugin contributed through this `registerSitemap`, in call order. */
+/**
+ * What every plugin contributed through this `registerSitemap`, in call order.
+ */
 export function contributedSitemaps(
   registerSitemap: RegisterSitemap,
 ): readonly ContributedSitemap[] {

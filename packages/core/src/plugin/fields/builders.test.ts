@@ -35,14 +35,6 @@ import {
   user,
 } from "./index.js";
 
-// One combined suite for the per-variant builder guarantees. The
-// universal-chain + immutability behavior shared by every fluent
-// builder is covered by `builder.test.ts` (string scalars as the
-// reference), and the choice builders in `select.test.ts` /
-// `toggle.test.ts`; these tests focus on what each variant adds —
-// per-type option chains, injected sanitizers, `.returns("date")`,
-// and the reference builders' scope / cardinality / hydration typing.
-
 describe("number() builder", () => {
   test("chains min/max/step/default into a number definition", () => {
     const field = number("rating").min(1).max(5).step(0.5).default(3).build();
@@ -851,9 +843,8 @@ describe("repeater() builder", () => {
   });
 
   test("a default is the stored shape, matching every scalar builder", () => {
-    // `.default()` lands straight in the form bag with no conversion, so
-    // it must be spelled the way storage holds it — an ISO string, not the
-    // `Date` the `.returns("date")` projection hands a reader.
+    // `.default()` lands in the form bag unconverted, so it is spelled as
+    // storage holds it: an ISO string, not a `Date`.
     repeater("events")
       .fields([date("on").returns("date")])
       .default([{ on: "2026-01-01" }]);
@@ -1047,10 +1038,8 @@ describe("group() builder", () => {
   });
 
   test("composite callbacks are typed against the stored shape, not the read shape", () => {
-    // The hooks run inside the write pipeline, on cells that have already
-    // been settled — a reference member is a bare id there, not the
-    // hydrated summary a read returns. Typing the callback against the
-    // read shape would hand the author a lie.
+    // The hooks run on settled cells, where a reference is a bare id, so
+    // typing the callback against the read shape would lie.
     group("card")
       .fields([text("title"), entry("related", ["post"])])
       .validate((members) => {

@@ -16,11 +16,7 @@ const inputSchema = v.object({
   ),
 });
 
-/**
- * The content-model introspection tool. With no argument it lists entry types
- * and taxonomies; with a `type` it returns that type's statuses, supports, and
- * taxonomies. Backed entirely by the in-memory manifest — no DB access.
- */
+/** Reads only the in-memory manifest, never the database. */
 export const schemaDescribeTool: McpTool<typeof inputSchema> = {
   name: "schema_describe",
   description:

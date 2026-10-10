@@ -42,9 +42,8 @@ describe("debug bar Database panel (end to end)", () => {
     const html = await res.text();
 
     expect(html).toContain('data-testid="plumix-debug-panel-database"');
-    // The resolve step queried the DB, so a real query row renders. Assert on
-    // rendered SQL content (table + column names) — every panel CSS class is in
-    // the inlined stylesheet, so only dynamic query text is a trustworthy signal.
+    // Every panel CSS class is in the inlined stylesheet, so only dynamic
+    // query text is a trustworthy signal.
     expect(html).toContain("entries");
     expect(html).toContain("author_id");
   });

@@ -9,10 +9,8 @@ import { terms } from "./schema/terms.js";
 import { users } from "./schema/users.js";
 
 /**
- * `entries.content` is deliberately absent. It holds the block envelope, whose
- * keys, block names and attribute names read as prose to a substring match, so
- * matching it returned most of the table for `image`, `text`, `code` and a
- * dozen other structural words (#2117).
+ * Skips `entries.content`: block names and attribute keys read as prose, so
+ * structural words like `image` matched most of the table.
  */
 export function entrySearchCondition(term: SearchTerm): SQL {
   return likeAcross(term, [entries.title, entries.excerpt]);
@@ -26,9 +24,10 @@ export function userSearchCondition(term: SearchTerm): SQL {
   return likeAcross(term, [users.name, users.email]);
 }
 
-// COALESCE is what keeps the excluded (`-term`) branch honest: `null LIKE ?` is
-// null, and `NOT (null)` is null, so a row with no excerpt would drop out of a
-// result set it belongs in.
+/**
+ * COALESCE: `NOT (null LIKE ?)` is null, which would drop a row with no
+ * excerpt from the excluded branch.
+ */
 function likeAcross(
   term: SearchTerm,
   columns: readonly AnySQLiteColumn[],

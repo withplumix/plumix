@@ -20,19 +20,18 @@ const USER_ROW_COLUMNS = {
   role: users.role,
 } as const;
 
-// `satisfies` keeps `hydrate`'s concrete `UserReferenceSummary` return
-// type visible instead of widening to the contract's `HydratedReference`.
+/**
+ * `satisfies` keeps `hydrate`'s concrete `UserReferenceSummary` return
+ * type visible instead of widening to the contract's `HydratedReference`.
+ */
 export const userLookupAdapter = {
   async list(ctx, options) {
     const conditions = scopeConditions(options.scope);
     let limit: number;
     if (options.ids !== undefined) {
-      // Resolve-by-id batch path: ignore `query` and bound the result
-      // to the parsed ids. Invalid (non-numeric) ids are silently
-      // dropped — they read as orphans on the caller's side. Limit
-      // tracks `numericIds.length` (not `MAX_LIST_LIMIT`) because the
-      // meta pipeline aggregates ids across same-`(kind,scope)` fields
-      // and can legitimately request >100 in one call.
+      // Invalid ids drop silently and read as orphans. The limit follows the id
+      // count, not `MAX_LIST_LIMIT`, because the meta pipeline batches ids
+      // across fields and may exceed 100.
       const numericIds = options.ids
         .map((id) => parseUserId(id))
         .filter((id): id is number => id !== null);

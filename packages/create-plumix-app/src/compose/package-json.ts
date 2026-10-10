@@ -4,20 +4,16 @@ import { resolveDeps } from "../catalog.js";
 
 export type { PackageJson };
 
-// Alphabetical so the merged output is deterministic regardless of the
-// order base and addon contributions arrive in.
+/**
+ * Alphabetical so the merged output is deterministic regardless of the
+ * order base and addon contributions arrive in.
+ */
 function sortedByKey(deps: Record<string, string>): Record<string, string> {
   return Object.fromEntries(
     Object.entries(deps).sort(([a], [b]) => a.localeCompare(b)),
   );
 }
 
-/**
- * Assemble the project's `package.json` from the base shell plus the
- * selected runtime's, the fulfilled capabilities' and the plugins'
- * dependency contributions. Names are unioned and sorted, protocols resolved
- * to concrete versions via the catalog, and the package renamed to the project.
- */
 export function assemblePackageJson(
   selection: Selection,
   base: PackageJson,

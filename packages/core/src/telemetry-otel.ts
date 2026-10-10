@@ -6,7 +6,7 @@ import type {
 } from "./telemetry-snapshot.js";
 import { isJsonObject } from "./json.js";
 
-/** OTLP/JSON `AnyValue` — the primitive subset the exporter emits. */
+/** The primitive subset of OTLP/JSON `AnyValue` the exporter emits. */
 interface OtlpValue {
   stringValue?: string;
   boolValue?: boolean;
@@ -47,7 +47,9 @@ const STATUS_CODE_ERROR = 2;
 export interface OtelConsumerOptions {
   /** OTLP/HTTP traces endpoint, e.g. `https://…/otlp/v1/traces`. */
   readonly endpoint: string;
-  /** Extra request headers (auth). Merged over `content-type: application/json`. */
+  /**
+   * Extra request headers (auth). Merged over `content-type: application/json`.
+   */
   readonly headers?: Readonly<Record<string, string>>;
   /** `service.name` resource attribute. */
   readonly serviceName?: string;
@@ -70,14 +72,14 @@ function randomHex(byteLength: number): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-/** Epoch milliseconds → OTLP nanosecond string (exceeds Number range). */
+/** A string because nanoseconds exceed the Number range. */
 function unixNano(ms: number): string {
   return (BigInt(Math.round(ms)) * 1_000_000n).toString();
 }
 
 /**
- * OTLP attribute values are primitives or arrays of primitives; nested
- * structures are JSON-stringified rather than projected onto `kvlistValue`.
+ * Nested structures are JSON-stringified rather than projected onto
+ * `kvlistValue`.
  */
 function toAnyValue(value: JsonValue): OtlpValue {
   if (typeof value === "string") return { stringValue: value };
@@ -102,7 +104,6 @@ function toAttributes(record: JsonObject): OtlpKeyValue[] {
   }));
 }
 
-/** Depth-first projection of the collected tree, minting span ids on the way. */
 function addTreeSpans(
   spans: readonly TelemetrySpan[],
   traceId: string,
@@ -145,7 +146,6 @@ function addTreeSpans(
   }
 }
 
-/** Timestamped records → root-span events, the namespace as event name. */
 function recordEvents(records: TelemetrySnapshot["records"]): OtlpEvent[] {
   return Object.entries(records).flatMap(([namespace, entries]) =>
     entries.map((record) => {
@@ -164,9 +164,7 @@ function recordEvents(records: TelemetrySnapshot["records"]): OtlpEvent[] {
 }
 
 /**
- * W3C trace-context `traceparent`: version-traceId-parentSpanId-flags. A
- * valid inbound header joins this request's spans to the caller's trace;
- * anything else (absent, malformed, all-zero ids, reserved version) is
+ * An invalid inbound header (malformed, all-zero ids, reserved version) is
  * ignored and a fresh trace id is minted.
  */
 const TRACEPARENT_PATTERN =
@@ -183,8 +181,10 @@ function parseTraceparent(
   return { traceId, parentSpanId };
 }
 
-// No route abstraction reaches the snapshot; the raw path is the best label
-// a CMS has. Deliberate semconv deviation (`{method} {route}` is preferred).
+/**
+ * No route abstraction reaches the snapshot; the raw path is the best label
+ * a CMS has. Deliberate semconv deviation (`{method} {route}` is preferred).
+ */
 function rootSpanName(method: string, url: string): string {
   try {
     return `${method} ${new URL(url).pathname}`;
@@ -193,8 +193,10 @@ function rootSpanName(method: string, url: string): string {
   }
 }
 
-// The envelope url keeps its query string and the exporter owns scrubbing
-// query-borne secrets (see TelemetrySnapshot) — drop the query wholesale.
+/**
+ * The envelope url keeps its query string and the exporter owns scrubbing
+ * query-borne secrets (see TelemetrySnapshot) — drop the query wholesale.
+ */
 function scrubUrl(url: string): string {
   try {
     const parsed = new URL(url);
@@ -204,18 +206,18 @@ function scrubUrl(url: string): string {
   }
 }
 
-// What the exporter reads off the request's context: the inbound
-// `traceparent`, and where to report a failed export.
+/**
+ * What the exporter reads off the request's context: the inbound
+ * `traceparent`, and where to report a failed export.
+ */
 interface ExportContext {
   readonly request: Request;
   readonly logger: { error(message: string): void };
 }
 
 /**
- * OTel trace exporter as a telemetry consumer: projects each collected
- * snapshot onto an OTLP/HTTP JSON `ExportTraceServiceRequest` and POSTs it
- * per request (from `waitUntil`, so export latency never blocks a response).
- * Core spans carry no ids — trace/span ids are minted here at export time.
+ * POSTs from `waitUntil`, so export latency never blocks a response.
+ * Trace and span ids are minted here, at export time.
  */
 export function otelConsumer(
   options: OtelConsumerOptions,
@@ -226,10 +228,8 @@ export function otelConsumer(
     ...(sample !== undefined && { sample: () => Math.random() < sample }),
     onRequestEnd: async (snapshot, ctx) => {
       if (tailSample && !tailSample(snapshot)) return;
-      // A failed export is an observability gap, never a request failure:
-      // the mapping too (records are `unknown` at runtime and can defeat
-      // JSON.stringify) — log and swallow so this promise cannot reject
-      // into `waitUntil`.
+      // A failed export is an observability gap, never a request failure, so
+      // this promise must not reject into `waitUntil`.
       try {
         const { request, spans: tree, records, dropped } = snapshot;
         const inbound = parseTraceparent(

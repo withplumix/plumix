@@ -11,8 +11,10 @@ interface LayoutProps {
   readonly children: ReactNode;
 }
 
-// Page shell shared by every template: chrome (header/footer) wrapping the
-// per-route content.
+/**
+ * Page shell shared by every template: chrome (header/footer) wrapping the
+ * per-route content.
+ */
 export function Layout({ settings, menus, children }: LayoutProps): ReactNode {
   const site = settings?.site as { readonly title?: string } | undefined;
   const siteTitle = site?.title ?? "Plumix Blog";

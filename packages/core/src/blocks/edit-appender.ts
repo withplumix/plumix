@@ -5,9 +5,10 @@ import type { BlockContext } from "./render-block-tree.js";
 
 const ADD_BLOCK = { id: "blocks.appender.addBlock", message: "Add a block" };
 
-// Inline-styled because this renders inside the canvas iframe, which carries the
-// theme's CSS, not admin-ui's. Theme-agnostic muted gray so it reads as editor
-// chrome on any background. `currentColor` is avoided for the same reason.
+/**
+ * Inline-styled because the canvas iframe carries the theme's CSS, not
+ * admin-ui's; a fixed muted gray reads as editor chrome on any background.
+ */
 const STYLE: Record<string, string> = {
   display: "flex",
   width: "100%",
@@ -26,12 +27,8 @@ const STYLE: Record<string, string> = {
 };
 
 /**
- * Edit-mode "Add a block" affordance, rendered in the canvas content flow — for
- * an empty root document or an empty child slot. It carries data attributes the
- * canvas click-delegation turns into an add-intent; it has no event handler so
- * the renderer stays pure (the same code string-renders for SSR, where this is
- * never emitted because it's edit-only). `target` identifies an empty slot;
- * omit it for the root document. `t` is the render context's resolver.
+ * Edit-only. Carries data attributes for canvas click-delegation instead of a
+ * handler, so the renderer stays pure. Omit `target` for the root document.
  */
 export function editAppender(
   t: BlockContext["t"],

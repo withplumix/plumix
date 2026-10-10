@@ -55,10 +55,8 @@ export interface EditorCommandContext {
 }
 
 /**
- * The built-in commands' titles. Data descriptors, not JSX, so they carry no
- * call site the extractor can see — admin mirrors them in
- * `lib/editor-command-i18n.ts` (test-guarded for lockstep) to pull the ids into
- * its catalog, the same seam core's manifest labels ride.
+ * Data descriptors carry no call site the extractor sees, so admin mirrors them
+ * to pull the ids into its catalog.
  */
 export const EDITOR_COMMAND_DESCRIPTORS = {
   xray: {
@@ -112,9 +110,7 @@ export function buildEditorCommands(
       run: () => store.getState().toggleXray(),
     },
   ];
-  // Group and ungroup are dropped rather than shown inert: both are no-ops when
-  // the selection can't take them, and a palette row that does nothing when
-  // picked reads as a broken command.
+  // Dropped rather than inert: a palette row that does nothing reads as broken.
   if (canGroupSelection(tree, selectedIds, registry)) {
     commands.push({
       id: "selection.group",
@@ -161,10 +157,8 @@ export function buildEditorCommands(
         icon: entry.icon,
         run: () => {
           const node = createNodeFromEntry(registry, entry);
-          // The palette has no drop position, so the block lands after the
-          // selection (at the top level), or at the end with none. Revealing
-          // it matters more here than on a drag, where the author is already
-          // looking at the drop.
+          // No drop position, so reveal it; on a drag the author is already
+          // looking.
           const { tree: current, activeId } = store.getState();
           store
             .getState()

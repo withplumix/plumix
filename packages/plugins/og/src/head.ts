@@ -1,7 +1,5 @@
-// `@plumix/plugin-seo` owns the `seo:og_image` filter this plugin subscribes
-// to. Its module augmentation only reaches this compilation through an import
-// of the package that declares it, so the type import below is what makes the
-// subscription in `index.ts` typecheck.
+// The `OgImage` import pulls in plugin-seo's augmentation, without which
+// `index.ts`'s `seo:og_image` subscription doesn't typecheck.
 import type { TemplateData } from "plumix";
 import type { AppContext } from "plumix/plugin";
 import { ruleLabel } from "plumix/plugin";
@@ -21,31 +19,19 @@ import { OG_PANEL_ID } from "./chain-trace.js";
 import { isShareablePage } from "./shareable.js";
 
 interface PageOgImageInput {
-  /** Whatever an earlier `seo:og_image` subscriber supplied, if any. */
   readonly image: OgImage | null;
-  /** The entry's `.featured()` photo, handed over by the chain. */
   readonly featured: OgImage | null;
   readonly data: TemplateData;
   readonly ctx: AppContext;
-  /**
-   * The extension a card is advertised under, or undefined when the connected
-   * renderer makes a format scrapers do not render. A card still has a route
-   * then; it just never reaches the head.
-   */
+  /** Undefined when scrapers don't render the renderer's format. */
   readonly extension: string | undefined;
   readonly cards: CardRegistry;
-  /** What a card renders with, which is half of what addresses it. */
   readonly inputs: CardInputs;
 }
 
 /**
- * What this plugin contributes to the page's `og:image`: the card, the entry's
- * own photo cropped to the card's shape, or null to leave the chain as it is.
- *
- * The decision is traced as it is made. Four links resolve one `og:image` and
- * nothing in the rendered page says which of them won, so the debug-bar panel
- * reads this back — including the reason a card was skipped, which is the whole
- * answer to "why is my card not showing".
+ * The card, the featured photo cropped to its shape, or null. Traced, since
+ * nothing in the page says which link won.
  */
 export async function pageOgImage(
   input: PageOgImageInput,
@@ -56,7 +42,6 @@ export async function pageOgImage(
 }
 
 interface ChainResolution {
-  /** What the filter returns — null leaves the chain to its own tail. */
   readonly image: OgImage | null;
   readonly trace: OgChainTrace;
 }
@@ -102,20 +87,8 @@ async function resolveChain(input: PageOgImageInput): Promise<ChainResolution> {
 }
 
 /**
- * The page a card is rendered from, which is not always the page the head is
- * rendering. Where the two differ the head has to ask the same question the
- * route will, or it publishes a digest taken over different data and every
- * scraper following it is redirected away from the image the page promised.
- * They differ in two places:
- *
- * - A card names an archive rather than one paginated slice of it, and the
- *   route only ever resolves the archive's first page.
- * - A preview link renders the author's autosave over the entry, and the route
- *   only ever resolves the live row — a card is public, so a draft is never on
- *   it. The in-progress card is the editor's card preview's to show.
- *
- * Costs a query only on `/page/2` and beyond, or on a preview render: anywhere
- * else the head is already holding exactly what the route would resolve.
+ * The route always resolves an archive's first page and the live row, never an
+ * autosave, so the head must digest the same data on later pages and previews.
  */
 async function cardPageData(
   ctx: AppContext,
@@ -146,10 +119,7 @@ export interface CardChoiceInput {
    */
   readonly extension: string | undefined;
   /**
-   * Whether this page may carry a card at all. Defaults to the question the
-   * route answers; the editor preview passes the same question minus its
-   * status half, so a draft previews while an entry no scraper could reach
-   * still gets no card.
+   * Defaults to the route's check; the editor preview drops its status half.
    */
   readonly shareable?: (
     ctx: AppContext,
@@ -175,18 +145,11 @@ export type CardChoice =
       readonly skipped: OgCardSkip;
     };
 
-/**
- * Whether this page gets a generated card, and what stands in when it does
- * not. One branch order, so the head and the editor preview cannot disagree
- * about which link of the chain wins — the whole point of a preview being that
- * it says what the page will say.
- */
+/** Shared by the head and the editor preview so they agree on the winner. */
 export async function chooseCard(input: CardChoiceInput): Promise<CardChoice> {
   const { data, ctx, cards, featured, extension } = input;
   const shareable = input.shareable ?? isShareablePage;
-  // A rule declared against a search page or a plugin archive resolves, but
-  // neither can be named by an identity a URL carries, so neither has a card
-  // URL to advertise.
+  // Search pages and plugin archives match rules but have no card URL.
   const identity = cardIdentityFor(data);
   if (identity === null) {
     return { card: null, photo: null, rule: null, skipped: "page-kind" };
@@ -197,17 +160,11 @@ export async function chooseCard(input: CardChoiceInput): Promise<CardChoice> {
   }
   const { card } = rule;
   const matched = ruleLabel(rule);
-  // The photo standing in for the card needs nothing else resolved — not the
-  // route's format, not the access question below, and not the card's digest,
-  // each of which costs a resolver run of its own on every page that asks it.
   const photo =
     featured === null ? null : cropToCard(ctx, featured, cardSize(card));
   if (photo !== null && card.mode !== "card") {
     return { card: null, photo, rule: matched, skipped: "featured-preferred" };
   }
-  // A card only for a page the route will serve, in a format a scraper
-  // renders. Failing either, the shaped photo goes out instead — even where a
-  // card declared itself the share image, since there is no card for it to be.
   if (extension === undefined) {
     return { card: null, photo, rule: matched, skipped: "renderer-format" };
   }
@@ -227,17 +184,16 @@ export async function chooseCard(input: CardChoiceInput): Promise<CardChoice> {
 interface CardOgImageInput {
   readonly card: CardDefinition<TemplateData>;
   readonly data: TemplateData;
-  /** Named off `data` by the caller, which has already asked. */
   readonly target: CardTarget;
   readonly ctx: AppContext;
   readonly inputs: CardInputs;
   readonly extension: string;
 }
 
-// The digest is what makes this URL worth publishing: it moves when the card
-// does, so an edit hands X, Facebook and LinkedIn a link they are not already
-// holding. Taken from the same call the route makes, because a digest the
-// route would not recognise redirects every scraper away from its own image.
+/**
+ * The same call the route makes; a digest the route doesn't recognise would
+ * redirect every scraper away.
+ */
 async function cardOgImageUrl(input: CardOgImageInput): Promise<string> {
   const { card, data, target, ctx, inputs, extension } = input;
   const { digest } = await resolveCardIdentity(
@@ -251,22 +207,16 @@ async function cardOgImageUrl(input: CardOgImageInput): Promise<string> {
 }
 
 interface NoCardInput {
-  /**
-   * The entry's photo shaped to the card that was going to carry it — set
-   * where a rule matched and something after it refused the card, absent where
-   * there was no card to take a shape from.
-   */
+  /** Cropped to the card that was refused; null when no rule matched. */
   readonly photo: OgImage | null;
-  /** The uncropped photo, which the chain falls to when this returns nothing. */
   readonly featured: OgImage | null;
   readonly rule: string | null;
   readonly skipped: OgCardSkip;
 }
 
 /**
- * No card on the chain. The page lands on the entry's photo either way — this
- * one returning it shaped, or the chain's own next link taking it as it stands
- * — so the trace names that photo whichever of the two supplies it.
+ * The trace names the photo whether this returns it cropped or the chain's next
+ * link takes it as is.
  */
 function noCard(input: NoCardInput): ChainResolution {
   const { photo, featured, rule, skipped } = input;
@@ -283,14 +233,14 @@ function noCard(input: NoCardInput): ChainResolution {
   };
 }
 
-// Cropping the photo to the card's shape is what stops a scraper cropping it
-// badly, and it is pure URL math — no rasterizer, no wasm, no CPU.
+/**
+ * Cropping the photo to the card's shape is what stops a scraper cropping it
+ * badly, and it is pure URL math — no rasterizer, no wasm, no CPU.
+ */
 function cropToCard(ctx: AppContext, image: OgImage, size: CardSize): OgImage {
   const url = ctx.imageDelivery?.url(image.url, { ...size, fit: "cover" });
-  // Handing the source back unchanged is the only way the slot's `url` can say
-  // it declined, and no delivery at all says the same thing. The photo still
-  // goes out — an uncropped picture unfurls where no picture does not — but at
-  // its own size rather than described as a crop that never happened.
+  // An unchanged `url` means the slot declined to crop, so keep the photo's own
+  // size.
   return url === undefined || url === image.url
     ? image
     : { url, ...size, alt: image.alt };

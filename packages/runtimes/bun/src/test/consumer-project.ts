@@ -14,8 +14,10 @@ import { promisify } from "node:util";
 const PACKAGE_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const OWN_MODULES = join(PACKAGE_ROOT, "node_modules");
 
-// The bin's own script, not the `.bin` shim: pnpm writes that as a shell
-// script, which `bun --bun` cannot execute.
+/**
+ * The bin's own script, not the `.bin` shim: pnpm writes that as a shell
+ * script, which `bun --bun` cannot execute.
+ */
 export const PLUMIX_SCRIPT = join(
   realpathSync(join(OWN_MODULES, "plumix")),
   "bin/plumix.mjs",
@@ -37,7 +39,9 @@ export interface CliResult {
   readonly stderr: string;
 }
 
-/** Run `plumix <args>` in `cwd` on the named runtime: `bun --bun`, or `node`. */
+/**
+ * Run `plumix <args>` in `cwd` on the named runtime: `bun --bun`, or `node`.
+ */
 export async function plumixOn(
   runtime: "bun" | "node",
   cwd: string,
@@ -71,7 +75,9 @@ export const rpc = (origin: string, path: string): Promise<Response> =>
     body: JSON.stringify({ json: {} }),
   });
 
-/** A config naming this package's adapter and `bunSqlite()` on a relative path. */
+/**
+ * A config naming this package's adapter and `bunSqlite()` on a relative path.
+ */
 export const BUN_CONFIG = `import { auth } from "plumix/auth";
 import { defineTheme, fallback } from "plumix/theme";
 import { plumix } from "plumix";
@@ -86,9 +92,8 @@ export default plumix({
 `;
 
 /**
- * A consumer project in a temp dir. Its `node_modules` is a real directory of
- * links, so `plumix` and this package resolve from there the way they do from
- * an app root.
+ * Its `node_modules` is a real directory of links, so packages resolve the
+ * way they do from an app root.
  */
 export function scaffoldConsumerProject(
   prefix: string,

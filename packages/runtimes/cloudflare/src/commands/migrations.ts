@@ -14,8 +14,10 @@ import type { D1BindingEntry } from "../wrangler-config.js";
 import { loadWranglerConfig } from "../wrangler-config.js";
 import { CloudflareCliError } from "./errors.js";
 
-// Where `plumix dev` (`@cloudflare/vite-plugin`) and the playground's built
-// server keep local state, under the project root.
+/**
+ * Where `plumix dev` (`@cloudflare/vite-plugin`) and the playground's built
+ * server keep local state, under the project root.
+ */
 const LOCAL_STATE = ".wrangler/state/v3";
 
 function chooseBinding(
@@ -57,9 +59,10 @@ function chooseBinding(
   return { config, entry };
 }
 
-// A config holding only the binding to migrate, so the proxy starts nothing
-// else the site declares; marked `remote` for `--remote`, which is how
-// wrangler's remote bindings reach the deployed database.
+/**
+ * Only the binding to migrate, so the proxy starts nothing else; `remote` is
+ * how wrangler reaches the deployed database.
+ */
 function proxyOptions(
   cwd: string,
   configDir: string,
@@ -138,8 +141,10 @@ export const migrations: RuntimeMigrations = {
   },
 };
 
-// Mutable seam for tests — substitute the collaborator, not the module path.
-// wrangler loads on first use: an optional peer, and a heavy one.
+/**
+ * Mutable seam for tests — substitute the collaborator, not the module path.
+ * wrangler loads on first use: an optional peer, and a heavy one.
+ */
 export const migrationsDeps = {
   loadWranglerConfig,
   getPlatformProxy: async (

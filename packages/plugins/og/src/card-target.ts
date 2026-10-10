@@ -1,31 +1,12 @@
 import type { ListingPageTarget, ResolvedNode, TemplateData } from "plumix";
 
-/**
- * The page a card is *about*, named by identity rather than by URL — what the
- * head derives from the page it is rendering and what the route parses back out
- * of the path it was asked for. One vocabulary for both, because a head that
- * named a page differently from the route would advertise a URL the route
- * answers about something else.
- *
- * An entry plus core's own listing pages, structurally rather than by
- * restatement: everything but the entry is handed straight to
- * `resolveListingPage`, and the page kinds absent from it are absent for the
- * reasons that export gives.
- */
+/** Shared by head and route, so both name a page the same way. */
 export type CardTarget =
   ListingPageTarget | { readonly kind: "entry"; readonly id: number };
 
 /**
- * What a card rule resolves a page against: the page named as a URL can carry
- * it, and the node a matcher matches on. Emitted together, from one switch,
- * because a page that cannot be addressed has no rule to match either — and
- * derived from the page's own data rather than taken from whoever resolved it,
- * so the head and the route, which arrive at the same page by completely
- * different paths, cannot resolve to different rules and then disagree about
- * the card's size.
- *
- * A listing says which paginated slice it is, because a card names the whole
- * archive and is always rendered from the archive's first page.
+ * Derived from the page's own data, so head and route resolve the same rule. A
+ * listing card is always rendered from the archive's first page.
  */
 export type CardIdentity =
   | {
@@ -102,17 +83,8 @@ function listing(
 }
 
 /**
- * How a target is spelled in a URL: the kind, then the one segment naming which
- * page of that kind — `entry/12`, `term/3`, `date/2026-03`. The front page is
- * the one kind with a single page, so it is the one kind with no target segment.
- *
- * A URL keeps its own spelling rather than the page kind's (ADR 0025): the
- * front page is `front-page` and an entry type's listing `archive/<type>`, the
- * segments cards were first published and stored under.
- *
- * The same string is the last segments of both the card's URL and its storage
- * key, which is what "the URL is the key" means here — structurally, rather
- * than as a claim two string literals have to keep agreeing on.
+ * Keeps the published spelling (`front-page`, `archive/<type>`) rather than the
+ * page kind's, since stored cards and URLs use it.
  */
 export function cardTargetPath(target: CardTarget): string {
   switch (target.kind) {
@@ -127,10 +99,10 @@ export function cardTargetPath(target: CardTarget): string {
   }
 }
 
-// `YYYY`, `YYYY-MM` or `YYYY-MM-DD` — one segment, so every target is exactly
-// one, and a date archive cannot be told apart from a digest by segment count.
-// The year is padded because `DATE` below reads exactly four digits; the card's
-// own headline is not, because that tracks the title core gives the archive.
+/**
+ * One segment, so every target is exactly one. The year is padded because
+ * `DATE` reads exactly four digits.
+ */
 function dateSegment(target: Extract<CardTarget, { kind: "date" }>): string {
   const parts = [String(target.year).padStart(4, "0")];
   if (target.month !== null) parts.push(pad2(target.month));
@@ -142,20 +114,20 @@ function pad2(value: number): string {
   return String(value).padStart(2, "0");
 }
 
-// 15 digits max keeps a parsed id below Number.MAX_SAFE_INTEGER; a leading
-// non-zero digit keeps `01` from naming the same row as `1`, which would be two
-// URLs holding one card.
+/**
+ * 15 digits max keeps a parsed id below Number.MAX_SAFE_INTEGER; a leading
+ * non-zero digit keeps `01` from naming the same row as `1`, which would be two
+ * URLs holding one card.
+ */
 const ID = /^[1-9]\d{0,14}$/;
-// The characters a registered entry type's name is made of. A name outside them
-// has no archive route either, so refusing it here costs nothing.
+/**
+ * The characters a registered entry type's name is made of. A name outside them
+ * has no archive route either, so refusing it here costs nothing.
+ */
 const ENTRY_TYPE = /^[a-z][a-z0-9_-]{0,63}$/;
 const DATE = /^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/;
 
-/**
- * The page a target path names, or null when it names none. Shape only —
- * whether the page exists is the resolver's answer, not the parser's, and a
- * date this accepts can still be the 31st of February.
- */
+/** Shape only: an accepted date can still be the 31st of February. */
 export function parseCardTargetPath(path: string): CardTarget | null {
   const [kind, target, ...rest] = path.split("/");
   if (rest.length > 0) return null;

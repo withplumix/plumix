@@ -7,15 +7,8 @@ import { resolveCommentableEntry } from "./commentable.js";
 import { loadThread } from "./load-thread.js";
 
 /**
- * The public "load more roots" handler, mounted at
- * `GET /_plumix/comments/list?entryId=<n>&cursor=<token>`
- * (`auth: "public"`). Returns the next page of root comments — each with
- * its descendants — in the same email/IP-private shape the SSR thread
- * uses, so the client can append them. `cursor` is the opaque
- * `nextCursor` from the prior page (or the SSR thread for page two);
- * omit it to re-fetch the first page. Gates the entry the same way the
- * submit route does: must be a published, publicly-readable, comment-enabled
- * entry.
+ * Omit `cursor` to re-fetch the first page. Gates the entry exactly as the
+ * submit route does.
  */
 export function createListHandler(config: ResolvedCommentsConfig) {
   return async (request: Request, ctx: AppContext): Promise<Response> => {

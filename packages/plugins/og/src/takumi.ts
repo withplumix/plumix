@@ -15,11 +15,7 @@ import {
 } from "./renderer.js";
 
 export interface TakumiOptions {
-  /**
-   * The raster format. PNG by default — lossless, and around 27 KB for a
-   * representative card. JPEG suits a photo-heavy design, where a flat template
-   * is not what the encoder is being handed.
-   */
+  /** PNG by default; JPEG suits a photo-heavy design. */
   readonly format?: "png" | "jpeg";
 }
 
@@ -39,11 +35,7 @@ export function takumi(options: TakumiOptions = {}): CardRenderer {
   };
 }
 
-/**
- * The same engine's SVG output. It saves no bytes — the wasm is loaded either
- * way — but it renders a card that is viewable in a browser without asking the
- * Worker to encode a raster.
- */
+/** Saves no bytes (the wasm loads either way), but skips raster encoding. */
 export function svgOnly(): CardRenderer {
   return {
     contentType: SVG_CONTENT_TYPE,
@@ -75,33 +67,29 @@ function sharedOptions(input: CardRenderInput): {
   };
 }
 
-// One renderer per isolate. The engine's own caches are module-scoped rather
-// than per-instance, so nothing is gained by making a fresh one per render. A
-// failed init is held too: nothing about loading a bundled wasm module is
-// transient, so a retry would only pay the same failure again.
+/**
+ * One per isolate. A failed init is kept too: loading a bundled wasm module
+ * never fails transiently.
+ */
 let engine: Promise<Renderer> | undefined;
 
 /**
- * `@takumi-rs/wasm/auto` resolves to a different module under every runtime
- * condition, and its export differs with it. TypeScript sees only whichever
- * condition this project resolves, so the value is read as the union it is at
- * runtime.
+ * `@takumi-rs/wasm/auto` exports differ per runtime condition; TypeScript sees
+ * only one.
  */
 type WasmEntry = SyncInitInput | ((...args: never[]) => void);
 
-// Declared as a return type rather than annotated at the call site, where
-// TypeScript would narrow a `const` straight back to the one condition it
-// resolved and take the other arms away. Returning through an async function
-// also settles the bundler entries, whose export is a promise of the bytes.
+/**
+ * A return type, so TypeScript can't narrow back to one condition; the await
+ * also settles bundler entries that export a promise.
+ */
 async function loadWasmEntry(): Promise<WasmEntry> {
   return (await import("@takumi-rs/wasm/auto")).default;
 }
 
 function renderer(): Promise<Renderer> {
   engine ??= (async () => {
-    // workerd hands back a compiled module, a bundler entry a promise of the
-    // raw bytes, and the Node entry — which initialises the module itself —
-    // its own init function, the one case with nothing left to do here.
+    // The Node entry is a function that initialises the module itself.
     const wasm = await loadWasmEntry();
     if (typeof wasm !== "function") initSync({ module: wasm });
     return new Renderer();

@@ -15,8 +15,10 @@ function formatDate(value: Date | null): string | null {
   }).format(value);
 }
 
-// The day-archive path for a date, e.g. `/2026/07/21` (UTC, zero-padded to
-// match the `/YYYY/MM/DD` route).
+/**
+ * The day-archive path for a date, e.g. `/2026/07/21` (UTC, zero-padded to
+ * match the `/YYYY/MM/DD` route).
+ */
 function dayArchivePath(value: Date): string {
   const year = value.getUTCFullYear();
   const month = String(value.getUTCMonth() + 1).padStart(2, "0");
@@ -29,10 +31,10 @@ interface PostMetaProps {
   readonly className?: string;
 }
 
-// The `author · date · reading-time` line, shared by the post card and the
-// single-post header. The author links to their archive (`/authors/{slug}`) and
-// the date to its day archive (`/YYYY/MM/DD`); each part is separated by a
-// middot.
+/**
+ * The `author · date · reading-time` line, shared by the post card and the
+ * single-post header.
+ */
 export function PostMeta({ entry, className }: PostMetaProps): ReactNode {
   const date = formatDate(entry.publishedAt);
   const parts: { readonly key: string; readonly node: ReactNode }[] = [];

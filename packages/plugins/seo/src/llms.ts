@@ -7,9 +7,7 @@ import { sitemapIndexUrl } from "./sitemap.js";
 /** Where the file answers, before any base prefix. */
 export const LLMS_PATH = "/llms.txt";
 
-// What a site says instead of a map when it has asked not to be read this way.
-// The file is still served: a crawler that fetches it gets an answer rather
-// than a 404 it would read as "nothing here yet".
+/** Still served, so a crawler doesn't read a 404 as "nothing here yet". */
 const WITHHELD =
   "This site's content is not offered for AI training or retrieval.";
 
@@ -24,13 +22,8 @@ declare module "plumix" {
 }
 
 /**
- * `GET /llms.txt` — the llmstxt.org convention: a Markdown file naming the
- * site and pointing at what is worth reading.
- *
- * The map is offered only to a site that wants to be read by machines. One
- * held out of the index has nothing to offer a crawler, and one blocking AI
- * crawlers has said the opposite of what a map here would say — so both get
- * the heading and a sentence, not a list.
+ * A site held out of the index or blocking AI crawlers gets the heading and a
+ * sentence, not the map.
  */
 export async function handleLlmsTxt(ctx: AppContext): Promise<Response> {
   const [site, seo] = await Promise.all([

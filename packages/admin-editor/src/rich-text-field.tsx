@@ -49,43 +49,28 @@ import {
 export type { JSONContent } from "@tiptap/react";
 
 interface RichTextFieldCommonProps {
-  /** Stable testid for the field root (the inspector's per-input id). */
   readonly testId: string;
-  /** Read-only when set — the toolbar and editor stop accepting input. */
   readonly disabled?: boolean;
-  /** Accessible name for the contenteditable region (metabox fields have no host label). */
+  /** Metabox fields have no host label. */
   readonly ariaLabel?: string;
-  /**
-   * Restrict the schema + toolbar to an allowlist. Omitted admits the full
-   * set (the block editor); a metabox `richtext()` field passes its
-   * `.marks()` / `.nodes()` so the editor can only produce accepted content.
-   */
+  /** Omitted admits the full set. */
   readonly allow?: RichTextExtensionOptions;
 }
 
-/** HTML-serialized variant (default) — the block editor stores an HTML string. */
 interface HtmlRichTextFieldProps extends RichTextFieldCommonProps {
   readonly serialization?: "html";
-  /** The body as an HTML string. */
   readonly value: string;
-  /** Emits the serialized HTML on every edit. */
   readonly onChange: (html: string) => void;
 }
 
-/** JSON-serialized variant — metabox `richtext()` stores a ProseMirror doc. */
 interface JsonRichTextFieldProps extends RichTextFieldCommonProps {
   readonly serialization: "json";
-  /** The body as a ProseMirror doc (or `null` when unset). */
   readonly value: JSONContent | null;
-  /** Emits the ProseMirror doc JSON on every edit. */
   readonly onChange: (doc: JSONContent) => void;
 }
 
 type RichTextFieldProps = HtmlRichTextFieldProps | JsonRichTextFieldProps;
 
-// The uniform marks: each toggles via toggleMark(name) and paints its pressed
-// state from isActive(name), so one table drives the toolbar and the selector.
-// `label` is the tooltip / accessible name for the icon-only button.
 const MARKS = [
   { name: "bold", icon: Bold, testId: "bold", label: "Bold" },
   { name: "italic", icon: Italic, testId: "italic", label: "Italic" },
@@ -122,31 +107,26 @@ const MARKS = [
   },
 ] as const;
 
-// The active-mark/-node flags the toolbar paints its pressed state from. Derived
-// via useEditorState so the toolbar re-renders on selection changes without
-// re-rendering on every keystroke.
+/**
+ * The active-mark/-node flags the toolbar paints its pressed state from.
+ * Derived via useEditorState so the toolbar re-renders on selection changes
+ * without re-rendering on every keystroke.
+ */
 interface ActiveState {
   readonly marks: Readonly<Record<string, boolean>>;
   readonly link: boolean;
   readonly bulletList: boolean;
   readonly orderedList: boolean;
   readonly blockquote: boolean;
-  /** The active heading level (1–4), or null when the block is a paragraph. */
+  /** Null when the block is a paragraph. */
   readonly headingLevel: number | null;
 }
 
 /**
- * Right-rail rich-text editor: a Tiptap instance over the explicit node set
- * (see richTextExtensions) + the shared core marks, serializing to the HTML
- * string the block stores and
- * renders. The editor identity is stable — `useEditor` is created once and
- * external value changes are pushed in without emitting an update — so typing
- * never loses focus across the live patch loop's re-renders.
+ * The trailing-node extension's empty paragraph is the editor's, not the
+ * author's. The sync guard compares this same form, or every keystroke resets
+ * the editor.
  */
-// The trailing-node extension keeps an empty paragraph after a final heading,
-// list or quote so the caret can leave it. That paragraph is the editor's, not
-// the author's, so the stored value drops it; the sync guard compares this same
-// form, or every keystroke would reset the editor.
 function storedHtml(editor: Editor): string {
   const html = editor.getHTML();
   return html !== EMPTY_PARAGRAPH && html.endsWith(EMPTY_PARAGRAPH)
@@ -196,13 +176,9 @@ export function RichTextField(props: RichTextFieldProps): ReactElement {
     onUpdate: ({ editor }) => emitRef.current(editor),
   });
 
-  // External value changes (undo/redo, switching to another block) sync into
-  // the editor without re-emitting. The guard compares the serialized form, so
-  // the echo from our own onUpdate is a no-op and the caret never resets
-  // mid-type — this rests on the host storing back the exact value we emit; any
-  // re-serialization between onChange and `value` would defeat it. A `null`
-  // value clears the editor (e.g. an RHF reset back to empty defaults) — in
-  // both modes, so the on-screen doc never lags behind a cleared field.
+  // Relies on the host storing back the exact value emitted; any
+  // re-serialization between onChange and `value` would reset the caret
+  // mid-type.
   useEffect(() => {
     if (!editor) return;
     if (props.serialization === "json") {
@@ -244,10 +220,8 @@ export function RichTextField(props: RichTextFieldProps): ReactElement {
         : null,
   });
 
-  // The toolbar mirrors the schema: a control shows only when its mark/node
-  // survives the allowlist (no allowlist ⇒ everything, the block editor).
-  // Otherwise a constrained field would offer buttons that produce content
-  // the editor can't hold and the server would reject.
+  // A button for content the schema can't hold would produce what the server
+  // rejects.
   const controlDisabled = !editor || disabled;
   const visibleMarks = MARKS.filter(({ name }) => allowsMark(allow, name));
   const showHeadings = allowsNode(allow, "heading");
@@ -403,8 +377,10 @@ function ToolbarToggle({
   );
 }
 
-// Convert the current block to a paragraph or a heading level. "paragraph"
-// and "h1"–"h6" are the values the format dropdown emits.
+/**
+ * Convert the current block to a paragraph or a heading level. "paragraph"
+ * and "h1"–"h6" are the values the format dropdown emits.
+ */
 function setFormat(editor: Editor | null, value: string): void {
   if (!editor) return;
   const chain = editor.chain().focus();
@@ -416,12 +392,10 @@ function setFormat(editor: Editor | null, value: string): void {
   }
 }
 
-// The link editor: a popover anchored to the toolbar's link toggle, replacing
-// the OS `window.prompt`. Focusing the URL input pulls DOM focus out of the
-// editor, but ProseMirror keeps its selection, so we snapshot the range on open
-// and restore it before mutating the link mark — the link lands on the text the
-// user had selected. Editing an existing link pre-fills its href and offers a
-// remove action.
+/**
+ * Focusing the URL input pulls DOM focus out of the editor, so the selection is
+ * snapshotted on open and restored before mutating the link mark.
+ */
 export function LinkPopover({
   editor,
   active,
@@ -446,10 +420,8 @@ export function LinkPopover({
     setOpen(next);
   };
 
-  // Restore the captured selection, then set (or, for an empty url, clear) the
-  // link mark. `extendMarkRange` widens a collapsed caret sitting inside an
-  // existing link to the whole link, so editing works without re-selecting; on
-  // unlinked text it's a no-op. Removing is just applying an empty url.
+  // `extendMarkRange` widens a caret inside a link to the whole link. An empty
+  // url removes it.
   const applyHref = (url: string): void => {
     if (!editor || !range.current) return;
     const chain = editor

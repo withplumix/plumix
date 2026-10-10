@@ -8,9 +8,11 @@ import { IslandPropSerializationError } from "./serialize.js";
 
 type Props = Readonly<Record<string, unknown>>;
 
-// Wrap `Component` exactly as the SSR shim the Vite transform generates
-// does: hand the raw props to `IslandShim`, which owns the boundary
-// decision.
+/**
+ * Wrap `Component` exactly as the SSR shim the Vite transform generates
+ * does: hand the raw props to `IslandShim`, which owns the boundary
+ * decision.
+ */
 function island(
   Component: (props: Props) => ReactNode,
   exportName: string,
@@ -35,7 +37,8 @@ describe("IslandShim boundary", () => {
 
     expect(islandCount(html)).toBe(1);
     expect(html).toContain('component-export="Widget"');
-    // Author prop survives, encoded in the plumix tuple format ([0,1] = Value 1).
+    // Author prop survives, encoded in the plumix tuple format ([0,1] = Value
+    // 1).
     expect(html).toContain("&quot;n&quot;:[0,1]");
     expect(html).toContain("<div>hi</div>");
   });
@@ -69,9 +72,8 @@ describe("IslandShim boundary", () => {
       island(Parent, "Parent", { children: island(Inner, "Inner") }),
     );
 
-    // Passed-in children are bridged to the client as slot HTML; if the child
-    // inlined it would be frozen static markup. As its own island it carries a
-    // <plumix-island> the client upgrades independently.
+    // Inlined, passed-in children would be frozen static markup; as their own
+    // island the client upgrades them independently.
     expect(islandCount(html)).toBe(2);
     expect(html).toContain('component-export="Inner"');
     expect(html).toContain('data-plumix-slot="children"');
@@ -99,10 +101,8 @@ describe("IslandShim boundary", () => {
     expect(html).not.toContain('prefetch="load"');
   });
 
-  // The #1702 mechanism, distilled: Radix threads a React Context object
-  // — genuinely cyclic (Ctx.Provider._context === Ctx) — nested inside a
-  // plain `__scope` object. That plain object reaches the serializer; if a
-  // nested shim re-serialized its props, the walk would hit the cycle and
+  // Radix threads a genuinely cyclic React Context inside a plain `__scope`
+  // object; a nested shim re-serializing its props would hit the cycle and
   // throw.
   test("does not throw when a nested primitive carries a cyclic value (regression: #1702)", () => {
     const CyclicCtx = createContext<unknown>(null);

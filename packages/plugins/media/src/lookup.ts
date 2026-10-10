@@ -1,8 +1,5 @@
-// Augmentation-seam types come from the root `plumix` specifier — the same
-// module this file augments below (`declare module "plumix"`). Importing them
-// here keeps the augmentation target loaded in the plugin's own build. Direct-
-// write db symbols come from their canonical seams: operators + the `SQL` type
-// from `plumix/db`, schema tables from `plumix/schema` (#1766).
+// From the root `plumix` specifier, the module augmented below, so the
+// augmentation target loads in the plugin's own build.
 import type {
   HydratedReference,
   LookupAdapter,
@@ -32,27 +29,16 @@ const MEDIA_ROW_COLUMNS = {
 } as const;
 
 /**
- * Public scope shape for the `media` reference field. Carried on the
- * field's `referenceTarget.scope`; the media `LookupAdapter` consumes
- * it for write-time validation, picker filtering, and read-time
- * orphan resolution.
- *
- * `accept` is either a single MIME prefix string (`"image/"` matches
- * `image/png`, `image/jpeg`, …) or a readonly array of exact MIME
- * matches. Drop HTML's `image/*` wildcard syntax — the trailing slash
- * already conveys "category" and avoids the `image/*` vs `image/`
- * ambiguity.
+ * A string `accept` is a MIME prefix (`"image/"`, not HTML's `image/*`); an
+ * array lists exact MIME types.
  */
 export interface MediaFieldScope {
   readonly accept?: string | readonly string[];
 }
 
 /**
- * Hydrated shape of a `media` reference — the read pipeline resolves
- * stored ids into this at read time, so themes can render a media meta
- * field (URL included) without a manual fetch. `id` stays the stored
- * string id so a hydrated value posted back through a meta write
- * self-heals to the plain id.
+ * `id` stays the stored string id, so a hydrated value posted back through a
+ * meta write heals to the plain id.
  */
 export interface MediaReference extends HydratedReference {
   readonly title: string;
@@ -71,29 +57,11 @@ declare module "plumix" {
   }
 }
 
+/** Only published media surface: a draft's bytes are not verified yet. */
 /**
- * Server-side adapter for the `media` reference field. Storage is the
- * plain media id; `hydrate` resolves ids into `MediaReference` (URL
- * included) at read time through the shared meta pipeline.
- *
- * Queries:
- *  - `list({ ids })`: PK lookup via `inArray(entries.id, …)` + the
- *    `entries_type_status_published_idx` partition. SQLite picks the
- *    PK as the most selective; the type+status filter is post-applied
- *    to a small rowset.
- *  - `list({ query })`: the read service's media list query, so the
- *    browse path returns what `media.list` returns for the same search.
- *  - MIME `accept` filter: pushed into SQL against the meta JSON, so a
- *    browse LIMIT counts only matching rows.
- *
- * Drafts and trashed media are invisible to the picker — only
- * `status = "published"` rows surface. A draft media entry exists
- * between `media.createUploadUrl` (writes a draft row) and
- * `media.confirm` (flips to published) — referencing one would point
- * at an asset whose bytes haven't been verified.
+ * `satisfies` keeps `hydrate`'s concrete `MediaReference` return type
+ * instead of widening it to `HydratedReference`.
  */
-// `satisfies` keeps `hydrate`'s concrete `MediaReference` return type
-// visible instead of widening to the contract's `HydratedReference`.
 export const mediaLookupAdapter = {
   async list(ctx, options) {
     const accept = options.scope?.accept;

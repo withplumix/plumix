@@ -64,9 +64,8 @@ export const embedBlock = defineBlock({
     const url = typeof attrs.url === "string" ? attrs.url : "";
     const resolved = resolveEmbed(url);
     if (!resolved) {
-      // No usable URL yet: render nothing on the public page (an empty embed is
-      // an unfinished draft), but in the editor show a placeholder so the block
-      // stays visible and selectable instead of collapsing to a zero-height line.
+      // An empty embed is an unfinished draft; the editor placeholder keeps it
+      // selectable instead of collapsing to zero height.
       if (!context.editing) return null;
       return (
         <div
@@ -96,10 +95,7 @@ export const embedBlock = defineBlock({
         : context.t(TITLE_FALLBACK);
     const caption = typeof attrs.caption === "string" ? attrs.caption : "";
 
-    // The iframe (with its sandbox/referrer protections) is never rendered
-    // server-side — the facade mounts it client-side on the visitor's first
-    // click, so an author-chosen host gets no connection until opt-in. The
-    // sandbox decision still travels with `sandboxed` for that mount.
+    // An author-chosen host gets no connection until the visitor opts in.
     return (
       <EmbedFacade
         client="interaction"

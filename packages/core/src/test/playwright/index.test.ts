@@ -125,11 +125,8 @@ describe("mockManifest", () => {
 
   const DOC_HTML = `<!doctype html><html><head><script id="plumix-manifest" type="application/json">{"old":true}</script></head><body></body></html>`;
 
-  /**
-   * `mockManifest` registers a catch-all route handler; capture it so
-   * each test can drive it with a hand-rolled `Route` and simulate the
-   * teardown races that only surface under full-suite parallel load.
-   */
+  // `mockManifest` registers a catch-all route; capturing it lets a test drive
+  // the teardown races that only surface under parallel load.
   async function captureHandler(
     manifest: PlumixManifest = emptyManifest(),
   ): Promise<(route: Route) => Promise<void>> {

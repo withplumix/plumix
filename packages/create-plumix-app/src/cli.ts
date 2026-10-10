@@ -46,8 +46,10 @@ Example:
   cd my-site
   pnpm dev`;
 
-// Only drive the interactive wizard on a real terminal (and never in CI),
-// so piped/scripted invocations stay on the deterministic flag path.
+/**
+ * Only drive the interactive wizard on a real terminal (and never in CI),
+ * so piped/scripted invocations stay on the deterministic flag path.
+ */
 function isInteractive(): boolean {
   return process.stdin.isTTY && process.stdout.isTTY && !process.env.CI;
 }
@@ -166,10 +168,8 @@ export async function runCli(
 }
 
 /**
- * A runtime that pins a package manager installs with it whatever invoked us
- * — pnpm's shell-script `.bin` shims cannot run under `bun --bun` — so only an
- * explicit `--pm` naming another one is refused. Otherwise `--pm` wins over
- * the invoking manager.
+ * pnpm's `.bin` shims can't run under `bun --bun`, so a runtime pinning a
+ * package manager refuses an explicit `--pm` naming another.
  */
 function resolvePackageManager(
   runtime: RuntimeDescriptor | undefined,

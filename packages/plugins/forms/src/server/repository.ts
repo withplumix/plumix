@@ -16,13 +16,6 @@ import { formLabelSnapshots, formSubmissions } from "../db/schema.js";
 import { FormsError } from "../errors.js";
 import { labelSnapshotDigest } from "./labels.js";
 
-/**
- * Put one label snapshot where submissions can point at it, and answer
- * with the key they point with. Content-addressed, so this is an insert
- * that is usually ignored rather than a lookup followed by an insert —
- * and no submission ever has to wonder whether the snapshot it needs is
- * already there.
- */
 export async function storeLabelSnapshot(
   db: AppContext["db"],
   labels: FormLabelSnapshot,
@@ -53,11 +46,7 @@ export async function insertSubmission(
   return toStored(row, labels);
 }
 
-/**
- * The pair as two columns. Exported so that everything writing a row
- * writes them through here — which is what makes "set and cleared
- * together" a property of the code rather than a rule to remember.
- */
+/** Every row writer must use this, so the pair is never half-set. */
 export function boundColumns(bound: FormBound | null): {
   boundType: BoundType | null;
   boundId: number | null;
@@ -66,11 +55,8 @@ export function boundColumns(bound: FormBound | null): {
 }
 
 /**
- * One row as every reader wants it: the digest dropped, since it is how
- * a snapshot is found and of no use to anything already holding one, and
- * the bound pair folded back into the value it stands for. A half-set
- * pair can only come from a direct write, and reads as nothing bound
- * rather than as half a reference.
+ * A half-set bound pair, possible only from a direct write, reads as
+ * nothing bound.
  */
 function toStored(
   { labelsDigest: _digest, boundType, boundId, ...rest }: FormSubmission,
@@ -86,11 +72,6 @@ function toStored(
   };
 }
 
-/**
- * Record on the row that the form's own handler threw. The submission
- * itself is untouched — it was received, and what failed was what the
- * site meant to do next with it.
- */
 export async function recordHandlerFailure(
   ctx: AppContext,
   id: number,
@@ -128,11 +109,10 @@ function filterFor(filter: SubmissionFilter): SQL | undefined {
   return and(...conditions);
 }
 
-// Left rather than inner. Nothing deletes a snapshot, but no foreign key
-// says so either — a direct write or a partial restore can leave a row
-// pointing at one that is not there. Such a row reads under its raw keys
-// rather than its labels; an inner join would drop it from the inbox
-// altogether, which is the worse answer to the same accident.
+/**
+ * Left join: no foreign key guarantees the snapshot exists, and an inner
+ * join would hide such a row from the inbox.
+ */
 function selectSubmissions(ctx: AppContext) {
   return ctx.db
     .select({
@@ -152,9 +132,7 @@ function withLabels(
   return toStored(row, row.labels ?? {});
 }
 
-// `id` is autoincrement and a submission is never rewritten in place, so
-// id order is arrival order: one column orders the list and carries the
-// cursor, with no same-second tie for `createdAt` to break.
+/** Id order is arrival order, with no same-second ties like `createdAt`. */
 function decodeCursor(raw: string | null | undefined): number | null {
   if (!raw) return null;
   const id = Number.parseInt(raw, 10);
@@ -188,12 +166,8 @@ export async function listSubmissions(
 }
 
 /**
- * Every submission a filter names, newest first — what an export writes.
- * Unpaged, because the columns of a CSV come from the label snapshots of
- * the rows it holds and there is no header to write before the last row
- * has been read. `limit` is therefore a ceiling rather than a page: the
- * caller reads one past what it can serve so that too many to hold is
- * something it can say — see `createExportHandler`.
+ * Unpaged; `limit` is a ceiling. Read one past what you can serve to
+ * detect overflow.
  */
 export async function listAllSubmissions(
   ctx: AppContext,
@@ -207,12 +181,7 @@ export async function listAllSubmissions(
   return rows.map(withLabels);
 }
 
-/**
- * The numbers beside each filter. Each facet is counted with the *other*
- * facet applied, so switching status keeps the form counts answering
- * "how many of these are there", rather than restating the page you can
- * already see.
- */
+/** Each facet is counted with the *other* facet applied. */
 export async function countSubmissionFacets(
   ctx: AppContext,
   filter: SubmissionFilter,

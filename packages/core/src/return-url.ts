@@ -2,10 +2,8 @@ import { withBasePath } from "./base-path.js";
 
 export interface ResolveReturnUrlOptions {
   /**
-   * The hidden field the re-rendered form carries. Tried before the browser's
-   * own `Referer`: after a rejected submit the document *is* the endpoint, so
-   * the `Referer` would send the retry back there and a POST-only route
-   * answers a GET with 404.
+   * Tried before `Referer`: after a rejected submit the document is the
+   * endpoint, and a POST-only route answers a GET with 404.
    */
   readonly returnTo: string | null | undefined;
   /** The endpoint's own path, which no answer may point back at. */
@@ -13,21 +11,9 @@ export interface ResolveReturnUrlOptions {
 }
 
 /**
- * Where to send a visitor after a form post that the browser, not an island,
- * submitted — the page the form was on, or the site root when nothing offered
- * a usable answer.
- *
- * Both candidates are the visitor's to set, so each is held to an origin this
- * site answers on and refused the endpoint's own path: the response can be
- * turned into neither an open redirect nor a loop.
- *
- * Candidates resolve against the request's own URL, so a relative value — the
- * natural thing for a template to pass — is read as a path on this site
- * rather than one `URL.parse` refuses outright. Both the request's origin and
- * the configured one are accepted, which is the pair the dispatcher's own
- * Origin check accepts: on a multi-host deploy, holding to the configured
- * origin alone would reject every candidate and send every visitor to the
- * site root.
+ * Falls back to the site root. Candidates must be on an origin this site
+ * answers on and not the endpoint itself, so neither an open redirect nor a
+ * loop.
  */
 export function resolveReturnUrl(
   request: Request,

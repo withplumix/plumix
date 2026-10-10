@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import { createRequestMemo } from "../../context/memo.js";
 import { declaredPageTags, declarePageTags } from "./page-tags.js";
 
-// The accumulator keys off `ctx.memo`, so each fake context needs its own
-// memo to stand in for a distinct request.
+/**
+ * The accumulator keys off `ctx.memo`, so each fake context needs its own
+ * memo to stand in for a distinct request.
+ */
 function fakeCtx() {
   return { memo: createRequestMemo() };
 }
@@ -41,9 +43,7 @@ describe("page-tags accumulator", () => {
   });
 
   it("reaches the same set from a derived context", () => {
-    // `withUser`, the base-path strip and the formPost session swap all
-    // spread the context into a fresh object that shares the memo — tags
-    // declared before or after the derivation read back through either.
+    // Derived contexts spread into a fresh object that shares the memo.
     const ctx = fakeCtx();
     const derived = { ...ctx, request: new Request("https://cms.example/") };
     declarePageTags(derived, ["e:1"]);

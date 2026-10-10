@@ -1,9 +1,9 @@
 import type { JsonObject } from "plumix";
 
-// http(s), root-relative, parent-relative, mailto:, and tel: pass; the
-// last two are required for contact-card "email me the file" flows.
-// Everything else is silently dropped so a hostile attribute value
-// never reaches the rendered anchor.
+/**
+ * mailto: and tel: are needed for contact-card flows. Anything else is dropped
+ * silently so a hostile attribute value never reaches the anchor.
+ */
 const SAFE_HREF = /^(https?:\/\/|mailto:|tel:|\/|\.\.?\/)/i;
 
 export function sanitizeHref(raw: unknown): string | undefined {
@@ -13,8 +13,10 @@ export function sanitizeHref(raw: unknown): string | undefined {
   return trimmed;
 }
 
-// The picker writes a { id, url, filename?, mime? } snapshot. Read what the
-// file render needs, tolerating a null/legacy value.
+/**
+ * The picker writes a { id, url, filename?, mime? } snapshot. Read what the
+ * file render needs, tolerating a null/legacy value.
+ */
 interface FileMedia {
   readonly url: string;
   readonly filename: string;
@@ -32,12 +34,8 @@ export function normalizeFileMedia(raw: unknown): FileMedia | null {
 }
 
 export function formatSize(bytes: unknown): string | undefined {
-  // Public-site SSR render. Decimal separator stays `.` until content
-  // i18n lands — the visitor-facing locale resolver is the seam where
-  // this should pull from. Admin-side formatting (MediaLibrary card +
-  // detail) uses `Intl.NumberFormat(locale, ...)` against `i18n.locale`.
-  // `<= 0` (not `< 0`): 0 is the unset default, so it reads as "no size"
-  // rather than a literal "0 B".
+  // Locale-free: the public render has no visitor locale yet. 0 is the unset
+  // default, so it reads as no size rather than "0 B".
   if (typeof bytes !== "number" || !Number.isFinite(bytes) || bytes <= 0) {
     return undefined;
   }

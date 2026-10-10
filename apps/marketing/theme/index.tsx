@@ -18,8 +18,10 @@ import { PluginsSection } from "./components/PluginsSection";
 import { ToolingSection } from "./components/ToolingSection";
 import { TOKENS } from "./tokens";
 
-// The landing sections are theme code for now; pages authored in the admin
-// render through `entry` so the site can grow without a deploy.
+/**
+ * The landing sections are theme code for now; pages authored in the admin
+ * render through `entry` so the site can grow without a deploy.
+ */
 export const marketingTheme = defineTheme({
   templates: [
     frontPage(

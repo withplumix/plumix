@@ -7,9 +7,8 @@ import { withBasePath } from "plumix/support";
 import type { Comment } from "../db/schema.js";
 
 /**
- * Mails the moderator `commentAwaitingModeration` for a `pending` comment. A
- * no-op for any other comment and on a site with no mailer, so callers can
- * fire it unconditionally on every new comment.
+ * A no-op for non-`pending` comments and without a mailer, so callers fire it
+ * on every new comment.
  */
 export async function notifyModeratorOfPending(
   ctx: Pick<AppContext, "db" | "mail" | "mailer" | "origin" | "config">,

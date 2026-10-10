@@ -28,10 +28,10 @@ const listInput = (partial: Record<string, unknown> = {}) =>
 const getInput = (partial: Record<string, unknown>) =>
   v.parse(entryGetInputSchema, partial);
 
-// A realistic stored envelope: every key, block name and attribute below is
-// structure, not prose. #2117 measured each of ENVELOPE_TERMS returning half
-// the table or more while the entries-list clause matched this column, so the
-// roster is the issue's own and stays whole.
+/**
+ * Every key, block name and attribute here is structure, not prose; each
+ * envelope term once matched half the table or more.
+ */
 const ENVELOPE_CONTENT = {
   version: "plumix.v2",
   blocks: [

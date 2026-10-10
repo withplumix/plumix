@@ -10,13 +10,6 @@ import type {
   DevErrorTimelineRow,
 } from "../ui/index.js";
 
-// The dev-only request-context collector for the error page (#1598). Reads the
-// same request-scoped sources the debug bar reads — the request itself, the
-// resolved entity/template, and the telemetry span tree — but shapes them into
-// the page's own plain, serializable contract rather than reusing the bar's
-// panel components. Referenced only under the `process.env.PLUMIX_DEV` gate at
-// the dispatcher catch, so this module tree-shakes out of production builds.
-
 export type DevErrorContextSource = Pick<
   AppContext,
   | "request"
@@ -34,11 +27,8 @@ export type DevErrorContextSource = Pick<
 >;
 
 /**
- * Read the request-scoped context sections (request, route/template, executed
- * queries, timeline, application) off `ctx` and its telemetry collector. The
- * dispatcher passes the result to {@link renderDevErrorPage}. Every field
- * degrades on its own: an unresolved route, a request that touched no database,
- * or an unsampled request each yields an empty section rather than a throw.
+ * Each section degrades on its own: an unresolved route, no database, or an
+ * unsampled request yields an empty section rather than a throw.
  */
 export function collectDevErrorContext(
   ctx: DevErrorContextSource,
@@ -73,20 +63,20 @@ function describeEntity(entity: ResolvedEntity | null): string | undefined {
   return `${entity.kind} #${entity.id}`;
 }
 
-// `Array.isArray` widens a readonly-array union to `any[]`; a dedicated guard
-// keeps the elements typed as JsonValue (mirrors the debug bar's db panel).
+/**
+ * `Array.isArray` widens a readonly-array union to `any[]`; a dedicated guard
+ * keeps the elements typed as JsonValue (mirrors the debug bar's db panel).
+ */
 function isJsonArray(
   value: JsonValue | undefined,
 ): value is readonly JsonValue[] {
   return Array.isArray(value);
 }
 
-// Walk the span tree collecting what the driver wraps emit: a `db.sql` span is
-// one query row; a `db.batch` span flattens into one row per statement. A span
-// with `status: "error"` marks the query the page flags as failing. Kept here,
-// not shared with the debug bar's db panel, so the error page has no dependency
-// on the debug bar — it must render when the bar is disabled or absent, and it
-// projects a different shape (a `failed` flag, no bound params).
+/**
+ * Not shared with the debug bar's db panel: the error page must render when
+ * the bar is disabled, and it projects a different shape.
+ */
 function collectQueries(spans: readonly TelemetrySpan[]): DevErrorQuery[] {
   const rows: DevErrorQuery[] = [];
   const visit = (span: TelemetrySpan): void => {
@@ -115,10 +105,10 @@ function collectQueries(spans: readonly TelemetrySpan[]): DevErrorQuery[] {
   return rows;
 }
 
-// Flatten the span tree into a waterfall, each row positioned against the
-// request's overall time window and carrying its span's failed status so the
-// renderer can flag where the request died. Mirrors the debug bar's timeline
-// model, kept here so the dev error page stays independent of it.
+/**
+ * Duplicates the debug bar's timeline model so the error page stays
+ * independent of the bar.
+ */
 function collectTimeline(spans: readonly TelemetrySpan[]): DevErrorTimeline {
   if (spans.length === 0) return { rows: [], totalMs: 0 };
   let windowStart = Infinity;

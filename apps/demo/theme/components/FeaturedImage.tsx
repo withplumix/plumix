@@ -6,8 +6,10 @@ import { Image } from "@plumix/core/blocks/renderer";
 interface FeaturedImageProps {
   readonly entry: ResolvedEntry;
   readonly priority?: boolean;
-  // Cards fall back to a neutral block when there's no image; the single
-  // post renders nothing.
+  /**
+   * Cards fall back to a neutral block when there's no image; the single
+   * post renders nothing.
+   */
   readonly placeholder?: boolean;
   readonly className?: string;
 }

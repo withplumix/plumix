@@ -1,22 +1,13 @@
-// Worker-driven plugin e2e. Runs against the real forms playground at
-// `../playground` via `plumix dev`, whose seeded `/contact` page carries
-// the form block. Reserved for what an HTTP-level test structurally
-// cannot reach: a real browser hydrating the island, an axe pass on the
-// rendered form, and a submit made with JavaScript switched off.
-//
-// Controls are addressed through the `data-plumix-form-*` attributes the
-// plugin documents as public API — the markup's stable handles, and what
-// a site styling the form already selects on.
-
 import type { Page } from "@playwright/test";
 import { expect, test } from "plumix/test/playwright";
 
 import { expectFormHasNoAxeViolations } from "./support/axe.js";
 
 const FORM = "[data-plumix-form='contact']";
-// The island sets this once it is driving the form. Waiting on it is
-// what keeps a spec from racing hydration and clicking a button the
-// browser would still submit the plain way.
+/**
+ * Set once the island drives the form; waiting on it keeps specs from clicking
+ * before hydration.
+ */
 const ENHANCED = "[data-plumix-form='contact'][data-plumix-form-enhanced]";
 const SUMMARY = "[data-plumix-form-summary]";
 const CONFIRMATION = "[data-plumix-form-confirmation]";
@@ -25,17 +16,18 @@ const ROW = "[data-plumix-form-row]";
 const ADD_ROW = "[data-plumix-form-row-add='attendees']";
 const removeRow = (row: string) => `[data-plumix-form-row-remove='${row}']`;
 
-// The playground's second form: the same field list, broken into three
-// steps, with a question on the last one that a plan chosen on the one
-// before it reveals.
+/**
+ * The playground's second form: the same field list, broken into three
+ * steps, with a question on the last one that a plan chosen on the one
+ * before it reveals.
+ */
 const SURVEY_ENHANCED =
   "[data-plumix-form='survey'][data-plumix-form-enhanced]";
 const STEP_TITLE = "[data-plumix-form-step-title]";
 const NEXT = "[data-plumix-form-next]";
 
-// A visitor is not signed in. The seeded admin session would personalize
-// the render and put the site's dev chrome on the page, which is neither
-// what a visitor meets nor what the edge caches.
+// A visitor is signed out; the seeded admin session would personalize the
+// render and add dev chrome.
 test.use({ storageState: { cookies: [], origins: [] } });
 
 test.describe("with JavaScript", () => {
@@ -97,9 +89,8 @@ test.describe("with JavaScript", () => {
     await expect(page.locator(ROW)).toHaveCount(2);
     await page.fill(control("attendees[1][who]"), "Alan");
 
-    // The row that stays keeps its own answer as it is renumbered into
-    // the slot the removed one held — which is what the stable row key
-    // buys, and what an index-keyed row would get wrong.
+    // The surviving row keeps its answer while renumbered; an index-keyed row
+    // would lose it.
     await page.click(removeRow("attendees[0]"));
     await expect(page.locator(ROW)).toHaveCount(1);
     await expect(page.locator(control("attendees[0][who]"))).toHaveValue(
@@ -264,11 +255,8 @@ test.describe("a step that only some answers call for", () => {
   const GATED = "[data-plumix-form='gated'][data-plumix-form-enhanced]";
   const SUBMIT = "[data-plumix-form-submit]";
 
-  // The form is one step until `pro` is chosen and two once it is, so
-  // the button on the first step changes what it is as the visitor
-  // answers. It has to say which of the two it is at every moment: a
-  // "Next" that posted the form, or a "Submit" that paged on instead,
-  // would both be the button lying about what pressing it does.
+  // The first step's button flips between Next and Submit as `pro` is chosen,
+  // and must never mislabel what pressing it does.
   test("keeps the button honest as the answer that shapes the wizard changes", async ({
     page,
   }) => {
@@ -401,10 +389,8 @@ test.describe("without JavaScript", () => {
   });
 });
 
-// The plugin's two theme-facing surfaces, both on the playground's own
-// theme: a form the template renders itself, and a subscribe bar that is
-// the theme's markup end to end. Between them they are the answer to
-// "the block is not what I want" that is not a fork.
+// The plugin's two theme-facing surfaces: a template-rendered form and a
+// subscribe bar of the theme's own markup.
 test.describe("a theme rendering the form itself", () => {
   test("renders a form the page carries no block for", async ({ page }) => {
     await page.goto("/templated");
@@ -432,10 +418,8 @@ test.describe("a theme rendering the form itself", () => {
 
 test.describe("a theme rendering its own controls", () => {
   const BAR = "[data-testid='subscribe-bar']";
-  // The bar's server render is on the page before the island driving it
-  // has hydrated, so a click before this lands on nothing. It carries
-  // none of the plugin's markup, so the marker it is waited on by is the
-  // theme's own — see `playground/subscribe-bar.ts`.
+  // The bar carries none of the plugin's markup, so hydration is awaited on the
+  // theme's own marker.
   const LIVE = "[data-testid='subscribe-bar'][data-live]";
 
   test("submits through usePlumixForm, in the theme's own markup", async ({
@@ -470,21 +454,14 @@ test.describe("a theme rendering its own controls", () => {
   });
 });
 
-// The one thing no HTTP-level test can reach: whether a widget actually
-// ends up in the form the island took over. It is drawn explicitly for
-// exactly that reason — Cloudflare's own auto-scan runs once at script
-// load, and an island replaces the markup the server sent — so this is
-// the test that says the wiring holds.
+// Drawn explicitly because Cloudflare's auto-scan runs once at script load,
+// before the island replaces the server's markup.
 test.describe("a form guarded by Turnstile", () => {
   const GUARDED = "[data-plumix-form='guarded'][data-plumix-form-enhanced]";
   const CHALLENGE = "input[name='cf-turnstile-response']";
 
-  // A stand-in for Cloudflare's `api.js`. The real one is a network
-  // dependency this suite should not take, and what needs proving is
-  // this plugin's half: that the script is asked for at all, that the
-  // container it is handed is the one still on the page after the island
-  // mounted, and that the answer it writes posts under the name the
-  // submit handler reads.
+  // Stands in for Cloudflare's `api.js` so the suite takes no network
+  // dependency; only the plugin's wiring is under test.
   async function stubWidget(page: Page): Promise<void> {
     await page.route("**/turnstile/v0/api.js*", (route) =>
       route.fulfill({
@@ -505,9 +482,8 @@ test.describe("a form guarded by Turnstile", () => {
     );
   }
 
-  // Only the drawing: verifying a challenge is the server's half, and
-  // driving it from here would put a live call to Cloudflare in the
-  // suite for something the dispatcher tests already cover offline.
+  // Only the drawing: verifying a challenge is the server's half, covered
+  // offline by the dispatcher tests.
   test("draws the challenge into the form the island took over", async ({
     page,
   }) => {

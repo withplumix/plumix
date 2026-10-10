@@ -5,11 +5,6 @@ import {
   isUniqueConstraintErrorOn,
 } from "./errors.js";
 
-// Synthetic driver error shapes — each mirrors what the real driver emits
-// for a UNIQUE violation. We keep them in-file so adding a new runtime
-// is a one-row append, and a future regression (someone narrowing the
-// detector) fails loud with a named driver.
-
 describe("isUniqueConstraintError — driver shape coverage", () => {
   test("better-sqlite3: SqliteError with string `code`", () => {
     const err = Object.assign(
@@ -29,10 +24,8 @@ describe("isUniqueConstraintError — driver shape coverage", () => {
   });
 
   test("node:sqlite (Node 22+): numeric extended `errcode` 2067", () => {
-    // Node's built-in sqlite exposes errcode = sqlite3_errcode(). Whether
-    // that's the primary or extended code depends on the Node build —
-    // both paths are covered: the numeric set has 2067, and the next
-    // test covers the primary-code-plus-message variant.
+    // Whether Node's sqlite errcode is primary or extended depends on the
+    // build; the next test covers the primary-code variant.
     const err = Object.assign(new Error("UNIQUE constraint failed: t.x"), {
       code: "ERR_SQLITE_ERROR",
       errcode: 2067,
@@ -41,12 +34,8 @@ describe("isUniqueConstraintError — driver shape coverage", () => {
   });
 
   test("node:sqlite: primary `errcode` 19 falls through to message fallback", () => {
-    // Some Node builds (and Bun pre-1.0) emit only the primary result
-    // code (19 = SQLITE_CONSTRAINT, covering every constraint flavour).
-    // Classifying on 19 alone would mis-fire on CHECK / FOREIGN KEY /
-    // NOT NULL too, so we deliberately don't. The distinctive SQLite
-    // message "UNIQUE constraint failed:" is what actually separates
-    // UNIQUE from other constraints.
+    // Code 19 alone also covers CHECK, FOREIGN KEY and NOT NULL, so only the
+    // "UNIQUE constraint failed:" message separates UNIQUE.
     const err = Object.assign(new Error("UNIQUE constraint failed: t.x"), {
       code: "ERR_SQLITE_ERROR",
       errcode: 19,
@@ -55,10 +44,8 @@ describe("isUniqueConstraintError — driver shape coverage", () => {
   });
 
   test("bun:sqlite: numeric `errno` 2067 (extended)", () => {
-    // Bun ≥ 1.x emits extended SQLite result codes on `errno`; pre-1.0 GA
-    // returned base code 19 (SQLITE_CONSTRAINT) which alone is too generic
-    // to classify on (covers CHECK, FOREIGN KEY, NOT NULL too) and relies
-    // on the message fallback — still detected, just via a different path.
+    // Bun before 1.0 returned only base code 19, detected through the
+    // message fallback instead.
     const err = Object.assign(new Error("UNIQUE constraint failed"), {
       errno: 2067,
     });
@@ -106,10 +93,8 @@ describe("isUniqueConstraintError — driver shape coverage", () => {
   });
 
   test("drizzle + D1 wrap: leaf is a plain Error with only a message", () => {
-    // D1 bindings throw bare Error instances with "D1_ERROR: …" messages —
-    // no structured code on the leaf. Drizzle wraps them in its own
-    // DrizzleError via .cause. Detector has to reach the leaf and match
-    // by message only.
+    // D1 leaves carry no structured code and Drizzle wraps them via
+    // `.cause`, so only the leaf's message identifies them.
     const d1 = new Error(
       "D1_ERROR: UNIQUE constraint failed: users.email: SQLITE_CONSTRAINT",
     );

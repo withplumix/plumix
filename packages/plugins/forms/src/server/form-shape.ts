@@ -7,11 +7,6 @@ import type { FormRegistry } from "../registry.js";
 import type { FormSummary } from "../types.js";
 import { declaredSteps } from "../steps.js";
 
-/**
- * Every registered form, named. The registry is the whole answer: a form
- * is a value in the repository, so there is no table to read and no
- * manifest entry to keep in step with one.
- */
 export function formSummaries(registry: FormRegistry): readonly FormSummary[] {
   return registry.list().map((form) => ({
     slug: form.slug,
@@ -19,13 +14,10 @@ export function formSummaries(registry: FormRegistry): readonly FormSummary[] {
   }));
 }
 
-/** One question, as a reader outside the browser needs it. */
 interface FormFieldShape {
   readonly key: string;
   readonly label: string;
-  /** The control the visitor is given — `text`, `select`, `repeater`, … */
   readonly inputType: string;
-  /** What an answer to it stores, which is what a submission carries. */
   readonly type: string;
   readonly required: boolean;
   readonly description?: string;
@@ -33,22 +25,17 @@ interface FormFieldShape {
     readonly value: string;
     readonly label: string;
   }[];
-  /** Set on a choice field that stores an array rather than one value. */
   readonly multiple?: boolean;
   /**
-   * Set on a field the form shows only under a condition. The rule itself
-   * is not reported; that it exists is what explains a submission with
-   * this answer missing — a hidden field is not asked, so a required one
-   * is not enforced either.
+   * Explains a missing answer: a hidden field isn't asked, even if
+   * required.
    */
   readonly conditional?: true;
-  /** A group's members, or a repeater row's fields. */
   readonly fields?: readonly FormFieldShape[];
 }
 
 interface FormStepShape {
   readonly title: string | null;
-  /** The keys the step holds, in the order the form declares them. */
   readonly fields: readonly string[];
 }
 
@@ -65,15 +52,13 @@ export interface FormShape {
   /** What the form carries from the page it is placed on, if anything. */
   readonly binds: FormBinding | null;
   /**
-   * How long a submission is kept before the nightly purge takes it, or
-   * null when they are kept indefinitely. The definition spells that as
-   * `retentionDays: 0`, which reads as "deleted immediately" to anyone
-   * who has not read the docs for it. The site's own period is already
-   * folded in, so this is what the form is actually kept for rather than
-   * what it declared.
+   * Null for indefinitely, since `0` reads as "deleted immediately". The
+   * site's period is folded in.
    */
   readonly retentionDays: number | null;
-  /** Whether the form is behind Turnstile. Never the site key, never the secret. */
+  /**
+   * Whether the form is behind Turnstile. Never the site key, never the secret.
+   */
   readonly captcha: boolean;
   readonly fields: readonly FormFieldShape[];
   readonly steps: readonly FormStepShape[];
@@ -83,8 +68,10 @@ function labelTextOrNull(label: Label | undefined): string | null {
   return label === undefined ? null : labelSourceText(label);
 }
 
-// An allowlist rather than a spread, so a property added to the manifest
-// entry later cannot ride out to a caller unexamined.
+/**
+ * An allowlist rather than a spread, so a property added to the manifest
+ * entry later cannot ride out to a caller unexamined.
+ */
 function fieldShape(field: MetaBoxFieldManifestEntry): FormFieldShape {
   return {
     key: field.key,
@@ -111,9 +98,11 @@ function fieldShape(field: MetaBoxFieldManifestEntry): FormFieldShape {
   };
 }
 
-// By key, so a reader gets each question once and the steps say where it
-// falls. Unconditioned: this describes the form, not what one visitor
-// would be shown.
+/**
+ * By key, so a reader gets each question once and the steps say where it
+ * falls. Unconditioned: this describes the form, not what one visitor
+ * would be shown.
+ */
 function stepShapes(form: FormDefinition): readonly FormStepShape[] {
   return declaredSteps(form).map((step) => ({
     title: labelTextOrNull(step.title),

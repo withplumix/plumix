@@ -3,26 +3,9 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
 
-// The `@plumix/core` root barrel statically imports `context/stores.ts`,
-// which imports `node:async_hooks`. esbuild resolves imports before it
-// tree-shakes, so pulling the barrel into an admin / editor / playground
-// (browser) bundle fails to resolve `node:async_hooks` — regardless of
-// core's `sideEffects: false`. Façade entrypoints that land in a browser
-// bundle must therefore re-export from a narrow `@plumix/core/<subpath>`
-// (e.g. `plumix/i18n` → `@plumix/core/i18n`), never the bare barrel.
-//
-// This guard turns that rule — previously recorded only in a comment on
-// `i18n/index.ts` — into an enforced invariant. Every subpath export is
-// scanned, and a *value* (non-type) import or re-export of the bare
-// `@plumix/core` barrel fails the build unless the entry is listed in
-// `BARREL_ALLOWED` (entries that only run in Node / build contexts, each
-// with a rationale). A new browser content subpath that lazily does
-// `export * from "@plumix/core"` is caught here rather than by a cryptic
-// esbuild "could not resolve node:async_hooks" at a consumer's build time.
-//
-// Scope: a textual scan of the entry file's own import/export sources. The
-// façade entries are thin re-export modules, so this is enough — none reach
-// the barrel through a local relative import.
+// The core barrel imports `node:async_hooks`, which esbuild resolves before
+// tree-shaking, so a browser-bound façade entry must re-export from a narrow
+// subpath. A textual scan suffices: entries are thin re-exports.
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -30,9 +13,11 @@ const pkg = JSON.parse(
   readFileSync(resolve(here, "..", "package.json"), "utf8"),
 ) as { exports: Record<string, { default?: string }> };
 
-// Subpath exports whose entry runs only server / build-side (Node), where
-// importing the `@plumix/core` barrel is safe. Everything else must reach
-// core through a `@plumix/core/<subpath>`.
+/**
+ * Subpath exports whose entry runs only server / build-side (Node), where
+ * importing the `@plumix/core` barrel is safe. Everything else must reach
+ * core through a `@plumix/core/<subpath>`.
+ */
 const BARREL_ALLOWED: Readonly<Record<string, string>> = {
   ".": "the full server surface (worker + config)",
   "./plugin": "plugin config is authored and loaded server-side",
@@ -44,7 +29,10 @@ const BARREL_ALLOWED: Readonly<Record<string, string>> = {
   // rule as the rest, reaching core through the `@plumix/core/admin` subpath.
 };
 
-// `./dist/admin/react.js` -> `<pkg>/src/admin/react.{ts,tsx}` (whichever exists)
+/**
+ * `./dist/admin/react.js` -> `<pkg>/src/admin/react.{ts,tsx}` (whichever
+ * exists)
+ */
 function entrySrcPath(distDefault: string): string | undefined {
   const base = distDefault.replace(/^\.\/dist\//, "").replace(/\.js$/, "");
   for (const ext of [".ts", ".tsx"]) {
@@ -54,9 +42,11 @@ function entrySrcPath(distDefault: string): string | undefined {
   return undefined;
 }
 
-// A value (runtime) import or re-export whose source is exactly
-// "@plumix/core". `import type` / `export type` are erased by the compiler
-// and never pull the barrel, so they are exempt.
+/**
+ * A value (runtime) import or re-export whose source is exactly
+ * "@plumix/core". `import type` / `export type` are erased by the compiler
+ * and never pull the barrel, so they are exempt.
+ */
 function importsBarrelAsValue(source: string): boolean {
   const statement =
     /\b(import|export)(\s+type)?\s+(?:\*(?:\s+as\s+[\w$]+)?|\{[^{}]*\}|[\w$]+)\s+from\s+["']@plumix\/core["']/g;

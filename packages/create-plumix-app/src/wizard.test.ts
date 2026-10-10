@@ -29,7 +29,7 @@ const registry: Registry = { runtimes: [cloudflare], plugins: [blog] };
 interface ScriptedAnswers {
   text?: string | null;
   select?: string | null;
-  // Consumed in order: the plugins multiselect, then the auth multiselect.
+  /** Consumed in order: the plugins multiselect, then the auth multiselect. */
   multiselect?: (string[] | null)[];
 }
 

@@ -12,23 +12,15 @@ import { createAssetsLayer } from "./http/assets.js";
 
 export interface NodeConfig {
   /**
-   * Trust `x-forwarded-proto`, `x-forwarded-host` and the rightmost
-   * `x-forwarded-for` entry — for a process behind a TLS-terminating proxy.
-   * Off by default, so a visitor reaching the process directly cannot forge
-   * its scheme, host or address.
+   * For a process behind a TLS-terminating proxy. Off by default, so a direct
+   * visitor cannot forge scheme, host or address.
    */
   readonly trustProxy?: boolean;
   /** Bytes a request body may carry; 1 GiB by default. */
   readonly bodySizeLimit?: number;
   /**
-   * Fire the site's scheduled tasks from inside the process. On by default:
-   * runs are guarded in the database, so every replica may keep a timer and
-   * only one of them does each firing.
-   *
-   * Turn it off to drive the schedules from outside instead — a system cron or
-   * a Kubernetes CronJob calling `plumix cron run <expression>`. Read the
-   * schedules a deploy needs from `plumix cron list`; they come from the
-   * plugins a site installs, so a hand-written list goes stale.
+   * On by default: runs are guarded in the database, so every replica may keep
+   * a timer. Turn off to drive `plumix cron run` from a system cron instead.
    */
   readonly cron?: boolean;
   readonly build?: {
@@ -52,9 +44,9 @@ function readAssetsBinding(env: PlumixEnv): AssetsBinding | undefined {
     : undefined;
 }
 
-// The default handler is the whole adapter; the bridge already supplied the
-// client address on the invocation, so nothing is read off the request here.
-// An env is fixed for a handler's lifetime, so each env's layer is built once.
+/**
+ * An env is fixed for a handler's lifetime, so each env's layer is built once.
+ */
 const assetsLayers = new WeakMap<PlumixEnv, AssetsBinding | undefined>();
 
 const handler: RuntimeHandlerSpec = {

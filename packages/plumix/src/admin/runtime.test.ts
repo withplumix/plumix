@@ -7,7 +7,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// What the admin shell publishes once it has booted.
+/** What the admin shell publishes once it has booted. */
 function bootShell(published: object): void {
   vi.stubGlobal("plumix", published);
 }

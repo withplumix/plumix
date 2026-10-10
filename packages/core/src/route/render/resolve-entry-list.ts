@@ -29,15 +29,10 @@ import {
   buildTermArchiveUrlSync,
 } from "../permalink.js";
 
-/** The user columns an author projection is allowed to read. */
 type AuthorRow = Pick<User, "id" | "slug" | "name" | "avatarUrl" | "meta">;
 
 /**
- * Project user rows into the public-safe author a template reads, resolving
- * every author's role images in one batch: the whole set's stored ids go
- * through `resolveImageRoles` together, so a page of authors costs one
- * hydration — and a site whose users declare no role field costs none, because
- * there are no ids to hydrate.
+ * Role images resolve in one batch, so a page of authors costs one hydration.
  */
 async function resolveAuthors(
   ctx: AppContext,
@@ -52,10 +47,8 @@ async function resolveAuthors(
 }
 
 /**
- * One author, from a row the caller already has. Shares the per-author request
- * memo with {@link resolveEntryList}, so an author archive — which
- * resolves its subject and then lists that same author's entries — projects
- * and hydrates them once, not twice.
+ * Shares the per-author memo with {@link resolveEntryList}, so an author
+ * archive resolves its author once.
  */
 export async function resolveAuthorRow(
   ctx: AppContext,
@@ -74,13 +67,17 @@ export async function resolveAuthorRow(
 }
 
 const authorMemoKey = (id: number): string => `core:author:${String(id)}`;
-// The author's own tag rather than the public types' tags every user change
-// also purges: an entry publish announces those, and must not drop an author
-// it did not touch.
+/**
+ * The author's own tag rather than the public types' tags every user change
+ * also purges: an entry publish announces those, and must not drop an author
+ * it did not touch.
+ */
 const authorMemoTags = (id: number): readonly string[] => [userTag(id)];
 
-// The projection itself — never spread the user row, which carries email and
-// the auth columns.
+/**
+ * The projection itself — never spread the user row, which carries email and
+ * the auth columns.
+ */
 function publicAuthor(row: AuthorRow, images: RoleImages): ResolvedAuthor {
   return {
     id: row.id,
@@ -92,11 +89,8 @@ function publicAuthor(row: AuthorRow, images: RoleImages): ResolvedAuthor {
 }
 
 /**
- * A term as a template reads it: the row, its decoded meta, the stored bag a
- * rule predicate compares against, its role images, and its archive URL. Both
- * surfaces that hand a theme a term — the entry's attachments here, and the
- * taxonomy page's own subject — build it through this, so neither can grow a
- * field the other lacks.
+ * Every surface that hands a theme a term builds it here, so none grows a field
+ * the others lack.
  */
 export function resolveTerm(
   ctx: AppContext,
@@ -118,10 +112,8 @@ export function resolveTerm(
 }
 
 /**
- * An entry's title with its shortcodes expanded, so `[year]` reads the same in
- * a heading, a listing and a card. The one place the shortcode context for a
- * title is built. The site settings load is request-memoized, so a page render
- * that reads them for its `<title>` pays for them once.
+ * Expands shortcodes so `[year]` reads the same in a heading, a listing and a
+ * card.
  */
 export async function expandEntryTitle(
   ctx: AppContext,
@@ -131,9 +123,8 @@ export async function expandEntryTitle(
   // no settings read — the same short-circuit `expandShortcodes` makes.
   if (!entry.title.includes("[")) return entry.title;
   const siteSettings = await loadSiteSettings(ctx);
-  // The spread is what makes the entry readable as an open bag: a shortcode
-  // looks its fields up by name, and TypeScript withholds the implicit index
-  // signature an `interface` would need to be read that way.
+  // Spread, not asserted: an `interface` lacks the implicit index signature a
+  // shortcode's by-name read needs.
   return expandShortcodes(entry.title, ctx.shortcodes, {
     siteSettings,
     locale: ctx.locale.code,
@@ -141,13 +132,6 @@ export async function expandEntryTitle(
   });
 }
 
-/**
- * Resolve raw entry rows into `ResolvedEntry` — author, terms, the
- * basePath-correct permalink and the shortcode-expanded title each entry
- * needs for rendering. Batched
- * (mirrors WordPress's `update_post_caches`): one `IN(...)` query for
- * authors, one entry_term×terms join for terms — no N+1 per entry.
- */
 export async function resolveEntryList(
   ctx: AppContext,
   rows: readonly Entry[],
@@ -155,10 +139,8 @@ export async function resolveEntryList(
   if (rows.length === 0) return [];
   const entryIds = rows.map((r) => r.id);
   const authorIds = Array.from(new Set(rows.map((r) => r.authorId)));
-  // Per-author request memo (#1493): entry resolution and the blog
-  // related-posts loader resolve the same author in one request — the
-  // second call replays the row, and a mixed batch still costs a single
-  // `IN(...)` query.
+  // Memoized per author because other loaders in the same request resolve the
+  // same authors.
   const [authorRows, joinRows, metaBags] = await Promise.all([
     memoBatch(
       ctx.memo,

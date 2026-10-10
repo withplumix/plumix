@@ -24,9 +24,11 @@ import {
 
 import { SettingsGroupCard } from "./-settings-group-card.js";
 
-// Descriptors that need runtime indirection — used outside JSX (aria
-// string, state setters). Pure-JSX strings stay inline at their `<Trans>`
-// callsite per the rest of admin's style.
+/**
+ * Descriptors that need runtime indirection — used outside JSX (aria
+ * string, state setters). Pure-JSX strings stay inline at their `<Trans>`
+ * callsite per the rest of admin's style.
+ */
 const M = {
   loadingAria: defineMessage({
     id: "settings.page.loading",
@@ -38,10 +40,12 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-// Literal API signature rendered inside the empty-state `<code>`.
-// Pulled to a module-scope const so the strict rule sees one string
-// expression instead of three JSX text fragments split by `{"{"}` /
-// `{"}"}` escapes.
+/**
+ * Literal API signature rendered inside the empty-state `<code>`.
+ * Pulled to a module-scope const so the strict rule sees one string
+ * expression instead of three JSX text fragments split by `{"{"}` /
+ * `{"}"}` escapes.
+ */
 // eslint-disable-next-line lingui/no-unlocalized-strings -- API signature, not user copy
 const API_SIGNATURE = "ctx.registerSettingsPage(name, { groups: [...] })";
 
@@ -60,9 +64,7 @@ export const Route = createFileRoute("/_authenticated/settings/$page")({
     }
     return { page };
   },
-  // Preload every group referenced by this page. `settings.get` is
-  // per-group, so we fan out one query per group — each card owns its
-  // own cache entry and can refetch independently after a save.
+  // One query per group so each card can refetch independently after a save.
   loader: ({ context }) => {
     const groups = groupsForSettingsPage(context.page);
     return Promise.all(
@@ -139,13 +141,8 @@ function EmptyPagePlaceholder(): ReactNode {
             />
           </EmptyTitle>
           <EmptyDescription>
-            {/* The literal-brace code example sits outside `<Trans>` —
-                braces inside the message string are ICU-parsed by Lingui's
-                MessageFormat compiler at extract / compile time even when
-                they appear inside a `<0>` placeholder, and the single-
-                quote `'{' '}'` escape doesn't survive `lingui extract`'s
-                normalization. Keeping the example as raw JSX side-steps
-                the whole pipeline. */}
+            {/* Outside `<Trans>`: Lingui ICU-parses braces even in a placeholder,
+                and the `'{'` escape doesn't survive extract. */}
             <Trans
               id="settings.page.empty.description"
               message="This settings page doesn't reference any registered groups yet. Plugins compose pages with the registerSettingsPage helper:"

@@ -14,24 +14,16 @@ import { toSubmissionDto } from "./dto.js";
 import { listAllSubmissions } from "./repository.js";
 
 /**
- * The envelope every submission carries, whichever form it answered,
- * and the note column that closes the row.
- *
- * Deliberately not translated, unlike everything the inbox renders. The
- * answer columns between these are named by the form's own label
- * snapshot — in whatever language that form was written — so a
- * translated envelope beside untranslated columns reads worse than a
- * consistent one. And an export is a file another program reads: a
- * stable column name is what a script or a spreadsheet formula keys on,
- * which is also why `status` is written as the stored identifier rather
- * than as the word the inbox shows. `formatSubmission` settles the same
- * question the same way.
+ * Deliberately untranslated: scripts and formulas key on stable column
+ * names, which is also why `status` is the stored identifier.
  */
 const ENVELOPE = ["Received", "Form", "Number", "Status"] as const;
 const NOTE_COLUMN = "Note";
 
-// The two words a stored checkbox answer reads as, in the same English
-// the envelope is written in.
+/**
+ * The two words a stored checkbox answer reads as, in the same English
+ * the envelope is written in.
+ */
 const WORDS: AnswerWords = { yes: "Yes", no: "No" };
 
 /**
@@ -56,19 +48,15 @@ export function submissionsToCsv(rows: readonly SubmissionDTO[]): string {
   ]);
 }
 
-/**
- * Submissions as another program reads them: the whole row, answers
- * nested as they were stored and the envelope the CSV leaves out — what
- * the form was bound to, the hashed address, the agent, whatever
- * the form's own handler failed at. Indented, because the first thing
- * done with an export is to look at it.
- */
+/** Includes fields the CSV leaves out. Indented, since people read it first. */
 export function submissionsToJson(rows: readonly SubmissionDTO[]): string {
   return JSON.stringify(rows, null, 2);
 }
 
-// Keyed by what `?format=` is asked for, which is also the extension the
-// file is named with.
+/**
+ * Keyed by what `?format=` is asked for, which is also the extension the
+ * file is named with.
+ */
 const FORMATS = {
   csv: { contentType: "text/csv; charset=utf-8", write: submissionsToCsv },
   json: {
@@ -96,10 +84,7 @@ function badRequest(reason: string): Response {
 
 const UNSAFE_FILENAME = /[^a-zA-Z0-9-]/g;
 
-// Named for what is in it, so two exports taken under different filters
-// do not land in the downloads folder as one file and its copy. A stored
-// row's slug is not the site's own, so it is filtered to what a filename
-// may hold rather than trusted.
+/** The slug comes from a stored row, so it is sanitized for a filename. */
 function exportFilename(filter: SubmissionFilter): string {
   const parts = ["submissions", filter.form, filter.status].filter(
     (part) => part !== undefined,
@@ -107,31 +92,21 @@ function exportFilename(filter: SubmissionFilter): string {
   return parts.map((part) => part.replaceAll(UNSAFE_FILENAME, "-")).join("-");
 }
 
-// An empty parameter is no filter rather than a filter on the empty
-// value: the inbox leaves out what it is not filtering by, and a stray
-// `?form=` would otherwise match nothing and export an empty file.
+/** A stray `?form=` means no filter, not an empty match. */
 function queryValue(query: URLSearchParams, name: string): string | undefined {
   const value = query.get(name);
   return value === null || value === "" ? undefined : value;
 }
 
 /**
- * How many submissions one file can carry. The columns come from the
- * rows' own snapshots, so nothing can be written until the last row is
- * read — an export is held whole in memory by construction, and a Worker
- * isolate has a ceiling. Past this the export is refused rather than
- * truncated: a file that looks complete and is not is the worse answer.
+ * Columns come from every row's snapshot, so exports are held whole in
+ * memory. Past this they are refused, never truncated.
  */
 export const EXPORT_MAX_ROWS = 20_000;
 
 /**
- * Every submission the inbox's own filters name, as a file. An
- * unrecognised format or status is refused rather than dropped — writing
- * every submission to disk because a query parameter was misspelt is the
- * wrong answer to a typo.
- *
- * `maxRows` is the ceiling above, taken as an argument so a test can
- * reach the refusal without seeding twenty thousand rows.
+ * An unrecognised format or status is refused, not ignored, so a typo
+ * can't export everything.
  */
 export function createExportHandler(maxRows = EXPORT_MAX_ROWS) {
   return async function exportHandler(

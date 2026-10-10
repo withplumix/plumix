@@ -7,11 +7,10 @@ import type {
 import { AppBootError } from "../runtime/contract/errors.js";
 import { CORE_MAILS } from "./core-mails.js";
 
-/** A declared mail as `ctx.mail.send` renders it. */
 interface DeclaredMail {
   /** `core`, or the id of the plugin that declared it. */
   readonly owner: string;
-  /** The declaration, with the site's and the theme's overrides applied. */
+  /** The site's and the theme's overrides are already applied. */
   readonly mail: AnyMailDefinition;
 }
 
@@ -20,23 +19,22 @@ export type DeclaredMails = ReadonlyMap<string, DeclaredMail>;
 
 interface DeclareMailsInput {
   readonly plugins: readonly AnyPluginDescriptor[];
-  /** The theme's `mail`. */
   readonly theme?: MailOverrides;
-  /** The site's `mail.overrides`. */
   readonly site?: MailOverrides;
 }
 
-// Read by name rather than through the typed map: the names a site or theme
-// overrides are checked against what was declared, not what was typed.
+/**
+ * Read by name rather than through the typed map: the names a site or theme
+ * overrides are checked against what was declared, not what was typed.
+ */
 type OverridesByName = Readonly<
   Record<string, MailOverride<never> | undefined>
 >;
 
 /**
- * Core's mails and every plugin's `mails`, by name. Each of a mail's render
- * functions comes from the site's override, else the theme's, else the
- * declaring owner's. Throws `AppBootError` when two owners declare one name,
- * or the site or theme overrides a name nobody declared.
+ * Each render function comes from the site's override, else the theme's, else
+ * the owner's. Throws `AppBootError` when two owners declare one name, or an
+ * override names an undeclared mail.
  */
 export function declareMails(input: DeclareMailsInput): DeclaredMails {
   const owned: [string, AnyMailDefinition][] = [

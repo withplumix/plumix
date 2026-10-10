@@ -8,9 +8,8 @@ import {
 } from "./lifecycle.js";
 
 /**
- * True when a `scheduled` write lacks a valid target time. A scheduled entry
- * must carry a future `publishedAt` — without one the cron can never pick it
- * up, so the write is rejected rather than silently stranded.
+ * A scheduled entry without a future `publishedAt` would never be picked up by
+ * the cron, so the write is rejected.
  */
 export function scheduledDateInvalid(
   status: string | undefined,
@@ -23,16 +22,9 @@ export function scheduledDateInvalid(
 }
 
 /**
- * Publish every scheduled entry whose target `publishedAt` has arrived,
- * returning how many were published. Driven by the core `publish-scheduled`
- * cron task. Each transition flips `status` to `published` (keeping the
- * scheduled `publishedAt` as the publish time, WordPress-style) and fires the
- * same lifecycle hooks the editor's publish path does — so cache-purge,
- * sitemap invalidation, and audit all run.
- *
- * Unlike the editor path this skips `entry:before_save` and revision capture:
- * a cron run has no `ctx.user`, so there's no actor to attribute a revision to
- * and the content was already snapshotted when it was scheduled.
+ * Fires the same lifecycle hooks as an editor publish but skips
+ * `entry:before_save` and revision capture: a cron run has no actor, and the
+ * content was snapshotted when scheduled.
  */
 export async function publishDueScheduledEntries(
   ctx: AppContext,

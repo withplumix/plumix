@@ -1,14 +1,8 @@
 import { Node } from "@tiptap/core";
 
 /**
- * Tiptap node that absorbs any block whose `type` isn't registered, so
- * a plugin uninstall (or a draft authored against a newer site)
- * doesn't strip the block from the saved document. The unknown block
- * round-trips byte-identical through the editor and re-renders when
- * the plugin is reinstalled.
- *
- * `payload` is an opaque pass-through for the original attrs/content;
- * the walker writes it back verbatim on save.
+ * Absorbs unregistered block types so a plugin uninstall doesn't strip them;
+ * they round-trip byte-identical and render again on reinstall.
  */
 export const unknownBlockSchema = Node.create({
   name: "unknown",

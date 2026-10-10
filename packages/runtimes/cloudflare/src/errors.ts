@@ -223,13 +223,8 @@ export class DemoError extends Error {
 }
 
 /**
- * A cron firing that did not do its job. Thrown out of the generated entry's
- * `scheduled` so Workers records the invocation as failed rather than ok.
- *
- * The two message bodies are the ones the Node in-process scheduler logs for
- * the same pair of cases, so an operator who runs both runtimes greps one
- * vocabulary. `cron` is the only field: it is what both cases share and what
- * an operator filters a firing by; everything else is already in the message.
+ * Messages match the Node scheduler's, so operators grep one vocabulary.
+ * Thrown so Workers records the invocation as failed.
  */
 export class ScheduledRunError extends Error {
   static {

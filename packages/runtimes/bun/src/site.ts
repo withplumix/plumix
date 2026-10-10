@@ -88,8 +88,10 @@ export interface BunSiteServe {
   readonly development: false;
 }
 
-// `db` is the runner's test seam; an embedder's cron writes to the site's own
-// database.
+/**
+ * `db` is the runner's test seam; an embedder's cron writes to the site's own
+ * database.
+ */
 export type BunCronOverrides = Omit<
   ScheduledRunnerOptions,
   "app" | "env" | "fire" | "db" | "holder"
@@ -97,32 +99,24 @@ export type BunCronOverrides = Omit<
 
 export interface BunSite {
   readonly handler: BunSiteHandler;
-  /**
-   * The serve path: the built assets first, then image transforms, then the
-   * site, behind the shared trust rules. Spread into `Bun.serve` by an
-   * embedder that picks its own port; `serveProcess` is the process that
-   * does.
-   */
+  /** Spread into `Bun.serve` by an embedder picking its own port. */
   readonly serve: BunSiteServe;
   /**
-   * Start firing this site's scheduled tasks, returning a handle whose
-   * `stop()` waits for the run in flight. Core's scheduler drives them rather
-   * than `Bun.cron`, which reads a `*`-led day field beside a restricted one
-   * differently (`cron-parity.test.ts`). Building the site starts no
-   * background work on its own; `serveProcess` calls this.
+   * Not `Bun.cron`, which reads a `*`-led day field differently. `stop()` waits
+   * for the run in flight. Building the site starts no background work.
    */
   readonly startCron: (overrides?: BunCronOverrides) => Promise<Scheduler>;
   /**
-   * Drain the deferred work no invocation carried away — telemetry delivery,
-   * cache purges — and release the handler's database connection. Resolves
-   * how many tasks were abandoned. Not terminal: a later request rebinds what
-   * this released.
+   * Resolves how many tasks were abandoned. Not terminal: a later request
+   * rebinds what this released.
    */
   readonly dispose: (options?: DisposeOptions) => Promise<DisposeResult>;
 }
 
-// A stream the client holds open for live updates idles between events by
-// design, so the idle timeout would cut it.
+/**
+ * A stream the client holds open for live updates idles between events by
+ * design, so the idle timeout would cut it.
+ */
 function isEventStream(response: Response): boolean {
   return (
     response.headers.get("content-type")?.startsWith("text/event-stream") ??
@@ -231,12 +225,9 @@ export function createBunSite({
 }
 
 /**
- * Load `.env` from the working directory into the process env when `main`
- * says this module is the process's entry point. A variable the environment
- * already set wins, so a stray file cannot override a platform's injected
- * secrets; a missing file loads nothing. Bun's own loading, which would also
- * read `.env.local` and `.env.{NODE_ENV}`, is what `env = false` in
- * `bunfig.toml` turns off.
+ * A variable the environment already set wins, so a stray file can't override
+ * injected secrets. Bun's own loading is off via `env = false` in
+ * `bunfig.toml`.
  */
 export function loadEnvFileWhenMain(main: boolean): void {
   if (!main) return;
@@ -248,10 +239,8 @@ export function loadEnvFileWhenMain(main: boolean): void {
 }
 
 /**
- * Run the site as a process: `Bun.serve` on `PORT` and `HOST`, its scheduled
- * tasks, and the shutdown protocol. The entry calls it only when it is the
- * process's entry point, and default-exports the `Server` it returns, which
- * Bun does not serve a second time.
+ * Returns the `Server` for the entry to default-export, which Bun does not
+ * serve twice.
  */
 export function serveProcess(site: BunSite): Server<undefined> {
   /* eslint-disable turbo/no-undeclared-env-vars -- the built site reads these when it runs, not during any turbo task */
@@ -261,9 +250,8 @@ export function serveProcess(site: BunSite): Server<undefined> {
   const server = Bun.serve({ ...site.serve, port, hostname });
   console.log(`plumix: listening on http://${hostname}:${String(server.port)}`);
 
-  // Started after the listen and never awaited by it: building the app must
-  // not delay serving, and a scheduler that cannot start must not take down a
-  // process already answering requests.
+  // Never awaited by the listen: a scheduler failing to start must not take
+  // down a serving process.
   let scheduler: Scheduler | undefined;
   let stopping = false;
   void site.startCron().then(
@@ -287,9 +275,8 @@ export function serveProcess(site: BunSite): Server<undefined> {
     const deadline = Date.now() + DRAIN_DEADLINE_MS;
     // On Bun 1.4 `stop()` resolves once the in-flight requests have finished.
     const stopped = server.stop().then(() => true);
-    // Before `dispose()`, not during it: a firing that started behind the
-    // drain would hand it more deferred work. Bounded by the same budget, so a
-    // long task cannot leave `dispose()` nothing.
+    // Before `dispose()`: a firing started behind the drain would hand it more
+    // deferred work.
     stopping = true;
     const cronSettled =
       (await scheduler?.stop({ timeoutMs: remainingMs(deadline) })) ?? true;
@@ -331,8 +318,8 @@ function remainingMs(deadline: number): number {
 }
 
 /**
- * `??` alone would read an empty `PORT=` as port 0; `||` is what this wants but
- * `prefer-nullish-coalescing` refuses it on a `string | undefined`.
+ * `??` would read an empty `PORT=` as port 0, and `prefer-nullish-coalescing`
+ * refuses `||` here.
  */
 function envOr(value: string | undefined, fallback: string): string {
   return value === undefined || value === "" ? fallback : value;

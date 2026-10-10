@@ -64,16 +64,24 @@ Never write:
 - **Words for a reviewer.** No notes to whoever reads the diff.
 - **File headers** that summarise the module.
 
-A `/** */` block is for a published export only (an entry in `tooling/published-surface`), and only
-for what its signature can't say: a precondition, what it throws, a surprising behaviour. Internal
-code gets no `/** */`.
+When a declaration or member needs a comment, make it `/** */`, because editors show it on hover and
+nothing shows a `//` there. Say only what its signature can't: a precondition, what it throws, a
+surprising behaviour. A code example for an extension point belongs there too. Inside a function
+body, use `//`; nothing hovers a local.
 
 When a change alters behaviour a comment describes, correct the comment or delete it. Don't replace
 it with something vaguer. When you edit a function, delete the comments in it that break these
 rules.
 
+Lint enforces the mechanical part in all linted code, tests included: a comment block stays within
+30 words, code examples aside (`plumix/max-comment-length`); a comment on a declaration or member is
+`/** */` (`plumix/prefer-jsdoc`); no `/** */` sits inside a function body
+(`plumix/no-jsdoc-in-function-body`); and no code is left commented out
+(`sonarjs/no-commented-code`).
+
 **In review**, treat every added comment line as a finding until it passes these rules. Name the
-refactor that would make it unnecessary, or say which rule it breaks.
+refactor that would make it unnecessary, or say which rule it breaks. Lint can't tell a why from a
+what; review can.
 
 ## Correctness
 

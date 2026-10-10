@@ -16,12 +16,8 @@ beforeEach(async () => {
 });
 
 /**
- * Publish `count` entries, none of them indexed, and clear the change feed.
- *
- * The feed is what a live site's drain has already emptied; leaving rows on it
- * would mean these entries are owed to the drain, which the rebuild walk
- * deliberately steps over. What is left is the state a rebuild exists for:
- * sources whose documents are missing or wrong, with nothing pending.
+ * Publish `count` unindexed entries and clear the change feed, since the
+ * rebuild walk deliberately steps over entries still owed to the drain.
  */
 async function publish(count: number): Promise<readonly number[]> {
   const ids: number[] = [];

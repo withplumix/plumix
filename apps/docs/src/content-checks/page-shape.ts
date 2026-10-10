@@ -4,13 +4,8 @@ import type { Finding } from "./finding";
 import { readBodyShape } from "./body-shape";
 
 /**
- * Report pages that do not follow the house template: the lede and the
- * mandatory `##` sections named in the documentation IA spec.
- *
- * A fragment is skipped outright. It has no URL, so it is not a page a reader
- * arrives at — it legitimately carries no lede and none of the four sections,
- * and holding it to a template written for pages would report every partial in
- * the tree.
+ * Skips fragments: a partial has no URL, so it legitimately carries no lede or
+ * sections.
  */
 export function checkPageShape(files: readonly ContentFile[]): Finding[] {
   return files
@@ -58,11 +53,10 @@ interface MandatorySection {
   readonly heading: string;
   readonly rule: string;
   readonly message: string;
-  /** Pages that earn their way out of carrying this section. */
   readonly exempt?: (page: ContentFile, body: BodyShape) => boolean;
 }
 
-/** The house template's mandatory `##` sections. Presence only — not order. */
+/** Presence only, not order. */
 const MANDATORY_SECTIONS: readonly MandatorySection[] = [
   {
     heading: "Overview",
@@ -91,31 +85,23 @@ const MANDATORY_SECTIONS: readonly MandatorySection[] = [
 ];
 
 /**
- * A splash page is Starlight's own declaration that a page is a landing page
- * rather than a documentation page, so the house template does not apply. It
- * cannot be claimed quietly: splash drops the sidebar and the table of
- * contents, so a page wearing it to dodge this check looks nothing like a
- * documentation page either.
+ * Splash cannot be claimed quietly to dodge the template: it drops the sidebar
+ * and table of contents.
  */
 function isDocumentationPage(page: ContentFile): boolean {
   return page.frontmatter.template !== "splash";
 }
 
 /**
- * The overview exemption: a page whose `<h1>` already reads "Overview" is its
- * section's landing page, so a `## Overview` under it renders the word twice in
- * a row and adds a heading that repeats the title. The page is the overview.
+ * A `## Overview` under an `<h1>` reading "Overview" would repeat the title.
  */
 function isSectionLanding(page: ContentFile): boolean {
   return page.frontmatter.title === "Overview";
 }
 
 /**
- * The quickstart exemption: a page opts in with `roster: true` and must then
- * actually enumerate something. The spec's other half — every item carrying
- * its own example — is not enforced here, because an item that is a pure
- * variant of a documented sibling legitimately links to the sibling's example
- * instead of repeating it.
+ * Items are not required to carry their own example: a pure variant may link to
+ * its sibling's.
  */
 function isRoster(page: ContentFile, body: BodyShape): boolean {
   return (

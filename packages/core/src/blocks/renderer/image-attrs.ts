@@ -6,7 +6,10 @@ export interface RemotePattern {
   readonly pathname?: string;
 }
 
-/** Builds an optimized URL for `src` at a target width — the `imageDelivery` transform. */
+/**
+ * Builds an optimized URL for `src` at a target width — the `imageDelivery`
+ * transform.
+ */
 export type ImageResolver = (
   src: string,
   opts?: {
@@ -50,11 +53,8 @@ function isOptimizable(
 }
 
 /**
- * Computes the `<img>` src/srcSet/sizes for a responsive, optimized image.
- * Unoptimizable sources (no resolver, unauthorized remote, SVG, data:) pass
- * through with just intrinsic dimensions — no srcSet. With `sizes`, emits a
- * width-descriptor srcSet from the breakpoint ladder (bounded at 2× the
- * intrinsic width); otherwise a density (1x/2x) srcSet.
+ * Unoptimizable sources (no resolver, unauthorized remote, SVG, data:) get no
+ * srcSet. With `sizes`, width descriptors are capped at 2× the intrinsic width.
  */
 export function buildImageAttrs(input: BuildImageAttrsInput): ImageAttrs {
   const {

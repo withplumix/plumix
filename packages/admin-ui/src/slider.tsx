@@ -3,20 +3,14 @@ import { Slider as SliderPrimitive } from "radix-ui";
 
 import { cn } from "./utils.js";
 
-// Vendored shadcn Slider primitive over `radix-ui/Slider`. Single-thumb
-// only — multi-thumb sliders aren't a 0.1 ask. Track + thumb styles
-// follow the rest of the form-control palette so the slider doesn't
-// look out of place next to text inputs / selects.
-
 function Slider({
   className,
   defaultValue,
   value,
   min = 0,
   max = 100,
-  // The thumb — not the Root — carries `role="slider"`, so an accessible name
-  // must land there or it's an unnamed input to assistive tech. Radix doesn't
-  // forward Root's name down, so hoist it onto the thumb (single-thumb only).
+  // The thumb, not the Root, carries `role="slider"`, and Radix doesn't forward
+  // Root's accessible name down, so hoist it onto the thumb.
   "aria-label": ariaLabel,
   "aria-labelledby": ariaLabelledby,
   ...props

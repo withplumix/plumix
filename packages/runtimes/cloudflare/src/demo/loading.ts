@@ -1,14 +1,8 @@
 import { renderTurnstileWidget } from "./turnstile.js";
 
 /**
- * Loading page shown at `/demo` while the sandbox provisions: it POSTs
- * `/_demo/init`, then redirects into the admin. When a Turnstile site key is
- * given, the widget's callback supplies the token and starts init (and its
- * error callbacks fall back to the retry page); otherwise init starts
- * immediately.
- *
- * The Turnstile widget carries its own spinner, so our card spinner is rendered
- * only when there's no widget (local dev / e2e) — a visitor never sees two.
+ * The card spinner renders only without the Turnstile widget, which carries its
+ * own.
  */
 export function renderDemoLoadingPage(siteKey?: string): string {
   const widget = siteKey ? renderTurnstileWidget(siteKey) : "";

@@ -14,9 +14,10 @@ import {
 import { M } from "./messages.js";
 import { fetchSerpPreview } from "./queries.js";
 
-// Keyed by the reason itself, so an arm added to the chain fails the build here
-// rather than reaching an author as a blank line. `default` is the page being
-// offered to search engines, which the panel says by showing no line at all.
+/**
+ * Keyed by reason so a new arm fails the build rather than showing a blank
+ * line. `default` (offered to search engines) shows no line at all.
+ */
 const REASONS: Record<
   Exclude<IndexabilityReason, "default">,
   MessageDescriptor
@@ -32,9 +33,7 @@ const REASONS: Record<
 };
 
 interface PanelProps {
-  /** The entry being previewed, or null on the create form. */
   readonly entryId: number | null;
-  /** What the author is holding unsaved in the fields below the preview. */
   readonly overrides: SerpOverrides;
   readonly disabled: boolean;
   readonly testId: string;
@@ -80,10 +79,9 @@ function LoadedPreview({
   const query = useQuery({
     queryKey: ["seo", "serp-preview", entryId],
     queryFn: () => fetchSerpPreview(entryId),
-    // Fetched once and overlaid: the three SEO fields the author is typing are
-    // applied client-side. The entry's own title and excerpt are not — they sit
-    // outside the meta bag this control can see — so a preview falling back to
-    // either shows the last saved one until Refresh.
+    // The entry's own title and excerpt sit outside the meta bag this control
+    // sees, so a preview falling back to them shows the saved one until
+    // Refresh.
     staleTime: Infinity,
     retry: false,
   });
@@ -158,11 +156,6 @@ function LoadedPreview({
   );
 }
 
-/**
- * How much of one line will survive. The bar is the reading at a glance and
- * the count is the exact one; the state line says which of the two things an
- * author has to do about it, if either.
- */
 function LengthMeter({
   label,
   value,

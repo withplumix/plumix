@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { Link } from "@plumix/core/blocks/renderer";
 
 export interface PaginationInfo {
-  // Root-relative request pathname (the base prefix is stripped upstream).
+  /** Root-relative request pathname (the base prefix is stripped upstream). */
   readonly path: string;
   readonly page: number;
   readonly pageCount: number;
@@ -21,7 +21,7 @@ export function paginationInfo(
   };
 }
 
-// Page 1 is the bare listing; later pages append /page/N.
+/** Page 1 is the bare listing; later pages append /page/N. */
 function pageHref(base: string, n: number): string {
   if (n <= 1) return base;
   return base === "/" ? `/page/${n}` : `${base}/page/${n}`;

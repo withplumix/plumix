@@ -11,21 +11,15 @@ import type { BreadcrumbItem } from "./breadcrumbs.js";
 import type { SiteRepresents } from "./settings.js";
 import { serializeJsonLd } from "./json-ld.js";
 
-/**
- * One node of the graph. `@id` is what makes it addressable: every other piece
- * that mentions it does so as `{ "@id": … }` rather than repeating its body,
- * which is what makes this a graph instead of a pile of disconnected objects.
- */
+/** Other pieces reference it as `{ "@id": … }` rather than repeating it. */
 export interface SchemaPiece extends JsonObject {
   readonly "@type": string;
   readonly "@id": string;
 }
 
 /**
- * The pieces this plugin builds, named by the role they play rather than by
- * their schema.org type — `publisher` is an `Organization` or a `Person`
- * depending on what the site says it represents, and the filters below key off
- * the role, which does not move.
+ * Named by role, not schema.org type: `publisher` is an `Organization` or a
+ * `Person` depending on the site.
  */
 export type SchemaPieceName =
   | "website"
@@ -39,13 +33,8 @@ export type SchemaPieceName =
 declare module "plumix" {
   interface FilterRegistry {
     /**
-     * Whether a piece belongs on this page at all. Return false to drop it —
-     * the coarsest of the three tiers, and the one to reach for when a page
-     * kind should simply not advertise something.
-     *
-     * A piece nothing built is never offered, so this only ever narrows.
-     * Dropping a piece another piece references leaves that reference
-     * dangling, so drop or reshape the referrer too.
+     * Only ever narrows. Dropping a piece another references leaves that
+     * reference dangling, so drop or reshape the referrer too.
      */
     "seo:schema:needs": (
       needed: boolean,
@@ -65,9 +54,7 @@ declare module "plumix" {
       ctx: AppContext,
     ) => SchemaPiece | Promise<SchemaPiece>;
     /**
-     * The whole graph, after the per-piece tiers have run — for a plugin that
-     * has to add nodes of its own (a `Product`, an `Event`) or reorder what is
-     * there. Returning an empty array emits no script at all.
+     * Runs after the per-piece tiers. An empty array emits no script at all.
      */
     "seo:schema:graph": (
       graph: readonly SchemaPiece[],
@@ -77,11 +64,7 @@ declare module "plumix" {
   }
 }
 
-/**
- * The schema.org types an editor can pick between for an entry. Article
- * subtypes only: the piece keeps its `@id` and its references either way, so
- * the choice is which kind of article this is, not whether the page has one.
- */
+/** Article subtypes only, so the piece keeps its `@id` and references. */
 export const SCHEMA_TYPES = [
   "Article",
   "BlogPosting",
@@ -127,9 +110,8 @@ export interface SchemaInputs {
 }
 
 /**
- * Every `@id` on the page, derived from the canonical URL and the site root —
- * so two renders of one URL produce the same identifiers, and a piece can be
- * referenced before it is built.
+ * Derived from URLs so two renders agree and a piece can be referenced before
+ * it is built.
  */
 function identifiers(inputs: SchemaInputs): Record<SchemaPieceName, string> {
   const { home, canonical } = inputs;
@@ -150,9 +132,9 @@ function ref(id: string): JsonObject {
   return { "@id": id };
 }
 
-// A piece is built from a bag that may hold nothing for a key — an entry with
-// no excerpt, a page with no image — and an absent property is spelled by
-// leaving the key out, not by emitting null.
+/**
+ * An absent property is spelled by leaving the key out, not by emitting null.
+ */
 function piece(
   type: string,
   id: string,
@@ -165,11 +147,7 @@ function piece(
   return out as SchemaPiece;
 }
 
-/**
- * The graph this page would emit before any filter runs, keyed by role. A
- * piece with nothing to say is absent rather than empty: no image means no
- * `ImageObject` and no `primaryImageOfPage` pointing at one.
- */
+/** A piece with nothing to say is absent, not empty. */
 function buildSchemaGraph(
   inputs: SchemaInputs,
 ): ReadonlyMap<SchemaPieceName, SchemaPiece> {

@@ -4,9 +4,8 @@ import { useParams } from "@tanstack/react-router";
 import { CardPreviewPanel } from "./CardPreviewPanel.js";
 
 /**
- * The preview as the meta box mounts it. All this adds is which entry is open,
- * read off the editor's own route — a plugin field renderer is handed its own
- * value and nothing about the entity around it.
+ * Reads the open entry off the editor's route: a field renderer is handed only
+ * its own value.
  */
 export function CardPreviewField({
   disabled,
@@ -24,7 +23,7 @@ export function CardPreviewField({
   );
 }
 
-/** The open entry, or null on the create form — where no row exists yet. */
+/** Null on the create form, where no row exists yet. */
 function useEntryId(): number | null {
   const params: Record<string, string | undefined> = useParams({
     strict: false,

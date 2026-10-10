@@ -315,9 +315,11 @@ describe("RequestAuthenticator interface", () => {
   });
 });
 
-// `hasSession` gates whether the public-render path runs the authenticator
-// at all (see loadUserForPublicRequest) — a non-cookie authenticator must be
-// able to opt in, or a signed-in visitor renders as anonymous.
+/**
+ * `hasSession` gates whether the public-render path runs the authenticator
+ * at all (see loadUserForPublicRequest) — a non-cookie authenticator must be
+ * able to opt in, or a signed-in visitor renders as anonymous.
+ */
 const carriesReq = (headers?: HeadersInit): Request =>
   new Request("https://cms.example/post/hello", headers ? { headers } : {});
 
@@ -346,7 +348,8 @@ describe("hasSession", () => {
     expect(
       auth.hasSession?.(req({ cookie: `${SESSION_COOKIE_NAME}=abc` })),
     ).toBe(true);
-    // A custom cookie-based authenticator in the chain is honored, not just the default.
+    // A custom cookie-based authenticator in the chain is honored, not just the
+    // default.
     const custom: RequestAuthenticator = {
       authenticate: () => Promise.resolve(null),
       hasSession: (request) => request.headers.get("cookie") === "demo=1",
@@ -369,7 +372,8 @@ describe("requestHasSession", () => {
     expect(requestHasSession(demoGuard, req({ cookie: "plumix_demo=t" }))).toBe(
       true,
     );
-    // The standard session cookie does NOT satisfy an authenticator that keys off its own.
+    // The standard session cookie does NOT satisfy an authenticator that keys
+    // off its own.
     expect(
       requestHasSession(demoGuard, req({ cookie: `${SESSION_COOKIE_NAME}=t` })),
     ).toBe(false);

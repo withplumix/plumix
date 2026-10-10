@@ -1,13 +1,9 @@
 import type { LookupUserCodeResult } from "../../../../auth/device-flow.js";
 import type { DeviceCodeLookupErrors } from "../../../../rpc-errors.js";
 
-// Map a `lookupDeviceCodeByUserCode` outcome to the right RPC error
-// and narrow the result type for callers that only want the `ok`
-// branch. The three device-flow procedures (lookup / approve / deny)
-// share this — extracted to keep each procedure's body small and to
-// guarantee consistent error reasons across them (a future
-// `already_*` outcome is added once and propagates everywhere).
-
+/**
+ * Shared by lookup, approve and deny so they report identical error reasons.
+ */
 export function assertLookupOk(
   result: LookupUserCodeResult,
   userCode: string,

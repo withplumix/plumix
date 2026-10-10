@@ -32,10 +32,8 @@ import { useEditorStore, useEditorStoreApi } from "./provider.js";
 const TOOLBAR_GAP = 4;
 
 /**
- * Floating actions for the active block: select its container, reorder it among
- * its siblings, duplicate or delete it. Bulk actions (delete/duplicate) act on
- * the whole selection; reorder + select-parent act on the active block. Renders
- * nothing until a block is active.
+ * Delete/duplicate act on the whole selection; reorder and select-parent on the
+ * active block.
  */
 export function SelectionToolbar({
   box,
@@ -186,8 +184,6 @@ export function SelectionToolbar({
   );
 }
 
-/** A ghost icon button named by `label`: its accessible name, and the tooltip
- *  that shows it to sighted users. */
 function IconAction({
   testId,
   icon,

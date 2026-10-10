@@ -19,27 +19,17 @@ export type {
 } from "../telemetry-snapshot.js";
 
 /**
- * Handed to a span's function for attaching attributes. A lazy (thunk) value is
- * evaluated once by the active collector and never by the no-op — expensive
- * payloads cost nothing when nobody collects.
+ * A thunk value is evaluated once by the active collector and never by the
+ * no-op.
  */
 export interface TelemetrySpanHandle {
   set(key: string, value: JsonValue | (() => JsonValue)): void;
 }
 
-/**
- * Request-scoped telemetry collector — the single source of truth for what
- * happened during a request. Core and plugins record spans (anything with a
- * duration) and records (durationless facts) under a namespace; consumers such
- * as the dev debug bar read them back. Two implementations:
- * {@link NOOP_TELEMETRY} (used whenever no consumer sampled the request) and
- * the real accumulating collector, activated by consumer vote.
- */
 export interface TelemetryCollector {
   /**
-   * Append an entry under `namespace` (for the debug bar: the panel's id).
-   * A function entry is a lazy payload: the active collector evaluates it once
-   * at record time; the no-op never does.
+   * For the debug bar, `namespace` is the panel's id. A function entry is
+   * evaluated once by the active collector and never by the no-op.
    */
   record(namespace: string, entry: JsonValue | (() => JsonValue)): void;
   /** Time `fn`, record a span, and return `fn`'s result unchanged. */
@@ -68,11 +58,8 @@ export const NOOP_HANDLE: TelemetrySpanHandle = {
 };
 
 /**
- * The permanent no-op collector. Lives in core proper so plugin `ctx.telemetry`
- * call sites stay safe everywhere: `record` drops the entry, `span` calls
- * through and returns the result, reads are empty. The real collector is
- * swapped in only when at least one registered consumer votes to sample the
- * request — a site with no consumers pays nothing, in dev or prod.
+ * Used whenever no consumer samples the request: `span` still calls through,
+ * everything else drops.
  */
 export const NOOP_TELEMETRY: TelemetryCollector = {
   record: () => undefined,

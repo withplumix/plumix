@@ -4,9 +4,10 @@ import { defineBlock } from "plumix/blocks";
 
 import { formatSize, normalizeFileMedia, sanitizeHref } from "./normalize.js";
 
-// Self-contained inline styles: the admin canvas iframe doesn't load the site
-// stylesheet, so the file "chip" has to carry its own layout — otherwise the
-// name + meta spans collapse into one run of text ("Download0 B").
+/**
+ * Inline styles: the admin canvas iframe doesn't load the site stylesheet, so
+ * without them the name and meta spans run together ("Download0 B").
+ */
 const CHIP: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
@@ -60,7 +61,8 @@ export const fileBlock: BlockSpec = defineBlock({
   ],
   inputs: [
     // The picked library asset — a { id, url, filename, mime } snapshot the
-    // media picker writes. The fields below are manual escape hatches / overrides.
+    // media picker writes. The fields below are manual escape hatches /
+    // overrides.
     {
       name: "media",
       type: "media",

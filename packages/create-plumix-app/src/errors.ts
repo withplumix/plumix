@@ -17,10 +17,8 @@ type ScaffoldErrorCode =
   | "package_manager_conflict";
 
 /**
- * A scaffolder failure. The interface callers depend on is the human-readable
- * `message` (rendered to the user) plus the machine-readable {@link code}; the
- * offending values are already interpolated into `message`, so they are not
- * re-exposed as fields. Construct via the static factories, never `new`.
+ * Offending values are already interpolated into `message`. Construct via the
+ * static factories, never `new`.
  */
 export class ScaffoldError extends Error {
   static {

@@ -40,13 +40,13 @@ export interface ImageLayerOptions extends Pick<BridgeOptions, "trustProxy"> {
     request: Request,
     meta: { readonly clientAddress?: string },
   ) => Response | Promise<Response>;
-  /** Consulted first, so a file the process serves from disk is a source too. */
+  /**
+   * Consulted first, so a file the process serves from disk is a source too.
+   */
   readonly assets?: AssetsBinding;
   /**
-   * Raw, as the user wrote it in `plumix.config.ts` — normalized here the
-   * same way core normalizes it, so the route matches wherever `url()`
-   * points a same-site source (`/cms/_plumix/image` behind a proxy that
-   * forwards only `/cms/*`).
+   * Raw from `plumix.config.ts`; normalized here as core does, so the route
+   * matches wherever `url()` points.
    */
   readonly basePath?: string;
 }
@@ -63,7 +63,6 @@ export interface ImageLayer {
   ) => void;
 }
 
-/** Every variant is content-addressed by its URL, and its format follows `Accept`. */
 const CACHED_HEADERS = {
   "cache-control": "public, max-age=31536000, immutable",
   vary: "accept",
@@ -79,24 +78,20 @@ const CONTENT_TYPES = {
 type OutputFormat = keyof typeof CONTENT_TYPES;
 const OUTPUT_FORMATS = Object.keys(CONTENT_TYPES) as readonly OutputFormat[];
 
-/** `sharp` encodes every format the slot contract names, on every host. */
 const ENCODABLE: readonly ImageFormat[] = ["jpeg", "webp", "avif"];
 
-/** One request's transform, named: the hash is both the cache file and the `ETag`. */
+/** The hash is both the cache file name and the `ETag`. */
 interface VariantRequest {
   readonly params: ImageParams;
   readonly format: NegotiatedFormat;
-  /** What a purge names: the source without its query, a same-host one by path. */
   readonly source: string;
   readonly key: string;
-  /** The request as the bridge would see it; a same-origin source resolves against it. */
   readonly url: URL;
   readonly clientAddress: string | undefined;
 }
 
 interface Variant {
   readonly format: OutputFormat;
-  /** Fresh bytes, or the cache file already open. */
   readonly body: Buffer | CachedVariant;
 }
 
@@ -105,9 +100,8 @@ const refused = (): ImagesError => ImagesError.upstream({ status: 400 });
 type Render = (request: VariantRequest) => Promise<Variant>;
 
 /**
- * At most `max` renders run at once; the rest wait in order. A render holds
- * a source of up to {@link MAX_SOURCE_BYTES} and its decoded pixels, so how
- * many run together is what bounds the process's memory.
+ * Concurrent renders, each holding a source and its decoded pixels, are what
+ * bound process memory.
  */
 function limited(max: number, render: Render): Render {
   let active = 0;
@@ -127,8 +121,10 @@ function limited(max: number, render: Render): Render {
 const candidates = (format: NegotiatedFormat): readonly OutputFormat[] =>
   format === "source" ? OUTPUT_FORMATS : [format];
 
-// What sharp names a decoded input, onto what it can encode. Vector and
-// exotic raster inputs come out lossless.
+/**
+ * What sharp names a decoded input, onto what it can encode. Vector and
+ * exotic raster inputs come out lossless.
+ */
 function ownFormat(format: string | undefined): OutputFormat {
   if (format === "heif") return "avif";
   return (OUTPUT_FORMATS as readonly string[]).includes(format ?? "")
@@ -144,7 +140,6 @@ function variantKey(params: ImageParams, format: NegotiatedFormat): string {
     .slice(0, 40);
 }
 
-/** The body, bounded: a source past the cap is refused before it is held. */
 async function readBounded(response: Response): Promise<Uint8Array> {
   const bytes = await readImageSource(response);
   if (bytes === null) throw ImagesError.upstream({ status: 413 });
@@ -152,10 +147,8 @@ async function readBounded(response: Response): Promise<Uint8Array> {
 }
 
 /**
- * The route served in front of the handler. A variant is named by a hash of
- * the request, so a hit is answered from disk with no source fetch, and the
- * `ETag` is that hash: `If-None-Match` is decided from the cache's index
- * before anything is read.
+ * The `ETag` is the request hash, so `If-None-Match` is decided from the cache
+ * index before any read.
  */
 export function createImageLayer(
   slot: ImageDelivery | undefined,

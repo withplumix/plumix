@@ -3,34 +3,41 @@ import * as v from "valibot";
 const MAX_PER_PAGE = 100;
 const DEFAULT_PER_PAGE = 20;
 
-// Path params only. Entry types and taxonomies share the top-level
-// `{collection}` rest_base namespace. Pagination is read from the query string
-// directly (see `readPagination`) so the surface doesn't depend on per-adapter
-// query coercion.
+/**
+ * Pagination is read from the query string directly, so the surface doesn't
+ * depend on per-adapter query coercion.
+ */
 export const collectionParamsSchema = v.object({ collection: v.string() });
 export const collectionItemParamsSchema = v.object({
   collection: v.string(),
   id: v.string(),
 });
 
-// The output schemas ARE the public allowlist (default-deny): only these
-// fields can ever leave the surface, and they double as the documented
-// response shapes in the generated OpenAPI spec.
+/**
+ * The output schemas ARE the public allowlist (default-deny): only these
+ * fields can ever leave the surface, and they double as the documented
+ * response shapes in the generated OpenAPI spec.
+ */
 export const publicAuthorSchema = v.object({
   id: v.number(),
   name: v.nullable(v.string()),
   avatarUrl: v.nullable(v.string()),
 });
 
-// Compact term shape, used both as a top-level resource and embedded on entries.
+/**
+ * Compact term shape, used both as a top-level resource and embedded on
+ * entries.
+ */
 export const publicTermSchema = v.object({
   id: v.number(),
   name: v.string(),
   slug: v.string(),
 });
 
-// One role's image. `width`/`height` are present only when the adapter knows
-// the size, matching `ResolvedImage`.
+/**
+ * One role's image. `width`/`height` are present only when the adapter knows
+ * the size, matching `ResolvedImage`.
+ */
 const publicImageSchema = v.object({
   url: v.string(),
   alt: v.nullable(v.string()),
@@ -52,7 +59,8 @@ export const publicEntrySchema = v.object({
   author: v.nullable(publicAuthorSchema),
   // Associations are embedded, never nested as their own sub-resource.
   terms: v.record(v.string(), v.array(publicTermSchema)),
-  // Only meta fields whitelisted with `showInApi` reach this map (default-deny).
+  // Only meta fields whitelisted with `showInApi` reach this map
+  // (default-deny).
   meta: v.record(v.string(), v.unknown()),
   // Image roles, one key per role whose field opted in with `showInApi` — the
   // same default-deny gate `meta` runs under. `null` is a role whose field
@@ -100,8 +108,10 @@ export function readPagination(url: URL): Pagination {
   return { page, perPage, offset: (page - 1) * perPage };
 }
 
-// Non-integer or out-of-range values fall back / clamp rather than erroring —
-// pagination params are ergonomic hints, not a place to 400 a content read.
+/**
+ * Non-integer or out-of-range values fall back / clamp rather than erroring —
+ * pagination params are ergonomic hints, not a place to 400 a content read.
+ */
 function clampInt(
   raw: string | null,
   fallback: number,

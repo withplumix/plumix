@@ -21,10 +21,10 @@ function query(testid: string): HTMLElement | null {
   return shadow().querySelector<HTMLElement>(`[data-testid="${testid}"]`);
 }
 
-// React roots inside the shadow commit on the scheduler, so the DOM an
-// assertion needs may not be there yet. Poll for it — a loaded CI runner
-// outruns any fixed delay. The interval is tightened from vitest's 50ms
-// default because every wait here pays it in full.
+/**
+ * React roots inside the shadow commit on the scheduler, so poll. The
+ * interval beats vitest's 50ms default because every wait pays it in full.
+ */
 function shown(testid: string): Promise<HTMLElement> {
   return vi.waitFor(
     () => {
@@ -52,16 +52,18 @@ async function press(testid: string): Promise<void> {
   (await shown(testid)).click();
 }
 
-// Only for the "nothing should have happened" assertions: there is no condition
-// to poll for, so let pending work run and then assert the absence.
+/**
+ * Only for the "nothing should have happened" assertions: there is no condition
+ * to poll for, so let pending work run and then assert the absence.
+ */
 function flush(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-// Vitest's browser runner listens for window `error` and `unhandledrejection`
-// events, and once the page listens too it re-logs each one through
-// `console.error`. That line is the runner's, not the code under test's, so a
-// test dispatching one keeps it out of the output for the dispatch alone.
+/**
+ * Vitest's browser runner re-logs window errors through `console.error`; that
+ * line is the runner's, so it is silenced for the dispatch alone.
+ */
 function dispatchUncaught(event: Event): void {
   const relog = vi.spyOn(console, "error").mockImplementation(() => undefined);
   try {
@@ -219,7 +221,8 @@ describe("installIslandErrorOverlay", () => {
     expect(query("plumix-dev-error-message")).not.toBeNull();
     expect(query("plumix-dev-error-hydration-diff")).not.toBeNull();
     // …and none of the server-only context sections the full page renders — the
-    // client dialog composes the slim body, never the full DevErrorPage (#1678).
+    // client dialog composes the slim body, never the full DevErrorPage
+    // (#1678).
     expect(query("plumix-dev-error-request")).toBeNull();
     expect(query("plumix-dev-error-route")).toBeNull();
     expect(query("plumix-dev-error-database")).toBeNull();
@@ -287,7 +290,8 @@ describe("installIslandErrorOverlay", () => {
 
     // A newer error arrives while the panel is open; it must not swap out.
     dispatchHydrationError(new Error("newer"), island("Beta"));
-    // The read error shifting from slot 1 to slot 2 of 2 is the new one landing.
+    // The read error shifting from slot 1 to slot 2 of 2 is the new one
+    // landing.
     await vi.waitFor(
       () =>
         expect(query("plumix-island-overlay-count")?.textContent).toContain(
@@ -490,7 +494,8 @@ describe("installIslandErrorOverlay", () => {
     await press("plumix-dev-overlay-close");
     await gone("plumix-dev-overlay-panel");
 
-    // The badge is back, but the count is unchanged — no false "arriving" pulse.
+    // The badge is back, but the count is unchanged — no false "arriving"
+    // pulse.
     const circle = await shown("plumix-island-overlay-badge-count");
     expect(circle.className).not.toContain(PULSE);
   });

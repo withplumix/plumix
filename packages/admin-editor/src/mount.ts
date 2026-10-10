@@ -13,20 +13,13 @@ import { EditorCanvas } from "./editor-canvas.js";
 
 interface MountEditorOptions {
   readonly doc: Document;
-  /** Registry the canvas renders with (core + plugin blocks). */
   readonly registry: BlockRegistry;
-  /** Shortcodes the canvas expands (core + plugin + theme). */
   readonly shortcodes?: ShortcodeRegistry;
   /** Host (admin shell) origin, for bridge message pinning. */
   readonly origin: string;
 }
 
-/**
- * Mounts the editor canvas into the SSR-emitted `[data-plumix-content-root]`,
- * seeded from the embedded `[data-plumix-initial-tree]` so first paint matches
- * the server render. Returns a teardown, or null when the page is not an
- * editor page (no content root).
- */
+/** Returns null when the page has no `[data-plumix-content-root]`. */
 export function mountEditorRuntime({
   doc,
   registry,
@@ -61,8 +54,10 @@ function readInitialTree(doc: Document): readonly BlockNode[] {
   }
 }
 
-// The SSR embeds what the canvas — a fresh React tree with no server context —
-// would otherwise have to guess; `parseRenderEnv` says what and why.
+/**
+ * The SSR embeds what the canvas — a fresh React tree with no server context —
+ * would otherwise have to guess; `parseRenderEnv` says what and why.
+ */
 function readRenderEnv(doc: Document): RenderEnv {
   return parseRenderEnv(
     doc.querySelector("[data-plumix-render-env]")?.textContent ?? "",

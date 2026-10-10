@@ -19,9 +19,10 @@ afterAll(async () => {
   await Promise.all(servers.map((server) => server.stop(true)));
 });
 
-// `S3Client` sends its requests from inside Bun rather than through the global
-// `fetch`, so the fake bucket answers on a real listener: every request, from
-// Bun's client and from core's signer alike, crosses the same boundary.
+/**
+ * `S3Client` sends from inside Bun, not through the global `fetch`, so the
+ * fake bucket answers on a real listener.
+ */
 function serve(fake: FakeS3): string {
   const server = Bun.serve({
     port: 0,
@@ -32,7 +33,7 @@ function serve(fake: FakeS3): string {
   return server.url.origin;
 }
 
-// One bucket per call: the contract wants every case to start empty.
+/** One bucket per call: the contract wants every case to start empty. */
 function bind(overrides: { publicUrlBase?: string } = {}) {
   const fake = fakeS3({ ...BUCKET, credentials: CREDENTIALS });
   const storage = bunS3({

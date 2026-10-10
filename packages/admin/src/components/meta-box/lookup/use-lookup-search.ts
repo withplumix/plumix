@@ -6,12 +6,7 @@ import type { JsonObject } from "@plumix/core";
 
 import type { LookupItem } from "./types.js";
 
-// A search box backed by the `lookup.list` RPC. Owns the query string and
-// the fetch; the caller owns dialog open/close (passed as `enabled`) and any
-// post-filtering of the results. Shared by the reference pickers and the link
-// field's entry picker — same RPC, same result shape, different surrounding
-// UX. `query` is trimmed for the RPC (a blank search lists everything) while
-// the raw value stays bound to the input so the user's spaces survive.
+/** Trims only the RPC query, so the user's spaces survive in the input. */
 export function useLookupSearch({
   kind,
   scope,

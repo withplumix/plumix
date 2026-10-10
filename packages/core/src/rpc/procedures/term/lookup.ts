@@ -30,19 +30,18 @@ interface TermLookupRow {
   readonly parentId: number | null;
 }
 
-// `satisfies` keeps `hydrate`'s concrete `TermReferenceSummary` return
-// type visible instead of widening to the contract's `HydratedReference`.
+/**
+ * `satisfies` keeps `hydrate`'s concrete `TermReferenceSummary` return
+ * type visible instead of widening to the contract's `HydratedReference`.
+ */
 export const termLookupAdapter = {
   async list(ctx, options) {
     const conditions = scopeConditions(options.scope);
     let limit: number;
     if (options.ids !== undefined) {
-      // Resolve-by-id batch path: ignore `query`, return only the
-      // requested ids (still subject to scope). Invalid ids are
-      // silently dropped — they read as orphans on the caller's side.
-      // Limit tracks `numericIds.length` (not `MAX_LIST_LIMIT`) since
-      // the meta pipeline aggregates ids across same-`(kind,scope)`
-      // fields and may legitimately request >100 in one call.
+      // Invalid ids drop silently and read as orphans. The limit follows the id
+      // count, not `MAX_LIST_LIMIT`, because the meta pipeline batches ids
+      // across fields and may exceed 100.
       const numericIds = options.ids
         .map((id) => parseTermId(id))
         .filter((id): id is number => id !== null);

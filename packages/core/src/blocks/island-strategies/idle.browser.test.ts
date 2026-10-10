@@ -3,7 +3,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import type { PlumixIslandElement } from "../island-element.js";
 import { idleStrategy } from "./idle.js";
 
-// The strategy only touches `loadFn` and `opts`; the element arg is unused.
+/** The strategy only touches `loadFn` and `opts`; the element arg is unused. */
 const EL = {} as PlumixIslandElement;
 
 describe("idleStrategy", () => {

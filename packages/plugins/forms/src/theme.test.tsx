@@ -141,10 +141,8 @@ describe("two installs in one process", () => {
   });
 });
 
-// Binding is minted by the block's loader, which a template render has
-// no equivalent of — signing is asynchronous and the render is not. The
-// form still submits; it just stores no entry, exactly as one on an
-// archive does.
+// A template render cannot sign asynchronously, so the form submits unbound, as
+// one on an archive does.
 describe("a bound form in a template", () => {
   test("renders without the signed entry the block would carry", async () => {
     const enquiry = defineForm("enquiry", {

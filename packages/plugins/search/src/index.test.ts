@@ -44,9 +44,8 @@ describe("search()", () => {
   });
 
   test("a save the index cannot absorb still succeeds, and stays on the feed", async () => {
-    // The response is never held up by the indexing, so a failure in it
-    // cannot reach the editor — the save is what the request answered for.
-    // The change stays on the feed, for the next drain to retry.
+    // Indexing never holds up the response, so its failure can't reach the
+    // editor; the change stays on the feed for the next drain.
     await h.db.run(sql`DROP TABLE search_documents`);
 
     await rpc("entry/create", {
@@ -161,9 +160,8 @@ describe("search()", () => {
   });
 
   test("an entry type excluded from search still reaches the index", async () => {
-    // The admin palette ranks out of the same index, and an editor's reach is
-    // not bounded by a front-end setting. What keeps this off the search page
-    // is the read clamp, asserted where the page is actually rendered.
+    // An editor's reach in the admin palette is not bounded by a front-end
+    // setting; the read clamp keeps this off the search page.
     const entry = await h.factory.entry.create({
       authorId: admin.id,
       type: "ledger",
@@ -293,10 +291,8 @@ describe("search()", () => {
   });
 
   test("a capability-gated field is not indexed, however it was declared", async () => {
-    // Written past the RPC surface on purpose: that surface rejects the key
-    // outright without the capability, so going through it would prove the
-    // write gate rather than the index's own exclusion. A snippet is served
-    // to whoever asks, so the value has to stay out once it is stored too.
+    // Bypasses RPC, whose write gate would reject the key, so this proves the
+    // index's own exclusion.
     await h.factory.entry.create({
       authorId: admin.id,
       title: "Winter growing",

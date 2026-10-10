@@ -14,13 +14,7 @@ interface Formatters {
   formatRelative: (value: Date, options?: FormatRelativeOptions) => string;
 }
 
-/** Pulls the active Lingui locale and returns the three format helpers
- *  with it baked in, so call sites read `formatters.formatDate(value)`
- *  rather than threading locale through every render. Memoized on
- *  `locale` so consumers can safely include the returned functions in
- *  `useMemo` / `useCallback` dep arrays without invalidating on every
- *  render (which would cascade into re-mount loops on tree-stable
- *  editor components). */
+/** Stable per locale, so the helpers are safe in dependency arrays. */
 export function useFormatters(): Formatters {
   const { i18n } = useLingui();
   const locale = i18n.locale;

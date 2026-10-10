@@ -15,24 +15,16 @@ import {
 } from "./switcher.js";
 
 /**
- * The bar as a page's chrome; see `RenderChrome.debugBar`. Off-loopback it
- * renders nothing: the bar's SQL and span tree would go to whoever reached
- * the dev server rather than to the developer running it (#2007).
+ * Renders nothing off-loopback: the bar's SQL and span tree would go to
+ * whoever reached the dev server rather than the developer running it.
  */
 export function debugBarChrome(ctx: AppContext): ReactNode {
   return isTrustedDevRequest(ctx.request) ? <PlumixDebugBar ctx={ctx} /> : null;
 }
 
 /**
- * The development-only debug bar. Standalone and auth-independent (unlike the
- * admin bar it does not gate on a user). The current request's panels are
- * fully server-rendered and zero-JS: a native <details> toggles the bar and
- * radio inputs drive the tabs. Its one client-JS concession is the request
- * switcher — a <select> of recent captured requests; picking a past one fetches
- * its pre-rendered panels and swaps them in (see {@link DEBUG_SWITCHER_SCRIPT}).
- * Rendered only under the dev gate at the injection site, so it — and this whole
- * module, script included — is tree-shaken from production builds. Panels render
- * from a {@link DebugSnapshot} projected from the current request.
+ * Must render only under the dev gate at the injection site, so this module
+ * and its switcher script tree-shake from production builds.
  */
 export function PlumixDebugBar({
   ctx,

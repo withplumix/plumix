@@ -7,9 +7,7 @@ import {
   tokenIdToCssVar,
 } from "./style-emitter.js";
 
-/** A caller's choice for one property: a theme token, or a raw CSS literal.
- *  This is the whole vocabulary the editor speaks — the `var()` encoding of a
- *  token stays behind the seam. */
+/** The token's `var()` encoding stays behind this seam. */
 export type StyleSelection =
   | { readonly kind: "token"; readonly id: string }
   | { readonly kind: "literal"; readonly value: string };

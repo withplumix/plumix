@@ -4,19 +4,8 @@ import type { AppContext } from "plumix/plugin";
 import { entryAllowsAnonymousAccess } from "plumix/auth";
 
 /**
- * Whether a page may carry a card at all — the one question the route and the
- * head both ask, so the head can never advertise a URL the route refuses.
- *
- * A listing page answers on whether it lists anything. An empty archive renders
- * a page, so this is a narrower rule than "the page exists", and deliberately:
- * a card is minted at an enumerable URL and kept immutable in storage, so the
- * date archives alone are three million URLs a stranger can spend the site's
- * bucket on, and an author card is a person's name at `author/<id>` whether or
- * not anything of theirs was ever published. "It lists at least one published
- * entry" closes both, and it is the same sentence for all four kinds.
- *
- * The front page is the exception: it is the site, and a site with nothing on it
- * yet is still the thing anyone sharing the site shares.
+ * A listing needs at least one published entry, so strangers can't fill the
+ * bucket via enumerable empty archives. The front page always qualifies.
  */
 export async function isShareablePage(
   ctx: AppContext,
@@ -27,12 +16,8 @@ export async function isShareablePage(
       return isShareableEntry(ctx, data.entry);
     case "frontPage":
       return true;
-    // An archive is the one listing kind core itself gates: `policyForMatch`
-    // resolves an `entryType` intent against the entry type's `access.default`,
-    // so a type whose own archive redirects an anonymous visitor to sign-in
-    // must not have a card either — the card is public, immutable and edge
-    // cached, and a theme card rendering `data.entries` would put gated titles
-    // on it. The other three have no policy attached, so nothing to ask.
+    // The only listing kind core gates by access; a public cached card could
+    // otherwise show gated titles.
     case "entryType":
       return (
         data.pagination.total > 0 &&
@@ -49,11 +34,7 @@ export async function isShareablePage(
   }
 }
 
-/**
- * {@link isShareablePage} with the status half dropped, for the editor preview:
- * showing a draft's card is its whole point, while an entry whose page a scraper
- * will never reach still gets none.
- */
+/** {@link isShareablePage} minus the status check, so drafts preview. */
 export function isPreviewablePage(
   ctx: AppContext,
   data: TemplateData,
@@ -76,15 +57,8 @@ export async function isShareableEntry(
 }
 
 /**
- * The half of {@link isShareableEntry} that is not about status: whether a
- * scraper could reach this entry's page at all.
- *
- * An unregistered type — a row left behind by a plugin the config no longer
- * installs — has no public page either, so it answers the same as a private
- * one. The access layer is asked last, and asked about an anonymous visitor
- * whoever is calling: a card carries the entry's title, sits at an enumerable
- * id, and is served from a shared cache, so an entry whose own page a scraper
- * never reaches must not have one either.
+ * Asks access as an anonymous visitor whoever is calling: a card is public and
+ * shared-cached. An unregistered type counts as private.
  */
 export async function isReachableEntry(
   ctx: AppContext,

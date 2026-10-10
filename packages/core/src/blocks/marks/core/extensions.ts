@@ -6,8 +6,10 @@ import { coreMarks } from "./metadata.js";
 import { SIMPLE_MARK_CONFIGS } from "./simple-configs.js";
 import { createSimpleMarkExtension } from "./simple.js";
 
-// The chord a mark advertises lives in `coreMarks`, which the cheatsheet reads.
-// Binding it here is what makes that advertisement true.
+/**
+ * The chord a mark advertises lives in `coreMarks`, which the cheatsheet reads.
+ * Binding it here is what makes that advertisement true.
+ */
 const shortcutByName = new Map(
   coreMarks.map((mark) => [mark.name, mark.keyboardShortcut]),
 );

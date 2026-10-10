@@ -110,9 +110,8 @@ describe("coreBlocks", () => {
     expect(hidden).toEqual(contentOnlyNames);
   });
 
-  // The reading-length counter's roster is now the blocks' own declarations, so
-  // what it reads is no longer visible at its call site. Anything else a core
-  // block declares is searchable text the reading estimate must not absorb.
+  // Any other declared input is searchable text the reading estimate must not
+  // absorb.
   test("declares exactly four inputs as body copy", () => {
     const bodyCopy = coreBlocks.flatMap((spec) =>
       (spec.text ?? [])

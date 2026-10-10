@@ -53,8 +53,10 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-// Split out of `login.tsx` so a test can mount the screen without the
-// file-based route tree; the route only hands it the validated search.
+/**
+ * Split out of `login.tsx` so a test can mount the screen without the
+ * file-based route tree; the route only hands it the validated search.
+ */
 export function LoginScreen({ search }: { search: LoginSearch }): ReactNode {
   const router = useRouter();
   const manifest = readManifest();
@@ -114,9 +116,8 @@ export function LoginScreen({ search }: { search: LoginSearch }): ReactNode {
     magicLink.mutate({ email });
   };
 
-  // Persist via cookie (WP `wp_lang` parity, `Path=/_plumix/` so public
-  // routes never see it) AND pin `?lang=` so the first SSR after reload
-  // resolves to the same locale before the cookie is on the wire.
+  // `?lang=` covers the first SSR after reload, before the cookie is on the
+  // wire.
   const handleLocaleSelect = (code: string): void => {
     writeLocaleCookie(code);
     window.location.assign(buildLocaleSwitchUrl(search, code));
@@ -125,11 +126,8 @@ export function LoginScreen({ search }: { search: LoginSearch }): ReactNode {
   const oauthErrorMessage = renderOAuthError(search.oauth_error);
   const magicLinkUrlError = renderMagicLinkError(search.magic_link_error);
   const emailChangeUrlError = renderEmailChangeError(search.email_change_error);
-  // Treat any non-empty value as success. The verify route emits
-  // `?email_change_success=1`, but TanStack Router can serialize a
-  // round-tripped search through other routes — e.g. an OAuth start
-  // that preserves search — so being liberal here is safer than
-  // pinning the literal "1".
+  // Not pinned to "1": a search round-tripped through other routes can
+  // reserialize.
   const emailChangeSuccess = Boolean(search.email_change_success);
 
   if (magicLinkSent) {

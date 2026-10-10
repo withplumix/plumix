@@ -8,16 +8,10 @@ import {
   META_FIELD_KEY_RE,
 } from "./meta-field-key.js";
 
-// Reserved namespace for core-owned meta keys (e.g. revision snapshot
-// envelopes at `__plumix_snapshot`). Rejected at registration so a
-// plugin can never shadow a future core key — the matching write
-// path would otherwise have to enforce this on every entry.update.
+/** Rejected at registration so a plugin can never shadow a future core key. */
 export const META_RESERVED_KEY_PREFIX = "__plumix_";
 
-// Cap on fields per box — keeps the admin's per-request payload
-// bounded and signals a modeling problem if a plugin wants to pile
-// hundreds of fields into one card. Matches the RPC input-schema cap
-// on the meta/upsert request surface.
+/** Bounds the admin payload. Matches the RPC meta/upsert input-schema cap. */
 export const MAX_FIELDS_PER_META_BOX = 200;
 
 export function assertMetaBoxFields(
@@ -35,9 +29,8 @@ export function assertMetaBoxFields(
   }
   const seen = new Set<string>();
   for (const field of fields) {
-    // `__proto__` and friends pass the regex but mutate the prototype chain
-    // of any fresh object literal they are written into — the decoded meta
-    // bag being one. Same set the sub-field validator rejects.
+    // `__proto__` and friends pass the regex but mutate the prototype chain of
+    // the decoded meta bag.
     if (FORBIDDEN_FIELD_KEYS.has(field.key)) {
       throw PluginContextError.metaBoxFieldForbiddenKey({
         kind,

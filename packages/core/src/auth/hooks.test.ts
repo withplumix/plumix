@@ -14,27 +14,8 @@ import { createRpcHarness } from "../test/rpc.js";
 import { SESSION_COOKIE_NAME } from "./cookies.js";
 import { generateToken, hashToken } from "./tokens.js";
 
-// Pins hook emissions across the auth surface so an audit-log plugin
-// can subscribe and capture every state-change without us touching
-// auth code again. One test per emission point — the assertion is
-// just "fires with the expected payload"; downstream behaviour
-// (audit-log writes etc.) is the plugin's concern.
-//
-// Coverage map:
-//   api_token:created    — auth.apiTokens.create
-//   api_token:revoked    — auth.apiTokens.{revoke (self), adminRevoke (admin)}
-//   device_code:approved — auth.deviceFlow.approve
-//   device_code:denied   — auth.deviceFlow.deny
-//   credential:revoked   — auth.credentials.delete
-//   credential:renamed   — auth.credentials.rename
-//   credential:created   — passkey register, invite-accept (dispatcher)
-//   session:revoked      — auth.sessions.{revoke, revokeOthers}
-//   user:signed_in       — passkey register, magic-link verify, oauth
-//                          callback, invite-accept (dispatcher)
-//   user:signed_out      — /_plumix/auth/signout (dispatcher)
-//
-// `user:registered` was already emitted before this PR (invite-accept),
-// not re-tested here.
+// An audit-log plugin subscribes to these emissions, so each state change
+// must keep firing with its expected payload.
 
 describe("auth hooks — api tokens", () => {
   test("api_token:created fires after a successful mint", async () => {

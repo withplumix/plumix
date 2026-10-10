@@ -19,8 +19,10 @@ import { entryLookupAdapter } from "./lookup.js";
 const POST = { entryTypes: ["post"] } as const;
 const PAGE = { entryTypes: ["page"] } as const;
 
-// Existence checks now ride the `list({ ids })` batch path — same
-// scope rules, single query.
+/**
+ * Existence checks now ride the `list({ ids })` batch path — same
+ * scope rules, single query.
+ */
 async function existsViaList(
   h: AuthenticatedRpcHarness,
   id: string,
@@ -58,9 +60,8 @@ describe("entryLookupAdapter", () => {
   });
 
   test("list({ ids }) honours the entryTypes scope filter", async () => {
-    // `page` pools onto `post`'s capabilities, so the viewer may read
-    // both types and the negative result below has to come from the
-    // type filter rather than from `page` being dropped as unreadable.
+    // `page` pools onto `post`'s capabilities, so the negative result must come
+    // from the type filter, not from `page` being unreadable.
     const registry: MutablePluginRegistry = createPluginRegistry();
     registry.entryTypes.set(
       "page",
@@ -166,9 +167,8 @@ describe("entryLookupAdapter", () => {
   });
 
   test("rejects a scope naming a reserved type (revision / autosave rows)", async () => {
-    // Revision and autosave rows share the `entries` table with content.
-    // An autosave carries another author's unsaved title, so a scope
-    // naming one would hand the picker a read channel into pending edits.
+    // An autosave carries another author's unsaved title, so a scope naming one
+    // would open a read channel into pending edits.
     const h = await createRpcHarness({ authAs: "admin" });
     for (const type of RESERVED_TYPES) {
       await expect(
@@ -193,10 +193,8 @@ describe("entryLookupAdapter", () => {
   });
 
   test("list() hides another author's unpublished entries from a viewer without edit rights", async () => {
-    // A subscriber holds `entry:post:read` and nothing else, and the
-    // role is reachable by the public wherever `auth.selfSignup` is on.
-    // Titles of drafts, pending and scheduled entries are not theirs to
-    // enumerate; published ones are what the site shows anyway.
+    // A subscriber role is public-reachable wherever `auth.selfSignup` is on,
+    // so it must not enumerate titles of unpublished entries.
     const h = await createRpcHarness({ authAs: "admin" });
     const subscriber = await userFactory
       .transient({ db: h.context.db })
@@ -254,10 +252,8 @@ describe("entryLookupAdapter", () => {
   });
 
   test("list() answers a principal-less caller with the published rows of a public type only", async () => {
-    // Public nav resolves menu targets through this adapter with no
-    // principal at all (`getMenuByName` in plugin-menu), so a viewer
-    // holding no capability still has to get the rows the site renders
-    // to anyone — and nothing from a type it never renders.
+    // Public nav resolves menu targets through this adapter with no principal,
+    // so it must get rendered rows and nothing from a type never rendered.
     const registry: MutablePluginRegistry = createPluginRegistry();
     registry.entryTypes.set(
       "page",
@@ -294,10 +290,9 @@ describe("entryLookupAdapter", () => {
   });
 
   test("list() ORs two viewer rules together without losing the scope filter", async () => {
-    // One type resolves through the readable arm and the other through
-    // the public arm, so the disjunction carries two operands — the only
-    // arity at which `or` precedence against the surrounding `and` can
-    // go wrong. A trashed row pins that the scope conditions still bind.
+    // Two operands is the only arity where `or` precedence against the
+    // surrounding `and` can go wrong; the trashed row pins that scope
+    // conditions still bind.
     const registry: MutablePluginRegistry = createPluginRegistry();
     registry.entryTypes.set(
       "page",
@@ -401,10 +396,8 @@ describe("entryLookupAdapter", () => {
     });
     expect(result?.id).toBe(String(e.id));
     expect(result?.label).toBe("Specific");
-    // Wire-contract pin: every entry adapter row carries `targetType`
-    // so the admin picker can cascade through `labels.untitledItem`
-    // per type. Drop this field and the admin silently regresses
-    // every row's "Untitled" fallback to the generic descriptor.
+    // The admin picker cascades `labels.untitledItem` per type off
+    // `targetType`; without it every row falls back to the generic "Untitled".
     expect(result?.targetType).toBe("post");
     // `href` is the public permalink — menu resolution renders links
     // from it at read time.
@@ -453,9 +446,8 @@ describe("entryLookupAdapter", () => {
   });
 
   test("hydrate() honours the entryTypes scope filter", async () => {
-    // `list` narrows per type on its own; `hydrate` has only the scope's
-    // `in` list, so this is what keeps a referenced id from resolving
-    // across into a type the field never declared.
+    // `hydrate` has only the scope's `in` list, so this keeps a referenced id
+    // from resolving into a type the field never declared.
     const registry: MutablePluginRegistry = createPluginRegistry();
     registry.entryTypes.set(
       "page",
@@ -520,10 +512,8 @@ describe("entryLookupAdapter", () => {
   });
 
   test("hydrate() clamps under an explicit status rather than being replaced by it", async () => {
-    // A field's `scope.status` says which rows the field wants, not which
-    // rows the reader may have. Treating it as an override let a
-    // server-declared `status: "draft"` reference hand an anonymous render
-    // every author's drafts of that type.
+    // A field's `scope.status` is which rows it wants, not which the reader may
+    // have; as an override it would hand anonymous renders authors' drafts.
     const h = await createRpcHarness({ authAs: "admin" });
     const draft = await entryFactory
       .transient({ db: h.context.db })
@@ -544,9 +534,8 @@ describe("entryLookupAdapter", () => {
   });
 
   test("hydrate() shows a contributor their own unpublished entry", async () => {
-    // The clamp asked only for `edit_any`, so an author referencing their
-    // own draft got an empty hydration on their own preview — `edit_own`
-    // over their own rows is the same rule every other read surface uses.
+    // `edit_own` over one's own rows is the rule every other read surface uses,
+    // so an author's preview hydrates their own draft.
     const h = await createRpcHarness({ authAs: "admin" });
     const contributor = await userFactory
       .transient({ db: h.context.db })

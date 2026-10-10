@@ -16,7 +16,6 @@ import { isValidTemporalValue } from "./meta-box-field.js";
 
 export type { TemporalInputType } from "./meta-box-field.js";
 
-/** Read type after `.returns("date")` — optionality carries over from `V`. */
 type ProjectedDate<V> = undefined extends V ? Date | undefined : Date;
 
 interface TemporalFieldState extends UniversalFieldState {
@@ -27,13 +26,8 @@ interface TemporalFieldState extends UniversalFieldState {
 }
 
 /**
- * Fluent chain for the temporal fields (`date`, `datetime`, `time`).
- * Storage is always the ISO-shaped string the native input produces —
- * the phantom stored shape `S` stays a string even when
- * `.returns("date")` projects the read type `V` to a JS `Date` at
- * decode time. `.sanitize()` / `.validate()` run on the write side,
- * so their callbacks always see the stored string regardless of the
- * read projection.
+ * Storage is always the ISO string, even under `.returns("date")`, so
+ * `.sanitize()` / `.validate()` callbacks always see the string.
  */
 export class TemporalFieldBuilder<
   Input extends TemporalInputType = TemporalInputType,
@@ -85,15 +79,17 @@ export class TemporalFieldBuilder<
   }
 
   /**
-   * The value a new entity starts with — an ISO string in the field's
-   * stored shape, written into its meta when it is created; a cleared field stays empty. Leaves the read type as
-   * it is; `.required()` narrows it.
+   * The value a new entity starts with, an ISO string in stored shape; a
+   * cleared field stays empty. Leaves the read type as it is.
    */
   default(value: string): TemporalFieldBuilder<Input, K, V, S> {
     return this.#fork({ default: value });
   }
 
-  /** Mark the field required — narrows the read and stored types to non-optional. */
+  /**
+   * Mark the field required — narrows the read and stored types to
+   * non-optional.
+   */
   required(): TemporalFieldBuilder<Input, K, NonNullable<V>, string> {
     return this.#fork<NonNullable<V>, string>({ required: true });
   }
@@ -158,23 +154,26 @@ export class TemporalFieldBuilder<
     });
   }
 
-  /** Lower bound in the field's stored ISO shape, enforced by the constraint walker. */
+  /**
+   * Lower bound in the field's stored ISO shape, enforced by the constraint
+   * walker.
+   */
   min(min: string): TemporalFieldBuilder<Input, K, V, S> {
     return this.#fork({ min });
   }
 
-  /** Upper bound in the field's stored ISO shape, enforced by the constraint walker. */
+  /**
+   * Upper bound in the field's stored ISO shape, enforced by the constraint
+   * walker.
+   */
   max(max: string): TemporalFieldBuilder<Input, K, V, S> {
     return this.#fork({ max });
   }
 
   /**
-   * Project reads to a JS `Date` at decode time — the read type
-   * follows; storage remains the ISO string. Wall-clock components
-   * anchor to UTC (`date` at UTC midnight, `time` on 1970-01-01 UTC)
-   * so they survive any server/browser timezone split — read them
-   * back with `getUTC*` or `timeZone: "UTC"` formatting. `Date`
-   * values written back encode from UTC components symmetrically.
+   * Storage stays the ISO string. Wall-clock parts anchor to UTC (`date` at
+   * midnight, `time` on 1970-01-01) to survive timezone splits; read them with
+   * `getUTC*` or `timeZone: "UTC"`.
    */
   returns(shape: "date"): TemporalFieldBuilder<Input, K, ProjectedDate<V>, S> {
     return this.#fork<ProjectedDate<V>>({ returns: shape });

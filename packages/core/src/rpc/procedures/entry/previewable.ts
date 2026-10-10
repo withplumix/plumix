@@ -13,25 +13,9 @@ export interface PreviewableEntryInput {
 }
 
 /**
- * The entry as its editor currently has it, for a caller who may edit it.
- *
- * A preview carries the entry's title and excerpt, and a draft's are not public
- * yet — so the gate is the editor's own, not the read gate a published entry
- * would pass for anyone.
- *
- * The caller's pending autosave is overlaid because on a type supporting
- * autosave a *published* entry's meta edits land on a per-user draft row rather
- * than the live one, so the live row alone would answer with the state before
- * the author's last change — exactly the question a preview procedure exists to
- * answer. The overlay is {@link overlayAutosave}, the one a preview link's
- * render goes through, so both read the row the page would. Meta references
- * are left unresolved; a caller needing them resolved runs the row through
- * `resolveEntryList`.
- *
- * `entryTypes` is load-bearing, and must be the caller's own registered types
- * rather than a wide or user-supplied list: unlike `entry.get`, this gate does
- * not re-check `read` or reject reserved types, so the allowlist is what keeps
- * autosave and revision rows — and types the caller never registered — out.
+ * `entryTypes` must be the caller's own registered types: this gate skips the
+ * `read` check and reserved-type rejection, so the allowlist alone keeps
+ * autosave and revision rows out.
  */
 export async function previewableEntry(
   ctx: AuthenticatedAppContext,

@@ -11,20 +11,18 @@ import { waitForPluginChunks } from "./lib/wait-for-plugin-chunks.js";
 
 import "./styles/globals.css";
 
-// Plugin chunks evaluate after this script and call `window.plumix.*`
-// at module-eval time. Boot the global first so it exists when they
-// run, then defer the initial mount until every chunk has settled —
-// see `waitForPluginChunks` for why.
+// Plugin chunks evaluate after this script and call `window.plumix.*` at
+// module-eval.
 bootPlumixGlobals();
 
 const rootElement = document.getElementById("root");
 // eslint-disable-next-line no-restricted-syntax -- React boot guard; convention exception per umbrella #232
 if (!rootElement) throw new Error("Missing #root element");
 
-// Catalog load can't gate the mount — a network blip on `de.mjs` would
-// otherwise leave the admin permanently blank. Fall through to the
-// source-locale fallback (Lingui renders descriptor `message` when no
-// catalog is active) and surface the failure to the console.
+/**
+ * Can't gate the mount: a network blip on a catalog would leave the admin
+ * blank.
+ */
 const i18nReady = bootI18n().catch((error: unknown) => {
   console.error("plumix i18n boot failed; rendering with source locale", error);
 });

@@ -31,16 +31,19 @@ declare module "plumix" {
   }
 }
 
-// A members-only gate that answers terminally. `authenticatedPolicy` would
-// redirect to sign-in, which these harnesses route no page for; where the gate
-// sends the reader is not what any of these tests are about.
+/**
+ * Answers terminally: `authenticatedPolicy` would redirect to sign-in, which
+ * these harnesses route no page for.
+ */
 const membersOnlyPolicy = definePolicy({
   segments: ["members"],
   resolve: (ctx) => (ctx.user ? grant("members") : challenge("subscribe")),
 });
 
-// A public type beside a gated one: every crawler-facing surface has to keep
-// the first and drop the second.
+/**
+ * A public type beside a gated one: every crawler-facing surface has to keep
+ * the first and drop the second.
+ */
 const membersOnlyPlugin = definePlugin("members", (ctx) => {
   ctx.registerEntryType("post", {
     label: "Posts",
@@ -76,8 +79,10 @@ const taxonomyPlugin = definePlugin("taxo", (ctx) => {
   });
 });
 
-// A plugin contributing a sitemap scope of its own, through this plugin's
-// `registerSitemap` rather than a core registration.
+/**
+ * A plugin contributing a sitemap scope of its own, through this plugin's
+ * `registerSitemap` rather than a core registration.
+ */
 const eventsPlugin = definePlugin("events", (ctx) => {
   ctx.registerSitemap("event-series", {
     // > SITEMAP_PAGE_SIZE (1000) so the index paginates the scope into two.
@@ -92,15 +97,11 @@ const eventsPlugin = definePlugin("events", (ctx) => {
   });
 });
 
-// A type whose pictures the sitemap has to find: role-tagged media fields,
-// declared raw rather than through the media plugin's builder, and a `media`
-// lookup adapter standing in for its hydration — what the sitemap reads is the
-// role and the image the adapter makes of the payload, so seeding those keeps
-// this suite off a second plugin. `shareCount` extra `ogImage` fields,
-// `share0`…, give one role more than one field to answer from.
-//
-// `featured` sits inside a group, which is where an appearance box tends to
-// put it, and `hero` is a role this suite registers rather than one core ships.
+/**
+ * Declared raw rather than via the media plugin: the sitemap reads only the
+ * role and the adapter's image. `featured` sits in a group, where appearance
+ * boxes put it.
+ */
 const picturePluginWith = (shareCount: number, hydrate?: LookupHydrate) =>
   definePlugin("pictures", (ctx) => {
     ctx.registerImageRole("hero", { single: true });
@@ -143,10 +144,10 @@ function pictureField(key: string, role: ImageRoleName): MetaBoxField {
 
 const picturePlugin = picturePluginWith(0);
 
-// A `doc`-prefixed id stands in for a non-image upload, a `rel`-prefixed one
-// for the worker-proxied serve path a deploy with no public bucket URL hands
-// back, and a `blank`-prefixed one for an adapter that answers with an image
-// carrying no URL.
+/**
+ * Id prefixes: `doc` is a non-image, `rel` a worker-proxied relative URL,
+ * `blank` an image with no URL.
+ */
 interface Upload {
   readonly id: string;
   readonly mime: string;
@@ -184,17 +185,17 @@ function registerPictureAdapter(
     adapter: {
       list: () => Promise.resolve([]),
       hydrate,
-      // Whether a payload is a picture is the adapter's own answer — the
-      // sitemap asks for an image and gets nothing for a PDF, rather than
-      // hydrating everything and sniffing the mime itself.
+      // The adapter decides what is a picture; the sitemap never sniffs mime.
       image: ({ url, mime }: Upload) =>
         mime.startsWith("image/") ? { url, alt: null } : null,
     },
   });
 }
 
-// A settings save fires its action mid-request, which is where the purge
-// accumulator lives; this stands in for the RPC that would normally fire it.
+/**
+ * A settings save fires its action mid-request, which is where the purge
+ * accumulator lives; this stands in for the RPC that would normally fire it.
+ */
 function settingsSaver(group: string): AnyPluginDescriptor {
   return definePlugin("settings-saver", (ctx) => {
     ctx.registerPublicRoute({
@@ -232,7 +233,9 @@ function createHarness(
   });
 }
 
-// `plumix` exports no span type; this is the part of one a query count reads.
+/**
+ * `plumix` exports no span type; this is the part of one a query count reads.
+ */
 interface SpanTree {
   readonly name: string;
   readonly attributes: Readonly<Record<string, unknown>>;
@@ -360,9 +363,8 @@ describe("the sitemap index", () => {
   });
 
   test("omits an access-policied entry type's scope", async () => {
-    // The sitemap is what a crawler reads instead of the site, so a scope
-    // here is a published list of URLs. A gated type's pages are not the
-    // site's to hand out, and the slugs alone say what exists.
+    // A sitemap publishes URLs to crawlers; a gated type's slugs alone would
+    // reveal what exists.
     const h = await createHarness([membersOnlyPlugin]);
     await seedPost(h);
     const author = await h.seedUser("admin");
@@ -439,9 +441,8 @@ describe("the sitemap index", () => {
     expect(body).not.toContain("sitemap-event-series-3.xml");
   });
 
-  // 1,500 published posts in id order, `updatedAt` minutes apart from a
-  // fixed start, except two: the newest overall sits on page 1, and page 2's
-  // newest is older than it — so a scope-wide maximum gets page 2 wrong.
+  // The newest overall sits on page 1 and page 2's newest is older, so a
+  // scope-wide maximum gets page 2 wrong.
   const PAGE_ONE_NEWEST = new Date("2026-03-01T00:00:00.000Z");
   const PAGE_TWO_NEWEST = new Date("2026-02-01T00:00:00.000Z");
 
@@ -450,9 +451,7 @@ describe("the sitemap index", () => {
     [1200, PAGE_TWO_NEWEST],
   ]);
 
-  // The factory builds each row; only `updatedAt`, which it takes no param
-  // for and which defines the page windows under test, is set here, and the
-  // rows go in batches rather than one query each.
+  // The factory takes no `updatedAt` param, so it is set here.
   async function seedPosts(h: DispatcherHarness, count: number): Promise<void> {
     const author = await h.seedUser("admin");
     const start = Date.parse("2026-01-01T00:00:00.000Z");
@@ -1243,12 +1242,8 @@ describe("a sitemap at the edge", () => {
     await bodyOf(h, "/sitemap-terms-category-1.xml");
     await h.drainDeferred();
 
-    // `t:post` is what an `entry:published` of a post purges, so publishing one
-    // clears the post scope. The category scope rides its taxonomy's entry
-    // types, which is what a term change purges.
-    // Asserted against core's own purge vocabulary rather than a spelled-out
-    // string: what makes this one caching story is that the set an
-    // `entry:published` sweeps covers what the scope stored under.
+    // Asserted against core's purge vocabulary: the set `entry:published`
+    // sweeps must cover what the scope stored under.
     expect(tagsFor(put, "/sitemap-entries-post-1.xml")).toContain(
       typeTag("post"),
     );
@@ -1263,12 +1258,8 @@ describe("a sitemap at the edge", () => {
   });
 
   test("names only its own tags, not one per picture it lists", async () => {
-    // Resolving image roles hydrates media, whose lookup adapter declares no
-    // embedded cache tag, so nothing per picture reaches the accumulator a
-    // registered public route is stored under. A page of 1,000 entries still
-    // carries the two tags a publish purges the scope by, plus the settings
-    // groups the sitemap read. #2511 owns whether the bulk primitive should
-    // stop accumulating at all.
+    // The media adapter declares no embedded cache tag, so a 1,000-entry page
+    // carries no per-picture tags.
     const { cdn, put } = cdnStub();
     const h = await createHarness([picturePlugin], { cdn });
     await seedPost(h, { meta: { appearance: { hero: "m1" } } });
@@ -1306,10 +1297,8 @@ describe("a sitemap at the edge", () => {
     expect(match).toHaveBeenCalledTimes(2);
   });
 
-  // Every SEO group rewrites something a cached response already says, so a
-  // save retires the sitemap set and the content pages of every registered
-  // type — the latter by type tag, since the cdn has no site-wide one. Core
-  // purges the group's own tag on every save, whichever group it was.
+  // Every SEO group changes cached output; content pages purge by type tag
+  // since the cdn has no site-wide one.
   test.each([
     ["the plugin's own group", "seo", true],
     ["the verification group", "seo_verification", true],
@@ -1460,10 +1449,8 @@ describe("noindex keeps a page out of the sitemap", () => {
 
   test("a bag holding something other than true stays listed", async () => {
     const h = await createHarness();
-    // The sitemap half of what the agreement table holds all three surfaces
-    // to: only a stored `true` hides a page, so a bag holding anything else
-    // stays listed. `1` is the one a JSON extraction cannot tell from `true`,
-    // which is why the predicate asks `json_type` instead.
+    // Only a stored `true` hides a page; JSON extraction can't tell `1` from
+    // `true`, hence `json_type`.
     await seedPost(h, { slug: "texty", meta: { seo_noindex: "yes" } });
     await seedPost(h, { slug: "numeric", meta: { seo_noindex: 1 } });
 
@@ -1581,9 +1568,7 @@ describe("an entry's pictures in the sitemap", () => {
   });
 
   test("a role with many fields lists the first of them that resolves", async () => {
-    // One image per role is the ceiling a role sets, and it is what replaced
-    // the per-entry cap the hand-rolled walk needed: a role names the entity's
-    // picture, so a type tagging thirteen fields with it still names one.
+    // A role names one picture, so thirteen fields sharing it yield one.
     const h = await createHarness([picturePluginWith(12)]);
     await seedPost(h, {
       meta: {
@@ -1606,10 +1591,8 @@ describe("an entry's pictures in the sitemap", () => {
   });
 
   test("drops an image whose URL is empty rather than listing the site root", async () => {
-    // `URL.parse("", origin)` resolves to the origin, so an adapter handing
-    // back a blank URL would put the homepage in the picture list. The
-    // first-party media adapter refuses that payload; a third-party one need
-    // not, and the sitemap is what would publish the mistake.
+    // `URL.parse("", origin)` resolves to the origin, and a third-party
+    // adapter may hand back a blank URL.
     const h = await createHarness([picturePlugin]);
     await seedPost(h, { slug: "bare", meta: featured("blank1") });
 
@@ -1844,9 +1827,11 @@ describe("/llms.txt", () => {
   });
 });
 
-// The publish RPC fires its lifecycle action mid-request; this stands in for
-// it, so a subscriber runs where it really would — inside a request, with a
-// context to defer through.
+/**
+ * The publish RPC fires its lifecycle action mid-request; this stands in for
+ * it, so a subscriber runs where it really would — inside a request, with a
+ * context to defer through.
+ */
 type LifecycleAction = "entry:published" | "entry:updated" | "both";
 
 function lifecycleFirer(action: LifecycleAction) {
@@ -1861,9 +1846,8 @@ function lifecycleFirer(action: LifecycleAction) {
         if (entry === undefined) {
           return new Response("no entry", { status: 404 });
         }
-        // Fired one name at a time: the two carry different argument lists, so
-        // a union of them narrows to nothing. `both` is the pair a real
-        // publish transition fires, in the order `entry.update` fires them.
+        // Fired one name at a time: their argument lists differ, so a union
+        // narrows to nothing.
         if (action !== "entry:published") {
           await appCtx.hooks.doAction("entry:updated", entry, entry, appCtx);
         }
@@ -1914,9 +1898,7 @@ describe("IndexNow", () => {
   }
 
   test("says nothing about an entry of an access-policied type", async () => {
-    // The gate the sitemap applies, applied here: a page no crawler may
-    // reach is a page no engine is told moved — otherwise the ping hands
-    // over the URL the sitemap was careful not to publish.
+    // Otherwise the ping would leak the URL the sitemap withholds.
     const fetch = stubbedFetch();
     const h = await createHarness([
       membersOnlyPlugin,
@@ -2107,11 +2089,8 @@ describe("IndexNow", () => {
   });
 });
 
-// The head asks `indexable` of one page, a sub-sitemap asks the same arms of
-// whole tables, and IndexNow asks them inline. This table holds the three to
-// one answer: an arm dropped from any of them fails a row here, and an arm
-// added to `indexable` needs a row of its own. Which scopes the index lists
-// is held by "a scope held out of the index leaves the sitemap".
+// Head, sitemap and IndexNow each implement the indexability arms; an arm
+// added to `indexable` needs a row here.
 describe("the head, the sitemap and IndexNow agree on indexability", () => {
   const theme = defineTheme({ templates: [fallback(() => null)] });
 
@@ -2152,10 +2131,8 @@ describe("the head, the sitemap and IndexNow agree on indexability", () => {
       meta: { seo_noindex: true },
       indexable: false,
     },
-    // A bag holding a token the write path would have settled — only a direct
-    // write or an import puts one there. All three read it as stored, so the
-    // page stays indexable rather than being hidden from two surfaces and
-    // listed by the third.
+    // Only a direct write or import stores a non-boolean token; all three
+    // must read it as stored.
     {
       arm: "numeric_token",
       subject: "entry",

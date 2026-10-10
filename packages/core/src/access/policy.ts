@@ -1,19 +1,3 @@
-/**
- * Access policies — the "open logic, closed output" core.
- *
- * A policy pairs a developer-supplied resolver (`(ctx) => Outcome`, whose
- * decision logic is unconstrained — role, entitlement, a `meta` flag, an
- * external billing check, a time window) with a *closed* return shape. The
- * resolver returns one of three discrete outcomes; {@link resolveAccess} maps
- * that to a `{ segment, gate }` pair. Because everything downstream (the hard
- * gate here, and the segment-keyed cache + theme render in later slices) only
- * ever sees the discrete output — never the arbitrary logic behind it — the
- * gate and cache stay sound no matter how exotic the rule is.
- *
- * The pure resolution performs no I/O of its own; any I/O (an entitlement
- * lookup) lives inside the developer's resolver, which may be async.
- */
-
 import type { AppContext, AuthenticatedUser } from "../context/app-context.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { Access, EntitlementSegment } from "./contract/access.js";
@@ -45,20 +29,9 @@ export function entitlementSegment(label: string): EntitlementSegment {
 /** Options for {@link challenge}. */
 export interface ChallengeOptions {
   /**
-   * Opt into a *soft* gate: instead of a terminal 402/403 the render proceeds
-   * at 200 with the resolved {@link Access} exposed on `ctx.access`, so the
-   * theme can serve a teaser variant. Off by default — the hard gate is the
-   * default; soft is the explicit opt-in.
-   *
-   * The teaser is a *public* document: it is keyed to the visitor's free
-   * segment (`anonymous` shares the plain-URL, crawler-indexable entry;
-   * `authenticated` shares one entry across every signed-in un-entitled
-   * visitor). A teaser that reads the principal is personal and leaves the
-   * shared entry unfilled (ADR 0030), so per-user content in it costs the
-   * caching rather than leaking; gated content the operator isn't willing to
-   * serve publicly must still stay out of it. Withholding the protected body
-   * means rendering less of it server-side; a client-only lock over a
-   * fully-delivered body is presentation, not protection.
+   * Renders at 200 with {@link Access} on `ctx.access` instead of a 402/403.
+   * The teaser is a public, shared-cached document; a client-only lock over a
+   * delivered body is not protection.
    */
   readonly soft?: boolean;
 }
@@ -69,25 +42,21 @@ export function grant(segment: string): AccessOutcome {
 }
 
 /**
- * Grant access under an `entitlement:<label>` segment — the membership /
- * paywall case. Sugar over `grant(entitlementSegment(label))`; declare the same
- * label in the policy's `segments` space (via {@link entitlementSegment}) so the
- * closed-output contract admits it. Every entitled principal shares one variant.
+ * Declare the same label in the policy's `segments` via
+ * {@link entitlementSegment}, or resolution throws.
  */
 export function entitlement(label: string): AccessOutcome {
   return grant(entitlementSegment(label));
 }
 
-/** Send an anonymous visitor to sign-in (returned afterwards via `redirectTo`). */
+/**
+ * Send an anonymous visitor to sign-in (returned afterwards via `redirectTo`).
+ */
 export function redirectToLogin(): AccessOutcome {
   return { type: "redirect" };
 }
 
-/**
- * Signal an unmet requirement (`"subscribe"` upsell, `"forbidden"` denial, …).
- * Hard by default — a terminal challenge response. Pass `{ soft: true }` to let
- * the render proceed so the theme serves a teaser at the same URL.
- */
+/** Hard by default: a terminal challenge response. */
 export function challenge(
   kind: string,
   options?: ChallengeOptions,
@@ -134,10 +103,8 @@ export class AccessError extends Error {
 }
 
 /**
- * Map `(principal, policy) → { segment, gate }`. Pure: it runs the policy's
- * resolver (which may perform I/O) and translates the closed outcome, doing no
- * I/O itself. A `grant` of a segment outside the policy's declared space (∪
- * built-ins) throws — the closed-output contract, enforced.
+ * Throws {@link AccessError} when the resolver grants a segment that is neither
+ * built in nor declared in the policy's `segments`.
  */
 export async function resolveAccess(
   ctx: AppContext,
@@ -158,11 +125,8 @@ export async function resolveAccess(
       // Nothing renders on a redirect; the visitor is anonymous by definition.
       return { segment: "anonymous", gate: { type: "redirect" } };
     case "challenge":
-      // A challenge (hard 402/403 block, or a soft teaser) is keyed to the
-      // principal's free built-in segment — `anonymous` or `authenticated` — so
-      // every un-entitled visitor of the same kind shares one variant, distinct
-      // from the entitled full render. `soft` rides through so the dispatcher
-      // renders the teaser (soft) or blocks (hard).
+      // Keyed to the free segment so every un-entitled visitor of a kind shares
+      // one variant, distinct from the entitled render.
       return {
         segment: principalSegment(ctx.user),
         gate: { type: "challenge", kind: outcome.kind, soft: outcome.soft },
@@ -195,27 +159,24 @@ export function principalSegment(
 }
 
 /**
- * The global default: everyone is the `anonymous` audience and passes. Absence
- * of an attached policy is equivalent to this — un-policied routes behave
- * exactly as they do today. A privileged request (a session, an
- * `Authorization` header, a `?preview=` link) renders `private` under it, as
- * under no policy, so it never enters the shared cache.
+ * Equivalent to no policy. A privileged request (session, `Authorization`,
+ * `?preview=`) still renders `private`, so it never enters the shared cache.
  */
 export const anonymousPolicy: AccessPolicy = definePolicy({
   resolve: () => grant("anonymous"),
 });
 
-/** Require any authenticated principal; redirect anonymous visitors to sign-in. */
+/**
+ * Require any authenticated principal; redirect anonymous visitors to sign-in.
+ */
 export const authenticatedPolicy: AccessPolicy = definePolicy({
   resolve: (ctx) => (ctx.user ? grant("authenticated") : redirectToLogin()),
 });
 
 /**
- * Require at least `required` on the role ladder. Anonymous visitors are sent
- * to sign-in; an authenticated-but-under-privileged principal is denied with a
- * `"forbidden"` challenge (a terminal 403 — re-authenticating as themselves
- * wouldn't help, so a redirect would loop). The granted segment is the
- * *required* tier, so every sufficiently-privileged visitor shares one variant.
+ * An under-privileged principal gets a 403, since redirecting to sign-in would
+ * loop. Grants the *required* tier, so all qualifying visitors share one
+ * variant.
  */
 export function rolePolicy(required: UserRole): AccessPolicy {
   return definePolicy({

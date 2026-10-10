@@ -5,7 +5,7 @@ import { toRegisteredEntryType } from "../../../plugin/registry.js";
 import { pageNotFound } from "../../../route/contract/page-outcome.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
-// A registry with a public post type and a loader-backed block.
+/** A registry with a public post type and a loader-backed block. */
 function loaderRegistry() {
   const registry = createPluginRegistry();
   registry.entryTypes.set(

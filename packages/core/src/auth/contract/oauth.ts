@@ -6,11 +6,8 @@ export interface OAuthClientConfig {
 }
 
 /**
- * Either literal credentials, or an `(env) => OAuthClientConfig` resolver — the
- * client secret is used at token exchange (request time), so on Workers it must
- * come from the per-request `env`, not config-time. See {@link EnvInput}.
- * Module-local: callers reach it through the `github`/`google` factory signature
- * (`OAuthProviderFactory`), never by name.
+ * The secret is used at token exchange, so on Workers it must come from the
+ * per-request `env`.
  */
 type OAuthClientInput = EnvInput<OAuthClientConfig>;
 
@@ -19,30 +16,16 @@ export interface OAuthProfile {
   readonly providerAccountId: string;
   readonly email: string;
   /**
-   * Whether the provider asserts the email is verified. We refuse to
-   * auto-link an OAuth identity to an existing local user unless the
-   * provider has confirmed the address — without this any attacker who
-   * controls the provider account could claim someone else's email.
+   * Auto-linking to an existing user requires this, or a provider account could
+   * claim someone else's email.
    */
   readonly emailVerified: boolean;
   readonly name: string | null;
   readonly avatarUrl: string | null;
 }
 
-/**
- * Concrete, configured provider — what `auth({ oauth: { providers } })`
- * accepts. Built-ins (`github`, `google`) ship as factories that return
- * this shape; user-defined providers implement the same interface in
- * their own code and hand an instance to the same config slot. There's
- * no privileged registry — provider keys come from the user's config
- * map, and routes / admin UI / signup all read keys at runtime.
- */
 export interface OAuthProviderClient {
-  /**
-   * Human-readable name shown on the login screen ("GitHub", "Google",
-   * "Acme SSO"). Travels with the provider definition so adding a new
-   * provider is one file, not "edit core + edit admin".
-   */
+  /** Shown on the login screen. */
   readonly label: string;
   readonly authorizeUrl: string;
   readonly tokenUrl: string;
@@ -50,44 +33,30 @@ export interface OAuthProviderClient {
   readonly scopes: readonly string[];
   readonly client: OAuthClientInput;
 
-  /**
-   * Translate the provider's userinfo JSON into a partial OAuthProfile.
-   * Returning `email: null` is fine — the consumer will call
-   * `fetchVerifiedEmail` (if defined) to resolve the missing address.
-   */
+  /** Returning `email: null` defers to `fetchVerifiedEmail`, when defined. */
   parseProfile(raw: unknown): Omit<OAuthProfile, "email" | "emailVerified"> & {
     email: string | null;
     emailVerified: boolean;
   };
 
-  /**
-   * Provider-specific authorize-URL params (Google's `access_type=offline`,
-   * etc.). Called after the standard OAuth params are set; the provider
-   * may add or override searchParams freely.
-   */
+  /** Runs after the standard OAuth params are set, so it may override them. */
   decorateAuthorizeUrl?(url: URL): void;
 
   /**
-   * Resolve a verified primary email when `parseProfile` returned
-   * `email: null`. GitHub needs this — its `/user` endpoint omits
-   * email unless made public, but `/user/emails` always carries it.
-   * Returning null here surfaces as `email_missing` to the user.
+   * Called only when `parseProfile` returned `email: null`; returning null
+   * surfaces `email_missing`.
    */
   fetchVerifiedEmail?(
     accessToken: string,
   ): Promise<{ email: string; verified: boolean } | null>;
 }
 
-/**
- * Convenience alias for provider factories. Built-ins follow this shape;
- * users can write their own factories the same way.
- */
 export type OAuthProviderFactory = (
   client: OAuthClientInput,
 ) => OAuthProviderClient;
 
-// Provider keys (the map keys in `auth.oauth.providers`) flow through the
-// URL path and into the `oauth_accounts.provider` column. Constrain the
-// shape to URL-path-safe identifiers so a typo can't smuggle special
-// characters into routing or storage.
+/**
+ * Provider keys become a URL path segment and the `oauth_accounts.provider`
+ * column, so they must be path-safe.
+ */
 export const OAUTH_PROVIDER_KEY_PATTERN = /^[a-z][a-z0-9_-]{0,31}$/;

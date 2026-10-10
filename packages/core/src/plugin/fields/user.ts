@@ -8,7 +8,10 @@ import { ReferenceFieldBuilder } from "./reference.js";
  * read-time orphan resolution.
  */
 export interface UserFieldScope {
-  /** Restrict matches to these roles. Empty/absent → any role. Set via `.roles()`. */
+  /**
+   * Restrict matches to these roles. Empty/absent → any role. Set via
+   * `.roles()`.
+   */
   readonly roles?: readonly UserRole[];
   /**
    * Whether to surface disabled accounts. Default `false` — disabled
@@ -19,15 +22,8 @@ export interface UserFieldScope {
 }
 
 /**
- * Build a typed `user` reference field — `user("owner")`. Scope is
- * optional and chained (`.roles([...])`, `.includeDisabled()`);
- * `.multiple()` flips to an id array.
- *
- * Storage is the bare user id as a string (an id array under
- * `.multiple()`). Reads hydrate to the user summary by default
- * (`.returns("id")` opts back to the bare id); single reads stay
- * optional (a target can orphan). The admin renders a picker that
- * calls the lookup RPC with `{ kind: "user", scope }`.
+ * Stores the bare user id as a string. Reads hydrate to the user summary unless
+ * `.returns("id")`; single reads stay optional because a target can orphan.
  */
 export function user<K extends string>(
   key: K,

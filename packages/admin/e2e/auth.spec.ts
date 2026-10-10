@@ -1,9 +1,4 @@
-// Every unauthenticated/auth surface in one suite: bootstrap (first
-// admin ever), login (returning user + email-change feedback params),
-// and the RFC 8628 device-grant approval page. Accept-invite
-// end-to-end requires mocked WebAuthn — the unit-level coverage in
-// `src/lib/passkey.test.ts` handles the shape contract today; a full
-// e2e is a follow-up when we have passkey test infra.
+// Accept-invite needs mocked WebAuthn, which this suite lacks.
 
 import { expect, test } from "@playwright/test";
 

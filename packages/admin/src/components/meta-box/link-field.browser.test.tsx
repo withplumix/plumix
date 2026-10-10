@@ -16,9 +16,6 @@ import { renderWithI18n } from "../../../test/render-with-i18n.js";
 import { stubRpc } from "../../../test/rpc.js";
 import { MetaBoxField } from "./meta-box-field.js";
 
-// The picker offers the manifest's public entry types and searches them
-// through the lookup RPC, so both come from their real sources: a manifest
-// payload in the document and the oRPC client answered at the fetch boundary.
 function seedEntryTypes(...names: readonly string[]): void {
   seedManifest({
     entryTypes: names.map((name) => ({

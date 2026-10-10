@@ -10,22 +10,25 @@ const tokenNameSchema = v.pipe(
   v.regex(/^[^\r\n]+$/, "name must not contain newlines"),
 );
 
-// SHA-256 hex (64 chars) — what `hashToken` produces. 128-char ceiling
-// guards against pathological hostile input on the receiving handler.
+/**
+ * SHA-256 hex (64 chars) — what `hashToken` produces. 128-char ceiling
+ * guards against pathological hostile input on the receiving handler.
+ */
 const tokenIdSchema = v.pipe(v.string(), v.minLength(1), v.maxLength(128));
 
-// Days-from-now expiry. The form offers 7 / 30 / 90 days as presets
-// plus "never" — modelled here as `null`, which the underlying
-// `createApiToken` accepts. Operators wanting longer windows pass an
-// integer day count up to 5 years; past that we'd want stronger
-// rotation policy (out of scope for v0.1.0).
+/**
+ * `null` means never expires. The 5-year cap stands in for a rotation
+ * policy we don't have.
+ */
 const expiresInDaysSchema = v.union([
   v.null(),
   v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(365 * 5)),
 ]);
 
-// Capability strings — `entry:post:read`, `settings:manage`, etc.
-// Same shape as device-flow's scope schema (kept in sync).
+/**
+ * Capability strings — `entry:post:read`, `settings:manage`, etc.
+ * Same shape as device-flow's scope schema (kept in sync).
+ */
 const capabilitySchema = v.pipe(
   v.string(),
   v.minLength(1, "capability must be non-empty"),
@@ -33,17 +36,11 @@ const capabilitySchema = v.pipe(
   v.regex(/^[A-Za-z0-9_:.\-*]+$/, "capability uses [A-Za-z0-9_:.\\-*] only"),
 );
 
-// null = inherit role caps unrestricted (default); array = whitelist
-// the token narrows to. Cap at 128 entries to bound the column size
-// against a hostile self-mint.
-//
-// Empty array `[]` is legal and means "no caps" — the token still
-// authenticates (so `auth.session` and similar identity-only
-// procedures work) but `auth.can(...)` returns false for every cap.
-// Use case: keep a token alive for revocation timing / audit-log
-// continuity without granting access. Operators creating an empty
-// scope on purpose can do so via the wire layer; the admin UI
-// surfaces the "No caps" badge on the resulting row.
+/**
+ * `null` inherits the role's caps; an array narrows to it. `[]` is legal: the
+ * token authenticates but every `auth.can` is false. Capped at 128 against a
+ * hostile self-mint.
+ */
 const scopesSchema = v.optional(
   v.union([
     v.null(),
@@ -64,10 +61,7 @@ export const apiTokensRevokeInputSchema = v.object({
   id: tokenIdSchema,
 });
 
-// Admin-scope (`user:manage_tokens`) procedures. Distinct from the
-// self-scope ones above so the audit log can attribute "admin X
-// revoked user Y's token" cleanly (and so a future refinement can
-// gate them on a tighter capability without rewiring the self path).
+// Separate from the self-scope schemas so audit can attribute admin actions.
 
 const userIdSchema = v.pipe(v.number(), v.integer(), v.minValue(1));
 const limitSchema = v.pipe(

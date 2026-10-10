@@ -2,15 +2,13 @@ import type { PackageManager } from "../package-manager.js";
 
 /** Placeholder token in descriptor strings, replaced with the project name. */
 export const PROJECT_NAME_TOKEN = "__PROJECT_NAME__";
-/** Placeholder in config descriptor strings, replaced with the runtime's secrets file. */
+/**
+ * Placeholder in config descriptor strings, replaced with the runtime's secrets
+ * file.
+ */
 export const SECRETS_FILE_TOKEN = "__SECRETS_FILE__";
 
-/**
- * A runtime's scaffold contributions, read from its `plumix.scaffold`
- * block. The runtime owns everything runtime-specific: config imports and
- * slots, the passkey deploy-origin, dependencies, and whole files (e.g. a
- * Cloudflare `wrangler.jsonc`). Strings may embed {@link PROJECT_NAME_TOKEN}.
- */
+/** Strings may embed {@link PROJECT_NAME_TOKEN}. */
 export interface RuntimeDescriptor {
   readonly id: string;
   readonly label: string;
@@ -20,7 +18,10 @@ export interface RuntimeDescriptor {
   readonly imports: readonly string[];
   /** Top-level `plumix({ ... })` slots, e.g. `runtime`, `database`. */
   readonly configSlots: Readonly<Record<string, string>>;
-  /** Object members spliced into the passkey block: a deploy-origin spread, or a literal pair. */
+  /**
+   * Object members spliced into the passkey block: a deploy-origin spread, or a
+   * literal pair.
+   */
   readonly authOrigin?: string;
   /** One-line comment emitted above {@link authOrigin}. */
   readonly authOriginComment?: string;
@@ -52,20 +53,19 @@ export interface RuntimeDescriptor {
   /** package.json scripts that replace or join the base skeleton's. */
   readonly scripts?: Readonly<Record<string, string>>;
   /**
-   * The command prefix that runs the project's `plumix` CLI, for a runtime
-   * whose commands need more than the package manager's exec — Bun's
-   * `bun --bun plumix`. Absent means the package manager's own.
+   * Needed when commands need more than the package manager's exec, like `bun
+   * --bun plumix`.
    */
   readonly cli?: string;
-  /** Markdown for the README's Deploy section: how this runtime ships and runs. */
+  /**
+   * Markdown for the README's Deploy section: how this runtime ships and runs.
+   */
   readonly readme?: string;
   /** Whole files the runtime contributes, keyed by relative path. */
   readonly files: Readonly<Record<string, string>>;
   /**
-   * Named runtime capabilities a plugin can require (e.g. `storage`).
-   * Fulfilling one contributes its imports, config slots, and wrangler
-   * bindings — the seam that lets a runtime-agnostic plugin like media
-   * wire object storage without naming Cloudflare.
+   * Lets a runtime-agnostic plugin like media wire object storage without
+   * naming Cloudflare.
    */
   readonly capabilities?: Readonly<Record<string, Contribution>>;
   /** Auth methods this runtime adds to the picker (e.g. Cloudflare Access). */
@@ -82,7 +82,10 @@ export interface RawAuthMethod {
   readonly authEntry: string;
   /** Top-level config slots the method needs (e.g. magic link's mailer). */
   readonly configSlots?: Readonly<Record<string, string>>;
-  /** Secret binding names → the runtime's secrets file + a PlumixEnv augmentation. */
+  /**
+   * Secret binding names → the runtime's secrets file + a PlumixEnv
+   * augmentation.
+   */
   readonly envVars?: readonly string[];
 }
 
@@ -92,15 +95,8 @@ export interface AuthMethodDescriptor extends RawAuthMethod {
 }
 
 /**
- * A bundle of contributions merged into the composed project: config
- * imports and top-level slots, plus wrangler binding patches. Shared by
- * plugin descriptors and runtime capabilities.
- */
-/**
- * Top-level `wrangler.jsonc` keys a contribution merges in — bindings, mostly.
- * Not JsonObject: this is JSON, and the scaffolder is a standalone CLI that
- * does not depend on plumix, so the sanctioned type is out of reach here. The
- * values go straight to jsonc-parser's `modify`.
+ * Not JsonObject: the scaffolder is a standalone CLI that does not depend on
+ * plumix, so the sanctioned type is out of reach.
  */
 export type WranglerPatch = Record<string, unknown>;
 

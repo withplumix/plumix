@@ -14,14 +14,8 @@ declare module "plumix" {
 }
 
 /**
- * The agents a site blocks by answering "block AI crawlers" — the crawlers
- * that feed model training and assistant answers, as each vendor documents its
- * own token. A search engine's ordinary indexing crawler is deliberately not
- * here: blocking those is what turning indexing off does.
- *
- * One group with many `User-agent` lines rather than a block each, which is
- * the same rule to a parser and a third of the bytes. Add to it — or drop from
- * it — through `seo:robots-txt`.
+ * Training and assistant crawlers only; ordinary search indexers are blocked by
+ * turning indexing off.
  */
 const AI_CRAWLERS = [
   "AI2Bot",
@@ -53,35 +47,27 @@ const AI_CRAWLERS = [
 
 const AI_CRAWLER_GROUP = `\n${AI_CRAWLERS.map((agent) => `User-agent: ${agent}\n`).join("")}Disallow: /\n`;
 
-// What a site that has written nothing serves: everything crawlable.
+/** What a site that has written nothing serves: everything crawlable. */
 const ALLOW_ALL = "User-agent: *\nDisallow:\n";
 const DISALLOW_ALL = "User-agent: *\nDisallow: /\n";
 
-// Case-insensitive and anchored to a line, so a `Sitemap:` inside a comment or
-// a path does not read as a declaration.
+/**
+ * Case-insensitive and anchored to a line, so a `Sitemap:` inside a comment or
+ * a path does not read as a declaration.
+ */
 const SITEMAP_LINE = /^\s*sitemap\s*:/im;
 
-// What the settings screen answers about the file.
+/** What the settings screen answers about the file. */
 interface RobotsInputs {
   readonly indexable: boolean;
   readonly blockAiCrawlers: boolean;
-  /** Hand-written content replacing the generated rules, or null. */
   readonly authored: string | null;
   readonly sitemap: string;
 }
 
 /**
- * The body `/robots.txt` serves.
- *
- * A site held out of the index disallows everything, whatever else is set —
- * the site-wide answer is the one assertion nothing below overrides, and a
- * blanket disallow already covers every AI agent the group would name.
- *
- * Otherwise the author's own rules are served if they wrote any, and the two
- * site-wide answers are composed onto them: the AI-crawler group while that
- * toggle is on, and the sitemap line unless they declared one themselves, so
- * an edit cannot drop the reference by omission. It can still point it
- * somewhere else, or disallow the path: this keeps the line, not the crawl.
+ * The sitemap line is appended unless the author's rules declare one, so an
+ * edit can't drop it by omission.
  */
 function robotsTxt(inputs: RobotsInputs): string {
   if (!inputs.indexable) return DISALLOW_ALL;

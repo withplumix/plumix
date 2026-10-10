@@ -69,11 +69,8 @@ describe("a condition", () => {
     },
   );
 
-  // The two sides answer the same question about different values, which
-  // is the point: markup is built once from the form's defaults and
-  // cached, while the handler judges the answers that actually came back.
-  // A visitor who changes the driver is answering a form the server has
-  // to read differently from the one it served.
+  // Markup is built once from defaults and cached; the handler must judge the
+  // driver the visitor actually submitted.
   test("judges the submitted driver, not the one the markup was built from", () => {
     const servedAsBasic = signupWith("basic");
 
@@ -84,12 +81,8 @@ describe("a condition", () => {
   });
 });
 
-// Both sides build their bag by the same per-field rule, so the set the
-// markup shows and the set the handler keeps can only differ where the
-// visitor actually changed an answer. These two shapes are where that
-// used to break: a driver the markup never rendered, whose default then
-// vanished at submit, and a toggle, whose "off" a body cannot express on
-// its own.
+// Both sides build by the same per-field rule, so they may differ only where
+// the visitor changed an answer.
 describe("a form nobody has touched", () => {
   test("reads a hidden driver as the default the markup judged it by", () => {
     const billing = select("plan").options(["free", "pro"]).default("free");
@@ -192,7 +185,7 @@ describe("a repeater", () => {
   ]);
   const form = defineForm("party", { fields: [attendees] });
 
-  /** What a browser posts for `rows` rendered rows of `attendees`. */
+  // What a browser posts for `rows` rendered rows of `attendees`.
   function body(rows: readonly Record<string, string>[]): URLSearchParams {
     return new URLSearchParams(
       rows.flatMap((row, index) => [

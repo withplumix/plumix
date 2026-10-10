@@ -5,8 +5,10 @@ import { base } from "../../base.js";
 import { requireCapability } from "../../require-capability.js";
 import { META_STORES, sweepUnsettledMeta } from "./sweep.js";
 
-// Settling rewrites stored content across every store on the site — the same
-// reach as a settings save, so the same gate.
+/**
+ * Settling rewrites stored content across every store on the site — the same
+ * reach as a settings save, so the same gate.
+ */
 const sweep = base
   .use(authenticated)
   .use(requireCapability("settings:manage"))

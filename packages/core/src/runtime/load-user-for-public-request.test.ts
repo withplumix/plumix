@@ -75,10 +75,8 @@ describe("loadUserForPublicRequest", () => {
     expect(result.user).toEqual(authenticatedUser);
   });
 
-  // Regression (demo editor was dead): a guard that carries its session by a
-  // non-standard signal must still run on public renders — the old gate keyed
-  // off the `plumix_session` cookie, so a demo visitor rendered as anonymous
-  // (canEdit false → no editor runtime injected → no canvas bridge).
+  // Keying off `plumix_session` rendered such visitors anonymous, so no
+  // editor runtime was injected.
   test("runs a custom authenticator that carries its session without the standard cookie", async () => {
     const authenticate = vi.fn().mockResolvedValue({
       user: authenticatedUser,

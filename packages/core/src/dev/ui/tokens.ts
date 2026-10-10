@@ -1,13 +1,5 @@
-// The shared dev-tooling token sheet. One place under `core/dev/ui` that owns
-// the colors, radii, and fonts every in-dev surface draws from, so a new dev
-// tool imports these tokens rather than starting yet another private copy. Two
-// families live here, each preserved at its exact prior values so every surface
-// renders as before: the warm full-page error surface (below, exposed as
-// `.plumix-dev-error` custom properties) and the cool WordPress-admin-style
-// debug bar. Converging them onto a single value set is a later design call,
-// deliberately out of scope for the relocation that consolidated them here.
-// Authored as plain strings: core has no bundler CSS pipeline, and each sheet
-// ships as inline `<style>` text.
+// Plain strings: core has no bundler CSS pipeline, and each sheet ships as
+// inline `<style>` text.
 
 export const devTokens = {
   /** Full-page dev error surface and its client overlays (#1580 seed). */

@@ -125,10 +125,8 @@ describe("sanitizeHtml — baseline allowlist", () => {
   });
 });
 
-// `HtmlAllowlist` and `HtmlAllowlistProvider` are both public, so an allowlist
-// reaching the sanitizer has not necessarily been through `buildHtmlAllowlist`.
-// The floors have to hold for whatever arrives, not only for what the builder
-// produced.
+// Both allowlist types are public, so an allowlist may skip
+// `buildHtmlAllowlist`; the floors must hold for whatever arrives.
 describe("sanitizeHtml — hand-built allowlists", () => {
   const HOSTILE = {
     allowedTags: ["p", "a", "script", "iframe"],

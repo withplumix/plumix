@@ -4,11 +4,8 @@ import * as v from "valibot";
 
 import type { Label } from "@plumix/core/i18n";
 
-// Client half of the path-addressed meta write-rejection contract: the
-// server aggregates constraint failures as `{ path, message }` under
-// `CONFLICT.data.errors` (see `sanitizeMetaForRpc` in core); these
-// helpers pull them off the wire and pin each onto the react-hook-form
-// input it addresses, so `<FormMessage />` renders it inline.
+// The server aggregates meta constraint failures as `{ path, message }` under
+// `CONFLICT.data.errors`.
 
 /** Where every admin form keeps its meta bag in the RHF values. */
 // RHF path segment, not display copy.
@@ -37,17 +34,19 @@ export function extractMetaFieldErrors(
   return errors.length > 0 ? errors : undefined;
 }
 
-// The oRPC error the rejections travel inside. Only the envelope is described
-// here — each entry is checked on its own below, so one malformed rejection
-// does not discard the rest.
+/**
+ * The oRPC error the rejections travel inside. Only the envelope is described
+ * here — each entry is checked on its own below, so one malformed rejection
+ * does not discard the rest.
+ */
 const errorEnvelopeSchema = v.looseObject({
   data: v.looseObject({ errors: v.array(v.unknown()) }),
 });
 
-// The wire form of `MetaFieldServerError`. A descriptor is matched on its `id`
-// alone — the rest of what Lingui puts on one is the catalog's business, and
-// `useMetaFieldMessage` reads it off the original value either way, since this
-// is a predicate and the parsed output is discarded.
+/**
+ * Matches a descriptor on `id` alone: a predicate whose parsed output is
+ * discarded.
+ */
 const serverErrorSchema = v.object({
   path: v.string(),
   message: v.union([v.string(), v.object({ id: v.string() })]),
@@ -72,11 +71,8 @@ export function useMetaFieldMessage(): (message: Label) => string {
 }
 
 /**
- * Pin each server rejection onto its form input. `setError` is the
- * form's `form.setError`; `basePath` is where the meta bag lives in
- * the form values (`"meta"` for every entity form; the settings card
- * keeps its fields at the root and passes `""`). Idempotent per
- * submit — RHF clears field errors on the next change/submit cycle.
+ * `basePath` is `""` for a form whose fields sit at the root (the settings
+ * card).
  */
 export function applyMetaFieldErrors(
   setError: (name: never, error: { type: string; message: string }) => void,
@@ -99,13 +95,7 @@ export function applyMetaFieldErrors(
   }
 }
 
-/**
- * Effect form of `applyMetaFieldErrors` for forms that receive server
- * rejections as a prop/state: applies whenever `errors` changes, and
- * clears the meta subtree's errors when it goes back to `null` (a
- * subsequent save succeeded). Submit-driven forms also self-clear on
- * the next `handleSubmit`.
- */
+/** Clears the meta subtree's errors when `errors` goes back to `null`. */
 export function useApplyMetaFieldErrors(
   form: {
     setError: (name: never, error: { type: string; message: string }) => void;

@@ -15,21 +15,19 @@ const CONTENT_TYPE: Record<FeedFormat, string> = {
   atom: "application/atom+xml; charset=utf-8",
 };
 
-// A reader polls on its own timer, so the window that matters is the shared
-// one: an hour at the edge, cut short by the purge a publish fires, while a
-// client is told to revalidate rather than sit on a stale copy.
+/**
+ * Readers poll on their own timer, so only the edge caches (an hour, cut short
+ * by the publish purge); clients always revalidate.
+ */
 const FEED_CACHE_CONTROL = "public, max-age=0, s-maxage=3600";
 
 /**
- * Carried by every feed on top of its type tags. The channel's title and
- * description, and whether the site syndicates at all, come from the site
- * settings, so a save there has to retire every feed.
+ * Carried by every feed, because channel metadata comes from site settings and
+ * a save there must retire every feed.
  */
 export const FEED_TAG = "feeds:feed";
 
-// The `t:<type>` tags of the types an archive's feed can read, which is what an
-// entry mutation purges: its own type's for a type archive, and every type a
-// feed may carry for the rest.
+/** The `t:<type>` tags an entry mutation purges. */
 function typeTags(
   plugins: PluginRegistry,
   target: ArchiveAtPath | null,
@@ -73,7 +71,7 @@ export async function handleFeed(
     format === "atom" ? renderAtom(channel, items) : renderRss2(channel, items);
   const headers = new Headers({ "content-type": CONTENT_TYPE[format] });
   // A feed kept out of the CDN is out of reach of every purge, so it declares
-  // no shared freshness for a cache in front of the origin to act on.
+  // no shared freshness.
   if (route.cacheable) headers.set("cache-control", FEED_CACHE_CONTROL);
   return new Response(body, { headers });
 }

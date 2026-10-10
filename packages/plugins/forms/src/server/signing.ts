@@ -5,10 +5,10 @@ import { getOrCreateSecret, getSecret, toHex } from "./secret.js";
 
 const ENCODER = new TextEncoder();
 
-// `Uint8Array<ArrayBuffer>` rather than the default `ArrayBufferLike`:
-// `crypto.subtle.verify` takes a `BufferSource`, which a possibly-shared
-// buffer does not satisfy. `null` for anything that is not lowercase hex,
-// so a malformed signature is refused before it reaches the verifier.
+/**
+ * `Uint8Array<ArrayBuffer>`: `crypto.subtle.verify` rejects a possibly
+ * shared buffer.
+ */
 function fromHex(hex: string): Uint8Array<ArrayBuffer> | null {
   if (hex.length === 0 || hex.length % 2 !== 0 || !/^[\da-f]+$/.test(hex)) {
     return null;
@@ -49,12 +49,7 @@ export async function sign(
   return toHex(new Uint8Array(signature));
 }
 
-/**
- * Whether `signature` is one this install produced over `payload`. Reads
- * the secret rather than minting one — see {@link getSecret} — so a
- * caller who presents a token before anything was ever signed is told no
- * rather than writing a row.
- */
+/** Never mints a secret, so verifying before any signing writes nothing. */
 export async function verify(
   ctx: AppContext,
   secretName: SecretName,

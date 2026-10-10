@@ -3,12 +3,8 @@ import { describe, expect, test } from "vitest";
 import type { Namespace, Unloadable } from "../test/facade-entries.js";
 import { facadeSpecifier, loadModules } from "../test/facade-entries.js";
 
-// A curated subpath names what it publishes, so the internal package behind it
-// can grow without the façade noticing: a new export is simply not re-exported,
-// and a documented one can sit unreachable for as long as nobody tries to
-// import it. This guard makes every value export of the source a decision —
-// published, or withheld with a reason — and fails on one nobody made. Values
-// only; the root says why its types stay wholesale.
+// A new export of a curated subpath's source is silently unpublished, so
+// every value export must be published or withheld with a reason.
 
 interface Withholding {
   readonly reason: string;
@@ -17,8 +13,10 @@ interface Withholding {
   readonly publishedBy?: string;
 }
 
-// A row records decisions only. Its source is named by specifier and the entry
-// by subpath; the guard loads both from the exports maps.
+/**
+ * A row records decisions only. Its source is named by specifier and the entry
+ * by subpath; the guard loads both from the exports maps.
+ */
 type Curated =
   | {
       /** One source, or several a subpath gathers under one import. */
@@ -34,8 +32,10 @@ type Curated =
       readonly adds?: readonly string[];
     };
 
-// The values core's barrel exports that no subpath publishes. Every other one
-// is published by exactly one subpath, which the tests below check by identity.
+/**
+ * The values core's barrel exports that no subpath publishes. Every other one
+ * is published by exactly one subpath, which the tests below check by identity.
+ */
 const CORE_WITHHELD: readonly Withholding[] = [
   {
     reason:
@@ -561,16 +561,17 @@ const CURATED: Readonly<Record<string, Curated>> = {
   },
 };
 
-// A subpath that republishes an internal package whole, on purpose. Anything
-// that package exports is published `plumix` API the moment it lands, so each
-// one says why nobody needs to decide name by name.
+/**
+ * Republished whole on purpose; each says why no name-by-name decision is
+ * needed.
+ */
 const PASSTHROUGH: Readonly<Record<string, string>> = {
   "./admin/ui":
     "the vendored shadcn set, published as the admin shell renders it; the " +
     "entry documents that it carries no stability promise beyond pre-1.0",
 };
 
-// Named, so a subpath is never skipped without a reason.
+/** Named, so a subpath is never skipped without a reason. */
 const UNLOADABLE: Unloadable = {
   "@plumix/core/blocks/island-runtime":
     "registers the `<plumix-island>` custom element as it evaluates, and " +
@@ -592,16 +593,20 @@ function loaded(
   return module;
 }
 
-// Only a function or an object has an identity to trace back to a source;
-// a primitive would match any constant that happens to share its value.
+/**
+ * Only a function or an object has an identity to trace back to a source;
+ * a primitive would match any constant that happens to share its value.
+ */
 function hasIdentity(value: unknown): value is object {
   return (
     typeof value === "function" || (typeof value === "object" && value !== null)
   );
 }
 
-// Every internal module that exports a value, keyed by the value itself. A
-// namespace counts as its own module's, so republishing one whole is caught.
+/**
+ * Every internal module that exports a value, keyed by the value itself. A
+ * namespace counts as its own module's, so republishing one whole is caught.
+ */
 const owners = new Map<object, string[]>();
 for (const [specifier, module] of sources) {
   for (const value of [module, ...Object.values(module)]) {
@@ -628,11 +633,8 @@ function republished(module: Namespace): Republished[] {
   });
 }
 
-// What a row cannot see: an entry is only checked once someone writes it a
-// row, so one that republishes internal values without a row — through an
-// import-then-export, a namespace or a local module's `export *` — would
-// publish them unreviewed. Traced by identity, so `plumix/vite` building on
-// core's values passes until it hands one on.
+// An entry without a row could republish internal values unreviewed through
+// an import-then-export, a namespace or `export *`.
 test("every subpath that republishes an internal value has a row", () => {
   expect(
     [...facade].flatMap(([subpath, module]) =>
@@ -774,12 +776,10 @@ describe.each(Object.entries(CURATED))(
   },
 );
 
-// One import path per value: a name reachable from two subpaths leaves an
-// editor's auto-import to pick between them, and neither is wrong enough for a
-// review to catch. Compared by identity, so `plumix/fields`'s `date` field and
-// `plumix/theme`'s `date` tier builder are two values that share a spelling,
-// while one function under two subpaths' names is still one value. A primitive has no
-// identity to compare, so two constants only collide when their names do.
+/**
+ * A value under two subpaths leaves auto-import to pick between them.
+ * Compared by identity; primitives have none, so they collide only by name.
+ */
 const publications = Object.keys(CURATED).flatMap((subpath) =>
   Object.entries(loaded(facade, subpath)).map(
     ([name, value]: [string, unknown]) => ({ subpath, name, value }),
@@ -807,9 +807,7 @@ test("no value is published by two subpaths", () => {
   ).toEqual([]);
 });
 
-// ADR 0015: a plugin asks core for a page's data through the call core's own
-// route makes, so the façade offers the resolvers and not the row assembler
-// three plugins once hand-rolled page data from.
+// A plugin asks for page data through the call core's own route makes.
 test("plumix/plugin offers core's page-data resolvers, not the row assembler", () => {
   const plugin = loaded(facade, "./plugin");
   expect(

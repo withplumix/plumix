@@ -40,46 +40,31 @@ import { mergeLoaderData } from "./merge-loader-data.js";
 import { forwardedShortcut, isTypingTarget } from "./shortcuts.js";
 
 interface EditorCanvasProps {
-  /** Block registry for the site (core + plugin blocks). */
   readonly registry: BlockRegistry;
-  /** Shortcodes rich-text bodies expand (core + plugin + theme). */
   readonly shortcodes?: ShortcodeRegistry;
   /** Expected origin of the host (admin shell). */
   readonly origin: string;
-  /** Seed tree for first paint, before the host pushes (from the SSR embed). */
+  /** Seed tree for first paint, before the host pushes. */
   readonly initialTree?: readonly BlockNode[];
-  /** Theme tokens (from the SSR embed), feeding the Styles tab's token picker so
-   *  authors can pre-select a registered token. Block-style CSS emits from the
-   *  stored value strings directly, so the walker itself needs no tokens. */
   readonly tokens?: ThemeTokens;
-  /** Theme breakpoints (from the SSR embed), so the canvas's responsive style
-   *  CSS gates at the same widths the live render uses. */
   readonly breakpoints?: ThemeBreakpoints;
-  /** The app's sanitiser allowlist (from the SSR embed), so raw-HTML and
-   *  rich-text blocks keep the same markup here that the published page will. */
   readonly htmlAllowlist?: HtmlAllowlist;
-  /** The page's locale (from the SSR embed), for shortcode/`Intl` output. */
   readonly locale?: string;
-  /** The queried entry (from the SSR embed) body shortcodes read — JSON-lossy,
-   *  see `parseRenderEnv`. */
+  /** JSON-lossy: it came through the SSR embed. */
   readonly entry?: HydratedEntry | null;
-  /** The site's `site` settings group (from the SSR embed) shortcodes read. */
   readonly siteSettings?: SiteSettings;
 }
 
-// X-ray outline rule, gated by data-plumix-xray on the content root. Static, so
-// the toggle is a pure attribute flip — no per-block geometry.
+/**
+ * X-ray outline rule, gated by data-plumix-xray on the content root. Static, so
+ * the toggle is a pure attribute flip — no per-block geometry.
+ */
 const XRAY_STYLE = `[data-plumix-xray] [data-plumix-block] {
   outline: 1px dashed rgba(59, 130, 246, 0.5);
   outline-offset: -1px;
 }`;
 
-/**
- * The canvas that runs inside the editor iframe. Renders the host's tree via
- * the real BlockRenderer in edit mode (so blocks are tagged with
- * data-plumix-id), and reports the author's clicks + block geometry back. It
- * never owns the tree — the host does.
- */
+/** Runs inside the editor iframe and never owns the tree; the host does. */
 export function EditorCanvas({
   registry,
   shortcodes,
@@ -93,9 +78,8 @@ export function EditorCanvas({
   siteSettings,
 }: EditorCanvasProps): ReactElement {
   const [tree, setTree] = useState<readonly BlockNode[]>(initialTree);
-  // Seed loader data from the SSR embed once (before React replaces the mount
-  // root's children). Kept stable across tree edits so loaders never re-run on
-  // a keystroke; a scoped refresh replaces a single block's entry.
+  // Read once, before React replaces the mount root's children; stable across
+  // edits so loaders never re-run on a keystroke.
   const [loaderData, setLoaderData] = useState<ResolvedBlockLoaders>(() =>
     parseLoaderData(
       document.querySelector("[data-plumix-loader-data]")?.textContent ?? "",
@@ -104,8 +88,8 @@ export function EditorCanvas({
   // The host's locale + catalog (it owns Lingui; the canvas has none).
   // Undefined until config arrives, so the pre-config window renders English.
   const [config, setConfig] = useState<CanvasConfig>();
-  // X-ray view: the host pushes the toggle over the bridge; a CSS rule (gated by
-  // the data-plumix-xray attribute below) then outlines every block.
+  // X-ray view: the host pushes the toggle over the bridge; a CSS rule (gated
+  // by the data-plumix-xray attribute below) then outlines every block.
   const [xray, setXray] = useState(false);
   const connectionRef = useRef<RuntimeConnection | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -138,9 +122,8 @@ export function EditorCanvas({
       const r = el.getBoundingClientRect();
       rects.push({ id, x: r.left, y: r.top, width: r.width, height: r.height });
     });
-    // Slot markers are display:contents (no box of their own), so a slot's drop
-    // region is the union of its direct children's rects — block rows for a
-    // filled slot, the min-height placeholder for an empty one.
+    // Slot markers are display:contents, so a slot's region is the union of its
+    // direct children's rects.
     const slots: SlotRect[] = [];
     root
       .querySelectorAll<HTMLElement>("[data-plumix-slot-parent]")
@@ -160,9 +143,8 @@ export function EditorCanvas({
     reportGeometry();
   }, [tree, reportGeometry]);
 
-  // Re-report after async layout shifts that aren't tree changes — late image
-  // loads, web-font swap, island hydration — so the host's content-height sizing
-  // and overlay rects track the settled document, not just the initial paint.
+  // Late image loads, font swaps and island hydration shift layout without a
+  // tree change.
   useEffect(() => {
     if (typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(() => reportGeometry());
@@ -170,10 +152,8 @@ export function EditorCanvas({
     return () => observer.disconnect();
   }, [reportGeometry]);
 
-  // Forward wheel/trackpad gestures to the host so it can pan/zoom the free
-  // canvas — events over the iframe never bubble to the parent stage. Native
-  // + non-passive so we can preventDefault and stop the iframe scrolling itself
-  // under the host's transform.
+  // Events over the iframe never bubble to the host stage. Non-passive so the
+  // iframe doesn't scroll itself under the host's transform.
   useEffect(() => {
     const onWheel = (e: WheelEvent): void => {
       e.preventDefault();
@@ -189,9 +169,7 @@ export function EditorCanvas({
     return () => window.removeEventListener("wheel", onWheel);
   }, []);
 
-  // Forward the host-claimed keys (space to pan, shift+digit to zoom, ? for the
-  // cheatsheet) so those shortcuts work while focus is inside the iframe. Only
-  // these — typing in the canvas is otherwise untouched.
+  // Host shortcuts must work while focus is inside the iframe.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent): void => {
       // Skip auto-repeat (a held key must not re-fire the toggle) and typing in
@@ -225,9 +203,8 @@ export function EditorCanvas({
     };
   }, []);
 
-  // Forward block clipboard shortcuts (Cmd/Ctrl+C/X/V) to the host, which owns
-  // the tree + clipboard. Defers to native copy when there's a real text
-  // selection, and to the field's own clipboard while typing.
+  // Defers to native copy for a real text selection, and to a field's own
+  // clipboard while typing.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent): void => {
       const op = clipboardOpFromEvent(e);
@@ -239,12 +216,8 @@ export function EditorCanvas({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  // Layer 1 — navigation guard. The canvas renders the entry's real themed
-  // route, so its links and forms are live and would carry the iframe off the
-  // entry. Neutralize at capture phase (ahead of theme JS). We preventDefault
-  // but deliberately do NOT stopPropagation: the click still bubbles to
-  // handleClick so an in-content link block stays selectable — it just doesn't
-  // navigate. Covers chrome links too (belt-and-suspenders with layer 2).
+  // The themed route's links and forms are live. No stopPropagation, so an
+  // in-content link block stays selectable without navigating.
   useEffect(() => {
     const onClickCapture = (event: Event): void => {
       if ((event.target as HTMLElement | null)?.closest("a[href]")) {
@@ -264,15 +237,8 @@ export function EditorCanvas({
     };
   }, []);
 
-  // Layer 2 — isolate the editable content. The entry's blocks render inside the
-  // content root (this container); the theme chrome (header/footer/nav) is
-  // everything else on the page. Mark those off-path regions `inert` so they
-  // render faithfully but take no clicks, hover, focus or theme-JS events —
-  // mirroring Gutenberg's `disabled` block editing mode. Walks root→body,
-  // disabling each ancestor's other children so only the content branch stays
-  // live. Anchors on the SSR `[data-plumix-content-root]` (production, where the
-  // theme wraps it in chrome), falling back to this container (the standalone
-  // playground, which has no content-root marker).
+  // Theme chrome goes `inert` so it renders but takes no events. The standalone
+  // playground has no content-root marker, hence the container fallback.
   useEffect(() => {
     const root =
       document.querySelector<HTMLElement>("[data-plumix-content-root]") ??
@@ -386,7 +352,7 @@ export function EditorCanvas({
   );
 }
 
-// Bounding box covering all rects, or null when there are none.
+/** Bounding box covering all rects, or null when there are none. */
 function unionRect(
   rects: readonly DOMRect[],
 ): { x: number; y: number; width: number; height: number } | null {

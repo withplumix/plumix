@@ -20,7 +20,9 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-// The database is read and written by `bun -e`: `bun:sqlite` exists only there.
+/**
+ * The database is read and written by `bun -e`: `bun:sqlite` exists only there.
+ */
 async function onDatabase(script: string): Promise<unknown> {
   const { stdout } = await promisify(execFile)(
     "bun",

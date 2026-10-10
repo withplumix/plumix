@@ -49,8 +49,10 @@ async function publish(
 const search = (query: string, page = 1) =>
   runSearch(ctx, { query, page, perPage: 2 });
 
-// A small page, so the planner's "can the walk reach a full page" question
-// has an answer a handful of seeded entries can give.
+/**
+ * A small page, so the planner's "can the walk reach a full page" question
+ * has an answer a handful of seeded entries can give.
+ */
 const searchAt = (query: string, commonTermThreshold: number) =>
   runSearch(ctx, { query, page: 1, perPage: 2, commonTermThreshold });
 
@@ -156,9 +158,8 @@ describe("runSearch", () => {
   });
 
   test("entries and terms come back in one ranked list", async () => {
-    // The term's name is the whole of its text, so bm25 puts it above an
-    // article that mentions the word once — which only means anything if the
-    // two were ranked against each other rather than merged after the fact.
+    // bm25 ranks the term above the article only if both are ranked together
+    // rather than merged after the fact.
     const entry = await publish({
       title: "An article mentioning hydroponics once, among many other words",
       slug: "article",
@@ -484,7 +485,7 @@ describe("runSearch", () => {
 });
 
 describe("runSearch without an index", () => {
-  /** One entry whose title and excerpt carry a word its body does not. */
+  // One entry whose title and excerpt carry a word its body does not.
   async function publishArticle(): Promise<{ id: number }> {
     return await publish({
       title: "Winter hydroponics",

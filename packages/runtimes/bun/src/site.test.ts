@@ -49,8 +49,10 @@ afterAll(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-// The site's serve options on a real `Bun.serve`, so the address and the URL
-// are what Bun hands a request from a real socket.
+/**
+ * The site's serve options on a real `Bun.serve`, so the address and the URL
+ * are what Bun hands a request from a real socket.
+ */
 async function served(
   config: BunConfig,
   body: (origin: string) => Promise<void>,

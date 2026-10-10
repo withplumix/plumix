@@ -4,29 +4,18 @@ import { resolveImageRoles } from "plumix/plugin";
 
 import { readSeoOverrides } from "./overrides.js";
 
-// A media URL is relative whenever the bucket has no public one and the worker
-// proxies the file itself, and an editor may type a relative URL too — while a
-// sitemap `<image:loc>` has to be absolute. Anything unparseable drops out, and
-// so does the empty string, which resolves to the site root rather than
-// failing: listing the homepage as a picture is the one wrong answer `URL`
-// hands back instead of refusing.
+/**
+ * A sitemap `<image:loc>` must be absolute but media URLs can be relative. The
+ * empty string is dropped because `URL` resolves it to the site root.
+ */
 function absolute(url: string | null, origin: string): string | null {
   if (url === null || url === "") return null;
   return URL.parse(url, origin)?.href ?? null;
 }
 
 /**
- * The pictures each entry shows, positionally aligned with `bags` — every
- * image role the entry's type declares a field in, out of one batched
- * hydration for the whole sitemap page rather than a query per entry.
- *
- * An editor's own social image URL leads, since it is the picture they chose;
- * the roles follow, one image each, in no order this promises — an image
- * sitemap does not rank what it lists. Duplicates collapse, so one photo named
- * by two roles is listed once.
- *
- * What counts as a picture is the reference adapter's own answer: a role field
- * holding a PDF resolves to nothing, so this never sniffs a payload's mime.
+ * Positionally aligned with `bags`. The editor's social image leads; role
+ * images follow in no promised order, deduplicated.
  */
 export async function entryImages(
   ctx: AppContext,

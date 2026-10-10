@@ -12,14 +12,9 @@ import {
 import { readManifest } from "./manifest.js";
 import { createPluginCatalogLoader } from "./plugin-catalogs.js";
 
-/** Path-keyed compiled catalogs, as `import.meta.glob` produces them. */
 type CatalogMap = Record<string, () => Promise<{ messages: Messages }>>;
 
-/**
- * The catalog sets `bootI18n` merges. Injectable so a caller can state
- * which locales ship instead of inheriting whatever `i18n:compile` last wrote
- * to disk — the globs resolve at build time and can't be narrowed afterwards.
- */
+/** Injectable because the build-time globs can't be narrowed afterwards. */
 export interface AdminCatalogs {
   readonly admin: CatalogMap;
   readonly plugins: CatalogMap;
@@ -34,33 +29,26 @@ const BUNDLED_CATALOGS: AdminCatalogs = {
   blocks: BLOCKS_CATALOGS,
 };
 
-// Source locale: the language `descriptor.message` strings are authored
-// in. When a user's locale isn't compiled (yet, or at all), we fall
-// back here. Mirrors `lingui.config.ts:sourceLocale`.
+/**
+ * Source locale: the language `descriptor.message` strings are authored
+ * in. When a user's locale isn't compiled (yet, or at all), we fall
+ * back here. Mirrors `lingui.config.ts:sourceLocale`.
+ */
 const SOURCE_LOCALE = "en";
 
 type PluginCatalogLoader = (pluginId: string, locale: string) => Promise<void>;
 
 const NOOP_LOADER: PluginCatalogLoader = () => Promise.resolve();
 
-/** Module-level handle so admin code (and plugin chunks via the
- *  `window.plumix.i18n.loadPluginCatalog` global) can reach the
- *  manifest-bound loader installed by `bootI18n`. Pre-boot calls
- *  hit the no-op default; post-boot they go through the cache. */
+/** A no-op until `bootI18n` installs the manifest-bound loader. */
 export const pluginCatalogLoaderRef: { current: PluginCatalogLoader } = {
   current: NOOP_LOADER,
 };
 
-/** Load and activate the compiled catalog for the user's active locale.
- *  Merges admin's own catalog with every workspace plugin catalog
- *  that has a matching `<locale>.mjs`, then fans out manifest-driven
- *  fetches for third-party plugin catalogs (slice 17 #697). The admin
- *  shell rewrites `<html lang>` server-side (slice 4) to the user's
- *  `meta.locale`; we normalize (lowercase + region-strip) and look up
- *  matching loaders. Unknown locales fall back to the source locale.
- *  A missing source catalog (e.g., a dev boot before any package has
- *  compiled) leaves Lingui in its descriptor-message fallback mode —
- *  never throws, never blanks. */
+/**
+ * Unknown locales fall back to the source locale. Never throws: a missing
+ * catalog leaves Lingui on descriptor messages.
+ */
 export async function bootI18n(
   catalogs: AdminCatalogs = BUNDLED_CATALOGS,
 ): Promise<void> {
@@ -86,12 +74,7 @@ export async function bootI18n(
     "../../../core/locales/blocks-",
     locale,
   );
-  // Blocks lowest, then editor + workspace plugins, admin chrome last so admin
-  // wins on collision. Slice 5's note had the opposite order; chrome
-  // stability matters more than letting a plugin override
-  // `breadcrumb.dashboard`. Workspace-plugin collisions on
-  // admin-namespaced keys are a build-time concern (future linter,
-  // not enforced here yet).
+  // Admin chrome last so it wins on collision.
   i18n.load(locale, {
     ...blocksMessages,
     ...editorMessages,
@@ -100,11 +83,7 @@ export async function bootI18n(
   });
   i18n.activate(locale);
 
-  // valibot validator messages registered via `vMessage(descriptor)`
-  // resolve through this hook at issue-construction time. Server-side
-  // bundles skip this registration and fall back to descriptor.message.
-  // Forward the full descriptor — `i18n._(MessageDescriptor)` carries
-  // any `values` / `comment` field through Lingui's resolution.
+  // Server bundles skip this and fall back to `descriptor.message`.
   setI18nResolver((d) => i18n._(d));
 
   // Third-party plugins: manifest-driven runtime fetch + merge.
@@ -121,9 +100,7 @@ export async function bootI18n(
   );
 }
 
-// The editor and blocks catalogs fall back to the source locale (unlike
-// plugins) so their strings are never blank — admin always ships both, so an
-// uncompiled locale should still read English rather than the raw ids.
+/** Unlike plugins, an uncompiled locale reads English rather than raw ids. */
 async function loadSourceFallbackCatalog(
   catalogs: CatalogMap,
   prefix: string,

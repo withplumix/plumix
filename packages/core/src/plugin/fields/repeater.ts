@@ -31,10 +31,9 @@ interface RepeaterFieldState extends UniversalFieldState {
 }
 
 /**
- * Entry point of the `repeater()` chain — only `.fields()` is available
- * until the row schema is declared, so a repeater without sub-fields
- * can't reach `build()` (registration surfaces require a `build`
- * method), and `.collapsed()` can be typed against the declared keys.
+ * Only `.fields()` is available until the row schema is declared, so a repeater
+ * can't build without sub-fields and `.collapsed()` is typed against their
+ * keys.
  */
 export class RepeaterFieldSeed<K extends string = string> {
   readonly #key: K;
@@ -59,16 +58,8 @@ export class RepeaterFieldSeed<K extends string = string> {
 }
 
 /**
- * Fluent chain for repeater fields. Immutable — every call returns a
- * fresh instance, so a shared base chain can be forked without
- * aliasing.
- *
- * `F` is the declared row-schema tuple (drives the recursive row type
- * and `.collapsed()` key typing); `K` is the literal field key; `V` is
- * the phantom read type — `readonly InferFields<F>[] | undefined`,
- * narrowed to the non-optional array by `.required()`; `S` is the
- * phantom stored shape (`InferStoredFields<F>` rows). All purely
- * type-level — nothing at runtime carries them.
+ * Immutable: every call returns a fresh instance, so a shared base chain can be
+ * forked.
  */
 export class RepeaterFieldBuilder<
   F extends readonly MetaBoxFieldInput[],
@@ -111,14 +102,9 @@ export class RepeaterFieldBuilder<
   }
 
   /**
-   * The rows a new entity starts with — written into its meta when it is
-   * created; a cleared repeater stays empty.
-   * Typed against the declared row schema in its STORED spelling — an ISO
-   * string, a bare reference id — because they are stored with no
-   * conversion. Rows are partial by design, and each is completed with the
-   * subfield defaults; a misspelled sub-field key is a compile error.
-   *
-   * Leaves the read type as it is; `.required()` narrows it.
+   * The rows a new entity starts with, in the STORED spelling (ISO string, bare
+   * id) because they are stored unconverted. Each partial row is completed with
+   * the subfield defaults.
    */
   default(
     rows: readonly Partial<InferStoredFields<F>>[],
@@ -154,11 +140,7 @@ export class RepeaterFieldBuilder<
     return this.#fork({ dialogSize });
   }
 
-  /**
-   * Make rows collapsible in the admin, labelling each collapsed row by
-   * the chosen sub-field's stored value. The key is typed against the
-   * declared row schema, so a nonexistent sub-field is a compile error.
-   */
+  /** Labels each collapsed row by the chosen sub-field's stored value. */
   collapsed(
     subFieldKey: keyof InferFields<F> & string,
   ): RepeaterFieldBuilder<F, K, V, S> {
@@ -239,16 +221,9 @@ export class RepeaterFieldBuilder<
   }
 
   /**
-   * Reshape the whole row list before persistence — reorder, de-dupe or
-   * trim. Runs once, after every cell has been settled, which is why it is
-   * typed against the stored shape: a reference cell is a bare id here,
-   * not the hydrated summary a read returns. Cells are not re-validated
-   * afterwards, but the blank-row strip and the security gates do re-run
-   * over the output, so a sanitizer cannot write a value into a cell that
-   * the cell's own field would have refused. The row-count bounds are
-   * checked against what the callback returned, so a sanitizer may trim
-   * to `.max()` or pad to `.min()` — and a de-dupe that cuts below
-   * `.min()` is still rejected. Returning no rows clears the field.
+   * Runs after every cell settled, so it sees the stored shape. The blank-row
+   * strip, security gates and row-count bounds re-run on the output; returning
+   * no rows clears the field.
    */
   sanitize(
     sanitize: (
@@ -259,12 +234,9 @@ export class RepeaterFieldBuilder<
   }
 
   /**
-   * Cross-row rule — returns `true` or the failure message (sync or
-   * async), reported against the repeater itself. Runs last: after the
-   * blank-row strip, after every cell passed, and after `.sanitize()`, so
-   * a uniqueness or total-count rule reasons about exactly the rows that
-   * will be stored. Skipped when any cell failed, when the strip leaves no
-   * rows (that is a deletion), and on a draft save.
+   * Reported against the repeater. Runs last, after the blank-row strip, the
+   * cells and `.sanitize()`; skipped when a cell failed, no rows remain, or on
+   * a draft save.
    */
   validate(
     validate: (rows: NonNullable<S>) => true | Label | Promise<true | Label>,
@@ -294,13 +266,7 @@ export class RepeaterFieldBuilder<
   }
 }
 
-/**
- * Repeatable list of structured rows —
- * `repeater("links").fields([text("label"), url("href")])`. Only
- * `.fields()` is available on the bare constructor; the returned
- * builder carries row-count bounds (`.min()`/`.max()`), UX affordances
- * (`.addLabel()`, `.layout()`, `.collapsed()`), and the universal chain.
- */
+/** Only `.fields()` is available on the bare constructor. */
 export function repeater<K extends string>(key: K): RepeaterFieldSeed<K> {
   return new RepeaterFieldSeed(key);
 }

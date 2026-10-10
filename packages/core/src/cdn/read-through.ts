@@ -15,51 +15,27 @@ import {
 
 interface ReadThroughArgs {
   readonly request: Request;
-  /**
-   * The resolved audience segment. It keys the cache entry (so two requests in
-   * the same non-`private` segment share one) and decides participation — a
-   * `private` segment bypasses the shared CDN entirely.
-   */
   readonly segment: Segment;
-  /**
-   * Resolved public route intent, or `null` when the URL matches no public
-   * route (a 404) — in which case the CDN is never consulted.
-   */
+  /** `null` when no public route matched; the CDN is never consulted. */
   readonly intentKind: RouteIntent["kind"] | null;
   /**
-   * When `intentKind` is `"archiveType"` or `"view"`, whether that
-   * plugin-registered page opted into CDN caching. The dispatcher resolves it
-   * from the registry so the pure decision layer stays free of the lookup.
+   * Resolved by the dispatcher so the pure decision layer stays free of the
+   * registry lookup.
    */
   readonly registeredPageCacheable?: boolean;
   readonly cdn: ConnectedCdn;
   readonly defer: DeferFn;
-  /** Records the cache decision + reason as a durationless `cdn` fact. */
   readonly telemetry: TelemetryCollector;
-  /** Renders the page live. Called once on a miss, never on a hit. */
   readonly render: () => Promise<Response>;
-  /**
-   * The cache tags the stored response should carry. Evaluated after `render`
-   * so it can read the route's resolved entity (e.g. the entry id).
-   */
+  /** Evaluated after `render`, so it can read the route's resolved entity. */
   readonly tags: () => readonly string[];
   /**
-   * Whether the render read the principal (ADR 0030). Evaluated after
-   * `render`: a personal render is one member's page, so it is neither stored
-   * under the segment's entry nor announced as shared, and the `cdn` record
-   * says so. A stored copy of the same segment is still served on a hit.
+   * A personal render is one member's page: never stored or announced as
+   * shared.
    */
   readonly personal: () => boolean;
 }
 
-/**
- * Serve a public page through the CDN: return a stored response on a hit,
- * otherwise render live and hand the result to the provider on the way out —
- * decorated with the site's freshness and the page's cache tags, and written to
- * an origin store where the provider has one. The store runs through `defer` so
- * it never blocks the response. Requests that aren't cacheable (privileged,
- * non-GET/HEAD, search, no route) render live and touch the CDN not at all.
- */
 export async function readThrough(args: ReadThroughArgs): Promise<Response> {
   const {
     request,
@@ -94,8 +70,6 @@ export async function readThrough(args: ReadThroughArgs): Promise<Response> {
     return render();
   }
 
-  // The segment is a cache-key axis: two requests in the same segment collide
-  // on one entry, distinct segments never do (#1740).
   return lookupOrRender({
     key: segmentCdnKey(request, segment),
     cdn,
@@ -110,33 +84,22 @@ export async function readThrough(args: ReadThroughArgs): Promise<Response> {
 
 interface ReadThroughRouteArgs {
   readonly request: Request;
-  /** The dispatcher's `requestHasSession` verdict for this request. */
   readonly hasSession: boolean;
   readonly cdn: ConnectedCdn;
   readonly defer: DeferFn;
   readonly telemetry: TelemetryCollector;
-  /** Runs the plugin's handler. Called once on a miss, never on a hit. */
   readonly render: () => Promise<Response>;
   /**
-   * The tags the stored response should carry. Evaluated after `render`,
-   * which is the only moment the handler has named what it resolved.
+   * Evaluated after `render`, the only moment the handler has named what it
+   * resolved.
    */
   readonly tags: () => readonly string[];
 }
 
 /**
- * Serve a plugin-registered raw route through the CDN — the read-through
- * a route opts into with `registerRoute({ cacheable: true })`.
- *
- * There is no segment axis here. The opt-in is the plugin's claim that the
- * route answers every visitor with the same document, so the entry is keyed off
- * the URL with the cookie dropped and a signed-in visitor shares it rather than
- * bypassing it. Freshness stays the handler's to declare: the provider keeps a
- * `cache-control` it set and falls back to the site's page TTL only when it set
- * none. Tags are the handler's too — core can't name what a raw route's
- * response depends on beyond the settings it reads, but the handler can,
- * through `tagCdnEntry` — and a handler that names none stores an entry only a
- * settings write reaches.
+ * No segment axis: `cacheable: true` claims every visitor gets the same
+ * document, so signed-in visitors share the entry. Freshness and tags stay the
+ * handler's to declare.
  */
 export async function readThroughRoute(
   args: ReadThroughRouteArgs,
@@ -164,15 +127,10 @@ export async function readThroughRoute(
   });
 }
 
-// The opt-in speaks for the route; each response still speaks for itself, and
-// the entry it would fill is reachable only by whatever tags the handler
-// declared — often none. So a response that came out for one visitor is neither
-// stored nor announced as shared: `auth: "public"` only means *core* doesn't
-// gate the route, and a handler checking a bearer token core knows nothing
-// about is exactly the shape at risk. A `Set-Cookie` says the same thing (the
-// store would strip it, leaving later visitors a body whose cookie went
-// missing), as does a `private`/`no-store` the store would otherwise overwrite
-// with the page TTL.
+/**
+ * `auth: "public"` only means core doesn't gate the route; a handler checking
+ * its own bearer token can still return one visitor's response.
+ */
 function routeResponseIsShareable(
   request: Request,
   hasSession: boolean,
@@ -184,39 +142,26 @@ function routeResponseIsShareable(
 }
 
 interface LookupArgs {
-  /** The cache-key request — the axes that separate entries are folded in. */
   readonly key: Request;
   readonly cdn: ConnectedCdn;
   readonly defer: DeferFn;
   readonly telemetry: TelemetryCollector;
   /**
-   * Spread into every `cdn` record this lookup emits. A bag rather than a
-   * field because the route path has no segment at all, and a `segment:
-   * undefined` key is not a `JsonValue`.
+   * A bag, not a field: the route path has no segment, and `segment: undefined`
+   * isn't a `JsonValue`.
    */
   readonly fact: { readonly segment?: Segment };
   readonly render: () => Promise<Response>;
   readonly tags: () => readonly string[];
-  /**
-   * A condition on the fresh response beyond its status. Only the route path
-   * sets one.
-   */
   readonly shareable?: (fresh: Response) => boolean;
-  /**
-   * Whether the render read the principal. Only the page path sets one: a
-   * route answers for its opt-in, and its response speaks for itself above.
-   */
   readonly personal?: () => boolean;
 }
 
-// Shared by both read-throughs, once their own bypass rules have passed. The
-// store runs through `defer` so it never blocks the response.
 async function lookupOrRender(args: LookupArgs): Promise<Response> {
   const { key, cdn, defer, telemetry, fact, render, tags, shareable } = args;
   const store = cdn.store;
-  // A storeless deploy never hits at the origin — every arriving request got
-  // past the CDN and is a miss by definition — so the fact says which regime
-  // produced it rather than reading as a permanently failing cache.
+  // A storeless deploy misses by definition, so the fact names the regime
+  // rather than reading as a failing cache.
   const originStore = store !== undefined;
 
   const hit = await store?.match(key);
@@ -246,10 +191,8 @@ async function lookupOrRender(args: LookupArgs): Promise<Response> {
   const entryTags = tags();
   // Cloned before `decorate` reads the body.
   if (stored) defer(store.put(key, fresh.clone(), entryTags));
-  // A per-visitor cookie can be stripped from the store's own copy but not
-  // from the one going back to the visitor, so that response leaves
-  // unannounced rather than inviting a shared cache to hold it. The port asks
-  // every provider for the same refusal; core makes it regardless.
+  // Core refuses a `Set-Cookie` response regardless of whether the provider
+  // does.
   if (fresh.headers.has("set-cookie")) return fresh;
   return cdn.decorate(fresh, entryTags);
 }

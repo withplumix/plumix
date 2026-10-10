@@ -26,22 +26,19 @@ import { imageRolesInScope } from "../plugin/image-roles.js";
 
 export interface ProjectImageRolesOptions {
   /**
-   * Which of a role's fields may answer for it. REST passes the `showInApi`
-   * test, so a role with no exposed field is absent from the response rather
-   * than reported as null.
+   * REST passes its `showInApi` test, so a role with no exposed field is
+   * absent rather than null.
    */
   readonly include?: (field: MetaBoxField) => boolean;
 }
 
-// A hydrated payload keeps the adapter's own fields — `looseObject` hands the
-// whole thing back so the adapter that produced it reads what it wrote.
+/**
+ * A hydrated payload keeps the adapter's own fields — `looseObject` hands the
+ * whole thing back so the adapter that produced it reads what it wrote.
+ */
 const hydratedReferenceSchema = v.looseObject({ id: v.string() });
 
-/**
- * Project one entity's role images out of its already-hydrated meta bag. Pure:
- * every reference the roles read has been resolved by the page's own hydration
- * batch, so this adds no query to any page kind.
- */
+/** Adds no query: the page's own hydration already resolved every reference. */
 export function projectImageRoles(
   plugins: PluginRegistry,
   scope: ImageRoleScope,
@@ -57,13 +54,8 @@ export function projectImageRoles(
 }
 
 /**
- * Every role image of many stored meta bags in one scope — the bulk path for a
- * caller that holds raw `meta` columns rather than resolved entities, such as
- * the sitemap. Results are index-aligned with `bags`.
- *
- * Ids aggregate across every bag and every role before anything is fetched, so
- * a whole page of bags costs one hydration per `(kind, scope)` group per
- * statement-sized chunk of ids — never one per bag.
+ * For raw `meta` columns, such as the sitemap's. Index-aligned with `bags`;
+ * one hydration per `(kind, scope)` group per chunk, never per bag.
  */
 export async function resolveImageRoles(
   ctx: AppContext,
@@ -73,9 +65,8 @@ export async function resolveImageRoles(
   const roles = imageRolesInScope(ctx.plugins, scope);
   if (roles.size === 0) return bags.map(() => ({}));
 
-  // One walk of every bag's role fields: each slot that holds an id is read
-  // once, filed under the group that will hydrate it, and remembered so the
-  // projection below is a map lookup rather than a second walk.
+  // Slots are remembered so the projection below is a lookup, not a second
+  // walk.
   const groups = new Map<
     string,
     { readonly target: ReferenceTarget; readonly ids: Set<string> }
@@ -119,13 +110,7 @@ export async function resolveImageRoles(
   );
 }
 
-/**
- * The one walk both entry points share: per role, the first field in
- * declaration order whose payload the adapter turns into an image wins, and
- * `null` means none of them did. `payloadOf` is where the two differ — a
- * hydrated bag reads its own slot, a stored bag reads the batch it just
- * hydrated.
- */
+/** Per role, the first field in declaration order that yields an image wins. */
 function roleImages(
   plugins: PluginRegistry,
   roles: ImageRoleScopeIndex,
@@ -148,11 +133,6 @@ function roleImages(
   return images;
 }
 
-/**
- * Hand a payload back to the adapter kind that produced it. An adapter without
- * `image()` — or a slot that held no reference at all, which is how an orphan
- * reads — yields nothing.
- */
 function imageOf(
   plugins: PluginRegistry,
   field: MetaBoxField,
@@ -163,11 +143,7 @@ function imageOf(
   return registered?.adapter.image?.(payload) ?? null;
 }
 
-/**
- * Read a role field's slot, following the keys of the groups it sits in, and
- * decode the leaf with `leaf`. `null` for a path that leads nowhere and for a
- * value the schema rejects — the two ways a role field answers with no image.
- */
+/** `null` for a path leading nowhere and for a value the schema rejects. */
 function readPath<TLeaf extends v.GenericSchema>(
   bag: ResolvedMeta,
   path: readonly string[],
@@ -182,19 +158,17 @@ function readPath<TLeaf extends v.GenericSchema>(
   return value.success ? value.output : null;
 }
 
-// A container the walk can descend into. An array is not one — a role is
-// rejected at registration anywhere beneath a repeater, so an array on the
-// path means the bag no longer matches the fields that declared it.
+/**
+ * Roles are rejected under repeaters, so an array on the path means the bag no
+ * longer matches its fields.
+ */
 function isBag(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /**
- * A stored single reference is the bare id string. A bag that has not been
- * settled since the snapshot shape was retired still holds `{ id, … }` there,
- * and `extractStringId` reads it — the hydrated path gets that for free from
- * `decodeMetaBag`, and a reader of the raw column has to ask for it, or the
- * two surfaces disagree about the same row.
+ * An unsettled bag may still hold the retired `{ id, … }` shape; the raw-column
+ * reader must accept it or disagree with the hydrated path.
  */
 function storedId(bag: JsonObject, path: readonly string[]): string | null {
   const slot = readPath(bag, path, v.unknown());

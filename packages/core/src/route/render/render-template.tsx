@@ -76,23 +76,9 @@ import { TEMPLATE_PANEL_ID, templateNodeLabel } from "./template-node-label.js";
 declare module "../../hooks/types.js" {
   interface FilterRegistry {
     /**
-     * Per-request head transform — the entry point for `@plumix/plugin-seo` and
-     * any plugin to inject, override, or remove document head fields with the
-     * resolved `{data, ctx}` in hand. Fires on the assembled (theme + template)
-     * document, so a theme's own tag is already present and a subscriber
-     * writing head meta gap-fills around it. Error renders fire it too, with
-     * `data.kind` of `"error"` — a page that was not found is exactly the one
-     * a plugin needs to mark `noindex` — though `applyCanonical` does not run
-     * there, so nothing declares a canonical for a URL that resolved to
-     * nothing. A subscriber that throws on the error path is logged and
-     * skipped rather than turning a 404 into a 500.
-     *
-     * `title` is the title core resolved for this page — an entry's expanded
-     * title, an archive's label, `Search: <query>`, a plugin archive's own,
-     * and `Not Found` / `Internal Server Error` on an error render.
-     * Passed because a subscriber cannot derive it: the per-page-kind logic is
-     * core's, and a `registerArchiveType` archive's title is known only to the
-     * resolver that returned it.
+     * Fires on the assembled document, so theme tags are already present. Also
+     * fires on error renders (`kind: "error"`), where a throwing subscriber is
+     * logged and skipped.
      */
     "render:document": (
       manifest: DocumentManifest,
@@ -109,7 +95,6 @@ interface RenderArgs {
   readonly node: ResolvedNode;
   readonly data: TemplateData;
   readonly title: string;
-  /** Visual-editor decision; defaults to a plain live render. */
   readonly editMode?: EditModeDecision;
 }
 
@@ -145,9 +130,7 @@ async function renderThroughThemeInner({
     chrome,
   } = renderEnv;
   const rules = templateRules(theme.templates);
-  // The resolution walk is a `template` span (nested under `render`) carrying
-  // the full explain as a lazy attribute — the Template panel reads it back
-  // from the span tree, and an inactive collector never pays for the explain.
+  // The explain is a lazy attribute so an inactive collector never pays for it.
   const matched = ctx.telemetry.span(TEMPLATE_PANEL_ID, (s) => {
     // Resolve first so the explain (which re-runs user predicates) keeps the
     // old resolve-then-explain order for any stateful predicate.
@@ -221,7 +204,7 @@ async function renderThroughThemeInner({
   });
 }
 
-// A template's setting replaces the theme's for the pages it renders.
+/** A template's setting replaces the theme's for the pages it renders. */
 function pageViewTransitions(
   theme: ThemeDescriptor,
   template: Template,
@@ -231,8 +214,10 @@ function pageViewTransitions(
   );
 }
 
-// String form falls back to the resolver title instead of substituting
-// `undefined`, dodging unhead's `"%s · Site"` → `" · Site"` orphan separator.
+/**
+ * String form falls back to the resolver title instead of substituting
+ * `undefined`, dodging unhead's `"%s · Site"` → `" · Site"` orphan separator.
+ */
 function composeTitle(document: DocumentManifest, fallback: string): string {
   const { titleTemplate } = document;
   // An empty title (an untitled entry) is treated as absent, so the fallback
@@ -241,8 +226,9 @@ function composeTitle(document: DocumentManifest, fallback: string): string {
   const title = document.title === "" ? undefined : document.title;
   if (typeof titleTemplate === "function") return titleTemplate(title);
   if (typeof titleTemplate === "string" && title !== undefined) {
-    // A function replacement, so `$&` / `$\`` / `$'` in a title — "Q&A: $& explained"
-    // — are the characters an author typed rather than replacement patterns.
+    // A function replacement, so `$&` / `$\`` / `$'` in a title — "Q&A: $&
+    // explained" — are the characters an author typed rather than replacement
+    // patterns.
     return titleTemplate.replaceAll("%s", () => title);
   }
   return title ?? fallback;
@@ -311,15 +297,9 @@ async function renderErrorThroughThemeInner({
     ctx,
     deps,
   });
-  // The same chain the happy path runs, so a plugin writing head tags reaches
-  // an error page too — a 404 that says `noindex` is the point of asking.
-  //
-  // Deliberately without `applyCanonical`: a URL that resolved to nothing must
-  // not declare itself the canonical address of anything.
-  //
-  // Caught, unlike the happy path's: `applyFilter` does not isolate a throwing
-  // subscriber, and this render is already the failure path. Letting one
-  // escalate would turn a clean 404 into a themed 500.
+  // No `applyCanonical`: a URL that resolved to nothing must not claim to be
+  // canonical. Caught because a throwing subscriber would turn a clean 404 into
+  // a themed 500.
   const renderDocument = await applyErrorDocumentFilter({
     ctx,
     merged,
@@ -391,9 +371,8 @@ async function prefetchEntryLoaders(
 ): Promise<ResolvedBlockLoaders | undefined> {
   const blocks = collectLoaderBlocks(data, template);
   if (blocks.length === 0) return undefined;
-  // A thrown outcome ends the page only from the page's own content, and not
-  // in the editor, which has to stay editable. Anywhere else it is an
-  // ordinary rejection, isolated to its block.
+  // Not in the editor, which has to stay editable; elsewhere a thrown outcome
+  // is an ordinary block rejection.
   const honoursOutcome = "entry" in data && editMode.mode !== "edit";
   let pageOutcome: PageOutcome | undefined;
   // Dev-only: the first loader rejection, captured so it can be escalated to a
@@ -405,12 +384,8 @@ async function prefetchEntryLoaders(
   const loaderData = await ctx.telemetry.span("render: loaders", (s) => {
     s.set("loaders.blocks", blocks.length);
     return resolveBlockLoaders(blocks, ctx.blocks, ctx, {
-      // Fire-and-forget bridge into the framework filter so plugins can
-      // subscribe via `addFilter("blocks:loader:error", ...)`. `applyFilter`
-      // is async; we don't await (the loader resolver shouldn't back-pressure
-      // on observability), but we DO catch — a throwing subscriber would
-      // otherwise surface as an unhandledRejection and on workers that
-      // kills the request. `LoaderErrorEvent` shape matches `BlockLoaderErrorContext`.
+      // Not awaited, so observability never back-pressures loaders; caught,
+      // because an unhandled rejection kills a Workers request.
       onLoaderError: (event: LoaderErrorEvent) => {
         if (honoursOutcome && isPageOutcome(event.error)) {
           pageOutcome ??= event.error;
@@ -430,10 +405,8 @@ async function prefetchEntryLoaders(
     });
   });
   if (pageOutcome !== undefined) throw pageOutcome;
-  // Dev-only: a throwing loader is fatal here — it propagates to the dispatcher
-  // catch, which serves the dev error page naming the culprit block, instead of
-  // silently degrading. `process.env.PLUMIX_DEV` is Vite-empty in prod builds,
-  // so this branch tree-shakes out and production keeps per-block isolation.
+  // Dev escalates so the error page names the culprit block; production keeps
+  // per-block isolation.
   if (process.env.PLUMIX_DEV && firstLoaderError) {
     throw new BlockLoaderError(firstLoaderError);
   }
@@ -458,8 +431,10 @@ interface ResolveDocumentArgs {
   readonly deps: LoadedTemplateDeps;
 }
 
-// Merge the matched template's `document` fragment (a literal or a per-request
-// function) onto the theme-wide document. No fragment → the theme document.
+/**
+ * Merge the matched template's `document` fragment (a literal or a per-request
+ * function) onto the theme-wide document. No fragment → the theme document.
+ */
 async function resolveRenderDocument({
   template,
   document,
@@ -493,18 +468,16 @@ interface RenderTreeArgs {
   readonly htmlAllowlist: HtmlAllowlist;
   readonly chrome: RenderChrome;
   readonly catalog: CompiledCatalog;
-  // The theme's `css: []` paths, linked in dev to avoid FOUC (#1701).
+  /** The theme's `css: []` paths, linked in dev to avoid FOUC (#1701). */
   readonly themeCss: readonly string[];
   readonly viewTransitions: ResolvedViewTransitions | null;
   readonly editMode: EditModeDecision;
 }
 
-// React 19 reorders every child of `<head>` (metadata first, scripts /
-// templates last), so we can't rely on JSX position to control where
-// theme `script[]` lands. We render only the body subtree via React
-// (capturing hoisted `<title>`/`<meta>`/`<link>`/`<script>` at the
-// start of the output) and assemble the full document as a string
-// template — Astro's approach for the same reason.
+/**
+ * React 19 reorders `<head>` children, so JSX position can't place theme
+ * `script[]`; React renders only the body.
+ */
 function renderTree({
   ctx,
   document,
@@ -524,22 +497,14 @@ function renderTree({
   viewTransitions,
   editMode,
 }: RenderTreeArgs): string {
-  // Adapter FC wraps `template.render({ data, ctx, ...deps })` so it
-  // executes inside React's render pass — hooks (useState, useId,
-  // useMemo, useSyncExternalStore) inside a factory template are
-  // legal. A direct call here would throw "Invalid hook call" because
-  // React's dispatcher isn't set yet at this construction point.
-  // `data` + `ctx` are framework-owned; spread `deps` first so a
-  // misregistered dep kind literally named `"data"` or `"ctx"` can't
-  // silently clobber the canonical args.
+  // A component, not a direct call, so hooks in a template run inside React's
+  // render pass. `deps` spread first so a dep named `data` or `ctx` can't
+  // clobber them.
   const TemplateAdapter = (): ReactNode =>
     template.render({ ...deps, data, ctx });
   const queriedEntry = "entry" in data ? data.entry : undefined;
-  // Body shortcodes get the post-expansion entry — its `title` is already
-  // rendered, not the raw `[year]` source the title pass itself expands.
-  // Spread rather than asserted: a shortcode reads the entry's fields by name,
-  // and TypeScript withholds from an `interface` the implicit index signature
-  // that open-bag read needs.
+  // Spread, not asserted: an `interface` lacks the implicit index signature a
+  // shortcode's by-name read needs.
   const entry = "entry" in data ? { ...data.entry } : null;
   // Bind once so the resolver closure keeps the non-null narrowing.
   const imageDelivery = ctx.imageDelivery;
@@ -594,16 +559,9 @@ function renderTree({
         renderFilters,
       },
     },
-    // Edit mode drops the front-end admin bar: redundant under the editor's
-    // own toolbar, and its injected `body { padding-top }` ratchets the
-    // auto-sized canvas iframe against the theme's `min-h-screen` into a
-    // runaway height loop. Live/preview renders keep it.
+    // In edit mode the bar's `body { padding-top }` and `min-h-screen` loop the
+    // auto-sized canvas iframe's height.
     editMode.mode === "edit" ? null : chrome.adminBar(ctx, queriedEntry),
-    // Dev-only debug bar — standalone and auth-independent (unlike the admin
-    // bar it never gates on a user). `process.env.PLUMIX_DEV` is Vite-empty
-    // in prod builds, so this branch tree-shakes out, and the composition root
-    // leaves `debugBar` unset under the same gate. Dropped in edit mode
-    // alongside the admin bar.
     process.env.PLUMIX_DEV &&
       chrome.debugBar !== undefined &&
       editMode.mode !== "edit"
@@ -630,25 +588,20 @@ function renderTree({
     lang: code,
     dir: direction,
     ...document.html,
-    // The island runtime reads this off <html> to decide whether to hydrate:
-    // in edit mode islands stay static + selectable. Only stamped for the
-    // editor render so ordinary pages keep clean markup (absent ⇒ hydrate).
+    // The island runtime skips hydration when set, keeping editor islands
+    // static and selectable.
     ...(editMode.mode === "edit" ? { "data-plumix-mode": editMode.mode } : {}),
   });
   const bodyAttrs = renderAttrs(document.body);
 
-  // A template-rendered `<title>` is part of `hoisted`. Browsers honor the
-  // first `<title>` in document order, so emitting the framework default
-  // first would shadow the template's choice — skip it in that case.
+  // Browsers honor the first `<title>`, so a default would shadow the
+  // template's.
   const titleFallback = hoistedHasTitle(hoisted)
     ? ""
     : `<title>${escapeHtml(title)}</title>`;
 
-  // Bundled CSS lands AFTER theme `link[]` so theme-local stylesheets
-  // override CDN imports declared in `link[]` (last-wins cascade).
-  // `process.env.PLUMIX_DEV` is Vite-substituted at SSR-bundle time —
-  // non-empty in `plumix dev`, empty in `plumix build`. The plumix Vite
-  // plugin's `define` populates the literal.
+  // Bundled CSS lands after theme `link[]` so theme stylesheets override CDN
+  // imports.
   const command: ViteCommand = process.env.PLUMIX_DEV ? "serve" : "build";
 
   const headContent =
@@ -702,13 +655,10 @@ function hoistedHasTitle(hoisted: string): boolean {
 
 const HYDRATION_SLOT = "<!--plumix-hydration-slot-->";
 
-// Template-tree metadata (`<title>` / `<meta>` / `<link>` / `<script>`)
-// rendered at the start of the JSX lands at the start of the
-// `renderToString` output. Split that prefix off so we can re-insert
-// it into the string-built `<head>` while keeping the body markup
-// downstream. The sticky regex matches only at `lastIndex`, but
-// `RegExp.exec` resets `lastIndex` to 0 on a failed match — track the
-// cursor explicitly through successful matches.
+/**
+ * `RegExp.exec` resets a sticky regex's `lastIndex` to 0 on a failed match, so
+ * the cursor is tracked explicitly.
+ */
 function splitHoistedMetadata(rendered: string): {
   hoisted: string;
   body: string;
@@ -721,9 +671,11 @@ function splitHoistedMetadata(rendered: string): {
   return { hoisted: rendered.slice(0, cursor), body: rendered.slice(cursor) };
 }
 
-// Case-insensitive: React's `renderToString` always emits lowercase tag
-// names, but the regex still needs `i` to satisfy code-scanning that
-// (correctly) treats case-sensitive HTML filters as fragile.
+/**
+ * Case-insensitive: React's `renderToString` always emits lowercase tag
+ * names, but the regex still needs `i` to satisfy code-scanning that
+ * (correctly) treats case-sensitive HTML filters as fragile.
+ */
 const HOISTED_TAG_RE =
   /<(?:title\b[^>]*>[^<]*<\/title>|script\b[^>]*>[^<]*<\/script>|(?:meta|link)\b[^>]*\/?>)/iy;
 
@@ -744,9 +696,11 @@ function groupScriptsByPosition(
   return out;
 }
 
-// `children` (string) wins over `dangerouslySetInnerHTML.__html` when both
-// are provided — JSX semantics. Both are emitted verbatim; the theme
-// author is trusted to produce valid script content.
+/**
+ * `children` (string) wins over `dangerouslySetInnerHTML.__html` when both
+ * are provided — JSX semantics. Both are emitted verbatim; the theme
+ * author is trusted to produce valid script content.
+ */
 function scriptToHtml(script: DocumentScript): string {
   const { position, children, dangerouslySetInnerHTML, ...attrs } = script;
   void position;
@@ -778,10 +732,10 @@ function renderAttrs(attrs: DocumentAttrs | undefined): string {
   return out;
 }
 
-// JSX uses camelCase attribute names that React's renderToString
-// translates on emit (`className` → `class`, `httpEquiv` → `http-equiv`,
-// etc.). Mirror the subset that matters for theme document attrs so a
-// theme written in JSX flavor produces valid HTML.
+/**
+ * Theme document attrs are string-rendered, bypassing React's camelCase-to-HTML
+ * attribute translation.
+ */
 const JSX_ATTR_MAP: Record<string, string> = {
   className: "class",
   htmlFor: "for",

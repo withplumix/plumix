@@ -6,16 +6,17 @@ import type { CloudflareCdnConfig } from "./cloudflare.js";
 import { describeCdnContract } from "../../test/conformance/cdn.js";
 import { cloudflare } from "./cloudflare.js";
 
-// The rules every provider shares — narrow-never-widen decoration, a stored
-// copy without the visitor's cookie, purge by tag — are asserted by the two
-// contract runs at the bottom. What is left here is what only this vendor
-// answers for: the exact `Cache-Control` and `Cache-Tag` it writes, and the
-// shape of its purge request.
+/**
+ * The shared provider rules are asserted by the contract runs at the bottom;
+ * here is only what this vendor answers for: its headers and purge request.
+ */
 const CREDS = { zoneId: "zone-1", purgeToken: "token-1" } as const;
 const PAGE_FRESHNESS = "public, s-maxage=60, stale-while-revalidate=600";
 const EMPTY_ENV = {} as PlumixEnv;
 
-// One shape for both fakes and for the provider's own view of `caches.default`.
+/**
+ * One shape for both fakes and for the provider's own view of `caches.default`.
+ */
 interface FakeCache {
   match(request: Request): Promise<Response | undefined>;
   put(request: Request, response: Response): Promise<void>;
@@ -270,9 +271,10 @@ describe("connected cdn purgeTags", () => {
   });
 });
 
-// The contract needs a cache that actually holds responses and a purge
-// endpoint wired back to it — purging here is a REST call to the zone, so an
-// isolated `caches.default` can never satisfy the contract on its own.
+/**
+ * Purging is a REST call to the zone, so an isolated `caches.default` can
+ * never satisfy the contract on its own.
+ */
 interface StoredEntry {
   readonly body: string;
   readonly status: number;

@@ -1,11 +1,5 @@
-// Test-only WebAuthn fixture builder. Uses node:crypto to generate a real
-// ES256 key pair, build authenticator data + clientDataJSON, sign assertions,
-// and CBOR-encode an attestation object with `fmt: "none"`. The output is
-// indistinguishable from what a real browser would POST — the same
-// finish{Registration,Authentication} verify path runs end-to-end against it.
-//
-// Not part of the public surface; tests only. node:crypto is fine here
-// (tests run on Node).
+// Generates real ES256 keys and signed WebAuthn payloads, so the production
+// verify path runs end-to-end against them.
 
 import {
   createHash,
@@ -42,10 +36,10 @@ export function generatePasskeyKeyPair(): PasskeyKeyPair {
   return keyPairFromJwk(privateKey, publicKey.export({ format: "jwk" }));
 }
 
-// Pinned P-256 key whose Y coordinate starts with 0x00 — the ~1/256
-// case where a bigint round-trip silently drops the leading byte.
-// Deterministic regression anchor for SEC1 fixed-width encoding; the
-// random generator above only hits it probabilistically.
+/**
+ * A P-256 key whose Y coordinate starts with 0x00, the ~1/256 case a bigint
+ * round-trip drops; the random generator only hits it by chance.
+ */
 const LEADING_ZERO_Y_JWK = {
   kty: "EC",
   crv: "P-256",
@@ -122,7 +116,7 @@ function u16(n: number): Uint8Array {
   return b;
 }
 
-// CBOR encoder — minimal, just what attestation needs.
+/** CBOR encoder — minimal, just what attestation needs. */
 const TYPE_UINT = 0;
 const TYPE_NEG_INT = 1;
 const TYPE_BYTES = 2;
@@ -181,7 +175,9 @@ interface BuildAuthenticatorDataInput {
   readonly rpId: string;
   readonly counter: number;
   readonly userVerified?: boolean;
-  /** Provide credentialId + COSE-encoded pubkey to set the AT (attested) flag. */
+  /**
+   * Provide credentialId + COSE-encoded pubkey to set the AT (attested) flag.
+   */
   readonly attested?: {
     readonly credentialId: Uint8Array;
     readonly cosePublicKey: Uint8Array;
@@ -323,7 +319,9 @@ export interface RegisterVerifyEnvelope {
   };
 }
 
-/** The register/verify request body a WebAuthn client would POST for `input`. */
+/**
+ * The register/verify request body a WebAuthn client would POST for `input`.
+ */
 export function buildRegisterVerifyEnvelope(
   input: BuildAttestationInput,
 ): RegisterVerifyEnvelope {

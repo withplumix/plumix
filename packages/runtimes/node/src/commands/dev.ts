@@ -14,9 +14,8 @@ type NodeDevEntry = DevEntry & Partial<Pick<NodeSite, "startCron" | "dispose">>;
 
 export const devCommand: CommandDefinition = {
   describe: "Start the dev server (vite). Accepts --port and --host.",
-  // The entry builds the app itself, inside the runner, so a config or
-  // registration failure renders the dev boot-error page in the browser
-  // instead of aborting the terminal before the server is up.
+  // A config failure then renders the dev boot-error page instead of aborting
+  // before the server is up.
   deferApp: true,
   async run(ctx) {
     const { runDevCommand } = await import("plumix/vite");
@@ -48,10 +47,8 @@ export const devCommand: CommandDefinition = {
           basePath: config.basePath,
           fetch,
         });
-        // Dev is one process, so serialising the loop is guard enough; the
-        // lease is sized in minutes and would outlive a process that restarts
-        // every few seconds, leaving cron looking dead for the session. The
-        // claim row still stops a reload replaying a minute.
+        // Dev is one process, so serialising is guard enough: the minutes-long
+        // lease would outlive a restart and make cron look dead.
         const scheduler =
           isNodeRuntime(config.runtime) && config.runtime.config.cron !== false
             ? await entry.startCron?.({ lease: false })

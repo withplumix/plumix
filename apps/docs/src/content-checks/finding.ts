@@ -1,8 +1,4 @@
-/**
- * One content problem in one file. Checks return findings rather than
- * asserting, so a single run reports every offending file at once and fixing
- * content is one pass rather than a queue.
- */
+/** Returned rather than asserted, so one run reports every offending file. */
 export interface Finding {
   /** Path of the offending file, relative to the content root. */
   readonly file: string;

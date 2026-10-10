@@ -29,15 +29,15 @@ const rpc = createPluginRpcClient<SubmissionsRouter>("forms");
 type FormsInputs = PluginRpcInputs<SubmissionsRouter>;
 type FormsOutputs = PluginRpcOutputs<SubmissionsRouter>;
 
-// The shapes the handlers return, read from where they are declared
-// rather than declared a second time here — a second copy is a copy that
-// can drift. `types.ts` carries no server imports, so nothing follows it
-// into the browser bundle.
+// `types.ts` carries no server imports, so nothing follows it into the
+// browser bundle.
 export type { SubmissionFilter };
 
 const SUBMISSIONS_KEY = ["forms", "submissions"] as const;
-// Outside the submissions key: the registry is code, and no write to a
-// submission can change what forms exist.
+/**
+ * Outside the submissions key: the registry is code, and no write to a
+ * submission can change what forms exist.
+ */
 const DEFINITIONS_KEY = ["forms", "definitions"] as const;
 
 /** Where the export links point, under whatever the inbox is showing. */
@@ -89,9 +89,8 @@ export function useSubmissions(
 }
 
 /**
- * One submission, read on its own rather than picked out of the list:
- * the panel stays right after a status change drops the row out of the
- * filter it was opened from.
+ * Read on its own, not from the list, so the panel survives a status
+ * change dropping the row out of the filter.
  */
 export function useSubmission(
   id: number | null,

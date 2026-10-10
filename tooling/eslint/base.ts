@@ -2,6 +2,7 @@ import * as path from "node:path";
 import { includeIgnoreFile } from "@eslint/compat";
 import eslint from "@eslint/js";
 import importXPlugin from "eslint-plugin-import-x";
+import sonarjsPlugin from "eslint-plugin-sonarjs";
 import turboPlugin from "eslint-plugin-turbo";
 import { defineConfig } from "eslint/config";
 import tseslint from "typescript-eslint";
@@ -138,6 +139,16 @@ export const baseConfig = defineConfig(
         NO_THROW_NEW_ERROR_SELECTOR,
         NO_INTERNAL_MODULE_AUGMENTATION_SELECTOR,
       ],
+    },
+  },
+  {
+    files: ["**/*.ts", "**/*.tsx"],
+    plugins: { sonarjs: sonarjsPlugin },
+    rules: {
+      "plumix/max-comment-length": "error",
+      "plumix/no-jsdoc-in-function-body": "error",
+      "plumix/prefer-jsdoc": "error",
+      "sonarjs/no-commented-code": "error",
     },
   },
   // Earned-types rules (issue #1807). Registered as distinct rules rather

@@ -2,46 +2,26 @@ import type { Capability } from "../access/contract/capability.js";
 import type { AppContext } from "../context/app-context.js";
 import type { ResolvedImage } from "../images/contract/role-images.js";
 
-// Reference fields (entry / term / user / media) share three
-// operations per target kind: write-time existence check, read-time
-// orphan handling, admin picker search/list. `LookupAdapter` is the
-// seam where each kind plugs them in once; core ships adapters for
-// `entry` / `term` / `user`, plugins register their own via
-// `PluginContext.registerLookupAdapter`.
-
 export interface LookupResult {
   readonly id: string;
   /**
-   * `null` signals the underlying row had no human-authored label and
-   * the consumer should render its own localized fallback (e.g. the
-   * admin picker renders an "Untitled" descriptor). Adapters that
-   * can guarantee a non-empty string (term name, user email) keep
-   * returning strings — only the entry adapter currently emits `null`.
+   * `null` when the row has no human-authored label; the consumer renders its
+   * own localized fallback.
    */
   readonly label: string | null;
   /**
-   * Adapter-specific sub-kind for the row — entry type name (`"post"`,
-   * `"page"`) for the entry adapter, taxonomy name (`"category"`) for
-   * the term adapter. Lets the admin picker resolve per-type chrome
-   * via the WP-style `labels[key]` cascade (e.g. `labels.untitledItem`
-   * when `label === null`) without parsing the subtitle string.
-   * Omitted for adapters whose universe is single-typed (`user`).
+   * Sub-kind of the row (entry type, taxonomy), so the picker resolves per-type
+   * labels without parsing `subtitle`. Omitted by single-typed adapters.
    */
   readonly targetType?: string;
   readonly subtitle?: string;
-  /**
-   * Public URL for the row, when it has one — entry permalink, term
-   * archive. Read-time consumers (menu resolution) render links from
-   * it; adapters whose rows have no public URL omit it.
-   */
+  /** Public URL for the row; omitted when the row has none. */
   readonly href?: string;
 }
 
 /**
- * Minimum shape of a batched-hydration payload. `id` is the stored
- * reference id (string form) so a hydrated value posted back through
- * a meta write self-heals to the plain id — the same `{ id, ... }`
- * extraction that migrates legacy snapshot values.
+ * `id` is the stored reference id, so a hydrated value posted back through a
+ * meta write reduces to the plain id.
  */
 export interface HydratedReference {
   readonly id: string;
@@ -53,11 +33,8 @@ export interface LookupHydrateOptions<TScope = unknown> {
 }
 
 /**
- * Read-shape registry for reference kinds, keyed by adapter `kind`.
- * Core declares its own kinds; plugins augment via declaration
- * merging (`declare module "plumix"`), so the typed-meta layer
- * can resolve a reference field's hydrated value without core knowing
- * plugin-provided kinds.
+ * Hydrated shape per reference kind, keyed by adapter `kind`. Plugins add their
+ * kinds by declaration merging.
  *
  * ```ts
  * declare module "plumix" {
@@ -104,31 +81,15 @@ export interface LookupListOptions<TScope = unknown> {
   readonly scope?: TScope;
   readonly limit?: number;
   /**
-   * Resolve-by-id batch: when set, the adapter ignores `query` and
-   * returns rows whose id matches any in this list (still subject to
-   * `scope`). Result order is up to the adapter — callers expecting
-   * positional access should map to a `{ id -> result }` Map. Used
-   * by the multi-reference orphan filter and the admin's
-   * `MultiReferencePicker` so a 50-item field renders as one query
-   * (single `WHERE id IN (...)`) rather than 50.
+   * When set, the adapter ignores `query` and returns the matching rows (still
+   * scoped) in any order.
    */
   readonly ids?: readonly string[];
 }
 
 /**
- * `TScope` is the shape carried on the field's `referenceTarget.scope`
- * — e.g. `{ roles: UserRole[] }` for `user`. Adapters interpret it
- * however makes sense for their target.
- *
- * One round-trip per call regardless of selection size:
- *  - `list` covers search/browse (no `ids`, optional `query`) and
- *    resolve-by-id batch (`ids` set, `query` ignored). The meta
- *    pipeline (`validateMetaReferences` + `resolveMetaBags`)
- *    groups all reference fields by `(kind, scope)` and issues one
- *    `list({ ids })` per group, eliminating per-field N+1 on both
- *    reads and writes. Both admin pickers batch the same way for
- *    label rendering — the single-reference picker resolves its one
- *    selected id through `list({ ids: [value] })`.
+ * `TScope` is the field's `referenceTarget.scope`. Each method must answer in
+ * one round-trip regardless of selection size.
  */
 export interface LookupAdapter<TScope = unknown> {
   list(
@@ -137,12 +98,8 @@ export interface LookupAdapter<TScope = unknown> {
   ): Promise<readonly LookupResult[]>;
 
   /**
-   * Batched read-time hydration: resolve `ids` (subject to `scope`)
-   * into this kind's hydrated shape (`ReferenceHydrationShapes[kind]`)
-   * in one query. Ids that are gone or out of scope are simply absent
-   * from the result — the meta pipeline reads absence as an orphan.
-   * Optional: kinds without it read as plain ids (orphan-stripped via
-   * `list({ ids })`, the pre-hydration behavior).
+   * Ids that are gone or out of scope must be absent from the result; absence
+   * reads as an orphan. Kinds without it read as plain ids.
    */
   hydrate?(
     ctx: AppContext,
@@ -150,49 +107,30 @@ export interface LookupAdapter<TScope = unknown> {
   ): Promise<readonly HydratedReference[]>;
 
   /**
-   * Cache tags a referenced id contributes to whatever read it, so editing
-   * or deleting the referenced entity reaches everything that hydrated it.
-   * Feeds two readers: the tags fold into the embedding page's stored cache
-   * tags, so the entity's purge purges the page (#1508), and they tag the
-   * id's request-memo entry, so the entity's write in the same request drops
-   * it (#2517). Return the same tag the entity's own purge enqueues — the
-   * entry adapter returns `e:<id>`, the precise per-entity tag. Handed the
-   * id rather than a payload: a purge tag is identity, and an id that
-   * hydrated to nothing has no payload but still needs its tag, so it
-   * re-queries once the entity becomes visible. Kinds whose entities carry
-   * no per-entity purge identity (e.g. `user`) omit this method; their
-   * references embed without a cache-tag dependency. Optional.
+   * Must return the same tag the entity's own purge enqueues. Takes the id, not
+   * a payload: an id that hydrated to nothing still needs its tag.
    */
   embeddedCacheTags?(id: string): readonly string[];
 
   /**
-   * The image a hydrated payload of this kind stands for. The adapter that
-   * produced the payload reads it, so a third-party adapter need not mimic
-   * another kind's field names. `null` when the payload is not a usable image
-   * (no URL, a non-image mime). Kinds without it yield no images. Only ever
-   * handed a payload this adapter's own `hydrate` returned, so an adapter may
-   * narrow the parameter to its hydrated shape.
+   * Only ever handed a payload this adapter's own `hydrate` returned, so it may
+   * narrow the parameter. `null` when the payload is not a usable image.
    */
   image?(payload: HydratedReference): ResolvedImage | null;
 }
 
-// `RegisteredLookupAdapter` extends `LookupAdapterOptions` so plugin-
-// contributed fields (declaration-merged via TypeScript module
-// augmentation) survive into the manifest. The `registerLookupAdapter`
-// implementation spreads `options` to preserve them.
+/**
+ * Extends `LookupAdapterOptions` so plugin fields added by declaration merging
+ * survive into the manifest.
+ */
 export interface RegisteredLookupAdapter<
   TScope = unknown,
 > extends LookupAdapterOptions<TScope> {
   readonly kind: string;
   readonly adapter: LookupAdapter<TScope>;
   /**
-   * Capability the lookup RPC requires for `list` calls targeting
-   * this kind. Without it, any authenticated user could
-   * enumerate the adapter's universe — a real concern for `user` /
-   * `entry` whose rows leak email/name/title to lower-privilege
-   * roles. Server-side write validation (the meta pipeline calling
-   * `exists`) already runs after the entity-level write capability
-   * check, so this gate covers only the picker-facing surface.
+   * Gates only the picker-facing lookup RPC; without it any signed-in user
+   * could enumerate the adapter's rows. `null` makes the lookup public.
    */
   readonly capability: Capability | null;
   readonly registeredBy: string | null;
@@ -201,6 +139,6 @@ export interface RegisteredLookupAdapter<
 export interface LookupAdapterOptions<TScope = unknown> {
   readonly kind: string;
   readonly adapter: LookupAdapter<TScope>;
-  /** See `RegisteredLookupAdapter.capability`. `null` opts out (public lookup). */
+  /** `null` makes the lookup public. */
   readonly capability?: Capability | null;
 }

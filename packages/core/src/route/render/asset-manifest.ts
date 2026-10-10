@@ -1,12 +1,6 @@
 import { withBasePath } from "../../base-path.js";
 
-/**
- * The Vite-emitted manifest shape (subset). Vite writes this to
- * `<outDir>/.vite/manifest.json` when `build.manifest: true`; plumix's
- * Vite plugin reads it and exposes the parsed object via the
- * `virtual:plumix/asset-manifest` module that the generated worker
- * imports.
- */
+/** Subset of Vite's `.vite/manifest.json` entry. */
 interface AssetManifestEntry {
   readonly file: string;
   readonly isEntry?: boolean;
@@ -19,24 +13,16 @@ interface AssetManifestEntry {
 
 export type AssetManifest = Readonly<Record<string, AssetManifestEntry>>;
 
-// The Vite lifecycle command the SSR render path branches on: `serve` (dev)
-// vs `build` (production).
+/**
+ * The Vite lifecycle command the SSR render path branches on: `serve` (dev)
+ * vs `build` (production).
+ */
 export type ViteCommand = "serve" | "build";
 
-// Walks the import graph starting from every `isEntry: true` chunk and
-// collects CSS from every reachable chunk (including code-split nodes
-// under `imports[]` / `dynamicImports[]`). Dedupes across entries that
-// share a bundle. Cycle-safe via the visited set.
-//
-// Output order is DFS-from-entries — deterministic for a given manifest
-// (V8 preserves Object.entries insertion order) but not author-
-// controllable. Themes that need a specific cascade should declare
-// CSS via `document.link[]` (emits before bundled CSS) and rely on
-// CSS specificity for the rest.
-//
-// No-op in serve: a manifest left on disk by a prior `plumix build`
-// points at hashed URLs the dev server doesn't serve, so every link
-// would 404. Dev styling arrives via `devThemeStylesTag`.
+/**
+ * No-op in serve: a stale build manifest points at hashed URLs. Order isn't
+ * author-controllable; themes needing a cascade use `document.link[]`.
+ */
 export function bundledCssTags(
   manifest: AssetManifest,
   command: ViteCommand,
@@ -57,9 +43,10 @@ export function bundledCssTags(
     .join("");
 }
 
-// CSS counterpart to `injectIslandsBootstrap`: dev has no asset manifest, so
-// load the client entry (which side-effect-imports the theme `css`) and let
-// Vite inject the stylesheets. No-op in build, where `bundledCssTags` links.
+/**
+ * Dev has no asset manifest, so the client entry side-effect-imports the theme
+ * `css` and Vite injects it.
+ */
 const DEV_CLIENT_ENTRY_PATH = "/.plumix/client-entry.ts";
 
 export function devThemeStylesTag(command: ViteCommand, basePath = ""): string {
@@ -68,13 +55,11 @@ export function devThemeStylesTag(command: ViteCommand, basePath = ""): string {
   return `<script type="module" src="${src}"></script>`;
 }
 
-// #1701: the client-entry `<script>` above injects the theme CSS as `<style>`
-// tags *after* it executes, so dev's first paint is unstyled (FOUC). A
-// render-blocking `<link>` to the Vite-served source path paints the first
-// frame styled — the dev mirror of `bundledCssTags`. The `<script>` stays: it
-// still owns CSS HMR (its injected `<style>` lands after this link and wins
-// the cascade on edit) and loads any specifiers a browser `<link>` can't.
-// No-op in build.
+/**
+ * The client entry injects `<style>` only after it runs, so a render-blocking
+ * link avoids a dev FOUC. The script still owns CSS HMR: its `<style>` lands
+ * later and wins.
+ */
 export function devThemeCssLinks(
   themeCss: readonly string[],
   command: ViteCommand,
@@ -92,12 +77,10 @@ export function devThemeCssLinks(
     .join("");
 }
 
-// Normalize an author's `css: []` entry to the root-absolute URL Vite's dev
-// server serves it under, or `null` when a browser `<link>` can't resolve it.
-// Mirrors the plumix Vite plugin's `toClientEntryImport`: `./x` and bare `x`
-// are project-root-relative; a leading `/` is already root-absolute. Aliased
-// (`~`, `@`) and parent-escape (`../`) specifiers are module-resolver concerns
-// with no stable dev URL, so they get no link.
+/**
+ * Must agree with the Vite plugin's `toClientEntryImport`. Aliased and `../`
+ * specifiers have no stable dev URL.
+ */
 function toDevCssHref(path: string): string | null {
   if (path.startsWith("~") || path.startsWith("@") || path.startsWith("../")) {
     return null;
@@ -107,9 +90,10 @@ function toDevCssHref(path: string): string | null {
   return "/" + path;
 }
 
-// In build, resolve the hashed asset path from Vite's manifest; in dev (or
-// the cold-build edge where the entry isn't in the manifest yet) fall back
-// to the source path Vite's dev server serves directly.
+/**
+ * Falls back to the dev source path on a cold build where the entry isn't in
+ * the manifest yet.
+ */
 export function resolveEntryUrl(
   manifest: AssetManifest,
   command: ViteCommand,

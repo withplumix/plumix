@@ -7,10 +7,8 @@ import type {
 } from "./types.js";
 
 /**
- * What a checkbox answer is called, in whichever language the reader is
- * being written for — English for the notification email a handler
- * sends, the administrator's own locale in the inbox. The traversal
- * takes them rather than choosing, because it serves both.
+ * Passed in because readers differ: English for notification emails,
+ * the admin's locale in the inbox.
  */
 export interface AnswerWords {
   readonly yes: string;
@@ -18,9 +16,8 @@ export interface AnswerWords {
 }
 
 /**
- * One answer, named by the field that asked for it. A composite — a
- * group, a repeater, one of its rows — carries no text of its own: the
- * lines under it, at a greater `depth`, are its answers.
+ * A composite carries no text of its own; the lines under it, at a
+ * greater `depth`, are its answers.
  */
 export interface AnswerLine {
   /** Where the answer sits: `referees.0.name`. Unique in one submission. */
@@ -33,12 +30,10 @@ export interface AnswerLine {
   readonly row?: number;
 }
 
-// Local guards rather than core's, for two reasons. This module is what
-// the admin chunk reads a stored submission through, and a runtime import
-// from `plumix` would pull the engine into the browser bundle. And a bare
-// `Array.isArray` on a `JsonValue` narrows the true branch to `any[]`,
-// throwing away every constraint the compiler could have checked — naming
-// the predicate is what keeps the narrowing honest.
+/**
+ * Local guards: importing core's would pull the engine into the admin
+ * bundle, and a bare `Array.isArray` narrows a `JsonValue` to `any[]`.
+ */
 function isRecord(
   value: JsonValue,
 ): value is Readonly<Record<string, JsonValue>> {
@@ -57,9 +52,7 @@ function scalarText(
   if (typeof value === "boolean") return value ? words.yes : words.no;
   if (typeof value === "string") return field?.options?.[value] ?? value;
   if (typeof value === "number") return String(value);
-  // Composite values are rendered by the caller; this is the floor under
-  // a shape no field produces, and JSON is the one reading of it that
-  // cannot lose what was stored.
+  // A shape no field produces; JSON is the reading that loses nothing.
   return JSON.stringify(value);
 }
 
@@ -94,11 +87,8 @@ export function answerText(
 }
 
 /**
- * A submission read through its own label snapshot, flat enough to
- * render as text or as DOM and nested enough to say what belongs to
- * what. The snapshot's order leads — it is the form's own field order —
- * and anything the answers carry that it does not name follows under its
- * raw key rather than vanishing.
+ * In the snapshot's field order; answers it doesn't name follow under
+ * their raw key rather than vanishing.
  */
 export function answerLines(
   answers: FormAnswers,

@@ -20,8 +20,10 @@ const PACKAGE_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const OWN_MODULES = join(PACKAGE_ROOT, "node_modules");
 const PLUMIX_BIN = join(OWN_MODULES, ".bin/plumix");
 
-// `NODE_PATH` is `pnpm exec`'s hoisted store, through which the fixture would
-// resolve packages it never installed; an app root has no such path.
+/**
+ * `NODE_PATH` is `pnpm exec`'s hoisted store, through which the fixture would
+ * resolve packages it never installed; an app root has no such path.
+ */
 const CLI_ENV: NodeJS.ProcessEnv = {
   ...process.env,
   NODE_OPTIONS: undefined,
@@ -119,8 +121,10 @@ function startDev(
   );
 }
 
-// Vite binds `localhost` to whichever address the child's resolver lists
-// first, which need not be the one this process's `fetch` dials.
+/**
+ * Vite binds `localhost` to whichever address the child's resolver lists
+ * first, which need not be the one this process's `fetch` dials.
+ */
 async function fetchLocal(origin: string, path: string): Promise<string> {
   const { port } = new URL(origin);
   let refused: unknown;

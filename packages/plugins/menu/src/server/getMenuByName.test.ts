@@ -61,9 +61,10 @@ interface SeedItemInput {
   readonly status?: "draft" | "published" | "scheduled" | "trash";
 }
 
-// A registry that registers `menu` taxonomy plus a public `post` entry type
-// and `category` term taxonomy — the latter two so the entry/term lookup
-// adapters report results within scope. Built once per test for isolation.
+/**
+ * The public `post` type and `category` taxonomy keep the entry and term
+ * lookup adapters' results within scope.
+ */
 const menuTestHost = definePlugin("menu-test-host", (ctx) => {
   ctx.registerEntryType("menu_item", {
     label: "Menu items",
@@ -612,9 +613,8 @@ describe("getMenuByName", () => {
               isPublic: false,
               entryTypes: ["menu_item"],
             });
-            // An eligible type of each kind keeps the render on the adapter
-            // path, so a hidden type is excluded by the lookup scope rather
-            // than by an empty eligible list short-circuiting the lookup.
+            // Keeps the render on the adapter path, so a hidden type is
+            // excluded by the lookup scope, not an empty eligible list.
             setup.registerEntryType("post", { label: "Posts", isPublic: true });
             setup.registerTermTaxonomy("category", {
               label: "Categories",
@@ -941,10 +941,8 @@ describe("getMenuByName", () => {
     const select = vi.spyOn(ctx.db, "select");
     const menu = await getMenuByName(ctx, "lean");
     expect(menu?.items.map((i) => i.label)).toEqual(["Solo"]);
-    // terms + menu items + one adapter batch read, then the admitted rows
-    // and their authors and terms for the resolved titles. The published
-    // constraint rides the adapter's own WHERE via scope.status, not a
-    // separate pre-filter query over the same ids.
+    // The published constraint rides the adapter's WHERE via scope.status,
+    // not a separate pre-filter query.
     expect(select.mock.calls.length).toBe(6);
     select.mockRestore();
   });

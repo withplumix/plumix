@@ -1,18 +1,17 @@
-// The visual-editor edit gate: the security truth table deciding whether a
-// request renders live/preview/edit and whether to ship the editor runtime.
-// Kept separate from the `ctx` wiring in resolve.ts so it stays auditable.
+// The visual-editor edit gate, kept apart from the `ctx` wiring in resolve.ts
+// so its security truth table stays auditable.
 
-/** Render mode, shared vocabulary with the runtime's `useIsEditing`/`useIsPreview`. */
+/** Shared vocabulary with the runtime's `useIsEditing`/`useIsPreview`. */
 type EditRenderMode = "live" | "preview" | "edit";
 
 export interface EditModeDecision {
   readonly mode: EditRenderMode;
   /** Ship + boot the editor runtime into the SSR output. */
   readonly injectRuntime: boolean;
-  // The response must never be edge-cached. Today the cache layer already
-  // excludes these requests (a session cookie / `?preview` marks them
-  // privileged); this records the gate's intent as the eventual single
-  // source of truth.
+  /**
+   * Never edge-cache. The cache layer already excludes these requests via
+   * session cookie or `?preview`; this states the gate's intent.
+   */
   readonly bypassCache: boolean;
 }
 

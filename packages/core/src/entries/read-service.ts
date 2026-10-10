@@ -26,11 +26,7 @@ import {
 const PUBLIC_STATUS: EntryStatus = "published";
 const TRASH_STATUS: EntryStatus = "trash";
 
-/**
- * The `type` of an entry by id, `null` when the entry doesn't exist.
- * Request-memoized (#1493): unrelated consumers gating on the resolved
- * entry's type in one render share a single query through this read.
- */
+/** Request-memoized, so consumers gating on one entry's type share a query. */
 export async function readEntryType(
   ctx: AppContext,
   id: number,
@@ -76,13 +72,9 @@ type EntryRead = WithResolvedMeta<Entry> & {
 };
 
 /**
- * List entries of a type, clamped to what the caller may see. Capability checks
- * and status clamping live here so every transport (oRPC, MCP) reads through
- * the same policy. Throws {@link EntryReadError} for reserved types and missing
- * read capability. Who may see which rows is `readableEntryRows`; the status
- * filter sits on top, so a contributor asking for drafts gets their own. A
- * caller who can see nothing unpublished asking for anything but `published`
- * gets an empty list rather than an error (matches WP's silent admin filter).
+ * Throws {@link EntryReadError} for reserved types and missing read
+ * capability. A caller who can see nothing unpublished asking for drafts gets
+ * an empty list, as WP does.
  */
 export async function listEntries(
   ctx: AppContext,
@@ -93,11 +85,7 @@ export async function listEntries(
   return rows.map((row, i) => ({ ...row, meta: bags[i] ?? {} }));
 }
 
-/**
- * The stored rows behind {@link listEntries}, after the same visibility checks
- * and before anything is resolved — for a caller that resolves them another
- * way, as the REST API does through `resolveEntryList`.
- */
+/** For a caller resolving rows another way, as the REST API does. */
 export async function listEntryRows(
   ctx: AppContext,
   input: ListEntriesInput,
@@ -165,11 +153,8 @@ export async function listEntryRows(
 }
 
 /**
- * Read a single entry by id, resolved with meta + terms. Every condition that
- * would reveal an entry the caller can't see — missing, reserved-type, no read
- * capability, or an unpublished status they can't view — collapses to
- * `not_found` so existence stays hidden. Preview/autosave overlay is an editor
- * concern and lives in the oRPC adapter, not here.
+ * Every condition that would reveal an entry the caller can't see collapses to
+ * `not_found`. Preview/autosave overlay lives in the oRPC adapter.
  */
 export async function getEntry(
   ctx: AppContext,
@@ -180,9 +165,8 @@ export async function getEntry(
 }
 
 /**
- * The stored row behind {@link getEntry}, after the same visibility checks and
- * before anything is resolved — for a caller that has something to do with the
- * stored meta first, as the editor's read does when it settles it.
+ * For a caller with something to do with the stored meta first, such as
+ * settling it.
  */
 export async function findReadableEntry(
   ctx: AppContext,
@@ -205,7 +189,9 @@ export async function resolveEntryRead(
   return { ...row, meta, terms: entryTerms };
 }
 
-// Kept here, not in schemas.ts, so schemas.ts stays free of drizzle imports.
+/**
+ * Kept here, not in schemas.ts, so schemas.ts stays free of drizzle imports.
+ */
 const ORDER_COLUMNS: Record<ListEntriesInput["orderBy"], AnySQLiteColumn> = {
   updated_at: entries.updatedAt,
   published_at: entries.publishedAt,
@@ -217,14 +203,8 @@ type StatusInput =
   EntryStatus | readonly (EntryStatus | undefined)[] | undefined;
 
 /**
- * The caller's `status` input as a WHERE clause. Who may see which of those
- * rows is `readableEntryRows`' business, `AND`ed alongside.
- *
- * - `undefined` → exclude trash (WP "All" tab).
- * - Explicit list/string → match as given.
- * - Cannot see anything unpublished and asked for anything else → "forbidden"
- *   so the caller yields an empty result (not a 403 — WP's admin also silently
- *   filters).
+ * `undefined` excludes trash. "forbidden" yields an empty result rather than a
+ * 403, as WP's admin silently filters.
  */
 function resolveStatusClause(
   input: StatusInput,
@@ -243,7 +223,7 @@ function resolveStatusClause(
   return inArray(entries.status, normalized);
 }
 
-// Collapse the valibot-widened input into a non-empty list or `undefined`.
+/** Collapse the valibot-widened input into a non-empty list or `undefined`. */
 function normalizeStatusInput(
   input: StatusInput,
 ): readonly EntryStatus[] | undefined {

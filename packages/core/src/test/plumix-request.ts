@@ -1,8 +1,6 @@
 /**
- * The loopback origin a dev-only surface has to be reached over to be served
- * (#2007). Tests that exercise the debug bar, its request history, the dev
- * error page or an `auth: "development"` route dispatch against this; anything
- * still on `https://cms.example` is asserting the off-loopback side of the gate.
+ * The loopback origin dev-only surfaces must be reached over;
+ * `https://cms.example` tests assert the off-loopback side of the gate.
  */
 export const DEV_ORIGIN = "http://localhost:5173";
 

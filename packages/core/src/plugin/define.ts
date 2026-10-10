@@ -30,12 +30,8 @@ export interface PluginI18nSlot {
    *  site's enabled locales before any URL is generated — declaring
    *  more locales than the site enables doesn't expand the dropdown. */
   readonly locales: readonly string[];
-  /** Directory containing the compiled `<locale>.mjs` catalogs,
-   *  relative to the plugin's package root. Admin (via slice 17
-   *  #697) resolves and lazy-loads catalogs from here. Workspace
-   *  plugins' catalogs are baked into the admin bundle via
-   *  `import.meta.glob`; third-party plugins are reached via the
-   *  manifest's `pluginI18n[id].catalogs[locale]` URL. */
+  /** Directory of the compiled `<locale>.mjs` catalogs, relative to the
+   *  plugin's package root. */
   readonly catalogPath: string;
 }
 
@@ -45,23 +41,18 @@ export interface PluginDescriptor<TConfig = undefined> {
   readonly provides?: PluginProvides;
   readonly setup: PluginSetup<TConfig>;
   /**
-   * Runs once every plugin's `setup` has, in array order, with `ctx.plugins`
-   * holding everything they registered. For registrations derived from what
-   * other plugins registered — a route per entry type, a box on every public
-   * taxonomy.
+   * Runs after every plugin's `setup`, in array order, for registrations
+   * derived from what other plugins registered.
    */
   readonly afterSetup?: PluginAfterSetup;
   /**
-   * Shortcodes the plugin declares statically, merged into the app's shortcode
-   * registry like `ctx.registerShortcode` calls. Declared here rather than
-   * registered, the build can recover them from source and ship them to the
-   * editor canvas, so a body expands there as it does on the page.
+   * Declared rather than registered so the build can ship them to the editor
+   * canvas, where a body expands as it does on the page.
    */
   readonly shortcodes?: readonly ShortcodeSpec[];
   /**
-   * The mails the plugin sends, each made with `defineMail`. Declared here
-   * rather than registered, so they are known at boot: a name another owner
-   * declared fails it, and a site or theme override is checked against them.
+   * Declared rather than registered so they are known at boot: a duplicate name
+   * fails it, and overrides are checked against them.
    */
   readonly mails?: readonly AnyMailDefinition[];
   readonly schema?: SchemaModule;
@@ -71,12 +62,9 @@ export interface PluginDescriptor<TConfig = undefined> {
    *  strings (no translation lookup, no catalog discovery). */
   readonly i18n?: PluginI18nSlot;
   /**
-   * Path to the plugin's admin entry — a TypeScript/TSX module that
-   * imports React from the bare specifier and registers components via
-   * `window.plumix.registerPluginPage(...)`. Resolved relative to the
-   * consumer site's root. The plumix vite plugin assembles every
-   * declared `adminEntry` into a single per-site bundle with `react`,
-   * `react-dom`, `@tanstack/*` aliased to host-shared shims.
+   * Resolved relative to the site root. Import React from the bare specifier:
+   * the bundle aliases `react`, `react-dom` and `@tanstack/*` to host-shared
+   * shims.
    */
   readonly adminEntry?: string;
   /** Pre-built admin chunk path. Legacy alternative to `adminEntry` —
@@ -107,28 +95,24 @@ export interface DefinePluginInput<TConfig> extends DefinePluginOptions {
   readonly mails?: readonly AnyMailDefinition[];
 }
 
-/** The standard on-disk location of a plugin's compiled admin bundle, given
- *  its installed package name — the shape every workspace plugin's
- *  `adminEntry` follows. Takes the package name rather than the plugin id:
- *  the two can diverge (`audit_log`'s package is `@plumix/plugin-audit-log`),
- *  and it's the package manager that puts the file here, not the id. #2312 */
+/** Takes the package name, not the plugin id: the two can diverge
+ *  (`audit_log`'s package is `@plumix/plugin-audit-log`). */
 export function pluginAdminEntryPath(packageName: string): string {
   return `node_modules/${packageName}/dist/admin/index.js`;
 }
 
-/** The catalog roster every first-party plugin ships today. A per-plugin
- *  declaration of *shipped* catalogs, not a re-export of the site's enabled
- *  locales (`PluginI18nSlot.locales` is intersected with those at render
- *  time) — so this stays a plain shared value a plugin opts into, never
- *  something derived from site config. #2312 */
+/** The catalogs first-party plugins ship, not the site's enabled locales;
+ *  those are intersected at render time. */
 export const PLUGIN_I18N_SLOT: PluginI18nSlot = {
   sourceLocale: "en",
   locales: ["en", "uk", "ar", "de", "zh-CN"],
   catalogPath: "./locales",
 };
 
-// URL- and SQL-identifier-safe — plugin ids become path segments,
-// RPC namespace keys, and nav-group ids without quoting.
+/**
+ * URL- and SQL-identifier-safe — plugin ids become path segments,
+ * RPC namespace keys, and nav-group ids without quoting.
+ */
 export const PLUGIN_ID_RE = /^[a-z][a-z0-9_-]*$/;
 export const MAX_PLUGIN_ID_LENGTH = 64;
 
@@ -199,8 +183,10 @@ export function definePlugin<TConfig = undefined>(
   };
 }
 
-// Per-id dedup so a plugin defined twice (re-imports, HMR, repeat
-// build entries) only emits the warning once.
+/**
+ * Per-id dedup so a plugin defined twice (re-imports, HMR, repeat
+ * build entries) only emits the warning once.
+ */
 const warnedIds = new Set<string>();
 
 function warnIfSchemaWithoutSchemaModule(

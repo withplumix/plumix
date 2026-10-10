@@ -17,16 +17,10 @@ import { useEditorConfig } from "./editor-config-context.js";
 import { useEditorStore } from "./provider.js";
 
 interface StarterModalProps {
-  /** Pre-filtered starter patterns (see `selectStarterPatterns`). */
   readonly candidates: readonly InserterPattern[];
 }
 
-/**
- * The blank-entry onboarding modal: a grid of starter patterns plus a
- * start-from-blank escape. Open state lives in the editor store so the toolbar
- * can re-summon it; choosing a card seeds the canvas with the pattern's blocks
- * (fresh ids, one undoable step) and closes.
- */
+/** Expects patterns already filtered by `selectStarterPatterns`. */
 export function StarterModal({
   candidates,
 }: StarterModalProps): ReactElement | null {
@@ -98,9 +92,7 @@ export function StarterModal({
   );
 }
 
-/** A pattern's declared `preview` image, or a neutral placeholder when it has
- *  none — the picker stays a lightweight labelled grid rather than
- *  live-rendering each pattern. */
+/** A placeholder, not a live render, when the pattern declares no `preview`. */
 function StarterThumbnail({
   pattern,
 }: {

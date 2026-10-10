@@ -30,20 +30,13 @@ export interface SearchResult {
   readonly title: string;
   readonly url: string;
   /**
-   * Escaped, with `<mark>` around what matched — safe as element content, the
-   * context a snippet is rendered in. Not safe in an attribute: quotes pass
-   * through, the same caveat core's own `escapeHtml` carries.
-   *
-   * Two dozen tokens of the text around the match, except on a page answered
-   * without an index: that one carries the entry's whole excerpt, unmarked and
-   * uncapped, because `LIKE` reports that a row matched and not where.
+   * Escaped HTML with `<mark>` highlights, safe as element content but not in
+   * an attribute. Without an index it is the whole excerpt, unmarked.
    */
   readonly snippet: string;
   /**
-   * bm25, ascending: a smaller number is a better match. Null when the page
-   * was ordered by recency, because a word in nearly every document has no
-   * meaningful bm25 to report — and null on a page answered without an index,
-   * which has no relevance to report at all.
+   * bm25, smaller is better. `null` when the page was ordered by recency or
+   * answered without an index.
    */
   readonly score: number | null;
 }
@@ -66,8 +59,9 @@ export interface SearchOptions {
   readonly commonTermThreshold?: number;
 }
 
-// Core's own archive page size, which this page replaces. Matching it keeps a
-// visitor's page boundaries the same whichever route answered.
+/**
+ * Core's archive page size, so page boundaries match whichever route answered.
+ */
 const DEFAULT_PER_PAGE = 20;
 
 const EMPTY: SearchResults = {
@@ -77,26 +71,16 @@ const EMPTY: SearchResults = {
 };
 
 /**
- * A page number the database can be asked for. `:page` is a `\d+` capture, so
- * the shape is guaranteed and the magnitude is not: SQLite rejects an `OFFSET`
- * past its integer range outright, which would be a 500 on a URL any crawler
- * can mint.
+ * SQLite rejects an `OFFSET` past its integer range, which would be a 500 on
+ * a URL any crawler can mint.
  */
 function isAskablePage(page: number): boolean {
   return Number.isSafeInteger(page) && page >= 1;
 }
 
 /**
- * Answer a visitor's search, ranked, clamped to what an anonymous reader may
- * see, and one page at a time.
- *
- * The clamp is a join back to `entries` rather than a column on the
- * projection: an entry's status changes far more often than its text, and
- * copying it into the projection would mean re-tokenizing a document every
- * time something was published or trashed.
- *
- * One row over the page is read so the caller learns whether another page
- * exists without a second `COUNT(*)` over a match set FTS5 has already scored.
+ * Clamped to what an anonymous reader may see by joining `entries`, since
+ * copying status into the projection would re-tokenize on every publish.
  */
 export async function runSearch(
   ctx: AppContext,
@@ -108,10 +92,8 @@ export async function runSearch(
   const perPage = options.perPage ?? DEFAULT_PER_PAGE;
   const { page } = options;
   if (!isAskablePage(page)) return { ...EMPTY, outOfRange: page !== 1 };
-  // The write side already keeps an unsearchable type out of the projection,
-  // but only as of its last write: opting an existing type out would otherwise
-  // leave every entry already indexed live in results until something touched
-  // each one. Clamping here makes the exclusion take effect at once.
+  // The write side only excludes as of each entry's last write; clamping here
+  // makes opting a type out take effect at once.
   const types = searchableEntryTypes(ctx.plugins);
   const taxonomies = searchableTaxonomies(ctx.plugins);
   if (types.length === 0 && taxonomies.length === 0) return EMPTY;
@@ -150,28 +132,15 @@ interface ReadArgs {
   readonly offset: number;
 }
 
-/** What the stage around the readers needs on top of what they read with. */
 interface PageArgs extends ReadArgs {
-  /** What the visitor typed, for the reader that has no index to ask. */
+  /** The visitor's words, for the reader with no index. */
   readonly query: string;
   readonly threshold: number;
 }
 
 /**
- * A page of matches, from the index when there is one and from title and
- * excerpt when there is not.
- *
- * A missing index is a real state — a migration that never ran, a restored
- * dump, a fresh install before the first drain — and it is not a state a
- * visitor should meet as an error page. So it is recognised rather than
- * guarded against: asking `sqlite_master` first would put a query on every
- * search to answer a question that is almost always the same, where letting
- * the read fail costs nothing until the day it does.
- *
- * The repair is handed to `defer` after the degraded read, not before it. A
- * deferred promise starts running where it is created, and a repair ends in a
- * rebuild that is O(corpus) — created first, it would queue that work on the
- * connection ahead of the visitor's own query.
+ * Catches a missing index instead of checking first on every search. Repair is
+ * deferred after the degraded read so its rebuild does not queue ahead.
  */
 async function matchedRows(
   ctx: AppContext,
@@ -188,10 +157,8 @@ async function matchedRows(
     return await (plan === "ranked" ? rankedRows : recentRows)(ctx, args);
   } catch (error) {
     if (!isMissingSearchIndex(error)) throw error;
-    // Said out loud, because the page itself cannot say it: a visitor sees
-    // thinner results and an operator would otherwise have no way to learn
-    // that the site has been searching without an index since a migration
-    // they never applied.
+    // The page cannot tell anyone; without this an operator never learns the
+    // index is missing.
     ctx.logger.warn(
       "search: no index to query, answering from title and excerpt",
       { query: args.query },
@@ -210,23 +177,12 @@ const SNIPPET = sql`
   )
 `;
 
-/**
- * Relevance order, driven off the index. FTS5 scores every match before the
- * limit applies, which is what makes this the wrong plan for a word almost
- * every document holds and the right one for everything else.
- */
 async function rankedRows(
   ctx: AppContext,
   { match, types, taxonomies, weights, limit, offset }: ReadArgs,
 ): Promise<MatchedRow[]> {
-  // Entries and terms are read together rather than queried apart, because
-  // bm25 is not comparable across queries: merging two ranked lists would put
-  // numbers side by side that were computed against different corpora, and it
-  // forces offset pagination on the merge. Both subjects resolve by primary
-  // key, so a page costs two lookups per row.
-  //
-  // The tiebreak is the document's own id: `source_id` stopped being unique
-  // the moment two kinds shared the table.
+  // One query for entries and terms, because bm25 is not comparable across
+  // queries. Tiebreak on the document id: `source_id` is unique only per kind.
   const entryRows = searchableEntryRows(ctx, types) ?? sql`FALSE`;
   return await ctx.db.all<MatchedRow>(sql`
     SELECT documents.source_type AS kind,
@@ -255,25 +211,8 @@ async function rankedRows(
 }
 
 /**
- * Recency order, driven off `entries` instead.
- *
- * Ordering the index's own output by `published_at` does not work: matching
- * makes FTS5 the outer loop, so the sort cannot reach the entries index and
- * every match goes through a temp b-tree. Asking `entries` for its newest
- * rows and testing each against the index inverts that — the planner walks
- * `entries_type_status_published_idx` and stops at the limit. Measured at
- * 50 000 entries, a word in every document: 64 ms the first way, 1.1 ms this
- * way.
- *
- * The cost is a second statement. `snippet()` needs the index row, which the
- * subquery above has no way to hand back, so the snippets are fetched for the
- * page that survived — bounded to it, and constrained by rowid, which FTS5
- * answers without scanning the match set again.
- *
- * Entries only. A term has no publication date to be ordered by, and this
- * plan is a walk down that date order — so a word common enough to reach it
- * is answered with articles. The ranked plan, which is what a topic name
- * takes, spans both.
+ * Driven off `entries` so the planner walks the published index and stops at
+ * the limit (1.1 ms vs 64 ms at 50 000). Entries only: terms have no date.
  */
 async function recentRows(
   ctx: AppContext,
@@ -327,9 +266,7 @@ async function recentRows(
 }
 
 /**
- * An entry's title as its own page shows it, shortcodes expanded, keyed by
- * id. The index holds the raw title on purpose — an expanded `[year]` would
- * freeze into it — so the page's entries are resolved in one batch here.
+ * The index holds raw titles so an expanded `[year]` does not freeze into it.
  */
 async function resolvedEntryTitles(
   ctx: AppContext,
@@ -344,12 +281,6 @@ async function resolvedEntryTitles(
   return new Map(resolved.map((entry) => [entry.id, entry.title]));
 }
 
-/**
- * `toResult` over a page: every nested row's ancestor chain is read in one
- * batched call per kind rather than one per row, and a flat type's URL is
- * pure substitution. A term's name is not a shortcode field, so only the
- * entries are resolved, for their titles.
- */
 async function toResults(
   ctx: AppContext,
   rows: readonly MatchedRow[],

@@ -11,16 +11,19 @@ import { loadSettingsGroups } from "plumix/plugin";
 
 import { publicTargets } from "./scope.js";
 
-/** This plugin's settings groups — each one a storage unit and an admin card. */
+/**
+ * This plugin's settings groups — each one a storage unit and an admin card.
+ */
 export const SEO_SETTINGS_GROUP = "seo";
 export const SEO_VERIFICATION_GROUP = "seo_verification";
 export const SEO_ROBOTS_GROUP = "seo_robots";
 
-// Every group is site-wide configuration, so every one carries the gate the
-// settings RPC enforces. A contributor reaching the page sees nothing.
+/**
+ * Every group is site-wide configuration, so every one carries the gate the
+ * settings RPC enforces. A contributor reaching the page sees nothing.
+ */
 const SETTINGS_CAPABILITY = "settings:manage";
 
-/** The meta name each engine reads its verification token from. */
 const VERIFICATION_TAGS = {
   google: "google-site-verification",
   bing: "msvalidate.01",
@@ -36,11 +39,7 @@ const VERIFICATION_ENGINES = Object.keys(
 ) as readonly VerificationEngine[];
 
 /**
- * Where each key lived while core owned it. A site that had turned indexing
- * off keeps it off with no migration step: the reads below fall back here, and
- * the admin form is seeded from the same fallback so the next save writes the
- * value through under the new key.
- *
+ * Fallback keys from when core owned these settings, so no migration is needed.
  * Removable at 1.0, along with the seeding filter.
  */
 const LEGACY_KEYS = {
@@ -169,10 +168,10 @@ const VERIFICATION_LABELS = {
   },
 } as const satisfies Record<VerificationEngine, Label>;
 
-// The two answers and the schema.org type each names. One roster, so the
-// stored value is narrowed against the same list the form offers. The labels
-// are vocabulary terms rather than prose — the same word in every language —
-// so they are written here rather than sent through the catalogs.
+/**
+ * Labels are schema.org vocabulary, the same in every language, so they skip
+ * the catalogs.
+ */
 const REPRESENTS = [
   { value: "organization", label: "Organization" },
   { value: "person", label: "Person" },
@@ -195,11 +194,7 @@ export interface SeoSettings {
   readonly titlePattern: string | null;
   /** Per-entry-type title patterns, keyed by type name. */
   readonly typeTitlePatterns: ReadonlyMap<string, string>;
-  /**
-   * Entry types the site owner defaulted out of the index. Read off the stored
-   * keys, not intersected with the registry — a row left by an uninstalled
-   * plugin keeps answering, which no page exists for anyway.
-   */
+  /** Not intersected with the registry, so may name uninstalled types. */
   readonly noindexTypes: ReadonlySet<string>;
   readonly noindexTaxonomies: ReadonlySet<string>;
   /** The three thin-page arms, each off by default and each overridable. */
@@ -212,23 +207,17 @@ export interface SeoSettings {
   readonly indexNowKey: string | null;
 }
 
-/** What `%%sep%%` resolves to until a site says otherwise. */
 const DEFAULT_SEPARATOR = "\u00b7";
 
-// Settings keys are one flat namespace per group, so the per-type answers
-// carry their scope in the key. Colons are legal in a field key and read as
-// structure where an underscore would collide with a type actually named
-// `post_title`.
+/** Colons, not underscores, so a type named `post_title` can't collide. */
 const TYPE_TITLE = /^type:([^:]+):title$/;
 const TYPE_INDEXABLE = /^type:([^:]+):indexable$/;
 const TAXONOMY_INDEXABLE = /^taxonomy:([^:]+):indexable$/;
 
 /**
- * A registry name reaches a settings key verbatim, and a meta-box field key is
- * `[a-zA-Z0-9_:-]`. Core validates neither entry-type nor taxonomy names, so a
- * type registered as `my type` would fail the boot naming *this plugin's*
- * settings group rather than the type that caused it. Colons are excluded on
- * top of that, so a name can never be read as key structure.
+ * Core doesn't validate registry names, so `my type` would fail the boot in
+ * this plugin's settings group. Colons are excluded so names never read as key
+ * structure.
  */
 const KEYABLE_NAME = /^[a-zA-Z0-9_-]+$/;
 
@@ -247,12 +236,6 @@ export function taxonomyIndexableKey(taxonomy: string): string {
   return `taxonomy:${taxonomy}:indexable`;
 }
 
-/**
- * Fold the two stored bags into the answers every consumer reads.
- *
- * Split from {@link loadSeoSettings} so the per-scope key parsing — the part
- * with a shape to get wrong — is readable without a request.
- */
 export function readSeoSettings(
   own: SettingsBag,
   legacy: SettingsBag,
@@ -306,7 +289,7 @@ export function readSeoSettings(
 
 const PATTERN_MAX = 200;
 
-// Every field the site answers once, whatever it registered.
+/** Every field the site answers once, whatever it registered. */
 const SITE_WIDE_FIELDS: readonly MetaBoxFieldInput[] = [
   {
     key: "indexable",
@@ -389,13 +372,6 @@ const SITE_WIDE_FIELDS: readonly MetaBoxFieldInput[] = [
   },
 ];
 
-/**
- * The per-scope fields, one pair per public entry type and one toggle per
- * public taxonomy.
- *
- * A scope's own registered label is its field label — already translated by
- * whoever registered it, where a descriptor built here could not name it.
- */
 function scopeFields(ctx: PluginAfterSetupContext): MetaBoxFieldInput[] {
   // A name that cannot be a key gets no fields, rather than taking the boot
   // down over a type this plugin does not own.
@@ -435,8 +411,10 @@ function scopeFields(ctx: PluginAfterSetupContext): MetaBoxFieldInput[] {
   ];
 }
 
-// Long enough for a token and for a hand-written crawler policy; the caps are
-// against an adversarial payload, not an editorial rule.
+/**
+ * Long enough for a token and for a hand-written crawler policy; the caps are
+ * against an adversarial payload, not an editorial rule.
+ */
 const TOKEN_MAX = 300;
 const ROBOTS_MAX = 8000;
 
@@ -447,9 +425,6 @@ export function registerSeoSettings(ctx: PluginAfterSetupContext): void {
     capability: SETTINGS_CAPABILITY,
     fields: [...SITE_WIDE_FIELDS, ...scopeFields(ctx)],
   });
-  // Their own cards rather than more rows on the one above: an ownership
-  // proof and a crawler policy are each answered once and rarely, where
-  // everything in that card is answered while writing.
   ctx.registerSettingsGroup(SEO_VERIFICATION_GROUP, {
     label: D.verificationLabel,
     description: D.verificationDescription,
@@ -484,9 +459,10 @@ export function registerSeoSettings(ctx: PluginAfterSetupContext): void {
   });
 }
 
-// What the admin form loads. Without it the form would show the registered
-// defaults over a site's legacy answers, and saving would turn indexing back on
-// for a site that had turned it off.
+/**
+ * Without it the form shows registered defaults over legacy answers, and saving
+ * would turn indexing back on.
+ */
 export function registerSeoSettingsDefaults(ctx: PluginSetupContext): void {
   ctx.addFilter("rpc:settings.get:output", async (bag, context, appCtx) => {
     if (context.group !== SEO_SETTINGS_GROUP) return bag;
@@ -498,11 +474,8 @@ async function withLegacyDefaults(
   bag: SettingsBag,
   ctx: AppContext,
 ): Promise<SettingsBag> {
-  // Presence off what storage holds, value off the head's own read — so a site
-  // that answered nothing is seeded nothing, and one that did is handed a
-  // boolean and a string whatever the untyped row holds. The bag cannot answer
-  // presence: `settings.get` fills a registered default into it, which reads
-  // as an answer the site never gave and would suppress the seed.
+  // Presence comes from storage: `settings.get` fills registered defaults into
+  // the bag, which would read as answers the site never gave.
   const groups = await loadSettingsGroups(ctx, [SEO_SETTINGS_GROUP, "site"]);
   const stored = groups[SEO_SETTINGS_GROUP] ?? {};
   const legacy = groups.site ?? {};
@@ -533,11 +506,6 @@ export interface VerificationTag {
   readonly content: string;
 }
 
-/**
- * The ownership proofs the head carries, one per engine the owner configured.
- * Its own read rather than a field on {@link SeoSettings}: nothing but the head
- * asks, and the chain has no use for it.
- */
 export async function loadVerificationTags(
   ctx: AppContext,
 ): Promise<readonly VerificationTag[]> {
@@ -562,8 +530,10 @@ export function nonEmpty(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
-// Undefined rather than a default, so an unset key falls through to the next
-// source instead of answering for it.
+/**
+ * Undefined rather than a default, so an unset key falls through to the next
+ * source instead of answering for it.
+ */
 function boolish(value: unknown): boolean | undefined {
   return typeof value === "boolean" ? value : undefined;
 }

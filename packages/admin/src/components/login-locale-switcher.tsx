@@ -16,12 +16,9 @@ interface LoginLocaleSwitcherProps {
   readonly onSelect: (code: string) => void;
 }
 
-/** Pre-auth locale picker shown beneath the login form. Pure
- *  presentational — the route wires the URL `?lang=` ↔ `currentCode`
- *  via `useSearch` / `useNavigate`. No cookie, no localStorage per the
- *  design constraint that pre-auth state can't fragment the public
- *  cache. The post-auth equivalent (`<LocaleSwitcher>`) ships the same
- *  shape but persists to `user.meta.locale` via RPC instead. */
+/**
+ * Persists nothing itself: pre-auth state must not fragment the public cache.
+ */
 export function LoginLocaleSwitcher({
   currentCode,
   manifest,

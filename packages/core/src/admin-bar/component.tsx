@@ -23,7 +23,6 @@ import {
 } from "./styles.js";
 
 interface PlumixAdminBarProps {
-  /** The staff principal the bar is for; see {@link adminBarViewer}. */
   readonly viewer: AuthenticatedUser;
   readonly hooks: HookExecutor;
   readonly request: Request;
@@ -96,10 +95,8 @@ export function PlumixAdminBar({
 }
 
 /**
- * The bar as a page's chrome; see `RenderChrome.adminBar`. Whether it shows
- * was decided before the render, so nothing here reads the principal for a
- * page that carries no bar. The staff member's render is personal (ADR 0030),
- * so the reads the bar then makes change nothing.
+ * Whether the bar shows was decided before the render, so nothing here reads
+ * the principal for a page without one.
  */
 export function adminBarChrome(
   ctx: AppContext,
@@ -171,16 +168,18 @@ function BarItem({
   );
 }
 
-// Avatar glyph shown in place of the email on mobile (WP collapses the
-// "Howdy, name" item to just the avatar). First code point of the email,
-// uppercased; `Array.from` keeps astral characters intact.
+/**
+ * Replaces the email on mobile, as WP collapses "Howdy, name". `Array.from`
+ * keeps astral characters intact.
+ */
 function accountInitial(email: string): string {
   return (Array.from(email)[0] ?? "?").toUpperCase();
 }
 
-// `signout` is the bar's only client action — a `<button>` the inline
-// island wires up (the endpoint needs the `X-Plumix-Request` header a
-// plain link can't send). Everything else stays a zero-JS link/span.
+/**
+ * A `<button>` because the signout endpoint needs the `X-Plumix-Request`
+ * header a plain link can't send.
+ */
 function renderLeaf(node: AdminBarTreeNode): ReactNode {
   if (node.action === "signout") {
     return (
@@ -203,9 +202,11 @@ function renderLeaf(node: AdminBarTreeNode): ReactNode {
   );
 }
 
-// User-supplied strings (account email, queried entry title once contributors
-// pass it through) get `<bdi>` wrapping so their script direction can't
-// invert the surrounding chrome layout.
+/**
+ * User-supplied strings (account email, queried entry title once contributors
+ * pass it through) get `<bdi>` wrapping so their script direction can't
+ * invert the surrounding chrome layout.
+ */
 function BarLabel({ node }: { readonly node: AdminBarTreeNode }): ReactNode {
   if (node.id === "account" || node.id.startsWith("+new:")) {
     return <bdi>{node.title}</bdi>;

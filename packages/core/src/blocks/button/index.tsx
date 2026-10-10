@@ -15,10 +15,8 @@ export const buttonBlock = defineBlock({
   title: { id: "block.core.button.title", message: "Button" },
   icon: "MousePointerClick",
   category: "interactive",
-  // selfSeam so the block class + default styles land on the `<a>`/`<button>`
-  // itself. Without it the framework also wraps a `<div>` carrying the same
-  // class + data-plumix-id, double-applying the button styles (a box inside a
-  // box) and giving the selection overlay two elements to track.
+  // A wrapping `<div>` would carry the same class and id, double-applying the
+  // button styles and giving the selection overlay two elements.
   selfSeam: true,
   inputs: [
     {
@@ -42,9 +40,8 @@ export const buttonBlock = defineBlock({
   ],
   text: [{ name: "label", prose: false }],
   defaults: { label: "Click" },
-  // Neutral, theme-overridable defaults, seeded as editable Styles values. The
-  // `var(--plumix-button-*, fallback)` form renders a button out of the box and
-  // lets a theme restyle every button by defining the variable in its own CSS.
+  // The `var(--plumix-button-*, fallback)` form renders out of the box and lets
+  // a theme restyle every button by defining the variable.
   defaultStyles: {
     large: {
       display: "inline-block",

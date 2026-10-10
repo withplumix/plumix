@@ -1,22 +1,9 @@
 import type { UserRole } from "../../db/schema/users.js";
 
-// Capability shape: `<entity>:<typeName>:<action>` for per-type
-// resources (`entry:post:edit_own`, `term:category:manage`); flat
-// `<entity>:<action>` for entity-level caps without a type segment
-// (`user:list`, `settings:manage`).
-//
-// `entry:post:*` is the baked-in default — plumix assumes a "post"
-// entry type exists out of the box (the conventional default). Other
-// entry types and every term taxonomy derive their caps at plugin
-// registration time. The `entry:` and `term:` prefixes prevent name
-// collisions when an entry type and a taxonomy share a name (e.g.
-// `entry:location:read` ≠ `term:location:read`).
-//
-// `user:*` mirrors WP's split: `list` is editor+, `edit_own` is any
-// authenticated user, create / edit / promote / delete are admin-only.
-// `promote` is split out from `edit` — role escalation is more
-// sensitive than a name/avatar change. `settings:manage` is a single
-// gate over both reads and writes (matches WP's `manage_options`).
+/**
+ * `entry:`/`term:` prefixes keep an entry type and a same-named taxonomy apart.
+ * `promote` is split from `edit`: role escalation outranks a profile change.
+ */
 export const CORE_CAPABILITIES: Readonly<Record<string, UserRole>> =
   Object.freeze({
     "entry:post:read": "subscriber",
@@ -33,11 +20,8 @@ export const CORE_CAPABILITIES: Readonly<Record<string, UserRole>> =
     "user:edit": "admin",
     "user:promote": "admin",
     "user:delete": "admin",
-    // Cross-user PAT oversight: list/revoke any user's API tokens.
-    // Distinct from `user:edit` so an audit policy can grant "edit
-    // profiles but not nuke tokens" or vice-versa. Self-management
-    // doesn't need this cap — every authed user manages their own
-    // via the self-scoped procedures.
+    // Any user's API tokens. Separate from `user:edit` so a policy can grant
+    // one without the other; users manage their own tokens without it.
     "user:manage_tokens": "admin",
     "plugin:manage": "admin",
     "settings:manage": "admin",
@@ -50,14 +34,8 @@ export const POST_TYPE_CAPABILITY_ACTIONS = {
   publish: "author",
   edit_any: "editor",
   delete: "editor",
-  // Revision history reads are an editor concern — authors don't
-  // ordinarily look at past versions of their own drafts. Matches the
-  // PRD's "editors can see who saved what and when" framing.
   read_revisions: "editor",
-  // Restoring a prior revision overwrites the live row. Pairs with
-  // `read_revisions` for symmetry with the existing list/get gates;
-  // capability lands here so the full surface is consistent before
-  // the restore-into-autosave action wires up in a later slice.
+  // Restoring overwrites the live row.
   restore_revision: "editor",
 } as const satisfies Record<string, UserRole>;
 
@@ -83,21 +61,14 @@ export type TermTaxonomyCapabilityOverrides = Partial<
 >;
 
 /**
- * Capabilities we know about statically — the built-in core caps. IDE
- * autocomplete picks these up when a `KnownCapability | (string & {})`
- * signature is used (the `string & {}` half preserves flexibility for
- * plugin-defined caps without losing literal suggestions). Derived
- * `{entryType|termTaxonomy}:{action}` shapes deliberately aren't listed here:
- * `${string}:${action}` collapses to `string` in TypeScript, which would
- * erase the autocomplete benefit for the core strings.
+ * Excludes derived `entry:`/`term:` shapes: `${string}:${action}` collapses to
+ * `string` and would erase autocomplete for the core literals.
  */
 export type KnownCapability = CoreCapability;
 
 /**
- * An entry capability named by what it guards: the entry type and the action.
- * The registry spells it, under the namespace the type pools its permissions
- * into (`capabilityType`), wherever a capability slot is read — so the string
- * a pooled type gates under is never written by hand.
+ * Spelled under the type's `capabilityType` namespace when a slot is read, so a
+ * pooled type's capability string is never written by hand.
  */
 export interface EntryCapability {
   readonly kind: "entry";
@@ -134,9 +105,8 @@ export function termCapability(
 }
 
 /**
- * The string for an entry capability whose namespace is already resolved. The
- * one place the `entry:` shape is spelled; `entryCapability` names the type
- * instead, and a caller holding only a type name wants that.
+ * Takes an already-resolved namespace, not a type name; a caller holding a type
+ * name wants `entryCapability`.
  */
 export function spellEntryCapability(
   namespace: string,
@@ -145,7 +115,9 @@ export function spellEntryCapability(
   return `entry:${namespace}:${action}`;
 }
 
-/** The string for a term capability. The one place the `term:` shape is spelled. */
+/**
+ * The string for a term capability. The one place the `term:` shape is spelled.
+ */
 export function spellTermCapability(
   taxonomy: string,
   action: TermTaxonomyCapabilityAction,
@@ -161,10 +133,7 @@ export interface CapabilityNamespaces {
   readonly entryTypes: ReadonlyMap<string, { readonly capabilityType: string }>;
 }
 
-/**
- * The namespace an entry type named `type` gates under. A name nobody
- * registered pools with nothing, so it is its own namespace.
- */
+/** An unregistered type pools with nothing, so it is its own namespace. */
 function entryNamespaceOf(
   registry: CapabilityNamespaces,
   type: string,
@@ -173,9 +142,8 @@ function entryNamespaceOf(
 }
 
 /**
- * The string a capability slot's value gates under. Read at the slot rather
- * than at registration, so a reference to a type a later plugin registers
- * still lands in that type's namespace.
+ * Resolved at the slot, not at registration, so a reference to a type a later
+ * plugin registers still lands in its namespace.
  */
 export function resolveCapability(
   registry: CapabilityNamespaces,

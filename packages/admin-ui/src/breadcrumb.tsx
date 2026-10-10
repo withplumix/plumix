@@ -4,7 +4,9 @@ import { Slot } from "radix-ui";
 import { ChevronRight, MoreHorizontal } from "./icons.js";
 import { cn } from "./utils.js";
 
-// admin-ui carries no catalog, so every `label` here arrives already localized.
+/**
+ * admin-ui carries no catalog, so every `label` here arrives already localized.
+ */
 function Breadcrumb({
   label,
   ...props

@@ -114,10 +114,8 @@ describe("canonicalRedirectTarget", () => {
   });
 
   test("a registered public route is exempt; a variant of one still normalizes onto it", () => {
-    // The exemption is the literal path, so a dot-less registered endpoint is
-    // never 301'd — and a trailing-slash variant of it is 301'd *at* it, which
-    // is what gets an aggregator to the feed rather than to the 404 the
-    // content router would answer with.
+    // The trailing-slash variant is 301'd at the endpoint, so an aggregator
+    // reaches the feed rather than the content router's 404.
     expect(
       targetFor(
         "https://cms.example/syndication",

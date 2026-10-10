@@ -33,10 +33,7 @@ describe("classifyAutosaveError", () => {
   const queryClient = { query: vi.fn() } as never;
 
   test("an invalid-block-content rejection is a hard failure the author must see", async () => {
-    // Regression: content that references a removed/unknown block is rejected
-    // by the server. This must classify as `failed` (surfaced), never as a
-    // recoverable conflict — otherwise the author's edit is silently dropped
-    // (the "image disappeared on save" class of bug).
+    // A conflict would drop the author's edit silently.
     const err = new ORPCError("INVALID_BLOCK_CONTENT", {
       data: { issues: ["unknown_block_type"] },
     });

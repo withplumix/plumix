@@ -6,17 +6,7 @@ import type { Term as StoredTerm } from "@plumix/core/schema";
 
 type Term = WithResolvedMeta<StoredTerm>;
 
-/**
- * Narrow a term-id bag (`{ category: [3, 7], tag: [12] }`) to the set
- * of taxonomies registered against the current entry type. Stale keys
- * from a previous entry-type or a hand-edited URL don't make it to
- * `entry.create`/`entry.update` — the server would reject them, but
- * filtering up-front gives a cleaner contract.
- *
- * Empty arrays are dropped; an empty result returns `undefined` so
- * callers can spread it conditionally without sending an empty `terms`
- * field to the server.
- */
+/** Drops empty arrays; returns `undefined` when nothing is left. */
 export function filterTermsForEntryType(
   bag: Record<string, readonly number[]>,
   allowed: readonly string[] | undefined,

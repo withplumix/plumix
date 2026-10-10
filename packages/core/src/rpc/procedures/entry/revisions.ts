@@ -179,11 +179,8 @@ export const restore = base
     if (!context.auth.can(readCapability)) {
       throw errors.FORBIDDEN({ data: { capability: readCapability } });
     }
-    // Restore lands either on the caller's autosave row (for types
-    // that opt into `supports: ['autosave']`) or the live row
-    // directly (legacy types). `restore_revision` gates both — pair
-    // it with `edit_*` so a viewer who can't edit the entry can't
-    // restore on it either.
+    // Paired with `edit_*` so a viewer who can't edit the entry can't restore
+    // on it either.
     const restoreCapability = namespacedEntryCapability(
       namespace,
       "restore_revision",
@@ -193,10 +190,8 @@ export const restore = base
     }
     assertCanEditEntry(context, live, errors);
 
-    // Snapshots survive block deregistration — a block removed since
-    // capture would render but never validate via `entry.update`. Run
-    // the same gate so a stale revision can't land invalid content on
-    // the destination row (autosave or live).
+    // Snapshots survive block deregistration, so a stale revision must pass the
+    // same gate before landing on autosave or live.
     assertContentWithinByteCap(revision.content, errors);
     assertContentValidAgainstRegistries(
       revision.content,
@@ -218,12 +213,9 @@ export const restore = base
       // own envelope from the live row's current slug + parentId.
       const cleanedMeta: Record<string, JsonValue> = { ...revision.meta };
       delete cleanedMeta[SNAPSHOT_META_KEY];
-      // A restore replays a whole snapshot, so every key in it is a deliberate
-      // edit — and a key live gained since has to go. An autosave stores edits
-      // (ADR 0003), where absence reads as untouched, so those are named as
-      // cleared instead of being left out of the bag. That includes the
-      // framework's own picks, which a revision snapshots like any other meta;
-      // only the two keys `upsertAutosave` re-derives are exempt.
+      // A restore replays the whole snapshot, so live keys it lacks must go. An
+      // autosave reads absence as untouched, so they are named as cleared,
+      // except keys `upsertAutosave` re-derives.
       const metaDeletes = Object.keys(live.meta).filter(
         (key) =>
           key !== SNAPSHOT_META_KEY &&
@@ -234,10 +226,8 @@ export const restore = base
         entry: live,
         authorId: context.user.id,
         patch: {
-          // Title is a live-only field, so it anchors to the current live
-          // row — never the revision — exactly like slug + parentId above.
-          // Only the drafted body (content/excerpt/meta) restores into the
-          // pending draft; the caller keeps editing the title on live.
+          // Title is live-only, like slug and parentId, so it anchors to live;
+          // only the drafted body restores into the draft.
           title: live.title,
           content: revision.content,
           excerpt: revision.excerpt,
@@ -245,19 +235,15 @@ export const restore = base
           metaDeletes,
         },
       });
-      // The autosave stores only the edits the restore makes, so hand the whole
-      // draft outward — a subscriber reading `meta` wants the row as it would
-      // render, not the delta that produced it.
+      // Hand subscribers the whole draft as it would render, not the stored
+      // delta.
       const draft = asDraftRow(live, autosave);
       await fireEntryRevisionRestored(context, revision, draft, live.type);
       await fireEntryAutosaveSaved(context, draft, live);
       return draft;
     }
 
-    // Legacy live-write path for types without autosave support.
-    // Preserves the pre-#290 behavior so existing callers don't break
-    // — the autosave destination is the modern path and only kicks in
-    // when the plugin explicitly opts in.
+    // Types without autosave support restore straight onto live.
     assertExpectedLiveUpdatedAt(input.expectedLiveUpdatedAt, live.updatedAt, {
       stale: () => {
         throw errors.CONFLICT({
@@ -323,23 +309,18 @@ export const restore = base
 
 const setMessageInput = v.object({
   revisionId: idParam,
-  // `null` clears the comment. Empty strings are coerced to null at
-  // the repository layer; the API surface accepts both so the UI can
-  // send whatever the input contains without a client-side trim
-  // pass.
+  // The repository coerces empty strings to null, so the UI needs no trim.
   message: v.union([
     v.null(),
     v.pipe(v.string(), v.maxLength(REVISION_MESSAGE_MAX_LENGTH)),
   ]),
 });
 
-// Patches `revision.message`. Capability gate deliberately matches
-// `restore` (read_revisions + edit_own/edit_any) for symmetry — a
-// user who can revert a revision can also re-caption it; future
-// loosening (e.g. comment-only role) should change both gates in
-// lockstep. No `expectedLiveUpdatedAt` token: comment edits don't
-// touch the live entry, so concurrent label edits are
-// last-write-wins on the same revision row.
+/**
+ * Same gate as `restore` so whoever can revert a revision can re-caption it;
+ * change both together. No concurrency token: captions never touch the live
+ * entry.
+ */
 export const setMessage = base
   .use(authenticated)
   .input(setMessageInput)

@@ -17,9 +17,11 @@ import {
 import { ChevronsUpDown, LogOut, Settings, User } from "@plumix/admin-ui/icons";
 import { SidebarMenuButton, useSidebar } from "@plumix/admin-ui/sidebar";
 
-// Only the identity fields are rendered — a narrow slice of the session
-// user so this component stays decoupled from `role` / `avatarUrl` churn,
-// while still type-linked to the auth.session contract.
+/**
+ * Only the identity fields are rendered — a narrow slice of the session
+ * user so this component stays decoupled from `role` / `avatarUrl` churn,
+ * while still type-linked to the auth.session contract.
+ */
 export type UserIdentity = Pick<AuthSessionUser, "email" | "name">;
 
 export function UserMenu({ user }: { user: UserIdentity }): ReactNode {
@@ -35,11 +37,8 @@ export function UserMenu({ user }: { user: UserIdentity }): ReactNode {
       router.options.context.queryClient.removeQueries({
         queryKey: SESSION_QUERY_KEY,
       });
-      // External-IdP authenticators (Cloudflare Access, SAML SP-initiated)
-      // surface a redirectTo that bounces the user through the IdP's
-      // logout endpoint — without it, the next request would carry the
-      // IdP credential and silently re-auth. Server pre-validates the
-      // URL shape; the client also re-validates inside `signOut()`.
+      // An external IdP's logout redirect; otherwise its credential would
+      // silently re-auth the next request.
       if (result?.redirectTo) {
         window.location.assign(result.redirectTo);
         return;

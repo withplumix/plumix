@@ -23,18 +23,17 @@ import {
 } from "./messages.js";
 import { fieldName, rowName } from "./paths.js";
 
-// The pattern a browser applies to `<input type="email">`, from the HTML
-// standard's "valid e-mail address" definition. Deliberately the same one:
-// a visitor with JavaScript disabled meets the browser's check and a
-// visitor with it enabled meets this one, and a form that submits in one
-// has to submit in the other.
+/**
+ * The HTML standard's `type="email"` pattern, so the browser's check and
+ * ours agree.
+ */
 const EMAIL =
   /^[\w.!#$%&'*+/=?^`{|}~-]+@[a-z\d](?:[a-z\d-]{0,61}[a-z\d])?(?:\.[a-z\d](?:[a-z\d-]{0,61}[a-z\d])?)*$/i;
 
-// `new URL` in a `try` rather than `URL.parse`, which the island would
-// ship to a browser that may not have it — this module is the one the
-// server and the wizard share, and a throw here would leave a visitor at
-// a Next button that has already cancelled its own submit.
+/**
+ * Not `URL.parse`: this also runs in the island, on browsers that may lack
+ * it.
+ */
 function urlIsValid(answer: string): boolean {
   try {
     const { protocol } = new URL(answer);
@@ -76,14 +75,8 @@ function fieldError(
 }
 
 /**
- * Whether the rows that came back are a number the repeater accepts. The
- * floor counts the rows the visitor actually used, since a form served
- * with more rows than they had things to say is the ordinary case. The
- * ceiling counts the rows themselves: the markup never renders more than
- * the maximum, so a body carrying more is refused whether or not the
- * excess is blank. The ceiling is judged first — a body carrying more
- * rows than the form takes is read only as far as the cap, so what it
- * put past there cannot be counted towards the floor.
+ * The floor counts filled rows; the ceiling counts all rows, blank or not,
+ * and is judged first since the body is read only up to the cap.
  */
 function rowCountError(
   field: MetaBoxFieldManifestEntry,
@@ -121,10 +114,8 @@ function walk(
     }
 
     if (field.inputType === "repeater") {
-      // Numbered by where the row sits on the page rather than by where
-      // it lands in the stored array, so an error names the control the
-      // visitor is looking at. A row nobody filled in is asked nothing,
-      // since it will not be stored either.
+      // Numbered by page position, not stored index, so errors name the
+      // visible control.
       const rows = asRows(value);
       const filled = rows
         .map((row, index) => ({ row, index }))
@@ -143,16 +134,8 @@ function walk(
 }
 
 /**
- * Every answer the form cannot accept, in the order it declares its
- * fields — which is the order the error summary reads them out in, and
- * the order a visitor meets the controls on the page.
- *
- * Judged over the fields the answers leave visible, so a question the
- * visitor was never shown cannot hold their submission up — inside a
- * repeater row and a group as well as at the top of the form, each
- * against its own siblings. `tel` and `date` carry no shape check here:
- * a telephone number has no canonical form worth refusing one over, and
- * a date control posts an ISO string or nothing at all.
+ * Only visible fields are judged, in declaration order. `tel` and `date`
+ * get no shape check.
  */
 export function validateAnswers(
   fields: readonly MetaBoxFieldManifestEntry[],

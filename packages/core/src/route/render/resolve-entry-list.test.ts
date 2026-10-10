@@ -23,22 +23,23 @@ import { resolveEntryList } from "./resolve-entry-list.js";
 import { forEntryType } from "./template-builders.js";
 import { resolveTemplate } from "./template-hierarchy.js";
 
-// The two ways decoding moves a value away from what the meta JSON holds:
-// `.returns("date")` reads a `Date` off a stored ISO string, and a reference
-// reads the summary its lookup adapter hydrates off a stored id.
+/**
+ * The two ways decoding moves a value away from what the meta JSON holds.
+ */
 const _dossierFields = [
   date("filedOn").returns("date"),
   entryRef("subject", ["post"]),
-  // The scalars decoding leaves alone, so `whereMeta` — which is typed from
-  // the stored shape and compares against `storedMeta` — asks the same
-  // question of them as a template reading the decoded bag does.
+  // Decoding leaves these alone, so `whereMeta` against `storedMeta` agrees
+  // with a template reading the decoded bag.
   toggle("sealed"),
   text("codename"),
   number("clearance"),
   text("tone").default("warm"),
 ];
-// The same two decode moves, on a term. Before the render path decoded
-// term meta these read back as the raw ISO string and the raw id.
+/**
+ * The same two decode moves, on a term. Before the render path decoded
+ * term meta these read back as the raw ISO string and the raw id.
+ */
 const _termDossierFields = [
   date("taggedOn").returns("date"),
   entryRef("curator", ["post"]),
@@ -317,11 +318,8 @@ describe("whereMeta against a real row", () => {
     expect(resolveTemplate([referenced], node, data)).toBe(referenced);
   });
 
-  // `whereMeta` is typed `boolean` here, from the field's declared type, and
-  // compares against `storedMeta`. A decode that widened a stored token to
-  // `true` would leave the signature telling the truth about one bag and not
-  // the other: a template branching on `entry.meta.sealed` would fire where
-  // the rule did not.
+  // `whereMeta` is typed from the declared field but compares `storedMeta`,
+  // so a widening decode would make a template branch where the rule didn't.
   test("a boolean reads alike from both bags, so whereMeta agrees with the decoded value", async () => {
     const { harness, ctx, run } = await createTracedContext({
       config: { plugins: [dossierPlugin] },
@@ -375,9 +373,8 @@ describe("whereMeta against a real row", () => {
     expect(read(token.id)).toEqual({ decoded: 1, stored: 1, rule: false });
   });
 
-  // Settling writes, and a write here would sit behind anonymous page views —
-  // traffic and CDN purges driven by whoever requests the page. The heal hangs
-  // off the authenticated read instead; rendering reads the row as it is.
+  // A settling write here would sit behind anonymous page views and their
+  // CDN purges.
   test("rendering an unsettled row leaves it as stored", async () => {
     const { harness, ctx, run } = await createTracedContext({
       config: { plugins: [dossierPlugin] },
@@ -399,10 +396,8 @@ describe("whereMeta against a real row", () => {
     expect(stored?.updatedAt).toEqual(token.updatedAt);
   });
 
-  // The other two scalars, which used to widen on read. What made the miss
-  // unfixable from the call site: `whereMeta`'s value is typed from the
-  // field's declared type, so the only value it accepted was the one the
-  // comparison could not match.
+  // `whereMeta` is typed from the declared type, so a widened read left it
+  // accepting only the value the comparison could not match.
   test("a string and a number read alike from both bags, so whereMeta agrees with the decoded value", async () => {
     const { harness, ctx, run } = await createTracedContext({
       config: { plugins: [dossierPlugin] },
@@ -507,9 +502,7 @@ describe("term meta on the render path", () => {
     });
   });
 
-  // `resolveEntryList` is the reader behind both a template's entries and a
-  // feed's items. A default is written when the entry is created (ADR 0026),
-  // so an entry whose stored meta lacks the key reads it as absent.
+  // A default is written at creation, not on read.
   test("an entry's `.default()` key absent from storage reads as absent", async () => {
     const { harness, ctx, run } = await createTracedContext({
       config: { plugins: [dossierPlugin] },
@@ -617,8 +610,10 @@ describe("term meta on the render path", () => {
   });
 });
 
-// The same fields with and without the role tag — the only difference between
-// a site that reads `images.featured` and the same site before this change.
+/**
+ * The same fields with and without the role tag — the only difference between
+ * a site that reads `images.featured` and the same site before this change.
+ */
 function photoPlugin(tagged: boolean) {
   const role = tagged ? { role: "featured" as const } : {};
   return definePlugin("test-photos", (ctx) => {

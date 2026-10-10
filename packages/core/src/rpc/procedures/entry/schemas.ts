@@ -6,30 +6,34 @@ import { slugSchema } from "../../schemas.js";
 
 export const MAX_CONTENT_BYTES = 1_000_000;
 const MAX_EXCERPT_LENGTH = 600;
-// 200 covers WordPress's practical ceiling many times over while still
-// bounding pathological payloads on the record-validate path.
+/**
+ * 200 covers WordPress's practical ceiling many times over while still
+ * bounding pathological payloads on the record-validate path.
+ */
 const MAX_TERMS_PER_TAXONOMY = 200;
 
 const trimmedText = (max: number) =>
   v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(max));
 
-// Entry titles may be empty — a draft can be untitled (read surfaces render
-// a localized fallback). Unlike `trimmedText`, no `minLength`.
+/**
+ * Entry titles may be empty — a draft can be untitled (read surfaces render
+ * a localized fallback). Unlike `trimmedText`, no `minLength`.
+ */
 const titleText = v.pipe(v.string(), v.trim(), v.maxLength(300));
 
-// Content is a ProseMirror JSON document. The public renderer's walker
-// allowlists node types on render, so the RPC only rejects obvious
-// garbage (non-objects). Byte-size cap is enforced in the handler via
-// `assertContentWithinByteCap` after a single serialize.
+/**
+ * The renderer allowlists node types, so this rejects only non-objects; the
+ * byte cap is enforced in the handler.
+ */
 const contentSchema = v.nullable(v.record(v.string(), v.unknown()));
 const excerptSchema = v.nullable(
   v.pipe(v.string(), v.maxLength(MAX_EXCERPT_LENGTH)),
 );
 
-// The id of a theme-registered `named` template (see `forEntryType(...).named`).
-// Written to the reserved `__plumix_template` meta key. `null` clears the
-// choice (theme-default resolution); an unknown id simply falls through to the
-// default at render time, so the server doesn't validate it against the theme.
+/**
+ * Not validated against the theme: an unknown id falls through to the
+ * default at render time. `null` clears the choice.
+ */
 const templateChoiceSchema = v.pipe(
   v.string(),
   v.trim(),
@@ -37,11 +41,11 @@ const templateChoiceSchema = v.pipe(
   v.maxLength(200),
 );
 
-// The key of a per-entry access policy declared in the entry type's
-// `access.policies` space. Written to the reserved `__plumix_access` meta key.
-// `null` clears the choice (type-default gating). Unlike the template choice,
-// the server DOES validate the key against the declared space (an editor can't
-// select a policy the developer didn't declare) — this only bounds the shape.
+/**
+ * Unlike the template choice, the server validates the key against the
+ * type's declared `access.policies`; this only bounds the shape. `null`
+ * restores type-default gating.
+ */
 const accessChoiceSchema = v.pipe(
   v.string(),
   v.trim(),
@@ -59,8 +63,10 @@ const serverControlledKeys = [
 
 const userSuppliableFields = v.omit(entryInsertSchema, serverControlledKeys);
 
-// termTaxonomy → ordered term ids. Empty array clears all assignments for that
-// termTaxonomy. Taxonomy keys not in the map are untouched.
+/**
+ * termTaxonomy → ordered term ids. Empty array clears all assignments for that
+ * termTaxonomy. Taxonomy keys not in the map are untouched.
+ */
 const postTermsSchema = v.record(
   v.pipe(
     v.string(),
@@ -75,9 +81,8 @@ const postTermsSchema = v.record(
 export const entryCreateInputSchema = v.object({
   ...userSuppliableFields.entries,
   type: v.optional(trimmedText(100), "post"),
-  // Optional — a fresh draft is created untitled (stored as ""), so the
-  // editor shows a placeholder instead of a literal "Untitled" the author
-  // must delete. Lists / lookups fall back to a localized "Untitled" label.
+  // A fresh draft is untitled (stored as "") so the editor shows a placeholder
+  // rather than a literal "Untitled" the author must delete.
   title: v.optional(titleText),
   slug: slugSchema,
   content: v.optional(contentSchema),
@@ -87,7 +92,10 @@ export const entryCreateInputSchema = v.object({
   sortOrder: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0)), 0),
   terms: v.optional(postTermsSchema),
   meta: v.optional(metaInputSchema),
-  /** Target publish time; required (and must be future) when `status: "scheduled"`. */
+  /**
+   * Target publish time; required (and must be future) when `status:
+   * "scheduled"`.
+   */
   publishedAt: v.optional(v.date()),
 });
 
@@ -105,31 +113,28 @@ export const entryUpdateInputSchema = v.object({
   meta: v.optional(metaInputSchema),
   /** Named-template choice; `null` clears it. See `templateChoiceSchema`. */
   template: v.optional(v.nullable(templateChoiceSchema)),
-  /** Per-entry access-policy choice; `null` clears it. See `accessChoiceSchema`. */
+  /**
+   * Per-entry access-policy choice; `null` clears it. See `accessChoiceSchema`.
+   */
   access: v.optional(v.nullable(accessChoiceSchema)),
-  /** Target publish time; required (and must be future) when `status: "scheduled"`. */
+  /**
+   * Target publish time; required (and must be future) when `status:
+   * "scheduled"`.
+   */
   publishedAt: v.optional(v.date()),
   /**
-   * Optimistic-concurrency token: the live entry's `updatedAt` at the
-   * moment the caller loaded it. When provided, the server rejects
-   * with `CONFLICT { reason: "stale_expected_updated_at" }` if another
-   * write landed in between. Absent ⇒ legacy last-write-wins.
+   * The live `updatedAt` the caller loaded; a newer write rejects with CONFLICT
+   * `stale_expected_updated_at`. Omitted means last write wins.
    */
   expectedLiveUpdatedAt: v.optional(v.date()),
   /**
-   * Routes the write between the live row and the caller's autosave
-   * row. `'draft'` is only valid when the entry is currently published
-   * AND the type opts into `supports: ['autosave']`; otherwise the
-   * handler rejects with `BAD_REQUEST { reason: "autosave_unsupported" }`.
-   * Omitted ⇒ legacy `'live'` semantics for backwards compatibility.
+   * `'draft'` needs a published entry on a `supports: ['autosave']` type, else
+   * BAD_REQUEST `autosave_unsupported`. Omitted means `'live'`.
    */
   saveAs: v.optional(v.picklist(["draft", "live"] as const)),
 });
 
-// Upper bound on the term-slug list per termTaxonomy clause. Mirrors the
-// per-termTaxonomy guard on `entry.update` — admin UIs don't reasonably issue
-// queries beyond this, and the cap protects the generated `IN (?, ?, …)`
-// subquery from pathological input lengths.
+/** Bounds the generated `IN (?, ?, …)` subquery against pathological input. */
 const MAX_TERM_SLUGS_PER_TAXONOMY = 50;
 
 const taxonomyNameSchema = v.pipe(
@@ -147,10 +152,10 @@ const termSlugSchema = v.pipe(
   v.maxLength(200),
 );
 
-// Whitelist of columns the caller is allowed to sort by. Keys are the
-// wire-level names (snake_case, matching DB columns) so the API surface
-// stays stable even if we rename the drizzle TS fields later. The handler
-// maps these to column references.
+/**
+ * Wire names, not drizzle field names, so the API stays stable if the TS
+ * fields are renamed.
+ */
 export const ENTRY_LIST_ORDER_COLUMNS = [
   "updated_at",
   "published_at",
@@ -160,13 +165,7 @@ export const ENTRY_LIST_ORDER_COLUMNS = [
 
 export const entryListInputSchema = v.object({
   type: v.optional(trimmedText(100)),
-  /**
-   * Status filter. Accepts a single status or a list — WP admin views
-   * like "Drafts + Pending" need arrays. When omitted, the handler
-   * excludes `trash` by default (WP's "All" semantics — trash is its
-   * own view, not part of the flat list). Pass `["trash"]` explicitly
-   * to see trashed entries.
-   */
+  /** When omitted, `trash` is excluded; pass `["trash"]` to see it. */
   status: v.optional(
     v.union([
       userSuppliableFields.entries.status,
@@ -178,29 +177,17 @@ export const entryListInputSchema = v.object({
    * session user's id here; future UIs can surface an author dropdown.
    */
   authorId: v.optional(idParam),
-  /**
-   * Filter by parent post id for hierarchical types (pages, etc.).
-   * - `null` → only top-level entries (parent_id IS NULL).
-   * - a number → only direct children of that post.
-   * - omitted → no filter, flat list across all depths.
-   */
+  /** `null` returns only top-level entries; omitted applies no filter. */
   parentId: v.optional(v.nullable(idParam)),
   /**
-   * Free-text search across `title` and `excerpt` — not `content`, whose
-   * block envelope reads as prose to a substring match. Whitespace separates
-   * terms (all AND-ed), `"quoted phrases"` stay whole, and a leading `-` on a
-   * bare term excludes matches (WordPress semantics). Capped at 200 chars to
-   * bound the LIKE workload per row.
+   * Searches `title` and `excerpt`, not `content`, whose block envelope reads
+   * as prose to a substring match. Terms AND together; `"phrases"` stay whole;
+   * a leading `-` excludes.
    */
   search: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(200))),
   /**
-   * Taxonomy clauses, keyed by termTaxonomy name. Each value is a list of term
-   * slugs the post must be associated with in that termTaxonomy. Within one
-   * termTaxonomy the match is OR (any listed slug); across termTaxonomies the
-   * match is AND (every specified termTaxonomy must contribute a match).
-   * Matches the default semantics of WordPress's `tax_query`.
-   *
-   * Empty slug arrays are no-ops for that termTaxonomy.
+   * OR within one taxonomy, AND across taxonomies, like WordPress's
+   * `tax_query`. An empty slug array is a no-op.
    */
   termTaxonomies: v.optional(
     v.record(
@@ -208,11 +195,7 @@ export const entryListInputSchema = v.object({
       v.pipe(v.array(termSlugSchema), v.maxLength(MAX_TERM_SLUGS_PER_TAXONOMY)),
     ),
   ),
-  /**
-   * Column to sort by. Whitelisted — arbitrary values are rejected so a
-   * malicious caller can't probe the schema. `id` is always applied as a
-   * stable tiebreaker by the handler, not exposed here.
-   */
+  /** `id` is always added as a stable tiebreaker. */
   orderBy: v.optional(v.picklist(ENTRY_LIST_ORDER_COLUMNS), "updated_at"),
   order: v.optional(v.picklist(["asc", "desc"] as const), "desc"),
   limit: v.optional(
@@ -225,10 +208,8 @@ export const entryListInputSchema = v.object({
 export const entryGetInputSchema = v.object({
   id: idParam,
   /**
-   * When `true`, the handler overlays the caller's autosave (if any)
-   * onto the live row and decorates the result with `_preview`
-   * metadata. Gated by `edit_own` / `edit_any` since previewing a
-   * pending draft is an editor concern.
+   * Overlays the caller's autosave and adds `_preview`. Needs `edit_own` or
+   * `edit_any`, since previewing a pending draft is an editor concern.
    */
   preview: v.optional(v.boolean()),
 });
@@ -243,8 +224,10 @@ export const entryRefreshBlockLoaderInputSchema = v.object({
   blockId: v.pipe(v.string(), v.minLength(1)),
 });
 
-// Bulk action input. Capped at 100 ids per call so a single batched
-// `WHERE id IN (…)` stays bounded; the admin selects a page at a time.
+/**
+ * Bulk action input. Capped at 100 ids per call so a single batched
+ * `WHERE id IN (…)` stays bounded; the admin selects a page at a time.
+ */
 const bulkIdsSchema = v.object({
   ids: v.pipe(v.array(idParam), v.minLength(1), v.maxLength(100)),
 });

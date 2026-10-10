@@ -72,7 +72,7 @@ describe("debugHistoryConsumer", () => {
     expect(store.find("req-42")?.status).toBe(500);
   });
 
-  /** Save one request captured on `url` and report whether it reached the ring. */
+  // Save one request captured on `url` and report whether it reached the ring.
   function savedFrom(url: string, basePath?: string): boolean {
     const store = createDebugHistoryStore();
     void debugHistoryConsumer(store).onRequestEnd?.(

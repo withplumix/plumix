@@ -1,24 +1,10 @@
-/**
- * Public `plumix/blocks` surface.
- *
- * Re-exports the curated public API from the workspace-internal
- * `@plumix/core/blocks` subpath. Consumers (plugins, themes, the user's app)
- * import from `plumix/blocks`; `@plumix/core` is never a direct
- * dependency in their `package.json`.
- *
- * The block *value* API (`defineBlock`, `renderBlockTree`, …) is imported
- * from here, but the block/pattern type-registries are augmented through the
- * root `plumix` specifier (see `../index.ts`), not `plumix/blocks` —
- * `declare module "plumix" { interface BlockTypeRegistry { … } }`. Type
- * augmentation must go through one specifier or it fractures.
- */
+// Block and pattern type registries are augmented through the root `plumix`
+// specifier, not this one: type augmentation through two specifiers fractures.
 
 import type { AppContext } from "@plumix/core";
 
-// `blocks/` sits in core's foundation layer, below `context/`, so it cannot
-// name the context its loaders receive. This façade reaches both, so it fills
-// the seam here, and the augmentation ships in this entry's `.d.ts` to every
-// program that imports a loader type from `plumix/blocks`.
+// Core's `blocks/` layer sits below `context/` and cannot name the context its loaders receive,
+// so this façade fills the seam.
 // eslint-disable-next-line no-restricted-syntax -- the façade filling a seam it owns, not a consumer registry augmentation (consumers augment only "plumix")
 declare module "@plumix/core/blocks" {
   interface BlockLoaderContextRegistry {

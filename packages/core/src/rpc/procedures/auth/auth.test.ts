@@ -488,10 +488,8 @@ describe("auth.sessions.revokeOthers", () => {
   });
 
   test("returns revoked: 0 when the request has no plumix session cookie (cfAccess / external IdP)", async () => {
-    // Simulate the cfAccess case via a custom authenticator: the user
-    // is authed without ever minting a plumix `sessions` row. The
-    // proc should no-op cleanly even if there are *other* sessions
-    // for this user (left over from a prior session-cookie auth).
+    // The cfAccess case: authed without a plumix `sessions` row, so the proc
+    // must no-op even when other sessions exist for the user.
     const db = await createTestDb();
     const user = await userFactory.transient({ db }).create({ role: "editor" });
     await createSession(db, { userId: user.id });
@@ -545,10 +543,8 @@ describe("auth.sessions.list", () => {
 
     const result = await h.client.auth.sessions.list({});
     expect(result).toHaveLength(3);
-    // Exactly one row is the current session — and it must be the one
-    // matching the harness request's cookie token, not just any row.
-    // Pull the cookie value off the harness context, hash it, and
-    // assert the flag landed on that specific id.
+    // The flag must land on the row matching the harness cookie's token, not
+    // just any row.
     const cookie = h.context.request.headers.get("cookie") ?? "";
     const cookieMatch = /plumix_session=([^;]+)/.exec(cookie);
     if (!cookieMatch?.[1])
@@ -692,10 +688,8 @@ describe("user.list — last-sign-in column", () => {
     const target = await h.factory.user.create({ email: "alice@cms.example" });
     // Older session
     await createSession(h.db, { userId: target.id });
-    // Newer session — wait a tick so createdAt advances. SQLite's
-    // unixepoch() resolution is seconds, so we manually set the
-    // expectation by inserting after a small wait. For this test,
-    // just confirm the value is non-null and is a Date.
+    // `unixepoch()` has second resolution, so this only checks the value is a
+    // non-null Date rather than its ordering.
     const result = await h.client.user.list({ limit: 50, offset: 0 });
     const row = result.find((u) => u.id === target.id);
     if (!row) throw new Error("expected target user in the list");
@@ -706,10 +700,9 @@ describe("user.list — last-sign-in column", () => {
 
 describe("auth.credentials.delete — race safety", () => {
   test("two concurrent deletes can't both leave the user with zero credentials", async () => {
-    // The TOCTOU window between count + delete is closed by folding
-    // the count check into the DELETE's WHERE via a subquery (per-
-    // statement isolation in SQLite). With exactly two credentials
-    // and two concurrent delete calls, exactly one must succeed.
+    // The count check is folded into the DELETE's WHERE, closing the TOCTOU
+    // window; of two concurrent deletes of two credentials, exactly one may
+    // succeed.
     const h = await createRpcHarness({ authAs: "editor" });
     const cred1 = await h.factory.credential.create({
       userId: h.user.id,

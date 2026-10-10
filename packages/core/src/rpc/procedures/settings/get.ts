@@ -8,17 +8,16 @@ import { requireCapability } from "../../require-capability.js";
 import { settingsGetInputSchema } from "./schemas.js";
 
 const CAPABILITY = "settings:manage";
-// Hard ceiling on rows returned per group. Registered-field count per
-// group is already capped at 200 (`MAX_FIELDS_PER_SETTINGS_GROUP` in
-// plugin/validation/meta-box-fields); doubling it here gives headroom for orphan keys
-// left by uninstalled plugins while still bounding response size.
+/**
+ * Double the 200-field group cap, leaving headroom for orphan keys from
+ * uninstalled plugins while bounding the response.
+ */
 const MAX_GROUP_ROWS_PER_READ = 500;
 
-// Returns the full key → value bag for one group, as `settingsGroupBag` reads
-// it — so the form of a group never saved opens on its starting values.
-//
-// Settings have no decode pass of their own: a `.returns("date")` settings
-// field reads back its stored ISO string, and a reference its stored id.
+/**
+ * Settings have no decode pass: a `.returns("date")` field reads back its
+ * stored ISO string, and a reference its stored id.
+ */
 export const get = base
   .use(authenticated)
   .use(requireCapability(CAPABILITY))

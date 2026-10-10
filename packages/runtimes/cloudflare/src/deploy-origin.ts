@@ -1,21 +1,17 @@
 export interface DeployOriginInput {
   /** `name` field from your `wrangler.jsonc` / `wrangler.toml`. */
   readonly workerName: string;
-  /** Your `<account>.workers.dev` subdomain — the part before `.workers.dev`. */
+  /**
+   * Your `<account>.workers.dev` subdomain — the part before `.workers.dev`.
+   */
   readonly accountSubdomain: string;
   /** Repo's default branch. Defaults to `"main"`. */
   readonly defaultBranch?: string;
   /** Override for local dev. Defaults to `http://localhost:8787`. */
   readonly localOrigin?: string;
   /**
-   * Full origin of the custom domain the *production* deploy is served on
-   * (e.g. `"https://example.com"`). Set this whenever production runs on a
-   * custom domain rather than its `*.workers.dev` host — Workers Builds does
-   * not expose the custom domain, so it can't be inferred. When set, the
-   * production branch resolves `rpId`/`origin` from it (deriving `rpId` from
-   * its hostname). Preview branches are unaffected: they stay on their
-   * per-branch `*.workers.dev` host (a custom domain and `workers.dev` are
-   * different registrable domains, so no single passkey can span both).
+   * Required on a custom production domain: Workers Builds doesn't expose it.
+   * Previews stay on `*.workers.dev`, so no single passkey spans both.
    */
   readonly productionOrigin?: string;
 }
@@ -26,45 +22,22 @@ export interface DeployOrigin {
   /** Full origin string the browser sends for this deploy. */
   readonly origin: string;
   /**
-   * Extra origins the passkey ceremony accepts alongside `origin`. On a
-   * `*.workers.dev` deploy this is the account wildcard
-   * (`https://*.<account>.workers.dev`) so one passkey — anchored to the
-   * account-subdomain `rpId` — spans production and every per-branch preview.
-   * Omitted for the localhost fallback and the custom-domain production case.
+   * The account wildcard on `*.workers.dev`, so one passkey spans production
+   * and every preview.
    */
   readonly allowedOrigins?: readonly string[];
 }
 
-// Read as the literal member expressions `process.env.WORKERS_CI` /
-// `process.env.WORKERS_CI_BRANCH`: the Plumix Vite plugin's `define` rewrites
-// those exact spellings and nothing else, and the deployed Worker's own
-// `process.env` never carries the names. Routing either read through an alias
-// or a helper puts it on the wrong side of that rewrite, and every deploy falls
-// back to localhost (#1947). The local `declare` re-shadows the `process: any`
-// @cloudflare/workers-types puts in scope; it emits nothing.
+/**
+ * Read as the literal `process.env.WORKERS_CI*` expressions: Vite's `define`
+ * rewrites only those spellings, so an alias or helper falls back to localhost.
+ */
 declare const process: { env: Record<string, string | undefined> };
 
 /**
- * Resolve the passkey `rpId` / `origin` / `allowedOrigins` for a Cloudflare
- * Workers deploy from the build-time env Workers Builds injects (`WORKERS_CI`,
- * `WORKERS_CI_BRANCH`).
- *
- * On any `*.workers.dev` deploy — production or a per-branch preview — `rpId`
- * is the account registrable domain (`<account>.workers.dev`) and
- * `allowedOrigins` is the account wildcard (`https://*.<account>.workers.dev`).
- * Because every deploy shares that registrable domain, one passkey enrolled
- * once is valid on production *and* every preview branch (previews are all
- * subdomains of the same `<account>.workers.dev`). `origin` still reflects the
- * specific host this build is served on.
- *
- * When production runs on a custom domain, pass `productionOrigin` — Workers
- * Builds does not expose the custom domain, so it can't be inferred. The
- * production branch then anchors to it; preview branches stay on their
- * `*.workers.dev` host. A custom domain and `workers.dev` are different
- * registrable domains, so no single passkey spans both — authenticate previews
- * with an origin-agnostic method (magic-link / Cloudflare Access) in that case.
- *
- * Falls back to localhost when not running under Workers Builds (local dev).
+ * With a custom production domain, previews stay on `*.workers.dev`, so
+ * authenticate them with an origin-agnostic method. Falls back to localhost
+ * outside Workers Builds.
  */
 export function cloudflareDeployOrigin(input: DeployOriginInput): DeployOrigin {
   const localOrigin = input.localOrigin ?? "http://localhost:8787";
@@ -72,18 +45,13 @@ export function cloudflareDeployOrigin(input: DeployOriginInput): DeployOrigin {
     return { rpId: "localhost", origin: localOrigin };
   }
   const defaultBranch = input.defaultBranch ?? "main";
-  // WORKERS_CI_BRANCH is set on push-triggered builds; on the very
-  // first deploy or some redeploy paths it can be missing. Treating
-  // an empty value as "the default branch" keeps production CSRF
-  // working instead of falling back to localhost (which would fail
-  // every deployed request).
+  // Missing on some first deploys and redeploys; treated as the default branch,
+  // since localhost would fail every deployed request.
   const raw = (process.env.WORKERS_CI_BRANCH ?? "").trim();
   const branch = raw === "" ? defaultBranch : raw;
   const isProduction = branch === defaultBranch;
 
-  // Custom-domain production: Workers Builds can't tell us the host, so the
-  // operator declares it. rpId derives from its hostname; previews keep their
-  // workers.dev host below (different registrable domain — can't be spanned).
+  // Workers Builds can't tell us the custom host, so the operator declares it.
   if (isProduction && input.productionOrigin !== undefined) {
     const url = new URL(input.productionOrigin);
     return { rpId: url.hostname, origin: url.origin };
@@ -103,16 +71,10 @@ export function cloudflareDeployOrigin(input: DeployOriginInput): DeployOrigin {
   };
 }
 
-// Cloudflare lowercases branch names and replaces non-alphanumerics
-// with `-`. We don't have an authoritative algorithm to mirror, so this
-// covers the cases the user is likely to push (slashes from feat/x,
-// underscores from snake_case, etc.) and lines up with the URLs
-// Workers Builds generates in practice.
-//
-// Hand-rolled single-pass to dodge CodeQL's `js/polynomial-redos` —
-// the `replace(/^-+|-+$/g, "")` trim is technically polynomial when
-// fed pathological dash runs, even though the upstream input is a
-// short branch name.
+/**
+ * Approximates Cloudflare's undocumented branch slug. Hand-rolled because a
+ * regex dash trim trips CodeQL's `js/polynomial-redos`.
+ */
 function sanitizeBranch(branch: string): string {
   let result = "";
   let pendingDash = false;

@@ -6,12 +6,8 @@ import { isCommentingEnabled } from "./enablement.js";
 import { loadThread } from "./load-thread.js";
 
 /**
- * Build the `comments` template-dep loader for a given plugin config.
- * The loader reads the entry being rendered from `ctx.resolvedEntity`
- * (set by the single-route resolver before deps load), confirms
- * commenting is enabled for that entry's type, and returns the approved
- * thread keyed by each declared slug. Returns `{}` (→ `null` per slug)
- * for non-entry routes or comment-disabled types.
+ * Returns `{}` (each slug `null`) on non-entry routes and comment-disabled
+ * types.
  */
 export function createCommentsThreadLoader(
   config: ResolvedCommentsConfig,

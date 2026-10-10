@@ -85,10 +85,10 @@ const M = {
   },
 } as const;
 
-// A body is paragraphs and one link: the text joins them with blank lines,
-// the HTML wraps each one, keeping a paragraph's own line breaks. Every value
-// is escaped, since a site name and an address are the site's and the user's
-// input.
+/**
+ * Every value is escaped, since a site name and an address are the site's
+ * and the user's input.
+ */
 type Block = { readonly text: string } | { readonly link: string };
 
 function textBody(blocks: readonly Block[]): string {

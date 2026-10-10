@@ -5,14 +5,7 @@ import { SeoError } from "./errors.js";
 import { readPageOverrides } from "./overrides.js";
 import { scopedType } from "./scope.js";
 
-/**
- * Why a page is or is not offered to a search engine, in the order the
- * assertions are evaluated. `default` is nothing having fired.
- *
- * The reason travels with the decision so an editor can be told a page is out
- * because its whole type is, rather than being shown a toggle that looks like
- * it did nothing.
- */
+/** In evaluation order. `default` means no assertion fired. */
 export type IndexabilityReason =
   | "site_private"
   | "entry_override"
@@ -60,23 +53,8 @@ export function assertIndexViewsNameViews(
 }
 
 /**
- * Whether this page is offered to search engines, and why.
- *
- * An ordered set of named assertions, short-circuiting on the first that
- * fires. Order is the design: a site held out of the index cannot be
- * overridden back in by an entry, and an editor's answer for one entry
- * outranks the default set for its whole type.
- *
- * The sitemap answers the same questions of whole tables rather than of a page
- * — the site and per-scope arms in `scopeIsOffered`, the entry arm as a `WHERE`
- * — and IndexNow asks the entry-facing ones inline, so what they share is this
- * module's keys and this order, not a call. The agreement table in
- * `routes.test.ts` is what holds the three to one answer. An entry type's
- * `access` policy sits outside all of this: it has no key here, and it gates
- * the page itself, so the head is only ever rendered behind it — only the
- * sitemap and IndexNow have to ask (`isCrawlableType`). The arms below
- * `taxonomy_default` describe pages the sitemap never lists, so there is
- * nothing for them to disagree about.
+ * Short-circuits on the first assertion that fires, so a private site can't be
+ * overridden by an entry and an entry's answer outranks its type's default.
  */
 export function indexable(
   facts: PageFacts,
@@ -93,8 +71,9 @@ export function indexable(
   if (taxonomy !== undefined && settings.noindexTaxonomies.has(taxonomy)) {
     return out("taxonomy_default");
   }
-  // A page that answers a visitor's query, whichever payload rendered it: core's
-  // search page states the query, and so does a plugin archive that replaces it.
+  // A page that answers a visitor's query, whichever payload rendered it:
+  // core's search page states the query, and so does a plugin archive that
+  // replaces it.
   if (facts.query !== null && !settings.indexSearch) {
     return out("search_results");
   }

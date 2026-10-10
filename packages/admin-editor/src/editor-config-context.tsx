@@ -6,22 +6,17 @@ import type { BlockRegistry, ThemeTokens } from "@plumix/core/blocks";
 import type { ResolvePluginFieldType } from "./block-input-control.js";
 import { EditorError } from "./errors.js";
 
-/**
- * The session-stable dependencies read across the editor tree. Provided once by
- * {@link PlumixEditor}; every consumer reads them via {@link useEditorConfig}
- * rather than receiving them as props drilled through intermediary panels that
- * only forward them. Mirrors how the editor store already reaches the same
- * components through context.
- */
+/** Session-stable for the editor's lifetime. */
 export interface EditorConfig {
-  /** Core + plugin block registry — inspector schemas, catalog, layer labels. */
+  /**
+   * Core + plugin block registry — inspector schemas, catalog, layer labels.
+   */
   readonly registry: BlockRegistry;
   /** Theme tokens offered in the Styles tab's token-or-custom controls. */
   readonly tokens: ThemeTokens;
   /** Viewer capabilities, gating which blocks the catalog offers. */
   readonly capabilities: ReadonlySet<string>;
-  /** Resolves plugin-registered field types (e.g. the media picker) to a
-   *  control; absent in a deployment with no plugin field registry. */
+  /** Absent in a deployment with no plugin field registry. */
   readonly resolvePluginFieldType?: ResolvePluginFieldType;
 }
 

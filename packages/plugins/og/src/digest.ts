@@ -1,4 +1,4 @@
-/** Hex characters kept from a digest — 64 bits, far past what one site mints. */
+/** 64 bits, far past what one site mints. */
 const DIGEST_LENGTH = 16;
 
 /** SHA-256 over a string, truncated to a short URL- and key-safe token. */

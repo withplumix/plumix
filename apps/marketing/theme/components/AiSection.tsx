@@ -5,9 +5,11 @@ import { CodePanel } from "./CodePanel";
 import { Eyebrow } from "./Eyebrow";
 import { SectionHeading } from "./SectionHeading";
 
-// A real `error_list` response from this app's dev server, taken while a
-// component threw on /pricing. Trimmed: the stack keeps its first frame and the
-// request id is shortened.
+/**
+ * A real `error_list` response from this app's dev server, taken while a
+ * component threw on /pricing. Trimmed: the stack keeps its first frame and the
+ * request id is shortened.
+ */
 const ERROR_LIST = `// POST /_plumix/mcp  tools/call "error_list"
 [{
   "source": "server",

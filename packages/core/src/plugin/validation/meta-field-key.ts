@@ -1,8 +1,7 @@
-// The one meta field key rule. Registration and the RPC write path both
-// build from it — a key registration accepts but a write rejects is a dead
-// field the admin only discovers later. Lives apart from meta-box-fields.ts
-// because the sub-field validator imports it and meta-box-fields.ts already
-// imports the sub-field module.
+/**
+ * Shared by registration and the RPC write path, so no registered key is
+ * rejected on write. Separate file to avoid an import cycle with sub-fields.
+ */
 export const META_FIELD_KEY_RE = /^[a-zA-Z0-9_:-]+$/;
 
 export const META_FIELD_KEY_MAX_LENGTH = 200;

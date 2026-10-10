@@ -6,12 +6,8 @@ import { withBasePath } from "plumix/support";
 import { feedUnder, servesFeed } from "./routes.js";
 
 /**
- * The path of the RSS feed a page advertises, base prefix included, or null
- * when it has none: the feed of the archive that owns the page, as the
- * dispatcher resolved it. A later page advertises the feed
- * of the route it paginates. A single entry, the search page and a view belong
- * to no archive, so they advertise nothing — and neither does an error page, which
- * can sit at an archive's URL without being its page.
+ * An error page can sit at an archive's URL without being its page, so it
+ * advertises no feed.
  */
 function feedBase(data: TemplateData, ctx: AppContext): string | null {
   const route = ctx.resolvedRoute;
@@ -35,7 +31,7 @@ function feedBase(data: TemplateData, ctx: AppContext): string | null {
 
 const SUFFIX_SEGMENTS = FRAMEWORK_PAGINATION_SUFFIX.split("/").length - 1;
 
-// A later page's listing is its own path with the pagination tail dropped.
+/** A later page's listing is its own path with the pagination tail dropped. */
 function listingPath(route: ResolvedRoute, pathname: string): string {
   if (!route.pattern.endsWith(FRAMEWORK_PAGINATION_SUFFIX)) return pathname;
   return pathname.split("/").slice(0, -SUFFIX_SEGMENTS).join("/");

@@ -16,21 +16,15 @@ import { paginatedEntries } from "./page-data.js";
 import { resolveEntryList } from "./resolve-entry-list.js";
 
 /**
- * The query every archive starts from: the public entries, and nothing a
- * receiver can add back. Where the site routes no public type at all it is
- * `none()` rather than unconstrained — an empty archive, not an open one.
+ * With no public type routed, this is `none()`: an empty archive, not an open
+ * one.
  */
 export function publicEntriesQuery(plugins: PluginRegistry): EntryQuery {
   const guard = publicEntryRows(plugins);
   return guard === null ? entryQuery().none() : entryQuery().where(guard);
 }
 
-/**
- * The CDN tags an archive's page is stored under: the types its query can
- * list, or every public type where it names none. A publish of any of them can
- * change the page, so a publish of any of them purges it — the same coarse
- * invalidation the built-in archives get.
- */
+/** The types the query can list, or every public type when it names none. */
 export function listingCdnTags(
   plugins: PluginRegistry,
   query: EntryQuery,
@@ -39,7 +33,10 @@ export function listingCdnTags(
   return types.map(typeTag);
 }
 
-/** A listing, plus the one thing only the reader can say about the page asked for. */
+/**
+ * A listing, plus the one thing only the reader can say about the page asked
+ * for.
+ */
 export interface EntryPage extends EntryListing {
   /** The page is past the last one — a 404 at every surface that has pages. */
   readonly outOfRange: boolean;
@@ -52,21 +49,9 @@ export interface EntryPageRequest {
 }
 
 /**
- * Run an entry query as one page of a listing: the resolved entries, their
- * pagination, and whether the page number ran off the end.
- *
- * `null` is a query that names something no row could answer to — a term path
- * nothing matches — which the caller reads as a 404 rather than as an empty
- * page. An empty page is `entries: []` with `outOfRange: false`, the answer an
- * archive with nothing in it yet gets.
- *
- * The public-entries rule is applied here whether or not the query already
- * carries it, for the reason ADR 0007 gives for applying a feed's guard twice:
- * a query built from scratch rather than narrowed from the one it was handed
- * still cannot list a draft.
- *
- * The one listing reader: core's built-in archives and every plugin archive
- * with `entries` page through here (ADR 0008).
+ * `null` means the query names something no row can match (a 404), unlike an
+ * empty page. Re-applies the public-entries rule so a query built from scratch
+ * still can't list a draft.
  */
 export async function listEntryPage(
   ctx: AppContext,

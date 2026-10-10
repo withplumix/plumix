@@ -2,10 +2,8 @@ import { readFileSync } from "node:fs";
 import { parseEnv } from "node:util";
 
 /**
- * Applies a `.env` file to the process environment with dotenv semantics — a
- * variable the shell already set wins — and remembers which keys came from
- * the file, so applying it again after an edit replaces or removes those
- * without touching the shell's. A missing file applies nothing.
+ * A variable the shell already set wins. Remembers which keys came from the
+ * file, so reapplying after an edit replaces or removes only those.
  */
 export function createDotenvLoader(
   env: NodeJS.ProcessEnv = process.env,

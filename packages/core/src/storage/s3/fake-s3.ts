@@ -1,10 +1,5 @@
-// Test support: an in-memory S3 reachable through `fetch`, and the SigV4
-// verifier it authenticates with. The verifier recomputes every signature
-// from the request as received — the way a real bucket does — with its own
-// reading of the AWS spec rather than anything from `sigv4.ts`, so a signer
-// bug and a matching verifier bug cannot cancel out. Published on
-// `plumix/test/conformance`, so a runtime's own S3 client is held to the same
-// bucket as core's signer.
+// The verifier reads the AWS spec independently of `sigv4.ts`, so a signer bug
+// and a matching verifier bug cannot cancel out.
 
 import { toFreshArrayBuffer } from "../body.js";
 
@@ -214,8 +209,10 @@ async function signedHeaderValue(
   return request.headers.get(name);
 }
 
-// `fetch` puts `Content-Length` on the wire from the body rather than on the
-// `Request`, so the length the bucket would see is the body's when it is unset.
+/**
+ * `fetch` puts `Content-Length` on the wire from the body rather than on the
+ * `Request`, so the length the bucket would see is the body's when it is unset.
+ */
 async function contentLengthOf(request: Request): Promise<string> {
   const declared = request.headers.get("content-length");
   if (declared !== null) return declared;
@@ -223,7 +220,7 @@ async function contentLengthOf(request: Request): Promise<string> {
   return String(body.byteLength);
 }
 
-// Each segment URI-encoded exactly once, from the decoded form.
+/** Each segment URI-encoded exactly once, from the decoded form. */
 function canonicalPathOf(url: URL): string {
   return url.pathname
     .split("/")
@@ -231,8 +228,10 @@ function canonicalPathOf(url: URL): string {
     .join("/");
 }
 
-// Decoded then re-encoded, the way S3 canonicalises what it receives, so an
-// equivalent encoding on the wire still verifies.
+/**
+ * Decoded then re-encoded, the way S3 canonicalises what it receives, so an
+ * equivalent encoding on the wire still verifies.
+ */
 function canonicalQueryOf(url: URL, omit: string | null): string {
   const pairs: [string, string][] = [];
   for (const [name, value] of url.searchParams) {
@@ -299,7 +298,7 @@ function encode(s: string): string {
   );
 }
 
-// `20260426T112233Z` → epoch milliseconds.
+/** `20260426T112233Z` → epoch milliseconds. */
 function parseAmzDate(stamp: string): number {
   const m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/.exec(stamp);
   if (!m) return Number.NaN;
@@ -324,7 +323,9 @@ export interface FakeS3 {
   /** Stands in for the global `fetch`; hand it to `s3({ fetch })`. */
   readonly fetch: typeof fetch;
   readonly store: Map<string, FakeS3Object>;
-  /** Every request received, in order — the last one is what a test inspects. */
+  /**
+   * Every request received, in order — the last one is what a test inspects.
+   */
   readonly requests: readonly Request[];
 }
 

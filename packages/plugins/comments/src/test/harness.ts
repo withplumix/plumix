@@ -19,13 +19,10 @@ export const ORIGIN = "https://cms.example";
 export type Harness = Awaited<ReturnType<typeof createDispatcherHarness>>;
 
 /**
- * A members-only gate that answers terminally. `authenticatedPolicy` would
- * redirect to sign-in, which no harness here routes a page for, and where the
- * gate sends a reader is not what the comment surfaces are tested on.
+ * Not `authenticatedPolicy`: no harness routes its sign-in redirect. A hard
+ * challenge, because a soft one still renders, so anonymous access would be
+ * allowed.
  */
-// The challenge is hard, not soft, and the tests depend on it: a soft
-// challenge still renders (a theme serves a teaser at the same URL), so
-// `entryAllowsAnonymousAccess` would answer yes and gate nothing.
 const membersOnlyPolicy = definePolicy({
   segments: ["members"],
   resolve: (ctx) => (ctx.user ? grant("members") : challenge("subscribe")),
@@ -110,13 +107,9 @@ export async function rows(harness: Harness) {
 }
 
 /**
- * Exactly what a browser sends for `<form method="post" action="…">`: a
- * urlencoded body, an `Origin` and a `Referer`, and none of the
- * `X-Plumix-Request` header it has no way to set.
- *
- * `as` puts a session cookie on it, which is how the tests show that the
- * `formPost` exemption hands the handler a request with no session to
- * read even when the cookie is right there on the wire.
+ * What a browser sends for `<form method="post">`: no `X-Plumix-Request`
+ * header, which it cannot set. `as` adds a session cookie the exemption must
+ * ignore.
  */
 export function formPost(
   harness: Harness,

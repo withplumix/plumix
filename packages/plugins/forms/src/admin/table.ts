@@ -1,14 +1,8 @@
 import type { FormSummary } from "../types.js";
 
 /**
- * What the form filter offers: every form the registry declares now,
- * then every slug that only has a backlog — a form deleted since is
- * still how its submissions are reached, under its slug because there is
- * no longer a title to call it by.
- *
- * The slug being filtered by is always among them. Slugs are counted
- * within the status filter, so a form with nothing under the status in
- * view would otherwise leave the list it is selected in.
+ * Includes slugs of deleted forms that still have submissions, and
+ * always the selected slug, which the status filter could otherwise hide.
  */
 export function formFilterOptions(
   declared: readonly FormSummary[],

@@ -23,23 +23,11 @@ export interface CreateSessionInput {
   readonly userAgent?: string | null;
 }
 
-// Bounds for the values we persist. Real-world UA strings are typically
-// 100-400 chars; 1024 leaves headroom while bounding row width on
-// hostile / malformed input. IPs are at most 45 chars (IPv6) — 64 gives
-// space for IPv6 zone IDs without going wild.
+/** 64 leaves room for IPv6 zone IDs; real UA strings stay well under 1024. */
 const MAX_IP_LENGTH = 64;
 const MAX_UA_LENGTH = 1024;
 
-/**
- * Pull the client address + user-agent for `sessions.ipAddress` /
- * `sessions.userAgent`, truncated so a misconfigured upstream can't blow up
- * the row width.
- *
- * Used at every `createSession` call site so the per-session admin UI can
- * surface meaningful "what device / where from" context for the "is this me?"
- * workflow. The values are advisory: policy decisions still flow through the
- * session id (hash-keyed, server-issued).
- */
+/** Advisory only, for display: never base a policy decision on these values. */
 export function readClientMeta(ctx: AppContext): {
   readonly ipAddress: string | null;
   readonly userAgent: string | null;
@@ -95,16 +83,14 @@ export async function createSession(
     })
     .returning();
 
-  // eslint-disable-next-line no-restricted-syntax -- defensive driver-regression guard; migrate alongside auth errors in PR 2 (#234)
+  // eslint-disable-next-line no-restricted-syntax -- unreachable unless the driver returns no row from INSERT … RETURNING
   if (!session) throw new Error("createSession: insert returned no row");
   return { token, session, expiresAt };
 }
 
 /**
- * Validate a raw session token from the cookie. Returns null on any failure
- * (no row, expired, beyond absolute cap). Slides expiresAt when over the
- * refresh threshold; deletes the row on absolute-cap breach so a stolen
- * token past the ceiling is purged on first use.
+ * Slides `expiresAt` past the refresh threshold, and deletes a row past the
+ * absolute cap on first use.
  */
 export async function validateSession(
   db: Db,
@@ -183,11 +169,8 @@ export async function invalidateAllSessionsForUser(
 }
 
 /**
- * Bulk-delete expired rows, returning how many were reaped. Caller decides
- * cadence (cron / on-demand). Counting off the driver rather than reading
- * every deleted id back trades portability for heap: a driver that reports
- * no count throws here, where `returning()` would have answered. The demo
- * runtime's `sqlite-proxy` is the only such driver, and it runs no cron.
+ * Throws on a driver that reports no affected-row count, such as
+ * `sqlite-proxy`.
  */
 export async function pruneExpiredSessions(db: Db): Promise<number> {
   return rowsAffected(

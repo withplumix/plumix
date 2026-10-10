@@ -4,10 +4,8 @@ import type { Comment } from "../db/schema.js";
 import type { CommentStatus } from "../types.js";
 
 /**
- * What a `comment:moderate` filter sees about an incoming comment. Spam,
- * Akismet, or AI plugins read these signals and may only push the status
- * toward the restrictive end (the submit handler clamps via
- * `mostRestrictive`, so order between filters doesn't matter).
+ * A `comment:moderate` filter may only push status toward the restrictive end;
+ * the handler clamps with `mostRestrictive`.
  */
 export interface CommentModerationCandidate {
   readonly entryId: number;

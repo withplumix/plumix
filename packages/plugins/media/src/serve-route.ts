@@ -7,10 +7,12 @@ import { parseMediaMeta } from "./meta.js";
 const PREFIX = "/_plumix/media/serve/";
 const MEDIA_ENTRY_TYPE = "media";
 
-// Mimes safe to render inline same-origin. Everything else gets
-// `Content-Disposition: attachment` to force download — defense
-// against stored-XSS via uploaded content (text/html in a `.txt`,
-// scripted SVG, polyglot bytes).
+/**
+ * Mimes safe to render inline same-origin. Everything else gets
+ * `Content-Disposition: attachment` to force download — defense
+ * against stored-XSS via uploaded content (text/html in a `.txt`,
+ * scripted SVG, polyglot bytes).
+ */
 const INLINE_SAFE_MIMES = new Set<string>([
   "image/jpeg",
   "image/png",
@@ -26,20 +28,8 @@ const INLINE_SAFE_MIMES = new Set<string>([
 ]);
 
 /**
- * Worker-proxied media serve. Mounted at `GET /_plumix/media/serve/<id>`
- * via `ctx.registerRoute({ path: "/serve/*", auth: "public" })`.
- *
- * Public on purpose — published media is meant to be embeddable in
- * pages/posts. Three guards:
- *
- * 1. **Published-only**: looks up `entries` by id and requires
- *    `type='media' AND status='published'`. Drafts and trashed rows
- *    return 404.
- * 2. **Mime sandboxing**: `X-Content-Type-Options: nosniff` always;
- *    `Content-Disposition: attachment` for any mime not in the
- *    inline-safe allowlist (forces download instead of render).
- * 3. **Etag round-trip**: 304 on `If-None-Match` match so the worker
- *    isn't re-streaming bytes for every page view.
+ * Public, so serves published media only (drafts and trash 404). Mimes outside
+ * the inline-safe allowlist are sent as attachments.
  */
 export async function handleMediaServe(
   request: Request,
@@ -87,11 +77,8 @@ export async function handleMediaServe(
     });
   }
 
-  // `?attachment=1` forces a download regardless of mime. The admin's
-  // Download button uses this so the response carries the attachment
-  // disposition even when `publicUrlBase` would otherwise route around
-  // the worker (HTML `<a download>` is silently ignored cross-origin
-  // without a matching `Content-Disposition` header).
+  // For the admin's Download button: `<a download>` is ignored cross-origin
+  // (with `publicUrlBase`) without this disposition.
   const forceAttachment = url.searchParams.get("attachment") === "1";
   const inline = !forceAttachment && INLINE_SAFE_MIMES.has(meta.mime);
 

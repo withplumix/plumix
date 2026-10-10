@@ -1,11 +1,5 @@
-// Plugin authors and core hooks both extend these registries via TypeScript
-// module augmentation: a `declare module` block colocated with the code that
-// fires each hook adds its name and handler signature here. Core's public hooks
-// are anchored into the published declaration graph by `./public-hooks.ts` so a
-// consumer's registry carries them (see that file and issue #1698); third-party
-// plugins augment `"plumix"` from their own modules.
-//
-// Each registry value is the handler signature for that hook name.
+// Extended by module augmentation colocated with the code firing each hook;
+// third-party plugins augment `"plumix"`.
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface FilterRegistry {}
@@ -13,25 +7,31 @@ export interface FilterRegistry {}
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface ActionRegistry {}
 
-// `keyof` of an empty interface is `never`; after module augmentation by the
-// Vite plugin (and by tests), it becomes a string-literal union.
+/**
+ * `keyof` of an empty interface is `never`; after module augmentation by the
+ * Vite plugin (and by tests), it becomes a string-literal union.
+ */
 // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 export type FilterName = keyof FilterRegistry & string;
 // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 export type ActionName = keyof ActionRegistry & string;
 
-// Filters are pipelines: each handler receives the previous handler's return
-// value as its first argument and returns the (possibly transformed) value.
-// `(value, ...rest) => value | Promise<value>`.
+/**
+ * Filters are pipelines: each handler receives the previous handler's return
+ * value as its first argument and returns the (possibly transformed) value.
+ * `(value, ...rest) => value | Promise<value>`.
+ */
 export type FilterFn<TName extends FilterName> = FilterRegistry[TName] extends (
   ...args: infer A
 ) => infer R
   ? (...args: A) => R
   : never;
 
-// Filter input type = first parameter type. Rest params = everything else.
-// Extracted via Parameters<T> + tuple slicing so `applyFilter(name, input, ...rest)`
-// is type-safe at the call site.
+/**
+ * Filter input type = first parameter type. Rest params = everything else.
+ * Extracted via Parameters<T> + tuple slicing so `applyFilter(name, input,
+ * ...rest)` is type-safe at the call site.
+ */
 export type FilterInput<TName extends FilterName> = Parameters<
   FilterRegistry[TName]
 >[0];

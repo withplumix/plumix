@@ -47,12 +47,16 @@ import {
 } from "./queries.js";
 import { formFilterOptions } from "./table.js";
 
-// Radix Select forbids an empty-string item value, so "every form"
-// carries a sentinel that maps back to no filter at all.
+/**
+ * Radix Select forbids an empty-string item value, so "every form"
+ * carries a sentinel that maps back to no filter at all.
+ */
 const ANY_FORM = "__any__";
 
-// As many answers as fit beside the date and the status without the
-// table scrolling; the rest are in the submission itself.
+/**
+ * As many answers as fit beside the date and the status without the
+ * table scrolling; the rest are in the submission itself.
+ */
 const MAX_COLUMNS = 3;
 
 const STATUS_LABELS = {
@@ -62,8 +66,10 @@ const STATUS_LABELS = {
   spam: { id: "plugin.forms.status.spam", message: "Spam" },
 } satisfies Record<SubmissionStatus, MessageDescriptor>;
 
-// Descriptors read outside JSX — attributes, dynamic lookups, and the
-// two words a stored checkbox answer is rendered with.
+/**
+ * Descriptors read outside JSX — attributes, dynamic lookups, and the
+ * two words a stored checkbox answer is rendered with.
+ */
 const M = {
   // The same id the admin page is registered under in `index.ts`: one
   // string, so one translation unit rather than two that can disagree.
@@ -97,9 +103,10 @@ const EXPORT_FORMATS = [
   { format: "json", label: M.exportJson },
 ] as const;
 
-// The counts come back as parsed JSON, and a form may legitimately be
-// called `constructor` or `toString`. A bare index would then hand back
-// an inherited function, which React throws on rendering.
+/**
+ * A form may be called `constructor`; a bare index would return an
+ * inherited function, which React throws on.
+ */
 function countFor(
   counts: Readonly<Record<string, number>> | undefined,
   key: string,
@@ -107,7 +114,6 @@ function countFor(
   return counts && Object.hasOwn(counts, key) ? (counts[key] ?? 0) : 0;
 }
 
-/** The two words a stored checkbox answer reads as, in the admin's own locale. */
 function useAnswerWords(): AnswerWords {
   const { i18n } = useLingui();
   return { yes: i18n._(M.yes), no: i18n._(M.no) };
@@ -537,9 +543,8 @@ function SubmissionDetail({
         </p>
       )}
 
-      {/* Not a `<dl>`: a group or a repeater row is a name with no value
-          of its own, and a `<dt>` with no `<dd>` is not a list a reader
-          can rely on. The nesting is carried by the indent instead. */}
+      {/* Not a `<dl>`: a group heading has no value, and a `<dt>` with
+          no `<dd>` is not a reliable list. */}
       <div data-testid="forms-detail-answers" className="flex flex-col gap-1">
         {answerLines(row.answers, row.labels, words).map((line) => (
           <p
@@ -595,10 +600,8 @@ function SubmissionDetail({
         <dd data-testid="forms-detail-agent">{row.userAgent ?? NONE}</dd>
       </dl>
 
-      {/* Keyed on the submission, not on its note: opening another one
-          remounts the box on that one's note, while a save leaves what is
-          in the box alone — typing on while it is in flight would
-          otherwise lose whatever was added. */}
+      {/* Keyed on the submission, not its note, so a save in flight
+          doesn't drop what the user keeps typing. */}
       <NoteEditor
         key={row.id}
         note={row.note}

@@ -42,15 +42,10 @@ export function readManifest(doc: Document = document): PlumixManifest {
   }
 }
 
-// Declares, per manifest field, whether the wire value is expected to be an
-// array (`true`) or an object (`false`) — a boolean rather than an "array" /
-// "object" string literal so the values themselves don't trip
-// `lingui/no-unlocalized-strings`, which is live for this file. `satisfies
-// Record<keyof PlumixManifest, boolean>` makes this exhaustive over
-// `PlumixManifest` in both directions: a field added there without an entry
-// here fails typecheck, and an entry here for a field that doesn't exist
-// there does too. Unlike the old hand-maintained allowlist, a new manifest
-// field cannot be silently dropped.
+/**
+ * Booleans, not "array" / "object" literals, which would trip
+ * `lingui/no-unlocalized-strings`.
+ */
 const MANIFEST_FIELD_IS_ARRAY = {
   entryTypes: true,
   termTaxonomies: true,
@@ -74,10 +69,10 @@ const MANIFEST_FIELD_IS_ARRAY = {
   frameworkRoutes: false,
 } as const satisfies Record<keyof PlumixManifest, boolean>;
 
-// Non-matching values for known fields are dropped (silent, not coerced —
-// the payload is build-time generated, malformed shape means the build is
-// broken upstream). Missing fields stay undefined; consumers `?? []`/`?? {}`
-// at the read site.
+/**
+ * Drops, not coerces: the payload is build-generated, so a bad shape means the
+ * build is broken upstream.
+ */
 function normalize(value: unknown): PlumixManifest {
   if (!value || typeof value !== "object") return {};
   const v = value as JsonObject;
@@ -92,9 +87,10 @@ function normalize(value: unknown): PlumixManifest {
   return result;
 }
 
-// Parsed once, on first read rather than at module load: the manifest
-// `<script>` is written by the admin shell, and a module imported before that
-// element exists would otherwise cache an empty snapshot forever.
+/**
+ * Parsed on first read: a module imported before the manifest `<script>`
+ * exists would cache an empty snapshot forever.
+ */
 let snapshot: PlumixManifest | undefined;
 
 function currentManifest(): PlumixManifest {
@@ -156,12 +152,6 @@ export function findEntryTypeBySlug(
   return (source.entryTypes ?? []).find((pt) => pt.adminSlug === slug);
 }
 
-/**
- * Find an entry type by its registered `name` (`"post"`, `"page"`).
- * The lookup adapter emits the row's type name as `LookupResult.
- * targetType`, so the admin reference picker uses this to resolve
- * `labels.untitledItem` from the manifest at render time.
- */
 export function findEntryTypeByName(
   name: string,
   source: PlumixManifest = currentManifest(),
@@ -169,11 +159,7 @@ export function findEntryTypeByName(
   return (source.entryTypes ?? []).find((pt) => pt.name === name);
 }
 
-/**
- * The theme-registered `named` templates selectable for an entry type,
- * feeding the editor's template picker. Empty when the type has none or is
- * unknown — the caller renders just the "theme default" option.
- */
+/** Empty when the type has none or is unknown. */
 export function namedTemplatesForType(
   name: string,
   source: PlumixManifest = currentManifest(),
@@ -181,11 +167,7 @@ export function namedTemplatesForType(
   return findEntryTypeByName(name, source)?.namedTemplates ?? [];
 }
 
-/**
- * The per-entry access policies an editor may assign for an entry type, feeding
- * the editor's visibility picker. Empty when the type declares no selectable
- * space or is unknown — the caller renders just the "type default" option.
- */
+/** Empty when the type declares no selectable space or is unknown. */
 export function accessPoliciesForType(
   name: string,
   source: PlumixManifest = currentManifest(),
@@ -199,11 +181,8 @@ export function visibleEntryTypes(
 ): readonly EntryTypeManifestEntry[] {
   const caps = new Set(capabilities);
   return (source.entryTypes ?? []).filter((pt) => {
-    // `showInSidebar: false` already hides the type from the auto-
-    // generated sidebar entry-list link. Apply the same flag to the
-    // dashboard quick-card grid — types that opted out of the sidebar
-    // weren't meant to be a generic content surface either (e.g. the
-    // media plugin renders its own Media Library page).
+    // A type that opted out of the sidebar isn't a generic content surface
+    // either.
     if (!pt.showInSidebar) return false;
     return caps.has(entryTypeCapability(pt, "edit_own"));
   });
@@ -257,9 +236,11 @@ export function visibleDashboardWidgets(
   );
 }
 
-// Three meta-box visibility filters (entry/term/user) share the same
-// shape: scope filter → capability gate → priority sort. Extracted so
-// each surface only declares what's specific (the scope predicate).
+/**
+ * Three meta-box visibility filters (entry/term/user) share the same
+ * shape: scope filter → capability gate → priority sort. Extracted so
+ * each surface only declares what's specific (the scope predicate).
+ */
 function filterMetaBoxes<
   T extends {
     readonly id: string;
@@ -342,12 +323,7 @@ export function groupsForSettingsPage(
     .filter((g): g is SettingsGroupManifestEntry => g !== undefined);
 }
 
-/**
- * Filter the unified admin nav tree by capabilities. Items missing
- * required caps are dropped; groups whose item list ends up empty are
- * dropped too. Group + item ordering is already baked into the wire
- * payload — no re-sort here.
- */
+/** Drops groups left empty. Ordering comes from the wire payload. */
 export function visibleAdminNav(
   capabilities: readonly string[],
   source: PlumixManifest = currentManifest(),

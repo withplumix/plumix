@@ -35,7 +35,9 @@ const MONTHS = [
   "December",
 ];
 
-// A readable heading for a date archive: "2026", "July 2026", "July 21, 2026".
+/**
+ * A readable heading for a date archive: "2026", "July 2026", "July 21, 2026".
+ */
 function dateHeading(data: DateArchiveData): string {
   const { year, month, day } = data;
   if (month === null) return String(year);
@@ -44,7 +46,9 @@ function dateHeading(data: DateArchiveData): string {
   return `${monthName} ${String(day)}, ${String(year)}`;
 }
 
-// Title + empty-state copy for each listing node; the front page has neither.
+/**
+ * Title + empty-state copy for each listing node; the front page has neither.
+ */
 function listingCopy(data: ListingData): {
   heading?: string;
   emptyMessage?: string;
@@ -78,9 +82,11 @@ function listingCopy(data: ListingData): {
   return {};
 }
 
-// The `index` slot: renders every listing route as a post list, deriving the
-// title from the resolved node (see index.ts for why it's the only listing
-// template).
+/**
+ * The `index` slot: renders every listing route as a post list, deriving the
+ * title from the resolved node (see index.ts for why it's the only listing
+ * template).
+ */
 export const fallback = defineTemplate({
   settings: ["site"],
   menus: ["primary", "footer"],

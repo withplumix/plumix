@@ -29,8 +29,10 @@ const request = new Request("https://cms.example/");
 const auth: AuthNamespace = { can: () => true };
 const entryTypes = new Map();
 
-// The chrome as a page renders it: the bar for the principal on the context,
-// with the core contributors registered unless a test registers its own.
+/**
+ * The chrome as a page renders it: the bar for the principal on the context,
+ * with the core contributors registered unless a test registers its own.
+ */
 function renderChrome(
   viewer: AuthenticatedUser | null,
   hooks = withCoreContributors(),
@@ -176,9 +178,7 @@ describe("PlumixAdminBar", () => {
   });
 
   // Which locale renders which translation is catalog content, gated by
-  // `i18n:check`. These tests cover the locale→chrome wiring: the nav carries
-  // an aria-label sourced from the bar catalog, and the locale drives the
-  // document `lang`/`dir` attributes.
+  // `i18n:check`; these tests cover only the locale-to-chrome wiring.
   test("renders nav with an aria-label sourced from the bar catalog", () => {
     const hooks = new HookRegistry();
     registerCoreAdminBarContributors(hooks);

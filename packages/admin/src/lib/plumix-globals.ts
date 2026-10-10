@@ -30,9 +30,11 @@ import {
   registerPluginPage,
 } from "./plugin-registry.js";
 
-// Keyed by core's shim roster, the same keys `plumix/admin/*` shims read
-// through `PlumixAdminRuntime`: a missing or stray key fails to compile here
-// rather than reaching a plugin chunk as `undefined`.
+/**
+ * Keyed by core's shim roster, the same keys `plumix/admin/*` shims read
+ * through `PlumixAdminRuntime`: a missing or stray key fails to compile here
+ * rather than reaching a plugin chunk as `undefined`.
+ */
 const runtime = {
   react: ReactNs,
   reactJsxRuntime: ReactJsxRuntimeNs,
@@ -45,20 +47,14 @@ const runtime = {
   orpcTanstackQuery: OrpcTanstackQueryNs,
   linguiCore: LinguiCoreNs,
   linguiReact: LinguiReactNs,
-  // Substrates the shared shadcn components (`plumix/admin/ui`) sit on.
-  // Exposing the host's instances lets plugin chunks share radix context
-  // (Tooltip/Dialog providers), sonner's `toast()` singleton, and the
-  // `tailwind-merge` cache rather than bundling their own copies.
+  // Host instances so plugin chunks share Radix context, sonner's singleton and
+  // the tailwind-merge cache.
   radix: RadixNs,
   sonner: SonnerNs,
   tailwindMerge: TailwindMergeNs,
 } as const satisfies Record<SharedAdminRuntimeKey, unknown>;
 
 interface PlumixI18nGlobal {
-  /** Load a third-party plugin's compiled catalog for the active
-   *  locale. Plugins that mount admin chunks after initial boot call
-   *  this from their entry to merge their catalog into the same
-   *  Lingui instance the admin uses. */
   readonly loadPluginCatalog: (
     pluginId: string,
     locale: string,
@@ -104,12 +100,8 @@ export function bootPlumixGlobals(): void {
     runtime,
     basePath: adminBasePath(),
     configuredSlots: getConfiguredSlots(),
-    // Indirection through the ref so the manifest-bound loader
-    // installed by `bootI18n` is reachable from plugin chunks that
-    // load post-boot. Pre-boot callers hit the no-op default; the
-    // call is then a silent miss (the chunk's `<Trans>` falls back
-    // to `descriptor.message`). Plugin authors should call this
-    // from `useEffect`, not module top-level.
+    // Through the ref so post-boot chunks reach the loader; a pre-boot call is
+    // a silent miss.
     i18n: {
       loadPluginCatalog: (pluginId, locale) =>
         pluginCatalogLoaderRef.current(pluginId, locale),

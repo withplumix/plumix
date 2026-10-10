@@ -12,8 +12,10 @@ import { SETTINGS_CREATED_KEY } from "../../../template-deps-core.js";
 import { createTracedContext } from "../../../test/traced-context.js";
 import { sweepUnsettledMeta } from "./sweep.js";
 
-// One field of each scalar shape per store, so every store has a value the
-// write path would settle and one it could not.
+/**
+ * One field of each scalar shape per store, so every store has a value the
+ * write path would settle and one it could not.
+ */
 const plugin = definePlugin("test-sweep", (ctx) => {
   ctx.registerEntryMetaBox("entry-box", {
     label: "Entry",
@@ -59,8 +61,10 @@ async function seeded() {
   return { harness, ctx, run, dbQueryCount, author, post, term };
 }
 
-// Enough settleable settings that a call's budget runs out partway through
-// them, so the settings walk has to resume.
+/**
+ * Enough settleable settings that a call's budget runs out partway through
+ * them, so the settings walk has to resume.
+ */
 const MANY = Array.from(
   { length: 30 },
   (_, i) => `n${String(i).padStart(2, "0")}`,
@@ -247,8 +251,7 @@ describe("sweepUnsettledMeta", () => {
       .assertCalledWith((entry) => entry.id === post.id);
   });
   // D1 caps the queries one Worker invocation may make, so a large site can't
-  // be settled in one call. A call stops at its budget and hands back where it
-  // stopped; calling again from there finishes the job.
+  // be settled in one call.
   test("stops at its query budget and resumes from where it stopped", async () => {
     const { harness, ctx, author } = await seeded();
     await harness.factory.entry.createList(40, {
@@ -293,9 +296,8 @@ describe("sweepUnsettledMeta", () => {
     expect(dbQueryCount() - before).toBeLessThanOrEqual(25);
   });
 
-  // Settings are resumed by key, not by position: a settings save landing
-  // between two calls can remove a row the walk already passed, and a
-  // position would then skip the row after it.
+  // A settings save between calls can remove a row the walk passed; resuming by
+  // position would then skip the next row.
   test("resumes settings by key when a row it passed is removed between calls", async () => {
     const { harness, ctx } = await seeded();
     await harness.db

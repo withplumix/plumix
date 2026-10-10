@@ -9,19 +9,7 @@ import type { ThemeDescriptor } from "../../theme.js";
 import type { AssetManifest } from "./asset-manifest.js";
 import type { BlockCatalogs } from "./block-catalog.js";
 
-/**
- * The app-level render environment — the values fixed at app-build time that
- * every public render reads: the theme descriptor, the base document manifest,
- * the template-dependency map, the asset manifest, and the sanitizer allowlist
- * the blocks that render stored HTML are held to.
- *
- * Bundled into one interface so `resolvePublicRoute`, the per-intent resolvers,
- * and the render entry point thread a single parameter instead of a
- * positional list. Computed once in `buildApp` and carried on the app; a new
- * render dependency is then a one-field change here, not a cross-file signature
- * edit. The per-render inputs (node, data, title, edit-mode) stay separate
- * because they genuinely vary per render.
- */
+/** Values fixed at app-build time; per-render inputs stay separate. */
 export interface RenderEnv {
   readonly theme: ThemeDescriptor;
   readonly document: DocumentManifest;
@@ -35,23 +23,18 @@ export interface RenderEnv {
 }
 
 /**
- * The bars a live or preview page carries after its template, inside the same
- * provider. The composition root fills it: both bars are surfaces, which the
- * renderer may not import. Edit mode renders neither.
+ * Filled by the composition root because the bars are surfaces the renderer may
+ * not import. Edit mode renders neither.
  */
 export interface RenderChrome {
   /**
-   * The front-end admin bar, for the staff principal the render phase decided
-   * on (ADR 0030); nothing for anyone else. `queriedEntry` is the entry the
-   * page renders, which the bar's edit link reads.
+   * Renders nothing for anyone but the staff principal the render phase decided
+   * on.
    */
   readonly adminBar: (
     ctx: AppContext,
     queriedEntry: EntryEditRow | undefined,
   ) => ReactNode;
-  /**
-   * The dev debug bar. Unset outside the dev server, so a build carries none
-   * of its modules.
-   */
+  /** Unset outside the dev server, so a build carries none of its modules. */
   readonly debugBar?: (ctx: AppContext) => ReactNode;
 }

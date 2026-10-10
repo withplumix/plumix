@@ -55,15 +55,8 @@ interface VerifiedAuthentication {
 }
 
 /**
- * Verify an assertion. Order of checks (Copenhagen Book):
- * 1. challenge consumed atomically (no double-spend)
- * 2. clientData type === webauthn.get
- * 3. origin === expected
- * 4. RP-ID hash matches
- * 5. user-present flag set
- * 6. counter strictly greater than stored (replay defence; counter == 0 means
- *    the authenticator does not implement counters — accept once)
- * 7. ECDSA signature verifies over `authenticatorData || sha256(clientDataJSON)`
+ * Spends the challenge before the credential and signature checks, so a failed
+ * assertion cannot be retried.
  */
 export async function finishAuthentication(
   db: Db,
@@ -158,16 +151,8 @@ export async function finishAuthentication(
 /**
  * @internal
  *
- * Normalise a driver-returned BLOB value into a plain `Uint8Array`.
- *
- * Drivers disagree on the shape: better-sqlite3 returns `Buffer` (a
- * `Uint8Array` subclass — handled by the first branch), libsql/D1 may
- * return `ArrayBuffer`. Anything else is a `credential_storage_corrupt`
- * signal: the response on the wire is fine, but the stored key is
- * unreadable and the caller needs to know that specifically.
- *
- * Exported for direct testing only. NOT part of the `@plumix/core`
- * public surface — import path is the barrel-less relative one.
+ * Drivers return BLOBs as `Buffer` or `ArrayBuffer`. Throws
+ * `credential_storage_corrupt` on anything else.
  */
 export function ensureUint8Array(value: unknown): Uint8Array {
   if (value instanceof Uint8Array) return value;

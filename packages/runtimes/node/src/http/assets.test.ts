@@ -16,7 +16,7 @@ import { listen } from "./test-support.js";
 const SHELL = "<!doctype html><title>admin</title>";
 const CHUNK = "export const admin = 1;";
 
-// `chmod 000` does not stop root, so the unreadable-file cases need a user.
+/** `chmod 000` does not stop root, so the unreadable-file cases need a user. */
 const unprivileged = process.getuid?.() !== 0;
 
 let base: string;

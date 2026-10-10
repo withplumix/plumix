@@ -12,10 +12,8 @@ import { createPluginRegistry } from "../plugin/manifest.js";
 import { testConfig } from "./config.js";
 
 /**
- * Any drizzle database a test hands the factory — the core schema, or a
- * plugin schema layered on top of it. Query builders take the table they
- * operate on as an argument, so a plugin's own tables resolve at runtime
- * through a context whose type only knows the core schema.
+ * Any drizzle database: query builders take their table as an argument, so
+ * plugin tables resolve at runtime through a context typed for the core schema.
  */
 type TestContextDb = Db<Record<string, unknown>>;
 
@@ -38,15 +36,9 @@ export const silentLogger: Logger = {
 };
 
 /**
- * A real `AppContext` for tests that exercise a service function directly
- * rather than through a request. Everything a handler reads through — the
- * request memo, the capability resolver, the hook executor, `defer` — is
- * the production implementation rather than an omission the test has to
- * work around.
- *
- * The default `defer` is fire-and-forget with no drain handle; a test that
- * asserts on deferred work should pass `createDeferQueue().defer`. For a
- * full request pipeline use `createDispatcherHarness` instead.
+ * A real `AppContext` for calling a service directly, with production memo,
+ * capabilities, hooks and `defer`. Pass `createDeferQueue().defer` to assert on
+ * deferred work.
  */
 export function createTestContext(
   options: CreateTestContextOptions,

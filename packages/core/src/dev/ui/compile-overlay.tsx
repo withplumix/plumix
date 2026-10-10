@@ -1,15 +1,7 @@
 /// <reference lib="dom" />
-// The client compile/import error overlay (#1622). Vite owns compile and import
-// errors, and its built-in overlay is visually and behaviorally disjoint from
-// the plumix dev error surface (the server dev error page and the island
-// dialog). This module intercepts Vite's HMR `vite:error` payload and renders it
-// through the *same* shared error renderer + token sheet, inside the shared
-// overlay shell's Shadow DOM modal (#1678), so a syntax error or a bad import
-// reads like every other dev error. Plumix disables Vite's own overlay
-// (`server.hmr.overlay: false`) so the two never stack. The whole module is
-// pulled in only behind the dev gate (a lazy `import()` from the generated
-// client entry, guarded by `import.meta.hot`), so it — and the React DOM client
-// weight it carries — tree-shakes out of the production client bundle.
+// Plumix disables Vite's own overlay (`server.hmr.overlay: false`) so the two
+// never stack. Load only behind the dev gate: the React DOM client weight must
+// tree-shake from production.
 
 import type { ReactElement } from "react";
 import type { Root } from "react-dom/client";
@@ -22,9 +14,10 @@ import { DEV_ERROR_CSS } from "./tokens.js";
 
 const HOST_TAG = "plumix-compile-error-overlay";
 
-// Vite HMR lifecycle events that mean the erroring module recompiled (or the
-// page is about to reload) — the fix landed, so drop the overlay. Vite clears
-// its own overlay on `vite:beforeUpdate` for the same reason.
+/**
+ * The erroring module recompiled or the page is reloading, so the fix landed.
+ * Vite clears its own overlay on `vite:beforeUpdate` for the same reason.
+ */
 const CLEAR_EVENTS = [
   "vite:beforeUpdate",
   "vite:afterUpdate",
@@ -51,9 +44,8 @@ export interface ViteErrorPayload {
 }
 
 /**
- * The slice of Vite's `import.meta.hot` (`ViteHotContext`) the overlay uses.
- * Structural so a test can pass a fake and the generated client entry can pass
- * the real `import.meta.hot` without `@plumix/core` depending on `vite`.
+ * Structural so a test can pass a fake and `@plumix/core` needn't depend on
+ * `vite`.
  */
 export interface HmrClient {
   on(event: string, cb: (payload?: { err?: ViteErrorPayload }) => void): void;
@@ -61,10 +53,8 @@ export interface HmrClient {
 }
 
 /**
- * Map a Vite error payload onto the shared {@link DevErrorInfo} the renderer
- * consumes. Compile errors carry no resolvable JS stack, so the code frame Vite
- * already computed (with its caret) is shown verbatim in the stack view — the
- * header, hints, and token sheet come straight from the shared page.
+ * Compile errors carry no resolvable JS stack, so Vite's own code frame is
+ * shown verbatim in the stack view.
  */
 export function compileErrorToInfo(err: ViteErrorPayload): DevErrorInfo {
   const message = firstLine(err.message) || "Compile error";
@@ -100,12 +90,8 @@ export interface InstallOptions {
   /** The window to attach to; defaults to the global `window`. */
   readonly target?: Window;
   /**
-   * A `vite:error` payload Vite broadcast *before* this overlay's listener was
-   * wired — the page was loaded while the module was already broken, so the
-   * event raced the overlay's own (lazily-imported) subscription. The caller
-   * buffers it synchronously and hands it here to replay on install, so the
-   * error still surfaces instead of being lost now that Vite's own overlay
-   * (which listens synchronously) is disabled.
+   * A `vite:error` that fired before this lazy install subscribed. Vite's own
+   * overlay is disabled, so without the replay the error is lost.
    */
   readonly initialError?: { readonly err?: ViteErrorPayload };
 }
@@ -113,11 +99,8 @@ export interface InstallOptions {
 let active: CompileErrorOverlay | null = null;
 
 /**
- * Install the compile-error overlay: subscribe to `hot`'s `vite:error` (show)
- * and update (clear) events, and to `Escape` on `target`. Returns a teardown
- * that unsubscribes and removes the mounted host. Idempotent — a second call
- * before teardown (e.g. an HMR re-run of the client entry) returns the existing
- * overlay's teardown rather than stacking listeners.
+ * Idempotent: a second call before teardown, e.g. an HMR re-run of the client
+ * entry, returns the existing teardown rather than stacking listeners.
  */
 export function installCompileErrorOverlay(
   hot: HmrClient,
@@ -139,8 +122,10 @@ class CompileErrorOverlay {
   private host: HTMLElement | null = null;
   private root: Root | null = null;
   private torndown = false;
-  // Tracked so teardown removes the HMR subscriptions (Vite's `hot.off`) and a
-  // late event after teardown can't remount the overlay.
+  /**
+   * Tracked so teardown removes the HMR subscriptions (Vite's `hot.off`) and a
+   * late event after teardown can't remount the overlay.
+   */
   private readonly hmrHandlers: {
     readonly event: string;
     readonly handler: (payload?: { err?: ViteErrorPayload }) => void;
@@ -229,11 +214,10 @@ class CompileErrorOverlay {
   };
 }
 
-// The compile surface composes the shared overlay shell (#1678): a static
-// "Compile error" window title — the body header already carries the specific
-// error name and plugin — over the shared slim body. `DevErrorBody` (not the full
-// `DevErrorPage`) renders the exception + code frame, so the overlay never mounts
-// the server-only context sections.
+/**
+ * `DevErrorBody`, not the full `DevErrorPage`, so the overlay never mounts
+ * the server-only context sections.
+ */
 function CompileModal({
   info,
   onClose,

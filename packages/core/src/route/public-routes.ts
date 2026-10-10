@@ -8,16 +8,16 @@ import type {
 import { AppBootError } from "../runtime/contract/errors.js";
 import { matchPublicRoute } from "./contract/public-route-table.js";
 
-// The prefix core owns outright: the RPC endpoint, the sign-in flows, the admin
-// app, MCP, REST and every `registerRoute` mount live under it, and the
-// dispatcher answers there before it ever reaches the public route table. A
-// public route registered inside it would therefore be unreachable, so it is
-// rejected at boot rather than left to look like a routing bug.
+/**
+ * The dispatcher answers under this prefix before the public route table, so a
+ * route registered inside it is unreachable and rejected at boot.
+ */
 const PLATFORM_PREFIX = "/_plumix";
 
-// URLPattern syntax. A path holding none of it is a literal, which is the
-// common case — a plugin enumerates entry types and taxonomies at theme-ready
-// and registers concrete paths — so those get a map lookup and never an exec.
+/**
+ * A path without URLPattern syntax is a literal, the common case, and gets a
+ * map lookup instead of an exec.
+ */
 const PATTERN_SYNTAX = /[:*?+(){}[\]]/;
 
 export type PublicRouteTable = PublicRouteTableFor<RegisteredPublicRoute>;
@@ -25,16 +25,9 @@ export type PublicRouteTable = PublicRouteTableFor<RegisteredPublicRoute>;
 export type PublicRouteMatch = PublicRouteMatchFor<RegisteredPublicRoute>;
 
 /**
- * Compile the registered public routes into the table the dispatcher matches
- * against, rejecting a path two plugins claim, a path inside core's own prefix,
- * and a pattern URLPattern can't parse. Registration is spread across `setup`
- * and `afterSetup`, so this runs at boot — the first moment the whole set
- * exists.
- *
- * A claim is the path string: two plugins whose *patterns* merely overlap both
- * compile, and the rules below decide which answers. Nothing here can tell an
- * overlap from a deliberate narrowing, which is why the registration advice is
- * to enumerate concrete paths.
+ * Compile the registered public routes, rejecting a path two plugins claim, one
+ * inside core's prefix, or an unparseable pattern. Merely overlapping patterns
+ * both compile.
  */
 export function compilePublicRoutes(
   routes: readonly RegisteredPublicRoute[],
@@ -54,9 +47,8 @@ export function compilePublicRoutes(
       });
     }
     const isPattern = PATTERN_SYNTAX.test(route.path);
-    // A literal is compared and stored percent-encoded, the shape a request's
-    // pathname arrives in — otherwise a route registered as `/café` could never
-    // match. A pattern is left alone; URLPattern normalizes it itself.
+    // Literals are keyed percent-encoded, as request pathnames arrive, so
+    // `/café` can match; URLPattern normalizes patterns itself.
     const key = isPattern ? route.path : encodedPath(route.path);
     const owner = owners.get(key);
     if (owner !== undefined) {
@@ -81,9 +73,10 @@ function encodedPath(path: string): string {
   return new URL(path, "https://plumix.invalid").pathname;
 }
 
-// URLPattern rejects an unbalanced group with a bare TypeError naming nothing.
-// The plugin that registered it is knowable here and nowhere later, so the
-// failure is re-thrown as the boot error the other two rejections use.
+/**
+ * URLPattern's TypeError names nothing; only here is the registering plugin
+ * known, so rethrow as a boot error.
+ */
 function compilePattern(route: RegisteredPublicRoute): URLPattern {
   try {
     return new URLPattern({ pathname: route.path });
@@ -96,16 +89,15 @@ function compilePattern(route: RegisteredPublicRoute): URLPattern {
   }
 }
 
-// Compiled once per registry: the routes are settled once every `afterSetup`
-// has run, which is before anything asks.
+/**
+ * Compiled once per registry: the routes are settled once every `afterSetup`
+ * has run, which is before anything asks.
+ */
 const registryTables = new WeakMap<PluginRegistry, PublicRouteTable>();
 
 /**
- * The public route the dispatcher answers this pathname with, or null — asked
- * of the same table and by the same rules, so a plugin that needs to know
- * whether one of its routes serves a path (a page deciding which feed to
- * advertise) gets the dispatcher's answer rather than a copy of its rules.
- * The pathname is read as the router reads it, with no base path.
+ * The public route the dispatcher answers this pathname (no base path) with, or
+ * null, using the dispatcher's own table and rules.
  */
 export function publicRouteAt(
   plugins: PluginRegistry,

@@ -1,8 +1,4 @@
-// The admin-side view of a `lookup.list` row — the
-// shape the reference pickers and the link field render. Structurally a
-// `LookupResult` from the RPC (assignable without a cast); kept as its
-// own admin type so the lookup hooks + render helpers don't reach back
-// into a picker component for it.
+/** Structurally a `LookupResult`, assignable without a cast. */
 export interface LookupItem {
   readonly id: string;
   readonly label: string | null;

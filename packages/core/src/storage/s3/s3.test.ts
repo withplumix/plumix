@@ -16,7 +16,7 @@ const BUCKET = {
   endpoint: "https://s3.us-east-1.amazonaws.com",
 };
 
-// One bucket per call: the contract wants every case to start empty.
+/** One bucket per call: the contract wants every case to start empty. */
 function bind(overrides: { publicUrlBase?: string } = {}) {
   const fake = fakeS3({ ...BUCKET, credentials: CREDENTIALS });
   const storage = s3({

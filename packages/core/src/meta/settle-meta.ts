@@ -19,14 +19,8 @@ export type MetaOwner =
   | "user";
 
 /**
- * Settle a meta bag against the fields registered for its owner, so a direct
- * write stores what the declared types describe — what a save through core
- * would have stored. A raw `db.update(...).set({ meta })` bypasses the field
- * pipeline, and a `1` under a toggle would otherwise read back as `1`.
- *
- * The same settle the admin's read heal and `plumix meta settle` apply. A
- * value no declared type accepts, and a key no registered field owns, come
- * back as given.
+ * For direct writes that bypass the field pipeline. A value no declared type
+ * accepts, and a key no registered field owns, come back as given.
  */
 export function settleMeta(
   ctx: { readonly plugins: PluginRegistry },

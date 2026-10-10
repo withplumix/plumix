@@ -5,9 +5,8 @@ import { and, eq, inArray, notInArray, sql } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { isReservedType, RESERVED_TYPES } from "../revisions/slug-codec.js";
 
-// Revisions and autosaves are rows in `entries` too, under types the editor
-// owns. Everything outside `revisions/` asks this module what an entry is, so
-// no reader has to remember those rows exist.
+// Revisions and autosaves are `entries` rows too, so readers outside
+// `revisions/` ask this module what an entry is.
 
 /** Whether a type name names authored entries rather than editor history. */
 export function isAuthoredEntryType(type: string): boolean {
@@ -35,11 +34,7 @@ export async function loadAuthoredEntry(
   });
 }
 
-/**
- * The authored entries among `ids`, in one `WHERE id IN (…)`. An id that is
- * missing or reserved is simply absent, so a caller that fails the whole batch
- * on a missing id fails it on a reserved one too.
- */
+/** A missing or reserved id is simply absent from the result. */
 export async function loadAuthoredEntries(
   db: Db,
   ids: readonly number[],

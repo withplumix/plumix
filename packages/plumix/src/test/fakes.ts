@@ -1,6 +1,5 @@
-// Upload fakes: a real `File` to hand an upload field, a drop zone or an RPC
-// procedure, in either test tier. Nothing here reaches for a Node built-in —
-// the browser build of `plumix/test` serves this module as it is.
+// The browser build of `plumix/test` serves this module as it is, so nothing
+// here may use a Node built-in.
 
 export interface FakeFileOptions {
   /** That many zero bytes. Ignored when `content` is given. */
@@ -51,11 +50,7 @@ export function fakeFile(name: string, options: FakeFileOptions = {}): File {
   });
 }
 
-/**
- * A `File` holding a valid PNG of `width` × `height` white pixels, which a
- * browser decodes and a magic-byte or header check accepts. PNG is the only
- * format generated, so the name has to end in `.png`.
- */
+/** PNG is the only format generated, so the name has to end in `.png`. */
 export function fakeImage(
   name = "image.png",
   options: FakeImageOptions = {},
@@ -73,7 +68,7 @@ export function fakeImage(
 
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
-// 8-bit grayscale, one filter byte (none) ahead of each row.
+/** 8-bit grayscale, one filter byte (none) ahead of each row. */
 function encodePng(width: number, height: number): Uint8Array<ArrayBuffer> {
   const header = new Uint8Array(13);
   const view = new DataView(header.buffer);
@@ -101,8 +96,10 @@ function chunk(type: string, data: Uint8Array): Uint8Array {
   return out;
 }
 
-// A zlib stream of uncompressed deflate blocks: valid for any decoder, and
-// no compressor to carry.
+/**
+ * A zlib stream of uncompressed deflate blocks: valid for any decoder, and
+ * no compressor to carry.
+ */
 function zlibStored(data: Uint8Array): Uint8Array {
   const MAX_BLOCK = 0xffff;
   const blocks: Uint8Array[] = [Uint8Array.from([0x78, 0x01])];

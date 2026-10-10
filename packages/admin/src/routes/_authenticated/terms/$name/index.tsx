@@ -48,11 +48,9 @@ const M = {
   // as fallback — see comment in entries/$slug/index.tsx for rationale.
 } satisfies Record<string, MessageDescriptor>;
 
-// Flat (non-hierarchical) lists paginate conventionally. Hierarchical
-// lists fetch a larger page so the tree renders as a coherent unit; the
-// server's `term.list` caps at 200. Deployments with >200 terms will
-// want a proper tree-aware paginator (root-level pagination + expand on
-// demand) — deferred until someone has that problem.
+/**
+ * A tree fetches one large page to render coherently; `term.list` caps at 200.
+ */
 const FLAT_PAGE_SIZE = 50;
 const TREE_PAGE_SIZE = 200;
 
@@ -104,21 +102,14 @@ export const Route = createFileRoute("/_authenticated/terms/$name/")({
   component: TaxonomyListRoute,
 });
 
-// Row shape for the list table — `displayDepth` is the tree indent for
-// hierarchical termTaxonomies (always 0 for flat ones). Keyed on the term
-// so react-table can key rows cleanly even when the same term appears
-// on different pages.
 interface TermRow {
   readonly term: Term;
   readonly displayDepth: number;
 }
 
-// Hierarchical termTaxonomies render as a tree: flatten-with-depth so
-// each row carries its indent level. Non-hierarchical just keeps the
-// server-provided order. Searching in a hierarchical taxonomy
-// temporarily collapses to flat-list mode so search results aren't
-// hidden inside collapsed parents that didn't match — matches the
-// WP behaviour where category search flattens.
+/**
+ * Search flattens a tree so matches aren't hidden under non-matching parents.
+ */
 function deriveTermRows(
   data: readonly Term[],
   isHierarchical: boolean,
@@ -176,11 +167,7 @@ function TaxonomyListRoute(): ReactNode {
 
   const { setPage, setSearch } = useTaxonomyListNavActions();
 
-  // `query.data` is `Term[] | undefined`; depending on the identity of
-  // `rawRows` directly in the tree memo below would make it re-run on
-  // every render when data is undefined (fresh `[]` each time). Tie the
-  // memo to the query itself — react-query gives us referential
-  // stability on `data` across renders within the same request state.
+  // A `?? []` here would be a fresh array each render and defeat the memo.
   const rawRows = query.data;
   const rows: readonly TermRow[] = useMemo(
     () => deriveTermRows(rawRows ?? [], isHierarchical, Boolean(search.q)),

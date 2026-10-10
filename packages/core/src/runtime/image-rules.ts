@@ -3,11 +3,9 @@ import type { TransformOpts } from "./contract/slots.js";
 import { withBasePath } from "../base-path.js";
 import { matchesRemotePattern } from "../blocks/renderer/image-attrs.js";
 
-// The rules every self-hosted runtime's `/_plumix/image` applies alike. Each
-// runtime keeps its own encoder and its own cache; nothing here does I/O
-// beyond the `fetch` a remote source is read through.
-
-/** Where a self-hosted runtime answers transforms, under the site's base path. */
+/**
+ * Where a self-hosted runtime answers transforms, under the site's base path.
+ */
 export const IMAGE_ROUTE = "/_plumix/image";
 
 export type ImageFormat = Exclude<NonNullable<TransformOpts["format"]>, "auto">;
@@ -45,9 +43,8 @@ export function clampQuality(quality: number): number {
 }
 
 /**
- * Snap and clamp one transform. A crop's height scales with the width so the
- * snap keeps its aspect; a bare height is bounded by the roster's ceiling,
- * which is what bounds the pixels one request can ask for.
+ * A crop's height scales with the width to keep its aspect; a bare height is
+ * capped by the roster ceiling, bounding pixels per request.
  */
 function normalize(
   widths: readonly number[],
@@ -97,10 +94,8 @@ function oneOf<T extends string>(
 }
 
 /**
- * The route's reading of a query: `url()` writes roster values, but a
- * hand-written URL is snapped and clamped the same way (a width or quality
- * below range rises to the floor), and anything unparseable is `null` for
- * the route to answer 400.
+ * A hand-written URL is snapped and clamped like a roster one; anything
+ * unparseable is `null`.
  */
 export function parseImageParams(
   widths: readonly number[],
@@ -130,9 +125,8 @@ function isRemote(src: string): boolean {
 }
 
 /**
- * `url()` for a self-hosted slot: URL math onto {@link IMAGE_ROUTE}. A remote
- * source no pattern allows, and a source with no transform asked of it, are
- * handed back as they came.
+ * A remote source no pattern allows, or one with no transform asked, is handed
+ * back unchanged.
  */
 export function imageTransformUrl(
   rules: ImageUrlRules,
@@ -161,21 +155,16 @@ export function imageTransformUrl(
     : `${withBasePath(IMAGE_ROUTE, rules.basePath)}?${query.toString()}`;
 }
 
-/** What a request asks for before the source is seen: a format, or the source's own. */
+/**
+ * What a request asks for before the source is seen: a format, or the source's
+ * own.
+ */
 export type NegotiatedFormat = ImageFormat | "source";
 
 /**
- * The format a request is rendered in: an explicit one the host can encode,
- * else the next-gen format `Accept` opts into among those the host can
- * encode, else the source's own. `encodable` is what the runtime's encoder
- * produces on this host — no AVIF on Linux under `Bun.Image`.
- *
- * A format counts as accepted when its exact range or the `image/*` subtype
- * wildcard names it with `q` above zero — the bare full-wildcard range does
- * not, since an inert fetch or a browser's default `Accept` mustn't be read
- * as "send me a next-gen format". The exact range always wins over the
- * subtype wildcard regardless of header order, so an explicit `q=0` still
- * refuses a format even alongside a wildcard that would otherwise allow it.
+ * `encodable` varies by host (no AVIF on Linux under `Bun.Image`). A bare full
+ * wildcard doesn't opt into a next-gen format; an exact range's `q=0` beats
+ * `image/*`.
  */
 export function negotiateImageFormat(
   explicit: ImageFormat | undefined,
@@ -211,22 +200,21 @@ export function negotiateImageFormat(
   return "source";
 }
 
-// A base for parsing a relative source, on a host no real source can have.
+/** A base for parsing a relative source, on a host no real source can have. */
 const RELATIVE_BASE = "http://plumix.invalid";
 
-// By host, not origin: behind a TLS-terminating proxy the process sees `http`
-// while an absolute URL of its own site says `https`.
+/**
+ * By host, not origin: behind a TLS-terminating proxy the process sees `http`
+ * while an absolute URL of its own site says `https`.
+ */
 export function isSameHostImageSource(src: string, host: string): boolean {
   if (src.startsWith("/")) return !src.startsWith("//");
   return URL.parse(src)?.host === host;
 }
 
 /**
- * What a purge names: a source without its query, so every variant of a
- * media item goes however its URL was decorated. A relative source is its
- * path alone, an absolute one its origin and path — unless it is on the host
- * of `request`, the route's own URL, when however the host is spelled it is
- * the path the media plugin purges by.
+ * Drops the query so every variant purges together. A source on `request`'s
+ * host keys by path alone, as the media plugin purges.
  */
 export function imageSourceKey(src: string, request?: URL): string {
   if (request !== undefined && isSameHostImageSource(src, request.host)) {
@@ -247,10 +235,8 @@ export function etagMatches(ifNoneMatch: string, etag: string): boolean {
     .some((s) => s === "*" || s === etag);
 }
 
-/** Redirects a remote source may take before it is refused. */
 const MAX_IMAGE_REDIRECTS = 10;
 const REMOTE_TIMEOUT_MS = 15_000;
-/** A source larger than this is not a picture a page would show. */
 const MAX_IMAGE_SOURCE_BYTES = 32 * 1024 * 1024;
 /** What a source is requested with, same-origin or remote. */
 export const IMAGE_SOURCE_HEADERS = { accept: "image/*,*/*;q=0.8" };
@@ -268,8 +254,10 @@ export type ImageSourceResult =
   | { readonly ok: true; readonly response: Response }
   | { readonly ok: false; readonly status: number };
 
-// The route is not a source for itself: the handler does not hold it, but a
-// self-fetch over the network would, and a nested one at every level.
+/**
+ * The route is not a source for itself: the handler does not hold it, but a
+ * self-fetch over the network would, and a nested one at every level.
+ */
 function isPermittedUrl(
   url: URL,
   { remotePatterns, route }: RemoteImageSourceOptions,
@@ -291,9 +279,8 @@ export function isPermittedImageSource(
 }
 
 /**
- * Fetch a remote source. Every hop is re-validated against the patterns, so
- * a permitted host may not hand the route a source it would have refused
- * directly; past {@link MAX_IMAGE_REDIRECTS} the source is refused.
+ * Re-validates every redirect hop, so a permitted host can't hand over a source
+ * that would be refused directly.
  */
 export async function fetchRemoteImageSource(
   src: string,

@@ -13,9 +13,8 @@ export interface CdnContractOptions {
    */
   readonly connect: () => ConnectedCdn | Promise<ConnectedCdn>;
   /**
-   * Whether this provider ships an origin-side response store. Declared rather
-   * than probed because `skip` runs before any connection exists — the first
-   * case asserts the declaration against a real one, so it cannot drift.
+   * Declared rather than probed because `skip` runs before any connection
+   * exists; the first case checks the declaration against a real one.
    */
   readonly store?: boolean;
   /** Whether this provider ships tag purge. Declared like {@link store}. */
@@ -28,9 +27,10 @@ function pageRequest(path: string): Request {
   return new Request(`${ORIGIN}${path}`);
 }
 
-// The provider owns its header names and its tag separator, so the contract
-// asks whether the tag reached the response at all rather than which header
-// carries it — a vendor using `Surrogate-Key` satisfies the rule too.
+/**
+ * The provider owns its header names and separator, so only the tag's presence
+ * is checked; a `Surrogate-Key` vendor satisfies the rule too.
+ */
 function carriesTag(response: Response, tag: string): boolean {
   for (const [, value] of response.headers) {
     if (value.includes(tag)) return true;
@@ -46,9 +46,11 @@ function needsStore(options: CdnContractOptions): string | null {
   return options.store === true ? null : "the provider has no origin store";
 }
 
-// A purge is observable in-process only through a store the contract can read
-// back. A storeless provider's purge reaches the vendor's own cache, which
-// nothing here can see.
+/**
+ * A purge is observable in-process only through a store the contract can read
+ * back. A storeless provider's purge reaches the vendor's own cache, which
+ * nothing here can see.
+ */
 function needsStoredPurge(options: CdnContractOptions): string | null {
   if (options.purgeTags !== true) return "the provider cannot purge by tag";
   return needsStore(options);
@@ -69,8 +71,10 @@ async function connectStore(options: CdnContractOptions): Promise<CdnStore> {
   return store;
 }
 
-// The purge cases read their result back through the store, so they bind both
-// from one connection — a second `connect()` would be a second, empty cdn.
+/**
+ * The purge cases read their result back through the store, so they bind both
+ * from one connection — a second `connect()` would be a second, empty cdn.
+ */
 async function connectStoredPurge(
   options: CdnContractOptions,
 ): Promise<{ store: CdnStore; purge: Purge }> {
@@ -81,7 +85,9 @@ async function connectStoredPurge(
   return { store: cdn.store, purge: cdn.purgeTags.bind(cdn) };
 }
 
-/** Every case of the cdn contract, for guard tests that run them outside vitest. */
+/**
+ * Every case of the cdn contract, for guard tests that run them outside vitest.
+ */
 export const cdnContractCases: readonly Case[] = [
   {
     name: "the optional members present are the ones declared",
@@ -212,9 +218,8 @@ export const cdnContractCases: readonly Case[] = [
         new Response("rendered"),
         [],
       );
-      // Probed with a GET rather than the POST itself: what a store does with
-      // a non-GET `match` is its own business, and asking it here would make
-      // the case pass or fail on that instead of on what was written.
+      // Probed with a GET: what a store does with a non-GET `match` is its own
+      // business and must not decide this case.
       expect(await storedBody(store, pageRequest(path))).toBeUndefined();
     },
   },
@@ -229,9 +234,8 @@ export const cdnContractCases: readonly Case[] = [
       });
       await store.put(request, response, []);
       const hit = await store.match(request);
-      // `?? null` so declining to store the response at all counts: it is the
-      // stricter answer to the same rule, and core's route read-through makes
-      // exactly that call before it ever reaches a provider.
+      // `?? null` so declining to store the response counts too; it is the
+      // stricter answer, and core's route read-through makes that call itself.
       expect(hit?.headers.get("set-cookie") ?? null).toBeNull();
     },
   },
@@ -277,10 +281,8 @@ export const cdnContractCases: readonly Case[] = [
 ];
 
 /**
- * Assert an implementation of the `cdn:` slot satisfies its port. Call it at
- * the top level of a test file with a factory that binds a fresh cdn, plus the
- * optional members the provider ships — `decorate` is the only one every
- * provider has, and the cases for the rest run only where they are declared.
+ * Assert a `cdn:` slot implementation satisfies its port. Cases for optional
+ * members run only where declared; `decorate` is the one every provider has.
  */
 export function describeCdnContract(options: CdnContractOptions): void {
   describeContract("cdn contract", cdnContractCases, options);

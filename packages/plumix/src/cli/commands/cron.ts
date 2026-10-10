@@ -20,7 +20,6 @@ import { report } from "../report.js";
 
 const MINUTE_MS = 60_000;
 
-/** What the scheduler fires when no task declares a cron of its own. */
 const EVERY_MINUTE = "* * * * *";
 
 export const cronCommand: CommandDefinition<PlumixApp> = {
@@ -44,12 +43,8 @@ export const cronCommand: CommandDefinition<PlumixApp> = {
 };
 
 /**
- * What an external scheduler has to fire, printed rather than guessed.
- *
- * Plugins contribute schedules, so a crontab written by hand goes stale the
- * moment a site installs one — the failure Cloudflare deploys already have,
- * where a task whose cron does not match a declared trigger never runs and
- * says nothing.
+ * Printed rather than hand-written: plugins contribute schedules, so a
+ * hand-written crontab goes stale silently when a site installs one.
  */
 function listSchedules(app: PlumixApp): void {
   if (app.scheduledTasks.length === 0) {
@@ -59,9 +54,8 @@ function listSchedules(app: PlumixApp): void {
 
   const schedules = declaredSchedules(app);
   if (schedules.length === 0) {
-    // Every task runs on every firing, so there is no declared schedule to
-    // print — but there is still work, and an operator told "none" would wire
-    // up nothing and never run it.
+    // Every task runs on every firing; an operator told "none" would wire up
+    // nothing.
     report.info(
       "No task declares a schedule of its own, so every one runs on each " +
         'firing. Fire them with `plumix cron run "* * * * *"`:\n',
@@ -118,11 +112,8 @@ async function runSchedule(ctx: CommandContext<PlumixApp>): Promise<void> {
     throw PlumixCliError.cronRunUnknownSchedule({ expression, declared });
   }
 
-  // Dynamic, so `src/cli/index.ts`'s static import of this module cannot put
-  // core's root barrel on every `plumix` invocation — `dev` opts out of
-  // building an app and must not pay for it (`cold-start.test.ts`). Here it is
-  // a module-cache hit: `resolveCommandApp` already imported the barrel to
-  // build `ctx.app`.
+  // Dynamic so `dev`, which builds no app, does not load core's root barrel
+  // (`cold-start.test.ts`).
   const {
     connectScheduledDb,
     createRuntimeHandler,
@@ -131,9 +122,8 @@ async function runSchedule(ctx: CommandContext<PlumixApp>): Promise<void> {
   } = await import("@plumix/core");
   const handler = createRuntimeHandler(ctx.app);
 
-  // `nodeSqlite` resolves its path against the process cwd, so `--cwd` has to
-  // land before anything opens a database — otherwise this creates an empty one
-  // beside wherever the command was invoked from.
+  // `nodeSqlite` resolves its path against the cwd; otherwise this opens an
+  // empty database wherever the command was invoked.
   if (ctx.cwd !== process.cwd()) process.chdir(ctx.cwd);
 
   const { db, close } = connectScheduledDb(ctx.app, process.env);
@@ -149,10 +139,9 @@ async function runSchedule(ctx: CommandContext<PlumixApp>): Promise<void> {
   try {
     await fireSchedule(ctx, guard, fired, handler);
   } finally {
-    // Drain first: deferred work — telemetry delivery, cache purges — is still
-    // querying through both connections until `dispose()` returns. Each release
-    // is independent: one that throws must not strand the other connection, nor
-    // replace the command's own result with a driver message.
+    // Drain first: deferred work still queries both connections until
+    // `dispose()` returns. One release throwing must not strand the other or
+    // replace the command's result.
     try {
       await handler.dispose?.();
     } catch (error) {
@@ -213,18 +202,13 @@ async function fireSchedule(
   report.info(`Fired "${fired}": ${ran}`);
 }
 
-/** Whitespace is not part of a schedule's identity. */
 function normalise(expression: string): string {
   return expression.trim().split(/\s+/).join(" ");
 }
 
 /**
- * Run `work` under the guard, turning a database failure into a CliError.
- *
- * The guard is the first thing here to touch the database, so an install that
- * has not run `plumix migrate` since upgrading would otherwise meet a raw
- * driver message and a stack trace. Every other way this command fails names
- * its fix.
+ * The guard touches the database first, so an install that skipped `plumix
+ * migrate` would otherwise meet a raw driver error.
  */
 async function runGuarded(
   guard: ScheduledRunGuard,
@@ -246,7 +230,6 @@ async function runGuarded(
   }
 }
 
-/** The message an error carries, for a line that is context rather than the failure itself. */
 function detailOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }

@@ -3,10 +3,8 @@ import type { AppContext } from "../context/app-context.js";
 export type { ResolvedEntity } from "./contract/resolved-entity.js";
 
 /**
- * Discriminated source the menu plugin (and similar consumers) pass when
- * asking "is this thing the current page". Mirrors the menu item's
- * `source` shape but adds a `url` carrier for custom-URL items, which
- * have no upstream id.
+ * Mirrors the menu item's `source` shape, plus `custom` for URL items that have
+ * no upstream id.
  */
 export type CurrentSource =
   | { readonly kind: "entry"; readonly id: number }
@@ -14,19 +12,9 @@ export type CurrentSource =
   | { readonly kind: "custom"; readonly url: string };
 
 /**
- * Returns `true` when `source` identifies the current request entity.
- *
- * - `entry` / `term`: id-based match against `ctx.resolvedEntity`.
- *   Survives URL changes (query strings, trailing slashes) because
- *   the comparison is by id, not by path string. Returns `false` when
- *   `resolvedEntity` is null (non-public route, 404, login page).
- *   Match keys on `(kind, id)` only — relies on `entries.id` /
- *   `terms.id` global uniqueness within their table.
- * - `custom`: pathname-based match against `ctx.request.url`, with
- *   trailing-slash normalization on both sides. Cross-origin sources
- *   never match (an external link is by definition not the current
- *   page). Custom URLs have no id to match against; `resolvedEntity`
- *   is ignored on this path.
+ * Whether `source` is the current request entity. `entry`/`term` match by id,
+ * so URL variations don't matter; `custom` matches by pathname, never
+ * cross-origin.
  */
 export function isCurrentSource(
   ctx: Pick<AppContext, "request" | "resolvedEntity">,
@@ -50,10 +38,8 @@ function matchesPathname(requestUrl: string, sourceUrl: string): boolean {
     return false;
   }
 
-  // Cross-origin sources are never the "current page" — an external link
-  // is by definition somewhere else, even if its pathname coincides with
-  // ours. Compared against the request's host (resolved against the
-  // request URL so a relative `/about` sees the same host as `here`).
+  // An external link is somewhere else even when its pathname coincides with
+  // ours.
   const requestHost = new URL(requestUrl).host;
   if (target.host !== requestHost) return false;
 

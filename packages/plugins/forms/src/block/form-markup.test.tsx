@@ -233,9 +233,8 @@ describe("a form broken into steps", () => {
         />,
       );
 
-    // Under the form's own title where there is one; standing in for it
-    // where there is not, since an `h3` would then skip a level down
-    // from the page's own heading.
+    // Without a form title, an `h3` would skip a heading level below the page's
+    // own.
     expect(head(defineForm("titled", { title: "Ask", ...stepped }))).toMatch(
       /<h3[^>]*data-plumix-form-step-title/,
     );
@@ -527,10 +526,8 @@ describe("a row the island added", () => {
     ],
   });
 
-  // The added row is past what the server rendered, so it has no answers
-  // of its own — judged by an empty bag it would hide a field its own
-  // default makes visible, and the server would then ask for an answer
-  // the page has nowhere to give.
+  // The added row has no server-rendered answers; an empty bag would hide
+  // fields its defaults make visible.
   test("shows the same fields as the row the server served", () => {
     const html = renderToStaticMarkup(
       <FormMarkup

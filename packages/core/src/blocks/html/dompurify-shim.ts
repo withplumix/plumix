@@ -1,21 +1,12 @@
 import DOMPurify from "dompurify";
 
 /**
- * Drop-in replacement for the subset of `sanitize-html` that `sanitizeHtml`
- * (./sanitize.ts) calls. This package's `browser` field remaps `sanitize-html`
- * to this module, so bundlers targeting the browser (the editor + islands
- * chunks) ship DOMPurify (~45 KB, native DOMParser) instead of sanitize-html's
- * pure-JS parser, the full HTML entity tables, and postcss (~230 KB). The
- * worker/SSR build is DOM-less and keeps the real `sanitize-html`.
- *
- * Security parity is the contract: for a given allowlist this must enforce the
- * same guarantees as the server engine — same tags, same per-tag attributes,
- * same URL-scheme policy. Verified by dompurify-shim.test.ts against the same
- * attack corpus as the server engine.
+ * The `browser` field swaps `sanitize-html` (~230 KB) for this in browser
+ * bundles. It must enforce exactly the server engine's tags, per-tag attributes
+ * and URL-scheme policy.
  */
 interface SanitizeOptions {
   readonly allowedTags?: readonly string[];
-  /** Per-tag attribute allowlist, keyed by lowercase tag name. */
   readonly allowedAttributes?: Readonly<Record<string, readonly string[]>>;
   readonly allowedSchemes?: readonly string[];
   readonly allowProtocolRelative?: boolean;
@@ -23,9 +14,7 @@ interface SanitizeOptions {
 
 const DEFAULT_SCHEMES = ["http", "https", "mailto", "tel"];
 
-// Attributes whose value is a URL and therefore subject to the scheme policy.
-// The per-tag allowlist already drops everything else; this is the set we
-// additionally scheme-check when an attribute IS allowed for its tag.
+/** Scheme-checked even when the attribute is allowed for its tag. */
 const URI_ATTRS = new Set([
   "href",
   "src",
@@ -37,12 +26,8 @@ const URI_ATTRS = new Set([
 ]);
 
 /**
- * Mirror sanitize-html's URL policy: relative URLs (path / `#frag` / `?query`)
- * pass; protocol-relative `//host` passes only when allowed; absolute URLs pass
- * only when their scheme is allowlisted. The DOM has already entity-decoded the
- * value, so obfuscation like `javas&#99;ript:` arrives as `javascript:`; we
- * additionally strip control/whitespace chars browsers ignore so `java\tscript:`
- * can't smuggle a scheme past the check.
+ * Mirrors sanitize-html's URL policy. Control and whitespace chars browsers
+ * ignore are stripped so `java\tscript:` can't smuggle a scheme past the check.
  */
 function isAllowedUri(
   value: string,
@@ -100,11 +85,8 @@ export default function sanitize(
     }
   };
 
-  // The hook is global on the DOMPurify singleton. Safe because every caller
-  // runs this synchronously from React render and DOMPurify.sanitize is
-  // synchronous, so add → sanitize → remove is atomic; `finally` restores
-  // state even if a vector makes the hook throw. Don't call sanitizeHtml
-  // re-entrantly from inside a hook — that would tear down this registration.
+  // The hook is global on the singleton; add → sanitize → remove is atomic
+  // because all of it is synchronous. Re-entrant calls would tear it down.
   DOMPurify.addHook("uponSanitizeAttribute", hook);
   try {
     return DOMPurify.sanitize(dirty, {

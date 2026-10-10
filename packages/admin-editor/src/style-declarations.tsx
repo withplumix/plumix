@@ -29,12 +29,16 @@ import {
 import { CSS_PROPERTIES } from "./css-properties.js";
 import { useStyleField } from "./use-style-field.js";
 
-// A camelCase standard property (`marginTop`) or a CSS custom property
-// (`--brand-gap`) — stricter than the render guard, which also tolerates junk.
+/**
+ * A camelCase standard property (`marginTop`) or a CSS custom property
+ * (`--brand-gap`) — stricter than the render guard, which also tolerates junk.
+ */
 const VALID_PROPERTY = /^(--)?[a-zA-Z][a-zA-Z-]*$/;
 
-// Radix Select forbids an empty-string item value, so the "clear" choice
-// carries a sentinel that maps back to `null` on change.
+/**
+ * Radix Select forbids an empty-string item value, so the "clear" choice
+ * carries a sentinel that maps back to `null` on change.
+ */
 const NONE_VALUE = "__none__";
 
 export interface StyleDeclaration {
@@ -45,18 +49,10 @@ export interface StyleDeclaration {
 
 interface StyleDeclarationsProps {
   readonly declarations: readonly StyleDeclaration[];
-  /** Set a property's value, or clear it with `null`. */
   readonly onChange: (property: string, value: string | null) => void;
-  /** Rename a property in place, keeping its value. */
   readonly onRename: (from: string, to: string) => void;
 }
 
-/**
- * The compiled list of every declaration in the active bucket — the escape
- * hatch that mirrors what the structured controls write. Raw declarations edit
- * as a text value; token declarations edit through an inline token picker of
- * the property's theme scale.
- */
 export function StyleDeclarations({
   declarations,
   onChange,
@@ -91,9 +87,10 @@ export function StyleDeclarations({
   );
 }
 
-/** One declaration row: an editable property name (renamed on commit), the raw
- *  value input (or a token picker), and a remove button. Keyed by property in
- *  the parent, so the draft re-inits when the row's identity changes. */
+/**
+ * Keyed by property in the parent, so the draft re-inits when the row's
+ * identity changes.
+ */
 function DeclarationRow({
   property,
   value,
@@ -108,9 +105,8 @@ function DeclarationRow({
   readonly onRename: (from: string, to: string) => void;
 }): ReactElement {
   const [keyDraft, setKeyDraft] = useState(property);
-  // A row edits as a token picker when its value is a `var(--plumix-…)` for the
-  // property's scale, and as a raw text input otherwise. Empty stays a
-  // declaration (not a clear) so retyping doesn't unmount the focused row.
+  // Empty stays a declaration, not a clear, so retyping doesn't unmount the
+  // focused row.
   const field = useStyleField(property, value, {
     onChange: (next) => onChange(property, next),
     emptyLiteralClears: false,
@@ -173,10 +169,8 @@ function DeclarationRow({
             >
               —
             </SelectItem>
-            {/* Keep an unknown token (stale id) visible + selected — a
-                controlled select with no matching item would render blank,
-                hiding the stored value. The bare `var(--plumix-…)` is the
-                raw-CSS view of the token. */}
+            {/* A controlled select with no matching item renders blank, hiding
+                a stale token id. */}
             {!field.options.some((option) => option.id === tokenId) ? (
               <SelectItem value={tokenId}>
                 {field.tokenOption(tokenId).cssVar}
@@ -211,10 +205,6 @@ function DeclarationRow({
   );
 }
 
-/** Key + value entry row that appends a raw declaration. The property is picked
- *  from a searchable combobox of common CSS properties (or typed for one not in
- *  the list); already-set properties are excluded so a new entry can't silently
- *  clobber an existing row. Submit also needs a non-empty value. */
 function AddDeclaration({
   onAdd,
   existingKeys,
@@ -235,11 +225,8 @@ function AddDeclaration({
 
   const taken = new Set(existingKeys);
   const options = CSS_PROPERTIES.filter((name) => !taken.has(name));
-  // Offer the typed query as a creatable property when it's a valid name that
-  // isn't already a listed option or an existing declaration — this is how a
-  // property outside the curated list (e.g. a vendor prefix) gets added. The
-  // collision check is case-insensitive: `margintop` must not create a second
-  // declaration alongside the curated `marginTop`.
+  // Case-insensitive: `margintop` must not create a second declaration
+  // alongside the curated `marginTop`.
   const custom = query.trim();
   const known = new Set(
     [...CSS_PROPERTIES, ...existingKeys].map((p) => p.toLowerCase()),
@@ -253,9 +240,8 @@ function AddDeclaration({
     setOpen(false);
   };
 
-  // Re-check `taken` at submit, not just at pick: a property picked here can be
-  // set elsewhere (a structured control, undo) before submit, and the write
-  // overwrites unconditionally — so the gate is the only no-clobber guard.
+  // Re-checked at submit: the property can be set elsewhere after picking, and
+  // the write overwrites unconditionally.
   const valid = property !== "" && !taken.has(property) && value.trim() !== "";
 
   return (

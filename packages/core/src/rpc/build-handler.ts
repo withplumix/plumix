@@ -6,11 +6,8 @@ import type { PluginRpcRouter } from "../plugin/manifest.js";
 import { appRouter } from "./router.js";
 
 /**
- * Build the merged oRPC handler — core `appRouter` plus the plugin routers.
- * Split out of `buildApp` and loaded via dynamic import so the heavy procedure
- * graph + oRPC runtime evaluate on the first RPC request per isolate, never on
- * the public render cold-start path. Plugin-id collisions are already rejected
- * eagerly in `buildApp`, so the merge here is a plain assign.
+ * Loaded via dynamic import so the procedure graph and oRPC runtime stay off
+ * the public render cold-start path.
  */
 export function buildRpcHandler(
   pluginRouters: ReadonlyMap<string, PluginRpcRouter>,
@@ -19,9 +16,8 @@ export function buildRpcHandler(
   for (const [pluginId, pluginRouter] of pluginRouters) {
     mergedRouter[pluginId] = pluginRouter;
   }
-  // Safety: the merge only adds keys — every core procedure is still present
-  // under its own name, and plugin ids are rejected in `buildApp` if they
-  // collide with one, so no procedure `appRouter` declares has been replaced.
+  // Safety: the merge only adds keys, and `buildApp` rejects plugin ids that
+  // collide with a core procedure, so none is replaced.
   const merged = mergedRouter as unknown as typeof appRouter;
   return new RPCHandler(merged, {
     plugins: [new ResponseHeadersPlugin()],

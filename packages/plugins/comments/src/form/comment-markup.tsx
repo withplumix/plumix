@@ -21,21 +21,17 @@ export interface CommentMarkupProps {
   /** The page to come back to once the comment is in. */
   readonly returnTo?: string;
   /**
-   * Prefix for every control id, so two forms on one page — the thread's
-   * own box and a reply box under a comment — cannot have one form's
-   * labels addressing the other's controls. Required rather than
-   * defaulted: a refused comment is handed back by a different caller
-   * than rendered it, and a default would give the returned form
-   * different ids from the one the visitor filled in.
+   * Prefix for every control id, so two forms on one page don't cross-label.
+   * Required: a refused comment is re-rendered by a different caller, and a
+   * default would change the ids.
    */
   readonly idBase: string;
   readonly requireEmail?: boolean;
   readonly values?: CommentFormValues;
   readonly errors?: readonly CommentFormError[];
   /**
-   * Set by the island. It turns the browser's own validation off, because
-   * the island checks nothing the server does not and a native bubble
-   * would pre-empt the summary a screen reader is sent to.
+   * Turns native validation off, so a browser bubble can't pre-empt the summary
+   * a screen reader is sent to.
    */
   readonly enhanced?: boolean;
   readonly busy?: boolean;
@@ -43,7 +39,6 @@ export interface CommentMarkupProps {
   readonly summaryRef?: Ref<HTMLDivElement>;
 }
 
-/** Every refusal at the top, each a link to the control that produced it. */
 function ErrorSummary({
   errors,
   idBase,
@@ -81,7 +76,6 @@ function ErrorSummary({
   );
 }
 
-/** One labelled control, with its refusal wired to it by id. */
 function Field({
   name,
   label,
@@ -127,19 +121,9 @@ function Field({
 }
 
 /**
- * The comment form, as markup the plugin owns.
- *
- * That ownership is the whole reason this exists. A plugin that renders no
- * form can only answer a refused submission with a redirect or a bare
- * page, and either way the visitor loses what they typed; owning the
- * markup is what lets the endpoint hand the form back with their words
- * still in it. It is also what the island upgrades in place — the same
- * elements, the same endpoint — so a visitor without JavaScript keeps the
- * thing the enhancement builds on rather than a placeholder.
- *
- * A theme that wants its own controls writes them and calls
- * `usePlumixCommentForm` instead; this is the default the plugin can stand
- * behind.
+ * Owning the markup lets the endpoint hand a refused form back with the
+ * visitor's words intact. A theme wanting its own controls uses
+ * `usePlumixCommentForm`.
  */
 export function CommentMarkup({
   action,
@@ -231,10 +215,8 @@ export function CommentMarkup({
           />
         )}
       </Field>
-      {/* Out of sight because a trap the visitor can see is a trap they fill
-          in. `aria-hidden` is the other half of the recipe, which keeps
-          content announced by design — a screen-reader user who filled the
-          trap would be silently dropped. */}
+      {/* Hidden visually and with `aria-hidden`: a screen-reader user who filled
+          the trap would be silently dropped. */}
       <div
         className="plumix-comment-honeypot"
         data-plumix-comment-honeypot=""

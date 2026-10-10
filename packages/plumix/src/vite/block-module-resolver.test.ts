@@ -7,8 +7,10 @@ import {
   resolveShortcodeModulePaths,
 } from "./block-module-resolver.js";
 
-// Real config modules always import the factory from `plumix`; the extractor
-// requires that provenance, so fixtures carry the import too.
+/**
+ * Real config modules always import the factory from `plumix`; the extractor
+ * requires that provenance, so fixtures carry the import too.
+ */
 const THEME = `import { defineTheme } from "plumix/theme";`;
 const PLUGIN = `import { definePlugin } from "plumix/plugin";`;
 

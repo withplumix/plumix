@@ -47,10 +47,6 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-// Mints a shareable draft preview link (route injects `mintPreviewLink`, wired
-// to entry.createPreviewLink — same DI shape as the revisions trigger, kept
-// RPC-agnostic and unit-testable). Primary action opens that preview in a new
-// tab; the menu keeps the copy-link affordance for sharing.
 export function PreviewButton({
   mintPreviewLink,
 }: {
@@ -60,10 +56,8 @@ export function PreviewButton({
   const [pending, setPending] = useState(false);
 
   function openPreview(): void {
-    // Open the tab synchronously inside the click gesture so popup blockers
-    // don't eat it, then navigate once the signed URL resolves. Null the
-    // opener before navigating so the preview tab can't reach back into the
-    // editor window.
+    // Opened synchronously so popup blockers allow it; the opener is nulled so
+    // the tab can't reach back into the editor.
     const win = window.open("", "_blank");
     setPending(true);
     mintPreviewLink()

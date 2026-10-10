@@ -6,11 +6,6 @@ const wired = (on: boolean): string => (on ? "✓" : "—");
 
 const list = (values: readonly string[]): string => values.join(", ") || "—";
 
-/**
- * The App panel: the site's static setup — the same across every page, so it's
- * consolidated into one tab (config, locale, wired slots, installed plugins,
- * and registered content types) rather than a tab each.
- */
 export const appPanel: DebugPanel = {
   id: "app",
   title: "App",

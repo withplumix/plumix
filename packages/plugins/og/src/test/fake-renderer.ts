@@ -8,9 +8,8 @@ export interface FakeRenderer {
 
 export interface FakeRendererOptions {
   /**
-   * What the renderer declares it produces. SVG by default, which keeps the
-   * bytes readable; a suite that cares about the format the route names — or
-   * about what reaches a scraper — passes a raster type instead.
+   * SVG by default to keep bytes readable; pass a raster type to test the
+   * served format or what reaches a scraper.
    */
   readonly contentType?: string;
   /**
@@ -21,9 +20,8 @@ export interface FakeRendererOptions {
 }
 
 /**
- * A renderer that writes the card's text and image sources into its bytes, so a
- * suite asserts on the served body rather than on the shape of the node tree
- * behind it. Every test outside `takumi.test.ts` renders through this.
+ * Writes the card's text and image sources into its bytes, so suites assert on
+ * the served body rather than the node tree.
  */
 export function createFakeRenderer(
   options: FakeRendererOptions = {},

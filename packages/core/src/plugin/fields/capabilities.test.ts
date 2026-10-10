@@ -27,14 +27,13 @@ import {
   toggle,
 } from "./index.js";
 
-// The matrix is a claim about the builders, so the suite checks the claim
-// against the chains themselves rather than restating it. A capability a
-// builder gained without its row saying so fails just as loudly as one its
-// row claims and the chain lacks — drift in either direction is the bug
-// this file exists to catch.
+// Checked against the chains themselves, so drift in either direction fails:
+// a capability the row omits or one the chain lacks.
 
-// One representative chain per builder, at the point where the whole chain
-// is reachable (the seeded builders need their schema declared first).
+/**
+ * One representative chain per builder, at the point where the whole chain
+ * is reachable (the seeded builders need their schema declared first).
+ */
 const CHAINS = {
   string: text("t"),
   number: number("n"),
@@ -100,10 +99,10 @@ describe("the builder capability matrix", () => {
   });
 });
 
-// The guard's whole value is that it fails, so here it is failing. A row
-// claiming a capability its chain does not offer leaves a non-`never`
-// entry in the missing-capabilities map, and the assertion rejects it —
-// which is what `pnpm typecheck` reports against the real matrix.
+/**
+ * The guard's whole value is that it fails, so here it is failing against a
+ * drifted row.
+ */
 type DriftedRow = {
   readonly [N in BuilderName]: N extends "group" ? "searchable" : never;
 };

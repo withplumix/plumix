@@ -3,16 +3,17 @@ import { join } from "node:path";
 import type { BunFile } from "bun";
 
 export interface VariantCache {
-  /** The variant `key` of `source` in the first of `extensions` held on disk. */
+  /**
+   * The variant `key` of `source` in the first of `extensions` held on disk.
+   */
   find<E extends string>(
     source: string,
     key: string,
     extensions: readonly E[],
   ): Promise<{ readonly extension: E; readonly file: BunFile } | null>;
   /**
-   * Counts the purges of `source` so far. A render takes it before it reads
-   * the source and hands it to `put`, which then declines to keep a variant
-   * of a source purged while the render was under way.
+   * `put` declines a variant of a source purged after the render read this
+   * epoch.
    */
   epoch(source: string): number;
   put(
@@ -30,9 +31,8 @@ const sourcePrefix = (source: string): string =>
   `${new Bun.CryptoHasher("sha256").update(source).digest("hex").slice(0, 40)}-`;
 
 /**
- * Variants on disk under one directory, each named by its source's hash and
- * its own, so a purge finds a source's variants by prefix. `Bun.write`
- * creates the directory on the first write.
+ * Named by source hash and its own, so a purge finds a source's variants by
+ * prefix.
  */
 export function createVariantCache(dir: string): VariantCache {
   const epochs = new Map<string, number>();

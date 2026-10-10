@@ -8,21 +8,12 @@ import { expect, test } from "vitest";
 
 type ViteManifest = Record<string, { readonly file: string }>;
 
-// The whole point of the renderer split: the eager islands element chunk
-// must carry no React. This builds the real islands entries (the same
-// modules the generated `.plumix/islands-*-entry.ts` inputs re-export)
-// through Vite with the plugin's load-bearing options
-// (`preserveEntrySignatures: "strict"`, prod minify) and asserts the
-// element chunk stays under the ceiling. A regression that pulls React back
-// into the element chunk blows it to ~60 KB and fails here.
-//
-// The chunk carries the custom element + all five hydration strategies
-// (load/idle/visible/interaction/only) + the prefetch wiring + prop
-// (de)serialization — measured at ~3.5 KB gz (was ~2.4 KB with only
-// `load`). 4 KB leaves headroom for a strategy or two while still catching
-// React (~60 KB) instantly.
+/**
+ * The eager element chunk must carry no React. Measured ~3.5 KB gz; React
+ * would add ~60 KB, so 4 KB leaves headroom while still catching it.
+ */
 const ELEMENT_CHUNK_CEILING_BYTES = 4 * 1024;
-// A real Vite build — give it room beyond vitest's 5s default.
+/** A real Vite build — give it room beyond vitest's 5s default. */
 const BUILD_TIMEOUT_MS = 30_000;
 
 test(
@@ -48,13 +39,8 @@ test(
     await build({
       root: dir,
       logLevel: "silent",
-      // Build the islands the way `plumix build` does: the plugin substitutes
-      // `process.env.PLUMIX_DEV` to `""` for a production build (see the Vite
-      // plugin's `define`), which eliminates the dev-only island error overlay
-      // (#1603) — a lazy `import()` in the runtime that would otherwise pull
-      // React DOM out of the renderer entry into a shared chunk and break the
-      // negative guard below. Omitting it here would exercise a build shape
-      // that never ships.
+      // Without it the dev-only error overlay's lazy `import()` pulls React
+      // DOM into a shared chunk, a build shape that never ships.
       define: {
         "process.env.NODE_ENV": '"production"',
         "process.env.PLUMIX_DEV": '""',
@@ -96,11 +82,8 @@ test(
 
     // Negative guard: React must NOT be in the eager element chunk.
     expect(elementGz).toBeLessThan(ELEMENT_CHUNK_CEILING_BYTES);
-    // Positive guard: React MUST be in the lazy renderer chunk. Without
-    // `preserveEntrySignatures: "strict"` the renderer's pure re-export
-    // tree-shakes to an empty chunk — which would also keep the element
-    // chunk tiny and pass the negative guard alone. ReactDOM is ~190 KB
-    // raw, so a healthy renderer chunk is comfortably over 50 KB.
+    // Without `preserveEntrySignatures: "strict"` the renderer tree-shakes to
+    // an empty chunk, which would also pass the negative guard.
     expect(rendererBytes).toBeGreaterThan(50 * 1024);
   },
   BUILD_TIMEOUT_MS,

@@ -1,7 +1,5 @@
-// Shared fixtures + interaction helpers for the editor specs.
-// The mock harness can't prove server persistence, so specs assert the
-// two client contracts instead: what the canvas renders, and what
-// envelope entry.update receives.
+// The mock harness can't prove server persistence, so specs assert what the
+// canvas renders and what envelope entry.update receives.
 
 import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
@@ -49,9 +47,7 @@ export interface PublishedEntryOptions {
 }
 
 /**
- * Published entry carrying the `_preview` projection the server emits
- * for autosave-capable entry types. A non-null `autosaveUpdatedAt`
- * marks a pending per-user draft (`source: "autosave"`); equal to
+ * A non-null `autosaveUpdatedAt` marks a pending per-user draft; equal to
  * `liveUpdatedAt` is fresh, older is stale.
  */
 export function publishedEntry(
@@ -77,10 +73,8 @@ export function publishedEntry(
 }
 
 /**
- * oRPC `entry/get` envelope for a `publishedEntry`, including the
- * date-revival meta entries the serializer emits — without them the
- * client sees strings where it expects Dates and the draft/stale
- * machinery silently misreads the `_preview` timestamps.
+ * Includes the date-revival meta; without it the client reads the `_preview`
+ * timestamps as strings and the draft/stale machinery misreads them.
  */
 export function publishedEntryRpcBody(entry: Record<string, unknown>): string {
   const preview = entry._preview as {
@@ -129,9 +123,11 @@ export function installEditorMocks(
   });
 }
 
-// The starter modal opens whenever the manifest carries a starter-
-// eligible pattern and the entry content is empty. Specs that aren't
-// about the modal start blank.
+/**
+ * The starter modal opens whenever the manifest carries a starter-
+ * eligible pattern and the entry content is empty. Specs that aren't
+ * about the modal start blank.
+ */
 export async function dismissStarterModal(page: Page): Promise<void> {
   const modal = page.getByTestId("plumix-starter-modal");
   await modal.waitFor({ state: "visible" });

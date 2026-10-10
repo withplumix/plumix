@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import * as path from "node:path";
 import type { Linter } from "eslint";
 import { ESLint } from "eslint";
@@ -49,8 +50,18 @@ beforeAll(async () => {
   await eslint.lintFiles(["src/restricted-syntax.ts"]);
 }, 60_000);
 
+// The comment rules judge prose, not code, and have fixtures of their own.
+const COMMENT_RULES = new Set([
+  "plumix/max-comment-length",
+  "plumix/no-jsdoc-in-function-body",
+  "plumix/prefer-jsdoc",
+]);
+
 const plumixReports = (fixture: string) =>
-  reportsMatching(fixture, (ruleId) => ruleId.startsWith("plumix/"));
+  reportsMatching(
+    fixture,
+    (ruleId) => ruleId.startsWith("plumix/") && !COMMENT_RULES.has(ruleId),
+  );
 
 // The earned-types rules borrowed from typescript-eslint's strict preset.
 // Named explicitly so a report from one of the presets the config already
@@ -94,6 +105,9 @@ const unparsedTypeofReports = messageIdReports(
 const chainedAssertionReports = messageIdReports(
   "plumix/no-chained-type-assertion",
 );
+const commentLengthReports = messageIdReports("plumix/max-comment-length");
+const preferJsdocReports = messageIdReports("plumix/prefer-jsdoc");
+const jsdocInBodyReports = messageIdReports("plumix/no-jsdoc-in-function-body");
 
 async function errorMessageReports(
   config: Linter.Config[],
@@ -223,6 +237,92 @@ describe("plumix/no-bare-object-input", () => {
     await expect(
       plumixReports("src/bare-object-input.allowed.ts"),
     ).resolves.toEqual([]);
+  });
+});
+
+describe("plumix/max-comment-length", () => {
+  it("rejects a line block, a doc comment and a trailing comment over the word limit", async () => {
+    await expect(
+      commentLengthReports("src/comment-length.violations.ts"),
+    ).resolves.toEqual([
+      { messageId: "tooLong", line: 1 },
+      { messageId: "tooLong", line: 5 },
+      { messageId: "tooLong", line: 13 },
+    ]);
+  });
+
+  it("applies in test files too", async () => {
+    await expect(
+      commentLengthReports("src/comment-length.violations.test.ts"),
+    ).resolves.toEqual([{ messageId: "tooLong", line: 3 }]);
+  });
+
+  it("counts blocks split by a blank line apart and skips lint directives and code examples", async () => {
+    await expect(
+      commentLengthReports("src/comment-length.allowed.ts"),
+    ).resolves.toEqual([]);
+  });
+});
+
+describe("plumix/no-jsdoc-in-function-body", () => {
+  it("rejects a doc comment inside a function or method body", async () => {
+    await expect(
+      jsdocInBodyReports("src/jsdoc-in-body.violations.ts"),
+    ).resolves.toEqual([
+      { messageId: "jsdocInBody", line: 2 },
+      { messageId: "jsdocInBody", line: 11 },
+    ]);
+  });
+
+  it("permits doc comments on declarations and members, exported or not", async () => {
+    await expect(
+      jsdocInBodyReports("src/jsdoc-in-body.allowed.ts"),
+    ).resolves.toEqual([]);
+  });
+});
+
+describe("plumix/prefer-jsdoc", () => {
+  it("rejects a line comment on a declaration or member", async () => {
+    await expect(
+      preferJsdocReports("src/prefer-jsdoc.violations.ts"),
+    ).resolves.toEqual([
+      { messageId: "preferJsdoc", line: 1 },
+      { messageId: "preferJsdoc", line: 7 },
+      { messageId: "preferJsdoc", line: 12 },
+      { messageId: "preferJsdoc", line: 20 },
+      { messageId: "preferJsdoc", line: 24 },
+    ]);
+  });
+
+  it("rewrites the comment as a doc comment and keeps lint directives as line comments", async () => {
+    const fixer = new ESLint({
+      cwd: fixturesDir,
+      overrideConfigFile: true,
+      overrideConfig: baseConfig,
+      fix: true,
+      ruleFilter: ({ ruleId }) => ruleId === "plumix/prefer-jsdoc",
+    });
+    const [result] = await fixer.lintFiles(["src/prefer-jsdoc.violations.ts"]);
+    expect(result?.output).toBe(
+      readFileSync(path.join(fixturesDir, "src/prefer-jsdoc.fixed.ts"), "utf8"),
+    );
+  });
+
+  it("stays silent in function bodies, on object properties, on separated section comments, on trailing comments, tool directives and where `*/` would end a doc comment", async () => {
+    await expect(
+      preferJsdocReports("src/prefer-jsdoc.allowed.ts"),
+    ).resolves.toEqual([]);
+  });
+});
+
+describe("sonarjs/no-commented-code", () => {
+  it("rejects code left behind in a comment", async () => {
+    await expect(
+      reportsMatching(
+        "src/commented-code.violations.ts",
+        (ruleId) => ruleId === "sonarjs/no-commented-code",
+      ),
+    ).resolves.toEqual([{ ruleId: "sonarjs/no-commented-code", line: 2 }]);
   });
 });
 

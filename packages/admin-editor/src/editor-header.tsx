@@ -71,11 +71,6 @@ export interface EditorHeaderProps {
   readonly revisionsTrigger?: ReactNode;
 }
 
-/**
- * Full-width editor header: a back button + inline-editable entry title on the
- * left; undo/redo, a preview menu, and the publish actions on the right. Spans
- * the whole editor (above both side rails), unlike the canvas toolbar.
- */
 export function EditorHeader({
   title,
   onTitleChange,
@@ -182,11 +177,10 @@ export function EditorHeader({
   );
 }
 
-/** Publish action for an entry. Edits to a published entry stage a per-user
- *  autosave draft that leaves the live page untouched, so `draftMode` adds an
- *  "unpublished changes" indicator and a Discard action (revert to live) beside
- *  Publish; both appear only while a draft is actually pending. Autosave already
- *  persists continuously, so there is no separate Save action. */
+/**
+ * No Save action: autosave persists continuously, staging a draft for a
+ * published entry.
+ */
 function HeaderPublish({
   publish,
 }: {
@@ -294,8 +288,6 @@ function HeaderPublish({
   );
 }
 
-/** Eye-icon menu: open the current draft preview or the published page. The
- *  live entry is disabled until the entry has been published at least once. */
 function PreviewMenu({
   previewLink,
   liveUrl,

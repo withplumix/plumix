@@ -16,7 +16,6 @@ async function tableExists(
   return rows.length > 0;
 }
 
-/** The migrations an owner's tracking table records, oldest first. */
 async function appliedMigrations(
   db: MigrationDatabase,
   owner: MigrationOwner,
@@ -91,8 +90,10 @@ export async function reportStatus(
   }
 }
 
-// Bookkeeping that belongs to SQLite, miniflare's D1, or a migrator, rather
-// than to any owner's schema.
+/**
+ * Bookkeeping that belongs to SQLite, miniflare's D1, or a migrator, rather
+ * than to any owner's schema.
+ */
 const BOOKKEEPING_PREFIXES = ["sqlite_", "_cf_", "__drizzle_migrations"];
 
 async function hasTrackingTables(db: MigrationDatabase): Promise<boolean> {
@@ -107,8 +108,8 @@ function quote(value: string): string {
 }
 
 /**
- * Every table, index and trigger, keyed `<type> <name>`: a table by its
- * columns, the rest by their SQL with whitespace collapsed.
+ * A table keyed by its columns, the rest by their SQL with whitespace
+ * collapsed.
  */
 async function schemaOf(
   db: MigrationDatabase,
@@ -182,10 +183,8 @@ function differences(
 }
 
 /**
- * Adopt a database the site's single legacy history built: when its schema
- * matches every owner's history applied to a scratch database exactly, record
- * each owner's migrations as applied rather than run them. The one place
- * Plumix writes drizzle's tracking table (ADR 0027).
+ * Records each owner's migrations as applied when the schema exactly matches
+ * every owner's history; the one place Plumix writes drizzle's tracking table.
  */
 export async function adoptLegacyDatabase(
   db: MigrationDatabase,

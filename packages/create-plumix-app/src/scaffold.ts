@@ -12,13 +12,9 @@ import { loadSources } from "./sources.js";
 
 interface ScaffoldOptions {
   readonly targetDir: string;
-  /** Runtime to scaffold; defaults to {@link DEFAULT_RUNTIME}. */
   readonly runtimeId?: string;
-  /** Plugin ids to include; defaults to none. The CLI defaults to the recommended set. */
   readonly pluginIds?: readonly string[];
-  /** Optional auth methods on top of passkey; defaults to none. */
   readonly authMethodIds?: readonly string[];
-  /** Pre-loaded sources (e.g. from the wizard) to avoid a second load. */
   readonly sources?: ScaffoldSources;
 }
 
@@ -30,10 +26,12 @@ interface ScaffoldResult {
 export const DEFAULT_RUNTIME = "node";
 
 const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-// The runtime-agnostic base skeleton, shipped in the package tarball.
+/** The runtime-agnostic base skeleton, shipped in the package tarball. */
 const BASE_DIR = join(PACKAGE_ROOT, "base");
-// In-workspace, sources come from the live monorepo here; a published
-// install has no monorepo and reads the snapshot baked next to the package.
+/**
+ * In-workspace, sources come from the live monorepo here; a published
+ * install has no monorepo and reads the snapshot baked next to the package.
+ */
 const REPO_ROOT = join(PACKAGE_ROOT, "..", "..");
 const SNAPSHOT_PATH = join(PACKAGE_ROOT, "registry.json");
 
@@ -42,9 +40,11 @@ export function loadScaffoldSources(): Promise<ScaffoldSources> {
   return loadSources(REPO_ROOT, SNAPSHOT_PATH);
 }
 
-// npm package-name grammar (lowercase, no spaces/quotes/slashes): the
-// project name is spliced into package.json, wrangler.jsonc, and TS string
-// literals, so an out-of-grammar name would emit a broken project.
+/**
+ * npm package-name grammar (lowercase, no spaces/quotes/slashes): the
+ * project name is spliced into package.json, wrangler.jsonc, and TS string
+ * literals, so an out-of-grammar name would emit a broken project.
+ */
 const PROJECT_NAME_RE = /^[a-z0-9][a-z0-9._-]*$/;
 
 export function isValidProjectName(name: string): boolean {
@@ -108,8 +108,10 @@ export async function scaffold(
   return { targetDir, name };
 }
 
-// Validate up front so we never half-write into an occupied directory,
-// and create the target when it doesn't exist yet.
+/**
+ * Validate up front so we never half-write into an occupied directory,
+ * and create the target when it doesn't exist yet.
+ */
 async function ensureEmptyTarget(targetDir: string): Promise<void> {
   const parent = dirname(targetDir);
   if (!existsSync(parent)) {

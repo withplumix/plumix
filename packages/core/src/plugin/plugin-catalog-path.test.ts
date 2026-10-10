@@ -6,10 +6,8 @@ import {
 } from "./plugin-catalog-path.js";
 
 test("pluginCatalogUrl stays in lockstep with pluginCatalogStagedPath", () => {
-  // Both ends of the runtime fetch (manifest URL emission + bundler
-  // copy destination) consume the same helper. A pattern change must
-  // flip both consumers at once or admin's `import()` resolves to a
-  // 404 — pin the symmetry so a refactor can't drift them apart.
+  // Manifest URL and bundler copy destination must agree, or admin's
+  // `import()` resolves to a 404.
   expect(pluginCatalogUrl("my-plugin", "de")).toBe(
     `/_plumix/admin/${pluginCatalogStagedPath("my-plugin", "de")}`,
   );

@@ -8,17 +8,13 @@ import { apiTokens } from "../db/schema/api_tokens.js";
 import { users } from "../db/schema/users.js";
 import { hashToken } from "./tokens.js";
 
-// Personal-access-token format: `pl_pat_<32 random bytes, base64url>`.
-// The prefix is recognizable on grep/log, signals "this is a Plumix
-// PAT", and makes accidental commits to git easier to spot — same
-// design as GitHub's `ghp_` / `gho_` and NPM's `npm_`. The 32-byte
-// random suffix gives 256 bits of entropy, well past the 120-bit
-// Copenhagen Book floor.
+/**
+ * A fixed prefix makes leaked tokens greppable and secret-scannable, like
+ * GitHub's `ghp_`.
+ */
 export const API_TOKEN_PREFIX = "pl_pat_";
 const API_TOKEN_BODY_BYTES = 32;
-// Length of the displayed `prefix` field — `pl_pat_` plus the first 4
-// chars of the random body. Short enough to fit in a list cell, long
-// enough to disambiguate users' own tokens at a glance.
+/** Short enough for a list cell, long enough to tell a user's tokens apart. */
 const PREFIX_DISPLAY_BODY_CHARS = 4;
 
 export interface MintedApiToken {
@@ -31,33 +27,17 @@ export interface MintedApiToken {
 export interface CreateApiTokenInput {
   readonly userId: number;
   readonly name: string;
-  /**
-   * Token expiry. Pass `null` for never-expires (long-lived CI / MCP
-   * server tokens); the admin form nudges towards a TTL but allows
-   * opting out. The hot path treats `null` as "no expiry check"; only
-   * the lookup's `revokedAt` and a manual revocation can kill it.
-   */
+  /** `null` never expires; only revocation ends such a token. */
   readonly expiresAt: Date | null;
   /**
-   * Capability scope whitelist. null = unrestricted (inherits the
-   * user's role caps); non-null = the token's effective caps are the
-   * intersection of this list with the user's role caps. See
-   * `db/schema/api_tokens.ts` for the full rationale.
+   * `null` inherits the user's role caps; a list narrows them to the
+   * intersection.
    */
   readonly scopes?: readonly string[] | null;
 }
 
 /**
- * Mint a new personal access token.
- *
- * Generates `pl_pat_<random>`, stores the SHA-256 hash + a short
- * recognisable prefix fragment, and returns both the secret (caller
- * shows once, never recoverable) and the persisted row.
- *
- * Concurrent calls have negligible collision risk (256 bits of
- * randomness) but the `id` column is the primary key, so a duplicate
- * would surface as a unique-constraint error rather than silent
- * corruption.
+ * Only the hash is stored, so the returned `secret` cannot be recovered later.
  */
 export async function createApiToken(
   db: Db,
@@ -81,7 +61,7 @@ export async function createApiToken(
       scopes: input.scopes ?? null,
     })
     .returning();
-  // eslint-disable-next-line no-restricted-syntax -- defensive driver-regression guard; migrate alongside auth errors in PR 2 (#234)
+  // eslint-disable-next-line no-restricted-syntax -- unreachable unless the driver returns no row from INSERT … RETURNING
   if (!row) throw new Error("createApiToken: insert returned no row");
 
   return { secret, row };
@@ -93,27 +73,8 @@ interface ValidatedApiToken {
 }
 
 /**
- * Validate a raw `Authorization: Bearer pl_pat_…` token.
- *
- * Returns the user + token row when:
- *   - the token's prefix matches `pl_pat_`,
- *   - the row exists,
- *   - the row isn't revoked,
- *   - the row hasn't expired (or has no expiry),
- *   - the linked user isn't disabled.
- *
- * Returns null on any miss — the authenticator caller maps null to
- * "no auth on this request" (which the dispatcher then turns into a
- * 401 for protected routes). The specific reason is logged but not
- * surfaced to the client; an attacker probing tokens learns nothing
- * beyond "this token doesn't authenticate."
- *
- * On success, updates `lastUsedAt` synchronously before returning.
- * One indexed UPDATE per authed request — the cost is small and the
- * race is benign (concurrent updates last-write-wins on a
- * timestamp). If/when the hot-path latency budget tightens this can
- * move to `ctx.after()` (worker-tail / waitUntil); v0.1.0 keeps it
- * simple and synchronous.
+ * Returns null for every failure reason alike, so a token prober learns nothing
+ * more. Writes `lastUsedAt` before returning.
  */
 export async function validateApiToken(
   db: Db,
@@ -153,15 +114,7 @@ export async function validateApiToken(
   return { user: row.user, token: row.token };
 }
 
-/**
- * Soft-delete a token by setting `revokedAt`. Idempotent — calling on
- * an already-revoked token is a no-op (the WHERE clause includes
- * `IS NULL` so the second call updates zero rows, which is fine).
- *
- * Self-scoped via the `userId` predicate; cross-user attempts return
- * `false` (no row matched). The caller — a self-scoped RPC procedure
- * — should map false to NOT_FOUND.
- */
+/** Returns `false` for another user's token or one already revoked. */
 export async function revokeApiToken(
   db: Db,
   input: { id: string; userId: number },

@@ -4,7 +4,7 @@ import { defineTemplate } from "plumix/theme";
 import { Layout } from "../components/Layout";
 import { PostSingle } from "../components/PostSingle";
 
-// Static page: title + body, no post metadata.
+/** Static page: title + body, no post metadata. */
 export const page = defineTemplate<EntryData>({
   settings: ["site"],
   menus: ["primary", "footer"],

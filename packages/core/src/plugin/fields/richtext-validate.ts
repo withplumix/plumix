@@ -1,35 +1,20 @@
-// Server-side Tiptap ProseMirror JSON validator. Walks a saved doc
-// against the field's `marks` / `nodes` / `blocks` allowlist and
-// rejects any disallowed type/mark name with a JSON-path pointer to
-// the offending location.
-//
-// The validator is sync and DB-free. The field pipeline runs it while
-// normalizing a `richtext()` field, before `applyMetaPatch` writes the
-// value. What comes back is the unchanged input — this is a validator, not
-// a transformer (a transformer would silently strip disallowed
-// nodes, hiding edits the editor already prevented from being
-// surfaced; reject loud here so the editor's allowlist + server's
-// allowlist stay in lockstep).
+// Rejects rather than strips disallowed nodes: stripping would silently hide
+// edits, and a loud reject keeps the editor's and server's allowlists in
+// lockstep.
 
 import * as v from "valibot";
 
-// The one field the walk needs typed. `looseObject` keeps the rest of the
-// node reachable as the undescribed bag it is, so `content` / `marks` / `attrs`
-// still read back for the `Array.isArray` branches below without this schema
-// claiming anything about them.
+/**
+ * `looseObject` keeps `content` / `marks` / `attrs` reachable without this
+ * schema claiming anything about them.
+ */
 const typedNodeSchema = v.looseObject({
   type: v.pipe(v.string(), v.nonEmpty()),
 });
 
 /**
- * Always-allowed type names — the structural nodes the shared editor
- * emits regardless of a field's `.nodes()` allowlist, so the editor's
- * schema and this validator stay in lockstep. ProseMirror requires
- * `doc` / `text`; the editor mounts an implicit paragraph; `hardBreak`
- * is the universal Shift+Enter line break; and `listItem` is pulled in
- * structurally by any allowed list (authors declare the list node, not
- * its item). All are content-free wrappers / inline breaks — none can
- * smuggle a script or href — so admitting them implicitly is safe.
+ * Structural nodes the editor emits regardless of `.nodes()`. None can carry a
+ * script or href, so admitting them implicitly is safe.
  */
 const IMPLICIT_NODES: ReadonlySet<string> = new Set([
   "doc",
@@ -39,9 +24,6 @@ const IMPLICIT_NODES: ReadonlySet<string> = new Set([
   "listItem",
 ]);
 
-// `legacyAliases` lived on the v1 BlockSpec; the v2 surface dropped it
-// since stored content now uses canonical names everywhere. Keeping the
-// expansion shape so call sites stay unchanged — it's a passthrough now.
 function expandAliases(allowlist: readonly string[]): readonly string[] {
   return allowlist;
 }
@@ -55,13 +37,8 @@ function expandAliases(allowlist: readonly string[]): readonly string[] {
 export const SAFE_HREF_RE = /^(https?:\/\/|mailto:|tel:|\/|#|\?|\.\.?\/)/i;
 
 /**
- * Maximum nesting depth the validator will recurse through. The
- * meta-pipeline byte cap (256 KiB) doesn't bound depth alone — a
- * pathological payload of ~30 bytes per level can reach ~8.5k levels
- * within the cap, blowing the JS engine's stack budget. 100 covers
- * any realistic authoring (deep blockquotes, nested lists rarely
- * exceed 5-10 levels) and keeps the validator within a safe stack
- * envelope on Workers / Node alike.
+ * The 256 KiB byte cap alone admits ~8.5k levels, enough to blow the stack;
+ * real documents rarely nest past 10.
  */
 const MAX_RICHTEXT_DEPTH = 100;
 
@@ -72,16 +49,8 @@ interface RichtextAllowlist {
 }
 
 /**
- * Build a validator for a `richtext` field. Returns a function that walks a
- * Tiptap JSON doc and either hands the input back — the identity return type
- * is the contract, not an accident — or throws a `RichtextValidationError`
- * pinpointing the first offending node/mark.
- *
- * Throws on the FIRST violation rather than collecting all of them
- * — the editor already prevents these cases at the source, so a
- * server-side reject is an integrity-check failure, not a "warn the
- * user about every issue" UX. Single-shot reject keeps the error
- * surface small.
+ * Throws `RichtextValidationError` on the first violation; otherwise returns
+ * the input unchanged.
  */
 export function walkRichtextDoc(
   allowlist: RichtextAllowlist,
@@ -109,13 +78,7 @@ export function walkRichtextDoc(
 type RichtextValidationReason =
   "disallowed_node" | "disallowed_mark" | "unsafe_href" | "invalid_shape";
 
-/**
- * Error thrown when the validator encounters a disallowed type or
- * unsafe attribute. Carries the JSON path so the editor (or test
- * harness) can pinpoint the offending location — e.g.
- * `"content[2].content[0].marks[1]"` for a disallowed mark on the
- * third paragraph's first text run's second mark.
- */
+/** `path` locates the offender, e.g. `"content[2].content[0].marks[1]"`. */
 export class RichtextValidationError extends Error {
   static {
     RichtextValidationError.prototype.name = "RichtextValidationError";
@@ -278,11 +241,8 @@ function walkMark(
       markType: mark.type,
     });
   }
-  // `link` is the only attr we gate at this layer — its `href` is
-  // user-supplied and reaches rendered HTML. Unsafe schemes
-  // (`javascript:`, `data:`, …) get a hard reject so a doc that
-  // cleared the admin's mark-name allowlist but smuggled an unsafe
-  // scheme via direct API write doesn't pollute output.
+  // `link.href` reaches rendered HTML, and a direct API write bypasses the
+  // admin's allowlist.
   if (mark.type === "link" && mark.attrs && typeof mark.attrs === "object") {
     const attrs = mark.attrs as Readonly<Record<string, unknown>>;
     const href = attrs.href;

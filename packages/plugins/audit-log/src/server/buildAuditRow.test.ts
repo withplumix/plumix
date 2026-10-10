@@ -50,10 +50,8 @@ describe("buildAuditRow", () => {
   });
 
   test("treats Date instances as equal when their .getTime() matches", () => {
-    // Drizzle reads timestamp columns as Date — same epoch, distinct
-    // instances. Without the Date special-case, JSON.stringify would
-    // emit identical strings (both ISO), so the equality holds — but
-    // the explicit branch keeps the contract obvious.
+    // Drizzle reads timestamps as distinct Date instances; JSON.stringify would
+    // equate them anyway, but the explicit branch keeps the contract obvious.
     const row = buildAuditRow({
       event: "entry:updated",
       actor: { id: 1, label: "a" },

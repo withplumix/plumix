@@ -79,11 +79,10 @@ import { stageUserPublic } from "./public-staging.js";
 import { stageIntoPlace } from "./stage-into-place.js";
 import { generateWorkerExportsSource } from "./worker-exports-codegen.js";
 
-// The pre-compiled admin SPA ships as its own package (@plumix/admin). Locate
-// it so the vite plugin can stage its dist into the user's app, and so the
-// catalogs it baked in can be told apart from the ones a site has to fetch.
-// This relies on @plumix/admin exposing its package.json — it declares no
-// `exports` map today; add a `"./package.json"` export if one is introduced.
+/**
+ * Relies on @plumix/admin exposing its package.json; it declares no `exports`
+ * map, so add a `"./package.json"` export if one is introduced.
+ */
 const require = createRequire(import.meta.url);
 const ADMIN_PACKAGE_ROOT = dirname(
   require.resolve("@plumix/admin/package.json"),
@@ -125,60 +124,40 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
 
   return {
     name: "plumix",
-    // Default Vite's publicDir to .plumix/public so the admin staging path is
-    // served automatically in the common case. Consumers with an explicit
-    // publicDir in their vite.config keep theirs — plumix just namespaces
-    // admin under `<their-publicDir>/_plumix/admin/` instead.
-    //
-    // Also `define` the Workers Builds env vars consumers can read from
-    // `plumix.config.ts` (e.g. via `cloudflareDeployOrigin`). Vite
-    // substitutes the literals at bundle time so the runtime worker
-    // doesn't depend on `process.env` being populated — CF Workers'
-    // process.env is empty by default and the helper would otherwise
-    // fall back to localhost on every deployed request.
+    // A consumer's explicit publicDir wins. Workers Builds env vars are
+    // `define`d because a Worker's `process.env` is empty, so deploys would
+    // fall back to localhost.
     async config(userConfig, env) {
       const define = {
         "process.env.WORKERS_CI": JSON.stringify(process.env.WORKERS_CI ?? ""),
         "process.env.WORKERS_CI_BRANCH": JSON.stringify(
           process.env.WORKERS_CI_BRANCH ?? "",
         ),
-        // Used by `injectIslandsBootstrap` to pick between the dev
-        // source-entry path and the hashed build manifest URL. Vite
-        // substitutes this literal at bundle time so the SSR worker
-        // gets a static boolean (no `process` lookup at runtime).
+        // A literal, so the SSR worker gets a static boolean with no `process`
+        // lookup.
         "process.env.PLUMIX_DEV": JSON.stringify(
           env.command === "build" ? "" : "1",
         ),
-        // The opt-out from the loopback-only gate on core's dev surfaces —
-        // the debug bar, the request history, the dev error page and every
-        // `auth: "development"` route (#2007). Set it to review on a phone,
-        // demo through a tunnel or work in a codespace; empty in a production
-        // build, where all of those tree-shake out regardless.
+        // Opts out of the loopback-only gate on core's dev surfaces, for a
+        // phone, tunnel or codespace. Empty in production, where those
+        // tree-shake out.
         "process.env.PLUMIX_DEV_ALLOW_REMOTE": JSON.stringify(
           env.command === "build"
             ? ""
             : (process.env.PLUMIX_DEV_ALLOW_REMOTE ?? ""),
         ),
-        // The dev-only open-in-editor scheme (#1581). Substituted from the dev
-        // machine's env at bundle time so the dev worker — whose `process.env`
-        // is empty — can read it when rendering the dev error page. Empty in a
-        // production build, where the whole dev-error path tree-shakes out.
+        // Substituted at bundle time because the dev worker's `process.env` is
+        // empty.
         "process.env.PLUMIX_EDITOR": JSON.stringify(
           env.command === "build" ? "" : (process.env.PLUMIX_EDITOR ?? ""),
         ),
-        // The dev-only open-in-editor path remap (#1627), for a dev server whose
-        // filesystem differs from the editor host's (container / remote / dev-
-        // container). Substituted from the dev machine's env at bundle time;
-        // empty in a production build, where the dev-error path tree-shakes out.
+        // For a dev server whose filesystem differs from the editor host's
+        // (container, remote).
         "process.env.PLUMIX_EDITOR_PATH_MAP": JSON.stringify(
           env.command === "build"
             ? ""
             : (process.env.PLUMIX_EDITOR_PATH_MAP ?? ""),
         ),
-        // The dev-only browser-errors-to-terminal level (#1604). Substituted from
-        // the dev machine's env at bundle time so the islands runtime knows what
-        // to forward; empty in a production build, where the whole forwarder
-        // tree-shakes out under the `PLUMIX_DEV` gate.
         "process.env.PLUMIX_FORWARD_ERRORS": JSON.stringify(
           env.command === "build"
             ? ""
@@ -190,18 +169,9 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       // the SSR renderer knows which hashed `<link rel="stylesheet">` tags
       // to inject after the theme's own `link[]`.
       const build = { manifest: true };
-      // Register `.plumix/client-entry.ts` as the CLIENT environment's
-      // entry. @cloudflare/vite-plugin checks for a non-empty
-      // `clientEnvironment.config.build.rollupOptions.input` and only
-      // falls back to its private `__cloudflare_fallback_entry__` when
-      // none is set (see packages/vite-plugin-cloudflare/src/build.ts).
-      // Vite merges this with the CF plugin's config; the merged
-      // result has both `manifest: true` and our entry input.
-      // Scan user source for islands BEFORE Vite resolves entries. Each
-      // `"use client"` module becomes its own `rollupOptions.input` so
-      // Vite emits one content-hashed chunk per island. The SSR shim
-      // resolves chunk URLs from Vite's `.vite/manifest.json` at build
-      // time (see `resolveIslandChunkUrl`).
+      // @cloudflare/vite-plugin falls back to its private entry only when no
+      // client input is set. Each `"use client"` module becomes its own input
+      // so Vite emits one hashed chunk per island.
       const scanRoot = userConfig.root ?? process.cwd();
       islands = scanUserSources(scanRoot);
       const islandInputs: Record<string, string> = {};
@@ -216,12 +186,9 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
           build: {
             manifest: true,
             rollupOptions: {
-              // Islands chunks (renderer + per-island components) are
-              // dynamic-import targets reached only via runtime URLs, so
-              // Rollup sees no static importer. Without strict signatures
-              // the renderer entry — a pure side-effect-free re-export of
-              // `mount` — tree-shakes to an empty chunk. `strict` keeps
-              // every entry's exports intact.
+              // Island chunks are reached only via runtime URLs, so without
+              // strict signatures the side-effect-free renderer entry
+              // tree-shakes to empty.
               preserveEntrySignatures: "strict" as const,
               input: {
                 "plumix-client": ".plumix/client-entry.ts",
@@ -254,21 +221,9 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
         build,
         environments,
         resolve: resolveOpts,
-        // Plumix ships its own dev browser-errors-to-terminal forwarder (#1604)
-        // — tagged `[browser]`, collapsing repeats, tuned by
-        // `PLUMIX_FORWARD_ERRORS`. Turn off Vite 8's native `forwardConsole` so
-        // client output isn't printed twice (Vite's default auto-enables it when
-        // it detects an AI agent driving the server). A user can re-enable it in
-        // their own `vite` config, which merges after this.
-        //
-        // Turn off Vite's built-in compile-error overlay (#1622): the client
-        // entry installs plumix's own overlay, which renders the same
-        // `vite:error` payload through the shared dev error surface — the two
-        // must not stack. A user can re-enable Vite's in their own config.
-        //
-        // The admin is staged under `.plumix/admin-staging/` before it is swapped
-        // into `publicDir`. Vite would announce every `index.html` written
-        // there as a page reload, so the watcher skips it.
+        // Plumix forwards browser errors and renders `vite:error` itself, so
+        // Vite's `forwardConsole` and overlay would duplicate them. Staged
+        // `index.html` writes would read as page reloads.
         server: {
           forwardConsole: false,
           hmr: { overlay: false },
@@ -278,10 +233,6 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       if (userConfig.publicDir === undefined) {
         base.publicDir = ".plumix/public";
       }
-      // Served from the cold-start config cache (#1102) — populated by the CLI
-      // dispatch / `emitPlumixSources` earlier in this same process. The dev
-      // watcher in `configureServer` forces a fresh eval on edits, so config
-      // hot-reload still works.
       const { config } = await loadConfig(scanRoot, options.configFile);
       const merged = config.vite
         ? (mergeConfig(
@@ -305,10 +256,8 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       if (id === SERIALIZE_VIRTUAL_ID) return SERIALIZE_RESOLVED_ID;
       if (id === WORKER_EXPORTS_VIRTUAL_ID) return WORKER_EXPORTS_RESOLVED_ID;
       if (id === PLUGIN_CATALOGS_VIRTUAL_ID) return PLUGIN_CATALOGS_RESOLVED_ID;
-      // `<file>?plumix-orig` — the SSR shim imports the original module
-      // from this virtual ID; `transform` short-circuits on it so the
-      // shim isn't recursively wrapped. The shim emits an absolute path,
-      // so passing `id` straight through resolves correctly.
+      // `transform` short-circuits on this query so the shim isn't recursively
+      // wrapped.
       if (id.endsWith(ORIG_QUERY)) {
         if (!importer) return id;
         const cleanId = id.slice(0, -ORIG_QUERY.length);
@@ -328,21 +277,13 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
         return generatePluginCatalogsSource(pluginCatalogFiles);
       }
       if (id === SERIALIZE_RESOLVED_ID) {
-        // Re-export `IslandShim` (the SSR island runtime) resolved from the
-        // project root, where `plumix` is always a dependency — so a "use
-        // client" island in any package (core's `blocks/` included)
-        // gets a working import the SSR shim injected via
-        // SERIALIZE_VIRTUAL_ID.
+        // Resolved from the project root, where `plumix` is always a
+        // dependency, so an island in any package gets a working import.
         return `export { IslandShim } from "plumix/blocks";`;
       }
       if (id === ASSET_MANIFEST_RESOLVED_ID) {
-        // Read the manifest Vite emits to `<outDir>/.vite/manifest.json`.
-        // Returns `{}` when missing — which happens in dev (no manifest
-        // is written) AND on the FIRST production build of a fresh
-        // project: @cloudflare/vite-plugin builds the worker env before
-        // the client env, so on a cold build the worker bakes an empty
-        // manifest and the second build picks up the real entries.
-        // Followup #528 tracks the fix.
+        // `{}` in dev, and on a cold Cloudflare build, which builds the worker
+        // before the client.
         return `export default ${JSON.stringify(loadAssetManifest(root))};`;
       }
       return null;
@@ -387,11 +328,8 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
     // contents directly from disk in dev, so file edits / additions are
     // picked up on next request without a re-stage.
     configureServer(server) {
-      // The dev source-frame resolver (#1583, #1596): the dev error page ships
-      // resolved `file:line` positions and lazy-fetches each frame's source
-      // excerpt from here, since the worker has no `fs`. Registered before the
-      // @cloudflare/vite-plugin proxy (plumix is ordered ahead of it), so this
-      // dev-only endpoint is answered here and never reaches the worker.
+      // The worker has no `fs`. Registered ahead of the @cloudflare/vite-plugin
+      // proxy, so the request never reaches the worker.
       server.middlewares.use((req, res, next) => {
         const rawUrl = req.url ?? "";
         const isSourceRequest =
@@ -436,9 +374,9 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
         return { map, file: mod.file };
       };
 
-      // Register a dev-only endpoint that reads a JSON POST body and answers with
-      // JSON. Ordered ahead of the worker proxy (plumix precedes it), so these
-      // never reach the worker.
+      // Register a dev-only endpoint that reads a JSON POST body and answers
+      // with JSON. Ordered ahead of the worker proxy (plumix precedes it), so
+      // these never reach the worker.
       const usePostJson = (
         endpoint: string,
         handle: (body: string) => Promise<{ status: number; body?: string }>,
@@ -466,19 +404,13 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
         });
       };
 
-      // The client-stack resolver (#1572, #1603): the island error overlay POSTs
-      // its raw browser stack here to get original-source frames, since the
-      // worker (and the browser) can't map the transformed positions — only the
-      // dev server's per-module sourcemaps can.
+      // Only the dev server's per-module sourcemaps can map the browser's
+      // transformed positions.
       usePostJson(DEV_ERROR_STACK_ENDPOINT, (body) =>
         handleDevErrorStackRequest(body, { lookup }),
       );
 
-      // Browser-errors-to-terminal (#1604): the islands runtime POSTs batches of
-      // client failures (uncaught exceptions + `console.error`/`warn`) here, and
-      // the forwarder sourcemaps each stack through the same `lookup` and prints
-      // it into this terminal tagged `[browser]`, collapsing consecutive
-      // identical entries. One instance per dev session holds the collapse state.
+      // One instance per dev session holds the collapse state.
       const forwarder = createTerminalForwarder({
         resolveStack: (stack) => resolveClientStack(stack, { lookup }),
         print: (message) => server.config.logger.info(message),
@@ -488,10 +420,6 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
         forwarder.handle(body),
       );
 
-      // The retained-client-errors read endpoint (#1656): a GET that returns the
-      // forwarder's bounded ring of already-sourcemapped client failures,
-      // newest-first, for the dev-only MCP `error_list` tool (#1653) to merge
-      // with its server-side projection. Read-only, so no request body.
       server.middlewares.use((req, res, next) => {
         if (
           req.method !== "GET" ||
@@ -537,12 +465,9 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
 }
 
 /**
- * Pre-emit `.plumix/worker.ts` (the runtime adapter's entry) and
- * `.plumix/schema.ts` from the user's config. Exposed so the runtime adapter
- * CLI can force the files into existence before handing plugins to
- * `vite.build` / `vite.createServer` — peer plugins (notably
- * @cloudflare/vite-plugin) validate wrangler.jsonc's `main` path early, and
- * expect that file to already exist.
+ * Lets a runtime adapter's CLI create `.plumix/worker.ts` and
+ * `.plumix/schema.ts` before Vite starts: @cloudflare/vite-plugin validates
+ * wrangler's `main` early.
  */
 export async function emitPlumixSources(
   cwd: string,
@@ -583,46 +508,27 @@ async function regenerate(
   });
   writeIfChanged(resolve(cwd, ".plumix/worker.ts"), entrySource);
 
-  // Always emit `.plumix/client-entry.ts`, even when empty. The plumix
-  // Vite plugin's `config()` hook unconditionally lists it as a client
-  // entry — Vite resolves entries during the build pass (after
-  // `buildStart`), so this file just needs to exist before then. CSS
-  // imports declared in `theme.css` (Nuxt-style string array) land in
-  // the client bundle through this entry's import graph; jiti never
-  // sees them, so themes can import arbitrary asset types without
-  // hitting the config loader.
+  // Always emitted, even empty: `config()` lists it as a client entry
+  // unconditionally. Theme CSS reaches the bundle through it, never through
+  // jiti.
   const clientEntrySource = generateClientEntrySource(config.theme.css ?? []);
   writeIfChanged(resolve(cwd, ".plumix/client-entry.ts"), clientEntrySource);
 
-  // Always-emit islands runtime entry. The file is bundled as its own
-  // client chunk (`plumix-islands-runtime` in rollupOptions.input) so
-  // the SSR layer can inject `<script src="<hashed-url>">` only on
-  // pages that contain at least one `<plumix-island>`. Importing the
-  // runtime is a side-effect — it registers the custom element +
-  // strategies on `self.Plumix` + `customElements`.
+  // Its own chunk, so the SSR layer injects it only on pages with a
+  // `<plumix-island>`.
   writeIfChanged(
     resolve(cwd, ".plumix/islands-entry.ts"),
     `// Generated by plumix — do not edit.\nimport "plumix/blocks/island-runtime";\n`,
   );
 
-  // Always-emit islands renderer entry — the React + ReactDOM half of the
-  // runtime, bundled as its own `plumix-islands-renderer` client chunk.
-  // The custom element dynamic-imports it on first hydration (URL threaded
-  // via the bootstrap script), so React is fetched only when an island
-  // actually hydrates — never on a page whose islands all defer.
+  // Its own chunk, dynamic-imported on first hydration, so React loads only
+  // when an island hydrates.
   writeIfChanged(
     resolve(cwd, ".plumix/islands-renderer-entry.ts"),
     `// Generated by plumix — do not edit.\nexport * from "plumix/blocks/island-renderer";\n`,
   );
 
-  // Always-emit editor runtime entry — bundled as the `plumix-editor` client
-  // chunk. Its `bootEditor()` call mounts the canvas into the SSR
-  // `data-plumix-content-root`; the SSR layer injects this chunk only when the
-  // edit gate authorizes it. Theme blocks (its `blocks` field) and plugin blocks
-  // (their `ctx.registerBlock(s)` calls) are recovered from config source and
-  // resolved to importable paths so the canvas renders them, not just core.
-  // Theme and plugin `shortcodes` fields are recovered the same way, so a
-  // rich-text body expands in the canvas as it does on the page.
+  // Injected only when the edit gate authorizes it.
   const configSource = readFileSync(configPath, "utf8");
   const editorBlockModules = collectEditorBlockModules(
     configPath,
@@ -666,10 +572,10 @@ async function regenerate(
   };
 }
 
-// Where each process builds its private copy of the admin. A sibling of the
-// default publicDir under the project root, so the swap into place is a
-// rename on one filesystem, and outside publicDir, so the half-built copy is
-// never served or watched.
+/**
+ * A sibling of publicDir, so the swap is a rename on one filesystem and the
+ * half-built copy is never served or watched.
+ */
 function adminStagingRoot(projectRoot: string): string {
   return resolve(projectRoot, ".plumix/admin-staging");
 }
@@ -680,13 +586,10 @@ function isInAdminStaging(projectRoot: string): (path: string) => boolean {
     path === stagingRoot || path.startsWith(`${stagingRoot}${sep}`);
 }
 
-// Copies the compiled admin SPA from the @plumix/admin package into the
-// effective publicDir under _plumix/admin/. The runtime adapter's asset-serving layer
-// (Cloudflare Workers Assets today, equivalents in future adapters) picks the
-// files up from publicDir automatically. The copy is built in full outside
-// publicDir and swapped in only when it differs from what is there, so a
-// restart or a config edit that leaves the admin unchanged doesn't bounce
-// Vite's file watcher.
+/**
+ * Built in full outside publicDir and swapped in only when it differs, so an
+ * unchanged admin doesn't bounce Vite's file watcher.
+ */
 async function stageAdminAssets(
   publicDir: string,
   manifest: PlumixManifest,
@@ -803,7 +706,7 @@ async function stagePluginChunks(
   return chunks;
 }
 
-// Copies each plugin's compiled `<catalogPath>/<locale>.mjs` to the
+/** Copies each plugin's compiled `<catalogPath>/<locale>.mjs` to the */
 async function resolvePluginAsset(
   pluginId: string,
   field: string,
@@ -838,9 +741,11 @@ async function injectIndexHtml(
   await writeFile(indexHtmlPath, next, "utf8");
 }
 
-// Plugin chunks load AFTER the main admin bundle so window.plumix is
-// populated before they execute. Block is replaced (not appended) on
-// rebuild so the HTML stays stable.
+/**
+ * Plugin chunks load AFTER the main admin bundle so window.plumix is
+ * populated before they execute. Block is replaced (not appended) on
+ * rebuild so the HTML stays stable.
+ */
 const PLUGIN_CHUNKS_MARKER = "<!-- plumix:plugin-chunks -->";
 const PLUGIN_CHUNKS_RE =
   /<!-- plumix:plugin-chunks -->[\s\S]*?<!-- \/plumix:plugin-chunks -->/;
@@ -885,10 +790,10 @@ type OnLog = NonNullable<
   NonNullable<BuildEnvironmentOptions["rolldownOptions"]>["onLog"]
 >;
 
-// Plumix gives `"use client"` its meaning itself: the SSR transform wraps each
-// one as an island and the client build emits it as its own chunk. Rolldown's
-// warning that bundling may not preserve the directive is noise, repeated for
-// every React library in the admin's graph; @vitejs/plugin-react drops it too.
+/**
+ * Plumix gives `"use client"` its meaning itself, so Rolldown's directive
+ * warning is noise; @vitejs/plugin-react drops it too.
+ */
 function withoutUseClientWarning(next: OnLog | undefined): OnLog {
   return (level, log, defaultHandler) => {
     if (
@@ -903,8 +808,10 @@ function withoutUseClientWarning(next: OnLog | undefined): OnLog {
   };
 }
 
-// Per-island synthesized entry name. Used as the `rollupOptions.input`
-// key so Rollup emits one content-hashed chunk per discovered island.
+/**
+ * Per-island synthesized entry name. Used as the `rollupOptions.input`
+ * key so Rollup emits one content-hashed chunk per discovered island.
+ */
 function islandEntryName(island: DiscoveredIsland): string {
   const slug = island.sourcePath.replace(/[^A-Za-z0-9]/g, "_");
   const suffix = simpleHash(island.sourcePath).toString(16).slice(0, 8);
@@ -968,8 +875,10 @@ function readAdminVersion(): string | null {
   }
 }
 
-// Strips common range prefixes and matches on 0.x-minor or 1.x+ major.
-// Advisory only; not a rigorous semver implementation.
+/**
+ * Strips common range prefixes and matches on 0.x-minor or 1.x+ major.
+ * Advisory only; not a rigorous semver implementation.
+ */
 function satisfiesLoose(installed: string, range: string): boolean {
   const base = range.replace(/^[~^><=]+/, "").trim();
   if (!base) return true;
@@ -985,9 +894,9 @@ function satisfiesLoose(installed: string, range: string): boolean {
   return rMajor === iMajor;
 }
 
-// Read a request body to a string — the dev-error stack endpoint POSTs a small
-// JSON payload, so buffering it whole is fine, bounded so a stray large POST to
-// the dev server can't grow memory unchecked.
+/**
+ * Bounded so a stray large POST to the dev server can't grow memory unchecked.
+ */
 const MAX_DEV_ERROR_BODY_BYTES = 1024 * 1024;
 function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {

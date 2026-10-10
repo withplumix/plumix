@@ -24,11 +24,7 @@ export interface CardIdentity {
   readonly height: number;
 }
 
-/**
- * What a card is rendered with beyond the card itself: the fonts its renderer
- * reads and the theme's tokens. Both change what comes out — a swapped face, a
- * retuned palette — so what the renderer receives of each is digested.
- */
+/** Both change the rendered bytes, so both are digested. */
 export interface CardInputs {
   /** The configured font set split by what this renderer reads. */
   readonly fonts: CardFontPlan;
@@ -36,17 +32,9 @@ export interface CardInputs {
 }
 
 /**
- * Resolve one card's identity. The head calls it to name the URL a page
- * advertises and the route calls it to decide which URL it is answering on, so
- * the two agree on one digest by computing it the same way rather than by
- * staying in step.
- *
- * What they do *not* share is how `data` got here: the head passes the page's
- * own, which core has already run through `resolve:single:data` and the
- * preview-autosave overlay, while the route rebuilds one from the row. A card
- * keyed on anything a subscriber to that filter rewrites therefore digests
- * differently on the two sides, and every scraper is redirected away from its
- * image — the cost of the two askers not sharing a render.
+ * The head passes filtered page data while the route rebuilds it from the row,
+ * so a card keyed on anything `resolve:single:data` rewrites digests
+ * differently on each side.
  */
 export async function resolveCardIdentity(
   card: CardDefinition<TemplateData>,
@@ -56,9 +44,7 @@ export async function resolveCardIdentity(
   extension: string,
 ): Promise<CardIdentity> {
   const args = await buildCardArgs(card, data, pinLocale(ctx), inputs.tokens);
-  // Read through the same call the render makes: the size the digest describes
-  // has to be the size that is rendered, or the stored bytes are not what the
-  // URL says they are.
+  // The same call the render makes, so the digested size is the rendered size.
   const { width, height } = cardSize(card);
   const key = card.key(args);
 
@@ -71,9 +57,7 @@ export async function resolveCardIdentity(
       id: key.id,
       sourceHash: await cardSourceHash(card),
       tokens: inputs.tokens.stylesheets,
-      // The faces the renderer receives, never the whole configured set: one
-      // it cannot parse reaches no render, so it is not an input to these
-      // bytes and must not move the URL that addresses them.
+      // An unreadable face reaches no render, so it must not move the URL.
       fonts: inputs.fonts.readable,
       width,
       height,
@@ -83,18 +67,9 @@ export async function resolveCardIdentity(
 }
 
 /**
- * The context a card sees, which is the request's with its locale pinned to
- * the site default.
- *
- * A card has to resolve identically wherever it is asked from, and the two
- * askers do not agree on a locale: `resolveLocale` reads `Accept-Language` and
- * the `Path=/_plumix/` cookie on the card's own route and on neither the page
- * the head renders on. Left alone, a scraper sending `Accept-Language` digests
- * a URL the head never published and takes a redirect instead of its image —
- * and a card that reads the locale without naming it in its key would freeze
- * whichever locale asked first into the bytes behind a content-addressed URL,
- * where no purge can reach them. Cards are content, and core's i18n is UI-only,
- * so the default locale is the honest one to render every card in.
+ * The card route resolves locale from `Accept-Language` and a `/_plumix/`
+ * cookie the page never sees, so head and route would digest differently.
+ * Core's i18n is UI-only anyway.
  */
 function pinLocale(ctx: AppContext): AppContext {
   return ctx.locale.code === ctx.config.i18n.defaultLocale.code
@@ -103,13 +78,10 @@ function pinLocale(ctx: AppContext): AppContext {
 }
 
 interface CardDigestParts {
-  /** The card's own identity, from its `key` callback. */
   readonly id: string;
-  /** The card's source, so a redesign lands on a fresh digest. */
   readonly sourceHash: string;
-  /** The theme's token sheet, so a retuned palette lands on a fresh digest. */
   readonly tokens: readonly string[];
-  /** Asset-layer paths, not bytes — a swapped font file lands on a new path. */
+  /** Paths, not bytes: a swapped font file lands on a new path. */
   readonly fonts: readonly string[];
   readonly width: number;
   readonly height: number;
@@ -118,12 +90,8 @@ interface CardDigestParts {
 }
 
 /**
- * One card's identity, digested over what the card read, what the card is, and
- * the size and format it is rendered at — so an edit lands on a fresh digest,
- * and both the URL that carries it and the ETag the read-through derives from
- * the storage key move with it. The renderer's own identity is not in here:
- * two implementations declaring the same content type share digests, so
- * swapping between them serves what the previous one stored.
+ * The renderer isn't digested: two renderers with the same content type share
+ * digests, so swapping serves what the previous one stored.
  */
 function cardDigest(parts: CardDigestParts): Promise<string> {
   return shortDigest(JSON.stringify(parts));

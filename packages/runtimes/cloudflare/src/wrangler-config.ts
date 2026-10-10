@@ -13,7 +13,7 @@ export interface D1BindingEntry {
   readonly database_id?: string;
 }
 
-// Wrangler's config search order — first match wins.
+/** Wrangler's config search order — first match wins. */
 const WRANGLER_FILENAMES = ["wrangler.jsonc", "wrangler.json", "wrangler.toml"];
 
 interface LoadedWranglerConfig {

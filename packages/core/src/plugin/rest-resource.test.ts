@@ -1,7 +1,4 @@
-// A REST resource handler's bindings are typed from its path literal: the
-// `{collection}` and `{entry}` segments each put their binding on the
-// handler's args, and a path without them carries neither. Enforced by `tsc`,
-// not by the vitest run.
+// Enforced by `tsc`, not by the vitest run.
 
 import { describe, expectTypeOf, test } from "vitest";
 

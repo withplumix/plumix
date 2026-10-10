@@ -13,11 +13,12 @@ import {
 } from "./schemas.js";
 import { getTermItem, listTermsEnvelope } from "./terms-resource.js";
 
-// Entry types and taxonomies are siblings in the top-level `{collection}`
-// rest_base namespace (as in WordPress), so a single pair of routes resolves
-// the rest_base to whichever registry owns it; an unowned base is 404.
+// Entry types and taxonomies share the `{collection}` namespace, as in
+// WordPress; an unowned base is 404.
 
-// GET /{collection} — a paginated envelope of a public entry type or taxonomy.
+/**
+ * GET /{collection} — a paginated envelope of a public entry type or taxonomy.
+ */
 const collectionList = base
   .route({ method: "GET", path: "/{collection}" })
   .input(collectionParamsSchema)
@@ -31,7 +32,7 @@ const collectionList = base
     throw errors.NOT_FOUND({ data: { kind: "collection" } });
   });
 
-// GET /{collection}/{id} — one entry or term. Missing/unviewable items 404.
+/** GET /{collection}/{id} — one entry or term. Missing/unviewable items 404. */
 const collectionGet = base
   .route({ method: "GET", path: "/{collection}/{id}" })
   .input(collectionItemParamsSchema)

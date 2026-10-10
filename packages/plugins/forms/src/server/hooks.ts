@@ -4,15 +4,8 @@ import type { FormFieldError, FormSubmissionCandidate } from "../types.js";
 declare module "plumix" {
   interface FilterRegistry {
     /**
-     * The last word before a submission is written. It sees one that
-     * every field rule, the form's own `validate` and the spam floor
-     * have already accepted, and the errors it returns reject it the
-     * same way a field rule's do — which is what lets a spam or
-     * compliance plugin refuse a submission without per-form wiring.
-     *
-     * The pipeline starts empty and each filter returns the list as it
-     * would have it, so a filter that has nothing to say returns what it
-     * was given.
+     * Runs after every other check passes. Starts empty; a filter with
+     * nothing to add returns what it was given.
      */
     "form:validate": (
       errors: readonly FormFieldError[],

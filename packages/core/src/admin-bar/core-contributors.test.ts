@@ -41,8 +41,10 @@ function typesMap(...slugs: readonly string[]): BarRenderContext["entryTypes"] {
   );
 }
 
-// `can` as the role hierarchy answers it for `role`, over the capabilities
-// `types` derive.
+/**
+ * `can` as the role hierarchy answers it for `role`, over the capabilities
+ * `types` derive.
+ */
 function roleCan(
   role: UserRole,
   types: BarRenderContext["entryTypes"],
@@ -107,9 +109,8 @@ describe("registerCoreAdminBarContributors — +New group", () => {
   });
 
   test("adds one child per registered entry type, in registration order", () => {
-    // The map is keyed by type name; the create href must target the derived
-    // `adminSlug` (`posts`) the admin's `/entries/$slug` route resolves, not
-    // the raw name (`post`) — echoing the name 404s the destination.
+    // The admin route resolves the derived `adminSlug` (`posts`); the raw
+    // name (`post`) 404s.
     const types = new Map([
       ["post", toRegisteredEntryType("post", { label: "Post" }, "test")],
       ["page", toRegisteredEntryType("page", { label: "Page" }, "test")],

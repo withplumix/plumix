@@ -1,28 +1,9 @@
 import { normalizeTag } from "../cdn/contract/tags.js";
 
 /**
- * Request-scoped read-through memo — see `AppContextBase.memo`. Callers
- * namespace keys (`core:settings-group:site`, `menu:data:primary`) since
- * all consumers share one map per context.
- *
- * An entry may carry cache tags, in the vocabulary the CDN purges by. A write
- * announces itself through the lifecycle action it already fires, core's
- * roster turns that action into tags, and `enqueuePurgeTags` drops every entry
- * carrying one of them — before the action's caller continues, whether or not
- * the site has a CDN (#2517). So a request that hydrates an entry, publishes
- * it, and hydrates it again reads the published row, and a miss tagged by id
- * re-queries once the id becomes visible. Cron runs share one memo across
- * every task in the invocation, and the same drop is what keeps one task's
- * write visible to the next.
- *
- * An untagged entry is never dropped: a write in the same execution stays
- * invisible to it, which is what every entry was before tags existed. Tag
- * what a write can make stale; leave untagged what has no entity identity.
- *
- * Loaders must also be principal-invariant — `withUser` derivations share
- * the same memo, so anything user-dependent must embed the principal in the
- * key. A loader runs synchronously on a miss, which is what lets `memoBatch`
- * collect a whole walk's misses before loading them.
+ * Keys are namespaced (`core:settings-group:site`), and anything user-dependent
+ * embeds the principal, since `withUser` derivations share one map. Tag what a
+ * write can make stale.
  */
 export interface RequestMemo {
   <T>(
@@ -31,10 +12,8 @@ export interface RequestMemo {
     tags?: readonly string[],
   ): Promise<T>;
   /**
-   * Drop every entry carrying any of `tags`, so its next read loads again.
-   * Synchronous on purpose: `doAction` settles its handlers, so an async
-   * invalidator that rejected would leave the memo stale behind nothing but a
-   * logged hook failure.
+   * Synchronous on purpose: `doAction` settles its handlers, so a rejected
+   * async invalidator would leave the memo stale behind only a logged failure.
    */
   invalidate(tags: readonly string[]): void;
 }
@@ -57,10 +36,8 @@ export function createRequestMemo(): RequestMemo {
       keys.add(key);
       keysByTag.set(normalized, keys);
     }
-    // Rejections are not memoized — a transient DB error on one read
-    // shouldn't poison every later read of the same key in the request.
-    // Only this load's own entry: a write may already have dropped it and a
-    // later read put a fresh one in its place.
+    // A transient error must not poison later reads. Check identity: a write
+    // may have replaced this entry with a fresh one.
     entry.catch(() => {
       if (cache.get(key) === entry) cache.delete(key);
     });
@@ -78,15 +55,8 @@ export function createRequestMemo(): RequestMemo {
 }
 
 /**
- * Per-id memo over a batched load: each id resolves through `memo`, and
- * the ids that miss share one `loadAll` over exactly them — so a call runs
- * at most one batch, for what the request has not seen yet. Extra entries
- * in the map it returns are ignored; ids absent from that map memoize as
- * `null`.
- *
- * `tagsFor` names the cache tags each id's entry carries. It is handed the
- * id and never the payload, because a memoized miss has none and must still
- * drop when a write makes the id visible.
+ * Ids absent from `loadAll`'s map memoize as `null`. `tagsFor` gets the id,
+ * never the payload, so a memoized miss still drops when the id appears.
  */
 export function memoBatch<K, T>(
   memo: RequestMemo,

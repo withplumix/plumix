@@ -58,12 +58,8 @@ export async function sanitizeMetaForRpc(
 }
 
 /**
- * Reject a meta patch that writes to a capability-gated field the viewer
- * can't access. Treats the field's `capability` as a server-side gate so
- * the API stays honest regardless of admin-side filtering. Deletes count
- * as writes — you can't blank a value you can't see. Repeater subfields
- * are NOT recursed: capability gates apply at the top-level field only;
- * a row's capability is whichever the parent repeater field declares.
+ * Deletes count as writes. Capability gates apply at the top-level field
+ * only; repeater subfields are not recursed.
  */
 export function assertEntryMetaCapabilities(
   registry: PluginRegistry,
@@ -154,20 +150,8 @@ export async function sanitizeAndValidateEntryMeta(
 }
 
 /**
- * Strict-validate a stored entry-meta bag before `entry.publish` promotes
- * it onto the live row. Draft autosaves are lenient, so this is the gate
- * that finally enforces required fields, bounds, formats, and row counts;
- * a violation aggregates into a `CONFLICT` the admin pins onto its inputs,
- * blocking the publish. See {@link validateAndPromoteMetaBag}.
- *
- * Capability-gated fields the publisher can't write are excluded from the
- * check: they can't fix such a field, so a co-author's required/invalid
- * value must not block their publish (its stored value still passes through
- * untouched, and was validated when whoever set it wrote it).
- *
- * `touched` is the set of keys the author submitted — see
- * {@link validateAndPromoteMetaBag} for why only those are rewritten. Use
- * {@link assertPromotedEntryMetaValid} where only the gate is wanted.
+ * Excludes capability-gated fields the publisher can't write, so a co-author's
+ * invalid value can't block their publish. Only `touched` keys are rewritten.
  */
 export async function sanitizePromotedEntryMeta(
   ctx: AppContext,
@@ -190,10 +174,8 @@ export async function sanitizePromotedEntryMeta(
 }
 
 /**
- * Run the same gate for its rejection alone, where the caller writes its own
- * patch and the rest of the row is already settled storage — a live write that
- * crosses into the published surface. Nothing is rewritten, so there is no
- * promoted bag to hand back.
+ * The same gate for its rejection alone, for a live write whose rest of row is
+ * already settled. Nothing is rewritten.
  */
 export async function assertPromotedEntryMetaValid(
   ctx: AppContext,
@@ -248,18 +230,8 @@ export async function resolveEntriesMeta(
 }
 
 /**
- * Settle one entry's stored bag, write it back, and return the bag a reader
- * should decode. An already-settled row costs a walk and no write.
- *
- * Called from the editor's read (`entry.get`) and the bulk sweep — never from
- * a read an anonymous caller can reach. `getEntry` and `resolveEntriesMeta`
- * serve the public REST API and the renderer, and a write there would put
- * database traffic and CDN purges behind anonymous requests. The editor is the
- * surface where an unsettled value is about to be shown to a human and
- * overwritten by them.
- *
- * A settle that lands is announced like any other meta change, so whatever
- * caches the entry hears that its stored value moved.
+ * Writes, so never call it from a read an anonymous caller can reach: that
+ * would put database traffic and CDN purges behind anonymous requests.
  */
 export async function settleEntryMeta(
   ctx: AppContext,
@@ -276,11 +248,7 @@ export async function settleEntryMeta(
   };
 }
 
-/**
- * Write back a settle already computed from `stored`, and announce it if it
- * landed — the step the bulk sweep shares with the read heal, so both write and
- * announce the same way.
- */
+/** Announces the settle only if it landed. */
 export async function writeSettledEntryMeta(
   ctx: AppContext,
   entry: { readonly id: number; readonly type: string },

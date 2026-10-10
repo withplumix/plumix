@@ -3,9 +3,10 @@ import { PluginContextError } from "../errors.js";
 
 const IDENTIFIER_NAME_RE = /^[a-z][a-z0-9_-]*$/;
 
-// A field type is the `inputType` the admin dispatches a renderer on, never a
-// storage key or a URL segment, so it can carry camelCase. Separators stay for
-// the snake and kebab names plugins already register.
+/**
+ * Never a storage key or URL segment, so it may carry camelCase; separators
+ * stay for the snake and kebab names plugins already register.
+ */
 const FIELD_TYPE_NAME_RE = /^[a-z][a-zA-Z0-9_-]*$/;
 
 export function assertValidFieldTypeName(pluginId: string, type: string): void {
@@ -33,13 +34,10 @@ export function assertValidLookupAdapterKind(
   }
 }
 
-// Keep page / group / field names portable: ASCII identifier that
-// starts with a letter, then letters/digits/underscores. Hyphens /
-// dots are excluded so testids, URL params, and storage keys stay
-// portable across SQLite / future MySQL without quoting. Length cap
-// mirrors the valibot `settingsIdentifierSchema` on the RPC side so a
-// plugin can't register a name its own `settings.get` / `.upsert`
-// calls would then reject.
+/**
+ * No hyphens or dots, so names work unquoted as testids, URL params and storage
+ * keys. The length cap matches the RPC `settingsIdentifierSchema`.
+ */
 export const SETTINGS_NAME_RE = /^[a-z][a-z0-9_]*$/;
 const MAX_SETTINGS_IDENTIFIER_LENGTH = 64;
 
@@ -60,9 +58,10 @@ export function assertValidIdentifier(kind: string, name: string): void {
   }
 }
 
-// Namespaced `<plugin>:<name>` shape. Both segments allow the hyphen
-// plugin ids use. The namespace must be the registering plugin's id so
-// one plugin can't squat another's ids in the shared, id-keyed registry.
+/**
+ * The namespace must be the registering plugin's id so one plugin can't squat
+ * another's ids in the shared registry.
+ */
 const NAMESPACED_ID_RE = /^[a-z][a-z0-9_-]*:[a-z][a-z0-9_-]*$/;
 
 export function assertNamespacedId(

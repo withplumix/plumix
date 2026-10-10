@@ -39,8 +39,10 @@ type PlumixCliErrorCode =
   | "dev_host_empty"
   | "dev_environment_not_runnable";
 
-// The errors only this package throws. Internal: a runtime adapter declares
-// its own subclass rather than borrowing these codes.
+/**
+ * The errors only this package throws. Internal: a runtime adapter declares
+ * its own subclass rather than borrowing these codes.
+ */
 export class PlumixCliError extends CliError<PlumixCliErrorCode> {
   static unknownCommand(ctx: { command: string }): PlumixCliError {
     return new PlumixCliError(
@@ -51,8 +53,10 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
     );
   }
 
-  // A typo is user error. Without this it reaches the CLI as an unexpected
-  // internal failure, which reads like a crash rather than a fixable mistake.
+  /**
+   * A typo is user error. Without this it reaches the CLI as an unexpected
+   * internal failure, which reads like a crash rather than a fixable mistake.
+   */
   static cronRunInvalidExpression(ctx: { detail: string }): PlumixCliError {
     return new PlumixCliError(
       "cron_run_invalid_expression",
@@ -64,9 +68,10 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
     );
   }
 
-  // A Cloudflare site's D1 binding exists only inside the Worker, so from a
-  // Node process there is no database to settle — the admin page runs the same
-  // settle where the binding lives.
+  /**
+   * A Cloudflare D1 binding exists only inside the Worker, so a Node process
+   * has no database.
+   */
   static metaDatabaseUnreachable(ctx: {
     detail: string;
     cause: unknown;
@@ -91,8 +96,10 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
     );
   }
 
-  // A caught task failure would otherwise leave the command exiting 0, so a
-  // CronJob whose work all failed looks exactly like one that worked.
+  /**
+   * A caught task failure would otherwise leave the command exiting 0, so a
+   * CronJob whose work all failed looks exactly like one that worked.
+   */
   static cronRunTasksFailed(ctx: {
     expression: string;
     failed: readonly string[];
@@ -105,8 +112,10 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
     );
   }
 
-  // Distinct from a task failing: nothing ran, so the hint about siblings and
-  // per-task logs would send the operator looking for the wrong thing.
+  /**
+   * Distinct from a task failing: nothing ran, so the hint about siblings and
+   * per-task logs would send the operator looking for the wrong thing.
+   */
   static cronRunNeverStarted(ctx: {
     expression: string;
     reason: string;
@@ -128,9 +137,7 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
     );
   }
 
-  // Firing a schedule nothing declares would exit green having done nothing —
-  // the silent failure an external scheduler is most likely to hit, since the
-  // schedules come from the plugins a site installs.
+  /** An undeclared schedule would otherwise exit green having done nothing. */
   static cronRunUnknownSchedule(ctx: {
     expression: string;
     declared: readonly string[];
@@ -431,7 +438,7 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
     );
   }
 
-  // An empty name would bind every interface, silently.
+  /** An empty name would bind every interface, silently. */
   static devHostEmpty(): PlumixCliError {
     return new PlumixCliError(
       "dev_host_empty",

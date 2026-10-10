@@ -33,10 +33,8 @@ async function updateTriggerSql(db: SearchTestDb): Promise<string> {
 
 describe("the index triggers", () => {
   test("the update trigger watches only the columns the index shadows", async () => {
-    // The whole of what keeps a block roster change from re-tokenizing the
-    // corpus: stamping a document with a new extractor version is a write to
-    // the projection and must not be a write to the index. Asserted against
-    // the installed definition, because a spy trigger written the same way
+    // Keeps a roster change from re-tokenizing the corpus. Asserted against
+    // the installed definition, since a spy trigger written the same way
     // would agree with a wrong one.
     const db = await createSearchTestDb();
 
@@ -75,10 +73,8 @@ describe("ensureSearchIndex", () => {
   });
 
   test("rebuilds an index recreated over a projection that outlived it", async () => {
-    // The install whose migration never ran: the projection is written
-    // for a while with no index behind it. Creating the objects alone leaves
-    // an empty index whose `integrity-check` passes and whose next update
-    // raises SQLITE_CORRUPT, so the repair has to repopulate.
+    // Creating the objects alone leaves an empty index whose
+    // `integrity-check` passes and whose next update raises SQLITE_CORRUPT.
     const db = await createSearchTestDb();
     await db.run(sql`DROP TRIGGER search_documents_ai`);
     await db.run(sql`DROP TRIGGER search_documents_au`);
@@ -100,11 +96,8 @@ describe("ensureSearchIndex", () => {
 
 describe("a repair that did not finish", () => {
   test("rebuilds an index whose objects exist but hold nothing", async () => {
-    // Creating the table and filling it are two statements, and the second is
-    // the expensive one — so an isolate can die between them. All four objects
-    // are then present, which is what a check on `sqlite_master` alone asks,
-    // and the index stays empty for good: search answers nothing and the next
-    // update to a row it never held raises SQLITE_CORRUPT.
+    // An isolate can die between creating the table and filling it, leaving
+    // every object in `sqlite_master` but an index that stays empty for good.
     const db = await createSearchTestDb();
     await dropSearchIndex(db);
     await db.insert(searchDocuments).values(document(1, "Hydroponics"));
@@ -131,7 +124,7 @@ describe("a repair that did not finish", () => {
 });
 
 describe("isMissingSearchIndex", () => {
-  /** What drizzle wraps a failed statement in: the SQL, then the parameters. */
+  // What drizzle wraps a failed statement in: the SQL, then the parameters.
   const asDrizzleWould = (cause: Error, params: string) =>
     new Error(
       `Failed query: SELECT 1 FROM search_index WHERE search_index MATCH ?\nparams: ${params}`,
@@ -152,11 +145,9 @@ describe("isMissingSearchIndex", () => {
   });
 
   test("a visitor cannot type their way to a missing index", () => {
-    // Drizzle's wrapper repeats the failing SQL — which names `search_index`
-    // in every query here — and then the bound parameters, which are the
-    // visitor's own words. Reading it would let anyone searching for this
-    // phrase have a differently broken schema answered as a degraded page,
-    // and start a rebuild per request while they did it.
+    // The wrapper's parameters are the visitor's words, so matching on it
+    // would let a search phrase trigger a degraded page and a rebuild per
+    // request.
     const other = new Error("SQLITE_ERROR: no such table: search_documents");
 
     expect(

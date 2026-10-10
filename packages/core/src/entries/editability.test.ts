@@ -58,9 +58,11 @@ function denial(
   throw new Error("expected a denial");
 }
 
-// The rule has three inputs — authorship, `edit_own`, `edit_any` — so the
-// table names every combination that changes the answer rather than the arms
-// someone remembered to write down.
+/**
+ * The rule has three inputs — authorship, `edit_own`, `edit_any` — so the
+ * table names every combination that changes the answer rather than the arms
+ * someone remembered to write down.
+ */
 const CASES = [
   { tier: "nothing", capabilities: [], own: false, any: false },
   {
@@ -186,8 +188,10 @@ describe("a type pooled onto another's capabilities", () => {
   });
 });
 
-// Deleting takes `delete` for any row, and `edit_any` on top for someone
-// else's — the trash lifecycle's rule, distinct from the edit gate above.
+/**
+ * Deleting takes `delete` for any row, and `edit_any` on top for someone
+ * else's — the trash lifecycle's rule, distinct from the edit gate above.
+ */
 const DELETE_CASES = [
   { tier: "nothing", capabilities: [], own: false, any: false },
   {

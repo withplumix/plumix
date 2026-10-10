@@ -256,10 +256,8 @@ describe("entry.revisions.restore — autosave destination (#292)", () => {
     expect(liveAfter?.excerpt).toBe("e3");
   });
 
-  // Restoring is "make the row look like this again", so a key added to live
-  // after the snapshot has to go. An autosave stores edits, where absence means
-  // untouched, so the restore names that key as cleared rather than relying on
-  // it simply not being in the bag.
+  // An autosave reads absence as untouched, so a key live gained after the
+  // snapshot must be named as cleared.
   test("clears a meta key the live row gained after the restored revision", async () => {
     const h = await createRpcHarness({
       authAs: "editor",
@@ -297,9 +295,8 @@ describe("entry.revisions.restore — autosave destination (#292)", () => {
     expect(previewed.meta.added_after).toBeUndefined();
   });
 
-  // The framework's own picks are stored meta like any other, and a revision
-  // taken before one was made does not carry it — so restoring that revision
-  // has to clear it, exactly as it clears an author's key.
+  // Framework picks are stored meta too, so restoring an older revision
+  // clears them like an author's key.
   test("clears a named-template pick the live row gained after the restored revision", async () => {
     const h = await createRpcHarness({
       authAs: "editor",
@@ -385,12 +382,8 @@ describe("entry.revisions.restore — autosave destination (#292)", () => {
       where: eq(entries.type, REVISION_TYPE),
     });
     if (!revision) throw new Error("expected one revision");
-    // Subscriber doesn't have read_revisions either, but the read gate
-    // fires first and emits a different cap name. Use the contributor
-    // role (which gets read_revisions via promotion — actually no,
-    // contributors don't have read_revisions either). The clearest
-    // gate-coverage assertion: a subscriber gets FORBIDDEN on
-    // read_revisions, the rest of the chain doesn't matter.
+    // The read gate fires first, so the subscriber is refused on
+    // read_revisions.
     const subscriber = await h.actingAs("subscriber");
     await expect(
       subscriber.client.entry.revisions.restore({ revisionId: revision.id }),

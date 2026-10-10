@@ -2,9 +2,8 @@ import type { Segment } from "../../access/contract/access.js";
 import type { PlumixEnv } from "./bindings.js";
 
 /**
- * A drizzle schema module as the consumer imports it — the namespace object
- * holding every table declaration. Not JSON: the values are drizzle table
- * builders, and the whole point of passing the module is to keep them live.
+ * Not JSON: the values are live drizzle table builders, which is why the module
+ * is passed.
  */
 export type SchemaModule = Record<string, unknown>;
 
@@ -13,10 +12,8 @@ export interface RequestScopedDbArgs {
   readonly request: Request;
   readonly schema: SchemaModule;
   /**
-   * The configured authenticator's `hasSession` verdict for this request.
-   * Adapters should treat this as "maybe signed in" — use it to gate whether
-   * per-request state (e.g. a bookmark cookie) is worth persisting. Not a
-   * substitute for validating the session inside handlers.
+   * The authenticator's `hasSession` verdict: "maybe signed in", not a
+   * validated session.
    */
   readonly isAuthenticated: boolean;
   /** True when the request method is not GET/HEAD/OPTIONS. */
@@ -24,22 +21,14 @@ export interface RequestScopedDbArgs {
 }
 
 /**
- * Deliberately has no `close` seam, unlike {@link ConnectedDb}. `connectRequest`
- * answers per request, so an adapter that used it to hand out a connection
- * would need it released on every response path including the error one —
- * a real seam with a real cost, for a shape none of today's adapters need.
- *
- * An adapter behind this hook must own its own pooling and hand out a
- * borrowed handle — the way `connect` owns the one client `ConnectedDb.close`
- * releases — rather than minting a connection per request here.
+ * No `close` seam: an adapter behind this hook must own its pooling and hand
+ * out a borrowed handle, not a fresh connection.
  */
 export interface RequestScopedDb {
   readonly db: unknown;
   /**
-   * Called exactly once after the dispatcher returns. Attach per-request
-   * state (e.g. a Set-Cookie header for the D1 Sessions API bookmark) to
-   * the response and return it. Idempotent adapters may return `response`
-   * unchanged.
+   * Called exactly once after the dispatcher returns, to attach per-request
+   * state such as a bookmark cookie.
    */
   commit(response: Response): Response;
 }
@@ -47,13 +36,8 @@ export interface RequestScopedDb {
 export interface ConnectedDb {
   readonly db: unknown;
   /**
-   * Release the connection. Provided only by an adapter that owns one — a
-   * binding (D1) has nothing to release — and called by whoever asked for it,
-   * once nothing will query it again.
-   *
-   * A one-shot process needs this: it exits when its event loop drains, and a
-   * remote libsql client holds a live socket until it is closed, so a CronJob
-   * pod would otherwise outlive the work it was started for.
+   * Only on an adapter that owns a connection. A one-shot process needs it, or
+   * a live socket keeps it from exiting.
    */
   readonly close?: () => void;
 }
@@ -61,38 +45,20 @@ export interface ConnectedDb {
 export interface DatabaseAdapter<TSchema = Record<string, unknown>> {
   readonly kind: string;
   /**
-   * Bind the database. Called once per handler against the first invocation's
-   * `env`, so an adapter that owns a connection pipeline does not need a memo
-   * of its own. `request` is the request that triggered the bind, not a
-   * per-request input — use {@link DatabaseAdapter.connectRequest} for that.
+   * Called once per handler; `request` is the one that triggered the bind, not
+   * a per-request input.
    */
   connect(env: PlumixEnv, request: Request, schema: TSchema): ConnectedDb;
   /**
-   * Optional per-request database hook, and the only per-request seam a slot
-   * gets: `connect` is called once per handler. When present, the handler
-   * prefers this over `connect`: the returned `db` becomes `ctx.db` for the
-   * request, and `commit` runs on the response path. Returning `null` means
-   * "fall through to the once-bound `connect`" — useful when the adapter
-   * is configured but the feature (e.g. Sessions API) is disabled.
-   *
-   * Declared as a property (not a method) so that `this`-less bare
-   * references — common in test fixtures and wrappers — are safe.
-   *
-   * Ownership: see {@link RequestScopedDb} — the returned `db` has no
-   * release seam, so an adapter using this hook must own its pooling.
+   * Preferred over `connect` when present; `null` falls through to it. A
+   * property so `this`-less references are safe.
    */
   readonly connectRequest?: (
     args: RequestScopedDbArgs,
   ) => RequestScopedDb | null;
   /**
-   * Env bindings this adapter requires at runtime. Runtime adapters (CF,
-   * Bun, Node) validate these against the actual env on first request so
-   * a misconfigured deploy fails fast with a readable error instead of an
-   * opaque 500 on the first query.
-   *
-   * Optional: adapters that don't consume runtime bindings (e.g. the test
-   * stub) can omit. Populate as an empty array when explicitly "no bindings
-   * needed"; omit to opt out of the check entirely.
+   * Validated on first request. Omitting it opts out of the check; `[]` means
+   * none needed.
    */
   readonly requiredBindings?: readonly string[];
 }
@@ -176,15 +142,8 @@ export interface HeadResult {
 
 export interface GetOptions {
   /**
-   * Read only the given byte range from the object. Inclusive offset,
-   * exclusive end (matches the `[offset, offset+length)` half-open
-   * convention). Useful for magic-byte sniffing or partial-content
-   * preview without fetching the whole body.
-   *
-   * The body is the window; `size` on the result is deliberately left
-   * unspecified for a ranged read, because backends disagree — R2 reports the
-   * whole object, the in-memory adapter the slice — and no caller reads it.
-   * Take the length from the bytes.
+   * Half-open `[offset, offset+length)`. The result's `size` is unspecified for
+   * a ranged read, since backends disagree.
    */
   readonly range?: { readonly offset: number; readonly length: number };
 }
@@ -192,20 +151,12 @@ export interface GetOptions {
 export interface ConnectedObjectStorage {
   put(key: string, body: ObjectBody, opts?: PutOptions): Promise<void>;
   get(key: string, opts?: GetOptions): Promise<GetResult | null>;
-  /**
-   * Object existence + lightweight metadata without fetching the body.
-   * Plugins use this to verify a presigned PUT actually landed before
-   * committing a draft media row to `published`. Returns `null` if the
-   * object doesn't exist.
-   */
   head(key: string): Promise<HeadResult | null>;
   delete(key: string): Promise<void>;
   list(prefix?: string, opts?: ListOptions): Promise<ListResult>;
   /**
-   * Resolve a public URL for the object, or `null` if the bucket isn't
-   * publicly addressable (private bucket without a custom domain). When
-   * null, the plugin layer is expected to mint a worker-proxied URL
-   * (e.g. media plugin's `/_plumix/media/serve/<id>` route).
+   * `null` when the bucket isn't publicly addressable; the caller then mints a
+   * worker-proxied URL.
    */
   url(key: string, opts?: UrlOptions): Promise<string | null>;
   presignPut?(
@@ -255,43 +206,22 @@ export interface ConnectedKv {
   list(opts?: KvListOptions): Promise<KvListResult>;
 }
 
-/**
- * Key/value slot. Providers include `kv({ binding })` from
- * `@plumix/runtime-cloudflare` (a Workers KV namespace) and `memoryKv()`
- * (in-memory, for dev and tests); any backend — e.g. a Node runtime over
- * Redis — implements this same port.
- */
 export interface KV {
   readonly kind: string;
   readonly requiredBindings?: readonly string[];
-  /**
-   * Bind the store. Called once per handler against the first invocation's
-   * `env`, which is fixed for the handler's life, so an implementation that
-   * builds a client does not need to memoise it by hand.
-   */
+  /** Called once per handler, so a client needs no hand-written memo. */
   connect(env: PlumixEnv): ConnectedKv;
 }
 
 /**
- * An origin-side response store, present on a runtime that offers one.
- * Cloudflare Workers is the case that has one: a Worker runs in front of its
- * own zone's cache, so the headers {@link ConnectedCdn.decorate} emits do not
- * reach it (#2265). Every other CDN caches from those headers and has no
- * store.
+ * For a runtime whose own cache the {@link ConnectedCdn.decorate} headers can't
+ * reach, as a Worker sits in front of its zone's cache.
  */
 export interface CdnStore {
   match(request: Request): Promise<Response | undefined>;
   /**
-   * Store `response` under `request`, tagged for
-   * {@link ConnectedCdn.purgeTags}. A non-GET request stores nothing, and the
-   * stored copy must not carry the response's `Set-Cookie` — both asserted by
-   * the cdn conformance suite, which is where the rules are stated in full.
-   *
-   * The copy persisted here is served straight to a visitor on a hit, so it
-   * must carry the freshness and tags a miss would leave with; core hands over
-   * the undecorated render and the provider re-headers it. That is also where
-   * this copy may widen sharing, which {@link ConnectedCdn.decorate} never
-   * does: a separately keyed entry is what makes widening safe.
+   * Stores nothing for non-GET and drops `Set-Cookie`. Core hands over the
+   * undecorated render; the provider re-headers it and may widen sharing.
    */
   put(
     request: Request,
@@ -301,66 +231,35 @@ export interface CdnStore {
 }
 
 /**
- * A CDN bound for the current isolate — a shared cache in front of the site.
- *
- * {@link decorate} is the only member every provider implements: it stamps the
- * freshness and cache tags on the response going back to the visitor, which is
- * how a page reaches a CDN the origin does not itself write to. The other three
- * are where vendors differ, and each one being absent is a supported
- * configuration rather than a broken provider.
+ * Only {@link decorate} is required; each other member's absence is a supported
+ * configuration.
  */
 export interface ConnectedCdn {
   /**
-   * Return the response the visitor receives, carrying whatever freshness and
-   * cache-tag headers this vendor reads. Called for every shared-cacheable
-   * public response, whether or not a {@link store} also holds a copy.
-   *
-   * Decoration may **narrow** sharing, never widen it, and the conformance
-   * suite asserts every arm: a response that declared a shared-cacheable
-   * freshness keeps it, a response that declared none is stamped with the
-   * site's page freshness, and a response marked `private`/`no-store`, or
-   * carrying a `Set-Cookie`, is returned untouched and untagged — that cookie
-   * is the visitor's own and cannot be stripped the way {@link CdnStore.put}
-   * strips it from a copy nobody else holds. Header names and the tag separator
-   * are the provider's own — vendors disagree on both.
+   * May narrow sharing, never widen it: a `private`/`no-store` or `Set-Cookie`
+   * response is returned untouched and untagged.
    */
   decorate(response: Response, tags: readonly string[]): Response;
   /**
-   * Absent alongside `purgeTags` is a supported pair; a store *without* one is
-   * the sharpest configuration this port allows, since an entry it holds is
-   * then reachable only by expiry. Such a provider belongs on a short TTL.
+   * A store without `purgeTags` expires entries only by TTL, so keep that TTL
+   * short.
    */
   readonly store?: CdnStore;
   /**
-   * Present when the CDN can key its cache on an audience segment — a store the
-   * provider keys itself, or a vendor that varies on a named cookie. Without
-   * either, a non-anonymous segment bypasses the CDN rather than risk one
-   * audience's page reaching another.
-   *
-   * Declared and not called: core stamps `private, no-store` on every
-   * non-anonymous render's client copy, so the first provider to implement this
-   * has to lift that stamping for itself before the member does anything.
+   * Not yet called: core stamps `private, no-store` on every non-anonymous
+   * render, which the first implementer must lift.
    */
   readonly segmentVary?: (response: Response, segment: Segment) => Response;
   /**
-   * Invalidate every cached response carrying any of `tags`. Absent when the
-   * vendor cannot invalidate by tag — freshness is then the only control, and
-   * such a site runs a short TTL rather than a long one.
-   *
-   * Optional in the type rather than a method that no-ops, so the compiler
-   * forces every call site to handle absence: a purge that exists and quietly
-   * does nothing would leave content cached and permanently unpurgeable with
-   * every call reporting success.
+   * Absent, never a no-op, when the vendor can't purge by tag, so callers must
+   * handle unpurgeable content.
    */
   readonly purgeTags?: (tags: readonly string[]) => Promise<void>;
 }
 
 /**
- * CDN slot. `connect` returns a {@link ConnectedCdn} when the
- * runtime has everything it needs to cache safely, or `null` to disable
- * caching for this deploy (e.g. a Cloudflare deploy with no zone credentials,
- * where pages must render live) — a verdict that holds for the handler's life.
- * Mirrors the `storage:` slot's connect shape.
+ * `connect` returns `null` to disable caching for the handler's life, such as a
+ * deploy without zone credentials.
  */
 export interface CdnProvider {
   readonly kind: string;
@@ -378,38 +277,25 @@ export interface TransformOpts {
 }
 
 /**
- * On-the-fly image delivery — pairs with `storage:` to serve resized /
- * format-converted images from a CDN. The contract is pure URL math: take
- * a source URL (already publicly reachable, typically through the bucket's
- * custom domain) plus `TransformOpts` and return the transformed URL.
- *
- * Optional `connect(env)`: an implementation whose config lives in the runtime
- * env (e.g. a zone from a Worker secret) binds against it once per handler,
- * returning `undefined` for "no delivery" so downstream presence checks stay
- * meaningful. The handler uses the bare object when `connect` is absent.
+ * `url` is pure URL math. `connect` returns `undefined` for "no delivery" so
+ * presence checks stay meaningful.
  */
 export interface ImageDelivery {
   readonly kind: string;
   /**
-   * The slot resolves a same-origin relative source (`/_plumix/media/serve/1`)
-   * itself — an in-process transformer, such as the Node runtime's. Absent,
-   * the transform service fetches the source over the network, so a caller
-   * holding a relative URL hands it back untransformed.
+   * Absent, the service fetches over the network, so a relative source comes
+   * back untransformed.
    */
   readonly acceptsRelativeSources?: boolean;
   url(sourceUrl: string, opts?: TransformOpts): string;
   /**
-   * Forget every variant rendered from `sourceUrl`, so the next request for
-   * one resolves the source again and meets its gating. A slot that
-   * transforms at the edge has nothing to forget and leaves this out.
+   * Forgets every variant of `sourceUrl`, so the next request meets the
+   * source's gating again.
    */
   purge?(sourceUrl: string): Promise<void>;
   /**
-   * The connect context carries the site's resolved `basePath`, so an implementation
-   * whose `url()` points back at its own route (Node's `/_plumix/image`) can
-   * prefix it the way every other outbound URL does. Off-origin delivery
-   * (Cloudflare's) has no use for it. Optional so a slot constructed and
-   * connected by hand, outside a handler bind, still type-checks.
+   * Carries `basePath` for an implementation whose `url()` points back at its
+   * own route.
    */
   connect?(
     env: PlumixEnv,
@@ -418,11 +304,7 @@ export interface ImageDelivery {
 }
 
 /**
- * Runtime-provided static asset serving. Exposed so the core dispatcher can
- * serve admin SPA deep-links (`/_plumix/admin/<anything>`) by delegating
- * back to the platform's asset layer — Cloudflare's `env.ASSETS` binding
- * today, equivalents in future Node/Bun adapters. Omitted when the runtime
- * has no asset layer, in which case deep-link requests 404 with a hint.
+ * Serves admin SPA deep links. Without it, deep-link requests 404 with a hint.
  */
 export interface AssetsBinding {
   fetch(request: Request): Promise<Response>;

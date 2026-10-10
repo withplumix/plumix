@@ -2,27 +2,14 @@ import type { MessageDescriptor } from "@lingui/core";
 
 import { useLabel } from "./use-label.js";
 
-// Factories for the wire-error-code → `MessageDescriptor` registry
-// pattern shared by every admin module that maps a server-emitted
-// error code to a localizable user-facing string.
-//
-// Two variants because the call shapes legitimately diverge:
-//
-// - `createNullableErrorDescriptorRegistry` — the code arrives from
-//   a URL search param or other optional source. `undefined` /
-//   empty inputs return `null` so the consumer can skip rendering
-//   the alert. Unknown codes fall through to a separate `fallback`
-//   descriptor. Used by magic-link / oauth / email-change.
-// - `createStrictErrorDescriptorRegistry` — the code is always
-//   present (caught from a thrown error class). Unknown codes fall
-//   through to the `fallbackKey` entry inside the table itself, so
-//   every code (including `unknown`) is owned by one map. Used by
-//   passkey-errors.
+// Nullable: an optional code (a URL param) yields `null` when absent. Strict:
+// the code is always present, and unknown codes use the table's own
+// `fallbackKey`.
 
 interface NullableRegistry<TCode extends string> {
   readonly descriptor: (code: string | undefined) => MessageDescriptor | null;
   readonly useMessage: () => (code: string | undefined) => string | null;
-  /** Test-only — iterate `<Code>` keys to assert exhaustive coverage. */
+  /** Test-only. */
   readonly _messages: Record<TCode, MessageDescriptor>;
 }
 

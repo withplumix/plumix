@@ -1,8 +1,3 @@
-// The closed-admin plugin seam in one suite: the /pages/$ catch-all
-// route (not-found, capability gate, not-loaded diagnostic), the
-// build-time runtime alias seam proven against a real built plugin
-// chunk, and block registration through the window.plumix bridge.
-
 import { expect, test } from "@playwright/test";
 
 import type { AuthSessionOutput } from "@plumix/core";
@@ -166,11 +161,8 @@ test.describe("plugin runtime alias seam", () => {
     expect(buttonBg).not.toBe("rgba(0, 0, 0, 0)");
     expect(buttonBg).not.toBe("rgb(255, 255, 255)");
 
-    // (5b) A shared shadcn component from `plumix/admin/ui` renders inside
-    // the plugin chunk. The Button is bundled, but its `radix-ui` (Tooltip
-    // context) and `tailwind-merge` (`cn`) deps resolve through the host
-    // shims — so it gets the shell's `bg-primary` token without bundling
-    // radix. Visible + non-transparent proves the whole chain.
+    // Its `radix-ui` and `tailwind-merge` deps resolve through the host shims,
+    // so it gets the shell's `bg-primary` token without bundling radix.
     const sharedButton = page.getByTestId("runtime-proof-ui-button");
     await expect(sharedButton).toBeVisible();
     const sharedButtonBg = await sharedButton.evaluate(
@@ -179,21 +171,13 @@ test.describe("plugin runtime alias seam", () => {
     expect(sharedButtonBg).not.toBe("rgba(0, 0, 0, 0)");
     expect(sharedButtonBg).not.toBe("rgb(255, 255, 255)");
 
-    // (5c) Hovering opens the radix Tooltip. The plugin's bundled Tooltip
-    // wrapper resolves `radix-ui` to the host shim, so it shares the
-    // shell's radix context + `<TooltipProvider>` — if radix were bundled
-    // per-chunk (separate context), the content would never mount. This is
-    // the assertion that proves context sharing, not just bundling.
+    // If radix were bundled per-chunk with its own context, the tooltip
+    // content would never mount.
     await sharedButton.hover();
     await expect(page.getByTestId("runtime-proof-ui-tooltip")).toBeVisible();
 
-    // (5d) A shared-component *variant the admin shell never renders*
-    // (`size="icon-xs"`) still lands styled. The shell's globals.css
-    // `@source`s `admin-ui/src`, so Tailwind extracts every cva variant
-    // string from `button.tsx` — `icon-xs` → `size-6` ships in shell CSS
-    // even though no shell route uses it. Without that scan a plugin
-    // reaching an unused variant would render unstyled. `size-6` is
-    // 24×24 with no padding/border, so a styled button measures exactly
+    // A variant the shell never renders still ships, because globals.css
+    // `@source`s `admin-ui/src`. A styled `size-6` button measures exactly
     // 24px; an unstyled one sizes to its glyph.
     const iconButton = page.getByTestId("runtime-proof-ui-icon-button");
     const iconBox = await iconButton.evaluate((el) => {
@@ -220,13 +204,6 @@ test.describe("plugin runtime alias seam", () => {
 test.describe("plugin block registered via window.plumix bridge", () => {
   test.use({ viewport: { width: 1280, height: 800 } });
 
-  // Guardrail proving a plugin block registered via
-  // `window.plumix.registerPluginBlock(spec)` at chunk-evaluation time
-  // reaches the editor's runtime registry and surfaces in the inserter.
-  // Simulates the plugin-chunk side effect without needing a multi-plugin
-  // playground: an `addInitScript` traps the first assignment to
-  // `window.plumix` (by `bootPlumixGlobals`) and immediately registers a stub
-  // block against the just-installed bridge.
   test("a block registered at chunk-eval time surfaces in the inserter", async ({
     page,
   }) => {
@@ -240,11 +217,8 @@ test.describe("plugin block registered via window.plumix bridge", () => {
       },
     });
 
-    // Trap the first `window.plumix = ...` assignment (done by
-    // `bootPlumixGlobals` early in main.tsx). At that moment the bridge
-    // is live but no plugin chunks have run yet — perfect proxy for
-    // what a real `<script data-plumix-plugin>` would do once its
-    // module evaluates.
+    // At the first `window.plumix` assignment the bridge is live but no plugin
+    // chunk has run, which is when a real plugin chunk would evaluate.
     await page.addInitScript(() => {
       let trapped: unknown;
       Object.defineProperty(window, "plumix", {
@@ -271,10 +245,6 @@ test.describe("plugin block registered via window.plumix bridge", () => {
 
     await page.goto("entries/posts/1/edit");
 
-    // The runtime registry feeds the editor's block catalog (the inserter):
-    // a block registered at chunk-eval time surfaces there and is searchable,
-    // proving the bridge reaches the same registry the hardcoded `coreBlocks`
-    // import used to.
     await expect(
       page.getByTestId("block-catalog-item-test/fake"),
     ).toBeVisible();

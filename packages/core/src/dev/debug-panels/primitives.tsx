@@ -1,13 +1,6 @@
 import type { ReactNode } from "react";
 import { Fragment } from "react";
 
-/**
- * Presentational primitives shared by core and plugin debug panels so every
- * panel reads uniformly. Panels may drop to raw markup, but these give them
- * the bar's look for free: `DebugSection` groups a titled block, `DebugKV` is
- * the key/value description list, `DebugTable` a columnar list.
- */
-
 export function DebugSection({
   title,
   children,
@@ -49,7 +42,10 @@ export function DebugKV({
   );
 }
 
-/** A columnar table for list-shaped panel data (queries, spans, resolution rules). */
+/**
+ * A columnar table for list-shaped panel data (queries, spans, resolution
+ * rules).
+ */
 export function DebugTable({
   headers,
   rows,

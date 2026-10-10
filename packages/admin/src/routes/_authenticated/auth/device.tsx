@@ -37,9 +37,11 @@ import { Textarea } from "@plumix/admin-ui/textarea";
 import { rpcErrorCode, rpcErrorReason } from "@plumix/core/admin";
 import { vMessage } from "@plumix/core/validation";
 
-// Descriptors used outside JSX — error helpers + the textarea
-// placeholder. Chrome strings stay inline at their `<Trans>` callsite
-// per admin convention.
+/**
+ * Descriptors used outside JSX — error helpers + the textarea
+ * placeholder. Chrome strings stay inline at their `<Trans>` callsite
+ * per admin convention.
+ */
 const M = {
   userCodePlaceholder: defineMessage({
     id: "auth.device.userCode.placeholder",
@@ -96,21 +98,10 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-// OAuth 2.0 RFC 8628 §3.5 error response token. Not user copy.
+/** OAuth 2.0 RFC 8628 §3.5 error response token. Not user copy. */
 const ACCESS_DENIED = "access_denied";
 
-// Admin-side approval page for OAuth 2.0 Device Authorization Grant
-// (RFC 8628). The CLI prints a URL like
-// `https://cms.example/_plumix/admin/auth/device?user_code=ABCD-EFGH`
-// and waits while the human approves here.
-//
-// Two phases:
-//   1. Lookup — verify the typed code maps to a pending row this user
-//      can approve. Surfaces expired / already-approved / already-denied
-//      / not-found inline rather than at submit time.
-//   2. Approve / Deny — name the to-be-minted token, optionally
-//      restrict its scopes, then approve. Or explicitly deny — the
-//      polling client gets `access_denied` immediately.
+// OAuth 2.0 Device Authorization Grant (RFC 8628) approval page.
 
 const lookupSchema = v.object({
   userCode: v.pipe(v.string(), v.trim(), v.maxLength(32)),
@@ -176,12 +167,8 @@ function DeviceApprovalRoute(): ReactNode {
     null,
   );
 
-  // Deep-link case: when the page mounts with `?user_code=...`,
-  // pre-validate the code so the approval form only renders for
-  // valid pending codes. Otherwise we'd ask the user to type a
-  // token name then surface the "expired" error post-submit.
-  // Manual-lookup phase doesn't run this — it goes through the
-  // `lookup` mutation in `LookupCard`. Mount-only by design.
+  // Pre-validates a deep-linked code so "expired" doesn't surface only after
+  // submit.
   useEffect(() => {
     if (phase.kind === "approve") {
       void orpc.auth.deviceFlow.lookup
@@ -244,10 +231,8 @@ function DeviceApprovalRoute(): ReactNode {
       {phase.kind === "denied" ? (
         <Alert variant="destructive" data-testid="auth-device-denied-alert">
           <AlertDescription>
-            {/* `access_denied` is the OAuth 2.0 RFC 8628 §3.5 wire-level
-                error code the polling client receives — keep it as a raw
-                `<code>` outside `<Trans>` so translators can't accidentally
-                drift the localized copy away from the actual API value. */}
+            {/* `access_denied` is the RFC 8628 wire code; outside `<Trans>` so
+                translators can't change it. */}
             <Trans
               id="auth.device.denied"
               message="Denied. The CLI will get a(n) <0>{accessDenied}</0> response and stop polling."
@@ -617,10 +602,8 @@ function ApproveCard({
 }
 
 function formatLookupError(err: unknown): MessageDescriptor {
-  // CONFLICT carries the lifecycle reason (expired / already_approved /
-  // already_denied); NOT_FOUND signals "no row matches this user_code".
-  // Branch on code first so a future CONFLICT/reason addition doesn't
-  // silently fall through to the generic message.
+  // Code first, so a new CONFLICT reason doesn't fall through to the generic
+  // message.
   const code = rpcErrorCode(err);
   if (code === "NOT_FOUND") return M.errLookupNotFound;
   if (code === "CONFLICT") {

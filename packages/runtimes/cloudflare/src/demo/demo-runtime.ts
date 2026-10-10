@@ -23,7 +23,6 @@ import { verifyTurnstile } from "./turnstile.js";
 /** The env var the demo's site origin is read from (see demoPreset). */
 export const PUBLIC_ORIGIN = "PUBLIC_ORIGIN";
 
-/** Subpath whose named exports (DemoDB) the generated worker re-exports. */
 const DEMO_EXPORTS_MODULE = "@plumix/runtime-cloudflare/demo/durable-object";
 
 export interface DemoRuntimeConfig {
@@ -36,11 +35,8 @@ export interface DemoRuntimeConfig {
 }
 
 /**
- * Wraps a base runtime so the deploy behaves as an anonymous demo: `/demo`
- * mints a session and shows a loading page, `/_demo/init` migrates + seeds the
- * visitor's Durable Object and arms its TTL, and any request without a session
- * is routed through `/demo`. Everything else delegates to the base runtime,
- * which resolves the visitor's DO via the demo database adapter.
+ * Any request without a session is routed through `/demo`, which provisions the
+ * visitor's DO.
  */
 export function demoRuntime(
   inner: RuntimeAdapter,
@@ -70,8 +66,9 @@ export function demoRuntime(
         // cookieless request that needs it.
         let showcaseReady = false;
         // `scheduled` is intentionally omitted: demo mode has no shared
-        // database, so scheduled tasks (session cleanup, publish-scheduled) have
-        // nothing to act on. Omitting it makes the worker's scheduled() a no-op.
+        // database, so scheduled tasks (session cleanup, publish-scheduled)
+        // have nothing to act on. Omitting it makes the worker's scheduled() a
+        // no-op.
         return {
           fetch: async (request, invocation) => {
             const { pathname } = new URL(request.url);
@@ -79,7 +76,8 @@ export function demoRuntime(
 
             if (pathname === "/demo") {
               const token = readDemoToken(request) ?? crypto.randomUUID();
-              // Empty or absent site key → no widget (see renderDemoLoadingPage).
+              // Empty or absent site key → no widget (see
+              // renderDemoLoadingPage).
               const siteKey = activeTurnstile(turnstile, env)?.siteKey;
               const headers = new Headers({
                 "content-type": "text/html; charset=utf-8",
@@ -136,9 +134,9 @@ export function demoRuntime(
 
             const hasSession = readDemoToken(request) !== null;
             if (!hasSession) {
-              // The admin needs a session — route newcomers through /demo. Public
-              // pages (and media) render from the shared read-only showcase, which
-              // we seed once per isolate.
+              // The admin needs a session — route newcomers through /demo.
+              // Public pages (and media) render from the shared read-only
+              // showcase, which we seed once per isolate.
               if (pathname.startsWith("/_plumix/admin")) {
                 return Response.redirect(
                   new URL("/demo", request.url).toString(),
@@ -153,9 +151,8 @@ export function demoRuntime(
               }
             }
 
-            // The site origin is read from PUBLIC_ORIGIN (see demoPreset); a
-            // deploy that sets none gets the host it is served from, so the
-            // demo's canonical and share URLs point back at itself.
+            // A deploy without PUBLIC_ORIGIN gets the serving host, so
+            // canonical and share URLs point back at itself.
             const withOrigin: WorkerEnv = {
               ...env,
               [PUBLIC_ORIGIN]: new URL(request.url).origin,
@@ -184,10 +181,7 @@ export function demoRuntime(
 }
 
 /**
- * Resolve Turnstile config for this deploy, or `undefined` when it's off.
- * Keyed on the *secret*: a deploy with no secret (dev, e2e) skips the widget
- * and verification, while a secret set without a site key fails loud (empty
- * site key → no widget → every init is challenged and 403s) rather than
+ * Keyed on the secret: a secret without a site key fails loud rather than
  * silently disabling the gate.
  */
 function activeTurnstile(
@@ -200,7 +194,6 @@ function activeTurnstile(
   return { siteKey: resolveEnvInput(turnstile.siteKey, env), secretKey };
 }
 
-/** Inject the demo toolbar into HTML responses; pass everything else through. */
 async function injectToolbar(
   response: Response,
   hasSession: boolean,

@@ -195,13 +195,8 @@ describe("createAuditExtension — integration with the real AuditService", () =
   });
 
   test("public log() + internal entry hook route to the same service — both rows land", async () => {
-    // Pins the "share the same buffer / no double-write" criterion: a
-    // third-party plugin's ctx.audit.log() and a core entry-hook
-    // capture in the same request route through the same AuditService
-    // instance and both rows reach storage. (The synchronous batching
-    // window is a microtask — see auditService.ts:48-54 — so an
-    // intervening `await` may produce multiple flushes, but neither
-    // call sets up a separate buffer.)
+    // Batching is a microtask window, so an intervening `await` may flush more
+    // than once, but neither call sets up a separate buffer.
     const { storage, capture } = captureStorage();
     const service = createAuditService(storage);
     const audit = createAuditExtension(service);
@@ -244,10 +239,8 @@ describe("createAuditExtension — integration with the real AuditService", () =
   });
 
   test("public log() + internal hook fired in the same sync tick batch into one flush", async () => {
-    // Synchronous siblings within the microtask window collapse into a
-    // single storage.write — matches the existing service-test
-    // guarantee for multiple internal calls and proves the public API
-    // joins that same window when fired without an intervening await.
+    // Proves the public API joins the same microtask window as internal calls
+    // when fired without an intervening await.
     const { storage, capture } = captureStorage();
     const service = createAuditService(storage);
     const audit = createAuditExtension(service);
@@ -272,9 +265,8 @@ describe("createAuditExtension — integration with the real AuditService", () =
   });
 });
 
-// Production builds the request's ambient context before anyone is signed
-// in; an authenticated procedure works on a copy that carries the user. So
-// the session rides a cookie here, not the harness's pre-signed context.
+// The ambient context is built before sign-in and an authenticated procedure
+// works on a copy, so the session rides a cookie, not a pre-signed context.
 describe("createAuditExtension — through an authenticated procedure", () => {
   test("a row logged by a plugin's procedure is attributed to the signed-in user", async () => {
     const { storage, capture } = captureStorage();

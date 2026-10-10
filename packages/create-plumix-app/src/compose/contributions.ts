@@ -13,19 +13,14 @@ export interface ResolvedContributions {
   /** Dependencies the fulfilled capabilities add to the app. */
   readonly deps: Record<string, string>;
   /**
-   * Secret binding names the selected auth methods need, deduped. Derived
-   * once here so the runtime's secrets file and the `PlumixEnv` augmentation that
+   * Secret binding names the selected auth methods need, deduped. Derived once
+   * here so the runtime's secrets file and the `PlumixEnv` augmentation that
    * declares them can never drift.
    */
   readonly envVars: string[];
 }
 
-/**
- * Fold a selection's runtime, the runtime capabilities its plugins require,
- * and the plugins themselves into one set of contributions. A required
- * capability is fulfilled once even if several plugins ask for it; a
- * capability the runtime does not provide is a hard error.
- */
+/** A capability the runtime does not provide is a hard error. */
 export function resolveContributions(
   selection: Selection,
 ): ResolvedContributions {
@@ -63,9 +58,11 @@ export function resolveContributions(
   return acc;
 }
 
-// Array wrangler values append; config slots and scalar/object wrangler
-// values are last-write-wins. Fine for today's disjoint descriptors; a
-// future collision (two capabilities touching one slot) would need a guard.
+/**
+ * Array wrangler values append; config slots and scalar/object wrangler
+ * values are last-write-wins. Fine for today's disjoint descriptors; a
+ * future collision (two capabilities touching one slot) would need a guard.
+ */
 function apply(acc: ResolvedContributions, contribution: Contribution): void {
   if (contribution.imports) acc.imports.push(...contribution.imports);
   if (contribution.configSlots)

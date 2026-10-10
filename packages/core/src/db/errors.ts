@@ -1,29 +1,28 @@
-// Unique-constraint detection across every SQLite driver plumix runs on:
-// better-sqlite3 (Node), node:sqlite (Node 22+), bun:sqlite, libsql,
-// Cloudflare D1, Deno's @db/sqlite. Each exposes the constraint violation
-// in a different field; drizzle-orm may wrap the driver error with `.cause`
-// N levels deep. The detector below checks every known shape and falls
-// back to the SQLite-produced message substring, which is the one thing
-// every driver surfaces verbatim.
+// Each SQLite driver exposes a constraint violation in a different field,
+// possibly wrapped in `.cause`; the message substring is the one thing every
+// driver surfaces verbatim.
 
-// Extended SQLite result codes for UNIQUE / PRIMARYKEY violations. See
-// https://www.sqlite.org/rescode.html — "SQLITE_CONSTRAINT_UNIQUE" (2067)
-// and "SQLITE_CONSTRAINT_PRIMARYKEY" (1555).
+/**
+ * Extended SQLite result codes for UNIQUE / PRIMARYKEY violations. See
+ * https://www.sqlite.org/rescode.html — "SQLITE_CONSTRAINT_UNIQUE" (2067)
+ * and "SQLITE_CONSTRAINT_PRIMARYKEY" (1555).
+ */
 const CONSTRAINT_CODE_STRINGS = new Set([
   "SQLITE_CONSTRAINT_UNIQUE",
   "SQLITE_CONSTRAINT_PRIMARYKEY",
 ]);
 const CONSTRAINT_CODE_NUMBERS = new Set([2067, 1555]);
 
-// Max depth of `.cause` walk. Drizzle-orm typically wraps once, libsql twice,
-// D1-through-drizzle can stack three or four. Six gives us headroom without
-// letting a pathological cycle (bug in a driver) loop forever.
+/**
+ * D1 through drizzle can stack four causes deep; the bound stops a driver's
+ * cause cycle from looping forever.
+ */
 const MAX_CAUSE_DEPTH = 6;
 
-// Every field name we've seen a SQLite driver put the result code on.
-// String fields hold extended-code strings ("SQLITE_CONSTRAINT_UNIQUE");
-// number fields hold numeric extended codes (2067 / 1555). Adding a new
-// driver is a one-row append to whichever list matches its shape.
+/**
+ * String fields hold extended-code names; number fields hold numeric extended
+ * codes (2067 / 1555).
+ */
 const STRING_CODE_FIELDS = ["code", "extendedCode"] as const;
 const NUMBER_CODE_FIELDS = ["errno", "errcode", "resultCode"] as const;
 
@@ -44,13 +43,8 @@ function hasUniqueCode(error: unknown): boolean {
     }
   }
 
-  // Universal fallback: SQLite's core produces "UNIQUE constraint failed: …"
-  // verbatim; every driver we've audited includes it in the message.
-  // Cloudflare D1 relies entirely on this path (no structured codes at all).
-  //
-  // Colon-anchored to avoid matching a stray substring in an unrelated
-  // wrapper message ("... UNIQUE constraint failed would be bad ...");
-  // SQLite always emits the phrase followed by `": table.column"`.
+  // D1 has no structured codes and relies entirely on this. Colon-anchored so
+  // an unrelated wrapper message mentioning the phrase doesn't match.
   const message = err.message;
   if (
     typeof message === "string" &&
@@ -74,11 +68,8 @@ export function isUniqueConstraintError(error: unknown): boolean {
 }
 
 /**
- * True when the unique violation is on a specific `table.column` constraint —
- * e.g. `isUniqueConstraintErrorOn(err, "users.slug")` to tell a slug collision
- * apart from an email one. Column identity only rides on SQLite's message
- * (`UNIQUE constraint failed: users.slug`), so this is message-only, unlike the
- * code-first `isUniqueConstraintError`; every driver surfaces that phrase.
+ * Message-only, unlike `isUniqueConstraintError`: column identity rides only on
+ * SQLite's `UNIQUE constraint failed: users.slug`.
  */
 export function isUniqueConstraintErrorOn(
   error: unknown,
@@ -125,11 +116,9 @@ export class DbError extends Error {
   }
 
   /**
-   * `readVisitorMeta` lost its middle `request` argument, and a plugin built
-   * against the old three-argument form passes its request where the options
-   * now go. Without this the namespace reads `undefined`, every such plugin
-   * silently shares one salt group, and their hashes become comparable across
-   * plugins — the one thing the per-namespace salt exists to prevent.
+   * A plugin built against the old three-argument `readVisitorMeta` passes its
+   * request here; reading `undefined` would make hashes comparable across
+   * plugins.
    */
   static visitorNamespaceMissing(): DbError {
     return new DbError(

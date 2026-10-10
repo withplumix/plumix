@@ -104,9 +104,11 @@ const locationIdSchema = v.pipe(
   v.regex(MENU_LOCATION_ID_RE),
 );
 
-// Capability used for every mutating menu RPC. `registerTermTaxonomy`
-// auto-derives the taxonomy's `manage` at the editor tier; reusing it here
-// keeps the gate consistent with WP-style "manage taxonomy" semantics.
+/**
+ * Capability used for every mutating menu RPC. `registerTermTaxonomy`
+ * auto-derives the taxonomy's `manage` at the editor tier; reusing it here
+ * keeps the gate consistent with WP-style "manage taxonomy" semantics.
+ */
 export const MENU_MANAGE_CAPABILITY = termCapability("menu", "manage");
 
 interface MenuListItem {
@@ -277,11 +279,8 @@ export function createMenuRouter(
         flat.items.map((item) => item.meta),
       );
 
-      // Atomic CAS version bump. Both concurrent saves passing the
-      // earlier `term.version === input.version` check would otherwise
-      // race and silently overwrite each other. With CAS, only the
-      // first save's UPDATE matches; the loser sees rowsAffected = 0
-      // and aborts before doing any writes.
+      // CAS bump: two concurrent saves can both pass the earlier version check;
+      // only the first UPDATE matches, and the loser aborts before writing.
       const versionBumped = await context.db
         .update(terms)
         .set({ version: term.version + 1 })
@@ -296,10 +295,8 @@ export function createMenuRouter(
         });
       }
 
-      // Existing item ids the input claims to update. Anything claimed
-      // but not currently linked to this menu term is rejected — a
-      // client-side bug or hostile call would otherwise let a save
-      // re-parent another menu's items into this one.
+      // Reject claimed ids not linked to this menu, or a save could re-parent
+      // another menu's items.
       const claimedIds = flat.items
         .map((item) => item.id)
         .filter((id): id is number => id !== null);
@@ -333,9 +330,8 @@ export function createMenuRouter(
         }
       }
 
-      // Snapshot each linked item's label and href, so the editor can
-      // still show it after the target is trashed or deleted. A target
-      // that doesn't resolve keeps the snapshot its row already stores.
+      // The snapshot keeps the editor showing the item after its target is
+      // trashed; an unresolved target keeps the snapshot already stored.
       const storedMetas = new Map(
         existingRows.map((r) => [r.id, parseMenuItemMeta(r.meta)]),
       );
@@ -385,14 +381,9 @@ export function createMenuRouter(
       const added: number[] = [];
       const modified: number[] = [];
 
-      // Serial writes — drizzle's `db.transaction()` for libsql opens a
-      // separate connection that doesn't share `:memory:` state with
-      // the parent in tests, and Cloudflare D1 doesn't support
-      // full BEGIN/COMMIT transactions either. Atomicity is provided by
-      // the version-bump-last pattern: if any write fails, the term
-      // version stays unbumped and the editor's next save sees the
-      // inconsistent state via a version mismatch and retries. SQLite
-      // statement-level isolation rules out half-written rows.
+      // Serial, no transaction: D1 lacks BEGIN/COMMIT and libsql's opens a
+      // separate connection. The version bump comes last, so a failed write
+      // leaves a mismatch the next save sees.
       for (let i = 0; i < flat.items.length; i++) {
         const item = flat.items[i];
         if (!item) continue;
@@ -470,11 +461,8 @@ export function createMenuRouter(
       const itemIdSet = new Set(itemIds);
       const removed = [...priorIds].filter((id) => !itemIdSet.has(id));
 
-      // `menu:saved` fires after every successful save (including
-      // no-op saves where added/removed/modified are all empty), so
-      // cache invalidators can run unconditionally without sniffing
-      // the payload. Failures in subscribers don't roll back the
-      // commit (Promise.allSettled inside doAction).
+      // Fires even for no-op saves so cache invalidators needn't sniff the
+      // payload. Subscriber failures don't roll back the commit.
       await context.hooks.doAction(
         "menu:saved",
         {
@@ -530,11 +518,8 @@ export function createMenuRouter(
           ),
         );
       await context.db.delete(terms).where(eq(terms.id, term.id));
-      // Sweep any settings rows binding a location to this term's slug
-      // — leaving them lingering is a known WP pain point. The value is
-      // stored as JSON; compare against the JSON-encoded form of the
-      // slug ("\"main\"") since drizzle's `eq` on a JSON column
-      // serializes via JSON.stringify before comparing.
+      // Leaving bindings to a deleted menu is a known WP pain point. The value
+      // is stored as JSON, so compare against the JSON-encoded slug.
       const unbound = await context.db
         .delete(settings)
         .where(
@@ -620,10 +605,8 @@ export function createMenuRouter(
           })
           .returning({ id: terms.id, version: terms.version });
         if (!row) {
-          // Defensive: `.returning()` on an INSERT that just succeeded
-          // returning the affected row is contractually non-empty for
-          // SQLite/D1. Surface as a plain error (mapped to 500 by the
-          // RPC layer) rather than papering over a driver regression.
+          // `.returning()` after a successful INSERT is non-empty on SQLite/D1;
+          // surface a driver regression rather than paper over it.
           throw MenuPluginError.menuCreateNoRowReturned();
         }
         return { termId: row.id, slug, version: row.version };
@@ -748,10 +731,8 @@ export function createMenuRouter(
             data: { kind: "menu_target", id: input.target },
           });
         }
-        // The same gate `lookup.list` applies to the adapter, so the picker
-        // lists no more than the viewer could look up directly.
-        // Core registers both adapters; like `lookupMenuTargets`, a missing
-        // one has nothing to list.
+        // The same gate `lookup.list` applies, so the picker lists no more than
+        // the viewer could look up directly.
         const registered = context.plugins.lookupAdapters.get(input.kind);
         if (!registered) return { items: [] };
         const { capability } = registered;
@@ -780,11 +761,8 @@ export function createMenuRouter(
     .handler(async ({ context }): Promise<readonly LocationRow[]> => {
       if (registered.size === 0) return [];
 
-      // settings.value is a JSON-encoded text column, so a SQL-level
-      // join against terms.slug would compare `"main"` (quoted) with
-      // `main` (unquoted). Two small queries are clearer than reaching
-      // for json_extract, and the rowcount is bounded by the number of
-      // theme-registered locations.
+      // settings.value is JSON-encoded, so a SQL join on terms.slug would
+      // compare `"main"` with `main`. Rows are bounded by registered locations.
       const settingRows = await context.db
         .select({ key: settings.key, value: settings.value })
         .from(settings)
@@ -865,9 +843,7 @@ function readMaxDepth(meta: JsonObject): number {
 }
 
 function cryptoRandom(): string {
-  // Short non-cryptographic suffix for slug generation; a collision
-  // with a live row's slug surfaces as a unique-index violation that
-  // rolls the transaction back, so worst case is the editor sees a
-  // retry-friendly error.
+  // Non-cryptographic: a collision fails the unique index and the editor gets a
+  // retryable error.
   return Math.random().toString(36).slice(2, 10);
 }

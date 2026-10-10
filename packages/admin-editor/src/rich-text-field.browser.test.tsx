@@ -20,7 +20,9 @@ afterEach(cleanup);
 
 i18n.loadAndActivate({ locale: "en", messages: {} });
 
-// The editor renders a `<Trans>` hint, so its render needs the i18n context.
+/**
+ * The editor renders a `<Trans>` hint, so its render needs the i18n context.
+ */
 const renderRT = (ui: ReactElement): ReturnType<typeof render> =>
   render(<I18nProvider i18n={i18n}>{ui}</I18nProvider>);
 
@@ -232,9 +234,8 @@ describe("RichTextField toolbar reflects the allowlist", () => {
     expect(queryByTestId("rt-clear")).not.toBeNull();
   });
 
-  // The editor keeps an empty paragraph after a trailing heading, list or
-  // quote so the caret can leave it; that paragraph is the editor's, not the
-  // author's, and must not reach the stored body.
+  // The editor keeps an empty paragraph after a trailing block so the caret
+  // can leave it; it is not the author's.
   test("turning the text into a heading stores no trailing empty paragraph", async () => {
     const onChange = vi.fn();
     const { getByTestId } = renderRT(
@@ -304,7 +305,8 @@ describe("RichTextField toolbar reflects the allowlist", () => {
     );
     const { rerender, getByTestId } = render(wrap(doc));
     expect(getByTestId("rtc-editor").textContent).toContain("hello");
-    // An external reset to null must clear the on-screen doc, not leave it stale.
+    // An external reset to null must clear the on-screen doc, not leave it
+    // stale.
     rerender(wrap(null));
     expect(getByTestId("rtc-editor").textContent).not.toContain("hello");
   });

@@ -174,7 +174,7 @@ describe("ctx.registerTemplateDep", () => {
   });
 });
 
-// Loaders are handed the request context, so they get a real one.
+/** Loaders are handed the request context, so they get a real one. */
 let db: Db;
 beforeAll(async () => {
   db = await createTestDb();
@@ -655,10 +655,8 @@ describe("theme-level flat dep declarations", () => {
   });
 
   test("function-form dep on the theme root throws at defineTheme (no parent)", () => {
-    // The function form means "given the parent, return the next." The
-    // theme root has no parent — declaring a function there is always a
-    // mistake. Reject at boot so it doesn't silently no-op like
-    // pre-#614 templateDeps.
+    // The theme root has no parent, so a function form there is always a
+    // mistake that would otherwise silently no-op.
     const bad = {
       settings: (prev: readonly string[]) => [...prev, "general"],
       templates: { index: () => null },

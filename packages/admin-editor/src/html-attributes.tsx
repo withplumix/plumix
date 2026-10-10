@@ -20,8 +20,10 @@ import {
 } from "@plumix/admin-ui/popover";
 import { isAllowedHtmlAttr } from "@plumix/core/blocks";
 
-// Common allowlisted attributes offered as suggestions. The field still accepts
-// any name `isAllowedHtmlAttr` permits (e.g. an arbitrary `data-*`/`aria-*`).
+/**
+ * Common allowlisted attributes offered as suggestions. The field still accepts
+ * any name `isAllowedHtmlAttr` permits (e.g. an arbitrary `data-*`/`aria-*`).
+ */
 const COMMON_ATTRS: readonly string[] = [
   "id",
   "title",
@@ -37,16 +39,13 @@ const COMMON_ATTRS: readonly string[] = [
 
 interface HtmlAttributesProps {
   readonly attributes: Readonly<Record<string, string>>;
-  /** Set an attribute's value, or clear it with `null`. */
   readonly onChange: (key: string, value: string | null) => void;
-  /** Rename an attribute in place, keeping its value. */
   readonly onRename: (from: string, to: string) => void;
 }
 
 /**
- * Key/value editor for a block's HTML attributes — the same repeater as the CSS
- * section, but flat string values. Keys are constrained to the render-time
- * allowlist (`isAllowedHtmlAttr`); the value flows verbatim (React escapes it).
+ * Keys are constrained to the render-time allowlist; values flow verbatim
+ * because React escapes them.
  */
 export function HtmlAttributes({
   attributes,
@@ -79,9 +78,10 @@ export function HtmlAttributes({
   );
 }
 
-/** One attribute row: an editable name (renamed on commit), the value input,
- *  and a remove button. Keyed by name in the parent, so the draft re-inits when
- *  the row's identity changes. */
+/**
+ * Keyed by name in the parent, so the draft re-inits when the row's identity
+ * changes.
+ */
 function AttrRow({
   name,
   value,
@@ -98,9 +98,8 @@ function AttrRow({
   const [keyDraft, setKeyDraft] = useState(name);
 
   const commitRename = (): void => {
-    // Normalize to lowercase: a mixed-case data-/aria- key passes the allowlist
-    // check but React drops it at render, so the editor must store the form the
-    // renderer keeps. Collision is checked case-insensitively to match.
+    // A mixed-case data-/aria- key passes the allowlist but React drops it at
+    // render.
     const next = keyDraft.trim().toLowerCase();
     const valid =
       next !== name.toLowerCase() &&
@@ -145,9 +144,6 @@ function AttrRow({
   );
 }
 
-/** Key + value entry row. The key is picked from the common-attribute combobox
- *  or typed; only allowlisted, non-duplicate names with a non-empty value can
- *  be added. */
 function AddAttr({
   onAdd,
   existingKeys,

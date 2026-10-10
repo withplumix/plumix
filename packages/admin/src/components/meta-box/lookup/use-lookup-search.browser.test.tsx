@@ -8,9 +8,10 @@ import type { LookupItem } from "./types.js";
 import { settleRpc, stubRpc } from "../../../../test/rpc.js";
 import { useLookupSearch } from "./use-lookup-search.js";
 
-// The hook talks to `lookup.list` through the admin's real oRPC client; the
-// stub answers at the fetch boundary, so `rpc.calls` holds the exact input the
-// hook assembled and put on the wire.
+/**
+ * Answers at the fetch boundary, so `rpc.calls` holds the input the hook put on
+ * the wire.
+ */
 function stubLookup(items: readonly LookupItem[] = []): RpcStub {
   return stubRpc({ "lookup/list": () => ({ items }) });
 }

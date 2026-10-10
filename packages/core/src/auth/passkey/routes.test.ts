@@ -849,11 +849,8 @@ describe("passkey signout", () => {
   });
 });
 
-// Full end-to-end happy path exercising every /_plumix/auth/* POST: bootstrap
-// → register/options → register/verify → signout → login/options →
-// login/verify. Driven through the dispatcher (not direct fn calls) so any
-// regression in the wire-level schema, CSRF gate, or session plumbing shows
-// up here instead of only at deploy time.
+// Driven through the dispatcher so a regression in the wire schema, CSRF gate
+// or session plumbing shows up here rather than at deploy time.
 describe("passkey end-to-end happy path", () => {
   test("register a new user, signout, then login with the same credential", async () => {
     const h = await createDispatcherHarness();

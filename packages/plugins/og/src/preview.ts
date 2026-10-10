@@ -11,16 +11,14 @@ import { chooseCard } from "./head.js";
 import { isPreviewablePage } from "./shareable.js";
 import { siteDefaultImage } from "./site.js";
 
-/**
- * Which link of the `og:image` chain answered for this entry — the debug bar's
- * own vocabulary, plus the one link the `seo:og_image` filter never sees
- * because an explicit `.ogImage()` role short-circuits above it.
- */
+/** `og-image` is an explicit `.ogImage()` role, which the filter never sees. */
 export type CardPreviewOutcome = OgChainOutcome | "og-image";
 
 export interface CardPreview {
   readonly outcome: CardPreviewOutcome;
-  /** Why there is no card, in the panel's own vocabulary, or null when there is. */
+  /**
+   * Why there is no card, in the panel's own vocabulary, or null when there is.
+   */
   readonly skipped: OgCardSkip | null;
   /**
    * What an `<img>` in the editor points at: a `data:` URI for a card, an
@@ -41,17 +39,8 @@ export interface PreviewCardInput {
 }
 
 /**
- * The image this entry will be shared with, and which link of the chain
- * produced it — resolved live for the entry as it stands, draft included.
- *
- * Nothing is read from storage or from the edge: a card is addressed by a
- * digest over what it read, so a draft has no stable URL and an entry under
- * edit moves out from under one. The card is rendered on the spot instead, and
- * its digest is never computed — there is no URL here to name.
- *
- * Only this plugin's own contribution is modelled. A third-party subscriber to
- * `seo:og_image` sitting between the role markers and the card would change
- * what the page ends up advertising without changing what this says.
+ * Rendered live, draft included, never read from storage. Ignores third-party
+ * `seo:og_image` subscribers, which may change what the page advertises.
  */
 export async function previewCard(
   input: PreviewCardInput,
@@ -69,10 +58,6 @@ export async function previewCard(
     cards,
     featured,
     extension,
-    // The status half of `isShareablePage` is deliberately dropped — showing
-    // a draft's card is the point — and the rest of it deliberately is not: an
-    // entry whose page a scraper can never reach gets no card in the head, so
-    // naming one here would preview an image the page will not use.
     shareable: isPreviewablePage,
   });
 

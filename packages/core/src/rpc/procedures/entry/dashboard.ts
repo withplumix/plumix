@@ -8,8 +8,10 @@ import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { entryRecentActivityInputSchema } from "./schemas.js";
 
-// Rows of every registered type the caller may read. Reserved rows
-// (revision/autosave) aren't registered types, so they're excluded for free.
+/**
+ * Rows of every registered type the caller may read. Reserved rows
+ * (revision/autosave) aren't registered types, so they're excluded for free.
+ */
 function readableRowsOfAnyType(
   context: AuthenticatedAppContext,
 ): SQL | undefined {

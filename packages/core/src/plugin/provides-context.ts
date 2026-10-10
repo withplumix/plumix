@@ -16,10 +16,7 @@ export interface PluginProvidesContext {
     value: PluginContextExtensions[TKey],
   ): void;
   /**
-   * Register a runtime helper on every per-request `AppContext`. Reads
-   * are typed via the `AppContextExtensions` declaration-merge target —
-   * a plugin augments it once and `ctx.<key>` is autocompleted in
-   * every RPC/route/hook handler. Duplicate keys throw.
+   * Augment `AppContextExtensions` to type `ctx.<key>`. Duplicate keys throw.
    */
   extendAppContext<TKey extends keyof AppContextExtensions>(
     key: TKey,
@@ -33,20 +30,17 @@ interface CreateProvidesContextArgs {
   readonly appExtensions: Map<string, ContextExtensionEntry>;
 }
 
-// Names that would corrupt the per-request `AppContext` if a plugin
-// tried to register them. `__proto__` triggers the Object.prototype
-// setter and reparents the ctx; `constructor` / `prototype` shadow
-// inherited members and confuse downstream introspection.
+/**
+ * `__proto__` would reparent the ctx through the Object.prototype setter;
+ * `constructor`/`prototype` would shadow inherited members.
+ */
 const RESERVED_EXTENSION_KEYS: ReadonlySet<string> = new Set([
   "__proto__",
   "constructor",
   "prototype",
 ]);
 
-// Built-in `AppContextBase` members. extendAppContext rejects these so
-// a plugin can't silently replace `db`, `auth`, etc. at request time.
-// Mirrors the `key in target` shadow check `extendPluginContext`
-// runs against the constructed PluginSetupContext at install.
+/** So a plugin can't silently replace `db`, `auth`, etc. at request time. */
 const APP_CONTEXT_BASE_KEYS: ReadonlySet<string> = new Set([
   "db",
   "env",

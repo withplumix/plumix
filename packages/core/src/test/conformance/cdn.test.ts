@@ -12,9 +12,11 @@ interface CachedEntry {
   readonly tags: readonly string[];
 }
 
-// Decoration every provider must do, in the smallest form that satisfies the
-// rules: narrow-never-widen, the handler's own freshness preserved, tags on a
-// header of the provider's choosing.
+/**
+ * Decoration every provider must do, in the smallest form that satisfies the
+ * rules: narrow-never-widen, the handler's own freshness preserved, tags on a
+ * header of the provider's choosing.
+ */
 function decorate(response: Response, tags: readonly string[]): Response {
   if (response.headers.has("set-cookie")) return response;
   if (!responseAllowsSharedStorage(response)) return response;
@@ -35,9 +37,10 @@ function byTag(
   }
 }
 
-// A tag-indexed map is the smallest store that can satisfy the contract, so it
-// is what the cases are proved green against here. The Cloudflare provider
-// runs them against the Workers Cache API beside its own tests.
+/**
+ * A tag-indexed map, the smallest store that satisfies the contract; the
+ * Cloudflare provider runs the cases against the Workers Cache API itself.
+ */
 function storefulCdn(
   purge: (entries: Map<string, CachedEntry>, tags: readonly string[]) => void,
 ): ConnectedCdn {
@@ -82,9 +85,8 @@ function mapEntries(entries: Map<string, CachedEntry>): CdnStore {
   };
 }
 
-// The four optional-member combinations a provider can ship. Cloudflare
-// Workers is the first; a header-only CDN with a purge API is the second; the
-// rest are supported configurations rather than broken providers.
+// Every optional-member combination a provider can ship; all are supported
+// configurations, not broken providers.
 describeCdnContract({
   connect: () => storefulCdn(byTag),
   store: true,

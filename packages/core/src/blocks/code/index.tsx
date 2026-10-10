@@ -4,11 +4,10 @@ import { defineBlock } from "../block-registry.js";
 import { CODE_THEME_CSS, highlightCode } from "./highlight.js";
 import { CODE_LANGUAGES, normalizeLanguage } from "./languages.js";
 
-// Suggestions for the language combobox — the curated common-language
-// list. A combobox (free text + suggestions), not a select: the stored
-// value stays a plain string, so content authored with the old
-// free-text field (alias or unknown language) is preserved and
-// normalized at render rather than dropped.
+/**
+ * A combobox, not a select, so a stored alias or unknown language is kept and
+ * normalized at render rather than dropped.
+ */
 const LANGUAGE_OPTIONS = CODE_LANGUAGES.map((lang) => ({
   label: lang.label,
   value: lang.id,
@@ -19,13 +18,10 @@ export const codeBlock = defineBlock({
   title: { id: "block.core.code.title", message: "Code" },
   icon: "Code",
   category: "text",
-  // selfSeam so the block class + default styles land on the `<pre>` itself,
-  // not a wrapper div — the code box is the block.
+  // The code box is the block, so styles land on the `<pre>`, not a wrapper.
   selfSeam: true,
-  // Neutral, theme-overridable defaults seeded as editable Styles values: a
-  // padded, rounded, horizontally-scrolling monospace box. A theme restyles
-  // every code block by defining the vars. (Token colours are separate — they
-  // ride the highlight theme.)
+  // A theme restyles every code block by defining the vars; token colours ride
+  // the highlight theme instead.
   defaultStyles: {
     large: {
       marginTop: "var(--plumix-code-margin-y, 1.5rem)",
@@ -68,8 +64,6 @@ export const codeBlock = defineBlock({
     const lang = normalizeLanguage(language);
     if (lang === undefined) return <pre {...blockProps}>{text}</pre>;
 
-    // highlight.js runs here — sync, so this same render highlights at SSR
-    // (public) and re-runs live in the editor canvas when the language changes.
     // An unsupported language keeps the semantic attribute but stays plain.
     const highlighted = highlightCode(text, lang);
     if (highlighted === null) {

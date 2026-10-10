@@ -13,10 +13,10 @@ import {
 } from "@plumix/admin-ui/card";
 import { Skeleton } from "@plumix/admin-ui/skeleton";
 
-// Renders the given (already capability-filtered) dashboard widgets. A
-// widget whose admin chunk hasn't registered a component yet is skipped
-// silently — a missing widget shouldn't break the dashboard the way a
-// missing full-page route would.
+/**
+ * An unregistered widget is skipped silently rather than breaking the
+ * dashboard.
+ */
 export function DashboardWidgets({
   widgets,
 }: {

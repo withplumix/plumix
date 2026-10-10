@@ -30,9 +30,8 @@ describe("toCsv", () => {
     );
   });
 
-  // A `number` field stores a number, and one below zero opens with the
-  // same character a formula does. Neutralising it would file the answer
-  // as text and lose every sum the column was exported for.
+  // A negative number starts like a formula; neutralising it would turn it into
+  // text and break sums.
   test("leaves a negative number a number", () => {
     expect(toCsv([["-12.5", "-3"]])).toContain("-12.5,-3");
   });

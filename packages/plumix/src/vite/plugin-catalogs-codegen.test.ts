@@ -28,10 +28,8 @@ describe("generatePluginCatalogsSource", () => {
     expect(source).toContain('"uk": [() => import("/site/a/locales/uk.mjs")],');
   });
 
-  // A plugin may import its own source catalog to format strings with no
-  // request in hand (forms does), and a lazy import of a module the graph
-  // already holds statically splits nothing: rolldown reports it as
-  // INEFFECTIVE_DYNAMIC_IMPORT on every build.
+  // A lazy import of a module the graph already holds statically makes
+  // rolldown report INEFFECTIVE_DYNAMIC_IMPORT on every build.
   test("imports a plugin's source-locale catalog statically, never lazily", () => {
     const source = generatePluginCatalogsSource(
       new Map([

@@ -3,13 +3,10 @@ import { resolve } from "node:path";
 import { factoriesFor } from "plumix/test";
 import { actingAs, openPlaygroundDb } from "plumix/test/playwright";
 
-// All e2e seeding happens here — once, in the quiet window after the worker
-// boots but before any spec drives it. Seeding from a spec races the live
-// worker for the D1 write lock, and a retry would re-insert against a
-// baseline that does not rewind `sqlite_sequence`, so the row would come back
-// under a different id than the spec was written against. The spec reads the
-// id out of e2e-fixtures.json and never touches the database; a retry gets the
-// row back from the rig's baseline restore.
+/**
+ * Seeds before any spec runs: seeding from a spec races the worker for the D1
+ * write lock, and a retry would reinsert under a new id.
+ */
 export default async function globalSetup(): Promise<void> {
   const db = await openPlaygroundDb({
     cwd: resolve(process.cwd(), "playground"),

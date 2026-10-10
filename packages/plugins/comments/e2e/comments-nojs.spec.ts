@@ -2,9 +2,10 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, test } from "plumix/test/playwright";
 
-// Seeded by globalSetup, once per suite run. `nojsEmail` already has one
-// approved comment, so the playground's default `first_time` policy
-// auto-approves what this spec posts and the thread can be read back.
+/**
+ * `nojsEmail` already has an approved comment, so the `first_time` policy
+ * auto-approves what this spec posts and the thread can be read back.
+ */
 interface Fixtures {
   readonly nojsSlug: string;
   readonly nojsEmail: string;
@@ -18,14 +19,14 @@ const SUMMARY = "[data-plumix-comment-summary]";
 const control = (name: string) => `[data-plumix-comment-control="${name}"]`;
 const SUBMIT = "[data-plumix-comment-submit]";
 
-// Absolute, because the rig's `baseURL` is the admin SPA's own root and
-// these are public pages the worker renders.
+/**
+ * Absolute, because the rig's `baseURL` is the admin SPA's own root and
+ * these are public pages the worker renders.
+ */
 const post = (slug: string) => `/posts/${slug}`;
 
-// The claim this plugin's form makes, made in the one place that can
-// actually test it: a real browser with scripting switched off. The
-// dispatcher harness synthesises the request a browser would have sent;
-// here the browser sends it.
+// Only a real browser with scripting off can prove the form posts without
+// JavaScript; the dispatcher harness merely synthesises the request.
 test.describe("without JavaScript", () => {
   test.use({ javaScriptEnabled: false });
 
@@ -70,9 +71,8 @@ test.describe("without JavaScript", () => {
       "a comment worth not losing",
     );
 
-    // The document is the endpoint now, so the form's own hidden field —
-    // not the browser's `Referer` — is what sends the retry back to the
-    // post rather than 404ing on a GET of a POST-only route.
+    // The form's hidden field, not `Referer`, sends the retry back to the
+    // post; otherwise it would GET the POST-only route and 404.
     await page.fill(control("name"), "Grace Hopper");
     await Promise.all([
       page.waitForURL(`**/posts/${fixtures.nojsSlug}`),

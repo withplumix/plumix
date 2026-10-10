@@ -42,25 +42,17 @@ declare module "./hooks/types.js" {
 
   interface ActionRegistry {
     /**
-     * Boot-time handover of the theme's own descriptor, fired once after
-     * plugins install and before core aggregates anything — so a subscriber
-     * that registers off the back of what it read is still in time for every
-     * registry below.
-     *
-     * An action rather than a filter, because the descriptor is not the
-     * plugin's to rewrite, and because `applyFilter` structured-clones its
-     * input — which a descriptor carrying template components cannot survive.
+     * Fires before core aggregates anything, so a subscriber registering off
+     * it is in time. An action, not a filter: `applyFilter` structured-clones,
+     * which template components can't survive.
      */
     "theme:ready": (theme: ThemeDescriptor) => void | Promise<void>;
   }
 }
 
 /**
- * Discriminated union of every data shape a template can receive. Per-kind
- * templates (`entry`, `entryType`, …) narrow via the registry; a template that
- * receives the whole union (like `index`) discriminates on the `kind` field —
- * a `switch (data.kind)` gets exhaustiveness, or use the `isEntry`/`isTerm`/…
- * guards below for single-branch checks.
+ * A template receiving the whole union discriminates on `kind`, or uses the
+ * `isEntry`/`isTerm`/… guards for single-branch checks.
  */
 export type TemplateData =
   | EntryData
@@ -107,19 +99,16 @@ export function isError(data: TemplateData): data is ErrorData {
 
 export type TemplateComponent<Data> = ComponentType<{ readonly data: Data }>;
 
-// Per-slot entry type: either the legacy plain-function form
-// (`TemplateComponent<T>`) or a `Template<T>` built via `defineTemplate`.
-// The `normalizeTemplate` boot-time helper accepts both and rejects
-// hand-written `{ render }` literals that didn't go through the factory.
+/**
+ * `normalizeTemplate` rejects hand-written `{ render }` literals that didn't go
+ * through `defineTemplate`.
+ */
 export type TemplateEntry<Data extends TemplateData> =
   TemplateComponent<Data> | Template<Data>;
 
 /**
- * The fixed set of generic tiers a theme's `templates` array can declare. Each
- * page-kind tier (`entry`, `entryType`, `term`, `author`, `date`, `frontPage`,
- * `search`) serves the resolved node of the same kind, plus `fallback`
- * (the universal catch-all) and the `notFound`/`serverError` condition handlers.
- * Type/term-specific matchers arrive in a later slice.
+ * Each page-kind tier serves the resolved node of the same kind; `fallback`
+ * catches everything, `notFound`/`serverError` handle conditions.
  */
 export type GenericTier =
   | "fallback"
@@ -134,10 +123,8 @@ export type GenericTier =
   | "serverError";
 
 /**
- * How a targeted rule (from `forEntryType`/`forTermTaxonomy`/`forAuthor`/
- * `forDate`) matches a resolved node: by node kind + type name, optionally
- * narrowed. Author matchers use a fixed `type` of `"author"`; date matchers use
- * `"date"` and narrow by `year`/`month`/`day` instead of `slug`/`id`.
+ * Author matchers use `type: "author"`; date matchers use `"date"` and narrow
+ * by `year`/`month`/`day`.
  */
 export interface TargetMatcher {
   readonly nodeKind: Exclude<ResolvedNode["kind"], "frontPage" | "search">;
@@ -159,10 +146,8 @@ export interface TargetMatcher {
 }
 
 /**
- * The part of a rule that resolution reads: a generic `tier` or a targeted
- * `match` — exactly one, as the builders never produce both. Payload-free, so
- * any rule kind declared against the node hierarchy resolves through the one
- * `resolveRule` instead of carrying its own copy of the precedence walk.
+ * Exactly one of `tier` or `match`. Payload-free, so any rule kind resolves
+ * through `resolveRule` instead of copying the precedence walk.
  */
 export interface TierMatchRule {
   readonly tier?: GenericTier;
@@ -186,20 +171,15 @@ export interface ThemeDescriptor extends TemplateDepDeclarations {
    */
   readonly templates: readonly TemplateRule[] | TemplateEntry<TemplateData>;
   /**
-   * Presentation blocks the theme owns (charts, callouts, …), declared
-   * statically like {@link ThemeDescriptor.shortcodes} (themes have no setup
-   * hook). They merge into the per-app block registry at `buildApp` with the
-   * highest precedence (core < plugin < theme) — the most site-specific layer
-   * wins.
+   * Merged into the block registry with the highest precedence (core < plugin <
+   * theme).
    */
   readonly blocks?: readonly BlockSpec[];
   readonly document?: DocumentManifest;
   readonly tokens?: ThemeTokens;
   /**
-   * Responsive breakpoints (max-width px) for the `tablet`/`mobile` buckets.
-   * Feed both the SSR style emitter's @media maxima and the editor's
-   * device-switch canvas widths, so preview equals shipped. Defaults to
-   * `DEFAULT_BREAKPOINTS` (991/640) when unspecified.
+   * Max-width px. Feeds both the SSR `@media` maxima and the editor canvas
+   * widths, so preview equals shipped.
    */
   readonly breakpoints?: ThemeBreakpoints;
   /**
@@ -209,19 +189,13 @@ export interface ThemeDescriptor extends TemplateDepDeclarations {
    */
   readonly shortcodes?: readonly ShortcodeSpec[];
   /**
-   * Public-route redirects the theme owns — declared statically, like
-   * {@link ThemeDescriptor.shortcodes} (themes have no setup hook). Use for
-   * URL-structure moves that belong to the theme itself (e.g. `/post/:slug` →
-   * `/blog/:slug`). These merge behind the site's `config.redirects` and
-   * plugin-registered redirects (theme loses a tie). See {@link RedirectRule}.
+   * Merged behind `config.redirects` and plugin redirects; the theme loses a
+   * tie.
    */
   readonly redirects?: readonly RedirectRule[];
   /**
-   * Paths (relative to the project root or aliased) to CSS / asset files
-   * that should ship as client bundles. Mirror of Nuxt's `css: []` — the
-   * strings never enter jiti's module graph; the plumix Vite plugin
-   * generates a synthetic client entry that imports each path so Vite
-   * resolves them through its normal graph and emits hashed bundles.
+   * Never enters jiti's module graph: the Vite plugin generates a client entry
+   * importing each path, so Vite emits hashed bundles.
    */
   readonly css?: readonly string[];
   /**
@@ -231,9 +205,8 @@ export interface ThemeDescriptor extends TemplateDepDeclarations {
    */
   readonly viewTransitions?: ViewTransitionsInput;
   /**
-   * The theme's look for mails it did not declare, by mail name: any of a
-   * mail's `subject`, `text` and `html`. A site's `mail.overrides` win over
-   * these, and these over the declaring owner's own.
+   * By mail name. A site's `mail.overrides` win over these, and these over
+   * the declaring owner's own.
    */
   readonly mail?: MailOverrides;
 }
@@ -265,11 +238,10 @@ export function defineTheme(descriptor: ThemeDescriptor): ThemeDescriptor {
   return descriptor;
 }
 
-// Post-filter validation: catches malformed contributions at boot
-// (before any request can render). Validates the two cases the renderer
-// can't recover from gracefully — link entries without `rel` (browsers
-// ignore them, invalid HTML) and scripts with no src + no inline body
-// (dead weight, signals a plugin bug worth surfacing loud).
+/**
+ * Catches at boot the two cases the renderer can't recover from: a link with
+ * no `rel`, and a script with neither `src` nor body.
+ */
 export function validateDocumentManifest(manifest: DocumentManifest): void {
   manifest.link?.forEach((entry, index) => {
     if (typeof entry.rel !== "string" || entry.rel.length === 0) {

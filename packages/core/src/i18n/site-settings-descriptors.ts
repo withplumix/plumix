@@ -1,9 +1,9 @@
 import type { MessageDescriptor } from "@lingui/core";
 
-// Descriptors core renders for the built-in site settings. They resolve
-// inside the admin SPA via the manifest cascade (`i18n._`), so admin's
-// catalogs own the translations — `core-settings-i18n.ts` mirrors these
-// ids for extraction, lockstep-guarded. Exported to back that test.
+/**
+ * Exported for the lockstep test with admin's extraction mirror, since admin's
+ * catalogs own the translations.
+ */
 export const SITE_SETTINGS_DESCRIPTORS = {
   groupLabel: {
     id: "core.settings.site.label",

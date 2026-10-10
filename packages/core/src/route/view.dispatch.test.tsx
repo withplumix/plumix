@@ -19,7 +19,9 @@ declare module "../template-registry.js" {
   }
 }
 
-// `/compare/:id` resolves a share the visitor was sent; `missing` names none.
+/**
+ * `/compare/:id` resolves a share the visitor was sent; `missing` names none.
+ */
 const comparePlugin = definePlugin("compare", (ctx) => {
   ctx.registerView("compareShare", {
     routes: ["/compare/:id"],
@@ -34,7 +36,7 @@ const comparePlugin = definePlugin("compare", (ctx) => {
   });
 });
 
-// A CDN whose store records every write.
+/** A CDN whose store records every write. */
 function recordingCdn() {
   const put = vi.fn<CdnStore["put"]>(() => Promise.resolve());
   const cdn: ConnectedCdn = {

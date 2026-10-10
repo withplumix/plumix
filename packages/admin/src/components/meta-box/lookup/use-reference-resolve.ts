@@ -6,20 +6,16 @@ import type { JsonObject } from "@plumix/core";
 
 import type { LookupItem } from "./types.js";
 
-// Per-id outcome of resolving a selected reference. `pending` covers the
-// window between mount and the first settled resolve, so a picker never
-// flashes "missing"; `orphan` means the resolve settled with no matching
-// row (the target was deleted or fell out of scope).
+/**
+ * `pending` keeps a picker from flashing "missing" before the first resolve
+ * settles.
+ */
 export type ResolvedReference =
   | { readonly status: "found"; readonly item: LookupItem }
   | { readonly status: "pending" }
   | { readonly status: "orphan" };
 
-// Resolves already-selected reference ids to their display rows through a
-// single batched `lookup.list` call, skipping ids the read-time hydration
-// already covered (`initialSelected`, #1507). The single and multi reference
-// pickers share this — the single picker passes a one-element `ids` — so the
-// resolve strategy and the found/pending/orphan tri-state live in one place.
+/** One batched call, skipping ids `initialSelected` already covers. */
 export function useReferenceResolve({
   kind,
   scope,

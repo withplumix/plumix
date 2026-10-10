@@ -46,8 +46,10 @@ function wrapper({ children }: { children: ReactNode }): ReactNode {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
-// A title field whose current value the test sets directly — the group reads
-// it at write time, as a route reads its refs.
+/**
+ * A title field whose current value the test sets directly — the group reads
+ * it at write time, as a route reads its refs.
+ */
 function titleField(initial = "Hello"): {
   value: string;
   readonly group: AutosaveGroup<string>;

@@ -1,8 +1,5 @@
-// The playground theme opts into native view transitions, and core's head
-// script adds the navigation's direction to each one. The init script keeps
-// the view transition of every reveal (`null` when the navigation had none);
-// the direction script's listener runs after it, so the test reads the live
-// `types` set once that has happened.
+// The direction script's listener runs after the init script, so the test
+// reads the live `types` set once that has happened.
 
 import type { Page } from "@playwright/test";
 import { expect, test } from "plumix/test/playwright";
@@ -28,9 +25,10 @@ async function recordReveals(page: Page): Promise<void> {
   });
 }
 
-// The types of the current document's last revealed view transition, or null
-// while the document has not been revealed yet, so a poll keeps waiting. A
-// reveal without a transition throws here, which fails the test.
+/**
+ * Null while the document has not been revealed, so a poll keeps waiting; a
+ * reveal without a transition throws, failing the test.
+ */
 async function lastRevealTypes(page: Page): Promise<string[] | null> {
   return page.evaluate(() => {
     const { transitions } = (
@@ -44,7 +42,7 @@ async function lastRevealTypes(page: Page): Promise<string[] | null> {
   });
 }
 
-// How many reveals the current document had, and its last view transition.
+/** How many reveals the current document had, and its last view transition. */
 async function reveals(
   page: Page,
 ): Promise<{ count: number; last: RevealedTransition | null | undefined }> {

@@ -9,10 +9,8 @@ export interface FetchOptions {
   readonly headers?: HeadersInit;
   readonly body?: BodyInit;
   /**
-   * JSON body. Mutually exclusive with `body`. Sets content-type to
-   * application/json and serialises via JSON.stringify. A call to an RPC
-   * procedure through `fetch` carries the oRPC envelope itself
-   * (`{ json: input }`); `createRpcHarness`'s client handles the wire format.
+   * JSON body, exclusive with `body`. An RPC call through `fetch` carries the
+   * oRPC `{ json: input }` envelope itself.
    */
   readonly json?: unknown;
   /**
@@ -33,14 +31,9 @@ export interface FetchOptions {
  */
 export interface HarnessFetchOptions extends FetchOptions {
   /**
-   * The client address the runtime reports for this one request — what a real
-   * adapter varies between visitors. Wins over the harness's own
-   * `clientAddress`.
-   *
-   * It lives here rather than on {@link FetchOptions} because `buildRequest`
-   * could not honour it: an address is a fact the runtime supplies alongside a
-   * request, never a header on it. The harness reads it when it builds the
-   * context.
+   * This request's client address, winning over the harness's. Not on
+   * `FetchOptions` because the runtime supplies an address beside a request,
+   * never as a header.
    */
   readonly clientAddress?: string;
 }
@@ -98,17 +91,8 @@ export async function buildRequest(
 }
 
 /**
- * Wraps a Response with chainable assertion helpers. Returned from
- * harness.fetch() — callers never construct this directly.
- *
- * Surface intentionally minimal: assertions land here when a test
- * actually needs them. `deepEqual` / `partialMatch` are exported
- * from `./match.js` for body-shape checks. Earlier this class
- * shipped with `assertJson`, `assertJsonMatch`, `assertBodyContains`,
- * `assertRedirect`, `assertHeader`, plus `raw` / `status` getters —
- * nothing called them, so they were removed under the
- * "address fallow dead-code" pass. Re-add a method when you write
- * the first test that needs it.
+ * Wraps a Response with chainable assertions; returned from `harness.fetch()`.
+ * Add a method when a test first needs it.
  */
 export class TestResponse {
   readonly #response: Response;
@@ -121,11 +105,8 @@ export class TestResponse {
     this.#bodyText = response.clone().text();
   }
 
-  // The five members below are consumed only from *.test.ts files;
-  // fallow's class-member analyser treats test files as terminal
-  // entry points (not usage sites), so it flags everything as unused
-  // even though the passkey-routes test suite calls them directly.
-  // Per-line suppressions document the consumer.
+  // fallow treats test files as terminal entry points, so it flags these
+  // test-only members as unused.
 
   // fallow-ignore-next-line unused-class-member
   get headers(): Headers {
@@ -166,10 +147,9 @@ export class TestResponse {
   }
 
   /**
-   * Assert the request rendered through the named template rule. `name` is
-   * the matched rule's label, as the debug bar's template panel shows it: its
-   * tier (`fallback`, `entry`, ...) or, for a targeted rule, `post`,
-   * `post:hello`, `post#12`, `archive:post`.
+   * Assert the request rendered through the named template rule, labelled as
+   * the debug bar shows it: a tier like `fallback`, or `post:hello`, `post#12`,
+   * `archive:post`.
    */
   // fallow-ignore-next-line unused-class-member
   assertTemplate(name: string): this {

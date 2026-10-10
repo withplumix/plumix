@@ -5,10 +5,9 @@ import { definePlugin, loadSiteSettings } from "plumix/plugin";
 import { applyFeedDiscovery } from "./discovery.js";
 import { FEED_TAG, handleFeed } from "./respond.js";
 import { feedRoutes } from "./routes.js";
-// Augmentation anchors. A `declare module "plumix"` block reaches a consumer
-// only if the module declaring it is in this package's declaration graph, and
-// naming them here is what stops that riding on which types the exports below
-// happen to mention.
+// A `declare module "plumix"` block reaches a consumer only if its module is in
+// this package's declaration graph, so the augmenting modules are imported
+// explicitly.
 import "./archive.js"; // ListingArchiveTypeOptions.feed
 import "./items.js"; // feed:items
 
@@ -18,15 +17,8 @@ export type { FeedChannel, FeedFormat, FeedItem } from "./serialize.js";
 export { FEED_LIMIT } from "./items.js";
 
 /**
- * `@plumix/plugin-feeds` — RSS 2.0 and Atom for every archive: the front
- * page, an entry type, a taxonomy term, an author, a date period, and any
- * archive a plugin registered with `feed: true`. A feed is its archive's own
- * entry query, read newest first (ADR 0008).
- *
- * Routes are claimed in `afterSetup`, once every archive is registered, beside
- * each route core lists the archive at — so a path this plugin does not claim
- * still renders as content. Each page's own feed is advertised through
- * `render:document`, gap-filling around whatever the theme already declared.
+ * RSS 2.0 and Atom for every archive; a feed is its archive's own entry query,
+ * newest first.
  */
 export function feeds(): PluginDescriptor {
   return definePlugin("feeds", {

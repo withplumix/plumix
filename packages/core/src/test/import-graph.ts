@@ -3,23 +3,9 @@ import * as path from "node:path";
 import ts from "typescript";
 
 /**
- * Static reading of core's own import graph, for the suites that assert a
- * property of the graph rather than of a running program: what a cold start
- * pays for (`runtime/cold-path.test.ts`), which direction the dev debug
- * layers may import in (`dev/debug-layers.test.ts`), and whether core keeps
- * its layer table (`layers.test.ts`).
- *
- * Deliberately a source-text walk rather than a bundler or a loaded module.
- * Core ships as unbundled `tsc` output, so the only thing keeping a graph out
- * of a consumer's chunk is the absence of a static import in the text — which
- * is exactly what this reads. Loading the modules instead would answer a
- * different question and would run their side effects.
- *
- * The two callers mean different things by "an edge", so the split below is
- * three-way rather than two. A cost question counts what *links*, and a
- * type-only import links nothing. A direction question counts what the module
- * *names*: `import type` is still a dependency, and erasing it is the cheapest
- * way to point a layer back at one above it without any of this noticing.
+ * A source-text walk, not a bundler: core ships unbundled `tsc` output, so a
+ * static import in the text is exactly what pulls a graph into a consumer's
+ * chunk.
  */
 export interface FileImports {
   /** Specifiers that link the module at load: `import`, and `export … from`. */
@@ -30,10 +16,10 @@ export interface FileImports {
   readonly typeOnly: readonly string[];
 }
 
-// Only a whole-statement `import type` is erased. Inline specifiers do not
-// count: under `verbatimModuleSyntax` TS keeps the statement and emits
-// `import {} from "…"`, which still loads the module and drags its graph
-// along. `import defer` counts as static too — a deferred module is linked.
+/**
+ * Only a whole-statement `import type` is erased; under `verbatimModuleSyntax`
+ * inline type specifiers still emit `import {}`, which loads the module.
+ */
 function isErased(clause: ts.ImportClause | undefined): boolean {
   return clause?.phaseModifier === ts.SyntaxKind.TypeKeyword;
 }
@@ -85,9 +71,8 @@ export function importsOf(file: string): FileImports {
 }
 
 /**
- * The file a specifier names, or undefined when it leaves core. Only relative
- * specifiers can re-enter core's own graph; a bare specifier is a leaf as far
- * as these walks are concerned.
+ * The file a specifier names, or undefined when it leaves core; only relative
+ * specifiers can re-enter core's graph.
  */
 export function resolveWithinCore(
   from: string,
@@ -126,10 +111,8 @@ export function edgesOf(file: string): readonly ImportEdge[] {
 }
 
 /**
- * Maps each file reachable from `entries` through `next` to the one that
- * reached it, so a failure can name the chain instead of only the
- * destination. Breadth-first, so that chain is the shortest one — the longest
- * is rarely the one worth deleting.
+ * Maps each file reachable from `entries` to the one that reached it,
+ * breadth-first, so a failure names the shortest chain.
  */
 export function closureOf(
   entries: readonly string[],
@@ -151,7 +134,9 @@ export function closureOf(
   return importedBy;
 }
 
-/** The chain `closure` reached `file` by, entry first; undefined if it didn't. */
+/**
+ * The chain `closure` reached `file` by, entry first; undefined if it didn't.
+ */
 export function chainTo(
   closure: ReadonlyMap<string, string | undefined>,
   file: string,
@@ -178,9 +163,8 @@ export function staticClosureOf(
 }
 
 /**
- * The groups of `nodes` that all reach each other through `next` — each one a
- * cycle, or several sharing members. Groups of one are left out: a node
- * reaching itself is not a cycle between two of them. Tarjan's algorithm.
+ * Groups of `nodes` that all reach each other through `next` (Tarjan's
+ * algorithm); groups of one are left out.
  */
 export function cyclesAmong(
   nodes: readonly string[],

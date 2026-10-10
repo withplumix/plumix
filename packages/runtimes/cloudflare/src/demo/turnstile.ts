@@ -30,10 +30,8 @@ export async function verifyTurnstile(
 }
 
 /**
- * Turnstile widget markup + script for the loading page. The success callback
- * starts init; the error/timeout/expired callbacks (and the script's `onerror`,
- * for a blocked `api.js`) fall back to the retry page so a visitor whose
- * challenge fails to load is never left hanging.
+ * Every failure callback, and the script's `onerror` for a blocked `api.js`,
+ * falls back to the retry page.
  */
 export function renderTurnstileWidget(siteKey: string): string {
   return `<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer onerror="plumixDemoTurnstileError()"></script>

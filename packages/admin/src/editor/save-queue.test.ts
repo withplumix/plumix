@@ -2,8 +2,10 @@ import { describe, expect, test } from "vitest";
 
 import { createSaveQueue } from "./save-queue.js";
 
-// A controllable async task: exposes when it started and a `resolve`/`reject`
-// the test drives so overlap can be observed deterministically.
+/**
+ * A controllable async task: exposes when it started and a `resolve`/`reject`
+ * the test drives so overlap can be observed deterministically.
+ */
 function deferred<T = void>() {
   let resolve!: (value: T) => void;
   let reject!: (reason: unknown) => void;

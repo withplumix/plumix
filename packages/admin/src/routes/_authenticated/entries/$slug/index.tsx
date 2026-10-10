@@ -69,17 +69,19 @@ type Term = WithResolvedMeta<StoredTerm>;
 
 const PAGE_SIZE = 20;
 
-// A row's Trash and Delete sit in a line of text links, so they take the
-// Button's destructive-row treatment without its box.
+/**
+ * A row's Trash and Delete sit in a line of text links, so they take the
+ * Button's destructive-row treatment without its box.
+ */
 const rowDestructiveClassName = cn(
   buttonVariants({ variant: "destructive-row", size: "xs" }),
   "h-auto p-0 font-normal hover:bg-transparent dark:hover:bg-transparent",
 );
 
-// Mirrors `EntryStatus` from core's schema; kept local as a runtime array so
-// the valibot picklist stays tree-shakeable (importing the core runtime
-// symbol would pull drizzle into the admin bundle). The type import above
-// keeps the two in lockstep — a drift would break compilation.
+/**
+ * Local: importing core's runtime symbol would pull drizzle into the admin
+ * bundle.
+ */
 const ENTRY_STATUSES: readonly EntryStatus[] = [
   "draft",
   "published",
@@ -89,11 +91,10 @@ const ENTRY_STATUSES: readonly EntryStatus[] = [
 const STATUS_FILTER_VALUES = [...ENTRY_STATUSES, "all"] as const;
 type StatusFilter = (typeof STATUS_FILTER_VALUES)[number];
 
-// Local copy of core's `ENTRY_LIST_ORDER_COLUMNS` to keep the valibot
-// picklist tree-shakeable (same rationale as `ENTRY_STATUSES` above —
-// importing the core runtime symbol would pull drizzle into the admin
-// bundle). Must stay in sync with `entryListInputSchema.orderBy`; a drift
-// would fail server-side validation at runtime, not compile time.
+/**
+ * Local copy of `ENTRY_LIST_ORDER_COLUMNS`; unlike above, drift fails only at
+ * runtime, server-side.
+ */
 const ORDER_BY_VALUES = [
   "updated_at",
   "published_at",
@@ -112,9 +113,11 @@ type Order = (typeof ORDER_VALUES)[number];
 const AUTHOR_VALUES = ["all", "mine"] as const;
 type AuthorFilter = (typeof AUTHOR_VALUES)[number];
 
-// `looseObject` keeps unknown keys verbatim so per-taxonomy filters
-// land on the URL as `?category=foo&tag=bar` without requiring the
-// schema to enumerate every taxonomy a plugin might register.
+/**
+ * `looseObject` keeps unknown keys verbatim so per-taxonomy filters
+ * land on the URL as `?category=foo&tag=bar` without requiring the
+ * schema to enumerate every taxonomy a plugin might register.
+ */
 const searchSchema = v.looseObject({
   page: v.optional(
     v.fallback(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
@@ -230,12 +233,6 @@ const M = {
     message: "Trashing…",
     context: "action verb",
   }),
-  // Search placeholder / load error / loading aria / taxonomy filter
-  // chrome resolve via the WP-style cascade — `labels[<key>]` when the
-  // plugin author declared it, else the noun-less generic descriptor
-  // exported from `type-labels.ts`. The deleted substitution patterns
-  // ("Search {pluralLower}…" etc.) broke morphology in DE/RU/PL/UK/AR
-  // and improperly lowercased translated nouns.
   trashingMove: defineMessage({
     id: "entries.list.trashDialog.moving",
     message: "Moving…",
@@ -477,10 +474,6 @@ function buildColumns({
 
 export const Route = createFileRoute("/_authenticated/entries/$slug/")({
   validateSearch: (search) => v.parse(searchSchema, search),
-  // Resolve the manifest entry in `beforeLoad` so the route component never
-  // has to handle a missing post type. `notFound()` is TanStack Router's
-  // control-flow throw — it bubbles up to the nearest `notFoundComponent`,
-  // which the admin renders as a generic 404.
   beforeLoad: ({ params }): { entryType: EntryTypeManifestEntry } => {
     const entryType = findEntryTypeBySlug(params.slug);
     if (!entryType) {
@@ -492,8 +485,10 @@ export const Route = createFileRoute("/_authenticated/entries/$slug/")({
   component: ContentListRoute,
 });
 
-// Parse comma-separated URL values (`?category=foo,bar`) into the slug
-// array the server expects for multi-term filtering.
+/**
+ * Parse comma-separated URL values (`?category=foo,bar`) into the slug
+ * array the server expects for multi-term filtering.
+ */
 function parseTermFilters(
   search: Readonly<v.InferOutput<typeof searchSchema>>,
   taxonomyNames: readonly string[],
@@ -520,9 +515,11 @@ interface EntriesListNavActions {
   setSort: (column: OrderBy, defaultDirection: Order) => void;
 }
 
-// useCallback keeps these navigation handlers stable across renders so
-// the `columns` memo (and any future memoised consumers) doesn't
-// invalidate on every tick.
+/**
+ * useCallback keeps these navigation handlers stable across renders so
+ * the `columns` memo (and any future memoised consumers) doesn't
+ * invalidate on every tick.
+ */
 function useEntriesListNavActions(): EntriesListNavActions {
   const navigate = Route.useNavigate();
   const setStatus = useCallback(
@@ -587,9 +584,6 @@ function useEntriesListNavActions(): EntriesListNavActions {
   return { setStatus, setPage, setSearch, setAuthor, setTermFilter, setSort };
 }
 
-// The list's mutation + selection surface: the four single-row actions (each
-// with its confirm-dialog state), page-scoped bulk selection, and the three
-// bulk actions. Split out of ContentListRoute so the component reads as render.
 function useEntryListActions({
   entryType,
   rows,
@@ -698,11 +692,7 @@ function useEntryListActions({
     [setPendingDeleteId],
   );
 
-  // ── Bulk selection ──────────────────────────────────────────────
-  // Selection is page-scoped by construction: `selectedIds` intersects
-  // the row-selection map with the currently-visible rows, so a tick left
-  // over from a prior page / filter can never ride into a bulk action —
-  // no reset-on-change effect needed.
+  // Intersecting with visible rows keeps a stale tick out of bulk actions.
   const { i18n } = useLingui();
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const selectedIds = useMemo(() => {
@@ -809,18 +799,13 @@ function ContentListRoute(): ReactNode {
   // undefined; memoize so the `selectedIds` useMemo below keeps a stable dep.
   const rows: readonly Entry[] = useMemo(() => query.data ?? [], [query.data]);
   const canPrev = search.page > 1;
-  // Heuristic "next exists": a full page came back. Imprecise when total is an
-  // exact multiple of PAGE_SIZE — the user sees an extra empty page. `entry.list`
-  // doesn't expose a total count today; accept the edge case until it does.
+  // `entry.list` has no total, so an exact multiple of PAGE_SIZE shows one
+  // empty page.
   const canNext = rows.length === PAGE_SIZE;
 
   const renderLabel = useLabel();
   const pluralLabel = renderLabel(entryType.labels?.plural ?? entryType.label);
 
-  // Capability gate for the "New" button, under the namespace the manifest
-  // resolved for the type. Missing the cap? Hide the button — the new-post
-  // route also redirects on `beforeLoad` but we shouldn't surface the button
-  // at all.
   const createCapability = entryTypeCapability(entryType, "create");
   const canCreate = hasCap(user.capabilities, createCapability);
   const deleteCapability = entryTypeCapability(entryType, "delete");
@@ -1095,9 +1080,11 @@ function ContentListRoute(): ReactNode {
   );
 }
 
-// If the user clicks the already-active column, flip direction;
-// otherwise pick the caller's sensible default (asc for alphabetical,
-// desc for date-ish).
+/**
+ * If the user clicks the already-active column, flip direction;
+ * otherwise pick the caller's sensible default (asc for alphabetical,
+ * desc for date-ish).
+ */
 function nextSortOrder(
   isActiveColumn: boolean,
   currentOrder: Order,
@@ -1107,9 +1094,11 @@ function nextSortOrder(
   return currentOrder === "asc" ? "desc" : "asc";
 }
 
-// Three visual states: inactive (generic updown icon), active-asc (up),
-// active-desc (down). The icon doubles as the a11y hint via the button's
-// aria-label on the parent.
+/**
+ * Three visual states: inactive (generic updown icon), active-asc (up),
+ * active-desc (down). The icon doubles as the a11y hint via the button's
+ * aria-label on the parent.
+ */
 function SortIndicator({
   isActive,
   order,
@@ -1166,9 +1155,11 @@ function SortableHeader({
   );
 }
 
-// WP-style title cell: title (clickable), slug, then a row-action
-// strip below. Actions reserve vertical space always (`invisible`
-// rather than `hidden`) so hover doesn't reflow the row.
+/**
+ * WP-style title cell: title (clickable), slug, then a row-action
+ * strip below. Actions reserve vertical space always (`invisible`
+ * rather than `hidden`) so hover doesn't reflow the row.
+ */
 function TitleCell({
   entry,
   adminSlug,
@@ -1308,7 +1299,7 @@ function TitleCell({
   );
 }
 
-// Pill-style status filter (shadcn ToggleGroup, single-select).
+/** Pill-style status filter (shadcn ToggleGroup, single-select). */
 function StatusViews({
   value,
   onChange,
@@ -1343,14 +1334,18 @@ function StatusViews({
   );
 }
 
-// Stable empty array reference — react-query returns a fresh `[]`
-// fallback on every render when `data` is undefined, which breaks
-// useMemo identity in `TaxonomyFilter`.
+/**
+ * Stable empty array reference — react-query returns a fresh `[]`
+ * fallback on every render when `data` is undefined, which breaks
+ * useMemo identity in `TaxonomyFilter`.
+ */
 const EMPTY_TERMS: readonly Term[] = [];
 
-// Stable fallback for `entryType.termTaxonomies ?? ...` so the array
-// identity stays put across renders (otherwise `useMemo([..., names])`
-// invalidates every tick when termTaxonomies is undefined).
+/**
+ * Stable fallback for `entryType.termTaxonomies ?? ...` so the array
+ * identity stays put across renders (otherwise `useMemo([..., names])`
+ * invalidates every tick when termTaxonomies is undefined).
+ */
 const EMPTY_TAXONOMY_NAMES: readonly string[] = [];
 
 const AUTHOR_FILTER_OPTIONS: readonly {
@@ -1427,9 +1422,8 @@ function TaxonomyFilter({
   const allLabel = renderLabel(termTaxonomyLabelOr(taxonomy, "allItems"));
   const searchLabel = renderLabel(termTaxonomyLabelOr(taxonomy, "searchItems"));
   const emptyLabel = renderLabel(termTaxonomyLabelOr(taxonomy, "noMatch"));
-  // Purpose label for the trigger (a role="combobox" takes its name from the
-  // author). Mirrors the sibling author/status filters; not the "All …"
-  // placeholder, which would read as the empty state, not what it filters.
+  // Not the "All …" placeholder, which would name the empty state, not the
+  // filter.
   const filterLabel = renderLabel(
     termTaxonomyLabelOr(taxonomy, "filterByItem"),
   );

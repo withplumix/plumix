@@ -9,9 +9,9 @@ import { basename, join } from "node:path";
 export interface RuntimeE2E {
   readonly packageName: string;
   /**
-   * Command prefix the playground's `plumix` CLI steps run through, in place
-   * of `pnpm exec plumix` — for a runtime whose CLI must run on a runtime
-   * other than the one pnpm's shim starts. Relative to the playground.
+   * Command prefix for the playground's `plumix` CLI steps, replacing `pnpm
+   * exec plumix`, for a CLI that must run on another runtime. Relative to the
+   * playground.
    */
   readonly cli?: string;
   /** Paths, relative to the playground, wiped before the server starts. */
@@ -39,20 +39,17 @@ function readPackageJson(path: string): PackageJson {
   return JSON.parse(readFileSync(path, "utf8")) as PackageJson;
 }
 
-// A dependency pnpm did not link into the playground's own node_modules is
-// not the runtime; the playground's own manifest failing to read is an error
-// in its own right and stays one.
+/**
+ * An unlinked dependency is simply not the runtime; the playground's own
+ * manifest failing to read stays an error.
+ */
 function readDependencyPackageJson(path: string): PackageJson | null {
   return existsSync(path) ? readPackageJson(path) : null;
 }
 
 /**
- * The `plumix.e2e` block of the runtime package a playground depends on.
- *
- * The runtime is found the way the scaffolder's registry finds it: it is
- * whichever dependency carries a runtime scaffold block. Read through the
- * playground's own `node_modules` rather than the export map, which no
- * runtime exposes its package.json through.
+ * The `plumix.e2e` block of the playground's runtime dependency, read through
+ * its `node_modules` since no runtime exports its package.json.
  */
 export function readRuntimeE2E(playgroundDir: string): RuntimeE2E {
   const own = readPackageJson(join(playgroundDir, "package.json"));
@@ -84,9 +81,8 @@ export function readRuntimeE2E(playgroundDir: string): RuntimeE2E {
 }
 
 /**
- * Absolute path of the playground's database, resolved through the
- * runtime's `plumix.e2e` block. Exactly one file must match: none means the
- * server has not migrated yet, several means the glob is too wide.
+ * The playground database's absolute path. Exactly one file must match: none
+ * means unmigrated, several means the glob is too wide.
  */
 export function resolvePlaygroundDbPath(playgroundDir: string): string {
   const { packageName, database } = readRuntimeE2E(playgroundDir);

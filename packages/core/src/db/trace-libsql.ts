@@ -8,8 +8,10 @@ import type {
 import type { TracedQuery } from "./trace.js";
 import { traceDbBatch, traceDbQuery } from "./trace.js";
 
-// drizzle binds positionally; named-args objects are a direct-client shape
-// this wrap never sees, so they degrade to "no params".
+/**
+ * drizzle binds positionally; named-args objects are a direct-client shape
+ * this wrap never sees, so they degrade to "no params".
+ */
 const stmtQuery = (stmt: InStatement): TracedQuery =>
   typeof stmt === "string"
     ? { sql: stmt, params: [] }
@@ -18,8 +20,10 @@ const stmtQuery = (stmt: InStatement): TracedQuery =>
 const resultRows = (result: ResultSet): number =>
   result.rows.length > 0 ? result.rows.length : result.rowsAffected;
 
-// The query surface a client and a transaction share — the two objects
-// drizzle's libsql session issues statements through.
+/**
+ * The query surface a client and a transaction share — the two objects
+ * drizzle's libsql session issues statements through.
+ */
 interface QueryTarget {
   execute(stmt: InStatement): Promise<ResultSet>;
   batch(stmts: InStatement[], ...rest: never[]): Promise<ResultSet[]>;
@@ -44,25 +48,14 @@ function wrapQueryTarget<T extends QueryTarget>(target: T): T {
 }
 
 /**
- * Wraps a libsql client so every query — `execute`, `batch`, and statements
- * inside an interactive `transaction` — runs through {@link traceDbQuery} /
- * {@link traceDbBatch}: one timed `db: <kind>` span each, with sql/params/rows
- * attributes. Applied unconditionally at adapter construction; without an
- * active collector the spans are no-ops, so production with no telemetry
- * consumer pays nothing.
- *
- * Assumes drizzle's single-argument call convention (`execute(stmt)`,
- * `batch(stmts)`); it forwards only that first argument, so a direct
- * `execute(sql, args)` call would drop its params.
+ * Forwards only the first argument, drizzle's convention, so a direct
+ * `execute(sql, args)` would drop its params.
  */
 export function traceSqlClient(client: Client): Client {
   wrapQueryTarget(client);
 
-  // drizzle runs in-transaction statements through the Transaction object's
-  // own execute/batch — wrap each transaction as it opens.
-  // Only libsql's zero-argument `transaction()` overload is deprecated; the
-  // `transaction(mode)` one this forwards to is current. A bare reference
-  // can't pick an overload, so the rule sees the whole symbol as deprecated.
+  // Only the zero-argument `transaction()` overload is deprecated, but a bare
+  // reference can't pick an overload.
   /* eslint-disable @typescript-eslint/no-deprecated */
   const rawTransaction = client.transaction.bind(client);
   client.transaction = async (mode?: TransactionMode) =>

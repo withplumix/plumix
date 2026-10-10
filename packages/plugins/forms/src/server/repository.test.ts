@@ -28,8 +28,10 @@ import {
 
 const answers = { name: "Ada" };
 
-// The db comes back alongside the context because the date-range reads
-// seed through the factory, which takes the db rather than the context.
+/**
+ * The db comes back alongside the context because the date-range reads
+ * seed through the factory, which takes the db rather than the context.
+ */
 async function contextWithSchema(): Promise<{
   ctx: AppContext;
   db: FormsTestDb;
@@ -110,9 +112,7 @@ describe("insertSubmission", () => {
     expect(await ctx.db.select().from(formLabelSnapshots)).toHaveLength(2);
   });
 
-  // No foreign key holds the pointer, so a direct write can leave one
-  // dangling. Such a row still reaches the inbox — under its raw keys,
-  // which is what an empty snapshot renders as.
+  // No foreign key holds the pointer, so a direct write can leave it dangling.
   test("still reads a row whose snapshot is not there", async () => {
     const { ctx, db } = await contextWithSchema();
     const [row] = await db
@@ -173,11 +173,8 @@ describe("the inbox reads", () => {
     expect(page.nextCursor).toBeNull();
   });
 
-  // Every one of these carries the same `created_at`, so it ties across
-  // the page boundary and a cursor keyed on it would step over whatever
-  // shares the last row's timestamp. The cursor is the `id`. Seeded to
-  // one instant rather than submitted: `unixepoch()` stamps whole
-  // seconds, so a real burst ties only while it misses a tick.
+  // A shared `created_at` ties across the page boundary, so the cursor is the
+  // `id`. Seeded, since `unixepoch()` stamps whole seconds.
   test("pages through a burst of same-second arrivals, reaching every one", async () => {
     const { ctx, db } = await contextWithSchema();
     const stored: FormSubmission[] = [];
@@ -319,11 +316,8 @@ describe("the inbox writes", () => {
 });
 
 /**
- * How SQLite says it would answer the read `run` issues. Taken off the
- * traced span rather than off SQL the test writes out, so the plan
- * asserted below cannot drift from the query `listSubmissions` builds.
- * Only the shape of a statement decides its plan, so the bound values go
- * back purely to make the argument count up.
+ * Read off the traced span so the asserted plan cannot drift from the query
+ * `listSubmissions` builds.
  */
 async function planFor(
   traced: TracedContext,
@@ -350,9 +344,8 @@ async function planFor(
 
 describe("what the inbox's paging costs", () => {
   test("walks an index already in page order, whichever facets are set", async () => {
-    // The harness takes the libsql db explicitly so its client stays in
-    // reach: the plan is read through libsql's own `execute`, which binds
-    // the traced values the way drizzle's raw `sql` cannot.
+    // libsql's own `execute` binds the traced values, which drizzle's raw `sql`
+    // cannot.
     const db = await createTestDb();
     const traced = await createTracedContext({ db });
     await applyFormsSchema(db);
@@ -370,9 +363,8 @@ describe("what the inbox's paging costs", () => {
     const byBoth = await plan(() =>
       listSubmissions(traced.ctx, { ...page, form: "contact", status: "new" }),
     );
-    // The read every page after the first one issues, and the reason the
-    // cursor is the `id`: it narrows the same index walk rather than
-    // asking for a second column to break a tie.
+    // Every later page issues this; the `id` cursor narrows the same index walk
+    // without a tiebreak column.
     const cursored = await plan(() =>
       listSubmissions(traced.ctx, { ...page, form: "contact", cursor: "500" }),
     );

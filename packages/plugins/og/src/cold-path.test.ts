@@ -3,24 +3,28 @@ import * as path from "node:path";
 import ts from "typescript";
 import { describe, expect, test } from "vitest";
 
-// The plugin's main entry — what a site pays for by installing it. The engine
-// is reachable only through the `/takumi` subpath, and the default renderer
-// reaches it through a dynamic import, so the wasm stays off this graph for
-// every install that never renders a card.
+/**
+ * The engine is reachable only via `/takumi` and a dynamic import, so the wasm
+ * stays off this graph for installs that never render a card.
+ */
 const ENTRY = "index.ts";
 const ENGINE = "takumi.ts";
 const ENGINE_LOADER = "./takumi.js";
-// The developer surfaces — preview route and debug-bar panel. Reached only
-// through the `PLUMIX_DEV` branch's dynamic import, so a build drops the
-// branch and the whole module with it.
+/**
+ * The developer surfaces — preview route and debug-bar panel. Reached only
+ * through the `PLUMIX_DEV` branch's dynamic import, so a build drops the
+ * branch and the whole module with it.
+ */
 const DEV = path.join("dev", "index.ts");
 const DEV_LOADER = "./dev/index.js";
 
 const SRC = import.meta.dirname;
 
-// Only a whole-statement `import type` is erased. Under `verbatimModuleSyntax`
-// an inline `import { type X }` keeps the statement and still loads the module,
-// so it counts as static here.
+/**
+ * Only a whole-statement `import type` is erased. Under `verbatimModuleSyntax`
+ * an inline `import { type X }` keeps the statement and still loads the module,
+ * so it counts as static here.
+ */
 function isErased(clause: ts.ImportClause | undefined): boolean {
   return clause?.phaseModifier === ts.SyntaxKind.TypeKeyword;
 }
@@ -87,9 +91,8 @@ function resolveWithinPackage(
 }
 
 /**
- * Every file statically reachable from the entry, mapped to the file that
- * imported it, so a failure names the chain to go delete rather than only its
- * destination. Breadth-first, so the reported chain is the shortest one.
+ * Maps each reachable file to its importer so a failure names the whole chain;
+ * breadth-first, so the chain is the shortest.
  */
 function staticClosure(entry: string): ReadonlyMap<string, string | undefined> {
   const importedBy = new Map<string, string | undefined>([[entry, undefined]]);

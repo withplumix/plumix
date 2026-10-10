@@ -8,14 +8,14 @@ import {
 import { findUnknownConditionDriver } from "./condition.js";
 import { FieldConfigError } from "./errors.js";
 
-// The top-level registrar validates field keys against the meta key rule
-// but doesn't recurse into composite children, so repeater / group enforce
-// it locally — guards row/member-object shape and protects against
-// duplicate-key clobber.
+// The top-level registrar doesn't recurse into composite children, so repeater
+// and group check their own keys here.
 
-// `__proto__` / `constructor` / `prototype` match the key regex but
-// writing them into a fresh object literal mutates the prototype chain.
-// Reject at registration regardless of regex pass.
+/**
+ * `__proto__` / `constructor` / `prototype` match the key regex but
+ * writing them into a fresh object literal mutates the prototype chain.
+ * Reject at registration regardless of regex pass.
+ */
 export const FORBIDDEN_FIELD_KEYS: ReadonlySet<string> = new Set([
   "__proto__",
   "constructor",
@@ -23,11 +23,8 @@ export const FORBIDDEN_FIELD_KEYS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Validate the child fields of a composite field (`repeater` / `group`)
- * at registration: key shape, prototype-pollution guard, uniqueness, and
- * that every condition names a sibling. Nested repeaters and groups are
- * permitted — each composite validates its own immediate children, so
- * arbitrarily deep nesting is covered as each builder is constructed.
+ * Validates only the immediate children; deeper nesting is covered as each
+ * nested builder is constructed.
  */
 export function assertSubFields(
   container: SubFieldContainer,

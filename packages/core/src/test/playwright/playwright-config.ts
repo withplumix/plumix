@@ -8,26 +8,15 @@ import { readRuntimeE2E } from "./runtime-e2e.js";
 
 export interface PlumixE2EConfigOptions {
   /**
-   * Base port the worker / preview listens on. Used to derive `baseURL`
-   * when not explicitly set, and passed through to the baked
-   * `plumix dev --port <port>` so the worker binds where playwright
-   * polls. Suites should pick distinct ports so they can run in
-   * parallel under turbo without colliding. Defaults to `5173`
-   * (vite's default) for back-compat.
-   *
-   * This is a *base*: `PLUMIX_E2E_PORT_OFFSET` shifts it (and every
-   * other port here) so a second checkout can move the whole block off
-   * a busy range without editing any config. See `resolveE2EPort`.
+   * Base port for the worker / preview; derives `baseURL` and is passed to
+   * `plumix dev --port`. Pick distinct ports per suite. Shifted by
+   * `PLUMIX_E2E_PORT_OFFSET`. Defaults to `5173`.
    */
   readonly port?: number;
   /**
-   * Explicit workerd inspector port baked into `plumix dev
-   * --inspector-port <port>`. `@cloudflare/vite-plugin` otherwise
-   * auto-allocates from 9229 upward, which collides when multiple
-   * worker-driven e2e suites boot in parallel under turbo. Suites
-   * should pick distinct ports (convention: mirror the HTTP port —
-   * 3010 ↔ 9310, 3020 ↔ 9320, …). Ignored when `playground` is unset.
-   * Shifted by `PLUMIX_E2E_PORT_OFFSET` like every other port here.
+   * Workerd inspector port for `plumix dev --inspector-port`; the
+   * auto-allocated default collides across parallel suites. Convention: mirror
+   * the HTTP port (3010 ↔ 9310). Shifted like `port`.
    */
   readonly inspectorPort?: number;
   /**
@@ -37,29 +26,15 @@ export interface PlumixE2EConfigOptions {
    */
   readonly configDir?: string;
   /**
-   * Optional path to a playground workspace (relative to `configDir`).
-   * When set, `definePlumixE2EConfig` bakes the standard worker-driven
-   * webServer setup: `plumix migrate fresh` (delete the local state the
-   * runtime's `plumix.e2e.wipe` names, then apply every table owner's shipped
-   * migrations) → run `plumix dev`. Nothing is generated, and nothing outside
-   * the runtime's wipe paths is deleted.
-   * Also auto-wires `globalSetup.ts` and `storageState.json` by convention.
-   * Mutually exclusive with an explicit `webServerCommand`.
-   *
-   * The state wipe belongs to the webServer, so it runs once per suite run
-   * and never per retry. Import `test` from `plumix/test/playwright` and
-   * the `plumixDbBaseline` fixture closes that gap, restoring the
-   * post-`globalSetup` database once per attempt; a suite importing
-   * `@playwright/test` directly still meets whatever its failed attempt
-   * left behind (#1923).
+   * Playground workspace relative to `configDir`. Bakes the webServer (`plumix
+   * migrate fresh` then `plumix dev`) and wires `globalSetup.ts` /
+   * `storageState.json`. Excludes `webServerCommand`.
    */
   readonly playground?: string;
   /**
-   * Whether the specs share the playground's one database. Defaults to
-   * `true`, which pins the suite to one worker and has the
-   * `plumixDbBaseline` fixture snapshot and restore it. Set `false` when the
-   * site never serves from it — e.g. one database created per session at
-   * runtime. Only meaningful when `playground` is set.
+   * Whether specs share the playground's one database (default `true`): pins
+   * one worker and enables the `plumixDbBaseline` fixture. Set `false` for e.g.
+   * per-session databases.
    */
   readonly sharedDatabase?: boolean;
   /** Directory passed through to playwright's `testDir`. Defaults to `'.'`. */
@@ -75,29 +50,18 @@ export interface PlumixE2EConfigOptions {
    */
   readonly webServerCommand?: string;
   /**
-   * Optional. When set, the webServer readiness check waits for the
-   * TCP port to open instead of polling a URL (a request the Plumix
-   * handler answers for a `playground`, else `baseURL`) for a 2xx/3xx
-   * response. Use this when the dev server starts but `/` returns
-   * 404 (e.g. a public-route example whose front page isn't wired) —
-   * waiting on the URL would otherwise time out forever. Pass the same
-   * base as `port`; it is shifted by `PLUMIX_E2E_PORT_OFFSET` too, so
-   * readiness keeps watching the port the server actually binds.
+   * Wait for this TCP port instead of polling a URL, for a dev server whose `/`
+   * 404s. Pass the same base as `port`; it's shifted by the offset too.
    */
   readonly webServerPort?: number;
   /**
-   * Optional shell step to run inside the baked playground command, after
-   * `plumix migrate fresh`, and before `plumix dev` starts.
-   * Use for fixture seeds that need to live in the database before the
-   * server comes up. Only meaningful when `playground` is set.
+   * Shell step run after `plumix migrate fresh` and before `plumix dev`, for
+   * seeds the server needs at boot. Only meaningful with `playground`.
    */
   readonly extraSetup?: string;
   /**
-   * When `playground` is set, the helper auto-wires the worker-driven
-   * `globalSetup.ts` + `storageState.json` convention so the admin
-   * shell is already authenticated when tests start. Pass `false`
-   * here to skip that wiring — useful for public-route specs that
-   * never need an admin session.
+   * Pass `false` to skip the `globalSetup.ts` / `storageState.json`
+   * admin-session wiring, e.g. for public-route specs.
    */
   readonly seedAdminSession?: boolean;
 }
@@ -108,18 +72,9 @@ const PORT_OFFSET_ENV = "PLUMIX_E2E_PORT_OFFSET";
 const DEFAULT_PORT = 5173;
 
 /**
- * Shifts a suite's declared base port by `PLUMIX_E2E_PORT_OFFSET`.
- *
- * Every port in an e2e suite — HTTP, workerd inspector, readiness —
- * moves by the same offset, so the spacing that keeps suites from
- * colliding under a parallel `turbo run test:e2e` is preserved by
- * construction. Unset or blank means no shift, so the baked literals
- * are what runs by default.
- *
- * Exported because the admin-family suites assemble their own
- * `vite preview --port <n> --strictPort` command strings and explicit
- * base URLs, which `definePlumixE2EConfig` never sees. They must
- * resolve through here rather than re-deriving the arithmetic.
+ * Shifts a base port by `PLUMIX_E2E_PORT_OFFSET`, moving every port equally so
+ * suite spacing holds. Exported for admin suites that build their own `vite
+ * preview` commands.
  */
 export function resolveE2EPort(base: number): number {
   const raw = process.env[PORT_OFFSET_ENV];
@@ -133,10 +88,10 @@ export function resolveE2EPort(base: number): number {
   return base + offset;
 }
 
-// Runs the server command as a child and stays in the process group Playwright
-// made for it. Playwright holds the only writer of its stdin, so the pipe ends
-// however the runner dies — a SIGTERM or a SIGKILL skips the teardown that
-// would kill the group — and the group goes with it, port and all (#2808).
+/**
+ * Playwright holds the only writer of the child's stdin, so the pipe closes
+ * however the runner dies, and the process group, port and all, goes with it.
+ */
 const SUPERVISOR = [
   `const { spawn } = require("node:child_process");`,
   `const server = spawn(process.argv[1], { shell: true, stdio: ["ignore", "inherit", "inherit"] });`,
@@ -194,20 +149,8 @@ function playgroundRuntime(
 }
 
 /**
- * Shared Playwright config for plumix e2e suites. Standardises the
- * options every suite wants the same way (chromium-only project,
- * fullyParallel, CI retry/worker tuning, github reporter on CI) and
- * leaves the per-suite knobs — port, playground, testDir, base URL,
- * the build/preview command — as parameters.
- *
- * When `playground` is set, the helper bakes a worker-driven webServer
- * (`plumix migrate fresh` → `plumix dev`) and wires the
- * `globalSetup.ts` / `storageState.json` convention used by the
- * worker-driven plugin e2e pattern. Otherwise the caller supplies
- * `webServerCommand` directly.
- *
- * Used by the admin suites, each plugin and runtime playground suite, and
- * `apps/demo`.
+ * Shared Playwright config for plumix e2e suites: common defaults, with
+ * per-suite port, playground, testDir, base URL and command as parameters.
  */
 export function definePlumixE2EConfig(
   options: PlumixE2EConfigOptions,
@@ -242,10 +185,8 @@ export function definePlumixE2EConfig(
   const baseURL = options.baseURL ?? `${origin}${ADMIN_BASE}/`;
   const isPlayground = options.playground !== undefined;
   const seedAdmin = isPlayground && options.seedAdminSession !== false;
-  // `sharedDatabase: false` is how a playground says its specs never share
-  // one database — apps/demo builds one per session in a Durable Object.
-  // Nothing to pin to one worker, and nothing for the baseline fixture to
-  // snapshot.
+  // `sharedDatabase: false`: specs never share a database (apps/demo has one
+  // per session), so there's nothing to pin or snapshot.
   const hasSharedDb = isPlayground && options.sharedDatabase !== false;
   const runtime =
     options.playground === undefined
@@ -271,15 +212,11 @@ export function definePlumixE2EConfig(
     fullyParallel: true,
     forbidOnly: Boolean(process.env.CI),
     retries: process.env.CI ? 2 : 0,
-    // Tests sharing one mutable D1 race across workers and would each restore
-    // the baseline mid-run (see `test.ts`). Nothing else needs serializing —
-    // this used to pin every suite whenever CI was set.
+    // Tests sharing one mutable D1 would race across workers and each restore
+    // the baseline mid-run.
     workers: hasSharedDb ? 1 : undefined,
-    // On CI: write the HTML report alongside the inline GitHub annotations
-    // so the failure-artifact upload (which globs `**/playwright-report/`)
-    // has something to capture — without `["html"]` it never gets generated.
-    // `open: "never"` keeps `pnpm test:e2e` from trying to launch a browser
-    // post-run on CI.
+    // The failure-artifact upload globs `**/playwright-report/`, so CI writes
+    // the HTML report; `open: "never"` keeps it from launching a browser.
     reporter: process.env.CI
       ? [["list"], ["github"], ["html", { open: "never" }]]
       : [["list"], ["html"]],
@@ -288,10 +225,9 @@ export function definePlumixE2EConfig(
       baseURL,
       trace: "on-first-retry",
       ...(seedAdmin ? { storageState: "./storageState.json" } : {}),
-      // Read by the `plumixDbBaseline` fixture in `test.ts`; inert for a
-      // suite that imports `test` from `@playwright/test`. Stays relative
-      // because the fixture re-resolves it against the config file's
-      // directory, which is what the baked `cd <playground>` uses too.
+      // Read by the `plumixDbBaseline` fixture, which re-resolves this relative
+      // path against the config file's directory, as the baked `cd
+      // <playground>` does.
       plumixPlayground: hasSharedDb ? options.playground : undefined,
     },
     projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
@@ -300,24 +236,13 @@ export function definePlumixE2EConfig(
       ...(options.webServerPort !== undefined
         ? { port: resolveE2EPort(options.webServerPort) }
         : {
-            // The admin shell is a static file `plumix dev` serves before any
-            // server code has loaded, so a suite polling it starts while the
-            // first request through the Plumix handler still has Vite's whole
-            // server-side dependency pre-bundle ahead of it — longer than a
-            // spec's 5s wait on a busy runner (#2756). Readiness is a GET the
-            // handler answers instead: Playwright only probes with a bare GET
-            // and counts 200-403 as up, which rules out the session RPC (405
-            // to anything but POST). The magic-link verify always 302s to the
-            // login page, configured or not, from the lazily loaded auth
-            // routes, and a plugin cannot shadow the path. A custom command
-            // may not run the Plumix handler at all, so it keeps `baseURL`.
+            // The static admin shell answers before Vite's server pre-bundle
+            // finishes, so readiness is a bare GET the handler answers; the
+            // magic-link verify always 302s. Custom commands keep `baseURL`.
             url: isPlayground ? `${origin}${READINESS_PATH}` : baseURL,
           }),
-      // Never adopt whatever already answers on the port. Playwright
-      // does not check that the responder is this suite's build, and
-      // reuse skips the whole command above — the state wipe, the
-      // migrations, the rebuild — so even a legitimately-ours server
-      // means running against stale data and a stale build.
+      // Reuse would skip the state wipe, migrations and rebuild, and Playwright
+      // doesn't check the responder is this suite's server.
       reuseExistingServer: false,
       stdout: "pipe",
       stderr: "pipe",

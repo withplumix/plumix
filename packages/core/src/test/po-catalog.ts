@@ -7,7 +7,7 @@ const ENTRY =
   /^msgid ((?:"(?:[^"\\\n]|\\.)*"(?:\n|$))+)msgstr ((?:"(?:[^"\\\n]|\\.)*"(?:\n|$))+)/gm;
 const PLACEHOLDER = /\{(\w+)\}/g;
 
-// A `.po` string is one or more quoted lines, concatenated.
+/** A `.po` string is one or more quoted lines, concatenated. */
 function unquote(lines: string): string {
   return [...lines.matchAll(/"((?:[^"\\]|\\.)*)"/g)]
     .map((match) => match[1] ?? "")
@@ -15,8 +15,10 @@ function unquote(lines: string): string {
     .replace(/\\(.)/g, (_, char: string) => (char === "n" ? "\n" : char));
 }
 
-// `Hello {name}` → `["Hello ", ["name"]]`, the token array `lingui compile`
-// emits for a message with a placeholder.
+/**
+ * `Hello {name}` → `["Hello ", ["name"]]`, the token array `lingui compile`
+ * emits for a message with a placeholder.
+ */
 function compile(message: string): CompiledCatalog[string] {
   if (!message.includes("{")) return message;
   const tokens: (string | readonly string[])[] = [];
@@ -31,11 +33,9 @@ function compile(message: string): CompiledCatalog[string] {
 }
 
 /**
- * A committed `.po` catalog in the shape `lingui compile` emits. Unit tests
- * resolve every compiled `locales/*` import to an empty catalog, so a test of
- * translated output reads the catalog it shipped. Only `{name}` placeholders
- * compile; an untranslated entry is left out, as compile leaves it to the
- * source.
+ * A committed `.po` catalog compiled as `lingui compile` would, since unit
+ * tests stub compiled catalogs. Only `{name}` placeholders compile;
+ * untranslated entries are omitted.
  */
 export function catalogFromPo(path: URL): CompiledCatalog {
   const po = readFileSync(path, "utf8");

@@ -23,10 +23,8 @@ const PROFILE = {
 describe("resolveOAuthUser — dangling oauth_accounts row", () => {
   test("missing user behind an oauth_accounts row throws link_broken", async () => {
     const db = await createTestDb();
-    // SQLite enforces FKs in our test harness; produce a dangling row by
-    // disabling enforcement just long enough to insert a forward-reference
-    // to a userId that doesn't exist. Mirrors the production-data shape we
-    // care about: a row that the cascade should have deleted but didn't.
+    // A row the cascade should have deleted but didn't; FKs are off only long
+    // enough to insert the dangling reference.
     await db.run(sql`PRAGMA foreign_keys = OFF`);
     await oauthAccountFactory.transient({ db }).create({
       provider: "github",
@@ -307,10 +305,8 @@ describe("resolveOAuthUser — race on concurrent inserts", () => {
       resolveOAuthUser(db, {
         meta: {},
         provider: "github",
-        // Identical email but a *different* providerAccountId — both
-        // would normally try to insert a new user row keyed by that
-        // email. The unique-constraint retry pattern lets the loser
-        // fall through to the email-link branch on attempt #2.
+        // Same email, different providerAccountId: the loser of the insert
+        // race falls through to the email-link branch on retry.
         profile: { ...PROFILE, providerAccountId: "race-2" },
       }),
     ]);

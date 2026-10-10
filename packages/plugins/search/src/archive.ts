@@ -11,11 +11,11 @@ import { runSearch } from "./server/query.js";
 
 const SEARCH_ARCHIVE_NAME = "search";
 
-// Core's own search rules sit at priority 5, and lower wins. Claiming their
-// patterns below that is what replaces the page. Where the site keeps core's
-// search routes they stay compiled behind these, so uninstalling the plugin
-// restores them with nothing to undo; where it turned them off, these are the
-// only rules at the patterns.
+/**
+ * Core's search rules sit at priority 5 and lower wins, so these shadow them
+ * while core's stay compiled behind, restored on uninstall with nothing to
+ * undo.
+ */
 const SHADOW_PRIORITY = 1;
 
 /** What the theme renders a search page from. */
@@ -23,18 +23,15 @@ export interface SearchArchiveData extends ArchiveTypeData {
   readonly kind: "archiveType";
   readonly name: "search";
   /**
-   * Core's two archive facts, required here where the base leaves them
-   * optional so a theme reading either never handles `undefined`: which page
-   * of results this is, and what the visitor typed — decoded, for the heading
-   * and the input.
+   * Required here, unlike the base, so a theme never handles `undefined`.
+   * `query` is decoded.
    */
   readonly page: number;
   readonly query: string;
   readonly results: readonly SearchResult[];
   /**
-   * Where the next page of results lives, or `null` at the end. Opaque on
-   * purpose — a theme renders it, never builds it, so what paginating means
-   * can change without the payload changing shape.
+   * `null` at the end. Opaque so a theme renders it, never builds it, and
+   * pagination can change shape freely.
    */
   readonly nextUrl: string | null;
 }
@@ -68,15 +65,8 @@ function decodeQuery(raw: string | undefined): string {
 }
 
 /**
- * Replace core's search page with one backed by the index.
- *
- * The bare `/search` is left to core on purpose. A plain HTML form submits
- * `GET /search?q=…`, and where the site keeps core's search routes, core
- * answers it with a 301 to the canonical `/search/<q>` — which lands back
- * here. An archive resolver returns a payload or a 404 and has no way to
- * redirect, so taking that path would cost the no-JavaScript form its
- * canonical URL. A site that turns core's search routes off has no bare
- * `/search` and no 301, and only these routes answer.
+ * Leaves bare `/search` to core: core 301s a form's `?q=` to `/search/<q>`,
+ * and an archive resolver cannot redirect.
  */
 export function registerSearchArchive(
   ctx: PluginSetupContext,
@@ -88,9 +78,8 @@ export function registerSearchArchive(
       FRAMEWORK_SEARCH_QUERY_PATTERN,
     ],
     priority: SHADOW_PRIORITY,
-    // Not `cacheable`, for the reason core gives for leaving its own search
-    // page out of the CDN: the query space is unbounded, so every
-    // distinct string a crawler tries would mint an entry keyed on that URL.
+    // Not `cacheable`: the query space is unbounded, so every string a crawler
+    // tries would mint a CDN entry.
     resolve: async (appCtx, params) => {
       const query = decodeQuery(params.query);
       const page = Number(params.page ?? 1);

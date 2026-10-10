@@ -20,10 +20,8 @@ type LinkFieldState = Omit<StringFieldState, "default" | "maxLength"> & {
 };
 
 /**
- * Fluent chain for the `link` field — see `StringFieldBuilder` for the
- * chassis conventions (immutability, phantom `K`/`V`/`S`, `build()`
- * seam). `V` is `LinkValue | undefined` unadorned and `S` is the stored
- * shape; `.required()` narrows both to `LinkValue`, `.default()` neither.
+ * `.required()` narrows `V` and `S` to `LinkValue`; `.default()` narrows
+ * neither.
  */
 export class LinkFieldBuilder<
   K extends string = string,
@@ -87,7 +85,9 @@ export class LinkFieldBuilder<
     return this.#fork({ default: value });
   }
 
-  /** Mark the field required — narrows the read and stored types to `LinkValue`. */
+  /**
+   * Mark the field required — narrows the read and stored types to `LinkValue`.
+   */
   required(): LinkFieldBuilder<K, LinkValue, LinkValue> {
     return this.#fork<LinkValue, LinkValue>({ required: true });
   }
@@ -189,13 +189,8 @@ export function link<K extends string>(key: K): LinkFieldBuilder<K> {
 }
 
 /**
- * Parse an incoming link value into its canonical `LinkValue` shape, or
- * `null` when malformed. Rebuilds from the known keys so unrecognized
- * properties never persist. The URL gate is `SAFE_HREF_RE` (shared with
- * richtext link marks): relative forms (`/pricing` — what the admin's
- * entry picker stores — plus `#`, `?`, `./`) and `https?` / `mailto:` /
- * `tel:` absolutes. Script-bearing schemes (`javascript:`, `data:`)
- * hard-fail — the value is destined for rendered anchor hrefs.
+ * `null` when malformed; unknown keys are dropped. Only relative, `http(s)`,
+ * `mailto:` and `tel:` hrefs pass, because the value renders into anchor hrefs.
  */
 export function parseLinkValue(value: unknown): LinkValue | null {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {

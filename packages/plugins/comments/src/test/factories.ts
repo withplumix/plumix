@@ -17,10 +17,8 @@ function requireDb(transient: Partial<DbTransient>): CommentsTestDb {
 }
 
 /**
- * Seeds a `comments` row. Requires `entryId` (a comment with no entry is
- * meaningless); everything else has a sane default, with `status`
- * defaulting to `pending` to mirror the table default. Pair with the
- * core `factoriesFor(db)` to create the entry/user it points at.
+ * Seeds a `comments` row; `entryId` is required. `status` defaults to
+ * `pending` to mirror the table default.
  */
 export const commentFactory = Factory.define<NewComment, DbTransient, Comment>(
   ({ sequence, transientParams, onCreate, params }) => {

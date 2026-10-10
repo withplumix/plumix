@@ -18,10 +18,8 @@ export interface FetchStub {
 }
 
 /**
- * The endpoint, stubbed, for the two browser surfaces that post to it —
- * the island over the plugin's markup and the hook over a theme's own.
- * Replaced before each test and unstubbed after, so a suite never
- * inherits the last test's answer.
+ * Replaced before each test and unstubbed after, so a suite never inherits
+ * the last test's answer.
  */
 export function stubFetch(): FetchStub {
   let mock = vi.fn<Fetch>();

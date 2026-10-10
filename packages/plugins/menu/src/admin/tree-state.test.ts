@@ -25,10 +25,8 @@ function row(
 
 describe("getProjection", () => {
   test("returns the over item's slot at the same depth when there is no horizontal drag", () => {
-    // Drag A onto B with zero offset. The dnd-kit Sortable Tree pattern
-    // simulates the post-drop array `[B, A]`, takes A's previous item B
-    // as the depth anchor, and produces (parentKey=null, depth=0,
-    // sortOrder=1) — A becomes B's sibling after B.
+    // dnd-kit's Sortable Tree anchors depth on the previous item in the
+    // post-drop array `[B, A]`, so A becomes B's sibling.
     const items = [row("a", null, 0), row("b", null, 1)];
 
     const projection = getProjection(items, "a", "b", 0, 24, 5);
@@ -41,9 +39,6 @@ describe("getProjection", () => {
   });
 
   test("drag-right past one indentation step nests the active item under the previous one", () => {
-    // After dropping A behind B, dragging right by one indent unit asks
-    // dnd-kit "nest under the previous item." `previous` here is B in
-    // the post-reorder list, so A becomes B's first child.
     const items = [row("a", null, 0), row("b", null, 1)];
 
     const projection = getProjection(items, "a", "b", 24, 24, 5);
@@ -71,10 +66,8 @@ describe("getProjection", () => {
   });
 
   test("returns null when the resolved parent is the active item or one of its descendants", () => {
-    // Dragging A onto its own child A.child with rightward offset would
-    // resolve to parentKey === A.child (or even A itself). Releasing
-    // there forms a cycle — the reducer also guards, but failing fast
-    // here means the live drop indicator never lies.
+    // The reducer also guards cycles; failing here keeps the live drop
+    // indicator honest.
     const items = [row("a", null, 0), row("achild", "a", 0)];
 
     const projection = getProjection(items, "a", "achild", 99, 24, 5);
@@ -83,10 +76,8 @@ describe("getProjection", () => {
   });
 
   test("caps depth so the active item's subtree stays within maxDepth", () => {
-    // Active A has a child at depth 1. Dragging A right behind B would
-    // try to nest A under B (depth 1), pushing A.child to depth 2.
-    // With maxDepth=1 the projection clamps depth to 0 so the visible
-    // indicator stops at root level — the visible "rejection" feedback.
+    // Nesting A under B would push A.child past maxDepth=1, so the
+    // projection clamps A to root.
     const items = [row("a", null, 0), row("achild", "a", 0), row("b", null, 1)];
 
     const projection = getProjection(items, "a", "b", 99, 24, 1);

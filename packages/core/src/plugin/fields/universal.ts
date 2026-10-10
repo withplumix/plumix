@@ -8,19 +8,9 @@ import type {
 } from "./meta-box-field.js";
 
 /**
- * The state behind the chain every fluent builder carries, whatever it
- * stores — the field's label and layout, its capability gate, its
- * visibility condition, and the two server-side callbacks.
- *
- * The builders are deliberately not a class hierarchy (see
- * `capabilities.ts` for why), so the *methods* stay per-file: each has to
- * return its own concrete builder type for the phantom parameters to
- * survive the call. The state they fork into has no such constraint, and
- * this is it — declared once, so a builder cannot carry a subtly
- * different spelling of `span` or forget `showInApi` altogether.
- *
- * `default` is deliberately absent: its type is the field's own value
- * type, so it belongs to each builder's state rather than here.
+ * Shared state only: methods stay per builder so each returns its concrete type
+ * and keeps the phantoms. `default` is absent because its type is each field's
+ * value type.
  */
 export interface UniversalFieldState {
   readonly visibleWhen?: MetaFieldCondition;

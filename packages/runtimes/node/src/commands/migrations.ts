@@ -7,7 +7,7 @@ import { MigrationsError } from "../errors.js";
 import { drizzleNodeSqlite, openNodeSqlite } from "../node-sqlite-client.js";
 import { isNodeSqlite } from "../node-sqlite.js";
 
-// The driver is synchronous; a failure still rejects, as on every runtime.
+/** The driver is synchronous; a failure still rejects, as on every runtime. */
 function settle<T>(work: () => T): Promise<T> {
   return new Promise((resolve) => {
     resolve(work());
@@ -43,7 +43,10 @@ function migrationDatabase(client: NodeSqliteClient): MigrationDatabase {
   };
 }
 
-/** `plumix migrate` opens the file `nodeSqlite()` names, against the project root. */
+/**
+ * `plumix migrate` opens the file `nodeSqlite()` names, against the project
+ * root.
+ */
 export const migrations: RuntimeMigrations = {
   remote: false,
   legacyTable: "__drizzle_migrations",

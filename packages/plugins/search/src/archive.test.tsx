@@ -9,8 +9,10 @@ import type { SearchHarness } from "./test/db.js";
 import { search } from "./index.js";
 import { contentPlugin, createSearchHarness, paragraph } from "./test/db.js";
 
-// A theme that renders the plugin's payload through the surface it registers
-// the archive on — the same `forArchiveType` any theme would reach for.
+/**
+ * A theme that renders the plugin's payload through the surface it registers
+ * the archive on — the same `forArchiveType` any theme would reach for.
+ */
 const theme = defineTheme({
   templates: [
     forArchiveType("search").template(({ data }) => (
@@ -173,9 +175,8 @@ describe("the search page", () => {
   });
 
   test("the page states the query it answers and which page of it this is", async () => {
-    // What a consumer classifies the page by: `@plumix/plugin-seo` reads these
-    // facts to hold search results out of the index the way it holds core's.
-    // Both pages are asserted — each is a URL the built-in page held out.
+    // `@plumix/plugin-seo` reads these facts to hold search results out of
+    // the index the way it holds core's.
     for (let i = 0; i < 21; i += 1) {
       await publish({
         title: `Hydroponics ${String(i)}`,
@@ -194,9 +195,8 @@ describe("the search page", () => {
   });
 
   test("a topic's own page is a result, beside the articles about it", async () => {
-    // Created through the application, because that is the only path that
-    // indexes a term: core's change feed records entries, so a term written
-    // straight to the database waits for a reindex sweep.
+    // Only the application indexes a term: the change feed records entries,
+    // so a term written straight to the database waits for a reindex sweep.
     await rpc("term/create", {
       taxonomy: "category",
       name: "Hydroponics",

@@ -1,17 +1,15 @@
-// Pure view math for the free canvas (no React, no store) — the device frame
-// floats in a Figma-style pannable/zoomable stage. Kept here so both the store
-// (toolbar zoom-to-center) and the canvas component (wheel, fit, zoom-to-
-// selection) share one tested implementation, and so the geometry is unit-
-// testable without a layout engine.
-
 export const MIN_ZOOM = 0.25;
 export const MAX_ZOOM = 2;
-// Keep at least this much of the frame inside the viewport so it can't be
-// panned into the void, and fit with this much top breathing room.
+/**
+ * Keep at least this much of the frame inside the viewport so it can't be
+ * panned into the void, and fit with this much top breathing room.
+ */
 const MIN_VISIBLE = 64;
 const FIT_MARGIN_Y = 32;
-// Zoom-to-selection leaves this fraction of the viewport as padding around the
-// framed block.
+/**
+ * Zoom-to-selection leaves this fraction of the viewport as padding around the
+ * framed block.
+ */
 const SELECTION_FIT = 0.85;
 
 /** The canvas viewport transform: the frame's top-left offset + scale. */
@@ -56,9 +54,10 @@ export function clampPanToFrame(
   };
 }
 
-/** Center the frame in the viewport at a never-upscaled fit-to-width zoom (top
- *  margin when it's taller than the viewport). What a device switch and "fit"
- *  both land on, so the frame is always on-screen, never pinned top-left. */
+/**
+ * Never upscales; a frame taller than the viewport gets a top margin instead of
+ * centering.
+ */
 export function fitView(
   frameWidth: number,
   contentHeight: number,
@@ -88,11 +87,10 @@ export function zoomToCursor(
   return { zoom, panX: cx - wx * zoom, panY: cy - wy * zoom };
 }
 
-/** Fold a free-canvas wheel event into the next view: zoom-to-cursor (Ctrl/Cmd
- *  intent) or pan, re-clamped so the frame stays reachable either way.
- *  `scaledFrame` is the iframe's live on-screen size (scaled at the current
- *  zoom); `cursor` is in viewport space. A zoom already at a limit returns the
- *  same `view` object so the caller can skip a redundant gesture write. */
+/**
+ * `scaledFrame` is the live on-screen size; `cursor` is in viewport space.
+ * Returns the same `view` object when zoom is already at a limit.
+ */
 export function wheelToView(
   view: View,
   wheel: {
@@ -137,10 +135,7 @@ export function wheelToView(
   };
 }
 
-/** The view the canvas should settle to after a geometry/camera change: re-fit
- *  and center while in fit mode, otherwise re-clamp the current pan so the frame
- *  stays reachable. Returns `null` when the current view already satisfies the
- *  constraint, so the caller skips a redundant store write. */
+/** Returns `null` when the current view already satisfies the constraint. */
 export function reconcileView(
   input:
     | {
@@ -188,10 +183,10 @@ export function reconcileView(
     : null;
 }
 
-/** Bring a block into view at the current zoom: panned so its rect sits in the
- *  middle of the viewport. `rect` is in the frame's unscaled coordinate space.
- *  Unlike {@link frameSelection} this never changes the zoom, so jumping to a
- *  small block doesn't slam the camera into a close-up. */
+/**
+ * `rect` is in the frame's unscaled space. Unlike {@link frameSelection} this
+ * never changes the zoom.
+ */
 export function centerOnRect(
   rect: {
     readonly x: number;

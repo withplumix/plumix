@@ -3,8 +3,10 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { PlumixIslandElement } from "../island-element.js";
 import { visibleStrategy } from "./visible.js";
 
-// Minimal IntersectionObserver double: records construction options and
-// observed targets, and lets a test fire a synthetic intersection.
+/**
+ * Minimal IntersectionObserver double: records construction options and
+ * observed targets, and lets a test fire a synthetic intersection.
+ */
 class FakeIO {
   static instances: FakeIO[] = [];
   readonly observed: Element[] = [];
@@ -29,9 +31,11 @@ class FakeIO {
   }
 }
 
-// A detached element's getBoundingClientRect is all zeros, so `isInViewport`
-// is false by default and the observer path is taken. The already-visible test
-// stubs the rect + viewport explicitly.
+/**
+ * A detached element's getBoundingClientRect is all zeros, so `isInViewport`
+ * is false by default and the observer path is taken. The already-visible test
+ * stubs the rect + viewport explicitly.
+ */
 function makeEl(): PlumixIslandElement {
   return document.createElement("plumix-island") as PlumixIslandElement;
 }

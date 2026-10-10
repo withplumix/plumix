@@ -45,10 +45,8 @@ const M = {
     message: "{label} failed to render.",
     comment: "label: a plugin-author-provided name (e.g. 'SEO meta')",
   }),
-  // Inline stub for blocks / field renderers — `{kind}` is the
-  // protocol discriminator (block / field) verbatim. Localizing it
-  // would require a kind→noun map; keep raw for now (same policy
-  // as other protocol identifiers).
+  // `{kind}` is the raw protocol discriminator, like other protocol
+  // identifiers.
   inlineStub: defineMessage({
     id: "plugin.errorBoundary.inlineStub",
     message: "{label} {kind} failed",
@@ -63,18 +61,8 @@ const M = {
 } satisfies Record<string, MessageDescriptor>;
 
 /**
- * Catch render errors in plugin-supplied components so a third-party
- * bug doesn't take down the surrounding admin shell. Each kind picks
- * a fallback shape that fits its host context: pages get a full-card
- * alert, widgets get a card-body alert, icons get a tiny warning glyph,
- * blocks/fields get inline stubs.
- *
- * Class component because React error boundaries still require it
- * (no hook equivalent for `componentDidCatch` as of React 19). Label
- * resolution goes through `@lingui/core`'s global `i18n._` — same
- * locale-snapshot constraint that applies to every non-React lingui
- * consumer in admin; acceptable here because the user is already
- * looking at a crash report.
+ * A class because React 19 has no hook for `componentDidCatch`. Labels use the
+ * global `i18n._` snapshot, acceptable on a crash report.
  */
 export class PluginErrorBoundary extends Component<Props, State> {
   override state: State = { error: null };

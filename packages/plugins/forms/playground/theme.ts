@@ -8,16 +8,11 @@ import { formWire, PlumixForm } from "@plumix/plugin-forms/theme";
 
 import { SubscribeBar } from "./subscribe-bar.js";
 
-// Minimal page template that puts the entry's blocks on the page — the
-// only way the form block's markup reaches a visitor, and so the only
-// way the e2e suite can drive the real thing. Authored with
-// `createElement` (no JSX) so the theme stays transform-agnostic across
-// the jiti config load and the vite worker bundle.
-//
-// It also carries the plugin's two theme-facing surfaces: a form dropped
-// straight into the template on the one page seeded without a block, and
-// the site-wide subscribe bar, which is the theme's own markup driven by
-// `usePlumixForm`.
+/**
+ * Renders entry blocks, a template-rendered form and the subscribe bar. Uses
+ * `createElement`, not JSX, to stay transform-agnostic across jiti and the vite
+ * worker bundle.
+ */
 const page = defineTemplate<EntryData>({
   render: ({ data }): ReactNode => {
     const subscribe = formWire("subscribe");

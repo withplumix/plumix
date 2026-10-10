@@ -1,7 +1,5 @@
-// Type-level test: these types have no runtime, so the assertions cover only
-// what a reader can't get from the declarations' own text — recursion, the
-// shapes that look assignable but aren't, and the two halves of the block tree.
-// Enforced by `tsc`, not by the vitest run.
+// These types have no runtime, so this is enforced by `tsc`, not the vitest
+// run.
 
 import { describe, expectTypeOf, test } from "vitest";
 

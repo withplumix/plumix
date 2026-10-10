@@ -13,8 +13,10 @@ function query(testid: string): HTMLElement | null {
   return container.querySelector<HTMLElement>(`[data-testid="${testid}"]`);
 }
 
-// React commits on the scheduler; poll for the rendered shell rather than
-// betting a fixed delay covers it.
+/**
+ * React commits on the scheduler; poll for the rendered shell rather than
+ * betting a fixed delay covers it.
+ */
 async function mount(node: ReactElement): Promise<void> {
   root.render(node);
   await vi.waitFor(
@@ -23,8 +25,10 @@ async function mount(node: ReactElement): Promise<void> {
   );
 }
 
-// Only for the "nothing should have happened" assertions: there is no condition
-// to poll for, so let pending work run and then assert the absence.
+/**
+ * Only for the "nothing should have happened" assertions: there is no condition
+ * to poll for, so let pending work run and then assert the absence.
+ */
 function flush(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }

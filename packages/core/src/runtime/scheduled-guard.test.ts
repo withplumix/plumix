@@ -7,8 +7,10 @@ import {
   scheduledLeaseScope,
 } from "./scheduled-guard.js";
 
-// Two guards over one database stand in for two replicas of a deploy sharing
-// one database — the configuration `plumix/db/libsql` makes possible today.
+/**
+ * Two guards over one database stand in for two replicas of a deploy sharing
+ * one database — the configuration `plumix/db/libsql` makes possible today.
+ */
 function replicas(db: Db, options: { lease?: boolean } = {}) {
   const make = (holder: string) =>
     createScheduledRunGuard({
@@ -168,9 +170,8 @@ describe("createScheduledRunGuard", () => {
 
 describe("createScheduledRunGuard — a run that legitimately runs long", () => {
   test("keeps its lease past the TTL while it is still working", async () => {
-    // The TTL is what frees a lease whose holder died, so it is sized above any
-    // plausible run. A run that outlives it anyway — a big purge batching
-    // async deletes — must not have the lease taken out from under it.
+    // The TTL frees a dead holder's lease, but a live run outliving it must
+    // keep the lease.
     const db = await createTestDb();
     const holder = createScheduledRunGuard({
       db,
@@ -206,9 +207,8 @@ describe("createScheduledRunGuard — a run that legitimately runs long", () => 
 
 describe("createScheduledRunGuard — a firing that loses the lease", () => {
   test("does not burn the minute, so the schedule is not lost", async () => {
-    // The claim is taken only once the lease is held. Claiming first would
-    // mark the minute done for a firing that never ran — and a schedule that
-    // matches once a day would skip the whole day.
+    // Claiming before the lease would mark the minute done for a firing that
+    // never ran, skipping a daily schedule's whole day.
     const db = await createTestDb();
     const busy = createScheduledRunGuard({
       db,

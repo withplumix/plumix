@@ -85,11 +85,10 @@ function assertCanPublishTransition(
   }
 }
 
-// Reparenting: caller may only point at entries they can see, and the
-// parent must share the current entry's type. Undistinguished 404 on
-// any failure — don't leak whether the parent exists. Also walk the
-// chain upward to reject cycles of any depth (self-parent, A→B→A, …) —
-// admin UI tree renders will infinite-loop on any cycle in the DB.
+/**
+ * Undistinguished 404 so the parent's existence doesn't leak. Cycles of any
+ * depth are rejected because the admin tree render infinite-loops on them.
+ */
 async function assertParentReassignmentValid(
   context: AuthenticatedAppContext,
   existing: Entry,
@@ -169,9 +168,8 @@ export const update = base
 
     assertCanEditEntry(context, existing, errors);
 
-    // An editor may only select a per-entry access policy the type declares —
-    // enforced here (before either the autosave or the live write folds it in)
-    // so an undeclared key is rejected regardless of the save target.
+    // Checked before either write path so an undeclared key is rejected
+    // regardless of the save target.
     assertAccessChoiceDeclared(
       context.plugins.entryTypes.get(existing.type)?.access?.policies,
       filtered.access,
@@ -192,10 +190,8 @@ export const update = base
       },
     );
 
-    // Resolve `saveAs` against the entry's state + type capabilities.
-    // The default keeps legacy callers writing to live unless the type
-    // explicitly opts into autosave AND the row is currently published;
-    // then a pending edit lands on a per-user autosave row instead.
+    // Writes stay on live unless the type supports autosave AND the row is
+    // published.
     const typeSupportsAutosave =
       context.plugins.entryTypes
         .get(existing.type)
@@ -218,23 +214,16 @@ export const update = base
           data: { reason: "autosave_requires_published" },
         });
       }
-      // The autosave accumulates the author's in-progress edits, so base each
-      // write on the existing draft and apply only this patch on top — the
-      // editor sends only what changed, so rebasing would drop keys an earlier
-      // partial write changed. The base is the draft's own meta, never the live
-      // row's: a key the author never touched must not ride into a bag that
-      // publish re-decodes (ADR 0003).
+      // Base on the draft's own edits, never live: the editor sends only
+      // changes, and a key the author never touched must not ride into a bag
+      // publish re-decodes.
       const currentEdits = await getAutosaveEdits(context.db, {
         entryId: existing.id,
         authorId: context.user.id,
       });
-      // Autosave is draft-lenient: a work-in-progress save must never fail
-      // over an empty required field or an out-of-bounds value the author
-      // hasn't finished. Structural + security gates still run; the
-      // business-rule constraints are re-enforced when `entry.publish`
-      // promotes this bag in strict mode. The patch lands on the pending
-      // draft, not on live, so that is the bag its conditions are judged
-      // against.
+      // Draft-lenient: a work-in-progress save never fails on business rules,
+      // which `entry.publish` re-enforces. Conditions are judged against the
+      // pending draft, not live.
       const autosaveMetaPatch = await sanitizeAndValidateEntryMeta(
         context,
         existing.type,
@@ -248,10 +237,8 @@ export const update = base
       // The columns snapshot where the meta bag patches, so these two still
       // fall back to the live row's values when the author left them alone.
       const columnBase = currentEdits ?? existing;
-      // Reserved envelope keys (snapshot, revision message) are re-derived by
-      // `upsertAutosave`; drop them from the base, but keep the template and
-      // access picks so a prior unsaved choice survives a write that doesn't
-      // change it.
+      // `upsertAutosave` re-derives the reserved envelope keys; the template
+      // and access picks stay so a prior unsaved choice survives.
       const autosaveMeta: Record<string, JsonValue> = currentEdits
         ? stripReservedMeta(currentEdits.meta, [
             NAMED_TEMPLATE_META_KEY,
@@ -265,10 +252,8 @@ export const update = base
           ? (decodeSnapshotEnvelope(currentEdits.meta)?.deletes ?? [])
           : [],
       );
-      // The framework's template and access picks fold in at patch level, the
-      // same way the live branch takes them, so one loop applies every edit the
-      // author made and a cleared key lands in `deletes` rather than merely
-      // going missing.
+      // Picks fold in at patch level, as on the live branch, so a cleared key
+      // lands in `deletes` rather than going missing.
       const draftPatch = withAccessChoice(
         withTemplateChoice(autosaveMetaPatch, filtered.template),
         filtered.access,
@@ -285,12 +270,9 @@ export const update = base
         entry: existing,
         authorId: context.user.id,
         patch: {
-          // Title is a live-only field: the editor writes it straight to the
-          // live row (its structural path) and publish never promotes it, so
-          // anchor the snapshot column to the current live title and ignore any
-          // caller-supplied `title` on the draft branch — a drafted title would
-          // be a write that publish silently drops. Content/excerpt/meta below
-          // flow through the draft, so they accumulate on it.
+          // Title is live-only and publish never promotes it, so a drafted
+          // title would be silently dropped; the snapshot anchors to the live
+          // title.
           title: existing.title,
           content:
             filtered.content !== undefined
@@ -304,9 +286,8 @@ export const update = base
           metaDeletes: [...autosaveDeletes],
         },
       });
-      // The stored row carries only the edits, so lay them over live before
-      // anything outside the write path sees it: a subscriber and a caller
-      // both asked for the pending draft, which is a whole row.
+      // The stored row carries only the edits, so lay them over live before a
+      // subscriber or caller sees it.
       const draft = asDraftRow(existing, autosave);
       await fireEntryAutosaveSaved(context, draft, existing);
       // Decode + resolve against the LIVE row's type — the autosave
@@ -354,11 +335,8 @@ export const update = base
       publishedAt: publishedAtInput,
       ...changes
     } = filtered;
-    // A save that lands the entry as a draft is validated leniently:
-    // work-in-progress must never fail over an empty required field or a
-    // not-yet-valid value. Only a save that publishes or schedules the
-    // entry enforces the full constraint set — the same gate `entry.publish`
-    // applies when it promotes an autosave bag.
+    // Drafts validate leniently; only publishing or scheduling enforces the
+    // full constraint set, as `entry.publish` does.
     const targetStatus = filtered.status ?? existing.status;
     const metaMode =
       targetStatus === "published" || targetStatus === "scheduled"
@@ -384,13 +362,9 @@ export const update = base
       );
     }
 
-    // Entering the live surface (publishing or scheduling) enforces the full
-    // resulting bag, not just this patch: a draft's meta was written
-    // leniently, so a required field it left empty — or any value it never
-    // re-touched — is caught here and blocks the transition. Editing an
-    // already-live entry re-validates only its own patch and the fields that
-    // patch switches visible (above), so pre-existing schema drift on a
-    // co-author's field can't block an unrelated edit.
+    // Publishing or scheduling checks the whole bag, catching required fields a
+    // lenient draft left empty. Editing a live entry checks only its patch, so
+    // a co-author's drift can't block it.
     const nowScheduled =
       filtered.status === "scheduled" && existing.status !== "scheduled";
     if (isPublishTransition || nowScheduled) {
@@ -414,11 +388,9 @@ export const update = base
       if (stamped) patch.publishedAt = stamped;
     }
 
-    // Scheduling: validate the target time only when actually (re)scheduling —
-    // moving status to `scheduled` or supplying a new date. An incidental edit
-    // to an already-scheduled entry (e.g. fixing a typo while it waits for the
-    // cron, its date now in the past) must not be rejected. The supplied date
-    // is written only while scheduling, so it can't backdate a published entry.
+    // Publishing or scheduling checks the whole bag, catching required fields a
+    // lenient draft left empty. A live edit checks only its patch, so a
+    // co-author's drift can't block it.
     if (
       (filtered.status === "scheduled" || publishedAtInput !== undefined) &&
       (filtered.status ?? existing.status) === "scheduled"
@@ -434,10 +406,7 @@ export const update = base
       }
     }
 
-    // Nothing to write anywhere? Short-circuit without firing hooks, but
-    // still return the current meta so callers get a consistent shape. An
-    // empty meta map from the client (e.g. admin always sending `meta: {}`)
-    // counts as no-op on the meta side too.
+    // An empty `meta: {}` from the client counts as a no-op too.
     if (
       Object.keys(patch).length === 0 &&
       termsPatch === undefined &&

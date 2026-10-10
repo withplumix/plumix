@@ -8,18 +8,20 @@ import { blockTextRoster, extractBlockText } from "./block-text.js";
 import { coreBlocks } from "./core-blocks.js";
 import { countProse } from "./count-prose.js";
 
-// The demo site's seeded content — 40-odd published entries of real prose,
-// nested tables, a code listing and images. Synthetic fixtures prove the walk
-// handles a shape; this proves it handles what the product actually stores.
-// Resolved from the package root vitest runs in, not `import.meta.url` — the
-// transform rewrites that to a dev-server URL, which `readFileSync` refuses.
+/**
+ * The demo site's seeded content, the shapes the product actually stores. Read
+ * from the package root: vitest rewrites `import.meta.url` to a URL
+ * `readFileSync` refuses.
+ */
 const SEED_SQL = readFileSync(
   resolve(process.cwd(), "../../apps/demo/seed.sql"),
   "utf8",
 );
 
-// Split one `VALUES (…)` tuple on its top-level commas. SQL string literals
-// escape a quote by doubling it, so quote state is all the scanner tracks.
+/**
+ * Split one `VALUES (…)` tuple on its top-level commas. SQL string literals
+ * escape a quote by doubling it, so quote state is all the scanner tracks.
+ */
 function splitSqlValues(tuple: string): string[] {
   const values: string[] = [];
   let current = "";
@@ -76,8 +78,10 @@ function seededEntries(): readonly SeededEntry[] {
 const CORPUS = seededEntries();
 const roster = blockTextRoster(coreBlocks);
 
-// What the reading-length counter read before blocks declared their own text:
-// four block names, one input each, hardcoded in the counter.
+/**
+ * What the reading-length counter read before blocks declared their own text:
+ * four block names, one input each, hardcoded in the counter.
+ */
 const LEGACY_ROSTER: BlockTextRoster = {
   text: new Map([
     ["core/rich-text", [{ name: "body", html: true }]],
@@ -88,7 +92,9 @@ const LEGACY_ROSTER: BlockTextRoster = {
   specs: roster.specs,
 };
 
-// The typography showcase post: the one entry exercising every styled element.
+/**
+ * The typography showcase post: the one entry exercising every styled element.
+ */
 const showcaseBlocks =
   CORPUS.find((entry) => entry.title.startsWith("Typography & Elements"))
     ?.blocks ?? [];
@@ -99,8 +105,7 @@ describe("block text over the demo corpus", () => {
   });
 
   // The seeded bodies carry no escaped markup, so a surviving `<tag>` means the
-  // strip missed it. An entry that ever writes `&lt;div&gt;` in prose would
-  // decode to a real `<div>` here by design, and this would need narrowing.
+  // strip missed it.
   test("every entry yields text, and none of it is markup", () => {
     for (const entry of CORPUS) {
       const text = extractBlockText(entry.blocks, roster);

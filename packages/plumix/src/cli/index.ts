@@ -24,8 +24,10 @@ import { formatHelp } from "./help.js";
 import { loadConfig } from "./load-config.js";
 import { badge, exitWithError, report } from "./report.js";
 
-// A built-in may read the whole app — `meta` and `cron` build the site's
-// handler from it; a runtime's own commands see only its `CommandApp` part.
+/**
+ * A built-in may read the whole app — `meta` and `cron` build the site's
+ * handler from it; a runtime's own commands see only its `CommandApp` part.
+ */
 const BUILT_IN_COMMANDS: ReadonlyMap<
   string,
   CommandDefinition<PlumixApp>
@@ -48,10 +50,8 @@ interface CliArgs {
 }
 
 function parseCli(argv: readonly string[]): CliArgs {
-  // Eat plumix-level flags from the start of argv. The first non-plumix
-  // token (positional or unknown flag) becomes the command name; every
-  // token after that passes through unparsed so subcommand flags like
-  // `--remote` aren't dropped by node:util.parseArgs.
+  // Every token after the command name passes through unparsed so subcommand
+  // flags like `--remote` survive.
   let cwd = process.cwd();
   let config: string | undefined;
   let help = false;
@@ -97,7 +97,8 @@ function parseCli(argv: readonly string[]): CliArgs {
       i += 1;
       continue;
     }
-    // First non-plumix token: command name (or, if it's a flag, subcommand-only).
+    // First non-plumix token: command name (or, if it's a flag,
+    // subcommand-only).
     break;
   }
 
@@ -126,9 +127,7 @@ export async function run(argv: readonly string[]): Promise<void> {
     return;
   }
 
-  // Astro-style: a compact version badge greets the long-running dev/build
-  // sessions (the full wordmark is the scaffolder's welcome). Gated on a TTY so
-  // piped / CI runs stay clean; the version resolves dynamically, never hardcoded.
+  // Gated on a TTY so piped and CI runs stay clean.
   if (
     (args.command === "dev" || args.command === "build") &&
     process.stderr.isTTY
@@ -176,7 +175,8 @@ export async function run(argv: readonly string[]): Promise<void> {
 
 /**
  * The app the command runs against: the eagerly built app, or — when the
- * command opts out via {@link CommandDefinition.deferApp} — a throwing sentinel.
+ * command opts out via {@link CommandDefinition.deferApp} — a throwing
+ * sentinel.
  */
 export async function resolveCommandApp(
   command: CommandDefinition,
@@ -188,20 +188,16 @@ export async function resolveCommandApp(
       PlumixCliError.deferredCommandNoApp({ command: commandName }),
     );
   }
-  // Deferred so the commands that never build an app — `dev` opts out via
-  // `deferApp`, and `--version`/`--help`/`i18n` return before this — do not
-  // pay for core's root barrel: ~500ms to evaluate, against 4ms for the `cli`
-  // subpath above.
+  // Deferred: core's root barrel costs ~500ms to evaluate, and `dev`,
+  // `--version`, `--help` and `i18n` never need it.
   const { buildApp } = await import("@plumix/core");
   return buildApp(config);
 }
 
-// A stand-in `ctx.app` for commands that run without a built app. Any property
-// read throws at the access site — a future refactor that reaches for `ctx.app`
-// fails loud rather than silently NPE'ing inside a method call. `then` is
-// exempt: `await resolveCommandApp(...)` probes it to detect a thenable, and the
-// sentinel must pass through promise machinery unharmed. The cast is structural
-// (`app` is non-optional on CommandContext); the throw is the guard.
+/**
+ * Throws on any property read so code reaching for `ctx.app` fails loud. `then`
+ * is exempt so the sentinel survives `await`.
+ */
 function appSentinel(makeError: () => PlumixCliError): PlumixApp {
   return new Proxy(
     {},
@@ -224,7 +220,8 @@ async function printHelp(args: CliArgs): Promise<void> {
     loaded = await loadConfig(args.cwd, args.config);
     runtimeModule = await loadRuntimeCommands(loaded.config.runtime, args.cwd);
   } catch (error) {
-    // Help is still useful with no config loaded; surface the reason in verbose.
+    // Help is still useful with no config loaded; surface the reason in
+    // verbose.
     report.verbose(
       `help: ${error instanceof Error ? error.message : String(error)}`,
     );

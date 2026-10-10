@@ -10,15 +10,6 @@ import {
   rpcOkBody,
 } from "./support/rpc-mock.js";
 
-// All /users admin coverage lives here:
-//   - /users list (role filter, search, access gates)
-//   - /users/create invite form (happy path, email-taken, cap gate)
-//   - /users/$id/edit edit (admin-editing-other, self-via-profile, last-admin
-//     CONFLICT, delete-with-reassign)
-//   - /users/$id/edit cards: email change (self + admin oversight) and
-//     API tokens (self mint/revoke + admin oversight)
-// Ordering follows the user journey: list → invite → edit → cards.
-
 function user(overrides: Partial<User> & { id: number; email: string }): User {
   return {
     slug: `user-${String(overrides.id)}`,
@@ -66,8 +57,10 @@ function token(
   };
 }
 
-// The self-edit page loads the passkeys, sessions, and API-tokens
-// cards alongside the form — every self-profile test needs these.
+/**
+ * The self-edit page loads the passkeys, sessions, and API-tokens
+ * cards alongside the form — every self-profile test needs these.
+ */
 const SELF_EDIT_LISTS = {
   "/auth/credentials/list": [],
   "/auth/sessions/list": [],
@@ -498,7 +491,9 @@ test.describe("/users/$id/edit", () => {
   });
 });
 
-// The change control is offered only where magic-link sign-in is configured.
+/**
+ * The change control is offered only where magic-link sign-in is configured.
+ */
 const MAGIC_LINK_ON = { magicLink: true, oauth: [] };
 
 test.describe("/users/$id/edit — email change (self)", () => {

@@ -11,9 +11,11 @@ import {
   createTestDb,
 } from "./harness.js";
 
-// A plugin's history, hand-written so its one migration is dated 1970: older
-// than anything core ships, which is the case a tracking table shared with
-// core would skip.
+/**
+ * A plugin's history, hand-written so its one migration is dated 1970: older
+ * than anything core ships, which is the case a tracking table shared with
+ * core would skip.
+ */
 const widgetsMigrations = fileURLToPath(
   new URL("fixtures/widgets/migrations", import.meta.url),
 );

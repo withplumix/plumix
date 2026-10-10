@@ -26,17 +26,14 @@ export interface CanvasConnection {
 
 interface ConnectCanvasOptions {
   readonly store: EditorStoreApi;
-  /** The iframe's `contentWindow`. */
   readonly frameWindow: Window;
-  /** Expected origin of the canvas iframe; messages from elsewhere are dropped. */
+  /** Messages from any other origin are dropped. */
   readonly origin: string;
-  /** Latest block + slot geometry, for overlays and nested drop targeting. */
   readonly onGeometry?: (
     rects: readonly BlockRect[],
     slots: readonly SlotRect[],
   ) => void;
-  /** A wheel/trackpad gesture over the canvas, forwarded from the iframe so the
-   *  host can pan/zoom the free canvas. clientX/Y are iframe-local. */
+  /** clientX/Y are iframe-local. */
   readonly onWheel?: (wheel: {
     readonly deltaX: number;
     readonly deltaY: number;
@@ -44,27 +41,24 @@ interface ConnectCanvasOptions {
     readonly clientX: number;
     readonly clientY: number;
   }) => void;
-  /** A canvas-view key, forwarded so pan/zoom shortcuts work over the iframe. */
   readonly onKey?: (key: {
     readonly down: boolean;
     readonly code: string;
     readonly shiftKey: boolean;
   }) => void;
-  /** An in-canvas "Add a block" affordance was clicked — root or empty slot. */
   readonly onRequestAdd?: (target: {
     readonly parentId?: string;
     readonly slotKey?: string;
   }) => void;
-  /** A clipboard shortcut fired with focus inside the iframe; the host performs
-   *  the copy/cut/paste against its tree + the system clipboard. */
   readonly onClipboard?: (op: "copy" | "cut" | "paste") => void;
-  /** The active locale and merged catalog, pushed once the canvas is ready.
-   *  The canvas has no i18n runtime, so the host hands it the catalog. */
+  /** The canvas has no i18n runtime, so the host hands it the catalog. */
   readonly config?: CanvasConfig;
 }
 
-// The iframe runtime usually boots after the parent mounts, so a single hello
-// would race; re-announce on this interval until the canvas acks.
+/**
+ * The iframe runtime usually boots after the parent mounts, so a single hello
+ * would race; re-announce on this interval until the canvas acks.
+ */
 const HANDSHAKE_RETRY_MS = 250;
 
 /**
@@ -177,7 +171,8 @@ export function connectCanvas({
     }
   });
 
-  // retry() no-ops once ready, so this is safe to fire until handshake resolves.
+  // retry() no-ops once ready, so this is safe to fire until handshake
+  // resolves.
   const retryTimer = setInterval(() => handshake.retry(), HANDSHAKE_RETRY_MS);
   const whenReady = handshake.whenReady();
   void whenReady.then(() => clearInterval(retryTimer));

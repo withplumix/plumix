@@ -13,8 +13,10 @@ import { useVisibleFields } from "./use-visible-fields.js";
 
 afterEach(cleanup);
 
-// A driver text field and a dependent whose visibility rides on it —
-// the wire shape a `.visibleWhen(layout.is("video"))` chain compiles to.
+/**
+ * A driver text field and a dependent whose visibility rides on it —
+ * the wire shape a `.visibleWhen(layout.is("video"))` chain compiles to.
+ */
 const conditionalBox = {
   id: "video",
   label: "Video",
@@ -46,8 +48,10 @@ function Harness({
   );
 }
 
-// The settings card renders fields at the form root and owns its form
-// instance — the hook's no-name + explicit-control path.
+/**
+ * The settings card renders fields at the form root and owns its form
+ * instance — the hook's no-name + explicit-control path.
+ */
 function RootHarness({
   initial,
 }: {

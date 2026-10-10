@@ -8,24 +8,18 @@ export interface CliIO {
   stderr(line: string): void;
 }
 
-/** The outcome of a completed scaffold, phrased differently by each reporter. */
 interface ScaffoldOutcome {
   readonly name: string;
   readonly targetDir: string;
   readonly steps: readonly string[];
-  /** So the interactive surface can name it in `"<pm> install" failed.`. */
   readonly pm: PackageManager;
   readonly installFailed: boolean;
   readonly dbSetupFailed: boolean;
 }
 
 /**
- * The output surface of the CLI, the mirror of {@link Prompter}. It hides
- * whether the run is an interactive @clack/prompts session or a plain,
- * deterministic stdout stream, so the orchestrator reports an outcome once
- * instead of branching on `interactive` at every print. The pre-flight
- * usage/validation errors stay on {@link CliIO} directly — they can fire
- * before any session is opened.
+ * Pre-flight usage errors stay on {@link CliIO}: they can fire before any
+ * session opens.
  */
 export interface Reporter {
   /** Open an interactive session (no-op on the plain path). */
@@ -36,7 +30,7 @@ export interface Reporter {
   cancelled(message: string): void;
 }
 
-// The plumix wordmark, shown once as a welcome header on a plain scaffold.
+/** The plumix wordmark, shown once as a welcome header on a plain scaffold. */
 export const BANNER = [
   "        _                 _",
   "  _ __ | |_   _ _ __ ___ (_)_  __",
@@ -46,7 +40,7 @@ export const BANNER = [
   " |_|",
 ].join("\n");
 
-// Resolved from this package's own manifest at runtime — never hardcoded.
+/** Resolved from this package's own manifest at runtime — never hardcoded. */
 function readVersion(): string {
   try {
     const require = createRequire(import.meta.url);

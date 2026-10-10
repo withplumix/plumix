@@ -1,7 +1,7 @@
-// Midnight UTC for the given components, via `setUTCFullYear` rather than
-// `Date.UTC`/`new Date(y, …)` — the latter two remap a 0–99 year to 1900–1999,
-// which would send `/0050` to 1950. `setUTCFullYear` takes the literal year and
-// still overflows an out-of-range month/day, which the callers rely on.
+/**
+ * Not `Date.UTC`, which remaps years 0–99 to 1900–1999. Callers rely on an
+ * out-of-range month or day overflowing.
+ */
 function utcMidnight(year: number, monthIndex: number, day: number): Date {
   const d = new Date(0);
   d.setUTCFullYear(year, monthIndex, day);
@@ -9,11 +9,8 @@ function utcMidnight(year: number, monthIndex: number, day: number): Date {
 }
 
 /**
- * The half-open `[start, end)` UTC instant range a `/YYYY[/MM[/DD]]` archive
- * covers, or `null` when the components don't form a real date (month 13,
- * Feb 30, …) so the caller 404s. `month`/`day` are 1-based; `null` = a coarser
- * granularity (a year has `month`/`day` null). Shared by the date-archive
- * resolver and the date feed so both agree on boundaries and validation.
+ * Half-open `[start, end)` in UTC; `null` when the components aren't a real
+ * date, so the caller 404s. `month`/`day` are 1-based.
  */
 export function dateRange(
   year: number,

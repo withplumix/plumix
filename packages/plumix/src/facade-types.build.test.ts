@@ -10,8 +10,10 @@ import {
   subpathsMatching,
 } from "../test/facade-entries.js";
 
-// The same subpaths `facade-curated.test.ts` holds a drift guard for, keyed to
-// their published declarations.
+/**
+ * The same subpaths `facade-curated.test.ts` holds a drift guard for, keyed to
+ * their published declarations.
+ */
 const curated = new Map(
   subpathsMatching(CURATED_REEXPORT).map((subpath) => [
     subpath,
@@ -19,9 +21,11 @@ const curated = new Map(
   ]),
 );
 
-// Kept out of `test/facade-entries.ts`: the unit-tier façade tests import that
-// module eagerly, and a `typescript` import there would load the compiler into
-// every one of them.
+/**
+ * Kept out of `test/facade-entries.ts`: the unit-tier façade tests import that
+ * module eagerly, and a `typescript` import there would load the compiler into
+ * every one of them.
+ */
 function parseTsconfig(): ts.ParsedCommandLine {
   const config = ts.getParsedCommandLineOfConfigFile(
     resolve(packageDir, "tsconfig.json"),
@@ -32,9 +36,11 @@ function parseTsconfig(): ts.ParsedCommandLine {
   return config;
 }
 
-// The types that have no role subpath, so the root is their only home. Every
-// other type core's barrel exports sits on the root and on exactly one other
-// subpath.
+/**
+ * The types that have no role subpath, so the root is their only home. Every
+ * other type core's barrel exports sits on the root and on exactly one other
+ * subpath.
+ */
 interface RootOnly {
   readonly reason: string;
   readonly names: readonly string[];
@@ -158,22 +164,15 @@ const ROOT_ONLY_TYPES: readonly RootOnly[] = [
   },
 ];
 
-// Types stay wholesale on the root because the declaration emitter needs them
-// there. Printing a type a consumer's `.d.ts` inferred, it picks the specifier
-// with the fewest path components: the root has none, and on a tie between
-// `plumix/plugin` and `@plumix/core` it keeps the declaring package, which no
-// consumer can resolve (#2347). A role subpath re-exports its own types on top,
-// so a theme or a plugin file still needs one import. `facade-curated.test.ts`
-// compares values at runtime; types only exist for the compiler, so this asks it.
+// Types stay wholesale on the root: the declaration emitter picks the
+// specifier with the fewest path components, and on a tie keeps the
+// declaring package, which no consumer can resolve.
 describe("types", () => {
   let coreTypes: Map<string, ts.Symbol>;
   let subpathTypes: Map<string, Map<string, ts.Symbol>>;
 
-  // Read from the published declarations, which is what a consumer's compiler
-  // resolves. They carry no function bodies, so the program grows with the
-  // public surface rather than with every source file behind it. Parsing is
-  // CPU-bound, so it stretches with whatever runs beside it: ~1.1s alone, 6.6s
-  // when turbo runs `test:unit` alongside `test:build` in a full `pnpm test`.
+  // Parsing the published declarations is CPU-bound: ~1.1s alone, 6.6s when
+  // turbo runs `test:unit` alongside `test:build`.
   beforeAll(() => {
     const config = parseTsconfig();
     const program = ts.createProgram([...curated.values()], config.options);
@@ -262,9 +261,7 @@ describe("types", () => {
 });
 
 // Core's `blocks/` sits below `context/` and cannot name `AppContext`, so the
-// `plumix/blocks` façade fills the loader-context seam. The fixture is what a
-// plugin file writes: nothing but the façade and `AppContext`'s own home, read
-// through the published declarations a plugin build resolves.
+// `plumix/blocks` façade fills the loader-context seam.
 describe("block loader context", () => {
   const fixture = resolve(packageDir, "test", "block-loader-ctx.fixture.ts");
   const source = `

@@ -1,10 +1,11 @@
 interface Debouncer<Args extends readonly unknown[]> {
   readonly call: (...args: Args) => void;
-  /** Run any pending work now and resolve when it settles, so callers can
-   *  await persistence before navigating away. Resolves immediately when idle. */
+  /**
+   * Resolves once pending work settles, so callers can await it before
+   * navigating.
+   */
   readonly flush: () => Promise<void>;
   readonly cancel: () => void;
-  /** Whether a call is waiting for the delay to pass. */
   readonly pending: () => boolean;
 }
 

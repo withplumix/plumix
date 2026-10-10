@@ -400,9 +400,8 @@ describe("entry.create", () => {
     });
   });
 
-  // Creating straight onto the live surface is the same crossing as publishing
-  // a draft, so it answers to the same whole-bag gate: a required field the
-  // create never sent is missing, not merely unsubmitted.
+  // Creating straight to live is the same crossing as publishing, so a required
+  // field the create never sent counts as missing.
   test("meta: creating straight to published enforces a required field it omits", async () => {
     const plugins = createPluginRegistry();
     plugins.entryMetaBoxes.set("box", {
@@ -458,12 +457,8 @@ describe("entry.create", () => {
   });
 
   test("meta: reference field rejects an upsert pointing at a missing user", async () => {
-    // Smoke test for the validateEntryMetaReferences wiring in
-    // create.ts — confirms the LookupAdapter pipeline runs before the
-    // entity insert and surfaces missing references through the same
-    // `meta_invalid_value` envelope as a sanitize rejection. The
-    // term + user wrappers share the same machinery; covering entry
-    // is enough for regression detection.
+    // The term and user wrappers share this machinery, so covering entry is
+    // enough.
     const plugins = createPluginRegistry();
     registerCoreLookupAdapters(plugins);
     plugins.entryMetaBoxes.set("ownership", {

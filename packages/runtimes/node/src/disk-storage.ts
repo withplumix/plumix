@@ -36,7 +36,7 @@ export interface DiskObjectStorage extends ObjectStorage {
   readonly config: DiskStorageConfig;
 }
 
-/** What `put` records beside the bytes, so `head` and `list` never read them. */
+/** Beside the bytes, so `head` and `list` never read them. */
 interface Sidecar extends HeadResult {
   readonly uploaded: string;
 }
@@ -44,7 +44,6 @@ interface Sidecar extends HeadResult {
 const MAX_PAGE = 1000;
 
 interface Located {
-  /** The key as stored: the path under `objects/`, whatever spelling named it. */
   readonly key: string;
   readonly file: string;
   readonly sidecar: string;
@@ -63,7 +62,7 @@ async function readSidecar(path: string): Promise<Sidecar | null> {
   }
 }
 
-// Opened on the first read, so a body nobody consumes holds no descriptor.
+/** Opened on the first read, so a body nobody consumes holds no descriptor. */
 function fileBody(
   file: string,
   range: GetOptions["range"],
@@ -96,10 +95,8 @@ function fileBody(
 }
 
 /**
- * Object storage on the filesystem: one file per key under `dir`, its
- * content type and metadata beside it. Single-node by design — `s3()` from
- * `plumix/storage/s3` is the slot for a bucket several processes share.
- * `url()` is null, so the media plugin serves through its own route.
+ * Single-node by design: `s3()` is the slot for a shared bucket. `url()` is
+ * null, so media serves through its own route.
  */
 export function diskStorage(config: DiskStorageConfig): DiskObjectStorage {
   const root = resolve(config.dir);
@@ -107,9 +104,8 @@ export function diskStorage(config: DiskStorageConfig): DiskObjectStorage {
   const meta = join(root, "meta");
   const tmp = join(root, "tmp");
 
-  // Bytes and metadata are two trees under the directory, keyed by the same
-  // normalised path, so a key can never name another key's sidecar. The
-  // guard runs before anything touches disk.
+  // Two trees keyed by the same normalised path, so a key can never name
+  // another key's sidecar.
   const locate = (key: string): Located => {
     const file = resolve(objects, key);
     if (!file.startsWith(objects + sep)) {
@@ -123,9 +119,8 @@ export function diskStorage(config: DiskStorageConfig): DiskObjectStorage {
     };
   };
 
-  // Bytes and sidecar are each written under `tmp/` and renamed into place,
-  // so a reader never sees a half-written object; the etag is taken as the
-  // bytes pass. A failed body leaves nothing behind.
+  // Written under `tmp/` and renamed, so a reader never sees a half-written
+  // object.
   const writeObject = async (
     located: Located,
     body: ObjectBody,
@@ -221,9 +216,8 @@ export function diskStorage(config: DiskStorageConfig): DiskObjectStorage {
         if (!isMissing(error)) throw error;
       }
       const { cursor } = opts;
-      // The cursor is the last key served, so a key added or removed between
-      // pages cannot shift what the next page starts at. Code-unit order on
-      // both sides, so the sort and the comparison agree.
+      // The cursor is the last key served, so concurrent writes can't shift the
+      // next page's start.
       const matching = entries
         .filter((entry) => entry.isFile())
         .map((entry) =>

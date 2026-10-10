@@ -3,11 +3,6 @@ import type { BlockNode } from "./render-block-tree.js";
 import { blockSlotKeys } from "./block-slots.js";
 import { isBlockNodeArray } from "./render-block-tree.js";
 
-/**
- * Find a block node by id anywhere in the tree, descending into the slots
- * `blocks` declares on each node. Returns null when absent. Used to isolate a
- * single block's subtree — e.g. to re-run only its loader.
- */
 export function findBlockNode(
   nodes: readonly BlockNode[],
   id: string,

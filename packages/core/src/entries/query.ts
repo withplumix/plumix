@@ -14,9 +14,8 @@ import { EntryQueryError } from "./errors.js";
 import { findAuthorBySlug, findTermBySlug } from "./slug-lookups.js";
 
 /**
- * One recorded narrowing. Intent, not SQL: a query is built where the caller
- * knows what it wants and compiled where there is a database to resolve a term
- * slug or an author against, so building one costs no queries.
+ * Intent, not SQL: compiled where there is a database to resolve slugs
+ * against, so building a query costs no queries.
  */
 type EntryNarrowing =
   | { readonly kind: "types"; readonly names: readonly string[] }
@@ -37,10 +36,8 @@ type EntryNarrowing =
   | { readonly kind: "none" };
 
 /**
- * The one order a query is read in. Recorded like a narrowing and just as
- * unreadable from outside, but unlike one it replaces rather than accumulates:
- * a second call to order a query is a caller saying what the order is, not
- * adding a secondary sort under the first.
+ * Replaces rather than accumulates: a second order call says what the order
+ * is, not a secondary sort.
  */
 type EntryOrder =
   | {
@@ -50,7 +47,7 @@ type EntryOrder =
     }
   | {
       readonly kind: "meta";
-      /** The JSON path, resolved where the key was given so a bad one is refused there. */
+      /** Resolved where the key was given, so a bad one is refused there. */
       readonly path: string;
       readonly direction: EntryOrderDirection;
     };
@@ -89,11 +86,9 @@ function queryOf(state: QueryState): EntryQuery {
       direction: EntryOrderDirection = "asc",
     ) => orderedBy({ kind: "column", column, direction }),
     orderByMeta: (key: string, direction: EntryOrderDirection = "asc") => {
-      // Resolved where the key is given rather than where the SQL is built:
-      // a key carrying a quote or a backslash names a value no entry can
-      // hold, so an order on it is a mistake to report rather than a sort to
-      // approximate. Pass a visitor's input to it and that report is a 500 —
-      // check it against the keys the archive knows first.
+      // A key with a quote or backslash names a value no entry can hold, so
+      // it throws. Check a visitor's input against known keys first, or it is
+      // a 500.
       const path = metaJsonPath(key);
       if (path === null) throw EntryQueryError.metaKeyHasNoPath(key);
       return orderedBy({ kind: "meta", path, direction });
@@ -125,14 +120,16 @@ export function entryQuery(): EntryQuery {
   return queryOf({ narrowings: [], order: LATEST });
 }
 
-// Capped for the reason the ancestor walk in `route/permalink.ts` is: nothing
-// in the schema forbids a cycle in `parent_id`, and `plumix/db` hands direct
-// writes to plugins, so a walk with no bound turns one malformed pair of rows
-// into a request that never finishes. Real content trees stay far under this.
+/**
+ * Nothing forbids a `parent_id` cycle and plugins write directly, so an
+ * unbounded walk could never finish.
+ */
 const MAX_SUBTREE_DEPTH = 50;
 
-// The CTE sits inside `IN (…)` rather than being joined so the condition
-// composes with whatever else the query narrows by.
+/**
+ * The CTE sits inside `IN (…)` rather than being joined so the condition
+ * composes with whatever else the query narrows by.
+ */
 function descendantsOf(parentId: number): SQL {
   return sql`${entries.id} IN (WITH RECURSIVE descendants(id, depth) AS (
     SELECT ${entries.id}, 0 FROM ${entries} WHERE ${entries.parentId} = ${parentId}
@@ -143,8 +140,10 @@ function descendantsOf(parentId: number): SQL {
   ) SELECT id FROM descendants)`;
 }
 
-// Every arm returns, so a narrowing kind added without a translation for it is
-// a compile error here rather than a narrowing the compiler lets fall through.
+/**
+ * Every arm returns, so a narrowing kind added without a translation for it is
+ * a compile error here rather than a narrowing the compiler lets fall through.
+ */
 async function conditionsFor(
   ctx: AppContext,
   narrowing: EntryNarrowing,
@@ -187,12 +186,10 @@ async function conditionsFor(
   }
 }
 
-// Each condition is parenthesized before it is joined, and the conjunction
-// again after: drizzle's `and` wraps the whole conjunction but not its
-// operands, so a top-level `OR` inside one condition binds looser than the
-// `AND`s around it and admits rows every other narrowing excluded. Which is to
-// say: without these parentheses `where` can widen a query, and a narrowing
-// that can widen is the hole this whole type exists to close.
+/**
+ * drizzle's `and` doesn't parenthesize its operands, so a top-level `OR` in
+ * one condition would widen the query past every other narrowing.
+ */
 function allOf(conditions: readonly SQL[]): SQL {
   const combined = and(...conditions.map((condition) => sql`(${condition})`));
   return combined === undefined ? sql`(1 = 1)` : sql`(${combined})`;
@@ -211,10 +208,8 @@ const ORDER_TERMS: Record<EntryOrderColumn, SQL> = {
 };
 
 /**
- * The entry types this query can list — what every `ofTypes` on it agrees on,
- * since two of them intersect — or `null` where it names none and any type
- * could answer. Read by the CDN tagging, which has to know what publishing
- * could change this archive's page without running the query.
+ * `null` when the query names no type and any type could answer. Two
+ * `ofTypes` calls intersect.
  */
 export function entryQueryTypeNames(
   query: EntryQuery,
@@ -231,11 +226,8 @@ export function entryQueryTypeNames(
 }
 
 /**
- * The `ORDER BY` terms a query is read in — the order it recorded, then the
- * entry id in the same direction. The id is never optional: two rows with the
- * same sort value in an order SQLite is free to pick between would swap
- * places between the count and the page query, and a row would show up twice
- * or not at all across a page boundary.
+ * Always ends with the entry id: rows tied on the sort value could otherwise
+ * swap between count and page query and straddle a page boundary.
  */
 export function entryQueryOrder(query: EntryQuery): readonly SQL[] {
   const { order } = stateOf(query);
@@ -249,14 +241,8 @@ export function entryQueryOrder(query: EntryQuery): readonly SQL[] {
 }
 
 /**
- * The one condition a query narrows by, for the caller to `and` onto its own.
- * A query that narrows nothing compiles to a condition every row satisfies;
- * `null` is a query that names something no row could match — a term slug
- * nothing answers to — which a route surface reads as a 404 rather than as an
- * empty result.
- *
- * It is one condition rather than a list because a list is a shape a caller
- * can drop part of.
+ * `null` when the query names something no row could match, such as an unknown
+ * term slug; route surfaces read it as a 404, not an empty result.
  */
 export async function compileEntryQuery(
   ctx: AppContext,
@@ -264,10 +250,8 @@ export async function compileEntryQuery(
 ): Promise<SQL | null> {
   const { narrowings } = stateOf(query);
 
-  // The lookups a narrowing needs are independent of each other, so they go out
-  // together rather than one round-trip at a time. An unresolvable narrowing
-  // therefore costs the others their answers, which is the cheaper side of the
-  // trade: it happens on the 404 path, where nothing is rendered anyway.
+  // Lookups go out together; an unresolvable narrowing wasting the others is
+  // cheap, since it happens on the 404 path.
   const resolved = await Promise.all(
     narrowings.map((narrowing) => conditionsFor(ctx, narrowing)),
   );

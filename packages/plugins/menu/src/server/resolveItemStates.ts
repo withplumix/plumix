@@ -1,11 +1,5 @@
-// Server-side admin resolver. Takes raw `entries` rows from a menu and
-// produces the `resolved` shape the admin renders — state (ok / broken /
-// unauthorized), display label, current href, and the last-known href
-// for "Convert to Custom URL" seeding.
-//
-// Distinct from `getMenuByName`'s render-side resolver: that one drops
-// broken items silently for public output. This one keeps them so the
-// editor can surface them with a warning + Re-link affordances.
+// Unlike `getMenuByName`'s render-side resolver, this keeps broken items so
+// the editor can warn and offer Re-link.
 
 import type { JsonObject } from "plumix";
 import type { AppContext, LookupResult } from "plumix/plugin";
@@ -31,11 +25,8 @@ export interface MenuItemRow {
 }
 
 /**
- * What the editor receives. `meta` is the parsed value this resolver already
- * computed — sending the raw column instead would make every client re-parse
- * it, and the one that didn't asserted its way to the same type without the
- * check. `null` when the stored JSON matched no known kind, which is also
- * what puts `resolved.state` at `"broken"`.
+ * `meta` is `null` when the stored JSON matched no known kind, which also makes
+ * `resolved.state` `"broken"`.
  */
 export interface ResolvedRow extends Omit<MenuItemRow, "meta"> {
   readonly meta: MenuItemMeta | null;
@@ -43,10 +34,8 @@ export interface ResolvedRow extends Omit<MenuItemRow, "meta"> {
     readonly state: ItemState;
     readonly label: string;
     /**
-     * The linked entry's or term's title, whatever the item's own label:
-     * the lookup label, else the last-known snapshot. `null` for custom
-     * items and for rows whose meta didn't parse. The editor falls back to
-     * it when an override is cleared.
+     * The target's title whatever the item's own label; `null` for custom items
+     * and unparsed meta.
      */
     readonly linkedLabel: string | null;
     readonly href: string | null;
@@ -119,13 +108,8 @@ export async function lookupMenuTargets(
   await Promise.all(
     [...idsByKind.entries()].map(async ([kind, ids]) => {
       const adapter = ctx.plugins.lookupAdapters.get(kind)?.adapter;
-      // Skip the adapter call when:
-      // 1. the adapter isn't registered at all,
-      // 2. the viewer lacks the adapter's capability — fetching would
-      //    leak labels into `resolved.label` for kinds they shouldn't
-      //    see (information disclosure),
-      // 3. the kind has no eligible types/taxonomies — no row could
-      //    possibly resolve, and some adapters reject empty scopes.
+      // Skipping without the capability keeps labels the viewer may not see out
+      // of `resolved.label`; some adapters reject empty scopes.
       if (!adapter || !canAccessKind(kind)) {
         lookupsByKind.set(kind, new Map());
         return;
@@ -247,12 +231,7 @@ function hrefFor(
   resolverHref: string | null,
   lastHref: string | null,
 ): string | null {
-  // Per-state intent:
-  // - ok:           current resolved href, falling back to last-known.
-  // - broken:       last-known only — Convert-to-Custom seeds the editor.
-  // - unauthorized: null. Defense in depth — even if lookup leaked
-  //                 through, we don't surface a current href the
-  //                 viewer wasn't supposed to see.
+  // Unauthorized gets no href even if a lookup leaked through.
   if (state === "ok") return resolverHref ?? lastHref;
   if (state === "broken") return lastHref;
   return null;

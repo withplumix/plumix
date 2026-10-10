@@ -5,11 +5,7 @@ import { collectBlocks } from "./block-tree-ops.js";
 import { parseClipboardBlocks, serializeBlocks } from "./clipboard.js";
 import { isTypingTarget, matchesShortcut } from "./shortcuts.js";
 
-/**
- * Paste lands at the top level, so a `requiresParent` block (which can't live
- * there) is dropped. Shared by the canvas frame and the Layers panel, which
- * both build their own clipboard ops over the same tree.
- */
+/** Paste lands at the top level, where a `requiresParent` block can't live. */
 export function pasteableAtRoot(
   registry: BlockRegistry,
 ): (node: BlockNode) => boolean {
@@ -38,11 +34,8 @@ const CLIPBOARD_OPS = [
 ] as const satisfies readonly ClipboardOp[];
 
 /**
- * Resolve a keydown to a block clipboard op, or `null` when it isn't one. Bails
- * on form fields / contenteditable (let them own their clipboard) and, for
- * copy/cut, on a real text selection (the author wants text, not a block). The
- * caller does preventDefault + performs the op — this is the shared decision the
- * host and the iframe both use, reading each context's own `window`.
+ * `null` while typing, and for copy/cut on a real text selection. The caller
+ * must preventDefault.
  */
 export function clipboardOpFromEvent(e: KeyboardEvent): ClipboardOp | null {
   if (isTypingTarget(e.target)) return null;
@@ -56,12 +49,7 @@ export function clipboardOpFromEvent(e: KeyboardEvent): ClipboardOp | null {
   return op;
 }
 
-/**
- * Block clipboard operations over the editor store, async because the Clipboard
- * API is. `copy`/`cut` no-op when nothing is selected; `paste` no-ops when the
- * clipboard doesn't hold a plumix payload. `canPaste` filters pasted root nodes
- * (e.g. dropping `requiresParent` blocks, which can't live at the top level).
- */
+/** `paste` no-ops when the clipboard doesn't hold a plumix payload. */
 export function createClipboardOps(
   store: EditorStoreApi,
   registry: BlockRegistry,

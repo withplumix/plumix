@@ -1,12 +1,3 @@
-// Runnable example: a plugin handler kicks off fire-and-forget work
-// via `ctx.defer`. The test runtime's `createDeferQueue()` lets the
-// test wait for the background task to settle before asserting.
-//
-// In production (CF Workers) the same `ctx.defer` call would route
-// through `executionCtx.waitUntil` and the work continues after the
-// response is sent. On a runtime that supplies no `waitUntil`, the
-// handler tracks it for `dispose()` to drain instead.
-
 import { describe, expect, test } from "vitest";
 
 import type { AppContext, Db } from "./app-context.js";

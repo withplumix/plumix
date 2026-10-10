@@ -6,9 +6,10 @@ interface CodePanelProps {
   readonly className?: string;
 }
 
-// Enough of TypeScript to colour the snippets this site shows: comments,
-// strings, calls and the keywords they use. The snippets are a known, small
-// set in `snippets/`, so a full highlighter (and its bundle) buys nothing.
+/**
+ * The snippets are a known, small set in `snippets/`, so a full highlighter
+ * (and its bundle) buys nothing.
+ */
 const TOKEN =
   /(\/\/[^\n]*)|("(?:[^"\\]|\\.)*")|([A-Za-z_$][\w$]*)(?=\()|\b(import|from|export|default|const|type|typeof|declare|module|interface)\b/g;
 

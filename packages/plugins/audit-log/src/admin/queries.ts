@@ -38,12 +38,8 @@ export function useAuditLogList(
 export type DateRangePreset = "today" | "last7" | "last30" | "custom";
 
 /**
- * Convert a UI preset into the epoch-second pair the RPC accepts. All
- * presets are inclusive on both ends and computed against `now`.
- *
- * - `today`: from 00:00 UTC of the current day → now.
- * - `last7` / `last30`: rolling N-day windows, ending at `now`.
- * - `custom`: returns `{}` — caller supplies the bounds explicitly.
+ * Bounds are inclusive epoch seconds; `today` starts at 00:00 UTC. `custom`
+ * returns `{}` for the caller to fill.
  */
 export function presetToRange(
   preset: DateRangePreset,

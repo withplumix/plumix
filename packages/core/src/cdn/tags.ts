@@ -5,18 +5,13 @@ import { entryTag, typeTag } from "./contract/tags.js";
 interface PageTagSources {
   readonly intent: RouteIntent;
   readonly resolvedEntity: ResolvedEntity | null;
-  /** Entry types the front page lists (public, non-hierarchical). */
   readonly frontPageEntryTypes: () => readonly string[];
-  /** Entry types the named taxonomy's term pages depend on. */
   readonly taxonomyEntryTypes: (taxonomy: string) => readonly string[];
 }
 
 /**
- * The cache tags a rendered public page is stored under. Every page that lists
- * or embeds type-`X` content — its archives, the front page, term archives,
- * and an entry permalink (which can render sibling content like related posts)
- * — carries `t:X`, so any publish of that type purges it. A permalink also
- * carries its own `e:<id>` so an edit to just that entry purges it precisely.
+ * A permalink carries `t:X` too, since it can render sibling content like
+ * related posts; its own `e:<id>` lets an edit purge it precisely.
  */
 export function pageTags(sources: PageTagSources): string[] {
   const { intent, resolvedEntity } = sources;
@@ -39,11 +34,7 @@ export function pageTags(sources: PageTagSources): string[] {
     case "archiveType":
     case "view":
     case "search":
-      // Neither is derivable from the intent alone: search results depend on a
-      // query, and a plugin archive's content on what it registered. Both
-      // contribute their tags per request instead — a listed archive's from
-      // the types its entry query can list, an unlisted one's from whatever
-      // its resolver returns. A view is an unlisted resolver's page too.
+      // Not derivable from the intent; these contribute their tags per request.
       return [];
   }
 }

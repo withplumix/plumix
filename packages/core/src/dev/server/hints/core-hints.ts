@@ -4,12 +4,10 @@ import { ThemeError, ThemeRegistrationError } from "../../../theme-errors.js";
 
 import "./types.js";
 
-// A matcher inspects the caught value and, when it recognizes it, returns the
-// hint to surface. Typed matchers (`instanceof`, reliable) come first, then
-// untyped signature matchers over the message text (curated, documented
-// pitfalls). As an untyped pitfall proves common it graduates to a typed
-// error and moves up — the swap is non-breaking because matching lives here,
-// not on the Error classes (decision #1575).
+/**
+ * Matching lives here, not on the Error classes, so an untyped pitfall can
+ * graduate to a typed error without a breaking change.
+ */
 type Matcher = (error: unknown) => DevErrorHint | null;
 
 const TYPED_MATCHERS: readonly Matcher[] = [
@@ -35,9 +33,10 @@ const TYPED_MATCHERS: readonly Matcher[] = [
       : null,
 ];
 
-// Each untyped matcher documents the stable signature it keys off. These match
-// errors raised by the platform (D1/SQLite, the Workers runtime), not by
-// plumix code, so message substrings are the only reliable handle.
+/**
+ * These match platform errors (D1/SQLite, the Workers runtime), not plumix
+ * code, so message substrings are the only reliable handle.
+ */
 const UNTYPED_MATCHERS: readonly Matcher[] = [
   // D1/SQLite raises `no such table` when a query hits a table the local
   // database is missing — almost always unapplied migrations.
@@ -57,11 +56,8 @@ const UNTYPED_MATCHERS: readonly Matcher[] = [
 ];
 
 /**
- * Runs core's typed and untyped matchers against a caught value and returns the
- * hints that recognized it (typed first, then untyped), in match order. Pure and
- * hook-free: the filter subscriber below appends its result to the running list,
- * and the boot-error path (where no app — and so no hook filter — exists yet)
- * calls it directly to hint config/registration throws (#1601).
+ * Hook-free, so the boot-error path, where no app or hook filter exists yet,
+ * can call it directly.
  */
 export function matchCoreErrorHints(error: unknown): DevErrorHint[] {
   const matched: DevErrorHint[] = [];
@@ -73,10 +69,8 @@ export function matchCoreErrorHints(error: unknown): DevErrorHint[] {
 }
 
 /**
- * Registers core's built-in error-page hints. Wired at `buildApp` time behind
- * the dev gate, at low priority (10) so plugin hints (default priority 100)
- * rank after core's and can prepend to place their own first. Mirrors
- * `registerCoreDebugPanels`.
+ * Registers at priority 10 so plugin hints (default 100) rank after core's and
+ * can prepend to place their own first.
  */
 export function registerCoreErrorHints(hooks: HookRegistry): void {
   hooks.addFilter(
@@ -86,8 +80,10 @@ export function registerCoreErrorHints(hooks: HookRegistry): void {
   );
 }
 
-// Builds a matcher that recognizes an error by a substring/regex over its
-// message. Non-`Error` throws (which carry no reliable message) never match.
+/**
+ * Builds a matcher that recognizes an error by a substring/regex over its
+ * message. Non-`Error` throws (which carry no reliable message) never match.
+ */
 function signature(pattern: RegExp, hint: DevErrorHint): Matcher {
   return (error) =>
     error instanceof Error && pattern.test(error.message) ? hint : null;

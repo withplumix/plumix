@@ -18,11 +18,9 @@ describe("StaticHtml", () => {
   });
 
   test("memo() comparator always returns true — never re-renders on parent state change", () => {
-    // `React.memo(C, () => true)` short-circuits re-renders. We can't
-    // observe React's commit directly from SSR, but the memo comparator
-    // IS a public surface: invoking it must return true regardless of
-    // prop deltas. That's the contract the runtime depends on so the
-    // SSR'd HTML survives parent re-renders.
+    // SSR can't observe React's commit, but the memo comparator is public: it
+    // must return true for any props so the SSR'd HTML survives parent
+    // re-renders.
     const Memoized = StaticHtml as unknown as {
       compare?: (prev: unknown, next: unknown) => boolean;
     };

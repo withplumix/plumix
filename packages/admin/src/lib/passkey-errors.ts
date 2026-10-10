@@ -5,8 +5,10 @@ import type { PasskeyErrorCode as CorePasskeyErrorCode } from "@plumix/core";
 
 import { createStrictErrorDescriptorRegistry } from "./error-descriptor-registry.js";
 
-// Codes thrown from core's `PasskeyError` class. Drift-guarded
-// against core's `PasskeyErrorCode` by the assertion below.
+/**
+ * Codes thrown from core's `PasskeyError` class. Drift-guarded
+ * against core's `PasskeyErrorCode` by the assertion below.
+ */
 type PasskeyClassErrorCode =
   | "challenge_not_found"
   | "invalid_client_data"
@@ -24,11 +26,10 @@ type PasskeyClassErrorCode =
   | "user_not_found"
   | "invalid_response";
 
-// Wire codes the passkey UI's `postJson` can receive that core does
-// not name in a single union: route-inline strings from
-// `passkey/routes.ts` and sibling-flow codes that arrive when the user
-// came in via an invite or hit RPC input validation. Admin owns this
-// union outright.
+/**
+ * Codes core doesn't name in a single union: route-inline strings and
+ * sibling-flow codes (invite, RPC input validation).
+ */
 type PasskeyWireExtraErrorCode =
   | "challenge_not_bound_to_user"
   | "challenge_mismatch"
@@ -40,14 +41,18 @@ type PasskeyWireExtraErrorCode =
 
 type PasskeyServerErrorCode = PasskeyClassErrorCode | PasskeyWireExtraErrorCode;
 
-// Browser-side failures we distinguish ourselves before/after the server call.
+/**
+ * Browser-side failures we distinguish ourselves before/after the server call.
+ */
 type PasskeyClientErrorCode =
   "user_cancelled" | "no_authenticator" | "network_error" | "unknown";
 
 export type PasskeyErrorCode = PasskeyServerErrorCode | PasskeyClientErrorCode;
 
-// Each `<T>()` is deliberately single-use: deferring the conditional is what
-// makes this exact equality rather than mutual assignability.
+/**
+ * Each `<T>()` is deliberately single-use: deferring the conditional is what
+ * makes this exact equality rather than mutual assignability.
+ */
 type Equals<A, B> =
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
   (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
@@ -55,9 +60,11 @@ type Equals<A, B> =
     : false;
 type Assert<T extends true> = T;
 
-// If core's `PasskeyErrorCode` adds, removes, or renames a code,
-// `Equals` resolves to `false` and `Assert<false>` fails the
-// constraint here. Purely type-level — no runtime cost.
+/**
+ * If core's `PasskeyErrorCode` adds, removes, or renames a code,
+ * `Equals` resolves to `false` and `Assert<false>` fails the
+ * constraint here. Purely type-level — no runtime cost.
+ */
 type _PasskeyClassErrorCodeSync = Assert<
   Equals<PasskeyClassErrorCode, CorePasskeyErrorCode>
 >;
@@ -82,9 +89,11 @@ export class PasskeyError extends Error {
     return new PasskeyError("user_cancelled");
   }
 
-  // Dispatch entry for codes derived from a server response or DOMException
-  // mapping. Most codes have no literal throw site — they arrive via
-  // dispatch, so a single entry beats per-code factories.
+  /**
+   * Dispatch entry for codes derived from a server response or DOMException
+   * mapping. Most codes have no literal throw site — they arrive via
+   * dispatch, so a single entry beats per-code factories.
+   */
   static ofCode(ctx: { code: PasskeyErrorCode }): PasskeyError {
     return new PasskeyError(ctx.code);
   }

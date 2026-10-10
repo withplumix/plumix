@@ -12,16 +12,20 @@ import {
   SERP_PREVIEW_INPUT_TYPE,
 } from "./preview-box.js";
 
-// A hard challenge, not a soft one: a soft challenge still renders, so it
-// would gate nothing. `authenticatedPolicy` would redirect to a sign-in page
-// no harness here routes.
+/**
+ * A hard challenge, not a soft one: a soft challenge still renders, so it
+ * would gate nothing. `authenticatedPolicy` would redirect to a sign-in page
+ * no harness here routes.
+ */
 const membersOnlyPolicy = definePolicy({
   segments: ["members"],
   resolve: (ctx) => (ctx.user ? grant("members") : challenge("subscribe")),
 });
 
-// One public entry type and one internal one, plus a public taxonomy and a
-// private one — the four cases scope derivation has to separate.
+/**
+ * One public entry type and one internal one, plus a public taxonomy and a
+ * private one — the four cases scope derivation has to separate.
+ */
 const contentPlugin = definePlugin("content", (ctx) => {
   ctx.registerEntryType("post", { label: "Posts", isPublic: true });
   ctx.registerEntryType("page", { label: "Pages", isPublic: true });
@@ -91,11 +95,8 @@ describe("SEO meta box scope", () => {
   });
 
   test("keeps the box on an access-policied type", async () => {
-    // This is what keeps the access check out of `publicTargets`: a gated
-    // type is held out of the sitemap and IndexNow, and nothing else. An
-    // editor still writes the title and description a member will read, and
-    // folding the check up into the shared scope helper would take the box,
-    // its SERP preview and the type's saved settings keys with it.
+    // Access stays out of `publicTargets`: editors still write a gated type's
+    // title and description, so only the sitemap and IndexNow drop it.
     const gated = definePlugin("gated", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
       ctx.registerEntryType("lesson", {

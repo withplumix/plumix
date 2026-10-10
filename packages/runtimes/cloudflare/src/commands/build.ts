@@ -13,11 +13,8 @@ export const buildCommand: CommandDefinition = {
       configFile: false,
       root,
       plugins,
-      // CF's config hook honours a user-provided `builder.buildApp`. Its
-      // `order:"post"` hook still writes `wrangler.json` afterwards and skips
-      // already-built envs; the worker imports no static assets, so CF's
-      // worker→client asset-move has nothing to relocate and the output is
-      // unchanged.
+      // CF's `order:"post"` hook still writes `wrangler.json` and skips
+      // already-built envs, so the output is unchanged.
       builder: { buildApp: buildAppClientFirst },
     });
 

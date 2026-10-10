@@ -1,20 +1,6 @@
-// Port of Astro's prop serializer; see LICENSE. PROP_TYPE integer
-// codes AND payload shape match Astro byte-for-byte: nested collection
-// types (Map/Set/Array/typed-arrays) are encoded as nested arrays of
-// `[type, value]` tuples, NOT JSON-stringified strings. The single
-// outer `JSON.stringify` in `serializeProps` walks the whole tree once.
-//
-// Why this matters: encoding `new Map([["k", new Date(0)]])` with the
-// old nested-stringify approach would lose the inner Date — it would
-// round-trip as `Map<string, string>` because the second-stage JSON
-// parse couldn't see the nested `[PROP_TYPE.Date, "..."]` tuple. The
-// nested-array form preserves type fidelity through the whole graph.
-//
-// Cycle detection runs at the SSR boundary and throws with the
-// component displayName so a broken prop graph fails loud rather than
-// producing nested-tuple soup the client can't decode. `seen.delete`
-// after the recursive walk so a *shared* reference (same object in
-// two slots) is fine — only true cycles raise.
+// Port of Astro's prop serializer; see LICENSE. PROP_TYPE codes and payload
+// shape match Astro byte-for-byte. Nested collections encode as nested
+// tuples, not stringified JSON, so inner types survive.
 
 export class IslandPropSerializationError extends Error {
   static {
@@ -69,10 +55,8 @@ interface SerializePropsOptions {
 type Encoded = readonly [PROP_TYPE, unknown?];
 
 /**
- * An island's props as the codec moves them, distinct from the `IslandProps<T>`
- * an author writes. Not JSON: the codec below carries `Date`, `Map`, `Set`,
- * `BigInt`, `URL` and the typed arrays through the round trip, so what comes
- * back out is richer than a JSON parse could produce.
+ * Not JSON: the codec carries `Date`, `Map`, `Set`, `BigInt`, `URL` and typed
+ * arrays through the round trip.
  */
 export type SerializedProps = Readonly<Record<string, unknown>>;
 
@@ -120,16 +104,16 @@ function encode(
   try {
     return encodeInner(value, seen, displayName);
   } finally {
-    // Remove the value AFTER the recursive walk completes so a sibling
-    // slot can reuse the same reference without tripping the cycle
-    // guard. Cycles still raise because the inner walk hits `seen.has`
-    // before this `finally` runs on the outer call.
+    // Delete after the walk so a shared reference in sibling slots passes; a
+    // true cycle still hits `seen.has` first.
     seen.delete(value);
   }
 }
 
-// Widened back on purpose: every branch below re-derives the shape from the
-// runtime tag, so the caller's narrowing buys this function nothing.
+/**
+ * Widened back on purpose: every branch below re-derives the shape from the
+ * runtime tag, so the caller's narrowing buys this function nothing.
+ */
 function encodeInner(
   value: unknown,
   seen: WeakSet<object>,
@@ -182,10 +166,7 @@ function encodeInner(
   }
 }
 
-/**
- * Everything `decode` can hand back — the inverse of `PROP_TYPE`, so a branch
- * added to one belongs in the other.
- */
+/** The inverse of `PROP_TYPE`: a branch added to one belongs in the other. */
 type DecodedValue =
   | string
   | number

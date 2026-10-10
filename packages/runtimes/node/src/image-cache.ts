@@ -17,22 +17,27 @@ export interface CachedVariant {
 }
 
 export interface VariantCache {
-  /** Whether a variant `key` of `source` is held in any of `extensions`; counts as serving it. */
+  /**
+   * Whether a variant `key` of `source` is held in any of `extensions`; counts
+   * as serving it.
+   */
   touch(
     source: string,
     key: string,
     extensions: readonly string[],
   ): Promise<boolean>;
-  /** The variant `key` of `source` in the first of `extensions` held, opened for reading. */
+  /**
+   * The variant `key` of `source` in the first of `extensions` held, opened for
+   * reading.
+   */
   open<E extends string>(
     source: string,
     key: string,
     extensions: readonly E[],
   ): Promise<{ readonly extension: E; readonly body: CachedVariant } | null>;
   /**
-   * Counts the purges of `source` so far. A render takes it before it reads
-   * the source and hands it to `put`, which then declines to keep a variant
-   * of a source purged while the render was under way.
+   * `put` declines a variant of a source purged after the render read this
+   * epoch.
    */
   epoch(source: string): number;
   put(
@@ -55,10 +60,8 @@ const fileName = (source: string, key: string, extension: string): string =>
   `${sourcePrefix(source)}${key}.${extension}`;
 
 /**
- * Variants on disk under one directory, bounded by `maxBytes`. The index of
- * name to size is ordered least recently served first; a restart seeds it
- * from the directory in modification order, the nearest thing the files
- * themselves record.
+ * Least recently served first; a restart seeds the index in file modification
+ * order.
  */
 export function createVariantCache(
   dir: string,

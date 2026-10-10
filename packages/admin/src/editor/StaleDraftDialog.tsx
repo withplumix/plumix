@@ -31,24 +31,24 @@ const M = {
 
 interface StaleDraftDialogProps {
   readonly open: boolean;
-  // The user's pending autosave content + the current live row. Both
-  // already loaded by the route — passed in so the Compare toggle
-  // doesn't need to re-fetch.
+  /**
+   * The user's pending autosave content + the current live row. Both
+   * already loaded by the route — passed in so the Compare toggle
+   * doesn't need to re-fetch.
+   */
   readonly autosaveSnapshot: unknown;
   readonly liveSnapshot: unknown;
-  // `Use mine` keeps the autosave seeded into the canvas. `Use theirs`
-  // discards the autosave row server-side; the route's success
-  // handler then refetches live and the editor re-seeds.
+  /**
+   * `Use mine` keeps the autosave seeded into the canvas. `Use theirs`
+   * discards the autosave row server-side; the route's success
+   * handler then refetches live and the editor re-seeds.
+   */
   readonly onUseMine: () => void;
   readonly onUseTheirs: () => void;
-  // True while the discard mutation is in flight after Use theirs.
+  /** True while the discard mutation is in flight after Use theirs. */
   readonly isResolving: boolean;
 }
 
-// Three-action resolver surfaced at editor mount when a pending
-// autosave was anchored against an older live row than what's on the
-// server now. Builder.io's history UI uses the same three options —
-// "yours" / "theirs" / "compare" — for parallel-edit conflicts.
 export function StaleDraftDialog({
   open,
   autosaveSnapshot,
@@ -65,11 +65,7 @@ export function StaleDraftDialog({
         className="max-w-4xl"
         showCloseButton={false}
         data-testid="stale-draft-dialog"
-        // Radix Dialog closes on Escape / outside-click by default;
-        // prevent both so the resolver actually blocks until the user
-        // picks one of the three actions. Without these, the dialog
-        // dismisses but the canvas stays seeded with the stale
-        // autosave content — silent contract violation.
+        // Dismissing would leave the canvas seeded with the stale autosave.
         onEscapeKeyDown={(e) => e.preventDefault()}
         onPointerDownOutside={(e) => e.preventDefault()}
       >

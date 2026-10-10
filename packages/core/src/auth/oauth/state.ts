@@ -9,16 +9,14 @@ interface OAuthStatePayload {
   readonly provider: string;
   readonly codeVerifier: string;
   /**
-   * Validated same-origin path to return the visitor to after the callback
-   * mints a session. Absent for admin-originated sign-in (defaults to the
-   * admin). Stored server-side in the (hashed-key) state row, never in the
-   * URL round-trip, so it can't be tampered with between start and callback.
+   * Kept server-side, not in the URL, so it can't be tampered with between
+   * start and callback.
    */
   readonly redirectTo?: string;
 }
 
 interface IssuedOAuthState {
-  /** Raw state token to send to the provider via the URL. Never persisted. */
+  /** Never persisted; only its hash is stored. */
   readonly state: string;
   readonly expiresAt: Date;
 }
@@ -51,12 +49,8 @@ export async function consumeOAuthState(
 ): Promise<OAuthStatePayload | null> {
   const hash = await hashToken(state);
 
-  // Atomic compare-and-delete: `DELETE … RETURNING` returns at most one
-  // row to whichever caller wins the SQLite write. A concurrent second
-  // consume sees an empty result, never the same payload twice. Scope the
-  // DELETE by `type = 'oauth_state'` so a hash collision with another
-  // token type (invite, magic_link, …) doesn't accidentally consume that
-  // row when the oauth row was never present.
+  // Atomic compare-and-delete so a concurrent consume gets nothing; scoped by
+  // type so it can't consume another token kind.
   const [row] = await db
     .delete(authTokens)
     .where(and(eq(authTokens.hash, hash), eq(authTokens.type, "oauth_state")))

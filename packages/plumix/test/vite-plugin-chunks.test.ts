@@ -13,12 +13,8 @@ import {
   installPlugins,
 } from "@plumix/core";
 
-// Re-implements the HTML-injection path from `packages/plumix/src/vite/index.ts`
-// against a freshly-staged fixture so the plumix Vite plugin's chunk + css
-// + manifest behaviour is exercisable without spinning up a real Vite build.
-// The shape under test (copy files → inject tags → write HTML) is exactly
-// what `stageAdminAssets` does at `buildStart`; the fixture drives the same
-// code path by calling the exported pieces directly.
+// Drives `stageAdminAssets`'s exported pieces directly, avoiding a real Vite
+// build.
 
 async function mkTmp(prefix: string): Promise<string> {
   const path = join(

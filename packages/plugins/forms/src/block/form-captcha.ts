@@ -1,15 +1,8 @@
 import { TURNSTILE_FIELD } from "../contract.js";
 
 /**
- * Cloudflare's widget, as the island drives it.
- *
- * Explicitly rendered, never through the `.cf-turnstile` auto-scan: that
- * scan runs once when the script loads and never again, and an island
- * mounts with `createRoot`, which replaces the markup the server sent —
- * so a widget drawn into the served container is discarded the moment
- * the island takes over, with nothing to draw it a second time. A form
- * broken into steps would never get one at all, since its container only
- * appears when the visitor reaches the step that submits.
+ * Rendered explicitly: the `.cf-turnstile` auto-scan runs once at script
+ * load, and `createRoot` then discards what it drew.
  */
 interface TurnstileApi {
   readonly render: (
@@ -23,18 +16,17 @@ interface TurnstileApi {
   readonly remove: (widget: string) => void;
 }
 
-// `render=explicit` turns the auto-scan off, so nothing can draw a
-// second widget into a container this module already owns.
+/**
+ * `render=explicit` turns the auto-scan off, so nothing can draw a
+ * second widget into a container this module already owns.
+ */
 const SCRIPT_SRC =
   "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
 
 const api = (): TurnstileApi | undefined =>
   (globalThis as { turnstile?: TurnstileApi }).turnstile;
 
-// One script per document however many guarded forms are on it, and one
-// promise so two islands mounting in the same tick cannot each append
-// one. Undefined until the first guarded form asks: a page with no
-// captcha on it fetches nothing from Cloudflare.
+/** One promise, so islands mounting in the same tick share one script. */
 let script: Promise<TurnstileApi | undefined> | undefined;
 
 function load(): Promise<TurnstileApi | undefined> {
@@ -50,9 +42,8 @@ function load(): Promise<TurnstileApi | undefined> {
     element.addEventListener("load", () => {
       resolve(api());
     });
-    // A blocked or unreachable script resolves to nothing rather than
-    // rejecting: the server refuses a submission carrying no challenge
-    // on its own, which is the answer the visitor needs either way.
+    // Resolves rather than rejects: the server refuses a submission with
+    // no challenge anyway.
     element.addEventListener("error", () => {
       resolve(undefined);
     });
@@ -81,10 +72,8 @@ export async function drawCaptcha(
 }
 
 /**
- * Draw the challenge again, after the server refused a submission. A
- * token is spent the moment it is verified, so a visitor told to try
- * again would otherwise post the used one and be refused a second time
- * for a reason they were never shown.
+ * Call after the server refuses a submission: a token is spent once
+ * verified, so a retry would post a used one.
  */
 export function resetCaptcha(widget: string | undefined): void {
   if (widget !== undefined) api()?.reset(widget);

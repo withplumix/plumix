@@ -3,15 +3,14 @@ import type { MessageDescriptor } from "@lingui/core";
 import type { MessageValues } from "../../blocks/index.js";
 import type { JsonObject } from "../../json.js";
 
-// Every declared mail augments this registry, keyed by its name, with the
-// props it renders from: core from `../core-mails.ts`, a plugin from its own
-// module through `declare module "plumix"`. The same pattern as
-// `FilterRegistry`: the registry types every API keyed by a mail's name, and
-// the declaration (`defineMail`) makes the mail exist when the site runs.
+/**
+ * Each declared mail augments this, keyed by name, with its props; only
+ * `defineMail` makes the mail exist at runtime.
+ */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface MailRegistry {}
 
-// `keyof` of an empty interface is `never`; augmentation makes it a union.
+/** `keyof` of an empty interface is `never`; augmentation makes it a union. */
 // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 export type MailName = keyof MailRegistry & string;
 
@@ -35,7 +34,9 @@ export type MailRender<Props> = (
   ctx: MailRenderContext,
 ) => string;
 
-/** The render functions a mail is made of, and the ones an override replaces. */
+/**
+ * The render functions a mail is made of, and the ones an override replaces.
+ */
 export interface MailParts<Props> {
   readonly subject: MailRender<Props>;
   /** The plain-text body. Every mail has one. */
@@ -50,10 +51,8 @@ export interface MailDefinition<Props> extends MailParts<Props> {
 }
 
 /**
- * Any declared mail, whatever its props: what a plugin's `mails` field and
- * the boot-time registry hold. The methods take `never` so every
- * `MailDefinition<Props>` is assignable; the sender calls them with the props
- * `send` already typed against the registry.
+ * The methods take `never` so every `MailDefinition<Props>` is assignable;
+ * the sender passes props `send` already typed against the registry.
  */
 export interface AnyMailDefinition {
   readonly name: string;
@@ -91,10 +90,8 @@ export interface MailSendOptions {
 /** `ctx.mail`: sends a declared mail by name. */
 export interface MailSender {
   /**
-   * Renders the mail in the recipient's locale and hands it to the configured
-   * mailer. Throws `MailerNotConfigured` when the site has no mailer,
-   * `MailError` when no installed owner declares the name, and whatever the
-   * mailer throws.
+   * Throws `MailerNotConfigured` when the site has no mailer, `MailError` when
+   * no installed owner declares the name, and whatever the mailer throws.
    */
   send<Name extends MailName>(
     name: Name,

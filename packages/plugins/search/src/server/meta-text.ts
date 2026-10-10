@@ -2,18 +2,11 @@ import type { MetaBoxField } from "plumix/fields";
 import type { PluginRegistry } from "plumix/plugin";
 import { listEntryMetaFields } from "plumix/plugin";
 
-// Bumped when the extraction below changes — a different way of walking a
-// nested document, a different separator. The roster hashes itself, but
-// nothing else would tell text derived by an older extractor from current.
+/** Bump when the extraction below changes; the roster hash cannot see that. */
 const META_EXTRACTOR_ALGORITHM = "1";
 
 export interface SearchableMetaField {
   readonly key: string;
-  /**
-   * How the stored value has to be read to get text out of it. `string` is
-   * the value itself; `richtext` is the nested document the field stores,
-   * which carries its prose in leaves rather than in one string.
-   */
   readonly kind: "string" | "richtext";
 }
 
@@ -25,11 +18,10 @@ export type SearchableMetaRoster = ReadonlyMap<
   readonly SearchableMetaField[]
 >;
 
-// The inputs whose stored value is prose a visitor could reasonably search
-// for, and the only ones a `.searchable()` chain is offered on. Named rather
-// than derived from the string family: `password` is a string input too, and
-// a sixth one joining that family should not become public index content by
-// arriving.
+/**
+ * Named rather than derived from the string family: `password` is one too,
+ * and a new string input must not become public index content by arriving.
+ */
 const TEXT_INPUT_KINDS = new Map<string, SearchableMetaKind>([
   ["text", "string"],
   ["textarea", "string"],
@@ -39,21 +31,8 @@ const TEXT_INPUT_KINDS = new Map<string, SearchableMetaKind>([
 ]);
 
 /**
- * How a field's value is read as text, or nothing when it is not indexed.
- *
- * Two exclusions sit here beside the opt-in, and they are the same rule
- * rather than two: a document's body is served back to an anonymous visitor
- * as a snippet around a word that visitor chose, so a value not everyone may
- * read cannot be in it. A capability-gated field is the declared case; a
- * password field is the one an author is likely to reach for without
- * thinking, and the admin already masks it for the same reason. Excluding
- * both from the projection is what makes the leak impossible rather than
- * dependent on a predicate the query surface remembers.
- *
- * A field's capability is the one core enforces server-side; the capability a
- * *box* carries is a UI filter that any holder of the entity's write gate can
- * go around, so it says nothing about who may read a value and is not
- * consulted here either.
+ * Snippets reach anonymous visitors, so capability-gated fields stay out. A
+ * box's capability is only a UI filter and is deliberately not consulted.
  */
 function searchableKind(field: MetaBoxField): SearchableMetaKind | undefined {
   if (field.searchable !== true) return undefined;
@@ -75,15 +54,8 @@ export function searchableMetaFields(
 }
 
 /**
- * The same across the types that are actually indexed — what the version
- * hashes.
- *
- * The caller supplies the types rather than this reading the registry itself,
- * which keeps the searchability rule in `document.ts` where the rest of it
- * lives instead of importing it back the way it came. Types that reach no
- * document are left out on purpose: a field declared on one cannot move any
- * text, so folding it into the tag would restamp the whole corpus — a read of
- * every entry row and a walk of every block tree — for nothing.
+ * Pass only indexed types: a field on any other type would restamp the whole
+ * corpus for nothing.
  */
 export function searchableMetaRoster(
   plugins: PluginRegistry,
@@ -103,25 +75,15 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isTextNode = (node: unknown): node is { readonly text: string } =>
   isRecord(node) && typeof node.text === "string";
 
-// Matches the cap core's richtext validator enforces on write, and is here
-// for the same arithmetic: a node costs roughly 30 bytes, so the 256 KiB
-// per-value meta cap still buys thousands of levels — enough to exhaust the
-// stack. The write path already refuses a document this deep, but the change
-// feed carries bags that never went through it (a seed, an import, a direct
-// write), and a `RangeError` here throws inside the drain.
+/**
+ * Matches core's richtext write cap. The change feed also carries bags that
+ * skipped validation, and a stack overflow here would throw inside the drain.
+ */
 const MAX_DOCUMENT_DEPTH = 100;
 
 /**
- * The prose a nested document holds, its structure flattened.
- *
- * Adjacent text nodes are glued rather than joined: an editor marking half a
- * word bold stores it as two nodes, and separating them would file "unbroken"
- * under two tokens neither of which the reader typed. Anything else — a
- * paragraph, a line break, a node the walk cannot read — separates, so two
- * lines never fuse into one word instead.
- *
- * Past the depth cap the subtree reads as unreadable rather than throwing,
- * which is what every other shape this walk cannot parse does.
+ * Adjacent text nodes are glued: half a word in bold is two nodes, and
+ * splitting them would index two tokens nobody typed.
  */
 function documentText(node: unknown, depth = 0): string {
   if (isTextNode(node)) return node.text;
@@ -141,20 +103,14 @@ function documentText(node: unknown, depth = 0): string {
   return out;
 }
 
-/** One field's stored value read as the text its kind carries. */
 function fieldText(raw: unknown, kind: SearchableMetaKind): string {
   if (kind === "richtext") return documentText(raw);
   return typeof raw === "string" ? raw.trim() : "";
 }
 
 /**
- * The text these fields carry out of one entry's meta bag, newline-joined so
- * two fields stay two tokens.
- *
- * A key the bag does not hold, and a key holding something other than what
- * its field declared, both contribute nothing rather than throwing: meta is
- * written through the field pipeline but the column predates any given
- * roster, so a stale bag is a thing that exists.
+ * A missing key, or one holding the wrong shape, contributes nothing rather
+ * than throwing.
  */
 export function extractMetaText(
   meta: unknown,
@@ -171,23 +127,9 @@ export function extractMetaText(
 }
 
 /**
- * A tag for the extraction this roster produces, so a document derived from
- * an older one can be told apart from a current one — which is what makes
- * marking a field searchable re-index the entries it affects with nobody
- * bumping a number by hand.
- *
- * Sorted before hashing, so the tag tracks the declared *set* rather than the
- * order plugins registered their boxes in.
- *
- * Two-lane FNV-1a to 64 bits, the same shape `blockTextVersion` uses on the
- * block roster: cheap, synchronous and dependency-free. Only change detection
- * is needed — but a collision means affected rows never re-index, so 32 bits
- * is thinner than it needs to be.
- *
- * Deliberately a copy rather than a shared helper. The two tags are halves of
- * a composite and never compared with each other, so one changing how it
- * hashes moves that half and restamps — which is the behaviour wanted, not a
- * divergence to guard against.
+ * Independent of registration order. Two-lane 64-bit FNV-1a, since a collision
+ * means affected rows never re-index. Deliberately a copy of
+ * `blockTextVersion`'s hash.
  */
 export function metaTextVersion(roster: SearchableMetaRoster): string {
   const declarations = [...roster]

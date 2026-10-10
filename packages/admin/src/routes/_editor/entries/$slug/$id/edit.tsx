@@ -95,29 +95,30 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-// Core + plugin blocks supply the inspector's input schemas, plugin specs
-// winning a name clash (`createBlockRegistry` is last-write-wins). Only the
-// component reads it, so the router's code-splitter moves it, and every core
-// block with its highlighter and sanitizer, out of the entry chunk. A
-// top-level call here would stay behind in the route file the entry imports.
+/**
+ * Only the component reads it, so the code-splitter moves it and every core
+ * block out of the entry chunk.
+ */
 const registry = createBlockRegistry([...coreBlocks, ...getRegisteredBlocks()]);
 
-// Theme + plugin patterns, surfaced in the inserter alongside the blocks.
+/** Theme + plugin patterns, surfaced in the inserter alongside the blocks. */
 const patterns = getPatterns();
 
-// Theme breakpoints sizing the editor's device-switch canvas widths.
+/** Theme breakpoints sizing the editor's device-switch canvas widths. */
 const breakpoints = getThemeBreakpoints();
 
-// Theme tokens offered in the Styles tab's token-or-custom controls.
+/** Theme tokens offered in the Styles tab's token-or-custom controls. */
 const themeTokens = getThemeTokens();
 
-// How long to wait after a template-rendered field autosaves before reloading
-// the preview canvas — short, only to coalesce writes that land together (the
-// autosave debounce has already elapsed by the time this fires).
+/**
+ * Short: only coalesces writes that land together, after the autosave debounce.
+ */
 const PREVIEW_REFRESH_DEBOUNCE_MS = 250;
 
-// Mint once and cache forever — each call writes a fresh preview token, and
-// the URL it returns is the canvas iframe's target for the editor's lifetime.
+/**
+ * Mint once and cache forever — each call writes a fresh preview token, and
+ * the URL it returns is the canvas iframe's target for the editor's lifetime.
+ */
 const previewLinkQuery = (
   id: number,
 ): ReturnType<typeof orpc.entry.createPreviewLink.queryOptions> =>
@@ -126,9 +127,6 @@ const previewLinkQuery = (
     staleTime: Infinity,
   });
 
-// The visual editor. The entry load and the preview mint both run in
-// the loader so a failure (unreadable entry, no public url) surfaces through
-// one ErrorScreen rather than a dead canvas.
 const editorSearch = v.object({
   // Opening `?revision=<id>` views that past revision read-only with a restore
   // banner; absent → the normal editing session.
@@ -148,11 +146,8 @@ export const Route = createFileRoute("/_editor/entries/$slug/$id/edit")({
   },
   validateSearch: editorSearch,
   loader: async ({ context, params }) => {
-    // Only the visual canvas (and the revision preview) loads the public route
-    // behind a minted preview link; non-editor types render the plain form,
-    // which has no canvas, so skip the mint (a structured-record type may have
-    // no public URL to mint against). The gate decides whether to include the
-    // mint, not when — the entry load and the mint have no data dependency.
+    // Load and mint run together so a failure surfaces in one ErrorScreen. The
+    // plain form skips the mint: its type may have no public URL.
     const entryType = findEntryTypeBySlug(params.slug);
     await Promise.all([
       context.queryClient.query({
@@ -212,11 +207,8 @@ function EditorRoute(): ReactNode {
   const { data: entry } = useSuspenseQuery(
     orpc.entry.get.queryOptions({ input: { id, preview: true } }),
   );
-  // The store seeds once (uncontrolled), so the canvas only re-seeds on a
-  // remount. The preview source flip covers load-time-draft publish/discard
-  // (autosave↔live); `reseedNonce` covers the in-session case where discarding
-  // a freshly-made draft leaves the source at "live" (no flip) — the inner
-  // bumps it so the canvas drops the discarded edits.
+  // The store seeds once, so only a remount re-seeds. Discarding a fresh draft
+  // leaves the source at "live", so this nonce forces it.
   const [reseedNonce, setReseedNonce] = useState(0);
   const reseed = useCallback(() => setReseedNonce((n) => n + 1), []);
 
@@ -268,7 +260,7 @@ interface EntryEditorProps {
   readonly onReseed: () => void;
 }
 
-// Content + excerpt + meta + template + access, as one autosave-row write.
+/** Content + excerpt + meta + template + access, as one autosave-row write. */
 interface ContentSnapshot {
   readonly blocks: EntryContent["blocks"];
   readonly serializedBlocks: string;
@@ -278,7 +270,9 @@ interface ContentSnapshot {
   readonly access: string | null;
 }
 
-// Title + slug + parent + terms, written to the live row (`saveAs: "live"`).
+/**
+ * Title + slug + parent + terms, written to the live row (`saveAs: "live"`).
+ */
 interface StructuralSnapshot {
   readonly title: string;
   readonly slug: string;
@@ -286,8 +280,10 @@ interface StructuralSnapshot {
   readonly terms: Readonly<Record<string, readonly string[]>>;
 }
 
-// What changed between the last-saved structural fields and `next`. A blank
-// title or slug is never sent: the author is mid-edit, not clearing it.
+/**
+ * What changed between the last-saved structural fields and `next`. A blank
+ * title or slug is never sent: the author is mid-edit, not clearing it.
+ */
 function structuralChanges(
   saved: StructuralSnapshot,
   next: StructuralSnapshot,
@@ -309,9 +305,11 @@ function structuralChanges(
   };
 }
 
-// Content + excerpt + meta ride one debounced autosave-row write; slug + parent
-// ride a second group that writes the live row. `useEntryAutosave` runs both
-// behind one optimistic-concurrency token.
+/**
+ * Content + excerpt + meta ride one debounced autosave-row write; slug + parent
+ * ride a second group that writes the live row. `useEntryAutosave` runs both
+ * behind one optimistic-concurrency token.
+ */
 function EntryEditor({
   capabilities,
   entryType,
@@ -362,9 +360,9 @@ function EntryEditor({
     initialTemplate,
   );
   const templateRef = useRef<string | null>(initialTemplate);
-  // Per-entry visibility pick — same reserved-key / dedicated-field mechanics as
-  // the template choice, sent as the `access` update field. `null` = the entry
-  // type's default policy. Rides the same autosave group.
+  // Per-entry visibility pick — same reserved-key / dedicated-field mechanics
+  // as the template choice, sent as the `access` update field. `null` = the
+  // entry type's default policy. Rides the same autosave group.
   const rawAccess = entry.meta[ACCESS_POLICY_META_KEY];
   const initialAccess = typeof rawAccess === "string" ? rawAccess : null;
   const [accessValue, setAccessValue] = useState<string | null>(initialAccess);
@@ -375,10 +373,8 @@ function EntryEditor({
   const titleRef = useRef(titleValue);
   const slugRef = useRef(slugValue);
   const parentRef = useRef(parentValue);
-  // Taxonomies registered against this entry type that the user can assign to
-  // (the editor picker writes assignments, so `:assign` — not just `:read` — is
-  // the gate; an unassignable taxonomy would only fail the save). Selections are
-  // kept as string ids (the MultiSelect's value form), mirrored into `termsRef`.
+  // Gated on `:assign`, not `:read`: an unassignable taxonomy would only fail
+  // the save.
   const taxonomies = useMemo(() => {
     const allowed = new Set(entryType?.termTaxonomies ?? []);
     return visibleTermTaxonomies(capabilities).filter(
@@ -405,9 +401,6 @@ function EntryEditor({
     accessRef.current = accessValue;
   });
 
-  // Coalesce the preview reload: a content + structural save landing together
-  // (or a burst of meta edits) triggers a single canvas reload shortly after
-  // the writes persist, rather than one reload per field.
   const refreshPreview = useMemo(
     () =>
       createDebouncer(
@@ -422,10 +415,6 @@ function EntryEditor({
     id,
     entryType: entry.type,
     liveUpdatedAt: entry.updatedAt,
-    // Surface a genuine autosave failure so a rejected save (e.g. content
-    // referencing an unknown block) isn't silently swallowed and lost. Meta
-    // constraint rejections carry field paths — pin them onto the document
-    // panel's inputs alongside the toast.
     onError: (err) => {
       setMetaFieldErrors(extractMetaFieldErrors(err) ?? null);
       toastError(renderLabel(M.autosaveFailed));
@@ -483,13 +472,13 @@ function EntryEditor({
         onSaved: (patch, response) => {
           if (response.type !== entry.type) {
             // The write landed on the per-user autosave row — a pending draft
-            // now exists. Surface it so the draft actions wake without a reload.
+            // now exists. Surface it so the draft actions wake without a
+            // reload.
             setHasLocalDraft(true);
           }
           setMetaFieldErrors(null);
-          // Excerpt / meta / template render into the shell — reload to show
-          // them (block content is already live over the bridge). An access
-          // change doesn't alter this render, so it needn't trigger a reload.
+          // These render into the server shell, which the bridge doesn't
+          // update.
           if (
             patch.excerpt !== undefined ||
             patch.meta !== undefined ||
@@ -848,10 +837,7 @@ function EntryEditor({
       ]),
     [id, entryTypeName, queryClient],
   );
-  // Publish is the strict gate — a rejection carries the field paths that
-  // need fixing (an empty required field, an out-of-bounds value a draft
-  // tolerated). Pin them onto the document panel's inputs, not just a generic
-  // toast, so the author knows what to fix before retrying.
+  // Publish is stricter than a draft save, rejecting values a draft tolerated.
   const handlePublishError = useCallback(
     (err: unknown): void => {
       setMetaFieldErrors(extractMetaFieldErrors(err) ?? null);
@@ -859,9 +845,9 @@ function EntryEditor({
     },
     [renderLabel],
   );
-  // Publishing flushes pending edits first and waits its turn in the save queue,
-  // so it neither publishes without the last edit nor races an autosave for the
-  // token.
+  // Publishing flushes pending edits first and waits its turn in the save
+  // queue, so it neither publishes without the last edit nor races an autosave
+  // for the token.
   const publish = useMutation({
     mutationFn: () =>
       autosave.runExclusive((expectedLiveUpdatedAt) =>
@@ -991,13 +977,10 @@ function EntryEditor({
     />
   );
 
-  // `createPreviewLink` returns a site-relative url (`/blog/hello?preview=…`);
-  // resolve it against the admin's own origin (the public site is same-origin).
-  // The shareable draft-preview link is that token URL as-is; the canvas reuses
-  // it with `plumix.edit` flipped on so the public render boots the runtime.
+  // The site-relative url resolves against the admin origin: the public site is
+  // same-origin.
   const target = new URL(previewLink.url, window.location.origin);
-  // The shareable draft-preview link is the token URL as-is (captured before
-  // the edit flag is added); the canvas reuses the same URL with `plumix.edit`.
+  // Captured before the canvas's `plumix.edit` flag is added.
   const shareUrl = target.toString();
   target.searchParams.set("plumix.edit", "");
 
@@ -1038,10 +1021,6 @@ function EntryEditor({
   );
 }
 
-// Opens a past revision read-only in the same editor, with a banner offering
-// "back to live" and restore. Restore reuses the shared revisions RPC (which
-// lands on the caller's autosave row for autosave types, or the live row with
-// an optimistic-concurrency token for legacy types), then returns to live.
 function RevisionPreview({
   id,
   revisionId,
@@ -1093,9 +1072,7 @@ function RevisionPreview({
   });
 
   const revision = revisionQuery.data;
-  // Gate on the live entry too: its `updatedAt` is the restore concurrency
-  // token, so Restore must not be clickable until it's loaded (an undefined
-  // token would skip the stale-check on the legacy live-write path).
+  // An undefined `updatedAt` token would skip the legacy path's stale-check.
   if (!revision || !liveQuery.data) return <PendingScreen />;
 
   const target = new URL(previewLink.url, window.location.origin);

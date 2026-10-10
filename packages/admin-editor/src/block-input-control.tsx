@@ -37,18 +37,17 @@ import { Switch } from "@plumix/admin-ui/switch";
 import { Textarea } from "@plumix/admin-ui/textarea";
 import { resolveLabel } from "@plumix/core/i18n";
 
-// Lazy so the Tiptap + ProseMirror engine (~230 KB) splits into its own chunk,
-// fetched only when a rich-text block is selected.
+/**
+ * Lazy so the Tiptap + ProseMirror engine (~230 KB) splits into its own chunk,
+ * fetched only when a rich-text block is selected.
+ */
 const RichTextField = lazy(() =>
   import("./rich-text-field.js").then((m) => ({ default: m.RichTextField })),
 );
 
 /**
- * A plugin-supplied field control (e.g. the media picker), resolved by the host
- * from the same registry metaboxes use. The seam adapts a block attribute onto
- * the `rhf` shape these controls already expect, so one registration serves
- * both metaboxes and the block inspector. `field` is opaque here — the host's
- * control casts it to its own field-manifest type.
+ * The same control serves metaboxes and the block inspector. `field` is opaque
+ * here; the host's control casts it to its own field-manifest type.
  */
 export interface PluginFieldControlProps {
   readonly field: unknown;
@@ -61,9 +60,8 @@ export interface PluginFieldControlProps {
   readonly disabled: boolean;
   readonly testId: string;
   /**
-   * The rest of the active block's attributes (read-only). A few controls are
-   * sibling-aware — the focal-point picker reads the block's image url to draw
-   * its preview. Absent in the metabox context (fields there are independent).
+   * Read-only sibling attributes for sibling-aware controls. Absent in the
+   * metabox context.
    */
   readonly attrs?: JsonObject;
 }
@@ -73,9 +71,8 @@ export type PluginFieldControl = (
 ) => ReactElement | null;
 
 /**
- * Resolves an input type the built-in kinds don't handle to a host control.
- * Threaded from the app (which owns the plugin field registry) down to each
- * control, so this package stays decoupled from that registry.
+ * Threaded from the app, which owns the plugin field registry, so this package
+ * stays decoupled from it.
  */
 export type ResolvePluginFieldType = (
   type: string,
@@ -84,25 +81,20 @@ export type ResolvePluginFieldType = (
 interface BlockInputControlProps {
   readonly input: BlockInput;
   readonly value: JsonValue | undefined;
-  /** Emits the next typed value (string for text, number for number, etc.). */
   readonly onChange: (value: JsonValue) => void;
   readonly resolvePluginFieldType?: ResolvePluginFieldType;
-  /** The active block's other attributes, forwarded to sibling-aware plugin
-   *  controls (e.g. the focal-point picker reads the image url). */
   readonly attrs?: JsonObject;
 }
 
-// Block-attr edits commit on onChange; the block path has no RHF touched-state,
-// so a plugin control's onBlur is inert here (kept to satisfy the shim shape).
+/**
+ * Block-attr edits commit on onChange; the block path has no RHF touched-state,
+ * so a plugin control's onBlur is inert here (kept to satisfy the shim shape).
+ */
 const noop = (): void => undefined;
 
 const FIELD_TESTID = (name: string): string => `block-input-${name}`;
 
 /**
- * Renders one block attribute as an admin-ui form control, dispatching the
- * typed next value on edit. shadcn primitives throughout — select uses the
- * shadcn `Select`, round-tripping number/boolean option values through their
- * stringified `optionKey` (Radix is string-only); radio stays a native group.
  * Mirrors the kinds the Puck field translator supports so plugin blocks render
  * unchanged.
  */
@@ -234,9 +226,7 @@ export function BlockInputControl({
           />
         );
       default: {
-        // A plugin may register a control for a type the built-ins don't
-        // handle (the media picker). Fall through to plain text when nothing
-        // is registered, preserving the prior behavior for stray types.
+        // Falls through to plain text when no plugin registers the type.
         const PluginField = resolvePluginFieldType?.(input.type);
         if (PluginField) {
           // createElement, not JSX: the component is resolved at runtime from a
@@ -278,9 +268,8 @@ export function BlockInputControl({
 }
 
 /**
- * Placeholder shown while the lazy `RichTextField` chunk loads. Mirrors the
- * field's footprint (toolbar row + content box + hint) so the panel doesn't
- * jump when the real editor swaps in. Pure skeleton — no copy, so no new i18n.
+ * Mirrors the field's footprint so the panel doesn't jump when the editor
+ * loads.
  */
 function RichTextFieldSkeleton({
   testId,
@@ -306,8 +295,10 @@ function RichTextFieldSkeleton({
   );
 }
 
-// Block attr values are primitives in practice; coerce only the primitive
-// kinds so a stray object can't stringify to "[object Object]".
+/**
+ * Block attr values are primitives in practice; coerce only the primitive
+ * kinds so a stray object can't stringify to "[object Object]".
+ */
 function asString(value: unknown): string {
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean") {
@@ -316,10 +307,10 @@ function asString(value: unknown): string {
   return "";
 }
 
-// A searchable dropdown that still accepts a free-typed value — a shadcn
-// Command in a Popover, not a native `<datalist>` (which looks like a plain
-// input and hides its options until you type). Selecting an option or the
-// "use typed text" affordance commits; unknown/legacy values round-trip.
+/**
+ * Not a native `<datalist>`, which hides its options until you type. Unknown
+ * values round-trip.
+ */
 function ComboboxControl({
   id,
   testId,
@@ -428,23 +419,21 @@ function ComboboxControl({
   );
 }
 
-// DOM control values are strings; key options by their stringified value so
-// number/boolean options round-trip back to their typed form via decodeOption.
+/**
+ * DOM control values are strings; key options by their stringified value so
+ * number/boolean options round-trip back to their typed form via decodeOption.
+ */
 function optionKey(value: unknown): string {
   return asString(value);
 }
 
-// Radix Select reserves "" for "no selection" and throws on an empty-string
-// item value, but an option's stringified key can legitimately be "" (e.g. an
-// empty-string value). Encode "" to a sentinel for the trigger + items and
-// decode it back before resolving the typed option. (An option that stringifies
-// to the sentinel itself would collide — vanishingly unlikely, as meta-box's
-// equivalent also accepts.)
+/**
+ * Radix Select throws on an empty-string item value, but an option's key can
+ * legitimately be "".
+ */
 const SELECT_EMPTY = "__plumix_empty__";
 function encodeSelectKey(value: unknown): string {
-  // An unset value (no attr) maps to Radix's reserved "" — "no selection" — so
-  // the trigger renders its placeholder. The sentinel is only for an *option*
-  // whose own value stringifies to "", which must stay distinct from unset.
+  // Unset maps to Radix's reserved "" so the trigger renders its placeholder.
   if (value === undefined || value === null) return "";
   const key = optionKey(value);
   return key === "" ? SELECT_EMPTY : key;

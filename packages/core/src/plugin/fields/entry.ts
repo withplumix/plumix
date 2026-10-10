@@ -9,10 +9,8 @@ import { ReferenceFieldBuilder } from "./reference.js";
  */
 export interface EntryFieldScope {
   /**
-   * Restrict matches to these entry types. Required at the field
-   * level — entry references without a type filter would surface
-   * the entire content table to pickers. Seeded from the `entry()`
-   * constructor argument.
+   * Required: without a type filter a picker would surface the entire content
+   * table.
    */
   readonly entryTypes: readonly string[];
   /**
@@ -22,25 +20,15 @@ export interface EntryFieldScope {
    */
   readonly includeTrashed?: boolean;
   /**
-   * Restrict matches to exactly this lifecycle status; supersedes the
-   * `includeTrashed` default. Public-render consumers (e.g. menu nav)
-   * pass `"published"` via `.status()` so drafts never surface; the
-   * admin picker leaves it unset and keeps admitting drafts/scheduled.
+   * Supersedes the `includeTrashed` default. Public-render consumers pass
+   * `"published"` so drafts never surface.
    */
   readonly status?: EntryStatus;
 }
 
 /**
- * Build a typed `entry` reference field —
- * `entry("related", ["post"])`. The required entry-type scope is the
- * constructor's second argument; `.includeTrashed()` / `.status()`
- * refine it, `.multiple()` flips to an id array.
- *
- * Storage is the bare entry id (an id array under `.multiple()`).
- * Reads hydrate to the entry summary by default (`.returns("id")`
- * opts back to the bare id); single reads stay optional (a target can
- * orphan). The admin renders a picker that calls the lookup RPC with
- * `{ kind: "entry", scope }`.
+ * Stores the bare entry id. Reads hydrate to the entry summary unless
+ * `.returns("id")`; single reads stay optional because a target can orphan.
  */
 export function entry<K extends string>(
   key: K,

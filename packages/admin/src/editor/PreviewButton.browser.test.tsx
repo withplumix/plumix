@@ -8,8 +8,10 @@ import { TooltipProvider } from "@plumix/admin-ui/tooltip";
 import { renderWithI18n } from "../../test/render-with-i18n.js";
 import { PreviewButton } from "./PreviewButton.js";
 
-// Mounted alongside the button so a toast lands in the DOM the user would see
-// it in — `toastSuccess` / `toastError` tag their content with a test id.
+/**
+ * Mounted alongside the button so a toast lands in the DOM the user would see
+ * it in — `toastSuccess` / `toastError` tag their content with a test id.
+ */
 function renderPreviewButton(
   mintPreviewLink: () => Promise<{ readonly url: string }>,
 ): void {

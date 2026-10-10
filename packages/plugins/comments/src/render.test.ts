@@ -13,8 +13,10 @@ import { commentFactory } from "./test/factories.js";
 import { gatedBlog } from "./test/harness.js";
 import { PlumixCommentForm } from "./theme.js";
 
-// Minimal host plugin registering a public `post` type so the dispatcher
-// compiles a `/posts/:slug` single route.
+/**
+ * Minimal host plugin registering a public `post` type so the dispatcher
+ * compiles a `/posts/:slug` single route.
+ */
 const testBlog = definePlugin("test_blog", {
   setup: (ctx) => {
     ctx.registerEntryType("post", {
@@ -25,8 +27,10 @@ const testBlog = definePlugin("test_blog", {
   },
 });
 
-// Theme that renders the approved thread the `comments` dep resolves,
-// recursing into nested replies.
+/**
+ * Theme that renders the approved thread the `comments` dep resolves,
+ * recursing into nested replies.
+ */
 function renderComment(
   comment: ResolvedThread["comments"][number],
 ): ReturnType<typeof el> {
@@ -96,7 +100,9 @@ const formTheme = defineTheme({
 
 const EMAIL_REQUIRED = /data-plumix-comment-control="email"[^>]*required/;
 
-/** A site whose theme renders the comment form, booted now, and a visit to it. */
+/**
+ * A site whose theme renders the comment form, booted now, and a visit to it.
+ */
 async function formSite(
   plugins: readonly AnyPluginDescriptor[],
 ): Promise<() => Promise<string>> {
@@ -168,11 +174,8 @@ describe("comments read path through the dispatcher", () => {
   });
 
   test("still renders the thread to a member the gate admits", async () => {
-    // This is what keeps the access check out of `isCommentingEnabled`: the
-    // SSR thread rides the entry's own page, which the dispatcher has already
-    // gated, so the member who got through sees the discussion. Folding the
-    // check up into the shared enablement helper would take it away from
-    // them, which is the opposite of what the fix is for.
+    // Keeps the access check out of `isCommentingEnabled`: the SSR thread
+    // rides the entry's page, which the dispatcher already gated.
     const harness = await createDispatcherHarness({
       config: {
         plugins: [gatedBlog, comments({ entryTypes: ["post"] })],
@@ -244,9 +247,7 @@ describe("comments read path through the dispatcher", () => {
   });
 
   // Public content can't render under `plumix dev` (it serves the admin
-  // SPA), so the load-more flow is exercised here through the in-process
-  // dispatcher: the SSR page shows only the first root page plus the
-  // affordance, and the public list route reveals the next page.
+  // SPA), so load-more is covered here rather than in e2e.
   test("shows a load-more affordance and reveals the next root page", async () => {
     const harness = await createDispatcherHarness({
       config: {

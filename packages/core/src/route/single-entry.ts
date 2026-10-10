@@ -1,18 +1,5 @@
-/**
- * The one lookup that turns an `entry`-intent match into the entry that will
- * render — shared, and request-memoized, so the access gate and the renderer
- * resolve the *same* row from one query.
- *
- * The gate (`policyForMatch`) needs the entry's stored per-entry access choice
- * before the cache decision; the renderer (`resolveSingle`) needs the full row
- * after. Routing both through {@link resolveSingleEntry} keeps them in lockstep
- * — the gate can't pick a policy for one row while the renderer shows another —
- * and pays for at most one DB read per request.
- *
- * Memo-safety: the resolution reads only the intent, the request URL (slug/path
- * params and the `?preview=` token) and the database — never the principal — so
- * it is principal-invariant and safe under the `withUser`-shared request memo.
- */
+// Request-memoized so the access gate and the renderer resolve the same row
+// from one query. Memo-safe: it never reads the principal.
 
 import type { AppContext } from "../context/app-context.js";
 import type { Entry } from "../db/schema/entries.js";
@@ -29,10 +16,8 @@ type EntrySelector =
   | { readonly by: "path"; readonly path: string };
 
 /**
- * Resolve the entry an `entry` intent addresses (the intent's fixed `slug`,
- * else a flat `slug` or hierarchical `path` param), honouring a `?preview=`
- * token for drafts. `null` when nothing matches. Memoized per request per
- * `(entryType, slug|path)`.
+ * The entry an `entry` intent addresses, honouring a `?preview=` token for
+ * drafts, or `null`. Memoized per request per `(entryType, slug|path)`.
  */
 export function resolveSingleEntry(
   ctx: AppContext,
@@ -47,8 +32,10 @@ export function resolveSingleEntry(
   );
 }
 
-// Slugs are unique per type, so a fixed slug names a nested entry too and no
-// ancestor path is checked.
+/**
+ * Slugs are unique per type, so a fixed slug names a nested entry too and no
+ * ancestor path is checked.
+ */
 function selectEntry(
   intent: EntryIntent,
   params: Record<string, string>,

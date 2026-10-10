@@ -1,11 +1,15 @@
 interface ResolvedEmbed {
   readonly provider: string;
   readonly src: string;
-  // Safelisted providers render with provider-appropriate `allow`
-  // permissions; everything else is framed under a strict sandbox.
+  /**
+   * Safelisted providers render with provider-appropriate `allow`
+   * permissions; everything else is framed under a strict sandbox.
+   */
   readonly sandboxed: boolean;
-  // Responsive aspect-ratio container (e.g. "16 / 9") for video; mutually
-  // exclusive with `height`, which fixed-height audio/code embeds use.
+  /**
+   * Responsive aspect-ratio container (e.g. "16 / 9") for video; mutually
+   * exclusive with `height`, which fixed-height audio/code embeds use.
+   */
   readonly aspect?: string;
   readonly height?: number;
   readonly allowFullscreen?: boolean;
@@ -13,9 +17,9 @@ interface ResolvedEmbed {
 
 interface Provider {
   readonly id: string;
-  // Hostname already stripped of a leading `www.`.
+  /** Hostname already stripped of a leading `www.`. */
   readonly host: (host: string) => boolean;
-  // Returns the embed `src`, or null when the path doesn't name a resource.
+  /** Returns the embed `src`, or null when the path doesn't name a resource. */
   readonly toSrc: (url: URL) => string | null;
   readonly aspect?: string;
   readonly height?: number;
@@ -26,10 +30,11 @@ function firstSegment(url: URL): string | undefined {
   return url.pathname.split("/").find(Boolean);
 }
 
-// Provider ids/handles only ever contain url-safe word chars and
-// hyphens. Validating before interpolation keeps a crafted path
-// (traversal, extra segments) from producing a malformed embed `src`
-// instead of relying on the iframe origin staying fixed as the backstop.
+/**
+ * Validated before interpolation so a crafted path (traversal, extra segments)
+ * can't produce a malformed `src`, rather than trusting the fixed iframe
+ * origin.
+ */
 const SAFE_SEGMENT = /^[\w-]+$/;
 const YOUTUBE_ID = /^[\w-]{11}$/;
 

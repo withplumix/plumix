@@ -189,8 +189,10 @@ function docOf(text: string): unknown {
   };
 }
 
-// The roster is scoped by its caller to the types that reach a document; a
-// suite asking what the tag tracks means every type it registered.
+/**
+ * The roster is scoped by its caller to the types that reach a document; a
+ * suite asking what the tag tracks means every type it registered.
+ */
 const rosterOf = (plugins: MutablePluginRegistry) =>
   searchableMetaRoster(plugins, plugins.entryTypes.keys());
 

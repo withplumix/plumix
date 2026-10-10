@@ -10,15 +10,6 @@ import {
   rpcOkBody,
 } from "./support/rpc-mock.js";
 
-// The settings admin surface:
-//   - /settings — the page index (one link per registered settings page)
-//   - /settings/$page — one admin page per registered page, rendering
-//     each referenced group as its own shadcn Card with per-card save.
-// Scope: the plugin-facing contract end-to-end (page → groups → fields)
-// and the settings.get/upsert round-trips. Doesn't exercise boolean /
-// number / select field types — those land when we widen
-// `SettingsFieldType` beyond `text | textarea`.
-
 test.describe("/settings (page index)", () => {
   test("admin sees a card per registered page; each links into its form", async ({
     page,
@@ -195,9 +186,6 @@ test.describe("/settings/$page", () => {
   test("save rejection: per-field errors render on the inputs they address", async ({
     page,
   }) => {
-    // A registered settings field now runs the same write pipeline as
-    // entry meta, so its constraint failures come back path-addressed —
-    // the card pins each one on the input rather than showing a banner.
     await mockManifest(page, MANIFEST_WITH_SETTINGS);
     await page.route("**/_plumix/rpc/**", (route) => {
       const url = route.request().url();

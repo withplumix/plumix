@@ -6,12 +6,8 @@ import type {
 import { sanitizeCssValue } from "./sanitize-css.js";
 
 /**
- * A stored declaration value is a plain CSS value string — a literal
- * (`"16px"`, `"#0c2238"`) or a `var()` reference (`"var(--plumix-color-primary,
- * #0c2238)"`). Token vs. literal is not a stored distinction: a token is just a
- * `var()` string the editor's token picker builds via {@link tokenIdToCssVar}.
- * The emitter sanitizes and writes the string; the theme owns what the custom
- * property resolves to.
+ * Token vs. literal is not a stored distinction: a token is just a `var()`
+ * string built by {@link tokenIdToCssVar}.
  */
 export type ResponsiveStyleBucket = Readonly<Record<string, string>>;
 
@@ -27,18 +23,19 @@ export type ResponsiveStyleSlot = Readonly<{
   small?: ResponsiveStyleBucket;
 }>;
 
-/** Per-device visibility, kept OUT of the style slot so hiding never clobbers a
- *  bucket's layout `display`. Emitted as `display: none` (overriding layout) for
- *  each flagged device; clearing a flag restores the stored `display`. */
+/** Kept out of the style slot so hiding never clobbers a bucket's layout
+ *  `display`; clearing a flag restores it. */
 export type VisibilityFlags = Readonly<{
   large?: boolean;
   medium?: boolean;
   small?: boolean;
 }>;
 
-// Which token category a property reads from. `spacing` and `color` are the
-// two cross-property buckets; every other property reads its own same-named
-// scale (fontSize → fontSize, not the font-family bucket).
+/**
+ * Which token category a property reads from. `spacing` and `color` are the
+ * two cross-property buckets; every other property reads its own same-named
+ * scale (fontSize → fontSize, not the font-family bucket).
+ */
 const PROPERTY_TO_CATEGORY: Readonly<Record<string, TokenCategory>> = {
   padding: "spacing",
   paddingTop: "spacing",
@@ -67,9 +64,7 @@ const PROPERTY_TO_CATEGORY: Readonly<Record<string, TokenCategory>> = {
   maxWidth: "maxWidth",
 };
 
-/** The token category a property reads from (e.g. `marginTop` → `spacing`), or
- *  `undefined` for a property with no token scale. The editor uses this to offer
- *  the right token picker for a declaration. */
+/** `undefined` for a property with no token scale. */
 export function tokenCategoryForProperty(
   property: string,
 ): TokenCategory | undefined {
@@ -84,11 +79,7 @@ export const VIEWPORT_MAX_PX: Readonly<Record<"medium" | "small", number>> = {
 };
 
 /**
- * Theme-supplied responsive breakpoints (max-width, px): `tablet` gates the
- * medium bucket, `mobile` the small bucket. A theme overrides these; both the
- * SSR emitter and the editor canvas read the same values so preview equals
- * shipped. Defaults match the historical viewport maxima, so an unspecified
- * theme emits identical CSS.
+ * Max-width in px: `tablet` gates the medium bucket, `mobile` the small bucket.
  */
 export interface ThemeBreakpoints {
   readonly tablet: number;
@@ -100,9 +91,8 @@ export const DEFAULT_BREAKPOINTS: ThemeBreakpoints = {
   mobile: VIEWPORT_MAX_PX.small,
 };
 
-/** Build the `var()` string the editor's token picker stores when a token is
- *  selected — the CSS variable with the token's registered literal as a
- *  fallback so it renders even before a theme defines the variable. */
+/** Falls back to the token's registered literal so it renders before a theme
+ *  defines the variable. */
 export function tokenIdToCssVar(
   id: string,
   category: TokenCategory,
@@ -121,10 +111,8 @@ export function tokenCssVar(id: string, category: TokenCategory): string {
   return `var(--plumix-${categoryToSegment(category)}-${id})`;
 }
 
-/** The inverse of {@link tokenIdToCssVar}: extract the token id from a stored
- *  `var(--plumix-<segment>-<id>…)` string for the given category, or `null`
- *  when the value is a literal or references a different category. The editor
- *  uses it to show the token picker's selection for a stored value. */
+/** Inverse of {@link tokenIdToCssVar}; `null` for a literal or a different
+ *  category. */
 export function tokenIdFromCssVar(
   value: string,
   category: TokenCategory,
@@ -136,24 +124,12 @@ export function tokenIdFromCssVar(
 }
 
 /**
- * A theme's tokens reduced to what a stylesheet can carry: category to slug to
- * CSS value. A token declared without a `value` is dropped — the theme's own
- * CSS is what defines those — and so is any name or value that would break out
- * of the declaration it is written into. `defineTheme` rejects most of those at
- * boot, but a descriptor reaches the runtime without having passed through it,
- * and this is called with whatever a caller has.
- *
- * The one filter: {@link emitThemeTokenCss} formats this rather than walking
- * the declarations again, so a consumer reading these values and a stylesheet
- * resolving the same tokens can never disagree about which ones exist.
+ * Drops tokens without a `value` and any unsafe name or value, since a
+ * descriptor can reach the runtime without passing `defineTheme`.
  */
 export function resolveThemeTokens(tokens: ThemeTokens): ResolvedThemeTokens {
-  // Null-prototype throughout. `SAFE_CSS_TOKEN_RE` admits `__proto__`, and on a
-  // plain object `resolved.__proto__ ??= {}` reads back `Object.prototype`
-  // rather than undefined — so that category's tokens would be written onto
-  // every object in the isolate. The groups get it too, so a consumer asking
-  // whether a slug exists is answered about the theme rather than about
-  // `Object`.
+  // `SAFE_CSS_TOKEN_RE` admits `__proto__`; on a plain object those tokens
+  // would be written onto `Object.prototype` for the whole isolate.
   const resolved = Object.create(null) as Record<
     string,
     Record<string, string>
@@ -173,10 +149,8 @@ export function resolveThemeTokens(tokens: ThemeTokens): ResolvedThemeTokens {
 }
 
 /**
- * The theme's tokens as a `:root` block of custom properties — the same
- * `--plumix-<category>-<slug>` names {@link tokenCssVar} builds references to.
- * A stylesheet rendered away from the page, where the theme's own CSS never
- * loads, prepends this so its `var()` references resolve.
+ * For stylesheets rendered away from the page, where the theme's CSS never
+ * loads, so their `var()` references resolve.
  */
 export function emitThemeTokenCss(tokens: ThemeTokens): string {
   const declarations = Object.entries(resolveThemeTokens(tokens)).flatMap(
@@ -217,9 +191,11 @@ export function emitBlockStyleCss(
   return parts.join(" ");
 }
 
-// A device's emitted declarations: its stored bucket, with `display: none`
-// forced on top when the device is hidden (visibility overrides layout, and the
-// spread keeps `display` last so it wins).
+/**
+ * A device's emitted declarations: its stored bucket, with `display: none`
+ * forced on top when the device is hidden (visibility overrides layout, and the
+ * spread keeps `display` last so it wins).
+ */
 function effectiveBucket(
   bucket: ResponsiveStyleBucket | undefined,
   hide: boolean | undefined,
@@ -244,14 +220,17 @@ const kebabCase = (s: string): string =>
   s.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
 
 function propertyToCss(property: string): string {
-  // CSS custom properties are case-sensitive (`--brandColor` ≠ `--brand-color`),
-  // so pass them through verbatim; only camelCase standard props get kebab-cased.
+  // CSS custom properties are case-sensitive (`--brandColor` ≠
+  // `--brand-color`), so pass them through verbatim; only camelCase standard
+  // props get kebab-cased.
   if (property.startsWith("--")) return property;
   return kebabCase(property);
 }
 
-// The CSS-var segment for a category is its kebab-cased key, so the var is
-// always `--plumix-<kebab(category)>-<slug>` — one rule, no per-category cases.
+/**
+ * The CSS-var segment for a category is its kebab-cased key, so the var is
+ * always `--plumix-<kebab(category)>-<slug>` — one rule, no per-category cases.
+ */
 function categoryToSegment(category: TokenCategory): string {
   return kebabCase(category);
 }

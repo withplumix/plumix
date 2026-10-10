@@ -11,9 +11,10 @@ import {
   segmentCdnKey,
 } from "./decision.js";
 
-// Every case below is about an axis other than the provider's segment
-// capability, so they run against one that can key by segment; the cases that
-// exercise absence pass `canKeySegments: false` themselves.
+/**
+ * Defaults to a provider that can key by segment; cases about its absence
+ * pass `canKeySegments: false` themselves.
+ */
 type BypassArgs = Parameters<typeof cdnBypassReason>[0];
 const bypassReason = (
   req: Omit<BypassArgs, "canKeySegments"> &
@@ -293,7 +294,8 @@ describe("requestCarriesEphemeralGrant", () => {
 
   it("does not flag a plain request or a bare session cookie", () => {
     // A durable audience membership (the session cookie) is NOT ephemeral — a
-    // policied route caches it under its segment; only per-request grants opt out.
+    // policied route caches it under its segment; only per-request grants opt
+    // out.
     expect(
       requestCarriesEphemeralGrant(new Request("https://site.test/post")),
     ).toBe(false);

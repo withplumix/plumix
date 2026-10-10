@@ -54,25 +54,24 @@ interface ControlSpec {
   readonly property: string;
   readonly label: string;
   readonly category?: TokenCategory;
-  /** Enumerated CSS keywords rendered as a Select (e.g. border-style). When
-   *  set, the control is a plain keyword picker — no token/custom modes. */
+  /**
+   * When set, the control is a plain keyword picker with no token/custom modes.
+   */
   readonly options?: readonly string[];
-  /** Render on its own full-width row instead of a half-width grid cell — for
-   *  keyword selects and lone controls that would otherwise leave a gap. */
   readonly fullWidth?: boolean;
 }
 
-// The buckets whose values cascade into each one, nearest first: the large
-// bucket has no @media, medium narrows it, small narrows medium.
+/**
+ * The buckets whose values cascade into each one, nearest first: the large
+ * bucket has no @media, medium narrows it, small narrows medium.
+ */
 const WIDER_BUCKETS: Readonly<Record<StyleBucket, readonly StyleBucket[]>> = {
   large: [],
   medium: ["large"],
   small: ["medium", "large"],
 };
 
-/** Reads the active block's value for a style property in the current bucket. */
 type StyleGetter = (property: string) => string | undefined;
-/** Curried writer: pick a property, then set (or clear with `null`) its value. */
 type StyleSetter = (property: string) => (value: string | null) => void;
 
 interface SectionDef {
@@ -81,8 +80,10 @@ interface SectionDef {
   readonly controls: readonly ControlSpec[];
 }
 
-// Box dimensions — its own section (not folded into Layout, which is about
-// arrangement). No token scale (widths are arbitrary px/%/rem), so custom-only.
+/**
+ * Box dimensions — its own section (not folded into Layout, which is about
+ * arrangement). No token scale (widths are arbitrary px/%/rem), so custom-only.
+ */
 const SIZE_SECTION: SectionDef = {
   id: "size",
   label: <Trans id="editor.styles.size" message="Size" />,
@@ -91,17 +92,18 @@ const SIZE_SECTION: SectionDef = {
     { property: "height", label: "Height" },
     { property: "minWidth", label: "Min width" },
     { property: "minHeight", label: "Min height" },
-    // All six are custom-only so the grid rows stay even — a lone Token/Custom
-    // toggle on maxWidth made its cell taller than its neighbour. A max-width
-    // token is still reachable as a custom `var(--…)` value.
+    // Custom-only so the grid rows stay even; a token is still reachable as a
+    // custom `var(--…)` value.
     { property: "maxWidth", label: "Max width" },
     { property: "maxHeight", label: "Max height" },
   ],
 };
 
-// Grid-of-controls sections (rendered by GenericSection). The custom sections
-// (layout / visibility / spacing / effects / declarations) render their own
-// components; all are ordered explicitly below to mirror Builder.
+/**
+ * Grid-of-controls sections (rendered by GenericSection). The custom sections
+ * (layout / visibility / spacing / effects / declarations) render their own
+ * components; all are ordered explicitly below to mirror Builder.
+ */
 const BACKGROUND_SECTION: SectionDef = {
   id: "background",
   label: <Trans id="editor.styles.background" message="Background" />,
@@ -154,8 +156,11 @@ const BORDER_SECTION: SectionDef = {
   ],
 };
 
-// Default-open sections, in Builder's order. The raw-CSS "declarations" section
-// is a dev-facing escape hatch, so it's intentionally omitted (starts collapsed).
+/**
+ * Default-open sections, in Builder's order. The raw-CSS "declarations" section
+ * is a dev-facing escape hatch, so it's intentionally omitted (starts
+ * collapsed).
+ */
 const SECTION_IDS = [
   "layout",
   "size",
@@ -168,9 +173,9 @@ const SECTION_IDS = [
 ];
 
 /**
- * Right-rail Styles tab: collapsible sections of token-or-custom controls plus a
- * visual box-model for per-side spacing. Every edit targets the active device's
- * responsive bucket, so styles are set per breakpoint.
+ * Right-rail Styles tab: collapsible sections of token-or-custom controls plus
+ * a visual box-model for per-side spacing. Every edit targets the active
+ * device's responsive bucket, so styles are set per breakpoint.
  */
 export function StylesTab(): ReactElement {
   const { registry, tokens } = useEditorConfig();
@@ -202,9 +207,8 @@ export function StylesTab(): ReactElement {
 
   const bucket: StyleBucket = deviceBucket(device);
   const current = block.style?.[bucket];
-  // A non-string or empty value reads as unset — junk in a hand-edited style
-  // slot, or a mid-retype clear, never surfaces as a spurious value. Mirrors
-  // the `declarations` builder's string guard just below.
+  // A non-string or empty value (hand-edited junk, a mid-retype clear) reads as
+  // unset.
   const valueOf = (property: string): string | undefined => {
     const stored = current?.[property];
     return typeof stored === "string" && stored !== "" ? stored : undefined;
@@ -351,9 +355,6 @@ export function StylesTab(): ReactElement {
   );
 }
 
-/** A grid-of-controls section: two-per-row cells (KeywordControl for enumerated
- *  props, else StyleControl), with the typography/background sections appending
- *  their custom sub-controls. */
 function GenericSection({
   section,
   valueOf,
@@ -418,9 +419,10 @@ function GenericSection({
   );
 }
 
-// Toggle marks write a fixed raw value to one CSS property; underline and
-// strikethrough share `text-decoration`, so they're mutually exclusive. Bold
-// shares `font-weight` with the weight control as a quick shortcut.
+/**
+ * Underline and strikethrough share `text-decoration`, so they're mutually
+ * exclusive.
+ */
 const TEXT_MARKS = [
   { id: "bold", property: "fontWeight", on: "bold", Icon: Bold, label: "Bold" },
   {
@@ -452,7 +454,6 @@ const TEXT_ALIGNMENTS = [
   { value: "right", Icon: AlignRight, label: "Align right" },
 ] as const;
 
-/** A tooltipped toggle item. */
 function TooltipToggleItem({
   value,
   testid,
@@ -476,8 +477,6 @@ function TooltipToggleItem({
   );
 }
 
-/** Bold/italic/underline/strikethrough marks and a text-align switch. Each
- *  writes a raw value to its CSS property (no token form). */
 function TextStyleControls({
   valueOf,
   setter,
@@ -554,9 +553,7 @@ function TextStyleControls({
   );
 }
 
-// Each device maps to the responsive bucket its @media narrows to. The Switch is
-// `htmlFor`-associated with its translated Label, so the label doubles as the
-// accessible name and clicking it toggles (Builder's click-anywhere rows).
+/** Each device maps to the responsive bucket its @media narrows to. */
 const VISIBILITY_DEVICES: readonly {
   readonly id: string;
   readonly bucket: StyleBucket;
@@ -585,9 +582,6 @@ const VISIBILITY_DEVICES: readonly {
   },
 ];
 
-/** Per-device hide switches — toggles each device's visibility flag
- *  independently, so all three breakpoints are visible/editable at once
- *  (Builder's Visibility panel). Decoupled from layout `display`. */
 function VisibilityControls({
   hidden,
   onToggle,
@@ -633,9 +627,6 @@ const LAYOUT_LABELS: Readonly<Record<string, string>> = {
   stretch: "Stretch",
 };
 
-/** Style-bound layout controls (display / direction / gap / justify / align)
- *  written straight to the block's `node.style` — the unopinionated Box gets
- *  its layout here rather than from a block prop, like Builder's Box. */
 function LayoutControls({
   valueOf,
   setter,
@@ -703,13 +694,12 @@ function LayoutControls({
   );
 }
 
-// Radix Select forbids an empty item value, so the "clear" choice carries a
-// sentinel that maps back to `null` (property absent) on change.
+/**
+ * Radix Select forbids an empty item value, so the "clear" choice carries a
+ * sentinel that maps back to `null` (property absent) on change.
+ */
 const KEYWORD_NONE = "__unset__";
 
-/** A labelled dropdown of enumerated CSS keywords (e.g. border-style). Writes
- *  the picked keyword to `property`; the leading "—" clears it. No token mode —
- *  these properties have no theme scale, only a fixed value set. */
 function KeywordControl({
   label,
   property,
@@ -761,8 +751,6 @@ function KeywordControl({
   );
 }
 
-/** One style-bound single-choice row: writes the picked CSS keyword to
- *  `property` in node.style, clears it when the active item is re-picked. */
 function LayoutToggle({
   label,
   property,
@@ -776,9 +764,8 @@ function LayoutToggle({
   readonly valueOf: StyleGetter;
   readonly setter: StyleSetter;
 }): ReactElement {
-  // A ToggleGroup is a `role="group"`, not a labelable control — name it with a
-  // non-<label> title referenced by aria-labelledby (a bare <label> here would
-  // be orphaned and give the group no accessible name).
+  // A ToggleGroup is a `role="group"`, not labelable, so a <label> would be
+  // orphaned; name it via aria-labelledby instead.
   const labelId = useId();
   return (
     <Field size="sm">
@@ -805,7 +792,9 @@ function LayoutToggle({
   );
 }
 
-// Static ids (a switch, not a template literal) so the extractor catalogs them.
+/**
+ * Static ids (a switch, not a template literal) so the extractor catalogs them.
+ */
 function markLabel(i18n: I18n, id: string): string {
   switch (id) {
     case "italic":
@@ -857,18 +846,15 @@ const SPACING_GROUPS = [
   },
 ] as const;
 
-// Unwraps `url("…")` to the bare URL for editing; tolerant of single/double/no
-// quotes. A non-url() value (e.g. a gradient set via raw CSS) yields "" so the
-// field stays empty rather than showing a form it can't represent.
+/**
+ * A non-url() value (a gradient set via raw CSS) yields "" rather than a form
+ * the field can't represent.
+ */
 function parseBackgroundImageUrl(value: string | undefined): string {
   const match = value?.match(/^url\((['"]?)(.*)\1\)$/);
   return match?.[2] ?? "";
 }
 
-/** The Background "Fill image" control. Uses the plugin media picker when one
- *  is registered (pick/upload from the shared library), falling back to a
- *  hand-typed URL when it isn't (a media-less deployment). Both compose the same
- *  `background-image: url("…")` string into the active device's style bucket. */
 function BackgroundImageField({
   value,
   onChange,
@@ -889,10 +875,7 @@ function BackgroundImageField({
         <Trans id="editor.styles.fillImage" message="Fill image" />
       </FieldTitle>
       {createElement(Picker, {
-        // `field` is a block-input shape the host resolver adapts onto the
-        // field manifest the picker reads — `accept` becomes its scope. The
-        // picker's value is a bare url; the style stores a css url(), so unwrap
-        // in and re-wrap (or clear on empty/null) out.
+        // The picker's value is a bare url but the style stores a css url().
         field: { name: "backgroundImage", type: "mediaUrl", accept: "image/" },
         rhf: {
           value: parseBackgroundImageUrl(value),
@@ -910,12 +893,10 @@ function BackgroundImageField({
   );
 }
 
-/** A "Fill image" URL field composing `background-image: url("…")` — the
- *  hand-typed fallback used when no media picker is registered.
- *
- *  The value is stored verbatim; `sanitizeCssValue` at emit drops URLs carrying
- *  `@`, `;`, or a `data:` scheme (its breakout denylist), so those won't ship
- *  even though the field accepts them — an accepted limitation, not a guard. */
+/**
+ * Accepts URLs that `sanitizeCssValue` drops at emit (`@`, `;`, `data:`); an
+ * accepted limitation, not a guard.
+ */
 function BackgroundImageControl({
   value,
   onChange,
@@ -943,8 +924,6 @@ function BackgroundImageControl({
   );
 }
 
-/** Shadows & Effects: opacity plus a box-shadow token picker. Opacity leads,
- *  matching Builder's ordering. */
 function ShadowsEffectsControls({
   valueOf,
   setter,
@@ -970,8 +949,10 @@ function ShadowsEffectsControls({
   );
 }
 
-// A text-shadow as its offset/blur/color parts. Enabling seeds a soft default;
-// each field recomposes the whole `x y blur color` value.
+/**
+ * A text-shadow as its offset/blur/color parts. Enabling seeds a soft default;
+ * each field recomposes the whole `x y blur color` value.
+ */
 const DEFAULT_TEXT_SHADOW = { x: "1", y: "1", blur: "3", color: "#000000" };
 
 interface TextShadowParts {
@@ -981,10 +962,10 @@ interface TextShadowParts {
   readonly color: string;
 }
 
-// Splits on whitespace and treats the 4th token as the color — a hex-only
-// contract that matches the swatch below. A hand-authored space-separated color
-// (e.g. `rgb(0 0 0)`) via the raw-CSS section wouldn't round-trip; the composer
-// resets it to the default hex on the next edit.
+/**
+ * Hex-only: a space-separated color like `rgb(0 0 0)` from raw CSS doesn't
+ * round-trip and resets to the default hex on the next edit.
+ */
 function parseTextShadow(value: string | undefined): TextShadowParts {
   if (!value) return DEFAULT_TEXT_SHADOW;
   const parts = value.trim().split(/\s+/);
@@ -1002,8 +983,6 @@ function formatTextShadow(parts: TextShadowParts): string {
   return `${parts.x}px ${parts.y}px ${parts.blur}px ${parts.color}`;
 }
 
-/** A switch-gated text-shadow composer: color swatch plus X/Y/blur offsets.
- *  Off clears the property; on seeds a default then edits its parts in place. */
 function TextShadowControls({
   value,
   onChange,
@@ -1070,9 +1049,7 @@ function TextShadowControls({
   );
 }
 
-/** Opacity as a 0–1 slider paired with an editable numeric readout. The input
- *  is the canonical entry point (fully controllable); the slider mirrors it. An
- *  absent value reads as fully opaque (1) but leaves the property unset. */
+/** An absent value reads as fully opaque but leaves the property unset. */
 function OpacityControl({
   value,
   onChange,
@@ -1121,13 +1098,13 @@ function OpacityControl({
   );
 }
 
-// Radix Select forbids an empty item value, so "Default" (no override → the
-// block's own element) carries a sentinel that maps to an empty string.
+/**
+ * Radix Select forbids an empty item value, so "Default" (no override → the
+ * block's own element) carries a sentinel that maps to an empty string.
+ */
 const TAG_DEFAULT = "__default__";
 
-/** Root-element override picker (Builder's tag-name). "Default" clears it;
- *  otherwise writes one of the allowlisted container tags. A stale value is
- *  normalized to "Default" so the picker matches what the renderer emits. */
+/** A stale value shows as "Default", matching what the renderer emits. */
 function TagNameField({
   value,
   onChange,
@@ -1175,8 +1152,6 @@ function TagNameField({
   );
 }
 
-/** A free-form CSS class field (merged onto the block root at render) — the
- *  class-name escape hatch, sitting above the raw declarations in Custom CSS. */
 function CssClassesField({
   className,
   onChange,
@@ -1205,7 +1180,6 @@ function CssClassesField({
   );
 }
 
-/** Margin and padding, each its own card of per-side token-or-custom controls. */
 function SpacingControls({
   valueOf,
   setter,

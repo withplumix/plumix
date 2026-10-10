@@ -32,11 +32,7 @@ import { Input } from "@plumix/admin-ui/input";
 import { buildLocaleSwitchUrl, writeLocaleCookie } from "../-locale-param.js";
 import { langOnlySearchSchema } from "../-schemas.js";
 
-// The invite flow lands unauthenticated users here — any existing session
-// is a red flag (you don't accept an invite while already signed in, and
-// the token would bind a *different* user to your current browser). Kick
-// them to the dashboard; if they want to switch accounts they can sign
-// out first.
+/** An existing session would bind a different user to this browser. */
 export const Route = createFileRoute("/_auth/accept-invite/$token")({
   validateSearch: langOnlySearchSchema,
   beforeLoad: async ({ context }) => {

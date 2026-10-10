@@ -1,8 +1,5 @@
 import type { MessageDescriptor } from "plumix/i18n";
 
-// Descriptors for the entry-editor SERP preview. Kept in their own module so
-// the reason table below and the component read one source, and so a catalog
-// extraction sees every string in one place.
 export const M = {
   loading: {
     id: "plugin.seo.preview.loading",

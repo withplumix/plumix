@@ -9,18 +9,15 @@ import type { CommentStatus } from "../types.js";
 import { comments } from "../db/schema.js";
 import { COMMENT_STATUSES } from "../types.js";
 
-// Absolute walk ceiling, independent of maxDepth, so the true depth is
-// measured even if maxDepth was lowered after deep rows were written
-// (otherwise the clamp could under-count and let a reply escape the cap).
-// Doubles as a cycle guard against (impossible-but-cheap-to-defend) loops.
+/**
+ * Independent of maxDepth so true depth is measured even after maxDepth was
+ * lowered; otherwise a reply could escape the cap. Doubles as a cycle guard.
+ */
 const MAX_ANCESTOR_WALK = 1000;
 
 /**
- * Resolve the parent a new reply should actually attach to, clamped so the
- * reply never lands deeper than `maxDepth` (root = 0). Replying to a
- * comment already at the cap re-parents to its deepest in-cap ancestor.
- * Returns null (a root comment) when there's no parent, the parent is
- * missing, or it belongs to another entry.
+ * Replying at the cap re-parents to the deepest in-cap ancestor. Null (a root)
+ * when the parent is missing or on another entry.
  */
 export async function clampParent(
   ctx: AppContext,
@@ -50,10 +47,7 @@ export async function clampParent(
   }
   if (chain.length === 0) return null;
 
-  // The requested parent sits at depth chain.length - 1 (root = 0). Cap the
-  // new comment at maxDepth by attaching to the ancestor at maxDepth - 1
-  // (or the parent itself when it's already shallower). chain is child-first,
-  // so that ancestor is this many entries from the end:
+  // chain is child-first; the requested parent is at depth chain.length - 1.
   const requestedDepth = chain.length - 1;
   const targetDepth = Math.min(requestedDepth, maxDepth - 1);
   const indexFromRoot = chain.length - 1 - targetDepth;
@@ -124,8 +118,10 @@ function toModeration(row: Comment): ModerationComment {
   };
 }
 
-// LIKE pattern matching `term` anywhere, with the SQL wildcards escaped so
-// a literal `%` or `_` in the search box isn't treated as a wildcard.
+/**
+ * LIKE pattern matching `term` anywhere, with the SQL wildcards escaped so
+ * a literal `%` or `_` in the search box isn't treated as a wildcard.
+ */
 function likeContains(column: AnySQLiteColumn, term: string): SQL {
   return sql`${column} LIKE ${`%${escapeLikePattern(term)}%`} ESCAPE '\\'`;
 }
@@ -213,7 +209,6 @@ export async function setStatus(
   return row ?? null;
 }
 
-/** What {@link purgeComment} did, with the row as it stood before. */
 type RemovalOutcome =
   | { readonly result: "tombstoned" | "deleted"; readonly comment: Comment }
   | { readonly result: "missing" };

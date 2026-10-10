@@ -1,17 +1,3 @@
-// The field-type roster — the single runtime vocabulary of built-in
-// `inputType` names, grouped by family. It is the one source the admin's
-// reserved-name set, the admin's `console.warn` prose list, and the
-// type-level input unions all derive from, replacing the copies that used
-// to be hand-synced across `core` and `admin` (and had drifted). The
-// exhaustiveness guard at the foot binds the roster to the `MetaBoxField`
-// union so the two can never disagree again.
-//
-// Adding a built-in field type is now local: append its name to the right
-// family array here, add the narrowed union variant + its builder, and the
-// guard fails `pnpm typecheck` until the array and the union agree.
-//
-// Re-exported as a public surface from `plumix/fields`.
-
 import type { CanonicalMetaBoxField } from "./meta-box-field.js";
 
 /** String-scalar inputs sharing one field shape (`StringMetaBoxField`). */
@@ -30,12 +16,8 @@ export const TEMPORAL_INPUT_TYPES = ["date", "datetime", "time"] as const;
 export const SCALAR_INPUT_TYPES = ["number", "color", "range", "json"] as const;
 
 /**
- * Host built-in reference kinds — `user` / `entry` / `term` and their list
- * variants. `media` / `mediaList` are deliberately absent: they are
- * plugin-contributed (`@plumix/plugin-media` ships their builders, lookup
- * adapters, and admin renderers), so they self-register and stay
- * unreserved. This is what makes the roster a subset of the union rather
- * than equal to it.
+ * `media` / `mediaList` are absent: the media plugin contributes them, so they
+ * self-register and stay unreserved.
  */
 export const REFERENCE_INPUT_TYPES = [
   "user",
@@ -49,7 +31,9 @@ export const REFERENCE_INPUT_TYPES = [
 /** Choice inputs — the option-list `select` and the boolean `toggle`. */
 export const CHOICE_INPUT_TYPES = ["select", "toggle"] as const;
 
-/** Structural inputs storing composite JSON (rich text, nested rows, CTA link). */
+/**
+ * Structural inputs storing composite JSON (rich text, nested rows, CTA link).
+ */
 export const STRUCTURAL_INPUT_TYPES = [
   "richtext",
   "repeater",
@@ -58,10 +42,8 @@ export const STRUCTURAL_INPUT_TYPES = [
 ] as const;
 
 /**
- * Retired input types. Reserved (so a plugin can't claim the name) and
- * still rendered by the admin's back-compat renderers, but NOT authorable
- * — they have no builder and no narrowed union variant, folding into the
- * `LegacyMetaBoxField` catch-all instead.
+ * Reserved and still rendered by the admin, but not authorable: no builder and
+ * no narrowed variant.
  */
 export const LEGACY_INPUT_TYPES = ["checkbox", "radio", "multiselect"] as const;
 
@@ -94,17 +76,15 @@ export type StringInputType = (typeof STRING_INPUT_TYPES)[number];
  */
 export type TemporalInputType = (typeof TEMPORAL_INPUT_TYPES)[number];
 
-// --- exhaustiveness guard ----------------------------------------------
-// A compile-time, type-level assertion binding the canonical roster to the
-// narrowed `MetaBoxField` union. Multi-name families (string, temporal)
-// derive their variant's `inputType` from the arrays above, so they can't
-// drift by construction; this guard covers the singleton variants and the
-// roster ⊆ union relationship. It has no runtime footprint.
+// Multi-name families derive their `inputType` from the arrays above, so the
+// guard below only has to cover the singleton variants.
 
 type Assert<T extends true> = T;
 
-// Each `<T>()` is deliberately single-use: deferring the conditional is what
-// makes this exact equality rather than mutual assignability.
+/**
+ * Each `<T>()` is deliberately single-use: deferring the conditional is what
+ * makes this exact equality rather than mutual assignability.
+ */
 type Equals<A, B> =
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
   (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
@@ -112,22 +92,16 @@ type Equals<A, B> =
     : false;
 
 /**
- * Plugin-contributed reference kinds that live in the core union but are
- * not roster members — media self-registers its admin renderers, so it is
- * unreserved (roster ⊆ union). Parking them here keeps the guard's
- * equality honest while documenting the one gap between roster and union.
+ * In the core union but not the roster: media self-registers its admin
+ * renderers, so it stays unreserved.
  */
 type ParkedInputType = "media" | "mediaList";
 
 /**
- * The canonical roster names, unioned with the parked plugin kinds, must
- * exactly equal the narrowed union's `inputType` discriminants. Adding a
- * `CanonicalMetaBoxField` variant without a roster entry (or a roster entry
- * without a variant) breaks this equality and fails `pnpm typecheck`.
+ * The roster plus the parked kinds must equal the union's `inputType`
+ * discriminants; a variant without a roster entry, or the reverse, fails
+ * typecheck.
  */
-// Not exported — the alias declaration itself is the assertion (TypeScript
-// evaluates the `AssertTrue<… extends true>` constraint here), so nothing
-// needs to consume it.
 type _RosterBindsUnion = Assert<
   Equals<
     (typeof CANONICAL_INPUT_TYPES)[number] | ParkedInputType,

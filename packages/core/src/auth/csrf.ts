@@ -1,22 +1,8 @@
-/**
- * Two-layered CSRF protection:
- *
- * 1. RPC + auth endpoints: require a custom `X-Plumix-Request: 1` header.
- *    Browsers cannot set custom headers on cross-origin requests without a
- *    CORS preflight, and Plumix does not enable CORS — so a forged request
- *    from another origin cannot include this header.
- *
- * 2. Public route mutations (POST/PUT/PATCH/DELETE): validate the Origin
- *    header (or Referer if Origin is absent) against the site origin. This
- *    is stateless and CDN-cache compatible.
- *
- * Combined with `SameSite=Lax` on the session cookie this covers all modern
- * browsers; Origin/Referer check covers older clients without SameSite support.
- */
+// The custom header is unforgeable cross-origin because Plumix enables no CORS,
+// so a preflight would fail.
 
-// Declared in the foundation layer so the islands that send the header can
-// name it without pulling the gate's server code into a browser bundle.
-// Re-exported so this module stays the one place server code reads it from.
+// Declared in the foundation layer so islands sending the header don't bundle
+// this server code.
 import { CSRF_HEADER_NAME, CSRF_HEADER_VALUE } from "../csrf-header.js";
 
 export { CSRF_HEADER_NAME, CSRF_HEADER_VALUE };
@@ -77,7 +63,8 @@ export function hasMatchingOrigin(
   const origin = request.headers.get("origin");
   if (origin) return options.allowed.includes(origin);
 
-  // Some legacy clients omit Origin on same-origin POSTs — fall back to Referer.
+  // Some legacy clients omit Origin on same-origin POSTs — fall back to
+  // Referer.
   const referer = request.headers.get("referer");
   if (!referer) return false;
   try {

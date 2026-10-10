@@ -22,5 +22,5 @@ export const appRouter = {
 
 export type AppRouter = typeof appRouter;
 
-// Pre-applied so consumers don't need @orpc/server in their dep tree.
+/** Pre-applied so consumers don't need @orpc/server in their dep tree. */
 export type AppRouterClient = RouterClient<AppRouter>;

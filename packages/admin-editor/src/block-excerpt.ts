@@ -7,11 +7,7 @@ import {
 
 const MAX_LENGTH = 48;
 
-/**
- * A short line of what a block says — its own declared text, not its nested
- * blocks', which have rows of their own — so blocks of one type can be told
- * apart in Layers and the palette. Null when the block carries no text.
- */
+/** Excludes nested blocks' text, which have rows of their own. */
 export function blockExcerpt(
   node: BlockNode,
   spec: BlockSpec | undefined,

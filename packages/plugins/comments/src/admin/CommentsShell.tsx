@@ -19,8 +19,10 @@ import {
 
 const TABS: readonly CommentStatus[] = ["pending", "approved", "spam", "trash"];
 
-// Which actions each status tab offers. `purge` (hard remove) is always
-// available; the rest move the comment between queues.
+/**
+ * Which actions each status tab offers. `purge` (hard remove) is always
+ * available; the rest move the comment between queues.
+ */
 const ACTIONS: Record<CommentStatus, readonly ModerationAction[]> = {
   pending: ["approve", "spam", "trash", "purge"],
   approved: ["spam", "trash", "purge"],
@@ -28,11 +30,10 @@ const ACTIONS: Record<CommentStatus, readonly ModerationAction[]> = {
   trash: ["restore", "purge"],
 };
 
-// Status/action labels are looked up dynamically (tab + button maps), so
-// they can't be authored as inline `<Trans>` JSX; they live here as
-// explicit-id descriptors and render through `i18n._`. `status.spam` and
-// `action.spam` are deliberately distinct ids — one names a queue, the
-// other an operation, and a locale may translate them differently.
+/**
+ * `status.spam` and `action.spam` are distinct ids: one names a queue, the
+ * other an operation, and a locale may translate them differently.
+ */
 const STATUS_LABELS = {
   pending: { id: "plugin.comments.status.pending", message: "Pending" },
   approved: { id: "plugin.comments.status.approved", message: "Approved" },
@@ -51,15 +52,15 @@ const ACTION_LABELS = {
   },
 } satisfies Record<ModerationAction, MessageDescriptor>;
 
-// Approve/restore move a comment into a queue; everything else (spam,
-// trash, purge) is destructive and gets the shared ghost tint. Used by both
-// the bulk bar and the per-row actions so the two can't drift on which
-// actions count as destructive.
+/**
+ * Shared by the bulk bar and the per-row actions so they agree on what is
+ * destructive.
+ */
 function isDestructiveAction(action: string): boolean {
   return action !== "approve" && action !== "restore";
 }
 
-// Descriptors used outside JSX (input attributes, interpolated aria-label).
+/** Descriptors used outside JSX (input attributes, interpolated aria-label). */
 const M = {
   heading: {
     id: "plugin.comments.heading",

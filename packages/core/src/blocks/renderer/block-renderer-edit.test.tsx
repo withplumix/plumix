@@ -46,9 +46,8 @@ describe("BlockRenderer edit-mode mount boundary", () => {
       </PlumixProvider>,
     );
 
-    // The canvas runtime renders in a fresh React tree with no SSR context, so
-    // it can only emit block-style CSS if tokens + breakpoints ride along in the
-    // embed. Without them, token-or-custom style edits never paint.
+    // The canvas renders with no SSR context, so block-style CSS needs tokens
+    // and breakpoints in the embed.
     expect(html).toContain("data-plumix-render-env");
     expect(html).toContain("brand");
     expect(html).toContain("900");

@@ -9,7 +9,7 @@ import type { NewAuditLogRow } from "./db/schema.js";
 import * as schema from "./db/schema.js";
 import { auditLog } from "./db/schema.js";
 
-// The history this package ships, at its root.
+/** The history this package ships, at its root. */
 const migrations = fileURLToPath(new URL("../migrations", import.meta.url));
 
 export type TestDb = ReturnType<typeof drizzle<typeof schema>>;

@@ -23,8 +23,10 @@ function contributingHooks(): HookRegistry {
   return hooks;
 }
 
-// An error whose own stack cannot be read breaks every renderer that reports
-// it, which is the one failure the surface has to absorb rather than pass on.
+/**
+ * An error whose own stack cannot be read breaks every renderer that reports
+ * it, which is the one failure the surface has to absorb rather than pass on.
+ */
 function unreadableError(): Error {
   const err = new Error("boom");
   Object.defineProperty(err, "stack", {

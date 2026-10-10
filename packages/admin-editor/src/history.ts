@@ -1,12 +1,16 @@
 interface Entry<T> {
   readonly value: T;
-  /** Edits sharing a non-null key collapse into the current step (typing,
-   *  dragging); null is always a discrete step. */
+  /**
+   * Edits sharing a non-null key collapse into one step; null is always
+   * discrete.
+   */
   readonly coalesceKey: string | null;
 }
 
-// Cap retained undo steps so a long session can't grow the stack unbounded
-// (each entry holds a full tree snapshot). Oldest steps fall off the back.
+/**
+ * Cap retained undo steps so a long session can't grow the stack unbounded
+ * (each entry holds a full tree snapshot). Oldest steps fall off the back.
+ */
 const MAX_HISTORY = 100;
 
 export interface History<T> {
@@ -21,10 +25,8 @@ export function initHistory<T>(value: T): History<T> {
 }
 
 /**
- * Record a new value. When `coalesceKey` matches the current step's key the
- * value replaces it in place (one undo step for a typing/drag burst);
- * otherwise the current value is pushed onto the past as a discrete step. Any
- * recorded edit clears the redo stack.
+ * A matching `coalesceKey` replaces the current step in place. Clears the redo
+ * stack.
  */
 export function recordHistory<T>(
   history: History<T>,

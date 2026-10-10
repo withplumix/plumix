@@ -1,15 +1,19 @@
 import type { Label } from "../../i18n/label.js";
 
 interface CodeLanguage {
-  // Stable, lowercase id stored on the block and emitted as
-  // `data-language` — highlighters key off these.
+  /**
+   * Stable, lowercase id stored on the block and emitted as
+   * `data-language` — highlighters key off these.
+   */
   readonly id: string;
   readonly label: Label;
 }
 
-// Curated common-language list for the code block's picker. Labels stay
-// plain English (proper nouns / not worth translating); ids are the
-// canonical highlighter slugs.
+/**
+ * Curated common-language list for the code block's picker. Labels stay
+ * plain English (proper nouns / not worth translating); ids are the
+ * canonical highlighter slugs.
+ */
 export const CODE_LANGUAGES: readonly CodeLanguage[] = [
   { id: "bash", label: "Bash" },
   { id: "c", label: "C" },
@@ -39,10 +43,10 @@ export const CODE_LANGUAGES: readonly CodeLanguage[] = [
   { id: "yaml", label: "YAML" },
 ];
 
-// Short forms / fence names that map onto a canonical id. Anything not
-// listed falls through unchanged (lowercased) so an unknown language
-// already stored on a block is preserved rather than dropped. Every
-// value here must be an id in CODE_LANGUAGES — guarded by a test.
+/**
+ * An unlisted name falls through lowercased, so an unknown stored language is
+ * preserved. Every value must be an id in CODE_LANGUAGES.
+ */
 export const LANGUAGE_ALIASES: Readonly<Record<string, string>> = {
   ts: "typescript",
   js: "javascript",

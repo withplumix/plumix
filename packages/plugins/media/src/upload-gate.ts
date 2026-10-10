@@ -10,11 +10,8 @@ export const MEDIA_CREATE_CAPABILITY = entryCapability(
 );
 
 /**
- * Whether this caller may finish uploading this draft — PUT its bytes through
- * the worker route, or confirm it. The draft was minted behind media `create`,
- * so finishing asks the same of its owner and nothing else: the two steps
- * agree whether or not the storage presigns, and a non-owner never takes over
- * someone's half-finished upload, `edit_any` or not.
+ * Owner-only, asking the same `create` that minted the draft: a non-owner never
+ * takes over a half-finished upload, `edit_any` or not.
  */
 export function canFinishUpload(
   ctx: Pick<AppContext, "user" | "auth">,

@@ -10,14 +10,18 @@ import { createDispatcherHarness } from "../test/dispatcher.js";
 import { defineTheme } from "../theme.js";
 import { fallback, forArchiveType } from "./render/template-builders.js";
 
-// A plugin's archive type data, declared in the augmentable registry so
-// `forArchiveType("event-series")` types `data.series`.
+/**
+ * A plugin's archive type data, declared in the augmentable registry so
+ * `forArchiveType("event-series")` types `data.series`.
+ */
 interface EventSeriesData extends ArchiveTypeData {
   readonly kind: "archiveType";
   readonly name: "event-series";
   readonly series: string;
-  // A field whose name collides with a built-in data sentinel (`"year" in data`
-  // for date archives) — the SEO helpers must classify by `kind`, not by field.
+  /**
+   * A field whose name collides with a built-in data sentinel (`"year" in data`
+   * for date archives) — the SEO helpers must classify by `kind`, not by field.
+   */
   readonly year: number;
 }
 declare module "../template-registry.js" {
@@ -26,8 +30,10 @@ declare module "../template-registry.js" {
   }
 }
 
-// A test plugin registering a whole archive type end-to-end — pattern and
-// resolver — with no core changes.
+/**
+ * A test plugin registering a whole archive type end-to-end — pattern and
+ * resolver — with no core changes.
+ */
 const eventsPlugin = definePlugin("events", (ctx) => {
   ctx.registerArchiveType("event-series", {
     routes: ["/events/:series", "/events/:series/page/:page(\\d+)"],
@@ -47,7 +53,7 @@ const eventsPlugin = definePlugin("events", (ctx) => {
   });
 });
 
-// A theme templating the archive type via the targeted builder.
+/** A theme templating the archive type via the targeted builder. */
 const eventsTheme = defineTheme({
   templates: [
     forArchiveType("event-series").template(({ data }) => (
@@ -127,8 +133,10 @@ describe("archive types (registerArchiveType)", () => {
   });
 });
 
-// An archive that declares its entries and lets core list them: no resolver,
-// no paginated route of its own, no hand-written pagination.
+/**
+ * An archive that declares its entries and lets core list them: no resolver,
+ * no paginated route of its own, no hand-written pagination.
+ */
 interface TalkArchiveData extends ListingArchiveData {
   readonly kind: "archiveType";
   readonly name: "talks";
@@ -216,8 +224,10 @@ describe("an archive that declares its entries", () => {
   });
 });
 
-// A second listed archive, this one with a subject to load: `resolve` gets the
-// finished page and adds to it rather than building one.
+/**
+ * A second listed archive, this one with a subject to load: `resolve` gets the
+ * finished page and adds to it rather than building one.
+ */
 interface RoomArchiveData extends ListingArchiveData {
   readonly kind: "archiveType";
   readonly name: "rooms";

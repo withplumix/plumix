@@ -3,15 +3,9 @@ import type { GenericSchema, InferOutput } from "valibot";
 import type { JsonObject } from "../json.js";
 import type { AppContext } from "./app-context.js";
 
-// Declared beside the context rather than under `mcp/`, a surface: a plugin
-// registers tools through its setup context and the registry holds them, and
-// a contract under `mcp/` that names `AppContext` would tie the two into a
-// cycle.
 /**
- * One MCP tool: a name, a description, a valibot input schema authored once
- * (projected to JSON Schema for `tools/list`, validated on `tools/call`), and
- * a `run` that delegates to a service. Mirrors how `PluginRpcRouter` describes
- * an RPC surface — the registry is the seam, `run` is the adapter.
+ * Not under `mcp/`: a contract there naming `AppContext` would form an import
+ * cycle with the plugin registry that holds tools.
  */
 export interface McpTool<TSchema extends GenericSchema = GenericSchema> {
   readonly name: string;
@@ -23,11 +17,9 @@ export interface McpTool<TSchema extends GenericSchema = GenericSchema> {
    */
   readonly jsonSchema?: JsonObject;
   /**
-   * The tool's work. The transport `JSON.stringify`s what it hands back, so
-   * `JsonValue` is the type this wants — but a tool returns a read service's
-   * row, and those carry `Date` fields and a `ResolvedMeta` bag that is still
-   * `Record<string, unknown>`. This becomes `JsonValue` when the meta pipeline
-   * finishes the migration #1817 deferred, not before.
+   * Not `JsonValue` though the transport stringifies it: read-service rows
+   * carry `Date` fields and a `ResolvedMeta` bag still typed `Record<string,
+   * unknown>`.
    */
   // eslint-disable-next-line plumix/no-unknown-return
   run(ctx: AppContext, input: InferOutput<TSchema>): unknown;

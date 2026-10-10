@@ -2,15 +2,8 @@ import { cp, stat } from "node:fs/promises";
 import { relative, resolve, sep } from "node:path";
 
 /**
- * Copy the workspace's user-facing `public/` directory contents into
- * Vite's resolved `publicDir`. Files in `public/robots.txt` end up at
- * `<publicDir>/robots.txt` so that:
- *   - the dev server (Vite) serves them at `/robots.txt`
- *   - `vite build` copies them into the static-asset output directory
- *
- * No-op when the workspace has no `public/` directory. Files under the
- * reserved `_plumix/` namespace are skipped — `stageAdminAssets` owns that
- * subtree and replaces it whole.
+ * Skips the reserved `_plumix/` namespace, which `stageAdminAssets` owns and
+ * replaces whole.
  */
 export async function stageUserPublic(args: {
   readonly workspaceRoot: string;

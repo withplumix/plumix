@@ -17,11 +17,10 @@ import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { resolveEntryList } from "../../../route/render/resolve-entry-list.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
-// Each field type whose clear the pipeline turns into a deletion, with the
-// value the admin form sends when the author clears it. A default is the
-// entry's starting value, not a read fallback (ADR 0026), so once cleared the
-// key stays absent on every surface — and the form, seeded from storage,
-// writes nothing back for it.
+/**
+ * Field types whose clear becomes a deletion, with the value the form sends. A
+ * default is a starting value, not a read fallback, so the key stays absent.
+ */
 const CASES: readonly {
   readonly type: string;
   readonly field: MetaBoxField;

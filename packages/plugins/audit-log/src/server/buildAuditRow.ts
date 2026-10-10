@@ -4,21 +4,8 @@ import type { NewAuditLogRow } from "../db/schema.js";
 import type { AuditEntityRow, AuditLogActor } from "../types.js";
 
 /**
- * Pure helper that turns an event payload into a denormalized audit
- * row. The `properties` envelope is intentionally narrow for v1 —
- * `{ diff: { field: [old, new] } }` for entity mutations; future
- * events can add their own keys without breaking older readers
- * because the column is JSON.
- *
- * Diff shape rules:
- * - Only top-level entity columns are diffed. Nested JSON (meta,
- *   content) is intentionally skipped — those have their own
- *   dedicated events (`entry:meta_changed`).
- * - A field appears in the diff iff `previous[k] !== next[k]`. Missing
- *   keys on either side are treated as `null`.
- * - Date instances compare via `.getTime()`; everything else uses
- *   structural equality through `JSON.stringify` so `[1,2]` and
- *   `[1,2]` count as equal.
+ * Only top-level columns are diffed; meta and content have their own events
+ * (`entry:meta_changed`).
  */
 interface BuildAuditRowInput {
   readonly event: string;
@@ -30,7 +17,6 @@ interface BuildAuditRowInput {
   };
   readonly previous?: Readonly<AuditEntityRow>;
   readonly next?: Readonly<AuditEntityRow>;
-  /** Extra fields merged into `properties` after the diff. */
   readonly extraProperties?: JsonObject;
 }
 

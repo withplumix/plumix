@@ -1,31 +1,3 @@
-/**
- * The selection vocabulary shared by every rule kind a theme declares against
- * the node hierarchy — the mirror of `rule-resolver.ts`, which reads what these
- * mint. A rule kind supplies only how a selected `TierMatchRule` becomes its
- * own rule (a `BindRule`); which nodes a selector can target, the narrowings it
- * accepts and the matchers those produce are written once, here. Core's
- * `templates` and the OG plugin's `ogCards` both sit on top of it.
- *
- * Each targeted builder is split in two: an interface parameterised by the rule
- * kind's selector types, which a consumer composes into its own public builder,
- * and a constructor that fills it in. The pairing is what lets a rule kind keep
- * its own terminal — `.template(...)`, `.define(...)` — without restating the
- * chain that leads to it.
- *
- * Nothing here knows what a rule carries or who reads it. A narrowing that is
- * one half of a contract with another surface — `named`, which the editor's
- * template picker writes and `collectNamedTemplates` reads back — belongs to
- * the rule kind that holds up the other half, not to this layer.
- *
- * The `*Match` and `*Equals` constructors are on the `plumix` façade for that
- * case. What a rule kind needs to mint a narrowing of its own is the node
- * prefix and the predicate, not a sixth `*Targets` constructor:
- * `template-builders.ts` builds `named` out of them, and a third-party rule
- * kind builds its equivalent the same way rather than restating the prefix —
- * the coupling this module exists to remove, which does not stop being one a
- * level down.
- */
-
 import type {
   ResolvedEntryFor,
   ResolvedTermFor,
@@ -44,26 +16,15 @@ import type {
 import type { EntryData, TermArchiveData } from "../contract/resolved-entry.js";
 
 /**
- * How a rule kind turns a selected match into one of its rules. The selector it
- * returns is typed to the data the match confines the rule to, which is what
- * types the payload the caller then binds.
- *
- * It has to return a fresh object literal carrying nothing but its own
- * terminal: the constructors below spread it to hang the narrowings off, so an
- * inherited method would be dropped and an own key named for a narrowing would
- * be overwritten by it.
+ * Must return a fresh object literal with only its terminal: it is spread, so
+ * inherited methods drop and narrowing-named keys get overwritten.
  */
 export type BindRule<S> = (where: TierMatchRule) => S;
 
 /** What a `*Match` constructor accepts on top of the prefix it mints. */
 export type MatchNarrowing = Omit<Partial<TargetMatcher>, "nodeKind" | "type">;
 
-/**
- * The match an entry-type selector narrows from, and the prefix a rule kind's
- * own narrowing hangs off. `extra` cannot reach `nodeKind` or `type`: minting
- * those from one place is the whole job, so a caller overriding them would be
- * back to writing the matcher by hand.
- */
+/** `extra` cannot override `nodeKind` or `type`. */
 export function entryTypeMatch(
   name: EntryTypeName,
   extra?: MatchNarrowing,
@@ -80,12 +41,7 @@ export function termTaxonomyMatch(
 }
 
 /**
- * A predicate matching when a content entry's stored meta value equals
- * `value` — `entry.storedMeta`, the meta JSON as the row holds it, not the
- * decoded `entry.meta` a template reads.
- *
- * The walk calls a predicate with whatever the resolved node carries, so this
- * one has to refuse a term rather than read a key off it.
+ * Compares `entry.storedMeta`, not the decoded `entry.meta`. False for a term.
  */
 export function metaEquals(
   key: string,
@@ -95,10 +51,8 @@ export function metaEquals(
 }
 
 /**
- * A predicate matching when a resolved term's stored meta value equals
- * `value`. Reads `storedMeta` because the decoded `term.meta` holds
- * `Date`s and hydrated references, which are not the primitives `===`
- * can land on.
+ * Reads `storedMeta`: the decoded `term.meta` holds `Date`s and hydrated
+ * references `===` can't match.
  */
 export function termMetaEquals(
   key: string,
@@ -133,7 +87,10 @@ export interface TermTaxonomyTargets<K extends TermTaxonomyName, STerm> {
   slug(slug: string): STerm;
   /** Narrow to one term by numeric id. */
   id(id: number): STerm;
-  /** Narrow by a term-meta value, typed against the taxonomy's folded stored meta shape. */
+  /**
+   * Narrow by a term-meta value, typed against the taxonomy's folded stored
+   * meta shape.
+   */
   whereMeta<M extends keyof StoredTermMetaOf<K>>(
     key: M,
     value: StoredTermMetaOf<K>[M],
@@ -153,9 +110,8 @@ export interface AuthorTargets<S> {
 }
 
 /**
- * A date selector. The three signatures rather than optional parameters are
- * what reject `(2026, undefined, 5)` — a day is meaningless without the month
- * above it, and the matcher an unset component mints has to stay unset.
+ * Overloads rather than optional parameters, so `(2026, undefined, 5)` is
+ * rejected.
  */
 export interface DateTargets<S> {
   (year: number): S;

@@ -16,32 +16,15 @@ export const ENTRY_STATUSES = [
 export type EntryStatus = (typeof ENTRY_STATUSES)[number];
 
 /**
- * The block envelope persisted in `entries.content` — `plumix.v2` today, a
- * pre-cutover Tiptap document on rows nobody has re-saved. Intentionally
- * loose — the editor owns the outgoing block vocabulary and the public
- * renderer's walker allowlists on the way out, so the column only needs
- * to agree that content is a JSON object.
- *
- * Not `JsonObject`, unlike `meta`. Both arrive off the wire as
- * `v.record(v.string(), v.unknown())`, but meta is written through the field
- * pipeline, which normalizes every value before `applyMetaPatch` encodes it;
- * content goes straight from the request into `.values()`. Narrowing the
- * column would only move the unproven claim to an assertion at the RPC
- * boundary.
+ * Not `JsonObject`, unlike `meta`: content goes from the request straight into
+ * `.values()` without passing a normalizing pipeline.
  */
 export type EntryContent = Record<string, unknown>;
 
 /**
- * Carries the change-feed triggers in `entries/change-feed.ts`. drizzle emits
- * a table rebuild for some schema changes — adding a `NOT NULL` to an existing
- * column, for one — and every trigger on the table dies at the `DROP TABLE`
- * inside it. A migration that rebuilds this table has to re-create them in a
- * hand-written migration after it, as `migrations/0001_entry_change_feed.sql`
- * created them.
- *
- * A new column that changes what a consumer's projection of an entry says —
- * its text, its visibility, its URL — belongs in that module's
- * `WATCHED_COLUMNS`, and reaches installs only through a further migration.
+ * A drizzle table rebuild drops the change-feed triggers; a migration
+ * rebuilding this table must re-create them by hand, as
+ * `0001_entry_change_feed.sql` did.
  */
 export const entries = sqliteTable(
   "entries",

@@ -9,17 +9,23 @@ import { displayedThread } from "./displayed-thread.js";
 import { gravatarUrl } from "./gravatar.js";
 import { renderCommentBody } from "./render-body.js";
 
-// Mirrors core's private rest/{schemas,envelope} pagination helpers. Kept local
-// while comments is the only plugin REST consumer; promote to a shared
-// `@plumix/core/rest` export when a second plugin needs offset pagination.
+/**
+ * Mirrors core's private rest/{schemas,envelope} pagination helpers. Kept local
+ * while comments is the only plugin REST consumer; promote to a shared
+ * `@plumix/core/rest` export when a second plugin needs offset pagination.
+ */
 const MAX_PER_PAGE = 100;
 const DEFAULT_PER_PAGE = 20;
 
-/** Where the resource sits; core binds both segments before the handler runs. */
+/**
+ * Where the resource sits; core binds both segments before the handler runs.
+ */
 export const COMMENTS_REST_PATH = "/{collection}/{entry}/comments";
 
-// Output schema = the public allowlist. Author email, IP, user-agent, the
-// moderation status, and meta never appear — only these fields leave.
+/**
+ * Output schema = the public allowlist. Author email, IP, user-agent, the
+ * moderation status, and meta never appear — only these fields leave.
+ */
 const publicCommentSchema = v.object({
   id: v.number(),
   parentId: v.nullable(v.number()),
@@ -54,8 +60,10 @@ function clampInt(
   return Math.min(max, Math.max(min, n));
 }
 
-// Relative path + query so links don't pin the response to an internal origin;
-// clients resolve them against the request base.
+/**
+ * Relative path + query so links don't pin the response to an internal origin;
+ * clients resolve them against the request base.
+ */
 function pageUrl(url: URL, page: number): string {
   const next = new URL(url);
   next.searchParams.set("page", String(page));
@@ -63,13 +71,8 @@ function pageUrl(url: URL, page: number): string {
 }
 
 /**
- * `GET /_plumix/api/v1/{collection}/{entry}/comments` — a flat, offset-paginated
- * list of the entry's displayed thread (the comments the site shows, bounded by
- * `maxDepth`), each carrying `parentId` so clients build the thread. Core binds
- * the entry, so a collection or id that names no readable entry of that
- * collection's type never reaches here. An entry that isn't published and open
- * to anonymous visitors answers the same `NOT_FOUND`, so existence stays
- * hidden; one whose type has commenting off resolves to an empty page.
+ * An entry not published and open to anonymous visitors answers `NOT_FOUND`,
+ * hiding existence; commenting off yields an empty page.
  */
 export function createCommentsRestHandler(config: ResolvedCommentsConfig) {
   return async ({

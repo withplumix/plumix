@@ -32,12 +32,8 @@ export const RPC_ERRORS = {
       // reasons that pinpoint a specific field/row (e.g. `meta_*` reasons
       // set this to the offending meta key); omitted otherwise.
       key: v.optional(v.string()),
-      // Path-addressed field rejections from the meta constraint walker.
-      // `path` dot-joins from the top-level meta key into nested repeater
-      // cells (`sections.2.heading`); `message` is either a plain string
-      // (custom `.validate()` verdicts) or an i18n message descriptor the
-      // admin resolves against its catalog. `looseObject` keeps the
-      // descriptor's `values` interpolations on the wire.
+      // `message` is a plain string or a catalog descriptor; `looseObject`
+      // keeps the descriptor's `values` on the wire.
       errors: v.optional(
         v.array(
           v.object({
@@ -114,7 +110,9 @@ export type DeviceCodeLookupErrors = Pick<RpcErrors, "NOT_FOUND" | "CONFLICT">;
 /** An input the procedure rejects outright. */
 export type BadRequestErrors = Pick<RpcErrors, "BAD_REQUEST">;
 
-/** A write that conflicts with a stored constraint — meta, settings, size caps. */
+/**
+ * A write that conflicts with a stored constraint — meta, settings, size caps.
+ */
 export type ConflictErrors = Pick<RpcErrors, "CONFLICT">;
 
 /** Entry content the block registries reject. */

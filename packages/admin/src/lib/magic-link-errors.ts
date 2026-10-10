@@ -46,6 +46,8 @@ const registry = createNullableErrorDescriptorRegistry(MESSAGES, FALLBACK);
 export const magicLinkErrorDescriptor = registry.descriptor;
 export const useMagicLinkErrorMessage = registry.useMessage;
 
-// Test-only export so the unit test can assert every code in
-// `MAGIC_LINK_ERROR_CODES` is mapped (no silent fallbacks).
+/**
+ * Test-only export so the unit test can assert every code in
+ * `MAGIC_LINK_ERROR_CODES` is mapped (no silent fallbacks).
+ */
 export const MAGIC_LINK_ERROR_MESSAGES = registry._messages;

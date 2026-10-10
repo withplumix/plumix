@@ -12,11 +12,10 @@ import { og } from "./index.js";
 import { svgOnly, takumi } from "./takumi.js";
 import { createHarness, fetchCard, seedEntry } from "./test/harness.js";
 
-// The only tests that load the real wasm. Everything else renders through the
-// fake in `test/fake-renderer.ts` — exercising the engine harder than this
-// tests upstream rather than us.
-// The engine must never reach the network: a card is rendered from what the
-// request already resolved, which is what keeps the storage key complete.
+/**
+ * The only tests loading the real wasm. The engine must never reach the
+ * network, which keeps the storage key complete.
+ */
 const input = (
   stylesheets: string[],
   images: CardImage[] = [],
@@ -29,8 +28,10 @@ const input = (
   fetch: () => Promise.reject(new Error("the engine must not fetch")),
 });
 
-// A 1x1 red PNG. The engine decodes it itself; what matters here is that the
-// bytes reach it under the `src` the node names, with nothing fetched.
+/**
+ * A 1x1 red PNG. The engine decodes it itself; what matters here is that the
+ * bytes reach it under the `src` the node names, with nothing fetched.
+ */
 const RED_PIXEL = Uint8Array.from(
   atob(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGO4o6YGAAMKASng8MlTAAAAAElFTkSuQmCC",
@@ -143,11 +144,8 @@ describe("the bundled engine", () => {
   });
 
   test("paints the bundled card in the theme's own palette", async () => {
-    // Every fill the served card carries, in paint order: the ground, then the
-    // headline, then the site line beneath it. `renderSvg` emits glyphs as
-    // `<use>` references, so the colours are the only part of a card this can
-    // read — and they are the whole of what a palette decides. Nothing else in
-    // the document is written as a hex triplet.
+    // `renderSvg` emits glyphs as `<use>` references, so fills are the only
+    // readable part, and they're all a palette decides.
     const fillsOf = async (tokens?: ThemeTokens): Promise<string[]> => {
       const harness = await createHarness({ renderer: svgOnly(), tokens });
       const id = await seedEntry(harness);
@@ -202,9 +200,8 @@ describe("the bundled engine", () => {
   });
 });
 
-// The lockfile governs this repo only; a consumer's install follows the spec,
-// so the spec has to name the version the suite above rasterized with. Read by
-// path because the engine's `exports` map has no `./package.json`.
+// Consumers install by the spec, not our lockfile, so it must name the version
+// tested; read by path since `exports` lacks `./package.json`.
 describe("the declared engine version", () => {
   test("is the one these tests rasterized with", () => {
     const readJson = <T>(path: string): T =>

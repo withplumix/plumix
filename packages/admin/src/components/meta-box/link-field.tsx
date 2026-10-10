@@ -26,12 +26,8 @@ import { AdornedControl } from "./adorned-control.js";
 import { renderLookupListBody } from "./lookup/list-body.js";
 import { useLookupSearch } from "./lookup/use-lookup-search.js";
 
-// Admin control for the `link` field — a CTA-shaped `{ url, label?,
-// newTab? }` value. The URL is authored either by typing an external
-// URL or by picking a published internal entry, which resolves to its
-// permalink via the lookup RPC's `href` and stores that plain URL (no
-// reference, no hydration — renaming the entry does not retarget the
-// link).
+// A picked entry stores its permalink as a plain URL, so renaming the entry
+// doesn't retarget the link.
 
 const M = {
   url: defineMessage({
@@ -56,8 +52,10 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-// Display-state view of the value. Absent optionals render as empty
-// string / off so the inputs stay controlled.
+/**
+ * Display-state view of the value. Absent optionals render as empty
+ * string / off so the inputs stay controlled.
+ */
 interface LinkDraft {
   readonly url: string;
   readonly label: string;
@@ -95,12 +93,8 @@ export function LinkField({
   const untitledLabel = useUntitledLabel();
   const [open, setOpen] = useState(false);
 
-  // The inputs edit a local draft so a half-filled state (link text
-  // typed before the URL) survives in the UI while the form value
-  // stays valid: a draft without a URL emits `null` (the server
-  // rejects `{ url: "" }`, and an absent key is a deletion on save).
-  // External resyncs (`form.reset()` post-save) are detected with the
-  // state-during-render snapshot pattern — see `JsonControl`.
+  // A draft without a URL emits `null`: the server rejects `{ url: "" }`, yet
+  // link text typed first must survive in the UI.
   const externalDraft = toDraft(rhf.value);
   const [draft, setDraft] = useState(externalDraft);
   const [lastSynced, setLastSynced] = useState(externalDraft);

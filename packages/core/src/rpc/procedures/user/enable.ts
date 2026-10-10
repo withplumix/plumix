@@ -7,10 +7,7 @@ import { userEnableInputSchema } from "./schemas.js";
 
 const CAPABILITY = "user:edit";
 
-// Restore a previously-disabled user by clearing `disabledAt`. No
-// last-admin guard here — unlike disable/delete/demote, re-enabling is
-// never the path to an all-admins-locked-out state. Idempotent: a second
-// call on an already-active user short-circuits with the existing row.
+/** No last-admin guard: re-enabling can never lock admins out. */
 export const enable = base
   .use(authenticated)
   .use(requireCapability(CAPABILITY))

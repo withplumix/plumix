@@ -15,9 +15,10 @@ declare module "../../context/dev-runtime.js" {
   }
 }
 
-// A plugin panel author's happy path: record per-request data during render,
-// then read it back when the panel renders. `render:document` fires during a
-// real page render (before the bar), so the entry is present by panel time.
+/**
+ * `render:document` fires during a real page render, before the bar, so the
+ * recorded entry is present by panel time.
+ */
 const demoPlugin = definePlugin("debug-demo", (ctx) => {
   ctx.registerEntryType("post", {
     label: "Posts",
@@ -84,9 +85,8 @@ describe("debug bar plugin panel", () => {
     expect(html).toContain("recorded during render");
   });
 
-  // A plugin panel is nameable in `dev.panels` only once its plugin declares
-  // it — the registry is what makes a mistyped id a compile error rather than
-  // a silent no-op, so an undeclared panel simply isn't addressable (#2425).
+  // An undeclared panel isn't addressable in `dev.panels`, so a mistyped id
+  // is a compile error rather than a silent no-op.
   test("disabling the panel removes both its render and its data", async () => {
     process.env.PLUMIX_DEV = "1";
     const h = await createDispatcherHarness({

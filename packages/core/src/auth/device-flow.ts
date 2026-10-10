@@ -7,36 +7,8 @@ import { deviceCodes } from "../db/schema/device_codes.js";
 import { createApiToken } from "./api-tokens.js";
 import { hashToken } from "./tokens.js";
 
-// OAuth 2.0 Device Authorization Grant — RFC 8628. Used by CLIs / MCP
-// servers / anything without a browser to bootstrap an API token via
-// the operator's existing browser session. Two secrets per flow:
-//
-//   device_code (high-entropy, machine-side) — what the client polls
-//                with; never shown to the human, never typed.
-//   user_code   (low-entropy, human-readable) — what the human types
-//                into the admin's `/auth/device` page to approve.
-//
-// Persistence (see `db/schema/device_codes.ts` for the full rationale):
-//   row.id        = SHA-256(device_code)         (PK)
-//   row.userCode  = "ABCD-EFGH"                  (unique, plaintext)
-//   row.userId    = null until approved
-//   row.status    = "pending" | "approved" | "denied"
-//   row.tokenName = approver-set token label
-//   row.scopes    = capability whitelist or null (inherit)
-//   row.expiresAt = now + 10min                  (RFC 8628 §3.5)
-//
-// Polling intervals follow the spec defaults:
-//   client polls every `interval` seconds (5).
-//   pre-approval: returns "authorization_pending" / "slow_down".
-//   post-approval: returns the API token, then deletes the device row.
-//   post-deny: returns "access_denied", deletes the row.
-//   post-expiry: returns "expired_token".
-
 const DEVICE_CODE_BYTES = 32;
-// Base32 alphabet, ambiguous-char-stripped: 0/O/1/I removed. 8 chars
-// in two groups of 4 ("ABCD-EFGH") gives 30 bits — enough that brute
-// force across the 10-minute TTL is infeasible without distinguishing
-// the device_code (~2^-19 odds per attempt with rate-limiting).
+/** Humans type this code, so 0/O/1/I are left out. */
 const USER_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const USER_CODE_LENGTH = 8;
 const DEVICE_CODE_TTL_SECONDS = 10 * 60;
@@ -46,19 +18,14 @@ export const DEVICE_FLOW_TTL_SECONDS = DEVICE_CODE_TTL_SECONDS;
 export const DEVICE_FLOW_INTERVAL_SECONDS = DEVICE_CODE_POLL_INTERVAL_SECONDS;
 
 interface DeviceCodeRequest {
-  /** What the client polls with. ~256 bits of entropy. */
+  /** The client polls with this; never shown to the human. */
   readonly deviceCode: string;
-  /** What the human types into the admin to approve. ~30 bits. */
+  /** The human types this into the admin to approve. */
   readonly userCode: string;
   readonly expiresIn: number;
   readonly interval: number;
 }
 
-/**
- * Begin a device-flow session. The caller (raw route handler) returns
- * the response shape directly to the client; this function only
- * persists the DB row.
- */
 export async function requestDeviceCode(db: Db): Promise<DeviceCodeRequest> {
   const deviceCode = generateDeviceCode();
   const userCode = generateUserCode();
@@ -86,12 +53,6 @@ export type LookupUserCodeResult =
   | { readonly outcome: "already_approved" }
   | { readonly outcome: "already_denied" };
 
-/**
- * Find the device-code row matching a `user_code` typed by the
- * authenticated browser user. Used by the admin's approval page —
- * the user navigates to `/_plumix/admin/auth/device`, types their
- * code, and the page calls this to render the confirm/deny prompt.
- */
 export async function lookupDeviceCodeByUserCode(
   db: Db,
   userCode: string,
@@ -111,21 +72,9 @@ export async function lookupDeviceCodeByUserCode(
 }
 
 /**
- * Approve a pending device-code row. Idempotent — the WHERE clause
- * pins `status = pending` so two concurrent approves race on the
- * primitive itself: the first transitions, the second updates zero
- * rows and returns false. Same guard prevents `denied → approved`
- * (a deny followed by a stale approve is a no-op) and re-approval
- * after exchange (the row is gone).
- *
- * `scopes` may be null to let the minted token inherit the approver's
- * full role caps; non-null narrows the token to that intersection.
- *
- * Returns true when a row transitioned, false when none did. Callers
- * pre-check via `lookupDeviceCodeByUserCode` to surface the specific
- * outcome (expired vs already_approved vs already_denied vs
- * not_found); a `false` here despite a successful prior lookup means
- * a concurrent approve/deny landed first.
+ * Only a pending row transitions; `false` after a successful lookup means a
+ * concurrent approve or deny won. `scopes: null` lets the token inherit the
+ * approver's role caps.
  */
 export async function approveDeviceCode(
   db: Db,
@@ -150,16 +99,8 @@ export async function approveDeviceCode(
 }
 
 /**
- * Deny a pending device-code row. Same `status = pending` guard as
- * `approveDeviceCode` — a deny on an already-approved row is a
- * no-op (we don't revoke an active approval via deny), and a
- * second-tab deny after the first deny lands is silently a no-op.
- *
- * The polling client gets `access_denied` on its next exchange and
- * stops polling. The row is preserved (not deleted) until exchange
- * so the polling client sees the deny outcome rather than a generic
- * `invalid_grant` — exchange consumes denied rows the same way it
- * consumes approved ones.
+ * Only a pending row transitions, so deny never revokes an approval. The row
+ * stays until exchange so the client sees `access_denied`, not `invalid_grant`.
  */
 export async function denyDeviceCode(
   db: Db,
@@ -185,23 +126,8 @@ type ExchangeDeviceCodeResult =
   | { readonly outcome: "invalid" };
 
 /**
- * Polled by the client. Returns the freshly-minted API token once a
- * browser-side approval has set the row's `status`; the device-code
- * row is consumed on success/deny/expiry so a leaked device_code
- * can't be exchanged twice.
- *
- * Concurrency: the consume-then-mint path is `DELETE … RETURNING`,
- * not `SELECT` then `DELETE` then `INSERT`. Two concurrent polls of
- * the same approved row cannot both proceed — the second `DELETE`
- * affects zero rows and returns `pending` (the row is gone, but the
- * surface contract is "the human approved, your CLI got the token
- * via the other poll" → effectively the protocol's success path
- * from the *user's* perspective; the polling client sees `pending`
- * once and `invalid_grant` thereafter, both terminal).
- *
- * Pending rows fall through with no DB write. A leaked device_code
- * polling against a still-pending row burns one read per poll but
- * can't race itself into a token.
+ * Consumes the row on approval, denial or expiry, so a leaked device_code can't
+ * be exchanged twice.
  */
 export async function exchangeDeviceCode(
   db: Db,
@@ -231,12 +157,8 @@ export async function exchangeDeviceCode(
     return { outcome: "pending" };
   }
 
-  // Atomic consume: only the first concurrent poll on an approved
-  // row gets back the row. The second sees zero rows from
-  // DELETE…RETURNING and resolves to "pending" (which the polling
-  // client treats as continue-polling; the next poll sees no row at
-  // all and gets "invalid"). Without this, two concurrent polls
-  // could both mint a token from one approval.
+  // DELETE…RETURNING so two concurrent polls can't both mint a token from one
+  // approval; the loser reads "pending".
   const consumed = await db
     .delete(deviceCodes)
     .where(and(eq(deviceCodes.id, id), eq(deviceCodes.status, "approved")))

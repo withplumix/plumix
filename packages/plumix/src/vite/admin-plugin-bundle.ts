@@ -28,13 +28,10 @@ import { VitePluginError } from "./errors.js";
 // `plumix/admin/<lib>` shims that read from `window.plumix.runtime.*`
 // — single React instance across host + plugin.
 
-// Plugin chunk URLs MUST be absolute (not `./plugins/...`). The SPA's
-// index.html is served for every deep-link, so a relative `src`
-// resolves against the current URL — `/_plumix/admin/pages/media`
-// would fetch `/_plumix/admin/pages/plugins/site-bundle.js` and 404,
-// leaving the plugin registry empty and rendering "Plugin not loaded"
-// on direct deep-links. Same prefix the dispatcher and admin Vite
-// config hardcode.
+/**
+ * Must be absolute: index.html is served for every deep link, so a relative
+ * chunk `src` resolves against the current URL and 404s.
+ */
 export const ADMIN_URL_PREFIX = "/_plumix/admin";
 
 interface AssembledBundle {
@@ -42,28 +39,29 @@ interface AssembledBundle {
   readonly cssUrl?: string;
 }
 
-// Resolve shim targets relative to this file rather than via the
-// consumer's `node_modules/plumix` lookup. This module always lives
-// next to its sibling `../admin/<lib>.js`, whether shipped from the
-// published `plumix` tarball or from a workspace symlink. Side effect:
-// the assembler works in monorepos where the consuming package doesn't
-// declare `plumix` as its own dep.
+/**
+ * Relative to this file, not `node_modules/plumix`, so it works where the
+ * consuming package doesn't declare `plumix` itself.
+ */
 const ADMIN_SHIM_DIR = resolve(
   dirname(fileURLToPath(import.meta.url)),
   "../admin",
 );
 
-// Resolve the `@theme` mapping from the installed @plumix/admin (same
-// package.json lookup index.ts uses to stage the SPA) so the per-plugin
-// sidecar compiles against the exact admin the consumer runs.
+/**
+ * Resolve the `@theme` mapping from the installed @plumix/admin (same
+ * package.json lookup index.ts uses to stage the SPA) so the per-plugin
+ * sidecar compiles against the exact admin the consumer runs.
+ */
 const require = createRequire(import.meta.url);
 const ADMIN_THEME_CSS = resolve(
   dirname(require.resolve("@plumix/admin/package.json")),
   "dist/theme.css",
 );
-// Tailwind is plumix's dependency, not the site's: resolved from the site
-// root it is found only where an install hoisted it there or pnpm's bin shim
-// put its store on `NODE_PATH`, and `bun --bun` on the CLI entry has neither.
+/**
+ * Tailwind is plumix's dependency, not the site's; resolved from the site root
+ * it is missing under `bun --bun`.
+ */
 const TAILWIND_THEME_CSS = require.resolve("tailwindcss/theme.css");
 const TAILWIND_UTILITIES_CSS = require.resolve("tailwindcss/utilities.css");
 
@@ -97,19 +95,8 @@ export async function assemblePluginAdminBundle({
   const cacheDir = resolve(projectRoot, ".plumix");
   await mkdir(cacheDir, { recursive: true });
 
-  // Synthesised entry: namespace-import each plugin's adminEntry, then
-  // emit `window.plumix.registerPlugin{Page,FieldType}` calls for
-  // every surface the plugin's `setup()` registered. The plugin author
-  // exports `MediaLibrary` (etc.) and writes one `ctx.registerAdminPage
-  // ({ component: "MediaLibrary" })` line — the boilerplate that used to
-  // live in the plugin's `admin/index.tsx` (Window typing, registry
-  // call) is generated here, where it's correct by construction.
-  //
-  // Namespace imports still execute the module body, so any imperative
-  // `window.plumix.register*` calls a plugin chooses to make at module-
-  // eval time keep working. Plugins are imported in declared order;
-  // duplicate paths/names throw at admin runtime via the registry's
-  // first-writer-wins guard.
+  // Namespace imports still execute module bodies, so imperative
+  // `window.plumix.register*` calls at eval time keep working.
   const resolvedEntries = await Promise.all(
     withEntry.map((p) => resolveAndValidateEntry(p, projectRoot)),
   );
@@ -146,11 +133,8 @@ export async function assemblePluginAdminBundle({
     plugins: [pluginRuntimeAliasPlugin()],
     nodePaths: [resolve(projectRoot, "node_modules")],
     absWorkingDir: projectRoot,
-    // Plugin admin entries are bare `import "..."` for the
-    // module-eval side effect (`window.plumix.registerPluginPage`).
-    // A plugin's `package.json` `"sideEffects": false` would let
-    // esbuild tree-shake the entire import — silently producing a
-    // 0-byte bundle. Ignore those annotations for this build.
+    // A plugin's `"sideEffects": false` would let esbuild tree-shake its
+    // side-effect-only admin entry into a 0-byte bundle.
     ignoreAnnotations: true,
   });
 
@@ -166,17 +150,10 @@ export async function assemblePluginAdminBundle({
   };
 }
 
-// Build the synthesised JS entry the bundler ingests. One namespace
-// import per plugin (`p_<id>` — plugin ids are `[a-z][a-z0-9_]*`, so
-// the prefix-and-id form is always a valid identifier), followed by a
-// flat list of `registerPlugin*` calls keyed off the plugin id and the
-// `component` export name from each registered surface.
-//
-// Window-presence guard: the host admin's main bundle runs
-// `bootPlumixGlobals()` synchronously on module-eval, and plugin chunks
-// load AFTER it in document order — so `window.plumix` is always
-// populated by the time this entry runs. The `if` is belt-and-braces
-// for the unusual case where the host bundle errored out mid-init.
+/**
+ * The `window.plumix` guard covers a host bundle that errored mid-init;
+ * normally it is populated before plugin chunks run.
+ */
 function buildSynthesisedEntry({
   plugins,
   resolvedEntries,
@@ -191,9 +168,8 @@ function buildSynthesisedEntry({
   const importLines: string[] = [];
   const registerLines: string[] = [];
 
-  // Block specs (theme + plugin) recovered from config source, registered into
-  // the admin from the one source the canvas also uses — so themes reach the
-  // inserter and a plugin declares its blocks once (in `setup`), not again here.
+  // From the same source the canvas uses, so a plugin declares its blocks once,
+  // in `setup`.
   blockModules.forEach((ref, i) => {
     const local = `b_${i}`;
     importLines.push(blockImportStatement(ref, local));
@@ -249,13 +225,10 @@ function buildSynthesisedEntry({
   ].join("\n");
 }
 
-// Tailwind v4 compile of the union of plugin source directories. The
-// host admin's `globals.css` ships preflight + design-token vars on
-// every page; this sidecar adds only the utility classes plugin source
-// actually uses, mapped to the same vars via the shared `theme.css`.
-// Returns `false` if no candidates were found (no CSS file emitted, no
-// `<link>` injected — keeps the HTML clean for plugins that don't ship
-// any UI).
+/**
+ * Only the utilities plugin source uses; the host admin's `globals.css` already
+ * ships preflight and the design tokens.
+ */
 async function compilePluginCss({
   sourceDirs,
   outFile,
@@ -267,28 +240,18 @@ async function compilePluginCss({
 }): Promise<boolean> {
   const themeCss = await readFile(ADMIN_THEME_CSS, "utf8").catch(() => null);
   if (themeCss === null) {
-    // @plumix/admin hasn't been built yet (its `dist/theme.css` is a
-    // build asset). Skip the compile rather than failing — plugin
-    // authors testing with `pnpm dev` see the host admin's CSS but not
-    // the per-plugin utilities. Production installs always ship it.
+    // `@plumix/admin` isn't built yet in a workspace dev run; production
+    // installs always ship it.
     return false;
   }
 
-  // `@source` directives must point at directories that exist; missing
-  // dirs would make the Scanner throw. `dirname(adminEntry)` always
-  // exists by the time this runs (we just resolved the entry path),
-  // but a plugin could declare an entry at the package root with no
-  // sibling components — Tailwind handles empty scans fine.
+  // `@source` directories must exist or Tailwind's Scanner throws.
   const sourceLines = sourceDirs
     .map((d) => `@source ${JSON.stringify(d)};`)
     .join("\n");
 
-  // Emit plugin utilities into a dedicated `plumix-plugins` layer, NOT the
-  // shared `utilities` layer. The admin's globals.css declares this layer
-  // first (lowest priority), so a plugin re-emitting a base utility like
-  // `.hidden` can't override the admin's own utilities (e.g. the sidebar's
-  // responsive `md:block`). Plugin-specific utilities still apply — nothing
-  // in the admin competes with them.
+  // A dedicated lowest-priority layer, so a plugin re-emitting a base utility
+  // like `.hidden` can't override the admin's own.
   const input = [
     `@import ${JSON.stringify(TAILWIND_THEME_CSS)} layer(theme);`,
     `@import ${JSON.stringify(TAILWIND_UTILITIES_CSS)} layer(plumix-plugins);`,
@@ -299,11 +262,8 @@ async function compilePluginCss({
   const compiler = await compile(input, {
     base: projectRoot,
     onDependency: () => {
-      // Vite watches plumix.config.ts and re-runs `regenerate()` on
-      // change; per-plugin source edits are picked up by Vite's own
-      // watcher when the plugin source lives in the project tree. No
-      // need to forward Tailwind's dependency hints — the rebuild
-      // path doesn't poll Tailwind separately.
+      // Vite's own watcher picks up config and plugin source edits, so
+      // Tailwind's hints are unused.
     },
   });
   const scanner = new Scanner({ sources: compiler.sources });
@@ -324,10 +284,8 @@ export async function resolveAndValidateEntry(
     ? plugin.adminEntry
     : resolve(projectRoot, plugin.adminEntry);
 
-  // Containment check: reject paths that escape the project root.
-  // Plugin descriptors can come from npm packages that the consumer
-  // has installed but doesn't fully control — guard against malicious
-  // or buggy `adminEntry` values pulling in arbitrary files.
+  // Plugin descriptors come from npm packages the consumer doesn't fully
+  // control; reject an `adminEntry` escaping the project root.
   const rel = relative(projectRoot, resolved);
   if (rel.startsWith("..") || isAbsolute(rel)) {
     throw VitePluginError.adminEntryOutsideProjectRoot({
@@ -350,9 +308,11 @@ export async function resolveAndValidateEntry(
   return resolved;
 }
 
-// Each shared specifier resolves to an absolute file path under the
-// `../admin/` sibling — works for both the published tarball and the
-// workspace symlink without consulting node_modules.
+/**
+ * Each shared specifier resolves to an absolute file path under the
+ * `../admin/` sibling — works for both the published tarball and the
+ * workspace symlink without consulting node_modules.
+ */
 const SHIM_PATHS: Readonly<Record<string, string>> = Object.fromEntries(
   Object.keys(SHARED_ADMIN_RUNTIME_SPECIFIERS).map((spec) => {
     const slug = adminRuntimeShimSlug(spec as SharedAdminRuntimeSpecifier);

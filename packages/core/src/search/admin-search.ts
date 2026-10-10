@@ -28,8 +28,10 @@ export interface SearchGroup {
 
 declare module "../hooks/types.js" {
   interface FilterRegistry {
-    // Producer set, run via `getFilterHandlers` — each handler is invoked
-    // with the same input and returns its own groups (not a pipeline).
+    /**
+     * Producer set, run via `getFilterHandlers` — each handler is invoked
+     * with the same input and returns its own groups (not a pipeline).
+     */
     "admin:search:results": (
       input: AdminSearchInput,
       ctx: AppContext,
@@ -38,21 +40,9 @@ declare module "../hooks/types.js" {
 }
 
 /**
- * Run every `admin:search:results` handler concurrently and merge their
- * groups. Each handler is isolated: a throwing or rejecting one degrades
- * to no contribution instead of breaking the palette.
- *
- * Handlers sharing a group key fill one group between them: items arrive in
- * registration priority order, deduplicated by id and capped at `limit`, and
- * the earliest handler names and places the group. That is how a plugin takes
- * a core domain over — registering ahead of core puts its results first —
- * without core's having to stand down, which is what makes degrading free.
- * A plugin whose index is missing, has not been rebuilt yet, or cannot rank
- * one type contributes less, or nothing, and core's own matches fill the rest
- * of the group. Nobody probes for any of it.
- *
- * `priority` then orders the groups, so a plugin can lead a domain without
- * moving where the palette shows it.
+ * A throwing handler contributes nothing. Handlers sharing a group key fill it
+ * in priority order, deduplicated and capped, so a plugin ahead of core leads
+ * and core fills the rest.
  */
 export async function runAdminSearch(
   hooks: Pick<HookExecutor, "getFilterHandlers">,

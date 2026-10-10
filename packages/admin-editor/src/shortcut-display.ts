@@ -2,9 +2,8 @@ import { coreMarks } from "@plumix/core/blocks";
 
 import type { Chord, Gesture } from "./shortcuts.js";
 
-// How a chord is *shown*, kept apart from `shortcuts.ts` so the key handlers —
-// which run in the canvas iframe's bundle too — match a keypress without
-// pulling the mark catalogue in behind them.
+// Kept apart from `shortcuts.ts` so the iframe's key handlers don't pull in the
+// mark catalogue.
 
 /** An inline-formatting binding, taken from the mark that declares it. */
 export interface MarkShortcut {
@@ -14,8 +13,10 @@ export interface MarkShortcut {
   readonly chord: Chord;
 }
 
-// Tiptap spells its bindings "Mod-Shift-X". Parsing them keeps the marks as the
-// one place a formatting shortcut is declared.
+/**
+ * Tiptap spells its bindings "Mod-Shift-X". Parsing them keeps the marks as the
+ * one place a formatting shortcut is declared.
+ */
 function parseTiptapShortcut(shortcut: string): Chord {
   const parts = shortcut.split("-");
   const key = parts[parts.length - 1] ?? "";
@@ -35,12 +36,14 @@ export const MARK_SHORTCUTS: readonly MarkShortcut[] = coreMarks
     chord: parseTiptapShortcut(mark.keyboardShortcut ?? ""),
   }));
 
-/** A rendered piece of a chord: a key cap, or the pointer gesture completing it. */
+/**
+ * A rendered piece of a chord: a key cap, or the pointer gesture completing it.
+ */
 export type ChordToken =
   | { readonly type: "key"; readonly label: string }
   | { readonly type: "gesture"; readonly gesture: Gesture };
 
-// Physical codes the roster uses, spelled as the cap the author sees.
+/** Physical codes the roster uses, spelled as the cap the author sees. */
 const CODE_CAPS: Readonly<Record<string, string>> = {
   Space: "Space",
   Slash: "/",

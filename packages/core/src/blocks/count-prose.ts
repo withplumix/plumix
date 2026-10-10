@@ -7,8 +7,10 @@ export interface ProseCount {
   readonly characters: number;
 }
 
-// CJK / Japanese / Korean ranges — scripts without inter-word spaces, so
-// each character counts as one "word" (matching Word/Google Docs).
+/**
+ * CJK / Japanese / Korean ranges — scripts without inter-word spaces, so
+ * each character counts as one "word" (matching Word/Google Docs).
+ */
 const CJK = /[぀-ヿ㐀-䶿一-鿿豈-﫿가-힯]/gu;
 
 function countSegment(text: string): ProseCount {
@@ -22,12 +24,10 @@ function countSegment(text: string): ProseCount {
   };
 }
 
-// Reading length over the same roster the text extractor walks, filtered to
-// the inputs declared as body copy — a code listing, a control's label or an
-// image's alt attribute is findable but is not read at prose speed.
-//
-// Sums per segment rather than joining: a join separator would inflate the
-// character total by one phantom char per block boundary.
+/**
+ * Sums per segment rather than joining, which would add a phantom character
+ * per block boundary.
+ */
 export function countProse(
   blocks: readonly BlockNode[],
   roster: BlockTextRoster,

@@ -15,7 +15,9 @@ export const DB_PANEL_ID = "database";
 interface QueryRow {
   readonly sql: string;
   readonly params: readonly unknown[];
-  /** Absent for statements inside a batch — the round-trip is timed, not each. */
+  /**
+   * Absent for statements inside a batch: the round-trip is timed, not each.
+   */
   readonly durationMs?: number;
 }
 
@@ -23,16 +25,20 @@ function asParams(value: unknown): readonly unknown[] {
   return Array.isArray(value) ? (value as readonly unknown[]) : [];
 }
 
-// `Array.isArray` narrows a readonly-array union to `any[]`; a dedicated
-// guard keeps the elements typed as JsonValue.
+/**
+ * `Array.isArray` narrows a readonly-array union to `any[]`; a dedicated
+ * guard keeps the elements typed as JsonValue.
+ */
 function isJsonArray(
   value: JsonValue | undefined,
 ): value is readonly JsonValue[] {
   return Array.isArray(value);
 }
 
-// Walks the span tree collecting what the driver wraps emit: a `db.sql` span
-// is one query row; a `db.batch` span flattens into one row per statement.
+/**
+ * Walks the span tree collecting what the driver wraps emit: a `db.sql` span
+ * is one query row; a `db.batch` span flattens into one row per statement.
+ */
 function collectQueryRows(spans: readonly TelemetrySpan[]): QueryRow[] {
   const rows: QueryRow[] = [];
   const visit = (span: TelemetrySpan): void => {
@@ -74,12 +80,6 @@ function HighlightedSql({ sql }: { readonly sql: string }): ReactNode {
   );
 }
 
-/**
- * The Database panel: every query span this request's driver wrap emitted,
- * with SQL syntax highlighting, a per-query kind badge, per-query duration,
- * and the bound params shown separately (typed-colored) — the `?`-form SQL
- * stays copyable.
- */
 export const databasePanel: DebugPanel = {
   id: DB_PANEL_ID,
   title: "Database",

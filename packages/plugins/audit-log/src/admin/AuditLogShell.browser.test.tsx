@@ -20,9 +20,8 @@ import { AuditLogShell } from "./AuditLogShell.js";
 i18n.load({ en: {} });
 i18n.activate("en");
 
-// These tests drive real Radix Select + text-filter interactions through
-// userEvent; under heavily-parallel CI the 5s default testTimeout is too tight
-// (they pass everywhere but a loaded runner takes ~5s just for the clicks).
+// Real Radix Select interactions through userEvent take ~5s on a loaded CI
+// runner, too tight for the default testTimeout.
 vi.setConfig({ testTimeout: 20_000 });
 
 let stub: PluginRpcStub;
@@ -65,9 +64,8 @@ function renderShell(): void {
 
 describe("AuditLogShell", () => {
   beforeEach(() => {
-    // URL-state lives in window.location.search; isolate each test from
-    // bleed-over by resetting the URL to a clean baseline path. Without
-    // this, a filter set in one test would re-hydrate in the next.
+    // URL state lives in window.location.search, so a filter set in one test
+    // would re-hydrate in the next.
     window.history.replaceState(null, "", "/pages/audit-log");
   });
 

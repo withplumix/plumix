@@ -14,13 +14,8 @@ const MODULE_EXTS = [".ts", ".tsx", ".mts", ".js", ".jsx", ".mjs"] as const;
 const JS_EXT = /\.(js|jsx|mjs)$/;
 
 /**
- * Editor-importable block modules (path + the export to take) for every block a
- * config's theme (via its `blocks` field) and plugins (via `ctx.registerBlock(s)`
- * calls) declare. Reads the config to locate each theme / plugin module, scans it
- * for those block bindings, and resolves the recovered specifiers to real files
- * on disk — mapping the authored `.js` extension back to the `.ts` source so the
- * generated editor entry imports something Vite can load. Bare package specifiers
- * pass through untouched for Vite to resolve.
+ * Maps the authored `.js` extension back to the `.ts` source so Vite can load
+ * it.
  */
 export function collectEditorBlockModules(
   configPath: string,
@@ -55,10 +50,8 @@ function collectEditorModules(
   modulesOf: (source: string, file: string) => readonly BlockModuleRef[],
 ): readonly BlockModuleRef[] {
   const { theme, plugins } = extractConfigModules(configSource, configPath);
-  // Plugin modules first, theme last: the canvas registries and the admin
-  // (`registerPluginBlock`) are all last-write-wins, so a theme declaration
-  // overrides a same-named plugin one — the `core < plugin < theme`
-  // precedence the server registries give.
+  // Theme last: the canvas and admin registries are last-write-wins, matching
+  // the server's `core < plugin < theme` precedence.
   const specifiers = [...plugins, ...(theme ? [theme] : [])];
 
   const refs: BlockModuleRef[] = [];
@@ -76,7 +69,6 @@ function collectEditorModules(
   return dedupe(refs);
 }
 
-/** Resolve an import specifier (from the config) to a file on disk. */
 function resolveModuleFile(
   specifier: string,
   fromFile: string,
@@ -91,13 +83,11 @@ function resolveModuleFile(
   }
 }
 
-/** Map an emitted `.js` path back to its real source file (`.ts`, index, …). */
 function toSourceFile(path: string): string {
   if (isFile(path)) return path;
   return probe(path.replace(JS_EXT, "")) ?? path;
 }
 
-/** Try `<base><ext>` and `<base>/index<ext>` across module extensions. */
 function probe(base: string): string | undefined {
   if (isFile(base)) return base;
   for (const ext of MODULE_EXTS) {

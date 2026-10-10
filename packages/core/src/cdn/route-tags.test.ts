@@ -5,8 +5,10 @@ import { createRequestMemo } from "../context/memo.js";
 import { declaredPageTags } from "./contract/page-tags.js";
 import { tagCdnEntry } from "./route-tags.js";
 
-// Only the two fields the accumulator reads: the memo it keys on, and the
-// cdn slot whose absence means nothing will ever be stored.
+/**
+ * Only the two fields the accumulator reads: the memo it keys on, and the
+ * cdn slot whose absence means nothing will ever be stored.
+ */
 function context(): Pick<AppContext, "cdn" | "memo"> {
   return {
     memo: createRequestMemo(),
@@ -31,9 +33,8 @@ describe("tagCdnEntry", () => {
     expect(declaredPageTags(context())).toEqual([]);
   });
 
-  // Core derives contexts by spreading — the base-path strip and `withUser`
-  // both do. A handler handed a derived one has to reach the same accumulator,
-  // or it stores untagged with nothing to say so.
+  // Core derives contexts by spreading; a derived one reaching a separate
+  // accumulator would store untagged silently.
   it("reaches the same entry from a derived context", () => {
     const ctx = context();
     const derived = { ...ctx, request: new Request("https://x/") };

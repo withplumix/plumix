@@ -1,11 +1,8 @@
 import { afterEach, expect, test, vi } from "vitest";
 
-// Isolated from `island-runtime.browser.test.ts` on purpose: this file must be
-// the first thing to define `<plumix-island>` in its page, so the
-// element upgrade happens *during* bootstrap — exactly as it does in the
-// browser when the runtime script runs against SSR'd markup already in the
-// document. `island-runtime.browser.test.ts` appends islands AFTER bootstrap, so it
-// never exercises this ordering.
+// Kept apart from `island-runtime.browser.test.ts`: this file must define
+// `<plumix-island>` first, so the upgrade happens during bootstrap as it does
+// against SSR'd markup.
 
 afterEach(() => {
   document.head.innerHTML = "";

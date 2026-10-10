@@ -18,21 +18,14 @@ export const DEMO_EXPIRES_COOKIE_NAME = "plumix_demo_expires";
 export const DEMO_TTL_SECONDS = 3600;
 
 /**
- * Durable Object name for the shared, read-only "showcase" database that
- * serves cookieless visitors the public blog before they start their own
- * session. One instance for everyone — a bot browsing spawns no per-session DOs.
+ * One read-only instance for all cookieless visitors, so bots spawn no
+ * per-session DOs.
  */
 export const DEMO_SHOWCASE_NAME = "__plumix_demo_showcase__";
 
 /**
- * Read the demo session token from the request cookie, or null if absent.
- *
- * A client-supplied token equal to the reserved showcase name is treated as
- * absent: the cookie is an opaque, unsigned DO name, so without this a visitor
- * could forge `plumix_demo=<showcase name>` to be authenticated as admin
- * operating directly on the shared showcase database. Rejecting it here closes
- * every consumer at once — auth stays anonymous, the admin redirects to /demo,
- * and the database falls back to the showcase as a read-only reader.
+ * A token equal to the reserved showcase name reads as absent: the cookie is
+ * unsigned, so it could otherwise forge admin access to the shared database.
  */
 export function readDemoToken(request: Request): string | null {
   const token = readSessionCookie(request, DEMO_COOKIE_NAME);
@@ -40,12 +33,8 @@ export function readDemoToken(request: Request): string | null {
 }
 
 /**
- * Whether the request carries a demo session — true for a provisioned visitor
- * (and inside the editor's live preview, which is same-origin), false for the
- * anonymous showcase. Themes use it to show the "Try the editor" CTA to
- * newcomers only. `ctx.user` can't stand in here: core only resolves the user
- * on public routes when the *default* session cookie is present, so a custom
- * authenticator's session (like the demo's) leaves `ctx.user` null.
+ * `ctx.user` can't stand in: core resolves the user on public routes only with
+ * the default session cookie present, not a custom authenticator's.
  */
 export function hasDemoSession(request: Request): boolean {
   return readDemoToken(request) !== null;

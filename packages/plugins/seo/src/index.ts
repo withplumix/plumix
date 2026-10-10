@@ -7,7 +7,8 @@ import {
 
 import type { SeoMetaBoxOptions } from "./meta-box.js";
 import type { SeoSitemapsOptions } from "./sitemap.js";
-// Also anchors the `registerSitemap` augmentation, as the imports below do theirs.
+// Also anchors the `registerSitemap` augmentation, as the imports below do
+// theirs.
 import { contributedSitemaps, createRegisterSitemap } from "./contributed.js";
 import { applySeoHead } from "./head.js";
 import { assertIndexViewsNameViews } from "./indexable.js";
@@ -19,21 +20,18 @@ import {
   registerSeoSettings,
   registerSeoSettingsDefaults,
 } from "./settings.js";
-// Augmentation anchors. A `declare module "plumix"` block reaches a consumer
-// only if the module declaring it is in this package's declaration graph, and
-// naming them here is what stops that riding on which types the exports below
-// happen to mention — drop the `og-image` line and `@plumix/plugin-og`'s
-// subscription stops compiling.
+// A `declare module "plumix"` block reaches consumers only if its module is in
+// the declaration graph; without these, `@plumix/plugin-og` stops compiling.
 import "./llms.js"; // seo:llms-txt
 import "./og-image.js"; // seo:og_image
 import "./robots.js"; // seo:robots-txt
 import "./schema.js"; // seo:schema:needs, seo:schema:piece, seo:schema:graph
 import "./sitemap.js"; // seo:sitemap:urls
 
-// Well past the default of 100, so nothing a site writes lands after this.
+/** Well past the default of 100, so nothing a site writes lands after this. */
 const LAST = 1000;
 
-// Resolved against the consuming site, the way every plugin admin entry is.
+/** Resolved against the consuming site, the way every plugin admin entry is. */
 const ADMIN_ENTRY_PATH = pluginAdminEntryPath("@plumix/plugin-seo");
 
 // Re-exported so a subscriber to this plugin's `seo:og_image` filter names the
@@ -100,35 +98,16 @@ export interface SeoOptions {
    */
   readonly sitemaps?: SeoSitemapsOptions;
   /**
-   * The views (`registerView`) the site offers to search engines. Every view
-   * is `noindex` by default, as an app page is usually per-visitor; a name no
-   * view registered fails the boot. An indexed view still gets no automatic
-   * canonical unless its template's `document` declares one.
+   * Views are `noindex` unless named here; an unknown name fails the boot. An
+   * indexed view gets a canonical only if its template's `document` declares
+   * one.
    */
   readonly indexViews?: readonly string[];
 }
 
 /**
- * Everything a public page tells a search engine: the head meta — a
- * description, a robots directive, the Open Graph set with an entry's
- * timestamps and byline, the Twitter card, and the resolved social image — plus
- * `/robots.txt` and the paged sitemap.
- *
- * On every publicly-visible entry type and taxonomy an editor also gets a
- * **Search & social** box: a search title, a search description, a canonical
- * override, a social image, and `noindex` / `nofollow` flags. The `noindex`
- * flag reaches the head and the sitemap through one predicate, so a page
- * cannot claim `noindex` while still being listed.
- *
- * Unless `structuredData` is off, every indexable page also carries a
- * cross-referenced structured-data graph — website, publisher, page, article,
- * breadcrumbs, image and author, each addressable by URL fragment — which a
- * plugin can narrow, reshape or replace through the three `seo:schema:*`
- * filters. {@link Breadcrumbs} draws the same trail the graph publishes.
- *
- * Every tag is gap-filled — a theme or another plugin that set the same key
- * keeps it — so installing this adds what a page was missing and overrides
- * nothing.
+ * Every tag is gap-filled: a theme or plugin that set the same key keeps it,
+ * so installing this overrides nothing.
  *
  * @example
  * ```ts
@@ -148,10 +127,8 @@ export function seo(options: SeoOptions = {}): PluginDescriptor {
     // preview falls through to the admin's text-input fallback.
     adminEntry: ADMIN_ENTRY_PATH,
     i18n: PLUGIN_I18N_SLOT,
-    // One list per install rather than per `seo()` call: a descriptor is a
-    // value, installed more than once per build and possibly into more than
-    // one app. Core runs every `provides` before any `setup`, so every
-    // plugin's `setup` can contribute to it.
+    // One list per install, not per `seo()` call: a descriptor is a value that
+    // may be installed into more than one app.
     provides: (ctx) => {
       ctx.extendPluginContext("registerSitemap", createRegisterSitemap());
     },
@@ -164,13 +141,8 @@ export function seo(options: SeoOptions = {}): PluginDescriptor {
         type: SERP_PREVIEW_INPUT_TYPE,
         component: "SerpPreviewField",
       });
-      // The assembled theme + template document arrives here, which is what
-      // makes gap-filling possible: a theme's own tag is already in hand.
-      //
-      // Last on the chain, whatever order the config lists the plugins in. A
-      // gap-filler that ran mid-chain would fill a key a later subscriber was
-      // about to set, and that subscriber appending to the manifest would then
-      // put two of the same tag on the page rather than override one.
+      // Last on the chain: a gap-filler mid-chain would fill a key a later
+      // subscriber then appends again, putting two of the same tag on the page.
       ctx.addFilter(
         "render:document",
         (manifest, data, appCtx, title) =>

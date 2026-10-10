@@ -4,19 +4,15 @@ import { Input } from "plumix/admin/ui";
 import { resolveLabel, useLingui } from "plumix/i18n";
 import * as v from "valibot";
 
-// An empty control is what a cleared field already shows, so a value that
-// turns out to be anything but a string reads as unset.
+/**
+ * An empty control is what a cleared field already shows, so a value that
+ * turns out to be anything but a string reads as unset.
+ */
 const storedTelSchema = v.fallback(v.string(), "");
 
 /**
- * The admin renderer for the `tel` field type this plugin contributes.
- * Core has no built-in for it, so without this registration every `tel`
- * field in the admin falls through to the host's plain-text fallback —
- * losing the numeric keypad on a touch device and warning on every
- * render.
- *
  * Deliberately unvalidated: phone numbers have no format worth enforcing
- * across borders, which is the whole reason `tel` is not `text`.
+ * across borders.
  */
 export function TelField({
   field,

@@ -7,9 +7,11 @@ import { welcomeMessages } from "./welcome/i18n.js";
 
 const BRAND = "#0ea5e9";
 
-// Inline so the screen fetches nothing — no stylesheet, no web font.
-// `dangerouslySetInnerHTML`, not a JSX child: React would HTML-escape the
-// `>`/`&` in the CSS.
+/**
+ * Inline so the screen fetches nothing — no stylesheet, no web font.
+ * `dangerouslySetInnerHTML`, not a JSX child: React would HTML-escape the
+ * `>`/`&` in the CSS.
+ */
 const styles = `
 body {
   margin: 0;
@@ -180,12 +182,9 @@ function WelcomeScreen({
 }
 
 /**
- * Built-in theme served when a site registers no `theme`. `plumix()`
- * substitutes it at config resolution, so to all downstream code a
- * theme-less site is indistinguishable from one with a user theme.
- *
- * The sole `fallback` template uses `defineTemplate` (not a plain function) so
- * its render receives `ctx` — needed for the basePath-aware admin link.
+ * Substituted at config resolution when a site registers no `theme`.
+ * `defineTemplate` so the render receives `ctx` for the basePath-aware admin
+ * link.
  */
 export const welcomeTheme = defineTheme({
   templates: [

@@ -4,10 +4,11 @@ import type { JsonObject } from "../../json.js";
 import type { PlumixIslandElement } from "../island-element.js";
 import { interactionStrategy } from "./interaction.js";
 
-// A single document-level capture listener is registered once at module
-// load and persists across tests; each test registers its own island and
-// tears it down, so the registry never leaks between cases. rAF is stubbed
-// to run synchronously so replay is observable without a real frame.
+/**
+ * The capture listener is registered once at module load and persists across
+ * tests, so each test tears its island down. rAF runs synchronously so replay
+ * is observable.
+ */
 const cleanups: (() => void)[] = [];
 
 function register(
@@ -39,7 +40,7 @@ function makeIsland(): {
   return { island, button };
 }
 
-// Let the `loadFn().then(replay)` microtask + the (sync-stubbed) rAF run.
+/** Let the `loadFn().then(replay)` microtask + the (sync-stubbed) rAF run. */
 async function flush(): Promise<void> {
   await Promise.resolve();
   await Promise.resolve();

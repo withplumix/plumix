@@ -46,10 +46,10 @@ function registerTermMetaFields(
   });
 }
 
-// The term:meta_changed empty-patch and upsert/delete tests share the
-// same scaffold: an admin-authed harness with a category that has an
-// icon_url field registered, a "Travel" term created, and an action
-// spy already attached.
+/**
+ * Shared scaffold: an admin harness, a category with an `icon_url` field, a
+ * "Travel" term and an action spy.
+ */
 async function setupTravelCategoryWithIconUrl(): Promise<{
   h: Awaited<ReturnType<typeof createRpcHarness>>;
   created: Awaited<

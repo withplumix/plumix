@@ -2,11 +2,10 @@ import type { ReactNode } from "react";
 import { json } from "@codemirror/lang-json";
 import CodeMirror, { EditorView } from "@uiw/react-codemirror";
 
-// CodeMirror wants a concrete light/dark. Read the resolved theme the
-// `ThemeProvider` stamps onto the document root (`.dark`) — that already
-// collapses the "system" setting to a real class — falling back to the OS
-// preference, then light. Reading the DOM keeps this decoupled from the
-// theme context (it renders correctly in isolation too).
+/**
+ * Reads the DOM rather than the theme context so it also renders correctly in
+ * isolation.
+ */
 function resolveColorScheme(): "dark" | "light" {
   if (
     typeof document !== "undefined" &&
@@ -23,13 +22,7 @@ function resolveColorScheme(): "dark" | "light" {
   return "light";
 }
 
-/**
- * Syntax-highlighted, editable JSON control backing the metabox `json()`
- * field. A thin controlled wrapper over CodeMirror — it owns the editing
- * surface (gutter, bracket matching, highlighting) and reports the raw
- * text; parsing / validation stays with the caller (`JsonControl`). Loaded
- * lazily so a form without a JSON field never pulls the CodeMirror chunk.
- */
+/** Reports raw text; parsing stays with the caller. */
 function JsonCodeEditor({
   value,
   onChange,

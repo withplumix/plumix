@@ -57,9 +57,8 @@ describe("cloudflare generateEntry", () => {
       'import { surfaceScheduledFailure } from "@plumix/runtime-cloudflare";',
     );
     const start = source.indexOf("async scheduled(event, env, ctx)");
-    // Bounded to the handler, because the `fetch` above it does carry a branch
-    // and a throw; the positive assertions double as the guard against bounds
-    // that slipped to empty, which the negative ones would pass in silence.
+    // Bounded to the handler because the `fetch` above carries a branch and a
+    // throw; the positive assertions guard against bounds that slipped to empty.
     const scheduled = source.slice(start, source.indexOf("\n  },", start));
     expect(scheduled).toContain(
       "const report = await handler.scheduled?.(event, invocation(env, ctx));",

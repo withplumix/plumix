@@ -32,9 +32,13 @@ export interface ImageLayerOptions {
     request: Request,
     clientAddress: string | undefined,
   ) => Response | Promise<Response>;
-  /** Consulted first, so a file the process serves from disk is a source too. */
+  /**
+   * Consulted first, so a file the process serves from disk is a source too.
+   */
   readonly assets?: AssetsBinding;
-  /** Raw, as the user wrote it in `plumix.config.ts`; normalized as core does. */
+  /**
+   * Raw, as the user wrote it in `plumix.config.ts`; normalized as core does.
+   */
   readonly basePath?: string;
 }
 
@@ -50,7 +54,6 @@ export interface ImageLayer {
   ) => Promise<Response | null>;
 }
 
-/** Every variant is named by its URL, and its format follows `Accept`. */
 const CACHED_HEADERS = {
   "cache-control": "public, max-age=31536000, immutable",
   vary: "accept",
@@ -75,16 +78,17 @@ interface VariantRequest {
 
 interface Variant {
   readonly format: OutputFormat;
-  /** Freshly rendered, or the cache file. */
   readonly body: Blob;
 }
 
-// What a source-typed variant may be stored as, looked up in this order.
+/** What a source-typed variant may be stored as, looked up in this order. */
 const candidates = (format: NegotiatedFormat): readonly OutputFormat[] =>
   format === "source" ? ["jpeg", "png", "webp", "avif"] : [format];
 
-// A decoded input onto what the host can encode; `Bun.Image` decodes GIF,
-// BMP and TIFF but encodes none of them, so those come out lossless.
+/**
+ * A decoded input onto what the host can encode; `Bun.Image` decodes GIF,
+ * BMP and TIFF but encodes none of them, so those come out lossless.
+ */
 function ownFormat(
   decoded: Bun.Image.Format,
   encodable: readonly ImageFormat[],
@@ -102,9 +106,8 @@ function variantKey(params: ImageParams, format: NegotiatedFormat): string {
 }
 
 /**
- * The size a source renders at, or `null` to leave it as it is. Never larger
- * than the source. `Bun.Image` has no crop, so `cover` scales to cover the
- * box whole and leaves the overflow to the page's `object-fit`.
+ * `Bun.Image` has no crop, so `cover` scales to cover the box and leaves
+ * overflow to `object-fit`.
  */
 function targetSize(
   source: { readonly width: number; readonly height: number },
@@ -128,10 +131,8 @@ function targetSize(
 }
 
 /**
- * The route served in front of the handler. A variant is named by a hash of
- * the request, so a hit is answered from disk with no source fetch, and the
- * `ETag` is that hash: `If-None-Match` is decided from the disk before
- * anything is rendered.
+ * The `ETag` is the request hash, so `If-None-Match` is decided from disk
+ * before any render.
  */
 export function createImageLayer(
   slot: ImageDelivery | undefined,

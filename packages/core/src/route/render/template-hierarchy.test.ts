@@ -155,14 +155,16 @@ declare module "../../template-registry.js" {
   }
 }
 
-// Meta contribution fixtures: typed reads come from the contribution
-// registries, folded per target by `MetaOf` / `TermMetaOf`.
+/**
+ * Meta contribution fixtures: typed reads come from the contribution
+ * registries, folded per target by `MetaOf` / `TermMetaOf`.
+ */
 const _productFields = [text("badge").default("none"), text("tier").required()];
 const _editorialFields = [text("featured"), text("premium")];
-// `brandTone` and `launchedOn` are the fixture's canaries for the term
-// read shape. `.default()` leaves the read type optional, as storage may lack
-// the key, and `.returns("date")` reads back as a `Date` only because the
-// render path now decodes term meta.
+/**
+ * Canaries for the term read shape: `.default()` keeps the read optional,
+ * and `.returns("date")` is a `Date` only if the render path decodes term meta.
+ */
 const _brandFields = [
   text("brandBadge"),
   text("brandTone").default("warm"),
@@ -184,8 +186,10 @@ declare module "../../plugin/fields/contributions.js" {
   }
 }
 
-// Both bags, same values: the rules below turn on which key is read, not on
-// the stored/decoded split — `resolve-entry-list.test.ts` covers that.
+/**
+ * Both bags, same values: the rules below turn on which key is read, not on
+ * the stored/decoded split — `resolve-entry-list.test.ts` covers that.
+ */
 const entryData = (meta: Record<string, unknown>): TemplateData =>
   ({
     kind: "entry",

@@ -39,10 +39,6 @@ function taxonomyRegistry(
   return registry;
 }
 
-// Both replacement-semantics and sortOrder tests need the same shape:
-// an editor-authed harness, an empty post, and three pre-seeded
-// "category" terms. Centralized so a future tweak to the scaffold
-// only edits once.
 async function setupEditorWithThreeCategoryTerms(): Promise<{
   h: Awaited<ReturnType<typeof createRpcHarness>>;
   post: Awaited<
@@ -318,10 +314,8 @@ describe("entry.update — terms", () => {
   });
 
   test("re-inserting the same term id is idempotent (guards PK race)", async () => {
-    // Simulates the outcome of concurrent updates that both want the same
-    // final assignment — the second insert hits the (entryId, termId) PK
-    // that the first insert just created. onConflictDoNothing keeps us
-    // from bubbling a 500 in that race.
+    // The second insert hits the (entryId, termId) PK; onConflictDoNothing
+    // keeps that race from becoming a 500.
     const plugins = taxonomyRegistry();
     const h = await createRpcHarness({ authAs: "editor", plugins });
     const post = await h.factory.draft.create({ authorId: h.user.id });

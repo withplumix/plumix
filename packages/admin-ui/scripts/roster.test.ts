@@ -18,8 +18,10 @@ afterEach(() => {
   for (const dir of scratch.splice(0)) rmSync(dir, { recursive: true });
 });
 
-// A package with `button` and `icons` on disk, synced, so each test breaks one
-// list and reads what the guard says about it.
+/**
+ * A package with `button` and `icons` on disk, synced, so each test breaks one
+ * list and reads what the guard says about it.
+ */
 async function syncedPackage(): Promise<string> {
   const dir = mkdtempSync(join(tmpdir(), "admin-ui-roster-"));
   scratch.push(dir);

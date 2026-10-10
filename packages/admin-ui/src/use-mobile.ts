@@ -13,7 +13,7 @@ function isMobileViewport(): boolean {
   return window.matchMedia(MOBILE_QUERY).matches;
 }
 
-// No viewport to measure on the server, so it renders the desktop layout.
+/** No viewport to measure on the server, so it renders the desktop layout. */
 function isMobileOnServer(): boolean {
   return false;
 }

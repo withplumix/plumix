@@ -9,17 +9,14 @@ import { barMessages } from "./i18n.js";
 const SITE_POSITION = 10;
 const EDIT_THIS_POSITION = 20;
 const NEW_GROUP_POSITION = 15;
-// Sorts last so `margin-inline-start: auto` parks the account at the far
-// right with nothing trailing it — site / +New / Edit cluster on the left.
+/**
+ * Sorts last so `margin-inline-start: auto` parks the account at the far
+ * right with nothing trailing it — site / +New / Edit cluster on the left.
+ */
 const ACCOUNT_POSITION = 100;
 
 /**
- * Registers the four core contributors (`site`, `edit-this`, `+new`,
- * `account`). Wired at `buildApp` time so they run before any plugin
- * filter handler.
- *
- * Filter priority levels (10/15/20/25/30) stay well under the
- * `DEFAULT_HOOK_PRIORITY` of 100 plugins land at — plugins see core's
+ * Priorities 10–30 stay under the plugin default of 100, so plugins see core's
  * contributions in their input.
  */
 export function registerCoreAdminBarContributors(hooks: HookRegistry): void {
@@ -65,9 +62,8 @@ function editThisContributor(
   if (ctx.queriedEntry?.kind !== "entry") return nodes;
   const details = ctx.queriedEntryDetails;
   if (!details?.canEdit) return nodes;
-  // Admin routes key on the derived `adminSlug` (`posts`), not the type name
-  // (`post`); echoing the name lands on a 404 list route once you leave the
-  // edit screen. `ctx.entryTypes` is keyed by name, so resolve from there.
+  // Admin routes key on `adminSlug` (`posts`), not the type name (`post`),
+  // which would land on a 404 list route.
   const adminSlug = adminSlugForType(
     details.type,
     ctx.entryTypes.get(details.type),
@@ -125,9 +121,7 @@ function newGroupContributor(
   ];
 }
 
-// Resolve a type name (`post`) to the admin route slug (`posts`) used by the
-// admin's `/entries/$slug` routes, preferring the type's plural label. Falls
-// back to pluralizing the name when the type is absent.
+/** Falls back to pluralizing the name when the type is absent. */
 function adminSlugForType(
   name: string,
   type: RegisteredEntryType | undefined,

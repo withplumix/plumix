@@ -99,10 +99,8 @@ export const create = base
       listEntryMetaFields(context.plugins, filtered.type),
     );
 
-    // Validate meta up-front so a bad key fails before the entry insert —
-    // keeps the DB clean when the client sends a typo in a meta key.
-    // Creating a draft is lenient (business rules deferred to publish);
-    // creating straight to published/scheduled enforces them now.
+    // Validated before the insert so a bad key leaves no row. Drafts are
+    // lenient; creating published or scheduled enforces business rules now.
     const metaPatch = await sanitizeAndValidateEntryMeta(
       context,
       filtered.type,
@@ -111,10 +109,9 @@ export const create = base
       errors,
       requiresPublishCap ? "strict" : "draft",
     );
-    // Creating onto the live surface is the same crossing as publishing a
-    // draft, so it answers to the same whole-bag gate: the patch above judged
-    // only the keys it was sent and the fields they switch on, and a required
-    // field it omits is missing.
+    // Creating onto the live surface is a publish, so it takes the whole-bag
+    // gate: the patch check judged only the keys sent, and a required field it
+    // omits is missing.
     if (requiresPublishCap) {
       const resultingMeta: Record<string, JsonValue> = { ...starting };
       if (metaPatch) {

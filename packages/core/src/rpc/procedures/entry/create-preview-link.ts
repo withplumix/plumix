@@ -6,12 +6,10 @@ import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { entryCreatePreviewLinkInputSchema } from "./schemas.js";
 
-// Mint a shareable, entry-scoped, expiring preview link so a draft can be
-// shown to someone without an account. Gated by `canReadEntry` — the same
-// rule `entry.get`/`entry.duplicate` use — so only someone who can already
-// see the draft (its author with `edit_own`, or an `edit_any` editor) can
-// hand it out. 404 (not 403) on an unreadable or missing entry to avoid
-// leaking which rows exist.
+/**
+ * Gated by `canReadEntry`, so only someone who can already see the draft can
+ * hand it out. 404, not 403, to avoid leaking which rows exist.
+ */
 export const createPreviewLink = base
   .use(authenticated)
   .input(entryCreatePreviewLinkInputSchema)

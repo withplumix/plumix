@@ -33,8 +33,10 @@ export type PublicRouteOutcome =
   | { readonly kind: "public-route"; readonly route: PublicRouteMatch }
   | ContentRoute;
 
-// A request the content route map decides. `match` is what the map matched;
-// `intent` and `render` also cover an unmatched root, which is the front page.
+/**
+ * A request the content route map decides. `match` is what the map matched;
+ * `intent` and `render` also cover an unmatched root, which is the front page.
+ */
 export interface ContentRoute {
   readonly kind: "content";
   readonly match: RouteMatch | null;
@@ -45,11 +47,9 @@ export interface ContentRoute {
 type RoutingContext = Pick<AppContext, "request" | "origin" | "config">;
 
 /**
- * Route a public request through the route unit's stages, in their fixed
- * order: method check → public route → redirect → static-asset 404 →
- * canonical 301 → content route map. The first stage that answers wins, so a
- * plugin's `/robots.txt` can't be shadowed by a redirect, a moved asset can
- * still redirect, and a redirect shadows a would-be page.
+ * Route a public request through its stages in fixed order; the first that
+ * answers wins, so a plugin's `/robots.txt` beats redirects and a redirect
+ * shadows a would-be page.
  */
 export function routePublicRequest(
   routing: PublicRouting,
@@ -94,7 +94,7 @@ export function routePublicRequest(
   };
 }
 
-// An unmatched root is the front page; any other unmatched URL is a 404.
+/** An unmatched root is the front page; any other unmatched URL is a 404. */
 function unmatchedFallback(url: URL): RouteMatch | null {
   if (url.pathname !== "/") return null;
   return {
@@ -105,18 +105,18 @@ function unmatchedFallback(url: URL): RouteMatch | null {
   };
 }
 
-// Extensions that only ever name static assets (favicon.ico, hashed chunks,
-// images, fonts). Slugs are slug-shaped by schema — never contain dots — so no
-// entry or term URL can collide (#1491). Deliberately excludes
-// content-plausible extensions (`.txt`, `.xml`, `.json`, `.html`) so routes
-// like an `ads.txt` or podcast-feed plugin keep working.
+/**
+ * Extensions that only name static assets; slugs never contain dots, so no
+ * entry or term URL collides. Content-plausible ones (`.txt`, `.xml`, `.json`,
+ * `.html`) stay routable for plugins.
+ */
 export const STATIC_ASSET_EXT =
   /\.(?:ico|css|js|mjs|map|png|jpe?g|gif|svg|webp|avif|woff2?|ttf|otf|eot|wasm)$/i;
 
-// Cacheable because the extension check makes the path permanently
-// unroutable — a short TTL only bounds "a deploy added this asset". The
-// CDN stores GET+200 only, so this reaches browsers/CDNs, not the
-// shared read-through layer.
+/**
+ * Cacheable: the extension makes the path permanently unroutable, and the short
+ * TTL only bounds a deploy adding the asset.
+ */
 export function cacheableAssetNotFound(hint: string): Response {
   const response = notFound(hint);
   response.headers.set("cache-control", "public, max-age=300");

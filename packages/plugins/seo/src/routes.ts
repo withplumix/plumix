@@ -32,24 +32,22 @@ import { SITEMAP_STYLESHEET, SITEMAP_STYLESHEET_PATH } from "./stylesheet.js";
 
 const ROBOTS_PATH = "/robots.txt";
 
-// A crawler refetches a sitemap on its own schedule, so the window that matters
-// is the shared one: an hour at the edge, cut short by the purge a publish
-// fires, while a client is told to revalidate rather than sit on a stale copy.
+/**
+ * An hour at the edge, cut short by a publish's purge; clients always
+ * revalidate.
+ */
 const SITEMAP_CACHE_CONTROL = "public, max-age=0, s-maxage=3600";
 
 /**
- * Carried by every sitemap response on top of its scope tags. The indexing
- * toggle changes which URLs (if any) the whole set may expose, so flipping it
- * has to retire all of them — the one invalidation that is legitimately global.
+ * On every sitemap response: flipping the indexing toggle must retire the whole
+ * set, the one legitimately global invalidation.
  */
 export const SITEMAP_TAG = "seo:sitemap";
 
-// Which settings groups change what an already-cached response says: the
-// sitemap's URL set, or a page's robots directive, title and verification
-// tags. Content pages are retired by entry-type tag rather than individually —
-// the shipped cache has no site-wide tag, and every page core caches carries
-// the tag of the type it draws from. `site` is here because the site-wide
-// toggle answers from this plugin's own key falling back to the legacy one.
+/**
+ * Groups that change cached responses. `site` is here because the indexing
+ * toggle falls back to its legacy key there.
+ */
 const SEO_SETTINGS_GROUPS: ReadonlySet<string> = new Set([
   SEO_SETTINGS_GROUP,
   SEO_ROBOTS_GROUP,
@@ -57,12 +55,12 @@ const SEO_SETTINGS_GROUPS: ReadonlySet<string> = new Set([
   "site",
 ]);
 
-// The page segment is the sitemap's own pagination, not a slug, so the route
-// pattern spells that out — a path that is not a 1-based page number then goes
-// unclaimed and 404s through the content router, as it did before this plugin.
+/**
+ * Anything but a 1-based page number goes unclaimed and 404s through the
+ * content router.
+ */
 const PAGE_SEGMENT = ":page([1-9]\\d*)";
 
-/** Where the stylesheet answers for this deployment. */
 function stylesheetHref(ctx: AppContext): string {
   return withBasePath(SITEMAP_STYLESHEET_PATH, ctx.config.basePath);
 }
@@ -108,10 +106,8 @@ async function handleSubSitemap(
 }
 
 /**
- * Claim `/robots.txt`, `/llms.txt` (unless the site turned it off) and the
- * sitemap stylesheet, and keep the cached sitemap honest about the indexing
- * toggle. None of it depends on what the site registered; the sitemap does, so
- * {@link registerSitemapRoutes} claims it from `afterSetup`.
+ * Excludes the sitemap itself, which depends on what the site registered; see
+ * {@link registerSitemapRoutes}.
  */
 export function registerSeoRoutes(
   ctx: PluginSetupContext,
@@ -144,9 +140,7 @@ export function registerSeoRoutes(
       }),
   });
 
-  // The indexing toggle decides whether the sitemap has any URLs at all, so a
-  // save has to retire the cached set. Both groups, because the toggle answers
-  // from this plugin's own key falling back to the legacy `site` one.
+  // The indexing toggle decides whether the sitemap has any URLs at all.
   ctx.addAction("settings:group_changed", (changes, appCtx) => {
     if (!SEO_SETTINGS_GROUPS.has(changes.group)) return;
     enqueuePurgeTags(appCtx, [
@@ -157,10 +151,8 @@ export function registerSeoRoutes(
 }
 
 /**
- * One route per scope, enumerated from what the site registered. A registered
- * public route has no fall-through, so a single `/sitemap-:scope-:page.xml`
- * would claim the whole `sitemap-*.xml` space — answering for scopes that do
- * not exist, and shadowing anything else that wanted a path in it.
+ * One route per scope: a public route has no fall-through, so one wildcard
+ * route would claim and shadow the whole `sitemap-*.xml` space.
  */
 export function registerSitemapRoutes(
   ctx: PluginAfterSetupContext,

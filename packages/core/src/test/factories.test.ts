@@ -18,8 +18,10 @@ import {
 import * as thisProcess from "./factories.js";
 import { createTestDb } from "./harness.js";
 
-// A second Playwright worker is a second process: its factory sequences start
-// over at 1, and it loads its own copy of the factories module.
+/**
+ * A second Playwright worker is a second process: its factory sequences start
+ * over at 1, and it loads its own copy of the factories module.
+ */
 async function loadSecondProcess() {
   vi.resetModules();
   return import("./factories.js");

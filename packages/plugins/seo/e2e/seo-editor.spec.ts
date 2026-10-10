@@ -1,10 +1,5 @@
-// Worker-driven plugin e2e. Runs against the real SEO playground at
-// `../playground` via `plumix dev`, seeded by globalSetup with an admin user +
-// storageState carrying the session cookie. Nothing is mocked: the meta box
-// has to reach the editor through the manifest, the field renderer through the
-// plugin chunk, the preview through the real oRPC call, and the live overlay
-// through the host handing the control its box's sibling values — none of
-// which a unit test can stand in for.
+// Nothing is mocked: manifest, plugin chunk, real oRPC preview and the host's
+// sibling values all have to reach the editor, which no unit test covers.
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -20,9 +15,10 @@ const SEARCH_TITLE = "meta-box-field-seo_title-input";
 const SEARCH_DESCRIPTION = "meta-box-field-seo_description-input";
 const NOINDEX = "meta-box-field-seo_noindex-input";
 
-// The rig rewinds the database once per attempt, not between tests, so each
-// test leaves the seeded entry's SEO fields the way it found them: everything
-// below types into the form and nothing saves.
+/**
+ * The rig rewinds the database per attempt, not per test, so tests only type
+ * into the form and never save.
+ */
 async function openSeoBox(page: Page): Promise<void> {
   await page.goto(`entries/posts/${String(fixtures.postId)}/edit`);
   await page.getByTestId("plumix-tab-page").click();
@@ -116,8 +112,10 @@ test("the preview ships styled controls", async ({ page }) => {
   expect(ui.styled).toBeGreaterThan(0);
 });
 
-// Counts the plugin control's interactive elements and how many carry a
-// styling class — a count of 0 is the unstyled-component regression signal.
+/**
+ * Counts the plugin control's interactive elements and how many carry a
+ * styling class — a count of 0 is the unstyled-component regression signal.
+ */
 async function styledControls(page: Page, shellTestId: string) {
   return page.evaluate((id) => {
     const shell = document.querySelector(`[data-testid="${id}"]`);

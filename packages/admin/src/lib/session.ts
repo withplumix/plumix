@@ -3,9 +3,11 @@ import { redirect } from "@tanstack/react-router";
 
 import { orpc } from "./orpc.js";
 
-// Single source of truth for the auth-session query. Used by __root's
-// beforeLoad probe, the _authenticated layout gate, and the login/bootstrap
-// screens — invalidating this key after a login/signout fans out everywhere.
+/**
+ * Single source of truth for the auth-session query. Used by __root's
+ * beforeLoad probe, the _authenticated layout gate, and the login/bootstrap
+ * screens — invalidating this key after a login/signout fans out everywhere.
+ */
 export const sessionQueryOptions = () =>
   orpc.auth.session.queryOptions({
     input: {},
@@ -14,29 +16,23 @@ export const sessionQueryOptions = () =>
 
 export const SESSION_QUERY_KEY = orpc.auth.session.queryKey({ input: {} });
 
-// `static` short-circuits the freshness check entirely: whatever is already
-// cached is served as-is, so a hard page load fetches the session exactly once
-// no matter how many route guards read it on the way down.
+/**
+ * `static` makes a page load fetch the session once, however many guards read
+ * it.
+ */
 export function loadSession(queryClient: QueryClient) {
   return queryClient.query({ ...sessionQueryOptions(), staleTime: "static" });
 }
 
 /**
- * After a sign-in the guards must see the new identity, and invalidating is
- * not enough: `static` serves the cached signed-out session even once it is
- * invalidated, so the next guard would bounce straight back to the auth
- * screen.
+ * Invalidating isn't enough after sign-in: `static` keeps serving the cached
+ * signed-out session.
  */
 export function refetchSession(queryClient: QueryClient) {
   return queryClient.refetchQueries({ queryKey: SESSION_QUERY_KEY });
 }
 
-/**
- * Shared auth guard for layouts that require a signed-in user. Used by
- * `_authenticated` (shell + sidebar) and `_editor` (full-screen canvas).
- * Returns the user so the caller can spread it into route context.
- * Throws a TanStack Router redirect on failure.
- */
+/** Throws a TanStack Router redirect when signed out. */
 export async function requireAuthenticatedSession(queryClient: QueryClient) {
   const session = await loadSession(queryClient);
   if (!session.user) {

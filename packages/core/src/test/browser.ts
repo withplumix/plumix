@@ -1,7 +1,5 @@
-// The share of the test surface a browser bundle can carry: nothing here
-// reaches a database, the dispatcher or a Node built-in. `plumix/test`'s
-// browser build takes its real values from here and answers every other name
-// with an error pointing the test back at the Node tier.
+// The browser-safe share of the test surface: nothing here reaches a database,
+// the dispatcher or a Node built-in.
 
 export {
   userFactory,

@@ -93,11 +93,8 @@ describe("serveRenderedAsset", () => {
     expect(render).toHaveBeenCalledOnce();
   });
 
-  // An entry past the first keeps the separator's optional whitespace, so the
-  // `W/` prefix is only there to strip once the tag has been trimmed. Each
-  // case below pins a different half of that: the weak forms catch stripping
-  // before the trim, the strong one catches trimming only as part of the
-  // strip, and the pair of positions catches scanning less than the whole list.
+  // A later entry keeps the separator's whitespace, so `W/` strips only after
+  // trimming; each case pins one way of getting that wrong.
   it.each([
     ["strong, past the first entry", `"superseded", ${KEY_ETAG}`],
     ["weak, past the first entry", `"superseded", W/${KEY_ETAG}`],
@@ -184,10 +181,8 @@ describe("serveRenderedAsset", () => {
     }
   });
 
-  // The trap this primitive exists to close: mint the ETag on the render path
-  // and read the storage backend's own on the hit path, and the two never
-  // agree — so revalidation silently never returns 304. R2 hands back an MD5,
-  // the in-memory backend computes its own; only the key is common to both.
+  // R2 returns an MD5 and the memory backend its own hash, so only a
+  // key-derived ETag agrees across render and hit paths.
   it("derives the ETag from the key, not from the storage backend", async () => {
     const storage = memoryStorage().connect({});
 

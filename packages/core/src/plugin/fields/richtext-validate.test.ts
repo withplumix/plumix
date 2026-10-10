@@ -299,11 +299,8 @@ describe("walkRichtextDoc — shape errors", () => {
   });
 
   test("excessive nesting depth throws invalid_shape (stack-overflow protection)", () => {
-    // Pathological 200-level nesting — pre-cap this would either work
-    // (within JS stack budget) or blow up with a generic
-    // RangeError. Post-cap it deterministically rejects with a
-    // RichtextValidationError that points at the depth that tipped
-    // over.
+    // Uncapped, this nesting would either work or throw a generic RangeError
+    // depending on the JS stack budget.
     const validate = walkRichtextDoc({ nodes: ["blockquote"] });
     interface DeepNode {
       type: string;

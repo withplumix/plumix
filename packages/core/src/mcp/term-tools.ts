@@ -8,8 +8,10 @@ import { TermReadError } from "../terms/errors.js";
 import { getTerm, listTerms } from "../terms/read-service.js";
 import { McpToolError } from "./errors.js";
 
-// Curated read surface: taxonomy + search + pagination, picked from the
-// canonical schema so validation and the advertised JSON Schema can't drift.
+/**
+ * Curated read surface: taxonomy + search + pagination, picked from the
+ * canonical schema so validation and the advertised JSON Schema can't drift.
+ */
 const termListInput = v.pick(termListInputSchema, [
   "taxonomy",
   "search",

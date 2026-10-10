@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
 
-// Zero-JS GET search — submits to /search, which 301s the bare `?q=` to the
-// path form. Shared by the desktop header and the mobile disclosure panel.
+/**
+ * Zero-JS GET search — submits to /search, which 301s the bare `?q=` to the
+ * path form. Shared by the desktop header and the mobile disclosure panel.
+ */
 export function SearchForm({
   className,
 }: {

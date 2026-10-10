@@ -18,15 +18,18 @@ export interface RegisteredImageRole extends ImageRoleOptions {
   readonly registeredBy: string | null;
 }
 
-/** Where a role's fields are looked up: one entry type, one taxonomy, or the users. */
+/**
+ * Where a role's fields are looked up: one entry type, one taxonomy, or the
+ * users.
+ */
 export type ImageRoleScope =
   | { readonly kind: "entry"; readonly entryType: string }
   | { readonly kind: "term"; readonly taxonomy: string }
   | { readonly kind: "user" };
 
 /**
- * One field in a role. `path` leads from the meta bag to the stored value: the
- * field's own key at the top level, or the keys of the groups it sits in.
+ * `path` leads from the meta bag to the stored value: the field's own key at
+ * the top level, or the keys of the groups it sits in.
  */
 export interface ImageRoleField {
   readonly field: MetaBoxField;
@@ -75,18 +78,15 @@ export function imageRolesInScope(
   registry: PluginRegistry,
   scope: ImageRoleScope,
 ): ImageRoleScopeIndex {
-  // Before boot resolves the index the registry may still grow, so an early
-  // query answers from a fresh walk rather than memoising a partial one, and
-  // leaves the checks to boot: a role another plugin has yet to register is
-  // not an error until every plugin has had its turn.
+  // Before boot the registry may still grow, so an early query walks fresh and
+  // unchecked rather than memoising a partial index.
   const index = indexes.get(registry) ?? buildIndex(registry, false);
   return index.get(scopeKey(scope)) ?? NO_ROLES;
 }
 
 /**
- * Build, check and memoise the registry's image-role index. Boot calls it once
- * every plugin has registered — `buildManifest` and `buildApp` both do — so a
- * misdeclared role fails there and requests read the stored index.
+ * Call once every plugin has registered: throws on a misdeclared role, then
+ * memoises the index for requests.
  */
 export function resolveImageRoleIndex(registry: PluginRegistry): void {
   if (indexes.has(registry)) return;
@@ -143,8 +143,10 @@ interface CollectTarget {
   readonly byRole: Map<string, ImageRoleField[]>;
 }
 
-// `repeater` is the path of the outermost repeater above `fields`, if any: a
-// role anywhere beneath one would name a row's image, not the entity's.
+/**
+ * `repeater` is the path of the outermost repeater above `fields`, if any: a
+ * role anywhere beneath one would name a row's image, not the entity's.
+ */
 function collect(
   target: CollectTarget,
   fields: readonly MetaBoxField[],

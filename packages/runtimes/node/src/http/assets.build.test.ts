@@ -9,9 +9,11 @@ import {
 } from "../test/consumer-project.js";
 import { createAssetsLayer } from "./assets.js";
 
-// Built the way `plumix build` builds the client: the plumix plugin and
-// Vite's builder, client environment only, into the outDir the Node build
-// command uses.
+/**
+ * Built the way `plumix build` builds the client: the plumix plugin and
+ * Vite's builder, client environment only, into the outDir the Node build
+ * command uses.
+ */
 type ViteManifest = Record<string, { readonly file: string }>;
 
 let dir: string;

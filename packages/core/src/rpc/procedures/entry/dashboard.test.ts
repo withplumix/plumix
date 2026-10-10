@@ -5,8 +5,10 @@ import { toRegisteredEntryType } from "../../../plugin/registry.js";
 import { pooledEntryTypeRegistry } from "../../../test/pooled-entry-types.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
-// Stats/activity scope to *registered* entry types, so the harness needs
-// a `post` type registered (the default empty registry has none).
+/**
+ * Stats/activity scope to *registered* entry types, so the harness needs
+ * a `post` type registered (the default empty registry has none).
+ */
 function postRegistry() {
   const registry = createPluginRegistry();
   registry.entryTypes.set(

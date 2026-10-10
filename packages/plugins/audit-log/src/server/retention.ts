@@ -6,11 +6,9 @@ import { AuditLogConfigError } from "./errors.js";
 export interface AuditLogRetentionPolicy {
   readonly maxAgeDays: number;
   /**
-   * Cron schedule the purge task runs on. The task runs only when a
-   * trigger with exactly this schedule fires, so on Cloudflare a
-   * custom value needs a matching entry in `wrangler.jsonc`
-   * `triggers.crons` (the scaffold carries `"0 3 * * *"`) or the
-   * purge never runs. Defaults to `"0 3 * * *"` (daily at 03:00 UTC).
+   * Runs only when a trigger with exactly this schedule fires; on Cloudflare a
+   * custom value needs a matching `wrangler.jsonc` `triggers.crons` entry.
+   * Defaults to daily at 03:00 UTC.
    */
   readonly purgeAt?: string;
 }
@@ -27,10 +25,8 @@ export const DEFAULT_RETENTION: AuditLogRetentionPolicy = {
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /**
- * Throws on configs that would corrupt the audit log. Negative
- * `maxAgeDays` puts the cutoff in the future and deletes every row;
- * `NaN` / `Infinity` produce an Invalid Date that silently no-ops in
- * SQL. Either way, fail loud at the config site.
+ * Throws on negative `maxAgeDays`, which would delete every row, and on
+ * non-finite values, which silently no-op in SQL.
  */
 export function assertValidRetention(retention: AuditLogRetentionConfig): void {
   if (retention === false) return;
@@ -50,7 +46,9 @@ export function computeRetentionCutoff(
 export interface RunRetentionPurgeArgs {
   readonly storage: AuditLogStorage;
   readonly retention: AuditLogRetentionConfig;
-  /** Override the clock; defaults to `new Date()`. Tests pass an explicit value. */
+  /**
+   * Override the clock; defaults to `new Date()`. Tests pass an explicit value.
+   */
   readonly now?: Date;
 }
 

@@ -1,92 +1,14 @@
-// The roster-drift guard: what binds a roster page to the source it promises
-// to enumerate.
-//
-// A roster page says *this is all of them*. When it falls behind its source it
-// does not merely become incomplete — it lies, because a reader treats an
-// omission as evidence the thing does not exist.
-//
-// Each roster below holds its item ids **once**, and two assertions pin that
-// list from both sides:
-//
-//   1. To the source. Either a type-level binding here, or a runtime
-//      comparison in `rosters.test.ts` — see "which binding" below.
-//   2. To the page, by `checkRosterDrift`, which reads the page's `###`
-//      headings and reports either direction of disagreement. The page's own
-//      body: an item contributed by an imported partial reads as missing,
-//      because a promise assembled out of fragments cannot be read against a
-//      source.
-//
-// Transitively that is page ≡ source, with no code generation and no change to
-// the product.
-//
-// **Which binding.** Follow the source's shape:
-//
-// - **Type-level** when the source's declared type carries its values — an
-//   `as const` array, a string union, an interface whose keys are the roster,
-//   a `declare module` registry. Most rosters here are this kind, and for the
-//   registries and interfaces it is the only binding there could be: they have
-//   no runtime form to compare against. Note that `tsc` resolves `plumix` to
-//   its built `.d.ts`, so this half reads source only after a build — in a
-//   working tree with stale `dist` it is the runtime half that is current.
-// - **Runtime** when the source's own annotation widens its values away
-//   (`readonly BlockSpec[]`, `Record<string, …>`) or the source is data rather
-//   than types (a `package.json` `exports` map): `typeof` has nothing left to
-//   compare, and the runtime comparison is stricter anyway, pinning order as
-//   well as membership. Those live in `rosters.test.ts`.
-//
-// Read every source through the `plumix` façade. That is the surface the
-// documentation describes, so a roster bound to anything else could agree with
-// the repo while disagreeing with what a reader can actually import.
-//
-// **The item id is the `###` heading's text**, exactly as the source spells the
-// item — for a heading carrying a signature, the signature as written. Two
-// things settle this. MDX cannot express the `{#id}` suffix the IA spec asks
-// for: braces open an expression, and `{#id}` is not one, so the page fails to
-// parse. And the heading's text is what generates its anchor, so pinning the
-// text pins the anchor a reader or an agent cites. Text rather than that
-// slugified anchor is what the guard compares, because the slug is lossy —
-// `userList` and `userlist` share an anchor, but only one is the name the
-// source uses.
-//
-// Two conventions sit on top of that. Where several interfaces share a page,
-// each item is qualified by the one that declares it — `Invocation.env`, not
-// `env`, which names nothing on its own and would give a reader a worthless
-// anchor. And where the source spells a name with a parameter, the page spells
-// that parameter `*` and the binding substitutes it back — the convention the
-// capability roster already set with `entry:*:read`. The per-entry-type hooks
-// need it because their source spelling is `entry:${string}:published`, which
-// no heading can carry; the cache tags need it because MDX reads a bare
-// `t:<type>` as an unclosed JSX tag and refuses to parse the page at all.
-//
-// **Two rosters are page-bound only**, and deliberately: `apis/mcp.mdx` and
-// `deployment/cli.mdx`. Each says at its own list which source it would bind
-// to and why it may not. They carry `binding: "page-only"`, so how many are
-// unbound is a fact `rosters.test.ts` checks rather than a paragraph someone
-// has to keep true.
-//
-// **What these unions see is what `apps/docs` depends on.** `FilterName`,
-// `ActionName` and `keyof EntryTypeOptions` are not "what core declares" —
-// they are what this TypeScript program can reach, and every plugin augments
-// them through `declare module "plumix"` (`@plumix/plugin-menu` alone adds
-// three hooks and two entry-type options). They resolve to core's own set only
-// because this app depends on `plumix` and nothing else. Adding a
-// `@plumix/plugin-*` package to it folds that plugin's augmentations into
-// these unions and breaks three assertions at once — the fix then is the
-// dependency, not the roster.
-//
-// **Adding a roster:** append an entry to `ROSTERS`, hold its items in source
-// order, bind it, name that binding in the entry, and raise the count in
-// `rosters.test.ts`. Nothing else re-decides. Two cases you may meet:
-//
-// - **A page item its source does not carry.** The guard reports it, which is
-//   the point: extend the list and say in a comment which source the extra
-//   item answers to. Silence would make the roster's promise unenforceable.
-// - **A list that is not a roster.** `supports` is the standing example: the
-//   code accepts any string, so no complete set exists to promise and its page
-//   presents a conventional list instead. Do not add it here — a guard would
-//   assert a closed set the product does not have, and the first plugin to
-//   pass its own `supports` value would be reported as drift.
+// A roster page claims to list every item, so an omission reads as
+// nonexistence. Each list is pinned to its source (here or in
+// `rosters.test.ts`) and to its page.
 
+// Item ids are the `###` heading text: MDX cannot parse `{#id}`, and slugs are
+// lossy (`userList` and `userlist` share one). Sources are read through the
+// `plumix` façade only.
+
+// These unions are what `apps/docs` can reach, and `tsc` reads `plumix` from
+// built `.d.ts`. Adding a `@plumix/plugin-*` dependency folds its augmentations
+// in and breaks these bindings.
 import type {
   ActionName,
   ArchiveTypeData,
@@ -123,9 +45,7 @@ import type { Assert, Equals } from "./type-assert";
 // --- Getting Started -------------------------------------------------------
 
 /**
- * Every subpath the façade publishes, in `package.json` order. Source: the
- * `exports` map of `packages/plumix/package.json`, compared at runtime — an
- * exports map is data, and nothing about its keys survives into a type.
+ * Source: the `exports` map of `packages/plumix/package.json`, in its order.
  */
 const FACADE_SUBPATHS = [
   "plumix",
@@ -171,12 +91,8 @@ const FACADE_SUBPATHS = [
 ] as const;
 
 /**
- * Every slot `plumix.config.ts` accepts, in declaration order. Source:
- * `PlumixConfigInput`.
- *
- * `PlumixConfig` — the resolved shape `buildApp` produces — is deliberately
- * not the source: it carries defaults the author never writes, and the page
- * documents what an author types.
+ * Not `PlumixConfig`: that resolved shape carries defaults an author never
+ * writes.
  */
 const CONFIG_OPTIONS = [
   "runtime",
@@ -211,17 +127,12 @@ interface TypeLevelBindings {
 
 // --- Content Modelling -----------------------------------------------------
 
-/** The statuses an entry moves between. Source: `ENTRY_STATUSES`. */
 const STATUSES = ["draft", "published", "scheduled", "trash"] as const;
 
 interface TypeLevelBindings {
   statusesMatchSource: Assert<Equals<(typeof STATUSES)[number], EntryStatus>>;
 }
 
-/**
- * Every option `registerEntryType` accepts, in declaration order. Source:
- * `EntryTypeOptions`.
- */
 const ENTRY_TYPE_OPTIONS = [
   "label",
   "labels",
@@ -251,10 +162,6 @@ interface TypeLevelBindings {
   >;
 }
 
-/**
- * Every per-type chrome string, in declaration order. Source:
- * `EntryTypeLabels`.
- */
 const ENTRY_TYPE_LABELS = [
   "singular",
   "plural",
@@ -284,11 +191,9 @@ interface TypeLevelBindings {
 }
 
 /**
- * The entry-type reference hosts both rosters, so they merge into one list —
- * `checkRosterDrift` reads every `###` heading on a page, and two entries
- * claiming one page would each report the other's items as unknown. Labels
- * carry their `labels.` path so `notFound` the option and `notFound` the label
- * stay distinguishable, and so each heading's anchor is unique.
+ * Merged because two rosters on one page would report each other's items as
+ * unknown. The `labels.` prefix keeps `notFound` the option apart from
+ * `notFound` the label.
  */
 const ENTRY_TYPE_REFERENCE: readonly string[] = [
   ...ENTRY_TYPE_OPTIONS,
@@ -298,11 +203,8 @@ const ENTRY_TYPE_REFERENCE: readonly string[] = [
 // --- Fields ----------------------------------------------------------------
 
 /**
- * Every field type authorable out of the box, in family order. Source:
- * `CANONICAL_INPUT_TYPES`. The three legacy types are deliberately absent —
- * they are retired, and the IA spec leaves them undocumented — as are the
- * plugin-contributed `media` kinds, which `@plumix/plugin-media` ships rather
- * than core.
+ * The retired legacy types and plugin-contributed `media` kinds are
+ * deliberately absent.
  */
 const FIELD_TYPES = [
   "text",
@@ -340,9 +242,8 @@ interface TypeLevelBindings {
 // --- Blocks ----------------------------------------------------------------
 
 /**
- * Every block core registers, in registration order. Source: `coreBlocks`,
- * whose `readonly BlockSpec[]` annotation puts the names out of reach of a
- * type-level binding.
+ * Source: `coreBlocks`. Its `readonly BlockSpec[]` annotation widens the names,
+ * so the binding is runtime.
  */
 const CORE_BLOCKS = [
   "core/rich-text",
@@ -364,7 +265,7 @@ const CORE_BLOCKS = [
   "core/table-cell",
 ] as const;
 
-/** Every inline mark, in bubble-menu order. Source: `coreMarks`. */
+/** Source: `coreMarks`. */
 const CORE_MARKS = [
   "bold",
   "italic",
@@ -382,20 +283,13 @@ const CORE_MARKS = [
 ] as const;
 
 /**
- * Every shortcode core registers, in registration order. Source:
- * `coreShortcodes`, widened to `readonly ShortcodeSpec[]` exactly like
- * `coreBlocks`, so the binding is the same runtime comparison.
- *
- * Spelled bare rather than as `[year]`: the name is the identity a plugin's
- * `registerShortcode` overrides — core loses a tie silently, so the page is
- * the only place a reader learns the name was taken — and the brackets are
- * the syntax around it, not the item.
+ * Source: `coreShortcodes`. Bare, not `[year]`: the name is what a plugin's
+ * `registerShortcode` overrides.
  */
 const CORE_SHORTCODES = ["year", "month"] as const;
 
 // --- Islands ---------------------------------------------------------------
 
-/** Source: `PlumixStrategy`. */
 const HYDRATION_STRATEGIES = [
   "load",
   "idle",
@@ -410,11 +304,6 @@ interface TypeLevelBindings {
   >;
 }
 
-/**
- * The strategies also valid as a prefetch trigger. Source: `PlumixPrefetch` —
- * a subset of the above, which is why the page is a two-axis roster rather
- * than one list with a footnote.
- */
 const PREFETCH_TRIGGERS = ["load", "idle", "visible"] as const;
 
 interface TypeLevelBindings {
@@ -424,9 +313,8 @@ interface TypeLevelBindings {
 }
 
 /**
- * Both axes on one page. The prop each value belongs to is part of the item
- * id, because `load` names a strategy *and* a prefetch trigger — bare, the two
- * would be one heading and one anchor.
+ * The prop is part of the id because `load` is both a strategy and a prefetch
+ * trigger.
  */
 const HYDRATION: readonly string[] = [
   ...HYDRATION_STRATEGIES.map((strategy) => `client="${strategy}"`),
@@ -436,34 +324,15 @@ const HYDRATION: readonly string[] = [
 // --- Themes ----------------------------------------------------------------
 
 /**
- * Every value `plumix/theme` publishes, and every value `plumix/plugin` does.
- * Each name has one import path, so a roster pins a name to the subpath a
- * reader imports it from. Used only as a *constraint* — `satisfies
- * ThemeExport`, `Partial<Record<ThemeExport, …>>` — so a roster naming an
- * export fails on the day the export is renamed or moves.
- *
- * **Deliberately not an exhaustive key set documentation has to cover.** The
- * two subpaths publish well over a hundred values against a planned 105
- * pages, and much of the difference is plumbing no page will ever name:
- * `createPluginRegistry`, `requestStore`, `installPlugins`. Binding export to
- * page forces one of two things — a heading per export, which is the
- * generated API appendix the IA spec rejects outright, or a hand-kept
- * allowlist of the exports that need no page, which is a second unbound list
- * drifting exactly the way a roster page does.
- *
- * So a new export fails no roster. What catches an undocumented surface is a
- * person deciding it deserves a page, and the roster that binds that page to
- * its source once it has one.
+ * Constraints only, never an exhaustive set to document: much of each subpath
+ * is plumbing no page should name, so a new export fails no roster.
  */
 type ThemeExport = keyof typeof PlumixTheme;
 type PluginExport = keyof typeof PlumixPlugin;
 
 /**
- * The generic tiers, in resolution order. Source: `GenericTier`, the union a
- * `TemplateRule` carries — so the ids are the tiers rather than the builder
- * functions that mint them. The second assertion is what keeps those the same
- * names: nothing in source ties `entry()` the builder to `"entry"` the tier,
- * so renaming the builder would otherwise leave the roster passing.
+ * Nothing in source ties the `entry()` builder to the `"entry"` tier, so the
+ * second assertion pins the tier names to theme exports.
  */
 const GENERIC_TIERS = [
   "fallback",
@@ -491,17 +360,8 @@ interface TypeLevelBindings {
 }
 
 /**
- * The targeted matchers, listed against the node kinds they mint. `satisfies`
- * pins each key to a `plumix/theme` export, so a rename fails on the
- * offending line; the assertion pins the kinds, flattened, to
- * `TargetMatcher["nodeKind"]`, so a seventh matcher reaching a new kind fails
- * too.
- *
- * Two things neither catches, both needing the builders to share a return
- * shape they do not have: a seventh matcher minting an *existing* kind, and a
- * key paired with the wrong kinds. The values are a reader's map from matcher
- * to node kind and a lever for the second assertion — they are not themselves
- * checked against what each builder does.
+ * Unchecked: a new matcher minting an existing kind, or a key paired with the
+ * wrong kinds. The builders share no return shape to compare against.
  */
 const TARGETED_MATCHERS = {
   forEntryType: ["entry", "entryType"],
@@ -523,35 +383,13 @@ interface TypeLevelBindings {
   >;
 }
 
-/** `defineTemplate` heads the page: every rule below wraps one. */
 const TEMPLATES: readonly string[] = [
   "defineTemplate" satisfies ThemeExport,
   ...GENERIC_TIERS,
   ...Object.keys(TARGETED_MATCHERS),
 ];
 
-/**
- * The constructors a plugin-authored rule kind builds its selectors from, each
- * against the matcher it backs. Source: the same node-kind targets
- * `TARGETED_MATCHERS` lists, since both sides exist to mint the same
- * `TargetMatcher` shapes.
- *
- * `satisfies` pins each key to a `plumix/plugin` export, so a rename fails on
- * its own line. The assertion catches the direction nothing else does: a
- * seventh entry in `TARGETED_MATCHERS` arriving without a constructor here.
- * Its own page would not report that — `templates.mdx` already carries the
- * matcher as a `###`, so its roster stays green while this page silently
- * stops being complete.
- *
- * It shares the holes the map above admits to, for the same reason: the values
- * are compared as a union, so a swapped pairing and a seventh key duplicating an
- * existing matcher both pass. Roster drift catches the second — seven keys
- * against six `###` headings — and nothing catches the first.
- *
- * The rest of that page is not a roster. `resolveRule`, `BindRule` and
- * `TierMatchRule` are a mechanism, not a set, so the page carries them as
- * prose and promises completeness only here.
- */
+/** Values compare as a union, so a swapped pairing passes unnoticed. */
 const TARGET_CONSTRUCTORS = {
   entryTypeTargets: "forEntryType",
   termTaxonomyTargets: "forTermTaxonomy",
@@ -573,21 +411,8 @@ interface TypeLevelBindings {
 }
 
 /**
- * The pieces a rule kind mints a narrowing of *its own* out of, once the six
- * constructors above have run out. Source: the `*Match` and `*Equals` exports
- * of `rule-selectors.ts`, which `template-builders.ts` builds `named` from.
- *
- * A list rather than a map, because there is nothing in source to pair these
- * against: a predicate constructor mints no `nodeKind` of its own, so a map
- * would invent the second column. `satisfies` still pins each name to a
- * `plumix/plugin` export — the direction that matters here, since the page
- * exists only because they are reachable at all.
- *
- * It admits a hole the two above do not: with no map there is nothing to
- * assert exhaustiveness against, so a fifth constructor published without a
- * `###` for it fails nothing. A convention-shaped assert (`${string}Match`)
- * would bind the guard to a naming habit rather than to the source, which is
- * the drift a roster exists to catch rather than a way of catching it.
+ * Not exhaustive: nothing in source enumerates these, so a newly published
+ * constructor fails nothing.
  */
 const MATCH_CONSTRUCTORS = [
   "entryTypeMatch",
@@ -597,13 +422,7 @@ const MATCH_CONSTRUCTORS = [
 ] as const satisfies readonly PluginExport[];
 
 /**
- * Every shape a template can receive, named as a reader would import it.
- * Source: the `TemplateData` union.
- *
- * The map is the binding: its values are the real types, so a rename or
- * removal fails to compile, and the union of its values is asserted to be
- * `TemplateData` itself, so an eleventh shape fails typecheck. A bare array of
- * names could not do either — type names have no runtime form to compare.
+ * A map because type names have no runtime form: its values are the real types.
  */
 interface TemplateDataShapes {
   EntryData: EntryData;
@@ -645,7 +464,6 @@ interface TypeLevelBindings {
 
 // --- Access & Identity -----------------------------------------------------
 
-/** The roles, ascending. Source: `USER_ROLES`. */
 const ROLES = [
   "subscriber",
   "contributor",
@@ -659,18 +477,9 @@ interface TypeLevelBindings {
 }
 
 /**
- * The core capabilities, then the actions derived for every other entry type
- * and taxonomy. Sources: `CORE_CAPABILITIES`, `POST_TYPE_CAPABILITY_ACTIONS`,
- * `TERM_TAXONOMY_CAPABILITY_ACTIONS`.
- *
- * The derived actions are spelled `entry:*:read` rather than bare `read`,
- * following how `rbac.ts` itself writes `entry:post:*`: an id is unique on its
- * page, and `read` names both an entry action and a taxonomy one.
- *
- * Bound at runtime as a whole. `CORE_CAPABILITIES` is annotated
- * `Record<string, UserRole>`, so its keys are `string` at the type level even
- * though they are literals in source — binding half the list one way and half
- * the other would cost a reader more than it buys.
+ * Runtime-bound: `CORE_CAPABILITIES` is a `Record<string, UserRole>`, so its
+ * keys are lost at the type level. `entry:*:read` keeps ids unique since `read`
+ * is also a taxonomy action.
  */
 const CAPABILITIES = [
   "entry:post:read",
@@ -708,23 +517,8 @@ const CAPABILITIES = [
 // --- APIs ------------------------------------------------------------------
 
 /**
- * The tools core contributes unconditionally, then the ones the dev gate adds.
- * Sources: `coreMcpTools`, `telemetryMcpTools`, `errorMcpTools`.
- *
- * **Page-bound only.** All three arrays live in `@plumix/core`'s
- * `mcp/registry.ts` and its siblings, and none is re-exported from the package
- * barrel — `mcp/index.ts` publishes the `McpTool` type and `McpToolError` and
- * nothing else. A relative import could physically reach them; what forbids it
- * is this file's own rule, that a roster binds to the surface a reader can
- * import.
- *
- * So a source binding here means *publishing* API, which is a different act
- * from forwarding something already public — the distinction that let
- * `coreShortcodes` onto the façade in the same change that left this unbound.
- * `coreMcpTools` has the better case of the three (`registerMcpTool` already
- * rejects a plugin tool colliding with `CORE_MCP_TOOL_NAMES`, derived from
- * it); whether the dev-only two belong on a public surface at all is the MCP
- * page's decision, not this guard's.
+ * Page-only: `coreMcpTools`, `telemetryMcpTools` and `errorMcpTools` are not
+ * public, and binding them would mean publishing API.
  */
 const MCP_TOOLS = [
   "schema_describe",
@@ -741,31 +535,14 @@ const MCP_TOOLS = [
 // --- Hooks -----------------------------------------------------------------
 
 /**
- * A hook name as its registry spells it. The per-entry-type hooks are template
- * literals over the type name (`entry:${string}:published`), which no heading
- * can carry, so a page writes `entry:*:published` and this puts the parameter
- * back before the comparison. Exported so `rosters.test.ts` can prove the
- * substitution does not blunt the assertion it feeds.
+ * Maps a page's `entry:*:published` back to the registry's
+ * `entry:${string}:published`, which no heading can carry.
  */
 export type SourceHookName<TName extends string> =
   TName extends `entry:*:${infer TSuffix}`
     ? `entry:${string}:${TSuffix}`
     : TName;
 
-/**
- * Every filter, grouped by family and with the mechanical `rpc:*` family last.
- * Source: `FilterName`, which is `keyof FilterRegistry` — an interface every
- * hook augments from wherever it is fired, so there is no runtime value and
- * the type-level binding is the only one there can be.
- *
- * A filter reaches this union only if its declaring module is in the closure
- * `@plumix/core`'s barrel anchors (`hooks/public-hooks.ts`). That is the same
- * boundary a plugin author sees, so a hook missing from here is a hook they
- * cannot type either — which is why the roster follows the façade rather than
- * the repo. The dev-only `debug:panels`, `error_page:hints` and
- * `error_page:panels` are inside it: each exists so a plugin can contribute to
- * a dev surface, and a hook nothing outside core can name serves no one.
- */
 const FILTER_HOOKS = [
   "admin_bar:nodes",
   "admin:search:results",
@@ -845,12 +622,8 @@ interface TypeLevelBindings {
 }
 
 /**
- * Every action, grouped by family. Source: `ActionName` — same registry
- * mechanism as the filters above, same reason for the type-level binding.
- *
- * Each entry action fires twice: once per-type (`entry:*:published`) and once
- * generic (`entry:published`). Both are items, because a plugin author picks
- * between them.
+ * Per-type and generic entry actions are both items: each fires, and a plugin
+ * author picks one.
  */
 const ACTION_HOOKS = [
   "theme:ready",
@@ -908,12 +681,10 @@ interface TypeLevelBindings {
   >;
 }
 
-// A per-type hook spelled with a concrete type — `entry:post:published` — is
-// absorbed by its template-literal sibling when TypeScript reduces the union,
-// so the bindings above would accept it and the page would then owe a heading
-// for a name no registry spells. `CAPABILITIES` legitimately writes
-// `entry:post:read`, which is what puts the spelling in reach of this file, so
-// the two lists say in types which convention each follows.
+/**
+ * `entry:post:published` would be absorbed by its template-literal sibling in
+ * the union, so the bindings above would accept a name no registry spells.
+ */
 interface TypeLevelBindings {
   everyPerTypeActionUsesTheStar: Assert<
     Equals<
@@ -928,28 +699,14 @@ const HOOKS: readonly string[] = [...FILTER_HOOKS, ...ACTION_HOOKS];
 // --- Deployment ------------------------------------------------------------
 
 /**
- * The content cache-tag vocabulary, coarse by design. Sources: `typeTag` and
- * `entryTag`, the only tag minters the façade exports. Core's settings tag
- * (`s:<group>`) is internal and stays in the page's prose.
- *
- * A third minter on the façade without a heading here is the drift a reader
- * would feel — the page promises the content vocabulary is these two.
+ * Sources: `typeTag` and `entryTag`. Spelled `*` because MDX reads a bare
+ * `t:<type>` as an unclosed JSX tag.
  */
 const CACHE_TAGS = ["t:*", "e:*"] as const;
 
 /**
- * Every command, then the global flags that precede any of them. Sources: the
- * CLI's `BUILT_IN_COMMANDS` map (`migrate`, `cron`, `doctor`, `i18n`), the runtime
- * adapter's `commands` registry (`dev`, `build`, `deploy`, `types`), and the
- * usage block `formatHelp` prints.
- *
- * **Page-bound only.** `BUILT_IN_COMMANDS` and the flag list are module-private
- * inside `packages/plumix`'s CLI entry, which has no `exports` subpath at all.
- * The adapter half is public, but reaching it means this app taking a
- * dependency on `@plumix/runtime-cloudflare` — a runtime adapter, not the
- * façade the documentation describes, and one of several a site may deploy to.
- * Publishing a `plumix/cli` subpath would bind the whole list through the one
- * surface a reader has.
+ * Page-only: `BUILT_IN_COMMANDS` and the flags are private to the CLI entry,
+ * and the adapter's `commands` would need a runtime-adapter dependency.
  */
 const CLI_REFERENCE = [
   "dev",
@@ -968,7 +725,6 @@ const CLI_REFERENCE = [
   "--version",
 ] as const;
 
-/** Source: `Invocation`. */
 const INVOCATION_MEMBERS = ["env", "waitUntil", "clientAddress"] as const;
 
 interface TypeLevelBindings {
@@ -977,7 +733,6 @@ interface TypeLevelBindings {
   >;
 }
 
-/** Source: `PlumixHandler`. */
 const HANDLER_MEMBERS = ["fetch", "scheduled", "run", "dispose"] as const;
 
 interface TypeLevelBindings {
@@ -986,7 +741,6 @@ interface TypeLevelBindings {
   >;
 }
 
-/** Source: `RuntimeAdapter`. */
 const ADAPTER_MEMBERS = [
   "name",
   "handler",
@@ -1003,13 +757,8 @@ interface TypeLevelBindings {
 }
 
 /**
- * The three interfaces on one page, each member qualified by the interface
- * that declares it. Nothing collides here, unlike the hydration roster — but
- * with three interfaces in scope `name`, `fetch` and `env` name nothing on
- * their own, and the qualifier is what the anchor a reader cites carries.
- *
- * `ScheduledEvent` and `EntrySourceOptions` are each one member's argument and
- * are documented under it; a heading for either is reported as drift, rightly.
+ * Qualified because with three interfaces on one page `name`, `fetch` and `env`
+ * would make useless anchors.
  */
 const RUNTIME_CONTRACT_MEMBERS: readonly string[] = [
   ...ADAPTER_MEMBERS.map((member) => `RuntimeAdapter.${member}`),
@@ -1020,13 +769,8 @@ const RUNTIME_CONTRACT_MEMBERS: readonly string[] = [
 // --- Plugins ---------------------------------------------------------------
 
 /**
- * Every plugin package that ships. Source: the directories under
- * `packages/plugins/` whose manifest is not private — runtime, because
- * `apps/docs` depends on none of them, so no type carries their names.
- *
- * Membership only, unlike the runtime bindings above: a directory's sole order
- * is alphabetical, the one order the IA spec tells a roster page not to adopt.
- * Its page is a narrative one, so every `###` anywhere on it reads as an item.
+ * Source: non-private manifests under `packages/plugins/`. Membership only,
+ * since directory order is alphabetical, which a roster page must not adopt.
  */
 const PLUGIN_PACKAGES = [
   "@plumix/plugin-blog",
@@ -1042,13 +786,6 @@ const PLUGIN_PACKAGES = [
   "@plumix/plugin-search",
 ] as const;
 
-/**
- * Every key of the `i18n` slot a plugin descriptor may declare. Source:
- * `PluginI18nSlot` — membership only, since `Equals` compares a union.
- *
- * A fourth key arriving undocumented would leave the page making the same
- * silent omission it warns about, which is why a set this small is bound.
- */
 const PLUGIN_I18N_SLOT = ["sourceLocale", "locales", "catalogPath"] as const;
 
 interface TypeLevelBindings {
@@ -1058,12 +795,8 @@ interface TypeLevelBindings {
 }
 
 /**
- * How a roster's items reach the source they enumerate. Each
- * `TypeLevelBindings` member is an `Assert` declared beside the list it pins,
- * and the declarations merge into one interface. A type-level roster names
- * the members that hold it, so deleting one fails to
- * compile at the entry that cites it, and demoting an entry to `"page-only"`
- * shows up against the tally `rosters.test.ts` keeps.
+ * Naming its `TypeLevelBindings` members makes deleting an assertion fail to
+ * compile at the roster citing it.
  */
 type Binding =
   | readonly [keyof TypeLevelBindings, ...(keyof TypeLevelBindings)[]]
@@ -1074,11 +807,6 @@ interface RegisteredRoster extends Roster {
   readonly binding: Binding;
 }
 
-/**
- * Every roster, keyed by the page that carries it, in site order.
- * `rosters.test.ts` asserts the count and the tally per binding, so neither a
- * new roster nor a demoted one arrives without someone deciding about it.
- */
 export const ROSTERS: readonly RegisteredRoster[] = [
   {
     page: "getting-started/project-structure.mdx",

@@ -69,11 +69,8 @@ describe("bundledCssTags", () => {
   });
 
   test("walks `imports[]` to surface code-split chunks' CSS", () => {
-    // Vite splits a heavy theme dependency into its own chunk. The
-    // entry references it via `imports[]`; the dependency owns the
-    // CSS bytes. Browsers won't load that CSS unless the renderer
-    // walks the import graph and emits a <link> for every reachable
-    // chunk.
+    // The split dependency chunk owns the CSS, which browsers won't load
+    // unless the renderer walks the import graph.
     const manifest: AssetManifest = {
       "src/theme/index.ts": {
         file: "assets/theme-abc.js",
@@ -190,10 +187,8 @@ describe("devThemeStylesTag", () => {
 });
 
 describe("devThemeCssLinks", () => {
-  // #1701: in dev the theme CSS otherwise rides in only via the client-entry
-  // <script>, which injects <style> after hydration → flash of unstyled
-  // content. A render-blocking <link> to the Vite-served source path paints
-  // the first frame styled, matching prod's `bundledCssTags`.
+  // Otherwise dev theme CSS arrives only via the client-entry script after
+  // hydration, flashing unstyled content.
   test("serve mode links a `./`-relative css path as a root-absolute href", () => {
     expect(devThemeCssLinks(["./theme/app.css"], "serve")).toBe(
       '<link rel="stylesheet" href="/theme/app.css" />',
@@ -233,11 +228,8 @@ describe("devThemeCssLinks", () => {
     );
   });
 
-  // A plain <link href> is resolved by the browser, not Vite's module
-  // resolver, so aliased (`~`, `@/`) and npm-scope (`@scope/pkg`) specifiers
-  // 404 as links. Those keep riding in on the client-entry <script> import
-  // (today's behavior); emitting a knowingly-404ing <link> would just add
-  // console noise.
+  // The browser, not Vite, resolves a <link href>, so alias and npm-scope
+  // specifiers would 404; they keep riding the client-entry import.
   test("serve mode skips alias and npm-scope specifiers", () => {
     expect(
       devThemeCssLinks(

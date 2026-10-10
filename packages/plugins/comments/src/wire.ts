@@ -13,10 +13,8 @@ import { isRefusalCode, REFUSALS } from "./refusals.js";
 import { COMMENT_STATUSES } from "./types.js";
 
 /**
- * What the endpoint answers a scripted caller with — decoded rather than
- * asserted, because it arrives over `fetch` from a URL a page carries, and
- * a stale service worker, an intercepting proxy or a captive portal all
- * answer 200 with something else entirely.
+ * Decoded, not asserted: a stale service worker, proxy or captive portal can
+ * answer 200 with something else.
  */
 const AnswerResponse = v.union([
   v.object({ status: v.picklist(COMMENT_STATUSES) }),
@@ -24,19 +22,16 @@ const AnswerResponse = v.union([
 ]);
 
 /**
- * What a comment that never reached the endpoint comes back as. It names
- * no field: the summary reads such an error as text rather than as a link
- * to nowhere, and a theme reads it back through `errorFor("")`.
+ * Names no field, so the summary renders it as text and a theme reads it via
+ * `errorFor("")`.
  */
 const unreachable: readonly CommentFormError[] = [
   { field: "", message: labelSourceText(UNREACHABLE) },
 ];
 
 /**
- * The refusal the endpoint named, as the message and the control it
- * belongs against. The wording lives on the server's own table, so a
- * browser reads back exactly what the no-JavaScript page would have shown
- * rather than carrying a second copy of it.
+ * Wording comes from the server's table, so the browser shows exactly what the
+ * no-JavaScript page would.
  */
 function refusalErrors(code: string): readonly CommentFormError[] {
   if (!isRefusalCode(code)) return unreachable;
@@ -50,13 +45,8 @@ export type CommentAnswer =
   | { readonly ok: false; readonly errors: readonly CommentFormError[] };
 
 /**
- * Post one comment as JSON, from either browser surface: the island over
- * the plugin's own markup, and `usePlumixCommentForm` over a theme's.
- *
- * JSON rather than the urlencoded body the plain form posts, because that
- * is what the endpoint negotiates on — and with the CSRF header, so a
- * scripted submission goes through the ordinary gate and keeps the session
- * the `formPost` exemption would have taken away.
+ * Sends JSON with the CSRF header, so the submission keeps the session a
+ * `formPost` request would lose.
  */
 export async function postComment(
   action: string,
@@ -91,10 +81,8 @@ export function submitAction(basePath?: string): string {
 }
 
 /**
- * One comment as the list route sends it, restored to the type the
- * template dep hands a theme. The route answers with plain JSON, which
- * turns `createdAt` into a string, so the date is revived here rather
- * than a theme being handed a `ResolvedComment` that lies about it.
+ * Plain JSON turns `createdAt` into a string; revive it so `ResolvedComment`
+ * doesn't lie.
  */
 const PagedComment: v.GenericSchema<unknown, ResolvedComment> = v.object({
   id: v.number(),
@@ -133,9 +121,8 @@ export type CommentPageAnswer =
     };
 
 /**
- * Fetch the page of root comments older than `cursor`. Never throws: a
- * page that did not arrive, or arrived as something else, is
- * `unreachable`, and a refusal the route named comes back by its code.
+ * Never throws: a missing or malformed page is `unreachable`; a named refusal
+ * comes back by its code.
  */
 export async function fetchCommentPage(
   entryId: number,

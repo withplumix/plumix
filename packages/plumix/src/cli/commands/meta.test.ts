@@ -19,8 +19,10 @@ const plugin = definePlugin("test-meta", (ctx) => {
   });
 });
 
-// A real app, database and handler: the command is only as good as the settle
-// it drives, so nothing between the two is stubbed.
+/**
+ * A real app, database and handler: the command is only as good as the settle
+ * it drives, so nothing between the two is stubbed.
+ */
 async function seeded(
   argv: readonly string[],
   database?: PlumixApp["config"]["database"],
@@ -106,9 +108,8 @@ describe("plumix meta", () => {
     expect(isCliError(error) && error.code).toBe("unknown_subcommand");
   });
 
-  // A failure inside the settle is the settle's to report: calling it an
-  // unreachable database would send a Node site to the admin page, where the
-  // same query fails the same way.
+  // Calling it an unreachable database would send a Node site to the admin
+  // page, where the same query fails the same way.
   test("a query that fails inside the settle surfaces as itself", async () => {
     captureReport();
     const { ctx } = await seeded([], {

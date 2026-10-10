@@ -37,14 +37,12 @@ import {
 import { Textarea } from "@plumix/admin-ui/textarea";
 import { idParam, vMessage } from "@plumix/core/validation";
 
-/** Normalised input shape consumed by both create + update paths. */
 interface TermFormValues {
   readonly name: string;
   readonly slug: string;
   readonly description: string;
   readonly parentId: number | null;
-  /** Plugin-registered meta bag. Shape is open because meta-box fields
-   *  coerce per-field on edit; the server re-sanitises on write. */
+  /** Open shape: fields coerce on edit and the server re-sanitises on write. */
   readonly meta: ResolvedMeta;
 }
 
@@ -59,13 +57,17 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-// Radix Select forbids an empty-string item value, so the "root" choice
-// carries a sentinel that maps back to `null` (no parent) on change.
+/**
+ * Radix Select forbids an empty-string item value, so the "root" choice
+ * carries a sentinel that maps back to `null` (no parent) on change.
+ */
 const ROOT_VALUE = "__root__";
 
-// Client-side shape mirrors `termCreateInputSchema` / `termUpdateInputSchema`
-// on the server. Slug is optional at the form level — the server derives
-// it from the name if omitted (see `term.create` handler).
+/**
+ * Client-side shape mirrors `termCreateInputSchema` / `termUpdateInputSchema`
+ * on the server. Slug is optional at the form level — the server derives
+ * it from the name if omitted (see `term.create` handler).
+ */
 const termFormSchema = v.object({
   name: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(200)),
   slug: v.pipe(
@@ -79,19 +81,6 @@ const termFormSchema = v.object({
   meta: v.record(v.string(), v.unknown()),
 });
 
-/**
- * Form component shared by `/terms/$name/new` and
- * `/terms/$name/$id` — the only differences between create and
- * edit are the mutation target + the default values, both injected by
- * the parent route. The `submitLabel` prop lets callers say "Create" vs
- * "Save changes" without the form knowing which mode it's in.
- *
- * `parentOptions` is a pre-flattened list with depth-indented labels
- * (see `parentPickerOptions` in `./tree.ts`) so the select visibly
- * conveys nesting. Editing a term? Pass a list that excludes the term
- * itself and its descendants — client-side cycle prevention that's
- * kinder than a round-trip to a CONFLICT.
- */
 interface ParentOption {
   readonly id: number;
   readonly label: string;
@@ -120,10 +109,9 @@ export function TermForm({
   /** Submit-button copy when not pending. Caller picks "Create" vs
    *  "Save changes" and passes a localized `Label`. */
   readonly submitLabel: Label;
-  /** Plugin-registered meta boxes for this taxonomy — rendered inside
-   *  the form so the single Save button submits row fields + meta
-   *  together via one `term.update` call. Pass an empty array when no
-   *  boxes are registered for the current viewer. */
+  /**
+   * Rendered inside the form so one Save submits row fields and meta together.
+   */
   readonly metaBoxes: readonly TermMetaBoxManifestEntry[];
   readonly onSubmit: (values: TermFormValues) => void;
   readonly onCancel: () => void;

@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import { trustRequest } from "./request-trust.js";
 
-// What a hostile client, or a trusted proxy, puts on a request.
+/** What a hostile client, or a trusted proxy, puts on a request. */
 const FORWARDED = {
   "x-forwarded-proto": "https",
   "x-forwarded-host": "cms.example",

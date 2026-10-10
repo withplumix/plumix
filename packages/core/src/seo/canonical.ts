@@ -7,23 +7,14 @@ import { matchPublicRoute } from "../route/contract/public-route-table.js";
 type CanonicalContext = Pick<AppContext, "request" | "origin" | "config">;
 
 /**
- * Normalize a pathname to its canonical, slash-less shape. `/page/1` is the
- * same content as the bare listing, so it collapses — `/shop/page/1` → `/shop`,
- * `/page/1` → `/`. Shared by {@link canonicalUrl} and
- * {@link canonicalRedirectTarget} so the tag and the 301 can never disagree.
+ * `/page/1` is the bare listing. Shared so the tag and the 301 never disagree.
  */
 function canonicalPath(pathname: string): string {
   const slashless = pathname === "/" ? "/" : pathname.replace(/\/+$/, "");
   return slashless.replace(/\/page\/1$/, "") || "/";
 }
 
-/**
- * The single source of truth for a request's canonical URL: the configured
- * site origin + the request path normalized to the fixed slash-less shape
- * (query and fragment dropped so URL variants consolidate). Drives the
- * `<link rel="canonical">` tag and the 301 normalizer + sitemap/og:url, so
- * they can never disagree.
- */
+/** Drops query and fragment so URL variants consolidate. */
 export function canonicalUrl(ctx: CanonicalContext): string {
   // The dispatcher already stripped any base prefix from the request, so the
   // pathname is root-relative; re-add the prefix on the way out.
@@ -32,16 +23,9 @@ export function canonicalUrl(ctx: CanonicalContext): string {
 }
 
 /**
- * Paths the 301 normalizer must never touch: the root, the plumix surface, a
- * path a plugin registered as a public route, and asset/extension-like paths (a
- * dot in the last segment — covers `favicon.ico`, and `robots.txt` and
- * `sitemap*.xml` whether or not a plugin claimed them). Everything else is a
- * public page route whose shape we normalize. Core spells no SEO literal here:
- * the feeds and the robots/sitemap set are registered routes now.
- *
- * The registered-route arm restates the dispatcher's own check, which already
- * answered such a path before this ran — it is here so the exemption stays
- * true if that ordering ever moves, not for a request it decides today.
+ * Exempts the root, the plumix surface, registered public routes and
+ * dot-suffixed asset paths. The registered-route arm guards against dispatch
+ * order moving.
  */
 export function isCanonicalExempt(
   pathname: string,
@@ -49,12 +33,8 @@ export function isCanonicalExempt(
 ): boolean {
   if (pathname === "/") return true;
   if (pathname.startsWith("/_plumix/")) return true;
-  // The literal shape, not the normalized one. Matching the normalized shape
-  // exempted every trailing-slash variant of a registered endpoint — so
-  // `/post/feed/` stopped 301'ing onto the feed and 404'd through the content
-  // router instead, where core's own `/feed` literal only ever covered the
-  // site scope. A machine endpoint consolidates its URL variants exactly like
-  // a page: the 301 is what gets an aggregator to the feed.
+  // The literal shape, not normalized: a feed's trailing-slash variant must
+  // still 301 onto the feed.
   if (matchPublicRoute(publicRoutes, pathname) !== null) {
     return true;
   }
@@ -64,10 +44,8 @@ export function isCanonicalExempt(
 }
 
 /**
- * The canonical URL to 301-redirect this request to, or null when it's already
- * canonical or exempt. Shares {@link canonicalUrl} with the `<link rel=canonical>`
- * tag so the redirect target and the tag can never disagree; the query string
- * is preserved, and an already-canonical path returns null (loop-safe).
+ * Null when already canonical or exempt, so it is loop-safe. Keeps the query
+ * string.
  */
 export function canonicalRedirectTarget(
   ctx: CanonicalContext,
@@ -87,10 +65,8 @@ function hasCanonical(manifest: DocumentManifest): boolean {
 }
 
 /**
- * Gap-filler: emit `<link rel="canonical">` only when neither the template nor
- * a `render:document` subscriber already set one — so a higher layer's canonical
- * always wins and the tag never duplicates. A page that opted out with
- * `canonical: false` gets none.
+ * Only when neither the template nor a `render:document` subscriber set one,
+ * and not for `canonical: false`.
  */
 export function applyCanonical(
   manifest: DocumentManifest,

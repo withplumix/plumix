@@ -18,7 +18,9 @@ export async function provisionUser(
     readonly avatarUrl?: string | null;
     readonly defaultRole?: UserRole;
     readonly emailVerified?: boolean;
-    /** The meta the new user starts with — `startingMeta` of the user fields. */
+    /**
+     * The meta the new user starts with — `startingMeta` of the user fields.
+     */
     readonly meta: JsonObject;
   },
 ): Promise<BootstrappedUser> {
@@ -27,10 +29,8 @@ export async function provisionUser(
   for (let attempt = 1; ; attempt++) {
     const slug = await deriveUserSlug(db, input.name);
 
-    // Role is decided inside the INSERT so concurrent first-user provisioning
-    // can't elect two admins: SQLite serializes writers, and the subquery
-    // observes previously-inserted rows. Only the statement that runs when
-    // the table is empty gets `admin`.
+    // Role is decided inside the INSERT: SQLite serializes writers, so
+    // concurrent first-user provisioning can't elect two admins.
     let user: User | undefined;
     try {
       [user] = await db
@@ -57,7 +57,7 @@ export async function provisionUser(
       throw error;
     }
 
-    // eslint-disable-next-line no-restricted-syntax -- defensive driver-regression guard; migrate alongside auth errors in PR 2 (#234)
+    // eslint-disable-next-line no-restricted-syntax -- unreachable unless the driver returns no row from INSERT … RETURNING
     if (!user) throw new Error("provisionUser: insert returned no row");
     return {
       user,

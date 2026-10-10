@@ -1,23 +1,16 @@
 import type { ResolvedEntity } from "../route/contract/resolved-entity.js";
 import type { TelemetryRecord, TelemetrySpan } from "./telemetry.js";
 
-// The dev runtime every request carries as `ctx.dev`, with the capture shapes
-// it names, and the `config.dev` input it resolves from. Declared here, not
-// under `dev/`, so the context and config types can name them without reaching
-// up into a surface; `dev/` implements them.
+// Declared here, not under `dev/`, so the context and config types can name
+// them without importing up into a surface.
 
-// Users write the position as a string literal, so it needs no public name.
+/** Users write the position as a string literal, so it needs no public name. */
 type DebugBarPosition =
   "bottom-right" | "bottom-left" | "top-right" | "top-left";
 
 /**
- * `dev.bar`: the overlay itself. Only what the bar alone reads lives here —
- * which panels it shows is `dev.panels`, read identically by the history read
- * routes, a surface with no bar in it.
- *
- * `false` is the only spelling of off; there is no `enabled` key, because two
- * spellings of one thing is how the slot this replaced grew four settings with
- * three meanings.
+ * `false` is the only spelling of off. Panel choice lives in `dev.panels`,
+ * which the history routes read too.
  */
 export type DebugBarInput =
   | boolean
@@ -33,11 +26,8 @@ export interface NormalizedDebugBar {
 }
 
 /**
- * A bounded, fixed projection of request context — the only parts of the live
- * `AppContext` a debug panel is allowed to see. Deliberately *not* the raw
- * config or the full entity registry: a small, JSON-serializable slice so a
- * stored snapshot never pins the request graph and a future consumer (the
- * request-history store, an MCP reader) can serialize it verbatim.
+ * A small JSON-serializable slice, never the raw config or registry, so a
+ * stored snapshot never pins the request graph.
  */
 export interface DebugContext {
   readonly method: string;
@@ -65,11 +55,8 @@ export interface DebugContext {
 }
 
 /**
- * The serializable model every debug panel renders from: the request's span
- * tree, its telemetry records, and the fixed context projection. HTML is only
- * ever a rendering over this JSON — the JSON is never derived from HTML. The
- * same document is what the inline bar renders for the current request and
- * (in the request-history work) what a stored past request replays.
+ * Panels render HTML from this JSON, never the reverse, so a stored request
+ * replays like a live one.
  */
 export interface DebugSnapshot {
   readonly context: DebugContext;
@@ -78,13 +65,8 @@ export interface DebugSnapshot {
 }
 
 /**
- * One captured request in the dev request-history: the finished request's
- * identity/outcome plus its {@link DebugSnapshot}. Everything here is inert
- * JSON — the store serializes the snapshot on {@link DebugHistoryStore.save},
- * so an entry never pins a live `ctx`, `Request`, DB connection, or closure.
- * `id` is the request id (the switcher selects and {@link DebugHistoryStore.find}
- * looks up by it); `startedAt`/`status`/`durationMs` label an entry without
- * reopening the snapshot.
+ * Inert JSON: never pins a live `ctx`, `Request`, connection or closure. `id`
+ * is the request id.
  */
 export interface DebugHistoryEntry {
   readonly id: string;
@@ -105,17 +87,13 @@ export interface DebugHistoryStoreOptions {
 }
 
 /**
- * A bounded, transport-agnostic store of the most recent requests. Four
- * readers share it unchanged — the debug bar, the HTTP read routes and the two
- * dev MCP tools — which is why it is the capture layer's and not any one
- * surface's. The in-memory ring is dev-only and tree-shaken from production.
+ * Bounded and transport-agnostic, because several dev surfaces read it
+ * unchanged.
  */
 export interface DebugHistoryStore {
   /**
-   * Capture one finished request. The snapshot is deep-copied to inert JSON
-   * and payload-bounded (oversized strings truncated) before storing, so the
-   * store never retains a live reference and its footprint stays flat. Past
-   * the entry-count or total-byte caps the oldest entries are evicted.
+   * Deep-copies and truncates the snapshot; evicts the oldest entries past the
+   * caps.
    */
   save(entry: DebugHistoryEntry): void;
   /** The stored entry with this request id, or undefined. */
@@ -125,8 +103,8 @@ export interface DebugHistoryStore {
 }
 
 /**
- * Every debug panel a site can name in `dev.panels`. Core seeds its five;
- * a plugin adds its own from the module that registers the panel:
+ * Augment with `og: true` to make a plugin's panel nameable in `dev.panels`;
+ * only registered ids are, so a typo is a compile error.
  *
  * ```ts
  * declare module "plumix" {
@@ -135,24 +113,13 @@ export interface DebugHistoryStore {
  *   }
  * }
  * ```
- *
- * The extension point is open and the configuration surface is closed:
- * {@link DebugPanel.id} stays `string`, so anyone may contribute a panel
- * through the `debug:panels` filter, but only a registered id is *nameable*
- * in config — which is what turns a mistyped panel name from a silent no-op
- * into a compile error. A panel whose plugin ships no augmentation is still
- * removable through the filter.
- *
- * The value type carries nothing; the key is the whole declaration.
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- intentional augmentation seam
 export interface DebugPanelRegistry extends Record<CoreDebugPanelId, true> {}
 
 /**
- * The ids of the panels core registers. A runtime list rather than five
- * interface members so a test can hold it equal to what `registerCoreDebugPanels`
- * actually contributes — a registry key with no panel behind it would be the
- * same silent no-op this registry exists to rule out.
+ * A runtime list so a test can hold it equal to what `registerCoreDebugPanels`
+ * contributes.
  */
 export const CORE_DEBUG_PANEL_IDS = [
   "app",
@@ -166,20 +133,10 @@ type CoreDebugPanelId = (typeof CORE_DEBUG_PANEL_IDS)[number];
 
 type DebugPanelId = keyof DebugPanelRegistry;
 
-/**
- * `dev.panels`: which panels this site shows. An absent key shows the panel,
- * so the default is every panel a plugin contributed rather than a list the
- * author has to maintain as they install things.
- */
+/** An absent key shows the panel. */
 export type DebugPanelsInput = Partial<Readonly<Record<DebugPanelId, boolean>>>;
 
-/**
- * `config.dev`, resolved once when the app is built: the same keys, each in
- * the form its readers consume. The app holds one and hands it to every
- * request as `ctx.dev`. Composed here rather than under `dev/` for the reason
- * `DevInput` lives in `config.ts` — no module in the dev tree has to name all
- * of its layers (ADR 0003).
- */
+/** `config.dev`, resolved once per app and shared by every request. */
 export interface DevRuntime {
   /** `config.dev.bar`, normalized. */
   readonly bar: NormalizedDebugBar;

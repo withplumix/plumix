@@ -4,24 +4,26 @@ import type { Term } from "../../db/schema/terms.js";
 import type { RoleImages } from "../../images/contract/role-images.js";
 import type { StoredMeta, WithResolvedMeta } from "../../meta/contract/bags.js";
 
-/** Public-safe author projection — query select narrows away email + auth columns. */
+/**
+ * Public-safe author projection — query select narrows away email + auth
+ * columns.
+ */
 export interface ResolvedAuthor {
   readonly id: number;
   readonly slug: string;
   readonly name: string | null;
   readonly avatarUrl: string | null;
   /**
-   * The author's images by role, as {@link ResolvedEntry.images}. The bag they
-   * come from does not travel with them: a role names the one thing about a
-   * user a public page is meant to render, where the rest of their meta is
-   * not public-safe.
+   * The author's images by role. The rest of their meta stays behind: a user's
+   * meta is not public-safe.
    */
   readonly images: RoleImages;
 }
 
-// A term plus its pre-resolved archive `url` (basePath-correct). `url` is null
-// for a private taxonomy or a nested term needing an ancestor-chain walk —
-// `<Link term>` then degrades to its children. Mirrors `ResolvedEntry.url`.
+/**
+ * `url` is null for a private taxonomy or a nested term needing an ancestor
+ * walk; `<Link term>` then degrades to its children.
+ */
 export interface ResolvedTerm extends WithResolvedMeta<Term> {
   readonly url: string | null;
   /** The meta JSON column, as {@link ResolvedEntry.storedMeta}. */
@@ -30,27 +32,22 @@ export interface ResolvedTerm extends WithResolvedMeta<Term> {
   readonly images: RoleImages;
 }
 
-// `content` stays loose so non-blocks serializers (TipTap, etc.) keep
-// working; `contentBlocks` is the narrowed `EntryContent` (null when
-// the stored JSON fails the shape check).
-//
-// `url` is null when an ancestor-chain DB walk is required — hierarchical
-// types with a non-null parentId await a follow-up batched resolver.
+/**
+ * `content` stays loose for non-blocks serializers; `contentBlocks` is null
+ * when the stored JSON fails the shape check. `url` is null where an
+ * ancestor-chain walk is needed.
+ */
 export interface ResolvedEntry extends WithResolvedMeta<Entry> {
   /**
-   * The meta JSON column as it sits in the row, beside the decoded and
-   * reference-hydrated `meta` a template reads. A rule predicate compares
-   * against this one: `whereMeta` is typed from the stored shape
-   * (`StoredMetaOf`), where a `.returns("date")` field is still its ISO string
-   * and a reference is still its id — the primitives `===` can land on, which
-   * a `Date` and a hydrated summary are not.
+   * The meta column as stored. Rule predicates compare against this: a date
+   * field is still its ISO string and a reference its id, primitives `===` can
+   * land on.
    */
   readonly storedMeta: StoredMeta;
   readonly contentBlocks: EntryContent | null;
   /**
-   * The entry's image for each role its type declares a field in — what a
-   * template asks for instead of guessing a meta key. Projected out of the
-   * hydrated `meta` beside it, so reading it costs no query.
+   * The entry's image for each role its type declares, projected from `meta`
+   * at no query cost.
    */
   readonly images: RoleImages;
   readonly terms: readonly ResolvedTerm[];
@@ -58,10 +55,10 @@ export interface ResolvedEntry extends WithResolvedMeta<Entry> {
   readonly url: string | null;
 }
 
-// Per-kind data shapes are generic over the entry projection so theme
-// authors can narrow `data.entry` to plugin-populated types (e.g.
-// `defineTemplate<EntryData<BlogPost>>`). Default to `ResolvedEntry`
-// — the framework's internal renderer always sees the default.
+/**
+ * Generic so a theme can narrow `data.entry` to plugin-populated types, e.g.
+ * `defineTemplate<EntryData<BlogPost>>`.
+ */
 export interface EntryData<TEntry extends ResolvedEntry = ResolvedEntry> {
   readonly kind: "entry";
   readonly entry: TEntry;
@@ -95,8 +92,9 @@ export interface TermArchiveData<
 }
 
 /**
- * Payload for an author archive (`/authors/{slug}`). Carries the resolved author
- * as the subject (like `TermArchiveData.term`) plus their published entries.
+ * Payload for an author archive (`/authors/{slug}`). Carries the resolved
+ * author as the subject (like `TermArchiveData.term`) plus their published
+ * entries.
  */
 export interface AuthorArchiveData<
   TEntry extends ResolvedEntry = ResolvedEntry,
@@ -135,36 +133,26 @@ export interface SearchData<TEntry extends ResolvedEntry = ResolvedEntry> {
 }
 
 /**
- * Base payload for a plugin-registered archive (`registerArchiveType`). The
- * `kind`/`name` discriminate it; a plugin extends this with its own fields
- * (entries, pagination, whatever the archive lists) and declares the extended
- * shape in `ArchiveTypeRegistry` so `forArchiveType(name)` types `data`. Core
- * only ever sees the base — the resolver and template come from the plugin.
+ * Base payload for a plugin archive. Extend it and declare the shape in
+ * `ArchiveTypeRegistry` so `forArchiveType(name)` types `data`.
  */
 export interface ArchiveTypeData {
   readonly kind: "archiveType";
   /** The registered archive-type name (`registerArchiveType(name, …)`). */
   readonly name: string;
   /**
-   * The two facts core cannot derive from the rest of the payload, which an
-   * archive that has them states here: the 1-based pagination index, and the
-   * query a visitor typed for an archive that answers one, the way core's own
-   * `/search` page does. `PageFacts` reports both, so a consumer classifies
-   * this archive by the same record it classifies every other page by.
-   *
-   * Facts, not directives — what follows from either is the consumer's to
-   * decide.
+   * Facts core cannot derive: the 1-based page index, and a visitor's typed
+   * query. `PageFacts` reports both so this archive is classified like every
+   * other page.
    */
   readonly page?: number;
   readonly query?: string;
 }
 
 /**
- * What a theme receives for a view (`registerView`): a per-visitor app page
- * that lists nothing. Core builds the envelope — the view's `name` and the
- * `params` its route captured — around the `data` the view's `resolve`
- * returned, so the plugin never restates either. Declare the data's shape in
- * `ViewRegistry` so `forView(name)` types it.
+ * What a theme receives for a view: core wraps the `data` its `resolve`
+ * returned with the `name` and route `params`. Declare the shape in
+ * `ViewRegistry`.
  */
 export interface ViewData<TData = unknown> {
   readonly kind: "view";
@@ -175,10 +163,9 @@ export interface ViewData<TData = unknown> {
 }
 
 /**
- * What a theme receives for an archive core listed — a plugin's own fields
- * plus the `entries` and `pagination` every built-in archive already hands
- * over, so a theme's pagination and entry components work on both unchanged.
- * Extend it, and declare the extension in `ArchiveTypeRegistry`.
+ * An archive core listed: a plugin's fields plus the `entries` and
+ * `pagination` built-in archives carry, so theme components work on both.
+ * Declare the extension in `ArchiveTypeRegistry`.
  */
 export interface ListingArchiveData<
   TEntry extends ResolvedEntry = ResolvedEntry,
@@ -197,9 +184,8 @@ export interface ErrorData {
   readonly request: Request;
   readonly hint?: string;
   /**
-   * Correlation id for a 5xx — the failing request's telemetry id, so a theme
-   * can print it and a user report maps back to the exact failure in the logs.
-   * Set only on the server-error path; a 404 leaves it undefined.
+   * Correlation id for a 5xx, the request's telemetry id, so a user report maps
+   * to the logs. Unset on a 404.
    */
   readonly errorId?: string;
 }

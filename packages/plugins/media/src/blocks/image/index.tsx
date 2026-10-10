@@ -13,9 +13,7 @@ interface MediaValue {
   readonly height: number | null;
 }
 
-// The media picker writes a { id, url, alt, width, height } snapshot. Read just
-// what render needs, tolerating a null/legacy value. A missing/null asset alt
-// projects to "" here (the picker stores alt as string | null).
+/** Tolerates a null or legacy value. */
 function normalizeMediaValue(raw: unknown): MediaValue | null {
   if (!raw || typeof raw !== "object") return null;
   const obj = raw as JsonObject;
@@ -94,10 +92,8 @@ export const imageBlock: BlockSpec = defineBlock({
         message: "High priority (load eagerly)",
       },
     },
-    // A visual crop anchor: click/drag a dot on the image preview. `sizes` and
-    // display `width` are deliberately not authored here — `sizes` is a
-    // dev-only responsive hint the renderer defaults sensibly, and width lives
-    // in the Styles tab's Size section (both would edit `node.style.width`).
+    // `sizes` and `width` are not authored here: the renderer defaults `sizes`,
+    // and width lives in the Styles tab.
     {
       name: "focalPoint",
       type: "focalPoint",
@@ -129,9 +125,8 @@ export const imageBlock: BlockSpec = defineBlock({
     const src = media?.url ?? rawSrc;
     const caption = typeof attrs.caption === "string" ? attrs.caption : "";
 
-    // Empty source: show a placeholder in the editor so the block stays visible
-    // and selectable; render nothing on the public page (an empty image block is
-    // an unfinished draft, not content).
+    // A placeholder keeps the block selectable in the editor; publicly an empty
+    // image block is an unfinished draft, not content.
     if (src === "") {
       if (!context.editing) return null;
       return (
@@ -177,8 +172,8 @@ export const imageBlock: BlockSpec = defineBlock({
             style={style}
           />
         ) : (
-          // Unmanaged/dimensionless source (external URL or SVG): render a plain
-          // img — no srcset, no intrinsic dimensions to assume.
+          // Unmanaged/dimensionless source (external URL or SVG): render a
+          // plain img — no srcset, no intrinsic dimensions to assume.
           <img
             src={src}
             alt={alt}

@@ -1,14 +1,3 @@
-/**
- * Sync filter hooks fired by `renderBlockTree` around every block render.
- *
- * Plugins decorate or replace the React element the walker is about to
- * render: `block:before_render` runs first, `block:after_render` second,
- * with the second receiving the first's return value.
- *
- * Augments `FilterRegistry` so `setupContext.addFilter("block:before_render", ...)`
- * is type-safe at plugin-authoring time.
- */
-
 import type { ReactNode } from "react";
 
 import type { BlockContext, BlockNode, BlockSpec } from "../blocks/index.js";
@@ -18,10 +7,12 @@ export interface BlockRenderHookContext {
   readonly context: BlockContext;
 }
 
-// Fired by the SSR dispatcher once per rejected loader. The hook is
-// observational only (filters return `void`); plugins typically log to
-// external observability and leave user-visible fallback to
-// `BlockSpec.errorFallback`.
+/**
+ * Fired by the SSR dispatcher once per rejected loader. The hook is
+ * observational only (filters return `void`); plugins typically log to
+ * external observability and leave user-visible fallback to
+ * `BlockSpec.errorFallback`.
+ */
 export interface BlockLoaderErrorContext {
   readonly spec: BlockSpec;
   readonly node: BlockNode;

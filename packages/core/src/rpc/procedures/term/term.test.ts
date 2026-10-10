@@ -7,8 +7,10 @@ import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { toRegisteredTermTaxonomy } from "../../../plugin/registry.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
-// "category" is the canonical hierarchical taxonomy in WP; used here as the
-// fixture because term RPC requires a registered taxonomy to operate.
+/**
+ * "category" is the canonical hierarchical taxonomy in WP; used here as the
+ * fixture because term RPC requires a registered taxonomy to operate.
+ */
 function taxonomyRegistry() {
   const registry = createPluginRegistry();
   registry.termTaxonomies.set(

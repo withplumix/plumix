@@ -7,13 +7,8 @@ import { messages } from "@plumix/plugin-forms/locales/en";
 import { SOURCE_LOCALE } from "./contract.js";
 
 /**
- * The source locale's compiled catalog, resolved through this package's
- * own `./locales/*` subpath the way core's admin bar does. It has to be
- * the compiled form, not the descriptors' own `message`: Lingui installs
- * the parser that would read a raw ICU string only when `NODE_ENV` is not
- * `"production"`, and both ends that render these — the worker and the
- * island — are built with that folded to `"production"`. Compiled, the
- * ICU is already an array and no parser ships at all.
+ * Compiled, not raw `message`: Lingui only installs its ICU parser outside
+ * production, and both worker and island build as production.
  */
 const source = setupI18n({
   locale: SOURCE_LOCALE,
@@ -33,12 +28,8 @@ function formatMessage(
 }
 
 /**
- * Every string this plugin shows a visitor, in one place.
- *
- * They render as authored English whatever the locale: a plugin has no
- * catalog at render time, so the public render path flattens a `Label` to
- * its source message (see `labelSourceText`). What the ids buy is that a
- * translator can reach them at all.
+ * Rendered as authored English whatever the locale: a plugin has no
+ * catalog at render time.
  */
 export const SUBMIT_LABEL: Label = {
   id: "plugin.forms.submit",
@@ -67,22 +58,15 @@ export const BACK_LABEL: Label = {
 };
 
 /**
- * What a visitor is told when a captcha did not clear: they got it wrong,
- * the challenge had already been spent, or the check could not be made at
- * all. One message for all three — none of them is the visitor's to tell
- * apart, and every one is answered by solving it again.
+ * One message for a wrong, spent or unverifiable challenge: each is
+ * answered by solving it again.
  */
 export const CAPTCHA_FAILED: Label = {
   id: "plugin.forms.error.captcha",
   message: "We could not confirm you are not a robot. Please try again.",
 };
 
-/**
- * The widget is drawn by a script, so a guarded form is the one place
- * this plugin's no-JavaScript path stops. Say so where the challenge
- * would have been, rather than leaving a visitor at a box that never
- * fills in and a submit button that will always be refused.
- */
+/** Shown where the widget would be, since a guarded form needs JavaScript. */
 export const CAPTCHA_NEEDS_JS: Label = {
   id: "plugin.forms.captcha.needs_js",
   message: "This form needs JavaScript enabled to check you are not a robot.",
@@ -94,7 +78,6 @@ export const UNREACHABLE: Label = {
   message: "Your submission could not be sent. Please try again.",
 };
 
-/** What a step nobody titled is called, in the indicator and its heading. */
 const STEP_POSITION: MessageDescriptor = {
   id: "plugin.forms.step.position",
   message: "Step {position} of {total}",
@@ -130,10 +113,8 @@ export const urlMessage = (label: string): string =>
   formatMessage(INVALID_URL, { label });
 
 /**
- * One message for all three bounds rather than three ids: a translator
- * seeing them apart cannot tell that they are the same sentence with a
- * different tail, and some languages inflect the whole clause on which
- * bound is present.
+ * One message for all bounds: some languages inflect the whole clause on
+ * which bound is present.
  */
 const OUT_OF_RANGE: MessageDescriptor = {
   id: "plugin.forms.error.range",
@@ -182,7 +163,6 @@ const TOO_MANY_ROWS: MessageDescriptor = {
 export const tooManyRowsMessage = (label: string, max: number): string =>
   formatMessage(TOO_MANY_ROWS, { label, count: max });
 
-/** The heading over one repeater row, numbered as the visitor sees it. */
 const ROW_LEGEND: MessageDescriptor = {
   id: "plugin.forms.repeater.rowLegend",
   message: "{label} {number}",
@@ -193,9 +173,8 @@ export const rowLegend = (label: string, index: number): string =>
   formatMessage(ROW_LEGEND, { label, number: index + 1 });
 
 /**
- * Authored whole rather than composed from `ROW_LEGEND`, so a translator
- * sees the sentence a screen reader will read out and can put the pieces
- * in whatever order the language wants.
+ * Authored whole, not composed from `ROW_LEGEND`, so a translator can order
+ * the pieces.
  */
 const REMOVE_ROW_ARIA: MessageDescriptor = {
   id: "plugin.forms.repeater.removeRow",

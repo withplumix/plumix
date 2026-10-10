@@ -13,20 +13,18 @@ export type ViewTransitionType =
   (typeof viewTransitionTypes)[keyof typeof viewTransitionTypes];
 
 /**
- * A `view-transition-name` for the element `key` identifies within `prefix`'s
- * group, e.g. `transitionName("post", entry.id)`; a number key names the same
- * element as its string form. The result is always one CSS `<custom-ident>`:
- * both parts are escaped, and the `_` between them keeps the name from ever
- * reading as a reserved word (`none`, `auto`, `match-element`, the CSS-wide
- * keywords), which the browser would drop silently. Pure and DOM-free, so
- * server and client produce the same name.
+ * The `_` separator keeps the name from reading as a reserved word, which the
+ * browser would drop silently. DOM-free, so server and client agree.
  */
 export function transitionName(prefix: string, key: string | number): string {
   return serializeIdentifier(`${prefix}_${String(key)}`);
 }
 
-// CSSOM "serialize an identifier" (https://drafts.csswg.org/cssom/#serialize-an-identifier),
-// written out because `CSS.escape` exists only in a browser.
+/**
+ * CSSOM "serialize an identifier"
+ * (https://drafts.csswg.org/cssom/#serialize-an-identifier), written out
+ * because `CSS.escape` exists only in a browser.
+ */
 function serializeIdentifier(value: string): string {
   let out = "";
   for (let index = 0; index < value.length; index++) {

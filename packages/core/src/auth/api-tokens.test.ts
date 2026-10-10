@@ -105,10 +105,8 @@ describe("validateApiToken", () => {
 
   test("returns null when the token doesn't carry the plumix prefix", async () => {
     const db = await createTestDb();
-    // Hash a random-looking string with a foreign prefix; even if its
-    // hash collided with a real row (it won't), we'd refuse to look it
-    // up. This protects against accidentally accepting a GitHub PAT
-    // (`ghp_…`) that someone pastes into the wrong env var.
+    // A foreign prefix is refused before lookup, so a GitHub PAT pasted into
+    // the wrong env var is never accepted.
     const result = await validateApiToken(db, "ghp_aaaaaaaaaaaaaaaaaaaa");
     expect(result).toBeNull();
   });

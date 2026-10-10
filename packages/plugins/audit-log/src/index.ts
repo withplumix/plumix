@@ -35,10 +35,8 @@ export type {
 export { DEFAULT_RETENTION, runRetentionPurge } from "./server/retention.js";
 export { sqlite } from "./server/storage-sqlite.js";
 
-// Declaration-merge contribution. Declared optional so consumers that
-// don't install the plugin can still write `ctx.audit?.log(...)` and
-// have it compile + no-op at runtime. The augmentation is picked up
-// automatically when any module imports from `@plumix/plugin-audit-log`.
+// Optional so `ctx.audit?.log(...)` compiles and no-ops where the plugin isn't
+// installed.
 declare module "plumix" {
   interface AppContextExtensions {
     readonly audit?: AuditExtension;
@@ -53,12 +51,8 @@ export interface AuditLogPluginOptions {
    */
   readonly storage?: AuditLogStorage;
   /**
-   * How long rows are kept. Defaults to `{ maxAgeDays: 90 }`. The
-   * plugin registers a scheduled task that deletes older rows, daily
-   * at 03:00 UTC unless `purgeAt` says otherwise. Pass
-   * `retention: false` to keep rows forever and register no task.
-   * `runRetentionPurge(ctx, ...)` is exported for running the purge
-   * from elsewhere, such as a one-off script.
+   * Defaults to `{ maxAgeDays: 90 }`, purged daily at 03:00 UTC unless
+   * `purgeAt` says otherwise. `false` keeps rows forever and registers no task.
    */
   readonly retention?: AuditLogRetentionConfig;
 }
@@ -67,58 +61,19 @@ const ADMIN_ENTRY_PATH = pluginAdminEntryPath("@plumix/plugin-audit-log");
 
 const AUDIT_LOG_READ_CAPABILITY = "audit_log:read";
 
-// Plain descriptor literals — plugin source runs server-side without
-// the Babel macro pipeline; the manifest payload is identical to a
-// `defineMessage(...)` call. Catalogs ship under #697.
+/**
+ * Plain descriptor literals — plugin source runs server-side without
+ * the Babel macro pipeline; the manifest payload is identical to a
+ * `defineMessage(...)` call. Catalogs ship under #697.
+ */
 const AUDIT_LABELS = {
   auditLog: { id: "plugin.auditLog.adminPage.title", message: "Audit log" },
   tools: { id: "core.adminNav.tools", message: "Tools" },
 } satisfies Record<string, Label>;
 
 /**
- * `@plumix/plugin-audit-log` — captures lifecycle events to a queryable
- * activity feed. v0.1 covers entry events; #179+ add user, term, and
- * settings hooks plus the public `ctx.audit.log()` API for third-party
- * plugins.
- *
- * Architectural seams:
- *
- * - **Storage** is pluggable via the `storage` option. The default
- *   `sqlite()` writes to `ctx.db` against the plugin's own Drizzle
- *   table; the schema is forwarded into `definePlugin({ schema })`, and
- *   the table's history ships in this package's `migrations/`.
- * - **Service** buffers per-request via a WeakMap keyed by AppContext
- *   and flushes once via `ctx.defer` (the runtime shim from #177).
- *   Multiple events from one RPC become one INSERT.
- * - **Hooks** subscribe to entry lifecycle events; each listener
- *   records against the AppContext its action hands it last.
- * - **RPC** `auditLog.list` is gated on the `audit_log:read`
- *   capability (admin-only by default); slice #180 adds filter +
- *   cursor pagination.
- * - **Public API** `ctx.audit.log(ctx, { event, subject, properties })`
- *   from #181 — third-party plugins emit their own events through
- *   the same buffered flush. The row is attributed to the user on the
- *   context passed in, which has to be an `AuthenticatedAppContext`,
- *   so frontend / anonymous events can't leak into the admin feed.
- *
- * Example — a comments plugin records moderation actions:
- *
- *     definePlugin("comments", {
- *       setup: (ctx) => {
- *         ctx.addAction("comment:approved", (comment, appCtx) => {
- *           // The action hands over the AppContext, which carries
- *           // `audit` when the audit-log plugin is also installed; the
- *           // optional chain makes this a no-op when it isn't. An action
- *           // can fire for a visitor, so narrow on the user first.
- *           if (!appCtx.user) return;
- *           appCtx.audit?.log({ ...appCtx, user: appCtx.user }, {
- *             event: "comment:approved",
- *             subject: { type: "comment", id: comment.id, label: comment.body.slice(0, 40) },
- *             properties: { postId: comment.postId },
- *           });
- *         });
- *       },
- *     });
+ * Records lifecycle events to an activity feed. A request's events are
+ * buffered and written in one insert after the response, via `ctx.defer`.
  */
 export function auditLog(options: AuditLogPluginOptions = {}) {
   const storage = options.storage ?? sqlite();

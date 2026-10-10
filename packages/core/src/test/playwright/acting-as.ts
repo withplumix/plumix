@@ -26,26 +26,10 @@ export interface ActingAsResult {
 }
 
 /**
- * Seed an authenticated user against a real worker-backed playground D1
- * and package the resulting session as a Playwright `storageState` so a
- * subsequent `browser.newContext({ storageState })` walks the admin
- * shell already logged in.
+ * Seed a user and session in the playground D1 and return it as a Playwright
+ * `storageState`. Skips the passkey ceremony, so call it only from test setup.
  *
- * Mirrors the vitest-side `harness.actingAs` (factory → `createSession`
- * → request with cookie), but stops at the storageState boundary so
- * Playwright owns the cookie injection. **Skips the WebAuthn / passkey
- * ceremony entirely** — the helper writes through the production
- * `createSession` code path (no auth bypass at the data layer), but the
- * UI affordance that a real user goes through is short-circuited. Use
- * only from `globalSetup` or test fixtures; never from production code.
- *
- * `userOrRole`: when a string, a fresh user is created via
- * `userFactory.transient({ db })` with that role. When a `User` object,
- * the existing user is reused but a fresh session is minted.
- *
- * @experimental Part of the worker-driven plugin e2e helpers landing in
- *   #251. Signature may shift as the pattern propagates to other
- *   plugins (#252-#256).
+ * @experimental
  */
 export async function actingAs(
   db: PlaygroundDb,

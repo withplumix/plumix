@@ -14,8 +14,10 @@ import { NAMED_TEMPLATE_META_KEY } from "../../../route/render/template-builders
 import { pooledEntryTypeRegistry } from "../../../test/pooled-entry-types.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
-// Register a `post` entry type carrying a selectable per-entry access space, so
-// the update handler validates a caller's `access` key against it.
+/**
+ * Register a `post` entry type carrying a selectable per-entry access space, so
+ * the update handler validates a caller's `access` key against it.
+ */
 function registerPostAccess(
   plugins: ReturnType<typeof createPluginRegistry>,
 ): void {
@@ -41,9 +43,11 @@ function registerPostAccess(
   );
 }
 
-// SEO meta box fixture used by the partial-write and null-clear tests.
-// Registers two fields on the `post` entry type so each test can flip
-// one without disturbing the other.
+/**
+ * SEO meta box fixture used by the partial-write and null-clear tests.
+ * Registers two fields on the `post` entry type so each test can flip
+ * one without disturbing the other.
+ */
 function registerSeoMetaBox(
   plugins: ReturnType<typeof createPluginRegistry>,
 ): void {
@@ -89,8 +93,10 @@ function registerRequiredSubtitle(
   });
 }
 
-// `video_url` is required only while `layout` is "video" — the smallest shape
-// in which one key's value decides whether another key is required.
+/**
+ * `video_url` is required only while `layout` is "video" — the smallest shape
+ * in which one key's value decides whether another key is required.
+ */
 function registerVideoLayout(
   plugins: ReturnType<typeof createPluginRegistry>,
 ): void {
@@ -594,10 +600,9 @@ describe("entry.update", () => {
     });
   });
 
-  // A strict edit validates its own keys so that a co-author's older drift
-  // cannot block it. That reasoning covers drift that already exists, not drift
-  // the edit creates: switching a driver on makes its dependent required, and
-  // leaving the dependent unset is this edit's doing.
+  // Strict edits validate only their own keys so older drift can't block them,
+  // but switching a driver on makes its dependent required: that drift is this
+  // edit's.
   test("meta: a live edit that switches a required field visible without it is rejected", async () => {
     const plugins = createPluginRegistry();
     registerVideoLayout(plugins);
@@ -653,10 +658,8 @@ describe("entry.update", () => {
     expect(updated.meta.video_url).toBe("https://example.com/v");
   });
 
-  // Visibility is judged against the row as it will be, so a field the stored
-  // driver hides is not held to a rule it is not subject to. A hidden field is
-  // dropped from the write rather than validated, so its stored value stays —
-  // the same thing the publish gate does with one.
+  // Visibility is judged against the row as it will be, so a hidden field is
+  // dropped from the write rather than validated, as the publish gate does.
   test("meta: an edit to a field the stored driver hides is accepted and leaves it alone", async () => {
     const plugins = createPluginRegistry();
     registerVideoLayout(plugins);
@@ -693,9 +696,8 @@ describe("entry.update", () => {
     });
   });
 
-  // The reason the patch-only rule exists: drift the edit did not cause and
-  // does not change the conditions of must not block it — including an edit
-  // that re-sends a driver at the value it already holds.
+  // Drift the edit neither caused nor re-conditioned must not block it, even
+  // when the edit re-sends a driver at its current value.
   test("meta: an edit that does not change a driver is not blocked by its dependent's older drift", async () => {
     const plugins = createPluginRegistry();
     registerVideoLayout(plugins);
@@ -716,9 +718,8 @@ describe("entry.update", () => {
     expect(updated.title).toBe("fixed a typo");
   });
 
-  // A default is written when the entity is created, not filled on read
-  // (ADR 0026). A row that predates the default lacks the driver, and
-  // conditions judge what is stored, as the page and search do.
+  // Defaults are written at creation, not filled on read, so a row predating
+  // the default lacks the driver, and conditions judge what is stored.
   test("meta: a driver storage lacks is not stood in for by its default", async () => {
     const plugins = createPluginRegistry();
     plugins.entryMetaBoxes.set("layout-box", {
@@ -759,9 +760,8 @@ describe("entry.update", () => {
     expect(updated.meta).toEqual({});
   });
 
-  // The publish gate judges storage, and a default on an existing row is not
-  // storage — so a required field resting on its default is still missing.
-  // Switching it visible has to be held to the same rule the gate will apply.
+  // The publish gate judges storage, and a default on an existing row isn't
+  // storage, so a required field resting on its default is still missing.
   test("meta: a required field the edit switches visible is not satisfied by its default", async () => {
     const plugins = createPluginRegistry();
     plugins.entryMetaBoxes.set("layout-box", {
@@ -1018,9 +1018,8 @@ describe("entry.update", () => {
     expect(updated.meta.note).toBe("hi");
   });
 
-  // Conditions can form a cycle — an either/or pair hides each other — and then
-  // no set of dropped writes agrees with the row it leaves. Nothing is dropped:
-  // every write is validated and stored rather than lost without an error.
+  // Conditions can form a cycle where no set of dropped writes agrees with the
+  // result, so nothing is dropped; every write is validated and stored.
   test("meta: an either/or pair written together is stored, not dropped", async () => {
     const plugins = createPluginRegistry();
     plugins.entryMetaBoxes.set("either-box", {
@@ -1062,7 +1061,8 @@ describe("entry.update", () => {
   });
 
   // A driver whose `.sanitize()` yields nothing is not written, so its stored
-  // value is what decides the fields it drives — including one this edit clears.
+  // value is what decides the fields it drives — including one this edit
+  // clears.
   test("meta: a driver the pipeline leaves unwritten is judged by its stored value", async () => {
     const plugins = createPluginRegistry();
     plugins.entryMetaBoxes.set("layout-box", {
@@ -1345,10 +1345,8 @@ describe("entry.update", () => {
     });
   });
 
-  // Round-trip implies the v2 branch was taken: the v1 validator would
-  // reject this envelope at the root (`Content root must be a Tiptap doc
-  // node`), so a successful update + content match proves the dispatch in
-  // `assertContentValidAgainstRegistries`.
+  // The v1 validator would reject this envelope at the root, so a successful
+  // round-trip proves the v2 dispatch was taken.
   test("persists a plumix.v2 content envelope through entry.update", async () => {
     const h = await createRpcHarness({ authAs: "author" });
     const own = await h.factory.draft.create({

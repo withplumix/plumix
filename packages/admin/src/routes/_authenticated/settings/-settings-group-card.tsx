@@ -45,8 +45,10 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-// Split out of `$page.tsx` so a test can mount one group's card without the
-// file-based route tree.
+/**
+ * Split out of `$page.tsx` so a test can mount one group's card without the
+ * file-based route tree.
+ */
 export function SettingsGroupCard({
   group,
 }: {
@@ -65,11 +67,6 @@ export function SettingsGroupCard({
     orpc.settings.get.queryOptions({ input: { group: group.name } }),
   );
 
-  // Initial form state: what `settings.get` returns — the stored values, or
-  // the fields' starting values while the group has never been saved.
-  // Values are `unknown` both ways — `MetaBoxField` renders the right input
-  // for each field's `inputType` and hands back the coerced value through
-  // rhf's Controller.
   const form = useForm({
     defaultValues: seedFromMetaBoxes([group], stored),
   });

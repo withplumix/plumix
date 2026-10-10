@@ -26,10 +26,8 @@ import {
   validateAndPromoteMetaBag,
 } from "./core.js";
 
-// The write path funnels every value through the field pipeline and
-// aggregates `{ path, message }` rejections across the whole patch into
-// one `MetaValidationError` — the RPC layer ships them to the admin
-// form, which maps each onto the addressed input.
+// The RPC layer ships the aggregated `{ path, message }` rejections to the
+// admin form, which maps each onto its input.
 describe("sanitizeMetaInput (constraint enforcement)", () => {
   const fields = new Map<string, MetaBoxField>([
     ["subtitle", text("subtitle").maxLength(5).build()],
@@ -74,10 +72,8 @@ describe("sanitizeMetaInput (constraint enforcement)", () => {
   });
 
   test("a sanitize callback returning undefined writes nothing for that key", async () => {
-    // Nothing to persist: the value is neither a deletion request (the input
-    // was a real value) nor storable. The key is left alone rather than
-    // upserted as `undefined`, which would reach the driver as an unbindable
-    // `json_set` parameter.
+    // Upserting `undefined` would reach the driver as an unbindable `json_set`
+    // parameter, so the key is left alone.
     const blanked = new Map<string, MetaBoxField>([
       [
         "subtitle",
@@ -100,9 +96,8 @@ describe("sanitizeMetaInput (constraint enforcement)", () => {
   });
 
   test("a deletion (null/undefined) of an unregistered key is a harmless no-op", async () => {
-    // A foreign key the field system doesn't own (e.g. `featuredImage` written
-    // by another plugin) must not fail the whole write when it arrives as a
-    // deletion — dropping something untracked can't corrupt registered state.
+    // A key the field system doesn't own, e.g. another plugin's
+    // `featuredImage`; dropping it can't corrupt registered state.
     const patch = await sanitizeMetaInput(findField, {
       subtitle: "ok",
       ghost: null,
@@ -113,11 +108,8 @@ describe("sanitizeMetaInput (constraint enforcement)", () => {
   });
 });
 
-// Publish promotes a whole draft bag onto the live row. Draft autosaves
-// are lenient, so the bag may hold not-yet-valid content — this gate
-// re-runs it in strict mode against the full field list (so a required
-// field ABSENT from the bag is caught, not just an empty one), throwing
-// the same aggregated `MetaValidationError` the write path uses.
+// Draft autosaves are lenient, so publish re-runs the bag strictly against the
+// full field list: a required field absent from the bag is caught.
 describe("validateAndPromoteMetaBag (publish strict gate)", () => {
   const fields: readonly MetaBoxField[] = [
     text("heading").required().build(),
@@ -191,9 +183,8 @@ describe("validateAndPromoteMetaBag (publish strict gate)", () => {
     expect(promoted.heading).toBe("Hi");
   });
 
-  // A submitted `null` is how a caller clears a field, so the pipeline reads it
-  // as a deletion. Stored under a key nobody submitted it is just a value, and
-  // promoting it as a deletion would drop a key on an unrelated publish.
+  // A submitted `null` clears a field; a stored one under an unsubmitted key is
+  // just a value, and deleting it would drop a key on an unrelated publish.
   test("promotes a stored null under an unsubmitted key instead of deleting it", async () => {
     const optional: readonly MetaBoxField[] = [
       text("heading").required().build(),
@@ -285,10 +276,8 @@ describe("MetaSanitizationError", () => {
   });
 });
 
-// Reference storage is plain ids, but bags written before the
-// write-time snapshot machinery was removed may still hold
-// `{ id, ... }` objects. Reads yield the id transparently; the
-// entity's next save persists the plain form.
+// Older bags may still hold `{ id, ... }` reference objects. Reads yield the
+// id; the entity's next save persists the plain form.
 describe("decodeMetaBag (legacy reference self-heal)", () => {
   const heroField = {
     key: "hero",
@@ -362,10 +351,8 @@ describe("decodeMetaBag (scalars read as stored)", () => {
   } as MetaBoxField;
   const titleScope = metaScope([titleField]);
 
-  // An array case has to be wrapped in its own row: `test.each` spreads a bare
-  // array element across parameters, which would quietly test `"a"` instead.
-  // `toBe` is the claim the block title makes — the decoded bag hands back the
-  // stored value itself, not an equal copy.
+  // A bare array row would be spread across parameters by `test.each`. `toBe`:
+  // the decoded bag hands back the stored value itself, not a copy.
   test.each([[42], [{ a: 1 }], [["a", "b"]], [null]])(
     "reads a stored %o under a string field as itself",
     (stored) => {
@@ -425,9 +412,8 @@ describe("decodeMetaBag (scalars read as stored)", () => {
     expect(decodeMetaBag(flagScope, stored).flag).toBe(true);
   });
 
-  // The same bargain for the other two scalars: the decode stopped widening,
-  // so what keeps a field reading as its declared type is that the write
-  // settled it. Both round-trips go through the pipeline, not a raw bag.
+  // The decode doesn't widen, so the write settling it is what keeps a field
+  // reading as its declared type.
   test("a number written under a string field stores and reads back as text", async () => {
     const patch = await sanitizeMetaInput(() => titleField, { title: 42 });
     expect(patch?.upserts.get("title")).toBe("42");
@@ -490,11 +476,8 @@ describe('decodeMetaBag (.returns("date") projection)', () => {
   });
 });
 
-// The admin form reads decoded meta and writes the untouched bag back
-// on save — with `.returns("date")` that means a `Date` instance can
-// arrive on the write side. Temporal fields accept it and store the
-// field's ISO shape from UTC components, so read-projected values
-// round-trip without corruption on any deployment timezone.
+// The admin form writes the decoded bag back on save, so a `Date` can arrive;
+// temporal fields store its UTC ISO shape so values round-trip in any timezone.
 describe("sanitizeMetaInput (Date acceptance on temporal fields)", () => {
   const fields = new Map<string, MetaBoxField>([
     ["publishedOn", date("publishedOn").build()],
@@ -546,9 +529,8 @@ describe("sanitizeMetaInput (Date acceptance on temporal fields)", () => {
   });
 });
 
-// A field default is written when the entity is created (ADR 0026), so the
-// decoder reads storage alone: a key storage lacks reads as absent, at any
-// depth, whatever its field declares.
+// A field default is written at creation, so the decoder reads storage alone: a
+// missing key reads as absent at any depth.
 describe("decodeMetaBag (.default() is not a read fallback)", () => {
   const fields = [
     text("tone").default("warm").build(),
@@ -603,12 +585,10 @@ describe("decodeMetaBag (.default() is not a read fallback)", () => {
   });
 });
 
-// The other half of making the two bags agree. #2426 and #2441 made every
-// reader literal, which is only honest while the row holds what its field
-// declared. Settling is what makes that true of the data rather than of the
-// decode, so `StoredMetaOf` and `MetaOf` describe the same value (#2440).
-// What a settle hands a meta writer, flattened so a test can compare it: the
-// settled bag, and only the top-level keys the patch will write.
+/**
+ * What a settle hands a meta writer, flattened for comparison: the settled bag
+ * and only the top-level keys the patch writes.
+ */
 function settle(scope: ReturnType<typeof metaScope>, bag: JsonObject | null) {
   const settled = settleStoredMeta(scope, bag);
   return {

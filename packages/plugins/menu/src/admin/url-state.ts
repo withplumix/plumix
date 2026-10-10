@@ -1,8 +1,5 @@
-// Menu admin internal state lives in `?menu=<slug>` and `?tab=<id>`
-// query params (matches WordPress's `wp-admin/nav-menus.php` model
-// and dodges `:param` paths in `registerAdminPage`). Manipulated via
-// `history.replaceState` so React Router upstream of the plugin
-// doesn't get involved.
+// State lives in query params, not `:param` paths `registerAdminPage` can't
+// take, and uses `history.replaceState` to keep the upstream router out.
 
 export type TabId = "edit" | "locations";
 

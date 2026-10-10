@@ -1,11 +1,5 @@
-// Deliberately no `"use client"` directive. The directive marks an
-// *island* — a component the build gives its own chunk and a server-side
-// shim that renders a `<plumix-island>` in its place — and every export of
-// a module carrying one is replaced by that shim during the SSR pass. A
-// hook shimmed into a component returns a React element, so the theme
-// island calling it would render nothing it asked for. The directive
-// belongs on the theme's own component, which imports this and is the
-// thing that hydrates.
+// No `"use client"`: SSR replaces every export of such a module with an island
+// shim, so a hook would return an element. Themes mark their own component.
 import { useCallback, useRef, useState } from "react";
 import { labelSourceText } from "plumix/i18n";
 
@@ -27,11 +21,6 @@ export interface CommentDraft {
   readonly parentId?: number | null;
 }
 
-/**
- * What a theme rendering its own comment controls gets back. Everything
- * the form needs and nothing about how it looks: no markup, no stylesheet,
- * no class names — the developer's own React is the whole of the form.
- */
 export interface PlumixCommentFormState {
   /**
    * Every refusal the last submit came back with. One naming no field is
@@ -41,9 +30,8 @@ export interface PlumixCommentFormState {
   /** True from the moment a submit leaves until its answer lands. */
   readonly submitting: boolean;
   /**
-   * How the last accepted comment was filed, or null before one was. A
-   * comment that is not `approved` is not in the thread yet, which is what
-   * a theme says instead of leaving the visitor looking for it.
+   * How the last accepted comment was filed, or null before one was. Anything
+   * but `approved` isn't in the thread yet.
    */
   readonly status: CommentStatus | null;
   /**
@@ -53,23 +41,15 @@ export interface PlumixCommentFormState {
    */
   errorFor(field: string): string | undefined;
   /**
-   * Send the comment. It goes to the same endpoint the rendered form posts
-   * to, so a comment submitted from a theme's own controls meets the
-   * honeypot, the rate limit, the trust policy and the `comment:moderate`
-   * chain exactly as one submitted from the plugin's markup does.
+   * Posts to the rendered form's endpoint, so the same rate limit, trust policy
+   * and `comment:moderate` chain apply.
    */
   submit(draft: CommentDraft): Promise<CommentStatus | null>;
 }
 
 /**
- * A comment form, without the plugin's rendering of it.
- *
- *     const form = usePlumixCommentForm({ entryId: props.entryId });
- *
- * The honeypot is a field in markup this hook does not render, so a theme
- * driving its own controls is met by the rate limit and the trust policy
- * rather than by the trap — which is the trade of writing the markup
- * yourself, and the reason `PlumixCommentForm` exists.
+ * The honeypot lives in markup this hook doesn't render, so a theme's own
+ * controls are guarded only by the rate limit and trust policy.
  */
 export function usePlumixCommentForm(options: {
   readonly entryId: number;
@@ -84,11 +64,8 @@ export function usePlumixCommentForm(options: {
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState<CommentStatus | null>(null);
 
-  // A ref rather than the `submitting` state: a second press landing in
-  // the same tick reads the state the first has not re-rendered yet, and
-  // the cost of letting it through is two rows for one comment. A theme
-  // is handed `submitting` to disable its own control with; nothing makes
-  // it, so the guard is the hook's.
+  // A ref, not `submitting` state: a second press in the same tick reads stale
+  // state and would insert two rows. Themes may not disable their control.
   const inFlight = useRef(false);
 
   const submit = useCallback(
@@ -128,11 +105,6 @@ export function usePlumixCommentForm(options: {
   return { errors, submitting, status, errorFor, submit };
 }
 
-/**
- * What a theme loading older comments gets back: the comments, and
- * whether there are more. The markup is the theme's, and so is the first
- * page, which the `comments` template dep already rendered.
- */
 export interface PlumixCommentThreadState {
   /**
    * Every root comment this hook has loaded, oldest page last, each with
@@ -153,17 +125,8 @@ export interface PlumixCommentThreadState {
 }
 
 /**
- * The older root comments of a thread, without the rendering of them.
- *
- *     const thread = usePlumixCommentThread({
- *       entryId: props.entryId,
- *       cursor: props.cursor,
- *     });
- *
- * `cursor` is the `nextCursor` of the thread the template rendered, so
- * the first press loads the page after it. Every comment carries
- * `createdAt` as a `Date`, as it does server-side, so one item component
- * renders both.
+ * `cursor` is the rendered thread's `nextCursor`. `createdAt` arrives as a
+ * `Date`, as server-side, so one item component renders both.
  */
 export function usePlumixCommentThread(options: {
   readonly entryId: number;

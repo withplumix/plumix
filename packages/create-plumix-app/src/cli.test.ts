@@ -31,8 +31,10 @@ function captureIO(): CapturedIO {
   return { io, stdout, stderr };
 }
 
-// A runner that spawns nothing, so tests never actually install or init git,
-// plus a fixed user agent so package-manager detection is deterministic.
+/**
+ * A runner that spawns nothing, so tests never actually install or init git,
+ * plus a fixed user agent so package-manager detection is deterministic.
+ */
 const noopRunner: CommandRunner = { run: () => Promise.resolve({ ok: true }) };
 const run = (argv: readonly string[], io: CliIO): Promise<number> =>
   runCli(argv, io, { runner: noopRunner, userAgent: "pnpm/8.0.0 npm/? node" });

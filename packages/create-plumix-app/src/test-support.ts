@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-// packages/create-plumix-app/src → repo root is three levels up.
+/** packages/create-plumix-app/src → repo root is three levels up. */
 export const REPO_ROOT = join(
   new URL(".", import.meta.url).pathname,
   "..",

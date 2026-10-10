@@ -23,8 +23,10 @@ import { renderBlockTree } from "../render-block-tree.js";
 import { serializeRenderEnv } from "../render-env.js";
 import { RendererError } from "./errors.js";
 
-// `blocks/` sits in the foundation layer, below `auth/` and `route/` — these
-// mirror `AuthenticatedUser` / `ResolvedEntity` structurally.
+/**
+ * `blocks/` sits in the foundation layer, below `auth/` and `route/` — these
+ * mirror `AuthenticatedUser` / `ResolvedEntity` structurally.
+ */
 export interface RendererUser {
   readonly id: number;
   readonly email: string;
@@ -35,8 +37,10 @@ export interface RendererUser {
   readonly meta: JsonObject;
 }
 
-// Mirrors core's `AuthMethodsSummary` structurally — blocks sits below core in
-// the build graph and can't import it.
+/**
+ * Mirrors core's `AuthMethodsSummary` structurally — blocks sits below core in
+ * the build graph and can't import it.
+ */
 export interface RendererOAuthProvider {
   readonly key: string;
   readonly label: string;
@@ -58,7 +62,9 @@ export type PlumixRenderMode = "live" | "preview" | "edit";
 
 export interface PlumixContextValue {
   readonly registry: BlockRegistry;
-  /** Render mode; defaults to `"live"`. `edit`/`preview` drive the editor hooks. */
+  /**
+   * Render mode; defaults to `"live"`. `edit`/`preview` drive the editor hooks.
+   */
   readonly mode?: PlumixRenderMode;
   readonly tokens?: ThemeTokens;
   /** Theme breakpoints feeding the style emitter's @media maxima. */
@@ -81,9 +87,15 @@ export interface PlumixContextValue {
   readonly siteSettings?: SiteSettings;
   /** Subdirectory prefix for internal links; `""` for a root deployment. */
   readonly basePath?: string;
-  /** Builds optimized image URLs (the `imageDelivery` transform); absent = no optimization. */
+  /**
+   * Builds optimized image URLs (the `imageDelivery` transform); absent = no
+   * optimization.
+   */
   readonly imageResolver?: ImageResolver;
-  /** Remote hosts `<Image>` is allowed to optimize; same-origin is always allowed. */
+  /**
+   * Remote hosts `<Image>` is allowed to optimize; same-origin is always
+   * allowed.
+   */
   readonly imageRemotePatterns?: readonly RemotePattern[];
   /** Bridge into the framework's `block:before_render` / `block:after_render`
    *  filters — populated by core with a closure over its request-scoped
@@ -113,8 +125,10 @@ export function PlumixProvider({
   );
 }
 
-// The one place a context becomes walker options, so a render input added to
-// the context reaches the server render and the editor canvas alike.
+/**
+ * The one place a context becomes walker options, so a render input added to
+ * the context reaches the server render and the editor canvas alike.
+ */
 function renderOptions(ctx: PlumixContextValue): RenderBlockTreeOptions {
   return {
     breakpoints: ctx.breakpoints,
@@ -157,12 +171,9 @@ export function BlockRenderer({
   const htmlAllowlist = useHtmlAllowlist();
   const tree = <BlockTree blocks={content.blocks} />;
   if (ctx.mode !== "edit") return tree;
-  // Edit mode: wrap the content in a mount root the injected runtime renders
-  // into, and embed the tree + the SSR-resolved loader data so the edit runtime
-  // seeds both without a round-trip — blocks open with real data and keep it
-  // across edits (loaders re-run only via a scoped refresh), plus the render
-  // env the runtime has no other way to learn. `<` is escaped so authored
-  // content can't break out of the JSON <script>.
+  // Embedded so the edit runtime seeds tree and loader data without a
+  // round-trip.
+  // `<` is escaped so authored content can't break out of the JSON <script>.
   return (
     <div data-plumix-content-root="">
       <script

@@ -10,17 +10,20 @@ import {
   THEMES,
 } from "./subjects.js";
 
-// The images are committed, so where they were rendered has to be the pinned
-// container and not whatever machine ran the command. Checked here rather than
-// in the config, which the e2e project shares.
+// The images are committed, so they must come from the pinned container.
+// Checked here because the config is shared with the e2e project.
 assertCaptureEndpoint();
 
-// `ThemeProvider`'s storage key. Pinning it beats driving the theme menu, which
-// would put a menu in frame and a transition under the capture.
+/**
+ * `ThemeProvider`'s storage key. Pinning it beats driving the theme menu, which
+ * would put a menu in frame and a transition under the capture.
+ */
 const THEME_STORAGE_KEY = "plumix-admin-theme";
 
-// A frame that has not appeared by now is a moved test id, not a slow one — the
-// subject already waited for its own content.
+/**
+ * A frame that has not appeared by now is a moved test id, not a slow one — the
+ * subject already waited for its own content.
+ */
 const FRAME_TIMEOUT = 5_000;
 
 async function pinTheme(page: Page, theme: Theme): Promise<void> {
@@ -43,10 +46,8 @@ for (const subject of SCREENSHOT_SUBJECTS) {
 
       await subject.open(page);
 
-      // `ThemeProvider` applies the class from an effect, so this is both the
-      // gate against capturing mid-flip and the only thing that would notice if
-      // the admin stopped reading that storage key — without it a renamed key
-      // yields a light image in the dark file, silently.
+      // `ThemeProvider` applies the class from an effect, so this also gates
+      // against capturing mid-flip.
       await expect(page.locator("html")).toHaveClass(
         new RegExp(`(^|\\s)${theme}(\\s|$)`),
       );

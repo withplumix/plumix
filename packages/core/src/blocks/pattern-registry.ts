@@ -7,13 +7,9 @@ import { blockSlotKeys } from "./block-slots.js";
 import { isBlockNodeArray } from "./render-block-tree.js";
 
 /**
- * Augmentable registry mapping block name → attrs shape. Plugins and
- * themes extend it via `declare module "plumix"` so the `block()`
- * helper can narrow attrs at compile time for known block names.
- *
- * Unknown names fall back to `JsonObject` — see `AttrsFor` below — so call
- * sites with names the registry hasn't seen still compile. An augmentation's
- * value type has to be JSON-assignable.
+ * Augment via `declare module "plumix"` to narrow `block()` attrs. Unknown
+ * names fall back to `JsonObject`; an augmentation's value type must be
+ * JSON-assignable.
  *
  * ```ts
  * declare module "plumix" {
@@ -27,9 +23,7 @@ import { isBlockNodeArray } from "./render-block-tree.js";
 export interface BlockTypeRegistry {}
 
 /**
- * Augmentable registry of pattern category slugs. The 8 default
- * categories ship as the seed; plugins / themes augment via
- * `declare module "plumix"` to add their own.
+ * Augment via `declare module "plumix"` to add categories.
  *
  * ```ts
  * declare module "plumix" {
@@ -68,22 +62,30 @@ export interface BlockPattern {
   readonly title: Label;
   readonly category?: keyof PatternCategoryRegistry;
   readonly keywords?: readonly Label[];
-  // Static preview override. When set, the inserter renders an <img>
-  // at the declared dimensions instead of live-rendering `content`.
+  /**
+   * Static preview override. When set, the inserter renders an <img>
+   * at the declared dimensions instead of live-rendering `content`.
+   */
   readonly preview?: PatternPreview;
-  // Marks the pattern as eligible for the starter modal when the
-  // matching entry type is being authored from scratch.
+  /**
+   * Marks the pattern as eligible for the starter modal when the
+   * matching entry type is being authored from scratch.
+   */
   readonly target?: PatternTarget;
   readonly entryTypes?: readonly string[];
-  // Lower numbers float to the top of the starter modal; ties break
-  // alphabetically by name.
+  /**
+   * Lower numbers float to the top of the starter modal; ties break
+   * alphabetically by name.
+   */
   readonly priority?: number;
   readonly content: readonly BlockNode[];
 }
 
-// `block()` writes a blank placeholder ID; `assignPatternIds` numbers nodes
-// `p1, p2, ...` per pattern body so preview React keys are stable. Inserting
-// rewrites them.
+/**
+ * `block()` writes a blank placeholder ID; `assignPatternIds` numbers nodes
+ * `p1, p2, ...` per pattern body so preview React keys are stable. Inserting
+ * rewrites them.
+ */
 const PLACEHOLDER_ID = "";
 
 export function definePattern(spec: BlockPattern): BlockPattern {
@@ -107,10 +109,8 @@ export function block<TName extends string>(
 }
 
 /**
- * Number every blank id in a pattern body `p1, p2, ...` in document order,
- * descending into the slots `blocks` declares on each node. An id the author
- * wrote is kept. Run where the block registry is known, which a pattern's
- * definition is not.
+ * Ids the author wrote are kept. Run where the block registry is known, which
+ * a pattern's definition is not.
  */
 export function assignPatternIds(
   nodes: readonly BlockNode[],

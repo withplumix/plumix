@@ -31,18 +31,12 @@ export function buildEditorShortcodes(
 }
 
 interface BootEditorOptions {
-  /** Theme + plugin block specs. */
   readonly blocks?: readonly BlockSpec[];
-  /** Plugin then theme shortcode specs. */
+  /** Plugin specs first, then theme. */
   readonly shortcodes?: readonly ShortcodeSpec[];
 }
 
-/**
- * Boots the editor canvas in the iframe page. Called by the SSR-injected
- * editor entry, which passes the site's theme + plugin block and shortcode
- * specs (recovered by the vite plugin from config source). No-ops outside the
- * browser.
- */
+/** No-ops outside the browser. */
 export function bootEditor({
   blocks,
   shortcodes,

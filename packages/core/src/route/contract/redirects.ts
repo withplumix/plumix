@@ -12,10 +12,8 @@ export type RedirectTarget =
       readonly to: string;
       readonly status?: RedirectStatus;
       /**
-       * Append the request's query string to `to` (unless `to` carries its own
-       * `?…`). Defaults to `true` — the migration-friendly default, matching a
-       * CDN "preserve query string" toggle. Set `false` to redirect to exactly
-       * `to`.
+       * Append the request's query string to `to` unless `to` has its own.
+       * Defaults to `true`, like a CDN "preserve query string" toggle.
        */
       readonly preserveQuery?: boolean;
     }

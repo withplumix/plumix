@@ -14,11 +14,7 @@ export interface SeoRouterOptions {
   readonly entryTypes: readonly string[];
 }
 
-/**
- * The plugin's admin surface: one procedure, answering what the entry being
- * edited will look like in a search result. Read-only — every answer an author
- * can change is a meta field on the same box, saved with the entry.
- */
+/** Read-only: every answer an author can change is a meta field on the box. */
 export function createSeoRouter(options: SeoRouterOptions) {
   const preview = base
     .use(authenticated)

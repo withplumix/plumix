@@ -51,10 +51,8 @@ describe("core/rich-text walker render", () => {
     expect(html).toContain("<p>hi</p>");
   });
 
-  // Only a string body is authored HTML; everything else takes the empty
-  // fallback. Driven through `render` rather than the walker: `BlockNode.attrs`
-  // is JSON, so no tree can express the element case. That case was once routed
-  // past the sanitiser instead — #1895 removed the branch.
+  // Driven through `render` rather than the walker: `BlockNode.attrs` is JSON,
+  // so no tree can express the element case.
   test.each([
     ["a React element", <span>unsanitised</span>],
     ["a number", 42],

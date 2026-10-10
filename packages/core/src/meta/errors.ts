@@ -2,10 +2,8 @@ type MetaReferenceErrorCode =
   "scope_not_serializable" | "batch_size_exceeded" | "meta_key_forbidden_chars";
 
 /**
- * Reference-resolution invariant violated while batching meta lookups: a
- * scope that won't `JSON.stringify`, an aggregated batch past the hard cap,
- * or a meta key carrying characters forbidden in a JSON path. Named-error
- * convention (#232).
+ * Thrown for an unserializable scope, a batch past the hard cap, or a meta key
+ * with characters forbidden in a JSON path.
  */
 export class MetaReferenceError extends Error {
   static {

@@ -6,10 +6,8 @@ import { parseSync } from "vite";
 // declares no dependency on it.
 
 /**
- * Parse `source`, choosing JSX/TS syntax from `filename`'s extension — which is
- * why callers pass the real path: a syntax error yields an empty program, so a
- * `.ts` file read as TSX would scan as containing nothing. It never throws;
- * Vite's own transform is what reports the error.
+ * Never throws: a syntax error yields an empty program, so pass the real
+ * filename or a `.ts` file read as TSX scans as empty.
  */
 export function parseModule(source: string, filename: string): ESTree.Program {
   return parseSync(filename, source).program;

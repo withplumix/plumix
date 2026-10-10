@@ -2,14 +2,7 @@ import type { Db } from "../../context/app-context.js";
 import { and, eq } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 
-/**
- * Cancel any outstanding email-change verification for a user. The
- * caller (RPC procedure) decides whether self or admin can invoke.
- *
- * Returns the count of deleted rows so the UI can render "no
- * pending request" vs "cancelled". Idempotent — calling on a user
- * with no pending request returns 0.
- */
+/** Performs no authorization; the caller decides who may cancel. */
 export async function cancelEmailChange(
   db: Db,
   input: { userId: number },

@@ -5,11 +5,10 @@ import { actingAs, openPlaygroundDb } from "plumix/test/playwright";
 
 import { submissionFactory } from "../src/test/factories.js";
 
-// All e2e seeding happens here — once, in the quiet window after the
-// worker boots but before any spec drives it. The specs never write to
-// the database: they submit the form the seeded page carries, and the
-// inbox spec moves the submissions seeded below, reading their ids back
-// from e2e-fixtures.json.
+/**
+ * All seeding happens here, before any spec runs; specs never write to the
+ * database.
+ */
 export default async function globalSetup(): Promise<void> {
   const db = await openPlaygroundDb({
     cwd: resolve(process.cwd(), "playground"),

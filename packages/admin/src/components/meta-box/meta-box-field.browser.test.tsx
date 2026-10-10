@@ -18,9 +18,11 @@ import { Form } from "@plumix/admin-ui/form";
 import { renderWithI18n } from "../../../test/render-with-i18n.js";
 import { MetaBoxField } from "./meta-box-field.js";
 
-// CodeMirror renders each document line as its own element, so the editing
-// surface's `textContent` collapses the newlines the field seeded. Rejoin them
-// to read back what the author would see.
+/**
+ * CodeMirror renders each document line as its own element, so the editing
+ * surface's `textContent` collapses the newlines the field seeded. Rejoin them
+ * to read back what the author would see.
+ */
 function editorText(surface: HTMLElement): string {
   return [...surface.children].map((line) => line.textContent).join("\n");
 }
@@ -46,9 +48,6 @@ function field(
   };
 }
 
-// Mounts `MetaBoxField` inside a react-hook-form context so tests behave
-// like a real form — Controller subscribes to updates and the onChange
-// we spy on mirrors what the parent form would see on submit.
 function Harness({
   fieldDef,
   initial,
@@ -66,11 +65,7 @@ function Harness({
   useEffect(() => {
     if (error !== undefined) form.setError(fieldDef.key, { message: error });
   }, [error, form, fieldDef.key]);
-  // Reference fields call `useQuery`; provide a fresh QueryClient
-  // per-test so the surrounding tests stay independent. No fetcher
-  // is wired here — the smoke tests only assert dispatch + initial
-  // state, not query results (those are covered by the lookup RPC
-  // tests in core).
+  // Fresh per test so tests stay independent; no fetcher is wired.
   const queryClient = createQueryClient();
   return (
     <QueryClientProvider client={queryClient}>
@@ -84,12 +79,10 @@ function Harness({
   );
 }
 
-// Subscribes via `useWatch` (compiler-compatible) and fires the spy on
-// every value change — mirrors what the original `form.watch` callback
-// did but without tripping the `react-hooks/incompatible-library` rule.
-// Fires once with the initial value too; the surrounding assertions use
-// `toHaveBeenCalledWith` / `toHaveBeenLastCalledWith`, both of which are
-// indifferent to that extra call.
+/**
+ * `useWatch` instead of `form.watch`, which trips
+ * `react-hooks/incompatible-library`. Also fires once with the initial value.
+ */
 function Spy({
   name,
   onChange,
@@ -168,9 +161,7 @@ describe("MetaBoxField dispatcher", () => {
       />,
     );
     const input = screen.getByTestId("meta-box-field-k-input");
-    // Typing "-" on an empty number input is valid partial state in most
-    // browsers but Number("-") is NaN; the component must drop it on the
-    // floor so NaN never lands in form state.
+    // Browsers accept "-" as partial number input, but Number("-") is NaN.
     await userEvent.type(input, "-");
     for (const call of onChange.mock.calls) {
       expect(Number.isNaN(call[0])).toBe(false);
@@ -349,12 +340,8 @@ describe("MetaBoxField dispatcher", () => {
   });
 
   test("single reference: a hydrated object value prefills its label without a lookup round-trip", () => {
-    // Read responses hydrate reference meta (#1507) — the picker
-    // extracts the id so the selection doesn't render empty (and a
-    // subsequent save doesn't clear the field). The hydrated summary
-    // also prefills the visible label: this harness wires no fetcher,
-    // so the label can only come from the hydrated value, not a
-    // `lookup.list` fetch.
+    // No fetcher is wired, so the label can only come from the hydrated
+    // value.
     renderWithI18n(
       <Harness
         fieldDef={field({
@@ -382,11 +369,8 @@ describe("MetaBoxField dispatcher", () => {
   });
 
   test("single reference: a hydrated value with no label falls through to the resolve", () => {
-    // A null name/title means the lookup RPC has a richer fallback (a
-    // user's email, an entry's untitled chrome) the public summary
-    // omits — so we must NOT short-circuit it. With no fetcher wired,
-    // that shows up as the resolving skeleton rather than a prefilled
-    // (and misleading "Untitled") chip.
+    // A null name/title means the lookup RPC has a richer fallback the
+    // summary omits, so the picker must not short-circuit it.
     renderWithI18n(
       <Harness
         fieldDef={field({
@@ -455,11 +439,8 @@ describe("MetaBoxField dispatcher", () => {
     expect(onChange).toHaveBeenCalledWith(["news", "sport"]);
   });
 
-  // The CodeMirror lazy chunk is heavy, and this is the only test in the file
-  // that pulls it, so it pays the whole graph's cold vite-node transform (~1s
-  // idle, past the default 5s test timeout on a contended CI runner). Raise the
-  // findBy margin and the test timeout above it, so a real failure surfaces the
-  // informative findBy error instead of racing vitest's timeout.
+  // The only test pulling the heavy CodeMirror chunk pays its cold transform,
+  // so the findBy margin and test timeout are raised to surface findBy's error.
   test(
     "json: seeds the editor and parses input, surfacing errors inline",
     { timeout: 15_000 },
@@ -637,10 +618,8 @@ describe("MetaBoxField dispatcher", () => {
       screen.getByTestId("meta-box-field-k-input-display"),
     ).toHaveTextContent("20");
     const root = screen.getByTestId("meta-box-field-k-input-slider");
-    // Radix forwards `aria-valuemin` / `aria-valuemax` to the thumb,
-    // but the user-visible signal lives on the inline display
-    // anchored by `-display`. Assert root visibility + the displayed
-    // value, then trust radix on the slider semantics it owns.
+    // The user-visible value lives on the `-display` node; slider semantics
+    // are radix's.
     expect(root).toBeInTheDocument();
   });
 
@@ -704,10 +683,8 @@ describe("MetaBoxField dispatcher", () => {
   });
 
   test("select: tolerates an empty-string option value (Radix-safe)", async () => {
-    // Radix Select throws on an empty-string item value; a plugin author may
-    // still register an option whose value is "". The renderer must encode it
-    // rather than crash the whole entry editor (it runs outside the field
-    // error boundary), and round-trip the original "" back through onChange.
+    // Radix Select throws on an empty-string item value, and this renderer
+    // runs outside the field error boundary.
     const onChange = vi.fn();
     renderWithI18n(
       <Harness
@@ -1020,10 +997,7 @@ describe("MetaBoxField dispatcher", () => {
     const describedBy = input.getAttribute("aria-describedby");
     expect(describedBy).toBeTruthy();
     const desc = screen.getByTestId("meta-box-field-k-description");
-    // shadcn's FormControl joins description + message ids with a space
-    // — assert the description id is present in the list rather than an
-    // exact equality that would break once the message id joins in on
-    // validation errors.
+    // The message id joins this list on validation errors.
     expect(describedBy?.split(" ")).toContain(desc.id);
     expect(desc).toHaveTextContent("Help text");
   });
@@ -1154,11 +1128,8 @@ describe("MetaBoxField dispatcher", () => {
   });
 
   test("plugin renderer: error boundary resets when the field value changes", async () => {
-    // Boundary recovery path: an initial render with `value === "bad"`
-    // throws, then a sibling button flips the form value to "good" via
-    // `form.setValue`. The same MetaBoxField instance stays mounted —
-    // only the field value changes. Without `resetKey` wired to
-    // rhf.value the boundary would stay stuck on the error placeholder.
+    // Without `resetKey` wired to rhf.value the boundary would stay stuck on
+    // the error placeholder.
     const consoleError = vi
       .spyOn(console, "error")
       .mockImplementation(() => undefined);

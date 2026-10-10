@@ -10,10 +10,8 @@ import { collectDebugPanels } from "./collect.js";
 import { disabledPanelIds } from "./config.js";
 import { registerCoreDebugPanels } from "./core-panels.js";
 
-// The point of the registry, and the reason this is a type and not a runtime
-// check: the old free-string denylist accepted a typo and silently did nothing.
-// `tsc` fails on an unused `@ts-expect-error`, so these stop being satisfied
-// the moment the key set reopens.
+// A type rather than a runtime check, so a typo fails `tsc` instead of
+// silently doing nothing.
 describe("panel ids are closed", () => {
   // Closed is only worth anything if the closed set is the real one: a
   // registry key with no panel behind it type-checks and hides nothing.

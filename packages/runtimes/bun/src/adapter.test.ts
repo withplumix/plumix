@@ -39,9 +39,11 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-// Build app → `createRuntimeHandler` → `fetch(request, invocation)`: the seam every
-// runtime adapter conforms to, over a real `bun:sqlite` file the app's own
-// `connect` opens a second time.
+/**
+ * Build app → `createRuntimeHandler` → `fetch(request, invocation)`: the seam
+ * every runtime adapter conforms to, over a real `bun:sqlite` file the app's
+ * own `connect` opens a second time.
+ */
 async function handlerFor(plugins: PluginDescriptor[] = []) {
   const database = bunSqlite({ path: join(dir, "site.sqlite") });
   await applyCoreTestSchema(

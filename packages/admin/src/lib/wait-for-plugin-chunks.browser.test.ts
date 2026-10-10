@@ -7,8 +7,10 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
-// Parsed through `innerHTML`, a script is inert: the browser never fetches
-// it, so only the events a test dispatches settle the wait.
+/**
+ * Parsed through `innerHTML`, a script is inert: the browser never fetches
+ * it, so only the events a test dispatches settle the wait.
+ */
 function appendPluginScript(id: string): HTMLScriptElement {
   const holder = document.createElement("div");
   holder.innerHTML = `<script type="module" data-plumix-plugin="${id}" src="/plugins/${id}.js"></script>`;

@@ -1,17 +1,9 @@
 import type { Logger, LogMeta } from "./app-context.js";
 
 /**
- * Report `error` as `message`, and let nothing out.
- *
- * A custom logger backend can throw — a broken transport, a full disk, a
- * payload it cannot stringify. Every caller is already handling a failure and
- * holds work it must not lose, so logging one must not start another.
- *
- * Both the error message and the raw value land in the log: the message is the
- * grep-friendly bit, the raw value carries the stack for structured backends.
- *
- * Deliberately outside `context/index.ts`'s barrel — this is core's own
- * plumbing, and the barrel is re-exported all the way to the `plumix` façade.
+ * Never throws, even when the logger backend does: every caller is already
+ * handling a failure. Kept out of the `context/index.ts` barrel, which reaches
+ * the `plumix` façade.
  */
 export function logErrorSafely(
   logger: Logger,

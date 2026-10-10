@@ -1,30 +1,16 @@
 import type { PlumixEnv } from "./bindings.js";
 
 /**
- * A config value that's either a literal `T`, or a resolver deriving it from the
- * runtime `env` at request time. The resolver form is required wherever the
- * value carries a secret that only exists per-request — notably Cloudflare
- * Workers, where secrets arrive via the `env` binding (not `process.env`) and
- * the config module is evaluated before any request. `env` is the augmentable
- * {@link PlumixEnv} (the cloudflare runtime extends it with `Cloudflare.Env`),
- * so a resolver reads bindings/secrets type-checked. Used by the secret-bearing
- * config slots — `mailer`, OAuth `clientSecret`, R2 S3 creds, the Cloudflare
- * CDN's zone credentials — all mirroring the `libsql()` connection-config
- * union.
- *
- * `T` must be a non-callable value: the literal-vs-resolver discriminator is
- * `typeof input === "function"`, which every current slot satisfies (each `T`
- * is an object or a string). A `T` that includes `undefined` resolves and
- * memoises like any other — the CDN's credentials use it to say the value may
- * be missing on a given deploy.
+ * The resolver form is needed where secrets arrive only via `env`, as on
+ * Workers. `T` must not be callable: `typeof input === "function"` tells the
+ * forms apart.
  */
 export type EnvInput<T> = T | ((env: PlumixEnv) => T);
 
-// Memoize by resolver identity so a value that owns a connection (an SMTP
-// transport, a pooled client) is built once per isolate, not per request.
-// `env` is isolate-stable, so the first resolution holds — and this memo is
-// the only thing keeping a resolver at one call, since the slots themselves
-// are bound once by the handler rather than memoising internally.
+/**
+ * By resolver identity, so a connection-owning value is built once per isolate.
+ * `env` is isolate-stable, so the first resolution holds.
+ */
 const cache = new WeakMap<object, unknown>();
 
 export function resolveEnvInput<T>(input: EnvInput<T>, env: PlumixEnv): T {

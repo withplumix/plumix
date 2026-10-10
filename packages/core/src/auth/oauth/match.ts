@@ -5,14 +5,8 @@ interface OAuthRouteParams {
 }
 
 /**
- * Match `/_plumix/auth/oauth/<key>/(start|callback)`. The shape check
- * (alphanum + `_-`) happens here; existence check ("is this a configured
- * provider?") happens in the handler. A path that doesn't match the
- * shape returns null → 404 from the dispatcher.
- *
- * Kept apart from the OAuth handlers so the dispatcher can match the path
- * eagerly without pulling the (heavy) consumer/arctic graph onto the
- * public render cold-start path; the handlers load on first OAuth request.
+ * Checks shape only, not whether the provider is configured. Kept apart from
+ * the handlers so matching doesn't load the heavy OAuth graph on cold start.
  */
 export function parseOAuthPath(
   pathname: string,

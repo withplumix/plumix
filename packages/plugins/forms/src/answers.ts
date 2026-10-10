@@ -7,17 +7,11 @@ import { MAX_REPEATER_ROWS } from "./contract.js";
 import { fieldName, rowMarkerName, rowName } from "./paths.js";
 
 /**
- * What a checked box posts. A hidden input of the same name posts the
- * empty string beside it, so the key is on the body either way — see
- * `FormControl`, which renders the pair.
+ * A hidden input of the same name posts "" beside it, so the key is on
+ * the body either way.
  */
 export const TOGGLE_ON = "on";
 
-/**
- * One field's answer: a scalar for an ordinary control, the members'
- * answers for a group, one bag per row for a repeater. Composites nest,
- * so this recurses exactly as the fields do.
- */
 export type SubmittedValue =
   JsonValue | undefined | SubmittedValues | readonly SubmittedValues[];
 
@@ -30,14 +24,11 @@ export interface SubmittedValues {
   readonly [key: string]: SubmittedValue;
 }
 
-/** Everything a body carried, indexed once so a nested read is a lookup. */
 type Posted = ReadonlyMap<string, readonly string[]>;
 
 /**
- * A declared default as the control would post it had nobody touched the
- * form. One shape for both sides: the renderer seeds the control from it
- * and the handler reads an unanswered field back through it, so the two
- * cannot drift.
+ * Shared by the renderer and the handler, so an untouched control reads
+ * back exactly as it was served.
  */
 export function asPosted(value: unknown): readonly string[] {
   if (Array.isArray(value)) {
@@ -48,21 +39,14 @@ export function asPosted(value: unknown): readonly string[] {
   return [];
 }
 
-/**
- * Nothing was answered. `undefined` is what an empty control reads back
- * as; an unticked box reads `false` and an unchosen multiple choice an
- * empty list, and a field that insists on an answer means those too.
- */
+/** An unticked box (`false`) and an empty multiple choice count as blank. */
 export function isBlank(value: unknown): boolean {
   if (value === undefined || value === "") return true;
   if (value === false) return true;
   return Array.isArray(value) && value.length === 0;
 }
 
-// Both guards are read only off a composite field's own key, where the
-// value can only be what the composite put there. Written as predicates
-// because `Array.isArray` narrows a `JsonValue` union to `any[]`, which
-// turns every downstream read unsafe.
+/** Predicates because `Array.isArray` narrows a `JsonValue` to `any[]`. */
 function isRowList(value: SubmittedValue): value is readonly SubmittedValues[] {
   return Array.isArray(value);
 }
@@ -77,12 +61,8 @@ export function asGroup(value: SubmittedValue): SubmittedValues {
 }
 
 /**
- * A repeater's rows, whatever a caller was holding at that key. Anything
- * in the list that is not a bag of answers is dropped rather than counted
- * — a theme rendering its own controls manages their own rows, and
- * `delete rows[i]` leaves
- * a hole that reads back as `undefined`. Every other caller hands this a
- * list the read side built, where the question does not arise.
+ * Drops anything that isn't a bag, such as the hole `delete rows[i]`
+ * leaves in a theme's own row list.
  */
 export function asRows(value: SubmittedValue): readonly SubmittedValues[] {
   return isRowList(value) ? value.filter(isBag) : [];
@@ -103,25 +83,16 @@ export function minRows(field: MetaBoxFieldManifestEntry): number {
 }
 
 /**
- * How many rows a blank form is served with: the fewest it accepts, but
- * never none — a repeater with no row on the page is a question a visitor
- * without JavaScript can never answer.
+ * Never zero: a visitor without JavaScript could never answer a repeater
+ * served with no row.
  */
 export function initialRowCount(field: MetaBoxFieldManifestEntry): number {
   return Math.min(Math.max(minRows(field), 1), maxRows(field));
 }
 
 /**
- * One field's answer in the shape the field stores — a number for
- * `number`, a boolean for `toggle`, the option value for `select`.
- * `raw` is what the body carried under the field's name; `undefined`
- * means it carried nothing at all, and the field falls back to its
- * declared default.
- *
- * That fallback is what keeps the two sides honest. The markup is built
- * from defaults and a field the markup hid posts nothing, so without it
- * a hidden driver would read as its default at render and as blank at
- * submit — and every field it drives would flip between the two.
+ * `raw` undefined falls back to the default: a hidden field posts nothing,
+ * and reading it as blank would flip every field its condition drives.
  */
 function answerOf(
   field: MetaBoxFieldManifestEntry,
@@ -132,11 +103,8 @@ function answerOf(
   }
 
   if (field.inputType === "select") {
-    // Restricted to the options the form declared, for the same reason
-    // the answers are restricted to its fields: a value nobody offered
-    // has no place to land, and admitting one would make the declared
-    // option union a lie. This is also what drops the hidden input's
-    // empty string from a multiple choice.
+    // A value nobody offered would make the declared option union a lie.
+    // Also drops the hidden input's empty string.
     const offered = new Set((field.options ?? []).map((o) => o.value));
     const given = raw ?? asPosted(field.default);
     const chosen = given.filter((value) => offered.has(value));
@@ -150,12 +118,7 @@ function answerOf(
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-/**
- * One level of a form's answers, from a body or — with no body at all —
- * from the defaults the blank form is served with. One walk for both, so
- * the shape the markup is built from and the shape the handler reads back
- * cannot drift apart.
- */
+/** With no body, reads the defaults, so markup and handler share one walk. */
 function readLevel(
   fields: readonly MetaBoxFieldManifestEntry[],
   posted: Posted | undefined,
@@ -168,10 +131,8 @@ function readLevel(
         return [field.key, readLevel(field.subFields ?? [], posted, name)];
       }
       if (field.inputType === "repeater") {
-        // One marker per row the visitor was shown, so the count is the
-        // rows themselves rather than a number a body could disagree
-        // with. Read one past what the repeater accepts, which is how the
-        // count check sees that more rows came back than it takes.
+        // Counted from row markers, not a posted number. Reads one past
+        // the max so the count check can see an overflow.
         const rows =
           posted === undefined
             ? initialRowCount(field)
@@ -220,15 +181,8 @@ export function readSubmittedValues(
 }
 
 /**
- * The fields a form shows for one set of answers. Core's own
- * `isFieldVisible` decides, so the markup, the submit handler and the
- * admin's meta boxes all agree on what a condition means — and because
- * both sides judge a bag built by {@link answerOf}, an untouched form is
- * read exactly as it was served.
- *
- * A repeater row is its own scope: the values handed in are that row's,
- * so a rule inside a row is answered by that row's siblings and says
- * nothing about the row next to it.
+ * A repeater row is its own scope: a rule inside it is answered by that
+ * row's siblings only.
  */
 export function visibleFields(
   fields: readonly MetaBoxFieldManifestEntry[],
@@ -240,12 +194,7 @@ export function visibleFields(
 const holdsNothing = (stored: FormAnswers): boolean =>
   Object.values(stored).every(isBlank);
 
-/**
- * Whether a scope holds an answer at all, once its own conditions apply.
- * A repeater row that does not is dropped rather than stored blank, and a
- * group that does not has not met a `.required()` — the same rule
- * `isBlank` applies one field at a time.
- */
+/** Applies the scope's own conditions first, like `isBlank` per field. */
 export function holdsNoAnswer(
   fields: readonly MetaBoxFieldManifestEntry[],
   values: SubmittedValues,
@@ -275,22 +224,8 @@ function storedValue(
 }
 
 /**
- * The answers as stored, over the fields the submitted answers leave
- * visible. An input the visitor added to the payload has no field to
- * land in and is dropped, and so is a field its own condition hid —
- * which is what keeps a hidden answer out of the row even when a script
- * put one in the body.
- *
- * A repeater stores an array of row objects, a group one object under
- * its own key, and each recurses through the same rule — including the
- * conditions, judged inside the row or group that declares them. A row
- * nobody filled in is not an answer, so it is dropped rather than stored
- * blank; a composite left with nothing is dropped entirely, exactly as a
- * scalar nobody answered is.
- *
- * Built by `fromEntries` rather than assignment: a field keyed
- * `__proto__` would otherwise set the object's prototype and lose the
- * answer.
+ * Drops undeclared inputs and hidden fields even if a script posted them.
+ * Empty rows and composites are dropped, not stored blank.
  */
 export function pickStoredAnswers(
   fields: readonly MetaBoxFieldManifestEntry[],
@@ -304,12 +239,7 @@ export function pickStoredAnswers(
   );
 }
 
-/**
- * One level of a form's answers, written back out as the body a filled-in
- * form would have posted. The mirror of {@link readLevel}, and it sits
- * beside it for that reason: the two spellings of one field's name have to
- * stay one.
- */
+/** The mirror of `readLevel`; field names must be spelled the same in both. */
 function writeLevel(
   fields: readonly MetaBoxFieldManifestEntry[],
   values: SubmittedValues,
@@ -326,10 +256,8 @@ function writeLevel(
       continue;
     }
     if (field.inputType === "repeater") {
-      // Numbered by where the row is written rather than by where the
-      // caller held it: the read side counts the markers and then reads
-      // indices from zero, so a caller's array with a hole in it would
-      // otherwise put an answer under a name nothing looks for.
+      // Renumbered: the read side counts markers and reads from zero, so
+      // a hole in the caller's array would misname answers.
       let position = 0;
       for (const row of asRows(value)) {
         // The marker the read side counts rows by — one per row, exactly
@@ -341,10 +269,8 @@ function writeLevel(
       continue;
     }
     if (field.inputType === "toggle") {
-      // The pair a checkbox posts: the empty answer that says the field
-      // was on the form at all, and the `on` a ticked box adds. Without
-      // the first, switching a toggle off would read as "was never shown
-      // this field" and fall back to a default that is on.
+      // Without the empty entry, an unticked toggle would read as never
+      // shown and fall back to a default that may be on.
       body.append(name, "");
       if (value === true) body.append(name, TOGGLE_ON);
       continue;
@@ -360,19 +286,8 @@ function writeLevel(
 }
 
 /**
- * A form's answers as the urlencoded body its markup would have posted —
- * what `usePlumixForm` submits, so a form filled in by a theme's own
- * controls reaches the endpoint as the same request a rendered form makes
- * and is validated and stored identically. The inverse of
- * {@link readSubmittedValues}.
- *
- * Only fields the form declares are written, so an extra key a caller put
- * in the bag has nowhere to land — the same rule {@link pickStoredAnswers}
- * applies to an input a visitor added to the payload. A field the bag says
- * nothing about is left out entirely rather than written blank, which is
- * what makes an omitted answer read back as the field's declared default:
- * what a visitor served the blank form and leaving it alone would have
- * posted.
+ * The inverse of {@link readSubmittedValues}. Undeclared keys are dropped;
+ * an omitted field is left out, so it reads back as its default.
  */
 export function writeSubmittedValues(
   fields: readonly MetaBoxFieldManifestEntry[],

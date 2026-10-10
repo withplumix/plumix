@@ -101,10 +101,8 @@ describe("descendantIds", () => {
   });
 
   test("rootId not in the tree → empty set (caller must backstop)", () => {
-    // This is the gap the `$id.tsx` edit route works around by
-    // always seeding `excludeIds` with the term's own id. This test
-    // locks in the `descendantIds` behaviour so a future "helpful"
-    // refactor doesn't quietly change the contract.
+    // The `$id.tsx` edit route relies on this by seeding `excludeIds` with the
+    // term's own id.
     const terms: Term[] = [term({ id: 1, name: "Food" })];
     expect(descendantIds(terms, 999)).toEqual(new Set());
   });
