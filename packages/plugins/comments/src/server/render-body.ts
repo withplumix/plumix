@@ -1,9 +1,9 @@
 import MarkdownIt from "markdown-it";
 
 /**
- * `html: false` is the whole safety posture: raw HTML is escaped, never parsed,
- * so no separate sanitizer. The default `validateLink` still allows raster
- * `data:` images.
+ * `html: false` escapes raw HTML, so no sanitizer; the default `validateLink`
+ * is the other half, dropping `javascript:`/`vbscript:`/`file:` hrefs. Don't
+ * override it.
  */
 const md = new MarkdownIt({
   html: false,

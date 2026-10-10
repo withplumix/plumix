@@ -86,6 +86,8 @@ export async function handleMediaServe(
   headers.set("content-type", meta.mime);
   headers.set("content-length", String(obj.size));
   headers.set("cache-control", cacheControl());
+  // Always: without it a browser may sniff polyglot bytes served under an
+  // inline-safe type and render them as HTML.
   headers.set("x-content-type-options", "nosniff");
   if (obj.etag) headers.set("etag", obj.etag);
   if (!inline)
