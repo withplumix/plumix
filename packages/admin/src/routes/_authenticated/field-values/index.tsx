@@ -69,9 +69,8 @@ export const Route = createFileRoute("/_authenticated/field-values/")({
   component: FieldValuesRoute,
 });
 
-// The server stops each call at a query budget — D1 caps what one request may
-// do — and hands back where it stopped, so a whole site is walked a call at a
-// time and the calls' counts are added up here.
+// D1 caps each request's queries, so the server walks the site one budgeted
+// call at a time.
 async function readReport(): Promise<readonly SweepKey[]> {
   let keys: readonly SweepKey[] = [];
   let cursor: SweepCursor | null = null;

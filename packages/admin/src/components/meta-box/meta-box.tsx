@@ -33,15 +33,7 @@ interface MetaBoxProps {
   readonly disabled?: boolean;
 }
 
-/**
- * Card variant — used by standalone meta-box surfaces (term + user
- * edit forms) where the box is its own card on the page. Honours
- * `field.span` for multi-column layouts. Entry-editor rail uses
- * `MetaBoxAccordionItem` instead, which is always single-column.
- *
- * Expects an ancestor `<Form>` provider — each field binds to
- * `${basePath}.${field.key}` via react-hook-form context.
- */
+/** Expects an ancestor `<Form>` provider. */
 export function MetaBoxCard({
   box,
   basePath,
@@ -80,16 +72,8 @@ interface MetaBoxAccordionItemProps {
 }
 
 /**
- * Accordion-section variant — used inside the entry editor's right
- * rail, where meta boxes stack as collapsible sections alongside
- * built-in document panels (Permalink, Status, Excerpt). Must render
- * inside an `<Accordion>` parent; `box.id` is the accordion value.
- *
- * Fields always occupy the full row — the rail is fixed at 256px and
- * side-by-side layouts don't fit legibly. `span` is a universal hint
- * this surface doesn't honor: the entry wire projection strips it and
- * this renderer ignores it besides, so a runtime-loaded plugin can't
- * force a squished layout.
+ * Must render inside an `<Accordion>`; `box.id` is its value. Ignores `span`:
+ * the 256px rail can't fit side-by-side fields.
  */
 export function MetaBoxAccordionItem({
   box,

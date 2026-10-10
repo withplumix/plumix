@@ -18,17 +18,8 @@ function stableStringify(value: unknown): string {
 }
 
 /**
- * Diff two meta bags into a minimal write patch: only the keys whose value
- * changed (added or edited) plus `null` for keys that were removed. Keys
- * present-and-equal in both are omitted.
- *
- * The editor form carries the entry's whole meta bag — including keys the
- * editor never renders or owns (e.g. `featuredImage` written by the media
- * plugin / seed). Sending the whole bag on every autosave re-validates those
- * foreign keys, and an unregistered one fails the entire write
- * (`meta_not_registered`), silently dropping the edit. Sending only the diff
- * leaves untouched foreign keys alone — the meta write is a patch, so omitted
- * keys persist unchanged.
+ * Removed keys map to `null`. Sending the whole bag would re-validate foreign
+ * keys, and an unregistered one fails the entire write.
  */
 export function diffMetaBag(
   prev: ResolvedMeta,

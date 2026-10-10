@@ -143,10 +143,7 @@ function decodeAuthenticationOptions(
   };
 }
 
-/**
- * A credential on the wire: the browser's `ArrayBuffer` fields rendered as
- * base64url, which is the shape the verify endpoints parse.
- */
+// `ArrayBuffer` fields as base64url, the shape the verify endpoints parse.
 interface EncodedCredential {
   readonly id: string;
   readonly rawId: string;
@@ -244,13 +241,7 @@ interface InviteAcceptSuccess extends VerifySuccess {
   readonly invitee: InviteeSummary;
 }
 
-/**
- * Two-step invite acceptance: fetch passkey-registration options keyed to
- * the invite token, prompt the authenticator, then POST the attestation
- * back for verification. A successful verify creates the user session
- * (cookie set by the server) and consumes the token — a second attempt
- * with the same token returns `invalid_token`.
- */
+/** Consumes the token: a second attempt returns `invalid_token`. */
 export async function acceptInviteWithPasskey(input: {
   token: string;
   name?: string;
@@ -309,14 +300,8 @@ interface SignOutResponse {
   readonly redirectTo: string | null;
 }
 
-/**
- * Result of a sign-out call. When `redirectTo` is set, the calling
- * component should `window.location.assign(redirectTo)` instead of
- * navigating to /login — required for external-IdP authenticators
- * (Cloudflare Access, SAML SP-initiated) where the local cookie clear
- * isn't enough; the next page load would silently re-auth via the IdP
- * unless the user is bounced through the IdP's logout endpoint.
- */
+// A set `redirectTo` must be followed instead of /login, or an external IdP
+// silently re-authenticates the next page load.
 interface SignOutResult {
   readonly redirectTo: string | null;
 }

@@ -44,12 +44,7 @@ function prefersReducedMotion(): boolean {
   return matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-/**
- * The view transition types a navigation starts with, by the direction it
- * moves through history, or `false` for no transition: on the first load,
- * when only the search params or hash changed, and when
- * `prefersReducedMotion` returns `true`.
- */
+// `false` on first load, a search/hash-only change, or reduced motion.
 function navigationTransitionTypes(
   { fromLocation, toLocation, pathChanged }: NavigationChange,
   prefersReducedMotion: () => boolean,

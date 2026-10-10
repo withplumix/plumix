@@ -23,17 +23,9 @@ export function App(): ReactNode {
   const [queryClient] = useState(createQueryClient);
   const [router] = useState(() => createRouter(queryClient));
 
-  // `DirectionProvider` feeds resolved direction into Radix primitives
-  // behind shadcn (dialog, dropdown, popover, …). Without it they read
-  // `dir` from a fallback chain that doesn't include `<html dir>`.
-  // Source is `<html dir>` set by SSR + the locale-switch reload path.
-  //
-  // MUST come from the `radix-ui` umbrella, not the standalone
-  // `@radix-ui/react-direction`: the shadcn primitives consume direction
-  // via the umbrella's bundled `useDirection`, and the standalone package
-  // can resolve to a different version (a separate React context) — in
-  // which case the provider is invisible to the primitives and RTL silently
-  // falls back to LTR. See App.direction.test.tsx.
+  // Radix's `dir` fallback chain skips `<html dir>`. Import from the `radix-ui`
+  // umbrella: the standalone package can be a separate React context, silently
+  // forcing LTR.
   return (
     <I18nProvider i18n={i18n}>
       <Direction.DirectionProvider dir={useDir()}>

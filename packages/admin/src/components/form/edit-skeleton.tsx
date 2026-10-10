@@ -3,18 +3,7 @@ import type { ReactNode } from "react";
 import { Card, CardContent, CardHeader } from "@plumix/admin-ui/card";
 import { Skeleton } from "@plumix/admin-ui/skeleton";
 
-/**
- * Shared "form-shaped loading state" for the admin's edit routes
- * (users/$id, terms/$name/$id, and future settings screens).
- * Renders a content-shaped shimmer instead of a plain "Loading…"
- * string so the form doesn't pop in with a visible reflow once the
- * query resolves.
- *
- * `role="status"` + `aria-live` announces loading to assistive tech
- * via the `ariaLabel` prop; sighted users get the visual shimmer.
- * Each consumer picks its own `testId` so e2e can wait for the right
- * loading state without false positives across routes.
- */
+/** Content-shaped so the form doesn't reflow in once the query resolves. */
 export function FormEditSkeleton({
   ariaLabel,
   testId,

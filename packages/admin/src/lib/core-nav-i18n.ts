@@ -1,13 +1,8 @@
 import type { MessageDescriptor } from "@lingui/core";
 import { defineMessage } from "@lingui/core/macro";
 
-// Mirror of `@plumix/core`'s `CORE_NAV_GROUPS` + `CORE_NAV_ITEMS`
-// descriptor ids so the admin's `lingui extract` picks them up into
-// `locales/en.po` (and the per-locale translation catalogs). Actual
-// rendering reads the descriptor from the manifest at runtime — this
-// module isn't imported elsewhere. Keep ids in lockstep with
-// `packages/core/src/plugin/manifest.ts:CORE_NAV_GROUPS` and
-// `:CORE_NAV_ITEMS`.
+// Exists only so `lingui extract` sees core's nav descriptor ids; keep them in
+// lockstep with `CORE_NAV_GROUPS` / `CORE_NAV_ITEMS`.
 
 export const CORE_NAV_DESCRIPTORS = {
   groupOverview: defineMessage({
@@ -51,10 +46,7 @@ export const CORE_NAV_DESCRIPTORS = {
     message: "Settings",
   }),
 
-  // Command-palette search aliases. Keyed by word so a synonym shared across
-  // items (e.g. `email` for both Allowed domains and Mailer) resolves to one
-  // translatable entry. Keep in lockstep with the `keywords` arrays in
-  // `packages/core/src/plugin/manifest.ts:CORE_NAV_ITEMS`.
+  // Keyed by word so a synonym shared across items is one translatable entry.
   keywordHome: defineMessage({
     id: "core.adminNav.keyword.home",
     message: "home",

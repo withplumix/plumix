@@ -4,13 +4,6 @@ import { createFileRoute, Outlet } from "@tanstack/react-router";
 
 import { TooltipProvider } from "@plumix/admin-ui/tooltip";
 
-/**
- * Full-screen editor layout. Sibling to `_authenticated` — they share
- * the same auth gate but this one drops the admin shell (no left nav,
- * no `ShellHeader`). The editor itself supplies its top bar via the
- * nested route so the entire viewport is available for the canvas +
- * right rail.
- */
 export const Route = createFileRoute("/_editor")({
   beforeLoad: ({ context }) => requireAuthenticatedSession(context.queryClient),
   component: EditorLayout,

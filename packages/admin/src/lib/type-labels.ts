@@ -10,21 +10,11 @@ import {
   GENERIC_TERM_TAXONOMY_LABELS,
 } from "@plumix/core/i18n";
 
-// Generic noun-less descriptors come from `@plumix/core/i18n` so the
-// admin and the manifest builder agree on the cascade fallback set.
-// Re-exported here for ergonomic admin imports; the canonical home is
-// core, since plugin code reads the same tables.
 export { GENERIC_ENTRY_TYPE_LABELS, GENERIC_TERM_TAXONOMY_LABELS };
 
 /**
- * Resolve a chrome label for an entry type with the WP-style cascade:
- * the plugin-declared `labels[key]` when present, the generic
- * noun-less descriptor from `GENERIC_ENTRY_TYPE_LABELS` otherwise.
- * No third `fallback` param — the per-key generic is the canonical
- * fallback for every consumer. Mirrors WP's `get_post_type_labels()`
- * resolution except plumix never substitutes the type's noun into
- * a sentence (DE/RU/PL/UK/AR morphology) or lowercases a translated
- * noun.
+ * Falls back to a noun-less generic: substituting the type's noun into a
+ * sentence breaks languages with inflection.
  */
 export function entryTypeLabel(
   entry: EntryTypeManifestEntry,
@@ -41,13 +31,7 @@ export function termTaxonomyLabel(
   return taxonomy.labels?.[key] ?? GENERIC_TERM_TAXONOMY_LABELS[key];
 }
 
-/**
- * Undefined-tolerant variant of `termTaxonomyLabel` for call sites
- * that resolve the taxonomy lazily (e.g. HMR boundary, dynamic
- * taxonomy name from a URL segment). Returns the generic descriptor
- * when the taxonomy isn't known — matches WP's
- * `get_taxonomy_labels( null )` semantics.
- */
+/** Returns the generic descriptor when the taxonomy is unknown. */
 export function termTaxonomyLabelOr(
   taxonomy: TermTaxonomyManifestEntry | undefined,
   key: keyof TermTaxonomyLabels,

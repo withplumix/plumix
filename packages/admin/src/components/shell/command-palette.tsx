@@ -106,13 +106,8 @@ function useDebounced(value: string, ms: number): string {
 }
 
 /**
- * Global command palette. Opened with Cmd/Ctrl+K from anywhere in the
- * authenticated admin: filters the sidebar's navigation destinations
- * client-side and shows debounced cross-domain content results from the
- * server, grouped by type. `shouldFilter` is off because content results
- * are already query-matched server-side (they may match on excerpt, not
- * title); navigation is filtered explicitly. RTL is inherited from the
- * app-root `DirectionProvider`.
+ * `shouldFilter` is off: content results match server-side, possibly on excerpt
+ * rather than title.
  */
 export function CommandPalette({
   capabilities,

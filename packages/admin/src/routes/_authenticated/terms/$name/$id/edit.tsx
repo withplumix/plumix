@@ -192,10 +192,8 @@ function EditTermRoute(): ReactNode {
 
   return (
     <EditTermContent
-      // Keep the form fresh after a term id change (navigation between
-      // sibling terms). Server-sanitize reseed after save doesn't
-      // apply here — the terms table has no `updatedAt`, so we can't
-      // detect a save-driven refetch the way user/entry edit do.
+      // No reseed after save: terms have no `updatedAt` to detect a save-driven
+      // refetch.
       key={term.id}
       taxonomy={taxonomy}
       term={term}

@@ -12,13 +12,10 @@ import { useQueryClient } from "@tanstack/react-query";
 type EntryUpdateInput = Parameters<typeof orpc.entry.update.call>[0];
 type EntryRow = Awaited<ReturnType<typeof orpc.entry.update.call>>;
 
-/** What one field group contributes to an `entry.update` write. */
 type EntryUpdatePatch = Omit<EntryUpdateInput, "id" | "expectedLiveUpdatedAt">;
 
 /**
- * A set of fields that autosave together. The hook keeps the group's
- * last-saved value `S`; the group only says how to read the current one, what
- * to send for the difference, and what counts as saved once the write lands.
+ * The hook owns the last-saved `S`; the group only reads, diffs and confirms.
  */
 export interface AutosaveGroup<S> {
   readonly initial: S;
@@ -74,7 +71,6 @@ function createEntryAutosave<G extends Record<string, unknown>>(
 ): {
   readonly autosave: EntryAutosave<G>;
   readonly sync: (options: EntryAutosaveOptions<G>) => void;
-  /** Whether an edit is waiting to be sent or is being sent. */
   readonly unsaved: () => boolean;
 } {
   let latest = initial;
@@ -124,10 +120,7 @@ function createEntryAutosave<G extends Record<string, unknown>>(
         );
         if (outcome.kind === "recovered") {
           if (outcome.updatedAt) liveUpdatedAt = outcome.updatedAt;
-          // The token moved under the write but the edit is intact: send it
-          // once more rather than leave it unsaved until the next keystroke. A
-          // second conflict stays quiet too — nothing was lost, and the next
-          // edit sends it on the re-anchored token.
+          // Retry once rather than leave it unsaved until the next keystroke.
           if (attempt === 0) await save(1);
           return;
         }
@@ -188,13 +181,7 @@ function createEntryAutosave<G extends Record<string, unknown>>(
   };
 }
 
-/**
- * The entry autosave protocol: every write runs in one queue behind the
- * optimistic live token, so no two writes read the same token and race each
- * other into a stale conflict. Pending writes are sent on unmount, and when
- * the document unloads — reload, tab close, a link off the admin — which runs
- * no unmount.
- */
+/** Pending writes are also sent on document unload, which runs no unmount. */
 export function useEntryAutosave<G extends Record<string, unknown>>(
   options: EntryAutosaveOptions<G>,
 ): EntryAutosave<G> {

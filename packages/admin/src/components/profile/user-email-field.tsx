@@ -36,19 +36,8 @@ import { Label as UILabel } from "@plumix/admin-ui/label";
 import { describeRpcError } from "@plumix/core/admin";
 import { vMessage } from "@plumix/core/validation";
 
-// Email field on the user-edit page. Three states:
-//
-//   1. No pending change → display the current email + a "Change
-//      email" button (only when the caller can edit). A change is
-//      confirmed by a magic link, so on a site without magic-link
-//      sign-in the email is read-only and the field says why.
-//   2. Pending change → show a banner with the new email + expiry +
-//      a Cancel button. New change requests still work; the request
-//      flow auto-purges the prior pending row before issuing.
-//   3. Modal open → form to type the new email + submit.
-//
-// Self vs admin behaves identically — the server's per-procedure
-// auth gate decides what's allowed. The UI just renders + dispatches.
+// A change is confirmed by magic link, so without magic-link sign-in the email
+// is read-only. The server's auth gate decides self vs admin.
 
 const M = {
   invalidEmail: defineMessage({
@@ -200,13 +189,8 @@ export function UserEmailField({
         </p>
       ) : null}
 
-      {/*
-        Pending banner takes precedence over the post-mutation success
-        alert: a successful request invalidates the pending query, so
-        the next fetch surfaces the same in-flight state. Rendering
-        both would briefly double-up between the mutation resolving
-        and the refetch landing — pick the durable signal.
-      */}
+      {/* The pending banner wins: the refetch shows the same state, and both
+          would briefly double up. */}
       {pending ? (
         <Alert data-testid="user-edit-email-pending">
           <AlertDescription>

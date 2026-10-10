@@ -26,11 +26,8 @@ import { isFieldVisible, startingMeta } from "@plumix/core/manifest";
 import { MetaBoxField } from "./meta-box-field.js";
 import { useVisibleFields } from "./use-visible-fields.js";
 
-// Row ids are index-derived. dnd-kit only needs stability within a single
-// drag; controlled subfields live at `${rowName}.${subKey}` in RHF state, so
-// React identity at row level matters only for uncontrolled state (focus,
-// selection). Accepting an occasional focus shift on reorder beats the
-// impurity of mint-on-render.
+// Row ids are index-derived: dnd-kit only needs stability within one drag, and
+// an occasional focus shift on reorder beats minting ids during render.
 
 interface RepeaterRow {
   readonly id: string;
@@ -44,9 +41,7 @@ const ROW_ERROR_LABEL = defineMessage({
   message: "This row has an error",
 });
 
-// Accessible name for the icon-only Edit button. Row-numbered so a
-// screen-reader rotor listing many rows' buttons can tell them apart —
-// the icon carries no text, and every row's button is otherwise identical.
+// Row-numbered so a screen-reader rotor can tell the rows' buttons apart.
 const EDIT_ROW_LABEL = defineMessage({
   id: "metaBox.repeater.editRow.button",
   message: "Edit row {n}",
@@ -64,9 +59,7 @@ const REMOVE_ROW_LABEL = defineMessage({
   message: "Remove",
 });
 
-// Render-side tolerance for malformed rows from migration / hand-edited
-// DB rows. Bad rows drop from display but the validator still rejects
-// them on save, surfacing the error to the author at write time.
+// Malformed rows drop from display; the validator still rejects them on save.
 function asRows(raw: unknown): readonly ResolvedMeta[] {
   if (!Array.isArray(raw)) return [];
   return raw.filter(
@@ -96,19 +89,12 @@ export function RepeaterField({
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   const { control, getFieldState, clearErrors } = useFormContext();
-  // Read the live array via `useWatch`, not the Controller's `rhf.value`
-  // snapshot: a subfield edited in the dialog writes a nested path
-  // (`${name}.${i}.${key}`) that doesn't re-render the parent Controller, so a
-  // stale `rhf.value` would show outdated summaries — and, worse, let the next
-  // add / remove / reorder commit an array missing the just-edited row's
-  // fields, dropping them.
+  // A nested subfield write doesn't re-render the Controller, so a stale
+  // `rhf.value` would let the next commit drop the just-edited fields.
   const watched = useWatch({ control, name: rhf.name }) as unknown;
   const rows = asRows(watched ?? rhf.value);
 
-  // A row's fields live in its dialog, so a server / validation error on a
-  // sub-field would be invisible while the dialog is closed. Flag the summary
-  // rows that hold an error so the author knows which to open. `getFieldState`
-  // reads the subscribed `formState`, so the flags re-render as errors change.
+  // A sub-field error is invisible while its dialog is closed, so flag the row.
   const formState = useFormState({ control, name: rhf.name });
   const rowHasError = (index: number): boolean =>
     getFieldState(`${rhf.name}.${index}`, formState).invalid;
@@ -119,19 +105,14 @@ export function RepeaterField({
     index: i,
   }));
 
-  // onChange-only — match MultiReferencePicker / ReferencePicker. Calling
-  // onBlur on every Add/Remove/Reorder would mark the field touched in
-  // `mode: "onTouched"` forms, surfacing required-field errors on a
-  // freshly-Added blank row before the user types anything.
+  // No onBlur: in `onTouched` forms it would flag a freshly added blank row as
+  // required before the user types.
   const commit = (nextRows: readonly ResolvedMeta[]): void => {
     rhf.onChange(nextRows);
   };
 
-  // Reorder / remove shift indices, so the open dialog would point at the
-  // wrong row — close it rather than silently editing a different row. The
-  // index-keyed errors don't shift with the array, so clear the repeater's
-  // error subtree too, otherwise a stale row indicator lands on the wrong row
-  // (the next save recomputes them).
+  // Shifted indices would point the open dialog and the index-keyed errors at
+  // the wrong row.
   const handleReorder = (next: readonly RepeaterRow[]): void => {
     setEditingIndex(null);
     clearErrors(rhf.name);
@@ -165,10 +146,8 @@ export function RepeaterField({
   return (
     <div
       data-testid={testId}
-      // `min-w-0` so a long summary (a wordy heading, a long option label)
-      // truncates within the rail instead of growing the row and blowing the
-      // meta panel's width — the field's grid cell has `min-width: auto`, so
-      // without this the content sizes the column.
+      // The grid cell's `min-width: auto` would otherwise let a long summary
+      // widen the panel.
       className="border-input flex min-w-0 flex-col gap-2 rounded-md border p-2"
     >
       {rows.length === 0 ? (
@@ -236,10 +215,6 @@ export function RepeaterField({
         ) : null}
       </div>
 
-      {/* One shared dialog edits whichever row is open. The row's fields lay
-          out on the same 12-column grid the top-level box uses, honouring each
-          sub-field's `.span()` — the roomy surface a complex row can't get in
-          the narrow document rail. */}
       <Dialog
         open={editingRow !== undefined}
         onOpenChange={(open) => {
@@ -286,10 +261,8 @@ export function RepeaterField({
   );
 }
 
-// A row's sub-fields, their conditions judged against that row's own sibling
-// values. Its own component because `useVisibleFields` can't be called from
-// `RepeaterField`: the row name is null while the dialog is closed, and the
-// hook has to run unconditionally.
+// Its own component: the row name is null while the dialog is closed, and
+// `useVisibleFields` must run unconditionally.
 function RepeaterRowFields({
   subFields,
   rowName,
@@ -302,10 +275,7 @@ function RepeaterRowFields({
   const visible = useVisibleFields(subFields, { name: rowName });
   return (
     <div className="@container">
-      {/* `items-start` so a field showing a validation message grows its own
-          cell only — without it the grid stretches every cell in the row to
-          match, vertically centring the siblings' controls out of line with
-          the errored field. */}
+      {/* `items-start` so a validation message grows only its own cell. */}
       <div className="grid grid-cols-12 items-start gap-4">
         {visible.map((sf) => (
           <MetaBoxField
@@ -387,12 +357,7 @@ function RepeaterSummaryRow({
   );
 }
 
-// `{rows.length} / min {min} / max {max}` rendered as one cohesive
-// message per shape so translators see the whole template, not a
-// leading-whitespace fragment. Returns null when neither bound is
-// set — the caller's outer guard prevents that path anyway, but the
-// component handles it defensively so the type signature stays
-// loose.
+// One whole message per shape so translators never see a fragment.
 function CountSuffix({
   min,
   max,
@@ -433,10 +398,7 @@ function CountSuffix({
   return null;
 }
 
-// The row summary: the explicit `.collapsed()` sub-field's value when set,
-// otherwise the first sub-field carrying a non-empty primitive, so a row is
-// recognisable at a glance. `null` when nothing suitable is present (caller
-// falls back to the row number).
+// Without `.collapsed()`, the first sub-field holding a non-empty primitive.
 function rowSummary(
   row: ResolvedMeta,
   subFields: readonly MetaBoxFieldManifestEntry[],
@@ -459,11 +421,7 @@ function rowSummary(
   return null;
 }
 
-// A cell's stored value as a display string. For a select / radio the stored
-// option *value* is resolved to its (i18n) label, so the summary reads "Card"
-// rather than the raw stored "card"; other primitives render as-is. `null`
-// when the value is absent / blank or a non-primitive (nested
-// group/repeater/reference).
+// A select / radio value resolves to its translated label.
 function cellSummary(
   value: unknown,
   field: MetaBoxFieldManifestEntry | undefined,

@@ -45,10 +45,6 @@ interface StaleDraftDialogProps {
   readonly isResolving: boolean;
 }
 
-// Three-action resolver surfaced at editor mount when a pending
-// autosave was anchored against an older live row than what's on the
-// server now. Builder.io's history UI uses the same three options —
-// "yours" / "theirs" / "compare" — for parallel-edit conflicts.
 export function StaleDraftDialog({
   open,
   autosaveSnapshot,
@@ -65,11 +61,7 @@ export function StaleDraftDialog({
         className="max-w-4xl"
         showCloseButton={false}
         data-testid="stale-draft-dialog"
-        // Radix Dialog closes on Escape / outside-click by default;
-        // prevent both so the resolver actually blocks until the user
-        // picks one of the three actions. Without these, the dialog
-        // dismisses but the canvas stays seeded with the stale
-        // autosave content — silent contract violation.
+        // Dismissing would leave the canvas seeded with the stale autosave.
         onEscapeKeyDown={(e) => e.preventDefault()}
         onPointerDownOutside={(e) => e.preventDefault()}
       >

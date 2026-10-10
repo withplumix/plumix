@@ -24,11 +24,8 @@ type PasskeyClassErrorCode =
   | "user_not_found"
   | "invalid_response";
 
-// Wire codes the passkey UI's `postJson` can receive that core does
-// not name in a single union: route-inline strings from
-// `passkey/routes.ts` and sibling-flow codes that arrive when the user
-// came in via an invite or hit RPC input validation. Admin owns this
-// union outright.
+// Codes core doesn't name in a single union: route-inline strings and
+// sibling-flow codes (invite, RPC input validation).
 type PasskeyWireExtraErrorCode =
   | "challenge_not_bound_to_user"
   | "challenge_mismatch"

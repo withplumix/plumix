@@ -71,20 +71,8 @@ import { Textarea } from "@plumix/admin-ui/textarea";
 import { describeRpcError } from "@plumix/core/admin";
 import { vMessage } from "@plumix/core/validation";
 
-// Renders the API-token surface for a target user. Two modes:
-//
-//   `mode: "self"`     — calls self-scoped procedures (`apiTokens.list/
-//                        create/revoke`). Used when the editor is the
-//                        token owner.
-//   `mode: "admin"`    — calls admin procedures (`apiTokens.adminList/
-//                        adminRevoke`) scoped to a target userId.
-//                        Mint isn't available cross-user — only the owner
-//                        can mint, by design (matches GitHub's behaviour).
-//
-// Splitting on mode at the call boundary keeps the audit log
-// distinguishing "user X minted/revoked their own" from "admin Y
-// revoked user X's", and lets the create form be omitted entirely on
-// the admin path.
+// Self and admin call separate procedures so the audit log tells "revoked their
+// own" from "admin revoked theirs". Only the owner can mint.
 
 const M = {
   // Validator messages
@@ -123,10 +111,8 @@ const M = {
     id: "apiTokens.secret.copyAria",
     message: "Copy token",
   }),
-  // Multi-line example capabilities for the textarea placeholder.
-  // The tokens themselves (`entry:post:read`) are protocol-defined
-  // identifiers and stay verbatim across locales; this exists so the
-  // newline-joined literal isn't an unwrapped string at the callsite.
+  // The capability tokens are protocol identifiers and stay verbatim across
+  // locales.
   capabilitiesPlaceholder: defineMessage({
     id: "apiTokens.create.capabilities.placeholder",
     message: "entry:post:read\nentry:post:edit_own",
@@ -173,10 +159,7 @@ interface TokenRow {
   readonly lastUsedAt: Date | string | null;
 }
 
-// Public surface — two thin wrappers below choose the right data /
-// mutation hooks. Splitting at the call site keeps `useQuery` /
-// `useMutation` order stable (rules-of-hooks) and gives us per-mode
-// react-query keys without conditional hook calls.
+// Split per mode so hook order stays stable without conditional hook calls.
 
 export function SelfApiTokensCard(): ReactNode {
   const queryClient = useQueryClient();
@@ -234,10 +217,7 @@ export function AdminApiTokensCard({ userId }: { userId: number }): ReactNode {
       }),
   });
 
-  // No `onMint` — minting requires the owner's authenticated browser
-  // session, by design (matches GitHub's "you can revoke another
-  // user's PAT but you can't mint one for them"). The shared view
-  // omits the create form when `onMint` is undefined.
+  // No `onMint`: minting requires the owner's own browser session.
   return (
     <ApiTokensCardView
       mode="admin"
@@ -817,10 +797,6 @@ function SecretShownDialog({
   );
 }
 
-// Renders a relative-time string when the timestamp is set, otherwise
-// the localized "Never" placeholder. Used by both the lastUsed and
-// expires columns — they share the formatter call so the table row
-// pulls `useFormatters` once at this seam instead of in the parent.
 function RelativeOrNever({ when }: { when: Date | string | null }): ReactNode {
   const { formatRelative } = useFormatters();
   if (when === null) return <Trans id="apiTokens.never" message="Never" />;

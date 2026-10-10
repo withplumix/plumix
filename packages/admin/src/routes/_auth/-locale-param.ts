@@ -6,11 +6,10 @@ import { buildLocaleCookie } from "@plumix/core/i18n";
 
 import { adminBasePath } from "../../lib/admin-base.js";
 
-/** Builds the next search-param object when the login locale dropdown
- *  changes. Always sets `?lang=`, even when the chosen code matches
- *  the site default, because the admin shell's Accept-Language fallback
- *  may otherwise resolve the request to something other than the
- *  user's pick on reload. */
+/**
+ * Always sets `?lang=`, even for the default, or Accept-Language may override
+ * the pick on reload.
+ */
 export function nextSearchForLang(
   currentSearch: JsonObject,
   nextCode: string,

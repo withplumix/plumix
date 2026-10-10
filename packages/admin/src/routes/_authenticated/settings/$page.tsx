@@ -60,9 +60,7 @@ export const Route = createFileRoute("/_authenticated/settings/$page")({
     }
     return { page };
   },
-  // Preload every group referenced by this page. `settings.get` is
-  // per-group, so we fan out one query per group — each card owns its
-  // own cache entry and can refetch independently after a save.
+  // One query per group so each card can refetch independently after a save.
   loader: ({ context }) => {
     const groups = groupsForSettingsPage(context.page);
     return Promise.all(
@@ -139,13 +137,8 @@ function EmptyPagePlaceholder(): ReactNode {
             />
           </EmptyTitle>
           <EmptyDescription>
-            {/* The literal-brace code example sits outside `<Trans>` —
-                braces inside the message string are ICU-parsed by Lingui's
-                MessageFormat compiler at extract / compile time even when
-                they appear inside a `<0>` placeholder, and the single-
-                quote `'{' '}'` escape doesn't survive `lingui extract`'s
-                normalization. Keeping the example as raw JSX side-steps
-                the whole pipeline. */}
+            {/* Outside `<Trans>`: Lingui ICU-parses braces even in a placeholder,
+                and the `'{'` escape doesn't survive extract. */}
             <Trans
               id="settings.page.empty.description"
               message="This settings page doesn't reference any registered groups yet. Plugins compose pages with the registerSettingsPage helper:"

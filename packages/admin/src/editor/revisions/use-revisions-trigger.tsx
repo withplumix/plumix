@@ -11,10 +11,6 @@ interface UseRevisionsTriggerInput {
   // Trigger presentation, forwarded to the sheet. `text` (default) for the
   // plain-form editor; `icon` for the visual editor's icon header.
   readonly triggerVariant?: "text" | "icon";
-  // Fires when a row body is clicked — caller navigates the editor to
-  // preview the chosen revision (`?revision=<id>`). Restore now lives
-  // on the preview banner, not the sheet, so the sheet no longer
-  // owns the optimistic-concurrency token.
   readonly onPreview: (revisionId: number) => void;
 }
 
@@ -27,9 +23,7 @@ export interface RevisionsTrigger {
   readonly openRevisions?: () => void;
 }
 
-// Single chokepoint for the `<RevisionsSheet />` adapter both v1 and
-// v2 edit routes mount. The open state lives here rather than in the
-// sheet so the command palette can raise it too.
+// Open state lives here so the command palette can raise the sheet too.
 export function useRevisionsTrigger({
   entryId,
   enabled,

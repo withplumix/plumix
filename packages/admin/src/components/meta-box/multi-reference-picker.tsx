@@ -24,19 +24,8 @@ import type { LookupItem } from "./lookup/types.js";
 import { useLookupSearch } from "./lookup/use-lookup-search.js";
 import { useReferenceResolve } from "./lookup/use-reference-resolve.js";
 
-// Multi-value counterpart to `ReferencePicker`. Shares the same
-// `kind` / `scope` dispatch shape — same lookup RPC, same adapter
-// — but the UX is different: selected rows render as a sortable
-// list with drag-reorder + per-row remove, the picker dialog stays
-// open across selections (so authors can pick several without
-// re-clicking "Add"), and `max` caps the array length both in the
-// "Add" button (disables when full) and inside the dialog (no-op
-// on item click).
-
-// User-facing copy. `dialogDescription` and `searchPlaceholder`
-// interpolate `{kind}` raw (`user`, `entry`, `term`, `media` — the
-// wire identifier). A real kind→localized-noun map is deferred under
-// the manifest-label widening tracked in #730.
+// `{kind}` interpolates the raw wire identifier; there's no localized noun map
+// yet.
 const M = {
   resolveError: defineMessage({
     id: "metaBox.multiReference.resolveError",
@@ -89,12 +78,7 @@ interface MultiReferencePickerProps {
   readonly required?: boolean;
   readonly label: string;
   readonly testId: string;
-  /**
-   * Read-time-hydrated summaries for the initial `value` (reference
-   * reads hydrate by default, #1507). When every selected id is
-   * covered, the labels paint on first render and the batch
-   * `lookup.list` resolve is skipped entirely.
-   */
+  // When every selected id is covered, the batch resolve is skipped.
   readonly initialSelected?: readonly LookupItem[];
 }
 

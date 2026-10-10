@@ -22,10 +22,7 @@ import {
 import { Settings as SettingsIcon } from "@plumix/admin-ui/icons";
 
 export const Route = createFileRoute("/_authenticated/settings/")({
-  // The settings surface is admin-only at the floor — `settings:manage`
-  // is the server's gate for every `settings.*` RPC. Plugins may declare
-  // a tighter per-page capability in future; those would be filtered by
-  // `visibleSettingsPages` rather than rejected here.
+  // `settings:manage` is the server's gate for every `settings.*` RPC.
   beforeLoad: ({ context }) => {
     if (!hasCap(context.user.capabilities, "settings:manage")) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router redirect pattern

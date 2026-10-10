@@ -1,12 +1,7 @@
 import type { MessageDescriptor } from "@lingui/core";
 import { defineMessage } from "@lingui/core/macro";
 
-// Extraction mirror for core's meta constraint-walker messages (see
-// `core-validation-i18n.ts` for the pattern). The wire ships the
-// descriptor (`{ id, message, values }`); `useMetaFieldMessage`
-// resolves it against the catalog these `defineMessage` calls feed.
-// Lockstep with `packages/core/src/meta/contract/field-messages.ts` is
-// test-guarded.
+// Exists only so `lingui extract` sees core's meta constraint message ids.
 
 export const META_FIELD_DESCRIPTORS = {
   required: defineMessage({

@@ -35,11 +35,8 @@ export function UserMenu({ user }: { user: UserIdentity }): ReactNode {
       router.options.context.queryClient.removeQueries({
         queryKey: SESSION_QUERY_KEY,
       });
-      // External-IdP authenticators (Cloudflare Access, SAML SP-initiated)
-      // surface a redirectTo that bounces the user through the IdP's
-      // logout endpoint — without it, the next request would carry the
-      // IdP credential and silently re-auth. Server pre-validates the
-      // URL shape; the client also re-validates inside `signOut()`.
+      // An external IdP's logout redirect; otherwise its credential would
+      // silently re-auth the next request.
       if (result?.redirectTo) {
         window.location.assign(result.redirectTo);
         return;

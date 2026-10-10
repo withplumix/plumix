@@ -1,10 +1,4 @@
-/**
- * Interpret the raw text of the JSON field's editor. Blank clears the
- * value (stored `null`); valid JSON parses to its value; invalid JSON
- * reports the failure and yields no value, so the last good value is left in
- * place. The engine's parse message isn't carried: it is English the admin
- * didn't choose. Pure — the editing surface (CodeMirror) owns none of this.
- */
+/** Drops the engine's parse message: it is English the admin didn't choose. */
 export type JsonDraftResult =
   | { readonly kind: "empty" }
   | { readonly kind: "value"; readonly value: unknown }

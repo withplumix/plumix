@@ -97,10 +97,7 @@ const inviteFormSchema = v.object({
 
 export const Route = createFileRoute("/_authenticated/users/create")({
   beforeLoad: ({ context }) => {
-    // `user:create` is admin-only. Defense in depth — the sidebar button
-    // is already gated on this cap but someone following a direct link
-    // shouldn't land on a forbidden form.
-    // A deployment that refuses email delivery can't send the invite either.
+    // A deployment that refuses email delivery can't send the invite.
     if (
       !hasCap(context.user.capabilities, "user:create") ||
       !isSurfaceOffered("userInvite")
@@ -112,11 +109,6 @@ export const Route = createFileRoute("/_authenticated/users/create")({
   component: InviteUserRoute,
 });
 
-// We render one of two views: the form (idle) or the success screen with
-// the shareable URL. The submitting state is tracked separately via
-// `inviteUser.isPending`, not by this union. Discriminated union here so
-// the success payload (user + url) correlates with the status without
-// nullable juggling.
 type ViewState =
   { status: "idle" } | { status: "success"; user: User; inviteUrl: string };
 
@@ -366,9 +358,8 @@ function InviteSuccess({
         setCopied(false);
       }, 2000);
     } catch {
-      // Clipboard API is gated in non-HTTPS / iframed / Permissions-Policy
-      // contexts. Select the input so the user can fall back to ⌘-C /
-      // Ctrl-C — better than a dead button that looks like it worked.
+      // The Clipboard API is blocked in insecure or iframed contexts; selecting
+      // the input leaves a manual copy.
       const input = document.getElementById("invite-url");
       if (input instanceof HTMLInputElement) {
         input.focus();

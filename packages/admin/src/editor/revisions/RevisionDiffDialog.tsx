@@ -52,11 +52,8 @@ export function RevisionDiffDialog({
   fetchCurrent,
 }: RevisionDiffDialogProps): ReactElement {
   const renderLabel = useLabel();
-  // Sticky id keeps query results visible during Radix's close
-  // animation: once `revisionId` flips to null the queries would
-  // disable and the panes would flash to "Loading…" while the
-  // dialog fades out. Use the setState-during-render memoization
-  // pattern (refs would trip react-hooks/cannot-access-during-render).
+  // Keeps results visible through the close animation instead of flashing
+  // "Loading…". Refs would trip react-hooks.
   const [stickyRevisionId, setStickyRevisionId] = useState<number | null>(
     revisionId,
   );

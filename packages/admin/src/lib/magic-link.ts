@@ -4,10 +4,8 @@ import { defineMessage } from "@lingui/core/macro";
 import { adminBasePath } from "./admin-base.js";
 import { createStrictErrorDescriptorRegistry } from "./error-descriptor-registry.js";
 
-// Client wrapper for the magic-link request endpoint. Not an oRPC
-// procedure (the verify side is a top-level GET navigation, and the
-// always-success response shape is intentionally hand-rolled rather
-// than typed through oRPC).
+// Not oRPC: verify is a top-level GET navigation, and the always-success
+// response is deliberately hand-rolled.
 
 interface MagicLinkRequestResponse {
   readonly ok: boolean;

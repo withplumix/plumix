@@ -1,10 +1,7 @@
 import type { Messages } from "@lingui/core";
 
-// Vite expands these globs at build time into `path → () => import(path)` maps
-// of the compiled catalogs on disk. Kept apart from `i18n-boot` so the boot
-// path can take its catalogs as an argument: `import.meta.glob` is a
-// filesystem scan resolved at build time, and a caller shouldn't inherit
-// whichever locales `i18n:compile` happened to produce.
+// Kept apart from `i18n-boot` so a caller needn't inherit whichever locales
+// `i18n:compile` happened to produce.
 
 // Admin's own compiled catalogs. Adding a locale (drop a `.po`, run
 // `pnpm i18n:compile`) appears here automatically.

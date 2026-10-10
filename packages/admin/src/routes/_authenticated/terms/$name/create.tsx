@@ -191,10 +191,7 @@ function NewTermRoute(): ReactNode {
             // confuse plugin authors expecting meaningful defaults.
             metaBoxes={[]}
             onSubmit={(values) => {
-              // Short-circuit the RPC when the user left slug blank and
-              // the derived slug would also be empty (CJK, emoji, pure
-              // punctuation — scripts the transliterate lib doesn't
-              // cover). Surfacing this inline beats a 400 round-trip.
+              // CJK, emoji or punctuation-only names derive an empty slug.
               if (
                 values.slug.length === 0 &&
                 slugify(values.name).length === 0

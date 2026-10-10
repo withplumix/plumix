@@ -12,12 +12,8 @@ import {
 
 export interface Crumb {
   /**
-   * Either a `MessageDescriptor` (chrome-owned labels) or a plain
-   * string (manifest-derived labels that plugin authors haven't
-   * migrated to `defineMessage(...)` yet). Both variants resolve
-   * through `i18n._` at render time in `shell-header.tsx`; never
-   * narrows because plain-string manifest labels remain a valid
-   * `Label` per #730.
+   * A plain string is a manifest label, still a valid `Label`; both resolve via
+   * `i18n._`.
    */
   readonly label: string | MessageDescriptor;
   /** ICU placeholder values threaded into `i18n._` at render time —
@@ -48,13 +44,7 @@ const M = {
   editUser: defineMessage({ id: "breadcrumb.editUser", message: "Edit user" }),
 } satisfies Record<string, MessageDescriptor>;
 
-/**
- * Pathname → breadcrumb trail. Resolves entry-type / taxonomy / settings
- * labels via the manifest so dynamic segments match the sidebar. Used
- * by both the shell header (visual breadcrumbs, with non-leaf crumbs
- * rendered as Links) and the document-title effect on the root route
- * (which only reads the leaf label).
- */
+/** Labels come from the manifest so dynamic segments match the sidebar. */
 export function pathToCrumbs(pathname: string): readonly Crumb[] {
   if (pathname === "/") return [{ label: M.dashboard }];
   const parts = pathname.split("/").filter((p) => p.length > 0);
@@ -97,10 +87,7 @@ function taxonomiesCrumbs(parts: readonly string[]): readonly Crumb[] {
   const tax = findTermTaxonomyByName(name);
   const label: Label = tax?.label ?? name;
   const list: Crumb = { label, to: `/terms/${name}` };
-  // Generic `Create` / `Edit` leaf — the parent crumb already carries
-  // the taxonomy's plural label so the trail reads "Taxonomies ›
-  // Categories › Create" rather than "Create category". Drops the
-  // last interpolation site in breadcrumbs.
+  // The parent crumb already carries the taxonomy's label.
   if (parts[2] === "create")
     return [{ label: M.terms }, list, { label: M.create }];
   if (parts[3] === "edit") return [{ label: M.terms }, list, { label: M.edit }];
@@ -116,12 +103,7 @@ function usersCrumbs(parts: readonly string[]): readonly Crumb[] {
 }
 
 function pluginPagesCrumbs(parts: readonly string[]): readonly Crumb[] {
-  // Plugin admin pages are mounted at /pages/<plugin-path>. The leaf
-  // label comes from the registered nav item (`registerAdminPage`'s
-  // `label` / `title`) so the document title and breadcrumb match the
-  // sidebar — not the URL slug, which would render as "media" instead
-  // of "Media Library". No parent crumb: a "Pages > X" trail collides
-  // with the entry-type "Pages" in the user's sidebar.
+  // No parent crumb: "Pages > X" would collide with the "Pages" entry type.
   const path = `/${parts.join("/")}`;
   const item = findPluginPageByPath(path);
   if (item) return [{ label: item.label }];

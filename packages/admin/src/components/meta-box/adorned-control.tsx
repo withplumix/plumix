@@ -4,9 +4,8 @@ import { useLabel } from "@/lib/use-label.js";
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 import { InputGroup, InputGroupAddon } from "@plumix/admin-ui/input-group";
 
-// The addons sit beside `children` (a `<FormControl>`), not inside it,
-// so the Slot keeps forwarding id / aria-* onto the real input. `block`
-// stacks them above and below, the layout a textarea's height calls for.
+// Addons sit beside the `<FormControl>`, not inside, so its Slot keeps
+// forwarding id / aria-* onto the real input.
 export function AdornedControl({
   field,
   testId,

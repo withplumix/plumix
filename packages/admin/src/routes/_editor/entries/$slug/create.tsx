@@ -67,14 +67,8 @@ function CreateEntryRoute(): ReactNode {
     mutationFn: () =>
       orpc.entry.create.call({
         type: entryType.name,
-        // Title omitted: created untitled (stored ""), so the editor shows its
-        // placeholder rather than a literal "Untitled" the author must delete.
-        // Read surfaces fall back to a localized label for the empty title —
-        // "(no title)" in the entry lists, "Untitled" in lookups
-        // (`useUntitledLabel`) and the public `<title>` (site name).
-        // Random suffix: two creates in the same millisecond (parallel
-        // tabs, double-click) would otherwise mint the same slug and
-        // 409 on the unique constraint.
+        // Untitled so the editor shows its placeholder. The random suffix stops
+        // same-millisecond creates (double-click) from colliding on the slug.
         slug: slugify(
           `untitled-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
         ),

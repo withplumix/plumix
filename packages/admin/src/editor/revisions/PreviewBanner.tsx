@@ -24,10 +24,6 @@ interface PreviewBannerProps {
   readonly onBackToLive: () => void;
   readonly onRestore: () => void;
   readonly isRestoring: boolean;
-  // Surface restore failures inline. CONFLICT (stale token) is the
-  // most likely cause — another tab edited the live entry after the
-  // preview loaded — but any server rejection lands here so the user
-  // doesn't watch a silent no-op.
   readonly restoreError?: string | null;
 }
 

@@ -75,37 +75,32 @@ interface DocumentParentOption {
 }
 
 interface DocumentSettingsPanelProps {
-  /** Present only when the entry type's supports list includes "title". */
+  // Each optional section is present only when the entry type supports it.
   readonly title?: {
     readonly value: string;
     readonly onChange: (next: string) => void;
   };
   readonly slug: string;
   readonly onSlugChange: (next: string) => void;
-  /** Present only when the entry type's supports list includes "excerpt". */
   readonly excerpt?: {
     readonly value: string;
     readonly onChange: (next: string) => void;
   };
-  /** Present only for hierarchical entry types. */
   readonly parent?: {
     readonly value: number | null;
     readonly options: readonly DocumentParentOption[];
     readonly onChange: (next: number | null) => void;
   };
-  /** Present only when the theme registers `named` templates for this type. */
   readonly template?: {
     readonly value: string | null;
     readonly options: readonly NamedTemplateChoice[];
     readonly onChange: (next: string | null) => void;
   };
-  /** Present only when the entry type declares selectable access policies. */
   readonly access?: {
     readonly value: string | null;
     readonly options: readonly AccessPolicyChoice[];
     readonly onChange: (next: string | null) => void;
   };
-  /** Term pickers for the taxonomies registered against this entry type. */
   readonly taxonomies?: readonly {
     readonly name: string;
     readonly label: string;
@@ -113,22 +108,16 @@ interface DocumentSettingsPanelProps {
     readonly value: readonly string[];
     readonly onChange: (next: readonly string[]) => void;
   }[];
-  /** Capability-filtered metaboxes for this entry type, if any. */
   readonly metaBoxes?: {
     readonly boxes: readonly EntryMetaBoxManifestEntry[];
     readonly initialMeta: ResolvedMeta;
     readonly onMetaChange: (next: ResolvedMeta) => void;
-    /** Path-addressed rejections from the last autosave — pinned onto
-     *  the addressed inputs; cleared when the next save succeeds. */
+    // Cleared when the next save succeeds.
     readonly fieldErrors?: readonly MetaFieldServerError[] | null;
   };
 }
 
-// MetaBoxField expects an ancestor react-hook-form <Form> provider —
-// this wrapper owns that form and forwards every change into the
-// route's autosave path. Exported for the integration test that pins the
-// load-bearing "foreign keys survive an edit untouched" behavior the
-// autosave diff relies on.
+// Owns the <Form> MetaBoxField expects and forwards every change to autosave.
 export function DocumentMetaBoxes({
   boxes,
   initialMeta,
@@ -187,12 +176,7 @@ function DocumentMetaBoxSection({
   );
 }
 
-/**
- * Document-level entry fields for the editor's right sidebar — the
- * WP "document settings" counterpart. Dumb by design: the route owns
- * persistence (structural fields write the live row; the autosave-row
- * patch drops them) and feeds values + change handlers in.
- */
+/** Presentational: the route owns persistence. */
 export function DocumentSettingsPanel({
   title,
   slug,

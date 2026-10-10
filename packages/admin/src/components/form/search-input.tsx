@@ -11,13 +11,8 @@ import {
 const SEARCH_DEBOUNCE_MS = 250;
 
 /**
- * Debounced URL-synced search input shared by admin list screens
- * (/entries/$slug, /users, etc). Local state keeps typing instant; the
- * debounce defers the URL commit (which triggers the RPC refetch) so
- * every keystroke doesn't spawn a query. Parent keys this component on
- * the URL value so external URL changes (back button, deep links) remount
- * with the right initial value instead of needing a setState-in-effect
- * sync.
+ * Key it on the URL value so external URL changes remount it with the right
+ * value.
  */
 export function DebouncedSearchInput({
   initialValue,

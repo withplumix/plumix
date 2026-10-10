@@ -8,14 +8,10 @@ interface PluginCatalogLoaderInput {
   readonly importCatalog?: (url: string) => Promise<{ messages: Messages }>;
 }
 
-/** Build a `loadPluginCatalog(pluginId, locale)` function bound to a
- *  manifest snapshot. Resolves the URL declared in
- *  `manifest[pluginId].catalogs[locale]` via dynamic `import()` (the
- *  catalog is a standard ES module — `export const messages = {...}`),
- *  and merges the loaded `messages` into the active Lingui instance.
- *  No-op when the manifest doesn't declare a URL for that (plugin,
- *  locale): missing catalog means the plugin's `<Trans>` calls fall
- *  through to `descriptor.message`. */
+/**
+ * The loader no-ops when the manifest declares no catalog for that plugin and
+ * locale.
+ */
 export function createPluginCatalogLoader({
   manifest,
   importCatalog = (url) => import(/* @vite-ignore */ url),
@@ -33,20 +29,13 @@ export function createPluginCatalogLoader({
     const key = `${pluginId}|${locale}`;
     const cached = inflight.get(key);
     if (cached) return cached;
-    // The IIFE never rejects: failures swallow inside the catch. The
-    // boot path (`Promise.all` in `bootI18n`) relies on this — a
-    // single broken plugin must not abort the mount. Pulling the
-    // try/catch out of this closure would silently break that
-    // contract.
+    // Never rejects: `bootI18n`'s `Promise.all` relies on one broken plugin not
+    // aborting the mount.
     const promise = (async () => {
       try {
         const mod = await importCatalog(url);
-        // `i18n.load(locale, messages)` merges via Object.assign
-        // internally — no need to spread `i18n.messages` (which is
-        // the *active* locale's bucket, not `locale`'s; spreading
-        // would copy active strings into the wrong bucket when this
-        // is called for a non-active locale, e.g., via
-        // `window.plumix.i18n.loadPluginCatalog`).
+        // Already merges; spreading `i18n.messages` would copy the active
+        // locale's strings into a non-active locale's bucket.
         i18n.load(locale, mod.messages);
       } catch (error) {
         console.error(

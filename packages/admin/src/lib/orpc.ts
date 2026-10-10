@@ -6,23 +6,16 @@ import type { AppRouterClient } from "@plumix/core";
 
 import { adminBasePath } from "./admin-base.js";
 
-// Admin and the plumix backend are same-origin in production; prefixing the
-// path with `window.location.origin` keeps things same-origin while giving
-// `RPCLink` the absolute URL its `new URL(...)` constructor needs — a bare
-// path like "/_plumix/rpc" throws "Invalid URL" at `URL` construction time.
-// `adminBasePath()` adds the subdirectory prefix under a subdirectory proxy.
-// Resolved lazily per call so SSR / prerender contexts (no `window`) can
-// import this module without crashing; every actual call runs in the browser.
+// `RPCLink` needs an absolute URL (a bare path throws "Invalid URL"). Lazy so
+// SSR contexts without `window` can import this module.
 const link = new RPCLink({
   url: () => `${window.location.origin}${adminBasePath()}/_plumix/rpc`,
   headers: () => ({
     // Dispatcher rejects any non-safe /_plumix/* method missing this header.
     "x-plumix-request": "1",
   }),
-  // `RPCLink` otherwise binds `globalThis.fetch` at construction, freezing
-  // whichever implementation existed when this module was first imported.
-  // `init` carries the link's own `redirect: "manual"` — forward it, or a 3xx
-  // on an RPC path gets followed and its HTML parsed as an RPC envelope.
+  // Otherwise `RPCLink` freezes `globalThis.fetch` at import. Forward `init`'s
+  // `redirect: "manual"`, or a followed 3xx's HTML parses as an RPC envelope.
   fetch: (request, init) => globalThis.fetch(request, init),
 });
 

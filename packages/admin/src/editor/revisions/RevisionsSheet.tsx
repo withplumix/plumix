@@ -231,9 +231,7 @@ export function RevisionsSheet({
           );
           return (
             <Tabs defaultValue="all" className="mt-2">
-              {/* The tab strip carries its own horizontal inset so it lines up
-                  with the header (p-4) and the row list (px-4); padding the Tabs
-                  root instead would double up the list's own px-4. */}
+              {/* Padding the Tabs root would double up the list's own px-4. */}
               <div className="px-4">
                 <TabsList className="w-full">
                   <TabsTrigger value="all" data-testid="revisions-tab-all">
@@ -393,10 +391,7 @@ function RevisionRow({
   const [draft, setDraft] = useState(revision.message ?? "");
   const [saving, setSaving] = useState(false);
 
-  // Toggle: re-clicking the icon while the editor is open closes it
-  // (without destroying the draft for the *next* open — `openEditor`
-  // re-seeds from the current message on each open). Without this,
-  // a second click would silently reset the in-progress text.
+  // A second click would otherwise silently reset the in-progress text.
   function toggleEditor(): void {
     if (editing) {
       setEditing(false);

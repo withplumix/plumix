@@ -56,10 +56,7 @@ import { ReferencePicker } from "./reference-picker.js";
 import { RepeaterField } from "./repeater-field.js";
 import { useBagValues } from "./use-visible-fields.js";
 
-// The Tiptap editor is code-split: it pulls ProseMirror + the whole editor
-// chunk, so a form with no richtext field never pays for it. Loaded on first
-// render of a richtext field via a lazy subpath import (the block editor uses
-// the same shared component).
+// Code-split so a form with no richtext field never pays for ProseMirror.
 const RichTextField = lazy(() =>
   import("@plumix/admin-editor/rich-text-field").then((m) => ({
     default: m.RichTextField,
@@ -81,18 +78,8 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-// Schema-driven field renderer wired to react-hook-form. Each meta-box
-// field becomes a shadcn `FormField` under the supplied `name` path so
-// label/description/error rendering + ARIA wiring match every other
-// admin form surface. Expects an ancestor `<Form>` provider —
-// Controller reads the form context for `control`, which keeps this
-// component agnostic of the caller's TFieldValues generic.
-//
-// `span` places the outer FormItem in a parent's 12-column grid. Unknown
-// `inputType` falls back to a plain text input with a dev-mode warning
-// so a plugin-specific type doesn't crash the editor. Custom React
-// renderers (plugin chunks) are a future extension seam — they slot in
-// ahead of the built-in switch when chunk splitting lands.
+// Expects an ancestor `<Form>` provider; reading `control` from context keeps
+// this agnostic of the caller's TFieldValues generic.
 export function MetaBoxField({
   field,
   name,
@@ -114,10 +101,8 @@ export function MetaBoxField({
       name={name}
       render={({ field: rhf }) => {
         if (field.inputType === "checkbox") {
-          // Label-above like the toggle and every other grid field, so a
-          // checkbox sharing a row with text / number inputs lines up with
-          // them: the box centres in a control-height row to meet the
-          // neighbouring inputs' midline instead of floating at their label.
+          // Label-above so the box lines up with text inputs sharing its grid
+          // row.
           return (
             <FormItem span={span} data-testid={testIdPrefix}>
               <FormLabel>{labelText}</FormLabel>
@@ -147,11 +132,8 @@ export function MetaBoxField({
         }
 
         if (field.inputType === "toggle") {
-          // Label-above like every other grid field, so a toggle sharing a
-          // row with text / number inputs lines up with them instead of
-          // floating at the siblings' label height. The switch centres in a
-          // control-height row so it meets the neighbouring inputs' midline;
-          // optional on/off state text tracks the current value.
+          // Label-above so the switch lines up with text inputs sharing its
+          // grid row.
           const stateText = rhf.value === true ? field.onText : field.offText;
           return (
             <FormItem span={span} data-testid={testIdPrefix}>
@@ -282,9 +264,8 @@ export function MetaBoxField({
   );
 }
 
-// Types whose control takes `prepend` / `append`. Decided by `inputType`
-// rather than by the keys' presence, so a key that reaches another type
-// (untyped JS, a plugin type) renders nothing. `link` places its own.
+// Keyed by `inputType`, not the keys' presence, so stray adornments on other
+// types render nothing. `link` places its own.
 const ADORNED_INPUT_TYPES: ReadonlySet<string> = new Set([
   "text",
   "email",
@@ -294,10 +275,8 @@ const ADORNED_INPUT_TYPES: ReadonlySet<string> = new Set([
   "textarea",
 ]);
 
-// Radix Select / RadioGroup reject an empty-string item value (Radix reserves
-// it for "no selection"), but a plugin author may legitimately register an
-// option whose value is "". Encode "" to a sentinel for the item + selected
-// value and decode it back on change so author data round-trips intact.
+// Radix reserves "" for "no selection", but a plugin may legitimately register
+// an option whose value is "".
 const EMPTY_OPTION_VALUE = "__plumix_empty__";
 function encodeOptionValue(value: string): string {
   return value === "" ? EMPTY_OPTION_VALUE : value;
@@ -306,10 +285,8 @@ function decodeOptionValue(value: string): string {
   return value === EMPTY_OPTION_VALUE ? "" : value;
 }
 
-// The box's own bag, so a plugin control can read the fields beside it. A
-// component rather than a call in `renderNativeInput`, which is a plain
-// function: only the plugin branch subscribes, so a box of built-in inputs
-// keeps re-rendering one field per keystroke instead of all of them.
+// A component so only the plugin branch subscribes to sibling values; built-in
+// inputs keep re-rendering one field per keystroke.
 function PluginFieldSlot({
   Renderer,
   field,
@@ -334,9 +311,7 @@ function PluginFieldSlot({
   );
 }
 
-// The bag one level above the field's own path — `meta` for `meta.seo_title`,
-// and the whole form for a box that sits at the root (the settings card),
-// which is the undefined name.
+// A box at the form root (the settings card) reads the whole form.
 function useSiblingValues(name: string): MetaBoxSiblingValues | undefined {
   const dot = name.lastIndexOf(".");
   return useBagValues({ name: dot === -1 ? undefined : name.slice(0, dot) });
@@ -419,10 +394,7 @@ function renderNumberField(ctx: NativeInputContext): ReactNode {
           rhf.onChange(null);
           return;
         }
-        // Native `<input type=number>` accepts partial input ("-",
-        // "1e") which parses to NaN; guard so we never propagate NaN
-        // into form state. User can keep typing — once the input is
-        // a complete number the `isFinite` check passes.
+        // Partial input like "-" or "1e" parses to NaN.
         const parsed = Number(raw);
         if (Number.isFinite(parsed)) rhf.onChange(parsed);
       }}
@@ -538,11 +510,8 @@ function renderLinkField({
   );
 }
 
-// Dispatch for the non-dropdown `select` variants. The dropdown case
-// (single + appearance "select", the default) never reaches this table —
-// it's handled in the FormField render callback because Radix Select
-// needs <FormControl> around its trigger. Everything else lands here:
-// single radio/buttons, multi buttons (the multi default) / checkboxes.
+// The dropdown case never reaches here: Radix Select needs <FormControl>
+// around its trigger, so the FormField callback handles it.
 function renderSelectChoiceField(ctx: NativeInputContext): ReactNode {
   const { field } = ctx;
   if (field.multiple === true) {
@@ -714,18 +683,10 @@ function renderRichtextField({
   disabled,
   renderLabel,
 }: NativeInputContext): ReactNode {
-  // The metabox richtext field hosts the shared Tiptap editor in JSON mode:
-  // it reads/writes the ProseMirror doc the field stores, and its `.marks()` /
-  // `.nodes()` allowlist constrains the editor schema + toolbar so the author
-  // can only produce content the server's constraint walker would accept.
   const rt = field as RichtextMetaBoxField;
   const testId = `meta-box-field-${field.key}`;
-  // The value is a stored ProseMirror doc (an object). Anything else — a
-  // legacy string from the old textarea fallback, say — becomes an empty
-  // editor rather than being mis-parsed as HTML by Tiptap's `content`.
-  // Not parsed: a ProseMirror doc is a recursive node tree whose shape is the
-  // editor schema's to state, and nothing here mirrors it — the check is only
-  // separating a stored doc from the legacy string.
+  // A legacy string becomes an empty editor rather than being parsed as HTML.
+  // Not parsed: the doc's shape is the editor schema's to state.
   const doc =
     rhf.value && typeof rhf.value === "object"
       ? (rhf.value as JSONContent)
@@ -763,12 +724,7 @@ function RichTextFieldSkeleton({ testId }: { testId: string }): ReactNode {
 
 function renderDateTimeField(ctx: NativeInputContext): ReactNode {
   const { field, rhf } = ctx;
-  // Native HTML5 date / datetime-local / time inputs. They emit
-  // ISO-shaped strings (`YYYY-MM-DD`, `YYYY-MM-DDTHH:MM`, `HH:MM`)
-  // which Plumix stores as-is; consumers parse via `parseMetaDate`
-  // when they need a JS `Date`. A future iteration may swap in the
-  // shadcn `Calendar` primitive without changing the field-type
-  // contract.
+  // The ISO-shaped strings native inputs emit are stored as-is.
   const htmlType =
     field.inputType === "datetime" ? "datetime-local" : field.inputType;
   return (
@@ -840,11 +796,8 @@ function renderTextLikeField(ctx: NativeInputContext): ReactNode {
     field.inputType !== "url" &&
     field.inputType !== "password"
   ) {
-    // Forward-compat fallback: unknown inputType renders as a plain
-    // text input so a plugin-specific type doesn't crash the editor.
-    // Warn once per render so the plugin author sees the mismatch in
-    // dev tools. A future `customRenderers` seam will hook in here
-    // before the fallback.
+    // A plugin-specific type falls back to text rather than crashing the
+    // editor.
     console.warn(
       `[plumix] unknown meta-box field inputType "${field.inputType}" — falling back to text input. Register a custom renderer or use a built-in type (${CANONICAL_INPUT_TYPES.join("/")}).`,
     );
@@ -876,11 +829,8 @@ function renderTextLikeField(ctx: NativeInputContext): ReactNode {
 
 type NativeInputRenderer = (ctx: NativeInputContext) => ReactNode;
 
-// Input types keyed purely on `inputType`, dispatched *before* the
-// reference-target branches — so a `repeater` (or any of these) that also
-// carried a `referenceTarget` still renders as its declared type rather than a
-// reference picker. Order within the table is irrelevant; a field has one
-// inputType.
+// Dispatched before the reference branches, so a stray `referenceTarget` can't
+// turn these into a reference picker.
 const PRE_REFERENCE_RENDERERS: Partial<Record<string, NativeInputRenderer>> = {
   textarea: renderTextareaField,
   number: renderNumberField,
@@ -890,13 +840,8 @@ const PRE_REFERENCE_RENDERERS: Partial<Record<string, NativeInputRenderer>> = {
   group: renderGroupField,
 };
 
-// Input types keyed purely on `inputType`, dispatched *after* the
-// reference-target branches — a field carrying a `referenceTarget` reaches the
-// reference pickers first. The `select` entry covers the non-dropdown
-// appearances only; the dropdown case is handled in the FormField render
-// callback (it needs <FormControl> around the Radix trigger). The bare
-// `multiselect` / `radio` keys keep object-literal registrations using the
-// retired input types rendering.
+// The bare `multiselect` / `radio` keys keep object-literal registrations of
+// the retired input types rendering.
 const POST_REFERENCE_RENDERERS: Partial<Record<string, NativeInputRenderer>> = {
   select: renderSelectChoiceField,
   multiselect: renderMultiButtonsField,
@@ -913,13 +858,8 @@ function renderNativeInput(ctx: NativeInputContext): ReactNode {
   const { field, rhf, disabled, testId, renderLabel } = ctx;
   const labelText = renderLabel(field.label);
 
-  // Plugin-supplied field renderers slot in here, BEFORE the built-in
-  // switch. A plugin's admin chunk calls `window.plumix.
-  // registerPluginFieldType(inputType, Component)` at module load —
-  // this dispatch consults the registry on every render. Wrapped in
-  // `PluginFieldErrorBoundary` so a thrown render doesn't take down
-  // the whole entry editor; the boundary surfaces a static "couldn't
-  // render" placeholder and logs to the dev console.
+  // Plugin renderers win over built-ins; the boundary keeps a thrown render
+  // from taking down the whole entry editor.
   const PluginRenderer = getPluginFieldType(field.inputType);
   if (PluginRenderer) {
     return (
@@ -927,11 +867,8 @@ function renderNativeInput(ctx: NativeInputContext): ReactNode {
         fieldKey={field.key}
         inputType={field.inputType}
         testId={testId}
-        // Resetting on value change lets the boundary recover after a
-        // bad render — a user who picks a different (valid) value
-        // re-attempts instead of staying stuck on the placeholder.
-        // JSON.stringify covers both id (string) and block-attr
-        // snapshot (object) value shapes.
+        // A different value re-attempts instead of staying stuck on the
+        // placeholder.
         resetKey={stringifyForResetKey(rhf.value)}
       >
         <PluginFieldSlot
@@ -1004,10 +941,8 @@ function renderNativeInput(ctx: NativeInputContext): ReactNode {
   return renderTextLikeField(ctx);
 }
 
-// Reference reads hydrate at the server (#1507): a stored id arrives
-// as the adapter's `{ id, ... }` payload. The pickers operate on ids —
-// extract it, and keep accepting the bare-id shape (drafts in-flight
-// before a save, `.returns("id")` opt-outs).
+// Reads arrive hydrated as `{ id, ... }`; drafts and `.returns("id")` opt-outs
+// carry the bare id.
 function referenceValueId(value: unknown): string | null {
   if (typeof value === "string" && value !== "") return value;
   if (typeof value === "object" && value !== null && !Array.isArray(value)) {
@@ -1017,19 +952,8 @@ function referenceValueId(value: unknown): string | null {
   return null;
 }
 
-// Map a hydrated reference read (`{ id, title|name, ... }`) to the
-// picker's `LookupItem` so the selected label paints on first render —
-// no lookup round-trip. The summary key names differ per kind
-// (entry `title`, term/user `name`), so read both spellings.
-//
-// Returns null (→ the picker resolves the id itself via `lookup.list`)
-// for the bare-id shape (drafts, `.returns("id")` opt-outs) AND when the
-// hydrated label is absent: a null title/name means the lookup query has
-// a richer fallback to offer (an entry's untitled chrome, a user's email)
-// that the public-safe summary intentionally omits, so it's worth the
-// query. Only the label is carried — the summary lacks the admin-only
-// subtitle bits (`type · status`, `email · role`) the lookup query
-// shows, and a mismatched subtitle would mislead more than an absent one.
+// Null on a missing label so the picker's lookup can offer its richer fallback
+// (untitled chrome, email). No subtitle: the public-safe summary lacks it.
 function referenceValueSummary(value: unknown): LookupItem | null {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return null;
@@ -1046,10 +970,7 @@ function referenceValueSummary(value: unknown): LookupItem | null {
   return { id: summary.id, label };
 }
 
-// Tolerant coercion for inputs that display strings. Meta values
-// arrive as `unknown` because the registry isn't per-type-generic yet;
-// each input keeps the display-string stable regardless of what the
-// server sent. `null` / `undefined` become empty strings.
+// Meta values arrive as `unknown` because the registry isn't per-type-generic.
 function asString(value: unknown): string {
   if (value === null || value === undefined) return "";
   if (typeof value === "string") return value;
@@ -1059,10 +980,8 @@ function asString(value: unknown): string {
   return "";
 }
 
-// A `.returns("date")` temporal field reads as a JS `Date` whose
-// wall-clock components anchor to UTC — `formatTemporalValue` (the
-// same formatter the server's write encoder uses) keeps the display
-// timezone-invariant. Invalid Dates drop to empty.
+// A `.returns("date")` value's wall-clock anchors to UTC; the server's own
+// formatter keeps the display timezone-invariant.
 function asTemporalInputValue(
   inputType: TemporalInputType,
   value: Date,
@@ -1080,12 +999,7 @@ function asNumberInputValue(value: unknown): number | string {
   return "";
 }
 
-// Coerce a manifest min/max bound (which the wire shape carries as
-// `number | string | undefined`) to a finite number suitable for the
-// slider's `min`/`max` props. Unset bounds fall back to the supplied
-// default. ISO-string bounds shouldn't reach this branch — `range`
-// is numeric-only — but the cast makes it impossible to surface
-// `string` to a `number`-only prop.
+// The wire shape allows string bounds, though `range` is numeric-only.
 function toFiniteNumber(
   value: number | string | undefined,
   fallback: number,
@@ -1098,11 +1012,8 @@ function toFiniteNumber(
   return fallback;
 }
 
-// JSON field renderer. Holds a local "draft" string so the user can
-// type intermediate state without re-stringifying form state on every
-// keystroke; valid drafts propagate the parsed value upward, invalid
-// drafts surface a parse error inline and leave the previous valid
-// form value untouched. An empty draft is treated as `null`.
+// A local draft lets the user type invalid intermediate JSON; only valid drafts
+// propagate.
 function JsonControl({
   value,
   onChange,
@@ -1122,11 +1033,8 @@ function JsonControl({
   const initialFormatted = formatInitial(value);
   const [draft, setDraft] = useState(initialFormatted);
   const [error, setError] = useState<MessageDescriptor | null>(null);
-  // Detect external resyncs (e.g. `form.reset()` post-save) by
-  // comparing the formatted shape of the incoming `value` against
-  // a state-tracked snapshot. State-during-render is React's
-  // sanctioned pattern for "deriving state from props" — setState
-  // here is a no-op when nothing changed, so it doesn't loop.
+  // Picks up external resyncs like `form.reset()`. setState during render is
+  // React's sanctioned derive-from-props pattern.
   const [lastValueSnapshot, setLastValueSnapshot] = useState(initialFormatted);
   if (initialFormatted !== lastValueSnapshot) {
     setLastValueSnapshot(initialFormatted);
@@ -1134,10 +1042,7 @@ function JsonControl({
     setError(null);
   }
 
-  // Interpret each edit: blank clears to `null`, valid JSON propagates the
-  // parsed value, invalid JSON shows the localized notice and leaves the last
-  // good value in place. `onBlur` is wired on the shell (CodeMirror has no
-  // single focusable input to hang it on) so rhf still marks the field touched.
+  // `onBlur` lives on the shell: CodeMirror has no single focusable input.
   const handleRaw = (raw: string): void => {
     setDraft(raw);
     const result = evaluateJsonDraft(raw);
@@ -1197,10 +1102,8 @@ function formatInitial(value: unknown): string {
   }
 }
 
-// Stable string for the error boundary's `resetKey`. Bare-id (string)
-// values pass through; object/array values JSON-stringify; primitives
-// coerce. Cycles or BigInts (very rare for meta values) fall back to
-// a constant — the boundary just won't reset on those, which is fine.
+// Cycles and BigInts fall back to a constant, so the boundary won't reset on
+// them.
 function stringifyForResetKey(value: unknown): string {
   if (typeof value === "string") return value;
   if (value === null || value === undefined) return "";

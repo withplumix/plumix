@@ -140,10 +140,6 @@ export function PlainFormRouteInner({
     parentId: entry.parentId,
   };
 
-  // Use the entry's title as the headline when available; cascade
-  // through the type's `labels.editItem` ("Edit Post" / "Edit Page")
-  // otherwise. Substitution-free — the per-type label declares the
-  // noun explicitly so DE/RU/PL/UK/AR morphology stays correct.
   const headline =
     entry.title.trim() === ""
       ? renderLabel(entryTypeLabel(entryType, "editItem"))

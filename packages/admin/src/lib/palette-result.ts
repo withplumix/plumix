@@ -12,10 +12,10 @@ export function parseGroupKey(groupKey: string): {
     : { domain: groupKey.slice(0, sep), name: groupKey.slice(sep + 1) };
 }
 
-/** Full admin URL for a content result, for opening in a new tab. Mirrors
- *  the in-app routes; `null` for an unroutable domain. `resolveSlug` maps
- *  an entry-type name to its admin slug. Segments are encoded to match the
- *  router's encoding on the SPA path. */
+/**
+ * Must mirror the in-app routes and the router's segment encoding. `null` for
+ * an unroutable domain.
+ */
 export function resultHref(
   groupKey: string,
   id: string,

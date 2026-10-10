@@ -40,11 +40,7 @@ interface ResolveEditorModeInput {
   readonly capabilities: ReadonlySet<string>;
 }
 
-// Maps (entry, viewer) → which editor experience to mount. Mirrors the
-// server's `entry.update` saveAs defaulting (a published row of an
-// autosave-supporting type whose viewer can edit gets draft routing);
-// the dispatcher logic lives here so unit tests can run the truth
-// table without booting the editor.
+// Must mirror the server's `entry.update` saveAs defaulting.
 export function resolveEditorMode({
   entryType,
   currentStatus,
