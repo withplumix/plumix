@@ -39,17 +39,41 @@ same.
 
 ### Comments
 
-Let names and structure carry the meaning. Write a comment only for what the reader can't recover
-from the code, and delete one that repeats what the names or types already say.
+A comment is a smell. The default is none. Wanting to write one is a sign the code isn't saying
+enough, so fix the code first:
 
-- Write for someone who opens the file months later with no ticket, PR or diff. Say how the code
-  works and why, not how it came to be. Leave out "now", "previously" and "no longer", and never
-  address a reviewer.
-- A `/** */` block states the contract, meaning behaviour, parameters, return value and what it
-  throws. A `//` comment gives the reasoning.
-- A workaround names the issue or PR that explains it.
-- When a change alters documented behaviour, correct the existing text. Don't replace it with
-  something vaguer.
+- A comment that explains a block: extract the block into a function named after the explanation.
+- A comment that explains a value: give it a named constant or variable.
+- A comment that explains a parameter or state: give it a type that can't hold the wrong value, or
+  an assertion.
+- A comment that explains what a function does: rename the function.
+
+What survives is the one thing code can't hold: **why**. That covers a constraint from outside the
+code, an invariant the types can't express, a choice that looks wrong but isn't, or a workaround
+for an upstream bug. One line where possible. A workaround links the upstream issue, so the next
+reader knows when to delete it.
+
+Never write:
+
+- **What the code does.** If a reader needs it, the names are wrong.
+- **History.** No "now", "previously", "no longer", "we changed", PR or ticket numbers. The commit
+  and the PR body carry how the code came to be.
+- **Pointers that rot.** No lists of implementations, callers or the places a value flows to. No
+  "see ADR/§X" in place of a reason.
+- **Restated types.** No `@param`/`@returns` that repeats the signature. No "Optional." on a `?`.
+- **Words for a reviewer.** No notes to whoever reads the diff.
+- **File headers** that summarise the module.
+
+A `/** */` block is for a published export only (an entry in `tooling/published-surface`), and only
+for what its signature can't say: a precondition, what it throws, a surprising behaviour. Internal
+code gets no `/** */`.
+
+When a change alters behaviour a comment describes, correct the comment or delete it. Don't replace
+it with something vaguer. When you edit a function, delete the comments in it that break these
+rules.
+
+**In review**, treat every added comment line as a finding until it passes these rules. Name the
+refactor that would make it unnecessary, or say which rule it breaks.
 
 ## Correctness
 
