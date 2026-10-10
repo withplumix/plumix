@@ -5,16 +5,9 @@ import {
   pluginAdminEntryPath,
 } from "plumix/plugin";
 
-// `@plumix/plugin-seo` declares the `seo:og_image` filter subscribed to below.
-// The augmentation reaches this compilation only through an import of the
-// package that declares it, and a side-effect import is the edge tsc keeps —
-// same idiom as core's `public-hooks.ts` anchor (#1698).
+// Side-effect imports keep these augmentations in the declaration graph; tsc
+// drops value-only edges.
 import "@plumix/plugin-seo";
-// Anchors this plugin's own `DebugPanelRegistry` augmentation — which makes
-// `dev: { panels: { og: false } }` type-check on a site that installs it —
-// into the published declaration graph. `chain-trace.js` is otherwise reached
-// only transitively, and tsc keeps a side-effect edge where it drops a value
-// one (#1698).
 import "./chain-trace.js";
 
 import type { CardInputs } from "./card-identity.js";
@@ -68,87 +61,31 @@ export { remote } from "./remote.js";
 
 export interface OgPluginOptions {
   /**
-   * How a card's node tree becomes bytes. Defaults to the engine bundled with
-   * this package, rasterizing to PNG; `takumi({ format: "jpeg" })` and
-   * `svgOnly()` on the `/takumi` subpath and {@link remote} are the shipped
-   * alternatives. Only PNG and JPEG reach a page's head — what X, Facebook and
-   * LinkedIn all render. Any other format still gets its route, so a card is
-   * viewable while you build it, but the head keeps the site-wide default.
-   *
-   * Selecting one does not shrink the deploy: the default is resolved inside
-   * this package, so the engine is part of the install either way, and the
-   * SVG-only implementation is that same engine's SVG output. Only
-   * {@link remote} leaves the engine unexecuted.
+   * Only PNG and JPEG reach the head; other formats are served but not
+   * advertised. The bundled engine ships either way; only {@link remote} leaves
+   * it unexecuted.
    */
   readonly renderer?: CardRenderer;
   /**
-   * Font files to render with, as paths into the platform asset layer
-   * (Cloudflare's `ASSETS`), in fallback order. They are read at render time,
-   * so they cost nothing in the Worker bundle.
-   *
-   * Which formats are read is the renderer's business, not this option's: the
-   * bundled engine parses TTF, OTF and WOFF but not WOFF2 — what most font
-   * packages ship — while a `remote` endpoint may parse exactly the reverse.
-   * Faces in a format the connected renderer does not parse are never fetched,
-   * and a set with none it can parse fails the card rather than serving one
-   * with no text on it. A renderer that reads no fonts at all ignores this
-   * option entirely, which the debug bar points out in development.
-   *
-   * Left empty, the engine's own fallback face is used.
+   * Asset-layer paths, in fallback order. The bundled engine can't parse WOFF2;
+   * a set with no face the renderer parses fails the card.
    */
   readonly fonts?: readonly string[];
   /**
-   * Entry types whose editor shows a live preview of the card the entry will
-   * be shared with, and which link of the `og:image` chain produced it.
-   *
-   * Named rather than defaulted: a meta box is registered against entry types
-   * by name and an unregistered name fails the boot, so a guess here would
-   * crash a site for installing a plugin.
-   *
-   * @example
-   * ```ts
-   * og({ preview: ["post", "page"] });
-   * ```
+   * Entry types whose editor shows a card preview. An unregistered name fails
+   * the boot.
    */
   readonly preview?: readonly string[];
   /**
-   * Which of the theme's `color` tokens the bundled default card paints from:
-   * its ground, its headline, and the site name beneath. Left out, each looks
-   * for a slug of its own name — the convention a theme can adopt to get a card
-   * in its own palette for declaring nothing here at all. Name only the roles
-   * your theme spells differently.
-   *
-   * The card takes the theme's colours only when all three resolve. A theme
-   * that names two of them keeps the bundled card's own palette rather than
-   * mixing the two, because half a palette is what makes a card unreadable.
-   *
-   * A theme's own `ogCards` are unaffected — they style themselves from the
-   * same tokens directly.
-   *
-   * @example
-   * ```ts
-   * og({ palette: { background: "paper", foreground: "ink", mutedForeground: "muted" } });
-   * ```
+   * Theme `color` token slugs for the default card. Each role defaults to a
+   * slug of its own name; the theme palette applies only when all three
+   * resolve.
    */
   readonly palette?: CardPalette;
 }
 
 /**
- * Generated social cards. Installing it and configuring nothing serves a card
- * for every page kind that has one — an entry, a term archive, a content-type
- * archive, an author, a date, the front page — at
- * `/_plumix/og/card/<target>/<digest>.<ext>`, composited from the bundled
- * default template: the page's own title over the site's name.
- *
- * @example
- * ```ts
- * import { og } from "@plumix/plugin-og";
- *
- * plumix({
- *   storage: r2({ binding: "MEDIA" }),
- *   plugins: [og({ fonts: ["/fonts/Inter-SemiBold.ttf"] })],
- * });
- * ```
+ * With no configuration, serves the bundled default card for every page kind.
  */
 export function og(options: OgPluginOptions = {}): PluginDescriptor {
   const renderer = options.renderer ?? bundledRenderer();
@@ -167,9 +104,7 @@ export function og(options: OgPluginOptions = {}): PluginDescriptor {
   const advertised = advertisedExtension(renderer.contentType);
 
   return definePlugin("og", {
-    // Only when a site asked for the box: the chunk exists to ship the
-    // preview's field renderer, so with no box it would be dead weight folded
-    // into every og install's admin bundle.
+    // The chunk only ships the preview renderer, dead weight without a box.
     ...(preview.length > 0 ? { adminEntry: ADMIN_ENTRY_PATH } : {}),
     i18n: PLUGIN_I18N_SLOT,
     // Async because of the dev import below; core awaits `setup` before it
@@ -186,10 +121,8 @@ export function og(options: OgPluginOptions = {}): PluginDescriptor {
         method: "GET",
         path: CARD_ROUTE_PATH,
         auth: "public",
-        // A card is one document for every visitor, and content-addressing is
-        // what guarantees it rather than an absence of reads: a card that reads
-        // something visitor-specific digests differently, so such a request is
-        // redirected away instead of filling the shared entry with its answer.
+        // Content-addressing keeps it shared: a visitor-specific read digests
+        // differently and is redirected away.
         cacheable: true,
         handler,
       });
@@ -243,9 +176,6 @@ export function og(options: OgPluginOptions = {}): PluginDescriptor {
           inputs: inputs(),
         }),
       );
-      // Behind the development gate and a dynamic import, the way core mounts
-      // its own dev-only routes: the branch is dead code in a build, so the
-      // preview and the debug panel leave nothing in a production bundle.
       if (process.env.PLUMIX_DEV) {
         const { registerDevSurfaces } = await import("./dev/index.js");
         registerDevSurfaces(ctx, { renderer, cards, inputs });

@@ -7,13 +7,8 @@ import type { CardFontPlan } from "../card-fonts.js";
 import type { OgCardSkip, OgChainOutcome, OgTrace } from "../chain-trace.js";
 import { OG_PANEL_ID } from "../chain-trace.js";
 
-// What each link of the chain is called, in the vocabulary the README uses.
-// "if one is set" because the chain's tail is `?? (siteDefault ? … : null)`:
-// with no default image set the page carries no `og:image` at all, and this
-// plugin cannot see which of the two it is from inside the filter.
-//
-// `supplied` names an earlier subscriber rather than the chain's owner: the
-// value handed in is always null on the first subscriber to run.
+// "if one is set": this plugin can't see from inside the filter whether a site
+// default exists. `supplied` means an earlier subscriber.
 const OUTCOME_LABEL: Record<OgChainOutcome, string> = {
   supplied: "Another seo:og_image subscriber",
   card: "Generated card",
@@ -21,9 +16,8 @@ const OUTCOME_LABEL: Record<OgChainOutcome, string> = {
   "site-default": "Site default, if one is set",
 };
 
-// Why no card is on the page — the question the panel exists to answer, and
-// the reason a renderer whose format scrapers cannot read needs no boot-time
-// warning of its own.
+// Shown here instead of a boot-time warning for an unadvertisable renderer
+// format.
 const SKIP_REASON: Record<OgCardSkip, string> = {
   "page-kind":
     "This page kind cannot be named by a card URL — a search page's subject " +
@@ -45,12 +39,7 @@ export interface OgDebugPanelOptions {
   readonly fonts: CardFontPlan;
 }
 
-/**
- * The `og:image` chain for the page, and which of its four links produced the
- * image. The chain resolves inside `@plumix/plugin-seo` and leaves no trace in
- * the markup, so without this the only way to tell a missing rule from an
- * unadvertisable format is to go and read the plugin.
- */
+/** Shows which `og:image` link won; the chain leaves no trace in the markup. */
 export function ogDebugPanel(options: OgDebugPanelOptions): DebugPanel {
   const { fonts } = options;
   return {
@@ -65,10 +54,7 @@ export function ogDebugPanel(options: OgDebugPanelOptions): DebugPanel {
   };
 }
 
-// A face the renderer never receives leaves no mark on the card it serves —
-// that card looks exactly like one rendered in the faces you chose. Both ways
-// of never receiving one get a row, and the plan makes them exclusive: a
-// renderer reading nothing has no unreadable set to report.
+// A face the renderer never receives leaves no visible mark on the card.
 function fontRows(plan: CardFontPlan): readonly DebugKVRow[] {
   if (plan.ignored.length > 0) {
     return [
@@ -105,12 +91,8 @@ function chainRows(snapshot: DebugSnapshot): readonly DebugKVRow[] {
   if (page === undefined) {
     return [{ label: "Chain", value: "No page rendered on this request" }];
   }
-  // A page rendered but the filter never answered. Either the chain
-  // short-circuited above it — an explicit `.ogImage()` role on the entry, the
-  // one link `seo:og_image` never sees — or nothing fires the filter at all,
-  // which is what an install missing `@plumix/plugin-seo` looks like. This
-  // plugin cannot tell the two apart from inside the filter it was not called
-  // through, so the row names both rather than guessing.
+  // Either an explicit `.ogImage()` short-circuited the chain or
+  // `@plumix/plugin-seo` isn't installed; this plugin can't tell which.
   if (chain === undefined) {
     return [
       { label: "Page", value: page.pageKind },

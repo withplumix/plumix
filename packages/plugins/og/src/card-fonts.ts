@@ -1,40 +1,24 @@
 import type { CardRenderer, FontFormat } from "./renderer.js";
 import { BUNDLED_ENGINE_FONTS, FONT_FORMATS } from "./renderer.js";
 
-/**
- * The configured font set split by what the connected renderer can do with it,
- * decided once from that renderer's own declaration. Both the renderer and the
- * set are fixed for the life of the plugin, so nothing here is per-request.
- */
+/** Decided once: the renderer and font set are fixed for the plugin's life. */
 export interface CardFontPlan {
-  /**
-   * Faces the renderer will be handed, in the configured fallback order. This
-   * is what the digest names: a face the renderer never receives is not an
-   * input to the bytes it produces.
-   */
+  /** In fallback order. Only these are digested. */
   readonly readable: readonly string[];
   /**
-   * Configured faces in a format this renderer cannot parse. Kept out of the
-   * digest — they reach no render — but a render fails on them when they are
-   * all a site configured, because the alternative is a card with no text.
+   * Not digested, but a render fails when these are all a site configured,
+   * since the alternative is a card with no text.
    */
   readonly unreadable: readonly string[];
   /**
-   * Configured faces against a renderer that reads none at all. Not an error:
-   * the set is simply not addressed to this renderer. Surfaced in development
-   * so the dead config is visible to whoever wrote it.
+   * For a renderer that reads no fonts. Not an error; surfaced in development.
    */
   readonly ignored: readonly string[];
   /** What the renderer declared it reads — the list a refusal names. */
   readonly formats: readonly FontFormat[];
 }
 
-/**
- * Split a configured font set against what the renderer declared it reads.
- *
- * Format comes from the path, which is the only thing there is to read before
- * a face is fetched — and deciding without fetching one is the whole point.
- */
+/** Format comes from the path, so nothing is fetched to decide. */
 export function planCardFonts(
   renderer: CardRenderer,
   configured: readonly string[],
@@ -47,9 +31,7 @@ export function planCardFonts(
     if (format !== undefined && formats.includes(format)) readable.push(path);
     else rejected.push(path);
   }
-  // A renderer reading no format was never addressed by this set, so the whole
-  // of it is dead config rather than a failed render. `false` and an empty
-  // format list are the two ways the type spells that, and they mean the same.
+  // `false` and an empty format list both mean the renderer reads no fonts.
   const readsNothing = formats.length === 0;
   return {
     readable,
@@ -65,9 +47,7 @@ function rendererFontFormats(renderer: CardRenderer): readonly FontFormat[] {
 }
 
 function formatOf(path: string): FontFormat | undefined {
-  // A configured path is read straight out of the asset layer, so it carries
-  // whatever a cache-busting query or fragment put on it. Neither is part of
-  // the filename the format is named by.
+  // Strip any cache-busting query or fragment.
   const filename = path.split(/[?#]/)[0] ?? "";
   const extension = filename.split(".").pop()?.toLowerCase();
   return FONT_FORMATS.find((format) => format === extension);

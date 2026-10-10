@@ -29,23 +29,13 @@ export interface PreviewRouteOptions {
 }
 
 /**
- * `GET /_plumix/og/preview` — every declared card rule rendered against sample
- * data, and `/_plumix/og/preview/<n>.<ext>` for one of them on its own.
- *
- * Registered only under the development gate, so neither path exists in a
- * production build. Storage and the cache are both bypassed, which is a
- * requirement rather than a convenience: a card is content-addressed, so every
- * edit lands on a different URL with the previous render sitting immutable in
- * the bucket, and without the bypass the authoring loop is copy-pasting URLs
- * out of page source.
+ * Bypasses storage and cache: cards are content-addressed, so otherwise every
+ * edit would land on a new URL to find in page source.
  */
 export function createPreviewRoute(
   options: PreviewRouteOptions,
 ): (request: Request, ctx: AppContext) => Promise<Response> {
   const { renderer, rules, inputs } = options;
-  // A format with no extension has no URL to serve a card at, so the route is
-  // decided here rather than re-asked on every request — the same call the card
-  // route makes about the same renderer.
   const extension = extensionFor(renderer.contentType);
   if (extension === undefined) return () => Promise.resolve(notFound());
 
@@ -86,17 +76,8 @@ export function createPreviewRoute(
   };
 }
 
-/**
- * The rules in the order a node is actually resolved against them, which is not
- * the order they were declared in: `resolveRule` walks targeted matchers first,
- * then the generic tier for the node's kind, then `fallback`. Listing them as
- * declared would tell a developer the opposite of what happens — a
- * `card.entry()` declared above `card.forEntryType("post")` would look like the
- * winner on a post, while the panel on that post's page names the other one.
- *
- * Stable within each band, so two rules of the same standing keep the order the
- * theme wrote them in, which is the tie-break `resolveRule` itself applies.
- */
+// The order `resolveRule` walks, not declaration order, so the preview never
+// shows a different winner than the page. Stable within each band.
 function inPrecedenceOrder(rules: readonly CardRule[]): readonly CardRule[] {
   return [...rules].sort((a, b) => precedence(a) - precedence(b));
 }
@@ -106,10 +87,8 @@ function precedence(rule: CardRule): number {
   return rule.tier === "fallback" ? 2 : 1;
 }
 
-// `<n>.<ext>`, where `n` indexes the precedence order the index page listed.
-// The label is not the identifier: two rules of the same tier, or two matchers
-// narrowed by different predicates, share one. Four digits is well past any
-// rule set a theme hand-writes, and keeps a crafted URL from allocating.
+// Indexed, since labels aren't unique. Four digits caps what a crafted URL can
+// allocate.
 const PREVIEW_FILENAME = /^(0|[1-9]\d{0,3})\.([a-z]+)$/;
 
 function parseRuleIndex(filename: string, extension: string): number | null {

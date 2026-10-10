@@ -11,19 +11,15 @@ import { resolveCardImages } from "./card-images.js";
 import { cardSize } from "./card.js";
 import { OgPluginError } from "./errors.js";
 
-// A card is bytes a renderer produced, and the renderer is a slot: `remote()`
-// and any third-party implementation can answer with whatever they like, served
-// inline from the site's own origin. SVG is a document to a browser, so a
-// direct navigation would run whatever script those bytes carried. The media
-// plugin answers the same hazard by forcing a download; a card has to stay
-// viewable, so it is defused wherever one is served.
+// A renderer may return any bytes, served from the site's origin; SVG could run
+// script on direct navigation, and a card must stay viewable rather than
+// downloaded.
 export const SANDBOX_CSP =
   "default-src 'none'; style-src 'unsafe-inline'; sandbox";
 
 /**
- * The arguments a card is both keyed and rendered from. Deps are spread first,
- * so a dep kind named `data`, `ctx` or `tokens` cannot displace the
- * framework-owned set — the same ordering the template renderer uses.
+ * Deps spread first, so a dep named `data`, `ctx` or `tokens` can't displace
+ * them.
  */
 export async function buildCardArgs(
   card: CardDefinition<TemplateData>,
@@ -71,19 +67,8 @@ export async function renderCardBytes(
   });
 }
 
-/**
- * Fonts come from the platform asset layer rather than the Worker bundle, so
- * adding cards costs no deployment size. Which formats can be read is the
- * renderer's own business, declared on it — the bundled engine reads TTF, OTF
- * and WOFF but not WOFF2, and an endpoint off-box may well read the one it
- * cannot.
- *
- * A declared font that cannot be read fails the render rather than dropping to
- * the engine's own fallback face, which would answer 200 with a card nobody
- * meant to publish. A configured set in a format this renderer parses none of
- * fails the same way and for the same reason, one step earlier. Both failures
- * then take the route's fallback path.
- */
+// An unreadable font fails the render rather than falling back to the engine's
+// face, which would publish a card nobody meant to.
 async function loadFonts(
   ctx: AppContext,
   plan: CardFontPlan,

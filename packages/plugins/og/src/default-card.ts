@@ -22,21 +22,15 @@ export interface CardPalette {
   readonly mutedForeground?: string;
 }
 
-// Not an identity map: `defineTheme` holds token slugs to `[a-z][a-z0-9-]*`,
-// so the kebab-case slug a theme has to declare and the camelCase key this
-// option is read with cannot be the same string.
+// Not an identity map: token slugs are kebab-case, option keys camelCase.
 const CONVENTION = {
   background: "background",
   foreground: "foreground",
   mutedForeground: "muted-foreground",
 } satisfies Required<CardPalette>;
 
-// Ordinary CSS against ordinary class names, custom properties included — the
-// same shape a theme-declared card is written in, and the reason the engine has
-// to resolve `var()` rather than take flattened values. Each bundled colour is
-// a `var()` fallback rather than a `:root` block of the card's own: such a
-// block ships after the theme's and beats it, which is what kept a theme's
-// palette out of this card entirely.
+// Bundled colours are `var()` fallbacks, not a `:root` block, which would ship
+// after the theme's and beat its palette.
 const STYLESHEET = `
 .plumix-og-card {
   display: flex;
@@ -60,16 +54,8 @@ const STYLESHEET = `
 `;
 
 /**
- * The theme's palette mapped onto the properties {@link STYLESHEET} falls back
- * to, or `""` for a theme whose palette the card leaves alone.
- *
- * All-or-nothing because a half-taken palette is worse than an untaken one: the
- * theme's paper under the bundled card's near-white ink is unreadable, while a
- * card that took nothing merely looks unlike the site.
- *
- * A slug is a lookup key here and never reaches the CSS. Only values do, and
- * those came through `sanitizeCssValue` on their way out of
- * `resolveThemeTokens`.
+ * All-or-nothing: a half-taken palette can be unreadable. Only values reach the
+ * CSS, already sanitized by `resolveThemeTokens`.
  */
 export function defaultCardPaletteCss(
   tokens: ResolvedThemeTokens,
@@ -94,23 +80,13 @@ export function defaultCardPaletteCss(
   return `:root { --plumix-og-background: ${background}; --plumix-og-foreground: ${foreground}; --plumix-og-muted-foreground: ${muted}; }`;
 }
 
-/**
- * What a fresh install renders, with no theme configuration: the page's own
- * title over the site's name on a plain ground — for every page kind a card is
- * served for, not just an entry, so "install the plugin and cards work" holds
- * on a tag archive as much as on a post.
- *
- * Declared as an ordinary `fallback` rule, so a theme's own `ogCards` outrank
- * it by sitting ahead of it.
- */
+/** An ordinary `fallback` rule, so a theme's own `ogCards` outrank it. */
 export const defaultCards: readonly CardRule[] = [
   card.fallback().define({
     settings: ["site"],
     styles: [STYLESHEET],
-    // The card renders two lines, so the key names both — an entry's
-    // second-resolution `updatedAt` alone would let a same-second retitle keep
-    // the old card, and two archives of one site would otherwise collide on the
-    // site name alone.
+    // `updatedAt` has second resolution, so a same-second retitle would keep
+    // the old card.
     key: (args) => {
       const [headline, footer] = lines(args);
       return isEntry(args.data)
@@ -121,7 +97,6 @@ export const defaultCards: readonly CardRule[] = [
   }),
 ];
 
-/** The two lines the card carries: the page's own title, then the site's name. */
 function lines(args: CardArgs<TemplateData>): readonly [string, string] {
   const site = siteSetting(args, "title");
   // On the front page the headline *is* the site, so the line below it carries
@@ -131,12 +106,7 @@ function lines(args: CardArgs<TemplateData>): readonly [string, string] {
     : [pageTitle(args.data, args.ctx), site];
 }
 
-/**
- * What the page calls itself, read from the page's own data rather than from
- * whoever resolved it: the head and the route both reach this, and a title
- * either could not reproduce would put them on different digests and redirect
- * every scraper away from its image.
- */
+// From the page's own data, so head and route compute the same digest.
 function pageTitle(data: TemplateData, ctx: AppContext): string {
   switch (data.kind) {
     case "entry":
@@ -158,9 +128,7 @@ function pageTitle(data: TemplateData, ctx: AppContext): string {
   }
 }
 
-// Core's own date-archive title, spelled the way `page-data.ts` spells it: the
-// card's headline is the page's own title, so the two have to stay in step. Not
-// `dateSegment`, which pads the year for a URL that has to round-trip.
+// Must match core's date-archive title; not `dateSegment`, which pads the year.
 function dateTitle(
   year: number,
   month: number | null,
@@ -172,9 +140,7 @@ function dateTitle(
   return parts.join("-");
 }
 
-// Which page this is, for the key. Two archives on one site render the same two
-// lines only by coincidence, but a card keyed on what it renders alone would
-// hand them one URL the first time they did.
+// Two archives can render the same lines; without this they'd share a URL.
 function pageName(data: TemplateData): string {
   const identity = cardIdentityFor(data);
   return identity === null ? data.kind : cardTargetPath(identity.target);
@@ -194,7 +160,6 @@ function cardNode(title: string, footer: string): CardNode {
   return { type: "container", className: "plumix-og-card", children };
 }
 
-/** Empty on a site that has not set one, which leaves that line off. */
 function siteSetting(
   args: CardArgs<TemplateData>,
   key: "title" | "tagline",

@@ -25,26 +25,18 @@ import { extensionFor } from "./renderer.js";
 import { isShareablePage } from "./shareable.js";
 import { siteDefaultImage } from "./site.js";
 
-/**
- * Where the plugin mounts the route, relative to its own prefix. One mount for
- * every page kind a card is served for — the kind is a path segment the handler
- * reads, not a route of its own, so adding a kind adds no route and the mount
- * is spelled here and nowhere else.
- */
+/** One mount for every page kind; the kind is a path segment, not a route. */
 export const CARD_ROUTE_PATH = "/card/*";
 
-// Where core mounts this plugin's routes — it prefixes each with
-// `/_plumix/<pluginId>` — spelled once because the head has to name the URL the
-// route answers on, and a preview link has to reach the preview route.
+// Core prefixes plugin routes with `/_plumix/<pluginId>`; the head needs the
+// full URL.
 export const OG_ROUTE_PREFIX = "/_plumix/og";
 const CARD_URL_PREFIX = `${OG_ROUTE_PREFIX}/card`;
 
 /**
- * One card's URL. Absolute, because a scraper reads it out of the page and
- * never resolves it against anything; content-addressed, because that is the
- * only lever on the image caches X, Facebook and LinkedIn keep — a purge
- * reaches Cloudflare and stops there, while a changed URL is one they have to
- * fetch again.
+ * Absolute, since scrapers never resolve it. Content-addressed, since a changed
+ * URL is the only way to refresh the image caches X, Facebook and LinkedIn
+ * keep.
  */
 export function cardUrl(
   ctx: AppContext,
@@ -56,9 +48,8 @@ export function cardUrl(
   return `${ctx.origin}${withBasePath(path, ctx.config.basePath)}`;
 }
 
-// Names one card within the site, and is the last segments of both the URL and
-// the storage key — which is what "the URL is the key" means here, structurally
-// rather than as a claim two string literals have to keep agreeing on.
+// The last segments of both the URL and the storage key, so the two can't
+// drift.
 function cardAssetPath(
   target: CardTarget,
   digest: string,
@@ -72,22 +63,15 @@ export interface CardRouteOptions {
   /** What the theme declared, behind the plugin's own default. */
   readonly cards: CardRegistry;
   /**
-   * Everything a card is addressed and rendered by that isn't the card. Read
-   * per request rather than captured, because the theme hands its tokens over
-   * after the route is built — and read through the same accessor the head
-   * uses, since the two have to name one digest.
+   * Read per request: the theme hands its tokens over after the route is built.
+   * Must be the accessor the head uses, so both name one digest.
    */
   readonly inputs: () => CardInputs;
 }
 
 /**
- * `GET /_plumix/og/card/<target>/<digest>.<ext>` — one page's card, rendered on
- * a miss and read back from storage on every request after. `<target>` names
- * the page: `entry/12`, `term/3`, `archive/post`, `date/2026-03`, `front-page`.
- *
- * `/_plumix/og/card/<target>.<ext>` is the same card without its digest: it
- * names whichever render is current and redirects there, which is what makes a
- * card reachable by hand while an unfurl still gets an immutable URL.
+ * Serves `<target>/<digest>.<ext>`, rendering on a miss. The digest-less
+ * `<target>.<ext>` redirects to the current render.
  */
 export function createCardRoute(
   options: CardRouteOptions,
@@ -102,11 +86,8 @@ export function createCardRoute(
     const url = new URL(request.url);
     const asked = parseCardPath(url.pathname, extension);
     if (asked === null) return notFound();
-    // The whole URL is the CDN's key, query string included, so a
-    // parameter a caller invents is another entry holding the same immutable
-    // bytes — an unauthenticated way to mint them without bound. A card reads
-    // nothing from the query, so there is nothing to keep: send it back to the
-    // one URL that addresses these bytes, before any of the work below.
+    // The query string is part of the CDN key, so an invented parameter would
+    // mint unbounded entries for the same bytes.
     if (url.search !== "") return redirect(`${ctx.origin}${url.pathname}`);
 
     const page = await resolveCardPage(ctx, asked.target);
@@ -126,16 +107,11 @@ export function createCardRoute(
     );
     const { args } = identity;
 
-    // The digest in the URL is never taken as the key: a crafted one would
-    // otherwise mint an entry per request, in storage and at the edge alike.
-    // A URL naming any other render — the digest-less one, or one an edit has
-    // superseded — is answered by naming the current one instead.
+    // Never trust the URL's digest as the key: a crafted one would mint an
+    // entry per request.
     if (asked.digest !== identity.digest) {
       return redirect(cardUrl(ctx, asked.target, identity.digest, extension));
     }
-    // What a purge of this card names, which for an entry card is the entry
-    // tag the publish hook already sweeps. Belt and braces: the URL moved with
-    // the edit, so nothing that reads the old one is stale.
     tagCdnEntry(ctx, [identity.key.tag]);
 
     let response: Response;
@@ -163,12 +139,8 @@ export function createCardRoute(
   };
 }
 
-/**
- * What a card that could not be produced answers with. The page's head shipped
- * this URL before anything rendered and cannot take it back, so an error status
- * would leave a promised image broken; the site's own default is the closest
- * thing to what the page meant. Never cached — the next render may well work.
- */
+// The head already shipped this URL, so an error status would break a promised
+// image. Never cached: the next render may work.
 async function siteDefaultRedirect(ctx: AppContext): Promise<Response> {
   const location = await siteDefaultImage(ctx);
   return location === null ? notFound() : redirect(location);
@@ -188,12 +160,6 @@ interface CardPage {
   readonly data: TemplateData;
 }
 
-/**
- * The page behind a card URL, in the shape card rules resolve against: the node
- * a matcher matches on, and the same `data` the page's own template would
- * receive. Null where no such page is publicly shareable, which is the route's
- * whole answer to a draft, a private type, an empty term or an invented date.
- */
 async function resolveCardPage(
   ctx: AppContext,
   target: CardTarget,
@@ -206,18 +172,13 @@ async function resolveCardPage(
 }
 
 /**
- * The data a card for `target` is computed from — the public page's, whichever
- * page is asking. The head asks it too wherever the page it is rendering is not
- * that page, since a digest taken over anything else names a card this route
- * never serves.
+ * Always the public page's data, whoever asks; a digest over anything else
+ * names a card the route never serves.
  */
 export async function cardTargetData(
   ctx: AppContext,
   target: CardTarget,
 ): Promise<TemplateData | null> {
-  // Every kind resolves through core, which is what keeps a card rendered from
-  // the page's own data rather than from a second, drifting copy of the
-  // queries behind it — pagination included, which core pins to page one.
   return target.kind === "entry"
     ? entryData(ctx, target.id)
     : ((await resolveListingPage(ctx, target))?.data ?? null);
@@ -239,22 +200,13 @@ async function entryData(
 
 interface AskedCard {
   readonly target: CardTarget;
-  /** The render the URL named, or null for the digest-less pointer. */
   readonly digest: string | null;
 }
 
-// A digest is lowercase hex, and so is a bare id, so the two forms are told
-// apart by trying the longer one first: `entry/12` reads as a target with a
-// digest until `entry` fails to parse as a whole target.
+// A bare id is also hex, so the longer form is tried first.
 const DIGEST = /^[0-9a-f]+$/;
 
-/**
- * What the URL is asking for, or null when it asks for nothing this route
- * serves. Read against the route's own mount rather than off the end of the
- * path, so a `/card` segment anywhere else in the URL is off the table before
- * anything is parsed. The base path is not in it: what reaches a route handler
- * has already had the site's mount stripped.
- */
+// The site's base path is already stripped from what reaches a route handler.
 function parseCardPath(pathname: string, extension: string): AskedCard | null {
   const prefix = `${CARD_URL_PREFIX}/`;
   if (!pathname.startsWith(prefix)) return null;

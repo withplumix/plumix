@@ -30,7 +30,6 @@ const SKIPS: Record<OgCardSkip, MessageDescriptor> = {
 };
 
 interface PanelProps {
-  /** The entry being previewed, or null on the create form. */
   readonly entryId: number | null;
   readonly disabled: boolean;
   readonly testId: string;

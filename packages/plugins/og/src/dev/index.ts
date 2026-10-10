@@ -16,14 +16,7 @@ export interface DevSurfaceOptions {
   readonly inputs: () => CardInputs;
 }
 
-/**
- * The two questions a card author asks constantly, both answerable in seconds:
- * "what does my card look like" (the preview route) and "why is my card not
- * showing" (the debug-bar panel).
- *
- * Reached only through the development gate's dynamic import, so this module
- * and everything below it are absent from a production build.
- */
+/** Import only behind the development gate, so it stays out of production. */
 export function registerDevSurfaces(
   ctx: PluginSetupContext,
   options: DevSurfaceOptions,
@@ -32,10 +25,8 @@ export function registerDevSurfaces(
   ctx.registerRoute({
     method: "GET",
     path: PREVIEW_ROUTE_PATH,
-    // Wider than the card route beside it: this runs the theme's own `render`
-    // and resolves whatever template deps the card declared, against a request
-    // carrying no session. `"development"` is core's gate for that (#2007) —
-    // the dev server's environment variable *and* a loopback request.
+    // Renders arbitrary template deps for a sessionless request, so dev server
+    // and loopback only.
     auth: "development",
     handler: createPreviewRoute({
       renderer,
@@ -43,11 +34,8 @@ export function registerDevSurfaces(
       inputs,
     }),
   });
-  // Marks that a page render reached head assembly. The `seo:og_image` filter
-  // does not always run — an explicit `.ogImage()` role short-circuits the
-  // chain above it, and an install without `@plumix/plugin-seo` never fires it
-  // — so without this the panel cannot tell either case from a request that
-  // rendered no page at all.
+  // `seo:og_image` doesn't always fire, so the panel needs this to tell those
+  // cases from a request that rendered no page.
   ctx.addFilter("render:document", (manifest, data, appCtx) => {
     appCtx.telemetry.record(OG_PANEL_ID, (): OgPageTrace => ({
       phase: "page",
@@ -57,10 +45,7 @@ export function registerDevSurfaces(
   });
   ctx.addFilter("debug:panels", (panels) => [
     ...panels,
-    // Read off the one accessor rather than passed in beside it: a second
-    // copy is a second thing that could disagree, which is what this change
-    // exists to remove. The plan is fixed for the plugin's life, so holding it
-    // from registration is honest.
+    // The font plan is fixed for the plugin's life, so reading it once is safe.
     ogDebugPanel({ fonts: inputs().fonts }),
   ]);
 }

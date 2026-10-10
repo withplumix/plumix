@@ -13,10 +13,8 @@ export interface CardRegistry {
 }
 
 /**
- * The plugin's own copy of what the theme declared, snapshotted at boot.
- * `defaults` sit behind the theme's rules in declaration order, which is all
- * that makes a declared card outrank the plugin's own — including at the
- * `fallback` tier, where the resolver takes the first one it finds.
+ * `defaults` sit behind the theme's rules, which is what makes a declared card
+ * outrank them, including at the `fallback` tier.
  */
 export function createCardRegistry(
   defaults: readonly CardRule[],

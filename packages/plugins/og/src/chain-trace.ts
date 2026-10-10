@@ -1,10 +1,7 @@
 import type { JsonObject } from "plumix";
 
-// What the plugin records about the `og:image` chain, and the vocabulary the
-// debug-bar panel reads it back in. The chain record is written from the main
-// graph, so a sampled production trace carries it too; the page marker below is
-// only ever registered under the development gate, because the question it
-// answers is only ever asked by the panel.
+// The chain record is also written in production traces; the page marker is
+// registered only under the development gate.
 
 /** The namespace both records use, which is also the panel's id. */
 export const OG_PANEL_ID = "og";
@@ -20,7 +17,9 @@ declare module "plumix" {
 
 /** Which link of the chain the page's `og:image` came off. */
 export type OgChainOutcome =
-  /** An earlier `seo:og_image` subscriber's image, which a card never outranks. */
+  /**
+   * An earlier `seo:og_image` subscriber's image, which a card never outranks.
+   */
   "supplied" | "card" | "featured" | "site-default";
 
 /** Why the page carries no generated card. */
@@ -37,10 +36,8 @@ export type OgCardSkip =
   | "featured-preferred";
 
 /**
- * Recorded once per page render, before the chain resolves, so the panel can
- * tell "the chain short-circuited above this plugin" — an explicit `.ogImage()`
- * role, the one link the `seo:og_image` filter never sees — apart from a
- * request that rendered no page at all.
+ * Lets the panel tell a chain short-circuited by `.ogImage()` apart from a
+ * request that rendered no page.
  */
 export interface OgPageTrace extends JsonObject {
   readonly phase: "page";
@@ -51,9 +48,13 @@ export interface OgPageTrace extends JsonObject {
 export interface OgChainTrace extends JsonObject {
   readonly phase: "chain";
   readonly outcome: OgChainOutcome;
-  /** The image the page ends up advertising, as far as this plugin can see it. */
+  /**
+   * The image the page ends up advertising, as far as this plugin can see it.
+   */
   readonly url: string | null;
-  /** The matched card rule, by core's own `ruleLabel`, or null when none did. */
+  /**
+   * The matched card rule, by core's own `ruleLabel`, or null when none did.
+   */
   readonly rule: string | null;
   readonly skipped: OgCardSkip | null;
 }

@@ -23,13 +23,8 @@ export interface OgRouterOptions {
 }
 
 /**
- * The plugin's admin surface: one procedure, answering what the entry being
- * edited will be shared with. Read-only by design — a per-entry override would
- * be a second precedence authority beside the role markers.
- *
- * Nothing rendered here is stored or served to anyone else; with a `remote()`
- * renderer connected the card's content does reach the endpoint that renderer
- * names, which is the operator's own service.
+ * Read-only: a per-entry override would compete with the role markers. With
+ * `remote()`, card content reaches the operator's endpoint.
  */
 export function createOgRouter(options: OgRouterOptions) {
   const preview = base
