@@ -78,8 +78,9 @@ not relocating every page.
 ## Link and anchor validation
 
 `starlight-links-validator` runs on `pnpm build` and fails it on any internal
-link that does not resolve — including a `#heading` that no longer exists. In
-CI that is the `Docs (build)` job.
+link that does not resolve — including a `#heading` that no longer exists. On a
+pull request that is the `Workers Builds: plumix-docs` check; the `Links` CI job
+checks the same links with lychee.
 
 A cross-reference to another page has one correct form: **root-absolute**, as
 in `/fields/text/#reserved-names`. Relative links are rejected by
@@ -89,11 +90,10 @@ the page you are already on (`#reserved-names`) is fine.
 
 Two gotchas when adding a page. **Give it a body** — a frontmatter-only page
 never reaches the markdown pipeline, so the validator never records it, and
-every link to it is reported invalid. And **`draft: true` opts a page out**: the
-validator skips it entirely, so its links are unchecked until you publish it.
+every link to it is reported invalid. And **`draft: true` opts a page out** of
+the validator, though the `Links` job still checks its links.
 
-Repository prose is lychee's, under a separate CI job — see the "Link
-validation" section of [CONTRIBUTING.md](../../CONTRIBUTING.md) for the split.
+See "Link validation" in [CONTRIBUTING.md](../../CONTRIBUTING.md).
 
 ## Machine-readable output
 
