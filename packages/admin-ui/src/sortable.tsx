@@ -26,12 +26,6 @@ import { Button } from "./button.js";
 import { GripVertical, X } from "./icons.js";
 import { cn } from "./utils.js";
 
-// Generic vertical-list sortable primitive built around dnd-kit. Used
-// by `mediaList` / `userList` / `entryList` / repeater rows — any
-// place an admin author needs to drag-reorder a small list. Single-
-// thumb (no nested drop targets); keyboard reorder works out of the
-// box via dnd-kit's `KeyboardSensor` + `sortableKeyboardCoordinates`.
-
 // Where an item sits, for a drag announcement: `position` is 1-based.
 // Announcements read positions, never item ids, which are opaque to an author.
 export interface SortablePosition {
@@ -95,9 +89,8 @@ export function SortableList<T extends { readonly id: string }>({
     total: items.length,
   });
 
-  // dnd-kit fires `onDragOver` as soon as a drag starts, with the item over
-  // its own slot; announcing that would talk over "picked up". Speak only
-  // when the item reaches a slot other than the last one announced.
+  // dnd-kit fires `onDragOver` on drag start over the item's own slot, which
+  // would talk over "picked up"; speak only on reaching a new slot.
   const announcedOverId = useRef<UniqueIdentifier | null>(null);
   const dndAnnouncements: Announcements = {
     onDragStart: ({ active }) => {

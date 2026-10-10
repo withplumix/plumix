@@ -6,11 +6,6 @@ import { Input } from "./input.js";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover.js";
 import { cn } from "./utils.js";
 
-// Hex color picker built around `react-colorful` + a Popover trigger.
-// Sits above the meta-box-field renderer so dispatching a color field
-// stays a one-line component swap. Pairs the visual picker with a
-// hex text input for paste-and-go workflows; the trigger swatch and
-// the input share the same controlled value via the parent form.
 interface ColorPickerProps {
   readonly value: string;
   readonly onChange: (next: string) => void;
@@ -22,9 +17,8 @@ interface ColorPickerProps {
   // Accessible name for the icon-less swatch button; admin-ui carries no
   // catalog, so the caller passes it already localized.
   readonly triggerLabel: string;
-  // Forwarded to the hex input — the value control a label should name and
-  // focus. Without this, a wrapping <FormControl> lands its injected id/aria on
-  // the outer div (not a form field) and the input goes unlabelled.
+  // Forwarded to the hex input; otherwise <FormControl> puts its id/aria on the
+  // outer div and the input goes unlabelled.
   readonly id?: string;
   readonly "aria-describedby"?: string;
   readonly "aria-invalid"?: React.ComponentProps<typeof Input>["aria-invalid"];

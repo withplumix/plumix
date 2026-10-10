@@ -1,16 +1,6 @@
-// The shared icon set — the single owner of which lucide icons ship in the
-// admin/editor bundle. We deliberately DON'T `export *`: a namespace re-export
-// plus the runtime name→component lookup in <BlockIcon> defeats tree-shaking
-// and pulls the entire ~3,900-icon library (~600 KB) into the editor chunk.
-// Instead every icon is named explicitly, so bundlers keep only these.
-//
-// Two access shapes, one curated list:
-//   1. Named re-exports below — `import { Trash2 } from "@plumix/admin-ui/icons"`
-//      for components that reference an icon statically. The compiler enforces
-//      this set: importing an un-exported icon is a build error.
-//   2. `blockIcons` — the name→component map <BlockIcon> resolves a block's
-//      `icon: "Heading"` string against, since that name is only known at
-//      runtime and can't be statically imported per-use.
+// Every icon is named explicitly, never `export *`: a namespace re-export plus
+// <BlockIcon>'s runtime lookup pulls all of lucide (~600 KB) into the editor
+// chunk.
 import type { LucideIcon } from "lucide-react";
 // Bindings for the blockIcons map (block-declared icons, resolved by string).
 import {

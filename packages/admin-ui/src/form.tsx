@@ -71,12 +71,8 @@ const FormItemContext = React.createContext<FormItemContextValue>(
   {} as FormItemContextValue,
 );
 
-/**
- * Column span within a 12-column grid. A plain number applies from the
- * smallest breakpoint up; the object form is mobile-first, `sm` / `md` /
- * `lg` overriding `base` (default 12) at the grid container's width.
- * Values outside 1..12 are clamped.
- */
+// Mobile-first 12-column span measured at the grid container's width; values
+// outside 1..12 are clamped.
 type FormItemSpan =
   | number
   | {

@@ -31,11 +31,9 @@ const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
-// PLUMIX DIVERGENCE from upstream shadcn: Cmd/Ctrl+B is also the editor's
-// rich-text bold mark, so upstream's unguarded listener collapsed the panels out
-// from under an author bolding a word in one. Duplicated rather than imported
-// from `@plumix/admin-editor/src/shortcuts.ts`: this package can't depend on the
-// editor, and the editor's copy ships inside the canvas iframe bundle.
+// PLUMIX DIVERGENCE from upstream shadcn: Cmd/Ctrl+B is also rich-text bold.
+// Duplicated from the editor's shortcuts because admin-ui can't depend on the
+// editor.
 function isTypingTarget(target: EventTarget | null): boolean {
   return (
     target instanceof HTMLElement &&
