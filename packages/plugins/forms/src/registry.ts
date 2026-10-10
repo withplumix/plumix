@@ -4,11 +4,7 @@ import type { FormDefinition } from "./define-form.js";
 import { FormsError } from "./errors.js";
 
 export interface FormRegistry {
-  /**
-   * `contributor` is what a slug collision names, so it has to say where
-   * the form came from: `"config"` for the plugin's own `forms` array, the
-   * plugin id for one registered through `ctx.registerForm`.
-   */
+  /** `contributor` is `"config"` or the registering plugin's id. */
   register(form: FormDefinition, contributor: string): void;
   get(slug: string): FormDefinition | undefined;
   /**
@@ -18,22 +14,13 @@ export interface FormRegistry {
    */
   list(): readonly FormDefinition[];
   /**
-   * The block's form picker, as one live array rather than a snapshot.
-   * Block inputs are projected into the admin manifest once every
-   * plugin's `setup` has run, and a plugin contributing a form may run
-   * after this one — so the picker has to be the array the registry keeps
-   * appending to, not a copy taken when the block was defined.
+   * Live, not a snapshot: forms contributed after the block is defined
+   * must still reach the picker.
    */
   readonly options: readonly BlockInputOption[];
   /**
-   * How long one form's submissions are kept: its own period, or the
-   * site's for a form that declares none.
-   *
-   * The two are separate so that a site can set a period once instead of
-   * repeating it on every form, and one form can still keep its own — a
-   * newsletter signup outliving an enquiry that carried a home address.
-   * `retentionDays: 0` is a declaration, so it wins over a site default
-   * rather than reading as the absence of one.
+   * The form's own period, else the site's. A form's `0` wins over the
+   * site default rather than reading as absent.
    */
   retentionDaysFor(form: FormDefinition): number;
 }

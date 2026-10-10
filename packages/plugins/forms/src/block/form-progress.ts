@@ -3,42 +3,29 @@ import * as v from "valibot";
 import { PROGRESS_KEY_PREFIX, TURNSTILE_FIELD } from "../contract.js";
 
 /**
- * How far through a wizard a visitor has got: which step they are on,
- * and every answer behind them, urlencoded exactly as the submit would
- * post it. One string rather than a parsed bag — the same shape the
- * server reads a submission from, so restoring progress and reading a
- * body go through one decoder and cannot disagree about what a checked
- * box or an unchosen dropdown means.
+ * `body` is urlencoded as the submit posts it, so restoring and reading a
+ * submission share one decoder.
  */
 export interface FormProgress {
   readonly step: number;
   readonly body: string;
 }
 
-// Written by this module and nothing else, and still decoded: session
-// storage is the visitor's to edit, and a half-written entry from an
-// older release of the plugin is the ordinary case rather than the
-// exotic one.
+// Decoded anyway: the visitor can edit session storage, and an older
+// release may have written it.
 const StoredProgress = v.object({
   step: v.pipe(v.number(), v.integer(), v.minValue(0)),
   body: v.string(),
 });
 
 /**
- * Keyed on the form as well as the block node: a node whose slug the
- * editor points at another form would otherwise restore answers keyed to
- * a field list that no longer exists.
+ * Includes the slug, since an editor can repoint a node at another form.
  */
 export const progressKey = (slug: string, idBase: string): string =>
   `${PROGRESS_KEY_PREFIX}${slug}:${idBase}`;
 
-/**
- * Every touch of session storage goes through here, and every one of
- * them is guarded. A visitor who has blocked site data gets a throw
- * from the property itself in some browsers and from the call in
- * others, and the cost of either is the wizard forgetting a reload —
- * nothing the form needs to work.
- */
+// Blocked site data throws from the property in some browsers and from the
+// call in others; losing progress is harmless.
 function inStorage<T>(read: (storage: Storage) => T): T | undefined {
   try {
     return read(globalThis.sessionStorage);
@@ -71,22 +58,8 @@ export function clearProgress(key: string): void {
 }
 
 /**
- * The answers so far, with what the step on screen says folded in.
- *
- * A step's fields are the only ones in the document, so a submit built
- * from the form element alone would carry that step and lose every
- * other. Merging is by name: a key the current step renders replaces
- * what was stored for it — which is how an answer is corrected on the
- * way back through — and a key it does not render is carried untouched.
- * Every rendered control posts its name, an unticked box and an
- * unchosen dropdown included, so "answered nothing" is distinguishable
- * from "was on another step".
- *
- * An answer a later change hid is carried rather than dropped, and so
- * reaches the server. That is deliberate: the server judges visibility
- * from the same body, so both sides agree about what is hidden, and
- * dropping it here would make them disagree instead. `pickStoredAnswers`
- * is what keeps it out of the row.
+ * Keys the current step renders replace stored ones. Hidden answers are
+ * deliberately kept: the server judges visibility from the same body.
  */
 export function foldStepAnswers(saved: string, entered: FormData): string {
   const carried = new URLSearchParams(saved);
@@ -100,12 +73,8 @@ export function foldStepAnswers(saved: string, entered: FormData): string {
 }
 
 /**
- * The answers with the challenge taken out, for storing rather than for
- * posting. A Turnstile token is spent the moment the server verifies it,
- * and a visitor who reloads would otherwise have the used one folded
- * back into their next submission — where Cloudflare refuses it as a
- * duplicate, and the refusal reads as a captcha they failed rather than
- * one they never re-solved.
+ * For storing: a Turnstile token is single-use, so a restored one would
+ * be refused as a duplicate.
  */
 export function withoutCaptcha(body: string): string {
   const answers = new URLSearchParams(body);

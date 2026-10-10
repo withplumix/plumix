@@ -7,14 +7,8 @@ export interface SubmissionColumn {
 }
 
 /**
- * The columns a set of submissions is read under, taken from each row's
- * own label snapshot rather than from the live form — so a page mixing
- * two generations of one form still names every column, and a submission
- * whose form is gone is not a table of empty cells.
- *
- * `limit` is the inbox's, where only the first few answers fit beside
- * the date and the status. An export passes none: the point of it is
- * every answer.
+ * Read from each row's label snapshot, not the live form, so old
+ * generations and deleted forms still name their columns.
  */
 export function submissionColumns(
   rows: readonly { readonly labels: FormLabelSnapshot }[],

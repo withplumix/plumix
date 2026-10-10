@@ -35,24 +35,11 @@ interface FormIslandProps {
   readonly action: string;
   readonly tokenPath: string;
   readonly idBase: string;
-  /**
-   * The signed row the server resolved for a bound form. It crosses the
-   * wire with the rest of the props and is posted back untouched — the
-   * island never reads what is inside it, and could not forge one if it
-   * did.
-   */
+  // Signed by the server and posted back untouched.
   readonly bound: string | null;
 }
 
-/**
- * The form, upgraded: a submit that does not leave the page, errors
- * rendered against the fields that produced them, rows a visitor can add
- * and remove, a timing token fetched once it mounts, and — where the form
- * declares a page break — one step at a time. It renders the same
- * {@link FormMarkup} the server already sent, so what a visitor without
- * JavaScript keeps working with is the thing this builds on rather than a
- * placeholder it fills in.
- */
+/** Renders the same {@link FormMarkup} the server sent, so it hydrates. */
 export function FormIsland({
   form: wire,
   action,
@@ -65,9 +52,8 @@ export function FormIsland({
   const [errors, setErrors] = useState<readonly FormFieldError[]>([]);
   const token = useTimingToken(tokenPath);
   const [busy, setBusy] = useState(false);
-  // A ref rather than `busy`: Enter pressed twice in one tick reaches
-  // `forward` both times before the disabled button has re-rendered, and
-  // the cost of letting the second through is two rows for one enquiry.
+  // A ref, not `busy`: a double Enter in one tick beats the re-render and
+  // would store two rows.
   const inFlight = useRef(false);
   // Which rows each repeater is showing. Empty until the visitor adds or
   // removes one, so the first render is the markup the server sent.
@@ -77,13 +63,9 @@ export function FormIsland({
   // first client render identical to the one the server sent.
   const [entered, setEntered] = useState<FormProgress | null>(null);
   const [moves, setMoves] = useState(0);
-  // Counted for the same reason `moves` is: two refusals in a row are
-  // two spent challenges, and the second owes the visitor a fresh one
-  // just as much as the first did.
+  // Counted so each consecutive refusal draws a fresh challenge.
   const [refusals, setRefusals] = useState(0);
-  // The challenge Cloudflare drew, held against the container that holds
-  // it. Undefined on a form with no captcha and on one whose widget
-  // script never arrived — both leave every call below a no-op.
+  // Undefined with no captcha or a script that never arrived.
   const widget = useRef<string | undefined>(undefined);
   const summary = useRef<HTMLDivElement>(null);
   const confirmed = useRef<HTMLDivElement>(null);
@@ -93,10 +75,8 @@ export function FormIsland({
   // whose ref below is therefore never called.
   const siteKey = form.turnstile?.siteKey ?? "";
   const key = progressKey(form.slug, idBase);
-  // Read once the island is live rather than in an effect: an effect
-  // that restored by setting state would render the blank form, then
-  // cascade a second render over it. `live` is false through hydration,
-  // so the first client render still matches the server's byte for byte.
+  // Not an effect, which would render the blank form then a second
+  // render. `live` is false through hydration, so it still matches.
   const saved = useMemo(() => (live ? readProgress(key) : null), [live, key]);
   const progress = entered ?? saved;
   const body = progress?.body ?? "";
@@ -104,30 +84,21 @@ export function FormIsland({
     () => readSubmittedValues(form.fields, new URLSearchParams(body)),
     [form, body],
   );
-  // Everything about the wizard's shape comes from here, and every
-  // decision below is taken against this same list — the button's label
-  // and what pressing it does are one reading of one set of answers, not
-  // two readings that can disagree.
+  // The button's label and its action both read this one list.
   const steps = useMemo(() => visibleSteps(form, values), [form, values]);
   const step = Math.min(progress?.step ?? 0, steps.length - 1);
   const last = steps.length - 1;
 
-  // Focus follows the outcome, so a visitor who cannot see the page is
-  // told what happened instead of being left at a button that appeared to
-  // do nothing. Every failure sets a fresh array, so a second submit
-  // failing the same way moves focus again.
+  // Every failure sets a fresh array, so a repeat failure moves focus
+  // again.
   useEffect(() => {
     if (errors.length > 0) summary.current?.focus();
   }, [errors]);
   useEffect(() => {
     if (confirmation !== null) confirmed.current?.focus();
   }, [confirmation]);
-  // Counted rather than watched on the step itself: a visitor who goes
-  // back and forward between two steps arrives at one they have already
-  // been on, and the announcement is owed to them every time. The count
-  // rises only on a step the visitor asked for — never on the one a
-  // reload restores, which would take focus off whatever they came back
-  // to the page for.
+  // Counted, so revisiting a step announces again; a reload's restored
+  // step doesn't count, so it doesn't steal focus.
   useEffect(() => {
     if (moves > 0) heading.current?.focus();
   }, [moves]);
@@ -137,13 +108,8 @@ export function FormIsland({
     if (refusals > 0) resetCaptcha(widget.current);
   }, [refusals]);
 
-  /**
-   * Draw the challenge where the markup left room for it, and let go of
-   * it when that room goes. A callback ref rather than an effect because
-   * the container comes and goes on its own — it exists only on the step
-   * that submits, and the markup remounts when a reload restores
-   * answers — and only the ref is told each time.
-   */
+  // A callback ref, since the container mounts and unmounts on its own
+  // with steps and restores.
   const captcha = useCallback(
     (container: HTMLDivElement) => {
       let mounted = true;
@@ -160,18 +126,15 @@ export function FormIsland({
     [siteKey],
   );
 
-  // What the visitor has said, kept where a reload can find it. Called
-  // on every step change and on every refusal, so the answers behind a
-  // visitor who reloads on seeing an error are the ones they just gave.
+  // Also called on refusal, so a reload after an error keeps the answers.
   function keep(next: FormProgress): void {
     const kept = { ...next, body: withoutCaptcha(next.body) };
     setEntered(kept);
     writeProgress(key, kept);
   }
 
-  // A step the visitor asked to be on, whose heading is announced to
-  // them. `keep` on its own is for a step they arrive at some other way
-  // — see `submit`, which relocates them to a refused answer.
+  // Announces the heading; plain `keep` is for steps the visitor didn't
+  // ask for.
   function move(next: FormProgress): void {
     keep(next);
     setMoves((count) => count + 1);
@@ -200,13 +163,8 @@ export function FormIsland({
       // The server answered, so the challenge it was sent is spent
       // whether or not it was what the answer objected to.
       setRefusals((count) => count + 1);
-      // An answer the server refused may be on a step behind this one —
-      // its own step passed, and a later answer revealed the problem.
-      // The summary links to controls, so the step holding the first of
-      // them has to be the one on screen. Judged against the steps the
-      // submission was made from rather than whatever is on screen when
-      // it lands. Focus still goes to the summary: the step changed
-      // because of the failure, not because the visitor asked to move.
+      // A refused answer may be on an earlier step; show it so the
+      // summary links work, judged against the submitted steps.
       const at = posture.findIndex((one) =>
         one.fields.some((field) =>
           failed.some((error) => error.field === field.key),
@@ -225,23 +183,12 @@ export function FormIsland({
     return foldStepAnswers(body, new FormData(element));
   }
 
-  /**
-   * Forward, from the button that moves the wizard on and from Enter
-   * pressed in a field — which is the same button, so the two cannot
-   * mean different things. Whether that is a step or a submit is read
-   * from `steps`, the list the button's own label came from.
-   *
-   * The step on screen is checked before the visitor leaves it, against
-   * the same rules the server will apply, and only over the fields it
-   * actually shows: a question on a later step, or one this step's own
-   * answers hide, cannot hold them up here. The final step is left to
-   * the server, which judges every step at once.
-   */
+  // Checks only the visible fields of the current step; the final step is
+  // left to the server, which judges every step.
   function forward(element: HTMLFormElement): void {
     const posted = folded(element);
-    // `!live` is the flat form the server sent, whose one button
-    // submits — the handler is attached from the first client render,
-    // which is a frame before the island is driving anything.
+    // Before `live`, the form is the flat server render, whose button
+    // submits.
     if (!live || step >= last) {
       void submit(posted, steps);
       return;
@@ -285,10 +232,8 @@ export function FormIsland({
 
   return (
     <FormMarkup
-      // Remounts the markup the once, when a reload has answers to put
-      // back: the controls are uncontrolled, so `defaultValue` is read
-      // at mount and a re-render alone would leave the restored answers
-      // out of the document.
+      // Uncontrolled inputs read `defaultValue` only at mount, so restored
+      // answers need a remount.
       key={saved === null ? "blank" : "restored"}
       form={form}
       action={action}

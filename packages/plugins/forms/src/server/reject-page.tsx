@@ -19,16 +19,8 @@ interface RejectedSubmission {
 }
 
 /**
- * What a visitor with no JavaScript gets when the server will not accept
- * their answers: the same form back, carrying what they typed and the
- * errors against the fields that produced them. A redirect would have
- * lost both and told them nothing.
- *
- * It is the form alone rather than the page it came from — the plugin
- * owns the endpoint, not the theme's template — so it inherits none of
- * the site's chrome. A visitor who gets here has JavaScript off *and* has
- * defeated the browser's own `required` / `type=email` checks, which is
- * rare enough to answer plainly and correctly rather than elaborately.
+ * The form alone, without site chrome: the plugin owns the endpoint, not
+ * the theme's template.
  */
 export function rejectPage(
   ctx: AppContext,

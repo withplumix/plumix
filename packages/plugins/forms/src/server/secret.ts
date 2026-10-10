@@ -2,17 +2,13 @@ import type { AppContext } from "plumix/plugin";
 import { and, eq } from "drizzle-orm";
 import { settings } from "plumix/schema";
 
-// Core's private-settings convention: a group whose name ends `_internal`
-// holds server-only rows, and `settings.get` / `settings.upsert` refuse
-// it — so a `settings:manage` holder cannot read this out of the admin.
-// The same group core's `readVisitorMeta` puts this plugin's IP salt in.
+// An `_internal` group is refused by `settings.get`/`settings.upsert`, so
+// admins can't read it.
 const GROUP = "forms_internal";
 
 /**
- * The secrets this plugin keeps. A closed union because a typo would
- * otherwise mint a silent third key rather than failing — and the two
- * that exist are deliberately separate, so a token signed under one can
- * never be presented as the other.
+ * Closed, so a typo can't mint a third key. Separate secrets, so one
+ * token can't pass as the other.
  */
 export type SecretName = "timing_secret" | "bind_secret";
 
@@ -22,10 +18,8 @@ export function toHex(bytes: Uint8Array): string {
 }
 
 /**
- * The secret as it stands, without minting one. What verification reads:
- * a caller presenting a token before this install ever signed one is not
- * a reason to write a row on an unauthenticated public route, and a
- * freshly minted secret could not have signed their token anyway.
+ * Never mints, so an unauthenticated caller can't make a public route
+ * write a row.
  */
 export async function getSecret(
   ctx: AppContext,
@@ -38,12 +32,7 @@ export async function getSecret(
   return typeof row?.value === "string" ? row.value : null;
 }
 
-/**
- * A per-install secret, lazily generated on first use and persisted in
- * the settings table — so the plugin needs no environment variable and no
- * KV binding to hold one. `onConflictDoNothing` plus a re-read makes
- * concurrent first-writes converge on one value.
- */
+/** Concurrent first writes converge on one value. */
 export function getOrCreateSecret(
   ctx: AppContext,
   key: SecretName,

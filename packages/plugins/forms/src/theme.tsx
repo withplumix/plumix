@@ -10,16 +10,8 @@ export type { FormWire } from "./define-form.js";
 export type { FormFieldError } from "./types.js";
 
 /**
- * One of the site's forms, dropped straight into a theme template rather
- * than placed as a block:
- *
- *     h(PlumixForm, { slug: "contact" })
- *
- * It renders exactly what the block renders — the same static markup, the
- * same island over it, the same no-JavaScript submit — so a form in a
- * template and a form on a page are the same form. A slug nobody
- * registered renders nothing, which is what keeps a template that outlives
- * its form from taking the page down with it.
+ * Renders exactly what the block renders. An unregistered slug renders
+ * nothing, so a template outliving its form doesn't break the page.
  */
 export function PlumixForm({
   slug,
@@ -27,12 +19,8 @@ export function PlumixForm({
 }: {
   readonly slug: string;
   /**
-   * What tells two renders of one form apart. Control ids are built from
-   * it, and a label points at its control by id — so a form rendered in
-   * a header and again in a footer needs one each, or the second form's
-   * labels address the first form's controls. The same goes for a form
-   * rendered here and again as a block: the block falls back to the slug
-   * too when its node carries no id.
+   * Required when one form renders twice on a page, or the second form's
+   * labels point at the first form's controls.
    */
   readonly id?: string;
 }): ReactNode {
@@ -46,25 +34,16 @@ export function PlumixForm({
       basePath={basePath}
       idBase={`plumix-form-${id ?? slug}`}
       editing={editing}
-      // A `bind: "entry"` form carries no entry here. The signed token
-      // comes from a block loader, which is the one point in the render
-      // path that can await — a template's render cannot, so a bound
-      // form in a template is in the same position as one on an archive:
-      // it submits, and stores no entry.
+      // Only a block loader can await signing, so a bound form in a
+      // template stores nothing bound.
       bound={null}
     />
   );
 }
 
 /**
- * A form's shape, for a theme rendering its own controls rather than the
- * plugin's: hand it to a `"use client"` island as a prop and read it back
- * there with `usePlumixForm` from `@plumix/plugin-forms/hooks`.
- *
- * Only the half that serializes — the callbacks a form declares stay on
- * the server, which is why this is not the definition itself. Undefined
- * for a slug nobody registered, and outside a render — it resolves against
- * the app serving the request, so call it from a template's `render`.
+ * Call from a template's `render`: undefined outside a request, and for an
+ * unregistered slug.
  */
 export function formWire(slug: string): FormWire | undefined {
   const form = tryGetContext()?.forms?.get(slug);

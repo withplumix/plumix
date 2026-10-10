@@ -4,20 +4,12 @@ import { sign, verify } from "./signing.js";
 
 const SECRET = "timing_secret";
 
-/**
- * Under a second between the page issuing a token and the submission
- * arriving is not a person reading a form and answering it. It is the
- * floor a script trips, not a threshold a slow reader can fail: nothing
- * up here rejects a visitor for taking *longer*.
- */
+// No upper bound: a slow reader is never rejected.
 const MIN_FILL_MS = 1000;
 
 /**
- * A signed "the form was on screen from here" mark. The island fetches
- * one after it hydrates, from a route nothing caches — which is the whole
- * reason it is a fetch rather than a hidden input in the rendered form:
- * the page carrying the form is byte-identical for every visitor and
- * edge-cached, so it can carry nothing that is about one of them.
+ * Fetched by the island from an uncached route, since the edge-cached page
+ * can carry nothing per visitor.
  */
 export async function issueTimingToken(ctx: AppContext): Promise<string> {
   const issuedAt = String(Date.now());
@@ -25,13 +17,8 @@ export async function issueTimingToken(ctx: AppContext): Promise<string> {
 }
 
 /**
- * Whether a submission carrying `token` was filled implausibly fast.
- *
- * A submission with no token is not fast — that is what a visitor with no
- * JavaScript sends, and the plugin promises them a working form. A token
- * this install did not sign is: nobody legitimate produces one, so it is
- * treated exactly as a filled honeypot is, and the caller files it as
- * spam rather than answering the sender that they were caught.
+ * No token is not fast (no-JavaScript visitors send none); an unsigned
+ * token is, and is treated like a filled honeypot.
  */
 export async function isImplausiblyFast(
   ctx: AppContext,

@@ -27,23 +27,18 @@ const slugInput = v.object({
 const START_OF_DAY = "00:00:00.000Z";
 const END_OF_DAY = "23:59:59.999Z";
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
-// An instant that says where it is. `Date` reads one without a zone in
-// whatever timezone the process happens to be in, so the same argument
-// would mean different things on Workers and on a developer's machine.
+// `Date` reads a zoneless instant in the process timezone, which differs
+// between Workers and a developer's machine.
 const ZONED_INSTANT =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/;
 
-// A bare `2026-08-24` names a whole UTC day, so each bound is read at its
-// own end of it: without that, `until: "2026-08-24"` would land on
-// midnight and exclude every submission that day received.
+// A bare date is a whole UTC day, so `until` reads its end, not midnight.
 function atEdge(raw: string, edge: string): string {
   return DATE_ONLY.test(raw) ? `${raw}T${edge}` : raw;
 }
 
-// Both patterns are matched before parsing rather than after, because
-// `Date.parse` accepts `2026-8-24` and `Aug 24 2026` too — and those miss
-// `DATE_ONLY`, so they would silently skip the widening above and answer
-// for one midnight instead of one day.
+// Matched before parsing: `Date.parse` also accepts `Aug 24 2026`, which
+// would skip the day widening.
 function isBound(raw: string, edge: string): boolean {
   if (!DATE_ONLY.test(raw) && !ZONED_INSTANT.test(raw)) return false;
   return !Number.isNaN(Date.parse(atEdge(raw, edge)));
@@ -108,11 +103,7 @@ const submissionListInput = v.object({
   ),
 });
 
-/**
- * The same gate the inbox is behind, spelled for MCP. Reading forms and
- * reading submissions are one permission: knowing a form exists is of no
- * use to a caller that may not read what was said through it.
- */
+// Listing forms needs the inbox permission too.
 function requireInboxAccess(ctx: AppContext): void {
   if (!ctx.auth.can(SUBMISSION_MODERATE_CAPABILITY)) {
     throw McpToolError.forbidden(
@@ -122,10 +113,7 @@ function requireInboxAccess(ctx: AppContext): void {
 }
 
 /**
- * This plugin's read-only agent surface. There is deliberately no write
- * tool: a form is a value in the repository, so a tool that mutated one
- * would create exactly the environment drift the design exists to avoid —
- * and would do it faster than a person could review.
+ * Read-only: forms live in the repository, so a write tool would cause drift.
  */
 export function createFormMcpTools(registry: FormRegistry): readonly McpTool[] {
   const formList: McpTool<typeof emptyInput> = {

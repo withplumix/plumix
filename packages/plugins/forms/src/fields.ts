@@ -7,13 +7,8 @@ import { StringFieldBuilder } from "plumix/fields";
 import { TEL_INPUT_TYPE } from "./contract.js";
 
 /**
- * Telephone input — `tel("phone")`. Not one of core's built-in string
- * scalars: the plugin contributes it through `registerFieldType`, and the
- * chain is core's own string builder over the contributed `inputType`, so
- * `tel` reads, stores and conditions exactly as `text` does.
- *
- * A browser shows the numeric keypad for it and, deliberately, validates
- * nothing — phone numbers have no format worth enforcing across borders.
+ * Behaves exactly like `text`, and deliberately validates nothing: phone
+ * numbers have no format worth enforcing across borders.
  */
 export function tel<K extends string>(
   key: K,

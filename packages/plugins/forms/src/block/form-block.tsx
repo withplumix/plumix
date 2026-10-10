@@ -14,10 +14,8 @@ import { signBound } from "../server/binding.js";
 import { FormRender } from "./form-render.js";
 
 /**
- * The block a content editor places on a page. It resolves its slug
- * against the registry at render: a slug nobody registered renders
- * nothing on a live page, and says so in the editor — the same shape
- * core's unknown-block path takes.
+ * An unregistered slug renders nothing on a live page and says so in the
+ * editor.
  */
 export function createFormBlock(registry: FormRegistry): BlockSpec {
   // The block's own attr bag, read the same way by the loader — handed
@@ -25,18 +23,8 @@ export function createFormBlock(registry: FormRegistry): BlockSpec {
   const slugOf = (attrs: MaterializedAttrs): string =>
     typeof attrs.slug === "string" ? attrs.slug : "";
 
-  /**
-   * Where a bound form's row comes from. It is a loader rather than
-   * part of the render because signing is asynchronous and the render is
-   * not — core resolves every block's loaders before it renders the tree,
-   * which is the one point in the render path that can await.
-   *
-   * `ctx.resolvedEntity` is what the public-route resolver already
-   * matched this URL to, so binding costs no second lookup and needs
-   * nothing wired through the block, the template or the theme. The
-   * result is about the page and not about the visitor, so the page
-   * carrying it stays byte-identical and edge-cacheable.
-   */
+  // A loader because signing is async and the render isn't. The result
+  // depends on the page, not the visitor, so the page stays edge-cacheable.
   const loaders = {
     bound: async ({ ctx, attrs }: BlockLoaderArgs): Promise<string | null> => {
       const form = registry.get(slugOf(attrs));

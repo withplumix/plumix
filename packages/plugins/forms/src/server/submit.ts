@@ -35,25 +35,15 @@ import { insertSubmission, recordHandlerFailure } from "./repository.js";
 import { isImplausiblyFast, issueTimingToken } from "./timing.js";
 import { verifyTurnstile } from "./turnstile.js";
 
-// A handler failure is third-party text — an SMTP reply, an upstream
-// error page, a URL carrying a token — and it is stored on a row the
-// inbox renders. Bounded here rather than at the column, because what
-// makes it worth bounding is where it came from.
+// Third-party text, such as an SMTP reply or error page, stored on a row
+// the inbox renders.
 const MAX_HANDLER_ERROR_CHARS = 1000;
 
-// The route is public and unauthenticated, so a body arrives before
-// anything has decided whether it is welcome. Text and email answers do
-// not approach this. Counted as it streams rather than read and measured:
-// `content-length` is absent on a chunked body, so trusting it would cap
-// nothing. Per-field limits belong with the validation slice.
+// Counted as it streams: a chunked body has no `content-length`.
 const MAX_BODY_BYTES = 64 * 1024;
 
-/**
- * The submission body, or `null` once it passes the cap. Read as
- * urlencoded because that is what a `<form>` with no `enctype` sends and
- * the block never sets one — multipart would mean file uploads, which
- * this plugin deliberately does not accept.
- */
+// Urlencoded only: multipart would mean file uploads, which this plugin
+// deliberately refuses.
 async function readBoundedBody(
   request: Request,
 ): Promise<URLSearchParams | null> {
@@ -76,9 +66,6 @@ async function readBoundedBody(
   return new URLSearchParams(text + decoder.decode());
 }
 
-// The island asks for JSON; a browser posting the form asks for HTML and
-// gets a redirect. One endpoint, because both are the same submission —
-// the negotiation is only over what the answer looks like.
 function wantsJson(request: Request): boolean {
   return (request.headers.get("accept") ?? "").includes("application/json");
 }
@@ -118,16 +105,8 @@ export async function tokenHandler(
   return jsonResponse({ token: await issueTimingToken(ctx) });
 }
 
-/**
- * Run the form's own handler over a submission that is already stored.
- * A throw is caught rather than answered: the visitor's enquiry was
- * received the moment the row was written, and telling them otherwise
- * would have them send it again. The failure is recorded on the row for
- * whoever reads the inbox, and logged for whoever reads the logs.
- *
- * Returns the row as it now stands — carrying the failure when there was
- * one — which is what the post-submit action fires with.
- */
+// A throw is recorded, not answered: the row is stored, and an error
+// would make the visitor resend.
 async function runHandler(
   ctx: AppContext,
   form: FormDefinition,
@@ -171,22 +150,8 @@ async function runHandler(
 }
 
 /**
- * The public submit handler, mounted at `POST /_plumix/forms/submit` as a
- * `formPost` route so a plain `<form method="post">` reaches it without
- * the `X-Plumix-Request` header a browser cannot set. The dispatcher's
- * Origin check stands in for that header; this handler reads no session
- * and grants nothing on the strength of one.
- *
- * A filled honeypot is stored as spam and answered exactly like a real
- * submission — telling a bot it was caught only teaches it to stop
- * filling the trap.
- *
- * Visibility is judged from the answers themselves, by the same call the
- * renderer makes: a field the submitted answers hide is dropped before
- * anything reads it, so it never reaches the row and no constraint of
- * its own is ever asked about. What the answers reveal is kept, which is
- * what lets a visitor whose script showed them a further question have
- * it stored.
+ * Must read no session: as a `formPost` route only the Origin check
+ * guards it. Spam is answered like a real submission.
  */
 export function createSubmitHandler(registry: FormRegistry) {
   return async (request: Request, ctx: AppContext): Promise<Response> => {
@@ -197,23 +162,15 @@ export function createSubmitHandler(registry: FormRegistry) {
     const form = slug === null ? undefined : registry.get(slug);
     if (!form) return refusal("Not Found", 404);
 
-    // Read before anything else looks at the answers: a token this
-    // install did not sign is not a submission with a bad field, it is a
-    // submission claiming a row nobody bound it to, so it is refused
-    // outright rather than answered like a mistyped address. Only a form
-    // that binds even looks — otherwise removing a `bind` would start
-    // refusing every visitor still holding a cached page that has one.
+    // An unsigned token is refused outright. Only a binding form looks, so
+    // removing `bind` doesn't break cached pages.
     const bind = form.bind;
     const token = bind === undefined ? null : body.get(BOUND_FIELD);
     const signed =
       token === null ? null : await verifyBound(ctx, form.slug, token);
     if (token !== null && signed === null) return refusal("Forbidden", 403);
-    // Signed by this install, but naming a kind the form no longer binds
-    // — its `bind` changed while edge-cached pages went on carrying the
-    // old tokens. Stored as nothing rather than refused, for the reason
-    // above: the edit was the site's, and storing it would hand a handler
-    // written for terms an entry id, which declaring a kind is meant to
-    // prevent.
+    // A kind the form no longer binds (cached pages after a `bind` change)
+    // is stored as nothing rather than refused.
     const bound = signed?.type === bind ? signed : null;
 
     const values = readSubmittedValues(form.fields, body);
@@ -231,22 +188,12 @@ export function createSubmitHandler(registry: FormRegistry) {
             values,
             errors,
             returnTo,
-            // Carried through untouched, so a visitor who is handed the
-            // form back does not lose what it was bound to. It is the
-            // same signed token that just verified — re-emitting one
-            // grants nothing that posting it again would not.
+            // Re-emitting the verified token grants nothing new.
             bound: token,
           });
 
-    // Validation comes before the spam floor, and that is what keeps a
-    // trapped submission indistinguishable from a real one: a bot that
-    // fills the honeypot *and* answers badly is told what a person
-    // answering badly is told. The cost is that the form's own `validate`
-    // — arbitrary code, which may query the database — runs for spam
-    // traffic too, on a route with no rate limit; the alternative tells
-    // a bot which half caught it. The `form:validate` filter sits below
-    // the floor instead, because it is given the floor's verdict to
-    // judge, which is exactly what this cannot be.
+    // Before the spam floor, so a trapped bot gets a person's answer. The
+    // cost: the form's `validate` runs for spam traffic too.
     const errors = validateAnswers(form.fields, values);
     if (errors.length > 0) return reject(errors);
 
@@ -254,12 +201,8 @@ export function createSubmitHandler(registry: FormRegistry) {
     const ownErrors = await form.validate?.({ answers, bound, ctx });
     if (ownErrors?.length) return reject(ownErrors);
 
-    // Below the field rules so a visitor meets every mistake they can fix
-    // in one pass — and so a submission that was never going to be stored
-    // costs no subrequest. Above the spam floor because this half of the
-    // defence is one the visitor can see and is told about: the honeypot
-    // works by staying quiet, and a challenge nobody was asked to solve
-    // would too.
+    // After field rules, so invalid submissions cost no subrequest. Before
+    // the spam floor, because the visitor sees this check.
     if (
       form.turnstile !== undefined &&
       !(await verifyTurnstile(ctx, form.turnstile, body.get(TURNSTILE_FIELD)))
@@ -269,9 +212,6 @@ export function createSubmitHandler(registry: FormRegistry) {
       ]);
     }
 
-    // The two halves of the spam floor, and they answer the sender the
-    // same way a real submission is answered: telling a bot it was caught
-    // only teaches it which half caught it.
     const trapped = (body.get(HONEYPOT_FIELD)?.trim().length ?? 0) > 0;
     const fast = await isImplausiblyFast(ctx, body.get(TOKEN_FIELD));
     const status: SubmissionStatus = trapped || fast ? "spam" : "new";
@@ -291,19 +231,12 @@ export function createSubmitHandler(registry: FormRegistry) {
       userAgent,
     };
 
-    // The last word before anything is written, and the one seam a spam
-    // or compliance plugin needs: it sees a submission every other check
-    // has accepted, and the errors it returns reject it like any other.
     const vetoed = await ctx.hooks.applyFilter("form:validate", [], candidate);
     if (vetoed.length > 0) return reject(vetoed);
 
     const stored = form.store ? await insertSubmission(ctx, candidate) : null;
-    // The handler is what tells a person a submission arrived, and a
-    // trapped one is not worth telling anyone about — the whole point of
-    // the floor is that the notification stops, not merely that the row
-    // is labelled. It is still stored, so a false positive is still
-    // there to be found; a form that opted out of storage is where the
-    // floor costs something, and that is the trade of opting out.
+    // Spam skips the handler, so no notification goes out; it is still
+    // stored, unless the form opted out of storage.
     const submission =
       status === "spam"
         ? stored

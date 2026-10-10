@@ -45,22 +45,13 @@ const optionalText = (label: Label | undefined): string | undefined =>
   label === undefined ? undefined : labelSourceText(label);
 
 /**
- * Which rows of which repeater are on the page, keyed by the repeater's
- * place in the form and valued by one stable id per row. Ids rather than
- * a count because they are what React keys a row's controls by: removing
- * the row in the middle has to take that row's answers with it and leave
- * its neighbours' where they are, and only a key that survives the
- * renumbering can do that.
- *
- * Absent for a form nobody is driving, where every repeater falls back to
- * the rows the server rendered.
+ * Stable ids, not a count, so removing a middle row takes its own
+ * answers with it.
  */
 export type FormRowState = Readonly<Record<string, readonly string[]>>;
 
-/** What the island calls when a visitor adds or removes a row. */
 type FormRowsChange = (statePath: string, ids: readonly string[]) => void;
 
-/** Everything below one field, invariant across the whole form. */
 interface FormChrome {
   readonly idBase: string;
   readonly messages: ReadonlyMap<string, string>;
@@ -71,9 +62,8 @@ interface FormChrome {
 const serverRowIds = (count: number): readonly string[] =>
   Array.from({ length: count }, (_, index) => String(index));
 
-// Ids are numeric strings, so one past the highest is one nothing holds —
-// including a row that was removed, whose id must never come back and
-// take a still-mounted row's controls with it.
+// A removed row's id must never be reused, or it takes a mounted row's
+// controls.
 const withNewRow = (ids: readonly string[]): readonly string[] => [
   ...ids,
   String(ids.reduce((highest, id) => Math.max(highest, Number(id)), -1) + 1),
@@ -82,12 +72,8 @@ const withNewRow = (ids: readonly string[]): readonly string[] => [
 const statePathOf = (parent: string | undefined, key: string): string =>
   parent === undefined ? key : `${parent}.${key}`;
 
-/**
- * The visual half of "required". The control's `required` attribute is
- * the half assistive technology reads, so the marker is hidden from it
- * rather than announced twice — and being a glyph rather than a tint, it
- * survives a visitor who cannot tell the label's colour from any other.
- */
+// Hidden from assistive technology, which reads `required` already. A
+// glyph, not a tint, for colour-blind visitors.
 function RequiredMark({
   field,
 }: {
@@ -105,7 +91,6 @@ function RequiredMark({
   );
 }
 
-/** One refusal, under the control that produced it. */
 function FieldError({
   name,
   id,
@@ -122,12 +107,6 @@ function FieldError({
   );
 }
 
-/**
- * The help text and the error that describe one field, and the ids that
- * wire them to it. Shared by every field shape: a control points at them
- * with `aria-describedby`, and so does the `<fieldset>` a group or a
- * repeater renders, which carries the same implicit grouping role.
- */
 function describe(
   field: MetaBoxFieldManifestEntry,
   name: string,
@@ -201,13 +180,6 @@ function FormField({
   );
 }
 
-/**
- * The shell a group and a repeater share: a `<fieldset>` naming itself in
- * its `<legend>`, carrying the id the error summary links to and the help
- * and error text that belong to the container rather than to anything
- * inside it — a row count the visitor missed is the repeater's error, not
- * any one row's.
- */
 function FormFieldset({
   field,
   name,
@@ -240,18 +212,8 @@ function FormFieldset({
   );
 }
 
-/**
- * A repeater: as many rows as the visitor has things to say. Each row is
- * its own `<fieldset>` carrying one hidden marker, and the markers are
- * how the handler counts the rows that came back — a repeater posts no
- * value of its own, so nothing else can claim that name.
- *
- * Add and remove appear only once the island is driving the form. Without
- * JavaScript there is nothing behind them: adding a row means asking the
- * server for one, and the plugin's endpoint answers submissions rather
- * than serving forms. The form is served with the fewest rows it accepts,
- * and never fewer than one.
- */
+// Each row's hidden marker is how the handler counts rows. Add and remove
+// need the island: the endpoint answers submissions, not row requests.
 function FormRepeater({
   field,
   value,
@@ -274,10 +236,8 @@ function FormRepeater({
   const change = chrome.onRowsChange;
   const floor = Math.max(minRows(field), 1);
   const addId = `${elementId(chrome.idBase, name)}-add`;
-  // The remove button unmounts itself, so without this a keyboard visitor
-  // is left on `<body>` with no announcement and nothing to carry on from.
-  // Removing always leaves room for another row, so the add button is
-  // always there to take the focus.
+  // The remove button unmounts itself; focus moves to the add button,
+  // which removal always leaves available.
   const removed = useRef(false);
   useEffect(() => {
     if (!removed.current) return;
@@ -300,11 +260,8 @@ function FormRepeater({
             <input type="hidden" name={rowMarkerName(name)} value="" readOnly />
             <FormFields
               fields={subFields}
-              // A row the island added is past what the server rendered,
-              // and it has to be judged by the same defaults its controls
-              // are seeded from — an empty bag would hide a sub-field
-              // whose driver's default makes it visible, leaving an answer
-              // the server then asks for and nothing on the page to give.
+              // An empty bag would hide a sub-field whose driver's default
+              // makes it visible, yet the server would require it.
               values={rows[index] ?? defaultAnswers(subFields)}
               name={rowPath}
               statePath={statePathOf(statePath, id)}
@@ -348,13 +305,8 @@ function FormRepeater({
   );
 }
 
-/**
- * One level of a form's questions, in the order it declares them. A group
- * and a repeater row recurse through here with their own values, so a
- * condition inside one is judged against that scope's answers and nothing
- * else's — which is the same call the submit handler makes over the
- * answers that come back.
- */
+// Groups and rows recurse with their own values, matching the submit
+// handler's scoping.
 function FormFields({
   fields,
   values,
@@ -367,7 +319,6 @@ function FormFields({
   readonly values: SubmittedValues;
   readonly name: string | undefined;
   readonly statePath: string | undefined;
-  /** True in a scope the visitor may leave blank — see `FormControl`. */
   readonly optional?: boolean;
   readonly chrome: FormChrome;
 }): ReactNode {
@@ -420,17 +371,8 @@ function FormFields({
   });
 }
 
-/**
- * Where the challenge goes. The widget itself is drawn into this
- * container by the island — see `drawCaptcha` for why it cannot be left
- * to Cloudflare's own auto-scan — so what the server renders is the
- * container, the id the error summary links to, and, for a visitor whose
- * browser will never draw one, an explanation instead of an empty box.
- *
- * It renders once, above the submit button, and on a wizard only on the
- * step that submits: a challenge solved two steps early is a token that
- * may have expired by the time it is posted.
- */
+// Only on the submitting step: a token solved two steps early may expire
+// before it is posted.
 function FormCaptcha({
   siteKey,
   idBase,
@@ -463,14 +405,6 @@ function FormCaptcha({
   );
 }
 
-/**
- * What went wrong, once, at the top of the form. `role="alert"` is what
- * announces it to a screen reader the moment the island renders it;
- * `tabIndex={-1}` is what lets the island move focus here, so a visitor
- * who cannot see the page is told what happened rather than left at a
- * submit button that appeared to do nothing. Each message links to the
- * control that produced it.
- */
 function ErrorSummary({
   errors,
   idBase,
@@ -514,11 +448,6 @@ const stepName = (step: FormStep, index: number, total: number): string =>
     ? stepPositionMessage(index + 1, total)
     : labelSourceText(step.title);
 
-/**
- * Where the visitor is, and how far there is to go. Rendered only where
- * a wizard is: a form nobody broke into steps has one step, which is a
- * progress indicator with nothing to indicate.
- */
 function StepProgress({
   steps,
   index,
@@ -548,47 +477,25 @@ export interface FormMarkupProps {
   readonly idBase: string;
   /** Rendered inline against their fields and listed in the summary. */
   readonly errors?: readonly FormFieldError[];
-  /**
-   * What the visitor already answered — so a rejected submit costs them
-   * nothing, and so the conditions are judged against what they said
-   * rather than against the defaults the blank form was built from.
-   */
+  /** Conditions are judged against these rather than the defaults. */
   readonly answers?: SubmittedValues;
   /** Client-side only — see `issueTimingToken`. */
   readonly token?: string | null;
-  /**
-   * The signed row a bound form was rendered on — see `signBound`.
-   * Unlike `token` it belongs in the server render: it is about the page,
-   * not the visitor, so it costs the page nothing at the edge.
-   */
+  /** Unlike `token`, safe in the server render: it depends on the page. */
   readonly bound?: string | null;
   /** Where a submit should return to — see {@link RETURN_FIELD}. */
   readonly returnTo?: string;
-  /**
-   * True once the island is driving this form: it marks the markup as
-   * enhanced, and turns the browser's own validation off so a visitor
-   * meets one set of messages rather than the browser's bubbles on one
-   * field and the server's on the next.
-   */
+  /** Also turns browser validation off, so one set of messages shows. */
   readonly enhanced?: boolean;
   readonly busy?: boolean;
   readonly onSubmit?: ComponentProps<"form">["onSubmit"];
-  /**
-   * Every edit, so that what a wizard shows keeps up with what the
-   * visitor has said. Which fields a step holds, how many steps there
-   * are, and whether the button on this one moves on or submits are all
-   * read from `answers` — so an edit nobody folded back into them leaves
-   * the form deciding against what the visitor said a keystroke ago.
-   */
+  /** Must fold edits back into `answers`, which drive the wizard's shape. */
   readonly onChange?: ComponentProps<"form">["onChange"];
   readonly summaryRef?: Ref<HTMLDivElement>;
   /** Where the island draws the challenge — see `drawCaptcha`. */
   readonly captchaRef?: Ref<HTMLDivElement>;
   /**
-   * Which of the form's steps to show. Absent — the server render, the
-   * editor, the page a rejected submit is answered with — renders every
-   * field as one form, which is what a visitor with no JavaScript
-   * submits. Only the island passes it, and only once it is live.
+   * Absent renders every field as one form, as a no-JavaScript visitor sees it.
    */
   readonly step?: number;
   readonly onBack?: ComponentProps<"button">["onClick"];
@@ -603,21 +510,9 @@ export interface FormMarkupProps {
 }
 
 /**
- * The form itself. One implementation renders it three times over: the
- * static server render the block emits, the island that takes that render
- * over, and the page the no-JavaScript path answers a rejected submit
- * with — so what a visitor meets is the same markup however they got it.
- * With no `token`, `errors` or `answers` it is byte-identical for every
- * visitor, which is what keeps the page carrying it edge-cacheable.
- *
- * A field whose condition fails is not rendered at all. The submit
- * handler makes the same call against the answers that come back, and an
- * answer the body does not carry falls back to the same default judged
- * here — so an untouched form is read exactly as it was served.
- *
- * Labels flatten to their source message rather than the visitor's
- * locale: a plugin has no catalog at render time, and a plain string
- * label (the common case) passes through untouched.
+ * Without `token`, `errors` or `answers` it is byte-identical for every
+ * visitor, so the page stays edge-cacheable. Labels render in the source
+ * locale.
  */
 export function FormMarkup({
   form,
@@ -647,9 +542,6 @@ export function FormMarkup({
   // No caller asked for a step: -1, which matches no real one, so every
   // test below reads as "not a wizard".
   const index = step === undefined ? -1 : Math.min(step, steps.length - 1);
-  // A wizard needs both a caller asking for a step and more than one step
-  // to move between — so a form the answers collapse to a single step
-  // sheds its stepper rather than showing a bar with one mark on it.
   const stepped = index >= 0 && steps.length > 1;
   // The step carrying the submit button — which is every step of a form
   // nobody is paging through, and the last of one they are.
@@ -706,12 +598,8 @@ export function FormMarkup({
         controls
       ) : (
         <div className="plumix-form-step" data-plumix-form-step={index}>
-          {/* Where focus lands on every step change, so a visitor who
-              cannot see the page is told which step they are now on
-              rather than left where the button they pressed used to be.
-              It sits under the form's own title where there is one, and
-              stands in for it where there is not — a fixed level would
-              skip from the page's `h1` to an `h3` on an untitled form. */}
+          {/* Focus lands here on step change. Its level depends on the
+              form title, so an untitled form doesn't skip a level. */}
           <StepHeading
             className="plumix-form-step-title"
             data-plumix-form-step-title=""
@@ -723,10 +611,8 @@ export function FormMarkup({
           {controls}
         </div>
       )}
-      {/* Out of sight because a trap the visitor can see is a trap they fill
-          in. `aria-hidden` is the other half of the recipe, which keeps
-          content announced by design — a screen-reader user who filled the
-          trap would be silently filed as spam. */}
+      {/* `aria-hidden` too, or a screen-reader user who filled the trap
+          would be silently filed as spam. */}
       <div
         className="plumix-form-honeypot"
         data-plumix-form-honeypot=""
@@ -772,10 +658,8 @@ export function FormMarkup({
             {labelSourceText(form.submitLabel ?? SUBMIT_LABEL)}
           </button>
         ) : (
-          // "Next" submits too. A step whose only button was a plain one
-          // would leave the browser to guess what Enter in a text field
-          // means, and a submit button held back for the last step would
-          // make that guess "post the half-filled form".
+          // A submit button, so Enter in a field means "next" rather than
+          // a browser guess.
           <button
             className="plumix-form-next"
             data-plumix-form-next=""

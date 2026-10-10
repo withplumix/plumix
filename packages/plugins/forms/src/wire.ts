@@ -6,12 +6,8 @@ import * as v from "valibot";
 import type { FormFieldError, FormSubmitResponse } from "./types.js";
 import { UNREACHABLE } from "./messages.js";
 
-// Both answers a browser reads off this plugin's endpoints — the token
-// below and the submit response under it — are decoded rather than
-// asserted: they arrive over `fetch` from a URL a page carries, so what
-// comes back is a boundary like any other, and a stale service worker, an
-// intercepting proxy or a captive portal all answer 200 with something
-// else entirely.
+// Decoded: a stale service worker or captive portal can answer 200 with
+// something else.
 const TokenResponse = v.object({ token: v.string() });
 
 const FieldError = v.object({ field: v.string(), message: v.string() });
@@ -24,13 +20,8 @@ const SubmitResponse: v.GenericSchema<FormSubmitResponse> = v.variant("ok", [
 ]);
 
 /**
- * A form definition as it left the server, with the holes JSON punched in
- * it filled back in. Island props cross the wire as JSON, which has no
- * `undefined`: every absent property — a field's `description`, its
- * `visibleWhen`, the form's `title` — arrives as `null`. One pass here is
- * what lets the markup and core's own visibility evaluation read the
- * definition exactly as the server did, rather than every reader down the
- * line learning to spell absence twice.
+ * Island props arrive as JSON, where every absent property became `null`;
+ * this restores `undefined`.
  */
 export function withoutNulls<T>(value: T): T {
   if (Array.isArray(value)) {
@@ -44,22 +35,12 @@ export function withoutNulls<T>(value: T): T {
   ) as T;
 }
 
-/**
- * What a submission that never reached the endpoint comes back as. It
- * names no field: the summary the plugin's own markup renders reads such
- * an error as text rather than a link to nowhere, and a theme reads it
- * back through `errorFor("")`.
- */
+/** Names no field; a theme reads it back through `errorFor("")`. */
 export const unreachable: readonly FormFieldError[] = [
   { field: "", message: labelSourceText(UNREACHABLE) },
 ];
 
-/**
- * Post one submission and decode the reply. Both browser surfaces submit
- * through here, so the request and what counts as an answer cannot drift
- * between them. Never rejects: a request that failed, a reply that is not
- * JSON and one that is not a submit response are all `"unreachable"`.
- */
+/** Never rejects; any failure or unexpected reply is {@link unreachable}. */
 export async function postSubmission(
   action: string,
   body: URLSearchParams,
@@ -85,11 +66,6 @@ export async function postSubmission(
   }
 }
 
-/**
- * The timing token, fetched once the form is live. Both browser surfaces
- * ask for it the same way, so a form driven by a theme's own controls
- * meets the same spam floor as the rendered one.
- */
 export function useTimingToken(tokenPath: string): string | null {
   const [token, setToken] = useState<string | null>(null);
   useEffect(() => {
@@ -103,9 +79,7 @@ export function useTimingToken(tokenPath: string): string | null {
         const payload = v.safeParse(TokenResponse, await response.json());
         if (payload.success) setToken(payload.output.token);
       } catch {
-        // A form that could not get a token still submits: the server
-        // treats a submission carrying none as one it cannot time, which
-        // is exactly how it treats every no-JavaScript submission.
+        // Submits untimed, like any no-JavaScript submission.
       }
     })();
     return () => {

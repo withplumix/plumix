@@ -4,23 +4,12 @@ import { labelSourceText } from "plumix/i18n";
 
 import { asPosted, TOGGLE_ON } from "../answers.js";
 
-/**
- * Posted alongside a control that stays silent when the visitor chooses
- * nothing — an unticked checkbox, a multiple choice with no selection.
- * Without it the handler cannot tell "chose nothing" from "was never
- * shown this field", and the second falls back to the field's default,
- * which would quietly undo the visitor's answer.
- */
+// Tells "chose nothing" from "never shown", which would fall back to the
+// default and undo the visitor's answer.
 function EmptyAnswer({ name }: { readonly name: string }): ReactNode {
   return <input type="hidden" name={name} value="" readOnly />;
 }
 
-/**
- * One field's control, chosen by its input type. Every branch carries the
- * same identity attributes — the `id` its label points at, the `name` the
- * submit handler reads the answer back under — so a form's markup stays
- * one shape however its questions are asked.
- */
 export function FormControl({
   field,
   name,
@@ -31,23 +20,19 @@ export function FormControl({
   optional,
 }: {
   readonly field: MetaBoxFieldManifestEntry;
-  /** What the answer posts under — the field's key, bracketed by its container. */
+  /**
+   * What the answer posts under — the field's key, bracketed by its container.
+   */
   readonly name: string;
   readonly id: string;
-  /**
-   * What the visitor already answered, when the form is being rendered
-   * back to them after a rejected submit. Absent on a form nobody has
-   * filled in, where the field's own default seeds the control instead.
-   */
+  /** Absent on a blank form, where the field's default seeds the control. */
   readonly answer?: unknown;
   /** Ids of the help text and error this control is described by. */
   readonly describedBy?: string;
   readonly invalid?: boolean;
   /**
-   * True inside a repeater row the form does not insist on. The browser's
-   * own `required` is dropped there: the server asks a blank row nothing,
-   * so leaving one alone has to be something the browser lets a visitor
-   * with no JavaScript actually do.
+   * Drops the browser's `required` in an optional repeater row, which the
+   * server accepts blank.
    */
   readonly optional?: boolean;
 }): ReactNode {
