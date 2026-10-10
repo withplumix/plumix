@@ -73,9 +73,10 @@ When a change alters behaviour a comment describes, correct the comment or delet
 it with something vaguer. When you edit a function, delete the comments in it that break these
 rules.
 
-Lint enforces the mechanical part in production source: a comment block stays within 30 words, code
-examples aside (`plumix/max-comment-length`), no `/** */` sits inside a function body
-(`plumix/no-jsdoc-in-function-body`), and no code is left commented out
+Lint enforces the mechanical part in all linted code, tests included: a comment block stays within
+30 words, code examples aside (`plumix/max-comment-length`); a comment on a declaration or member is
+`/** */` (`plumix/prefer-jsdoc`); no `/** */` sits inside a function body
+(`plumix/no-jsdoc-in-function-body`); and no code is left commented out
 (`sonarjs/no-commented-code`).
 
 **In review**, treat every added comment line as a finding until it passes these rules. Name the
