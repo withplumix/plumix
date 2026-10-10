@@ -19,40 +19,20 @@ export type { RankingAlgorithm } from "./ranking.js";
 
 export interface SearchConfig {
   /**
-   * Which ranking algorithm orders the results. One exists, and its weights
-   * are hardcoded — the name is what lets a future revision ship without
-   * silently reordering the results a site already has.
+   * Pinning a name lets a future revision ship without silently reordering this
+   * site's results.
    */
   readonly ranking?: RankingAlgorithm;
   /**
-   * How many documents a word has to appear in before results for it are
-   * ordered by recency rather than relevance. Defaults to where the two plans
-   * were measured to cross; a site with a much smaller or much larger corpus
-   * can move it.
+   * Document count past which a word's results order by recency rather than
+   * relevance. The default is where the two plans were measured to cross.
    */
   readonly commonTermThreshold?: number;
 }
 
 /**
- * `@plumix/plugin-search` — a maintained full-text index over everything a
- * site publishes.
- *
- * Installing it materializes a plain-text projection of every searchable
- * entry and term, and an SQLite FTS5 index over that projection. For entries,
- * both boundaries where the index could drift from the content are closed by
- * triggers in the database — core's change feed on one side, the projection's
- * own triggers on the other — so a seed, a migration or a bulk import cannot
- * leave a site with an index that quietly disagrees with its content. Only the
- * middle hop is JavaScript, because stripping HTML out of block content needs
- * it.
- *
- * A term has no such feed: it is indexed through the lifecycle actions, and a
- * term the projection is missing or holds stale text for is swept up by the
- * scheduled run.
- *
- * An entry saved through the application is indexed after the response, so a
- * visitor never waits for it; anything the fast path misses is caught when
- * the feed is next drained.
+ * Entry indexing is closed by database triggers, so seeds and bulk imports
+ * cannot leave it stale. Terms have no feed; the scheduled run sweeps them.
  */
 export function search(options: SearchConfig = {}): PluginDescriptor {
   return definePlugin("search", {
@@ -79,10 +59,8 @@ export function search(options: SearchConfig = {}): PluginDescriptor {
       });
       registerSearchArchive(ctx, options);
       registerAdminSearch(ctx, options);
-      // No `cron`: a task that declares one runs only on an invocation whose
-      // schedule matches it byte for byte, and how often a site's worker
-      // wakes is the site's decision. Draining costs nothing when the feed is
-      // empty, so the right cadence is whatever cadence the site already has.
+      // No `cron`: a declared one runs only on a byte-identical schedule, and
+      // draining an empty feed is free, so any cadence the site has will do.
       ctx.registerScheduledTask({
         id: "index-drain",
         handler: runSearchMaintenance,

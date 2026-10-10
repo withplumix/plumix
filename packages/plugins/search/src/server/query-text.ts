@@ -1,12 +1,7 @@
 import { escapeHtml } from "plumix/support";
 
-/**
- * The markers FTS5 splices around a match. Chosen to look like markup rather
- * than to be unguessable: `escapeHtml` turns the angle brackets into entities,
- * so the restore below matches only the escaped form — and content that
- * happens to carry this exact text escapes with everything else and yields a
- * stray `<mark>`, which is inert, rather than an opening for anything.
- */
+// Need not be unguessable: content carrying this text is escaped with the
+// rest and yields only an inert stray `<mark>`.
 const MARK_OPEN = "<plumix:mark>";
 const MARK_CLOSE = "</plumix:mark>";
 
@@ -19,15 +14,8 @@ export const SNIPPET_MARKERS = {
   tokens: 24,
 } as const;
 
-/**
- * Make a raw FTS5 snippet safe to render, keeping the highlight.
- *
- * FTS5 splices its markers in literally and escapes nothing around them, so a
- * snippet handed to a theme unescaped runs whatever script the indexed content
- * held. Everything is escaped first — core's helper covers `&`, `<` and `>`,
- * which is exactly the element-content case a snippet is — and only then are
- * the two markers restored.
- */
+// FTS5 escapes nothing around its markers, so escape everything first and
+// only then restore them.
 const ESCAPED_OPEN = escapeHtml(MARK_OPEN);
 const ESCAPED_CLOSE = escapeHtml(MARK_CLOSE);
 
@@ -37,15 +25,12 @@ export function highlightSnippet(raw: string): string {
     .replaceAll(ESCAPED_CLOSE, "</mark>");
 }
 
-// Anything between double quotes, or a run of non-space characters. The
-// closing quote is optional, so an unterminated one takes the rest of the
-// input as its phrase — which is what turns a visitor's stray quote mark into
-// a search rather than a syntax error.
+// The closing quote is optional, so a stray quote mark becomes a phrase
+// rather than a syntax error.
 const TOKEN = /"([^"]*)"?|(\S+)/g;
 
 interface QueryToken {
   readonly value: string;
-  /** `-word`: what the reader is asking not to be shown. */
   readonly exclude: boolean;
 }
 
@@ -67,24 +52,9 @@ const phrase = (token: QueryToken): string =>
   `"${token.value.replaceAll('"', '""')}"`;
 
 /**
- * Turn what a visitor typed into an FTS5 match expression, or `null` when
- * there is nothing to look for.
- *
- * Every token is emitted as a quoted phrase, joined by FTS5's implicit AND —
- * so adding a word narrows the result set, a quoted phrase stays one phrase,
- * and every operator the syntax defines (`AND`, `NEAR`, `*`, `^`) is inert.
- * That totality is the point: any string a visitor can type compiles to a
- * valid expression, so a malformed query is an empty result set rather than
- * an error page, without a `try`/`catch` standing in for a guarantee.
- *
- * A leading `-` is the exception, and it has to be: quoting it leaves it
- * inside the phrase, where FTS5's tokenizer drops it — so `-lettuce` would
- * ask for exactly what the reader said they did not want. It means exclusion
- * here, the same thing it means to core's own tokenizer.
- *
- * A query of nothing but exclusions is nothing to look for. FTS5 has no way
- * to spell "every document except these", and the alternative — answering
- * with the whole corpus — is not what anyone typing `-draft` meant.
+ * Total: every input compiles to a valid expression, FTS5 operators inert. A
+ * leading `-` excludes. Returns `null` for only exclusions, which FTS5 cannot
+ * express.
  */
 export function toMatchExpression(query: string): string | null {
   const tokens = tokensOf(query);

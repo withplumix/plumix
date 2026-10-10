@@ -4,14 +4,11 @@ import { jsonResponse } from "plumix/plugin";
 import type { ReindexStatus, SearchReindexRun } from "../db/schema.js";
 import { latestReindex, startReindex } from "./reindex.js";
 
-/** What an operator is told about a rebuild. */
 interface ReindexReport {
   readonly status: ReindexStatus;
-  /** Sources rebuilt so far, and sources this run could not rebuild. */
   readonly processed: number;
   readonly failed: number;
   readonly startedAt: string;
-  /** Null while it is still going. */
   readonly finishedAt: string | null;
 }
 
@@ -26,13 +23,8 @@ function report(run: SearchReindexRun): ReindexReport {
 }
 
 /**
- * Start a rebuild, and answer with where it has got to.
- *
- * Starting is idempotent — a second POST while one is running reports that
- * one rather than beginning a rival walk over the same corpus — so this is
- * safe to retry and safe to wire to a button somebody may double-press. The
- * work itself happens on the scheduled runs that follow; this only records
- * that a rebuild is wanted.
+ * Idempotent: a POST during a run reports it. Only records the request;
+ * scheduled runs do the work.
  */
 export async function handleReindexStart(ctx: AppContext): Promise<Response> {
   return jsonResponse(report(await startReindex(ctx)));
