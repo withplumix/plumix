@@ -1,9 +1,11 @@
 import type { ESLint } from "eslint";
 
+import { maxCommentLength } from "./max-comment-length.js";
 import { noBareObjectInput } from "./no-bare-object-input.js";
 import { noChainedTypeAssertion } from "./no-chained-type-assertion.js";
 import { noErrorMessageInUi } from "./no-error-message-in-ui.js";
 import { noForgedApp } from "./no-forged-app.js";
+import { noInternalJsdoc } from "./no-internal-jsdoc.js";
 import { noModuleMocking } from "./no-module-mocking.js";
 import { noNonTestidQueries } from "./no-non-testid-queries.js";
 import { noReflectApply } from "./no-reflect-apply.js";
@@ -28,10 +30,12 @@ import { testTier } from "./test-tier.js";
  */
 export const plumixPlugin: ESLint.Plugin = {
   rules: {
+    "max-comment-length": maxCommentLength,
     "no-bare-object-input": noBareObjectInput,
     "no-chained-type-assertion": noChainedTypeAssertion,
     "no-error-message-in-ui": noErrorMessageInUi,
     "no-forged-app": noForgedApp,
+    "no-internal-jsdoc": noInternalJsdoc,
     "no-module-mocking": noModuleMocking,
     "no-non-testid-queries": noNonTestidQueries,
     "no-reflect-apply": noReflectApply,

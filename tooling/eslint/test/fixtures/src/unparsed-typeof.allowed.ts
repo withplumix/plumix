@@ -52,18 +52,16 @@ export function resolveEnvInput<T>(
   return (input as (env: Record<string, string>) => T)(env);
 }
 
-// A parse boundary's own subject. `unknown` is the correct input type for a
-// function that decodes, and the first check inside one has nothing to reach
-// through — including when a schema library is the caller.
+// A parse boundary's own subject: `unknown` is the right input for a decoder,
+// and its first check has nothing to reach through.
 export function isPlainObject(
   value: unknown,
 ): value is Readonly<Record<string, unknown>> {
   return typeof value === "object" && value !== null;
 }
 
-// Probing a live object for a member `JSON` could never have carried: a
-// function and a symbol do not survive serialization, so asking for one is a
-// structural question about the value in hand, not a parse that was skipped.
+// Functions and symbols never survive serialization, so probing for one asks
+// about the live value, not a skipped parse.
 export function isThenable(value: unknown): boolean {
   return typeof (value as { then?: unknown }).then === "function";
 }

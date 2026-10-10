@@ -94,6 +94,8 @@ const unparsedTypeofReports = messageIdReports(
 const chainedAssertionReports = messageIdReports(
   "plumix/no-chained-type-assertion",
 );
+const commentLengthReports = messageIdReports("plumix/max-comment-length");
+const internalJsdocReports = messageIdReports("plumix/no-internal-jsdoc");
 
 async function errorMessageReports(
   config: Linter.Config[],
@@ -223,6 +225,54 @@ describe("plumix/no-bare-object-input", () => {
     await expect(
       plumixReports("src/bare-object-input.allowed.ts"),
     ).resolves.toEqual([]);
+  });
+});
+
+describe("plumix/max-comment-length", () => {
+  it("rejects a line block, a doc comment and a trailing comment over the word limit", async () => {
+    await expect(
+      commentLengthReports("src/comment-length.violations.ts"),
+    ).resolves.toEqual([
+      { messageId: "tooLong", line: 1 },
+      { messageId: "tooLong", line: 5 },
+      { messageId: "tooLong", line: 13 },
+    ]);
+  });
+
+  it("counts blocks split by a blank line apart and skips lint directives", async () => {
+    await expect(
+      commentLengthReports("src/comment-length.allowed.ts"),
+    ).resolves.toEqual([]);
+  });
+});
+
+describe("plumix/no-internal-jsdoc", () => {
+  it("rejects a doc comment on a declaration the module does not export", async () => {
+    await expect(
+      internalJsdocReports("src/internal-jsdoc.violations.ts"),
+    ).resolves.toEqual([
+      { messageId: "internalJsdoc", line: 1 },
+      { messageId: "internalJsdoc", line: 6 },
+      { messageId: "internalJsdoc", line: 10 },
+      { messageId: "internalJsdoc", line: 15 },
+    ]);
+  });
+
+  it("permits doc comments on exports, their members and module augmentations", async () => {
+    await expect(
+      internalJsdocReports("src/internal-jsdoc.allowed.ts"),
+    ).resolves.toEqual([]);
+  });
+});
+
+describe("sonarjs/no-commented-code", () => {
+  it("rejects code left behind in a comment", async () => {
+    await expect(
+      reportsMatching(
+        "src/commented-code.violations.ts",
+        (ruleId) => ruleId === "sonarjs/no-commented-code",
+      ),
+    ).resolves.toEqual([{ ruleId: "sonarjs/no-commented-code", line: 2 }]);
   });
 });
 
