@@ -32,22 +32,9 @@ interface ResolvedRef {
 }
 
 /**
- * `name` is matched against `terms.slug` (NOT `terms.name`) — the parameter
- * name mirrors WordPress's `wp_get_nav_menu_object()`.
- *
- * Resolution at render time is live: entry/term refs go through the
- * registered `LookupAdapter` per kind, batched by id, so a renamed page or
- * retitled category propagates without re-saving the menu (unless the item
- * carries its own label, which wins over the linked title). Items whose
- * ref fails to resolve (deleted, unpublished, scope-excluded) drop
- * silently along with their descendants — mirrors how broken refs will
- * be surfaced in admin from slice 11.
- *
- * Hook ordering: `menu:item` filter runs once per resolved item during
- * tree assembly (per-item transforms see already-transformed children),
- * then `menu:tree` runs once on the final array. `location` is
- * forwarded from `getMenuForLocation` when the resolution started from
- * a registered slot, otherwise `null`.
+ * `name` matches `terms.slug`, not `terms.name`, as WordPress's
+ * `wp_get_nav_menu_object()` does. Items whose target doesn't resolve drop
+ * silently with their descendants.
  */
 export async function getMenuByName(
   ctx: AppContext,
@@ -60,13 +47,6 @@ export async function getMenuByName(
   return resolved ?? null;
 }
 
-/**
- * Batched `getMenuByName`: resolves every slug with a query count flat in
- * the number of menus — one term lookup, one item read, and one ref
- * resolution pass shared across all of them. This is the seam the `menus`
- * template dep loads through, so a site rendering header + footer +
- * sidebar navs pays one resolve pass per request, not one per location.
- */
 export async function getMenusByName(
   ctx: AppContext,
   names: readonly string[],
@@ -87,21 +67,15 @@ interface MenuRequest {
 }
 
 /**
- * Internal seam shared with `getMenusForLocations` — not part of the
- * package surface. Results align with `requests` by index. Locations are
- * per request — two locations bound to the same slug share one query
- * cluster but get their own hook pass, each seeing its own `location`
- * (#1518).
+ * Not part of the package surface. Results align with `requests` by index; each
+ * request gets its own hook pass.
  */
 export async function resolveMenus(
   ctx: AppContext,
   requests: readonly MenuRequest[],
 ): Promise<(ResolvedMenu | null)[]> {
-  // Per-slug request memo over the batched load (#1493): the `menus`
-  // template dep and a `getMenuForLocation` render both resolving the
-  // same menu share one query cluster. Only the cluster is memoized —
-  // hooks (`menu:item`, `menu:tree`) and `isCurrent` still run per call
-  // with that call's own `location` / `resolvedEntity` context.
+  // Only the query cluster is memoized; hooks and `isCurrent` still run per
+  // call with that call's own context.
   const unique = [...new Set(requests.map((r) => r.slug))];
   const clusters = await memoBatch(
     ctx.memo,
@@ -255,11 +229,8 @@ async function resolveEntryRefs(
     .map((t) => t.name);
   if (eligibleTypes.length === 0) return new Map();
 
-  // The entry adapter excludes trash by default but admits drafts and
-  // scheduled — fine for the picker (editors want to link to drafts),
-  // wrong for public nav. scope.status pushes the published constraint
-  // into the adapter's own WHERE so a draft that was added to a menu
-  // doesn't render until it ships (#1519).
+  // The entry adapter admits drafts and scheduled entries, which the picker
+  // wants but public nav must not render.
   const results = await adapter.list(ctx, {
     scope: { entryTypes: eligibleTypes, status: "published" },
     ids: [...ids].map(String),
@@ -267,10 +238,8 @@ async function resolveEntryRefs(
   const refs = refMapFromResults(results);
   if (refs.size === 0) return refs;
 
-  // The adapter's label is the raw title, which is what the admin pickers
-  // edit. The public nav shows the title the entry's own page does, with
-  // its shortcodes expanded, so the rows the adapter admitted are resolved
-  // in one batch and their titles replace it.
+  // The adapter label is the raw title; public nav shows the page's title with
+  // shortcodes expanded.
   const rows = await ctx.db
     .select()
     .from(entries)
@@ -312,11 +281,7 @@ function refMapFromResults(
     if (!Number.isFinite(numericId)) continue;
     const href = result.href ?? null;
     if (!href) continue; // No public URL → can't render in nav
-    // `result.label` may be `null` for entries the upstream adapter
-    // didn't title — fall through to the menu's own "(unnamed)" rather
-    // than ship a stale English "Untitled <type>" into the SSR-rendered
-    // nav. Content-i18n of `"(unnamed)"` is the deferred theme-layer
-    // concern, not chrome.
+    // Don't ship an English "Untitled <type>" into the SSR nav.
     const label = result.label ?? "(unnamed)";
     map.set(numericId, { label, href });
   }
@@ -340,11 +305,8 @@ async function toResolvedItem(
     (child): child is ResolvedMenuItem => child !== null,
   );
 
-  // Menu-tree ancestor: any descendant is current. Pure JS walk over
-  // the children we just built. Entity-tree ancestry (linked entry is
-  // ancestor of current entry) is deliberately not built-in — it
-  // requires walking the entries.parent_id chain at render time and
-  // is a `menu:item` filter consumer's job when needed.
+  // Entity-tree ancestry is left to `menu:item` filters: it needs a parent_id
+  // walk at render time.
   const isAncestor = children.some(
     (child) => child.isCurrent || child.isAncestor,
   );

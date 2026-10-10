@@ -139,11 +139,9 @@ export function MenuItemEditor({
 
   useEffect(() => {
     if (!menu.data) return;
-    // Reload either when the user switches menus (term id changes) or
-    // when the server's version moves past the editor's — the latter
-    // is how the conflict-reload action makes its way into local state.
-    // applySaveResult bumps state.version to the new server value, so
-    // the matching case stays a no-op after a clean save.
+    // A server version past the editor's is how a conflict reload reaches local
+    // state; applySaveResult bumps state.version, so a clean save stays a
+    // no-op.
     if (menu.data.id !== state.termId || menu.data.version !== state.version) {
       dispatch({ type: "loadFromServer", response: menu.data });
     }
@@ -215,7 +213,6 @@ function LocationsBindings({
   );
 }
 
-/** Narrows an `ORPCError.data` payload to check its `reason` discriminant. */
 function isReason(data: unknown, reason: string): boolean {
   return (
     typeof data === "object" &&
@@ -234,13 +231,8 @@ function MenuSettingsPanel({
 }): ReactNode {
   const save = useSaveMenu();
   const queryClient = useQueryClient();
-  // The conflict banner persists past the mutation's transient error
-  // state (mutation goes idle on dismiss/refetch). Dismissal is keyed
-  // to the data version that was active when the user dismissed —
-  // after invalidateQueries lands a newer version and the reducer
-  // advances `state.version`, the comparison naturally re-arms so a
-  // SECOND `version_mismatch` (different racing editor) shows the
-  // banner again.
+  // Dismissal is keyed to the version active at dismiss time, so a second
+  // `version_mismatch` from another editor re-arms the banner.
   const [dismissedAt, setDismissedAt] = useState<number | null>(null);
   const isVersionMismatch =
     save.error instanceof ORPCError &&
@@ -331,22 +323,16 @@ function MaxDepthField({
   readonly state: EditorState;
   readonly dispatch: Dispatch<EditorAction>;
 }): ReactNode {
-  // A local draft buys the user a transient empty string while editing —
-  // without it, controlled-input + reject-on-NaN traps the field on the
-  // last valid value. The reducer is still the source of truth: when
-  // state.maxDepth changes (load, undo, etc.) the draft snaps back via
-  // an adjusting-state-during-render compare (React 19 idiomatic — no
-  // setState-in-effect).
+  // A local draft allows a transient empty string; controlled input plus
+  // reject-on-NaN would otherwise trap the field on the last valid value.
   const [draft, setDraft] = useState(String(state.maxDepth));
   const [lastSeen, setLastSeen] = useState(state.maxDepth);
   if (state.maxDepth !== lastSeen) {
     setLastSeen(state.maxDepth);
     setDraft(String(state.maxDepth));
   }
-  // The reducer no-ops `updateMaxDepth` below the deepest-existing
-  // depth. Surface that explicitly so the user can tell their value
-  // didn't take — without this the input keeps showing a number that
-  // never made it into state and the next save sends the old value.
+  // The reducer ignores a value below the deepest existing depth; show that, or
+  // the input displays a number the next save won't send.
   const parsed = Number.parseInt(draft, 10);
   const rejected = Number.isFinite(parsed) && parsed !== state.maxDepth;
   return (
@@ -450,11 +436,8 @@ function ItemsPicker({
   readonly dispatch: Dispatch<EditorAction>;
 }): ReactNode {
   const { i18n } = useLingui();
-  // Tab identity is `kind + target`: entry/term contribute one tab per
-  // type/taxonomy (all sharing `kind`), so keying the active tab on
-  // `kind` alone collapses every entry tab into one and makes them all
-  // read as selected. The composite keeps each tab independently
-  // selectable. Until the user picks one, the first tab is active.
+  // Keyed on `kind + target`: entry and term tabs share `kind`, so `kind` alone
+  // would mark every entry tab selected.
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const firstTab = tabs[0];
   const selectedTab =

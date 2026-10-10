@@ -7,18 +7,8 @@ import { resolveMenus } from "./getMenuByName.js";
 const MENU_LOCATIONS_GROUP = "menu_locations";
 
 /**
- * Resolve the menu currently bound to a theme-registered location.
- *
- * The slot → term-slug binding lives in the `settings` table under group
- * `menu_locations`, with `key = location` and `value = '<term slug>'`.
- * Reads the binding, then defers to the shared menu resolver. Returns
- * `null` when no binding exists for this location, or when the bound
- * menu has been deleted.
- *
- * Calling this twice for the same location within a single request hits
- * the request memo (`ctx.memo`, #1493) so header + footer + breadcrumb
- * consumers all share one resolve pass; the resolver memoizes its query
- * cluster by slug on the same primitive.
+ * `null` when the location is unbound or its menu was deleted. Memoized per
+ * request, so repeated calls share one resolve.
  */
 export async function getMenuForLocation(
   ctx: AppContext,
@@ -29,10 +19,8 @@ export async function getMenuForLocation(
 }
 
 /**
- * Batched `getMenuForLocation` (#1518): one settings read covering every
- * location, then one `resolveMenus` pass over the bound slugs — query
- * count flat in the number of locations. Each location's hook pass sees
- * its own `location`, even when two locations bind the same menu.
+ * Each location's hook pass sees its own `location`, even when two locations
+ * bind the same menu.
  */
 export async function getMenusForLocations(
   ctx: AppContext,

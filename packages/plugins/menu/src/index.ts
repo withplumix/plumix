@@ -18,10 +18,8 @@ import { menuTag } from "./server/cache-tags.js";
 import { getMenusForLocations } from "./server/getMenuForLocation.js";
 import { declareLocations } from "./server/locations.js";
 
-// Plain descriptor literals — plugin source runs server-side without
-// the Babel macro pipeline. Per-entity tables (`MENU_ITEM_LABELS` /
-// `MENU_LABELS`) `satisfies` the matching schema so typo-renames in
-// label keys fail compile rather than silently cascade to generic.
+// Plain descriptor literals: plugin source runs server-side without the Babel
+// macro pipeline.
 
 const MENU_ITEM_LABELS = {
   singular: {
@@ -103,18 +101,10 @@ const APPEARANCE_LABEL: Label = {
   message: "Appearance",
 };
 
-// `@plumix/plugin-menu` augments the core option shapes with
-// menu-eligibility flags and the hook registries with four menu
-// hooks. TypeScript surfaces all of these only when this plugin is
-// in the project's `node_modules`. The eligibility flags are read by
-// `isMenuEligible`; the hooks are fired by `getMenuByName`, `menu.save`
-// and `menu.delete`.
 declare module "plumix" {
   interface EntryTypeOptions {
     /**
-     * Whether this entry type is offered in the menu plugin's item picker and
-     * its entries are kept in rendered menus. Defaults to `true`. Has no effect
-     * on an `isPublic: false` type, which has no public URL to link to. Unlike
+     * Defaults to `true`; no effect on an `isPublic: false` type. Unlike
      * WordPress's `show_in_nav_menus`, `false` also drops existing menu links
      * to the type.
      */
@@ -123,7 +113,10 @@ declare module "plumix" {
     readonly menuPickerLabel?: string;
   }
   interface TermTaxonomyOptions {
-    /** Same rule as `EntryTypeOptions.isShownInMenus`, for this taxonomy's terms. */
+    /**
+     * Same rule as `EntryTypeOptions.isShownInMenus`, for this taxonomy's
+     * terms.
+     */
     readonly isShownInMenus?: boolean;
     readonly menuPickerLabel?: string;
   }
@@ -139,15 +132,8 @@ declare module "plumix" {
   }
 
   /**
-   * Hook surface. `menu:item` runs per resolved item during tree
-   * assembly (children resolve first, so subscribers see the
-   * already-transformed subtree). `menu:tree` runs once after
-   * assembly with `{ location, termId }` so a single subscriber can
-   * branch by slot. `menu:saved` fires after every successful
-   * `menu.save` commit — including no-op saves — so cache
-   * invalidators don't need to sniff the payload to decide whether
-   * to run. `menu:deleted` fires after `menu.delete` removes the menu
-   * and its items. Both actions take the request context last.
+   * `menu:item` runs children first, so subscribers see the transformed
+   * subtree. `menu:saved` fires on every successful save, including no-ops.
    */
   interface FilterRegistry {
     "menu:tree": (
@@ -185,20 +171,15 @@ const ADMIN_ENTRY_PATH = pluginAdminEntryPath("@plumix/plugin-menu");
 
 export interface MenuPluginOptions {
   /**
-   * Navigation slots the site's theme renders, keyed by location id;
-   * the label shows in the admin Locations tab. Replaces the
-   * registration path lost when `theme.setup` went away — the theme
-   * renders the slots, but the consumer config declares them.
+   * Keyed by location id. The theme renders the slots; the consumer config
+   * declares them.
    */
   readonly locations?: Readonly<Record<string, MenuLocationOptions>>;
 }
 
 /**
- * `@plumix/plugin-menu` — menus reuse the entries/terms/entry_term substrate
- * rather than adding tables: a menu is a `terms` row (`taxonomy = 'menu'`),
- * a menu item is an `entries` row (`type = 'menu_item'`), and membership
- * lives in `entry_term`. Both types are `isPublic: false` so they hide from
- * the generic Entries/Terms admin; the plugin owns its own admin (slices 7+).
+ * A menu is a `terms` row and its items are `entries` rows linked through
+ * `entry_term`; no tables of its own.
  */
 export function menu(options: MenuPluginOptions = {}): PluginDescriptor {
   return definePlugin("menu", {

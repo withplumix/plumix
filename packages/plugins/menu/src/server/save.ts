@@ -7,16 +7,9 @@ import type {
 import { MenuPluginError } from "../errors.js";
 
 /**
- * Save-protocol input for a single menu item. `parentIndex` references
- * another item's position in the same `items` array — must be strictly
- * less than the item's own index, or `null` for root-level items. This
- * lets the client send a freshly-mutated tree (including newly-created
- * items that don't have ids yet) in one payload without the server
- * needing two round-trips for id assignment.
- *
- * `id` is omitted for new items (the save will allocate ids); existing
- * items pass their current id so the server diffs against the prior
- * set.
+ * `parentIndex` must be less than the item's own index, or `null` for a root,
+ * so new items without ids can be saved in one round-trip. Omit `id` for new
+ * items.
  */
 export interface SaveItemInput {
   readonly id?: number;
@@ -71,13 +64,8 @@ type FlattenResult =
   | { readonly ok: false; readonly error: FlattenError };
 
 /**
- * Validate the save-protocol payload and compute each item's depth,
- * rejecting forward references, self-parents, out-of-range parent
- * indexes, and depth violations. Returns a flat array preserving the
- * input order so the persistence layer can iterate once.
- *
- * All validation is structural (no DB access) — the caller is expected
- * to have already loaded the term row for the optimistic-lock check.
+ * Structural only, no DB access: the caller must already have loaded the term
+ * row for the optimistic-lock check.
  */
 export function flattenSaveItems(
   items: readonly SaveItemInput[],
@@ -135,12 +123,6 @@ export function flattenSaveItems(
   return { ok: true, items: out };
 }
 
-/**
- * Resolve `parentIndex` into the eventual `parentId` after the persistence
- * layer has assigned ids to new items. The caller passes a parallel array
- * of resolved ids (one per flattened item, in input order) and gets back
- * an array of `parentId` values aligned with the same order.
- */
 export function resolveParentIds(
   items: readonly FlattenedItem[],
   resolvedIds: readonly number[],
@@ -158,10 +140,8 @@ export function resolveParentIds(
 }
 
 /**
- * `meta` with `lastLabel` / `lastHref` taken from its target's lookup. A
- * field the lookup leaves empty isn't written. A target that doesn't
- * resolve keeps the snapshot `stored` holds, if `stored` links the same
- * target.
+ * A field the lookup leaves empty isn't written. An unresolved target keeps
+ * `stored`'s snapshot if `stored` links the same target.
  */
 export function withTargetSnapshot(
   meta: MenuItemMeta,

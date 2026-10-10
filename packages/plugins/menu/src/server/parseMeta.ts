@@ -3,15 +3,9 @@ import type { JsonObject } from "plumix";
 import type { MenuItemDisplayAttrs, MenuItemMeta } from "./types.js";
 
 /**
- * Runtime guard for `entries.meta` (untyped JSON in the DB). Returns `null`
- * for anything that doesn't match a known kind — resolver drops those items,
- * matching how broken refs will be handled in slice 2.
- *
- * READ-SHAPE ONLY: this validates structural shape, not safety. The custom
- * `url` field is passed through unsanitized — render paths must call
- * `sanitizeMenuHref` separately, and write paths (slice 5+) must reject
- * unsafe URLs at validation time. Treating parseMeta as a write-side guard
- * would persist hostile URLs in the DB and only filter them at render.
+ * Validates shape, not safety: a custom `url` passes through unsanitized, so
+ * render paths must call `sanitizeMenuHref` and write paths must reject unsafe
+ * URLs.
  */
 export function parseMenuItemMeta(raw: unknown): MenuItemMeta | null {
   if (!raw || typeof raw !== "object") return null;

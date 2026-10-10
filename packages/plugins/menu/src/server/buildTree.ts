@@ -1,14 +1,5 @@
-/**
- * Items unreachable from a root (`parentId === null`) — missing parent or
- * cycle — are returned in `orphans` so the caller decides whether to drop,
- * surface, or promote them. Slice 1 drops silently at render and surfaces
- * in admin.
- *
- * Precondition: ids are unique. Duplicate ids are silently deduped via the
- * `visited` set — any item past the first occurrence is dropped from both
- * `tree` and `orphans`. The DB primary key on `entries.id` enforces this
- * for the production call site.
- */
+// Unreachable items (missing parent or cycle) go to `orphans` for the caller
+// to handle. Duplicate ids past the first are dropped from both outputs.
 interface TreeBuildable {
   readonly id: number;
   readonly parentId: number | null;

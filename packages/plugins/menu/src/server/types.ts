@@ -6,10 +6,8 @@
 export type MenuItemMeta =
   MenuItemCustomMeta | MenuItemEntryMeta | MenuItemTermMeta;
 
-// The four below are spelled as `Readonly<{…}>` rather than as interfaces so
-// they stay assignable to the `entries.meta` column type: this shape is
-// written to storage as JSON, and TypeScript withholds the implicit index
-// signature an `interface` would need in order to be stored that way.
+// `Readonly<{…}>`, not interfaces: an interface gets no implicit index
+// signature, so it wouldn't be assignable to the JSON `entries.meta` column.
 export type MenuItemDisplayAttrs = Readonly<{
   target?: "_blank";
   rel?: string;
@@ -27,10 +25,8 @@ export type MenuItemEntryMeta = MenuItemDisplayAttrs &
     kind: "entry";
     entryId: number;
     /**
-     * Snapshot of the linked entry's label/href, written by the server on
-     * every menu save the entry resolves on. Survives source deletion so
-     * the admin can render broken items with their last-known label and
-     * "Convert to Custom URL" can seed `meta.url`.
+     * Written by the server on each save the target resolves on; survives its
+     * deletion so broken items keep a label.
      */
     lastLabel?: string;
     lastHref?: string;
@@ -70,10 +66,8 @@ export interface ResolvedMenuItem {
    */
   readonly isCurrent: boolean;
   /**
-   * True iff any descendant in this menu's tree has `isCurrent: true`.
-   * Menu-tree ancestry only — entity-tree ancestry (item links to a
-   * page that's an ancestor of the current page in the entries tree)
-   * is a `menu:item` filter consumer's job, not built-in.
+   * Menu-tree ancestry only; entity-tree ancestry is left to `menu:item`
+   * filters.
    */
   readonly isAncestor: boolean;
   readonly children: readonly ResolvedMenuItem[];

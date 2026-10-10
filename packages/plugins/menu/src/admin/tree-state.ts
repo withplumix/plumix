@@ -1,9 +1,3 @@
-// Pure projection helpers for the dnd-kit Sortable Tree integration.
-// `getProjection` answers "if the user releases the drag now, where
-// would the item land?" — the editor consumes the result both to
-// preview the drop indicator and, on `onDragEnd`, to dispatch
-// `moveItem(parentKey, sortOrder)`.
-
 import type { EditorAction, EditorItem, ItemKey } from "./editor-state.js";
 import { collectSubtreeKeys, computeDepths } from "./editor-state.js";
 
@@ -69,11 +63,8 @@ export function getProjection(
     activeDepth + Math.round(dragOffsetX / indentationWidth);
   const maxAllowedDepth = previousItem === undefined ? 0 : previousDepth + 1;
   const minAllowedDepth = nextDepth;
-  // The active item carries its subtree along on the move, so its depth
-  // ceiling is `maxDepth - subtreeExtra` — anything higher would push a
-  // descendant past `maxDepth`. Clamping here makes the drop indicator
-  // visibly stop short instead of letting the user release into a
-  // position the reducer would reject.
+  // The moved item carries its subtree, so cap its depth to keep descendants
+  // within `maxDepth` and stop the indicator short of a rejected drop.
   const subtreeExtra = subtreeDepthExtra(items, activeIndex, depths);
   const depthCap = Math.max(0, maxDepth - subtreeExtra);
   const depth = Math.min(
