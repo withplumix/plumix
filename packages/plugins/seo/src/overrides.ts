@@ -138,11 +138,7 @@ export const SEO_META_FIELDS: readonly MetaBoxFieldInput[] = [
   },
 ];
 
-/**
- * The entry box: the shared set plus the schema type. Only an entry has an
- * article piece in the structured-data graph for the choice to retype, so a
- * term box carrying the control would offer an answer nothing reads.
- */
+/** Adds the schema type, which only an entry's article piece reads. */
 export const SEO_ENTRY_FIELDS: readonly MetaBoxFieldInput[] = [
   ...SEO_META_FIELDS,
   {
@@ -181,12 +177,7 @@ export function readSeoOverrides(meta: SeoMetaBag): SeoOverrides {
   };
 }
 
-/**
- * The SEO answers for a page — an entry page has an entry, a term archive has
- * a term, and no page has both, so whichever is present is the subject an
- * editor answered for. Read here rather than at each consumer so the head and
- * the predicate cannot pick different subjects.
- */
+/** Reads the entry's or the term's answers; no page has both. */
 export function readPageOverrides(facts: PageFacts): SeoOverrides {
   return readSeoOverrides((facts.entry ?? facts.term)?.meta);
 }

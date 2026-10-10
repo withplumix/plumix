@@ -16,12 +16,13 @@ export const TITLE_VARIABLES = [
 
 type TitleVariable = (typeof TITLE_VARIABLES)[number];
 
-/** Every variable's value for one page. Empty string where the page has none. */
+/**
+ * Every variable's value for one page. Empty string where the page has none.
+ */
 export type TitleVariables = Record<TitleVariable, string>;
 
-// Anything in `%%...%%` shape is a variable, not only the names that resolve —
-// so `%%Title%%` and `%%term-title%%` are dropped like `%%nope%%` rather than
-// surviving into a search result. Mis-casing is the likeliest author slip.
+// Any `%%...%%` shape, so a mis-cased `%%Title%%` is dropped rather than
+// reaching a search result.
 const PLACEHOLDER = /%%([^%\s]+)%%/g;
 
 // The separator is what the pattern is segmented on, so it is matched before
@@ -42,20 +43,8 @@ function substitute(segment: string, variables: TitleVariables): string {
 }
 
 /**
- * Resolve a title pattern against one page's variables, or null when it says
- * nothing — an empty pattern, or one whose every variable is empty on this
- * page, in which case the caller keeps the title core resolved.
- *
- * The separator is a join, not a substitution: the pattern is cut into the
- * parts it separates, the parts this page has nothing for drop out, and what
- * is left is joined back. So a pattern written for the page that has every
- * part degrades cleanly on the one that does not — no leading separator, and
- * no doubled one where the middle part was empty — while a separator character
- * the page's own text carries is never touched.
- *
- * A name that is not a variable is dropped rather than emitted: a pattern is
- * authored in an admin field, and shipping `%%titel%%` into a SERP is worse
- * than shipping a shorter title.
+ * Null when every variable is empty. The separator joins non-empty parts, so no
+ * leading or doubled separators. Unknown names are dropped.
  */
 export function renderTitlePattern(
   pattern: string,

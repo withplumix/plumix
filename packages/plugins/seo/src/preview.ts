@@ -13,15 +13,8 @@ import { patternTitle } from "./page-title.js";
 import { loadSeoSettings, nonEmpty } from "./settings.js";
 
 /**
- * What this entry will look like in a search result, before the answers its
- * author is holding unsaved.
- *
- * Everything the editor cannot work out for itself: the permalink, the site's
- * own name, the type's title pattern, and the chain's verdict on whether the
- * page is offered to search engines at all — each through the function the
- * head runs, so the preview cannot show what the page will not carry. The
- * editor overlays the search title, the search description and the `noindex`
- * toggle live.
+ * Computed through the functions the head runs, before unsaved answers; the
+ * editor overlays the search title, description and `noindex` live.
  */
 export async function serpPreview(
   ctx: AppContext,
@@ -55,10 +48,8 @@ export async function serpPreview(
   };
 }
 
-// The entry with its own `noindex` set aside: the editor holds a live answer
-// for that one flag, and a preview computed from the saved one would contradict
-// the toggle the author is looking at. Fed through `pageFacts` rather than
-// hand-built, so what the chain reads here is what it reads on a render.
+// The saved `noindex` would contradict the live toggle the author is looking
+// at.
 function withoutOverride(page: EntryData): EntryData {
   const { [SEO_META_KEYS.noindex]: _noindex, ...meta } = page.entry.meta;
   return { ...page, entry: { ...page.entry, meta } };

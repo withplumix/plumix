@@ -11,12 +11,7 @@ import { createSeoRouter } from "./rpc.js";
 import { publicTargets } from "./scope.js";
 
 /**
- * Which entry types and taxonomies carry the SEO box.
- *
- * Scope is derived, not configured: everything publicly visible gets the box,
- * which excludes an internal type like a menu item for free. `exclude` is for
- * the exception — a type that is public but whose pages nobody writes search
- * copy for.
+ * Every publicly visible entry type and taxonomy gets the box unless excluded.
  */
 export interface SeoMetaBoxOptions {
   /** Entry-type and taxonomy names that should not carry the box. */
@@ -28,13 +23,8 @@ export interface SeoMetaBoxOptions {
 const BOX_ID = "seo";
 
 /**
- * Put the SEO box on every publicly-visible entry type and taxonomy, and the
- * procedure its preview reads from behind it.
- *
- * The procedure is registered here rather than beside the public routes
- * because it answers for exactly the types the box was put on — one
- * derivation, so a type with no box cannot be previewed and a type with one
- * always can.
+ * Also registers the preview procedure, so it answers for exactly the types
+ * that carry the box.
  */
 export function registerSeoEditorSurfaces(
   ctx: PluginAfterSetupContext,

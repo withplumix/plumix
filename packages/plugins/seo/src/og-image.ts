@@ -4,23 +4,9 @@ import type { AppContext, ImageRoleName, OgImage } from "plumix/plugin";
 declare module "plumix" {
   interface FilterRegistry {
     /**
-     * Supply the page's `og:image`. Sits below an author's explicit
-     * `.ogImage()` role — which short-circuits before this runs, so a
-     * deliberate choice is never overridden — and above the entry's
-     * `.featured()` photo and the site-wide default.
-     *
-     * Returning null, the value handed in, leaves the chain alone: the photo
-     * is used, then the site default. Returning an image outranks both, so a
-     * subscriber that only handles some pages must pass the value through on
-     * the rest rather than answer for them.
-     *
-     * An image returned may carry an `alt` describing it, which is the text
-     * the head's alt tags then emit — a crop of the author's photo shows what
-     * the photo showed, so its description travels with it.
-     *
-     * `featured` is that photo, passed alongside rather than as the value, so
-     * a subscriber can improve on it — crop it to a social card's shape, say —
-     * instead of only replacing it, and so that declining stays free.
+     * Not called when the author chose an image. Returning an image outranks
+     * `featured` and the site default, so pass the value through on pages you
+     * don't handle.
      */
     "seo:og_image": (
       image: OgImage | null,
@@ -31,16 +17,13 @@ declare module "plumix" {
   }
 }
 
-/**
- * One role's image for the page, off what core projected onto the entry. Null
- * for anything that is not a single entry, and for a role the entry's own
- * scope declares no field in.
- */
 function roleImage(data: TemplateData, role: ImageRoleName): OgImage | null {
   return data.kind === "entry" ? (data.entry.images[role] ?? null) : null;
 }
 
-/** The two links of the chain that come from stored answers rather than code. */
+/**
+ * The two links of the chain that come from stored answers rather than code.
+ */
 export interface OgImageChain {
   /** The URL the editor typed into the SEO box for this entry or term. */
   readonly override: string | null;
@@ -49,14 +32,8 @@ export interface OgImageChain {
 }
 
 /**
- * The `og:image` for a request, resolved down the chain: the author's explicit
- * choice — a `.ogImage()` role field, then the SEO box's own URL — followed by
- * whatever a subscriber supplies, then the entry's photo, then the site
- * default.
- *
- * The order is fixed here rather than by subscription order, so a generated
- * card never outranks a deliberate choice however the `plugins` array happens
- * to be written.
+ * Fixed order regardless of plugin order: the author's choice, a subscriber's
+ * answer, the entry's photo, the site default.
  */
 export async function resolveOgImage(
   ctx: AppContext,

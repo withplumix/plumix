@@ -58,9 +58,7 @@ export class SeoError extends Error {
   }
 
   /**
-   * A plugin contributes a sitemap scope under a name seo keeps for
-   * its own entry-type and taxonomy scopes. Raised at boot, naming the plugin,
-   * so the name can be changed before any route answers for it.
+   * A contributed sitemap scope uses a name seo reserves for its own scopes.
    */
   static reservedSitemapScope(ctx: {
     scope: string;
@@ -77,10 +75,8 @@ export class SeoError extends Error {
   }
 
   /**
-   * The site's `sitemaps` option names no sitemap scope — nothing by that
-   * name, or a registration the sitemap never lists — so its policy would
-   * never apply. `key` is the path as written in the option, such as
-   * `entries.post` or `location`.
+   * A `sitemaps` option key names no listed scope. `key` is the path as
+   * written, such as `entries.post`.
    */
   static unknownSitemapPolicyKey(ctx: { key: string }): SeoError {
     return new SeoError(

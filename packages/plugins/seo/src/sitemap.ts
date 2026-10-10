@@ -19,17 +19,11 @@ export const SITEMAP_PAGE_SIZE = 1000;
 /** Where the index answers, before any base prefix. */
 export const SITEMAP_INDEX_PATH = "/sitemap.xml";
 
-// The entry-override arm of `indexable`, asked of the whole table at once —
-// membership has to be a `WHERE`, or the count driving index pagination and
-// the page it pages would disagree. The agreement table in `routes.test.ts`
-// holds it to the head's directive for the same page.
+// A `WHERE`, so the count driving index pagination and the page agree.
 const NOINDEX_PATH = `$.${SEO_META_KEYS.noindex}`;
 
-// `json_type`, not `json_extract`: extraction collapses JSON `true` and JSON
-// `1` to the same integer, so a bag holding `1` would drop out of the sitemap
-// while the reader — which is `=== true` — left its page saying `index`. The
-// type is exactly what the reader tests, NULL arm included, so a bag that
-// never answered and one holding anything else both stay listed.
+// `json_type`, not `json_extract`, which collapses `true` and `1`; this
+// matches the reader's `=== true`, NULL included.
 const entryIsIndexable = sql`json_type(${entries.meta}, ${NOINDEX_PATH}) is not 'true'`;
 const termIsIndexable = sql`json_type(${terms.meta}, ${NOINDEX_PATH}) is not 'true'`;
 
@@ -60,13 +54,7 @@ export interface SitemapUrl {
 
 declare module "plumix" {
   interface FilterRegistry {
-    /**
-     * Adjust a sub-sitemap's URL set before it's serialized — add, drop, or
-     * re-`lastmod` entries, or set their `changefreq` and `priority`. Receives
-     * the scope by kind and name, the 1-based `page`, and the request `ctx` so
-     * a subscriber can query the DB to inject rows, not just reshape
-     * statically-known URLs.
-     */
+    /** Runs even on an empty page, so a subscriber can inject rows. */
     "seo:sitemap:urls": (
       urls: readonly SitemapUrl[],
       scope: SitemapScopeRef,
@@ -76,11 +64,8 @@ declare module "plumix" {
   }
 }
 
-// The declaration plus the stylesheet a browser renders the document through.
-// A crawler ignores the instruction and parses the same XML. The href goes in
-// unescaped — a processing instruction's content is not entity-parsed, so an
-// escape would be emitted literally — and it is a path this deployment's own
-// config produced, not anything a request carries.
+// The href goes in unescaped: a processing instruction isn't entity-parsed, and
+// the path comes from config, not the request.
 function prologue(stylesheet: string): string {
   return (
     `<?xml version="1.0" encoding="UTF-8"?>` +
@@ -88,7 +73,9 @@ function prologue(stylesheet: string): string {
   );
 }
 
-/** One `<sitemap>` the index lists: a sub-sitemap page and when it last changed. */
+/**
+ * One `<sitemap>` the index lists: a sub-sitemap page and when it last changed.
+ */
 export interface SitemapIndexEntry {
   readonly loc: string;
   /** Written as `<lastmod>` only when set. */
@@ -148,12 +135,7 @@ export function renderSubSitemap(
   );
 }
 
-/**
- * Which URL space a sub-sitemap lists. Seo provides the `entries` and `terms`
- * scopes; a `contributed` one is a plugin's own, named by that plugin. The
- * kind is part of the name, so an entry type and a taxonomy sharing one are
- * still two scopes.
- */
+/** An entry type and a taxonomy sharing a name are still two scopes. */
 export type SitemapScopeRef =
   | { readonly kind: "entries"; readonly name: string }
   | { readonly kind: "terms"; readonly name: string }
@@ -169,10 +151,8 @@ export interface SitemapScopePolicy {
 type ScopePolicies = Readonly<Record<string, false | SitemapScopePolicy>>;
 
 /**
- * The site's policy for each sitemap scope, its own and every plugin's. Entry
- * types sit under `entries`, taxonomies under `terms`, and a contributed scope
- * under its own name. A scope's value is `false` to leave it out of the
- * sitemap, or the `changefreq` and `priority` its URLs default to.
+ * A contributed scope sits under its own name. `false` leaves a scope out of
+ * the sitemap.
  */
 export interface SeoSitemapsOptions {
   readonly entries?: ScopePolicies;
@@ -181,14 +161,13 @@ export interface SeoSitemapsOptions {
     false | SitemapScopePolicy | ScopePolicies | undefined;
 }
 
-/**
- * One sub-sitemap's URL space: an entry type, a taxonomy, or a source a
- * plugin contributed. `tags` is what the scope's cached pages are stored under,
- * so a publish retires that scope and leaves the rest of the set alone.
- */
+/** `tags` lets a publish retire this scope and leave the rest alone. */
 export interface SitemapScope {
   readonly ref: SitemapScopeRef;
-  /** The `changefreq` and `priority` the site's `sitemaps` option set for this scope. */
+  /**
+   * The `changefreq` and `priority` the site's `sitemaps` option set for this
+   * scope.
+   */
   readonly policy: SitemapScopePolicy;
   /** Whether the site's `sitemaps` option set this scope to `false`. */
   readonly dropped: boolean;
@@ -205,7 +184,6 @@ export interface SitemapScope {
   ) => Promise<readonly SitemapUrl[]> | readonly SitemapUrl[];
 }
 
-/** What the index knows of one sub-sitemap page before it has a `<loc>`. */
 interface SitemapIndexPage {
   readonly lastmod?: string;
 }
@@ -226,11 +204,8 @@ export function sitemapScopeStem(ref: SitemapScopeRef): string {
   }
 }
 
-/**
- * Where a sub-sitemap answers. The registered route path is root-relative —
- * the dispatcher strips any base prefix before matching — so the prefix is
- * re-added only on the `<loc>` the index publishes.
- */
+// Root-relative: the dispatcher strips the base prefix, so only the published
+// `<loc>` re-adds it.
 function subSitemapPath(
   ctx: AppContext,
   ref: SitemapScopeRef,
@@ -242,7 +217,10 @@ function subSitemapPath(
   );
 }
 
-/** The absolute index URL, for a caller that publishes it — `robots.txt`, `llms.txt`. */
+/**
+ * The absolute index URL, for a caller that publishes it — `robots.txt`,
+ * `llms.txt`.
+ */
 export function sitemapIndexUrl(ctx: AppContext): string {
   return `${ctx.origin}${withBasePath(SITEMAP_INDEX_PATH, ctx.config.basePath)}`;
 }
@@ -284,9 +262,7 @@ function listedTermsOf(taxonomy: string) {
   return and(eq(terms.taxonomy, taxonomy), termIsIndexable);
 }
 
-// Each page's newest `updatedAt`, in the order and window `entryUrls` pages
-// by, as one query for the whole scope — the index lists every page, so a
-// query per page would grow with the site.
+// One query for the whole scope; a query per page would grow with the site.
 async function entryPages(
   ctx: AppContext,
   type: string,
@@ -402,11 +378,6 @@ function policyOf(
   }
 }
 
-/**
- * Every scope the sitemap index enumerates: each crawlable public entry type,
- * each public taxonomy, and each scope a plugin contributed with
- * `registerSitemap`, with the policy the site's `sitemaps` option set for it.
- */
 export function sitemapScopes(
   plugins: PluginRegistry,
   sitemaps: SeoSitemapsOptions,
@@ -433,9 +404,7 @@ export function sitemapScopes(
   for (const taxonomy of publicTargets(plugins.termTaxonomies)) {
     add({
       ref: { kind: "terms", name: taxonomy.name },
-      // A term archive is stored under the `t:<type>` tags of its taxonomy's
-      // entry types, and a term change purges exactly those — so the list of
-      // those archives rides the same signal.
+      // A term change purges its taxonomy's entry-type tags.
       tags: (taxonomy.entryTypes ?? []).map(typeTag),
       // A term stores no modification time, so its pages carry no lastmod.
       pages: async (ctx) => undatedPages(await termCount(ctx, taxonomy.name)),
@@ -453,14 +422,7 @@ export function sitemapScopes(
   return scopes;
 }
 
-/**
- * Fail the boot on a `sitemaps` key that names no scope this site has, so a
- * misspelt, uninstalled, non-public or gated one cannot leave its policy
- * silently unapplied.
- *
- * @throws naming the first such key, as `sitemaps.<kind>.<name>` for an entry
- * type or taxonomy and `sitemaps.<name>` for a contributed scope.
- */
+/** @throws naming the first `sitemaps` key that matches no listed scope. */
 export function assertSitemapPolicyNamesScopes(
   sitemaps: SeoSitemapsOptions,
   scopes: readonly SitemapScope[],
@@ -495,12 +457,7 @@ function withPolicy(url: SitemapUrl, policy: SitemapScopePolicy): SitemapUrl {
   };
 }
 
-/**
- * A scope's URLs for one page, each over its scope's policy, passed through
- * the `seo:sitemap:urls` filter — which runs even on an empty page, so a
- * subscriber can inject rows into a scope that has none of its own, and which
- * has the last word on every value.
- */
+/** The `seo:sitemap:urls` filter has the last word on every value. */
 export async function collectSitemapUrls(
   ctx: AppContext,
   scope: SitemapScope,
@@ -530,15 +487,8 @@ export async function sitemapIndexEntries(
 }
 
 /**
- * Whether this scope's URLs may be offered at all — the `site_private`,
- * `type_default` and `taxonomy_default` arms of `indexable`, asked of a whole
- * scope rather than of a page, so a type held out of the index is not still
- * advertised here. A scope the site's `sitemaps` policy set to `false` is
- * held out too, and that is about the sitemap only: the head's robots
- * directive never reads it.
- *
- * A contributed scope answers to no admin per-scope default: it is a plugin's
- * own URL space, and only the site's `sitemaps` policy can drop it.
+ * A `sitemaps: false` policy affects only the sitemap, never robots. A
+ * contributed scope can be dropped only by that policy.
  */
 export function scopeIsOffered(
   scope: SitemapScope,

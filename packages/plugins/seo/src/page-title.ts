@@ -8,10 +8,7 @@ import { renderTitlePattern } from "./title-pattern.js";
 export interface TitleVariableInput {
   readonly facts: PageFacts;
   /**
-   * The payload alongside the facts. Two variables are presentation rather
-   * than page identity — a listing's result count and a date archive's period
-   * — so they are read from the payload's own arm rather than asked of
-   * `PageFacts`.
+   * Supplies the result count and date period, which `PageFacts` doesn't hold.
    */
   readonly data: TemplateData;
   /** The title core resolved for this page. */
@@ -50,7 +47,6 @@ function formatPeriod(
   });
 }
 
-/** How many entries the page lists in total, or "" where it lists none. */
 function resultCount(data: TemplateData): string {
   switch (data.kind) {
     case "entryType":
@@ -74,11 +70,7 @@ function periodOf(data: TemplateData, localeCode: string): string {
     : "";
 }
 
-/**
- * Every title variable's value for one page. A variable the page has nothing
- * for is the empty string, which is what lets a pattern written for the page
- * that has everything degrade cleanly on the one that does not.
- */
+/** A variable the page has nothing for is "", so patterns degrade cleanly. */
 export function titleVariables(input: TitleVariableInput): TitleVariables {
   const { facts, data, localeCode } = input;
   const author = facts.author;
@@ -100,12 +92,8 @@ export function titleVariables(input: TitleVariableInput): TitleVariables {
 }
 
 /**
- * The title the site's own pattern composes for this page, or null when it has
- * none — a type with no pattern and no site-wide default, or a pattern whose
- * every variable is empty here.
- *
- * A type's pattern covers its entries and its archive; everything else falls
- * to the site-wide one.
+ * Null when no pattern applies or every variable is empty. A type's pattern
+ * covers its entries and archive; everything else uses the site-wide one.
  */
 export function patternTitle(
   settings: SeoSettings,

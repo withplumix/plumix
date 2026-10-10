@@ -17,7 +17,8 @@ import { patternTitle } from "./page-title.js";
 import { DEFAULT_SCHEMA_TYPE, schemaGraph, schemaScript } from "./schema.js";
 import { loadSeoSettings, loadVerificationTags, nonEmpty } from "./settings.js";
 
-// `composeTitle` substitutes `%s`, so this is the template that changes nothing.
+// `composeTitle` substitutes `%s`, so this is the template that changes
+// nothing.
 const IDENTITY_TEMPLATE = "%s";
 
 // `max-image-preview` is an indexing hint, so it rides only on the arm that
@@ -43,11 +44,8 @@ export interface HeadInputs {
   /** The title core resolved for the page. */
   readonly title: string | null;
   /**
-   * The title this plugin composed — an editor's search title, else the
-   * site's own pattern for this page. Outranks {@link title} everywhere it is
-   * set, and is the only thing that reaches `<title>`: writing the resolved
-   * title there would put every page through a theme's `titleTemplate` that
-   * it does not go through today.
+   * Outranks {@link title}, and is the only title written to `<title>`, so
+   * pages without one keep going through the theme's `titleTemplate`.
    */
   readonly searchTitle: string | null;
   readonly description: string | null;
@@ -103,11 +101,8 @@ function derivedCanonical(
 }
 
 /**
- * Pure gap-filler for the head: appends a `<meta>` only when its
- * `name`/`property` key is absent, a `<link rel=canonical>` only when nothing
- * declared one, and a `<title>` only when an editor overrode it — so a theme-
- * or plugin-set value always wins and nothing duplicates. An error page gets
- * the robots directive and nothing else.
+ * Appends only what is absent, so a theme- or plugin-set value always wins. An
+ * error page gets the robots directive and nothing else.
  */
 export function seoHeadMeta(
   manifest: DocumentManifest,
@@ -157,9 +152,8 @@ export function seoHeadMeta(
     );
     addProperty("article:author", inputs.author);
   }
-  // The image tags describe one picture, so they travel as a group: a template
-  // that declared its own `og:image` owns it, and a size or twitter mirror
-  // appended beside it would describe some other image.
+  // The image tags travel as a group: a size or twitter mirror beside a
+  // template's own `og:image` would describe some other image.
   if (image && !hasProperty(existing, "og:image")) {
     addProperty("og:image", image.url);
     addProperty("og:image:width", image.width?.toString() ?? null);
@@ -173,15 +167,13 @@ export function seoHeadMeta(
   return withAdditions(manifest, inputs, additions);
 }
 
-/** The manifest with `additions` appended, plus the canonical link and title. */
 function withAdditions(
   manifest: DocumentManifest,
   inputs: HeadInputs,
   additions: readonly DocumentMeta[],
 ): DocumentManifest {
-  // Written here rather than left to core's own gap-filler, which runs after
-  // this and would otherwise declare the derived URL an editor overrode. With
-  // no override the two agree, so core simply finds the tag already set.
+  // Written here because core's gap-filler runs after this and would otherwise
+  // declare the derived URL an editor overrode.
   const canonical = inputs.canonical;
   const link =
     canonical === null || hasCanonical(manifest.link)
@@ -191,10 +183,8 @@ function withAdditions(
           { rel: "canonical", href: canonical } satisfies DocumentLink,
         ];
 
-  // Only a composed title reaches `<title>`, and it ships verbatim: a search
-  // title or a site's own pattern is the whole line, not a fragment for a
-  // theme's `titleTemplate` to finish. A page with none — or one whose theme
-  // set its own — goes on being titled the way core titles it.
+  // Ships verbatim: a composed title is the whole line, not a fragment for a
+  // theme's `titleTemplate` to finish.
   const composed = manifest.title === undefined ? inputs.searchTitle : null;
   return {
     ...manifest,
@@ -206,14 +196,14 @@ function withAdditions(
   };
 }
 
-// `og:locale` wants `lang_TERRITORY`; the active locale code is `lang-TERRITORY`.
+// `og:locale` wants `lang_TERRITORY`; the active locale code is
+// `lang-TERRITORY`.
 function toOgLocale(localeCode: string): string {
   return localeCode.replace("-", "_");
 }
 
-// The graph goes with the tags rather than beside them: a theme that wrote its
-// own `ld+json` has said what the page is, and a second script would have the
-// page make two claims about itself.
+// A theme that wrote its own `ld+json` has described the page; a second graph
+// would make two claims about it.
 function hasJsonLd(scripts: readonly DocumentScript[] | undefined): boolean {
   // Lowercased: an HTML `type` attribute is case-insensitive, so a theme that
   // wrote `application/LD+JSON` has still claimed the page.
@@ -233,11 +223,8 @@ export interface SeoHeadOptions {
 }
 
 /**
- * Write this page's head. Reads the site settings and the subject's own SEO
- * answers, decides indexability once through {@link indexable}, then gap-fills
- * via {@link seoHeadMeta} and appends the structured-data graph. An error page
- * gets the robots directive alone, and `options.structuredData: false` skips
- * the graph and the `seo:schema:*` filters it runs.
+ * An error page gets the robots directive alone; `options.structuredData:
+ * false` skips the graph and its `seo:schema:*` filters.
  */
 export async function applySeoHead(
   manifest: DocumentManifest,
@@ -260,11 +247,8 @@ export async function applySeoHead(
     indexViews: options.indexViews,
   });
   const siteName = nonEmpty(site.title);
-  // A URL that resolved to nothing is the canonical address of nothing, and
-  // core deliberately leaves an error page's canonical unwritten for the same
-  // reason — so neither the tag nor `og:url` is claimed there. A page that
-  // opted out with `canonical: false` gets no derived URL either: only one it
-  // declared itself, or an editor's override.
+  // An error page is the canonical address of nothing. A page with
+  // `canonical: false` gets only one it declared, or an editor's override.
   const canonical =
     kind === "error"
       ? null
@@ -310,13 +294,8 @@ export async function applySeoHead(
     verification,
   });
 
-  // A page asking not to be indexed has no rich result to be eligible for, so
-  // it offers no structured data — the alternative is a page whose graph and
-  // whose robots directive say different things about it. Nor does a URL that
-  // resolved to nothing, which has no subject to describe.
-  //
-  // A site that turned the graph off gets none built, so no `seo:schema:*`
-  // subscriber runs.
+  // A noindex page gets no graph, so its graph and robots directive never
+  // disagree.
   if (
     !options.structuredData ||
     kind === "error" ||
@@ -337,10 +316,8 @@ export async function applySeoHead(
     siteName,
     siteDescription: tagline,
     locale: ctx.locale.code,
-    // The last link of the `og:image` chain is a sharing fallback, not a
-    // picture of this page. Passed on, every article on the site would claim
-    // the same bytes as its own `#primaryimage`, and `Article.image` is read
-    // as representative of the article it hangs off.
+    // The site default is a sharing fallback; passed on, every article would
+    // claim it as its own `#primaryimage`.
     image: ogImage?.url === seoSettings.defaultOgImage ? null : ogImage,
     published,
     modified,

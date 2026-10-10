@@ -1,17 +1,7 @@
 /** Where the stylesheet answers, before any base prefix. */
 export const SITEMAP_STYLESHEET_PATH = "/sitemap.xsl";
 
-/**
- * An XSLT 1.0 stylesheet the sitemap names, so opening either document in a
- * browser gives a table a person can read while a crawler still parses the
- * same XML. One row template serves both roots — a sitemap index lists
- * sub-sitemaps, a sub-sitemap lists pages — because both are a `loc` and an
- * optional `lastmod`.
- *
- * Everything is inline: a stylesheet fetching a second asset would be a second
- * route to serve, and a crawler that follows the sitemap must never be handed
- * a document whose rendering depends on one.
- */
+/** Fully inline, so rendering never depends on a second asset or route. */
 export const SITEMAP_STYLESHEET = `<?xml version="1.0" encoding="UTF-8"?>
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
