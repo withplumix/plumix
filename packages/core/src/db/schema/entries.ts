@@ -22,9 +22,9 @@ export type EntryStatus = (typeof ENTRY_STATUSES)[number];
 export type EntryContent = Record<string, unknown>;
 
 /**
- * A drizzle table rebuild drops the change-feed triggers; a migration
- * rebuilding this table must re-create them by hand, as
- * `0001_entry_change_feed.sql` did.
+ * A table rebuild drops the change-feed triggers, so re-create them by hand. A
+ * column feed consumers show must join the `entries_change_feed_update`
+ * trigger's column list.
  */
 export const entries = sqliteTable(
   "entries",

@@ -388,9 +388,9 @@ export const update = base
       if (stamped) patch.publishedAt = stamped;
     }
 
-    // Publishing or scheduling checks the whole bag, catching required fields a
-    // lenient draft left empty. A live edit checks only its patch, so a
-    // co-author's drift can't block it.
+    // Only actually (re)scheduling validates the date: a typo fix on a scheduled
+    // entry whose time has passed must still save, and the date can't backdate
+    // a published entry.
     if (
       (filtered.status === "scheduled" || publishedAtInput !== undefined) &&
       (filtered.status ?? existing.status) === "scheduled"

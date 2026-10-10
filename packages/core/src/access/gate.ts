@@ -102,8 +102,8 @@ export async function entryAllowsAnonymousAccess(
 
 /**
  * Drops everything the principal confers, or a capability check would use the
- * asker's privileges. `ctx.request` keeps the cookie because policies read its
- * URL and headers.
+ * asker's privileges. `ctx.request` keeps the cookie for its URL and headers;
+ * re-authenticating from it defeats this.
  */
 function asAnonymous(ctx: AppContext): AppContext {
   return {
@@ -156,9 +156,8 @@ export function gateToResponse(
 }
 
 /**
- * Build the sign-in `Location`: the (base-prefixed) login path carrying a
- * `redirectTo` of the (base-prefixed) current path, so the honouring flow —
- * #1735's OAuth/magic-link `redirectTo` threading — returns the visitor here.
+ * Both paths are base-prefixed, so the OAuth and magic-link flows that honour
+ * `redirectTo` return the visitor here.
  */
 function loginRedirect(loginPath: string, url: URL, basePath: string): string {
   const returnTo = withBasePath(`${url.pathname}${url.search}`, basePath);

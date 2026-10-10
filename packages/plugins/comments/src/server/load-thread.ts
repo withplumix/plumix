@@ -87,8 +87,9 @@ async function countThread(
 }
 
 /**
- * A reply whose parent isn't approved is excluded, not promoted. Replies stay
- * chronological within each sibling group.
+ * Applies no access policy: gate the entry first, as `resolveCommentableEntry`
+ * does. Unapproved parents exclude their replies; replies stay chronological
+ * per sibling group.
  */
 export async function loadThread(
   ctx: AppContext,

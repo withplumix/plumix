@@ -42,7 +42,10 @@ export function resolvePasskeyConfig(
   };
 }
 
-/** Resolve the deferred `origin`/`allowedOrigins` against the request `env`. */
+/**
+ * Resolved from operator config and `env` only, never the request's Host, so
+ * an attacker-chosen host can't widen the origins verification accepts.
+ */
 export function resolvePasskeyOrigins(
   config: PasskeyRuntimeConfig,
   env: PlumixEnv,

@@ -128,8 +128,9 @@ export async function readThroughRoute(
 }
 
 /**
- * `auth: "public"` only means core doesn't gate the route; a handler checking
- * its own bearer token can still return one visitor's response.
+ * `auth: "public"` only means core doesn't gate the route; a handler may still
+ * personalize. The store would strip `Set-Cookie` and overwrite
+ * `private`/`no-store` with the page TTL.
  */
 function routeResponseIsShareable(
   request: Request,
