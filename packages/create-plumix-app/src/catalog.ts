@@ -75,11 +75,6 @@ export function resolveDeps(
   return out;
 }
 
-/**
- * Read the default catalog and every workspace package's version from
- * the monorepo at `repoRoot`. Used at scaffold time (dev path) and at
- * `prepack` time to bake concrete versions into the published snapshot.
- */
 export async function loadCatalogContext(
   repoRoot: string,
 ): Promise<CatalogContext> {
@@ -110,7 +105,6 @@ async function collectWorkspaceVersions(
   return out;
 }
 
-/** Parse the `packages:` glob list out of pnpm-workspace.yaml. */
 function parseWorkspacePackages(yaml: string): string[] {
   const out: string[] = [];
   for (const line of blockLines(yaml, "packages:")) {
@@ -121,9 +115,8 @@ function parseWorkspacePackages(yaml: string): string[] {
 }
 
 /**
- * Parse the top-level `catalog:` map out of pnpm-workspace.yaml. The
- * format is stable (we control it) so a tiny line-scanner is enough,
- * keeping a YAML parser out of the scaffolder's dependency surface.
+ * A line scanner rather than a YAML parser, keeping one out of the scaffolder's
+ * dependencies.
  */
 export function parseWorkspaceCatalog(yaml: string): Record<string, string> {
   const out: Record<string, string> = {};
@@ -136,10 +129,7 @@ export function parseWorkspaceCatalog(yaml: string): Record<string, string> {
 }
 
 /**
- * Parse the named `catalogs:` block — each second-level key (e.g.
- * `react:`) opens its own name → range table. A header line has nothing
- * after its colon; an entry line carries a version, reusing the same
- * scanner as the default catalog.
+ * A header line has nothing after its colon; an entry line carries a version.
  */
 export function parseNamedCatalogs(
   yaml: string,

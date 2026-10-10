@@ -33,12 +33,8 @@ interface ParsedArgs {
 }
 
 /**
- * Turn raw argv into a resolved selection plus the plan of fields a wizard
- * would still prompt for. `--yes` accepts every default and empties the
- * plan; without it, each un-flagged field is reported so the caller (the
- * interactive wizard, in a later slice) can ask. Id validation is the
- * scaffolder's job, and so is defaulting an absent `--plugins` (which needs
- * the registry) — this stays a pure argv → intent mapping.
+ * Pure argv → intent: `--yes` empties the prompt plan. Id validation and
+ * defaulting an absent `--plugins` are the scaffolder's job.
  */
 export function reconcile(argv: readonly string[]): Reconciliation {
   const parsed = parseArgs(argv);

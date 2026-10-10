@@ -23,9 +23,8 @@ interface Choice {
 }
 
 /**
- * The prompt surface the wizard needs, abstracted from @clack/prompts so
- * the flow (which fields to ask, how answers merge) is testable without a
- * TTY. A method returns `null` when the user cancels.
+ * Abstracted from @clack/prompts so the flow is testable without a TTY. Methods
+ * return `null` on cancel.
  */
 export interface Prompter {
   text(opts: {

@@ -3,13 +3,6 @@ import type { Selection } from "./types.js";
 import { mergeImports } from "./imports.js";
 import { fillProjectName, SECRETS_FILE_TOKEN } from "./types.js";
 
-/**
- * Assemble the project's `plumix.config.ts` by splicing the runtime's,
- * capabilities', plugins', and auth methods' imports, slots, and entries
- * into a fixed shell. This is the one file whose structure varies with the
- * selection, so it is built from descriptor strings rather than copied.
- * Contributions are resolved once by the caller and threaded in.
- */
 export function assembleConfig(
   selection: Selection,
   { imports, configSlots, registrations, envVars }: ResolvedContributions,
@@ -62,10 +55,8 @@ export function assembleConfig(
       ]
     : ["  plugins: [],"];
 
-  // A method whose config uses an `(env) => ...` secret resolver needs those
-  // bindings declared, or the config would not type-check. `envVars` is the
-  // one deduped derivation (see resolveContributions), shared with the
-  // runtime's secrets file.
+  // A method's `(env) => ...` secret resolver needs its bindings declared, or
+  // the config won't type-check.
   const envAugmentation = envVars.length
     ? [
         "",

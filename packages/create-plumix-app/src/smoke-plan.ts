@@ -14,17 +14,16 @@ export interface SmokeCombo {
   readonly packageManager: PackageManager;
   /** Turn on a second locale and assert every plugin's catalog is staged. */
   readonly secondLocale?: boolean;
-  /** Plugin ids the runtime cannot host, so none of their catalogs is expected. */
+  /**
+   * Plugin ids the runtime cannot host, so none of their catalogs is expected.
+   */
   readonly excluded?: readonly string[];
   readonly typescript7?: boolean;
 }
 
 /**
- * Every runtime times the four shapes, from the registry, so a new runtime or
- * plugin joins the matrix on its own. `-y` on every combo: without it the
- * remaining prompts drop the CLI into the wizard on a terminal. A plugin
- * requiring a capability the runtime lacks is left out, as the scaffolder
- * would refuse it by name, and `excluded` is what says so.
+ * `-y` on every combo, or the remaining prompts open the wizard on a terminal.
+ * A plugin needing a capability the runtime lacks goes to `excluded`.
  */
 export function planSmokeCombos(registry: Registry): readonly SmokeCombo[] {
   return registry.runtimes.flatMap((runtime) => {
@@ -96,9 +95,8 @@ export interface SmokeInstall {
 }
 
 /**
- * Point every plumix package at its packed tarball, in the field the combo's
- * package manager reads. Overrides apply transitively across the whole plumix
- * graph, which a direct dependency rewrite would not.
+ * Overrides apply transitively across the plumix graph, which a direct
+ * dependency rewrite would not.
  */
 export function planInstall(
   packageManager: PackageManager,

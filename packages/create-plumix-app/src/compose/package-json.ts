@@ -12,12 +12,6 @@ function sortedByKey(deps: Record<string, string>): Record<string, string> {
   );
 }
 
-/**
- * Assemble the project's `package.json` from the base shell plus the
- * selected runtime's, the fulfilled capabilities' and the plugins'
- * dependency contributions. Names are unioned and sorted, protocols resolved
- * to concrete versions via the catalog, and the package renamed to the project.
- */
 export function assemblePackageJson(
   selection: Selection,
   base: PackageJson,

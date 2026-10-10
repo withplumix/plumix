@@ -12,13 +12,9 @@ import { loadSources } from "./sources.js";
 
 interface ScaffoldOptions {
   readonly targetDir: string;
-  /** Runtime to scaffold; defaults to {@link DEFAULT_RUNTIME}. */
   readonly runtimeId?: string;
-  /** Plugin ids to include; defaults to none. The CLI defaults to the recommended set. */
   readonly pluginIds?: readonly string[];
-  /** Optional auth methods on top of passkey; defaults to none. */
   readonly authMethodIds?: readonly string[];
-  /** Pre-loaded sources (e.g. from the wizard) to avoid a second load. */
   readonly sources?: ScaffoldSources;
 }
 

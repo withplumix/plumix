@@ -165,12 +165,8 @@ export async function runCli(
   }
 }
 
-/**
- * A runtime that pins a package manager installs with it whatever invoked us
- * — pnpm's shell-script `.bin` shims cannot run under `bun --bun` — so only an
- * explicit `--pm` naming another one is refused. Otherwise `--pm` wins over
- * the invoking manager.
- */
+// pnpm's `.bin` shims can't run under `bun --bun`, so a runtime pinning a
+// package manager refuses an explicit `--pm` naming another.
 function resolvePackageManager(
   runtime: RuntimeDescriptor | undefined,
   requested: PackageManager | undefined,

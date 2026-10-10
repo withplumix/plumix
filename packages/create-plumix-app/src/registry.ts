@@ -10,7 +10,6 @@ import type {
 import type { PackageManager } from "./package-manager.js";
 import { ScaffoldError } from "./errors.js";
 
-/** The raw `plumix.scaffold` block as authored in a package's package.json. */
 interface RawScaffoldMeta extends Contribution {
   readonly kind: "runtime" | "plugin";
   readonly id?: string;
@@ -21,29 +20,18 @@ interface RawScaffoldMeta extends Contribution {
   readonly authOriginComment?: string;
   readonly deps?: Record<string, string>;
   readonly devDeps?: Record<string, string>;
-  /** Runtime only: local secrets file name. */
   readonly secretsFile?: string;
-  /** Runtime only: paths appended to the base `.gitignore`. */
   readonly gitignore?: readonly string[];
-  /** Runtime only: ambient type packages the project's tsconfig lists. */
   readonly types?: readonly string[];
-  /** Runtime only: the package manager a project on this runtime installs with. */
   readonly packageManager?: PackageManager;
-  /** Runtime only: package.json scripts that replace or join the base ones. */
   readonly scripts?: Record<string, string>;
-  /** Runtime only: the command prefix that runs the `plumix` CLI. */
   readonly cli?: string;
-  /** Runtime only: path to the markdown that becomes the README's Deploy section. */
   readonly readme?: string;
-  /** dest path in the scaffolded project → source path in this package. */
   readonly files?: Record<string, string>;
   readonly capabilities?: Record<string, Contribution>;
   readonly authMethods?: Record<string, RawAuthMethod>;
-  /** Plugin only: expression placed in the config `plugins` array. */
   readonly registration?: string;
-  /** Plugin only: runtime capabilities the plugin needs. */
   readonly requires?: readonly string[];
-  /** Plugin only: the plugin recommends itself as a scaffold default. */
   readonly recommended?: boolean;
 }
 
@@ -62,10 +50,8 @@ export interface Registry {
 }
 
 /**
- * Discover scaffoldable runtimes and plugins by scanning the workspace's
- * runtime and plugin packages for a `plumix.scaffold` block. Runtime files
- * are read into the descriptor as content, and plugin dependencies are
- * derived from the plugin's own package + peer dependencies.
+ * Plugin dependencies derive from the plugin's own package and peer
+ * dependencies.
  */
 export async function loadRegistry(repoRoot: string): Promise<Registry> {
   const runtimes: RuntimeDescriptor[] = [];

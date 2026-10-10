@@ -7,11 +7,8 @@ import { ScaffoldError } from "./errors.js";
 import { loadRegistry } from "./registry.js";
 
 /**
- * Everything a scaffold run needs: the discovered registry (runtimes and
- * plugins, with runtime file content inlined) plus the catalog context that
- * resolves their dependency protocols. Assembled live from the workspace, or
- * baked at `prepack` and reloaded — either way the same shape, so scaffolded
- * output is identical. A serialized copy of this is the published snapshot.
+ * Live from the workspace or baked at `prepack`; the same shape, so scaffolded
+ * output is identical.
  */
 export interface ScaffoldSources {
   readonly registry: Registry;

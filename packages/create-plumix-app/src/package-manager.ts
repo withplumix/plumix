@@ -3,10 +3,8 @@ export type PackageManager = "npm" | "pnpm" | "yarn" | "bun";
 const KNOWN: readonly PackageManager[] = ["npm", "pnpm", "yarn", "bun"];
 
 /**
- * Identify the package manager the user invoked us with, from the
- * `npm_config_user_agent` string every manager sets (e.g.
- * `"pnpm/8.15.0 npm/? node/..."`). Falls back to npm when it is absent or
- * names a manager we do not special-case.
+ * Falls back to npm when the user agent is absent or names a manager not
+ * special-cased.
  */
 export function detectPackageManager(userAgent?: string): PackageManager {
   const name = userAgent?.split(" ")[0]?.split("/")[0];

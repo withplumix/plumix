@@ -14,7 +14,6 @@ export type ComposedFiles = Record<string, string>;
 
 interface ComposeOptions {
   readonly selection: Selection;
-  /** Directory holding the runtime-agnostic base skeleton. */
   readonly baseDir: string;
   readonly ctx: CatalogContext;
 }
@@ -50,12 +49,6 @@ function tsconfig(runtimeTypes: readonly string[] = []) {
   };
 }
 
-/**
- * Produce the complete set of files for a scaffolded project as a
- * path → content map. The runtime-agnostic base tree is read and
- * project-name-substituted; the config, package.json, runtime files and
- * tsconfig are assembled from the selection. The caller just writes them.
- */
 export async function compose({
   selection,
   baseDir,

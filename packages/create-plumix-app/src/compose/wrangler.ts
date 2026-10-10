@@ -6,10 +6,7 @@ import { fillProjectName } from "./types.js";
 const FORMATTING = { insertSpaces: true, tabSize: 2 } as const;
 
 /**
- * Merge top-level binding patches (e.g. a plugin's `r2_buckets`) into the
- * runtime's `wrangler.jsonc`, editing the text through jsonc-parser so the
- * runtime's inline comments survive. Project-name tokens in both the base
- * and the patches are substituted last.
+ * Edits the text through jsonc-parser so the runtime's inline comments survive.
  */
 export function assembleWrangler(
   base: string,

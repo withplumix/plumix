@@ -4,10 +4,8 @@ import type {
 } from "./compose/types.js";
 import { ScaffoldError } from "./errors.js";
 
-// Passkey is always emitted (it is mandatory and zero-config); these are the
-// optional methods layered on top. A tiny fixed set, so core methods live
-// here rather than in a self-describing registry; runtimes contribute their
-// own (e.g. Cloudflare Access) via their scaffold block.
+// Passkey is mandatory and always emitted; these are the optional methods
+// layered on top.
 export const CORE_AUTH_METHODS: readonly AuthMethodDescriptor[] = [
   {
     id: "oauth",
