@@ -13,14 +13,8 @@ export interface BodyShape {
 const mdx = unified().use(remarkParse).use(remarkMdx);
 
 /**
- * Parse the body rather than scan its lines. MDX opens a page with `import`
- * statements and JSX elements — both of which span lines and both of which a
- * line scanner mistakes for the prose a page owes its reader. A `##` inside a
- * code fence is text, not a section, and a fence may itself contain fences, for
- * the same reason.
- *
- * `undefined` when the body is not MDX at all: a run has to report every
- * offending file, so one unparsable file cannot take the whole run down.
+ * `undefined` when the body is not MDX, so one unparsable file cannot stop a
+ * run that must report every offending file.
  */
 export function parseBody(source: string): Root | undefined {
   try {

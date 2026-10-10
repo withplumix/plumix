@@ -9,20 +9,14 @@ import { checkParsable } from "./parsable";
 import { checkRosterDrift } from "./roster-drift";
 import { ROSTERS } from "./rosters";
 
-/** The content root the published site is built from. */
 export const CONTENT_ROOT = fileURLToPath(
   new URL("../content/docs", import.meta.url),
 );
 
 /**
- * Run every content check over one traversal of a content root. Checks are
- * added here rather than given a traversal of their own, so the suite stays
- * fast as the tree grows past a hundred pages — which is also why the
- * traversal carries fragments and each check declares whether it applies to
- * them, rather than the partials getting a walk of their own.
- *
- * The rosters are a parameter for the same reason the root is: a check has to
- * be provable against content built to break it.
+ * One traversal shared by every check, so add checks here rather than giving
+ * them their own walk. Root and rosters are parameters so fixtures can prove a
+ * check fails.
  */
 export function runContentChecks(
   root: string,

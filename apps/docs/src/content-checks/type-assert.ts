@@ -1,8 +1,5 @@
 /**
- * Compile-time assertion helpers, the shape `packages/core` already uses to
- * bind its field roster to the `MetaBoxField` union. A failing `Equals`
- * violates `Assert`'s constraint, so the alias declaration itself is the
- * assertion — nothing needs to consume it, and it has no runtime footprint.
+ * The alias declaration itself is the assertion; nothing needs to consume it.
  */
 export type Assert<T extends true> = T;
 
