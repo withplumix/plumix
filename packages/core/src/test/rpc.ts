@@ -92,10 +92,8 @@ export interface RpcHarnessBase<TUser extends User | null> {
     name: TName,
   ) => FilterSpy<FilterInput<TName>, FilterRest<TName>>;
   /**
-   * Return a new harness bound to the given user (or freshly seeded user of
-   * the given role). The underlying db / hooks / plugins / env are shared,
-   * so state survives the swap — use this for tests that exercise multiple
-   * roles in a single scenario.
+   * A harness bound to the given user or a fresh one of the role, sharing db,
+   * hooks, plugins and env so state survives the swap.
    */
   readonly actingAs: (
     userOrRole: User | UserRole,
@@ -106,9 +104,8 @@ export type RpcHarness = RpcHarnessBase<User | null>;
 export type AuthenticatedRpcHarness = RpcHarnessBase<User>;
 
 /**
- * The context the `authenticated` middleware hands a handler. `h.context` is
- * the base one even on an authed harness, and the read surfaces answer per
- * viewer, so a test calling one directly has to speak as somebody.
+ * The context `authenticated` hands a handler; `h.context` is the base one, and
+ * read surfaces answer per viewer.
  */
 export function authedCtx(
   h: AuthenticatedRpcHarness,

@@ -58,8 +58,7 @@ describe("forms registration", () => {
   });
 
   // A descriptor is a value: the config loader caches it and a Vite build
-  // installs it more than once in one process. Appending on each install
-  // made the second one fail with "one from config, one from config".
+  // installs it more than once per process.
   test("survives being installed twice, as a build installs it", async () => {
     const descriptor = forms({ forms: [contact] });
     await createFormsHarness([descriptor]);
@@ -155,20 +154,16 @@ describe("the tel field type", () => {
     });
   });
 
-  // The admin bundler resolves the registration's `component` as a named
-  // export off this module. A rename on one side alone leaves every `tel`
-  // field falling through to the host's text-input fallback, and only at
-  // build time — nothing in `plumix dev` would say so.
+  // The admin bundler resolves `component` as a named export; a one-sided
+  // rename silently drops `tel` to the text-input fallback at build time.
   test("names a component the admin entry actually exports", () => {
     expect(adminEntry).toHaveProperty(TEL_FIELD_COMPONENT);
   });
 });
 
 /**
- * The escape hatch that keeps total control from meaning a fork: a theme
- * registering a block of the plugin's own name replaces its render
- * outright. Core merges theme blocks over plugin blocks last-wins, and
- * this is the plugin holding that guarantee to its own block.
+ * Core merges theme blocks over plugin blocks last-wins, so a theme can replace
+ * this block without forking.
  */
 describe("a theme block of the same name", () => {
   const themeForm = defineBlock({

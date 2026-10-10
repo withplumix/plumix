@@ -153,11 +153,8 @@ describe("header / toolbar alignment", () => {
     // Same left/right inset → the back button and rails toggle line up.
     expect(token(toolbar, "px-")).toBe(token(header, "px-"));
 
-    // Same button box → their icon centers align, not just their left edges.
-    // The back button emits its size via the `icon-sm` Button variant while the
-    // toolbar hardcodes `size-8`; this pins those to the same token, so a
-    // retune of `icon-sm` to a different class trips it even if the bars still
-    // align.
+    // The back button sizes via the `icon-sm` variant while the toolbar
+    // hardcodes `size-8`, so a retune of `icon-sm` trips this.
     expect(token(getByTestId("plumix-rails-toggle"), "size-")).toBe(
       token(getByTestId("plumix-editor-back"), "size-"),
     );

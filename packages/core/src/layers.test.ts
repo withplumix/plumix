@@ -289,10 +289,8 @@ describe("core keeps its layer table", () => {
     expect(described(cycleViolations(GRAPH))).toEqual([]);
   });
 
-  // `@plumix/core/support` is what `plumix/support` promises an admin chunk
-  // or an island can import. The ambient stores import `node:async_hooks`,
-  // which a browser bundle cannot resolve, so one static edge into them from a
-  // helper breaks every bundle that takes the subpath.
+  // The ambient stores import `node:async_hooks`, so one static edge into
+  // them breaks every browser bundle taking `plumix/support`.
   test("the support entry never reaches the ambient stores", () => {
     expect(environmentOf("context/stores.ts")).toBe("server-only");
     expect(CLIENT_ENTRIES).toContain("support.ts");
@@ -302,9 +300,8 @@ describe("core keeps its layer table", () => {
   });
 });
 
-// `plumix/runtime` hands these to every self-hosted runtime, and they sit on
-// the request path, so they hold to what a Worker offers: Web APIs, no Node
-// builtin anywhere in what they load.
+// These sit on every self-hosted runtime's request path, so they hold to
+// what a Worker offers: no Node builtin anywhere they load.
 describe("the self-hosted request rules stay Worker-compatible", () => {
   const RULES = [
     "runtime/request-trust.ts",
@@ -469,9 +466,8 @@ describe("lint holds each file to its own layer or a lower one", () => {
     ).toEqual([]);
   });
 
-  // The plugin picks the first descriptor that matches and the table the
-  // deepest folder, so the generated order is the thing that could drift.
-  // A probe importing the root entry names the layer lint put the file in.
+  // The plugin picks the first matching descriptor and the table the deepest
+  // folder, so the generated order is what could drift.
   test("lint puts every production file in the table's layer", async () => {
     const disagreeing: string[] = [];
     for (const file of PRODUCTION_FILES) {

@@ -42,12 +42,8 @@ export async function applySearchSchema(db: SearchTestDb): Promise<void> {
 }
 
 /**
- * Take the index and its triggers away, leaving the projection behind — the
- * shape an install has when the plugin's migration never ran.
- *
- * The triggers go with the table because they write to it: leaving one behind
- * would make every projection write fail, which is a different fault from the
- * one the repair path exists for.
+ * The shape of an install whose migration never ran. Triggers go too: one
+ * left behind would fail every projection write, a different fault.
  */
 export async function dropSearchIndex(db: SearchTestDb): Promise<void> {
   for (const statement of [
@@ -90,13 +86,8 @@ export async function assertIndexIntact(db: SearchTestDb): Promise<void> {
 }
 
 /**
- * Start recording every re-tokenization, and answer with a reader for what has
- * been recorded.
- *
- * Scoped to `title` and `body` exactly as the index's own update trigger is,
- * so it counts the work that actually reaches FTS5. An unscoped spy would also
- * catch a document being stamped with a new extractor version, which is a
- * write to the projection and deliberately not a write to the index.
+ * Scoped to `title` and `body` like the index's update trigger; an unscoped
+ * spy would also count extractor-version stamps, which never reach FTS5.
  */
 export async function watchRewrites(
   db: SearchTestDb,
@@ -126,13 +117,8 @@ export function paragraph(html: string): {
 }
 
 /**
- * The entry types a site under test publishes — core registers none, so a
- * suite that wants a searchable entry has to bring a plugin that does. The
- * `ledger` type is the one opted out, for asserting what never gets indexed.
- *
- * Its meta box carries one field of each kind the index cares about: opted
- * in, silent, and opted in behind a capability — which is the field that must
- * never reach a snippet.
+ * Core registers no entry types. `ledger` is opted out of search; the meta
+ * box has an opted-in, a silent, and a capability-gated field.
  */
 export const contentPlugin = definePlugin("content", {
   setup: (ctx) => {
@@ -228,15 +214,9 @@ export async function createSearchHarness(
 }
 
 /**
- * Publish `count` entries carrying `words` and put each in the index, oldest
- * first. Writes the projection directly rather than running the extractor —
- * a suite asking what the index knows does not care how the text got there.
- *
- * The plan suite seeds a corpus deeper than `HEAD_WALK_CAP` so the recency
- * walk has something to run out of, and at a round trip per entry that alone
- * cost the test 5.2s against vitest's 5s default once CI contention slowed it
- * (#2132) — hence one statement per table. Drizzle binds 11 parameters per
- * entry, so that holds until roughly 2900 of them.
+ * One statement per table: a round trip per entry overran vitest's timeout
+ * under CI contention. At 11 bound parameters per entry, this holds to
+ * roughly 2900 entries.
  */
 export async function indexWords(
   db: SearchTestDb,
@@ -287,9 +267,8 @@ interface SearchContext {
 }
 
 /**
- * A real `AppContext` over a search test db, with one entry type and one
- * taxonomy registered and an author to hang entries on — what every suite
- * that calls a server function directly opens with.
+ * A real `AppContext` with one entry type, one taxonomy and an author
+ * registered.
  */
 export async function createSearchContext(): Promise<SearchContext> {
   const db = await createSearchTestDb();

@@ -31,12 +31,8 @@ const fromPlaywrightTest = createRequire(
 );
 
 /**
- * The image the capture renders in, tagged with the `playwright-core` this
- * checkout would connect with — mismatched versions refuse each other, so
- * deriving the tag is what keeps the pair matched, and what makes a Playwright
- * bump re-take the images as the Chromium change it is.
- *
- * Exported for direct testing only.
+ * Tagged with this checkout's `playwright-core` version, because mismatched
+ * versions refuse each other. Exported for direct testing only.
  */
 export function captureBrowserImage(): string {
   const { version } = fromPlaywrightTest("playwright-core/package.json") as {
@@ -67,9 +63,8 @@ export function captureBrowserRunArgs({
     "run",
     "--detach",
     "--rm",
-    // The image is multi-arch and the two rasterize differently: plain system
-    // text matches, a real capture does not. CI's runners are amd64, so every
-    // machine renders there, and Apple Silicon pays a few seconds of emulation.
+    // The image is multi-arch and the arches rasterize differently; CI runs
+    // amd64, so every machine renders there.
     "--platform",
     "linux/amd64",
     // Chromium's renderers share memory through /dev/shm, which docker sizes
@@ -117,11 +112,6 @@ export interface CaptureBrowser {
   stop: () => void;
 }
 
-/**
- * Starts the pinned browser and waits for it to serve. The image is pulled on
- * first use, which `docker run` does before it prints the id, so the wait below
- * only ever covers the server's own startup.
- */
 export async function startCaptureBrowser(): Promise<CaptureBrowser> {
   const image = captureBrowserImage();
   const hostPort = captureBrowserPort();
@@ -162,9 +152,7 @@ function runDocker(args: string[], image: string): string {
       stdio: ["ignore", "pipe", "inherit"],
     }).trim();
   } catch (cause) {
-    // Docker's own reason is on stderr just above — a refused daemon, a port
-    // another capture still holds, a platform this host cannot emulate. Say
-    // what was being attempted and leave the diagnosis to it.
+    // Docker's own reason is already on stderr above.
     throw new Error(
       `\`docker run\` failed. The documentation capture renders in \`${image}\` ` +
         `rather than in a local browser, so it needs a running Docker.`,
@@ -174,14 +162,9 @@ function runDocker(args: string[], image: string): string {
 }
 
 /**
- * Polls until the server announces itself. Watching the log rather than the
- * port is the whole point: docker publishes the port when it *creates* the
- * container, so a TCP connect succeeds against the proxy about a second before
- * anything inside is listening.
- *
- * Takes the reader rather than a container id — what it does is poll until a
- * marker shows up, and `docker logs` is only where this caller happens to read
- * from. Exported for direct testing only.
+ * Watches the log, not the port: docker publishes the port at container
+ * creation, so a TCP connect succeeds before anything listens. Exported for
+ * direct testing only.
  */
 export async function waitForServer(
   readLog: () => string | undefined,

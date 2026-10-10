@@ -88,11 +88,8 @@ const AGREES = [
   "0 0 13 * *",
 ];
 
-// Vixie cron decides a day field is restricted on its first character, so
-// `*/2` beside a restricted weekday is unrestricted and the two fields AND.
-// Bun 1.4 counts `*/2` as restricted and ORs them, so these fire on days core
-// does not. Because of this, core's scheduler drives the jobs on Bun and
-// `Bun.cron` is not used; once these agree, it can take over.
+// Vixie cron ANDs `*/2` with a restricted weekday; Bun 1.4 ORs them, so these
+// fire on days core does not. That is why core's scheduler drives jobs on Bun.
 const DIVERGES = ["0 0 */2 * MON", "0 0 1 * */2", "0 0 */10 * SAT,SUN"];
 
 describe("Bun.cron.parse against core's cron dialect, in UTC", () => {

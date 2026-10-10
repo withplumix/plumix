@@ -33,10 +33,8 @@ function draw() {
 }
 
 /**
- * The body the island posted. It has to be a string — that is what makes
- * the request JSON, which is what the endpoint negotiates the answer's
- * shape on — so anything else is the failure rather than something to
- * coerce.
+ * A non-string body is the failure, not something to coerce: the string is
+ * what makes the request JSON, which the endpoint negotiates its answer on.
  */
 function posted(): unknown {
   const body = endpoint.current().mock.calls.at(-1)?.[1]?.body;

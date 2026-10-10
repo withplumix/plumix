@@ -206,9 +206,8 @@ describe("the SERP preview procedure", () => {
     const h = await createHarness();
     const id = await seedPost(h, { meta: { [SEO_META_KEYS.noindex]: true } });
 
-    // The saved flag is deliberately not applied: the editor holds a live
-    // toggle for it, and a preview computed from the saved one would
-    // contradict what the author is looking at.
+    // The saved flag is ignored: the editor's live toggle would contradict a
+    // preview computed from it.
     expect(await preview(h, id)).toMatchObject({
       indexable: true,
       reason: "default",

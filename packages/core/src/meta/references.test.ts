@@ -38,11 +38,8 @@ import {
 } from "./core.js";
 
 /**
- * Build a registry with the core lookup adapters registered + a
- * single user-meta box carrying a `user` reference field. The
- * reference field shape is the same one `user()` produces; we
- * build it inline rather than importing the builder so this test
- * stays focused on the pipeline.
+ * A registry with the core lookup adapters and one user-meta box carrying a
+ * `user` reference field, built inline to keep the test on the pipeline.
  */
 function registryWithUserRef(field: Partial<MetaBoxField> = {}) {
   const registry: MutablePluginRegistry = createPluginRegistry();
@@ -326,10 +323,8 @@ describe("resolveMetaBags (response-level batching)", () => {
 });
 
 /**
- * Multi-value reference shape (`userList` and friends). The pipeline
- * dispatches on `referenceTarget.multiple` — array values get
- * per-item existence checks + a `max` length guard, while orphan
- * filtering drops missing IDs and keeps the array dense.
+ * Multi-value reference shape: array values get per-item existence checks and a
+ * `max` guard, and orphan filtering keeps the array dense.
  */
 function registryWithUserListRef(
   field: Partial<MetaBoxField & { readonly max?: number }> = {},
@@ -431,10 +426,8 @@ describe("validateMetaReferences (multi)", () => {
   });
 
   test("two same-(kind,scope) reference fields batch into one adapter.list call", async () => {
-    // Headline guarantee of kind-grouped batching: a meta patch with
-    // multiple reference upserts targeting the same `(kind, scope)`
-    // costs exactly one adapter call, not one per key. Wrap the core
-    // user adapter with a counting proxy and confirm.
+    // Kind-grouped batching: references to the same `(kind, scope)` cost one
+    // adapter call, not one per key.
     const registry = createPluginRegistry();
     registerCoreLookupAdapters(registry);
     const userEntry = registry.lookupAdapters.get("user");
@@ -491,11 +484,8 @@ describe("validateMetaReferences (multi)", () => {
   });
 
   test("rejects oversized arrays as value_too_large, even without a field-level max", async () => {
-    // Defensive cap: a multi field that doesn't declare `max` still
-    // can't be coerced into N+ sequential `adapter.exists` round-trips
-    // in one request. Surfaces as `value_too_large` rather than
-    // `invalid_value` so the caller can distinguish "your shape is
-    // wrong" from "this is too big".
+    // A multi field without `max` still can't force unbounded `adapter.exists`
+    // round-trips; `value_too_large` tells "too big" apart from "wrong shape".
     const { registry, findField } = registryWithUserListRef();
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const oversized = Array.from({ length: 101 }, (_, i) => String(i + 1));
@@ -753,10 +743,8 @@ describe("entryList / termList multi-reference pipeline", () => {
     ).rejects.toBeInstanceOf(MetaSanitizationError);
   });
 
-  // Locks in the kind-grouped batch architecture from PR #137 against
-  // the new variants: a meta patch mixing two reference kinds (user +
-  // entry) calls each adapter exactly once, regardless of how many
-  // fields target that kind. Different kinds = different groups.
+  // Two reference kinds in one patch call each adapter exactly once, however
+  // many fields target each kind.
   test("cross-kind batching: a userList + entryList patch makes one call per kind", async () => {
     const registry = createPluginRegistry();
     registerCoreLookupAdapters(registry);
@@ -834,11 +822,8 @@ describe("entryList / termList multi-reference pipeline", () => {
   });
 });
 
-// Reference storage is plain ids — a bare id string (single) or a
-// dense id array (multi). Legacy clients and legacy stored bags may
-// still round-trip the old cached-object shape (`{ id, ... }`); the
-// validator extracts the id and persists the plain form, so old
-// values self-heal on the entity's next save.
+// Legacy clients and bags may still send the cached `{ id, ... }` shape; the
+// validator persists the plain id so old values self-heal on next save.
 describe("sanitizeMetaInput (hydrated-value healing)", () => {
   test("a hydrated single-reference object heals to its plain id", async () => {
     // Hydrated reads round-trip through the admin form untouched —
@@ -997,12 +982,8 @@ describe("validateMetaReferences (plain-id normalization)", () => {
 });
 
 describe("validateMetaReferences (repeater subFields)", () => {
-  // Repeater rows can contain reference subFields (entry/term/user/media).
-  // v0.1 wrote them through without the live-id check or the cached-
-  // object normalize pass — orphan ids landed in the bag silently.
-  // These tests pin the v0.2 contract: walk into rows, group nested
-  // refs into the same `(kind, scope)` batch as top-level fields, and
-  // surface failures keyed on the top-level repeater key.
+  // Nested refs join the top-level `(kind, scope)` batch, and failures are
+  // keyed on the top-level repeater key.
 
   function repeaterWithUserSubField(): {
     readonly registry: MutablePluginRegistry;
@@ -1159,10 +1140,8 @@ describe("validateMetaReferences (repeater subFields)", () => {
   });
 
   test("groups top-level and nested refs of the same (kind, scope) into one adapter.list call", async () => {
-    // Headline guarantee that mirrors the existing top-level batching
-    // test — the nested walk feeds into the same `(kind, scope)` group,
-    // so a patch with one top-level user field + N user-ref subFields
-    // across M repeater rows still costs exactly one adapter call.
+    // The nested walk feeds the same `(kind, scope)` group, so top-level and
+    // nested user refs still cost one adapter call.
     const registry = createPluginRegistry();
     registerCoreLookupAdapters(registry);
     const userEntry = registry.lookupAdapters.get("user");
@@ -1233,10 +1212,8 @@ describe("validateMetaReferences (repeater subFields)", () => {
 
 describe("resolveMetaReferences (repeater subFields)", () => {
   test("resolves nested refs and nulls out a nested orphan on read", async () => {
-    // A concurrent delete between save and read can leave a dead id in
-    // the meta bag. Top-level refs already null-out on read; nested
-    // refs need the same treatment so a stale row doesn't leak through
-    // the resolved view.
+    // A concurrent delete between save and read can leave a dead id in the bag;
+    // nested refs null out like top-level ones.
     const registry: MutablePluginRegistry = createPluginRegistry();
     registerCoreLookupAdapters(registry);
     const ownerSubField: MetaBoxField = {
@@ -1277,9 +1254,8 @@ describe("resolveMetaReferences (repeater subFields)", () => {
 });
 
 describe("references nested in groups + deep repeaters", () => {
-  // A `user` reference living inside a group, and inside a repeater row
-  // nested in another repeater — both must validate on write and resolve
-  // on read, so the declared nested type is honoured at runtime.
+  // Nested reference fields must validate on write and resolve on read, so the
+  // declared nested type holds at runtime.
   const ownerRef: MetaBoxField = {
     key: "owner",
     label: "Owner",
@@ -1636,10 +1612,8 @@ describe("reference hydration memo (request-scoped)", () => {
     const bags = [{ findField, decoded: { featured: String(target.id) } }];
 
     await resolveMetaBags(h.context, bags);
-    // Tags accumulate per `ctx.request` while the memo lives on the
-    // context graph, and core rebinds the request on a spread context
-    // (`stripBasePathOrReject`), so the two scopes are not the same scope.
-    // A batch that hydrates nothing still has a page to tag.
+    // Core rebinds the request on a spread context, so the tag scope and the
+    // memo's scope differ; a batch hydrating nothing still has a page to tag.
     const rebound: AppContext = {
       ...h.context,
       request: new Request(h.context.request),
@@ -1701,11 +1675,8 @@ describe("reference hydration memo (request-scoped)", () => {
     });
   });
 
-  // `asAnonymous` hands an access policy a principal-stripped context that
-  // shares this memo, and an adapter's `hydrate` answers the asker — the
-  // entry adapter hides unpublished rows from anyone without `edit_any`.
-  // So the memo keys on the asker too: a payload one of them loaded is
-  // not an answer to the other's question.
+  // An adapter's `hydrate` answers the asker, and `asAnonymous` shares this
+  // memo, so the memo keys on the asker too.
   test("a principal-stripped context sharing the memo hydrates for itself", async () => {
     const { registry, findField } = registryWithEntryRef();
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
@@ -1725,9 +1696,8 @@ describe("reference hydration memo (request-scoped)", () => {
   });
 });
 
-// A write in the same execution announces itself through the lifecycle action
-// it already fires, and the memo drops what that write made stale (#2517). The
-// traced harness configures no `cdn`, so none of this rides on a CDN.
+// A write invalidates the memo through the lifecycle action it already fires;
+// the traced harness has no `cdn`, so none of this rides on one.
 describe("reference hydration memo (invalidated by a write)", () => {
   const featured: MetaBoxField = {
     key: "featured",

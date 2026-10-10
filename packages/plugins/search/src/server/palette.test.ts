@@ -111,9 +111,8 @@ describe("the admin command palette", () => {
   });
 
   test("does not rank body text for a caller who cannot edit the type", async () => {
-    // `entry:<type>:read` is the subscriber tier, so on a site with open
-    // signup every reader holds it. A ranked hit says a word is somewhere
-    // inside an entry, which is more than core's title match ever said.
+    // Every subscriber holds `entry:<type>:read`, and a ranked hit reveals
+    // body words that core's title match never did.
     const reader = await h.seedUser("subscriber");
     await withBody("hydroponics", { slug: "body" });
     await seed({ title: "Hydroponics", slug: "title" });

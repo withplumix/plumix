@@ -11,10 +11,9 @@ import { registerCoreSearchHandlers } from "../../../search/register-core-handle
 import { createRpcHarness } from "../../../test/rpc.js";
 
 /**
- * Spin up a harness with a `post` entry type + a `category` taxonomy +
- * the core search handlers wired on (the harness boots none). `post` caps
- * are core; the taxonomy's are derived at registration, so we populate
- * them the way `registerTermTaxonomy` would. Mirrors `createPlumixApp`.
+ * A harness with a `post` type, a `category` taxonomy and the core search
+ * handlers, which the harness doesn't boot; taxonomy caps are populated as
+ * registration would.
  */
 async function searchHarness(
   authAs: "editor" | "author",

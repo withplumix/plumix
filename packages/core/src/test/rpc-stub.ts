@@ -1,15 +1,5 @@
-// Serve RPC procedures from a test instead of the network, by substituting
-// `fetch` — the platform boundary every oRPC client already calls through. Both
-// the admin's own stub (the core router, at `/_plumix/rpc`) and the published
-// `stubPluginRpc` (one plugin's namespace) are this function with a different
-// prefix.
-//
-// Served by oRPC's own `RPCHandler` — the class the dispatcher builds the real
-// merged router on — rather than by re-implementing the wire format here. Two
-// hand-written copies of one protocol drift, and only someone reading both ever
-// catches it: that is how the missing `meta` type hints (#2411), the
-// non-envelope error bodies (#2418) and the admin copy that kept both (#2431)
-// got in.
+// Served by oRPC's own `RPCHandler`, not a hand-written copy of the wire
+// format: two copies of one protocol drift unnoticed.
 
 import type {
   AnyProcedure,
@@ -32,14 +22,9 @@ import type { JsonValue } from "../json.js";
 import { methodNotAllowed, notFound } from "../runtime/contract/http.js";
 
 /**
- * What an untyped responder may hand back: plain JSON, plus every value
- * `StandardRPCJsonSerializer` encodes with a `meta` type hint, nested at any
- * depth — returning a `Date` here is the point, the client revives one.
- *
- * `undefined` is admitted at the top level because a procedure returning
- * nothing serializes exactly that way; the cost is that a responder missing its
- * `return` type-checks. A `Blob` switches the whole message to multipart
- * `FormData`, which the handler builds and parses as the server does.
+ * Plain JSON plus anything `StandardRPCJsonSerializer` types with a `meta`
+ * hint. Top-level `undefined` is how a void procedure serializes; a `Blob`
+ * switches to multipart.
  */
 type RpcStubValue =
   | JsonValue
@@ -55,13 +40,9 @@ type RpcStubValue =
   | { readonly [key: string]: RpcStubValue };
 
 /**
- * Every procedure of `TRouter`, paired with the slash-joined path it is called
- * under — `{ locations: { list } }` yields `"locations/list"`. Walks the router
- * the way `InferRouterInputs` does, lazy branches included.
- *
- * `TDepth` bounds the walk: checked against `AnyRouter` itself, a router nests
- * without end, and TypeScript gives up on the whole type rather than on the
- * branch. No real router comes near the bound.
+ * Each procedure of `TRouter` with its slash-joined path. `TDepth` bounds the
+ * walk: an `AnyRouter` nests without end and TypeScript gives up on the whole
+ * type.
  */
 type ProcedureAt<
   TRouter,
@@ -118,19 +99,9 @@ type CallFor<
 }[TPath];
 
 /**
- * The route map `stubRpcEndpoint` serves, keyed by slash-joined procedure path.
- *
- * Given a router type, a key is one of its procedures, a responder's `input` is
- * what the client sends that procedure, and its return is what the client
- * receives — so a renamed procedure or a reshaped output breaks the test at
- * compile time rather than leaving a fixture the real server no longer
- * matches. Without one (`never`, the default), any path takes any responder.
- *
- * A responder's `input` arrives revived, as a real handler's would: a `Date`
- * the caller passed is a `Date` here, and a `Blob` is a `Blob` read back out of
- * the multipart body. Throwing an `RpcReplyError` answers with that error's
- * status, code and data; throwing an `ORPCError` passes it through untouched;
- * throwing anything else answers with the handler's own 500.
+ * Route map keyed by procedure path; given a router type, responders are typed
+ * against it so drift breaks at compile time. Throw `RpcReplyError` for a
+ * specific error.
  */
 export type RpcStubRoutes<TRouter extends AnyRouter = never> = RoutesFor<
   WireTable<TRouter>
@@ -169,13 +140,8 @@ export interface StubRpcEndpointOptions<TRouter extends AnyRouter = never> {
 }
 
 /**
- * Throw from a route responder to answer with a specific oRPC error shape —
- * e.g. the CONFLICT a version-mismatch save returns — instead of the generic
- * 500 an unannotated throw produces.
- *
- * `status` has to be one an error envelope can carry: below 200 or 400 and up.
- * The protocol has no way to express a 2xx/3xx failure, so one given here
- * cannot reach the client and answers 500 instead.
+ * Throw from a responder to answer a specific oRPC error. `status` must be
+ * below 200 or 400 and up; an envelope can't carry 2xx/3xx, which answer 500.
  */
 export class RpcReplyError extends Error {
   static {
@@ -211,11 +177,8 @@ class RpcStubMisuseError extends Error {
   }
 
   /**
-   * `vi.stubGlobal("fetch")` intercepts every request the test makes, not only
-   * the ones this stub serves. Answering an unrecognised URL with a quiet 404
-   * turns the common mistake — stubbing one prefix and calling another — into a
-   * rejection several layers downstream, naming neither. Failing here names
-   * both sides of the mismatch at the point it happened.
+   * A quiet 404 for an unserved URL would surface layers downstream naming
+   * neither side; failing here names both at the point of the mismatch.
    */
   static unservedFetch(
     url: string,
@@ -240,11 +203,8 @@ class RpcStubMisuseError extends Error {
 }
 
 /**
- * Reads the input off a request the handler declined to route, so the unrouted
- * branch records what the routed one does. `toStandardBody` is the parser
- * `RPCHandler`'s own fetch adapter runs, and oRPC's server-side codec
- * deserializes with this very class — the pair is the server's decode path,
- * not a second guess at the link's encoding.
+ * Decodes an unrouted request's input with the server's own decode path, so the
+ * unrouted branch records what the routed one does.
  */
 const serializer = new StandardRPCSerializer(new StandardRPCJsonSerializer());
 
@@ -290,10 +250,8 @@ function buildRouter(
     responder === undefined ? [] : [[path, responder] as const],
   );
   const paths = entries.map(([path]) => path);
-  // A router node is a procedure or a branch, never both, so `"list"` beside
-  // `"list/count"` is a route map no server could serve either. Checked across
-  // the whole map rather than as the tree is walked: which of the two survives
-  // would otherwise depend on the order the keys were declared in.
+  // A node is a procedure or a branch, never both. Checked across the whole
+  // map, or which survives would depend on key order.
   for (const path of paths) {
     const nested = paths.find((other) => other.startsWith(`${path}/`));
     if (nested !== undefined) {
@@ -337,25 +295,19 @@ interface ServedStub {
 }
 
 /**
- * Stub global `fetch` to serve `routes` under `prefix`. An unrouted procedure
- * answers the dispatcher's own 404 and is still recorded, so a test can't pass
- * by accident on a call it never declared; a fetch outside `prefix` throws.
+ * Stub global `fetch` to serve `routes` under `prefix`. Unrouted procedures 404
+ * but are recorded; a fetch outside `prefix` throws.
  */
 export function stubRpcEndpoint<TRouter extends AnyRouter = never>(
   options: StubRpcEndpointOptions<NoInfer<TRouter>>,
 ): RpcStub<TRouter>;
-/**
- * The typed signature above is checked where the caller writes the route map;
- * past it, each responder is served the input the client sent its own path and
- * every recorded call pairs a path with that path's input.
- */
+/** Past the typed overload, each responder is served its own path's input. */
 export function stubRpcEndpoint(options: ServedRoutesOptions): ServedStub {
   const { prefix, unservedHint } = options;
   const calls: RecordedCall[] = [];
   const handler = new RPCHandler(buildRouter(options.routes), {
-    // The matched path and its revived input, read off the same call the
-    // responder receives. Recording from the URL instead would re-derive both,
-    // and would have to parse the multipart body a second time to do it.
+    // Recorded off the call the responder receives; re-deriving from the URL
+    // would parse the multipart body twice.
     clientInterceptors: [
       (interceptorOptions) => {
         calls.push({
@@ -374,19 +326,16 @@ export function stubRpcEndpoint(options: ServedRoutesOptions): ServedStub {
       throw RpcStubMisuseError.unservedFetch(request.url, prefix, unservedHint);
     }
     if (request.method !== "POST") return methodNotAllowed(["POST"]);
-    // A subdirectory deploy prepends a base path, so the procedures mount where
-    // the request carries the prefix rather than at the root. The handler
-    // anchors its prefix at the start of the pathname while the guard above
-    // accepts it anywhere, so `handle` is told where it landed.
+    // A subdirectory deploy prepends a base path, and the handler anchors its
+    // prefix at the pathname start, so `handle` is told where it landed.
     const mountedAt: `/${string}` = `/${pathname.slice(1, prefixAt + prefix.length)}`;
     const result = await handler.handle(request, {
       prefix: mountedAt,
       context: {},
     });
     if (result.matched) return result.response;
-    // Recorded even though nothing served it, so a test can't pass on a call it
-    // never declared. oRPC reports the miss without dispatching, so no
-    // interceptor ran and this is the only place the call is seen.
+    // oRPC reports the miss without dispatching, so no interceptor ran and this
+    // is the only place the call is seen.
     calls.push({
       procedure: pathname.slice(prefixAt + prefix.length + 1),
       input: serializer.deserialize(await toStandardBody(request)),

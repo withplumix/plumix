@@ -4,15 +4,8 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "plumix/test/playwright";
 
 /**
- * The one case only Node has: `plumix dev` here is a Vite server that
- * evaluates the config through its own module runner, so an edit is served
- * only if the runner's cache is invalidated along the import chain
- * (`invalidateFile` in `src/commands/dev.ts`). Cloudflare gets the same effect
- * from wrangler restarting the worker, which is why the shared spec does not
- * carry this.
- *
- * It is also the one e2e side effect landing outside the wiped `data/`: it
- * rewrites a git-tracked source file.
+ * Node-only: Vite's module runner serves an edit only if its cache is
+ * invalidated along the import chain. It rewrites a git-tracked source file.
  */
 const CONFIG = join(import.meta.dirname, "../playground/plumix.config.ts");
 const BASELINE = "config-edit-baseline";
@@ -22,9 +15,8 @@ const EDITED = "config-edit-served";
 // and this drives two of them.
 test.setTimeout(120_000);
 
-// In teardown rather than a `finally`: a test timeout tears the body down
-// without unwinding it, and an edit left behind would make every retry fail on
-// the guard below instead of on whatever actually broke.
+// Not a `finally`: a test timeout tears the body down without unwinding, and a
+// leftover edit would make every retry fail on the guard below.
 test.afterEach(async () => {
   const current = await readFile(CONFIG, "utf8");
   if (current.includes(EDITED)) {

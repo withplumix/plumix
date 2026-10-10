@@ -15,11 +15,9 @@ export interface PhotoReference {
 }
 
 /**
- * A reference kind whose payloads are images — the seam `images.<role>` reads
- * through, without core's tests reaching for the media plugin. Entry rows
- * stand in for photo rows, so hydration is a real `IN (...)` and a query-count
- * assertion counts what the database saw; a row titled `"broken"` is the
- * payload the adapter refuses.
+ * An image-payload reference kind for `images.<role>` without the media plugin.
+ * Entry rows stand in for photos, so hydration is a real `IN (...)`; a
+ * `"broken"` title is refused.
  */
 export const photoLookupAdapter = {
   list: async (ctx, { ids }) => {

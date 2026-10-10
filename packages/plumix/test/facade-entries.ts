@@ -126,9 +126,8 @@ export async function loadModules(
   if (stale.length > 0)
     throw new Error(`no exports map has ${stale.join(", ")}; drop it`);
 
-  // The admin shims read their upstream namespace off admin's global runtime
-  // as they evaluate. What they publish is upstream's, never an internal
-  // package's, so an empty namespace per runtime key is enough to load them.
+  // The admin shims read their namespace off admin's global runtime as they
+  // evaluate, so an empty namespace per key is enough to load them.
   (globalThis as { plumix?: unknown }).plumix ??= {
     runtime: Object.fromEntries(
       Object.values(SHARED_ADMIN_RUNTIME_KEYS).map((key) => [key, {}]),

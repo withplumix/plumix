@@ -208,9 +208,7 @@ async function withServer(
 }
 
 /**
- * The TCP ports a process is listening on, read from the kernel rather than
- * from what the process says: each listening socket in the namespace's tables
- * whose inode is one of the process's own descriptors.
+ * Read from the kernel rather than from what the process says.
  */
 function listeningPorts(pid: number): number[] {
   const inodes = new Set<string>();

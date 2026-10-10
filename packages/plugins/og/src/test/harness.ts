@@ -58,21 +58,15 @@ interface PhotoReference {
 }
 
 /**
- * Where `seedEntry` stores the picture it was handed, so a role field holds
- * the bare id a real reference holds and the adapter hands the row back. Ids
- * are never reused, so a photo left behind by an earlier test is simply never
- * asked for again.
+ * Ids are never reused, so a photo left by an earlier test is never asked for
+ * again.
  */
 const photos = new Map<string, PhotoReference>();
 let nextPhoto = 0;
 
 /**
- * The meta a `.featured()` photo is stored as: a bare reference id, in the
- * group the role field sits in. Exported so a suite writing meta through the
- * entry RPC writes the same shape {@link seedEntry} does.
- *
- * Stores the photo as a side effect, so the adapter can hand it back — calling
- * this twice for one image mints two rows pointing at the same URL.
+ * The meta a `.featured()` photo is stored as. Stores the photo as a side
+ * effect, so calling it twice mints two rows for one URL.
  */
 export function featuredMeta(image: OgImage): JsonObject {
   return { [FEATURED_GROUP_KEY]: { [FEATURED_KEY]: storePhoto(image) } };
@@ -110,13 +104,9 @@ const photoAdapter = {
 } satisfies LookupAdapter;
 
 /**
- * A host plugin registering the shapes a card has to tell apart: a public type,
- * a private one, and three access-policied ones — gated by the type, gated by
- * the entry's own choice, and behind a *soft* gate whose page a scraper still
- * reaches. The role-tagged media fields the precedence chain reads hang off the
- * public type; they point at {@link photoAdapter} rather than at the media
- * plugin's own kind, since what the chain reads is the role and the image an
- * adapter makes of its payload — which keeps this suite off a second plugin.
+ * Covers the shapes a card must tell apart. Role fields point at {@link
+ * photoAdapter}, not the media plugin, since the chain reads only the role and
+ * adapter image.
  */
 const testBlog = definePlugin("test_blog", {
   setup: (ctx) => {
@@ -125,10 +115,8 @@ const testBlog = definePlugin("test_blog", {
       isPublic: true,
       hasArchive: true,
       rewrite: { slug: "posts" },
-      // As `@plumix/plugin-blog` declares it: an editor's meta edits on a
-      // *published* post of a type supporting autosave land on a per-user
-      // draft row rather than the live one, which anything rendering what an
-      // author is editing has to account for.
+      // Matches `@plumix/plugin-blog`: autosave sends meta edits on a published
+      // post to a per-user draft row.
       supports: ["title", "editor", "autosave"],
     });
     ctx.registerEntryType("secret", { label: "Secrets", isPublic: false });
@@ -154,9 +142,8 @@ const testBlog = definePlugin("test_blog", {
         ],
       },
     });
-    // A type whose *archive* is gated: `policyForMatch` resolves an archive
-    // intent against the type's `access.default`, so its listing page redirects
-    // an anonymous visitor and its card has to refuse them too.
+    // `policyForMatch` resolves an archive intent against `access.default`, so
+    // this archive and its card refuse anonymous visitors.
     ctx.registerEntryType("memo", {
       label: "Memos",
       isPublic: true,
@@ -245,9 +232,9 @@ export interface HarnessOptions extends OgPluginOptions {
    */
   readonly before?: readonly AnyPluginDescriptor[];
   /**
-   * Cards the theme declares, ahead of the plugin's own default. Supplying
-   * either these or {@link HarnessOptions.tokens} swaps the harness's default
-   * theme for a bare one, so a page renders its head and nothing else.
+   * Cards the theme declares, ahead of the plugin's default. Setting these or
+   * {@link HarnessOptions.tokens} swaps in a bare theme that renders only the
+   * head.
    */
   readonly cards?: readonly CardRule[];
   /** Design tokens the theme declares. */
@@ -355,9 +342,8 @@ export async function cardPath(
   const named = cardTargetPath(targetOf(target));
   const pointer = `${basePath}/_plumix/og/card/${named}.${extension}`;
   const location = (await harness.fetch(pointer)).headers.get("location");
-  // Nothing to point at — a draft, an unserved format, an entry nobody may
-  // see. The pointer's own 404 is then what a caller fetches, which is the
-  // answer they were asking for.
+  // A draft, unserved format or hidden entry has no target; the pointer's own
+  // 404 is then the right answer.
   return location === null ? pointer : new URL(location).pathname;
 }
 
@@ -387,9 +373,8 @@ export interface SeedEntryOverrides {
   /** When, for a suite asking about a date archive. */
   readonly publishedAt?: Date;
   /**
-   * When it last changed. The default card's digest reads it, and the column
-   * defaults to the insert's second — so a suite comparing URLs across two
-   * seeds pins it, or a tick between them moves the URL on its own.
+   * The default card's digest reads it and it defaults to the insert's second,
+   * so pin it when comparing URLs across seeds.
    */
   readonly updatedAt?: Date;
   /** Written verbatim — a per-entry access choice, a media row's own fields. */

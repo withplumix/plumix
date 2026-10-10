@@ -6,14 +6,8 @@ import type { Rolldown } from "vite";
 import { build } from "vite";
 import { describe, expect, test } from "vitest";
 
-// Core keeps its dev-only code out of production by writing the
-// `process.env.PLUMIX_DEV` literal at every gate, which the plugin's `define`
-// substitutes to `""` on build so the branch — and the modules only it
-// reaches — tree-shakes out. A helper or an exported constant standing in for
-// the literal does not fold across modules, and the dev code ships (#2620).
-// This builds what a runtime adapter imports from core's built output (the app,
-// the dispatcher, and the handler that builds each request's context) with
-// both defines and checks which dev modules land in the chunks.
+// A helper or exported constant standing in for the `process.env.PLUMIX_DEV`
+// literal does not fold across modules, so the dev code would ship.
 
 /** The gated dev modules, as paths under core's `dist/`. */
 const GATED_DEV_MODULES = [

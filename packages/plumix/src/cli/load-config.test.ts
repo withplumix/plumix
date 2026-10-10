@@ -6,10 +6,8 @@ import { afterEach, describe, expect, test } from "vitest";
 import { loadConfig } from "./load-config.js";
 
 /**
- * A valid PlumixConfig (passes isPlumixConfig) that bumps a global counter
- * every time the module is evaluated. With jiti's `moduleCache: false`, each
- * real load re-executes the module body — so the counter tells us exactly how
- * many times the config was evaluated vs. served from cache.
+ * With jiti's `moduleCache: false` each real load re-executes the body, so
+ * the counter separates evaluations from cache hits.
  */
 const FIXTURE = `
 (globalThis as unknown as Record<string, number>).__plumixEvalCount =
@@ -28,9 +26,8 @@ function evalCount(): number {
 }
 
 /**
- * A fresh temp dir per call gives each test a unique config path, so the
- * module-level cache in load-config.ts never collides across tests (it is keyed
- * by absolute path and intentionally has no reset hook).
+ * A unique path per test, because load-config's module-level cache is keyed
+ * by absolute path and has no reset hook.
  */
 function writeFixtureDir(body = FIXTURE): string {
   const dir = mkdtempSync(join(tmpdir(), "plumix-loadconfig-"));
@@ -66,9 +63,8 @@ describe("loadConfig", () => {
     expect(afterRefresh.config).toBe(refreshed.config);
   });
 
-  // Each slot the shape check reads, dropped one at a time. A config module
-  // that loads and evaluates cleanly but is not a config has to be rejected
-  // here rather than reaching the runtime as one.
+  // A module that evaluates cleanly but is not a config must be rejected
+  // here rather than reach the runtime as one.
   test.each([
     ["runtime missing", `{ database: { kind: "d1" }, auth: { passkey: {} } }`],
     [

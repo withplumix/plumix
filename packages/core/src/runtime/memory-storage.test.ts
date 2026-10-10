@@ -35,9 +35,8 @@ describe("memoryStorage public URLs", () => {
 });
 
 describe("memoryStorage list", () => {
-  // The contract sorts a page before comparing it and treats `limit` as an
-  // upper bound, so the ordering and the exact page fill the in-memory store
-  // guarantees have to be asserted here or nowhere.
+  // The shared contract sorts before comparing, so this store's ordering
+  // guarantee is asserted here or nowhere.
   test("returns keys in sorted order, not insertion order", async () => {
     const s = memoryStorage().connect({});
     for (const key of ["c", "a", "b"]) await s.put(key, key);

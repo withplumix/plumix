@@ -1,10 +1,3 @@
-// Worker-driven plugin e2e (#254 / #250). Runs against the real blog
-// playground at `../playground` via `plumix dev --port 3020`, seeded
-// by globalSetup with an admin user + storageState carrying the
-// session cookie. No RPC mocking — the spec exercises blog's
-// declarative registration (post entry type + category/tag taxonomies)
-// end-to-end through core admin's CRUD against real D1.
-
 import { CONTENT_LIST_ROWS, expect, test } from "plumix/test/playwright";
 
 test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
@@ -36,10 +29,8 @@ test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
     await updated;
 
     await page.goto("entries/posts");
-    // Assert by title, not an absolute count: CI retries re-run this
-    // `describe.serial` block against the same worker D1 (wiped once at
-    // webServer start, not per attempt), so a retry sees rows the prior
-    // attempt created. `toHaveCount(1)` cascade-fails with "Received: 2".
+    // By title, not count: CI retries reuse the same D1, so a retry sees rows
+    // the prior attempt created.
     await expect(
       page
         .locator(CONTENT_LIST_ROWS)
@@ -48,13 +39,9 @@ test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
     ).toBeVisible();
   });
 
-  // FIXME(editor-refinement): the live canvas iframe re-renders the toolbar so
-  // rapidly that Playwright's resolved click handle goes stale before dispatch,
-  // so the toolbar Publish button click never reaches React's handler (no
-  // entry.update fires) against the real worker. A human click still works
-  // (target resolves at mouse-up), and the publish wiring is covered by the
-  // admin mock e2e ("clicking the Publish button POSTs entry.update"). Re-enable
-  // once the editor re-render/zoom-fit stability is fixed in the refinement pass.
+  // FIXME(editor-refinement): canvas re-renders stale Playwright's click
+  // handle before dispatch, so Publish never fires; re-enable once the editor
+  // re-render stability is fixed.
   test("edit the draft → publish → status persists across reload", async ({
     page,
   }) => {
@@ -83,9 +70,8 @@ test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
       page.getByTestId("plumix-editor-publish-button"),
     ).toBeDisabled();
 
-    // The server-side status filter is the persistence proof: the row
-    // comes back under ?status=published from real D1. Match by title
-    // rather than count — a retry may have published its own copy.
+    // Matched by title rather than count, since a retry may have published its
+    // own copy.
     await page.goto("entries/posts?status=published");
     await expect(
       page
@@ -98,21 +84,16 @@ test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
   test("the public theme page serves the admin bar in the user's locale", async ({
     page,
   }) => {
-    // Switch the seeded admin's locale via the profile card; the
-    // setLocale RPC persists user.meta.locale in real D1, then the card
-    // does `window.location.reload()` on success. Arm the reload's load
-    // event BEFORE selecting so the later navigation to the public page
-    // can't race that reload into net::ERR_ABORTED (the CI flake).
+    // Arm the reload's load event before selecting, so the later navigation
+    // can't race the card's reload into net::ERR_ABORTED.
     await page.goto("profile");
     await page.getByTestId("locale-switcher-trigger").click();
     const reloaded = page.waitForEvent("load");
     await page.getByTestId("locale-switcher-option-uk").click();
     await reloaded;
 
-    // The front page is the theme's SSR surface, not the admin SPA —
-    // the worker resolves the session, reads meta.locale, and renders
-    // the bar chrome from core's compiled po catalogs. "/" resolves to
-    // the public root (baseURL's origin), not the admin base path.
+    // "/" resolves to the public root (baseURL's origin), not the admin base
+    // path.
     await page.goto("/");
     const bar = page.getByTestId("plumix-admin-bar");
     await expect(bar).toBeVisible();

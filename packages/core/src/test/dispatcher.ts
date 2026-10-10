@@ -53,12 +53,9 @@ export interface CreateDispatcherHarnessOptions {
    */
   readonly env?: PlumixEnv;
   /**
-   * The client address the runtime reports, as a real adapter hands core
-   * through `invocation.clientAddress`. Set it in tests of session metadata or
-   * visitor-meta hashing; leaving it unset is the runtime that could resolve
-   * none, whatever forwarding header the request carries. A test with two
-   * visitors to tell apart overrides it per request — see
-   * {@link HarnessFetchOptions.clientAddress}.
+   * The client address the runtime reports, as `invocation.clientAddress`.
+   * Unset means the runtime resolved none, whatever forwarding header the
+   * request carries.
    */
   readonly clientAddress?: string;
   /**
@@ -89,9 +86,8 @@ export interface CreateDispatcherHarnessOptions {
    */
   readonly kv?: ConnectedKv;
   /**
-   * Substitute the app's lazily-loaded cold-interface handlers — the only
-   * things the dispatcher reads from the app that aren't already config, and
-   * so the seam for observing whether it reached for one at all.
+   * Substitute the app's lazy cold-interface handlers, the seam for observing
+   * whether the dispatcher reached for one.
    */
   readonly coldInterfaces?: Partial<
     Pick<PlumixApp, "loadMcpHandler" | "loadRestHandler">
@@ -132,9 +128,8 @@ export interface DispatcherHarness {
     clientAddress?: string,
   ) => Promise<Response>;
   /**
-   * Build and dispatch a request in one call. Returns a TestResponse with
-   * chainable assertion helpers. Frontend tests should reach for this
-   * first; use `dispatch` only when you need to build the Request yourself.
+   * Build and dispatch a request in one call; use `dispatch` only to build the
+   * Request yourself.
    */
   readonly fetch: (
     path: string,

@@ -63,9 +63,6 @@ const FIXTURE: PlumixManifest = {
 };
 
 beforeEach(() => {
-  // The crumb labels come from the manifest lookups, so the fixture is written
-  // into the document the admin shell writes it into — the same payload the
-  // real parse and capability filtering run over.
   seedManifest(FIXTURE);
   // Source-locale renders use `descriptor.message` directly; explicit en
   // catalog keeps the resolver on the cheap path.
@@ -127,11 +124,8 @@ describe("pathToCrumbs", () => {
   });
 
   test("terms create: leaf is the generic Create crumb (no noun interpolation)", () => {
-    // Per WP-style per-type-labels refactor, taxonomy breadcrumbs drop
-    // the "Create category" / "Edit category" interpolation. The
-    // parent crumb already carries the taxonomy's plural label
-    // ("Categories"), so the trail reads "Terms › Categories › Create"
-    // — substitution-free, locale-safe.
+    // The parent crumb already carries the plural label, so the leaf stays
+    // noun-less and locale-safe.
     expect(labels(pathToCrumbs("/terms/category/create"))).toEqual([
       { label: "Terms" },
       { label: "Categories", to: "/terms/category" },
@@ -148,10 +142,6 @@ describe("pathToCrumbs", () => {
   });
 
   test("terms create/edit leaf carries no ICU `values` map post-widening", () => {
-    // After the chrome widening dropped the `{singular}` interpolation
-    // the leaf descriptor stays noun-less — `values` is intentionally
-    // omitted so the render path doesn't try to substitute placeholders
-    // that no longer exist in the message.
     const createLeaf = pathToCrumbs("/terms/category/create").at(-1);
     expect(createLeaf).toBeDefined();
     expect(typeof createLeaf?.label).toBe("object");

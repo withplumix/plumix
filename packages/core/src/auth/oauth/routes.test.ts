@@ -283,10 +283,8 @@ describe("oauth start route", () => {
   });
 
   test("rejects `constructor` (prototype-chain key) as not configured", async () => {
-    // The path regex accepts `constructor` (lowercase letters only), but
-    // a direct `providers[key]` lookup would walk the prototype chain
-    // and return `Object`. `Object.hasOwn` keeps the lookup confined to
-    // the operator's config map.
+    // The path regex accepts `constructor`, which a plain `providers[key]`
+    // lookup would resolve through the prototype chain.
     const h = await createDispatcherHarness({
       config: { auth: { oauth: { providers: TEST_OAUTH } } },
     });

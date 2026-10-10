@@ -1,9 +1,6 @@
-// The browser editor / islands bundle swaps `sanitize-html` for this
-// DOMPurify-backed shim (via core's `browser` field). It MUST enforce
-// the same security guarantees as the server engine for the same allowlist —
-// these tests assert security *properties* rather than exact serialization,
-// since DOMPurify and sanitize-html emit byte-different (but security-
-// equivalent) markup.
+// The browser bundle swaps `sanitize-html` for this shim. The engines emit
+// byte-different markup, so these assert security properties rather than
+// serialization.
 import { describe, expect, test } from "vitest";
 
 import type { HtmlAllowlist } from "./sanitize.js";
@@ -165,14 +162,9 @@ describe("dompurify-shim — baseline allowlist parity", () => {
   });
 });
 
-// The two engines read `allowedSchemes` differently — DOMPurify lowercases its
-// own allowlist where sanitize-html compares it verbatim — so an override has
-// to be driven through this engine too, not only the server one. DOMPurify also
-// rejects the dangerous schemes on its own URI regexp whatever the allowlist
-// says; these cases pin that the builder's floor holds independently of that.
-// The floor lives in `sanitizeHtml`, so a hand-built allowlist is floored too;
-// `runBuilt` covers the config path and the literal case below covers the
-// other.
+// DOMPurify lowercases its own `allowedSchemes` where sanitize-html compares
+// verbatim, so overrides are driven through this engine too. These pin that the
+// floor holds without DOMPurify's own URI regexp.
 describe("dompurify-shim — operator-override allowlists", () => {
   // Mirrors what `sanitizeHtml` hands the engine: the floored allowlist,
   // mapped into the option shape.
@@ -221,10 +213,9 @@ describe("dompurify-shim — operator-override allowlists", () => {
     expect(parse(out).querySelector("a")?.hasAttribute("href")).toBe(false);
   });
 
-  // Unlike the schemes above, DOMPurify honours an event handler that reaches
-  // its ALLOWED_ATTR — this engine was exposed too, and the mixed-case spelling
-  // was exposed HERE ONLY, since DOMPurify lowercases its allowlist where
-  // sanitize-html compares the parsed name against it verbatim.
+  // Unlike schemes, DOMPurify honours an event handler in its ALLOWED_ATTR; the
+  // mixed-case spelling slipped through only here, since DOMPurify lowercases
+  // its allowlist.
   test.each(["onclick", "ONCLICK", "OnClick"])(
     "an override granting `%s` cannot produce a live handler",
     (attr) => {

@@ -21,13 +21,6 @@ import { RichtextValidationError } from "../plugin/fields/richtext-validate.js";
 import { META_FIELD_MESSAGES } from "./contract/field-messages.js";
 import { runFieldPipeline } from "./field-pipeline.js";
 
-// The per-value write pipeline: coercion → `.sanitize()` → declarative
-// constraints → `.validate()`. Errors carry `{ path, message }` so the
-// admin form can address the offending input, including nested repeater
-// cells. `null` / `undefined` inputs are deletion requests — allowed
-// for optional fields, rejected for `.required()` ones (previously a
-// UI-only promise).
-
 describe("required", () => {
   test("rejects a deletion request for a required field", async () => {
     const field = text("subtitle").required().build();
@@ -62,13 +55,9 @@ describe("required", () => {
   });
 });
 
-// Draft mode (autosave) tolerates not-yet-valid content so a
-// work-in-progress save never fails: business-rule constraints
-// (required, min/max, maxLength, option membership, format, row counts,
-// `.validate()`) are skipped. Structural/security gates (coercion,
-// shape, url safe-href, temporal validity, `.sanitize()`) still run so
-// a draft can never hold corrupt or unsafe data. `strict` is the
-// default and enforces everything.
+// Draft autosaves skip business rules so a work-in-progress save never fails,
+// but structural and security gates still run so a draft never holds unsafe
+// data.
 describe("draft mode", () => {
   test("keeps an empty required field instead of erroring", async () => {
     const field = text("subtitle").required().build();
@@ -704,9 +693,8 @@ describe("composite .sanitize() output is structurally re-checked", () => {
 
 describe("a composite .sanitize() cannot smuggle a value past a cell's gates", () => {
   test("a member copied into a url cell still clears the safe-href gate", async () => {
-    // The scalar path re-runs the security gates on its sanitizer's
-    // output; a composite that writes into a member must not be the way
-    // around them. `raw` is a plain text cell, so it accepts anything.
+    // A composite writing into a member must not bypass the security gates;
+    // `raw` is a plain text cell, so it accepts anything.
     const cta = group("cta")
       .fields([text("raw"), url("href")])
       .sanitize((m) => ({ ...m, href: m.raw ?? "" }))
@@ -845,11 +833,9 @@ describe("a composite .sanitize() clears the field by returning it empty", () =>
 
 describe("composite hooks nested inside one another", () => {
   test("a hidden inner group's rule is skipped while the outer repeater's still runs", async () => {
-    // `cellMode` drops a condition-hidden cell to draft so a business
-    // rule can't fail on an input nobody can open. The inner group is
-    // that cell; the outer repeater is not, so it still runs strict and
-    // receives the very cell whose own rule was skipped. That mixed trust
-    // is the documented consequence of the hook, pinned here.
+    // `cellMode` drops the hidden inner group to draft, while the outer
+    // repeater still runs strict on that same cell. The mixed trust is the
+    // hook's documented consequence.
     const inner: unknown[] = [];
     const outer: unknown[] = [];
     const rows = repeater("sections")
@@ -1023,10 +1009,8 @@ describe("condition-hidden cells", () => {
   });
 
   test("a stored row missing its driver reads the condition as unmet", async () => {
-    // An unset driver cell leaves no key behind, so the stored row carries
-    // no `kind` at all. A row is always written whole, so that absence means
-    // "unset" — read as "unknown driver" it would validate a cell the admin
-    // hides and block the publish at a path with no input to open.
+    // A row is always written whole, so a missing `kind` means unset; read as
+    // an unknown driver it would block publish at a path with no input.
     const result = await runFieldPipeline(
       sections,
       [{ title: "x" }],
@@ -1154,10 +1138,8 @@ describe("group members", () => {
   });
 
   test("a blank optional group is dropped even with a required member", async () => {
-    // Regression: the all-empty strip must run before member validation,
-    // or a required member makes an untouched optional group impossible
-    // to clear — the same trap the repeater avoids by stripping blank
-    // rows first.
+    // The all-empty strip must run before member validation, or a required
+    // member makes an untouched optional group impossible to clear.
     const withRequired = group("meta")
       .fields([text("a").required(), text("b")])
       .build();
@@ -1376,11 +1358,8 @@ describe(".sanitize()", () => {
   });
 
   test("the callback's output is decoded, not taken on trust", async () => {
-    // The descriptor types `.sanitize()` as returning `JsonValue`, but
-    // nothing enforces that at runtime. A callback handing back a `Date`
-    // used to reach storage as one and become whatever `JSON.stringify`
-    // made of it later; the pipeline now decodes the output the same way
-    // it decoded the input.
+    // `.sanitize()` is typed to return `JsonValue`, but nothing enforces it at
+    // runtime, so the pipeline decodes its output as it decoded the input.
     const field = json("payload")
       .sanitize(() => new Date("2020-01-02T03:04:05.000Z") as never)
       .build();

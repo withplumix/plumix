@@ -144,10 +144,6 @@ describe("provides phase", () => {
   );
 
   test("app-context extensions are collected and surfaced on the install result", async () => {
-    // Slice 11 deferred subscribers because action handlers couldn't
-    // reach AppContext from the test harness; this opens the door —
-    // a plugin registers a helper, the install result hands it to the
-    // dispatcher, the dispatcher merges it into each per-request ctx.
     const audit = definePlugin("audit", {
       provides: (ctx) => {
         ctx.extendAppContext("audit", {
@@ -202,10 +198,8 @@ describe("provides phase", () => {
   });
 
   test("createAppContext refuses to overwrite a base field via a malformed extensions map", () => {
-    // Belt-and-braces: even when the registration-time guard is bypassed
-    // (a test or dev tool builds an extensions map by hand), the
-    // dispatcher won't let an entry shadow `db` etc. on the per-request
-    // ctx — fail fast rather than silently corrupt every request.
+    // A hand-built extensions map bypasses the registration guard, so the
+    // dispatcher must still refuse to shadow `db` and friends.
     const stubDb = {} as Parameters<typeof createAppContext>[0]["db"];
     const malformed = new Map<string, { readonly value: unknown }>([
       ["db", { value: { broken: true } }],
@@ -261,10 +255,8 @@ describe("provides phase", () => {
   });
 
   test("hook listener reads extensions via requestStore.getStore() at fire-time", async () => {
-    // The motivating use case from slice 11 deferred subscribers: a
-    // listener for an action that declares no AppContext pulls ctx out
-    // of the requestStore. Once that ctx carries plugin-contributed
-    // extensions, the listener gets cross-plugin helpers for free.
+    // A listener for an action that declares no AppContext pulls ctx from
+    // the requestStore.
     const captured: string[] = [];
 
     const auditProvider = definePlugin("audit", {
@@ -332,10 +324,8 @@ describe("provides phase", () => {
   });
 
   test("extending with 'telemetryConsumers' throws at registration", async () => {
-    // This key is assigned after the extension spread (only when a consumer
-    // samples), so the per-request `key in target` shadow check never sees
-    // it — registration is the only gate keeping a plugin from planting a
-    // value the dispatcher would read as the sampled-consumer list.
+    // Assigned after the extension spread, so the per-request shadow check
+    // never sees it and registration is the only gate.
     const evil = definePlugin("evil", {
       provides: (ctx) => {
         (

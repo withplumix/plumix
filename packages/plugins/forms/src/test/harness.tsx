@@ -34,9 +34,8 @@ const themeWith = (blocks: readonly BlockSpec[], entryTemplate = entryBlocks) =>
     templates: [
       fallback(() => null),
       entry(({ data }) => entryTemplate(data)),
-      // The same blocks on a page that is not one entry's — what a listing
-      // rendering an excerpt does, and the only way to reach the form block
-      // where there is no entry to bind.
+      // A page that is not one entry's: the only way to reach the form block
+      // with no entry to bind.
       entryType(({ data }) =>
         data.entries.map((one) =>
           one.contentBlocks ? (

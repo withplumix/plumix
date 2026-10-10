@@ -22,10 +22,8 @@ function query(testid: string): HTMLElement | null {
 }
 
 /**
- * React roots inside the shadow commit on the scheduler, so the DOM an
- * assertion needs may not be there yet. Poll for it — a loaded CI runner
- * outruns any fixed delay. The interval is tightened from vitest's 50ms
- * default because every wait here pays it in full.
+ * React roots inside the shadow commit on the scheduler, so poll. The
+ * interval beats vitest's 50ms default because every wait pays it in full.
  */
 function shown(testid: string): Promise<HTMLElement> {
   return vi.waitFor(
@@ -63,10 +61,8 @@ function flush(): Promise<void> {
 }
 
 /**
- * Vitest's browser runner listens for window `error` and `unhandledrejection`
- * events, and once the page listens too it re-logs each one through
- * `console.error`. That line is the runner's, not the code under test's, so a
- * test dispatching one keeps it out of the output for the dispatch alone.
+ * Vitest's browser runner re-logs window errors through `console.error`; that
+ * line is the runner's, so it is silenced for the dispatch alone.
  */
 function dispatchUncaught(event: Event): void {
   const relog = vi.spyOn(console, "error").mockImplementation(() => undefined);

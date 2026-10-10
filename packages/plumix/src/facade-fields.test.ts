@@ -1,7 +1,5 @@
-// Reachability guard for the field compile + projection pair (#2017): a plugin
-// rendering its own fields reaches both through the public umbrella, never by
-// importing @plumix/core. Walks the recipe the docs publish, so a re-export
-// dropped behind the façade fails here rather than in a consumer's build.
+// Walks the recipe the docs publish, so a re-export dropped behind the façade
+// fails here rather than in a consumer's build.
 
 import { describe, expect, expectTypeOf, test } from "vitest";
 

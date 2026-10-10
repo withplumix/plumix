@@ -47,10 +47,8 @@ describe("island renderer mount()", () => {
       },
     );
 
-    // A component may render more than once; waiting for an exact render
-    // count only passes when the poll samples at that instant. `seen[0]` is
-    // fixed once written, so polling it is stable.
-    // Scalar prop passes through untouched.
+    // A component may render more than once; `seen[0]` is fixed once written,
+    // so polling it is stable where an exact render count is not.
     await vi.waitFor(() => expect(seen[0]?.label).toBe("x"));
     // The slot prop is now a React element (the StaticHtml bridge).
     const children = seen[0]?.children as { $$typeof?: symbol } | undefined;
@@ -85,9 +83,8 @@ describe("island renderer mount()", () => {
     active = mount(el);
     active.render(Boom, {}, {});
 
-    // `events` is one entry per failed hydration, so an exact-length wait was
-    // never the race `seen` had — but polling for `length === 1` reports a
-    // duplicate as a timeout, where asserting after the wait reports the count.
+    // Wait for any, then assert the count: polling for `length === 1` would
+    // report a duplicate as a timeout.
     await vi.waitFor(() => expect(events.length).toBeGreaterThan(0));
     expect(events).toHaveLength(1);
     const detail = events[0]?.detail as {
@@ -115,9 +112,8 @@ describe("island renderer mount()", () => {
     const errorSpy = vi
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
-    // React's default root handler reports the uncaught throw to `window`;
-    // swallow it so it doesn't surface as an unhandled error in the run — and
-    // count it, since it is the proof React got as far as throwing.
+    // React reports the uncaught throw to `window`; swallow it so the run stays
+    // clean, and count it as proof React got as far as throwing.
     let uncaught = 0;
     const swallow = (event: Event): void => {
       uncaught += 1;
@@ -260,9 +256,8 @@ describe("island renderer mount()", () => {
 
     active = mount(el, { hydrate: true });
     active.render(Component, { label: "A" }, {}); // first render hydrates
-    // The props change must follow the hydration commit. An update that lands
-    // first makes React abandon hydration for client rendering and report a
-    // recoverable error, which surfaces below as a phantom mismatch.
+    // A props update landing before the hydration commit makes React abandon
+    // hydration and report a phantom mismatch.
     await vi.waitFor(() => expect(commits).toBe(1));
     expect(el.firstElementChild).toBe(serverSpan);
 
@@ -321,10 +316,9 @@ describe("island renderer mount()", () => {
     process.env.PLUMIX_DEV = "1";
     const events = listenForMismatch();
 
-    // Bridged slot HTML rides through <StaticHtml> as `dangerouslySetInnerHTML`,
-    // which React never routes through the `onRecoverableError` diagnostic — so
-    // a slot can never manufacture false mismatch noise, and the diagnostic only
-    // ever reflects the component's own render.
+    // Slot HTML rides through `dangerouslySetInnerHTML`, which React never
+    // routes through `onRecoverableError`, so a slot cannot manufacture
+    // mismatch noise.
     let commits = 0;
     const Card = (props: Readonly<Record<string, unknown>>) => {
       useEffect(() => {
@@ -374,13 +368,9 @@ describe("island renderer mount()", () => {
     process.env.PLUMIX_DEV = "1";
     const events = listenForMismatch();
 
-    // The parent's own text diverges (server "SERVER" vs client "CLIENT"), so
-    // the diagnostic fires exactly once — proof the root hydrated. Its slot
-    // carries a nested <plumix-island>'s SSR markup, opaque to hydration through
-    // the StaticHtml bridge: it appears byte-identical in both captured renders,
-    // so a parent's settling never surfaces as a separate child mismatch. (The
-    // top-down `ssr` gate that keeps the child from hydrating before the parent
-    // settles lives in `island-element` and is covered by its suite.)
+    // The parent's own text diverges, so the diagnostic fires once. Its slot
+    // holds a nested island's SSR markup, byte-identical in both renders
+    // through the StaticHtml bridge.
     const childMarkup =
       '<plumix-island ssr="" client="load"><span>child</span></plumix-island>';
     const Wrapper = (props: Readonly<Record<string, unknown>>) => (
@@ -413,11 +403,8 @@ describe("island renderer mount()", () => {
     process.env.PLUMIX_DEV = "1";
     const events = listenForMismatch();
 
-    // The same text-only divergence that fires the diagnostic elsewhere, but
-    // the author marked the diverging node with React's
-    // `suppressHydrationWarning` — the documented escape hatch for intentional
-    // divergence. No signal fires and React keeps the server text for that
-    // subtree.
+    // `suppressHydrationWarning` is React's documented escape hatch for
+    // intentional divergence.
     let commits = 0;
     const Component = () => {
       useEffect(() => {

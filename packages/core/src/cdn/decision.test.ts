@@ -12,9 +12,8 @@ import {
 } from "./decision.js";
 
 /**
- * Every case below is about an axis other than the provider's segment
- * capability, so they run against one that can key by segment; the cases that
- * exercise absence pass `canKeySegments: false` themselves.
+ * Defaults to a provider that can key by segment; cases about its absence
+ * pass `canKeySegments: false` themselves.
  */
 type BypassArgs = Parameters<typeof cdnBypassReason>[0];
 const bypassReason = (

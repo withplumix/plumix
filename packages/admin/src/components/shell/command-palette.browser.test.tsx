@@ -15,11 +15,6 @@ import { renderWithRouter } from "../../../test/render-with-router.js";
 import { stubRpc } from "../../../test/rpc.js";
 import { CommandPalette } from "./command-palette.js";
 
-/**
- * Navigation destinations and the entry-type slug the palette routes through
- * both come from the manifest the admin shell writes into the document, so
- * they are seeded there rather than substituted at the lookup functions.
- */
 const NAV_MANIFEST = {
   entryTypes: [
     {

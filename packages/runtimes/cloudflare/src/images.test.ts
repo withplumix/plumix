@@ -69,10 +69,8 @@ describe("images() — Cloudflare Image Transformations URL builder", () => {
 });
 
 describe("images() — conventional env zone", () => {
-  // Zero-arg `images()` defers its zone to the deploy's request env, so a
-  // config can stay `imageDelivery: images()` and light up once the media
-  // host is attached — without the config-time `process.env` read (which is
-  // empty on Workers) or the `X ? images(...) : undefined` ternary.
+  // Zero-arg `images()` defers its zone to the request env, since a
+  // config-time `process.env` read is empty on Workers.
   test("resolves the zone from MEDIA_PUBLIC_URL_BASE at connect time", () => {
     const cdn = images().connect?.({
       MEDIA_PUBLIC_URL_BASE: "https://media.example.com",
@@ -84,9 +82,8 @@ describe("images() — conventional env zone", () => {
   });
 
   test("resolves to undefined (no delivery) when no zone is in the env", () => {
-    // Absent — not an identity-transform passthrough. A present slot would
-    // make the render path emit a same-URL srcSet across the width ladder;
-    // returning undefined keeps "no host" behaving exactly like "no slot".
+    // Absent, not a passthrough: a present slot would emit a same-URL srcSet
+    // across the width ladder.
     expect(images().connect?.({})).toBeUndefined();
   });
 

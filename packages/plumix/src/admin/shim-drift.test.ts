@@ -10,18 +10,8 @@ import {
 
 import manifest from "../../package.json" with { type: "json" };
 
-// Drift detection. Each admin shim hand-re-exports a curated slice of an
-// upstream package off `globalThis.plumix.runtime` (admin ships precompiled;
-// plugin chunks reach deps via that global). The shims are an *intentional*
-// surface, not a mirror — so this guards the failure that actually breaks
-// plugins: a binding a shim re-exports having DISAPPEARED upstream (a dangling
-// `ns.X` that resolves to `undefined`), e.g. an upstream rename/removal.
-//
-// It deliberately does NOT fail when upstream *adds* an export the shim hasn't
-// adopted. That additive churn forced a manual `KNOWN_GAPS` edit (with a
-// written rationale) on every routine dependency bump and didn't scale with
-// upstream release cadence (see #1177). New upstream APIs are exposed pull-
-// based: add the binding to the shim when a plugin actually needs it.
+// Fails only when a binding a shim re-exports disappears upstream; additive
+// upstream exports are adopted when a plugin needs them, not on every bump.
 
 const SHIMS = Object.keys(SHARED_ADMIN_RUNTIME_SPECIFIERS).map((spec) => {
   const name = spec as SharedAdminRuntimeSpecifier;
@@ -37,11 +27,8 @@ const SHIMS = Object.keys(SHARED_ADMIN_RUNTIME_SPECIFIERS).map((spec) => {
 });
 
 /**
- * Stands in for admin's `window.plumix.runtime`: each upstream namespace
- * under the key core's roster assigns it, which admin's object is checked
- * against at compile time. Loaded while the file is collected, where no hook
- * timer runs: fourteen packages take 170ms idle and several seconds under
- * load, which timed out a beforeAll.
+ * Loaded during collection, where no hook timer runs: fourteen packages take
+ * several seconds under load, which timed out a beforeAll.
  */
 const runtime = Object.fromEntries(
   await Promise.all(
@@ -84,9 +71,8 @@ describe("shim drift vs upstream packages", () => {
     "$name shim re-exports only bindings upstream still provides",
     async ({ name, load }) => {
       const shim = await load();
-      // A re-export wired to `ns.X` resolves to a real value when upstream
-      // still provides `X`, and to `undefined` once upstream renames or removes
-      // it. Surface those — they're the silent breakage for plugins.
+      // A re-export of a binding upstream removed resolves to `undefined`,
+      // which breaks plugins silently.
       const broken = Object.keys(shim).filter(
         (k) => !ALWAYS_SKIPPED_KEYS.has(k) && shim[k] === undefined,
       );

@@ -24,9 +24,8 @@ const testDelivery: ImageDelivery = {
 };
 
 /**
- * A site with the preview registered, rendering to a raster format — a card
- * only reaches the head, and therefore the preview, in a format scrapers
- * render, which is what a fresh install ships.
+ * Renders to a raster format, since only a scraper-renderable card reaches the
+ * head and therefore the preview.
  */
 function previewHarness(
   options: HarnessOptions = {},
@@ -98,10 +97,8 @@ describe("the card preview in the entry editor", () => {
   });
 
   test("reflects a published entry's pending edit, which lives on an autosave row", async () => {
-    // On a type supporting autosave, an editor's meta edits to a *published*
-    // entry route to a per-user draft row rather than the live one — so a
-    // preview reading the live row would answer with the state before the
-    // author's last change, which is the very question it is asked.
+    // Autosave routes meta edits on a published entry to a per-user draft row,
+    // so reading the live row would miss the author's last change.
     const harness = await previewHarness({ imageDelivery: testDelivery });
     const editor = await harness.seedUser("editor");
     const id = await seedEntry(harness, { status: "published" });
@@ -208,9 +205,8 @@ describe("the card preview in the entry editor", () => {
   });
 
   test("names the site default where no card reaches the head", async () => {
-    // An SVG renderer serves its route but never reaches a scraper, so the
-    // page falls through — and the preview says what the page will say.
-    // An SVG renderer serves its route but never reaches a scraper.
+    // An SVG renderer never reaches a scraper, so the page falls through and
+    // the preview must say the same.
     const harness = await createHarness({
       preview: ["post"],
       siteDefaultImage: SITE_DEFAULT,
@@ -240,9 +236,8 @@ describe("the card preview in the entry editor", () => {
   });
 
   test("refuses a card for an entry no scraper could reach", async () => {
-    // The status half of the shareable check is skipped so drafts preview;
-    // the access half is not, or the preview names a card the head never
-    // emits for this entry. Both gated shapes: by the type, and per entry.
+    // Drafts skip the status half of the shareable check but not the access
+    // half, or the preview names a card the head never emits.
     const harness = await previewHarness({ siteDefaultImage: SITE_DEFAULT });
     const editor = await harness.seedUser("editor");
     const gated = await seedEntry(harness, { type: "gated" });
@@ -261,10 +256,8 @@ describe("the card preview in the entry editor", () => {
   });
 
   test("answers from the live access choice, as the page does, not a pending one", async () => {
-    // The gate resolves policy from the persisted row, so an unsaved pick
-    // gates nothing yet: the page keeps publishing a card for the entry an
-    // author just drafted to members-only, and withholds one from the entry
-    // they drafted back to public.
+    // The gate reads policy from the persisted row, so an unsaved access pick
+    // changes nothing yet.
     const harness = await previewHarness({ siteDefaultImage: SITE_DEFAULT });
     const editor = await harness.seedUser("editor");
     const drafted = async (

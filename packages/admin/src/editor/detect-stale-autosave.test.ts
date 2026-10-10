@@ -21,11 +21,8 @@ describe("detectStaleAutosave", () => {
   });
 
   test("returns 'fresh' when the autosave timestamp equals live's (no third-party publish race)", () => {
-    // Tie goes to the autosave — the user's pending work isn't
-    // 'stale' relative to a live row written at the same instant
-    // (in practice, the autosave is always written after live, so
-    // an exact match means the autosave row was created right after
-    // the load that anchored its timestamp).
+    // The autosave is always written after live, so a tie means it was
+    // created right after the load.
     expect(detectStaleAutosave(EQUAL, LIVE)).toBe("fresh");
   });
 

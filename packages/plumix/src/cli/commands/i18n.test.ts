@@ -101,10 +101,8 @@ describe("sourceDescriptorIds", () => {
   });
 
   test("does NOT match an outer { id: ... } whose message: lives in a nested child block", () => {
-    // Real false positive: a nav-group descriptor `{ id: "library",
-    // label: { id: "...", message: "Library" } }` has both keys but
-    // `message:` belongs to a nested object, so the outer `id:` is not
-    // a translation descriptor.
+    // A real false positive: `message:` belongs to a nested object, so the
+    // outer `id:` is not a translation descriptor.
     const ids = sourceDescriptorIds(`{
        id: "library",
        label: { id: "core.adminNav.library", message: "Library" },
@@ -478,10 +476,8 @@ describe("i18nCommand", () => {
 
   describe("extract --check", () => {
     test("still runs against a catalog carrying the hand-authored marker", async () => {
-      // admin/admin-editor's catalogs carry this marker from before their
-      // `--check` CI gate was wired — `--check` snapshots and restores the
-      // file regardless of what extract does to it, so it must not be
-      // refused the way bare `extract` is.
+      // `--check` snapshots and restores the file regardless of what extract
+      // does, so it must not be refused the way bare `extract` is.
       const localesDir = join(dir, "locales");
       mkdirSync(localesDir, { recursive: true });
       writeFileSync(

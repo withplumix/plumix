@@ -101,10 +101,8 @@ describe("CanvasFrame", () => {
     );
     const frame = container.querySelector("iframe");
     if (!frame) throw new Error("expected an iframe");
-    // A real `location.reload` is non-configurable and leaves nothing to
-    // observe, so shadow `contentWindow` on the element with a stub.
-    // The bridge / geometry effects already ran at mount off the real window;
-    // only the reload effect re-reads it on the token-change re-render.
+    // A real `location.reload` is non-configurable, so shadow `contentWindow`;
+    // only the reload effect re-reads it on re-render.
     const reload = vi.fn();
     Object.defineProperty(frame, "contentWindow", {
       configurable: true,
@@ -343,9 +341,8 @@ describe("CanvasFrame", () => {
       </Wrapper>,
     );
 
-    // Opening is driven by an in-iframe click (a postMessage), so focus has just
-    // left the host window. The dismiss-on-blur listener must not fire during
-    // this transition and self-close the popover it was armed for.
+    // An in-iframe click has just moved focus off the host window, which must
+    // not trip the dismiss-on-blur listener.
     fromCanvas({ type: "canvas:requestAdd" });
     expect(queryByTestId("plumix-inserter-popover")).not.toBeNull();
     // A re-render (another host message) must also leave it open.
@@ -363,9 +360,8 @@ describe("CanvasFrame", () => {
     fromCanvas({ type: "canvas:requestAdd" });
     expect(getByTestId("plumix-inserter-popover")).toBeDefined();
 
-    // Radix only sees outside pointerdowns on the host document; a click inside
-    // the cross-frame canvas instead blurs the host window (focus leaves the
-    // popover for the iframe), which must close the inserter.
+    // Radix only sees outside pointerdowns on the host document; a click in
+    // the cross-frame canvas blurs the host window instead.
     act(() => {
       window.dispatchEvent(new Event("blur"));
     });
@@ -435,9 +431,8 @@ describe("CanvasFrame nested drop", () => {
     );
   }
 
-  // A point inside the reported slot region, on screen. Slot geometry arrives
-  // in the canvas document's coordinates, so it is offset by where the iframe
-  // actually sits in the host page.
+  // Slot geometry arrives in canvas document coordinates, so it is offset by
+  // the iframe's position in the host page.
   const slotPoint = (): { clientX: number; clientY: number } => {
     const frame = document.querySelector("iframe")?.getBoundingClientRect();
     if (frame === undefined) throw new Error("expected the canvas iframe");
@@ -554,9 +549,8 @@ describe("CanvasFrame nested drop", () => {
 
     dragInto("b1", "items");
 
-    // A refusing slot is not a drop target (#1135): the drag resolves to the
-    // nearest level that accepts the block — here the top level, where the
-    // drop line was drawn — and the slot itself stays empty.
+    // A refusing slot is not a drop target, so the drag resolves to the
+    // nearest accepting level.
     const tree = storeApi?.getState().tree ?? [];
     expect(tree.find((n) => n.id === "b1")?.attrs?.items).toEqual([]);
     expect(tree.map((n) => n.name).sort()).toEqual([

@@ -62,10 +62,8 @@ function fixtureFs(
       if (!next || seen.has(next)) continue;
       seen.add(next);
       const fullChild = `${prefix}${next}`;
-      // A symlink entry reports `isDirectory: false` even when it targets
-      // a directory — `lstat`/`Dirent` describe the link itself. Only an
-      // intermediate real dir (e.g. the `@scope` folder above a link) is
-      // a directory. Modelling this is what surfaces the symlink walk bug.
+      // `lstat`/`Dirent` describe the link itself, so a symlink to a directory
+      // reports `isDirectory: false`.
       out.push({
         name: next,
         isDirectory: !Object.prototype.hasOwnProperty.call(links, fullChild),
@@ -238,10 +236,8 @@ describe("transformUseClientModule", () => {
   });
 
   test("imports IslandShim from the virtual module, not plumix/blocks directly", () => {
-    // A "use client" island in core's `blocks/` itself can't resolve the
-    // public `plumix/blocks` specifier (cycle + pnpm strictness), so the
-    // shim sources `IslandShim` from the virtual module the plugin resolves
-    // at the project root.
+    // Core's own `blocks/` can't resolve `plumix/blocks` (cycle and pnpm
+    // strictness), so the shim uses the virtual module.
     const source = `
       "use client";
       export function Widget() { return null; }

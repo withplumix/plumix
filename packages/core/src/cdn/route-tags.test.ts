@@ -33,9 +33,8 @@ describe("tagCdnEntry", () => {
     expect(declaredPageTags(context())).toEqual([]);
   });
 
-  // Core derives contexts by spreading — the base-path strip and `withUser`
-  // both do. A handler handed a derived one has to reach the same accumulator,
-  // or it stores untagged with nothing to say so.
+  // Core derives contexts by spreading; a derived one reaching a separate
+  // accumulator would store untagged silently.
   it("reaches the same entry from a derived context", () => {
     const ctx = context();
     const derived = { ...ctx, request: new Request("https://x/") };

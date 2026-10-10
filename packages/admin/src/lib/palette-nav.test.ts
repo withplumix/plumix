@@ -87,10 +87,7 @@ describe("selectNavItems", () => {
   });
 
   test("matches keywords against their resolved translation, not the source", () => {
-    // Stands in for a non-English locale: the resolver translates the
-    // `uploads` keyword to a localized synonym. Proves keyword matching runs
-    // through the i18n seam, so localized aliases are searchable and the
-    // English source term is not what gets matched under that locale.
+    // Stands in for a non-English locale.
     const localize = (label: Label): string =>
       typeof label !== "string" && label.id === "k.uploads"
         ? "надсилання"

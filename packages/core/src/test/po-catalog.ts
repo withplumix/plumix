@@ -33,11 +33,9 @@ function compile(message: string): CompiledCatalog[string] {
 }
 
 /**
- * A committed `.po` catalog in the shape `lingui compile` emits. Unit tests
- * resolve every compiled `locales/*` import to an empty catalog, so a test of
- * translated output reads the catalog it shipped. Only `{name}` placeholders
- * compile; an untranslated entry is left out, as compile leaves it to the
- * source.
+ * A committed `.po` catalog compiled as `lingui compile` would, since unit
+ * tests stub compiled catalogs. Only `{name}` placeholders compile;
+ * untranslated entries are omitted.
  */
 export function catalogFromPo(path: URL): CompiledCatalog {
   const po = readFileSync(path, "utf8");

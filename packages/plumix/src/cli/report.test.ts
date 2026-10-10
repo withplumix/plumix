@@ -1,10 +1,8 @@
 import { stripVTControlCharacters } from "node:util";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-// Deliberately the root barrel while `report.ts` checks via `@plumix/core/cli`:
-// this is the repo's only cross-specifier `instanceof` assertion, and it is what
-// proves the two paths resolve to one class. Aligning the specifiers would look
-// like a tidy-up and would silently delete that coverage.
+// Deliberately the root barrel while `report.ts` uses `@plumix/core/cli`: it
+// proves the two specifiers resolve to one class.
 import { CliError } from "@plumix/core";
 
 import { PlumixCliError } from "./errors.js";

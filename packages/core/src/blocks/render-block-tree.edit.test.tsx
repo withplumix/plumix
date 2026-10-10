@@ -14,9 +14,8 @@ import {
 } from "./table/index.js";
 
 /**
- * A minimal selfSeam leaf standing in for the former core/heading: it spreads
- * the seam onto its own <h2> with no wrapper div — the property this suite pins
- * (the same reason a <td> table cell stays selectable).
+ * A selfSeam leaf: it spreads the seam onto its own <h2> with no wrapper div,
+ * the property this suite pins.
  */
 const selfSeamBlock = defineBlock({
   name: "test/self-seam",
@@ -126,9 +125,8 @@ describe("renderBlockTree edit-aware seam", () => {
   });
 
   test("editing reveals a declared slot even when the attr was never set", () => {
-    // A freshly hand-authored columns block with no `columns` attr has an unset
-    // slot. Edit mode must still surface the declared slot as an empty drop
-    // target with its own "Add a block".
+    // A hand-authored columns block with no `columns` attr leaves the slot
+    // unset.
     const cols: readonly BlockNode[] = [{ id: "c1", name: "core/columns" }];
     const html = renderToStaticMarkup(
       renderBlockTree(cols, registry, { editing: true }),

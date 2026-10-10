@@ -9,34 +9,17 @@ import {
 } from "../test/import-graph.js";
 
 /**
- * The dev debug feature is three layers, and the only thing that keeps them
- * three is that imports run one way: a surface reads the panel vocabulary,
- * which reads the captured request, and never the reverse. Nothing in the
- * compiler complains about a cycle between sibling directories — TypeScript
- * resolves one happily — so the direction is a property only a test can hold.
- *
- * This is why the store and the writer left `debug-bar/`: the bar is one of
- * four readers (itself, the read routes, and the two MCP tools), and while it
- * owned the directory, every new reader had to import out of a UI widget to
- * reach the data (#2422).
- *
- * Scope is the debug cluster only, and only edges *inside* it. `dev/server/`
- * (the dev error page, which has its own unrelated `panels/`), `dev/ui/` and
- * `dev/trust.ts` are not part of the cluster and are deliberately absent
- * below. Nor is a rule here aimed at `context/app.ts`, which registers both
- * the bar's telemetry consumer and the history writer: a composition root
- * naming every unit is what a composition root is for, and forbidding it
- * would only push the wiring somewhere less visible.
+ * TypeScript resolves cycles between sibling directories happily, so only a
+ * test can hold the one-way direction: surface, then panel vocabulary, then
+ * captured request.
  */
 const UNIT_NAMES = ["capture", "panels", "bar", "routes"] as const;
 type UnitName = (typeof UNIT_NAMES)[number];
 
 interface Unit {
   /**
-   * Path under `src/`, with no extension and no trailing slash. It names
-   * either a directory or a single module, and {@link unitOf} decides which
-   * structurally — `dev/history-routes` is a module, and a prefix match alone
-   * would let it claim a sibling that merely shares the prefix.
+   * Path under `src/` naming a directory or a module; a prefix match alone
+   * would let a module claim a sibling that merely shares the prefix.
    */
   readonly base: string;
   /** The other units it may name. Its own files are always allowed. */
@@ -45,9 +28,7 @@ interface Unit {
 
 const UNITS: Readonly<Record<UnitName, Unit>> = {
   capture: { base: "dev/request-history", mayImport: [] },
-  // Owns `dev.panels` as well as the panels themselves: both surfaces resolve
-  // the setting from here, which is what lets the leaf that used to hold it
-  // disappear rather than be relocated (#2425).
+  // Owns `dev.panels` as well, since both surfaces resolve the setting here.
   panels: { base: "dev/debug-panels", mayImport: ["capture"] },
   // Two surfaces. Same rank, and they must not import each other either: the
   // bar's switcher reaches the read routes over HTTP, and a direct import
@@ -92,10 +73,8 @@ interface CrossUnitEdge {
 /** Every edge out of `file` that lands in a different unit of the cluster. */
 function crossUnitEdges(file: string): readonly CrossUnitEdge[] {
   const { static: statics, dynamic, typeOnly } = importsOf(file);
-  // All three kinds count here. A dynamic import is still a dependency —
-  // deferring a module does not undo a cycle, it only moves when it links —
-  // and so is a type-only one, which is the kind that leaves no trace at all
-  // in the emitted graph and would otherwise walk straight past this test.
+  // A dynamic import still links a cycle, only later, and a type-only one
+  // leaves no trace in the emitted graph.
   return [...statics, ...dynamic, ...typeOnly].flatMap((specifier) => {
     const resolved = resolveWithinCore(file, specifier);
     if (resolved === undefined) return [];
@@ -124,13 +103,8 @@ describe("the dev debug layers import one way", () => {
 });
 
 /**
- * The two dev MCP tools want the captured requests and nothing else. While the
- * store lived in `debug-bar/`, asking for it meant importing a React overlay's
- * directory into the MCP tool registry — the panel graph travelled with it,
- * held out of production only by the dev gate. Since #2442 they read the app's
- * ring off the context and import nothing in the cluster at all; this pins the
- * graph there. Whether they still *read* the ring is behaviour, and the MCP
- * dispatch suite asserts it.
+ * The dev MCP tools read the app's ring off the context, so importing the
+ * cluster would drag the panel graph into the tool registry.
  */
 const MCP_READERS = ["mcp/telemetry-tools.ts", "mcp/error-tools.ts"] as const;
 

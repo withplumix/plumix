@@ -11,10 +11,8 @@ import {
   termTaxonomyLabel,
 } from "./type-labels.js";
 
-// The cascade contract for both helpers: per-type label when the
-// plugin author declared it, generic noun-less fallback otherwise.
-// Drops the substitution pattern entirely — never `.toLowerCase()`
-// a translated noun and never glue the type name into a sentence.
+// Never `.toLowerCase()` a translated noun or glue the type name into a
+// sentence.
 
 describe("entryTypeLabel", () => {
   test("returns the per-type label when declared", () => {
@@ -102,11 +100,8 @@ describe("termTaxonomyLabel", () => {
 
 describe("GENERIC_ENTRY_TYPE_LABELS", () => {
   test("ships a noun-less message for every cascade fallback (entry + taxonomy)", async () => {
-    // Pin the rule: the generic catalog never mentions the type's noun.
-    // If a fallback ever needs to reference the entity, that's the
-    // signal to make the field required on the per-type labels table.
-    // Loop both tables — the entry alias and the term-taxonomy table —
-    // so a hand-edit on either can't silently regress the invariant.
+    // A fallback that needs the noun means the per-type label should be
+    // required instead.
     const { GENERIC_TERM_TAXONOMY_LABELS } = await import("@plumix/core/i18n");
     const everyDescriptor = [
       ...Object.values(GENERIC_ENTRY_TYPE_LABELS),

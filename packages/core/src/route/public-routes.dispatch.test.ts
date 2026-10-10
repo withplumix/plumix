@@ -119,9 +119,8 @@ describe("public route dispatch", () => {
   });
 
   test("a route registered from afterSetup is served", async () => {
-    // The registration point the seam is designed around: by `afterSetup`
-    // every entry type and taxonomy is known, so a plugin enumerates them and
-    // claims concrete paths instead of matching a pattern per request.
+    // By `afterSetup` every entry type and taxonomy is known, so a plugin can
+    // claim concrete paths instead of matching per request.
     const feeds = definePlugin("feeds", {
       setup: () => undefined,
       afterSetup: (ctx) => {

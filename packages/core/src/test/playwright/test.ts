@@ -32,28 +32,8 @@ interface PlumixWorkerFixtures {
 }
 
 /**
- * `test` with the database baseline wired in. Import it instead of
- * `@playwright/test` in a worker-driven suite and a retry starts from
- * the same database its first attempt did.
- *
- * The whole problem is that the state wipe belongs to the webServer
- * command, which Playwright runs once per suite run — so the
- * second attempt inherits whatever the first left behind. A worker-scoped
- * fixture is the one hook that matches that cadence: Playwright discards
- * the worker after a failure and starts a fresh one, so this runs once
- * per worker process, which for a retry means once per attempt.
- * `definePlumixE2EConfig` pins playground suites to a single worker,
- * without which it would instead be once per parallel worker, mid-run.
- *
- * Running before the first test rather than between tests is deliberate:
- * several suites are `describe.serial` sequences whose later tests build
- * on what earlier ones created, and a per-test reset would destroy them.
- * The flip side is that tests within one attempt are not isolated from
- * each other — two tests mutating the same row still need to be ordered
- * or disjoint.
- *
- * The database only: whatever else the runtime wipes before a run (object
- * storage, KV, Durable Object state) is still wiped once per suite run.
+ * `test` with the database baseline restored once per worker, which for a retry
+ * means once per attempt; per-test resets would break `describe.serial` suites.
  */
 export const test = base.extend<
   object,
@@ -86,10 +66,9 @@ export const test = base.extend<
             parseDbBaseline(await readFile(file, "utf8")),
           );
         } else {
-          // No baseline yet means this is the run's first worker:
-          // globalSetup has finished and nothing has driven the site, so
-          // this is the state every later attempt comes back to. Written
-          // via rename so a reader can never catch it half-written.
+          // No baseline yet means this is the run's first worker, right after
+          // globalSetup. Written via rename so a reader never sees it
+          // half-written.
           const draft = `${file}.tmp`;
           await writeFile(
             draft,

@@ -1,16 +1,5 @@
-// The visual editor now owns the `/edit` route (Puck is gone).
-// Editor *behavior* (block insertion, selection/actions, field/rich-text
-// editing, patterns) lives in the @plumix/admin-editor playground e2e + unit
-// tests; this suite is INTEGRATION only — the route wiring and the orpc glue
-// the route owns.
-//
-// The mock harness can't run the real public route the canvas iframe loads, so
-// canvas-render assertions aren't possible here. The specs assert the client
-// contracts the route owns instead: the canvas shell mounts pointed at the
-// minted preview URL with `plumix.edit` flipped on; the right rails + host
-// panels mount; load/mint failure surfaces the error placeholder; the
-// document/page tab fields, publish/draft mutations, stale-draft + revision
-// surfaces, and create-failure recovery all reach the right entry.* envelopes.
+// The mock harness can't serve the public route the canvas iframe loads, so
+// these assert the client contracts the route owns, not canvas rendering.
 
 import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
@@ -88,11 +77,8 @@ test.describe("editor route", () => {
 
     await page.goto("entries/posts/1/edit");
 
-    // The mock harness can't serve the public route the canvas iframe loads,
-    // so block selection (which arrives from inside the iframe) can't fire
-    // here — the host-side edit→autosave loop is covered by the package unit
-    // tests. This asserts the inspector rail mounts with the registry wired,
-    // showing its empty state until a block is selected.
+    // Block selection arrives from inside the iframe, which the mock harness
+    // can't serve.
     await expect(page.getByTestId("plumix-editor-right")).toBeVisible();
     await expect(page.getByTestId("block-inspector-empty")).toBeVisible();
   });
@@ -106,10 +92,8 @@ test.describe("editor route", () => {
 
     await page.goto("entries/posts/1/edit");
 
-    // The catalog lists the core blocks the registry ships, searchable. The
-    // empty-state "Add a block" affordance now renders inside the canvas iframe
-    // (the mock harness can't serve that route — see above), so it's covered by
-    // the admin-editor unit + playground layers, not here.
+    // The empty-state "Add a block" renders inside the canvas iframe, which
+    // the mock harness can't serve.
     await expect(page.getByTestId("plumix-editor-left")).toBeVisible();
     await expect(page.getByTestId("block-catalog-search")).toBeVisible();
     await expect(
@@ -341,11 +325,6 @@ test.describe("editor route", () => {
   });
 });
 
-// Ported from the old Puck suite ("editor chrome & layout"). The editor
-// shell has no mobile-sheet triggers, viewport-preset buttons, or a back
-// button (navigation back to the list is the entries-list route's concern,
-// covered there) — dropped, no equivalent. The genuine chrome wiring that
-// survives is the toolbar's device switch + zoom controls.
 test.describe("editor chrome & layout", () => {
   test.beforeEach(async ({ page }) => {
     await mockRpc(page, {
@@ -386,10 +365,6 @@ test.describe("editor chrome & layout", () => {
   });
 });
 
-// Ported from "editor accessibility". The mobile inspector-sheet a11y sweep
-// and the Puck-shell ARIA tab pins are dropped — the editor shell has no
-// mobile sheet, and its tab triggers are vendored radix primitives (their
-// roles are covered by the axe sweep below, not re-asserted by hand).
 test.describe("editor accessibility", () => {
   test("desktop editor chrome has no WCAG 2.1 AA violations from axe-core", async ({
     page,
@@ -422,9 +397,7 @@ test.describe("editor accessibility", () => {
     await page.goto("entries/posts/1/edit");
     await expect(page.getByTestId("plumix-editor-layout")).toBeVisible();
 
-    // The empty-chrome sweep above never reaches the inspector's form
-    // controls. Select a block so the Block tab renders its labelled inputs,
-    // then sweep — this guards the label→control wiring on every control.
+    // The empty-chrome sweep never reaches the inspector's form controls.
     await page.getByTestId("plumix-tab-layers").click();
     await page.getByTestId("layer-h1").click();
     await expect(page.getByTestId("block-input-label")).toBeVisible();
@@ -438,12 +411,8 @@ test.describe("editor accessibility", () => {
   });
 });
 
-// Ported from "editor server-loaded content". The plumix.v2 canvas render +
-// word-count assertions can't run here (the canvas renders inside the iframe
-// the mock harness can't serve, and the editor shell has no word-count
-// readout). The surviving integration contract — that server-loaded content
-// is parsed and surfaced by the route — is asserted through the Layers tab,
-// which reads the same tree the canvas would.
+// The canvas renders inside the iframe the mock harness can't serve, so the
+// Layers tab, which reads the same tree, stands in for it.
 test.describe("editor server-loaded content", () => {
   test("server-loaded plumix.v2 content surfaces in the Layers outline", async ({
     page,
@@ -874,9 +843,6 @@ test.describe("editor document tab", () => {
   });
 });
 
-// The header's preview menu (eye icon) offers the current draft and the live
-// entry. The host mints the draft URL in the loader and feeds it in as
-// `previewLink`; "View live entry" stays disabled until the entry is published.
 test.describe("editor preview", () => {
   test("the preview menu offers the draft and live-entry options", async ({
     page,
@@ -896,12 +862,7 @@ test.describe("editor preview", () => {
   });
 });
 
-// Ported from "editor publishing & autosave". The autosave-pill cycle, title
-// edits, and block-insertion-driven autosave assertions are dropped — the
-// editor shell has no autosave pill or title input, and content edits arrive
-// from inside the canvas iframe the mock can't serve (that loop is covered by
-// the @plumix/admin-editor package tests). The publish-button → entry.update
-// wiring + failure handling survive as integration contracts.
+// Content edits arrive from inside the canvas iframe the mock can't serve.
 test.describe("editor publishing & autosave", () => {
   test("clicking the Publish button POSTs entry.update with status: published", async ({
     page,
@@ -1042,11 +1003,7 @@ test.describe("editor publishing & autosave", () => {
   });
 });
 
-// Ported from "editor draft of a published entry". The existing "draft
-// save/publish/discard" route spec above already covers the pending-autosave
-// surfaces; these add the discard + publish-409-retry orpc wiring. The Puck
-// "edit the title → banner appears" variants are dropped — the editor shell
-// has no title input, so a pending draft is seeded via `_preview` instead.
+// The editor has no title input, so a pending draft is seeded via `_preview`.
 test.describe("editor draft of a published entry", () => {
   test.beforeEach(async ({ page }) => {
     await mockManifest(page, {
@@ -1167,9 +1124,6 @@ test.describe("editor draft of a published entry", () => {
   });
 });
 
-// Ported from "editor stale-draft dialog". The StaleDraftDialog component +
-// testids are unchanged. The Puck "Use mine keeps the title value" assertion
-// is dropped (no title input); the dialog dismissal is asserted instead.
 test.describe("editor stale-draft dialog", () => {
   const T_LIVE = new Date("2026-05-22T12:00:00Z");
   const T_STALE = new Date("2026-05-22T10:00:00Z"); // before live
@@ -1247,9 +1201,7 @@ test.describe("editor stale-draft dialog", () => {
     await page.goto("entries/posts/1/edit");
     await expect(page.getByTestId("stale-draft-dialog")).toBeVisible();
     await page.getByTestId("stale-draft-use-mine").click();
-    // Dismissing keeps the editor (with the autosave content already seeded);
-    // the Puck title-value check is dropped — the editor shell has no title
-    // input, so the chosen-draft content lives only in the canvas iframe.
+    // The chosen-draft content lives only in the canvas iframe.
     await expect(page.getByTestId("stale-draft-dialog")).toHaveCount(0);
     await expect(page.getByTestId("plumix-editor-layout")).toBeVisible();
   });
@@ -1263,10 +1215,6 @@ test.describe("editor stale-draft dialog", () => {
   });
 });
 
-// Ported from "editor revision preview". The PreviewBanner component + testids
-// are unchanged. The Puck `plumix-editor-preview-shield` + publish-button
-// assertions are dropped — the read-only mode renders no editing
-// toolbar at all (so no publish button to assert), and has no overlay shield.
 test.describe("editor revision preview", () => {
   const T_REV0 = new Date("2026-05-22T00:00:00Z");
   const T_REV = new Date("2026-05-22T10:00:00Z");
@@ -1484,11 +1432,6 @@ test.describe("editor create failure", () => {
   });
 });
 
-// The starter modal (#2103). Picking a starting pattern is editor behavior,
-// unit-tested in @plumix/admin-editor; what admin owns — and what these pin —
-// is the glue: the manifest's starter fields survive the wire and reach the
-// picker, and whichever branch the author takes leaves a working editor whose
-// autosave envelope matches what they chose.
 test.describe("editor starter modal", () => {
   test("creating an entry of a type with starter patterns opens the modal", async ({
     page,
@@ -1529,10 +1472,8 @@ test.describe("editor starter modal", () => {
 
     // The escape lands on a working editor, not a blocked screen.
     await expect(page.getByTestId("plumix-canvas-frame")).toBeVisible();
-    // Editing the title forces an autosave, so the envelope proves the blank
-    // start seeded nothing rather than merely proving nothing saved *yet*.
-    // Autosave ships only dirtied fields, so an absent `content` is the proof:
-    // choosing a starter instead puts the seeded blocks on this same envelope.
+    // Autosave ships only dirtied fields, so forcing one with a title edit and
+    // finding no `content` proves the blank start seeded nothing.
     await page.getByTestId("plumix-editor-title-input").fill("Blank start");
     await expect
       .poll(() => lastUpdate(captures)?.title ?? null)

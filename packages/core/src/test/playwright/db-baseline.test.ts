@@ -89,9 +89,8 @@ describe("captureDbBaseline / restoreDbBaseline", () => {
     ]);
   });
 
-  // The baseline is written by one Playwright worker and read by the next,
-  // so it has to survive a file. `credentials.public_key` is a BLOB in every
-  // playground, and a blob does not survive `JSON.stringify`.
+  // `credentials.public_key` is a BLOB in every playground, and the baseline
+  // passes between workers through a file.
   test("survives a round-trip through text, blobs included", async () => {
     const client = await makeDb([
       "CREATE TABLE credential (id INTEGER PRIMARY KEY, public_key BLOB NOT NULL)",
@@ -110,9 +109,7 @@ describe("captureDbBaseline / restoreDbBaseline", () => {
     ]);
   });
 
-  // `SELECT *` hands back generated columns and `INSERT` refuses them, so
-  // taking the column list from the select would make any schema using
-  // `.generatedAlwaysAs()` fail the restore for every suite at once.
+  // `SELECT *` returns generated columns that `INSERT` refuses.
   test("skips generated columns, which cannot be inserted", async () => {
     const client = await makeDb([
       "CREATE TABLE priced (id INTEGER PRIMARY KEY, net REAL NOT NULL, gross REAL GENERATED ALWAYS AS (net * 1.2) STORED)",

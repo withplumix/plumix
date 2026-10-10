@@ -84,10 +84,9 @@ describe("lookup capability gating", () => {
   });
 
   test("subscribers can't reach unpublished entries through entry lookup", async () => {
-    // The entry adapter is `capability: null` — every signed-in
-    // principal reaches it, and `subscriber` is public-reachable
-    // wherever `auth.selfSignup` is on. The scope arrives from the
-    // caller, so what it may name is the whole of the gate.
+    // The entry adapter is `capability: null` and `subscriber` is
+    // public-reachable under `auth.selfSignup`, so the caller-supplied scope is
+    // the whole gate.
     const plugins = registryWithCoreAdapters();
     const h = await createRpcHarness({ authAs: "subscriber", plugins });
     const author = await adminUser.transient({ db: h.context.db }).create();

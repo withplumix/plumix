@@ -92,9 +92,8 @@ export default plumix({
 `;
 
 /**
- * A consumer project in a temp dir. Its `node_modules` is a real directory of
- * links, so `plumix` and this package resolve from there the way they do from
- * an app root.
+ * Its `node_modules` is a real directory of links, so packages resolve the
+ * way they do from an app root.
  */
 export function scaffoldConsumerProject(
   prefix: string,

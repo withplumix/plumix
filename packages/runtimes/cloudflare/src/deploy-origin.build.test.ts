@@ -13,10 +13,9 @@ const SOURCE = fileURLToPath(new URL("./deploy-origin.ts", import.meta.url));
 
 let dir: string;
 
-// `env` comes from `node:process` for a typed view the
-// @cloudflare/workers-types global would otherwise swallow. deploy-origin.ts
-// itself cannot import it: the specifier would put its reads out of reach of
-// the plugin's `define`.
+// `env` comes from `node:process` for a typed view the workers-types global
+// would swallow; deploy-origin.ts cannot import it, or its reads escape the
+// plugin's `define`.
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "plumix-deploy-origin-"));
   delete env.WORKERS_CI;
@@ -28,10 +27,8 @@ afterEach(() => {
 });
 
 /**
- * Only the plugin's `define` carries the Workers Builds env into a deployed
- * bundle, so a Node-level test — mutating a live `process.env` no deploy has —
- * cannot see this class of bug. Bundle the way a deploy does, taking the define
- * map off the plugin so a rename on either side can't drift past it (#1947).
+ * Only the plugin's `define` carries the Workers Builds env into a bundle, so
+ * a Node-level test cannot see this bug; bundle the way a deploy does.
  */
 async function bundleWithPlumixDefine(): Promise<
   (input: DeployOriginInput) => DeployOrigin
@@ -60,11 +57,8 @@ async function bundleWithPlumixDefine(): Promise<
     root: dir,
     logLevel: "silent",
     define,
-    // A server build, like the worker half of `plumix build`: Vite keeps
-    // `process.env` intact here instead of collapsing it to `{}`, so the
-    // substitution is the only thing that can carry these names across.
-    // Minifying matches a real deploy and drops the doc comments that mention
-    // them, leaving the assertion below to speak about code.
+    // Vite keeps `process.env` intact in a server build, so the substitution
+    // is the only carrier; minifying drops doc comments that mention the names.
     build: { outDir, ssr: SOURCE, minify: true },
   });
 
@@ -93,9 +87,8 @@ test("carries the Workers Builds env into the bundle, so a deploy resolves its r
   });
 });
 
-// The branch needs its own case: an unsubstituted `WORKERS_CI_BRANCH` reads as
-// `undefined`, which the helper treats as the default branch — so the
-// production case above passes whether or not that second name crossed.
+// An unsubstituted `WORKERS_CI_BRANCH` reads as the default branch, so the
+// production case passes whether or not that name crossed.
 test("carries the branch name too, so a preview deploy resolves its per-branch host", async () => {
   env.WORKERS_CI = "1";
   env.WORKERS_CI_BRANCH = "feat/x";

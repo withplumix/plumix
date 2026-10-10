@@ -5,25 +5,8 @@ import { expect, test } from "vitest";
 
 import { PLUGIN_I18N_SLOT } from "@plumix/core";
 
-// `stagePluginCatalogs` (./index.ts) copies `<installed
-// package>/<i18n.catalogPath>/ <locale>.mjs` out of a consumer's `node_modules`
-// at `plumix build` time, and throws `adminAssetNotFound` when the directory is
-// missing or a declared locale has no `.mjs`. In this repo a plugin resolves to
-// a symlinked source tree, so both are always in place; a site installing the
-// same plugin from npm gets only what `package.json#files` allowlists, of
-// whatever `i18n:compile` generated. A plugin that declares an `i18n` slot but
-// leaves either behind therefore passes every check here and breaks the first
-// `plumix build` a consumer runs.
-//
-// Scope: a textual scan for the `i18n` slot literal, and only under `src/`.
-// `catalogPath` is also a Lingui config key with an unrelated
-// `<rootDir>/locales/ {locale}` grammar (tooling/lingui/index.ts) — the scan
-// stays out of the package root, where every `lingui.config.ts` lives, to keep
-// the two vocabularies apart; widened there it would report `<rootDir>` as an
-// unshipped directory. Every test below reads one parse, so a slot the scan
-// stops seeing — a computed value, a nested object splitting the body early —
-// drops out of all three at once and the first one says so, rather than going
-// quiet in the one that needed it.
+// Here plugins resolve to symlinked source; an npm install gets only what
+// `files` allowlists. Scans only `src/`, avoiding Lingui's `catalogPath` key.
 
 const PLUGINS_DIR = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -31,11 +14,8 @@ const PLUGINS_DIR = resolve(
 );
 
 /**
- * The slot is either a flat object literal or a reference to the shared
- * `PLUGIN_I18N_SLOT` constant every first-party plugin's catalog roster
- * collapsed onto (#2312) — matching the body (or the bare identifier) and
- * reading keys out of it keeps a reordering, or the hoist itself, from being
- * drift the scan has to model.
+ * Matching the body or the bare constant keeps a key reordering from being
+ * drift.
  */
 const I18N_SLOT = /\bi18n:\s*(\{[^}]*\}|PLUGIN_I18N_SLOT)/g;
 const SLOT_LOCALES = /\blocales:\s*\[([^\]]*)\]/;
@@ -94,13 +74,8 @@ const plugins = readdirSync(PLUGINS_DIR, { withFileTypes: true })
     };
   });
 
-// Two filesystem signals the regex cannot fail alongside: a plugin that
-// translates anything has `locales/*.po` checked in and an `i18n:compile`
-// script for turbo's `build` edge to generate the `.mjs` from. Requiring all
-// three to agree catches a slot whose catalogs nothing compiles, and keeps a
-// silently drifting scan — a hoisted constant, a shared slot helper, a
-// reordered key — from dropping plugins out of the guarded set while the suite
-// stays green.
+// Requiring the slot, checked-in `.po` files and a compile script to agree
+// keeps a drifting regex from silently dropping plugins out of the guard.
 test("each plugin's i18n slot, catalog sources, and compile script agree", () => {
   const drifted = plugins
     .filter(({ slots, hasSources, compiles }) =>
@@ -135,17 +110,9 @@ test("every declared i18n catalog directory is published", () => {
   ).toEqual([]);
 });
 
-// `projectPluginI18n` (@plumix/core) walks the slot's `locales` and drops the
-// source locale, so a slot naming only `en` projects an empty catalog map,
-// `buildManifest` omits the plugin from `pluginI18n` entirely, and
-// `stagePluginCatalogs` never copies a file — the shipped `.po` translations
-// are unreachable. Nothing else catches this: admin bundles workspace plugins
-// through a filesystem glob over `locales/*.mjs`
-// (packages/admin/src/lib/catalog-globs.ts), so the declared set is bypassed in
-// this repo and only bites a site that installs the plugin from npm. Declaring
-// is safe — the slot's contract intersects with the site's enabled locales
-// before any URL is emitted, so naming a locale the site hasn't enabled expands
-// nothing.
+// A slot naming only the source locale projects no catalogs, so shipped
+// translations go unstaged. Admin's glob bypasses the slot in this repo, so
+// only npm installs would notice.
 test("each plugin declares exactly the locales it ships catalogs for", () => {
   const drifted = plugins.flatMap(({ name, dir, slots }) =>
     slots.flatMap(({ locales, catalogPath }) => {

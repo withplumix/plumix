@@ -61,10 +61,8 @@ describe("mapItemState", () => {
   });
 
   test("unauthorized state is set without a lookup result (server is expected to skip the call)", () => {
-    // Resolver should NOT call the adapter for kinds the viewer can't
-    // access — that would round-trip data the response then leaks via
-    // `resolved.label`. mapItemState handles the post-skip case where
-    // lookupResult is null and canAccessKind is false: unauthorized.
+    // The resolver skips the lookup for inaccessible kinds, so a null
+    // lookup with no kind access must map to unauthorized.
     expect(
       mapItemState({
         meta: termMeta,

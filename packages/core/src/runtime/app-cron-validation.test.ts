@@ -36,9 +36,8 @@ const appWithTaskCron = (cron: string): Promise<unknown> =>
     }),
   );
 
-// A cron reaches the registry as a free-form string — `auditLog({ retention:
-// { purgeAt } })` hands one straight through — so boot is the last place to
-// catch one before it becomes a task that silently never fires.
+// A cron reaches the registry as a free-form string, so boot is the last
+// place to catch one before it silently never fires.
 describe("buildApp — scheduled task cron validation", () => {
   test("accepts a portable schedule", async () => {
     await expect(appWithTaskCron("*/5 * * * *")).resolves.toBeDefined();

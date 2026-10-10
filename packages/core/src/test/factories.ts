@@ -54,18 +54,15 @@ function requireDb(transient: Partial<DbTransient>): Db {
 }
 
 /**
- * Each Playwright worker is its own process with its own fishery sequence, and
- * they all seed one database. Defaults on a unique column add this token so two
- * processes are unlikely to mint the same value; within a process the sequence
- * orders them. The device-code default uses only its first four characters.
+ * Playwright workers each have their own fishery sequence but seed one
+ * database, so unique-column defaults add this token. Device codes use its
+ * first four characters.
  */
 const processToken = crypto.randomUUID().slice(0, 8);
 
 /**
- * The fourth type argument pins `params` to a shallow `Partial`. fishery's
- * default is a `DeepPartial`, which walks into the JSON columns — `JsonValue`
- * is recursive, so that instantiation never bottoms out. An override on a JSON
- * column is a whole value anyway.
+ * The fourth type argument pins `params` to a shallow `Partial`: fishery's
+ * `DeepPartial` walks the recursive `JsonValue` columns and never bottoms out.
  */
 export const userFactory = Factory.define<
   NewUser,
@@ -358,9 +355,8 @@ interface MintedAuthToken {
 }
 
 /**
- * Mints a real auth-token (magic-link / invite / email-verification / …):
- * generates the token, stores only its hash, and returns the plaintext so a
- * test can drive the verify path. `hash` is always derived, never passed.
+ * Mints a real auth token, storing only its hash and returning the plaintext so
+ * a test can drive the verify path.
  */
 export const authTokenFactory = Factory.define<
   Omit<NewAuthToken, "hash">,
@@ -428,10 +424,8 @@ interface MintedDeviceCode {
 }
 
 /**
- * Mints a device-flow row (RFC 8628): generates the device_code, stores only
- * its SHA-256 under the PK, and returns the plaintext so a test can drive the
- * poll/exchange path. Pass `status` / `userId` to seed an approved or denied
- * terminal state directly. `id` is always derived, never passed.
+ * Mints a device-flow row (RFC 8628), storing only the code's SHA-256 and
+ * returning the plaintext. Pass `status` / `userId` to seed a terminal state.
  */
 export const deviceCodeFactory = Factory.define<
   Omit<NewDeviceCode, "id">,

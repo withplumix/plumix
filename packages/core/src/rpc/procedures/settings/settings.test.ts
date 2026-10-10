@@ -155,10 +155,8 @@ describe("settings.upsert", () => {
   });
 
   test("round-trips non-string JSON values (the column is `mode: json`)", async () => {
-    // Locks in the contract that `value` is stored as JSON, not TEXT.
-    // If someone ever drops `mode: "json"` or stringifies at the app
-    // layer, booleans / numbers / objects would come back as strings
-    // and this assertion would flip.
+    // `value` is stored as JSON, not TEXT; stringifying anywhere would bring
+    // booleans, numbers and objects back as strings.
     const h = await createRpcHarness({ authAs: "admin" });
     await h.client.settings.upsert({
       group: "general",
@@ -176,12 +174,8 @@ describe("settings.upsert", () => {
     });
   });
 
-  // Regression: the registration-time field regex is permissive
-  // (`[a-zA-Z0-9_:-]+`), matching the meta-box surface. Before #67 the
-  // RPC input schema only accepted `[a-z][a-z0-9_]*`, so a plugin that
-  // registered a field key like `og:title` would pass registration but
-  // every save request would fail at the valibot schema — dead-code
-  // field. This locks in that value keys accept the full meta regex.
+  // Registration accepts `[a-zA-Z0-9_:-]+`, so the RPC schema must too, or a
+  // key like `og:title` registers but can never be saved.
   test("accepts the same field keys that plugins can register", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const bag = await h.client.settings.upsert({
@@ -287,9 +281,8 @@ describe("settings.upsert (condition-hidden fields)", () => {
   });
 });
 
-// Registered fields put their declared shape between the caller and the
-// column: a value arrives decoded rather than however the caller spelled
-// it, which is what lets `settings.value` name what it holds.
+// Registered fields decode a value to their declared shape, whatever the
+// caller's spelling, which is what lets `settings.value` name what it holds.
 describe("settings.upsert (field pipeline)", () => {
   async function harnessWithTypedGroup(): Promise<
     Awaited<ReturnType<typeof createRpcHarness>>
@@ -387,10 +380,8 @@ describe("settings.upsert (field pipeline)", () => {
   });
 });
 
-// A group whose name ends in `_internal` is server-only storage — the
-// per-install visitor-IP salt behind `readVisitorMeta` is one. Keeping it
-// off a settings page never kept it out of the RPC, which takes any group
-// name it is handed.
+// A group ending in `_internal` is server-only storage, like the visitor-IP
+// salt; hiding it from a settings page never kept it out of the RPC.
 describe("settings private groups", () => {
   test("get refuses a group the RPC does not serve", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
@@ -429,9 +420,9 @@ describe("settings private groups", () => {
   });
 });
 
-// A settings group counts as created on its first save (ADR 0026): until then
-// it reads its fields' starting values, and after it storage alone is the
-// truth. The first save leaves a reserved marker row nobody reads back.
+// A group counts as created on its first save: before it, reads use its fields'
+// starting values; after it, storage alone. The save leaves an unread marker
+// row.
 describe("settings groups: created on first save", () => {
   async function harnessWithDefaults(): Promise<
     Awaited<ReturnType<typeof createRpcHarness>>
@@ -554,10 +545,8 @@ describe("settings groups: created on first save", () => {
     expect(groups.blog).toEqual({});
   });
 
-  // Only the marker makes a group created. A group whose rows were written
-  // without one (written by a version without the marker, or directly) has not
-  // had its first save: it reads its starting values under what is stored, and
-  // that save fills the rest and adds the marker.
+  // Only the marker makes a group created, so rows written without one still
+  // read starting values under what is stored until the first save.
   test("a group with rows but no marker is not created until its first save", async () => {
     const h = await harnessWithDefaults();
     await h.factory.setting.create({

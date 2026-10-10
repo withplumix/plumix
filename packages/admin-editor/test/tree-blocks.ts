@@ -8,9 +8,8 @@ const slotted = (name: string, slots: readonly string[]): BlockSpec => ({
 });
 
 /**
- * The slots the editor suites' trees nest children in. `core/columns` takes
- * two named slots here so a multi-slot block needs no extra fixture; every
- * other name the suites use is a leaf or unregistered, so it has no slots.
+ * `core/columns` takes two named slots so a multi-slot block needs no extra
+ * fixture.
  */
 export const treeBlocks = createBlockRegistry([
   slotted("core/group", ["content"]),

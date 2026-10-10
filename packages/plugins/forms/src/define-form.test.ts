@@ -221,9 +221,8 @@ describe("a form's retention period", () => {
 });
 
 describe("toFormWire", () => {
-  // The island's props cross the wire as JSON. What is not on this shape
-  // cannot leak to a browser, which is the point of projecting rather
-  // than passing the definition straight through.
+  // Island props cross the wire as JSON; projecting keeps anything off this
+  // shape out of the browser.
   test("carries what the markup renders from and nothing else", () => {
     const form = defineForm("direct", {
       title: "Get in touch",

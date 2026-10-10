@@ -18,9 +18,8 @@ const run = promisify(execFile);
 
 let dir: string;
 
-// A real copy of the built package, not a link: `sharp` is required relative
-// to the package's own location, and a link back into this workspace would
-// find the development install. From the copy, nothing resolves it.
+// A real copy, not a link: `sharp` resolves relative to the package, and a
+// link would find the workspace's development install.
 beforeAll(() => {
   dir = mkdtempSync(join(tmpdir(), "plumix-node-images-"));
   const modules = join(dir, "node_modules");

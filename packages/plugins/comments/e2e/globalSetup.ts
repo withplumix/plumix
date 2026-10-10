@@ -15,12 +15,8 @@ const LOAD_MORE_SLUG = "older-comments";
 const LOAD_MORE_ROOTS = 21;
 
 /**
- * All e2e seeding happens here — once, in the quiet window after the worker
- * boots but before any spec drives it. Seeding from a spec races the live
- * worker for the D1 write lock and re-collides on unique indexes when a
- * retry runs it again. The specs read the seeded ids back from
- * e2e-fixtures.json and never touch the database; a retry gets these rows
- * back from the rig's baseline restore, not from re-seeding.
+ * Seeding from a spec races the live worker for the D1 write lock and
+ * re-collides on unique indexes on retry, so all seeding happens here.
  */
 export default async function globalSetup(): Promise<void> {
   const db = await openPlaygroundDb({
@@ -59,10 +55,8 @@ export default async function globalSetup(): Promise<void> {
     authorId: author.id,
     status: "published",
   });
-  // The playground runs the default `first_time` policy, under which a
-  // brand-new address's first comment is held and never reaches the
-  // thread. One approved comment from the address that spec posts under
-  // is what lets its submission be visible on the page it lands back on.
+  // Under the `first_time` policy a new address's first comment is held, so
+  // the no-JS spec's address needs one approved comment to show its post.
   await commentFactory.transient({ db }).create({
     entryId: nojs.id,
     status: "approved",

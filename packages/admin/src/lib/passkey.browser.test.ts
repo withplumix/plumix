@@ -275,11 +275,8 @@ describe("signOut", () => {
 
 describe("acceptInviteWithPasskey", () => {
   test("verify POST body nests the full credential under `response` (server schema)", async () => {
-    // Critical regression guard: the server's
-    // `inviteRegisterVerifyInputSchema` is `{ token, response: credential }`
-    // — spreading the credential at the top level (earlier bug) made
-    // every accept-invite fail with `invalid_input`. Assert the shape
-    // explicitly so a future refactor can't regress.
+    // Spreading the credential at the top level makes every accept-invite
+    // fail with `invalid_input`.
     fetchMock
       .mockResolvedValueOnce(
         jsonResponse({

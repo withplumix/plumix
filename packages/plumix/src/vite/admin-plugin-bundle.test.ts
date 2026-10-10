@@ -25,12 +25,6 @@ type AssemblerPlugin = Parameters<
 
 type ResolveEntryPlugin = Parameters<typeof resolveAndValidateEntry>[0];
 
-/**
- * Empty registry stand-in for tests that don't exercise auto-register
- * — the assembler still emits namespace imports and runs Tailwind, which
- * is all we're asserting on. Using `createPluginRegistry()` keeps the
- * shape honest (mutable registry the assembler reads as readonly).
- */
 function emptyRegistry() {
   return createPluginRegistry();
 }
@@ -94,11 +88,8 @@ describe("resolveAndValidateEntry", () => {
 
 describe("assemblePluginAdminBundle", () => {
   test("preserves side-effect imports even when the plugin package declares sideEffects: false", async () => {
-    // Regression: a plugin's `dist/admin/index.js` runs `window.plumix.
-    // registerPluginPage(...)` on module-eval. The synthesised entry is
-    // a bare side-effect import. If the plugin's package.json declares
-    // `"sideEffects": false`, esbuild treated the import as removable
-    // and the bundle came out empty.
+    // With `"sideEffects": false`, esbuild treated the bare side-effect import
+    // as removable and the bundle came out empty.
     const pkgDir = resolve(workspace, "node_modules/@fixture/plugin");
     await mkdir(pkgDir, { recursive: true });
     await writeFile(
@@ -166,12 +157,6 @@ describe("assemblePluginAdminBundle", () => {
   // `admin-plugin-bundle.build.test.ts` (run by `test:build`).
 
   test("auto-emits register* calls for ctx-registered admin pages and field types", async () => {
-    // Plugin authors used to write a `window.plumix.registerPluginPage`
-    // call inside their admin chunk in addition to `ctx.registerAdmin
-    // Page({ component: { package, export } })`. The bundler now
-    // namespace-imports each plugin's adminEntry and emits the matching
-    // register call from the registry — verifying both the admin page
-    // and the field-type variant here so the surfaces stay in lockstep.
     const pkgDir = resolve(workspace, "node_modules/@fixture/plugin-auto");
     await mkdir(pkgDir, { recursive: true });
     await writeFile(

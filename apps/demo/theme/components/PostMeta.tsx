@@ -33,9 +33,7 @@ interface PostMetaProps {
 
 /**
  * The `author · date · reading-time` line, shared by the post card and the
- * single-post header. The author links to their archive (`/authors/{slug}`) and
- * the date to its day archive (`/YYYY/MM/DD`); each part is separated by a
- * middot.
+ * single-post header.
  */
 export function PostMeta({ entry, className }: PostMetaProps): ReactNode {
   const date = formatDate(entry.publishedAt);

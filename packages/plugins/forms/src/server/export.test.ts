@@ -171,10 +171,8 @@ describe("the export route", () => {
     expect(await response.text()).toContain("Ada");
   });
 
-  // The columns come from the rows, so nothing can be written until the
-  // last one is read: an export is held whole in memory by construction,
-  // and a Worker isolate has a ceiling. Better to say so than to hand
-  // back a file that looks complete.
+  // Columns come from the rows, so exports are held whole in memory; a Worker
+  // isolate has a ceiling.
   test("refuses an export past the ceiling rather than truncating it", async () => {
     const db = await createFormsTestDb();
     const seed = submissionFactory.transient({ db });

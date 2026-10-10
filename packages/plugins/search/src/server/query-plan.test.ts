@@ -40,9 +40,8 @@ describe("planForQuery", () => {
   });
 
   test("measures through the stem the index stored, not the word typed", async () => {
-    // The index is porter-stemmed, so "running" is filed under "run". Counting
-    // the match set asks the index the question in its own terms; reading a
-    // word's frequency out of the vocabulary would have to guess at them.
+    // The index is porter-stemmed, so "running" is filed under "run"; only
+    // counting the match set sees through that.
     await index(20, "running");
 
     expect(await plan("running", 10)).toBe("recent");
@@ -89,10 +88,8 @@ describe("planForQuery", () => {
   });
 
   test("ranks a word the recency walk would never reach", async () => {
-    // Common by any count, but every one of them is old — so ordering by date
-    // would step over the whole corpus before it had a page. The match set
-    // cannot show that; only walking the head can, which is why the corpus
-    // here has to be deeper than the walk is allowed to go.
+    // Common but all old, so a date walk finds no page; the corpus must be
+    // deeper than the walk is allowed to go.
     await index(20, "bygone");
     await index(510, "modern");
 

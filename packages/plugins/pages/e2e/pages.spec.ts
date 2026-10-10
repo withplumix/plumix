@@ -1,10 +1,3 @@
-// Worker-driven plugin e2e (#255 / #250). Runs against the real pages
-// playground at `../playground` via `plumix dev --port 3050`, seeded
-// by globalSetup with an admin user + storageState carrying the
-// session cookie. No RPC mocking — the spec exercises pages'
-// declarative registration (hierarchical `page` entry type) end-to-
-// end through core admin's CRUD against real D1.
-
 import { CONTENT_LIST_ROWS, expect, test } from "plumix/test/playwright";
 
 test.describe.serial("@plumix/plugin-pages — worker-driven happy path", () => {
@@ -38,11 +31,8 @@ test.describe.serial("@plumix/plugin-pages — worker-driven happy path", () => 
     await updated;
 
     await page.goto("entries/pages");
-    // Assert the created row exists by title, not an absolute count:
-    // CI retries re-run this `describe.serial` block against the same
-    // worker D1 (wiped once at webServer start, not per attempt), so a
-    // retry sees rows the prior attempt created. Existence survives
-    // that; `toHaveCount(1)` cascade-fails with "Received: 2".
+    // By title, not count: CI retries reuse the same D1, so a retry sees rows
+    // the prior attempt created.
     await expect(
       page.locator(CONTENT_LIST_ROWS).filter({ hasText: "About" }).first(),
     ).toBeVisible();

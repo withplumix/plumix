@@ -85,10 +85,8 @@ describe("editorReducer", () => {
     });
 
     test("converts server items into editor items in (parentId, sortOrder) DFS order with stable keys", () => {
-      // Server sends items already ordered by (parentId, sortOrder, id).
-      // The editor stores them in DFS pre-order so parents always come
-      // before children — this matches what `buildSavePayload` will emit
-      // and what `flattenSaveItems` requires server-side.
+      // DFS pre-order is what `buildSavePayload` emits and
+      // `flattenSaveItems` requires server-side.
       const next = editorReducer(initialEditorState, {
         type: "loadFromServer",
         response: {
@@ -139,10 +137,7 @@ describe("editorReducer", () => {
     });
 
     test("treats empty title as null so live-resolve fallback applies", () => {
-      // Server stores `''` (the entries.title default) when a user has
-      // never set a label override. The editor needs to distinguish
-      // "no override" from "explicit empty string" — both round-trip
-      // as null on save.
+      // `''` is the entries.title default for "no override".
       const next = editorReducer(initialEditorState, {
         type: "loadFromServer",
         response: {
@@ -171,10 +166,8 @@ describe("editorReducer", () => {
 
   describe("applySaveResult", () => {
     test("assigns returned ids to new items in payload order and bumps the version", () => {
-      // After save, the editor must rekey new items from `tmp-*` to
-      // their final `id-*` form so subsequent edits send the existing
-      // id (not another insert). The server returns `itemIds[i]` aligned
-      // with the input `items[i]` — same order buildSavePayload emits.
+      // Rekeying `tmp-*` to `id-*` makes later saves update rather than
+      // insert again.
       const loaded = editorReducer(initialEditorState, {
         type: "loadFromServer",
         response: {
@@ -213,10 +206,8 @@ describe("editorReducer", () => {
     });
 
     test("matches ids to items by snapshot key, ignoring slots whose key was removed mid-flight", () => {
-      // Regression: a positional zip between `state.items` and the
-      // returned `itemIds` misaligns ids if the user removed an item
-      // between firing the save and its onSuccess. Carrying the
-      // snapshot keys keeps the mapping stable.
+      // An item removed between save and onSuccess must not misalign a
+      // positional zip of the returned `itemIds`.
       const a = editorReducer(initialEditorState, {
         type: "addItem",
         title: "A",
@@ -527,10 +518,8 @@ describe("editorReducer", () => {
     });
 
     test("storing null for title round-trips as null in the save payload (live-resolve fallback)", () => {
-      // Acceptance: "Label override field stores `null` (not empty string)
-      // when cleared, so live-resolve fallback applies." The reducer
-      // accepts null directly; the call site is responsible for
-      // translating `''` from the input element to `null`.
+      // A cleared override must be null so the live-resolve fallback
+      // applies; the call site translates `''` to null.
       const loaded = editorReducer(initialEditorState, {
         type: "loadFromServer",
         response: {
@@ -668,9 +657,6 @@ describe("editorReducer", () => {
     });
 
     test("appends after the last existing root-level item with sortOrder = prior+1", () => {
-      // The flat-list interim treats "add" as "append at the end of the
-      // root group". Slice 9's drag-drop changes how items move into
-      // child groups; for now everything new lands at the root.
       const loaded = editorReducer(initialEditorState, {
         type: "loadFromServer",
         response: {
@@ -706,10 +692,6 @@ describe("editorReducer", () => {
 
   describe("moveItem", () => {
     test("reorders an item among same-parent siblings using newSortOrder", () => {
-      // Drop the third sibling into position 0 — siblings re-number
-      // 0..n in DFS order. dnd-kit's onDragEnd hands us the projected
-      // (parentKey, sortOrder); the reducer is responsible for
-      // re-flowing the rest of the parent's children.
       const loaded = editorReducer(initialEditorState, {
         type: "loadFromServer",
         response: {
@@ -815,12 +797,8 @@ describe("editorReducer", () => {
     });
 
     test("is a no-op when the new parent is the target itself (no self-cycle)", () => {
-      // Regression: dnd-kit's projection helper can land on a parent
-      // chain that resolves to the active item itself. Without this
-      // guard the reducer happily writes target.parentKey = target.key,
-      // and the next rebuildDfsOrder finds no roots — every entry's
-      // parent chain dead-ends in a cycle, so the walk returns [] and
-      // the entire menu disappears.
+      // dnd-kit's projection can resolve the parent to the item itself; a
+      // self-parent leaves no roots and the whole menu disappears.
       const loaded = editorReducer(initialEditorState, {
         type: "loadFromServer",
         response: {
@@ -951,10 +929,8 @@ describe("editorReducer", () => {
     });
 
     test("preserves dirty=false when the projection lands at the item's current position", () => {
-      // dnd-kit can fire onDragEnd even for a click-then-release at the
-      // same row. The reducer should treat that as a no-op rather than
-      // re-flowing the same shape and flipping dirty — otherwise just
-      // tapping a row makes the editor think it has unsaved changes.
+      // dnd-kit fires onDragEnd for a click-release on the same row;
+      // that must not mark the editor dirty.
       const loaded = editorReducer(initialEditorState, {
         type: "loadFromServer",
         response: {
@@ -995,11 +971,7 @@ describe("editorReducer", () => {
     });
 
     test("is a no-op when the move would push the target's subtree past maxDepth", () => {
-      // maxDepth=2 means depth values 0..2 are allowed. Moving B under A
-      // pushes B.grandchild from depth 2 to depth 3, exceeding the cap.
-      // The reducer should return the input state unchanged so dnd-kit's
-      // drop preview can render disabled feedback without the editor
-      // committing the move.
+      // Moving B under A pushes B.grandchild to depth 3, past maxDepth=2.
       const loaded = editorReducer(initialEditorState, {
         type: "loadFromServer",
         response: {
@@ -1127,10 +1099,8 @@ describe("editorReducer", () => {
     });
 
     test("falls back to the empty string when no lastHref is present", () => {
-      // Edge case: item was added before slice 11 so meta.lastHref is
-      // missing. The conversion still runs — Convert is a destructive
-      // affordance the user invokes intentionally — and seeds an empty
-      // url for them to fix.
+      // Older items lack meta.lastHref; Convert is deliberate, so it still
+      // runs and seeds an empty url.
       const loaded = editorReducer(initialEditorState, {
         type: "loadFromServer",
         response: {

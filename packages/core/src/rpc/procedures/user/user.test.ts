@@ -266,10 +266,8 @@ describe("user.update", () => {
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
-  // `email` is intentionally NOT in `user.update`'s schema — silent
-  // email changes would let a hijacked admin / self session redirect
-  // a user's recovery address. The `email_taken` CONFLICT lives on
-  // `user.requestEmailChange` instead (see request-email-change.ts).
+  // `email` is deliberately absent from `user.update`: a silent change would
+  // let a hijacked session redirect a user's recovery address.
 });
 
 describe("user.disable", () => {

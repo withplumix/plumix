@@ -128,11 +128,8 @@ describe("the card route", () => {
 
     const { headers } = await fetchCard(harness, id);
 
-    // `immutable` is honest here only because the URL carries the card's
-    // digest: an edit publishes a different URL rather than changing what this
-    // one answers. No `Vary` and no `Set-Cookie` go with it — the route reads
-    // neither session nor locale, and the Cache API refuses to store a
-    // response carrying a cookie.
+    // `immutable` is safe because the URL carries the digest. No Set-Cookie:
+    // the Cache API refuses to store a response with one.
     expect(headers.get("cache-control")).toBe(
       "public, max-age=31536000, immutable",
     );
@@ -175,9 +172,8 @@ describe("the card route", () => {
       .where(eq(entries.id, id));
     const after = await cardPath(harness, id);
 
-    // The URL moving is the whole mechanism: a purge reaches Cloudflare, and
-    // nothing reaches the image caches X, Facebook and LinkedIn keep, so the
-    // only way to make them refetch is to give them a link they don't hold.
+    // Social image caches never see a purge, so only a new URL makes X,
+    // Facebook and LinkedIn refetch.
     expect(after).not.toBe(before);
     const served = await harness.fetch(after);
     expect(served.headers.get("etag")).not.toBe(
@@ -197,18 +193,15 @@ describe("the card route", () => {
       .where(eq(entries.id, id));
     const response = await harness.fetch(stale);
 
-    // A scraper holding last week's URL gets pointed at this week's card
-    // rather than a 404 — and a URL carrying a digest nothing rendered never
-    // mints an entry of its own, in storage or at the edge.
+    // A stale digest redirects rather than 404s, and never mints a storage or
+    // edge entry of its own.
     const location = response.assertStatus(302).headers.get("location");
     expect(new URL(location ?? "").pathname).toBe(await cardPath(harness, id));
     expect(response.headers.get("cache-control")).toBe("no-store");
   });
 
-  // A card carries the entry's title, is served from a shared cdn, and sits
-  // at an enumerable id, so every entry with no page a scraper can reach has to
-  // be refused — whether that is publication status, the type's visibility, or
-  // the access layer turning an anonymous visitor away.
+  // A card carries the title and is served from a shared CDN at an enumerable
+  // id, so any entry with no reachable page is refused.
   test.each<[string, SeedEntryOverrides]>([
     ["a draft entry", { status: "draft" }],
     ["an entry type the site does not publish", { type: "secret" }],
@@ -227,9 +220,8 @@ describe("the card route", () => {
     response.assertStatus(404);
   });
 
-  // The other side of the same rule: a policied *type* must not cost every
-  // entry on it its card, and a soft gate serves a public teaser at 200 at the
-  // plain URL — the whole point of which is that it unfurls.
+  // A policied type must not cost every entry its card; a soft gate's public
+  // teaser exists to unfurl.
   test.each<[string, SeedEntryOverrides]>([
     ["a sibling entry that selected nothing", { type: "column", meta: {} }],
     ["an entry behind a soft gate", { type: "teaser" }],
@@ -259,9 +251,8 @@ describe("the card route", () => {
     const html = await (await harness.fetch("/blog/posts/hello-world")).text();
     const path = await cardPath(harness, id, "png", "/blog");
 
-    // A route handler is given a request whose mount has already been stripped,
-    // while the head has to put it back — so the two are only in step if each
-    // reads the base path from the side it is on.
+    // The handler sees the mount stripped while the head adds it back, so each
+    // must read the base path from its own side.
     expect(html).toContain(`content="https://cms.example${path}"`);
     (await harness.fetch(path)).assertStatus(200);
   });
@@ -397,9 +388,7 @@ describe("the card route", () => {
     });
     const id = await seedEntry(harness);
 
-    // A textless card is what this would otherwise serve, and it would serve
-    // it with a 200 — the failure the plugin already refuses for a font it
-    // cannot read, reached one step earlier and named.
+    // Otherwise this would serve a textless card with a 200.
     const response = await fetchCard(harness, id);
 
     expect(response.assertStatus(302).headers.get("location")).toBe(
@@ -438,10 +427,8 @@ describe("the card route", () => {
 
     const response = await fetchCard(harness, id);
 
-    // The head shipped this URL before anything rendered, so an error status
-    // here is a broken unfurl on a page that promised an image. The scraper
-    // gets the site's own default instead — and the failure still surfaces,
-    // because nothing else about the response says a card is broken.
+    // The head already promised this URL, so an error status breaks the unfurl;
+    // redirect to the site default instead.
     expect(response.assertStatus(302).headers.get("location")).toBe(
       SITE_DEFAULT,
     );
@@ -526,13 +513,9 @@ describe("a card at the edge", () => {
     await fetchCard(harness, id);
     await harness.drainDeferred();
 
-    // The card key emits the URL hash and this tag from one call, so a card
-    // keyed on an entry lands under the entry tag. Asserted against core's own
-    // purge vocabulary rather than a spelled-out string: what makes this one
-    // caching story is that the set an `entry:published` sweeps covers the
-    // entry tag the card stored under, and either side moving has to break
-    // this. The card also prints the site's name, so it carries the `site`
-    // settings group's tag core declared when the card read it.
+    // Asserted against core's purge vocabulary so `entry:published` and the
+    // card's stored tags can't drift apart; the `site` tag is there because the
+    // card prints the site name.
     const stored = [...(put.mock.calls[0]?.[2] ?? [])];
     expect(stored).toEqual(["s:site", entryTag(id)]);
     expect(entryPurgeTags("post", id)).toEqual(
@@ -553,9 +536,8 @@ describe("a card at the edge", () => {
 
     expect(await second.text()).toBe(first);
     expect(put).toHaveBeenCalledOnce();
-    // Looked up twice and stored once: the second request was answered out of
-    // the edge entry the first one filled. (`cardPath` resolves the pointer,
-    // which is a lookup of its own — hence the filter.)
+    // Two lookups, one store: the second was answered from the edge. `cardPath`
+    // resolves the pointer with a lookup of its own, hence the filter.
     const lookups = match.mock.calls.filter(
       ([request]) => new URL(request.url).pathname === path,
     );
@@ -601,10 +583,8 @@ describe("a card at the edge", () => {
       as: reader,
     });
 
-    // Session and locale cookies are scoped to `/_plumix/`, so a signed-in
-    // visitor's browser does send them here. A card is the same image for
-    // everyone, so they are not a key axis — the cookie comes off the lookup
-    // and the shared entry answers.
+    // Session and locale cookies are scoped to `/_plumix/` so browsers send
+    // them here; a card is the same for everyone, so they aren't a key axis.
     expect(await response.text()).toBe("EDGE COPY");
     expect(match.mock.calls[0]?.[0].headers.has("cookie")).toBe(false);
   });
@@ -613,10 +593,8 @@ describe("a card at the edge", () => {
 describe("a card and the visitor's locale", () => {
   const I18N = { defaultLocale: "en", locales: ["en", "fr"] };
 
-  // A card keyed on the locale is the documented pattern, and the locale is
-  // exactly what the two askers disagree about: `resolveLocale` reads
-  // `Accept-Language` and the `Path=/_plumix/` cookie on the card's own route
-  // and on neither the page the head renders on.
+  // `resolveLocale` reads `Accept-Language` and the `/_plumix/` cookie on the
+  // card route, not on the page whose head names it, so the two disagree.
   const localeCard = card.fallback().define({
     key: ({ ctx }) => cardKey.of("card", ctx.locale.code),
     render: ({ ctx }) => ({ type: "text", text: `locale:${ctx.locale.code}` }),
@@ -660,9 +638,8 @@ describe("a card and the visitor's locale", () => {
       await fetchCard(harness, id, { headers: { "accept-language": "fr" } })
     ).text();
 
-    // Whoever asks first decides what is behind a content-addressed URL for a
-    // year, and no purge replaces stored bytes under an unchanged key. So the
-    // card reads the site's locale, not the visitor's.
+    // Whoever asks first fixes a content-addressed URL's bytes for a year, and
+    // no purge replaces them, so the card reads the site's locale.
     expect(body).toContain("locale:en");
   });
 });
@@ -672,7 +649,7 @@ describe("a card and the page it shares", () => {
     new Date(),
   );
 
-  /** The card the page's own head names, fetched at the URL it names. */
+  // The card the page's own head names, fetched at the URL it names.
   async function cardFromHead(
     harness: Awaited<ReturnType<typeof createHarness>>,
     slug: string,

@@ -5,9 +5,8 @@ import { definePlugin } from "../plugin/define.js";
 import { installPlugins } from "../runtime/install-plugins.js";
 
 /**
- * Registers `news` pooling its permissions with `post`: a role holding
- * `entry:post:*` reaches news rows and `entry:news:*` is never minted. The
- * plugin itself, for a harness that assembles an app from descriptors.
+ * Registers `news` pooling its permissions with `post`, so `entry:post:*`
+ * reaches news rows and `entry:news:*` is never minted.
  */
 export const pooledEntryTypesPlugin = definePlugin("site", (ctx) => {
   ctx.registerEntryType("post", { label: "Posts" });
@@ -15,9 +14,8 @@ export const pooledEntryTypesPlugin = definePlugin("site", (ctx) => {
 });
 
 /**
- * The registry `pooledEntryTypesPlugin` builds, through registration itself so
- * the namespace is resolved the way an app's is. `plugins` install after it,
- * for a suite whose subject registers something that names the types.
+ * The registry `pooledEntryTypesPlugin` builds, through real registration;
+ * `plugins` install after it.
  */
 export async function pooledEntryTypeRegistry(
   ...plugins: readonly AnyPluginDescriptor[]

@@ -8,11 +8,9 @@ const ORIGIN = "https://conformance.test";
 const UNHELD_PATH = "/_plumix-conformance/no-such-asset";
 
 /**
- * What a layer does with a path it does not hold. Both are real Cloudflare
- * deploys: `"404"` is Workers Assets under `not_found_handling: "none"`, which
- * the scaffold ships so an unmatched path reaches the Worker; `"spa"` is the
- * `single-page-application` handling several plugin playgrounds use, where the
- * layer answers with the shell instead.
+ * What a layer does with an unheld path: `"404"` is Workers Assets with
+ * `not_found_handling: "none"` (the scaffold's), `"spa"` the
+ * single-page-application handling some playgrounds use.
  */
 export type AssetsNotFound = "404" | "spa";
 
@@ -20,15 +18,13 @@ export interface AssetsContractOptions {
   /** Bind the runtime's asset layer for one case. */
   readonly connect: () => AssetsBinding | Promise<AssetsBinding>;
   /**
-   * A path the layer holds as a file — a hashed chunk, a stylesheet, a font.
-   * Not the shell: one case asserts this comes back as itself rather than as
-   * HTML, which is how the dispatcher tells an asset from a deep link.
+   * A path the layer holds as a file, never the shell: one case asserts it
+   * comes back as itself rather than HTML.
    */
   readonly assetPath: string;
   /**
-   * The request that resolves to the admin shell — the mount prefix with its
-   * trailing slash, which is what the dispatcher fetches for a deep link.
-   * Not optional: a layer that cannot answer it cannot serve the admin.
+   * The mount prefix with its trailing slash, which the dispatcher fetches for
+   * a deep link. Required: a layer that can't answer it can't serve the admin.
    */
   readonly shellPath: string;
   /** How the layer answers a path it does not hold. */
@@ -61,11 +57,9 @@ export const assetsContractCases: readonly Case[] = [
       const assets = await options.connect();
       const response = await assets.fetch(assetRequest(options.assetPath));
       expect(response.status).toBe(200);
-      // Under a subdirectory mount the dispatcher hands this response straight
-      // to the browser, so a layer that labels a chunk `text/html` breaks the
-      // module loader. Asserting the type also keeps the case meaningful for a
-      // layer whose not-found answer is the shell, where a bare 200 says
-      // nothing.
+      // Under a subdirectory mount this response reaches the browser, so a
+      // chunk labelled `text/html` breaks the module loader; a bare 200 proves
+      // nothing for an SPA layer.
       expect(isHtml(response)).toBe(false);
     },
   },

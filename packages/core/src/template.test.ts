@@ -18,10 +18,8 @@ describe("defineTemplate", () => {
   });
 
   test("an object spread of a template does not carry the brand onward", () => {
-    // The brand is spelled in the literal so the object satisfies `Template`
-    // on its own terms, then redefined non-enumerable. That second step is
-    // what stops a spread copy from passing `isTemplate` — an enumerable
-    // symbol key would ride along and brand every derivative.
+    // Redefined non-enumerable, or the symbol key would ride a spread and
+    // brand every derivative.
     const tmpl = defineTemplate({ render: () => null });
     expect(isTemplate({ ...tmpl })).toBe(false);
   });
@@ -37,10 +35,8 @@ describe("defineTemplate", () => {
 
 describe("normalizeTemplate", () => {
   test("wraps a plain function into a branded Template (factory shape)", async () => {
-    // The wrapper invokes the legacy fn via `createElement` so React's
-    // render pass handles hooks. Asserting that the returned ReactNode
-    // is a React element whose `type` points at the original fn proves
-    // the wiring without spinning up `renderToString`.
+    // Checking the element's `type` proves the wiring without spinning up
+    // `renderToString`.
     const fn = () => null;
     const normalized = normalizeTemplate(fn, "index");
     expect(isTemplate(normalized)).toBe(true);

@@ -79,9 +79,8 @@ describe("purge accumulator", () => {
     expect(purgeTags).toHaveBeenCalledWith(["t:post", "e:1", "e:2"]);
   });
 
-  // Core derives contexts by spreading — basePath stripping, `withUser`, the
-  // formPost session swap — and the flush runs against the outermost one. A
-  // handler handed a derived context would otherwise fill a set nothing reads.
+  // Core derives contexts by spreading and the flush reads the outermost one,
+  // so a derived context must share the same set.
   it("flushes tags enqueued against a derived context", () => {
     const { ctx, purgeTags } = fakeCtx();
     const derived = withUser(ctx, {
@@ -262,10 +261,8 @@ describe("registerCorePurgeInvalidator", () => {
     return { loads, read };
   }
 
-  // The memo is the roster's second consumer (#2517): whatever an action
-  // purges, it also drops from the request memo — read here off the purge
-  // itself, so the two cannot be checked against separate lists — and on a
-  // site with no cdn at all.
+  // The memo drop is read off the purge itself, so the two cannot drift into
+  // separate lists, and it applies even with no cdn.
   it.each(PURGING_EVENTS)(
     "%s drops the memo entries tagged with what it purges",
     async (event, payload) => {

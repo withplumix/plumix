@@ -7,10 +7,8 @@ import { beforeAll, describe, expect, test } from "vitest";
 import { resolveOgImage } from "./og-image.js";
 
 /**
- * What core projects onto a resolved entry: the role images it resolved out of
- * the page's own hydration batch. The chain reads the role off this, so a
- * suite about the chain's *order* seeds the roles directly and leaves which
- * field carries which role to core's own index.
+ * Seeds role images directly; which field carries which role is core's
+ * concern, not the chain's order.
  */
 const entryData = (images: RoleImages = {}): TemplateData =>
   ({
@@ -32,9 +30,8 @@ describe("resolveOgImage", () => {
     db = await createTestDb();
   });
 
-  // A real context, because the chain hands it on to `seo:og_image`
-  // subscribers; the hooks are the only part of it the chain itself reads —
-  // the roles arrive on the entry, so no registry is seeded here.
+  // A real context because `seo:og_image` subscribers receive it; roles
+  // arrive on the entry, so no registry is seeded.
   const ogContext = (hooks: HookRegistry): AppContext =>
     createTestContext({ db, hooks });
 
@@ -137,10 +134,8 @@ describe("resolveOgImage", () => {
       { override: null, siteDefault },
     );
 
-    // The value handed in is null, so a subscriber that passes it through — or
-    // returns null on a page it does not handle — costs the author nothing.
-    // Anything else would make a bare `return null` guard delete featured
-    // images site-wide.
+    // The value handed in is null, so a bare `return null` guard must not
+    // delete featured images site-wide.
     expect(image).toEqual(hero);
   });
 

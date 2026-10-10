@@ -42,9 +42,8 @@ function renderControl(
 describe("StyleControl", () => {
   test("token mode emits a token ref, and clears on the empty option", async () => {
     const user = userEvent.setup({ delay: null });
-    // The spy doesn't feed the chosen value back as a prop, so each pick is
-    // made from the same rendered `lg` value — choose targets that differ
-    // from it (Radix skips onValueChange when the active item is re-picked).
+    // The spy doesn't feed the value back, and Radix skips onValueChange when
+    // the active `lg` is re-picked.
     const { getByTestId, onChange } = renderControl({
       value: "var(--plumix-spacing-lg, 24px)",
     });

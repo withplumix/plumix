@@ -1,8 +1,5 @@
-// /entries/$slug list coverage: filters, search, sort, pagination,
-// trash, capability gates, and the loading/empty/error/not-found
-// states. The list mock always returns fixtures — tests assert the
-// captured `entry.list` input (the server contract) plus the rendered
-// rows, never persistence.
+// The list mock always returns fixtures, so tests assert the captured
+// `entry.list` input and the rendered rows, never persistence.
 
 import { expect, test } from "@playwright/test";
 

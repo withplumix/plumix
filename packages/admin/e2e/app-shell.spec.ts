@@ -143,13 +143,8 @@ test.describe("admin navigation transitions", () => {
   });
 });
 
-// The sidebar collapse was an admin-chrome bug, not a plugin one: a plugin
-// admin chunk's CSS sidecar re-emitted base utilities (e.g. `.hidden`) and,
-// loading after the admin stylesheet, overrode the sidebar's responsive
-// `md:block`. globals.css fixes it by ordering the `plumix-plugins` layer
-// below the admin's own `utilities`. This guards that end-to-end so the
-// regression can't recur regardless of which plugin is installed. The
-// layer-order *contract* is unit-tested in src/styles/globals.test.ts.
+// A plugin chunk's CSS sidecar re-emitting `.hidden` once overrode the
+// sidebar's `md:block`; globals.css orders `plumix-plugins` below `utilities`.
 test.describe("admin shell", () => {
   test("a plugin CSS sidecar cannot collapse the sidebar", async ({ page }) => {
     await mockManifest(page, MANIFEST_WITH_POST);
@@ -163,10 +158,7 @@ test.describe("admin shell", () => {
     const sidebar = page.locator('[data-slot="sidebar"]').first();
     await expect(sidebar).toBeVisible();
 
-    // Inject exactly what a plugin sidecar emits: a base utility re-declared
-    // in the `plumix-plugins` layer, added after the admin CSS. It must NOT
-    // beat the sidebar's `md:block` — i.e. `plumix-plugins` must stay below
-    // the admin's `utilities` layer.
+    // What a plugin sidecar emits; it must not beat the sidebar's `md:block`.
     await page.addStyleTag({
       content: "@layer plumix-plugins{.hidden{display:none}}",
     });
@@ -178,19 +170,9 @@ test.describe("admin shell", () => {
     expect(display).toBe("block");
   });
 
-  // RTL is a shipped launch locale (`ar`), so prove the direction context
-  // reaches radix primitives in a real browser — the unit guard in
-  // App.direction.test.tsx can't, since radix's behaviour depends on its
-  // own resolved package instance at runtime. SSR normally sets
-  // `<html dir>`; the SPA preview has no SSR, so seed it the same way the
-  // locale-switch reload path does, before the bundle boots.
-  //
-  // The assertion reads the `dir` attribute radix writes onto the menu's
-  // `role="menu"` element *from its DirectionProvider context* — not the
-  // CSS `direction`, which the portaled content would inherit from
-  // `<html dir>` regardless of whether the provider chain works. If the
-  // provider ever re-splits from the primitives (the original bug), this
-  // attribute reads "ltr" even under `<html dir="rtl">`.
+  // Radix behaviour depends on its resolved package instance, so only a real
+  // browser proves it. Reads radix's `dir` attribute, not CSS `direction`,
+  // which the portal inherits from `<html dir>` regardless.
   test("radix primitives inherit RTL from the direction provider under ar", async ({
     page,
   }) => {

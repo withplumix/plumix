@@ -4,13 +4,8 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "plumix/test/playwright";
 
 /**
- * Seeded by globalSetup (see e2e/globalSetup.ts), once per suite run.
- *
- * The rig rewinds the database once per attempt, not between tests, so
- * these tests are not isolated from each other: each must moderate its own
- * fixture and leave the others alone. `pendingId` and `bulkIds` are on
- * separate entries for that reason — a third test reaching for one of
- * these ids would pass alone and fail in suite order.
+ * The database rewinds per attempt, not per test, so each test moderates
+ * only its own fixture; sharing an id passes alone and fails in suite order.
  */
 interface Fixtures {
   readonly pendingId: number;
@@ -21,9 +16,6 @@ const fixtures = JSON.parse(
   readFileSync(resolve(process.cwd(), "e2e-fixtures.json"), "utf8"),
 ) as Fixtures;
 
-// The public render of an approved comment is covered in-process by the
-// dispatcher-harness render tests (plumix dev serves the admin SPA for
-// public routes). This suite exercises the admin moderation queue.
 test("moderator approves a pending comment from the queue", async ({
   page,
 }) => {
@@ -68,11 +60,6 @@ test("moderator bulk-approves selected comments", async ({ page }) => {
   ).toBeHidden();
 });
 
-// Regression: the comments admin page once shipped as bare unstyled HTML
-// (the component had zero `className`). Assert it ships styled controls.
-// (The admin sidebar's CSS-cascade isolation — the other half of the
-// original incident — is guarded admin-side in packages/admin/e2e/
-// app-shell.spec.ts + packages/admin/src/styles/globals.test.ts.)
 test("admin page ships styled controls", async ({ page }) => {
   await page.goto("pages/comments");
   await expect(page.getByTestId("comments-shell")).toBeVisible();

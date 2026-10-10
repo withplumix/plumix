@@ -8,10 +8,8 @@ import type {
 import { stubRpcEndpoint } from "@plumix/core/test/browser";
 
 /**
- * Let anything already dispatched reach the stub. A query is several awaits
- * away from its fetch, so asserting `calls` is empty without this passes
- * whether or not the request was made — which is exactly the assertion that
- * has to bite when a fetch gate is removed.
+ * A query is several awaits from its fetch, so asserting `calls` is empty
+ * without this passes whether or not the request was made.
  */
 export async function settleRpc(): Promise<void> {
   await act(async () => {
@@ -22,14 +20,8 @@ export async function settleRpc(): Promise<void> {
 export type RpcStub = CoreRpcStub<AppRouter>;
 
 /**
- * Serve the admin's oRPC client from the test instead of the network, by
- * substituting `fetch` — the platform boundary the real client already calls
- * through. The client, its links and its query-key generation all run for
- * real, so a change to how a hook assembles its input shows up in `calls`.
- *
- * Routes are keyed by the core router's procedure paths and typed against it:
- * `{ "lookup/list": () => ({ items: [] }) }`. An unrouted procedure answers
- * 404, so a test can't pass by accident on a call it never declared.
+ * Substitutes `fetch`, so the real client, links and query keys all run. An
+ * unrouted procedure answers 404, so a test can't pass on an undeclared call.
  */
 export function stubRpc(routes: RpcStubRoutes<AppRouter>): RpcStub {
   return stubRpcEndpoint<AppRouter>({

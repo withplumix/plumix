@@ -10,15 +10,6 @@ import {
   rpcOkBody,
 } from "./support/rpc-mock.js";
 
-// All /users admin coverage lives here:
-//   - /users list (role filter, search, access gates)
-//   - /users/create invite form (happy path, email-taken, cap gate)
-//   - /users/$id/edit edit (admin-editing-other, self-via-profile, last-admin
-//     CONFLICT, delete-with-reassign)
-//   - /users/$id/edit cards: email change (self + admin oversight) and
-//     API tokens (self mint/revoke + admin oversight)
-// Ordering follows the user journey: list → invite → edit → cards.
-
 function user(overrides: Partial<User> & { id: number; email: string }): User {
   return {
     slug: `user-${String(overrides.id)}`,

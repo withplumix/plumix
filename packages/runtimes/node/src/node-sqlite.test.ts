@@ -184,9 +184,8 @@ describe("core requests over nodeSqlite", () => {
     expect(orphans).toEqual([[], []]);
   });
 
-  // The update trigger's WHEN is a chain of `old.col IS NOT new.col` over
-  // eight columns — the comparison a driver binding values its own way would
-  // get wrong, and the only core write that runs a trigger inside `run`.
+  // The update trigger's WHEN chains `IS NOT` over eight columns, the
+  // comparison a driver binding values its own way would get wrong.
   test("saving an entry writes a change-feed row per save", async () => {
     const h = await harness();
     const admin = await h.seedUser("admin");
@@ -299,9 +298,8 @@ describe("the debug bar over nodeSqlite", () => {
     const testid = 'data-testid="plumix-debug-panel-database"';
     const start = html.indexOf(testid);
     expect(start).toBeGreaterThan(-1);
-    // The panel highlights SQL keyword by keyword, so the statement is split
-    // across spans; what survives as text is the quoted table name and the
-    // bound param — `db.sql` and `db.params` off the shim's span.
+    // The panel splits SQL into keyword spans; only the quoted table name and
+    // bound param survive as text.
     const panel = html
       .slice(start, html.indexOf("plumix-debug-panel-", start + testid.length))
       .replaceAll("&quot;", '"');
@@ -310,9 +308,8 @@ describe("the debug bar over nodeSqlite", () => {
   });
 });
 
-// Statement-level parity only: a relational read is one batched round-trip on
-// libsql (a single `db: <kind> (n)` span carrying `db.batch`) and N statements
-// on the shim, so the two slots agree per query, not per round-trip.
+// Per query, not per round-trip: libsql batches a relational read into one
+// round-trip where the shim runs N statements.
 describe("span parity with the libsql adapter", () => {
   async function spansFor(db: Db) {
     const t = await createTracedContext({ db });

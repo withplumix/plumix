@@ -181,10 +181,8 @@ describe("sanitizeMetaInput", () => {
   });
 
   test("key registered for a different entry type is NOT_REGISTERED when queried for the other scope", async () => {
-    // Scope enforcement is now a property of the field-finder (the
-    // caller passes a scope-specific finder), so a key visible for
-    // `product` simply isn't visible for `post` — identical to "never
-    // registered" from the caller's perspective.
+    // Scope comes from the caller's field-finder, so a key registered for
+    // `product` is, for `post`, the same as never registered.
     const registry = registryWithMeta({
       product_sku: { type: "string", entryTypes: ["product"] },
     });
@@ -381,13 +379,8 @@ describe("applyMetaPatch + loadEntryMeta", () => {
     expect(await loadEntryMeta(h.context, post)).toEqual({ title: "new" });
   });
 
-  // A boolean field reads as stored, so the bag a template gets agrees with
-  // the one a `WHERE` and `storedMeta` read. The string is handed back as
-  // itself rather than resolved either way: `Boolean("false") === true` would
-  // read a row written via `type: "json"` — before a plugin tightened the
-  // field to `boolean` — as the opposite of what it says. A reader testing
-  // `=== true`, which is what core and the first-party plugins do, sees no
-  // flag here; one testing truthiness sees a non-empty string.
+  // Resolving the string either way is wrong: `Boolean("false") === true` would
+  // invert a legacy `type: "json"` row. Readers testing `=== true` see no flag.
   test("a legacy string boolean reads back as the stored string", async () => {
     const plugins = registryWithMeta({ featured: { type: "boolean" } });
     const h = await createRpcHarness({ authAs: "admin", plugins });
@@ -408,15 +401,13 @@ describe("applyMetaPatch + loadEntryMeta", () => {
   });
 });
 
-// The row a direct write or a post-hoc type change leaves behind. Reads are
-// literal since #2426/#2441, so the declared type is only true while the row
-// holds what it declared — opening the entry is what settles it (#2440).
+// The row a direct write or a post-hoc type change leaves behind; reads are
+// literal, so opening the entry settles it.
 describe("entry.get settles an unsettled row", () => {
   const unsettled = { title: 42, count: "7", flag: 1 };
   const settled = { title: "42", count: 7, flag: true };
-  // A real last-edit time, well before the test runs. `updatedAt` is stored
-  // to the second, so a fixture created and settled inside one second cannot
-  // tell a bumped timestamp from an untouched one.
+  // `updatedAt` is stored to the second, so a fixture made and settled in one
+  // second couldn't tell a bump from no change.
   const lastEdited = new Date("2026-01-01T00:00:00.000Z");
   const spec = {
     title: { type: "string" },
@@ -455,9 +446,8 @@ describe("entry.get settles an unsettled row", () => {
     expect((await storedRow(h, row.id))?.meta).toMatchObject(settled);
   });
 
-  // Settling is a normalization, not an edit. Moving `updatedAt` would float
-  // an old entry to the top of "recently updated" for having been opened, and
-  // hand the editor a lock token the row no longer carries.
+  // Moving `updatedAt` would float an opened entry to the top of "recently
+  // updated" and hand the editor a stale lock token.
   test("opening the entry leaves its last-edit time alone", async () => {
     const { h, row } = await seedUnsettled();
 
@@ -491,9 +481,9 @@ describe("entry.get settles an unsettled row", () => {
   });
 });
 
-// The settle computes its write from a snapshot, so the row can move under it.
-// Seeding the column the snapshot no longer describes is the race, reached
-// without a timing seam.
+// The settle writes from a snapshot, so the row can move under it; seeding the
+// column the snapshot no longer describes reaches the race without a timing
+// seam.
 describe("writeSettledMeta", () => {
   const snapshot = { count: "7" };
   const patch = { upserts: new Map([["count", 7]]), deletes: [] };

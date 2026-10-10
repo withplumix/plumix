@@ -12,10 +12,8 @@ import { createDispatcherHarness } from "./dispatcher.js";
 import { createTestDb } from "./harness.js";
 import { buildRequest } from "./request.js";
 
-// The app defers the RPC handler's module graph to its first RPC request
-// (`runtime/app.ts`), roughly 800ms cold. Loaded here, so that cost sits in a
-// hook rather than inside whichever test sends the first RPC, where a busy
-// runner pushed it past the 5s timeout.
+// The RPC handler's graph loads on the first RPC, ~800ms cold; loading it here
+// keeps that out of a test, where a busy runner hit the 5s timeout.
 beforeAll(async () => {
   await import("../rpc/build-handler.js");
 });

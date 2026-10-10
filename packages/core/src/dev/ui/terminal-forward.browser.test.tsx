@@ -42,20 +42,16 @@ function forwarded(): ForwardedLog[] {
 }
 
 /**
- * Vitest's browser runner listens for window `error` events too, and once the
- * page has a listener of its own it re-logs each one through `console.error`,
- * which the forwarder then forwards as a console line. A test about what a
- * window error forwards counts the exceptions alone.
+ * Vitest's browser runner re-logs window errors through `console.error`,
+ * which the forwarder forwards too, so count exceptions alone.
  */
 function exceptions(): ForwardedLog[] {
   return forwarded().filter((log) => log.kind === "exception");
 }
 
 /**
- * Vitest's browser runner listens for window `error` and `unhandledrejection`
- * events, and once the page listens too it re-logs each one through
- * `console.error`. That line is the runner's, not the code under test's, so a
- * test dispatching one keeps it out of the output for the dispatch alone.
+ * Vitest's browser runner re-logs window errors through `console.error`; that
+ * line is the runner's, so it is silenced for the dispatch alone.
  */
 function dispatchUncaught(event: Event): void {
   const relog = vi.spyOn(console, "error").mockImplementation(() => undefined);

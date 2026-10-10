@@ -234,9 +234,8 @@ describe("RichTextField toolbar reflects the allowlist", () => {
     expect(queryByTestId("rt-clear")).not.toBeNull();
   });
 
-  // The editor keeps an empty paragraph after a trailing heading, list or
-  // quote so the caret can leave it; that paragraph is the editor's, not the
-  // author's, and must not reach the stored body.
+  // The editor keeps an empty paragraph after a trailing block so the caret
+  // can leave it; it is not the author's.
   test("turning the text into a heading stores no trailing empty paragraph", async () => {
     const onChange = vi.fn();
     const { getByTestId } = renderRT(

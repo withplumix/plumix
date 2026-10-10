@@ -60,9 +60,8 @@ describe("POST /_plumix/comments/submit", () => {
   });
 
   test("refuses a comment on an entry whose type gates anonymous readers", async () => {
-    // Reading the thread is one half; this is the other. The route is
-    // public, so without the entry's own gate a stranger can write into a
-    // members-only discussion as well as read it.
+    // The route is public, so without the entry's own gate a stranger can
+    // write into a members-only discussion.
     const harness = await harnessWith(
       { entryTypes: ["post"], mode: "none" },
       { blog: gatedBlog },

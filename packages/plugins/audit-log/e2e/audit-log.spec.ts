@@ -1,36 +1,14 @@
-// Worker-driven plugin e2e (#253 / #250). Runs against the real
-// audit-log playground at `../playground` via `plumix dev`, seeded by
-// globalSetup with an admin user + storageState carrying the session
-// cookie. No RPC mocking — the spec exercises the audit-log plugin
-// end-to-end through the actual oRPC + D1 round-trip.
-
 import { resolve } from "node:path";
 import type { Page } from "@playwright/test";
 import { expect, openPlaygroundDb, test } from "plumix/test/playwright";
 
-// Import the schema via the relative source path, not the
-// `@plumix/plugin-audit-log/schema` package-export. The export points
-// at `./dist/db/schema` which doesn't exist when CI runs lint (turbo
-// `^build` builds upstream deps but never builds the package being
-// linted), so the import would resolve to nothing and trip
-// `no-unsafe-assignment`. The source path always exists.
+// The relative source path, not the package export: lint runs before this
+// package is built, so `./dist/db/schema` would not exist yet.
 import { auditLog } from "../src/db/schema.js";
 
 /**
- * Seed audit_log rows directly via D1. Audit-log hooks only fire when
- * the worker handles an action through the request pipeline; for e2e
- * rendering coverage we go around them so the table has something to
- * render + filter against without depending on additional admin UI
- * flows that aren't this plugin's responsibility. The hook→record
- * path is exercised by `hooks.test.ts` against an in-memory db.
- *
- * Insert through drizzle's typed builder against the audit-log
- * plugin's own schema so column renames / new NOT NULL fields surface
- * as a TypeScript error here, not a runtime SqliteError mid-test.
- *
- * Safe to run again on a retry because the rig restores the database to
- * its post-globalSetup baseline first, so this always inserts into an
- * empty table (`plumixDbBaseline` in plumix/test/playwright).
+ * Seeded directly because audit hooks fire only through the request pipeline;
+ * drizzle's typed builder surfaces schema drift as a type error.
  */
 async function seedAuditRows(): Promise<void> {
   const db = await openPlaygroundDb({
@@ -145,11 +123,6 @@ test.describe
   });
 });
 
-// Regression: the audit-log admin page once shipped as bare unstyled HTML
-// (the component had zero `className`). Assert it ships styled controls.
-// (The admin sidebar's CSS-cascade isolation — the other half of the
-// original incident — is guarded admin-side in packages/admin/e2e/
-// app-shell.spec.ts + packages/admin/src/styles/globals.test.ts.)
 test("admin page ships styled controls", async ({ page }) => {
   await page.goto("pages/audit-log");
   await expect(page.getByTestId("audit-log-shell")).toBeVisible();

@@ -43,9 +43,7 @@ describe("page-tags accumulator", () => {
   });
 
   it("reaches the same set from a derived context", () => {
-    // `withUser`, the base-path strip and the formPost session swap all
-    // spread the context into a fresh object that shares the memo — tags
-    // declared before or after the derivation read back through either.
+    // Derived contexts spread into a fresh object that shares the memo.
     const ctx = fakeCtx();
     const derived = { ...ctx, request: new Request("https://cms.example/") };
     declarePageTags(derived, ["e:1"]);

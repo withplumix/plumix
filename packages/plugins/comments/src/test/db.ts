@@ -19,9 +19,8 @@ export function ctxFor(db: CommentsTestDb): AppContext {
 }
 
 /**
- * Seed a published `post` (with its author) — the comment target every
- * read-path test needs. Slug defaults to the factory's unique value so
- * repeated calls don't collide on the type+slug unique index.
+ * Seed a published `post` with its author. The slug defaults to the
+ * factory's unique value so repeated calls don't collide on type+slug.
  */
 export async function seedPublishedPost(
   db: CommentsTestDb,

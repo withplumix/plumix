@@ -22,10 +22,8 @@ const GET = (
 const noTags = () => [];
 
 /**
- * The marker a conforming `decorate` leaves on the visitor's copy, so a test
- * can tell it from the render it came out of. It honours narrow-never-widen
- * like a real provider: a fake that decorated unconditionally would share the
- * code's assumption and could never fail.
+ * Set only by a conforming, narrow-never-widen `decorate`: a fake that
+ * decorated unconditionally would share the code's assumption and never fail.
  */
 const DECORATED = "x-decorated";
 
@@ -231,10 +229,8 @@ describe("readThrough", () => {
     );
     const telemetry = createTelemetryCollector();
 
-    // The bypass is named for the capability, not for the store: a vendor that
-    // varies on a named cookie satisfies it by a different route. Core does not
-    // call `segmentVary` — the dispatcher stamps every non-anonymous render
-    // `private, no-store`, so a conforming `decorate` refuses it anyway.
+    // The dispatcher stamps every non-anonymous render `private, no-store`,
+    // so a conforming `decorate` refuses it even without `segmentVary`.
     await readThrough({
       request: GET("https://site.test/members"),
       segment: "authenticated",
@@ -383,9 +379,8 @@ describe("readThrough", () => {
       personal: () => false,
     });
 
-    // The store strips the cookie from a copy nobody else holds, so it keeps
-    // storing. This copy is the visitor's own and cannot be stripped, so it
-    // leaves without inviting a shared cache to hold it.
+    // The stored copy has its cookie stripped; the visitor's own copy cannot
+    // be, so it must not invite a shared cache to hold it.
     expect(put).toHaveBeenCalledOnce();
     expect(decorate).not.toHaveBeenCalled();
     expect(result).toBe(fresh);

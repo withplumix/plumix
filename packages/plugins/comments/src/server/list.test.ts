@@ -73,9 +73,8 @@ describe("GET /_plumix/comments/list", () => {
   });
 
   test("404s for an entry whose type gates anonymous readers", async () => {
-    // This route is `auth: "public"` — the dispatcher answers it ahead of the
-    // access gate, so the entry page's own policy has to be asked here or a
-    // members-only discussion is readable by anyone who knows the entry id.
+    // A public route skips the access gate, so without asking the entry's
+    // policy a members-only discussion is readable by anyone with its id.
     const harness = await harnessWith(
       { entryTypes: ["post"] },
       { blog: gatedBlog },

@@ -17,9 +17,8 @@ import { fetchCommentPage } from "./wire.js";
 const endpoint = stubFetch();
 
 /**
- * A theme's own reply box: its own markup, its own controls, none of the
- * plugin's. Everything it knows about the submission comes back from the
- * hook, which is the whole claim `usePlumixCommentForm` makes.
+ * None of the plugin's markup: everything it knows about the submission
+ * comes from the hook, which is the claim `usePlumixCommentForm` makes.
  */
 function ReplyBox(): ReactNode {
   const form = usePlumixCommentForm({ entryId: 7 });
@@ -163,11 +162,7 @@ describe("a theme rendering its own comment controls", () => {
   });
 });
 
-/**
- * A theme's own "load more": its markup, its button, and every comment
- * the hook hands back rendered by the theme. What the hook claims is in
- * what reaches the render — the request, the dates, the error text.
- */
+/** A theme's own "load more", rendering everything the hook hands back. */
 function OlderComments({ cursor }: { readonly cursor: string | null }) {
   const thread = usePlumixCommentThread({ entryId: 7, cursor });
   return (

@@ -10,10 +10,8 @@ import { SEED_BLOCKS } from "./seed.js";
 import "./playground.css";
 
 /**
- * The page the host iframe loads. Same-origin, so the postMessage bridge
- * (handshake + host:tree / canvas:* reports) works for real — no worker, no
- * public route. Mirrors what the SSR-injected editor runtime does in
- * production, minus the server.
+ * Same-origin, so the postMessage bridge works for real without a worker or
+ * public route.
  */
 const registry = createBlockRegistry([...coreBlocks, feedSpec]);
 

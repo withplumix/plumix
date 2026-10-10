@@ -19,10 +19,8 @@ export interface KvContractOptions {
    */
   readonly minTtlSeconds?: number;
   /**
-   * Move the store's clock forward by `ms`. Omit for a backend whose clock the
-   * test cannot control — the TTL cases are then skipped rather than slept
-   * through, which leaves expiry, the port's one time-dependent guarantee,
-   * unproven. Supply it wherever the rig can.
+   * Move the store's clock forward. Omit it only when the rig can't control the
+   * clock: TTL cases are then skipped, leaving expiry unproven.
    */
   readonly advanceTime?: (ms: number) => void | Promise<void>;
 }
@@ -222,9 +220,7 @@ export const kvContractCases: readonly Case[] = [
     },
   },
   {
-    // Redundant against the case above for a store with no floor, and skipped
-    // for one that has a floor above 5s. It is here so a backend that quietly
-    // rounds a short TTL up to its own minimum is caught saying it did not.
+    // Catches a backend that quietly rounds a short TTL up to its own minimum.
     name: "an expirationTtl of 5s expires on time",
     skip: (options) =>
       noClock(options) ??

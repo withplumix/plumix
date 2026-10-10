@@ -1,15 +1,9 @@
 import type { Client, InValue, Transaction } from "@libsql/client";
 
 /**
- * Every row of every application table, as of the moment it was taken.
- *
- * Schema-agnostic on purpose: the table list comes out of SQLite itself
- * rather than a drizzle schema, so it covers plugin tables core has
- * never heard of.
- *
- * D1 only. R2, KV, Durable Object and Cache state also live under
- * `.wrangler/state` and are still wiped once per suite run, not per
- * attempt.
+ * Every row of every application table. Lists tables from SQLite itself to
+ * cover unknown plugin tables; D1 only, other `.wrangler/state` is still wiped
+ * per suite run.
  */
 export interface DbBaseline {
   readonly tables: readonly TableSnapshot[];
@@ -22,26 +16,21 @@ interface TableSnapshot {
 }
 
 /**
- * `sqlite_*` is SQLite's own bookkeeping — `sqlite_sequence` above all,
- * see `restoreDbBaseline` for why it must not be rewound. `_cf_*` is
- * miniflare's D1 bookkeeping, which belongs to the emulator rather than
- * to the site. `__drizzle_migrations_*` records which migrations each
- * owner has applied, which no test changes.
+ * SQLite's and miniflare's bookkeeping, and drizzle's applied-migration
+ * records, none of which a test changes; `sqlite_sequence` must never be
+ * rewound.
  */
 const INTERNAL_TABLE_PREFIXES = ["sqlite_", "_cf_", "__drizzle_migrations_"];
 
 /**
- * `hidden` in `table_xinfo`: 2 is a VIRTUAL generated column, 3 STORED.
- * `SELECT *` returns both and `INSERT` rejects both, so a snapshot that
- * took its column list from the select would fail to restore.
+ * `table_xinfo` `hidden`: 2 is VIRTUAL, 3 STORED. `SELECT *` returns both and
+ * `INSERT` rejects both.
  */
 const GENERATED_COLUMN_KINDS = new Set([2, 3]);
 
 async function applicationTables(client: Client): Promise<string[]> {
-  // `table_list` rather than `sqlite_master` because it distinguishes a
-  // plain table from a view, a virtual table and a virtual table's shadow
-  // tables. Shadow tables carry no prefix that marks them, and restoring
-  // an FTS index as if its shadows were independent corrupts it.
+  // `table_list` tells tables from views, virtual tables and their unprefixed
+  // shadow tables; restoring an FTS index's shadows independently corrupts it.
   const listed = await client.execute("PRAGMA table_list");
   return listed.rows
     .filter((row) => row.schema === "main" && row.type === "table")
@@ -70,12 +59,8 @@ function isEncodedBlob(value: unknown): value is { readonly $blob: string } {
 }
 
 /**
- * Serialize a baseline so one Playwright worker can hand it to the next.
- *
- * libsql reads a BLOB back as an `ArrayBuffer`, which has no JSON
- * representation — and `credentials.public_key` is a BLOB in every
- * playground. Binary travels as `{ $blob }`, a shape no column value can
- * collide with: SQLite stores only null, integer, real, text and blob.
+ * libsql reads a BLOB as an `ArrayBuffer`, which has no JSON form, so binary
+ * travels as `{ $blob }`, a shape no SQLite value collides with.
  */
 export function serializeDbBaseline(baseline: DbBaseline): string {
   return JSON.stringify(baseline, (_key, value: unknown) =>
@@ -94,11 +79,8 @@ export function parseDbBaseline(text: string): DbBaseline {
 }
 
 /**
- * Snapshot the database so a later `restoreDbBaseline` can put it back.
- *
- * Intended to run once the seeding is done and before anything drives
- * the site, so the snapshot is the state every attempt should start
- * from.
+ * Snapshot the database once seeding is done and before anything drives the
+ * site.
  */
 export async function captureDbBaseline(client: Client): Promise<DbBaseline> {
   const tables: TableSnapshot[] = [];
@@ -118,22 +100,9 @@ export async function captureDbBaseline(client: Client): Promise<DbBaseline> {
 }
 
 /**
- * Put the database back to a captured baseline.
- *
- * One transaction with `defer_foreign_keys` on, so foreign keys are
- * checked once at commit instead of per statement. Without that the
- * table order would matter — wiping a parent before refilling its
- * children fails immediately — and there is no order that works for a
- * cycle.
- *
- * Deliberately not restored: `sqlite_sequence`. Rewinding the
- * autoincrement counter would hand a fresh row an id an earlier attempt
- * already used, and ids leak out of the database into test ids, URLs and
- * saved fixtures. Letting it keep climbing costs nothing.
- *
- * Pass a client this call can own. A statement that errors mid-transaction
- * stays open on the connection, and every later transaction on it then
- * fails at commit with an unrelated-looking message.
+ * Restores under `defer_foreign_keys`: no table order works for a cycle. Never
+ * rewinds `sqlite_sequence`, as reused ids leak into URLs. Own the client: a
+ * failed statement poisons its connection.
  */
 export async function restoreDbBaseline(
   client: Client,

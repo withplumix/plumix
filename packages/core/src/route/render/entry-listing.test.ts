@@ -147,9 +147,8 @@ describe("listEntryPage paging", () => {
   });
 
   test("a tie is broken by id, so no entry straddles a page boundary", async () => {
-    // Four entries sharing one publish date: with only the date to sort on,
-    // SQLite is free to return them in any order, and a row could land on
-    // both pages or on neither.
+    // With only a shared date to sort on, SQLite may return any order, so a
+    // row could land on both pages or neither.
     const shared = new Date("2026-04-01T00:00:00Z");
     for (const slug of ["w", "x", "y", "z"]) {
       await seed({ slug, publishedAt: shared });
@@ -171,10 +170,8 @@ describe("listEntryPage paging", () => {
   });
 
   test("a listing costs a fixed number of queries whatever the page holds", async () => {
-    // Counted from the driver's own spans rather than from a spy on the
-    // reader: an N+1 is a thing the database sees. Each page size gets its own
-    // cold context, because a warm request memo would answer for an author the
-    // earlier read had already batched and undercount the later one.
+    // Counted from driver spans because an N+1 is what the database sees.
+    // Each size gets a cold context so a warm memo can't undercount.
     const cost = async (perPage: number): Promise<number> => {
       const traced = await createTracedContext({ config: { plugins: [blog] } });
       // Two authors, so the larger page's author batch covers more than one

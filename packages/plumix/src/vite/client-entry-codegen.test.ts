@@ -30,9 +30,8 @@ describe("generateClientEntrySource", () => {
     // No side-effect CSS import declarations.
     expect(source).not.toContain('import "/');
     expect(source).not.toContain(".css");
-    // Must still be a module (no static import/export at all would have Vite
-    // treat the file as a script with implicit globals — the install block is
-    // only a dynamic `import()` expression).
+    // Without a static import/export, Vite treats the file as a script with
+    // implicit globals.
     expect(source).toContain("export {};");
   });
 

@@ -3,12 +3,8 @@ import { I18nProvider, Trans } from "@lingui/react";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test } from "vitest";
 
-// Pins the ICU plural compile path used by `settings.pageSummary` in
-// `settings/index.tsx`. Lingui v6's runtime `<Trans>` evaluates ICU
-// `{count, plural, ...}` via `@lingui/message-utils` at render time —
-// admin doesn't wire `@lingui/react/macro`, so the runtime path is
-// the canonical way to ship a plural here. This test guards against
-// a future Lingui upgrade silently dropping the runtime ICU path.
+// Admin doesn't wire `@lingui/react/macro`, so plurals rely on the runtime
+// `<Trans>` ICU path.
 
 beforeEach(() => {
   i18n.load({ en: {} });

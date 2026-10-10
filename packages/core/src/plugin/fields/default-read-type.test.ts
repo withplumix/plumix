@@ -26,9 +26,8 @@ import {
   user,
 } from "./index.js";
 
-// A field default is the starting value of a new entity, not a read fallback
-// (ADR 0026): a cleared field stays empty, so `.default()` cannot promise a
-// value on read. Only `.required()` narrows the read type.
+// A cleared field stays empty, so `.default()` cannot promise a value on
+// read; only `.required()` narrows.
 describe("`.default()` leaves the read type optional", () => {
   test("text-family", () => {
     const _defaulted = text("a").default("x");

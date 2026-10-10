@@ -147,10 +147,8 @@ describe("access gate — hard gate through the dispatcher", () => {
 });
 
 /**
- * An entry type carrying an `access.default` gates its single (and archive)
- * routes end-to-end — proving the policy survives registration and the
- * single/archive intent branch of `policyForMatch` fires through the real
- * dispatcher, not just a stubbed registry.
+ * Exercises the single/archive branch of `policyForMatch` through the real
+ * dispatcher, not a stubbed registry.
  */
 const articlesPlugin = definePlugin("articles", (ctx) => {
   ctx.registerEntryType("article", {
@@ -201,17 +199,15 @@ describe("access gate — entry-type-level policy", () => {
     );
     expect(response.status).toBe(200);
     expect(await response.text()).toContain("Gated Article");
-    // With no cdn binding, the copy sent to the client is always live and
-    // per-visitor: an `authenticated` render carries `private, no-store` so a
+    // Without a cdn binding, an `authenticated` render stays private so a
     // downstream intermediary never shares it under the plain URL.
     expect(response.headers.get("cache-control")).toBe("private, no-store");
   });
 });
 
 /**
- * A real in-memory CDN: `match`/`put` key on the request URL, exactly as
- * the Workers Cache API does, so the segment folded into the key by #1740 is
- * what separates (or collapses) entries.
+ * `match`/`put` key on the request URL, exactly as the Workers Cache API does,
+ * so the segment folded into the key is what separates entries.
  */
 function memoryCdn() {
   const store = new Map<
@@ -228,9 +224,8 @@ function memoryCdn() {
     },
   );
   const cdn: ConnectedCdn = {
-    // Conforming rather than an identity: these tests turn on what a segment
-    // render leaves carrying, so a decorate that widened would have to fail
-    // here rather than pass by doing nothing.
+    // Conforming rather than an identity, so a decorate that widened would
+    // fail here instead of passing by doing nothing.
     decorate: (response, tags) => {
       if (response.headers.has("set-cookie")) return response;
       if (!responseAllowsSharedStorage(response)) return response;
@@ -373,9 +368,8 @@ describe("access gate — segment-keyed caching (#1740)", () => {
     );
     await h.drainDeferred();
 
-    // The segment-keyed edge entry beside it is deliberately shared; this copy
-    // is one member's, and decoration may only ever narrow what the render
-    // declared. A downstream intermediary knows nothing of the segment axis.
+    // The segment-keyed edge entry is shared, but this copy is one member's,
+    // and a downstream intermediary knows nothing of the segment axis.
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("private, no-store");
     expect(response.headers.get("cache-tag")).toBeNull();
@@ -418,10 +412,8 @@ describe("access gate — segment-keyed caching (#1740)", () => {
     expect(put).not.toHaveBeenCalled();
   });
 
-  // A per-request grant (a draft preview, an editor session) must never be
-  // stored under the shared segment entry, where it would outlive the grant and
-  // serve a draft/editor render to other members. The gate still allows
-  // (`authenticated`), but the render is forced private.
+  // A per-request grant stored under the shared segment entry would outlive
+  // the grant and serve a draft or editor render to other members.
   test.each(["preview=tok", "plumix.edit"])(
     "an ephemeral ?%s grant on a policied route bypasses the shared cdn",
     async (query) => {
@@ -587,12 +579,9 @@ describe("access gate — an anonymous grant to a privileged request (#2914)", (
 });
 
 /**
- * The paywall: a soft gate. An active `entitlement:premium` gets the full
- * render under one shared segment; everyone else (anonymous or lapsed) gets a
- * teaser at their own segment — the same URL, a distinct cdn variant. A
- * mutable `entitled` set stands in for the developer's per-request entitlement
- * check (a `meta` flag, their own table, an external billing API), letting a
- * test flip a subscription active/lapsed between requests.
+ * A soft gate: entitled visitors share one full render, everyone else gets a
+ * teaser at their own segment. The mutable `entitled` set lets a test flip a
+ * subscription between requests.
  */
 interface PaywallData extends ArchiveTypeData {
   readonly kind: "archiveType";
@@ -638,10 +627,8 @@ function paywallSetup() {
       forArchiveType("premium").template(
         defineTemplate<PaywallData>({
           render: ({ data, ctx }) => {
-            // The soft-gate seam: a `challenge` gate means render the teaser.
-            // The teaser variant is a public document, so it withholds the
-            // protected body server-side and shows only the free summary; the
-            // full body renders solely on the entitled `allow` branch.
+            // The teaser is a public document, so the protected body is
+            // withheld server-side and renders only on the `allow` branch.
             const gated = ctx.access?.gate.type === "challenge";
             return gated ? (
               <main data-testid="teaser">{data.summary}</main>
@@ -718,9 +705,8 @@ describe("access gate — soft gate / paywall (#1741)", () => {
     const member = await h.seedUser("subscriber");
     entitled.add(member.id);
 
-    // Anonymous visitor (a search-engine crawler) → the teaser variant: a 200,
-    // publicly cacheable page carrying only the free summary. The protected
-    // body is withheld server-side, so it can't leak through the public entry.
+    // An anonymous crawler gets a publicly cacheable teaser, so the protected
+    // body must be withheld server-side to not leak through the public entry.
     const teaser = await h.dispatch(new Request("https://cms.example/premium"));
     await h.drainDeferred();
     expect(teaser.status).toBe(200);
@@ -788,11 +774,8 @@ describe("access gate — soft gate / paywall (#1741)", () => {
 });
 
 /**
- * An entry type whose single routes are PUBLIC by default but declare a
- * selectable `members` policy an editor can assign per-entry. Proves the
- * per-entry choice (stored under the reserved access meta key) overrides the
- * type default at the gate and in the cdn key — the load-bearing data seam of
- * #1742. Precedence: per-entry › entry-type › global.
+ * Single routes are public by default but offer a selectable `members`
+ * policy per entry. Precedence: per-entry › entry-type › global.
  */
 const perEntryPlugin = definePlugin("per-entry", (ctx) => {
   ctx.registerEntryType("column", {
@@ -972,8 +955,7 @@ describe("access gate — per-entry visibility (#1742)", () => {
 
 /**
  * A shared segment stores one copy per segment, so a render that read the
- * principal must never fill it (ADR 0030). Each fixture reads the principal
- * from one seam of the render phase under `authenticatedPolicy`.
+ * principal must never fill it.
  */
 function memberArticles(blocks: readonly BlockSpec[]) {
   return definePlugin("member-articles", (ctx) => {

@@ -4,10 +4,8 @@ import ts from "typescript";
 import { describe, expect, test } from "vitest";
 
 /**
- * The plugin's main entry — what a site pays for by installing it. The engine
- * is reachable only through the `/takumi` subpath, and the default renderer
- * reaches it through a dynamic import, so the wasm stays off this graph for
- * every install that never renders a card.
+ * The engine is reachable only via `/takumi` and a dynamic import, so the wasm
+ * stays off this graph for installs that never render a card.
  */
 const ENTRY = "index.ts";
 const ENGINE = "takumi.ts";
@@ -93,9 +91,8 @@ function resolveWithinPackage(
 }
 
 /**
- * Every file statically reachable from the entry, mapped to the file that
- * imported it, so a failure names the chain to go delete rather than only its
- * destination. Breadth-first, so the reported chain is the shortest one.
+ * Maps each reachable file to its importer so a failure names the whole chain;
+ * breadth-first, so the chain is the shortest.
  */
 function staticClosure(entry: string): ReadonlyMap<string, string | undefined> {
   const importedBy = new Map<string, string | undefined>([[entry, undefined]]);

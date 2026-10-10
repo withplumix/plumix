@@ -12,10 +12,8 @@ import { createTracedContext } from "../test/traced-context.js";
 import { registerCoreScheduledTasks } from "./register-core-scheduled-tasks.js";
 import { runScheduledTasks } from "./scheduled.js";
 
-// End-to-end proof of the composed path: the `publish-scheduled` cron task →
-// `entry:published` → the CDN purge subscriber → the flush at the end
-// of `runScheduledTasks`. Each piece is unit-tested elsewhere; this guards
-// that they're actually wired together so a scheduled publish purges the CDN.
+// Each piece is unit-tested elsewhere; this guards that they are actually
+// wired together.
 describe("scheduled publish purges the CDN", () => {
   it("fires one purge for the published entry's tags", async () => {
     const db = await createTestDb();
@@ -77,10 +75,8 @@ describe("scheduled publish purges the CDN", () => {
   });
 });
 
-// One invocation builds one context, so every task reads one request memo.
-// The publish announces itself through the same roster as the purge above,
-// and that is what keeps a task's write visible to the tasks after it (#2517)
-// — on a site with no cdn configured, as this one is.
+// One invocation shares one request memo, so a publish must drop stale rows
+// for later tasks even with no cdn configured.
 describe("scheduled publish is visible to later tasks in the invocation", () => {
   it("a task after publish-scheduled hydrates the published entry", async () => {
     const { harness, ctx } = await createTracedContext();

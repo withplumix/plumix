@@ -17,7 +17,7 @@ export function virtualClock(startIso: string) {
       new Promise<void>((wake) => {
         sleepers.push({ at: now + ms, seq: seq++, wake });
       }),
-    /** Time passes with nothing running — a slept laptop, a paused container. */
+    // Time passes with nothing running — a slept laptop, a paused container.
     suspend(ms) {
       now += ms;
     },

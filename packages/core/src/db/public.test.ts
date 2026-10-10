@@ -2,9 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import * as db from "./public.js";
 
-// The `@plumix/core/db` surface is the promise that a direct-write / ingest
-// plugin never needs its own `drizzle-orm` dependency. Assert the toolkit stays
-// whole so a refactor can't silently drop part of it (the drift #1700 is about).
+// A direct-write plugin must never need its own `drizzle-orm` dependency, so
+// the toolkit has to stay whole.
 describe("@plumix/core/db surface", () => {
   it("re-exports the drizzle write toolkit and CDN purge vocabulary", () => {
     for (const name of [

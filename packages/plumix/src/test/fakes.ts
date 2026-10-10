@@ -1,6 +1,5 @@
-// Upload fakes: a real `File` to hand an upload field, a drop zone or an RPC
-// procedure, in either test tier. Nothing here reaches for a Node built-in —
-// the browser build of `plumix/test` serves this module as it is.
+// The browser build of `plumix/test` serves this module as it is, so nothing
+// here may use a Node built-in.
 
 export interface FakeFileOptions {
   /** That many zero bytes. Ignored when `content` is given. */
@@ -51,11 +50,7 @@ export function fakeFile(name: string, options: FakeFileOptions = {}): File {
   });
 }
 
-/**
- * A `File` holding a valid PNG of `width` × `height` white pixels, which a
- * browser decodes and a magic-byte or header check accepts. PNG is the only
- * format generated, so the name has to end in `.png`.
- */
+/** PNG is the only format generated, so the name has to end in `.png`. */
 export function fakeImage(
   name = "image.png",
   options: FakeImageOptions = {},

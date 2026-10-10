@@ -178,9 +178,7 @@ describe("PlumixAdminBar", () => {
   });
 
   // Which locale renders which translation is catalog content, gated by
-  // `i18n:check`. These tests cover the locale→chrome wiring: the nav carries
-  // an aria-label sourced from the bar catalog, and the locale drives the
-  // document `lang`/`dir` attributes.
+  // `i18n:check`; these tests cover only the locale-to-chrome wiring.
   test("renders nav with an aria-label sourced from the bar catalog", () => {
     const hooks = new HookRegistry();
     registerCoreAdminBarContributors(hooks);

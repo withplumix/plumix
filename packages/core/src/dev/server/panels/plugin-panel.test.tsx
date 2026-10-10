@@ -11,10 +11,8 @@ import {
 import { defineTheme } from "../../../theme.js";
 
 /**
- * A plugin panel author's happy path on the dev error page: contribute a panel
- * through `error_page:panels`, reading off the caught error, and it renders as
- * its own section on the 500 page — built from the primitives the package
- * barrel publishes rather than re-spelling the page's class names.
+ * Built from the primitives the package barrel publishes rather than
+ * re-spelling the page's class names.
  */
 const demoPanel: DevErrorPanel = {
   id: "error-panel-demo",

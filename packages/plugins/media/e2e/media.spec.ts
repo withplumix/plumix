@@ -1,13 +1,5 @@
-// Worker-driven plugin e2e (#251 / #250). Runs against the real media
-// playground at `../playground` via `plumix dev`, seeded by globalSetup
-// with an admin user + storageState carrying the session cookie. No
-// RPC mocking — the spec exercises the media plugin end-to-end through
-// the actual oRPC + miniflare D1 + miniflare R2 round-trip.
-//
-// Upload routes through the worker's MEDIA binding (miniflare R2
-// emulation) because the playground doesn't configure S3 credentials;
-// `media.createUploadUrl` returns a same-origin `/_plumix/media/upload/<id>`
-// URL the browser PUTs to. No `**/storage.test/**` mock needed.
+// The playground configures no S3 credentials, so uploads PUT to the worker's
+// same-origin route and no storage mock is needed.
 
 import type { Page } from "@playwright/test";
 import { expect, PNG_1X1, test } from "plumix/test/playwright";
@@ -28,13 +20,8 @@ test.describe.serial("@plumix/plugin-media — worker-driven happy path", () => 
       "library is empty",
     );
 
-    // 2. Upload a minimal valid 1×1 transparent PNG via the Upload
-    //    button's hidden file input. The plugin's `confirm` step
-    //    validates the uploaded bytes against the declared MIME — the
-    //    buffer below is a real PNG signature + IHDR + IDAT + IEND so
-    //    confirm doesn't 409. The worker handles createUploadUrl →
-    //    worker-routed PUT → confirm in a single round-trip; on
-    //    success the list query invalidates and a card appears.
+    // `confirm` validates the bytes against the declared MIME, so this is a
+    // real PNG (signature, IHDR, IDAT, IEND) or confirm answers 409.
     const fileInput = page.locator(
       '[data-testid="media-library-upload"] input[type="file"]',
     );
@@ -115,11 +102,6 @@ test.describe.serial("@plumix/plugin-media — worker-driven happy path", () => 
   });
 });
 
-// Regression: a plugin admin page once shipped as bare unstyled HTML (the
-// component had zero `className`). Assert this page ships styled controls.
-// (The admin sidebar's CSS-cascade isolation — the other half of the
-// original incident — is guarded admin-side in packages/admin/e2e/
-// app-shell.spec.ts + packages/admin/src/styles/globals.test.ts.)
 test("admin page ships styled controls", async ({ page }) => {
   await page.goto("pages/media");
   await expect(page.getByTestId("media-library")).toBeVisible();

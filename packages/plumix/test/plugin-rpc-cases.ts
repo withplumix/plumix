@@ -5,12 +5,7 @@ import type { MenuRouter } from "./menu-router.js";
 import { createPluginRpcClient } from "../src/admin/plugin-rpc.js";
 import { PluginRpcError, stubPluginRpc } from "../src/test/plugin-rpc.js";
 
-/**
- * The same cases run in both tiers (`src/test/plugin-rpc.test.ts` and
- * `src/test/plugin-rpc.browser.test.ts`): `plumix/test` promises the stub to
- * a Node test and to a browser test alike, and each tier brings its own
- * `fetch`, `FormData` and `File` to the wire.
- */
+/** Each tier brings its own `fetch`, `FormData` and `File` to the wire. */
 export function describeStubPluginRpc(): void {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -148,10 +143,8 @@ export function describeStubPluginRpc(): void {
         },
       );
 
-      // Not an oRPC error envelope: oRPC reports the miss without producing a
-      // response at all, and the dispatcher answers its own plain-text 404. A
-      // client rejection from here is therefore a malformed-response one, which
-      // is what a real deployment produces.
+      // oRPC produces no response for the miss, so the dispatcher's plain-text
+      // 404 is what a real deployment returns.
       expect(response.status).toBe(404);
       expect(response.headers.get("content-type")).toBe(
         "text/plain; charset=utf-8",
@@ -302,10 +295,8 @@ export function describeStubPluginRpc(): void {
         code: "INTERNAL_SERVER_ERROR",
         status: 500,
       });
-      // A real handler's error envelope carries no `data`. The client only
-      // populates one when the body failed `isORPCErrorJson` and it fell back
-      // to the malformed-response path, so an undefined `data` is what proves
-      // the body was a genuine envelope.
+      // The client only populates `data` on the malformed-response fallback,
+      // so its absence proves a genuine envelope.
       expect((error as { data?: unknown }).data).toBeUndefined();
     });
 

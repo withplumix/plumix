@@ -39,10 +39,8 @@ const blog = definePlugin("test-blog", (ctx) => {
 });
 
 /**
- * Reports how much the live collector holds mid-request, from inside a real
- * plugin tool — the only reader of `ctx.telemetry` on the MCP path that isn't
- * itself a telemetry consumer, so it can't vote the collection it measures into
- * existence.
+ * Not itself a telemetry consumer, so it can't vote into existence the
+ * collection it measures.
  */
 const spanProbe = definePlugin("test-span-probe", (ctx) => {
   ctx.registerMcpTool({
@@ -274,10 +272,6 @@ describe("MCP endpoint — transport guards", () => {
   });
 });
 
-// Dev-trust: over loopback a dev server auto-enables the endpoint and trusts
-// the local developer with no PAT, guarded by an Origin allowlist and a
-// loopback bind. Production (no dev gate) keeps the token requirement
-// unchanged.
 describe("MCP endpoint — dev trust", () => {
   afterEach(() => void vi.unstubAllEnvs());
 
@@ -618,11 +612,8 @@ async function seedAndList(
   return parseToolResult<RequestListRow[]>(list.json);
 }
 
-// The tracing tools read the debug request-history ring, which only captures
-// under the `PLUMIX_DEV` gate — the same gate that registers the tools. So the
-// whole block runs with the dev signal on and seeds the ring by dispatching
-// real requests through the harness's own capture path (drainDeferred flushes
-// the deferred `onRequestEnd` write).
+// The ring captures only under the `PLUMIX_DEV` gate, so the block seeds it
+// by dispatching real requests.
 describe("MCP endpoint — telemetry tracing tools (dev gate)", () => {
   beforeEach(() => void vi.stubEnv("PLUMIX_DEV", "1"));
   afterEach(() => void vi.unstubAllEnvs());
@@ -761,9 +752,8 @@ describe("MCP endpoint — telemetry tracing tools (dev gate)", () => {
     expect(names).toContain("telemetry_request_get");
   });
 
-  // The tools are registered on the dev gate alone, so turning the overlay off
-  // must not silently turn the capture behind them off too — the developer who
-  // sets `dev.bar: false` is typically the one driving the site over MCP.
+  // Whoever sets `dev.bar: false` is typically the one driving the site over
+  // MCP, so capture must stay on.
   test("requests are captured with the debug bar off, and the trace still resolves", async () => {
     const h = await mcpHarness({
       config: { plugins: [blog], dev: { bar: false } },
@@ -789,11 +779,8 @@ describe("MCP endpoint — telemetry tracing tools (dev gate)", () => {
     );
   });
 
-  // The writer keeps the MCP endpoint out of the ring so listing never evicts a
-  // real request. That must stay a decision about what gets *saved*: with the
-  // bar off the writer is the only consumer, so declining to collect would
-  // switch the collector off for the whole request and hand every other
-  // mid-request reader of `ctx.telemetry` — a plugin's own tool here — a no-op.
+  // With the bar off the writer is the only consumer; declining to collect
+  // would hand every other reader of `ctx.telemetry` a no-op.
   test("the collector is still active on the endpoint the writer keeps out of the ring", async () => {
     const h = await mcpHarness({
       config: { plugins: [blog, spanProbe], dev: { bar: false } },
@@ -807,9 +794,7 @@ describe("MCP endpoint — telemetry tracing tools (dev gate)", () => {
 });
 
 /**
- * One entry as read off the merged error_list stream — a superset of the server
- * and client shapes, so a single parse handles both. `requestId`/`path`/
- * `timestamp` are server-only; `label` and frame `stack` mark a client entry.
+ * A superset of the server and client shapes, so one parse handles both.
  */
 interface MergedErrorRow {
   readonly source: string;
@@ -822,11 +807,6 @@ interface MergedErrorRow {
   readonly label?: string;
 }
 
-/**
- * A theme whose fallback template throws, so a plain GET renders a 500 the
- * request-history ring captures with the error on its span — the exact seam the
- * server half of error_list projects from.
- */
 function throwingTheme(message: string) {
   return defineTheme({
     templates: [
@@ -837,10 +817,6 @@ function throwingTheme(message: string) {
   });
 }
 
-// error_list is the server half of the dev-only error surface: a flat,
-// newest-first projection of failed requests over the same request-history ring
-// the tracing tools read, so it runs under the same PLUMIX_DEV gate and seeds
-// via the harness's own capture path (dispatch → deferred onRequestEnd).
 describe("MCP endpoint — error_list (dev gate)", () => {
   beforeEach(() => void vi.stubEnv("PLUMIX_DEV", "1"));
   afterEach(() => void vi.unstubAllEnvs());
@@ -983,10 +959,7 @@ describe("MCP endpoint — error_list (dev gate)", () => {
 });
 
 /**
- * Stub the worker's outbound fetch so the client half of `error_list` reads a
- * fixed payload instead of a live dev endpoint (AC: the producer side is
- * covered by its own ticket). Only the client-error endpoint is intercepted;
- * every other URL falls through to the real fetch so nothing else in dispatch
+ * Only the client-error endpoint is intercepted, so nothing else in dispatch
  * is disturbed.
  */
 function stubClientErrorEndpoint(
@@ -1008,11 +981,6 @@ function clientErrorsResponse(entries: readonly unknown[]): Response {
   });
 }
 
-// The client half: `error_list` also fetches the retained browser failures from
-// the dev read endpoint (#1656) and merges them into the same newest-first
-// stream as its server projection — closing the "why did this hydration error
-// happen?" loop. The worker-side merge is what this ticket adds; the fetch is
-// stubbed here.
 describe("MCP endpoint — error_list client merge (dev gate)", () => {
   beforeEach(() => void vi.stubEnv("PLUMIX_DEV", "1"));
   afterEach(() => {

@@ -1,11 +1,6 @@
 /**
- * Core's layer table (ADR 0010): which layer each folder under `src/` belongs
- * to, and whether a browser bundle may carry it. The graph suite
- * (`src/layers.test.ts`) and the ESLint direction rule read this one module,
- * so it stays plain data and string lookups — importing it must not load
- * TypeScript or touch the file system.
- *
- * Lives outside `src/` because nothing a consumer runs may import it.
+ * Core's layer table. Plain data and string lookups, so the graph suite and
+ * the ESLint rule can import it without loading TypeScript or the file system.
  */
 
 export const LAYERS = [
@@ -18,11 +13,8 @@ export const LAYERS = [
 export type Layer = (typeof LAYERS)[number];
 
 /**
- * Server-only when the folder's own code links drizzle, a `node:` builtin,
- * the database, the authenticator or the dispatcher; client-safe otherwise.
  * Declared per folder rather than derived, so a client-safe folder growing a
- * server link is caught as an environment violation instead of silently
- * reclassifying it.
+ * server link is caught instead of silently reclassified.
  */
 export type Environment = "client-safe" | "server-only";
 
@@ -41,10 +33,9 @@ const server = (layer: Layer): Placement => ({
 });
 
 /**
- * Keys are paths under `src/`. `name/` is a folder and everything below it;
- * `*\/contract/` is any subsystem's contract folder; a key without a slash is
- * a root module, and a trailing `*` makes it every root module whose name
- * starts with that prefix. The deepest matching folder decides.
+ * Keys are paths under `src/`: `name/` is a folder, `*\/contract/` any
+ * contract folder, a bare key a root module, a trailing `*` a prefix. The
+ * deepest match decides.
  */
 export const FOLDERS: Readonly<Record<string, Placement>> = {
   "blocks/": client("foundation"),
@@ -131,12 +122,9 @@ export interface CycleUnit {
 }
 
 /**
- * Subsystems of one layer that the cycle rule reads as a single node, keyed
- * by the name a report gives it. `AppContext` carries the config, the hook
- * executor and the plugin registry; the plugin, template and theme handlers
- * those carry take an `AppContext`, and the hook registry reads one from the
- * ambient store. The types are mutually recursive by nature (ADR 0010). A cycle between a unit and another
- * subsystem is still a violation.
+ * Subsystems the cycle rule reads as one node, because their types are
+ * mutually recursive by nature. A cycle between a unit and another subsystem
+ * is still a violation.
  */
 export const CYCLE_UNITS: Readonly<Record<string, CycleUnit>> = {
   "app-context": {

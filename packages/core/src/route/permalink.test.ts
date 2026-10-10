@@ -287,10 +287,6 @@ describe("buildEntryPermalink", () => {
 });
 
 describe("buildEntryPermalinkSync", () => {
-  // Locks the sync slice's branches — the async permalink builder now
-  // delegates here for the no-DB cases, so a regression here ripples
-  // out to listing URLs, sitemap, canonical tags, and the menu plugin.
-
   test("non-hierarchical type returns the substituted URL", async () => {
     const registry = await buildRegistry([
       definePlugin("blog", (ctx) => {

@@ -5,11 +5,9 @@ interface Journal {
 }
 
 /**
- * Each table owner's shipped history, in the order `plumix migrate` applies
- * them: core, then each plugin package that owns tables, in config order. A
- * plugin with tables joins the list and both globs below. `import.meta.glob`
- * is Vite-only, so this module is imported lazily by the demo runtime — jiti
- * (config codegen) never evaluates it.
+ * Ordered as `plumix migrate` applies them; a table-owning plugin joins both
+ * globs too. `import.meta.glob` is Vite-only, so jiti must never evaluate
+ * this module.
  */
 const OWNERS = [
   "./node_modules/@plumix/core/migrations",

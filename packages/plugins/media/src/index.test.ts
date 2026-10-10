@@ -375,10 +375,8 @@ describe("@plumix/plugin-media — media.createUploadUrl", () => {
   });
 
   test("falls back to a worker-routed upload URL when presignPut is unavailable", async () => {
-    // memoryStorage exposes presignPut, but we can stub it out by passing
-    // a connected storage with the method removed — simulates the
-    // production case where the R2 binding is attached but no S3
-    // credentials are configured.
+    // Storage with `presignPut` removed: the R2 binding attached but no S3
+    // credentials configured.
     const { h } = await setupBindingOnlyHarness();
     const user = await h.seedUser("contributor");
     const { status, output } = await rpcDispatch<CreateUploadUrlOutput>(
@@ -535,10 +533,8 @@ describe("@plumix/plugin-media — media.confirm", () => {
   });
 
   test("CAS prevents double-publish: a second confirm on a published row returns already_confirmed", async () => {
-    // Two confirms on the same draft race the magic-byte sniff but
-    // exactly one must flip the row from draft → published. The
-    // loser sees `already_confirmed`, not a silent stomp of
-    // `publishedAt` or a duplicate publish.
+    // Two confirms race the magic-byte sniff; exactly one may publish and the
+    // loser sees `already_confirmed`.
     const storage = memoryStorage().connect({});
     const h = await createDispatcherHarness({
       storage,
@@ -915,12 +911,8 @@ describe("@plumix/plugin-media — media.list", () => {
       storage,
       config: { plugins: [media()] },
     });
-    // The default `subscriber` has read; explicitly drop the reader to
-    // a role that can't even see the entry type. A user not in any
-    // role wouldn't authenticate at all, so we just test the cap path
-    // by seeding the row but reaching for a non-existent capability:
-    // since `entry:media:read` is granted to subscriber+, this test
-    // confirms anonymous (no session) is denied.
+    // `entry:media:read` is granted to subscriber and up, so anonymous (no
+    // session) is denied.
     const { status } = await rpcDispatch<MediaListOutput>(
       h,
       "media/list",
@@ -1325,10 +1317,8 @@ describe("@plumix/plugin-media — media.update", () => {
     );
   });
 
-  // Owning a row is not on its own a licence to edit it — the caller still
-  // needs `edit_own`, which is what core's entry procedures ask. A subscriber
-  // holds neither edit capability, so their own row is out of reach; this is
-  // the gate answering, so it lands before the meta parse would.
+  // Owning a row is no licence to edit it without `edit_own`, as core's entry
+  // procedures ask; the gate answers before the meta parse would.
   test("returns FORBIDDEN for an owner who holds no edit capability", async () => {
     const storage = memoryStorage().connect({});
     const h = await createDispatcherHarness({
@@ -1437,12 +1427,8 @@ const PNG_1X1_BYTES = new Uint8Array([
 ]);
 
 /**
- * Worker-routed upload tests share the same binding-only harness:
- * memoryStorage with `presignPut` stripped so the plugin falls back
- * to the worker route, plus the media plugin wired up through
- * createDispatcherHarness. Each test then layers its own auth /
- * request shape on top. The connected storage is returned alongside
- * so tests can assert directly on what landed in the bucket.
+ * memoryStorage with `presignPut` stripped, so the plugin falls back to the
+ * worker route; the connected storage is returned for asserting on the bucket.
  */
 async function setupBindingOnlyHarness(): Promise<{
   h: Awaited<ReturnType<typeof createDispatcherHarness>>;
@@ -1458,11 +1444,8 @@ async function setupBindingOnlyHarness(): Promise<{
 }
 
 describe("@plumix/plugin-media — worker-routed upload (presign-less mode)", () => {
-  // Regression for the deployed-blog-doesn't-upload bug:
-  // when only the R2 binding is configured (no S3 credentials), the
-  // plugin used to throw `presign_not_supported` and the admin showed
-  // an opaque error. The createUploadUrl → PUT → confirm flow has to
-  // work end-to-end through the worker route in that mode.
+  // With only the R2 binding (no S3 credentials) the upload flow must still
+  // work end-to-end through the worker route.
   test("createUploadUrl → PUT to /_plumix/media/upload/<id> → confirm round-trips bytes through the worker", async () => {
     const { h, stub } = await setupBindingOnlyHarness();
     const owner = await h.seedUser("contributor");
@@ -1799,10 +1782,8 @@ describe("@plumix/plugin-media — worker-routed upload (presign-less mode)", ()
 });
 
 describe("@plumix/plugin-media — worker-proxied serve route", () => {
-  // The serve route is keyed on entry id (NOT storage key) so it can
-  // enforce `status='published'` before streaming bytes. Anyone with
-  // a leaked storage key would otherwise be able to fetch draft
-  // bytes (the bytes exist in R2 between PUT and confirm).
+  // Keyed on entry id, not storage key, so the route can enforce
+  // `status='published'`: draft bytes sit in R2 between PUT and confirm.
   test("GET /_plumix/media/serve/<id> returns published media bytes with security headers", async () => {
     const storage = memoryStorage().connect({});
     const h = await createDispatcherHarness({

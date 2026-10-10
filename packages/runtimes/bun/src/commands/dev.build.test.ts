@@ -15,10 +15,8 @@ import {
 } from "../test/consumer-project.js";
 
 /**
- * `message.mjs` is a module the config imports, so an edit to it reaches the
- * entry only through the importer walk; `/runtime` says which runtime the
- * site's code runs on; `/secret` reads what `.env` carries; `/tagline` is
- * written into the config itself.
+ * `message.mjs` reaches the entry only through the importer walk; `/runtime`
+ * says which runtime the site's code runs on.
  */
 const config = (tagline = "first") => `import { auth } from "plumix/auth";
 import { definePlugin } from "plumix/plugin";

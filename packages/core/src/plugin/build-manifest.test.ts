@@ -142,12 +142,8 @@ describe("buildManifest", () => {
   });
 
   test("buildManifest skips pluginI18n URLs for ids in adminBundledPluginIds", () => {
-    // Admin's `import.meta.glob("../../../plugins/*/locales/*.mjs")` in
-    // `i18n-boot.ts` already bakes workspace plugin catalogs into the
-    // bundle. Emitting URLs for them would mean admin double-loads —
-    // once via the inlined glob, again via the runtime URL fetch.
-    // The bundler signals which ids admin already covers;
-    // `projectPluginI18n` drops them.
+    // Admin's `import.meta.glob` already bakes workspace plugin catalogs into
+    // the bundle, so emitting URLs for them would double-load.
     const bundled = definePlugin("bundled-plug", {
       i18n: {
         sourceLocale: "en",
@@ -215,9 +211,7 @@ describe("buildManifest", () => {
     expect(manifest.settingsGroups).toEqual([]);
     expect(manifest.settingsPages).toEqual([]);
     expect(manifest.fieldTypes).toEqual([]);
-    // Overview always carries Dashboard; Management carries Users +
-    // Allowed domains + Field values, and no Settings with no page to show.
-    // Capability filtering happens admin-side at render time — the
+    // Capability filtering happens admin-side at render time, so the
     // projection ships every item.
     const overview = manifest.adminNav.find((g) => g.id === "overview");
     expect(overview?.items.map((i) => i.to)).toEqual(["/"]);
@@ -846,10 +840,6 @@ describe("buildManifest", () => {
   });
 
   test("entry meta box accepts MessageDescriptor labels on the box, field, and option surfaces", async () => {
-    // Pin the descriptor pass-through end-to-end: panel title, field
-    // label, and select option label all flow as `MessageDescriptor`
-    // through `registerEntryMetaBox` → manifest projection. The admin's
-    // meta-box renderer pipes each through `useLabel` at render time.
     const boxLabel = { id: "plugin.seo.meta.label", message: "SEO" };
     const fieldLabel = {
       id: "plugin.seo.meta.title.label",
@@ -1606,12 +1596,8 @@ describe("buildManifest adminNav projection", () => {
   });
 
   test("entry type accepts WP-style per-type chrome labels and projects them through the manifest", async () => {
-    // WordPress-style `labels` table: per-type translations for chrome
-    // strings the admin would otherwise interpolate via lowercase noun
-    // substitution. Each label flows through unchanged so the admin can
-    // cascade `labels[key] ?? genericFallback` at every call site —
-    // languages with morphological agreement (DE, RU, PL, UK, AR) read
-    // correctly without ever lowercasing a translated noun.
+    // The admin cascades `labels[key] ?? genericFallback`, so languages with
+    // morphological agreement never get a lowercased translated noun.
     const labels = {
       singular: { id: "blog.post.singular", message: "Post" },
       plural: { id: "blog.post.plural", message: "Posts" },
@@ -1636,10 +1622,8 @@ describe("buildManifest adminNav projection", () => {
     };
     const hooks = new HookRegistry();
     const plugin = definePlugin("blog", (ctx) => {
-      // Inline literal so TypeScript's excess-property check fires —
-      // the test simultaneously pins the type contract (compiles only
-      // when the new keys are part of EntryTypeOptions.labels) and the
-      // runtime pass-through (manifest projection preserves the keys).
+      // Inline literal so TypeScript's excess-property check also pins the
+      // type contract.
       ctx.registerEntryType("post", {
         label: "Posts",
         labels: {
@@ -1786,10 +1770,8 @@ describe("buildManifest adminNav projection", () => {
   });
 
   test("plugins can register admin page nav.label as a MessageDescriptor", async () => {
-    // Translator-friendly path: a plugin emits a Lingui descriptor for
-    // the sidebar label, and the manifest preserves the descriptor
-    // shape through to the rendered nav item so the admin's `useLabel`
-    // hook can resolve it at the visiting user's locale.
+    // The descriptor must survive so the admin's `useLabel` resolves it at
+    // the visiting user's locale.
     const navLabel = {
       id: "plugin.x.menus.nav",
       message: "Menus",
@@ -1810,11 +1792,8 @@ describe("buildManifest adminNav projection", () => {
   });
 
   test("core nav groups ship their labels as descriptors so the sidebar localizes", async () => {
-    // The four built-in groups (Overview / Entries / Taxonomies /
-    // Management) are the chrome an empty-registry install renders.
-    // After widening the labels become Lingui descriptors so the
-    // sidebar's `useLabel` resolves them at the visiting user's
-    // locale rather than shipping English source.
+    // Descriptors, not English source, so the sidebar's `useLabel` resolves
+    // them at the visiting user's locale.
     const { registry } = await installPlugins({
       hooks: new HookRegistry(),
       plugins: [],

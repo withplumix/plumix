@@ -484,11 +484,8 @@ describe("resolvePublicRoute — single", () => {
   });
 
   test("a preview overlay reads the title from the live row, not the frozen autosave", async () => {
-    // The real editor sequence: content/excerpt/meta autosave as a draft
-    // (anchoring the autosave's title to the live title at that moment), then
-    // the title is edited with `saveAs: "live"` — a live-row write that never
-    // touches the autosave row. The preview must show the *fresh* live title,
-    // not the frozen snapshot, since the title is a live field, not a draft.
+    // Title is live-only, so the preview shows the fresh live title, not the
+    // snapshot the earlier draft autosave froze.
     const h = await createDispatcherHarness({
       config: { plugins: [blogPlugin] },
     });
@@ -541,10 +538,8 @@ describe("resolvePublicRoute — single", () => {
   });
 
   test("a preview overlay reports the live per-entry access choice, not the draft's", async () => {
-    // The gate resolves its policy from the persisted row — `policyForMatch`
-    // never sees this overlay — so the bag the template reads has to agree with
-    // it. Anything the page publishes on the entry's behalf (a social card) is
-    // decided from this value, and a draft's pick gates nothing.
+    // The gate resolves policy from the persisted row, so the template's bag
+    // must agree; a draft's pick gates nothing.
     const metaTheme = defineTheme({
       templates: [
         fallback(({ data }) => {

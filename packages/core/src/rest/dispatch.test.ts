@@ -235,9 +235,8 @@ describe("REST API — entries get", () => {
     expect(body.updatedAt).toBe(entry.updatedAt.toISOString());
   });
 
-  // Settling stored meta writes, and a write — with the CDN purge behind it —
-  // must never sit behind an anonymous read. The editor's own read heals a row;
-  // the public API reads it as stored.
+  // Settling writes, and a write with its CDN purge must never sit behind an
+  // anonymous read.
   test("an anonymous read leaves an unsettled value as stored", async () => {
     const h = await restHarness();
     const author = await h.factory.user.create({ role: "author" });
@@ -413,9 +412,7 @@ describe("REST API — public projection (default-deny)", () => {
     const res = await h.dispatch(apiGet(`/_plumix/api/v1/posts/${entry.id}`));
 
     const body = (await res.json()) as Record<string, unknown>;
-    // The allowlist omits raw authorId, sortOrder, and parentId — adding a
-    // column to the entries table cannot leak it through this surface. Meta is
-    // present but default-deny (empty until a field opts in via showInApi).
+    // An allowlist, so a new entries column cannot leak through this surface.
     expect(body).not.toHaveProperty("authorId");
     expect(body).not.toHaveProperty("sortOrder");
     expect(body).not.toHaveProperty("parentId");

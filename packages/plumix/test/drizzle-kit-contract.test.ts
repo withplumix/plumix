@@ -29,11 +29,9 @@ import {
 import { report } from "../src/cli/report.js";
 
 /**
- * `migrate generate` leans on two properties of the pinned drizzle-kit that
- * are not documented contracts: a successful generate stays silent on
- * stderr, and one that needs a rename decided fails without a terminal.
- * These run the real binary so a `catalog:drizzle` bump breaks here rather
- * than in every build in the repo.
+ * `migrate generate` relies on undocumented drizzle-kit behaviour: a silent
+ * stderr on success, and failing without a terminal when a rename needs
+ * deciding.
  */
 
 let dir: string;
@@ -75,9 +73,8 @@ function makeProjectDir(): void {
 }
 
 /**
- * Each `generate` spawns drizzle-kit, which bundles the schema with esbuild
- * before it can diff — past vitest's 5s default on a cold runner, so every
- * spawning test or hook carries its own budget.
+ * drizzle-kit bundles the schema with esbuild before diffing, past vitest's 5s
+ * default on a cold runner.
  */
 const ONE_SPAWN = 60_000;
 const TWO_SPAWNS = 120_000;

@@ -8,9 +8,8 @@ import { failingCases } from "./case.js";
 import { databaseContractCases } from "./database.js";
 
 /**
- * libsql is the reference driver the suite is proved green against, in the
- * adapter's own suite. Each adapter below breaks it in one way a real driver
- * has been seen to.
+ * libsql is the reference driver; each adapter below breaks it in one way a
+ * real driver has been seen to.
  */
 function adapterOver(client: Client): DatabaseAdapter {
   return {

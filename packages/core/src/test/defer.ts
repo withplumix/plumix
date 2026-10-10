@@ -1,10 +1,5 @@
-// Test harness for `AppContext.defer`. Production runtimes route
-// fire-and-forget work through their platform primitive (CF Workers'
-// `waitUntil`) or, without one, the handler's own pending set that
-// `dispose()` drains. Tests need a deterministic queue
-// they can flush + await before asserting on side effects, so this
-// helper builds a `defer` implementation backed by an array plus a
-// `drainDeferred()` that waits for everything queued so far.
+// Tests need a deterministic `defer` they can flush and await before asserting
+// on side effects, unlike the platform's fire-and-forget `waitUntil`.
 
 import type { DeferFn } from "../context/app-context.js";
 
@@ -12,15 +7,8 @@ export interface DeferQueue {
   /** Pass to `createAppContext({ defer })` so handlers route here. */
   readonly defer: DeferFn;
   /**
-   * Wait for every promise queued so far to settle (rejections are
-   * swallowed — the test asserts on observable side effects, not on
-   * the promise return values). Subsequent `defer` calls are queued
-   * onto the same array, so a follow-up `drainDeferred()` picks them
-   * up.
-   *
-   * `this: void` annotation lets callers destructure freely
-   * (`const { drainDeferred } = createDeferQueue()`) without the
-   * unbound-method lint rule complaining.
+   * Wait for everything queued so far, swallowing rejections; tests assert on
+   * side effects. `this: void` lets callers destructure it.
    */
   drainDeferred(this: void): Promise<void>;
 }

@@ -19,12 +19,8 @@ import { SEED_BLOCKS, SEED_PATTERNS } from "./seed.js";
 import "./playground.css";
 
 /**
- * Load the package's compiled catalogs, exactly as the admin shell does. A
- * production build (what e2e previews) won't runtime-compile a raw default
- * message, so an empty catalog would render ICU like "{count} selected"
- * literally — loading the compiled `en` catalog keeps the harness faithful.
- * `playground`/`playground:build` compile them first through core's
- * `plumix-compile-catalogs` bin — the compile `plumix i18n compile` runs.
+ * A production build won't runtime-compile a raw default message, so without
+ * the compiled catalog ICU like "{count} selected" renders literally.
  */
 const CATALOGS = import.meta.glob<{ messages: Messages }>("../locales/*.mjs", {
   eager: true,

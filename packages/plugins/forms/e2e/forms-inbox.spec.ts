@@ -1,16 +1,10 @@
-// The submissions inbox, driven in a real admin. What this reaches that
-// the component suite cannot: the plugin's admin chunk actually resolving
-// `SubmissionsShell` for the page the plugin registered, and the RPC
-// answering it behind the capability an editor holds.
-
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, test } from "plumix/test/playwright";
 
 /**
- * Seeded by globalSetup, once per suite run. The rig rewinds the database
- * once per attempt rather than between tests, so each test moves its own
- * fixture and leaves the other alone.
+ * Seeded once per run; the rig never rewinds between tests, so each test moves
+ * only its own fixture.
  */
 interface Fixtures {
   readonly answeredId: number;
@@ -28,9 +22,8 @@ test("an administrator reads a submission under its own labels", async ({
   await page.goto(INBOX);
   await expect(page.getByTestId("forms-submissions-shell")).toBeVisible();
 
-  // Filter to the retired form first: the columns come from the rows on
-  // the page, so without this the assertion below would turn on how many
-  // submissions the rest of the suite has made.
+  // The columns come from the rows on the page; filtering keeps the rest of the
+  // suite's submissions out of the assertion.
   await page.getByTestId("forms-form-filter").click();
   await page.getByTestId("forms-form-filter-retired").click();
 

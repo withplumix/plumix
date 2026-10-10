@@ -21,14 +21,8 @@ export interface BuildAdminPluginChunkOptions {
 }
 
 /**
- * Build a plugin's admin chunk into admin's preview dist using the same
- * alias seam plumix's vite plugin uses at consumer build time, then patch
- * `index.html` to load it. Used by e2e fixtures in admin and plugins.
- *
- * `esbuild` is dynamically imported so this module is free to ship inside
- * `@plumix/core/test/playwright` without forcing every consumer to have
- * esbuild installed — only the e2e build steps that call this function
- * need it.
+ * Build a plugin's admin chunk into admin's preview dist and patch `index.html`
+ * to load it. esbuild is imported lazily so consumers needn't install it.
  */
 export async function buildAdminPluginChunkForE2E(
   options: BuildAdminPluginChunkOptions,

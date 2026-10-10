@@ -199,9 +199,8 @@ describe("resolveListingPage", () => {
     expect(page?.data.pagination.total).toBe(1);
   });
 
-  // A term archive gets the same decode pass an entry does, so `term.meta`
-  // and `term.storedMeta` diverge here — which is why `termMetaEquals` reads
-  // `storedMeta`: a `Date` is not a value `===` can match a rule literal on.
+  // A decoded `Date` can't match a rule literal by `===`, so
+  // `termMetaEquals` reads `storedMeta`.
   test("a term archive is decoded, and a whereMeta rule still matches its stored meta", async () => {
     const h = await harness();
     const term = await h.factory.term.create({
@@ -462,9 +461,8 @@ describe("resolveListingPage", () => {
       url: photoUrl(photo.id),
       alt: null,
     });
-    // The subject's row, its portrait, the entry count and page, and the
-    // entry_term join. Listing the author's own entries replays the author
-    // from the request memo rather than hydrating the portrait again.
+    // Listing the author's own entries replays the author from the request
+    // memo rather than hydrating the portrait again.
     expect(traced.dbQueryCount()).toBe(5);
   });
 

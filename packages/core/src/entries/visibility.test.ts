@@ -136,10 +136,8 @@ describe("readableEntryRows", () => {
   }
 
   test("matches referenceableEntryRows wherever the caller holds read", async () => {
-    // The two are one rule under two compositions — `read` is the only thing
-    // `readableEntryRows` asks on top, so a tier that holds it must not be
-    // able to tell them apart. A tier that does not is where they are meant
-    // to differ, and is skipped rather than asserted.
+    // `read` is all `readableEntryRows` asks on top, so a tier holding it
+    // must not tell the two apart; other tiers are skipped.
     for (const [tier, { capabilities }] of Object.entries(TIERS)) {
       const ctx = viewer(capabilities);
       if (readableEntryRows(ctx, "post") === null) continue;

@@ -1,9 +1,3 @@
-// Admin's e2e support layer. The generic playwright helpers
-// (`mockRpc`, `mockSession`, `mockManifest`, `rpcOkBody`, etc.) live
-// in `@plumix/core/test/playwright` so the same surface is what
-// external plugin authors use — admin re-exports them and adds the
-// admin-specific manifest + session fixtures the suite shares.
-
 import type { PlumixManifest } from "@plumix/core/manifest";
 import { emptyManifest } from "@plumix/core/manifest";
 import {
@@ -23,10 +17,8 @@ export {
 } from "@plumix/core/test/playwright";
 
 /**
- * Defined oRPC 409 envelope with a `reason` discriminator — the shape
- * every CONFLICT surface in the admin maps to friendly copy. Core's
- * `rpcErrorBody` omits `defined`/`status`, which `isORPCErrorJson`
- * needs to decode a typed rejection.
+ * Core's `rpcErrorBody` omits `defined`/`status`, which `isORPCErrorJson` needs
+ * to decode a typed rejection.
  */
 export function rpcConflictBody(reason: string): string {
   return JSON.stringify({
@@ -101,12 +93,7 @@ export const MANIFEST_WITH_CAPABILITY_GATES: PlumixManifest = {
   ],
 };
 
-/**
- * Non-editor entry-type fixture — supports lacks "editor", so the admin
- * route renders the plain-form (stacked Cards) layout instead of the
- * editor surface. Carries one entry metabox with two fields so the e2e
- * can exercise the Card/section + MetaBoxField pipeline.
- */
+/** Lacks "editor" support, so the route renders the plain-form layout. */
 export const MANIFEST_WITH_PLAIN_FORM_TYPE: PlumixManifest = {
   ...emptyManifest(),
   entryTypes: [
@@ -170,10 +157,7 @@ export const MANIFEST_WITH_POST: PlumixManifest = {
 };
 
 /**
- * Full editor fixture: an autosave-capable post type plus two registered
- * patterns — one starter-eligible via `target`, one not. Drives the patterns
- * section and the starter modal, neither of which renders without manifest
- * patterns.
+ * The patterns section and starter modal render only with manifest patterns.
  */
 export const MANIFEST_WITH_EDITOR_PATTERNS: PlumixManifest = {
   ...emptyManifest(),
@@ -252,12 +236,8 @@ export const MANIFEST_WITH_TAXONOMIES: PlumixManifest = {
       isPublic: true,
       showUI: true,
       showInSidebar: true,
-      // Per-type chrome labels (WP-aligned) the admin reads via the
-      // `termTaxonomyLabel` cascade. Without these, the heading
-      // would fall back to the generic noun-less "Add" / "Edit"
-      // descriptors — fine in production but the e2e contracts pin
-      // the per-type names so a regression in the cascade lookup
-      // gets caught here.
+      // Without these the heading falls back to the generic "Add" / "Edit",
+      // which would hide a regression in the label cascade.
       labels: {
         singular: "Category",
         addNewItem: "New category",
@@ -280,13 +260,6 @@ export const MANIFEST_WITH_TAXONOMIES: PlumixManifest = {
   ],
 };
 
-/**
- * Manifest exercising the full settings hierarchy: one page (group),
- * two groups composed on one page. Covers the plugin-author contract
- * end-to-end — plugins register groups + a page that lists them, and
- * the admin renders one shadcn `<Card>` per group with its own save
- * button.
- */
 export const MANIFEST_WITH_SETTINGS: PlumixManifest = {
   ...emptyManifest(),
   settingsGroups: [
@@ -337,10 +310,8 @@ export const MANIFEST_WITH_SETTINGS: PlumixManifest = {
 };
 
 /**
- * Admin's e2e suite needs a bigger capability set than `core`'s baseline
- * `AUTHED_ADMIN` because the taxonomy fixtures depend on per-taxonomy
- * caps the real server would derive at registration time. Layer them
- * on once and let specs use this fixture by default.
+ * The taxonomy fixtures need the per-taxonomy caps the real server derives at
+ * registration.
  */
 export const AUTHED_ADMIN = withCapabilities(
   BASE_AUTHED_ADMIN,

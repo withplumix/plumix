@@ -175,10 +175,8 @@ describe("handleDebugRequests", () => {
   });
 });
 
-// Drives real requests through the dispatcher and reads them back over the
-// route, exercising the whole capture → list → get → render path. Toggles the
-// `PLUMIX_DEV` gate directly (a Vite build makes it empty and tree-shakes the
-// route); mirrors the dev/prod split of the injection test.
+// A Vite build empties the `PLUMIX_DEV` gate and tree-shakes the route, so
+// these tests toggle it directly.
 describe("debug read routes through the dispatcher", () => {
   const original = process.env.PLUMIX_DEV;
   afterEach(() => {

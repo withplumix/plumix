@@ -193,9 +193,8 @@ describe("mountEditorRuntime", () => {
         },
       ],
     };
-    // The published page renders this `img` because the operator allowed it;
-    // a canvas still on the baseline would strip it and show the author a
-    // narrower document than the one they are editing.
+    // A canvas still on the baseline would strip the operator-allowed `img`
+    // the published page renders.
     const renderEnv = {
       htmlAllowlist: {
         allowedTags: [...BASELINE_HTML_ALLOWLIST.allowedTags, "img"],

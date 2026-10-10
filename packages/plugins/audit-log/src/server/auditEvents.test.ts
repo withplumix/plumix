@@ -1,17 +1,3 @@
-// Audit-event subscription tests. Each test wires a `HookRegistry`,
-// calls `registerAuditEvents(ctx, fakeService)`, fires the action via
-// `doAction` with the context last, and asserts on the row that
-// landed in the fake service's record buffer. Avoids the
-// real DB path and keeps each assertion pinned to the row's shape.
-//
-// Three layers:
-// 1. Existing per-event behavioral coverage (preserved verbatim post-rename).
-// 2. Backfill: one assertion per audit-events row so a refactor of the
-//    interpreter can't silently break a row that previously had no test.
-// 3. Registration + guard: the listeners actually registered are held to a
-//    pinned list; `assertRedactionInvariants` ensures sensitive fields stay
-//    omitted on every row whose subject type carries them.
-
 import type {
   AppContext,
   AuthenticatedUser,
@@ -41,9 +27,8 @@ import {
   SUBJECT_REQUIRED_REDACTIONS,
 } from "./auditEvents.js";
 
-// Production builds the request's ambient context before anyone is signed
-// in; an authenticated procedure works on a copy that carries the user. So
-// the session rides a cookie here, not the harness's pre-signed context.
+// The ambient context is built before sign-in and an authenticated procedure
+// works on a copy, so the session rides a cookie, not a pre-signed context.
 describe("registerAuditEvents — through a procedure", () => {
   test("a signed-in admin's settings save is attributed to them", async () => {
     const writes: NewAuditLogRow[] = [];
@@ -80,10 +65,8 @@ describe("registerAuditEvents — through a procedure", () => {
 });
 
 /**
- * Loose-typed dispatch — slice 178's defer.test.ts uses the same
- * pattern. The action names here aren't all in `ActionRegistry`'s
- * typed view (some are core lifecycle actions), so we cast once to
- * keep the tests readable.
+ * Some action names here aren't in `ActionRegistry`'s typed view (core
+ * lifecycle actions), so the dispatch is cast once.
  */
 type ActionDispatcher = (name: string, ...args: unknown[]) => Promise<void>;
 

@@ -26,9 +26,8 @@ const subscribe = defineForm("subscribe", {
 const wire = toFormWire(subscribe);
 
 /**
- * A theme's own subscribe bar: its own markup, its own controls, none of
- * the plugin's. Everything it knows about the form comes back from the
- * hook, which is the whole claim `usePlumixForm` makes.
+ * A theme's own subscribe bar with none of the plugin's markup; everything it
+ * knows comes from the hook.
  */
 function SubscribeBar(): ReactNode {
   const form = usePlumixForm<typeof subscribe>(wire);
@@ -107,9 +106,8 @@ function lastSubmit(): readonly [string, RequestInit] {
 }
 
 /**
- * The answers the hook posted. It has to be a `URLSearchParams` — that is
- * what makes the request urlencoded, exactly as the rendered form posts
- * it — so anything else is the failure rather than something to coerce.
+ * Must be a `URLSearchParams`, which makes the request urlencoded like the
+ * rendered form's; anything else fails.
  */
 function submittedBody(): URLSearchParams {
   const body = lastSubmit()[1].body;
@@ -262,10 +260,8 @@ describe("usePlumixForm", () => {
     expect(lastSubmit()[0]).toBe("/blog/_plumix/forms/submit");
   });
 
-  // The rendered form disables its own button while a submit is in
-  // flight. A theme is handed `submitting` to do the same, but a second
-  // click landing inside the same tick beats any disabling — and the cost
-  // is two rows in `form_submissions` for one enquiry.
+  // A second click in the same tick beats any disabling, and would store two
+  // rows for one enquiry.
   test("makes one submission of a button pressed twice", async () => {
     render(<EagerBar />);
 

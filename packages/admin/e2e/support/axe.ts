@@ -3,9 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect } from "@playwright/test";
 
 /**
- * WCAG 2.1 AA coverage — the baseline every admin screen commits to. Call
- * from any spec after the page has rendered its critical content so axe has
- * the DOM in its settled state.
+ * Call once the page has rendered its critical content, so axe sees it settled.
  */
 export async function expectNoAxeViolations(page: Page): Promise<void> {
   const results = await new AxeBuilder({ page })

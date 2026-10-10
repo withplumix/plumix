@@ -8,9 +8,8 @@ interface RelatedPostsProps {
 }
 
 /**
- * Sits below the article (and its comments) on the single-post view. The
- * `relatedPosts` dep returns posts sharing a term with the current one, so an
- * empty list means nothing related — hide the strip rather than show it.
+ * An empty list means nothing related, so the strip is hidden rather than
+ * shown empty.
  */
 export function RelatedPosts({ entries }: RelatedPostsProps): ReactNode {
   if (entries.length === 0) return null;

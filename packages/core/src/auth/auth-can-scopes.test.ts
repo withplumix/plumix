@@ -13,10 +13,8 @@ import { testConfig } from "../test/config.js";
 import { pooledEntryTypeRegistry } from "../test/pooled-entry-types.js";
 import { withUser } from "./with-user.js";
 
-// `auth.can()` is the single gate every capability check goes through —
-// settings RPC, entry RPC, plugin route handlers all consult it. These
-// tests pin its tokenScopes-narrowing behaviour so a future refactor
-// can't silently strip the intersection.
+// `auth.can()` is the single gate every capability check goes through, so
+// a refactor must not strip the tokenScopes intersection.
 
 function buildCtx(args: {
   role: "subscriber" | "contributor" | "author" | "editor" | "admin";

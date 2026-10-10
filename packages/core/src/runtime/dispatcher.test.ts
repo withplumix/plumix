@@ -55,10 +55,8 @@ function mcpRequest(): Request {
 }
 
 /**
- * Both cold interfaces hang off the app as lazy loaders, so substituting one
- * makes the load observable: a zero count is the "the SDK never came onto the
- * cold-start path" assertion, and the handler's body proves the request was
- * delegated rather than merely answered.
+ * Substituting a lazy loader makes the load observable: a zero count proves
+ * the SDK stayed off the cold-start path.
  */
 function coldInterfaceProbe(): {
   readonly loads: { mcp: number; rest: number };
@@ -189,11 +187,8 @@ describe("dispatcher — routing", () => {
   });
 
   test("hands back a non-HTML answer to the shell fetch untouched", async () => {
-    // Under `not_found_handling: "none"` — what the scaffold ships — a deploy
-    // whose admin was never staged answers the shell URL with a plain 404. It
-    // has to come back as one: the rewrite below turns whatever it gets into a
-    // 200-shaped shell with `private, no-cache`, so without this branch a
-    // missing admin would look installed and uncacheable to every visitor.
+    // The scaffold's `not_found_handling: "none"` answers an unstaged admin
+    // with a 404; rewritten to a shell, it would look installed.
     const body = "Not Found";
     const assets = {
       fetch: (): Promise<Response> =>
@@ -407,9 +402,8 @@ describe("dispatcher — routing", () => {
     expect(authenticated).toBe(false);
   });
 
-  // A signal a custom authenticator reads instead of `plumix_session` — an SSO
-  // header, a Cloudflare Access JWT, a tenant cookie. Deliberately not the
-  // default cookie, so these tests fail if the shell goes back to sniffing it.
+  // Deliberately not the default cookie, so these tests fail if the shell
+  // goes back to sniffing it.
   const TENANT_HEADER = "x-tenant-session";
 
   function tenantHeaderAuthenticator(user: User): RequestAuthenticator {
@@ -566,10 +560,8 @@ describe("dispatcher — CSRF", () => {
     expect(body.reason).toBe("csrf_origin_mismatch");
   });
 
-  // Extended timeout: this is the first request in the file to pass the CSRF
-  // gate, so it pays `loadRpcHandler`'s one-time source-resolved import of the
-  // whole oRPC router graph (~0.3s idle, 5s+ on a contended CI runner) —
-  // every later RPC dispatch in the process is ~20ms.
+  // Extended timeout: the first CSRF-passing request pays the one-time import
+  // of the whole oRPC router graph, 5s+ on a contended CI runner.
   test(
     "dev localhost CSRF: any loopback origin is allowed on the dev server",
     { timeout: 15_000 },
@@ -678,10 +670,8 @@ describe("dispatcher — CSRF", () => {
   });
 
   test("same-origin POST is allowed even when the deploy host differs from app.origin", async () => {
-    // The demo sandbox (and any multi-domain deploy) is served on a host that
-    // isn't the canonical app.origin. A same-origin request — Origin equals the
-    // host it targets — is never cross-site forgery, so it must clear the
-    // origin check; only the header gate (satisfied) and auth then apply.
+    // Multi-domain deploys serve off the canonical origin; a same-origin
+    // request is never cross-site forgery.
     const h = await createDispatcherHarness();
     const response = await h.dispatch(
       plumixRequest("https://demo.deploy.example/_plumix/rpc/entry/list", {
@@ -1410,10 +1400,8 @@ describe("dispatcher — form-post routes (#2018)", () => {
     expect(body.reason).toBe("csrf_origin_mismatch");
   });
 
-  // A plugin id may name a prefix core answers itself — nothing reserves
-  // `rpc` — and the plugin's handler never runs on those paths. Its opt-out
-  // must not run there either, or a route it cannot serve would drop the
-  // header gate in front of the cookie-authenticated RPC router.
+  // Nothing reserves `rpc` as a plugin id, so the opt-out could otherwise
+  // drop the header gate in front of the RPC router.
   test("the opt-out does not reach a path core answers itself", async () => {
     const plugin = definePlugin("rpc", (ctx) => {
       ctx.registerRoute({
@@ -1466,9 +1454,8 @@ describe("dispatcher — form-post routes (#2018)", () => {
     expect(body.reason).toBe("csrf_header_missing");
   });
 
-  // Both halves of the predicate are pinned: drop the swap entirely and the
-  // first fails; key it on `formPost` alone and only the second does, which is
-  // what holds the header in the condition.
+  // Keying the swap on `formPost` alone fails only the second case, which
+  // holds the header in the condition.
   const sessionEchoPlugin = definePlugin("forms", (ctx) => {
     ctx.registerRoute({
       method: "POST",
@@ -1868,19 +1855,16 @@ describe("dispatcher — public read-through CDN", () => {
     );
 
     expect(response.status).toBe(200);
-    // Before this, the copy the visitor received carried nothing: freshness and
-    // tags only ever reached the store's own copy, so a CDN in front of the
-    // origin had nothing to act on.
+    // A CDN in front of the origin acts on the visitor's copy, not the
+    // store's.
     expect(response.headers.get("cache-control")).toBe("public, s-maxage=60");
     expect(response.headers.get("cache-tag")).toBe(
       `t:post,e:${String(entry.id)},s:site`,
     );
   });
 
-  // A render reads things the route intent cannot name, and a plugin is the
-  // one that knows it read them. It is usually handed a derived context — a
-  // sessioned render runs through `withUser` — so the tag has to reach the
-  // stored page from there too.
+  // A sessioned render runs through `withUser`, so a plugin's tag must reach
+  // the stored page from a derived context.
   test("a page render's tagCdnEntry from a derived context tags the stored page", async () => {
     const { cdn, put } = cdnStub();
     const author = { id: 1, email: "a@example.com", role: "admin" } as const;
@@ -1916,9 +1900,8 @@ describe("dispatcher — public read-through CDN", () => {
     expect(response.headers.get("cache-tag")?.split(",")).toContain("x:1");
   });
 
-  // Every render reads the `site` group for its `<title>` fallback, through the
-  // same loader as the `settings` template dep — so saving the group has to
-  // reach every page that printed it.
+  // Every render reads the `site` group for its `<title>` fallback, so saving
+  // it must reach every page.
   test("a page that read a settings group is stored under that group's tag", async () => {
     const { cdn, put } = cdnStub();
     const h = await createDispatcherHarness({
@@ -2342,9 +2325,8 @@ describe("dispatcher — archive-type CDN (#1693)", () => {
     expect(put).not.toHaveBeenCalled();
   });
 
-  // An archive that declares its entries instead of resolving a payload:
-  // core knows which types the query can list, so nothing is left for the
-  // plugin to restate as a `tags` array that could disagree with it.
+  // Core knows which types the query lists, so the plugin need not restate a
+  // `tags` array that could disagree.
   const cacheableTalks = definePlugin("talks-archive", (ctx) => {
     ctx.registerEntryType("talk", { label: "Talks", isPublic: true });
     ctx.registerEntryType("workshop", { label: "Workshops", isPublic: true });
@@ -3801,9 +3783,8 @@ describe("dispatcher — dev error page", () => {
 describe("dispatcher — dev JSON error (non-HTML 5xx)", () => {
   afterEach(() => void vi.unstubAllEnvs());
 
-  // A request that explicitly negotiates away from HTML — an API/fetch call, as
-  // opposed to a browser navigation. `acceptsHtml` returns false for these, so
-  // they never see the themed page or the standalone dev HTML page.
+  // An API call, not a navigation, so it never sees the themed page or the
+  // standalone dev HTML page.
   const jsonRequest = () =>
     new Request(`${DEV_ORIGIN}/`, {
       headers: { accept: "application/json" },

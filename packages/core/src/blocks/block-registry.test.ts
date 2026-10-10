@@ -80,11 +80,6 @@ describe("defineBlock", () => {
   });
 
   test("text slots accept MessageDescriptor for translation", () => {
-    // The four BlockSpec text slots (`title`, `description`,
-    // `placeholder`, `keywords[]`) and BlockVariation (`title`,
-    // `description`, `keywords[]`) widen to `Label` so plugin authors
-    // can pass Lingui descriptors. String callers still work
-    // (backwards-compat through the union).
     const spec = defineBlock({
       name: "acme/hero",
       title: { id: "block.hero.title", message: "Hero" },

@@ -266,9 +266,8 @@ describe("the card in a listing page's head", () => {
       harness.fetch("/posts/page/2").then((r) => r.text()),
     ]);
 
-    // A card names the archive, not one slice of it — and the route only ever
-    // renders the first page, so a head that digested page two's entries would
-    // publish a URL every scraper is redirected away from.
+    // The route renders only page one, so a head digesting page two's entries
+    // would publish a URL every scraper gets redirected away from.
     expect(ogImageOf(second)).toBe(ogImageOf(first));
     (
       await harness.fetch(new URL(ogImageOf(second) ?? "").pathname)

@@ -717,11 +717,8 @@ describe("resolvePublicRoute — single entry through theme", () => {
       publishedAt: new Date(),
     });
 
-    // The editor canvas loads the real route with `?plumix.edit`. The author
-    // is authenticated (so the bar would otherwise render), but inside the
-    // canvas the front-end admin bar is redundant chrome — and its injected
-    // `body { padding-top }` drives a runaway height loop against the theme's
-    // `min-h-screen`. It must be suppressed in edit mode.
+    // In the canvas the bar's injected `body { padding-top }` drives a
+    // runaway height loop against the theme's `min-h-screen`.
     const request = await h.authenticateRequest(
       new Request("https://cms.example/post/public?plumix.edit"),
       author.id,
@@ -1200,10 +1197,7 @@ describe("resolvePublicRoute — single entry through theme", () => {
   });
 
   test("React hooks (useId) inside a factory template render correctly", async () => {
-    // Regression for the gotcha: if the renderer calls `template.render`
-    // outside React's render pass, useId / useState etc. throw with
-    // "Invalid hook call". The TemplateAdapter wraps the call so hooks
-    // are legal — this test enforces that contract.
+    // Called outside React's render pass, hooks throw "Invalid hook call".
     const theme = defineTheme({
       templates: [
         fallback(() => null),
@@ -2349,11 +2343,6 @@ describe("resolvePublicRoute — single entry through theme", () => {
   });
 });
 
-/**
- * A block whose loader always rejects. In dev the failure must escalate to the
- * dev error page naming the block; in prod it stays isolated to the block and
- * the page still renders (#1600).
- */
 const throwingLoaderPlugin = definePlugin("acme-throwing-loader", (ctx) => {
   ctx.registerBlock(
     defineBlock({
@@ -2372,9 +2361,8 @@ const throwingLoaderPlugin = definePlugin("acme-throwing-loader", (ctx) => {
 });
 
 /**
- * A block whose loader runs a traced DB query that fails. The failing query
- * span is recorded before the rejection escalates, so the dev error page's
- * database section can flag it — the "showing the failing query" half of #1600.
+ * The failing query span is recorded before the rejection escalates, so the
+ * dev error page's database section can flag it.
  */
 const failingQueryPlugin = definePlugin("acme-failing-query", (ctx) => {
   ctx.registerBlock(
@@ -3709,11 +3697,8 @@ describe("resolvePublicRoute — front-page through theme", () => {
   });
 
   test("blog archive at /posts resolves even when a pages plugin's empty-slug catch-all registers first", async () => {
-    // With `rewrite.slug: ""`, the pages plugin auto-registers `/:slug`
-    // (or `/:path+` hierarchical). Sharing AUTO_ROUTE_PRIORITY (50) with
-    // blog's `/posts` archive made resolution depend on plugin order —
-    // `[pages, blog]` would 404 because pages' catch-all matched first
-    // and the page resolver missed slug "posts".
+    // Sharing a priority with blog's `/posts` archive made resolution depend
+    // on plugin order, so pages' catch-all could shadow it.
     const pagesPlugin = definePlugin("pages", (ctx) => {
       ctx.registerEntryType("page", {
         label: "Pages",
@@ -4708,10 +4693,8 @@ describe("html allowlist — operator config reaches the renderer", () => {
     expect(body).toContain('<img src="/cat.png" />');
   });
 
-  // The editor canvas remounts client-side with no server context, so it can
-  // only match the published page if the allowlist rides the SSR embed. The
-  // two halves are unit-tested either side of that boundary; this is the one
-  // assertion that the edit-mode dispatch actually joins them.
+  // The canvas remounts client-side with no server context, so the allowlist
+  // must ride the SSR embed.
   test("an edit-mode dispatch embeds the operator's allowlist for the canvas", async () => {
     const h = await createDispatcherHarness({
       config: {

@@ -40,10 +40,8 @@ describe("requireCapability middleware", () => {
     expect(await client.probe()).toBe("ok");
   });
 
-  // Composed before `.input()` (matching every real call site), so the
-  // capability gate runs ahead of schema validation — a caller lacking
-  // the capability gets FORBIDDEN even when their input is also malformed,
-  // rather than a validation error leaking the input shape to them first.
+  // Composed before `.input()`, as every call site is, so a caller without the
+  // capability gets FORBIDDEN before validation can leak the input shape.
   test("wins over a schema-validation error when the input is also invalid", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
     const router = {

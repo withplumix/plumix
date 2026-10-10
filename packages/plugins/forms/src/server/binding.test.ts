@@ -351,13 +351,8 @@ describe("a bound token this install did not sign", () => {
 });
 
 describe("a form whose bind changed under a cached page", () => {
-  /**
-   * What makes two harnesses one install: the bind secret. Copied from
-   * the one that minted the token to the one that receives it, so the
-   * token verifies and the only difference left is the kind the form now
-   * declares — which is the state a site is in after editing `bind`
-   * while the edge still serves pages rendered before the edit.
-   */
+  // Sharing the bind secret makes two harnesses one install, as when a site
+  // edits `bind` while the edge serves older pages.
   async function shareSecret(
     from: FormsHarness,
     to: FormsHarness,
@@ -387,10 +382,8 @@ describe("a form whose bind changed under a cached page", () => {
     await shareSecret(wasEntry, nowTerm);
     const response = await post(nowTerm, cached);
 
-    // Accepted, not refused: the visitor is holding a page this site
-    // served them, and the edit was the site's. Stored as nothing,
-    // because storing it would hand a handler written for terms an
-    // entry id.
+    // Accepted: this site served the page. Stored as nothing, so a terms
+    // handler never receives an entry id.
     response.assertStatus(303);
     const [row] = await rows(nowTerm);
     expect(row?.boundType).toBeNull();

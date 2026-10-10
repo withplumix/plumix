@@ -53,9 +53,8 @@ function query(testid: string): HTMLElement | null {
 }
 
 /**
- * React roots inside the shadow commit on the scheduler, so the DOM an
- * assertion needs may not be there yet. Poll for it — a loaded CI runner
- * outruns any fixed delay.
+ * React roots inside the shadow commit on the scheduler, and a loaded CI
+ * runner outruns any fixed delay, so poll.
  */
 function shown(testid: string): Promise<HTMLElement> {
   return vi.waitFor(

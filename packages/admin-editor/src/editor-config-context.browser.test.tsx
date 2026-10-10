@@ -54,10 +54,8 @@ describe("useEditorConfig", () => {
   });
 
   test("keeps the config identity stable across re-renders with equal inputs", () => {
-    // The "session-stable" promise rests on the provider's memo: equal inputs
-    // must yield the same object, so a parent re-render doesn't cascade into
-    // every panel. (Guards the NO_TOKENS default in PlumixEditor, whose job is
-    // to keep the `tokens` input referentially stable.)
+    // Equal inputs must yield the same object, so a parent re-render doesn't
+    // cascade into every panel.
     const seen: EditorConfig[] = [];
     function Capture(): null {
       seen.push(useEditorConfig());

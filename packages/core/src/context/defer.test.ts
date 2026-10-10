@@ -34,11 +34,8 @@ describe("AppContext.defer", () => {
   });
 
   test("rejections from a caller-supplied defer route through the configured logger", async () => {
-    // Bug 1 fix: the cloudflare adapter (and any other runtime that
-    // wires `defer`) shouldn't have to know about logging. Whatever
-    // promise the caller's `defer` receives must already carry a
-    // .catch that lands in `ctx.logger.error` so an operator-wired
-    // logger sees deferred rejections in production.
+    // A runtime wiring `defer` shouldn't have to know about logging, so the
+    // promise it receives already routes rejections to `ctx.logger.error`.
     const seen: { msg: string; meta?: Record<string, unknown> }[] = [];
     const captureLogger: Logger = {
       debug: () => undefined,
@@ -113,9 +110,8 @@ describe("AppContext.defer", () => {
   });
 
   test("default fallback swallows rejections so plugin code never throws on `defer`", async () => {
-    // No `defer` wired at all — a harness, a narrow unit test. Nothing
-    // intercepts the promise, so the fallback has to log it rather than
-    // let the process crash on an unhandled rejection.
+    // Nothing intercepts the promise, so the fallback must log it rather than
+    // crash on an unhandled rejection.
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {
       // swallow — assertion checks the captured calls.
     });

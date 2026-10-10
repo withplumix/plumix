@@ -12,9 +12,8 @@ const command = (overrides: Partial<CommandDefinition>): CommandDefinition => ({
 });
 
 /**
- * Plugin setup runs while the app is being assembled, so a plugin that records
- * its own registration is how a test sees whether the build happened at all —
- * no stand-in for `buildApp`, just the observable it leaves behind.
+ * Plugin setup runs during app assembly, so its registration shows whether the
+ * build happened.
  */
 const registrations: string[] = [];
 

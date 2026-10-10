@@ -48,9 +48,8 @@ describe("planning a card's fonts against its renderer", () => {
   });
 
   test("treats an empty format list as a renderer that reads no fonts", () => {
-    // The same state as `false`, spelled the other way the public type allows.
-    // Calling it unreadable would fail every card on a site that configured a
-    // font set, which is the opposite of what declaring it asks for.
+    // An empty `formats` means the same as `false`; calling it unreadable would
+    // fail every card on a site that configured fonts.
     const plan = planCardFonts(rendererReading({ formats: [] }), [
       "/fonts/A.ttf",
     ]);

@@ -9,8 +9,8 @@ import { baseConfig } from "@plumix/vitest-config/base";
 import { defineTestConfig } from "./test-config.js";
 
 /**
- * What a tier is, as far as a test run can tell: the fields a plugin's config
- * and this repo's must agree on for "the same two tiers" to mean anything.
+ * The fields a plugin's config and this repo's must agree on for the tiers to
+ * match.
  */
 function tiers(config: ViteUserConfig) {
   const projects = (config.test?.projects ??

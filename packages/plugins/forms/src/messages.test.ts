@@ -16,9 +16,8 @@ import {
   urlMessage,
 } from "./messages.js";
 
-// A visitor reads these in the locale they were authored in — the public
-// render path has no catalog to resolve against — so what the ICU source
-// messages render to is the contract, not an implementation detail.
+// The public render path has no catalog, so what the ICU source messages render
+// to is the contract.
 describe("interpolated messages", () => {
   test("names the field a rejection is about", () => {
     expect(requiredMessage("Your name")).toBe("Your name is required.");
@@ -66,10 +65,8 @@ describe("interpolated messages", () => {
 });
 
 /**
- * `lingui compile` fails on a malformed ICU message but not on a plural
- * that is missing one of the locale's categories — the count would then
- * silently fall through to `other`. These read the committed `.po`
- * rather than the compiled catalogs, which are build output.
+ * `lingui compile` misses a plural lacking a locale category, which falls
+ * through to `other`. Reads the committed `.po`, not build output.
  */
 const catalog = (locale: string): Map<string, string> => {
   // vitest runs with the package root as cwd.
@@ -143,10 +140,8 @@ describe("row-count plurals across the launch set", () => {
   });
 });
 
-// In production these render from the compiled `en` catalog, not from the
-// descriptors — Lingui ships no ICU parser there. So the catalog's English
-// is what a visitor actually reads, and nothing else checks it against the
-// message the descriptor was authored with. `i18n:check` compares ids only.
+// Production renders from the compiled `en` catalog, not descriptors, and
+// `i18n:check` compares ids only, so nothing else checks its English.
 describe("the source catalog", () => {
   test("says the same English the descriptors do", () => {
     const en = catalog("en");

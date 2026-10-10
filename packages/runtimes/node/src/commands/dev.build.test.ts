@@ -23,10 +23,7 @@ import {
 } from "../test/consumer-project.js";
 
 /**
- * `message.mjs` is a module the config imports, so an edit to it reaches the
- * entry only through the importer walk; `/secret` reads what `.env` carries;
- * the theme's stylesheet shows whether the emitted sources saw `.env`; a
- * duplicated plugin makes `buildApp` reject, for the boot failure; and every
+ * `message.mjs` reaches the entry only through the importer walk; every
  * database connection the site releases is appended to `data/closed.log`.
  */
 const config = (plugins = "[probes]") =>
@@ -247,13 +244,8 @@ describe("plumix dev on the node runtime", () => {
     mkdirSync(dirname(staged), { recursive: true });
     writeFileSync(staged, "export const probe = 1;\n");
 
-    // Vite answers publicDir from a listing taken once at createServer and
-    // repaired by watcher events, so a file staged afterwards can be absent
-    // from the set for the server's life — it then calls next(), the
-    // dispatcher sees an asset-shaped path at the root base and 404s without
-    // reading the disk (#2225). `?url` makes vite decline by construction,
-    // which is that same fall-through without waiting on a race that only
-    // loses under CI load.
+    // Vite's publicDir listing can miss a file staged after createServer and
+    // 404 it; `?url` makes vite decline by construction, without the race.
     const response = await fetch(`${dev.origin}${asset}?url`);
 
     expect(response.status).toBe(200);

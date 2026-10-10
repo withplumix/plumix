@@ -5,10 +5,8 @@ import type { ResolvedNode } from "./rule-resolver.js";
 import { resolveErrorRule, resolveRule } from "./rule-resolver.js";
 
 /**
- * A second rule kind: the same tier/matcher vocabulary the template rules use,
- * over a payload that is not a React component. `template-hierarchy.test.ts`
- * covers the walk itself at `TemplateRule`; what is asserted here is that the
- * payload stays out of it — precedence, and the rule that comes back.
+ * A rule kind over a non-component payload, to prove the payload stays out
+ * of the walk.
  */
 interface CardRule extends TierMatchRule {
   readonly cardKey: string;

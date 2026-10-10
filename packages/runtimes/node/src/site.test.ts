@@ -71,9 +71,8 @@ beforeEach(() => {
 afterEach(async () => {
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
-  // A test that failed before its drain leaves these behind; left in place,
-  // one would drain rather than exit when the pool terminates the worker.
-  // Nothing else in this worker registers them.
+  // A test that failed before its drain leaves these behind, and one would
+  // drain rather than exit when the pool terminates the worker.
   process.removeAllListeners("SIGTERM");
   process.removeAllListeners("SIGINT");
   await Promise.all(
@@ -90,9 +89,8 @@ interface SiteOptions {
 }
 
 /**
- * The same shape `plumix build` emits: the entry in `dist/server`, the client
- * build beside it, which is how `entryUrl` resolves the assets directory.
- * Records the path of each connection the site opens, and of each it closes.
+ * The shape `plumix build` emits, which is how `entryUrl` resolves the assets
+ * directory. Records each connection the site opens and closes.
  */
 async function siteFor({ plugins = [], runtime = {} }: SiteOptions = {}) {
   const inner = nodeSqlite({ path: join(dir, "site.sqlite") });
@@ -145,9 +143,8 @@ describe("createNodeSite — scheduled", () => {
   });
 
   test("the report reaches the scheduler's failure logging", async () => {
-    // The whole chain the shipped cron path walks: firing → handler → report →
-    // the one line that says the firing did not do its job. Dropping the
-    // return anywhere along it leaves an operator with silence (#2303).
+    // The whole chain the shipped cron path walks; dropping the return anywhere
+    // leaves an operator with silence.
     const error = vi
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
@@ -237,10 +234,8 @@ describe("createNodeSite — serveWhenMain", () => {
   ])(
     "honours the runtime's `cron: $cron`, and drains through the site's own dispose",
     async ({ cron, starts }, { signal }) => {
-      // A body that outlives its timeout runs on after `afterEach` cleaned up.
-      // The first check is load-bearing: past it, a late body would start a
-      // server, signal listeners and a scheduler nothing tears down. The second
-      // only saves work: the restored `process.exit` is vitest's throwing stub.
+      // A body that outlives its timeout runs on after `afterEach`; the first
+      // check stops it starting a server nothing tears down.
       const exit = vi
         .spyOn(process, "exit")
         .mockImplementation(() => undefined as never);
@@ -365,9 +360,8 @@ describe("serveProcess", () => {
   });
 
   test("spends one budget across the whole shutdown, not one per step", async () => {
-    // A stop close to the budget leaves the drain a real but small slice, so
-    // the two worlds are far apart: one budget spends 600ms, one per step
-    // spends 1100. The slack either side of the threshold is STOP / 2.
+    // A stop close to the budget keeps the two worlds apart: one budget spends
+    // 600ms, one per step 1100. The slack either side is STOP / 2.
     const error = vi
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
@@ -381,9 +375,8 @@ describe("serveProcess", () => {
     const arrived = new Promise<void>((resolve) => (arrive = resolve));
     const { drain, server } = harness({
       drainDeadlineMs: BUDGET,
-      // Never answers, so `server.close()` cannot settle and the drain has to
-      // fall through to its own deadline. `closeIdleConnections()` would reap
-      // a socket that had not sent a request, so the request is load-bearing.
+      // Never answers, so the drain falls through to its deadline;
+      // `closeIdleConnections()` would reap a socket that sent no request.
       listener: () => arrive(),
       startCron: () => Promise.resolve(scheduler),
     });
@@ -398,9 +391,8 @@ describe("serveProcess", () => {
     await hung;
 
     expect(elapsed).toBeLessThan(BUDGET + STOP / 2);
-    // The other side: the drain spends the budget rather than cutting short.
     // The 5ms covers a timer firing early against `Date.now()` rounding on a
-    // busy host (#2582); per-step spending is still ~500ms away.
+    // busy host.
     expect(elapsed).toBeGreaterThanOrEqual(BUDGET - 5);
     expect(log).toHaveBeenCalledWith(
       `plumix: listening on http://127.0.0.1:${String(port)}`,

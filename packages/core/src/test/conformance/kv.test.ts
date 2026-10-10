@@ -5,9 +5,8 @@ import { memoryKv } from "../../runtime/memory-kv.js";
 import { failingCases } from "./case.js";
 import { kvContractCases } from "./kv.js";
 
-// A suite that cannot fail proves nothing about the store that passes it.
-// `memoryKv` passing the suite is asserted by its own test file; here the same
-// cases run against stores broken in ways an adapter really ships broken.
+// A suite that cannot fail proves nothing, so the cases also run against stores
+// broken the way real adapters ship broken.
 
 beforeEach(() => {
   vi.useFakeTimers();

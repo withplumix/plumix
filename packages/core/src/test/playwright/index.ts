@@ -17,17 +17,6 @@ export { CONTENT_LIST_ROWS, PNG_1X1 } from "./site-fixtures.js";
 export type { PlumixWorkerOptions } from "./test.js";
 export { expect, test } from "./test.js";
 
-/**
- * Playwright helpers for plugin authors testing their admin pages
- * against a running plumix site. Keep the surface small: mock RPC
- * endpoints, mock the admin manifest, mock auth session. Compose them
- * in your own `beforeEach` or fixtures.
- *
- * The plumix `webServer` setup (build + preview) is not provided here;
- * plugin authors point Playwright at their own `playground/` site that
- * registers their plugin via `plumix.config.ts`.
- */
-
 export type MockRpcHandlers = Readonly<Record<string, unknown>>;
 
 /**
@@ -61,10 +50,8 @@ function rpcOk(route: Route, body: unknown): Promise<void> {
 }
 
 /**
- * Intercept `/_plumix/rpc/**` and answer matching procedure paths from
- * the supplied handler map. Handler keys match by URL suffix
- * (`"/auth/session"`, `"/media/list"`, etc). Unmatched paths return
- * 404 — surface gaps loudly rather than silently empty-respond.
+ * Answer `/_plumix/rpc/**` from the handler map, matched by URL suffix.
+ * Unmatched paths 404 so gaps surface loudly rather than as empty responses.
  */
 export async function mockRpc(
   page: Page,
@@ -80,12 +67,8 @@ export async function mockRpc(
 }
 
 /**
- * Same as `mockRpc`, but pushes the parsed `json` payload of every
- * request whose URL ends in `captureSuffix` into an array that the
- * caller holds a reference to. Use to assert on the RPC input shape
- * a UI interaction produces (search box → /entry/list `search`,
- * column header click → `orderBy`, etc) without re-implementing the
- * page.route handler in every test.
+ * `mockRpc`, also recording the parsed `json` payload of each request ending in
+ * `captureSuffix`, to assert on the RPC input a UI interaction produces.
  */
 export async function mockRpcWithCapture(
   page: Page,
@@ -119,9 +102,8 @@ export function mockSession(
 }
 
 /**
- * `text()` decoded and reassembled the body and the rewrite resized it,
- * so every header describing the original bytes is now wrong. Playwright
- * reframes what it serves, so drop them rather than restating them.
+ * The rewrite resized a decoded body, so headers describing the original bytes
+ * are wrong; Playwright reframes what it serves.
  */
 const STALE_HEADERS = new Set([
   "content-encoding",
@@ -138,10 +120,8 @@ function freshHeaders(headers: Record<string, string>): Record<string, string> {
 }
 
 /**
- * Playwright disposes a fetched response body, and cuts `fulfill`'s
- * channel, when the page re-navigates or the test tears down while a
- * document request is still in flight. Both are teardown races rather
- * than defects.
+ * Playwright disposes a fetched body and cuts `fulfill` when the page
+ * re-navigates or tears down mid-request: teardown races, not defects.
  */
 function isTeardownRace(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
@@ -153,10 +133,8 @@ function isTeardownRace(error: unknown): boolean {
 }
 
 /**
- * `fallback` is the recovery every path here reaches for, and it is itself a
- * route call — so it races teardown exactly as the call it is recovering from
- * did. Rejecting inside a route callback kills the worker rather than failing
- * a test, which is how #2189 lost a suite that had already passed.
+ * `fallback` is itself a route call that races teardown, and rejecting inside a
+ * route callback kills the worker rather than failing a test.
  */
 async function fallbackUnlessTornDown(route: Route): Promise<void> {
   try {
@@ -200,10 +178,8 @@ export async function mockManifest(
         headers: freshHeaders(response.headers()),
       });
     } catch (error) {
-      // Losing the race means there is no document left to rewrite, so
-      // serve the request unmodified. Anything else must stay loud: a
-      // silently no-op'd manifest mock resurfaces as an unrelated
-      // assertion failure much later in whichever spec is running.
+      // Anything but a lost race stays loud: a silently no-op'd manifest mock
+      // resurfaces as an unrelated failure much later.
       if (!isTeardownRace(error)) throw error;
       await fallbackUnlessTornDown(route);
     }

@@ -346,9 +346,8 @@ describe("a field its condition hid", () => {
 });
 
 describe("a form broken into steps", () => {
-  // The wizard is a rendering of this list, not a change to it: one
-  // submission arrives carrying every step's answers, and the handler
-  // never learns the visitor answered them a page at a time.
+  // The wizard is only a rendering: one submission carries every step's
+  // answers.
   const plan = select("plan").options(["basic", "pro"]);
   const wizard = defineForm("wizard", {
     fields: [
@@ -521,9 +520,8 @@ describe("validation", () => {
       [HONEYPOT_FIELD]: "buy now",
     });
 
-    // Validation runs first, so a bot filling the trap is told exactly
-    // what a person answering badly is told — and nothing is stored,
-    // which is what a failed submission stores for anyone.
+    // Validation runs first, so a bot filling the trap gets the same answer as
+    // a person answering badly.
     response.assertStatus(422);
     expect(await rows(harness)).toHaveLength(0);
   });
@@ -1016,7 +1014,7 @@ describe("rows and groups", () => {
     ],
   });
 
-  /** One `party` submission, its rows spelled the way the markup posts them. */
+  // One `party` submission, its rows spelled the way the markup posts them.
   function partyBody(
     host: Record<string, string>,
     rows: readonly Record<string, string>[],
@@ -1146,10 +1144,8 @@ describe("rows and groups", () => {
     });
   });
 
-  // The markup never renders more rows than the maximum, so a body
-  // carrying more is refused whether or not the excess is blank —
-  // otherwise a body could park its answers past the cap and be read as
-  // a handful of empty rows.
+  // The markup never renders more rows than the maximum; accepting blank excess
+  // would let answers hide past the cap.
   test("refuses more rows than it takes even when the excess is blank", async () => {
     const harness = await partyHarness();
 
@@ -1223,10 +1219,8 @@ describe("rows and groups", () => {
 });
 
 /**
- * `usePlumixForm`'s half of the submit contract: a theme rendering
- * its own controls writes the answers out with `writeSubmittedValues` and
- * posts them itself, so what reaches the endpoint has to be the request a
- * rendered form makes — and be validated and stored identically.
+ * A theme posts answers written with `writeSubmittedValues`; that must be the
+ * request a rendered form makes, validated and stored identically.
  */
 describe("a submission made through usePlumixForm", () => {
   const rsvp = defineForm("rsvp", {
@@ -1239,7 +1233,7 @@ describe("a submission made through usePlumixForm", () => {
     ],
   });
 
-  /** What the hook posts: the header a script can set, and JSON back. */
+  // What the hook posts: the header a script can set, and JSON back.
   function postHeadless(harness: FormsHarness, body: URLSearchParams) {
     return harness.fetch("/_plumix/forms/submit", {
       method: "POST",
@@ -1317,18 +1311,18 @@ describe("a form guarded by Turnstile", () => {
     message: "We could not confirm you are not a robot. Please try again.",
   };
 
-  /** The urlencoded body of a call captured on the siteverify spy. */
+  // The urlencoded body of a call captured on the siteverify spy.
   const sentBody = (init: RequestInit | undefined): URLSearchParams =>
     new URLSearchParams(typeof init?.body === "string" ? init.body : "");
 
-  /** Cloudflare's answer, and a spy on the calls made to get it. */
+  // Cloudflare's answer, and a spy on the calls made to get it.
   function stubSiteverify(answer: unknown = { success: true }) {
     return vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValue(Response.json(answer));
   }
 
-  /** The guarded form, with the answers and the challenge filled in. */
+  // The guarded form, with the answers and the challenge filled in.
   const solve = (harness: FormsHarness, fields: Record<string, string> = {}) =>
     submitJson(harness, "guarded", {
       name: "Ada",

@@ -242,11 +242,8 @@ describe("menu RPC", () => {
 
   describe("menu.pickerTabs", () => {
     test("returns an ordered tab list from the eligibility resolver", async () => {
-      // The admin's left rail builds picker tabs from this list. With
-      // only the menu plugin installed, no entry type or taxonomy is
-      // menu-eligible (`menu_item` and `menu` are both `isPublic: false`)
-      // and the only registered non-built-in lookup adapter is none —
-      // so the response is just the always-present Custom URL tab.
+      // `menu_item` and `menu` aren't public, so with only this plugin the
+      // sole tab is the always-present Custom URL.
       const h = await buildHarness();
       const tabs = (await (
         h.client.menu as unknown as {
@@ -416,10 +413,7 @@ describe("menu RPC", () => {
     });
 
     test("returns each item with a per-item resolved.state — custom URLs are always ok", async () => {
-      // Slice 11: admin RPC enriches each item with state/label/href so
-      // the editor can render broken/unauthorized rows. Custom URL items
-      // never go through a lookup, so they resolve to ok with the meta
-      // url as href.
+      // Custom URL items never go through a lookup.
       const h = await buildHarness();
       const m = await seedMenu(h.db, h.factories, "primary", "Primary");
       const author = await adminUser
@@ -459,10 +453,7 @@ describe("menu RPC", () => {
     });
 
     test("entry-kind item pointing at a non-existent entry resolves to broken with last-known label", async () => {
-      // The entry adapter returns nothing for the dead id, so
-      // mapItemState sees a null lookup → broken. The admin still
-      // surfaces a label by falling through to `meta.lastLabel`
-      // (snapshot from the entry's last sync) rather than a numeric id.
+      // The admin falls back to `meta.lastLabel` rather than a numeric id.
       const h = await buildHarness();
       const m = await seedMenu(h.db, h.factories, "primary", "Primary");
       const author = await adminUser
@@ -582,10 +573,8 @@ describe("menu RPC", () => {
     });
 
     test("entry-kind item of a non-public type resolves to broken even with isShownInMenus: true", async () => {
-      // The public menu can never render it (no permalink), so the editor
-      // must not show it as ok. The public `page` type keeps the lookup
-      // scope non-empty, so `memo` is excluded by the type filter rather
-      // than by an empty scope skipping the lookup.
+      // `page` keeps the lookup scope non-empty, so `memo` is excluded by
+      // the type filter, not by an empty scope skipping the lookup.
       const h = await buildHarness("editor", {}, [
         definePlugin("internal", (setup) => {
           setup.registerEntryType("page", { label: "Pages", isPublic: true });
@@ -627,9 +616,7 @@ describe("menu RPC", () => {
     });
 
     test("sends meta already parsed — null when the stored JSON matches no kind", async () => {
-      // The resolver parses `entries.meta` to compute state and label; it
-      // sends that parsed value on rather than the raw column, so the editor
-      // never has to re-derive (or assert) the type of what it receives.
+      // The parsed meta is sent so the editor never re-derives its type.
       const h = await buildHarness();
       const m = await seedMenu(h.db, h.factories, "primary", "Primary");
       const author = await adminUser

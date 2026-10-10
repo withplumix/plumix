@@ -344,9 +344,6 @@ describe("createPlumixHandler — scheduled", () => {
   });
 });
 
-// Core work run against the site from outside a request — a CLI command that
-// settles stored meta, say — gets the same context a request or a scheduled
-// run would, and ends the same way.
 describe("createPlumixHandler — run", () => {
   test("hands the work the site's context and returns what it did", async () => {
     const notes = definePlugin("notes", (ctx) => {
@@ -731,9 +728,8 @@ describe("createPlumixHandler — scheduled reporting", () => {
   });
 
   test("keeps the tasks it ran when the commit after them throws", async () => {
-    // Committing the scoped write is the last thing the run does, and its
-    // response has no reader here. A `database` slot that throws there has not
-    // stopped the run from reaching its tasks, so it must not produce `aborted`.
+    // The commit's response has no reader, and a throw there hasn't stopped
+    // the run reaching its tasks, so it isn't `aborted`.
     const handler = await handlerFor({
       plugins: [oneTask],
       database: scopedDatabase(() => ({
@@ -821,10 +817,8 @@ describe("createPlumixHandler — scheduled reporting", () => {
   });
 
   test("the report type only admits an abort from before any task ran", () => {
-    // The invariant the tests above rely on, where a third-party adapter
-    // writing its own report has to meet it too: prose on the field is what
-    // let the handler contradict it in the first place. `expectTypeOf`
-    // compiles away, so `pnpm typecheck` is what runs these, not vitest.
+    // Third-party adapters write their own reports, so the type holds the
+    // invariant. `expectTypeOf` compiles away; `pnpm typecheck` runs these.
     expectTypeOf<{
       readonly ran: 1;
       readonly failed: readonly [];

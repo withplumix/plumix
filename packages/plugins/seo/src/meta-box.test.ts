@@ -95,11 +95,8 @@ describe("SEO meta box scope", () => {
   });
 
   test("keeps the box on an access-policied type", async () => {
-    // This is what keeps the access check out of `publicTargets`: a gated
-    // type is held out of the sitemap and IndexNow, and nothing else. An
-    // editor still writes the title and description a member will read, and
-    // folding the check up into the shared scope helper would take the box,
-    // its SERP preview and the type's saved settings keys with it.
+    // Access stays out of `publicTargets`: editors still write a gated type's
+    // title and description, so only the sitemap and IndexNow drop it.
     const gated = definePlugin("gated", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
       ctx.registerEntryType("lesson", {

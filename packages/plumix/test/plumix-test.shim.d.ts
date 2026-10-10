@@ -1,14 +1,5 @@
-// Ambient declaration for the `plumix/test` subpath. The real types live
-// at `./dist/test/index.d.ts` (via the package `exports` map) and only
-// exist after a same-package build; turbo's typecheck intentionally
-// doesn't depend on that build, so tsc can't resolve the published
-// types at typecheck time.
-//
-// The module just re-exports everything from @plumix/core/test (which
-// IS resolvable, because turbo's typecheck DOES depend on upstream
-// builds). Gives the test file real types — not `any` — so
-// `no-unsafe-*` lint rules are happy, and drift between this shim and
-// the published surface is caught if symbol names change.
+// The real types exist only after a same-package build, which turbo's
+// typecheck doesn't depend on; this re-exports the resolvable core types.
 //
 // eslint-disable-next-line no-restricted-syntax -- ambient declaration of the `plumix/test` subpath so tsc can resolve it, not a registry augmentation (the issue #1691 guard targets the latter)
 declare module "plumix/test" {

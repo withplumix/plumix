@@ -23,10 +23,8 @@ const blogPlugin = definePlugin("blog", (ctx) => {
 });
 
 /**
- * The same blog type, plus a `.featured()` role field nested in a group and a
- * reference kind that resolves it. Declared raw rather than through the media
- * plugin's builder: what the chain reads is the role and the image the adapter
- * makes of the payload, so seeding those keeps this suite off a second plugin.
+ * Declared raw rather than via the media plugin: the chain reads only the role
+ * and the adapter's image, so this suite stays off a second plugin.
  */
 const photoPlugin = definePlugin("photos", (ctx) => {
   ctx.registerEntryType("post", {
@@ -229,9 +227,8 @@ describe("head meta", () => {
   });
 
   test("a featured photo nested in a group reaches og:image, alt and all", async () => {
-    // The chain asks the entry for its `featured` role rather than walking the
-    // type's fields for one, so a role field an appearance box nests in a
-    // group answers where the walk this replaced saw nothing.
+    // The chain asks the entry for its `featured` role, so a role field nested
+    // in a group still answers.
     const h = await createDispatcherHarness({
       config: { plugins: [photoPlugin, seo()], theme: theme },
     });
@@ -892,9 +889,8 @@ describe("a page that was not found", () => {
 });
 
 describe("paginated archives", () => {
-  // The archive pages at 20, so page two needs a twenty-first entry to exist
-  // at all — a shorter run would 404 and be held out by the not-found arm
-  // instead, which is not what these assert.
+  // The archive pages at 20; without a 21st entry page two 404s and the
+  // not-found arm, not the one under test, holds it out.
   const seedTwoPages = async (h: DispatcherHarness): Promise<void> => {
     const author = await h.seedUser("admin");
     for (let n = 0; n < 21; n++) {

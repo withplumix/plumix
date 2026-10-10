@@ -20,9 +20,8 @@ afterAll(async () => {
 });
 
 /**
- * `S3Client` sends its requests from inside Bun rather than through the global
- * `fetch`, so the fake bucket answers on a real listener: every request, from
- * Bun's client and from core's signer alike, crosses the same boundary.
+ * `S3Client` sends from inside Bun, not through the global `fetch`, so the
+ * fake bucket answers on a real listener.
  */
 function serve(fake: FakeS3): string {
   const server = Bun.serve({

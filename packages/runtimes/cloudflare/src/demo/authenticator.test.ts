@@ -43,9 +43,8 @@ describe("demoAuthenticator", () => {
     expect(result).toBeNull();
   });
 
-  // Regression: the demo session lives in the `plumix_demo` cookie, so the guard
-  // must declare it carries a session — otherwise public renders (the editor
-  // canvas iframe) skip authentication and the visitor edits nothing.
+  // The demo session lives in the `plumix_demo` cookie; without declaring it,
+  // public renders (the editor canvas) skip authentication.
   test("hasSession follows the demo cookie, not the standard session cookie", () => {
     const auth = demoAuthenticator();
     expect(auth.hasSession?.(withSession)).toBe(true);

@@ -9,11 +9,9 @@ import { coreBlocks } from "./core-blocks.js";
 import { countProse } from "./count-prose.js";
 
 /**
- * The demo site's seeded content — 40-odd published entries of real prose,
- * nested tables, a code listing and images. Synthetic fixtures prove the walk
- * handles a shape; this proves it handles what the product actually stores.
- * Resolved from the package root vitest runs in, not `import.meta.url` — the
- * transform rewrites that to a dev-server URL, which `readFileSync` refuses.
+ * The demo site's seeded content, the shapes the product actually stores. Read
+ * from the package root: vitest rewrites `import.meta.url` to a URL
+ * `readFileSync` refuses.
  */
 const SEED_SQL = readFileSync(
   resolve(process.cwd(), "../../apps/demo/seed.sql"),
@@ -107,8 +105,7 @@ describe("block text over the demo corpus", () => {
   });
 
   // The seeded bodies carry no escaped markup, so a surviving `<tag>` means the
-  // strip missed it. An entry that ever writes `&lt;div&gt;` in prose would
-  // decode to a real `<div>` here by design, and this would need narrowing.
+  // strip missed it.
   test("every entry yields text, and none of it is markup", () => {
     for (const entry of CORPUS) {
       const text = extractBlockText(entry.blocks, roster);

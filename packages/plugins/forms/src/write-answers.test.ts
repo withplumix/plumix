@@ -19,10 +19,8 @@ import {
 import { defineForm } from "./define-form.js";
 
 /**
- * What the endpoint would store for answers written to a body — the whole
- * point of the encoder is that this is the same row a filled-in form
- * produces, so every case below asserts the round trip rather than the
- * body's exact spelling.
+ * Cases assert the stored round trip, not the body's spelling: the encoder must
+ * yield the row a filled-in form does.
  */
 function stored(form: FormDefinition, answers: SubmittedValues) {
   const body = writeSubmittedValues(form.fields, answers);
@@ -133,10 +131,8 @@ describe("writeSubmittedValues", () => {
     expect(body.getAll("attendees[]")).toEqual([""]);
   });
 
-  // A caller manages their own rows, and `delete rows[i]` or `rows[n] = x`
-  // leaves holes. Numbering by where a row sits in the caller's array
-  // rather than by where it is written puts an answer under a name the
-  // read side, which counts markers from zero, never looks for.
+  // A caller's array may have holes; the read side counts row markers from
+  // zero, so rows are numbered as written.
   test("numbers rows by where they are written, not where the caller held them", () => {
     const form = defineForm("rsvp", {
       fields: [repeater("attendees").fields([text("who").required()])],

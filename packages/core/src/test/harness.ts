@@ -29,10 +29,8 @@ export const CORE_MIGRATIONS = fileURLToPath(
 );
 
 /**
- * One tracking table per history, named for the folder's owner — the package
- * directory holding `migrations/`. drizzle applies only migrations newer than
- * the newest it has recorded, so a plugin history sharing core's table would
- * have every migration older than core's newest skipped.
+ * One tracking table per migration owner: drizzle applies only migrations newer
+ * than its newest record, so a shared table would skip a plugin's older ones.
  */
 function trackingTable(migrationsFolder: string): string {
   const owner = basename(dirname(migrationsFolder)).replace(/\W/g, "_");
@@ -58,10 +56,8 @@ async function migrate(
 }
 
 /**
- * Apply a plugin's shipped migration history to `db` with drizzle's own
- * migrator. A plugin suite layers its history onto a core test db when its
- * FKs reference `entries` / `users`, or onto a bare `:memory:` db when it owns
- * every table it touches.
+ * Apply a plugin's shipped migrations with drizzle's own migrator, onto a core
+ * test db when its FKs reference core tables, or a bare `:memory:` db.
  */
 export async function applyTestSchema(
   db: MigratableDb,

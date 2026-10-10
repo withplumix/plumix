@@ -21,10 +21,8 @@ interface FakeBinding {
 }
 
 /**
- * In-memory stand-in for the CF R2 binding: content-derived etags, ranged
- * reads, custom metadata and a numeric-offset cursor — the behaviours the
- * adapter maps onto the `storage:` port. R2 at runtime is richer
- * (conditionals, multipart), and none of that is in the port today.
+ * Only the behaviours the adapter maps onto the `storage:` port; R2's
+ * conditionals and multipart are not in the port.
  */
 function fakeR2Binding(): {
   binding: FakeBinding;
@@ -260,10 +258,8 @@ describe("r2 put/get/delete", () => {
 
 describe("r2 url", () => {
   test("returns null when publicUrlBase is not configured", async () => {
-    // Binding-only deploys (private bucket, no custom domain) get
-    // `null` so the consumer can mint a worker-proxied URL keyed on
-    // an entry id — keying on the storage key would let anyone with
-    // the key fetch bytes regardless of publication status.
+    // Binding-only deploys get `null`: keying a URL on the storage key would
+    // serve bytes regardless of publication status.
     const store = connectR2();
     expect(await store.url("2026/04/uuid.png")).toBeNull();
   });
@@ -390,10 +386,8 @@ describe("r2 presignPut", () => {
 });
 
 describe("r2 conventional env credentials", () => {
-  // With no `s3` block, `r2` reads S3 credentials from the deploy's request
-  // env by convention — account-global keys plus a binding-derived bucket
-  // (`<BINDING>_BUCKET`). This is what lets a config stay `r2({ binding })`
-  // while presigned uploads still work once the secrets are attached.
+  // With no `s3` block, `r2` reads S3 credentials from the request env by
+  // convention, so presigned uploads work once the secrets are attached.
   const conventionalEnv = {
     CF_ACCOUNT_ID: "acct-from-env",
     R2_ACCESS_KEY_ID: "AKIA-CONVENTIONAL",

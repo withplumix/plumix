@@ -14,20 +14,16 @@ import type { SourceHookName } from "./rosters";
 import type { Equals } from "./type-assert";
 import { ROSTERS } from "./rosters";
 
-// The other half of the guard, and it belongs to `pnpm typecheck` rather than
-// to vitest: this is the comparison every type-level binding in `rosters.ts`
-// asserts, applied to a list one value short of its source. It must come out
-// `false`, which is what fails the binding's `Assert` — the day the shape stops
-// catching a short list is the day this fails typecheck.
+// Belongs to `pnpm typecheck`: the binding comparison applied to a list one
+// short of its source must come out `false`, or the shape stops catching
+// short lists.
 expectTypeOf<
   Equals<"draft" | "published", EntryStatus>
 >().toEqualTypeOf<false>();
 
 /**
- * The same proof for the hook registries, whose lists reach the shape only
- * through the placeholder substitution: a list holding two of the actions must
- * still fail, so expanding `entry:*:published` back to its template literal
- * cannot be what makes a short list pass.
+ * A list holding two of the actions must still fail, so expanding
+ * `entry:*:published` cannot be what makes a short list pass.
  */
 type ShortActionList = SourceHookName<"entry:*:published" | "entry:published">;
 
@@ -45,17 +41,14 @@ function itemsOf(page: string): readonly string[] {
 }
 
 describe("the roster inventory", () => {
-  // The IA spec settles the site at twenty-one rosters. Pinning the count is
-  // what stops a twenty-second arriving without anyone deciding how it binds to
-  // its source — the page-side half comes free with registration, so an unbound
-  // roster looks guarded until it drifts.
+  // Pinning the count stops a new roster arriving unbound: the page-side half
+  // comes free with registration, so it looks guarded until it drifts.
   it("covers every roster the site promises", () => {
     expect(ROSTERS).toHaveLength(21);
   });
 
-  // And the tally stops a roster losing the binding it already had. Deleting
-  // a `TypeLevelBindings` member fails to compile at the entry that cites it;
-  // moving that entry to `page-only` to match fails here instead.
+  // Moving a roster to `page-only` to dodge a deleted `TypeLevelBindings`
+  // member fails here instead of at compile time.
   it("leaves exactly the two rosters whose source no package exports unbound", () => {
     const unbound = ROSTERS.filter((roster) => roster.binding === "page-only");
 
@@ -71,10 +64,8 @@ describe("the roster inventory", () => {
     expect([...new Set(pages)]).toEqual(pages);
   });
 
-  // `checkRosterDrift` compares against a Set, so a roster holding one item
-  // twice is satisfied by a single heading. Five rosters are assembled from
-  // more than one source, and three of those qualify their items rather than
-  // spelling them bare — this is what holds that reasoning.
+  // `checkRosterDrift` compares against a Set, so a duplicated item is
+  // satisfied by one heading; composed rosters could collide with themselves.
   it("holds each item once, so no composed roster collides with itself", () => {
     for (const roster of ROSTERS) {
       expect([...new Set(roster.items)]).toEqual(roster.items);
@@ -82,9 +73,8 @@ describe("the roster inventory", () => {
   });
 });
 
-// Every roster marked `binding: "runtime"` in the inventory. Each source says
-// there why it is bound this way rather than type-level; what they share is
-// that the comparison pins order as well as membership.
+// The runtime-bound rosters share that the comparison pins order as well as
+// membership.
 describe("the rosters bound to their source at runtime", () => {
   it("binds the core-block roster to the blocks the package ships", () => {
     expect(itemsOf("blocks/core-blocks.mdx")).toEqual(

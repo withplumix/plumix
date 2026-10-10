@@ -59,9 +59,8 @@ export interface FilterSpy<
 }
 
 /**
- * Shared assertion / state helpers for both spy flavours. `self` is a
- * thunk so the methods return the concrete spy type for chaining — the
- * base only knows how to count and reset the call array.
+ * Shared helpers for both spy flavours; `self` is a thunk so methods return the
+ * concrete spy type for chaining.
  */
 function buildSpyBase<TCall, TSpy>(
   label: string,
@@ -151,15 +150,8 @@ export function spyAction<TName extends ActionName>(
 }
 
 /**
- * Install a recording filter on the named hook. By default it's a
- * pass-through; call `.override(fn)` to transform the value. Still records
- * every invocation regardless.
- *
- * @remarks
- * Identity note: the hook registry `structuredClone`s each filter input
- * before passing it to listeners, so `spy.calls[i].input` is a clone, not
- * the caller-supplied reference. Use equality matchers
- * (`deepEqual` / `toEqual` / `toMatchObject`) — not identity / `toBe`.
+ * Install a recording filter on the hook, pass-through until `.override(fn)`.
+ * Inputs are `structuredClone`d, so match by equality, not `toBe`.
  */
 export function spyFilter<TName extends FilterName>(
   hooks: HookRegistry,
@@ -206,12 +198,8 @@ export function spyFilter<TName extends FilterName>(
 }
 
 /**
- * Assert that a promise rejects with a specific error code (and optionally
- * matches a partial data shape). Replaces the widely-copied
- * `.rejects.toMatchObject({ code, data })` idiom.
- *
- * Runner-agnostic — throws plain Errors, so it works under vitest, jest,
- * node:test, bun test, or anything that surfaces thrown errors as failures.
+ * Assert a promise rejects with a code and optionally a partial data shape.
+ * Throws plain Errors, so it works under any test runner.
  */
 export async function expectError(
   promise: Promise<unknown>,

@@ -67,10 +67,6 @@ describe("plugin field-type registry", () => {
   });
 
   test("reserves the structural built-ins group + link (closing the drift where they were shadowable)", () => {
-    // `group` and `link` are host-owned built-ins with builders + narrowed
-    // union variants, but the hand-synced reserved set had omitted them, so
-    // a plugin could shadow the host control. Deriving the set from the
-    // roster closes that hole.
     expect(() => registerPluginFieldType("group", Stub)).toThrow(/reserved/);
     expect(() => registerPluginFieldType("link", Stub)).toThrow(/reserved/);
   });

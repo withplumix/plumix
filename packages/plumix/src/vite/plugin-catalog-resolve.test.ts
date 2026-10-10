@@ -75,10 +75,8 @@ describe("findPluginPackageRoot", () => {
     expect(root).toBe("/site/node_modules/plumix-plugin-translate");
   });
 
-  // `audit_log` ships as `@plumix/plugin-audit-log`: `PLUGIN_ID_RE` admits `_`,
-  // npm names use `-`, and nothing reconciles them. Reading the id literally
-  // resolves nothing, which surfaced as `adminAssetNotFound` for a plugin whose
-  // catalogs were sitting in the tarball all along.
+  // `PLUGIN_ID_RE` admits `_` while npm names use `-`, and nothing else
+  // reconciles them.
   test("falls back to the hyphenated name for an id carrying an underscore", () => {
     const requireFrom = makeRequireFrom({
       "@plumix/plugin-audit-log/package.json":
@@ -120,13 +118,8 @@ describe("findPluginPackageRoot", () => {
   });
 });
 
-// Integration coverage against real Node module resolution. The seam-
-// based tests above don't exercise the `exports` enforcement
-// (`ERR_PACKAGE_PATH_NOT_EXPORTED`) that Node applies in production —
-// if a plugin's `package.json` doesn't expose `./package.json` in its
-// `exports` map, `require.resolve("<name>/package.json")` throws and
-// the unit tests miss the regression. These fixtures drive the
-// production `createRequire` path against a tmpdir layout.
+// The seam tests don't exercise Node's `exports` enforcement
+// (`ERR_PACKAGE_PATH_NOT_EXPORTED`), which only real resolution applies.
 describe("plugin catalog resolution — real FS", () => {
   let projectRoot: string;
   let bundledPluginsDir: string;
@@ -138,9 +131,8 @@ describe("plugin catalog resolution — real FS", () => {
     projectRoot = await realpath(
       await mkdtemp(join(tmpdir(), "plumix-plugin-resolve-")),
     );
-    // The plumix monorepo's `packages/plugins`, as `findAdminBundledPluginsDir`
-    // hands it to the predicate: present, so a case that expects `false` has to
-    // earn it on the comparison rather than on a missing directory.
+    // Present, so a case expecting `false` earns it on the comparison rather
+    // than a missing directory.
     bundledPluginsDir = join(projectRoot, "packages/plugins");
     await mkdir(bundledPluginsDir, { recursive: true });
     await writeFile(join(projectRoot, "package.json"), JSON.stringify({}));
@@ -184,10 +176,8 @@ describe("plugin catalog resolution — real FS", () => {
   });
 
   test("isAdminBundledPlugin returns false for a pnpm store symlink (registry install)", async () => {
-    // Regression pin: under pnpm EVERY `node_modules` entry is a symlink,
-    // including registry tarballs, which resolve into `.pnpm/`. Treating
-    // symlink-ness alone as "workspace" silently dropped the plugin's catalog
-    // URLs on every pnpm consumer site.
+    // Under pnpm every `node_modules` entry is a symlink, registry tarballs
+    // included, so symlink-ness alone can't mean "workspace".
     const storeDir = join(
       projectRoot,
       "node_modules/.pnpm/@plumix+plugin-published@0.1.0/node_modules/@plumix/plugin-published",
@@ -235,9 +225,8 @@ describe("plugin catalog resolution — real FS", () => {
   });
 
   test("isAdminBundledPlugin returns false off the monorepo, where nothing is baked in", async () => {
-    // What a consumer site looks like: `findAdminBundledPluginsDir` found no
-    // sibling of the installed admin, so no plugin can be bundled — not even
-    // one whose link happens to land in a `packages/plugins` of the site's own.
+    // A consumer site: no admin-bundled plugins dir, so nothing is bundled,
+    // even a link landing in the site's own `packages/plugins`.
     const pluginDir = join(bundledPluginsDir, "real");
     await mkdir(pluginDir, { recursive: true });
     await linkPlugin(projectRoot, "real", pluginDir);
@@ -297,14 +286,9 @@ describe("plugin catalog resolution — real FS", () => {
   });
 });
 
-// `findAdminBundledPluginsDir` mirrors a glob written in another package: admin
-// bakes plugin catalogs in with `import.meta.glob` over a path relative to
-// `packages/admin/src/lib`, and this one derives the same directory from the
-// installed admin package root. Two path expressions, two packages, nothing in
-// the type system holding them together — move `catalog-globs.ts` a directory,
-// or widen the glob, and the predicate silently stops matching it. The drift is
-// quiet in the direction that matters: plugins admin *did* bake in would be
-// told to fetch a catalog nobody staged.
+// Two path expressions in two packages that nothing in the type system ties
+// together; if they drift, plugins admin baked in fetch a catalog nobody
+// staged.
 test("the admin plugin-catalog glob and findAdminBundledPluginsDir name the same directory", async () => {
   const adminRoot = resolve(
     dirname(fileURLToPath(import.meta.url)),
@@ -329,13 +313,8 @@ test("the admin plugin-catalog glob and findAdminBundledPluginsDir name the same
   expect(findAdminBundledPluginsDir(adminRoot)).toBe(scanned);
 });
 
-// The copy itself, driven the way a consumer's `plumix build` drives it: a
-// plugin whose catalogs admin does not bake in, so its compiled `.mjs` has to
-// reach the staged admin dist for the runtime `import(url)` to find it. Every
-// other test in this file stops at resolution — whether a path resolves, whose
-// `plugins/` dir it lands in — and never copies anything. That left the
-// manifest-driven half of the pipeline uncovered, which is how a slot declaring
-// only its source locale shipped four releases with unreachable translations.
+// Every other test here stops at resolution and never copies, leaving the
+// manifest-driven half of the pipeline uncovered.
 describe("stagePluginCatalogs — real FS", () => {
   let projectRoot: string;
   let dest: string;
@@ -403,9 +382,8 @@ describe("stagePluginCatalogs — real FS", () => {
     await installPlugin(["en", "uk", "de"]);
     await stage(["en", "uk", "de"]);
 
-    // `en` is the source locale — admin already has those strings as
-    // `descriptor.message`. `de` ships a catalog and is declared, but the site
-    // left it disabled, so the intersection drops it before staging.
+    // `en` is the source locale; `de` is declared but disabled by the site,
+    // so the intersection drops it.
     for (const locale of ["en", "de"]) {
       expect(
         existsSync(join(dest, pluginCatalogStagedPath("vendor", locale))),
@@ -414,9 +392,8 @@ describe("stagePluginCatalogs — real FS", () => {
   });
 
   test("stages nothing when the slot declares only its source locale", async () => {
-    // The bug this guards: catalogs present on disk, but a slot naming only
-    // `en` projects an empty catalog map, so the plugin never reaches
-    // `pluginI18n` and the copy loop never runs.
+    // A slot naming only `en` projects an empty catalog map, so the copy loop
+    // never runs.
     await installPlugin(["en", "uk", "de"]);
     await stage(["en"]);
 

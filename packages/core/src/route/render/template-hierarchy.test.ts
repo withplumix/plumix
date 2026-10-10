@@ -162,10 +162,8 @@ declare module "../../template-registry.js" {
 const _productFields = [text("badge").default("none"), text("tier").required()];
 const _editorialFields = [text("featured"), text("premium")];
 /**
- * `brandTone` and `launchedOn` are the fixture's canaries for the term
- * read shape. `.default()` leaves the read type optional, as storage may lack
- * the key, and `.returns("date")` reads back as a `Date` only because the
- * render path now decodes term meta.
+ * Canaries for the term read shape: `.default()` keeps the read optional,
+ * and `.returns("date")` is a `Date` only if the render path decodes term meta.
  */
 const _brandFields = [
   text("brandBadge"),

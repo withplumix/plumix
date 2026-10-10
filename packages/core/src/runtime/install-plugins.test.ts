@@ -860,9 +860,8 @@ describe("registerRoute", () => {
     );
   });
 
-  // Load-bearing beyond consistency: the dispatcher's read-through happens
-  // *outside* the per-route auth gate, so a cacheable dev route would serve a
-  // stored answer to an off-loopback request without the gate ever running.
+  // Read-through happens outside the per-route auth gate, so a cacheable dev
+  // route would serve off-loopback requests ungated.
   test("rejects the CDN opt-in on a development route", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("og", (ctx) => {
@@ -1412,9 +1411,8 @@ describe("settings group field keys", () => {
 type Variant = "first" | "second";
 
 /**
- * Which plugins a registrar refuses a second registration from: every plugin,
- * only the one that holds it ("plugin"), or only itself because the key is
- * derived from its own id ("self").
+ * Refused from every plugin, only the holder ("plugin"), or only itself
+ * because the key derives from its id ("self").
  */
 type DuplicateScope = "global" | "plugin" | "self";
 

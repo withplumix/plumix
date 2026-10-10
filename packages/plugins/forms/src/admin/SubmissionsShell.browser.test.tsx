@@ -70,9 +70,8 @@ function isFailure(reply: unknown): reply is { failure: string } {
 }
 
 /**
- * A reply naming a `failure` is answered the way the server answers a
- * refusal (a real oRPC error envelope), so the page meets the same shape it
- * meets in production rather than one only this file produces.
+ * A `failure` reply is answered with a real oRPC error envelope, the shape
+ * production returns.
  */
 function answer(reply: unknown): JsonValue {
   if (isFailure(reply)) {

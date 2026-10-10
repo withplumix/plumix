@@ -16,9 +16,8 @@ export interface ObjectStorageContractOptions {
   readonly connect: () =>
     ConnectedObjectStorage | Promise<ConnectedObjectStorage>;
   /**
-   * The bucket is publicly addressable, so `url` resolves to a string. A
-   * private bucket with no custom domain leaves this off: `url` then returns
-   * `null` and the caller mints a proxied URL instead.
+   * Publicly addressable bucket, so `url` returns a string; a private bucket
+   * with no custom domain gets `null` and the caller mints a proxied URL.
    */
   readonly publicUrls?: boolean;
   /** The bucket can mint presigned PUTs. Cases that need one are skipped without it. */

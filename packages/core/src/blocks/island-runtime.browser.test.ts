@@ -5,10 +5,9 @@ import { ISLAND_TAG, setDynamicImport } from "./island-element.js";
 import "./island-runtime.js";
 
 /**
- * The module bootstraps itself on import and the registry caches it, so the
- * import-time side effect is observable exactly once. Read during module
- * evaluation, before any hook runs — the `beforeEach` below clears
- * `window.Plumix`, and the element registration cannot be undone.
+ * The module bootstraps once on import and the element registration cannot be
+ * undone, so this is read at module evaluation, before `beforeEach` clears
+ * `window.Plumix`.
  */
 const loadAtImport = (window as { Plumix?: Record<string, unknown> }).Plumix
   ?.load;

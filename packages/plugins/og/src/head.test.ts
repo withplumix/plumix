@@ -32,9 +32,8 @@ const brandedCard: CardRule = card.fallback().define({
 });
 
 /**
- * Options land in the path, so a test reads what was asked of the delivery.
- * `zone: null` is the slot's one way of saying it cannot transform a source —
- * `url` returns a string, so handing the source back is the whole vocabulary.
+ * `zone: null` means the slot cannot transform a source; `url` returns a
+ * string, so handing the source back is its only way to say so.
  */
 const testDelivery = (zone: string | null): ImageDelivery => ({
   kind: "test",
@@ -45,9 +44,8 @@ const testDelivery = (zone: string | null): ImageDelivery => ({
 });
 
 /**
- * The card URL is content-addressed, so a test cannot spell it — it matches
- * the shape and reads the one the head published, which is also the only thing
- * a scraper ever has.
+ * The card URL is content-addressed, so tests match its shape and read the one
+ * the head published.
  */
 function cardUrlPattern(id: number): RegExp {
   return new RegExp(
@@ -67,10 +65,8 @@ describe("the card in the page head", () => {
 
     const url = ogImageOf(html) ?? "";
     expect(url).toMatch(cardUrlPattern(id));
-    // The head names the URL by computing the card's digest and the route
-    // answers only on the digest it computes for itself. Nothing else holds
-    // those two together, and a drift between them is a card that redirects
-    // every scraper that follows it away from the image it was promised.
+    // Nothing else ties the head's digest to the route's; a drift redirects
+    // every scraper away from the promised image.
     const served = await harness.fetch(new URL(url).pathname);
     expect(served.assertStatus(200).headers.get("content-type")).toBe(
       "image/png",
@@ -92,9 +88,8 @@ describe("the card in the page head", () => {
     const html = await headOf(harness, "hello-world");
     const served = await fetchCard(harness, id);
 
-    // An SVG og:image unfurls as nothing on X, Facebook and LinkedIn — worse
-    // than the site's generic default. The route still serves it, so a
-    // developer with no rasterizer can still look at their cards.
+    // An SVG og:image unfurls as nothing on X, Facebook and LinkedIn, so the
+    // head falls back; the route still serves it for previewing.
     expect(ogImageOf(html)).toBe(SITE_DEFAULT);
     expect(html).not.toContain("/_plumix/og/card/entry/");
     served.assertStatus(200);
@@ -130,9 +125,8 @@ describe("the card in the page head", () => {
     await seedEntry(harness, { type: "gated", slug: "locked" });
     const member = await harness.seedUser("subscriber");
 
-    // The page renders — for this visitor. The URL its head would advertise is
-    // fetched by a scraper carrying no session, and the gate turns that away,
-    // so the head must not name it however privileged the reader is.
+    // A scraper carries no session and the gate turns it away, so the head must
+    // not name the card however privileged the reader.
     const response = await harness.dispatch(
       await harness.authenticateRequest(
         new Request("https://cms.example/gated/locked"),
@@ -345,9 +339,8 @@ describe("the og:image precedence chain", () => {
 
     const html = await headOf(harness, "hello-world");
 
-    // Nothing can crop it, so it goes out at its own size rather than being
-    // dropped or described as a crop that never happened. This is the whole
-    // free-plan path: no rasterizer, no resizer, still a real preview.
+    // This is the free-plan path: with no rasterizer or resizer the photo goes
+    // out at its own size.
     expect(ogImageOf(html)).toBe(PHOTO);
     expect(html).toContain('<meta property="og:image:width" content="1600"/>');
     expect(html).toContain('<meta property="og:image:height" content="1200"/>');
@@ -408,9 +401,8 @@ describe("the og:image precedence chain", () => {
       renderer: rasterRenderer(),
       siteDefaultImage: SITE_DEFAULT,
       imageDelivery: testDelivery("https://img.example"),
-      // Installed ahead of the card plugin, so its image is already on the
-      // chain when the card's subscriber runs — the order that would let a
-      // generated card overwrite one somebody meant.
+      // Installed first, so a generated card would overwrite this image if
+      // precedence were wrong.
       before: [
         definePlugin("test_share", {
           setup: (ctx) => {

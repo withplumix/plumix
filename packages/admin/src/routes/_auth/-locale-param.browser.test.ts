@@ -14,11 +14,8 @@ describe("nextSearchForLang", () => {
   });
 
   test("sets `?lang=` even when the chosen code is the site default", () => {
-    // The user's currently-rendered locale may have come from
-    // Accept-Language (the resolver's 5th tier on `/_plumix/*` paths),
-    // so the site default isn't necessarily what they see. Picking "en"
-    // explicitly must pin the URL or the next reload reverts to
-    // whatever Accept-Language resolves.
+    // The rendered locale may come from Accept-Language, so picking the site
+    // default must still pin the URL.
     expect(nextSearchForLang({ lang: "uk" }, "en")).toEqual({ lang: "en" });
   });
 

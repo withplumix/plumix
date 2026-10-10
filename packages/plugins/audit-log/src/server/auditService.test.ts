@@ -140,10 +140,8 @@ describe("createAuditService", () => {
   });
 
   test("a record() after the previous flush has run schedules a fresh defer (no orphan rows)", async () => {
-    // Race regression: previously `flush` spliced the buffer empty,
-    // but the buffer object stayed in the WeakMap. A subsequent
-    // record() found the (empty) array, pushed onto it, and returned
-    // without scheduling — the row was orphaned until ctx GC'd it.
+    // A flushed buffer left in the WeakMap would take the next record()
+    // without scheduling a flush, orphaning the row.
     const { ctx, defer } = fakeCtx();
     const { storage, writes } = fakeStorage();
     const service = createAuditService(storage);

@@ -41,10 +41,6 @@ describe("RequestAuthenticator — dispatcher integration", () => {
   });
 
   test("default (session cookie) gates plugin authed routes", async () => {
-    // Smoke: with no override and no session cookie, an authed RPC
-    // call returns UNAUTHORIZED. This is the existing behaviour
-    // before the contract was extracted; locking it in protects the
-    // refactor from a regression.
     const h = await createDispatcherHarness();
     const response = await h.dispatch(
       plumixRequest("/_plumix/rpc/auth/session", {
@@ -69,10 +65,6 @@ describe("RequestAuthenticator — dispatcher integration", () => {
       role: "editor",
     });
 
-    // The dispatcher calls `app.authenticator.authenticate(request)` on
-    // every authed surface. We exercise this through a plugin route in
-    // a separate test (here we only confirm the override is wired —
-    // running app.authenticator directly via the harness's app handle).
     const result = await h.app.authenticator.authenticate(
       new Request("https://cms.example/", {
         headers: { "x-trusted-email": "trusted@enterprise.example" },
@@ -84,10 +76,7 @@ describe("RequestAuthenticator — dispatcher integration", () => {
   });
 
   test("API-token scoping gates plugin routes via auth.can()", async () => {
-    // End-to-end: a scoped PAT hits a capability-gated plugin route.
-    // Cap in scope → 200; cap not in scope → 403, even when the user's
-    // role would grant it. Locks in the intersection invariant past
-    // the dispatcher boundary.
+    // The user's role would grant the cap; the token scope still wins.
     const tokenProbePlugin = definePlugin("token-probe", (ctx) => {
       ctx.registerRoute({
         method: "GET",

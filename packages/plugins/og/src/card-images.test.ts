@@ -108,11 +108,8 @@ describe("an image a card references", () => {
     expect(fake.inputs[0]?.images).toEqual([{ src, data: HERO_BYTES }]);
   });
 
-  // The whole guard on that branch: the key is sliced out of the `src`, and the
-  // slot has to mint that exact URL back for it. Here it does not — the bucket
-  // percent-encodes the separators — so a real key that a real object sits at
-  // is still refused, because the URL naming it was not one the bucket would
-  // have published.
+  // The bucket percent-encodes separators, so it never mints this URL for the
+  // key; a real key is still refused.
   test("is refused when the bucket does not mint that URL for the key", async () => {
     const storage = seededBucket();
     const fake = createFakeRenderer();
@@ -201,11 +198,8 @@ describe("an image a card references", () => {
     expect(fake.inputs[0]?.images).toEqual([]);
   });
 
-  // The root cause of all three advisories the no-fetch rule answers was a
-  // render option taken from the URL. The server derives every one of them: the
-  // URL names a card and carries nothing else — so a query string is not
-  // ignored, it is refused, since the edge keys on the whole URL and answering
-  // one would mint an entry per parameter a caller invents.
+  // A query string is refused, not ignored: the edge keys on the whole URL, so
+  // answering one mints an entry per invented parameter.
   test("cannot be steered by anything in the request URL", async () => {
     const fake = createFakeRenderer();
     const harness = await createHarness({ renderer: fake.renderer });

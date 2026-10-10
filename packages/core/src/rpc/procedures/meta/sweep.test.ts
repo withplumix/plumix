@@ -251,8 +251,7 @@ describe("sweepUnsettledMeta", () => {
       .assertCalledWith((entry) => entry.id === post.id);
   });
   // D1 caps the queries one Worker invocation may make, so a large site can't
-  // be settled in one call. A call stops at its budget and hands back where it
-  // stopped; calling again from there finishes the job.
+  // be settled in one call.
   test("stops at its query budget and resumes from where it stopped", async () => {
     const { harness, ctx, author } = await seeded();
     await harness.factory.entry.createList(40, {
@@ -297,9 +296,8 @@ describe("sweepUnsettledMeta", () => {
     expect(dbQueryCount() - before).toBeLessThanOrEqual(25);
   });
 
-  // Settings are resumed by key, not by position: a settings save landing
-  // between two calls can remove a row the walk already passed, and a
-  // position would then skip the row after it.
+  // A settings save between calls can remove a row the walk passed; resuming by
+  // position would then skip the next row.
   test("resumes settings by key when a row it passed is removed between calls", async () => {
     const { harness, ctx } = await seeded();
     await harness.db

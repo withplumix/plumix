@@ -1,6 +1,4 @@
-// Runner-agnostic deep equality helpers used by the test DX kit. Kept
-// deliberately minimal — we don't want to ship a competitor to chai/expect,
-// just enough to let TestResponse and expectError work without importing
+// Runner-agnostic so TestResponse and expectError work without importing
 // vitest.
 
 /**
@@ -42,11 +40,8 @@ export function deepEqual(a: unknown, b: unknown): boolean {
 }
 
 /**
- * Partial-match: every key in `expected` must be deepEqual to the same key
- * in `actual`, but `actual` may have extra keys. For arrays, length must
- * match and each element is recursively partial-matched. Mirrors
- * `expect.toMatchObject` semantics, at a level of rigor that's good enough
- * for test-harness assertions.
+ * Partial match with `expect.toMatchObject` semantics: `actual` may have extra
+ * keys; arrays must match in length, elements matched recursively.
  */
 export function partialMatch(actual: unknown, expected: unknown): boolean {
   if (Object.is(actual, expected)) return true;

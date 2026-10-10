@@ -85,9 +85,8 @@ describe("demoDatabase() — query span tracing", () => {
 });
 
 describe("demoDatabase() — per-visitor routing", () => {
-  // The handler binds `connect` once, so a visitor's own DO can only be
-  // resolved through `connectRequest`. Without it every visitor would share
-  // whichever DO the handler's first request happened to name.
+  // The handler binds `connect` once; without `connectRequest` every visitor
+  // would share whichever DO the first request named.
   test("routes each request to the durable object its own cookie names", () => {
     const named: string[] = [];
     const env = {

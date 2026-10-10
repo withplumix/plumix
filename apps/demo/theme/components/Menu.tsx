@@ -5,10 +5,7 @@ import type { ReactNode } from "react";
 import type { ResolvedMenu } from "@plumix/plugin-menu/server";
 
 /**
- * A flat nav of a resolved menu's top-level items. (Nested `children`
- * are ignored for now — the blog chrome only needs a single row.) The
- * `className` lets callers swap the row layout for a column (mobile panel,
- * footer) without a second component.
+ * Nested `children` are ignored: the blog chrome only needs a single row.
  */
 export function Menu({
   menu,

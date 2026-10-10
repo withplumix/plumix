@@ -220,8 +220,7 @@ describe("magic-link request route", () => {
 
   test("is callable from a theme-origin page (custom header + Origin gate)", async () => {
     // The theme login page lives on the site origin and posts here with the
-    // custom CSRF header. Assert the endpoint accepts it — this is what makes
-    // the endpoints theme-callable, not just admin-callable.
+    // custom CSRF header.
     const { mailer, sent } = captureMailer();
     const h = await createDispatcherHarness({
       config: {
@@ -499,9 +498,6 @@ describe("magic-link verify route", () => {
   });
 
   test("worked theme wiring: request with redirectTo → verify returns to the theme page", async () => {
-    // Mirrors a custom theme login page: an email form posts to
-    // magic-link/request with the current page as redirectTo; the visitor
-    // clicks the emailed link and lands back on that page, signed in.
     const { mailer, sent } = captureMailer();
     const h = await createDispatcherHarness({
       config: {
@@ -654,11 +650,8 @@ describe("magic-link verify route", () => {
   });
 
   test("signed-in user clicking a magic-link mints a fresh session", async () => {
-    // Already-authenticated browser clicks the email link. The verify
-    // route mints a NEW session row and overwrites the cookie. The old
-    // row stays in the DB until its own TTL — that matches every other
-    // sign-in path (passkey, oauth) and the Copenhagen Book "always
-    // create a new session when the user signs in" rule.
+    // The old row stays until its own TTL, matching every other sign-in path
+    // and the Copenhagen Book "always create a new session" rule.
     const { mailer } = captureMailer();
     const h = await createDispatcherHarness({
       config: {
@@ -910,10 +903,6 @@ describe("magic-link verify route", () => {
   });
 
   test("logs and surfaces a generic token_invalid for unexpected errors", async () => {
-    // Spy on the request schema parser by passing a token that's neither
-    // missing nor in DB nor oversized — it just hits the standard
-    // "not found" branch which surfaces as token_invalid. Already
-    // covered above; this test is the explicit "unknown error" symbol.
     const { mailer } = captureMailer();
     const h = await createDispatcherHarness({
       config: {

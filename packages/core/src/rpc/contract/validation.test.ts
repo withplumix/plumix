@@ -108,10 +108,9 @@ describe("idPathParam", () => {
   });
 
   test("rejects Number() coercion quirks that would otherwise pass", () => {
-    // `Number()` coerces these to valid integers (0x1F→31, 5e2→500,
-    // +5→5, " 42 "→42). The regex gate in `idPathParam` rejects
-    // them up front so the route surfaces a clean 404 instead of
-    // firing an RPC with a surprising id.
+    // `Number()` would coerce these to valid integers, so the regex gate
+    // rejects them and the route 404s rather than firing an RPC with a
+    // surprising id.
     expect(() => v.parse(idPathParam, "0x1F")).toThrow();
     expect(() => v.parse(idPathParam, "5e2")).toThrow();
     expect(() => v.parse(idPathParam, "+5")).toThrow();

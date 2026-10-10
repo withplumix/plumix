@@ -559,9 +559,8 @@ describe("breadcrumbs", () => {
   });
 
   test("a type with no route of its own contributes no step", async () => {
-    // Public enough to render through a plugin's own route, but with no
-    // archive route for a crumb to link: the router skips a non-public type
-    // before it ever asks about `hasArchive`.
+    // The router skips a non-public type before asking about `hasArchive`, so
+    // no archive crumb exists.
     const hidden = definePlugin("hidden", (ctx) => {
       ctx.registerEntryType("secret", {
         label: "Secrets",

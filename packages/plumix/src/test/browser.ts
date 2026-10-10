@@ -1,8 +1,5 @@
-// `plumix/test` as a browser test loads it (the `browser` condition). It
-// exports every name the Node build does, so one import serves both tiers and
-// both are typed by the Node build. What a browser can run is the real value;
-// a harness that needs a database, the dispatcher or a Node built-in throws,
-// naming the tier its test belongs in.
+// Exports every name the Node build does, so one import serves both tiers. A
+// harness needing a database or Node built-in throws, naming its tier.
 
 import type * as node from "./index.js";
 

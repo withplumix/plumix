@@ -35,9 +35,8 @@ describe("enforceHtmlFloors", () => {
     expect(floor({ allowedTags: ["p", tag] }).allowedTags).toEqual(["p"]);
   });
 
-  // Neither engine sees a name the floor did not canonicalize: sanitize-html
-  // lowercases the parsed tag and matches the list verbatim, DOMPurify
-  // lowercases its list — so a mixed-case entry renders in the editor alone.
+  // sanitize-html lowercases the parsed tag and DOMPurify lowercases its list,
+  // so an uncanonicalized mixed-case entry would render in the editor alone.
   test.each([...HARD_DENYLIST].map((tag) => tag.toUpperCase()))(
     "drops the denied tag `%s` however it is spelled",
     (tag) => {

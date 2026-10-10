@@ -1,15 +1,6 @@
-// Real-browser coverage of the geometry-dependent editor surface. The mock-RPC
-// admin suite can't serve the canvas iframe, so selection overlays, the
-// floating toolbar, and multi-select are unit-tested there but never rendered.
-// Here the playground's same-origin canvas makes the bridge — and the real
-// geometry it reports — work end to end.
-//
-// NB: this harness mounts the editor and boots the canvas directly — it does
-// NOT go through the real render's edit gate (canEdit → resolveEditMode →
-// injectEditorBootstrap). So green here means "given a booted editor, behavior
-// works", never "the editor boots on a real render". That the gate injects the
-// runtime for an authed user is covered in core's edit-mode.render.test.ts, and
-// end to end in the demo runtime in apps/demo/e2e/demo.spec.ts.
+// The mock-RPC admin suite can't serve the canvas iframe; the playground's
+// same-origin canvas can. This harness boots the editor directly, skipping
+// the real render's edit gate.
 
 import type { Locator } from "@playwright/test";
 import { expect, test } from "@playwright/test";
@@ -19,10 +10,8 @@ const CANVAS_FRAME = '[data-testid="plumix-canvas-frame"] iframe';
 type Box = NonNullable<Awaited<ReturnType<Locator["boundingBox"]>>>;
 
 /**
- * Reads the boxes a `page.mouse` sequence is about to aim at, retrying until
- * every one is non-null. A `toBeVisible()` just before a one-shot read is not
- * enough: under worker load the toolbar or canvas can re-render between the
- * two, and the read comes back null (#2582).
+ * Retries until every box is non-null: under worker load the toolbar or
+ * canvas can re-render between a `toBeVisible()` and a one-shot read.
  */
 async function settledBoxes<const T extends readonly Locator[]>(
   ...locators: T
@@ -78,9 +67,8 @@ test.describe("editor playground", () => {
     // 1280px canvas — far wider than the column.
     await canvas.locator('[data-plumix-id="heading-1"]').click();
 
-    // Overlays live inside a clip layer that exactly covers the canvas column
-    // and hides overflow, so nothing they draw can reach the side rails.
-    // (boundingBox can't see CSS clipping, so assert the clip region instead.)
+    // boundingBox can't see CSS clipping, so assert the clip region that
+    // keeps overlays off the side rails.
     const frameBox = await page
       .getByTestId("plumix-canvas-frame")
       .boundingBox();
@@ -108,10 +96,8 @@ test.describe("editor playground", () => {
     // the additive click.
     await expect(page.getByTestId("plumix-overlay-selected")).toBeVisible();
 
-    // Additive-select a block well clear of heading-1's floating toolbar (which
-    // sits over the top of the canvas) so the shift-click can't land on the
-    // toolbar instead of the block. Hold Shift at the page level for a robust
-    // modifier across the iframe boundary.
+    // Clear of heading-1's floating toolbar so the shift-click can't land on
+    // it. Shift is held at page level to cross the iframe boundary.
     await page.keyboard.down("Shift");
     await canvas.locator('[data-plumix-id="col-left"]').click();
     await page.keyboard.up("Shift");
@@ -133,11 +119,9 @@ test.describe("editor playground", () => {
     await page.goto("/");
     const canvas = page.frameLocator(CANVAS_FRAME);
     const blocks = canvas.locator("[data-plumix-id]");
-    // Settle the canvas before sampling. `goto` resolves on the host's load
-    // event, but the iframe mounts with createRoot().render(), which commits
-    // asynchronously — and `.count()` does not retry. Under parallel-worker
-    // load the sample otherwise lands on zero and every delta below is off by
-    // the whole baseline. Same guard at each baseline sample in this file.
+    // The iframe commits asynchronously after `goto` and `.count()` doesn't
+    // retry, so under load the baseline would sample zero. Same guard at each
+    // baseline sample in this file.
     await expect(blocks).not.toHaveCount(0);
     const before = await blocks.count();
 
@@ -163,9 +147,8 @@ test.describe("editor playground", () => {
     const before = await page.getByTestId("plumix-overlay-clip").boundingBox();
     if (!before) throw new Error("expected clip box");
 
-    // Collapsing both rails widens the canvas column; the clip layer must track
-    // it (the rail toggle fires no block-geometry report, so this exercises the
-    // scroll/resize/collapse re-measure path, not the tree-keyed one).
+    // The rail toggle fires no block-geometry report, so this exercises the
+    // resize re-measure path.
     await page.getByTestId("plumix-rails-toggle").click();
     await expect
       .poll(
@@ -633,9 +616,8 @@ test.describe("editor playground", () => {
     await expect(page.getByTestId("styles-tab")).toBeVisible();
     await expect(page.getByTestId("styles-section-typography")).toBeVisible();
 
-    // Set the font size (the seed theme declares no font-size tokens, so the
-    // control shows its custom input directly) and a per-side custom padding;
-    // both land on the canonical tree (visible through the source dialog).
+    // The seed theme declares no font-size tokens, so the control shows its
+    // custom input directly.
     await page.getByTestId("style-control-fontSize-custom").fill("20px");
     await page.getByTestId("style-control-paddingTop-mode-custom").click();
     await page.getByTestId("style-control-paddingTop-custom").fill("12px");

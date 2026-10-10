@@ -590,10 +590,8 @@ describe("insertBlockAt", () => {
   });
 
   test("creates an unset slot's array on first insert", () => {
-    // A freshly inserted container has no array for its declared slots yet.
-    // Inserting into one must create it rather than no-op, so the in-canvas
-    // "Add a block" affordance can fill an empty slot. The caller resolves the
-    // slot key from the registry, so it always names a real slot.
+    // A freshly inserted container has no slot arrays yet; the in-canvas
+    // "Add a block" relies on insertion creating one.
     const empty: readonly BlockNode[] = [{ id: "cols", name: "core/columns" }];
     const next = insertBlockAt(
       empty,

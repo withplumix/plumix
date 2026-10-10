@@ -24,15 +24,13 @@ interface FakeNamespace {
 }
 
 /**
- * Workers KV rejects a write asking for less than a minute of life. The fake
- * enforces it so the conformance run proves the slot's declared floor is real
- * rather than a comment.
+ * Workers KV rejects a write asking for less than a minute of life; the fake
+ * enforces it so the slot's declared floor is proven.
  */
 const MIN_TTL_SECONDS = 60;
 
 /**
- * In-test stand-in for a Workers KV namespace binding: lazy TTL expiry against
- * the wall clock, sorted key listings, and a numeric-offset cursor — the
+ * Lazy TTL expiry, sorted listings and a numeric-offset cursor: the
  * behaviours the adapter maps onto the `kv:` port.
  */
 function fakeNamespace(): FakeNamespace {

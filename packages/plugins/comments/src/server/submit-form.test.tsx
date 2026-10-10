@@ -34,11 +34,8 @@ function attributes(tag: string): Map<string, string> {
 }
 
 /**
- * What a browser serialises when the visitor presses the submit button:
- * every named control in the rendered markup, carrying either what they
- * typed or the value the server put there. Read off React's static markup,
- * whose attribute quoting and escaping are fixed, so the test stays in the
- * Node tier beside the dispatcher it posts to.
+ * Read off React's static markup, whose attribute quoting and escaping are
+ * fixed, so the test stays in the Node tier beside the dispatcher.
  */
 function serializeForm(
   html: string,
@@ -368,10 +365,7 @@ describe("what the session swap costs a signed-in author", () => {
 
     await post("first one");
     const first = await rows(harness);
-    // The `formPost` exemption hands the handler an authenticator that
-    // resolves nobody, so the same cookie that would have been trusted
-    // over `fetch` buys nothing here — and the account link is gone with
-    // it. Documented on the plugin's docs page rather than worked around:
+    // The `formPost` exemption resolves nobody, so the cookie buys nothing;
     // reading the session back would defeat the guard core put there.
     expect(first[0]?.status).toBe("pending");
     expect(first[0]?.authorUserId).toBeNull();
@@ -403,9 +397,8 @@ describe("what the session swap costs a signed-in author", () => {
     });
 
     res.assertStatus(200);
-    // The island sets the CSRF header, so the request goes through the
-    // ordinary gate and arrives with its session intact: the fast path
-    // holds even under `mode: "all"`, and the row keeps its account link.
+    // The island sets the CSRF header, so the session survives the gate even
+    // under `mode: "all"`.
     expect(await res.json()).toEqual({ status: "approved" });
     expect((await rows(harness))[0]?.authorUserId).toBe(author.id);
   });

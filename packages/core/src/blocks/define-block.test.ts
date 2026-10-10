@@ -4,12 +4,8 @@ import { defineBlock } from "./block-registry.js";
 
 describe("defineBlock type inference", () => {
   test("loader return types flow into the render function's loaders param", () => {
-    // The inference target is `render`'s `loaders` arg at the spec-
-    // literal callsite. The returned `BlockSpec` is intentionally
-    // widened (`BlockSpec` is invariant in its generics, so a narrow
-    // return type wouldn't fit `BlockRegistry`'s homogenized row).
-    // Strong typing lives inside the spec literal, exactly where the
-    // block author needs it.
+    // `BlockSpec` is invariant in its generics, so the return is widened;
+    // inference is checked at the spec literal, where the author needs it.
     defineBlock({
       name: "acme/typed",
       render: ({ loaders }) => {
@@ -38,10 +34,8 @@ describe("defineBlock type inference", () => {
   });
 
   test("`defaults` checks against the inferred `Attrs` but does not drive its inference", () => {
-    // The `NoInfer` wrapper on `defaults` means it can't narrow `Attrs`.
-    // `render` reads `attrs.somethingElse` — if `defaults` drove inference,
-    // `Attrs` would narrow to `{ text: string }` and this would be a type
-    // error. It isn't.
+    // `NoInfer` on `defaults`: if it drove inference, `Attrs` would narrow to
+    // `{ text: string }` and reading `attrs.somethingElse` would fail.
     defineBlock({
       name: "acme/defaults-no-narrow",
       defaults: { text: "" },

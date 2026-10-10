@@ -9,10 +9,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-// Evaluates core's root barrel during collection, where no per-test timeout
-// applies. Otherwise `migrate generate` pays for it inside the test, through
-// `resolveCommandApp`'s deferred `import("@plumix/core")`, which stays deferred
-// to keep the CLI's cold path fast (see `cold-start.test.ts`).
+// Evaluated during collection, where no per-test timeout applies; the CLI
+// keeps its own import deferred for cold-start speed.
 import "@plumix/core";
 
 import packageJson from "../package.json" with { type: "json" };

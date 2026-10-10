@@ -9,30 +9,14 @@ import {
 } from "../test/import-graph.js";
 
 /**
- * A runtime adapter builds the app and then dispatches every request through
- * it, so the graph a public render pays for is what these two modules reach
- * between them. Rooting only at `app.ts` would miss what the dispatcher pulls
- * in directly — the admin shell, the route renderer, the SEO handlers.
- *
- * Not the root barrel, even though that's what an adapter actually imports:
- * core is `sideEffects: false`, so the barrel is tree-shaken and a module is
- * only paid for once something executed reaches it. Rooting there would redden
- * this file for a public re-export that costs a render nothing.
+ * Not the root barrel: core is `sideEffects: false`, so a re-export costs a
+ * render nothing until something executed reaches it.
  */
 const COLD_PATH_ENTRIES = ["runtime/app.ts", "runtime/dispatcher.ts"] as const;
 
 /**
- * The graphs deliberately held behind a dynamic import. Each pulls in a heavy
- * dependency — the MCP SDK and tool registry, the `@orpc/openapi` generator,
- * the RPC procedure graph, the webauthn/oslo/arctic auth stack — that a public
- * render must never pay for. Core ships as unbundled `tsc` output, so within
- * the executed graph nothing keeps them out of a consumer's main chunk except
- * the absence of a static import somewhere above.
- *
- * `app.ts` holds a whole-statement `import type` to each of them for its own
- * signatures; rewriting one into a value import is the regression this file
- * exists to catch. That distinction lives in `importsOf` — see the note there
- * on why an inline `type` specifier still counts as a link.
+ * Heavy graphs a public render must never pay for. Core ships unbundled `tsc`
+ * output, so only the absence of a static import keeps them out.
  */
 const DEFERRED = [
   { importer: "runtime/app.ts", specifier: "../mcp/dispatch.js" },
@@ -47,9 +31,8 @@ const ENTRY_FILES = COLD_PATH_ENTRIES.map((entry) => path.join(SRC, entry));
 const COLD_PATH = staticClosureOf(ENTRY_FILES);
 
 /**
- * Every module the entry files defer, discovered rather than listed. A loader
- * added later is guarded the day it lands, which the hand-written roster above
- * can't promise — this repo has had roster drift before.
+ * Discovered rather than listed, so a loader added later is guarded the day
+ * it lands.
  */
 const DEFERRED_FILES = ENTRY_FILES.flatMap((entry) =>
   importsOf(entry).dynamic.flatMap((specifier) => {
@@ -59,10 +42,8 @@ const DEFERRED_FILES = ENTRY_FILES.flatMap((entry) =>
 );
 
 /**
- * The chain that put `file` in the closure, entry first — or undefined when
- * nothing static reaches it, which is the passing case. Returning the chain as
- * the asserted value rather than a boolean means the failure names the import
- * to go delete, which is otherwise a hand search across 200-odd files.
+ * Returns the chain rather than a boolean so a failure names the import to
+ * delete instead of forcing a hand search.
  */
 function staticImportChain(
   closure: ReadonlyMap<string, string | undefined>,
@@ -79,10 +60,8 @@ function staticImportChain(
 }
 
 describe("the cold-start path defers its heavy graphs", () => {
-  // The roster and the discovered set assert opposite failures. Losing a loader
-  // shrinks the discovered set silently, so the roster pins that each named one
-  // still exists; a static import that defeats a loader is invisible to the
-  // roster, so the discovered set carries the reachability half.
+  // Losing a loader shrinks the discovered set silently, so the roster pins
+  // each; the discovered set carries the reachability half.
   test.each(DEFERRED)(
     "$importer still defers $specifier",
     ({ importer, specifier }) => {
@@ -99,11 +78,8 @@ describe("the cold-start path defers its heavy graphs", () => {
 });
 
 /**
- * Modules published only behind a subpath — the libSQL driver, the S3 slot and
- * its SigV4 signer, the Cloudflare CDN provider — so a bundle that never
- * imports the subpath never carries them. The root barrel is the entry here,
- * not the cold path: the property is that no public export reaches them,
- * whatever a bundler later shakes.
+ * Published only behind a subpath, so the property is that no public export
+ * reaches them, whatever a bundler later shakes.
  */
 const SUBPATH_ONLY = [
   "cdn/cloudflare/index.ts",
@@ -138,9 +114,8 @@ describe("subpath-only modules stay off the root barrel", () => {
 const CLI_GRAPH = staticClosureOf([path.join(SRC, "cli/index.ts")]);
 
 /**
- * The whole subtree, not `db/index.ts` alone. DDL naturally wants column names,
- * so a later `import { entries } from "../db/schema/entries.js"` is the likely
- * regression — and at ~240ms it is dearer than the import that prompted this.
+ * The whole subtree, since DDL naturally wants column names and a schema
+ * import is the likely regression.
  */
 const DB_MODULES = fs
   .readdirSync(path.join(SRC, "db"), { recursive: true })
@@ -156,16 +131,9 @@ describe("the CLI's SQL helpers stay off the query layer", () => {
 });
 
 /**
- * `cdn/decision.ts` answers one question per response — may this go into
- * shared storage — and all it wants from the access layer is one routing
- * string. While that string lived beside `access/policy.ts`'s role resolution,
- * asking for it cost 273ms; it is now 1ms.
- *
- * Not yet load-bearing for a runtime adapter: cloudflare's `edge.ts` still
- * reaches `responseAllowsSharedStorage` through the bare `plumix` barrel and
- * pays for it regardless. This pins the precondition for the subpath that would
- * fix that. Rooting a closure at `edge.ts` instead would pass vacuously —
- * `resolveWithinCore` treats a bare specifier as a leaf.
+ * Rooted at `cdn/decision.ts`, not cloudflare's `edge.ts`, because
+ * `resolveWithinCore` treats a bare specifier as a leaf and would pass
+ * vacuously.
  */
 const CDN_DECISION = staticClosureOf([path.join(SRC, "cdn/decision.ts")]);
 

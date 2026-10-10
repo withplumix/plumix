@@ -10,9 +10,7 @@ import {
 import { defineTheme } from "../../../theme.js";
 
 /**
- * A hint author's happy path: recognize the caught error and prepend a hint
- * more specific than the one core's own matcher contributes for it. Core
- * subscribes at priority 10 and appends, so a plugin's default-priority
+ * Core subscribes at priority 10 and appends, so a default-priority
  * subscriber runs after and can place itself first.
  */
 const demoPlugin = definePlugin("error-hint-demo", (ctx) => {

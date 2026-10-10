@@ -10,10 +10,8 @@ interface CapturedMail {
 }
 
 /**
- * In-memory `Mailer` for tests. Captures every send into `sent` so
- * the test can assert on the recipient / subject / body. Resolves
- * synchronously; throws when `failWith` is set so the caller can
- * exercise transport-failure paths without manually rolling a vi-mock.
+ * In-memory `Mailer` capturing every send into `sent`; set `failWith` to
+ * exercise transport failures.
  */
 interface CapturingMailer extends Mailer {
   readonly sent: CapturedMail[];

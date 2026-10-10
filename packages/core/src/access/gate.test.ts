@@ -33,10 +33,8 @@ import {
 } from "./policy.js";
 
 /**
- * A memo pre-seeded with `single-entry:*` rows keyed exactly as
- * `resolveSingleEntry` computes them. A hit replays the seeded row (its
- * `load` never runs); a miss loads live — no `resolveSingleEntry` under test
- * here reaches the DB because every single-intent case seeds its key.
+ * Seeded with `single-entry:*` rows keyed exactly as `resolveSingleEntry`
+ * computes them, so no single-intent case here reaches the DB.
  */
 function seededMemo(
   rows: Record<string, { meta: Record<string, unknown> } | null>,
@@ -497,9 +495,8 @@ describe("entryAllowsAnonymousAccess", () => {
   });
 
   it("answers the same for a signed-in asker as for a scraper", async () => {
-    // The load-bearing case. Whoever asks, the artefact this answers for is
-    // fetched by a scraper carrying no session — so an admin viewing the page
-    // must not be told a gated entry is shareable.
+    // The artefact is fetched by a scraper carrying no session, so an admin
+    // viewing the page must not be told a gated entry is shareable.
     const c = await ctx({
       user: admin,
       entryTypes: withType({ default: authenticatedPolicy }),
