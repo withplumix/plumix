@@ -1,6 +1,3 @@
-// Drizzle's own `bun-sqlite` session over a real `bun:sqlite` database. The
-// client handed to it is the database with its `prepare` wrapped, for tracing
-// and for the two places Bun departs from the other SQLite drivers.
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import type * as BunSqlite from "bun:sqlite";
@@ -33,30 +30,24 @@ export type BunSqliteDatabase<
   TSchema extends Record<string, unknown> = Record<string, unknown>,
 > = BaseSQLiteDatabase<"sync", void, TSchema>;
 
-// `bun:sqlite` is a specifier only Bun resolves, so a static import would stop
-// a config naming `bunSqlite()` from loading under Node at all — before the
-// commands module can say to run on Bun instead.
+// Only Bun resolves `bun:sqlite`; a static import would stop the config loading
+// under Node before the commands module can say to use Bun.
 function loadBunSqlite(): typeof BunSqlite {
   // Safety: Bun hands back its own `bun:sqlite` module for this id; under Node
   // it is undefined, and nothing opens a database there.
   return process.getBuiltinModule("bun:sqlite") as typeof BunSqlite;
 }
 
-// A raw `sql` Date reaches the driver untouched, and Bun cannot bind one:
-// alone it is taken for a named-parameter object and binds NULL. Epoch
-// milliseconds is what libsql and `nodeSqlite` bind. A boolean binds as 1/0
-// on Bun already.
+// Bun can't bind a raw Date: it takes it for a named-parameter object and binds
+// NULL. Epoch milliseconds matches libsql and `nodeSqlite`.
 const bind = (params: BindValue[]): BunSqlite.SQLQueryBindings[] =>
   params.map((value) => (value instanceof Date ? value.valueOf() : value));
 
 const rowsReturned = (rows: readonly unknown[]): number => rows.length;
 const rowsChanged = (result: BunSqlite.Changes): number => result.changes;
 
-// Bun's `changes` counts the rows a trigger wrote, so a one-row `UPDATE` of an
-// entry reports 2 once its change-feed trigger fires; SQL's `changes()` counts
-// the statement's own rows. It keeps the last write's count across statements
-// that write nothing, so it is read only when Bun reports a change. A Bun
-// bug, reproduced on 1.4.2: better-sqlite3 and `node:sqlite` report 1.
+// Bun bug, reproduced on 1.4.2: `changes` counts trigger-written rows, so read
+// SQL's `changes()`, and only when Bun reports a change since it carries over.
 function exactChanges(
   counter: BunSqlite.Statement<{ changes: number }>,
   result: BunSqlite.Changes,
@@ -66,9 +57,6 @@ function exactChanges(
   return { ...result, changes };
 }
 
-// Every statement drizzle's session issues lands on one of these members, so
-// this is where the client earns its query spans. Spans carry the params as
-// the caller bound them, as the libsql wrap records them.
 function statement(
   stmt: BunSqlite.Statement<unknown, BunSqlite.SQLQueryBindings[]>,
   sql: string,
@@ -96,10 +84,8 @@ function statement(
   };
 }
 
-// Bun opens a file with foreign keys off, no busy timeout, a rollback journal
-// and `synchronous = FULL`, so all four are set here rather than inherited.
-// WAL so a reader never blocks the writer; `synchronous = NORMAL` is durable
-// across a crash under WAL without an fsync per commit.
+// Bun's defaults (foreign keys off, no busy timeout, rollback journal,
+// `synchronous = FULL`) are overridden; NORMAL is crash-durable under WAL.
 export function openBunSqlite(path: string): BunSqliteClient {
   mkdirSync(dirname(path), { recursive: true });
   const { Database } = loadBunSqlite();
@@ -139,9 +125,8 @@ export function drizzleBunSqlite<TSchema extends Record<string, unknown>>(
     TSchema,
     ExtractTablesWithRelations<TSchema>
   >(
-    // Safety: the session calls only `prepare` on its client, then `run`,
-    // `all` and `values` on the statement — the members this client wraps.
-    // `transaction` it would call for `db.transaction`, which core never does.
+    // Safety: the session calls only `prepare`, then `run`, `all` and `values`,
+    // the members this client wraps; core never calls `transaction`.
     client as BunSqlite.Database,
     dialect,
     relational,

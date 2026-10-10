@@ -13,10 +13,8 @@ import { createAssetsLayer } from "./http/assets.js";
 
 export interface BunConfig {
   /**
-   * Trust `x-forwarded-proto`, `x-forwarded-host` and the rightmost
-   * `x-forwarded-for` entry — for a process behind a TLS-terminating proxy.
-   * Off by default, so a visitor reaching the process directly cannot forge
-   * its scheme, host or address.
+   * For a process behind a TLS-terminating proxy. Off by default, so a direct
+   * visitor cannot forge scheme, host or address.
    */
   readonly trustProxy?: boolean;
   /**
@@ -25,9 +23,8 @@ export interface BunConfig {
    */
   readonly bodySizeLimit?: number;
   /**
-   * Seconds a connection may sit idle, a response still pending included;
    * 30 by default, where Bun's own 10 would drop a slow render. `0` disables
-   * it. At most 255, Bun's ceiling. An event stream is exempt either way.
+   * it; at most 255, Bun's ceiling. Event streams are exempt.
    */
   readonly idleTimeout?: number;
   readonly build?: {
@@ -60,8 +57,6 @@ function readAssetsBinding(env: PlumixEnv): AssetsBinding | undefined {
     : undefined;
 }
 
-// The default handler is the whole adapter; the serve path already put the
-// client address from `server.requestIP` on the invocation.
 // An env is fixed for a handler's lifetime, so each env's layer is built once.
 const assetsLayers = new WeakMap<PlumixEnv, AssetsBinding | undefined>();
 

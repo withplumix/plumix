@@ -63,14 +63,9 @@ function objectBody(source: S3File): ReadableStream<Uint8Array> {
 }
 
 /**
- * Object storage in any S3-compatible bucket — AWS S3, R2, MinIO — over Bun's
- * `S3Client`. Where the client falls short of the contract, core's portable
- * `s3()` fills that operation and nothing more (ADR 0019): `put` and `head`,
- * since Bun 1.4.2 sends no `x-amz-meta-*` or `cache-control`, rewrites
- * `text/plain` with a charset and returns no custom metadata from `stat()`;
- * `presignPut`, since Bun's presign signs only `host`; and `url`, so a key is
- * encoded as `s3()` and R2 encode it. The bucket layout is the one `s3()` and
- * R2 write. Without `publicUrlBase`, `url()` is null, so media proxies.
+ * Core's portable `s3()` fills `put`, `head`, `presignPut` and `url`, where
+ * Bun 1.4.2's `S3Client` drops metadata or headers. Without `publicUrlBase`,
+ * `url()` is null and media proxies.
  */
 export function bunS3(config: BunS3Config): BunS3ObjectStorage {
   return {
@@ -87,10 +82,9 @@ export function bunS3(config: BunS3Config): BunS3ObjectStorage {
         credentials,
         publicUrlBase: config.publicUrlBase,
       }).connect(env);
-      // Every field is given, so Bun's own `S3_*`/`AWS_*` lookup never picks
-      // the account. Reached through the global rather than imported from
-      // `bun`, so the package root still loads under Node, where a CLI command
-      // reports that Bun is required.
+      // Every field is given, so Bun's `S3_*`/`AWS_*` env lookup never picks
+      // the account. Global, not imported, so the package root still loads
+      // under Node.
       const client = new Bun.S3Client({
         bucket: config.bucket,
         region,

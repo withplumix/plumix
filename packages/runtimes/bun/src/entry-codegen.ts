@@ -1,14 +1,9 @@
 import type { EntrySourceOptions } from "plumix";
 
 /**
- * The Bun entry: imports and calls only; the process is `serveProcess`.
- *
- * Its default export is conditional because Bun serves any default export
- * carrying a `fetch` property itself, beside whatever the module started, so
- * a site exporting its handler would bind the port twice. Run directly, the
- * entry exports the `Server`, which Bun does not serve again; imported to be
- * embedded, it exports the portable `{ fetch, scheduled }` and starts
- * nothing.
+ * Bun serves any default export with a `fetch` itself, so a run-directly entry
+ * exports the `Server` instead, and an embedded one exports `{ fetch, scheduled
+ * }`.
  */
 export function generateEntry({ configModule }: EntrySourceOptions): string {
   const lines = [

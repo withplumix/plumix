@@ -15,12 +15,8 @@ export interface AssetsLayer extends AssetsBinding {
   readonly serve: (request: Request) => Promise<Response | null>;
 }
 
-/**
- * A held file as a response, or `null` when the layer does not hold it. The
- * shared rules decide what a decoded path may name; the disk decides whether
- * it is a file. Every call opens its own `Bun.file`: one caches its stat and
- * would go on reporting a deleted file as present.
- */
+// A fresh `Bun.file` per call: one caches its stat and would keep reporting a
+// deleted file.
 async function answer(
   root: string,
   request: Request,
@@ -41,10 +37,8 @@ async function answer(
 }
 
 /**
- * The `Bun.file` layer over the built client directory, in the `"404"` mode
- * of the assets contract: a path it does not hold is the handler's to answer.
- * Bun's own `routes: { dir }` is not used — it matches the raw, encoded path,
- * and the rules would then live in two places.
+ * Not Bun's `routes: { dir }`: it matches the raw, encoded path, so the
+ * shared path rules would live in two places.
  */
 export function createAssetsLayer(options: AssetsLayerOptions): AssetsLayer {
   const root = resolve(options.root);

@@ -10,9 +10,8 @@ import { createVariantCache } from "./image-cache.js";
 
 export interface ImagesConfig {
   /**
-   * The widths a variant may have; a request snaps up to the next entry and
-   * past the largest takes it. Bounds what a visitor can make the process
-   * render and cache.
+   * A request snaps up to the next width; bounds what a visitor can make the
+   * process render.
    */
   readonly widths?: readonly number[];
   /**
@@ -26,10 +25,8 @@ export interface ImagesConfig {
 }
 
 interface ResolvedImagesConfig {
-  /** Ascending, deduplicated. */
   readonly widths: readonly number[];
   readonly remotePatterns: readonly RemotePattern[];
-  /** Absolute. */
   readonly cacheDir: string;
 }
 
@@ -112,18 +109,14 @@ async function probeEncodable(): Promise<readonly ImageFormat[]> {
 }
 
 /**
- * The `imageDelivery` slot on Bun: `url()` is URL math onto
- * `/_plumix/image`, which the serve path answers through `Bun.Image`. A
- * same-origin source is resolved through the site's own handler, so the
- * media plugin's gating applies; a remote one must match `remotePatterns`.
+ * A same-origin source resolves through the site's handler, so media gating
+ * applies; a remote one must match `remotePatterns`.
  *
  * @example
- * ```ts
- * plumix({
+ * ```ts plumix({
  *   storage: diskStorage({ dir: "data/media" }),
  *   imageDelivery: images({ remotePatterns: [{ hostname: "images.example.com" }] }),
- * });
- * ```
+ * }); ```
  */
 export function images(config: ImagesConfig = {}): BunImageDelivery {
   const resolved = resolveConfig(config);

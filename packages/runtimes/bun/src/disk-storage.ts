@@ -23,7 +23,7 @@ export interface DiskObjectStorage extends ObjectStorage {
   readonly config: DiskStorageConfig;
 }
 
-/** What `put` records beside the bytes, so `head` and `list` never read them. */
+// Beside the bytes, so `head` and `list` never read them.
 interface Sidecar extends HeadResult {
   readonly uploaded: string;
 }
@@ -31,7 +31,6 @@ interface Sidecar extends HeadResult {
 const MAX_PAGE = 1000;
 
 interface Located {
-  /** The key as stored: the path under `objects/`, whatever spelling named it. */
   readonly key: string;
   readonly file: string;
   readonly sidecar: string;
@@ -76,10 +75,8 @@ function fileBody(
 }
 
 /**
- * Object storage on the filesystem through `Bun.file`: one file per key under
- * `dir`, its content type and metadata beside it. Single-node by design —
- * `bunS3()` is the slot for a bucket several processes share. `url()` is
- * null, so the media plugin serves through its own route.
+ * Single-node by design: `bunS3()` is the slot for a shared bucket. `url()` is
+ * null, so media serves through its own route.
  */
 export function diskStorage(config: DiskStorageConfig): DiskObjectStorage {
   const root = resolve(config.dir);
@@ -87,9 +84,8 @@ export function diskStorage(config: DiskStorageConfig): DiskObjectStorage {
   const meta = join(root, "meta");
   const tmp = join(root, "tmp");
 
-  // Bytes and metadata are two trees under the directory, keyed by the same
-  // normalised path, so a key can never name another key's sidecar. The
-  // guard runs before anything touches disk.
+  // Two trees keyed by the same normalised path, so a key can never name
+  // another key's sidecar.
   const locate = (key: string): Located => {
     const file = resolve(objects, key);
     if (!file.startsWith(objects + sep)) {
@@ -103,9 +99,8 @@ export function diskStorage(config: DiskStorageConfig): DiskObjectStorage {
     };
   };
 
-  // Bytes and sidecar are each written under `tmp/` and renamed into place:
-  // `Bun.write` leaves what it had written when its body fails, so a reader
-  // must never see the target mid-write. The etag is taken as the bytes pass.
+  // Written under `tmp/` and renamed: `Bun.write` leaves partial output when
+  // its body fails.
   const writeObject = async (
     located: Located,
     body: ObjectBody,
@@ -208,9 +203,8 @@ export function diskStorage(config: DiskStorageConfig): DiskObjectStorage {
     async list(prefix, opts = {}): Promise<ListResult> {
       const limit = Math.min(opts.limit ?? MAX_PAGE, MAX_PAGE);
       const { cursor } = opts;
-      // The cursor is the last key served, so a key added or removed between
-      // pages cannot shift what the next page starts at. Code-unit order on
-      // both sides, so the sort and the comparison agree.
+      // The cursor is the last key served, so concurrent writes can't shift the
+      // next page's start.
       const matching = (await storedKeys())
         .filter(
           (key) =>

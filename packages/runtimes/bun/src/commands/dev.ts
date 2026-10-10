@@ -13,9 +13,8 @@ type BunDevEntry = DevEntry & Partial<Pick<BunSite, "dispose">>;
 
 export const devCommand: CommandDefinition = {
   describe: "Start the dev server (vite). Accepts --port and --host.",
-  // The entry builds the app itself, inside the runner, so a config or
-  // registration failure renders the dev boot-error page in the browser
-  // instead of aborting the terminal before the server is up.
+  // A config failure then renders the dev boot-error page instead of aborting
+  // before the server is up.
   deferApp: true,
   async run(ctx) {
     const { runDevCommand } = await import("plumix/vite");
