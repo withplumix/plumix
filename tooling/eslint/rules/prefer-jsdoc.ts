@@ -100,6 +100,7 @@ export const preferJsdoc: Rule.RuleModule = {
       if (lineComments.length !== block.length) return;
       const prose = lineComments.filter((c) => !DIRECTIVE.test(c.value));
       const directives = lineComments.filter((c) => DIRECTIVE.test(c.value));
+      if (prose.some((comment) => comment.value.includes("*/"))) return;
       const first = prose[0];
       const last = block.at(-1);
       if (!first?.range || !first.loc || !last?.range) return;

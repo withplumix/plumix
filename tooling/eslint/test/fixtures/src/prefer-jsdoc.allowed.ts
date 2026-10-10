@@ -15,3 +15,6 @@ export const ratio = 2; // trailing remarks stay as they are
 
 /** Already documented. */
 export const offset = 1;
+
+// Fires on `*/5` minutes; a doc comment can't hold that sequence.
+export const SCHEDULE = "*/5 * * * *";

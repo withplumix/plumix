@@ -308,7 +308,7 @@ describe("plumix/prefer-jsdoc", () => {
     );
   });
 
-  it("stays silent in function bodies, on object properties, on separated section comments and on trailing comments", async () => {
+  it("stays silent in function bodies, on object properties, on separated section comments, on trailing comments and where `*/` would end a doc comment", async () => {
     await expect(
       preferJsdocReports("src/prefer-jsdoc.allowed.ts"),
     ).resolves.toEqual([]);
