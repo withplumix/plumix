@@ -158,7 +158,7 @@ catalogs:
     "@testing-library/react": ^16.3.3
     "@testing-library/user-event": ^14.6.7
   tiptap:
-    "@tiptap/core": ^3.31.3
+    "@tiptap/core": ^3.31.4
     # Explicit extension set for the rich-text rail instead of starter-kit,
     # which bundles ~16 extensions but we activate only these (the rest are
     # disabled marks we replace with the core block marks, or nodes that are
@@ -167,15 +167,15 @@ catalogs:
     # every package here and rides along on that lockstep -- never pin it in
     # `overrides`, which silently rewrites the peer range and forks it away
     # from the version tiptap expects.
-    "@tiptap/extension-blockquote": ^3.31.3
-    "@tiptap/extension-document": ^3.31.3
-    "@tiptap/extension-hard-break": ^3.31.3
-    "@tiptap/extension-heading": ^3.31.3
-    "@tiptap/extension-list": ^3.31.3
-    "@tiptap/extension-paragraph": ^3.31.3
-    "@tiptap/extension-text": ^3.31.3
-    "@tiptap/extensions": ^3.31.3
-    "@tiptap/react": ^3.31.3
+    "@tiptap/extension-blockquote": ^3.31.4
+    "@tiptap/extension-document": ^3.31.4
+    "@tiptap/extension-hard-break": ^3.31.4
+    "@tiptap/extension-heading": ^3.31.4
+    "@tiptap/extension-list": ^3.31.4
+    "@tiptap/extension-paragraph": ^3.31.4
+    "@tiptap/extension-text": ^3.31.4
+    "@tiptap/extensions": ^3.31.4
+    "@tiptap/react": ^3.31.4
   vite:
     "@vitejs/plugin-react": ^6.1.1
     vite: ^8.3.0
