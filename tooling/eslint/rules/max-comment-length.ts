@@ -9,9 +9,16 @@ const WORD = /[A-Za-z]/;
 const DIRECTIVE =
   /^\s*(eslint[\s-]|@ts-|prettier-ignore|global\s|[cv]8\s|istanbul\s|[#@]__PURE__|@vite-ignore|\/\s*<reference)/;
 
+const FENCED_CODE = /```[\s\S]*?```/g;
+const EXAMPLE_TAG = /@example[\s\S]*?(?=\n[\s*]*@\w|$)/g;
+
 function countWords(comments: readonly Comment[]): number {
   return comments
-    .flatMap((comment) => comment.value.split(/\s+/))
+    .map((comment) => comment.value)
+    .join("\n")
+    .replace(FENCED_CODE, "")
+    .replace(EXAMPLE_TAG, "")
+    .split(/\s+/)
     .filter((word) => WORD.test(word)).length;
 }
 

@@ -95,7 +95,7 @@ const chainedAssertionReports = messageIdReports(
   "plumix/no-chained-type-assertion",
 );
 const commentLengthReports = messageIdReports("plumix/max-comment-length");
-const internalJsdocReports = messageIdReports("plumix/no-internal-jsdoc");
+const jsdocInBodyReports = messageIdReports("plumix/no-jsdoc-in-function-body");
 
 async function errorMessageReports(
   config: Linter.Config[],
@@ -239,28 +239,26 @@ describe("plumix/max-comment-length", () => {
     ]);
   });
 
-  it("counts blocks split by a blank line apart and skips lint directives", async () => {
+  it("counts blocks split by a blank line apart and skips lint directives and code examples", async () => {
     await expect(
       commentLengthReports("src/comment-length.allowed.ts"),
     ).resolves.toEqual([]);
   });
 });
 
-describe("plumix/no-internal-jsdoc", () => {
-  it("rejects a doc comment on a declaration the module does not export", async () => {
+describe("plumix/no-jsdoc-in-function-body", () => {
+  it("rejects a doc comment inside a function or method body", async () => {
     await expect(
-      internalJsdocReports("src/internal-jsdoc.violations.ts"),
+      jsdocInBodyReports("src/jsdoc-in-body.violations.ts"),
     ).resolves.toEqual([
-      { messageId: "internalJsdoc", line: 1 },
-      { messageId: "internalJsdoc", line: 6 },
-      { messageId: "internalJsdoc", line: 10 },
-      { messageId: "internalJsdoc", line: 15 },
+      { messageId: "jsdocInBody", line: 2 },
+      { messageId: "jsdocInBody", line: 11 },
     ]);
   });
 
-  it("permits doc comments on exports, their members and module augmentations", async () => {
+  it("permits doc comments on declarations and members, exported or not", async () => {
     await expect(
-      internalJsdocReports("src/internal-jsdoc.allowed.ts"),
+      jsdocInBodyReports("src/jsdoc-in-body.allowed.ts"),
     ).resolves.toEqual([]);
   });
 });

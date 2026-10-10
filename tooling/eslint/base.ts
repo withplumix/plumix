@@ -147,7 +147,7 @@ export const baseConfig = defineConfig(
     plugins: { sonarjs: sonarjsPlugin },
     rules: {
       "plumix/max-comment-length": "error",
-      "plumix/no-internal-jsdoc": "error",
+      "plumix/no-jsdoc-in-function-body": "error",
       "sonarjs/no-commented-code": "error",
     },
   },
