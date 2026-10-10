@@ -56,7 +56,7 @@ export const SEARCH_INDEX_TRIGGER_RESET_DDL: readonly string[] = [
   ),
 ];
 
-// Narrow so any drizzle db satisfies it, however a site widened its schema.
+/** Narrow so any drizzle db satisfies it, however a site widened its schema. */
 type SqlRunner = Pick<AppContext["db"], "run" | "all">;
 
 const INDEX_OBJECTS = [
@@ -101,9 +101,11 @@ export async function ensureSearchIndex(db: SqlRunner): Promise<void> {
   }
 }
 
-// Catches a repair that died between create and rebuild. Reads FTS5's
-// `search_index_docsize` because an unmatched external-content table reads
-// rows straight from the projection.
+/**
+ * Catches a repair that died between create and rebuild. Reads FTS5's
+ * `search_index_docsize` because an unmatched external-content table reads
+ * rows straight from the projection.
+ */
 async function isIndexEmptyOverAProjection(db: SqlRunner): Promise<boolean> {
   const [state] = await db.all<{ indexed: number; projected: number }>(sql`
     SELECT EXISTS(SELECT 1 FROM search_index_docsize) AS indexed,
@@ -112,12 +114,16 @@ async function isIndexEmptyOverAProjection(db: SqlRunner): Promise<boolean> {
   return state?.indexed === 0 && state.projected === 1;
 }
 
-// Anchored on the table, because the messages searched also carry SQL and
-// visitor input.
+/**
+ * Anchored on the table, because the messages searched also carry SQL and
+ * visitor input.
+ */
 const MISSING_INDEX = /no such table:\s*(?:main\.)?search_index\b/;
 
-// How deep a driver may nest its causes before this stops looking. A `cause`
-// that points at itself would otherwise be an infinite loop in a request.
+/**
+ * How deep a driver may nest its causes before this stops looking. A `cause`
+ * that points at itself would otherwise be an infinite loop in a request.
+ */
 const MAX_CAUSE_DEPTH = 8;
 
 /**

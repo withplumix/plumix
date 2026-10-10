@@ -18,8 +18,10 @@ import { createEditorStore } from "./store.js";
 const EditorStoreContext = createContext<EditorStoreApi | null>(null);
 const CameraStoreContext = createContext<CameraStoreApi | null>(null);
 
-// Held in a ref so the inspector can read it without re-rendering when the
-// bridge connects.
+/**
+ * Held in a ref so the inspector can read it without re-rendering when the
+ * bridge connects.
+ */
 type LoaderDataPush = (data: SerializedLoaderData) => void;
 
 const LoaderPushContext =

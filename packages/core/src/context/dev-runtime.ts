@@ -4,7 +4,7 @@ import type { TelemetryRecord, TelemetrySpan } from "./telemetry.js";
 // Declared here, not under `dev/`, so the context and config types can name
 // them without importing up into a surface.
 
-// Users write the position as a string literal, so it needs no public name.
+/** Users write the position as a string literal, so it needs no public name. */
 type DebugBarPosition =
   "bottom-right" | "bottom-left" | "top-right" | "top-left";
 

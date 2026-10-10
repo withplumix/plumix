@@ -25,7 +25,9 @@ export type ModerationCommentDTO = Omit<ModerationComment, "createdAt"> & {
 
 type TransitionAction = "comment:approved" | "comment:spam" | "comment:trashed";
 
-// `restore` reuses the approved entry; `purge` is separate because it removes.
+/**
+ * `restore` reuses the approved entry; `purge` is separate because it removes.
+ */
 const BULK_ACTIONS = ["approve", "spam", "trash"] as const;
 type BulkAction = (typeof BULK_ACTIONS)[number];
 const TRANSITIONS: Record<

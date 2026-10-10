@@ -46,7 +46,7 @@ export function isBlank(value: unknown): boolean {
   return Array.isArray(value) && value.length === 0;
 }
 
-// Predicates because `Array.isArray` narrows a `JsonValue` to `any[]`.
+/** Predicates because `Array.isArray` narrows a `JsonValue` to `any[]`. */
 function isRowList(value: SubmittedValue): value is readonly SubmittedValues[] {
   return Array.isArray(value);
 }
@@ -90,8 +90,10 @@ export function initialRowCount(field: MetaBoxFieldManifestEntry): number {
   return Math.min(Math.max(minRows(field), 1), maxRows(field));
 }
 
-// `raw` undefined falls back to the default: a hidden field posts nothing,
-// and reading it as blank would flip every field its condition drives.
+/**
+ * `raw` undefined falls back to the default: a hidden field posts nothing,
+ * and reading it as blank would flip every field its condition drives.
+ */
 function answerOf(
   field: MetaBoxFieldManifestEntry,
   raw: readonly string[] | undefined,
@@ -116,7 +118,7 @@ function answerOf(
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-// With no body, reads the defaults, so markup and handler share one walk.
+/** With no body, reads the defaults, so markup and handler share one walk. */
 function readLevel(
   fields: readonly MetaBoxFieldManifestEntry[],
   posted: Posted | undefined,
@@ -237,7 +239,7 @@ export function pickStoredAnswers(
   );
 }
 
-// The mirror of `readLevel`; field names must be spelled the same in both.
+/** The mirror of `readLevel`; field names must be spelled the same in both. */
 function writeLevel(
   fields: readonly MetaBoxFieldManifestEntry[],
   values: SubmittedValues,

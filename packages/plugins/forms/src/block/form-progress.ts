@@ -11,8 +11,10 @@ export interface FormProgress {
   readonly body: string;
 }
 
-// Decoded anyway: the visitor can edit session storage, and an older
-// release may have written it.
+/**
+ * Decoded anyway: the visitor can edit session storage, and an older
+ * release may have written it.
+ */
 const StoredProgress = v.object({
   step: v.pipe(v.number(), v.integer(), v.minValue(0)),
   body: v.string(),
@@ -24,8 +26,10 @@ const StoredProgress = v.object({
 export const progressKey = (slug: string, idBase: string): string =>
   `${PROGRESS_KEY_PREFIX}${slug}:${idBase}`;
 
-// Blocked site data throws from the property in some browsers and from the
-// call in others; losing progress is harmless.
+/**
+ * Blocked site data throws from the property in some browsers and from the
+ * call in others; losing progress is harmless.
+ */
 function inStorage<T>(read: (storage: Storage) => T): T | undefined {
   try {
     return read(globalThis.sessionStorage);

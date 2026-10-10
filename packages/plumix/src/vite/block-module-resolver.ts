@@ -89,8 +89,10 @@ export function resolveBlockModulePaths(
   );
 }
 
-// Relative specifiers resolve against the declaring module's directory; bare
-// package specifiers pass through for Vite.
+/**
+ * Relative specifiers resolve against the declaring module's directory; bare
+ * package specifiers pass through for Vite.
+ */
 function resolveRelative(
   refs: readonly BlockModuleRef[],
   moduleFsPath: string,
@@ -137,8 +139,10 @@ export function extractRegisteredBlockModules(
   return dedupe(refs);
 }
 
-// A `registerBlock(x)` / `registerBlocks(arr)` identifier, or the elements of a
-// `registerBlocks([a, ...b])` array literal, traced to their import bindings.
+/**
+ * A `registerBlock(x)` / `registerBlocks(arr)` identifier, or the elements of a
+ * `registerBlocks([a, ...b])` array literal, traced to their import bindings.
+ */
 function collectBindingRefs(
   node: ESTree.ArrayExpressionElement,
   importOf: ReadonlyMap<string, BlockModuleRef>,
@@ -166,9 +170,11 @@ const factoryCall =
   (call: ESTree.CallExpression): boolean =>
     call.callee.type === "Identifier" && factoryLocals.has(call.callee.name);
 
-// Value-binding local name -> import ref (module + export), and the local names
-// a `plumix` factory export was imported under (canonical or aliased). Shared
-// by the `blocks`-field and `registerBlock`-call extractors.
+/**
+ * Value-binding local name -> import ref (module + export), and the local names
+ * a `plumix` factory export was imported under (canonical or aliased). Shared
+ * by the `blocks`-field and `registerBlock`-call extractors.
+ */
 function buildImportMaps(program: ESTree.Program): {
   importOf: Map<string, BlockModuleRef>;
   factoryLocals: Set<string>;
@@ -211,8 +217,10 @@ export function resolveShortcodeModulePaths(
   return resolveRelative(refs, moduleFsPath);
 }
 
-// The `field` property of the module's own config object literal, if it
-// declares one.
+/**
+ * The `field` property of the module's own config object literal, if it
+ * declares one.
+ */
 function configProperty(
   program: ESTree.Program,
   factoryLocals: ReadonlySet<string>,

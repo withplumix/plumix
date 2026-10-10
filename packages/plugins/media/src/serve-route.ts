@@ -7,10 +7,12 @@ import { parseMediaMeta } from "./meta.js";
 const PREFIX = "/_plumix/media/serve/";
 const MEDIA_ENTRY_TYPE = "media";
 
-// Mimes safe to render inline same-origin. Everything else gets
-// `Content-Disposition: attachment` to force download — defense
-// against stored-XSS via uploaded content (text/html in a `.txt`,
-// scripted SVG, polyglot bytes).
+/**
+ * Mimes safe to render inline same-origin. Everything else gets
+ * `Content-Disposition: attachment` to force download — defense
+ * against stored-XSS via uploaded content (text/html in a `.txt`,
+ * scripted SVG, polyglot bytes).
+ */
 const INLINE_SAFE_MIMES = new Set<string>([
   "image/jpeg",
   "image/png",

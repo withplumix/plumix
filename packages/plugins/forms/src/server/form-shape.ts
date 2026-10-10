@@ -68,8 +68,10 @@ function labelTextOrNull(label: Label | undefined): string | null {
   return label === undefined ? null : labelSourceText(label);
 }
 
-// An allowlist rather than a spread, so a property added to the manifest
-// entry later cannot ride out to a caller unexamined.
+/**
+ * An allowlist rather than a spread, so a property added to the manifest
+ * entry later cannot ride out to a caller unexamined.
+ */
 function fieldShape(field: MetaBoxFieldManifestEntry): FormFieldShape {
   return {
     key: field.key,
@@ -96,9 +98,11 @@ function fieldShape(field: MetaBoxFieldManifestEntry): FormFieldShape {
   };
 }
 
-// By key, so a reader gets each question once and the steps say where it
-// falls. Unconditioned: this describes the form, not what one visitor
-// would be shown.
+/**
+ * By key, so a reader gets each question once and the steps say where it
+ * falls. Unconditioned: this describes the form, not what one visitor
+ * would be shown.
+ */
 function stepShapes(form: FormDefinition): readonly FormStepShape[] {
   return declaredSteps(form).map((step) => ({
     title: labelTextOrNull(step.title),

@@ -4,8 +4,10 @@ import { ThemeError, ThemeRegistrationError } from "../../../theme-errors.js";
 
 import "./types.js";
 
-// Matching lives here, not on the Error classes, so an untyped pitfall can
-// graduate to a typed error without a breaking change.
+/**
+ * Matching lives here, not on the Error classes, so an untyped pitfall can
+ * graduate to a typed error without a breaking change.
+ */
 type Matcher = (error: unknown) => DevErrorHint | null;
 
 const TYPED_MATCHERS: readonly Matcher[] = [
@@ -31,8 +33,10 @@ const TYPED_MATCHERS: readonly Matcher[] = [
       : null,
 ];
 
-// These match platform errors (D1/SQLite, the Workers runtime), not plumix
-// code, so message substrings are the only reliable handle.
+/**
+ * These match platform errors (D1/SQLite, the Workers runtime), not plumix
+ * code, so message substrings are the only reliable handle.
+ */
 const UNTYPED_MATCHERS: readonly Matcher[] = [
   // D1/SQLite raises `no such table` when a query hits a table the local
   // database is missing — almost always unapplied migrations.
@@ -76,8 +80,10 @@ export function registerCoreErrorHints(hooks: HookRegistry): void {
   );
 }
 
-// Builds a matcher that recognizes an error by a substring/regex over its
-// message. Non-`Error` throws (which carry no reliable message) never match.
+/**
+ * Builds a matcher that recognizes an error by a substring/regex over its
+ * message. Non-`Error` throws (which carry no reliable message) never match.
+ */
 function signature(pattern: RegExp, hint: DevErrorHint): Matcher {
   return (error) =>
     error instanceof Error && pattern.test(error.message) ? hint : null;

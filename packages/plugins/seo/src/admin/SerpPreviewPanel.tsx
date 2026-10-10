@@ -14,8 +14,10 @@ import {
 import { M } from "./messages.js";
 import { fetchSerpPreview } from "./queries.js";
 
-// Keyed by reason so a new arm fails the build rather than showing a blank
-// line. `default` (offered to search engines) shows no line at all.
+/**
+ * Keyed by reason so a new arm fails the build rather than showing a blank
+ * line. `default` (offered to search engines) shows no line at all.
+ */
 const REASONS: Record<
   Exclude<IndexabilityReason, "default">,
   MessageDescriptor

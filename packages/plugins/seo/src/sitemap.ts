@@ -12,22 +12,28 @@ import { SeoError } from "./errors.js";
 import { SEO_META_KEYS } from "./overrides.js";
 import { isCrawlableType, publicTargets } from "./scope.js";
 
-// Well under the sitemaps.org 50k cap, and small enough to build + hold in
-// Worker memory per request.
+/**
+ * Well under the sitemaps.org 50k cap, and small enough to build + hold in
+ * Worker memory per request.
+ */
 export const SITEMAP_PAGE_SIZE = 1000;
 
 /** Where the index answers, before any base prefix. */
 export const SITEMAP_INDEX_PATH = "/sitemap.xml";
 
-// A `WHERE`, so the count driving index pagination and the page agree.
+/** A `WHERE`, so the count driving index pagination and the page agree. */
 const NOINDEX_PATH = `$.${SEO_META_KEYS.noindex}`;
 
-// `json_type`, not `json_extract`, which collapses `true` and `1`; this
-// matches the reader's `=== true`, NULL included.
+/**
+ * `json_type`, not `json_extract`, which collapses `true` and `1`; this
+ * matches the reader's `=== true`, NULL included.
+ */
 const entryIsIndexable = sql`json_type(${entries.meta}, ${NOINDEX_PATH}) is not 'true'`;
 const termIsIndexable = sql`json_type(${terms.meta}, ${NOINDEX_PATH}) is not 'true'`;
 
-// Google's sitemap image extension — the one crawlers read image entries from.
+/**
+ * Google's sitemap image extension — the one crawlers read image entries from.
+ */
 const IMAGE_NS = "http://www.google.com/schemas/sitemap-image/1.1";
 
 /** How often a page is likely to change, in the sitemaps.org vocabulary. */
@@ -64,8 +70,10 @@ declare module "plumix" {
   }
 }
 
-// The href goes in unescaped: a processing instruction isn't entity-parsed, and
-// the path comes from config, not the request.
+/**
+ * The href goes in unescaped: a processing instruction isn't entity-parsed, and
+ * the path comes from config, not the request.
+ */
 function prologue(stylesheet: string): string {
   return (
     `<?xml version="1.0" encoding="UTF-8"?>` +
@@ -204,8 +212,10 @@ export function sitemapScopeStem(ref: SitemapScopeRef): string {
   }
 }
 
-// Root-relative: the dispatcher strips the base prefix, so only the published
-// `<loc>` re-adds it.
+/**
+ * Root-relative: the dispatcher strips the base prefix, so only the published
+ * `<loc>` re-adds it.
+ */
 function subSitemapPath(
   ctx: AppContext,
   ref: SitemapScopeRef,
@@ -251,7 +261,7 @@ function offsetFor(page: number): number {
   return (page - 1) * SITEMAP_PAGE_SIZE;
 }
 
-// `null` where the site has no public type, so there is nothing to list.
+/** `null` where the site has no public type, so there is nothing to list. */
 function publishedEntriesOf(ctx: AppContext, type: string) {
   const listed = publicEntryRows(ctx.plugins);
   if (listed === null) return null;
@@ -262,7 +272,7 @@ function listedTermsOf(taxonomy: string) {
   return and(eq(terms.taxonomy, taxonomy), termIsIndexable);
 }
 
-// One query for the whole scope; a query per page would grow with the site.
+/** One query for the whole scope; a query per page would grow with the site. */
 async function entryPages(
   ctx: AppContext,
   type: string,
@@ -445,8 +455,10 @@ export function assertSitemapPolicyNamesScopes(
   }
 }
 
-// A value the URL carries beats the site's default for its scope. A field
-// neither sets stays absent, so the serializer writes no element for it.
+/**
+ * A value the URL carries beats the site's default for its scope. A field
+ * neither sets stays absent, so the serializer writes no element for it.
+ */
 function withPolicy(url: SitemapUrl, policy: SitemapScopePolicy): SitemapUrl {
   const changefreq = url.changefreq ?? policy.changefreq;
   const priority = url.priority ?? policy.priority;

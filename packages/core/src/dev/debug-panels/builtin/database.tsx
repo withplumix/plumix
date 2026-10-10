@@ -25,16 +25,20 @@ function asParams(value: unknown): readonly unknown[] {
   return Array.isArray(value) ? (value as readonly unknown[]) : [];
 }
 
-// `Array.isArray` narrows a readonly-array union to `any[]`; a dedicated
-// guard keeps the elements typed as JsonValue.
+/**
+ * `Array.isArray` narrows a readonly-array union to `any[]`; a dedicated
+ * guard keeps the elements typed as JsonValue.
+ */
 function isJsonArray(
   value: JsonValue | undefined,
 ): value is readonly JsonValue[] {
   return Array.isArray(value);
 }
 
-// Walks the span tree collecting what the driver wraps emit: a `db.sql` span
-// is one query row; a `db.batch` span flattens into one row per statement.
+/**
+ * Walks the span tree collecting what the driver wraps emit: a `db.sql` span
+ * is one query row; a `db.batch` span flattens into one row per statement.
+ */
 function collectQueryRows(spans: readonly TelemetrySpan[]): QueryRow[] {
   const rows: QueryRow[] = [];
   const visit = (span: TelemetrySpan): void => {

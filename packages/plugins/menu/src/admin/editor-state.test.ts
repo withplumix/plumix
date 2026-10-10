@@ -7,7 +7,7 @@ import {
   itemDisplayLabel,
 } from "./editor-state.js";
 
-// What the server's resolver attaches to every row it sends back.
+/** What the server's resolver attaches to every row it sends back. */
 function okResolved(label: string) {
   return {
     state: "ok",

@@ -58,9 +58,11 @@ export function resolveContributions(
   return acc;
 }
 
-// Array wrangler values append; config slots and scalar/object wrangler
-// values are last-write-wins. Fine for today's disjoint descriptors; a
-// future collision (two capabilities touching one slot) would need a guard.
+/**
+ * Array wrangler values append; config slots and scalar/object wrangler
+ * values are last-write-wins. Fine for today's disjoint descriptors; a
+ * future collision (two capabilities touching one slot) would need a guard.
+ */
 function apply(acc: ResolvedContributions, contribution: Contribution): void {
   if (contribution.imports) acc.imports.push(...contribution.imports);
   if (contribution.configSlots)

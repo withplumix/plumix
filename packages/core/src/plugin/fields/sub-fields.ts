@@ -11,9 +11,11 @@ import { FieldConfigError } from "./errors.js";
 // The top-level registrar doesn't recurse into composite children, so repeater
 // and group check their own keys here.
 
-// `__proto__` / `constructor` / `prototype` match the key regex but
-// writing them into a fresh object literal mutates the prototype chain.
-// Reject at registration regardless of regex pass.
+/**
+ * `__proto__` / `constructor` / `prototype` match the key regex but
+ * writing them into a fresh object literal mutates the prototype chain.
+ * Reject at registration regardless of regex pass.
+ */
 export const FORBIDDEN_FIELD_KEYS: ReadonlySet<string> = new Set([
   "__proto__",
   "constructor",

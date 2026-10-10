@@ -19,8 +19,10 @@ import { entryLookupAdapter } from "./lookup.js";
 const POST = { entryTypes: ["post"] } as const;
 const PAGE = { entryTypes: ["page"] } as const;
 
-// Existence checks now ride the `list({ ids })` batch path — same
-// scope rules, single query.
+/**
+ * Existence checks now ride the `list({ ids })` batch path — same
+ * scope rules, single query.
+ */
 async function existsViaList(
   h: AuthenticatedRpcHarness,
   id: string,

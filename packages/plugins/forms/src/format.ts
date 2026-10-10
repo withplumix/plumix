@@ -3,9 +3,11 @@ import { answerLines } from "./answer-lines.js";
 
 const INDENT = "  ";
 
-// Not in `messages.ts`: nothing here is shown to a visitor. A formatted
-// submission goes to whoever the site notifies, in the one language the
-// label snapshot is already written in.
+/**
+ * Not in `messages.ts`: nothing here is shown to a visitor. A formatted
+ * submission goes to whoever the site notifies, in the one language the
+ * label snapshot is already written in.
+ */
 const WORDS = { yes: "Yes", no: "No" };
 
 /**

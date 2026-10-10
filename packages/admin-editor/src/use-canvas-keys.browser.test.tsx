@@ -57,8 +57,10 @@ function renderKeys(): void {
   );
 }
 
-// A key the canvas forwards over the bridge: the iframe holds focus, so this
-// is the only way the press reaches the host.
+/**
+ * A key the canvas forwards over the bridge: the iframe holds focus, so this
+ * is the only way the press reaches the host.
+ */
 function forward(code: string, shiftKey = false): void {
   act(() => {
     keys?.keyHandlerRef.current?.(true, code, shiftKey);

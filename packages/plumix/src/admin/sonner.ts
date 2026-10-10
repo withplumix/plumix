@@ -9,7 +9,9 @@ const ns = getRuntime().sonner;
 export default ns;
 
 export const Toaster = ns.Toaster;
-// Annotated so declaration emit names sonner's type rather than its
-// non-exported internal `PromiseIExtendedResult` return type (TS4023).
+/**
+ * Annotated so declaration emit names sonner's type rather than its
+ * non-exported internal `PromiseIExtendedResult` return type (TS4023).
+ */
 export const toast: typeof SonnerNs.toast = ns.toast;
 export const useSonner = ns.useSonner;

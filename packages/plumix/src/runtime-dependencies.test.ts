@@ -21,8 +21,10 @@ function runtimeModules(dir: string): string[] {
   });
 }
 
-// A type-only import or export is erased from the emitted JS, so it asks
-// nothing of a consumer's install; everything else survives into dist.
+/**
+ * A type-only import or export is erased from the emitted JS, so it asks
+ * nothing of a consumer's install; everything else survives into dist.
+ */
 function runtimeSpecifiers(path: string): string[] {
   const source = readFileSync(path, "utf8");
   const { program, module } = parseSync(path, source);

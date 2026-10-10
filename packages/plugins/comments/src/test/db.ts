@@ -9,7 +9,7 @@ import {
   factoriesFor,
 } from "plumix/test";
 
-// The history this package ships, at its root.
+/** The history this package ships, at its root. */
 const migrations = fileURLToPath(new URL("../../migrations", import.meta.url));
 
 export type CommentsTestDb = DispatcherHarness["db"];

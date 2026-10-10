@@ -6,8 +6,10 @@ import { entrySearchCondition } from "../db/search-conditions.js";
 import { adminEntryScope, entryGroups } from "./admin-entry-scope.js";
 import { tokenizeSearchQuery } from "./contract/search-terms.js";
 
-// LIKE has no relevance ranking, so the most recently updated matches are
-// taken and bucketed.
+/**
+ * LIKE has no relevance ranking, so the most recently updated matches are
+ * taken and bucketed.
+ */
 const SCAN_LIMIT = 50;
 
 /**

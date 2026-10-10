@@ -23,9 +23,11 @@ import { resolveEntryList } from "./resolve-entry-list.js";
 import { forEntryType } from "./template-builders.js";
 import { resolveTemplate } from "./template-hierarchy.js";
 
-// The two ways decoding moves a value away from what the meta JSON holds:
-// `.returns("date")` reads a `Date` off a stored ISO string, and a reference
-// reads the summary its lookup adapter hydrates off a stored id.
+/**
+ * The two ways decoding moves a value away from what the meta JSON holds:
+ * `.returns("date")` reads a `Date` off a stored ISO string, and a reference
+ * reads the summary its lookup adapter hydrates off a stored id.
+ */
 const _dossierFields = [
   date("filedOn").returns("date"),
   entryRef("subject", ["post"]),
@@ -37,8 +39,10 @@ const _dossierFields = [
   number("clearance"),
   text("tone").default("warm"),
 ];
-// The same two decode moves, on a term. Before the render path decoded
-// term meta these read back as the raw ISO string and the raw id.
+/**
+ * The same two decode moves, on a term. Before the render path decoded
+ * term meta these read back as the raw ISO string and the raw id.
+ */
 const _termDossierFields = [
   date("taggedOn").returns("date"),
   entryRef("curator", ["post"]),
@@ -617,8 +621,10 @@ describe("term meta on the render path", () => {
   });
 });
 
-// The same fields with and without the role tag — the only difference between
-// a site that reads `images.featured` and the same site before this change.
+/**
+ * The same fields with and without the role tag — the only difference between
+ * a site that reads `images.featured` and the same site before this change.
+ */
 function photoPlugin(tagged: boolean) {
   const role = tagged ? { role: "featured" as const } : {};
   return definePlugin("test-photos", (ctx) => {

@@ -16,8 +16,10 @@ const blogPlugin = definePlugin("blog", (ctx) => {
   });
 });
 
-// The slug-narrowed rule is skipped (wrong slug), the plain `post` rule wins,
-// and `fallback` is never reached — one of each status in the table.
+/**
+ * The slug-narrowed rule is skipped (wrong slug), the plain `post` rule wins,
+ * and `fallback` is never reached — one of each status in the table.
+ */
 const theme = defineTheme({
   templates: [
     fallback(() => null),
@@ -55,7 +57,8 @@ describe("debug bar Template panel (end to end)", () => {
     const html = await res.text();
 
     expect(html).toContain('data-testid="plumix-debug-panel-template"');
-    // Resolved node + winning rule, pinned to their exact `DebugKV` value cells.
+    // Resolved node + winning rule, pinned to their exact `DebugKV` value
+    // cells.
     expect(html).toContain("<dd>post: hello</dd>");
     expect(html).toContain("<dd>post</dd>");
     // The table surfaces all three statuses: the winner, the skipped

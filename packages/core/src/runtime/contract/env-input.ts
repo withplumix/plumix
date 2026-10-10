@@ -7,8 +7,10 @@ import type { PlumixEnv } from "./bindings.js";
  */
 export type EnvInput<T> = T | ((env: PlumixEnv) => T);
 
-// By resolver identity, so a connection-owning value is built once per isolate.
-// `env` is isolate-stable, so the first resolution holds.
+/**
+ * By resolver identity, so a connection-owning value is built once per isolate.
+ * `env` is isolate-stable, so the first resolution holds.
+ */
 const cache = new WeakMap<object, unknown>();
 
 export function resolveEnvInput<T>(input: EnvInput<T>, env: PlumixEnv): T {

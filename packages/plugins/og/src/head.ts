@@ -86,8 +86,10 @@ async function resolveChain(input: PageOgImageInput): Promise<ChainResolution> {
   };
 }
 
-// The route always resolves an archive's first page and the live row, never an
-// autosave, so the head must digest the same data on later pages and previews.
+/**
+ * The route always resolves an archive's first page and the live row, never an
+ * autosave, so the head must digest the same data on later pages and previews.
+ */
 async function cardPageData(
   ctx: AppContext,
   data: TemplateData,
@@ -188,8 +190,10 @@ interface CardOgImageInput {
   readonly extension: string;
 }
 
-// The same call the route makes; a digest the route doesn't recognise would
-// redirect every scraper away.
+/**
+ * The same call the route makes; a digest the route doesn't recognise would
+ * redirect every scraper away.
+ */
 async function cardOgImageUrl(input: CardOgImageInput): Promise<string> {
   const { card, data, target, ctx, inputs, extension } = input;
   const { digest } = await resolveCardIdentity(
@@ -210,8 +214,10 @@ interface NoCardInput {
   readonly skipped: OgCardSkip;
 }
 
-// The trace names the photo whether this returns it cropped or the chain's next
-// link takes it as is.
+/**
+ * The trace names the photo whether this returns it cropped or the chain's next
+ * link takes it as is.
+ */
 function noCard(input: NoCardInput): ChainResolution {
   const { photo, featured, rule, skipped } = input;
   const shared = photo ?? featured;
@@ -227,8 +233,10 @@ function noCard(input: NoCardInput): ChainResolution {
   };
 }
 
-// Cropping the photo to the card's shape is what stops a scraper cropping it
-// badly, and it is pure URL math — no rasterizer, no wasm, no CPU.
+/**
+ * Cropping the photo to the card's shape is what stops a scraper cropping it
+ * badly, and it is pure URL math — no rasterizer, no wasm, no CPU.
+ */
 function cropToCard(ctx: AppContext, image: OgImage, size: CardSize): OgImage {
   const url = ctx.imageDelivery?.url(image.url, { ...size, fit: "cover" });
   // An unchanged `url` means the slot declined to crop, so keep the photo's own

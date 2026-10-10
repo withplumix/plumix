@@ -8,8 +8,10 @@ import type {
 import type { TracedQuery } from "./trace.js";
 import { traceDbBatch, traceDbQuery } from "./trace.js";
 
-// drizzle binds positionally; named-args objects are a direct-client shape
-// this wrap never sees, so they degrade to "no params".
+/**
+ * drizzle binds positionally; named-args objects are a direct-client shape
+ * this wrap never sees, so they degrade to "no params".
+ */
 const stmtQuery = (stmt: InStatement): TracedQuery =>
   typeof stmt === "string"
     ? { sql: stmt, params: [] }
@@ -18,8 +20,10 @@ const stmtQuery = (stmt: InStatement): TracedQuery =>
 const resultRows = (result: ResultSet): number =>
   result.rows.length > 0 ? result.rows.length : result.rowsAffected;
 
-// The query surface a client and a transaction share — the two objects
-// drizzle's libsql session issues statements through.
+/**
+ * The query surface a client and a transaction share — the two objects
+ * drizzle's libsql session issues statements through.
+ */
 interface QueryTarget {
   execute(stmt: InStatement): Promise<ResultSet>;
   batch(stmts: InStatement[], ...rest: never[]): Promise<ResultSet[]>;

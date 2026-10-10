@@ -31,9 +31,11 @@ const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
-// PLUMIX DIVERGENCE from upstream shadcn: Cmd/Ctrl+B is also rich-text bold.
-// Duplicated from the editor's shortcuts because admin-ui can't depend on the
-// editor.
+/**
+ * PLUMIX DIVERGENCE from upstream shadcn: Cmd/Ctrl+B is also rich-text bold.
+ * Duplicated from the editor's shortcuts because admin-ui can't depend on the
+ * editor.
+ */
 function isTypingTarget(target: EventTarget | null): boolean {
   return (
     target instanceof HTMLElement &&
@@ -175,8 +177,10 @@ function Sidebar({
   side?: "left" | "right";
   variant?: "sidebar" | "floating" | "inset";
   collapsible?: "offcanvas" | "icon" | "none";
-  // The mobile sheet's screen-reader title and description. admin-ui carries
-  // no catalog, so these and every other `label` here arrive already localized.
+  /**
+   * The mobile sheet's screen-reader title and description. admin-ui carries
+   * no catalog, so these and every other `label` here arrive already localized.
+   */
   mobileTitle: string;
   mobileDescription: string;
 }) {

@@ -3,8 +3,10 @@ import { and, eq } from "../db/index.js";
 import { authTokens } from "../db/schema/auth_tokens.js";
 import { generateToken, hashToken } from "./tokens.js";
 
-// Entry scope plus expiry is the whole security model; reusable until then so a
-// reviewer can refresh and re-share.
+/**
+ * Entry scope plus expiry is the whole security model; reusable until then so a
+ * reviewer can refresh and re-share.
+ */
 const PREVIEW_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 interface PreviewPayload {

@@ -1,8 +1,10 @@
 import type { MessageDescriptor } from "@lingui/core";
 import * as v from "valibot";
 
-// oRPC fills `.message` with its own English text, so only these two fields
-// are worth reading.
+/**
+ * oRPC fills `.message` with its own English text, so only these two fields
+ * are worth reading.
+ */
 const RpcErrorCode = v.object({ code: v.string() });
 const RpcErrorReason = v.object({ data: v.object({ reason: v.string() }) });
 

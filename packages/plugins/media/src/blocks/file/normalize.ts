@@ -1,7 +1,9 @@
 import type { JsonObject } from "plumix";
 
-// mailto: and tel: are needed for contact-card flows. Anything else is dropped
-// silently so a hostile attribute value never reaches the anchor.
+/**
+ * mailto: and tel: are needed for contact-card flows. Anything else is dropped
+ * silently so a hostile attribute value never reaches the anchor.
+ */
 const SAFE_HREF = /^(https?:\/\/|mailto:|tel:|\/|\.\.?\/)/i;
 
 export function sanitizeHref(raw: unknown): string | undefined {
@@ -11,8 +13,10 @@ export function sanitizeHref(raw: unknown): string | undefined {
   return trimmed;
 }
 
-// The picker writes a { id, url, filename?, mime? } snapshot. Read what the
-// file render needs, tolerating a null/legacy value.
+/**
+ * The picker writes a { id, url, filename?, mime? } snapshot. Read what the
+ * file render needs, tolerating a null/legacy value.
+ */
 interface FileMedia {
   readonly url: string;
   readonly filename: string;

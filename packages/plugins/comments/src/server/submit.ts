@@ -37,14 +37,16 @@ const submitInputSchema = v.object({
 
 const NAMEABLE = ["name", "email", "body"] as const;
 
-// `entryId` and `parentId` have no control a visitor can correct.
+/** `entryId` and `parentId` have no control a visitor can correct. */
 function refusedField(issues: readonly v.BaseIssue<unknown>[]): string {
   const key = issues[0]?.path?.[0]?.key;
   return NAMEABLE.some((name) => name === key) ? String(key) : "";
 }
 
-// `no-store` on every answer: the page carrying the form is edge-cached,
-// and each of these is about one visitor's comment.
+/**
+ * `no-store` on every answer: the page carrying the form is edge-cached,
+ * and each of these is about one visitor's comment.
+ */
 function noStore(body: unknown, status: number): Response {
   return jsonResponse(body, {
     status,

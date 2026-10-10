@@ -42,8 +42,10 @@ export function clampQuality(quality: number): number {
   return Math.min(100, Math.max(1, Math.round(quality)));
 }
 
-// A crop's height scales with the width to keep its aspect; a bare height is
-// capped by the roster ceiling, bounding pixels per request.
+/**
+ * A crop's height scales with the width to keep its aspect; a bare height is
+ * capped by the roster ceiling, bounding pixels per request.
+ */
 function normalize(
   widths: readonly number[],
   opts: Omit<ImageParams, "src"> & { readonly dpr?: number },
@@ -198,11 +200,13 @@ export function negotiateImageFormat(
   return "source";
 }
 
-// A base for parsing a relative source, on a host no real source can have.
+/** A base for parsing a relative source, on a host no real source can have. */
 const RELATIVE_BASE = "http://plumix.invalid";
 
-// By host, not origin: behind a TLS-terminating proxy the process sees `http`
-// while an absolute URL of its own site says `https`.
+/**
+ * By host, not origin: behind a TLS-terminating proxy the process sees `http`
+ * while an absolute URL of its own site says `https`.
+ */
 export function isSameHostImageSource(src: string, host: string): boolean {
   if (src.startsWith("/")) return !src.startsWith("//");
   return URL.parse(src)?.host === host;
@@ -250,8 +254,10 @@ export type ImageSourceResult =
   | { readonly ok: true; readonly response: Response }
   | { readonly ok: false; readonly status: number };
 
-// The route is not a source for itself: the handler does not hold it, but a
-// self-fetch over the network would, and a nested one at every level.
+/**
+ * The route is not a source for itself: the handler does not hold it, but a
+ * self-fetch over the network would, and a nested one at every level.
+ */
 function isPermittedUrl(
   url: URL,
   { remotePatterns, route }: RemoteImageSourceOptions,

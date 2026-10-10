@@ -9,10 +9,12 @@ import {
 } from "../../../test/dispatcher.js";
 import { defineTheme } from "../../../theme.js";
 
-// A hint author's happy path: recognize the caught error and prepend a hint
-// more specific than the one core's own matcher contributes for it. Core
-// subscribes at priority 10 and appends, so a plugin's default-priority
-// subscriber runs after and can place itself first.
+/**
+ * A hint author's happy path: recognize the caught error and prepend a hint
+ * more specific than the one core's own matcher contributes for it. Core
+ * subscribes at priority 10 and appends, so a plugin's default-priority
+ * subscriber runs after and can place itself first.
+ */
 const demoPlugin = definePlugin("error-hint-demo", (ctx) => {
   ctx.addFilter("error_page:hints", (hints, caught) => {
     if (!(caught instanceof Error) || !caught.message.includes("posts")) {
@@ -27,8 +29,10 @@ const demoPlugin = definePlugin("error-hint-demo", (ctx) => {
   });
 });
 
-// Recognized by core's `no such table` matcher too, so the page carries both
-// hints and their order is a claim worth asserting.
+/**
+ * Recognized by core's `no such table` matcher too, so the page carries both
+ * hints and their order is a claim worth asserting.
+ */
 const boomTheme = defineTheme({
   templates: [
     fallback(() => {

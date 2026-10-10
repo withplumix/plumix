@@ -34,8 +34,10 @@ type FormsOutputs = PluginRpcOutputs<SubmissionsRouter>;
 export type { SubmissionFilter };
 
 const SUBMISSIONS_KEY = ["forms", "submissions"] as const;
-// Outside the submissions key: the registry is code, and no write to a
-// submission can change what forms exist.
+/**
+ * Outside the submissions key: the registry is code, and no write to a
+ * submission can change what forms exist.
+ */
 const DEFINITIONS_KEY = ["forms", "definitions"] as const;
 
 /** Where the export links point, under whatever the inbox is showing. */

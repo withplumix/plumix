@@ -5,11 +5,13 @@ import type { Finding } from "./finding";
 import type { SampleDiagnostic } from "./sample-program";
 import { typeCheckSamples } from "./sample-program";
 
-// The Shiki alias `typescript` is listed so a writer who uses it still gets a
-// checked sample.
+/**
+ * The Shiki alias `typescript` is listed so a writer who uses it still gets a
+ * checked sample.
+ */
 const TYPESCRIPT_FENCES = new Set(["ts", "tsx", "typescript"]);
 
-// Without an opt-out a page could never show a mistake or an anti-pattern.
+/** Without an opt-out a page could never show a mistake or an anti-pattern. */
 const OPT_OUT = "no-typecheck";
 
 interface Sample {
@@ -30,8 +32,10 @@ export function checkCodeSamples(files: readonly ContentFile[]): Finding[] {
   return files.flatMap(checkFile);
 }
 
-// One program per file, so one file's `declare module "plumix"` augmentation
-// cannot decide whether another file's samples compile.
+/**
+ * One program per file, so one file's `declare module "plumix"` augmentation
+ * cannot decide whether another file's samples compile.
+ */
 function checkFile(file: ContentFile): Finding[] {
   const samples = readSamples(file);
   const complaints = typeCheckSamples(samples);
@@ -91,8 +95,10 @@ function readSamples(file: ContentFile): Sample[] {
   return samples;
 }
 
-// Nested fences too: a sample inside `<Tabs>` or a list item is still copied by
-// readers.
+/**
+ * Nested fences too: a sample inside `<Tabs>` or a list item is still copied by
+ * readers.
+ */
 function* fencedBlocks(node: Root | RootContent): Generator<Code> {
   if (node.type === "code") {
     yield node;

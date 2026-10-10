@@ -2,21 +2,27 @@
 // possibly wrapped in `.cause`; the message substring is the one thing every
 // driver surfaces verbatim.
 
-// Extended SQLite result codes for UNIQUE / PRIMARYKEY violations. See
-// https://www.sqlite.org/rescode.html — "SQLITE_CONSTRAINT_UNIQUE" (2067)
-// and "SQLITE_CONSTRAINT_PRIMARYKEY" (1555).
+/**
+ * Extended SQLite result codes for UNIQUE / PRIMARYKEY violations. See
+ * https://www.sqlite.org/rescode.html — "SQLITE_CONSTRAINT_UNIQUE" (2067)
+ * and "SQLITE_CONSTRAINT_PRIMARYKEY" (1555).
+ */
 const CONSTRAINT_CODE_STRINGS = new Set([
   "SQLITE_CONSTRAINT_UNIQUE",
   "SQLITE_CONSTRAINT_PRIMARYKEY",
 ]);
 const CONSTRAINT_CODE_NUMBERS = new Set([2067, 1555]);
 
-// D1 through drizzle can stack four causes deep; the bound stops a driver's
-// cause cycle from looping forever.
+/**
+ * D1 through drizzle can stack four causes deep; the bound stops a driver's
+ * cause cycle from looping forever.
+ */
 const MAX_CAUSE_DEPTH = 6;
 
-// String fields hold extended-code names; number fields hold numeric extended
-// codes (2067 / 1555).
+/**
+ * String fields hold extended-code names; number fields hold numeric extended
+ * codes (2067 / 1555).
+ */
 const STRING_CODE_FIELDS = ["code", "extendedCode"] as const;
 const NUMBER_CODE_FIELDS = ["errno", "errcode", "resultCode"] as const;
 

@@ -67,8 +67,10 @@ export interface UpdateResponse {
   readonly alt: string | null;
 }
 
-// No whitespace or control characters: browsers send a bare `image/png` for an
-// XHR File upload, so anything else is a malformed client.
+/**
+ * No whitespace or control characters: browsers send a bare `image/png` for an
+ * XHR File upload, so anything else is a malformed client.
+ */
 const CONTENT_TYPE_RE = /^[\x21-\x7E]+$/;
 
 interface MediaRpcErrors {
@@ -78,7 +80,7 @@ interface MediaRpcErrors {
   readonly FORBIDDEN: (opts: { data: { capability: string } }) => Error;
 }
 
-// Each caller applies its own gate.
+/** Each caller applies its own gate. */
 async function loadMediaRow(
   context: AuthenticatedAppContext,
   id: number,
@@ -410,8 +412,10 @@ export function createMediaRouter(options: MediaRpcOptions) {
   return { createUploadUrl, confirm, list, update, delete: remove };
 }
 
-// Map a media-read domain error to the oRPC typed error to throw; `undefined`
-// for anything else, which the caller rethrows as it caught it.
+/**
+ * Map a media-read domain error to the oRPC typed error to throw; `undefined`
+ * for anything else, which the caller rethrows as it caught it.
+ */
 function mapMediaReadError(
   error: unknown,
   errors: MediaRpcErrors,

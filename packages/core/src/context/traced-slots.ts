@@ -8,8 +8,10 @@ import type {
 } from "../runtime/contract/slots.js";
 import type { TelemetryCollector } from "./telemetry.js";
 
-// Read per call so the post-vote collector swap in `createAppContext` is
-// observed.
+/**
+ * Read per call so the post-vote collector swap in `createAppContext` is
+ * observed.
+ */
 type GetTelemetry = () => TelemetryCollector;
 
 function traceCdnStore(store: CdnStore, getTelemetry: GetTelemetry): CdnStore {

@@ -29,8 +29,10 @@ const request = new Request("https://cms.example/");
 const auth: AuthNamespace = { can: () => true };
 const entryTypes = new Map();
 
-// The chrome as a page renders it: the bar for the principal on the context,
-// with the core contributors registered unless a test registers its own.
+/**
+ * The chrome as a page renders it: the bar for the principal on the context,
+ * with the core contributors registered unless a test registers its own.
+ */
 function renderChrome(
   viewer: AuthenticatedUser | null,
   hooks = withCoreContributors(),

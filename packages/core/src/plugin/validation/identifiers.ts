@@ -3,8 +3,10 @@ import { PluginContextError } from "../errors.js";
 
 const IDENTIFIER_NAME_RE = /^[a-z][a-z0-9_-]*$/;
 
-// Never a storage key or URL segment, so it may carry camelCase; separators
-// stay for the snake and kebab names plugins already register.
+/**
+ * Never a storage key or URL segment, so it may carry camelCase; separators
+ * stay for the snake and kebab names plugins already register.
+ */
 const FIELD_TYPE_NAME_RE = /^[a-z][a-zA-Z0-9_-]*$/;
 
 export function assertValidFieldTypeName(pluginId: string, type: string): void {
@@ -56,8 +58,10 @@ export function assertValidIdentifier(kind: string, name: string): void {
   }
 }
 
-// The namespace must be the registering plugin's id so one plugin can't squat
-// another's ids in the shared registry.
+/**
+ * The namespace must be the registering plugin's id so one plugin can't squat
+ * another's ids in the shared registry.
+ */
 const NAMESPACED_ID_RE = /^[a-z][a-z0-9_-]*:[a-z][a-z0-9_-]*$/;
 
 export function assertNamespacedId(

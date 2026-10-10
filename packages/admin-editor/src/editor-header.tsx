@@ -177,8 +177,10 @@ export function EditorHeader({
   );
 }
 
-// No Save action: autosave persists continuously, staging a draft for a
-// published entry.
+/**
+ * No Save action: autosave persists continuously, staging a draft for a
+ * published entry.
+ */
 function HeaderPublish({
   publish,
 }: {

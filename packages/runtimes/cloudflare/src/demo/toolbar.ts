@@ -2,9 +2,11 @@ import { DEMO_EXPIRES_COOKIE_NAME } from "./session.js";
 
 const DEPLOY_URL = "https://github.com/withplumix/plumix";
 
-// Shared chrome for both pill variants: the dark rounded bar pinned bottom
-// centre. `.pdt-note` is the anonymous tagline; `.pdt-time` the session
-// countdown (tabular so it doesn't jitter as digits change).
+/**
+ * Shared chrome for both pill variants: the dark rounded bar pinned bottom
+ * centre. `.pdt-note` is the anonymous tagline; `.pdt-time` the session
+ * countdown (tabular so it doesn't jitter as digits change).
+ */
 const TOOLBAR_STYLE = `
 <style>
   #plumix-demo-toolbar {
@@ -43,8 +45,10 @@ const TOOLBAR_STYLE = `
   }
 </style>`;
 
-// The countdown reads the `plumix_demo_expires` cookie client-side, not a
-// server-rendered time.
+/**
+ * The countdown reads the `plumix_demo_expires` cookie client-side, not a
+ * server-rendered time.
+ */
 function sessionToolbar(off: string): string {
   return `
 <div id="plumix-demo-toolbar" role="region" aria-label="Plumix demo">
@@ -77,8 +81,10 @@ function sessionToolbar(off: string): string {
 </script>`;
 }
 
-// Anonymous pill: the read-only showcase's single entry point into the editor.
-// "Try the editor" hits `/demo`, which mints a session and redirects to admin.
+/**
+ * Anonymous pill: the read-only showcase's single entry point into the editor.
+ * "Try the editor" hits `/demo`, which mints a session and redirects to admin.
+ */
 const ANONYMOUS_TOOLBAR = `
 <div id="plumix-demo-toolbar" role="region" aria-label="Plumix demo">
   <span class="pdt-brand">Demo</span>

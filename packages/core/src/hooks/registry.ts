@@ -18,9 +18,11 @@ interface FilterEntry {
   readonly plugin: string | null;
   readonly priority: number;
   readonly insertOrder: number;
-  // One map holds every filter name, which is an existential TypeScript can't
-  // spell. The erasure is undone once, where each pipeline returns through
-  // `as FilterInput<TName>`, and never reaches a caller.
+  /**
+   * One map holds every filter name, which is an existential TypeScript can't
+   * spell. The erasure is undone once, where each pipeline returns through
+   * `as FilterInput<TName>`, and never reaches a caller.
+   */
   // eslint-disable-next-line plumix/no-unknown-return
   readonly fn: (value: unknown, ...rest: unknown[]) => unknown;
 }
@@ -29,7 +31,7 @@ interface ActionEntry {
   readonly plugin: string | null;
   readonly priority: number;
   readonly insertOrder: number;
-  // Actions are fire-and-forget by contract — see `ActionFn`.
+  /** Actions are fire-and-forget by contract — see `ActionFn`. */
   readonly fn: (...args: unknown[]) => void | Promise<void>;
 }
 
@@ -249,8 +251,10 @@ export class HookRegistry implements HookExecutor {
   }
 }
 
-// A payload carrying a function (the theme's `titleTemplate`) can't be cloned,
-// so it goes uncopied rather than failing the page.
+/**
+ * A payload carrying a function (the theme's `titleTemplate`) can't be cloned,
+ * so it goes uncopied rather than failing the page.
+ */
 function isolate<T>(value: T): T {
   try {
     return structuredClone(value);
@@ -261,14 +265,18 @@ function isolate<T>(value: T): T {
   }
 }
 
-// The registry is app-scoped but telemetry is request-scoped; outside a request
-// handlers run untraced.
+/**
+ * The registry is app-scoped but telemetry is request-scoped; outside a request
+ * handlers run untraced.
+ */
 function requestTelemetry(): TelemetryCollector {
   return tryGetContext()?.telemetry ?? NOOP_TELEMETRY;
 }
 
-// One handler execution = one `hook:` span wrapping the existing hookStore
-// frame — shared by the traced pipelines (applyFilter, doAction).
+/**
+ * One handler execution = one `hook:` span wrapping the existing hookStore
+ * frame — shared by the traced pipelines (applyFilter, doAction).
+ */
 function runHandlerTraced<T>(
   telemetry: TelemetryCollector,
   name: string,

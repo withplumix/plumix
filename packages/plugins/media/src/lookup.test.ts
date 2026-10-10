@@ -5,8 +5,10 @@ import { describe, expect, test } from "vitest";
 import { media } from "./index.js";
 import { mediaLookupAdapter } from "./lookup.js";
 
-// Seed a published `media` entry directly (not via media.createUploadUrl /
-// confirm) so the adapter's contract is exercised in isolation.
+/**
+ * Seed a published `media` entry directly (not via media.createUploadUrl /
+ * confirm) so the adapter's contract is exercised in isolation.
+ */
 interface SeedOptions {
   readonly title: string;
   readonly mime: string;

@@ -208,7 +208,7 @@ interface EditorActions {
   redo: () => void;
 }
 
-// Untouched branches keep their reference, so React skips them.
+/** Untouched branches keep their reference, so React skips them. */
 function mapNodeById(
   nodes: readonly BlockNode[],
   id: string,
@@ -219,8 +219,10 @@ function mapNodeById(
   return next.some((node, i) => node !== nodes[i]) ? next : nodes;
 }
 
-// A control echoing its value back (a rich-text field mounting) must not leave
-// an undo step.
+/**
+ * A control echoing its value back (a rich-text field mounting) must not leave
+ * an undo step.
+ */
 function holdsPatch(node: BlockNode, patch: JsonObject): boolean {
   return Object.entries(patch).every(
     ([key, value]) =>
@@ -247,7 +249,7 @@ function mapNode(
   return nextAttrs ? { ...node, attrs: nextAttrs } : node;
 }
 
-// Raw values are sanitized by the SSR emitter, not here.
+/** Raw values are sanitized by the SSR emitter, not here. */
 function setNodeStyle(
   node: BlockNode,
   bucket: StyleBucket,
@@ -274,9 +276,11 @@ function setNodeStyle(
   return { ...node, style };
 }
 
-// Set/clear one device's visibility flag, pruning an emptied `hidden`. Kept off
-// the style slot so it never touches a bucket's layout `display`. Returns the
-// same reference when nothing changed.
+/**
+ * Set/clear one device's visibility flag, pruning an emptied `hidden`. Kept off
+ * the style slot so it never touches a bucket's layout `display`. Returns the
+ * same reference when nothing changed.
+ */
 function setNodeHidden(
   node: BlockNode,
   bucket: StyleBucket,
@@ -292,8 +296,10 @@ function setNodeHidden(
   return { ...node, hidden: nextHidden };
 }
 
-// Rebuilt so the renamed key keeps its position; a spread would move it to the
-// end.
+/**
+ * Rebuilt so the renamed key keeps its position; a spread would move it to the
+ * end.
+ */
 function renameNodeStyleProperty(
   node: BlockNode,
   bucket: StyleBucket,
@@ -313,8 +319,10 @@ function renameNodeStyleProperty(
   return { ...node, style: nextSlot };
 }
 
-// Set/clear one HTML attribute on a node, pruning an emptied htmlAttrs. Flat
-// (not responsive). Values are allowlisted at render, not here.
+/**
+ * Set/clear one HTML attribute on a node, pruning an emptied htmlAttrs. Flat
+ * (not responsive). Values are allowlisted at render, not here.
+ */
 function setNodeHtmlAttr(
   node: BlockNode,
   key: string,
@@ -333,8 +341,10 @@ function setNodeHtmlAttr(
   return { ...node, htmlAttrs };
 }
 
-// Rename one HTML attribute in place, keeping its value + position. No-op when
-// the source is missing or the target is taken (mirrors the style rename).
+/**
+ * Rename one HTML attribute in place, keeping its value + position. No-op when
+ * the source is missing or the target is taken (mirrors the style rename).
+ */
 function renameNodeHtmlAttr(
   node: BlockNode,
   from: string,
@@ -353,8 +363,10 @@ export type EditorStore = EditorState & EditorActions;
 
 export type EditorStoreApi = StoreApi<EditorStore>;
 
-// The undo stack's storage format stays inside the store: consumers read
-// canUndo/canRedo, so the snapshot shape can change without a public break.
+/**
+ * The undo stack's storage format stays inside the store: consumers read
+ * canUndo/canRedo, so the snapshot shape can change without a public break.
+ */
 interface InternalState extends EditorState {
   readonly history: TreeHistory;
 }
@@ -367,8 +379,10 @@ function historyState(
   return { history, canUndo: canUndo(history), canRedo: canRedo(history) };
 }
 
-// An unchanged tree reference is a no-op; `coalesceKey` folds a keystroke burst
-// into one undo step.
+/**
+ * An unchanged tree reference is a no-op; `coalesceKey` folds a keystroke burst
+ * into one undo step.
+ */
 function commitTree(
   state: InternalState,
   tree: readonly BlockNode[],
@@ -381,8 +395,10 @@ function commitTree(
   };
 }
 
-// History snapshots only the tree, so a restored tree can lack blocks the
-// selection still names.
+/**
+ * History snapshots only the tree, so a restored tree can lack blocks the
+ * selection still names.
+ */
 function restoreTree(
   state: InternalState,
   history: TreeHistory,
@@ -403,7 +419,7 @@ function restoreTree(
   return { tree, ...historyState(history), ...selection, ...activeId };
 }
 
-// An unchanged tree leaves the selection untouched too.
+/** An unchanged tree leaves the selection untouched too. */
 function commitTreeWithSelection(
   state: InternalState,
   tree: readonly BlockNode[],

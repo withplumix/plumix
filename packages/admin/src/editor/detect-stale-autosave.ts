@@ -1,5 +1,7 @@
-// "stale": the pending autosave was anchored to an older live row than the
-// server's. "none": nothing pending.
+/**
+ * "stale": the pending autosave was anchored to an older live row than the
+ * server's. "none": nothing pending.
+ */
 type StaleAutosaveState = "fresh" | "stale" | "none";
 
 export function detectStaleAutosave(

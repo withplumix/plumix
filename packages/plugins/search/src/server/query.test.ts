@@ -49,8 +49,10 @@ async function publish(
 const search = (query: string, page = 1) =>
   runSearch(ctx, { query, page, perPage: 2 });
 
-// A small page, so the planner's "can the walk reach a full page" question
-// has an answer a handful of seeded entries can give.
+/**
+ * A small page, so the planner's "can the walk reach a full page" question
+ * has an answer a handful of seeded entries can give.
+ */
 const searchAt = (query: string, commonTermThreshold: number) =>
   runSearch(ctx, { query, page: 1, perPage: 2, commonTermThreshold });
 

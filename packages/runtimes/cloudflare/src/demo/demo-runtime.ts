@@ -180,8 +180,10 @@ export function demoRuntime(
   };
 }
 
-// Keyed on the secret: a secret without a site key fails loud rather than
-// silently disabling the gate.
+/**
+ * Keyed on the secret: a secret without a site key fails loud rather than
+ * silently disabling the gate.
+ */
 function activeTurnstile(
   turnstile: TurnstileConfig | undefined,
   env: PlumixEnv,

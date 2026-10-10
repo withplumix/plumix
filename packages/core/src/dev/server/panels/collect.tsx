@@ -8,9 +8,11 @@ import { DevErrorEmptyNote } from "../../ui/panel-primitives.js";
 
 import "./types.js";
 
-// Unordered panels sort after every explicitly-ordered one. Finite (not
-// Infinity) so two unordered panels compare as 0, not NaN. Mirrors the debug
-// bar's collector.
+/**
+ * Unordered panels sort after every explicitly-ordered one. Finite (not
+ * Infinity) so two unordered panels compare as 0, not NaN. Mirrors the debug
+ * bar's collector.
+ */
 const DEFAULT_PANEL_ORDER = Number.MAX_SAFE_INTEGER;
 
 /**
@@ -44,8 +46,10 @@ export function collectDevErrorPanels(
     }));
 }
 
-// A panel that throws yields a fallback rather than crashing the host page
-// the error surface is meant to help debug.
+/**
+ * A panel that throws yields a fallback rather than crashing the host page
+ * the error surface is meant to help debug.
+ */
 function renderPanelHtml(
   panel: DevErrorPanel,
   error: unknown,

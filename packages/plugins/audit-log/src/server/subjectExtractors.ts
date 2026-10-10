@@ -40,8 +40,10 @@ const userExtractor: SubjectExtractor = (entity) => ({
   label: nonEmpty(entity.name) ?? nonEmpty(entity.email) ?? FALLBACK_LABEL,
 });
 
-// Subjects without a human label (sessions, device codes) resolve to
-// `subject_id` via the FALLBACK.
+/**
+ * Subjects without a human label (sessions, device codes) resolve to
+ * `subject_id` via the FALLBACK.
+ */
 const termExtractor: SubjectExtractor = (entity) => ({
   type: "term",
   id: String(entity.id),

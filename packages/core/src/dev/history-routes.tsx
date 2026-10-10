@@ -68,8 +68,10 @@ export function handleDebugRequests(
   return jsonResponse(entry.snapshot);
 }
 
-// Panels render purely from the snapshot, never live ctx, so a past request
-// replays faithfully; `ctx` and `dev` supply only the panel set.
+/**
+ * Panels render purely from the snapshot, never live ctx, so a past request
+ * replays faithfully; `ctx` and `dev` supply only the panel set.
+ */
 function renderPanelsHtml(
   ctx: AppContext,
   dev: NonNullable<AppContext["dev"]>,

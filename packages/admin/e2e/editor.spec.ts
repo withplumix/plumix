@@ -39,8 +39,10 @@ import {
   rpcOkBody,
 } from "./support/rpc-mock.js";
 
-// The minted preview URL every editing-mode spec needs in the loader; without
-// it the route surfaces the error placeholder instead of the canvas.
+/**
+ * The minted preview URL every editing-mode spec needs in the loader; without
+ * it the route surfaces the error placeholder instead of the canvas.
+ */
 const PREVIEW_LINK = {
   token: "tok123",
   url: "/post/hello?preview=tok123",

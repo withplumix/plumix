@@ -9,8 +9,10 @@ import type { CardPreviewOutcome } from "../preview.js";
 import { M } from "./messages.js";
 import { fetchCardPreview } from "./queries.js";
 
-// Keyed by the outcome and the skip reason themselves, so a value added on the
-// server fails the build here rather than reaching an editor as a blank line.
+/**
+ * Keyed by the outcome and the skip reason themselves, so a value added on the
+ * server fails the build here rather than reaching an editor as a blank line.
+ */
 const OUTCOMES: Record<CardPreviewOutcome, MessageDescriptor> = {
   "og-image": M.outcomeOgImage,
   card: M.outcomeCard,
@@ -19,8 +21,10 @@ const OUTCOMES: Record<CardPreviewOutcome, MessageDescriptor> = {
   supplied: M.outcomeSupplied,
 };
 
-// Why there is no card. The answer to "why is my card not showing", which is
-// the question the box exists to make answerable.
+/**
+ * Why there is no card. The answer to "why is my card not showing", which is
+ * the question the box exists to make answerable.
+ */
 const SKIPS: Record<OgCardSkip, MessageDescriptor> = {
   "page-kind": M.skipPageKind,
   "no-rule": M.skipNoRule,

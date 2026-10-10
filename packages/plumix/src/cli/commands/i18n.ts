@@ -90,8 +90,10 @@ export const i18nCommand: CommandDefinition = {
   },
 };
 
-// Errors when package.json is missing or malformed rather than creating one:
-// `init` sets up i18n in a package, it doesn't make one.
+/**
+ * Errors when package.json is missing or malformed rather than creating one:
+ * `init` sets up i18n in a package, it doesn't make one.
+ */
 function runInit(ctx: CommandContext): void {
   report.info("Plumix i18n init");
 
@@ -135,8 +137,10 @@ type PackageJsonShape = Readonly<{
 }> &
   JsonObject;
 
-// Raises rather than falling back, which would clobber a broken file or
-// scaffold into a non-package.
+/**
+ * Raises rather than falling back, which would clobber a broken file or
+ * scaffold into a non-package.
+ */
 function readRequiredPackageJson(
   pkgPath: string,
   cwd: string,
@@ -157,8 +161,10 @@ function readRequiredPackageJson(
   }
 }
 
-// Compares inserted keys rather than stringified JSON, so key order alone never
-// rewrites the file.
+/**
+ * Compares inserted keys rather than stringified JSON, so key order alone never
+ * rewrites the file.
+ */
 function mergePackageJson(pkg: PackageJsonShape): {
   merged: PackageJsonShape;
   changed: boolean;
@@ -238,9 +244,11 @@ async function runExtractCheck(
   }
 }
 
-// Scans for any `{ id, message }` literal, unlike `extract --check`, so
-// descriptors the Lingui extractor never sees (`withContext(...)`, manifest
-// fields) count too.
+/**
+ * Scans for any `{ id, message }` literal, unlike `extract --check`, so
+ * descriptors the Lingui extractor never sees (`withContext(...)`, manifest
+ * fields) count too.
+ */
 function runVerify(ctx: CommandContext): void {
   const localesDir = resolve(ctx.cwd, "locales");
   const srcDirs = verifySrcDirs(ctx);
@@ -387,7 +395,7 @@ function hasSiblingMessageKey(text: string, pos: number): boolean {
   return false;
 }
 
-// Opening JSX tags don't nest, so a simple `<...>` window is enough.
+/** Opening JSX tags don't nest, so a simple `<...>` window is enough. */
 function enclosingJsxTag(text: string, pos: number): string | null {
   const lt = text.lastIndexOf("<", pos);
   if (lt === -1) return null;
@@ -398,8 +406,10 @@ function enclosingJsxTag(text: string, pos: number): string | null {
   return text.slice(lt, gt + 1);
 }
 
-// Handles `pofile-ts`'s folded continuation form (`msgid ""` then `"..."`
-// lines), which CRLF files and long ids produce.
+/**
+ * Handles `pofile-ts`'s folded continuation form (`msgid ""` then `"..."`
+ * lines), which CRLF files and long ids produce.
+ */
 function activeMsgids(content: string): readonly string[] {
   const ids: string[] = [];
   const lines = content.replace(/\r\n/g, "\n").split("\n");
@@ -430,8 +440,10 @@ function decodeQuoted(buf: string): string {
   return segments.map((s) => s.slice(1, -1).replace(/\\(.)/g, "$1")).join("");
 }
 
-// A hand-authored catalog has no extractor-visible source, so `lingui extract`
-// wipes it.
+/**
+ * A hand-authored catalog has no extractor-visible source, so `lingui extract`
+ * wipes it.
+ */
 function hasHandAuthoredCatalog(localesDir: string): boolean {
   return listPoFiles(localesDir).some((path) =>
     /X-Generator:\s*hand-authored/.test(readFileSync(path, "utf8")),
@@ -466,7 +478,7 @@ function resolveLinguiCliBin(cwd: string): string | null {
   return null;
 }
 
-// Mutable seam for tests.
+/** Mutable seam for tests. */
 export const i18nDeps = {
   resolveLinguiCliBin,
   spawnInherit,

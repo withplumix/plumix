@@ -67,8 +67,10 @@ const isNonEmptyString = (val: unknown): boolean =>
 const hasNonEmptyString = (val: unknown, key: string): boolean =>
   isPlainObject(val) && isNonEmptyString(val[key]);
 
-// null for entries the runtime matcher could never honor; exact entries must be
-// bare origins since `originAllowed` compares full strings.
+/**
+ * null for entries the runtime matcher could never honor; exact entries must be
+ * bare origins since `originAllowed` compares full strings.
+ */
 function allowedOriginHost(entry: string): string | null {
   if (entry.startsWith(HTTPS_WILDCARD_PREFIX)) {
     const base = entry.slice(HTTPS_WILDCARD_PREFIX.length);
@@ -100,8 +102,10 @@ const isUrl = (value: string): boolean => {
 const isStringArray = (value: unknown): value is readonly string[] =>
   Array.isArray(value) && value.every((entry) => typeof entry === "string");
 
-// `v.custom`, not `v.union`, so the error message stays precise; resolvers are
-// validated at runtime.
+/**
+ * `v.custom`, not `v.union`, so the error message stays precise; resolvers are
+ * validated at runtime.
+ */
 const passkeySchema = v.pipe(
   v.object({
     rpName: v.pipe(v.string(), v.nonEmpty("rpName must be a non-empty string")),
@@ -159,8 +163,10 @@ const sessionPolicySchema = v.pipe(
   ),
 );
 
-// Shape-checked here so a malformed provider fails at config time, not at the
-// first sign-in.
+/**
+ * Shape-checked here so a malformed provider fails at config time, not at the
+ * first sign-in.
+ */
 const oauthProviderClientSchema = v.object({
   label: v.pipe(v.string(), v.nonEmpty("provider label must be non-empty")),
   authorizeUrl: v.pipe(v.string(), v.url("authorizeUrl must be a valid URL")),
@@ -277,7 +283,9 @@ const authInputSchema = v.object({
   ),
 } satisfies { readonly [K in keyof PlumixAuthInput]?: v.GenericSchema });
 
-// Where a sign-in redirect sends a visitor when the operator sets no override.
+/**
+ * Where a sign-in redirect sends a visitor when the operator sets no override.
+ */
 const DEFAULT_LOGIN_PATH = "/_plumix/admin/login";
 
 /** The configured login path, defaulting to the admin login. */

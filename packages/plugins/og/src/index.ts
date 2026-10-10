@@ -27,9 +27,11 @@ import { advertisedExtension } from "./renderer.js";
 import { createOgRouter } from "./rpc.js";
 import { compileThemeTokens } from "./tokens.js";
 
-// Where the built admin chunk sits once the package is installed. The vite
-// plugin resolves it from the consuming site's root and folds it into the
-// per-site admin bundle.
+/**
+ * Where the built admin chunk sits once the package is installed. The vite
+ * plugin resolves it from the consuming site's root and folds it into the
+ * per-site admin bundle.
+ */
 const ADMIN_ENTRY_PATH = pluginAdminEntryPath("@plumix/plugin-og");
 
 export type {

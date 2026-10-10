@@ -22,8 +22,10 @@ beforeAll(() => {
 
 afterEach(cleanup);
 
-// Exposes the stores so a test can drive edits the toolbar reacts to (document
-// store) and read the camera (pan/zoom/fit).
+/**
+ * Exposes the stores so a test can drive edits the toolbar reacts to (document
+ * store) and read the camera (pan/zoom/fit).
+ */
 let storeApi: ReturnType<typeof useEditorStoreApi> | undefined;
 let cameraApi: ReturnType<typeof useCameraStoreApi> | undefined;
 function Capture(): null {
@@ -153,8 +155,9 @@ describe("header / toolbar alignment", () => {
 
     // Same button box → their icon centers align, not just their left edges.
     // The back button emits its size via the `icon-sm` Button variant while the
-    // toolbar hardcodes `size-8`; this pins those to the same token, so a retune
-    // of `icon-sm` to a different class trips it even if the bars still align.
+    // toolbar hardcodes `size-8`; this pins those to the same token, so a
+    // retune of `icon-sm` to a different class trips it even if the bars still
+    // align.
     expect(token(getByTestId("plumix-rails-toggle"), "size-")).toBe(
       token(getByTestId("plumix-editor-back"), "size-"),
     );

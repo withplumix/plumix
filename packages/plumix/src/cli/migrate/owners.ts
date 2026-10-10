@@ -15,8 +15,10 @@ export interface MigrationOwner extends MigrationFolder {
 
 const TRACKING_TABLE_PREFIX = "__drizzle_migrations_";
 
-// Where `plumix migrate generate` writes the module that re-exports the
-// site's `schemaModule`s, so a spec resolves from here the way it imports them.
+/**
+ * Where `plumix migrate generate` writes the module that re-exports the
+ * site's `schemaModule`s, so a spec resolves from here the way it imports them.
+ */
 export const SITE_SCHEMA_OUT = ".plumix/site-schema.ts";
 
 function trackingSuffix(packageName: string): string {
@@ -55,12 +57,12 @@ function readPackageName(root: string): string {
   return pkg.name ?? root;
 }
 
-// The site is the package its config lives in, wherever `--config` points.
+/** The site is the package its config lives in, wherever `--config` points. */
 export function siteRootOf(configPath: string): string {
   return nearestPackageRoot(configPath) ?? dirname(configPath);
 }
 
-// `null` for the site itself.
+/** `null` for the site itself. */
 function schemaOwnerRoot(
   cwd: string,
   siteRoot: string,

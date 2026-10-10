@@ -7,16 +7,22 @@ import { readSeoOverrides } from "./overrides.js";
 import { isCrawlableType } from "./scope.js";
 import { loadSeoSettings } from "./settings.js";
 
-// The shared endpoint: one submission reaches every participating engine, so a
-// site does not hold a key per search engine.
+/**
+ * The shared endpoint: one submission reaches every participating engine, so a
+ * site does not hold a key per search engine.
+ */
 const ENDPOINT = "https://api.indexnow.org/indexnow";
 
-// Fixed and named as `keyLocation`, since `<key>.txt` can't be routed: the key
-// is runtime data and routes register at boot.
+/**
+ * Fixed and named as `keyLocation`, since `<key>.txt` can't be routed: the key
+ * is runtime data and routes register at boot.
+ */
 const INDEXNOW_KEY_PATH = "/indexnow-key.txt";
 
-// Long enough for a slow endpoint, short enough that a stalled submission
-// cannot hold a worker open until the platform kills it.
+/**
+ * Long enough for a slow endpoint, short enough that a stalled submission
+ * cannot hold a worker open until the platform kills it.
+ */
 const TIMEOUT_MS = 5000;
 
 async function handleIndexNowKey(ctx: AppContext): Promise<Response> {
@@ -27,8 +33,10 @@ async function handleIndexNowKey(ctx: AppContext): Promise<Response> {
   });
 }
 
-// Applies every gate the head and sitemap apply: a page nobody may index is a
-// page nobody is told about.
+/**
+ * Applies every gate the head and sitemap apply: a page nobody may index is a
+ * page nobody is told about.
+ */
 async function submit(ctx: AppContext, entry: Entry): Promise<void> {
   if (entry.status !== "published") return;
   const entryType = ctx.plugins.entryTypes.get(entry.type);

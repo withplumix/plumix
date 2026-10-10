@@ -9,17 +9,23 @@ import { users } from "../../db/schema/users.js";
 import { extractDomain } from "../identity.js";
 import { generateToken, hashToken } from "../tokens.js";
 
-// Long enough to survive email delivery, short enough that a leaked link is
-// mostly stale.
+/**
+ * Long enough to survive email delivery, short enough that a leaked link is
+ * mostly stale.
+ */
 const MAGIC_LINK_TTL_SECONDS = 15 * 60;
 
-// Jitter on silent branches so timing can't tell a registered email apart;
-// approximates token generation plus the mailer round-trip.
+/**
+ * Jitter on silent branches so timing can't tell a registered email apart;
+ * approximates token generation plus the mailer round-trip.
+ */
 const TIMING_DELAY_MIN_MS = 100;
 const TIMING_DELAY_RANGE_MS = 150;
 
-// Per-email cap stops open self-signup becoming an email-bomb amplifier.
-// Applied on sign-in too so it can't probe which addresses are registered.
+/**
+ * Per-email cap stops open self-signup becoming an email-bomb amplifier.
+ * Applied on sign-in too so it can't probe which addresses are registered.
+ */
 const MAGIC_LINK_MAX_PER_WINDOW = 5;
 const MAGIC_LINK_WINDOW_MS = 15 * 60 * 1000;
 

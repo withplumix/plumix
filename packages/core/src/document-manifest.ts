@@ -1,6 +1,6 @@
 import type { JSX } from "react";
 
-// `children` and `dangerouslySetInnerHTML` are kept only for `<script>`.
+/** `children` and `dangerouslySetInnerHTML` are kept only for `<script>`. */
 type DocumentTag<T extends keyof JSX.IntrinsicElements> = Omit<
   JSX.IntrinsicElements[T],
   "key" | "ref" | `on${string}`

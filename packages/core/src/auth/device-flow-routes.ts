@@ -6,18 +6,20 @@ import { withBasePath } from "../base-path.js";
 import { jsonResponse } from "../runtime/contract/http.js";
 import { exchangeDeviceCode, requestDeviceCode } from "./device-flow.js";
 
-// RFC 8628 §3.4 grant_type identifier.
+/** RFC 8628 §3.4 grant_type identifier. */
 const DEVICE_CODE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code";
 
-// Must match the admin router's `/auth/device` page.
+/** Must match the admin router's `/auth/device` page. */
 const VERIFICATION_PATH = "/_plumix/admin/auth/device";
 
-// Only a fallback: the approval form requires a token name.
+/** Only a fallback: the approval form requires a token name. */
 const DEFAULT_TOKEN_NAME = "CLI";
 
-// Defensive bound on the inbound `device_code` body field. Our generator
-// emits 256-bit base64url (43 chars); 256 chars is generous for
-// future-proofing while bounding malformed-poll amplification.
+/**
+ * Defensive bound on the inbound `device_code` body field. Our generator
+ * emits 256-bit base64url (43 chars); 256 chars is generous for
+ * future-proofing while bounding malformed-poll amplification.
+ */
 const MAX_DEVICE_CODE_LENGTH = 256;
 
 const exchangeInputSchema = v.object({

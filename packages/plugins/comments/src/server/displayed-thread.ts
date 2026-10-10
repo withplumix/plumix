@@ -9,8 +9,10 @@ export interface DisplayedCommentRow {
   readonly author_name: string;
   readonly author_email: string;
   readonly body_md: string;
-  // Unix seconds: the raw CTE bypasses drizzle's timestamp codec, so this
-  // is the stored integer — hence the `* 1000` when building a Date.
+  /**
+   * Unix seconds: the raw CTE bypasses drizzle's timestamp codec, so this
+   * is the stored integer — hence the `* 1000` when building a Date.
+   */
   readonly created_at: number;
 }
 

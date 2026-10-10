@@ -60,9 +60,11 @@ export interface SqlToken {
   readonly kind: SqlTokenKind;
 }
 
-// One alternation per token class; the last branch mops up whitespace and
-// punctuation (including `?` placeholders, and a lone unterminated `'`) so
-// tokenization stays lossless for any input.
+/**
+ * One alternation per token class; the last branch mops up whitespace and
+ * punctuation (including `?` placeholders, and a lone unterminated `'`) so
+ * tokenization stays lossless for any input.
+ */
 const TOKEN =
   /('(?:[^']|'')*')|(\d+(?:\.\d+)?)|([A-Za-z_][A-Za-z0-9_]*)|(\s+|[^\w'\s]+|')/g;
 

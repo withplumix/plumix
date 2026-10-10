@@ -8,8 +8,10 @@ import type { ResolvedNode } from "../contract/resolved-node.js";
 
 export type { ResolvedNode } from "../contract/resolved-node.js";
 
-// `fallback` and the error tiers are absent: they fire on a condition, not a
-// node.
+/**
+ * `fallback` and the error tiers are absent: they fire on a condition, not a
+ * node.
+ */
 const GENERIC_TIER_FOR_NODE: Record<ResolvedNode["kind"], GenericTier> = {
   entry: "entry",
   entryType: "entryType",
@@ -76,7 +78,7 @@ export function matchesIdentity(
   }
 }
 
-// A predicate rule never matches when `data` is absent.
+/** A predicate rule never matches when `data` is absent. */
 function matchesNode(
   match: TargetMatcher,
   node: ResolvedNode,

@@ -4,10 +4,12 @@ import type { ReactNode } from "react";
 // augmentation, so `menus: [...]` is typed on the templates' render args.
 import type { ResolvedMenu } from "@plumix/plugin-menu/server";
 
-// A flat nav of a resolved menu's top-level items. (Nested `children`
-// are ignored for now — the blog chrome only needs a single row.) The
-// `className` lets callers swap the row layout for a column (mobile panel,
-// footer) without a second component.
+/**
+ * A flat nav of a resolved menu's top-level items. (Nested `children`
+ * are ignored for now — the blog chrome only needs a single row.) The
+ * `className` lets callers swap the row layout for a column (mobile panel,
+ * footer) without a second component.
+ */
 export function Menu({
   menu,
   className = "flex flex-wrap gap-5",

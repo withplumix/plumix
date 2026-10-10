@@ -24,8 +24,10 @@ import { formatHelp } from "./help.js";
 import { loadConfig } from "./load-config.js";
 import { badge, exitWithError, report } from "./report.js";
 
-// A built-in may read the whole app — `meta` and `cron` build the site's
-// handler from it; a runtime's own commands see only its `CommandApp` part.
+/**
+ * A built-in may read the whole app — `meta` and `cron` build the site's
+ * handler from it; a runtime's own commands see only its `CommandApp` part.
+ */
 const BUILT_IN_COMMANDS: ReadonlyMap<
   string,
   CommandDefinition<PlumixApp>
@@ -192,8 +194,10 @@ export async function resolveCommandApp(
   return buildApp(config);
 }
 
-// Throws on any property read so code reaching for `ctx.app` fails loud. `then`
-// is exempt so the sentinel survives `await`.
+/**
+ * Throws on any property read so code reaching for `ctx.app` fails loud. `then`
+ * is exempt so the sentinel survives `await`.
+ */
 function appSentinel(makeError: () => PlumixCliError): PlumixApp {
   return new Proxy(
     {},

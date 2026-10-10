@@ -20,9 +20,11 @@ const SEARCH_TITLE = "meta-box-field-seo_title-input";
 const SEARCH_DESCRIPTION = "meta-box-field-seo_description-input";
 const NOINDEX = "meta-box-field-seo_noindex-input";
 
-// The rig rewinds the database once per attempt, not between tests, so each
-// test leaves the seeded entry's SEO fields the way it found them: everything
-// below types into the form and nothing saves.
+/**
+ * The rig rewinds the database once per attempt, not between tests, so each
+ * test leaves the seeded entry's SEO fields the way it found them: everything
+ * below types into the form and nothing saves.
+ */
 async function openSeoBox(page: Page): Promise<void> {
   await page.goto(`entries/posts/${String(fixtures.postId)}/edit`);
   await page.getByTestId("plumix-tab-page").click();
@@ -116,8 +118,10 @@ test("the preview ships styled controls", async ({ page }) => {
   expect(ui.styled).toBeGreaterThan(0);
 });
 
-// Counts the plugin control's interactive elements and how many carry a
-// styling class — a count of 0 is the unstyled-component regression signal.
+/**
+ * Counts the plugin control's interactive elements and how many carry a
+ * styling class — a count of 0 is the unstyled-component regression signal.
+ */
 async function styledControls(page: Page, shellTestId: string) {
   return page.evaluate((id) => {
     const shell = document.querySelector(`[data-testid="${id}"]`);

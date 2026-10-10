@@ -14,9 +14,11 @@ import { describe, expect, test } from "vitest";
 
 import { imageBlock } from "./index.js";
 
-// Render the block inside a PlumixProvider so its `<Image>` primitive can read
-// the image-delivery resolver from context (the public + canvas render paths
-// both wrap blocks in this provider).
+/**
+ * Render the block inside a PlumixProvider so its `<Image>` primitive can read
+ * the image-delivery resolver from context (the public + canvas render paths
+ * both wrap blocks in this provider).
+ */
 function renderWithProvider(
   attrs: JsonObject,
   opts: {

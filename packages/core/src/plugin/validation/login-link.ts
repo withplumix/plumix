@@ -1,8 +1,10 @@
 import type { LoginLinkOptions } from "../manifest.js";
 import { PluginContextError } from "../errors.js";
 
-// Matches `OAUTH_PROVIDER_KEY_PATTERN` so keys read consistently across
-// login-button surfaces.
+/**
+ * Matches `OAUTH_PROVIDER_KEY_PATTERN` so keys read consistently across
+ * login-button surfaces.
+ */
 const LOGIN_LINK_KEY_RE = /^[a-z][a-z0-9_-]{0,31}$/;
 
 export function assertValidLoginLink(

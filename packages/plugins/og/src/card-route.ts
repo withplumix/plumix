@@ -50,8 +50,10 @@ export function cardUrl(
   return `${ctx.origin}${withBasePath(path, ctx.config.basePath)}`;
 }
 
-// The last segments of both the URL and the storage key, so the two can't
-// drift.
+/**
+ * The last segments of both the URL and the storage key, so the two can't
+ * drift.
+ */
 function cardAssetPath(
   target: CardTarget,
   digest: string,
@@ -141,15 +143,19 @@ export function createCardRoute(
   };
 }
 
-// The head already shipped this URL, so an error status would break a promised
-// image. Never cached: the next render may work.
+/**
+ * The head already shipped this URL, so an error status would break a promised
+ * image. Never cached: the next render may work.
+ */
 async function siteDefaultRedirect(ctx: AppContext): Promise<Response> {
   const location = await siteDefaultImage(ctx);
   return location === null ? notFound() : redirect(location);
 }
 
-// Never stored: it points at whatever is current, and the whole point of the
-// card URL beside it is that *that* one is the immutable thing.
+/**
+ * Never stored: it points at whatever is current, and the whole point of the
+ * card URL beside it is that *that* one is the immutable thing.
+ */
 function redirect(location: string): Response {
   return new Response(null, {
     status: 302,
@@ -186,8 +192,10 @@ export async function cardTargetData(
     : ((await resolveListingPage(ctx, target))?.data ?? null);
 }
 
-// The live row, never an autosave: the card is public and edge cached, so a
-// draft an author is previewing has no place on it.
+/**
+ * The live row, never an autosave: the card is public and edge cached, so a
+ * draft an author is previewing has no place on it.
+ */
 async function entryData(
   ctx: AppContext,
   id: number,
@@ -205,10 +213,12 @@ interface AskedCard {
   readonly digest: string | null;
 }
 
-// A bare id is also hex, so the longer form is tried first.
+/** A bare id is also hex, so the longer form is tried first. */
 const DIGEST = /^[0-9a-f]+$/;
 
-// The site's base path is already stripped from what reaches a route handler.
+/**
+ * The site's base path is already stripped from what reaches a route handler.
+ */
 function parseCardPath(pathname: string, extension: string): AskedCard | null {
   const prefix = `${CARD_URL_PREFIX}/`;
   if (!pathname.startsWith(prefix)) return null;

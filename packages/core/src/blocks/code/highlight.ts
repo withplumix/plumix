@@ -55,7 +55,7 @@ for (const [name, grammar] of [
   hljs.registerLanguage(name, grammar);
 }
 
-// Canonical ids highlight.js keys under a different (or shared) grammar.
+/** Canonical ids highlight.js keys under a different (or shared) grammar. */
 const LANGUAGE_TO_GRAMMAR: Readonly<Record<string, string>> = {
   html: "xml",
   toml: "ini",

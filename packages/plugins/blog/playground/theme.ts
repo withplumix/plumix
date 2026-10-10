@@ -9,10 +9,12 @@ import {
   frontPage,
 } from "plumix/theme";
 
-// The front page lists the published posts as links, and a post links back,
-// so the e2e suite can walk from one page to another and back. Authored with
-// `createElement` (no JSX) so the theme stays transform-agnostic across the
-// jiti config load and the vite worker bundle.
+/**
+ * The front page lists the published posts as links, and a post links back,
+ * so the e2e suite can walk from one page to another and back. Authored with
+ * `createElement` (no JSX) so the theme stays transform-agnostic across the
+ * jiti config load and the vite worker bundle.
+ */
 const home = defineTemplate<FrontPageData>({
   render: ({ data }): ReactNode =>
     h(

@@ -12,11 +12,13 @@ import { og } from "./index.js";
 import { svgOnly, takumi } from "./takumi.js";
 import { createHarness, fetchCard, seedEntry } from "./test/harness.js";
 
-// The only tests that load the real wasm. Everything else renders through the
-// fake in `test/fake-renderer.ts` — exercising the engine harder than this
-// tests upstream rather than us.
-// The engine must never reach the network: a card is rendered from what the
-// request already resolved, which is what keeps the storage key complete.
+/**
+ * The only tests that load the real wasm. Everything else renders through the
+ * fake in `test/fake-renderer.ts` — exercising the engine harder than this
+ * tests upstream rather than us.
+ * The engine must never reach the network: a card is rendered from what the
+ * request already resolved, which is what keeps the storage key complete.
+ */
 const input = (
   stylesheets: string[],
   images: CardImage[] = [],
@@ -29,8 +31,10 @@ const input = (
   fetch: () => Promise.reject(new Error("the engine must not fetch")),
 });
 
-// A 1x1 red PNG. The engine decodes it itself; what matters here is that the
-// bytes reach it under the `src` the node names, with nothing fetched.
+/**
+ * A 1x1 red PNG. The engine decodes it itself; what matters here is that the
+ * bytes reach it under the `src` the node names, with nothing fetched.
+ */
 const RED_PIXEL = Uint8Array.from(
   atob(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGO4o6YGAAMKASng8MlTAAAAAElFTkSuQmCC",

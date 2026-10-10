@@ -74,9 +74,11 @@ import { dragEndToAction, getProjection } from "./tree-state.js";
 
 const INDENTATION_WIDTH = 24;
 
-// Descriptors that need runtime indirection — used outside JSX (aria
-// strings, reorder labels) or inside attributes. JSX-text strings stay
-// inline at their <Trans> callsite for extraction discoverability.
+/**
+ * Descriptors that need runtime indirection — used outside JSX (aria
+ * strings, reorder labels) or inside attributes. JSX-text strings stay
+ * inline at their <Trans> callsite for extraction discoverability.
+ */
 const M = {
   brokenLinkAria: {
     id: "plugin.menu.itemEditor.brokenLinkAria",
@@ -503,8 +505,10 @@ function ItemsPicker({
   );
 }
 
-// Stable per-tab identity. `custom` has no `target`, so its key is just
-// `custom` — keeping the existing `menu-picker-tab-custom` testid.
+/**
+ * Stable per-tab identity. `custom` has no `target`, so its key is just
+ * `custom` — keeping the existing `menu-picker-tab-custom` testid.
+ */
 function tabKey(tab: PickerTab): string {
   return tab.target === undefined ? tab.kind : `${tab.kind}-${tab.target}`;
 }
@@ -1062,9 +1066,11 @@ function ItemDetailFields({
   );
 }
 
-// Names what a linked item points at: its title when known, otherwise its
-// kind and id, so an untitled or vanished target isn't passed off as one
-// without a title.
+/**
+ * Names what a linked item points at: its title when known, otherwise its
+ * kind and id, so an untitled or vanished target isn't passed off as one
+ * without a title.
+ */
 function LinkedTargetLine({ item }: { readonly item: EditorItem }): ReactNode {
   const { i18n } = useLingui();
   const { meta } = item;

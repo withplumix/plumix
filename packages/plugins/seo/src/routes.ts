@@ -32,8 +32,10 @@ import { SITEMAP_STYLESHEET, SITEMAP_STYLESHEET_PATH } from "./stylesheet.js";
 
 const ROBOTS_PATH = "/robots.txt";
 
-// An hour at the edge, cut short by a publish's purge; clients always
-// revalidate.
+/**
+ * An hour at the edge, cut short by a publish's purge; clients always
+ * revalidate.
+ */
 const SITEMAP_CACHE_CONTROL = "public, max-age=0, s-maxage=3600";
 
 /**
@@ -42,8 +44,10 @@ const SITEMAP_CACHE_CONTROL = "public, max-age=0, s-maxage=3600";
  */
 export const SITEMAP_TAG = "seo:sitemap";
 
-// Groups that change cached responses. `site` is here because the indexing
-// toggle falls back to its legacy key there.
+/**
+ * Groups that change cached responses. `site` is here because the indexing
+ * toggle falls back to its legacy key there.
+ */
 const SEO_SETTINGS_GROUPS: ReadonlySet<string> = new Set([
   SEO_SETTINGS_GROUP,
   SEO_ROBOTS_GROUP,
@@ -51,8 +55,10 @@ const SEO_SETTINGS_GROUPS: ReadonlySet<string> = new Set([
   "site",
 ]);
 
-// Anything but a 1-based page number goes unclaimed and 404s through the
-// content router.
+/**
+ * Anything but a 1-based page number goes unclaimed and 404s through the
+ * content router.
+ */
 const PAGE_SEGMENT = ":page([1-9]\\d*)";
 
 function stylesheetHref(ctx: AppContext): string {

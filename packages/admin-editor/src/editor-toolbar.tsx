@@ -43,7 +43,9 @@ const DEVICES: readonly {
   { value: "mobile", Icon: Smartphone },
 ];
 
-// Static ids (a switch, not a template literal) so the extractor catalogs them.
+/**
+ * Static ids (a switch, not a template literal) so the extractor catalogs them.
+ */
 export function deviceLabel(i18n: I18n, value: EditorDevice): string {
   switch (value) {
     case "tablet":
@@ -106,7 +108,9 @@ export function EditorToolbar({
   );
 }
 
-// Without it the bindings are only findable by knowing the one that lists them.
+/**
+ * Without it the bindings are only findable by knowing the one that lists them.
+ */
 function ShortcutsButton(): ReactElement {
   const { i18n } = useLingui();
   const setShortcutsOpen = useEditorStore((s) => s.setShortcutsOpen);
@@ -135,7 +139,7 @@ function ShortcutsButton(): ReactElement {
   );
 }
 
-// Empty canvas only: starters must never prepend a layout to real work.
+/** Empty canvas only: starters must never prepend a layout to real work. */
 function PickStarterButton(): ReactElement | null {
   const isEmpty = useEditorStore((s) => s.tree.length === 0);
   const setStarterOpen = useEditorStore((s) => s.setStarterOpen);

@@ -2,9 +2,11 @@ import type { Segment } from "../access/contract/access.js";
 import type { RouteIntent } from "../route/contract/intent.js";
 import { PRIVATE_SEGMENT } from "../access/contract/segments.js";
 
-// Public route intents whose anonymous render is a shared, cacheable document.
-// `search` is deliberately excluded — its unbounded query space would pollute
-// the CDN with one entry per distinct query string.
+/**
+ * Public route intents whose anonymous render is a shared, cacheable document.
+ * `search` is deliberately excluded — its unbounded query space would pollute
+ * the CDN with one entry per distinct query string.
+ */
 const CACHEABLE_INTENTS: ReadonlySet<RouteIntent["kind"]> = new Set([
   "entry",
   "entryType",
@@ -29,8 +31,10 @@ interface CacheableRequest {
   readonly canKeySegments: boolean;
 }
 
-// The markers of an ephemeral, per-request render grant: a `?preview=<token>`
-// draft link and a `?plumix.edit` editor session (see `resolveEditMode`).
+/**
+ * The markers of an ephemeral, per-request render grant: a `?preview=<token>`
+ * draft link and a `?plumix.edit` editor session (see `resolveEditMode`).
+ */
 const PREVIEW_PARAM = "preview";
 const EDIT_PARAM = "plumix.edit";
 

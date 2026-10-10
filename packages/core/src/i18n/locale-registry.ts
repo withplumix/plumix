@@ -9,18 +9,22 @@ export interface LocaleInput {
   readonly enabled?: boolean;
 }
 
-// Generic over the user an override is handed: `i18n/` sits below the
-// context and cannot name `AuthenticatedUser`, so `config.ts` instantiates
-// these as `I18nInput`, `LocaleResolverOverride` and `ResolvedI18n`.
+/**
+ * Generic over the user an override is handed: `i18n/` sits below the
+ * context and cannot name `AuthenticatedUser`, so `config.ts` instantiates
+ * these as `I18nInput`, `LocaleResolverOverride` and `ResolvedI18n`.
+ */
 export interface I18nInputFor<TUser> {
   readonly defaultLocale: string;
   readonly locales: readonly (string | LocaleInput)[];
   readonly resolveLocale?: LocaleResolverOverrideFor<TUser>;
 }
 
-// Escape hatch for sites that want Accept-Language detection, URL-prefix
-// routing, or any other resolution model WP doesn't do natively. Return
-// `null` to fall through; out-of-registry / disabled returns are also ignored.
+/**
+ * Escape hatch for sites that want Accept-Language detection, URL-prefix
+ * routing, or any other resolution model WP doesn't do natively. Return
+ * `null` to fall through; out-of-registry / disabled returns are also ignored.
+ */
 export type LocaleResolverOverrideFor<TUser> = (
   request: Request,
   user: TUser | null,
@@ -43,9 +47,11 @@ export interface ResolvedI18nFor<TUser> extends LocaleRegistry {
   readonly resolveLocale?: LocaleResolverOverrideFor<TUser>;
 }
 
-// `Intl.Locale.prototype.getTextInfo()` shipped in V8/Node/Workers but the
-// stock TS lib (5.x) hasn't picked it up yet — narrow shim here, scoped to
-// the one property we read.
+/**
+ * `Intl.Locale.prototype.getTextInfo()` shipped in V8/Node/Workers but the
+ * stock TS lib (5.x) hasn't picked it up yet — narrow shim here, scoped to
+ * the one property we read.
+ */
 interface LocaleWithTextInfo {
   getTextInfo(): { direction: LocaleDirection };
 }
@@ -86,8 +92,10 @@ function textInfoDirection(locale: Intl.Locale): LocaleDirection {
   return (locale as unknown as LocaleWithTextInfo).getTextInfo().direction;
 }
 
-// `direction` flows raw into `<html dir>`, so an `as any` misuse must not
-// punch out of the attribute.
+/**
+ * `direction` flows raw into `<html dir>`, so an `as any` misuse must not
+ * punch out of the attribute.
+ */
 function validateDirection(raw: unknown, code: string): LocaleDirection {
   if (raw === "ltr" || raw === "rtl") return raw;
   throw I18nConfigError.invalidDirection(code, raw);
@@ -119,8 +127,10 @@ export function findEnabledLocale(
   return i18n.locales.find((l) => l.code === code && l.enabled) ?? null;
 }
 
-// `Intl.DisplayNames` rejects some valid tags (Unicode extensions, private
-// use), and `.of()` is undefined when ICU lacks the language.
+/**
+ * `Intl.DisplayNames` rejects some valid tags (Unicode extensions, private
+ * use), and `.of()` is undefined when ICU lacks the language.
+ */
 function labelFor(locale: Intl.Locale): string {
   const code = locale.toString();
   try {

@@ -3,15 +3,17 @@ import { join } from "node:path";
 import type { Page } from "@playwright/test";
 import { expect, test } from "plumix/test/playwright";
 
-// The one case only Node has: `plumix dev` here is a Vite server that
-// evaluates the config through its own module runner, so an edit is served
-// only if the runner's cache is invalidated along the import chain
-// (`invalidateFile` in `src/commands/dev.ts`). Cloudflare gets the same effect
-// from wrangler restarting the worker, which is why the shared spec does not
-// carry this.
-//
-// It is also the one e2e side effect landing outside the wiped `data/`: it
-// rewrites a git-tracked source file.
+/**
+ * The one case only Node has: `plumix dev` here is a Vite server that
+ * evaluates the config through its own module runner, so an edit is served
+ * only if the runner's cache is invalidated along the import chain
+ * (`invalidateFile` in `src/commands/dev.ts`). Cloudflare gets the same effect
+ * from wrangler restarting the worker, which is why the shared spec does not
+ * carry this.
+ *
+ * It is also the one e2e side effect landing outside the wiped `data/`: it
+ * rewrites a git-tracked source file.
+ */
 const CONFIG = join(import.meta.dirname, "../playground/plumix.config.ts");
 const BASELINE = "config-edit-baseline";
 const EDITED = "config-edit-served";

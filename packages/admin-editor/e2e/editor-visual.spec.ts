@@ -18,10 +18,12 @@ const CANVAS_FRAME = '[data-testid="plumix-canvas-frame"] iframe';
 
 type Box = NonNullable<Awaited<ReturnType<Locator["boundingBox"]>>>;
 
-// Reads the boxes a `page.mouse` sequence is about to aim at, retrying until
-// every one is non-null. A `toBeVisible()` just before a one-shot read is not
-// enough: under worker load the toolbar or canvas can re-render between the
-// two, and the read comes back null (#2582).
+/**
+ * Reads the boxes a `page.mouse` sequence is about to aim at, retrying until
+ * every one is non-null. A `toBeVisible()` just before a one-shot read is not
+ * enough: under worker load the toolbar or canvas can re-render between the
+ * two, and the read comes back null (#2582).
+ */
 async function settledBoxes<const T extends readonly Locator[]>(
   ...locators: T
 ): Promise<{ [K in keyof T]: Box }> {
@@ -256,8 +258,8 @@ test.describe("editor playground", () => {
     await expect(popover).toBeVisible();
 
     // The list is bounded by the ScrollArea viewport (max-h-96 ≈ 384px) rather
-    // than spilling out of the popover — guards the viewport-targeted cap, which
-    // silently fails if the scroll-area data-slot ever drifts.
+    // than spilling out of the popover — guards the viewport-targeted cap,
+    // which silently fails if the scroll-area data-slot ever drifts.
     const viewport = popover.locator('[data-slot="scroll-area-viewport"]');
     const box = await viewport.boundingBox();
     if (!box) throw new Error("expected scroll-area viewport box");
@@ -367,7 +369,8 @@ test.describe("editor playground", () => {
     const before = await blocks.count();
 
     // The catalog lives in the left rail (no toolbar "+ Add Block" popover).
-    // Inserting the hero pattern splices its whole two-block composition at once.
+    // Inserting the hero pattern splices its whole two-block composition at
+    // once.
     await page.getByTestId("block-catalog-pattern-starter/hero").click();
     await expect(blocks).toHaveCount(before + 2);
   });

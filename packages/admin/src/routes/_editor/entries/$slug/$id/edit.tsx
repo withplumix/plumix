@@ -95,24 +95,30 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-// Only the component reads it, so the code-splitter moves it and every core
-// block out of the entry chunk.
+/**
+ * Only the component reads it, so the code-splitter moves it and every core
+ * block out of the entry chunk.
+ */
 const registry = createBlockRegistry([...coreBlocks, ...getRegisteredBlocks()]);
 
-// Theme + plugin patterns, surfaced in the inserter alongside the blocks.
+/** Theme + plugin patterns, surfaced in the inserter alongside the blocks. */
 const patterns = getPatterns();
 
-// Theme breakpoints sizing the editor's device-switch canvas widths.
+/** Theme breakpoints sizing the editor's device-switch canvas widths. */
 const breakpoints = getThemeBreakpoints();
 
-// Theme tokens offered in the Styles tab's token-or-custom controls.
+/** Theme tokens offered in the Styles tab's token-or-custom controls. */
 const themeTokens = getThemeTokens();
 
-// Short: only coalesces writes that land together, after the autosave debounce.
+/**
+ * Short: only coalesces writes that land together, after the autosave debounce.
+ */
 const PREVIEW_REFRESH_DEBOUNCE_MS = 250;
 
-// Mint once and cache forever — each call writes a fresh preview token, and
-// the URL it returns is the canvas iframe's target for the editor's lifetime.
+/**
+ * Mint once and cache forever — each call writes a fresh preview token, and
+ * the URL it returns is the canvas iframe's target for the editor's lifetime.
+ */
 const previewLinkQuery = (
   id: number,
 ): ReturnType<typeof orpc.entry.createPreviewLink.queryOptions> =>
@@ -254,7 +260,7 @@ interface EntryEditorProps {
   readonly onReseed: () => void;
 }
 
-// Content + excerpt + meta + template + access, as one autosave-row write.
+/** Content + excerpt + meta + template + access, as one autosave-row write. */
 interface ContentSnapshot {
   readonly blocks: EntryContent["blocks"];
   readonly serializedBlocks: string;
@@ -264,7 +270,9 @@ interface ContentSnapshot {
   readonly access: string | null;
 }
 
-// Title + slug + parent + terms, written to the live row (`saveAs: "live"`).
+/**
+ * Title + slug + parent + terms, written to the live row (`saveAs: "live"`).
+ */
 interface StructuralSnapshot {
   readonly title: string;
   readonly slug: string;
@@ -272,8 +280,10 @@ interface StructuralSnapshot {
   readonly terms: Readonly<Record<string, readonly string[]>>;
 }
 
-// What changed between the last-saved structural fields and `next`. A blank
-// title or slug is never sent: the author is mid-edit, not clearing it.
+/**
+ * What changed between the last-saved structural fields and `next`. A blank
+ * title or slug is never sent: the author is mid-edit, not clearing it.
+ */
 function structuralChanges(
   saved: StructuralSnapshot,
   next: StructuralSnapshot,
@@ -295,9 +305,11 @@ function structuralChanges(
   };
 }
 
-// Content + excerpt + meta ride one debounced autosave-row write; slug + parent
-// ride a second group that writes the live row. `useEntryAutosave` runs both
-// behind one optimistic-concurrency token.
+/**
+ * Content + excerpt + meta ride one debounced autosave-row write; slug + parent
+ * ride a second group that writes the live row. `useEntryAutosave` runs both
+ * behind one optimistic-concurrency token.
+ */
 function EntryEditor({
   capabilities,
   entryType,

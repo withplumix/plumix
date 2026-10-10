@@ -60,7 +60,9 @@ export interface R2ObjectStorage extends ObjectStorage {
   readonly config: R2Config;
 }
 
-// `put` resolves to an object the adapter never reads, so it is typed `void`.
+/**
+ * `put` resolves to an object the adapter never reads, so it is typed `void`.
+ */
 interface R2Bucket {
   put(
     key: string,
@@ -247,13 +249,15 @@ export function r2(config: R2Config): R2ObjectStorage {
   };
 }
 
-// `/` separators in keys survive — R2 stores them as literal chars.
+/** `/` separators in keys survive — R2 stores them as literal chars. */
 function encodePath(key: string): string {
   return key.split("/").map(encodeURIComponent).join("/");
 }
 
-// All four or none: a partial set stays undefined (presign disabled), not a
-// throw.
+/**
+ * All four or none: a partial set stays undefined (presign disabled), not a
+ * throw.
+ */
 function readConventionalS3(
   env: unknown,
   binding: string,

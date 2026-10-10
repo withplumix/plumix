@@ -168,14 +168,18 @@ function BarItem({
   );
 }
 
-// Replaces the email on mobile, as WP collapses "Howdy, name". `Array.from`
-// keeps astral characters intact.
+/**
+ * Replaces the email on mobile, as WP collapses "Howdy, name". `Array.from`
+ * keeps astral characters intact.
+ */
 function accountInitial(email: string): string {
   return (Array.from(email)[0] ?? "?").toUpperCase();
 }
 
-// A `<button>` because the signout endpoint needs the `X-Plumix-Request`
-// header a plain link can't send.
+/**
+ * A `<button>` because the signout endpoint needs the `X-Plumix-Request`
+ * header a plain link can't send.
+ */
 function renderLeaf(node: AdminBarTreeNode): ReactNode {
   if (node.action === "signout") {
     return (
@@ -198,9 +202,11 @@ function renderLeaf(node: AdminBarTreeNode): ReactNode {
   );
 }
 
-// User-supplied strings (account email, queried entry title once contributors
-// pass it through) get `<bdi>` wrapping so their script direction can't
-// invert the surrounding chrome layout.
+/**
+ * User-supplied strings (account email, queried entry title once contributors
+ * pass it through) get `<bdi>` wrapping so their script direction can't
+ * invert the surrounding chrome layout.
+ */
 function BarLabel({ node }: { readonly node: AdminBarTreeNode }): ReactNode {
   if (node.id === "account" || node.id.startsWith("+new:")) {
     return <bdi>{node.title}</bdi>;

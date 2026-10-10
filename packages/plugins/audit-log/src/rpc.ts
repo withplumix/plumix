@@ -11,8 +11,10 @@ import { CursorError } from "./server/cursor.js";
 const AUDIT_LOG_READ_CAPABILITY = "audit_log:read";
 
 const DEFAULT_LIMIT = 50;
-// Clamped silently, not rejected: admin pages pass user input through, and it
-// shouldn't surface as a 4xx.
+/**
+ * Clamped silently, not rejected: admin pages pass user input through, and it
+ * shouldn't surface as a 4xx.
+ */
 const MAX_LIMIT = 200;
 
 const listInputSchema = v.optional(

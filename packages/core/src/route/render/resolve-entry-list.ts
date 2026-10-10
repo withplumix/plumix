@@ -31,7 +31,9 @@ import {
 
 type AuthorRow = Pick<User, "id" | "slug" | "name" | "avatarUrl" | "meta">;
 
-// Role images resolve in one batch, so a page of authors costs one hydration.
+/**
+ * Role images resolve in one batch, so a page of authors costs one hydration.
+ */
 async function resolveAuthors(
   ctx: AppContext,
   rows: readonly AuthorRow[],
@@ -65,13 +67,17 @@ export async function resolveAuthorRow(
 }
 
 const authorMemoKey = (id: number): string => `core:author:${String(id)}`;
-// The author's own tag rather than the public types' tags every user change
-// also purges: an entry publish announces those, and must not drop an author
-// it did not touch.
+/**
+ * The author's own tag rather than the public types' tags every user change
+ * also purges: an entry publish announces those, and must not drop an author
+ * it did not touch.
+ */
 const authorMemoTags = (id: number): readonly string[] => [userTag(id)];
 
-// The projection itself — never spread the user row, which carries email and
-// the auth columns.
+/**
+ * The projection itself — never spread the user row, which carries email and
+ * the auth columns.
+ */
 function publicAuthor(row: AuthorRow, images: RoleImages): ResolvedAuthor {
   return {
     id: row.id,

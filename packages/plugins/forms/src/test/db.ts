@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 import type { DispatcherHarness } from "plumix/test";
 import { applyTestSchema, createTestDb } from "plumix/test";
 
-// The history this package ships, at its root.
+/** The history this package ships, at its root. */
 const migrations = fileURLToPath(new URL("../../migrations", import.meta.url));
 
 export type FormsTestDb = DispatcherHarness["db"];

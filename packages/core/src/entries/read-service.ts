@@ -189,7 +189,9 @@ export async function resolveEntryRead(
   return { ...row, meta, terms: entryTerms };
 }
 
-// Kept here, not in schemas.ts, so schemas.ts stays free of drizzle imports.
+/**
+ * Kept here, not in schemas.ts, so schemas.ts stays free of drizzle imports.
+ */
 const ORDER_COLUMNS: Record<ListEntriesInput["orderBy"], AnySQLiteColumn> = {
   updated_at: entries.updatedAt,
   published_at: entries.publishedAt,
@@ -200,8 +202,10 @@ const ORDER_COLUMNS: Record<ListEntriesInput["orderBy"], AnySQLiteColumn> = {
 type StatusInput =
   EntryStatus | readonly (EntryStatus | undefined)[] | undefined;
 
-// `undefined` excludes trash. "forbidden" yields an empty result rather than a
-// 403, as WP's admin silently filters.
+/**
+ * `undefined` excludes trash. "forbidden" yields an empty result rather than a
+ * 403, as WP's admin silently filters.
+ */
 function resolveStatusClause(
   input: StatusInput,
   canSeeUnpublished: boolean,
@@ -219,7 +223,7 @@ function resolveStatusClause(
   return inArray(entries.status, normalized);
 }
 
-// Collapse the valibot-widened input into a non-empty list or `undefined`.
+/** Collapse the valibot-widened input into a non-empty list or `undefined`. */
 function normalizeStatusInput(
   input: StatusInput,
 ): readonly EntryStatus[] | undefined {

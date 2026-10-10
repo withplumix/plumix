@@ -12,8 +12,10 @@ export interface EntryChange {
   readonly kind: EntryChangeKind;
 }
 
-// Narrow enough that any drizzle db satisfies it, however a plugin widened
-// its schema.
+/**
+ * Narrow enough that any drizzle db satisfies it, however a plugin widened
+ * its schema.
+ */
 type ChangeFeedDb = Pick<Db, "select" | "delete">;
 
 /**

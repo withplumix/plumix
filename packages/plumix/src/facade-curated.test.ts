@@ -17,8 +17,10 @@ interface Withholding {
   readonly publishedBy?: string;
 }
 
-// A row records decisions only. Its source is named by specifier and the entry
-// by subpath; the guard loads both from the exports maps.
+/**
+ * A row records decisions only. Its source is named by specifier and the entry
+ * by subpath; the guard loads both from the exports maps.
+ */
 type Curated =
   | {
       /** One source, or several a subpath gathers under one import. */
@@ -34,8 +36,10 @@ type Curated =
       readonly adds?: readonly string[];
     };
 
-// The values core's barrel exports that no subpath publishes. Every other one
-// is published by exactly one subpath, which the tests below check by identity.
+/**
+ * The values core's barrel exports that no subpath publishes. Every other one
+ * is published by exactly one subpath, which the tests below check by identity.
+ */
 const CORE_WITHHELD: readonly Withholding[] = [
   {
     reason:
@@ -561,16 +565,18 @@ const CURATED: Readonly<Record<string, Curated>> = {
   },
 };
 
-// A subpath that republishes an internal package whole, on purpose. Anything
-// that package exports is published `plumix` API the moment it lands, so each
-// one says why nobody needs to decide name by name.
+/**
+ * A subpath that republishes an internal package whole, on purpose. Anything
+ * that package exports is published `plumix` API the moment it lands, so each
+ * one says why nobody needs to decide name by name.
+ */
 const PASSTHROUGH: Readonly<Record<string, string>> = {
   "./admin/ui":
     "the vendored shadcn set, published as the admin shell renders it; the " +
     "entry documents that it carries no stability promise beyond pre-1.0",
 };
 
-// Named, so a subpath is never skipped without a reason.
+/** Named, so a subpath is never skipped without a reason. */
 const UNLOADABLE: Unloadable = {
   "@plumix/core/blocks/island-runtime":
     "registers the `<plumix-island>` custom element as it evaluates, and " +
@@ -592,16 +598,20 @@ function loaded(
   return module;
 }
 
-// Only a function or an object has an identity to trace back to a source;
-// a primitive would match any constant that happens to share its value.
+/**
+ * Only a function or an object has an identity to trace back to a source;
+ * a primitive would match any constant that happens to share its value.
+ */
 function hasIdentity(value: unknown): value is object {
   return (
     typeof value === "function" || (typeof value === "object" && value !== null)
   );
 }
 
-// Every internal module that exports a value, keyed by the value itself. A
-// namespace counts as its own module's, so republishing one whole is caught.
+/**
+ * Every internal module that exports a value, keyed by the value itself. A
+ * namespace counts as its own module's, so republishing one whole is caught.
+ */
 const owners = new Map<object, string[]>();
 for (const [specifier, module] of sources) {
   for (const value of [module, ...Object.values(module)]) {
@@ -774,12 +784,15 @@ describe.each(Object.entries(CURATED))(
   },
 );
 
-// One import path per value: a name reachable from two subpaths leaves an
-// editor's auto-import to pick between them, and neither is wrong enough for a
-// review to catch. Compared by identity, so `plumix/fields`'s `date` field and
-// `plumix/theme`'s `date` tier builder are two values that share a spelling,
-// while one function under two subpaths' names is still one value. A primitive has no
-// identity to compare, so two constants only collide when their names do.
+/**
+ * One import path per value: a name reachable from two subpaths leaves an
+ * editor's auto-import to pick between them, and neither is wrong enough for a
+ * review to catch. Compared by identity, so `plumix/fields`'s `date` field and
+ * `plumix/theme`'s `date` tier builder are two values that share a spelling,
+ * while one function under two subpaths' names is still one value. A primitive
+ * has no identity to compare, so two constants only collide when their names
+ * do.
+ */
 const publications = Object.keys(CURATED).flatMap((subpath) =>
   Object.entries(loaded(facade, subpath)).map(
     ([name, value]: [string, unknown]) => ({ subpath, name, value }),

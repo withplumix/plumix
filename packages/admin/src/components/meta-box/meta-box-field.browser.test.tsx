@@ -18,9 +18,11 @@ import { Form } from "@plumix/admin-ui/form";
 import { renderWithI18n } from "../../../test/render-with-i18n.js";
 import { MetaBoxField } from "./meta-box-field.js";
 
-// CodeMirror renders each document line as its own element, so the editing
-// surface's `textContent` collapses the newlines the field seeded. Rejoin them
-// to read back what the author would see.
+/**
+ * CodeMirror renders each document line as its own element, so the editing
+ * surface's `textContent` collapses the newlines the field seeded. Rejoin them
+ * to read back what the author would see.
+ */
 function editorText(surface: HTMLElement): string {
   return [...surface.children].map((line) => line.textContent).join("\n");
 }
@@ -46,9 +48,11 @@ function field(
   };
 }
 
-// Mounts `MetaBoxField` inside a react-hook-form context so tests behave
-// like a real form — Controller subscribes to updates and the onChange
-// we spy on mirrors what the parent form would see on submit.
+/**
+ * Mounts `MetaBoxField` inside a react-hook-form context so tests behave
+ * like a real form — Controller subscribes to updates and the onChange
+ * we spy on mirrors what the parent form would see on submit.
+ */
 function Harness({
   fieldDef,
   initial,
@@ -84,12 +88,14 @@ function Harness({
   );
 }
 
-// Subscribes via `useWatch` (compiler-compatible) and fires the spy on
-// every value change — mirrors what the original `form.watch` callback
-// did but without tripping the `react-hooks/incompatible-library` rule.
-// Fires once with the initial value too; the surrounding assertions use
-// `toHaveBeenCalledWith` / `toHaveBeenLastCalledWith`, both of which are
-// indifferent to that extra call.
+/**
+ * Subscribes via `useWatch` (compiler-compatible) and fires the spy on
+ * every value change — mirrors what the original `form.watch` callback
+ * did but without tripping the `react-hooks/incompatible-library` rule.
+ * Fires once with the initial value too; the surrounding assertions use
+ * `toHaveBeenCalledWith` / `toHaveBeenLastCalledWith`, both of which are
+ * indifferent to that extra call.
+ */
 function Spy({
   name,
   onChange,

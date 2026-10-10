@@ -119,8 +119,10 @@ export {
   ZoomOut,
 } from "lucide-react";
 
-// Block-declared icons. <BlockIcon> looks names up here at render time. Add an
-// entry when a block ships a new `icon: "..."`.
+/**
+ * Block-declared icons. <BlockIcon> looks names up here at render time. Add an
+ * entry when a block ships a new `icon: "..."`.
+ */
 export const blockIcons = {
   AlignLeft,
   Box,

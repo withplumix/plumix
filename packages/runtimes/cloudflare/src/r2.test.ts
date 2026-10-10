@@ -20,10 +20,12 @@ interface FakeBinding {
   list(options?: unknown): Promise<unknown>;
 }
 
-// In-memory stand-in for the CF R2 binding: content-derived etags, ranged
-// reads, custom metadata and a numeric-offset cursor — the behaviours the
-// adapter maps onto the `storage:` port. R2 at runtime is richer
-// (conditionals, multipart), and none of that is in the port today.
+/**
+ * In-memory stand-in for the CF R2 binding: content-derived etags, ranged
+ * reads, custom metadata and a numeric-offset cursor — the behaviours the
+ * adapter maps onto the `storage:` port. R2 at runtime is richer
+ * (conditionals, multipart), and none of that is in the port today.
+ */
 function fakeR2Binding(): {
   binding: FakeBinding;
   store: Map<string, FakeEntry>;
@@ -127,8 +129,10 @@ function fakeR2Binding(): {
   };
 }
 
-// Every `ObjectBody` the port advertises — R2's binding takes them all, so a
-// fake that took fewer would let a contract case pass for the wrong reason.
+/**
+ * Every `ObjectBody` the port advertises — R2's binding takes them all, so a
+ * fake that took fewer would let a contract case pass for the wrong reason.
+ */
 async function toBytes(body: unknown): Promise<Uint8Array> {
   if (body === null) return new Uint8Array(0);
   if (typeof body === "string") return new TextEncoder().encode(body);
@@ -147,16 +151,20 @@ async function toBytes(body: unknown): Promise<Uint8Array> {
   throw new Error("the r2 fake was handed a body the port does not allow");
 }
 
-// R2 carries the etag twice: bare for listings and manifests, quoted for the
-// HTTP `If-None-Match` echo. Minting both here keeps that convention in one
-// place, the way the binding does.
+/**
+ * R2 carries the etag twice: bare for listings and manifests, quoted for the
+ * HTTP `If-None-Match` echo. Minting both here keeps that convention in one
+ * place, the way the binding does.
+ */
 function etagPair(bytes: Uint8Array): { etag: string; httpEtag: string } {
   const etag = etagFor(bytes);
   return { etag, httpEtag: `"${etag}"` };
 }
 
-// R2 returns the object's MD5; a content hash is what matters here — the same
-// bytes must produce the same etag and different bytes a different one.
+/**
+ * R2 returns the object's MD5; a content hash is what matters here — the same
+ * bytes must produce the same etag and different bytes a different one.
+ */
 function etagFor(bytes: Uint8Array): string {
   let hash = 0x811c9dc5;
   for (const byte of bytes) {
@@ -166,8 +174,10 @@ function etagFor(bytes: Uint8Array): string {
   return `${bytes.byteLength.toString(16)}-${(hash >>> 0).toString(16)}`;
 }
 
-// Most tests want a bucket bound and nothing else; only the listing-shape test
-// reaches for the map behind it.
+/**
+ * Most tests want a bucket bound and nothing else; only the listing-shape test
+ * reaches for the map behind it.
+ */
 function connectR2(
   config: Partial<R2Config> = {},
   env: Record<string, unknown> = {},

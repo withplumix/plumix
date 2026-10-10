@@ -25,9 +25,11 @@ export function isOriginDependent(cors: ApiCorsConfig | undefined): boolean {
   return Array.isArray(cors?.origins);
 }
 
-// CORS for anonymous reads only. No `Access-Control-Allow-Credentials` is ever
-// set — the surface is bearer/anonymous, never cookie-authed, so credentialed
-// CORS would only invite a PAT-in-browser-JS footgun.
+/**
+ * CORS for anonymous reads only. No `Access-Control-Allow-Credentials` is ever
+ * set — the surface is bearer/anonymous, never cookie-authed, so credentialed
+ * CORS would only invite a PAT-in-browser-JS footgun.
+ */
 function corsHeaders(allowOrigin: string): Headers {
   const headers = new Headers({ "access-control-allow-origin": allowOrigin });
   if (allowOrigin !== "*") headers.append("vary", "origin");

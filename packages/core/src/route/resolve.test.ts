@@ -715,7 +715,8 @@ describe("resolvePublicRoute — single", () => {
       config: { plugins: [blogPlugin], theme: landingTheme },
     });
     const author = await h.seedUser("admin");
-    // The choice lives in the live row's meta (as the publish flow persists it).
+    // The choice lives in the live row's meta (as the publish flow persists
+    // it).
     await h.factory.entry.create({
       type: "post",
       slug: "promo",
@@ -1118,7 +1119,8 @@ describe("resolvePublicRoute — archive", () => {
     );
     expect(response.status).toBe(200);
     const body = await response.text();
-    // perPage=20, page 2 shows entries 1..5 (oldest, since newest are on page 1)
+    // perPage=20, page 2 shows entries 1..5 (oldest, since newest are on page
+    // 1)
     expect(body).toContain("Product 05");
     expect(body).toContain("Product 01");
     expect(body).not.toContain("Product 25");
@@ -2191,8 +2193,10 @@ describe("resolvePublicRoute — front page", () => {
   });
 });
 
-// Every built-in archive lists its own entry query (ADR 0008). Each seed here
-// is one the hand-written listings and the feeds used to disagree on.
+/**
+ * Every built-in archive lists its own entry query (ADR 0008). Each seed here
+ * is one the hand-written listings and the feeds used to disagree on.
+ */
 const archiveQueriesPlugin = definePlugin("archive-queries", (ctx) => {
   ctx.registerEntryType("post", {
     label: "Posts",

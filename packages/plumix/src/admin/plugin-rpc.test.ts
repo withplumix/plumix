@@ -14,9 +14,11 @@ import { base } from "@plumix/core";
 
 import { createPluginRpcClient } from "./plugin-rpc.js";
 
-// The shape a plugin's server module hands `registerRpcRouter`. Only its type
-// is under test: the handlers never run, the stub answers at the fetch
-// boundary.
+/**
+ * The shape a plugin's server module hands `registerRpcRouter`. Only its type
+ * is under test: the handlers never run, the stub answers at the fetch
+ * boundary.
+ */
 const _menuRouter = {
   list: base.handler((): readonly { id: number }[] => []),
   get: base

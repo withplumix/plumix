@@ -22,13 +22,17 @@ import { presetToRange, useAuditLogList } from "./queries.js";
 
 const MAX_DIFF_PREVIEW_FIELDS = 3;
 
-// Radix Select forbids an empty-string item value, so the "any" filter choice
-// carries a sentinel that maps back to "" (no filter) on change.
+/**
+ * Radix Select forbids an empty-string item value, so the "any" filter choice
+ * carries a sentinel that maps back to "" (no filter) on change.
+ */
 const ANY_VALUE = "__any__";
 
-// Descriptors that need runtime indirection — used outside JSX (placeholder
-// attribute, option labels, the load-failure copy). JSX-text strings stay
-// inline at their `<Trans>` callsite for extraction discoverability.
+/**
+ * Descriptors that need runtime indirection — used outside JSX (placeholder
+ * attribute, option labels, the load-failure copy). JSX-text strings stay
+ * inline at their `<Trans>` callsite for extraction discoverability.
+ */
 const M = {
   loadFailed: {
     id: "plugin.auditLog.shell.loadFailed",
@@ -75,9 +79,11 @@ const M = {
   },
 } satisfies Record<string, MessageDescriptor>;
 
-// Curated lists — keep the v1 admin discoverable. Plugins shipping new
-// subject types / event namespaces can grow these in a follow-up by
-// reading from the plugin registry.
+/**
+ * Curated lists — keep the v1 admin discoverable. Plugins shipping new
+ * subject types / event namespaces can grow these in a follow-up by
+ * reading from the plugin registry.
+ */
 const SUBJECT_TYPES = [
   "entry",
   "user",
@@ -114,9 +120,11 @@ const EMPTY_FILTERS: FilterState = {
   eventPrefix: "",
 };
 
-// Filter state in `window.location.search` enables reload + shared-link
-// hydration. Empty fields are skipped so EMPTY_FILTERS produces a clean URL
-// instead of `?preset=all&actorId=&...`.
+/**
+ * Filter state in `window.location.search` enables reload + shared-link
+ * hydration. Empty fields are skipped so EMPTY_FILTERS produces a clean URL
+ * instead of `?preset=all&actorId=&...`.
+ */
 function filtersToSearchParams(state: FilterState): URLSearchParams {
   const params = new URLSearchParams();
   if (state.preset !== "all") params.set("preset", state.preset);
@@ -172,9 +180,11 @@ function filterToRpcInput(state: FilterState): AuditLogFilter {
   return out;
 }
 
-// `popstate` covers browser back/forward; for our own writes we dispatch
-// the event explicitly after `replaceState` since neither push/replace fire
-// it natively. Module-scoped so `useSyncExternalStore` sees a stable ref.
+/**
+ * `popstate` covers browser back/forward; for our own writes we dispatch
+ * the event explicitly after `replaceState` since neither push/replace fire
+ * it natively. Module-scoped so `useSyncExternalStore` sees a stable ref.
+ */
 function subscribeToHistory(onChange: () => void): () => void {
   window.addEventListener("popstate", onChange);
   return () => {

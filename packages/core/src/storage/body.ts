@@ -16,7 +16,7 @@ export async function bodyToBytes(body: ObjectBody): Promise<Uint8Array> {
   return new Uint8Array(await new Response(body).arrayBuffer());
 }
 
-// Avoids the `SharedArrayBuffer` union that `.slice()` introduces.
+/** Avoids the `SharedArrayBuffer` union that `.slice()` introduces. */
 export function toFreshArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   const out = new ArrayBuffer(bytes.byteLength);
   new Uint8Array(out).set(bytes);

@@ -13,8 +13,10 @@ import { commentFactory } from "./test/factories.js";
 import { gatedBlog } from "./test/harness.js";
 import { PlumixCommentForm } from "./theme.js";
 
-// Minimal host plugin registering a public `post` type so the dispatcher
-// compiles a `/posts/:slug` single route.
+/**
+ * Minimal host plugin registering a public `post` type so the dispatcher
+ * compiles a `/posts/:slug` single route.
+ */
 const testBlog = definePlugin("test_blog", {
   setup: (ctx) => {
     ctx.registerEntryType("post", {
@@ -25,8 +27,10 @@ const testBlog = definePlugin("test_blog", {
   },
 });
 
-// Theme that renders the approved thread the `comments` dep resolves,
-// recursing into nested replies.
+/**
+ * Theme that renders the approved thread the `comments` dep resolves,
+ * recursing into nested replies.
+ */
 function renderComment(
   comment: ResolvedThread["comments"][number],
 ): ReturnType<typeof el> {
@@ -96,7 +100,9 @@ const formTheme = defineTheme({
 
 const EMAIL_REQUIRED = /data-plumix-comment-control="email"[^>]*required/;
 
-/** A site whose theme renders the comment form, booted now, and a visit to it. */
+/**
+ * A site whose theme renders the comment form, booted now, and a visit to it.
+ */
 async function formSite(
   plugins: readonly AnyPluginDescriptor[],
 ): Promise<() => Promise<string>> {

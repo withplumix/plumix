@@ -6,23 +6,31 @@ import { entryChanges } from "plumix/schema";
 
 import { indexEntries, indexTerms } from "./index-writer.js";
 
-// Keyed on the memo, not the context: core derives contexts by spreading, but
-// the memo is one object per request shared by every derivation.
+/**
+ * Keyed on the memo, not the context: core derives contexts by spreading, but
+ * the memo is one object per request shared by every derivation.
+ */
 const scheduled = new WeakMap<AppContext["memo"], Set<number>>();
 
-// Bounded so a hot entry cannot return an unbounded set; the rest drains
-// like any backlog.
+/**
+ * Bounded so a hot entry cannot return an unbounded set; the rest drains
+ * like any backlog.
+ */
 const CHANGES_PER_ENTRY = 100;
 
-// One deferral per entry, not per request: `defer` starts at once and plugins
-// have no request-end seam. A second write of an entry is left to the drain.
+/**
+ * One deferral per entry, not per request: `defer` starts at once and plugins
+ * have no request-end seam. A second write of an entry is left to the drain.
+ */
 function enqueueEntryIndex(ctx: AppContext, entryId: number): void {
   if (!claim(ctx, entryId)) return;
   ctx.defer(indexAndAck(ctx, entryId));
 }
 
-// Not deduplicated: no feed holds terms, so a dropped write would be lost
-// until the next edit.
+/**
+ * Not deduplicated: no feed holds terms, so a dropped write would be lost
+ * until the next edit.
+ */
 function enqueueTermIndex(ctx: AppContext, termId: number): void {
   ctx.defer(indexTerms(ctx, [termId]));
 }

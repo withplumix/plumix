@@ -5,10 +5,12 @@ import type { MenuRouter } from "./menu-router.js";
 import { createPluginRpcClient } from "../src/admin/plugin-rpc.js";
 import { PluginRpcError, stubPluginRpc } from "../src/test/plugin-rpc.js";
 
-// The same cases run in both tiers (`src/test/plugin-rpc.test.ts` and
-// `src/test/plugin-rpc.browser.test.ts`): `plumix/test` promises the stub to
-// a Node test and to a browser test alike, and each tier brings its own
-// `fetch`, `FormData` and `File` to the wire.
+/**
+ * The same cases run in both tiers (`src/test/plugin-rpc.test.ts` and
+ * `src/test/plugin-rpc.browser.test.ts`): `plumix/test` promises the stub to
+ * a Node test and to a browser test alike, and each tier brings its own
+ * `fetch`, `FormData` and `File` to the wire.
+ */
 export function describeStubPluginRpc(): void {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -301,9 +303,9 @@ export function describeStubPluginRpc(): void {
         status: 500,
       });
       // A real handler's error envelope carries no `data`. The client only
-      // populates one when the body failed `isORPCErrorJson` and it fell back to
-      // the malformed-response path, so an undefined `data` is what proves the
-      // body was a genuine envelope.
+      // populates one when the body failed `isORPCErrorJson` and it fell back
+      // to the malformed-response path, so an undefined `data` is what proves
+      // the body was a genuine envelope.
       expect((error as { data?: unknown }).data).toBeUndefined();
     });
 

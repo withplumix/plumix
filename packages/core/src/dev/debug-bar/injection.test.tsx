@@ -8,15 +8,19 @@ interface DebugRequestListShape {
   readonly path: string;
 }
 
-// The debug bar is gated on `process.env.PLUMIX_DEV` at both registration
-// (buildApp) and injection (renderTree). In a Vite build the define makes it
-// empty and the whole module tree-shakes; here we toggle it directly to prove
-// the runtime gate. Dispatching an unknown URL renders the 404 through the
-// shared renderTree, so this also covers error-page injection.
+/**
+ * The debug bar is gated on `process.env.PLUMIX_DEV` at both registration
+ * (buildApp) and injection (renderTree). In a Vite build the define makes it
+ * empty and the whole module tree-shakes; here we toggle it directly to prove
+ * the runtime gate. Dispatching an unknown URL renders the 404 through the
+ * shared renderTree, so this also covers error-page injection.
+ */
 const UNKNOWN_URL = `${DEV_ORIGIN}/no-such-page`;
 
-// The same page reached the way an off-box client reaches an exposed dev server
-// — through the tunnel's or the container's own hostname, not loopback (#2007).
+/**
+ * The same page reached the way an off-box client reaches an exposed dev server
+ * — through the tunnel's or the container's own hostname, not loopback (#2007).
+ */
 const REMOTE_URL = "https://cms.example/no-such-page";
 
 describe("debug bar injection", () => {
@@ -69,10 +73,10 @@ describe("debug bar injection", () => {
   });
 
   // The end-to-end path a developer drives: a request is captured, the next
-  // page's bar lists it in the switcher, and selecting it renders that request's
-  // panels. Selection is client-side (fetch → swap), so we exercise the wire
-  // contract the script uses: the option's value is the captured id, and that
-  // id's `?format=html` returns the panels.
+  // page's bar lists it in the switcher, and selecting it renders that
+  // request's panels. Selection is client-side (fetch → swap), so we exercise
+  // the wire contract the script uses: the option's value is the captured id,
+  // and that id's `?format=html` returns the panels.
   test("lists a captured request in the switcher and renders its panels", async () => {
     vi.stubEnv("PLUMIX_DEV", "1");
     const h = await createDispatcherHarness();

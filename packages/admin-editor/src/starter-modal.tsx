@@ -92,7 +92,7 @@ export function StarterModal({
   );
 }
 
-// A placeholder, not a live render, when the pattern declares no `preview`.
+/** A placeholder, not a live render, when the pattern declares no `preview`. */
 function StarterThumbnail({
   pattern,
 }: {

@@ -32,10 +32,12 @@ import {
   rolePolicy,
 } from "./policy.js";
 
-// A memo pre-seeded with `single-entry:*` rows keyed exactly as
-// `resolveSingleEntry` computes them. A hit replays the seeded row (its
-// `load` never runs); a miss loads live — no `resolveSingleEntry` under test
-// here reaches the DB because every single-intent case seeds its key.
+/**
+ * A memo pre-seeded with `single-entry:*` rows keyed exactly as
+ * `resolveSingleEntry` computes them. A hit replays the seeded row (its
+ * `load` never runs); a miss loads live — no `resolveSingleEntry` under test
+ * here reaches the DB because every single-intent case seeds its key.
+ */
 function seededMemo(
   rows: Record<string, { meta: Record<string, unknown> } | null>,
 ): RequestMemo {
@@ -44,8 +46,10 @@ function seededMemo(
   return Object.assign(memo, { invalidate: () => undefined });
 }
 
-// A real request memo that records the key of every load it runs, so a test
-// can show two callers shared one entry rather than each loading their own.
+/**
+ * A real request memo that records the key of every load it runs, so a test
+ * can show two callers shared one entry rather than each loading their own.
+ */
 function recordingMemo(): { memo: RequestMemo; loads: string[] } {
   const inner = createRequestMemo();
   const loads: string[] = [];
@@ -76,9 +80,11 @@ beforeAll(async () => {
   db = await createTestDb();
 });
 
-// Types are registered through a plugin so their derived `entry:<type>:*`
-// capabilities exist: a signed-in asker really holds them, and the anonymous
-// answer must not depend on that.
+/**
+ * Types are registered through a plugin so their derived `entry:<type>:*`
+ * capabilities exist: a signed-in asker really holds them, and the anonymous
+ * answer must not depend on that.
+ */
 async function ctx(args: {
   user?: AuthenticatedUser | null;
   entryTypes?: Readonly<Record<string, EntryTypeAccess | undefined>>;
@@ -112,7 +118,7 @@ async function ctx(args: {
   return args.memo ? { ...context, memo: args.memo } : context;
 }
 
-// The gate reads the intent and params; no case here turns on the pattern.
+/** The gate reads the intent and params; no case here turns on the pattern. */
 const match = (intent: RouteMatch["intent"]): RouteMatch => ({
   intent,
   pattern: "/",
@@ -125,8 +131,10 @@ const matchWith = (
   params: Record<string, string>,
 ): RouteMatch => ({ intent, pattern: "/", params, isPermalinkRoute: true });
 
-// Narrow a gate result to a Response — a redirect/challenge case asserts it
-// short-circuited rather than allowed the render through.
+/**
+ * Narrow a gate result to a Response — a redirect/challenge case asserts it
+ * short-circuited rather than allowed the render through.
+ */
 function must(response: Response | null): Response {
   if (response === null) throw new Error("expected a gate response");
   return response;

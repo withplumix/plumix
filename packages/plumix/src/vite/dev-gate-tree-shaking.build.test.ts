@@ -15,7 +15,7 @@ import { describe, expect, test } from "vitest";
 // the dispatcher, and the handler that builds each request's context) with
 // both defines and checks which dev modules land in the chunks.
 
-// The gated dev modules, as paths under core's `dist/`.
+/** The gated dev modules, as paths under core's `dist/`. */
 const GATED_DEV_MODULES = [
   "dev/history-routes.js",
   "dev/request-history/writer.js",

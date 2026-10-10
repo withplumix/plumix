@@ -44,10 +44,12 @@ export interface ScreenshotSubject {
   readonly open: (page: Page) => Promise<void>;
 }
 
-// Projected through `buildManifest` rather than declared, because the sidebar
-// renders `manifest.adminNav` — which core seeds with its own groups and items.
-// A hand-written nav would be a second copy of that list, and the image would
-// go on showing the old one after core changed it.
+/**
+ * Projected through `buildManifest` rather than declared, because the sidebar
+ * renders `manifest.adminNav` — which core seeds with its own groups and items.
+ * A hand-written nav would be a second copy of that list, and the image would
+ * go on showing the old one after core changed it.
+ */
 function docsManifest(): PlumixManifest {
   const registry = createPluginRegistry();
   for (const entryType of [
@@ -71,8 +73,10 @@ function docsManifest(): PlumixManifest {
   return buildManifest(registry);
 }
 
-// The e2e session fixture is an admin over `post` alone; the site being
-// photographed has two types.
+/**
+ * The e2e session fixture is an admin over `post` alone; the site being
+ * photographed has two types.
+ */
 const DOCS_ADMIN = withCapabilities(
   AUTHED_ADMIN,
   "entry:page:create",
@@ -141,9 +145,11 @@ export const SCREENSHOT_SUBJECTS: readonly ScreenshotSubject[] = [
   },
 ];
 
-// A directory of their own, not `src/assets` at large: turbo caches this task
-// by its outputs, and a glob over the shared assets directory would claim — and
-// on a cache hit restore over — images a person put there by hand.
+/**
+ * A directory of their own, not `src/assets` at large: turbo caches this task
+ * by its outputs, and a glob over the shared assets directory would claim — and
+ * on a cache hit restore over — images a person put there by hand.
+ */
 const DOCS_ASSETS_DIR = new URL(
   "../../../apps/docs/src/assets/screenshots/",
   import.meta.url,

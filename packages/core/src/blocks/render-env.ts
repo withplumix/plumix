@@ -134,8 +134,10 @@ function decodeBreakpoints(
     : undefined;
 }
 
-// The sanitiser's floors, not this decode, are what keep a tampered allowlist
-// from re-admitting a denied tag; this only drops one the sanitiser can't read.
+/**
+ * The sanitiser's floors, not this decode, are what keep a tampered allowlist
+ * from re-admitting a denied tag; this only drops one the sanitiser can't read.
+ */
 function decodeHtmlAllowlist(
   value: JsonValue | undefined,
 ): HtmlAllowlist | undefined {

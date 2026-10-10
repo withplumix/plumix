@@ -4,8 +4,10 @@ import { cloudflareDeployOrigin } from "./deploy-origin.js";
 
 const ENV_KEYS = ["WORKERS_CI", "WORKERS_CI_BRANCH"] as const;
 
-// @cloudflare/workers-types declares a global `process: any`; cast to a typed
-// view so env reads/writes here stay type-safe.
+/**
+ * @cloudflare/workers-types declares a global `process: any`; cast to a typed
+ * view so env reads/writes here stay type-safe.
+ */
 const env = (process as { env: Record<string, string | undefined> }).env;
 
 describe("cloudflareDeployOrigin", () => {

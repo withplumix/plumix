@@ -36,11 +36,13 @@ const SHIMS = Object.keys(SHARED_ADMIN_RUNTIME_SPECIFIERS).map((spec) => {
   };
 });
 
-// Stands in for admin's `window.plumix.runtime`: each upstream namespace
-// under the key core's roster assigns it, which admin's object is checked
-// against at compile time. Loaded while the file is collected, where no hook
-// timer runs: fourteen packages take 170ms idle and several seconds under
-// load, which timed out a beforeAll.
+/**
+ * Stands in for admin's `window.plumix.runtime`: each upstream namespace
+ * under the key core's roster assigns it, which admin's object is checked
+ * against at compile time. Loaded while the file is collected, where no hook
+ * timer runs: fourteen packages take 170ms idle and several seconds under
+ * load, which timed out a beforeAll.
+ */
 const runtime = Object.fromEntries(
   await Promise.all(
     SHIMS.map(async ({ name }): Promise<[string, unknown]> => {
@@ -51,8 +53,10 @@ const runtime = Object.fromEntries(
 );
 (globalThis as { plumix?: unknown }).plumix = { runtime };
 
-// `default` / `module.exports` / `__esModule` are namespace artefacts whose
-// value can legitimately be `undefined` — never treat them as a broken binding.
+/**
+ * `default` / `module.exports` / `__esModule` are namespace artefacts whose
+ * value can legitimately be `undefined` — never treat them as a broken binding.
+ */
 const ALWAYS_SKIPPED_KEYS = new Set([
   "default",
   "module.exports",

@@ -8,7 +8,7 @@ import { media } from "@plumix/plugin-media";
 
 import { diskStorage } from "./disk-storage.js";
 
-// PNG signature: what the plugin's magic-byte sniff accepts for image/png.
+/** PNG signature: what the plugin's magic-byte sniff accepts for image/png. */
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 let dir: string;

@@ -1423,8 +1423,10 @@ describe("@plumix/plugin-media — media.update", () => {
   });
 });
 
-// PNG (1x1, transparent) for round-trip tests below — magic-byte sniff
-// in `media.confirm` requires real PNG bytes, not synthetic noise.
+/**
+ * PNG (1x1, transparent) for round-trip tests below — magic-byte sniff
+ * in `media.confirm` requires real PNG bytes, not synthetic noise.
+ */
 const PNG_1X1_BYTES = new Uint8Array([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49,
   0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06,
@@ -1434,12 +1436,14 @@ const PNG_1X1_BYTES = new Uint8Array([
   0x60, 0x82,
 ]);
 
-// Worker-routed upload tests share the same binding-only harness:
-// memoryStorage with `presignPut` stripped so the plugin falls back
-// to the worker route, plus the media plugin wired up through
-// createDispatcherHarness. Each test then layers its own auth /
-// request shape on top. The connected storage is returned alongside
-// so tests can assert directly on what landed in the bucket.
+/**
+ * Worker-routed upload tests share the same binding-only harness:
+ * memoryStorage with `presignPut` stripped so the plugin falls back
+ * to the worker route, plus the media plugin wired up through
+ * createDispatcherHarness. Each test then layers its own auth /
+ * request shape on top. The connected storage is returned alongside
+ * so tests can assert directly on what landed in the bucket.
+ */
 async function setupBindingOnlyHarness(): Promise<{
   h: Awaited<ReturnType<typeof createDispatcherHarness>>;
   stub: ReturnType<ReturnType<typeof memoryStorage>["connect"]>;

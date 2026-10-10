@@ -39,9 +39,11 @@ function readPackageJson(path: string): PackageJson {
   return JSON.parse(readFileSync(path, "utf8")) as PackageJson;
 }
 
-// A dependency pnpm did not link into the playground's own node_modules is
-// not the runtime; the playground's own manifest failing to read is an error
-// in its own right and stays one.
+/**
+ * A dependency pnpm did not link into the playground's own node_modules is
+ * not the runtime; the playground's own manifest failing to read is an error
+ * in its own right and stays one.
+ */
 function readDependencyPackageJson(path: string): PackageJson | null {
   return existsSync(path) ? readPackageJson(path) : null;
 }

@@ -21,12 +21,16 @@ type TitleVariable = (typeof TITLE_VARIABLES)[number];
  */
 export type TitleVariables = Record<TitleVariable, string>;
 
-// Any `%%...%%` shape, so a mis-cased `%%Title%%` is dropped rather than
-// reaching a search result.
+/**
+ * Any `%%...%%` shape, so a mis-cased `%%Title%%` is dropped rather than
+ * reaching a search result.
+ */
 const PLACEHOLDER = /%%([^%\s]+)%%/g;
 
-// The separator is what the pattern is segmented on, so it is matched before
-// the rest rather than substituted alongside them.
+/**
+ * The separator is what the pattern is segmented on, so it is matched before
+ * the rest rather than substituted alongside them.
+ */
 const SEPARATOR_PLACEHOLDER = /%%sep%%/g;
 
 function isTitleVariable(name: string): name is TitleVariable {

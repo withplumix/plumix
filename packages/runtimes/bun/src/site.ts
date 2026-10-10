@@ -88,8 +88,10 @@ export interface BunSiteServe {
   readonly development: false;
 }
 
-// `db` is the runner's test seam; an embedder's cron writes to the site's own
-// database.
+/**
+ * `db` is the runner's test seam; an embedder's cron writes to the site's own
+ * database.
+ */
 export type BunCronOverrides = Omit<
   ScheduledRunnerOptions,
   "app" | "env" | "fire" | "db" | "holder"
@@ -111,8 +113,10 @@ export interface BunSite {
   readonly dispose: (options?: DisposeOptions) => Promise<DisposeResult>;
 }
 
-// A stream the client holds open for live updates idles between events by
-// design, so the idle timeout would cut it.
+/**
+ * A stream the client holds open for live updates idles between events by
+ * design, so the idle timeout would cut it.
+ */
 function isEventStream(response: Response): boolean {
   return (
     response.headers.get("content-type")?.startsWith("text/event-stream") ??
@@ -313,8 +317,10 @@ function remainingMs(deadline: number): number {
   return Math.max(0, deadline - Date.now());
 }
 
-// `??` would read an empty `PORT=` as port 0, and `prefer-nullish-coalescing`
-// refuses `||` here.
+/**
+ * `??` would read an empty `PORT=` as port 0, and `prefer-nullish-coalescing`
+ * refuses `||` here.
+ */
 function envOr(value: string | undefined, fallback: string): string {
   return value === undefined || value === "" ? fallback : value;
 }

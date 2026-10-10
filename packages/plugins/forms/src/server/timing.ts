@@ -4,7 +4,7 @@ import { sign, verify } from "./signing.js";
 
 const SECRET = "timing_secret";
 
-// No upper bound: a slow reader is never rejected.
+/** No upper bound: a slow reader is never rejected. */
 const MIN_FILL_MS = 1000;
 
 /**

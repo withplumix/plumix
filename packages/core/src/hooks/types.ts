@@ -7,16 +7,20 @@ export interface FilterRegistry {}
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface ActionRegistry {}
 
-// `keyof` of an empty interface is `never`; after module augmentation by the
-// Vite plugin (and by tests), it becomes a string-literal union.
+/**
+ * `keyof` of an empty interface is `never`; after module augmentation by the
+ * Vite plugin (and by tests), it becomes a string-literal union.
+ */
 // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 export type FilterName = keyof FilterRegistry & string;
 // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 export type ActionName = keyof ActionRegistry & string;
 
-// Filters are pipelines: each handler receives the previous handler's return
-// value as its first argument and returns the (possibly transformed) value.
-// `(value, ...rest) => value | Promise<value>`.
+/**
+ * Filters are pipelines: each handler receives the previous handler's return
+ * value as its first argument and returns the (possibly transformed) value.
+ * `(value, ...rest) => value | Promise<value>`.
+ */
 export type FilterFn<TName extends FilterName> = FilterRegistry[TName] extends (
   ...args: infer A
 ) => infer R

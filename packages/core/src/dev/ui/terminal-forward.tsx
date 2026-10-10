@@ -57,8 +57,10 @@ export function parseForwardLevel(raw: string | undefined): ForwardLevel {
   return "warn";
 }
 
-// Idempotent: a second install before teardown returns the existing teardown,
-// so an HMR re-run never double-patches console or stacks listeners.
+/**
+ * Idempotent: a second install before teardown returns the existing teardown,
+ * so an HMR re-run never double-patches console or stacks listeners.
+ */
 let active: TerminalForwarder | null = null;
 
 export function installTerminalForwarding(
@@ -73,7 +75,7 @@ export function installTerminalForwarding(
 
 type ConsoleMethod = "error" | "warn" | "log" | "info" | "debug";
 
-// Which console methods each level patches, cumulative from `error` up.
+/** Which console methods each level patches, cumulative from `error` up. */
 const CONSOLE_METHODS: Record<Exclude<ForwardLevel, "off">, ConsoleMethod[]> = {
   error: ["error"],
   warn: ["error", "warn"],
@@ -161,8 +163,10 @@ class TerminalForwarder {
     });
   }
 
-  // True when `value` is an error object already captured as an exception —
-  // read-only, so genuine repeat `console.error` strings still forward.
+  /**
+   * True when `value` is an error object already captured as an exception —
+   * read-only, so genuine repeat `console.error` strings still forward.
+   */
   private alreadyForwarded(value: unknown): boolean {
     return (
       value !== null && typeof value === "object" && this.seenObjects.has(value)
@@ -223,7 +227,7 @@ function errorLabel(error: Error): string {
   return `${error.name}: ${error.message}`;
 }
 
-// Any value can be thrown; a non-`Error` degrades to its string form.
+/** Any value can be thrown; a non-`Error` degrades to its string form. */
 function messageOf(error: unknown): string {
   return error instanceof Error ? errorLabel(error) : String(error);
 }
@@ -238,8 +242,10 @@ function formatArg(arg: unknown): string {
   }
 }
 
-// `Error.captureStackTrace` omits our wrapper frame where V8 supports it;
-// elsewhere the server drops it as a vendor frame anyway.
+/**
+ * `Error.captureStackTrace` omits our wrapper frame where V8 supports it;
+ * elsewhere the server drops it as a vendor frame anyway.
+ */
 function callSiteStack(
   origin: (...args: unknown[]) => void,
 ): string | undefined {

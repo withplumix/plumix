@@ -43,7 +43,7 @@ const theme = defineTheme({ templates: [fallback(() => null)] });
 
 const CRON = "*/5 * * * *";
 
-// `connectScheduledDb`'s request path, which core does not export.
+/** `connectScheduledDb`'s request path, which core does not export. */
 const SCHEDULED_PATH = "/_plumix/internal/scheduled";
 
 const failing = definePlugin("failing", (ctx) => {
@@ -89,9 +89,11 @@ interface SiteOptions {
   readonly runtime?: NodeConfig;
 }
 
-// The same shape `plumix build` emits: the entry in `dist/server`, the client
-// build beside it, which is how `entryUrl` resolves the assets directory.
-// Records the path of each connection the site opens, and of each it closes.
+/**
+ * The same shape `plumix build` emits: the entry in `dist/server`, the client
+ * build beside it, which is how `entryUrl` resolves the assets directory.
+ * Records the path of each connection the site opens, and of each it closes.
+ */
 async function siteFor({ plugins = [], runtime = {} }: SiteOptions = {}) {
   const inner = nodeSqlite({ path: join(dir, "site.sqlite") });
   await applyCoreTestSchema(

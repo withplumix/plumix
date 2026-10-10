@@ -18,8 +18,10 @@ import { consumeOAuthState } from "./state.js";
 const ADMIN_PATH = "/_plumix/admin";
 const BOOTSTRAP_PATH = "/_plumix/admin/bootstrap";
 
-// Real codes are at most a few hundred chars; the bound limits amplification on
-// a malformed callback.
+/**
+ * Real codes are at most a few hundred chars; the bound limits amplification on
+ * a malformed callback.
+ */
 const MAX_CODE_LENGTH = 4096;
 
 export async function handleOAuthStart(
@@ -155,8 +157,10 @@ function pickProvider(
   return providers[key] ?? null;
 }
 
-// Pinned to the canonical origin so authorize and token exchange send the same
-// URL even if a proxy rewrites Host.
+/**
+ * Pinned to the canonical origin so authorize and token exchange send the same
+ * URL even if a proxy rewrites Host.
+ */
 function oauthCallbackUrl(
   origin: string,
   basePath: string,

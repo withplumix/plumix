@@ -6,12 +6,16 @@ import {
 } from "./authenticator.js";
 import { withUser } from "./with-user.js";
 
-// Not the configured authenticator: these endpoints sit ahead of the CSRF gate,
-// and only bearer auth is CSRF-immune.
+/**
+ * Not the configured authenticator: these endpoints sit ahead of the CSRF gate,
+ * and only bearer auth is CSRF-immune.
+ */
 const bearerAuthenticator = apiTokenAuthenticator();
 
-// Must stay a superset of what `apiTokenAuthenticator` parses, so an
-// unparseable header fails closed to 401, not anonymous.
+/**
+ * Must stay a superset of what `apiTokenAuthenticator` parses, so an
+ * unparseable header fails closed to 401, not anonymous.
+ */
 const BEARER = /^bearer\s+\S/i;
 
 export function hasBearerToken(request: Request): boolean {

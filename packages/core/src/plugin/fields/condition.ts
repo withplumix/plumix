@@ -131,16 +131,20 @@ function containsItem(value: unknown, comparand: unknown): boolean {
   );
 }
 
-// Multi-value drivers count their selections; anything else (including
-// an absent value) counts as zero.
+/**
+ * Multi-value drivers count their selections; anything else (including
+ * an absent value) counts as zero.
+ */
 function countOf(value: unknown): number {
   return Array.isArray(value) ? value.length : 0;
 }
 
-// JSON-structural equality — rule comparands are JSON-serializable by
-// construction (typed factories produce them from field value types),
-// so array order and own enumerable keys are the identity. Objects
-// compare key-order-insensitively.
+/**
+ * JSON-structural equality — rule comparands are JSON-serializable by
+ * construction (typed factories produce them from field value types),
+ * so array order and own enumerable keys are the identity. Objects
+ * compare key-order-insensitively.
+ */
 export function structurallyEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
   if (Array.isArray(a) && Array.isArray(b)) {
@@ -168,8 +172,10 @@ export function structurallyEqual(a: unknown, b: unknown): boolean {
   return false;
 }
 
-// "No value yet" as an editor perceives it: unset, cleared input, or
-// an empty multi-value selection. `false` / `0` are values.
+/**
+ * "No value yet" as an editor perceives it: unset, cleared input, or
+ * an empty multi-value selection. `false` / `0` are values.
+ */
 function isEmptyValue(value: unknown): boolean {
   if (value === undefined || value === null || value === "") return true;
   return Array.isArray(value) && value.length === 0;
@@ -186,8 +192,10 @@ function compareNumeric(
   );
 }
 
-// Numeric driver values may arrive as strings (an HTML number input's
-// raw form value) — accept them, but never coerce blank to 0.
+/**
+ * Numeric driver values may arrive as strings (an HTML number input's
+ * raw form value) — accept them, but never coerce blank to 0.
+ */
 function numericValueOf(value: unknown): number | undefined {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string" && value.trim() !== "") {

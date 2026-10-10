@@ -22,9 +22,11 @@ import {
 import { MetaBoxField } from "./meta-box-field.js";
 import { useVisibleFields } from "./use-visible-fields.js";
 
-// `MetaBoxCard` serves the page-width surfaces (term + user edit). The
-// entry editor rail uses `MetaBoxAccordionItem`, and settings groups
-// use their own per-card save model in `SettingsGroupCard`.
+/**
+ * `MetaBoxCard` serves the page-width surfaces (term + user edit). The
+ * entry editor rail uses `MetaBoxAccordionItem`, and settings groups
+ * use their own per-card save model in `SettingsGroupCard`.
+ */
 type MetaBoxCardEntry = TermMetaBoxManifestEntry | UserMetaBoxManifestEntry;
 
 interface MetaBoxProps {

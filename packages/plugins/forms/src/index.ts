@@ -76,8 +76,10 @@ export type {
 } from "./types.js";
 export { BOUND_TYPES, SUBMISSION_STATUSES } from "./types.js";
 
-// Checked here rather than in the registry: the message has to name the
-// site that wrote the number.
+/**
+ * Checked here rather than in the registry: the message has to name the
+ * site that wrote the number.
+ */
 function retentionDefault(days: number | undefined): number {
   if (days === undefined) return 0;
   if (!isRetentionPeriod(days)) {
@@ -86,8 +88,10 @@ function retentionDefault(days: number | undefined): number {
   return days;
 }
 
-// A plain descriptor literal — plugin source runs server-side without the
-// Babel macro pipeline, so the manifest payload is authored by hand.
+/**
+ * A plain descriptor literal — plugin source runs server-side without the
+ * Babel macro pipeline, so the manifest payload is authored by hand.
+ */
 const SUBMISSIONS_TITLE: Label = {
   id: "plugin.forms.adminPage.title",
   message: "Form submissions",
@@ -124,8 +128,10 @@ declare module "plumix" {
 
 type RegisterForm = PluginContextExtensions["registerForm"];
 
-// Keyed by the install's `registerForm`, which core also puts on the setup
-// context.
+/**
+ * Keyed by the install's `registerForm`, which core also puts on the setup
+ * context.
+ */
 const registries = new WeakMap<RegisterForm, FormRegistry>();
 
 export function forms(options: FormsConfig = {}) {

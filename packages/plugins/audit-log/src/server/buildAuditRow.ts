@@ -3,8 +3,10 @@ import type { JsonObject } from "plumix";
 import type { NewAuditLogRow } from "../db/schema.js";
 import type { AuditEntityRow, AuditLogActor } from "../types.js";
 
-// Only top-level columns are diffed; meta and content have their own events
-// (`entry:meta_changed`).
+/**
+ * Only top-level columns are diffed; meta and content have their own events
+ * (`entry:meta_changed`).
+ */
 interface BuildAuditRowInput {
   readonly event: string;
   readonly actor: AuditLogActor;

@@ -8,8 +8,10 @@ import { privateSettingsGroup } from "./settings-groups.js";
 
 const SALT_KEY = "ip_salt";
 const SALT_BYTES = 16;
-// Real-world user-agent strings run 100-400 characters; 1024 leaves headroom
-// while bounding row width on hostile input.
+/**
+ * Real-world user-agent strings run 100-400 characters; 1024 leaves headroom
+ * while bounding row width on hostile input.
+ */
 const MAX_UA_LENGTH = 1024;
 const ENCODER = new TextEncoder();
 const UNKNOWN_ADDRESS = "unknown";
@@ -40,8 +42,10 @@ async function readSalt(
   return typeof row?.value === "string" ? row.value : null;
 }
 
-// `onConflictDoNothing` plus a re-read makes concurrent first-writes converge
-// on one salt.
+/**
+ * `onConflictDoNothing` plus a re-read makes concurrent first-writes converge
+ * on one salt.
+ */
 function getOrCreateIpSalt(ctx: AppContext, group: string): Promise<string> {
   return ctx.memo(`core:ip-salt:${group}`, async () => {
     const existing = await readSalt(ctx, group);

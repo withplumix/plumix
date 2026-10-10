@@ -10,8 +10,10 @@ interface PaletteNavItem {
   readonly keywords?: readonly Label[];
 }
 
-// Reuses `visibleAdminNav` verbatim so palette navigation can never drift
-// from the sidebar — same source, same capability filtering.
+/**
+ * Reuses `visibleAdminNav` verbatim so palette navigation can never drift
+ * from the sidebar — same source, same capability filtering.
+ */
 export function paletteNavItems(
   capabilities: readonly string[],
   source?: PlumixManifest,

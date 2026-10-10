@@ -4,13 +4,17 @@ import type {
   ShortcodeSpec,
 } from "./types.js";
 
-// A tag plus its optional attribute run, shared by both token branches.
-// Positional/valueless/space-in-bare attrs deliberately don't match, so the
-// whole tag falls through verbatim rather than half-parsing.
+/**
+ * A tag plus its optional attribute run, shared by both token branches.
+ * Positional/valueless/space-in-bare attrs deliberately don't match, so the
+ * whole tag falls through verbatim rather than half-parsing.
+ */
 const ATTR_SRC = `[a-z0-9-]+=(?:"[^"]*"|'[^']*'|[^\\s\\]'"]+)`;
 const TAG_SRC = `[a-z0-9-]+(?:\\s+${ATTR_SRC})*`;
-// Escaped `[[tag …]]` is matched first so it wins over `[tag …]` at the same
-// index; it re-emits its inner text literally, attributes and all.
+/**
+ * Escaped `[[tag …]]` is matched first so it wins over `[tag …]` at the same
+ * index; it re-emits its inner text literally, attributes and all.
+ */
 const TOKEN = new RegExp(
   `\\[\\[(${TAG_SRC})\\s*\\]\\]|\\[([a-z0-9-]+)((?:\\s+${ATTR_SRC})*)\\s*\\]`,
   "g",
@@ -93,8 +97,10 @@ function warnDev(message: string, error?: unknown): void {
   }
 }
 
-// Mirrors `render-block-tree`'s in-package dev signal; kept inline so this
-// leaf module stays a pure dependency of a future `@plumix/plugin-seo`.
+/**
+ * Mirrors `render-block-tree`'s in-package dev signal; kept inline so this
+ * leaf module stays a pure dependency of a future `@plumix/plugin-seo`.
+ */
 function isDevMode(): boolean {
   if (typeof process === "undefined") return false;
   return process.env.NODE_ENV !== "production";

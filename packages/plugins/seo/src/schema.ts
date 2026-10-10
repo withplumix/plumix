@@ -109,8 +109,10 @@ export interface SchemaInputs {
   readonly breadcrumbs: readonly BreadcrumbItem[];
 }
 
-// Derived from URLs so two renders agree and a piece can be referenced before
-// it is built.
+/**
+ * Derived from URLs so two renders agree and a piece can be referenced before
+ * it is built.
+ */
 function identifiers(inputs: SchemaInputs): Record<SchemaPieceName, string> {
   const { home, canonical } = inputs;
   return {
@@ -130,7 +132,9 @@ function ref(id: string): JsonObject {
   return { "@id": id };
 }
 
-// An absent property is spelled by leaving the key out, not by emitting null.
+/**
+ * An absent property is spelled by leaving the key out, not by emitting null.
+ */
 function piece(
   type: string,
   id: string,
@@ -143,7 +147,7 @@ function piece(
   return out as SchemaPiece;
 }
 
-// A piece with nothing to say is absent, not empty.
+/** A piece with nothing to say is absent, not empty. */
 function buildSchemaGraph(
   inputs: SchemaInputs,
 ): ReadonlyMap<SchemaPieceName, SchemaPiece> {

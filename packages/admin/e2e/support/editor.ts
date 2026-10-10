@@ -129,9 +129,11 @@ export function installEditorMocks(
   });
 }
 
-// The starter modal opens whenever the manifest carries a starter-
-// eligible pattern and the entry content is empty. Specs that aren't
-// about the modal start blank.
+/**
+ * The starter modal opens whenever the manifest carries a starter-
+ * eligible pattern and the entry content is empty. Specs that aren't
+ * about the modal start blank.
+ */
 export async function dismissStarterModal(page: Page): Promise<void> {
   const modal = page.getByTestId("plumix-starter-modal");
   await modal.waitFor({ state: "visible" });

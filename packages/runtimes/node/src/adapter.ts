@@ -44,7 +44,9 @@ function readAssetsBinding(env: PlumixEnv): AssetsBinding | undefined {
     : undefined;
 }
 
-// An env is fixed for a handler's lifetime, so each env's layer is built once.
+/**
+ * An env is fixed for a handler's lifetime, so each env's layer is built once.
+ */
 const assetsLayers = new WeakMap<PlumixEnv, AssetsBinding | undefined>();
 
 const handler: RuntimeHandlerSpec = {

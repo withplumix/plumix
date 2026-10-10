@@ -23,8 +23,10 @@ export type TemplateDepLoader<TKind extends keyof TemplateDepRegistry> = (
   ctx: AppContext,
 ) => Promise<Record<string, TemplateDepRegistry[TKind]["result"] | null>>;
 
-// Not JSON: a loader returns whatever its kind is about, a menu tree or a
-// queried row, and it reaches the template untouched.
+/**
+ * Not JSON: a loader returns whatever its kind is about, a menu tree or a
+ * queried row, and it reaches the template untouched.
+ */
 type DepResults = Record<string, unknown>;
 
 /** Every dep kind's results for one request, keyed by kind. */
@@ -36,8 +38,10 @@ export type LoadedTemplateDeps = Record<string, DepResults>;
  */
 export type DepDeclarations = Readonly<Record<string, unknown>>;
 
-// Untyped so the registry can store loaders for kinds the typed registry
-// hasn't been augmented with yet.
+/**
+ * Untyped so the registry can store loaders for kinds the typed registry
+ * hasn't been augmented with yet.
+ */
 type UntypedTemplateDepLoader = (
   keys: readonly string[],
   ctx: AppContext,
@@ -50,8 +54,10 @@ export interface RegisteredTemplateDep {
   readonly registeredBy: string | null;
 }
 
-// Framework-owned keys, skipped so `render` or `css` never read as dep-kind
-// declarations. `registerTemplateDep` rejects them as kinds too.
+/**
+ * Framework-owned keys, skipped so `render` or `css` never read as dep-kind
+ * declarations. `registerTemplateDep` rejects them as kinds too.
+ */
 const RESERVED_THEME_KEYS = new Set(["templates", "document", "tokens", "css"]);
 const RESERVED_TEMPLATE_KEYS = new Set([
   "render",

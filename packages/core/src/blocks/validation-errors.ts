@@ -43,9 +43,11 @@ export class BlockContentValidationError extends Error {
     return new BlockContentValidationError(summary, issues);
   }
 
-  // Sugar so callers can `if (!r.ok) throw …fromResult(r)` after
-  // narrowing once. The parameter only accepts the failure variant —
-  // the type system rejects passing an ok result.
+  /**
+   * Sugar so callers can `if (!r.ok) throw …fromResult(r)` after
+   * narrowing once. The parameter only accepts the failure variant —
+   * the type system rejects passing an ok result.
+   */
   static fromResult(
     result: Extract<BlockContentValidationResult, { ok: false }>,
   ): BlockContentValidationError {

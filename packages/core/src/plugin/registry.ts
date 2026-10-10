@@ -43,7 +43,7 @@ import { resolveFrameworkRoutes } from "../route/contract/framework-routes.js";
  * An unset key falls back to a generic catalog string.
  */
 export interface EntryTypeLabels {
-  // Identity
+  /** Identity */
   readonly singular?: Label;
   readonly plural?: Label;
   // Create / read / update / delete actions
@@ -773,8 +773,10 @@ export interface RegisteredRestResource extends Omit<
 > {
   readonly pluginId: string;
   readonly method: RestResourceMethod;
-  // Method syntax on purpose: each resource's handler is typed from its own
-  // path, and core supplies exactly the bindings that path names.
+  /**
+   * Method syntax on purpose: each resource's handler is typed from its own
+   * path, and core supplies exactly the bindings that path names.
+   */
   handler(
     args: RestResourceHandlerArgs &
       Partial<RestResourceBoundEntryType & RestResourceBoundEntry>,

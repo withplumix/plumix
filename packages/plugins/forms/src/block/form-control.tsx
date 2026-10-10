@@ -4,8 +4,10 @@ import { labelSourceText } from "plumix/i18n";
 
 import { asPosted, TOGGLE_ON } from "../answers.js";
 
-// Tells "chose nothing" from "never shown", which would fall back to the
-// default and undo the visitor's answer.
+/**
+ * Tells "chose nothing" from "never shown", which would fall back to the
+ * default and undo the visitor's answer.
+ */
 function EmptyAnswer({ name }: { readonly name: string }): ReactNode {
   return <input type="hidden" name={name} value="" readOnly />;
 }

@@ -5,8 +5,10 @@ export interface OAuthClientConfig {
   readonly clientSecret: string;
 }
 
-// The secret is used at token exchange, so on Workers it must come from the
-// per-request `env`.
+/**
+ * The secret is used at token exchange, so on Workers it must come from the
+ * per-request `env`.
+ */
 type OAuthClientInput = EnvInput<OAuthClientConfig>;
 
 export interface OAuthProfile {

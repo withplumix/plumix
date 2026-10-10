@@ -23,12 +23,16 @@ import {
 } from "./document.js";
 import { metaTextVersion, searchableMetaRoster } from "./meta-text.js";
 
-// libsql, which every test uses, enforces no cap. Headroom below D1's limit
-// covers the delete's extra `source_type` bind and a future column.
+/**
+ * libsql, which every test uses, enforces no cap. Headroom below D1's limit
+ * covers the delete's extra `source_type` bind and a future column.
+ */
 const IDS_PER_STATEMENT = D1_MAX_BOUND_PARAMETERS - 10;
 
-// Not the roster hash: terms have no blocks or meta, and that hash would mark
-// every term stale on any declaration change.
+/**
+ * Not the roster hash: terms have no blocks or meta, and that hash would mark
+ * every term stale on any declaration change.
+ */
 const TERM_EXTRACTOR_VERSION = "term/1";
 const DOCUMENTS_PER_STATEMENT = 18;
 
@@ -43,7 +47,7 @@ interface Extractor {
   readonly version: string;
 }
 
-// Keyed on the registry, which is built at boot and never mutated.
+/** Keyed on the registry, which is built at boot and never mutated. */
 const blockExtractors = new WeakMap<BlockRegistry, BlockExtractor>();
 
 function blockExtractorFor(blocks: BlockRegistry): BlockExtractor {
@@ -58,8 +62,10 @@ function blockExtractorFor(blocks: BlockRegistry): BlockExtractor {
   return extractor;
 }
 
-// Meta is read fresh, not cached: it is cheap, and a test's mutable registry
-// would otherwise get a stale roster.
+/**
+ * Meta is read fresh, not cached: it is cheap, and a test's mutable registry
+ * would otherwise get a stale roster.
+ */
 function extractorFor(ctx: AppContext): Extractor {
   const { roster, version } = blockExtractorFor(ctx.blocks);
   const meta = searchableMetaRoster(
@@ -143,8 +149,10 @@ export async function indexTerms(
   });
 }
 
-// Shared so entries and terms cannot drift: an id `documentsFor` did not
-// return is dropped, so gating a type takes effect on the next write.
+/**
+ * Shared so entries and terms cannot drift: an id `documentsFor` did not
+ * return is dropped, so gating a type takes effect on the next write.
+ */
 async function project(
   ctx: AppContext,
   sourceType: SearchSourceType,
@@ -165,8 +173,10 @@ async function project(
   }
 }
 
-// Conditional so unchanged text fires no `AFTER UPDATE` and is not
-// re-tokenized. `IS NOT` rather than `<>` so a null-to-text change counts.
+/**
+ * Conditional so unchanged text fires no `AFTER UPDATE` and is not
+ * re-tokenized. `IS NOT` rather than `<>` so a null-to-text change counts.
+ */
 async function writeDocuments(
   ctx: AppContext,
   documents: readonly NewSearchDocument[],
@@ -192,8 +202,10 @@ async function writeDocuments(
   }
 }
 
-// Separate from the upsert so the `title`/`body`-scoped trigger does not
-// re-tokenize a document whose text did not change.
+/**
+ * Separate from the upsert so the `title`/`body`-scoped trigger does not
+ * re-tokenize a document whose text did not change.
+ */
 async function stampVersion(
   ctx: AppContext,
   sourceType: SearchSourceType,

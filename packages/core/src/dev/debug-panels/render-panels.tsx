@@ -14,8 +14,10 @@ export interface RenderedDebugPanel {
   readonly html: string;
 }
 
-// A panel that throws yields a fallback rather than crashing the host page
-// the bar is meant to help debug.
+/**
+ * A panel that throws yields a fallback rather than crashing the host page
+ * the bar is meant to help debug.
+ */
 function renderPaneHtml(panel: DebugPanel, snapshot: DebugSnapshot): string {
   try {
     return renderToStaticMarkup(<>{panel.render(snapshot)}</>);

@@ -37,10 +37,12 @@ import { DEFAULT_BREAKPOINTS } from "../blocks/index.js";
 export { startingMeta } from "./fields/starting-meta.js";
 export type { StartingMetaField } from "./fields/starting-meta.js";
 
-// Wire shape intentionally equals DashboardWidgetOptions (minus
-// registeredBy) — unlike e.g. FieldTypeManifestEntry, a widget's options
-// carry nothing server-only to drop, so the manifest entry just mirrors
-// them as the admin-facing boundary.
+/**
+ * Wire shape intentionally equals DashboardWidgetOptions (minus
+ * registeredBy) — unlike e.g. FieldTypeManifestEntry, a widget's options
+ * carry nothing server-only to drop, so the manifest entry just mirrors
+ * them as the admin-facing boundary.
+ */
 export interface DashboardWidgetManifestEntry {
   readonly id: string;
   readonly title: Label;
@@ -360,7 +362,7 @@ export interface PlumixManifest {
   readonly frameworkRoutes?: Pick<FrameworkRoutes, "author">;
 }
 
-// Constrains each slot name to a key of the config it is read off.
+/** Constrains each slot name to a key of the config it is read off. */
 type ConfigKey<K extends keyof PlumixConfig> = K;
 
 /**

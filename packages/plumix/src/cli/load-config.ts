@@ -28,8 +28,10 @@ export interface LoadConfigOptions {
   readonly fresh?: boolean;
 }
 
-// One build calls `loadConfig` ~8 times, each re-evaluating the JSX theme
-// graph; cache by absolute path, invalidated through `fresh` for hot reload.
+/**
+ * One build calls `loadConfig` ~8 times, each re-evaluating the JSX theme
+ * graph; cache by absolute path, invalidated through `fresh` for hot reload.
+ */
 const cache = new Map<string, LoadedConfig>();
 
 export async function loadConfig(
@@ -99,8 +101,10 @@ export function resolveConfigPath(cwd: string, explicit?: string): string {
   throw PlumixCliError.configNotFoundDefault({ cwd });
 }
 
-// Only enough to tell a config from another export; the module itself is
-// returned, not this shape.
+/**
+ * Only enough to tell a config from another export; the module itself is
+ * returned, not this shape.
+ */
 const configShapeSchema = v.looseObject({
   runtime: v.looseObject({
     name: v.string(),

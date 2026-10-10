@@ -10,7 +10,9 @@ import { buildTimeline } from "../timeline-model.js";
 /** Panel id, also the disable-denylist key and tab testid suffix. */
 export const TIMELINE_PANEL_ID = "timeline";
 
-// Drawn in a nominal coordinate space that the viewBox scales to full width.
+/**
+ * Drawn in a nominal coordinate space that the viewBox scales to full width.
+ */
 const VIEW_WIDTH = 400;
 const GUTTER = 132;
 const MS_COL = 34;

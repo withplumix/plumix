@@ -28,8 +28,10 @@ export interface DeployOrigin {
   readonly allowedOrigins?: readonly string[];
 }
 
-// Read as the literal `process.env.WORKERS_CI*` expressions: Vite's `define`
-// rewrites only those spellings, so an alias or helper falls back to localhost.
+/**
+ * Read as the literal `process.env.WORKERS_CI*` expressions: Vite's `define`
+ * rewrites only those spellings, so an alias or helper falls back to localhost.
+ */
 declare const process: { env: Record<string, string | undefined> };
 
 /**
@@ -69,8 +71,10 @@ export function cloudflareDeployOrigin(input: DeployOriginInput): DeployOrigin {
   };
 }
 
-// Approximates Cloudflare's undocumented branch slug. Hand-rolled because a
-// regex dash trim trips CodeQL's `js/polynomial-redos`.
+/**
+ * Approximates Cloudflare's undocumented branch slug. Hand-rolled because a
+ * regex dash trim trips CodeQL's `js/polynomial-redos`.
+ */
 function sanitizeBranch(branch: string): string {
   let result = "";
   let pendingDash = false;

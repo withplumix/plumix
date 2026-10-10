@@ -19,12 +19,16 @@ import {
 // Nothing here touches the theme, layout, or document, so the page renders
 // even when the theme itself is the culprit.
 
-// Self-contained by design, so stringifying it is enough: it reads the
-// resolver endpoint and the frames off the DOM.
+/**
+ * Self-contained by design, so stringifying it is enough: it reads the
+ * resolver endpoint and the frames off the DOM.
+ */
 const ENHANCE_SCRIPT = `(${enhanceDevError.toString()})(document);`;
 
-// Shared by the HTML page and the JSON payload so both name and describe an
-// exception identically.
+/**
+ * Shared by the HTML page and the JSON payload so both name and describe an
+ * exception identically.
+ */
 function toErrorBasics(err: unknown): {
   name: string;
   message: string;
@@ -40,7 +44,9 @@ function toErrorBasics(err: unknown): {
   return { name: "UnknownError", message: String(err) };
 }
 
-// In `plumix dev` the stack is already sourcemapped to original `file:line`.
+/**
+ * In `plumix dev` the stack is already sourcemapped to original `file:line`.
+ */
 function toDevErrorInfo(err: unknown): DevErrorInfo {
   const basics = toErrorBasics(err);
   const frames = basics.stack ? parseStackFrames(basics.stack) : [];

@@ -13,9 +13,10 @@ const SOURCE = fileURLToPath(new URL("./deploy-origin.ts", import.meta.url));
 
 let dir: string;
 
-// `env` comes from `node:process` for a typed view the @cloudflare/workers-types
-// global would otherwise swallow. deploy-origin.ts itself cannot import it: the
-// specifier would put its reads out of reach of the plugin's `define`.
+// `env` comes from `node:process` for a typed view the
+// @cloudflare/workers-types global would otherwise swallow. deploy-origin.ts
+// itself cannot import it: the specifier would put its reads out of reach of
+// the plugin's `define`.
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "plumix-deploy-origin-"));
   delete env.WORKERS_CI;
@@ -26,10 +27,12 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-// Only the plugin's `define` carries the Workers Builds env into a deployed
-// bundle, so a Node-level test — mutating a live `process.env` no deploy has —
-// cannot see this class of bug. Bundle the way a deploy does, taking the define
-// map off the plugin so a rename on either side can't drift past it (#1947).
+/**
+ * Only the plugin's `define` carries the Workers Builds env into a deployed
+ * bundle, so a Node-level test — mutating a live `process.env` no deploy has —
+ * cannot see this class of bug. Bundle the way a deploy does, taking the define
+ * map off the plugin so a rename on either side can't drift past it (#1947).
+ */
 async function bundleWithPlumixDefine(): Promise<
   (input: DeployOriginInput) => DeployOrigin
 > {

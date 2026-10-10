@@ -14,8 +14,10 @@ import { AdminPluginRegistryError } from "./errors.js";
  */
 export type MetaBoxSiblingValues = Readonly<Record<string, unknown>>;
 
-// The renderer must return a single element: `<FormControl>`'s Radix Slot
-// forwards id/aria-* onto it.
+/**
+ * The renderer must return a single element: `<FormControl>`'s Radix Slot
+ * forwards id/aria-* onto it.
+ */
 interface PluginFieldRendererProps {
   readonly field: MetaBoxFieldManifestEntry;
   readonly rhf: ControllerRenderProps<FieldValues, string>;
@@ -95,9 +97,11 @@ export function getPluginDashboardWidget(
   return dashboardWidgets.map.get(id);
 }
 
-// Stops a plugin replacing a built-in input across the admin, by accident or to
-// harvest form data. `media` / `mediaList` are plugin-contributed, so
-// unreserved.
+/**
+ * Stops a plugin replacing a built-in input across the admin, by accident or to
+ * harvest form data. `media` / `mediaList` are plugin-contributed, so
+ * unreserved.
+ */
 const RESERVED_INPUT_TYPES: ReadonlySet<string> = new Set<string>([
   ...CANONICAL_INPUT_TYPES,
   ...LEGACY_INPUT_TYPES,

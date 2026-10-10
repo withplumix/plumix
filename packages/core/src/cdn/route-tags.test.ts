@@ -5,8 +5,10 @@ import { createRequestMemo } from "../context/memo.js";
 import { declaredPageTags } from "./contract/page-tags.js";
 import { tagCdnEntry } from "./route-tags.js";
 
-// Only the two fields the accumulator reads: the memo it keys on, and the
-// cdn slot whose absence means nothing will ever be stored.
+/**
+ * Only the two fields the accumulator reads: the memo it keys on, and the
+ * cdn slot whose absence means nothing will ever be stored.
+ */
 function context(): Pick<AppContext, "cdn" | "memo"> {
   return {
     memo: createRequestMemo(),

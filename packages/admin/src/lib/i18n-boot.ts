@@ -29,9 +29,11 @@ const BUNDLED_CATALOGS: AdminCatalogs = {
   blocks: BLOCKS_CATALOGS,
 };
 
-// Source locale: the language `descriptor.message` strings are authored
-// in. When a user's locale isn't compiled (yet, or at all), we fall
-// back here. Mirrors `lingui.config.ts:sourceLocale`.
+/**
+ * Source locale: the language `descriptor.message` strings are authored
+ * in. When a user's locale isn't compiled (yet, or at all), we fall
+ * back here. Mirrors `lingui.config.ts:sourceLocale`.
+ */
 const SOURCE_LOCALE = "en";
 
 type PluginCatalogLoader = (pluginId: string, locale: string) => Promise<void>;
@@ -98,7 +100,7 @@ export async function bootI18n(
   );
 }
 
-// Unlike plugins, an uncompiled locale reads English rather than raw ids.
+/** Unlike plugins, an uncompiled locale reads English rather than raw ids. */
 async function loadSourceFallbackCatalog(
   catalogs: CatalogMap,
   prefix: string,

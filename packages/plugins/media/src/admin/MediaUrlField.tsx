@@ -12,8 +12,10 @@ import type { MediaSelection } from "./MediaLibrary.js";
 // picker wants the same copy; no separate catalog namespace is warranted.
 import { M, MediaPickerModal, readAccept } from "./MediaPickerField.js";
 
-// An empty control is what a cleared field already shows, so anything the
-// stored value turns out to be other than a string reads as unset.
+/**
+ * An empty control is what a cleared field already shows, so anything the
+ * stored value turns out to be other than a string reads as unset.
+ */
 const storedUrlSchema = v.fallback(v.string(), "");
 
 /**

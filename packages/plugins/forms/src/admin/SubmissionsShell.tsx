@@ -47,12 +47,16 @@ import {
 } from "./queries.js";
 import { formFilterOptions } from "./table.js";
 
-// Radix Select forbids an empty-string item value, so "every form"
-// carries a sentinel that maps back to no filter at all.
+/**
+ * Radix Select forbids an empty-string item value, so "every form"
+ * carries a sentinel that maps back to no filter at all.
+ */
 const ANY_FORM = "__any__";
 
-// As many answers as fit beside the date and the status without the
-// table scrolling; the rest are in the submission itself.
+/**
+ * As many answers as fit beside the date and the status without the
+ * table scrolling; the rest are in the submission itself.
+ */
 const MAX_COLUMNS = 3;
 
 const STATUS_LABELS = {
@@ -62,8 +66,10 @@ const STATUS_LABELS = {
   spam: { id: "plugin.forms.status.spam", message: "Spam" },
 } satisfies Record<SubmissionStatus, MessageDescriptor>;
 
-// Descriptors read outside JSX — attributes, dynamic lookups, and the
-// two words a stored checkbox answer is rendered with.
+/**
+ * Descriptors read outside JSX — attributes, dynamic lookups, and the
+ * two words a stored checkbox answer is rendered with.
+ */
 const M = {
   // The same id the admin page is registered under in `index.ts`: one
   // string, so one translation unit rather than two that can disagree.
@@ -97,8 +103,10 @@ const EXPORT_FORMATS = [
   { format: "json", label: M.exportJson },
 ] as const;
 
-// A form may be called `constructor`; a bare index would return an
-// inherited function, which React throws on.
+/**
+ * A form may be called `constructor`; a bare index would return an
+ * inherited function, which React throws on.
+ */
 function countFor(
   counts: Readonly<Record<string, number>> | undefined,
   key: string,

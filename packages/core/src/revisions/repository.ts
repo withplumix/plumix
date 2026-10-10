@@ -21,8 +21,10 @@ import {
   stripReservedMeta,
 } from "./snapshot-envelope.js";
 
-// 21 chars × 64-char alphabet = 126 bits of entropy — collision-
-// resistant under the `(type, slug)` unique index. URL-safe.
+/**
+ * 21 chars × 64-char alphabet = 126 bits of entropy — collision-
+ * resistant under the `(type, slug)` unique index. URL-safe.
+ */
 const NANOID_ALPHABET =
   "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-";
 
@@ -90,9 +92,11 @@ export async function snapshotAsRevision(
 interface ListRevisionsInput {
   readonly entryId: number;
   readonly limit: number;
-  // Opaque cursor returned by the previous page (last row's id as a
-  // base-10 string). `id` is autoincrement and revisions are insert-
-  // only, so id-ordering is chronological without same-second ties.
+  /**
+   * Opaque cursor returned by the previous page (last row's id as a
+   * base-10 string). `id` is autoincrement and revisions are insert-
+   * only, so id-ordering is chronological without same-second ties.
+   */
   readonly cursor?: string | null;
 }
 
@@ -107,8 +111,10 @@ function decodeCursor(raw: string | null | undefined): number | null {
   return Number.isInteger(id) && id > 0 ? id : null;
 }
 
-// Filtering in SQL, not JS after a `type='revision'` query, which would lose
-// rows once the limit window saturates on noisy neighbours.
+/**
+ * Filtering in SQL, not JS after a `type='revision'` query, which would lose
+ * rows once the limit window saturates on noisy neighbours.
+ */
 function entryRevisionPrefix(entryId: number): string {
   return `revision:${String(entryId)}:%`;
 }
@@ -155,16 +161,20 @@ interface UpsertAutosaveInput {
    * without a round trip.
    */
   readonly entry: Entry;
-  // The user editing. Combined with `entry.id` to produce the
-  // deterministic slug — UNIQUE (type, slug) enforces "one autosave
-  // per (entry, user)" without an extra dedup query.
+  /**
+   * The user editing. Combined with `entry.id` to produce the
+   * deterministic slug — UNIQUE (type, slug) enforces "one autosave
+   * per (entry, user)" without an extra dedup query.
+   */
   readonly authorId: number;
   readonly patch: {
     readonly title: string;
     readonly content: EntryContent | null;
     readonly excerpt: string | null;
-    // The keys the author touched, and the keys they cleared. Not the whole
-    // bag — see ADR 0003.
+    /**
+     * The keys the author touched, and the keys they cleared. Not the whole
+     * bag — see ADR 0003.
+     */
     readonly meta: JsonObject;
     readonly metaDeletes: readonly string[];
   };
@@ -302,14 +312,18 @@ interface ListActiveAutosavesInput {
   readonly entryId: number;
   /** A parameter so tests can pin it to a fixture time. */
   readonly notOlderThan: Date;
-  // Exclude the calling user — every viewer should see their
-  // co-authors, not themselves.
+  /**
+   * Exclude the calling user — every viewer should see their
+   * co-authors, not themselves.
+   */
   readonly excludeAuthorId: number;
 }
 
-// Slug shape is `autosave:<entryId>:<authorId>`; the leading-anchor
-// `LIKE` scopes the query to one entry without a JOIN. Same pattern
-// as `listRevisions`.
+/**
+ * Slug shape is `autosave:<entryId>:<authorId>`; the leading-anchor
+ * `LIKE` scopes the query to one entry without a JOIN. Same pattern
+ * as `listRevisions`.
+ */
 function entryAutosavePrefix(entryId: number): string {
   return `autosave:${String(entryId)}:%`;
 }
@@ -335,14 +349,18 @@ export async function listActiveAutosaves(
 
 interface SetRevisionMessageInput {
   readonly revisionId: number;
-  // `null` clears the message (deletes the meta key). The RPC layer
-  // is responsible for normalizing empty strings to null before it
-  // gets here — the repository writes what it's told.
+  /**
+   * `null` clears the message (deletes the meta key). The RPC layer
+   * is responsible for normalizing empty strings to null before it
+   * gets here — the repository writes what it's told.
+   */
   readonly message: string | null;
 }
 
-// Patches the revision row's `meta.__plumix_revision_message`. Returns
-// the updated row, or `undefined` if `revisionId` doesn't exist.
+/**
+ * Patches the revision row's `meta.__plumix_revision_message`. Returns
+ * the updated row, or `undefined` if `revisionId` doesn't exist.
+ */
 export async function setRevisionMessage(
   db: Db,
   input: SetRevisionMessageInput,
@@ -368,8 +386,10 @@ interface PruneInput {
   readonly maxRevisions: number;
 }
 
-// Deletes the oldest revisions for `entryId` past `maxRevisions`.
-// Returns the count actually pruned (0 when under the cap).
+/**
+ * Deletes the oldest revisions for `entryId` past `maxRevisions`.
+ * Returns the count actually pruned (0 when under the cap).
+ */
 export async function pruneOldRevisions(
   db: Db,
   input: PruneInput,

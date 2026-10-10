@@ -31,16 +31,20 @@ declare module "plumix" {
   }
 }
 
-// A members-only gate that answers terminally. `authenticatedPolicy` would
-// redirect to sign-in, which these harnesses route no page for; where the gate
-// sends the reader is not what any of these tests are about.
+/**
+ * A members-only gate that answers terminally. `authenticatedPolicy` would
+ * redirect to sign-in, which these harnesses route no page for; where the gate
+ * sends the reader is not what any of these tests are about.
+ */
 const membersOnlyPolicy = definePolicy({
   segments: ["members"],
   resolve: (ctx) => (ctx.user ? grant("members") : challenge("subscribe")),
 });
 
-// A public type beside a gated one: every crawler-facing surface has to keep
-// the first and drop the second.
+/**
+ * A public type beside a gated one: every crawler-facing surface has to keep
+ * the first and drop the second.
+ */
 const membersOnlyPlugin = definePlugin("members", (ctx) => {
   ctx.registerEntryType("post", {
     label: "Posts",
@@ -76,8 +80,10 @@ const taxonomyPlugin = definePlugin("taxo", (ctx) => {
   });
 });
 
-// A plugin contributing a sitemap scope of its own, through this plugin's
-// `registerSitemap` rather than a core registration.
+/**
+ * A plugin contributing a sitemap scope of its own, through this plugin's
+ * `registerSitemap` rather than a core registration.
+ */
 const eventsPlugin = definePlugin("events", (ctx) => {
   ctx.registerSitemap("event-series", {
     // > SITEMAP_PAGE_SIZE (1000) so the index paginates the scope into two.
@@ -92,15 +98,17 @@ const eventsPlugin = definePlugin("events", (ctx) => {
   });
 });
 
-// A type whose pictures the sitemap has to find: role-tagged media fields,
-// declared raw rather than through the media plugin's builder, and a `media`
-// lookup adapter standing in for its hydration — what the sitemap reads is the
-// role and the image the adapter makes of the payload, so seeding those keeps
-// this suite off a second plugin. `shareCount` extra `ogImage` fields,
-// `share0`…, give one role more than one field to answer from.
-//
-// `featured` sits inside a group, which is where an appearance box tends to
-// put it, and `hero` is a role this suite registers rather than one core ships.
+/**
+ * A type whose pictures the sitemap has to find: role-tagged media fields,
+ * declared raw rather than through the media plugin's builder, and a `media`
+ * lookup adapter standing in for its hydration — what the sitemap reads is the
+ * role and the image the adapter makes of the payload, so seeding those keeps
+ * this suite off a second plugin. `shareCount` extra `ogImage` fields,
+ * `share0`…, give one role more than one field to answer from.
+ *
+ * `featured` sits inside a group, which is where an appearance box tends to
+ * put it, and `hero` is a role this suite registers rather than one core ships.
+ */
 const picturePluginWith = (shareCount: number, hydrate?: LookupHydrate) =>
   definePlugin("pictures", (ctx) => {
     ctx.registerImageRole("hero", { single: true });
@@ -143,10 +151,12 @@ function pictureField(key: string, role: ImageRoleName): MetaBoxField {
 
 const picturePlugin = picturePluginWith(0);
 
-// A `doc`-prefixed id stands in for a non-image upload, a `rel`-prefixed one
-// for the worker-proxied serve path a deploy with no public bucket URL hands
-// back, and a `blank`-prefixed one for an adapter that answers with an image
-// carrying no URL.
+/**
+ * A `doc`-prefixed id stands in for a non-image upload, a `rel`-prefixed one
+ * for the worker-proxied serve path a deploy with no public bucket URL hands
+ * back, and a `blank`-prefixed one for an adapter that answers with an image
+ * carrying no URL.
+ */
 interface Upload {
   readonly id: string;
   readonly mime: string;
@@ -193,8 +203,10 @@ function registerPictureAdapter(
   });
 }
 
-// A settings save fires its action mid-request, which is where the purge
-// accumulator lives; this stands in for the RPC that would normally fire it.
+/**
+ * A settings save fires its action mid-request, which is where the purge
+ * accumulator lives; this stands in for the RPC that would normally fire it.
+ */
 function settingsSaver(group: string): AnyPluginDescriptor {
   return definePlugin("settings-saver", (ctx) => {
     ctx.registerPublicRoute({
@@ -232,7 +244,9 @@ function createHarness(
   });
 }
 
-// `plumix` exports no span type; this is the part of one a query count reads.
+/**
+ * `plumix` exports no span type; this is the part of one a query count reads.
+ */
 interface SpanTree {
   readonly name: string;
   readonly attributes: Readonly<Record<string, unknown>>;
@@ -1844,9 +1858,11 @@ describe("/llms.txt", () => {
   });
 });
 
-// The publish RPC fires its lifecycle action mid-request; this stands in for
-// it, so a subscriber runs where it really would — inside a request, with a
-// context to defer through.
+/**
+ * The publish RPC fires its lifecycle action mid-request; this stands in for
+ * it, so a subscriber runs where it really would — inside a request, with a
+ * context to defer through.
+ */
 type LifecycleAction = "entry:published" | "entry:updated" | "both";
 
 function lifecycleFirer(action: LifecycleAction) {

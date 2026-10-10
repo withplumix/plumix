@@ -55,8 +55,10 @@ interface EditorCanvasProps {
   readonly siteSettings?: SiteSettings;
 }
 
-// X-ray outline rule, gated by data-plumix-xray on the content root. Static, so
-// the toggle is a pure attribute flip — no per-block geometry.
+/**
+ * X-ray outline rule, gated by data-plumix-xray on the content root. Static, so
+ * the toggle is a pure attribute flip — no per-block geometry.
+ */
 const XRAY_STYLE = `[data-plumix-xray] [data-plumix-block] {
   outline: 1px dashed rgba(59, 130, 246, 0.5);
   outline-offset: -1px;
@@ -350,7 +352,7 @@ export function EditorCanvas({
   );
 }
 
-// Bounding box covering all rects, or null when there are none.
+/** Bounding box covering all rects, or null when there are none. */
 function unionRect(
   rects: readonly DOMRect[],
 ): { x: number; y: number; width: number; height: number } | null {

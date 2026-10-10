@@ -38,8 +38,10 @@ function contentType(name: string): string {
   return CONTENT_TYPES[extension] ?? "application/octet-stream";
 }
 
-// An `.env` in `public/` must never become a URL; this also blocks `..`.
-// Windows reads a backslash as a separator.
+/**
+ * An `.env` in `public/` must never become a URL; this also blocks `..`.
+ * Windows reads a backslash as a separator.
+ */
 function refused(segment: string): boolean {
   return (
     (segment.startsWith(".") && segment !== ".well-known") ||

@@ -23,8 +23,10 @@ interface DeclareMailsInput {
   readonly site?: MailOverrides;
 }
 
-// Read by name rather than through the typed map: the names a site or theme
-// overrides are checked against what was declared, not what was typed.
+/**
+ * Read by name rather than through the typed map: the names a site or theme
+ * overrides are checked against what was declared, not what was typed.
+ */
 type OverridesByName = Readonly<
   Record<string, MailOverride<never> | undefined>
 >;

@@ -16,7 +16,9 @@ export const MEDIA_READ_CAPABILITY = entryCapability(MEDIA_ENTRY_TYPE, "read");
 export const DEFAULT_PAGE_SIZE = 24;
 export const MAX_PAGE_SIZE = 100;
 
-// 320px-wide auto-format thumbnail — enough for the 160px admin card at 2× DPI.
+/**
+ * 320px-wide auto-format thumbnail — enough for the 160px admin card at 2× DPI.
+ */
 const THUMBNAIL_OPTS = { width: 320, format: "auto", fit: "cover" } as const;
 
 export const mediaListInputSchema = v.object({
@@ -264,9 +266,11 @@ export async function purgeVariants(
   }
 }
 
-// Translate `accept` into a SQL predicate against the JSON `mime` field. Real
-// MIME strings don't contain LIKE wildcards and the input is plugin/agent
-// supplied, so no escaping is needed.
+/**
+ * Translate `accept` into a SQL predicate against the JSON `mime` field. Real
+ * MIME strings don't contain LIKE wildcards and the input is plugin/agent
+ * supplied, so no escaping is needed.
+ */
 export function buildAcceptCondition(
   accept: string | readonly string[] | undefined,
 ): SQL | undefined {

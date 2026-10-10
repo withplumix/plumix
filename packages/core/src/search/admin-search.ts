@@ -28,8 +28,10 @@ export interface SearchGroup {
 
 declare module "../hooks/types.js" {
   interface FilterRegistry {
-    // Producer set, run via `getFilterHandlers` — each handler is invoked
-    // with the same input and returns its own groups (not a pipeline).
+    /**
+     * Producer set, run via `getFilterHandlers` — each handler is invoked
+     * with the same input and returns its own groups (not a pipeline).
+     */
     "admin:search:results": (
       input: AdminSearchInput,
       ctx: AppContext,

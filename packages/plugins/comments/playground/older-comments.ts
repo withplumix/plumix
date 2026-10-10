@@ -9,14 +9,16 @@ import { usePlumixCommentThread } from "@plumix/plugin-comments/hooks";
 
 import { commentItem } from "./comment-item.js";
 
-// The theme's own "load more", and the reason `usePlumixCommentThread`
-// exists: the hook fetches older roots from under the deployment's base
-// path and hands them back typed as the template dep types them, so they
-// render through the same `commentItem` the server-side list does.
-//
-// Authored with `createElement` rather than JSX, like the theme beside
-// it, so the playground stays transform-agnostic across the jiti config
-// load and the vite worker bundle.
+/**
+ * The theme's own "load more", and the reason `usePlumixCommentThread`
+ * exists: the hook fetches older roots from under the deployment's base
+ * path and hands them back typed as the template dep types them, so they
+ * render through the same `commentItem` the server-side list does.
+ *
+ * Authored with `createElement` rather than JSX, like the theme beside
+ * it, so the playground stays transform-agnostic across the jiti config
+ * load and the vite worker bundle.
+ */
 export function OlderComments({
   entryId,
   cursor,

@@ -2349,9 +2349,11 @@ describe("resolvePublicRoute — single entry through theme", () => {
   });
 });
 
-// A block whose loader always rejects. In dev the failure must escalate to the
-// dev error page naming the block; in prod it stays isolated to the block and
-// the page still renders (#1600).
+/**
+ * A block whose loader always rejects. In dev the failure must escalate to the
+ * dev error page naming the block; in prod it stays isolated to the block and
+ * the page still renders (#1600).
+ */
 const throwingLoaderPlugin = definePlugin("acme-throwing-loader", (ctx) => {
   ctx.registerBlock(
     defineBlock({
@@ -2369,9 +2371,11 @@ const throwingLoaderPlugin = definePlugin("acme-throwing-loader", (ctx) => {
   );
 });
 
-// A block whose loader runs a traced DB query that fails. The failing query
-// span is recorded before the rejection escalates, so the dev error page's
-// database section can flag it — the "showing the failing query" half of #1600.
+/**
+ * A block whose loader runs a traced DB query that fails. The failing query
+ * span is recorded before the rejection escalates, so the dev error page's
+ * database section can flag it — the "showing the failing query" half of #1600.
+ */
 const failingQueryPlugin = definePlugin("acme-failing-query", (ctx) => {
   ctx.registerBlock(
     defineBlock({
@@ -4422,7 +4426,8 @@ describe("resolvePublicRoute — error pages through theme", () => {
     expect(response.status).toBe(500);
     const body = await response.text();
     expect(body).toContain('data-testid="five-oh-oh"');
-    // The 5xx payload reaches the theme with a correlation id, not exception detail.
+    // The 5xx payload reaches the theme with a correlation id, not exception
+    // detail.
     expect(body).toMatch(
       new RegExp(`data-testid="error-id">${UUID_RE.source}<`),
     );
@@ -4460,7 +4465,8 @@ describe("resolvePublicRoute — error pages through theme", () => {
     const body = await response.text();
     expect(body).toContain("<!doctype html>");
     expect(body).toContain("Internal Server Error");
-    // The built-in 500 page prints the correlation id even with no `500` template.
+    // The built-in 500 page prints the correlation id even with no `500`
+    // template.
     expect(body).toMatch(UUID_RE);
     expect(body).not.toContain("kaboom-different-payload");
   });
@@ -4737,8 +4743,10 @@ const REDUCED_MOTION =
   "@media (prefers-reduced-motion:reduce){@view-transition{navigation:none}}";
 const DIRECTION_SCRIPT = /<script>addEventListener\("pagereveal".*?<\/script>/;
 
-// A theme with an entry template, each carrying its own setting, and one
-// published post at /post/hello.
+/**
+ * A theme with an entry template, each carrying its own setting, and one
+ * published post at /post/hello.
+ */
 async function viewTransitionsHarness(
   themeSetting: Pick<ThemeDescriptor, "viewTransitions">,
   templateSetting: Pick<ThemeDescriptor, "viewTransitions">,

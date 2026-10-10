@@ -104,9 +104,11 @@ const locationIdSchema = v.pipe(
   v.regex(MENU_LOCATION_ID_RE),
 );
 
-// Capability used for every mutating menu RPC. `registerTermTaxonomy`
-// auto-derives the taxonomy's `manage` at the editor tier; reusing it here
-// keeps the gate consistent with WP-style "manage taxonomy" semantics.
+/**
+ * Capability used for every mutating menu RPC. `registerTermTaxonomy`
+ * auto-derives the taxonomy's `manage` at the editor tier; reusing it here
+ * keeps the gate consistent with WP-style "manage taxonomy" semantics.
+ */
 export const MENU_MANAGE_CAPABILITY = termCapability("menu", "manage");
 
 interface MenuListItem {

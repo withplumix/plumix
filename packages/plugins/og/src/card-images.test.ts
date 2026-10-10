@@ -16,13 +16,17 @@ import {
   seedMedia,
 } from "./test/harness.js";
 
-// Stands in for an uploaded file: what it decodes to does not matter to the
-// walk, only that the bytes the bucket holds are the bytes the renderer gets.
+/**
+ * Stands in for an uploaded file: what it decodes to does not matter to the
+ * walk, only that the bytes the bucket holds are the bytes the renderer gets.
+ */
 const HERO_KEY = "media/2026/hero.png";
 const HERO_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a]);
 
-// A 1x1 transparent GIF — small enough to write inline, which is the case data
-// URIs exist for.
+/**
+ * A 1x1 transparent GIF — small enough to write inline, which is the case data
+ * URIs exist for.
+ */
 const DATA_URI =
   "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 

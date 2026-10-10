@@ -204,7 +204,7 @@ async function renderThroughThemeInner({
   });
 }
 
-// A template's setting replaces the theme's for the pages it renders.
+/** A template's setting replaces the theme's for the pages it renders. */
 function pageViewTransitions(
   theme: ThemeDescriptor,
   template: Template,
@@ -214,8 +214,10 @@ function pageViewTransitions(
   );
 }
 
-// String form falls back to the resolver title instead of substituting
-// `undefined`, dodging unhead's `"%s · Site"` → `" · Site"` orphan separator.
+/**
+ * String form falls back to the resolver title instead of substituting
+ * `undefined`, dodging unhead's `"%s · Site"` → `" · Site"` orphan separator.
+ */
 function composeTitle(document: DocumentManifest, fallback: string): string {
   const { titleTemplate } = document;
   // An empty title (an untitled entry) is treated as absent, so the fallback
@@ -429,8 +431,10 @@ interface ResolveDocumentArgs {
   readonly deps: LoadedTemplateDeps;
 }
 
-// Merge the matched template's `document` fragment (a literal or a per-request
-// function) onto the theme-wide document. No fragment → the theme document.
+/**
+ * Merge the matched template's `document` fragment (a literal or a per-request
+ * function) onto the theme-wide document. No fragment → the theme document.
+ */
 async function resolveRenderDocument({
   template,
   document,
@@ -464,14 +468,16 @@ interface RenderTreeArgs {
   readonly htmlAllowlist: HtmlAllowlist;
   readonly chrome: RenderChrome;
   readonly catalog: CompiledCatalog;
-  // The theme's `css: []` paths, linked in dev to avoid FOUC (#1701).
+  /** The theme's `css: []` paths, linked in dev to avoid FOUC (#1701). */
   readonly themeCss: readonly string[];
   readonly viewTransitions: ResolvedViewTransitions | null;
   readonly editMode: EditModeDecision;
 }
 
-// React 19 reorders `<head>` children, so JSX position can't place theme
-// `script[]`; React renders only the body.
+/**
+ * React 19 reorders `<head>` children, so JSX position can't place theme
+ * `script[]`; React renders only the body.
+ */
 function renderTree({
   ctx,
   document,
@@ -649,8 +655,10 @@ function hoistedHasTitle(hoisted: string): boolean {
 
 const HYDRATION_SLOT = "<!--plumix-hydration-slot-->";
 
-// `RegExp.exec` resets a sticky regex's `lastIndex` to 0 on a failed match, so
-// the cursor is tracked explicitly.
+/**
+ * `RegExp.exec` resets a sticky regex's `lastIndex` to 0 on a failed match, so
+ * the cursor is tracked explicitly.
+ */
 function splitHoistedMetadata(rendered: string): {
   hoisted: string;
   body: string;
@@ -663,9 +671,11 @@ function splitHoistedMetadata(rendered: string): {
   return { hoisted: rendered.slice(0, cursor), body: rendered.slice(cursor) };
 }
 
-// Case-insensitive: React's `renderToString` always emits lowercase tag
-// names, but the regex still needs `i` to satisfy code-scanning that
-// (correctly) treats case-sensitive HTML filters as fragile.
+/**
+ * Case-insensitive: React's `renderToString` always emits lowercase tag
+ * names, but the regex still needs `i` to satisfy code-scanning that
+ * (correctly) treats case-sensitive HTML filters as fragile.
+ */
 const HOISTED_TAG_RE =
   /<(?:title\b[^>]*>[^<]*<\/title>|script\b[^>]*>[^<]*<\/script>|(?:meta|link)\b[^>]*\/?>)/iy;
 
@@ -686,9 +696,11 @@ function groupScriptsByPosition(
   return out;
 }
 
-// `children` (string) wins over `dangerouslySetInnerHTML.__html` when both
-// are provided — JSX semantics. Both are emitted verbatim; the theme
-// author is trusted to produce valid script content.
+/**
+ * `children` (string) wins over `dangerouslySetInnerHTML.__html` when both
+ * are provided — JSX semantics. Both are emitted verbatim; the theme
+ * author is trusted to produce valid script content.
+ */
 function scriptToHtml(script: DocumentScript): string {
   const { position, children, dangerouslySetInnerHTML, ...attrs } = script;
   void position;
@@ -720,8 +732,10 @@ function renderAttrs(attrs: DocumentAttrs | undefined): string {
   return out;
 }
 
-// Theme document attrs are string-rendered, bypassing React's camelCase-to-HTML
-// attribute translation.
+/**
+ * Theme document attrs are string-rendered, bypassing React's camelCase-to-HTML
+ * attribute translation.
+ */
 const JSX_ATTR_MAP: Record<string, string> = {
   className: "class",
   htmlFor: "for",

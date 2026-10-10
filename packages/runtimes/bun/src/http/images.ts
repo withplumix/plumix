@@ -81,12 +81,14 @@ interface Variant {
   readonly body: Blob;
 }
 
-// What a source-typed variant may be stored as, looked up in this order.
+/** What a source-typed variant may be stored as, looked up in this order. */
 const candidates = (format: NegotiatedFormat): readonly OutputFormat[] =>
   format === "source" ? ["jpeg", "png", "webp", "avif"] : [format];
 
-// A decoded input onto what the host can encode; `Bun.Image` decodes GIF,
-// BMP and TIFF but encodes none of them, so those come out lossless.
+/**
+ * A decoded input onto what the host can encode; `Bun.Image` decodes GIF,
+ * BMP and TIFF but encodes none of them, so those come out lossless.
+ */
 function ownFormat(
   decoded: Bun.Image.Format,
   encodable: readonly ImageFormat[],
@@ -103,8 +105,10 @@ function variantKey(params: ImageParams, format: NegotiatedFormat): string {
     .slice(0, 40);
 }
 
-// `Bun.Image` has no crop, so `cover` scales to cover the box and leaves
-// overflow to `object-fit`.
+/**
+ * `Bun.Image` has no crop, so `cover` scales to cover the box and leaves
+ * overflow to `object-fit`.
+ */
 function targetSize(
   source: { readonly width: number; readonly height: number },
   { width, height, fit }: ImageParams,

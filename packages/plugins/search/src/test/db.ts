@@ -29,7 +29,7 @@ import * as schema from "../db/schema.js";
 
 export type SearchTestDb = DispatcherHarness["db"];
 
-// The history this package ships, at its root.
+/** The history this package ships, at its root. */
 const migrations = fileURLToPath(new URL("../../migrations", import.meta.url));
 
 /**
@@ -114,7 +114,9 @@ export async function watchRewrites(
   };
 }
 
-/** One rich-text block holding `html` — the shape a seeded entry's body takes. */
+/**
+ * One rich-text block holding `html` — the shape a seeded entry's body takes.
+ */
 export function paragraph(html: string): {
   readonly id: string;
   readonly name: string;

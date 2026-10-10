@@ -61,9 +61,11 @@ const ADMIN_ENTRY_PATH = pluginAdminEntryPath("@plumix/plugin-audit-log");
 
 const AUDIT_LOG_READ_CAPABILITY = "audit_log:read";
 
-// Plain descriptor literals — plugin source runs server-side without
-// the Babel macro pipeline; the manifest payload is identical to a
-// `defineMessage(...)` call. Catalogs ship under #697.
+/**
+ * Plain descriptor literals — plugin source runs server-side without
+ * the Babel macro pipeline; the manifest payload is identical to a
+ * `defineMessage(...)` call. Catalogs ship under #697.
+ */
 const AUDIT_LABELS = {
   auditLog: { id: "plugin.auditLog.adminPage.title", message: "Audit log" },
   tools: { id: "core.adminNav.tools", message: "Tools" },

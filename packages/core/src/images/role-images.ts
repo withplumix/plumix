@@ -32,8 +32,10 @@ export interface ProjectImageRolesOptions {
   readonly include?: (field: MetaBoxField) => boolean;
 }
 
-// A hydrated payload keeps the adapter's own fields — `looseObject` hands the
-// whole thing back so the adapter that produced it reads what it wrote.
+/**
+ * A hydrated payload keeps the adapter's own fields — `looseObject` hands the
+ * whole thing back so the adapter that produced it reads what it wrote.
+ */
 const hydratedReferenceSchema = v.looseObject({ id: v.string() });
 
 /** Adds no query: the page's own hydration already resolved every reference. */
@@ -108,7 +110,7 @@ export async function resolveImageRoles(
   );
 }
 
-// Per role, the first field in declaration order that yields an image wins.
+/** Per role, the first field in declaration order that yields an image wins. */
 function roleImages(
   plugins: PluginRegistry,
   roles: ImageRoleScopeIndex,
@@ -141,7 +143,7 @@ function imageOf(
   return registered?.adapter.image?.(payload) ?? null;
 }
 
-// `null` for a path leading nowhere and for a value the schema rejects.
+/** `null` for a path leading nowhere and for a value the schema rejects. */
 function readPath<TLeaf extends v.GenericSchema>(
   bag: ResolvedMeta,
   path: readonly string[],
@@ -156,14 +158,18 @@ function readPath<TLeaf extends v.GenericSchema>(
   return value.success ? value.output : null;
 }
 
-// Roles are rejected under repeaters, so an array on the path means the bag no
-// longer matches its fields.
+/**
+ * Roles are rejected under repeaters, so an array on the path means the bag no
+ * longer matches its fields.
+ */
 function isBag(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-// An unsettled bag may still hold the retired `{ id, … }` shape; the raw-column
-// reader must accept it or disagree with the hydrated path.
+/**
+ * An unsettled bag may still hold the retired `{ id, … }` shape; the raw-column
+ * reader must accept it or disagree with the hydrated path.
+ */
 function storedId(bag: JsonObject, path: readonly string[]): string | null {
   const slot = readPath(bag, path, v.unknown());
   return extractStringId(slot) ?? nonEmpty(slot);

@@ -20,8 +20,10 @@ import {
 } from "@plumix/admin-ui/popover";
 import { isAllowedHtmlAttr } from "@plumix/core/blocks";
 
-// Common allowlisted attributes offered as suggestions. The field still accepts
-// any name `isAllowedHtmlAttr` permits (e.g. an arbitrary `data-*`/`aria-*`).
+/**
+ * Common allowlisted attributes offered as suggestions. The field still accepts
+ * any name `isAllowedHtmlAttr` permits (e.g. an arbitrary `data-*`/`aria-*`).
+ */
 const COMMON_ATTRS: readonly string[] = [
   "id",
   "title",
@@ -76,8 +78,10 @@ export function HtmlAttributes({
   );
 }
 
-// Keyed by name in the parent, so the draft re-inits when the row's identity
-// changes.
+/**
+ * Keyed by name in the parent, so the draft re-inits when the row's identity
+ * changes.
+ */
 function AttrRow({
   name,
   value,

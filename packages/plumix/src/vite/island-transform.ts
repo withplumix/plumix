@@ -4,17 +4,21 @@ import { extname, join } from "node:path";
 import { VitePluginError } from "./errors.js";
 import { moduleExportName, parseModule } from "./estree.js";
 
-// The client runtime does `mod[exportName]`; these would resolve to
-// `Object.prototype` or the constructor. Matches Astro's
-// `FORBIDDEN_COMPONENT_EXPORT_KEYS`.
+/**
+ * The client runtime does `mod[exportName]`; these would resolve to
+ * `Object.prototype` or the constructor. Matches Astro's
+ * `FORBIDDEN_COMPONENT_EXPORT_KEYS`.
+ */
 const FORBIDDEN_EXPORT_KEYS: ReadonlySet<string> = new Set([
   "__proto__",
   "constructor",
   "prototype",
 ]);
 
-// Hook naming convention. A shim replaces the export with a component, so a
-// hook in an island module returns a React element instead of running.
+/**
+ * Hook naming convention. A shim replaces the export with a component, so a
+ * hook in an island module returns a React element instead of running.
+ */
 const HOOK_EXPORT = /^use[A-Z]/;
 
 interface UseClientFinding {
@@ -250,10 +254,12 @@ function walk(
   }
 }
 
-// pnpm symlinks every dep — workspace AND published — so isSymlink
-// alone can't tell them apart. Discriminator: a workspace dep
-// realpaths outside any `node_modules` segment; a published dep
-// realpaths back into `.pnpm/<pkg>@<ver>/node_modules/<pkg>`.
+/**
+ * pnpm symlinks every dep — workspace AND published — so isSymlink
+ * alone can't tell them apart. Discriminator: a workspace dep
+ * realpaths outside any `node_modules` segment; a published dep
+ * realpaths back into `.pnpm/<pkg>@<ver>/node_modules/<pkg>`.
+ */
 function walkSymlinkedDeps(
   nodeModulesPath: string,
   fs: ScannerFs,

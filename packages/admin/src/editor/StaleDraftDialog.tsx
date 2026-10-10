@@ -31,17 +31,21 @@ const M = {
 
 interface StaleDraftDialogProps {
   readonly open: boolean;
-  // The user's pending autosave content + the current live row. Both
-  // already loaded by the route — passed in so the Compare toggle
-  // doesn't need to re-fetch.
+  /**
+   * The user's pending autosave content + the current live row. Both
+   * already loaded by the route — passed in so the Compare toggle
+   * doesn't need to re-fetch.
+   */
   readonly autosaveSnapshot: unknown;
   readonly liveSnapshot: unknown;
-  // `Use mine` keeps the autosave seeded into the canvas. `Use theirs`
-  // discards the autosave row server-side; the route's success
-  // handler then refetches live and the editor re-seeds.
+  /**
+   * `Use mine` keeps the autosave seeded into the canvas. `Use theirs`
+   * discards the autosave row server-side; the route's success
+   * handler then refetches live and the editor re-seeds.
+   */
   readonly onUseMine: () => void;
   readonly onUseTheirs: () => void;
-  // True while the discard mutation is in flight after Use theirs.
+  /** True while the discard mutation is in flight after Use theirs. */
   readonly isResolving: boolean;
 }
 

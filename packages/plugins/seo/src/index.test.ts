@@ -22,10 +22,12 @@ const blogPlugin = definePlugin("blog", (ctx) => {
   });
 });
 
-// The same blog type, plus a `.featured()` role field nested in a group and a
-// reference kind that resolves it. Declared raw rather than through the media
-// plugin's builder: what the chain reads is the role and the image the adapter
-// makes of the payload, so seeding those keeps this suite off a second plugin.
+/**
+ * The same blog type, plus a `.featured()` role field nested in a group and a
+ * reference kind that resolves it. Declared raw rather than through the media
+ * plugin's builder: what the chain reads is the role and the image the adapter
+ * makes of the payload, so seeding those keeps this suite off a second plugin.
+ */
 const photoPlugin = definePlugin("photos", (ctx) => {
   ctx.registerEntryType("post", {
     label: "Posts",

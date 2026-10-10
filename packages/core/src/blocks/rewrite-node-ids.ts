@@ -4,9 +4,11 @@ import type { BlockNode } from "./render-block-tree.js";
 import { blockSlotKeys } from "./block-slots.js";
 import { isBlockNodeArray } from "./render-block-tree.js";
 
-// 12 chars × 64 = 72 bits entropy — ample for React keys with no
-// realistic collision risk over a page's edit lifetime. The 64-char
-// URL-safe alphabet plus `byte & 63` masking avoids modulo bias.
+/**
+ * 12 chars × 64 = 72 bits entropy — ample for React keys with no
+ * realistic collision risk over a page's edit lifetime. The 64-char
+ * URL-safe alphabet plus `byte & 63` masking avoids modulo bias.
+ */
 const ID_ALPHABET =
   "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-";
 const ID_LENGTH = 12;

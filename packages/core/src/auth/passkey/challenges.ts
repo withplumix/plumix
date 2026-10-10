@@ -7,13 +7,17 @@ import { generateToken, hashToken } from "../tokens.js";
 
 const CHALLENGE_TYPE = "webauthn_challenge" as const;
 
-// Each register-verify route accepts only its own ceremony, so an attestation
-// can't be redirected past that ceremony's checks.
+/**
+ * Each register-verify route accepts only its own ceremony, so an attestation
+ * can't be redirected past that ceremony's checks.
+ */
 const ceremonySchema = v.picklist(["bootstrap", "add-device", "invite"]);
 export type RegistrationCeremony = v.InferOutput<typeof ceremonySchema>;
 
-// Sampling keeps the sweep's amortised cost low while still bounding table
-// growth.
+/**
+ * Sampling keeps the sweep's amortised cost low while still bounding table
+ * growth.
+ */
 const OPPORTUNISTIC_PRUNE_PROBABILITY = 0.1;
 
 interface IssuedChallenge {

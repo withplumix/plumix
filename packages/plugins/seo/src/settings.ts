@@ -18,8 +18,10 @@ export const SEO_SETTINGS_GROUP = "seo";
 export const SEO_VERIFICATION_GROUP = "seo_verification";
 export const SEO_ROBOTS_GROUP = "seo_robots";
 
-// Every group is site-wide configuration, so every one carries the gate the
-// settings RPC enforces. A contributor reaching the page sees nothing.
+/**
+ * Every group is site-wide configuration, so every one carries the gate the
+ * settings RPC enforces. A contributor reaching the page sees nothing.
+ */
 const SETTINGS_CAPABILITY = "settings:manage";
 
 const VERIFICATION_TAGS = {
@@ -36,8 +38,10 @@ const VERIFICATION_ENGINES = Object.keys(
   VERIFICATION_TAGS,
 ) as readonly VerificationEngine[];
 
-// Fallback keys from when core owned these settings, so no migration is needed.
-// Removable at 1.0, along with the seeding filter.
+/**
+ * Fallback keys from when core owned these settings, so no migration is needed.
+ * Removable at 1.0, along with the seeding filter.
+ */
 const LEGACY_KEYS = {
   indexable: "public",
   default_og_image: "default_og_image",
@@ -164,8 +168,10 @@ const VERIFICATION_LABELS = {
   },
 } as const satisfies Record<VerificationEngine, Label>;
 
-// Labels are schema.org vocabulary, the same in every language, so they skip
-// the catalogs.
+/**
+ * Labels are schema.org vocabulary, the same in every language, so they skip
+ * the catalogs.
+ */
 const REPRESENTS = [
   { value: "organization", label: "Organization" },
   { value: "person", label: "Person" },
@@ -203,14 +209,16 @@ export interface SeoSettings {
 
 const DEFAULT_SEPARATOR = "\u00b7";
 
-// Colons, not underscores, so a type named `post_title` can't collide.
+/** Colons, not underscores, so a type named `post_title` can't collide. */
 const TYPE_TITLE = /^type:([^:]+):title$/;
 const TYPE_INDEXABLE = /^type:([^:]+):indexable$/;
 const TAXONOMY_INDEXABLE = /^taxonomy:([^:]+):indexable$/;
 
-// Core doesn't validate registry names, so `my type` would fail the boot in
-// this plugin's settings group. Colons are excluded so names never read as key
-// structure.
+/**
+ * Core doesn't validate registry names, so `my type` would fail the boot in
+ * this plugin's settings group. Colons are excluded so names never read as key
+ * structure.
+ */
 const KEYABLE_NAME = /^[a-zA-Z0-9_-]+$/;
 
 /** The settings key a type's title pattern is stored under. */
@@ -281,7 +289,7 @@ export function readSeoSettings(
 
 const PATTERN_MAX = 200;
 
-// Every field the site answers once, whatever it registered.
+/** Every field the site answers once, whatever it registered. */
 const SITE_WIDE_FIELDS: readonly MetaBoxFieldInput[] = [
   {
     key: "indexable",
@@ -403,8 +411,10 @@ function scopeFields(ctx: PluginAfterSetupContext): MetaBoxFieldInput[] {
   ];
 }
 
-// Long enough for a token and for a hand-written crawler policy; the caps are
-// against an adversarial payload, not an editorial rule.
+/**
+ * Long enough for a token and for a hand-written crawler policy; the caps are
+ * against an adversarial payload, not an editorial rule.
+ */
 const TOKEN_MAX = 300;
 const ROBOTS_MAX = 8000;
 
@@ -520,8 +530,10 @@ export function nonEmpty(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
-// Undefined rather than a default, so an unset key falls through to the next
-// source instead of answering for it.
+/**
+ * Undefined rather than a default, so an unset key falls through to the next
+ * source instead of answering for it.
+ */
 function boolish(value: unknown): boolean | undefined {
   return typeof value === "boolean" ? value : undefined;
 }

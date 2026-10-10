@@ -9,8 +9,10 @@ import { pluginCatalogStagedPath } from "@plumix/core";
 import type { PluginCatalogFile } from "./plugin-catalogs-codegen.js";
 import { VitePluginError } from "./errors.js";
 
-// An id with `_` also gets hyphenated candidates (`audit_log` ships as
-// `@plumix/plugin-audit-log`), tried after the literal.
+/**
+ * An id with `_` also gets hyphenated candidates (`audit_log` ships as
+ * `@plumix/plugin-audit-log`), tried after the literal.
+ */
 function packageNameCandidates(pluginId: string): string[] {
   const ids = pluginId.includes("_")
     ? [pluginId, pluginId.replaceAll("_", "-")]
@@ -173,8 +175,10 @@ export async function collectPluginCatalogFiles(
   return files;
 }
 
-// Absolute `catalogPath` values are honored verbatim; otherwise only the
-// npm-name convention.
+/**
+ * Absolute `catalogPath` values are honored verbatim; otherwise only the
+ * npm-name convention.
+ */
 async function resolveCatalogDir(
   pluginId: string,
   catalogPath: string,

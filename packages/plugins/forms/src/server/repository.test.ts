@@ -28,8 +28,10 @@ import {
 
 const answers = { name: "Ada" };
 
-// The db comes back alongside the context because the date-range reads
-// seed through the factory, which takes the db rather than the context.
+/**
+ * The db comes back alongside the context because the date-range reads
+ * seed through the factory, which takes the db rather than the context.
+ */
 async function contextWithSchema(): Promise<{
   ctx: AppContext;
   db: FormsTestDb;

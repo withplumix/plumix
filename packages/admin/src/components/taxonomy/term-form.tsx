@@ -57,13 +57,17 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-// Radix Select forbids an empty-string item value, so the "root" choice
-// carries a sentinel that maps back to `null` (no parent) on change.
+/**
+ * Radix Select forbids an empty-string item value, so the "root" choice
+ * carries a sentinel that maps back to `null` (no parent) on change.
+ */
 const ROOT_VALUE = "__root__";
 
-// Client-side shape mirrors `termCreateInputSchema` / `termUpdateInputSchema`
-// on the server. Slug is optional at the form level — the server derives
-// it from the name if omitted (see `term.create` handler).
+/**
+ * Client-side shape mirrors `termCreateInputSchema` / `termUpdateInputSchema`
+ * on the server. Slug is optional at the form level — the server derives
+ * it from the name if omitted (see `term.create` handler).
+ */
 const termFormSchema = v.object({
   name: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(200)),
   slug: v.pipe(

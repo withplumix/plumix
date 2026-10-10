@@ -1,7 +1,9 @@
 import { normalizeTag } from "./tags.js";
 
-// Keyed on the request memo, not the context: derived contexts are spreads, so
-// a write against one would land in an accumulator nothing reads.
+/**
+ * Keyed on the request memo, not the context: derived contexts are spreads, so
+ * a write against one would land in an accumulator nothing reads.
+ */
 const pending = new WeakMap<WeakKey, Set<string>>();
 
 /** Add `tags` to what this request's response is stored under. */

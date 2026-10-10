@@ -37,11 +37,13 @@ import {
   validateMetaReferences,
 } from "./core.js";
 
-// Build a registry with the core lookup adapters registered + a
-// single user-meta box carrying a `user` reference field. The
-// reference field shape is the same one `user()` produces; we
-// build it inline rather than importing the builder so this test
-// stays focused on the pipeline.
+/**
+ * Build a registry with the core lookup adapters registered + a
+ * single user-meta box carrying a `user` reference field. The
+ * reference field shape is the same one `user()` produces; we
+ * build it inline rather than importing the builder so this test
+ * stays focused on the pipeline.
+ */
 function registryWithUserRef(field: Partial<MetaBoxField> = {}) {
   const registry: MutablePluginRegistry = createPluginRegistry();
   registerCoreLookupAdapters(registry);
@@ -323,10 +325,12 @@ describe("resolveMetaBags (response-level batching)", () => {
   });
 });
 
-// Multi-value reference shape (`userList` and friends). The pipeline
-// dispatches on `referenceTarget.multiple` — array values get
-// per-item existence checks + a `max` length guard, while orphan
-// filtering drops missing IDs and keeps the array dense.
+/**
+ * Multi-value reference shape (`userList` and friends). The pipeline
+ * dispatches on `referenceTarget.multiple` — array values get
+ * per-item existence checks + a `max` length guard, while orphan
+ * filtering drops missing IDs and keeps the array dense.
+ */
 function registryWithUserListRef(
   field: Partial<MetaBoxField & { readonly max?: number }> = {},
 ) {
@@ -535,10 +539,12 @@ describe("resolveMetaReferences (multi)", () => {
   });
 });
 
-// `entryList` and `termList` ride the same multi-reference pipeline
-// as `userList`. These tests cover the kind-routing + scope-required
-// guards on the entry/term adapters specifically — adding a new kind
-// shouldn't bypass either.
+/**
+ * `entryList` and `termList` ride the same multi-reference pipeline
+ * as `userList`. These tests cover the kind-routing + scope-required
+ * guards on the entry/term adapters specifically — adding a new kind
+ * shouldn't bypass either.
+ */
 function registryWithEntryRef(field: Partial<MetaBoxField> = {}) {
   const registry: MutablePluginRegistry = createPluginRegistry();
   registerCoreLookupAdapters(registry);

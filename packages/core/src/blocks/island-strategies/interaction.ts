@@ -6,8 +6,10 @@ import type { IslandStrategy, PlumixIslandElement } from "../island-element.js";
 import { isJsonArray } from "../../json.js";
 import { publishIslandStrategy } from "../island-global.js";
 
-// `pointerenter` doesn't bubble, so it can trigger hydration but is never
-// replayed.
+/**
+ * `pointerenter` doesn't bubble, so it can trigger hydration but is never
+ * replayed.
+ */
 const SUPPORTED_EVENTS = [
   "pointerenter",
   "focusin",
@@ -96,8 +98,10 @@ function onIntent(event: Event): void {
   void reg.loadFn().then(() => replay(marker, reg));
 }
 
-// Nearest registered, not-yet-hydrated island that is `target` or an
-// ancestor of it and listens for this event type.
+/**
+ * Nearest registered, not-yet-hydrated island that is `target` or an
+ * ancestor of it and listens for this event type.
+ */
 function nearestMarker(
   target: Element,
   type: string,
@@ -133,8 +137,10 @@ function replay(marker: PlumixIslandElement, reg: Registration): void {
   });
 }
 
-// Positional path from the marker down to the target: child-index at each
-// level, top-down.
+/**
+ * Positional path from the marker down to the target: child-index at each
+ * level, top-down.
+ */
 function encodePath(marker: Element, target: Element): readonly number[] {
   const path: number[] = [];
   let node: Element = target;
@@ -158,8 +164,10 @@ function resolvePath(marker: Element, path: readonly number[]): Element {
   return node;
 }
 
-// The event is a valid init dict for its own constructor, which keeps subtype
-// data like keyboard modifiers.
+/**
+ * The event is a valid init dict for its own constructor, which keeps subtype
+ * data like keyboard modifiers.
+ */
 type EventConstructor = new (type: string, init: Event) => Event;
 
 function reconstruct(event: Event): Event {

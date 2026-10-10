@@ -30,8 +30,10 @@ export interface AnswerLine {
   readonly row?: number;
 }
 
-// Local guards: importing core's would pull the engine into the admin
-// bundle, and a bare `Array.isArray` narrows a `JsonValue` to `any[]`.
+/**
+ * Local guards: importing core's would pull the engine into the admin
+ * bundle, and a bare `Array.isArray` narrows a `JsonValue` to `any[]`.
+ */
 function isRecord(
   value: JsonValue,
 ): value is Readonly<Record<string, JsonValue>> {

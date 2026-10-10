@@ -133,7 +133,7 @@ export interface CapabilityNamespaces {
   readonly entryTypes: ReadonlyMap<string, { readonly capabilityType: string }>;
 }
 
-// An unregistered type pools with nothing, so it is its own namespace.
+/** An unregistered type pools with nothing, so it is its own namespace. */
 function entryNamespaceOf(
   registry: CapabilityNamespaces,
   type: string,

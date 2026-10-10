@@ -13,9 +13,11 @@ export const collectionItemParamsSchema = v.object({
   id: v.string(),
 });
 
-// The output schemas ARE the public allowlist (default-deny): only these
-// fields can ever leave the surface, and they double as the documented
-// response shapes in the generated OpenAPI spec.
+/**
+ * The output schemas ARE the public allowlist (default-deny): only these
+ * fields can ever leave the surface, and they double as the documented
+ * response shapes in the generated OpenAPI spec.
+ */
 export const publicAuthorSchema = v.object({
   id: v.number(),
   name: v.nullable(v.string()),
@@ -32,8 +34,10 @@ export const publicTermSchema = v.object({
   slug: v.string(),
 });
 
-// One role's image. `width`/`height` are present only when the adapter knows
-// the size, matching `ResolvedImage`.
+/**
+ * One role's image. `width`/`height` are present only when the adapter knows
+ * the size, matching `ResolvedImage`.
+ */
 const publicImageSchema = v.object({
   url: v.string(),
   alt: v.nullable(v.string()),
@@ -104,8 +108,10 @@ export function readPagination(url: URL): Pagination {
   return { page, perPage, offset: (page - 1) * perPage };
 }
 
-// Non-integer or out-of-range values fall back / clamp rather than erroring —
-// pagination params are ergonomic hints, not a place to 400 a content read.
+/**
+ * Non-integer or out-of-range values fall back / clamp rather than erroring —
+ * pagination params are ergonomic hints, not a place to 400 a content read.
+ */
 function clampInt(
   raw: string | null,
   fallback: number,

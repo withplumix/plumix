@@ -107,9 +107,11 @@ const MARKS = [
   },
 ] as const;
 
-// The active-mark/-node flags the toolbar paints its pressed state from.
-// Derived via useEditorState so the toolbar re-renders on selection changes
-// without re-rendering on every keystroke.
+/**
+ * The active-mark/-node flags the toolbar paints its pressed state from.
+ * Derived via useEditorState so the toolbar re-renders on selection changes
+ * without re-rendering on every keystroke.
+ */
 interface ActiveState {
   readonly marks: Readonly<Record<string, boolean>>;
   readonly link: boolean;
@@ -120,9 +122,11 @@ interface ActiveState {
   readonly headingLevel: number | null;
 }
 
-// The trailing-node extension's empty paragraph is the editor's, not the
-// author's. The sync guard compares this same form, or every keystroke resets
-// the editor.
+/**
+ * The trailing-node extension's empty paragraph is the editor's, not the
+ * author's. The sync guard compares this same form, or every keystroke resets
+ * the editor.
+ */
 function storedHtml(editor: Editor): string {
   const html = editor.getHTML();
   return html !== EMPTY_PARAGRAPH && html.endsWith(EMPTY_PARAGRAPH)
@@ -373,8 +377,10 @@ function ToolbarToggle({
   );
 }
 
-// Convert the current block to a paragraph or a heading level. "paragraph"
-// and "h1"–"h6" are the values the format dropdown emits.
+/**
+ * Convert the current block to a paragraph or a heading level. "paragraph"
+ * and "h1"–"h6" are the values the format dropdown emits.
+ */
 function setFormat(editor: Editor | null, value: string): void {
   if (!editor) return;
   const chain = editor.chain().focus();

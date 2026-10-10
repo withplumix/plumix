@@ -4,8 +4,10 @@ import { defineBlock } from "../block-registry.js";
 import { CODE_THEME_CSS, highlightCode } from "./highlight.js";
 import { CODE_LANGUAGES, normalizeLanguage } from "./languages.js";
 
-// A combobox, not a select, so a stored alias or unknown language is kept and
-// normalized at render rather than dropped.
+/**
+ * A combobox, not a select, so a stored alias or unknown language is kept and
+ * normalized at render rather than dropped.
+ */
 const LANGUAGE_OPTIONS = CODE_LANGUAGES.map((lang) => ({
   label: lang.label,
   value: lang.id,

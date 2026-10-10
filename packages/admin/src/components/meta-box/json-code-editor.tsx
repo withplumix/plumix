@@ -2,8 +2,10 @@ import type { ReactNode } from "react";
 import { json } from "@codemirror/lang-json";
 import CodeMirror, { EditorView } from "@uiw/react-codemirror";
 
-// Reads the DOM rather than the theme context so it also renders correctly in
-// isolation.
+/**
+ * Reads the DOM rather than the theme context so it also renders correctly in
+ * isolation.
+ */
 function resolveColorScheme(): "dark" | "light" {
   if (
     typeof document !== "undefined" &&
@@ -20,7 +22,7 @@ function resolveColorScheme(): "dark" | "light" {
   return "light";
 }
 
-// Reports raw text; parsing stays with the caller.
+/** Reports raw text; parsing stays with the caller. */
 function JsonCodeEditor({
   value,
   onChange,

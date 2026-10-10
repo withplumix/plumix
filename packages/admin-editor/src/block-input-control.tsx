@@ -37,8 +37,10 @@ import { Switch } from "@plumix/admin-ui/switch";
 import { Textarea } from "@plumix/admin-ui/textarea";
 import { resolveLabel } from "@plumix/core/i18n";
 
-// Lazy so the Tiptap + ProseMirror engine (~230 KB) splits into its own chunk,
-// fetched only when a rich-text block is selected.
+/**
+ * Lazy so the Tiptap + ProseMirror engine (~230 KB) splits into its own chunk,
+ * fetched only when a rich-text block is selected.
+ */
 const RichTextField = lazy(() =>
   import("./rich-text-field.js").then((m) => ({ default: m.RichTextField })),
 );
@@ -84,8 +86,10 @@ interface BlockInputControlProps {
   readonly attrs?: JsonObject;
 }
 
-// Block-attr edits commit on onChange; the block path has no RHF touched-state,
-// so a plugin control's onBlur is inert here (kept to satisfy the shim shape).
+/**
+ * Block-attr edits commit on onChange; the block path has no RHF touched-state,
+ * so a plugin control's onBlur is inert here (kept to satisfy the shim shape).
+ */
 const noop = (): void => undefined;
 
 const FIELD_TESTID = (name: string): string => `block-input-${name}`;
@@ -263,8 +267,10 @@ export function BlockInputControl({
   );
 }
 
-// Mirrors the field's footprint so the panel doesn't jump when the editor
-// loads.
+/**
+ * Mirrors the field's footprint so the panel doesn't jump when the editor
+ * loads.
+ */
 function RichTextFieldSkeleton({
   testId,
 }: {
@@ -289,8 +295,10 @@ function RichTextFieldSkeleton({
   );
 }
 
-// Block attr values are primitives in practice; coerce only the primitive
-// kinds so a stray object can't stringify to "[object Object]".
+/**
+ * Block attr values are primitives in practice; coerce only the primitive
+ * kinds so a stray object can't stringify to "[object Object]".
+ */
 function asString(value: unknown): string {
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean") {
@@ -299,8 +307,10 @@ function asString(value: unknown): string {
   return "";
 }
 
-// Not a native `<datalist>`, which hides its options until you type. Unknown
-// values round-trip.
+/**
+ * Not a native `<datalist>`, which hides its options until you type. Unknown
+ * values round-trip.
+ */
 function ComboboxControl({
   id,
   testId,
@@ -409,14 +419,18 @@ function ComboboxControl({
   );
 }
 
-// DOM control values are strings; key options by their stringified value so
-// number/boolean options round-trip back to their typed form via decodeOption.
+/**
+ * DOM control values are strings; key options by their stringified value so
+ * number/boolean options round-trip back to their typed form via decodeOption.
+ */
 function optionKey(value: unknown): string {
   return asString(value);
 }
 
-// Radix Select throws on an empty-string item value, but an option's key can
-// legitimately be "".
+/**
+ * Radix Select throws on an empty-string item value, but an option's key can
+ * legitimately be "".
+ */
 const SELECT_EMPTY = "__plumix_empty__";
 function encodeSelectKey(value: unknown): string {
   // Unset maps to Radix's reserved "" so the trigger renders its placeholder.

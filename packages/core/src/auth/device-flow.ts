@@ -8,7 +8,7 @@ import { createApiToken } from "./api-tokens.js";
 import { hashToken } from "./tokens.js";
 
 const DEVICE_CODE_BYTES = 32;
-// Humans type this code, so 0/O/1/I are left out.
+/** Humans type this code, so 0/O/1/I are left out. */
 const USER_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const USER_CODE_LENGTH = 8;
 const DEVICE_CODE_TTL_SECONDS = 10 * 60;

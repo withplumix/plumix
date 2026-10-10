@@ -48,8 +48,10 @@ export async function serpPreview(
   };
 }
 
-// The saved `noindex` would contradict the live toggle the author is looking
-// at.
+/**
+ * The saved `noindex` would contradict the live toggle the author is looking
+ * at.
+ */
 function withoutOverride(page: EntryData): EntryData {
   const { [SEO_META_KEYS.noindex]: _noindex, ...meta } = page.entry.meta;
   return { ...page, entry: { ...page.entry, meta } };

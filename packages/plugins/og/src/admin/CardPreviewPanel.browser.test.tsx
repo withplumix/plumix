@@ -39,8 +39,10 @@ function mockRpc(...queued: readonly CardPreview[]): void {
   });
 }
 
-// `entryId` is what the field reads off the editor's route; `disabled` is what
-// a read-only form passes down.
+/**
+ * `entryId` is what the field reads off the editor's route; `disabled` is what
+ * a read-only form passes down.
+ */
 function renderPanel(entryId: number | null = 7, disabled = false): void {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },

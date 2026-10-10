@@ -45,7 +45,7 @@ export function assertCanEditEntry(
   });
 }
 
-// The capability a delete is refused for, or null when it is allowed.
+/** The capability a delete is refused for, or null when it is allowed. */
 function deleteDenial(ctx: EntryViewer, entry: EntryEditRow): string | null {
   const namespace = entryCapabilityNamespace(ctx.plugins, entry.type);
   const deleteCapability = namespacedEntryCapability(namespace, "delete");

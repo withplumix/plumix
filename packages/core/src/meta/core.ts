@@ -43,7 +43,9 @@ import {
   runFieldPipeline,
 } from "./field-pipeline.js";
 
-// 256 KiB fits any realistic plugin config while bounding adversarial payloads.
+/**
+ * 256 KiB fits any realistic plugin config while bounding adversarial payloads.
+ */
 const MAX_META_VALUE_BYTES = 256 * 1024;
 
 /**
@@ -61,7 +63,7 @@ export interface MetaPatch {
   readonly deletes: readonly string[];
 }
 
-// A public contract: admin UIs and plugin tests match on `data.reason`.
+/** A public contract: admin UIs and plugin tests match on `data.reason`. */
 type MetaSanitizationReason =
   "not_registered" | "invalid_value" | "value_too_large";
 
@@ -196,8 +198,10 @@ export interface MetaPatchTarget {
   readonly auth: { can(capability: Capability): boolean };
 }
 
-// The stored meta with the patch laid over it, as conditions will see it; a
-// null or undefined value is a deletion.
+/**
+ * The stored meta with the patch laid over it, as conditions will see it; a
+ * null or undefined value is a deletion.
+ */
 function overlayMetaPatch(
   target: MetaPatchTarget,
   input: MetaInput,
@@ -210,9 +214,11 @@ function overlayMetaPatch(
   return next;
 }
 
-// Conditions judge the settled value, as the publish gate does; a raw `"10"`
-// would disagree with it. A key that fails to settle stays raw for the real
-// pass.
+/**
+ * Conditions judge the settled value, as the publish gate does; a raw `"10"`
+ * would disagree with it. A key that fails to settle stays raw for the real
+ * pass.
+ */
 async function settleForConditions(
   findField: (key: string) => MetaBoxField | undefined,
   input: MetaInput,
@@ -234,9 +240,11 @@ async function settleForConditions(
   return settled;
 }
 
-// Settled to a fixpoint: a dropped write's discarded value must not hide a
-// field visible under what actually gets stored. A chain settles within one
-// round per key.
+/**
+ * Settled to a fixpoint: a dropped write's discarded value must not hide a
+ * field visible under what actually gets stored. A chain settles within one
+ * round per key.
+ */
 function hiddenPatchKeys(
   target: MetaPatchTarget,
   findField: (key: string) => MetaBoxField | undefined,
@@ -268,8 +276,10 @@ function hiddenPatchKeys(
   return new Set();
 }
 
-// A field a changed driver switches visible without being supplied is this
-// edit's to fix; a co-author's older drift elsewhere is not.
+/**
+ * A field a changed driver switches visible without being supplied is this
+ * edit's to fix; a co-author's older drift elsewhere is not.
+ */
 async function validateConditionDependents(
   target: MetaPatchTarget,
   input: MetaInput,
@@ -564,11 +574,15 @@ function upsertGroup(
 interface ReferenceGroup {
   readonly registered: { readonly adapter: LookupAdapter };
   readonly scope: unknown;
-  // De-duped ids across every field in this group — one query
-  // resolves them all regardless of how many fields reference them.
+  /**
+   * De-duped ids across every field in this group — one query
+   * resolves them all regardless of how many fields reference them.
+   */
   readonly ids: Set<string>;
-  // Per-contribution error attribution. Top-level and
-  // nested-in-repeater contributions share this shape.
+  /**
+   * Per-contribution error attribution. Top-level and
+   * nested-in-repeater contributions share this shape.
+   */
   readonly contributions: ReferenceContribution[];
 }
 
@@ -584,8 +598,10 @@ interface ReferenceContribution {
   };
 }
 
-// Above this the live-id fetch throws rather than silently truncating; only
-// reached when many fields share `(kind, scope)`.
+/**
+ * Above this the live-id fetch throws rather than silently truncating; only
+ * reached when many fields share `(kind, scope)`.
+ */
 const MAX_REFERENCE_GROUP_BATCH = 1000;
 
 /**
@@ -600,8 +616,10 @@ export function referenceGroupKey(target: ReferenceTarget): string {
   }
 }
 
-// Throwing beats truncation, which would either reject valid writes or hide
-// live targets.
+/**
+ * Throwing beats truncation, which would either reject valid writes or hide
+ * live targets.
+ */
 async function fetchLiveIds(
   ctx: AppContext,
   registered: { readonly adapter: LookupAdapter },
@@ -625,12 +643,16 @@ async function fetchLiveIds(
   return new Set(rows.map((row) => row.id));
 }
 
-// Bounds one query's row count and response size; a field may declare a
-// lower `max`.
+/**
+ * Bounds one query's row count and response size; a field may declare a
+ * lower `max`.
+ */
 const HARD_MULTI_REFERENCE_LIMIT = 100;
 
-// Storage is plain ids, but each slot still accepts the retired `{ id, ... }`
-// shape so legacy values self-heal on the next save.
+/**
+ * Storage is plain ids, but each slot still accepts the retired `{ id, ... }`
+ * shape so legacy values self-heal on the next save.
+ */
 function referenceIdsForValidation(
   key: string,
   value: unknown,
@@ -708,7 +730,7 @@ interface ReferenceOccurrence {
   readonly value: unknown;
 }
 
-// `.returns("id")` reads the bare stored id, so the walk skips it.
+/** `.returns("id")` reads the bare stored id, so the walk skips it. */
 function readsRawReferenceId(field: MetaBoxField | undefined): boolean {
   return field !== undefined && "returns" in field && field.returns === "id";
 }
@@ -722,10 +744,12 @@ function* referenceOccurrences(
   }
 }
 
-// Recurse a single field's decoded value, yielding reference occurrences
-// with their full path. Nested field definitions come straight off the
-// composite field (`subFields` / `fields`) — `findField` only resolves
-// top-level keys.
+/**
+ * Recurse a single field's decoded value, yielding reference occurrences
+ * with their full path. Nested field definitions come straight off the
+ * composite field (`subFields` / `fields`) — `findField` only resolves
+ * top-level keys.
+ */
 function* fieldOccurrences(
   path: readonly PathSegment[],
   field: MetaBoxField | undefined,
@@ -781,8 +805,10 @@ export async function resolveMetaReferences(
   return bag ?? decoded;
 }
 
-// Adapters without `hydrate` yield only the live-id set. Either way, an id
-// absent from the result is an orphan.
+/**
+ * Adapters without `hydrate` yield only the live-id set. Either way, an id
+ * absent from the result is an orphan.
+ */
 type GroupResolution =
   | {
       readonly kind: "hydrated";
@@ -920,16 +946,20 @@ export async function hydrateReferenceGroup(
   return resolution.kind === "hydrated" ? resolution.byId : new Map();
 }
 
-// `ctx.memo` is shared by every derived context, and `hydrate` clamps rows by
-// `user.id`, so the asker belongs in the key. Scopes are sorted because they
-// narrow as a set.
+/**
+ * `ctx.memo` is shared by every derived context, and `hydrate` clamps rows by
+ * `user.id`, so the asker belongs in the key. Scopes are sorted because they
+ * narrow as a set.
+ */
 function principalKey(ctx: AppContext): string {
   const scopes = ctx.tokenScopes === null ? null : [...ctx.tokenScopes].sort();
   return JSON.stringify([ctx.user?.id ?? null, scopes]);
 }
 
-// Chunked rather than thrown: a response-level group can legitimately exceed
-// one query's id limit, and a read-path throw would kill the render.
+/**
+ * Chunked rather than thrown: a response-level group can legitimately exceed
+ * one query's id limit, and a read-path throw would kill the render.
+ */
 async function resolveGroup(
   ctx: AppContext,
   adapter: LookupAdapter,
@@ -991,8 +1021,10 @@ async function resolveGroup(
   return { kind: "ids", liveIds };
 }
 
-// Write one candidate's resolved value into its slot — the leaf object
-// key of a container reached by walking the candidate's path.
+/**
+ * Write one candidate's resolved value into its slot — the leaf object
+ * key of a container reached by walking the candidate's path.
+ */
 function applyResolutionToSlot(
   slot: ResolvedMeta,
   key: string,
@@ -1018,9 +1050,11 @@ function applyResolutionToSlot(
   if (!resolution.liveIds.has(singleId)) slot[key] = null;
 }
 
-// Containers cloned by an earlier candidate are reused, so sibling references
-// land in one clone. Null when a hand-edited or migrated bag doesn't match the
-// declared structure.
+/**
+ * Containers cloned by an earlier candidate are reused, so sibling references
+ * land in one clone. Null when a hand-edited or migrated bag doesn't match the
+ * declared structure.
+ */
 function takeWritableSlot(
   outBag: ResolvedMeta,
   decoded: ResolvedMeta,
@@ -1055,8 +1089,10 @@ function takeWritableSlot(
 
 type MetaContainer = unknown[] | ResolvedMeta;
 
-// A leaf or missing key reads as `undefined`: the storage shape no longer
-// matches the declared structure.
+/**
+ * A leaf or missing key reads as `undefined`: the storage shape no longer
+ * matches the declared structure.
+ */
 function readContainer(
   container: unknown,
   seg: PathSegment,
@@ -1087,8 +1123,10 @@ function writeSegment(
   if (isPlainObject(container)) container[seg] = value;
 }
 
-// Shallow clone an array or plain object; null for any other shape (the
-// path expected a container but the stored value isn't one).
+/**
+ * Shallow clone an array or plain object; null for any other shape (the
+ * path expected a container but the stored value isn't one).
+ */
 function cloneContainer(value: unknown): MetaContainer | null {
   // `Array.isArray` widens to `any[]`; cast before spread so the clone
   // stays `unknown[]` rather than leaking `any` into the walk.
@@ -1101,8 +1139,10 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-// Mirrors the apply step's storage-shape guards so no work is enqueued that
-// would be skipped.
+/**
+ * Mirrors the apply step's storage-shape guards so no work is enqueued that
+ * would be skipped.
+ */
 function referenceCandidateIds(
   target: ReferenceTarget,
   value: unknown,
@@ -1172,8 +1212,10 @@ function decodeBag(scope: MetaScope, raw: JsonObject): ResolvedMeta {
   return out;
 }
 
-// Wider than stored JSON: `.returns("date")` yields a `Date`, and a repeater
-// row or group yields a decoded bag.
+/**
+ * Wider than stored JSON: `.returns("date")` yields a `Date`, and a repeater
+ * row or group yields a decoded bag.
+ */
 type DecodedValue =
   JsonValue | Date | DecodedRow | readonly DecodedRow[] | undefined;
 
@@ -1307,9 +1349,11 @@ function isTemporalField(field: MetaBoxField): field is TemporalMetaBoxField {
   );
 }
 
-// Anchored to UTC so wall-clock components survive any server/browser
-// timezone pair; the inverse of `formatTemporalValue`. An unparseable value
-// reads as no value, since the read type is `Date`.
+/**
+ * Anchored to UTC so wall-clock components survive any server/browser
+ * timezone pair; the inverse of `formatTemporalValue`. An unparseable value
+ * reads as no value, since the read type is `Date`.
+ */
 function projectTemporalDate(
   inputType: TemporalInputType,
   value: unknown,
@@ -1418,8 +1462,10 @@ export async function loadMeta(
 
 // --- internals below ---------------------------------------------------
 
-// Non-RPC callers such as hook listeners bypass the RPC schema that rejects
-// `"` and `\`.
+/**
+ * Non-RPC callers such as hook listeners bypass the RPC schema that rejects
+ * `"` and `\`.
+ */
 function requireMetaJsonPath(key: string): string {
   const path = metaJsonPath(key);
   if (path === null) throw MetaReferenceError.metaKeyForbiddenChars(key);

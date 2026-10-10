@@ -2,10 +2,12 @@ import { parseCron } from "plumix/runtime";
 import { describe, expect, test } from "vitest";
 
 const MINUTE_MS = 60_000;
-// Two years of minutes: every expression below fires well inside one.
+/** Two years of minutes: every expression below fires well inside one. */
 const HORIZON_MINUTES = 2 * 366 * 24 * 60;
 
-/** Core's next fire time strictly after `from`, found by walking its matcher. */
+/**
+ * Core's next fire time strictly after `from`, found by walking its matcher.
+ */
 function coreNext(expression: string, from: Date): Date {
   const schedule = parseCron(expression);
   const start = Math.floor(from.getTime() / MINUTE_MS) + 1;
@@ -16,8 +18,10 @@ function coreNext(expression: string, from: Date): Date {
   throw new Error(`"${expression}" never fires within the horizon`);
 }
 
-// Starts that straddle the boundaries a cron engine can get wrong: a leap
-// day, a month end, a year end, and a mid-week afternoon.
+/**
+ * Starts that straddle the boundaries a cron engine can get wrong: a leap
+ * day, a month end, a year end, and a mid-week afternoon.
+ */
 const STARTS = [
   "2026-01-01T00:00:00Z",
   "2026-09-29T13:37:00Z",
@@ -25,8 +29,10 @@ const STARTS = [
   "2028-02-28T12:00:00Z",
 ];
 
-// Ten successive firings from each start, so a rule that only goes wrong on
-// the second or later occurrence still shows.
+/**
+ * Ten successive firings from each start, so a rule that only goes wrong on
+ * the second or later occurrence still shows.
+ */
 const FIRINGS = 10;
 
 function firings(
@@ -47,7 +53,7 @@ function firings(
 const bunNext = (expression: string) => (from: Date) =>
   Bun.cron.parse(expression, from, { tz: "UTC" }) ?? new Date(Number.NaN);
 
-// Every construct core's dialect accepts.
+/** Every construct core's dialect accepts. */
 const AGREES = [
   // Wildcards and plain values
   "* * * * *",

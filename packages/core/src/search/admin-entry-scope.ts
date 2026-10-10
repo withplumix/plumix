@@ -9,8 +9,10 @@ import {
   readableEntryRows,
 } from "../entries/visibility.js";
 
-// Where the Content groups start. Terms take 100.., users later still, so
-// there is room for one group per entry type between them.
+/**
+ * Where the Content groups start. Terms take 100.., users later still, so
+ * there is room for one group per entry type between them.
+ */
 const GROUP_PRIORITY_BASE = 10;
 
 /** A palette group one entry type would fill, before it is filled. */

@@ -26,14 +26,16 @@ import { Button } from "./button.js";
 import { GripVertical, X } from "./icons.js";
 import { cn } from "./utils.js";
 
-// Where an item sits, for a drag announcement: `position` is 1-based.
-// Announcements read positions, never item ids, which are opaque to an author.
+/**
+ * Where an item sits, for a drag announcement: `position` is 1-based.
+ * Announcements read positions, never item ids, which are opaque to an author.
+ */
 export interface SortablePosition {
   readonly position: number;
   readonly total: number;
 }
 
-// What a screen reader hears while an item is dragged with the keyboard.
+/** What a screen reader hears while an item is dragged with the keyboard. */
 export interface SortableAnnouncements {
   readonly instructions: string;
   readonly pickedUp: (at: SortablePosition) => string;
@@ -49,9 +51,11 @@ interface SortableListProps<T extends { readonly id: string }> {
   readonly renderItem: (item: T) => ReactNode;
   readonly disabled?: boolean;
   readonly testId?: string;
-  // Accessible names for the icon-only handle and remove buttons, and the
-  // drag announcements; admin-ui carries no catalog, so the caller passes
-  // them already localized.
+  /**
+   * Accessible names for the icon-only handle and remove buttons, and the
+   * drag announcements; admin-ui carries no catalog, so the caller passes
+   * them already localized.
+   */
   readonly reorderLabel: string;
   readonly removeLabel: string;
   readonly announcements: SortableAnnouncements;

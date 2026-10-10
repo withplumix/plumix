@@ -28,7 +28,7 @@ import {
 
 const SRC = import.meta.dirname;
 
-// Posix, relative to `src/` — the form the table's keys are written in.
+/** Posix, relative to `src/` — the form the table's keys are written in. */
 function relative(file: string): string {
   return path.relative(SRC, file).split(path.sep).join("/");
 }
@@ -55,8 +55,10 @@ describe("every production file has a layer", () => {
   });
 });
 
-// Every production file's resolved imports, keyed and pointing by path under
-// `src/`. Read once: the rules below walk it many times.
+/**
+ * Every production file's resolved imports, keyed and pointing by path under
+ * `src/`. Read once: the rules below walk it many times.
+ */
 type Graph = ReadonlyMap<string, readonly ImportEdge[]>;
 
 const GRAPH: Graph = new Map(
@@ -91,7 +93,9 @@ interface Found<V extends Violation = Violation> {
   readonly detail: string;
 }
 
-// One line per violation, so a failure reads as the edge or cycle to remove.
+/**
+ * One line per violation, so a failure reads as the edge or cycle to remove.
+ */
 function keyOf(violation: Violation): string {
   return violation.rule === "cycle"
     ? `cycle in ${violation.layer}: ${violation.members.join(", ")}`
@@ -105,8 +109,10 @@ function described(found: readonly Found[]): readonly string[] {
   );
 }
 
-// Static and dynamic edges both ship: a lazy chunk is still in the bundle.
-// A whole-statement `import type` is erased and ships nothing.
+/**
+ * Static and dynamic edges both ship: a lazy chunk is still in the bundle.
+ * A whole-statement `import type` is erased and ships nothing.
+ */
 function runtimeImports(graph: Graph, file: string): readonly string[] {
   return (graph.get(file) ?? [])
     .filter((edge) => edge.kind !== "typeOnly")
@@ -128,8 +134,10 @@ function environmentViolations(
   });
 }
 
-// A top-level folder, or a root file on its own, or the unit it belongs to
-// in its layer.
+/**
+ * A top-level folder, or a root file on its own, or the unit it belongs to
+ * in its layer.
+ */
 function subsystemOf(file: string): string {
   const [head, ...rest] = file.split("/");
   const subsystem = rest.length === 0 || head === undefined ? file : head;
@@ -141,8 +149,10 @@ function subsystemOf(file: string): string {
   return unit?.[0] ?? subsystem;
 }
 
-// Every edge kind counts here, type-only included: a cycle erased from the
-// emitted code is still two subsystems that can't be understood apart.
+/**
+ * Every edge kind counts here, type-only included: a cycle erased from the
+ * emitted code is still two subsystems that can't be understood apart.
+ */
 function cycleViolations(graph: Graph): readonly Found<CycleViolation>[] {
   return LAYERS.flatMap((layer) => {
     // subsystem → subsystem it imports → one file edge that does it
@@ -186,7 +196,7 @@ const EXPORTS = new Map(
   ]),
 );
 
-// `./dist/foo.js` in the `exports` map is `src/foo.ts` or `src/foo.tsx`.
+/** `./dist/foo.js` in the `exports` map is `src/foo.ts` or `src/foo.tsx`. */
 function sourceOfSubpath(subpath: string): string {
   const target = EXPORTS.get(subpath);
   if (target === undefined) throw new Error(`no export ${subpath}`);
@@ -315,8 +325,10 @@ describe("the self-hosted request rules stay Worker-compatible", () => {
   });
 });
 
-// Parse as core's own config does, minus the project service: a probe exists
-// only as text, and direction needs no type information.
+/**
+ * Parse as core's own config does, minus the project service: a probe exists
+ * only as text, and direction needs no type information.
+ */
 const PARSER = baseConfig.find((block) => block.languageOptions?.parser)
   ?.languageOptions?.parser;
 
@@ -333,7 +345,7 @@ function directionLinter(config = layerDirection()): ESLint {
 
 const DIRECTION = directionLinter();
 
-// The plugin names both files' categories, which here are their layers.
+/** The plugin names both files' categories, which here are their layers. */
 const DENIED =
   /^Dependencies to file of category "(\w+)" are not allowed in file of category "(\w+)"/;
 

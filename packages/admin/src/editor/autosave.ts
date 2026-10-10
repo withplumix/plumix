@@ -8,8 +8,10 @@ import { ORPCError } from "@orpc/client";
  */
 export const AUTOSAVE_DEBOUNCE_MS = 1000;
 
-// A stale optimistic-concurrency token: the live row moved since we read it.
-// Both editor routes recover by refetching the row and retrying.
+/**
+ * A stale optimistic-concurrency token: the live row moved since we read it.
+ * Both editor routes recover by refetching the row and retrying.
+ */
 export function isStaleConflictError(err: unknown): boolean {
   if (!(err instanceof ORPCError)) return false;
   if (err.code !== "CONFLICT") return false;
@@ -17,7 +19,7 @@ export function isStaleConflictError(err: unknown): boolean {
   return data.reason === "stale_expected_updated_at";
 }
 
-// Best-effort: null when the refetch fails, and the next edit retries.
+/** Best-effort: null when the refetch fails, and the next edit retries. */
 async function freshLiveUpdatedAt(
   err: unknown,
   queryClient: QueryClient,

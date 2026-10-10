@@ -6,7 +6,7 @@ import type {
 } from "./telemetry-snapshot.js";
 import { isJsonObject } from "./json.js";
 
-// The primitive subset of OTLP/JSON `AnyValue` the exporter emits.
+/** The primitive subset of OTLP/JSON `AnyValue` the exporter emits. */
 interface OtlpValue {
   stringValue?: string;
   boolValue?: boolean;
@@ -72,13 +72,15 @@ function randomHex(byteLength: number): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-// A string because nanoseconds exceed the Number range.
+/** A string because nanoseconds exceed the Number range. */
 function unixNano(ms: number): string {
   return (BigInt(Math.round(ms)) * 1_000_000n).toString();
 }
 
-// Nested structures are JSON-stringified rather than projected onto
-// `kvlistValue`.
+/**
+ * Nested structures are JSON-stringified rather than projected onto
+ * `kvlistValue`.
+ */
 function toAnyValue(value: JsonValue): OtlpValue {
   if (typeof value === "string") return { stringValue: value };
   if (typeof value === "boolean") return { boolValue: value };
@@ -161,8 +163,10 @@ function recordEvents(records: TelemetrySnapshot["records"]): OtlpEvent[] {
   );
 }
 
-// An invalid inbound header (malformed, all-zero ids, reserved version) is
-// ignored and a fresh trace id is minted.
+/**
+ * An invalid inbound header (malformed, all-zero ids, reserved version) is
+ * ignored and a fresh trace id is minted.
+ */
 const TRACEPARENT_PATTERN =
   /^([0-9a-f]{2})-([0-9a-f]{32})-([0-9a-f]{16})-[0-9a-f]{2}$/;
 
@@ -177,8 +181,10 @@ function parseTraceparent(
   return { traceId, parentSpanId };
 }
 
-// No route abstraction reaches the snapshot; the raw path is the best label
-// a CMS has. Deliberate semconv deviation (`{method} {route}` is preferred).
+/**
+ * No route abstraction reaches the snapshot; the raw path is the best label
+ * a CMS has. Deliberate semconv deviation (`{method} {route}` is preferred).
+ */
 function rootSpanName(method: string, url: string): string {
   try {
     return `${method} ${new URL(url).pathname}`;
@@ -187,8 +193,10 @@ function rootSpanName(method: string, url: string): string {
   }
 }
 
-// The envelope url keeps its query string and the exporter owns scrubbing
-// query-borne secrets (see TelemetrySnapshot) — drop the query wholesale.
+/**
+ * The envelope url keeps its query string and the exporter owns scrubbing
+ * query-borne secrets (see TelemetrySnapshot) — drop the query wholesale.
+ */
 function scrubUrl(url: string): string {
   try {
     const parsed = new URL(url);
@@ -198,8 +206,10 @@ function scrubUrl(url: string): string {
   }
 }
 
-// What the exporter reads off the request's context: the inbound
-// `traceparent`, and where to report a failed export.
+/**
+ * What the exporter reads off the request's context: the inbound
+ * `traceparent`, and where to report a failed export.
+ */
 interface ExportContext {
   readonly request: Request;
   readonly logger: { error(message: string): void };

@@ -6,8 +6,10 @@ import { messages } from "@plumix/plugin-forms/locales/en";
 
 import { SOURCE_LOCALE } from "./contract.js";
 
-// Compiled, not raw `message`: Lingui only installs its ICU parser outside
-// production, and both worker and island build as production.
+/**
+ * Compiled, not raw `message`: Lingui only installs its ICU parser outside
+ * production, and both worker and island build as production.
+ */
 const source = setupI18n({
   locale: SOURCE_LOCALE,
   // `plumix i18n compile --dts` emits a deliberately loose `.d.mts` stub
@@ -110,8 +112,10 @@ const INVALID_URL: MessageDescriptor = {
 export const urlMessage = (label: string): string =>
   formatMessage(INVALID_URL, { label });
 
-// One message for all bounds: some languages inflect the whole clause on
-// which bound is present.
+/**
+ * One message for all bounds: some languages inflect the whole clause on
+ * which bound is present.
+ */
 const OUT_OF_RANGE: MessageDescriptor = {
   id: "plugin.forms.error.range",
   message:
@@ -168,8 +172,10 @@ const ROW_LEGEND: MessageDescriptor = {
 export const rowLegend = (label: string, index: number): string =>
   formatMessage(ROW_LEGEND, { label, number: index + 1 });
 
-// Authored whole, not composed from `ROW_LEGEND`, so a translator can order
-// the pieces.
+/**
+ * Authored whole, not composed from `ROW_LEGEND`, so a translator can order
+ * the pieces.
+ */
 const REMOVE_ROW_ARIA: MessageDescriptor = {
   id: "plugin.forms.repeater.removeRow",
   message: "Remove {label} {number}",

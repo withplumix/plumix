@@ -7,9 +7,11 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, test } from "plumix/test/playwright";
 
-// Seeded by globalSetup, once per suite run. The rig rewinds the database
-// once per attempt rather than between tests, so each test moves its own
-// fixture and leaves the other alone.
+/**
+ * Seeded by globalSetup, once per suite run. The rig rewinds the database
+ * once per attempt rather than between tests, so each test moves its own
+ * fixture and leaves the other alone.
+ */
 interface Fixtures {
   readonly answeredId: number;
   readonly retiredId: number;

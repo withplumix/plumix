@@ -8,18 +8,24 @@ import { useQueryClient } from "@tanstack/react-query";
 interface UseRevisionsTriggerInput {
   readonly entryId: number;
   readonly enabled: boolean;
-  // Trigger presentation, forwarded to the sheet. `text` (default) for the
-  // plain-form editor; `icon` for the visual editor's icon header.
+  /**
+   * Trigger presentation, forwarded to the sheet. `text` (default) for the
+   * plain-form editor; `icon` for the visual editor's icon header.
+   */
   readonly triggerVariant?: "text" | "icon";
   readonly onPreview: (revisionId: number) => void;
 }
 
 export interface RevisionsTrigger {
-  // The header affordance; null when the entry type has no revisions, so
-  // callers can drop it straight into the layout's slot.
+  /**
+   * The header affordance; null when the entry type has no revisions, so
+   * callers can drop it straight into the layout's slot.
+   */
   readonly trigger: ReactNode;
-  // Opens the same sheet without its trigger being clicked (the editor
-  // command palette). Undefined when the entry type has no revisions.
+  /**
+   * Opens the same sheet without its trigger being clicked (the editor
+   * command palette). Undefined when the entry type has no revisions.
+   */
   readonly openRevisions?: () => void;
 }
 

@@ -22,10 +22,12 @@ export {
   withCapabilities,
 } from "@plumix/core/test/playwright";
 
-// Defined oRPC 409 envelope with a `reason` discriminator — the shape
-// every CONFLICT surface in the admin maps to friendly copy. Core's
-// `rpcErrorBody` omits `defined`/`status`, which `isORPCErrorJson`
-// needs to decode a typed rejection.
+/**
+ * Defined oRPC 409 envelope with a `reason` discriminator — the shape
+ * every CONFLICT surface in the admin maps to friendly copy. Core's
+ * `rpcErrorBody` omits `defined`/`status`, which `isORPCErrorJson`
+ * needs to decode a typed rejection.
+ */
 export function rpcConflictBody(reason: string): string {
   return JSON.stringify({
     json: {
@@ -39,8 +41,10 @@ export function rpcConflictBody(reason: string): string {
   });
 }
 
-// Manifest fixture exercising capability gating across both metabox and
-// field levels. Two levels of gating in one fixture.
+/**
+ * Manifest fixture exercising capability gating across both metabox and
+ * field levels. Two levels of gating in one fixture.
+ */
 export const MANIFEST_WITH_CAPABILITY_GATES: PlumixManifest = {
   ...emptyManifest(),
   entryTypes: [
@@ -97,10 +101,12 @@ export const MANIFEST_WITH_CAPABILITY_GATES: PlumixManifest = {
   ],
 };
 
-// Non-editor entry-type fixture — supports lacks "editor", so the admin
-// route renders the plain-form (stacked Cards) layout instead of the
-// editor surface. Carries one entry metabox with two fields so the e2e
-// can exercise the Card/section + MetaBoxField pipeline.
+/**
+ * Non-editor entry-type fixture — supports lacks "editor", so the admin
+ * route renders the plain-form (stacked Cards) layout instead of the
+ * editor surface. Carries one entry metabox with two fields so the e2e
+ * can exercise the Card/section + MetaBoxField pipeline.
+ */
 export const MANIFEST_WITH_PLAIN_FORM_TYPE: PlumixManifest = {
   ...emptyManifest(),
   entryTypes: [
@@ -142,9 +148,11 @@ export const MANIFEST_WITH_PLAIN_FORM_TYPE: PlumixManifest = {
   ],
 };
 
-// Default post-type manifest fixture — one entry, slug `entries`, shared
-// by specs that just need "something to list" without caring about the
-// specifics.
+/**
+ * Default post-type manifest fixture — one entry, slug `entries`, shared
+ * by specs that just need "something to list" without caring about the
+ * specifics.
+ */
 export const MANIFEST_WITH_POST: PlumixManifest = {
   ...emptyManifest(),
   entryTypes: [
@@ -161,10 +169,12 @@ export const MANIFEST_WITH_POST: PlumixManifest = {
   ],
 };
 
-// Full editor fixture: an autosave-capable post type plus two registered
-// patterns — one starter-eligible via `target`, one not. Drives the patterns
-// section and the starter modal, neither of which renders without manifest
-// patterns.
+/**
+ * Full editor fixture: an autosave-capable post type plus two registered
+ * patterns — one starter-eligible via `target`, one not. Drives the patterns
+ * section and the starter modal, neither of which renders without manifest
+ * patterns.
+ */
 export const MANIFEST_WITH_EDITOR_PATTERNS: PlumixManifest = {
   ...emptyManifest(),
   entryTypes: [
@@ -216,9 +226,11 @@ export const MANIFEST_WITH_EDITOR_PATTERNS: PlumixManifest = {
   ],
 };
 
-// Manifest with two termTaxonomies — one hierarchical (category), one flat
-// (tag) — shared by the taxonomy e2e specs so both code paths can be
-// exercised from a single fixture.
+/**
+ * Manifest with two termTaxonomies — one hierarchical (category), one flat
+ * (tag) — shared by the taxonomy e2e specs so both code paths can be
+ * exercised from a single fixture.
+ */
 export const MANIFEST_WITH_TAXONOMIES: PlumixManifest = {
   ...emptyManifest(),
   entryTypes: [
@@ -268,11 +280,13 @@ export const MANIFEST_WITH_TAXONOMIES: PlumixManifest = {
   ],
 };
 
-// Manifest exercising the full settings hierarchy: one page (group),
-// two groups composed on one page. Covers the plugin-author contract
-// end-to-end — plugins register groups + a page that lists them, and
-// the admin renders one shadcn `<Card>` per group with its own save
-// button.
+/**
+ * Manifest exercising the full settings hierarchy: one page (group),
+ * two groups composed on one page. Covers the plugin-author contract
+ * end-to-end — plugins register groups + a page that lists them, and
+ * the admin renders one shadcn `<Card>` per group with its own save
+ * button.
+ */
 export const MANIFEST_WITH_SETTINGS: PlumixManifest = {
   ...emptyManifest(),
   settingsGroups: [
@@ -322,10 +336,12 @@ export const MANIFEST_WITH_SETTINGS: PlumixManifest = {
   ],
 };
 
-// Admin's e2e suite needs a bigger capability set than `core`'s baseline
-// `AUTHED_ADMIN` because the taxonomy fixtures depend on per-taxonomy
-// caps the real server would derive at registration time. Layer them
-// on once and let specs use this fixture by default.
+/**
+ * Admin's e2e suite needs a bigger capability set than `core`'s baseline
+ * `AUTHED_ADMIN` because the taxonomy fixtures depend on per-taxonomy
+ * caps the real server would derive at registration time. Layer them
+ * on once and let specs use this fixture by default.
+ */
 export const AUTHED_ADMIN = withCapabilities(
   BASE_AUTHED_ADMIN,
   "term:category:read",

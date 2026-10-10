@@ -21,9 +21,11 @@ const CATALOGS: Readonly<Record<BarLocale, CompiledCatalog>> = {
   "zh-CN": zhCnMessages,
 };
 
-// Source descriptors — `plumix i18n verify` matches these against the
-// po catalogs; `message` is the English source and the runtime
-// fallback for locales missing an entry.
+/**
+ * Source descriptors — `plumix i18n verify` matches these against the
+ * po catalogs; `message` is the English source and the runtime
+ * fallback for locales missing an entry.
+ */
 const M = {
   siteFallback: { id: "core.adminBar.siteFallback", message: "Site" },
   newGroup: { id: "core.adminBar.newGroup", message: "+ New" },

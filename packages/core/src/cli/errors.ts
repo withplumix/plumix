@@ -1,5 +1,7 @@
-// The codes core throws itself. Every other package declares its own union on
-// a subclass, so core carries no command's or runtime's vocabulary.
+/**
+ * The codes core throws itself. Every other package declares its own union on
+ * a subclass, so core carries no command's or runtime's vocabulary.
+ */
 type CoreCliErrorCode = "spawn_failed" | "spawn_nonzero_exit";
 
 export class CliError<Code extends string = string> extends Error {

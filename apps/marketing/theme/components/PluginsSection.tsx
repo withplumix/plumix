@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import { SectionHeading } from "./SectionHeading";
 
-// Descriptions follow each plugin's package.json.
+/** Descriptions follow each plugin's package.json. */
 const PLUGINS = [
   ["blog", "Posts, categories and tags"],
   ["pages", "Hierarchical static pages"],

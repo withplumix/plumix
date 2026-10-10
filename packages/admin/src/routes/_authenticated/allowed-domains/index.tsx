@@ -52,8 +52,10 @@ const USER_ROLES = [
   "admin",
 ] as const satisfies readonly UserRole[];
 
-// Descriptors that need runtime indirection — used outside JSX (string
-// props, aria labels with placeholders, state setters).
+/**
+ * Descriptors that need runtime indirection — used outside JSX (string
+ * props, aria labels with placeholders, state setters).
+ */
 const M = {
   domainPlaceholder: defineMessage({
     id: "allowedDomains.add.placeholder",
@@ -74,8 +76,10 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-// Mirrors the server schema in
-// packages/core/src/rpc/procedures/auth/allowed-domains/schemas.ts.
+/**
+ * Mirrors the server schema in
+ * packages/core/src/rpc/procedures/auth/allowed-domains/schemas.ts.
+ */
 const DOMAIN_REGEX =
   /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 

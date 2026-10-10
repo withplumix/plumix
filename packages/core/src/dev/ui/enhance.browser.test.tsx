@@ -30,8 +30,10 @@ const frames: DevErrorFrame[] = [
   },
 ];
 
-// A fake resolver: returns a three-line excerpt whose highlighted middle line
-// echoes the requested file:line, so a test can prove which frame drove it.
+/**
+ * A fake resolver: returns a three-line excerpt whose highlighted middle line
+ * echoes the requested file:line, so a test can prove which frame drove it.
+ */
 function fakeFetch(overrides?: { ok?: boolean }) {
   return vi.fn((url: string) => {
     const parsed = new URL(url, "http://localhost");
@@ -62,8 +64,10 @@ function mount(): void {
 const SOURCE = '[data-testid="plumix-dev-error-source"]';
 const FRAME = '[data-testid="plumix-dev-error-frame"]';
 
-// The excerpt lands a promise chain after the frame is selected — poll for the
-// text it renders rather than betting a fixed delay covers the round trip.
+/**
+ * The excerpt lands a promise chain after the frame is selected — poll for the
+ * text it renders rather than betting a fixed delay covers the round trip.
+ */
 function waitForSource(contains: string): Promise<void> {
   return vi.waitFor(
     () =>

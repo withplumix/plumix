@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import { createRequestMemo } from "../../context/memo.js";
 import { declaredPageTags, declarePageTags } from "./page-tags.js";
 
-// The accumulator keys off `ctx.memo`, so each fake context needs its own
-// memo to stand in for a distinct request.
+/**
+ * The accumulator keys off `ctx.memo`, so each fake context needs its own
+ * memo to stand in for a distinct request.
+ */
 function fakeCtx() {
   return { memo: createRequestMemo() };
 }

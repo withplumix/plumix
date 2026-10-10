@@ -14,7 +14,7 @@ import { indexEntries, indexTerms } from "./index-writer.js";
  */
 export const SOURCES_PER_INVOCATION = 200;
 
-// Entries first: they are the bulk, so progress means something early.
+/** Entries first: they are the bulk, so progress means something early. */
 const KIND_ORDER: readonly SearchSourceType[] = ["entry", "term"];
 
 function kindAfter(kind: SearchSourceType): SearchSourceType | undefined {
@@ -129,8 +129,10 @@ async function walk(
   return processed;
 }
 
-// A failed batch is retried per source, so one bad row does not take healthy
-// ones with it past the cursor.
+/**
+ * A failed batch is retried per source, so one bad row does not take healthy
+ * ones with it past the cursor.
+ */
 async function projectBatch(
   ctx: AppContext,
   kind: SearchSourceType,

@@ -18,8 +18,10 @@ interface ComposeOptions {
   readonly ctx: CatalogContext;
 }
 
-// npm renames a published `.gitignore` to `.npmignore`, so the base ships
-// it dotless; the dot comes back when the list is written below.
+/**
+ * npm renames a published `.gitignore` to `.npmignore`, so the base ships
+ * it dotless; the dot comes back when the list is written below.
+ */
 const GITIGNORE_SOURCE = "gitignore";
 
 function tsconfig(runtimeTypes: readonly string[] = []) {

@@ -13,13 +13,17 @@ import { toCsv } from "./csv.js";
 import { toSubmissionDto } from "./dto.js";
 import { listAllSubmissions } from "./repository.js";
 
-// Deliberately untranslated: scripts and formulas key on stable column
-// names, which is also why `status` is the stored identifier.
+/**
+ * Deliberately untranslated: scripts and formulas key on stable column
+ * names, which is also why `status` is the stored identifier.
+ */
 const ENVELOPE = ["Received", "Form", "Number", "Status"] as const;
 const NOTE_COLUMN = "Note";
 
-// The two words a stored checkbox answer reads as, in the same English
-// the envelope is written in.
+/**
+ * The two words a stored checkbox answer reads as, in the same English
+ * the envelope is written in.
+ */
 const WORDS: AnswerWords = { yes: "Yes", no: "No" };
 
 /**
@@ -49,8 +53,10 @@ export function submissionsToJson(rows: readonly SubmissionDTO[]): string {
   return JSON.stringify(rows, null, 2);
 }
 
-// Keyed by what `?format=` is asked for, which is also the extension the
-// file is named with.
+/**
+ * Keyed by what `?format=` is asked for, which is also the extension the
+ * file is named with.
+ */
 const FORMATS = {
   csv: { contentType: "text/csv; charset=utf-8", write: submissionsToCsv },
   json: {
@@ -78,7 +84,7 @@ function badRequest(reason: string): Response {
 
 const UNSAFE_FILENAME = /[^a-zA-Z0-9-]/g;
 
-// The slug comes from a stored row, so it is sanitized for a filename.
+/** The slug comes from a stored row, so it is sanitized for a filename. */
 function exportFilename(filter: SubmissionFilter): string {
   const parts = ["submissions", filter.form, filter.status].filter(
     (part) => part !== undefined,
@@ -86,7 +92,7 @@ function exportFilename(filter: SubmissionFilter): string {
   return parts.map((part) => part.replaceAll(UNSAFE_FILENAME, "-")).join("-");
 }
 
-// A stray `?form=` means no filter, not an empty match.
+/** A stray `?form=` means no filter, not an empty match. */
 function queryValue(query: URLSearchParams, name: string): string | undefined {
   const value = query.get(name);
   return value === null || value === "" ? undefined : value;

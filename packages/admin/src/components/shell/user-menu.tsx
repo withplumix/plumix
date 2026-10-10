@@ -17,9 +17,11 @@ import {
 import { ChevronsUpDown, LogOut, Settings, User } from "@plumix/admin-ui/icons";
 import { SidebarMenuButton, useSidebar } from "@plumix/admin-ui/sidebar";
 
-// Only the identity fields are rendered — a narrow slice of the session
-// user so this component stays decoupled from `role` / `avatarUrl` churn,
-// while still type-linked to the auth.session contract.
+/**
+ * Only the identity fields are rendered — a narrow slice of the session
+ * user so this component stays decoupled from `role` / `avatarUrl` churn,
+ * while still type-linked to the auth.session contract.
+ */
 export type UserIdentity = Pick<AuthSessionUser, "email" | "name">;
 
 export function UserMenu({ user }: { user: UserIdentity }): ReactNode {

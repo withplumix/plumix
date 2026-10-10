@@ -41,8 +41,10 @@ function typesMap(...slugs: readonly string[]): BarRenderContext["entryTypes"] {
   );
 }
 
-// `can` as the role hierarchy answers it for `role`, over the capabilities
-// `types` derive.
+/**
+ * `can` as the role hierarchy answers it for `role`, over the capabilities
+ * `types` derive.
+ */
 function roleCan(
   role: UserRole,
   types: BarRenderContext["entryTypes"],

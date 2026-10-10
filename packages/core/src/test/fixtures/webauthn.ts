@@ -42,10 +42,12 @@ export function generatePasskeyKeyPair(): PasskeyKeyPair {
   return keyPairFromJwk(privateKey, publicKey.export({ format: "jwk" }));
 }
 
-// Pinned P-256 key whose Y coordinate starts with 0x00 — the ~1/256
-// case where a bigint round-trip silently drops the leading byte.
-// Deterministic regression anchor for SEC1 fixed-width encoding; the
-// random generator above only hits it probabilistically.
+/**
+ * Pinned P-256 key whose Y coordinate starts with 0x00 — the ~1/256
+ * case where a bigint round-trip silently drops the leading byte.
+ * Deterministic regression anchor for SEC1 fixed-width encoding; the
+ * random generator above only hits it probabilistically.
+ */
 const LEADING_ZERO_Y_JWK = {
   kty: "EC",
   crv: "P-256",
@@ -122,7 +124,7 @@ function u16(n: number): Uint8Array {
   return b;
 }
 
-// CBOR encoder — minimal, just what attestation needs.
+/** CBOR encoder — minimal, just what attestation needs. */
 const TYPE_UINT = 0;
 const TYPE_NEG_INT = 1;
 const TYPE_BYTES = 2;
@@ -181,7 +183,9 @@ interface BuildAuthenticatorDataInput {
   readonly rpId: string;
   readonly counter: number;
   readonly userVerified?: boolean;
-  /** Provide credentialId + COSE-encoded pubkey to set the AT (attested) flag. */
+  /**
+   * Provide credentialId + COSE-encoded pubkey to set the AT (attested) flag.
+   */
   readonly attested?: {
     readonly credentialId: Uint8Array;
     readonly cosePublicKey: Uint8Array;
@@ -323,7 +327,9 @@ export interface RegisterVerifyEnvelope {
   };
 }
 
-/** The register/verify request body a WebAuthn client would POST for `input`. */
+/**
+ * The register/verify request body a WebAuthn client would POST for `input`.
+ */
 export function buildRegisterVerifyEnvelope(
   input: BuildAttestationInput,
 ): RegisterVerifyEnvelope {

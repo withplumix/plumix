@@ -39,7 +39,9 @@ declare module "../hooks/types.js" {
  */
 export type ArchiveReader = Pick<AppContext, "plugins" | "hooks">;
 
-// Author and date archives narrow this, since all three are a stream of posts.
+/**
+ * Author and date archives narrow this, since all three are a stream of posts.
+ */
 function frontPageEntries(plugins: PluginRegistry): EntryQuery {
   return publicEntriesQuery(plugins).ofTypes(...listedEntryTypeNames(plugins));
 }
@@ -51,7 +53,7 @@ function entryTypeEntries(
   return publicEntriesQuery(plugins).ofTypes(entryType);
 }
 
-// The public-entries rule leaves out any tagged type that is not public.
+/** The public-entries rule leaves out any tagged type that is not public. */
 function termEntries(
   plugins: PluginRegistry,
   taxonomy: string,
@@ -151,8 +153,10 @@ export interface ArchiveBaseRoute {
   readonly pattern: string;
 }
 
-// The router's own table, compiled once per registry: the lookup has to agree
-// with what the dispatcher matched, down to which of two rival patterns wins.
+/**
+ * The router's own table, compiled once per registry: the lookup has to agree
+ * with what the dispatcher matched, down to which of two rival patterns wins.
+ */
 const routeMaps = new WeakMap<PluginRegistry, readonly RouteRule[]>();
 
 function routeMapOf(plugins: PluginRegistry): readonly RouteRule[] {
@@ -181,8 +185,10 @@ function isEntryArchive(
   );
 }
 
-// The front page's first page is the site root, which the dispatcher answers
-// when no rule matches rather than through a rule of its own.
+/**
+ * The front page's first page is the site root, which the dispatcher answers
+ * when no rule matches rather than through a rule of its own.
+ */
 const FRONT_PAGE_ROOT = "/";
 
 /**

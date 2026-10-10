@@ -5,7 +5,7 @@ import type { PaginationInfo } from "./Pagination";
 import { Pagination } from "./Pagination";
 import { PostCard } from "./PostCard";
 
-// Backs the front page, archive, taxonomy and search.
+/** Backs the front page, archive, taxonomy and search. */
 interface PostListProps {
   readonly entries: readonly ResolvedEntry[];
   readonly heading?: string;

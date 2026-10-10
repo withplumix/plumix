@@ -52,8 +52,10 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-// Display-state view of the value. Absent optionals render as empty
-// string / off so the inputs stay controlled.
+/**
+ * Display-state view of the value. Absent optionals render as empty
+ * string / off so the inputs stay controlled.
+ */
 interface LinkDraft {
   readonly url: string;
   readonly label: string;

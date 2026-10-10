@@ -26,8 +26,10 @@ export const metaCommand: CommandDefinition<PlumixApp> = {
   },
 };
 
-// Runs through the site's own handler so the database, field declarations and
-// CDN purges are the site's, not a reimplementation.
+/**
+ * Runs through the site's own handler so the database, field declarations and
+ * CDN purges are the site's, not a reimplementation.
+ */
 async function sweep(
   ctx: CommandContext<PlumixApp>,
   write: boolean,

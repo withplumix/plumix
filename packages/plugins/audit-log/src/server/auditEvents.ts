@@ -68,8 +68,10 @@ type ActorStrategy =
       ) => AuditLogActor;
     };
 
-// An action that hands its handler the firing context last — the only kind
-// the interpreter can record against, since that is where it reads it.
+/**
+ * An action that hands its handler the firing context last — the only kind
+ * the interpreter can record against, since that is where it reads it.
+ */
 type ContextualAction = {
   [K in ActionName]: ActionArgs<K> extends readonly [...unknown[], AppContext]
     ? K

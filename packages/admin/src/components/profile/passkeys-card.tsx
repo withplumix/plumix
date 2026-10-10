@@ -519,7 +519,7 @@ function formatDeleteError(err: unknown): MessageDescriptor {
   return describeRpcError(err, {}, M.deleteFallback);
 }
 
-// No `registration_closed`: signed-in users always pass that check.
+/** No `registration_closed`: signed-in users always pass that check. */
 function formatPasskeyEnrollError(err: unknown): MessageDescriptor {
   if (err instanceof PasskeyError) {
     switch (err.code) {

@@ -58,8 +58,10 @@ function resolveSource(sourceUrl: string, zonePrefix: string): string {
   return sourceUrl;
 }
 
-// Order matches Cloudflare's URL convention; missing keys are skipped so
-// `width=auto` (a real value) and `width=undefined` differ predictably.
+/**
+ * Order matches Cloudflare's URL convention; missing keys are skipped so
+ * `width=auto` (a real value) and `width=undefined` differ predictably.
+ */
 const TRANSFORM_KEYS = [
   "width",
   "height",

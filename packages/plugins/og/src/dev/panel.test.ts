@@ -45,7 +45,9 @@ afterEach(() => {
   else process.env.PLUMIX_DEV = original;
 });
 
-// The format a fresh install ships, and the only kind a card is advertised in.
+/**
+ * The format a fresh install ships, and the only kind a card is advertised in.
+ */
 const rasterRenderer = (): CardRenderer =>
   createFakeRenderer({ contentType: "image/png" }).renderer;
 

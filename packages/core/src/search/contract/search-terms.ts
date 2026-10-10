@@ -1,9 +1,11 @@
 // Mirrors WordPress's search parsing, minus its English-biased stopwords:
 // https://developer.wordpress.org/reference/classes/wp_query/parse_search/
 
-// Unicode-aware: matches NBSP, em-space, etc. Shared between the outer
-// skip and the inner token-end scan so a non-ASCII whitespace char can
-// never produce an empty token + stuck cursor (earlier regression).
+/**
+ * Unicode-aware: matches NBSP, em-space, etc. Shared between the outer
+ * skip and the inner token-end scan so a non-ASCII whitespace char can
+ * never produce an empty token + stuck cursor (earlier regression).
+ */
 const WHITESPACE = /\s/;
 
 export interface SearchTerm {

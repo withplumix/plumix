@@ -6,8 +6,10 @@ import { createPluginRegistry } from "../plugin/manifest.js";
 import { testConfig } from "../test/config.js";
 import { createAppContext } from "./app.js";
 
-// Stub Db typed as the default CoreSchema so AppContext doesn't
-// resolve to a non-default generic.
+/**
+ * Stub Db typed as the default CoreSchema so AppContext doesn't
+ * resolve to a non-default generic.
+ */
 const stubDb = {} as Db;
 
 describe("AppContext.defer", () => {

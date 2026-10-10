@@ -6,9 +6,11 @@ import type {
 } from "plumix/plugin";
 import { applyOverride, definePlugin, PLUGIN_I18N_SLOT } from "plumix/plugin";
 
-// Plain descriptor literals — plugin source runs server-side without
-// the Babel macro pipeline. Per-entity table mirrors `blog`'s shape;
-// `satisfies EntryTypeLabels` catches typo-renames at compile time.
+/**
+ * Plain descriptor literals — plugin source runs server-side without
+ * the Babel macro pipeline. Per-entity table mirrors `blog`'s shape;
+ * `satisfies EntryTypeLabels` catches typo-renames at compile time.
+ */
 const PAGE_LABELS = {
   singular: { id: "plugin.pages.page.singular", message: "Page" },
   plural: { id: "plugin.pages.page.plural", message: "Pages" },

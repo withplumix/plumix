@@ -163,7 +163,7 @@ interface NestedEntry {
   readonly parentId: number;
 }
 
-// `null` when the URL needs no ancestor walk.
+/** `null` when the URL needs no ancestor walk. */
 function nestedEntry(
   ctx: Pick<AppContext, "plugins">,
   entry: EntryPermalinkSource,
@@ -229,8 +229,10 @@ function shouldNestUnderTermParent(
   return parentId !== null && exposesHierarchicalUrls(taxonomy);
 }
 
-// Splitting on internal `/` keeps a slug stored as `a/b` from shadowing a
-// sibling route; traversal markers are dropped.
+/**
+ * Splitting on internal `/` keeps a slug stored as `a/b` from shadowing a
+ * sibling route; traversal markers are dropped.
+ */
 function joinSegments(
   segments: readonly (string | null | undefined)[],
 ): string {
@@ -251,8 +253,10 @@ interface ChainRow {
   readonly slug: string;
 }
 
-// `parent_id` has no DB cycle prevention; the cap truncates a cyclic chain
-// instead of hitting SQLite's 1000-deep limit as a 500.
+/**
+ * `parent_id` has no DB cycle prevention; the cap truncates a cyclic chain
+ * instead of hitting SQLite's 1000-deep limit as a 500.
+ */
 const MAX_ANCESTOR_DEPTH = 50;
 
 /**
@@ -276,7 +280,7 @@ export async function loadTermAncestorSlugs(
   return chains.get(leafParentId) ?? [];
 }
 
-// Root-first, including the id's own slug; one recursive CTE per D1 chunk.
+/** Root-first, including the id's own slug; one recursive CTE per D1 chunk. */
 async function loadAncestorChains(
   ctx: Pick<AppContext, "db">,
   table: typeof entries | typeof terms,

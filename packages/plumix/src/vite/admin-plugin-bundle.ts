@@ -39,23 +39,29 @@ interface AssembledBundle {
   readonly cssUrl?: string;
 }
 
-// Relative to this file, not `node_modules/plumix`, so it works where the
-// consuming package doesn't declare `plumix` itself.
+/**
+ * Relative to this file, not `node_modules/plumix`, so it works where the
+ * consuming package doesn't declare `plumix` itself.
+ */
 const ADMIN_SHIM_DIR = resolve(
   dirname(fileURLToPath(import.meta.url)),
   "../admin",
 );
 
-// Resolve the `@theme` mapping from the installed @plumix/admin (same
-// package.json lookup index.ts uses to stage the SPA) so the per-plugin
-// sidecar compiles against the exact admin the consumer runs.
+/**
+ * Resolve the `@theme` mapping from the installed @plumix/admin (same
+ * package.json lookup index.ts uses to stage the SPA) so the per-plugin
+ * sidecar compiles against the exact admin the consumer runs.
+ */
 const require = createRequire(import.meta.url);
 const ADMIN_THEME_CSS = resolve(
   dirname(require.resolve("@plumix/admin/package.json")),
   "dist/theme.css",
 );
-// Tailwind is plumix's dependency, not the site's; resolved from the site root
-// it is missing under `bun --bun`.
+/**
+ * Tailwind is plumix's dependency, not the site's; resolved from the site root
+ * it is missing under `bun --bun`.
+ */
 const TAILWIND_THEME_CSS = require.resolve("tailwindcss/theme.css");
 const TAILWIND_UTILITIES_CSS = require.resolve("tailwindcss/utilities.css");
 
@@ -144,8 +150,10 @@ export async function assemblePluginAdminBundle({
   };
 }
 
-// The `window.plumix` guard covers a host bundle that errored mid-init;
-// normally it is populated before plugin chunks run.
+/**
+ * The `window.plumix` guard covers a host bundle that errored mid-init;
+ * normally it is populated before plugin chunks run.
+ */
 function buildSynthesisedEntry({
   plugins,
   resolvedEntries,
@@ -217,8 +225,10 @@ function buildSynthesisedEntry({
   ].join("\n");
 }
 
-// Only the utilities plugin source uses; the host admin's `globals.css` already
-// ships preflight and the design tokens.
+/**
+ * Only the utilities plugin source uses; the host admin's `globals.css` already
+ * ships preflight and the design tokens.
+ */
 async function compilePluginCss({
   sourceDirs,
   outFile,
@@ -298,9 +308,11 @@ export async function resolveAndValidateEntry(
   return resolved;
 }
 
-// Each shared specifier resolves to an absolute file path under the
-// `../admin/` sibling — works for both the published tarball and the
-// workspace symlink without consulting node_modules.
+/**
+ * Each shared specifier resolves to an absolute file path under the
+ * `../admin/` sibling — works for both the published tarball and the
+ * workspace symlink without consulting node_modules.
+ */
 const SHIM_PATHS: Readonly<Record<string, string>> = Object.fromEntries(
   Object.keys(SHARED_ADMIN_RUNTIME_SPECIFIERS).map((spec) => {
     const slug = adminRuntimeShimSlug(spec as SharedAdminRuntimeSpecifier);

@@ -62,8 +62,10 @@ interface FormChrome {
 const serverRowIds = (count: number): readonly string[] =>
   Array.from({ length: count }, (_, index) => String(index));
 
-// A removed row's id must never be reused, or it takes a mounted row's
-// controls.
+/**
+ * A removed row's id must never be reused, or it takes a mounted row's
+ * controls.
+ */
 const withNewRow = (ids: readonly string[]): readonly string[] => [
   ...ids,
   String(ids.reduce((highest, id) => Math.max(highest, Number(id)), -1) + 1),
@@ -72,8 +74,10 @@ const withNewRow = (ids: readonly string[]): readonly string[] => [
 const statePathOf = (parent: string | undefined, key: string): string =>
   parent === undefined ? key : `${parent}.${key}`;
 
-// Hidden from assistive technology, which reads `required` already. A
-// glyph, not a tint, for colour-blind visitors.
+/**
+ * Hidden from assistive technology, which reads `required` already. A
+ * glyph, not a tint, for colour-blind visitors.
+ */
 function RequiredMark({
   field,
 }: {
@@ -212,8 +216,10 @@ function FormFieldset({
   );
 }
 
-// Each row's hidden marker is how the handler counts rows. Add and remove
-// need the island: the endpoint answers submissions, not row requests.
+/**
+ * Each row's hidden marker is how the handler counts rows. Add and remove
+ * need the island: the endpoint answers submissions, not row requests.
+ */
 function FormRepeater({
   field,
   value,
@@ -305,8 +311,10 @@ function FormRepeater({
   );
 }
 
-// Groups and rows recurse with their own values, matching the submit
-// handler's scoping.
+/**
+ * Groups and rows recurse with their own values, matching the submit
+ * handler's scoping.
+ */
 function FormFields({
   fields,
   values,
@@ -371,8 +379,10 @@ function FormFields({
   });
 }
 
-// Only on the submitting step: a token solved two steps early may expire
-// before it is posted.
+/**
+ * Only on the submitting step: a token solved two steps early may expire
+ * before it is posted.
+ */
 function FormCaptcha({
   siteKey,
   idBase,

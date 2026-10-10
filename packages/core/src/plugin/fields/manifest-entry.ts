@@ -96,8 +96,10 @@ export interface MetaBoxFieldManifestEntry {
   readonly visibleWhen?: MetaFieldCondition;
 }
 
-// A caller projecting fields without a registry resolves an entry reference
-// under the type's own name, as for a type nobody registered.
+/**
+ * A caller projecting fields without a registry resolves an entry reference
+ * under the type's own name, as for a type nobody registered.
+ */
 const NO_ENTRY_TYPES: CapabilityNamespaces = { entryTypes: new Map() };
 
 /**

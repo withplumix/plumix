@@ -5,11 +5,13 @@ import { users } from "../db/schema/users.js";
 import { userSearchCondition } from "../db/search-conditions.js";
 import { tokenizeSearchQuery } from "./contract/search-terms.js";
 
-// Group priority base, after entries (10..) and terms (100..).
+/** Group priority base, after entries (10..) and terms (100..). */
 const PRIORITY_BASE = 200;
 
-// Reuses the existing nav label so the group localizes via the admin
-// catalog with no new message.
+/**
+ * Reuses the existing nav label so the group localizes via the admin
+ * catalog with no new message.
+ */
 const USERS_LABEL = { id: "core.adminNav.item.users", message: "Users" };
 
 /**

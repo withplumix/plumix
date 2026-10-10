@@ -19,8 +19,10 @@ import { resolveListingPage } from "./page-data.js";
 import { forTermTaxonomy } from "./template-builders.js";
 import { resolveTemplate } from "./template-hierarchy.js";
 
-// Declared with `.returns("date")` so the term decode pass is visible in what
-// the archive carries: `meta` holds the `Date`, `storedMeta` the ISO string.
+/**
+ * Declared with `.returns("date")` so the term decode pass is visible in what
+ * the archive carries: `meta` holds the `Date`, `storedMeta` the ISO string.
+ */
 const _categoryDateFields = [date("launchedOn").returns("date")];
 declare module "../../plugin/fields/contributions.js" {
   interface TermMetaContributions {
@@ -56,8 +58,10 @@ const blog = definePlugin("blog", (ctx) => {
   });
 });
 
-// Gives a category term a `featured` role field, so the term archive has an
-// image to project.
+/**
+ * Gives a category term a `featured` role field, so the term archive has an
+ * image to project.
+ */
 const termArt = definePlugin("term-art", (ctx) => {
   ctx.registerLookupAdapter({ kind: "photo", adapter: photoLookupAdapter });
   ctx.registerTermMetaBox("categoryArt", {

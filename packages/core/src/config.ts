@@ -45,7 +45,7 @@ export type AnyPluginDescriptor = PluginDescriptor<any>;
 export type AnyDatabaseAdapter = DatabaseAdapter<any>;
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
-// The locale config with its override handed the request's user.
+/** The locale config with its override handed the request's user. */
 export type I18nInput = I18nInputFor<AuthenticatedUser>;
 export type LocaleResolverOverride =
   LocaleResolverOverrideFor<AuthenticatedUser>;
@@ -187,9 +187,11 @@ export interface PlumixConfigInput {
   readonly vite?: ViteUserConfig;
 }
 
-// The slots `plumix()` resolves. Every other slot reaches `PlumixConfig` as
-// the operator wrote it, so a new pass-through slot is declared only on the
-// input.
+/**
+ * The slots `plumix()` resolves. Every other slot reaches `PlumixConfig` as
+ * the operator wrote it, so a new pass-through slot is declared only on the
+ * input.
+ */
 interface ResolvedSlots {
   readonly theme: ThemeDescriptor;
   readonly plugins: readonly AnyPluginDescriptor[];

@@ -109,8 +109,10 @@ export const PLUGIN_I18N_SLOT: PluginI18nSlot = {
   catalogPath: "./locales",
 };
 
-// URL- and SQL-identifier-safe — plugin ids become path segments,
-// RPC namespace keys, and nav-group ids without quoting.
+/**
+ * URL- and SQL-identifier-safe — plugin ids become path segments,
+ * RPC namespace keys, and nav-group ids without quoting.
+ */
 export const PLUGIN_ID_RE = /^[a-z][a-z0-9_-]*$/;
 export const MAX_PLUGIN_ID_LENGTH = 64;
 
@@ -181,8 +183,10 @@ export function definePlugin<TConfig = undefined>(
   };
 }
 
-// Per-id dedup so a plugin defined twice (re-imports, HMR, repeat
-// build entries) only emits the warning once.
+/**
+ * Per-id dedup so a plugin defined twice (re-imports, HMR, repeat
+ * build entries) only emits the warning once.
+ */
 const warnedIds = new Set<string>();
 
 function warnIfSchemaWithoutSchemaModule(

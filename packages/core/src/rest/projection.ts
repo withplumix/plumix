@@ -71,8 +71,10 @@ export function projectEntry(
   };
 }
 
-// Grouped by taxonomy, keeping the resolver's `entry_term.sortOrder` order.
-// Terms in non-public taxonomies are dropped (default-deny).
+/**
+ * Grouped by taxonomy, keeping the resolver's `entry_term.sortOrder` order.
+ * Terms in non-public taxonomies are dropped (default-deny).
+ */
 function projectEntryTerms(
   registry: PluginRegistry,
   terms: ResolvedEntry["terms"],
@@ -87,7 +89,7 @@ function projectEntryTerms(
   return grouped;
 }
 
-// `?? null` only satisfies the optional type of `RoleImages`.
+/** `?? null` only satisfies the optional type of `RoleImages`. */
 function projectApiImages(
   registry: PluginRegistry,
   entry: ResolvedEntry,

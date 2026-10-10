@@ -1,7 +1,9 @@
 import { useSyncExternalStore } from "react";
 
-// Nothing external to subscribe to: the store never changes, and the two
-// snapshots differ only in *where* they are read.
+/**
+ * Nothing external to subscribe to: the store never changes, and the two
+ * snapshots differ only in *where* they are read.
+ */
 const NEVER_CHANGES = () => () => undefined;
 const onClient = () => true;
 const onServer = () => false;

@@ -22,8 +22,10 @@ export interface BlockTextSegment {
   readonly prose: boolean;
 }
 
-// Bump when the extraction algorithm changes; the roster hash can't detect
-// that.
+/**
+ * Bump when the extraction algorithm changes; the roster hash can't detect
+ * that.
+ */
 const EXTRACTOR_ALGORITHM = "1";
 
 const NAMED_ENTITIES: Readonly<Record<string, string>> = {
@@ -36,16 +38,20 @@ const NAMED_ENTITIES: Readonly<Record<string, string>> = {
 
 const MAX_CODE_POINT = 0x10ffff;
 
-// A code point past the Unicode ceiling throws out of `String.fromCodePoint`,
-// so an out-of-range entity is left as the literal it already is.
+/**
+ * A code point past the Unicode ceiling throws out of `String.fromCodePoint`,
+ * so an out-of-range entity is left as the literal it already is.
+ */
 function fromCodePoint(match: string, code: number): string {
   return code <= MAX_CODE_POINT ? String.fromCodePoint(code) : match;
 }
 
 const RAW_ELEMENT = /<(script|style)\b[^<>]*>/gi;
 
-// Drops bodies, not just tags, because `core/html` stores markup raw. A scan,
-// not a lazy regex, which would rescan to the end from every unclosed opener.
+/**
+ * Drops bodies, not just tags, because `core/html` stores markup raw. A scan,
+ * not a lazy regex, which would rescan to the end from every unclosed opener.
+ */
 function stripRawElements(html: string): string {
   const lower = html.toLowerCase();
   let out = "";
@@ -68,8 +74,10 @@ function stripRawElements(html: string): string {
   return out + html.slice(cursor);
 }
 
-// `&amp;` decodes last so `&amp;lt;` stays "&lt;". Not a sanitizer. `[^<>]`
-// rather than `[^>]` keeps stray `<` runs from triggering polynomial ReDoS.
+/**
+ * `&amp;` decodes last so `&amp;lt;` stays "&lt;". Not a sanitizer. `[^<>]`
+ * rather than `[^>]` keeps stray `<` runs from triggering polynomial ReDoS.
+ */
 function htmlToText(html: string): string {
   return stripRawElements(html)
     .replace(/<[^<>]*>/g, " ")

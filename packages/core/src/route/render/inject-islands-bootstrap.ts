@@ -3,8 +3,10 @@ import { resolveEntryUrl } from "./asset-manifest.js";
 
 const DEV_ENTRY_PATH = "/.plumix/islands-entry.ts";
 const RUNTIME_MANIFEST_KEY = ".plumix/islands-entry.ts";
-// Passed as a URL, not loaded, so a page whose islands never hydrate ships zero
-// React.
+/**
+ * Passed as a URL, not loaded, so a page whose islands never hydrate ships zero
+ * React.
+ */
 const DEV_RENDERER_PATH = "/.plumix/islands-renderer-entry.ts";
 const RENDERER_MANIFEST_KEY = ".plumix/islands-renderer-entry.ts";
 

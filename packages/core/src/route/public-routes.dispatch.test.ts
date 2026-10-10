@@ -15,8 +15,10 @@ import { tagCdnEntry } from "../cdn/route-tags.js";
 import { definePlugin } from "../plugin/define.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 
-// A plugin that owns a path at the site root, the way `@plumix/plugin-feeds`
-// owns `/feed` and `@plumix/plugin-seo` owns `/robots.txt` and the sitemap.
+/**
+ * A plugin that owns a path at the site root, the way `@plumix/plugin-feeds`
+ * owns `/feed` and `@plumix/plugin-seo` owns `/robots.txt` and the sitemap.
+ */
 function owner(path: string, body = "owned", pluginId = "feeds") {
   return definePlugin(pluginId, (ctx) => {
     ctx.registerPublicRoute({

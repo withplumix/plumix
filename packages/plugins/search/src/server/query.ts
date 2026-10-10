@@ -59,7 +59,9 @@ export interface SearchOptions {
   readonly commonTermThreshold?: number;
 }
 
-// Core's archive page size, so page boundaries match whichever route answered.
+/**
+ * Core's archive page size, so page boundaries match whichever route answered.
+ */
 const DEFAULT_PER_PAGE = 20;
 
 const EMPTY: SearchResults = {
@@ -68,8 +70,10 @@ const EMPTY: SearchResults = {
   outOfRange: false,
 };
 
-// SQLite rejects an `OFFSET` past its integer range, which would be a 500 on
-// a URL any crawler can mint.
+/**
+ * SQLite rejects an `OFFSET` past its integer range, which would be a 500 on
+ * a URL any crawler can mint.
+ */
 function isAskablePage(page: number): boolean {
   return Number.isSafeInteger(page) && page >= 1;
 }
@@ -134,8 +138,10 @@ interface PageArgs extends ReadArgs {
   readonly threshold: number;
 }
 
-// Catches a missing index instead of checking first on every search. Repair is
-// deferred after the degraded read so its rebuild does not queue ahead.
+/**
+ * Catches a missing index instead of checking first on every search. Repair is
+ * deferred after the degraded read so its rebuild does not queue ahead.
+ */
 async function matchedRows(
   ctx: AppContext,
   args: PageArgs,
@@ -204,8 +210,10 @@ async function rankedRows(
   `);
 }
 
-// Driven off `entries` so the planner walks the published index and stops at
-// the limit (1.1 ms vs 64 ms at 50 000). Entries only: terms have no date.
+/**
+ * Driven off `entries` so the planner walks the published index and stops at
+ * the limit (1.1 ms vs 64 ms at 50 000). Entries only: terms have no date.
+ */
 async function recentRows(
   ctx: AppContext,
   { match, types, limit, offset }: ReadArgs,
@@ -257,7 +265,9 @@ async function recentRows(
   }));
 }
 
-// The index holds raw titles so an expanded `[year]` does not freeze into it.
+/**
+ * The index holds raw titles so an expanded `[year]` does not freeze into it.
+ */
 async function resolvedEntryTitles(
   ctx: AppContext,
   ids: readonly number[],

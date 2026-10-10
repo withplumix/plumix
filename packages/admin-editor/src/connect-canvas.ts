@@ -55,8 +55,10 @@ interface ConnectCanvasOptions {
   readonly config?: CanvasConfig;
 }
 
-// The iframe runtime usually boots after the parent mounts, so a single hello
-// would race; re-announce on this interval until the canvas acks.
+/**
+ * The iframe runtime usually boots after the parent mounts, so a single hello
+ * would race; re-announce on this interval until the canvas acks.
+ */
 const HANDSHAKE_RETRY_MS = 250;
 
 /**

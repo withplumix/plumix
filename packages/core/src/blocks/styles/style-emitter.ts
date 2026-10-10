@@ -31,9 +31,11 @@ export type VisibilityFlags = Readonly<{
   small?: boolean;
 }>;
 
-// Which token category a property reads from. `spacing` and `color` are the
-// two cross-property buckets; every other property reads its own same-named
-// scale (fontSize → fontSize, not the font-family bucket).
+/**
+ * Which token category a property reads from. `spacing` and `color` are the
+ * two cross-property buckets; every other property reads its own same-named
+ * scale (fontSize → fontSize, not the font-family bucket).
+ */
 const PROPERTY_TO_CATEGORY: Readonly<Record<string, TokenCategory>> = {
   padding: "spacing",
   paddingTop: "spacing",
@@ -189,9 +191,11 @@ export function emitBlockStyleCss(
   return parts.join(" ");
 }
 
-// A device's emitted declarations: its stored bucket, with `display: none`
-// forced on top when the device is hidden (visibility overrides layout, and the
-// spread keeps `display` last so it wins).
+/**
+ * A device's emitted declarations: its stored bucket, with `display: none`
+ * forced on top when the device is hidden (visibility overrides layout, and the
+ * spread keeps `display` last so it wins).
+ */
 function effectiveBucket(
   bucket: ResponsiveStyleBucket | undefined,
   hide: boolean | undefined,
@@ -223,8 +227,10 @@ function propertyToCss(property: string): string {
   return kebabCase(property);
 }
 
-// The CSS-var segment for a category is its kebab-cased key, so the var is
-// always `--plumix-<kebab(category)>-<slug>` — one rule, no per-category cases.
+/**
+ * The CSS-var segment for a category is its kebab-cased key, so the var is
+ * always `--plumix-<kebab(category)>-<slug>` — one rule, no per-category cases.
+ */
 function categoryToSegment(category: TokenCategory): string {
   return kebabCase(category);
 }

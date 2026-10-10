@@ -8,11 +8,13 @@ import {
   splitStatements,
 } from "./storage.js";
 
-// A DemoSqlExecutor backed by an in-memory libsql database — the same
-// engine core's test harness uses. Exercises the real SQL behavior
-// (tables created, seeded, dropped) without a workerd Durable Object;
-// the DO wrapper's `ctx.storage.sql` is proven end-to-end in the spine
-// slice (#1342) and e2e (#1347).
+/**
+ * A DemoSqlExecutor backed by an in-memory libsql database — the same
+ * engine core's test harness uses. Exercises the real SQL behavior
+ * (tables created, seeded, dropped) without a workerd Durable Object;
+ * the DO wrapper's `ctx.storage.sql` is proven end-to-end in the spine
+ * slice (#1342) and e2e (#1347).
+ */
 function memoryExecutor(): DemoSqlExecutor {
   const client = createClient({ url: ":memory:" });
   return {

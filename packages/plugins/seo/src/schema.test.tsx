@@ -27,8 +27,10 @@ const blogPlugin = definePlugin("blog", (ctx) => {
 
 const theme = defineTheme({ templates: [fallback(() => null)] });
 
-// The trail as a theme would draw it, so one render carries both the rendered
-// crumbs and the `BreadcrumbList` that claims them.
+/**
+ * The trail as a theme would draw it, so one render carries both the rendered
+ * crumbs and the `BreadcrumbList` that claims them.
+ */
 const trailTheme = defineTheme({
   templates: [
     fallback(({ data }: { readonly data: TemplateData }) => (

@@ -2,12 +2,16 @@ import type { CSSProperties, ReactNode } from "react";
 
 import { defineBlock } from "../block-registry.js";
 
-// A bare CSS length/percentage — the only shape a column width may take. Keeps
-// the value inert when spread into an inline `flex` style.
+/**
+ * A bare CSS length/percentage — the only shape a column width may take. Keeps
+ * the value inert when spread into an inline `flex` style.
+ */
 const SAFE_WIDTH = /^\d+(\.\d+)?(px|%|rem|em|vw|vh|ch)$/;
 
-// Shrink but not grow, so several fixed widths fit the row instead of
-// overflowing it. A bare number is a percent, matching Builder's column width.
+/**
+ * Shrink but not grow, so several fixed widths fit the row instead of
+ * overflowing it. A bare number is a percent, matching Builder's column width.
+ */
 function columnFlex(width: unknown): CSSProperties | undefined {
   if (typeof width !== "string") return undefined;
   const value = width.trim();

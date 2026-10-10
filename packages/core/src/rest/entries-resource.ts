@@ -24,13 +24,17 @@ export function entryNotFound(
   return undefined;
 }
 
-// Pagination params own these query keys; a taxonomy that happens to share a
-// name with one is skipped as a filter so `?page=2` can't double as a term
-// query.
+/**
+ * Pagination params own these query keys; a taxonomy that happens to share a
+ * name with one is skipped as a filter so `?page=2` can't double as a term
+ * query.
+ */
 const RESERVED_QUERY_PARAMS = new Set(["page", "per_page"]);
 
-// Map `?<taxonomy>=slug,slug` query params onto the service's term filter. Only
-// registered public taxonomies are honored, so any other query key is ignored.
+/**
+ * Map `?<taxonomy>=slug,slug` query params onto the service's term filter. Only
+ * registered public taxonomies are honored, so any other query key is ignored.
+ */
 function readTermFilters(
   context: AppContext,
   url: URL,
@@ -49,8 +53,10 @@ function readTermFilters(
   return Object.keys(filters).length > 0 ? filters : undefined;
 }
 
-// A paginated envelope of a public content type's entries: published ones,
-// plus whatever unpublished rows the caller's own token may see.
+/**
+ * A paginated envelope of a public content type's entries: published ones,
+ * plus whatever unpublished rows the caller's own token may see.
+ */
 export async function listEntriesEnvelope(
   context: AppContext,
   entryType: RegisteredEntryType,
@@ -82,7 +88,7 @@ export async function listEntriesEnvelope(
   return listEnvelope(data, { url, page, perPage, hasNext });
 }
 
-// One published entry. Unviewable or missing content is 404, never 403.
+/** One published entry. Unviewable or missing content is 404, never 403. */
 export async function getEntryItem(
   context: AppContext,
   entryType: RegisteredEntryType,

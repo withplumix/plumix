@@ -13,9 +13,11 @@ export interface WizardSelection {
   readonly authMethodIds: readonly string[];
 }
 
-// The wizard only ever chooses string ids (runtimes, plugins), so the
-// prompter is string-typed rather than generic — which also sidesteps
-// @clack/prompts' conditional Option typing.
+/**
+ * The wizard only ever chooses string ids (runtimes, plugins), so the
+ * prompter is string-typed rather than generic — which also sidesteps
+ * @clack/prompts' conditional Option typing.
+ */
 interface Choice {
   readonly value: string;
   readonly label: string;

@@ -16,8 +16,10 @@ interface SpecLookup {
   get(name: string): BlockSpec | undefined;
 }
 
-// Issues use the path grammar `blocks[i]` at the root and
-// `blocks[i].<slotKey>[j]` for nested slot children.
+/**
+ * Issues use the path grammar `blocks[i]` at the root and
+ * `blocks[i].<slotKey>[j]` for nested slot children.
+ */
 export function validateEntryContent(
   content: EntryContent,
   registry: SpecLookup,
@@ -47,8 +49,9 @@ function walk(
       });
       return;
     }
-    // The inverse of a slot's `allowedBlocks`: a parent-bound block may only sit
-    // under a listed parent (and never at the top level, where parentName null).
+    // The inverse of a slot's `allowedBlocks`: a parent-bound block may only
+    // sit under a listed parent (and never at the top level, where parentName
+    // null).
     if (
       spec.requiresParent &&
       (parentName === null || !spec.requiresParent.includes(parentName))

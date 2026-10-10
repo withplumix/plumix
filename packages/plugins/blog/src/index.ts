@@ -22,9 +22,11 @@ export type { RelatedPosts } from "./related.js";
 // Plain `{ id, message }` literals: server-side plugin code can't run the
 // Babel macro pipeline.
 
-// `withContext` isn't macro-visible, so the `msgctxt` lines in `locales/en.po`
-// are hand-authored. Action phrases omit context: the leading verb already
-// fixes the noun sense, per WP gettext convention.
+/**
+ * `withContext` isn't macro-visible, so the `msgctxt` lines in `locales/en.po`
+ * are hand-authored. Action phrases omit context: the leading verb already
+ * fixes the noun sense, per WP gettext convention.
+ */
 const POST_LABELS = {
   singular: withContext(
     { id: "plugin.blog.post.singular", message: "Post" },
@@ -118,9 +120,11 @@ const TAG_LABELS = {
   },
 } satisfies TermTaxonomyLabels;
 
-// Plural for the term-taxonomy root `label` field — `TermTaxonomyLabels`
-// doesn't include `plural` (taxonomies only carry singular on the
-// labels table), so the plural lives alongside the table.
+/**
+ * Plural for the term-taxonomy root `label` field — `TermTaxonomyLabels`
+ * doesn't include `plural` (taxonomies only carry singular on the
+ * labels table), so the plural lives alongside the table.
+ */
 const CATEGORY_PLURAL = withContext(
   { id: "plugin.blog.category.plural", message: "Categories" },
   "taxonomy general name",
@@ -130,9 +134,11 @@ const TAG_PLURAL = withContext(
   "taxonomy general name",
 );
 
-// Command-palette search aliases. `taxonomy` is deliberately one shared id
-// across both taxonomies — one English word, one translatable entry —
-// mirroring how core shares `keyword.email` across nav items.
+/**
+ * Command-palette search aliases. `taxonomy` is deliberately one shared id
+ * across both taxonomies — one English word, one translatable entry —
+ * mirroring how core shares `keyword.email` across nav items.
+ */
 const BLOG_KEYWORDS = {
   post: [
     { id: "plugin.blog.keyword.articles", message: "articles" },
@@ -191,8 +197,10 @@ const TAG_DEFAULTS: TermTaxonomyOptions = {
   keywords: BLOG_KEYWORDS.tag,
 };
 
-// Keyed by name so the roster that drives pruning is the same one that drives
-// registration — a third taxonomy is one entry, not three edits.
+/**
+ * Keyed by name so the roster that drives pruning is the same one that drives
+ * registration — a third taxonomy is one entry, not three edits.
+ */
 const TAXONOMY_DEFAULTS = {
   category: CATEGORY_DEFAULTS,
   tag: TAG_DEFAULTS,

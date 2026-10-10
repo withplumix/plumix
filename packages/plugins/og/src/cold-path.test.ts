@@ -3,24 +3,30 @@ import * as path from "node:path";
 import ts from "typescript";
 import { describe, expect, test } from "vitest";
 
-// The plugin's main entry — what a site pays for by installing it. The engine
-// is reachable only through the `/takumi` subpath, and the default renderer
-// reaches it through a dynamic import, so the wasm stays off this graph for
-// every install that never renders a card.
+/**
+ * The plugin's main entry — what a site pays for by installing it. The engine
+ * is reachable only through the `/takumi` subpath, and the default renderer
+ * reaches it through a dynamic import, so the wasm stays off this graph for
+ * every install that never renders a card.
+ */
 const ENTRY = "index.ts";
 const ENGINE = "takumi.ts";
 const ENGINE_LOADER = "./takumi.js";
-// The developer surfaces — preview route and debug-bar panel. Reached only
-// through the `PLUMIX_DEV` branch's dynamic import, so a build drops the
-// branch and the whole module with it.
+/**
+ * The developer surfaces — preview route and debug-bar panel. Reached only
+ * through the `PLUMIX_DEV` branch's dynamic import, so a build drops the
+ * branch and the whole module with it.
+ */
 const DEV = path.join("dev", "index.ts");
 const DEV_LOADER = "./dev/index.js";
 
 const SRC = import.meta.dirname;
 
-// Only a whole-statement `import type` is erased. Under `verbatimModuleSyntax`
-// an inline `import { type X }` keeps the statement and still loads the module,
-// so it counts as static here.
+/**
+ * Only a whole-statement `import type` is erased. Under `verbatimModuleSyntax`
+ * an inline `import { type X }` keeps the statement and still loads the module,
+ * so it counts as static here.
+ */
 function isErased(clause: ts.ImportClause | undefined): boolean {
   return clause?.phaseModifier === ts.SyntaxKind.TypeKeyword;
 }

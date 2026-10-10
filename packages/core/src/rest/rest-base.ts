@@ -4,8 +4,10 @@ import type {
   RegisteredTermTaxonomy,
 } from "../plugin/manifest.js";
 
-// Naive pluralization; an explicit per-type rest_base override is a later
-// concern.
+/**
+ * Naive pluralization; an explicit per-type rest_base override is a later
+ * concern.
+ */
 function pluralize(name: string): string {
   if (name.endsWith("y") && !/[aeiou]y$/.test(name)) {
     return `${name.slice(0, -1)}ies`;

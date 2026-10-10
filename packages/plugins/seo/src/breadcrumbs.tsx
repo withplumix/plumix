@@ -15,8 +15,10 @@ export interface BreadcrumbItem {
   readonly name: string;
 }
 
-// English, like core's own public-route strings; a theme wanting a translated
-// trail renders `breadcrumbTrail` itself.
+/**
+ * English, like core's own public-route strings; a theme wanting a translated
+ * trail renders `breadcrumbTrail` itself.
+ */
 const HOME = "Home";
 
 function absolute(ctx: AppContext, path: string): string {
@@ -35,7 +37,9 @@ function pad2(value: number): string {
   return String(value).padStart(2, "0");
 }
 
-// Spelled the way core titles a date archive, so the crumb reads like the page.
+/**
+ * Spelled the way core titles a date archive, so the crumb reads like the page.
+ */
 function dateName(
   year: number,
   month: number | null,
@@ -46,8 +50,10 @@ function dateName(
   return `${String(year)}-${pad2(month)}-${pad2(day)}`;
 }
 
-// Mirrors the router: a non-public type has no archive route even with
-// `hasArchive`, so `archiveSlugForEntryType` alone would link a dead URL.
+/**
+ * Mirrors the router: a non-public type has no archive route even with
+ * `hasArchive`, so `archiveSlugForEntryType` alone would link a dead URL.
+ */
 function archiveStep(ctx: AppContext, type: string): BreadcrumbItem | null {
   const registered = ctx.plugins.entryTypes.get(type);
   if (!registered?.isPublic) return null;
@@ -59,9 +65,11 @@ function archiveStep(ctx: AppContext, type: string): BreadcrumbItem | null {
   };
 }
 
-// A plugin archive's hierarchy is its owner's to describe via
-// `seo:schema:piece`. Ancestors aren't walked: that would cost a DB round-trip
-// per render.
+/**
+ * A plugin archive's hierarchy is its owner's to describe via
+ * `seo:schema:piece`. Ancestors aren't walked: that would cost a DB round-trip
+ * per render.
+ */
 function trailBelowHome(
   ctx: AppContext,
   data: TemplateData,

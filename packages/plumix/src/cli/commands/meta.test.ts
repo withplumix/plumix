@@ -19,8 +19,10 @@ const plugin = definePlugin("test-meta", (ctx) => {
   });
 });
 
-// A real app, database and handler: the command is only as good as the settle
-// it drives, so nothing between the two is stubbed.
+/**
+ * A real app, database and handler: the command is only as good as the settle
+ * it drives, so nothing between the two is stubbed.
+ */
 async function seeded(
   argv: readonly string[],
   database?: PlumixApp["config"]["database"],

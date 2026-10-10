@@ -3,10 +3,12 @@ import { fallback } from "../route/render/template-builders.js";
 import { renderTiptapContent } from "../route/render/tiptap.js";
 import { defineTheme } from "../theme.js";
 
-// Test-only theme that mirrors the structure of the dropped inline-HTML
-// fallback so resolver tests keep their `body.toContain("<h1>{title}</h1>")`
-// assertions. Authored as a single `fallback` template that branches on the
-// data shape — real themes narrow via targeted/tier rules.
+/**
+ * Test-only theme that mirrors the structure of the dropped inline-HTML
+ * fallback so resolver tests keep their `body.toContain("<h1>{title}</h1>")`
+ * assertions. Authored as a single `fallback` template that branches on the
+ * data shape — real themes narrow via targeted/tier rules.
+ */
 export const defaultTestTheme = defineTheme({
   templates: [
     fallback(({ data }) => {

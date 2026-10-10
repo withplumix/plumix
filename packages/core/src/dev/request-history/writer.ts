@@ -4,8 +4,10 @@ import { stripBasePath } from "../../base-path.js";
 import { isDebugRequestsPath } from "./path.js";
 import { projectDebugSnapshot } from "./snapshot.js";
 
-// Kept in step with the literal the dispatcher owns (`MCP_PATH`); duplicated
-// rather than imported for the same tree-shaking reason as DEBUG_REQUESTS_PATH.
+/**
+ * Kept in step with the literal the dispatcher owns (`MCP_PATH`); duplicated
+ * rather than imported for the same tree-shaking reason as DEBUG_REQUESTS_PATH.
+ */
 const MCP_PATH = "/_plumix/mcp";
 
 /**
@@ -31,7 +33,9 @@ export function debugHistoryConsumer(
   };
 }
 
-// The URL still carries any base-path mount; a path outside it is never ours.
+/**
+ * The URL still carries any base-path mount; a path outside it is never ours.
+ */
 function isRingReader(pathname: string, basePath: string): boolean {
   const stripped = stripBasePath(pathname, basePath);
   if (stripped === null) return false;

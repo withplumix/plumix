@@ -5,10 +5,12 @@ import {
   META_FIELD_KEY_RE,
 } from "../../../plugin/validation/meta-field-key.js";
 
-// Group / page identifiers stay tight — lowercase snake_case ASCII so
-// they're safe in URLs (`/settings/<page>`), testids, and future
-// storage backends that may quote differently. Matches the
-// registration-time `SETTINGS_NAME_RE` in `plugin/validation/identifiers.ts`.
+/**
+ * Group / page identifiers stay tight — lowercase snake_case ASCII so
+ * they're safe in URLs (`/settings/<page>`), testids, and future
+ * storage backends that may quote differently. Matches the
+ * registration-time `SETTINGS_NAME_RE` in `plugin/validation/identifiers.ts`.
+ */
 const settingsNameSchema = v.pipe(
   v.string(),
   v.trim(),
@@ -17,10 +19,12 @@ const settingsNameSchema = v.pipe(
   v.regex(/^[a-z][a-z0-9_]*$/, "must be lowercase ASCII [a-z][a-z0-9_]*"),
 );
 
-// Field-value keys share the permissive meta regex (`og:title`,
-// `my-field`, `2fa_enabled` all valid) so a plugin registering a
-// `MetaBoxField` via `registerSettingsGroup` isn't rejected at the
-// RPC boundary.
+/**
+ * Field-value keys share the permissive meta regex (`og:title`,
+ * `my-field`, `2fa_enabled` all valid) so a plugin registering a
+ * `MetaBoxField` via `registerSettingsGroup` isn't rejected at the
+ * RPC boundary.
+ */
 const settingsValueKeySchema = v.pipe(
   v.string(),
   v.trim(),
@@ -33,8 +37,10 @@ export const settingsGetInputSchema = v.object({
   group: settingsNameSchema,
 });
 
-// Caps keys per request against fan-out from callers iterating untrusted
-// input. 64 KiB per value matches the WP `wp_options` convention.
+/**
+ * Caps keys per request against fan-out from callers iterating untrusted
+ * input. 64 KiB per value matches the WP `wp_options` convention.
+ */
 const MAX_SETTINGS_VALUE_BYTES = 64 * 1024;
 const MAX_SETTINGS_KEYS_PER_UPSERT = 200;
 

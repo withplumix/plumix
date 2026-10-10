@@ -140,7 +140,9 @@ function ColumnsProbe({ id }: { readonly id: string }): ReactElement {
   return <output data-testid="columns-count">{String(count)}</output>;
 }
 
-// "rows:cellsInFirstRow" — lets a test watch both dimensions of the table grid.
+/**
+ * "rows:cellsInFirstRow" — lets a test watch both dimensions of the table grid.
+ */
 function TableProbe({ id }: { readonly id: string }): ReactElement {
   const summary = useEditorStore((s) => {
     const node = s.tree.find((b) => b.id === id);
@@ -396,7 +398,8 @@ describe("BlockInspector", () => {
     );
     const control = getByTestId("block-input-image") as HTMLInputElement;
     expect(control.value).toBe("7");
-    // The composite value round-trips through updateBlockAttrs into attrs.image.
+    // The composite value round-trips through updateBlockAttrs into
+    // attrs.image.
     fireEvent.change(control, { target: { value: "42" } });
     expect((getByTestId("block-input-image") as HTMLInputElement).value).toBe(
       "42",

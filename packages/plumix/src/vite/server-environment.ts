@@ -1,6 +1,6 @@
 import type { EnvironmentOptions } from "vite";
 
-// Compiled addons the bundler cannot carry; each is one a site may install.
+/** Compiled addons the bundler cannot carry; each is one a site may install. */
 const NATIVE_EXTERNALS: readonly string[] = [
   "sharp",
   "better-sqlite3",

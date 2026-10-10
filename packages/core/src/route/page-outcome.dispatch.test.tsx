@@ -36,7 +36,9 @@ declare module "../template.js" {
   }
 }
 
-// A CDN whose store records every write, so a test can assert nothing landed.
+/**
+ * A CDN whose store records every write, so a test can assert nothing landed.
+ */
 function recordingCdn() {
   const put = vi.fn<CdnStore["put"]>(() => Promise.resolve());
   const cdn: ConnectedCdn = {
@@ -46,8 +48,10 @@ function recordingCdn() {
   return { cdn, put };
 }
 
-// `/login` sends a signed-in visitor home, and `?to=` sends anyone elsewhere
-// with the status it names.
+/**
+ * `/login` sends a signed-in visitor home, and `?to=` sends anyone elsewhere
+ * with the status it names.
+ */
 const loginPlugin = definePlugin("login-page", (ctx) => {
   ctx.registerArchiveType("login-page", {
     routes: ["/login"],
@@ -179,8 +183,10 @@ describe("an archive resolve that throws an outcome", () => {
   });
 });
 
-// A share page: its block's loader looks the share up by the `share` attr,
-// and what it finds decides the page.
+/**
+ * A share page: its block's loader looks the share up by the `share` attr,
+ * and what it finds decides the page.
+ */
 const sharePlugin = definePlugin("share", (ctx) => {
   ctx.registerEntryType("post", {
     label: "Posts",
@@ -198,7 +204,8 @@ const sharePlugin = definePlugin("share", (ctx) => {
           if (attrs.share === "mixed") throw new Error("share store down");
           return Promise.resolve(`share ${String(attrs.share)}`);
         },
-        // Declared after `share`, so a block's first rejection is not its outcome.
+        // Declared after `share`, so a block's first rejection is not its
+        // outcome.
         audit: ({ attrs }: { readonly attrs: Record<string, unknown> }) => {
           if (attrs.share === "mixed") throw pageNotFound();
           return Promise.resolve("audited");

@@ -10,10 +10,12 @@ import {
 import { registerCoreSearchHandlers } from "../../../search/register-core-handlers.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
-// Spin up a harness with a `post` entry type + a `category` taxonomy +
-// the core search handlers wired on (the harness boots none). `post` caps
-// are core; the taxonomy's are derived at registration, so we populate
-// them the way `registerTermTaxonomy` would. Mirrors `createPlumixApp`.
+/**
+ * Spin up a harness with a `post` entry type + a `category` taxonomy +
+ * the core search handlers wired on (the harness boots none). `post` caps
+ * are core; the taxonomy's are derived at registration, so we populate
+ * them the way `registerTermTaxonomy` would. Mirrors `createPlumixApp`.
+ */
 async function searchHarness(
   authAs: "editor" | "author",
 ): Promise<AuthenticatedRpcHarness> {

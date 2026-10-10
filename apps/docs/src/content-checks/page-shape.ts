@@ -56,7 +56,7 @@ interface MandatorySection {
   readonly exempt?: (page: ContentFile, body: BodyShape) => boolean;
 }
 
-// Presence only, not order.
+/** Presence only, not order. */
 const MANDATORY_SECTIONS: readonly MandatorySection[] = [
   {
     heading: "Overview",
@@ -84,19 +84,25 @@ const MANDATORY_SECTIONS: readonly MandatorySection[] = [
   },
 ];
 
-// Splash cannot be claimed quietly to dodge the template: it drops the sidebar
-// and table of contents.
+/**
+ * Splash cannot be claimed quietly to dodge the template: it drops the sidebar
+ * and table of contents.
+ */
 function isDocumentationPage(page: ContentFile): boolean {
   return page.frontmatter.template !== "splash";
 }
 
-// A `## Overview` under an `<h1>` reading "Overview" would repeat the title.
+/**
+ * A `## Overview` under an `<h1>` reading "Overview" would repeat the title.
+ */
 function isSectionLanding(page: ContentFile): boolean {
   return page.frontmatter.title === "Overview";
 }
 
-// Items are not required to carry their own example: a pure variant may link to
-// its sibling's.
+/**
+ * Items are not required to carry their own example: a pure variant may link to
+ * its sibling's.
+ */
 function isRoster(page: ContentFile, body: BodyShape): boolean {
   return (
     page.frontmatter.roster === true &&

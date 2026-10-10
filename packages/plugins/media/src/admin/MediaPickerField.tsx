@@ -40,8 +40,10 @@ export function normalizeValue(raw: unknown): MediaValue | null {
   };
 }
 
-// Metabox fields store the plain id; block-attr fields keep the full
-// snapshot — the block renderer reads `url`/`alt` directly from attrs.
+/**
+ * Metabox fields store the plain id; block-attr fields keep the full
+ * snapshot — the block renderer reads `url`/`alt` directly from attrs.
+ */
 export function selectionWriteValue(
   selection: MediaSelection,
   inBlockEditor: boolean,
@@ -83,9 +85,11 @@ export function MediaPickerField({
 }: {
   readonly field: MetaBoxFieldManifestEntry;
   readonly rhf: {
-    // Not JSON: in a metabox this is RHF's own controller value, which can be a
-    // `Date` (see the temporal branch in admin's `meta-box-field`). Only the
-    // write half is provably JSON.
+    /**
+     * Not JSON: in a metabox this is RHF's own controller value, which can be a
+     * `Date` (see the temporal branch in admin's `meta-box-field`). Only the
+     * write half is provably JSON.
+     */
     readonly value: unknown;
     readonly onChange: (next: JsonValue) => void;
     readonly onBlur: () => void;
@@ -93,8 +97,10 @@ export function MediaPickerField({
   };
   readonly disabled: boolean;
   readonly testId: string;
-  // Present only in the block inspector (the block's sibling attributes);
-  // absent in metaboxes. Used purely to know which context we're rendering in.
+  /**
+   * Present only in the block inspector (the block's sibling attributes);
+   * absent in metaboxes. Used purely to know which context we're rendering in.
+   */
   readonly attrs?: JsonObject;
 }): ReactNode {
   const { i18n } = useLingui();
@@ -193,9 +199,11 @@ function MediaPreview({
   );
 }
 
-// Own component so the lookup query only mounts for id-shaped values.
-// While loading — or when the target is gone — fall back to the
-// "Selected (id N)" placeholder.
+/**
+ * Own component so the lookup query only mounts for id-shaped values.
+ * While loading — or when the target is gone — fall back to the
+ * "Selected (id N)" placeholder.
+ */
 function ResolvedPreview({
   id,
   testId,

@@ -8,16 +8,20 @@ import { commentFactory } from "../src/test/factories.js";
 const NOJS_SLUG = "comment-without-javascript";
 const NOJS_EMAIL = "grace@example.test";
 const LOAD_MORE_SLUG = "older-comments";
-// One root more than the default `rootsPerPage`, so exactly the oldest
-// is left for the load-more button to fetch.
+/**
+ * One root more than the default `rootsPerPage`, so exactly the oldest
+ * is left for the load-more button to fetch.
+ */
 const LOAD_MORE_ROOTS = 21;
 
-// All e2e seeding happens here — once, in the quiet window after the worker
-// boots but before any spec drives it. Seeding from a spec races the live
-// worker for the D1 write lock and re-collides on unique indexes when a
-// retry runs it again. The specs read the seeded ids back from
-// e2e-fixtures.json and never touch the database; a retry gets these rows
-// back from the rig's baseline restore, not from re-seeding.
+/**
+ * All e2e seeding happens here — once, in the quiet window after the worker
+ * boots but before any spec drives it. Seeding from a spec races the live
+ * worker for the D1 write lock and re-collides on unique indexes when a
+ * retry runs it again. The specs read the seeded ids back from
+ * e2e-fixtures.json and never touch the database; a retry gets these rows
+ * back from the rig's baseline restore, not from re-seeding.
+ */
 export default async function globalSetup(): Promise<void> {
   const db = await openPlaygroundDb({
     cwd: resolve(process.cwd(), "playground"),

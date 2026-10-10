@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 
-// One capturing group so `split` keeps tokens at odd indices.
+/** One capturing group so `split` keeps tokens at odd indices. */
 const TOKEN =
   /((?:"(?:\\.|[^"\\])*"(?:\s*:)?)|(?:\b(?:true|false|null)\b)|(?:-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?))/g;
 

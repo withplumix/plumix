@@ -51,8 +51,10 @@ export type CardArgs<TData extends TemplateData> = TemplateRenderArgs<TData> & {
  */
 export type CardMode = "auto" | "card";
 
-// Literal form only: a card has nothing to inherit, so `(prev) => next` would
-// have nothing to extend.
+/**
+ * Literal form only: a card has nothing to inherit, so `(prev) => next` would
+ * have nothing to extend.
+ */
 type CardDeps = {
   readonly [K in keyof TemplateDepRegistry]?: readonly TemplateDepKey<K>[];
 };
@@ -108,8 +110,10 @@ export interface CardSelector<TData extends TemplateData> {
   define(definition: CardDefinition<TData>): CardRule;
 }
 
-// The per-tier data type is erased on the way into the rule, the way the
-// template builders erase theirs, so `ogCards` stays a homogeneous array.
+/**
+ * The per-tier data type is erased on the way into the rule, the way the
+ * template builders erase theirs, so `ogCards` stays a homogeneous array.
+ */
 function selector<TData extends TemplateData>(
   where: TierMatchRule,
 ): CardSelector<TData> {

@@ -1411,16 +1411,20 @@ describe("settings group field keys", () => {
 
 type Variant = "first" | "second";
 
-// Which plugins a registrar refuses a second registration from: every plugin,
-// only the one that holds it ("plugin"), or only itself because the key is
-// derived from its own id ("self").
+/**
+ * Which plugins a registrar refuses a second registration from: every plugin,
+ * only the one that holds it ("plugin"), or only itself because the key is
+ * derived from its own id ("self").
+ */
 type DuplicateScope = "global" | "plugin" | "self";
 
 interface DuplicateCase {
   readonly kind: string;
   readonly identifier: string;
   readonly scope: DuplicateScope;
-  // Registers the row's key, carrying `variant` in a field `read` gets back.
+  /**
+   * Registers the row's key, carrying `variant` in a field `read` gets back.
+   */
   readonly register: (
     ctx: PluginSetupContext,
     variant: Variant,
@@ -1430,8 +1434,10 @@ interface DuplicateCase {
     registry: PluginRegistry,
     pluginId: string,
   ) => string | undefined | Promise<string | undefined>;
-  // Registers an identifier core already holds once the core seeders ran;
-  // `coreHolds` reads back that core still does.
+  /**
+   * Registers an identifier core already holds once the core seeders ran;
+   * `coreHolds` reads back that core still does.
+   */
   readonly core?: {
     readonly identifier: string;
     readonly register: (ctx: PluginSetupContext) => void;

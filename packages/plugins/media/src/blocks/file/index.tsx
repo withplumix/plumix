@@ -4,8 +4,10 @@ import { defineBlock } from "plumix/blocks";
 
 import { formatSize, normalizeFileMedia, sanitizeHref } from "./normalize.js";
 
-// Inline styles: the admin canvas iframe doesn't load the site stylesheet, so
-// without them the name and meta spans run together ("Download0 B").
+/**
+ * Inline styles: the admin canvas iframe doesn't load the site stylesheet, so
+ * without them the name and meta spans run together ("Download0 B").
+ */
 const CHIP: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",

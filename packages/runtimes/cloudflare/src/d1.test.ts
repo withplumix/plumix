@@ -72,8 +72,10 @@ function callScoped(
   return result;
 }
 
-// One local D1 through miniflare for the whole file: booting it costs about
-// two seconds, so each case wipes it instead of starting another.
+/**
+ * One local D1 through miniflare for the whole file: booting it costs about
+ * two seconds, so each case wipes it instead of starting another.
+ */
 let dir: string;
 let proxy: PlatformProxy<{ DB: D1Database }>;
 
@@ -102,9 +104,11 @@ afterAll(async () => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-// Triggers first, so no drop fires one; foreign keys deferred to the batch's
-// commit, by which point every table they point between is gone. D1's own
-// `_cf_` tables refuse a drop.
+/**
+ * Triggers first, so no drop fires one; foreign keys deferred to the batch's
+ * commit, by which point every table they point between is gone. D1's own
+ * `_cf_` tables refuse a drop.
+ */
 async function wipe(binding: D1Database): Promise<void> {
   const { results } = await binding
     .prepare(
@@ -149,8 +153,10 @@ describe("d1() adapter — session config", () => {
   });
 });
 
-// A consumer without `sample` votes yes, so the context carries a live collector
-// and the driver's spans land where the assertions read them.
+/**
+ * A consumer without `sample` votes yes, so the context carries a live
+ * collector and the driver's spans land where the assertions read them.
+ */
 async function sampledContext(): Promise<AppContext> {
   return createTestContext({
     db: await createTestDb(),

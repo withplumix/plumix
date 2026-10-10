@@ -15,12 +15,16 @@ import {
 // in the config, which the e2e project shares.
 assertCaptureEndpoint();
 
-// `ThemeProvider`'s storage key. Pinning it beats driving the theme menu, which
-// would put a menu in frame and a transition under the capture.
+/**
+ * `ThemeProvider`'s storage key. Pinning it beats driving the theme menu, which
+ * would put a menu in frame and a transition under the capture.
+ */
 const THEME_STORAGE_KEY = "plumix-admin-theme";
 
-// A frame that has not appeared by now is a moved test id, not a slow one — the
-// subject already waited for its own content.
+/**
+ * A frame that has not appeared by now is a moved test id, not a slow one — the
+ * subject already waited for its own content.
+ */
 const FRAME_TIMEOUT = 5_000;
 
 async function pinTheme(page: Page, theme: Theme): Promise<void> {

@@ -288,8 +288,10 @@ async function settleWithin(
   }
 }
 
-// Work outside a request — a scheduled run, `run` — reading `ctx.request.url`
-// sees an internal marker, not an inbound request.
+/**
+ * Work outside a request — a scheduled run, `run` — reading `ctx.request.url`
+ * sees an internal marker, not an inbound request.
+ */
 function syntheticRequest(
   app: PlumixApp,
   env: PlumixEnv,
@@ -329,8 +331,10 @@ interface RequestContextInput {
   readonly slots: BoundSlots;
 }
 
-// Shared with the dispatcher test harness, so a new context slot fails to
-// compile rather than reach only one.
+/**
+ * Shared with the dispatcher test harness, so a new context slot fails to
+ * compile rather than reach only one.
+ */
 type RequestContextArgs = {
   readonly [
     K in keyof Required<CreateAppContextArgs<CoreSchema>>
@@ -413,8 +417,10 @@ function buildAppContext({
   );
 }
 
-// `connect` owns its result, including `undefined` for "no delivery" — so it
-// must not `?? slot` back to the bare (identity-transform) object.
+/**
+ * `connect` owns its result, including `undefined` for "no delivery" — so it
+ * must not `?? slot` back to the bare (identity-transform) object.
+ */
 function connectImageDelivery(
   app: PlumixApp,
   env: PlumixEnv,
@@ -426,8 +432,10 @@ function connectImageDelivery(
     : slot;
 }
 
-// One error lists every missing binding, which beats a 500 surfacing from the
-// first query several hops deeper.
+/**
+ * One error lists every missing binding, which beats a 500 surfacing from the
+ * first query several hops deeper.
+ */
 function validateBindings(app: PlumixApp, env: PlumixEnv): void {
   const { database, storage, kv } = app.config;
   const required: string[] = [];

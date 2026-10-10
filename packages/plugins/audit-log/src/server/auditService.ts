@@ -9,8 +9,10 @@ export interface AuditService {
   record(ctx: AppContext, row: NewAuditLogRow): void;
 }
 
-// Mirrors core's 256 KiB meta cap, so one subscriber-built `properties`
-// envelope can't blow the SQLite column limit.
+/**
+ * Mirrors core's 256 KiB meta cap, so one subscriber-built `properties`
+ * envelope can't blow the SQLite column limit.
+ */
 const MAX_PROPERTIES_BYTES = 256 * 1024;
 
 type Buffers = WeakMap<AppContext["memo"], NewAuditLogRow[]>;

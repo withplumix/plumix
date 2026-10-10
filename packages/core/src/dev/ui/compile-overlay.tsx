@@ -14,8 +14,10 @@ import { DEV_ERROR_CSS } from "./tokens.js";
 
 const HOST_TAG = "plumix-compile-error-overlay";
 
-// The erroring module recompiled or the page is reloading, so the fix landed.
-// Vite clears its own overlay on `vite:beforeUpdate` for the same reason.
+/**
+ * The erroring module recompiled or the page is reloading, so the fix landed.
+ * Vite clears its own overlay on `vite:beforeUpdate` for the same reason.
+ */
 const CLEAR_EVENTS = [
   "vite:beforeUpdate",
   "vite:afterUpdate",
@@ -120,8 +122,10 @@ class CompileErrorOverlay {
   private host: HTMLElement | null = null;
   private root: Root | null = null;
   private torndown = false;
-  // Tracked so teardown removes the HMR subscriptions (Vite's `hot.off`) and a
-  // late event after teardown can't remount the overlay.
+  /**
+   * Tracked so teardown removes the HMR subscriptions (Vite's `hot.off`) and a
+   * late event after teardown can't remount the overlay.
+   */
   private readonly hmrHandlers: {
     readonly event: string;
     readonly handler: (payload?: { err?: ViteErrorPayload }) => void;
@@ -210,8 +214,10 @@ class CompileErrorOverlay {
   };
 }
 
-// `DevErrorBody`, not the full `DevErrorPage`, so the overlay never mounts
-// the server-only context sections.
+/**
+ * `DevErrorBody`, not the full `DevErrorPage`, so the overlay never mounts
+ * the server-only context sections.
+ */
 function CompileModal({
   info,
   onClose,

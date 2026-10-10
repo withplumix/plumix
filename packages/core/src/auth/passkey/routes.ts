@@ -52,15 +52,21 @@ const loginOptionsInputSchema = v.object({
   email: v.optional(emailSchema),
 });
 
-// Opaque invite token (generateToken's base64url output, ~32 chars).
-// We cap generously to protect the hashToken path from pathological inputs.
+/**
+ * Opaque invite token (generateToken's base64url output, ~32 chars).
+ * We cap generously to protect the hashToken path from pathological inputs.
+ */
 const inviteTokenSchema = v.pipe(v.string(), v.minLength(16), v.maxLength(256));
 
-// Real credential IDs are at most a few hundred bytes; the cap blocks
-// pathological payloads.
+/**
+ * Real credential IDs are at most a few hundred bytes; the cap blocks
+ * pathological payloads.
+ */
 const MAX_CREDENTIAL_ID_LENGTH = 1024;
-// Generous for interoperability, but stops oversized binary fields reaching the
-// oslo parsers.
+/**
+ * Generous for interoperability, but stops oversized binary fields reaching the
+ * oslo parsers.
+ */
 const MAX_WEBAUTHN_FIELD_LENGTH = 65_536;
 
 const base64urlField = (max: number) =>
@@ -402,8 +408,10 @@ export async function handleSignout(
   );
 }
 
-// The authenticator is operator-trusted, but a buggy one returning
-// `javascript:` or CR/LF would become a trusted navigation target.
+/**
+ * The authenticator is operator-trusted, but a buggy one returning
+ * `javascript:` or CR/LF would become a trusted navigation target.
+ */
 function sanitiseSignOutUrl(value: string | null | undefined): string | null {
   if (typeof value !== "string" || value.length === 0) return null;
   if (/[\r\n]/.test(value)) return null;
@@ -523,7 +531,9 @@ async function resolveInvite(
   }
 }
 
-// A user with any credential is refused: an invite is not for re-registration.
+/**
+ * A user with any credential is refused: an invite is not for re-registration.
+ */
 async function resolveInviteTarget(
   ctx: AppContext,
   rawToken: string,
@@ -552,8 +562,10 @@ function inviteErrorResponse(error: InviteError): Response {
   return jsonResponse({ error: error.code }, { status });
 }
 
-// Pick a WebAuthn display name: invitee's input > admin-set name > email.
-// Falsy check (not `??`) so empty strings fall through to the next fallback.
+/**
+ * Pick a WebAuthn display name: invitee's input > admin-set name > email.
+ * Falsy check (not `??`) so empty strings fall through to the next fallback.
+ */
 function pickDisplayName(
   userInput: string | undefined,
   existingName: string | null,

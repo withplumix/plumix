@@ -5,8 +5,10 @@ import { matchAcceptLanguage } from "./accept-language.js";
 import { ADMIN_LOCALE_COOKIE } from "./cookie.js";
 import { findEnabledLocale } from "./locale-registry.js";
 
-// The user is whatever the site's override is handed; this reads only the
-// stored `meta` bag, for `meta.locale`.
+/**
+ * The user is whatever the site's override is handed; this reads only the
+ * stored `meta` bag, for `meta.locale`.
+ */
 interface LocaleUser {
   readonly meta: JsonObject;
 }

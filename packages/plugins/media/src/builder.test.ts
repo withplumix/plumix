@@ -12,8 +12,10 @@ import type { MediaFieldScope, MediaReference } from "./index.js";
 import { media } from "./fields.js";
 import { media as mediaPlugin } from "./index.js";
 
-// Public type export gets a type-level smoke test so the package
-// surface stays consumable by external plugin authors.
+/**
+ * Public type export gets a type-level smoke test so the package
+ * surface stays consumable by external plugin authors.
+ */
 const _scope: MediaFieldScope = { accept: "image/" };
 void _scope;
 

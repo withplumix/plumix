@@ -7,8 +7,10 @@ import {
   scheduledLeaseScope,
 } from "./scheduled-guard.js";
 
-// Two guards over one database stand in for two replicas of a deploy sharing
-// one database — the configuration `plumix/db/libsql` makes possible today.
+/**
+ * Two guards over one database stand in for two replicas of a deploy sharing
+ * one database — the configuration `plumix/db/libsql` makes possible today.
+ */
 function replicas(db: Db, options: { lease?: boolean } = {}) {
   const make = (holder: string) =>
     createScheduledRunGuard({

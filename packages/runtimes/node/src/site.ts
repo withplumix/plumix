@@ -75,8 +75,10 @@ export interface NodeSiteHandler {
   ) => Promise<void | ScheduledRunReport>;
 }
 
-// `db` is the runner's test seam; an embedder's cron writes to the site's own
-// database.
+/**
+ * `db` is the runner's test seam; an embedder's cron writes to the site's own
+ * database.
+ */
 export type CronOverrides = Omit<
   ScheduledRunnerOptions,
   "app" | "env" | "fire" | "db"
@@ -236,8 +238,10 @@ export interface ServingProcess {
   readonly server: Server;
 }
 
-// Not on the barrel: `serveWhenMain` is the door, and this is what a test
-// drives to reach the drain without ending the runner.
+/**
+ * Not on the barrel: `serveWhenMain` is the door, and this is what a test
+ * drives to reach the drain without ending the runner.
+ */
 export function serveProcess({
   listener,
   startCron,
@@ -327,8 +331,10 @@ function remainingMs(deadline: number): number {
   return Math.max(0, deadline - Date.now());
 }
 
-// `??` would read an empty `PORT=` as port 0, and `prefer-nullish-coalescing`
-// refuses `||` here.
+/**
+ * `??` would read an empty `PORT=` as port 0, and `prefer-nullish-coalescing`
+ * refuses `||` here.
+ */
 function envOr(value: string | undefined, fallback: string): string {
   return value === undefined || value === "" ? fallback : value;
 }

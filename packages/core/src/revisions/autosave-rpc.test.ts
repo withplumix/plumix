@@ -51,7 +51,7 @@ function registryWithMetaField(field: MetaBoxField) {
   return registryWithMetaFields([field]);
 }
 
-// A bounded number field the draft-lenient / publish-strict tests share.
+/** A bounded number field the draft-lenient / publish-strict tests share. */
 const RATING_FIELD: MetaBoxField = {
   key: "rating",
   label: "Rating",
@@ -401,7 +401,8 @@ describe("entry.update saveAs", () => {
   test("consecutive partial draft writes accumulate (a later patch keeps an earlier key)", async () => {
     // The editor autosaves only what changed, so a later meta patch carries a
     // different key than an earlier one. The draft must accumulate both rather
-    // than rebase each patch on the live row (which would drop the earlier key).
+    // than rebase each patch on the live row (which would drop the earlier
+    // key).
     const h = await publishedPostFixture(
       registryWithMetaFields([
         {
@@ -695,7 +696,8 @@ describe("entry.publish", () => {
     // The latent revert: draft a field (freezing the snapshot's title at the
     // then-current live title), edit the title straight to live, then publish
     // without touching the draft again. Title is a live-only field, so publish
-    // must leave the live title intact rather than promoting the stale snapshot.
+    // must leave the live title intact rather than promoting the stale
+    // snapshot.
     const h = await publishedPostFixture();
     await h.client.entry.update({ id: h.entryId, excerpt: "draft excerpt" });
     const live = await h.client.entry.update({

@@ -8,8 +8,10 @@ import { requireCapability } from "../../require-capability.js";
 import { settingsGetInputSchema } from "./schemas.js";
 
 const CAPABILITY = "settings:manage";
-// Double the 200-field group cap, leaving headroom for orphan keys from
-// uninstalled plugins while bounding the response.
+/**
+ * Double the 200-field group cap, leaving headroom for orphan keys from
+ * uninstalled plugins while bounding the response.
+ */
 const MAX_GROUP_ROWS_PER_READ = 500;
 
 /**

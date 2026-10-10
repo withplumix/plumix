@@ -31,7 +31,9 @@ const BASE_PARAMS = {
   now: FIXED_NOW,
 } as const;
 
-// Exactly `BASE_PARAMS.contentLength` bytes, the body the signed URL is for.
+/**
+ * Exactly `BASE_PARAMS.contentLength` bytes, the body the signed URL is for.
+ */
 const BODY = "jpeg bytes";
 
 describe("presignPutUrl", () => {

@@ -6,26 +6,34 @@ import { slugSchema } from "../../schemas.js";
 
 export const MAX_CONTENT_BYTES = 1_000_000;
 const MAX_EXCERPT_LENGTH = 600;
-// 200 covers WordPress's practical ceiling many times over while still
-// bounding pathological payloads on the record-validate path.
+/**
+ * 200 covers WordPress's practical ceiling many times over while still
+ * bounding pathological payloads on the record-validate path.
+ */
 const MAX_TERMS_PER_TAXONOMY = 200;
 
 const trimmedText = (max: number) =>
   v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(max));
 
-// Entry titles may be empty — a draft can be untitled (read surfaces render
-// a localized fallback). Unlike `trimmedText`, no `minLength`.
+/**
+ * Entry titles may be empty — a draft can be untitled (read surfaces render
+ * a localized fallback). Unlike `trimmedText`, no `minLength`.
+ */
 const titleText = v.pipe(v.string(), v.trim(), v.maxLength(300));
 
-// The renderer allowlists node types, so this rejects only non-objects; the
-// byte cap is enforced in the handler.
+/**
+ * The renderer allowlists node types, so this rejects only non-objects; the
+ * byte cap is enforced in the handler.
+ */
 const contentSchema = v.nullable(v.record(v.string(), v.unknown()));
 const excerptSchema = v.nullable(
   v.pipe(v.string(), v.maxLength(MAX_EXCERPT_LENGTH)),
 );
 
-// Not validated against the theme: an unknown id falls through to the
-// default at render time. `null` clears the choice.
+/**
+ * Not validated against the theme: an unknown id falls through to the
+ * default at render time. `null` clears the choice.
+ */
 const templateChoiceSchema = v.pipe(
   v.string(),
   v.trim(),
@@ -33,9 +41,11 @@ const templateChoiceSchema = v.pipe(
   v.maxLength(200),
 );
 
-// Unlike the template choice, the server validates the key against the
-// type's declared `access.policies`; this only bounds the shape. `null`
-// restores type-default gating.
+/**
+ * Unlike the template choice, the server validates the key against the
+ * type's declared `access.policies`; this only bounds the shape. `null`
+ * restores type-default gating.
+ */
 const accessChoiceSchema = v.pipe(
   v.string(),
   v.trim(),
@@ -53,8 +63,10 @@ const serverControlledKeys = [
 
 const userSuppliableFields = v.omit(entryInsertSchema, serverControlledKeys);
 
-// termTaxonomy → ordered term ids. Empty array clears all assignments for that
-// termTaxonomy. Taxonomy keys not in the map are untouched.
+/**
+ * termTaxonomy → ordered term ids. Empty array clears all assignments for that
+ * termTaxonomy. Taxonomy keys not in the map are untouched.
+ */
 const postTermsSchema = v.record(
   v.pipe(
     v.string(),
@@ -122,7 +134,7 @@ export const entryUpdateInputSchema = v.object({
   saveAs: v.optional(v.picklist(["draft", "live"] as const)),
 });
 
-// Bounds the generated `IN (?, ?, …)` subquery against pathological input.
+/** Bounds the generated `IN (?, ?, …)` subquery against pathological input. */
 const MAX_TERM_SLUGS_PER_TAXONOMY = 50;
 
 const taxonomyNameSchema = v.pipe(
@@ -212,8 +224,10 @@ export const entryRefreshBlockLoaderInputSchema = v.object({
   blockId: v.pipe(v.string(), v.minLength(1)),
 });
 
-// Bulk action input. Capped at 100 ids per call so a single batched
-// `WHERE id IN (…)` stays bounded; the admin selects a page at a time.
+/**
+ * Bulk action input. Capped at 100 ids per call so a single batched
+ * `WHERE id IN (…)` stays bounded; the admin selects a page at a time.
+ */
 const bulkIdsSchema = v.object({
   ids: v.pipe(v.array(idParam), v.minLength(1), v.maxLength(100)),
 });

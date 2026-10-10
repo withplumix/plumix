@@ -13,8 +13,10 @@ import { dateRange } from "./date-range.js";
 import { EntryQueryError } from "./errors.js";
 import { findAuthorBySlug, findTermBySlug } from "./slug-lookups.js";
 
-// Intent, not SQL: compiled where there is a database to resolve slugs
-// against, so building a query costs no queries.
+/**
+ * Intent, not SQL: compiled where there is a database to resolve slugs
+ * against, so building a query costs no queries.
+ */
 type EntryNarrowing =
   | { readonly kind: "types"; readonly names: readonly string[] }
   | {
@@ -33,8 +35,10 @@ type EntryNarrowing =
   | { readonly kind: "sql"; readonly condition: SQL }
   | { readonly kind: "none" };
 
-// Replaces rather than accumulates: a second order call says what the order
-// is, not a secondary sort.
+/**
+ * Replaces rather than accumulates: a second order call says what the order
+ * is, not a secondary sort.
+ */
 type EntryOrder =
   | {
       readonly kind: "column";
@@ -116,12 +120,16 @@ export function entryQuery(): EntryQuery {
   return queryOf({ narrowings: [], order: LATEST });
 }
 
-// Nothing forbids a `parent_id` cycle and plugins write directly, so an
-// unbounded walk could never finish.
+/**
+ * Nothing forbids a `parent_id` cycle and plugins write directly, so an
+ * unbounded walk could never finish.
+ */
 const MAX_SUBTREE_DEPTH = 50;
 
-// The CTE sits inside `IN (…)` rather than being joined so the condition
-// composes with whatever else the query narrows by.
+/**
+ * The CTE sits inside `IN (…)` rather than being joined so the condition
+ * composes with whatever else the query narrows by.
+ */
 function descendantsOf(parentId: number): SQL {
   return sql`${entries.id} IN (WITH RECURSIVE descendants(id, depth) AS (
     SELECT ${entries.id}, 0 FROM ${entries} WHERE ${entries.parentId} = ${parentId}
@@ -132,8 +140,10 @@ function descendantsOf(parentId: number): SQL {
   ) SELECT id FROM descendants)`;
 }
 
-// Every arm returns, so a narrowing kind added without a translation for it is
-// a compile error here rather than a narrowing the compiler lets fall through.
+/**
+ * Every arm returns, so a narrowing kind added without a translation for it is
+ * a compile error here rather than a narrowing the compiler lets fall through.
+ */
 async function conditionsFor(
   ctx: AppContext,
   narrowing: EntryNarrowing,
@@ -176,8 +186,10 @@ async function conditionsFor(
   }
 }
 
-// drizzle's `and` doesn't parenthesize its operands, so a top-level `OR` in
-// one condition would widen the query past every other narrowing.
+/**
+ * drizzle's `and` doesn't parenthesize its operands, so a top-level `OR` in
+ * one condition would widen the query past every other narrowing.
+ */
 function allOf(conditions: readonly SQL[]): SQL {
   const combined = and(...conditions.map((condition) => sql`(${condition})`));
   return combined === undefined ? sql`(1 = 1)` : sql`(${combined})`;

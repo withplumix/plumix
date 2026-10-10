@@ -25,8 +25,10 @@ export interface UseAuthResult {
   readonly loading: boolean;
 }
 
-// Raw envelope, not `@orpc/client`: `blocks/` sits below `rpc/`. Safe while the
-// output stays JSON-native; a `Date` would need the real client.
+/**
+ * Raw envelope, not `@orpc/client`: `blocks/` sits below `rpc/`. Safe while the
+ * output stays JSON-native; a `Date` would need the real client.
+ */
 const SESSION_PATH = "/_plumix/rpc/auth/session";
 
 interface SessionEnvelope {

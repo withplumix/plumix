@@ -25,9 +25,11 @@ import { group } from "./group.js";
 import { link } from "./link.js";
 import { repeater } from "./repeater.js";
 
-// Fixture field sets. Registered under test-only entry types / taxonomies so
-// the module augmentations (global across the compilation) can't interfere
-// with other suites' meta expectations.
+/**
+ * Fixture field sets. Registered under test-only entry types / taxonomies so
+ * the module augmentations (global across the compilation) can't interfere
+ * with other suites' meta expectations.
+ */
 const _articleFields = [
   text("subtitle").maxLength(120),
   text("badge").default("none"),
@@ -46,9 +48,11 @@ const _brandingFields = [text("tagline").default("")];
 
 const _brandCardFields = [text("brandBadge")];
 
-// Helper-alias fixtures — the same contributions authored through the
-// `EntryMeta` / `TermMeta` / `UserMeta` / `SettingsMeta` shape helpers
-// instead of the hand-written `{ entryTypes; fields }` object type.
+/**
+ * Helper-alias fixtures — the same contributions authored through the
+ * `EntryMeta` / `TermMeta` / `UserMeta` / `SettingsMeta` shape helpers
+ * instead of the hand-written `{ entryTypes; fields }` object type.
+ */
 const _helpedFields = [text("kicker").required(), text("deck")];
 
 const _helpedTermFields = [text("badgeText")];
@@ -57,8 +61,10 @@ const _helpedUserFields = [text("pronouns")];
 
 const _helpedSettingsFields = [text("siteTagline").required()];
 
-// Composite fields: a group namespaces into a nested record, a repeater
-// folds into a typed row array — both recurse into `MetaOf`.
+/**
+ * Composite fields: a group namespaces into a nested record, a repeater
+ * folds into a typed row array — both recurse into `MetaOf`.
+ */
 const _structuredFields = [
   group("seo").fields([text("title").required(), textarea("description")]),
   repeater("sections").fields([text("heading").required()]),
@@ -88,8 +94,10 @@ declare module "./contributions.js" {
       entryTypes: "structured";
       fields: typeof _structuredFields;
     };
-    // Authored through the `EntryMeta` helper — folds identically to the
-    // hand-written shapes above.
+    /**
+     * Authored through the `EntryMeta` helper — folds identically to the
+     * hand-written shapes above.
+     */
     cxHelped: EntryMeta<"helped", typeof _helpedFields>;
   }
   interface TermMetaContributions {
@@ -107,9 +115,11 @@ declare module "./contributions.js" {
   }
 }
 
-// Never invoked — the drift check is purely compile-time. When a
-// contribution declaration exists for a box id / group name, the
-// registration call must match it; undeclared ids stay unconstrained.
+/**
+ * Never invoked — the drift check is purely compile-time. When a
+ * contribution declaration exists for a box id / group name, the
+ * registration call must match it; undeclared ids stay unconstrained.
+ */
 const _driftChecks = (ctx: PluginSetupContext) => {
   ctx.registerEntryMetaBox("cxArticle", {
     label: "Article",

@@ -9,8 +9,10 @@ import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { entryDuplicateInputSchema } from "./schemas.js";
 
-// Bounded retry so two duplicates of the same source don't collide on
-// the `(type, slug)` unique index: "original-copy", "original-copy-2", …
+/**
+ * Bounded retry so two duplicates of the same source don't collide on
+ * the `(type, slug)` unique index: "original-copy", "original-copy-2", …
+ */
 const MAX_SLUG_ATTEMPTS = 50;
 
 export const duplicate = base

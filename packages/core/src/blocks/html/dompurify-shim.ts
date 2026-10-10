@@ -1,8 +1,10 @@
 import DOMPurify from "dompurify";
 
-// The `browser` field swaps `sanitize-html` (~230 KB) for this in browser
-// bundles. It must enforce exactly the server engine's tags, per-tag attributes
-// and URL-scheme policy.
+/**
+ * The `browser` field swaps `sanitize-html` (~230 KB) for this in browser
+ * bundles. It must enforce exactly the server engine's tags, per-tag attributes
+ * and URL-scheme policy.
+ */
 interface SanitizeOptions {
   readonly allowedTags?: readonly string[];
   readonly allowedAttributes?: Readonly<Record<string, readonly string[]>>;
@@ -12,7 +14,7 @@ interface SanitizeOptions {
 
 const DEFAULT_SCHEMES = ["http", "https", "mailto", "tel"];
 
-// Scheme-checked even when the attribute is allowed for its tag.
+/** Scheme-checked even when the attribute is allowed for its tag. */
 const URI_ATTRS = new Set([
   "href",
   "src",
@@ -23,8 +25,10 @@ const URI_ATTRS = new Set([
   "data",
 ]);
 
-// Mirrors sanitize-html's URL policy. Control and whitespace chars browsers
-// ignore are stripped so `java\tscript:` can't smuggle a scheme past the check.
+/**
+ * Mirrors sanitize-html's URL policy. Control and whitespace chars browsers
+ * ignore are stripped so `java\tscript:` can't smuggle a scheme past the check.
+ */
 function isAllowedUri(
   value: string,
   schemes: readonly string[],

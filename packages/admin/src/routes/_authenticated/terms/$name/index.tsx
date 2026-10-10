@@ -48,7 +48,9 @@ const M = {
   // as fallback — see comment in entries/$slug/index.tsx for rationale.
 } satisfies Record<string, MessageDescriptor>;
 
-// A tree fetches one large page to render coherently; `term.list` caps at 200.
+/**
+ * A tree fetches one large page to render coherently; `term.list` caps at 200.
+ */
 const FLAT_PAGE_SIZE = 50;
 const TREE_PAGE_SIZE = 200;
 
@@ -105,7 +107,9 @@ interface TermRow {
   readonly displayDepth: number;
 }
 
-// Search flattens a tree so matches aren't hidden under non-matching parents.
+/**
+ * Search flattens a tree so matches aren't hidden under non-matching parents.
+ */
 function deriveTermRows(
   data: readonly Term[],
   isHierarchical: boolean,

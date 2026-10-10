@@ -1,7 +1,9 @@
 import type { JsonValue } from "plumix";
 
-// `<` and `>` can close the `<script>`; U+2028/U+2029 are legal JSON but end a
-// line in a script body, a parse error.
+/**
+ * `<` and `>` can close the `<script>`; U+2028/U+2029 are legal JSON but end a
+ * line in a script body, a parse error.
+ */
 const BREAKOUT = /[<>&\u2028\u2029]/g;
 
 /**

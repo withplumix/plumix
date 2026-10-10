@@ -11,8 +11,10 @@ export interface KVInstance extends KV {
   readonly config: KVConfig;
 }
 
-// Structural shape of a Workers KV namespace — typed locally so the runtime
-// doesn't take a hard `@cloudflare/workers-types` dependency at this boundary.
+/**
+ * Structural shape of a Workers KV namespace — typed locally so the runtime
+ * doesn't take a hard `@cloudflare/workers-types` dependency at this boundary.
+ */
 interface KvNamespace {
   get(key: string): Promise<string | null>;
   put(

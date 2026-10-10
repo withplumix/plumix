@@ -5,8 +5,10 @@ const SAFE_IDENTIFIER = /^[a-z_][a-z0-9_]*$/i;
 
 const READY_TABLE = "_plumix_demo_ready";
 
-// A DO persisted with an older bootstrap re-initializes instead of serving a
-// stale schema. FNV-1a: change detection only, not cryptographic strength.
+/**
+ * A DO persisted with an older bootstrap re-initializes instead of serving a
+ * stale schema. FNV-1a: change detection only, not cryptographic strength.
+ */
 function bootstrapVersion(bootstrapSql: string): string {
   let hash = 0x811c9dc5;
   for (let i = 0; i < bootstrapSql.length; i += 1) {
@@ -16,8 +18,10 @@ function bootstrapVersion(bootstrapSql: string): string {
   return (hash >>> 0).toString(16);
 }
 
-// Not JSON: a blob column arrives as an `ArrayBuffer`, which no serializer
-// round trips.
+/**
+ * Not JSON: a blob column arrives as an `ArrayBuffer`, which no serializer
+ * round trips.
+ */
 type DemoSqlRow = Record<string, unknown>;
 
 export interface DemoSqlExecutor {
@@ -27,12 +31,16 @@ export interface DemoSqlExecutor {
   query(sql: string): Promise<readonly DemoSqlRow[]>;
 }
 
-// `end` is only the keyword when it stands alone: an identifier like `x2end`
-// must not read as one, so a digit keeps the word going.
+/**
+ * `end` is only the keyword when it stands alone: an identifier like `x2end`
+ * must not read as one, so a digit keeps the word going.
+ */
 const WORD_CHAR = /[A-Za-z0-9_]/;
 
-// Quoted spans, whichever delimiter drizzle or a plugin reached for. A `;`
-// inside one doesn't split, and a word inside one is never a keyword.
+/**
+ * Quoted spans, whichever delimiter drizzle or a plugin reached for. A `;`
+ * inside one doesn't split, and a word inside one is never a keyword.
+ */
 const QUOTES = new Set(["'", '"', "`"]);
 
 /**

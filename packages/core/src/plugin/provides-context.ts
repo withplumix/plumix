@@ -30,15 +30,17 @@ interface CreateProvidesContextArgs {
   readonly appExtensions: Map<string, ContextExtensionEntry>;
 }
 
-// `__proto__` would reparent the ctx through the Object.prototype setter;
-// `constructor`/`prototype` would shadow inherited members.
+/**
+ * `__proto__` would reparent the ctx through the Object.prototype setter;
+ * `constructor`/`prototype` would shadow inherited members.
+ */
 const RESERVED_EXTENSION_KEYS: ReadonlySet<string> = new Set([
   "__proto__",
   "constructor",
   "prototype",
 ]);
 
-// So a plugin can't silently replace `db`, `auth`, etc. at request time.
+/** So a plugin can't silently replace `db`, `auth`, etc. at request time. */
 const APP_CONTEXT_BASE_KEYS: ReadonlySet<string> = new Set([
   "db",
   "env",

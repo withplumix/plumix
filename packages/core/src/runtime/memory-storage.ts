@@ -156,7 +156,7 @@ function streamFromBytes(bytes: Uint8Array): ReadableStream<Uint8Array> {
   });
 }
 
-// FNV-1a — fast, non-cryptographic, sufficient for dev cache validation.
+/** FNV-1a — fast, non-cryptographic, sufficient for dev cache validation. */
 function computeEtag(bytes: Uint8Array): string {
   let hash = 0x811c9dc5;
   for (let i = 0; i < bytes.byteLength; i++) {

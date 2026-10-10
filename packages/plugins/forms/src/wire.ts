@@ -6,14 +6,18 @@ import * as v from "valibot";
 import type { FormFieldError, FormSubmitResponse } from "./types.js";
 import { UNREACHABLE } from "./messages.js";
 
-// Decoded: a stale service worker or captive portal can answer 200 with
-// something else.
+/**
+ * Decoded: a stale service worker or captive portal can answer 200 with
+ * something else.
+ */
 const TokenResponse = v.object({ token: v.string() });
 
 const FieldError = v.object({ field: v.string(), message: v.string() });
 
-// Typed as the response the server declares, so the two halves of one
-// wire contract cannot drift apart without a compile error.
+/**
+ * Typed as the response the server declares, so the two halves of one
+ * wire contract cannot drift apart without a compile error.
+ */
 const SubmitResponse: v.GenericSchema<FormSubmitResponse> = v.variant("ok", [
   v.object({ ok: v.literal(true), message: v.string() }),
   v.object({ ok: v.literal(false), errors: v.array(FieldError) }),

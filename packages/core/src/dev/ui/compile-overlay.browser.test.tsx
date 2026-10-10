@@ -9,8 +9,10 @@ import {
 
 const HOST_TAG = "plumix-compile-error-overlay";
 
-// A minimal `import.meta.hot` stand-in that records subscriptions and lets a
-// test drive `vite:error` / lifecycle events synchronously.
+/**
+ * A minimal `import.meta.hot` stand-in that records subscriptions and lets a
+ * test drive `vite:error` / lifecycle events synchronously.
+ */
 class FakeHot implements HmrClient {
   private readonly handlers = new Map<
     string,
@@ -50,9 +52,11 @@ function query(testid: string): HTMLElement | null {
   );
 }
 
-// React roots inside the shadow commit on the scheduler, so the DOM an
-// assertion needs may not be there yet. Poll for it — a loaded CI runner
-// outruns any fixed delay.
+/**
+ * React roots inside the shadow commit on the scheduler, so the DOM an
+ * assertion needs may not be there yet. Poll for it — a loaded CI runner
+ * outruns any fixed delay.
+ */
 function shown(testid: string): Promise<HTMLElement> {
   return vi.waitFor(
     () => {
@@ -77,8 +81,10 @@ function hostGone(): Promise<void> {
   );
 }
 
-// Only for the "nothing should have happened" assertions: there is no condition
-// to poll for, so let pending work run and then assert the absence.
+/**
+ * Only for the "nothing should have happened" assertions: there is no condition
+ * to poll for, so let pending work run and then assert the absence.
+ */
 function flush(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }

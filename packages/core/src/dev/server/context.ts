@@ -63,16 +63,20 @@ function describeEntity(entity: ResolvedEntity | null): string | undefined {
   return `${entity.kind} #${entity.id}`;
 }
 
-// `Array.isArray` widens a readonly-array union to `any[]`; a dedicated guard
-// keeps the elements typed as JsonValue (mirrors the debug bar's db panel).
+/**
+ * `Array.isArray` widens a readonly-array union to `any[]`; a dedicated guard
+ * keeps the elements typed as JsonValue (mirrors the debug bar's db panel).
+ */
 function isJsonArray(
   value: JsonValue | undefined,
 ): value is readonly JsonValue[] {
   return Array.isArray(value);
 }
 
-// Not shared with the debug bar's db panel: the error page must render when
-// the bar is disabled, and it projects a different shape.
+/**
+ * Not shared with the debug bar's db panel: the error page must render when
+ * the bar is disabled, and it projects a different shape.
+ */
 function collectQueries(spans: readonly TelemetrySpan[]): DevErrorQuery[] {
   const rows: DevErrorQuery[] = [];
   const visit = (span: TelemetrySpan): void => {
@@ -101,8 +105,10 @@ function collectQueries(spans: readonly TelemetrySpan[]): DevErrorQuery[] {
   return rows;
 }
 
-// Duplicates the debug bar's timeline model so the error page stays
-// independent of the bar.
+/**
+ * Duplicates the debug bar's timeline model so the error page stays
+ * independent of the bar.
+ */
 function collectTimeline(spans: readonly TelemetrySpan[]): DevErrorTimeline {
   if (spans.length === 0) return { rows: [], totalMs: 0 };
   let windowStart = Infinity;

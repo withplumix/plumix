@@ -39,8 +39,10 @@ type PlumixCliErrorCode =
   | "dev_host_empty"
   | "dev_environment_not_runnable";
 
-// The errors only this package throws. Internal: a runtime adapter declares
-// its own subclass rather than borrowing these codes.
+/**
+ * The errors only this package throws. Internal: a runtime adapter declares
+ * its own subclass rather than borrowing these codes.
+ */
 export class PlumixCliError extends CliError<PlumixCliErrorCode> {
   static unknownCommand(ctx: { command: string }): PlumixCliError {
     return new PlumixCliError(
@@ -51,8 +53,10 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
     );
   }
 
-  // A typo is user error. Without this it reaches the CLI as an unexpected
-  // internal failure, which reads like a crash rather than a fixable mistake.
+  /**
+   * A typo is user error. Without this it reaches the CLI as an unexpected
+   * internal failure, which reads like a crash rather than a fixable mistake.
+   */
   static cronRunInvalidExpression(ctx: { detail: string }): PlumixCliError {
     return new PlumixCliError(
       "cron_run_invalid_expression",
@@ -92,8 +96,10 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
     );
   }
 
-  // A caught task failure would otherwise leave the command exiting 0, so a
-  // CronJob whose work all failed looks exactly like one that worked.
+  /**
+   * A caught task failure would otherwise leave the command exiting 0, so a
+   * CronJob whose work all failed looks exactly like one that worked.
+   */
   static cronRunTasksFailed(ctx: {
     expression: string;
     failed: readonly string[];
@@ -106,8 +112,10 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
     );
   }
 
-  // Distinct from a task failing: nothing ran, so the hint about siblings and
-  // per-task logs would send the operator looking for the wrong thing.
+  /**
+   * Distinct from a task failing: nothing ran, so the hint about siblings and
+   * per-task logs would send the operator looking for the wrong thing.
+   */
   static cronRunNeverStarted(ctx: {
     expression: string;
     reason: string;
@@ -430,7 +438,7 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
     );
   }
 
-  // An empty name would bind every interface, silently.
+  /** An empty name would bind every interface, silently. */
   static devHostEmpty(): PlumixCliError {
     return new PlumixCliError(
       "dev_host_empty",

@@ -66,10 +66,12 @@ const searchSchema = v.object({
   ),
 });
 
-// Admin / editor = strong; author / contributor = neutral; subscriber =
-// muted; disabled overrides everything to destructive to signal the
-// blocked state at a glance (matches WordPress's greyed-out disabled
-// user row).
+/**
+ * Admin / editor = strong; author / contributor = neutral; subscriber =
+ * muted; disabled overrides everything to destructive to signal the
+ * blocked state at a glance (matches WordPress's greyed-out disabled
+ * user row).
+ */
 const ROLE_VARIANT: Record<UserRole, "default" | "secondary" | "outline"> = {
   admin: "default",
   editor: "default",
@@ -267,8 +269,10 @@ function UsersListRoute(): ReactNode {
   );
 }
 
-// Mirrors the `user.list` row so the column builder needn't reach into core's
-// RPC internals.
+/**
+ * Mirrors the `user.list` row so the column builder needn't reach into core's
+ * RPC internals.
+ */
 type UserListRow = User & {
   readonly lastSignInAt: Date | string | null;
 };

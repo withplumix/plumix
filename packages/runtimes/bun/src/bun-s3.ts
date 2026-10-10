@@ -45,7 +45,7 @@ export interface BunS3ObjectStorage extends ObjectStorage {
 const DEFAULT_REGION = "us-east-1";
 const MAX_KEYS = 1000;
 
-// Opened on the first read, so a body nobody consumes sends no request.
+/** Opened on the first read, so a body nobody consumes sends no request. */
 function objectBody(source: S3File): ReadableStream<Uint8Array> {
   let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
   return new ReadableStream<Uint8Array>(

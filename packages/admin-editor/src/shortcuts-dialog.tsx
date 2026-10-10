@@ -30,7 +30,7 @@ import {
   shortcutsInGroup,
 } from "./shortcuts.js";
 
-// Keyed by the id union, so an undescribed new binding is a compile error.
+/** Keyed by the id union, so an undescribed new binding is a compile error. */
 const SHORTCUT_LABELS: Record<EditorShortcutId, ReactNode> = {
   "help.open": (
     <Trans id="editor.shortcut.help.open" message="Show keyboard shortcuts" />
@@ -129,7 +129,7 @@ const GROUP_LABELS: Record<ShortcutGroupId, ReactNode> = {
   history: <Trans id="editor.shortcuts.group.history" message="History" />,
 };
 
-// The pointer half of a chord — ⇧-click, space-drag, ⌘-scroll.
+/** The pointer half of a chord — ⇧-click, space-drag, ⌘-scroll. */
 const GESTURE_LABELS: Record<Gesture, ReactNode> = {
   click: <Trans id="editor.shortcuts.gesture.click" message="Click" />,
   drag: <Trans id="editor.shortcuts.gesture.drag" message="Drag" />,

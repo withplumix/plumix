@@ -10,7 +10,7 @@ import type { JsonObject } from "../../json.js";
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface MailRegistry {}
 
-// `keyof` of an empty interface is `never`; augmentation makes it a union.
+/** `keyof` of an empty interface is `never`; augmentation makes it a union. */
 // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 export type MailName = keyof MailRegistry & string;
 

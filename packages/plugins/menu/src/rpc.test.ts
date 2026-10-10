@@ -140,8 +140,10 @@ async function seedMenu(
   return { id: term.id, version: term.version, slug: term.slug };
 }
 
-// A public `post` entry type and `category` taxonomy, both menu-eligible, so
-// the core lookup adapters resolve the items a save links to them.
+/**
+ * A public `post` entry type and `category` taxonomy, both menu-eligible, so
+ * the core lookup adapters resolve the items a save links to them.
+ */
 const contentHost: ReturnType<typeof definePlugin> = definePlugin(
   "content-host",
   (setup) => {

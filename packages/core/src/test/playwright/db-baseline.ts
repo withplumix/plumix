@@ -21,16 +21,20 @@ interface TableSnapshot {
   readonly rows: readonly (readonly InValue[])[];
 }
 
-// `sqlite_*` is SQLite's own bookkeeping — `sqlite_sequence` above all,
-// see `restoreDbBaseline` for why it must not be rewound. `_cf_*` is
-// miniflare's D1 bookkeeping, which belongs to the emulator rather than
-// to the site. `__drizzle_migrations_*` records which migrations each
-// owner has applied, which no test changes.
+/**
+ * `sqlite_*` is SQLite's own bookkeeping — `sqlite_sequence` above all,
+ * see `restoreDbBaseline` for why it must not be rewound. `_cf_*` is
+ * miniflare's D1 bookkeeping, which belongs to the emulator rather than
+ * to the site. `__drizzle_migrations_*` records which migrations each
+ * owner has applied, which no test changes.
+ */
 const INTERNAL_TABLE_PREFIXES = ["sqlite_", "_cf_", "__drizzle_migrations_"];
 
-// `hidden` in `table_xinfo`: 2 is a VIRTUAL generated column, 3 STORED.
-// `SELECT *` returns both and `INSERT` rejects both, so a snapshot that
-// took its column list from the select would fail to restore.
+/**
+ * `hidden` in `table_xinfo`: 2 is a VIRTUAL generated column, 3 STORED.
+ * `SELECT *` returns both and `INSERT` rejects both, so a snapshot that
+ * took its column list from the select would fail to restore.
+ */
 const GENERATED_COLUMN_KINDS = new Set([2, 3]);
 
 async function applicationTables(client: Client): Promise<string[]> {

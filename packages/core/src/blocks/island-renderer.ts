@@ -92,8 +92,10 @@ function reportIslandError(
   };
 }
 
-// React has already committed the recovered client render when this fires, so
-// `innerHTML` is the client side.
+/**
+ * React has already committed the recovered client render when this fires, so
+ * `innerHTML` is the client side.
+ */
 function reportIslandMismatch(
   element: HTMLElement,
   server: string,

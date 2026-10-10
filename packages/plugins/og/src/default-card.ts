@@ -22,15 +22,17 @@ export interface CardPalette {
   readonly mutedForeground?: string;
 }
 
-// Not an identity map: token slugs are kebab-case, option keys camelCase.
+/** Not an identity map: token slugs are kebab-case, option keys camelCase. */
 const CONVENTION = {
   background: "background",
   foreground: "foreground",
   mutedForeground: "muted-foreground",
 } satisfies Required<CardPalette>;
 
-// Bundled colours are `var()` fallbacks, not a `:root` block, which would ship
-// after the theme's and beat its palette.
+/**
+ * Bundled colours are `var()` fallbacks, not a `:root` block, which would ship
+ * after the theme's and beat its palette.
+ */
 const STYLESHEET = `
 .plumix-og-card {
   display: flex;
@@ -106,7 +108,7 @@ function lines(args: CardArgs<TemplateData>): readonly [string, string] {
     : [pageTitle(args.data, args.ctx), site];
 }
 
-// From the page's own data, so head and route compute the same digest.
+/** From the page's own data, so head and route compute the same digest. */
 function pageTitle(data: TemplateData, ctx: AppContext): string {
   switch (data.kind) {
     case "entry":
@@ -128,7 +130,9 @@ function pageTitle(data: TemplateData, ctx: AppContext): string {
   }
 }
 
-// Must match core's date-archive title; not `dateSegment`, which pads the year.
+/**
+ * Must match core's date-archive title; not `dateSegment`, which pads the year.
+ */
 function dateTitle(
   year: number,
   month: number | null,
@@ -140,7 +144,7 @@ function dateTitle(
   return parts.join("-");
 }
 
-// Two archives can render the same lines; without this they'd share a URL.
+/** Two archives can render the same lines; without this they'd share a URL. */
 function pageName(data: TemplateData): string {
   const identity = cardIdentityFor(data);
   return identity === null ? data.kind : cardTargetPath(identity.target);

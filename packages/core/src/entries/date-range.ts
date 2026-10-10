@@ -1,5 +1,7 @@
-// Not `Date.UTC`, which remaps years 0–99 to 1900–1999. Callers rely on an
-// out-of-range month or day overflowing.
+/**
+ * Not `Date.UTC`, which remaps years 0–99 to 1900–1999. Callers rely on an
+ * out-of-range month or day overflowing.
+ */
 function utcMidnight(year: number, monthIndex: number, day: number): Date {
   const d = new Date(0);
   d.setUTCFullYear(year, monthIndex, day);

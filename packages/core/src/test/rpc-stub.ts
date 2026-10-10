@@ -155,7 +155,10 @@ export interface RpcStub<TRouter extends AnyRouter = never> {
 }
 
 export interface StubRpcEndpointOptions<TRouter extends AnyRouter = never> {
-  /** Where the procedures mount, e.g. `/_plumix/rpc`. A base path may precede it. */
+  /**
+   * Where the procedures mount, e.g. `/_plumix/rpc`. A base path may precede
+   * it.
+   */
   readonly prefix: `/${string}`;
   readonly routes: RpcStubRoutes<TRouter>;
   /**
@@ -236,15 +239,19 @@ class RpcStubMisuseError extends Error {
   }
 }
 
-// Reads the input off a request the handler declined to route, so the unrouted
-// branch records what the routed one does. `toStandardBody` is the parser
-// `RPCHandler`'s own fetch adapter runs, and oRPC's server-side codec
-// deserializes with this very class — the pair is the server's decode path,
-// not a second guess at the link's encoding.
+/**
+ * Reads the input off a request the handler declined to route, so the unrouted
+ * branch records what the routed one does. `toStandardBody` is the parser
+ * `RPCHandler`'s own fetch adapter runs, and oRPC's server-side codec
+ * deserializes with this very class — the pair is the server's decode path,
+ * not a second guess at the link's encoding.
+ */
 const serializer = new StandardRPCSerializer(new StandardRPCJsonSerializer());
 
-// Typed and untyped route maps meet here: the responder's signature was checked
-// where the caller wrote the map, and the handler hands it the revived input.
+/**
+ * Typed and untyped route maps meet here: the responder's signature was checked
+ * where the caller wrote the map, and the handler hands it the revived input.
+ */
 type ServedResponder = (input: never) => unknown;
 
 function stubProcedure(responder: ServedResponder) {
@@ -337,9 +344,11 @@ interface ServedStub {
 export function stubRpcEndpoint<TRouter extends AnyRouter = never>(
   options: StubRpcEndpointOptions<NoInfer<TRouter>>,
 ): RpcStub<TRouter>;
-// The typed signature above is checked where the caller writes the route map;
-// past it, each responder is served the input the client sent its own path and
-// every recorded call pairs a path with that path's input.
+/**
+ * The typed signature above is checked where the caller writes the route map;
+ * past it, each responder is served the input the client sent its own path and
+ * every recorded call pairs a path with that path's input.
+ */
 export function stubRpcEndpoint(options: ServedRoutesOptions): ServedStub {
   const { prefix, unservedHint } = options;
   const calls: RecordedCall[] = [];

@@ -21,8 +21,10 @@ import {
   scaffoldConsumerProject,
 } from "./test/consumer-project.js";
 
-// Each knob is read off the process env when the built site boots, so one
-// build serves every configuration a case needs.
+/**
+ * Each knob is read off the process env when the built site boots, so one
+ * build serves every configuration a case needs.
+ */
 const config = (markers: {
   drained: string;
   aborted: string;
@@ -138,8 +140,10 @@ interface Started {
   readonly exited: Promise<number | null>;
 }
 
-// `CI` and `TEST` are cleared: a runtime that shortens or skips its shutdown
-// under them would pass here and not in production.
+/**
+ * `CI` and `TEST` are cleared: a runtime that shortens or skips its shutdown
+ * under them would pass here and not in production.
+ */
 function start(dir: string, env: NodeJS.ProcessEnv = {}): Promise<Started> {
   return new Promise((resolve, reject) => {
     const child = spawn("bun", ["dist/server/worker.js"], {
@@ -185,8 +189,10 @@ function start(dir: string, env: NodeJS.ProcessEnv = {}): Promise<Started> {
   });
 }
 
-// SIGKILL after the case so a hung drain cannot outlive vitest; a no-op once
-// the process has exited on its own.
+/**
+ * SIGKILL after the case so a hung drain cannot outlive vitest; a no-op once
+ * the process has exited on its own.
+ */
 async function withServer(
   dir: string,
   body: (started: Started) => Promise<void>,

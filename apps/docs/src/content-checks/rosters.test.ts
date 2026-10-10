@@ -23,10 +23,12 @@ expectTypeOf<
   Equals<"draft" | "published", EntryStatus>
 >().toEqualTypeOf<false>();
 
-// The same proof for the hook registries, whose lists reach the shape only
-// through the placeholder substitution: a list holding two of the actions must
-// still fail, so expanding `entry:*:published` back to its template literal
-// cannot be what makes a short list pass.
+/**
+ * The same proof for the hook registries, whose lists reach the shape only
+ * through the placeholder substitution: a list holding two of the actions must
+ * still fail, so expanding `entry:*:published` back to its template literal
+ * cannot be what makes a short list pass.
+ */
 type ShortActionList = SourceHookName<"entry:*:published" | "entry:published">;
 
 expectTypeOf<Equals<ShortActionList, ActionName>>().toEqualTypeOf<false>();

@@ -66,9 +66,11 @@ export async function resolveCardIdentity(
   };
 }
 
-// The card route resolves locale from `Accept-Language` and a `/_plumix/`
-// cookie the page never sees, so head and route would digest differently.
-// Core's i18n is UI-only anyway.
+/**
+ * The card route resolves locale from `Accept-Language` and a `/_plumix/`
+ * cookie the page never sees, so head and route would digest differently.
+ * Core's i18n is UI-only anyway.
+ */
 function pinLocale(ctx: AppContext): AppContext {
   return ctx.locale.code === ctx.config.i18n.defaultLocale.code
     ? ctx
@@ -87,8 +89,10 @@ interface CardDigestParts {
   readonly extension: string;
 }
 
-// The renderer isn't digested: two renderers with the same content type share
-// digests, so swapping serves what the previous one stored.
+/**
+ * The renderer isn't digested: two renderers with the same content type share
+ * digests, so swapping serves what the previous one stored.
+ */
 function cardDigest(parts: CardDigestParts): Promise<string> {
   return shortDigest(JSON.stringify(parts));
 }

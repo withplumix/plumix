@@ -8,12 +8,16 @@ import type {
 import { AppBootError } from "../runtime/contract/errors.js";
 import { matchPublicRoute } from "./contract/public-route-table.js";
 
-// The dispatcher answers under this prefix before the public route table, so a
-// route registered inside it is unreachable and rejected at boot.
+/**
+ * The dispatcher answers under this prefix before the public route table, so a
+ * route registered inside it is unreachable and rejected at boot.
+ */
 const PLATFORM_PREFIX = "/_plumix";
 
-// A path without URLPattern syntax is a literal, the common case, and gets a
-// map lookup instead of an exec.
+/**
+ * A path without URLPattern syntax is a literal, the common case, and gets a
+ * map lookup instead of an exec.
+ */
 const PATTERN_SYNTAX = /[:*?+(){}[\]]/;
 
 export type PublicRouteTable = PublicRouteTableFor<RegisteredPublicRoute>;
@@ -69,8 +73,10 @@ function encodedPath(path: string): string {
   return new URL(path, "https://plumix.invalid").pathname;
 }
 
-// URLPattern's TypeError names nothing; only here is the registering plugin
-// known, so rethrow as a boot error.
+/**
+ * URLPattern's TypeError names nothing; only here is the registering plugin
+ * known, so rethrow as a boot error.
+ */
 function compilePattern(route: RegisteredPublicRoute): URLPattern {
   try {
     return new URLPattern({ pathname: route.path });
@@ -83,8 +89,10 @@ function compilePattern(route: RegisteredPublicRoute): URLPattern {
   }
 }
 
-// Compiled once per registry: the routes are settled once every `afterSetup`
-// has run, which is before anything asks.
+/**
+ * Compiled once per registry: the routes are settled once every `afterSetup`
+ * has run, which is before anything asks.
+ */
 const registryTables = new WeakMap<PluginRegistry, PublicRouteTable>();
 
 /**

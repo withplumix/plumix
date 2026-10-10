@@ -526,8 +526,10 @@ interface Owned {
   readonly registeredBy: string | null;
 }
 
-// The one place a duplicate registration is raised, so every registry reports
-// who already holds the identifier the same way.
+/**
+ * The one place a duplicate registration is raised, so every registry reports
+ * who already holds the identifier the same way.
+ */
 function assertUnclaimed(
   kind: string,
   identifier: string,
@@ -543,9 +545,11 @@ function assertUnclaimed(
   });
 }
 
-// `build` runs between the check and the write, so a registrar's remaining
-// validation keeps its place after the duplicate check and a throw from it
-// leaves the registry untouched.
+/**
+ * `build` runs between the check and the write, so a registrar's remaining
+ * validation keeps its place after the duplicate check and a throw from it
+ * leaves the registry untouched.
+ */
 function claimKey<V extends Owned>(
   map: Map<string, V>,
   kind: string,
@@ -581,8 +585,10 @@ function withExtensions<TContext extends PluginSetupContextBase>(
   return ctx as TContext & PluginContextExtensions;
 }
 
-// Fluent builders compile to plain definitions here, so everything downstream
-// carries `MetaBoxField` only.
+/**
+ * Fluent builders compile to plain definitions here, so everything downstream
+ * carries `MetaBoxField` only.
+ */
 function makeMetaBoxRegistrar<R extends Owned & { readonly id: string }>(
   map: Map<string, R>,
   kind: string,

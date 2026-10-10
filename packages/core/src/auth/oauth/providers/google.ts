@@ -6,9 +6,11 @@ import type {
 interface GoogleProfile {
   readonly sub: string;
   readonly email: string;
-  // Unparsed provider JSON. `emailVerified` gates account linking, so the
-  // boolean is derived below rather than claimed here — the same way the
-  // GitHub provider derives it.
+  /**
+   * Unparsed provider JSON. `emailVerified` gates account linking, so the
+   * boolean is derived below rather than claimed here — the same way the
+   * GitHub provider derives it.
+   */
   readonly email_verified: unknown;
   readonly name: string | null;
   readonly picture: string | null;

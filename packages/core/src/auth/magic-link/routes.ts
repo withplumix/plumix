@@ -20,9 +20,11 @@ import { verifyMagicLink } from "./verify.js";
 
 const ADMIN_PATH = "/_plumix/admin";
 
-// Defensive bound on the inbound `token` query param. Our generator
-// emits 192-bit base64url (32 chars); 256 chars is generous for
-// future-proofing while bounding malformed-callback amplification.
+/**
+ * Defensive bound on the inbound `token` query param. Our generator
+ * emits 192-bit base64url (32 chars); 256 chars is generous for
+ * future-proofing while bounding malformed-callback amplification.
+ */
 const MAX_TOKEN_LENGTH = 256;
 
 const requestInputSchema = v.object({

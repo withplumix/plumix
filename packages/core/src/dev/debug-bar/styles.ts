@@ -6,8 +6,10 @@ import { devTokens } from "../ui/tokens.js";
 
 const t = devTokens.bar;
 
-// A translucent tint of a palette color — the database panel's per-kind badge
-// backgrounds. Derived from the shared token so no color is hardcoded twice.
+/**
+ * A translucent tint of a palette color — the database panel's per-kind badge
+ * backgrounds. Derived from the shared token so no color is hardcoded twice.
+ */
 function tint(hex: string, alpha: number): string {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
@@ -15,8 +17,10 @@ function tint(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-// Upper bound on pure-CSS tab wiring. Panels beyond this still render but
-// their tab won't toggle; core ships far fewer than this.
+/**
+ * Upper bound on pure-CSS tab wiring. Panels beyond this still render but
+ * their tab won't toggle; core ships far fewer than this.
+ */
 const MAX_TABS = 16;
 
 function tabRules(): string {

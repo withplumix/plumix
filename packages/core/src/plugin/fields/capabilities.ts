@@ -198,8 +198,10 @@ export type AssertNoMissingCapabilities<T extends Record<BuilderName, never>> =
 type _EveryBuilderHonoursItsRow =
   AssertNoMissingCapabilities<MissingCapabilities>;
 
-// Every builder named in the matrix is a builder the guard knows how to
-// check, and every builder the guard knows is named in the matrix.
+/**
+ * Every builder named in the matrix is a builder the guard knows how to
+ * check, and every builder the guard knows is named in the matrix.
+ */
 type _MatrixCoversEveryBuilder = Assert<
   [Exclude<BuilderName, keyof BuilderTypes>] extends [never]
     ? [Exclude<keyof BuilderTypes, BuilderName>] extends [never]

@@ -6,7 +6,9 @@ import { matchPublicRoute } from "../route/contract/public-route-table.js";
 
 type CanonicalContext = Pick<AppContext, "request" | "origin" | "config">;
 
-// `/page/1` is the bare listing. Shared so the tag and the 301 never disagree.
+/**
+ * `/page/1` is the bare listing. Shared so the tag and the 301 never disagree.
+ */
 function canonicalPath(pathname: string): string {
   const slashless = pathname === "/" ? "/" : pathname.replace(/\/+$/, "");
   return slashless.replace(/\/page\/1$/, "") || "/";

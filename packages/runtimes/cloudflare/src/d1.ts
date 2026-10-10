@@ -34,8 +34,10 @@ export interface D1DatabaseAdapter extends DatabaseAdapter {
   readonly config: D1Config;
 }
 
-// `responseAllowsSharedStorage` alone is true of a response that declared
-// nothing, and a bookmark must not ride out on one.
+/**
+ * `responseAllowsSharedStorage` alone is true of a response that declared
+ * nothing, and a bookmark must not ride out on one.
+ */
 function isSharedCacheable(response: Response): boolean {
   return (
     response.headers.has("cache-control") &&

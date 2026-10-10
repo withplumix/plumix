@@ -466,7 +466,7 @@ function CanvasHandle({
   );
 }
 
-// Shift a window-space overlay box into the clip layer's local space.
+/** Shift a window-space overlay box into the clip layer's local space. */
 function clipRelative(box: OverlayBox, container: OverlayBox): OverlayBox {
   return {
     ...box,

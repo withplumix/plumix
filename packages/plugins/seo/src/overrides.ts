@@ -81,9 +81,11 @@ const D = {
   },
 } as const satisfies Record<string, Label>;
 
-// Long enough for a title or a description a search engine will truncate
-// anyway, and for any URL — the cap is against an adversarial payload, not an
-// editorial rule.
+/**
+ * Long enough for a title or a description a search engine will truncate
+ * anyway, and for any URL — the cap is against an adversarial payload, not an
+ * editorial rule.
+ */
 const TEXT_MAX = 300;
 const URL_MAX = 500;
 

@@ -11,8 +11,10 @@ import type {
 } from "./meta-box-field.js";
 import { resolveCapability } from "../../access/contract/capability.js";
 
-// `min` / `max` widen to `number | string` because the temporal variants store
-// ISO-string bounds.
+/**
+ * `min` / `max` widen to `number | string` because the temporal variants store
+ * ISO-string bounds.
+ */
 interface MetaBoxFieldOptionView {
   readonly placeholder?: Label;
   readonly prepend?: Label;

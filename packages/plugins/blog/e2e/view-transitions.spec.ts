@@ -28,9 +28,11 @@ async function recordReveals(page: Page): Promise<void> {
   });
 }
 
-// The types of the current document's last revealed view transition, or null
-// while the document has not been revealed yet, so a poll keeps waiting. A
-// reveal without a transition throws here, which fails the test.
+/**
+ * The types of the current document's last revealed view transition, or null
+ * while the document has not been revealed yet, so a poll keeps waiting. A
+ * reveal without a transition throws here, which fails the test.
+ */
 async function lastRevealTypes(page: Page): Promise<string[] | null> {
   return page.evaluate(() => {
     const { transitions } = (
@@ -44,7 +46,7 @@ async function lastRevealTypes(page: Page): Promise<string[] | null> {
   });
 }
 
-// How many reveals the current document had, and its last view transition.
+/** How many reveals the current document had, and its last view transition. */
 async function reveals(
   page: Page,
 ): Promise<{ count: number; last: RevealedTransition | null | undefined }> {

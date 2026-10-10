@@ -1,7 +1,9 @@
 import type { RedirectStatus } from "./redirects.js";
 
-// Registered rather than unique, so an outcome a separately bundled copy of
-// this module made is still recognised.
+/**
+ * Registered rather than unique, so an outcome a separately bundled copy of
+ * this module made is still recognised.
+ */
 const BRAND = Symbol.for("plumix.pageOutcome");
 
 type OutcomeFields =

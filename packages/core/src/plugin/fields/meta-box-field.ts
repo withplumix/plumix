@@ -102,7 +102,7 @@ export interface MetaBoxFieldBase {
   readonly role?: ImageRoleName;
 }
 
-// Carried only by the variants whose admin control renders it.
+/** Carried only by the variants whose admin control renders it. */
 interface MetaBoxFieldAdornments {
   readonly prepend?: Label;
   readonly append?: Label;
@@ -190,9 +190,11 @@ export function isTemporalInputType(
   return (TEMPORAL_INPUT_TYPES as readonly string[]).includes(inputType);
 }
 
-// Stored ISO shapes the native temporal inputs produce. The regex pins
-// the shape; the UTC-anchored `Date` parse rejects impossible
-// wall-clock values (`2026-13-45`, `25:99`) the shape alone admits.
+/**
+ * Stored ISO shapes the native temporal inputs produce. The regex pins
+ * the shape; the UTC-anchored `Date` parse rejects impossible
+ * wall-clock values (`2026-13-45`, `25:99`) the shape alone admits.
+ */
 const TEMPORAL_SHAPES: Record<TemporalInputType, RegExp> = {
   date: /^\d{4}-\d{2}-\d{2}$/,
   datetime: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/,

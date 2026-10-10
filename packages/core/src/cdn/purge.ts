@@ -14,8 +14,10 @@ import {
   userTag,
 } from "./contract/tags.js";
 
-// Keyed on the request memo, not the context: the flush runs against the
-// outermost context, so a derived spread would fill a set nothing reads.
+/**
+ * Keyed on the request memo, not the context: the flush runs against the
+ * outermost context, so a derived spread would fill a set nothing reads.
+ */
 const pending = new WeakMap<RequestMemo, Set<string>>();
 
 /**

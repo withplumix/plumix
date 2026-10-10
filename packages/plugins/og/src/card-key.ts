@@ -41,14 +41,18 @@ export const cardKey = {
   }),
 };
 
-// Parts join on a pair, which `slugify` collapses out of any single part — so
-// `of("a-b", "c")` and `of("a", "b-c")` cannot land on one id.
+/**
+ * Parts join on a pair, which `slugify` collapses out of any single part — so
+ * `of("a-b", "c")` and `of("a", "b-c")` cannot land on one id.
+ */
 function joinParts(parts: readonly (string | number)[]): string {
   return parts.map((part) => slugify(String(part))).join("--");
 }
 
-// Trims one dash, not a run: the collapse leaves none, and `-+$` would
-// backtrack across a title made of separators.
+/**
+ * Trims one dash, not a run: the collapse leaves none, and `-+$` would
+ * backtrack across a title made of separators.
+ */
 function slugify(value: string): string {
   return (
     value

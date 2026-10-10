@@ -3,13 +3,15 @@ import { resolve } from "node:path";
 import type { Page } from "@playwright/test";
 import { expect, test } from "plumix/test/playwright";
 
-// Seeded by globalSetup (see e2e/globalSetup.ts), once per suite run.
-//
-// The rig rewinds the database once per attempt, not between tests, so
-// these tests are not isolated from each other: each must moderate its own
-// fixture and leave the others alone. `pendingId` and `bulkIds` are on
-// separate entries for that reason — a third test reaching for one of
-// these ids would pass alone and fail in suite order.
+/**
+ * Seeded by globalSetup (see e2e/globalSetup.ts), once per suite run.
+ *
+ * The rig rewinds the database once per attempt, not between tests, so
+ * these tests are not isolated from each other: each must moderate its own
+ * fixture and leave the others alone. `pendingId` and `bulkIds` are on
+ * separate entries for that reason — a third test reaching for one of
+ * these ids would pass alone and fail in suite order.
+ */
 interface Fixtures {
   readonly pendingId: number;
   readonly bulkEntryId: number;
@@ -80,8 +82,10 @@ test("admin page ships styled controls", async ({ page }) => {
   expect(ui.styled).toBeGreaterThan(0);
 });
 
-// Counts the plugin shell's interactive controls and how many carry a
-// styling class — a count of 0 is the unstyled-component regression signal.
+/**
+ * Counts the plugin shell's interactive controls and how many carry a
+ * styling class — a count of 0 is the unstyled-component regression signal.
+ */
 async function styledControls(page: Page, shellTestId: string) {
   return page.evaluate((id) => {
     const shell = document.querySelector(`[data-testid="${id}"]`);

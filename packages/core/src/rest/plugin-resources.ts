@@ -14,8 +14,10 @@ import { base } from "./base.js";
 import { entryNotFound } from "./entries-resource.js";
 import { resolvePublicEntryType } from "./rest-base.js";
 
-// `authenticated` requires a real bearer principal, not the anonymous public
-// one.
+/**
+ * `authenticated` requires a real bearer principal, not the anonymous public
+ * one.
+ */
 function enforceRestAuth(
   auth: RestResourceAuth,
   context: RestContext,
@@ -43,8 +45,10 @@ interface Bindings {
   entry?: Entry;
 }
 
-// Resolved through core's own collection and entry-read rules so they never
-// disagree. Every bind failure is the same NOT_FOUND, so ids can't be probed.
+/**
+ * Resolved through core's own collection and entry-read rules so they never
+ * disagree. Every bind failure is the same NOT_FOUND, so ids can't be probed.
+ */
 async function bindSegments(
   params: Partial<Record<BoundSegment, string>>,
   context: RestContext,
@@ -99,11 +103,13 @@ function inputSchemaOf(
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
-// Not JSON: values are whatever the plugin's schema decodes them to, `Date`s
-// and `File`s included.
+/**
+ * Not JSON: values are whatever the plugin's schema decodes them to, `Date`s
+ * and `File`s included.
+ */
 type BoundResourceInput = Record<string, unknown>;
 
-// Split the bound segments' raw values out of the parsed input.
+/** Split the bound segments' raw values out of the parsed input. */
 function splitBound(
   input: BoundResourceInput,
   bound: readonly BoundSegment[],
@@ -120,12 +126,16 @@ function splitBound(
   return { params, own };
 }
 
-// Not JSON: the values are live oRPC procedures, handler closures with route
-// metadata attached.
+/**
+ * Not JSON: the values are live oRPC procedures, handler closures with route
+ * metadata attached.
+ */
 type PluginRestRouter = Record<string, unknown>;
 
-// Build oRPC procedures for plugin resources, keyed by index (OpenAPI routing
-// is driven by each procedure's `route`, not the object key).
+/**
+ * Build oRPC procedures for plugin resources, keyed by index (OpenAPI routing
+ * is driven by each procedure's `route`, not the object key).
+ */
 export function buildPluginRestRouter(
   resources: readonly RegisteredRestResource[],
 ): PluginRestRouter {

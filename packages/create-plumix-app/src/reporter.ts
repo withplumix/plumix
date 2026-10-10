@@ -30,7 +30,7 @@ export interface Reporter {
   cancelled(message: string): void;
 }
 
-// The plumix wordmark, shown once as a welcome header on a plain scaffold.
+/** The plumix wordmark, shown once as a welcome header on a plain scaffold. */
 export const BANNER = [
   "        _                 _",
   "  _ __ | |_   _ _ __ ___ (_)_  __",
@@ -40,7 +40,7 @@ export const BANNER = [
   " |_|",
 ].join("\n");
 
-// Resolved from this package's own manifest at runtime — never hardcoded.
+/** Resolved from this package's own manifest at runtime — never hardcoded. */
 function readVersion(): string {
   try {
     const require = createRequire(import.meta.url);

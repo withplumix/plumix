@@ -32,20 +32,24 @@ export type LinkProps = AnchorAttrs & {
       }
   );
 
-// Mirror of core's `withBasePath` — blocks sits below core in the build
-// graph and can't import it.
+/**
+ * Mirror of core's `withBasePath` — blocks sits below core in the build
+ * graph and can't import it.
+ */
 function withBasePath(path: string, basePath: string): string {
   if (basePath === "") return path;
   return path === "/" ? basePath : `${basePath}${path}`;
 }
 
-// Absolute (`https:`, `mailto:`, `tel:`, …) or protocol-relative (`//`).
+/** Absolute (`https:`, `mailto:`, `tel:`, …) or protocol-relative (`//`). */
 function isExternal(href: string): boolean {
   return /^[a-z][a-z0-9+.-]*:/i.test(href) || href.startsWith("//");
 }
 
-// Caller's `rel` plus the safety tokens, de-duplicated — so an explicit
-// `rel` augments rather than drops the external-link protection.
+/**
+ * Caller's `rel` plus the safety tokens, de-duplicated — so an explicit
+ * `rel` augments rather than drops the external-link protection.
+ */
 function externalRel(rel: string | undefined): string {
   const tokens = new Set((rel ?? "").split(/\s+/).filter(Boolean));
   tokens.add("noopener");
@@ -53,9 +57,11 @@ function externalRel(rel: string | undefined): string {
   return [...tokens].join(" ");
 }
 
-// Script-capable schemes that must never become a clickable href. Strip
-// whitespace/control chars (browsers ignore them inside the scheme) and peel
-// nested `view-source:` before testing.
+/**
+ * Script-capable schemes that must never become a clickable href. Strip
+ * whitespace/control chars (browsers ignore them inside the scheme) and peel
+ * nested `view-source:` before testing.
+ */
 function isDangerousHref(href: string): boolean {
   // eslint-disable-next-line no-control-regex -- strips the control chars a scheme could hide behind
   let s = href.replace(/[\u0000-\u0020\u007f-\u009f]/g, "").toLowerCase();

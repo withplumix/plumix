@@ -79,8 +79,10 @@ import { stageUserPublic } from "./public-staging.js";
 import { stageIntoPlace } from "./stage-into-place.js";
 import { generateWorkerExportsSource } from "./worker-exports-codegen.js";
 
-// Relies on @plumix/admin exposing its package.json; it declares no `exports`
-// map, so add a `"./package.json"` export if one is introduced.
+/**
+ * Relies on @plumix/admin exposing its package.json; it declares no `exports`
+ * map, so add a `"./package.json"` export if one is introduced.
+ */
 const require = createRequire(import.meta.url);
 const ADMIN_PACKAGE_ROOT = dirname(
   require.resolve("@plumix/admin/package.json"),
@@ -570,8 +572,10 @@ async function regenerate(
   };
 }
 
-// A sibling of publicDir, so the swap is a rename on one filesystem and the
-// half-built copy is never served or watched.
+/**
+ * A sibling of publicDir, so the swap is a rename on one filesystem and the
+ * half-built copy is never served or watched.
+ */
 function adminStagingRoot(projectRoot: string): string {
   return resolve(projectRoot, ".plumix/admin-staging");
 }
@@ -582,8 +586,10 @@ function isInAdminStaging(projectRoot: string): (path: string) => boolean {
     path === stagingRoot || path.startsWith(`${stagingRoot}${sep}`);
 }
 
-// Built in full outside publicDir and swapped in only when it differs, so an
-// unchanged admin doesn't bounce Vite's file watcher.
+/**
+ * Built in full outside publicDir and swapped in only when it differs, so an
+ * unchanged admin doesn't bounce Vite's file watcher.
+ */
 async function stageAdminAssets(
   publicDir: string,
   manifest: PlumixManifest,
@@ -700,7 +706,7 @@ async function stagePluginChunks(
   return chunks;
 }
 
-// Copies each plugin's compiled `<catalogPath>/<locale>.mjs` to the
+/** Copies each plugin's compiled `<catalogPath>/<locale>.mjs` to the */
 async function resolvePluginAsset(
   pluginId: string,
   field: string,
@@ -735,9 +741,11 @@ async function injectIndexHtml(
   await writeFile(indexHtmlPath, next, "utf8");
 }
 
-// Plugin chunks load AFTER the main admin bundle so window.plumix is
-// populated before they execute. Block is replaced (not appended) on
-// rebuild so the HTML stays stable.
+/**
+ * Plugin chunks load AFTER the main admin bundle so window.plumix is
+ * populated before they execute. Block is replaced (not appended) on
+ * rebuild so the HTML stays stable.
+ */
 const PLUGIN_CHUNKS_MARKER = "<!-- plumix:plugin-chunks -->";
 const PLUGIN_CHUNKS_RE =
   /<!-- plumix:plugin-chunks -->[\s\S]*?<!-- \/plumix:plugin-chunks -->/;
@@ -782,8 +790,10 @@ type OnLog = NonNullable<
   NonNullable<BuildEnvironmentOptions["rolldownOptions"]>["onLog"]
 >;
 
-// Plumix gives `"use client"` its meaning itself, so Rolldown's directive
-// warning is noise; @vitejs/plugin-react drops it too.
+/**
+ * Plumix gives `"use client"` its meaning itself, so Rolldown's directive
+ * warning is noise; @vitejs/plugin-react drops it too.
+ */
 function withoutUseClientWarning(next: OnLog | undefined): OnLog {
   return (level, log, defaultHandler) => {
     if (
@@ -798,8 +808,10 @@ function withoutUseClientWarning(next: OnLog | undefined): OnLog {
   };
 }
 
-// Per-island synthesized entry name. Used as the `rollupOptions.input`
-// key so Rollup emits one content-hashed chunk per discovered island.
+/**
+ * Per-island synthesized entry name. Used as the `rollupOptions.input`
+ * key so Rollup emits one content-hashed chunk per discovered island.
+ */
 function islandEntryName(island: DiscoveredIsland): string {
   const slug = island.sourcePath.replace(/[^A-Za-z0-9]/g, "_");
   const suffix = simpleHash(island.sourcePath).toString(16).slice(0, 8);
@@ -863,8 +875,10 @@ function readAdminVersion(): string | null {
   }
 }
 
-// Strips common range prefixes and matches on 0.x-minor or 1.x+ major.
-// Advisory only; not a rigorous semver implementation.
+/**
+ * Strips common range prefixes and matches on 0.x-minor or 1.x+ major.
+ * Advisory only; not a rigorous semver implementation.
+ */
 function satisfiesLoose(installed: string, range: string): boolean {
   const base = range.replace(/^[~^><=]+/, "").trim();
   if (!base) return true;
@@ -880,7 +894,9 @@ function satisfiesLoose(installed: string, range: string): boolean {
   return rMajor === iMajor;
 }
 
-// Bounded so a stray large POST to the dev server can't grow memory unchecked.
+/**
+ * Bounded so a stray large POST to the dev server can't grow memory unchecked.
+ */
 const MAX_DEV_ERROR_BODY_BYTES = 1024 * 1024;
 function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {

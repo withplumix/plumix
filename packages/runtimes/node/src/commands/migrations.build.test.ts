@@ -63,8 +63,10 @@ const schema = () =>
     "SELECT type, name, sql FROM sqlite_master WHERE tbl_name NOT LIKE '\\_\\_drizzle%' ESCAPE '\\' ORDER BY name",
   );
 
-// A legacy database: the same schema, recorded in drizzle's default tracking
-// table rather than core's.
+/**
+ * A legacy database: the same schema, recorded in drizzle's default tracking
+ * table rather than core's.
+ */
 async function buildLegacyDatabase(): Promise<void> {
   expect(await plumix("migrate")).toMatchObject({ code: 0 });
   const db = new DatabaseSync(join(dir, "data/site.sqlite"));

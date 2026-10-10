@@ -9,7 +9,7 @@ interface Item {
   readonly id: string;
 }
 
-// Each string distinct, so a swapped or unwired announcement can't match.
+/** Each string distinct, so a swapped or unwired announcement can't match. */
 const announcements: SortableAnnouncements = {
   instructions: "instructions-text",
   pickedUp: ({ position, total }: SortablePosition) =>

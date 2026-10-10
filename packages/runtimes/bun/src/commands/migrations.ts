@@ -6,7 +6,7 @@ import { drizzleBunSqlite, openBunSqlite } from "../bun-sqlite-client.js";
 import { databaseFile, isBunSqlite } from "../bun-sqlite.js";
 import { MigrationsError } from "../errors.js";
 
-// The driver is synchronous; a failure still rejects, as on every runtime.
+/** The driver is synchronous; a failure still rejects, as on every runtime. */
 function settle<T>(work: () => T): Promise<T> {
   return new Promise((resolve) => {
     resolve(work());
@@ -43,7 +43,10 @@ function migrationDatabase(client: BunSqliteClient): MigrationDatabase {
   };
 }
 
-/** `plumix migrate` opens the file `bunSqlite()` names, against the project root. */
+/**
+ * `plumix migrate` opens the file `bunSqlite()` names, against the project
+ * root.
+ */
 export const migrations: RuntimeMigrations = {
   remote: false,
   legacyTable: "__drizzle_migrations",

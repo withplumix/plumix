@@ -2,7 +2,9 @@ import { CliError } from "plumix/cli";
 
 type BunCliErrorCode = "bun_required";
 
-// Bun's vocabulary, which core's runtime-agnostic `CliError` does not carry.
+/**
+ * Bun's vocabulary, which core's runtime-agnostic `CliError` does not carry.
+ */
 export class BunCliError extends CliError<BunCliErrorCode> {
   static bunRequired(): BunCliError {
     return new BunCliError(

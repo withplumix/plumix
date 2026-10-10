@@ -16,7 +16,7 @@ import {
 } from "@plumix/admin-ui/alert-dialog";
 import { Button } from "@plumix/admin-ui/button";
 
-// Actions key off the active view, which sidesteps mixed-status selections.
+/** Actions key off the active view, which sidesteps mixed-status selections. */
 const M = {
   selected: defineMessage({
     id: "entries.list.bulk.selected",

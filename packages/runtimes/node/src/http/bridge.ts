@@ -74,8 +74,10 @@ export function trustedRequest(
   );
 }
 
-// Unread body is drained after the response: Node dumps an unconsumed body but
-// not a started one, which blocks the next keep-alive request.
+/**
+ * Unread body is drained after the response: Node dumps an unconsumed body but
+ * not a started one, which blocks the next keep-alive request.
+ */
 function requestBody(
   req: IncomingMessage,
   res: ServerResponse,
@@ -119,8 +121,10 @@ function requestBody(
   return stream;
 }
 
-// On the socket, not `res`, which emits `close` after a normal finish too.
-// Removed on finish so keep-alive connections don't accumulate listeners.
+/**
+ * On the socket, not `res`, which emits `close` after a normal finish too.
+ * Removed on finish so keep-alive connections don't accumulate listeners.
+ */
 function abortOnDisconnect(
   req: IncomingMessage,
   res: ServerResponse,

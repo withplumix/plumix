@@ -60,8 +60,10 @@ declare module "../hooks/types.js" {
   }
 }
 
-// `renderThroughTheme` returns `null` when the theme has no rule for the node
-// and no `fallback` — a 404, per the router-style resolution model.
+/**
+ * `renderThroughTheme` returns `null` when the theme has no rule for the node
+ * and no `fallback` — a 404, per the router-style resolution model.
+ */
 function htmlResponseOrNotFound(html: string | null, reason: string): Response {
   if (html === null) return notFound(reason);
   return new Response(html, {
@@ -287,9 +289,11 @@ async function resolveDate(
   return renderListing(ctx, renderEnv, page, "public-date-no-template");
 }
 
-// The open seam: a plugin-registered archive type (`registerArchiveType`). The
-// resolver comes from the registry, produces the `{ data, title }` payload (or
-// `null` → 404), and templates via a `forArchiveType(name)` rule or `fallback`.
+/**
+ * The open seam: a plugin-registered archive type (`registerArchiveType`). The
+ * resolver comes from the registry, produces the `{ data, title }` payload (or
+ * `null` → 404), and templates via a `forArchiveType(name)` rule or `fallback`.
+ */
 async function resolveCustom(
   ctx: AppContext,
   intent: Extract<RouteIntent, { kind: "archiveType" }>,
@@ -321,8 +325,10 @@ async function resolveCustom(
   return htmlResponseOrNotFound(html, "public-custom-archive-no-template");
 }
 
-// A plugin-registered view (`registerView`): the resolver's `data` is wrapped
-// in the `{ kind, name, params }` envelope its `forView(name)` template reads.
+/**
+ * A plugin-registered view (`registerView`): the resolver's `data` is wrapped
+ * in the `{ kind, name, params }` envelope its `forView(name)` template reads.
+ */
 async function resolveView(
   ctx: AppContext,
   intent: Extract<RouteIntent, { kind: "view" }>,
@@ -413,8 +419,10 @@ async function resolveListingArchive(
   return htmlResponseOrNotFound(html, "public-custom-archive-no-template");
 }
 
-// Asked per arm so the types guarantee a title exists; the arm that declares a
-// `title` is the arm whose resolver cannot return one.
+/**
+ * Asked per arm so the types guarantee a title exists; the arm that declares a
+ * `title` is the arm whose resolver cannot return one.
+ */
 async function nameListingPage(
   ctx: AppContext,
   archive: ListingArchiveType,
@@ -498,14 +506,18 @@ async function resolveArchive(
   return renderListing(ctx, renderEnv, page, "public-archive-no-template");
 }
 
-// Invalid input coerces to NaN or <1, which paginate() marks out of range for a
-// 404.
+/**
+ * Invalid input coerces to NaN or <1, which paginate() marks out of range for a
+ * 404.
+ */
 function parsePageParam(raw: string | undefined): number {
   return raw === undefined ? 1 : Number(raw);
 }
 
-// Null when no token grants the entry or there is no autosave, so the live row
-// renders.
+/**
+ * Null when no token grants the entry or there is no autosave, so the live row
+ * renders.
+ */
 async function overlayPreviewAutosave(
   ctx: AppContext,
   entry: Entry,

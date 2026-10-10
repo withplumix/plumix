@@ -28,8 +28,10 @@ const idInput = v.object({
   id: v.pipe(v.number(), v.integer(), v.minValue(1)),
 });
 
-// The two filters every read takes, spelled once: `counts` takes them
-// alone, `list` takes them with a page on top.
+/**
+ * The two filters every read takes, spelled once: `counts` takes them
+ * alone, `list` takes them with a page on top.
+ */
 const filterEntries = {
   form: v.optional(v.pipe(v.string(), v.maxLength(200))),
   status: v.optional(v.picklist(SUBMISSION_STATUSES)),

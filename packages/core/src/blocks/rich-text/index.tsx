@@ -6,9 +6,11 @@ import { useHtmlAllowlist } from "../html/context.js";
 import { sanitizeHtml } from "../html/sanitize.js";
 import { expandShortcodes } from "../shortcodes/expand.js";
 
-// The trust boundary is the stored bytes: a string body is authored HTML and
-// is sanitised at render like `core/html`, which also covers content stored
-// before this gate.
+/**
+ * The trust boundary is the stored bytes: a string body is authored HTML and
+ * is sanitised at render like `core/html`, which also covers content stored
+ * before this gate.
+ */
 function RichTextBlockRender({
   attrs,
   context,

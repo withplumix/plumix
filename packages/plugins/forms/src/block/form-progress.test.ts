@@ -10,9 +10,11 @@ import {
   writeProgress,
 } from "./form-progress.js";
 
-// The platform boundary, stubbed rather than mocked away: these are the
-// four calls the plugin makes against session storage, and a browser
-// that refuses them is the case the island has to survive.
+/**
+ * The platform boundary, stubbed rather than mocked away: these are the
+ * four calls the plugin makes against session storage, and a browser
+ * that refuses them is the case the island has to survive.
+ */
 function stubStorage(entries: Record<string, string> = {}): void {
   const held = new Map(Object.entries(entries));
   vi.stubGlobal("sessionStorage", {

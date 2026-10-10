@@ -80,7 +80,7 @@ const OUTPUT_FORMATS = Object.keys(CONTENT_TYPES) as readonly OutputFormat[];
 
 const ENCODABLE: readonly ImageFormat[] = ["jpeg", "webp", "avif"];
 
-// The hash is both the cache file name and the `ETag`.
+/** The hash is both the cache file name and the `ETag`. */
 interface VariantRequest {
   readonly params: ImageParams;
   readonly format: NegotiatedFormat;
@@ -99,8 +99,10 @@ const refused = (): ImagesError => ImagesError.upstream({ status: 400 });
 
 type Render = (request: VariantRequest) => Promise<Variant>;
 
-// Concurrent renders, each holding a source and its decoded pixels, are what
-// bound process memory.
+/**
+ * Concurrent renders, each holding a source and its decoded pixels, are what
+ * bound process memory.
+ */
 function limited(max: number, render: Render): Render {
   let active = 0;
   const waiting: (() => void)[] = [];
@@ -119,8 +121,10 @@ function limited(max: number, render: Render): Render {
 const candidates = (format: NegotiatedFormat): readonly OutputFormat[] =>
   format === "source" ? OUTPUT_FORMATS : [format];
 
-// What sharp names a decoded input, onto what it can encode. Vector and
-// exotic raster inputs come out lossless.
+/**
+ * What sharp names a decoded input, onto what it can encode. Vector and
+ * exotic raster inputs come out lossless.
+ */
 function ownFormat(format: string | undefined): OutputFormat {
   if (format === "heif") return "avif";
   return (OUTPUT_FORMATS as readonly string[]).includes(format ?? "")

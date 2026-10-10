@@ -18,8 +18,10 @@ const CATALOGS: Readonly<Record<string, CompiledCatalog>> = {
   "zh-CN": zhCnMessages,
 };
 
-// Source descriptors — `plumix i18n verify` matches these against the po
-// catalogs; `message` is the English source and the runtime fallback.
+/**
+ * Source descriptors — `plumix i18n verify` matches these against the po
+ * catalogs; `message` is the English source and the runtime fallback.
+ */
 const M = {
   running: { id: "core.welcome.running", message: "plumix is running" },
   heading: { id: "core.welcome.heading", message: "Your site is ready." },

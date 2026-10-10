@@ -48,7 +48,9 @@ import { StarterModal } from "./starter-modal.js";
 import { StylesTab } from "./styles-tab.js";
 
 const NO_CAPABILITIES: ReadonlySet<string> = new Set();
-// Stable so a fresh `{}` doesn't defeat the config provider's memo each render.
+/**
+ * Stable so a fresh `{}` doesn't defeat the config provider's memo each render.
+ */
 const NO_TOKENS: ThemeTokens = {};
 
 export interface PlumixEditorProps {
@@ -294,7 +296,7 @@ export function PlumixEditor({
   );
 }
 
-// Store-controlled tab so selections can steer which panel is shown.
+/** Store-controlled tab so selections can steer which panel is shown. */
 function RightRail({
   documentPanel,
   onRefreshBlockLoader,

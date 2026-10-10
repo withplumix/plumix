@@ -1,7 +1,7 @@
 // The visual-editor edit gate, kept apart from the `ctx` wiring in resolve.ts
 // so its security truth table stays auditable.
 
-// Shared vocabulary with the runtime's `useIsEditing`/`useIsPreview`.
+/** Shared vocabulary with the runtime's `useIsEditing`/`useIsPreview`. */
 type EditRenderMode = "live" | "preview" | "edit";
 
 export interface EditModeDecision {

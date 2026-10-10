@@ -22,8 +22,10 @@ function daysAgo(days: number): Date {
   return new Date(NOW.getTime() - days * DAY);
 }
 
-// The db is kept beside the context rather than read back off it: the
-// factory seeds through the same handle the purge then reads.
+/**
+ * The db is kept beside the context rather than read back off it: the
+ * factory seeds through the same handle the purge then reads.
+ */
 async function context(): Promise<{
   readonly ctx: AppContext;
   readonly seed: (form: string, createdAt: Date) => Promise<unknown>;

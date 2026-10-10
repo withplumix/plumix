@@ -26,9 +26,11 @@ import { Trans, useLingui } from "plumix/i18n";
 import type { MediaRouter } from "../rpc.js";
 import { mediaRpc } from "./rpc.js";
 
-// Descriptors that need runtime indirection — used outside JSX (aria
-// strings, native attribute values). JSX-text strings stay inline at
-// their `<Trans>` callsite for extraction discoverability.
+/**
+ * Descriptors that need runtime indirection — used outside JSX (aria
+ * strings, native attribute values). JSX-text strings stay inline at
+ * their `<Trans>` callsite for extraction discoverability.
+ */
 const M = {
   titleLibrary: {
     id: "plugin.media.library.title.library",
@@ -80,9 +82,11 @@ const M = {
 const PAGE_SIZE = 24;
 const UPLOAD_CONCURRENCY = 4;
 
-// `MEDIA_LIST_KEY` is parametric over `accept` so the picker grid
-// stays in its own cache slot — the page-mode library and a picker
-// scoped to `accept: "image/"` never poison each other's data.
+/**
+ * `MEDIA_LIST_KEY` is parametric over `accept` so the picker grid
+ * stays in its own cache slot — the page-mode library and a picker
+ * scoped to `accept: "image/"` never poison each other's data.
+ */
 function mediaListKey(
   accept: string | readonly string[] | undefined,
   search: string,
@@ -90,11 +94,13 @@ function mediaListKey(
   return ["media", "list", accept ?? null, search] as const;
 }
 
-// Matches the admin's DebouncedSearchInput interval for list-screen parity.
+/** Matches the admin's DebouncedSearchInput interval for list-screen parity. */
 const SEARCH_DEBOUNCE_MS = 250;
 
-// Local debounce — the admin shell's DebouncedSearchInput lives behind
-// the `@/` alias and isn't part of the plugin-facing surface.
+/**
+ * Local debounce — the admin shell's DebouncedSearchInput lives behind
+ * the `@/` alias and isn't part of the plugin-facing surface.
+ */
 function useDebouncedValue(value: string, delayMs: number): string {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
@@ -108,8 +114,10 @@ function useDebouncedValue(value: string, delayMs: number): string {
   return debounced;
 }
 
-// Without `publicUrlBase` the plugin emits relative serve URLs, which break
-// once pasted elsewhere; `Copy URL` must hand back something pasteable.
+/**
+ * Without `publicUrlBase` the plugin emits relative serve URLs, which break
+ * once pasted elsewhere; `Copy URL` must hand back something pasteable.
+ */
 function toAbsoluteUrl(url: string): string {
   if (url.startsWith("http://") || url.startsWith("https://")) return url;
   if (typeof window === "undefined") return url;
@@ -166,8 +174,10 @@ function toSelection(item: MediaItem): MediaSelection {
   };
 }
 
-// The PUT never reaches oRPC, so the HTTP status stands in for a `reason`;
-// null when the request never got an answer.
+/**
+ * The PUT never reaches oRPC, so the HTTP status stands in for a `reason`;
+ * null when the request never got an answer.
+ */
 class UploadPutError extends Error {
   static {
     UploadPutError.prototype.name = "UploadPutError";
@@ -189,9 +199,11 @@ class UploadPutError extends Error {
   }
 }
 
-// Browser PUT with progress reporting. `fetch()` in 2026 still doesn't
-// expose request-body progress; XMLHttpRequest's `upload.onprogress` is
-// the only portable signal. The signed headers must be echoed verbatim.
+/**
+ * Browser PUT with progress reporting. `fetch()` in 2026 still doesn't
+ * expose request-body progress; XMLHttpRequest's `upload.onprogress` is
+ * the only portable signal. The signed headers must be echoed verbatim.
+ */
 function putWithProgress(
   url: string,
   method: string,
@@ -294,9 +306,11 @@ function useMediaUpload(invalidateList: () => void): MediaUploadState {
   return { pending, error, setError, startUpload };
 }
 
-// Generic intersection-observer-on-sentinel hook. Re-binds when the
-// data length changes so we don't miss the next intersection after a
-// page lands.
+/**
+ * Generic intersection-observer-on-sentinel hook. Re-binds when the
+ * data length changes so we don't miss the next intersection after a
+ * page lands.
+ */
 function useInfiniteScrollSentinel(
   sentinelRef: React.RefObject<HTMLDivElement | null>,
   hasNextPage: boolean,
@@ -696,8 +710,10 @@ function hasFiles(e: DragEvent): boolean {
   return Array.from(e.dataTransfer.types).includes("Files");
 }
 
-// The banner is the only surface a failed upload shows, and raw reasons like
-// `mime_mismatch` read like 404s. Aliased codes share one descriptor.
+/**
+ * The banner is the only surface a failed upload shows, and raw reasons like
+ * `mime_mismatch` read like 404s. Aliased codes share one descriptor.
+ */
 const ERROR_DESCRIPTORS = {
   storageNotConfigured: {
     id: "plugin.media.error.storageNotConfigured",
@@ -810,8 +826,10 @@ async function tryCleanupDraft(mediaId: number): Promise<void> {
   }
 }
 
-// The page-wide drop handlers already accept files; a visible target tells the
-// user the empty library accepts them at all.
+/**
+ * The page-wide drop handlers already accept files; a visible target tells the
+ * user the empty library accepts them at all.
+ */
 function Dropzone({
   onSelect,
   highlight,
@@ -946,11 +964,15 @@ function MediaCard({
 }: {
   item: MediaItem;
   selected: boolean;
-  // Single-click action — opens the drawer (page mode) OR sets the
-  // picker selection (picker mode).
+  /**
+   * Single-click action — opens the drawer (page mode) OR sets the
+   * picker selection (picker mode).
+   */
   onActivate: () => void;
-  // Double-click action — only meaningful in picker mode (confirm +
-  // close). Page mode passes an empty fn.
+  /**
+   * Double-click action — only meaningful in picker mode (confirm +
+   * close). Page mode passes an empty fn.
+   */
   onConfirm?: () => void;
   ariaActionLabel: string;
   // onDelete + onAltChange removed from card — both belong to the
@@ -1429,7 +1451,7 @@ function FileGlyph({ mime }: { mime: string }): ReactNode {
   );
 }
 
-// Fixed aspect ratio so the skeleton-to-image swap causes no layout shift.
+/** Fixed aspect ratio so the skeleton-to-image swap causes no layout shift. */
 function ImageWithFallback({
   src,
   alt,

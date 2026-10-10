@@ -131,8 +131,10 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-// Radix Select forbids an empty-string item value, so "keep entries as-is"
-// carries a sentinel that maps back to `null` (no reassignment) on change.
+/**
+ * Radix Select forbids an empty-string item value, so "keep entries as-is"
+ * carries a sentinel that maps back to `null` (no reassignment) on change.
+ */
 const KEEP_AS_IS_VALUE = "__keep__";
 
 async function invalidateUserCaches(
@@ -880,7 +882,7 @@ function mapUserError(
   return descriptor ?? fallback;
 }
 
-// `last_admin` reads differently per action, hence three records.
+/** `last_admin` reads differently per action, hence three records. */
 const UPDATE_ERROR_MESSAGES: ErrorMessages = {
   last_admin: defineMessage({
     id: "userEdit.error.lastAdmin.update",

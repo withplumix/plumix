@@ -21,9 +21,11 @@ import {
   mediaAcceptSchema,
 } from "./accept.js";
 
-// "heroImage" → "Hero image". Derived default for fields authored
-// without `.label()`. Kept local — the plugin can't reach core's
-// private `humanizeFieldKey`, and the rule is a one-liner.
+/**
+ * "heroImage" → "Hero image". Derived default for fields authored
+ * without `.label()`. Kept local — the plugin can't reach core's
+ * private `humanizeFieldKey`, and the rule is a one-liner.
+ */
 function humanizeFieldKey(key: string): string {
   const spaced = key
     .replaceAll(/([a-z0-9])([A-Z])/g, "$1 $2")
@@ -37,8 +39,10 @@ type MediaReadItem<Returns extends "id" | "hydrated"> = Returns extends "id"
   ? string
   : MediaReference;
 
-// A single reference is always optional: its target can be deleted after the
-// id is written.
+/**
+ * A single reference is always optional: its target can be deleted after the
+ * id is written.
+ */
 type MediaReadValue<
   Multiple extends boolean,
   Required extends boolean,
@@ -360,15 +364,17 @@ export class MediaFieldBuilder<
   }
 }
 
-// The lookup reads an empty accept as no filter at all.
+/** The lookup reads an empty accept as no filter at all. */
 function hasAcceptFilter(
   accept: string | readonly string[] | undefined,
 ): accept is string | readonly string[] {
   return accept !== undefined && accept.length > 0;
 }
 
-// A string accept is a prefix, a list is exact MIME types, as the lookup reads
-// them — so a listed `"image/"` matches no file at all.
+/**
+ * A string accept is a prefix, a list is exact MIME types, as the lookup reads
+ * them — so a listed `"image/"` matches no file at all.
+ */
 function admitsOnlyImages(accept: string | readonly string[]): boolean {
   if (typeof accept === "string") return accept.startsWith("image/");
   return accept.every((type) => /^image\/.+/.test(type));

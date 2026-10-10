@@ -15,8 +15,10 @@ import { publicEntryTypeNames } from "../plugin/registry.js";
 
 export type EntryViewer = Pick<AppContext, "user" | "auth" | "plugins">;
 
-// `authorId` admits `null` so a caller can ask about a hypothetical row "by
-// the current user", who may be nobody.
+/**
+ * `authorId` admits `null` so a caller can ask about a hypothetical row "by
+ * the current user", who may be nobody.
+ */
 export interface EntryRow {
   readonly type: Entry["type"];
   readonly status: Entry["status"];
@@ -74,7 +76,7 @@ export function referenceableEntryRows(ctx: EntryViewer, type: string): SQL {
     : sql`(${or(published, earned)})`;
 }
 
-// The SQL half of `canReadUnpublished`, under the same `read` gate.
+/** The SQL half of `canReadUnpublished`, under the same `read` gate. */
 function earnedUnpublishedRows(ctx: EntryViewer, type: string): SQL | null {
   const namespace = entryCapabilityNamespace(ctx.plugins, type);
   if (!ctx.auth.can(namespacedEntryCapability(namespace, "read"))) return null;

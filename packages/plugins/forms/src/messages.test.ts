@@ -65,10 +65,12 @@ describe("interpolated messages", () => {
   });
 });
 
-// `lingui compile` fails on a malformed ICU message but not on a plural
-// that is missing one of the locale's categories — the count would then
-// silently fall through to `other`. These read the committed `.po`
-// rather than the compiled catalogs, which are build output.
+/**
+ * `lingui compile` fails on a malformed ICU message but not on a plural
+ * that is missing one of the locale's categories — the count would then
+ * silently fall through to `other`. These read the committed `.po`
+ * rather than the compiled catalogs, which are build output.
+ */
 const catalog = (locale: string): Map<string, string> => {
   // vitest runs with the package root as cwd.
   const po = readFileSync(

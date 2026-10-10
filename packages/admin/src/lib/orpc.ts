@@ -6,8 +6,10 @@ import type { AppRouterClient } from "@plumix/core";
 
 import { adminBasePath } from "./admin-base.js";
 
-// `RPCLink` needs an absolute URL (a bare path throws "Invalid URL"). Lazy so
-// SSR contexts without `window` can import this module.
+/**
+ * `RPCLink` needs an absolute URL (a bare path throws "Invalid URL"). Lazy so
+ * SSR contexts without `window` can import this module.
+ */
 const link = new RPCLink({
   url: () => `${window.location.origin}${adminBasePath()}/_plumix/rpc`,
   headers: () => ({

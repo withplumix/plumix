@@ -368,8 +368,10 @@ function LayerRow({
   );
 }
 
-// The row that takes `id`'s place once it and its nested rows are gone: the
-// next row past its subtree, else the one before it.
+/**
+ * The row that takes `id`'s place once it and its nested rows are gone: the
+ * next row past its subtree, else the one before it.
+ */
 function rowAfterRemoving(
   items: readonly FlatNode[],
   id: string,

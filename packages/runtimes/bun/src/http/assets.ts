@@ -15,8 +15,10 @@ export interface AssetsLayer extends AssetsBinding {
   readonly serve: (request: Request) => Promise<Response | null>;
 }
 
-// A fresh `Bun.file` per call: one caches its stat and would keep reporting a
-// deleted file.
+/**
+ * A fresh `Bun.file` per call: one caches its stat and would keep reporting a
+ * deleted file.
+ */
 async function answer(
   root: string,
   request: Request,

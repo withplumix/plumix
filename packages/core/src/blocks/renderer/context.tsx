@@ -23,8 +23,10 @@ import { renderBlockTree } from "../render-block-tree.js";
 import { serializeRenderEnv } from "../render-env.js";
 import { RendererError } from "./errors.js";
 
-// `blocks/` sits in the foundation layer, below `auth/` and `route/` — these
-// mirror `AuthenticatedUser` / `ResolvedEntity` structurally.
+/**
+ * `blocks/` sits in the foundation layer, below `auth/` and `route/` — these
+ * mirror `AuthenticatedUser` / `ResolvedEntity` structurally.
+ */
 export interface RendererUser {
   readonly id: number;
   readonly email: string;
@@ -35,8 +37,10 @@ export interface RendererUser {
   readonly meta: JsonObject;
 }
 
-// Mirrors core's `AuthMethodsSummary` structurally — blocks sits below core in
-// the build graph and can't import it.
+/**
+ * Mirrors core's `AuthMethodsSummary` structurally — blocks sits below core in
+ * the build graph and can't import it.
+ */
 export interface RendererOAuthProvider {
   readonly key: string;
   readonly label: string;
@@ -121,8 +125,10 @@ export function PlumixProvider({
   );
 }
 
-// The one place a context becomes walker options, so a render input added to
-// the context reaches the server render and the editor canvas alike.
+/**
+ * The one place a context becomes walker options, so a render input added to
+ * the context reaches the server render and the editor canvas alike.
+ */
 function renderOptions(ctx: PlumixContextValue): RenderBlockTreeOptions {
   return {
     breakpoints: ctx.breakpoints,

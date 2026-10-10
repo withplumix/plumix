@@ -16,20 +16,22 @@ import { expect, openPlaygroundDb, test } from "plumix/test/playwright";
 // `no-unsafe-assignment`. The source path always exists.
 import { auditLog } from "../src/db/schema.js";
 
-// Seed audit_log rows directly via D1. Audit-log hooks only fire when
-// the worker handles an action through the request pipeline; for e2e
-// rendering coverage we go around them so the table has something to
-// render + filter against without depending on additional admin UI
-// flows that aren't this plugin's responsibility. The hook→record
-// path is exercised by `hooks.test.ts` against an in-memory db.
-//
-// Insert through drizzle's typed builder against the audit-log
-// plugin's own schema so column renames / new NOT NULL fields surface
-// as a TypeScript error here, not a runtime SqliteError mid-test.
-//
-// Safe to run again on a retry because the rig restores the database to
-// its post-globalSetup baseline first, so this always inserts into an
-// empty table (`plumixDbBaseline` in plumix/test/playwright).
+/**
+ * Seed audit_log rows directly via D1. Audit-log hooks only fire when
+ * the worker handles an action through the request pipeline; for e2e
+ * rendering coverage we go around them so the table has something to
+ * render + filter against without depending on additional admin UI
+ * flows that aren't this plugin's responsibility. The hook→record
+ * path is exercised by `hooks.test.ts` against an in-memory db.
+ *
+ * Insert through drizzle's typed builder against the audit-log
+ * plugin's own schema so column renames / new NOT NULL fields surface
+ * as a TypeScript error here, not a runtime SqliteError mid-test.
+ *
+ * Safe to run again on a retry because the rig restores the database to
+ * its post-globalSetup baseline first, so this always inserts into an
+ * empty table (`plumixDbBaseline` in plumix/test/playwright).
+ */
 async function seedAuditRows(): Promise<void> {
   const db = await openPlaygroundDb({
     cwd: resolve(process.cwd(), "playground"),
@@ -157,8 +159,10 @@ test("admin page ships styled controls", async ({ page }) => {
   expect(ui.styled).toBeGreaterThan(0);
 });
 
-// Counts the plugin shell's interactive controls and how many carry a
-// styling class — a count of 0 is the unstyled-component regression signal.
+/**
+ * Counts the plugin shell's interactive controls and how many carry a
+ * styling class — a count of 0 is the unstyled-component regression signal.
+ */
 async function styledControls(page: Page, shellTestId: string) {
   return page.evaluate((id) => {
     const shell = document.querySelector(`[data-testid="${id}"]`);

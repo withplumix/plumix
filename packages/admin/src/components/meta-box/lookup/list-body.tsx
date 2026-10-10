@@ -6,9 +6,11 @@ import { CommandEmpty, CommandItem } from "@plumix/admin-ui/command";
 
 import type { LookupItem } from "./types.js";
 
-// Shared loading / empty / item-list body for lookup-backed pickers —
-// the reference pickers select by `item.id`, the link field's entry
-// picker by `item.href`.
+/**
+ * Shared loading / empty / item-list body for lookup-backed pickers —
+ * the reference pickers select by `item.id`, the link field's entry
+ * picker by `item.href`.
+ */
 export function renderLookupListBody({
   isLoading,
   items,

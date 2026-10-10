@@ -54,10 +54,12 @@ function mcpRequest(): Request {
   });
 }
 
-// Both cold interfaces hang off the app as lazy loaders, so substituting one
-// makes the load observable: a zero count is the "the SDK never came onto the
-// cold-start path" assertion, and the handler's body proves the request was
-// delegated rather than merely answered.
+/**
+ * Both cold interfaces hang off the app as lazy loaders, so substituting one
+ * makes the load observable: a zero count is the "the SDK never came onto the
+ * cold-start path" assertion, and the handler's body proves the request was
+ * delegated rather than merely answered.
+ */
 function coldInterfaceProbe(): {
   readonly loads: { mcp: number; rest: number };
   readonly coldInterfaces: Pick<
@@ -2552,7 +2554,7 @@ describe("dispatcher — plugin-route CDN (#1959)", () => {
   });
 });
 
-// Depth-first span-tree walk shared by the telemetry assertions.
+/** Depth-first span-tree walk shared by the telemetry assertions. */
 function flattenSpans(spans: readonly TelemetrySpan[]): TelemetrySpan[] {
   return spans.flatMap((span) => [span, ...flattenSpans(span.children)]);
 }
@@ -3454,7 +3456,9 @@ describe("dispatcher — ctx.fetch tracing", () => {
   });
 });
 
-// A theme whose only template throws, so a dispatch lands on the error path.
+/**
+ * A theme whose only template throws, so a dispatch lands on the error path.
+ */
 const throwingTheme = defineTheme({
   templates: [
     fallback(() => {

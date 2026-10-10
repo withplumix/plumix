@@ -20,7 +20,9 @@ afterEach(cleanup);
 
 i18n.loadAndActivate({ locale: "en", messages: {} });
 
-// The editor renders a `<Trans>` hint, so its render needs the i18n context.
+/**
+ * The editor renders a `<Trans>` hint, so its render needs the i18n context.
+ */
 const renderRT = (ui: ReactElement): ReturnType<typeof render> =>
   render(<I18nProvider i18n={i18n}>{ui}</I18nProvider>);
 
@@ -304,7 +306,8 @@ describe("RichTextField toolbar reflects the allowlist", () => {
     );
     const { rerender, getByTestId } = render(wrap(doc));
     expect(getByTestId("rtc-editor").textContent).toContain("hello");
-    // An external reset to null must clear the on-screen doc, not leave it stale.
+    // An external reset to null must clear the on-screen doc, not leave it
+    // stale.
     rerender(wrap(null));
     expect(getByTestId("rtc-editor").textContent).not.toContain("hello");
   });

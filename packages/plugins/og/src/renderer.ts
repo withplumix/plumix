@@ -90,7 +90,7 @@ export const JPEG_CONTENT_TYPE = "image/jpeg";
 export const CARD_WIDTH = 1200;
 export const CARD_HEIGHT = 630;
 
-// A content type with no extension here has no servable URL.
+/** A content type with no extension here has no servable URL. */
 const EXTENSIONS = new Map<string, string>([
   [SVG_CONTENT_TYPE, "svg"],
   [PNG_CONTENT_TYPE, "png"],
@@ -102,8 +102,10 @@ export function extensionFor(contentType: string): string | undefined {
   return EXTENSIONS.get(contentType);
 }
 
-// What X, Facebook and LinkedIn all render. An SVG `og:image` unfurls as
-// nothing, worse than the site default.
+/**
+ * What X, Facebook and LinkedIn all render. An SVG `og:image` unfurls as
+ * nothing, worse than the site default.
+ */
 const SCRAPER_SAFE = new Set([PNG_CONTENT_TYPE, JPEG_CONTENT_TYPE]);
 
 /** Undefined when scrapers don't render the format; its route still serves. */

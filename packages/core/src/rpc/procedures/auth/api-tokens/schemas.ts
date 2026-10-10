@@ -10,19 +10,25 @@ const tokenNameSchema = v.pipe(
   v.regex(/^[^\r\n]+$/, "name must not contain newlines"),
 );
 
-// SHA-256 hex (64 chars) — what `hashToken` produces. 128-char ceiling
-// guards against pathological hostile input on the receiving handler.
+/**
+ * SHA-256 hex (64 chars) — what `hashToken` produces. 128-char ceiling
+ * guards against pathological hostile input on the receiving handler.
+ */
 const tokenIdSchema = v.pipe(v.string(), v.minLength(1), v.maxLength(128));
 
-// `null` means never expires. The 5-year cap stands in for a rotation
-// policy we don't have.
+/**
+ * `null` means never expires. The 5-year cap stands in for a rotation
+ * policy we don't have.
+ */
 const expiresInDaysSchema = v.union([
   v.null(),
   v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(365 * 5)),
 ]);
 
-// Capability strings — `entry:post:read`, `settings:manage`, etc.
-// Same shape as device-flow's scope schema (kept in sync).
+/**
+ * Capability strings — `entry:post:read`, `settings:manage`, etc.
+ * Same shape as device-flow's scope schema (kept in sync).
+ */
 const capabilitySchema = v.pipe(
   v.string(),
   v.minLength(1, "capability must be non-empty"),
@@ -30,9 +36,11 @@ const capabilitySchema = v.pipe(
   v.regex(/^[A-Za-z0-9_:.\-*]+$/, "capability uses [A-Za-z0-9_:.\\-*] only"),
 );
 
-// `null` inherits the role's caps; an array narrows to it. `[]` is legal: the
-// token authenticates but every `auth.can` is false. Capped at 128 against a
-// hostile self-mint.
+/**
+ * `null` inherits the role's caps; an array narrows to it. `[]` is legal: the
+ * token authenticates but every `auth.can` is false. Capped at 128 against a
+ * hostile self-mint.
+ */
 const scopesSchema = v.optional(
   v.union([
     v.null(),

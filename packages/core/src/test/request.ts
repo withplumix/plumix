@@ -127,23 +127,23 @@ export class TestResponse {
   // even though the passkey-routes test suite calls them directly.
   // Per-line suppressions document the consumer.
 
-  // fallow-ignore-next-line unused-class-member
+  /** fallow-ignore-next-line unused-class-member */
   get headers(): Headers {
     return this.#response.headers;
   }
 
-  // fallow-ignore-next-line unused-class-member
+  /** fallow-ignore-next-line unused-class-member */
   async text(): Promise<string> {
     return this.#bodyText;
   }
 
-  // fallow-ignore-next-line unused-class-member
+  /** fallow-ignore-next-line unused-class-member */
   async json<T = unknown>(): Promise<T> {
     const text = await this.#bodyText;
     return JSON.parse(text) as T;
   }
 
-  // fallow-ignore-next-line unused-class-member
+  /** fallow-ignore-next-line unused-class-member */
   assertStatus(code: number): this {
     if (this.#response.status !== code) {
       throw new Error(

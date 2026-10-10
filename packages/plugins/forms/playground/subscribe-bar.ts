@@ -8,15 +8,17 @@ import { useIsLive } from "plumix/blocks/renderer";
 import type { FormWire } from "@plumix/plugin-forms/hooks";
 import { usePlumixForm } from "@plumix/plugin-forms/hooks";
 
-// A theme's own subscribe bar, and the reason `usePlumixForm`
-// exists: one input, one button, and markup that is entirely the
-// theme's — none of the plugin's classes, attributes or stylesheet. The
-// hook supplies the fields, the submit and the errors; everything else
-// here is ordinary React.
-//
-// Authored with `createElement` rather than JSX, like the theme beside
-// it, so the playground stays transform-agnostic across the jiti config
-// load and the vite worker bundle.
+/**
+ * A theme's own subscribe bar, and the reason `usePlumixForm`
+ * exists: one input, one button, and markup that is entirely the
+ * theme's — none of the plugin's classes, attributes or stylesheet. The
+ * hook supplies the fields, the submit and the errors; everything else
+ * here is ordinary React.
+ *
+ * Authored with `createElement` rather than JSX, like the theme beside
+ * it, so the playground stays transform-agnostic across the jiti config
+ * load and the vite worker bundle.
+ */
 export function SubscribeBar({
   form,
 }: IslandProps<{ readonly form: FormWire }>): ReactNode {

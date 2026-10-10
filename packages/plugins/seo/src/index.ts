@@ -28,10 +28,10 @@ import "./robots.js"; // seo:robots-txt
 import "./schema.js"; // seo:schema:needs, seo:schema:piece, seo:schema:graph
 import "./sitemap.js"; // seo:sitemap:urls
 
-// Well past the default of 100, so nothing a site writes lands after this.
+/** Well past the default of 100, so nothing a site writes lands after this. */
 const LAST = 1000;
 
-// Resolved against the consuming site, the way every plugin admin entry is.
+/** Resolved against the consuming site, the way every plugin admin entry is. */
 const ADMIN_ENTRY_PATH = pluginAdminEntryPath("@plumix/plugin-seo");
 
 // Re-exported so a subscriber to this plugin's `seo:og_image` filter names the

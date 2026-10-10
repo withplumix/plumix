@@ -39,11 +39,16 @@ function entryLookups(spans: readonly TelemetrySpan[]): string[] {
   });
 }
 
-// One edit time for every seed a URL comparison makes, so the font set is the
-// only input that differs between the two cards.
+/**
+ * One edit time for every seed a URL comparison makes, so the font set is the
+ * only input that differs between the two cards.
+ */
 const UPDATED_AT = new Date("2026-01-01T00:00:00Z");
 
-/** The URL a card lands on for a given font set, under a renderer reading `reads`. */
+/**
+ * The URL a card lands on for a given font set, under a renderer reading
+ * `reads`.
+ */
 async function cardPathFor(
   fonts: readonly string[],
   reads?: CardRenderer["fonts"],

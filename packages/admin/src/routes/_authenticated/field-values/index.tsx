@@ -38,7 +38,7 @@ type Sweep = Awaited<ReturnType<typeof orpc.meta.sweep.call>>;
 type SweepKey = Sweep["keys"][number];
 type SweepCursor = NonNullable<Sweep["next"]>;
 
-// Matches the server's cap on the rows it names per field.
+/** Matches the server's cap on the rows it names per field. */
 const MAX_LINKED_ROWS = 20;
 
 const STORE_LABELS = {
@@ -69,8 +69,10 @@ export const Route = createFileRoute("/_authenticated/field-values/")({
   component: FieldValuesRoute,
 });
 
-// D1 caps each request's queries, so the server walks the site one budgeted
-// call at a time.
+/**
+ * D1 caps each request's queries, so the server walks the site one budgeted
+ * call at a time.
+ */
 async function readReport(): Promise<readonly SweepKey[]> {
   let keys: readonly SweepKey[] = [];
   let cursor: SweepCursor | null = null;
@@ -339,8 +341,10 @@ function ReportRow({ count }: { readonly count: SweepKey }): ReactNode {
   );
 }
 
-// The declared label when the plugin that declared the scope is installed;
-// the raw name otherwise, which is still what the stored rows are keyed by.
+/**
+ * The declared label when the plugin that declared the scope is installed;
+ * the raw name otherwise, which is still what the stored rows are keyed by.
+ */
 function scopeLabel(count: SweepKey): Label | undefined {
   if (count.scope === null) return undefined;
   switch (count.store) {
@@ -355,8 +359,10 @@ function scopeLabel(count: SweepKey): Label | undefined {
   }
 }
 
-// Where an author fixes the value by hand. Settings rows carry no id, so they
-// never reach here.
+/**
+ * Where an author fixes the value by hand. Settings rows carry no id, so they
+ * never reach here.
+ */
 function RowLink({
   count,
   id,

@@ -15,9 +15,11 @@ declare module "../../context/dev-runtime.js" {
   }
 }
 
-// A plugin panel author's happy path: record per-request data during render,
-// then read it back when the panel renders. `render:document` fires during a
-// real page render (before the bar), so the entry is present by panel time.
+/**
+ * A plugin panel author's happy path: record per-request data during render,
+ * then read it back when the panel renders. `render:document` fires during a
+ * real page render (before the bar), so the entry is present by panel time.
+ */
 const demoPlugin = definePlugin("debug-demo", (ctx) => {
   ctx.registerEntryType("post", {
     label: "Posts",

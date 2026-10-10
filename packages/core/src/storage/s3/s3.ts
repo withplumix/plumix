@@ -241,15 +241,19 @@ function metadataOf(response: Response): HeadResult {
   };
 }
 
-// Only the `<Code>` element is read off an error document. The rest of the
-// body is the bucket's prose and never makes it into a message.
+/**
+ * Only the `<Code>` element is read off an error document. The rest of the
+ * body is the bucket's prose and never makes it into a message.
+ */
 async function errorCodeOf(response: Response): Promise<string | undefined> {
   const text = await response.text().catch(() => "");
   return elementText(text, "Code") || undefined;
 }
 
-// ListObjectsV2 answers in XML and no server runtime ships a parser for it;
-// the document is flat enough that element extraction is the whole job.
+/**
+ * ListObjectsV2 answers in XML and no server runtime ships a parser for it;
+ * the document is flat enough that element extraction is the whole job.
+ */
 function parseListing(xml: string): ListResult {
   const items: ListItem[] = [];
   for (const match of xml.matchAll(/<Contents>([\s\S]*?)<\/Contents>/g)) {

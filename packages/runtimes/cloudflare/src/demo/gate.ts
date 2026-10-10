@@ -1,8 +1,10 @@
 import type { AdminArea } from "plumix";
 
-// Each refused path is filed under the admin area whose surfaces offer it, so
-// the areas the demo declares to the admin can't drift from what the gate
-// refuses.
+/**
+ * Each refused path is filed under the admin area whose surfaces offer it, so
+ * the areas the demo declares to the admin can't drift from what the gate
+ * refuses.
+ */
 const REFUSED_PREFIXES = {
   // An API token authenticates from anywhere.
   apiTokens: ["/_plumix/rpc/auth/apiTokens/"],

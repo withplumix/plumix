@@ -14,7 +14,7 @@ import { hashToken } from "./tokens.js";
  */
 export const API_TOKEN_PREFIX = "pl_pat_";
 const API_TOKEN_BODY_BYTES = 32;
-// Short enough for a list cell, long enough to tell a user's tokens apart.
+/** Short enough for a list cell, long enough to tell a user's tokens apart. */
 const PREFIX_DISPLAY_BODY_CHARS = 4;
 
 export interface MintedApiToken {

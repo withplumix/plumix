@@ -27,8 +27,10 @@ interface CapturedError {
   readonly label?: string;
 }
 
-// Idempotent: a second install before teardown returns the existing teardown,
-// so an HMR re-run of the islands bootstrap never stacks listeners.
+/**
+ * Idempotent: a second install before teardown returns the existing teardown,
+ * so an HMR re-run of the islands bootstrap never stacks listeners.
+ */
 let active: IslandErrorOverlay | null = null;
 
 export function installIslandErrorOverlay(target: Window = window): () => void {
@@ -40,21 +42,29 @@ export function installIslandErrorOverlay(target: Window = window): () => void {
 }
 
 class IslandErrorOverlay {
-  // Replaced (not mutated) on each change so React and the `ErrorBody` effect
-  // see a new reference and reconcile the resolved frames when they arrive.
+  /**
+   * Replaced (not mutated) on each change so React and the `ErrorBody` effect
+   * see a new reference and reconcile the resolved frames when they arrive.
+   */
   private errors: CapturedError[] = [];
-  // Identity dedup so a render loop or a doubly-dispatched failure (e.g. the
-  // hydration path and the window `error` handler both seeing it) counts once.
+  /**
+   * Identity dedup so a render loop or a doubly-dispatched failure (e.g. the
+   * hydration path and the window `error` handler both seeing it) counts once.
+   */
   private readonly seenObjects = new WeakSet();
   private readonly seenPrimitives = new Set<string>();
   private active = 0;
-  // Set by a genuine capture and consumed (reset) by the next `render`, so only
-  // that render pulses the count circle — not a reopen on a settled count.
+  /**
+   * Set by a genuine capture and consumed (reset) by the next `render`, so only
+   * that render pulses the count circle — not a reopen on a settled count.
+   */
   private pulseNext = false;
   private expanded = false;
   private host: HTMLElement | null = null;
   private root: Root | null = null;
-  // Set on teardown so a late `resolveFrames` POST can't remount the overlay.
+  /**
+   * Set on teardown so a late `resolveFrames` POST can't remount the overlay.
+   */
   private torndown = false;
   private readonly listeners: (() => void)[] = [];
 
@@ -139,8 +149,10 @@ class IslandErrorOverlay {
     this.addEntry(info, element);
   }
 
-  // Push a resolved entry, point the overlay at it, and pulse the count. Shared
-  // by the error-capture paths (thrown errors, hydration mismatches).
+  /**
+   * Push a resolved entry, point the overlay at it, and pulse the count. Shared
+   * by the error-capture paths (thrown errors, hydration mismatches).
+   */
   private addEntry(info: DevErrorInfo, element?: HTMLElement): CapturedError {
     const label = deriveLabel(element);
     const entry: CapturedError = { info, ...(label ? { label } : {}) };
@@ -275,8 +287,10 @@ function Overlay({
 }: {
   readonly errors: readonly CapturedError[];
   readonly active: number;
-  // True only on the render that follows a genuine new capture, so the count
-  // circle animates the tick-up but a reopen on a settled count does not.
+  /**
+   * True only on the render that follows a genuine new capture, so the count
+   * circle animates the tick-up but a reopen on a settled count does not.
+   */
   readonly pulse: boolean;
   readonly expanded: boolean;
   readonly shadowRoot: ShadowRoot | null;
@@ -379,14 +393,16 @@ function ClientErrorBody({
   return <DevErrorBody error={entry.info} />;
 }
 
-// React's own recoverable-error wording is an internal we don't surface.
+/** React's own recoverable-error wording is an internal we don't surface. */
 const HYDRATION_MISMATCH_MESSAGE =
   "The island's server and client renders disagreed. React recovered by " +
   "re-rendering it on the client; the usual cause is a non-deterministic " +
   "render — a Date.now(), Math.random(), or locale/timezone read.";
 
-// Browser stacks arrive raw, so keep the stack string rather than parse frames
-// that would point at transformed positions.
+/**
+ * Browser stacks arrive raw, so keep the stack string rather than parse frames
+ * that would point at transformed positions.
+ */
 function toDevErrorInfo(error: unknown, componentStack?: string): DevErrorInfo {
   const componentPart = componentStack !== undefined ? { componentStack } : {};
   if (error instanceof Error) {
@@ -400,8 +416,10 @@ function toDevErrorInfo(error: unknown, componentStack?: string): DevErrorInfo {
   return { name: "UnknownError", message: String(error), ...componentPart };
 }
 
-// The badge reuses the shell's palette, inherited from `:host`; only its layout
-// and the count-pulse animation live here.
+/**
+ * The badge reuses the shell's palette, inherited from `:host`; only its layout
+ * and the count-pulse animation live here.
+ */
 const BADGE_CSS = `
 .plumix-island-overlay__badge {
   position: fixed;

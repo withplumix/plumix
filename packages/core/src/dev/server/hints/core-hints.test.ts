@@ -8,7 +8,7 @@ import { ThemeRegistrationError } from "../../../theme-errors.js";
 import { collectDevErrorHints } from "./collect.js";
 import { registerCoreErrorHints } from "./core-hints.js";
 
-// Handlers receive the request context; these tests never read it.
+/** Handlers receive the request context; these tests never read it. */
 let ctx: AppContext;
 beforeAll(async () => {
   ctx = createTestContext({ db: await createTestDb() });

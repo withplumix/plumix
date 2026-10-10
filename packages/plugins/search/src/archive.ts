@@ -11,9 +11,11 @@ import { runSearch } from "./server/query.js";
 
 const SEARCH_ARCHIVE_NAME = "search";
 
-// Core's search rules sit at priority 5 and lower wins, so these shadow them
-// while core's stay compiled behind, restored on uninstall with nothing to
-// undo.
+/**
+ * Core's search rules sit at priority 5 and lower wins, so these shadow them
+ * while core's stay compiled behind, restored on uninstall with nothing to
+ * undo.
+ */
 const SHADOW_PRIORITY = 1;
 
 /** What the theme renders a search page from. */

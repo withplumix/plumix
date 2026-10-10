@@ -19,8 +19,10 @@ export function listEnvelope<T>(
   };
 }
 
-// Relative path + query so links don't pin the response to an internal origin;
-// clients resolve them against the request base.
+/**
+ * Relative path + query so links don't pin the response to an internal origin;
+ * clients resolve them against the request base.
+ */
 function pageUrl(url: URL, page: number): string {
   const next = new URL(url);
   next.searchParams.set("page", String(page));

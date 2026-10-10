@@ -45,8 +45,10 @@ interface RootCursor {
   readonly id: number;
 }
 
-// Keyset, not offset, so comments approved between page loads can't shift the
-// window. Unparseable input is treated as the first page.
+/**
+ * Keyset, not offset, so comments approved between page loads can't shift the
+ * window. Unparseable input is treated as the first page.
+ */
 function encodeCursor(createdAt: number, id: number): string {
   return `${String(createdAt)}_${String(id)}`;
 }

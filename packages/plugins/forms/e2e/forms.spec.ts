@@ -14,9 +14,11 @@ import { expect, test } from "plumix/test/playwright";
 import { expectFormHasNoAxeViolations } from "./support/axe.js";
 
 const FORM = "[data-plumix-form='contact']";
-// The island sets this once it is driving the form. Waiting on it is
-// what keeps a spec from racing hydration and clicking a button the
-// browser would still submit the plain way.
+/**
+ * The island sets this once it is driving the form. Waiting on it is
+ * what keeps a spec from racing hydration and clicking a button the
+ * browser would still submit the plain way.
+ */
 const ENHANCED = "[data-plumix-form='contact'][data-plumix-form-enhanced]";
 const SUMMARY = "[data-plumix-form-summary]";
 const CONFIRMATION = "[data-plumix-form-confirmation]";
@@ -25,9 +27,11 @@ const ROW = "[data-plumix-form-row]";
 const ADD_ROW = "[data-plumix-form-row-add='attendees']";
 const removeRow = (row: string) => `[data-plumix-form-row-remove='${row}']`;
 
-// The playground's second form: the same field list, broken into three
-// steps, with a question on the last one that a plan chosen on the one
-// before it reveals.
+/**
+ * The playground's second form: the same field list, broken into three
+ * steps, with a question on the last one that a plan chosen on the one
+ * before it reveals.
+ */
 const SURVEY_ENHANCED =
   "[data-plumix-form='survey'][data-plumix-form-enhanced]";
 const STEP_TITLE = "[data-plumix-form-step-title]";

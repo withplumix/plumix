@@ -28,7 +28,7 @@ const blog = definePlugin("blog", (ctx) => {
   ctx.registerEntryType("post", { label: "Posts", isPublic: true });
 });
 
-// A permalink template rendering the `primary` location.
+/** A permalink template rendering the `primary` location. */
 const theme = defineTheme({
   templates: [
     entry(

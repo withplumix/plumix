@@ -77,9 +77,11 @@ const M = {
   hintClose: defineMessage({ id: "palette.hint.close", message: "Close" }),
 } satisfies Record<string, MessageDescriptor>;
 
-// Built-in commands. Distinct from the Navigation group: these are
-// actions/destinations the sidebar doesn't surface (e.g. the current
-// user's own profile, reached via the user menu).
+/**
+ * Built-in commands. Distinct from the Navigation group: these are
+ * actions/destinations the sidebar doesn't surface (e.g. the current
+ * user's own profile, reached via the user menu).
+ */
 const CORE_COMMANDS: readonly PaletteCommand[] = [
   {
     id: "core:profile",

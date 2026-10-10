@@ -26,9 +26,11 @@ function ignoresRange(): ConnectedObjectStorage {
   return { ...inner, get: (key) => inner.get(key) };
 }
 
-// Spelled out rather than a rest-destructure that omits `presignPut`:
-// pulling a method off the object by name is what the unbound-method rule
-// exists to stop.
+/**
+ * Spelled out rather than a rest-destructure that omits `presignPut`:
+ * pulling a method off the object by name is what the unbound-method rule
+ * exists to stop.
+ */
 function withoutPresign(): ConnectedObjectStorage {
   const inner = memoryStorage().connect({});
   return {

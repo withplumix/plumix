@@ -16,12 +16,16 @@ import { cn } from "@plumix/admin-ui/utils";
 
 import { useStyleField } from "./use-style-field.js";
 
-// Native `<input type="color">` only round-trips 6-digit hex; anything else
-// (a token var(), `transparent`, rgba) leaves the swatch on a safe default.
+/**
+ * Native `<input type="color">` only round-trips 6-digit hex; anything else
+ * (a token var(), `transparent`, rgba) leaves the swatch on a safe default.
+ */
 export const HEX6 = /^#[0-9a-fA-F]{6}$/;
 
-// Radix Select forbids an empty-string item value, so the "clear" choice
-// carries a sentinel that maps back to `null` on change.
+/**
+ * Radix Select forbids an empty-string item value, so the "clear" choice
+ * carries a sentinel that maps back to `null` on change.
+ */
 const NONE_VALUE = "__none__";
 
 interface StyleControlProps {

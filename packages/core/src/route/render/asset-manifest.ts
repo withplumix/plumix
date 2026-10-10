@@ -1,6 +1,6 @@
 import { withBasePath } from "../../base-path.js";
 
-// Subset of Vite's `.vite/manifest.json` entry.
+/** Subset of Vite's `.vite/manifest.json` entry. */
 interface AssetManifestEntry {
   readonly file: string;
   readonly isEntry?: boolean;
@@ -13,8 +13,10 @@ interface AssetManifestEntry {
 
 export type AssetManifest = Readonly<Record<string, AssetManifestEntry>>;
 
-// The Vite lifecycle command the SSR render path branches on: `serve` (dev)
-// vs `build` (production).
+/**
+ * The Vite lifecycle command the SSR render path branches on: `serve` (dev)
+ * vs `build` (production).
+ */
 export type ViteCommand = "serve" | "build";
 
 /**
@@ -41,8 +43,10 @@ export function bundledCssTags(
     .join("");
 }
 
-// Dev has no asset manifest, so the client entry side-effect-imports the theme
-// `css` and Vite injects it.
+/**
+ * Dev has no asset manifest, so the client entry side-effect-imports the theme
+ * `css` and Vite injects it.
+ */
 const DEV_CLIENT_ENTRY_PATH = "/.plumix/client-entry.ts";
 
 export function devThemeStylesTag(command: ViteCommand, basePath = ""): string {
@@ -73,8 +77,10 @@ export function devThemeCssLinks(
     .join("");
 }
 
-// Must agree with the Vite plugin's `toClientEntryImport`. Aliased and `../`
-// specifiers have no stable dev URL.
+/**
+ * Must agree with the Vite plugin's `toClientEntryImport`. Aliased and `../`
+ * specifiers have no stable dev URL.
+ */
 function toDevCssHref(path: string): string | null {
   if (path.startsWith("~") || path.startsWith("@") || path.startsWith("../")) {
     return null;

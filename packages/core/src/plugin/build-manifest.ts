@@ -81,8 +81,10 @@ import {
 import { pluginCatalogUrl } from "./plugin-catalog-path.js";
 import { ENTRY_MENU_ICONS, TAXONOMY_MENU_ICONS } from "./registry.js";
 
-// Checked at runtime too: a stale-compiled plugin can emit a name outside the
-// closed type, which falls back to a default.
+/**
+ * Checked at runtime too: a stale-compiled plugin can emit a name outside the
+ * closed type, which falls back to a default.
+ */
 const ENTRY_MENU_ICON_SET: ReadonlySet<EntryMenuIcon> = new Set(
   ENTRY_MENU_ICONS,
 );
@@ -306,9 +308,11 @@ interface MutableAdminNavGroup {
   items: AdminNavItem[];
 }
 
-// Capability gating happens in the admin. A `slot`, `area` or `settingsPages`
-// row is dropped when the deployment can't serve it: the user may, but the site
-// can't.
+/**
+ * Capability gating happens in the admin. A `slot`, `area` or `settingsPages`
+ * row is dropped when the deployment can't serve it: the user may, but the site
+ * can't.
+ */
 const CORE_NAV_ITEMS: readonly {
   groupId: string;
   slot?: InfrastructureSlot;
@@ -411,15 +415,19 @@ const CORE_NAV_ITEMS: readonly {
   },
 ];
 
-// Default priority for plugin-declared custom groups — sits between
-// `term-taxonomies` (200) and `management` (1000). Plugin authors who
-// need a different position pass `priority` in the inline group form
-// on `registerAdminPage`.
+/**
+ * Default priority for plugin-declared custom groups — sits between
+ * `term-taxonomies` (200) and `management` (1000). Plugin authors who
+ * need a different position pass `priority` in the inline group form
+ * on `registerAdminPage`.
+ */
 const CUSTOM_NAV_GROUP_PRIORITY = 500;
 
-// Title-case a kebab/snake id when a plugin doesn't declare a label
-// inline. `appearance` → `Appearance`, `my-custom-group` → `My custom
-// group`. Plugins can override by passing the rich group form.
+/**
+ * Title-case a kebab/snake id when a plugin doesn't declare a label
+ * inline. `appearance` → `Appearance`, `my-custom-group` → `My custom
+ * group`. Plugins can override by passing the rich group form.
+ */
 function humanizeGroupId(id: string): string {
   const spaced = id.replace(/[-_]+/g, " ").trim();
   if (spaced.length === 0) return id;
@@ -566,13 +574,15 @@ function projectAdminNav(
     .sort(compareByPriorityThenId);
 }
 
-// Synthetic flat-keyspace scope for user meta. Hoisted so the
-// `assertUniqueFieldKeysPerScope` callback doesn't re-allocate per
-// buildManifest call.
+/**
+ * Synthetic flat-keyspace scope for user meta. Hoisted so the
+ * `assertUniqueFieldKeysPerScope` callback doesn't re-allocate per
+ * buildManifest call.
+ */
 const USER_SCOPE = ["user"] as const;
 const getUserScope = (): readonly string[] => USER_SCOPE;
 
-// Two boxes on one `(scope, field.key)` would silently share a storage key.
+/** Two boxes on one `(scope, field.key)` would silently share a storage key. */
 function assertUniqueFieldKeysPerScope<
   TBox extends {
     readonly id: string;
@@ -604,8 +614,10 @@ function assertUniqueFieldKeysPerScope<
   }
 }
 
-// A box on an unregistered scope never renders or writes; fail at boot rather
-// than at first admin click.
+/**
+ * A box on an unregistered scope never renders or writes; fail at boot rather
+ * than at first admin click.
+ */
 function assertMetaBoxScopesExist<TBox extends { readonly id: string }>(
   boxes: readonly TBox[],
   getScopes: (box: TBox) => readonly string[],
@@ -627,7 +639,9 @@ function assertMetaBoxScopesExist<TBox extends { readonly id: string }>(
   }
 }
 
-// Catch a typo'd group name at build, not as an "unknown group" in the admin.
+/**
+ * Catch a typo'd group name at build, not as an "unknown group" in the admin.
+ */
 function assertSettingsPageGroupsExist(
   pages: readonly SettingsPageManifestEntry[],
   groups: ReadonlyMap<string, RegisteredSettingsGroup>,
@@ -678,8 +692,10 @@ export function deriveAdminSlug(name: string, plural?: string): string {
   return slug;
 }
 
-// A loop, not `/[^a-z0-9]+/g` plus a trim: CodeQL flags that regex as
-// polynomial on library-exposed input.
+/**
+ * A loop, not `/[^a-z0-9]+/g` plus a trim: CodeQL flags that regex as
+ * polynomial on library-exposed input.
+ */
 function slugify(input: string): string {
   const lower = input.toLowerCase();
   let result = "";
@@ -699,8 +715,10 @@ function slugify(input: string): string {
   return result;
 }
 
-// Allowlist, so a new `RegisteredEntryType` field reaches the browser only when
-// added here.
+/**
+ * Allowlist, so a new `RegisteredEntryType` field reaches the browser only when
+ * added here.
+ */
 function toEntryTypeManifest(
   pt: RegisteredEntryType,
   namedTemplates?: readonly NamedTemplateChoice[],
@@ -751,8 +769,10 @@ function toEntryTypeManifest(
   };
 }
 
-// Omitted when no policy is selectable, so the admin picker appears only with a
-// real choice.
+/**
+ * Omitted when no policy is selectable, so the admin picker appears only with a
+ * real choice.
+ */
 function accessPoliciesManifest(access: EntryTypeAccess | undefined): {
   accessPolicies?: readonly AccessPolicyChoice[];
 } {
@@ -763,8 +783,10 @@ function accessPoliciesManifest(access: EntryTypeAccess | undefined): {
   };
 }
 
-// Defaults let the admin read versioning without nil-checks; undefined tells
-// the editor to skip the Revisions sheet.
+/**
+ * Defaults let the admin read versioning without nil-checks; undefined tells
+ * the editor to skip the Revisions sheet.
+ */
 function deriveVersioning(
   supports: readonly string[] | undefined,
   declared: EntryTypeManifestEntry["versioning"] | undefined,
@@ -776,9 +798,11 @@ function deriveVersioning(
   };
 }
 
-// Allowlist for termTaxonomy entries — same rationale as `toEntryTypeManifest`.
-// `registeredBy`, `capabilities`, `isInQuickEdit`, `hasAdminColumn`, and
-// `rewrite` stay server-side.
+/**
+ * Allowlist for termTaxonomy entries — same rationale as `toEntryTypeManifest`.
+ * `registeredBy`, `capabilities`, `isInQuickEdit`, `hasAdminColumn`, and
+ * `rewrite` stay server-side.
+ */
 function toTermTaxonomyEntry(
   tax: RegisteredTermTaxonomy,
 ): TermTaxonomyManifestEntry {
@@ -833,8 +857,10 @@ function resolveTaxonomyMenuIcon(
   return isHierarchical === true ? "folder" : "tag";
 }
 
-// Whatever leaves the server is a string: the admin compares capabilities
-// against the session's granted list, so a reference is spelled here.
+/**
+ * Whatever leaves the server is a string: the admin compares capabilities
+ * against the session's granted list, so a reference is spelled here.
+ */
 function shippedCapability(
   registry: CapabilityNamespaces,
   capability: Capability | undefined,
@@ -852,8 +878,10 @@ function toEntryMetaBoxFieldEntry(
   return entry;
 }
 
-// Allowlist like `toEntryTypeManifest`. `span` is stripped: the editor rail
-// renders every entry field full width.
+/**
+ * Allowlist like `toEntryTypeManifest`. `span` is stripped: the editor rail
+ * renders every entry field full width.
+ */
 function toEntryMetaBoxEntry(
   box: RegisteredEntryMetaBox,
   registry: CapabilityNamespaces,
@@ -883,8 +911,10 @@ function toEntryMetaBoxEntry(
   };
 }
 
-// Term meta boxes are always stacked top-to-bottom on the termTaxonomy
-// edit form — no `location` hint applies.
+/**
+ * Term meta boxes are always stacked top-to-bottom on the termTaxonomy
+ * edit form — no `location` hint applies.
+ */
 function toTermMetaBoxEntry(
   box: RegisteredTermMetaBox,
   registry: CapabilityNamespaces,
@@ -909,7 +939,7 @@ function toTermMetaBoxEntry(
   };
 }
 
-// User meta boxes are stacked like term boxes — no scope / location.
+/** User meta boxes are stacked like term boxes — no scope / location. */
 function toUserMetaBoxEntry(
   box: RegisteredUserMetaBox,
   registry: CapabilityNamespaces,
@@ -925,10 +955,12 @@ function toUserMetaBoxEntry(
   };
 }
 
-// Allowlist for settings group entries — same rationale as the other
-// `to*Entry` projections. `registeredBy` is server-only debug metadata.
-// Fields ship through `projectMetaBoxField` — same projection as every
-// other meta surface.
+/**
+ * Allowlist for settings group entries — same rationale as the other
+ * `to*Entry` projections. `registeredBy` is server-only debug metadata.
+ * Fields ship through `projectMetaBoxField` — same projection as every
+ * other meta surface.
+ */
 function toSettingsGroupEntry(
   group: RegisteredSettingsGroup,
   registry: CapabilityNamespaces,

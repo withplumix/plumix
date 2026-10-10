@@ -7,8 +7,10 @@ interface Entry<T> {
   readonly coalesceKey: string | null;
 }
 
-// Cap retained undo steps so a long session can't grow the stack unbounded
-// (each entry holds a full tree snapshot). Oldest steps fall off the back.
+/**
+ * Cap retained undo steps so a long session can't grow the stack unbounded
+ * (each entry holds a full tree snapshot). Oldest steps fall off the back.
+ */
 const MAX_HISTORY = 100;
 
 export interface History<T> {

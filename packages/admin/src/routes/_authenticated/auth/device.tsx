@@ -37,9 +37,11 @@ import { Textarea } from "@plumix/admin-ui/textarea";
 import { rpcErrorCode, rpcErrorReason } from "@plumix/core/admin";
 import { vMessage } from "@plumix/core/validation";
 
-// Descriptors used outside JSX — error helpers + the textarea
-// placeholder. Chrome strings stay inline at their `<Trans>` callsite
-// per admin convention.
+/**
+ * Descriptors used outside JSX — error helpers + the textarea
+ * placeholder. Chrome strings stay inline at their `<Trans>` callsite
+ * per admin convention.
+ */
 const M = {
   userCodePlaceholder: defineMessage({
     id: "auth.device.userCode.placeholder",
@@ -96,7 +98,7 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-// OAuth 2.0 RFC 8628 §3.5 error response token. Not user copy.
+/** OAuth 2.0 RFC 8628 §3.5 error response token. Not user copy. */
 const ACCESS_DENIED = "access_denied";
 
 // OAuth 2.0 Device Authorization Grant (RFC 8628) approval page.

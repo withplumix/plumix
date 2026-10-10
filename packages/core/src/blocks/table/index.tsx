@@ -9,9 +9,11 @@ type Align = (typeof ALIGNS)[number];
 
 const COLUMN_COUNT = 3;
 
-// Cell text alignment — shared by header and body cells. Left is the default
-// (an unset align), surfaced as the select's placeholder so its trigger reads
-// "Left" instead of blank.
+/**
+ * Cell text alignment — shared by header and body cells. Left is the default
+ * (an unset align), surfaced as the select's placeholder so its trigger reads
+ * "Left" instead of blank.
+ */
 const ALIGN_INPUT: BlockInput = {
   name: "align",
   type: "select",
@@ -45,8 +47,10 @@ const ALIGN_INPUT: BlockInput = {
   ],
 };
 
-// React 19 dedupes this in the editor, but the public string render emits one
-// identical copy per table, which is harmless.
+/**
+ * React 19 dedupes this in the editor, but the public string render emits one
+ * identical copy per table, which is harmless.
+ */
 const TABLE_THEME_CSS = [
   "table{border-collapse:collapse;width:var(--plumix-table-width,100%)}",
   "th,td{border:var(--plumix-table-border,1px solid #d0d7de);padding:var(--plumix-table-cell-padding,0.5rem 0.75rem);text-align:left;vertical-align:top}",
@@ -55,8 +59,10 @@ const TABLE_THEME_CSS = [
   "th[data-align=right],td[data-align=right]{text-align:right}",
 ].join("");
 
-// Slot seeding doesn't recurse into a nested slot's defaultChildren, so each
-// row lists its cells. Placeholder text makes a dropped table read as a grid.
+/**
+ * Slot seeding doesn't recurse into a nested slot's defaultChildren, so each
+ * row lists its cells. Placeholder text makes a dropped table read as a grid.
+ */
 function seedCells(
   rowId: string,
   cell: string,
@@ -69,8 +75,10 @@ function seedCells(
   }));
 }
 
-// A header row + two body rows, so a freshly dropped table reads as an
-// editable, filled grid and shows both row types up front.
+/**
+ * A header row + two body rows, so a freshly dropped table reads as an
+ * editable, filled grid and shows both row types up front.
+ */
 const DEFAULT_ROWS: readonly BlockNode[] = [
   {
     id: "row-header",

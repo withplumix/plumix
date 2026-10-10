@@ -78,8 +78,10 @@ function resolveConfig(config: ImagesConfig): ResolvedImagesConfig {
 
 const ownRequire = createRequire(import.meta.url);
 
-// `sharp` is an optional peer, so a site without images() installs nothing
-// native; a missing package is named on first use.
+/**
+ * `sharp` is an optional peer, so a site without images() installs nothing
+ * native; a missing package is named on first use.
+ */
 function loadSharp(): typeof SharpModule {
   let loaded: typeof SharpModule;
   try {

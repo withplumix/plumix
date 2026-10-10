@@ -7,8 +7,10 @@ import { NOOP_TELEMETRY } from "../context/telemetry.js";
 import { responseAllowsSharedStorage, SEGMENT_KEY_PARAM } from "./decision.js";
 import { readThrough, readThroughRoute } from "./read-through.js";
 
-// `defer` swallows the promise here so tests can drive the store-write path
-// without a real waitUntil queue.
+/**
+ * `defer` swallows the promise here so tests can drive the store-write path
+ * without a real waitUntil queue.
+ */
 const immediateDefer = (p: Promise<unknown>): void => {
   void p;
 };
@@ -19,10 +21,12 @@ const GET = (
 ) => new Request(url, { headers });
 const noTags = () => [];
 
-// The marker a conforming `decorate` leaves on the visitor's copy, so a test
-// can tell it from the render it came out of. It honours narrow-never-widen
-// like a real provider: a fake that decorated unconditionally would share the
-// code's assumption and could never fail.
+/**
+ * The marker a conforming `decorate` leaves on the visitor's copy, so a test
+ * can tell it from the render it came out of. It honours narrow-never-widen
+ * like a real provider: a fake that decorated unconditionally would share the
+ * code's assumption and could never fail.
+ */
 const DECORATED = "x-decorated";
 
 function spies(

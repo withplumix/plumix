@@ -6,11 +6,13 @@ import { createPluginRpcClient } from "plumix/admin";
 
 import type { MediaRouter } from "../rpc.js";
 
-// Media's own `media/*` procedures.
+/** Media's own `media/*` procedures. */
 export const mediaRpc = createPluginRpcClient<MediaRouter>("media");
 
-// `lookup/list` is a core namespace (see `CORE_RPC_NAMESPACES`), not
-// media's own — reference-field label resolution calls through it directly.
+/**
+ * `lookup/list` is a core namespace (see `CORE_RPC_NAMESPACES`), not
+ * media's own — reference-field label resolution calls through it directly.
+ */
 type LookupRouter = AppRouter["lookup"];
 export const lookupRpc = createPluginRpcClient<LookupRouter>("lookup");
 

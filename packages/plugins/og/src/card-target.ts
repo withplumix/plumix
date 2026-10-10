@@ -99,8 +99,10 @@ export function cardTargetPath(target: CardTarget): string {
   }
 }
 
-// One segment, so every target is exactly one. The year is padded because
-// `DATE` reads exactly four digits.
+/**
+ * One segment, so every target is exactly one. The year is padded because
+ * `DATE` reads exactly four digits.
+ */
 function dateSegment(target: Extract<CardTarget, { kind: "date" }>): string {
   const parts = [String(target.year).padStart(4, "0")];
   if (target.month !== null) parts.push(pad2(target.month));
@@ -112,12 +114,16 @@ function pad2(value: number): string {
   return String(value).padStart(2, "0");
 }
 
-// 15 digits max keeps a parsed id below Number.MAX_SAFE_INTEGER; a leading
-// non-zero digit keeps `01` from naming the same row as `1`, which would be two
-// URLs holding one card.
+/**
+ * 15 digits max keeps a parsed id below Number.MAX_SAFE_INTEGER; a leading
+ * non-zero digit keeps `01` from naming the same row as `1`, which would be two
+ * URLs holding one card.
+ */
 const ID = /^[1-9]\d{0,14}$/;
-// The characters a registered entry type's name is made of. A name outside them
-// has no archive route either, so refusing it here costs nothing.
+/**
+ * The characters a registered entry type's name is made of. A name outside them
+ * has no archive route either, so refusing it here costs nothing.
+ */
 const ENTRY_TYPE = /^[a-z][a-z0-9_-]{0,63}$/;
 const DATE = /^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/;
 

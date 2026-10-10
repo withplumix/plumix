@@ -63,8 +63,10 @@ interface GroupRunner {
   readonly pending: () => boolean;
 }
 
-// The protocol itself, outside React: `sync` hands it each render's groups and
-// callbacks, which it reads at write time.
+/**
+ * The protocol itself, outside React: `sync` hands it each render's groups and
+ * callbacks, which it reads at write time.
+ */
 function createEntryAutosave<G extends Record<string, unknown>>(
   initial: EntryAutosaveOptions<G>,
   queryClient: QueryClient,

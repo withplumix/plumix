@@ -5,12 +5,16 @@ import { parse as parseYaml } from "yaml";
 
 import { parseBody } from "./body-shape";
 
-// Not JsonObject: values are unchecked, and YAML reads `.nan` / `.inf` as `NaN`
-// / `Infinity`, which JSON cannot carry.
+/**
+ * Not JsonObject: values are unchecked, and YAML reads `.nan` / `.inf` as `NaN`
+ * / `Infinity`, which JSON cannot carry.
+ */
 type Frontmatter = Readonly<Record<string, unknown>>;
 
-// A `fragment` has no URL, so no page template applies, but it still renders
-// inside every page that imports it.
+/**
+ * A `fragment` has no URL, so no page template applies, but it still renders
+ * inside every page that imports it.
+ */
 type ContentKind = "page" | "fragment";
 
 /** One content file, read once and shared by every check in the suite. */
@@ -29,8 +33,10 @@ export interface ContentFile {
   readonly mdast: Root | undefined;
 }
 
-// Wider than the site's `{md,mdx}` glob on purpose: matches Starlight's
-// `docsLoader()` so nothing the pipeline processes escapes the sample check.
+/**
+ * Wider than the site's `{md,mdx}` glob on purpose: matches Starlight's
+ * `docsLoader()` so nothing the pipeline processes escapes the sample check.
+ */
 const MARKDOWN_EXTENSION = /\.(?:markdown|mdown|mkdn|mkd|mdwn|mdx?)$/;
 
 const PUBLISHED_EXTENSION = /\.mdx?$/;
@@ -65,9 +71,11 @@ function collect(root: string, prefix: string): string[] {
   });
 }
 
-// Mirrors the collection glob in `src/content.config.ts`: it excludes
-// `_`-prefixed segments, tinyglobby excludes dot-prefixed ones by default, and
-// only `{md,mdx}` publish.
+/**
+ * Mirrors the collection glob in `src/content.config.ts`: it excludes
+ * `_`-prefixed segments, tinyglobby excludes dot-prefixed ones by default, and
+ * only `{md,mdx}` publish.
+ */
 function kindOf(relativePath: string): ContentKind {
   const segments = relativePath.split("/");
   const excluded = segments.some(

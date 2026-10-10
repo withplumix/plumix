@@ -8,9 +8,11 @@ import {
   resolveClientStack,
 } from "./dev-error-stack.js";
 
-// A one-segment sourcemap: generated (line 1, col 0) maps to source 0 at its
-// origin. `sources` deliberately differs from the served module file so a test
-// can prove the mapped location came from the map, not the URL/file fallback.
+/**
+ * A one-segment sourcemap: generated (line 1, col 0) maps to source 0 at its
+ * origin. `sources` deliberately differs from the served module file so a test
+ * can prove the mapped location came from the map, not the URL/file fallback.
+ */
 function mapFor(source: string): SourceMapInput {
   return {
     version: 3,

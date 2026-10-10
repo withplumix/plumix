@@ -9,8 +9,10 @@ import { Button } from "./button.js";
 import { X } from "./icons.js";
 import { cn } from "./utils.js";
 
-// admin-ui carries no catalog, so a shown close button takes its name from the
-// caller, already localized.
+/**
+ * admin-ui carries no catalog, so a shown close button takes its name from the
+ * caller, already localized.
+ */
 type DialogCloseButtonProps =
   | { showCloseButton?: true; closeLabel: string }
   | { showCloseButton: false; closeLabel?: undefined };
@@ -55,8 +57,10 @@ function DialogOverlay({
   );
 }
 
-// The width applies from `sm` up; below it every size keeps the
-// `max-w-[calc(100%-2rem)]` gutters.
+/**
+ * The width applies from `sm` up; below it every size keeps the
+ * `max-w-[calc(100%-2rem)]` gutters.
+ */
 const dialogContentVariants = cva(
   "bg-background data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 fixed start-[50%] top-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-lg duration-200 outline-none rtl:-translate-x-[-50%]",
   {

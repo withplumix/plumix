@@ -81,8 +81,10 @@ function submit(
   );
 }
 
-// The stored rows with the snapshot each points at resolved, so a test
-// can read what a submission's fields were called the way the inbox does.
+/**
+ * The stored rows with the snapshot each points at resolved, so a test
+ * can read what a submission's fields were called the way the inbox does.
+ */
 const rows = (harness: FormsHarness) =>
   harness.db
     .select({

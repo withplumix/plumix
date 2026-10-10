@@ -8,9 +8,11 @@ import { IslandPropSerializationError } from "./serialize.js";
 
 type Props = Readonly<Record<string, unknown>>;
 
-// Wrap `Component` exactly as the SSR shim the Vite transform generates
-// does: hand the raw props to `IslandShim`, which owns the boundary
-// decision.
+/**
+ * Wrap `Component` exactly as the SSR shim the Vite transform generates
+ * does: hand the raw props to `IslandShim`, which owns the boundary
+ * decision.
+ */
 function island(
   Component: (props: Props) => ReactNode,
   exportName: string,
@@ -35,7 +37,8 @@ describe("IslandShim boundary", () => {
 
     expect(islandCount(html)).toBe(1);
     expect(html).toContain('component-export="Widget"');
-    // Author prop survives, encoded in the plumix tuple format ([0,1] = Value 1).
+    // Author prop survives, encoded in the plumix tuple format ([0,1] = Value
+    // 1).
     expect(html).toContain("&quot;n&quot;:[0,1]");
     expect(html).toContain("<div>hi</div>");
   });

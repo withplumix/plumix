@@ -34,15 +34,19 @@ export function extractMetaFieldErrors(
   return errors.length > 0 ? errors : undefined;
 }
 
-// The oRPC error the rejections travel inside. Only the envelope is described
-// here — each entry is checked on its own below, so one malformed rejection
-// does not discard the rest.
+/**
+ * The oRPC error the rejections travel inside. Only the envelope is described
+ * here — each entry is checked on its own below, so one malformed rejection
+ * does not discard the rest.
+ */
 const errorEnvelopeSchema = v.looseObject({
   data: v.looseObject({ errors: v.array(v.unknown()) }),
 });
 
-// Matches a descriptor on `id` alone: a predicate whose parsed output is
-// discarded.
+/**
+ * Matches a descriptor on `id` alone: a predicate whose parsed output is
+ * discarded.
+ */
 const serverErrorSchema = v.object({
   path: v.string(),
   message: v.union([v.string(), v.object({ id: v.string() })]),

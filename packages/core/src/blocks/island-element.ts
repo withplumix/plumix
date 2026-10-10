@@ -10,8 +10,10 @@ import { islandStrategy } from "./island-global.js";
 import { clientOnlyPlaceholderLabel, shouldHydrate } from "./island-mode.js";
 import { deserializeProps } from "./serialize.js";
 
-// Type-only so this element chunk stays React-free; the renderer is fetched at
-// runtime.
+/**
+ * Type-only so this element chunk stays React-free; the renderer is fetched at
+ * runtime.
+ */
 interface RendererModule {
   mount(element: HTMLElement, options?: MountOptions): IslandRoot;
 }
@@ -34,8 +36,10 @@ declare global {
 
 const RETRY_DELAY_MS = 1000;
 
-// Prototype-pollution defense: `mod["__proto__"]` would resolve to
-// `Object.prototype` and be mounted as the component.
+/**
+ * Prototype-pollution defense: `mod["__proto__"]` would resolve to
+ * `Object.prototype` and be mounted as the component.
+ */
 const FORBIDDEN_EXPORT_KEYS: ReadonlySet<string> = new Set([
   "__proto__",
   "constructor",
@@ -289,13 +293,17 @@ export class PlumixIslandElement extends HTMLElement {
   }
 }
 
-// A chunk's namespace object. Not JSON: its exports are live components and
-// module bindings — nothing here knows what they are, only that they are read
-// by name.
+/**
+ * A chunk's namespace object. Not JSON: its exports are live components and
+ * module bindings — nothing here knows what they are, only that they are read
+ * by name.
+ */
 type ModuleNamespace = Readonly<Record<string, unknown>>;
 
-// Swappable because unit tests have no real chunk URLs. The URL comes off the
-// page at runtime, so Vite has nothing to analyze.
+/**
+ * Swappable because unit tests have no real chunk URLs. The URL comes off the
+ * page at runtime, so Vite has nothing to analyze.
+ */
 let dynamicImport: (url: string) => Promise<ModuleNamespace> = (url) =>
   import(/* @vite-ignore */ url);
 
@@ -309,16 +317,20 @@ export function setDynamicImport(
   };
 }
 
-// Resolved from Vite's manifest at SSR time like each island's `chunk-url`,
-// never baked in at build time.
+/**
+ * Resolved from Vite's manifest at SSR time like each island's `chunk-url`,
+ * never baked in at build time.
+ */
 let rendererUrl: string | null = null;
 
 export function setRendererUrl(url: string): void {
   rendererUrl = url;
 }
 
-// Memoized so islands share one fetch. A rejection is not cached, so a later
-// island can retry after a deploy race.
+/**
+ * Memoized so islands share one fetch. A rejection is not cached, so a later
+ * island can retry after a deploy race.
+ */
 let rendererPromise: Promise<RendererModule> | null = null;
 let loadRenderer: () => Promise<RendererModule> = () => {
   if (rendererUrl === null) {
@@ -333,9 +345,11 @@ let loadRenderer: () => Promise<RendererModule> = () => {
   return rendererPromise;
 };
 
-// Same deploy-during-load defense as `loadComponent`: one retry with a
-// cache-bust hash before giving up, since the renderer URL is resolved
-// from the SSR manifest exactly like the per-island chunk URL.
+/**
+ * Same deploy-during-load defense as `loadComponent`: one retry with a
+ * cache-bust hash before giving up, since the renderer URL is resolved
+ * from the SSR manifest exactly like the per-island chunk URL.
+ */
 async function importRendererWithRetry(url: string): Promise<RendererModule> {
   try {
     return readRenderer(await dynamicImport(url));
@@ -345,15 +359,19 @@ async function importRendererWithRetry(url: string): Promise<RendererModule> {
   }
 }
 
-// The chunk is built from our own entry, so `mount` is a fact of the build. A
-// member added to `RendererModule` must be read here too.
+/**
+ * The chunk is built from our own entry, so `mount` is a fact of the build. A
+ * member added to `RendererModule` must be read here too.
+ */
 function readRenderer(namespace: ModuleNamespace): RendererModule {
   return { mount: namespace.mount as RendererModule["mount"] };
 }
 
-// Test seam: a unit test has no renderer chunk URL to import, so it injects
-// the (statically imported) renderer module directly. Mirrors
-// `setDynamicImport`.
+/**
+ * Test seam: a unit test has no renderer chunk URL to import, so it injects
+ * the (statically imported) renderer module directly. Mirrors
+ * `setDynamicImport`.
+ */
 export function setRendererImport(
   fn: () => Promise<RendererModule>,
 ): () => void {
@@ -365,8 +383,10 @@ export function setRendererImport(
   };
 }
 
-// The edit/preview render stamps `data-plumix-mode` on <html> (see
-// render-template). Read it here without importing the editor or renderer.
+/**
+ * The edit/preview render stamps `data-plumix-mode` on <html> (see
+ * render-template). Read it here without importing the editor or renderer.
+ */
 function readPageMode(): IslandPageMode {
   const raw = document.documentElement.dataset.plumixMode;
   if (raw === "edit" || raw === "preview" || raw === "live") return raw;
@@ -381,7 +401,7 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// Prefetch only helps when it fires strictly before hydration.
+/** Prefetch only helps when it fires strictly before hydration. */
 function shouldPrefetch(hydrateWhen: string, prefetchWhen: string): boolean {
   if (hydrateWhen === "load" || hydrateWhen === "only") return false;
   return hydrateWhen !== prefetchWhen;
@@ -406,7 +426,9 @@ function readProps(el: HTMLElement): SerializedProps {
   return deserializeProps(raw);
 }
 
-// The `closest` check stops a parent island claiming a nested island's slots.
+/**
+ * The `closest` check stops a parent island claiming a nested island's slots.
+ */
 function readSlotHtml(el: PlumixIslandElement): Record<string, string> {
   const raw = el.getAttribute("slots");
   if (!raw) return {};

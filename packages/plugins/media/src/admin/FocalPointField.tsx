@@ -19,9 +19,11 @@ type FocalPoint = Readonly<{ x: number; y: number }>;
 
 const clamp01 = (n: number): number => Math.min(1, Math.max(0, n));
 
-// Centre is where an unset image already renders, so any bad stored value falls
-// back to it. Each axis falls back alone, so one bad coordinate keeps the
-// other.
+/**
+ * Centre is where an unset image already renders, so any bad stored value falls
+ * back to it. Each axis falls back alone, so one bad coordinate keeps the
+ * other.
+ */
 const CENTRE: FocalPoint = { x: 0.5, y: 0.5 };
 const axisSchema = v.fallback(v.pipe(v.number(), v.transform(clamp01)), 0.5);
 const focalPointSchema = v.fallback(
@@ -29,8 +31,10 @@ const focalPointSchema = v.fallback(
   CENTRE,
 );
 
-// The block's image url — the picked media's url, else the raw src escape
-// hatch.
+/**
+ * The block's image url — the picked media's url, else the raw src escape
+ * hatch.
+ */
 function imageUrl(attrs: JsonObject): string {
   const media = attrs.media;
   if (media && typeof media === "object") {

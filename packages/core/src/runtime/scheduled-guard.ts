@@ -8,11 +8,13 @@ import {
   scheduledTaskLeases,
 } from "../db/schema/scheduled_runs.js";
 
-// A task with no cron runs on every firing, so concurrent schedules would run
-// it twice at once.
+/**
+ * A task with no cron runs on every firing, so concurrent schedules would run
+ * it twice at once.
+ */
 const SHARED_LEASE_KEY = "scheduled";
 
-// ~10x the worst plausible synchronous purge, and one publish cycle.
+/** ~10x the worst plausible synchronous purge, and one publish cycle. */
 const DEFAULT_LEASE_TTL_MS = 300_000;
 
 export type ScheduledRunOutcome =

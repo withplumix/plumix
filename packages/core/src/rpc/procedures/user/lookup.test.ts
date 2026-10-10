@@ -4,9 +4,11 @@ import { adminUser, userFactory } from "../../../test/factories.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 import { userLookupAdapter } from "./lookup.js";
 
-// Existence checks now ride the `list({ ids })` batch path — same
-// scope rules, single query. These tests mirror the semantics that
-// used to live on `adapter.exists`: id present in result ⇔ exists.
+/**
+ * Existence checks now ride the `list({ ids })` batch path — same
+ * scope rules, single query. These tests mirror the semantics that
+ * used to live on `adapter.exists`: id present in result ⇔ exists.
+ */
 async function existsViaList(
   h: Awaited<ReturnType<typeof createRpcHarness>>,
   id: string,

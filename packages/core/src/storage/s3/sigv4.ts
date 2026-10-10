@@ -40,9 +40,11 @@ export interface PresignPutInput {
 const MIN_EXPIRES_IN = 1;
 const MAX_EXPIRES_IN = 604_800; // 7 days, the AWS-spec ceiling.
 
-// Tight default — same-page XHR PUTs land in seconds; a longer window is a
-// replay surface (logs, browser history). Callers extend via `expiresIn` when
-// they actually need it (e.g. resumable uploads).
+/**
+ * Tight default — same-page XHR PUTs land in seconds; a longer window is a
+ * replay surface (logs, browser history). Callers extend via `expiresIn` when
+ * they actually need it (e.g. resumable uploads).
+ */
 export const DEFAULT_PRESIGN_TTL_SECONDS = 60;
 
 export interface PresignedPut {
@@ -237,8 +239,10 @@ async function sign(
   return bytesToHex(new Uint8Array(await hmac(key, stringToSign)));
 }
 
-// The query as sent, split back into pairs so the canonical form can re-encode
-// each one the AWS way regardless of how the caller encoded it.
+/**
+ * The query as sent, split back into pairs so the canonical form can re-encode
+ * each one the AWS way regardless of how the caller encoded it.
+ */
 function parseQuery(search: string): Record<string, string> {
   const params: Record<string, string> = {};
   if (search.length <= 1) return params;
@@ -260,8 +264,10 @@ export function canonicalQueryString(
     .join("&");
 }
 
-// Values are trimmed and inner whitespace runs collapsed — the canonical form
-// only; the header goes on the wire as given.
+/**
+ * Values are trimmed and inner whitespace runs collapsed — the canonical form
+ * only; the header goes on the wire as given.
+ */
 function canonicalHeaderBlock(
   headers: Readonly<Record<string, string>>,
 ): string {
@@ -276,8 +282,10 @@ function canonicalHeaderBlock(
   );
 }
 
-// S3 encodes each path segment exactly once, whatever the request encoded:
-// `/test$file` and `/test%24file` both canonicalise to the latter.
+/**
+ * S3 encodes each path segment exactly once, whatever the request encoded:
+ * `/test$file` and `/test%24file` both canonicalise to the latter.
+ */
 function canonicalPath(pathname: string): string {
   return pathname
     .split("/")
@@ -311,8 +319,10 @@ async function hmac(
 
 const TEXT_ENCODER = new TextEncoder();
 
-// Copied into a fresh ArrayBuffer: `TextEncoder.encode()` returns
-// `Uint8Array<ArrayBufferLike>`, which Web Crypto's `BufferSource` rejects.
+/**
+ * Copied into a fresh ArrayBuffer: `TextEncoder.encode()` returns
+ * `Uint8Array<ArrayBufferLike>`, which Web Crypto's `BufferSource` rejects.
+ */
 function encodeUtf8(data: string): ArrayBuffer {
   const view = TEXT_ENCODER.encode(data);
   const out = new ArrayBuffer(view.byteLength);
@@ -324,14 +334,18 @@ function bytesToHex(bytes: Uint8Array): string {
   return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-// AWS UTC stamp `YYYYMMDDTHHMMSSZ`: ISO 8601 with separators and millis
-// dropped.
+/**
+ * AWS UTC stamp `YYYYMMDDTHHMMSSZ`: ISO 8601 with separators and millis
+ * dropped.
+ */
 function formatAmzDate(d: Date): string {
   return d.toISOString().replace(/[-:]|\.\d{3}/g, "");
 }
 
-// AWS canonical encoding: `encodeURIComponent` plus the four RFC 3986 reserved
-// characters it leaves alone.
+/**
+ * AWS canonical encoding: `encodeURIComponent` plus the four RFC 3986 reserved
+ * characters it leaves alone.
+ */
 export function rfc3986Encode(s: string): string {
   return encodeURIComponent(s).replace(
     /[!'()*]/g,

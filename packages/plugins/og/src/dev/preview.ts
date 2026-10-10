@@ -14,8 +14,10 @@ import { sampleDataFor } from "./sample-data.js";
 /** Where the plugin mounts the preview, relative to its own prefix. */
 export const PREVIEW_ROUTE_PATH = "/preview/*";
 
-// The same path once mounted, which is what the index's own links are written
-// against.
+/**
+ * The same path once mounted, which is what the index's own links are written
+ * against.
+ */
 const PREVIEW_URL_PREFIX = `${OG_ROUTE_PREFIX}/preview`;
 
 const NO_STORE = "no-store";
@@ -76,8 +78,10 @@ export function createPreviewRoute(
   };
 }
 
-// The order `resolveRule` walks, not declaration order, so the preview never
-// shows a different winner than the page. Stable within each band.
+/**
+ * The order `resolveRule` walks, not declaration order, so the preview never
+ * shows a different winner than the page. Stable within each band.
+ */
 function inPrecedenceOrder(rules: readonly CardRule[]): readonly CardRule[] {
   return [...rules].sort((a, b) => precedence(a) - precedence(b));
 }
@@ -87,8 +91,10 @@ function precedence(rule: CardRule): number {
   return rule.tier === "fallback" ? 2 : 1;
 }
 
-// Indexed, since labels aren't unique. Four digits caps what a crafted URL can
-// allocate.
+/**
+ * Indexed, since labels aren't unique. Four digits caps what a crafted URL can
+ * allocate.
+ */
 const PREVIEW_FILENAME = /^(0|[1-9]\d{0,3})\.([a-z]+)$/;
 
 function parseRuleIndex(filename: string, extension: string): number | null {
@@ -170,8 +176,10 @@ function notFound(): Response {
   });
 }
 
-// Quotes included, unlike core's own `escapeHtml`: every interpolation on this
-// page but one lands inside an attribute.
+/**
+ * Quotes included, unlike core's own `escapeHtml`: every interpolation on this
+ * page but one lands inside an attribute.
+ */
 function escapeAttr(value: string): string {
   return value
     .replaceAll("&", "&amp;")

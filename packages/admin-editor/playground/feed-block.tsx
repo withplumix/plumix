@@ -1,9 +1,11 @@
 import type { BlockNode, BlockSpec } from "@plumix/core/blocks";
 
-// A loader-backed block so the inspector's scoped-refresh control (#1120) has
-// something to act on. The loader is a server function — it never runs in this
-// backend-less harness, so the canvas opens with no data and the host's refresh
-// stub pushes some in over the bridge. The render reflects whichever it has.
+/**
+ * A loader-backed block so the inspector's scoped-refresh control (#1120) has
+ * something to act on. The loader is a server function — it never runs in this
+ * backend-less harness, so the canvas opens with no data and the host's refresh
+ * stub pushes some in over the bridge. The render reflects whichever it has.
+ */
 export const feedSpec: BlockSpec = {
   name: "playground/feed",
   inputs: [{ name: "title", type: "text", label: "Title" }],

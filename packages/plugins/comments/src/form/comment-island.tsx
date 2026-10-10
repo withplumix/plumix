@@ -24,8 +24,10 @@ interface CommentIslandProps {
   readonly requireEmail: boolean;
 }
 
-// A held comment isn't in the thread yet, so "posted" would read as lost.
-// Spam and trash get the held message: the filing isn't the sender's to learn.
+/**
+ * A held comment isn't in the thread yet, so "posted" would read as lost.
+ * Spam and trash get the held message: the filing isn't the sender's to learn.
+ */
 const confirmationFor = (status: CommentStatus): string =>
   labelSourceText(status === "approved" ? POSTED : HELD);
 

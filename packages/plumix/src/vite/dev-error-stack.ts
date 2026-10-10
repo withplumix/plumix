@@ -24,9 +24,11 @@ export interface ResolveStackDeps {
   ) => Promise<{ map: SourceMapInput | null; file: string | null } | null>;
 }
 
-// The trailing `:line:column` (with an optional closing paren) common to Chrome
-// and Firefox frames. Anchored with bounded `\d+` runs — no catch-all that
-// could backtrack on a hostile stack.
+/**
+ * The trailing `:line:column` (with an optional closing paren) common to Chrome
+ * and Firefox frames. Anchored with bounded `\d+` runs — no catch-all that
+ * could backtrack on a hostile stack.
+ */
 const LOCATION = /:(\d+):(\d+)\)?$/;
 
 /**
@@ -168,7 +170,9 @@ function mapPosition(
   }
 }
 
-// A sourcemap `source` can be module-relative or carry Vite's `/@fs/` prefix.
+/**
+ * A sourcemap `source` can be module-relative or carry Vite's `/@fs/` prefix.
+ */
 function resolveSource(source: string, moduleFile: string | null): string {
   const path = stripFsPrefix(source);
   if (isAbsolute(path)) return path;
@@ -176,22 +180,28 @@ function resolveSource(source: string, moduleFile: string | null): string {
   return path;
 }
 
-// Vite serves out-of-root files under `/@fs/<abs>`; strip that back to the
-// path.
+/**
+ * Vite serves out-of-root files under `/@fs/<abs>`; strip that back to the
+ * path.
+ */
 function stripFsPrefix(path: string): string {
   return path.startsWith("/@fs/") ? path.slice("/@fs".length) : path;
 }
 
-// The graph keys modules without the `?v=`/`?t=` cache-bust query, so a query
-// makes `getModuleByUrl` miss.
+/**
+ * The graph keys modules without the `?v=`/`?t=` cache-bust query, so a query
+ * makes `getModuleByUrl` miss.
+ */
 function cleanModuleUrl(url: string): string {
   const path = url.replace(/^[a-z][a-z0-9+.-]*:\/\/[^/]+/i, "");
   const query = path.indexOf("?");
   return query >= 0 ? path.slice(0, query) : path;
 }
 
-// Fallback location when a frame has no sourcemap (a pre-bundled dep) — the
-// module path itself, with Vite's `/@fs/` prefix stripped to a real fs path.
+/**
+ * Fallback location when a frame has no sourcemap (a pre-bundled dep) — the
+ * module path itself, with Vite's `/@fs/` prefix stripped to a real fs path.
+ */
 function urlToPath(moduleUrl: string): string {
   return stripFsPrefix(moduleUrl);
 }

@@ -1,8 +1,10 @@
 import type { ReactNode } from "react";
 import { toast } from "sonner";
 
-// Centralises the data-testid wrapper (selector policy: getByTestId
-// only) so every mutation surface emits the same toast shape.
+/**
+ * Centralises the data-testid wrapper (selector policy: getByTestId
+ * only) so every mutation surface emits the same toast shape.
+ */
 export function toastSuccess(message: ReactNode): void {
   toast.success(<span data-testid="toast-success">{message}</span>);
 }

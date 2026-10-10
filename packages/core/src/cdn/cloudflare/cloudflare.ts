@@ -25,8 +25,10 @@ export interface CloudflareCdnConfig {
   readonly purgeToken: EnvInput<string | undefined>;
 }
 
-// Minimal shape of `caches.default` — present on Workers and nowhere else —
-// typed locally so core takes no `@cloudflare/workers-types` dependency.
+/**
+ * Minimal shape of `caches.default` — present on Workers and nowhere else —
+ * typed locally so core takes no `@cloudflare/workers-types` dependency.
+ */
 interface WorkersCache {
   match(request: Request): Promise<Response | undefined>;
   put(request: Request, response: Response): Promise<void>;
@@ -47,9 +49,11 @@ function pageCacheControl(config: CloudflareCdnConfig): string {
   return directives.join(", ");
 }
 
-// Drops `private`/`no-store`: a segment variant sends them for intermediaries,
-// yet its separately keyed edge entry is deliberately shared. Only `forStorage`
-// may widen like this.
+/**
+ * Drops `private`/`no-store`: a segment variant sends them for intermediaries,
+ * yet its separately keyed edge entry is deliberately shared. Only `forStorage`
+ * may widen like this.
+ */
 function sharedCacheControl(
   response: Response,
   config: CloudflareCdnConfig,
@@ -60,8 +64,10 @@ function sharedCacheControl(
   return pageCacheControl(config);
 }
 
-// The zone reads `Cache-Tag`, comma-separated. The header name and the
-// separator are this provider's to choose.
+/**
+ * The zone reads `Cache-Tag`, comma-separated. The header name and the
+ * separator are this provider's to choose.
+ */
 function cdnHeaders(
   response: Response,
   config: CloudflareCdnConfig,
@@ -81,8 +87,10 @@ function withHeaders(response: Response, headers: Headers): Response {
   });
 }
 
-// A visitor's `Set-Cookie` can't be stripped here as on the stored copy;
-// stamping shared freshness beside it would hand that cookie to everyone.
+/**
+ * A visitor's `Set-Cookie` can't be stripped here as on the stored copy;
+ * stamping shared freshness beside it would hand that cookie to everyone.
+ */
 function decorate(
   response: Response,
   config: CloudflareCdnConfig,
@@ -93,8 +101,10 @@ function decorate(
   return withHeaders(response, cdnHeaders(response, config, tags));
 }
 
-// The Workers Cache API rejects a response carrying `Set-Cookie`. Delete before
-// building the `Response`, whose header guard would make the delete a no-op.
+/**
+ * The Workers Cache API rejects a response carrying `Set-Cookie`. Delete before
+ * building the `Response`, whose header guard would make the delete a no-op.
+ */
 function forStorage(
   response: Response,
   config: CloudflareCdnConfig,
@@ -119,7 +129,9 @@ function originStore(
   };
 }
 
-// Cloudflare refuses a `purge_cache` call carrying more than this many tags.
+/**
+ * Cloudflare refuses a `purge_cache` call carrying more than this many tags.
+ */
 const PURGE_TAG_LIMIT = 100;
 
 async function purgeGroup(
@@ -143,9 +155,11 @@ async function purgeGroup(
   }
 }
 
-// Rejections bubble to the caller, which defers the purge, so a zone that
-// refuses a call is logged rather than failing the publish. The groups are
-// sent concurrently.
+/**
+ * Rejections bubble to the caller, which defers the purge, so a zone that
+ * refuses a call is logged rather than failing the publish. The groups are
+ * sent concurrently.
+ */
 async function purgeByTag(
   zoneId: string,
   purgeToken: string,
@@ -164,7 +178,7 @@ async function purgeByTag(
   if (refused !== undefined) throw refused.reason;
 }
 
-// A var declared and left blank is the same deploy as one never set.
+/** A var declared and left blank is the same deploy as one never set. */
 function credential(
   input: EnvInput<string | undefined>,
   env: PlumixEnv,

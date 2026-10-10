@@ -48,7 +48,7 @@ export interface BunImageDelivery extends ImageDelivery {
 const DEFAULT_WIDTHS = [320, 640, 768, 1024, 1280, 1536, 1920];
 const DEFAULT_CACHE_DIR = ".cache/plumix/images";
 const PROBED: readonly ImageFormat[] = ["jpeg", "webp", "avif"];
-// A 1×1 PNG, the smallest input every encoder can be asked to take.
+/** A 1×1 PNG, the smallest input every encoder can be asked to take. */
 const PIXEL = Uint8Array.from(
   atob(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
@@ -92,8 +92,10 @@ export function encodeAs(
   }
 }
 
-// A format the host cannot encode rejects at the terminal, whatever the
-// input, so one pixel through each encoder is the whole probe.
+/**
+ * A format the host cannot encode rejects at the terminal, whatever the
+ * input, so one pixel through each encoder is the whole probe.
+ */
 async function probeEncodable(): Promise<readonly ImageFormat[]> {
   const results = await Promise.all(
     PROBED.map((format) =>

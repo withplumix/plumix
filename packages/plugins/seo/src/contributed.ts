@@ -53,8 +53,10 @@ export interface ContributedSitemap {
   readonly source: SitemapSource;
 }
 
-// These own every stem starting with their name, so a contributed scope by one
-// would answer for an entry type's or taxonomy's sub-sitemap.
+/**
+ * These own every stem starting with their name, so a contributed scope by one
+ * would answer for an entry type's or taxonomy's sub-sitemap.
+ */
 const RESERVED_SCOPE_KINDS = ["entries", "terms"] as const;
 
 function assertContributable(name: string, pluginId: string): void {
@@ -67,8 +69,10 @@ function assertContributable(name: string, pluginId: string): void {
 
 type RegisterSitemap = PluginContextExtensions["registerSitemap"];
 
-// Keyed by the install's `registerSitemap`: core puts that same function on
-// every setup context, which is how `afterSetup` finds its install's list.
+/**
+ * Keyed by the install's `registerSitemap`: core puts that same function on
+ * every setup context, which is how `afterSetup` finds its install's list.
+ */
 const contributions = new WeakMap<RegisterSitemap, ContributedSitemap[]>();
 
 /** A fresh `registerSitemap` for one install, collecting into its own list. */

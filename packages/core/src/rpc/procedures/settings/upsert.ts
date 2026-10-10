@@ -24,9 +24,11 @@ import {
 
 const CAPABILITY = "settings:manage";
 
-// Single endpoint for all group writes. Keys mapped to `null` or
-// `undefined` are deletions; anything else is an upsert. Unmentioned
-// keys are left alone — same partial-patch semantic as `entry.meta`.
+/**
+ * Single endpoint for all group writes. Keys mapped to `null` or
+ * `undefined` are deletions; anything else is an upsert. Unmentioned
+ * keys are left alone — same partial-patch semantic as `entry.meta`.
+ */
 export const upsert = base
   .use(authenticated)
   .use(requireCapability(CAPABILITY))
@@ -188,9 +190,11 @@ export const upsert = base
     );
   });
 
-// Values that blow past the per-value cap in `schemas.ts` translate to a
-// CONFLICT with a keyed `reason` so admin UIs surface which field hit
-// the limit.
+/**
+ * Values that blow past the per-value cap in `schemas.ts` translate to a
+ * CONFLICT with a keyed `reason` so admin UIs surface which field hit
+ * the limit.
+ */
 function assertEncodedSize(
   group: string,
   key: string,

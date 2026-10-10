@@ -18,8 +18,10 @@ export interface TitleVariableInput {
   readonly localeCode: string;
 }
 
-// A period is a calendar span, not an instant: anchoring at UTC and formatting
-// there keeps `2026/01` from printing as December in a negative offset.
+/**
+ * A period is a calendar span, not an instant: anchoring at UTC and formatting
+ * there keeps `2026/01` from printing as December in a negative offset.
+ */
 function formatUtc(
   date: Date,
   localeCode: string,
@@ -31,8 +33,10 @@ function formatUtc(
   }).format(date);
 }
 
-// An archive prints exactly the parts it covers, so the options it formats
-// with are the arguments it was given.
+/**
+ * An archive prints exactly the parts it covers, so the options it formats
+ * with are the arguments it was given.
+ */
 function formatPeriod(
   year: number,
   month: number | null,

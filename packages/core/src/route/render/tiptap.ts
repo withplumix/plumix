@@ -1,9 +1,11 @@
 import type { JsonObject } from "../../json.js";
 import { escapeHtml } from "../../escape-html.js";
 
-// Attribute-context escape: `href="..."` / `alt="..."` etc. Additionally
-// escapes the quote characters that would let untrusted input break out
-// of the attribute.
+/**
+ * Attribute-context escape: `href="..."` / `alt="..."` etc. Additionally
+ * escapes the quote characters that would let untrusted input break out
+ * of the attribute.
+ */
 function escapeAttr(value: string): string {
   return escapeHtml(value).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
@@ -124,8 +126,10 @@ function clampHeadingLevel(level: unknown): 1 | 2 | 3 | 4 | 5 | 6 {
   return Math.trunc(level) as 1 | 2 | 3 | 4 | 5 | 6;
 }
 
-// Independent of the editor's allowlist: content also reaches the column via
-// seeds and scripts.
+/**
+ * Independent of the editor's allowlist: content also reaches the column via
+ * seeds and scripts.
+ */
 const SAFE_HREF = /^(https?:\/\/|mailto:|tel:|\/|#|\?|\.\.?\/)/i;
 
 function sanitizeHref(href: unknown): string | null {

@@ -5,8 +5,10 @@ interface EntryNode {
   readonly children: readonly EntryNode[];
 }
 
-// Orphans (children whose parent isn't in the input set) get promoted
-// to roots so a paginated `entry.list` page never silently drops rows.
+/**
+ * Orphans (children whose parent isn't in the input set) get promoted
+ * to roots so a paginated `entry.list` page never silently drops rows.
+ */
 export function buildEntryTree(
   entries: readonly Entry[],
 ): readonly EntryNode[] {

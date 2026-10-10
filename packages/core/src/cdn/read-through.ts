@@ -127,8 +127,10 @@ export async function readThroughRoute(
   });
 }
 
-// `auth: "public"` only means core doesn't gate the route; a handler checking
-// its own bearer token can still return one visitor's response.
+/**
+ * `auth: "public"` only means core doesn't gate the route; a handler checking
+ * its own bearer token can still return one visitor's response.
+ */
 function routeResponseIsShareable(
   request: Request,
   hasSession: boolean,

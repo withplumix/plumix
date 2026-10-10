@@ -129,8 +129,10 @@ test("admin page ships styled controls", async ({ page }) => {
   expect(ui.styled).toBeGreaterThan(0);
 });
 
-// Counts the plugin shell's interactive controls and how many carry a
-// styling class — a count of 0 is the unstyled-component regression signal.
+/**
+ * Counts the plugin shell's interactive controls and how many carry a
+ * styling class — a count of 0 is the unstyled-component regression signal.
+ */
 async function styledControls(page: Page, shellTestId: string) {
   return page.evaluate((id) => {
     const shell = document.querySelector(`[data-testid="${id}"]`);

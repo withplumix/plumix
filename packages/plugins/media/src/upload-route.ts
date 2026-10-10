@@ -7,9 +7,11 @@ import { canFinishUpload } from "./upload-gate.js";
 
 const MEDIA_ENTRY_TYPE = "media";
 
-// Anchored: digits only, no leading zeros, ≤16 chars (well above any
-// realistic SQLite int). Rejects scientific notation, signs, padding
-// whitespace, and unicode digits.
+/**
+ * Anchored: digits only, no leading zeros, ≤16 chars (well above any
+ * realistic SQLite int). Rejects scientific notation, signs, padding
+ * whitespace, and unicode digits.
+ */
 const ID_RE = /^[1-9]\d{0,15}$/;
 
 /**

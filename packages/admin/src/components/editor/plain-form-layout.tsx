@@ -59,18 +59,24 @@ interface PlainFormLayoutProps {
   readonly headline: string;
   readonly isSubmitting: boolean;
   readonly serverError: string | null;
-  // Path-addressed meta rejections from the last failed save, pinned onto
-  // their inputs; `null` once a save succeeds.
+  /**
+   * Path-addressed meta rejections from the last failed save, pinned onto
+   * their inputs; `null` once a save succeeds.
+   */
   readonly serverFieldErrors?: readonly MetaFieldServerError[] | null;
   readonly onSubmit: (values: PostEditorValues) => void;
-  // Optional Revisions trigger slot — route layer wires the
-  // `<RevisionsSheet />` with RPC fetchers + onRestore and passes it
-  // here when the entry type declares `supports: ['revisions']`.
+  /**
+   * Optional Revisions trigger slot — route layer wires the
+   * `<RevisionsSheet />` with RPC fetchers + onRestore and passes it
+   * here when the entry type declares `supports: ['revisions']`.
+   */
   readonly revisionsTrigger?: ReactNode;
-  // Optional "Copy preview link" action slot — route layer wires the
-  // entry.createPreviewLink RPC and passes the button here.
+  /**
+   * Optional "Copy preview link" action slot — route layer wires the
+   * entry.createPreviewLink RPC and passes the button here.
+   */
   readonly previewLinkAction?: ReactNode;
-  // Every edit that leaves the form valid, so the route can autosave it.
+  /** Every edit that leaves the form valid, so the route can autosave it. */
   readonly onValuesChange?: (values: PostEditorValues) => void;
 }
 

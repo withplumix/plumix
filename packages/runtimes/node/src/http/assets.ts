@@ -31,7 +31,7 @@ interface Held {
   readonly headers: Readonly<Record<string, string>>;
 }
 
-// A directory without its trailing slash is refused here.
+/** A directory without its trailing slash is refused here. */
 async function locate(root: string, pathname: string): Promise<Held | null> {
   const asset = resolveAssetPath(root, pathname);
   if (asset === null) return null;
@@ -47,9 +47,11 @@ async function locate(root: string, pathname: string): Promise<Held | null> {
   }
 }
 
-// The file is opened before any header is decided: a stream that fails on
-// its first read would otherwise have already sent `immutable` with a body it
-// cannot deliver.
+/**
+ * The file is opened before any header is decided: a stream that fails on
+ * its first read would otherwise have already sent `immutable` with a body it
+ * cannot deliver.
+ */
 function open(file: string): Promise<ReadStream> {
   return new Promise((resolvePromise, reject) => {
     const stream = createReadStream(file);

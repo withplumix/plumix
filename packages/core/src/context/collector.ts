@@ -13,8 +13,10 @@ function isThenable(value: unknown): value is PromiseLike<unknown> {
   );
 }
 
-// `String(x)` itself throws for e.g. `Object.create(null)`; the serializer
-// must never replace the original failure with its own.
+/**
+ * `String(x)` itself throws for e.g. `Object.create(null)`; the serializer
+ * must never replace the original failure with its own.
+ */
 function describeThrown(error: unknown): { name: string; message: string } {
   try {
     return { name: "Error", message: String(error) };
@@ -23,8 +25,10 @@ function describeThrown(error: unknown): { name: string; message: string } {
   }
 }
 
-// Bounds memory on a runaway loop or extreme N+1; overflow counts into
-// getDropped(), never silently.
+/**
+ * Bounds memory on a runaway loop or extreme N+1; overflow counts into
+ * getDropped(), never silently.
+ */
 const MAX_SPANS = 2000;
 const MAX_RECORDS_PER_NAMESPACE = 1000;
 

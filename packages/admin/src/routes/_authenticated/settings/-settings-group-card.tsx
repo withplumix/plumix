@@ -45,8 +45,10 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-// Split out of `$page.tsx` so a test can mount one group's card without the
-// file-based route tree.
+/**
+ * Split out of `$page.tsx` so a test can mount one group's card without the
+ * file-based route tree.
+ */
 export function SettingsGroupCard({
   group,
 }: {

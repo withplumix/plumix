@@ -5,8 +5,10 @@ import type { BlockContext } from "./render-block-tree.js";
 
 const ADD_BLOCK = { id: "blocks.appender.addBlock", message: "Add a block" };
 
-// Inline-styled because the canvas iframe carries the theme's CSS, not
-// admin-ui's; a fixed muted gray reads as editor chrome on any background.
+/**
+ * Inline-styled because the canvas iframe carries the theme's CSS, not
+ * admin-ui's; a fixed muted gray reads as editor chrome on any background.
+ */
 const STYLE: Record<string, string> = {
   display: "flex",
   width: "100%",

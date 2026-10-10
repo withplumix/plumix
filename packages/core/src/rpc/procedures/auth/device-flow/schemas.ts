@@ -1,7 +1,9 @@
 import * as v from "valibot";
 
-// Accepts either case and a missing dash for pasting, then normalises to
-// the canonical "ABCD-EFGH" the server primitive expects.
+/**
+ * Accepts either case and a missing dash for pasting, then normalises to
+ * the canonical "ABCD-EFGH" the server primitive expects.
+ */
 const userCodeSchema = v.pipe(
   v.string(),
   v.trim(),
@@ -32,9 +34,11 @@ const capabilitySchema = v.pipe(
   v.regex(/^[A-Za-z0-9_:.\-*]+$/, "capability uses [A-Za-z0-9_:.\\-*] only"),
 );
 
-// `null` inherits the role's caps; an array narrows the token to its
-// intersection with the role. `[]` is legal, as in `api_tokens.scopes`.
-// Capped against a hostile approver.
+/**
+ * `null` inherits the role's caps; an array narrows the token to its
+ * intersection with the role. `[]` is legal, as in `api_tokens.scopes`.
+ * Capped against a hostile approver.
+ */
 const scopesSchema = v.optional(
   v.union([
     v.null(),

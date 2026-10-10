@@ -133,10 +133,12 @@ export function resolveE2EPort(base: number): number {
   return base + offset;
 }
 
-// Runs the server command as a child and stays in the process group Playwright
-// made for it. Playwright holds the only writer of its stdin, so the pipe ends
-// however the runner dies — a SIGTERM or a SIGKILL skips the teardown that
-// would kill the group — and the group goes with it, port and all (#2808).
+/**
+ * Runs the server command as a child and stays in the process group Playwright
+ * made for it. Playwright holds the only writer of its stdin, so the pipe ends
+ * however the runner dies — a SIGTERM or a SIGKILL skips the teardown that
+ * would kill the group — and the group goes with it, port and all (#2808).
+ */
 const SUPERVISOR = [
   `const { spawn } = require("node:child_process");`,
   `const server = spawn(process.argv[1], { shell: true, stdio: ["ignore", "inherit", "inherit"] });`,

@@ -4,15 +4,17 @@
 
 import { D1Error } from "./errors.js";
 
-// Links a wrapped statement back to the real bound one, for `batch`.
+/** Links a wrapped statement back to the real bound one, for `batch`. */
 const RAW = Symbol("plumix.d1.raw");
 
 interface ClientStatement extends D1PreparedStatement {
   readonly [RAW]: D1PreparedStatement;
 }
 
-// The query surface drizzle's d1 session uses — satisfied by both a raw
-// `D1Database` binding and a Sessions-API `withSession()` handle.
+/**
+ * The query surface drizzle's d1 session uses — satisfied by both a raw
+ * `D1Database` binding and a Sessions-API `withSession()` handle.
+ */
 interface D1QueryTarget {
   prepare: (sql: string) => D1PreparedStatement;
   batch: <T = unknown>(

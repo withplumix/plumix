@@ -20,9 +20,11 @@ interface TiptapBlockNode {
   readonly content?: readonly (TiptapTextNode | TiptapBlockNode)[];
 }
 
-// Mirrors `marks/core/link.tsx`; the walker re-checks so a value that
-// sneaks past the schema (migrated content, hand-edited storage)
-// never reaches the rendered anchor.
+/**
+ * Mirrors `marks/core/link.tsx`; the walker re-checks so a value that
+ * sneaks past the schema (migrated content, hand-edited storage)
+ * never reaches the rendered anchor.
+ */
 const SAFE_HREF = /^(https?:\/\/|mailto:|tel:|\/|#|\?|\.\.?\/)/i;
 function sanitizeHref(raw: unknown): string | undefined {
   if (typeof raw !== "string") return undefined;

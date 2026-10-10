@@ -1,8 +1,12 @@
-// Keeps an unbounded attacker string out of the DB and the `Location` header.
+/**
+ * Keeps an unbounded attacker string out of the DB and the `Location` header.
+ */
 const MAX_REDIRECT_LENGTH = 2048;
 
-// The URL parser strips TAB/CR/LF before parsing, so `/<TAB>/host` becomes
-// `//host` after the `//` check passed.
+/**
+ * The URL parser strips TAB/CR/LF before parsing, so `/<TAB>/host` becomes
+ * `//host` after the `//` check passed.
+ */
 function hasControlChar(value: string): boolean {
   for (let i = 0; i < value.length; i++) {
     const code = value.charCodeAt(i);

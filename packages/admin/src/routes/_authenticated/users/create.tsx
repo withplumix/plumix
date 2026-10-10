@@ -58,7 +58,7 @@ import {
   USERS_LIST_DEFAULT_SEARCH,
 } from "./-constants.js";
 
-// Descriptors used outside JSX — error setters, copy-button aria label.
+/** Descriptors used outside JSX — error setters, copy-button aria label. */
 const M = {
   copyAria: defineMessage({
     id: "userInvite.copy.aria",
@@ -74,9 +74,11 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-// Client-side validation mirrors `userInviteInputSchema` on the server so
-// the user gets instant feedback; the server remains the authoritative
-// gate.
+/**
+ * Client-side validation mirrors `userInviteInputSchema` on the server so
+ * the user gets instant feedback; the server remains the authoritative
+ * gate.
+ */
 const inviteFormSchema = v.object({
   email: v.pipe(
     v.string(),
@@ -325,9 +327,11 @@ function InviteUserRoute(): ReactNode {
   );
 }
 
-// Absolute URL so the admin can copy-paste into an email client without
-// post-processing. Admin is SPA-only so `window` is always defined here
-// (the browser test tier covers the test path).
+/**
+ * Absolute URL so the admin can copy-paste into an email client without
+ * post-processing. Admin is SPA-only so `window` is always defined here
+ * (the browser test tier covers the test path).
+ */
 function buildInviteUrl(token: string): string {
   return `${window.location.origin}${ADMIN_BASE_PATH}/accept-invite/${token}`;
 }

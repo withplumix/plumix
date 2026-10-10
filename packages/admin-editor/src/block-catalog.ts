@@ -145,8 +145,10 @@ export function createNodeFromEntry(
   return node;
 }
 
-// Doesn't seed a nested container's `defaultChildren`: a container placed in
-// `defaultChildren` must spell out its own children.
+/**
+ * Doesn't seed a nested container's `defaultChildren`: a container placed in
+ * `defaultChildren` must spell out its own children.
+ */
 function seedNodeDefaults(node: BlockNode, registry: BlockRegistry): BlockNode {
   const spec = registry.get(node.name);
   const attrs: Record<string, JsonValue> = { ...spec?.defaults, ...node.attrs };

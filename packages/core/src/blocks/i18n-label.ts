@@ -13,9 +13,11 @@ export type MessageValues = Readonly<Record<string, string>>;
 
 const PLACEHOLDER = /\{(\w+)\}/g;
 
-// Plain object access: blocks render on the Worker, in the canvas iframe and
-// in the admin, none with a Lingui runtime. Plural/select tokens drop to the
-// English source.
+/**
+ * Plain object access: blocks render on the Worker, in the canvas iframe and
+ * in the admin, none with a Lingui runtime. Plural/select tokens drop to the
+ * English source.
+ */
 function fromCatalog(
   value: CompiledCatalog[string] | undefined,
   values: MessageValues | undefined,

@@ -11,8 +11,10 @@ const ENDPOINT = "/@plumix-dev-error-terminal";
 
 let uninstall: () => void = () => undefined;
 let fetchMock: ReturnType<typeof vi.fn>;
-// A manual scheduler: forwarding batches into a queue and flushes when the
-// captured callback runs, so a test drives the flush deterministically.
+/**
+ * A manual scheduler: forwarding batches into a queue and flushes when the
+ * captured callback runs, so a test drives the flush deterministically.
+ */
 let flush: () => void = () => undefined;
 
 function schedule(run: () => void): void {
@@ -27,7 +29,7 @@ function install(level: "off" | "error" | "warn" | "log" = "warn"): void {
   });
 }
 
-// Every POSTed batch's logs, flattened in order.
+/** Every POSTed batch's logs, flattened in order. */
 function forwarded(): ForwardedLog[] {
   const logs: ForwardedLog[] = [];
   for (const call of fetchMock.mock.calls) {
@@ -39,18 +41,22 @@ function forwarded(): ForwardedLog[] {
   return logs;
 }
 
-// Vitest's browser runner listens for window `error` events too, and once the
-// page has a listener of its own it re-logs each one through `console.error`,
-// which the forwarder then forwards as a console line. A test about what a
-// window error forwards counts the exceptions alone.
+/**
+ * Vitest's browser runner listens for window `error` events too, and once the
+ * page has a listener of its own it re-logs each one through `console.error`,
+ * which the forwarder then forwards as a console line. A test about what a
+ * window error forwards counts the exceptions alone.
+ */
 function exceptions(): ForwardedLog[] {
   return forwarded().filter((log) => log.kind === "exception");
 }
 
-// Vitest's browser runner listens for window `error` and `unhandledrejection`
-// events, and once the page listens too it re-logs each one through
-// `console.error`. That line is the runner's, not the code under test's, so a
-// test dispatching one keeps it out of the output for the dispatch alone.
+/**
+ * Vitest's browser runner listens for window `error` and `unhandledrejection`
+ * events, and once the page listens too it re-logs each one through
+ * `console.error`. That line is the runner's, not the code under test's, so a
+ * test dispatching one keeps it out of the output for the dispatch alone.
+ */
 function dispatchUncaught(event: Event): void {
   const relog = vi.spyOn(console, "error").mockImplementation(() => undefined);
   try {

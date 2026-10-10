@@ -20,9 +20,11 @@ import {
 } from "./core.js";
 import { loadEntryMeta } from "./entry.js";
 
-// Each test declares its meta fields via this helper — one 1-field box
-// per key so the `entryTypes` scope can differ per key (useful for
-// scope-mismatch assertions).
+/**
+ * Each test declares its meta fields via this helper — one 1-field box
+ * per key so the `entryTypes` scope can differ per key (useful for
+ * scope-mismatch assertions).
+ */
 interface TestMetaSpec {
   readonly type: "string" | "number" | "boolean" | "json";
   readonly entryTypes?: readonly string[];

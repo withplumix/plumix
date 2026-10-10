@@ -3,8 +3,10 @@ import type { ReactNode } from "react";
 import type { RenderedDebugPanel } from "./render-panels.js";
 import { labelSourceText } from "../../i18n/label.js";
 
-// One radio group drives the tabs; the label's `for` targets the matching
-// radio so `:checked` alone (no JS) shows the active pane.
+/**
+ * One radio group drives the tabs; the label's `for` targets the matching
+ * radio so `:checked` alone (no JS) shows the active pane.
+ */
 const TAB_RADIO_NAME = "plumix-debug-tab";
 
 /**

@@ -95,7 +95,7 @@ const MENU_LABELS = {
   },
 } satisfies TermTaxonomyLabels;
 
-// Shared admin-nav group label (cross-plugin convention).
+/** Shared admin-nav group label (cross-plugin convention). */
 const APPEARANCE_LABEL: Label = {
   id: "core.adminNav.appearance",
   message: "Appearance",

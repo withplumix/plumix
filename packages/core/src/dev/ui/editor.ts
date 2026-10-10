@@ -1,11 +1,15 @@
 import type { DevErrorFrame } from "./contract.js";
 
-// The default when `PLUMIX_EDITOR` is unset: VS Code, the dominant editor, so
-// the link works out of the box with no configuration.
+/**
+ * The default when `PLUMIX_EDITOR` is unset: VS Code, the dominant editor, so
+ * the link works out of the box with no configuration.
+ */
 const VSCODE_TEMPLATE = "vscode://file/{file}:{line}:{column}";
 
-// The VS Code family puts the path in the URL; the JetBrains family and
-// Sublime take file and line as query parameters.
+/**
+ * The VS Code family puts the path in the URL; the JetBrains family and
+ * Sublime take file and line as query parameters.
+ */
 const EDITOR_TEMPLATES: Readonly<Record<string, string>> = {
   vscode: VSCODE_TEMPLATE,
   "vscode-insiders": "vscode-insiders://file/{file}:{line}:{column}",
@@ -61,8 +65,10 @@ function stripTrailingSlash(path: string): string {
   return path.endsWith("/") ? path.slice(0, -1) : path;
 }
 
-// The prefix must land on a path boundary so `/workspace` doesn't rewrite
-// `/workspace-other`.
+/**
+ * The prefix must land on a path boundary so `/workspace` doesn't rewrite
+ * `/workspace-other`.
+ */
 function remapFilePath(file: string, map: EditorPathMap): string {
   if (file === map.from) return map.to;
   if (file.startsWith(`${map.from}/`)) {

@@ -25,7 +25,7 @@ export interface TrustedRequest {
   readonly clientAddress?: string;
 }
 
-// An empty header reads as absent, so a blank `Host` still yields a URL.
+/** An empty header reads as absent, so a blank `Host` still yields a URL. */
 function header(request: Request, name: string): string | undefined {
   const value = request.headers.get(name);
   return value === null || value === "" ? undefined : value;

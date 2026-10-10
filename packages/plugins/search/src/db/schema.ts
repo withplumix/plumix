@@ -1,8 +1,10 @@
 import { sql } from "drizzle-orm";
 import { sqliteTable, uniqueIndex } from "drizzle-orm/sqlite-core";
 
-// Entries and terms share one table because bm25 scores are not comparable
-// across tables.
+/**
+ * Entries and terms share one table because bm25 scores are not comparable
+ * across tables.
+ */
 const SEARCH_SOURCE_TYPES = ["entry", "term"] as const;
 
 /** What a search result is — the discriminator a theme renders on. */

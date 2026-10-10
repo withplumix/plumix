@@ -10,8 +10,10 @@ import { fallback } from "../route/render/template-builders.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 import { defineTheme } from "../theme.js";
 
-// MCP is default-off; every test in this suite exercises the live endpoint,
-// so opt it in here rather than repeating `mcp: { enabled: true }` per call.
+/**
+ * MCP is default-off; every test in this suite exercises the live endpoint,
+ * so opt it in here rather than repeating `mcp: { enabled: true }` per call.
+ */
 function mcpHarness(
   options: Parameters<typeof createDispatcherHarness>[0] = {},
 ): Promise<DispatcherHarness> {
@@ -36,10 +38,12 @@ const blog = definePlugin("test-blog", (ctx) => {
   });
 });
 
-// Reports how much the live collector holds mid-request, from inside a real
-// plugin tool — the only reader of `ctx.telemetry` on the MCP path that isn't
-// itself a telemetry consumer, so it can't vote the collection it measures into
-// existence.
+/**
+ * Reports how much the live collector holds mid-request, from inside a real
+ * plugin tool — the only reader of `ctx.telemetry` on the MCP path that isn't
+ * itself a telemetry consumer, so it can't vote the collection it measures into
+ * existence.
+ */
 const spanProbe = definePlugin("test-span-probe", (ctx) => {
   ctx.registerMcpTool({
     name: "probe_spans",
@@ -270,9 +274,10 @@ describe("MCP endpoint — transport guards", () => {
   });
 });
 
-// Dev-trust: over loopback a dev server auto-enables the endpoint and trusts the
-// local developer with no PAT, guarded by an Origin allowlist and a loopback
-// bind. Production (no dev gate) keeps the token requirement unchanged.
+// Dev-trust: over loopback a dev server auto-enables the endpoint and trusts
+// the local developer with no PAT, guarded by an Origin allowlist and a
+// loopback bind. Production (no dev gate) keeps the token requirement
+// unchanged.
 describe("MCP endpoint — dev trust", () => {
   afterEach(() => void vi.unstubAllEnvs());
 
@@ -598,8 +603,10 @@ function flattenSpans(spans: readonly TelemetrySpan[]): TelemetrySpan[] {
   return spans.flatMap((span) => [span, ...flattenSpans(span.children)]);
 }
 
-// Seed the ring through the harness's own capture path (dispatch → deferred
-// onRequestEnd, flushed by drainDeferred), then read it back via the list tool.
+/**
+ * Seed the ring through the harness's own capture path (dispatch → deferred
+ * onRequestEnd, flushed by drainDeferred), then read it back via the list tool.
+ */
 async function seedAndList(
   h: DispatcherHarness,
   secret: string,
@@ -799,9 +806,11 @@ describe("MCP endpoint — telemetry tracing tools (dev gate)", () => {
   });
 });
 
-// One entry as read off the merged error_list stream — a superset of the server
-// and client shapes, so a single parse handles both. `requestId`/`path`/
-// `timestamp` are server-only; `label` and frame `stack` mark a client entry.
+/**
+ * One entry as read off the merged error_list stream — a superset of the server
+ * and client shapes, so a single parse handles both. `requestId`/`path`/
+ * `timestamp` are server-only; `label` and frame `stack` mark a client entry.
+ */
 interface MergedErrorRow {
   readonly source: string;
   readonly level: string;
@@ -813,9 +822,11 @@ interface MergedErrorRow {
   readonly label?: string;
 }
 
-// A theme whose fallback template throws, so a plain GET renders a 500 the
-// request-history ring captures with the error on its span — the exact seam the
-// server half of error_list projects from.
+/**
+ * A theme whose fallback template throws, so a plain GET renders a 500 the
+ * request-history ring captures with the error on its span — the exact seam the
+ * server half of error_list projects from.
+ */
 function throwingTheme(message: string) {
   return defineTheme({
     templates: [
@@ -914,9 +925,9 @@ describe("MCP endpoint — error_list (dev gate)", () => {
     const errors = parseToolResult<MergedErrorRow[]>(json);
 
     // The ring is a process-wide singleton shared across tests, so scope to the
-    // seeded path (as the telemetry-tools tests do) rather than asserting global
-    // emptiness: a 2xx request is never projected as a failure, and a run with
-    // no failures at all yields this same empty array.
+    // seeded path (as the telemetry-tools tests do) rather than asserting
+    // global emptiness: a 2xx request is never projected as a failure, and a
+    // run with no failures at all yields this same empty array.
     expect(res.status).toBe(200);
     expect(json.result.isError).toBeUndefined();
     expect(Array.isArray(errors)).toBe(true);
@@ -971,10 +982,13 @@ describe("MCP endpoint — error_list (dev gate)", () => {
   });
 });
 
-// Stub the worker's outbound fetch so the client half of `error_list` reads a
-// fixed payload instead of a live dev endpoint (AC: the producer side is covered
-// by its own ticket). Only the client-error endpoint is intercepted; every other
-// URL falls through to the real fetch so nothing else in dispatch is disturbed.
+/**
+ * Stub the worker's outbound fetch so the client half of `error_list` reads a
+ * fixed payload instead of a live dev endpoint (AC: the producer side is
+ * covered by its own ticket). Only the client-error endpoint is intercepted;
+ * every other URL falls through to the real fetch so nothing else in dispatch
+ * is disturbed.
+ */
 function stubClientErrorEndpoint(
   respond: () => Response | Promise<Response>,
 ): void {
@@ -995,9 +1009,10 @@ function clientErrorsResponse(entries: readonly unknown[]): Response {
 }
 
 // The client half: `error_list` also fetches the retained browser failures from
-// the dev read endpoint (#1656) and merges them into the same newest-first stream
-// as its server projection — closing the "why did this hydration error happen?"
-// loop. The worker-side merge is what this ticket adds; the fetch is stubbed here.
+// the dev read endpoint (#1656) and merges them into the same newest-first
+// stream as its server projection — closing the "why did this hydration error
+// happen?" loop. The worker-side merge is what this ticket adds; the fetch is
+// stubbed here.
 describe("MCP endpoint — error_list client merge (dev gate)", () => {
   beforeEach(() => void vi.stubEnv("PLUMIX_DEV", "1"));
   afterEach(() => {
@@ -1118,8 +1133,8 @@ describe("MCP endpoint — error_list client merge (dev gate)", () => {
     const { json } = await callTool(h, secret, 1, "error_list", {});
     const errors = parseToolResult<MergedErrorRow[]>(json);
 
-    // The client run (freshly fetched, no per-entry clock) is concatenated ahead
-    // of the server run, so a client entry leads.
+    // The client run (freshly fetched, no per-entry clock) is concatenated
+    // ahead of the server run, so a client entry leads.
     expect(errors[0]?.source).toBe("client");
     expect(errors[0]?.message).toBe("front of line");
   });

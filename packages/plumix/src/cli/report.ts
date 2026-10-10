@@ -45,8 +45,10 @@ export const report = {
   },
 };
 
-// An object cause would render as `[object Object]`, which is worse than
-// printing nothing.
+/**
+ * An object cause would render as `[object Object]`, which is worse than
+ * printing nothing.
+ */
 function causeText(cause: unknown): string | undefined {
   if (cause instanceof Error) return cause.message;
   if (typeof cause === "string") return cause;

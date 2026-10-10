@@ -65,8 +65,10 @@ function splitCsv(csv: string): string[] {
     .filter(Boolean);
 }
 
-// A flag not passed stays `undefined` (distinct from an explicit empty
-// value), so `reconcile` can tell "defaulted" from "the user said none".
+/**
+ * A flag not passed stays `undefined` (distinct from an explicit empty
+ * value), so `reconcile` can tell "defaulted" from "the user said none".
+ */
 function parseArgs(argv: readonly string[]): ParsedArgs {
   let runtime: string | undefined;
   let plugins: string[] | undefined;

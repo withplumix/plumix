@@ -25,8 +25,10 @@ function readGif(v: DataView): ImageDimensions | null {
   return { width: v.getUint16(6, true), height: v.getUint16(8, true) };
 }
 
-// Start-Of-Frame markers carry the frame dimensions. Excludes 0xC4 (DHT),
-// 0xC8 (JPG), 0xCC (DAC), which share the 0xCn range but aren't frame headers.
+/**
+ * Start-Of-Frame markers carry the frame dimensions. Excludes 0xC4 (DHT),
+ * 0xC8 (JPG), 0xCC (DAC), which share the 0xCn range but aren't frame headers.
+ */
 function isSofMarker(marker: number): boolean {
   return (
     marker >= 0xc0 &&

@@ -26,7 +26,7 @@ const TASKS: readonly TaskFields[] = [
   { id: "index-drain", registeredBy: "search" },
 ];
 
-// The command reads the roster; running a task is the handler's job.
+/** The command reads the roster; running a task is the handler's job. */
 const withHandlers = (tasks: readonly TaskFields[]) =>
   tasks.map((task) => ({ ...task, handler: () => undefined }));
 
@@ -75,7 +75,8 @@ async function context(
   return {
     app,
     // A real directory: `runSchedule` chdirs to it so a database path resolves
-    // from where the config was loaded, not from where the shell happened to be.
+    // from where the config was loaded, not from where the shell happened to
+    // be.
     cwd: process.cwd(),
     configPath: `${process.cwd()}/plumix.config.ts`,
     argv,

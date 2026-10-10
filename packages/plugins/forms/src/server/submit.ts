@@ -35,15 +35,19 @@ import { insertSubmission, recordHandlerFailure } from "./repository.js";
 import { isImplausiblyFast, issueTimingToken } from "./timing.js";
 import { verifyTurnstile } from "./turnstile.js";
 
-// Third-party text, such as an SMTP reply or error page, stored on a row
-// the inbox renders.
+/**
+ * Third-party text, such as an SMTP reply or error page, stored on a row
+ * the inbox renders.
+ */
 const MAX_HANDLER_ERROR_CHARS = 1000;
 
-// Counted as it streams: a chunked body has no `content-length`.
+/** Counted as it streams: a chunked body has no `content-length`. */
 const MAX_BODY_BYTES = 64 * 1024;
 
-// Urlencoded only: multipart would mean file uploads, which this plugin
-// deliberately refuses.
+/**
+ * Urlencoded only: multipart would mean file uploads, which this plugin
+ * deliberately refuses.
+ */
 async function readBoundedBody(
   request: Request,
 ): Promise<URLSearchParams | null> {
@@ -70,8 +74,10 @@ function wantsJson(request: Request): boolean {
   return (request.headers.get("accept") ?? "").includes("application/json");
 }
 
-// `no-store` on every one of them: the page carrying the form is
-// edge-cached, and these answers are about one visitor's submission.
+/**
+ * `no-store` on every one of them: the page carrying the form is
+ * edge-cached, and these answers are about one visitor's submission.
+ */
 function jsonResponse(
   body: FormSubmitResponse | { readonly token: string },
   status = 200,
@@ -85,7 +91,7 @@ function jsonResponse(
   });
 }
 
-// Nothing about a refused submission belongs in a shared cache either.
+/** Nothing about a refused submission belongs in a shared cache either. */
 function refusal(message: string, status: number): Response {
   return new Response(message, {
     status,
@@ -105,8 +111,10 @@ export async function tokenHandler(
   return jsonResponse({ token: await issueTimingToken(ctx) });
 }
 
-// A throw is recorded, not answered: the row is stored, and an error
-// would make the visitor resend.
+/**
+ * A throw is recorded, not answered: the row is stored, and an error
+ * would make the visitor resend.
+ */
 async function runHandler(
   ctx: AppContext,
   form: FormDefinition,

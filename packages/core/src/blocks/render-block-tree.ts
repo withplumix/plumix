@@ -140,15 +140,19 @@ export interface RenderBlockTreeOptions {
   readonly catalog?: CompiledCatalog;
 }
 
-// Both `data-plumix-*` markers are edit-only; the public page ships neither.
+/**
+ * Both `data-plumix-*` markers are edit-only; the public page ships neither.
+ */
 interface BlockSeamProps {
   readonly "data-plumix-block"?: string;
   readonly "data-plumix-id"?: string;
   readonly className?: string;
 }
 
-// Seam props plus author HTML attributes. The seam keys are spread last when
-// built, so they always win a key collision.
+/**
+ * Seam props plus author HTML attributes. The seam keys are spread last when
+ * built, so they always win a key collision.
+ */
 type BlockProps = Readonly<Record<string, string | undefined>> & BlockSeamProps;
 
 export interface BlockNodeRenderProps<

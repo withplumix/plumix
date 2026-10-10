@@ -23,7 +23,7 @@ import {
 } from "./provider.js";
 import { matchesShortcut } from "./shortcuts.js";
 
-// The root document carries neither id.
+/** The root document carries neither id. */
 interface PendingAdd {
   readonly parentId?: string;
   readonly slotKey?: string;

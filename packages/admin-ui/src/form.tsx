@@ -71,8 +71,10 @@ const FormItemContext = React.createContext<FormItemContextValue>(
   {} as FormItemContextValue,
 );
 
-// Mobile-first 12-column span measured at the grid container's width; values
-// outside 1..12 are clamped.
+/**
+ * Mobile-first 12-column span measured at the grid container's width; values
+ * outside 1..12 are clamped.
+ */
 type FormItemSpan =
   | number
   | {
@@ -84,8 +86,10 @@ type FormItemSpan =
 
 type SpanValue = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
 
-// Tailwind only generates a class it can see verbatim in source, so every
-// span at every breakpoint is spelled out rather than built from `n`.
+/**
+ * Tailwind only generates a class it can see verbatim in source, so every
+ * span at every breakpoint is spelled out rather than built from `n`.
+ */
 const BASE_SPAN: Record<SpanValue, string> = {
   1: "col-span-1",
   2: "col-span-2",

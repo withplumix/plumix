@@ -110,8 +110,10 @@ function encode(
   }
 }
 
-// Widened back on purpose: every branch below re-derives the shape from the
-// runtime tag, so the caller's narrowing buys this function nothing.
+/**
+ * Widened back on purpose: every branch below re-derives the shape from the
+ * runtime tag, so the caller's narrowing buys this function nothing.
+ */
 function encodeInner(
   value: unknown,
   seen: WeakSet<object>,
@@ -164,7 +166,7 @@ function encodeInner(
   }
 }
 
-// The inverse of `PROP_TYPE`: a branch added to one belongs in the other.
+/** The inverse of `PROP_TYPE`: a branch added to one belongs in the other. */
 type DecodedValue =
   | string
   | number

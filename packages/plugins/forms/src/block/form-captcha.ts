@@ -1,7 +1,9 @@
 import { TURNSTILE_FIELD } from "../contract.js";
 
-// Rendered explicitly: the `.cf-turnstile` auto-scan runs once at script
-// load, and `createRoot` then discards what it drew.
+/**
+ * Rendered explicitly: the `.cf-turnstile` auto-scan runs once at script
+ * load, and `createRoot` then discards what it drew.
+ */
 interface TurnstileApi {
   readonly render: (
     container: HTMLElement,
@@ -14,15 +16,17 @@ interface TurnstileApi {
   readonly remove: (widget: string) => void;
 }
 
-// `render=explicit` turns the auto-scan off, so nothing can draw a
-// second widget into a container this module already owns.
+/**
+ * `render=explicit` turns the auto-scan off, so nothing can draw a
+ * second widget into a container this module already owns.
+ */
 const SCRIPT_SRC =
   "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
 
 const api = (): TurnstileApi | undefined =>
   (globalThis as { turnstile?: TurnstileApi }).turnstile;
 
-// One promise, so islands mounting in the same tick share one script.
+/** One promise, so islands mounting in the same tick share one script. */
 let script: Promise<TurnstileApi | undefined> | undefined;
 
 function load(): Promise<TurnstileApi | undefined> {

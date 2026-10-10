@@ -41,8 +41,10 @@ declare module "plumix" {
 
 const ADMIN_ENTRY_PATH = pluginAdminEntryPath("@plumix/plugin-comments");
 
-// Plain descriptor literal — plugin source runs server-side without the
-// Babel macro pipeline, so the manifest payload is authored by hand.
+/**
+ * Plain descriptor literal — plugin source runs server-side without the
+ * Babel macro pipeline, so the manifest payload is authored by hand.
+ */
 const COMMENT_LABELS = {
   comments: { id: "plugin.comments.adminPage.title", message: "Comments" },
 } satisfies Record<string, Label>;

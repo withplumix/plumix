@@ -18,10 +18,12 @@ import {
   termTaxonomyTargets,
 } from "./rule-selectors.js";
 
-// A rule kind that is neither of the two in the repo: its selector keeps the
-// selected match and carries no payload at all. What these tests read is the
-// vocabulary the constructors publish, rather than what a template or a card
-// happens to do with it — the contract a third-party rule kind builds against.
+/**
+ * A rule kind that is neither of the two in the repo: its selector keeps the
+ * selected match and carries no payload at all. What these tests read is the
+ * vocabulary the constructors publish, rather than what a template or a card
+ * happens to do with it — the contract a third-party rule kind builds against.
+ */
 interface Probe {
   readonly selected: TierMatchRule;
 }
@@ -223,9 +225,11 @@ describe("the match constructors", () => {
   });
 });
 
-// Both read the stored bag. A fixture fills the decoded sibling to match, so
-// only the test below turns on the split; `resolve-entry-list.test.ts`
-// runs the same pair off a real row, where the two genuinely differ.
+/**
+ * Both read the stored bag. A fixture fills the decoded sibling to match, so
+ * only the test below turns on the split; `resolve-entry-list.test.ts`
+ * runs the same pair off a real row, where the two genuinely differ.
+ */
 const entryData = (meta: Record<string, unknown>) =>
   ({ entry: { meta, storedMeta: meta } }) as unknown as TemplateData;
 const termData = (meta: Record<string, unknown>) =>

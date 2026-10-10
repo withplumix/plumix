@@ -1,7 +1,9 @@
 import type { ConnectedObjectStorage } from "../runtime/contract/slots.js";
 
-// A content-addressed key names one immutable representation, so the bytes
-// behind it can be held for as long as a client cares to.
+/**
+ * A content-addressed key names one immutable representation, so the bytes
+ * behind it can be held for as long as a client cares to.
+ */
 const IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
 export interface RenderedAssetArgs {
@@ -81,13 +83,15 @@ export async function serveRenderedAsset(
   return respond(bytes.slice(), bytes.byteLength);
 }
 
-// A payload digest would disagree with the backend's own ETag. Percent-encoding
-// because RFC 9110 gives entity-tags no escape.
+/**
+ * A payload digest would disagree with the backend's own ETag. Percent-encoding
+ * because RFC 9110 gives entity-tags no escape.
+ */
 function etagForKey(key: string): string {
   return `"${encodeURIComponent(key)}"`;
 }
 
-// `*` isn't honoured: answering it would need a storage read.
+/** `*` isn't honoured: answering it would need a storage read. */
 function etagMatches(ifNoneMatch: string | null, etag: string): boolean {
   if (!ifNoneMatch) return false;
   const normalize = (tag: string): string => tag.trim().replace(/^W\//, "");

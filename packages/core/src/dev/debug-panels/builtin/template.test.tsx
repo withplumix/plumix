@@ -7,9 +7,11 @@ import { TEMPLATE_PANEL_ID } from "../../../route/render/template-node-label.js"
 import { makeSnapshot } from "../../request-history/snapshot-fixture.js";
 import { templatePanel } from "./template.js";
 
-// The renderer stores the resolution walk as an attribute on the `template`
-// span (nested under `render`, as in a real request) — the panel reads it back
-// from the snapshot's span tree.
+/**
+ * The renderer stores the resolution walk as an attribute on the `template`
+ * span (nested under `render`, as in a real request) — the panel reads it back
+ * from the snapshot's span tree.
+ */
 function render(resolution?: TemplateResolution): string {
   const telemetry = createTelemetryCollector();
   telemetry.span("render", () => {

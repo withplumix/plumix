@@ -5,9 +5,11 @@ import { and, eq, inArray } from "../db/index.js";
 import { entryTerm } from "../db/schema/entry_term.js";
 import { terms } from "../db/schema/terms.js";
 
-// Errors a `terms` patch can raise. Helpers receive callable throwers
-// so the orpc-typed `errors` map at the handler call-site doesn't have
-// to leak its concrete shape into shared code.
+/**
+ * Errors a `terms` patch can raise. Helpers receive callable throwers
+ * so the orpc-typed `errors` map at the handler call-site doesn't have
+ * to leak its concrete shape into shared code.
+ */
 interface TermPatchThrowers {
   taxonomyNotFound(taxonomy: string): never;
   forbidden(capability: string): never;

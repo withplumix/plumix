@@ -20,8 +20,10 @@ export function feedUnder(path: string): string {
   return `${path.replace(/\/$/, "")}/feed`;
 }
 
-// An `access`-policied archive gets no feed: core matches public routes ahead
-// of the access gate and principal loading, so there is no reader to check.
+/**
+ * An `access`-policied archive gets no feed: core matches public routes ahead
+ * of the access gate and principal loading, so there is no reader to check.
+ */
 function hasFeed(plugins: PluginRegistry, archive: EntryArchive): boolean {
   switch (archive.kind) {
     case "entryType":
@@ -38,7 +40,7 @@ function hasFeed(plugins: PluginRegistry, archive: EntryArchive): boolean {
   }
 }
 
-// One archive's identity, whichever of its routes named it.
+/** One archive's identity, whichever of its routes named it. */
 function archiveKey(archive: EntryArchive): string {
   switch (archive.kind) {
     case "entryType":
@@ -106,16 +108,20 @@ interface CompiledFeedRoutes {
    * check.
    */
   readonly owners: ReadonlyMap<string, string>;
-  // The `/page/:page` form of each archive route, which a listing path can
-  // match without being a listing of its own.
+  /**
+   * The `/page/:page` form of each archive route, which a listing path can
+   * match without being a listing of its own.
+   */
   readonly laterPages: readonly {
     readonly pattern: URLPattern;
     readonly archive: string;
   }[];
 }
 
-// The registry is settled once `afterSetup` has claimed the feed routes, so
-// they are compiled once per registry rather than on every request.
+/**
+ * The registry is settled once `afterSetup` has claimed the feed routes, so
+ * they are compiled once per registry rather than on every request.
+ */
 const compiled = new WeakMap<PluginRegistry, CompiledFeedRoutes>();
 
 function compiledFor(plugins: PluginRegistry): CompiledFeedRoutes {
@@ -174,7 +180,7 @@ export function servesFeed(
   );
 }
 
-// The listing a concrete RSS or Atom path hangs off.
+/** The listing a concrete RSS or Atom path hangs off. */
 function listingOf(feedPath: string): string {
   return feedPath.replace(/\/feed(\/atom)?$/, "") || "/";
 }

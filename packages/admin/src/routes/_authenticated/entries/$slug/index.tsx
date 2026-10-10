@@ -69,15 +69,19 @@ type Term = WithResolvedMeta<StoredTerm>;
 
 const PAGE_SIZE = 20;
 
-// A row's Trash and Delete sit in a line of text links, so they take the
-// Button's destructive-row treatment without its box.
+/**
+ * A row's Trash and Delete sit in a line of text links, so they take the
+ * Button's destructive-row treatment without its box.
+ */
 const rowDestructiveClassName = cn(
   buttonVariants({ variant: "destructive-row", size: "xs" }),
   "h-auto p-0 font-normal hover:bg-transparent dark:hover:bg-transparent",
 );
 
-// Local: importing core's runtime symbol would pull drizzle into the admin
-// bundle.
+/**
+ * Local: importing core's runtime symbol would pull drizzle into the admin
+ * bundle.
+ */
 const ENTRY_STATUSES: readonly EntryStatus[] = [
   "draft",
   "published",
@@ -87,8 +91,10 @@ const ENTRY_STATUSES: readonly EntryStatus[] = [
 const STATUS_FILTER_VALUES = [...ENTRY_STATUSES, "all"] as const;
 type StatusFilter = (typeof STATUS_FILTER_VALUES)[number];
 
-// Local copy of `ENTRY_LIST_ORDER_COLUMNS`; unlike above, drift fails only at
-// runtime, server-side.
+/**
+ * Local copy of `ENTRY_LIST_ORDER_COLUMNS`; unlike above, drift fails only at
+ * runtime, server-side.
+ */
 const ORDER_BY_VALUES = [
   "updated_at",
   "published_at",
@@ -107,9 +113,11 @@ type Order = (typeof ORDER_VALUES)[number];
 const AUTHOR_VALUES = ["all", "mine"] as const;
 type AuthorFilter = (typeof AUTHOR_VALUES)[number];
 
-// `looseObject` keeps unknown keys verbatim so per-taxonomy filters
-// land on the URL as `?category=foo&tag=bar` without requiring the
-// schema to enumerate every taxonomy a plugin might register.
+/**
+ * `looseObject` keeps unknown keys verbatim so per-taxonomy filters
+ * land on the URL as `?category=foo&tag=bar` without requiring the
+ * schema to enumerate every taxonomy a plugin might register.
+ */
 const searchSchema = v.looseObject({
   page: v.optional(
     v.fallback(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
@@ -477,8 +485,10 @@ export const Route = createFileRoute("/_authenticated/entries/$slug/")({
   component: ContentListRoute,
 });
 
-// Parse comma-separated URL values (`?category=foo,bar`) into the slug
-// array the server expects for multi-term filtering.
+/**
+ * Parse comma-separated URL values (`?category=foo,bar`) into the slug
+ * array the server expects for multi-term filtering.
+ */
 function parseTermFilters(
   search: Readonly<v.InferOutput<typeof searchSchema>>,
   taxonomyNames: readonly string[],
@@ -505,9 +515,11 @@ interface EntriesListNavActions {
   setSort: (column: OrderBy, defaultDirection: Order) => void;
 }
 
-// useCallback keeps these navigation handlers stable across renders so
-// the `columns` memo (and any future memoised consumers) doesn't
-// invalidate on every tick.
+/**
+ * useCallback keeps these navigation handlers stable across renders so
+ * the `columns` memo (and any future memoised consumers) doesn't
+ * invalidate on every tick.
+ */
 function useEntriesListNavActions(): EntriesListNavActions {
   const navigate = Route.useNavigate();
   const setStatus = useCallback(
@@ -1068,9 +1080,11 @@ function ContentListRoute(): ReactNode {
   );
 }
 
-// If the user clicks the already-active column, flip direction;
-// otherwise pick the caller's sensible default (asc for alphabetical,
-// desc for date-ish).
+/**
+ * If the user clicks the already-active column, flip direction;
+ * otherwise pick the caller's sensible default (asc for alphabetical,
+ * desc for date-ish).
+ */
 function nextSortOrder(
   isActiveColumn: boolean,
   currentOrder: Order,
@@ -1080,9 +1094,11 @@ function nextSortOrder(
   return currentOrder === "asc" ? "desc" : "asc";
 }
 
-// Three visual states: inactive (generic updown icon), active-asc (up),
-// active-desc (down). The icon doubles as the a11y hint via the button's
-// aria-label on the parent.
+/**
+ * Three visual states: inactive (generic updown icon), active-asc (up),
+ * active-desc (down). The icon doubles as the a11y hint via the button's
+ * aria-label on the parent.
+ */
 function SortIndicator({
   isActive,
   order,
@@ -1139,9 +1155,11 @@ function SortableHeader({
   );
 }
 
-// WP-style title cell: title (clickable), slug, then a row-action
-// strip below. Actions reserve vertical space always (`invisible`
-// rather than `hidden`) so hover doesn't reflow the row.
+/**
+ * WP-style title cell: title (clickable), slug, then a row-action
+ * strip below. Actions reserve vertical space always (`invisible`
+ * rather than `hidden`) so hover doesn't reflow the row.
+ */
 function TitleCell({
   entry,
   adminSlug,
@@ -1281,7 +1299,7 @@ function TitleCell({
   );
 }
 
-// Pill-style status filter (shadcn ToggleGroup, single-select).
+/** Pill-style status filter (shadcn ToggleGroup, single-select). */
 function StatusViews({
   value,
   onChange,
@@ -1316,14 +1334,18 @@ function StatusViews({
   );
 }
 
-// Stable empty array reference — react-query returns a fresh `[]`
-// fallback on every render when `data` is undefined, which breaks
-// useMemo identity in `TaxonomyFilter`.
+/**
+ * Stable empty array reference — react-query returns a fresh `[]`
+ * fallback on every render when `data` is undefined, which breaks
+ * useMemo identity in `TaxonomyFilter`.
+ */
 const EMPTY_TERMS: readonly Term[] = [];
 
-// Stable fallback for `entryType.termTaxonomies ?? ...` so the array
-// identity stays put across renders (otherwise `useMemo([..., names])`
-// invalidates every tick when termTaxonomies is undefined).
+/**
+ * Stable fallback for `entryType.termTaxonomies ?? ...` so the array
+ * identity stays put across renders (otherwise `useMemo([..., names])`
+ * invalidates every tick when termTaxonomies is undefined).
+ */
 const EMPTY_TAXONOMY_NAMES: readonly string[] = [];
 
 const AUTHOR_FILTER_OPTIONS: readonly {

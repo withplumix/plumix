@@ -339,9 +339,11 @@ function SessionRow({ session, onChanged }: SessionRowProps): ReactNode {
   );
 }
 
-// Pending → error → empty → list. Promoted to a helper because the
-// inline JSX nesting is the kind of nested-ternary the project rule
-// flags; one early-return chain is easier to scan.
+/**
+ * Pending → error → empty → list. Promoted to a helper because the
+ * inline JSX nesting is the kind of nested-ternary the project rule
+ * flags; one early-return chain is easier to scan.
+ */
 function renderSessionsBody(
   list: ReturnType<typeof useQuery<readonly SessionWire[]>>,
   sessions: readonly SessionWire[],
@@ -392,10 +394,12 @@ function renderSessionsBody(
   );
 }
 
-// Picks the right "{browser} on {os}" / "{browser}" / "{os}" / fallback
-// message for the parsed UA. Browser + OS vendor names stay verbatim;
-// only the connector ("on") and the unknown-device fallback get
-// localized.
+/**
+ * Picks the right "{browser} on {os}" / "{browser}" / "{os}" / fallback
+ * message for the parsed UA. Browser + OS vendor names stay verbatim;
+ * only the connector ("on") and the unknown-device fallback get
+ * localized.
+ */
 function useDeviceLabel(ua: ReturnType<typeof parseUserAgent>): string {
   const { i18n } = useLingui();
   const label = useLabel();

@@ -14,9 +14,11 @@ import { serializeProps } from "./serialize.js";
  */
 export const InsideIslandContext = createContext(false);
 
-// Default prefetch trigger per hydration trigger — the chunk warms before
-// the user reaches the island. Mirrors the table the transform used to
-// bake into every shim.
+/**
+ * Default prefetch trigger per hydration trigger — the chunk warms before
+ * the user reaches the island. Mirrors the table the transform used to
+ * bake into every shim.
+ */
 const PREFETCH_DEFAULTS: Readonly<Record<string, string>> = {
   load: "load",
   idle: "load",
@@ -36,8 +38,10 @@ export interface IslandShimProps {
   readonly props: SerializedProps;
 }
 
-// Broader than `isValidElement` on purpose: portals and lazy must be bridged as
-// slots, not serialized.
+/**
+ * Broader than `isValidElement` on purpose: portals and lazy must be bridged as
+ * slots, not serialized.
+ */
 function isReactElementValue(value: unknown): value is ReactElement {
   return (
     value != null &&

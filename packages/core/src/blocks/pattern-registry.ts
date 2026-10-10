@@ -62,22 +62,30 @@ export interface BlockPattern {
   readonly title: Label;
   readonly category?: keyof PatternCategoryRegistry;
   readonly keywords?: readonly Label[];
-  // Static preview override. When set, the inserter renders an <img>
-  // at the declared dimensions instead of live-rendering `content`.
+  /**
+   * Static preview override. When set, the inserter renders an <img>
+   * at the declared dimensions instead of live-rendering `content`.
+   */
   readonly preview?: PatternPreview;
-  // Marks the pattern as eligible for the starter modal when the
-  // matching entry type is being authored from scratch.
+  /**
+   * Marks the pattern as eligible for the starter modal when the
+   * matching entry type is being authored from scratch.
+   */
   readonly target?: PatternTarget;
   readonly entryTypes?: readonly string[];
-  // Lower numbers float to the top of the starter modal; ties break
-  // alphabetically by name.
+  /**
+   * Lower numbers float to the top of the starter modal; ties break
+   * alphabetically by name.
+   */
   readonly priority?: number;
   readonly content: readonly BlockNode[];
 }
 
-// `block()` writes a blank placeholder ID; `assignPatternIds` numbers nodes
-// `p1, p2, ...` per pattern body so preview React keys are stable. Inserting
-// rewrites them.
+/**
+ * `block()` writes a blank placeholder ID; `assignPatternIds` numbers nodes
+ * `p1, p2, ...` per pattern body so preview React keys are stable. Inserting
+ * rewrites them.
+ */
 const PLACEHOLDER_ID = "";
 
 export function definePattern(spec: BlockPattern): BlockPattern {

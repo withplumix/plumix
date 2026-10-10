@@ -11,8 +11,10 @@ import {
 type StartViewTransitionArg =
   ViewTransitionUpdateCallback | StartViewTransitionOptions | undefined;
 
-// Records the argument of every view transition the page starts, by wrapping
-// `document.startViewTransition` before the bundle boots.
+/**
+ * Records the argument of every view transition the page starts, by wrapping
+ * `document.startViewTransition` before the bundle boots.
+ */
 async function recordViewTransitions(page: Page): Promise<void> {
   await page.addInitScript(() => {
     const recorded: StartViewTransitionArg[] = [];
@@ -25,8 +27,10 @@ async function recordViewTransitions(page: Page): Promise<void> {
   });
 }
 
-// The recorded arguments as they cross into the test: an options object keeps
-// its `types`, a bare update callback arrives as `undefined`.
+/**
+ * The recorded arguments as they cross into the test: an options object keeps
+ * its `types`, a bare update callback arrives as `undefined`.
+ */
 function viewTransitions(page: Page): Promise<StartViewTransitionArg[]> {
   return page.evaluate(
     () =>

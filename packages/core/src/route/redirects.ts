@@ -13,7 +13,7 @@ export type RedirectResolution =
     }
   | { readonly kind: "gone" };
 
-// The SEO-conventional permanent move.
+/** The SEO-conventional permanent move. */
 const DEFAULT_REDIRECT_STATUS: RedirectStatus = 301;
 
 interface CompiledRedirect {
@@ -46,7 +46,9 @@ function resolveTarget(
   };
 }
 
-// Substitute URLPattern named groups (`:slug`) captured from `from` into `to`.
+/**
+ * Substitute URLPattern named groups (`:slug`) captured from `from` into `to`.
+ */
 function substituteNamed(
   to: string,
   groups: Record<string, string | undefined>,
@@ -69,8 +71,10 @@ function compileStringRule(
   };
 }
 
-// Mirrors Apache/nginx backref syntax. One pass, so an escaped `$$1` stays
-// literal and captured text is never rescanned.
+/**
+ * Mirrors Apache/nginx backref syntax. One pass, so an escaped `$$1` stays
+ * literal and captured text is never rescanned.
+ */
 function substituteBackrefs(to: string, match: RegExpExecArray): string {
   return to.replace(
     /\$\$|\$<(\w+)>|\$(\d+)/g,

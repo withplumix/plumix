@@ -66,8 +66,10 @@ function token(
   };
 }
 
-// The self-edit page loads the passkeys, sessions, and API-tokens
-// cards alongside the form — every self-profile test needs these.
+/**
+ * The self-edit page loads the passkeys, sessions, and API-tokens
+ * cards alongside the form — every self-profile test needs these.
+ */
 const SELF_EDIT_LISTS = {
   "/auth/credentials/list": [],
   "/auth/sessions/list": [],
@@ -498,7 +500,9 @@ test.describe("/users/$id/edit", () => {
   });
 });
 
-// The change control is offered only where magic-link sign-in is configured.
+/**
+ * The change control is offered only where magic-link sign-in is configured.
+ */
 const MAGIC_LINK_ON = { magicLink: true, oauth: [] };
 
 test.describe("/users/$id/edit — email change (self)", () => {

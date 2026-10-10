@@ -7,9 +7,11 @@ import { idParam } from "../rpc/contract/validation.js";
 import { entryListInputSchema } from "../rpc/procedures/entry/schemas.js";
 import { McpToolError } from "./errors.js";
 
-// Curated read surface: the entries list shape minus the admin-shaped filters
-// (author / parent / taxonomy). Picked from the canonical schema so validation
-// and the advertised JSON Schema can't drift from it.
+/**
+ * Curated read surface: the entries list shape minus the admin-shaped filters
+ * (author / parent / taxonomy). Picked from the canonical schema so validation
+ * and the advertised JSON Schema can't drift from it.
+ */
 const contentListInputSchema = v.pick(entryListInputSchema, [
   "type",
   "status",

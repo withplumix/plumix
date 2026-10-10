@@ -1,12 +1,16 @@
-// RFC 4180's list and no more, so ordinary answers stay unquoted.
+/** RFC 4180's list and no more, so ordinary answers stay unquoted. */
 const NEEDS_QUOTES = /["\r\n,]/;
 
-// Excel's and LibreOffice's formula leads; tab and CR count because both
-// are trimmed before the first character is judged.
+/**
+ * Excel's and LibreOffice's formula leads; tab and CR count because both
+ * are trimmed before the first character is judged.
+ */
 const FORMULA_LEAD = /^[=+\-@\t\r]/;
 
-// Not escaped: marking it as text would break sums, and a bare number
-// isn't evaluated.
+/**
+ * Not escaped: marking it as text would break sums, and a bare number
+ * isn't evaluated.
+ */
 const NEGATIVE_NUMBER = /^-\d+(?:\.\d+)?$/;
 
 function cell(value: string): string {
@@ -16,8 +20,10 @@ function cell(value: string): string {
   return NEEDS_QUOTES.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 
-// Excel reads a file without a BOM in the machine's code page, garbling
-// non-ASCII answers.
+/**
+ * Excel reads a file without a BOM in the machine's code page, garbling
+ * non-ASCII answers.
+ */
 const BOM = "\uFEFF";
 
 /**

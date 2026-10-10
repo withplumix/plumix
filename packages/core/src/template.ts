@@ -7,8 +7,10 @@ import type { ViewTransitionsInput } from "./theme-view-transitions.js";
 import type { TemplateData } from "./theme.js";
 import { ThemeRegistrationError } from "./theme-errors.js";
 
-// Not `Symbol.for(...)`: the global registry would let any caller forge a
-// template.
+/**
+ * Not `Symbol.for(...)`: the global registry would let any caller forge a
+ * template.
+ */
 const PLUMIX_TEMPLATE_BRAND: unique symbol = Symbol("plumix.template");
 
 /**
@@ -45,7 +47,7 @@ export type TemplateDepDeclarations = {
     | ((prev: readonly TemplateDepKey<K>[]) => readonly TemplateDepKey<K>[]);
 };
 
-// `null` when the loader returned nothing for that key, or threw.
+/** `null` when the loader returned nothing for that key, or threw. */
 type TemplateDepResults = {
   readonly [K in keyof TemplateDepRegistry]?: Readonly<
     Record<string, TemplateDepRegistry[K]["result"] | null>
@@ -63,8 +65,10 @@ export type TemplateRender<TData extends TemplateData> = (
   args: TemplateRenderArgs<TData>,
 ) => ReactNode;
 
-// The function form runs per request after the block loaders, so it can await
-// the same `ctx.memo` lookup. It may throw `pageNotFound()` or `redirectTo()`.
+/**
+ * The function form runs per request after the block loaders, so it can await
+ * the same `ctx.memo` lookup. It may throw `pageNotFound()` or `redirectTo()`.
+ */
 type TemplateDocument<TData extends TemplateData> =
   | DocumentManifest
   | ((

@@ -9,8 +9,10 @@ import type { SearchHarness } from "./test/db.js";
 import { search } from "./index.js";
 import { contentPlugin, createSearchHarness, paragraph } from "./test/db.js";
 
-// A theme that renders the plugin's payload through the surface it registers
-// the archive on — the same `forArchiveType` any theme would reach for.
+/**
+ * A theme that renders the plugin's payload through the surface it registers
+ * the archive on — the same `forArchiveType` any theme would reach for.
+ */
 const theme = defineTheme({
   templates: [
     forArchiveType("search").template(({ data }) => (

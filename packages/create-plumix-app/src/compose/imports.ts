@@ -1,5 +1,7 @@
-// Named-import statement: `import { a, b } from "module";`. Descriptors
-// only emit this form; anything else passes through untouched.
+/**
+ * Named-import statement: `import { a, b } from "module";`. Descriptors
+ * only emit this form; anything else passes through untouched.
+ */
 const NAMED_IMPORT_RE = /^import\s+\{([^}]+)\}\s+from\s+"([^"]+)";$/;
 
 /** Module order follows first appearance; symbols are deduped and sorted. */

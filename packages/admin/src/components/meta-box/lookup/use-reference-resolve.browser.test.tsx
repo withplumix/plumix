@@ -8,9 +8,11 @@ import type { LookupItem } from "./types.js";
 import { settleRpc, stubRpc } from "../../../../test/rpc.js";
 import { useReferenceResolve } from "./use-reference-resolve.js";
 
-// Resolve is a batched `lookup.list` call keyed on `ids`. The stub answers at
-// the fetch boundary with whichever rows exist (orphans simply don't), leaving
-// the real client to assemble and send the `ids` the hook asked for.
+/**
+ * Resolve is a batched `lookup.list` call keyed on `ids`. The stub answers at
+ * the fetch boundary with whichever rows exist (orphans simply don't), leaving
+ * the real client to assemble and send the `ids` the hook asked for.
+ */
 function stubResolve(items: readonly LookupItem[] = []): RpcStub {
   return stubRpc({ "lookup/list": () => ({ items }) });
 }

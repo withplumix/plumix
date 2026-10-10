@@ -20,8 +20,10 @@ export function cardSourceHash(
   return hash;
 }
 
-// `key` is left out: changing what it reads already moves the key, so hashing
-// it would only re-render on cosmetic edits.
+/**
+ * `key` is left out: changing what it reads already moves the key, so hashing
+ * it would only re-render on cosmetic edits.
+ */
 function cardSource(definition: CardDefinition<TemplateData>): string {
   return JSON.stringify([
     definition.render.toString(),

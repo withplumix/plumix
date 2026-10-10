@@ -65,6 +65,8 @@ const registry = createNullableErrorDescriptorRegistry(MESSAGES, FALLBACK);
 export const oauthErrorDescriptor = registry.descriptor;
 export const useOAuthErrorMessage = registry.useMessage;
 
-// Test-only export so the unit test can assert every code in
-// `OAUTH_ERROR_CODES` is mapped (no silent fallbacks).
+/**
+ * Test-only export so the unit test can assert every code in
+ * `OAUTH_ERROR_CODES` is mapped (no silent fallbacks).
+ */
 export const OAUTH_ERROR_MESSAGES = registry._messages;

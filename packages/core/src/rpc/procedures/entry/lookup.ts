@@ -39,9 +39,11 @@ interface EntryLookupRow {
   readonly parentId: number | null;
 }
 
-// `satisfies` (not an annotation) keeps `hydrate`'s concrete
-// `EntryReferenceSummary` return type visible to callers instead of
-// widening it to the contract's `HydratedReference`.
+/**
+ * `satisfies` (not an annotation) keeps `hydrate`'s concrete
+ * `EntryReferenceSummary` return type visible to callers instead of
+ * widening it to the contract's `HydratedReference`.
+ */
 export const entryLookupAdapter = {
   async list(ctx, options) {
     const { conditions, entryTypes } = scopeConditions(options.scope);
@@ -166,9 +168,11 @@ function scopeConditions(scope: EntryFieldScope | undefined): ScopedEntryQuery {
   return { conditions, entryTypes };
 }
 
-// Without `read`, public nav (no principal) still gets a public type's
-// published rows. Arms must parenthesize themselves: drizzle leaves a lone
-// `or` operand bare.
+/**
+ * Without `read`, public nav (no principal) still gets a public type's
+ * published rows. Arms must parenthesize themselves: drizzle leaves a lone
+ * `or` operand bare.
+ */
 function visibleTypeRows(ctx: EntryViewer, type: string): SQL | undefined {
   const readable = readableEntryRows(ctx, type);
   if (readable !== null) return readable;

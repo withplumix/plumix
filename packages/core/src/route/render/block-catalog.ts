@@ -17,7 +17,7 @@ const BLOCKS_CATALOGS: Readonly<Record<string, CompiledCatalog>> = {
   "zh-CN": zhCnMessages,
 };
 
-// As `lingui compile --namespace es` emits it.
+/** As `lingui compile --namespace es` emits it. */
 interface CatalogModule {
   readonly messages: CompiledCatalog;
 }

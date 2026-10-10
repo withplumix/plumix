@@ -204,8 +204,10 @@ test("plumix() leaves dev undefined when unset", () => {
   expect(config.dev).toBeUndefined();
 });
 
-// `Required` makes a newly declared slot a compile error here until it is set,
-// so the identity check below covers it without anyone remembering to.
+/**
+ * `Required` makes a newly declared slot a compile error here until it is set,
+ * so the identity check below covers it without anyone remembering to.
+ */
 const everySlot: Required<PlumixConfigInput> = {
   runtime,
   database,

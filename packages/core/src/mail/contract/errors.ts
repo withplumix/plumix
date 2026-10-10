@@ -36,7 +36,9 @@ export class MailError extends Error {
     this.mail = mail;
   }
 
-  // Reachable when a registry entry is typed but its plugin isn't installed.
+  /**
+   * Reachable when a registry entry is typed but its plugin isn't installed.
+   */
   static notDeclared(ctx: { mail: string }): MailError {
     return new MailError(
       "mail_not_declared",

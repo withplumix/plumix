@@ -5,7 +5,9 @@ import type { ThemeBreakpoints } from "../styles/style-emitter.js";
 import { defineBlock } from "../block-registry.js";
 import { DEFAULT_BREAKPOINTS } from "../styles/style-emitter.js";
 
-// Two equal columns, each seeded with a paragraph so a fresh row isn't bare.
+/**
+ * Two equal columns, each seeded with a paragraph so a fresh row isn't bare.
+ */
 const DEFAULT_COLUMNS: readonly BlockNode[] = [
   {
     id: "column-1",
@@ -29,8 +31,10 @@ function pickStackAt(raw: unknown): StackAt {
     : "tablet";
 }
 
-// Emitted by the block rather than a stylesheet so it follows the theme's
-// breakpoints.
+/**
+ * Emitted by the block rather than a stylesheet so it follows the theme's
+ * breakpoints.
+ */
 function stackStyleCss(
   nodeId: string,
   stackAt: StackAt,

@@ -42,9 +42,11 @@ export const HARD_DENYLIST: ReadonlySet<string> = new Set([
  */
 export const HARD_DENIED_ATTRS: ReadonlySet<string> = new Set(["style"]);
 
-// sanitize-html reads names as globs (`{ "*": ["*"] }`, `"*click"`) while the
-// DOMPurify shim matches exactly, so a glob would bypass the floors on the
-// server only.
+/**
+ * sanitize-html reads names as globs (`{ "*": ["*"] }`, `"*click"`) while the
+ * DOMPurify shim matches exactly, so a glob would bypass the floors on the
+ * server only.
+ */
 const LITERAL_NAME = /^[a-z][a-z0-9-]*$/;
 
 function isAllowedAttr(name: string): boolean {

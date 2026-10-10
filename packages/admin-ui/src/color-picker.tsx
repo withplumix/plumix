@@ -14,8 +14,10 @@ interface ColorPickerProps {
   readonly name?: string;
   readonly testId?: string;
   readonly placeholder?: string;
-  // Accessible name for the icon-less swatch button; admin-ui carries no
-  // catalog, so the caller passes it already localized.
+  /**
+   * Accessible name for the icon-less swatch button; admin-ui carries no
+   * catalog, so the caller passes it already localized.
+   */
   readonly triggerLabel: string;
   /**
    * Forwarded to the hex input; otherwise <FormControl> puts its id/aria on the

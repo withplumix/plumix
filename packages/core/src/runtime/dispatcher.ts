@@ -72,11 +72,15 @@ const AUTH_PREFIX = "/_plumix/auth/";
 const PLUMIX_PREFIX = "/_plumix/";
 const MCP_PATH = "/_plumix/mcp";
 const API_PREFIX = "/_plumix/api";
-// Inlined, not imported, so the eager graph touches no dev debug module. Keep
-// in step with `DEBUG_REQUESTS_PATH`.
+/**
+ * Inlined, not imported, so the eager graph touches no dev debug module. Keep
+ * in step with `DEBUG_REQUESTS_PATH`.
+ */
 const DEBUG_REQUESTS_PREFIX = "/_plumix/debug/requests";
-// Core owns these ahead of plugin routes. The CSRF exemption must skip them
-// too, or a plugin id'd `rpc` could drop the header gate on RPC.
+/**
+ * Core owns these ahead of plugin routes. The CSRF exemption must skip them
+ * too, or a plugin id'd `rpc` could drop the header gate on RPC.
+ */
 const CORE_PLUMIX_PREFIXES = [
   RPC_PREFIX,
   ADMIN_PREFIX,
@@ -92,20 +96,26 @@ function coreAnswersPlumixPath(pathname: string): boolean {
   );
 }
 
-// Lazy so the webauthn/oslo/arctic graph stays off the public render cold
-// start.
+/**
+ * Lazy so the webauthn/oslo/arctic graph stays off the public render cold
+ * start.
+ */
 let authFlowRoutes: Promise<typeof AuthFlowRoutes> | undefined;
 function loadAuthFlowRoutes(): Promise<typeof AuthFlowRoutes> {
   return (authFlowRoutes ??= import("../auth/flow-routes.js"));
 }
 
-// Filenames look like `index.html`, `chunk-abc.js`, `fonts/g.woff2` — paths
-// with a dot-suffix after the last slash. Deep-link SPA routes never match.
+/**
+ * Filenames look like `index.html`, `chunk-abc.js`, `fonts/g.woff2` — paths
+ * with a dot-suffix after the last slash. Deep-link SPA routes never match.
+ */
 const ASSET_LIKE = /\.[^/]+$/;
 
 type RouteHandler = (ctx: AppContext, app: PlumixApp) => Promise<Response>;
-// Maps a path to its handler accessor on the lazily-loaded module, so the map
-// itself pulls no handler code into the eager graph — only the matching paths.
+/**
+ * Maps a path to its handler accessor on the lazily-loaded module, so the map
+ * itself pulls no handler code into the eager graph — only the matching paths.
+ */
 type AuthFlowRoute = (handlers: typeof AuthFlowRoutes) => RouteHandler;
 
 const POST_AUTH_ROUTES = new Map<string, AuthFlowRoute>([
@@ -184,8 +194,10 @@ function enforcePlumixCsrf(
   return enforceOrigin(app, ctx);
 }
 
-// POST only, since that is all a form can send. Any headerless POST reaches the
-// table scan, so the cheap tests go first.
+/**
+ * POST only, since that is all a form can send. Any headerless POST reaches the
+ * table scan, so the cheap tests go first.
+ */
 function acceptsFormPost(
   app: PlumixApp,
   ctx: AppContext,
@@ -231,7 +243,9 @@ function hasLocalhostOrigin(request: Request): boolean {
   return origin !== null && isLoopbackOrigin(origin);
 }
 
-// Stripped once here so every downstream handler matches root-relative paths.
+/**
+ * Stripped once here so every downstream handler matches root-relative paths.
+ */
 function stripBasePathOrReject(
   app: PlumixApp,
   ctx: AppContext,
@@ -249,8 +263,10 @@ function stripBasePathOrReject(
   return { ...ctx, request: new Request(rawUrl, ctx.request) };
 }
 
-// Ahead of the CSRF gate: bearer-token MCP and anonymous REST are CSRF-immune.
-// Each 404s before its import when disabled.
+/**
+ * Ahead of the CSRF gate: bearer-token MCP and anonymous REST are CSRF-immune.
+ * Each 404s before its import when disabled.
+ */
 async function tryColdInterfaces(
   app: PlumixApp,
   ctx: AppContext,
@@ -284,8 +300,10 @@ async function dispatchRest(
   return handleRestRequest(ctx);
 }
 
-// POST only: a procedure declaring `method: "GET"` escapes oRPC's strict-GET
-// default, letting a navigable URL answer private JSON.
+/**
+ * POST only: a procedure declaring `method: "GET"` escapes oRPC's strict-GET
+ * default, letting a navigable URL answer private JSON.
+ */
 async function dispatchRpc(app: PlumixApp, ctx: AppContext): Promise<Response> {
   if (ctx.request.method !== "POST") return methodNotAllowed(["POST"]);
   const rpcHandler = await app.loadRpcHandler();
@@ -296,8 +314,10 @@ async function dispatchRpc(app: PlumixApp, ctx: AppContext): Promise<Response> {
   return result.matched ? result.response : notFound("rpc-procedure-not-found");
 }
 
-// A `/_plumix/` path that matches nothing 404s here rather than falling through
-// to the public map.
+/**
+ * A `/_plumix/` path that matches nothing 404s here rather than falling through
+ * to the public map.
+ */
 async function tryPlumixRoutes(
   app: PlumixApp,
   ctx: AppContext,
@@ -397,8 +417,10 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
   return tryPublicRoutes(app, ctx, url);
 }
 
-// The public site. The route unit answers everything it can on its own; a
-// public route is served here, on the CDN terms it opted into.
+/**
+ * The public site. The route unit answers everything it can on its own; a
+ * public route is served here, on the CDN terms it opted into.
+ */
 function tryPublicRoutes(
   app: PlumixApp,
   ctx: AppContext,
@@ -419,8 +441,10 @@ function tryPublicRoutes(
   }
 }
 
-// An `anonymous` grant to a privileged request renders `private`: its render
-// can show who signed in.
+/**
+ * An `anonymous` grant to a privileged request renders `private`: its render
+ * can show who signed in.
+ */
 function segmentForAudience(ctx: AppContext, segment: Segment): Segment {
   return segment === "anonymous" &&
     requestIsPrivileged(ctx.request, ctxHasSession(ctx))
@@ -428,8 +452,10 @@ function segmentForAudience(ctx: AppContext, segment: Segment): Segment {
     : segment;
 }
 
-// The CDN's privileged check must ask the site's authenticator rather than
-// sniff the cookie.
+/**
+ * The CDN's privileged check must ask the site's authenticator rather than
+ * sniff the cookie.
+ */
 function ctxHasSession(ctx: AppContext): boolean {
   return requestHasSession(ctx.authenticator, ctx.request);
 }
@@ -638,9 +664,11 @@ async function renderPublicError(
   });
 }
 
-// Null in production and for an untrusted dev request, so the caller's own 500
-// answers. `process.env.PLUMIX_DEV` is Vite-empty in production builds, which
-// is what tree-shakes the dev error surface out.
+/**
+ * Null in production and for an untrusted dev request, so the caller's own 500
+ * answers. `process.env.PLUMIX_DEV` is Vite-empty in production builds, which
+ * is what tree-shakes the dev error surface out.
+ */
 function devFailureResponse(
   ctx: AppContext,
   err: unknown,
@@ -662,8 +690,10 @@ function negotiatesHtml(request: Request): boolean {
   );
 }
 
-// Only a client that explicitly negotiates away from HTML skips the themed
-// error page.
+/**
+ * Only a client that explicitly negotiates away from HTML skips the themed
+ * error page.
+ */
 function acceptsHtml(request: Request): boolean {
   const accept = request.headers.get("accept");
   if (accept === null) return true;
@@ -674,8 +704,10 @@ function acceptsHtml(request: Request): boolean {
   );
 }
 
-// What an unrecognised `/_plumix/` path answers with, shared so a dev-only
-// route's off-loopback 404 is byte-identical to a path that never existed.
+/**
+ * What an unrecognised `/_plumix/` path answers with, shared so a dev-only
+ * route's off-loopback 404 is byte-identical to a path that never existed.
+ */
 const UNKNOWN_PLUMIX_ROUTE = "unknown-plumix-route";
 
 interface PluginRawRouteMatch {
@@ -708,7 +740,7 @@ export function matchPluginRawRoute(
   return null;
 }
 
-// No auth gate: a route at the site root is public by construction.
+/** No auth gate: a route at the site root is public by construction. */
 function servePublicRoute(
   match: PublicRouteMatch,
   ctx: AppContext,
@@ -727,7 +759,7 @@ function servePublicRoute(
   });
 }
 
-// Renders per reader, so it stays out of the CDN whatever `cacheable` says.
+/** Renders per reader, so it stays out of the CDN whatever `cacheable` says. */
 async function servePoliciedPublicRoute(
   app: PlumixApp,
   ctx: AppContext,
@@ -749,16 +781,20 @@ async function servePoliciedPublicRoute(
   return response;
 }
 
-// For `formPost`-exempt requests. `hasSession` must be explicit, or
-// `requestHasSession` sniffs the cookie still on the request.
+/**
+ * For `formPost`-exempt requests. `hasSession` must be explicit, or
+ * `requestHasSession` sniffs the cookie still on the request.
+ */
 const anonymousAuthenticator: RequestAuthenticator = {
   authenticate: () => Promise.resolve(null),
   hasSession: () => false,
 };
 
-// Keyed on the header: the exemption is per request. Coupled to
-// `enforcePlumixCsrf`; a second way past its header check would keep the
-// session.
+/**
+ * Keyed on the header: the exemption is per request. Coupled to
+ * `enforcePlumixCsrf`; a second way past its header check would keep the
+ * session.
+ */
 function withoutAmbientSession(
   route: RegisteredRawRoute,
   ctx: AppContext,
@@ -777,8 +813,10 @@ function dispatchPluginRawRoute(
   return requestStore.run(scoped, () => serveRawRoute(route, scoped));
 }
 
-// A raw route reaches the CDN on its own `cacheable: true` opt-in, and
-// only where the deploy bound a CDN.
+/**
+ * A raw route reaches the CDN on its own `cacheable: true` opt-in, and
+ * only where the deploy bound a CDN.
+ */
 function serveRawRoute(
   route: RegisteredRawRoute,
   ctx: AppContext,
@@ -800,7 +838,7 @@ function serveRawRoute(
   });
 }
 
-// The route's own work: enforce its `auth` gate, then run its handler.
+/** The route's own work: enforce its `auth` gate, then run its handler. */
 async function runPluginRawRoute(
   route: RegisteredRawRoute,
   ctx: AppContext,

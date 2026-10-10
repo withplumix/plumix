@@ -15,9 +15,11 @@ export interface PackageJson {
   [key: string]: unknown;
 }
 
-// `@plumix/typescript-config` is a private dev-only workspace package,
-// never published to npm. Scaffolded projects get a self-contained
-// tsconfig instead, so the dependency is dropped entirely.
+/**
+ * `@plumix/typescript-config` is a private dev-only workspace package,
+ * never published to npm. Scaffolded projects get a self-contained
+ * tsconfig instead, so the dependency is dropped entirely.
+ */
 const PRIVATE_DEV_PACKAGE = "@plumix/typescript-config";
 
 export interface CatalogContext {
@@ -149,8 +151,10 @@ export function parseNamedCatalogs(
   return out;
 }
 
-// The block ends at the next top-level key (a non-indented line);
-// comments and blank lines inside it are left for the caller's regex.
+/**
+ * The block ends at the next top-level key (a non-indented line);
+ * comments and blank lines inside it are left for the caller's regex.
+ */
 function* blockLines(yaml: string, key: string): Generator<string> {
   let inBlock = false;
   for (const line of yaml.split("\n")) {

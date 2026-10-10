@@ -57,11 +57,15 @@ import {
 const EMPTY_BLOCK_REGISTRY: BlockRegistry = createBlockRegistry([]);
 const EMPTY_MARK_LIST: readonly MarkSpec[] = Object.freeze([]);
 const EMPTY_SHORTCODE_REGISTRY: ShortcodeRegistry = new Map();
-// A context built without an app (bare test/util contexts) renders against
-// core's own catalogs.
+/**
+ * A context built without an app (bare test/util contexts) renders against
+ * core's own catalogs.
+ */
 const CORE_MAIL_CATALOGS_ONLY: MailCatalogs = createMailCatalogs();
-// Fallback for contexts built without an app wiring auth (bare test/util
-// contexts). The real app always passes `app.authMethods`.
+/**
+ * Fallback for contexts built without an app wiring auth (bare test/util
+ * contexts). The real app always passes `app.authMethods`.
+ */
 const NO_AUTH_METHODS: AuthMethodsSummary = Object.freeze({
   passkey: false,
   magicLink: false,
@@ -106,8 +110,10 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   >;
 }
 
-// A proxy that sets its header blank has reported no address, not an address
-// that is the empty string — the two would otherwise hash to separate buckets.
+/**
+ * A proxy that sets its header blank has reported no address, not an address
+ * that is the empty string — the two would otherwise hash to separate buckets.
+ */
 function normalizeClientAddress(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
   if (trimmed === undefined || trimmed.length === 0) return undefined;
@@ -251,8 +257,10 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
   return ctx;
 }
 
-// The history writer registers unconditionally in dev: its readers sit behind
-// separate switches, so gating it on any one of them would starve the rest.
+/**
+ * The history writer registers unconditionally in dev: its readers sit behind
+ * separate switches, so gating it on any one of them would starve the rest.
+ */
 function sampleTelemetryConsumers(
   ctx: AppContext,
   dev: DevRuntime | undefined,

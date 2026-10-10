@@ -8,7 +8,7 @@ export function serializeManifestScript(manifest: PlumixManifest): string {
   return `<script id="${MANIFEST_SCRIPT_ID}" type="application/json">${safe}</script>`;
 }
 
-// Case-insensitive because a minifier could uppercase the tag.
+/** Case-insensitive because a minifier could uppercase the tag. */
 const MANIFEST_SCRIPT_RE = new RegExp(
   `<script id="${MANIFEST_SCRIPT_ID}"[^>]*>[\\s\\S]*?</script>`,
   "i",

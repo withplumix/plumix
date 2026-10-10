@@ -13,9 +13,11 @@ import type { UniversalFieldState } from "./universal.js";
 
 export type { StringInputType } from "./meta-box-field.js";
 
-// "heroImage" → "Hero image", "site_title" → "Site title". Derived
-// default for fields authored without `.label()`. Shared by every
-// fluent builder in this directory.
+/**
+ * "heroImage" → "Hero image", "site_title" → "Site title". Derived
+ * default for fields authored without `.label()`. Shared by every
+ * fluent builder in this directory.
+ */
 export function humanizeFieldKey(key: string): string {
   const spaced = key
     .replaceAll(/([a-z0-9])([A-Z])/g, "$1 $2")

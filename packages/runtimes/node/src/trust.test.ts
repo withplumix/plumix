@@ -25,7 +25,7 @@ import { nodeSqlite } from "./node-sqlite.js";
 const SITE_ORIGIN = "https://cms.example";
 const EMAIL = "editor@example.test";
 
-// What a hostile client, or a trusted proxy, puts on a request.
+/** What a hostile client, or a trusted proxy, puts on a request. */
 const FORWARDED = {
   "x-forwarded-proto": "https",
   "x-forwarded-host": "cms.example",
@@ -64,8 +64,10 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-// The composition the generated entry makes: the bridge in front of the
-// adapter's handler, the bridge's client address on the invocation.
+/**
+ * The composition the generated entry makes: the bridge in front of the
+ * adapter's handler, the bridge's client address on the invocation.
+ */
 async function serveSite(config: NodeConfig) {
   const database = nodeSqlite({ path: join(dir, "site.sqlite") });
   const db = database.connect({}, new Request(SITE_ORIGIN), schema).db;
@@ -106,8 +108,10 @@ async function serveSite(config: NodeConfig) {
   return { ...served, db, token };
 }
 
-// Core's own login, minus the mail: the session row and cookie the verify
-// route produces are what the runtime's trust decisions land on.
+/**
+ * Core's own login, minus the mail: the session row and cookie the verify
+ * route produces are what the runtime's trust decisions land on.
+ */
 async function sessionCookie(
   origin: string,
   token: string,

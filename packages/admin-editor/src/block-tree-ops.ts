@@ -174,8 +174,10 @@ export function projectMove(
   return { ...slot, index };
 }
 
-// Nesting under the row above targets its first slot; adopting a row's parent
-// also adopts the slot that row sits in.
+/**
+ * Nesting under the row above targets its first slot; adopting a row's parent
+ * also adopts the slot that row sits in.
+ */
 function projectedSlot(
   moved: readonly FlatNode[],
   overIndex: number,
@@ -233,7 +235,7 @@ export function moveBlock(
   return insertNode(removeNode(tree, sourceId, blocks), source, target, blocks);
 }
 
-// An unset declared slot counts as existing; insertNode creates its array.
+/** An unset declared slot counts as existing; insertNode creates its array. */
 function slotTargetExists(
   tree: readonly BlockNode[],
   target: MoveTarget,
@@ -316,7 +318,7 @@ export function duplicateBlock(
   };
 }
 
-// Unwrapping one slot of a multi-slot block would silently drop the others.
+/** Unwrapping one slot of a multi-slot block would silently drop the others. */
 function soleSlotChildren(
   node: BlockNode,
   blocks: BlockSpecLookup,
@@ -515,8 +517,10 @@ export function enclosingTableId(
   return null;
 }
 
-// A table's column count is its widest row's cell count, so a new row/column
-// keeps the grid rectangular even when existing rows disagree.
+/**
+ * A table's column count is its widest row's cell count, so a new row/column
+ * keeps the grid rectangular even when existing rows disagree.
+ */
 function columnCount(rows: readonly BlockNode[]): number {
   return rows.reduce((max, row) => Math.max(max, cellsOf(row).length), 0);
 }
@@ -605,8 +609,10 @@ export function removeTableRow(
   return setTableRows(tree, tableId, rows.slice(0, -1), blocks);
 }
 
-// Replace a table's `rows` slot, descending through slots so a nested table is
-// reachable. Untouched branches keep their reference for React.
+/**
+ * Replace a table's `rows` slot, descending through slots so a nested table is
+ * reachable. Untouched branches keep their reference for React.
+ */
 function setTableRows(
   nodes: readonly BlockNode[],
   tableId: string,
@@ -639,8 +645,10 @@ function topLevelSlot(tree: readonly BlockNode[]): SiblingSlot {
   return { siblings: tree, at: { parentId: null } };
 }
 
-// An absent id resolves to the top level, where a sibling-relative op finds
-// nothing.
+/**
+ * An absent id resolves to the top level, where a sibling-relative op finds
+ * nothing.
+ */
 function siblingsOf(
   tree: readonly BlockNode[],
   id: string,
@@ -668,8 +676,10 @@ function slotKeys(node: BlockNode, blocks: BlockSpecLookup): readonly string[] {
   return blockSlotKeys(node, blocks.get(node.name));
 }
 
-// The children held in each of the node's slots, in declaration order. A slot
-// that is unset, or holds something other than nodes, has none to walk.
+/**
+ * The children held in each of the node's slots, in declaration order. A slot
+ * that is unset, or holds something other than nodes, has none to walk.
+ */
 function slotChildren(
   node: BlockNode,
   blocks: BlockSpecLookup,

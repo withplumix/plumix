@@ -17,13 +17,17 @@ import { patternTitle } from "./page-title.js";
 import { DEFAULT_SCHEMA_TYPE, schemaGraph, schemaScript } from "./schema.js";
 import { loadSeoSettings, loadVerificationTags, nonEmpty } from "./settings.js";
 
-// `composeTitle` substitutes `%s`, so this is the template that changes
-// nothing.
+/**
+ * `composeTitle` substitutes `%s`, so this is the template that changes
+ * nothing.
+ */
 const IDENTITY_TEMPLATE = "%s";
 
-// `max-image-preview` is an indexing hint, so it rides only on the arm that
-// asks to be indexed; `nofollow` is a separate answer from `noindex` and can
-// pair with either.
+/**
+ * `max-image-preview` is an indexing hint, so it rides only on the arm that
+ * asks to be indexed; `nofollow` is a separate answer from `noindex` and can
+ * pair with either.
+ */
 function robotsDirective(page: {
   readonly indexable: boolean;
   readonly nofollow: boolean;
@@ -196,14 +200,18 @@ function withAdditions(
   };
 }
 
-// `og:locale` wants `lang_TERRITORY`; the active locale code is
-// `lang-TERRITORY`.
+/**
+ * `og:locale` wants `lang_TERRITORY`; the active locale code is
+ * `lang-TERRITORY`.
+ */
 function toOgLocale(localeCode: string): string {
   return localeCode.replace("-", "_");
 }
 
-// A theme that wrote its own `ld+json` has described the page; a second graph
-// would make two claims about it.
+/**
+ * A theme that wrote its own `ld+json` has described the page; a second graph
+ * would make two claims about it.
+ */
 function hasJsonLd(scripts: readonly DocumentScript[] | undefined): boolean {
   // Lowercased: an HTML `type` attribute is case-insensitive, so a theme that
   // wrote `application/LD+JSON` has still claimed the page.

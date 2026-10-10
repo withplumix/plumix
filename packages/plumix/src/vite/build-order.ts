@@ -1,10 +1,12 @@
 import type { ViteBuilder } from "vite";
 
-// Named after `ViteBuilder.build` so the real builder stays assignable; `void`
-// lets a test double resolve nothing.
+/**
+ * Named after `ViteBuilder.build` so the real builder stays assignable; `void`
+ * lets a test double resolve nothing.
+ */
 type BuildResult = Awaited<ReturnType<ViteBuilder["build"]>> | void;
 
-// Not JSON: they are the builder's own live objects, only read by name.
+/** Not JSON: they are the builder's own live objects, only read by name. */
 type ViteEnvironments = Record<string, unknown>;
 
 export interface BuildableApp {

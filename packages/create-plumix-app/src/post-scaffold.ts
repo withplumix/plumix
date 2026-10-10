@@ -32,7 +32,7 @@ export interface PostScaffoldResult {
   readonly gitInitialized: boolean;
 }
 
-// How each package manager runs a locally-installed bin (`plumix`).
+/** How each package manager runs a locally-installed bin (`plumix`). */
 function pmExec(pm: PackageManager): readonly [string, ...string[]] {
   switch (pm) {
     case "npm":
@@ -46,8 +46,10 @@ function pmExec(pm: PackageManager): readonly [string, ...string[]] {
   }
 }
 
-// A runtime's declared prefix is static scaffold metadata with no quoting, so
-// splitting on spaces recovers its argv.
+/**
+ * A runtime's declared prefix is static scaffold metadata with no quoting, so
+ * splitting on spaces recovers its argv.
+ */
 function plumixCommand(
   pm: PackageManager,
   cli: string | undefined,

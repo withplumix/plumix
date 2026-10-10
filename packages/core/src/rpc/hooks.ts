@@ -29,8 +29,10 @@ import type {
   UserUpdateInput,
 } from "./procedures/user/schemas.js";
 
-// `_preview` lets editor clients tell autosave-overlaid responses from
-// live reads.
+/**
+ * `_preview` lets editor clients tell autosave-overlaid responses from
+ * live reads.
+ */
 type EntryWithTerms = WithResolvedMeta<Entry> & {
   readonly terms: Record<string, readonly number[]>;
   readonly _preview?: {
@@ -40,9 +42,11 @@ type EntryWithTerms = WithResolvedMeta<Entry> & {
   };
 };
 
-// `user.list` decorates each row with `lastSignInAt` (max session
-// createdAt per user), so the admin's users table can show "Active 2d
-// ago" / "Never". Plugin filters see the same shape.
+/**
+ * `user.list` decorates each row with `lastSignInAt` (max session
+ * createdAt per user), so the admin's users table can show "Active 2d
+ * ago" / "Never". Plugin filters see the same shape.
+ */
 type UserListRow = User & {
   readonly lastSignInAt: Date | null;
 };

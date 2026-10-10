@@ -28,9 +28,11 @@ function wrap(child: React.ReactNode) {
   return <QueryClientProvider client={qc}>{child}</QueryClientProvider>;
 }
 
-// The sheet is controlled — `useRevisionsTrigger` owns its open state in the
-// app. These cases exercise it through its trigger, so they stand in for that
-// owner.
+/**
+ * The sheet is controlled — `useRevisionsTrigger` owns its open state in the
+ * app. These cases exercise it through its trigger, so they stand in for that
+ * owner.
+ */
 function TriggerDriven(
   props: Omit<ComponentProps<typeof RevisionsSheet>, "open" | "onOpenChange">,
 ): ReactElement {

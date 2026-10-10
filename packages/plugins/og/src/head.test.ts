@@ -18,20 +18,24 @@ import {
 const SITE_DEFAULT = "https://cdn.example/site-default.png";
 const PHOTO = "https://media.example/hero.jpg";
 
-// The format a fresh install ships, and the only kind a card is advertised in.
+/**
+ * The format a fresh install ships, and the only kind a card is advertised in.
+ */
 const rasterRenderer = (): CardRenderer =>
   createFakeRenderer({ contentType: "image/png" }).renderer;
 
-// A card that means to be the share image whatever else the entry carries.
+/** A card that means to be the share image whatever else the entry carries. */
 const brandedCard: CardRule = card.fallback().define({
   mode: "card",
   key: ({ data }) => cardKey.of(data.kind),
   render: () => ({ type: "text", text: "branded" }),
 });
 
-// Options land in the path, so a test reads what was asked of the delivery.
-// `zone: null` is the slot's one way of saying it cannot transform a source —
-// `url` returns a string, so handing the source back is the whole vocabulary.
+/**
+ * Options land in the path, so a test reads what was asked of the delivery.
+ * `zone: null` is the slot's one way of saying it cannot transform a source —
+ * `url` returns a string, so handing the source back is the whole vocabulary.
+ */
 const testDelivery = (zone: string | null): ImageDelivery => ({
   kind: "test",
   url: (src, opts) =>
@@ -40,9 +44,11 @@ const testDelivery = (zone: string | null): ImageDelivery => ({
       : `${zone}/${String(opts?.width)}x${String(opts?.height)},${String(opts?.fit)}/${src}`,
 });
 
-// The card URL is content-addressed, so a test cannot spell it — it matches
-// the shape and reads the one the head published, which is also the only thing
-// a scraper ever has.
+/**
+ * The card URL is content-addressed, so a test cannot spell it — it matches
+ * the shape and reads the one the head published, which is also the only thing
+ * a scraper ever has.
+ */
 function cardUrlPattern(id: number): RegExp {
   return new RegExp(
     `^https://cms\\.example/_plumix/og/card/entry/${String(id)}/[0-9a-f]+\\.png$`,

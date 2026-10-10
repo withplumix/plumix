@@ -6,10 +6,12 @@ import { beforeAll, describe, expect, test } from "vitest";
 
 import { resolveOgImage } from "./og-image.js";
 
-// What core projects onto a resolved entry: the role images it resolved out of
-// the page's own hydration batch. The chain reads the role off this, so a
-// suite about the chain's *order* seeds the roles directly and leaves which
-// field carries which role to core's own index.
+/**
+ * What core projects onto a resolved entry: the role images it resolved out of
+ * the page's own hydration batch. The chain reads the role off this, so a
+ * suite about the chain's *order* seeds the roles directly and leaves which
+ * field carries which role to core's own index.
+ */
 const entryData = (images: RoleImages = {}): TemplateData =>
   ({
     kind: "entry",
@@ -17,8 +19,10 @@ const entryData = (images: RoleImages = {}): TemplateData =>
   }) as unknown as TemplateData;
 
 const hero = { url: "https://cdn/hero.jpg", alt: null } as const;
-// Described, so the `ogImage` arm carries the alt a media row filled in and
-// not only the URL.
+/**
+ * Described, so the `ogImage` arm carries the alt a media row filled in and
+ * not only the URL.
+ */
 const share = { url: "https://cdn/share.jpg", alt: "A share card" } as const;
 
 describe("resolveOgImage", () => {

@@ -77,8 +77,10 @@ export function DevErrorBody({
   );
 }
 
-// Returns the nodes without the outer `.plumix-dev-error` element so the page
-// can place its context and panel sections as siblings inside that wrapper.
+/**
+ * Returns the nodes without the outer `.plumix-dev-error` element so the page
+ * can place its context and panel sections as siblings inside that wrapper.
+ */
 function DevErrorContent({
   error,
   editor,
@@ -212,8 +214,10 @@ function DevErrorContent({
   );
 }
 
-// Rendered as React-escaped text, never re-parsed, so a diverging `<script>`
-// can't run inside the overlay.
+/**
+ * Rendered as React-escaped text, never re-parsed, so a diverging `<script>`
+ * can't run inside the overlay.
+ */
 function HydrationDiff({
   diff,
 }: {
@@ -250,8 +254,10 @@ function HydrationDiff({
   );
 }
 
-// The panel HTML is inlined verbatim; only the plugin-supplied title is
-// React-escaped.
+/**
+ * The panel HTML is inlined verbatim; only the plugin-supplied title is
+ * React-escaped.
+ */
 function PanelSections({
   panels,
 }: {
@@ -277,8 +283,10 @@ function PanelSections({
   );
 }
 
-// The request section always renders, since a request always has a method and
-// URL; the others show an explicit empty note.
+/**
+ * The request section always renders, since a request always has a method and
+ * URL; the others show an explicit empty note.
+ */
 function ContextSections({
   context,
 }: {

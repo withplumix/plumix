@@ -12,8 +12,10 @@ import { SETTINGS_CREATED_KEY } from "../../../template-deps-core.js";
 import { createTracedContext } from "../../../test/traced-context.js";
 import { sweepUnsettledMeta } from "./sweep.js";
 
-// One field of each scalar shape per store, so every store has a value the
-// write path would settle and one it could not.
+/**
+ * One field of each scalar shape per store, so every store has a value the
+ * write path would settle and one it could not.
+ */
 const plugin = definePlugin("test-sweep", (ctx) => {
   ctx.registerEntryMetaBox("entry-box", {
     label: "Entry",
@@ -59,8 +61,10 @@ async function seeded() {
   return { harness, ctx, run, dbQueryCount, author, post, term };
 }
 
-// Enough settleable settings that a call's budget runs out partway through
-// them, so the settings walk has to resume.
+/**
+ * Enough settleable settings that a call's budget runs out partway through
+ * them, so the settings walk has to resume.
+ */
 const MANY = Array.from(
   { length: 30 },
   (_, i) => `n${String(i).padStart(2, "0")}`,

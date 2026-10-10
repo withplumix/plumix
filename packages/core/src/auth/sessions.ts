@@ -23,7 +23,7 @@ export interface CreateSessionInput {
   readonly userAgent?: string | null;
 }
 
-// 64 leaves room for IPv6 zone IDs; real UA strings stay well under 1024.
+/** 64 leaves room for IPv6 zone IDs; real UA strings stay well under 1024. */
 const MAX_IP_LENGTH = 64;
 const MAX_UA_LENGTH = 1024;
 

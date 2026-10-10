@@ -30,8 +30,10 @@ interface TermLookupRow {
   readonly parentId: number | null;
 }
 
-// `satisfies` keeps `hydrate`'s concrete `TermReferenceSummary` return
-// type visible instead of widening to the contract's `HydratedReference`.
+/**
+ * `satisfies` keeps `hydrate`'s concrete `TermReferenceSummary` return
+ * type visible instead of widening to the contract's `HydratedReference`.
+ */
 export const termLookupAdapter = {
   async list(ctx, options) {
     const conditions = scopeConditions(options.scope);

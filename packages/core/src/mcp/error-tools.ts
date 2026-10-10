@@ -23,8 +23,10 @@ interface ServerErrorEntry {
   readonly requestId: string;
 }
 
-// A client error has no server request behind it, so `label` names its
-// component or island instead of a request id.
+/**
+ * A client error has no server request behind it, so `label` names its
+ * component or island instead of a request id.
+ */
 interface ClientErrorEntry {
   readonly source: "client";
   readonly level: string;
@@ -36,9 +38,11 @@ interface ClientErrorEntry {
 
 type ErrorEntry = ServerErrorEntry | ClientErrorEntry;
 
-// The collector records an uncaught throw on every span it unwinds, so the
-// shallowest errored span is the cause; a deeper one may be caught and
-// unrelated.
+/**
+ * The collector records an uncaught throw on every span it unwinds, so the
+ * shallowest errored span is the cause; a deeper one may be caught and
+ * unrelated.
+ */
 function fatalError(
   spans: readonly TelemetrySpan[],
 ): TelemetrySpanError | undefined {
@@ -83,9 +87,11 @@ function serverErrors(ctx: AppContext): ServerErrorEntry[] {
     });
 }
 
-// Client errors are captured on the Vite/Node side and read back over the dev
-// origin. Any failure degrades to an empty list, never sinking the server
-// errors.
+/**
+ * Client errors are captured on the Vite/Node side and read back over the dev
+ * origin. Any failure degrades to an empty list, never sinking the server
+ * errors.
+ */
 async function clientErrors(ctx: AppContext): Promise<ClientErrorEntry[]> {
   try {
     const url = new URL(DEV_ERROR_CLIENT_ERRORS_ENDPOINT, ctx.request.url);
@@ -101,8 +107,10 @@ async function clientErrors(ctx: AppContext): Promise<ClientErrorEntry[]> {
   }
 }
 
-// Cross-process JSON, so only contract fields are picked, which also keeps a
-// server-only request id off a client entry.
+/**
+ * Cross-process JSON, so only contract fields are picked, which also keeps a
+ * server-only request id off a client entry.
+ */
 function toClientEntry(value: unknown): ClientErrorEntry | null {
   if (value === null || typeof value !== "object") return null;
   const row = value as Record<string, unknown>;

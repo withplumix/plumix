@@ -20,24 +20,30 @@ type TestDb = ReturnType<typeof drizzle<typeof schema>>;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type MigratableDb = BaseSQLiteDatabase<"sync" | "async", any, any>;
 
-// Core's shipped history, at the package root: `../../migrations` from both
-// `src/test/` and the `dist/test/` it compiles to.
+/**
+ * Core's shipped history, at the package root: `../../migrations` from both
+ * `src/test/` and the `dist/test/` it compiles to.
+ */
 export const CORE_MIGRATIONS = fileURLToPath(
   new URL("../../migrations", import.meta.url),
 );
 
-// One tracking table per history, named for the folder's owner — the package
-// directory holding `migrations/`. drizzle applies only migrations newer than
-// the newest it has recorded, so a plugin history sharing core's table would
-// have every migration older than core's newest skipped.
+/**
+ * One tracking table per history, named for the folder's owner — the package
+ * directory holding `migrations/`. drizzle applies only migrations newer than
+ * the newest it has recorded, so a plugin history sharing core's table would
+ * have every migration older than core's newest skipped.
+ */
 function trackingTable(migrationsFolder: string): string {
   const owner = basename(dirname(migrationsFolder)).replace(/\W/g, "_");
   return `__drizzle_migrations_${owner}`;
 }
 
-// drizzle ships one migrator per driver: libsql's and D1's batch the whole
-// history, the sync drivers' (better-sqlite3's, which the `node:sqlite` and
-// `bun:sqlite` shims satisfy) wrap it in BEGIN/COMMIT.
+/**
+ * drizzle ships one migrator per driver: libsql's and D1's batch the whole
+ * history, the sync drivers' (better-sqlite3's, which the `node:sqlite` and
+ * `bun:sqlite` shims satisfy) wrap it in BEGIN/COMMIT.
+ */
 async function migrate(
   db: MigratableDb,
   migrationsFolder: string,

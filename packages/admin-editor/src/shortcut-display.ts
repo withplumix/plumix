@@ -13,8 +13,10 @@ export interface MarkShortcut {
   readonly chord: Chord;
 }
 
-// Tiptap spells its bindings "Mod-Shift-X". Parsing them keeps the marks as the
-// one place a formatting shortcut is declared.
+/**
+ * Tiptap spells its bindings "Mod-Shift-X". Parsing them keeps the marks as the
+ * one place a formatting shortcut is declared.
+ */
 function parseTiptapShortcut(shortcut: string): Chord {
   const parts = shortcut.split("-");
   const key = parts[parts.length - 1] ?? "";
@@ -41,7 +43,7 @@ export type ChordToken =
   | { readonly type: "key"; readonly label: string }
   | { readonly type: "gesture"; readonly gesture: Gesture };
 
-// Physical codes the roster uses, spelled as the cap the author sees.
+/** Physical codes the roster uses, spelled as the cap the author sees. */
 const CODE_CAPS: Readonly<Record<string, string>> = {
   Space: "Space",
   Slash: "/",

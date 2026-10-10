@@ -11,8 +11,10 @@ export type {
   DebugHistoryStore,
 } from "../../context/dev-runtime.js";
 
-// Dev-only defaults: ~10 requests to compare a short sequence, and a byte
-// budget so one pathological request (a huge SQL dump) can't pin megabytes.
+/**
+ * Dev-only defaults: ~10 requests to compare a short sequence, and a byte
+ * budget so one pathological request (a huge SQL dump) can't pin megabytes.
+ */
 const DEFAULT_MAX_ENTRIES = 10;
 const DEFAULT_MAX_TOTAL_BYTES = 2_000_000;
 const DEFAULT_MAX_STRING_LENGTH = 8_192;
@@ -62,13 +64,17 @@ export function createDebugHistoryStore(
   };
 }
 
-// Force-resolved to inert JSON: sentinel for a value JSON would drop
-// (function, symbol, undefined). Callers skip the key / substitute null,
-// mirroring `JSON.stringify`.
+/**
+ * Force-resolved to inert JSON: sentinel for a value JSON would drop
+ * (function, symbol, undefined). Callers skip the key / substitute null,
+ * mirroring `JSON.stringify`.
+ */
 const DROP = Symbol("drop");
 
-// A record's `data` is typed `JsonValue` but nothing checks it at runtime, so
-// this is the boundary that keeps live values (errors, DB handles) out.
+/**
+ * A record's `data` is typed `JsonValue` but nothing checks it at runtime, so
+ * this is the boundary that keeps live values (errors, DB handles) out.
+ */
 function sanitize(value: unknown, maxString: number): JsonValue {
   const result = sanitizeInner(value, maxString, new WeakSet());
   // Top level is always a snapshot object, never a dropped primitive.

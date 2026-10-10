@@ -2,9 +2,11 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, test } from "plumix/test/playwright";
 
-// Seeded by globalSetup, once per suite run. `nojsEmail` already has one
-// approved comment, so the playground's default `first_time` policy
-// auto-approves what this spec posts and the thread can be read back.
+/**
+ * Seeded by globalSetup, once per suite run. `nojsEmail` already has one
+ * approved comment, so the playground's default `first_time` policy
+ * auto-approves what this spec posts and the thread can be read back.
+ */
 interface Fixtures {
   readonly nojsSlug: string;
   readonly nojsEmail: string;
@@ -18,8 +20,10 @@ const SUMMARY = "[data-plumix-comment-summary]";
 const control = (name: string) => `[data-plumix-comment-control="${name}"]`;
 const SUBMIT = "[data-plumix-comment-submit]";
 
-// Absolute, because the rig's `baseURL` is the admin SPA's own root and
-// these are public pages the worker renders.
+/**
+ * Absolute, because the rig's `baseURL` is the admin SPA's own root and
+ * these are public pages the worker renders.
+ */
 const post = (slug: string) => `/posts/${slug}`;
 
 // The claim this plugin's form makes, made in the one place that can

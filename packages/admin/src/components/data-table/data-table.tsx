@@ -34,9 +34,11 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-// Per-column alignment. Column defs opt in via `meta: { align: "end" }`;
-// the header cell and every body cell carry it as `data-align`, so
-// alignment stays in sync.
+/**
+ * Per-column alignment. Column defs opt in via `meta: { align: "end" }`;
+ * the header cell and every body cell carry it as `data-align`, so
+ * alignment stays in sync.
+ */
 interface DataTableColumnMeta {
   align?: "start" | "end";
 }

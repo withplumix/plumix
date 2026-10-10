@@ -32,8 +32,10 @@ export function resolveSingleEntry(
   );
 }
 
-// Slugs are unique per type, so a fixed slug names a nested entry too and no
-// ancestor path is checked.
+/**
+ * Slugs are unique per type, so a fixed slug names a nested entry too and no
+ * ancestor path is checked.
+ */
 function selectEntry(
   intent: EntryIntent,
   params: Record<string, string>,

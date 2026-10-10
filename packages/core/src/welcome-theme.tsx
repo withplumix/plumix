@@ -7,9 +7,11 @@ import { welcomeMessages } from "./welcome/i18n.js";
 
 const BRAND = "#0ea5e9";
 
-// Inline so the screen fetches nothing — no stylesheet, no web font.
-// `dangerouslySetInnerHTML`, not a JSX child: React would HTML-escape the
-// `>`/`&` in the CSS.
+/**
+ * Inline so the screen fetches nothing — no stylesheet, no web font.
+ * `dangerouslySetInnerHTML`, not a JSX child: React would HTML-escape the
+ * `>`/`&` in the CSS.
+ */
 const styles = `
 body {
   margin: 0;

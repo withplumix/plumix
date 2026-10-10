@@ -23,7 +23,7 @@ export interface DiskObjectStorage extends ObjectStorage {
   readonly config: DiskStorageConfig;
 }
 
-// Beside the bytes, so `head` and `list` never read them.
+/** Beside the bytes, so `head` and `list` never read them. */
 interface Sidecar extends HeadResult {
   readonly uploaded: string;
 }
@@ -40,16 +40,20 @@ function isMissing(error: unknown): boolean {
   return (error as { readonly code?: string }).code === "ENOENT";
 }
 
-// Every call opens its own `Bun.file`: a handle caches its stat, so one kept
-// across a delete still answers `exists()` for the file that is gone.
+/**
+ * Every call opens its own `Bun.file`: a handle caches its stat, so one kept
+ * across a delete still answers `exists()` for the file that is gone.
+ */
 async function readSidecar(path: string): Promise<Sidecar | null> {
   const sidecar = Bun.file(path);
   if (!(await sidecar.exists())) return null;
   return (await sidecar.json()) as Sidecar;
 }
 
-// The file is opened on the first read, so a body nobody consumes holds no
-// descriptor.
+/**
+ * The file is opened on the first read, so a body nobody consumes holds no
+ * descriptor.
+ */
 function fileBody(
   file: string,
   range: GetOptions["range"],

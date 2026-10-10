@@ -5,8 +5,10 @@ import { base } from "../../base.js";
 import { resolveUserMeta, settleUserMeta } from "./meta.js";
 import { userGetInputSchema } from "./schemas.js";
 
-// Listing gates access to arbitrary user records; self-lookup is always
-// allowed via `user:edit_own` so admin UIs can render "your profile".
+/**
+ * Listing gates access to arbitrary user records; self-lookup is always
+ * allowed via `user:edit_own` so admin UIs can render "your profile".
+ */
 const LIST_CAPABILITY = "user:list";
 
 export const get = base

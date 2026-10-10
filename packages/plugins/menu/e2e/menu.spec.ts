@@ -11,15 +11,19 @@ import { entries } from "plumix/schema";
 import { factoriesFor } from "plumix/test";
 import { expect, openPlaygroundDb, test } from "plumix/test/playwright";
 
-// MenuItemEditor.tsx — must match the constant in the component
-// because drag projection compares `delta.x` against this width.
+/**
+ * MenuItemEditor.tsx — must match the constant in the component
+ * because drag projection compares `delta.x` against this width.
+ */
 const INDENTATION_WIDTH = 24;
 
-// The worker-assigned slug of the menu the first test creates. The rig
-// hands every attempt an empty database, so this now resolves to
-// `primary` every time — it stays read rather than hard-coded because
-// the slug is the server's to choose, and the assertion on its shape is
-// the only thing in this suite guarding `slugify`.
+/**
+ * The worker-assigned slug of the menu the first test creates. The rig
+ * hands every attempt an empty database, so this now resolves to
+ * `primary` every time — it stays read rather than hard-coded because
+ * the slug is the server's to choose, and the assertion on its shape is
+ * the only thing in this suite guarding `slugify`.
+ */
 let menuSlug = "";
 
 // Tests share state across the serial sequence: the menu created in
@@ -380,8 +384,10 @@ test("entry and term tabs add linked items picked from the keyboard, and an over
   await expect(reloaded.last()).toHaveAttribute("data-state", "ok");
 });
 
-// Types into the open tab's search, waits for the only match, then picks it
-// with the keyboard alone.
+/**
+ * Types into the open tab's search, waits for the only match, then picks it
+ * with the keyboard alone.
+ */
 async function pickFromLinkedTab(
   page: Page,
   query: string,
@@ -405,10 +411,12 @@ function menuOption(page: Page): Locator {
 
 type Box = NonNullable<Awaited<ReturnType<Locator["boundingBox"]>>>;
 
-// Reads the boxes a drag is about to aim at, retrying until every one is
-// non-null. A one-shot read can come back null when the row re-renders
-// between locating it and measuring it, which a loaded runner makes likely
-// (#2582).
+/**
+ * Reads the boxes a drag is about to aim at, retrying until every one is
+ * non-null. A one-shot read can come back null when the row re-renders
+ * between locating it and measuring it, which a loaded runner makes likely
+ * (#2582).
+ */
 async function settledBoxes<const T extends readonly Locator[]>(
   ...locators: T
 ): Promise<{ [K in keyof T]: Box }> {
@@ -420,17 +428,19 @@ async function settledBoxes<const T extends readonly Locator[]>(
   return boxes as { [K in keyof T]: Box };
 }
 
-// dnd-kit's PointerSensor listens for native `pointerdown` /
-// `pointermove` / `pointerup` events with a `distance: 5` activation
-// gate. Playwright's `page.mouse` API doesn't reliably fire pointer
-// events in a sequence the sensor accepts; dispatch them ourselves
-// inside a single `page.evaluate` (one CDP roundtrip, microtask burst)
-// so the sequence runs without timeout pressure.
-//
-// Returns once the drop has landed. That matters because a row's
-// `data-depth` carries the *projected* depth while a drag is live, so a
-// depth read before the drop is the preview rather than the committed
-// tree — including the unchanged depth the max-depth test asserts.
+/**
+ * dnd-kit's PointerSensor listens for native `pointerdown` /
+ * `pointermove` / `pointerup` events with a `distance: 5` activation
+ * gate. Playwright's `page.mouse` API doesn't reliably fire pointer
+ * events in a sequence the sensor accepts; dispatch them ourselves
+ * inside a single `page.evaluate` (one CDP roundtrip, microtask burst)
+ * so the sequence runs without timeout pressure.
+ *
+ * Returns once the drop has landed. That matters because a row's
+ * `data-depth` carries the *projected* depth while a drag is live, so a
+ * depth read before the drop is the preview rather than the committed
+ * tree — including the unchanged depth the max-depth test asserts.
+ */
 async function dragRowOnSelf(
   page: Page,
   rowId: string,
@@ -518,19 +528,21 @@ async function dragRowOnSelf(
   await waitForClicksToLand(page);
 }
 
-// dnd-kit keeps a drag from ending in a click by leaving a capture-phase
-// `click` swallower on `document`, which `AbstractPointerSensor.detach`
-// removes from a 50ms timer. Any click the spec makes inside that window —
-// the save button above all — is dropped before React sees it. Poll a probe
-// click rather than sleep 50ms: the removal timer runs late under load,
-// which is exactly when a fixed sleep loses. A capture-phase
-// `stopPropagation` on `document` also keeps the event from document's own
-// bubble listeners, so a probe that doesn't come back is the swallower
-// still armed.
-//
-// The probe is invisible to React, whose listeners are delegated to `#root`
-// — but not to document-level listeners, and every mounted Radix
-// `DismissableLayer` has some. Don't call this with a dialog or select open.
+/**
+ * dnd-kit keeps a drag from ending in a click by leaving a capture-phase
+ * `click` swallower on `document`, which `AbstractPointerSensor.detach`
+ * removes from a 50ms timer. Any click the spec makes inside that window —
+ * the save button above all — is dropped before React sees it. Poll a probe
+ * click rather than sleep 50ms: the removal timer runs late under load,
+ * which is exactly when a fixed sleep loses. A capture-phase
+ * `stopPropagation` on `document` also keeps the event from document's own
+ * bubble listeners, so a probe that doesn't come back is the swallower
+ * still armed.
+ *
+ * The probe is invisible to React, whose listeners are delegated to `#root`
+ * — but not to document-level listeners, and every mounted Radix
+ * `DismissableLayer` has some. Don't call this with a dialog or select open.
+ */
 async function waitForClicksToLand(page: Page): Promise<void> {
   await expect
     .poll(
@@ -566,8 +578,10 @@ test("admin page ships styled controls", async ({ page }) => {
   expect(ui.styled).toBeGreaterThan(0);
 });
 
-// Counts the plugin shell's interactive controls and how many carry a
-// styling class — a count of 0 is the unstyled-component regression signal.
+/**
+ * Counts the plugin shell's interactive controls and how many carry a
+ * styling class — a count of 0 is the unstyled-component regression signal.
+ */
 async function styledControls(page: Page, shellTestId: string) {
   return page.evaluate((id) => {
     const shell = document.querySelector(`[data-testid="${id}"]`);

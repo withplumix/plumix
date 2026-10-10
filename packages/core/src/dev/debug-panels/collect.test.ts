@@ -7,7 +7,7 @@ import { createTestContext } from "../../test/context.js";
 import { createTestDb } from "../../test/harness.js";
 import { collectDebugPanels } from "./collect.js";
 
-// Handlers receive the request context; these tests never read it.
+/** Handlers receive the request context; these tests never read it. */
 let ctx: AppContext;
 beforeAll(async () => {
   ctx = createTestContext({ db: await createTestDb() });

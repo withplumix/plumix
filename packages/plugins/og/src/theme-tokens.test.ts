@@ -118,8 +118,10 @@ describe("a theme's design tokens", () => {
   });
 });
 
-// The demo theme's editorial palette, spelled under the three names the bundled
-// card looks for.
+/**
+ * The demo theme's editorial palette, spelled under the three names the bundled
+ * card looks for.
+ */
 const EDITORIAL = {
   color: {
     background: { value: "#fbfaf8" },

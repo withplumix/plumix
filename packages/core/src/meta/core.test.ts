@@ -603,12 +603,14 @@ describe("decodeMetaBag (.default() is not a read fallback)", () => {
   });
 });
 
-// The other half of making the two bags agree. #2426 and #2441 made every
-// reader literal, which is only honest while the row holds what its field
-// declared. Settling is what makes that true of the data rather than of the
-// decode, so `StoredMetaOf` and `MetaOf` describe the same value (#2440).
-// What a settle hands a meta writer, flattened so a test can compare it: the
-// settled bag, and only the top-level keys the patch will write.
+/**
+ * The other half of making the two bags agree. #2426 and #2441 made every
+ * reader literal, which is only honest while the row holds what its field
+ * declared. Settling is what makes that true of the data rather than of the
+ * decode, so `StoredMetaOf` and `MetaOf` describe the same value (#2440).
+ * What a settle hands a meta writer, flattened so a test can compare it: the
+ * settled bag, and only the top-level keys the patch will write.
+ */
 function settle(scope: ReturnType<typeof metaScope>, bag: JsonObject | null) {
   const settled = settleStoredMeta(scope, bag);
   return {

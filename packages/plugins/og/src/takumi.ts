@@ -67,16 +67,22 @@ function sharedOptions(input: CardRenderInput): {
   };
 }
 
-// One per isolate. A failed init is kept too: loading a bundled wasm module
-// never fails transiently.
+/**
+ * One per isolate. A failed init is kept too: loading a bundled wasm module
+ * never fails transiently.
+ */
 let engine: Promise<Renderer> | undefined;
 
-// `@takumi-rs/wasm/auto` exports differ per runtime condition; TypeScript sees
-// only one.
+/**
+ * `@takumi-rs/wasm/auto` exports differ per runtime condition; TypeScript sees
+ * only one.
+ */
 type WasmEntry = SyncInitInput | ((...args: never[]) => void);
 
-// A return type, so TypeScript can't narrow back to one condition; the await
-// also settles bundler entries that export a promise.
+/**
+ * A return type, so TypeScript can't narrow back to one condition; the await
+ * also settles bundler entries that export a promise.
+ */
 async function loadWasmEntry(): Promise<WasmEntry> {
   return (await import("@takumi-rs/wasm/auto")).default;
 }

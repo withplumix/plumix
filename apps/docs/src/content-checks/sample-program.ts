@@ -20,12 +20,16 @@ export interface SampleDiagnostic {
 
 const DOCS_ROOT = fileURLToPath(new URL("../../", import.meta.url));
 
-// Never written to; the path exists so `import ... from "plumix"` resolves as
-// it would in this app.
+/**
+ * Never written to; the path exists so `import ... from "plumix"` resolves as
+ * it would in this app.
+ */
 const SAMPLES_DIR = join(DOCS_ROOT, ".samples");
 
-// `parseJsonConfigFileContent` flags the empty `include`, which is deliberate:
-// the samples are the file list.
+/**
+ * `parseJsonConfigFileContent` flags the empty `include`, which is deliberate:
+ * the samples are the file list.
+ */
 const NO_INPUTS_FOUND = 18003;
 
 /** One array of complaints per sample, in the order passed in. */
@@ -78,8 +82,10 @@ export function typeCheckSamples(
   });
 }
 
-// Extends the shared app config so samples are checked no looser than the
-// reader's project.
+/**
+ * Extends the shared app config so samples are checked no looser than the
+ * reader's project.
+ */
 function sampleCompilerOptions(): ts.CompilerOptions {
   const parsed = ts.parseJsonConfigFileContent(
     {
@@ -117,8 +123,10 @@ function flatten(diagnostics: readonly ts.Diagnostic[]): string {
     .join(" ");
 }
 
-// Thrown, not reported as a finding, so a broken setup does not read as a
-// content problem.
+/**
+ * Thrown, not reported as a finding, so a broken setup does not read as a
+ * content problem.
+ */
 class SampleProgramError extends Error {
   static {
     SampleProgramError.prototype.name = "SampleProgramError";
@@ -147,8 +155,10 @@ class SampleProgramError extends Error {
   }
 }
 
-// Sharing parsed lib files across programs is safe only because every program
-// uses one set of options.
+/**
+ * Sharing parsed lib files across programs is safe only because every program
+ * uses one set of options.
+ */
 const parsedOnce = new Map<string, ts.SourceFile | undefined>();
 
 function virtualHost(

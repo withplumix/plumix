@@ -74,9 +74,11 @@ function makeProjectDir(): void {
   writeFileSync(join(dir, "schema.ts"), SCHEMA, "utf8");
 }
 
-// Each `generate` spawns drizzle-kit, which bundles the schema with esbuild
-// before it can diff — past vitest's 5s default on a cold runner, so every
-// spawning test or hook carries its own budget.
+/**
+ * Each `generate` spawns drizzle-kit, which bundles the schema with esbuild
+ * before it can diff — past vitest's 5s default on a cold runner, so every
+ * spawning test or hook carries its own budget.
+ */
 const ONE_SPAWN = 60_000;
 const TWO_SPAWNS = 120_000;
 

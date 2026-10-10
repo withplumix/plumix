@@ -18,9 +18,11 @@ import {
 
 const playground = usePlaygrounds();
 
-// The helper reads the runtime's `plumix.e2e` block off the playground the
-// config names, so every test gets one on disk, with an `e2e` directory
-// inside it standing in for the config file's directory.
+/**
+ * The helper reads the runtime's `plumix.e2e` block off the playground the
+ * config names, so every test gets one on disk, with an `e2e` directory
+ * inside it standing in for the config file's directory.
+ */
 let configDir = "";
 
 beforeEach(async () => {

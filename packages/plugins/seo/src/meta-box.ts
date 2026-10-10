@@ -18,8 +18,10 @@ export interface SeoMetaBoxOptions {
   readonly exclude?: readonly string[];
 }
 
-// One id per surface. Entry and term boxes live in separate registries, so the
-// same name on both reads as one box wherever it is rendered.
+/**
+ * One id per surface. Entry and term boxes live in separate registries, so the
+ * same name on both reads as one box wherever it is rendered.
+ */
 const BOX_ID = "seo";
 
 /**

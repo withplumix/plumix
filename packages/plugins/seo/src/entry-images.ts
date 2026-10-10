@@ -4,8 +4,10 @@ import { resolveImageRoles } from "plumix/plugin";
 
 import { readSeoOverrides } from "./overrides.js";
 
-// A sitemap `<image:loc>` must be absolute but media URLs can be relative. The
-// empty string is dropped because `URL` resolves it to the site root.
+/**
+ * A sitemap `<image:loc>` must be absolute but media URLs can be relative. The
+ * empty string is dropped because `URL` resolves it to the site root.
+ */
 function absolute(url: string | null, origin: string): string | null {
   if (url === null || url === "") return null;
   return URL.parse(url, origin)?.href ?? null;

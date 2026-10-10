@@ -13,15 +13,19 @@ import { findBlock } from "./block-tree-ops.js";
 import { useEditorConfig } from "./editor-config-context.js";
 import { useEditorStore } from "./provider.js";
 
-// Code-split: the highlighter only loads when the dialog first renders output.
+/**
+ * Code-split: the highlighter only loads when the dialog first renders output.
+ */
 const JsonHighlight = lazy(() => import("./json-highlight.js"));
 
 type JsonScope = "page" | "block";
 
 const OUTPUT_TESTID = "json-inspector-output";
 
-// Lives in the eager module: importing it from the lazy chunk would defeat the
-// split.
+/**
+ * Lives in the eager module: importing it from the lazy chunk would defeat the
+ * split.
+ */
 const JSON_PRE_CLASS =
   "bg-muted max-h-dialog overflow-auto rounded p-3 text-xs leading-relaxed";
 

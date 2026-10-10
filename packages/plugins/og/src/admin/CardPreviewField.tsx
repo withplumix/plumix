@@ -23,7 +23,7 @@ export function CardPreviewField({
   );
 }
 
-// Null on the create form, where no row exists yet.
+/** Null on the create form, where no row exists yet. */
 function useEntryId(): number | null {
   const params: Record<string, string | undefined> = useParams({
     strict: false,

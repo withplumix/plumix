@@ -30,10 +30,12 @@ export interface FileImports {
   readonly typeOnly: readonly string[];
 }
 
-// Only a whole-statement `import type` is erased. Inline specifiers do not
-// count: under `verbatimModuleSyntax` TS keeps the statement and emits
-// `import {} from "…"`, which still loads the module and drags its graph
-// along. `import defer` counts as static too — a deferred module is linked.
+/**
+ * Only a whole-statement `import type` is erased. Inline specifiers do not
+ * count: under `verbatimModuleSyntax` TS keeps the statement and emits
+ * `import {} from "…"`, which still loads the module and drags its graph
+ * along. `import defer` counts as static too — a deferred module is linked.
+ */
 function isErased(clause: ts.ImportClause | undefined): boolean {
   return clause?.phaseModifier === ts.SyntaxKind.TypeKeyword;
 }
@@ -151,7 +153,9 @@ export function closureOf(
   return importedBy;
 }
 
-/** The chain `closure` reached `file` by, entry first; undefined if it didn't. */
+/**
+ * The chain `closure` reached `file` by, entry first; undefined if it didn't.
+ */
 export function chainTo(
   closure: ReadonlyMap<string, string | undefined>,
   file: string,

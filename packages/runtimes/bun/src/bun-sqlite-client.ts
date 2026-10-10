@@ -30,24 +30,30 @@ export type BunSqliteDatabase<
   TSchema extends Record<string, unknown> = Record<string, unknown>,
 > = BaseSQLiteDatabase<"sync", void, TSchema>;
 
-// Only Bun resolves `bun:sqlite`; a static import would stop the config loading
-// under Node before the commands module can say to use Bun.
+/**
+ * Only Bun resolves `bun:sqlite`; a static import would stop the config loading
+ * under Node before the commands module can say to use Bun.
+ */
 function loadBunSqlite(): typeof BunSqlite {
   // Safety: Bun hands back its own `bun:sqlite` module for this id; under Node
   // it is undefined, and nothing opens a database there.
   return process.getBuiltinModule("bun:sqlite") as typeof BunSqlite;
 }
 
-// Bun can't bind a raw Date: it takes it for a named-parameter object and binds
-// NULL. Epoch milliseconds matches libsql and `nodeSqlite`.
+/**
+ * Bun can't bind a raw Date: it takes it for a named-parameter object and binds
+ * NULL. Epoch milliseconds matches libsql and `nodeSqlite`.
+ */
 const bind = (params: BindValue[]): BunSqlite.SQLQueryBindings[] =>
   params.map((value) => (value instanceof Date ? value.valueOf() : value));
 
 const rowsReturned = (rows: readonly unknown[]): number => rows.length;
 const rowsChanged = (result: BunSqlite.Changes): number => result.changes;
 
-// Bun bug, reproduced on 1.4.2: `changes` counts trigger-written rows, so read
-// SQL's `changes()`, and only when Bun reports a change since it carries over.
+/**
+ * Bun bug, reproduced on 1.4.2: `changes` counts trigger-written rows, so read
+ * SQL's `changes()`, and only when Bun reports a change since it carries over.
+ */
 function exactChanges(
   counter: BunSqlite.Statement<{ changes: number }>,
   result: BunSqlite.Changes,

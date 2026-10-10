@@ -38,9 +38,11 @@ import {
   rolePolicy,
 } from "./policy.js";
 
-// Two archive types standing in for policied public routes: one
-// authenticated-only, one gated to `editor`. The route-level `access` policy is
-// the seam under test end-to-end.
+/**
+ * Two archive types standing in for policied public routes: one
+ * authenticated-only, one gated to `editor`. The route-level `access` policy is
+ * the seam under test end-to-end.
+ */
 interface GatedData extends ArchiveTypeData {
   readonly kind: "archiveType";
   readonly name: "members" | "staff";
@@ -144,10 +146,12 @@ describe("access gate — hard gate through the dispatcher", () => {
   });
 });
 
-// An entry type carrying an `access.default` gates its single (and archive)
-// routes end-to-end — proving the policy survives registration and the
-// single/archive intent branch of `policyForMatch` fires through the real
-// dispatcher, not just a stubbed registry.
+/**
+ * An entry type carrying an `access.default` gates its single (and archive)
+ * routes end-to-end — proving the policy survives registration and the
+ * single/archive intent branch of `policyForMatch` fires through the real
+ * dispatcher, not just a stubbed registry.
+ */
 const articlesPlugin = definePlugin("articles", (ctx) => {
   ctx.registerEntryType("article", {
     label: "Articles",
@@ -204,9 +208,11 @@ describe("access gate — entry-type-level policy", () => {
   });
 });
 
-// A real in-memory CDN: `match`/`put` key on the request URL, exactly as
-// the Workers Cache API does, so the segment folded into the key by #1740 is
-// what separates (or collapses) entries.
+/**
+ * A real in-memory CDN: `match`/`put` key on the request URL, exactly as
+ * the Workers Cache API does, so the segment folded into the key by #1740 is
+ * what separates (or collapses) entries.
+ */
 function memoryCdn() {
   const store = new Map<
     string,
@@ -244,8 +250,10 @@ function memoryCdn() {
   return { cdn, store, match, put };
 }
 
-// An entry type whose single/archive routes require login and are cached
-// under the shared `authenticated` segment (the "explicit opt-in" of #1740) …
+/**
+ * An entry type whose single/archive routes require login and are cached
+ * under the shared `authenticated` segment (the "explicit opt-in" of #1740) …
+ */
 const membersPlugin = definePlugin("member-articles", (ctx) => {
   ctx.registerEntryType("article", {
     label: "Articles",
@@ -254,8 +262,10 @@ const membersPlugin = definePlugin("member-articles", (ctx) => {
   });
 });
 
-// … versus one whose policy grants the reserved `private` segment: gated, yet
-// never shared-cached.
+/**
+ * … versus one whose policy grants the reserved `private` segment: gated, yet
+ * never shared-cached.
+ */
 const privatePlugin = definePlugin("private-memos", (ctx) => {
   ctx.registerEntryType("memo", {
     label: "Memos",
@@ -436,8 +446,10 @@ describe("access gate — segment-keyed caching (#1740)", () => {
   );
 });
 
-// The theme echoes who it rendered for (a bearer client included), so a test
-// can tell a signed-in body from the anonymous one.
+/**
+ * The theme echoes who it rendered for (a bearer client included), so a test
+ * can tell a signed-in body from the anonymous one.
+ */
 const signedInEcho = defineTheme({
   templates: [
     entry(
@@ -456,8 +468,10 @@ const signedInEcho = defineTheme({
   ],
 });
 
-// A type whose policy grants `anonymous` to every principal, signed-in ones
-// included.
+/**
+ * A type whose policy grants `anonymous` to every principal, signed-in ones
+ * included.
+ */
 function anonymousGrantPlugin(policy: AccessPolicy) {
   return definePlugin("open-notes", (ctx) => {
     ctx.registerEntryType("note", {
@@ -468,8 +482,10 @@ function anonymousGrantPlugin(policy: AccessPolicy) {
   });
 }
 
-// A developer's own policy that hands a signed-in principal the shared
-// `anonymous` segment: the guard keys on the segment, not on the policy.
+/**
+ * A developer's own policy that hands a signed-in principal the shared
+ * `anonymous` segment: the guard keys on the segment, not on the policy.
+ */
 const customAnonymousGrant = definePolicy({
   resolve: () => grant("anonymous"),
 });
@@ -570,12 +586,14 @@ describe("access gate — an anonymous grant to a privileged request (#2914)", (
   });
 });
 
-// The paywall: a soft gate. An active `entitlement:premium` gets the full
-// render under one shared segment; everyone else (anonymous or lapsed) gets a
-// teaser at their own segment — the same URL, a distinct cdn variant. A
-// mutable `entitled` set stands in for the developer's per-request entitlement
-// check (a `meta` flag, their own table, an external billing API), letting a
-// test flip a subscription active/lapsed between requests.
+/**
+ * The paywall: a soft gate. An active `entitlement:premium` gets the full
+ * render under one shared segment; everyone else (anonymous or lapsed) gets a
+ * teaser at their own segment — the same URL, a distinct cdn variant. A
+ * mutable `entitled` set stands in for the developer's per-request entitlement
+ * check (a `meta` flag, their own table, an external billing API), letting a
+ * test flip a subscription active/lapsed between requests.
+ */
 interface PaywallData extends ArchiveTypeData {
   readonly kind: "archiveType";
   readonly name: "premium";
@@ -701,8 +719,8 @@ describe("access gate — soft gate / paywall (#1741)", () => {
     entitled.add(member.id);
 
     // Anonymous visitor (a search-engine crawler) → the teaser variant: a 200,
-    // publicly cacheable page carrying only the free summary. The protected body
-    // is withheld server-side, so it can't leak through the public entry.
+    // publicly cacheable page carrying only the free summary. The protected
+    // body is withheld server-side, so it can't leak through the public entry.
     const teaser = await h.dispatch(new Request("https://cms.example/premium"));
     await h.drainDeferred();
     expect(teaser.status).toBe(200);
@@ -769,11 +787,13 @@ describe("access gate — soft gate / paywall (#1741)", () => {
   });
 });
 
-// An entry type whose single routes are PUBLIC by default but declare a
-// selectable `members` policy an editor can assign per-entry. Proves the
-// per-entry choice (stored under the reserved access meta key) overrides the
-// type default at the gate and in the cdn key — the load-bearing data seam of
-// #1742. Precedence: per-entry › entry-type › global.
+/**
+ * An entry type whose single routes are PUBLIC by default but declare a
+ * selectable `members` policy an editor can assign per-entry. Proves the
+ * per-entry choice (stored under the reserved access meta key) overrides the
+ * type default at the gate and in the cdn key — the load-bearing data seam of
+ * #1742. Precedence: per-entry › entry-type › global.
+ */
 const perEntryPlugin = definePlugin("per-entry", (ctx) => {
   ctx.registerEntryType("column", {
     label: "Columns",
@@ -950,9 +970,11 @@ describe("access gate — per-entry visibility (#1742)", () => {
   });
 });
 
-// A shared segment stores one copy per segment, so a render that read the
-// principal must never fill it (ADR 0030). Each fixture reads the principal
-// from one seam of the render phase under `authenticatedPolicy`.
+/**
+ * A shared segment stores one copy per segment, so a render that read the
+ * principal must never fill it (ADR 0030). Each fixture reads the principal
+ * from one seam of the render phase under `authenticatedPolicy`.
+ */
 function memberArticles(blocks: readonly BlockSpec[]) {
   return definePlugin("member-articles", (ctx) => {
     ctx.registerEntryType("article", {
@@ -964,8 +986,10 @@ function memberArticles(blocks: readonly BlockSpec[]) {
   });
 }
 
-// Core's own program has no `plumix/blocks` façade to name the loader context,
-// so each loader narrows the context the dispatcher hands it to what it reads.
+/**
+ * Core's own program has no `plumix/blocks` façade to name the loader context,
+ * so each loader narrows the context the dispatcher hands it to what it reads.
+ */
 const whoamiBlock = defineBlock({
   name: "acme/whoami",
   loaders: {
@@ -977,7 +1001,7 @@ const whoamiBlock = defineBlock({
   render: ({ loaders }) => <p data-testid="whoami">{loaders.email}</p>,
 });
 
-// A loader that reads the request but never the principal.
+/** A loader that reads the request but never the principal. */
 const plainBlock = defineBlock({
   name: "acme/plain",
   loaders: {

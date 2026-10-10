@@ -7,7 +7,7 @@ import { createClipboardOps } from "./clipboard-ops.js";
 import { parseClipboardBlocks } from "./clipboard.js";
 import { createEditorStore } from "./store.js";
 
-// In-memory clipboard so the ops are testable without the browser API.
+/** In-memory clipboard so the ops are testable without the browser API. */
 function fakeClipboard(initial = "") {
   let text = initial;
   return {

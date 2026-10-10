@@ -95,8 +95,10 @@ function buildConditions(filter: AuditLogQueryFilter) {
   return out;
 }
 
-// Row-tuple `<` spelled as two predicates, which planners handle across
-// drivers; `audit_log_occurred_at_idx` covers it.
+/**
+ * Row-tuple `<` spelled as two predicates, which planners handle across
+ * drivers; `audit_log_occurred_at_idx` covers it.
+ */
 function cursorCondition(cursor: string) {
   // CursorError propagates up to the RPC layer where it's mapped to a
   // typed error response.

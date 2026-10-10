@@ -59,8 +59,10 @@ interface ExchangeAndFetchInput {
   readonly env: PlumixEnv;
 }
 
-// Providers may send unread fields like `id_token` as null; validating them
-// would fail the login.
+/**
+ * Providers may send unread fields like `id_token` as null; validating them
+ * would fail the login.
+ */
 const tokenResponseSchema = v.looseObject({ access_token: v.string() });
 
 type TokenResponse = v.InferOutput<typeof tokenResponseSchema>;

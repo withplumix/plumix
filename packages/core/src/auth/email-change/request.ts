@@ -7,8 +7,10 @@ import { users } from "../../db/schema/users.js";
 import { generateToken, hashToken } from "../tokens.js";
 import { EmailChangeError } from "./errors.js";
 
-// Far longer than magic-link's: the user may not reach the new mailbox for
-// hours.
+/**
+ * Far longer than magic-link's: the user may not reach the new mailbox for
+ * hours.
+ */
 const EMAIL_CHANGE_TTL_SECONDS = 24 * 60 * 60;
 
 export interface RequestEmailChangeInput {

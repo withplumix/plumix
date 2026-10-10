@@ -4,13 +4,17 @@ import type { JsonObject } from "../../json.js";
 // injects markup and lowercase `onclick` renders a live handler. Render is the
 // boundary; the editor only mirrors it.
 
-// Safe global attributes that work as-is when spread as lowercase React props.
-// (`tabindex`/`contenteditable` etc. are intentionally omitted — they need
-// React's camelCase prop names, and aren't worth the casing dance here.)
+/**
+ * Safe global attributes that work as-is when spread as lowercase React props.
+ * (`tabindex`/`contenteditable` etc. are intentionally omitted — they need
+ * React's camelCase prop names, and aren't worth the casing dance here.)
+ */
 const ALLOWED_GLOBAL = new Set(["id", "title", "role", "lang", "dir"]);
 
-// Stops a key smuggling a second attribute or markup without relying on React
-// dropping bad names.
+/**
+ * Stops a key smuggling a second attribute or markup without relying on React
+ * dropping bad names.
+ */
 const ATTR_NAME = /^[a-z][a-z0-9-]*$/;
 
 /** Allows a safe global set plus `aria-*` and `data-*`, minus the reserved

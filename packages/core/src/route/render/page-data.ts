@@ -329,7 +329,7 @@ function pad2(value: number): string {
   return String(value).padStart(2, "0");
 }
 
-// The params a date archive's URL captures for this period.
+/** The params a date archive's URL captures for this period. */
 function dateParams({ year, month, day }: DateTarget): Record<string, string> {
   return {
     year: String(year),
@@ -348,7 +348,7 @@ function dateTitle(
   return `${String(year)}-${pad2(month)}-${pad2(day)}`;
 }
 
-// Null when no archive answers, so each caller can pick its own 404 reason.
+/** Null when no archive answers, so each caller can pick its own 404 reason. */
 async function listingFor(
   ctx: AppContext,
   query: EntryQuery | null,

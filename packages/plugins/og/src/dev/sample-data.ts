@@ -8,7 +8,7 @@ import type {
   TierMatchRule,
 } from "plumix";
 
-// A pangram, so the preview shows every letter of the face.
+/** A pangram, so the preview shows every letter of the face. */
 const SAMPLE_TITLE = "The quick brown fox jumps over the lazy dog";
 const SAMPLE_EXCERPT =
   "Sample copy, so a card is judged at the length real writing arrives in " +
@@ -17,8 +17,10 @@ const SAMPLE_SLUG = "sample-entry";
 const SAMPLE_TERM_SLUG = "sample-term";
 const SAMPLE_QUERY = "sample search";
 
-// Fixed rather than `Date.now()`: a preview that re-renders on every refresh
-// must differ only by what the developer changed.
+/**
+ * Fixed rather than `Date.now()`: a preview that re-renders on every refresh
+ * must differ only by what the developer changed.
+ */
 const SAMPLE_DATE = new Date("2026-01-15T09:30:00.000Z");
 const SAMPLE_ID = 1;
 
@@ -49,7 +51,7 @@ export function sampleDataFor(rule: TierMatchRule): TemplateData {
   return pageFor(targetFor(rule));
 }
 
-// Same order as `ruleLabel`, so caption and picture agree.
+/** Same order as `ruleLabel`, so caption and picture agree. */
 function targetFor(rule: TierMatchRule): SampleTarget {
   if (rule.tier === undefined) {
     return rule.match === undefined
@@ -69,8 +71,10 @@ function targetFor(rule: TierMatchRule): SampleTarget {
   }
 }
 
-// A matcher's `nodeKind` names the same page kinds the page data does; what
-// differs per kind is which of the matcher's narrowings the sample takes.
+/**
+ * A matcher's `nodeKind` names the same page kinds the page data does; what
+ * differs per kind is which of the matcher's narrowings the sample takes.
+ */
 function targetForMatch(match: TargetMatcher): SampleTarget {
   const named = {
     ...DEFAULT_TARGET,
@@ -147,7 +151,7 @@ const PAGINATION: Pagination = {
   pageCount: 1,
 };
 
-// A sample has no registered type, so its permalink isn't rewritten.
+/** A sample has no registered type, so its permalink isn't rewritten. */
 function sampleEntry(target: SampleTarget): ResolvedEntry {
   const type = target.kind === "entry" ? target.type : DEFAULT_TARGET.type;
   return {

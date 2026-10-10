@@ -19,8 +19,10 @@ const rootElement = document.getElementById("root");
 // eslint-disable-next-line no-restricted-syntax -- React boot guard; convention exception per umbrella #232
 if (!rootElement) throw new Error("Missing #root element");
 
-// Can't gate the mount: a network blip on a catalog would leave the admin
-// blank.
+/**
+ * Can't gate the mount: a network blip on a catalog would leave the admin
+ * blank.
+ */
 const i18nReady = bootI18n().catch((error: unknown) => {
   console.error("plumix i18n boot failed; rendering with source locale", error);
 });

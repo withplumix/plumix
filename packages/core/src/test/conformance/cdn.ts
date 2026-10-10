@@ -28,9 +28,11 @@ function pageRequest(path: string): Request {
   return new Request(`${ORIGIN}${path}`);
 }
 
-// The provider owns its header names and its tag separator, so the contract
-// asks whether the tag reached the response at all rather than which header
-// carries it — a vendor using `Surrogate-Key` satisfies the rule too.
+/**
+ * The provider owns its header names and its tag separator, so the contract
+ * asks whether the tag reached the response at all rather than which header
+ * carries it — a vendor using `Surrogate-Key` satisfies the rule too.
+ */
 function carriesTag(response: Response, tag: string): boolean {
   for (const [, value] of response.headers) {
     if (value.includes(tag)) return true;
@@ -46,9 +48,11 @@ function needsStore(options: CdnContractOptions): string | null {
   return options.store === true ? null : "the provider has no origin store";
 }
 
-// A purge is observable in-process only through a store the contract can read
-// back. A storeless provider's purge reaches the vendor's own cache, which
-// nothing here can see.
+/**
+ * A purge is observable in-process only through a store the contract can read
+ * back. A storeless provider's purge reaches the vendor's own cache, which
+ * nothing here can see.
+ */
 function needsStoredPurge(options: CdnContractOptions): string | null {
   if (options.purgeTags !== true) return "the provider cannot purge by tag";
   return needsStore(options);
@@ -69,8 +73,10 @@ async function connectStore(options: CdnContractOptions): Promise<CdnStore> {
   return store;
 }
 
-// The purge cases read their result back through the store, so they bind both
-// from one connection — a second `connect()` would be a second, empty cdn.
+/**
+ * The purge cases read their result back through the store, so they bind both
+ * from one connection — a second `connect()` would be a second, empty cdn.
+ */
 async function connectStoredPurge(
   options: CdnContractOptions,
 ): Promise<{ store: CdnStore; purge: Purge }> {
@@ -81,7 +87,9 @@ async function connectStoredPurge(
   return { store: cdn.store, purge: cdn.purgeTags.bind(cdn) };
 }
 
-/** Every case of the cdn contract, for guard tests that run them outside vitest. */
+/**
+ * Every case of the cdn contract, for guard tests that run them outside vitest.
+ */
 export const cdnContractCases: readonly Case[] = [
   {
     name: "the optional members present are the ones declared",

@@ -14,10 +14,12 @@ import {
   scaffoldConsumerProject,
 } from "../test/consumer-project.js";
 
-// `message.mjs` is a module the config imports, so an edit to it reaches the
-// entry only through the importer walk; `/runtime` says which runtime the
-// site's code runs on; `/secret` reads what `.env` carries; `/tagline` is
-// written into the config itself.
+/**
+ * `message.mjs` is a module the config imports, so an edit to it reaches the
+ * entry only through the importer walk; `/runtime` says which runtime the
+ * site's code runs on; `/secret` reads what `.env` carries; `/tagline` is
+ * written into the config itself.
+ */
 const config = (tagline = "first") => `import { auth } from "plumix/auth";
 import { definePlugin } from "plumix/plugin";
 import { defineTheme, fallback } from "plumix/theme";
@@ -49,8 +51,10 @@ export default plumix({
 
 const CONFIG_FILE = "plumix.config.mjs";
 
-// Vite's watcher throttles change events per path in a 50 ms window and drops
-// the later one, so a second write to a file just edited needs a beat.
+/**
+ * Vite's watcher throttles change events per path in a 50 ms window and drops
+ * the later one, so a second write to a file just edited needs a beat.
+ */
 const settle = () => new Promise((resolve) => setTimeout(resolve, 100));
 
 const greeting = (value: string) => `export const greeting = ${value};\n`;

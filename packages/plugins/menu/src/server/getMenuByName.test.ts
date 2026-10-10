@@ -61,9 +61,11 @@ interface SeedItemInput {
   readonly status?: "draft" | "published" | "scheduled" | "trash";
 }
 
-// A registry that registers `menu` taxonomy plus a public `post` entry type
-// and `category` term taxonomy — the latter two so the entry/term lookup
-// adapters report results within scope. Built once per test for isolation.
+/**
+ * A registry that registers `menu` taxonomy plus a public `post` entry type
+ * and `category` term taxonomy — the latter two so the entry/term lookup
+ * adapters report results within scope. Built once per test for isolation.
+ */
 const menuTestHost = definePlugin("menu-test-host", (ctx) => {
   ctx.registerEntryType("menu_item", {
     label: "Menu items",

@@ -85,8 +85,10 @@ async function slugsWhere(clause: SQL): Promise<string[]> {
 
 const PUBLISHED = ["published-mine", "published-theirs"];
 
-// Each tier with the rows it is owed, so the SQL and the predicate are each
-// held to the rule and not only to each other.
+/**
+ * Each tier with the rows it is owed, so the SQL and the predicate are each
+ * held to the rule and not only to each other.
+ */
 const TIERS = {
   nothing: { capabilities: [], sees: [] },
   reader: { capabilities: ["entry:post:read"], sees: PUBLISHED },

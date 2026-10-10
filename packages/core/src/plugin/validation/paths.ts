@@ -1,7 +1,9 @@
 import { PluginContextError } from "../errors.js";
 
-// The wildcard rule stays at each call site because admin pages and plugin
-// routes handle `*` differently.
+/**
+ * The wildcard rule stays at each call site because admin pages and plugin
+ * routes handle `*` differently.
+ */
 function assertValidPathPrefix(
   pluginId: string,
   path: string,

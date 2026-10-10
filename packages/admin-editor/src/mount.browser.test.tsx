@@ -16,8 +16,10 @@ import { mountEditorRuntime } from "./mount.js";
 
 const registry = createBlockRegistry(coreBlocks);
 
-// What the SSR does to its own embeds: an authored `</script>` would otherwise
-// close the tag that carries it.
+/**
+ * What the SSR does to its own embeds: an authored `</script>` would otherwise
+ * close the tag that carries it.
+ */
 const embed = (value: unknown): string =>
   JSON.stringify(value).replace(/</g, "\\u003c");
 

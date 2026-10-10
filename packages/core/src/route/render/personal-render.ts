@@ -6,8 +6,10 @@ import type { RequestMemo } from "../../context/memo.js";
 import { canAccessAdmin } from "../../access/contract/rbac.js";
 import { resolveLocale } from "../../i18n/resolve-locale.js";
 
-// Keyed on the memo: derived contexts are spreads, and the memo is the one
-// object every derivation carries.
+/**
+ * Keyed on the memo: derived contexts are spreads, and the memo is the one
+ * object every derivation carries.
+ */
 interface RenderVerdict {
   personal: boolean;
   readonly adminBarViewer: AuthenticatedUser | null;
@@ -51,14 +53,18 @@ export function trackPrincipalReads(ctx: AppContext): AppContext {
   };
 }
 
-// The staff check the admin shell makes (#2814): the bar has nothing to offer
-// anyone else.
+/**
+ * The staff check the admin shell makes (#2814): the bar has nothing to offer
+ * anyone else.
+ */
 function staffViewer(user: AuthenticatedUser): AuthenticatedUser | null {
   return canAccessAdmin(user.role) ? user : null;
 }
 
-// The context's locale was resolved with the principal; the request alone may
-// resolve to another, through the site's `i18n.resolveLocale` override.
+/**
+ * The context's locale was resolved with the principal; the request alone may
+ * resolve to another, through the site's `i18n.resolveLocale` override.
+ */
 function localeIsPersonal(ctx: AppContext): boolean {
   const anonymous = resolveLocale({
     request: ctx.request,

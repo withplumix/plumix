@@ -27,18 +27,22 @@ const slugInput = v.object({
 const START_OF_DAY = "00:00:00.000Z";
 const END_OF_DAY = "23:59:59.999Z";
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
-// `Date` reads a zoneless instant in the process timezone, which differs
-// between Workers and a developer's machine.
+/**
+ * `Date` reads a zoneless instant in the process timezone, which differs
+ * between Workers and a developer's machine.
+ */
 const ZONED_INSTANT =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/;
 
-// A bare date is a whole UTC day, so `until` reads its end, not midnight.
+/** A bare date is a whole UTC day, so `until` reads its end, not midnight. */
 function atEdge(raw: string, edge: string): string {
   return DATE_ONLY.test(raw) ? `${raw}T${edge}` : raw;
 }
 
-// Matched before parsing: `Date.parse` also accepts `Aug 24 2026`, which
-// would skip the day widening.
+/**
+ * Matched before parsing: `Date.parse` also accepts `Aug 24 2026`, which
+ * would skip the day widening.
+ */
 function isBound(raw: string, edge: string): boolean {
   if (!DATE_ONLY.test(raw) && !ZONED_INSTANT.test(raw)) return false;
   return !Number.isNaN(Date.parse(atEdge(raw, edge)));
@@ -103,7 +107,7 @@ const submissionListInput = v.object({
   ),
 });
 
-// Listing forms needs the inbox permission too.
+/** Listing forms needs the inbox permission too. */
 function requireInboxAccess(ctx: AppContext): void {
   if (!ctx.auth.can(SUBMISSION_MODERATE_CAPABILITY)) {
     throw McpToolError.forbidden(

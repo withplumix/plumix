@@ -20,8 +20,10 @@ declare module "plumix" {
   }
 }
 
-// Plain descriptor literals, hand-authored into `locales/*.po` like every
-// other string this plugin renders server-side.
+/**
+ * Plain descriptor literals, hand-authored into `locales/*.po` like every
+ * other string this plugin renders server-side.
+ */
 const M = {
   subject: {
     id: "plugin.comments.mail.pending.subject",

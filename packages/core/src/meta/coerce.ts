@@ -33,8 +33,10 @@ const booleanSchema = v.union([
   ),
 ]);
 
-// The standard library under-types both: `stringify` can return `undefined`,
-// and `parse` of a string this module produced is JSON by construction.
+/**
+ * The standard library under-types both: `stringify` can return `undefined`,
+ * and `parse` of a string this module produced is JSON by construction.
+ */
 const stringifyJson: (value: unknown) => string | undefined = JSON.stringify;
 const parseJson: (text: string) => JsonValue = JSON.parse;
 
@@ -73,8 +75,10 @@ export function coerceValue(type: MetaScalarType, value: unknown): Coerced {
   return result.success ? { ok: true, value: result.output } : COERCE_FAIL;
 }
 
-// A hydrated reference payload as it comes back off a read: the lookup
-// adapter's row, of which only the id is ever stored.
+/**
+ * A hydrated reference payload as it comes back off a read: the lookup
+ * adapter's row, of which only the id is ever stored.
+ */
 const referencePayloadSchema = v.object({ id: v.string() });
 
 /**

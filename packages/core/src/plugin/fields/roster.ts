@@ -81,21 +81,27 @@ export type TemporalInputType = (typeof TEMPORAL_INPUT_TYPES)[number];
 
 type Assert<T extends true> = T;
 
-// Each `<T>()` is deliberately single-use: deferring the conditional is what
-// makes this exact equality rather than mutual assignability.
+/**
+ * Each `<T>()` is deliberately single-use: deferring the conditional is what
+ * makes this exact equality rather than mutual assignability.
+ */
 type Equals<A, B> =
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
   (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
     ? true
     : false;
 
-// In the core union but not the roster: media self-registers its admin
-// renderers, so it stays unreserved.
+/**
+ * In the core union but not the roster: media self-registers its admin
+ * renderers, so it stays unreserved.
+ */
 type ParkedInputType = "media" | "mediaList";
 
-// The roster plus the parked kinds must equal the union's `inputType`
-// discriminants; a variant without a roster entry, or the reverse, fails
-// typecheck.
+/**
+ * The roster plus the parked kinds must equal the union's `inputType`
+ * discriminants; a variant without a roster entry, or the reverse, fails
+ * typecheck.
+ */
 type _RosterBindsUnion = Assert<
   Equals<
     (typeof CANONICAL_INPUT_TYPES)[number] | ParkedInputType,

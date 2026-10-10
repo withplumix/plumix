@@ -36,7 +36,7 @@ export interface DiskObjectStorage extends ObjectStorage {
   readonly config: DiskStorageConfig;
 }
 
-// Beside the bytes, so `head` and `list` never read them.
+/** Beside the bytes, so `head` and `list` never read them. */
 interface Sidecar extends HeadResult {
   readonly uploaded: string;
 }
@@ -62,7 +62,7 @@ async function readSidecar(path: string): Promise<Sidecar | null> {
   }
 }
 
-// Opened on the first read, so a body nobody consumes holds no descriptor.
+/** Opened on the first read, so a body nobody consumes holds no descriptor. */
 function fileBody(
   file: string,
   range: GetOptions["range"],

@@ -7,8 +7,10 @@ import type { CardFontPlan } from "../card-fonts.js";
 import type { OgCardSkip, OgChainOutcome, OgTrace } from "../chain-trace.js";
 import { OG_PANEL_ID } from "../chain-trace.js";
 
-// "if one is set": this plugin can't see from inside the filter whether a site
-// default exists. `supplied` means an earlier subscriber.
+/**
+ * "if one is set": this plugin can't see from inside the filter whether a site
+ * default exists. `supplied` means an earlier subscriber.
+ */
 const OUTCOME_LABEL: Record<OgChainOutcome, string> = {
   supplied: "Another seo:og_image subscriber",
   card: "Generated card",
@@ -16,8 +18,10 @@ const OUTCOME_LABEL: Record<OgChainOutcome, string> = {
   "site-default": "Site default, if one is set",
 };
 
-// Shown here instead of a boot-time warning for an unadvertisable renderer
-// format.
+/**
+ * Shown here instead of a boot-time warning for an unadvertisable renderer
+ * format.
+ */
 const SKIP_REASON: Record<OgCardSkip, string> = {
   "page-kind":
     "This page kind cannot be named by a card URL — a search page's subject " +
@@ -54,7 +58,7 @@ export function ogDebugPanel(options: OgDebugPanelOptions): DebugPanel {
   };
 }
 
-// A face the renderer never receives leaves no visible mark on the card.
+/** A face the renderer never receives leaves no visible mark on the card. */
 function fontRows(plan: CardFontPlan): readonly DebugKVRow[] {
   if (plan.ignored.length > 0) {
     return [

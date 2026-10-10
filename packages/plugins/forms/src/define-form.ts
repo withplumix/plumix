@@ -55,14 +55,16 @@ export interface TurnstileConfig {
   readonly secret: EnvInput<string>;
 }
 
-// `Extract` drops page breaks, which carry no answer.
+/** `Extract` drops page breaks, which carry no answer. */
 type FormFieldInputs<Elements extends readonly FormElementInput[]> = Extract<
   Elements[number],
   MetaBoxFieldInput
 >[];
 
-// Values allow `undefined` so `InferStoredFields` is assignable here,
-// keeping `defineForm`'s widening a single assertion.
+/**
+ * Values allow `undefined` so `InferStoredFields` is assignable here,
+ * keeping `defineForm`'s widening a single assertion.
+ */
 type AnyAnswers = Readonly<Record<string, JsonValue | undefined>>;
 
 /**

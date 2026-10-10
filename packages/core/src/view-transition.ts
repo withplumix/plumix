@@ -20,9 +20,11 @@ export function transitionName(prefix: string, key: string | number): string {
   return serializeIdentifier(`${prefix}_${String(key)}`);
 }
 
-// CSSOM "serialize an identifier"
-// (https://drafts.csswg.org/cssom/#serialize-an-identifier), written out
-// because `CSS.escape` exists only in a browser.
+/**
+ * CSSOM "serialize an identifier"
+ * (https://drafts.csswg.org/cssom/#serialize-an-identifier), written out
+ * because `CSS.escape` exists only in a browser.
+ */
 function serializeIdentifier(value: string): string {
   let out = "";
   for (let index = 0; index < value.length; index++) {

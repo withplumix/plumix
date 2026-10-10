@@ -3,19 +3,23 @@ import * as path from "node:path";
 import ts from "typescript";
 import { describe, expect, test } from "vitest";
 
-// `bin/plumix.mjs` imports this directory's entry, so whatever it reaches
-// statically is evaluated by every `plumix` invocation before argv is even
-// parsed. Core's root barrel costs ~500ms to evaluate against ~4ms for its
-// `cli` subpath, and the one symbol the CLI wants from the barrel — `buildApp`
-// — is never called by a command that opts out through `deferApp`.
+/**
+ * `bin/plumix.mjs` imports this directory's entry, so whatever it reaches
+ * statically is evaluated by every `plumix` invocation before argv is even
+ * parsed. Core's root barrel costs ~500ms to evaluate against ~4ms for its
+ * `cli` subpath, and the one symbol the CLI wants from the barrel — `buildApp`
+ * — is never called by a command that opts out through `deferApp`.
+ */
 const CLI = import.meta.dirname;
 const BARREL = "@plumix/core";
 const ENTRY = path.join(CLI, "index.ts");
 
-// Only a whole-statement `import type` is erased. Under `verbatimModuleSyntax`
-// an inline `type` specifier still emits `import {} from "…"`, which loads the
-// module and drags its graph along — so that shape has to count as runtime, and
-// so does a re-export, which is how `kit.ts` reaches core at all.
+/**
+ * Only a whole-statement `import type` is erased. Under `verbatimModuleSyntax`
+ * an inline `type` specifier still emits `import {} from "…"`, which loads the
+ * module and drags its graph along — so that shape has to count as runtime, and
+ * so does a re-export, which is how `kit.ts` reaches core at all.
+ */
 function importsOf(file: string): {
   readonly runtime: readonly string[];
   readonly dynamic: readonly string[];
@@ -61,11 +65,13 @@ function importsOf(file: string): {
   return { runtime, dynamic };
 }
 
-// Following the graph rather than scanning `src/cli/`, because the cost can
-// arrive from outside it: `../vite/index.ts` imports the barrel at runtime, and
-// one CLI module reaching for it would put ~500ms back with every file in this
-// directory still clean. Maps each file to its importer so a failure names the
-// chain instead of only the destination.
+/**
+ * Following the graph rather than scanning `src/cli/`, because the cost can
+ * arrive from outside it: `../vite/index.ts` imports the barrel at runtime, and
+ * one CLI module reaching for it would put ~500ms back with every file in this
+ * directory still clean. Maps each file to its importer so a failure names the
+ * chain instead of only the destination.
+ */
 function reachesBarrel(entry: string): string | undefined {
   const importedBy = new Map<string, string | undefined>([[entry, undefined]]);
   const queue = [entry];
@@ -90,8 +96,10 @@ function reachesBarrel(entry: string): string | undefined {
   return undefined;
 }
 
-// Only a relative specifier re-enters this package's own graph; a bare one is a
-// leaf as far as this walk is concerned.
+/**
+ * Only a relative specifier re-enters this package's own graph; a bare one is a
+ * leaf as far as this walk is concerned.
+ */
 function resolveLocal(from: string, specifier: string): string | undefined {
   if (!specifier.startsWith(".")) return undefined;
   const base = path.resolve(path.dirname(from), specifier).replace(/\.js$/, "");

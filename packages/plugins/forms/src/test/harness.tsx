@@ -20,8 +20,10 @@ const blog = definePlugin("test_blog", (ctx) => {
   });
 });
 
-// The entry's blocks on its page — the only way the form block's own
-// markup reaches a visitor.
+/**
+ * The entry's blocks on its page — the only way the form block's own
+ * markup reaches a visitor.
+ */
 function entryBlocks(data: EntryData): ReactNode {
   return <BlockRenderer content={data.entry.contentBlocks} />;
 }
@@ -52,7 +54,10 @@ export interface FormsHarnessOptions {
   readonly env?: PlumixEnv;
   /** The visitor's address, as a runtime adapter reports it to core. */
   readonly clientAddress?: string;
-  /** What an entry's page renders in place of its blocks — a theme's own template. */
+  /**
+   * What an entry's page renders in place of its blocks — a theme's own
+   * template.
+   */
   readonly entryTemplate?: (data: EntryData) => ReactNode;
   /** The subdirectory the site is served under. */
   readonly basePath?: string;

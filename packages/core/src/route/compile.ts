@@ -12,12 +12,16 @@ import { matchRoute } from "./match.js";
 
 const AUTO_ROUTE_PRIORITY = 50;
 export const DEFAULT_REWRITE_RULE_PRIORITY = 10;
-// Framework-owned routes sort ahead of explicit rewrites so a plugin's
-// catch-all can't shadow `/page/N`.
+/**
+ * Framework-owned routes sort ahead of explicit rewrites so a plugin's
+ * catch-all can't shadow `/page/N`.
+ */
 const FRAMEWORK_ROUTE_PRIORITY = 5;
-// Empty-baseSlug single patterns (`/:slug` or `/:path+`) match everything
-// at the URL root, so they sort after sibling-plugin auto rules to keep
-// resolution order-independent.
+/**
+ * Empty-baseSlug single patterns (`/:slug` or `/:path+`) match everything
+ * at the URL root, so they sort after sibling-plugin auto rules to keep
+ * resolution order-independent.
+ */
 const CATCH_ALL_ROUTE_PRIORITY = 60;
 
 /**
@@ -30,8 +34,10 @@ function isPaginatedRoute(route: string): boolean {
   return route.endsWith(FRAMEWORK_PAGINATION_SUFFIX);
 }
 
-// One array per archive, so a consumer that compiles the list into patterns
-// can cache on its identity the way it does for a `routes` it was handed.
+/**
+ * One array per archive, so a consumer that compiles the list into patterns
+ * can cache on its identity the way it does for a `routes` it was handed.
+ */
 const derivedRoutes = new WeakMap<RegisteredArchiveType, readonly string[]>();
 
 /**
@@ -61,8 +67,10 @@ export const FRAMEWORK_SEARCH_PAGINATED_PATTERN = `${FRAMEWORK_SEARCH_QUERY_PATT
 export const FRAMEWORK_AUTHOR_PATTERN = "/authors/:slug";
 export const FRAMEWORK_AUTHOR_PAGINATED_PATTERN = `${FRAMEWORK_AUTHOR_PATTERN}${FRAMEWORK_PAGINATION_SUFFIX}`;
 
-// These sort at framework priority, so `/2026` shadows a post slugged "2026"
-// (as WP reserves date URLs) unless the site turns `routes.date` off.
+/**
+ * These sort at framework priority, so `/2026` shadows a post slugged "2026"
+ * (as WP reserves date URLs) unless the site turns `routes.date` off.
+ */
 const YEAR = ":year(\\d{4})";
 const MONTH = ":month(\\d{2})";
 const DAY = ":day(\\d{2})";
@@ -329,9 +337,11 @@ function autoRulesForTermTaxonomy(
   ];
 }
 
-// URL-pattern syntax in a slug would widen the rule into a catch-all. `""` is
-// allowed only for entry types (root mount); a taxonomy would compile
-// `//:term`.
+/**
+ * URL-pattern syntax in a slug would widen the rule into a catch-all. `""` is
+ * allowed only for entry types (root mount); a taxonomy would compile
+ * `//:term`.
+ */
 function baseSlugFor(
   spec: RegisteredEntryType | RegisteredTermTaxonomy,
   registration: RegistrationKind,
@@ -384,8 +394,10 @@ function archiveSlugFor(
   return baseSlug;
 }
 
-// A plugin may shadow a framework route at a priority that beats it, and then
-// owns the pattern. Runs before the sort, so the framework rule is seen first.
+/**
+ * A plugin may shadow a framework route at a priority that beats it, and then
+ * owns the pattern. Runs before the sort, so the framework rule is seen first.
+ */
 function assertUniquePatterns(rules: readonly CompiledRule[]): void {
   const owner = new Map<string, CompiledRule>();
   for (const rule of rules) {
@@ -405,8 +417,10 @@ function assertUniquePatterns(rules: readonly CompiledRule[]): void {
   }
 }
 
-// A non-numeric segment, so the probe stays out of the URL space the framework
-// reserves on purpose: date archives (`/2026`) and root pagination (`/page/2`).
+/**
+ * A non-numeric segment, so the probe stays out of the URL space the framework
+ * reserves on purpose: date archives (`/2026`) and root pagination (`/page/2`).
+ */
 const SAMPLE_SEGMENT = "sample";
 const SAMPLE_PAGE = "2";
 const SAMPLE_ORIGIN = "https://sample.invalid";
@@ -418,9 +432,11 @@ function samplePathFor(rawPattern: string): string {
   );
 }
 
-// Permalink builders emit auto rules' URLs, so a framework rule answering one
-// first misdirects sitemaps and canonicals. Probing sorted rules lets a
-// deliberate shadow keep its URLs.
+/**
+ * Permalink builders emit auto rules' URLs, so a framework rule answering one
+ * first misdirects sitemaps and canonicals. Probing sorted rules lets a
+ * deliberate shadow keep its URLs.
+ */
 function assertAutoUrlsResolveToThemselves(
   sorted: readonly CompiledRule[],
 ): void {

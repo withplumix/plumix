@@ -2,8 +2,10 @@ import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { format, resolveConfig } from "prettier";
 
-// Everything in `src/` is a component module unless it is the barrel itself
-// or a test.
+/**
+ * Everything in `src/` is a component module unless it is the barrel itself
+ * or a test.
+ */
 const BARREL = "index";
 
 /**

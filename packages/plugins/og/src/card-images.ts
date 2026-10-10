@@ -59,13 +59,17 @@ async function readImages(
   return read.filter((image) => image !== null);
 }
 
-// The isolate has 128 MB and a decoded raster is several times its encoded
-// size. Checked on object metadata, so an oversized upload never reaches
-// memory.
+/**
+ * The isolate has 128 MB and a decoded raster is several times its encoded
+ * size. Checked on object metadata, so an oversized upload never reaches
+ * memory.
+ */
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
-// The engine throws on non-image bytes, losing the whole card rather than one
-// picture. A missing content type is trusted.
+/**
+ * The engine throws on non-image bytes, losing the whole card rather than one
+ * picture. A missing content type is trusted.
+ */
 function isRenderable(object: GetResult): boolean {
   if (object.size > MAX_IMAGE_BYTES) return false;
   return object.contentType === undefined || isImageMime(object.contentType);
@@ -75,9 +79,11 @@ function isImageMime(mime: string): boolean {
   return mime.startsWith("image/");
 }
 
-// A candidate key counts only if the slot mints that same `src` back, so no
-// string becomes a read of another key. Signed URLs match nothing, failing
-// safe.
+/**
+ * A candidate key counts only if the slot mints that same `src` back, so no
+ * string becomes a read of another key. Signed URLs match nothing, failing
+ * safe.
+ */
 async function addressedKey(
   storage: NonNullable<AppContext["storage"]>,
   base: string | null,
@@ -89,8 +95,10 @@ async function addressedKey(
   return (await storage.url(key)) === src ? key : null;
 }
 
-// The media plugin's public proxy path, read structurally so this plugin
-// needn't import it.
+/**
+ * The media plugin's public proxy path, read structurally so this plugin
+ * needn't import it.
+ */
 const MEDIA_SERVE_PATH = "/_plumix/media/serve/";
 const MEDIA_ENTRY_TYPE = "media";
 
@@ -137,12 +145,14 @@ async function mediaKeys(
   return keys;
 }
 
-// 15 digits max keeps the parsed value below Number.MAX_SAFE_INTEGER.
+/** 15 digits max keeps the parsed value below Number.MAX_SAFE_INTEGER. */
 const MEDIA_ID = /^[1-9]\d{0,14}$/;
 
-// Parsed rather than string-matched: a `src` is resolved against the site's own
-// origin, so a relative path and the absolute form of it are one URL, and
-// `//elsewhere.example/_plumix/media/serve/1` is not.
+/**
+ * Parsed rather than string-matched: a `src` is resolved against the site's own
+ * origin, so a relative path and the absolute form of it are one URL, and
+ * `//elsewhere.example/_plumix/media/serve/1` is not.
+ */
 function mediaId(src: string, ctx: AppContext): number | null {
   const url = URL.parse(src, ctx.origin);
   if (url === null || url.origin !== URL.parse(ctx.origin)?.origin) return null;
@@ -152,8 +162,10 @@ function mediaId(src: string, ctx: AppContext): number | null {
   return MEDIA_ID.test(id) ? Number.parseInt(id, 10) : null;
 }
 
-// A `src` reaches here straight out of content, so a malformed escape is an
-// input to reject rather than a throw on the render path.
+/**
+ * A `src` reaches here straight out of content, so a malformed escape is an
+ * input to reject rather than a throw on the render path.
+ */
 function decodePath(value: string): string | null {
   try {
     return decodeURIComponent(value);
@@ -172,8 +184,10 @@ function collectSrcs(node: CardNode): string[] {
   return (node.children ?? []).flatMap(collectSrcs);
 }
 
-// Null where the image was dropped: its parent closes over the gap rather than
-// keeping a node with nothing behind it.
+/**
+ * Null where the image was dropped: its parent closes over the gap rather than
+ * keeping a node with nothing behind it.
+ */
 function prune(node: CardNode, resolved: ReadonlySet<string>): CardNode | null {
   if (node.type === "image") {
     return isInline(node.src) || resolved.has(node.src) ? node : null;

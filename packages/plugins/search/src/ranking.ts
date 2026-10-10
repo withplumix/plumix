@@ -12,8 +12,10 @@ export interface RankingWeights {
   readonly body: number;
 }
 
-// A title says what an entry is about; ten to one still lets a genuinely
-// denser body match win.
+/**
+ * A title says what an entry is about; ten to one still lets a genuinely
+ * denser body match win.
+ */
 const WEIGHTS: Readonly<Record<RankingAlgorithm, RankingWeights>> = {
   "bm25-v1": { title: 10, body: 1 },
 };

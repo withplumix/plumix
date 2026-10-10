@@ -24,9 +24,11 @@ import {
 
 import { SettingsGroupCard } from "./-settings-group-card.js";
 
-// Descriptors that need runtime indirection — used outside JSX (aria
-// string, state setters). Pure-JSX strings stay inline at their `<Trans>`
-// callsite per the rest of admin's style.
+/**
+ * Descriptors that need runtime indirection — used outside JSX (aria
+ * string, state setters). Pure-JSX strings stay inline at their `<Trans>`
+ * callsite per the rest of admin's style.
+ */
 const M = {
   loadingAria: defineMessage({
     id: "settings.page.loading",
@@ -38,10 +40,12 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-// Literal API signature rendered inside the empty-state `<code>`.
-// Pulled to a module-scope const so the strict rule sees one string
-// expression instead of three JSX text fragments split by `{"{"}` /
-// `{"}"}` escapes.
+/**
+ * Literal API signature rendered inside the empty-state `<code>`.
+ * Pulled to a module-scope const so the strict rule sees one string
+ * expression instead of three JSX text fragments split by `{"{"}` /
+ * `{"}"}` escapes.
+ */
 // eslint-disable-next-line lingui/no-unlocalized-strings -- API signature, not user copy
 const API_SIGNATURE = "ctx.registerSettingsPage(name, { groups: [...] })";
 

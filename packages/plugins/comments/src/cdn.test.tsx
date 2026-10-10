@@ -23,7 +23,7 @@ function cdnStub() {
   return { cdn, put, purgeTags };
 }
 
-// A permalink template rendering the entry's approved thread.
+/** A permalink template rendering the entry's approved thread. */
 const theme = defineTheme({
   templates: [
     entry(

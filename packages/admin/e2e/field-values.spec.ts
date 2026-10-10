@@ -29,8 +29,10 @@ const UNSETTLED = {
 
 const CLEAN = { keys: [], settled: 0, next: null };
 
-// `meta.sweep` answers a report or a settle depending on the `write` it is
-// sent, so the mock reads the request rather than answering by path alone.
+/**
+ * `meta.sweep` answers a report or a settle depending on the `write` it is
+ * sent, so the mock reads the request rather than answering by path alone.
+ */
 async function mockSweep(
   page: Page,
   answer: (write: boolean, cursor: unknown) => unknown,

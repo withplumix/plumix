@@ -46,7 +46,9 @@ const OG_IMAGE_KEY = "shareImage";
 /** The reference kind the harness's role fields point at. */
 const PHOTO_KIND = "photo";
 
-/** What {@link photoAdapter} hydrates an id to — the shape its `image()` reads. */
+/**
+ * What {@link photoAdapter} hydrates an id to — the shape its `image()` reads.
+ */
 interface PhotoReference {
   readonly id: string;
   readonly url: string;
@@ -55,10 +57,12 @@ interface PhotoReference {
   readonly alt: string | null;
 }
 
-// Where `seedEntry` stores the picture it was handed, so a role field holds
-// the bare id a real reference holds and the adapter hands the row back. Ids
-// are never reused, so a photo left behind by an earlier test is simply never
-// asked for again.
+/**
+ * Where `seedEntry` stores the picture it was handed, so a role field holds
+ * the bare id a real reference holds and the adapter hands the row back. Ids
+ * are never reused, so a photo left behind by an earlier test is simply never
+ * asked for again.
+ */
 const photos = new Map<string, PhotoReference>();
 let nextPhoto = 0;
 
@@ -105,13 +109,15 @@ const photoAdapter = {
       : { url, alt },
 } satisfies LookupAdapter;
 
-// A host plugin registering the shapes a card has to tell apart: a public type,
-// a private one, and three access-policied ones — gated by the type, gated by
-// the entry's own choice, and behind a *soft* gate whose page a scraper still
-// reaches. The role-tagged media fields the precedence chain reads hang off the
-// public type; they point at {@link photoAdapter} rather than at the media
-// plugin's own kind, since what the chain reads is the role and the image an
-// adapter makes of its payload — which keeps this suite off a second plugin.
+/**
+ * A host plugin registering the shapes a card has to tell apart: a public type,
+ * a private one, and three access-policied ones — gated by the type, gated by
+ * the entry's own choice, and behind a *soft* gate whose page a scraper still
+ * reaches. The role-tagged media fields the precedence chain reads hang off the
+ * public type; they point at {@link photoAdapter} rather than at the media
+ * plugin's own kind, since what the chain reads is the role and the image an
+ * adapter makes of its payload — which keeps this suite off a second plugin.
+ */
 const testBlog = definePlugin("test_blog", {
   setup: (ctx) => {
     ctx.registerEntryType("post", {
@@ -254,7 +260,9 @@ export interface HarnessOptions extends OgPluginOptions {
   readonly telemetry?: TelemetryConfig;
 }
 
-/** A fresh in-memory bucket, which is what a harness gets unless told otherwise. */
+/**
+ * A fresh in-memory bucket, which is what a harness gets unless told otherwise.
+ */
 function bucket(): ConnectedObjectStorage {
   return memoryStorage().connect({});
 }
@@ -325,7 +333,10 @@ export async function createHarness(
   return harness;
 }
 
-/** A bare number reads as the entry it is, which is what most of the suite asks for. */
+/**
+ * A bare number reads as the entry it is, which is what most of the suite asks
+ * for.
+ */
 function targetOf(target: number | CardTarget): CardTarget {
   return typeof target === "number" ? { kind: "entry", id: target } : target;
 }
@@ -462,11 +473,15 @@ export interface SeedTermOverrides {
   readonly taxonomy?: string;
   readonly name?: string;
   readonly slug?: string;
-  /** Entries filed under the term, which is what makes its archive non-empty. */
+  /**
+   * Entries filed under the term, which is what makes its archive non-empty.
+   */
   readonly entryIds?: readonly number[];
 }
 
-/** The rendered head of one post, which is what the chain is asserted through. */
+/**
+ * The rendered head of one post, which is what the chain is asserted through.
+ */
 export function headOf(
   harness: DispatcherHarness,
   slug: string,
@@ -474,7 +489,9 @@ export function headOf(
   return harness.fetch(`/posts/${slug}`).then((response) => response.text());
 }
 
-/** The one `og:image` a head carries, or undefined — a readable diff on failure. */
+/**
+ * The one `og:image` a head carries, or undefined — a readable diff on failure.
+ */
 export function ogImageOf(html: string): string | undefined {
   return /<meta property="og:image" content="([^"]*)"\/>/.exec(html)?.[1];
 }

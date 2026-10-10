@@ -12,21 +12,27 @@ import { UNREACHABLE } from "./messages.js";
 import { isRefusalCode, REFUSALS } from "./refusals.js";
 import { COMMENT_STATUSES } from "./types.js";
 
-// Decoded, not asserted: a stale service worker, proxy or captive portal can
-// answer 200 with something else.
+/**
+ * Decoded, not asserted: a stale service worker, proxy or captive portal can
+ * answer 200 with something else.
+ */
 const AnswerResponse = v.union([
   v.object({ status: v.picklist(COMMENT_STATUSES) }),
   v.object({ error: v.string() }),
 ]);
 
-// Names no field, so the summary renders it as text and a theme reads it via
-// `errorFor("")`.
+/**
+ * Names no field, so the summary renders it as text and a theme reads it via
+ * `errorFor("")`.
+ */
 const unreachable: readonly CommentFormError[] = [
   { field: "", message: labelSourceText(UNREACHABLE) },
 ];
 
-// Wording comes from the server's table, so the browser shows exactly what the
-// no-JavaScript page would.
+/**
+ * Wording comes from the server's table, so the browser shows exactly what the
+ * no-JavaScript page would.
+ */
 function refusalErrors(code: string): readonly CommentFormError[] {
   if (!isRefusalCode(code)) return unreachable;
   const refusal = REFUSALS[code];
@@ -74,8 +80,10 @@ export function submitAction(basePath?: string): string {
   return `${basePath ?? documentBasePath()}${SUBMIT_PATH}`;
 }
 
-// Plain JSON turns `createdAt` into a string; revive it so `ResolvedComment`
-// doesn't lie.
+/**
+ * Plain JSON turns `createdAt` into a string; revive it so `ResolvedComment`
+ * doesn't lie.
+ */
 const PagedComment: v.GenericSchema<unknown, ResolvedComment> = v.object({
   id: v.number(),
   authorName: v.string(),

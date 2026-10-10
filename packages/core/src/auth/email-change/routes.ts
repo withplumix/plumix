@@ -7,9 +7,11 @@ import { resolveLoginPath } from "../config.js";
 import { EmailChangeError } from "./errors.js";
 import { verifyEmailChange } from "./verify.js";
 
-// Defensive bound on the inbound `token` query param. Same shape
-// as magic-link's verify route — protects against pathological
-// query strings.
+/**
+ * Defensive bound on the inbound `token` query param. Same shape
+ * as magic-link's verify route — protects against pathological
+ * query strings.
+ */
 const MAX_TOKEN_LENGTH = 256;
 
 /**

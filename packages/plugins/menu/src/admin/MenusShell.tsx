@@ -36,13 +36,17 @@ import {
   setSelectedTab,
 } from "./url-state.js";
 
-// Radix Select forbids an empty-string item value, so the "unassigned" choice
-// carries a sentinel that maps back to `null` (no menu) on change.
+/**
+ * Radix Select forbids an empty-string item value, so the "unassigned" choice
+ * carries a sentinel that maps back to `null` (no menu) on change.
+ */
 const UNASSIGNED_VALUE = "__unassigned__";
 
-// Plain descriptor literals — the plugin package builds with plain
-// `tsc`, no Lingui macro pass, so we author the `{ id, message }`
-// shape directly. Resolved at the consume site via `useLingui()._()`.
+/**
+ * Plain descriptor literals — the plugin package builds with plain
+ * `tsc`, no Lingui macro pass, so we author the `{ id, message }`
+ * shape directly. Resolved at the consume site via `useLingui()._()`.
+ */
 const M = {
   tabEdit: {
     id: "plugin.menu.shell.tab.edit",

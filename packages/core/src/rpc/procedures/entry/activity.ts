@@ -11,7 +11,7 @@ import { idParam } from "../../contract/validation.js";
 
 const listInput = v.object({ entryId: idParam });
 
-// Polled over HTTP by admin clients, not real-time presence.
+/** Polled over HTTP by admin clients, not real-time presence. */
 const ACTIVE_WINDOW_MS = 5 * 60 * 1000;
 
 export const list = base

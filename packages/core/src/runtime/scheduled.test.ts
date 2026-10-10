@@ -23,10 +23,12 @@ beforeAll(async () => {
   db = await createTestDb();
 });
 
-// Returns the context alongside the `error` spy as a standalone handle. Asserting
-// on the handle rather than `ctx.logger.error` keeps `unbound-method` happy —
-// `AppContext.logger.error` is a method type, so reading it back off the object
-// reads as an unbound method reference.
+/**
+ * Returns the context alongside the `error` spy as a standalone handle.
+ * Asserting on the handle rather than `ctx.logger.error` keeps `unbound-method`
+ * happy — `AppContext.logger.error` is a method type, so reading it back off
+ * the object reads as an unbound method reference.
+ */
 function fakeCtx() {
   const error = vi.fn();
   const ctx = createTestContext({ db, logger: { ...silentLogger, error } });

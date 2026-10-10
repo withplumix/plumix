@@ -20,8 +20,10 @@ const USER_ROW_COLUMNS = {
   role: users.role,
 } as const;
 
-// `satisfies` keeps `hydrate`'s concrete `UserReferenceSummary` return
-// type visible instead of widening to the contract's `HydratedReference`.
+/**
+ * `satisfies` keeps `hydrate`'s concrete `UserReferenceSummary` return
+ * type visible instead of widening to the contract's `HydratedReference`.
+ */
 export const userLookupAdapter = {
   async list(ctx, options) {
     const conditions = scopeConditions(options.scope);

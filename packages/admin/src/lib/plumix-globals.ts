@@ -30,9 +30,11 @@ import {
   registerPluginPage,
 } from "./plugin-registry.js";
 
-// Keyed by core's shim roster, the same keys `plumix/admin/*` shims read
-// through `PlumixAdminRuntime`: a missing or stray key fails to compile here
-// rather than reaching a plugin chunk as `undefined`.
+/**
+ * Keyed by core's shim roster, the same keys `plumix/admin/*` shims read
+ * through `PlumixAdminRuntime`: a missing or stray key fails to compile here
+ * rather than reaching a plugin chunk as `undefined`.
+ */
 const runtime = {
   react: ReactNs,
   reactJsxRuntime: ReactJsxRuntimeNs,

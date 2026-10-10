@@ -24,8 +24,10 @@ export function userSearchCondition(term: SearchTerm): SQL {
   return likeAcross(term, [users.name, users.email]);
 }
 
-// COALESCE: `NOT (null LIKE ?)` is null, which would drop a row with no
-// excerpt from the excluded branch.
+/**
+ * COALESCE: `NOT (null LIKE ?)` is null, which would drop a row with no
+ * excerpt from the excluded branch.
+ */
 function likeAcross(
   term: SearchTerm,
   columns: readonly AnySQLiteColumn[],

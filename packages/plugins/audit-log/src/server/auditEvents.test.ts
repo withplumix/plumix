@@ -79,13 +79,15 @@ describe("registerAuditEvents — through a procedure", () => {
   });
 });
 
-// Loose-typed dispatch — slice 178's defer.test.ts uses the same
-// pattern. The action names here aren't all in `ActionRegistry`'s
-// typed view (some are core lifecycle actions), so we cast once to
-// keep the tests readable.
+/**
+ * Loose-typed dispatch — slice 178's defer.test.ts uses the same
+ * pattern. The action names here aren't all in `ActionRegistry`'s
+ * typed view (some are core lifecycle actions), so we cast once to
+ * keep the tests readable.
+ */
 type ActionDispatcher = (name: string, ...args: unknown[]) => Promise<void>;
 
-// The fake service never writes, so one database serves every request.
+/** The fake service never writes, so one database serves every request. */
 let db: TestDb;
 beforeAll(async () => {
   db = await createDb();

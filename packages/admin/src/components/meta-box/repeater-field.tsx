@@ -34,21 +34,25 @@ interface RepeaterRow {
   readonly index: number;
 }
 
-// Screen-reader name for the summary row's error triangle — the icon alone
-// doesn't convey the error non-visually.
+/**
+ * Screen-reader name for the summary row's error triangle — the icon alone
+ * doesn't convey the error non-visually.
+ */
 const ROW_ERROR_LABEL = defineMessage({
   id: "metaBox.repeater.rowError",
   message: "This row has an error",
 });
 
-// Row-numbered so a screen-reader rotor can tell the rows' buttons apart.
+/** Row-numbered so a screen-reader rotor can tell the rows' buttons apart. */
 const EDIT_ROW_LABEL = defineMessage({
   id: "metaBox.repeater.editRow.button",
   message: "Edit row {n}",
   comment: "n: 1-based index of the repeater row",
 });
 
-// Accessible names for the icon-only drag handle and remove button on each row.
+/**
+ * Accessible names for the icon-only drag handle and remove button on each row.
+ */
 const REORDER_ROW_LABEL = defineMessage({
   id: "metaBox.repeater.reorderRow",
   message: "Reorder",
@@ -59,7 +63,9 @@ const REMOVE_ROW_LABEL = defineMessage({
   message: "Remove",
 });
 
-// Malformed rows drop from display; the validator still rejects them on save.
+/**
+ * Malformed rows drop from display; the validator still rejects them on save.
+ */
 function asRows(raw: unknown): readonly ResolvedMeta[] {
   if (!Array.isArray(raw)) return [];
   return raw.filter(
@@ -261,8 +267,10 @@ export function RepeaterField({
   );
 }
 
-// Its own component: the row name is null while the dialog is closed, and
-// `useVisibleFields` must run unconditionally.
+/**
+ * Its own component: the row name is null while the dialog is closed, and
+ * `useVisibleFields` must run unconditionally.
+ */
 function RepeaterRowFields({
   subFields,
   rowName,
@@ -291,8 +299,10 @@ function RepeaterRowFields({
   );
 }
 
-// One row in the rail: a scannable summary + an Edit button opening the
-// dialog. Drag-handle and remove come from the enclosing `SortableList`.
+/**
+ * One row in the rail: a scannable summary + an Edit button opening the
+ * dialog. Drag-handle and remove come from the enclosing `SortableList`.
+ */
 function RepeaterSummaryRow({
   summary,
   rowNumber,
@@ -357,7 +367,7 @@ function RepeaterSummaryRow({
   );
 }
 
-// One whole message per shape so translators never see a fragment.
+/** One whole message per shape so translators never see a fragment. */
 function CountSuffix({
   min,
   max,
@@ -398,7 +408,9 @@ function CountSuffix({
   return null;
 }
 
-// Without `.collapsed()`, the first sub-field holding a non-empty primitive.
+/**
+ * Without `.collapsed()`, the first sub-field holding a non-empty primitive.
+ */
 function rowSummary(
   row: ResolvedMeta,
   subFields: readonly MetaBoxFieldManifestEntry[],
@@ -421,7 +433,7 @@ function rowSummary(
   return null;
 }
 
-// A select / radio value resolves to its translated label.
+/** A select / radio value resolves to its translated label. */
 function cellSummary(
   value: unknown,
   field: MetaBoxFieldManifestEntry | undefined,
@@ -433,8 +445,10 @@ function cellSummary(
   return option ? renderLabel(option.label) : raw;
 }
 
-// A stored primitive as a display string, or null when it's absent/blank or
-// a non-primitive (a nested group/repeater/reference).
+/**
+ * A stored primitive as a display string, or null when it's absent/blank or
+ * a non-primitive (a nested group/repeater/reference).
+ */
 function primitiveToString(value: unknown): string | null {
   if (typeof value === "string") return value === "" ? null : value;
   if (typeof value === "number" || typeof value === "boolean") {

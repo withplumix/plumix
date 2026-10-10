@@ -22,8 +22,10 @@ export const PASSKEY_ERROR_CODES = [
 
 export type PasskeyErrorCode = (typeof PASSKEY_ERROR_CODES)[number];
 
-// Structured diagnostic payload. Never returned to clients — the dispatcher
-// pulls it off via `error.detail` for server-side logging only.
+/**
+ * Structured diagnostic payload. Never returned to clients — the dispatcher
+ * pulls it off via `error.detail` for server-side logging only.
+ */
 interface PasskeyErrorDetail {
   readonly expected?: string;
   readonly actual?: string;

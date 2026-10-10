@@ -26,8 +26,10 @@ export interface ClientErrorRingOptions {
   readonly maxStringLength?: number;
 }
 
-// Client failures burst, so the entry cap is generous; the byte budget stops
-// one huge entry pinning memory.
+/**
+ * Client failures burst, so the entry cap is generous; the byte budget stops
+ * one huge entry pinning memory.
+ */
 const DEFAULT_MAX_ENTRIES = 50;
 const DEFAULT_MAX_TOTAL_BYTES = 500_000;
 const DEFAULT_MAX_STRING_LENGTH = 8_192;
@@ -66,7 +68,7 @@ export function createClientErrorRing(
   };
 }
 
-// Per-string cap so one giant value can't exhaust the byte budget alone.
+/** Per-string cap so one giant value can't exhaust the byte budget alone. */
 function boundStrings(
   entry: RetainedClientError,
   maxString: number,

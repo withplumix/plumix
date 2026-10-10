@@ -25,12 +25,14 @@ import {
 
 const run = promisify(execFile);
 
-// A 1×1 red PNG: enough for the image route to decode and re-encode.
+/** A 1×1 red PNG: enough for the image route to decode and re-encode. */
 const PIXEL =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
 
-// `my-native` stands in for a compiled addon the site declares external; the
-// probe routes give the shutdown cases in-flight and deferred work to observe.
+/**
+ * `my-native` stands in for a compiled addon the site declares external; the
+ * probe routes give the shutdown cases in-flight and deferred work to observe.
+ */
 const config = (marker: string) => `import { writeFileSync } from "node:fs";
 import { auth } from "plumix/auth";
 import { definePlugin } from "plumix/plugin";
@@ -120,8 +122,10 @@ function start(dir: string, env: NodeJS.ProcessEnv = {}): Promise<Started> {
   });
 }
 
-// SIGKILL after the case so a hung drain cannot outlive vitest; a no-op once
-// the process has exited on its own.
+/**
+ * SIGKILL after the case so a hung drain cannot outlive vitest; a no-op once
+ * the process has exited on its own.
+ */
 async function withServer(
   dir: string,
   body: (started: Started) => Promise<void>,

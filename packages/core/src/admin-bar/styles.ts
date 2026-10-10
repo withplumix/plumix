@@ -236,6 +236,8 @@ export const ADMIN_BAR_SIGNOUT_SCRIPT = `
 })();
 `;
 
-// With JS off the sign-out button can't do anything (the endpoint needs a
-// fetch with the CSRF header) — hide it rather than show a dead control.
+/**
+ * With JS off the sign-out button can't do anything (the endpoint needs a
+ * fetch with the CSRF header) — hide it rather than show a dead control.
+ */
 export const ADMIN_BAR_NOSCRIPT_CSS = "[data-plumix-signout]{display:none}";

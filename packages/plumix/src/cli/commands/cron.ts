@@ -42,8 +42,10 @@ export const cronCommand: CommandDefinition<PlumixApp> = {
   },
 };
 
-// Printed rather than hand-written: plugins contribute schedules, so a
-// hand-written crontab goes stale silently when a site installs one.
+/**
+ * Printed rather than hand-written: plugins contribute schedules, so a
+ * hand-written crontab goes stale silently when a site installs one.
+ */
 function listSchedules(app: PlumixApp): void {
   if (app.scheduledTasks.length === 0) {
     report.info("This site declares no scheduled tasks.");
@@ -204,8 +206,10 @@ function normalise(expression: string): string {
   return expression.trim().split(/\s+/).join(" ");
 }
 
-// The guard touches the database first, so an install that skipped `plumix
-// migrate` would otherwise meet a raw driver error.
+/**
+ * The guard touches the database first, so an install that skipped `plumix
+ * migrate` would otherwise meet a raw driver error.
+ */
 async function runGuarded(
   guard: ScheduledRunGuard,
   schedule: string,

@@ -7,8 +7,10 @@ import {
   vMessage,
 } from "@plumix/core/validation";
 
-// Localized here because core keeps only English. The term form keeps its own
-// looser schema: its slug is optional.
+/**
+ * Localized here because core keeps only English. The term form keeps its own
+ * looser schema: its slug is optional.
+ */
 const slugFormat = defineMessage({
   id: "admin.slug.format",
   message: "Slug must be lowercase letters, numbers, and dashes.",

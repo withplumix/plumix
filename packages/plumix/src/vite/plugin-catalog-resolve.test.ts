@@ -303,8 +303,8 @@ describe("plugin catalog resolution — real FS", () => {
 // installed admin package root. Two path expressions, two packages, nothing in
 // the type system holding them together — move `catalog-globs.ts` a directory,
 // or widen the glob, and the predicate silently stops matching it. The drift is
-// quiet in the direction that matters: plugins admin *did* bake in would be told
-// to fetch a catalog nobody staged.
+// quiet in the direction that matters: plugins admin *did* bake in would be
+// told to fetch a catalog nobody staged.
 test("the admin plugin-catalog glob and findAdminBundledPluginsDir name the same directory", async () => {
   const adminRoot = resolve(
     dirname(fileURLToPath(import.meta.url)),
@@ -329,13 +329,13 @@ test("the admin plugin-catalog glob and findAdminBundledPluginsDir name the same
   expect(findAdminBundledPluginsDir(adminRoot)).toBe(scanned);
 });
 
-// The copy itself, driven the way a consumer's `plumix build` drives it: a plugin
-// whose catalogs admin does not bake in, so its compiled `.mjs` has to reach the
-// staged admin dist for the runtime `import(url)` to find it. Every other test in
-// this file stops at resolution — whether a path resolves, whose `plugins/` dir it
-// lands in — and never copies anything. That left the manifest-driven half of the
-// pipeline uncovered, which is how a slot declaring only its source locale shipped
-// four releases with unreachable translations.
+// The copy itself, driven the way a consumer's `plumix build` drives it: a
+// plugin whose catalogs admin does not bake in, so its compiled `.mjs` has to
+// reach the staged admin dist for the runtime `import(url)` to find it. Every
+// other test in this file stops at resolution — whether a path resolves, whose
+// `plugins/` dir it lands in — and never copies anything. That left the
+// manifest-driven half of the pipeline uncovered, which is how a slot declaring
+// only its source locale shipped four releases with unreachable translations.
 describe("stagePluginCatalogs — real FS", () => {
   let projectRoot: string;
   let dest: string;
@@ -414,9 +414,9 @@ describe("stagePluginCatalogs — real FS", () => {
   });
 
   test("stages nothing when the slot declares only its source locale", async () => {
-    // The bug this guards: catalogs present on disk, but a slot naming only `en`
-    // projects an empty catalog map, so the plugin never reaches `pluginI18n` and
-    // the copy loop never runs.
+    // The bug this guards: catalogs present on disk, but a slot naming only
+    // `en` projects an empty catalog map, so the plugin never reaches
+    // `pluginI18n` and the copy loop never runs.
     await installPlugin(["en", "uk", "de"]);
     await stage(["en"]);
 
@@ -431,10 +431,12 @@ describe("stagePluginCatalogs — real FS", () => {
   });
 });
 
-// Minimal createRequire stub for resolution tests. Maps known package
-// specifiers to their resolved absolute paths; unknown specifiers
-// throw the same MODULE_NOT_FOUND shape Node's resolver emits, which
-// the resolver branches on.
+/**
+ * Minimal createRequire stub for resolution tests. Maps known package
+ * specifiers to their resolved absolute paths; unknown specifiers
+ * throw the same MODULE_NOT_FOUND shape Node's resolver emits, which
+ * the resolver branches on.
+ */
 function makeRequireFrom(
   resolutions: Readonly<Record<string, string>>,
 ): (filename: string) => { resolve: (id: string) => string } {
@@ -449,8 +451,10 @@ function makeRequireFrom(
   });
 }
 
-// pnpm's `node_modules/@plumix/plugin-<id>` link, pointed wherever the
-// test needs it.
+/**
+ * pnpm's `node_modules/@plumix/plugin-<id>` link, pointed wherever the
+ * test needs it.
+ */
 async function linkPlugin(
   projectRoot: string,
   pluginId: string,

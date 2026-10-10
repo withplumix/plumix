@@ -12,8 +12,10 @@ export type SearchPlan = "ranked" | "recent";
 /** How much of the corpus a word appears in before ranking it stops paying. */
 export const DEFAULT_COMMON_TERM_THRESHOLD = 12_000;
 
-// Bounds the recency plan's worst case. Measured at 50 000 entries: 0.43 ms to
-// confirm, 18 ms to reject, versus 761 ms choosing without asking.
+/**
+ * Bounds the recency plan's worst case. Measured at 50 000 entries: 0.43 ms to
+ * confirm, 18 ms to reject, versus 761 ms choosing without asking.
+ */
 const HEAD_WALK_CAP = 500;
 
 export interface PlanArgs {

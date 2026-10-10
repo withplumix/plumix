@@ -9,10 +9,12 @@ import { CONTENT_LIST_ROWS } from "plumix/test/playwright";
 
 const POST_TITLE = "A post I made in the demo";
 
-// The seeded typography showcase — the richest seeded entry, so it's a reliable
-// target for opening the editor and rendering tagged blocks. The seed pins it to
-// a fixed id (`POST_BASE_ID + 0` in seed/generate.mjs), so open it directly
-// rather than hunting a date-sorted, paginated list where it sits last.
+/**
+ * The seeded typography showcase — the richest seeded entry, so it's a reliable
+ * target for opening the editor and rendering tagged blocks. The seed pins it
+ * to a fixed id (`POST_BASE_ID + 0` in seed/generate.mjs), so open it directly
+ * rather than hunting a date-sorted, paginated list where it sits last.
+ */
 const SHOWCASE_ID = 200;
 const SHOWCASE_SLUG = "typography-and-elements-a-theme-test-sheet";
 
@@ -62,11 +64,13 @@ test("visitor enters the demo, creates a post, and it persists", async ({
   expect(blocked.status()).toBe(403);
 });
 
-// Regression: the visual editor was dead in the demo runtime (public renders
-// authenticated only `plumix_session`, so a `plumix_demo` visitor rendered
-// anonymous → no editor runtime → no bridge) and the demo pill leaked into the
-// canvas. Nothing opened the editor in the real demo runtime, so nothing caught
-// it — this does.
+/**
+ * Regression: the visual editor was dead in the demo runtime (public renders
+ * authenticated only `plumix_session`, so a `plumix_demo` visitor rendered
+ * anonymous → no editor runtime → no bridge) and the demo pill leaked into the
+ * canvas. Nothing opened the editor in the real demo runtime, so nothing caught
+ * it — this does.
+ */
 const CANVAS_FRAME = '[data-testid="plumix-canvas-frame"] iframe';
 
 test("the visual editor boots inside the demo — blocks are selectable, no demo pill in the canvas", async ({
@@ -81,10 +85,10 @@ test("the visual editor boots inside the demo — blocks are selectable, no demo
   await page.goto(`entries/posts/${String(SHOWCASE_ID)}/edit`);
   await page.waitForURL(/\/entries\/posts\/\d+\/edit/);
 
-  // The canvas iframe loads the entry's public route with `?plumix.edit`. If the
-  // editor runtime booted (the fix), edit mode is entered and the seeded blocks
-  // render tagged. Before the fix the render fell through to read-only, so no
-  // `data-plumix-mode="edit"` and no tagged blocks.
+  // The canvas iframe loads the entry's public route with `?plumix.edit`. If
+  // the editor runtime booted (the fix), edit mode is entered and the seeded
+  // blocks render tagged. Before the fix the render fell through to read-only,
+  // so no `data-plumix-mode="edit"` and no tagged blocks.
   const canvas = page.frameLocator(CANVAS_FRAME);
   await expect(canvas.locator('[data-plumix-mode="edit"]')).toBeAttached();
   await expect(canvas.locator("[data-plumix-id]").first()).toBeVisible();
@@ -151,7 +155,8 @@ test("the author byline links to the author archive of the author's posts", asyn
   await expect(byline).toHaveText("The Plumix Editors");
   await byline.click();
 
-  // Lands on the author archive, which renders the heading + the author's posts.
+  // Lands on the author archive, which renders the heading + the author's
+  // posts.
   await page.waitForURL(/\/authors\/the-plumix-editors/);
   await expect(page.getByTestId("post-list")).toContainText(
     "Posts by The Plumix Editors",

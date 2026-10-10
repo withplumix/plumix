@@ -5,7 +5,7 @@ import { blockTextRoster } from "./block-text.js";
 import { coreBlocks } from "./core-blocks.js";
 import { countProse } from "./count-prose.js";
 
-// The reading-length count reads the same declarations the extractor does.
+/** The reading-length count reads the same declarations the extractor does. */
 const roster = blockTextRoster(coreBlocks);
 const count = (blocks: readonly BlockNode[]) => countProse(blocks, roster);
 

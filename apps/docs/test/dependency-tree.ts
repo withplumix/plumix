@@ -17,8 +17,10 @@ function isRawWhyEntry(value: unknown): value is RawWhyEntry {
   return typeof value === "object" && value !== null;
 }
 
-// `pnpm why <pkg> --json` returns one top-level array entry per distinct
-// resolved copy, each carrying the real filesystem path pnpm installed it to.
+/**
+ * `pnpm why <pkg> --json` returns one top-level array entry per distinct
+ * resolved copy, each carrying the real filesystem path pnpm installed it to.
+ */
 export function parseResolvedCopies(whyOutputJson: string): ResolvedCopy[] {
   const parsed: unknown = JSON.parse(whyOutputJson);
   if (!Array.isArray(parsed)) return [];

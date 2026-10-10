@@ -26,9 +26,11 @@ function metaBox(id: string, entryTypes: readonly string[]) {
   } as const;
 }
 
-// A plugin whose registration is derived from the registry rather than known to
-// it — the shape `@plumix/plugin-seo` uses to put its box on every public entry
-// type, and the shape that only works once every plugin has registered.
+/**
+ * A plugin whose registration is derived from the registry rather than known to
+ * it — the shape `@plumix/plugin-seo` uses to put its box on every public entry
+ * type, and the shape that only works once every plugin has registered.
+ */
 const derived = definePlugin("derived", {
   setup: () => undefined,
   afterSetup: (ctx) => {
@@ -37,7 +39,9 @@ const derived = definePlugin("derived", {
   },
 });
 
-// Registered after the consumer above, so `setup` order alone cannot see it.
+/**
+ * Registered after the consumer above, so `setup` order alone cannot see it.
+ */
 const content = definePlugin("content", (ctx) => {
   ctx.registerEntryType("post", { label: "Posts", isPublic: true });
 });

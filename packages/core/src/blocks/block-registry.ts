@@ -150,8 +150,10 @@ export interface BlockSpec<
   readonly text?: readonly BlockTextInput[];
   readonly render: BlockNodeComponent<Attrs, Loaders>;
   readonly loaders?: Loaders;
-  // Renders in place of `render` when a loader rejects. Without one,
-  // the walker emits nothing (same shape as the unknown-block path).
+  /**
+   * Renders in place of `render` when a loader rejects. Without one,
+   * the walker emits nothing (same shape as the unknown-block path).
+   */
   readonly errorFallback?: (args: {
     readonly attrs: Attrs;
     readonly error: unknown;

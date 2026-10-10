@@ -24,8 +24,10 @@ export const DEV_ERROR_TERMINAL_ENDPOINT = "/@plumix-dev-error-terminal";
  */
 export const DEV_ERROR_CLIENT_ERRORS_ENDPOINT = "/@plumix-dev-client-errors";
 
-// Anchored, with no catch-all `.+`, so it can't backtrack superlinearly on a
-// hostile stack (CodeQL ReDoS).
+/**
+ * Anchored, with no catch-all `.+`, so it can't backtrack superlinearly on a
+ * hostile stack (CodeQL ReDoS).
+ */
 const LOCATION = /:(\d+):(\d+)\)?$/;
 
 /**

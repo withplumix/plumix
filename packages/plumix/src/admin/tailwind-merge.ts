@@ -10,8 +10,10 @@ export default ns;
 
 export const createTailwindMerge = ns.createTailwindMerge;
 export const extendTailwindMerge = ns.extendTailwindMerge;
-// Annotated so declaration emit names tailwind-merge's type rather than its
-// non-exported internal `ThemeGetter` (TS4023).
+/**
+ * Annotated so declaration emit names tailwind-merge's type rather than its
+ * non-exported internal `ThemeGetter` (TS4023).
+ */
 export const fromTheme: typeof TailwindMergeNs.fromTheme = ns.fromTheme;
 export const getDefaultConfig: typeof TailwindMergeNs.getDefaultConfig =
   ns.getDefaultConfig;

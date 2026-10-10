@@ -1,5 +1,7 @@
-// Unreachable items (missing parent or cycle) go to `orphans` for the caller
-// to handle. Duplicate ids past the first are dropped from both outputs.
+/**
+ * Unreachable items (missing parent or cycle) go to `orphans` for the caller
+ * to handle. Duplicate ids past the first are dropped from both outputs.
+ */
 interface TreeBuildable {
   readonly id: number;
   readonly parentId: number | null;

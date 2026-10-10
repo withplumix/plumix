@@ -44,7 +44,9 @@ import type { Assert, Equals } from "./type-assert";
 
 // --- Getting Started -------------------------------------------------------
 
-// Source: the `exports` map of `packages/plumix/package.json`, in its order.
+/**
+ * Source: the `exports` map of `packages/plumix/package.json`, in its order.
+ */
 const FACADE_SUBPATHS = [
   "plumix",
   "plumix/plugin",
@@ -88,8 +90,10 @@ const FACADE_SUBPATHS = [
   "plumix/editor-runtime",
 ] as const;
 
-// Not `PlumixConfig`: that resolved shape carries defaults an author never
-// writes.
+/**
+ * Not `PlumixConfig`: that resolved shape carries defaults an author never
+ * writes.
+ */
 const CONFIG_OPTIONS = [
   "runtime",
   "database",
@@ -186,9 +190,11 @@ interface TypeLevelBindings {
   >;
 }
 
-// Merged because two rosters on one page would report each other's items as
-// unknown. The `labels.` prefix keeps `notFound` the option apart from
-// `notFound` the label.
+/**
+ * Merged because two rosters on one page would report each other's items as
+ * unknown. The `labels.` prefix keeps `notFound` the option apart from
+ * `notFound` the label.
+ */
 const ENTRY_TYPE_REFERENCE: readonly string[] = [
   ...ENTRY_TYPE_OPTIONS,
   ...ENTRY_TYPE_LABELS.map((label) => `labels.${label}`),
@@ -196,8 +202,10 @@ const ENTRY_TYPE_REFERENCE: readonly string[] = [
 
 // --- Fields ----------------------------------------------------------------
 
-// The retired legacy types and plugin-contributed `media` kinds are
-// deliberately absent.
+/**
+ * The retired legacy types and plugin-contributed `media` kinds are
+ * deliberately absent.
+ */
 const FIELD_TYPES = [
   "text",
   "textarea",
@@ -233,8 +241,10 @@ interface TypeLevelBindings {
 
 // --- Blocks ----------------------------------------------------------------
 
-// Source: `coreBlocks`. Its `readonly BlockSpec[]` annotation widens the names,
-// so the binding is runtime.
+/**
+ * Source: `coreBlocks`. Its `readonly BlockSpec[]` annotation widens the names,
+ * so the binding is runtime.
+ */
 const CORE_BLOCKS = [
   "core/rich-text",
   "core/separator",
@@ -255,7 +265,7 @@ const CORE_BLOCKS = [
   "core/table-cell",
 ] as const;
 
-// Source: `coreMarks`.
+/** Source: `coreMarks`. */
 const CORE_MARKS = [
   "bold",
   "italic",
@@ -272,8 +282,10 @@ const CORE_MARKS = [
   "small",
 ] as const;
 
-// Source: `coreShortcodes`. Bare, not `[year]`: the name is what a plugin's
-// `registerShortcode` overrides.
+/**
+ * Source: `coreShortcodes`. Bare, not `[year]`: the name is what a plugin's
+ * `registerShortcode` overrides.
+ */
 const CORE_SHORTCODES = ["year", "month"] as const;
 
 // --- Islands ---------------------------------------------------------------
@@ -300,8 +312,10 @@ interface TypeLevelBindings {
   >;
 }
 
-// The prop is part of the id because `load` is both a strategy and a prefetch
-// trigger.
+/**
+ * The prop is part of the id because `load` is both a strategy and a prefetch
+ * trigger.
+ */
 const HYDRATION: readonly string[] = [
   ...HYDRATION_STRATEGIES.map((strategy) => `client="${strategy}"`),
   ...PREFETCH_TRIGGERS.map((trigger) => `prefetch="${trigger}"`),
@@ -309,13 +323,17 @@ const HYDRATION: readonly string[] = [
 
 // --- Themes ----------------------------------------------------------------
 
-// Constraints only, never an exhaustive set to document: much of each subpath
-// is plumbing no page should name, so a new export fails no roster.
+/**
+ * Constraints only, never an exhaustive set to document: much of each subpath
+ * is plumbing no page should name, so a new export fails no roster.
+ */
 type ThemeExport = keyof typeof PlumixTheme;
 type PluginExport = keyof typeof PlumixPlugin;
 
-// Nothing in source ties the `entry()` builder to the `"entry"` tier, so the
-// second assertion pins the tier names to theme exports.
+/**
+ * Nothing in source ties the `entry()` builder to the `"entry"` tier, so the
+ * second assertion pins the tier names to theme exports.
+ */
 const GENERIC_TIERS = [
   "fallback",
   "entry",
@@ -341,8 +359,10 @@ interface TypeLevelBindings {
   >;
 }
 
-// Unchecked: a new matcher minting an existing kind, or a key paired with the
-// wrong kinds. The builders share no return shape to compare against.
+/**
+ * Unchecked: a new matcher minting an existing kind, or a key paired with the
+ * wrong kinds. The builders share no return shape to compare against.
+ */
 const TARGETED_MATCHERS = {
   forEntryType: ["entry", "entryType"],
   forTermTaxonomy: ["term"],
@@ -369,7 +389,7 @@ const TEMPLATES: readonly string[] = [
   ...Object.keys(TARGETED_MATCHERS),
 ];
 
-// Values compare as a union, so a swapped pairing passes unnoticed.
+/** Values compare as a union, so a swapped pairing passes unnoticed. */
 const TARGET_CONSTRUCTORS = {
   entryTypeTargets: "forEntryType",
   termTaxonomyTargets: "forTermTaxonomy",
@@ -390,8 +410,10 @@ interface TypeLevelBindings {
   >;
 }
 
-// Not exhaustive: nothing in source enumerates these, so a newly published
-// constructor fails nothing.
+/**
+ * Not exhaustive: nothing in source enumerates these, so a newly published
+ * constructor fails nothing.
+ */
 const MATCH_CONSTRUCTORS = [
   "entryTypeMatch",
   "termTaxonomyMatch",
@@ -399,7 +421,9 @@ const MATCH_CONSTRUCTORS = [
   "termMetaEquals",
 ] as const satisfies readonly PluginExport[];
 
-// A map because type names have no runtime form: its values are the real types.
+/**
+ * A map because type names have no runtime form: its values are the real types.
+ */
 interface TemplateDataShapes {
   EntryData: EntryData;
   EntryTypeArchiveData: EntryTypeArchiveData;
@@ -452,9 +476,11 @@ interface TypeLevelBindings {
   rolesMatchSource: Assert<Equals<(typeof ROLES)[number], UserRole>>;
 }
 
-// Runtime-bound: `CORE_CAPABILITIES` is a `Record<string, UserRole>`, so its
-// keys are lost at the type level. `entry:*:read` keeps ids unique since `read`
-// is also a taxonomy action.
+/**
+ * Runtime-bound: `CORE_CAPABILITIES` is a `Record<string, UserRole>`, so its
+ * keys are lost at the type level. `entry:*:read` keeps ids unique since `read`
+ * is also a taxonomy action.
+ */
 const CAPABILITIES = [
   "entry:post:read",
   "entry:post:create",
@@ -490,8 +516,10 @@ const CAPABILITIES = [
 
 // --- APIs ------------------------------------------------------------------
 
-// Page-only: `coreMcpTools`, `telemetryMcpTools` and `errorMcpTools` are not
-// public, and binding them would mean publishing API.
+/**
+ * Page-only: `coreMcpTools`, `telemetryMcpTools` and `errorMcpTools` are not
+ * public, and binding them would mean publishing API.
+ */
 const MCP_TOOLS = [
   "schema_describe",
   "content_list",
@@ -593,8 +621,10 @@ interface TypeLevelBindings {
   >;
 }
 
-// Per-type and generic entry actions are both items: each fires, and a plugin
-// author picks one.
+/**
+ * Per-type and generic entry actions are both items: each fires, and a plugin
+ * author picks one.
+ */
 const ACTION_HOOKS = [
   "theme:ready",
   "entry:*:published",
@@ -651,8 +681,10 @@ interface TypeLevelBindings {
   >;
 }
 
-// `entry:post:published` would be absorbed by its template-literal sibling in
-// the union, so the bindings above would accept a name no registry spells.
+/**
+ * `entry:post:published` would be absorbed by its template-literal sibling in
+ * the union, so the bindings above would accept a name no registry spells.
+ */
 interface TypeLevelBindings {
   everyPerTypeActionUsesTheStar: Assert<
     Equals<
@@ -666,12 +698,16 @@ const HOOKS: readonly string[] = [...FILTER_HOOKS, ...ACTION_HOOKS];
 
 // --- Deployment ------------------------------------------------------------
 
-// Sources: `typeTag` and `entryTag`. Spelled `*` because MDX reads a bare
-// `t:<type>` as an unclosed JSX tag.
+/**
+ * Sources: `typeTag` and `entryTag`. Spelled `*` because MDX reads a bare
+ * `t:<type>` as an unclosed JSX tag.
+ */
 const CACHE_TAGS = ["t:*", "e:*"] as const;
 
-// Page-only: `BUILT_IN_COMMANDS` and the flags are private to the CLI entry,
-// and the adapter's `commands` would need a runtime-adapter dependency.
+/**
+ * Page-only: `BUILT_IN_COMMANDS` and the flags are private to the CLI entry,
+ * and the adapter's `commands` would need a runtime-adapter dependency.
+ */
 const CLI_REFERENCE = [
   "dev",
   "build",
@@ -720,8 +756,10 @@ interface TypeLevelBindings {
   >;
 }
 
-// Qualified because with three interfaces on one page `name`, `fetch` and `env`
-// would make useless anchors.
+/**
+ * Qualified because with three interfaces on one page `name`, `fetch` and `env`
+ * would make useless anchors.
+ */
 const RUNTIME_CONTRACT_MEMBERS: readonly string[] = [
   ...ADAPTER_MEMBERS.map((member) => `RuntimeAdapter.${member}`),
   ...HANDLER_MEMBERS.map((member) => `PlumixHandler.${member}`),
@@ -730,8 +768,10 @@ const RUNTIME_CONTRACT_MEMBERS: readonly string[] = [
 
 // --- Plugins ---------------------------------------------------------------
 
-// Source: non-private manifests under `packages/plugins/`. Membership only,
-// since directory order is alphabetical, which a roster page must not adopt.
+/**
+ * Source: non-private manifests under `packages/plugins/`. Membership only,
+ * since directory order is alphabetical, which a roster page must not adopt.
+ */
 const PLUGIN_PACKAGES = [
   "@plumix/plugin-blog",
   "@plumix/plugin-pages",
@@ -754,8 +794,10 @@ interface TypeLevelBindings {
   >;
 }
 
-// Naming its `TypeLevelBindings` members makes deleting an assertion fail to
-// compile at the roster citing it.
+/**
+ * Naming its `TypeLevelBindings` members makes deleting an assertion fail to
+ * compile at the roster citing it.
+ */
 type Binding =
   | readonly [keyof TypeLevelBindings, ...(keyof TypeLevelBindings)[]]
   | "runtime"

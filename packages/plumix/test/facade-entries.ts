@@ -3,8 +3,11 @@ import { resolve } from "node:path";
 
 import { SHARED_ADMIN_RUNTIME_KEYS } from "@plumix/core/admin";
 
-// Shared by the façade guards in `src/`. It lives in `test/` because
-// `tsconfig.build.json` excludes it; a helper under `src/` would ship in `dist/`.
+/**
+ * Shared by the façade guards in `src/`. It lives in `test/` because
+ * `tsconfig.build.json` excludes it; a helper under `src/` would ship in
+ * `dist/`.
+ */
 export const packageDir = resolve(import.meta.dirname, "..");
 
 interface ExportSpec {
@@ -38,8 +41,10 @@ const entrySources = Object.keys(pkg.exports).map((subpath) => {
   return [subpath, readFileSync(resolve(packageDir, file), "utf8")] as const;
 });
 
-// A subpath curates when its entry re-exports named values from an internal
-// package.
+/**
+ * A subpath curates when its entry re-exports named values from an internal
+ * package.
+ */
 export const CURATED_REEXPORT = /export\s+\{[^}]*\}\s+from\s+["']@plumix\//;
 
 export function subpathsMatching(pattern: RegExp): string[] {
@@ -70,14 +75,14 @@ export function facadeSpecifier(subpath: string): string {
   return `plumix${subpath.slice(1)}`;
 }
 
-// A wildcard subpath (`./locales/*`) names files, not one module.
+/** A wildcard subpath (`./locales/*`) names files, not one module. */
 function specifiersOf(name: string, exports: Manifest["exports"] = {}) {
   return Object.keys(exports)
     .filter((subpath) => !subpath.includes("*"))
     .map((subpath) => `${name}${subpath.slice(1)}`);
 }
 
-// The internal packages are the ones the façade depends on.
+/** The internal packages are the ones the façade depends on. */
 const internalSpecifiers = Object.keys(pkg.dependencies)
   .filter((name) => name.startsWith("@plumix/"))
   .flatMap((name) =>

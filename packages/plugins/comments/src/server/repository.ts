@@ -9,8 +9,10 @@ import type { CommentStatus } from "../types.js";
 import { comments } from "../db/schema.js";
 import { COMMENT_STATUSES } from "../types.js";
 
-// Independent of maxDepth so true depth is measured even after maxDepth was
-// lowered; otherwise a reply could escape the cap. Doubles as a cycle guard.
+/**
+ * Independent of maxDepth so true depth is measured even after maxDepth was
+ * lowered; otherwise a reply could escape the cap. Doubles as a cycle guard.
+ */
 const MAX_ANCESTOR_WALK = 1000;
 
 /**
@@ -116,8 +118,10 @@ function toModeration(row: Comment): ModerationComment {
   };
 }
 
-// LIKE pattern matching `term` anywhere, with the SQL wildcards escaped so
-// a literal `%` or `_` in the search box isn't treated as a wildcard.
+/**
+ * LIKE pattern matching `term` anywhere, with the SQL wildcards escaped so
+ * a literal `%` or `_` in the search box isn't treated as a wildcard.
+ */
 function likeContains(column: AnySQLiteColumn, term: string): SQL {
   return sql`${column} LIKE ${`%${escapeLikePattern(term)}%`} ESCAPE '\\'`;
 }

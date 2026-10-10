@@ -1,7 +1,9 @@
 import type { TelemetryCollector } from "./telemetry.js";
 
-// The span label carries the host (not the full URL) so a timeline groups
-// calls per upstream; the full URL lives in the `url.full` attribute.
+/**
+ * The span label carries the host (not the full URL) so a timeline groups
+ * calls per upstream; the full URL lives in the `url.full` attribute.
+ */
 function spanName(method: string, url: string): string {
   const host = URL.parse(url)?.host;
   return host ? `fetch: ${method} ${host}` : `fetch: ${method}`;

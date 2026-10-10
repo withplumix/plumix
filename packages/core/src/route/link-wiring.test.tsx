@@ -16,8 +16,10 @@ const blog = definePlugin("blog", (ctx) => {
   ctx.registerTermTaxonomy("topic", { label: "Topics", entryTypes: ["post"] });
 });
 
-// A theme that links to the first front-page entry and its first term — the
-// end-to-end path: resolve attaches url → provider carries basePath → Link.
+/**
+ * A theme that links to the first front-page entry and its first term — the
+ * end-to-end path: resolve attaches url → provider carries basePath → Link.
+ */
 const linkTheme = defineTheme({
   templates: [
     fallback(

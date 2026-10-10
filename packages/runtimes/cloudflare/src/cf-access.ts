@@ -6,25 +6,33 @@ import { ExternalIdentityError, resolveExternalIdentity } from "plumix/auth";
 
 import { CfAccessError } from "./errors.js";
 
-// Header CF Access sets on every request that passed the application's policy.
-// Documented in
-// `https://developers.cloudflare.com/cloudflare-one/identity/authorization-cookie/application-token/`.
+/**
+ * Header CF Access sets on every request that passed the application's policy.
+ * Documented in
+ * `https://developers.cloudflare.com/cloudflare-one/identity/authorization-cookie/application-token/`.
+ */
 const CF_ACCESS_HEADER = "cf-access-jwt-assertion";
 
-// Cookie CF Access sets host-wide after login, carrying the same signed
-// application token. Paths the Access application doesn't cover get no header,
-// but still carry this cookie. Documented in
-// `https://developers.cloudflare.com/cloudflare-one/identity/authorization-cookie/`.
+/**
+ * Cookie CF Access sets host-wide after login, carrying the same signed
+ * application token. Paths the Access application doesn't cover get no header,
+ * but still carry this cookie. Documented in
+ * `https://developers.cloudflare.com/cloudflare-one/identity/authorization-cookie/`.
+ */
 const CF_ACCESS_COOKIE = "CF_Authorization";
 
-// CF's logout endpoint clears both the global session cookie and the
-// per-application session. The plumix logout handler should redirect here when
-// the cfAccess() guard is in use; documented in
-// `https://developers.cloudflare.com/cloudflare-one/identity/users/session-management/`.
+/**
+ * CF's logout endpoint clears both the global session cookie and the
+ * per-application session. The plumix logout handler should redirect here when
+ * the cfAccess() guard is in use; documented in
+ * `https://developers.cloudflare.com/cloudflare-one/identity/users/session-management/`.
+ */
 const CF_ACCESS_LOGOUT_PATH = "/cdn-cgi/access/logout";
 
-// CF Access issues team domains only under this suffix, so the check catches
-// pasted URLs or the operator's own domain without rejecting valid setups.
+/**
+ * CF Access issues team domains only under this suffix, so the check catches
+ * pasted URLs or the operator's own domain without rejecting valid setups.
+ */
 const CF_TEAM_DOMAIN_RE = /^[a-z0-9-]+\.cloudflareaccess\.com$/;
 
 export interface CfAccessConfig {
@@ -142,8 +150,10 @@ export function cfAccessLogoutUrl(teamDomain: string): string {
   return `https://${teamDomain}${CF_ACCESS_LOGOUT_PATH}`;
 }
 
-// The header wins even when invalid: Cloudflare says the cookie "is not
-// guaranteed to be passed".
+/**
+ * The header wins even when invalid: Cloudflare says the cookie "is not
+ * guaranteed to be passed".
+ */
 function readAccessToken(request: Request): string | null {
   return request.headers.get(CF_ACCESS_HEADER) ?? readCookie(request);
 }

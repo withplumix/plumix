@@ -16,9 +16,11 @@ export function decideBaselineStatus(input: {
   return input.priorApprovedCount > 0 ? "approved" : "pending";
 }
 
-// Higher rank = more restrictive. The `comment:moderate` chain may only
-// push a comment toward the restrictive end, so detectors compose without
-// caring about order: spam > trash > pending > approved.
+/**
+ * Higher rank = more restrictive. The `comment:moderate` chain may only
+ * push a comment toward the restrictive end, so detectors compose without
+ * caring about order: spam > trash > pending > approved.
+ */
 const RANK: Record<CommentStatus, number> = {
   approved: 0,
   pending: 1,

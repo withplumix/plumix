@@ -1,6 +1,8 @@
-// A denylist suffices because React escapes HTML in `<style>` text, leaving
-// only closed CSS-grammar breakouts. A match discards the value rather than
-// escaping it.
+/**
+ * A denylist suffices because React escapes HTML in `<style>` text, leaving
+ * only closed CSS-grammar breakouts. A match discards the value rather than
+ * escaping it.
+ */
 const DANGEROUS_CSS = [
   /[{}<>]/, // declaration-block / tag breakout
   /\\/, // backslash escapes (unicode-escape obfuscation)

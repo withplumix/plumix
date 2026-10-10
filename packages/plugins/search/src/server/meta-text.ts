@@ -2,7 +2,7 @@ import type { MetaBoxField } from "plumix/fields";
 import type { PluginRegistry } from "plumix/plugin";
 import { listEntryMetaFields } from "plumix/plugin";
 
-// Bump when the extraction below changes; the roster hash cannot see that.
+/** Bump when the extraction below changes; the roster hash cannot see that. */
 const META_EXTRACTOR_ALGORITHM = "1";
 
 export interface SearchableMetaField {
@@ -18,8 +18,10 @@ export type SearchableMetaRoster = ReadonlyMap<
   readonly SearchableMetaField[]
 >;
 
-// Named rather than derived from the string family: `password` is one too,
-// and a new string input must not become public index content by arriving.
+/**
+ * Named rather than derived from the string family: `password` is one too,
+ * and a new string input must not become public index content by arriving.
+ */
 const TEXT_INPUT_KINDS = new Map<string, SearchableMetaKind>([
   ["text", "string"],
   ["textarea", "string"],
@@ -28,8 +30,10 @@ const TEXT_INPUT_KINDS = new Map<string, SearchableMetaKind>([
   ["richtext", "richtext"],
 ]);
 
-// Snippets reach anonymous visitors, so capability-gated fields stay out. A
-// box's capability is only a UI filter and is deliberately not consulted.
+/**
+ * Snippets reach anonymous visitors, so capability-gated fields stay out. A
+ * box's capability is only a UI filter and is deliberately not consulted.
+ */
 function searchableKind(field: MetaBoxField): SearchableMetaKind | undefined {
   if (field.searchable !== true) return undefined;
   if (field.capability !== undefined) return undefined;
@@ -71,12 +75,16 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isTextNode = (node: unknown): node is { readonly text: string } =>
   isRecord(node) && typeof node.text === "string";
 
-// Matches core's richtext write cap. The change feed also carries bags that
-// skipped validation, and a stack overflow here would throw inside the drain.
+/**
+ * Matches core's richtext write cap. The change feed also carries bags that
+ * skipped validation, and a stack overflow here would throw inside the drain.
+ */
 const MAX_DOCUMENT_DEPTH = 100;
 
-// Adjacent text nodes are glued: half a word in bold is two nodes, and
-// splitting them would index two tokens nobody typed.
+/**
+ * Adjacent text nodes are glued: half a word in bold is two nodes, and
+ * splitting them would index two tokens nobody typed.
+ */
 function documentText(node: unknown, depth = 0): string {
   if (isTextNode(node)) return node.text;
   if (depth > MAX_DOCUMENT_DEPTH || !isRecord(node)) return "";

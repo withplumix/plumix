@@ -1,8 +1,10 @@
 import type { JsonObject, ResolvedMeta } from "@plumix/core";
 
-// Structural equality via canonical JSON — meta values are plain
-// JSON (strings, numbers, booleans, nested objects/arrays), so a
-// stable-key stringify is enough to compare them order-insensitively.
+/**
+ * Structural equality via canonical JSON — meta values are plain
+ * JSON (strings, numbers, booleans, nested objects/arrays), so a
+ * stable-key stringify is enough to compare them order-insensitively.
+ */
 function stableStringify(value: unknown): string {
   return JSON.stringify(value, (_key, val: unknown) => {
     if (val && typeof val === "object" && !Array.isArray(val)) {

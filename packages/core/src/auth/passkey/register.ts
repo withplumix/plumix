@@ -233,9 +233,11 @@ export async function persistCredential(
   return row;
 }
 
-// Works around oslojs `encodeSEC1Uncompressed`, which left-shifts a Y with a
-// leading zero byte (~1/256 of keys) and corrupts the stored key. RFC 5480
-// §2.2.
+/**
+ * Works around oslojs `encodeSEC1Uncompressed`, which left-shifts a Y with a
+ * leading zero byte (~1/256 of keys) and corrupts the stored key. RFC 5480
+ * §2.2.
+ */
 function encodeSec1Uncompressed(x: bigint, y: bigint): Uint8Array {
   const out = new Uint8Array(65);
   out[0] = 0x04;

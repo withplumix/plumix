@@ -120,7 +120,7 @@ export interface DevCommandOptions<Entry extends DevEntry> {
 
 const SERVER_ENVIRONMENT = "server";
 
-// The page a failed `buildApp` renders; small, so it is written whole.
+/** The page a failed `buildApp` renders; small, so it is written whole. */
 async function respond(res: ServerResponse, response: Response): Promise<void> {
   res.statusCode = response.status;
   response.headers.forEach((value, name) => res.setHeader(name, value));

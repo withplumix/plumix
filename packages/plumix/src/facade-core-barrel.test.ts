@@ -30,9 +30,11 @@ const pkg = JSON.parse(
   readFileSync(resolve(here, "..", "package.json"), "utf8"),
 ) as { exports: Record<string, { default?: string }> };
 
-// Subpath exports whose entry runs only server / build-side (Node), where
-// importing the `@plumix/core` barrel is safe. Everything else must reach
-// core through a `@plumix/core/<subpath>`.
+/**
+ * Subpath exports whose entry runs only server / build-side (Node), where
+ * importing the `@plumix/core` barrel is safe. Everything else must reach
+ * core through a `@plumix/core/<subpath>`.
+ */
 const BARREL_ALLOWED: Readonly<Record<string, string>> = {
   ".": "the full server surface (worker + config)",
   "./plugin": "plugin config is authored and loaded server-side",
@@ -44,7 +46,10 @@ const BARREL_ALLOWED: Readonly<Record<string, string>> = {
   // rule as the rest, reaching core through the `@plumix/core/admin` subpath.
 };
 
-// `./dist/admin/react.js` -> `<pkg>/src/admin/react.{ts,tsx}` (whichever exists)
+/**
+ * `./dist/admin/react.js` -> `<pkg>/src/admin/react.{ts,tsx}` (whichever
+ * exists)
+ */
 function entrySrcPath(distDefault: string): string | undefined {
   const base = distDefault.replace(/^\.\/dist\//, "").replace(/\.js$/, "");
   for (const ext of [".ts", ".tsx"]) {
@@ -54,9 +59,11 @@ function entrySrcPath(distDefault: string): string | undefined {
   return undefined;
 }
 
-// A value (runtime) import or re-export whose source is exactly
-// "@plumix/core". `import type` / `export type` are erased by the compiler
-// and never pull the barrel, so they are exempt.
+/**
+ * A value (runtime) import or re-export whose source is exactly
+ * "@plumix/core". `import type` / `export type` are erased by the compiler
+ * and never pull the barrel, so they are exempt.
+ */
 function importsBarrelAsValue(source: string): boolean {
   const statement =
     /\b(import|export)(\s+type)?\s+(?:\*(?:\s+as\s+[\w$]+)?|\{[^{}]*\}|[\w$]+)\s+from\s+["']@plumix\/core["']/g;

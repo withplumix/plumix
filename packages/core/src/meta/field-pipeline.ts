@@ -154,8 +154,10 @@ export async function runFieldPipeline(
 
 // --- repeater rows ------------------------------------------------------
 
-// The 256 KiB byte cap doesn't bound work pre-walk: N empty rows allocate O(N)
-// before it measures the stripped output.
+/**
+ * The 256 KiB byte cap doesn't bound work pre-walk: N empty rows allocate O(N)
+ * before it measures the stripped output.
+ */
 const MAX_REPEATER_ROWS = 1000;
 
 export function isRepeaterField(
@@ -172,7 +174,7 @@ export function isGroupField(
 
 // --- group members ------------------------------------------------------
 
-// A group whose members all read empty is dropped unless `.required()`.
+/** A group whose members all read empty is dropped unless `.required()`. */
 async function runGroupPipeline(
   field: GroupMetaBoxField,
   value: JsonValue,
@@ -214,8 +216,10 @@ async function runGroupPipeline(
   return runCompositeValidate(field, members, path, mode);
 }
 
-// Runs before member validation, or a required member of an untouched optional
-// group would make the group impossible to clear. `0` and `false` are values.
+/**
+ * Runs before member validation, or a required member of an untouched optional
+ * group would make the group impossible to clear. `0` and `false` are values.
+ */
 function checkGroupBlank(
   field: GroupMetaBoxField,
   value: Readonly<Record<string, JsonValue>>,
@@ -259,9 +263,11 @@ async function settleGroupMembers(
 
 // --- composite hooks ----------------------------------------------------
 
-// Runs after every sub-field settled, so the callback sees what would be
-// stored rather than raw `Date`s or reference payloads. Re-settling cells is
-// the caller's job.
+/**
+ * Runs after every sub-field settled, so the callback sees what would be
+ * stored rather than raw `Date`s or reference payloads. Re-settling cells is
+ * the caller's job.
+ */
 function applyCompositeSanitize<T extends JsonValue>(
   field: RepeaterMetaBoxField | GroupMetaBoxField,
   sanitize: (value: unknown) => JsonValue,
@@ -293,9 +299,11 @@ function applyCompositeSanitize<T extends JsonValue>(
   return { value: decoded as T };
 }
 
-// Runs last, so cross-row rules see exactly what will be stored. Condition-
-// hidden cells were only draft-checked, so the value may hold cells that never
-// met their strict constraints.
+/**
+ * Runs last, so cross-row rules see exactly what will be stored. Condition-
+ * hidden cells were only draft-checked, so the value may hold cells that never
+ * met their strict constraints.
+ */
 async function runCompositeValidate(
   field: RepeaterMetaBoxField | GroupMetaBoxField,
   value: JsonValue,
@@ -312,8 +320,10 @@ async function runCompositeValidate(
   return { errors: [], value };
 }
 
-// The editor has no vocabulary for "the plugin threw"; the diagnostic trail
-// stays in the server log.
+/**
+ * The editor has no vocabulary for "the plugin threw"; the diagnostic trail
+ * stays in the server log.
+ */
 function callbackFailed(
   kind: "sanitize" | "validate",
   path: string,
@@ -326,8 +336,10 @@ function callbackFailed(
   return { errors: [{ path, message: META_FIELD_MESSAGES.invalid }] };
 }
 
-// The row ceiling is re-applied because a sanitizer can grow the list after
-// the pre-walk bound was measured.
+/**
+ * The row ceiling is re-applied because a sanitizer can grow the list after
+ * the pre-walk bound was measured.
+ */
 function isCompositeShape(
   field: RepeaterMetaBoxField | GroupMetaBoxField,
   value: JsonValue,
@@ -388,9 +400,11 @@ export function healReferenceValue(
   return extractStringId(value) ?? value;
 }
 
-// Hidden cells run in draft and are kept, not dropped: a row is rewritten whole
-// on every save. `isFieldVisible` because a row is complete, so an absent
-// driver means unset.
+/**
+ * Hidden cells run in draft and are kept, not dropped: a row is rewritten whole
+ * on every save. `isFieldVisible` because a row is complete, so an absent
+ * driver means unset.
+ */
 function cellMode(
   field: MetaBoxField,
   bag: ResolvedMeta,
@@ -399,8 +413,10 @@ function cellMode(
   return isFieldVisible(field, bag) ? mode : "draft";
 }
 
-// Blank rows are an authoring affordance, stripped before validation so a
-// required subfield never blocks the save. `0` and `false` are values.
+/**
+ * Blank rows are an authoring affordance, stripped before validation so a
+ * required subfield never blocks the save. `0` and `false` are values.
+ */
 function isBlankRow(
   subFields: readonly MetaBoxField[],
   row: ResolvedMeta,
@@ -411,8 +427,10 @@ function isBlankRow(
   });
 }
 
-// Error paths use the original row indices: the admin form still shows the
-// blank rows the strip removed.
+/**
+ * Error paths use the original row indices: the admin form still shows the
+ * blank rows the strip removed.
+ */
 async function runRepeaterPipeline(
   field: RepeaterMetaBoxField,
   value: JsonValue,
@@ -454,8 +472,10 @@ async function runRepeaterPipeline(
   return runCompositeValidate(field, rows, path, mode);
 }
 
-// After a `.sanitize()` row positions no longer name what the caller sent, so
-// cell errors anchor on the repeater rather than highlight the wrong row.
+/**
+ * After a `.sanitize()` row positions no longer name what the caller sent, so
+ * cell errors anchor on the repeater rather than highlight the wrong row.
+ */
 async function settleRepeaterRows(
   field: RepeaterMetaBoxField,
   value: readonly JsonValue[],
@@ -496,8 +516,10 @@ async function settleRepeaterRows(
   return { rows };
 }
 
-// The deletion sits after the bounds on purpose: `.min()` binds an optional
-// field too. Row counts are business rules, skipped in draft.
+/**
+ * The deletion sits after the bounds on purpose: `.min()` binds an optional
+ * field too. Row counts are business rules, skipped in draft.
+ */
 function checkRowCount(
   field: RepeaterMetaBoxField,
   rows: readonly unknown[],
@@ -527,9 +549,11 @@ function checkRowCount(
   return undefined;
 }
 
-// Structural normalization that must succeed before the declarative
-// constraints can inspect the value — a multi select's array shape and
-// de-dupe live here so `checkConstraints` sees the canonical form.
+/**
+ * Structural normalization that must succeed before the declarative
+ * constraints can inspect the value — a multi select's array shape and
+ * de-dupe live here so `checkConstraints` sees the canonical form.
+ */
 type Normalized =
   | { readonly ok: true; readonly value: JsonValue }
   | { readonly ok: false; readonly error: MetaFieldError };
@@ -749,9 +773,11 @@ function checkTemporal(
   return errors;
 }
 
-// `.required()` rejects the values an editor produces by clearing an
-// input: the empty string (text-family) and the empty array (multi
-// selects, lists, repeaters). `0` and `false` are real values.
+/**
+ * `.required()` rejects the values an editor produces by clearing an
+ * input: the empty string (text-family) and the empty array (multi
+ * selects, lists, repeaters). `0` and `false` are real values.
+ */
 function isEmptyValue(value: JsonValue): boolean {
   if (value === "") return true;
   return Array.isArray(value) && value.length === 0;

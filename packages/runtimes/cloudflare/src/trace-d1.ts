@@ -1,8 +1,10 @@
 import type { TracedQuery } from "plumix/runtime";
 import { traceDbBatch, traceDbQuery } from "plumix/runtime";
 
-// Links a traced statement back to the real bound statement (for `batch`) and
-// to its sql/params (for the batch span's attributes).
+/**
+ * Links a traced statement back to the real bound statement (for `batch`) and
+ * to its sql/params (for the batch span's attributes).
+ */
 const ORIGINAL = Symbol("plumix.d1.original");
 const QUERY = Symbol("plumix.d1.query");
 
@@ -45,8 +47,10 @@ function traceStatement(
   return traced;
 }
 
-// The query surface drizzle's d1 session uses — satisfied by both a raw
-// `D1Database` binding and a Sessions-API `withSession()` handle.
+/**
+ * The query surface drizzle's d1 session uses — satisfied by both a raw
+ * `D1Database` binding and a Sessions-API `withSession()` handle.
+ */
 interface D1QueryTarget {
   prepare: (sql: string) => D1PreparedStatement;
   batch: (statements: D1PreparedStatement[]) => Promise<D1Result[]>;

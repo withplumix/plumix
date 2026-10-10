@@ -14,12 +14,16 @@ import { isMissingSearchIndex } from "../db/ddl.js";
 import { DEFAULT_RANKING_ALGORITHM, rankingWeights } from "../ranking.js";
 import { toMatchExpression } from "./query-text.js";
 
-// Core's entries handler runs at 10, and the lower number goes first — so
-// this claims the entry groups it can rank before core produces them.
+/**
+ * Core's entries handler runs at 10, and the lower number goes first — so
+ * this claims the entry groups it can rank before core produces them.
+ */
 const HANDLER_PRIORITY = 5;
 
-// Matches core's own scan cap across all types, so palette coverage is
-// unchanged.
+/**
+ * Matches core's own scan cap across all types, so palette coverage is
+ * unchanged.
+ */
 const SCAN_LIMIT = 50;
 
 /**
@@ -73,8 +77,10 @@ async function rankedEntryGroups(
   return entryGroups(scope, rows, input.limit);
 }
 
-// A missing index is silent here: the palette would log once per keystroke,
-// and the search page and scheduled run already report it.
+/**
+ * A missing index is silent here: the palette would log once per keystroke,
+ * and the search page and scheduled run already report it.
+ */
 async function matched(
   ctx: AppContext,
   query: SQL,

@@ -106,9 +106,11 @@ export interface SettingsMeta<Fields extends readonly MetaBoxFieldInput[]> {
   fields: Fields;
 }
 
-// A fluent builder carrying the three phantoms the type flow reads.
-// Object-literal field definitions have none, so `Extract` drops them —
-// they degrade to absence from the typed record.
+/**
+ * A fluent builder carrying the three phantoms the type flow reads.
+ * Object-literal field definitions have none, so `Extract` drops them —
+ * they degrade to absence from the typed record.
+ */
 interface TypedField {
   readonly _key: string;
   readonly _value: unknown;
@@ -139,25 +141,31 @@ export type InferFields<F extends readonly MetaBoxFieldInput[]> = InferShape<
 export type InferStoredFields<F extends readonly MetaBoxFieldInput[]> =
   InferShape<F, "_stored">;
 
-// The `infer` is bounded so a deferred `MetaOf<K>` (generic `K`) still
-// satisfies `Record<string, unknown>` — what lets `ResolvedEntryFor<K>`
-// meet the `ResolvedEntry` constraint on the template data shapes.
+/**
+ * The `infer` is bounded so a deferred `MetaOf<K>` (generic `K`) still
+ * satisfies `Record<string, unknown>` — what lets `ResolvedEntryFor<K>`
+ * meet the `ResolvedEntry` constraint on the template data shapes.
+ */
 type UnionToIntersection<U> = (
   U extends unknown ? (u: U) => void : never
 ) extends (i: infer I extends Record<string, unknown>) => void
   ? I
   : never;
 
-// The closed empty record a target with no contributions folds to.
-// Deliberately NOT `Record<string, unknown>` — an open index signature
-// would make every typo read as `unknown` instead of erroring.
+/**
+ * The closed empty record a target with no contributions folds to.
+ * Deliberately NOT `Record<string, unknown>` — an open index signature
+ * would make every typo read as `unknown` instead of erroring.
+ */
 type EmptyMeta = Record<never, never>;
 
 type FoldRecords<R> = [R] extends [never] ? EmptyMeta : UnionToIntersection<R>;
 
-// One record per contribution scoped to `K` via the `P`-named target-set
-// property (`entryTypes` / `termTaxonomies`), in the chosen shape;
-// out-of-scope and malformed contributions collapse to `never`.
+/**
+ * One record per contribution scoped to `K` via the `P`-named target-set
+ * property (`entryTypes` / `termTaxonomies`), in the chosen shape;
+ * out-of-scope and malformed contributions collapse to `never`.
+ */
 type ScopedRecords<
   Contributions,
   K,
@@ -222,8 +230,10 @@ export type SettingsOf<Name extends keyof SettingsContributions> = FoldRecords<
   AllRecords<Pick<SettingsContributions, Name>, "_value">
 >;
 
-// Mutual assignability of both extractions. Read shapes alone would
-// miss stored-only drift.
+/**
+ * Mutual assignability of both extractions. Read shapes alone would
+ * miss stored-only drift.
+ */
 type FieldsMatch<
   A extends readonly MetaBoxFieldInput[],
   B extends readonly MetaBoxFieldInput[],

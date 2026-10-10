@@ -5,10 +5,12 @@ import { afterEach, describe, expect, test } from "vitest";
 
 import { loadConfig } from "./load-config.js";
 
-// A valid PlumixConfig (passes isPlumixConfig) that bumps a global counter
-// every time the module is evaluated. With jiti's `moduleCache: false`, each
-// real load re-executes the module body — so the counter tells us exactly how
-// many times the config was evaluated vs. served from cache.
+/**
+ * A valid PlumixConfig (passes isPlumixConfig) that bumps a global counter
+ * every time the module is evaluated. With jiti's `moduleCache: false`, each
+ * real load re-executes the module body — so the counter tells us exactly how
+ * many times the config was evaluated vs. served from cache.
+ */
 const FIXTURE = `
 (globalThis as unknown as Record<string, number>).__plumixEvalCount =
   ((globalThis as unknown as Record<string, number>).__plumixEvalCount ?? 0) + 1;
@@ -25,9 +27,11 @@ function evalCount(): number {
   return evalStore.__plumixEvalCount ?? 0;
 }
 
-// A fresh temp dir per call gives each test a unique config path, so the
-// module-level cache in load-config.ts never collides across tests (it is keyed
-// by absolute path and intentionally has no reset hook).
+/**
+ * A fresh temp dir per call gives each test a unique config path, so the
+ * module-level cache in load-config.ts never collides across tests (it is keyed
+ * by absolute path and intentionally has no reset hook).
+ */
 function writeFixtureDir(body = FIXTURE): string {
   const dir = mkdtempSync(join(tmpdir(), "plumix-loadconfig-"));
   writeFileSync(join(dir, "plumix.config.ts"), body);

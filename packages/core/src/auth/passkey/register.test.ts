@@ -17,8 +17,10 @@ import {
 import { PasskeyError } from "./errors.js";
 import { finishRegistration, persistCredential } from "./register.js";
 
-// The ceremony verifies against a resolved config; static origins resolve
-// against an empty env unchanged.
+/**
+ * The ceremony verifies against a resolved config; static origins resolve
+ * against an empty env unchanged.
+ */
 const resolved = (input: Parameters<typeof resolvePasskeyConfig>[0]) =>
   resolvePasskeyOrigins(resolvePasskeyConfig(input), {});
 

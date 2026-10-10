@@ -45,19 +45,25 @@ export interface CanvasConfig {
 export type HostMessage =
   | { readonly type: "host:tree"; readonly tree: readonly BlockNode[] }
   | ({
-      // The locale the canvas renders at (it has no i18n runtime of its own).
-      // Sent once the canvas is ready and again if the locale changes.
+      /**
+       * The locale the canvas renders at (it has no i18n runtime of its own).
+       * Sent once the canvas is ready and again if the locale changes.
+       */
       readonly type: "host:config";
     } & CanvasConfig)
   | {
-      // A scoped refresh's re-resolved loader data, node-keyed (same shape
-      // `serializeLoaderData` emits). The canvas merges it into its loader map.
+      /**
+       * A scoped refresh's re-resolved loader data, node-keyed (same shape
+       * `serializeLoaderData` emits). The canvas merges it into its loader map.
+       */
       readonly type: "host:loader-data";
       readonly data: SerializedLoaderData;
     }
   | {
-      // X-ray view toggle — the canvas outlines every block while on. Pushed on
-      // change and once the canvas is ready (initial sync).
+      /**
+       * X-ray view toggle — the canvas outlines every block while on. Pushed on
+       * change and once the canvas is ready (initial sync).
+       */
       readonly type: "host:xray";
       readonly enabled: boolean;
     };
@@ -106,17 +112,21 @@ export type CanvasMessage =
       readonly shiftKey: boolean;
     }
   | {
-      // An in-canvas "Add a block" affordance was clicked (empty root document,
-      // or an empty child slot identified by parentId+slotKey). The host owns
-      // the tree, so it resolves the actual insert.
+      /**
+       * An in-canvas "Add a block" affordance was clicked (empty root document,
+       * or an empty child slot identified by parentId+slotKey). The host owns
+       * the tree, so it resolves the actual insert.
+       */
       readonly type: "canvas:requestAdd";
       readonly parentId?: string;
       readonly slotKey?: string;
     }
   | {
-      // A clipboard shortcut (Cmd/Ctrl+C/X/V) fired while focus was inside the
-      // iframe. The host owns the tree + clipboard, so the canvas just forwards
-      // the intent and the host performs it.
+      /**
+       * A clipboard shortcut (Cmd/Ctrl+C/X/V) fired while focus was inside the
+       * iframe. The host owns the tree + clipboard, so the canvas just forwards
+       * the intent and the host performs it.
+       */
       readonly type: "canvas:clipboard";
       readonly op: "copy" | "cut" | "paste";
     };

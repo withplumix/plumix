@@ -69,8 +69,10 @@ export async function renderCardBytes(
   });
 }
 
-// An unreadable font fails the render rather than falling back to the engine's
-// face, which would publish a card nobody meant to.
+/**
+ * An unreadable font fails the render rather than falling back to the engine's
+ * face, which would publish a card nobody meant to.
+ */
 async function loadFonts(
   ctx: AppContext,
   plan: CardFontPlan,

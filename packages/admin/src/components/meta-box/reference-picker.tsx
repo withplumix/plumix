@@ -24,8 +24,10 @@ import { useReferenceResolve } from "./lookup/use-reference-resolve.js";
 
 // Stores the bare id; only the display becomes a label.
 
-// `{kind}` interpolates the raw wire identifier; there's no localized noun map
-// yet.
+/**
+ * `{kind}` interpolates the raw wire identifier; there's no localized noun map
+ * yet.
+ */
 const M = {
   selectIdle: defineMessage({
     id: "metaBox.reference.selectIdle",

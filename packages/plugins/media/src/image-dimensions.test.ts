@@ -3,7 +3,10 @@ import { describe, expect, test } from "vitest";
 
 import { readImageDimensions } from "./image-dimensions.js";
 
-// 800×600 PNG: 8-byte signature, IHDR length + tag, then width/height as BE u32.
+/**
+ * 800×600 PNG: 8-byte signature, IHDR length + tag, then width/height as BE
+ * u32.
+ */
 // prettier-ignore
 const PNG_800x600 = new Uint8Array([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, // signature
@@ -32,7 +35,7 @@ describe("readImageDimensions — PNG", () => {
   });
 });
 
-// 800×600 GIF89a: 6-byte magic, then width/height as LE u16.
+/** 800×600 GIF89a: 6-byte magic, then width/height as LE u16. */
 // prettier-ignore
 const GIF_800x600 = new Uint8Array([
   0x47, 0x49, 0x46, 0x38, 0x39, 0x61, // "GIF89a"
@@ -49,8 +52,10 @@ describe("readImageDimensions — GIF", () => {
   });
 });
 
-// 800×600 JPEG: SOI, an APP0 segment (must be skipped), then SOF0 with the
-// height/width as BE u16 after the 1-byte precision.
+/**
+ * 800×600 JPEG: SOI, an APP0 segment (must be skipped), then SOF0 with the
+ * height/width as BE u16 after the 1-byte precision.
+ */
 // prettier-ignore
 const JPEG_800x600 = new Uint8Array([
   0xff, 0xd8, // SOI
@@ -77,7 +82,7 @@ const RIFF_WEBP = [
   0x57, 0x45, 0x42, 0x50, // "WEBP"
 ];
 
-// Extended (VP8X): 1-based canvas width/height minus one as LE u24.
+/** Extended (VP8X): 1-based canvas width/height minus one as LE u24. */
 // prettier-ignore
 const WEBP_VP8X_800x600 = new Uint8Array([
   ...RIFF_WEBP,
@@ -88,7 +93,9 @@ const WEBP_VP8X_800x600 = new Uint8Array([
   0x57, 0x02, 0x00, // height - 1 = 599
 ]);
 
-// Lossless (VP8L): 0x2f signature, then 14-bit (width-1)/(height-1) bit-packed.
+/**
+ * Lossless (VP8L): 0x2f signature, then 14-bit (width-1)/(height-1) bit-packed.
+ */
 // prettier-ignore
 const WEBP_VP8L_800x600 = new Uint8Array([
   ...RIFF_WEBP,
@@ -98,7 +105,7 @@ const WEBP_VP8L_800x600 = new Uint8Array([
   0x1f, 0xc3, 0x95, 0x00, // packed 799 / 599
 ]);
 
-// Lossy (VP8): 3-byte frame tag, 0x9d012a start code, then 14-bit LE dims.
+/** Lossy (VP8): 3-byte frame tag, 0x9d012a start code, then 14-bit LE dims. */
 // prettier-ignore
 const WEBP_VP8_800x600 = new Uint8Array([
   ...RIFF_WEBP,
@@ -139,7 +146,7 @@ describe("readImageDimensions — WebP", () => {
   });
 });
 
-// AVIF: an ftyp box, then an ispe box carrying version/flags + BE u32 dims.
+/** AVIF: an ftyp box, then an ispe box carrying version/flags + BE u32 dims. */
 // prettier-ignore
 const AVIF_800x600 = new Uint8Array([
   0x00, 0x00, 0x00, 0x10, 0x66, 0x74, 0x79, 0x70, // ftyp box header
@@ -150,8 +157,10 @@ const AVIF_800x600 = new Uint8Array([
   0x00, 0x00, 0x02, 0x58, // height = 600
 ]);
 
-// A stray `ispe` byte sequence framed by a bogus box size, followed by the
-// real 20-byte ispe box carrying the true dimensions.
+/**
+ * A stray `ispe` byte sequence framed by a bogus box size, followed by the
+ * real 20-byte ispe box carrying the true dimensions.
+ */
 // prettier-ignore
 const AVIF_STRAY_ISPE = new Uint8Array([
   0x00, 0x00, 0x00, 0x63, 0x69, 0x73, 0x70, 0x65, // fake ispe, wrong box size

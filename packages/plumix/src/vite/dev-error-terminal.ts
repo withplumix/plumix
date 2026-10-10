@@ -43,8 +43,10 @@ export function formatForwardedLog(
   return [headerOf(log), ...lines].join("\n");
 }
 
-// The `[browser]`-tagged headline, shared by the full block and the collapsed
-// repeat line so a repeat reads identically minus the stack.
+/**
+ * The `[browser]`-tagged headline, shared by the full block and the collapsed
+ * repeat line so a repeat reads identically minus the stack.
+ */
 function headerOf(log: ForwardedLog): string {
   const label = log.label ? `${log.label} ` : "";
   const kind = log.kind === "console" ? `console.${log.level}: ` : "";
@@ -117,8 +119,10 @@ function retain(
   };
 }
 
-// The first application frame, falling back to the first frame of any kind, so
-// a console log that only ran through framework code still shows a location.
+/**
+ * The first application frame, falling back to the first frame of any kind, so
+ * a console log that only ran through framework code still shows a location.
+ */
 function pickFrame(
   frames: readonly DevErrorFrame[],
 ): DevErrorFrame | undefined {
@@ -136,8 +140,10 @@ function frameLocation(frame: DevErrorFrame | undefined, root: string): string {
   return `${shorten(frame.file, root)}:${frame.line}${column}`;
 }
 
-// Project-relative when the file lives under the root; left absolute otherwise
-// (a workspace-symlinked package, a dependency) so the path stays resolvable.
+/**
+ * Project-relative when the file lives under the root; left absolute otherwise
+ * (a workspace-symlinked package, a dependency) so the path stays resolvable.
+ */
 function shorten(file: string, root: string): string {
   const base = root.endsWith("/") ? root : `${root}/`;
   return file.startsWith(base) ? file.slice(base.length) : file;
@@ -169,8 +175,10 @@ function asForwardedLog(value: unknown): ForwardedLog | null {
   };
 }
 
-// A raw ESC survives the JSON round-trip. Frame paths are server-derived, so
-// only `message`/`label` need this.
+/**
+ * A raw ESC survives the JSON round-trip. Frame paths are server-derived, so
+ * only `message`/`label` need this.
+ */
 function stripControl(value: string): string {
   let out = "";
   for (const ch of value) {

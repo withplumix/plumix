@@ -1,5 +1,7 @@
-// Clone a response, preserving its body/status, with mutated headers — for
-// adding headers to a response produced elsewhere (CORS, cache directives).
+/**
+ * Clone a response, preserving its body/status, with mutated headers — for
+ * adding headers to a response produced elsewhere (CORS, cache directives).
+ */
 export function withHeaders(
   response: Response,
   mutate: (headers: Headers) => void,

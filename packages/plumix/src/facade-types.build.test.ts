@@ -10,8 +10,10 @@ import {
   subpathsMatching,
 } from "../test/facade-entries.js";
 
-// The same subpaths `facade-curated.test.ts` holds a drift guard for, keyed to
-// their published declarations.
+/**
+ * The same subpaths `facade-curated.test.ts` holds a drift guard for, keyed to
+ * their published declarations.
+ */
 const curated = new Map(
   subpathsMatching(CURATED_REEXPORT).map((subpath) => [
     subpath,
@@ -19,9 +21,11 @@ const curated = new Map(
   ]),
 );
 
-// Kept out of `test/facade-entries.ts`: the unit-tier façade tests import that
-// module eagerly, and a `typescript` import there would load the compiler into
-// every one of them.
+/**
+ * Kept out of `test/facade-entries.ts`: the unit-tier façade tests import that
+ * module eagerly, and a `typescript` import there would load the compiler into
+ * every one of them.
+ */
 function parseTsconfig(): ts.ParsedCommandLine {
   const config = ts.getParsedCommandLineOfConfigFile(
     resolve(packageDir, "tsconfig.json"),
@@ -32,9 +36,11 @@ function parseTsconfig(): ts.ParsedCommandLine {
   return config;
 }
 
-// The types that have no role subpath, so the root is their only home. Every
-// other type core's barrel exports sits on the root and on exactly one other
-// subpath.
+/**
+ * The types that have no role subpath, so the root is their only home. Every
+ * other type core's barrel exports sits on the root and on exactly one other
+ * subpath.
+ */
 interface RootOnly {
   readonly reason: string;
   readonly names: readonly string[];
@@ -164,7 +170,8 @@ const ROOT_ONLY_TYPES: readonly RootOnly[] = [
 // `plumix/plugin` and `@plumix/core` it keeps the declaring package, which no
 // consumer can resolve (#2347). A role subpath re-exports its own types on top,
 // so a theme or a plugin file still needs one import. `facade-curated.test.ts`
-// compares values at runtime; types only exist for the compiler, so this asks it.
+// compares values at runtime; types only exist for the compiler, so this asks
+// it.
 describe("types", () => {
   let coreTypes: Map<string, ts.Symbol>;
   let subpathTypes: Map<string, Map<string, ts.Symbol>>;

@@ -43,8 +43,10 @@ interface ShortcutSpec {
   readonly forwarded?: boolean;
 }
 
-// Pointer gestures are listed for the cheatsheet but matched elsewhere; inline
-// formatting bindings belong to the marks.
+/**
+ * Pointer gestures are listed for the cheatsheet but matched elsewhere; inline
+ * formatting bindings belong to the marks.
+ */
 const ROSTER = [
   {
     id: "help.open",

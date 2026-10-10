@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { MenusShell } from "./MenusShell.js";
 
-// What the server's resolver attaches to every row it sends back.
+/** What the server's resolver attaches to every row it sends back. */
 function okResolved(label: string): JsonValue {
   return { state: "ok", label, href: null, lastHref: null };
 }
@@ -38,8 +38,10 @@ interface SearchTargetsInput {
   readonly query?: string;
 }
 
-// Serves `searchTargets` the way the server does: a case-insensitive
-// substring match over the tab's own targets.
+/**
+ * Serves `searchTargets` the way the server does: a case-insensitive
+ * substring match over the tab's own targets.
+ */
 function searchTargetsFrom(
   byTarget: Record<string, readonly { id: string; label: string | null }[]>,
 ): (input: unknown) => JsonValue {

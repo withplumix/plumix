@@ -132,9 +132,11 @@ describe("RequestAuthenticator — dispatcher integration", () => {
   });
 });
 
-// Test fixture — a minimal authenticator that resolves a user by an
-// `x-trusted-email` header. Stand-in for what `cfAccess()` will do in
-// production via JWT validation.
+/**
+ * Test fixture — a minimal authenticator that resolves a user by an
+ * `x-trusted-email` header. Stand-in for what `cfAccess()` will do in
+ * production via JWT validation.
+ */
 function customHeaderAuth(): RequestAuthenticator {
   return {
     async authenticate(request, db) {

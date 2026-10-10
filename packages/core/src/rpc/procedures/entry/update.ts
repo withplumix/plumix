@@ -85,8 +85,10 @@ function assertCanPublishTransition(
   }
 }
 
-// Undistinguished 404 so the parent's existence doesn't leak. Cycles of any
-// depth are rejected because the admin tree render infinite-loops on them.
+/**
+ * Undistinguished 404 so the parent's existence doesn't leak. Cycles of any
+ * depth are rejected because the admin tree render infinite-loops on them.
+ */
 async function assertParentReassignmentValid(
   context: AuthenticatedAppContext,
   existing: Entry,

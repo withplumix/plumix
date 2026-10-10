@@ -23,13 +23,17 @@ import {
 } from "./messages.js";
 import { fieldName, rowName } from "./paths.js";
 
-// The HTML standard's `type="email"` pattern, so the browser's check and
-// ours agree.
+/**
+ * The HTML standard's `type="email"` pattern, so the browser's check and
+ * ours agree.
+ */
 const EMAIL =
   /^[\w.!#$%&'*+/=?^`{|}~-]+@[a-z\d](?:[a-z\d-]{0,61}[a-z\d])?(?:\.[a-z\d](?:[a-z\d-]{0,61}[a-z\d])?)*$/i;
 
-// Not `URL.parse`: this also runs in the island, on browsers that may lack
-// it.
+/**
+ * Not `URL.parse`: this also runs in the island, on browsers that may lack
+ * it.
+ */
 function urlIsValid(answer: string): boolean {
   try {
     const { protocol } = new URL(answer);
@@ -70,8 +74,10 @@ function fieldError(
   return null;
 }
 
-// The floor counts filled rows; the ceiling counts all rows, blank or not,
-// and is judged first since the body is read only up to the cap.
+/**
+ * The floor counts filled rows; the ceiling counts all rows, blank or not,
+ * and is judged first since the body is read only up to the cap.
+ */
 function rowCountError(
   field: MetaBoxFieldManifestEntry,
   rows: number,

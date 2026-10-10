@@ -30,7 +30,7 @@ export function registerCloudflareErrorHints(hooks: ErrorHintHooks): void {
   );
 }
 
-// A binding referenced in code isn't declared for the worker.
+/** A binding referenced in code isn't declared for the worker. */
 function matchBindingHint(error: unknown): DevErrorHint | null {
   if (
     error instanceof Error &&

@@ -4,14 +4,18 @@
 
 import * as v from "valibot";
 
-// `looseObject` keeps `content` / `marks` / `attrs` reachable without this
-// schema claiming anything about them.
+/**
+ * `looseObject` keeps `content` / `marks` / `attrs` reachable without this
+ * schema claiming anything about them.
+ */
 const typedNodeSchema = v.looseObject({
   type: v.pipe(v.string(), v.nonEmpty()),
 });
 
-// Structural nodes the editor emits regardless of `.nodes()`. None can carry a
-// script or href, so admitting them implicitly is safe.
+/**
+ * Structural nodes the editor emits regardless of `.nodes()`. None can carry a
+ * script or href, so admitting them implicitly is safe.
+ */
 const IMPLICIT_NODES: ReadonlySet<string> = new Set([
   "doc",
   "paragraph",
@@ -32,8 +36,10 @@ function expandAliases(allowlist: readonly string[]): readonly string[] {
  */
 export const SAFE_HREF_RE = /^(https?:\/\/|mailto:|tel:|\/|#|\?|\.\.?\/)/i;
 
-// The 256 KiB byte cap alone admits ~8.5k levels, enough to blow the stack;
-// real documents rarely nest past 10.
+/**
+ * The 256 KiB byte cap alone admits ~8.5k levels, enough to blow the stack;
+ * real documents rarely nest past 10.
+ */
 const MAX_RICHTEXT_DEPTH = 100;
 
 interface RichtextAllowlist {

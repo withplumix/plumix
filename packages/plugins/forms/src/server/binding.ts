@@ -6,8 +6,10 @@ import { sign, verify } from "./signing.js";
 
 const SECRET = "bind_secret";
 
-// The slug stops replay against another form; the kind stops entry 7 and
-// term 7 sharing a signature.
+/**
+ * The slug stops replay against another form; the kind stops entry 7 and
+ * term 7 sharing a signature.
+ */
 const payload = (slug: string, bound: FormBound): string =>
   `${slug}:${bound.type}:${String(bound.id)}`;
 

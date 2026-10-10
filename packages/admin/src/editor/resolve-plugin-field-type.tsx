@@ -7,7 +7,7 @@ import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 
 type PluginFieldComponent = NonNullable<ReturnType<typeof getPluginFieldType>>;
 
-// Projects only what the reference pickers read: the `scope`.
+/** Projects only what the reference pickers read: the `scope`. */
 function inputToField(input: BlockInput): MetaBoxFieldManifestEntry {
   return {
     key: input.name,
@@ -21,10 +21,10 @@ function inputToField(input: BlockInput): MetaBoxFieldManifestEntry {
   };
 }
 
-// A control may still spread the RHF ref onto an element.
+/** A control may still spread the RHF ref onto an element. */
 const NOOP_REF = (): void => undefined;
 
-// A new identity per render would remount the picker and its open modal.
+/** A new identity per render would remount the picker and its open modal. */
 const wrappers = new WeakMap<PluginFieldComponent, PluginFieldControl>();
 
 export function resolvePluginFieldType(

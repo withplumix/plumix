@@ -14,8 +14,10 @@ import { NAMED_TEMPLATE_META_KEY } from "../../../route/render/template-builders
 import { pooledEntryTypeRegistry } from "../../../test/pooled-entry-types.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
-// Register a `post` entry type carrying a selectable per-entry access space, so
-// the update handler validates a caller's `access` key against it.
+/**
+ * Register a `post` entry type carrying a selectable per-entry access space, so
+ * the update handler validates a caller's `access` key against it.
+ */
 function registerPostAccess(
   plugins: ReturnType<typeof createPluginRegistry>,
 ): void {
@@ -41,9 +43,11 @@ function registerPostAccess(
   );
 }
 
-// SEO meta box fixture used by the partial-write and null-clear tests.
-// Registers two fields on the `post` entry type so each test can flip
-// one without disturbing the other.
+/**
+ * SEO meta box fixture used by the partial-write and null-clear tests.
+ * Registers two fields on the `post` entry type so each test can flip
+ * one without disturbing the other.
+ */
 function registerSeoMetaBox(
   plugins: ReturnType<typeof createPluginRegistry>,
 ): void {
@@ -89,8 +93,10 @@ function registerRequiredSubtitle(
   });
 }
 
-// `video_url` is required only while `layout` is "video" — the smallest shape
-// in which one key's value decides whether another key is required.
+/**
+ * `video_url` is required only while `layout` is "video" — the smallest shape
+ * in which one key's value decides whether another key is required.
+ */
 function registerVideoLayout(
   plugins: ReturnType<typeof createPluginRegistry>,
 ): void {
@@ -1062,7 +1068,8 @@ describe("entry.update", () => {
   });
 
   // A driver whose `.sanitize()` yields nothing is not written, so its stored
-  // value is what decides the fields it drives — including one this edit clears.
+  // value is what decides the fields it drives — including one this edit
+  // clears.
   test("meta: a driver the pipeline leaves unwritten is judged by its stored value", async () => {
     const plugins = createPluginRegistry();
     plugins.entryMetaBoxes.set("layout-box", {

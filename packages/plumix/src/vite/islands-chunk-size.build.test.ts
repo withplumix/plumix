@@ -8,21 +8,23 @@ import { expect, test } from "vitest";
 
 type ViteManifest = Record<string, { readonly file: string }>;
 
-// The whole point of the renderer split: the eager islands element chunk
-// must carry no React. This builds the real islands entries (the same
-// modules the generated `.plumix/islands-*-entry.ts` inputs re-export)
-// through Vite with the plugin's load-bearing options
-// (`preserveEntrySignatures: "strict"`, prod minify) and asserts the
-// element chunk stays under the ceiling. A regression that pulls React back
-// into the element chunk blows it to ~60 KB and fails here.
-//
-// The chunk carries the custom element + all five hydration strategies
-// (load/idle/visible/interaction/only) + the prefetch wiring + prop
-// (de)serialization — measured at ~3.5 KB gz (was ~2.4 KB with only
-// `load`). 4 KB leaves headroom for a strategy or two while still catching
-// React (~60 KB) instantly.
+/**
+ * The whole point of the renderer split: the eager islands element chunk
+ * must carry no React. This builds the real islands entries (the same
+ * modules the generated `.plumix/islands-*-entry.ts` inputs re-export)
+ * through Vite with the plugin's load-bearing options
+ * (`preserveEntrySignatures: "strict"`, prod minify) and asserts the
+ * element chunk stays under the ceiling. A regression that pulls React back
+ * into the element chunk blows it to ~60 KB and fails here.
+ *
+ * The chunk carries the custom element + all five hydration strategies
+ * (load/idle/visible/interaction/only) + the prefetch wiring + prop
+ * (de)serialization — measured at ~3.5 KB gz (was ~2.4 KB with only
+ * `load`). 4 KB leaves headroom for a strategy or two while still catching
+ * React (~60 KB) instantly.
+ */
 const ELEMENT_CHUNK_CEILING_BYTES = 4 * 1024;
-// A real Vite build — give it room beyond vitest's 5s default.
+/** A real Vite build — give it room beyond vitest's 5s default. */
 const BUILD_TIMEOUT_MS = 30_000;
 
 test(

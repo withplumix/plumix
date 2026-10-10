@@ -2,8 +2,10 @@ import { useSyncExternalStore } from "react";
 
 import type { LocaleDirection } from "@plumix/core/i18n";
 
-// A locale change reloads the admin, so `<html dir>` never changes within a
-// mount.
+/**
+ * A locale change reloads the admin, so `<html dir>` never changes within a
+ * mount.
+ */
 const noop = (): void => undefined;
 const subscribe = (): typeof noop => noop;
 

@@ -59,14 +59,18 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-// Radix Select forbids an empty-string item value, so the "no parent"
-// choice carries a sentinel that maps back to `null` on change.
+/**
+ * Radix Select forbids an empty-string item value, so the "no parent"
+ * choice carries a sentinel that maps back to `null` on change.
+ */
 const NO_PARENT_VALUE = "__none__";
 
-// Same Radix constraint for the "theme default" (no override) template choice.
+/**
+ * Same Radix constraint for the "theme default" (no override) template choice.
+ */
 const THEME_DEFAULT_VALUE = "__default__";
 
-// And for the "type default" (no per-entry override) visibility choice.
+/** And for the "type default" (no per-entry override) visibility choice. */
 const ACCESS_DEFAULT_VALUE = "__default__";
 
 interface DocumentParentOption {
@@ -152,8 +156,10 @@ export function DocumentMetaBoxes({
   );
 }
 
-// Per-box component so the conditional-visibility hook keeps a stable
-// hook order regardless of how many boxes the entry type registers.
+/**
+ * Per-box component so the conditional-visibility hook keeps a stable
+ * hook order regardless of how many boxes the entry type registers.
+ */
 function DocumentMetaBoxSection({
   box,
 }: {

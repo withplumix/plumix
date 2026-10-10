@@ -22,9 +22,11 @@ import { feeds } from "./index.js";
 import { FEED_LIMIT } from "./items.js";
 import { FEED_TAG } from "./respond.js";
 
-// Every suite below installs the plugin over the host plugin it syndicates:
-// the plugin claims its routes in `afterSetup`, so what it serves is decided
-// by what the site registered, not by what the request path looks like.
+/**
+ * Every suite below installs the plugin over the host plugin it syndicates:
+ * the plugin claims its routes in `afterSetup`, so what it serves is decided
+ * by what the site registered, not by what the request path looks like.
+ */
 function harness(
   ...plugins: readonly AnyPluginDescriptor[]
 ): Promise<DispatcherHarness> {
@@ -33,7 +35,7 @@ function harness(
   });
 }
 
-// `plumix` exports no span type; this is the part of one these tests read.
+/** `plumix` exports no span type; this is the part of one these tests read. */
 interface SpanTree {
   readonly name: string;
   readonly attributes: Readonly<Record<string, JsonValue>>;
@@ -44,7 +46,7 @@ function flattenSpans(spans: readonly SpanTree[]): SpanTree[] {
   return spans.flatMap((span) => [span, ...flattenSpans(span.children)]);
 }
 
-// The SQL each database span ran, in the order it ran.
+/** The SQL each database span ran, in the order it ran. */
 function sqlOf(spans: readonly SpanTree[]): string[] {
   return flattenSpans(spans).flatMap((span) => {
     const sql = span.attributes["db.sql"];
@@ -57,10 +59,12 @@ function countDbSpans(spans: readonly SpanTree[]): number {
     .length;
 }
 
-// A members-only gate that answers terminally. The challenge is hard, not
-// soft: a soft one still renders, so it would gate nothing. And
-// `authenticatedPolicy` would redirect to a sign-in page this harness does
-// not route, which is not what the test is about either.
+/**
+ * A members-only gate that answers terminally. The challenge is hard, not
+ * soft: a soft one still renders, so it would gate nothing. And
+ * `authenticatedPolicy` would redirect to a sign-in page this harness does
+ * not route, which is not what the test is about either.
+ */
 const membersOnlyPolicy = definePolicy({
   segments: ["members"],
   resolve: (ctx) => (ctx.user ? grant("members") : challenge("subscribe")),

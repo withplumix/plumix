@@ -13,7 +13,7 @@ const searchInputSchema = v.object({
   ),
 });
 
-// Each domain enforces its own capabilities server-side.
+/** Each domain enforces its own capabilities server-side. */
 const query = base
   .use(authenticated)
   .input(searchInputSchema)

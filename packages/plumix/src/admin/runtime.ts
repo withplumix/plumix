@@ -41,8 +41,10 @@ interface SharedAdminNamespaces {
   tailwindMerge: typeof TailwindMergeNs;
 }
 
-// Keyed by core's shim roster, which admin's runtime object is checked
-// against too: a roster key with no namespace here fails to index.
+/**
+ * Keyed by core's shim roster, which admin's runtime object is checked
+ * against too: a roster key with no namespace here fails to index.
+ */
 export type PlumixAdminRuntime = {
   readonly [K in SharedAdminRuntimeKey]: SharedAdminNamespaces[K];
 };

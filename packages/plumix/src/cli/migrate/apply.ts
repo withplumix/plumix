@@ -90,8 +90,10 @@ export async function reportStatus(
   }
 }
 
-// Bookkeeping that belongs to SQLite, miniflare's D1, or a migrator, rather
-// than to any owner's schema.
+/**
+ * Bookkeeping that belongs to SQLite, miniflare's D1, or a migrator, rather
+ * than to any owner's schema.
+ */
 const BOOKKEEPING_PREFIXES = ["sqlite_", "_cf_", "__drizzle_migrations"];
 
 async function hasTrackingTables(db: MigrationDatabase): Promise<boolean> {
@@ -105,8 +107,10 @@ function quote(value: string): string {
   return `'${value.replaceAll("'", "''")}'`;
 }
 
-// A table keyed by its columns, the rest by their SQL with whitespace
-// collapsed.
+/**
+ * A table keyed by its columns, the rest by their SQL with whitespace
+ * collapsed.
+ */
 async function schemaOf(
   db: MigrationDatabase,
   legacyTable: string,

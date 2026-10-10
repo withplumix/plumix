@@ -71,8 +71,10 @@ const blog = definePlugin("test-blog", (ctx) => {
   });
 });
 
-// A custom public type plus a non-public one, to prove custom types light up
-// automatically and non-public types stay hidden.
+/**
+ * A custom public type plus a non-public one, to prove custom types light up
+ * automatically and non-public types stay hidden.
+ */
 const catalog = definePlugin("test-catalog", (ctx) => {
   ctx.registerEntryType("book", {
     label: "Books",
@@ -116,7 +118,7 @@ function apiGet(path: string): Request {
   return new Request(`https://cms.example${path}`);
 }
 
-// Every `properties` map in a JSON Schema document, however deeply nested.
+/** Every `properties` map in a JSON Schema document, however deeply nested. */
 function schemaPropertyMaps(node: JsonValue | undefined): JsonObject[] {
   if (Array.isArray(node)) return node.flatMap(schemaPropertyMaps);
   if (node === undefined || !isJsonObject(node)) return [];
@@ -489,8 +491,10 @@ describe("REST API — type exposure", () => {
 
 const OK_OUTPUT = v.object({ ok: v.boolean() });
 
-// Plugin that contributes resources at every auth level. Core owns the 1- and
-// 2-segment collection space, so plugin resources nest deeper.
+/**
+ * Plugin that contributes resources at every auth level. Core owns the 1- and
+ * 2-segment collection space, so plugin resources nest deeper.
+ */
 const apiPlugin = definePlugin("test-api-plugin", (ctx) => {
   ctx.registerRestResource({
     path: "/system/diag/ping",

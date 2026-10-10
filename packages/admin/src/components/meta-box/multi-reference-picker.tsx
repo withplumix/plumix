@@ -24,8 +24,10 @@ import type { LookupItem } from "./lookup/types.js";
 import { useLookupSearch } from "./lookup/use-lookup-search.js";
 import { useReferenceResolve } from "./lookup/use-reference-resolve.js";
 
-// `{kind}` interpolates the raw wire identifier; there's no localized noun map
-// yet.
+/**
+ * `{kind}` interpolates the raw wire identifier; there's no localized noun map
+ * yet.
+ */
 const M = {
   resolveError: defineMessage({
     id: "metaBox.multiReference.resolveError",

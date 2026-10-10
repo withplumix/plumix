@@ -174,7 +174,7 @@ describe("ctx.registerTemplateDep", () => {
   });
 });
 
-// Loaders are handed the request context, so they get a real one.
+/** Loaders are handed the request context, so they get a real one. */
 let db: Db;
 beforeAll(async () => {
   db = await createTestDb();

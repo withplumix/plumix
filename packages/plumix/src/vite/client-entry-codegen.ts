@@ -24,9 +24,11 @@ export function generateClientEntrySource(themeCss: readonly string[]): string {
   return lines.join("\n") + "\n";
 }
 
-// `import.meta.hot` is undefined in production, so this block tree-shakes out.
-// With Vite's overlay disabled, a sync listener buffers an already-broadcast
-// `vite:error` for replay.
+/**
+ * `import.meta.hot` is undefined in production, so this block tree-shakes out.
+ * With Vite's overlay disabled, a sync listener buffers an already-broadcast
+ * `vite:error` for replay.
+ */
 const DEV_CLIENT_INSTALL = [
   "if (import.meta.hot) {",
   "  const hot = import.meta.hot;",
@@ -40,8 +42,10 @@ const DEV_CLIENT_INSTALL = [
   "}",
 ].join("\n");
 
-// Vite reads a leading `/` as project-root-relative; absolute, aliased and
-// `../` paths pass through.
+/**
+ * Vite reads a leading `/` as project-root-relative; absolute, aliased and
+ * `../` paths pass through.
+ */
 function toClientEntryImport(path: string): string {
   if (path.startsWith("/") || path.startsWith("~") || path.startsWith("@")) {
     return path;

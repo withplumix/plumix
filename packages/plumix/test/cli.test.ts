@@ -20,8 +20,10 @@ import { migrateGenerateDeps } from "../src/cli/commands/migrate.js";
 import { run } from "../src/cli/index.js";
 import { report } from "../src/cli/report.js";
 
-// Inline config object — avoids importing "plumix" from a tmp dir, which
-// pnpm's strict node_modules layout won't resolve.
+/**
+ * Inline config object — avoids importing "plumix" from a tmp dir, which
+ * pnpm's strict node_modules layout won't resolve.
+ */
 const VALID_CONFIG = `
 export default {
   runtime: {

@@ -12,11 +12,15 @@ export interface InsertableBlockEntry {
   readonly icon?: string;
   readonly keywords?: readonly Label[];
   readonly attrs?: JsonObject;
-  // Default body for the parent block's conventional `content` slot.
-  // Caller deep-clones + ID-rewrites before merging into a block instance.
+  /**
+   * Default body for the parent block's conventional `content` slot.
+   * Caller deep-clones + ID-rewrites before merging into a block instance.
+   */
   readonly innerBlocks?: readonly BlockNode[];
-  // Preview-only override for inserter card / picker card rendering.
-  // Insertion paths still use `attrs` + `innerBlocks` above.
+  /**
+   * Preview-only override for inserter card / picker card rendering.
+   * Insertion paths still use `attrs` + `innerBlocks` above.
+   */
   readonly example?: BlockVariationExample;
 }
 
@@ -71,10 +75,12 @@ export interface VariationPreviewSource {
   readonly example?: BlockVariationExample;
 }
 
-// Resolves the preview data for a variation: example overrides applied
-// on top of the runtime attrs/innerBlocks. Used by preview surfaces
-// (inserter cards, block-scope picker thumbnails) — never by insertion
-// paths.
+/**
+ * Resolves the preview data for a variation: example overrides applied
+ * on top of the runtime attrs/innerBlocks. Used by preview surfaces
+ * (inserter cards, block-scope picker thumbnails) — never by insertion
+ * paths.
+ */
 export function resolveVariationPreview(source: VariationPreviewSource): {
   readonly attrs: JsonObject;
   readonly innerBlocks: readonly BlockNode[];

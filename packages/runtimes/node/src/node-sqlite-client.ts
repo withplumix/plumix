@@ -44,12 +44,14 @@ export type NodeSqliteDatabase<
   TSchema extends Record<string, unknown> = Record<string, unknown>,
 > = BaseSQLiteDatabase<"sync", StatementResultingChanges, TSchema>;
 
-// `setReturnArrays(true)` is not reflected in `node:sqlite`'s signatures, so
-// array-mode results are narrowed by hand.
+/**
+ * `setReturnArrays(true)` is not reflected in `node:sqlite`'s signatures, so
+ * array-mode results are narrowed by hand.
+ */
 const arrays = (rows: unknown): SQLOutputValue[][] =>
   rows as SQLOutputValue[][];
 
-// Mirrors libsql's `valueToSql`.
+/** Mirrors libsql's `valueToSql`. */
 const bind = (params: BindValue[]): SQLInputValue[] =>
   params.map((value) => {
     if (typeof value === "boolean") return value ? 1 : 0;
@@ -57,15 +59,19 @@ const bind = (params: BindValue[]): SQLInputValue[] =>
     return value;
   });
 
-// SQLite leaves `changes` at 0 for a `db.run` of a select, where libsql reports
-// the row count.
+/**
+ * SQLite leaves `changes` at 0 for a `db.run` of a select, where libsql reports
+ * the row count.
+ */
 const rowsReturned = (rows: readonly unknown[]): number => rows.length;
 const rowOrNone = (row: unknown): number => (row === undefined ? 0 : 1);
 const rowsChanged = (result: StatementResultingChanges): number =>
   Number(result.changes);
 
-// `database.exec` stays untraced, as for every other adapter. Spans carry
-// params as bound by the caller, not as `bind` coerced them.
+/**
+ * `database.exec` stays untraced, as for every other adapter. Spans carry
+ * params as bound by the caller, not as `bind` coerced them.
+ */
 function statement(stmt: StatementSync, sql: string): NodeSqliteStatement {
   // Array mode is sticky on the shared statement, so each read sets it, outside
   // the timed closure.
@@ -104,9 +110,11 @@ function statement(stmt: StatementSync, sql: string): NodeSqliteStatement {
   };
 }
 
-// WAL so a reader never blocks the writer; `synchronous = NORMAL` is durable
-// across a crash under WAL without an fsync per commit. Foreign keys are
-// already on — `node:sqlite`'s default.
+/**
+ * WAL so a reader never blocks the writer; `synchronous = NORMAL` is durable
+ * across a crash under WAL without an fsync per commit. Foreign keys are
+ * already on — `node:sqlite`'s default.
+ */
 export function openNodeSqlite(path: string): NodeSqliteClient {
   mkdirSync(dirname(path), { recursive: true });
   const database = new DatabaseSync(path, { timeout: BUSY_TIMEOUT_MS });

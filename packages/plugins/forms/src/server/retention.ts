@@ -9,8 +9,10 @@ export const RETENTION_CRON = "0 3 * * *";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-// `created_at` is unindexed, so filtering on it scans the backlog. Walking
-// `(form, id)` oldest-first stops at the first kept row.
+/**
+ * `created_at` is unindexed, so filtering on it scans the backlog. Walking
+ * `(form, id)` oldest-first stops at the first kept row.
+ */
 function firstKeptId(db: AppContext["db"], slug: string, cutoff: Date): SQL {
   const kept = db
     .select({ id: formSubmissions.id })

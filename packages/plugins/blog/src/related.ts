@@ -15,7 +15,9 @@ declare module "plumix" {
 
 export type RelatedPosts = readonly ResolvedEntry[];
 
-// The single-post "related" strip stays short — three cards below the article.
+/**
+ * The single-post "related" strip stays short — three cards below the article.
+ */
 const RELATED_POSTS_LIMIT = 3;
 
 /**

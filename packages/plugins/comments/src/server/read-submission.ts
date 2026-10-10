@@ -3,17 +3,21 @@ import * as v from "valibot";
 
 import { RETURN_FIELD } from "../contract.js";
 
-// The two fields a form cannot post as numbers. Coerced here rather than
-// by loosening the schema, so `entryId=12abc` stays a refusal on both
-// paths instead of quietly becoming 12.
+/**
+ * The two fields a form cannot post as numbers. Coerced here rather than
+ * by loosening the schema, so `entryId=12abc` stays a refusal on both
+ * paths instead of quietly becoming 12.
+ */
 const NUMERIC_FIELDS = ["entryId", "parentId"] as const;
 
 const optionalString = v.fallback(v.optional(v.string()), undefined);
 const optionalNumber = v.fallback(v.optional(v.number()), undefined);
 
-// Parsed so non-strings never reach a control and the honeypot can't be echoed
-// back. Every key is optional: a refusal re-renders the form even for a
-// non-comment body.
+/**
+ * Parsed so non-strings never reach a control and the honeypot can't be echoed
+ * back. Every key is optional: a refusal re-renders the form even for a
+ * non-comment body.
+ */
 const echoedSchema = v.object({
   name: optionalString,
   email: optionalString,
@@ -68,7 +72,7 @@ export async function readSubmission(request: Request): Promise<Submission> {
   return { form, body, echoed: parsed.success ? parsed.output : {} };
 }
 
-// Only a JSON body can fail to read; urlencoded always parses.
+/** Only a JSON body can fail to read; urlencoded always parses. */
 async function readBody(
   request: Request,
   form: boolean,

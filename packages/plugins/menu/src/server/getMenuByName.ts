@@ -112,8 +112,10 @@ export async function resolveMenus(
   );
 }
 
-// Every entry the menu links, resolved or not: the label and href are the
-// entry's, and a draft that gets published has to appear in the cached nav.
+/**
+ * Every entry the menu links, resolved or not: the label and href are the
+ * entry's, and a draft that gets published has to appear in the cached nav.
+ */
 function linkedEntryTags(ctx: AppContext, data: MenuData): string[] {
   const adapter = ctx.plugins.lookupAdapters.get("entry")?.adapter;
   if (adapter?.embeddedCacheTags === undefined) return [];

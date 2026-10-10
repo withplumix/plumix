@@ -13,7 +13,7 @@ interface MediaValue {
   readonly height: number | null;
 }
 
-// Tolerates a null or legacy value.
+/** Tolerates a null or legacy value. */
 function normalizeMediaValue(raw: unknown): MediaValue | null {
   if (!raw || typeof raw !== "object") return null;
   const obj = raw as JsonObject;

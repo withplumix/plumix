@@ -56,15 +56,17 @@ import { ReferencePicker } from "./reference-picker.js";
 import { RepeaterField } from "./repeater-field.js";
 import { useBagValues } from "./use-visible-fields.js";
 
-// Code-split so a form with no richtext field never pays for ProseMirror.
+/** Code-split so a form with no richtext field never pays for ProseMirror. */
 const RichTextField = lazy(() =>
   import("@plumix/admin-editor/rich-text-field").then((m) => ({
     default: m.RichTextField,
   })),
 );
 
-// CodeMirror (JSON syntax highlighting) is likewise code-split — a form
-// with no json field never pulls the editor chunk.
+/**
+ * CodeMirror (JSON syntax highlighting) is likewise code-split — a form
+ * with no json field never pulls the editor chunk.
+ */
 const JsonCodeEditor = lazy(() => import("./json-code-editor.js"));
 
 const M = {
@@ -266,8 +268,10 @@ export function MetaBoxField({
   );
 }
 
-// Keyed by `inputType`, not the keys' presence, so stray adornments on other
-// types render nothing. `link` places its own.
+/**
+ * Keyed by `inputType`, not the keys' presence, so stray adornments on other
+ * types render nothing. `link` places its own.
+ */
 const ADORNED_INPUT_TYPES: ReadonlySet<string> = new Set([
   "text",
   "email",
@@ -277,8 +281,10 @@ const ADORNED_INPUT_TYPES: ReadonlySet<string> = new Set([
   "textarea",
 ]);
 
-// Radix reserves "" for "no selection", but a plugin may legitimately register
-// an option whose value is "".
+/**
+ * Radix reserves "" for "no selection", but a plugin may legitimately register
+ * an option whose value is "".
+ */
 const EMPTY_OPTION_VALUE = "__plumix_empty__";
 function encodeOptionValue(value: string): string {
   return value === "" ? EMPTY_OPTION_VALUE : value;
@@ -287,8 +293,10 @@ function decodeOptionValue(value: string): string {
   return value === EMPTY_OPTION_VALUE ? "" : value;
 }
 
-// A component so only the plugin branch subscribes to sibling values; built-in
-// inputs keep re-rendering one field per keystroke.
+/**
+ * A component so only the plugin branch subscribes to sibling values; built-in
+ * inputs keep re-rendering one field per keystroke.
+ */
 function PluginFieldSlot({
   Renderer,
   field,
@@ -313,27 +321,31 @@ function PluginFieldSlot({
   );
 }
 
-// A box at the form root (the settings card) reads the whole form.
+/** A box at the form root (the settings card) reads the whole form. */
 function useSiblingValues(name: string): MetaBoxSiblingValues | undefined {
   const dot = name.lastIndexOf(".");
   return useBagValues({ name: dot === -1 ? undefined : name.slice(0, dot) });
 }
 
-// The shared inputs each native-field renderer needs. Every renderer must
-// return a single element so shadcn's `<FormControl>` (which uses Radix `Slot`)
-// can forward id / aria-describedby / aria-invalid onto it.
+/**
+ * The shared inputs each native-field renderer needs. Every renderer must
+ * return a single element so shadcn's `<FormControl>` (which uses Radix `Slot`)
+ * can forward id / aria-describedby / aria-invalid onto it.
+ */
 interface NativeInputContext {
   field: MetaBoxFieldManifestEntry;
   rhf: ControllerRenderProps<FieldValues, string>;
   disabled: boolean;
   testId: string;
   renderLabel: ReturnType<typeof useLabel>;
-  // Sits inside an `AdornedControl`: emit the input-group control variant.
+  /** Sits inside an `AdornedControl`: emit the input-group control variant. */
   adorned: boolean;
 }
 
-// Identity / validation / test-hook attributes shared by the plain
-// `<Input>`/`<Textarea>`-backed field types.
+/**
+ * Identity / validation / test-hook attributes shared by the plain
+ * `<Input>`/`<Textarea>`-backed field types.
+ */
 function nativeCommonProps({
   rhf,
   field,
@@ -350,7 +362,7 @@ function nativeCommonProps({
   } as const;
 }
 
-// A field's optional placeholder, resolved through the label formatter.
+/** A field's optional placeholder, resolved through the label formatter. */
 function fieldPlaceholder({
   field,
   renderLabel,
@@ -512,8 +524,10 @@ function renderLinkField({
   );
 }
 
-// The dropdown case never reaches here: Radix Select needs <FormControl>
-// around its trigger, so the FormField callback handles it.
+/**
+ * The dropdown case never reaches here: Radix Select needs <FormControl>
+ * around its trigger, so the FormField callback handles it.
+ */
 function renderSelectChoiceField(ctx: NativeInputContext): ReactNode {
   const { field } = ctx;
   if (field.multiple === true) {
@@ -526,9 +540,11 @@ function renderSelectChoiceField(ctx: NativeInputContext): ReactNode {
     : renderSingleButtonsField(ctx);
 }
 
-// Single-value toggle-button group — `appearance: "buttons"`. Radix
-// gives single-type items radio semantics (role=radio), matching the
-// control's one-of-many meaning.
+/**
+ * Single-value toggle-button group — `appearance: "buttons"`. Radix
+ * gives single-type items radio semantics (role=radio), matching the
+ * control's one-of-many meaning.
+ */
 function renderSingleButtonsField({
   field,
   rhf,
@@ -567,9 +583,11 @@ function renderSingleButtonsField({
   );
 }
 
-// Multi-value checkbox list — `appearance: "checkboxes"`. Selection
-// state lives in the value array; emitted arrays follow the declared
-// option order so storage stays stable regardless of click order.
+/**
+ * Multi-value checkbox list — `appearance: "checkboxes"`. Selection
+ * state lives in the value array; emitted arrays follow the declared
+ * option order so storage stays stable regardless of click order.
+ */
 function renderCheckboxListField({
   field,
   rhf,
@@ -708,9 +726,11 @@ function renderRichtextField({
   );
 }
 
-// Footprint-matching placeholder shown while the editor chunk loads, so the
-// form doesn't jump when Tiptap resolves. Mirrors the toolbar + min-height of
-// the real field.
+/**
+ * Footprint-matching placeholder shown while the editor chunk loads, so the
+ * form doesn't jump when Tiptap resolves. Mirrors the toolbar + min-height of
+ * the real field.
+ */
 function RichTextFieldSkeleton({ testId }: { testId: string }): ReactNode {
   return (
     <div
@@ -831,8 +851,10 @@ function renderTextLikeField(ctx: NativeInputContext): ReactNode {
 
 type NativeInputRenderer = (ctx: NativeInputContext) => ReactNode;
 
-// Dispatched before the reference branches, so a stray `referenceTarget` can't
-// turn these into a reference picker.
+/**
+ * Dispatched before the reference branches, so a stray `referenceTarget` can't
+ * turn these into a reference picker.
+ */
 const PRE_REFERENCE_RENDERERS: Partial<Record<string, NativeInputRenderer>> = {
   textarea: renderTextareaField,
   number: renderNumberField,
@@ -842,8 +864,10 @@ const PRE_REFERENCE_RENDERERS: Partial<Record<string, NativeInputRenderer>> = {
   group: renderGroupField,
 };
 
-// The bare `multiselect` / `radio` keys keep object-literal registrations of
-// the retired input types rendering.
+/**
+ * The bare `multiselect` / `radio` keys keep object-literal registrations of
+ * the retired input types rendering.
+ */
 const POST_REFERENCE_RENDERERS: Partial<Record<string, NativeInputRenderer>> = {
   select: renderSelectChoiceField,
   multiselect: renderMultiButtonsField,
@@ -943,8 +967,10 @@ function renderNativeInput(ctx: NativeInputContext): ReactNode {
   return renderTextLikeField(ctx);
 }
 
-// Reads arrive hydrated as `{ id, ... }`; drafts and `.returns("id")` opt-outs
-// carry the bare id.
+/**
+ * Reads arrive hydrated as `{ id, ... }`; drafts and `.returns("id")` opt-outs
+ * carry the bare id.
+ */
 function referenceValueId(value: unknown): string | null {
   if (typeof value === "string" && value !== "") return value;
   if (typeof value === "object" && value !== null && !Array.isArray(value)) {
@@ -954,8 +980,10 @@ function referenceValueId(value: unknown): string | null {
   return null;
 }
 
-// Null on a missing label so the picker's lookup can offer its richer fallback
-// (untitled chrome, email). No subtitle: the public-safe summary lacks it.
+/**
+ * Null on a missing label so the picker's lookup can offer its richer fallback
+ * (untitled chrome, email). No subtitle: the public-safe summary lacks it.
+ */
 function referenceValueSummary(value: unknown): LookupItem | null {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return null;
@@ -972,7 +1000,9 @@ function referenceValueSummary(value: unknown): LookupItem | null {
   return { id: summary.id, label };
 }
 
-// Meta values arrive as `unknown` because the registry isn't per-type-generic.
+/**
+ * Meta values arrive as `unknown` because the registry isn't per-type-generic.
+ */
 function asString(value: unknown): string {
   if (value === null || value === undefined) return "";
   if (typeof value === "string") return value;
@@ -982,8 +1012,10 @@ function asString(value: unknown): string {
   return "";
 }
 
-// A `.returns("date")` value's wall-clock anchors to UTC; the server's own
-// formatter keeps the display timezone-invariant.
+/**
+ * A `.returns("date")` value's wall-clock anchors to UTC; the server's own
+ * formatter keeps the display timezone-invariant.
+ */
 function asTemporalInputValue(
   inputType: TemporalInputType,
   value: Date,
@@ -993,15 +1025,17 @@ function asTemporalInputValue(
     : formatTemporalValue(inputType, value);
 }
 
-// `<input type="number">` needs an empty string (not `0`) to render an
-// empty field, and a number-or-string for a valued field. Non-numeric
-// input drops to empty rather than rendering "NaN".
+/**
+ * `<input type="number">` needs an empty string (not `0`) to render an
+ * empty field, and a number-or-string for a valued field. Non-numeric
+ * input drops to empty rather than rendering "NaN".
+ */
 function asNumberInputValue(value: unknown): number | string {
   if (typeof value === "number" && !Number.isNaN(value)) return value;
   return "";
 }
 
-// The wire shape allows string bounds, though `range` is numeric-only.
+/** The wire shape allows string bounds, though `range` is numeric-only. */
 function toFiniteNumber(
   value: number | string | undefined,
   fallback: number,
@@ -1014,8 +1048,10 @@ function toFiniteNumber(
   return fallback;
 }
 
-// A local draft lets the user type invalid intermediate JSON; only valid drafts
-// propagate.
+/**
+ * A local draft lets the user type invalid intermediate JSON; only valid drafts
+ * propagate.
+ */
 function JsonControl({
   value,
   onChange,
@@ -1084,7 +1120,7 @@ function JsonControl({
   );
 }
 
-// Footprint-matching placeholder while the CodeMirror chunk loads.
+/** Footprint-matching placeholder while the CodeMirror chunk loads. */
 function JsonEditorSkeleton({ testId }: { testId: string }): React.ReactNode {
   return (
     <div
@@ -1104,8 +1140,10 @@ function formatInitial(value: unknown): string {
   }
 }
 
-// Cycles and BigInts fall back to a constant, so the boundary won't reset on
-// them.
+/**
+ * Cycles and BigInts fall back to a constant, so the boundary won't reset on
+ * them.
+ */
 function stringifyForResetKey(value: unknown): string {
   if (typeof value === "string") return value;
   if (value === null || value === undefined) return "";

@@ -44,8 +44,10 @@ function termKey(taxonomy: string, slug: string): string {
   return `core:term-at:${JSON.stringify([taxonomy, slug])}`;
 }
 
-// A miss has no term id, so it is tagged with what any term write in the
-// taxonomy announces; an unrelated write costs one re-read.
+/**
+ * A miss has no term id, so it is tagged with what any term write in the
+ * taxonomy announces; an unrelated write costs one re-read.
+ */
 function termAtTags(ctx: AppContext, taxonomy: string): readonly string[] {
   return termPurgeTags(termPageEntryTypeNames(ctx.plugins, taxonomy));
 }
@@ -85,8 +87,10 @@ function authorKey(slug: string): string {
   return `core:author-at:${slug}`;
 }
 
-// Keyed by slug for the reason the term lookup is: a miss has
-// no user id, so the entry carries what any user write announces.
+/**
+ * Keyed by slug for the reason the term lookup is: a miss has
+ * no user id, so the entry carries what any user write announces.
+ */
 function authorAtTags(ctx: AppContext): readonly string[] {
   return usersPurgeTags(publicEntryTypeNames(ctx.plugins));
 }

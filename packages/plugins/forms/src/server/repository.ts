@@ -54,8 +54,10 @@ export function boundColumns(bound: FormBound | null): {
   return { boundType: bound?.type ?? null, boundId: bound?.id ?? null };
 }
 
-// A half-set bound pair, possible only from a direct write, reads as
-// nothing bound.
+/**
+ * A half-set bound pair, possible only from a direct write, reads as
+ * nothing bound.
+ */
 function toStored(
   { labelsDigest: _digest, boundType, boundId, ...rest }: FormSubmission,
   labels: FormLabelSnapshot,
@@ -107,8 +109,10 @@ function filterFor(filter: SubmissionFilter): SQL | undefined {
   return and(...conditions);
 }
 
-// Left join: no foreign key guarantees the snapshot exists, and an inner
-// join would hide such a row from the inbox.
+/**
+ * Left join: no foreign key guarantees the snapshot exists, and an inner
+ * join would hide such a row from the inbox.
+ */
 function selectSubmissions(ctx: AppContext) {
   return ctx.db
     .select({
@@ -128,7 +132,7 @@ function withLabels(
   return toStored(row, row.labels ?? {});
 }
 
-// Id order is arrival order, with no same-second ties like `createdAt`.
+/** Id order is arrival order, with no same-second ties like `createdAt`. */
 function decodeCursor(raw: string | null | undefined): number | null {
   if (!raw) return null;
   const id = Number.parseInt(raw, 10);

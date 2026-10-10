@@ -5,8 +5,10 @@ import { describe, expect, test } from "vitest";
 
 import { feeds } from "./index.js";
 
-// Discovery reads the archive that owns the page from core's archive lookup,
-// so each page here is rendered for real rather than handed in as a payload.
+/**
+ * Discovery reads the archive that owns the page from core's archive lookup,
+ * so each page here is rendered for real rather than handed in as a payload.
+ */
 const host = definePlugin("feeds-discovery-host", (ctx) => {
   ctx.registerEntryType("post", {
     label: "Posts",
@@ -59,7 +61,7 @@ async function seeded(
   return h;
 }
 
-// The `<link rel="alternate">` hrefs a rendered page advertises.
+/** The `<link rel="alternate">` hrefs a rendered page advertises. */
 async function advertised(
   h: DispatcherHarness,
   path: string,

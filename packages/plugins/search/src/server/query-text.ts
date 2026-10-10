@@ -1,7 +1,9 @@
 import { escapeHtml } from "plumix/support";
 
-// Need not be unguessable: content carrying this text is escaped with the
-// rest and yields only an inert stray `<mark>`.
+/**
+ * Need not be unguessable: content carrying this text is escaped with the
+ * rest and yields only an inert stray `<mark>`.
+ */
 const MARK_OPEN = "<plumix:mark>";
 const MARK_CLOSE = "</plumix:mark>";
 
@@ -14,8 +16,10 @@ export const SNIPPET_MARKERS = {
   tokens: 24,
 } as const;
 
-// FTS5 escapes nothing around its markers, so escape everything first and
-// only then restore them.
+/**
+ * FTS5 escapes nothing around its markers, so escape everything first and
+ * only then restore them.
+ */
 const ESCAPED_OPEN = escapeHtml(MARK_OPEN);
 const ESCAPED_CLOSE = escapeHtml(MARK_CLOSE);
 
@@ -25,8 +29,10 @@ export function highlightSnippet(raw: string): string {
     .replaceAll(ESCAPED_CLOSE, "</mark>");
 }
 
-// The closing quote is optional, so a stray quote mark becomes a phrase
-// rather than a syntax error.
+/**
+ * The closing quote is optional, so a stray quote mark becomes a phrase
+ * rather than a syntax error.
+ */
 const TOKEN = /"([^"]*)"?|(\S+)/g;
 
 interface QueryToken {

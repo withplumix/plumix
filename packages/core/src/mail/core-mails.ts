@@ -85,8 +85,10 @@ const M = {
   },
 } as const;
 
-// Every value is escaped, since a site name and an address are the site's
-// and the user's input.
+/**
+ * Every value is escaped, since a site name and an address are the site's
+ * and the user's input.
+ */
 type Block = { readonly text: string } | { readonly link: string };
 
 function textBody(blocks: readonly Block[]): string {

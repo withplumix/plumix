@@ -54,8 +54,10 @@ function readInitialTree(doc: Document): readonly BlockNode[] {
   }
 }
 
-// The SSR embeds what the canvas — a fresh React tree with no server context —
-// would otherwise have to guess; `parseRenderEnv` says what and why.
+/**
+ * The SSR embeds what the canvas — a fresh React tree with no server context —
+ * would otherwise have to guess; `parseRenderEnv` says what and why.
+ */
 function readRenderEnv(doc: Document): RenderEnv {
   return parseRenderEnv(
     doc.querySelector("[data-plumix-render-env]")?.textContent ?? "",

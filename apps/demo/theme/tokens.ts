@@ -1,8 +1,10 @@
 import type { ThemeTokens } from "@plumix/core/blocks";
 
-// Editorial defaults: warm paper/ink with a single accent, a serif display
-// face over a sans body. These emit `--plumix-<group>-<slug>` CSS variables
-// that the theme's Tailwind config consumes (see styles.css).
+/**
+ * Editorial defaults: warm paper/ink with a single accent, a serif display
+ * face over a sans body. These emit `--plumix-<group>-<slug>` CSS variables
+ * that the theme's Tailwind config consumes (see styles.css).
+ */
 export const DEFAULT_TOKENS = {
   color: {
     paper: { value: "#fbfaf8", label: "Paper" },

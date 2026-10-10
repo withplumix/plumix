@@ -14,11 +14,13 @@ import { PlumixCommentForm } from "@plumix/plugin-comments/theme";
 import { commentItem } from "./comment-item.js";
 import { OlderComments } from "./older-comments.js";
 
-// Minimal single-post template that renders the approved comment thread
-// the `comments` template dep resolves for the current entry, recursing
-// into nested replies. Authored with `createElement` (no JSX) so the
-// first real plumix theme stays transform-agnostic across jiti config
-// load + the vite worker bundle.
+/**
+ * Minimal single-post template that renders the approved comment thread
+ * the `comments` template dep resolves for the current entry, recursing
+ * into nested replies. Authored with `createElement` (no JSX) so the
+ * first real plumix theme stays transform-agnostic across jiti config
+ * load + the vite worker bundle.
+ */
 const single = defineTemplate<EntryData>({
   comments: ["current"],
   render: ({ data, comments }): ReactNode => {

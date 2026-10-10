@@ -2,10 +2,12 @@ import * as v from "valibot";
 
 import { base } from "@plumix/core";
 
-// The shape a plugin's server module hands `registerRpcRouter`. Only its type
-// is under test: the handlers never run, the stub answers at the fetch
-// boundary. The suites take it with `import type`, so a browser test never
-// loads core's root.
+/**
+ * The shape a plugin's server module hands `registerRpcRouter`. Only its type
+ * is under test: the handlers never run, the stub answers at the fetch
+ * boundary. The suites take it with `import type`, so a browser test never
+ * loads core's root.
+ */
 const _menuRouter = {
   list: base
     .input(v.object({ termId: v.number() }))

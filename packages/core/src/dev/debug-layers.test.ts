@@ -8,24 +8,26 @@ import {
   staticClosureOf,
 } from "../test/import-graph.js";
 
-// The dev debug feature is three layers, and the only thing that keeps them
-// three is that imports run one way: a surface reads the panel vocabulary,
-// which reads the captured request, and never the reverse. Nothing in the
-// compiler complains about a cycle between sibling directories — TypeScript
-// resolves one happily — so the direction is a property only a test can hold.
-//
-// This is why the store and the writer left `debug-bar/`: the bar is one of
-// four readers (itself, the read routes, and the two MCP tools), and while it
-// owned the directory, every new reader had to import out of a UI widget to
-// reach the data (#2422).
-//
-// Scope is the debug cluster only, and only edges *inside* it. `dev/server/`
-// (the dev error page, which has its own unrelated `panels/`), `dev/ui/` and
-// `dev/trust.ts` are not part of the cluster and are deliberately absent
-// below. Nor is a rule here aimed at `context/app.ts`, which registers both
-// the bar's telemetry consumer and the history writer: a composition root
-// naming every unit is what a composition root is for, and forbidding it
-// would only push the wiring somewhere less visible.
+/**
+ * The dev debug feature is three layers, and the only thing that keeps them
+ * three is that imports run one way: a surface reads the panel vocabulary,
+ * which reads the captured request, and never the reverse. Nothing in the
+ * compiler complains about a cycle between sibling directories — TypeScript
+ * resolves one happily — so the direction is a property only a test can hold.
+ *
+ * This is why the store and the writer left `debug-bar/`: the bar is one of
+ * four readers (itself, the read routes, and the two MCP tools), and while it
+ * owned the directory, every new reader had to import out of a UI widget to
+ * reach the data (#2422).
+ *
+ * Scope is the debug cluster only, and only edges *inside* it. `dev/server/`
+ * (the dev error page, which has its own unrelated `panels/`), `dev/ui/` and
+ * `dev/trust.ts` are not part of the cluster and are deliberately absent
+ * below. Nor is a rule here aimed at `context/app.ts`, which registers both
+ * the bar's telemetry consumer and the history writer: a composition root
+ * naming every unit is what a composition root is for, and forbidding it
+ * would only push the wiring somewhere less visible.
+ */
 const UNIT_NAMES = ["capture", "panels", "bar", "routes"] as const;
 type UnitName = (typeof UNIT_NAMES)[number];
 
@@ -80,7 +82,9 @@ function filesOf(name: UnitName): readonly string[] {
 }
 
 interface CrossUnitEdge {
-  /** `importer → imported`, both relative to `src/`, for the failure message. */
+  /**
+   * `importer → imported`, both relative to `src/`, for the failure message.
+   */
   readonly label: string;
   readonly target: UnitName;
 }
@@ -119,13 +123,15 @@ describe("the dev debug layers import one way", () => {
   });
 });
 
-// The two dev MCP tools want the captured requests and nothing else. While the
-// store lived in `debug-bar/`, asking for it meant importing a React overlay's
-// directory into the MCP tool registry — the panel graph travelled with it,
-// held out of production only by the dev gate. Since #2442 they read the app's
-// ring off the context and import nothing in the cluster at all; this pins the
-// graph there. Whether they still *read* the ring is behaviour, and the MCP
-// dispatch suite asserts it.
+/**
+ * The two dev MCP tools want the captured requests and nothing else. While the
+ * store lived in `debug-bar/`, asking for it meant importing a React overlay's
+ * directory into the MCP tool registry — the panel graph travelled with it,
+ * held out of production only by the dev gate. Since #2442 they read the app's
+ * ring off the context and import nothing in the cluster at all; this pins the
+ * graph there. Whether they still *read* the ring is behaviour, and the MCP
+ * dispatch suite asserts it.
+ */
 const MCP_READERS = ["mcp/telemetry-tools.ts", "mcp/error-tools.ts"] as const;
 
 describe("the dev MCP tools read the capture layer only", () => {

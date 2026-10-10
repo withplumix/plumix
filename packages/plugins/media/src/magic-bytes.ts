@@ -20,8 +20,10 @@ const anyOf =
   (b) =>
     m.some((f) => f(b));
 
-// `RIFF...<tag>` containers — `tag` lives at offset 8 after `RIFF` + size.
-// Used by image/webp + audio/wav.
+/**
+ * `RIFF...<tag>` containers — `tag` lives at offset 8 after `RIFF` + size.
+ * Used by image/webp + audio/wav.
+ */
 const riffWith = (...tag: readonly number[]): Matcher => {
   const head = startsWith(0x52, 0x49, 0x46, 0x46); // RIFF
   const tail = sigAt(8, ...tag);
@@ -38,8 +40,10 @@ const isXmlOrSvg: Matcher = (b) => {
   return trimmed.startsWith("<?xml") || trimmed.startsWith("<svg");
 };
 
-// HTML stashed in `.txt` bypasses the image allowlist. Plain text can't be
-// proven, so reject obvious markup and require valid UTF-8.
+/**
+ * HTML stashed in `.txt` bypasses the image allowlist. Plain text can't be
+ * proven, so reject obvious markup and require valid UTF-8.
+ */
 const isPlainText: Matcher = (b) => {
   let text: string;
   try {
@@ -63,15 +67,19 @@ const isPlainText: Matcher = (b) => {
   );
 };
 
-// `ftyp` at offset 4 covers MP4, MOV, AVIF, HEIC, etc. We only need to
-// detect "is this an isobmff container", not which brand exactly.
+/**
+ * `ftyp` at offset 4 covers MP4, MOV, AVIF, HEIC, etc. We only need to
+ * detect "is this an isobmff container", not which brand exactly.
+ */
 const isISOBMFF: Matcher = sigAt(4, 0x66, 0x74, 0x79, 0x70);
 
-// Any zip passes for every Office/ODF subtype; harmless because none is
-// inline-safe, so the serve route force-downloads them all.
+/**
+ * Any zip passes for every Office/ODF subtype; harmless because none is
+ * inline-safe, so the serve route force-downloads them all.
+ */
 const isZipContainer: Matcher = startsWith(0x50, 0x4b, 0x03, 0x04);
 
-// OLE2 compound document — legacy Office (.doc/.xls/.ppt).
+/** OLE2 compound document — legacy Office (.doc/.xls/.ppt). */
 const isOle2: Matcher = startsWith(0xd0, 0xcf, 0x11, 0xe0);
 
 const MATCHERS: Readonly<Record<string, Matcher>> = {

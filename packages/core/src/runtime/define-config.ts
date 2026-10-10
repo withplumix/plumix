@@ -5,8 +5,10 @@ import { resolveLocales } from "../i18n/locale-registry.js";
 import { resolveFrameworkRoutes } from "../route/contract/framework-routes.js";
 import { welcomeTheme } from "../welcome-theme.js";
 
-// Resolves the config shapes `config.ts` declares. Here rather than beside
-// them because the default theme is a surface, which no contract may import.
+/**
+ * Resolves the config shapes `config.ts` declares. Here rather than beside
+ * them because the default theme is a surface, which no contract may import.
+ */
 export function plumix(config: PlumixConfigInput): PlumixConfig {
   // Fail at build time rather than crash on the first request.
   if (config.auth.magicLink && !config.mailer) {

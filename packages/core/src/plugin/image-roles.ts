@@ -143,8 +143,10 @@ interface CollectTarget {
   readonly byRole: Map<string, ImageRoleField[]>;
 }
 
-// `repeater` is the path of the outermost repeater above `fields`, if any: a
-// role anywhere beneath one would name a row's image, not the entity's.
+/**
+ * `repeater` is the path of the outermost repeater above `fields`, if any: a
+ * role anywhere beneath one would name a row's image, not the entity's.
+ */
 function collect(
   target: CollectTarget,
   fields: readonly MetaBoxField[],

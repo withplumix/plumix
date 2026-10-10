@@ -46,8 +46,10 @@ export function createCapabilityResolver(
   };
 }
 
-// The registry has stable per-app identity; weak keys free the resolver with a
-// discarded registry.
+/**
+ * The registry has stable per-app identity; weak keys free the resolver with a
+ * discarded registry.
+ */
 const RESOLVER_BY_REGISTRY = new WeakMap<PluginRegistry, CapabilityResolver>();
 
 /**

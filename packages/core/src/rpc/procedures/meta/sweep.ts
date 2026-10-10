@@ -70,12 +70,16 @@ export interface MetaSweep {
   readonly next: MetaSweepCursor | null;
 }
 
-// D1 caps queries per Worker invocation (50 on the free plan). Half leaves
-// room for each settled row's hook work, so a call never dies partway.
+/**
+ * D1 caps queries per Worker invocation (50 on the free plan). Half leaves
+ * room for each settled row's hook work, so a call never dies partway.
+ */
 const QUERY_BUDGET = 25;
 
-// Rows per read: reporting a large site takes a read per page, and holding a
-// whole store in memory at once is what the paging avoids.
+/**
+ * Rows per read: reporting a large site takes a read per page, and holding a
+ * whole store in memory at once is what the paging avoids.
+ */
 const PAGE = 500;
 
 export const MAX_UNCONVERTIBLE_IDS = 20;
@@ -133,8 +137,10 @@ export function mergeUnsettledKeys(
   return tally.counts();
 }
 
-// Each store walks on from `from` — from its first row when `null` — and
-// answers where it stopped short, or `null` once it has walked every row.
+/**
+ * Each store walks on from `from` — from its first row when `null` — and
+ * answers where it stopped short, or `null` once it has walked every row.
+ */
 type StoreWalk = (
   walk: Walk,
   from: MetaSweepCursor | null,
@@ -205,8 +211,10 @@ const STORES: Readonly<Record<MetaStore, StoreWalk>> = {
   settings: sweepSettings,
 };
 
-// Settings are one row per key and a site holds few groups, so the rest are
-// read in one query. Each settled group is announced once, as a save would.
+/**
+ * Settings are one row per key and a site holds few groups, so the rest are
+ * read in one query. Each settled group is announced once, as a save would.
+ */
 async function sweepSettings(
   walk: Walk,
   from: MetaSweepCursor | null,
@@ -268,8 +276,10 @@ async function sweepSettings(
   return stopped;
 }
 
-// Guarded like the entry write-back: a save that landed since the read wins,
-// and this key is left for the next sweep.
+/**
+ * Guarded like the entry write-back: a save that landed since the read wins,
+ * and this key is left for the next sweep.
+ */
 async function writeSetting(
   ctx: AppContext,
   row: { readonly group: string; readonly key: string },

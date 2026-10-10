@@ -8,8 +8,10 @@ import { REPO_ROOT } from "../test-support.js";
 import { compose } from "./index.js";
 
 const baseDir = fileURLToPath(new URL("../../base", import.meta.url));
-// The base package.json pins `plumix` via `workspace:`, which only the live
-// catalog resolves.
+/**
+ * The base package.json pins `plumix` via `workspace:`, which only the live
+ * catalog resolves.
+ */
 const ctx: Promise<CatalogContext> = loadCatalogContext(REPO_ROOT);
 
 const runtime: RuntimeDescriptor = {

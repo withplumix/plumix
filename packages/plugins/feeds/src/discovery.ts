@@ -5,8 +5,10 @@ import { withBasePath } from "plumix/support";
 
 import { feedUnder, servesFeed } from "./routes.js";
 
-// An error page can sit at an archive's URL without being its page, so it
-// advertises no feed.
+/**
+ * An error page can sit at an archive's URL without being its page, so it
+ * advertises no feed.
+ */
 function feedBase(data: TemplateData, ctx: AppContext): string | null {
   const route = ctx.resolvedRoute;
   if (data.kind === "error" || route === null) return null;
@@ -29,7 +31,7 @@ function feedBase(data: TemplateData, ctx: AppContext): string | null {
 
 const SUFFIX_SEGMENTS = FRAMEWORK_PAGINATION_SUFFIX.split("/").length - 1;
 
-// A later page's listing is its own path with the pagination tail dropped.
+/** A later page's listing is its own path with the pagination tail dropped. */
 function listingPath(route: ResolvedRoute, pathname: string): string {
   if (!route.pattern.endsWith(FRAMEWORK_PAGINATION_SUFFIX)) return pathname;
   return pathname.split("/").slice(0, -SUFFIX_SEGMENTS).join("/");

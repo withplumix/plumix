@@ -32,9 +32,11 @@ import type { DevRuntime } from "./dev-runtime.js";
 import type { RequestMemo } from "./memo.js";
 import type { TelemetryCollector, TelemetryConsumer } from "./telemetry.js";
 
-// Mapped, not `typeof coreSchema`: a namespace type prints in a plugin's
-// declarations as `typeof import("@plumix/core/schema")`, which its consumers
-// cannot resolve; a mapped alias prints by name, through `plumix`.
+/**
+ * Mapped, not `typeof coreSchema`: a namespace type prints in a plugin's
+ * declarations as `typeof import("@plumix/core/schema")`, which its consumers
+ * cannot resolve; a mapped alias prints by name, through `plumix`.
+ */
 export type CoreSchema = {
   [Table in keyof typeof coreSchema]: (typeof coreSchema)[Table];
 };
@@ -68,8 +70,10 @@ export interface Logger {
 }
 
 export interface AuthNamespace {
-  // A reference is resolved against this request's registry before the check,
-  // so a pooled type's reference meets the namespace its role grants live in.
+  /**
+   * A reference is resolved against this request's registry before the check,
+   * so a pooled type's reference meets the namespace its role grants live in.
+   */
   can(capability: Capability): boolean;
 }
 

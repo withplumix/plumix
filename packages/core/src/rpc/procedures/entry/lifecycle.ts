@@ -152,8 +152,10 @@ export async function fireEntryRevisionRestored(
   );
 }
 
-// The trash gate is deliberately distinct from `canEditEntry`; don't unify
-// them.
+/**
+ * The trash gate is deliberately distinct from `canEditEntry`; don't unify
+ * them.
+ */
 interface DeletableGuards {
   readonly notFound: (id: number) => never;
   readonly errors: GatedLookupErrors;
@@ -170,7 +172,7 @@ export function entryDeletableGuards(
   };
 }
 
-// Pure (no query) gate, shared by the single-row and batched loaders.
+/** Pure (no query) gate, shared by the single-row and batched loaders. */
 function assertDeletable(
   ctx: AuthenticatedAppContext,
   entry: Entry,
@@ -239,10 +241,12 @@ export async function wouldCreateParentCycle(
   return false;
 }
 
-// No-op when the type doesn't opt into `supports: ['revisions']`.
-// Fires `entry:<type>:revision_created` + the generic variant once
-// the snapshot lands; `revision_pruned` only fires when the cap
-// pushed rows past `maxRevisions`.
+/**
+ * No-op when the type doesn't opt into `supports: ['revisions']`.
+ * Fires `entry:<type>:revision_created` + the generic variant once
+ * the snapshot lands; `revision_pruned` only fires when the cap
+ * pushed rows past `maxRevisions`.
+ */
 export async function captureRevisionIfSupported(
   ctx: AuthenticatedAppContext,
   updated: Entry,

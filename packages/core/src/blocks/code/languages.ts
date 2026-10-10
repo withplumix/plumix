@@ -1,15 +1,19 @@
 import type { Label } from "../../i18n/label.js";
 
 interface CodeLanguage {
-  // Stable, lowercase id stored on the block and emitted as
-  // `data-language` — highlighters key off these.
+  /**
+   * Stable, lowercase id stored on the block and emitted as
+   * `data-language` — highlighters key off these.
+   */
   readonly id: string;
   readonly label: Label;
 }
 
-// Curated common-language list for the code block's picker. Labels stay
-// plain English (proper nouns / not worth translating); ids are the
-// canonical highlighter slugs.
+/**
+ * Curated common-language list for the code block's picker. Labels stay
+ * plain English (proper nouns / not worth translating); ids are the
+ * canonical highlighter slugs.
+ */
 export const CODE_LANGUAGES: readonly CodeLanguage[] = [
   { id: "bash", label: "Bash" },
   { id: "c", label: "C" },

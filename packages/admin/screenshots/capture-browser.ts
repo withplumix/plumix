@@ -10,18 +10,22 @@ import { resolveE2EPort } from "@plumix/core/test/playwright";
  */
 export const CAPTURE_ENDPOINT_ENV = "PLUMIX_SCREENSHOT_WS_ENDPOINT";
 
-// Ten clear of the admin preview block (5180 here, 5181 in admin-editor).
+/** Ten clear of the admin preview block (5180 here, 5181 in admin-editor). */
 const BROWSER_PORT_BASE = 5190;
-// Inside the container nothing else is listening, so this never has to move.
+/**
+ * Inside the container nothing else is listening, so this never has to move.
+ */
 const CONTAINER_PORT = 3000;
 const MOUNTED_CORE = "/playwright-core";
-// What `run-server` prints once it is actually accepting connections.
+/** What `run-server` prints once it is actually accepting connections. */
 const READY_MARKER = "Listening on";
 const READY_TIMEOUT_MS = 30_000;
 const POLL_INTERVAL_MS = 100;
 
-// `playwright-core` is @playwright/test's dependency, not admin's, so it
-// resolves from there rather than from this file.
+/**
+ * `playwright-core` is @playwright/test's dependency, not admin's, so it
+ * resolves from there rather than from this file.
+ */
 const fromPlaywrightTest = createRequire(
   createRequire(import.meta.url).resolve("@playwright/test"),
 );
@@ -202,7 +206,9 @@ export async function waitForServer(
   }
 }
 
-/** `undefined` when docker has no such container — it has already been reaped. */
+/**
+ * `undefined` when docker has no such container — it has already been reaped.
+ */
 function containerLog(id: string): string | undefined {
   try {
     return execFileSync("docker", ["logs", id], {

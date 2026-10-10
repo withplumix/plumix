@@ -13,8 +13,10 @@ declare module "plumix" {
   }
 }
 
-// Training and assistant crawlers only; ordinary search indexers are blocked by
-// turning indexing off.
+/**
+ * Training and assistant crawlers only; ordinary search indexers are blocked by
+ * turning indexing off.
+ */
 const AI_CRAWLERS = [
   "AI2Bot",
   "Amazonbot",
@@ -45,15 +47,17 @@ const AI_CRAWLERS = [
 
 const AI_CRAWLER_GROUP = `\n${AI_CRAWLERS.map((agent) => `User-agent: ${agent}\n`).join("")}Disallow: /\n`;
 
-// What a site that has written nothing serves: everything crawlable.
+/** What a site that has written nothing serves: everything crawlable. */
 const ALLOW_ALL = "User-agent: *\nDisallow:\n";
 const DISALLOW_ALL = "User-agent: *\nDisallow: /\n";
 
-// Case-insensitive and anchored to a line, so a `Sitemap:` inside a comment or
-// a path does not read as a declaration.
+/**
+ * Case-insensitive and anchored to a line, so a `Sitemap:` inside a comment or
+ * a path does not read as a declaration.
+ */
 const SITEMAP_LINE = /^\s*sitemap\s*:/im;
 
-// What the settings screen answers about the file.
+/** What the settings screen answers about the file. */
 interface RobotsInputs {
   readonly indexable: boolean;
   readonly blockAiCrawlers: boolean;
@@ -61,8 +65,10 @@ interface RobotsInputs {
   readonly sitemap: string;
 }
 
-// The sitemap line is appended unless the author's rules declare one, so an
-// edit can't drop it by omission.
+/**
+ * The sitemap line is appended unless the author's rules declare one, so an
+ * edit can't drop it by omission.
+ */
 function robotsTxt(inputs: RobotsInputs): string {
   if (!inputs.indexable) return DISALLOW_ALL;
   const rules = endsInNewline(inputs.authored ?? ALLOW_ALL);

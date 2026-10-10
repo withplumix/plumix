@@ -1,8 +1,10 @@
 import MarkdownIt from "markdown-it";
 
-// `html: false` is the whole safety posture: raw HTML is escaped, never parsed,
-// so no separate sanitizer. The default `validateLink` still allows raster
-// `data:` images.
+/**
+ * `html: false` is the whole safety posture: raw HTML is escaped, never parsed,
+ * so no separate sanitizer. The default `validateLink` still allows raster
+ * `data:` images.
+ */
 const md = new MarkdownIt({
   html: false,
   linkify: false,

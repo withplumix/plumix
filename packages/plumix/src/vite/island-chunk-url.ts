@@ -21,7 +21,7 @@ export function resolveIslandChunkUrl(
   return "/@fs" + id;
 }
 
-// A missing file reads as an empty manifest, the cold-build case.
+/** A missing file reads as an empty manifest, the cold-build case. */
 type AssetManifest = Readonly<Record<string, { readonly file?: string }>>;
 
 export function loadAssetManifest(rootDir: string): AssetManifest {

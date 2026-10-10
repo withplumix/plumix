@@ -29,12 +29,16 @@ import {
 import { CSS_PROPERTIES } from "./css-properties.js";
 import { useStyleField } from "./use-style-field.js";
 
-// A camelCase standard property (`marginTop`) or a CSS custom property
-// (`--brand-gap`) — stricter than the render guard, which also tolerates junk.
+/**
+ * A camelCase standard property (`marginTop`) or a CSS custom property
+ * (`--brand-gap`) — stricter than the render guard, which also tolerates junk.
+ */
 const VALID_PROPERTY = /^(--)?[a-zA-Z][a-zA-Z-]*$/;
 
-// Radix Select forbids an empty-string item value, so the "clear" choice
-// carries a sentinel that maps back to `null` on change.
+/**
+ * Radix Select forbids an empty-string item value, so the "clear" choice
+ * carries a sentinel that maps back to `null` on change.
+ */
 const NONE_VALUE = "__none__";
 
 export interface StyleDeclaration {
@@ -83,8 +87,10 @@ export function StyleDeclarations({
   );
 }
 
-// Keyed by property in the parent, so the draft re-inits when the row's
-// identity changes.
+/**
+ * Keyed by property in the parent, so the draft re-inits when the row's
+ * identity changes.
+ */
 function DeclarationRow({
   property,
   value,

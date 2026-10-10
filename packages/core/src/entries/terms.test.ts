@@ -39,10 +39,12 @@ function taxonomyRegistry(
   return registry;
 }
 
-// Both replacement-semantics and sortOrder tests need the same shape:
-// an editor-authed harness, an empty post, and three pre-seeded
-// "category" terms. Centralized so a future tweak to the scaffold
-// only edits once.
+/**
+ * Both replacement-semantics and sortOrder tests need the same shape:
+ * an editor-authed harness, an empty post, and three pre-seeded
+ * "category" terms. Centralized so a future tweak to the scaffold
+ * only edits once.
+ */
 async function setupEditorWithThreeCategoryTerms(): Promise<{
   h: Awaited<ReturnType<typeof createRpcHarness>>;
   post: Awaited<

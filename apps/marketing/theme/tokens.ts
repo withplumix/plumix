@@ -1,7 +1,9 @@
 import type { ThemeTokens } from "plumix/blocks";
 
-// Warm paper and ink with one plum accent: a publishing tool should read like
-// print, not like the dark infrastructure pages the category defaults to.
+/**
+ * Warm paper and ink with one plum accent: a publishing tool should read like
+ * print, not like the dark infrastructure pages the category defaults to.
+ */
 export const TOKENS = {
   color: {
     paper: { value: "#f7f4ee", label: "Paper" },

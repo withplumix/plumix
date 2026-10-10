@@ -10,7 +10,9 @@ import { registerCloudflareErrorHints } from "./dev-hints.js";
 import { generateEntry } from "./entry-codegen.js";
 import { PlumixRuntimeConfigError } from "./errors.js";
 
-// Convention over config: a binding not named `ASSETS` gets no admin serving.
+/**
+ * Convention over config: a binding not named `ASSETS` gets no admin serving.
+ */
 function readAssetsBinding(env: PlumixEnv): AssetsBinding | undefined {
   const candidate = (env as { readonly ASSETS?: unknown }).ASSETS;
   if (
@@ -24,8 +26,10 @@ function readAssetsBinding(env: PlumixEnv): AssetsBinding | undefined {
   return undefined;
 }
 
-// The default handler is the whole adapter; Cloudflare adds only the reads its
-// platform can answer.
+/**
+ * The default handler is the whole adapter; Cloudflare adds only the reads its
+ * platform can answer.
+ */
 const handler: RuntimeHandlerSpec = {
   assets: readAssetsBinding,
   clientAddress: readClientAddress,
@@ -65,8 +69,10 @@ export function cloudflare(): RuntimeAdapter {
   };
 }
 
-// The edge overwrites this header, so it wins over a caller-supplied address,
-// absent header included. `x-forwarded-for` is forgeable and never read.
+/**
+ * The edge overwrites this header, so it wins over a caller-supplied address,
+ * absent header included. `x-forwarded-for` is forgeable and never read.
+ */
 function readClientAddress(request: Request): string | undefined {
   return request.headers.get("cf-connecting-ip") ?? undefined;
 }

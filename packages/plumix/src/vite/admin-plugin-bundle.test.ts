@@ -15,18 +15,22 @@ import {
   resolveAndValidateEntry,
 } from "./admin-plugin-bundle.js";
 
-// Re-derive the assembler's plugin-list element type so call sites can
-// cast without repeating `Parameters<...>[0]["plugins"][number]`.
+/**
+ * Re-derive the assembler's plugin-list element type so call sites can
+ * cast without repeating `Parameters<...>[0]["plugins"][number]`.
+ */
 type AssemblerPlugin = Parameters<
   typeof assemblePluginAdminBundle
 >[0]["plugins"][number];
 
 type ResolveEntryPlugin = Parameters<typeof resolveAndValidateEntry>[0];
 
-// Empty registry stand-in for tests that don't exercise auto-register
-// — the assembler still emits namespace imports and runs Tailwind, which
-// is all we're asserting on. Using `createPluginRegistry()` keeps the
-// shape honest (mutable registry the assembler reads as readonly).
+/**
+ * Empty registry stand-in for tests that don't exercise auto-register
+ * — the assembler still emits namespace imports and runs Tailwind, which
+ * is all we're asserting on. Using `createPluginRegistry()` keeps the
+ * shape honest (mutable registry the assembler reads as readonly).
+ */
 function emptyRegistry() {
   return createPluginRegistry();
 }

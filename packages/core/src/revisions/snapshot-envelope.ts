@@ -1,8 +1,10 @@
 import type { JsonObject, JsonValue } from "../json.js";
 
-// The `__plumix_*` meta-key namespace is reserved for framework use —
-// plugin / theme code must not author keys under it, and meta-box
-// fields cannot use this prefix.
+/**
+ * The `__plumix_*` meta-key namespace is reserved for framework use —
+ * plugin / theme code must not author keys under it, and meta-box
+ * fields cannot use this prefix.
+ */
 const RESERVED_META_PREFIX = "__plumix_";
 
 export const SNAPSHOT_META_KEY = "__plumix_snapshot";
@@ -13,23 +15,31 @@ export const SNAPSHOT_META_KEY = "__plumix_snapshot";
  */
 export const REVISION_MESSAGE_META_KEY = "__plumix_revision_message";
 
-// Soft cap on author-typed labels. Long enough for one sentence, short
-// enough to render inline without truncating the row UI.
+/**
+ * Soft cap on author-typed labels. Long enough for one sentence, short
+ * enough to render inline without truncating the row UI.
+ */
 export const REVISION_MESSAGE_MAX_LENGTH = 280;
 
-// A `type`, not an `interface`, so it assigns to `JsonObject` inside the
-// stored meta bag.
+/**
+ * A `type`, not an `interface`, so it assigns to `JsonObject` inside the
+ * stored meta bag.
+ */
 type SnapshotEnvelope = Readonly<{
   slug: string;
   parentId: number | null;
-  // Keys the author cleared. An autosave's meta holds the keys the author
-  // touched (ADR 0003), where absence means untouched — so a cleared field has
-  // nowhere to live but here.
+  /**
+   * Keys the author cleared. An autosave's meta holds the keys the author
+   * touched (ADR 0003), where absence means untouched — so a cleared field has
+   * nowhere to live but here.
+   */
   deletes: readonly string[];
 }>;
 
-// `deletes` is absent on a revision, which is a whole snapshot with nothing to
-// clear, and on older envelopes.
+/**
+ * `deletes` is absent on a revision, which is a whole snapshot with nothing to
+ * clear, and on older envelopes.
+ */
 type StoredSnapshotEnvelope = Readonly<{
   slug: string;
   parentId: number | null;
@@ -48,8 +58,10 @@ export function encodeSnapshotEnvelope(envelope: StoredSnapshotEnvelope): {
   };
 }
 
-// `Array.isArray` widens its subject to `any[]`, so the element check has to
-// carry a predicate or the filtered result assigns to `string[]` unexamined.
+/**
+ * `Array.isArray` widens its subject to `any[]`, so the element check has to
+ * carry a predicate or the filtered result assigns to `string[]` unexamined.
+ */
 function isString(value: unknown): value is string {
   return typeof value === "string";
 }

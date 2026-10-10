@@ -28,7 +28,9 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-// The fields the plain form writes: title and status always, meta as a patch.
+/**
+ * The fields the plain form writes: title and status always, meta as a patch.
+ */
 interface PlainFormSnapshot {
   readonly title: string;
   readonly status: PostEditorValues["status"];

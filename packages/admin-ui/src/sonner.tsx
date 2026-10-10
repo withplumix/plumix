@@ -2,9 +2,11 @@ import type { CSSProperties } from "react";
 import type { ToasterProps } from "sonner";
 import { Toaster as Sonner } from "sonner";
 
-// Styled Sonner toaster. Theme-agnostic: the host passes `theme` (this package
-// has no theme provider of its own), and the CSS variables map the toast
-// surface onto the active shadcn palette.
+/**
+ * Styled Sonner toaster. Theme-agnostic: the host passes `theme` (this package
+ * has no theme provider of its own), and the CSS variables map the toast
+ * surface onto the active shadcn palette.
+ */
 function Toaster(props: ToasterProps) {
   return (
     <Sonner

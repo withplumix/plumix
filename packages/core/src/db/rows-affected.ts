@@ -3,8 +3,10 @@
 
 import { DbError } from "./errors.js";
 
-// Not JSON: whatever the driver package constructed, a libsql `ResultSet` or a
-// D1 `D1Result`.
+/**
+ * Not JSON: whatever the driver package constructed, a libsql `ResultSet` or a
+ * D1 `D1Result`.
+ */
 type DriverResult = Record<string, unknown>;
 
 function asRecord(value: unknown): DriverResult | null {

@@ -40,9 +40,11 @@ export interface BlockLoaderArgs {
 export type BlockLoaderFn = (args: BlockLoaderArgs) => Promise<unknown>;
 export type BlockLoaderRecord = Readonly<Record<string, BlockLoaderFn>>;
 
-// Maps a loader record to the shape `render` sees after SSR resolution
-// (one loader fn → its awaited return type, keyed the same way). Same
-// pattern as TanStack Router's `ResolveLoaderData`.
+/**
+ * Maps a loader record to the shape `render` sees after SSR resolution
+ * (one loader fn → its awaited return type, keyed the same way). Same
+ * pattern as TanStack Router's `ResolveLoaderData`.
+ */
 export type ResolvedLoaders<L extends BlockLoaderRecord> = {
   readonly [K in keyof L]: Awaited<ReturnType<L[K]>>;
 };
@@ -59,10 +61,12 @@ export interface LoaderEntry {
  */
 export type LoaderResults = Readonly<Record<string, unknown>>;
 
-// Resolved data for one block. On success: `loaders` carries the
-// resolved record, `error` is `null`. On any rejection: `loaders` is
-// `{}`, `error` carries the first rejection (per-block isolation —
-// siblings are unaffected).
+/**
+ * Resolved data for one block. On success: `loaders` carries the
+ * resolved record, `error` is `null`. On any rejection: `loaders` is
+ * `{}`, `error` carries the first rejection (per-block isolation —
+ * siblings are unaffected).
+ */
 export interface ResolvedBlockLoaderData {
   readonly loaders: LoaderResults;
   readonly error: unknown;

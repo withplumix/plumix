@@ -9,8 +9,10 @@ import { barMessages } from "./i18n.js";
 const SITE_POSITION = 10;
 const EDIT_THIS_POSITION = 20;
 const NEW_GROUP_POSITION = 15;
-// Sorts last so `margin-inline-start: auto` parks the account at the far
-// right with nothing trailing it — site / +New / Edit cluster on the left.
+/**
+ * Sorts last so `margin-inline-start: auto` parks the account at the far
+ * right with nothing trailing it — site / +New / Edit cluster on the left.
+ */
 const ACCOUNT_POSITION = 100;
 
 /**
@@ -119,7 +121,7 @@ function newGroupContributor(
   ];
 }
 
-// Falls back to pluralizing the name when the type is absent.
+/** Falls back to pluralizing the name when the type is absent. */
 function adminSlugForType(
   name: string,
   type: RegisteredEntryType | undefined,

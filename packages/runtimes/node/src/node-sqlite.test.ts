@@ -125,8 +125,10 @@ describe("raw sql template parameters", () => {
   });
 });
 
-// The harness over `nodeSqlite` rather than its own libsql db: every request
-// below is one core already proves, replayed through the shim.
+/**
+ * The harness over `nodeSqlite` rather than its own libsql db: every request
+ * below is one core already proves, replayed through the shim.
+ */
 async function harness() {
   const db = open(join(dir, "site.sqlite"));
   await applyCoreTestSchema(db);

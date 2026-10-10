@@ -12,8 +12,10 @@ import {
 import { openPlaygroundDb } from "./open-playground-db.js";
 import { resolvePlaygroundDbPath } from "./runtime-e2e.js";
 
-// Lives beside the database, inside the state the webServer wipes, so a
-// stale baseline can never outlive the database it describes.
+/**
+ * Lives beside the database, inside the state the webServer wipes, so a
+ * stale baseline can never outlive the database it describes.
+ */
 const BASELINE_FILENAME = "plumix-e2e-baseline.json";
 
 export interface PlumixWorkerOptions {

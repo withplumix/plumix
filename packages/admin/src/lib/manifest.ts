@@ -42,8 +42,10 @@ export function readManifest(doc: Document = document): PlumixManifest {
   }
 }
 
-// Booleans, not "array" / "object" literals, which would trip
-// `lingui/no-unlocalized-strings`.
+/**
+ * Booleans, not "array" / "object" literals, which would trip
+ * `lingui/no-unlocalized-strings`.
+ */
 const MANIFEST_FIELD_IS_ARRAY = {
   entryTypes: true,
   termTaxonomies: true,
@@ -67,8 +69,10 @@ const MANIFEST_FIELD_IS_ARRAY = {
   frameworkRoutes: false,
 } as const satisfies Record<keyof PlumixManifest, boolean>;
 
-// Drops, not coerces: the payload is build-generated, so a bad shape means the
-// build is broken upstream.
+/**
+ * Drops, not coerces: the payload is build-generated, so a bad shape means the
+ * build is broken upstream.
+ */
 function normalize(value: unknown): PlumixManifest {
   if (!value || typeof value !== "object") return {};
   const v = value as JsonObject;
@@ -83,8 +87,10 @@ function normalize(value: unknown): PlumixManifest {
   return result;
 }
 
-// Parsed on first read: a module imported before the manifest `<script>`
-// exists would cache an empty snapshot forever.
+/**
+ * Parsed on first read: a module imported before the manifest `<script>`
+ * exists would cache an empty snapshot forever.
+ */
 let snapshot: PlumixManifest | undefined;
 
 function currentManifest(): PlumixManifest {
@@ -230,9 +236,11 @@ export function visibleDashboardWidgets(
   );
 }
 
-// Three meta-box visibility filters (entry/term/user) share the same
-// shape: scope filter → capability gate → priority sort. Extracted so
-// each surface only declares what's specific (the scope predicate).
+/**
+ * Three meta-box visibility filters (entry/term/user) share the same
+ * shape: scope filter → capability gate → priority sort. Extracted so
+ * each surface only declares what's specific (the scope predicate).
+ */
 function filterMetaBoxes<
   T extends {
     readonly id: string;

@@ -8,8 +8,10 @@ import type {
   SortablePosition,
 } from "@plumix/admin-ui/sortable";
 
-// What a screen reader hears while an author drags a `SortableList` row with
-// the keyboard. Positions, never row ids: an id is opaque to the author.
+/**
+ * What a screen reader hears while an author drags a `SortableList` row with
+ * the keyboard. Positions, never row ids: an id is opaque to the author.
+ */
 const M = {
   instructions: defineMessage({
     id: "sortable.instructions",

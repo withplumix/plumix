@@ -1,7 +1,7 @@
 import type { BlockNode } from "@plumix/core/blocks";
 import { isBlockNodeArray } from "@plumix/core/blocks";
 
-// `kind` tells our payload apart from arbitrary clipboard text.
+/** `kind` tells our payload apart from arbitrary clipboard text. */
 interface ClipboardEnvelope {
   readonly kind: "plumix/blocks";
   readonly version: 1;

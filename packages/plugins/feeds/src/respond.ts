@@ -15,8 +15,10 @@ const CONTENT_TYPE: Record<FeedFormat, string> = {
   atom: "application/atom+xml; charset=utf-8",
 };
 
-// Readers poll on their own timer, so only the edge caches (an hour, cut short
-// by the publish purge); clients always revalidate.
+/**
+ * Readers poll on their own timer, so only the edge caches (an hour, cut short
+ * by the publish purge); clients always revalidate.
+ */
 const FEED_CACHE_CONTROL = "public, max-age=0, s-maxage=3600";
 
 /**
@@ -25,7 +27,7 @@ const FEED_CACHE_CONTROL = "public, max-age=0, s-maxage=3600";
  */
 export const FEED_TAG = "feeds:feed";
 
-// The `t:<type>` tags an entry mutation purges.
+/** The `t:<type>` tags an entry mutation purges. */
 function typeTags(
   plugins: PluginRegistry,
   target: ArchiveAtPath | null,

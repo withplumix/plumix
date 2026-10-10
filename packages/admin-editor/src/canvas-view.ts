@@ -1,11 +1,15 @@
 export const MIN_ZOOM = 0.25;
 export const MAX_ZOOM = 2;
-// Keep at least this much of the frame inside the viewport so it can't be
-// panned into the void, and fit with this much top breathing room.
+/**
+ * Keep at least this much of the frame inside the viewport so it can't be
+ * panned into the void, and fit with this much top breathing room.
+ */
 const MIN_VISIBLE = 64;
 const FIT_MARGIN_Y = 32;
-// Zoom-to-selection leaves this fraction of the viewport as padding around the
-// framed block.
+/**
+ * Zoom-to-selection leaves this fraction of the viewport as padding around the
+ * framed block.
+ */
 const SELECTION_FIT = 0.85;
 
 /** The canvas viewport transform: the frame's top-left offset + scale. */

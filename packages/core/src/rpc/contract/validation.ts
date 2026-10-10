@@ -93,8 +93,10 @@ export const idPathParam = v.pipe(
   v.maxValue(Number.MAX_SAFE_INTEGER),
 );
 
-// Not translated: outer-shape errors reach only direct RPC consumers, never
-// admin forms.
+/**
+ * Not translated: outer-shape errors reach only direct RPC consumers, never
+ * admin forms.
+ */
 const MAX_META_KEYS_PER_REQUEST = 200;
 
 const metaKeySchema = v.pipe(

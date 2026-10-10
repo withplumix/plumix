@@ -2,8 +2,10 @@ import type { AppContext } from "plumix/plugin";
 import { and, eq } from "drizzle-orm";
 import { settings } from "plumix/schema";
 
-// An `_internal` group is refused by `settings.get`/`settings.upsert`, so
-// admins can't read it.
+/**
+ * An `_internal` group is refused by `settings.get`/`settings.upsert`, so
+ * admins can't read it.
+ */
 const GROUP = "forms_internal";
 
 /**

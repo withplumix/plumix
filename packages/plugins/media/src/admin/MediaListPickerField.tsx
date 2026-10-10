@@ -53,9 +53,11 @@ const M = {
 // Up/down buttons instead of drag-reorder: dnd-kit is not yet a shared runtime
 // module plugin chunks can import.
 
-// Legacy bags stored `{ id, ... }` snapshots; reads heal to plain ids
-// server-side, but the form value can still carry the old shape until
-// the next load — extract the id either way.
+/**
+ * Legacy bags stored `{ id, ... }` snapshots; reads heal to plain ids
+ * server-side, but the form value can still carry the old shape until
+ * the next load — extract the id either way.
+ */
 export function normalizeIds(raw: unknown): readonly string[] {
   if (!Array.isArray(raw)) return [];
   const out: string[] = [];
@@ -297,8 +299,10 @@ function MediaListItem({
   );
 }
 
-// Stays open across selections, until Cancel or the parent closes it on
-// reaching `max`.
+/**
+ * Stays open across selections, until Cancel or the parent closes it on
+ * reaching `max`.
+ */
 function MediaListPickerModal({
   accept,
   onSelect,

@@ -33,8 +33,10 @@ export type PublicRouteOutcome =
   | { readonly kind: "public-route"; readonly route: PublicRouteMatch }
   | ContentRoute;
 
-// A request the content route map decides. `match` is what the map matched;
-// `intent` and `render` also cover an unmatched root, which is the front page.
+/**
+ * A request the content route map decides. `match` is what the map matched;
+ * `intent` and `render` also cover an unmatched root, which is the front page.
+ */
 export interface ContentRoute {
   readonly kind: "content";
   readonly match: RouteMatch | null;
@@ -92,7 +94,7 @@ export function routePublicRequest(
   };
 }
 
-// An unmatched root is the front page; any other unmatched URL is a 404.
+/** An unmatched root is the front page; any other unmatched URL is a 404. */
 function unmatchedFallback(url: URL): RouteMatch | null {
   if (url.pathname !== "/") return null;
   return {

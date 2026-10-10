@@ -3,12 +3,16 @@ import { adminBasePath } from "./admin-base.js";
 import { base64urlToBuffer, bufferToBase64url } from "./base64url.js";
 import { PasskeyError } from "./passkey-errors.js";
 
-// Dispatcher accepts non-safe /_plumix/* only when this header is present
-// (CSRF double-submit token). Every passkey HTTP call needs it.
+/**
+ * Dispatcher accepts non-safe /_plumix/* only when this header is present
+ * (CSRF double-submit token). Every passkey HTTP call needs it.
+ */
 const PLUMIX_CSRF_HEADER = { "x-plumix-request": "1" } as const;
 
-// Non-readonly: DOM `PublicKeyCredentialCreationOptions` declares mutable
-// arrays, and we hand this straight to `navigator.credentials.create`.
+/**
+ * Non-readonly: DOM `PublicKeyCredentialCreationOptions` declares mutable
+ * arrays, and we hand this straight to `navigator.credentials.create`.
+ */
 interface ServerRegistrationOptions {
   rp: { id?: string; name: string };
   user: { id: string; name: string; displayName: string };
@@ -86,9 +90,11 @@ async function postJsonNoBody<T>(path: string): Promise<T> {
   return (await response.json()) as T;
 }
 
-// navigator.credentials.get/create throws a DOMException on user cancellation
-// or missing authenticator — normalize via lookup table so the UI only ever
-// deals in PasskeyError.
+/**
+ * navigator.credentials.get/create throws a DOMException on user cancellation
+ * or missing authenticator — normalize via lookup table so the UI only ever
+ * deals in PasskeyError.
+ */
 const DOM_EXCEPTION_CODE: Record<string, PasskeyErrorCode> = {
   NotAllowedError: "user_cancelled",
   AbortError: "user_cancelled",
@@ -96,9 +102,11 @@ const DOM_EXCEPTION_CODE: Record<string, PasskeyErrorCode> = {
   NotSupportedError: "no_authenticator",
 };
 
-// Wraps a `navigator.credentials.*` call: normalizes a null result (user
-// cancelled) and any DOMException into a `PasskeyError`. Returns the
-// non-null credential on success.
+/**
+ * Wraps a `navigator.credentials.*` call: normalizes a null result (user
+ * cancelled) and any DOMException into a `PasskeyError`. Returns the
+ * non-null credential on success.
+ */
 async function callCredentialsApi(
   call: () => Promise<Credential | null>,
 ): Promise<PublicKeyCredential> {
@@ -143,7 +151,7 @@ function decodeAuthenticationOptions(
   };
 }
 
-// `ArrayBuffer` fields as base64url, the shape the verify endpoints parse.
+/** `ArrayBuffer` fields as base64url, the shape the verify endpoints parse. */
 interface EncodedCredential {
   readonly id: string;
   readonly rawId: string;
@@ -223,9 +231,11 @@ export async function registerWithPasskey(input: {
   );
 }
 
-// Server pairs the registration options with a compact `invitee` preview
-// so the accept-invite screen can confirm the target email / role before
-// the user taps their passkey.
+/**
+ * Server pairs the registration options with a compact `invitee` preview
+ * so the accept-invite screen can confirm the target email / role before
+ * the user taps their passkey.
+ */
 interface InviteeSummary {
   readonly email: string;
   readonly role: string;
@@ -300,8 +310,10 @@ interface SignOutResponse {
   readonly redirectTo: string | null;
 }
 
-// A set `redirectTo` must be followed instead of /login, or an external IdP
-// silently re-authenticates the next page load.
+/**
+ * A set `redirectTo` must be followed instead of /login, or an external IdP
+ * silently re-authenticates the next page load.
+ */
 interface SignOutResult {
   readonly redirectTo: string | null;
 }

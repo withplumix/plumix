@@ -6,11 +6,13 @@ import type { TurnstileConfig } from "../define-form.js";
 
 const VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
-// A hung siteverify would hold the submission until the platform kills the
-// request.
+/**
+ * A hung siteverify would hold the submission until the platform kills the
+ * request.
+ */
 const VERIFY_TIMEOUT_MS = 5000;
 
-// Decoded: a proxy or outage can answer 200 with something else.
+/** Decoded: a proxy or outage can answer 200 with something else. */
 const SiteVerify = v.object({
   success: v.boolean(),
   "error-codes": v.optional(v.array(v.string())),

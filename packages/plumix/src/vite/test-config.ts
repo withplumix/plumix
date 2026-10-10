@@ -2,9 +2,11 @@ import type { ViteUserConfig } from "vitest/config";
 
 // Mirrors `tooling/vitest/tiers.ts`; `test-config.test.ts` holds the two equal.
 
-// The globs reach the whole package: vitest concatenates a config's own
-// `include` onto each project's, so one added there would feed its files to
-// both tiers. Narrow with `exclude` instead.
+/**
+ * The globs reach the whole package: vitest concatenates a config's own
+ * `include` onto each project's, so one added there would feed its files to
+ * both tiers. Narrow with `exclude` instead.
+ */
 const NODE_TIER = {
   name: "node",
   include: ["**/*.test.{ts,tsx}"],
@@ -21,8 +23,10 @@ const BROWSER_TIER = {
   screenshotFailures: false,
 } as const;
 
-// What the `plumix` Vite plugin substitutes into a production client build,
-// so a browser test runs client code as it ships, with no `process` to read.
+/**
+ * What the `plumix` Vite plugin substitutes into a production client build,
+ * so a browser test runs client code as it ships, with no `process` to read.
+ */
 const TEST_TIER_DEFINES = {
   "process.env.WORKERS_CI": JSON.stringify(""),
   "process.env.WORKERS_CI_BRANCH": JSON.stringify(""),

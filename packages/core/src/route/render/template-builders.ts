@@ -54,8 +54,10 @@ interface TemplateSelector<Data extends TemplateData> {
   template(t: TemplateEntry<Data>): TemplateRule;
 }
 
-// Erasing the per-tier data type is sound: the resolver only invokes a template
-// with its matching node's data.
+/**
+ * Erasing the per-tier data type is sound: the resolver only invokes a template
+ * with its matching node's data.
+ */
 function selector<Data extends TemplateData>(
   where: TierMatchRule,
 ): TemplateSelector<Data> {

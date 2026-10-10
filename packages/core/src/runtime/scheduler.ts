@@ -7,7 +7,7 @@ import { declaredSchedules } from "./contract/schedules.js";
 
 const MINUTE_MS = 60_000;
 
-// So tasks that declared no cron still have a firing.
+/** So tasks that declared no cron still have a firing. */
 const EVERY_MINUTE = "* * * * *";
 
 export interface SchedulerClock {
@@ -184,8 +184,10 @@ export function createScheduler({
   };
 }
 
-// `buildApp` already parsed every expression, so a throw here is a bug, not a
-// config error.
+/**
+ * `buildApp` already parsed every expression, so a throw here is a bug, not a
+ * config error.
+ */
 function deriveSchedules(
   app: Pick<PlumixApp, "scheduledTasks">,
 ): readonly CronSchedule[] {

@@ -32,10 +32,12 @@ import {
   visibleUserMetaBoxes,
 } from "./manifest.js";
 
-// Parses a manifest through the real production path: core's `buildManifest`
-// projection, `injectManifestIntoHtml` serialization, an HTML parse, and the
-// admin's `readManifest`. Unlike the `source` param every query function
-// accepts, this is the one route that actually exercises the normalizer.
+/**
+ * Parses a manifest through the real production path: core's `buildManifest`
+ * projection, `injectManifestIntoHtml` serialization, an HTML parse, and the
+ * admin's `readManifest`. Unlike the `source` param every query function
+ * accepts, this is the one route that actually exercises the normalizer.
+ */
 function readManifestAcrossTheWire(manifest: PlumixManifest): PlumixManifest {
   const html = injectManifestIntoHtml(
     `<script id="${MANIFEST_SCRIPT_ID}" type="application/json"></script>`,

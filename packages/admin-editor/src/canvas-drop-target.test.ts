@@ -25,8 +25,10 @@ const slot = (
   height: number,
 ): SlotRect => ({ parentId, slotKey, x, y, width, height });
 
-// core/group's slot has no allowedBlocks (permits any); core/buttons only
-// admits core/button.
+/**
+ * core/group's slot has no allowedBlocks (permits any); core/buttons only
+ * admits core/button.
+ */
 const registry = createBlockRegistry([
   spec({
     name: "core/group",

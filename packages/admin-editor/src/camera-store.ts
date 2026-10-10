@@ -3,8 +3,10 @@ import { createStore } from "zustand/vanilla";
 import type { View } from "./canvas-view.js";
 import { clampZoom, zoomToCursor } from "./canvas-view.js";
 
-// Kept off the document store so pan/zoom causes no re-renders in the tree
-// editors.
+/**
+ * Kept off the document store so pan/zoom causes no re-renders in the tree
+ * editors.
+ */
 interface CameraState {
   readonly zoom: number;
   /** Host/container px of the device frame's top-left. */

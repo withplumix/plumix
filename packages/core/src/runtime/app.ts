@@ -216,8 +216,10 @@ export interface PlumixApp {
   readonly renderEnv: RenderEnv;
 }
 
-// Resolved by the Vite plugin from virtual modules and injected by the
-// generated entry.
+/**
+ * Resolved by the Vite plugin from virtual modules and injected by the
+ * generated entry.
+ */
 interface RuntimeContext {
   readonly assetManifest?: AssetManifest;
   readonly pluginCatalogs?: PluginCatalogs;
@@ -455,8 +457,10 @@ export async function buildApp(
   };
 }
 
-// Deep-frozen: a shallow freeze would let a plugin mutate `app.document.meta`
-// and corrupt later requests.
+/**
+ * Deep-frozen: a shallow freeze would let a plugin mutate `app.document.meta`
+ * and corrupt later requests.
+ */
 async function resolveDocumentManifest(
   hooks: HookRegistry,
   themeManifest: DocumentManifest | undefined,

@@ -5,8 +5,10 @@ import { getOrCreateSecret, getSecret, toHex } from "./secret.js";
 
 const ENCODER = new TextEncoder();
 
-// `Uint8Array<ArrayBuffer>`: `crypto.subtle.verify` rejects a possibly
-// shared buffer.
+/**
+ * `Uint8Array<ArrayBuffer>`: `crypto.subtle.verify` rejects a possibly
+ * shared buffer.
+ */
 function fromHex(hex: string): Uint8Array<ArrayBuffer> | null {
   if (hex.length === 0 || hex.length % 2 !== 0 || !/^[\da-f]+$/.test(hex)) {
     return null;

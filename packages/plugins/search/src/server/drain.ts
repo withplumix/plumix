@@ -12,12 +12,16 @@ import {
 } from "./index-writer.js";
 import { advanceReindex, SOURCES_PER_INVOCATION } from "./reindex.js";
 
-// Matches the cap D1 puts on bound parameters, which is what the feed's own
-// acknowledgement chunks at.
+/**
+ * Matches the cap D1 puts on bound parameters, which is what the feed's own
+ * acknowledgement chunks at.
+ */
 const CHANGES_PER_BATCH = 100;
 
-// Bounded so a backlog spreads across invocations instead of breaching platform
-// limits; the feed is durable, so the rest drains next time.
+/**
+ * Bounded so a backlog spreads across invocations instead of breaching platform
+ * limits; the feed is durable, so the rest drains next time.
+ */
 const BATCHES_PER_RUN = 10;
 
 /**

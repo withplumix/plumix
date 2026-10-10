@@ -2,8 +2,10 @@ import type { AppContext, AuthenticatedUser } from "../context/app-context.js";
 import { authenticateBearer, hasBearerToken } from "../auth/bearer.js";
 import { withUser } from "../auth/with-user.js";
 
-// Anonymous requests read through the lowest role, so the entry services'
-// status clamping and hide-existence policy apply unchanged.
+/**
+ * Anonymous requests read through the lowest role, so the entry services'
+ * status clamping and hide-existence policy apply unchanged.
+ */
 const PUBLIC_PRINCIPAL: AuthenticatedUser = {
   id: 0,
   email: "",

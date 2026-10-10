@@ -58,8 +58,10 @@ export function createMailSender(input: CreateMailSenderInput): MailSender {
   };
 }
 
-// The recipient's stored locale when the recipient is a user, or the address
-// belongs to one, and the site enables it; otherwise the request's.
+/**
+ * The recipient's stored locale when the recipient is a user, or the address
+ * belongs to one, and the site enables it; otherwise the request's.
+ */
 async function recipientLocale(
   input: CreateMailSenderInput,
   recipient: MailRecipient,

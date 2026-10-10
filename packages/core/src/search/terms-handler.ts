@@ -10,12 +10,16 @@ import { terms } from "../db/schema/terms.js";
 import { termSearchCondition } from "../db/search-conditions.js";
 import { tokenizeSearchQuery } from "./contract/search-terms.js";
 
-// Max rows scanned across all taxonomies for one query; bucketed per
-// group afterward. Terms carry no draft/trash status — visibility is
-// just the per-taxonomy read capability.
+/**
+ * Max rows scanned across all taxonomies for one query; bucketed per
+ * group afterward. Terms carry no draft/trash status — visibility is
+ * just the per-taxonomy read capability.
+ */
 const SCAN_LIMIT = 50;
-// Group priority base, after the entries domain (10..) so Content sorts
-// above Terms in the palette.
+/**
+ * Group priority base, after the entries domain (10..) so Content sorts
+ * above Terms in the palette.
+ */
 const PRIORITY_BASE = 100;
 
 /**

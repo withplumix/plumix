@@ -8,8 +8,10 @@ import { describe, expect, test } from "vitest";
 import { demoDatabase } from "./database.js";
 import { DEMO_SHOWCASE_NAME } from "./session.js";
 
-// A consumer without `sample` votes yes, so the context carries a live collector
-// and the driver's spans land where the assertions read them.
+/**
+ * A consumer without `sample` votes yes, so the context carries a live
+ * collector and the driver's spans land where the assertions read them.
+ */
 async function sampledContext(): Promise<AppContext> {
   return createTestContext({
     db: await createTestDb(),

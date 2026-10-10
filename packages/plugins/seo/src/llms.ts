@@ -7,7 +7,7 @@ import { sitemapIndexUrl } from "./sitemap.js";
 /** Where the file answers, before any base prefix. */
 export const LLMS_PATH = "/llms.txt";
 
-// Still served, so a crawler doesn't read a 404 as "nothing here yet".
+/** Still served, so a crawler doesn't read a 404 as "nothing here yet". */
 const WITHHELD =
   "This site's content is not offered for AI training or retrieval.";
 

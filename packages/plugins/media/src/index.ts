@@ -23,10 +23,12 @@ export { DEFAULT_ACCEPTED_TYPES };
 /** Default max upload size — 25 MiB. */
 export const DEFAULT_MAX_UPLOAD_SIZE = 25 * 1024 * 1024;
 
-// Per-entity label table; `satisfies EntryTypeLabels` catches typo-
-// renames at compile time. See `plugin-pages/src/index.ts` for the
-// "no Babel macro server-side" rationale on the literal `{id,message}`
-// shape.
+/**
+ * Per-entity label table; `satisfies EntryTypeLabels` catches typo-
+ * renames at compile time. See `plugin-pages/src/index.ts` for the
+ * "no Babel macro server-side" rationale on the literal `{id,message}`
+ * shape.
+ */
 const MEDIA_LABELS = {
   singular: { id: "plugin.media.media.singular", message: "Asset" },
   plural: { id: "plugin.media.media.plural", message: "Media" },
@@ -78,8 +80,10 @@ const MEDIA_DESCRIPTION = {
   message: "Uploaded files — images, video, documents",
 };
 
-// Admin-page chrome (separate from per-type labels because the
-// "Media Library" page heading isn't an entry-type label).
+/**
+ * Admin-page chrome (separate from per-type labels because the
+ * "Media Library" page heading isn't an entry-type label).
+ */
 const MEDIA_LIBRARY_LABEL: Label = {
   id: "plugin.media.adminPage.title",
   message: "Media Library",
@@ -98,8 +102,10 @@ interface MediaPluginOptions {
   readonly maxUploadSize?: number;
 }
 
-// Lexical, inside the consumer's `node_modules`, so the build-time containment
-// check passes; esbuild follows the symlink to the source.
+/**
+ * Lexical, inside the consumer's `node_modules`, so the build-time containment
+ * check passes; esbuild follows the symlink to the source.
+ */
 const ADMIN_ENTRY_PATH = pluginAdminEntryPath("@plumix/plugin-media");
 
 /**

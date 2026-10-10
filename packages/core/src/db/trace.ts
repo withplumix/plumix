@@ -9,8 +9,10 @@ export interface TracedQuery {
   readonly params: readonly unknown[];
 }
 
-// Bound params may carry driver values (blobs, bigints, dates) that a
-// JSON-serializable snapshot can't hold; degrade those to short descriptions.
+/**
+ * Bound params may carry driver values (blobs, bigints, dates) that a
+ * JSON-serializable snapshot can't hold; degrade those to short descriptions.
+ */
 function jsonParam(value: unknown): JsonValue {
   if (
     value === null ||

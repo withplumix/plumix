@@ -13,9 +13,11 @@ import {
   tableCellBlock,
 } from "./table/index.js";
 
-// A minimal selfSeam leaf standing in for the former core/heading: it spreads
-// the seam onto its own <h2> with no wrapper div — the property this suite pins
-// (the same reason a <td> table cell stays selectable).
+/**
+ * A minimal selfSeam leaf standing in for the former core/heading: it spreads
+ * the seam onto its own <h2> with no wrapper div — the property this suite pins
+ * (the same reason a <td> table cell stays selectable).
+ */
 const selfSeamBlock = defineBlock({
   name: "test/self-seam",
   selfSeam: true,
@@ -102,7 +104,8 @@ describe("renderBlockTree edit-aware seam", () => {
 
     expect(html).toContain('data-plumix-slot-parent="g1"');
     expect(html).toContain('data-plumix-slot-key="content"');
-    // The marker is layout-neutral (display:contents) — the child still renders.
+    // The marker is layout-neutral (display:contents) — the child still
+    // renders.
     expect(html).toContain('data-plumix-id="h1"');
   });
 

@@ -21,8 +21,10 @@ import type {
 import type { UniversalFieldState } from "./universal.js";
 import { humanizeFieldKey } from "./builder.js";
 
-// Plugin-registered kinds augment `ReferenceHydrationShapes`; an unregistered
-// kind folds to `never`.
+/**
+ * Plugin-registered kinds augment `ReferenceHydrationShapes`; an unregistered
+ * kind folds to `never`.
+ */
 type ReferenceSummaryOf<Kind extends string> =
   Kind extends keyof ReferenceHydrationShapes
     ? ReferenceHydrationShapes[Kind]
@@ -33,8 +35,10 @@ type ReferenceReadItem<
   Returns extends "id" | "hydrated",
 > = Returns extends "id" ? string : Summary;
 
-// Single references are always optional: a target can be deleted after the id
-// is written, so even a `.required()` field reads `undefined` for an orphan.
+/**
+ * Single references are always optional: a target can be deleted after the id
+ * is written, so even a `.required()` field reads `undefined` for an orphan.
+ */
 type ReferenceReadValue<
   Summary,
   Multiple extends boolean,

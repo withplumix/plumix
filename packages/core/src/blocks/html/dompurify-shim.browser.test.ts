@@ -13,8 +13,10 @@ import sanitize from "./dompurify-shim.js";
 import { enforceHtmlFloors } from "./floors.js";
 import { BASELINE_HTML_ALLOWLIST } from "./sanitize.js";
 
-// Mirror how `sanitizeHtml` normalizes the allowlist into the option shape the
-// engine (sanitize-html / this shim) consumes.
+/**
+ * Mirror how `sanitizeHtml` normalizes the allowlist into the option shape the
+ * engine (sanitize-html / this shim) consumes.
+ */
 const opts = {
   allowedTags: [...BASELINE_HTML_ALLOWLIST.allowedTags],
   allowedAttributes: Object.fromEntries(
@@ -169,7 +171,8 @@ describe("dompurify-shim — baseline allowlist parity", () => {
 // rejects the dangerous schemes on its own URI regexp whatever the allowlist
 // says; these cases pin that the builder's floor holds independently of that.
 // The floor lives in `sanitizeHtml`, so a hand-built allowlist is floored too;
-// `runBuilt` covers the config path and the literal case below covers the other.
+// `runBuilt` covers the config path and the literal case below covers the
+// other.
 describe("dompurify-shim — operator-override allowlists", () => {
   // Mirrors what `sanitizeHtml` hands the engine: the floored allowlist,
   // mapped into the option shape.
