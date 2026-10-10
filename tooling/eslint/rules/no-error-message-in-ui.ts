@@ -4,9 +4,10 @@ import ts from "typescript";
 import { commentBlockAbove, wordsAfterMarker } from "./comment-block.js";
 import { readTypeAwareServices } from "./type-services.js";
 
-// The fourth marker in the family `// Safety:`, `Not JSON:` and `Not parsed:`
-// belong to. A render boundary has no descriptor to choose — the exception is
-// the only thing that can name what threw — so it says why it shows the text.
+/**
+ * A render boundary has no descriptor to choose, since only the exception can
+ * name what threw, so it says why it shows the text.
+ */
 const SHOWN_VERBATIM_MARKER = /(^|\s)shown\s+verbatim:/i;
 const MIN_REASON_WORDS = 6;
 
@@ -71,16 +72,8 @@ function enclosingStatement(node: Rule.Node): Rule.Node {
 }
 
 /**
- * A caught error's `message` is text the admin didn't choose: oRPC's English
- * name for a status code, a gateway's body, a parser's complaint. The admin
- * shows every failure through a localized descriptor it picked instead (ADR
- * 0018), so reading `.message` off an `Error` in admin source is where that
- * text would leak onto the screen.
- *
- * Two reads stay silent. An argument to `console.*` goes to a developer, not
- * the screen. And a render boundary that shows a client exception as
- * secondary detail says so in a `// Shown verbatim: …` comment directly above
- * the statement, giving the reason in a sentence.
+ * A caught error's `message` is text the admin didn't choose, such as oRPC's
+ * English status name or a gateway's body. `console.*` arguments stay silent.
  */
 export const noErrorMessageInUi: Rule.RuleModule = {
   meta: {

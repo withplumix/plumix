@@ -1,10 +1,3 @@
-// Shared lingui config for plumix's own packages: po format without
-// line numbers (stable diffs), `locales/{locale}` catalogs extracted
-// from `src`. Source-shipped like every tooling package, so configs
-// resolve before any build. External plugin authors get a standalone
-// config scaffolded by `plumix i18n init` instead — this package is
-// private.
-
 import { defineConfig } from "@lingui/cli";
 import { formatter } from "@lingui/format-po";
 
@@ -27,11 +20,8 @@ export interface PlumixLinguiOptions {
   /** Locale list including the "en" source. Defaults to PLUMIX_LOCALES. */
   readonly locales?: readonly string[];
   /**
-   * Catalog path template (the `{locale}` placeholder is required).
-   * Defaults to `<rootDir>/locales/{locale}`. Packages that host more
-   * than one translatable surface name catalogs per surface — core
-   * uses `<rootDir>/locales/admin-bar-{locale}` so a later debug-bar
-   * catalog can sit beside it without colliding.
+   * Must contain `{locale}`. A package with several translatable surfaces
+   * names a catalog per surface so they don't collide.
    */
   readonly catalogPath?: string;
   /** Source dirs scanned for descriptors. Defaults to `["src"]`. */

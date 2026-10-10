@@ -11,8 +11,10 @@ import {
 
 export const REPO_ROOT = resolve(import.meta.dirname, "../..");
 
-// Their consumer surface is reached through `plumix`, which the façade guards
-// own (the umbrella rule).
+/**
+ * Their consumer surface is reached through `plumix`, which the façade guards
+ * own (the umbrella rule).
+ */
 const INTERNAL = new Set([
   "@plumix/core",
   "@plumix/admin",
@@ -20,9 +22,11 @@ const INTERNAL = new Set([
   "@plumix/admin-ui",
 ]);
 
-// The `plumix` subpaths another guard already owns: the curated re-exports
-// (`facade-curated.test.ts`), the shared admin runtime shims (core's roster,
-// `shim-drift.test.ts`) and a whole-package passthrough.
+/**
+ * The `plumix` subpaths another guard already owns: the curated re-exports
+ * (`facade-curated.test.ts`), the shared admin runtime shims (core's roster,
+ * `shim-drift.test.ts`) and a whole-package passthrough.
+ */
 const OWNED_ELSEWHERE = new Set([
   ...subpathsMatching(CURATED_REEXPORT),
   ...Object.values(SHARED_ADMIN_RUNTIME_SPECIFIERS).map((specifier) =>

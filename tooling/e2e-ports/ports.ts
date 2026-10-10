@@ -42,31 +42,29 @@ export interface PortConflict {
   readonly claims: readonly ConflictingClaim[];
 }
 
-// Any option whose name ends in `port` binds one, so a new one in
-// `PlumixE2EConfigOptions` is covered without teaching this scan about it.
-// `viewport` is the single exception: it reads like a port and binds nothing.
+/**
+ * Any option named `*port` binds one, so new options are covered unasked.
+ * `viewport` reads like a port and binds nothing.
+ */
 const PORT_OPTION = /(?<![\w$])(\w*[Pp]ort)\s*:\s*([^,\n}]+)/g;
-// A suite with a custom `webServerCommand` binds its port on the command line
-// rather than through an option. Only the literal form is read: `--port
-// ${String(E2E_PORT)}` interpolates the `port` option the scan already has,
-// and counting it again would report every admin suite as its own rival.
+/**
+ * Only the literal flag is read: an interpolated `--port` repeats the `port`
+ * option already scanned, and counting it twice makes each admin suite its own
+ * rival.
+ */
 const PORT_FLAG = /--([\w-]*port)[= ](\d+)(?![\w.])/g;
 const NUMERIC_CONST = /(?<![\w$])const\s+([\w$]+)\s*=\s*(\d+)\s*;/g;
 const INTEGER = /^\d+$/;
-// The configs write their port allocation down in prose — apps/demo's says
-// where its pair sits relative to the plugin suites — so a comment is as
-// likely to hold a port as the code is. `//` comments are cut only where they
-// own the line: prettier puts every comment in these files on its own, and a
-// blunter cut would take a `port:` trailing a `http://localhost` with it.
+/**
+ * Configs discuss ports in prose. `//` is cut only where it owns the line, or a
+ * `port:` after `http://localhost` would go with it.
+ */
 function withoutComments(source: string): string {
   return withoutBlockComments(source).replaceAll(/^[^\S\n]*\/\/.*$/gm, "");
 }
 
-// Scanned rather than matched. Every regex spelling of a `/* … */` pair is
-// quadratic on a run of `a/*` — the global scan restarts at each unterminated
-// opener, which CodeQL fails as a polynomial ReDoS — while walking the string
-// once cannot be. An opener with no closer ends the walk: there is nothing
-// after it but comment.
+// Walked, not matched: every regex for `/* … */` is quadratic on a run of
+// unterminated openers, which CodeQL fails as a polynomial ReDoS.
 function withoutBlockComments(source: string): string {
   let kept = "";
   let at = 0;
@@ -93,15 +91,9 @@ function numericConsts(source: string): Map<string, number> {
 }
 
 /**
- * Reads the ports a playwright config declares, textually.
- *
- * Textual because importing the config is not available here: the plugin and
- * demo suites import `plumix/test/playwright`, whose `dist/` a `test:unit`
- * run has no build behind it to produce. The two forms the configs use — a
- * literal, and a file-local `const` the admin suites share with their
- * `vite preview` command — both resolve; a `port:` option that reduces to
- * neither is reported rather than passed over, so the scan cannot go quietly
- * blind to a port a config declares.
+ * Textual because the configs import `plumix/test/playwright`, whose `dist/`
+ * `test:unit` has not built. A `port:` that is neither a literal nor a local
+ * `const` is reported, not skipped.
  */
 export function parsePortClaims(source: string): {
   claims: PortClaim[];
@@ -130,9 +122,11 @@ export function parsePortClaims(source: string): {
   return { claims, unresolved };
 }
 
-// `exclude` is handed a repo-relative path, so match on its last segment —
-// every nested `node_modules` and `dist` has to be pruned, not just the ones
-// at the root.
+/**
+ * `exclude` is handed a repo-relative path, so match on its last segment —
+ * every nested `node_modules` and `dist` has to be pruned, not just the ones
+ * at the root.
+ */
 const NOT_SOURCE = new Set([
   "node_modules",
   "dist",
@@ -175,12 +169,8 @@ export function readSuitePorts(root: string, file: string): SuitePorts {
 }
 
 /**
- * Ports more than one suite binds.
- *
- * One suite naming the same port twice is one listener — `webServerPort` is
- * documented as the readiness view of `port` — so claims are counted per
- * config file. A suite that collides with itself fails the moment it runs,
- * alone; this looks for the collision that fails somebody else's suite.
+ * Counted per config file: `webServerPort` is the readiness view of `port`, so
+ * one suite naming a port twice is one listener.
  */
 export function findPortConflicts(
   suites: readonly SuitePorts[],

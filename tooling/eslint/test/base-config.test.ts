@@ -9,10 +9,10 @@ import { i18nStrictConfig } from "../i18n.js";
 import { pluginConfig } from "../plugin.js";
 import { reactConfig } from "../react.js";
 
-// The seam is taken as high as it goes: fixtures on disk are linted through
-// the real exported flat config, so a rule that is correct but unregistered —
-// or registered against the wrong file glob — fails here just as loudly as a
-// broken visitor.
+/**
+ * Linted through the real exported config, so a rule unregistered or under the
+ * wrong glob fails as loudly as a broken visitor.
+ */
 const fixturesDir = path.join(import.meta.dirname, "fixtures");
 
 const eslint = new ESLint({
@@ -42,15 +42,13 @@ async function messagesMatching<TReport>(
     .map(project);
 }
 
-// The first `lintFiles` call builds the fixture TS program for the type-aware
-// rules, and on a contended runner that alone outruns the 5s default. Pay it
-// here rather than inside whichever test happens to run first, so every test's
-// own timeout stays a hang detector — same cold-start spike as PR #1522.
+// Building the fixture TS program can outrun the 5s default on a contended
+// runner; paying it here keeps each test's timeout a hang detector.
 beforeAll(async () => {
   await eslint.lintFiles(["src/restricted-syntax.ts"]);
 }, 60_000);
 
-// The comment rules judge prose, not code, and have fixtures of their own.
+/** The comment rules judge prose, not code, and have fixtures of their own. */
 const COMMENT_RULES = new Set([
   "plumix/max-comment-length",
   "plumix/no-jsdoc-in-function-body",
@@ -63,9 +61,11 @@ const plumixReports = (fixture: string) =>
     (ruleId) => ruleId.startsWith("plumix/") && !COMMENT_RULES.has(ruleId),
   );
 
-// The earned-types rules borrowed from typescript-eslint's strict preset.
-// Named explicitly so a report from one of the presets the config already
-// extends can't be mistaken for one of these.
+/**
+ * The earned-types rules borrowed from typescript-eslint's strict preset.
+ * Named explicitly so a report from one of the presets the config already
+ * extends can't be mistaken for one of these.
+ */
 const STRICT_PRESET_RULES = new Set([
   "@typescript-eslint/no-deprecated",
   "@typescript-eslint/no-unnecessary-boolean-literal-compare",
@@ -87,10 +87,10 @@ async function restrictedSyntaxLines(
     .map((message) => message.line);
 }
 
-// Two rules report several distinct failures whose fixes differ — a missing
-// justification against one that only marks, an inline dictionary against a
-// value type no declaration can keep. Assert on the message id as well as the
-// position, so a report landing under the wrong branch fails here.
+/**
+ * Two rules report distinct failures with different fixes, so the message id
+ * is asserted too.
+ */
 const messageIdReports = (ruleId: string) => (fixture: string) =>
   messagesMatching(
     fixture,
@@ -521,9 +521,7 @@ describe("scoping", () => {
     await expect(plumixReports("src/carve-out.test.ts")).resolves.toEqual([]);
   });
 
-  // The single-use type parameter rule is the one strict-preset rule scoped to
-  // production source; the other four apply everywhere. Assert the split from
-  // one fixture that violates all five, so neither half can drift unnoticed.
+  // One fixture violates all five, so neither half of the split can drift.
   it("exempts test files from the single-use type parameter rule only", async () => {
     await expect(strictPresetReports("src/carve-out.test.ts")).resolves.toEqual(
       [
@@ -549,10 +547,8 @@ describe("scoping", () => {
   });
 });
 
-// Flat config replaces a rule's configuration wholesale rather than merging
-// it, so every config that re-declares `no-restricted-syntax` carries its own
-// full selector list. Assert both lists still fire after the new plugin block
-// lands between them.
+// Flat config replaces a rule's configuration wholesale, so each config that
+// re-declares `no-restricted-syntax` carries its own full selector list.
 describe("the existing restricted-syntax selectors", () => {
   it("still reports throw new Error and internal augmentation targets", async () => {
     await expect(

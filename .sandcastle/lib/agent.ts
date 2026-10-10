@@ -40,9 +40,10 @@ const LOST_THE_GIT_CONFIG_LOCK =
   /could not lock config file|unknown error occurred while reading the configuration files/;
 const ATTEMPTS_TO_START = 5;
 
-// Sandcastle writes the sandbox's global git config as every run starts, so runs started together
-// in one sandbox race for its lock. The loser fails before its agent begins, so starting it again
-// repeats nothing.
+/**
+ * Runs started together race for the sandbox's global git config lock; the
+ * loser fails before its agent begins, so a retry repeats nothing.
+ */
 export const retryALostGitConfigLock = async <T>(
   start: () => Promise<T>,
   pause: (ms: number) => Promise<void>,

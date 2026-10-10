@@ -1,9 +1,9 @@
 import type { Rule } from "eslint";
 
-// Vitest's module-registry helpers, in full. Every one of them takes a module
-// path; none of them can be pointed at a value. Jest's extra spellings
-// (`setMock`, `requireActual`) are deliberately absent — this repo runs vitest,
-// and a rule that guards against a runner nobody uses can't be kept honest.
+/**
+ * Jest-only spellings are absent: a rule guarding a runner nobody uses can't
+ * be kept honest.
+ */
 const MOCKING_HELPERS = new Set([
   "mock",
   "doMock",
@@ -14,11 +14,8 @@ const MOCKING_HELPERS = new Set([
 ]);
 
 /**
- * A test that mocks a module path asserts where code lives, not what it does:
- * move the file and the test keeps passing while covering nothing. Matching is
- * on the `vi.` receiver, so `vi.fn`, `vi.spyOn` and `vi.stubGlobal` —
- * substitutions at a real seam — are untouched, as is a `mock` method on any
- * other object.
+ * Mocking a module path asserts where code lives, not what it does: move the
+ * file and the test passes while covering nothing.
  */
 export const noModuleMocking: Rule.RuleModule = {
   meta: {

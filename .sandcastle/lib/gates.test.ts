@@ -188,9 +188,8 @@ describe("the test gate", () => {
 });
 
 describe("a gate command runs under an orphan reaper", () => {
-  // Sandcastle starts the container as `sleep infinity`, and sleep never reaps the children a
-  // gate orphans. A zombie still answers `kill -0`, so a test that waits for a process to go
-  // away waits out its timeout instead.
+  // `sleep infinity` as PID 1 never reaps orphans, and a zombie still answers
+  // `kill -0`, so waiting for one to exit runs out the timeout.
   test("so a process the gate orphans is reaped instead of left as a zombie", async () => {
     const ran: string[] = [];
     const sandbox = {

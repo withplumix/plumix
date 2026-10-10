@@ -17,8 +17,10 @@ import { say } from "./lib/log.js";
 import { REPO_ROOT } from "./lib/repo.js";
 import { HALF_AN_HOUR_IN_SECONDS } from "./lib/sandbox.js";
 
-// One run a week of ranking and checking claims, so effort is spent where a wrong
-// report would cost the maintainer a grilling session.
+/**
+ * One run a week of ranking and checking claims, so effort is spent where a wrong
+ * report would cost the maintainer a grilling session.
+ */
 const REVIEWER: Thinker = { model: "claude-opus-5-5", effort: "high" };
 
 const OUTPUT_FILE = join(
@@ -40,9 +42,10 @@ const explore = upstreamSection(
   "### 1. Explore",
 );
 
-// The agent runs on the host and reads issues anyone can file, so it gets no
-// permission it was not granted: the allow list lives in the user settings the
-// workflow writes.
+/**
+ * The agent runs on the host and reads issues anyone can file, so it gets only
+ * the allow list the workflow writes into user settings.
+ */
 const run = await sandcastle.run({
   name: "architecture-review",
   cwd: REPO_ROOT,

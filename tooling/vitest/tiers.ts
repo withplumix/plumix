@@ -1,8 +1,7 @@
-// The two test tiers, by filename (ADR 0021). `*.build.test.*` is a third,
-// separate run (`test:build`), so both tiers here leave it out. The globs
-// reach the whole package: vitest concatenates a package's own `include` onto
-// each project's, so a package adding one would feed its files to both tiers.
-// A package narrows with `exclude` instead.
+/**
+ * Vitest concatenates a package's own `include` onto each project's, feeding
+ * both tiers, so a package narrows with `exclude` instead.
+ */
 export const NODE_TIER = {
   name: "node",
   include: ["**/*.test.{ts,tsx}"],
@@ -20,9 +19,10 @@ export const BROWSER_TIER = {
   screenshotFailures: false,
 } as const;
 
-// What the `plumix` Vite plugin substitutes into a production client build.
-// A browser test runs the client code as it ships, where `process` does not
-// exist and every one of these reads is already a literal.
+/**
+ * A browser test runs client code as it ships, where `process` does not exist
+ * and these reads are already literals.
+ */
 export const TEST_TIER_DEFINES = {
   "process.env.WORKERS_CI": JSON.stringify(""),
   "process.env.WORKERS_CI_BRANCH": JSON.stringify(""),

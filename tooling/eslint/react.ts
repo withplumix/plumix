@@ -18,15 +18,10 @@ const THEME_LAYOUT_UTILITIES = [
   "transition-width",
 ];
 
-// Physical CSS classes don't auto-flip under `<html dir="rtl">`. `pl-4` stays
-// padding-left in every locale, while `ps-4` resolves to start-side per
-// direction. Universal RTL safety for any package emitting JSX.
-//
-// Variant prefixes (`sm:`, `hover:`, `dark:`, `group-data-[x]:`) attach
-// directly before the class, so the left boundary admits `:` as well as
-// whitespace. Bare utilities (`text-left`, `border-l`) split out so they
-// don't require a trailing `-N` segment. Arbitrary values may contain
-// parens / commas / spaces inside `[]` — the char class admits those.
+/**
+ * Physical classes like `pl-4` don't flip under `dir="rtl"`. The left boundary
+ * admits `:` because variant prefixes attach directly before the class.
+ */
 const PHYSICAL_CLASS_PATTERN =
   "(?:^|[\\s:])(?:" +
   // Segmented utilities with a trailing value.
@@ -77,19 +72,9 @@ export const reactConfig = defineConfig(
       ],
     },
   },
-  // Design-system rules for code composing `@plumix/admin-ui`. The primitives
-  // themselves are exempt because admin-ui's own config ignores them.
-  // A container's `gap-*` and `space-*` only space its children, so it
-  // leaves the primitive's own look alone. `require-static-classes` keeps
-  // every treatment where the other rules can read it: a variant or a
-  // `data-*` state, never a class built at runtime.
-  // `plumix-*` classes are the styling hooks public markup exposes to themes,
-  // and `hljs` is highlight.js's, so neither is a Tailwind utility.
-  // The layout utilities `@plumix/admin`'s theme.css declares are named for
-  // `no-unknown-classes` because plugins have no stylesheet for it to discover
-  // them in. `no-restyle` cannot tell what a declared utility changes, so the
-  // sizing families that sit on primitives are allowed by prefix; a named
-  // entry would warn in every package that cannot see the theme.
+  // theme.css's layout utilities are named because plugins have no stylesheet
+  // to discover them in. `no-restyle` allows sizing families by prefix: a
+  // named entry warns where the theme is unseen.
   {
     files: ["src/**/*.tsx"],
     ignores: ["**/*.test.tsx"],

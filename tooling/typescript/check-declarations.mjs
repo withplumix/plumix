@@ -1,16 +1,7 @@
 #!/usr/bin/env node
-// Fails a published package's build when the declarations a consumer can load
-// name a package its manifest does not declare. Loadable means reachable from
-// the manifest: every `types` target in `exports` (and a top-level `types`),
-// then every relative file those refer to. Declared means `dependencies`,
-// `peerDependencies` or the package's own name; a devDependency is not
-// installed for a consumer, so a `.d.ts` naming one resolves nowhere.
-//
-// The compiler writes these without being asked: an inferred type prints
-// through whichever module declares it, or whichever it ranks best: it ranks
-// `@plumix/core` level with `plumix/plugin`, and prints the
-// `@tanstack/router-core` that `@tanstack/react-router` re-exports. Annotating
-// the export with a type from a declared package is what moves the output.
+// tsc prints an inferred type through whichever module it ranks best, often
+// an undeclared one; annotating the export with a declared package's type
+// moves it.
 import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -26,13 +17,8 @@ const REFERENCE =
   /(?:\bfrom\s*|\bimport\s*\(\s*|<reference\s+(types|path)\s*=\s*)(["'])([^"']*)\2/g;
 
 /**
- * The specifiers a declaration file's code refers to, in order.
- * Comments are dropped first so a doc example cannot trip it; triple-slash
- * directives are code to the compiler and survive. A comment only counts where
- * it opens a line, which is where tsc writes every one — a `/*` inside a route
- * pattern string must not swallow the declarations after it. A
- * `/// <reference path>` is relative even without a leading `./`, so it comes
- * back with one.
+ * A comment counts only where it opens a line, as tsc writes them, so a `/*`
+ * in a route pattern string swallows nothing.
  *
  * @param {string} source
  * @returns {string[]}
@@ -64,8 +50,7 @@ function typesTargets(exports) {
 }
 
 /**
- * The files a `types` target names under `dir`. A target with a `*` matches
- * every file it could stand for, across directories as Node's pattern does.
+ * A `*` matches across directories, as Node's pattern does.
  *
  * @param {string} dir
  * @param {string} target
@@ -91,10 +76,7 @@ function expandTarget(dir, target) {
 }
 
 /**
- * Whether a specifier names a platform module: a `<scheme>:` one (`node:`,
- * `bun:`, `cloudflare:`) or the bare `bun`. No package declares these; the
- * app supplies their types, as create-plumix-app scaffolds `@types/bun` or
- * `@cloudflare/workers-types` into its devDependencies and tsconfig `types`.
+ * No package declares platform modules; the app supplies their types.
  *
  * @param {string} specifier
  * @returns {boolean}
@@ -116,10 +98,6 @@ function packageName(specifier) {
 }
 
 /**
- * The declaration file a relative specifier in `from` loads, if it exists:
- * `./x.js` loads `x.d.ts` (`.mjs` and `.cjs` likewise), and an extensionless
- * `./x` loads `x.d.ts` or else `x/index.d.ts`.
- *
  * @param {string} from
  * @param {string} specifier
  * @returns {string | undefined}
@@ -135,8 +113,8 @@ function resolveDeclaration(from, specifier) {
 }
 
 /**
- * Every declaration file a consumer of the package at `dir` can load that
- * names a package the manifest does not declare, with paths relative to `dir`.
+ * A devDependency is not installed for a consumer, so only dependencies and
+ * peers count as declared.
  *
  * @param {string} dir
  * @returns {{ file: string; specifiers: string[] }[]}

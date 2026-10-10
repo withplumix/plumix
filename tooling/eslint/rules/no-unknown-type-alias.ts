@@ -1,10 +1,8 @@
 import type { Rule } from "eslint";
 
 /**
- * A named type is a promise of meaning. Aliasing `unknown` breaks the promise
- * while making every call site read as deliberate design. `unknown` inside a
- * wider type (`Record<string, unknown>`, `(input: unknown) => T`) is
- * untouched — those describe a boundary rather than hide one.
+ * Aliasing `unknown` makes every call site read as deliberate design. Inside
+ * a wider type it describes a boundary instead of hiding one.
  */
 export const noUnknownTypeAlias: Rule.RuleModule = {
   meta: {

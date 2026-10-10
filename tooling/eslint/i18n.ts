@@ -3,14 +3,9 @@ import pluginLingui from "eslint-plugin-lingui";
 import { defineConfig } from "eslint/config";
 
 /**
- * Lingui macro-misuse rules. Opt-in for packages that render admin UI
- * (admin itself + plugins with admin chunks). Complements `plumix
- * i18n extract --check` (slice 7): the gate catches drift in wrapped
- * strings; these rules catch extractor-breaking shapes (empty
- * msgids, expressions inside messages, module-scope `t` calls).
- *
- * `no-unlocalized-strings` lives in `i18nStrictConfig` below — opt
- * into that once a package's chrome is fully wrapped.
+ * Catches shapes that break the extractor, which `i18n:check` cannot see.
+ * `no-unlocalized-strings` is separate so a package opts in once fully
+ * wrapped.
  */
 export const i18nConfig = defineConfig({
   files: ["**/src/**/*.{ts,tsx}"],
@@ -27,14 +22,8 @@ export const i18nConfig = defineConfig({
 });
 
 /**
- * Overrides that enable `no-unlocalized-strings`. Spread into a flat-
- * config block alongside `files: [...]` to scope strict mode — see
- * `i18nStrictConfig` below.
- *
- * The allowlist covers attribute / function call sites whose string-
- * literal arguments are non-user-facing identifiers (test ids, route
- * paths, validator constants, error discriminators) — authored
- * empirically against admin's real source.
+ * The allowlist was authored empirically against admin's source: identifiers
+ * such as test ids, route paths and discriminators, never user copy.
  */
 export const i18nStrictOverrides: Linter.Config = {
   rules: {
@@ -66,11 +55,8 @@ export const i18nStrictOverrides: Linter.Config = {
           // matches `UserRole` from `@plumix/core/schema`. The role's
           // display label lives in a separate `MessageDescriptor`.
           "^(subscriber|contributor|author|editor|admin)$",
-          // shadcn primitive variant values used everywhere as
-          // attribute / record values: `<Badge variant="outline">`,
-          // `Record<Role, "default" | "secondary" | …>`. The `variant`
-          // attribute itself is in `ignoreNames`, but values inside a
-          // record literal need a content match.
+          // shadcn variant values inside a record literal, which
+          // `ignoreNames` for the `variant` attribute does not reach.
           "^(default|secondary|outline|ghost|destructive|link)$",
           // Capability identifiers — colon-namespaced lowercase tokens
           // passed to `hasCap` / `otherUserCap` and similar gates.
@@ -85,23 +71,15 @@ export const i18nStrictOverrides: Linter.Config = {
           // `M.uncategorized` descriptor; the constant is only an
           // internal grouping key.
           "^(uncategorized|other)$",
-          // Multi-token kebab identifiers — testid prefixes / suffixes
-          // (`meta-box-field-`, `-input`), W3C input-type tokens
-          // (`datetime-local`), capability segments. The trailing
-          // hyphen variant covers template-literal quasi parts:
-          // `\`meta-box-field-${field.key}\`` exposes `meta-box-field-`
-          // as a quasi the rule sees as a bare literal.
+          // Kebab identifiers; the trailing hyphen covers a template
+          // literal's quasi, which the rule sees as a bare literal.
           "^[a-z]+(-[a-z0-9]+)+-?$",
           "^-[a-z]+$",
           // Internal `__sentinel__` strings (e.g. unserializable-value
           // marker on a meta-field reset key).
           "^__[a-z_]+__$",
-          // Plumix meta-box `inputType` discriminators — HTML5
-          // baseline plus admin's custom input kinds (multiselect,
-          // richtext, repeater, json) and the reference-target kinds
-          // (user/entry/term/userList/entryList/termList). Used as
-          // protocol values across the input dispatcher + registry,
-          // never user copy.
+          // Meta-box `inputType` discriminators: protocol values, never
+          // user copy.
           "^(text|password|email|url|number|tel|search|date|datetime|time|color|file|range|checkbox|radio|toggle|textarea|select|multiselect|richtext|repeater|json|user|entry|term|userList|entryList|termList)$",
           // Container-query Tailwind responsive variants used in the
           // meta-box grid dict — `@sm:col-span-N`, `@md:col-span-N`,
@@ -127,12 +105,8 @@ export const i18nStrictOverrides: Linter.Config = {
           // Entry status discriminator (`trash` for soft-deleted) —
           // sibling of the `trashed` token already covered.
           "^trash$",
-          // Pattern-source slug fallback (lowercase URL component
-          // in `starter/untitled`) — renders only into the generated
-          // TS-source snippet the editor copies to the clipboard,
-          // never to UI chrome. Title-cased `"Untitled"` stays
-          // wrap-required since it's a real form-field placeholder
-          // elsewhere.
+          // A slug in generated source the editor copies, never UI chrome.
+          // Title-cased `"Untitled"` is a real placeholder and stays wrapped.
           "^untitled$",
           // camelCase JS identifiers — registry kind names
           // (`registerPluginPage`), manifest section keys
@@ -177,21 +151,13 @@ export const i18nStrictOverrides: Linter.Config = {
           // (`duplicate_key`). Real user copy never has underscores
           // between words.
           "^[a-z]+(_[a-z]+)+$",
-          // Block-name protocol values (`core/rich-text`,
-          // `starter/<slug>`). Already partially covered by the
-          // kebab regex above, but namespaced slug shapes need their
-          // own anchor. Trailing-slash variant covers template-
-          // literal quasi heads (`\`starter/${suffix}\`` joins to
-          // `starter/`).
+          // Block names; the trailing slash covers a template literal's
+          // quasi head (`\`starter/${suffix}\``).
           "^[a-z]+/([a-z][a-z0-9-]*)?$",
           // Puck protocol zone identifier.
           "^root:default-zone$",
-          // Capability template-literal quasi joins — `entry:` /
-          // `user:` prefixes that appear when a template builds a
-          // colon-namespaced capability or sort key. The rule joins
-          // every quasi piece, so `\`entry:${x}:edit_own\`` becomes
-          // `entry::edit_own` and `\`type:${x}:${y}\`` becomes
-          // `type::`. Handles all shapes via colon-grouped suffixes.
+          // The rule joins a template's quasis, so `\`entry:${x}:edit_own\``
+          // arrives as `entry::edit_own`.
           "^[a-z_]+(:+[a-z_]*)+$",
           // Internal sort key prefix from the revision diff helper.
           // `id:` and `type:` quasis are already covered by the
