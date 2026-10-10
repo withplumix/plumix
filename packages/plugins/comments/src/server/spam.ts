@@ -5,18 +5,16 @@ import type { RateLimitConfig } from "../types.js";
 import { comments } from "../db/schema.js";
 
 /**
- * A hidden form field bots tend to auto-fill. Real users never touch it,
- * so any non-empty value means "drop this submission" — the caller fakes
- * a success rather than revealing the trap.
+ * Any non-empty value means drop the submission; the caller fakes a success
+ * rather than revealing the trap.
  */
 export function isHoneypotTripped(value: string | null | undefined): boolean {
   return typeof value === "string" && value.trim().length > 0;
 }
 
 /**
- * Whether this ip hash has hit the submission limit within the window.
- * Counts the plugin's own rows (no separate counter store) so the limiter
- * works on any deployment without a KV binding.
+ * Counts the plugin's own rows so the limiter works on any deployment without a
+ * KV binding.
  */
 export async function checkRateLimit(
   ctx: AppContext,

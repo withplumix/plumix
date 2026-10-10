@@ -11,17 +11,9 @@ const NUMERIC_FIELDS = ["entryId", "parentId"] as const;
 const optionalString = v.fallback(v.optional(v.string()), undefined);
 const optionalNumber = v.fallback(v.optional(v.number()), undefined);
 
-/**
- * What the visitor typed, as it goes back into the form they are handed,
- * and where they came from. Parsed rather than read off the body: a value
- * that is not a string is not something to put in a control, and the
- * honeypot is not in the shape at all, so it can never be echoed back and
- * filled in for the bot that tripped it.
- *
- * Every key is optional, because a body that reached no schema still has
- * to render something — a refusal is answered with the form back, and the
- * form has to be there even when what was posted was not a comment.
- */
+// Parsed so non-strings never reach a control and the honeypot can't be echoed
+// back. Every key is optional: a refusal re-renders the form even for a
+// non-comment body.
 const echoedSchema = v.object({
   name: optionalString,
   email: optionalString,
@@ -36,11 +28,8 @@ type EchoedComment = Partial<v.InferOutput<typeof echoedSchema>>;
 /** One submitted comment, decoded, before anything has judged it. */
 export interface Submission {
   /**
-   * True when the body arrived urlencoded — a browser posting a plain
-   * form rather than a script posting JSON. It is what the answer's shape
-   * is negotiated on: `Accept` cannot serve, because a `fetch` sends none
-   * of its own and every existing scripted caller would flip to the
-   * redirect.
+   * The answer's shape is negotiated on this, not `Accept`: `fetch` sends none,
+   * and scripted callers would flip to the redirect.
    */
   readonly form: boolean;
   /** The decoded body, or null when it could not be read at all. */
@@ -60,10 +49,8 @@ function readFormBody(text: string): JsonObject {
   for (const key of NUMERIC_FIELDS) {
     const value = out[key];
     if (typeof value !== "string") continue;
-    // A control the visitor left alone posts an empty string. Dropped
-    // rather than coerced, so an absent parent falls to the schema's own
-    // default instead of failing it; anything that is not a number is
-    // left as the string it was, for the schema to refuse.
+    // An untouched control posts "". Dropped so an absent parent takes the
+    // schema default; non-numbers stay strings for the schema to refuse.
     if (value === "") {
       delete out[key];
       continue;
@@ -81,10 +68,7 @@ export async function readSubmission(request: Request): Promise<Submission> {
   return { form, body, echoed: parsed.success ? parsed.output : {} };
 }
 
-/**
- * The submitted body, or null when it could not be read at all — which
- * only a JSON caller can manage, since a urlencoded body always parses.
- */
+// Only a JSON body can fail to read; urlencoded always parses.
 async function readBody(
   request: Request,
   form: boolean,

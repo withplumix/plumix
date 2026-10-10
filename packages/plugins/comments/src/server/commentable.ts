@@ -6,14 +6,12 @@ import type { ResolvedCommentsConfig } from "../config.js";
 import type { CommentRefusalCode } from "../refusals.js";
 import { isCommentingEnabled } from "./enablement.js";
 
-/** The entry a comment surface needs to know about, and nothing more. */
 interface CommentableEntry {
   readonly id: number;
   readonly type: string;
   readonly publishedAt: Date | null;
 }
 
-/** The refusals a commentable lookup can answer with, out of the one table. */
 type CommentableRefusal = Extract<
   CommentRefusalCode,
   "entry_not_found" | "comments_disabled"
@@ -24,20 +22,8 @@ export type CommentableResult =
   | { readonly ok: false; readonly reason: CommentableRefusal };
 
 /**
- * The entry behind a public comment surface, or why it is refused.
- *
- * All three of this plugin's public routes — the thread page, the REST
- * resource and the submit handler — are `auth: "public"`, which core answers
- * ahead of the access gate and without loading a principal. So each has to ask
- * the entry's own policy itself, and asking it in one place is what keeps a
- * fourth route in this plugin from being added without it. It is not a choke
- * point outside the plugin: `loadThread` is exported raw from
- * `@plumix/plugin-comments/server`, and a caller reaching for that answers the
- * access question itself.
- *
- * `entry_not_found` covers the gated case as well as the missing one, on
- * purpose: distinguishing them would tell a stranger which ids exist behind
- * the gate.
+ * Public routes skip core's access gate, so each asks the entry's policy here.
+ * A gated entry answers `entry_not_found` too, so strangers can't probe ids.
  */
 export async function resolveCommentableEntry(
   ctx: AppContext,

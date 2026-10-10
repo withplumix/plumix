@@ -15,7 +15,9 @@ import { renderCommentBody } from "./render-body.js";
 const MAX_PER_PAGE = 100;
 const DEFAULT_PER_PAGE = 20;
 
-/** Where the resource sits; core binds both segments before the handler runs. */
+/**
+ * Where the resource sits; core binds both segments before the handler runs.
+ */
 export const COMMENTS_REST_PATH = "/{collection}/{entry}/comments";
 
 // Output schema = the public allowlist. Author email, IP, user-agent, the
@@ -63,13 +65,8 @@ function pageUrl(url: URL, page: number): string {
 }
 
 /**
- * `GET /_plumix/api/v1/{collection}/{entry}/comments` — a flat, offset-paginated
- * list of the entry's displayed thread (the comments the site shows, bounded by
- * `maxDepth`), each carrying `parentId` so clients build the thread. Core binds
- * the entry, so a collection or id that names no readable entry of that
- * collection's type never reaches here. An entry that isn't published and open
- * to anonymous visitors answers the same `NOT_FOUND`, so existence stays
- * hidden; one whose type has commenting off resolves to an empty page.
+ * An entry not published and open to anonymous visitors answers `NOT_FOUND`,
+ * hiding existence; commenting off yields an empty page.
  */
 export function createCommentsRestHandler(config: ResolvedCommentsConfig) {
   return async ({

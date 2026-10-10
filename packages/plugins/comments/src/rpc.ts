@@ -25,9 +25,7 @@ export type ModerationCommentDTO = Omit<ModerationComment, "createdAt"> & {
 
 type TransitionAction = "comment:approved" | "comment:spam" | "comment:trashed";
 
-// Single source for the status transitions a moderator can drive (single
-// or bulk): each maps to its target status + the lifecycle action it fires.
-// `restore` reuses the approved entry; `purge` is separate (it removes).
+// `restore` reuses the approved entry; `purge` is separate because it removes.
 const BULK_ACTIONS = ["approve", "spam", "trash"] as const;
 type BulkAction = (typeof BULK_ACTIONS)[number];
 const TRANSITIONS: Record<

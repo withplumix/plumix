@@ -13,11 +13,8 @@ export const COMMENT_STATUSES = [
 export type CommentStatus = (typeof COMMENT_STATUSES)[number];
 
 /**
- * Trust policy for a new comment:
- * - `all` — always hold for moderation.
- * - `first_time` — hold a new email's first comment; auto-approve once it
- *   has a prior approved comment (WordPress `comment_previously_approved`).
- * - `none` — auto-approve everything.
+ * `first_time` holds a new email's first comment and auto-approves once it has
+ * an approved one.
  */
 export type ModerationMode = "all" | "first_time" | "none";
 
@@ -59,13 +56,8 @@ export interface CommentsConfig {
 }
 
 /**
- * One refusal, against the control that produced it. A `field` of `""` is
- * about the submission rather than about an answer — the summary renders
- * that one as text rather than as a link to a control.
- *
- * Here rather than beside the markup that renders it: the published
- * `./hooks` and `./theme` declarations both name it, and a data shape a
- * `.d.ts` reaches for should not sit inside a React component module.
+ * A `field` of `""` is about the submission, not a control; the summary renders
+ * it as text, not a link.
  */
 export interface CommentFormError {
   readonly field: string;

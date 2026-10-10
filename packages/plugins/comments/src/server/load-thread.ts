@@ -22,14 +22,10 @@ export interface ResolvedComment {
   readonly replies: readonly ResolvedComment[];
 }
 
-/** The assembled comment thread for one entry. `count` is every approved
- * comment in the displayed tree (depth-bounded, orphans excluded) — but
- * only on the first page (no `cursor`); load-more pages return `0`, since
- * the client already rendered the total and recounting the whole tree on
- * every fetch is wasted work. `comments` are the roots for the requested
- * page (newest first, each with nested replies). `hasMore` flags older
- * roots beyond this page, reachable by passing `nextCursor` back to
- * `GET /_plumix/comments/list`. */
+/**
+ * `count` is computed on the first page only; load-more pages return `0`, as
+ * the client already shows the total.
+ */
 export interface ResolvedThread {
   readonly entryId: number;
   readonly comments: readonly ResolvedComment[];
@@ -38,9 +34,6 @@ export interface ResolvedThread {
   readonly nextCursor: string | null;
 }
 
-/** One page of root comments to load. `cursor` is an opaque
- * `GET /_plumix/comments/list` token from a prior `nextCursor`; omit it
- * for the first (newest) page. */
 interface LoadThreadOptions {
   readonly maxDepth: number;
   readonly rootsPerPage: number;
@@ -52,10 +45,8 @@ interface RootCursor {
   readonly id: number;
 }
 
-// Keyset cursor over the root ordering `(created_at DESC, id DESC)`,
-// encoded `"<unixSeconds>_<id>"`. Keyset (not offset) so newly approved
-// comments arriving between page loads can't shift the window and dupe or
-// skip a root. Unparseable input → null → treated as the first page.
+// Keyset, not offset, so comments approved between page loads can't shift the
+// window. Unparseable input is treated as the first page.
 function encodeCursor(createdAt: number, id: number): string {
   return `${String(createdAt)}_${String(id)}`;
 }
@@ -67,13 +58,8 @@ function decodeCursor(cursor: string | null | undefined): RootCursor | null {
   return { createdAt: Number(match[1]), id: Number(match[2]) };
 }
 
-// Augment the template-dep registry so themes can declare
-// `defineTemplate({ comments: ["current"], render })` and receive a
-// `ResolvedThread` for the entry being rendered.
-//
-// Lives alongside the exported `ResolvedThread` (not the plugin entry) so
-// a theme importing the type from `./server` pulls the `comments` dep kind
-// into its `TemplateDepRegistry` too.
+// Declared beside `ResolvedThread` so a theme importing the type from
+// `./server` also gets the `comments` dep kind.
 declare module "plumix" {
   interface TemplateDepRegistry {
     comments: { slug: string; result: ResolvedThread };
@@ -86,9 +72,6 @@ function toResolved(node: ThreadNode<CommentValue>): ResolvedComment {
   return { ...node.value, replies: node.replies.map(toResolved) };
 }
 
-/** Count every comment in the displayed thread — the same set `loadThread`
- * renders across its pages and the REST collection serves — so the count
- * is stable across pages and matches what's actually shown. */
 async function countThread(
   ctx: AppContext,
   entryId: number,
@@ -102,13 +85,8 @@ async function countThread(
 }
 
 /**
- * Load one page of the approved thread for an entry, rendered for display.
- * Roots paginate newest-first at `rootsPerPage` via a keyset cursor; each
- * root's descendants down to `maxDepth` come with it. Two indexed queries
- * (the root page, then a recursive CTE descending the page's roots) plus a
- * count — no N+1 regardless of page size. A reply whose parent isn't
- * approved is excluded (the CTE only descends approved rows), not
- * promoted; replies stay chronological within each sibling group.
+ * A reply whose parent isn't approved is excluded, not promoted. Replies stay
+ * chronological within each sibling group.
  */
 export async function loadThread(
   ctx: AppContext,

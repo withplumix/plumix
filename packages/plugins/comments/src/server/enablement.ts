@@ -6,13 +6,7 @@
 export const COMMENTS_SUPPORT = "comments";
 
 /**
- * Whether commenting is enabled for an entry type. The effective set is
- * the union of two sources: types the site lists in `entryTypes`, and
- * types that self-declare `supports: ['comments']` at registration.
- *
- * @param typeName  the entry type (e.g. `"post"`).
- * @param supports  the type's registered `supports` array, if any.
- * @param config    the plugin config's entry-type allowlist.
+ * True for types listed in `entryTypes` or declaring `supports: ['comments']`.
  */
 export function isCommentingEnabled(
   typeName: string,

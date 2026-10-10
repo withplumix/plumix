@@ -48,25 +48,8 @@ const COMMENT_LABELS = {
 } satisfies Record<string, Label>;
 
 /**
- * `@plumix/plugin-comments` — threaded, moderated discussion on entries.
- *
- * Registers a `comments` template dep so a theme can render the approved
- * thread for the entry it's displaying:
- *
- *     defineTemplate({
- *       single: {
- *         comments: ["current"],
- *         render: ({ comments }) => <Thread data={comments?.current} />,
- *       },
- *     })
- *
- * and a public `POST /_plumix/comments/submit` route that runs a new
- * comment through honeypot + rate-limit + the trust policy and the
- * `comment:moderate` filter chain before persisting it.
- *
- * Commenting is enabled for an entry type when the type is listed in
- * `comments({ entryTypes })` or self-declares `supports: ['comments']`.
- * Threading depth and the admin moderation queue arrive in later slices.
+ * Commenting is enabled for a type listed in `entryTypes` or declaring
+ * `supports: ['comments']`.
  */
 export function comments(options: CommentsConfig = {}) {
   const config = resolveConfig(options);
@@ -112,11 +95,9 @@ export function comments(options: CommentsConfig = {}) {
         method: "POST",
         path: SUBMIT_ROUTE_PATH,
         auth: "public",
-        // A browser cannot set the `X-Plumix-Request` header on a plain
-        // form submit, so without this there is no commenting without
-        // JavaScript at all. The Origin check is then the whole gate, and
-        // the handler reads no session — see `createSubmitHandler` for
-        // what that costs a signed-in author.
+        // A plain form submit can't set `X-Plumix-Request`, so without this
+        // there's no no-JavaScript commenting. The Origin check is the whole
+        // gate; no session is read.
         formPost: true,
         handler: createSubmitHandler(config),
       });

@@ -17,19 +17,12 @@ export interface DisplayedCommentRow {
 interface DisplayedThreadScope {
   readonly entryId: number;
   readonly maxDepth: number;
-  /** Seed from these roots only — one page of them — instead of every
-   * approved root of the entry. */
   readonly rootIds?: readonly number[];
 }
 
 /**
- * `WITH RECURSIVE displayed AS (...)` — the one definition of which comments
- * the public sees for an entry: an approved root, or an approved reply
- * reached from one through approved parents only, at depth <= `maxDepth`
- * (root = 0). A reply under a pending, spam or trashed ancestor, or below a
- * lowered `maxDepth`, is ordinary data but never displayed. The SSR thread,
- * its count and the REST collection all select from this, so what they
- * show can't drift apart.
+ * The comments the public sees: approved roots and approved replies reached
+ * through approved parents only, at depth <= `maxDepth` (root = 0).
  */
 export function displayedThread({
   entryId,

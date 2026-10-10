@@ -15,11 +15,8 @@ interface MutableNode<T> {
 }
 
 /**
- * Build a reply tree from a flat list, preserving input order within each
- * sibling group. A node whose `parentId` isn't present in the set is
- * promoted to a root. (Callers that pre-filter rows decide whether orphans
- * can occur — `loadThread` excludes replies-to-unapproved at the query, so
- * it never feeds an orphan here.)
+ * Preserves input order within each sibling group. A node whose `parentId`
+ * isn't in the set is promoted to a root.
  */
 export function assembleThread<T>(
   items: readonly ThreadInput<T>[],

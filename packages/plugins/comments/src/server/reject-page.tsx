@@ -20,15 +20,8 @@ interface RefusedComment {
 }
 
 /**
- * What a visitor with no JavaScript gets when the server will not take
- * their comment: the same form back, carrying what they typed and the
- * refusal against the field that produced it. A redirect would have lost
- * both and told them nothing.
- *
- * It is the form alone rather than the post it came from — the plugin owns
- * the endpoint, not the theme's template — so it inherits none of the
- * site's chrome. `noindex` and `no-store` because it is one visitor's
- * refused comment and belongs in no index and no shared cache.
+ * The form alone, without site chrome, since the plugin owns the endpoint, not
+ * the theme. `noindex` and `no-store`: one visitor's refused comment.
  */
 export function rejectPage(ctx: AppContext, refused: RefusedComment): Response {
   const body = renderToStaticMarkup(

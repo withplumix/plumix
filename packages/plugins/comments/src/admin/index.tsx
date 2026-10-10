@@ -1,11 +1,4 @@
-// Plugin admin entry. The plumix vite plugin namespace-imports this
-// module and emits a `window.plumix.registerPluginPage("/comments",
-// CommentsShell)` call into the synthesised admin chunk based on the
-// `component: "CommentsShell"` ref passed to `ctx.registerAdminPage`.
-// All this entry has to do is expose the export by name — registering
-// the page imperatively here as well would double-register it (the
-// synthesised chunk runs this module body *and* its generated call),
-// throwing AdminPluginRegistryError at admin boot. See the media
-// plugin's admin entry for the canonical shape.
+// Expose the export only: the synthesised admin chunk already registers the
+// page, and registering it here too throws AdminPluginRegistryError at boot.
 
 export { CommentsShell } from "./CommentsShell.js";

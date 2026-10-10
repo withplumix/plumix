@@ -1,21 +1,15 @@
 import { sha256Hex } from "./hash.js";
 
 interface GravatarOptions {
-  /** Pixel size of the requested avatar. Defaults to 80. */
+  // Defaults to 80.
   readonly size?: number;
-  /**
-   * Fallback when the email has no Gravatar. Defaults to `"mp"`
-   * (mystery-person), matching WordPress's default.
-   */
+  // Defaults to `"mp"`, matching WordPress.
   readonly default?: string;
 }
 
 /**
- * Gravatar avatar URL for an email. Hashes the normalized (trimmed,
- * lowercased) address with SHA-256 — Gravatar's recommended algorithm,
- * and the one `crypto.subtle` supports on both Workers and Node (no md5
- * dependency). The raw email never leaves the server; only its hash
- * rides in the URL.
+ * SHA-256, not md5: Gravatar recommends it and `crypto.subtle` supports it on
+ * every runtime.
  */
 export async function gravatarUrl(
   email: string,

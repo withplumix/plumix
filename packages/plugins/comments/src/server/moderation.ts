@@ -2,15 +2,8 @@ import type { CommentStatus, ModerationMode } from "../types.js";
 import { COMMENT_STATUSES } from "../types.js";
 
 /**
- * The trust-policy baseline status for a new comment, before any
- * `comment:moderate` filters run. Logged-in commenters take a fast path
- * to `approved`; otherwise the mode decides (see {@link ModerationMode}).
- *
- * `first_time` trusts the prior-approved count for an *unverified* email
- * (WordPress's `comment_previously_approved` model): an anonymous author
- * who supplies a known-good address gets auto-approved. The moderation
- * queue and the `comment:moderate` chain (spam/AI plugins) are the
- * backstop; email verification is a future hardening.
+ * `first_time` trusts prior approvals for an unverified email, as WordPress
+ * does, so a known address auto-approves an anonymous author.
  */
 export function decideBaselineStatus(input: {
   readonly mode: ModerationMode;
@@ -45,10 +38,8 @@ function isCommentStatus(value: unknown): value is CommentStatus {
 }
 
 /**
- * Fold a `comment:moderate` filter's verdict into the baseline. Filters
- * may only demote (most-restrictive wins, so order doesn't matter); a
- * verdict that isn't a known status is ignored rather than persisted —
- * a misbehaving filter can't corrupt the column or promote a comment.
+ * Filters may only demote; an unknown status is ignored, so a misbehaving
+ * filter can't corrupt the column or promote a comment.
  */
 export function applyModerationVerdict(
   baseline: CommentStatus,
