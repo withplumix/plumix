@@ -72,8 +72,13 @@ When a change alters behaviour a comment describes, correct the comment or delet
 it with something vaguer. When you edit a function, delete the comments in it that break these
 rules.
 
+Lint enforces the mechanical part in production source: a comment block stays within 30 words
+(`plumix/max-comment-length`), a `/** */` sits only on an exported declaration
+(`plumix/no-internal-jsdoc`), and no code is left commented out (`sonarjs/no-commented-code`).
+
 **In review**, treat every added comment line as a finding until it passes these rules. Name the
-refactor that would make it unnecessary, or say which rule it breaks.
+refactor that would make it unnecessary, or say which rule it breaks. Lint can't tell an exported
+declaration from a published one, or a why from a what; review can.
 
 ## Correctness
 
