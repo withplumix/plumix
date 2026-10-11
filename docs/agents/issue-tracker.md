@@ -33,17 +33,6 @@ Create a GitHub issue.
 
 Run `gh issue view <number> --comments`.
 
-## Ticket model label
-
-`to-tickets` proposes one `model:` label per ticket in its quiz step, naming the model the ticket
-needs. A ticket with no label needs `opus`.
-
-| model    | Pick it when                                                                                                                       |
-| -------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `sonnet` | Mechanical and compiler-driven: a rename, a lockstep bump, a docs edit with no rewrite. The criteria enumerate every change.       |
-| `opus`   | The default vertical slice, and anything spanning packages or surfaces, schema, auth, caching or the RPC contract.                 |
-| `fable`  | Design-heavy: a wide refactor or expand–contract sequence, security-sensitive code, or criteria that need architectural judgement. |
-
 ## Wayfinding operations
 
 Used by `/wayfinder`. The **map** is a single issue with **child** issues as tickets.
