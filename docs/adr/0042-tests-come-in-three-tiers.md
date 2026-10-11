@@ -9,7 +9,7 @@ into Node's `fetch` lost its bytes and its name. Plain Node never had that
 bug, and `plugin-rpc-cases.ts` already sends a real `File` through
 `stubPluginRpc` in Node. The post-build tier grew one suite at a time, wherever
 a test happened to need `dist/`. With no rule for where a test belongs, each
-new test copied its neighbour: 113 browser files, 18 build suites, a Chromium
+new test copied its neighbour: 112 browser files, 18 build suites, a Chromium
 download in the unit job, and an extra required CI job (#3035, #3036).
 
 > **A test belongs to one of three tiers, chosen by what it needs to observe
@@ -46,7 +46,7 @@ the reasons.
 
 - **Keep the Chromium unit tier for components** (ADR 0021, and Vitest's own
   advice for component tests). Rejected for Plumix: the upload bug it was
-  adopted for is a Node test, 18 of the 113 files never needed a browser, about
+  adopted for is a Node test, 18 of the 112 files never needed a browser, about
   39 cover features the e2e suites already drive, and the tier puts a browser
   download and browser start-up into every unit run. A component's logic is
   tested where it lives; the DOM is tested where a user meets it.
@@ -73,7 +73,7 @@ the reasons.
   trust) are unit tests of the handler, and starting with one listener,
   answering and exiting within the deadline on `SIGTERM` are smoke steps, which
   #3036 adds. Its other three layers stand.
-- The 113 `*.browser.test.*` files move to unit or e2e (#3035), and the 18
+- The 112 `*.browser.test.*` files move to unit or e2e (#3035), and the 18
   `*.build.test.ts` suites move to unit or smoke (#3036).
 - The `plumix/test-tier` lint rule points a DOM-touching unit test at a
   function to call and at `e2e/`, not at a browser tier.

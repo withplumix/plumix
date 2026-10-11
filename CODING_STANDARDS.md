@@ -139,9 +139,11 @@ migration under a new name, because installs that ran the old one won't run it a
 
 Plumix has three test tiers: **unit**, **e2e** and **smoke**. A tier is chosen by what the test
 needs to observe the behaviour, never by convenience, and each tier has one location, one runner and
-one CI job ([ADR 0042](docs/adr/0042-tests-come-in-three-tiers.md)). Typecheck, lint, format, knip,
-publint, attw, `i18n:check`, `migrations:check` and the link check are **gates**, not tiers: they
-check code without running it, and a new check of that kind joins an existing gate.
+one CI job ([ADR 0042](docs/adr/0042-tests-come-in-three-tiers.md)). The section covers every
+workspace package and app; `.sandcastle`, the ship loop's own harness, sits outside the workspace
+and outside the tiers. Typecheck, lint, format, knip, publint, attw, `i18n:check`,
+`migrations:check` and the link check are **gates**, not tiers: they check code without running
+it, and a new check of that kind joins an existing gate.
 
 | Tier  | Proves                                               | Lives in                                       | Runs with                                        | CI job             |
 | ----- | ---------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------ | ------------------ |
@@ -313,9 +315,9 @@ only a boundary Plumix doesn't own, and keep it narrow.
    conformance suites (`plumix/test/conformance`), which is what keeps the fakes honest. Add a new
    fake there, as high up as every caller can use it.
 3. **Stub.** Only a boundary outside Plumix: a third-party HTTP API, the clock, randomness, a
-   platform global (`vi.stubGlobal`). A slot Plumix defines, like the `Mailer`, has a fake
-   (`makeMailer` captures what was sent). Inject the dependency when the code doesn't
-   take one yet: add the seam to the source.
+   platform global (`vi.stubGlobal`). A slot Plumix defines, like the `Mailer`, has a fake: core's
+   `makeMailer` (`packages/core/src/test/mailer.ts`) captures what was sent. Inject the dependency
+   when the code doesn't take one yet: add the seam to the source.
 4. **Never mock a module.** `vi.mock` couples a test to where code lives; the
    `plumix/no-module-mocking` lint rule rejects it. Wrap a third-party type behind an interface
    Plumix owns and double that.
