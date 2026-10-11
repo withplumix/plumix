@@ -25,7 +25,7 @@ export function createJsonLogger(
 }
 
 /** A log call must never throw, so meta JSON cannot hold is dropped, and says why. */
-function serialize(record: Record<string, unknown>): string {
+function serialize(record: LogMeta): string {
   try {
     return JSON.stringify(record, (_key, value: unknown) =>
       value instanceof Error ? errorFields(value) : value,
