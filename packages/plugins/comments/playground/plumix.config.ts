@@ -36,8 +36,6 @@ export default plumix({
   }),
   plugins: [blog(), comments({ entryTypes: ["post"], rootsPerPage: 2 })],
   theme,
-  // Two locales and a site override, so the mail gallery e2e can switch
-  // language and show a site's branding on core's mail.
   i18n: { defaultLocale: "en", locales: ["en", "de"] },
   mail: {
     overrides: {

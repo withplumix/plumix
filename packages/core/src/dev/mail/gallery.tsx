@@ -6,14 +6,14 @@ import { css } from "../../css-tag.js";
 import { devTokens } from "../ui/tokens.js";
 import { MailView, mailViewCss } from "./viewer.js";
 
-interface PreviewedMail {
+export interface PreviewedMail {
   readonly name: string;
   readonly subject: string;
   readonly text: string;
   readonly html?: string;
 }
 
-export interface PreviewGroup {
+interface PreviewGroup {
   /** `core`, or the id of the plugin that declared the mails. */
   readonly owner: string;
   readonly mails: readonly PreviewedMail[];
@@ -24,7 +24,6 @@ interface MailGalleryProps {
   readonly groups: readonly PreviewGroup[];
   /** The site's enabled locales, the switcher's options. */
   readonly locales: readonly ResolvedLocale[];
-  /** The locale the previews rendered in. */
   readonly locale: ResolvedLocale;
   /** Newest first. */
   readonly caught: readonly CaughtMail[];

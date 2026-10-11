@@ -158,8 +158,6 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     args.origin !== undefined
       ? resolveEnvInput(args.origin, args.env)
       : new URL(args.request.url).origin;
-  // `plumix dev` catches mail a site with no mailer would drop, and records
-  // what every mail rendered.
   const devMailWiring =
     process.env.PLUMIX_DEV && args.dev !== undefined
       ? devMail({

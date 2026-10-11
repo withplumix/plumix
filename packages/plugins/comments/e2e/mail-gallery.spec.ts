@@ -6,7 +6,9 @@ import { expect, test } from "plumix/test/playwright";
  */
 const GALLERY = "/_plumix/debug/mail";
 
-const preview = (name: string) => `plumix-mail-preview-${name}`;
+function preview(name: string): string {
+  return `plumix-mail-preview-${name}`;
+}
 
 test.describe("the dev mail gallery", () => {
   test("previews core's and the plugin's mails, with the site's override", async ({

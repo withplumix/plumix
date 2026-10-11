@@ -4,7 +4,7 @@ import type { AppContext } from "../../context/app-context.js";
 import type { DevRuntime } from "../../context/dev-runtime.js";
 import type { MailCatalogs } from "../../mail/catalogs.js";
 import type { DeclaredMails } from "../../mail/declared.js";
-import type { PreviewGroup } from "./gallery.js";
+import type { PreviewedMail } from "./gallery.js";
 import { findEnabledLocale } from "../../i18n/locale-registry.js";
 import { mailSite, renderDeclaredMail } from "../../mail/sender.js";
 import {
@@ -57,7 +57,7 @@ async function galleryPage(
     ctx.config.basePath,
   );
   // Declaration order puts core's mails first, then each plugin's.
-  const groups = new Map<string, PreviewGroup["mails"][number][]>();
+  const groups = new Map<string, PreviewedMail[]>();
   for (const [name, declared] of sources.mails) {
     const rendered = await renderDeclaredMail({
       mail: declared.mail,
@@ -86,7 +86,6 @@ async function galleryPage(
   });
 }
 
-/** The caught mail as JSON; what a test's `mailbox` reads and empties. */
 function sentMail(ctx: AppContext, dev: DevRuntime): Response {
   const { method } = ctx.request;
   if (method === "GET" || method === "HEAD") {

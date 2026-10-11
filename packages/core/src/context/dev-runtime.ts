@@ -112,11 +112,9 @@ export interface CaughtMail {
   readonly id: string;
   /** When it was caught (epoch ms). */
   readonly at: number;
-  /** The declared mail's name. */
   readonly name: string;
   readonly props: JsonValue;
   readonly to: string;
-  /** The locale it rendered in. */
   readonly locale: string;
   readonly subject: string;
   readonly text: string;

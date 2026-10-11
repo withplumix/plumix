@@ -143,7 +143,7 @@ function paneOf(html: string, id: string): string {
 const SENT_PATH = "/_plumix/debug/mail/sent";
 
 describe("the caught-mail JSON at /_plumix/debug/mail/sent", () => {
-  test("GET lists the caught mail, newest first, and DELETE clears it", async () => {
+  test("GET lists the caught mail, newest first", async () => {
     const h = await createDispatcherHarness({
       config: { auth: { magicLink: { siteName: "Dev Site" } } },
     });
@@ -170,6 +170,14 @@ describe("the caught-mail JSON at /_plumix/debug/mail/sent", () => {
     expect(typeof caught[0]?.at).toBe("number");
     expect(caught[0]?.text).toContain("magic-link/verify?token=");
     expect(caught[0]?.html).toContain("<a href=");
+  });
+
+  test("DELETE clears the caught mail", async () => {
+    const h = await createDispatcherHarness({
+      config: { auth: { magicLink: { siteName: "Dev Site" } } },
+    });
+    await h.factory.user.create({ email: "ann@example.test" });
+    await h.dispatch(requestMagicLink("ann@example.test"));
 
     const cleared = await h.dispatch(
       new Request(`${DEV_ORIGIN}${SENT_PATH}`, {
@@ -177,9 +185,26 @@ describe("the caught-mail JSON at /_plumix/debug/mail/sent", () => {
         headers: { "x-plumix-request": "1" },
       }),
     );
+
     expect(cleared.status).toBe(204);
     const after = await h.dispatch(new Request(`${DEV_ORIGIN}${SENT_PATH}`));
     expect(await after.json()).toEqual([]);
+  });
+
+  test("DELETE without the request header is refused and keeps the mail", async () => {
+    const h = await createDispatcherHarness({
+      config: { auth: { magicLink: { siteName: "Dev Site" } } },
+    });
+    await h.factory.user.create({ email: "ann@example.test" });
+    await h.dispatch(requestMagicLink("ann@example.test"));
+
+    const refused = await h.dispatch(
+      new Request(`${DEV_ORIGIN}${SENT_PATH}`, { method: "DELETE" }),
+    );
+
+    expect(refused.status).toBe(403);
+    const after = await h.dispatch(new Request(`${DEV_ORIGIN}${SENT_PATH}`));
+    expect(await after.json()).toHaveLength(1);
   });
 
   test("a configured mailer delivers, so nothing is caught", async () => {
