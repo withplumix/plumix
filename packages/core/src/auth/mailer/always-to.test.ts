@@ -42,6 +42,24 @@ describe("alwaysTo", () => {
     expect(message?.html).toMatch(/<\/p>\s*<p>Your link<\/p>$/);
   });
 
+  test("keeps a text-only message text-only and escapes the recipient in the banner", async () => {
+    const recording = recordingMailer();
+    const resolved = resolve(alwaysTo("qa@site.test", recording));
+
+    await resolved.send({ to: "ann@example.com", subject: "s", text: "t" });
+    await resolved.send({
+      to: "<b>@example.com",
+      subject: "s",
+      text: "t",
+      html: "<p>t</p>",
+    });
+
+    expect(recording.sent[0]).not.toHaveProperty("html");
+    expect(recording.sent[1]?.html).toBe(
+      '<p style="font-size:12px;color:#666">Originally to: &lt;b&gt;@example.com</p><p>t</p>',
+    );
+  });
+
   test("resolves the address and the transport from env", async () => {
     interface StagingEnv {
       readonly STAGING_INBOX: string;
