@@ -47,7 +47,7 @@
     "knip": "^6.32.2",
     "prettier": "catalog:",
     "sherif": "^1.13.0",
-    "turbo": "^2.11.2"
+    "turbo": "^2.11.7"
   },
   "prettier": "@plumix/prettier-config"
 }
