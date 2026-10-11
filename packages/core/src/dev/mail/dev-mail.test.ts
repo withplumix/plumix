@@ -368,6 +368,16 @@ const noter = definePlugin("noter", {
   },
 });
 
+async function sendNote(
+  h: Awaited<ReturnType<typeof createDispatcherHarness>>,
+  to: string,
+  length: number,
+): Promise<void> {
+  await h.dispatch(
+    new Request(`${DEV_ORIGIN}/_plumix/noter/send?to=${to}&length=${length}`),
+  );
+}
+
 async function caughtMail(
   h: Awaited<ReturnType<typeof createDispatcherHarness>>,
 ): Promise<CaughtMail[]> {
@@ -384,11 +394,7 @@ describe("the caught mail is capped by dev.history, like the request history", (
       },
     });
 
-    await h.dispatch(
-      new Request(
-        `${DEV_ORIGIN}/_plumix/noter/send?to=a@example.test&length=10000`,
-      ),
-    );
+    await sendNote(h, "a@example.test", 10_000);
 
     expect((await caughtMail(h))[0]?.text).toBe("x".repeat(10_000));
   });
@@ -398,11 +404,8 @@ describe("the caught mail is capped by dev.history, like the request history", (
       config: { plugins: [noter], dev: { history: { maxEntries: 1 } } },
     });
 
-    for (const to of ["a@example.test", "b@example.test"]) {
-      await h.dispatch(
-        new Request(`${DEV_ORIGIN}/_plumix/noter/send?to=${to}&length=1`),
-      );
-    }
+    await sendNote(h, "a@example.test", 1);
+    await sendNote(h, "b@example.test", 1);
 
     expect((await caughtMail(h)).map((mail) => mail.to)).toEqual([
       "b@example.test",
@@ -414,11 +417,8 @@ describe("the caught mail is capped by dev.history, like the request history", (
       config: { plugins: [noter], dev: { history: { maxTotalBytes: 3_000 } } },
     });
 
-    for (const to of ["a@example.test", "b@example.test"]) {
-      await h.dispatch(
-        new Request(`${DEV_ORIGIN}/_plumix/noter/send?to=${to}&length=2000`),
-      );
-    }
+    await sendNote(h, "a@example.test", 2000);
+    await sendNote(h, "b@example.test", 2000);
 
     expect((await caughtMail(h)).map((mail) => mail.to)).toEqual([
       "b@example.test",

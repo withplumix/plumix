@@ -26,7 +26,7 @@ interface CreateMailSenderInput {
   readonly locale: string;
   readonly siteName: string;
   readonly baseUrl: string;
-  /** Called with each mail the mailer accepted. The dev server records them. */
+  /** Called with each mail the mailer accepted. */
   readonly onSent?: (sent: SentMail) => void;
 }
 

@@ -5,10 +5,8 @@ import { isJsonObject } from "../../../json.js";
 import { DEBUG_MAIL_PANEL_ID } from "../../mail/path.js";
 import { MailView } from "../../mail/viewer.js";
 
-/** What `ctx.mail` recorded for one sent mail; a caught mail less its id. */
 type RecordedMail = Omit<CaughtMail, "id" | "at">;
 
-/** The Mail panel: each mail the request sent, rendered as it went out. */
 export const mailPanel: DebugPanel = {
   id: DEBUG_MAIL_PANEL_ID,
   title: "Mail",

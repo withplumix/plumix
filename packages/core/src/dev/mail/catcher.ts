@@ -16,9 +16,7 @@ interface DevMailInput {
 }
 
 interface DevMail {
-  /** The configured mailer, else one that logs instead of sending. */
   readonly mailer: Mailer;
-  /** Records a sent mail in the request's history, and keeps a caught one. */
   readonly onSent: (sent: SentMail) => void;
 }
 

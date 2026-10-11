@@ -108,7 +108,6 @@ export interface DebugHistoryStore {
  * `mailer`. Inert JSON, like a history entry.
  */
 export interface CaughtMail {
-  /** Unique per caught mail. */
   readonly id: string;
   /** When it was caught (epoch ms). */
   readonly at: number;
