@@ -5,17 +5,13 @@ import * as path from "node:path";
 import type { BaselineEntry } from "../rules/sync-comment-guarded.js";
 import type { SourceFile } from "./baseline.js";
 import { repoRootOf } from "../rules/sync-comment-guarded.js";
-import { occurrencesIn, syncBaseline } from "./baseline.js";
+import { isLintedFile, occurrencesIn, syncBaseline } from "./baseline.js";
 
 const BASELINE = path.join(
   import.meta.dirname,
   "../sync-comment-baseline.json",
 );
 const root = repoRootOf(BASELINE);
-
-/** The ignores `baseConfig` adds on top of the gitignore. */
-const LINT_IGNORED_CONFIG = /\.config\.[^/]*$/;
-const LINTED_CONFIG = /(^|\/)vitest(\.[^/]*)?\.config\.ts$/;
 
 const linted = new Map<string, boolean>();
 
@@ -52,9 +48,7 @@ function lintedFiles(): SourceFile[] {
   return tracked
     .split("\0")
     .filter((file) => file !== "")
-    .filter(
-      (file) => !LINT_IGNORED_CONFIG.test(file) || LINTED_CONFIG.test(file),
-    )
+    .filter(isLintedFile)
     .filter((file) => packageLints(path.posix.dirname(file)))
     .map((file) => ({
       file,

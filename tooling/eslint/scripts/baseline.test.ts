@@ -1,7 +1,36 @@
+import { ESLint } from "eslint";
 import { describe, expect, it } from "vitest";
 
+import { baseConfig } from "../base.js";
 import { repoRootOf } from "../rules/sync-comment-guarded.js";
-import { occurrencesIn, syncBaseline } from "./baseline.js";
+import { isLintedFile, occurrencesIn, syncBaseline } from "./baseline.js";
+
+describe("isLintedFile", () => {
+  it("agrees with baseConfig on which config files lint reads", async () => {
+    const eslint = new ESLint({
+      cwd: repoRootOf(import.meta.filename),
+      overrideConfigFile: true,
+      overrideConfig: baseConfig,
+    });
+    const files = [
+      "packages/core/src/a.ts",
+      "packages/core/tsup.config.ts",
+      "packages/core/vitest.config.ts",
+      "packages/core/vitest.browser.config.ts",
+      "packages/core/vitest.config.mts",
+      "apps/docs/astro.config.ts",
+      "packages/core/src/vitest.config.test.ts",
+    ];
+
+    const linted = files.filter((file) => isLintedFile(file));
+    const readByLint: string[] = [];
+    for (const file of files) {
+      if (!(await eslint.isPathIgnored(file))) readByLint.push(file);
+    }
+
+    expect(linted).toEqual(readByLint);
+  });
+});
 
 describe("occurrencesIn", () => {
   it("lists each coupling comment that names no guarding test, by the hash of its line", () => {

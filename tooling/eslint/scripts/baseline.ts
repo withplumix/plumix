@@ -16,6 +16,17 @@ export interface SourceFile {
   readonly text: string;
 }
 
+const CONFIG_FILE = /\.config\.[^/]*$/;
+const VITEST_CONFIG = /(^|\/)vitest(\.[^/]*)?\.config\.ts$/;
+
+/**
+ * Mirrors which config files `baseConfig` ignores.
+ * Guarded by: tooling/eslint/scripts/baseline.test.ts
+ */
+export function isLintedFile(file: string): boolean {
+  return !CONFIG_FILE.test(file) || VITEST_CONFIG.test(file);
+}
+
 /**
  * Runs the rule itself, with no baseline and no type information, so what the
  * script records is exactly what lint would report.

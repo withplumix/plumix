@@ -12,7 +12,7 @@ type Comment = ReturnType<
 const COUPLING =
   /\bmirrors\b|\bkeeps?\b[^.]*?\bin sync\b|\bkept in sync\b|\bmust match\b|\bmust stay in step\b/i;
 
-/** An occurrence that predates the rule, which burn-down slices remove. */
+/** A coupling comment the rule skips, identified by its file and line hash. */
 export interface BaselineEntry {
   readonly file: string;
   readonly hash: string;
