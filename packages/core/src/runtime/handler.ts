@@ -92,6 +92,7 @@ export function createPlumixHandler(
   options: PlumixHandlerOptions = {},
 ): PlumixHandler {
   const dispatcher = createPlumixDispatcher(app);
+  const logFailure = failureLog(options.logger);
   // Once per handler, not per request: an env is fixed for the handler's
   // lifetime on every runtime this factory serves, so the first verdict — and
   // the first bind below — holds.
@@ -136,7 +137,7 @@ export function createPlumixHandler(
     try {
       boundDb?.close?.();
     } catch (error) {
-      console.warn("[plumix] database_close_failed", error);
+      logFailure("warn", "[plumix] database_close_failed", error);
     }
     boundDb = undefined;
   };
@@ -188,7 +189,7 @@ export function createPlumixHandler(
         const response = await requestStore.run(ctx, () => dispatcher(ctx));
         return scoped.commit(response);
       } catch (error) {
-        return handleFailure(error);
+        return handleFailure(error, logFailure);
       }
     },
 
@@ -209,7 +210,8 @@ export function createPlumixHandler(
       pending.clear();
       releaseDatabase();
       if (abandoned > 0) {
-        console.warn(
+        logFailure(
+          "warn",
           `[plumix] deferred_work_abandoned: ${abandoned} deferred task(s) still running after ${timeoutMs}ms`,
         );
       }
@@ -255,7 +257,7 @@ export function createPlumixHandler(
         ));
       } catch (error) {
         // No `ctx` to log through — the build of it is what may have failed.
-        console.error("[plumix] scheduled_failure", error);
+        logFailure("error", "[plumix] scheduled_failure", error);
         return {
           ran: 0,
           failed: [],
@@ -468,8 +470,33 @@ function validateBindings(app: PlumixApp, env: PlumixEnv): void {
   }
 }
 
-function handleFailure(error: unknown): Response {
-  console.error("[plumix] handler_failure", error);
+type FailureLog = (
+  level: "warn" | "error",
+  message: string,
+  error?: unknown,
+) => void;
+
+/**
+ * Failures with no request context to log through. Without a runtime logger
+ * the console gets the same arguments as ever, so dev output is unchanged.
+ */
+function failureLog(logger: Logger | undefined): FailureLog {
+  return (level, message, error) => {
+    if (logger === undefined) {
+      if (error === undefined) console[level](message);
+      else console[level](message, error);
+      return;
+    }
+    try {
+      logger[level](message, error === undefined ? undefined : { error });
+    } catch {
+      // Already reporting a failure; a logger that throws must not add one.
+    }
+  };
+}
+
+function handleFailure(error: unknown, logFailure: FailureLog): Response {
+  logFailure("error", "[plumix] handler_failure", error);
   // Config errors are deploy metadata, not user input: surface them in the
   // body so an operator without a log tail can diagnose from HTTP alone.
   if (error instanceof RuntimeConfigError) {

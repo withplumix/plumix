@@ -161,6 +161,30 @@ describe("createPlumixHandler — fetch", () => {
     );
   });
 
+  test("a request that fails goes to the logger the runtime hands the handler, not the console", async () => {
+    const consoleError = vi.spyOn(console, "error");
+    onTestFinished(() => consoleError.mockRestore());
+    const logger = spyLogger();
+    const handler = await handlerFor(
+      {
+        database: {
+          kind: "bound",
+          requiredBindings: ["DB"],
+          connect: () => ({ db: {} }),
+        },
+      },
+      { logger },
+    );
+
+    const response = await handler.fetch(request(), { env: {} });
+
+    expect(response.status).toBe(500);
+    expect(logger.error).toHaveBeenCalledWith("[plumix] handler_failure", {
+      error: expect.objectContaining({ code: "bindings_missing" }) as unknown,
+    });
+    expect(consoleError).not.toHaveBeenCalled();
+  });
+
   test("binding validation is memoised per handler: the first env's verdict holds", async () => {
     const handler = await handlerFor({
       database: {
@@ -629,6 +653,56 @@ describe("createPlumixHandler — deferred work", () => {
     }
   });
 
+  test("abandoned work is reported to the logger the runtime hands the handler", async () => {
+    const stuck = manualPromise();
+    onTestFinished(() => stuck.resolve());
+    const consoleWarn = vi.spyOn(console, "warn");
+    onTestFinished(() => consoleWarn.mockRestore());
+    const logger = spyLogger();
+    const handler = await handlerFor(
+      { plugins: [deferring(() => stuck.promise)] },
+      { disposeTimeoutMs: 10, logger },
+    );
+    await handler.fetch(deferRequest(), { env: {} });
+
+    await handler.dispose?.();
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      "[plumix] deferred_work_abandoned: 1 deferred task(s) still running after 10ms",
+      undefined,
+    );
+    expect(consoleWarn).not.toHaveBeenCalled();
+  });
+
+  test("a database that fails to close is reported to the logger the runtime hands the handler", async () => {
+    const consoleWarn = vi.spyOn(console, "warn");
+    onTestFinished(() => consoleWarn.mockRestore());
+    const logger = spyLogger();
+    const closeFailed = new Error("busy");
+    const handler = await handlerFor(
+      {
+        database: {
+          kind: "closing",
+          connect: () => ({
+            db: {},
+            close: () => {
+              throw closeFailed;
+            },
+          }),
+        },
+      },
+      { logger },
+    );
+    await handler.fetch(request(), { env: {} });
+
+    await handler.dispose?.();
+
+    expect(logger.warn).toHaveBeenCalledWith("[plumix] database_close_failed", {
+      error: closeFailed,
+    });
+    expect(consoleWarn).not.toHaveBeenCalled();
+  });
+
   test("a per-call deadline overrides the handler's, so a shutdown can spend what it has left", async () => {
     const stuck = manualPromise();
     const handler = await handlerFor(
@@ -814,6 +888,31 @@ describe("createPlumixHandler — scheduled reporting", () => {
     } finally {
       error.mockRestore();
     }
+  });
+
+  test("a run that never started goes to the logger the runtime hands the handler", async () => {
+    const consoleError = vi.spyOn(console, "error");
+    onTestFinished(() => consoleError.mockRestore());
+    const logger = spyLogger();
+    const handler = await handlerFor(
+      {
+        plugins: [oneTask],
+        database: scopedDatabase(() => {
+          throw new Error("no connection");
+        }),
+      },
+      { logger },
+    );
+
+    await handler.scheduled?.(
+      { scheduledTime: 0, cron: UNCLAIMED_CRON },
+      { env: {} },
+    );
+
+    expect(logger.error).toHaveBeenCalledWith("[plumix] scheduled_failure", {
+      error: expect.objectContaining({ message: "no connection" }) as unknown,
+    });
+    expect(consoleError).not.toHaveBeenCalled();
   });
 
   test("keeps the tasks it ran when the commit throws and logging it throws too", async () => {
