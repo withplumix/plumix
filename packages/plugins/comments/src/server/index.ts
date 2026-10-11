@@ -2,7 +2,11 @@
 // here to type their `comments` template-dep render arg; importing this
 // barrel also pulls in the `TemplateDepRegistry` augmentation declared
 // alongside `ResolvedThread`.
-export type { ResolvedComment, ResolvedThread } from "./load-thread.js";
+export type {
+  ResolvedComment,
+  ResolvedThread,
+  ResolvedThreadPage,
+} from "./load-thread.js";
 export { loadThread } from "./load-thread.js";
 // Re-exported so a third-party moderation plugin can type its
 // `comment:moderate` filter; importing it also pulls the plugin's

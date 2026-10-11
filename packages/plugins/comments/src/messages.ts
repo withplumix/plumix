@@ -56,3 +56,13 @@ export const LOAD_FAILED: Label = {
   id: "plugin.comments.error.load_failed",
   message: "Those comments could not be loaded. Please try again.",
 };
+
+export const OLDER_COMMENTS: Label = {
+  id: "plugin.comments.thread.older",
+  message: "Older comments",
+};
+
+export const NEWEST_COMMENTS: Label = {
+  id: "plugin.comments.thread.newest",
+  message: "Newest comments",
+};

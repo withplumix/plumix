@@ -75,6 +75,7 @@ function seedComment(
     entryId: number;
     status?: "pending" | "approved";
     parentId?: number;
+    createdAt?: Date;
   },
 ) {
   return commentFactory.transient({ db: s.h.db }).create(attrs);
@@ -122,6 +123,29 @@ describe("@plumix/plugin-comments — CDN tags", () => {
     await s.h.drainDeferred();
 
     expect(s.put.mock.calls[0]?.[2]).toContain(`e:${String(post.id)}`);
+  });
+
+  test("approving a comment purges the stored older comment page", async () => {
+    const s = await site({ rootsPerPage: 1 });
+    const post = await seedPost(s, "hello");
+    await seedComment(s, {
+      entryId: post.id,
+      status: "approved",
+      createdAt: new Date("2026-06-01T00:00:00Z"),
+    });
+    const held = await seedComment(s, { entryId: post.id });
+    await s.h.dispatch(
+      new Request("https://cms.example/posts/hello?comments=1780358400_9"),
+    );
+    await s.h.drainDeferred();
+
+    await rpc(s, "approve", { id: held.id });
+
+    expect(s.put.mock.calls[0]?.[0].url).toBe(
+      "https://cms.example/posts/hello?comments=1780358400_9",
+    );
+    expect(s.put.mock.calls[0]?.[2]).toContain(`e:${String(post.id)}`);
+    expect(purged(s)).toContain(`e:${String(post.id)}`);
   });
 
   test.each(["approve", "restore", "spam", "trash"])(

@@ -34,6 +34,6 @@ export default plumix({
       origin,
     },
   }),
-  plugins: [blog(), comments({ entryTypes: ["post"] })],
+  plugins: [blog(), comments({ entryTypes: ["post"], rootsPerPage: 2 })],
   theme,
 });

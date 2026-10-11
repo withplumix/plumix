@@ -37,8 +37,9 @@ export interface CommentsConfig {
   /** Maximum reply nesting depth (root = 0). Defaults to `3`. */
   readonly maxDepth?: number;
   /**
-   * Root comments rendered per page (newest-first); older roots load
-   * on demand via `GET /_plumix/comments/list`. Defaults to `20`.
+   * Root comments rendered per page (newest-first); older roots render at
+   * the entry's `?comments=` pages and load via `GET /_plumix/comments/list`.
+   * Defaults to `20`.
    */
   readonly rootsPerPage?: number;
   /** Require a non-empty author email. Defaults to `true`. */

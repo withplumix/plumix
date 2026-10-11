@@ -1,5 +1,6 @@
 import type { AnyPluginDescriptor } from "plumix";
 import type { EntryData } from "plumix/theme";
+import type { ReactNode } from "react";
 import { createElement as el } from "react";
 import { definePlugin } from "plumix/plugin";
 import { createDispatcherHarness } from "plumix/test";
@@ -11,7 +12,7 @@ import { comments } from "./index.js";
 import { applyCommentsSchema } from "./test/db.js";
 import { commentFactory } from "./test/factories.js";
 import { gatedBlog } from "./test/harness.js";
-import { PlumixCommentForm } from "./theme.js";
+import { PlumixCommentForm, PlumixCommentThread } from "./theme.js";
 
 /**
  * Minimal host plugin registering a public `post` type so the dispatcher
@@ -292,5 +293,211 @@ describe("comments read path through the dispatcher", () => {
     expect(next.comments).toHaveLength(1);
     expect(next.comments[0]?.bodyHtml).toContain("root 1");
     expect(next.hasMore).toBe(false);
+  });
+});
+
+/** `count` approved roots, one a day from 2026-06-01, oldest first. */
+async function seedDailyRoots(
+  harness: Awaited<ReturnType<typeof createDispatcherHarness>>,
+  entryId: number,
+  count: number,
+): Promise<void> {
+  const seed = commentFactory.transient({ db: harness.db });
+  for (let day = 1; day <= count; day++) {
+    await seed.create({
+      entryId,
+      status: "approved",
+      bodyMd: `root ${String(day)}`,
+      createdAt: new Date(Date.UTC(2026, 5, day)),
+    });
+  }
+}
+
+/** A theme rendering its own page links from the thread's hrefs. */
+const linksTheme = defineTheme({
+  templates: [
+    fallback(() => null),
+    entry(
+      defineTemplate<EntryData>({
+        comments: ["current"],
+        render: ({ comments: threadDep }) => {
+          const thread = threadDep?.current ?? null;
+          return el(
+            "nav",
+            null,
+            thread?.olderHref
+              ? el("a", { "data-testid": "older", href: thread.olderHref })
+              : null,
+            thread?.newestHref
+              ? el("a", { "data-testid": "newest", href: thread.newestHref })
+              : null,
+          );
+        },
+      }),
+    ),
+  ],
+});
+
+async function pagedSite(
+  config: {
+    readonly basePath?: string;
+    readonly theme?: ReturnType<typeof defineTheme>;
+  } = {},
+) {
+  const harness = await createDispatcherHarness({
+    config: {
+      theme,
+      ...config,
+      plugins: [testBlog, comments({ entryTypes: ["post"], rootsPerPage: 2 })],
+    },
+  });
+  await applyCommentsSchema(harness.db);
+  const entry = await seedPost(harness, "busy");
+  await seedDailyRoots(harness, entry.id, 5);
+  return harness;
+}
+
+describe("an older comment page", () => {
+  test("renders the roots older than the cursor in its comments query", async () => {
+    const harness = await pagedSite();
+    const first = await (await harness.fetch("/posts/busy")).text();
+    const cursor = /data-cursor="([^"]+)"/.exec(first)?.[1] ?? "";
+
+    const html = await (
+      await harness.fetch(`/posts/busy?comments=${cursor}`)
+    ).text();
+
+    expect(html).toContain("root 3");
+    expect(html).toContain("root 2");
+    expect(html).not.toContain("root 4");
+    expect(html).not.toContain("root 1");
+  });
+
+  test("answers a malformed cursor with a 301 to the entry, other query kept", async () => {
+    const harness = await pagedSite();
+
+    const response = await harness.fetch(
+      "/posts/busy?utm_source=feed&comments=garbage",
+    );
+
+    response.assertStatus(301);
+    expect(response.headers.get("location")).toBe(
+      "https://cms.example/posts/busy?utm_source=feed",
+    );
+  });
+
+  test.each([
+    {
+      page: "/posts/busy",
+      older: '<a data-testid="older" href="/posts/busy?comments=1780531200_4">',
+      newest: null,
+    },
+    {
+      page: "/posts/busy?comments=1780531200_4",
+      older: '<a data-testid="older" href="/posts/busy?comments=1780358400_2">',
+      newest: '<a data-testid="newest" href="/posts/busy">',
+    },
+    {
+      page: "/posts/busy?comments=1780358400_2",
+      older: null,
+      newest: '<a data-testid="newest" href="/posts/busy">',
+    },
+    {
+      page: "/posts/busy?utm_source=feed&comments=1780531200_4",
+      older:
+        '<a data-testid="older" href="/posts/busy?utm_source=feed&amp;comments=1780358400_2">',
+      newest: '<a data-testid="newest" href="/posts/busy?utm_source=feed">',
+    },
+  ])(
+    "hands a theme the older and newest page links on $page",
+    async ({ page, older, newest }) => {
+      const harness = await pagedSite({ theme: linksTheme });
+
+      const html = await (await harness.fetch(page)).text();
+
+      expect(/<a data-testid="older"[^>]*>/.exec(html)?.[0] ?? null).toBe(
+        older,
+      );
+      expect(/<a data-testid="newest"[^>]*>/.exec(html)?.[0] ?? null).toBe(
+        newest,
+      );
+    },
+  );
+
+  test("prefixes the page links with the site's base path", async () => {
+    const harness = await pagedSite({ basePath: "/blog", theme: linksTheme });
+
+    const html = await (
+      await harness.fetch("/blog/posts/busy?comments=1780531200_4")
+    ).text();
+
+    expect(html).toContain('href="/blog/posts/busy?comments=1780358400_2"');
+    expect(html).toContain('href="/blog/posts/busy"');
+  });
+
+  test("canonicalises to the entry and carries no robots meta", async () => {
+    const harness = await pagedSite();
+
+    const html = await (
+      await harness.fetch("/posts/busy?comments=1780531200_4")
+    ).text();
+
+    expect(html).toContain(
+      '<link rel="canonical" href="https://cms.example/posts/busy"/>',
+    );
+    expect(html).not.toContain('name="robots"');
+  });
+});
+
+function threadTheme(
+  renderBody?: (comment: ResolvedThread["comments"][number]) => ReactNode,
+) {
+  return defineTheme({
+    templates: [
+      fallback(() => null),
+      entry(
+        defineTemplate<EntryData>({
+          comments: ["current"],
+          render: ({ comments: threadDep }) =>
+            el(PlumixCommentThread, {
+              thread: threadDep?.current ?? null,
+              renderBody,
+            }),
+        }),
+      ),
+    ],
+  });
+}
+
+describe("PlumixCommentThread", () => {
+  test("renders an older page's roots between plain older and newest links", async () => {
+    const harness = await pagedSite({ theme: threadTheme() });
+
+    const html = await (
+      await harness.fetch("/posts/busy?comments=1780531200_4")
+    ).text();
+
+    expect(html).toContain("<p>root 3</p>");
+    expect(html).toContain("<p>root 2</p>");
+    expect(html).not.toContain("<p>root 4</p>");
+    expect(html).toMatch(
+      /<a[^>]*href="\/posts\/busy\?comments=1780358400_2"[^>]*data-plumix-comment-older=""/,
+    );
+    expect(html).toMatch(
+      /<a[^>]*href="\/posts\/busy"[^>]*data-plumix-comment-newest=""/,
+    );
+  });
+
+  test("renders a theme's comment body in place of the default", async () => {
+    const harness = await pagedSite({
+      theme: threadTheme((comment) =>
+        el("blockquote", null, `said ${String(comment.id)}`),
+      ),
+    });
+
+    const html = await (await harness.fetch("/posts/busy")).text();
+
+    expect(html).toContain("<blockquote>said 5</blockquote>");
+    expect(html).not.toContain("<p>root 5</p>");
   });
 });

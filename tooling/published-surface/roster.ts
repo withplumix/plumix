@@ -108,7 +108,12 @@ export const ROSTER: Readonly<
         reason:
           "the `comments` template dep's thread, which a theme types its " +
           "render arg with or loads itself",
-        names: ["ResolvedComment", "ResolvedThread", "loadThread"],
+        names: [
+          "ResolvedComment",
+          "ResolvedThread",
+          "ResolvedThreadPage",
+          "loadThread",
+        ],
       },
       {
         reason:
@@ -121,6 +126,12 @@ export const ROSTER: Readonly<
       {
         reason: "the comment form a theme renders, and what it reports",
         names: ["PlumixCommentForm", "CommentFormError", "CommentFormValues"],
+      },
+      {
+        reason:
+          "the comment thread a theme renders, with older and newest links " +
+          "that work without JavaScript, and the body override it takes",
+        names: ["PlumixCommentThread", "CommentBodyRenderer"],
       },
     ],
     "./hooks": [

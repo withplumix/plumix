@@ -243,3 +243,13 @@ msgstr "{authorName} left a comment on “{entryTitle}” that's held for review
 #: src/server/mail.ts
 msgid "plugin.comments.mail.pending.review"
 msgstr "Review it in the moderation queue:"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.thread.older"
+msgstr "Older comments"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.thread.newest"
+msgstr "Newest comments"
