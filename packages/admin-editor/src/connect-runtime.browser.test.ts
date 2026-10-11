@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { BlockNode } from "@plumix/core/blocks";
+import type { BlockNode, LoadedDeps } from "@plumix/core/blocks";
 import type {
   CanvasConfig,
   SerializedLoaderData,
@@ -78,6 +78,41 @@ describe("connectRuntime (canvas/iframe side)", () => {
     fromHost({ type: "host:loader-data", data });
 
     expect(seen.at(-1)).toEqual(data);
+    conn.dispose();
+  });
+
+  test("delivers pushed deps to onDeps", () => {
+    const seen: LoadedDeps[] = [];
+    const { win } = fakeParent();
+    const conn = connectRuntime({
+      parentWindow: win,
+      origin: ORIGIN,
+      onTree: () => undefined,
+      onDeps: (deps) => seen.push(deps),
+    });
+
+    const deps = { menus: { footer: "menu:footer" } };
+    fromHost({ type: "host:deps", deps });
+
+    expect(seen.at(-1)).toEqual(deps);
+    conn.dispose();
+  });
+
+  test("reportRequestDeps posts canvas:requestDeps with the tree", () => {
+    const { win, posted } = fakeParent();
+    const conn = connectRuntime({
+      parentWindow: win,
+      origin: ORIGIN,
+      onTree: () => undefined,
+    });
+    const tree: readonly BlockNode[] = [{ id: "n", name: "acme/nav" }];
+
+    conn.reportRequestDeps(tree);
+
+    expect(messages(posted)).toContainEqual({
+      type: "canvas:requestDeps",
+      tree,
+    });
     conn.dispose();
   });
 

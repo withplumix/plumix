@@ -29,7 +29,7 @@ const stubTheme = defineTheme({ templates: [fallback(() => null)] });
 
 // Augment the registry with a test-only kind so the typed
 // `registerTemplateDep("test-thing", ...)` calls below compile.
-declare module "./template.js" {
+declare module "./blocks/deps.js" {
   interface TemplateDepRegistry {
     "test-thing": { slug: string; result: { value: string } };
     "test-other": { slug: string; result: number };

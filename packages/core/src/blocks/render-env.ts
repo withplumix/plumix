@@ -1,4 +1,5 @@
 import type { JsonObject, JsonValue } from "../json.js";
+import type { LoadedDeps } from "./deps.js";
 import type { HtmlAllowlist } from "./html/sanitize.js";
 import type { PlumixContextValue } from "./renderer/context.js";
 import type { ThemeBreakpoints } from "./styles/style-emitter.js";
@@ -18,7 +19,7 @@ export const RENDER_ENV_POLICY = {
   breakpoints: true,
   locale: true,
   entry: true,
-  siteSettings: true,
+  deps: true,
   registry:
     "functions; the editor bundle rebuilds it from the block modules the " +
     "build recovers from theme and plugin config",
@@ -97,8 +98,7 @@ export function parseRenderEnv(json: string): RenderEnv {
     return {};
   }
   if (!isJsonObject(parsed)) return {};
-  const { tokens, breakpoints, htmlAllowlist, locale, entry, siteSettings } =
-    parsed;
+  const { tokens, breakpoints, htmlAllowlist, locale, entry, deps } = parsed;
   return {
     // Unchecked: our SSR wrote them from typed config, and the style emitter
     // sanitizes every value.
@@ -107,12 +107,22 @@ export function parseRenderEnv(json: string): RenderEnv {
     htmlAllowlist: decodeHtmlAllowlist(htmlAllowlist),
     locale: typeof locale === "string" ? locale : undefined,
     entry: isObject(entry) ? entry : undefined,
-    siteSettings: isObject(siteSettings) ? siteSettings : undefined,
+    deps: decodeDeps(deps),
   };
 }
 
 const isObject = (value: JsonValue | undefined): value is JsonObject =>
   value !== undefined && isJsonObject(value);
+
+/** Only the kind-to-key-map nesting is checked; each result stays as sent. */
+function decodeDeps(value: JsonValue | undefined): LoadedDeps | undefined {
+  if (!isObject(value)) return undefined;
+  const deps: Record<string, JsonObject> = {};
+  for (const [kind, results] of Object.entries(value)) {
+    if (isObject(results)) deps[kind] = results;
+  }
+  return deps;
+}
 
 function isStringArray(
   value: JsonValue | undefined,

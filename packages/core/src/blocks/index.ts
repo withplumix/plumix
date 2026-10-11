@@ -52,6 +52,8 @@ export {
 } from "./block-text.js";
 export type { BlockTextRoster } from "./block-text.js";
 export type { HydratedEntry, SiteSettings } from "./context-bags.js";
+export { collectBlockDepKeys, pickDeps } from "./deps.js";
+export type { DepKeys, LoadedDeps } from "./deps.js";
 export type {
   BlockContext,
   BlockNode,

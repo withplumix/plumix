@@ -224,6 +224,11 @@ export const entryRefreshBlockLoaderInputSchema = v.object({
   blockId: v.pipe(v.string(), v.minLength(1)),
 });
 
+export const entryResolveBlockDepsInputSchema = v.object({
+  id: idParam,
+  content: contentSchema,
+});
+
 /**
  * Bulk action input. Capped at 100 ids per call so a single batched
  * `WHERE id IN (…)` stays bounded; the admin selects a page at a time.

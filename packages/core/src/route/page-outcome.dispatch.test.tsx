@@ -30,7 +30,7 @@ declare module "../template-registry.js" {
   }
 }
 
-declare module "../template.js" {
+declare module "../blocks/deps.js" {
   interface TemplateDepRegistry {
     "share-cursor": { slug: string; result: string };
   }

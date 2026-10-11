@@ -363,6 +363,8 @@ const CURATED: Readonly<Record<string, Curated>> = {
           "parseLoaderData",
           "serializeLoaderData",
           "parseRenderEnv",
+          "collectBlockDepKeys",
+          "pickDeps",
           "findBlockNode",
           "isAllowedHtmlAttr",
           "safeHtmlAttrs",

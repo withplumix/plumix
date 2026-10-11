@@ -22,13 +22,13 @@ describe("render env embed", () => {
     expect(policy).toBe(RENDER_ENV_POLICY);
   });
 
-  test("carries locale, the queried entry and site settings, losing what JSON can't hold", () => {
+  test("carries locale, the queried entry and the blocks' deps, losing what JSON can't hold", () => {
     const json = serializeRenderEnv(
       {
         registry: createBlockRegistry([]),
         locale: "de",
         entry: { title: "Sommer", publishedAt: new Date(Date.UTC(2026, 0, 2)) },
-        siteSettings: { title: "Acme" },
+        deps: { settings: { site: { title: "Acme" } } },
         renderFilters: { beforeRender: (element) => element },
       },
       BASELINE_HTML_ALLOWLIST,
@@ -37,7 +37,7 @@ describe("render env embed", () => {
     expect(parseRenderEnv(json)).toEqual({
       locale: "de",
       entry: { title: "Sommer", publishedAt: "2026-01-02T00:00:00.000Z" },
-      siteSettings: { title: "Acme" },
+      deps: { settings: { site: { title: "Acme" } } },
       htmlAllowlist: BASELINE_HTML_ALLOWLIST,
     });
   });

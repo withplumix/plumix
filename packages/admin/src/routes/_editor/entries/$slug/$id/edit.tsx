@@ -49,7 +49,7 @@ import * as v from "valibot";
 
 import type { PublishActions } from "@plumix/admin-editor";
 import type { ResolvedMeta } from "@plumix/core";
-import type { EntryContent } from "@plumix/core/blocks";
+import type { BlockNode, EntryContent } from "@plumix/core/blocks";
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import { PlumixEditor } from "@plumix/admin-editor";
 import {
@@ -567,6 +567,14 @@ function EntryEditor({
     },
     [autosave],
   );
+  // Stable, so the canvas bridge doesn't reconnect on every render.
+  const handleResolveBlockDeps = useCallback(
+    (tree: readonly BlockNode[]) =>
+      orpc.entry.resolveBlockDeps
+        .call({ id, content: { version: "plumix.v2", blocks: tree } })
+        .then((r) => r.deps),
+    [id],
+  );
   const handleTitleChange = useCallback(
     (next: string): void => {
       setTitleValue(next);
@@ -1015,6 +1023,7 @@ function EntryEditor({
       onRefreshBlockLoader={(blockId) =>
         orpc.entry.refreshBlockLoader.call({ id, blockId }).then((r) => r.data)
       }
+      onResolveBlockDeps={handleResolveBlockDeps}
       previewRefreshToken={previewRefreshToken}
       resolvePluginFieldType={resolvePluginFieldType}
     />

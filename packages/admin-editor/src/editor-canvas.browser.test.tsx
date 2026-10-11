@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import type { BlockNode, ThemeTokens } from "@plumix/core/blocks";
+import type { BlockNode, LoadedDeps, ThemeTokens } from "@plumix/core/blocks";
 import { coreBlocks, createBlockRegistry } from "@plumix/core/blocks";
 import { EDITOR_BRIDGE_CHANNEL, encode } from "@plumix/core/blocks/renderer";
 
@@ -23,7 +23,68 @@ function pushTree(tree: readonly BlockNode[]): void {
   });
 }
 
+function fromHost(message: unknown): void {
+  act(() => {
+    window.dispatchEvent(
+      new MessageEvent("message", {
+        data: encode(EDITOR_BRIDGE_CHANNEL, message),
+        origin: ORIGIN,
+      }),
+    );
+  });
+}
+
 describe("EditorCanvas", () => {
+  test("re-resolves a block's deps when an attribute declares a key it lacks", () => {
+    const posted: unknown[] = [];
+    const spy = vi
+      .spyOn(window.parent, "postMessage")
+      .mockImplementation((data) => posted.push(data));
+    // A plain spec, not `defineBlock`: this package's program loads no site's
+    // dep kinds for `defineBlock` to check a declaration against.
+    const copyRegistry = createBlockRegistry([
+      {
+        name: "acme/copy",
+        deps: (attrs) => ({ settings: [String(attrs.group)] }),
+        render: ({ attrs, deps }) => {
+          const bag = (deps as LoadedDeps).settings?.[String(attrs.group)];
+          const title = (bag as { readonly title?: string } | null)?.title;
+          return <h2>{title ?? "no copy"}</h2>;
+        },
+      },
+    ]);
+    const copy = (group: string): BlockNode[] => [
+      { id: "c1", name: "acme/copy", attrs: { group } },
+    ];
+    const requests = (): unknown[] =>
+      posted
+        .map((p) => (p as { message?: { type?: string } }).message)
+        .filter((m) => m?.type === "canvas:requestDeps");
+
+    const { container } = render(
+      <EditorCanvas
+        registry={copyRegistry}
+        origin={ORIGIN}
+        initialTree={copy("school_ks2")}
+        deps={{ settings: { school_ks2: { title: "KS2" } } }}
+      />,
+    );
+    expect(container.textContent).toContain("KS2");
+    expect(requests()).toEqual([]);
+
+    pushTree(copy("school_ks3"));
+    expect(requests()).toEqual([
+      { type: "canvas:requestDeps", tree: copy("school_ks3") },
+    ]);
+
+    fromHost({
+      type: "host:deps",
+      deps: { settings: { school_ks3: { title: "KS3" } } },
+    });
+    expect(container.textContent).toContain("KS3");
+    spy.mockRestore();
+  });
+
   test("renders the host's tree in edit mode, tagging blocks for selection", () => {
     const { container } = render(
       <EditorCanvas registry={registry} origin={ORIGIN} />,

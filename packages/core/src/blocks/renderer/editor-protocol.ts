@@ -2,6 +2,7 @@
 // reports user intent back.
 
 import type { JsonObject } from "../../json.js";
+import type { LoadedDeps } from "../deps.js";
 import type { CompiledCatalog } from "../i18n-label.js";
 import type { BlockNode } from "../render-block-tree.js";
 
@@ -58,6 +59,13 @@ export type HostMessage =
        */
       readonly type: "host:loader-data";
       readonly data: SerializedLoaderData;
+    }
+  | {
+      /**
+       * Deps resolved for a `canvas:requestDeps`, by kind and key.
+       */
+      readonly type: "host:deps";
+      readonly deps: LoadedDeps;
     }
   | {
       /**
@@ -120,6 +128,15 @@ export type CanvasMessage =
       readonly type: "canvas:requestAdd";
       readonly parentId?: string;
       readonly slotKey?: string;
+    }
+  | {
+      /**
+       * The tree declares deps the canvas holds no result for, after an
+       * attribute change or an insert. The host resolves them on the server,
+       * which evaluates each block's declaration.
+       */
+      readonly type: "canvas:requestDeps";
+      readonly tree: readonly BlockNode[];
     }
   | {
       /**

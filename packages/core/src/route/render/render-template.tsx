@@ -7,13 +7,13 @@ import type {
   BlockRenderFilters,
   CompiledCatalog,
   HtmlAllowlist,
+  LoadedDeps,
   LoaderErrorEvent,
   ResolvedBlockLoaders,
   ThemeBreakpoints,
   ThemeTokens,
 } from "../../blocks/index.js";
 import type { AppContext } from "../../context/app-context.js";
-import type { SettingsBag } from "../../db/schema/settings.js";
 import type {
   DocumentAttrs,
   DocumentLink,
@@ -35,7 +35,9 @@ import type { ResolvedNode } from "./rule-resolver.js";
 import type { TemplateResolution } from "./template-hierarchy.js";
 import {
   BlockLoaderError,
+  collectBlockDepKeys,
   HtmlAllowlistProvider,
+  pickDeps,
   resolveBlockLoaders,
 } from "../../blocks/index.js";
 import { PlumixProvider } from "../../blocks/renderer/index.js";
@@ -47,6 +49,7 @@ import { loadSiteSettings } from "../../seo/site-settings.js";
 import {
   loadTemplateDeps,
   mergeTemplateDepDeclarations,
+  unionDepKeys,
 } from "../../template-deps.js";
 import { normalizeTemplate } from "../../template.js";
 import {
@@ -145,8 +148,9 @@ async function renderThroughThemeInner({
   const matchedLabel = ruleLabel(matched);
   ctx.resolvedTemplate = matchedLabel;
   const template = normalizeTemplate(matched.template, matchedLabel);
+  const blockDepKeys = collectBlockDepKeys(renderedTrees(data), ctx.blocks);
   const deps = await loadTemplateDeps(
-    mergeTemplateDepDeclarations(theme, template),
+    unionDepKeys(mergeTemplateDepDeclarations(theme, template), blockDepKeys),
     templateDeps,
     ctx,
   );
@@ -189,8 +193,8 @@ async function renderThroughThemeInner({
     title: composeTitle(renderDocument, titleFallback),
     template,
     deps,
+    blockDeps: pickDeps(blockDepKeys, deps),
     loaderData,
-    siteSettings: site,
     tokens: theme.tokens,
     breakpoints: theme.breakpoints,
     htmlAllowlist,
@@ -319,10 +323,9 @@ async function renderErrorThroughThemeInner({
     ),
     template,
     deps,
+    // No block tree renders on an error page, so no block declares a dep.
+    blockDeps: {},
     loaderData: undefined,
-    // No settings read: this render is already the failure path, and one
-    // more DB round-trip here would let a database fault turn a 404 into a 500.
-    siteSettings: undefined,
     tokens: theme.tokens,
     breakpoints: theme.breakpoints,
     htmlAllowlist,
@@ -413,6 +416,13 @@ async function prefetchEntryLoaders(
   return loaderData;
 }
 
+/** Every block tree the page renders: the entry's, or each listed entry's. */
+function renderedTrees(data: TemplateData): readonly (readonly BlockNode[])[] {
+  if ("entry" in data) return [data.entry.contentBlocks?.blocks ?? []];
+  if (!("entries" in data)) return [];
+  return data.entries.map((e) => e.contentBlocks?.blocks ?? []);
+}
+
 function collectLoaderBlocks(
   data: TemplateData,
   template: Template,
@@ -461,8 +471,10 @@ interface RenderTreeArgs {
   readonly title: string;
   readonly template: Template;
   readonly deps: LoadedTemplateDeps;
+  /** Only the keys the page's blocks declared, so the canvas embed carries
+   *  none of the template's own deps. */
+  readonly blockDeps: LoadedDeps;
   readonly loaderData: ResolvedBlockLoaders | undefined;
-  readonly siteSettings: SettingsBag | undefined;
   readonly tokens: ThemeTokens | undefined;
   readonly breakpoints: ThemeBreakpoints | undefined;
   readonly htmlAllowlist: HtmlAllowlist;
@@ -492,7 +504,7 @@ function renderTree({
   chrome,
   catalog,
   loaderData,
-  siteSettings,
+  blockDeps,
   themeCss,
   viewTransitions,
   editMode,
@@ -544,7 +556,7 @@ function renderTree({
         catalog,
         shortcodes: ctx.shortcodes,
         entry,
-        siteSettings,
+        deps: blockDeps,
         basePath: ctx.config.basePath,
         imageResolver: imageDelivery
           ? (src, opts) =>

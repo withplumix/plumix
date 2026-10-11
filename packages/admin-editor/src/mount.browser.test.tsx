@@ -70,7 +70,7 @@ describe("mountEditorRuntime", () => {
             locale: "de",
             shortcodes,
             entry: { headline: "Sommer" },
-            siteSettings: { title: "Acme" },
+            deps: { settings: { site: { title: "Acme" } } },
           }}
         >
           <BlockRenderer content={content} />

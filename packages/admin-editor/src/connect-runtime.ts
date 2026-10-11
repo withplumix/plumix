@@ -1,4 +1,4 @@
-import type { BlockNode } from "@plumix/core/blocks";
+import type { BlockNode, LoadedDeps } from "@plumix/core/blocks";
 import type {
   BlockRect,
   CanvasConfig,
@@ -40,6 +40,8 @@ export interface RuntimeConnection {
   /** Forward a clipboard shortcut (focus is inside the iframe); the host owns
    *  the tree + clipboard and performs the op. */
   readonly reportClipboard: (op: "copy" | "cut" | "paste") => void;
+  /** Ask the host to resolve deps the tree declares and the canvas lacks. */
+  readonly reportRequestDeps: (tree: readonly BlockNode[]) => void;
   readonly dispose: () => void;
 }
 
@@ -49,6 +51,7 @@ interface ConnectRuntimeOptions {
   readonly origin: string;
   readonly onTree: (tree: readonly BlockNode[]) => void;
   readonly onLoaderData?: (data: SerializedLoaderData) => void;
+  readonly onDeps?: (deps: LoadedDeps) => void;
   readonly onConfig?: (config: CanvasConfig) => void;
   readonly onXray?: (enabled: boolean) => void;
 }
@@ -62,6 +65,7 @@ export function connectRuntime({
   origin,
   onTree,
   onLoaderData,
+  onDeps,
   onConfig,
   onXray,
 }: ConnectRuntimeOptions): RuntimeConnection {
@@ -95,6 +99,9 @@ export function connectRuntime({
         break;
       case "host:loader-data":
         onLoaderData?.(message.data);
+        break;
+      case "host:deps":
+        onDeps?.(message.deps);
         break;
       case "host:config":
         onConfig?.({ locale: message.locale, catalog: message.catalog });
@@ -141,6 +148,7 @@ export function connectRuntime({
         ...(slotKey !== undefined && { slotKey }),
       }),
     reportClipboard: (op) => post({ type: "canvas:clipboard", op }),
+    reportRequestDeps: (tree) => post({ type: "canvas:requestDeps", tree }),
     dispose: () => window.removeEventListener("message", onMessage),
   };
 }

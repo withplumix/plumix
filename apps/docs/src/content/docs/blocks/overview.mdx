@@ -163,6 +163,52 @@ export const shareTemplate = entry(
 );
 ```
 
+## Data a block reads from the site
+
+A block that shows copy an admin edits, or a menu, or anything else a [template dep](/themes/templates/) loads, declares it under `deps` with the same kinds and keys a template uses, an array or the `(prev) => next` form, where a block's `prev` is always `[]`. `render` receives the results as `deps`, typed per kind and per key you declared. A key the loader found nothing for reads `null`. An unknown kind, or a key of the wrong type, fails to compile.
+
+```tsx
+import { defineBlock } from "plumix/blocks";
+
+export const ks2Block = defineBlock({
+  name: "eduscope/ks2",
+  deps: { settings: ["school_ks2"] },
+  render: ({ deps }) => {
+    const title = deps.settings.school_ks2?.title;
+    return <h2>{typeof title === "string" ? title : null}</h2>;
+  },
+});
+```
+
+That block renders the `school_ks2` settings group under any template, and in the editor canvas, with no template wiring. A template that writes a group into each matching block's attrs only works under that one template and never reaches the canvas, so declare the group on the block instead.
+
+When the keys depend on how the author configured the block, declare them as a function of its stored attributes. It must be pure, because the page evaluates it before anything renders:
+
+```tsx
+import { defineBlock } from "plumix/blocks";
+
+export const stageBlock = defineBlock({
+  name: "eduscope/stage",
+  deps: (attrs: { readonly stage: string }) => ({
+    settings: [`school_${attrs.stage}`],
+  }),
+  render: ({ attrs, deps }) => {
+    const title = deps.settings[`school_${attrs.stage}`]?.title;
+    return <h2>{typeof title === "string" ? title : null}</h2>;
+  },
+});
+```
+
+With the [menu plugin](/plugins/menu/) installed, `deps: (attrs) => ({ menus: [attrs.location] })` works the same way for a navigation block.
+
+Before a page renders, it collects every block's declaration from the trees it will render, which is the entry's content or each listed entry's on an archive. It merges them with the template's and theme's declarations and loads each kind once. Twenty instances of a block cost one settings read, and two `eduscope/stage` blocks set to different stages load both groups in that same read. The stored page carries the cache tag of every dep it loaded, so saving the `school_ks2` group purges every page that renders the block.
+
+The editor canvas starts from the values the page render loaded. When an edit declares a key the canvas has no value for, such as a changed `stage` or a newly inserted block, it asks the server, which evaluates the declarations itself and loads them through the same loaders. A dep that ends the request with `pageNotFound()` or `redirectTo()` reads `null` in the canvas, so the page stays editable. The public page still answers with the outcome.
+
+Data that differs per instance, such as a query built from the block's own attributes, stays a loader's job. `deps` is for data many blocks share.
+
+The site's `site` settings group is read the same way, through `deps: { settings: ["site"] }`. A block's `context` doesn't carry it.
+
 ## Building a tree outside the editor
 
 The editor is the usual writer, but any code holding the entry can build a tree: a seed script, an import from another system, a migration. Use `defineEntryContent` to stamp the envelope, as in the Overview above. A tree without the envelope fails the shape check and reads back as no content at all.

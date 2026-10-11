@@ -1,3 +1,4 @@
+import type { BlockNode, LoadedDeps } from "@plumix/core/blocks";
 import type {
   BlockRect,
   CanvasConfig,
@@ -21,6 +22,8 @@ export interface CanvasConnection {
   readonly whenReady: Promise<void>;
   /** Push a scoped refresh's re-resolved loader data to the canvas. */
   readonly pushLoaderData: (data: SerializedLoaderData) => void;
+  /** Push deps resolved for a `canvas:requestDeps` to the canvas. */
+  readonly pushDeps: (deps: LoadedDeps) => void;
   readonly dispose: () => void;
 }
 
@@ -51,6 +54,7 @@ interface ConnectCanvasOptions {
     readonly slotKey?: string;
   }) => void;
   readonly onClipboard?: (op: "copy" | "cut" | "paste") => void;
+  readonly onRequestDeps?: (tree: readonly BlockNode[]) => void;
   /** The canvas has no i18n runtime, so the host hands it the catalog. */
   readonly config?: CanvasConfig;
 }
@@ -74,6 +78,7 @@ export function connectCanvas({
   onKey,
   onRequestAdd,
   onClipboard,
+  onRequestDeps,
   config,
 }: ConnectCanvasOptions): CanvasConnection {
   const post = (message: HostMessage | HandshakeMessage): void => {
@@ -153,6 +158,9 @@ export function connectCanvas({
       case "canvas:clipboard":
         onClipboard?.(message.op);
         break;
+      case "canvas:requestDeps":
+        onRequestDeps?.(message.tree);
+        break;
     }
   };
 
@@ -180,6 +188,7 @@ export function connectCanvas({
   return {
     whenReady,
     pushLoaderData: (data) => post({ type: "host:loader-data", data }),
+    pushDeps: (deps) => post({ type: "host:deps", deps }),
     dispose: () => {
       clearInterval(retryTimer);
       window.removeEventListener("message", onMessage);

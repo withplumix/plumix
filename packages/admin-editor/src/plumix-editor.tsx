@@ -3,8 +3,10 @@ import { useEffect, useMemo, useRef } from "react";
 import { Trans, useLingui } from "@lingui/react";
 
 import type {
+  BlockNode,
   BlockRegistry,
   EntryContent,
+  LoadedDeps,
   ThemeBreakpoints,
   ThemeTokens,
 } from "@plumix/core/blocks";
@@ -119,6 +121,13 @@ export interface PlumixEditorProps {
     blockId: string,
   ) => Promise<SerializedLoaderData>;
   /**
+   * Resolves the deps a tree's blocks declare on the server. The canvas asks
+   * when an edit declares a key the page render never loaded.
+   */
+  readonly onResolveBlockDeps?: (
+    tree: readonly BlockNode[],
+  ) => Promise<LoadedDeps>;
+  /**
    * Bump after saving a template-rendered entry field; each change reloads the
    * canvas.
    */
@@ -155,6 +164,7 @@ export function PlumixEditor({
   onOpenRevisions,
   overlay,
   onRefreshBlockLoader,
+  onResolveBlockDeps,
   previewRefreshToken,
   resolvePluginFieldType,
 }: PlumixEditorProps): ReactElement {
@@ -273,6 +283,7 @@ export function PlumixEditor({
                 origin={origin}
                 entryType={entryType}
                 previewRefreshToken={previewRefreshToken}
+                onResolveBlockDeps={onResolveBlockDeps}
               />
             </SidebarInset>
             <RightRail

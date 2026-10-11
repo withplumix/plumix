@@ -13,6 +13,7 @@ import {
 } from "@plumix/core/blocks";
 
 import { PlumixEditor } from "../src/plumix-editor.js";
+import { copySpec, resolveCopyDeps } from "./copy-block.js";
 import { feedSpec } from "./feed-block.js";
 import { SEED_BLOCKS, SEED_PATTERNS } from "./seed.js";
 
@@ -50,7 +51,7 @@ const withVariations = coreBlocks.map((spec): BlockSpec =>
       }
     : spec,
 );
-const registry = createBlockRegistry([...withVariations, feedSpec]);
+const registry = createBlockRegistry([...withVariations, feedSpec, copySpec]);
 
 /**
  * Seed theme tokens so the Styles tab's token-or-custom controls have options.
@@ -132,6 +133,7 @@ if (root) {
           onRefreshBlockLoader={(blockId) =>
             Promise.resolve({ [blockId]: { items: { label: "refreshed" } } })
           }
+          onResolveBlockDeps={resolveCopyDeps}
           publish={{
             onPublish: () => console.info("[playground] publish"),
             isPublished: false,

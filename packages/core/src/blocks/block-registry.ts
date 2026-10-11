@@ -2,6 +2,11 @@ import type { ReactNode } from "react";
 
 import type { Label } from "../i18n/label.js";
 import type { JsonObject } from "../json.js";
+import type {
+  BlockDeps,
+  KnownBlockDepKinds,
+  TemplateDepDeclarations,
+} from "./deps.js";
 import type { BlockLoaderRecord } from "./loaders.js";
 import type {
   BlockNode,
@@ -134,6 +139,8 @@ export interface BlockTransforms {
 export interface BlockSpec<
   Attrs extends MaterializedAttrs = MaterializedAttrs,
   Loaders extends BlockLoaderRecord = BlockLoaderRecord,
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  Deps extends TemplateDepDeclarations = {},
 > {
   readonly name: string;
   readonly title?: Label;
@@ -148,8 +155,13 @@ export interface BlockSpec<
    * version, with no version integer for an author to keep true.
    */
   readonly text?: readonly BlockTextInput[];
-  readonly render: BlockNodeComponent<Attrs, Loaders>;
+  readonly render: BlockNodeComponent<Attrs, Loaders, Deps>;
   readonly loaders?: Loaders;
+  /**
+   * The template deps the block reads, keyed by kind like a template's. The
+   * page loads every block's keys once, and `render` reads them as `deps`.
+   */
+  readonly deps?: BlockDeps<Attrs, Deps>;
   /**
    * Renders in place of `render` when a loader rejects. Without one,
    * the walker emits nothing (same shape as the unknown-block path).
@@ -232,7 +244,11 @@ export function defineBlock<
   Attrs extends MaterializedAttrs = MaterializedAttrs,
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   Loaders extends BlockLoaderRecord = {},
->(spec: BlockSpec<Attrs, Loaders>): BlockSpec {
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  const Deps extends TemplateDepDeclarations = {},
+>(
+  spec: BlockSpec<Attrs, Loaders, Deps> & KnownBlockDepKinds<Attrs, Deps>,
+): BlockSpec {
   // Safety: the registry is keyed by name, so a widened spec only meets nodes
   // carrying its own name; the erasure buys a homogeneous map, not
   // interchangeable specs.

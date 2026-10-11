@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 
+import type { TemplateDepDeclarations } from "./blocks/deps.js";
 import type {
   BlockSpec,
   ShortcodeSpec,
@@ -22,7 +23,7 @@ import type {
   ViewData,
 } from "./route/contract/resolved-entry.js";
 import type { ResolvedNode } from "./route/contract/resolved-node.js";
-import type { Template, TemplateDepDeclarations } from "./template.js";
+import type { Template } from "./template.js";
 import type { ViewTransitionsInput } from "./theme-view-transitions.js";
 import { isReservedBlockName } from "./blocks/index.js";
 import { RESERVED_DEP_KIND_NAMES } from "./template-deps.js";

@@ -6,6 +6,7 @@ import type {
 import { useEffect, useMemo, useRef } from "react";
 import { useLingui } from "@lingui/react";
 
+import type { BlockNode, LoadedDeps } from "@plumix/core/blocks";
 import {
   Popover,
   PopoverAnchor,
@@ -54,6 +55,11 @@ interface CanvasFrameProps {
    * shell around the block island, which the bridge doesn't push.
    */
   readonly previewRefreshToken?: number;
+  /** Answers the canvas's `canvas:requestDeps`; absent, the canvas keeps the
+   *  deps the page render embedded. */
+  readonly onResolveBlockDeps?: (
+    tree: readonly BlockNode[],
+  ) => Promise<LoadedDeps>;
 }
 
 const SELECTED_OUTLINE = "outline-canvas-selection";
@@ -66,6 +72,7 @@ export function CanvasFrame({
   entryType,
   readOnly = false,
   previewRefreshToken,
+  onResolveBlockDeps,
 }: CanvasFrameProps): ReactElement {
   const { registry } = useEditorConfig();
   const { i18n } = useLingui();
@@ -152,6 +159,9 @@ export function CanvasFrame({
         keyHandlerRef.current?.(down, code, shiftKey),
       onRequestAdd: ({ parentId, slotKey }) => requestAdd(parentId, slotKey),
       onClipboard: (op) => void clipboard.run(op),
+      onRequestDeps: onResolveBlockDeps
+        ? (tree) => void onResolveBlockDeps(tree).then(connection.pushDeps)
+        : undefined,
       // The canvas has no i18n runtime. Not a dep: Lingui returns a fresh `{}`
       // for an unloaded locale, which would reconnect on every render.
       config: { locale, catalog: i18n.messages },
@@ -174,6 +184,7 @@ export function CanvasFrame({
     i18n,
     locale,
     clipboard,
+    onResolveBlockDeps,
   ]);
 
   // Pans without zooming: a jump shouldn't also change the zoom.

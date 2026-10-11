@@ -102,6 +102,8 @@ describe("a revision row's id is not-found to every procedure loading a live ent
     createPreviewLink: (h, id) => h.client.entry.createPreviewLink({ id }),
     refreshBlockLoader: (h, id) =>
       h.client.entry.refreshBlockLoader({ id, blockId: "b" }),
+    resolveBlockDeps: (h, id) =>
+      h.client.entry.resolveBlockDeps({ id, content: null }),
     "activity.list": (h, id) => h.client.entry.activity.list({ entryId: id }),
     "revisions.list": (h, id) => h.client.entry.revisions.list({ entryId: id }),
   } satisfies Record<
