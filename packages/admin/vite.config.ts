@@ -1,8 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
-import { lingui, linguiTransformerBabelPreset } from "@lingui/vite-plugin";
-import babel from "@rolldown/plugin-babel";
+import { lingui } from "@lingui/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
@@ -88,9 +87,9 @@ export default defineConfig(({ command }) => ({
     }),
     tailwindcss(),
     react(),
-    lingui({ cwd: PACKAGE_DIR }),
-    babel({
-      presets: [linguiTransformerBabelPreset(undefined, { cwd: PACKAGE_DIR })],
+    lingui({
+      cwd: PACKAGE_DIR,
+      macroTransform: { parser: { syntax: "typescript", tsx: true } },
     }),
     shipThemeTokens(),
     shipAssetLicenses(),
