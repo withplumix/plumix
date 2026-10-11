@@ -81,7 +81,7 @@ catalog:
   "@axe-core/playwright": ^4.13.0
   "@libsql/client": ^0.18.0
   "@playwright/test": ^1.63.0
-  "@types/node": ^24.13.4
+  "@types/node": ^24.19.1
   cmdk: ^1.1.1
   esbuild: ^0.28.2
   eslint: ^10.11.0
@@ -104,9 +104,9 @@ catalog:
 # `catalog:<name>` from consumer package.json files.
 catalogs:
   cloudflare:
-    "@cloudflare/vite-plugin": ^1.62.4
-    "@cloudflare/workers-types": ^5.20261001.1
-    wrangler: ^4.146.0
+    "@cloudflare/vite-plugin": ^1.62.5
+    "@cloudflare/workers-types": ^5.20261002.1
+    wrangler: ^4.147.0
   dnd-kit:
     "@dnd-kit/core": ^6.3.1
     "@dnd-kit/modifiers": ^9.0.0
@@ -117,12 +117,11 @@ catalogs:
     drizzle-orm: ^0.45.3
     drizzle-valibot: ^0.4.2
   lingui:
-    "@lingui/babel-plugin-lingui-macro": ^6.8.0
-    "@lingui/cli": ^6.8.0
-    "@lingui/core": ^6.8.0
-    "@lingui/format-po": ^6.8.0
-    "@lingui/react": ^6.8.0
-    "@lingui/vite-plugin": ^6.8.0
+    "@lingui/cli": ^6.9.0
+    "@lingui/core": ^6.9.0
+    "@lingui/format-po": ^6.9.0
+    "@lingui/react": ^6.9.0
+    "@lingui/vite-plugin": ^6.9.0
   orpc:
     "@orpc/client": ^1.15.3
     "@orpc/openapi": ^1.15.3
@@ -147,18 +146,18 @@ catalogs:
     "@tailwindcss/vite": ^4.3.3
     tailwindcss: ^4.3.3
   tanstack:
-    "@tanstack/react-query": ^5.103.2
-    "@tanstack/react-query-devtools": ^5.103.2
-    "@tanstack/react-router": ^1.170.38
+    "@tanstack/react-query": ^5.104.1
+    "@tanstack/react-query-devtools": ^5.104.1
+    "@tanstack/react-router": ^1.170.41
     "@tanstack/react-router-devtools": ^1.167.2
-    "@tanstack/react-table": ^9.2.4
-    "@tanstack/router-plugin": ^1.168.40
+    "@tanstack/react-table": ^9.2.5
+    "@tanstack/router-plugin": ^1.168.42
   testing-library:
     "@testing-library/jest-dom": ^7.0.1
     "@testing-library/react": ^16.3.3
     "@testing-library/user-event": ^14.6.7
   tiptap:
-    "@tiptap/core": ^3.31.3
+    "@tiptap/core": ^3.31.4
     # Explicit extension set for the rich-text rail instead of starter-kit,
     # which bundles ~16 extensions but we activate only these (the rest are
     # disabled marks we replace with the core block marks, or nodes that are
@@ -167,18 +166,18 @@ catalogs:
     # every package here and rides along on that lockstep -- never pin it in
     # `overrides`, which silently rewrites the peer range and forks it away
     # from the version tiptap expects.
-    "@tiptap/extension-blockquote": ^3.31.3
-    "@tiptap/extension-document": ^3.31.3
-    "@tiptap/extension-hard-break": ^3.31.3
-    "@tiptap/extension-heading": ^3.31.3
-    "@tiptap/extension-list": ^3.31.3
-    "@tiptap/extension-paragraph": ^3.31.3
-    "@tiptap/extension-text": ^3.31.3
-    "@tiptap/extensions": ^3.31.3
-    "@tiptap/react": ^3.31.3
+    "@tiptap/extension-blockquote": ^3.31.4
+    "@tiptap/extension-document": ^3.31.4
+    "@tiptap/extension-hard-break": ^3.31.4
+    "@tiptap/extension-heading": ^3.31.4
+    "@tiptap/extension-list": ^3.31.4
+    "@tiptap/extension-paragraph": ^3.31.4
+    "@tiptap/extension-text": ^3.31.4
+    "@tiptap/extensions": ^3.31.4
+    "@tiptap/react": ^3.31.4
   vite:
     "@vitejs/plugin-react": ^6.1.1
-    vite: ^8.3.0
+    vite: ^8.3.2
   vitest:
     "@vitest/browser-playwright": ^5.0.3
     "@vitest/coverage-v8": ^5.0.3

@@ -337,7 +337,6 @@ const config: KnipConfig = {
         // the Vite playground entries (vite.config.ts, the HTML script modules)
         // are auto-detected by knip's vite plugin.
         "playwright.config.ts",
-        "playground/canvas.tsx",
         "e2e/*.spec.ts",
       ],
       // See packages/admin above for why the playwright plugin is off.
