@@ -16,6 +16,7 @@ import { noUnknownTypeAlias } from "./no-unknown-type-alias.js";
 import { noUnparsedPropertyTypeof } from "./no-unparsed-property-typeof.js";
 import { noUnsafeDictionary } from "./no-unsafe-dictionary.js";
 import { preferJsdoc } from "./prefer-jsdoc.js";
+import { syncCommentGuarded } from "./sync-comment-guarded.js";
 import { testTier } from "./test-tier.js";
 
 /**
@@ -40,6 +41,7 @@ export const plumixPlugin: ESLint.Plugin = {
     "no-unparsed-property-typeof": noUnparsedPropertyTypeof,
     "no-unsafe-dictionary": noUnsafeDictionary,
     "prefer-jsdoc": preferJsdoc,
+    "sync-comment-guarded": syncCommentGuarded,
     "test-tier": testTier,
   },
 };

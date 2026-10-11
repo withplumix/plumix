@@ -58,6 +58,8 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup
       - run: pnpm lint
+      - name: Sync-comment baseline matches the tree
+        run: pnpm --filter @plumix/eslint-config sync-baseline --check
 
   format:
     name: Format
