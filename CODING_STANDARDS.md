@@ -207,7 +207,10 @@ workerd. It reads source: `pnpm test:unit` needs no build.
 - **It stays inside the process.** No browser, no simulated DOM (`jsdom`, `happy-dom`, a
   `@vitest-environment` docblock), no child process, no network beyond a listener on `127.0.0.1`
   port 0 that the test opens and closes itself (a runtime adapter testing its server primitive),
-  no `dist/`, no sleeps. The `plumix/test-tier` lint rule reports DOM APIs in a unit test.
+  no `dist/`, no sleeps. A child process is allowed only where how a process starts and stops is
+  the behaviour under test (the e2e harness's process cleanup); such a file is named in
+  `TESTS_OF_PROCESS_HANDLING` in `tooling/eslint/base.ts`. The `plumix/test-tier` lint rule reports
+  DOM APIs and child processes in a unit test.
 - **A React hook keeps its logic in functions it calls**, and the unit test calls those. The hook's
   wiring to React is covered where a component uses it, in e2e.
 - **A component keeps its logic in functions it calls.** Which state it shows (a validation error,
@@ -353,12 +356,13 @@ matter.
 - **Deterministic and hermetic.** Fake the clock (`vi.useFakeTimers`, an injected `now`), seed
   randomness, and wait on a condition, never a delay. Each test builds its own state and passes in
   any order.
-- **A flaky test is a bug.** Unit tests never retry. E2E retries twice on CI (the shared
-  Playwright config), so a slow runner does not block a merge, and a test Playwright reports as
-  flaky is fixed in the change that finds it. When its cause lies outside that change, open an
-  issue and skip the test with `test.skip` and the issue number in its name; an unexplained skip
-  is not allowed. A skip for a platform that lacks what the test needs (`test.skipIf`, or a
-  conformance case a capability rules out) names that capability.
+- **A flaky test is a bug.** Unit tests never retry, and lint rejects a `test.retry` in a
+  Vitest config. E2E retries twice on CI (the shared Playwright config), so a slow runner does not
+  block a merge, and a test Playwright reports as flaky is fixed in the change that finds it. When
+  its cause lies outside that change, open an issue and skip the test with `test.skip` and the
+  issue number in its name; lint rejects a skip whose title names no issue. A skip for a platform
+  that lacks what the test needs (`test.skipIf`, or a conformance case a capability rules out)
+  names that capability.
 - **Fast.** A unit test runs in milliseconds. Vitest's 5s timeout catches hangs, it is not a
   budget: a unit test over one second is profiled before merge
   ([`docs/agents/testing.md`](docs/agents/testing.md#a-slow-test)).
