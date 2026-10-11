@@ -7,12 +7,12 @@ import {
   test,
 } from "plumix/test/playwright";
 
-// Under `plumix dev` on installed tarballs, Vite's dependency optimizer and
-// module rewriting meet installed plugins (#2840). Imports only what the
-// project installed.
-
 const PROJECT = resolve(import.meta.dirname, "..");
 const CANVAS_FRAME = '[data-testid="plumix-canvas-frame"] iframe';
+
+function describePageError(page: Page, error: Error): string {
+  return `pageerror on ${page.url()}: ${error.message}`;
+}
 
 /**
  * Rejects on the page's first uncaught error, in any of its frames, naming the
@@ -21,7 +21,7 @@ const CANVAS_FRAME = '[data-testid="plumix-canvas-frame"] iframe';
 function firstPageError(page: Page): Promise<never> {
   return new Promise((_, reject) => {
     page.once("pageerror", (error) => {
-      reject(new Error(`pageerror on ${page.url()}: ${error.message}`));
+      reject(new Error(describePageError(page, error)));
     });
   });
 }
@@ -33,7 +33,7 @@ function firstPageError(page: Page): Promise<never> {
 function collectProblems(page: Page): string[] {
   const problems: string[] = [];
   page.on("pageerror", (error) => {
-    problems.push(`pageerror on ${page.url()}: ${error.message}`);
+    problems.push(describePageError(page, error));
   });
   page.on("console", (message) => {
     if (message.type() === "error") {
@@ -81,8 +81,8 @@ test("a block from an installed plugin is selectable in the editor canvas", asyn
 });
 
 async function selectInstalledBlock(page: Page): Promise<void> {
-  // Opened by URL: the New button's client-side navigation into the editor
-  // throws a view-transition error that isn't specific to dev.
+  // Opened by URL: the New button's navigation into the editor throws a
+  // view-transition error, because both editor sidebars share one name.
   const created = await page.request.post("/_plumix/rpc/entry/create", {
     headers: { "x-plumix-request": "1" },
     data: { json: { type: "post", slug: "dev-editor" } },

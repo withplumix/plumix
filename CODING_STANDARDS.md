@@ -139,7 +139,8 @@ migration under a new name, because installs that ran the old one won't run it a
 
 Plumix has three test tiers: **unit**, **e2e** and **smoke**. A tier is chosen by what the test
 needs to observe the behaviour, never by convenience, and each tier has one location, one runner and
-one CI job ([ADR 0042](docs/adr/0042-tests-come-in-three-tiers.md)). The section covers every
+one CI job, bar the smoke's editor spec, which Playwright runs inside the smoke
+([ADR 0042](docs/adr/0042-tests-come-in-three-tiers.md)). The section covers every
 workspace package and app; `.sandcastle`, the ship loop's own harness, sits outside the workspace
 and outside the tiers. Typecheck, lint, format, knip, publint, attw, `i18n:check`,
 `migrations:check` and the link check are **gates**, not tiers: they check code without running

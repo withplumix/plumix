@@ -1,3 +1,5 @@
+import { stripVTControlCharacters } from "node:util";
+
 import type { PackageManager } from "./package-manager.js";
 import type { Registry } from "./registry.js";
 import { availableAuthMethods } from "./auth-methods.js";
@@ -194,10 +196,6 @@ export interface PlaywrightReportSuite {
   readonly suites?: readonly PlaywrightReportSuite[];
 }
 
-/** Playwright colours its error messages for the terminal. */
-// eslint-disable-next-line no-control-regex
-const ANSI_ESCAPE = /\u001b\[[0-9;]*m/g;
-
 /**
  * One line per error of each failed test, naming the test and the first line
  * of the error, so the smoke's own failure says which step broke.
@@ -213,7 +211,7 @@ export function summarizePlaywrightFailures(report: {
       for (const result of spec.tests.flatMap((t) => t.results)) {
         if (result.status === "passed" || result.status === "skipped") continue;
         for (const { message = "" } of result.errors) {
-          const [first = ""] = message.replace(ANSI_ESCAPE, "").split("\n");
+          const [first = ""] = stripVTControlCharacters(message).split("\n");
           lines.push(`${name}: ${first}`);
         }
       }

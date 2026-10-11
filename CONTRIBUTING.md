@@ -83,7 +83,7 @@ pnpm exec vitest run path/to/file.test.ts -t "name"   # one test
 pnpm exec vitest run --coverage                # with coverage
 ```
 
-Tests come in three tiers. A unit test checks logic in Node beside the source, an end-to-end test (Playwright, under a package's `e2e/`, run by `pnpm test:e2e`) drives a running site in a browser, and the scaffold smoke checks that a project built from the packed packages starts. `CODING_STANDARDS.md` picks the tier for a test.
+Tests come in three tiers. A unit test checks logic in Node beside the source, an end-to-end test (Playwright, under a package's `e2e/`, run by `pnpm test:e2e`) drives a running site in a browser, and the scaffold smoke checks that a project built from the packed packages starts, and that its editor loads under `plumix dev`. `CODING_STANDARDS.md` picks the tier for a test.
 
 ### Running the e2e suites
 

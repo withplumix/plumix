@@ -1,7 +1,7 @@
 // Scaffolds representative projects and proves they typecheck, build and
 // serve: each built server is started and requested before the next combo.
 // Each runtime's all-plugins project then runs `plumix dev` and drives the
-// editor in Chromium (ADR 0046).
+// editor in Chromium.
 //
 // The base skeleton lives inside this package rather than as a workspace
 // package, so nothing else ever compiles it. This is what catches a core,
@@ -47,14 +47,9 @@ const REPO = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const CLI = join(REPO, "packages/create-plumix-app/dist/index.js");
 const DEV_EDITOR = join(REPO, "packages/create-plumix-app/smoke/dev-editor");
 // Inside the package, where CI's failure upload reads Playwright's output.
-const DEV_EDITOR_RESULTS = join(
-  REPO,
-  "packages/create-plumix-app/test-results",
-);
-const DEV_EDITOR_REPORT = join(
-  REPO,
-  "packages/create-plumix-app/playwright-report",
-);
+const PACKAGE = join(REPO, "packages/create-plumix-app");
+const DEV_EDITOR_RESULTS = join(PACKAGE, "test-results");
+const DEV_EDITOR_REPORT = join(PACKAGE, "playwright-report");
 
 const { loadRegistry } = await import(
   join(REPO, "packages/create-plumix-app/dist/registry.js")
@@ -444,9 +439,8 @@ async function boot(appDir) {
 
 /**
  * `plumix dev` is where Vite's dependency optimizer and module rewriting meet
- * the installed plugins, which a production build never exercises (#2840).
- * The spec drives the editor in Chromium through the installed Playwright kit;
- * its config's webServer migrates afresh and runs the runtime's dev command.
+ * the installed plugins, which a production build never exercises. The spec's
+ * config's webServer migrates afresh and runs the runtime's dev command.
  */
 async function driveEditorUnderDev(appDir, combo) {
   renderEntryContent(appDir);
@@ -454,6 +448,7 @@ async function driveEditorUnderDev(appDir, combo) {
   const bin = join(appDir, "node_modules", ".bin");
   const port = await freePort();
   const jsonReport = join(appDir, "dev-editor-report.json");
+  const results = join(DEV_EDITOR_RESULTS, combo.name);
   try {
     execFileSync(
       "playwright",
@@ -462,7 +457,7 @@ async function driveEditorUnderDev(appDir, combo) {
         "--config",
         "dev-editor/playwright.config.ts",
         "--output",
-        join(DEV_EDITOR_RESULTS, combo.name),
+        results,
         "--trace",
         "retain-on-failure",
         // The config's reporters plus a JSON one, read back below to name what
@@ -498,7 +493,7 @@ async function driveEditorUnderDev(appDir, combo) {
     throw new Error(
       `${combo.name}: the editor failed under \`plumix dev\`:\n` +
         failures.map((line) => `  - ${line}`).join("\n") +
-        `\nTrace under ${join(DEV_EDITOR_RESULTS, combo.name)}.`,
+        `\nTrace under ${results}.`,
       { cause: err },
     );
   }
