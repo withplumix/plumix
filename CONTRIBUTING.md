@@ -126,7 +126,7 @@ Each folder under `packages/runtimes/` runs a Plumix site on one runtime, using 
 
 - `plumix.scaffold` is what `create-plumix-app` writes into a new project on this runtime: imports, config slots, dependencies, files, and the `packageManager` the project installs with (pnpm by default).
 - `plumix.e2e` is what the e2e suites and the scaffold smoke need: `start` serves the built output on `PORT`, `wipe` lists what a run deletes first, `database` says where the database ends up, and `cli` runs the `plumix` CLI (the package's bin by default).
-- An adapter proves itself with a `playground/` that runs the shared `runtimeSpec` from `plumix/test/playwright`. The scaffold smoke (`pnpm smoke:scaffold`) builds a project for each runtime, applies its migrations through `cli`, starts it, and requests `/`, the admin and the `auth/session` RPC.
+- An adapter proves itself with a `playground/` that runs the shared `runtimeSpec` from `plumix/test/playwright`. The scaffold smoke (`pnpm smoke:scaffold`) builds a project for each runtime, applies its migrations through `cli`, starts it, and requests `/`, the admin and the `auth/session` RPC. Its `all-plugins` project then runs `plumix dev` and drives the editor in Chromium.
 
 ### Packages that own tables
 

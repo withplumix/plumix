@@ -87,6 +87,19 @@ describe("planSmokeCombos", () => {
       },
     ]);
   });
+
+  it("drives the editor under plumix dev in each runtime's all-plugins combo only", () => {
+    const registry: Registry = {
+      runtimes: [runtime("bun", { packageManager: "bun" }), runtime("node")],
+      plugins: [plugin("media")],
+    };
+
+    const devEditor = planSmokeCombos(registry)
+      .filter((combo) => combo.devEditor)
+      .map((combo) => combo.name);
+
+    expect(devEditor).toEqual(["bun-all-plugins", "node-all-plugins"]);
+  });
 });
 
 describe("planSmokeCombos — the workspace's runtimes", () => {

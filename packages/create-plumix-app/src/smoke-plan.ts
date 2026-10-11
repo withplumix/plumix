@@ -19,6 +19,11 @@ export interface SmokeCombo {
    */
   readonly excluded?: readonly string[];
   readonly typescript7?: boolean;
+  /**
+   * Boot `plumix dev` after the built server and drive the block editor in
+   * Chromium, through the installed Playwright kit.
+   */
+  readonly devEditor?: boolean;
 }
 
 /**
@@ -53,6 +58,7 @@ export function planSmokeCombos(registry: Registry): readonly SmokeCombo[] {
         packageManager,
         secondLocale: true,
         excluded,
+        devEditor: true,
       },
       // Each auth method is a config fragment written as text, so only a
       // generated project that typechecks and builds proves it still fits.

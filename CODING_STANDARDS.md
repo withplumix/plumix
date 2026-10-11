@@ -293,9 +293,13 @@ test("empty state → upload → card visible → delete → empty again", async
 A smoke step checks that what a consumer installs works at all. `smoke:scaffold` packs every
 publishable package, scaffolds a project for each runtime the registry lists, installs it with that
 runtime's package manager, then typechecks, builds, applies migrations and starts it, and requests
-the home page, the admin shell and the session RPC. Before a release, the root `pnpm smoke`
-publishes the packages to a throwaway registry, scaffolds a Cloudflare project from it and boots
-`plumix dev`.
+the home page, the admin shell and the session RPC. Each runtime's `all-plugins` project then boots
+`plumix dev` and runs one Playwright spec in Chromium
+(`packages/create-plumix-app/smoke/dev-editor/`), which loads the front page and selects an
+installed plugin's block in the editor canvas
+([ADR 0046](docs/adr/0046-the-scaffold-smoke-drives-the-editor-under-plumix-dev.md)). Before a
+release, the root `pnpm smoke` publishes the packages to a throwaway registry, scaffolds a
+Cloudflare project from it and boots `plumix dev`.
 
 - **It answers one question per step about the installed project**: did it install, typecheck,
   build, start, answer and stop, and does it hold what an install must (the staged catalogs,

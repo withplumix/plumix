@@ -54,6 +54,7 @@
     "typecheck": "tsc"
   },
   "devDependencies": {
+    "@playwright/test": "catalog:",
     "@plumix/admin": "workspace:*",
     "@plumix/admin-editor": "workspace:*",
     "@plumix/admin-ui": "workspace:*",
