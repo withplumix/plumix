@@ -45,16 +45,9 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           turbo-cache: "false"
-      # We're deliberately in 0.x. A `major` changeset resolves straight to
-      # 1.0.0 (changesets does no 0.x demotion), so block it from shipping as a
-      # side effect of merging a feature PR — crossing 1.0 is a decision.
       - name: Block >= 1.0.0 while in 0.x
         run: pnpm check-no-major
 
-  # The admin build already refuses a copyleft dependency, but only for what it
-  # bundles. This catches one arriving anywhere else, where it would reach
-  # consumers through their build instead of ours. It sees the dependencies a
-  # PR changes, not the installed tree, so it guards drift rather than auditing.
   dependency-review:
     name: Dependency review
     if: github.event_name == 'pull_request'
@@ -64,11 +57,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # GitHub reads scopes from the lockfile and pnpm does not mark transitive
-      # dev dependencies, so an allowlist here fails on build tooling that never
-      # ships — CC-BY-3.0 SPDX metadata, say. LGPL is deliberately absent: it
-      # covers native libraries we link rather than copy. Vulnerabilities are
-      # Dependabot's job.
+      # A deny-list: GitHub cannot tell shipped dependencies from transitive dev tooling.
+      # LGPL is absent on purpose; it covers native libraries we link, not copy.
       - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           deny-licenses: >-
@@ -133,8 +123,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-      # drizzle-kit loads each schema module, and a plugin's imports
-      # `plumix/schema`, which resolves to `dist/`.
+      # drizzle-kit imports `plumix/schema`, which resolves to `dist/`.
       - run: pnpm exec turbo run build --filter plumix
       - run: pnpm migrations:check
 
@@ -159,10 +148,7 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup
 
-      # `*.browser.test.ts(x)` suites run in headless Chromium (ADR 0021).
-      # Cached and installed exactly as the e2e job does, keyed on the same
-      # resolved Playwright version, so the two jobs share one cache entry. Only
-      # the e2e job saves it; two jobs saving one key race to reserve it.
+      # Restore only: the e2e job saves this cache, and two savers race for one key.
       - name: Resolve Playwright version
         id: playwright-version
         shell: bash
@@ -198,8 +184,6 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-      # `*.build.test.ts` suites inspect what the build produced; the turbo
-      # task pulls the build graph.
       - run: pnpm test:build
 
   smoke:
@@ -211,29 +195,13 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-      # The scaffolder packs every publishable package to redirect the
-      # generated projects at this commit. It depends on none of them, so
-      # turbo's `^build` won't build them — do it explicitly.
-      #
-      # Filtered because a bare `pnpm build` also builds `apps/*`, which it never
-      # packs — `@plumix-apps/docs` above all, already covered by the `docs` job.
-      # `smoke.mjs` throws for anything publishable it cannot pack, so nothing
-      # keeps this filter in sync by hand.
-      #
-      # This used to build from source with the caches off, citing #1382. That
-      # issue says the remote-cache 429s were "a red herring" and its real cause
-      # — build and typecheck sharing one tsbuildinfo, so `dist` could silently
-      # not emit — is fixed. Verified on a 29/29 cached build: the generated
-      # projects still typecheck and build, and removing `dist` from one
-      # plugin's `files` still fails the job.
+      # The scaffolder packs these packages without depending on them, so `^build` skips them.
       - run: pnpm exec turbo run build --filter './packages/**'
       - run: pnpm --filter create-plumix-app smoke:scaffold
 
   test-e2e:
     name: Test (e2e)
     runs-on: ubuntu-latest
-    # The heaviest job (Playwright across admin + plugins) runs close to 10 min;
-    # give it headroom so a slow/loaded runner doesn't cancel it mid-suite.
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -241,11 +209,6 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup
 
-      # Cache the Playwright browser binaries (~120 MB) keyed on the resolved
-      # @playwright/test version (declared via the pnpm catalog, so read the
-      # installed version rather than the spec). System deps (apt libs like
-      # libnss3) aren't cached cross-runner — they're reinstalled cheaply via
-      # install-deps.
       - name: Resolve Playwright version
         id: playwright-version
         shell: bash
@@ -272,31 +235,11 @@ jobs:
 
       - run: pnpm test:e2e
 
-      # Running the capture is the check: markup that moved stops resolving by
-      # test id and the command fails. No baselines, no pixel diff — see the
-      # comments in packages/admin/screenshots/capture-browser.ts. A step rather than its own job because it
-      # reuses the checkout, the build and the failure upload below; the images
-      # it writes go with the runner.
-      #
-      # It renders in the pinned playwright container, not in the chromium
-      # installed above, so this pulls that image on a cache miss. Turbo caches
-      # the task now that its output no longer depends on the machine, so most
-      # runs skip both.
-      #
-      # Deliberately no `if: always()`. This is a second playwright run in the
-      # same package, and playwright clears `playwright-report/` and
-      # `test-results/` as it starts — running it after a failed suite would
-      # delete the artifacts the upload below exists to collect.
+      # No `if: always()`: playwright clears `playwright-report/` and `test-results/` as it
+      # starts, which would delete a failed suite's artifacts before the upload below.
       - name: Assert docs screenshot capture succeeds
         run: pnpm docs:screenshots
 
-      # The capture renders in a pinned container, so this runner writes the
-      # bytes a contributor's machine writes. That makes the committed images
-      # checkable rather than merely present: a diff here is either images that
-      # were not regenerated alongside the admin change, or a container that
-      # stopped being deterministic — both worth failing for. Skipped along
-      # with the capture on a turbo cache hit, which is exactly when nothing
-      # that could move a pixel changed.
       - name: Assert the committed images are the ones the capture produces
         id: screenshot-diff
         run: git diff --exit-code -- apps/docs/src/assets/screenshots
@@ -309,30 +252,8 @@ jobs:
           path: apps/docs/src/assets/screenshots
           retention-days: 7
 
-      # `playwright-report/` is the HTML report; `test-results/` carries the
-      # per-test artifacts that matter for diagnosing CI-only flakes —
-      # `trace.zip`, `error-context.md`, screenshots, videos.
-      #
-      # Collected here rather than handed to upload-artifact as `**/…`. A
-      # pattern with no literal prefix makes its globber search from the repo
-      # root, and it follows symlinks by default — so it walks pnpm's
-      # `node_modules/.pnpm` store once per workspace that links into it, and
-      # reports the same directory twice (once directly, once through the
-      # store). Measured on a tree this size: 56s wall / 366s CPU, against
-      # milliseconds for the pruned walk below. Negations wouldn't help, since
-      # `**` matches every directory, so nothing can be pruned early and the
-      # exclusion only applies to results. That cost landed on the one step
-      # that runs exclusively when the suite has already failed, so a failing
-      # e2e run looked like a hang and burned the job's timeout.
-      #
-      # Staging under the original relative paths leaves the real entries where
-      # the glob put them; only its duplicates are gone. `-prune` on the match
-      # branch stops `find` descending into a report it has already claimed —
-      # otherwise a nested pair copies twice, since `cp -R` into an existing
-      # destination copies *into* it. A copy that fails annotates and the walk
-      # continues: aborting would leave a partial artifact that reads as "those
-      # workspaces produced nothing", which is the failure this step exists to
-      # prevent.
+      # Not `**/…` in upload-artifact: its globber follows symlinks through `node_modules/.pnpm`,
+      # which took about a minute and made a failing run look like a hang.
       - name: Collect Playwright reports
         if: failure()
         shell: bash
@@ -389,9 +310,6 @@ jobs:
       - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
         with:
           tool: typos
-      # Markdown/prose only. Code + i18n catalogs carry their own vocabulary
-      # (acronyms, identifiers, localized strings, deliberate test fixtures)
-      # that would need a large allowlist for zero real bugs.
       - name: Spellcheck markdown
         run: git ls-files '*.md' '*.mdx' | xargs -r typos
 
