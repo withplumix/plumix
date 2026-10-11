@@ -26,6 +26,7 @@ const TIERS =
 
 const TEST_FILE = /\.test\.[cm]?[jt]sx?$/;
 const BROWSER_TEST_FILE = /\.browser\.test\.[cm]?[jt]sx?$/;
+const BUILD_TEST_FILE = /\.build\.test\.[cm]?[jt]sx?$/;
 const VITEST_CONFIG = /(?:^|[\\/])vitest(?:\.[\w-]+)?\.config\.[cm]?[jt]s$/;
 
 function baseName(filename: string): string {
@@ -56,17 +57,28 @@ export const testTier: Rule.RuleModule = {
     type: "problem",
     docs: {
       description:
-        "Keep unit tests on logic in Node: no simulated DOM, no DOM APIs.",
+        "Keep unit tests on logic in Node: no simulated DOM, no DOM APIs, and no file in a retired tier.",
     },
     messages: {
       environmentDocblock: `A \`@vitest-environment\` docblock swaps in a simulated DOM. ${TIERS} Drop the docblock.`,
       configEnvironment: `\`test.environment\` swaps the environment for every test in the package. ${TIERS} Drop the setting.`,
+      retiredTier: `\`*.browser.test.*\` and \`*.build.test.ts\` are retired tiers. ${TIERS} Test the logic in a \`*.test.ts\` file, what the user sees in \`e2e/\`, and what an installed project does in the scaffold smoke.`,
       domInNodeTest: `\`{{ what }}\` needs a DOM, and this file runs in Node. ${TIERS} Move the logic into a function this test can call, and cover what the user sees in \`e2e/\`.`,
     },
-    schema: [],
+    schema: [
+      {
+        type: "object",
+        properties: {
+          pending: { type: "array", items: { type: "string" } },
+        },
+        additionalProperties: false,
+      },
+    ],
   },
   create(context) {
     const { filename, sourceCode } = context;
+    const { pending = [] } =
+      (context.options[0] as { pending?: readonly string[] } | undefined) ?? {};
     const name = baseName(filename);
     const nodeTierTest = TEST_FILE.test(name) && !BROWSER_TEST_FILE.test(name);
 
@@ -86,8 +98,18 @@ export const testTier: Rule.RuleModule = {
         reportDom(node, source.value);
     }
 
+    const path = filename.split(/[\\/]/).join("/");
+    const retired =
+      (BROWSER_TEST_FILE.test(name) || BUILD_TEST_FILE.test(name)) &&
+      !pending.some((entry) => path.endsWith(`/${entry}`));
+
     return {
       Program(program) {
+        if (retired)
+          context.report({
+            loc: { line: 1, column: 0 },
+            messageId: "retiredTier",
+          });
         for (const comment of sourceCode.getAllComments()) {
           if (comment.value.includes("@vitest-environment"))
             context.report({

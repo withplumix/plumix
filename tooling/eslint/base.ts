@@ -8,6 +8,7 @@ import { defineConfig } from "eslint/config";
 import tseslint from "typescript-eslint";
 
 import { plumixPlugin } from "./rules/index.js";
+import { RETIRED_TIER_PENDING } from "./rules/test-tier-pending.js";
 
 /**
  * Exported so consumer configs that extend `no-restricted-syntax` for their
@@ -192,7 +193,9 @@ export const baseConfig = defineConfig(
   // for this rule alone, without type information.
   {
     files: TEST_SOURCE,
-    rules: { "plumix/test-tier": "error" },
+    rules: {
+      "plumix/test-tier": ["error", { pending: RETIRED_TIER_PENDING }],
+    },
   },
   {
     files: VITEST_CONFIGS,

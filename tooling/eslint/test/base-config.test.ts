@@ -482,10 +482,38 @@ describe("plumix/test-tier", () => {
     );
   });
 
-  it("stays silent on DOM imports and globals in a browser test", async () => {
-    await expect(
-      tierReports("src/test-tier.allowed.browser.test.tsx"),
-    ).resolves.toEqual([]);
+  it.each([
+    "src/test-tier.retired.browser.test.tsx",
+    "src/test-tier.retired.build.test.ts",
+  ])("rejects %s, a file in a retired tier", async (fixture) => {
+    const reports = await tierReports(fixture);
+    expect(reports.map(({ line }) => line)).toEqual([1]);
+    expect(reports[0]?.message).toContain("ADR 0042");
+  });
+
+  it("stays silent on a retired-tier file the pending list names", async () => {
+    const pendingEslint = new ESLint({
+      cwd: fixturesDir,
+      overrideConfigFile: true,
+      overrideConfig: [
+        ...baseConfig,
+        {
+          files: ["**/*.test.tsx"],
+          rules: {
+            "plumix/test-tier": [
+              "error",
+              { pending: ["src/test-tier.retired.browser.test.tsx"] },
+            ],
+          },
+        },
+      ],
+    });
+    const [result] = await pendingEslint.lintFiles([
+      "src/test-tier.retired.browser.test.tsx",
+    ]);
+    expect(
+      result?.messages.filter(({ ruleId }) => ruleId === "plumix/test-tier"),
+    ).toEqual([]);
   });
 
   it("stays silent on a helper beside the tests", async () => {
