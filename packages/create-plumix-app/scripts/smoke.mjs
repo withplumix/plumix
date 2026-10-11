@@ -45,9 +45,8 @@ const CLI = join(REPO, "packages/create-plumix-app/dist/index.js");
 const { loadRegistry } = await import(
   join(REPO, "packages/create-plumix-app/dist/registry.js")
 );
-const { planBoot, planInstall, planSmokeCombos } = await import(
-  join(REPO, "packages/create-plumix-app/dist/smoke-plan.js")
-);
+const { planBoot, planInstall, planSmokeCombos, undeclaredSmokePackages } =
+  await import(join(REPO, "packages/create-plumix-app/dist/smoke-plan.js"));
 
 const run = (cmd, args, cwd) =>
   execFileSync(cmd, args, { cwd, stdio: "inherit", encoding: "utf8" });
@@ -62,13 +61,30 @@ function packPlumixPackages(destination) {
     }),
   );
 
+  const packed = listed.filter(
+    ({ name, private: isPrivate }) => isPlumix(name) && !isPrivate,
+  );
+  const undeclared = undeclaredSmokePackages(
+    packed.map(({ name }) => name),
+    JSON.parse(
+      readFileSync(
+        join(REPO, "packages/create-plumix-app/package.json"),
+        "utf8",
+      ),
+    ),
+  );
+  if (undeclared.length > 0) {
+    throw new Error(
+      `Add ${undeclared.join(", ")} to create-plumix-app's devDependencies, so \`pnpm smoke:scaffold\` builds it first.`,
+    );
+  }
+
   const tarballs = new Map();
-  for (const { name, version, path, private: isPrivate } of listed) {
-    if (!isPlumix(name) || isPrivate) continue;
-    // `create-plumix-app` depends on none of these, so turbo's `^build` never
-    // builds them; packing an unbuilt one would fail far from the cause.
+  for (const { name, version, path } of packed) {
     if (!existsSync(join(path, "dist"))) {
-      throw new Error(`${name} has no dist/ — run \`pnpm build\` first.`);
+      throw new Error(
+        `${name} has no dist/ — run \`pnpm smoke:scaffold\` from the root.`,
+      );
     }
     run("pnpm", ["pack", "--pack-destination", destination], path);
     const file = `${name.replace("@", "").replace("/", "-")}-${version}.tgz`;

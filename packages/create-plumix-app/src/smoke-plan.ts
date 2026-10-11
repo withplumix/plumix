@@ -160,3 +160,19 @@ export function planBoot(
     start,
   };
 }
+
+export interface ScaffolderManifest {
+  readonly devDependencies?: Readonly<Record<string, string>>;
+}
+
+/**
+ * The packed packages the scaffolder doesn't declare. Each must be a
+ * devDependency so turbo's `^build` builds it before the smoke packs it.
+ */
+export function undeclaredSmokePackages(
+  packed: readonly string[],
+  manifest: ScaffolderManifest,
+): readonly string[] {
+  const declared = manifest.devDependencies ?? {};
+  return packed.filter((name) => !(name in declared));
+}
