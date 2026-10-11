@@ -187,8 +187,7 @@
       "outputLogs": "new-only"
     },
     "smoke:scaffold": {
-      // The scaffolder declares every package it packs as a devDependency, so
-      // `^build` builds them; never cached, since it asks about this commit.
+      // Asks whether this commit breaks a generated project; a replay can't answer that.
       "dependsOn": ["build", "^build"],
       "cache": false
     },
