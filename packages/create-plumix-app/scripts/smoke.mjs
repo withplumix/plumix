@@ -446,7 +446,6 @@ async function driveEditorUnderDev(appDir, combo) {
   renderEntryContent(appDir);
   cpSync(DEV_EDITOR, join(appDir, "dev-editor"), { recursive: true });
   const bin = join(appDir, "node_modules", ".bin");
-  const port = await freePort();
   const jsonReport = join(appDir, "dev-editor-report.json");
   const results = join(DEV_EDITOR_RESULTS, combo.name);
   try {
@@ -471,7 +470,6 @@ async function driveEditorUnderDev(appDir, combo) {
         env: {
           ...process.env,
           PATH: `${bin}${delimiter}${process.env.PATH}`,
-          PLUMIX_SMOKE_PORT: String(port),
           PLAYWRIGHT_HTML_OUTPUT_DIR: join(DEV_EDITOR_REPORT, combo.name),
           PLAYWRIGHT_HTML_OPEN: "never",
           PLAYWRIGHT_JSON_OUTPUT_FILE: jsonReport,
