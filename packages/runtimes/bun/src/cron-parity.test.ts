@@ -92,16 +92,27 @@ const AGREES = [
 // fire on days core does not. That is why core's scheduler drives jobs on Bun.
 const DIVERGES = ["0 0 */2 * MON", "0 0 1 * */2", "0 0 */10 * SAT,SUN"];
 
+/**
+ * Walked at collection, where no test timer runs: a yearly schedule's ten
+ * firings are ten years of minutes, too slow for a loaded runner's 5s.
+ */
+const CORE_FIRINGS = new Map(
+  [...AGREES, ...DIVERGES].map((expression) => [
+    expression,
+    firings(expression, (from) => coreNext(expression, from)),
+  ]),
+);
+
 describe("Bun.cron.parse against core's cron dialect, in UTC", () => {
   test.each(AGREES)("agrees on %s", (expression) => {
     expect(firings(expression, bunNext(expression))).toEqual(
-      firings(expression, (from) => coreNext(expression, from)),
+      CORE_FIRINGS.get(expression),
     );
   });
 
   test.each(DIVERGES)("diverges on %s", (expression) => {
     expect(firings(expression, bunNext(expression))).not.toEqual(
-      firings(expression, (from) => coreNext(expression, from)),
+      CORE_FIRINGS.get(expression),
     );
   });
 });

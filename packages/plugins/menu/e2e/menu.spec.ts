@@ -3,7 +3,7 @@ import type { Locator, Page } from "@playwright/test";
 import { eq } from "plumix/db";
 import { entries } from "plumix/schema";
 import { factoriesFor } from "plumix/test";
-import { expect, openPlaygroundDb, test } from "plumix/test/playwright";
+import { dragTo, expect, openPlaygroundDb, test } from "plumix/test/playwright";
 
 /**
  * MenuItemEditor.tsx — must match the constant in the component
@@ -381,106 +381,24 @@ function menuOption(page: Page): Locator {
   return page.getByTestId(`menus-selector-option-${menuSlug}`);
 }
 
-type Box = NonNullable<Awaited<ReturnType<Locator["boundingBox"]>>>;
-
-/**
- * Retries until every box is non-null: the row can re-render between
- * locating and measuring it, which a loaded runner makes likely.
- */
-async function settledBoxes<const T extends readonly Locator[]>(
-  ...locators: T
-): Promise<{ [K in keyof T]: Box }> {
-  let boxes: (Box | null)[] = [];
-  await expect(async () => {
-    boxes = await Promise.all(locators.map((locator) => locator.boundingBox()));
-    for (const box of boxes) expect(box).not.toBeNull();
-  }).toPass();
-  return boxes as { [K in keyof T]: Box };
-}
-
-/**
- * Playwright's `page.mouse` doesn't reliably fire pointer events in a
- * sequence dnd-kit's PointerSensor accepts, so dispatch them in one
- * `page.evaluate`. Returns after the drop, since `data-depth` is projected
- * mid-drag.
- */
+/** Returns after the drop, since `data-depth` is projected mid-drag. */
 async function dragRowOnSelf(
   page: Page,
   rowId: string,
   options: { readonly nestPx?: number } = {},
 ): Promise<void> {
+  const handle = page.getByTestId(`menu-item-drag-${rowId}`);
   const target = page.getByTestId(`menu-item-row-${rowId}`);
-  const [handleBox, targetBox] = await settledBoxes(
-    page.getByTestId(`menu-item-drag-${rowId}`),
-    target,
-  );
-  const startX = handleBox.x + handleBox.width / 2;
-  const startY = handleBox.y + handleBox.height / 2;
-  const dropX = targetBox.x + targetBox.width / 2 + (options.nestPx ?? 0);
-  const dropY = targetBox.y + targetBox.height / 2;
-  const handleSelector = `[data-testid="menu-item-drag-${rowId}"]`;
-
-  const activated = await page.evaluate(
-    async ({ selector, startX, startY, dropX, dropY }) => {
-      const el = document.querySelector(selector);
-      if (!el) throw new Error(`drag handle not found: ${selector}`);
-      const base = {
-        pointerId: 1,
-        pointerType: "mouse",
-        isPrimary: true,
-        bubbles: true,
-        cancelable: true,
-      } as const;
-      const yieldToReact = (): Promise<void> =>
-        new Promise((resolve) => requestAnimationFrame(() => resolve()));
-
-      // pointerdown on the activator (drag handle) binds the drag to
-      // this pointerId.
-      el.dispatchEvent(
-        new PointerEvent("pointerdown", {
-          ...base,
-          button: 0,
-          buttons: 1,
-          clientX: startX,
-          clientY: startY,
-        }),
-      );
-      await yieldToReact();
-
-      // After activation dnd-kit attaches its `pointermove` /
-      // `pointerup` listeners on `ownerDocument`, not the activator.
-      // Dispatch on `document` from here.
-      const steps = 12;
-      for (let i = 1; i <= steps; i += 1) {
-        const t = i / steps;
-        document.dispatchEvent(
-          new PointerEvent("pointermove", {
-            ...base,
-            button: 0,
-            buttons: 1,
-            clientX: startX + (dropX - startX) * t,
-            clientY: startY + (dropY - startY) * t,
-          }),
-        );
-        await yieldToReact();
-      }
-      // Read before the drop clears it — this is what separates a drag the
-      // sensor accepted from a burst of events it ignored.
-      const pressed = el.getAttribute("aria-pressed") === "true";
-      document.dispatchEvent(
-        new PointerEvent("pointerup", {
-          ...base,
-          button: 0,
-          buttons: 0,
-          clientX: dropX,
-          clientY: dropY,
-        }),
-      );
-      return pressed;
-    },
-    { selector: handleSelector, startX, startY, dropX, dropY },
-  );
-  expect(activated, `drag never activated for row ${rowId}`).toBe(true);
+  await dragTo(page, handle, target, {
+    targetPosition: (box) => ({
+      x: box.width / 2 + (options.nestPx ?? 0),
+      y: box.height / 2,
+    }),
+    steps: 12,
+    // Before the drop clears it, this separates a drag the sensor accepted
+    // from a burst of events it ignored.
+    beforeDrop: () => expect(handle).toHaveAttribute("aria-pressed", "true"),
+  });
   // `none` is the DragEnd commit; a self-drop still carries a transform
   // mid-drag. `aria-pressed` can't do this: it is absent before and after.
   await expect(target).toHaveCSS("transform", "none");

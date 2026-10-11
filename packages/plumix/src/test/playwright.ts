@@ -5,6 +5,7 @@ export {
   AUTHED_ADMIN,
   CONTENT_LIST_ROWS,
   definePlumixE2EConfig,
+  dragTo,
   emptyManifest,
   expect,
   mockManifest,
