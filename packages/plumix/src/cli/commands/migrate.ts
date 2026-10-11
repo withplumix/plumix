@@ -1,5 +1,15 @@
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
@@ -10,6 +20,7 @@ import type {
   CommandContext,
   CommandDefinition,
   MigrationDatabase,
+  PlumixConfig,
   RuntimeMigrations,
 } from "@plumix/core";
 import { spawnCapturingStderr } from "@plumix/core/cli";
@@ -33,25 +44,32 @@ import { report } from "../report.js";
 export const migrateCommand: CommandDefinition = {
   describe: "Apply each table owner's migrations, or generate the site's",
   async run(ctx) {
+    const target = migrationTarget(ctx);
     // `generate` takes no arguments, so it parses none.
     if (ctx.argv[0] === "generate") {
-      await migrateGenerate(ctx);
+      await migrateGenerate(target);
       return;
     }
     const { sub, remote, binding } = parseMigrateArgs(ctx.argv);
     if (sub === undefined) {
-      await withDatabase(ctx, { remote, binding }, adoptAndApply(ctx, binding));
+      await checkSiteDrift(target);
+      await withDatabase(
+        target,
+        { remote, binding },
+        adoptAndApply(target, binding),
+      );
       return;
     }
     if (sub === "fresh") {
       if (remote) throw PlumixCliError.migrateFreshRemote();
-      await withDatabase(ctx, { remote, binding }, applyOwners, () => {
-        wipeLocalState(ctx);
+      await checkSiteDrift(target);
+      await withDatabase(target, { remote, binding }, applyOwners, () => {
+        wipeLocalState(target);
       });
       return;
     }
     if (sub === "status") {
-      await withDatabase(ctx, { remote, binding }, reportStatus);
+      await withDatabase(target, { remote, binding }, reportStatus);
       return;
     }
     throw PlumixCliError.unknownSubcommand({
@@ -61,6 +79,23 @@ export const migrateCommand: CommandDefinition = {
     });
   },
 };
+
+/** What migrating needs of a command, which `plumix dev` has without an app. */
+export interface MigrationTarget {
+  readonly cwd: string;
+  readonly configPath: string;
+  readonly config: PlumixConfig;
+  readonly runtimeMigrations: RuntimeMigrations | undefined;
+}
+
+function migrationTarget(ctx: CommandContext): MigrationTarget {
+  return {
+    cwd: ctx.cwd,
+    configPath: ctx.configPath,
+    config: ctx.app.config,
+    runtimeMigrations: ctx.runtimeMigrations,
+  };
+}
 
 interface MigrateArgs {
   readonly sub: string | undefined;
@@ -92,13 +127,13 @@ function parseMigrateArgs(argv: readonly string[]): MigrateArgs {
   return { sub, remote: parsed.values.remote, binding: parsed.values.binding };
 }
 
-function runtimeMigrations(ctx: CommandContext): RuntimeMigrations {
-  if (ctx.runtimeMigrations === undefined) {
+function runtimeMigrations(target: MigrationTarget): RuntimeMigrations {
+  if (target.runtimeMigrations === undefined) {
     throw PlumixCliError.migrateRuntimeUnsupported({
-      runtime: ctx.app.config.runtime.name,
+      runtime: target.config.runtime.name,
     });
   }
-  return ctx.runtimeMigrations;
+  return target.runtimeMigrations;
 }
 
 /**
@@ -106,24 +141,24 @@ function runtimeMigrations(ctx: CommandContext): RuntimeMigrations {
  * fails with the database untouched.
  */
 async function withDatabase(
-  ctx: CommandContext,
-  target: Pick<MigrateArgs, "remote" | "binding">,
+  target: MigrationTarget,
+  database: Pick<MigrateArgs, "remote" | "binding">,
   work: MigrationWork,
   beforeOpen?: () => void,
 ): Promise<void> {
-  const migrations = runtimeMigrations(ctx);
-  if (target.remote && !migrations.remote) {
+  const migrations = runtimeMigrations(target);
+  if (database.remote && !migrations.remote) {
     throw PlumixCliError.migrateRemoteUnsupported({
-      runtime: ctx.app.config.runtime.name,
+      runtime: target.config.runtime.name,
     });
   }
-  const owners = resolveOwners(ctx.cwd, ctx.configPath, ctx.app.config);
+  const owners = resolveOwners(target.cwd, target.configPath, target.config);
   beforeOpen?.();
   const db = await migrations.open({
-    cwd: ctx.cwd,
-    app: ctx.app,
-    location: target.remote ? "remote" : "local",
-    binding: target.binding,
+    cwd: target.cwd,
+    config: target.config,
+    location: database.remote ? "remote" : "local",
+    binding: database.binding,
   });
   try {
     await work(db, owners, migrations);
@@ -140,19 +175,19 @@ type MigrationWork = (
 
 /** Adoption builds its scratch database through the same runtime, in memory. */
 function adoptAndApply(
-  ctx: CommandContext,
+  target: MigrationTarget,
   binding: string | undefined,
 ): MigrationWork {
   return async (db, owners, migrations) => {
     await adoptLegacyDatabase(
       db,
       owners,
-      siteTables(ctx),
+      siteTables(target),
       migrations.legacyTable,
       () =>
         migrations.open({
-          cwd: ctx.cwd,
-          app: ctx.app,
+          cwd: target.cwd,
+          config: target.config,
           location: "memory",
           binding,
         }),
@@ -161,8 +196,8 @@ function adoptAndApply(
   };
 }
 
-function siteTables(ctx: CommandContext): readonly string[] {
-  return sitePlugins(ctx.cwd, ctx.configPath, ctx.app.config).flatMap(
+function siteTables(target: MigrationTarget): readonly string[] {
+  return sitePlugins(target.cwd, target.configPath, target.config).flatMap(
     (plugin) =>
       Object.values(plugin.schema ?? {}).flatMap((value) =>
         is(value, SQLiteTable) ? [getTableName(value)] : [],
@@ -175,16 +210,16 @@ function siteTables(ctx: CommandContext): readonly string[] {
  * starts from nothing, read off the runtime package that provides the commands
  * module.
  */
-function wipeLocalState(ctx: CommandContext): void {
-  const runtime = ctx.app.config.runtime;
+function wipeLocalState(target: MigrationTarget): void {
+  const runtime = target.config.runtime;
   const wipe = runtime.commandsModule
-    ? readRuntimeWipe(ctx.cwd, runtime.commandsModule)
+    ? readRuntimeWipe(target.cwd, runtime.commandsModule)
     : undefined;
   if (wipe === undefined) {
     throw PlumixCliError.migrateFreshNoWipe({ runtime: runtime.name });
   }
   for (const path of wipe) {
-    rmSync(resolve(ctx.cwd, path), { recursive: true, force: true });
+    rmSync(resolve(target.cwd, path), { recursive: true, force: true });
   }
 }
 
@@ -201,31 +236,120 @@ function readRuntimeWipe(
   return pkg.plumix?.e2e?.wipe;
 }
 
-async function migrateGenerate(ctx: CommandContext): Promise<void> {
-  const { cwd, configPath, app } = ctx;
-  const modules = [
+function siteSchemaModules(target: MigrationTarget): readonly string[] {
+  return [
     ...new Set(
-      sitePlugins(cwd, configPath, app.config).flatMap(
+      sitePlugins(target.cwd, target.configPath, target.config).flatMap(
         (plugin) => plugin.schemaModule ?? [],
       ),
     ),
   ];
+}
+
+/** Where `plumix migrate` reads the site's history from. */
+function siteMigrationsDir(target: MigrationTarget): string {
+  return join(siteRootOf(target.configPath), "migrations");
+}
+
+function filesUnder(dir: string): Set<string> {
+  if (!existsSync(dir)) return new Set();
+  return new Set(
+    readdirSync(dir, { recursive: true, withFileTypes: true })
+      .filter((entry) => entry.isFile())
+      .map((entry) => relative(dir, join(entry.parentPath, entry.name))),
+  );
+}
+
+/** The files drizzle-kit wrote into `out`, a history of the site's own tables. */
+async function generateSiteMigrations(
+  target: MigrationTarget,
+  modules: readonly string[],
+  out: string,
+): Promise<readonly string[]> {
+  writeSiteSchema(target.cwd, modules);
+  const before = filesUnder(out);
+  await runDrizzleKitGenerate(target.cwd, relative(target.cwd, out));
+  return [...filesUnder(out)].filter((file) => !before.has(file)).sort();
+}
+
+/**
+ * Generates into a copy of the site's history, so a site whose tables are
+ * ahead of it fails before anything is written or opened.
+ */
+async function checkSiteDrift(target: MigrationTarget): Promise<void> {
+  const modules = siteSchemaModules(target);
+  if (modules.length === 0) return;
+  const scratch = mkdtempSync(join(tmpdir(), "plumix-drift-"));
+  try {
+    const history = siteMigrationsDir(target);
+    const copy = join(scratch, "migrations");
+    if (existsSync(history)) cpSync(history, copy, { recursive: true });
+    const files = await generateSiteMigrations(target, modules, copy);
+    if (files.length > 0) throw PlumixCliError.migrateSiteDrifted({ files });
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
+}
+
+/**
+ * What a runtime's `deploy` runs before it ships: the site's history checked,
+ * then every owner applied to the remote database.
+ */
+export async function migrateBeforeDeploy(ctx: CommandContext): Promise<void> {
+  const target = migrationTarget(ctx);
+  await checkSiteDrift(target);
+  await withDatabase(
+    target,
+    { remote: true, binding: undefined },
+    adoptAndApply(target, undefined),
+  );
+}
+
+/**
+ * What `plumix dev` runs before it serves: the site's next migration written
+ * when its tables are ahead of its history, then every owner applied locally.
+ */
+export async function migrateForDev(target: MigrationTarget): Promise<void> {
+  if (target.runtimeMigrations === undefined) return;
+  const modules = siteSchemaModules(target);
+  if (modules.length > 0) {
+    const history = siteMigrationsDir(target);
+    const files = await generateSiteMigrations(target, modules, history);
+    if (files.length > 0) {
+      const written = files
+        .map((file) => relative(target.cwd, join(history, file)))
+        .join(", ");
+      report.success(`Wrote the site's next migration, ${written}: commit it.`);
+    }
+  }
+  await withDatabase(
+    target,
+    { remote: false, binding: undefined },
+    adoptAndApply(target, undefined),
+  );
+}
+
+async function migrateGenerate(target: MigrationTarget): Promise<void> {
+  const modules = siteSchemaModules(target);
   if (modules.length === 0) {
     report.info(
       "This site owns no tables: no plugin's schemaModule resolves inside it, so there is nothing to generate.",
     );
     return;
   }
-  writeSiteSchema(cwd, modules);
+  report.info("Running drizzle-kit generate…");
+  await generateSiteMigrations(target, modules, siteMigrationsDir(target));
+  report.success(`Schema emitted: ${SITE_SCHEMA_OUT}`);
+  report.success(
+    `The site's own tables are migrated in ${relative(target.cwd, siteMigrationsDir(target))}/`,
+  );
+}
 
+async function runDrizzleKitGenerate(cwd: string, out: string): Promise<void> {
   const bin = migrateGenerateDeps.resolveDrizzleKitBin(cwd);
   if (bin === null) {
     throw PlumixCliError.migrateGenerateNoDrizzleKit();
   }
-
-  // Where `plumix migrate` reads the site's history from.
-  const out = relative(cwd, join(siteRootOf(configPath), "migrations"));
-  report.info("Running drizzle-kit generate…");
   const stderr = await migrateGenerateDeps.spawnCapturingStderr(
     process.execPath,
     [
@@ -252,7 +376,6 @@ async function migrateGenerate(ctx: CommandContext): Promise<void> {
   // A successful generate — including one that finds nothing to do —
   // writes nothing here, so anything at all means it bailed.
   if (stderr.trim() !== "") throw PlumixCliError.migrateGenerateFailed();
-  report.success(`The site's own tables are migrated in ${out}/`);
 }
 
 /**
@@ -269,7 +392,6 @@ function writeSiteSchema(cwd: string, modules: readonly string[]): void {
   const outFile = resolve(cwd, SITE_SCHEMA_OUT);
   mkdirSync(dirname(outFile), { recursive: true });
   writeFileSync(outFile, source, "utf8");
-  report.success(`Schema emitted: ${SITE_SCHEMA_OUT}`);
 }
 
 function resolveDrizzleKitBin(cwd: string): string | null {

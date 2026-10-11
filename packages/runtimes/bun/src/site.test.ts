@@ -2,18 +2,30 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { Database } from "bun:sqlite";
 import { plumix } from "plumix";
 import { auth as authConfig } from "plumix/auth";
+import { copyOwnerHistories } from "plumix/cli";
 import { definePlugin } from "plumix/plugin";
 import * as schema from "plumix/schema";
 import { applyCoreTestSchema } from "plumix/test";
 import { defineTheme, fallback } from "plumix/theme";
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  assert,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  test,
+  vi,
+} from "vitest";
 
 import type { BunConfig } from "./adapter.js";
 import { bun } from "./adapter.js";
 import { bunSqlite } from "./bun-sqlite.js";
-import { createBunSite } from "./site.js";
+import { createBunSite, serveProcess } from "./site.js";
 
 const CHUNK = "export const client = 1;";
 
@@ -112,4 +124,108 @@ describe("the site on Bun.serve", () => {
       const fallthrough = await fetch(`${origin}/whoami`);
       expect(fallthrough.status).toBe(200);
     }));
+});
+
+describe("the served process migrates before it listens", () => {
+  let project: string;
+  const servers: { stop: (force: boolean) => Promise<void> }[] = [];
+
+  beforeEach(() => {
+    project = mkdtempSync(join(tmpdir(), "plumix-bun-serve-"));
+    vi.stubEnv("PORT", "0");
+    vi.stubEnv("HOST", "127.0.0.1");
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+  });
+
+  afterEach(async () => {
+    await Promise.all(servers.splice(0).map((server) => server.stop(true)));
+    process.removeAllListeners("SIGTERM");
+    process.removeAllListeners("SIGINT");
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+    rmSync(project, { recursive: true, force: true });
+  });
+
+  // An empty database, with the histories shipped beside the entry as
+  // `plumix build` does.
+  function builtSite() {
+    const config = plumix({
+      runtime: bun({}),
+      database: bunSqlite({ path: join(project, "site.sqlite") }),
+      auth,
+      theme,
+    });
+    copyOwnerHistories(
+      { cwd: project, configPath: join(project, "plumix.config.ts"), config },
+      join(project, "dist/server"),
+    );
+    return createBunSite({
+      config,
+      assetManifest: {},
+      entryUrl: pathToFileURL(join(project, "dist/server/worker.js")).href,
+    });
+  }
+
+  function tables(): unknown[] {
+    const db = new Database(join(project, "site.sqlite"));
+    try {
+      return db
+        .query<{ name: string }, []>(
+          "SELECT name FROM sqlite_master WHERE type = 'table'",
+        )
+        .all()
+        .map((row) => row.name);
+    } finally {
+      db.close();
+    }
+  }
+
+  test("creates every owner's tables in an empty database", async () => {
+    vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    const site = builtSite();
+
+    const server = await serveProcess(site);
+    assert(server);
+    servers.push(server);
+
+    expect(tables()).toContain("entries");
+  });
+
+  test("against an up-to-date database applies nothing", async () => {
+    const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    const site = builtSite();
+    const first = await serveProcess(site);
+    assert(first);
+    servers.push(first);
+    stderr.mockClear();
+
+    const second = await serveProcess(site);
+    assert(second);
+    servers.push(second);
+
+    expect(stderr.mock.calls.map(([chunk]) => String(chunk))).toEqual([
+      "core: up to date\n",
+    ]);
+  });
+
+  test("a failed apply exits non-zero without listening", async () => {
+    const exit = vi
+      .spyOn(process, "exit")
+      .mockImplementation(() => undefined as never);
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    const site = builtSite();
+    writeFileSync(join(project, "site.sqlite"), "not a database");
+
+    const server = await serveProcess(site);
+
+    expect(server).toBeUndefined();
+    expect(exit).toHaveBeenCalledWith(1);
+    expect(error).toHaveBeenCalledWith(
+      "plumix: migrations failed; not serving",
+      expect.any(Error),
+    );
+  });
 });

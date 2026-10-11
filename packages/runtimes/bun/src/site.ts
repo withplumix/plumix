@@ -15,6 +15,7 @@ import type {
   ScheduledRunReport,
   Scheduler,
 } from "plumix/runtime";
+import { applyBuiltMigrations } from "plumix/cli";
 import {
   buildApp,
   createRuntimeHandler,
@@ -25,6 +26,8 @@ import {
 
 import type { ResolvedBunConfig } from "./adapter.js";
 import { bun, isBunRuntime } from "./adapter.js";
+import { isBunSqlite } from "./bun-sqlite.js";
+import { migrations } from "./commands/migrations.js";
 import { ASSETS_DIR_ENV, PROJECT_ROOT_ENV } from "./entry-constants.js";
 import { createAssetsLayer } from "./http/assets.js";
 import { createImageLayer } from "./http/images.js";
@@ -111,6 +114,11 @@ export interface BunSite {
    * rebinds what this released.
    */
   readonly dispose: (options?: DisposeOptions) => Promise<DisposeResult>;
+  /**
+   * Applies the histories `plumix build` shipped beside the entry to the
+   * `bunSqlite()` file; another database slot is migrated with its own tooling.
+   */
+  readonly migrate: () => Promise<void>;
 }
 
 /**
@@ -221,7 +229,17 @@ export function createBunSite({
   const dispose = (options?: DisposeOptions): Promise<DisposeResult> =>
     built?.dispose?.(options) ?? Promise.resolve({ abandoned: 0 });
 
-  return { handler, serve, startCron, dispose };
+  const migrate = async (): Promise<void> => {
+    if (!isBunSqlite(config.database)) return;
+    await applyBuiltMigrations({
+      serverDir,
+      cwd: resolve(serverDir, "../.."),
+      config,
+      migrations,
+    });
+  };
+
+  return { handler, serve, startCron, dispose, migrate };
 }
 
 /**
@@ -240,9 +258,19 @@ export function loadEnvFileWhenMain(main: boolean): void {
 
 /**
  * Returns the `Server` for the entry to default-export, which Bun does not
- * serve twice.
+ * serve twice. A failed {@link BunSite.migrate} ends the process with exit
+ * code 1 and never listens.
  */
-export function serveProcess(site: BunSite): Server<undefined> {
+export async function serveProcess(
+  site: BunSite,
+): Promise<Server<undefined> | undefined> {
+  try {
+    await site.migrate();
+  } catch (error) {
+    console.error("plumix: migrations failed; not serving", error);
+    process.exit(1);
+    return undefined;
+  }
   /* eslint-disable turbo/no-undeclared-env-vars -- the built site reads these when it runs, not during any turbo task */
   const port = Number(envOr(process.env.PORT, "3000"));
   const hostname = envOr(process.env.HOST, "0.0.0.0");

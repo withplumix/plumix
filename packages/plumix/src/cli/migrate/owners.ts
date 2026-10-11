@@ -13,7 +13,7 @@ export interface MigrationOwner extends MigrationFolder {
   readonly name: string;
 }
 
-const TRACKING_TABLE_PREFIX = "__drizzle_migrations_";
+export const TRACKING_TABLE_PREFIX = "__drizzle_migrations_";
 
 /**
  * Where `plumix migrate generate` writes the module that re-exports the

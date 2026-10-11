@@ -52,8 +52,8 @@ describe("scaffold — blank Cloudflare app", () => {
     const readme = readFileSync(join(target, "README.md"), "utf8");
     expect(readme).toContain("# my-app");
     expect(readme).toContain("wrangler d1 create my-app");
-    expect(readme).toContain("plumix migrate --remote");
-    expect(readme).not.toContain("migrate generate");
+    expect(readme).toContain("npx plumix deploy");
+    expect(readme).not.toContain("plumix migrate");
     expect(existsSync(join(target, "theme", "index.tsx"))).toBe(true);
     expect(existsSync(join(target, ".gitignore"))).toBe(true);
   });
@@ -351,8 +351,7 @@ describe("scaffold — Bun app", () => {
     expect(tsconfig.compilerOptions.types).toContain("bun");
     const readme = readFileSync(join(target, "README.md"), "utf8");
     expect(readme).toContain("bun install");
-    expect(readme).toContain("bun --bun plumix migrate\n");
-    expect(readme).not.toContain("migrate apply");
+    expect(readme).not.toContain("plumix migrate");
     expect(readme).toContain("bun dist/server/worker.js");
   });
 

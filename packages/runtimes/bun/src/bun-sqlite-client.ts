@@ -98,8 +98,9 @@ export function openBunSqlite(path: string): BunSqliteClient {
   mkdirSync(dirname(path), { recursive: true });
   const { Database } = loadBunSqlite();
   const database = new Database(path);
-  database.run("PRAGMA journal_mode = WAL");
+  // First, so switching to WAL waits on a server migrating the same file.
   database.run(`PRAGMA busy_timeout = ${String(BUSY_TIMEOUT_MS)}`);
+  database.run("PRAGMA journal_mode = WAL");
   database.run("PRAGMA synchronous = NORMAL");
   database.run("PRAGMA foreign_keys = ON");
   const counter = database.prepare<{ changes: number }, []>(

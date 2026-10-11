@@ -50,8 +50,8 @@ function migrationDatabase(client: NodeSqliteClient): MigrationDatabase {
 export const migrations: RuntimeMigrations = {
   remote: false,
   legacyTable: "__drizzle_migrations",
-  open({ cwd, app, location }) {
-    const database = app.config.database;
+  open({ cwd, config, location }) {
+    const database = config.database;
     if (!isNodeSqlite(database)) {
       return Promise.reject(
         MigrationsError.databaseNotNodeSqlite({ kind: database.kind }),

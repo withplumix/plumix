@@ -45,6 +45,12 @@ function isSharedCacheable(response: Response): boolean {
   );
 }
 
+export function isD1(adapter: {
+  readonly kind: string;
+}): adapter is D1DatabaseAdapter {
+  return adapter.kind === "d1";
+}
+
 export function d1(config: D1Config): D1DatabaseAdapter {
   const sessionEnabled = config.session && config.session !== "disabled";
   return {

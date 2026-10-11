@@ -6,10 +6,11 @@ rendered with `sharp` and cached under `.cache/plumix/images`; that directory
 can be emptied at any time.
 
 ```sh
-plumix migrate
 pnpm build
 PORT=3000 node dist/server/worker.js
 ```
+
+The built server applies pending migrations to the database before it listens.
 
 `pnpm dev` starts one Vite server with the site behind it: an edit to the
 config, the theme or a plugin is served on the next request. Copy

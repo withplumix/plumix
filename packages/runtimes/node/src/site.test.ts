@@ -1,6 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { pathToFileURL } from "node:url";
 import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -9,6 +10,7 @@ import type { Scheduler } from "plumix/runtime";
 import type { MockInstance } from "vitest";
 import { plumix } from "plumix";
 import { auth as authConfig } from "plumix/auth";
+import { copyOwnerHistories } from "plumix/cli";
 import { definePlugin } from "plumix/plugin";
 import * as schema from "plumix/schema";
 import { applyCoreTestSchema } from "plumix/test";
@@ -86,17 +88,28 @@ afterEach(async () => {
 interface SiteOptions {
   readonly plugins?: PluginDescriptor[];
   readonly runtime?: NodeConfig;
+  /**
+   * Leaves the database empty and ships the histories beside the entry, as
+   * `plumix build` does, for the server to apply when it starts.
+   */
+  readonly unmigrated?: boolean;
 }
 
 /**
  * The shape `plumix build` emits, which is how `entryUrl` resolves the assets
  * directory. Records each connection the site opens and closes.
  */
-async function siteFor({ plugins = [], runtime = {} }: SiteOptions = {}) {
+async function siteFor({
+  plugins = [],
+  runtime = {},
+  unmigrated = false,
+}: SiteOptions = {}) {
   const inner = nodeSqlite({ path: join(dir, "site.sqlite") });
-  await applyCoreTestSchema(
-    inner.connect({}, new Request("https://cms.example/"), schema).db,
-  );
+  if (!unmigrated) {
+    await applyCoreTestSchema(
+      inner.connect({}, new Request("https://cms.example/"), schema).db,
+    );
+  }
   const connected: string[] = [];
   const closed: string[] = [];
   const database: typeof inner = {
@@ -114,12 +127,37 @@ async function siteFor({ plugins = [], runtime = {} }: SiteOptions = {}) {
       };
     },
   };
+  const config = plumix({
+    runtime: node(runtime),
+    database,
+    auth,
+    theme,
+    plugins,
+  });
+  if (unmigrated) {
+    copyOwnerHistories(
+      { cwd: dir, configPath: join(dir, "plumix.config.ts"), config },
+      join(dir, "server"),
+    );
+  }
   const site = createNodeSite({
-    config: plumix({ runtime: node(runtime), database, auth, theme, plugins }),
+    config,
     assetManifest: {},
     entryUrl: pathToFileURL(join(dir, "server/worker.js")).href,
   });
   return { site, connected, closed };
+}
+
+function tables(): unknown[] {
+  const db = new DatabaseSync(join(dir, "site.sqlite"));
+  try {
+    return db
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
+      .all()
+      .map((row) => row.name);
+  } finally {
+    db.close();
+  }
 }
 
 describe("createNodeSite — scheduled", () => {
@@ -223,7 +261,7 @@ describe("createNodeSite — serveWhenMain", () => {
     const { site } = await siteFor();
     const before = process.listenerCount("SIGTERM");
 
-    expect(site.serveWhenMain(false)).toBeUndefined();
+    expect(await site.serveWhenMain(false)).toBeUndefined();
 
     expect(process.listenerCount("SIGTERM")).toBe(before);
   });
@@ -240,10 +278,14 @@ describe("createNodeSite — serveWhenMain", () => {
         .spyOn(process, "exit")
         .mockImplementation(() => undefined as never);
       const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
-      const { site, connected, closed } = await siteFor({ runtime: { cron } });
+      vi.spyOn(process.stderr, "write").mockReturnValue(true);
+      const { site, connected, closed } = await siteFor({
+        runtime: { cron },
+        unmigrated: true,
+      });
       signal.throwIfAborted();
 
-      const running = site.serveWhenMain(true);
+      const running = await site.serveWhenMain(true);
       assert(running);
       servers.push(running.server);
       // `startCron` waits on the same `buildApp` a request does and registered
@@ -259,6 +301,59 @@ describe("createNodeSite — serveWhenMain", () => {
       expect(log).toHaveBeenCalledWith("plumix: SIGTERM received, draining");
     },
   );
+});
+
+describe("createNodeSite — migrations at startup", () => {
+  test("creates every owner's tables in an empty database before it listens", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+    vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    const { site } = await siteFor({ unmigrated: true });
+
+    const running = await site.serveWhenMain(true);
+    assert(running);
+    servers.push(running.server);
+
+    expect(tables()).toContain("entries");
+  });
+
+  test("against an up-to-date database applies nothing", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    const { site } = await siteFor({ unmigrated: true });
+    const first = await site.serveWhenMain(true);
+    assert(first);
+    servers.push(first.server);
+    stderr.mockClear();
+
+    const second = await site.serveWhenMain(true);
+    assert(second);
+    servers.push(second.server);
+
+    expect(stderr.mock.calls.map(([chunk]) => String(chunk))).toEqual([
+      "core: up to date\n",
+    ]);
+  });
+
+  test("a failed apply exits non-zero without listening", async () => {
+    const exit = vi
+      .spyOn(process, "exit")
+      .mockImplementation(() => undefined as never);
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    const { site } = await siteFor({ unmigrated: true });
+    writeFileSync(join(dir, "site.sqlite"), "not a database");
+
+    const running = await site.serveWhenMain(true);
+
+    expect(running).toBeUndefined();
+    expect(exit).toHaveBeenCalledWith(1);
+    expect(error).toHaveBeenCalledWith(
+      "plumix: migrations failed; not serving",
+      expect.any(Error),
+    );
+  });
 });
 
 describe("serveProcess", () => {

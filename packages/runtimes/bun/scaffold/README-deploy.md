@@ -7,10 +7,11 @@ along with the build output.
 
 ```sh
 bun install
-bun --bun plumix migrate
 bun run build
 PORT=3000 bun dist/server/worker.js
 ```
+
+The built server applies pending migrations to the database before it listens.
 
 `bun run dev` starts one Vite server with the site behind it: an edit to the
 config, the theme or a plugin is served on the next request. Copy

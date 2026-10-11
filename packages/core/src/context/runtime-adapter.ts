@@ -135,7 +135,7 @@ export type MigrationLocation = "local" | "remote" | "memory";
 
 export interface OpenMigrationDatabaseOptions {
   readonly cwd: string;
-  readonly app: CommandApp;
+  readonly config: PlumixConfig;
   readonly location: MigrationLocation;
   /** `--binding`, for a runtime that can have more than one database. */
   readonly binding: string | undefined;

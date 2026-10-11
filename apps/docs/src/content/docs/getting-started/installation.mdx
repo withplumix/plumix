@@ -63,7 +63,7 @@ Then work through the rest:
 
 2. **Let the post-scaffold steps run.** The scaffolder installs dependencies, runs `plumix migrate` against the local database, then initializes a git repository and makes one commit. Each step is skippable with a flag, and none of them throws, so a failure never leaves you without a project.
 
-   The three do not report failure equally. A failed install and a failed database setup are both named in the output. The printed next steps carry `pnpm install` when the install did not run, but never the database step, so after a failed setup run `plumix migrate` yourself. The migration step runs the installed `plumix` binary, so it is skipped whenever the install did not succeed, with no message saying it was skipped. Git reports nothing either way. A failed `git init`, or a commit rejected for want of a configured git identity, prints no warning and no recovery step, and `git init` is skipped outright when the target directory is already inside a repository.
+   The three do not report failure equally. A failed install and a failed database setup are both named in the output. The printed next steps carry `pnpm install` when the install did not run, but never the database step, because `plumix dev` applies the migrations itself when it starts. The migration step runs the installed `plumix` binary, so it is skipped whenever the install did not succeed, with no message saying it was skipped. Git reports nothing either way. A failed `git init`, or a commit rejected for want of a configured git identity, prints no warning and no recovery step, and `git init` is skipped outright when the target directory is already inside a repository.
 
 3. **Start the dev server.** On the default Node runtime, the scaffolded config pins the passkey origin to port 3000:
 
@@ -118,15 +118,9 @@ The flags are:
 - `--no-git` skips `git init` and the first commit.
 - `-y, --yes` accepts defaults for everything not flagged.
 
-Skipping a step is not skipping the work. A project whose migration never ran fails on the first request with a missing-table error, so run it yourself. The next steps the scaffolder prints include the install when it did not run, but only ever `pnpm dev` after it, so the database step is yours to remember:
+Skipping the database step skips no work you have to do yourself. Every start of `plumix dev` applies the migrations core ships, then those of each plugin that carries its own tables, to the local database: the SQLite file on Node and Bun, the local D1 copy on Cloudflare. Adding a plugin that carries its own tables means restarting `plumix dev`, nothing more.
 
-```sh
-cd my-site
-pnpm install
-pnpm exec plumix migrate
-```
-
-`plumix migrate` applies the migrations core ships, then those of each plugin that carries its own tables, to the local database: the SQLite file on Node and Bun, the local D1 copy on Cloudflare. Adding a plugin that carries its own tables means running it again.
+Tables of the site's own, declared by a plugin inside the project, get their own history in the project's `migrations/` folder. When you change one, the next `plumix dev` writes the migration for the change into `migrations/`, applies it, and prints the file to commit. `plumix migrate generate` does the same without starting the server.
 
 ## Adding a sign-in method later
 

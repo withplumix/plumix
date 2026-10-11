@@ -1,8 +1,10 @@
+import { join } from "node:path";
 import { createBuilder } from "vite";
 
 import type { CommandContext, RuntimeAdapter } from "@plumix/core";
 
 import type { ServerEnvironmentOptions } from "./server-environment.js";
+import { copyOwnerHistories } from "../cli/migrate/built.js";
 import { buildAppClientFirst } from "./build-order.js";
 import { emitPlumixSources, plumix } from "./index.js";
 import { serverEnvironment } from "./server-environment.js";
@@ -13,24 +15,29 @@ export interface BuildCommandOptions {
 }
 
 /**
- * The body of a self-hosted runtime's `plumix build`: the plumix sources
- * emitted, then `dist/client` for the browser and the server bundle beside it.
+ * A self-hosted runtime's `plumix build`: the plumix sources emitted, then
+ * `dist/client`, the server bundle beside it, and the histories it applies.
  */
 export async function runBuildCommand(
   ctx: CommandContext,
   options: BuildCommandOptions,
 ): Promise<void> {
   await emitPlumixSources(ctx.cwd, ctx.configPath);
+  const server = options.environment(ctx.app.config.runtime);
   const builder = await createBuilder({
     configFile: false,
     root: ctx.cwd,
     plugins: [plumix({ configFile: ctx.configPath })],
     environments: {
       client: { build: { outDir: "dist/client" } },
-      server: serverEnvironment(options.environment(ctx.app.config.runtime)),
+      server: serverEnvironment(server),
     },
     // The server bakes the client's Vite manifest in, so the client goes first.
     builder: { buildApp: buildAppClientFirst },
   });
   await builder.buildApp();
+  copyOwnerHistories(
+    { cwd: ctx.cwd, configPath: ctx.configPath, config: ctx.app.config },
+    join(ctx.cwd, server.outDir),
+  );
 }

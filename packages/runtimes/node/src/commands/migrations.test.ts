@@ -37,7 +37,7 @@ function open(
 ) {
   return migrations.open({
     cwd: dir,
-    app: { ...base, config: { ...base.config, database } },
+    config: { ...base.config, database },
     location,
     binding: undefined,
   });
