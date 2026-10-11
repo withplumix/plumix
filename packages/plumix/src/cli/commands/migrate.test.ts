@@ -719,6 +719,8 @@ describe("applying owner histories", () => {
   describe("migrating before plumix dev", () => {
     const NEXT = {
       "0001_nickname.sql": "ALTER TABLE `widgets` ADD `nickname` text;",
+      // What drizzle-kit writes beside every migration.
+      "meta/0001_snapshot.json": "{}",
       "meta/_journal.json": JSON.stringify({
         version: "7",
         dialect: "sqlite",

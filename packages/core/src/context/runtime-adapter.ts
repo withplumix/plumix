@@ -165,8 +165,9 @@ export interface MigrationDatabase {
 }
 
 /**
- * What a runtime supplies to `plumix migrate`: only how to open its database.
- * Which histories apply, in what order, adoption and reporting live in the CLI.
+ * What a runtime supplies to `plumix migrate`, `plumix dev`, its deploy and its
+ * built server: only how to open its database. Which histories apply, in what
+ * order, adoption and reporting live in the CLI.
  */
 export interface RuntimeMigrations {
   /** Whether `--remote` names a database this runtime can reach. */

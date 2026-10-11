@@ -259,7 +259,7 @@ function filesUnder(dir: string): Set<string> {
   );
 }
 
-/** The files drizzle-kit wrote into `out`, a history of the site's own tables. */
+/** The migrations drizzle-kit wrote into `out`, a history of the site's own tables. */
 async function generateSiteMigrations(
   target: MigrationTarget,
   modules: readonly string[],
@@ -268,7 +268,9 @@ async function generateSiteMigrations(
   writeSiteSchema(target.cwd, modules);
   const before = filesUnder(out);
   await runDrizzleKitGenerate(target.cwd, relative(target.cwd, out));
-  return [...filesUnder(out)].filter((file) => !before.has(file)).sort();
+  return [...filesUnder(out)]
+    .filter((file) => file.endsWith(".sql") && !before.has(file))
+    .sort();
 }
 
 /**
