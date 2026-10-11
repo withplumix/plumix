@@ -195,7 +195,7 @@ The address is checked when the mailer is resolved, which happens as a request's
 
 The gallery at `/_plumix/debug/mail` shows every declared mail without sending it. It groups them by owner, core first and then each plugin, and renders each one from its `preview` props with the site's and the theme's overrides applied. Each mail shows its subject above the message, and an HTML tab and a text tab below it. The locale links at the top re-render every mail in one of the site's locales. Below the declared mails, "Sent in dev" lists the mail the dev server caught, newest first, in the same viewer.
 
-`/_plumix/debug/mail/sent` returns the caught mail as JSON, newest first: each entry's `name`, `props`, `to`, `locale`, `subject`, `text` and `html`. A `DELETE` with the `x-plumix-request: 1` header empties it. The dev server keeps the 50 most recent.
+`/_plumix/debug/mail/sent` returns the caught mail as JSON, newest first: each entry's `name`, `props`, `to`, `locale`, `subject`, `text` and `html`. A `DELETE` with the `x-plumix-request: 1` header empties it. The dev server keeps as many as the `dev.history` caps allow, the same ones that bound the request history: 10 mails and 2 MB by default, with each string cut at 8,192 characters. [Configuration](/getting-started/configuration/) covers `dev.history`.
 
 None of this exists in a build. The gallery, the JSON route, the Mail panel and the catching itself sit behind the development gate, and like every development surface they answer only on loopback. [Dev Server](/going-further/dev-server/) covers the gate.
 

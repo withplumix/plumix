@@ -121,7 +121,7 @@ export interface CaughtMail {
   readonly html?: string;
 }
 
-/** The mail `plumix dev` caught, bounded like the request history. */
+/** The mail `plumix dev` caught, bounded by the same `config.dev.history`. */
 export interface CaughtMailStore {
   /** Copies and truncates the mail; evicts the oldest past the cap. */
   save(mail: CaughtMail): void;
@@ -173,6 +173,6 @@ export interface DevRuntime {
   readonly panels: { readonly disabled: ReadonlySet<string> };
   /** The request-history ring, built from `config.dev.history`. */
   readonly history: DebugHistoryStore;
-  /** Mail caught on a site with no `mailer`. */
+  /** Mail caught on a site with no `mailer`, built from `config.dev.history`. */
   readonly mail: CaughtMailStore;
 }

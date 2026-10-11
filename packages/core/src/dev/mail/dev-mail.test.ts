@@ -333,3 +333,95 @@ describe("the mail preview gallery at /_plumix/debug/mail", () => {
     expect(sent).toContain('class="plumix-mail-view"');
   });
 });
+
+declare module "../../mail/contract/registry.js" {
+  interface MailRegistry {
+    longNote: { readonly body: string };
+  }
+}
+
+/** Sends `longNote` to `?to=`, its body as long as `?length=`. */
+const noter = definePlugin("noter", {
+  mails: [
+    defineMail("longNote", {
+      subject: () => "A long note",
+      text: (props) => props.body,
+      preview: { body: "x" },
+    }),
+  ],
+  setup: (ctx) => {
+    ctx.registerRoute({
+      method: "GET",
+      path: "/send",
+      auth: "public",
+      handler: async (request, appCtx) => {
+        const url = new URL(request.url);
+        const length = Number(url.searchParams.get("length"));
+        await appCtx.mail.send(
+          "longNote",
+          { body: "x".repeat(length) },
+          { to: url.searchParams.get("to") ?? "" },
+        );
+        return new Response(null, { status: 204 });
+      },
+    });
+  },
+});
+
+async function caughtMail(
+  h: Awaited<ReturnType<typeof createDispatcherHarness>>,
+): Promise<CaughtMail[]> {
+  const listed = await h.dispatch(new Request(`${DEV_ORIGIN}${SENT_PATH}`));
+  return (await listed.json()) as CaughtMail[];
+}
+
+describe("the caught mail is capped by dev.history, like the request history", () => {
+  test("a raised string limit keeps a long body whole", async () => {
+    const h = await createDispatcherHarness({
+      config: {
+        plugins: [noter],
+        dev: { history: { maxStringLength: 20_000 } },
+      },
+    });
+
+    await h.dispatch(
+      new Request(
+        `${DEV_ORIGIN}/_plumix/noter/send?to=a@example.test&length=10000`,
+      ),
+    );
+
+    expect((await caughtMail(h))[0]?.text).toBe("x".repeat(10_000));
+  });
+
+  test("maxEntries keeps only the newest mail", async () => {
+    const h = await createDispatcherHarness({
+      config: { plugins: [noter], dev: { history: { maxEntries: 1 } } },
+    });
+
+    for (const to of ["a@example.test", "b@example.test"]) {
+      await h.dispatch(
+        new Request(`${DEV_ORIGIN}/_plumix/noter/send?to=${to}&length=1`),
+      );
+    }
+
+    expect((await caughtMail(h)).map((mail) => mail.to)).toEqual([
+      "b@example.test",
+    ]);
+  });
+
+  test("maxTotalBytes evicts the oldest mail past the budget", async () => {
+    const h = await createDispatcherHarness({
+      config: { plugins: [noter], dev: { history: { maxTotalBytes: 3_000 } } },
+    });
+
+    for (const to of ["a@example.test", "b@example.test"]) {
+      await h.dispatch(
+        new Request(`${DEV_ORIGIN}/_plumix/noter/send?to=${to}&length=2000`),
+      );
+    }
+
+    expect((await caughtMail(h)).map((mail) => mail.to)).toEqual([
+      "b@example.test",
+    ]);
+  });
+});

@@ -17,18 +17,65 @@ export type {
  */
 const DEFAULT_MAX_ENTRIES = 10;
 const DEFAULT_MAX_TOTAL_BYTES = 2_000_000;
-export const DEFAULT_MAX_STRING_LENGTH = 8_192;
+const DEFAULT_MAX_STRING_LENGTH = 8_192;
 
 export function createDebugHistoryStore(
   options: DebugHistoryStoreOptions = {},
 ): DebugHistoryStore {
+  const ring = createBoundedRing<DebugHistoryEntry>(options);
+  return {
+    save(entry) {
+      // Only the snapshot is sanitized; the envelope fields are already JSON.
+      ring.push(entry, (item, maxString) => {
+        // Safety: `sanitize` rewrites leaves, never structure — it truncates
+        // long strings and replaces what JSON can't carry, so every key the
+        // snapshot declares survives with a value of its declared shape.
+        const snapshot = sanitize(
+          item.snapshot,
+          maxString,
+        ) as unknown as DebugSnapshot;
+        return { stored: { ...item, snapshot }, measured: snapshot };
+      });
+    },
+    find(id) {
+      return ring.items().find((entry) => entry.id === id);
+    },
+    get() {
+      return [...ring.items()].reverse();
+    },
+  };
+}
+
+/** What a ring keeps of one pushed item, and the part its byte budget counts. */
+interface Sanitized<T> {
+  readonly stored: T;
+  readonly measured: unknown;
+}
+
+interface BoundedRing<T> {
+  push(
+    item: T,
+    sanitizeItem: (item: T, maxString: number) => Sanitized<T>,
+  ): void;
+  /** Oldest first. */
+  items(): readonly T[];
+  clear(): void;
+}
+
+/**
+ * The caps `config.dev.history` sets, shared by every dev store that keeps
+ * request data, so one setting bounds them all.
+ */
+export function createBoundedRing<T>(
+  options: DebugHistoryStoreOptions = {},
+): BoundedRing<T> {
   const maxEntries = options.maxEntries ?? DEFAULT_MAX_ENTRIES;
   const maxTotalBytes = options.maxTotalBytes ?? DEFAULT_MAX_TOTAL_BYTES;
   const maxStringLength = options.maxStringLength ?? DEFAULT_MAX_STRING_LENGTH;
 
-  // Oldest-first; `get` reverses. `bytes` keeps the budget an O(1) running
-  // total rather than a re-measure per save.
-  const ring: { entry: DebugHistoryEntry; bytes: number }[] = [];
+  // Oldest-first. `bytes` keeps the budget an O(1) running total rather than
+  // a re-measure per push.
+  let ring: { item: T; bytes: number }[] = [];
   let totalBytes = 0;
 
   function evictOldest(): void {
@@ -37,29 +84,23 @@ export function createDebugHistoryStore(
   }
 
   return {
-    save(entry) {
-      // Safety: `sanitize` rewrites leaves, never structure — it truncates
-      // long strings and replaces what JSON can't carry, so every key the
-      // snapshot declares survives with a value of its declared shape.
-      const snapshot = sanitize(
-        entry.snapshot,
-        maxStringLength,
-      ) as unknown as DebugSnapshot;
-      const stored: DebugHistoryEntry = { ...entry, snapshot };
-      const bytes = JSON.stringify(snapshot).length;
-      ring.push({ entry: stored, bytes });
+    push(item, sanitizeItem) {
+      const { stored, measured } = sanitizeItem(item, maxStringLength);
+      const bytes = JSON.stringify(measured).length;
+      ring.push({ item: stored, bytes });
       totalBytes += bytes;
 
       // Hard count cap first, then the byte budget — but never evict the
-      // just-captured entry, so a lone oversized request still shows up.
+      // just-pushed item, so a lone oversized one still shows up.
       while (ring.length > maxEntries) evictOldest();
       while (ring.length > 1 && totalBytes > maxTotalBytes) evictOldest();
     },
-    find(id) {
-      return ring.find((slot) => slot.entry.id === id)?.entry;
+    items() {
+      return ring.map((slot) => slot.item);
     },
-    get() {
-      return ring.map((slot) => slot.entry).reverse();
+    clear() {
+      ring = [];
+      totalBytes = 0;
     },
   };
 }

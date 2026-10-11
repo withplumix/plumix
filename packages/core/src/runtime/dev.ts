@@ -12,6 +12,6 @@ export function createDevRuntime(input: DevInput | undefined): DevRuntime {
     bar: normalizeDebugBar(input?.bar),
     panels: { disabled: disabledPanelIds(input?.panels) },
     history: createDebugHistoryStore(input?.history),
-    mail: createCaughtMailStore(),
+    mail: createCaughtMailStore(input?.history),
   };
 }
