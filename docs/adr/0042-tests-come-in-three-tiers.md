@@ -37,7 +37,8 @@ the reasons.
   which adds one smoke spec that drives the editor under `plumix dev`.
 - **Smoke is what a consumer installs.** Packed tarballs, the runtime's package
   manager and the runtime's own binary are what no other tier sees, so smoke
-  checks those and nothing about features.
+  checks those and nothing about features, bar the one editor spec of
+  [ADR 0046](0046-the-scaffold-smoke-drives-the-editor-under-plumix-dev.md).
 - **Gates are not tiers.** A check that examines code without running it joins
   an existing gate, so a new kind of check never becomes a new kind of test.
 - **ADR 0019's runtime rule holds in all three tiers**: an adapter's unit suite

@@ -12,7 +12,8 @@ the project and fetched three URLs from the built server.
 > **After its built-server checks, each runtime's `all-plugins` combo in
 > `smoke:scaffold` boots `plumix dev` in the same installed project and runs one
 > Playwright spec against it in Chromium. The spec loads the front page and
-> fails on any uncaught error, logged error or failed script request. It then
+> fails on any uncaught error, logged error, failed request or script response
+> of 400 or more. It then
 > signs in with `actingAs`, inserts an installed plugin's block in the editor
 > and selects it in the canvas. It imports only the project's installed
 > `plumix/test/playwright`.**
@@ -49,8 +50,8 @@ the project and fetched three URLs from the built server.
 
 ## Consequences
 
-- The smoke job downloads Chromium and runs three dev servers more, within its
-  15-minute timeout.
+- The smoke job downloads Chromium and runs three dev servers more. It keeps
+  its 15-minute timeout, which fails a run that grows past it.
 - The smoke edits the scaffolded theme to render entry content with
   `BlockRenderer`, since the scaffold's entry template renders only the title
   and excerpt and the canvas needs a content root to mount into.

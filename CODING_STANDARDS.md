@@ -145,11 +145,11 @@ and outside the tiers. Typecheck, lint, format, knip, publint, attw, `i18n:check
 `migrations:check` and the link check are **gates**, not tiers: they check code without running
 it, and a new check of that kind joins an existing gate.
 
-| Tier  | Proves                                               | Lives in                                       | Runs with             | CI job             |
-| ----- | ---------------------------------------------------- | ---------------------------------------------- | --------------------- | ------------------ |
-| Unit  | the logic behind a behaviour, through its public API | `src/foo.test.ts` beside `src/foo.ts`          | `pnpm test:unit`      | `Test`             |
-| E2E   | what a consumer sees and does on a running site      | the package's `e2e/*.spec.ts`                  | `pnpm test:e2e`       | `Test (e2e)`       |
-| Smoke | a project scaffolded from the packed tarballs works  | `packages/create-plumix-app/scripts/smoke.mjs` | `pnpm smoke:scaffold` | `Smoke (scaffold)` |
+| Tier  | Proves                                               | Lives in                                                                                      | Runs with             | CI job             |
+| ----- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------- | ------------------ |
+| Unit  | the logic behind a behaviour, through its public API | `src/foo.test.ts` beside `src/foo.ts`                                                         | `pnpm test:unit`      | `Test`             |
+| E2E   | what a consumer sees and does on a running site      | the package's `e2e/*.spec.ts`                                                                 | `pnpm test:e2e`       | `Test (e2e)`       |
+| Smoke | a project scaffolded from the packed tarballs works  | `packages/create-plumix-app/scripts/smoke.mjs`, and the editor spec under `smoke/dev-editor/` | `pnpm smoke:scaffold` | `Smoke (scaffold)` |
 
 ### Where a test goes
 
@@ -304,11 +304,15 @@ Cloudflare project from it and boots `plumix dev`.
 - **It answers one question per step about the installed project**: did it install, typecheck,
   build, start, answer and stop, and does it hold what an install must (the staged catalogs,
   nothing fetched from the registry)? A step that asserts feature behaviour belongs in e2e, and a
-  rule belongs in a unit test.
+  rule belongs in a unit test. The one exception is the editor spec under `plumix dev`, which asks
+  whether the installed project's dev module graph links, not whether the editor works.
 - **A new smoke check is a new step in `smoke:scaffold`'s loop**, so every runtime gets it, never
-  a new harness or a new job.
+  a new harness or a new job. The editor spec is a step of that loop that runs Playwright, with its
+  report and traces uploaded by the same job.
 - **It reads only what a consumer gets**: the tarballs and the scaffolded project, never the
-  workspace's source.
+  workspace's source. The editor spec is copied into the project and imports only what the project
+  installed; the smoke adds `BlockRenderer` to the scaffolded theme first, because the scaffold's
+  entry template renders no content.
 
 ### Test doubles
 

@@ -156,7 +156,8 @@ jobs:
           playwright: "true"
       - run: pnpm smoke:scaffold
 
-      # The editor spec each all-plugins combo runs under `plumix dev`.
+      # Where the editor spec each all-plugins combo runs under `plumix dev` writes them.
+      # Explicit paths, not `**/…`: that globber follows symlinks through `node_modules/.pnpm`.
       - name: Upload Playwright reports + traces on failure
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
