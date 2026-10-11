@@ -49,6 +49,20 @@ describe("createJsonLogger", () => {
     ]);
   });
 
+  test("meta cannot overwrite the record's level, message or time", () => {
+    const { logger, lines } = capture();
+
+    logger.error("dispatch_failed", {
+      level: "info",
+      message: "other",
+      time: 0,
+    });
+
+    expect(lines).toEqual([
+      `{"level":"error","message":"dispatch_failed","time":"2026-10-11T09:30:00.000Z"}\n`,
+    ]);
+  });
+
   test("meta that JSON cannot hold still yields one parseable line", () => {
     const { logger, lines } = capture();
     const cyclic: Record<string, unknown> = {};

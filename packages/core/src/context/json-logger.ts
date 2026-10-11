@@ -13,8 +13,8 @@ export function createJsonLogger(
   const log =
     (level: Level) =>
     (message: string, meta?: LogMeta): void => {
-      const time = now().toISOString();
-      write(`${serialize({ level, message, time, ...meta })}\n`);
+      const head = { level, message, time: now().toISOString() };
+      write(`${serialize({ ...head, ...meta, ...head })}\n`);
     };
   return {
     debug: log("debug"),

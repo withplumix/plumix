@@ -478,7 +478,7 @@ type FailureLog = (
 
 /**
  * Failures with no request context to log through. Without a runtime logger
- * the console gets the same arguments as ever, so dev output is unchanged.
+ * they go to the console.
  */
 function failureLog(logger: Logger | undefined): FailureLog {
   return (level, message, error) => {
