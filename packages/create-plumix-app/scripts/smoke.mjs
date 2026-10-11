@@ -56,6 +56,7 @@ const { loadRegistry } = await import(
   join(REPO, "packages/create-plumix-app/dist/registry.js")
 );
 const {
+  doctorFailure,
   planBoot,
   planInstall,
   planSmokeCombos,
@@ -447,8 +448,7 @@ async function assertServes(base, child) {
 
 /**
  * Through the project's own bin, so the installed runtime's `diagnose` reads
- * the scaffold's config. A `warn` means a fresh project deploys with something
- * off.
+ * the scaffold's config.
  */
 function assertDoctorClean(appDir) {
   const bin = join(appDir, "node_modules", ".bin");
@@ -457,9 +457,8 @@ function assertDoctorClean(appDir) {
     env: { ...process.env, PATH: `${bin}${delimiter}${process.env.PATH}` },
     encoding: "utf8",
   });
-  if (/^\s+warn\s/m.test(output)) {
-    throw new Error(`plumix doctor warns on a fresh scaffold:\n${output}`);
-  }
+  const failure = doctorFailure(output);
+  if (failure !== undefined) throw new Error(`${failure}:\n${output}`);
 }
 
 async function boot(appDir, combo) {

@@ -221,3 +221,17 @@ export function summarizePlaywrightFailures(report: {
   for (const suite of report.suites) visit(suite, []);
   return lines;
 }
+
+/**
+ * Why `plumix doctor`'s output fails a fresh scaffold, or undefined when it
+ * passes. No `ok` line means the runtime's `diagnose` never ran.
+ */
+export function doctorFailure(output: string): string | undefined {
+  if (/^\s+warn\s/m.test(output)) {
+    return "plumix doctor warns on a fresh scaffold";
+  }
+  if (!/^\s+ok\s/m.test(output)) {
+    return "plumix doctor reported no deploy finding, so the runtime's diagnose never ran";
+  }
+  return undefined;
+}
