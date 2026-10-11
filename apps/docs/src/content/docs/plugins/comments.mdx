@@ -77,7 +77,7 @@ bun add @plumix/plugin-comments
    });
    ```
 
-2. **Apply the migrations.** The plugin ships its own migration history, and `plumix migrate` applies it once the descriptor is in the array. In production on D1, run `plumix migrate --remote`.
+2. **Apply the migrations.** The plugin ships its own migration history, and `plumix migrate` applies it once the descriptor is in the array. `plumix dev` does the same on start, and `plumix deploy` and the built Node and Bun servers apply it in production.
 
    ```sh
    pnpm plumix migrate

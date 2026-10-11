@@ -163,7 +163,6 @@ beforeAll(async () => {
     realpathSync(join(PACKAGE_ROOT, "node_modules/sharp")),
     join(dir, "node_modules/sharp"),
   );
-  // No `plumix migrate`: the built server applies the histories it shipped.
   await run(PLUMIX_BIN, ["build"], { cwd: dir, env: CLI_ENV });
 }, 240_000);
 

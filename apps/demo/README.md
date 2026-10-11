@@ -45,6 +45,5 @@ session provision → admin → create → persist) against this app.
 ```bash
 pnpm exec wrangler d1 create plumix_demo
 # paste the returned database_id into wrangler.jsonc
-pnpm exec plumix migrate --remote
 pnpm exec plumix deploy
 ```

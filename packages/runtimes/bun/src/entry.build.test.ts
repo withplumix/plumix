@@ -275,7 +275,6 @@ beforeAll(async () => {
     join(dir, "plumix.config.mjs"),
     config({ drained, aborted, fired, photo }),
   );
-  // No `plumix migrate`: the built server applies the histories it shipped.
   const result = await plumixOn("bun", dir, ["build"]);
   expect(result).toMatchObject({ code: 0 });
 }, 240_000);

@@ -246,7 +246,6 @@ function siteSchemaModules(target: MigrationTarget): readonly string[] {
   ];
 }
 
-/** Where `plumix migrate` reads the site's history from. */
 function siteMigrationsDir(target: MigrationTarget): string {
   return join(siteRootOf(target.configPath), "migrations");
 }
