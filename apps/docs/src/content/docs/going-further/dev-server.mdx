@@ -47,8 +47,9 @@ Off-loopback the surfaces are not merely refused, they are absent: the debug bar
 
 ## What sits behind the development gate
 
-- **The debug bar**, injected into every rendered page — its panels carry the request's queries, the resolved template and the full telemetry tree.
+- **The debug bar**, injected into every rendered page — its panels carry the request's queries, the resolved template, the mail it sent and the full telemetry tree. The Mail panel lists each mail by name, recipient and subject, and opens it with an HTML tab, shown in a sandboxed iframe, and a text tab.
 - **`/_plumix/debug/requests`** and `/_plumix/debug/requests/<id>`, the captured history the bar's switcher reads, holding the same detail for every recent request.
+- **`/_plumix/debug/mail`**, the mail gallery, which previews every declared mail, and `/_plumix/debug/mail/sent`, the mail the dev server caught as JSON. [Mail](/going-further/mail/#previewing-mail-in-development) covers both.
 - **The dev error page**, which renders the exception, its stack and the request context that led to it. Off-loopback the theme's `server-error` template answers instead, exactly as it does in a deploy.
 - **The dev server's own endpoints** — the source-excerpt reader behind the error page's frames, the sourcemap resolvers behind the island overlay, and the browser-errors-to-terminal sink. These are Vite middlewares that answer ahead of the worker, and the source reader hands back any file under Vite's fs allowlist, so it is the widest of the set.
 - **Every plugin route registered `auth: "development"`** — the `@plumix/plugin-og` card preview at `/_plumix/og/preview` is the one that ships.

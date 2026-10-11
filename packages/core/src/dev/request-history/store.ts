@@ -17,7 +17,7 @@ export type {
  */
 const DEFAULT_MAX_ENTRIES = 10;
 const DEFAULT_MAX_TOTAL_BYTES = 2_000_000;
-const DEFAULT_MAX_STRING_LENGTH = 8_192;
+export const DEFAULT_MAX_STRING_LENGTH = 8_192;
 
 export function createDebugHistoryStore(
   options: DebugHistoryStoreOptions = {},
@@ -75,7 +75,7 @@ const DROP = Symbol("drop");
  * A record's `data` is typed `JsonValue` but nothing checks it at runtime, so
  * this is the boundary that keeps live values (errors, DB handles) out.
  */
-function sanitize(value: unknown, maxString: number): JsonValue {
+export function sanitize(value: unknown, maxString: number): JsonValue {
   const result = sanitizeInner(value, maxString, new WeakSet());
   // Top level is always a snapshot object, never a dropped primitive.
   return result === DROP ? null : result;

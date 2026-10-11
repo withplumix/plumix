@@ -2,6 +2,7 @@ import type { HookRegistry } from "../../hooks/registry.js";
 import type { DebugPanel } from "./types.js";
 import { appPanel } from "./builtin/app.js";
 import { databasePanel } from "./builtin/database.js";
+import { mailPanel } from "./builtin/mail.js";
 import { requestPanel } from "./builtin/request.js";
 import { templatePanel } from "./builtin/template.js";
 import { timelinePanel } from "./builtin/timeline.js";
@@ -19,6 +20,7 @@ export function registerCoreDebugPanels(hooks: HookRegistry): void {
       requestPanel,
       templatePanel,
       databasePanel,
+      mailPanel,
       timelinePanel,
       appPanel,
     ],

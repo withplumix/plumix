@@ -48,7 +48,7 @@ export default plumix({
 
 `plumix()` returns a resolved config rather than the object you passed. Six slots gain a default on the way through. A missing `theme` becomes the built-in welcome theme, a missing `plugins` becomes an empty array, a missing `redirects` becomes an empty array, a missing `routes` keeps every framework route, a missing `i18n` becomes English only, and a missing `basePath` becomes `""`. That last one is normalization as well as defaulting, so `docs`, `/docs` and `/docs/` all resolve to `/docs`.
 
-One cross-slot rule is checked here rather than at request time: `auth.magicLink` without a `mailer` throws at build. Email sign-in with nothing to send the email through would otherwise fail silently on the first sign-in attempt.
+One cross-slot rule is checked here rather than at request time: `auth.magicLink` without a `mailer` throws at build. Email sign-in with nothing to send the email through would otherwise fail silently on the first sign-in attempt. `plumix dev` skips the check, because it catches mail when no mailer is set.
 
 Every slot below is optional unless it appears under "Required slots". Leaving one out is a decision with a consequence rather than an oversight. With no `cdn` slot every public page renders live; with no `storage` slot there is nowhere for uploads to go; with no `mcp` or `api` block the dispatcher returns 404 for those paths before it imports either handler graph.
 
@@ -130,7 +130,7 @@ Sign-in and session policy. `passkey` is required inside it and everything else 
 The seven optional keys are these.
 
 - `oauth` adds providers such as `github(...)`, each carrying its own client credentials.
-- `magicLink` adds email sign-in, and it needs a top-level `mailer` or the build throws.
+- `magicLink` adds email sign-in, and it needs a top-level `mailer` or the build throws. `plumix dev` runs without one and catches the mail.
 - `sessions` replaces the session policy, which covers lifetime and renewal.
 - `authenticator` replaces how a request is identified. The default chains the session cookie and then the API-token bearer header. Override it for transparent SSO, such as `cfAccess({ teamDomain })`, and note the built-in login routes stay mounted, so firewall `/_plumix/auth/*` at the edge if you want them gone.
 - `bootstrapVia` decides how the first admin enrols on a fresh deploy. The default `"passkey"` refuses magic-link and OAuth signup while the users table is empty. `"first-method-wins"` lets any verified flow mint that first admin, which suits a deploy already gated in front of the worker.
@@ -205,7 +205,7 @@ export const cdnSlot = cdn({
 
 ### mailer
 
-The outbound email transport, shared by every feature that sends mail. The interface is one method, `send(message)`, so any provider fits. `consoleMailer()` logs the message instead of sending it, which is how you copy a magic-link URL out of the dev terminal.
+The outbound email transport, shared by every feature that sends mail. The interface is one method, `send(message)`, so any provider fits. `consoleMailer()` logs the message instead of sending it, which is how you copy a magic-link URL out of the dev terminal. Under `plumix dev` a site with no `mailer` gets the same logging, and the dev server keeps each mail for the [mail gallery](/going-further/mail/#previewing-mail-in-development).
 
 ```ts
 import { consoleMailer } from "plumix";
@@ -350,7 +350,7 @@ export const api: PlumixConfigInput["api"] = {
 
 Development-only configuration. Everything under it defaults on in development and is compiled out of a production build. The app resolves this block into `ctx.dev`, which is `undefined` in a production build.
 
-`bar` is the debug bar itself — pass `false` to suppress it, or an object to move it or open it by default. `panels` says which debug panels the site shows, keyed by panel id; an absent key shows the panel. The core panels are `app`, `request`, `database`, `template` and `timeline`, and a plugin that contributes one declares its id so you can name it here too. `history` bounds the ring of recent requests the bar's switcher, the request-history viewer and the dev MCP tools all read.
+`bar` is the debug bar itself — pass `false` to suppress it, or an object to move it or open it by default. `panels` says which debug panels the site shows, keyed by panel id; an absent key shows the panel. The core panels are `app`, `request`, `database`, `template`, `timeline` and `mail`, and a plugin that contributes one declares its id so you can name it here too. `history` bounds the ring of recent requests the bar's switcher, the request-history viewer and the dev MCP tools all read.
 
 ```ts
 import type { PlumixConfigInput } from "plumix";

@@ -10,8 +10,10 @@ import { welcomeTheme } from "../welcome-theme.js";
  * them because the default theme is a surface, which no contract may import.
  */
 export function plumix(config: PlumixConfigInput): PlumixConfig {
-  // Fail at build time rather than crash on the first request.
-  if (config.auth.magicLink && !config.mailer) {
+  // Fail at build time rather than crash on the first request. `plumix dev`
+  // catches mail when no mailer is configured, so the pairing holds only
+  // outside it.
+  if (config.auth.magicLink && !config.mailer && !process.env.PLUMIX_DEV) {
     throw ConfigError.magicLinkRequiresMailer();
   }
   return {

@@ -77,6 +77,8 @@ const API_PREFIX = "/_plumix/api";
  * in step with `DEBUG_REQUESTS_PATH`.
  */
 const DEBUG_REQUESTS_PREFIX = "/_plumix/debug/requests";
+/** Inlined for the same reason; keep in step with `DEBUG_MAIL_PATH`. */
+const DEBUG_MAIL_PREFIX = "/_plumix/debug/mail";
 /**
  * Core owns these ahead of plugin routes. The CSRF exemption must skip them
  * too, or a plugin id'd `rpc` could drop the header gate on RPC.
@@ -86,6 +88,7 @@ const CORE_PLUMIX_PREFIXES = [
   ADMIN_PREFIX,
   AUTH_PREFIX,
   DEBUG_REQUESTS_PREFIX,
+  DEBUG_MAIL_PREFIX,
 ];
 
 function coreAnswersPlumixPath(pathname: string): boolean {
@@ -339,6 +342,19 @@ async function tryPlumixRoutes(
   ) {
     const { handleDebugRequests } = await import("../dev/history-routes.js");
     return handleDebugRequests(ctx, dev);
+  }
+  if (
+    process.env.PLUMIX_DEV &&
+    dev !== undefined &&
+    isTrustedDevRequest(ctx.request) &&
+    (pathname === DEBUG_MAIL_PREFIX ||
+      pathname.startsWith(`${DEBUG_MAIL_PREFIX}/`))
+  ) {
+    const { handleDebugMail } = await import("../dev/mail/routes.js");
+    return handleDebugMail(ctx, dev, {
+      mails: app.mails,
+      catalogs: app.mailCatalogs,
+    });
   }
 
   if (pathname === RPC_PREFIX || pathname.startsWith(`${RPC_PREFIX}/`)) {

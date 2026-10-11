@@ -1,3 +1,4 @@
+import type { JsonValue } from "../json.js";
 import type { ResolvedEntity } from "../route/contract/resolved-entity.js";
 import type { TelemetryRecord, TelemetrySpan } from "./telemetry.js";
 
@@ -103,6 +104,35 @@ export interface DebugHistoryStore {
 }
 
 /**
+ * A mail `plumix dev` caught instead of sending, because the site has no
+ * `mailer`. Inert JSON, like a history entry.
+ */
+export interface CaughtMail {
+  /** Unique per caught mail. */
+  readonly id: string;
+  /** When it was caught (epoch ms). */
+  readonly at: number;
+  /** The declared mail's name. */
+  readonly name: string;
+  readonly props: JsonValue;
+  readonly to: string;
+  /** The locale it rendered in. */
+  readonly locale: string;
+  readonly subject: string;
+  readonly text: string;
+  readonly html?: string;
+}
+
+/** The mail `plumix dev` caught, bounded like the request history. */
+export interface CaughtMailStore {
+  /** Copies and truncates the mail; evicts the oldest past the cap. */
+  save(mail: CaughtMail): void;
+  /** Every caught mail, newest first. */
+  get(): readonly CaughtMail[];
+  clear(): void;
+}
+
+/**
  * Augment with `og: true` to make a plugin's panel nameable in `dev.panels`;
  * only registered ids are, so a typo is a compile error.
  *
@@ -127,6 +157,7 @@ export const CORE_DEBUG_PANEL_IDS = [
   "database",
   "template",
   "timeline",
+  "mail",
 ] as const;
 
 type CoreDebugPanelId = (typeof CORE_DEBUG_PANEL_IDS)[number];
@@ -144,4 +175,6 @@ export interface DevRuntime {
   readonly panels: { readonly disabled: ReadonlySet<string> };
   /** The request-history ring, built from `config.dev.history`. */
   readonly history: DebugHistoryStore;
+  /** Mail caught on a site with no `mailer`. */
+  readonly mail: CaughtMailStore;
 }

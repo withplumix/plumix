@@ -34,11 +34,12 @@ import { resolveMailer } from "../auth/mailer/resolve.js";
 import { makeAuthCan } from "../auth/with-user.js";
 import { createBlockRegistry } from "../blocks/index.js";
 import { debugBarTelemetryConsumer } from "../dev/debug-bar/consumer.js";
+import { devMail } from "../dev/mail/catcher.js";
 import { debugHistoryConsumer } from "../dev/request-history/writer.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
 import { createMailCatalogs } from "../mail/catalogs.js";
 import { declareMails } from "../mail/declared.js";
-import { createMailSender } from "../mail/sender.js";
+import { createMailSender, mailSite } from "../mail/sender.js";
 import { resolveEnvInput } from "../runtime/contract/env-input.js";
 import { createTelemetryCollector } from "./collector.js";
 import { ContextError } from "./errors.js";
@@ -149,13 +150,26 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     user,
     i18n: args.config.i18n,
   });
-  const mailer = resolveMailer(args.config.mailer, args.env);
+  const configuredMailer = resolveMailer(args.config.mailer, args.env);
+  const logger = args.logger ?? consoleLogger;
   // The request URL is a fallback for contexts built without an app; it is
   // resolved here because an `(env) => …` origin needs the runtime env.
   const origin =
     args.origin !== undefined
       ? resolveEnvInput(args.origin, args.env)
       : new URL(args.request.url).origin;
+  // `plumix dev` catches mail a site with no mailer would drop, and records
+  // what every mail rendered.
+  const devMailWiring =
+    process.env.PLUMIX_DEV && args.dev !== undefined
+      ? devMail({
+          dev: args.dev,
+          configured: configuredMailer,
+          logger,
+          telemetry: () => base.telemetry,
+        })
+      : undefined;
+  const mailer = devMailWiring?.mailer ?? configuredMailer;
   const tracedMailer = mailer && traceMailer(mailer, () => base.telemetry);
   const base: AppContextBase<TSchema> = {
     db: args.db,
@@ -170,12 +184,12 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     blocks: args.blocks ?? EMPTY_BLOCK_REGISTRY,
     marks: args.marks ?? EMPTY_MARK_LIST,
     shortcodes: args.shortcodes ?? EMPTY_SHORTCODE_REGISTRY,
-    logger: args.logger ?? consoleLogger,
+    logger,
     memo: createRequestMemo(),
     auth: {
       can: makeAuthCan(args.plugins, user, tokenScopes),
     },
-    defer: wrapDefer(args.logger ?? consoleLogger, args.defer),
+    defer: wrapDefer(logger, args.defer),
     // I/O slots wrapped once here so every consumer gets spans; the getters
     // read `base.telemetry` per call like `fetch` below.
     assets: args.assets && traceAssets(args.assets, () => base.telemetry),
@@ -199,10 +213,12 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
       db: args.db as unknown as Db,
       i18n: args.config.i18n,
       locale: locale.code,
-      // The magic-link slot names the site; a site without it is named by
-      // its host.
-      siteName: args.config.auth.magicLink?.siteName ?? new URL(origin).host,
-      baseUrl: new URL(`${args.config.basePath}/`, origin).href,
+      ...mailSite(
+        args.config.auth.magicLink?.siteName,
+        origin,
+        args.config.basePath,
+      ),
+      onSent: devMailWiring?.onSent,
     }),
     locale,
     authMethods: args.authMethods ?? NO_AUTH_METHODS,

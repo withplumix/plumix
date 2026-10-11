@@ -2,6 +2,7 @@
 // element resets keep common theme selectors out, short of a shadow DOM.
 
 import { css } from "../../css-tag.js";
+import { mailViewCss } from "../mail/viewer.js";
 import { devTokens } from "../ui/tokens.js";
 
 const t = devTokens.bar;
@@ -400,6 +401,28 @@ export const DEBUG_BAR_CSS =
     .plumix-debug-bar__param--null {
       color: ${t.muted};
     }
+    /* Mail panel — one expandable row per sent mail */
+    .plumix-debug-bar__mail > summary {
+      padding: 0;
+      background: none;
+      font-weight: 400;
+      color: ${t.fgStrong};
+      overflow-wrap: anywhere;
+    }
+    .plumix-debug-bar__mail[open] > summary::after {
+      content: "▾";
+    }
+    .plumix-debug-bar__mail-name {
+      color: ${t.accent};
+    }
   ` +
+  mailViewCss({
+    fg: t.fgStrong,
+    muted: t.muted,
+    border: t.border,
+    active: t.frame,
+    radius: t.radiusControl,
+    mono: t.fontMono,
+  }) +
   POSITION_CSS +
   tabRules();

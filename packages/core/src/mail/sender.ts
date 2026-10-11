@@ -1,8 +1,9 @@
-import type { Mailer } from "../auth/contract/mailer.js";
+import type { EmailMessage, Mailer } from "../auth/contract/mailer.js";
 import type { Db } from "../context/app-context.js";
 import type { LocaleRegistry } from "../i18n/locale-registry.js";
 import type { MailCatalogs } from "./catalogs.js";
 import type {
+  AnyMailDefinition,
   MailRecipient,
   MailRenderContext,
   MailSender,
@@ -25,6 +26,61 @@ interface CreateMailSenderInput {
   readonly locale: string;
   readonly siteName: string;
   readonly baseUrl: string;
+  /** Called with each mail the mailer accepted. The dev server records them. */
+  readonly onSent?: (sent: SentMail) => void;
+}
+
+/** A mail `ctx.mail.send` rendered and the mailer accepted. */
+export interface SentMail {
+  readonly name: string;
+  readonly props: unknown;
+  readonly locale: string;
+  readonly message: EmailMessage;
+}
+
+/** Where a site's mails say they come from: its name and public root. */
+export function mailSite(
+  magicLinkSiteName: string | undefined,
+  origin: string,
+  basePath: string,
+): { readonly siteName: string; readonly baseUrl: string } {
+  return {
+    // The magic-link slot names the site; a site without it is named by its
+    // host.
+    siteName: magicLinkSiteName ?? new URL(origin).host,
+    baseUrl: new URL(`${basePath}/`, origin).href,
+  };
+}
+
+interface RenderMailInput {
+  readonly mail: AnyMailDefinition;
+  readonly props: unknown;
+  readonly locale: string;
+  readonly catalogs: MailCatalogs;
+  readonly siteName: string;
+  readonly baseUrl: string;
+}
+
+/** A declared mail rendered in `locale`, with no recipient and no send. */
+export async function renderDeclaredMail(
+  input: RenderMailInput,
+): Promise<Omit<EmailMessage, "to">> {
+  const catalog = await input.catalogs(input.locale);
+  const ctx: MailRenderContext = {
+    locale: input.locale,
+    siteName: input.siteName,
+    baseUrl: input.baseUrl,
+    t: (descriptor, values) => resolveMessage(catalog, descriptor, values),
+  };
+  // Safety: callers pass the props the registry typed for this mail's name,
+  // or the mail's own `preview`, which is what its render functions take.
+  const typed = input.props as never;
+  const { mail } = input;
+  return {
+    subject: mail.subject(typed, ctx),
+    text: mail.text(typed, ctx),
+    html: mail.html?.(typed, ctx),
+  };
 }
 
 export function createMailSender(input: CreateMailSenderInput): MailSender {
@@ -37,23 +93,19 @@ export function createMailSender(input: CreateMailSenderInput): MailSender {
         throw MailError.notDeclared({ mail: name });
       }
       const locale = await recipientLocale(input, options.to);
-      const catalog = await input.catalogs(locale);
-      const ctx: MailRenderContext = {
-        locale,
-        siteName: input.siteName,
-        baseUrl: input.baseUrl,
-        t: (descriptor, values) => resolveMessage(catalog, descriptor, values),
-      };
-      // Safety: `send` types `props` against the registry entry this name
-      // declared, which is what the definition's render functions take.
-      const typed = props as never;
-      const { mail } = declared;
-      await mailer.send({
+      const message: EmailMessage = {
         to: recipientAddress(options.to),
-        subject: mail.subject(typed, ctx),
-        text: mail.text(typed, ctx),
-        html: mail.html?.(typed, ctx),
-      });
+        ...(await renderDeclaredMail({
+          mail: declared.mail,
+          props,
+          locale,
+          catalogs: input.catalogs,
+          siteName: input.siteName,
+          baseUrl: input.baseUrl,
+        })),
+      };
+      await mailer.send(message);
+      input.onSent?.({ name, props, locale, message });
     },
   };
 }
