@@ -168,11 +168,17 @@ The cases that look like a fourth kind each have a tier:
 - **A CLI command** is a unit test of its command function, called in-process with its arguments.
   Running the installed binary in a scaffolded project is smoke.
 - **A build's output.** A unit test may run Vite or esbuild in-process over a fixture it builds from
-  source, and assert on what that build produced. What the workspace's `dist/` or a scaffolded
-  project's production build contains is smoke.
+  source, and assert on what that build produced: a chunk's size, a dev module tree-shaken out. What
+  a scaffolded project's production build contains is smoke.
+- **A published package's surface.** What a package exports and declares is checked by the publish
+  gates (publint, attw and the `tooling/published-surface` roster), not by a test.
+- **A behaviour only a browser has**: the DOMPurify sanitizer, an island's loading strategy,
+  WebAuthn. It is an e2e spec that loads the module in a page of its suite's site and drives it with
+  `page.evaluate`. A matrix of inputs is one test per input, declared in a loop at the top of the
+  spec.
 - **A runtime server's process behaviour.** The request rules (timeouts, body limits, trusted
-  proxies) are unit tests of the handler. That the built server starts on the runtime, answers and
-  exits cleanly on `SIGTERM` is smoke.
+  proxies) are unit tests of the handler. That the built server starts on the runtime with one
+  listener, answers, and exits within its deadline on `SIGTERM` is smoke.
 
 A behaviour is tested once, in the lowest tier that can observe it. A higher tier proves the parts
 connect, not the rules a lower tier already covers. When e2e or smoke finds a bug in logic, the fix
@@ -186,19 +192,24 @@ file moves with the change that next edits it. Review holds every added or edite
 ### Unit
 
 A unit test checks one behaviour of the code's public API (an exported function, a procedure, a
-hook, a route, a plugin descriptor), the way a caller uses it. It sits beside the source it tests.
-A test of a package as a whole, its configuration or its exports, goes in that package's `test/`
-folder, with any fixture files under `test/fixtures/`. It runs in one process with Vitest, on the
-package's own runtime (a runtime adapter's suite runs on that runtime,
-[ADR 0019](docs/adr/0019-a-runtime-adapter-uses-its-runtimes-primitives-and-is-tested-on-that-runtime.md)),
-and it reads source: `pnpm test:unit` needs no build.
+plugin hook, a route, a plugin descriptor), the way a caller uses it. It sits beside the source it
+tests. A test of a package as a whole, its configuration or its exports, goes in that package's
+`test/` folder, with any fixture files under `test/fixtures/`. It runs in one process with Vitest,
+on the package's own runtime wherever Vitest runs on it: Node, and Bun for the Bun adapter
+(`bun --bun`,
+[ADR 0019](docs/adr/0019-a-runtime-adapter-uses-its-runtimes-primitives-and-is-tested-on-that-runtime.md)).
+The Cloudflare adapter's suite runs on Node, and its playground e2e and the smoke prove it on
+workerd. It reads source: `pnpm test:unit` needs no build.
 
 - **It may use** the real collaborators, the in-memory database from the test harness (built from
   the shipped migration histories), a temporary directory it creates and removes, and the fakes in
   the shared test kits.
 - **It stays inside the process.** No browser, no simulated DOM (`jsdom`, `happy-dom`, a
-  `@vitest-environment` docblock), no child process, no network beyond an in-process handler, no
-  `dist/`, no sleeps. The `plumix/test-tier` lint rule reports DOM APIs in a unit test.
+  `@vitest-environment` docblock), no child process, no network beyond a listener on `127.0.0.1`
+  port 0 that the test opens and closes itself (a runtime adapter testing its server primitive),
+  no `dist/`, no sleeps. The `plumix/test-tier` lint rule reports DOM APIs in a unit test.
+- **A React hook keeps its logic in functions it calls**, and the unit test calls those. The hook's
+  wiring to React is covered where a component uses it, in e2e.
 - **A component keeps its logic in functions it calls.** Which state it shows (a validation error,
   an empty list, a control a role may not use) is decided by a function the component calls, and
   the unit test calls that function for each state. The unit test may also render the component
@@ -209,21 +220,15 @@ and it reads source: `pnpm test:unit` needs no build.
   link into the handler in-process.
 
 ```ts
-// packages/core/src/entries/change-feed.test.ts
-test("records a create and an update made through the RPC surface", async () => {
-  const h = await createRpcHarness({ authAs: "author" });
-  const created = await h.client.entry.create({
-    title: "Hello",
-    slug: "hello",
-  });
-  await h.client.entry.update({ id: created.id, title: "Hello again" });
+// packages/core/src/entries/read-service.test.ts; authedCtx and listInput are this file's helpers
+test("clamps a subscriber to published entries by default", async () => {
+  const h = await createRpcHarness({ authAs: "subscriber" });
+  await h.factory.published.create({ authorId: h.user.id, slug: "pub" });
+  await h.factory.draft.create({ authorId: h.user.id, slug: "draft" });
 
-  const changes = await readEntryChanges(h.db, 10);
+  const rows = await listEntries(authedCtx(h), listInput());
 
-  expect(changes.map((change) => [change.entryId, change.kind])).toEqual([
-    [created.id, "upsert"],
-    [created.id, "upsert"],
-  ]);
+  expect(rows.map((r) => r.slug)).toEqual(["pub"]);
 });
 ```
 
@@ -233,13 +238,15 @@ An e2e test drives a running Plumix site in Chromium with Playwright, the way a 
 editor does. Each package with a user-facing surface (the admin, the editor, a plugin, a runtime's
 playground) owns one suite in its `e2e/` folder, against a site on its own ports.
 
-- **It proves a journey or a browser behaviour**: the page renders, the control reacts, the request
-  lands, the result shows. The rules behind it are already unit tests; e2e checks they reach the
-  screen.
-- **It seeds once, in the suite's `globalSetup`**, with the helpers in `plumix/test/playwright`:
-  `openPlaygroundDb` opens the migrated database and `actingAs` creates a user and its session,
-  saved as the `storageState` every page starts with. A spec acts only through the page and asserts
-  only on what the page shows.
+- **It proves a journey, or a behaviour only a browser has**: the page renders, the control
+  reacts, the request lands, the result shows. The rules behind it are already unit tests; e2e
+  checks they reach the screen.
+- **It seeds with the helpers in `plumix/test/playwright`.** The suite's `globalSetup` creates the
+  shared state: `openPlaygroundDb` opens the migrated database and `actingAs` creates a user and
+  its session, saved as the `storageState` every page starts with. A test that needs its own rows
+  writes them at its start with `openPlaygroundDb`, and the `plumixDbBaseline` fixture restores the
+  database between tests. Past seeding, a test acts through the page (navigation, input,
+  `page.evaluate`) and asserts on what the page shows.
 - **It queries by test id only** (`page.getByTestId`, `[data-testid=…]`); the
   `plumix/no-non-testid-queries` lint rule enforces it. Add a `data-testid` to the markup when none
   exists.
@@ -283,8 +290,10 @@ the home page, the admin shell and the session RPC. Before a release, the root `
 publishes the packages to a throwaway registry, scaffolds a Cloudflare project from it and boots
 `plumix dev`.
 
-- **It answers one question per step: did it install, build, start, answer, stop?** A step that
-  asserts feature behaviour belongs in e2e, and a rule belongs in a unit test.
+- **It answers one question per step about the installed project**: did it install, typecheck,
+  build, start, answer and stop, and does it hold what an install must (the staged catalogs,
+  nothing fetched from the registry)? A step that asserts feature behaviour belongs in e2e, and a
+  rule belongs in a unit test.
 - **A new smoke check is a new step in `smoke:scaffold`'s loop**, so every runtime gets it, never
   a new harness or a new job.
 - **It reads only what a consumer gets**: the tarballs and the scaffolded project, never the
@@ -300,8 +309,9 @@ only a boundary Plumix doesn't own, and keep it narrow.
    `@plumix/core/test`), and the fake has tests of its own. A runtime's slots pass the shared
    conformance suites (`plumix/test/conformance`), which is what keeps the fakes honest. Add a new
    fake there, as high up as every caller can use it.
-3. **Stub.** Only a boundary outside Plumix: a third-party HTTP API, the mail transport, the clock,
-   randomness, a platform global (`vi.stubGlobal`). Inject the dependency when the code doesn't
+3. **Stub.** Only a boundary outside Plumix: a third-party HTTP API, the clock, randomness, a
+   platform global (`vi.stubGlobal`). A slot Plumix defines, like the `Mailer`, has a fake
+   (`makeMailer` captures what was sent). Inject the dependency when the code doesn't
    take one yet: add the seam to the source.
 4. **Never mock a module.** `vi.mock` couples a test to where code lives; the
    `plumix/no-module-mocking` lint rule rejects it. Wrap a third-party type behind an interface
@@ -326,8 +336,8 @@ matter.
   [`GLOSSARY.md`](./GLOSSARY.md) (entry, term, principal, segment) the way the code does, and a
   helper reads in those words (`h.factory.draft.create`, `actingAs(db, "admin")`), so a test reads
   like the behaviour it checks.
-- **One act per test.** A second call to the code under test is a second test, or a row of
-  `it.each`.
+- **One act per test.** The act is the one call whose behaviour the test names; arrange may call
+  the public API to reach the starting state. A second act is a second test, or a row of `it.each`.
 - **Arrange, act, assert, in straight-line code.** No branches or loops: a test that branches can
   pass on the branch that checked nothing. Use `it.each` for one case per input. Repeat the values
   that matter in each test rather than hiding them in a helper, and write literals inline; give a
@@ -347,12 +357,18 @@ matter.
   Playwright config), so a slow runner does not block a merge, and a test Playwright reports as
   flaky is fixed in the change that finds it. When its cause lies outside that change, open an
   issue and skip the test with `test.skip` and the issue number in its name; an unexplained skip
-  is not allowed. `test.skipIf` is only for a platform that lacks what the test needs.
+  is not allowed. A skip for a platform that lacks what the test needs (`test.skipIf`, or a
+  conformance case a capability rules out) names that capability.
 - **Fast.** A unit test runs in milliseconds. Vitest's 5s timeout catches hangs, it is not a
   budget: a unit test over one second is profiled before merge
   ([`docs/agents/testing.md`](docs/agents/testing.md#a-slow-test)).
 - **Expected values are written out.** No snapshot or screenshot baselines (`toMatchSnapshot`,
   `toMatchInlineSnapshot`, `toHaveScreenshot`): a reviewer reads the expected value in the test.
+  The docs screenshots are docs assets, regenerated by `pnpm docs:screenshots`; the e2e job's diff
+  of them is a gate that they were regenerated, not a test.
+- **Translated output.** Unit tests resolve compiled catalogs to empty ones, so a test that asserts
+  on translated text hands the committed `.po` in as a catalog
+  ([ADR 0036](docs/adr/0036-a-mail-is-declared-by-name.md)).
 - **A type contract is a unit test.** Assert it with `expectTypeOf` in the module's `*.test.ts`;
   the typecheck gate is what checks it, because the test files are in each package's program.
 - **A performance property is a count**: the queries a call runs, the bytes a chunk ships. Assert
@@ -360,8 +376,8 @@ matter.
   a deployed site, never in CI.
 - **Coverage is tracked, not targeted.** No package sets a threshold. A test exists to check a
   behaviour, never to raise the number.
-- **Seed with the fishery factories**, not raw writes, and reuse the shared helpers
-  (`plumix/test`, `packages/admin/test/`). Put a new test in the suite that already covers the area.
+- **Seed with the fishery factories**, not raw writes, and reuse the shared helpers in
+  `plumix/test` and `@plumix/core/test`. Put a new test in the suite that already covers the area.
 - **Never change a test just to make it pass**: the test may be the only thing that's right. When
   you can't tell which side is wrong, stop and say so.
 
@@ -385,7 +401,7 @@ Review asks of every added or edited test:
 
 - Does it sit in the tier the placement questions pick, and touch only what that tier allows?
 - Would it fail if the behaviour it names broke? Break the rule in your head, or for real.
-- Does its name state the behaviour, and does it make one simple assertion about it?
+- Does its name state the behaviour, and do its assertions check that one behaviour?
 - Is it straight-line, with literal expected values and no logic of its own?
 - Did the change ship its tests with it? A change without its tests is incomplete.
 

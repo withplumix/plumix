@@ -13,11 +13,10 @@ the shared `runtimeSpec`) from `plumix/test/playwright`.
 
 ## Admin test helpers
 
-`packages/admin/test/` has three shared helpers:
-
-- `stubRpc` answers the real oRPC client at the fetch boundary.
-- `seedManifest` writes the manifest payload the admin shell writes.
-- `renderWithRouter` renders with a real memory-history router, so navigation lands on a URL.
+`packages/admin/test/rpc.ts` has `stubRpc`, which answers the real oRPC client at the fetch
+boundary, so admin logic that calls the API is unit-tested in Node. The other files there
+(`renderWithI18n`, `renderWithRouter`, `seedManifest`) render into or write a DOM. Only the files
+on the `plumix/test-tier` pending list use them, and they leave with those files (#3035).
 
 ## A slow test
 
@@ -31,8 +30,8 @@ reaching for an override, because an override often hides the real cause.
   to a static import. That moves the cost into collection, where no per-test timeout applies.
   `cf-access.test.ts` was the only suite importing `plumix/test` with `await import()`. Hoisting it
   took that test's median from 546ms to 54ms and deleted a `{ timeout: 30_000 }` (#2184). Check
-  first, though. Some suites import lazily _because_ load order is what they test. The island
-  runtime suites re-import per test after clearing `window.Plumix`, and hoisting breaks them.
+  first, though. Some suites import lazily _because_ load order is what they test. A suite that
+  re-imports a module per test to reset its state breaks when the import is hoisted.
 - **A hook can pay the cost.** Warm up in `beforeAll`. The budget moves to the hook, each test's 5s
   goes back to catching hangs, and the suite stops depending on which test runs first (#1880).
 - **One slow test among fast ones.** Set a timeout on that test alone, and say in a comment what
