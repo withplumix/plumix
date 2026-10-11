@@ -30,10 +30,11 @@ kept arriving.
   grow it, and CI's Lint job fails when an entry no longer matches its file,
   so each burn-down slice removes its entries in the same change. The pattern
   is the one #2722 used to take `@shadcn/lint` to zero.
-- **The false-positive bar.** A `plumix/*` rule ships only when, once the
-  genuine violations are fixed or baselined, it has zero hits on the tree. The
-  only escapes are the named ones a rule defines (`// Safety:`, `Not JSON:`,
-  `Guarded by:`), never a disable comment.
+- **The false-positive bar.** A `plumix/*` rule ships only when it has zero
+  hits on the tree after the genuine violations are fixed, with only the
+  existing named escape hatches (`// Safety:`, `Not JSON:`). A baseline is a
+  rule's transition aid while its violations are fixed, not a way to meet the
+  bar.
 
 ## Considered options
 

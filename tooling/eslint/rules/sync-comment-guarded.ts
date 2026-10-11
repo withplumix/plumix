@@ -124,11 +124,12 @@ export const syncCommentGuarded: Rule.RuleModule = {
       .join("/");
     const options = context.options[0] as
       { baseline?: readonly BaselineEntry[] } | undefined;
-    const baselined = new Set(
-      (options?.baseline ?? [])
-        .filter((entry) => entry.file === file)
-        .map((entry) => entry.hash),
-    );
+    // Counted, so a verbatim copy of a baselined line is held to the rule.
+    const baselined = new Map<string, number>();
+    for (const entry of options?.baseline ?? []) {
+      if (entry.file !== file) continue;
+      baselined.set(entry.hash, (baselined.get(entry.hash) ?? 0) + 1);
+    }
     const report = (line: number, messageId: string, guard = ""): void => {
       context.report({
         loc: {
@@ -150,7 +151,10 @@ export const syncCommentGuarded: Rule.RuleModule = {
           if (guard === null) {
             const line = lineAt(prose.lines, coupling.index);
             const text = sourceCode.lines[line - 1] ?? "";
-            if (!baselined.has(lineHash(text))) report(line, "unguarded");
+            const hash = lineHash(text);
+            const remaining = baselined.get(hash) ?? 0;
+            if (remaining > 0) baselined.set(hash, remaining - 1);
+            else report(line, "unguarded");
             continue;
           }
           const guardPath = guard[1]?.replace(/^`|[`.,;:)]+$/g, "") ?? "";

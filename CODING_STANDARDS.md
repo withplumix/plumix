@@ -89,9 +89,8 @@ never grows: remove a fixed occurrence's entry with
 `pnpm --filter @plumix/eslint-config sync-baseline`
 ([ADR 0038](docs/adr/0038-a-coupled-invariant-is-collapsed-or-guarded-by-a-test.md)).
 
-A `plumix/*` rule ships only when it has zero hits on the tree once the genuine violations are
-fixed or baselined. Its only escapes are the named ones a rule defines (`// Safety:`,
-`Not JSON:`, `Guarded by:`), never a disable comment.
+A `plumix/*` rule ships only when it has zero hits on the tree after the genuine violations are
+fixed, with only the existing named escape hatches (`// Safety:`, `Not JSON:`).
 
 **In review**, treat every added comment line as a finding until it passes these rules. Name the
 refactor that would make it unnecessary, or say which rule it breaks. Lint can't tell a why from a

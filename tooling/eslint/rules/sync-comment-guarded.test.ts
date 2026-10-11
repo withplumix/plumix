@@ -72,6 +72,18 @@ new RuleTester().run("plumix/sync-comment-guarded", syncCommentGuarded, {
       errors: [{ messageId: "unguarded", line: 1 }],
     },
     {
+      code: "// Mirrors the server's list.\nconst a = 1;\n\n// Mirrors the server's list.\nconst b = 2;",
+      filename,
+      options: [
+        {
+          baseline: [
+            { file: "tooling/eslint/rules/example.ts", hash: MIRRORS_HASH },
+          ],
+        },
+      ],
+      errors: [{ messageId: "unguarded", line: 4 }],
+    },
+    {
       code: "// Mirrors the server's list.\n// Guarded by: tooling/eslint/test/no-such.test.ts\nconst a = 1;",
       filename,
       errors: [{ messageId: "guardMissing", line: 2 }],
