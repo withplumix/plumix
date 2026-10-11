@@ -24,8 +24,9 @@ export const SITE_SCHEMA_OUT = ".plumix/site-schema.ts";
 function trackingSuffix(packageName: string): string {
   return packageName
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+    .join("_");
 }
 
 export function nearestPackageRoot(file: string): string | null {
