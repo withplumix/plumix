@@ -1,20 +1,4 @@
-# Configuration for lychee (link checker). Read automatically by both the
-# per-PR offline check and the weekly external check in .github/workflows.
-#
-# See "Link validation" in CONTRIBUTING.md.
+# Read by the `Links` CI job. See "Link validation" in CONTRIBUTING.md.
 
-# Example / local-only hosts that appear in docs snippets — not real links.
-exclude = [
-  "^https?://localhost",
-  "^https?://127\\.0\\.0\\.1",
-  "example\\.com",
-  "example\\.org",
-  "api\\.resend\\.com",
-]
-
-# A regex, not a glob — the value reads like a path and is easy to "fix" wrongly.
-#
-# Fixtures for the docs content checks are inputs to a test, not prose — a
-# roster-drift fixture is free to carry a deliberately broken link, and that must
-# not read as a repo-wide link failure. True of both jobs, so it lives here.
+# A regex, not a glob. Docs test fixtures may carry deliberately broken links.
 exclude_path = ["(^|/)apps/docs/test/fixtures/"]
