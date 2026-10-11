@@ -163,23 +163,44 @@ export async function run(argv: readonly string[]): Promise<void> {
     throw PlumixCliError.unknownCommand({ command: args.command });
   }
 
+  await runCommand(args.command, command, {
+    cwd: args.cwd,
+    argv: args.rest,
+    loaded,
+    runtimeMigrations: runtimeModule.migrations,
+  });
+}
+
+interface RunCommandInput {
+  readonly cwd: string;
+  readonly argv: readonly string[];
+  readonly loaded: LoadedConfig;
+  readonly runtimeMigrations: RuntimeMigrations | undefined;
+}
+
+/** Runs a resolved command; `dev` migrates the local database first. */
+export async function runCommand(
+  name: string,
+  command: CommandDefinition<PlumixApp>,
+  { cwd, argv, loaded, runtimeMigrations }: RunCommandInput,
+): Promise<void> {
   // Before the command opens anything: on Cloudflare the dev server reads the
   // same local state the migration proxy holds until it closes.
-  if (args.command === "dev") {
+  if (name === "dev") {
     await migrateForDev({
-      cwd: args.cwd,
+      cwd,
       configPath: loaded.configPath,
       config: loaded.config,
-      runtimeMigrations: runtimeModule.migrations,
+      runtimeMigrations,
     });
   }
-  const app = await resolveCommandApp(command, loaded.config, args.command);
+  const app = await resolveCommandApp(command, loaded.config, name);
   await command.run({
     app,
-    cwd: args.cwd,
+    cwd,
     configPath: loaded.configPath,
-    argv: args.rest,
-    runtimeMigrations: runtimeModule.migrations,
+    argv,
+    runtimeMigrations,
   });
 }
 

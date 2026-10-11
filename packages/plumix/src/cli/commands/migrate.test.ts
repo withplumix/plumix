@@ -581,6 +581,32 @@ describe("applying owner histories", () => {
       ]);
     });
 
+    test("plumix migrate writes no schema module for the check", async () => {
+      siteWithHistory();
+      drizzleKitWrites(NEXT);
+
+      await expect(
+        migrateCommand.run(applyCtx([], [LOCAL])),
+      ).rejects.toMatchObject({ code: "migrate_site_drifted" });
+
+      expect(existsSync(join(dir, ".plumix"))).toBe(false);
+    });
+
+    test("plumix migrate leaves a schema module generate wrote as it was", async () => {
+      siteWithHistory();
+      mkdirSync(join(dir, ".plumix"));
+      writeFileSync(join(dir, ".plumix/site-schema.ts"), "// earlier\n");
+      drizzleKitWrites(NEXT);
+
+      await expect(
+        migrateCommand.run(applyCtx([], [LOCAL])),
+      ).rejects.toMatchObject({ code: "migrate_site_drifted" });
+
+      expect(readFileSync(join(dir, ".plumix/site-schema.ts"), "utf8")).toBe(
+        "// earlier\n",
+      );
+    });
+
     test("plumix migrate fresh fails before it deletes the local state", async () => {
       siteWithHistory();
       writeFileSync(join(dir, "site.sqlite"), "");
@@ -783,6 +809,24 @@ describe("applying owner histories", () => {
         hint: expect.stringContaining("interactive terminal") as unknown,
       });
       expect(opened).toEqual([]);
+    });
+
+    test("leaves migrations/ untouched when drizzle-kit fails after writing", async () => {
+      siteWithHistory();
+      drizzleKitWrites(NEXT).mockImplementation((_command, args, options) => {
+        const out = resolve(options.cwd, args[args.indexOf("--out") + 1] ?? "");
+        writeFileSync(join(out, "0001_half.sql"), "ALTER TABLE");
+        return Promise.resolve("Error: Interactive prompts require a TTY\n");
+      });
+
+      await expect(migrateForDev(devTarget([LOCAL]))).rejects.toMatchObject({
+        code: "migrate_generate_failed",
+      });
+
+      expect(readdirSync(join(dir, "migrations")).sort()).toEqual([
+        "0000_widgets.sql",
+        "meta",
+      ]);
     });
 
     test("adopts a database built from a legacy site history", async () => {

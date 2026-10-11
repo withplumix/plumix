@@ -278,16 +278,51 @@ async function generateSiteMigrations(
 async function checkSiteDrift(target: MigrationTarget): Promise<void> {
   const modules = siteSchemaModules(target);
   if (modules.length === 0) return;
-  const scratch = mkdtempSync(join(tmpdir(), "plumix-drift-"));
+  const restoreSiteSchema = snapshotSiteSchema(target.cwd);
+  try {
+    const files = await generateInCopy(target, modules, () => undefined);
+    if (files.length > 0) throw PlumixCliError.migrateSiteDrifted({ files });
+  } finally {
+    restoreSiteSchema();
+  }
+}
+
+/**
+ * Generates into a scratch copy of the site's history, so a generate that
+ * fails partway leaves the real one untouched. `keep` runs only on success.
+ */
+async function generateInCopy(
+  target: MigrationTarget,
+  modules: readonly string[],
+  keep: (copy: string) => void,
+): Promise<readonly string[]> {
+  const scratch = mkdtempSync(join(tmpdir(), "plumix-generate-"));
   try {
     const history = siteMigrationsDir(target);
     const copy = join(scratch, "migrations");
     if (existsSync(history)) cpSync(history, copy, { recursive: true });
     const files = await generateSiteMigrations(target, modules, copy);
-    if (files.length > 0) throw PlumixCliError.migrateSiteDrifted({ files });
+    keep(copy);
+    return files;
   } finally {
     rmSync(scratch, { recursive: true, force: true });
   }
+}
+
+/** Returns what puts `.plumix/site-schema.ts` back as it is now. */
+function snapshotSiteSchema(cwd: string): () => void {
+  const file = resolve(cwd, SITE_SCHEMA_OUT);
+  const dir = dirname(file);
+  const dirExisted = existsSync(dir);
+  const previous = existsSync(file) ? readFileSync(file, "utf8") : null;
+  return () => {
+    if (!dirExisted) {
+      rmSync(dir, { recursive: true, force: true });
+      return;
+    }
+    if (previous === null) rmSync(file, { force: true });
+    else writeFileSync(file, previous, "utf8");
+  };
 }
 
 /**
@@ -313,7 +348,9 @@ export async function migrateForDev(target: MigrationTarget): Promise<void> {
   const modules = siteSchemaModules(target);
   if (modules.length > 0) {
     const history = siteMigrationsDir(target);
-    const files = await generateSiteMigrations(target, modules, history);
+    const files = await generateInCopy(target, modules, (copy) => {
+      cpSync(copy, history, { recursive: true });
+    });
     if (files.length > 0) {
       const written = files
         .map((file) => relative(target.cwd, join(history, file)))
