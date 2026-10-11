@@ -143,11 +143,11 @@ one CI job ([ADR 0042](docs/adr/0042-tests-come-in-three-tiers.md)). Typecheck, 
 publint, attw, `i18n:check`, `migrations:check` and the link check are **gates**, not tiers: they
 check code without running it, and a new check of that kind joins an existing gate.
 
-| Tier  | Proves                                               | Lives in                              | Runs with        | CI job             |
-| ----- | ---------------------------------------------------- | ------------------------------------- | ---------------- | ------------------ |
-| Unit  | the logic behind a behaviour, through its public API | `src/foo.test.ts` beside `src/foo.ts` | `pnpm test:unit` | `Test`             |
-| E2E   | what a consumer sees and does on a running site      | the package's `e2e/*.spec.ts`         | `pnpm test:e2e`  | `Test (e2e)`       |
-| Smoke | a project scaffolded from the packed tarballs works  | `create-plumix-app/scripts/smoke.mjs` | `smoke:scaffold` | `Smoke (scaffold)` |
+| Tier  | Proves                                               | Lives in                                       | Runs with                                        | CI job             |
+| ----- | ---------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------ | ------------------ |
+| Unit  | the logic behind a behaviour, through its public API | `src/foo.test.ts` beside `src/foo.ts`          | `pnpm test:unit`                                 | `Test`             |
+| E2E   | what a consumer sees and does on a running site      | the package's `e2e/*.spec.ts`                  | `pnpm test:e2e`                                  | `Test (e2e)`       |
+| Smoke | a project scaffolded from the packed tarballs works  | `packages/create-plumix-app/scripts/smoke.mjs` | `pnpm --filter create-plumix-app smoke:scaffold` | `Smoke (scaffold)` |
 
 ### Where a test goes
 
@@ -163,6 +163,17 @@ Ask in order, and stop at the first yes:
 3. **Does it need what a consumer installs: the packed tarballs, a real package manager, the real
    runtime binary serving a built project?** It's a smoke step.
 
+The cases that look like a fourth kind each have a tier:
+
+- **A CLI command** is a unit test of its command function, called in-process with its arguments.
+  Running the installed binary in a scaffolded project is smoke.
+- **A build's output.** A unit test may run Vite or esbuild in-process over a fixture it builds from
+  source, and assert on what that build produced. What the workspace's `dist/` or a scaffolded
+  project's production build contains is smoke.
+- **A runtime server's process behaviour.** The request rules (timeouts, body limits, trusted
+  proxies) are unit tests of the handler. That the built server starts on the runtime, answers and
+  exits cleanly on `SIGTERM` is smoke.
+
 A behaviour is tested once, in the lowest tier that can observe it. A higher tier proves the parts
 connect, not the rules a lower tier already covers. When e2e or smoke finds a bug in logic, the fix
 starts with a unit test that reproduces it.
@@ -174,8 +185,10 @@ it.
 ### Unit
 
 A unit test checks one behaviour of the code's public API (an exported function, a procedure, a
-hook, a route, a plugin descriptor), the way a caller uses it. It runs in one process with Vitest,
-on the package's own runtime (a runtime adapter's suite runs on that runtime,
+hook, a route, a plugin descriptor), the way a caller uses it. It sits beside the source it tests.
+A test of a package as a whole, its configuration or its exports, goes in that package's `test/`
+folder, with any fixture files under `test/fixtures/`. It runs in one process with Vitest, on the
+package's own runtime (a runtime adapter's suite runs on that runtime,
 [ADR 0019](docs/adr/0019-a-runtime-adapter-uses-its-runtimes-primitives-and-is-tested-on-that-runtime.md)),
 and it reads source: `pnpm test:unit` needs no build.
 
@@ -223,8 +236,10 @@ playground) owns one suite in its `e2e/` folder, against a site on its own ports
   listener's mount. Use Playwright's auto-waiting assertions; a `waitForTimeout` is a bug.
 
 ```ts
-// packages/plugins/media/e2e/media.spec.ts (abridged)
-test("an uploaded image shows up in the library", async ({ page }) => {
+// packages/plugins/media/e2e/media.spec.ts, the upload steps of this test
+test("empty state → upload → card visible → delete → empty again", async ({
+  page,
+}) => {
   await page.goto("pages/media");
   await expect(page.getByTestId("media-library-dropzone")).toBeVisible();
 
@@ -252,13 +267,14 @@ test("an uploaded image shows up in the library", async ({ page }) => {
 A smoke step checks that what a consumer installs works at all. `smoke:scaffold` packs every
 publishable package, scaffolds a project for each runtime the registry lists, installs it with that
 runtime's package manager, then typechecks, builds, applies migrations and starts it, and requests
-the home page, the admin shell and the session RPC. The root `pnpm smoke` does the same through a
-throwaway registry before a release.
+the home page, the admin shell and the session RPC. Before a release, the root `pnpm smoke`
+publishes the packages to a throwaway registry, scaffolds a Cloudflare project from it and boots
+`plumix dev`.
 
-- **It answers one question per step: did it install, build, start, answer?** A step that asserts
+- **It answers one question per step: did it install, build, start, answer, stop?** A step that asserts
   feature behaviour belongs in e2e, and a rule belongs in a unit test.
-- **A new smoke check is a new step in that loop**, so every runtime gets it. It never starts a
-  second harness or a new job.
+- **A new smoke check is a new step in `smoke:scaffold`'s loop**, so every runtime gets it, never
+  a new harness or a new job.
 - **It reads only what a consumer gets**: the tarballs and the scaffolded project, never the
   workspace's source.
 
@@ -314,8 +330,6 @@ Every change is test-first, one cycle at a time:
 4. **Refactor** only on green, as its own step, with the tests unchanged.
 5. **Repeat** from the list. Add to the list what each cycle teaches; never write all the tests
    first.
-
-Report what you ran: the command, and the files or package it covered.
 
 ### Timeouts
 

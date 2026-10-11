@@ -26,33 +26,21 @@ the reasons.
 
 ## What this means
 
-- **Unit is in-process and reads source.** Vitest, `src/foo.test.ts` beside
-  `src/foo.ts`, `pnpm test:unit`, CI job `Test`. No browser, no simulated DOM,
-  no child process, no network, no `dist/`, no sleeps. Real collaborators, the
-  in-memory database built from the shipped migrations, a temporary directory,
-  and fakes from the owning package. This is Google's small test (in one
-  process, no blocking I/O) and Fowler's sociable unit test.
-- **E2E is the only place a browser runs.** Playwright under a package's
-  `e2e/`, `pnpm test:e2e`, CI job `Test (e2e)`. What a rendered page does when a
-  user acts on it is tested here, against a running site.
-- **Smoke is what a consumer installs.** `smoke:scaffold` scaffolds every
-  runtime from packed tarballs, installs, typechecks, builds, migrates, starts
-  and requests each one; `pnpm smoke` repeats it through a throwaway registry
-  before a release. A new smoke check is a step in that loop, so every runtime
-  gets it. It asserts that the project works, not how a feature behaves.
-- **Gates are not tiers.** Typecheck, lint, format, knip, publint, attw,
-  `i18n:check`, `migrations:check` and the link check examine code without
-  running it. A new check of that kind joins one of them.
-- **Doubles follow the owner.** Real implementation first, then a fake the
-  owning package ships in its test kit and tests, then a stub only at a boundary
-  Plumix does not own (third-party HTTP, the mail transport, the clock,
-  randomness, a platform global). Module mocking stays banned
-  (`plumix/no-module-mocking`). The conformance suites are how a runtime's
-  slots, and the fakes standing in for them, stay faithful.
-- **Runtime adapters keep ADR 0019's rule** that runtime-touching code is tested
-  on its runtime: an adapter's unit suite runs on that runtime and passes the
-  conformance suites, its playground runs the shared runtime e2e spec, and the
-  smoke starts its built server.
+- **Unit is Google's small test and Fowler's sociable unit test**: one process,
+  no blocking I/O, real collaborators. A Plumix rule is mostly logic over data,
+  so the in-memory database and the owning package's fakes reach almost every
+  behaviour from Node, fast and without a build.
+- **E2E is the only place a browser runs**, because a real page is the only
+  thing faithful to a browser. A rendered component is tested where a user meets
+  it, and its logic is tested where it lives.
+- **Smoke is what a consumer installs.** Packed tarballs, the runtime's package
+  manager and the runtime's own binary are what no other tier sees, so smoke
+  checks those and nothing about features.
+- **Gates are not tiers.** A check that examines code without running it joins
+  an existing gate, so a new kind of check never becomes a new kind of test.
+- **ADR 0019's runtime rule holds in all three tiers**: an adapter's unit suite
+  runs on its runtime and passes the conformance suites, its playground runs the
+  shared runtime e2e spec, and smoke starts its built server.
 
 ## Considered options
 
@@ -80,9 +68,10 @@ the reasons.
 
 - Supersedes ADR 0021 in full: the Chromium tier, the separate
   `*.build.test.ts` run and the `browser` build of `plumix/test` are retired.
-- Supersedes the "How a runtime is tested" section of ADR 0019 where it names a
-  build-lane suite that spawns the built server: those process facts are smoke
-  steps. Its other three layers stand.
+- Supersedes layer 2 of ADR 0019's "How a runtime is tested", the build-lane
+  suite that spawns the built server: its request rules (timeouts, body limits,
+  trust) are unit tests of the handler, and starting, answering and exiting on
+  `SIGTERM` are smoke steps. Its other three layers stand.
 - The 113 `*.browser.test.*` files move to unit or e2e (#3035), and the 18
   `*.build.test.ts` suites move to unit or smoke (#3036).
 - The `plumix/test-tier` lint rule points a DOM-touching unit test at a
@@ -90,15 +79,26 @@ the reasons.
 
 ## Sources
 
-- Google, _Software Engineering at Google_, ch. 11–14 (test size and scope,
-  unit testing, test doubles, larger testing).
-- Martin Fowler and Ham Vocke, "The Practical Test Pyramid"; Fowler,
-  "UnitTest", "Mocks Aren't Stubs", "TestDouble", "ContractTest",
-  "Eradicating Non-Determinism in Tests".
-- Kent Beck, "Canon TDD" and "Test Desiderata".
+- Google, [_Software Engineering at Google_](https://abseil.io/resources/swe-book),
+  ch. 11–14: test size and scope, unit testing, test doubles, larger testing.
+- Ham Vocke, ["The Practical Test Pyramid"](https://martinfowler.com/articles/practical-test-pyramid.html);
+  Martin Fowler, ["UnitTest"](https://martinfowler.com/bliki/UnitTest.html),
+  ["Mocks Aren't Stubs"](https://martinfowler.com/articles/mocksArentStubs.html),
+  ["TestDouble"](https://martinfowler.com/bliki/TestDouble.html),
+  ["ContractTest"](https://martinfowler.com/bliki/ContractTest.html),
+  ["Eradicating Non-Determinism in Tests"](https://martinfowler.com/articles/nonDeterminism.html).
+- Kent Beck, ["Canon TDD"](https://newsletter.kentbeck.com/p/canon-tdd) and
+  ["Test Desiderata"](https://testdesiderata.com/).
 - Gerard Meszaros, _xUnit Test Patterns_; Vladimir Khorikov, _Unit Testing
-  Principles, Practices, and Patterns_; Freeman and Pryce, _Growing
-  Object-Oriented Software, Guided by Tests_.
-- The test guidance in the repositories of Vite, Vitest, Astro, Nuxt, Next.js,
-  SvelteKit, React Router, Hono, Nitro, TanStack Router, Prisma, VS Code and
-  Payload.
+  Principles, Practices, and Patterns_ and
+  ["When to mock"](https://enterprisecraftsmanship.com/posts/when-to-mock/);
+  Freeman and Pryce, _Growing Object-Oriented Software, Guided by Tests_.
+- Where other frameworks put the same tests, from each repository's scripts and
+  CI: Vite's playground `test-build` mode (`vitejs/vite` `.github/workflows/ci.yml`),
+  Astro's `fixture.build()` tests (`withastro/astro` `packages/astro/test/`),
+  Nuxt's `test/bundle.test.ts`, Nitro's `test/minimal` and `test/presets`,
+  SvelteKit's `test:dev`/`test:build` apps, Next.js's `test/production` and
+  [testing guide](https://github.com/vercel/next.js/blob/canary/contributing/core/testing.md),
+  React Router's `integration/vite-build-test.ts`, Hono's per-runtime jobs, and
+  the `create-*` tests of Vite, Astro, Nuxt and React Router, which stub the
+  install.

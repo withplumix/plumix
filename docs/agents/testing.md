@@ -38,10 +38,12 @@ reaching for an override, because an override often hides the real cause.
 - **One slow test among fast ones.** Set a timeout on that test alone, and say in a comment what
   makes it slow (#1522).
 
-Judge an override against the whole suite's timings, not its single slowest test. When many tests
-peak near the limit, a timeout on the worst one only makes the next one the worst: find what they
-share instead. Timings move with the machine and the environment, so measure again before keeping
-an override.
+Judge an override against the whole suite's timings, not its single slowest test. `@plumix/admin-editor`
+once kept a package-wide `testTimeout: 15_000`: twenty-two of its tests peaked above 1000ms, and its
+worst three (2386ms, 1591ms, 1509ms) came within 2.1 to 3.3 times the 5s default (#2184). In a band
+that dense, a timeout on the worst test only makes the next one the worst: find what they share
+instead. Timings move with the machine and the environment, so measure again before keeping an
+override.
 
 ## Coverage
 
