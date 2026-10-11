@@ -61,7 +61,7 @@ This is the path from a scaffolded recipe site to a live one. It assumes a site 
   The scaffolded `plumix.config.ts` spreads `cloudflareDeployOrigin`, and that
   helper reads the build environment only Cloudflare Workers Builds sets. The
   quickstart below runs `plumix build` on your own machine, which sets none of
-  it, so the helper returns `rpId: "localhost"` and the passkey in step 7 cannot
+  it, so the helper returns `rpId: "localhost"` and the passkey in step 6 cannot
   verify against the deployed host. Write `rpId` and `origin` yourself, as step
   1 does, or deploy from git and keep the spread. [Cloudflare
   Workers](/deployment/cloudflare/) has both blocks.
@@ -69,7 +69,7 @@ This is the path from a scaffolded recipe site to a live one. It assumes a site 
 
 <Steps>
 
-1. **Point the passkey at the deployed host.** The scaffolded `plumix.config.ts` spreads `cloudflareDeployOrigin` into `auth.passkey`, and that spread resolves a real host only on a Workers Builds build. For the local build in step 4, replace it with a literal `rpId` of `your-account.workers.dev`, an `origin` of `https://recipes.your-account.workers.dev` and `allowedOrigins: ["https://*.your-account.workers.dev"]`, keeping the localhost pair behind `process.env.PLUMIX_DEV`. That one wildcard covers production and every preview branch. [Cloudflare Workers](/deployment/cloudflare/) has the block.
+1. **Point the passkey at the deployed host.** The scaffolded `plumix.config.ts` spreads `cloudflareDeployOrigin` into `auth.passkey`, and that spread resolves a real host only on a Workers Builds build. For the local build in step 3, replace it with a literal `rpId` of `your-account.workers.dev`, an `origin` of `https://recipes.your-account.workers.dev` and `allowedOrigins: ["https://*.your-account.workers.dev"]`, keeping the localhost pair behind `process.env.PLUMIX_DEV`. That one wildcard covers production and every preview branch. [Cloudflare Workers](/deployment/cloudflare/) has the block.
 
 2. **Create the database.** The scaffolded `wrangler.jsonc` ships a placeholder `database_id` that works only for local dev.
 
@@ -79,15 +79,7 @@ This is the path from a scaffolded recipe site to a live one. It assumes a site 
 
    Paste the returned id into the `d1_databases` entry in `wrangler.jsonc`. Both this edit and step 1 have to land before the build, because the build copies `wrangler.jsonc` into the bundle directory and bundles the config module into the worker entry.
 
-3. **Apply the migrations to the remote database.**
-
-   ```sh
-   plumix migrate --remote
-   ```
-
-   Core and every plugin that owns tables ship their own migration history, and this applies each one's pending migrations to the D1 database `wrangler.jsonc` names, through wrangler's remote bindings. It needs `wrangler login` or an API token, as wrangler does. Without `--remote` the same command applies to your local D1 copy.
-
-4. **Build the site.**
+3. **Build the site.**
 
    ```sh
    plumix build
@@ -95,15 +87,15 @@ This is the path from a scaffolded recipe site to a live one. It assumes a site 
 
    The build fails here rather than in production if a plugin registration or a config slot is wrong, because it constructs the whole app before Vite starts.
 
-5. **Deploy.**
+4. **Deploy.**
 
    ```sh
    plumix deploy
    ```
 
-   This is `wrangler deploy` with your arguments appended.
+   Core and every plugin that owns tables ship their own migration history. `plumix deploy` applies each one's pending migrations, and the site's own, to the D1 database `wrangler.jsonc` names, through wrangler's remote bindings, so it needs `wrangler login` or an API token, as wrangler does. Then it runs `wrangler deploy` with your arguments appended. When a migration fails, or the site's own tables are ahead of its `migrations/`, it stops before `wrangler deploy` runs.
 
-6. **Set the secrets your resolvers read.** One command per key.
+5. **Set the secrets your resolvers read.** One command per key.
 
    ```sh
    wrangler secret put RESEND_API_KEY
@@ -111,7 +103,7 @@ This is the path from a scaffolded recipe site to a live one. It assumes a site 
 
    You can run this before the first deploy too. Point `wrangler secret put` at a Worker that does not exist yet and it asks whether to create one. That prompt defaults to yes and answers itself yes in a non-interactive shell, uploads a stub Worker under the name, then stores the secret on it. Name the key under `secrets.required` in `wrangler.jsonc` and the deploy refuses until the value is set, telling you to ship it with `wrangler deploy --secrets-file <path>`.
 
-7. **Enrol the first passkey.** Open `/_plumix/admin` on the deployed origin. The first admin has to arrive through the passkey bootstrap rail, so do this before inviting anyone.
+6. **Enrol the first passkey.** Open `/_plumix/admin` on the deployed origin. The first admin has to arrive through the passkey bootstrap rail, so do this before inviting anyone.
 
 </Steps>
 
@@ -143,7 +135,7 @@ That split is why the secret-bearing slots take a resolver. `mailer`, an OAuth p
 
 Core and every plugin that ships its own tables carry their own migration history, so a site does not generate migrations to set up its database. Registering an entry type adds no table, so most content modelling needs no migration at all. A plugin that ships its own tables does.
 
-After adding such a plugin, or upgrading Plumix or a plugin, run `plumix migrate --remote` before the deploy that needs it. The command reads the D1 binding out of your wrangler config, so pass `--binding <name>` only when the config declares more than one D1 database. [CLI Reference](/deployment/cli/#migrate) covers each owner's tracking table and how a database set up by an earlier release is adopted.
+No migration command is part of a deploy. `plumix dev` applies every pending migration to your local database before it serves, and writes the next migration of the site's own tables when they changed, for you to commit. `plumix deploy` applies the pending ones to the remote D1 binding your `d1()` slot names before it runs `wrangler deploy`. On Node and Bun the built server applies them when it starts. [CLI Reference](/deployment/cli/#migrate) covers each owner's tracking table, the check that the site's own history is up to date, and how a database set up by an earlier release is adopted.
 
 ## Scheduled tasks
 

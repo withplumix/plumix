@@ -84,31 +84,25 @@ This is the path from a scaffolded site to a running process. It assumes a site 
    });
    ```
 
-2. **Create the database.** Core and every plugin that owns tables ship their own migrations, and this applies each one's to the file `nodeSqlite` names, relative to the project root.
-
-   ```sh
-   plumix migrate
-   ```
-
-3. **Develop.** One Vite server, with the site behind Vite's own middlewares: module serving, hot module replacement and the admin shell answer first, and everything else reaches the app through the same `node:http` bridge the built server uses. An edit to the config, the theme or a plugin is served on the next request, and a failing boot renders the dev error page instead of stopping the process. A `.env` in the project root is applied to the process environment, with a variable the shell already set winning, and re-applied when it changes. The built server loads the same file from the directory it starts in, with the same rule: the environment wins, and a missing file is not an error. The server answers loopback hosts only; set `PLUMIX_DEV_ALLOW_REMOTE=1` to review from another device, and add a named host to Vite's `server.allowedHosts` if you tunnel.
+2. **Develop.** Before it serves, `plumix dev` applies every pending migration to the file `nodeSqlite` names, relative to the project root: core and every plugin that owns tables ship their own. One Vite server, with the site behind Vite's own middlewares: module serving, hot module replacement and the admin shell answer first, and everything else reaches the app through the same `node:http` bridge the built server uses. An edit to the config, the theme or a plugin is served on the next request, and a failing boot renders the dev error page instead of stopping the process. A `.env` in the project root is applied to the process environment, with a variable the shell already set winning, and re-applied when it changes. The built server loads the same file from the directory it starts in, with the same rule: the environment wins, and a missing file is not an error. The server answers loopback hosts only; set `PLUMIX_DEV_ALLOW_REMOTE=1` to review from another device, and add a named host to Vite's `server.allowedHosts` if you tunnel.
 
    ```sh
    plumix dev --port 3000
    ```
 
-4. **Build.** The build writes `dist/client` for the browser and `dist/server/worker.js` to run. Everything the server needs is inlined into that one file, except native packages, which it imports at runtime. The build keeps `sharp`, `better-sqlite3` and the libsql client family external without you listing them. Name any other package the bundle must import rather than inline in `node({ build: { external: [...] } })`. After you change that list, restart the dev server.
+3. **Build.** The build writes `dist/client` for the browser and `dist/server/worker.js` to run. Everything the server needs is inlined into that one file, except native packages, which it imports at runtime. Every table owner's migration history lands beside it, in `dist/server/migrations/`. The build keeps `sharp`, `better-sqlite3` and the libsql client family external without you listing them. Name any other package the bundle must import rather than inline in `node({ build: { external: [...] } })`. After you change that list, restart the dev server.
 
    ```sh
    plumix build
    ```
 
-5. **Run.** The process listens on `PORT` and `HOST`, defaulting to `3000` and `0.0.0.0`.
+4. **Run.** The process applies every pending migration in `dist/server/migrations/` to its database, then listens on `PORT` and `HOST`, defaulting to `3000` and `0.0.0.0`. If a migration fails, it exits `1` without listening.
 
    ```sh
    PORT=3000 node dist/server/worker.js
    ```
 
-6. **Point the passkey at the deployed host.** Before the first sign-in on a real host, set `rpId` to that host and `origin` to its `https://` address, rebuild, and restart.
+5. **Point the passkey at the deployed host.** Before the first sign-in on a real host, set `rpId` to that host and `origin` to its `https://` address, rebuild, and restart.
 
 </Steps>
 
@@ -138,7 +132,7 @@ With it on, the forwarded scheme, host and rightmost client address are believed
 
 `nodeSqlite({ path })` opens the file for concurrent readers, which is what lets a backup, a test or a second process read it while the server writes. It creates any missing parent directories and opens the connection with WAL journaling, a five-second busy timeout, `synchronous = NORMAL` and foreign keys on.
 
-A relative `path` resolves against the process's working directory, while `plumix migrate` resolves it against the project root. Start the server from the project root, or the process opens a different, empty file from the one the migrations went into. Two things to know before you move a file around. It does not move to Cloudflare: D1 is a database of its own, so a site moving there runs `plumix migrate --remote` against a new D1 database. And for a remote or shared database, `plumix/db/libsql` stays selectable: point it at Turso or a libsql server and leave `nodeSqlite` out.
+A relative `path` resolves against the process's working directory, and the server applies its migrations to that same file. `plumix migrate` and `plumix dev` resolve it against the project root, so start the server from the project root to serve the file you developed against. Two things to know before you move a file around. It does not move to Cloudflare: D1 is a database of its own, so a site moving there runs `plumix migrate --remote` against a new D1 database. And for a remote or shared database, `plumix/db/libsql` stays selectable: point it at Turso or a libsql server and leave `nodeSqlite` out. The server applies migrations to a `nodeSqlite` file only, so a libsql database takes its migrations from its own tooling.
 
 ## Storage
 
@@ -200,16 +194,9 @@ An Astro Node build is stateless — the image is the artefact, and a redeploy l
 
 Mount a volume over `data/` and the database and uploads survive a redeploy. The image cache is different: losing it costs a cold cache, not data, [as above](#images) — worth mounting too if the first view of every page after a deploy shouldn't pay for a fresh render, but not required the way `data/` is.
 
-### Migrate before the server starts
+### Migrations run where the volume is
 
-`plumix migrate` needs the volume, which the build step does not have — a builder container has no mount, and a schema baked into the image can't apply to whatever the volume already holds. Run it from the entrypoint, ahead of the server, using `exec` so the server process itself receives `SIGTERM` rather than a wrapping shell. As `docker-entrypoint.sh`:
-
-```sh
-#!/bin/sh
-set -e
-plumix migrate
-exec node dist/server/worker.js
-```
+The built server applies its pending migrations to the database on the volume each time it starts, before it listens, so the image needs no migration step and no entrypoint script. A start against an up-to-date database applies nothing.
 
 ### Environment and shutdown
 
@@ -239,12 +226,10 @@ ENV NODE_ENV=production
 COPY package.json pnpm-lock.yaml ./
 RUN corepack enable && pnpm install --frozen-lockfile --prod
 COPY --from=build /app/dist ./dist
-COPY docker-entrypoint.sh ./
-RUN chmod +x docker-entrypoint.sh
 
 VOLUME /app/data
 EXPOSE 3000
-ENTRYPOINT ["./docker-entrypoint.sh"]
+CMD ["node", "dist/server/worker.js"]
 ```
 
 `COPY package.json pnpm-lock.yaml ./` before `COPY . .` means an edit to source alone reuses the installed layer; a lockfile change is the only thing that busts it. Secrets are absent from both stages — they arrive with `docker run --env-file` or whatever the platform's equivalent is, never as a build argument. List `.env` in `.dockerignore` so `COPY . .` cannot carry a local one into the image: the built server would load it.
@@ -253,7 +238,7 @@ ENTRYPOINT ["./docker-entrypoint.sh"]
 
 The generated entry holds only imports and one call. The package exports every layer it stacks, for a host that assembles its own server.
 
-- `createNodeSite({ config, assetManifest, pluginCatalogs, entryUrl })` is what the entry calls, and `pluginCatalogs` is optional. It returns `handler`, `listener`, `dispose`, `startCron(overrides)` and `serveWhenMain(main)`. `handler` is the `{ fetch, scheduled }` pair, and `scheduled` answers with the run's report. `startCron` hands back a handle whose `stop({ timeoutMs })` waits at most that long for the firing in flight and resolves `false` if it was still running. `serveWhenMain` runs the site as a process with the `http` server, cron and the shutdown protocol. It skips cron when the config sets `cron: false`, and does nothing when `main` is false.
+- `createNodeSite({ config, assetManifest, pluginCatalogs, entryUrl })` is what the entry calls, and `pluginCatalogs` is optional. It returns `handler`, `listener`, `dispose`, `startCron(overrides)` and `serveWhenMain(main)`. `handler` is the `{ fetch, scheduled }` pair, and `scheduled` answers with the run's report. `startCron` hands back a handle whose `stop({ timeoutMs })` waits at most that long for the firing in flight and resolves `false` if it was still running. `serveWhenMain` applies the migrations the build shipped beside the entry, exiting `1` if they fail, then runs the site as a process with the `http` server, cron and the shutdown protocol. It skips cron when the config sets `cron: false`, and does nothing when `main` is false.
 - `createRequestListener(handle, { trustProxy, bodySizeLimit })` is the `node:http` bridge the built server and the dev server share. Each request becomes a `Request` with a streamed body and an `AbortSignal` that fires when the client disconnects. The bridge answers 400 to a path `decodeURI` rejects, a `Host` the URL parser refuses, or a method `fetch` forbids. After the response it drains any body the handler left unread, so the connection stays usable.
 - `createAssetsLayer({ root })` is the disk layer over `dist/client`. `serve(req, res, next)` answers a GET or HEAD for a file it holds, and `fetch(request)` is the assets binding core reads for admin deep links. It never serves a path that escapes the root or a dotfile other than `.well-known`. Files under `/assets/` carry an immutable cache header.
 - `createImageLayer(imageDelivery, { fetch })` is the `/_plumix/image` route as Connect-style middleware. It serves when the config's `imageDelivery` is this package's `images()` and passes every request through otherwise.
@@ -266,7 +251,7 @@ Public pages are a different story. A process with no CDN in front of it renders
 
 ## Commands the runtime adds
 
-`plumix dev` runs the Vite server described in the quickstart and accepts `--port` and `--host`. `plumix build` builds the client first and the server second, because the server bakes the client's asset manifest into its bundle. `plumix migrate` applies every table owner's migrations to the file `nodeSqlite` names; it has no `--remote`. There is no `deploy` and no `types`: the deployment artefact is a directory and a command.
+`plumix dev` applies pending migrations, then runs the Vite server described in the quickstart, and accepts `--port` and `--host`. `plumix build` builds the client first and the server second, because the server bakes the client's asset manifest into its bundle, and copies every table owner's history into `dist/server/migrations/`. `plumix migrate` applies every table owner's migrations to the file `nodeSqlite` names; it has no `--remote`. There is no `deploy` and no `types`: the deployment artefact is a directory and a command.
 
 ## Related
 

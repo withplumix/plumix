@@ -22,6 +22,7 @@ type PlumixCliErrorCode =
   | "migrate_schema_module_unresolved"
   | "migrate_owner_history_missing"
   | "migrate_adoption_mismatch"
+  | "migrate_site_drifted"
   | "config_not_found_explicit"
   | "config_not_found_default"
   | "config_load_failed"
@@ -289,6 +290,15 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
       ctx.ungenerated.length > 0
         ? `Nothing was changed. The site's own schema declares ${ctx.ungenerated.join(", ")}, which its migrations/ has no migration for: run \`plumix migrate generate\`, then \`plumix migrate\` again.`
         : "Nothing was changed. Bring those objects in line with the shipped histories, then run `plumix migrate` again.",
+      undefined,
+    );
+  }
+
+  static migrateSiteDrifted(ctx: { files: readonly string[] }): PlumixCliError {
+    return new PlumixCliError(
+      "migrate_site_drifted",
+      `The site's own tables are ahead of its migrations/: generating would write ${ctx.files.join(", ")}`,
+      "Nothing was changed. Run `plumix migrate generate` (or `plumix dev`), commit the migration it writes, then run this again.",
       undefined,
     );
   }

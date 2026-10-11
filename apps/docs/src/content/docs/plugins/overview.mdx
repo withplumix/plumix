@@ -142,7 +142,7 @@ Then:
    });
    ```
 
-2. **Apply the migrations.** The plugin ships its own migration history, and `plumix migrate` applies it, after core's, once the descriptor is in the array. In production on D1, run `plumix migrate --remote`.
+2. **Apply the migrations.** The plugin ships its own migration history, and `plumix migrate` applies it, after core's, once the descriptor is in the array. `plumix dev` does the same on start, and `plumix deploy` and the built Node and Bun servers apply it in production.
 
    ```sh
    pnpm plumix migrate
@@ -252,7 +252,7 @@ Skip the augmentation and both `.role("hero")` and `data.entry.images.hero` are 
 
 ## Plugins that own tables
 
-`@plumix/plugin-comments`, `@plumix/plugin-audit-log` and `@plumix/plugin-search` each store rows in a table of their own, and each declares a `schemaModule` naming where that table's definition lives. For `@plumix/plugin-audit-log` that is the default storage's table; a swapped storage names its own, or none. The package that `schemaModule` resolves into ships the migration history for that table, and `plumix migrate` applies it after core's, recording it in a tracking table of its own. Skip the migrate step and the database holds core's tables only, so the plugin's first query fails on a missing table.
+`@plumix/plugin-comments`, `@plumix/plugin-audit-log` and `@plumix/plugin-search` each store rows in a table of their own, and each declares a `schemaModule` naming where that table's definition lives. For `@plumix/plugin-audit-log` that is the default storage's table; a swapped storage names its own, or none. The package that `schemaModule` resolves into ships the migration history for that table, and `plumix migrate` applies it after core's, recording it in a tracking table of its own. Until it is applied the database holds core's tables only, so the plugin's first query fails on a missing table.
 
 The rest add no tables of their own. `@plumix/plugin-feeds` reads the shared `entries` table and writes nothing at all. `@plumix/plugin-blog` and `@plumix/plugin-pages` register entry types, and every entry of every type is a row in the shared `entries` table. `@plumix/plugin-menu` goes further and reuses the same tables for its own model: a menu is a row in `terms`, a menu item is a row in `entries`, and membership is a row in `entry_term`. `@plumix/plugin-media` stores an asset as an entry and the bytes in object storage, and `@plumix/plugin-og` stores a rendered card in the same bucket, keyed by its content.
 

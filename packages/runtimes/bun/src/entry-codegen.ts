@@ -31,7 +31,7 @@ export function generateEntry({ configModule }: EntrySourceOptions): string {
     "});",
     "",
     "export const dispose = site.dispose;",
-    "export default import.meta.main ? serveProcess(site) : site.handler;",
+    "export default import.meta.main ? await serveProcess(site) : site.handler;",
     "",
   ];
   return lines.join("\n");

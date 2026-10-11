@@ -16,6 +16,7 @@ import type {
   Scheduler,
   SchedulerClock,
 } from "plumix/runtime";
+import { applyBuiltMigrations } from "plumix/cli";
 import {
   buildApp,
   createRuntimeHandler,
@@ -27,10 +28,12 @@ import type { NodeConfig } from "./adapter.js";
 import type { RequestHandler, RequestListener } from "./http/bridge.js";
 import type { ScheduledRunnerOptions } from "./scheduled-runner.js";
 import { isNodeRuntime } from "./adapter.js";
+import { migrations } from "./commands/migrations.js";
 import { ASSETS_DIR_ENV } from "./entry-constants.js";
 import { createAssetsLayer } from "./http/assets.js";
 import { createRequestListener } from "./http/bridge.js";
 import { createImageLayer } from "./http/images.js";
+import { isNodeSqlite } from "./node-sqlite.js";
 import { startScheduledRunner } from "./scheduled-runner.js";
 
 export interface NodeSiteOptions {
@@ -103,9 +106,12 @@ export interface NodeSite {
    */
   readonly dispose: (options?: DisposeOptions) => Promise<DisposeResult>;
   /**
-   * A no-op unless `main`, so importing the entry to embed it serves nothing.
+   * A no-op unless `main`, so importing the entry serves nothing. Applies the
+   * migrations the build shipped first; a failed apply exits 1 unlistened.
    */
-  readonly serveWhenMain: (main: boolean) => ServingProcess | undefined;
+  readonly serveWhenMain: (
+    main: boolean,
+  ) => Promise<ServingProcess | undefined>;
 }
 
 /**
@@ -118,7 +124,8 @@ export function createNodeSite({
   pluginCatalogs,
   entryUrl,
 }: NodeSiteOptions): NodeSite {
-  const assetsDir = resolve(dirname(fileURLToPath(entryUrl)), "../client");
+  const serverDir = dirname(fileURLToPath(entryUrl));
+  const assetsDir = resolve(serverDir, "../client");
   const env: PlumixEnv = { ...process.env, [ASSETS_DIR_ENV]: assetsDir };
   const nodeConfig: NodeConfig = isNodeRuntime(config.runtime)
     ? config.runtime.config
@@ -195,8 +202,23 @@ export function createNodeSite({
     listener,
     startCron,
     dispose,
-    serveWhenMain(main) {
+    async serveWhenMain(main) {
       if (!main) return undefined;
+      try {
+        // Another database slot is migrated with its own tooling.
+        if (isNodeSqlite(config.database)) {
+          await applyBuiltMigrations({
+            serverDir,
+            cwd: process.cwd(),
+            config,
+            migrations,
+          });
+        }
+      } catch (error) {
+        console.error("plumix: migrations failed; not serving", error);
+        process.exit(1);
+        return undefined;
+      }
       return serveProcess({
         listener,
         startCron,

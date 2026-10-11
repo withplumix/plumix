@@ -18,7 +18,6 @@ import {
   CLI_ENV,
   PACKAGE_ROOT,
   PLUMIX_BIN,
-  prepareDatabase,
   rpc,
   scaffoldConsumerProject,
 } from "./test/consumer-project.js";
@@ -164,7 +163,6 @@ beforeAll(async () => {
     realpathSync(join(PACKAGE_ROOT, "node_modules/sharp")),
     join(dir, "node_modules/sharp"),
   );
-  await prepareDatabase(dir);
   await run(PLUMIX_BIN, ["build"], { cwd: dir, env: CLI_ENV });
 }, 240_000);
 

@@ -135,7 +135,7 @@ export type MigrationLocation = "local" | "remote" | "memory";
 
 export interface OpenMigrationDatabaseOptions {
   readonly cwd: string;
-  readonly app: CommandApp;
+  readonly config: PlumixConfig;
   readonly location: MigrationLocation;
   /** `--binding`, for a runtime that can have more than one database. */
   readonly binding: string | undefined;
@@ -165,8 +165,8 @@ export interface MigrationDatabase {
 }
 
 /**
- * What a runtime supplies to `plumix migrate`: only how to open its database.
- * Which histories apply, in what order, adoption and reporting live in the CLI.
+ * Only how a runtime opens its database: which histories apply, their order,
+ * adoption and reporting live in the CLI.
  */
 export interface RuntimeMigrations {
   /** Whether `--remote` names a database this runtime can reach. */

@@ -126,7 +126,7 @@ yarn add -D wrangler @cloudflare/workers-types
    plumix dev
    ```
 
-   The dev server runs the real Worker under `workerd` through Vite, against a local D1 file. What you exercise locally is the same handler the deploy runs.
+   Before it starts, `plumix dev` applies every pending migration to a local D1 file, and the dev server then runs the real Worker under `workerd` through Vite, against that file. What you exercise locally is the same handler the deploy runs.
 
 </Steps>
 
@@ -300,7 +300,11 @@ Signing out takes one more piece. Clearing the Plumix session cookie leaves the 
 
 ## Commands the runtime adds
 
-`plumix dev` boots Vite with `@cloudflare/vite-plugin` and takes `--port` and `--inspector-port`. `plumix build` builds the client environment first and the worker second, because the worker bakes the client's asset manifest into its bundle. `plumix deploy` and `plumix types` forward to `wrangler deploy` and `wrangler types` with your arguments appended. `plumix migrate` applies every table owner's migrations to the local D1 copy `plumix dev` uses, under `.wrangler/state/v3`, and `plumix migrate --remote` to the D1 database your wrangler config names, both through wrangler's `getPlatformProxy`. The remote form needs `wrangler login` or an API token, as wrangler does. When the config declares more than one D1 binding, `--binding <name>` picks one.
+`plumix dev` boots Vite with `@cloudflare/vite-plugin` and takes `--port` and `--inspector-port`. `plumix build` builds the client environment first and the worker second, because the worker bakes the client's asset manifest into its bundle. `plumix types` forwards to `wrangler types` with your arguments appended.
+
+`plumix dev` applies every table owner's pending migrations to the local D1 copy it uses, under `.wrangler/state/v3`, before the dev server opens it. `plumix deploy` checks that the site's own tables are not ahead of its `migrations/`, applies every owner's pending migrations to the deployed D1 database, and only then runs `wrangler deploy` with your arguments appended. When the check or a migration fails it exits non-zero and `wrangler deploy` never runs. `plumix migrate` applies to the local copy, and `plumix migrate --remote` to the deployed database. All of them reach D1 through wrangler's `getPlatformProxy`, so the remote apply needs `wrangler login` or an API token, as wrangler does. They open the binding your `d1()` slot names; `plumix migrate --binding <name>` picks another.
+
+On Workers Builds, set the deploy command to `npx plumix deploy`. The remote apply then runs with the build's own Cloudflare credentials, the same ones `wrangler deploy` uses, so each version goes live only once the database has what it needs.
 
 ## Related
 

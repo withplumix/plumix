@@ -43,6 +43,8 @@ plumix --help
 
 Starts the dev server. What it wraps is the runtime's: on Cloudflare it is Vite with `@cloudflare/vite-plugin`, and it accepts `--port` and `--inspector-port`; on Node it is Vite alone, and it accepts `--port` and `--host`. Neither runtime has the CLI build the app up front — `dev` opts out via `deferApp` on both, so a broken config renders as a boot-error page in the browser instead of aborting the terminal before the server is up.
 
+Before the server starts, `dev` migrates the local database. When the site's own tables are ahead of its `migrations/`, it writes the next migration there, as [`migrate generate`](#migrate) does, and prints the file to commit. It then applies every owner's pending migrations, as `plumix migrate` does, adopting a database set up by an earlier release. When drizzle-kit needs a rename answered and has no terminal to ask in, `dev` stops with the same advice `migrate generate` gives. On a runtime whose commands module exports no `migrations`, it migrates nothing.
+
 ```bash
 plumix dev
 plumix dev --port 3000
@@ -50,7 +52,7 @@ plumix dev --port 3000
 
 ### `build`
 
-Builds the deployable artefact. On Cloudflare that is the Worker bundle; on Node it is `dist/client` for the browser and `dist/server` to run with `node`, built client-first because the server bundle bakes in the client's asset manifest.
+Builds the deployable artefact. On Cloudflare that is the Worker bundle; on Node and Bun it is `dist/client` for the browser and `dist/server` to run, built client-first because the server bundle bakes in the client's asset manifest. Every table owner's history is copied beside the server, as `dist/server/migrations/<owner>/`, and the built server applies what is pending when it starts, before it listens. A failed apply exits it `1` without listening.
 
 ```bash
 plumix build
@@ -58,7 +60,7 @@ plumix build
 
 ### `deploy`
 
-Cloudflare only. Forwards straight to `wrangler deploy`, with every argument after `deploy` appended unchanged.
+Cloudflare only. Runs the [check](#migrate) that the site's own tables are not ahead of its history, applies every owner's pending migrations to the deployed D1 database, as `plumix migrate --remote` does, then runs `wrangler deploy` with every argument after `deploy` appended unchanged. A failed check or apply exits non-zero, and `wrangler deploy` never runs.
 
 ```bash
 plumix deploy
@@ -80,6 +82,8 @@ Applies every table owner's pending migrations. The owners run in order: core fi
 Without a flag it applies to the local database. `--remote` applies to the deployed one, and only Cloudflare accepts it: it reaches the D1 database `wrangler.jsonc` names through wrangler's remote bindings, so it needs `wrangler login` or an API token, as wrangler does. On Node and Bun `--remote` fails, naming the runtime. On Cloudflare the local database is the D1 copy `plumix dev` uses, under `.wrangler/state/v3`. When the wrangler config declares more than one D1 binding, `--binding <name>` picks one, and the error without it names the bindings it found.
 
 `plumix migrate fresh` deletes the local database and applies every owner from nothing. It deletes the paths the runtime names as its local state: `.wrangler/state` on Cloudflare, and `data` on Node and Bun, which takes uploads stored under `data/` with it. It refuses `--remote`. `plumix migrate status` lists each owner in order with its applied and pending migrations, each with its date and a short hash.
+
+`plumix migrate`, `plumix migrate fresh` and `plumix deploy` never write a migration. When the site owns tables, each first checks its history: it runs `drizzle-kit generate` into a temporary copy of the site's `migrations/`, and if that writes anything, the site's tables are ahead of their history. The command then fails with `migrate_site_drifted` before it deletes, opens or deploys anything, naming the files a generate would write; run `plumix migrate generate`, or `plumix dev`, and commit what it writes. A site that owns no tables never drifts.
 
 `plumix migrate generate` writes the next migration of the site's own tables, the ones declared by a plugin whose `schemaModule` resolves inside the site's package. It writes `.plumix/site-schema.ts`, re-exporting only those schema modules, then runs `drizzle-kit generate --dialect sqlite --casing snake_case --schema .plumix/site-schema.ts --out migrations`, and the SQL lands in the site's `migrations/`. Commit that folder. Core's tables and every package's tables are never part of it, because they ship in their own histories, though a site table may reference one of them by foreign key. When nothing has changed it writes nothing, and when the site owns no tables it says so and writes nothing. When drizzle-kit needs to know whether a column or table was renamed, it asks, and without a terminal to ask in the command fails: run `plumix migrate generate` in an interactive terminal to answer it.
 

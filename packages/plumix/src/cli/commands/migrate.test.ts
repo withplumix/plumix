@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { sqliteTable } from "drizzle-orm/sqlite-core";
 import { drizzle } from "drizzle-orm/sqlite-proxy";
@@ -34,8 +34,14 @@ import type {
 import { CORE_MIGRATIONS_FOLDER } from "@plumix/core/cli";
 import { createDispatcherHarness } from "@plumix/core/test";
 
+import { applyBuiltMigrations, copyOwnerHistories } from "../migrate/built.js";
 import { report } from "../report.js";
-import { migrateCommand, migrateGenerateDeps } from "./migrate.js";
+import {
+  migrateBeforeDeploy,
+  migrateCommand,
+  migrateForDev,
+  migrateGenerateDeps,
+} from "./migrate.js";
 
 let base: PlumixApp;
 beforeAll(async () => {
@@ -422,11 +428,41 @@ describe("applying owner histories", () => {
   const trackingRows = (table: string): number =>
     Number(query(`SELECT count(*) AS n FROM "${table}"`)[0]?.n);
 
+  // drizzle-kit generate as it behaves: writes `next` into the history in
+  // `--out`, and nothing once it has every file.
+  function drizzleKitWrites(next: Record<string, string>) {
+    vi.spyOn(migrateGenerateDeps, "resolveDrizzleKitBin").mockReturnValue(
+      "/fake/drizzle-kit/bin.cjs",
+    );
+    return vi
+      .spyOn(migrateGenerateDeps, "spawnCapturingStderr")
+      .mockImplementation((_command, args, options) => {
+        const out = resolve(options.cwd, args[args.indexOf("--out") + 1] ?? "");
+        const files = Object.entries(next);
+        if (files.every(([file]) => existsSync(join(out, file)))) {
+          return Promise.resolve("");
+        }
+        for (const [file, content] of files) {
+          mkdirSync(join(out, file, ".."), { recursive: true });
+          writeFileSync(join(out, file), content);
+        }
+        return Promise.resolve("");
+      });
+  }
+
+  const LOCAL = plugin("local", "./src/schema.ts");
+
+  function siteWithHistory(): void {
+    cpSync(WIDGETS_MIGRATIONS, join(dir, "migrations"), { recursive: true });
+    installPackage("@acme/plugin-widgets", null);
+  }
+
   beforeEach(() => {
     dir = mkdtempSync(join(tmpdir(), "plumix-migrate-apply-"));
     writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "site" }));
     installRuntime(["site.sqlite", "uploads"]);
     opened = [];
+    drizzleKitWrites({});
     // What each owner applied is the command's own output; a test that reads
     // it collects the lines through these.
     vi.spyOn(report, "info").mockImplementation(() => undefined);
@@ -519,6 +555,300 @@ describe("applying owner histories", () => {
 
       expect(names("table")).toContain("widgets");
       expect(trackingRows("__drizzle_migrations_site")).toBe(1);
+    });
+  });
+
+  describe("a site whose own tables are ahead of its history", () => {
+    const NEXT = {
+      "0001_nickname.sql": "ALTER TABLE `widgets` ADD `nickname` text;",
+    };
+
+    test("plumix migrate fails naming the fix, and opens and writes nothing", async () => {
+      siteWithHistory();
+      drizzleKitWrites(NEXT);
+
+      await expect(
+        migrateCommand.run(applyCtx([], [LOCAL])),
+      ).rejects.toMatchObject({
+        code: "migrate_site_drifted",
+        hint: expect.stringContaining("plumix migrate generate") as unknown,
+      });
+
+      expect(opened).toEqual([]);
+      expect(readdirSync(join(dir, "migrations")).sort()).toEqual([
+        "0000_widgets.sql",
+        "meta",
+      ]);
+    });
+
+    test("plumix migrate writes no schema module for the check", async () => {
+      siteWithHistory();
+      drizzleKitWrites(NEXT);
+
+      await expect(
+        migrateCommand.run(applyCtx([], [LOCAL])),
+      ).rejects.toMatchObject({ code: "migrate_site_drifted" });
+
+      expect(existsSync(join(dir, ".plumix"))).toBe(false);
+    });
+
+    test("plumix migrate leaves a schema module generate wrote as it was", async () => {
+      siteWithHistory();
+      mkdirSync(join(dir, ".plumix"));
+      writeFileSync(join(dir, ".plumix/site-schema.ts"), "// earlier\n");
+      drizzleKitWrites(NEXT);
+
+      await expect(
+        migrateCommand.run(applyCtx([], [LOCAL])),
+      ).rejects.toMatchObject({ code: "migrate_site_drifted" });
+
+      expect(readFileSync(join(dir, ".plumix/site-schema.ts"), "utf8")).toBe(
+        "// earlier\n",
+      );
+    });
+
+    test("plumix migrate fresh fails before it deletes the local state", async () => {
+      siteWithHistory();
+      writeFileSync(join(dir, "site.sqlite"), "");
+      drizzleKitWrites(NEXT);
+
+      await expect(
+        migrateCommand.run(applyCtx(["fresh"], [LOCAL])),
+      ).rejects.toMatchObject({ code: "migrate_site_drifted" });
+
+      expect(existsSync(join(dir, "site.sqlite"))).toBe(true);
+      expect(opened).toEqual([]);
+    });
+
+    test("a site whose history is up to date applies it", async () => {
+      siteWithHistory();
+      drizzleKitWrites({ "0000_widgets.sql": "" });
+
+      await migrateCommand.run(applyCtx([], [LOCAL]));
+
+      expect(trackingRows("__drizzle_migrations_site")).toBe(1);
+    });
+  });
+
+  describe("the histories a build ships beside the server", () => {
+    const WIDGETS = [plugin("widgets", "@acme/plugin-widgets/schema")];
+
+    function build(): string {
+      installPackage("@acme/plugin-widgets", WIDGETS_MIGRATIONS);
+      const { cwd, configPath, app } = applyCtx([], WIDGETS);
+      const serverDir = join(dir, "dist/server");
+      copyOwnerHistories({ cwd, configPath, config: app.config }, serverDir);
+      // The server runs from what the build wrote, not the installed packages.
+      rmSync(join(dir, "node_modules/@acme/plugin-widgets"), {
+        recursive: true,
+      });
+      return serverDir;
+    }
+
+    const serve = (serverDir: string) =>
+      applyBuiltMigrations({
+        serverDir,
+        cwd: dir,
+        config: applyCtx([], WIDGETS).app.config,
+        migrations: runtime(),
+      });
+
+    test("lays each owner's history out under migrations/<owner>/", () => {
+      const serverDir = build();
+
+      expect(readdirSync(join(serverDir, "migrations")).sort()).toEqual([
+        "acme_plugin_widgets",
+        "core",
+        "owners.json",
+      ]);
+    });
+
+    test("the server applies every owner's history in order, each in its own tracking table", async () => {
+      const serverDir = build();
+      const lines: string[] = [];
+      vi.spyOn(report, "success").mockImplementation((line) =>
+        lines.push(line),
+      );
+
+      await serve(serverDir);
+
+      expect(names("table")).toContain("widgets");
+      expect(trackingRows("__drizzle_migrations_core")).toBe(2);
+      expect(trackingRows("__drizzle_migrations_acme_plugin_widgets")).toBe(1);
+      expect(lines).toEqual([
+        "core: applied 2 migrations",
+        "@acme/plugin-widgets: applied 1 migration",
+      ]);
+    });
+
+    test("against an up-to-date database the server applies nothing", async () => {
+      const serverDir = build();
+      await serve(serverDir);
+      const lines: string[] = [];
+      vi.spyOn(report, "info").mockImplementation((line) => lines.push(line));
+
+      await serve(serverDir);
+
+      expect(lines).toEqual([
+        "core: up to date",
+        "@acme/plugin-widgets: up to date",
+      ]);
+    });
+  });
+
+  describe("migrating before a deploy", () => {
+    test("applies every owner to the remote database", async () => {
+      await migrateBeforeDeploy(applyCtx([], [], runtime({ remote: true })));
+
+      expect(opened).toEqual(["remote"]);
+      expect(trackingRows("__drizzle_migrations_core")).toBe(2);
+    });
+
+    test("fails on a site whose own tables are ahead of its history, opening nothing", async () => {
+      siteWithHistory();
+      drizzleKitWrites({ "0001_nickname.sql": "" });
+
+      await expect(
+        migrateBeforeDeploy(applyCtx([], [LOCAL], runtime({ remote: true }))),
+      ).rejects.toMatchObject({ code: "migrate_site_drifted" });
+
+      expect(opened).toEqual([]);
+    });
+  });
+
+  describe("migrating before plumix dev", () => {
+    const NEXT = {
+      "0001_nickname.sql": "ALTER TABLE `widgets` ADD `nickname` text;",
+      // What drizzle-kit writes beside every migration.
+      "meta/0001_snapshot.json": "{}",
+      "meta/_journal.json": JSON.stringify({
+        version: "7",
+        dialect: "sqlite",
+        entries: [
+          {
+            idx: 0,
+            version: "6",
+            when: 1000,
+            tag: "0000_widgets",
+            breakpoints: true,
+          },
+          {
+            idx: 1,
+            version: "6",
+            when: 2000,
+            tag: "0001_nickname",
+            breakpoints: true,
+          },
+        ],
+      }),
+    };
+
+    function devTarget(plugins: PlumixApp["config"]["plugins"]) {
+      const { cwd, configPath, app, runtimeMigrations } = applyCtx([], plugins);
+      return { cwd, configPath, config: app.config, runtimeMigrations };
+    }
+
+    const columns = (table: string): unknown[] =>
+      query(`SELECT name FROM pragma_table_info('${table}')`).map(
+        (row) => row.name,
+      );
+
+    test("writes the site's next migration, applies it, and says to commit it", async () => {
+      siteWithHistory();
+      drizzleKitWrites(NEXT);
+      const lines: string[] = [];
+      vi.spyOn(report, "success").mockImplementation((line) =>
+        lines.push(line),
+      );
+
+      await migrateForDev(devTarget([LOCAL]));
+
+      expect(readdirSync(join(dir, "migrations")).sort()).toEqual([
+        "0000_widgets.sql",
+        "0001_nickname.sql",
+        "meta",
+      ]);
+      expect(columns("widgets")).toContain("nickname");
+      expect(lines).toContain(
+        "Wrote the site's next migration, migrations/0001_nickname.sql: commit it.",
+      );
+    });
+
+    test("a second start writes nothing", async () => {
+      siteWithHistory();
+      drizzleKitWrites(NEXT);
+      await migrateForDev(devTarget([LOCAL]));
+      const lines: string[] = [];
+      vi.spyOn(report, "success").mockImplementation((line) =>
+        lines.push(line),
+      );
+
+      await migrateForDev(devTarget([LOCAL]));
+
+      expect(lines).toEqual([]);
+      expect(trackingRows("__drizzle_migrations_site")).toBe(2);
+    });
+
+    test("applies the tables of a plugin package added to the config", async () => {
+      await migrateForDev(devTarget([]));
+      installPackage("@acme/plugin-widgets", WIDGETS_MIGRATIONS);
+
+      await migrateForDev(
+        devTarget([plugin("widgets", "@acme/plugin-widgets/schema")]),
+      );
+
+      expect(names("table")).toContain("widgets");
+    });
+
+    test("stops with the interactive-generate advice when drizzle-kit needs a rename answered", async () => {
+      siteWithHistory();
+      drizzleKitWrites({}).mockResolvedValue(
+        "Error: Interactive prompts require a TTY terminal\n",
+      );
+
+      await expect(migrateForDev(devTarget([LOCAL]))).rejects.toMatchObject({
+        code: "migrate_generate_failed",
+        hint: expect.stringContaining("interactive terminal") as unknown,
+      });
+      expect(opened).toEqual([]);
+    });
+
+    test("leaves migrations/ untouched when drizzle-kit fails after writing", async () => {
+      siteWithHistory();
+      drizzleKitWrites(NEXT).mockImplementation((_command, args, options) => {
+        const out = resolve(options.cwd, args[args.indexOf("--out") + 1] ?? "");
+        writeFileSync(join(out, "0001_half.sql"), "ALTER TABLE");
+        return Promise.resolve("Error: Interactive prompts require a TTY\n");
+      });
+
+      await expect(migrateForDev(devTarget([LOCAL]))).rejects.toMatchObject({
+        code: "migrate_generate_failed",
+      });
+
+      expect(readdirSync(join(dir, "migrations")).sort()).toEqual([
+        "0000_widgets.sql",
+        "meta",
+      ]);
+    });
+
+    test("adopts a database built from a legacy site history", async () => {
+      const legacy = sqliteDatabase(join(dir, "site.sqlite"));
+      await legacy.migrate({
+        migrationsFolder: CORE_MIGRATIONS_FOLDER,
+        migrationsTable: "__drizzle_migrations",
+      });
+      await legacy.close();
+
+      await migrateForDev(devTarget([]));
+
+      expect(trackingRows("__drizzle_migrations_core")).toBe(2);
+      expect(opened).toEqual(["local", "memory"]);
+    });
+
+    test("starts on a runtime that cannot open its database, migrating nothing", async () => {
+      await migrateForDev({ ...devTarget([]), runtimeMigrations: undefined });
+
+      expect(existsSync(join(dir, "site.sqlite"))).toBe(false);
     });
   });
 

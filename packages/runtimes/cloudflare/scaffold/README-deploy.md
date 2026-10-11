@@ -3,6 +3,9 @@ the database and paste its id into `wrangler.jsonc`:
 
 ```sh
 wrangler d1 create __PROJECT_NAME__
-plumix migrate --remote
 plumix deploy
 ```
+
+`plumix deploy` applies pending migrations to that database before it runs
+`wrangler deploy`. On Workers Builds, set the deploy command to
+`npx plumix deploy`.

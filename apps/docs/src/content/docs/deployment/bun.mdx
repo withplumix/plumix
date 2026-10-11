@@ -78,31 +78,25 @@ This is the path from a scaffolded site to a running process.
    });
    ```
 
-3. **Create the database.** Every command runs the `plumix` CLI with `bun --bun`, which runs it on Bun rather than on the Node its bin names. Core and every plugin that owns tables ship their own migrations, and this applies each one's to the file `bunSqlite` names.
-
-   ```sh
-   bun run migrate
-   ```
-
-4. **Develop.** One Vite server, with the site's code evaluated on Bun behind Vite's own middlewares. An edit to the config, the theme or a plugin is served on the next request, without a restart. The server answers loopback hosts only; set `PLUMIX_DEV_ALLOW_REMOTE=1` to review from another device.
+3. **Develop.** Every command runs the `plumix` CLI with `bun --bun`, which runs it on Bun rather than on the Node its bin names. Before it serves, `plumix dev` applies every pending migration to the file `bunSqlite` names: core and every plugin that owns tables ship their own. One Vite server, with the site's code evaluated on Bun behind Vite's own middlewares. An edit to the config, the theme or a plugin is served on the next request, without a restart. The server answers loopback hosts only; set `PLUMIX_DEV_ALLOW_REMOTE=1` to review from another device.
 
    ```sh
    bun run dev
    ```
 
-5. **Build.** The build writes `dist/client` for the browser and `dist/server/worker.js` to run. Everything the server needs is inlined into that one file, except `bun:` modules and native packages.
+4. **Build.** The build writes `dist/client` for the browser and `dist/server/worker.js` to run. Everything the server needs is inlined into that one file, except `bun:` modules and native packages. Every table owner's migration history lands beside it, in `dist/server/migrations/`.
 
    ```sh
    bun run build
    ```
 
-6. **Run.** The built server runs on plain `bun`; `--bun` is only for the CLI.
+5. **Run.** The built server runs on plain `bun`; `--bun` is only for the CLI. It applies every pending migration in `dist/server/migrations/` to its database before it listens, and exits `1` without listening if one fails.
 
    ```sh
    PORT=3000 bun dist/server/worker.js
    ```
 
-7. **Point the passkey at the deployed host.** Before the first sign-in on a real host, set `rpId` to that host and `origin` to its `https://` address, rebuild, and restart.
+6. **Point the passkey at the deployed host.** Before the first sign-in on a real host, set `rpId` to that host and `origin` to its `https://` address, rebuild, and restart.
 
 </Steps>
 
@@ -148,11 +142,11 @@ A rolling deploy that sends `SIGTERM` and waits ten seconds loses nothing that c
 
 ## The database
 
-`bunSqlite({ path })` opens the file with WAL journaling, a five-second busy timeout, `synchronous = NORMAL` and foreign keys on. Bun's own defaults differ on all four, so the slot sets each one on connect and again in `plumix migrate`, which is what makes the file behave as it does on Node. Missing parent directories are created, and a relative `path` resolves against the project root in the server and in `plumix migrate` alike, so both open the same file whichever directory you run them from.
+`bunSqlite({ path })` opens the file with WAL journaling, a five-second busy timeout, `synchronous = NORMAL` and foreign keys on. Bun's own defaults differ on all four, so the slot sets each one on connect and again in `plumix migrate`, which is what makes the file behave as it does on Node. Missing parent directories are created, and a relative `path` resolves against the project root in the server and in `plumix migrate` alike, so both open the same file whichever directory you run them from. The server applies the migrations its build shipped to that file when it starts.
 
-The file moves between Bun and Node: `plumix migrate` records each owner's applied migrations in the same `__drizzle_migrations_<owner>` tables on both, so a site can switch between the two runtimes and keep its database. It does not move to Cloudflare: D1 is a database of its own, so a site moving there runs `plumix migrate --remote` against a new D1 database.
+The file moves between Bun and Node: the server, `plumix dev` and `plumix migrate` record each owner's applied migrations in the same `__drizzle_migrations_<owner>` tables on both, so a site can switch between the two runtimes and keep its database. It does not move to Cloudflare: D1 is a database of its own, so a site moving there runs `plumix migrate --remote` against a new D1 database.
 
-For a remote or shared database, `plumix/db/libsql` stays selectable on Bun: point it at Turso or a libsql server and leave `bunSqlite` out.
+For a remote or shared database, `plumix/db/libsql` stays selectable on Bun: point it at Turso or a libsql server and leave `bunSqlite` out. The server applies migrations to a `bunSqlite` file only, so a libsql database takes its migrations from its own tooling.
 
 ## Storage
 
@@ -236,20 +230,13 @@ A Plumix Bun deploy is not stateless. Three things on this page write to disk, a
 
 Mount a volume over `data/` and the database and uploads survive a redeploy. The image cache is different: losing it costs a cold cache, not data — worth mounting too if the first view of every page after a deploy shouldn't pay for a fresh render, but not required the way `data/` is.
 
-### Migrate before the server starts
+### Migrations run where the volume is
 
-`plumix migrate` needs the volume, which the build step does not have — a builder container has no mount, and a schema baked into the image can't apply to whatever the volume already holds. Run it from the entrypoint, ahead of the server, using `exec` so Bun itself receives `SIGTERM` rather than a wrapping shell that would swallow it. Applying an already-applied set is a no-op, so it is safe on every start. As `docker-entrypoint.sh`:
-
-```sh
-#!/bin/sh
-set -e
-bun --bun plumix migrate
-exec bun dist/server/worker.js
-```
+The built server applies its pending migrations to the database on the volume each time it starts, before it listens, so the image needs no migration step and no entrypoint script. A start against an up-to-date database applies nothing.
 
 ### A multi-stage Dockerfile
 
-Two stages on the official `oven/bun` image: one that installs every dependency and builds, one that installs only production dependencies and runs. The build stage's source and dev dependencies never reach the image that ships. The runtime stage carries what `plumix migrate` reads: the config and the theme it imports, and the installed packages whose migrations it applies. Copy any other directory your config imports beside `theme`, and the site's own `migrations/` when it has one. As `Dockerfile`:
+Two stages on the official `oven/bun` image: one that installs every dependency and builds, one that installs only production dependencies and runs. The build stage's source and dev dependencies never reach the image that ships, and neither does the config: the server bundle carries it, and `dist/server/migrations/` carries every history it applies. As `Dockerfile`:
 
 ```dockerfile
 FROM oven/bun:1.4.2 AS build
@@ -264,15 +251,11 @@ WORKDIR /app
 ENV NODE_ENV=production
 COPY package.json bun.lock bunfig.toml ./
 RUN bun install --frozen-lockfile --production
-COPY tsconfig.json plumix.config.ts ./
-COPY theme ./theme
 COPY --from=build /app/dist ./dist
-COPY docker-entrypoint.sh ./
-RUN chmod +x docker-entrypoint.sh
 
 VOLUME /app/data
 EXPOSE 3000
-ENTRYPOINT ["./docker-entrypoint.sh"]
+CMD ["bun", "dist/server/worker.js"]
 ```
 
 `COPY package.json bun.lock ./` before `COPY . .` means an edit to source alone reuses the installed layer. `bunfig.toml` goes into the runtime stage because the server is started there, and without it Bun's own env loading comes back. List what the build context must not carry in `.dockerignore` — `.env` above all, because the built server would load it, and `data/`, because the volume owns it:
@@ -314,7 +297,6 @@ After=network-online.target
 User=my-site
 WorkingDirectory=/srv/my-site
 Environment=PORT=3000
-ExecStartPre=/usr/local/bin/bun --bun plumix migrate
 ExecStart=/usr/local/bin/bun dist/server/worker.js
 Restart=on-failure
 TimeoutStopSec=30
@@ -335,7 +317,7 @@ Public pages render on every request until the site sits behind a CDN with the `
 
 ## Commands the runtime adds
 
-`plumix dev` runs the site in Vite on Bun and accepts `--port` and `--host`. `plumix build` builds the client first and the server second, because the server bakes the client's asset manifest into its bundle. `plumix migrate` applies every table owner's migrations to the file `bunSqlite` names, through `bun:sqlite`; it has no `--remote`. There is no `deploy` and no `types`: the deployment artefact is a directory and a command. Each runs as `bun --bun plumix <command>`.
+`plumix dev` applies pending migrations, then runs the site in Vite on Bun, and accepts `--port` and `--host`. `plumix build` builds the client first and the server second, because the server bakes the client's asset manifest into its bundle, and copies every table owner's history into `dist/server/migrations/`. `plumix migrate` applies every table owner's migrations to the file `bunSqlite` names, through `bun:sqlite`; it has no `--remote`. There is no `deploy` and no `types`: the deployment artefact is a directory and a command. Each runs as `bun --bun plumix <command>`.
 
 ## Related
 

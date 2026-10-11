@@ -21,6 +21,7 @@ import {
 } from "vitest";
 import { getPlatformProxy } from "wrangler";
 
+import { d1 } from "../d1.js";
 import { migrations, migrationsDeps } from "./migrations.js";
 
 /** Core's shipped history, read from the workspace. */
@@ -67,7 +68,7 @@ function writeWrangler(d1: readonly object[]): void {
 }
 
 const open = (location: MigrationLocation, binding?: string) =>
-  migrations.open({ cwd: dir, app, location, binding });
+  migrations.open({ cwd: dir, config: app.config, location, binding });
 
 /** The glob the playground's e2e reads its database from. */
 const localDatabases = () =>
@@ -162,6 +163,36 @@ describe("cloudflare migrations", () => {
 
     const db = await open("local", "ARCHIVE");
     await db.close();
+  });
+
+  test("with several D1 bindings and no --binding, opens the one the config's d1() slot names", async () => {
+    writeWrangler([
+      D1_ENTRY,
+      { ...D1_ENTRY, binding: "ARCHIVE", database_name: "archive" },
+    ]);
+    const proxied: unknown[] = [];
+    vi.spyOn(migrationsDeps, "getPlatformProxy").mockImplementation(
+      (options) => {
+        proxied.push(
+          JSON.parse(readFileSync(options.configPath ?? "", "utf8")),
+        );
+        return getPlatformProxy(options);
+      },
+    );
+
+    const db = await migrations.open({
+      cwd: dir,
+      config: { ...app.config, database: d1({ binding: "ARCHIVE" }) },
+      location: "memory",
+      binding: undefined,
+    });
+    await db.close();
+
+    expect(proxied).toEqual([
+      expect.objectContaining({
+        d1_databases: [expect.objectContaining({ binding: "ARCHIVE" })],
+      }),
+    ]);
   });
 
   test("refuses a --binding the config does not declare", async () => {

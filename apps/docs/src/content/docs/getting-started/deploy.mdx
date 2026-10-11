@@ -50,31 +50,23 @@ This is the path from a scaffolded site (`pnpm create plumix-app`, the default r
 
 2. **Set every secret and environment variable the config resolves.** The built server loads `.env` from the directory it starts in, and any variable the host already sets wins over the file, so set `RESEND_API_KEY`, `GITHUB_CLIENT_SECRET` and the rest through whatever your host uses — its own secrets UI, the shell that starts the process, or a `.env` beside it. Do not bake `.env` into a container image. `PORT` and `HOST` control what the server listens on, defaulting to `3000` and `0.0.0.0`.
 
-3. **Apply the migrations.**
-
-   ```sh
-   pnpm exec plumix migrate
-   ```
-
-   Core and every plugin that carries its own tables ship their own migrations, and this applies each one's pending files to the SQLite file `nodeSqlite` names. Run it again after adding such a plugin. Point it at the production database path, not the one you have been developing against.
-
-4. **Build.**
+3. **Build.**
 
    ```sh
    pnpm build
    ```
 
-   `plumix build` writes `dist/client` for the browser and `dist/server/worker.js` to run. Everything the server needs is inlined into that one file, except native packages, which it imports at runtime.
+   `plumix build` writes `dist/client` for the browser and `dist/server/worker.js` to run. Everything the server needs is inlined into that one file, except native packages, which it imports at runtime. Beside it, `dist/server/migrations/` holds the migration history of core, of every plugin that carries its own tables, and of the site's own tables.
 
-5. **Run it.**
+4. **Run it.**
 
    ```sh
    PORT=3000 node dist/server/worker.js
    ```
 
-   Run this under whatever keeps a process alive on your host — systemd, a container orchestrator, `pm2`. A `SIGTERM` stops the process cleanly: it stops accepting new requests and gives in-flight work — requests, a scheduled run, deferred work such as telemetry delivery — one ten-second budget. If everything finishes it exits `0`; anything the budget cuts makes it exit `1`.
+   Before it listens, the server applies every pending migration in `dist/server/migrations/` to the SQLite file `nodeSqlite` names, so a new database gets every table and an upgrade gets what it added. If that fails, it exits `1` without listening. Run this under whatever keeps a process alive on your host — systemd, a container orchestrator, `pm2`. A `SIGTERM` stops the process cleanly: it stops accepting new requests and gives in-flight work — requests, a scheduled run, deferred work such as telemetry delivery — one ten-second budget. If everything finishes it exits `0`; anything the budget cuts makes it exit `1`.
 
-6. **Claim the admin account.** Open `https://recipes.example/_plumix/admin` and create your passkey before anyone else does. The database is empty, so the first registration wins the admin account and every later one is refused.
+5. **Claim the admin account.** Open `https://recipes.example/_plumix/admin` and create your passkey before anyone else does. The database is empty, so the first registration wins the admin account and every later one is refused.
 
 </Steps>
 
@@ -98,7 +90,7 @@ Deploying to Cloudflare instead? This is the path from a scaffolded site (`pnpm 
   The scaffolded config spreads `cloudflareDeployOrigin`, which resolves the
   deployed host only from the environment Cloudflare Workers Builds sets. A
   `plumix build` on your own machine sets none of it, so the helper returns
-  `rpId: "localhost"` and the passkey in step 6 cannot verify against the
+  `rpId: "localhost"` and the passkey in step 5 cannot verify against the
   deployed host. Step 2 replaces the spread with literal values. [Cloudflare
   Workers](/deployment/cloudflare/) covers the same block and what changes on a
   custom domain.
@@ -142,24 +134,16 @@ Deploying to Cloudflare instead? This is the path from a scaffolded site (`pnpm 
    wrangler secret put GITHUB_CLIENT_SECRET
    ```
 
-4. **Apply the migrations to the remote database.**
-
-   ```sh
-   pnpm exec plumix migrate --remote
-   ```
-
-   Core and every plugin that carries its own tables ship their own migrations, and `--remote` applies each one's pending files to the D1 database you just created, through wrangler, so it needs `wrangler login` or an API token. Run it again after adding such a plugin.
-
-5. **Build and deploy.**
+4. **Build and deploy.**
 
    ```sh
    pnpm build
    pnpm exec plumix deploy
    ```
 
-   `plumix build` builds the client bundle first and then the worker, because the worker bakes the client's asset manifest into itself. `plumix deploy` passes any extra arguments straight to `wrangler deploy`.
+   `plumix build` builds the client bundle first and then the worker, because the worker bakes the client's asset manifest into itself. `plumix deploy` first applies the pending migrations of core, of every plugin that carries its own tables and of the site's own tables to the D1 database you just created, through wrangler, so it needs `wrangler login` or an API token. Only then does it run `wrangler deploy`, passing any extra arguments straight to it. If the migrations fail, nothing is deployed.
 
-6. **Claim the admin account.** Open `https://recipes.<your-account>.workers.dev/_plumix/admin` and create your passkey before anyone else does. The database is empty, so the first registration wins the admin account and every later one is refused. This is the step the caution above blocks while a locally built deploy still carries the localhost origin.
+5. **Claim the admin account.** Open `https://recipes.<your-account>.workers.dev/_plumix/admin` and create your passkey before anyone else does. The database is empty, so the first registration wins the admin account and every later one is refused. This is the step the caution above blocks while a locally built deploy still carries the localhost origin.
 
 </Steps>
 

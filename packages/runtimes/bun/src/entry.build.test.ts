@@ -275,10 +275,8 @@ beforeAll(async () => {
     join(dir, "plumix.config.mjs"),
     config({ drained, aborted, fired, photo }),
   );
-  for (const args of [["migrate"], ["build"]]) {
-    const result = await plumixOn("bun", dir, args);
-    expect(result, args.join(" ")).toMatchObject({ code: 0 });
-  }
+  const result = await plumixOn("bun", dir, ["build"]);
+  expect(result).toMatchObject({ code: 0 });
 }, 240_000);
 
 afterAll(() => {

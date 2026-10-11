@@ -1,9 +1,14 @@
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
-import type { CommandDefinition, PlumixConfig } from "@plumix/core";
+import type {
+  CommandDefinition,
+  PlumixConfig,
+  RuntimeMigrations,
+} from "@plumix/core";
 import { auth, definePlugin, plumix } from "@plumix/core";
 
-import { resolveCommandApp } from "./index.js";
+import { resolveCommandApp, runCommand } from "./index.js";
+import { report } from "./report.js";
 
 const command = (overrides: Partial<CommandDefinition>): CommandDefinition => ({
   describe: "test",
@@ -68,5 +73,69 @@ describe("resolveCommandApp", () => {
     );
 
     expect(() => sentinel.config).toThrow(/ctx\.app is not available/);
+  });
+});
+
+describe("runCommand", () => {
+  function recordingRuntime(events: string[]): RuntimeMigrations {
+    return {
+      remote: false,
+      legacyTable: "__drizzle_migrations",
+      open: ({ location }) => {
+        events.push(`open ${location}`);
+        return Promise.resolve({
+          migrate: ({ migrationsTable }) => {
+            events.push(`migrate ${migrationsTable}`);
+            return Promise.resolve();
+          },
+          all: () => Promise.resolve([]),
+          batch: () => Promise.resolve(),
+          close: () => {
+            events.push("close");
+            return Promise.resolve();
+          },
+        });
+      },
+    };
+  }
+
+  function run(name: string, events: string[]): Promise<void> {
+    return runCommand(
+      name,
+      command({
+        deferApp: true,
+        run: () => {
+          events.push(`run ${name}`);
+        },
+      }),
+      {
+        cwd: process.cwd(),
+        argv: [],
+        loaded: { config: testConfig(), configPath: "/site/plumix.config.ts" },
+        runtimeMigrations: recordingRuntime(events),
+      },
+    );
+  }
+
+  test("dev applies every owner and closes the database before the runtime's dev opens it", async () => {
+    vi.spyOn(report, "info").mockImplementation(() => undefined);
+    const events: string[] = [];
+
+    await run("dev", events);
+
+    expect(events).toEqual([
+      "open local",
+      "migrate __drizzle_migrations_core",
+      "close",
+      "run dev",
+    ]);
+  });
+
+  test("another command runs without migrating", async () => {
+    const events: string[] = [];
+
+    await run("build", events);
+
+    expect(events).toEqual(["run build"]);
   });
 });

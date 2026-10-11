@@ -50,8 +50,8 @@ function migrationDatabase(client: BunSqliteClient): MigrationDatabase {
 export const migrations: RuntimeMigrations = {
   remote: false,
   legacyTable: "__drizzle_migrations",
-  open({ cwd, app, location }) {
-    const database = app.config.database;
+  open({ cwd, config, location }) {
+    const database = config.database;
     if (!isBunSqlite(database)) {
       return Promise.reject(
         MigrationsError.databaseNotBunSqlite({ kind: database.kind }),

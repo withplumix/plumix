@@ -11,6 +11,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { migrate } from "drizzle-orm/d1/migrator";
 
 import type { D1BindingEntry } from "../wrangler-config.js";
+import { isD1 } from "../d1.js";
 import { loadWranglerConfig } from "../wrangler-config.js";
 import { CloudflareCliError } from "./errors.js";
 
@@ -116,13 +117,17 @@ function migrationDatabase(
 /**
  * `plumix migrate` opens the site's D1 binding through wrangler's
  * `getPlatformProxy`: the local database `plumix dev` uses, or with
- * `--remote` the deployed one.
+ * `--remote` the deployed one. Without `--binding`, the one `d1()` names.
  */
 export const migrations: RuntimeMigrations = {
   remote: true,
   legacyTable: "d1_migrations",
-  async open({ cwd, location, binding }) {
-    const chosen = chooseBinding(cwd, binding);
+  async open({ cwd, config, location, binding }) {
+    const chosen = chooseBinding(
+      cwd,
+      binding ??
+        (isD1(config.database) ? config.database.config.binding : undefined),
+    );
     const configDir = mkdtempSync(join(tmpdir(), "plumix-migrate-"));
     let proxy: PlatformProxy;
     try {
