@@ -360,46 +360,45 @@ describe("serveProcess", () => {
   });
 
   test("spends one budget across the whole shutdown, not one per step", async () => {
-    // A stop close to the budget keeps the two worlds apart: one budget spends
-    // 600ms, one per step 1100. The slack either side is STOP / 2.
     const error = vi
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
     const BUDGET = 600;
     const STOP = 500;
-    const scheduler: Scheduler = {
-      start: () => Promise.resolve(),
-      stop: () => new Promise((done) => setTimeout(() => done(true), STOP)),
-    };
+    const clock = virtualClock("2026-09-07T03:00:00.000Z");
+    const stop = vi.fn(() => clock.sleep(STOP).then(() => true));
+    const dispose = vi.fn(() => Promise.resolve({ abandoned: 0 }));
     let arrive = (): void => undefined;
     const arrived = new Promise<void>((resolve) => (arrive = resolve));
-    const { drain, server } = harness({
+    const { exit, drain, server } = harness({
+      clock,
       drainDeadlineMs: BUDGET,
       // Never answers, so the drain falls through to its deadline;
       // `closeIdleConnections()` would reap a socket that sent no request.
       listener: () => arrive(),
-      startCron: () => Promise.resolve(scheduler),
+      startCron: () =>
+        Promise.resolve({ start: () => Promise.resolve(), stop }),
+      dispose,
     });
     await Promise.resolve();
     const { port } = await bound(server);
     const hung = fetch(`http://127.0.0.1:${String(port)}/`).catch(() => null);
     await arrived;
 
-    const began = Date.now();
-    await drain("SIGTERM");
-    const elapsed = Date.now() - began;
-    await hung;
+    const draining = drain("SIGTERM");
+    await clock.advanceTo("2026-09-07T03:00:00.599Z");
+    expect(exit).not.toHaveBeenCalled();
+    await clock.advanceTo("2026-09-07T03:00:00.600Z");
 
-    expect(elapsed).toBeLessThan(BUDGET + STOP / 2);
-    // The 5ms covers a timer firing early against `Date.now()` rounding on a
-    // busy host.
-    expect(elapsed).toBeGreaterThanOrEqual(BUDGET - 5);
-    expect(log).toHaveBeenCalledWith(
-      `plumix: listening on http://127.0.0.1:${String(port)}`,
-    );
+    expect(exit).toHaveBeenCalledWith(1);
+    expect(stop).toHaveBeenCalledWith({ timeoutMs: BUDGET });
+    expect(dispose).toHaveBeenCalledWith({ timeoutMs: 0 });
+    expect(clock.now()).toBe(Date.parse("2026-09-07T03:00:00.600Z"));
     expect(error).toHaveBeenCalledWith(
       `plumix: exiting with in-flight responses cut; the ${String(BUDGET)}ms shutdown budget ran out`,
     );
+    await draining;
+    await hung;
   });
 
   test("exits non-zero and says so when the budget cut a scheduled run", async () => {

@@ -192,6 +192,36 @@ cd <playground> && plumix migrate fresh && <extraSetup> && plumix dev --port <po
 
 Every spec shares the playground's one database. The suite runs on a single worker, and the `plumixDbBaseline` fixture restores the database after each attempt. It leaves each owner's `__drizzle_migrations_*` table alone. Pass `sharedDatabase: false` for a site that never serves from that database, such as one that creates a database per session. The suite then runs on parallel workers with no snapshot.
 
+## An end-to-end drag
+
+`dragTo` from `plumix/test/playwright` drags with the mouse from one element to another. It waits until both elements have a box that has stopped moving, presses at the source, moves to the target in steps, and releases there. A list that re-renders as the page settles cannot make it aim at a stale position.
+
+This spec drags the first row of a sortable list below the second:
+
+```ts
+// e2e/recipes.spec.ts
+import { dragTo, expect, test } from "plumix/test/playwright";
+
+test("dragging a recipe below the next one reorders the list", async ({
+  page,
+}) => {
+  await page.goto("pages/recipes");
+  const handle = page.getByTestId("recipe-drag-caponata");
+  const next = page.getByTestId("recipe-row-panzanella");
+
+  await dragTo(page, handle, next, {
+    targetPosition: (box) => ({ x: box.width / 2, y: box.height * 0.75 }),
+  });
+
+  await expect(page.getByTestId("recipe-list")).toHaveAttribute(
+    "data-order",
+    "panzanella,caponata",
+  );
+});
+```
+
+`sourcePosition` and `targetPosition` give the point to press and release, measured from the top-left of that element's box. Both default to the centre, and a point may fall outside the box, as when a drag pans a canvas past its own handle. `steps` sets how many moves lead to the target (10 by default). `beforeDrop` runs at the target with the button still held, so a test can check that the drag is live before it drops. `dragTo` does not scroll, so bring both elements into view first.
+
 ## Related
 
 [Overview](/plugins/overview/) covers installing a plugin and the registration context your plugin's `setup` receives. [Project Structure](/getting-started/project-structure/) lists every `plumix` subpath, `plumix/test` and `plumix/vite` among them. [Content Modelling](/content-modelling/overview/) covers writing the descriptor these tests boot.

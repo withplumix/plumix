@@ -599,7 +599,7 @@ export async function contextForRecipes(): Promise<AppContext> {
 
 ### plumix/test/playwright
 
-The end-to-end surface, aimed at a plugin author testing admin pages against a running site: `definePlumixE2EConfig`, a `test`/`expect` pair with Plumix fixtures, `actingAs` for signing in as a role, and helpers for mocking RPC and the plugin manifest.
+The end-to-end surface, aimed at a plugin author testing admin pages against a running site: `definePlumixE2EConfig`, a `test`/`expect` pair with Plumix fixtures, `actingAs` for signing in as a role, `dragTo` for a mouse drag between two elements, and helpers for mocking RPC and the plugin manifest.
 
 ```ts
 import { definePlumixE2EConfig } from "plumix/test/playwright";

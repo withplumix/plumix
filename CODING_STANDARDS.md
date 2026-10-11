@@ -258,6 +258,8 @@ playground) owns one suite in its `e2e/` folder, against a site on its own ports
 - **It waits on the page, never on the clock.** Wait for the element whose listener it drives
   before it dispatches input: a click, key or wheel sent straight after navigation races that
   listener's mount. Use Playwright's auto-waiting assertions; a `waitForTimeout` is a bug.
+- **A drag goes through `dragTo`**, from `@plumix/core/test/playwright` inside the framework and
+  `plumix/test/playwright` outside it, never through a `boundingBox()` read that aims `page.mouse`.
 
 ```ts
 // packages/plugins/media/e2e/media.spec.ts, the upload steps of this test

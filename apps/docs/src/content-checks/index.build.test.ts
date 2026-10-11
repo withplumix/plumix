@@ -5,14 +5,15 @@ import { readContentTree } from "./content-tree";
 import { CONTENT_ROOT, runContentChecks } from "./index";
 
 /**
- * Runs at collection, where no test timer runs: the tests are synchronous, so
- * a timeout could only fail a slow pass after the fact.
+ * Everything that allocates runs at collection, where no test timer runs, so
+ * the garbage collection its allocation triggers lands there too.
  */
 const findings = runContentChecks(FIXTURES_ROOT);
 const rosterFindings = runContentChecks(FIXTURES_ROOT, [
   { page: "rosters/roles.mdx", items: ["subscriber", "contributor"] },
 ]);
 const realTreeFindings = runContentChecks(CONTENT_ROOT);
+const realTree = readContentTree(CONTENT_ROOT);
 
 describe("runContentChecks", () => {
   it("runs the checks against an arbitrary content root", () => {
@@ -39,7 +40,7 @@ describe("runContentChecks", () => {
   it("reaches the real content tree", () => {
     // Without this the clean run below would pass just as happily on a
     // traversal that found nothing.
-    expect(readContentTree(CONTENT_ROOT).length).toBeGreaterThan(0);
+    expect(realTree.length).toBeGreaterThan(0);
   });
 
   it("passes the real content tree", () => {

@@ -14,6 +14,7 @@ import type {
   ScheduledEvent,
   ScheduledRunReport,
   Scheduler,
+  SchedulerClock,
 } from "plumix/runtime";
 import {
   buildApp,
@@ -229,6 +230,8 @@ export interface ServeProcessOptions extends Pick<
   readonly exit?: (code: number) => void;
   /** Test seam: the shutdown budget, so a test need not spend the real one. */
   readonly drainDeadlineMs?: number;
+  /** Test seam: what the drain reads its deadline from and sleeps on. */
+  readonly clock?: SchedulerClock;
 }
 
 export interface ServingProcess {
@@ -249,6 +252,7 @@ export function serveProcess({
   cron,
   exit = (code) => process.exit(code),
   drainDeadlineMs = DRAIN_DEADLINE_MS,
+  clock = processClock,
 }: ServeProcessOptions): ServingProcess {
   /* eslint-disable turbo/no-undeclared-env-vars -- the built site reads these when it runs, not during any turbo task */
   const port = Number(envOr(process.env.PORT, "3000"));
@@ -285,7 +289,7 @@ export function serveProcess({
     process.off("SIGTERM", shutdown);
     process.off("SIGINT", shutdown);
     console.log(`plumix: ${signal} received, draining`);
-    const deadline = Date.now() + drainDeadlineMs;
+    const deadline = clock.now() + drainDeadlineMs;
     const closed = new Promise<boolean>((settle) =>
       server.close(() => settle(true)),
     );
@@ -294,15 +298,15 @@ export function serveProcess({
     // deferred work.
     stopping = true;
     const cronSettled =
-      (await scheduler?.stop({ timeoutMs: remainingMs(deadline) })) ?? true;
+      (await scheduler?.stop({ timeoutMs: remainingMs(clock, deadline) })) ??
+      true;
     const finished = await Promise.race([
       closed,
-      // Unref'd: when `closed` wins, this timer outlives the race, and a
-      // pending tick must not be what keeps the process alive — the same
-      // reason the scheduler unrefs its own.
-      sleep(remainingMs(deadline), false, { ref: false }),
+      clock.sleep(remainingMs(clock, deadline)).then(() => false),
     ]);
-    const { abandoned } = await dispose({ timeoutMs: remainingMs(deadline) });
+    const { abandoned } = await dispose({
+      timeoutMs: remainingMs(clock, deadline),
+    });
     server.closeAllConnections();
     if (!cronSettled) {
       console.error(
@@ -327,8 +331,17 @@ export function serveProcess({
   return { drain, server };
 }
 
-function remainingMs(deadline: number): number {
-  return Math.max(0, deadline - Date.now());
+/**
+ * Unref'd: when `closed` wins, the drain's timer outlives the race, and a
+ * pending tick must not be what keeps the process alive.
+ */
+const processClock: SchedulerClock = {
+  now: () => Date.now(),
+  sleep: (ms) => sleep(ms, undefined, { ref: false }),
+};
+
+function remainingMs(clock: SchedulerClock, deadline: number): number {
+  return Math.max(0, deadline - clock.now());
 }
 
 /**
