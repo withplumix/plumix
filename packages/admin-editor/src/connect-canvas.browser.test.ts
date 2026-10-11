@@ -213,6 +213,40 @@ describe("connectCanvas", () => {
     conn.dispose();
   });
 
+  test("a canvas:requestDeps message is delivered to onRequestDeps", () => {
+    const store = createEditorStore(treeBlocks);
+    const { win } = fakeFrame();
+    const onRequestDeps = vi.fn();
+    const conn = connectCanvas({
+      store,
+      frameWindow: win,
+      origin: ORIGIN,
+      onRequestDeps,
+    });
+    const tree: readonly BlockNode[] = [{ id: "n", name: "acme/nav" }];
+
+    fromCanvas({ type: "canvas:requestDeps", tree });
+
+    expect(onRequestDeps).toHaveBeenCalledWith(tree);
+    conn.dispose();
+  });
+
+  test("pushDeps posts host:deps to the canvas", () => {
+    const store = createEditorStore(treeBlocks);
+    const { win, posted } = fakeFrame();
+    const conn = connectCanvas({ store, frameWindow: win, origin: ORIGIN });
+
+    conn.pushDeps({ menus: { footer: "menu:footer" } });
+
+    const msg = posted
+      .map(
+        (p) => (p as { message?: { type?: string; deps?: unknown } }).message,
+      )
+      .find((m) => m?.type === "host:deps");
+    expect(msg?.deps).toEqual({ menus: { footer: "menu:footer" } });
+    conn.dispose();
+  });
+
   test("re-announces hello until the canvas acks, then stops", () => {
     vi.useFakeTimers();
     try {

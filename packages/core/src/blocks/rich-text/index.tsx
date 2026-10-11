@@ -1,10 +1,17 @@
 import type { ReactNode } from "react";
 
-import type { BlockNodeRenderProps } from "../render-block-tree.js";
+import type { BlockLoaderRecord } from "../loaders.js";
+import type {
+  BlockNodeRenderProps,
+  MaterializedAttrs,
+} from "../render-block-tree.js";
 import { defineBlock } from "../block-registry.js";
 import { useHtmlAllowlist } from "../html/context.js";
 import { sanitizeHtml } from "../html/sanitize.js";
 import { expandShortcodes } from "../shortcodes/expand.js";
+
+/** Body shortcodes such as a site-title macro read the `site` group. */
+const RICH_TEXT_DEPS = { settings: ["site"] } as const;
 
 /**
  * The trust boundary is the stored bytes: a string body is authored HTML and
@@ -14,14 +21,19 @@ import { expandShortcodes } from "../shortcodes/expand.js";
 function RichTextBlockRender({
   attrs,
   context,
-}: BlockNodeRenderProps): ReactNode {
+  deps,
+}: BlockNodeRenderProps<
+  MaterializedAttrs,
+  BlockLoaderRecord,
+  typeof RICH_TEXT_DEPS
+>): ReactNode {
   const allowlist = useHtmlAllowlist();
   if (typeof attrs.body !== "string") return <div />;
   // Shortcode output is escaped, so a single sanitise over the expansion
   // covers both the body and the expanded result.
   const expanded = context.shortcodes
     ? expandShortcodes(attrs.body, context.shortcodes, {
-        siteSettings: context.siteSettings,
+        siteSettings: deps.settings.site ?? {},
         locale: context.locale,
         entry: context.entry,
       })
@@ -55,5 +67,6 @@ export const richTextBlock = defineBlock({
   ],
   text: [{ name: "body", html: true }],
   defaults: { body: "<p>Enter text here…</p>" },
+  deps: RICH_TEXT_DEPS,
   render: RichTextBlockRender,
 });

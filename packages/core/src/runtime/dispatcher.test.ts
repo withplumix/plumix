@@ -40,7 +40,7 @@ import { matchPluginRawRoute } from "./dispatcher.js";
 
 // Augment the registry so the typed `registerTemplateDep("probe-dep", ...)`
 // call in the render-interior telemetry test compiles.
-declare module "../template.js" {
+declare module "../blocks/deps.js" {
   interface TemplateDepRegistry {
     "probe-dep": { slug: string; result: { value: string } };
   }

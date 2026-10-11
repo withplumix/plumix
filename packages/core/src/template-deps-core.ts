@@ -14,7 +14,7 @@ import { startingMeta } from "./plugin/fields/starting-meta.js";
 // Augment the registry with the core `settings` dep — themes declare
 // `defineTemplate({ settings: ["site-info", ...], render })` and the
 // loader returns each requested group as a `Record<key, value>`.
-declare module "./template.js" {
+declare module "./blocks/deps.js" {
   interface TemplateDepRegistry {
     settings: { slug: string; result: SettingsBag };
   }

@@ -43,7 +43,7 @@ Category `text`. One input, `body`, of type `richtext`, holding an HTML string. 
 
 The body is authored HTML, so the renderer treats it as untrusted on the way out. Shortcodes in it expand first, then the renderer sanitizes the whole result against the same allowlist `core/html` uses, and that is what reaches the page.
 
-A shortcode is a bracketed text macro an author types into the body, and expanding one replaces the tag with escaped text. Core registers two, `[year]` and `[month]`. Expansion is a single left-to-right pass, so a shortcode that returns `[year]` stays literal. An unregistered tag passes through as typed, and `[[year]]` renders the literal `[year]`.
+A shortcode is a bracketed text macro an author types into the body, and expanding one replaces the tag with escaped text. Core registers two, `[year]` and `[month]`. Expansion is a single left-to-right pass, so a shortcode that returns `[year]` stays literal. An unregistered tag passes through as typed, and `[[year]]` renders the literal `[year]`. The block declares `deps: { settings: ["site"] }`, so a shortcode reads the site settings group from its context.
 
 The block also declares the keywords `paragraph`, `text` and `body`. The inserter matches a query as a plain substring of a block's name, title or keywords, so typing `paragraph` finds it. No slash-command surface ships, so `/paragraph` matches nothing.
 

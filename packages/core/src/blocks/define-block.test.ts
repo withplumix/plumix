@@ -1,5 +1,7 @@
 import { describe, expectTypeOf, test } from "vitest";
 
+import type { SettingsBag } from "../db/schema/settings.js";
+import type { BlockContext } from "./render-block-tree.js";
 import { defineBlock } from "./block-registry.js";
 
 describe("defineBlock type inference", () => {
@@ -44,5 +46,69 @@ describe("defineBlock type inference", () => {
         return null;
       },
     });
+  });
+
+  test("`deps` in render is typed per declared kind and key", () => {
+    defineBlock({
+      name: "acme/static-deps",
+      deps: { settings: ["school_ks2"] },
+      render: ({ deps }) => {
+        expectTypeOf(
+          deps.settings.school_ks2,
+        ).toEqualTypeOf<SettingsBag | null>();
+        // @ts-expect-error -- a group the block didn't declare
+        void deps.settings.school_ks3;
+        return null;
+      },
+    });
+  });
+
+  test("a declaration from attributes types its kind with open keys", () => {
+    defineBlock({
+      name: "acme/attr-deps",
+      deps: (attrs: { readonly group: string }) => ({
+        settings: [attrs.group],
+      }),
+      render: ({ attrs, deps }) => {
+        // Open keys, so an index read may miss.
+        expectTypeOf(deps.settings[attrs.group]).toEqualTypeOf<
+          SettingsBag | null | undefined
+        >();
+        return null;
+      },
+    });
+  });
+
+  test("`deps` is a known empty record when none are declared", () => {
+    defineBlock({
+      name: "acme/no-deps",
+      render: ({ deps }) => {
+        expectTypeOf<keyof typeof deps>().toEqualTypeOf<never>();
+        void deps;
+        return null;
+      },
+    });
+  });
+
+  test("an unknown dep kind fails to compile", () => {
+    defineBlock({
+      name: "acme/unknown-kind",
+      // @ts-expect-error -- no `TemplateDepRegistry` entry is named `nope`
+      deps: { settings: ["site"], nope: ["x"] },
+      render: () => null,
+    });
+  });
+
+  test("a key of the wrong type fails to compile", () => {
+    defineBlock({
+      name: "acme/wrong-key",
+      // @ts-expect-error -- a settings group is named by a string
+      deps: { settings: [42] },
+      render: () => null,
+    });
+  });
+
+  test("`BlockContext` no longer carries `siteSettings`", () => {
+    expectTypeOf<BlockContext>().not.toHaveProperty("siteSettings");
   });
 });

@@ -235,7 +235,7 @@ One page of an archive's entries: its entry query run by core, paged, and
 handed to the theme as resolved entries with their pagination.
 
 **Template dep**:
-A named per-request data dependency a template declares and the framework loads (e.g. `menu`, `settings`).
+A named per-request data dependency a template or a block declares and the framework loads once for the page (e.g. `menu`, `settings`).
 
 **Token**:
 A named design value a theme declares, emitted as a CSS custom property.

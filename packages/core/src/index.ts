@@ -454,11 +454,12 @@ export type { EntryListing } from "./route/contract/entry-listing.js";
 export { defineTemplate } from "./template.js";
 export type {
   Template,
-  TemplateDepKey,
-  TemplateDepRegistry,
   TemplateRender,
   TemplateRenderArgs,
 } from "./template.js";
+// From the declaring module, as every reference in core names it: a site's
+// `declare module "plumix"` merges into the registry only along that path.
+export type { TemplateDepKey, TemplateDepRegistry } from "./blocks/deps.js";
 export { loadTemplateDeps } from "./template-deps.js";
 export type { TemplateDepLoader } from "./template-deps.js";
 export {

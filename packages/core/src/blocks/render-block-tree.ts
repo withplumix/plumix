@@ -4,7 +4,12 @@ import { createElement, Fragment } from "react";
 
 import type { JsonObject } from "../json.js";
 import type { BlockRegistry } from "./block-registry.js";
-import type { HydratedEntry, SiteSettings } from "./context-bags.js";
+import type { HydratedEntry } from "./context-bags.js";
+import type {
+  BlockDepDeclarations,
+  BlockDepResults,
+  LoadedDeps,
+} from "./deps.js";
 import type { RootTag } from "./html/root-tag.js";
 import type { CompiledCatalog, MessageValues } from "./i18n-label.js";
 import type {
@@ -19,6 +24,7 @@ import type {
   VisibilityFlags,
 } from "./styles/style-emitter.js";
 import { blockSlotKeys } from "./block-slots.js";
+import { blockDepKeys, pickDeps } from "./deps.js";
 import { editAppender } from "./edit-appender.js";
 import { safeHtmlAttrs } from "./html/attrs.js";
 import { resolveRootTag } from "./html/root-tag.js";
@@ -32,7 +38,6 @@ import { emitBlockStyleCss } from "./styles/style-emitter.js";
  */
 export interface BlockContext {
   readonly entry: HydratedEntry | null;
-  readonly siteSettings: SiteSettings;
   /** Name of the immediate parent block, or `null` at the document root. */
   readonly parent: string | null;
   /** 0 at root, incremented for each container traversal. */
@@ -127,9 +132,10 @@ export interface RenderBlockTreeOptions {
   /** Queried entry, exposed to shortcodes via `BlockContext.entry`. */
   readonly entry?: HydratedEntry | null;
   /**
-   * The site's `site` settings group, exposed via `BlockContext.siteSettings`.
+   * The deps the page loaded for its blocks; each block reads the keys it
+   * declared as `deps`.
    */
-  readonly siteSettings?: SiteSettings;
+  readonly deps?: LoadedDeps;
   /**
    * Edit mode: tag each block wrapper with `data-plumix-id` for canvas
    * selection.
@@ -158,10 +164,14 @@ type BlockProps = Readonly<Record<string, string | undefined>> & BlockSeamProps;
 export interface BlockNodeRenderProps<
   Attrs = MaterializedAttrs,
   Loaders extends BlockLoaderRecord = BlockLoaderRecord,
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  Deps extends BlockDepDeclarations = {},
 > {
   readonly attrs: Attrs;
   readonly context: BlockContext;
   readonly loaders: ResolvedLoaders<Loaders>;
+  /** The template deps the block declared, by kind and key. */
+  readonly deps: BlockDepResults<Deps>;
   /**
    * Seam attributes for `selfSeam` blocks to spread onto their root element.
    */
@@ -182,7 +192,9 @@ export interface BlockNodeRenderProps<
 export type BlockNodeComponent<
   Attrs = MaterializedAttrs,
   Loaders extends BlockLoaderRecord = BlockLoaderRecord,
-> = (props: BlockNodeRenderProps<Attrs, Loaders>) => ReactNode;
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  Deps extends BlockDepDeclarations = {},
+> = (props: BlockNodeRenderProps<Attrs, Loaders, Deps>) => ReactNode;
 
 /** A `BlockContext.t` over `catalog`. */
 export function createMessageResolver(
@@ -195,7 +207,6 @@ const ENGLISH_ONLY = createMessageResolver({});
 
 export const DEFAULT_BLOCK_CONTEXT: BlockContext = Object.freeze({
   entry: null,
-  siteSettings: Object.freeze({}),
   parent: null,
   depth: 0,
   locale: "en",
@@ -313,6 +324,7 @@ interface WalkerEnv {
   readonly hooks: BlockRenderHooks | undefined;
   readonly renderFilters: BlockRenderFilters | undefined;
   readonly loaderData: ResolvedBlockLoaders | undefined;
+  readonly deps: LoadedDeps;
   readonly editing: boolean;
 }
 
@@ -406,6 +418,7 @@ function renderNode(
       attrs,
       context,
       loaders,
+      deps: pickDeps(blockDepKeys(spec, node), env.deps),
       blockProps,
       tagName,
       nodeId: safeId ?? undefined,
@@ -452,12 +465,12 @@ export function renderBlockTree(
     hooks: options?.hooks,
     renderFilters: options?.renderFilters,
     loaderData: options?.loaderData,
+    deps: options?.deps ?? {},
     editing: options?.editing ?? false,
   };
   const rootContext: BlockContext = {
     ...DEFAULT_BLOCK_CONTEXT,
     entry: options?.entry ?? DEFAULT_BLOCK_CONTEXT.entry,
-    siteSettings: options?.siteSettings ?? DEFAULT_BLOCK_CONTEXT.siteSettings,
     locale: options?.locale ?? DEFAULT_BLOCK_CONTEXT.locale,
     shortcodes: options?.shortcodes ?? null,
     editing: options?.editing ?? false,

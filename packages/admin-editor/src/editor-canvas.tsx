@@ -12,9 +12,9 @@ import type {
   BlockRegistry,
   HtmlAllowlist,
   HydratedEntry,
+  LoadedDeps,
   ResolvedBlockLoaders,
   ShortcodeRegistry,
-  SiteSettings,
   ThemeBreakpoints,
   ThemeTokens,
 } from "@plumix/core/blocks";
@@ -25,6 +25,7 @@ import type {
 } from "@plumix/core/blocks/renderer";
 import {
   BASELINE_HTML_ALLOWLIST,
+  collectBlockDepKeys,
   createMessageResolver,
   DEFAULT_BLOCK_CONTEXT,
   editAppender,
@@ -34,6 +35,7 @@ import {
 import { BlockTree, PlumixProvider } from "@plumix/core/blocks/renderer";
 
 import type { RuntimeConnection } from "./connect-runtime.js";
+import { mergeDeps, unresolvedDeps } from "./block-deps.js";
 import { clipboardOpFromEvent } from "./clipboard-ops.js";
 import { connectRuntime } from "./connect-runtime.js";
 import { mergeLoaderData } from "./merge-loader-data.js";
@@ -52,7 +54,8 @@ interface EditorCanvasProps {
   readonly locale?: string;
   /** JSON-lossy: it came through the SSR embed. */
   readonly entry?: HydratedEntry | null;
-  readonly siteSettings?: SiteSettings;
+  /** The blocks' deps the SSR render loaded, JSON-lossy like `entry`. */
+  readonly deps?: LoadedDeps;
 }
 
 /**
@@ -75,7 +78,7 @@ export function EditorCanvas({
   htmlAllowlist = BASELINE_HTML_ALLOWLIST,
   locale,
   entry,
-  siteSettings,
+  deps: seededDeps = {},
 }: EditorCanvasProps): ReactElement {
   const [tree, setTree] = useState<readonly BlockNode[]>(initialTree);
   // Read once, before React replaces the mount root's children; stable across
@@ -85,6 +88,10 @@ export function EditorCanvas({
       document.querySelector("[data-plumix-loader-data]")?.textContent ?? "",
     ),
   );
+  const [deps, setDeps] = useState<LoadedDeps>(seededDeps);
+  // The declared keys last asked for, so a loader that keeps failing isn't
+  // asked again on every keystroke.
+  const requestedDepsRef = useRef<string | null>(null);
   // The host's locale + catalog (it owns Lingui; the canvas has none).
   // Undefined until config arrives, so the pre-config window renders English.
   const [config, setConfig] = useState<CanvasConfig>();
@@ -101,6 +108,7 @@ export function EditorCanvas({
       onTree: setTree,
       onLoaderData: (data) =>
         setLoaderData((prior) => mergeLoaderData(prior, data)),
+      onDeps: (resolved) => setDeps((prior) => mergeDeps(prior, resolved)),
       onConfig: setConfig,
       onXray: setXray,
     });
@@ -110,6 +118,16 @@ export function EditorCanvas({
       connectionRef.current = null;
     };
   }, [origin]);
+
+  // An attribute a declaration reads, or an inserted block, can name a key
+  // the SSR render never loaded; the host resolves it on the server.
+  useEffect(() => {
+    if (!unresolvedDeps(tree, registry, deps)) return;
+    const asked = JSON.stringify(collectBlockDepKeys([tree], registry));
+    if (asked === requestedDepsRef.current) return;
+    requestedDepsRef.current = asked;
+    connectionRef.current?.reportRequestDeps(tree);
+  }, [tree, deps, registry]);
 
   const reportGeometry = useCallback((): void => {
     const root = containerRef.current;
@@ -315,7 +333,7 @@ export function EditorCanvas({
           catalog: config?.catalog,
           shortcodes,
           entry,
-          siteSettings,
+          deps,
         }}
       >
         <div

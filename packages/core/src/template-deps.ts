@@ -1,9 +1,10 @@
-import type { AppContext } from "./context/app-context.js";
 import type {
-  TemplateDepDeclarations,
+  DepKeys,
   TemplateDepKeyedBy,
   TemplateDepRegistry,
-} from "./template.js";
+} from "./blocks/deps.js";
+import type { AppContext } from "./context/app-context.js";
+import type { TemplateDepDeclarations } from "./template.js";
 import { isPageOutcome } from "./route/contract/page-outcome.js";
 
 /**
@@ -93,6 +94,18 @@ export function mergeTemplateDepDeclarations(
       const next = value(prev);
       if (Array.isArray(next)) result[kind] = next;
     }
+  }
+  return result;
+}
+
+/**
+ * The keys the page's blocks declare join the template's, so each kind still
+ * loads once for the whole page.
+ */
+export function unionDepKeys(template: DepKeys, blocks: DepKeys): DepKeys {
+  const result: Record<string, readonly string[]> = { ...template };
+  for (const [kind, keys] of Object.entries(blocks)) {
+    result[kind] = [...new Set([...(result[kind] ?? []), ...keys])];
   }
   return result;
 }

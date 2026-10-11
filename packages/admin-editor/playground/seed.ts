@@ -1,6 +1,7 @@
 import type { BlockNode } from "@plumix/core/blocks";
 
 import type { InserterPattern } from "../src/block-catalog.js";
+import { COPY_SEED } from "./copy-block.js";
 import { FEED_SEED } from "./feed-block.js";
 
 export const SEED_BLOCKS: readonly BlockNode[] = [
@@ -89,6 +90,7 @@ export const SEED_BLOCKS: readonly BlockNode[] = [
     style: { large: { display: "flex", gap: "0.5rem" } },
   },
   FEED_SEED,
+  COPY_SEED,
 ];
 
 export const SEED_PATTERNS: readonly InserterPattern[] = [

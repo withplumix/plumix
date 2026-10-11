@@ -1,4 +1,8 @@
 import type {
+  TemplateDepKeyedBy,
+  TemplateDepRegistry,
+} from "../blocks/deps.js";
+import type {
   BlockPattern,
   BlockSpec,
   MarkSpec,
@@ -22,7 +26,6 @@ import type { RouteIntent } from "../route/contract/intent.js";
 import type { RedirectRule } from "../route/contract/redirects.js";
 import type { TemplateDepLoader } from "../template-deps.js";
 import type { ViewResolvedDataOf } from "../template-registry.js";
-import type { TemplateDepKeyedBy, TemplateDepRegistry } from "../template.js";
 import type {
   EntryMetaBoxDrift,
   SettingsGroupDrift,

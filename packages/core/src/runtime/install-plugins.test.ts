@@ -31,7 +31,7 @@ import type {
 } from "../plugin/registry.js";
 import type { PluginSetupContext } from "../plugin/setup-context-types.js";
 
-declare module "../template.js" {
+declare module "../blocks/deps.js" {
   interface TemplateDepRegistry {
     "dup-thing": { slug: string; result: string };
   }

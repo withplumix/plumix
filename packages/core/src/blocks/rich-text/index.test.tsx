@@ -65,6 +65,7 @@ describe("core/rich-text walker render", () => {
         attrs={{ body }}
         context={DEFAULT_BLOCK_CONTEXT}
         loaders={{}}
+        deps={{ settings: { site: null } }}
         blockProps={{}}
       />,
     );

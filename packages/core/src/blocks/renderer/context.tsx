@@ -3,7 +3,8 @@ import { createContext, useContext } from "react";
 
 import type { JsonObject } from "../../json.js";
 import type { BlockRegistry } from "../block-registry.js";
-import type { HydratedEntry, SiteSettings } from "../context-bags.js";
+import type { HydratedEntry } from "../context-bags.js";
+import type { LoadedDeps } from "../deps.js";
 import type { EntryContent } from "../entry-content.js";
 import type { CompiledCatalog } from "../i18n-label.js";
 import type { ResolvedBlockLoaders } from "../loaders.js";
@@ -83,8 +84,8 @@ export interface PlumixContextValue {
   readonly shortcodes?: ShortcodeRegistry;
   /** Queried entry, exposed to body shortcodes via `BlockContext.entry`. */
   readonly entry?: HydratedEntry | null;
-  /** The site's `site` settings group, which shortcodes and blocks read. */
-  readonly siteSettings?: SiteSettings;
+  /** The deps the page loaded for the blocks it renders, by kind and key. */
+  readonly deps?: LoadedDeps;
   /** Subdirectory prefix for internal links; `""` for a root deployment. */
   readonly basePath?: string;
   /**
@@ -137,7 +138,7 @@ function renderOptions(ctx: PlumixContextValue): RenderBlockTreeOptions {
     catalog: ctx.catalog,
     shortcodes: ctx.shortcodes,
     entry: ctx.entry,
-    siteSettings: ctx.siteSettings,
+    deps: ctx.deps,
     editing: ctx.mode === "edit",
     renderFilters: ctx.renderFilters,
   };

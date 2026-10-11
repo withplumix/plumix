@@ -624,6 +624,20 @@ test.describe("editor playground", () => {
     await expect(page.getByTestId("refresh-block-loader")).toHaveCount(0);
   });
 
+  test("editing an attribute a block's deps read re-resolves them in the canvas", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+    const copy = canvas.locator('[data-testid="copy-text"]');
+    await expect(copy).toContainText("copy for school_ks2");
+
+    await canvas.locator('[data-plumix-id="copy-1"]').click();
+    await page.getByTestId("block-input-group").fill("school_ks3");
+
+    await expect(copy).toContainText("copy for school_ks3");
+  });
+
   test("x-ray toggle outlines every block in the canvas", async ({ page }) => {
     await page.goto("/");
     const canvas = page.frameLocator(CANVAS_FRAME);
