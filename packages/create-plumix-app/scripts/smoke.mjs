@@ -59,8 +59,13 @@ const DEV_EDITOR_REPORT = join(
 const { loadRegistry } = await import(
   join(REPO, "packages/create-plumix-app/dist/registry.js")
 );
-const { planBoot, planInstall, planSmokeCombos, undeclaredSmokePackages } =
-  await import(join(REPO, "packages/create-plumix-app/dist/smoke-plan.js"));
+const {
+  planBoot,
+  planInstall,
+  planSmokeCombos,
+  summarizePlaywrightFailures,
+  undeclaredSmokePackages,
+} = await import(join(REPO, "packages/create-plumix-app/dist/smoke-plan.js"));
 
 const run = (cmd, args, cwd) =>
   execFileSync(cmd, args, { cwd, stdio: "inherit", encoding: "utf8" });
@@ -448,6 +453,7 @@ async function driveEditorUnderDev(appDir, combo) {
   cpSync(DEV_EDITOR, join(appDir, "dev-editor"), { recursive: true });
   const bin = join(appDir, "node_modules", ".bin");
   const port = await freePort();
+  const jsonReport = join(appDir, "dev-editor-report.json");
   try {
     execFileSync(
       "playwright",
@@ -459,6 +465,10 @@ async function driveEditorUnderDev(appDir, combo) {
         join(DEV_EDITOR_RESULTS, combo.name),
         "--trace",
         "retain-on-failure",
+        // The config's reporters plus a JSON one, read back below to name what
+        // failed in this script's own error.
+        "--reporter",
+        "list,html,json",
       ],
       {
         cwd: appDir,
@@ -469,13 +479,26 @@ async function driveEditorUnderDev(appDir, combo) {
           PLUMIX_SMOKE_PORT: String(port),
           PLAYWRIGHT_HTML_OUTPUT_DIR: join(DEV_EDITOR_REPORT, combo.name),
           PLAYWRIGHT_HTML_OPEN: "never",
+          PLAYWRIGHT_JSON_OUTPUT_FILE: jsonReport,
         },
       },
     );
   } catch (err) {
+    // No failed test means Playwright stopped before any ran: the dev server
+    // never answered, which its [WebServer] output above shows.
+    const failed = existsSync(jsonReport)
+      ? summarizePlaywrightFailures(
+          JSON.parse(readFileSync(jsonReport, "utf8")),
+        )
+      : [];
+    const failures =
+      failed.length > 0
+        ? failed
+        : ["plumix dev did not serve (see the [WebServer] output above)"];
     throw new Error(
-      `${combo.name}: the editor failed under \`plumix dev\`; the failing step ` +
-        `and URL are above, the trace under ${join(DEV_EDITOR_RESULTS, combo.name)}.`,
+      `${combo.name}: the editor failed under \`plumix dev\`:\n` +
+        failures.map((line) => `  - ${line}`).join("\n") +
+        `\nTrace under ${join(DEV_EDITOR_RESULTS, combo.name)}.`,
       { cause: err },
     );
   }

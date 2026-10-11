@@ -15,12 +15,26 @@ const PROJECT = resolve(import.meta.dirname, "..");
 const CANVAS_FRAME = '[data-testid="plumix-canvas-frame"] iframe';
 
 /**
+ * Rejects on the page's first uncaught error, in any of its frames, naming the
+ * page it happened on.
+ */
+function firstPageError(page: Page): Promise<never> {
+  return new Promise((_, reject) => {
+    page.once("pageerror", (error) => {
+      reject(new Error(`pageerror on ${page.url()}: ${error.message}`));
+    });
+  });
+}
+
+/**
  * How a broken dev graph shows: an uncaught error (a module that won't link, a
  * rejected dynamic import), a logged error, or a script request that fails.
  */
 function collectProblems(page: Page): string[] {
   const problems: string[] = [];
-  page.on("pageerror", (error) => problems.push(`pageerror: ${error.message}`));
+  page.on("pageerror", (error) => {
+    problems.push(`pageerror on ${page.url()}: ${error.message}`);
+  });
   page.on("console", (message) => {
     if (message.type() === "error") {
       problems.push(`console: ${message.text()} (${message.location().url})`);
@@ -51,15 +65,22 @@ test("the front page loads every module it requests", async ({ page }) => {
   expect(problems).toEqual([]);
 });
 
+// Only uncaught errors fail this session, since the admin aborts requests as it
+// navigates. Raced, so the error is reported rather than a later timeout.
 test("a block from an installed plugin is selectable in the editor canvas", async ({
   page,
   context,
 }) => {
-  const problems = collectProblems(page);
+  const pageError = firstPageError(page);
   const db = await openPlaygroundDb({ cwd: PROJECT });
   const { storageState } = await actingAs(db, "editor");
   db.$client.close();
   await context.addCookies([...storageState.cookies]);
+
+  await Promise.race([pageError, selectInstalledBlock(page)]);
+});
+
+async function selectInstalledBlock(page: Page): Promise<void> {
   // Opened by URL: the New button's client-side navigation into the editor
   // throws a view-transition error that isn't specific to dev.
   const created = await page.request.post("/_plumix/rpc/entry/create", {
@@ -90,5 +111,4 @@ test("a block from an installed plugin is selectable in the editor canvas", asyn
   await expect(
     page.getByTestId("block-inspector").getByTestId("block-input-alt"),
   ).toBeVisible();
-  expect(problems).toEqual([]);
-});
+}
