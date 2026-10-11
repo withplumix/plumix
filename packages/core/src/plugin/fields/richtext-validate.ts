@@ -24,10 +24,6 @@ const IMPLICIT_NODES: ReadonlySet<string> = new Set([
   "listItem",
 ]);
 
-function expandAliases(allowlist: readonly string[]): readonly string[] {
-  return allowlist;
-}
-
 /**
  * Final href gate. Mirrors the regex in `route/render/tiptap.ts`'s
  * `sanitizeHref` — keep them in sync. Blocks `javascript:`, `data:`,
@@ -59,14 +55,12 @@ export function walkRichtextDoc(
   // them on every node.
   const allowedNodeTypes = new Set<string>([
     ...IMPLICIT_NODES,
-    ...expandAliases(allowlist.nodes ?? []),
-    ...expandAliases(allowlist.blocks ?? []),
+    ...(allowlist.nodes ?? []),
+    ...(allowlist.blocks ?? []),
   ]);
   const allowedMarkTypes = new Set<string>([
-    // `MarkSpec` has no `legacyAliases` today so `expandAliases` is a
-    // no-op for marks — kept symmetric for the eventual mark namespacing.
-    ...expandAliases(allowlist.marks ?? []),
-    ...expandAliases(allowlist.blocks ?? []),
+    ...(allowlist.marks ?? []),
+    ...(allowlist.blocks ?? []),
   ]);
   return (value) => {
     if (value === null || value === undefined) return value;
