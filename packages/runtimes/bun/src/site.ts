@@ -154,8 +154,7 @@ export function createBunSite({
   const { trustProxy, bodySizeLimit, idleTimeout }: ResolvedBunConfig =
     isBunRuntime(config.runtime) ? config.runtime.config : bun().config;
 
-  // Dev keeps the console's readable output; a build writes what a log drain
-  // parses. Vite substitutes the gate, so the choice is made at bundle time.
+  // Dev keeps the console's readable output; a build writes what a log drain parses.
   const logger = process.env.PLUMIX_DEV
     ? undefined
     : createJsonLogger((line) => process.stdout.write(line));

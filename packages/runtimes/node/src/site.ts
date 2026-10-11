@@ -133,8 +133,7 @@ export function createNodeSite({
     : {};
   const { trustProxy, bodySizeLimit, cron } = nodeConfig;
 
-  // Dev keeps the console's readable output; a build writes what a log drain
-  // parses. Statically decided, like the boot-error branch below.
+  // Dev keeps the console's readable output; a build writes what a log drain parses.
   const logger = process.env.PLUMIX_DEV
     ? undefined
     : createJsonLogger((line) => process.stdout.write(line));

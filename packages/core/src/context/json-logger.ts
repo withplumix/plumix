@@ -13,11 +13,8 @@ export function createJsonLogger(
   const log =
     (level: Level) =>
     (message: string, meta?: LogMeta): void => {
-      const record = { level, message, time: now().toISOString(), ...meta };
-      const line = JSON.stringify(record, (_key, value: unknown) =>
-        value instanceof Error ? errorFields(value) : value,
-      );
-      write(`${line}\n`);
+      const time = now().toISOString();
+      write(`${serialize({ level, message, time, ...meta })}\n`);
     };
   return {
     debug: log("debug"),
@@ -25,6 +22,23 @@ export function createJsonLogger(
     warn: log("warn"),
     error: log("error"),
   };
+}
+
+/** A log call must never throw, so meta JSON cannot hold is dropped, and says why. */
+function serialize(record: Record<string, unknown>): string {
+  try {
+    return JSON.stringify(record, (_key, value: unknown) =>
+      value instanceof Error ? errorFields(value) : value,
+    );
+  } catch (cause) {
+    const { level, message, time } = record;
+    return JSON.stringify({
+      level,
+      message,
+      time,
+      unserializable: cause instanceof Error ? cause.message : String(cause),
+    });
+  }
 }
 
 interface ErrorFields {

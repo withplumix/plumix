@@ -57,8 +57,8 @@ const failing = definePlugin("failing", (ctx) => {
   });
 });
 
-/** A built site logs to stdout; returns the spy so a test can read it. */
-const silenceStdout = () =>
+/** A built site logs to stdout; the spy keeps it out of the test output and holds what was written. */
+const captureStdout = () =>
   vi.spyOn(process.stdout, "write").mockImplementation(() => true);
 
 const quiet = () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() });
@@ -167,7 +167,7 @@ function tables(): unknown[] {
 
 describe("createNodeSite — scheduled", () => {
   test("answers with the run's report, so a failed task is not swallowed", async () => {
-    silenceStdout();
+    captureStdout();
     const { site } = await siteFor({ plugins: [failing] });
 
     const report = await site.handler.scheduled({
@@ -182,7 +182,7 @@ describe("createNodeSite — scheduled", () => {
   test("the report reaches the scheduler's failure logging", async () => {
     // The whole chain the shipped cron path walks; dropping the return anywhere
     // leaves an operator with silence.
-    silenceStdout();
+    captureStdout();
     const { site } = await siteFor({ plugins: [failing] });
     const clock = virtualClock("2026-09-07T02:58:00Z");
     const logger = quiet();
@@ -218,7 +218,7 @@ describe("createNodeSite — scheduled", () => {
 
 describe("createNodeSite — logs", () => {
   test("a built site writes each log call to stdout as one JSON line, with the error's stack", async () => {
-    const stdout = silenceStdout();
+    const stdout = captureStdout();
     const { site } = await siteFor({ plugins: [failing] });
 
     await site.handler.scheduled({
@@ -243,7 +243,7 @@ describe("createNodeSite — logs", () => {
   });
 
   test("a built site's cron writes its own lines as JSON too", async () => {
-    const stdout = silenceStdout();
+    const stdout = captureStdout();
     const { site } = await siteFor({ plugins: [failing] });
     const clock = virtualClock("2026-09-07T02:58:00Z");
 
