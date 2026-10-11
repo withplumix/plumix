@@ -195,8 +195,8 @@ jobs:
             packages/*/*/playwright-report/
             apps/*/playwright-report/
             packages/*/test-results/
-            packages/*/*/e2e/test-results/
-            apps/*/e2e/test-results/
+            packages/*/*/test-results/
+            apps/*/test-results/
           if-no-files-found: warn
           retention-days: 5
 
