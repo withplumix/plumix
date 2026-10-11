@@ -126,7 +126,7 @@ Each folder under `packages/runtimes/` runs a Plumix site on one runtime, using 
 
 - `plumix.scaffold` is what `create-plumix-app` writes into a new project on this runtime: imports, config slots, dependencies, files, and the `packageManager` the project installs with (pnpm by default).
 - `plumix.e2e` is what the e2e suites and the scaffold smoke need: `start` serves the built output on `PORT`, `wipe` lists what a run deletes first, `database` says where the database ends up, and `cli` runs the `plumix` CLI (the package's bin by default).
-- An adapter proves itself with a `playground/` that runs the shared `runtimeSpec` from `plumix/test/playwright`. The scaffold smoke (`pnpm --filter create-plumix-app smoke:scaffold`) builds a project for each runtime, applies its migrations through `cli`, starts it, and requests `/`, the admin and the `auth/session` RPC.
+- An adapter proves itself with a `playground/` that runs the shared `runtimeSpec` from `plumix/test/playwright`. The scaffold smoke (`pnpm smoke:scaffold`) builds a project for each runtime, applies its migrations through `cli`, starts it, and requests `/`, the admin and the `auth/session` RPC.
 
 ### Packages that own tables
 
@@ -194,7 +194,7 @@ Turborepo skips a task when nothing it reads has changed, so most pull requests 
 - **Editing upstream source re-runs dependents' unit tests.** The suites resolve workspace imports to source, so a package's source is part of what its dependents' tests execute; `test:unit` depends on `^topo` to say so. Without that edge, turbo served a cached pass for the very change that broke a test (#2093).
 - **Everything is cached, including e2e.** Turbo skips a suite when the packages it exercises are untouched, so a change to `@plumix/core`, which everything depends on, runs them all.
 
-To see a task run that turbo wants to skip, pass `--force`. The scaffolder smoke job opts out of both caches on purpose. It asks whether _this commit_ breaks a generated project, so it can't trust a replayed artifact.
+To see a task run that turbo wants to skip, pass `--force`. The `smoke:scaffold` task is never cached: it asks whether _this commit_ breaks a generated project, so it can't trust a replayed result. The builds it depends on are cached as usual, and `create-plumix-app` declares every package it packs as a devDependency so turbo builds them first.
 
 ### Link validation
 

@@ -145,11 +145,11 @@ and outside the tiers. Typecheck, lint, format, knip, publint, attw, `i18n:check
 `migrations:check` and the link check are **gates**, not tiers: they check code without running
 it, and a new check of that kind joins an existing gate.
 
-| Tier  | Proves                                               | Lives in                                       | Runs with                                        | CI job             |
-| ----- | ---------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------ | ------------------ |
-| Unit  | the logic behind a behaviour, through its public API | `src/foo.test.ts` beside `src/foo.ts`          | `pnpm test:unit`                                 | `Test`             |
-| E2E   | what a consumer sees and does on a running site      | the package's `e2e/*.spec.ts`                  | `pnpm test:e2e`                                  | `Test (e2e)`       |
-| Smoke | a project scaffolded from the packed tarballs works  | `packages/create-plumix-app/scripts/smoke.mjs` | `pnpm --filter create-plumix-app smoke:scaffold` | `Smoke (scaffold)` |
+| Tier  | Proves                                               | Lives in                                       | Runs with             | CI job             |
+| ----- | ---------------------------------------------------- | ---------------------------------------------- | --------------------- | ------------------ |
+| Unit  | the logic behind a behaviour, through its public API | `src/foo.test.ts` beside `src/foo.ts`          | `pnpm test:unit`      | `Test`             |
+| E2E   | what a consumer sees and does on a running site      | the package's `e2e/*.spec.ts`                  | `pnpm test:e2e`       | `Test (e2e)`       |
+| Smoke | a project scaffolded from the packed tarballs works  | `packages/create-plumix-app/scripts/smoke.mjs` | `pnpm smoke:scaffold` | `Smoke (scaffold)` |
 
 ### Where a test goes
 

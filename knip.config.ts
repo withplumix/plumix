@@ -58,6 +58,11 @@ const config: KnipConfig = {
     // own module graph.
     "packages/create-plumix-app": {
       ignore: ["base/**"],
+      // Declared so turbo's `^build` builds every package the smoke packs.
+      ignoreDependencies: [
+        /^@plumix\/(?:admin|core|plugin-|runtime-)/,
+        "plumix",
+      ],
     },
     // plumix.config.ts is the consumer's entry — knip can't infer it
     // from package.json's exports because apps don't publish.

@@ -186,6 +186,11 @@
       ],
       "outputLogs": "new-only"
     },
+    "smoke:scaffold": {
+      // Asks whether this commit breaks a generated project; a replay can't answer that.
+      "dependsOn": ["build", "^build"],
+      "cache": false
+    },
     "test:build": {
       // Tests that need the build graph (`*.build.test.ts`): plumix inspects
       // the artifacts of a real Vite build and the façade's published types,

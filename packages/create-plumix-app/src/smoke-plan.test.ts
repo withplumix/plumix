@@ -3,7 +3,12 @@ import { describe, expect, it } from "vitest";
 import type { PluginDescriptor, RuntimeDescriptor } from "./compose/types.js";
 import type { Registry } from "./registry.js";
 import { loadRegistry } from "./registry.js";
-import { planBoot, planInstall, planSmokeCombos } from "./smoke-plan.js";
+import {
+  planBoot,
+  planInstall,
+  planSmokeCombos,
+  undeclaredSmokePackages,
+} from "./smoke-plan.js";
 import { REPO_ROOT } from "./test-support.js";
 
 function runtime(
@@ -155,5 +160,29 @@ describe("planBoot", () => {
     expect(() => planBoot("@plumix/runtime-edge", {})).toThrow(
       /@plumix\/runtime-edge declares no "plumix\.e2e\.start"/,
     );
+  });
+});
+
+describe("undeclaredSmokePackages", () => {
+  it("names each packed package the scaffolder does not declare, so turbo would not build it", () => {
+    expect(
+      undeclaredSmokePackages(
+        ["plumix", "@plumix/core", "@plumix/plugin-seo"],
+        {
+          devDependencies: {
+            plumix: "workspace:*",
+            "@plumix/core": "workspace:*",
+          },
+        },
+      ),
+    ).toEqual(["@plumix/plugin-seo"]);
+  });
+
+  it("names nothing when every packed package is a devDependency", () => {
+    expect(
+      undeclaredSmokePackages(["plumix"], {
+        devDependencies: { plumix: "workspace:*" },
+      }),
+    ).toEqual([]);
   });
 });

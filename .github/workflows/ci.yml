@@ -175,9 +175,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-      # The scaffolder packs these packages without depending on them, so `^build` skips them.
-      - run: pnpm exec turbo run build --filter './packages/**'
-      - run: pnpm --filter create-plumix-app smoke:scaffold
+      - run: pnpm smoke:scaffold
 
   test-e2e:
     name: Test (e2e)

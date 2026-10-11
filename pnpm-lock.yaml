@@ -1285,12 +1285,66 @@ importers:
         specifier: 'catalog:'
         version: 3.3.1
     devDependencies:
+      '@plumix/admin':
+        specifier: workspace:*
+        version: link:../admin
+      '@plumix/admin-editor':
+        specifier: workspace:*
+        version: link:../admin-editor
+      '@plumix/admin-ui':
+        specifier: workspace:*
+        version: link:../admin-ui
+      '@plumix/core':
+        specifier: workspace:*
+        version: link:../core
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint
+      '@plumix/plugin-audit-log':
+        specifier: workspace:*
+        version: link:../plugins/audit-log
+      '@plumix/plugin-blog':
+        specifier: workspace:*
+        version: link:../plugins/blog
+      '@plumix/plugin-comments':
+        specifier: workspace:*
+        version: link:../plugins/comments
+      '@plumix/plugin-feeds':
+        specifier: workspace:*
+        version: link:../plugins/feeds
+      '@plumix/plugin-forms':
+        specifier: workspace:*
+        version: link:../plugins/forms
+      '@plumix/plugin-media':
+        specifier: workspace:*
+        version: link:../plugins/media
+      '@plumix/plugin-menu':
+        specifier: workspace:*
+        version: link:../plugins/menu
+      '@plumix/plugin-og':
+        specifier: workspace:*
+        version: link:../plugins/og
+      '@plumix/plugin-pages':
+        specifier: workspace:*
+        version: link:../plugins/pages
+      '@plumix/plugin-search':
+        specifier: workspace:*
+        version: link:../plugins/search
+      '@plumix/plugin-seo':
+        specifier: workspace:*
+        version: link:../plugins/seo
       '@plumix/prettier-config':
         specifier: workspace:*
         version: link:../../tooling/prettier
+      '@plumix/runtime-bun':
+        specifier: workspace:*
+        version: link:../runtimes/bun
+      '@plumix/runtime-cloudflare':
+        specifier: workspace:*
+        version: link:../runtimes/cloudflare
+      '@plumix/runtime-node':
+        specifier: workspace:*
+        version: link:../runtimes/node
       '@plumix/typescript-config':
         specifier: workspace:*
         version: link:../../tooling/typescript
@@ -1306,6 +1360,9 @@ importers:
       eslint:
         specifier: 'catalog:'
         version: 10.11.0(jiti@2.7.0)(supports-color@10.2.2)
+      plumix:
+        specifier: workspace:*
+        version: link:../plumix
       prettier:
         specifier: 'catalog:'
         version: 3.9.9

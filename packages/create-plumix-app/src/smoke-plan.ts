@@ -160,3 +160,15 @@ export function planBoot(
     start,
   };
 }
+
+export interface ScaffolderManifest {
+  readonly devDependencies?: Readonly<Record<string, string>>;
+}
+
+export function undeclaredSmokePackages(
+  packed: readonly string[],
+  manifest: ScaffolderManifest,
+): readonly string[] {
+  const declared = manifest.devDependencies ?? {};
+  return packed.filter((name) => !(name in declared));
+}
