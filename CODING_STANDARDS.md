@@ -310,14 +310,15 @@ Use the real thing when it is fast and deterministic. Otherwise use a fake the o
 only a boundary Plumix doesn't own, and keep it narrow.
 
 1. **Real.** Collaborators inside Plumix, and the in-memory database, are used as they are.
-2. **Fake.** The package that owns an interface ships its fake in its test kit (`plumix/test`,
-   `@plumix/core/test`), and the fake has tests of its own. A runtime's slots pass the shared
-   conformance suites (`plumix/test/conformance`), which is what keeps the fakes honest. Add a new
-   fake there, as high up as every caller can use it.
+2. **Fake.** The package that owns an interface ships its fake in its test kit, and the fake has
+   tests of its own beside it. The test kit is `plumix/test` for what another package's tests use,
+   and the package's own `src/test/` for a fake only its own tests use. A runtime's slots pass the
+   shared conformance suites (`plumix/test/conformance`), which is what keeps the fakes honest. Add
+   a new fake there, as high up as every caller can use it.
 3. **Stub.** Only a boundary outside Plumix: a third-party HTTP API, the clock, randomness, a
    platform global (`vi.stubGlobal`). A slot Plumix defines, like the `Mailer`, has a fake: core's
-   `makeMailer` (`packages/core/src/test/mailer.ts`) captures what was sent. Inject the dependency
-   when the code doesn't take one yet: add the seam to the source.
+   `makeMailer` (`packages/core/src/test/mailer.ts`, tested by `mailer.test.ts`) captures what was
+   sent. Inject the dependency when the code doesn't take one yet: add the seam to the source.
 4. **Never mock a module.** `vi.mock` couples a test to where code lives; the
    `plumix/no-module-mocking` lint rule rejects it. Wrap a third-party type behind an interface
    Plumix owns and double that.
