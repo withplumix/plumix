@@ -88,6 +88,8 @@ export type LoadedDeps = Readonly<
   Record<string, Readonly<Record<string, unknown>>>
 >;
 
+const NO_INHERITED_KEYS: readonly string[] = [];
+
 export function blockDepKeys(spec: BlockSpec, node: BlockNode): DepKeys {
   const { deps } = spec;
   if (deps === undefined) return {};
@@ -96,10 +98,11 @@ export function blockDepKeys(spec: BlockSpec, node: BlockNode): DepKeys {
   if (typeof declared !== "object" || declared === null) return {};
   const keys: Record<string, readonly string[]> = {};
   for (const [kind, value] of Object.entries(declared)) {
-    // A block inherits no keys for `(prev) => next` to compose.
     const declaredKeys: unknown =
       typeof value === "function"
-        ? (value as (prev: readonly string[]) => readonly unknown[])([])
+        ? (value as (prev: readonly string[]) => readonly unknown[])(
+            NO_INHERITED_KEYS,
+          )
         : value;
     if (!Array.isArray(declaredKeys)) continue;
     keys[kind] = declaredKeys.filter(
