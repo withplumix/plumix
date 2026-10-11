@@ -1,0 +1,12 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "lint": {
+      // `@plumix/eslint-config` depends on this package, so this one can't
+      // declare it back without a cycle. Its config imports the rules by
+      // path, and this edge puts their files in the lint hash.
+      "dependsOn": ["$TURBO_EXTENDS$", "@plumix/eslint-config#topo"]
+    }
+  }
+}

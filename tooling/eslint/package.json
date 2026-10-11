@@ -12,11 +12,11 @@
   "scripts": {
     "clean": "git clean -xdf .cache .turbo node_modules",
     "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path ../../.prettierignore",
+    "lint": "eslint",
     "test:unit": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@eslint/compat": "^2",
     "@eslint/js": "^10",
     "@shadcn/lint": "^0.2.0",
     "eslint-plugin-import-x": "^4",

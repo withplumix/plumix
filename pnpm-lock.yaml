@@ -3048,6 +3048,9 @@ importers:
 
   tooling/e2e-ports:
     devDependencies:
+      '@plumix/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint
       '@plumix/prettier-config':
         specifier: workspace:*
         version: link:../prettier
@@ -3063,6 +3066,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: catalog:vitest
         version: 5.0.3(@vitest/browser@5.0.3)(vitest@5.0.3)
+      eslint:
+        specifier: 'catalog:'
+        version: 10.11.0(jiti@2.7.0)(supports-color@10.2.2)
       prettier:
         specifier: 'catalog:'
         version: 3.9.9
@@ -3075,9 +3081,6 @@ importers:
 
   tooling/eslint:
     dependencies:
-      '@eslint/compat':
-        specifier: ^2
-        version: 2.1.1(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))
       '@eslint/js':
         specifier: ^10
         version: 10.0.1(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))
@@ -3143,12 +3146,21 @@ importers:
         specifier: catalog:lingui
         version: 6.9.0
     devDependencies:
+      '@plumix/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint
       '@plumix/prettier-config':
         specifier: workspace:*
         version: link:../prettier
       '@plumix/typescript-config':
         specifier: workspace:*
         version: link:../typescript
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.1
+      eslint:
+        specifier: 'catalog:'
+        version: 10.11.0(jiti@2.7.0)(supports-color@10.2.2)
       prettier:
         specifier: 'catalog:'
         version: 3.9.9
@@ -3177,6 +3189,9 @@ importers:
       '@plumix/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@plumix/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint
       '@plumix/plugin-audit-log':
         specifier: workspace:*
         version: link:../../packages/plugins/audit-log
@@ -3231,6 +3246,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.1
+      eslint:
+        specifier: 'catalog:'
+        version: 10.11.0(jiti@2.7.0)(supports-color@10.2.2)
       plumix:
         specifier: workspace:*
         version: link:../../packages/plumix
@@ -3255,6 +3273,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: catalog:vitest
         version: 5.0.3(@vitest/browser@5.0.3)(vitest@5.0.3)
+      eslint:
+        specifier: 'catalog:'
+        version: 10.11.0(jiti@2.7.0)(supports-color@10.2.2)
       prettier:
         specifier: 'catalog:'
         version: 3.9.9
@@ -3279,6 +3300,9 @@ importers:
       '@vitest/browser-playwright':
         specifier: catalog:vitest
         version: 5.0.3(playwright@1.63.0)(vite@8.3.2(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))(vitest@5.0.3)
+      eslint:
+        specifier: 'catalog:'
+        version: 10.11.0(jiti@2.7.0)(supports-color@10.2.2)
       playwright:
         specifier: 'catalog:'
         version: 1.63.0
@@ -4563,15 +4587,6 @@ packages:
   '@eslint-community/regexpp@4.12.2':
     resolution: {integrity: sha512-EriSTlt5OC9/7SXkRSCAhfSxxoSUgBm33OH+IkwbdpgoqsSsUg7y3uh+IICI/Qg4BBWr3U2i39RpmycbxMq4ew==}
     engines: {node: ^12.0.0 || ^14.0.0 || >=16.0.0}
-
-  '@eslint/compat@2.1.1':
-    resolution: {integrity: sha512-rMcy8GSrwNzcISX/BlTDY/GLB4eCopEuy9woIls3To+15OLxykZrxxq+WUcylCPCQ6F4MujjBM1DX5V1aqI3Vw==}
-    engines: {node: ^20.19.0 || ^22.13.0 || >=24}
-    peerDependencies:
-      eslint: ^8.40 || 9 || 10
-    peerDependenciesMeta:
-      eslint:
-        optional: true
 
   '@eslint/config-array@0.23.5':
     resolution: {integrity: sha512-Y3kKLvC1dvTOT+oGlqNQ1XLqK6D1HU2YXPc52NmAlJZbMMWDzGYXMiPRJ8TYD39muD/OTjlZmNJ4ib7dvSrMBA==}
@@ -13324,12 +13339,6 @@ snapshots:
       eslint-visitor-keys: 3.4.3
 
   '@eslint-community/regexpp@4.12.2': {}
-
-  '@eslint/compat@2.1.1(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))':
-    dependencies:
-      '@eslint/core': 1.2.1
-    optionalDependencies:
-      eslint: 10.11.0(jiti@2.7.0)(supports-color@10.2.2)
 
   '@eslint/config-array@0.23.5(supports-color@10.2.2)':
     dependencies:

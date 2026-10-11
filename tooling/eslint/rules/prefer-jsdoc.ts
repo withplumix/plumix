@@ -44,7 +44,7 @@ function isTopLevelDeclaration(node: Rule.Node): boolean {
     parent?.type === "Program" ||
     (parent !== null &&
       EXPORTS.has(parent.type) &&
-      parent.parent?.type === "Program")
+      parent.parent.type === "Program")
   );
 }
 
@@ -79,7 +79,7 @@ export const preferJsdoc: Rule.RuleModule = {
       let expectedEnd = (anchor.loc?.start.line ?? 0) - 1;
       for (let i = before.length - 1; i >= 0; i--) {
         const comment = before[i];
-        if (!comment?.loc || comment.loc.end.line !== expectedEnd) break;
+        if (comment?.loc?.end.line !== expectedEnd) break;
         const lead = sourceCode.lines[comment.loc.start.line - 1]?.slice(
           0,
           comment.loc.start.column,

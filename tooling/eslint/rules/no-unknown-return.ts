@@ -104,7 +104,7 @@ function isTypePattern(node: ts.Node): boolean {
   ) {
     return true;
   }
-  for (let child = node; child.parent; child = child.parent) {
+  for (let child = node; !ts.isSourceFile(child); child = child.parent) {
     const parent = child.parent;
     if (
       ts.isConditionalTypeNode(parent) &&
@@ -131,7 +131,10 @@ function returnIsNotOurs(context: Rule.RuleContext, node: Rule.Node): boolean {
   const contextual = contextualFunctionType(checker, signature);
   const signatures = contextual?.getNonNullableType().getCallSignatures() ?? [];
   return signatures.some((candidate) => {
-    const declared = candidate.getDeclaration()?.type;
+    // Typed non-null, but a signature the checker synthesizes has none.
+    const declared = (
+      candidate.getDeclaration() as ts.SignatureDeclaration | undefined
+    )?.type;
     return declared !== undefined && isOpenTypeNode(declared);
   });
 }
@@ -143,7 +146,11 @@ function returnIsNotOurs(context: Rule.RuleContext, node: Rule.Node): boolean {
 function enclosingSignature(
   node: ts.Node,
 ): ts.SignatureDeclaration | undefined {
-  for (let current = node; current.parent; current = current.parent) {
+  for (
+    let current = node;
+    !ts.isSourceFile(current);
+    current = current.parent
+  ) {
     if (ts.isFunctionLike(current)) return current;
   }
   return undefined;
