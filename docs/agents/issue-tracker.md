@@ -35,8 +35,8 @@ Run `gh issue view <number> --comments`.
 
 ## Ticket model label
 
-`to-tickets` proposes one `model:` label per ticket in its quiz step. `/ship` reads it when it
-spawns a subagent for that ticket. A ticket with no label runs on `opus`.
+`to-tickets` proposes one `model:` label per ticket in its quiz step, naming the model the ticket
+needs. A ticket with no label needs `opus`.
 
 | model    | Pick it when                                                                                                                       |
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------- |
