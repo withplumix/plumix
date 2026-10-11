@@ -127,31 +127,8 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-
-      # Restore only: the e2e job saves this cache, and two savers race for one key.
-      - name: Resolve Playwright version
-        id: playwright-version
-        shell: bash
-        run: |
-          version=$(pnpm --filter @plumix/admin exec playwright --version | awk '{print $NF}')
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-
-      - name: Restore Playwright browsers
-        id: playwright-cache
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
-
-      - name: Install Playwright browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        working-directory: packages/admin
-        run: pnpm exec playwright install --with-deps chromium
-
-      - name: Install Playwright system deps (cache hit — browsers already there)
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        working-directory: packages/admin
-        run: pnpm exec playwright install-deps chromium
+          playwright: "true"
 
       - run: pnpm test:unit
 
@@ -186,72 +163,40 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-
-      - name: Resolve Playwright version
-        id: playwright-version
-        shell: bash
-        run: |
-          version=$(pnpm --filter @plumix/admin exec playwright --version | awk '{print $NF}')
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Playwright browsers
-        id: playwright-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
-
-      - name: Install Playwright browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        working-directory: packages/admin
-        run: pnpm exec playwright install --with-deps chromium
-
-      - name: Install Playwright system deps (cache hit — browsers already there)
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        working-directory: packages/admin
-        run: pnpm exec playwright install-deps chromium
+          playwright: "true"
 
       - run: pnpm test:e2e
 
       # No `if: always()`: playwright clears `playwright-report/` and `test-results/` as it
       # starts, which would delete a failed suite's artifacts before the upload below.
-      - name: Assert docs screenshot capture succeeds
-        run: pnpm docs:screenshots
-
-      - name: Assert the committed images are the ones the capture produces
-        id: screenshot-diff
-        run: git diff --exit-code -- apps/docs/src/assets/screenshots
+      - name: Assert the committed docs screenshots are the ones the capture produces
+        id: screenshots
+        run: |
+          pnpm docs:screenshots
+          git diff --exit-code -- apps/docs/src/assets/screenshots
 
       - name: Upload the recaptured screenshots
-        if: failure() && steps.screenshot-diff.outcome == 'failure'
+        if: failure() && steps.screenshots.outcome == 'failure'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: docs-screenshots
           path: apps/docs/src/assets/screenshots
           retention-days: 7
 
-      # Not `**/…` in upload-artifact: its globber follows symlinks through `node_modules/.pnpm`,
-      # which took about a minute and made a failing run look like a hang.
-      - name: Collect Playwright reports
-        if: failure()
-        shell: bash
-        run: |
-          stage="${RUNNER_TEMP}/playwright-reports"
-          mkdir -p "$stage"
-          find . -type d \( -name node_modules -o -name .git -o -name .turbo \) -prune -o \
-                 -type d \( -name playwright-report -o -name test-results \) -prune -print0 |
-            while IFS= read -r -d '' dir; do
-              rel="${dir#./}"
-              mkdir -p "$stage/$(dirname "$rel")" && cp -R "$dir" "$stage/$rel" ||
-                echo "::warning::could not stage $rel"
-            done
-
+      # Explicit paths, not `**/…`: that globber follows symlinks through `node_modules/.pnpm`.
       - name: Upload Playwright reports + traces on failure
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: playwright-reports
-          path: ${{ runner.temp }}/playwright-reports
+          path: |
+            packages/*/playwright-report/
+            packages/*/*/playwright-report/
+            apps/*/playwright-report/
+            packages/*/test-results/
+            packages/*/*/test-results/
+            apps/*/test-results/
           if-no-files-found: warn
           retention-days: 5
 

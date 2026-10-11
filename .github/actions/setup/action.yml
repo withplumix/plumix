@@ -2,6 +2,9 @@ name: "Setup and install"
 description: "Common setup steps for CI"
 
 inputs:
+  playwright:
+    description: "Install Chromium and its system dependencies for Playwright"
+    default: "false"
   turbo-cache:
     description: "Restore and save the local turbo cache"
     default: "true"
@@ -17,6 +20,10 @@ runs:
     - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
       with:
         bun-version-file: ".bun-version"
+
+    - if: inputs.playwright == 'true'
+      shell: bash
+      run: pnpm --filter @plumix/admin exec playwright install --with-deps chromium
 
     - if: inputs.turbo-cache == 'true'
       shell: bash
