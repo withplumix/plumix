@@ -200,8 +200,6 @@ To see a task run that turbo wants to skip, pass `--force`. The scaffolder smoke
 
 The `Links` CI job checks every local link offline with [lychee](https://lychee.cli.rs), `#anchor` fragments included. Repository prose links are ordinary relative paths. Docs pages under `apps/docs/src/content/docs` link to Starlight routes (`/fields/text/#reserved-names`), which the job reads as the `.mdx` file at that path, so a page must not set its own `slug`. For the form a docs link takes, see [`apps/docs/README.md`](apps/docs/README.md).
 
-The weekly `Link Check` workflow checks remote URLs, including prose links to `https://docs.plumix.dev/...`.
-
 ## License
 
 By contributing, you agree to license your contributions under the [MIT License](LICENSE).
