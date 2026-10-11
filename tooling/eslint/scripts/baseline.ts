@@ -5,7 +5,7 @@ import tseslint from "typescript-eslint";
 import type { BaselineEntry } from "../rules/sync-comment-guarded.js";
 import { lineHash, syncCommentGuarded } from "../rules/sync-comment-guarded.js";
 
-/** An unguarded coupling comment as it stands in the tree today. */
+/** An unguarded coupling comment found in a file. */
 export interface Occurrence extends BaselineEntry {
   readonly line: number;
 }

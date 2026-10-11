@@ -10,7 +10,7 @@ RuleTester.itOnly = it.only;
 
 const filename = path.join(import.meta.dirname, "example.ts");
 
-/** The trimmed line `// Mirrors the server's list.`, hashed by `sha256sum`. */
+/** The `sha256sum` of the trimmed first fixture line below, cut to 16 characters. */
 const MIRRORS_HASH = "98a57b9564263b90";
 
 new RuleTester().run("plumix/sync-comment-guarded", syncCommentGuarded, {
@@ -102,6 +102,7 @@ new RuleTester().run("plumix/sync-comment-guarded", syncCommentGuarded, {
     },
     ...[
       "// Mirrors the server's list.",
+      "// Keeps `roster.names` in sync with the docs.",
       "// Keep this in sync with the admin copy.",
       "// keeps the roster and the docs in sync",
       "// Kept in sync by hand.",

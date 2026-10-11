@@ -32,9 +32,9 @@ kept arriving.
   is the one #2722 used to take `@shadcn/lint` to zero.
 - **The false-positive bar.** A `plumix/*` rule ships only when it has zero
   hits on the tree after the genuine violations are fixed, with only the
-  existing named escape hatches (`// Safety:`, `Not JSON:`). A baseline is a
-  rule's transition aid while its violations are fixed, not a way to meet the
-  bar.
+  existing named escape hatches (`// Safety:`, `Not JSON:`). A baseline may
+  list the genuine violations still awaiting their fix while they are burned
+  down, never a false positive.
 
 ## Considered options
 

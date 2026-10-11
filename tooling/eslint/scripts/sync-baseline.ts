@@ -16,9 +16,8 @@ const root = repoRootOf(BASELINE);
 const linted = new Map<string, boolean>();
 
 /**
- * A file is linted by the nearest package above it that declares a `lint`
- * script, even past a nested package (a playground) that declares none. The
- * root's `lint` runs turbo, not ESLint.
+ * The nearest package above a file that declares `lint` lints it, even past a
+ * nested package (a playground) that declares none. The root's runs turbo.
  */
 function packageLints(dir: string): boolean {
   if (dir === ".") return false;

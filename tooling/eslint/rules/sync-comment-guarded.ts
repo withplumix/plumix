@@ -10,7 +10,7 @@ type Comment = ReturnType<
 >[number];
 
 const COUPLING =
-  /\bmirrors\b|\bkeeps?\b[^.]*?\bin sync\b|\bkept in sync\b|\bmust match\b|\bmust stay in step\b/i;
+  /\bmirrors\b|\bkeeps?\b(?:[^.]|\.(?!\s|$))*?\bin sync\b|\bkept in sync\b|\bmust match\b|\bmust stay in step\b/i;
 
 /** A coupling comment the rule skips, identified by its file and line hash. */
 export interface BaselineEntry {

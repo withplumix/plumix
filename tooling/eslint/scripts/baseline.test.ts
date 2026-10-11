@@ -22,11 +22,12 @@ describe("isLintedFile", () => {
       "packages/core/src/vitest.config.test.ts",
     ];
 
+    const ignored = await Promise.all(
+      files.map((file) => eslint.isPathIgnored(file)),
+    );
+
     const linted = files.filter((file) => isLintedFile(file));
-    const readByLint: string[] = [];
-    for (const file of files) {
-      if (!(await eslint.isPathIgnored(file))) readByLint.push(file);
-    }
+    const readByLint = files.filter((_, index) => !ignored[index]);
 
     expect(linted).toEqual(readByLint);
   });
