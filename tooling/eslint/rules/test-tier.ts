@@ -27,6 +27,11 @@ const TIERS =
 const TEST_FILE = /\.test\.[cm]?[jt]sx?$/;
 const BROWSER_TEST_FILE = /\.browser\.test\.[cm]?[jt]sx?$/;
 const BUILD_TEST_FILE = /\.build\.test\.[cm]?[jt]sx?$/;
+const PROCESS_MODULES = new Set(["node:child_process", "child_process"]);
+const SKIPPING = new Set(["skip", "fixme"]);
+const TEST_FUNCTIONS = new Set(["test", "it", "describe"]);
+const ISSUE_NUMBER = /#\d+/;
+
 const VITEST_CONFIG = /(?:^|[\\/])vitest(?:\.[\w-]+)?\.config\.[cm]?[jt]s$/;
 
 function baseName(filename: string): string {
@@ -57,12 +62,15 @@ export const testTier: Rule.RuleModule = {
     type: "problem",
     docs: {
       description:
-        "Keep unit tests on logic in Node: no simulated DOM, no DOM APIs, and no file in a retired tier.",
+        "Keep unit tests on logic in Node (no simulated DOM, no DOM APIs, no child process), keep retries out of Vitest, give every skip an issue, and add no file to a retired tier.",
     },
     messages: {
       environmentDocblock: `A \`@vitest-environment\` docblock swaps in a simulated DOM. ${TIERS} Drop the docblock.`,
       configEnvironment: `\`test.environment\` swaps the environment for every test in the package. ${TIERS} Drop the setting.`,
       retiredTier: `\`*.browser.test.*\` and \`*.build.test.ts\` are retired tiers. ${TIERS} Test the logic in a \`*.test.ts\` file, what the user sees in \`e2e/\`, and what an installed project does in the scaffold smoke.`,
+      unexplainedSkip: `A skipped test names the issue that re-enables it, \`#1234\` in its title, or the capability its platform lacks (CODING_STANDARDS.md#tests). Add the issue number, or delete the test if the behaviour is gone.`,
+      configRetry: `\`test.retry\` hides a flaky unit test. A flaky test is a bug: drop the setting and fix the test (CODING_STANDARDS.md#tests).`,
+      processInUnitTest: `A unit test stays in one process. ${TIERS} Call the command's function in-process, and run the installed binary in the scaffold smoke.`,
       domInNodeTest: `\`{{ what }}\` needs a DOM, and this file runs in Node. ${TIERS} Move the logic into a function this test can call, and cover what the user sees in \`e2e/\`.`,
     },
     schema: [
@@ -70,6 +78,7 @@ export const testTier: Rule.RuleModule = {
         type: "object",
         properties: {
           pending: { type: "array", items: { type: "string" } },
+          processSubjects: { type: "array", items: { type: "string" } },
         },
         additionalProperties: false,
       },
@@ -77,8 +86,10 @@ export const testTier: Rule.RuleModule = {
   },
   create(context) {
     const { filename, sourceCode } = context;
-    const { pending = [] } =
-      (context.options[0] as { pending?: readonly string[] } | undefined) ?? {};
+    const { pending = [], processSubjects = [] } =
+      (context.options[0] as
+        | { pending?: readonly string[]; processSubjects?: readonly string[] }
+        | undefined) ?? {};
     const name = baseName(filename);
     const nodeTierTest = TEST_FILE.test(name) && !BROWSER_TEST_FILE.test(name);
 
@@ -99,9 +110,30 @@ export const testTier: Rule.RuleModule = {
     }
 
     const path = filename.split(/[\\/]/).join("/");
+    const listed = (entries: readonly string[]): boolean =>
+      entries.some((entry) => path.endsWith(`/${entry}`));
     const retired =
       (BROWSER_TEST_FILE.test(name) || BUILD_TEST_FILE.test(name)) &&
-      !pending.some((entry) => path.endsWith(`/${entry}`));
+      !listed(pending);
+    const processBanned =
+      nodeTierTest &&
+      !BUILD_TEST_FILE.test(name) &&
+      !path.includes("/e2e/") &&
+      !listed(pending) &&
+      !listed(processSubjects);
+
+    function checkProcessModule(
+      node: Rule.Node,
+      source: { type: string; value?: unknown } | null,
+    ): void {
+      if (
+        processBanned &&
+        source?.type === "Literal" &&
+        typeof source.value === "string" &&
+        PROCESS_MODULES.has(source.value)
+      )
+        context.report({ node, messageId: "processInUnitTest" });
+    }
 
     return {
       Program(program) {
@@ -147,16 +179,45 @@ export const testTier: Rule.RuleModule = {
       },
       ImportDeclaration(node) {
         if (nodeTierTest) checkModule(node, node.source);
+        checkProcessModule(node, node.source);
       },
       ImportExpression(node) {
         if (nodeTierTest) checkModule(node, node.source);
+        checkProcessModule(node, node.source);
+      },
+      CallExpression(node) {
+        if (node.type !== "CallExpression") return;
+        const { callee } = node;
+        if (
+          callee.type !== "MemberExpression" ||
+          callee.computed ||
+          callee.object.type !== "Identifier" ||
+          callee.property.type !== "Identifier" ||
+          !TEST_FUNCTIONS.has(callee.object.name) ||
+          !SKIPPING.has(callee.property.name)
+        )
+          return;
+        const [title] = node.arguments;
+        const text =
+          title?.type === "Literal" && typeof title.value === "string"
+            ? title.value
+            : title?.type === "TemplateLiteral" &&
+                title.expressions.length === 0
+              ? title.quasis.map((quasi) => quasi.value.cooked ?? "").join("")
+              : undefined;
+        if (text !== undefined && !ISSUE_NUMBER.test(text))
+          context.report({ node, messageId: "unexplainedSkip" });
       },
       Property(node) {
-        if (!VITEST_CONFIG.test(name) || propertyName(node) !== "environment")
-          return;
+        if (!VITEST_CONFIG.test(name)) return;
+        const key = propertyName(node);
+        if (key !== "environment" && key !== "retry") return;
         const owner = node.parent.parent;
         if (owner?.type === "Property" && propertyName(owner) === "test")
-          context.report({ node, messageId: "configEnvironment" });
+          context.report({
+            node,
+            messageId: key === "retry" ? "configRetry" : "configEnvironment",
+          });
       },
     };
   },

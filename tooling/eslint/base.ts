@@ -53,6 +53,11 @@ const TEST_SOURCE = [
 const E2E_SOURCE = ["**/e2e/**/*.ts", "**/e2e/**/*.tsx"];
 const VITEST_CONFIGS = ["**/vitest.config.ts", "**/vitest.*.config.ts"];
 
+/** Unit tests whose subject is how a child process is started and stopped. */
+const TESTS_OF_PROCESS_HANDLING = [
+  "packages/core/src/test/playwright/playwright-config.test.ts",
+];
+
 export const baseConfig = defineConfig(
   includeIgnoreFile(path.join(import.meta.dirname, "../../.gitignore")),
   // ESLint runs per package, so the root .gitignore's anchored patterns miss
@@ -194,7 +199,13 @@ export const baseConfig = defineConfig(
   {
     files: TEST_SOURCE,
     rules: {
-      "plumix/test-tier": ["error", { pending: RETIRED_TIER_PENDING }],
+      "plumix/test-tier": [
+        "error",
+        {
+          pending: RETIRED_TIER_PENDING,
+          processSubjects: TESTS_OF_PROCESS_HANDLING,
+        },
+      ],
     },
   },
   {

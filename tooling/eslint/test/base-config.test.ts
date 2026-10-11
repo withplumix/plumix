@@ -516,6 +516,49 @@ describe("plumix/test-tier", () => {
     ).toEqual([]);
   });
 
+  it("rejects a skip whose title names no issue, and allows one that does", async () => {
+    const reports = await tierReports("src/test-tier.skips.test.ts");
+    expect(reports.map(({ line }) => line)).toEqual([3, 11]);
+    expect(reports[0]?.message).toContain("issue");
+  });
+
+  it("rejects a vitest config that sets test.retry", async () => {
+    const reports = await tierReports("vitest.retry.config.ts");
+    expect(reports.map(({ line }) => line)).toEqual([5]);
+    expect(reports[0]?.message).toContain("retry");
+  });
+
+  it("rejects a child process in a unit test", async () => {
+    const reports = await tierReports("src/test-tier.process.test.ts");
+    expect(reports.map(({ line }) => line)).toEqual([1]);
+    expect(reports[0]?.message).toContain("smoke");
+  });
+
+  it("stays silent on a child process in a file the processSubjects list names", async () => {
+    const processEslint = new ESLint({
+      cwd: fixturesDir,
+      overrideConfigFile: true,
+      overrideConfig: [
+        ...baseConfig,
+        {
+          files: ["**/*.test.ts"],
+          rules: {
+            "plumix/test-tier": [
+              "error",
+              { processSubjects: ["src/test-tier.process.test.ts"] },
+            ],
+          },
+        },
+      ],
+    });
+    const [result] = await processEslint.lintFiles([
+      "src/test-tier.process.test.ts",
+    ]);
+    expect(
+      result?.messages.filter(({ ruleId }) => ruleId === "plumix/test-tier"),
+    ).toEqual([]);
+  });
+
   it("stays silent on a helper beside the tests", async () => {
     await expect(tierReports("src/test/dom-helper.ts")).resolves.toEqual([]);
   });
