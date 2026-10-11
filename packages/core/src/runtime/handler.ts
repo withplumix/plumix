@@ -3,6 +3,7 @@ import type {
   CoreSchema,
   Db,
   DeferFn,
+  Logger,
 } from "../context/app-context.js";
 import type { CreateAppContextArgs } from "../context/app.js";
 import type { Invocation, PlumixHandler } from "../context/runtime-adapter.js";
@@ -43,19 +44,31 @@ export interface PlumixHandlerOptions {
    * five seconds.
    */
   readonly disposeTimeoutMs?: number;
+  /** What `ctx.logger` writes to; the console when omitted. */
+  readonly logger?: Logger;
 }
 
 const DEFAULT_DISPOSE_TIMEOUT_MS = 5_000;
+
+/** What the entry, rather than the runtime adapter, decides per build. */
+export type RuntimeHandlerOptions = Pick<PlumixHandlerOptions, "logger">;
 
 /**
  * The handler an entry serves: the default handler, with what the configured
  * runtime's `handler` spec adds.
  */
-export function createRuntimeHandler(app: PlumixApp): PlumixHandler {
+export function createRuntimeHandler(
+  app: PlumixApp,
+  { logger }: RuntimeHandlerOptions = {},
+): PlumixHandler {
   const { assets, disposeTimeoutMs, clientAddress, prepare, wrap } =
     app.config.runtime.handler;
   prepare?.(app.hooks);
-  const handler = createPlumixHandler(app, { assets, disposeTimeoutMs });
+  const handler = createPlumixHandler(app, {
+    assets,
+    disposeTimeoutMs,
+    logger,
+  });
   const addressed: PlumixHandler =
     clientAddress === undefined
       ? handler
@@ -329,6 +342,7 @@ interface RequestContextInput {
   readonly defer: DeferFn;
   readonly assets: AssetsBinding | undefined;
   readonly slots: BoundSlots;
+  readonly logger?: Logger;
 }
 
 /**
@@ -350,6 +364,7 @@ export function requestContextArgs({
   defer,
   assets,
   slots,
+  logger,
 }: RequestContextInput): RequestContextArgs {
   return {
     db,
@@ -362,7 +377,7 @@ export function requestContextArgs({
     blocks: app.blocks,
     marks: app.marks,
     shortcodes: app.shortcodes,
-    logger: undefined,
+    logger,
     // Resolved per request by the dispatcher's authenticator, not up front.
     user: undefined,
     tokenScopes: undefined,
@@ -413,6 +428,7 @@ function buildAppContext({
       defer,
       assets: options.assets?.(env),
       slots,
+      logger: options.logger,
     }),
   );
 }

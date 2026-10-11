@@ -140,6 +140,12 @@ Run directly, the entry serves `dist/client` from disk ahead of the site, with h
 
 A rolling deploy that sends `SIGTERM` and waits ten seconds loses nothing that can finish in that window: the process stops accepting, lets in-flight responses finish, stops the scheduler and drains deferred work such as telemetry delivery, then exits `0`. Whatever is still running at the ten-second deadline is cut, and the process exits `1` saying what it abandoned. A second signal exits at once.
 
+## Logs
+
+A built server writes each line Plumix logs to stdout as one JSON object: `level`, `message`, `time` and whatever else the call carried, with an error as its `name`, `message` and `stack`. The server's own start and shutdown lines (`listening on`, `draining`) stay plain text. `plumix dev` prints its usual readable output instead.
+
+The process keeps nothing itself, so whatever runs it keeps the logs. Under [systemd](#on-a-bare-vps), journald stores stdout, and `journalctl -u my-site -o cat` prints it back. A container platform forwards stdout to its log drain, and a process manager writes it to a file it rotates. `plumix doctor` reports where the logs go.
+
 ## The database
 
 `bunSqlite({ path })` opens the file with WAL journaling, a five-second busy timeout, `synchronous = NORMAL` and foreign keys on. Bun's own defaults differ on all four, so the slot sets each one on connect and again in `plumix migrate`, which is what makes the file behave as it does on Node. Missing parent directories are created, and a relative `path` resolves against the project root in the server and in `plumix migrate` alike, so both open the same file whichever directory you run them from. The server applies the migrations its build shipped to that file when it starts.

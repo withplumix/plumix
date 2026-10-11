@@ -118,7 +118,25 @@ export interface CommandContext<App extends CommandApp = CommandApp> {
    * From the runtime's commands module; absent when the runtime declares none.
    */
   readonly runtimeMigrations?: RuntimeMigrations;
+  /**
+   * From the runtime's commands module; absent when the runtime declares none.
+   */
+  readonly runtimeDiagnose?: RuntimeDiagnose;
 }
+
+/** One thing `plumix doctor` reports about how a project will deploy. */
+export interface DiagnosticFinding {
+  readonly level: "ok" | "warn";
+  readonly message: string;
+  /** What to change so a `warn` becomes `ok`. */
+  readonly fix?: string;
+}
+
+/**
+ * What a runtime's commands module supplies to `plumix doctor`: the findings
+ * its deploy config in `cwd` gives rise to.
+ */
+export type RuntimeDiagnose = (cwd: string) => readonly DiagnosticFinding[];
 
 /** One owner's history, as drizzle's migrator takes it. */
 export interface MigrationFolder {

@@ -129,6 +129,14 @@ Prints a diagnostic snapshot: the resolved config path, the runtime and database
 plumix doctor
 ```
 
+Under `deploy:` it then prints what the runtime finds in the project's deploy config, one finding per line. `ok` means the setting is right as it stands. `warn` means a deploy would run without something, and the line under it gives the fix. On Cloudflare, doctor warns when `wrangler.jsonc` leaves Workers Logs off. On Node and Bun it reports where the server's logs go.
+
+```text
+  deploy:
+    warn  Workers Logs is off in wrangler.jsonc, so the deployed Worker keeps no logs
+          fix: Add to wrangler.jsonc: "observability": { "enabled": true }
+```
+
 ### `i18n`
 
 Extracts translatable strings to `.po` catalogs and compiles them to the runtime format Lingui reads, via `@lingui/cli`. Four subcommands: `extract`, `compile`, `init` (scaffolds `lingui.config.ts` and `i18n:extract`, `i18n:compile`, `i18n:check` and `prepack` scripts that run these verbs, skipping anything that already exists), and `verify` (extracts to a snapshot, diffs the active message set, and restores — the CI gate behind `extract --check`).

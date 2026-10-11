@@ -19,6 +19,7 @@ import type {
 import { applyBuiltMigrations } from "plumix/cli";
 import {
   buildApp,
+  createJsonLogger,
   createRuntimeHandler,
   DRAIN_DEADLINE_MS,
   renderDevBootErrorResponse,
@@ -132,10 +133,16 @@ export function createNodeSite({
     : {};
   const { trustProxy, bodySizeLimit, cron } = nodeConfig;
 
+  // Dev keeps the console's readable output; a build writes what a log drain
+  // parses. Statically decided, like the boot-error branch below.
+  const logger = process.env.PLUMIX_DEV
+    ? undefined
+    : createJsonLogger((line) => process.stdout.write(line));
+
   const appPromise = buildApp(config, { assetManifest, pluginCatalogs });
   let built: PlumixHandler | undefined;
   const handlerFor = (app: PlumixApp): PlumixHandler =>
-    (built ??= createRuntimeHandler(app));
+    (built ??= createRuntimeHandler(app, { logger }));
 
   const handler: NodeSiteHandler = {
     async fetch(request, invocation = { env }) {
@@ -190,6 +197,7 @@ export function createNodeSite({
       env,
       fire: (firedCron, scheduledTime) =>
         handler.scheduled({ scheduledTime, cron: firedCron }),
+      logger,
       ...overrides,
     });
   };

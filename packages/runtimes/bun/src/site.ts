@@ -18,6 +18,7 @@ import type {
 import { applyBuiltMigrations } from "plumix/cli";
 import {
   buildApp,
+  createJsonLogger,
   createRuntimeHandler,
   DRAIN_DEADLINE_MS,
   startScheduledRunner,
@@ -153,10 +154,16 @@ export function createBunSite({
   const { trustProxy, bodySizeLimit, idleTimeout }: ResolvedBunConfig =
     isBunRuntime(config.runtime) ? config.runtime.config : bun().config;
 
+  // Dev keeps the console's readable output; a build writes what a log drain
+  // parses. Vite substitutes the gate, so the choice is made at bundle time.
+  const logger = process.env.PLUMIX_DEV
+    ? undefined
+    : createJsonLogger((line) => process.stdout.write(line));
+
   const appPromise = buildApp(config, { assetManifest, pluginCatalogs });
   let built: PlumixHandler | undefined;
   const handlerFor = (app: PlumixApp): PlumixHandler =>
-    (built ??= createRuntimeHandler(app));
+    (built ??= createRuntimeHandler(app, { logger }));
 
   const handler: BunSiteHandler = {
     async fetch(request, invocation = { env }) {
@@ -222,6 +229,7 @@ export function createBunSite({
       env,
       holder: `${machineName()}:${String(process.pid)}`,
       fire: (cron, scheduledTime) => handler.scheduled({ scheduledTime, cron }),
+      logger,
       ...overrides,
     });
   };

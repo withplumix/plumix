@@ -8,6 +8,7 @@ import type {
   PlumixApp,
   PlumixConfig,
   RuntimeAdapter,
+  RuntimeDiagnose,
   RuntimeMigrations,
 } from "@plumix/core";
 import { isCliError } from "@plumix/core/cli";
@@ -168,6 +169,7 @@ export async function run(argv: readonly string[]): Promise<void> {
     argv: args.rest,
     loaded,
     runtimeMigrations: runtimeModule.migrations,
+    runtimeDiagnose: runtimeModule.diagnose,
   });
 }
 
@@ -176,13 +178,14 @@ interface RunCommandInput {
   readonly argv: readonly string[];
   readonly loaded: LoadedConfig;
   readonly runtimeMigrations: RuntimeMigrations | undefined;
+  readonly runtimeDiagnose: RuntimeDiagnose | undefined;
 }
 
 /** Runs a resolved command; `dev` migrates the local database first. */
 export async function runCommand(
   name: string,
   command: CommandDefinition<PlumixApp>,
-  { cwd, argv, loaded, runtimeMigrations }: RunCommandInput,
+  { cwd, argv, loaded, runtimeMigrations, runtimeDiagnose }: RunCommandInput,
 ): Promise<void> {
   // Before the command opens anything: on Cloudflare the dev server reads the
   // same local state the migration proxy holds until it closes.
@@ -201,6 +204,7 @@ export async function runCommand(
     configPath: loaded.configPath,
     argv,
     runtimeMigrations,
+    runtimeDiagnose,
   });
 }
 
@@ -246,6 +250,7 @@ async function printHelp(args: CliArgs): Promise<void> {
   let runtimeModule: RuntimeCommandsModule = {
     commands: {},
     migrations: undefined,
+    diagnose: undefined,
   };
   try {
     loaded = await loadConfig(args.cwd, args.config);
@@ -284,13 +289,16 @@ function buildGroups(
 interface RuntimeCommandsModule {
   readonly commands: CommandRegistry;
   readonly migrations: RuntimeMigrations | undefined;
+  readonly diagnose: RuntimeDiagnose | undefined;
 }
 
 async function loadRuntimeCommands(
   adapter: RuntimeAdapter,
   cwd: string,
 ): Promise<RuntimeCommandsModule> {
-  if (!adapter.commandsModule) return { commands: {}, migrations: undefined };
+  if (!adapter.commandsModule) {
+    return { commands: {}, migrations: undefined, diagnose: undefined };
+  }
   const require = createRequire(pathToFileURL(join(cwd, "noop.js")));
   let resolved: string;
   try {
@@ -307,10 +315,12 @@ async function loadRuntimeCommands(
       default?: CommandRegistry;
       commands?: CommandRegistry;
       migrations?: RuntimeMigrations;
+      diagnose?: RuntimeDiagnose;
     };
     return {
       commands: mod.commands ?? mod.default ?? {},
       migrations: mod.migrations,
+      diagnose: mod.diagnose,
     };
   } catch (cause) {
     // A commands module that refuses to load says why in its own terms.

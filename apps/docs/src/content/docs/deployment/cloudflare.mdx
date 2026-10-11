@@ -215,6 +215,24 @@ Work handed to `waitUntil` is unaffected either way: the CDN purges and telemetr
 
 There is no way to exempt a task from any of this — a flaky task reddens every firing it fails in. If that is the situation you are in, catch inside the task and decide there whether the failure is worth reporting.
 
+## Logs
+
+A Worker keeps logs only when its config turns Workers Logs on, and the scaffolded `wrangler.jsonc` does:
+
+```jsonc
+"observability": { "enabled": true },
+```
+
+With it, Workers Logs records each request with its errors and uncaught exceptions, plus whatever Plumix writes to the console: a block that failed to render, a scheduled task that threw, a deferred promise that rejected. You search them in the dashboard under the Worker's **Observability** tab, including what happened before anyone was watching. `wrangler tail` streams the same events live, but it shows nothing from before you attached it.
+
+Workers Paid includes 20 million log events a month. A busy site can log a share of its requests instead of every one with `head_sampling_rate`, a fraction from `0` to `1`:
+
+```jsonc
+"observability": { "enabled": true, "head_sampling_rate": 0.1 },
+```
+
+`plumix doctor` warns when the config leaves Workers Logs off, and prints the block to add.
+
 ## Passkey origins across deploys
 
 A passkey is bound to a hostname. Workers Builds gives production `recipes.your-account.workers.dev` and each branch `<branch>-recipes.your-account.workers.dev`, so a credential anchored to one of those hosts means re-enrolling on every preview. Anchoring it to the registrable domain they share is what avoids that.

@@ -107,6 +107,24 @@ const drainedWithin = (handler: PlumixHandler, ms = 50) =>
     after(ms).then(() => false),
   ]);
 
+/** A route that logs one line through `ctx.logger`. */
+const logging = definePlugin("logging", (ctx) => {
+  ctx.registerPublicRoute({
+    path: "/log",
+    handler: (_request, appCtx) => {
+      appCtx.logger.info("route_hit", { path: "/log" });
+      return new Response("logged");
+    },
+  });
+});
+
+const spyLogger = () => ({
+  debug: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+});
+
 const deferRequest = () => new Request("https://cms.example/defer");
 
 describe("createPlumixHandler — fetch", () => {
@@ -268,6 +286,15 @@ describe("createPlumixHandler — fetch", () => {
     });
 
     expect(seen).toBe("none");
+  });
+
+  test("a logger the runtime hands the handler is the one a request logs through", async () => {
+    const logger = spyLogger();
+    const handler = await handlerFor({ plugins: [logging] }, { logger });
+
+    await handler.fetch(new Request("https://cms.example/log"), { env: {} });
+
+    expect(logger.info).toHaveBeenCalledWith("route_hit", { path: "/log" });
   });
 
   test("deferred work rides waitUntil when the invocation supplies one", async () => {
@@ -963,5 +990,15 @@ describe("createRuntimeHandler", () => {
     );
 
     expect(await response.text()).toBe("203.0.113.7");
+  });
+
+  test("the logger the entry hands it is the one a request logs through", async () => {
+    const app = await appWith({}, [logging]);
+    const logger = spyLogger();
+    const handler = createRuntimeHandler(app, { logger });
+
+    await handler.fetch(new Request("https://cms.example/log"), { env: {} });
+
+    expect(logger.info).toHaveBeenCalledWith("route_hit", { path: "/log" });
   });
 });

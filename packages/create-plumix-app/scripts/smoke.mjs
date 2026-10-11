@@ -445,6 +445,23 @@ async function assertServes(base, child) {
   }
 }
 
+/**
+ * Through the project's own bin, so the installed runtime's `diagnose` reads
+ * the scaffold's config. A `warn` means a fresh project deploys with something
+ * off.
+ */
+function assertDoctorClean(appDir) {
+  const bin = join(appDir, "node_modules", ".bin");
+  const output = execSync("plumix doctor 2>&1", {
+    cwd: appDir,
+    env: { ...process.env, PATH: `${bin}${delimiter}${process.env.PATH}` },
+    encoding: "utf8",
+  });
+  if (/^\s+warn\s/m.test(output)) {
+    throw new Error(`plumix doctor warns on a fresh scaffold:\n${output}`);
+  }
+}
+
 async function boot(appDir, combo) {
   const runtime = installedRuntime(appDir);
   const plan = planBoot(runtime.name, runtime.e2e);
@@ -574,6 +591,7 @@ async function smoke(combo, tarballs) {
     run(pm, ["run", "typecheck"], app);
     run(pm, ["run", "build"], app);
     if (combo.secondLocale) assertCatalogsStaged(app, combo.excluded);
+    assertDoctorClean(app);
     await boot(app, combo);
     if (combo.devEditor) await driveEditorUnderDev(app, combo);
     console.log(`=== ${combo.name}: ok ===`);
