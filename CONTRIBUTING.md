@@ -27,7 +27,7 @@ nvm install        # installs the Node version from .nvmrc
 nvm use            # activates it
 corepack enable    # enables pnpm through Corepack
 pnpm install
-pnpm --filter @plumix/admin exec playwright install chromium   # once, for the browser test tier and e2e
+pnpm --filter @plumix/admin exec playwright install chromium   # once, for the tests Playwright drives
 ```
 
 > **Tip:** add `nvm use` to your shell's `cd` hook so it switches automatically when you enter the project. See [nvm's deeper shell integration](https://github.com/nvm-sh/nvm#deeper-shell-integration).
@@ -83,7 +83,7 @@ pnpm exec vitest run path/to/file.test.ts -t "name"   # one test
 pnpm exec vitest run --coverage                # with coverage
 ```
 
-A unit test runs in Node (`*.test.ts`) or in a real browser (`*.browser.test.ts`). Reach for an end-to-end test (Playwright, under a package's `e2e/`, run by `pnpm test:e2e`) only when the behaviour needs a running site: a page that loads, a form that posts, an editor a user drives.
+Tests come in three tiers. A unit test checks logic in Node beside the source, an end-to-end test (Playwright, under a package's `e2e/`, run by `pnpm test:e2e`) drives a running site in a browser, and the scaffold smoke checks that a project built from the packed packages starts. `CODING_STANDARDS.md` picks the tier for a test.
 
 ### Running the e2e suites
 

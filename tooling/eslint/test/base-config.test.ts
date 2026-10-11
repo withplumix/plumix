@@ -450,10 +450,11 @@ describe("plumix/test-tier", () => {
       (message) => ({ line: message.line, message: message.message }),
     );
 
-  it("rejects an environment docblock, naming both tiers", async () => {
+  it("rejects an environment docblock, pointing DOM behaviour at e2e", async () => {
     const reports = await tierReports("src/test-tier.docblock.test.ts");
     expect(reports.map(({ line }) => line)).toEqual([1]);
-    expect(reports[0]?.message).toMatch(/\*\.browser\.test\.ts\(x\)/);
+    expect(reports[0]?.message).toContain("`e2e/`");
+    expect(reports[0]?.message).not.toContain(".browser.test");
   });
 
   it("rejects a vitest config that sets test.environment", async () => {
@@ -471,9 +472,8 @@ describe("plumix/test-tier", () => {
     expect(reports.map(({ line }) => line)).toEqual([
       1, 2, 3, 4, 6, 14, 15, 16, 17, 18, 19,
     ]);
-    expect(reports[0]?.message).toContain(
-      "test-tier.violations.browser.test.tsx",
-    );
+    expect(reports[0]?.message).toContain("`e2e/`");
+    expect(reports[0]?.message).not.toContain(".browser.test");
   });
 
   it("stays silent on a typeof probe and a local that shadows a global", async () => {
@@ -482,10 +482,81 @@ describe("plumix/test-tier", () => {
     );
   });
 
-  it("stays silent on DOM imports and globals in a browser test", async () => {
-    await expect(
-      tierReports("src/test-tier.allowed.browser.test.tsx"),
-    ).resolves.toEqual([]);
+  it.each([
+    "src/test-tier.retired.browser.test.tsx",
+    "src/test-tier.retired.build.test.ts",
+  ])("rejects %s, a file in a retired tier", async (fixture) => {
+    const reports = await tierReports(fixture);
+    expect(reports.map(({ line }) => line)).toEqual([1]);
+    expect(reports[0]?.message).toContain("ADR 0042");
+  });
+
+  it("stays silent on a retired-tier file the pending list names", async () => {
+    const pendingEslint = new ESLint({
+      cwd: fixturesDir,
+      overrideConfigFile: true,
+      overrideConfig: [
+        ...baseConfig,
+        {
+          files: ["**/*.test.tsx"],
+          rules: {
+            "plumix/test-tier": [
+              "error",
+              { pending: ["src/test-tier.retired.browser.test.tsx"] },
+            ],
+          },
+        },
+      ],
+    });
+    const [result] = await pendingEslint.lintFiles([
+      "src/test-tier.retired.browser.test.tsx",
+    ]);
+    expect(
+      result?.messages.filter(({ ruleId }) => ruleId === "plumix/test-tier"),
+    ).toEqual([]);
+  });
+
+  it("rejects a skip whose title names no issue, and allows one that does", async () => {
+    const reports = await tierReports("src/test-tier.skips.test.ts");
+    expect(reports.map(({ line }) => line)).toEqual([3, 11, 24, 37]);
+    expect(reports[0]?.message).toContain("issue");
+  });
+
+  it("rejects a vitest config that sets test.retry", async () => {
+    const reports = await tierReports("vitest.retry.config.ts");
+    expect(reports.map(({ line }) => line)).toEqual([5]);
+    expect(reports[0]?.message).toContain("retry");
+  });
+
+  it("rejects a child process in a unit test", async () => {
+    const reports = await tierReports("src/test-tier.process.test.ts");
+    expect(reports.map(({ line }) => line)).toEqual([1]);
+    expect(reports[0]?.message).toContain("smoke");
+  });
+
+  it("stays silent on a child process in a file the processSubjects list names", async () => {
+    const processEslint = new ESLint({
+      cwd: fixturesDir,
+      overrideConfigFile: true,
+      overrideConfig: [
+        ...baseConfig,
+        {
+          files: ["**/*.test.ts"],
+          rules: {
+            "plumix/test-tier": [
+              "error",
+              { processSubjects: ["src/test-tier.process.test.ts"] },
+            ],
+          },
+        },
+      ],
+    });
+    const [result] = await processEslint.lintFiles([
+      "src/test-tier.process.test.ts",
+    ]);
+    expect(
+      result?.messages.filter(({ ruleId }) => ruleId === "plumix/test-tier"),
+    ).toEqual([]);
   });
 
   it("stays silent on a helper beside the tests", async () => {

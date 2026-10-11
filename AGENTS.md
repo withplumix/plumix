@@ -4,7 +4,7 @@ Plumix is a CMS with pluggable runtime adapters. It is pre-1.0, so every `0.x` m
 
 ## Working rules
 
-- **TDD.** A bug isn't fixed until a failing test reproduces it first. New behavior starts red, one RED→GREEN cycle at a time, never all the tests first and then all the code.
+- **TDD.** A bug isn't fixed until a failing test reproduces it first. New behavior starts red, one RED→GREEN cycle at a time, never all the tests first and then all the code. Each test goes in the tier [`CODING_STANDARDS.md`](./CODING_STANDARDS.md#tests) picks: unit, e2e or smoke.
 - **Stay in scope.** One PR per issue, and every changed line traces to it. Skip drive-by refactors and bulk cleanups. Match the surrounding style, remove only what your change left unused, and mention dead code you find rather than deleting it. Ship dependent PRs one at a time. Merge one and rebase before you start the next.
 - **Investigate before building.** When a change is consumed in more than one place (server, admin, editor, a second bundle), find out how each consumer gets it today before you design. Say what you verified and where you stopped. Resolving a path is not a working render.
 - **Claims need evidence.** Back every statement about how the code behaves with a file and line, a source excerpt, or a command someone can rerun. That goes for PR bodies, review replies and declines alike.
@@ -62,9 +62,9 @@ The same holds for every task with a `dependsOn`. `test:unit` has none, so `pnpm
 
 **Single test file.** Inside a package: `pnpm exec vitest run path/to/file.test.ts`. With coverage: `pnpm exec vitest run --coverage`.
 
-**Browser tier.** Run `pnpm --filter @plumix/admin exec playwright install chromium` once before the first `pnpm test:unit`; `*.browser.test.*` files run in headless Chromium.
+**Chromium.** Run `pnpm --filter @plumix/admin exec playwright install chromium` once before running the tests.
 
-**Tests.** What the shared test helpers provide, and how to diagnose a slow test before reaching for a timeout, are in [`docs/agents/testing.md`](docs/agents/testing.md).
+**Tests.** Before writing or reviewing a test, read [`CODING_STANDARDS.md`](CODING_STANDARDS.md#tests): which tier it belongs to, what that tier may touch, the test-double order and the TDD loop. [`docs/agents/testing.md`](docs/agents/testing.md) lists the test kits and how to diagnose a slow test.
 
 **Before committing.** `pnpm typecheck && pnpm lint && pnpm format && pnpm knip && pnpm test` must be clean, and add a changeset if the change is consumer-visible (see [Releases](#releases-changesets)). CI reruns these plus e2e, i18n, publint, and attw.
 

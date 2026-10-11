@@ -8,6 +8,7 @@ import { defineConfig } from "eslint/config";
 import tseslint from "typescript-eslint";
 
 import { plumixPlugin } from "./rules/index.js";
+import { RETIRED_TIER_PENDING } from "./rules/test-tier-pending.js";
 
 /**
  * Exported so consumer configs that extend `no-restricted-syntax` for their
@@ -51,6 +52,11 @@ const TEST_SOURCE = [
  */
 const E2E_SOURCE = ["**/e2e/**/*.ts", "**/e2e/**/*.tsx"];
 const VITEST_CONFIGS = ["**/vitest.config.ts", "**/vitest.*.config.ts"];
+
+/** Unit tests whose subject is how a child process is started and stopped. */
+const TESTS_OF_PROCESS_HANDLING = [
+  "packages/core/src/test/playwright/playwright-config.test.ts",
+];
 
 export const baseConfig = defineConfig(
   includeIgnoreFile(path.join(import.meta.dirname, "../../.gitignore")),
@@ -192,7 +198,15 @@ export const baseConfig = defineConfig(
   // for this rule alone, without type information.
   {
     files: TEST_SOURCE,
-    rules: { "plumix/test-tier": "error" },
+    rules: {
+      "plumix/test-tier": [
+        "error",
+        {
+          pending: RETIRED_TIER_PENDING,
+          processSubjects: TESTS_OF_PROCESS_HANDLING,
+        },
+      ],
+    },
   },
   {
     files: VITEST_CONFIGS,
