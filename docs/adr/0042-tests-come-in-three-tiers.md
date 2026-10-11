@@ -93,6 +93,19 @@ the reasons.
   Principles, Practices, and Patterns_ and
   ["When to mock"](https://enterprisecraftsmanship.com/posts/when-to-mock/);
   Freeman and Pryce, _Growing Object-Oriented Software, Guided by Tests_.
+- Robert C. Martin, _Clean Code_, ch. 9 (F.I.R.S.T., one concept per test,
+  clean tests); Michael Feathers,
+  ["Characterization Testing"](https://michaelfeathers.silvrback.com/characterization-testing);
+  Kent Beck, ["Structure and behavior PRs"](https://newsletter.kentbeck.com/p/structure-and-behavior-prs).
+- Microsoft, [unit testing best practices](https://learn.microsoft.com/en-us/dotnet/core/testing/unit-testing-best-practices),
+  ["Shift left"](https://learn.microsoft.com/en-us/devops/develop/shift-left-make-testing-fast-reliable)
+  and the [Code-With Engineering Playbook](https://microsoft.github.io/code-with-engineering-playbook/automated-testing/);
+  Google's [code review guide](https://google.github.io/eng-practices/review/reviewer/looking-for.html);
+  [DORA test automation](https://dora.dev/capabilities/test-automation/).
+- Flaky tests: [Meta](https://engineering.fb.com/2020/12/10/developer-tools/probabilistic-flakiness/),
+  [Spotify](https://engineering.atspotify.com/2019/11/test-flakiness-methods-for-identifying-and-dealing-with-flaky-tests/),
+  [Shopify](https://shopify.engineering/unreasonable-effectiveness-test-retries-android-monorepo-case-study);
+  Thoughtworks Radar, ["Snapshot testing only"](https://www.thoughtworks.com/radar/techniques/snapshot-testing-only).
 - Where other frameworks put the same tests, from each repository's scripts and
   CI: Vite's playground `test-build` mode (`vitejs/vite` `.github/workflows/ci.yml`),
   Astro's `fixture.build()` tests (`withastro/astro` `packages/astro/test/`),

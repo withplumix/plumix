@@ -154,9 +154,9 @@ check code without running it, and a new check of that kind joins an existing ga
 Ask in order, and stop at the first yes:
 
 1. **Can it be observed by calling code in one process, on source?** It's a unit test. This covers
-   almost everything: business rules, RPC procedures, plugin hooks and filters, routing, rendering to a string,
-   schema and query behaviour against the in-memory database, CLI argument handling, a Vite
-   plugin's config. When in doubt, it's a unit test.
+   almost everything: business rules, RPC procedures, plugin hooks and filters, routing, rendering
+   to a string, schema and query behaviour against the in-memory database, CLI argument handling,
+   a Vite plugin's config. When in doubt, it's a unit test.
 2. **Does it need a browser, or a site a user drives?** It's an e2e test: a page that renders and
    reacts, a form that posts, an upload through the UI, the editor under the keyboard and pointer,
    layout, focus.
@@ -176,11 +176,12 @@ The cases that look like a fourth kind each have a tier:
 
 A behaviour is tested once, in the lowest tier that can observe it. A higher tier proves the parts
 connect, not the rules a lower tier already covers. When e2e or smoke finds a bug in logic, the fix
-starts with a unit test that reproduces it.
+starts with a unit test that reproduces it. A test that a lower tier now covers, or that checks
+behaviour the code no longer has, is deleted.
 
-A change that edits a test brings that test in line with this section: one in the wrong tier moves
-to the right one, and one that breaks a rule below is rewritten. Review holds every touched test to
-it.
+A change that adds or edits a test case brings that case in line with this section: a case in the
+wrong tier moves to the right one, and a case that breaks a rule below is rewritten. The rest of its
+file moves with the change that next edits it. Review holds every added or edited case to it.
 
 ### Unit
 
@@ -198,22 +199,31 @@ and it reads source: `pnpm test:unit` needs no build.
 - **It stays inside the process.** No browser, no simulated DOM (`jsdom`, `happy-dom`, a
   `@vitest-environment` docblock), no child process, no network beyond an in-process handler, no
   `dist/`, no sleeps. The `plumix/test-tier` lint rule reports DOM APIs in a unit test.
-- **A component keeps its logic in functions it calls.** A unit test calls those functions, or
-  renders the component to a string. What the rendered DOM does when a user acts on it is e2e.
+- **A component keeps its logic in functions it calls.** Which state it shows (a validation error,
+  an empty list, a control a role may not use) is decided by a function the component calls, and
+  the unit test calls that function for each state. The unit test may also render the component
+  to a string. What the rendered DOM does when a user acts on it is e2e, for the journeys a user
+  takes, not for every state the function already covers.
 - **An upload is a value.** Call the procedure with a native `File` (`fakeFile`, `fakeImage`); Node
   has `File`, `Blob`, `FormData` and `fetch`. One test of the wire format sends it through the RPC
   link into the handler in-process.
 
 ```ts
-// packages/core/src/entries/read-service.test.ts
-test("clamps a subscriber to published entries by default", async () => {
-  const h = await createRpcHarness({ authAs: "subscriber" });
-  await h.factory.published.create({ authorId: h.user.id, slug: "pub" });
-  await h.factory.draft.create({ authorId: h.user.id, slug: "draft" });
+// packages/core/src/entries/change-feed.test.ts
+test("records a create and an update made through the RPC surface", async () => {
+  const h = await createRpcHarness({ authAs: "author" });
+  const created = await h.client.entry.create({
+    title: "Hello",
+    slug: "hello",
+  });
+  await h.client.entry.update({ id: created.id, title: "Hello again" });
 
-  const rows = await listEntries(authedCtx(h), listInput());
+  const changes = await readEntryChanges(h.db, 10);
 
-  expect(rows.map((r) => r.slug)).toEqual(["pub"]);
+  expect(changes.map((change) => [change.entryId, change.kind])).toEqual([
+    [created.id, "upsert"],
+    [created.id, "upsert"],
+  ]);
 });
 ```
 
@@ -226,8 +236,10 @@ playground) owns one suite in its `e2e/` folder, against a site on its own ports
 - **It proves a journey or a browser behaviour**: the page renders, the control reacts, the request
   lands, the result shows. The rules behind it are already unit tests; e2e checks they reach the
   screen.
-- **It sets up through the site.** Seed with the suite's own setup, sign in the way a user does,
-  and assert on what the page shows.
+- **It seeds once, in the suite's `globalSetup`**, with the helpers in `plumix/test/playwright`:
+  `openPlaygroundDb` opens the migrated database and `actingAs` creates a user and its session,
+  saved as the `storageState` every page starts with. A spec acts only through the page and asserts
+  only on what the page shows.
 - **It queries by test id only** (`page.getByTestId`, `[data-testid=…]`); the
   `plumix/no-non-testid-queries` lint rule enforces it. Add a `data-testid` to the markup when none
   exists.
@@ -271,8 +283,8 @@ the home page, the admin shell and the session RPC. Before a release, the root `
 publishes the packages to a throwaway registry, scaffolds a Cloudflare project from it and boots
 `plumix dev`.
 
-- **It answers one question per step: did it install, build, start, answer, stop?** A step that asserts
-  feature behaviour belongs in e2e, and a rule belongs in a unit test.
+- **It answers one question per step: did it install, build, start, answer, stop?** A step that
+  asserts feature behaviour belongs in e2e, and a rule belongs in a unit test.
 - **A new smoke check is a new step in `smoke:scaffold`'s loop**, so every runtime gets it, never
   a new harness or a new job.
 - **It reads only what a consumer gets**: the tarballs and the scaffolded project, never the
@@ -291,8 +303,12 @@ only a boundary Plumix doesn't own, and keep it narrow.
 3. **Stub.** Only a boundary outside Plumix: a third-party HTTP API, the mail transport, the clock,
    randomness, a platform global (`vi.stubGlobal`). Inject the dependency when the code doesn't
    take one yet: add the seam to the source.
-4. **Never mock a module.** `vi.mock` couples a test to where code lives; the `plumix/no-module-mocking`
-   lint rule rejects it. Wrap a third-party type behind an interface Plumix owns and double that.
+4. **Never mock a module.** `vi.mock` couples a test to where code lives; the
+   `plumix/no-module-mocking` lint rule rejects it. Wrap a third-party type behind an interface
+   Plumix owns and double that.
+
+A failure path is a unit test too: make the fake or stub fail (a rejected send, a storage error,
+a timeout) and assert what the caller does with it.
 
 Assert on the outcome (the returned value, the stored state, the captured mail), not on which
 functions ran. A spy is for an outgoing effect at a boundary, and it asserts only the arguments that
@@ -300,19 +316,50 @@ matter.
 
 ### Writing a test
 
-- **One behaviour per test, named for it**: "publishing a draft makes it readable", not
-  "publish() calls save()". The name and the failure message say what broke.
+- **Test code meets the production bar.** Every naming, readability and review rule for code
+  applies to tests, except that a test repeats itself where that makes it read on its own. A suite
+  nobody can read gets discarded, so a messy test is rewritten, not tolerated.
+- **One behaviour per test, named for it**: a sentence about the behaviour, "publishing a draft
+  makes it readable", never the method it calls ("publish() calls save()"). The `describe` names
+  the subject. The name and the failure message say what broke.
+- **The domain's words.** A test's name, its `describe` and its helpers use the vocabulary in
+  [`GLOSSARY.md`](./GLOSSARY.md) (entry, term, principal, segment) the way the code does, and a
+  helper reads in those words (`h.factory.draft.create`, `actingAs(db, "admin")`), so a test reads
+  like the behaviour it checks.
+- **One act per test.** A second call to the code under test is a second test, or a row of
+  `it.each`.
 - **Arrange, act, assert, in straight-line code.** No branches or loops: a test that branches can
   pass on the branch that checked nothing. Use `it.each` for one case per input. Repeat the values
-  that matter in each test rather than hiding them in a helper.
+  that matter in each test rather than hiding them in a helper, and write literals inline; give a
+  value a name only when its meaning is not obvious from the literal.
 - **Expected values come from outside the code**: a literal, a worked example, the spec. A value
-  copied from the output, or recomputed the way the code computes it, can't fail.
+  copied from the output, or recomputed the way the code computes it, can't fail. The one place an
+  expected value is read off the code is a **characterization test**: before a structural change
+  to code no test covers, pin what it does today, in the same change, with a name that says so
+  ("keeps today's slug for a title with emoji").
 - **Cover the requirement and its edge cases, not the lines a change touched.** If breaking the
   rule a test names leaves it green, rewrite it or delete it. Don't test a value that is statically
   defined, or logic that was removed.
 - **Deterministic and hermetic.** Fake the clock (`vi.useFakeTimers`, an injected `now`), seed
   randomness, and wait on a condition, never a delay. Each test builds its own state and passes in
-  any order. A flaky test is a bug: fix it in the change that finds it.
+  any order.
+- **A flaky test is a bug.** Unit tests never retry. E2E retries twice on CI (the shared
+  Playwright config), so a slow runner does not block a merge, and a test Playwright reports as
+  flaky is fixed in the change that finds it. When its cause lies outside that change, open an
+  issue and skip the test with `test.skip` and the issue number in its name; an unexplained skip
+  is not allowed. `test.skipIf` is only for a platform that lacks what the test needs.
+- **Fast.** A unit test runs in milliseconds. Vitest's 5s timeout catches hangs, it is not a
+  budget: a unit test over one second is profiled before merge
+  ([`docs/agents/testing.md`](docs/agents/testing.md#a-slow-test)).
+- **Expected values are written out.** No snapshot or screenshot baselines (`toMatchSnapshot`,
+  `toMatchInlineSnapshot`, `toHaveScreenshot`): a reviewer reads the expected value in the test.
+- **A type contract is a unit test.** Assert it with `expectTypeOf` in the module's `*.test.ts`;
+  the typecheck gate is what checks it, because the test files are in each package's program.
+- **A performance property is a count**: the queries a call runs, the bytes a chunk ships. Assert
+  the count, never elapsed time. Benchmarks and load tests are not tests: they run by hand against
+  a deployed site, never in CI.
+- **Coverage is tracked, not targeted.** No package sets a threshold. A test exists to check a
+  behaviour, never to raise the number.
 - **Seed with the fishery factories**, not raw writes, and reuse the shared helpers
   (`plumix/test`, `packages/admin/test/`). Put a new test in the suite that already covers the area.
 - **Never change a test just to make it pass**: the test may be the only thing that's right. When
@@ -327,9 +374,20 @@ Every change is test-first, one cycle at a time:
    fail, for the reason the behaviour is missing: read the failure, not just the colour. A bug fix
    starts with a test that fails without the fix.
 3. **Green.** Write the least code that makes it and every earlier test pass.
-4. **Refactor** only on green, as its own step, with the tests unchanged.
+4. **Refactor** only on green, as its own step and its own commit, with the tests unchanged. A
+   commit either changes behaviour or changes structure, never both.
 5. **Repeat** from the list. Add to the list what each cycle teaches; never write all the tests
    first.
+
+### Reviewing a test
+
+Review asks of every added or edited test:
+
+- Does it sit in the tier the placement questions pick, and touch only what that tier allows?
+- Would it fail if the behaviour it names broke? Break the rule in your head, or for real.
+- Does its name state the behaviour, and does it make one simple assertion about it?
+- Is it straight-line, with literal expected values and no logic of its own?
+- Did the change ship its tests with it? A change without its tests is incomplete.
 
 ### Timeouts
 
