@@ -20,3 +20,23 @@ test.skipIf(process.platform === "win32")("needs /dev/fd", () => {
 
 const reason = "the slot has no TTL";
 test.skip(`expires a key — ${reason}`, () => undefined);
+
+test.describe.skip("a playwright suite with no reason", () => {
+  test("reads nothing", () => {
+    expect(1).toBe(1);
+  });
+});
+
+test.describe.fixme("waits on the port fix (#4321)", () => {
+  test("reads nothing", () => {
+    expect(1).toBe(1);
+  });
+});
+
+test("skips itself with no reason", () => {
+  test.skip();
+});
+
+test("skips itself on a platform", () => {
+  test.skip(process.platform === "win32", "needs /dev/fd");
+});

@@ -68,7 +68,7 @@ export const testTier: Rule.RuleModule = {
       environmentDocblock: `A \`@vitest-environment\` docblock swaps in a simulated DOM. ${TIERS} Drop the docblock.`,
       configEnvironment: `\`test.environment\` swaps the environment for every test in the package. ${TIERS} Drop the setting.`,
       retiredTier: `\`*.browser.test.*\` and \`*.build.test.ts\` are retired tiers. ${TIERS} Test the logic in a \`*.test.ts\` file, what the user sees in \`e2e/\`, and what an installed project does in the scaffold smoke.`,
-      unexplainedSkip: `A skipped test names the issue that re-enables it, \`#1234\` in its title, or the capability its platform lacks (CODING_STANDARDS.md#tests). Add the issue number, or delete the test if the behaviour is gone.`,
+      unexplainedSkip: `A \`skip\` or \`fixme\` names the issue that re-enables it, \`#1234\` in its title (CODING_STANDARDS.md#tests). Add the issue number, delete the test if the behaviour is gone, or use \`test.skipIf\` with the capability a platform lacks.`,
       configRetry: `\`test.retry\` hides a flaky unit test. A flaky test is a bug: drop the setting and fix the test (CODING_STANDARDS.md#tests).`,
       processInUnitTest: `A unit test stays in one process. ${TIERS} Call the command's function in-process, and run the installed binary in the scaffold smoke.`,
       domInNodeTest: `\`{{ what }}\` needs a DOM, and this file runs in Node. ${TIERS} Move the logic into a function this test can call, and cover what the user sees in \`e2e/\`.`,
@@ -118,7 +118,6 @@ export const testTier: Rule.RuleModule = {
     const processBanned =
       nodeTierTest &&
       !BUILD_TEST_FILE.test(name) &&
-      !path.includes("/e2e/") &&
       !listed(pending) &&
       !listed(processSubjects);
 
@@ -191,12 +190,24 @@ export const testTier: Rule.RuleModule = {
         if (
           callee.type !== "MemberExpression" ||
           callee.computed ||
-          callee.object.type !== "Identifier" ||
           callee.property.type !== "Identifier" ||
-          !TEST_FUNCTIONS.has(callee.object.name) ||
           !SKIPPING.has(callee.property.name)
         )
           return;
+        const { object } = callee;
+        const testFunction =
+          (object.type === "Identifier" && TEST_FUNCTIONS.has(object.name)) ||
+          (object.type === "MemberExpression" &&
+            !object.computed &&
+            object.object.type === "Identifier" &&
+            object.object.name === "test" &&
+            object.property.type === "Identifier" &&
+            object.property.name === "describe");
+        if (!testFunction) return;
+        if (node.arguments.length === 0) {
+          context.report({ node, messageId: "unexplainedSkip" });
+          return;
+        }
         const [title] = node.arguments;
         const text =
           title?.type === "Literal" && typeof title.value === "string"

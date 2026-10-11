@@ -518,7 +518,7 @@ describe("plumix/test-tier", () => {
 
   it("rejects a skip whose title names no issue, and allows one that does", async () => {
     const reports = await tierReports("src/test-tier.skips.test.ts");
-    expect(reports.map(({ line }) => line)).toEqual([3, 11]);
+    expect(reports.map(({ line }) => line)).toEqual([3, 11, 24, 37]);
     expect(reports[0]?.message).toContain("issue");
   });
 
