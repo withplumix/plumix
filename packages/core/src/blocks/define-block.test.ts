@@ -79,6 +79,20 @@ describe("defineBlock type inference", () => {
     });
   });
 
+  test("a kind takes the template's `(prev) => next` form too", () => {
+    defineBlock({
+      name: "acme/composed-deps",
+      deps: { settings: (prev) => [...prev, "school_ks2"] },
+      render: ({ deps }) => {
+        // Composed keys are computed, so the kind's keys are open.
+        expectTypeOf(deps.settings.school_ks2).toEqualTypeOf<
+          SettingsBag | null | undefined
+        >();
+        return null;
+      },
+    });
+  });
+
   test("`deps` is a known empty record when none are declared", () => {
     defineBlock({
       name: "acme/no-deps",

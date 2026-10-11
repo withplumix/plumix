@@ -6,9 +6,9 @@ import type { JsonObject } from "../json.js";
 import type { BlockRegistry } from "./block-registry.js";
 import type { HydratedEntry } from "./context-bags.js";
 import type {
-  BlockDepDeclarations,
   BlockDepResults,
   LoadedDeps,
+  TemplateDepDeclarations,
 } from "./deps.js";
 import type { RootTag } from "./html/root-tag.js";
 import type { CompiledCatalog, MessageValues } from "./i18n-label.js";
@@ -165,7 +165,7 @@ export interface BlockNodeRenderProps<
   Attrs = MaterializedAttrs,
   Loaders extends BlockLoaderRecord = BlockLoaderRecord,
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  Deps extends BlockDepDeclarations = {},
+  Deps extends TemplateDepDeclarations = {},
 > {
   readonly attrs: Attrs;
   readonly context: BlockContext;
@@ -193,7 +193,7 @@ export type BlockNodeComponent<
   Attrs = MaterializedAttrs,
   Loaders extends BlockLoaderRecord = BlockLoaderRecord,
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  Deps extends BlockDepDeclarations = {},
+  Deps extends TemplateDepDeclarations = {},
 > = (props: BlockNodeRenderProps<Attrs, Loaders, Deps>) => ReactNode;
 
 /** A `BlockContext.t` over `catalog`. */

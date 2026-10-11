@@ -23,11 +23,13 @@ in the editor canvas, and every template using it repeats the wiring.
 ## What this means
 
 - **One declaration shape.** The kinds are the `TemplateDepRegistry` kinds,
-  core's and every plugin's, and the keys are typed the same way. A block
-  declares arrays only: it has no inherited declaration for a template's
-  `(prev) => next` form to compose. An unknown kind or a key of the wrong type
-  fails to compile, and `render`'s `deps` is typed per declared kind and key.
-  The registry moves down into `blocks/` (ADR 0010). Core's index exports it
+  core's and every plugin's. A block's static `deps` is a
+  `TemplateDepDeclarations`, the type a template declares with, so a kind takes
+  an array or the `(prev) => next` form. A block inherits no keys, so its
+  `prev` is `[]`. An unknown kind or a key of the wrong type fails to compile,
+  and `render`'s `deps` is typed per declared kind and key; keys a function
+  computes are open. The registry and `TemplateDepDeclarations` move down into
+  `blocks/` (ADR 0010). Core's index exports it
   from there, and every reference in core imports it from there too. A
   `declare module "plumix"` augmentation merges only into the registry reached
   along the path the façade exports, so a re-export in between would leave
@@ -51,7 +53,10 @@ in the editor canvas, and every template using it repeats the wiring.
   holds nothing for, the canvas sends its tree to the host. The host calls
   `entry.resolveBlockDeps`, which evaluates the declarations on the server,
   loads through the same loaders and pushes the result back. A client can't
-  name keys no block declares.
+  name keys no block declares. A dep that throws a page outcome there reads
+  `null`, as a block loader's outcome is its loader error in the editor
+  (ADR 0032): the author is mid-edit, and the canvas must stay usable. The
+  public page still ends the request.
 - **One way to read a value (#2493).** `BlockContext.siteSettings` is gone, with
   no shim. `core/rich-text` declares `deps: { settings: ["site"] }` and hands
   the group to its shortcodes, whose context keeps `siteSettings`.

@@ -1,10 +1,10 @@
 import type {
   DepKeys,
+  TemplateDepDeclarations,
   TemplateDepKeyedBy,
   TemplateDepRegistry,
 } from "./blocks/deps.js";
 import type { AppContext } from "./context/app-context.js";
-import type { TemplateDepDeclarations } from "./template.js";
 import { isPageOutcome } from "./route/contract/page-outcome.js";
 
 /**
@@ -111,13 +111,15 @@ export function unionDepKeys(template: DepKeys, blocks: DepKeys): DepKeys {
 }
 
 /**
- * A failing loader doesn't break the render: its result becomes `{}`, it is
- * logged as `template_dep_load_failed`, and the response stays 200.
+ * A failing loader's result becomes `{}`, logged as `template_dep_load_failed`,
+ * and the response stays 200. The editor sets `honourOutcomes: false` so an
+ * outcome fails the same way (ADR 0032).
  */
 export async function loadTemplateDeps(
   template: DepDeclarations,
   registry: ReadonlyMap<string, RegisteredTemplateDep>,
   ctx: AppContext,
+  { honourOutcomes = true }: { readonly honourOutcomes?: boolean } = {},
 ): Promise<LoadedTemplateDeps> {
   const declared: {
     kind: string;
@@ -136,7 +138,9 @@ export async function loadTemplateDeps(
     s.set("deps.kinds", () => declared.map((d) => d.kind));
     return Object.fromEntries(
       await Promise.all(
-        declared.map((d) => loadOne(d.kind, d.slugs, d.dep, ctx)),
+        declared.map((d) =>
+          loadOne(d.kind, d.slugs, d.dep, ctx, honourOutcomes),
+        ),
       ),
     );
   });
@@ -147,6 +151,7 @@ async function loadOne(
   slugs: readonly string[],
   loader: RegisteredTemplateDep,
   ctx: AppContext,
+  honourOutcomes: boolean,
 ): Promise<readonly [string, DepResults]> {
   try {
     const raw = await loader.load(slugs, ctx);
@@ -157,7 +162,7 @@ async function loadOne(
   } catch (err) {
     // A dep that ends the request (ADR 0032) is the page's answer, not a
     // failure to degrade around.
-    if (isPageOutcome(err)) throw err;
+    if (honourOutcomes && isPageOutcome(err)) throw err;
     ctx.logger.error("template_dep_load_failed", {
       kind,
       slugs,

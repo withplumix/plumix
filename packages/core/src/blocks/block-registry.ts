@@ -3,9 +3,9 @@ import type { ReactNode } from "react";
 import type { Label } from "../i18n/label.js";
 import type { JsonObject } from "../json.js";
 import type {
-  BlockDepDeclarations,
   BlockDeps,
   KnownBlockDepKinds,
+  TemplateDepDeclarations,
 } from "./deps.js";
 import type { BlockLoaderRecord } from "./loaders.js";
 import type {
@@ -140,7 +140,7 @@ export interface BlockSpec<
   Attrs extends MaterializedAttrs = MaterializedAttrs,
   Loaders extends BlockLoaderRecord = BlockLoaderRecord,
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  Deps extends BlockDepDeclarations = {},
+  Deps extends TemplateDepDeclarations = {},
 > {
   readonly name: string;
   readonly title?: Label;
@@ -245,8 +245,10 @@ export function defineBlock<
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   Loaders extends BlockLoaderRecord = {},
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  const Deps extends KnownBlockDepKinds<Deps> = {},
->(spec: BlockSpec<Attrs, Loaders, Deps>): BlockSpec {
+  const Deps extends TemplateDepDeclarations = {},
+>(
+  spec: BlockSpec<Attrs, Loaders, Deps> & KnownBlockDepKinds<Attrs, Deps>,
+): BlockSpec {
   // Safety: the registry is keyed by name, so a widened spec only meets nodes
   // carrying its own name; the erasure buys a homogeneous map, not
   // interchangeable specs.

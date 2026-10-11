@@ -2,6 +2,7 @@ import { describe, expect, test, vi } from "vitest";
 
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { toRegisteredEntryType } from "../../../plugin/registry.js";
+import { pageNotFound } from "../../../route/contract/page-outcome.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
 /** A post type, a location-keyed dep and a block reading it from its attrs. */
@@ -61,6 +62,44 @@ describe("entry.resolveBlockDeps", () => {
       menus: { header: "menu:header", footer: "menu:footer" },
     });
     expect(load).toHaveBeenCalledOnce();
+  });
+
+  test("a dep that ends the request reads null, so the canvas stays editable", async () => {
+    const { registry } = navRegistry();
+    registry.templateDeps.set("shares", {
+      kind: "shares",
+      registeredBy: "test",
+      load: () => Promise.reject(pageNotFound()),
+    });
+    registry.blockSpecs.set("test/share", {
+      spec: {
+        name: "test/share",
+        render: () => null,
+        deps: () => ({ shares: ["spent"] }),
+      },
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ authAs: "editor", plugins: registry });
+    const draft = await h.factory.draft.create({
+      authorId: h.user.id,
+      content: tree("header"),
+    });
+
+    const result = await h.client.entry.resolveBlockDeps({
+      id: draft.id,
+      content: {
+        version: "plumix.v2",
+        blocks: [
+          { id: "s", name: "test/share" },
+          { id: "n", name: "test/nav", attrs: { location: "header" } },
+        ],
+      },
+    });
+
+    expect(result.deps).toEqual({
+      shares: { spent: null },
+      menus: { header: "menu:header" },
+    });
   });
 
   test("404s an entry the caller can't read", async () => {

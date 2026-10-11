@@ -165,7 +165,7 @@ export const shareTemplate = entry(
 
 ## Data a block reads from the site
 
-A block that shows copy an admin edits, or a menu, or anything else a [template dep](/themes/templates/) loads, declares it under `deps` with the same kinds and keys a template uses. `render` receives the results as `deps`, typed per kind and per key you declared. A key the loader found nothing for reads `null`. An unknown kind, or a key of the wrong type, fails to compile.
+A block that shows copy an admin edits, or a menu, or anything else a [template dep](/themes/templates/) loads, declares it under `deps` with the same kinds and keys a template uses, an array or the `(prev) => next` form, where a block's `prev` is always `[]`. `render` receives the results as `deps`, typed per kind and per key you declared. A key the loader found nothing for reads `null`. An unknown kind, or a key of the wrong type, fails to compile.
 
 ```tsx
 import { defineBlock } from "plumix/blocks";
@@ -203,7 +203,7 @@ With the [menu plugin](/plugins/menu/) installed, `deps: (attrs) => ({ menus: [a
 
 Before a page renders, it collects every block's declaration from the trees it will render, which is the entry's content or each listed entry's on an archive. It merges them with the template's and theme's declarations and loads each kind once. Twenty instances of a block cost one settings read, and two `eduscope/stage` blocks set to different stages load both groups in that same read. The stored page carries the cache tag of every dep it loaded, so saving the `school_ks2` group purges every page that renders the block.
 
-The editor canvas starts from the values the page render loaded. When an edit declares a key the canvas has no value for, such as a changed `stage` or a newly inserted block, it asks the server, which evaluates the declarations itself and loads them through the same loaders.
+The editor canvas starts from the values the page render loaded. When an edit declares a key the canvas has no value for, such as a changed `stage` or a newly inserted block, it asks the server, which evaluates the declarations itself and loads them through the same loaders. A dep that ends the request with `pageNotFound()` or `redirectTo()` reads `null` in the canvas, so the page stays editable. The public page still answers with the outcome.
 
 Data that differs per instance, such as a query built from the block's own attributes, stays a loader's job. `deps` is for data many blocks share.
 

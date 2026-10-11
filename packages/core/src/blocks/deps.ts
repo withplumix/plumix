@@ -5,8 +5,7 @@ import { blockSlotKeys } from "./block-slots.js";
 import { isBlockNodeArray } from "./render-block-tree.js";
 
 /**
- * Core imports this from here only: a `plumix` augmentation misses references
- * reached through a re-export.
+ * Imported from here only: augmentations miss re-exports.
  *
  * Augmented per kind as `{ slug | location: string; result }`. The loader
  * receives keys under that name, so reading the wrong one does not compile.
@@ -32,20 +31,32 @@ export type TemplateDepKey<K extends keyof TemplateDepRegistry> =
   TemplateDepRegistry[K][TemplateDepKeyedBy<K>];
 
 /**
- * The keys a block reads per dep kind. Arrays only: a block has no inherited
- * declaration for a `(prev) => next` form to compose.
+ * An array replaces the inherited keys, `(prev) => next` composes them, `[]`
+ * disables the dep, and an omitted kind inherits unchanged. A block inherits
+ * nothing, so its `prev` is `[]`.
  */
-export type BlockDepDeclarations = {
-  readonly [K in keyof TemplateDepRegistry]?: readonly TemplateDepKey<K>[];
+export type TemplateDepDeclarations = {
+  readonly [K in keyof TemplateDepRegistry]?:
+    | readonly TemplateDepKey<K>[]
+    | ((prev: readonly TemplateDepKey<K>[]) => readonly TemplateDepKey<K>[]);
 };
 
-/** Rejects a kind no `TemplateDepRegistry` entry names. */
-export type KnownBlockDepKinds<D> = BlockDepDeclarations &
-  Readonly<Record<Exclude<keyof D, keyof TemplateDepRegistry>, never>>;
+/**
+ * Rejects a kind no `TemplateDepRegistry` entry names. Checked on the spec, not
+ * as `Deps`'s constraint, so the constraint still types a kind's `prev`.
+ */
+export interface KnownBlockDepKinds<Attrs, D> {
+  readonly deps?: BlockDeps<
+    Attrs,
+    Readonly<Record<Exclude<keyof D, keyof TemplateDepRegistry>, never>>
+  >;
+}
 
 type DeclaredKey<V> = V extends readonly (infer Key extends string)[]
   ? Key
-  : never;
+  : V extends (prev: never) => readonly (infer Key extends string)[]
+    ? Key
+    : never;
 
 /**
  * What `render` reads: each declared kind's results under each declared key,
@@ -61,7 +72,10 @@ export type BlockDepResults<D> = {
  * Static, or a pure function of the block's stored attributes, so a page can
  * collect every block's keys before anything renders.
  */
-export type BlockDeps<Attrs, D> = D | ((attrs: Attrs) => D);
+export type BlockDeps<Attrs, D> =
+  // The intersection types a kind's `prev`, which `D` alone can't while it is
+  // still being inferred.
+  (D & TemplateDepDeclarations) | ((attrs: Attrs) => D);
 
 /** Each dep kind's keys, as the loaders take them. */
 export type DepKeys = Readonly<Record<string, readonly string[]>>;
@@ -82,8 +96,15 @@ export function blockDepKeys(spec: BlockSpec, node: BlockNode): DepKeys {
   if (typeof declared !== "object" || declared === null) return {};
   const keys: Record<string, readonly string[]> = {};
   for (const [kind, value] of Object.entries(declared)) {
-    if (!Array.isArray(value)) continue;
-    keys[kind] = value.filter((key): key is string => typeof key === "string");
+    // A block inherits no keys for `(prev) => next` to compose.
+    const declaredKeys: unknown =
+      typeof value === "function"
+        ? (value as (prev: readonly string[]) => readonly unknown[])([])
+        : value;
+    if (!Array.isArray(declaredKeys)) continue;
+    keys[kind] = declaredKeys.filter(
+      (key): key is string => typeof key === "string",
+    );
   }
   return keys;
 }

@@ -1,7 +1,10 @@
 import type { ComponentType, ReactNode } from "react";
 import { createElement } from "react";
 
-import type { TemplateDepKey, TemplateDepRegistry } from "./blocks/deps.js";
+import type {
+  TemplateDepDeclarations,
+  TemplateDepRegistry,
+} from "./blocks/deps.js";
 import type { AppContext } from "./context/app-context.js";
 import type { DocumentManifest } from "./document-manifest.js";
 import type { ViewTransitionsInput } from "./theme-view-transitions.js";
@@ -13,16 +16,6 @@ import { ThemeRegistrationError } from "./theme-errors.js";
  * template.
  */
 const PLUMIX_TEMPLATE_BRAND: unique symbol = Symbol("plumix.template");
-
-/**
- * An array replaces the inherited keys, `(prev) => next` composes them, `[]`
- * disables the dep, and an omitted kind inherits unchanged.
- */
-export type TemplateDepDeclarations = {
-  readonly [K in keyof TemplateDepRegistry]?:
-    | readonly TemplateDepKey<K>[]
-    | ((prev: readonly TemplateDepKey<K>[]) => readonly TemplateDepKey<K>[]);
-};
 
 /** `null` when the loader returned nothing for that key, or threw. */
 type TemplateDepResults = {

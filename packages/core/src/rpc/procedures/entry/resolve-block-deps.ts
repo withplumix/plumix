@@ -1,5 +1,9 @@
 import type { JsonObject } from "../../../json.js";
-import { collectBlockDepKeys, isEntryContent } from "../../../blocks/index.js";
+import {
+  collectBlockDepKeys,
+  isEntryContent,
+  pickDeps,
+} from "../../../blocks/index.js";
 import { loadAuthoredEntry } from "../../../entries/authored.js";
 import { canReadEntry } from "../../../entries/visibility.js";
 import { loadTemplateDeps } from "../../../template-deps.js";
@@ -22,12 +26,17 @@ export const resolveBlockDeps = base
     if (!isEntryContent(input.content)) return { deps: {} };
 
     const keys = collectBlockDepKeys([input.content.blocks], context.blocks);
-    const deps = await loadTemplateDeps(
+    // A dep that ends the request reads `null`, as a block loader's outcome
+    // is its loader error in the editor (ADR 0032).
+    const loaded = await loadTemplateDeps(
       keys,
       context.plugins.templateDeps,
       context,
+      { honourOutcomes: false },
     );
-    // JSON on the way out: the canvas receives what the page's embed carries.
+    // Every declared key is filled, so the canvas holds a failed one as `null`
+    // rather than asking again. JSON, as the page's embed carries it.
+    const deps = pickDeps(keys, loaded);
     return {
       deps: JSON.parse(JSON.stringify(deps)) as Record<string, JsonObject>,
     };

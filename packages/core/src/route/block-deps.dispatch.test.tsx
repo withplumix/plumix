@@ -82,6 +82,36 @@ describe("a block that declares its deps", () => {
     expect(await response.text()).toContain("<h2>Key Stage 2</h2>");
   });
 
+  test("a kind declared in the template's `(prev) => next` form starts from no keys", async () => {
+    const composedPlugin = definePlugin("composed", (ctx) => {
+      ctx.registerBlock(
+        defineBlock({
+          name: "eduscope/composed",
+          deps: { settings: (prev) => [...prev, "school_ks2"] },
+          render: ({ deps }) => {
+            const title = deps.settings.school_ks2?.title;
+            return <h3>{typeof title === "string" ? title : "no copy"}</h3>;
+          },
+        }),
+      );
+    });
+    const h = await createDispatcherHarness({
+      config: { plugins: [schoolPlugin, composedPlugin], theme: plainTheme },
+    });
+    await h.factory.setting.create({
+      group: "school_ks2",
+      key: "title",
+      value: "Key Stage 2",
+    });
+    await seedPost(h, [{ id: "a", name: "eduscope/composed" }]);
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/school"),
+    );
+
+    expect(await response.text()).toContain("<h3>Key Stage 2</h3>");
+  });
+
   test("twenty instances on one page load the settings dep once", async () => {
     const h = await createDispatcherHarness({
       config: { plugins: [schoolPlugin], theme: plainTheme },
