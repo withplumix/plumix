@@ -7,6 +7,7 @@ import {
   planBoot,
   planInstall,
   planSmokeCombos,
+  summarizePlaywrightFailures,
   undeclaredSmokePackages,
 } from "./smoke-plan.js";
 import { REPO_ROOT } from "./test-support.js";
@@ -86,6 +87,19 @@ describe("planSmokeCombos", () => {
         excluded: ["media"],
       },
     ]);
+  });
+
+  it("drives the editor under plumix dev in each runtime's all-plugins combo only", () => {
+    const registry: Registry = {
+      runtimes: [runtime("bun", { packageManager: "bun" }), runtime("node")],
+      plugins: [plugin("media")],
+    };
+
+    const devEditor = planSmokeCombos(registry)
+      .filter((combo) => combo.devEditor)
+      .map((combo) => combo.name);
+
+    expect(devEditor).toEqual(["bun-all-plugins", "node-all-plugins"]);
   });
 });
 
@@ -184,5 +198,54 @@ describe("undeclaredSmokePackages", () => {
         devDependencies: { plumix: "workspace:*" },
       }),
     ).toEqual([]);
+  });
+});
+
+describe("summarizePlaywrightFailures", () => {
+  it("names each failed test with the first line of each of its errors, and skips passing tests", () => {
+    const report = {
+      suites: [
+        {
+          title: "editor.spec.ts",
+          specs: [
+            {
+              title: "the front page loads every module it requests",
+              tests: [{ results: [{ status: "passed", errors: [] }] }],
+            },
+          ],
+          suites: [
+            {
+              title: "canvas",
+              specs: [
+                {
+                  title: "a block is selectable",
+                  tests: [
+                    {
+                      results: [
+                        {
+                          status: "failed",
+                          errors: [
+                            {
+                              message:
+                                "pageerror on http://localhost:3000/_plumix/admin/: SyntaxError\n  at x",
+                            },
+                            { message: "expect(locator).toBeVisible() failed" },
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(summarizePlaywrightFailures(report)).toEqual([
+      "editor.spec.ts › canvas › a block is selectable: pageerror on http://localhost:3000/_plumix/admin/: SyntaxError",
+      "editor.spec.ts › canvas › a block is selectable: expect(locator).toBeVisible() failed",
+    ]);
   });
 });

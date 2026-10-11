@@ -3,5 +3,6 @@
     "./tsconfig.json",
     "@plumix/typescript-config/library.build.json"
   ],
+  "include": ["src"],
   "exclude": ["src/**/*.test.ts", "src/test-support.ts"]
 }

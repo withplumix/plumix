@@ -43,7 +43,7 @@ Run everything from the root. Most root scripts run the turbo task of the same n
 | `commitlint`                      | Lint commit messages.                                                                                               |
 | `check-no-major`                  | Fails when a changeset would take a package to 1.0.                                                                 |
 | `smoke`                           | Publish to a throwaway registry, scaffold an app from it, and boot it.                                              |
-| `smoke:scaffold`                  | Pack every publishable package, scaffold a project for each runtime from the tarballs, and build and boot each one. |
+| `smoke:scaffold`                  | Pack each package, scaffold a runtime project from the tarballs, boot it, and run the editor under dev.             |
 | `clean` / `clean:workspaces`      | Remove the root `node_modules` / each package's `dist`, caches and `node_modules`.                                  |
 | `release` / `version-packages`    | Changesets publishing; the release bot runs these.                                                                  |
 

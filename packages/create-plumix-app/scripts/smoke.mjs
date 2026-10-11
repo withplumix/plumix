@@ -1,5 +1,7 @@
 // Scaffolds representative projects and proves they typecheck, build and
 // serve: each built server is started and requested before the next combo.
+// Each runtime's all-plugins project then runs `plumix dev` and drives the
+// editor in Chromium.
 //
 // The base skeleton lives inside this package rather than as a workspace
 // package, so nothing else ever compiles it. This is what catches a core,
@@ -25,6 +27,7 @@
 
 import { execFileSync, execSync, spawn } from "node:child_process";
 import {
+  cpSync,
   createWriteStream,
   existsSync,
   mkdtempSync,
@@ -33,6 +36,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { createRequire } from "node:module";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { delimiter, join, resolve } from "node:path";
@@ -41,12 +45,22 @@ import { parse as parseJsonc } from "jsonc-parser";
 
 const REPO = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const CLI = join(REPO, "packages/create-plumix-app/dist/index.js");
+const DEV_EDITOR = join(REPO, "packages/create-plumix-app/smoke/dev-editor");
+// Inside the package, where CI's failure upload reads Playwright's output.
+const PACKAGE = join(REPO, "packages/create-plumix-app");
+const DEV_EDITOR_RESULTS = join(PACKAGE, "test-results");
+const DEV_EDITOR_REPORT = join(PACKAGE, "playwright-report");
 
 const { loadRegistry } = await import(
   join(REPO, "packages/create-plumix-app/dist/registry.js")
 );
-const { planBoot, planInstall, planSmokeCombos, undeclaredSmokePackages } =
-  await import(join(REPO, "packages/create-plumix-app/dist/smoke-plan.js"));
+const {
+  planBoot,
+  planInstall,
+  planSmokeCombos,
+  summarizePlaywrightFailures,
+  undeclaredSmokePackages,
+} = await import(join(REPO, "packages/create-plumix-app/dist/smoke-plan.js"));
 
 const run = (cmd, args, cwd) =>
   execFileSync(cmd, args, { cwd, stdio: "inherit", encoding: "utf8" });
@@ -256,6 +270,50 @@ function assertCatalogsStaged(appDir, excluded) {
 }
 
 /**
+ * The version this package develops against, which is the one CI installs
+ * Chromium for: a project on another version would look for a browser build
+ * that isn't there.
+ */
+function addPlaywright(appDir) {
+  const { version } = createRequire(import.meta.url)(
+    "@playwright/test/package.json",
+  );
+  const manifestPath = join(appDir, "package.json");
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  manifest.devDependencies = {
+    ...manifest.devDependencies,
+    "@playwright/test": version,
+  };
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+}
+
+/**
+ * The scaffold's entry template renders the title and excerpt but not the
+ * entry content, so the canvas would have no root to mount blocks into. Add
+ * the `BlockRenderer` a site renders its content with.
+ */
+function renderEntryContent(appDir) {
+  const themePath = join(appDir, "theme", "index.tsx");
+  const theme = readFileSync(themePath, "utf8");
+  const anchor =
+    "        {data.entry.excerpt ? <p>{data.entry.excerpt}</p> : null}\n";
+  if (!theme.includes(anchor)) {
+    throw new Error(
+      "theme/index.tsx no longer renders the excerpt in its entry template — " +
+        "see packages/create-plumix-app/base/theme/index.tsx.",
+    );
+  }
+  writeFileSync(
+    themePath,
+    `import { BlockRenderer } from "plumix/blocks/renderer";\n${theme.replace(
+      anchor,
+      `${anchor}        <BlockRenderer content={data.entry.contentBlocks} />\n`,
+    )}`,
+    "utf8",
+  );
+}
+
+/**
  * The runtime package the project installed, found the way the Playwright
  * helper finds it: the dependency carrying a runtime scaffold block. Read from
  * the installed tarball, so the published manifest is what declares the boot.
@@ -379,6 +437,66 @@ async function boot(appDir) {
   }
 }
 
+/**
+ * `plumix dev` is where Vite's dependency optimizer and module rewriting meet
+ * the installed plugins, which a production build never exercises. The spec's
+ * config's webServer migrates afresh and runs the runtime's dev command.
+ */
+async function driveEditorUnderDev(appDir, combo) {
+  renderEntryContent(appDir);
+  cpSync(DEV_EDITOR, join(appDir, "dev-editor"), { recursive: true });
+  const bin = join(appDir, "node_modules", ".bin");
+  const jsonReport = join(appDir, "dev-editor-report.json");
+  const results = join(DEV_EDITOR_RESULTS, combo.name);
+  try {
+    execFileSync(
+      "playwright",
+      [
+        "test",
+        "--config",
+        "dev-editor/playwright.config.ts",
+        "--output",
+        results,
+        "--trace",
+        "retain-on-failure",
+        // The config's reporters plus a JSON one, read back below to name what
+        // failed in this script's own error.
+        "--reporter",
+        "list,html,json",
+      ],
+      {
+        cwd: appDir,
+        stdio: "inherit",
+        env: {
+          ...process.env,
+          PATH: `${bin}${delimiter}${process.env.PATH}`,
+          PLAYWRIGHT_HTML_OUTPUT_DIR: join(DEV_EDITOR_REPORT, combo.name),
+          PLAYWRIGHT_HTML_OPEN: "never",
+          PLAYWRIGHT_JSON_OUTPUT_FILE: jsonReport,
+        },
+      },
+    );
+  } catch (err) {
+    // No failed test means Playwright stopped before any ran: the dev server
+    // never answered, which its [WebServer] output above shows.
+    const failed = existsSync(jsonReport)
+      ? summarizePlaywrightFailures(
+          JSON.parse(readFileSync(jsonReport, "utf8")),
+        )
+      : [];
+    const failures =
+      failed.length > 0
+        ? failed
+        : ["plumix dev did not serve (see the [WebServer] output above)"];
+    throw new Error(
+      `${combo.name}: the editor failed under \`plumix dev\`:\n` +
+        failures.map((line) => `  - ${line}`).join("\n") +
+        `\nTrace under ${results}.`,
+      { cause: err },
+    );
+  }
+}
+
 async function smoke(combo, tarballs) {
   const dir = mkdtempSync(join(tmpdir(), `plumix-smoke-${combo.name}-`));
   const app = join(dir, "app");
@@ -396,6 +514,7 @@ async function smoke(combo, tarballs) {
 
     if (combo.secondLocale) enableSecondLocale(app);
     if (combo.typescript7) useTypeScript7(app);
+    if (combo.devEditor) addPlaywright(app);
     const install = planInstall(pm, tarballs);
     redirectToTarballs(app, install);
     const [installer, ...installArgs] = install.command;
@@ -407,6 +526,7 @@ async function smoke(combo, tarballs) {
     run(pm, ["run", "build"], app);
     if (combo.secondLocale) assertCatalogsStaged(app, combo.excluded);
     await boot(app);
+    if (combo.devEditor) await driveEditorUnderDev(app, combo);
     console.log(`=== ${combo.name}: ok ===`);
   } finally {
     rmSync(dir, { recursive: true, force: true });

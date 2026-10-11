@@ -1,3 +1,5 @@
+import { stripVTControlCharacters } from "node:util";
+
 import type { PackageManager } from "./package-manager.js";
 import type { Registry } from "./registry.js";
 import { availableAuthMethods } from "./auth-methods.js";
@@ -19,6 +21,11 @@ export interface SmokeCombo {
    */
   readonly excluded?: readonly string[];
   readonly typescript7?: boolean;
+  /**
+   * Boot `plumix dev` after the built server and drive the block editor in
+   * Chromium, through the installed Playwright kit.
+   */
+  readonly devEditor?: boolean;
 }
 
 /**
@@ -53,6 +60,7 @@ export function planSmokeCombos(registry: Registry): readonly SmokeCombo[] {
         packageManager,
         secondLocale: true,
         excluded,
+        devEditor: true,
       },
       // Each auth method is a config fragment written as text, so only a
       // generated project that typechecks and builds proves it still fits.
@@ -171,4 +179,45 @@ export function undeclaredSmokePackages(
 ): readonly string[] {
   const declared = manifest.devDependencies ?? {};
   return packed.filter((name) => !(name in declared));
+}
+
+/** The part of Playwright's JSON report the smoke reads. */
+export interface PlaywrightReportSuite {
+  readonly title: string;
+  readonly specs?: readonly {
+    readonly title: string;
+    readonly tests: readonly {
+      readonly results: readonly {
+        readonly status: string;
+        readonly errors: readonly { readonly message?: string }[];
+      }[];
+    }[];
+  }[];
+  readonly suites?: readonly PlaywrightReportSuite[];
+}
+
+/**
+ * One line per error of each failed test, naming the test and the first line
+ * of the error, so the smoke's own failure says which step broke.
+ */
+export function summarizePlaywrightFailures(report: {
+  readonly suites: readonly PlaywrightReportSuite[];
+}): readonly string[] {
+  const lines: string[] = [];
+  const visit = (suite: PlaywrightReportSuite, path: readonly string[]) => {
+    const here = [...path, suite.title];
+    for (const spec of suite.specs ?? []) {
+      const name = [...here, spec.title].join(" › ");
+      for (const result of spec.tests.flatMap((t) => t.results)) {
+        if (result.status === "passed" || result.status === "skipped") continue;
+        for (const { message = "" } of result.errors) {
+          const [first = ""] = stripVTControlCharacters(message).split("\n");
+          lines.push(`${name}: ${first}`);
+        }
+      }
+    }
+    for (const child of suite.suites ?? []) visit(child, here);
+  };
+  for (const suite of report.suites) visit(suite, []);
+  return lines;
 }
