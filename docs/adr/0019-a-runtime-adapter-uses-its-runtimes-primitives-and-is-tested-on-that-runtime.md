@@ -59,6 +59,9 @@ secret`.
 
 ## How a runtime is tested
 
+Layer 2 below is superseded by [ADR 0042](0042-tests-come-in-three-tiers.md): the process facts it
+lists are smoke steps, not a build-lane suite. The other layers stand.
+
 A fake built-in shares the assumption under test and cannot fail. So
 runtime-touching code is tested on the runtime, and nothing substitutes the
 runtime's API. There are four layers, highest first.

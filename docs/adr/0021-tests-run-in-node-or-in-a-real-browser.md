@@ -1,5 +1,8 @@
 # Tests run in Node or in a real browser
 
+Superseded by [ADR 0042](0042-tests-come-in-three-tiers.md): tests come in three tiers (unit,
+e2e, smoke), and the Chromium tier and the `*.build.test.ts` run below are retired.
+
 A plugin could not test an upload (#2432). When an RPC input carries a `File`,
 oRPC's link posts `multipart/form-data`. Under vitest's jsdom environment that
 body never survived the trip: vitest converts a jsdom `Blob` or `FormData` for

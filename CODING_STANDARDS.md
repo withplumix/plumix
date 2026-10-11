@@ -137,45 +137,188 @@ migration under a new name, because installs that ran the old one won't run it a
 
 ## Tests
 
-Each package has one vitest suite. Put a test in one of two places, in this order:
+Plumix has three test tiers: **unit**, **e2e** and **smoke**. A tier is chosen by what the test
+needs to observe the behaviour, never by convenience, and each tier has one location, one runner and
+one CI job ([ADR 0042](docs/adr/0042-tests-come-in-three-tiers.md)). Typecheck, lint, format, knip,
+publint, attw, `i18n:check`, `migrations:check` and the link check are **gates**, not tiers: they
+check code without running it, and a new check of that kind joins an existing gate.
 
-1. **Next to the source.** `src/foo.test.ts` sits beside `src/foo.ts`, and `src/foo.browser.test.tsx`
-   for the browser tier. This is the default, including for tests that use an in-memory database or
-   the helpers from `@plumix/core/test`, since those run inside the vitest worker.
-2. **In the package's `test/` folder.** Use it only when a test can't sit next to the source,
-   because it spawns a real binary, runs against the built `dist/`, or uses the package the way an
-   outside consumer would.
+| Tier  | Proves                                               | Lives in                              | Runs with        | CI job             |
+| ----- | ---------------------------------------------------- | ------------------------------------- | ---------------- | ------------------ |
+| Unit  | the logic behind a behaviour, through its public API | `src/foo.test.ts` beside `src/foo.ts` | `pnpm test:unit` | `Test`             |
+| E2E   | what a consumer sees and does on a running site      | the package's `e2e/*.spec.ts`         | `pnpm test:e2e`  | `Test (e2e)`       |
+| Smoke | a project scaffolded from the packed tarballs works  | `create-plumix-app/scripts/smoke.mjs` | `smoke:scaffold` | `Smoke (scaffold)` |
 
-End-to-end tests use Playwright, live in each package's `e2e/` folder, and run with
-`pnpm test:e2e`.
+### Where a test goes
 
-### Test code
+Ask in order, and stop at the first yes:
 
-A test has no branches or loops of its own, because a test that branches can pass on the branch
-that checked nothing. Use `it.each` to run one case per input. Cover the requirement the change
-serves and its edge cases, not the lines it touched. Assert on what the code did, not on what it
-called. A spy that shares the code's own assumption can't fail. Neither can a test whose
-assertion holds whatever the code does: if breaking the rule a test names leaves it green, rewrite
-it or delete it.
+1. **Can it be observed by calling code in one process, on source?** It's a unit test. This covers
+   almost everything: business rules, RPC procedures, plugin hooks and filters, routing, rendering to a string,
+   schema and query behaviour against the in-memory database, CLI argument handling, a Vite
+   plugin's config. When in doubt, it's a unit test.
+2. **Does it need a browser, or a site a user drives?** It's an e2e test: a page that renders and
+   reacts, a form that posts, an upload through the UI, the editor under the keyboard and pointer,
+   layout, focus.
+3. **Does it need what a consumer installs: the packed tarballs, a real package manager, the real
+   runtime binary serving a built project?** It's a smoke step.
 
-Never change a test just to make it pass, because the test may be the only thing that's right. When
-you can't tell which side is wrong, stop and say so.
+A behaviour is tested once, in the lowest tier that can observe it. A higher tier proves the parts
+connect, not the rules a lower tier already covers. When e2e or smoke finds a bug in logic, the fix
+starts with a unit test that reproduces it.
 
-An end-to-end test waits for the element whose listener it drives before it dispatches input.
-A click, key or wheel sent straight after navigation races the mount of the listener that handles
-it, and passes or fails with the machine's load. Waiting for that element is part of the test, not
-a scope change, even when the ticket never names the race.
+A change that edits a test brings that test in line with this section: one in the wrong tier moves
+to the right one, and one that breaks a rule below is rewritten. Review holds every touched test to
+it.
 
-### Shared helpers
+### Unit
 
-Put a new test in the suite that already covers the area, not in a second setup of your own. Seed
-data through the fishery factories, not raw writes. Reuse the helpers a package already shares
-before you write a new one, `plumix/test` in a consumer package and `packages/admin/test/` in the
-admin. When you need a new place to swap in a test double, add it to the shared helpers, as high up
-as every caller can use it.
+A unit test checks one behaviour of the code's public API (an exported function, a procedure, a
+hook, a route, a plugin descriptor), the way a caller uses it. It runs in one process with Vitest,
+on the package's own runtime (a runtime adapter's suite runs on that runtime,
+[ADR 0019](docs/adr/0019-a-runtime-adapter-uses-its-runtimes-primitives-and-is-tested-on-that-runtime.md)),
+and it reads source: `pnpm test:unit` needs no build.
+
+- **It may use** the real collaborators, the in-memory database from the test harness (built from
+  the shipped migration histories), a temporary directory it creates and removes, and the fakes in
+  the shared test kits.
+- **It stays inside the process.** No browser, no simulated DOM (`jsdom`, `happy-dom`, a
+  `@vitest-environment` docblock), no child process, no network beyond an in-process handler, no
+  `dist/`, no sleeps. The `plumix/test-tier` lint rule reports DOM APIs in a unit test.
+- **A component keeps its logic in functions it calls.** A unit test calls those functions, or
+  renders the component to a string. What the rendered DOM does when a user acts on it is e2e.
+- **An upload is a value.** Call the procedure with a native `File` (`fakeFile`, `fakeImage`); Node
+  has `File`, `Blob`, `FormData` and `fetch`. One test of the wire format sends it through the RPC
+  link into the handler in-process.
+
+```ts
+// packages/core/src/entries/read-service.test.ts
+test("clamps a subscriber to published entries by default", async () => {
+  const h = await createRpcHarness({ authAs: "subscriber" });
+  await h.factory.published.create({ authorId: h.user.id, slug: "pub" });
+  await h.factory.draft.create({ authorId: h.user.id, slug: "draft" });
+
+  const rows = await listEntries(authedCtx(h), listInput());
+
+  expect(rows.map((r) => r.slug)).toEqual(["pub"]);
+});
+```
+
+### E2E
+
+An e2e test drives a running Plumix site in Chromium with Playwright, the way a visitor or an
+editor does. Each package with a user-facing surface (the admin, the editor, a plugin, a runtime's
+playground) owns one suite in its `e2e/` folder, against a site on its own ports.
+
+- **It proves a journey or a browser behaviour**: the page renders, the control reacts, the request
+  lands, the result shows. The rules behind it are already unit tests; e2e checks they reach the
+  screen.
+- **It sets up through the site.** Seed with the suite's own setup, sign in the way a user does,
+  and assert on what the page shows.
+- **It queries by test id only** (`page.getByTestId`, `[data-testid=…]`); the
+  `plumix/no-non-testid-queries` lint rule enforces it. Add a `data-testid` to the markup when none
+  exists.
+- **It waits on the page, never on the clock.** Wait for the element whose listener it drives
+  before it dispatches input: a click, key or wheel sent straight after navigation races that
+  listener's mount. Use Playwright's auto-waiting assertions; a `waitForTimeout` is a bug.
+
+```ts
+// packages/plugins/media/e2e/media.spec.ts (abridged)
+test("an uploaded image shows up in the library", async ({ page }) => {
+  await page.goto("pages/media");
+  await expect(page.getByTestId("media-library-dropzone")).toBeVisible();
+
+  const confirmed = page.waitForResponse(
+    (r) => r.url().endsWith("/media/confirm") && r.status() === 200,
+  );
+  await page
+    .locator('[data-testid="media-library-upload"] input[type="file"]')
+    .setInputFiles({
+      name: "smoke.png",
+      mimeType: "image/png",
+      buffer: PNG_1X1,
+    });
+  await confirmed;
+
+  const cards = page.locator(
+    "[data-testid='media-library-grid'] > [data-testid^='media-card-']",
+  );
+  await expect(cards).toHaveCount(1);
+});
+```
+
+### Smoke
+
+A smoke step checks that what a consumer installs works at all. `smoke:scaffold` packs every
+publishable package, scaffolds a project for each runtime the registry lists, installs it with that
+runtime's package manager, then typechecks, builds, applies migrations and starts it, and requests
+the home page, the admin shell and the session RPC. The root `pnpm smoke` does the same through a
+throwaway registry before a release.
+
+- **It answers one question per step: did it install, build, start, answer?** A step that asserts
+  feature behaviour belongs in e2e, and a rule belongs in a unit test.
+- **A new smoke check is a new step in that loop**, so every runtime gets it. It never starts a
+  second harness or a new job.
+- **It reads only what a consumer gets**: the tarballs and the scaffolded project, never the
+  workspace's source.
+
+### Test doubles
+
+Use the real thing when it is fast and deterministic. Otherwise use a fake the owner provides. Stub
+only a boundary Plumix doesn't own, and keep it narrow.
+
+1. **Real.** Collaborators inside Plumix, and the in-memory database, are used as they are.
+2. **Fake.** The package that owns an interface ships its fake in its test kit (`plumix/test`,
+   `@plumix/core/test`), and the fake has tests of its own. A runtime's slots pass the shared
+   conformance suites (`plumix/test/conformance`), which is what keeps the fakes honest. Add a new
+   fake there, as high up as every caller can use it.
+3. **Stub.** Only a boundary outside Plumix: a third-party HTTP API, the mail transport, the clock,
+   randomness, a platform global (`vi.stubGlobal`). Inject the dependency when the code doesn't
+   take one yet: add the seam to the source.
+4. **Never mock a module.** `vi.mock` couples a test to where code lives; the `plumix/no-module-mocking`
+   lint rule rejects it. Wrap a third-party type behind an interface Plumix owns and double that.
+
+Assert on the outcome (the returned value, the stored state, the captured mail), not on which
+functions ran. A spy is for an outgoing effect at a boundary, and it asserts only the arguments that
+matter.
+
+### Writing a test
+
+- **One behaviour per test, named for it**: "publishing a draft makes it readable", not
+  "publish() calls save()". The name and the failure message say what broke.
+- **Arrange, act, assert, in straight-line code.** No branches or loops: a test that branches can
+  pass on the branch that checked nothing. Use `it.each` for one case per input. Repeat the values
+  that matter in each test rather than hiding them in a helper.
+- **Expected values come from outside the code**: a literal, a worked example, the spec. A value
+  copied from the output, or recomputed the way the code computes it, can't fail.
+- **Cover the requirement and its edge cases, not the lines a change touched.** If breaking the
+  rule a test names leaves it green, rewrite it or delete it. Don't test a value that is statically
+  defined, or logic that was removed.
+- **Deterministic and hermetic.** Fake the clock (`vi.useFakeTimers`, an injected `now`), seed
+  randomness, and wait on a condition, never a delay. Each test builds its own state and passes in
+  any order. A flaky test is a bug: fix it in the change that finds it.
+- **Seed with the fishery factories**, not raw writes, and reuse the shared helpers
+  (`plumix/test`, `packages/admin/test/`). Put a new test in the suite that already covers the area.
+- **Never change a test just to make it pass**: the test may be the only thing that's right. When
+  you can't tell which side is wrong, stop and say so.
+
+### TDD
+
+Every change is test-first, one cycle at a time:
+
+1. **List** the behaviours the change needs, as test names.
+2. **Red.** Turn exactly one into a test, in the tier the placement rules pick, and run it. It must
+   fail, for the reason the behaviour is missing: read the failure, not just the colour. A bug fix
+   starts with a test that fails without the fix.
+3. **Green.** Write the least code that makes it and every earlier test pass.
+4. **Refactor** only on green, as its own step, with the tests unchanged.
+5. **Repeat** from the list. Add to the list what each cycle teaches; never write all the tests
+   first.
+
+Report what you ran: the command, and the files or package it covered.
 
 ### Timeouts
 
 Override a timeout only as a last resort. Profile the slow test first and fix what the profile
 shows. Keep an override only when the whole suite's timings call for it, not its single slowest
-test.
+test. [`docs/agents/testing.md`](docs/agents/testing.md#a-slow-test) has the usual causes.
