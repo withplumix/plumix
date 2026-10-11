@@ -450,10 +450,11 @@ describe("plumix/test-tier", () => {
       (message) => ({ line: message.line, message: message.message }),
     );
 
-  it("rejects an environment docblock, naming both tiers", async () => {
+  it("rejects an environment docblock, pointing DOM behaviour at e2e", async () => {
     const reports = await tierReports("src/test-tier.docblock.test.ts");
     expect(reports.map(({ line }) => line)).toEqual([1]);
-    expect(reports[0]?.message).toMatch(/\*\.browser\.test\.ts\(x\)/);
+    expect(reports[0]?.message).toContain("`e2e/`");
+    expect(reports[0]?.message).not.toContain(".browser.test");
   });
 
   it("rejects a vitest config that sets test.environment", async () => {
@@ -471,9 +472,8 @@ describe("plumix/test-tier", () => {
     expect(reports.map(({ line }) => line)).toEqual([
       1, 2, 3, 4, 6, 14, 15, 16, 17, 18, 19,
     ]);
-    expect(reports[0]?.message).toContain(
-      "test-tier.violations.browser.test.tsx",
-    );
+    expect(reports[0]?.message).toContain("`e2e/`");
+    expect(reports[0]?.message).not.toContain(".browser.test");
   });
 
   it("stays silent on a typeof probe and a local that shadows a global", async () => {

@@ -1,8 +1,8 @@
 import type { Rule, Scope } from "eslint";
 
 /**
- * What a test can only do with a DOM in front of it. A Node-tier test that
- * reaches for one of these belongs in the browser tier.
+ * What a test can only do with a DOM in front of it. A unit test that reaches
+ * for one of these is testing browser behaviour, which e2e owns.
  */
 const DOM_MODULES = new Set([
   "@testing-library/react",
@@ -21,9 +21,8 @@ const DOM_GLOBALS = new Set([
 ]);
 
 const TIERS =
-  "Tests come in two tiers, chosen by filename: `*.test.ts(x)` runs in Node, " +
-  "`*.browser.test.ts(x)` runs in Chromium, and neither simulates a DOM " +
-  "(ADR 0021).";
+  "A unit test checks logic in Node and simulates no DOM; browser behaviour is " +
+  "tested by the package's `e2e/` suite (CODING_STANDARDS.md#tests, ADR 0042).";
 
 const TEST_FILE = /\.test\.[cm]?[jt]sx?$/;
 const BROWSER_TEST_FILE = /\.browser\.test\.[cm]?[jt]sx?$/;
@@ -57,12 +56,12 @@ export const testTier: Rule.RuleModule = {
     type: "problem",
     docs: {
       description:
-        "Keep each test in the tier its filename names: Node for `*.test.ts(x)`, Chromium for `*.browser.test.ts(x)`.",
+        "Keep unit tests on logic in Node: no simulated DOM, no DOM APIs.",
     },
     messages: {
-      environmentDocblock: `A \`@vitest-environment\` docblock swaps in a simulated DOM. ${TIERS} Drop the docblock, and name the file \`*.browser.test.tsx\` if it needs a DOM.`,
-      configEnvironment: `\`test.environment\` swaps the environment for every test in the package. ${TIERS} Drop the setting, and name each DOM test \`*.browser.test.tsx\`.`,
-      domInNodeTest: `\`{{ what }}\` needs a DOM, and this file runs in Node. ${TIERS} Rename it to \`{{ fix }}\`, or move the DOM case into a file named that way.`,
+      environmentDocblock: `A \`@vitest-environment\` docblock swaps in a simulated DOM. ${TIERS} Drop the docblock.`,
+      configEnvironment: `\`test.environment\` swaps the environment for every test in the package. ${TIERS} Drop the setting.`,
+      domInNodeTest: `\`{{ what }}\` needs a DOM, and this file runs in Node. ${TIERS} Move the logic into a function this test can call, and cover what the user sees in \`e2e/\`.`,
     },
     schema: [],
   },
@@ -70,10 +69,9 @@ export const testTier: Rule.RuleModule = {
     const { filename, sourceCode } = context;
     const name = baseName(filename);
     const nodeTierTest = TEST_FILE.test(name) && !BROWSER_TEST_FILE.test(name);
-    const fix = name.replace(/\.test\./, ".browser.test.");
 
     function reportDom(node: Rule.Node, what: string): void {
-      context.report({ node, messageId: "domInNodeTest", data: { what, fix } });
+      context.report({ node, messageId: "domInNodeTest", data: { what } });
     }
 
     function checkModule(
