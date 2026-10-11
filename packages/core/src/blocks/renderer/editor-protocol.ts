@@ -62,8 +62,7 @@ export type HostMessage =
     }
   | {
       /**
-       * Deps resolved for a `canvas:requestDeps`, by kind and key. The canvas
-       * merges them into the deps the SSR embed seeded it with.
+       * Deps resolved for a `canvas:requestDeps`, by kind and key.
        */
       readonly type: "host:deps";
       readonly deps: LoadedDeps;

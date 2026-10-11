@@ -1,7 +1,3 @@
-// In the foundation layer so `blocks/` can type a block's deps (ADR 0010).
-// Core imports the registry from here only: a `plumix` augmentation misses
-// references reached through a re-export.
-
 import type { JsonObject } from "../json.js";
 import type { BlockRegistry, BlockSpec } from "./block-registry.js";
 import type { BlockNode } from "./render-block-tree.js";
@@ -9,6 +5,9 @@ import { blockSlotKeys } from "./block-slots.js";
 import { isBlockNodeArray } from "./render-block-tree.js";
 
 /**
+ * Core imports this from here only: a `plumix` augmentation misses references
+ * reached through a re-export.
+ *
  * Augmented per kind as `{ slug | location: string; result }`. The loader
  * receives keys under that name, so reading the wrong one does not compile.
  *
@@ -75,7 +74,6 @@ export type LoadedDeps = Readonly<
   Record<string, Readonly<Record<string, unknown>>>
 >;
 
-/** The keys one node's block declares, evaluated against its attributes. */
 export function blockDepKeys(spec: BlockSpec, node: BlockNode): DepKeys {
   const { deps } = spec;
   if (deps === undefined) return {};

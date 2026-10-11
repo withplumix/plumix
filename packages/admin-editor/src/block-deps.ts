@@ -2,8 +2,8 @@ import type { BlockNode, BlockRegistry, LoadedDeps } from "@plumix/core/blocks";
 import { collectBlockDepKeys } from "@plumix/core/blocks";
 
 /**
- * Whether the tree declares a key the canvas holds no result for. A key whose
- * loader found nothing is held as `null`, so it doesn't ask again.
+ * Whether the tree declares a key the canvas holds no result for. A key the
+ * server answered for, even with `null`, is held.
  */
 export function unresolvedDeps(
   tree: readonly BlockNode[],

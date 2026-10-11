@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "vitest";
+import { assert, describe, expect, test, vi } from "vitest";
 
 import type { ConnectedCdn } from "../runtime/contract/slots.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
@@ -87,7 +87,7 @@ describe("a block that declares its deps", () => {
       config: { plugins: [schoolPlugin], theme: plainTheme },
     });
     const settingsDep = h.app.plugins.templateDeps.get("settings");
-    if (!settingsDep) throw new Error("core registers the settings dep");
+    assert(settingsDep, "core registers the settings dep");
     const load = vi.spyOn(settingsDep, "load");
     await seedPost(
       h,
@@ -197,7 +197,7 @@ describe("a block that declares its deps", () => {
       config: { plugins: [schoolPlugin], theme: archiveTheme },
     });
     const settingsDep = h.app.plugins.templateDeps.get("settings");
-    if (!settingsDep) throw new Error("core registers the settings dep");
+    assert(settingsDep, "core registers the settings dep");
     const load = vi.spyOn(settingsDep, "load");
     await h.factory.setting.create({
       group: "school_ks2",
