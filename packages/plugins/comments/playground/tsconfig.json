@@ -17,11 +17,5 @@
       ]
     }
   },
-  "include": [
-    "plumix.config.ts",
-    "theme.ts",
-    "comment-item.ts",
-    "older-comments.ts",
-    ".plumix"
-  ]
+  "include": ["plumix.config.ts", "theme.ts", ".plumix"]
 }

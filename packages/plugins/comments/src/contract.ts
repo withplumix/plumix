@@ -13,6 +13,9 @@ export const SUBMIT_PATH = `/_plumix/comments${SUBMIT_ROUTE_PATH}`;
 export const LIST_ROUTE_PATH = "/list";
 export const LIST_PATH = `/_plumix/comments${LIST_ROUTE_PATH}`;
 
+/** The entry URL's query parameter holding an older comment page's cursor. */
+export const COMMENTS_PAGE_PARAM = "comments";
+
 /**
  * Named for what a bot expects to find. Never echo it back into a form, which
  * would fill it for the bot.

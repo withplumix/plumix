@@ -34,6 +34,17 @@ export interface ResolvedThread {
   readonly nextCursor: string | null;
 }
 
+/**
+ * What the `comments` template dep resolves to: the thread page the entry URL's
+ * `?comments=` cursor selects, with base-path-aware links to its neighbours.
+ */
+export interface ResolvedThreadPage extends ResolvedThread {
+  /** The next older page, or `null` on the oldest one. */
+  readonly olderHref: string | null;
+  /** The entry without a cursor, or `null` when this is that page. */
+  readonly newestHref: string | null;
+}
+
 interface LoadThreadOptions {
   readonly maxDepth: number;
   readonly rootsPerPage: number;
@@ -53,18 +64,20 @@ function encodeCursor(createdAt: number, id: number): string {
   return `${String(createdAt)}_${String(id)}`;
 }
 
-function decodeCursor(cursor: string | null | undefined): RootCursor | null {
+export function decodeCursor(
+  cursor: string | null | undefined,
+): RootCursor | null {
   if (!cursor) return null;
   const match = /^(\d+)_(\d+)$/.exec(cursor);
   if (!match) return null;
   return { createdAt: Number(match[1]), id: Number(match[2]) };
 }
 
-// Declared beside `ResolvedThread` so a theme importing the type from
+// Declared beside `ResolvedThreadPage` so a theme importing the type from
 // `./server` also gets the `comments` dep kind.
 declare module "plumix" {
   interface TemplateDepRegistry {
-    comments: { slug: string; result: ResolvedThread };
+    comments: { slug: string; result: ResolvedThreadPage };
   }
 }
 

@@ -7,12 +7,9 @@ import { commentFactory } from "../src/test/factories.js";
 
 const NOJS_SLUG = "comment-without-javascript";
 const NOJS_EMAIL = "grace@example.test";
-const LOAD_MORE_SLUG = "older-comments";
-/**
- * One root more than the default `rootsPerPage`, so exactly the oldest
- * is left for the load-more button to fetch.
- */
-const LOAD_MORE_ROOTS = 21;
+const OLDER_PAGES_SLUG = "older-comments";
+/** Three pages at the playground's `rootsPerPage` of 2, the last holding one. */
+const OLDER_PAGES_ROOTS = 5;
 
 /**
  * Seeding from a spec races the live worker for the D1 write lock and
@@ -65,25 +62,22 @@ export default async function globalSetup(): Promise<void> {
     bodyMd: "already approved",
   });
 
-  const loadMore = await factories.entry.create({
+  const olderPages = await factories.entry.create({
     type: "post",
     title: "Older comments",
-    slug: LOAD_MORE_SLUG,
+    slug: OLDER_PAGES_SLUG,
     authorId: author.id,
     status: "published",
   });
-  // Distinct days, oldest first, so the keyset page order is the seed
-  // order and the first root seeded is the one past the first page.
-  const seedRoot = (day: number) =>
-    seed.create({
-      entryId: loadMore.id,
+  // Distinct days, oldest first, so the keyset page order is the reverse of
+  // the seed order.
+  for (let day = 1; day <= OLDER_PAGES_ROOTS; day++) {
+    await seed.create({
+      entryId: olderPages.id,
       status: "approved",
       bodyMd: `older root ${String(day)}`,
       createdAt: new Date(Date.UTC(2026, 0, day)),
     });
-  const oldestRoot = await seedRoot(1);
-  for (let day = 2; day <= LOAD_MORE_ROOTS; day++) {
-    await seedRoot(day);
   }
 
   const bulkEntry = await factories.entry.create({
@@ -106,8 +100,7 @@ export default async function globalSetup(): Promise<void> {
       pendingId: pending.id,
       bulkEntryId: bulkEntry.id,
       bulkIds: [first.id, second.id],
-      loadMoreSlug: LOAD_MORE_SLUG,
-      oldestRootId: oldestRoot.id,
+      olderPagesSlug: OLDER_PAGES_SLUG,
     }),
     "utf8",
   );
