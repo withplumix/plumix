@@ -390,6 +390,9 @@ describe("serveProcess", () => {
     expect(exit).not.toHaveBeenCalled();
     await clock.advanceTo("2026-09-07T03:00:00.600Z");
 
+    expect(log).toHaveBeenCalledWith(
+      `plumix: listening on http://127.0.0.1:${String(port)}`,
+    );
     expect(exit).toHaveBeenCalledWith(1);
     expect(stop).toHaveBeenCalledWith({ timeoutMs: BUDGET });
     expect(dispose).toHaveBeenCalledWith({ timeoutMs: 0 });

@@ -1,5 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
-import { describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { dragTo } from "./drag-to.js";
 
@@ -42,7 +42,21 @@ function fakePage(): { page: Page; events: string[] } {
   return { page, events };
 }
 
+/** Lets `toPass` sleep between reads on the fake clock instead of the real one. */
+async function drag(...args: Parameters<typeof dragTo>): Promise<void> {
+  const dragging = dragTo(...args);
+  await vi.advanceTimersByTimeAsync(2_000);
+  await dragging;
+}
+
 describe("dragTo", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   test("presses on the settled source and releases on the settled target", async () => {
     const { page, events } = fakePage();
     const source = fakeLocator(null, { x: 10, y: 20, width: 40, height: 20 });
@@ -52,7 +66,7 @@ describe("dragTo", () => {
       { x: 300, y: 400, width: 100, height: 50 },
     );
 
-    await dragTo(page, source, target);
+    await drag(page, source, target);
 
     expect(events).toEqual([
       "move 30,30 in 1",
@@ -66,7 +80,7 @@ describe("dragTo", () => {
     const { page, events } = fakePage();
     const box = { x: 0, y: 0, width: 20, height: 20 };
 
-    await dragTo(page, fakeLocator(box), fakeLocator(box), {
+    await drag(page, fakeLocator(box), fakeLocator(box), {
       beforeDrop: () => {
         events.push("beforeDrop");
         return Promise.resolve();
@@ -86,7 +100,7 @@ describe("dragTo", () => {
     const { page, events } = fakePage();
     const strip = { x: 100, y: 50, width: 200, height: 20 };
 
-    await dragTo(page, fakeLocator(strip), fakeLocator(strip), {
+    await drag(page, fakeLocator(strip), fakeLocator(strip), {
       sourcePosition: () => ({ x: 5, y: 5 }),
       targetPosition: (box) => ({
         x: box.width / 2 - 160,
