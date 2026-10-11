@@ -44,11 +44,9 @@ export function createCommentsThreadLoader(
 
     const page = new URL(ctx.request.url);
     const cursor = page.searchParams.get(COMMENTS_PAGE_PARAM);
+    const newestHref = threadPageHref(page, ctx.config.basePath, null);
     if (cursor !== null && decodeCursor(cursor) === null) {
-      throw redirectTo(
-        `${ctx.origin}${threadPageHref(page, ctx.config.basePath, null)}`,
-        301,
-      );
+      throw redirectTo(`${ctx.origin}${newestHref}`, 301);
     }
 
     const thread = await loadThread(ctx, resolved.id, {
@@ -62,10 +60,7 @@ export function createCommentsThreadLoader(
         thread.nextCursor === null
           ? null
           : threadPageHref(page, ctx.config.basePath, thread.nextCursor),
-      newestHref:
-        cursor === null
-          ? null
-          : threadPageHref(page, ctx.config.basePath, null),
+      newestHref: cursor === null ? null : newestHref,
     };
     return Object.fromEntries(slugs.map((slug) => [slug, threadPage]));
   };

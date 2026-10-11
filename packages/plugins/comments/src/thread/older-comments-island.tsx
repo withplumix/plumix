@@ -16,9 +16,8 @@ interface OlderCommentsProps {
 }
 
 /**
- * Until it hydrates the link navigates to the older page. A theme's
- * `renderBody` can't reach the browser, so appended comments use the default
- * body.
+ * A theme's `renderBody` can't reach the browser, so appended comments use
+ * the default body.
  */
 export function OlderCommentsIsland({
   entryId,

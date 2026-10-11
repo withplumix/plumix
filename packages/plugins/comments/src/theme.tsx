@@ -70,7 +70,6 @@ export function PlumixCommentThread({
   thread,
   renderBody,
 }: {
-  /** The `comments` template dep's result. */
   readonly thread: ResolvedThreadPage | null;
   /**
    * Applies to the server-rendered page; comments loaded inline use the
