@@ -132,15 +132,10 @@ describe("images() — URL math onto /_plumix/image", () => {
     };
     const slot = createImages({}, notInstalled);
 
-    let thrown: unknown;
-    try {
-      slot.connect?.({});
-    } catch (error) {
-      thrown = error;
-    }
+    const connect = () => slot.connect?.({});
 
-    expect(thrown).toBeInstanceOf(ImagesError);
-    expect(thrown).toMatchObject({ code: "sharp_missing" });
-    expect((thrown as ImagesError).message).toMatch(/`sharp`.*not installed/);
+    expect(connect).toThrow(ImagesError);
+    expect(connect).toThrow(expect.objectContaining({ code: "sharp_missing" }));
+    expect(connect).toThrow(/`sharp`.*not installed/);
   });
 });

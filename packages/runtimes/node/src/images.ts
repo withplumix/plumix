@@ -76,7 +76,6 @@ function resolveConfig(config: ImagesConfig): ResolvedImagesConfig {
   };
 }
 
-/** How `sharp` is required; a test passes one that fails as if uninstalled. */
 type RequireSharp = (id: "sharp") => typeof SharpModule;
 
 const ownRequire: RequireSharp = createRequire(import.meta.url);
@@ -117,7 +116,6 @@ export function images(config: ImagesConfig = {}): NodeImageDelivery {
   return createImages(config, ownRequire);
 }
 
-/** `images()` with how `sharp` is required left open; not re-exported. */
 export function createImages(
   config: ImagesConfig,
   requireSharp: RequireSharp,

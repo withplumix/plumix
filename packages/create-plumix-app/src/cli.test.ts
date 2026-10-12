@@ -39,7 +39,6 @@ const noopRunner: CommandRunner = { run: () => Promise.resolve({ ok: true }) };
 const run = (argv: readonly string[], io: CliIO): Promise<number> =>
   runCli(argv, io, { runner: noopRunner, userAgent: "pnpm/8.0.0 npm/? node" });
 
-/** A runner that records each command it is asked to run, as `<bin> <args…>`. */
 function recordingRunner(): { runner: CommandRunner; calls: string[] } {
   const calls: string[] = [];
   const runner: CommandRunner = {
