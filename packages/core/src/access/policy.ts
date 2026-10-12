@@ -103,6 +103,42 @@ export class AccessError extends Error {
 }
 
 /**
+ * What a policy's gate lets its principal have of an entry. A soft challenge
+ * lists the entry as a teaser; only `allow` hands over its body.
+ */
+export type EntryAdmission = "content" | "listing";
+
+/** What one resolved outcome lets its principal have. */
+export function admissionOf(
+  outcome: AccessOutcome,
+): EntryAdmission | "nothing" {
+  if (outcome.type === "grant") return "content";
+  if (outcome.type === "challenge" && outcome.soft === true) return "listing";
+  return "nothing";
+}
+
+/**
+ * Whether `policy` admits `ctx`'s principal at `level`. Ask it through
+ * `anonymousContext` for what anonymous visitors may have.
+ */
+export async function policyAdmits(
+  ctx: AppContext,
+  policy: AccessPolicy,
+  level: EntryAdmission,
+): Promise<boolean> {
+  return admissionMeets(admissionOf(await policy.resolve(ctx)), level);
+}
+
+/** Whether an admission reaches `level`. */
+export function admissionMeets(
+  admits: EntryAdmission | "nothing",
+  level: EntryAdmission,
+): boolean {
+  if (admits === "nothing") return false;
+  return level === "listing" || admits === "content";
+}
+
+/**
  * Throws {@link AccessError} when the resolver grants a segment that is neither
  * built in nor declared in the policy's `segments`.
  */

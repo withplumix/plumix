@@ -10,7 +10,14 @@ import type {
   CreateDispatcherHarnessOptions,
   DispatcherHarness,
 } from "plumix/test";
-import { challenge, definePolicy, grant } from "plumix/auth";
+import {
+  ACCESS_POLICY_META_KEY,
+  anonymousPolicy,
+  authenticatedPolicy,
+  challenge,
+  definePolicy,
+  grant,
+} from "plumix/auth";
 import { entryPurgeTags, eq, typeTag } from "plumix/db";
 import { definePlugin } from "plumix/plugin";
 import { entries } from "plumix/schema";
@@ -57,6 +64,56 @@ const membersOnlyPlugin = definePlugin("members", (ctx) => {
     access: { default: membersOnlyPolicy },
   });
 });
+
+/** Soft: an anonymous visitor reads a teaser at 200 rather than a refusal. */
+const teaserPolicy = definePolicy({
+  segments: ["members"],
+  resolve: (ctx) =>
+    ctx.user ? grant("members") : challenge("paywall", { soft: true }),
+});
+
+/**
+ * One type whose entries each pick a policy: public by default, members or
+ * a teaser on request.
+ */
+const eduscopePlugin = definePlugin("eduscope", (ctx) => {
+  ctx.registerEntryType("page", {
+    label: "Pages",
+    isPublic: true,
+    access: {
+      default: anonymousPolicy,
+      policies: [
+        { key: "members", label: "Members", policy: membersOnlyPolicy },
+        { key: "teaser", label: "Teaser", policy: teaserPolicy },
+      ],
+    },
+  });
+});
+
+/** 1,001 public pages, and a members page whose id is the 500th. */
+async function seedEduscope(h: DispatcherHarness): Promise<void> {
+  const author = await h.seedUser("admin");
+  const rows = Array.from({ length: 1002 }, (_, i) =>
+    h.factory.entry.build({
+      type: "page",
+      slug: i === 499 ? "members-page" : `page-${String(i)}`,
+      title: "Page",
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date("2026-01-01T00:00:00.000Z"),
+      ...(i === 499 ? { meta: { [ACCESS_POLICY_META_KEY]: "members" } } : {}),
+    }),
+  );
+  for (let i = 0; i < rows.length; i += 100) {
+    await h.db.insert(entries).values(rows.slice(i, i + 100));
+  }
+}
+
+function locsIn(urlset: string): string[] {
+  return [...urlset.matchAll(/<url><loc>([^<]*)<\/loc>/g)].map(
+    ([, loc]) => loc ?? "",
+  );
+}
 
 const blogPlugin = definePlugin("blog", (ctx) => {
   ctx.registerEntryType("post", {
@@ -362,31 +419,53 @@ describe("the sitemap index", () => {
     expect(await bodyOf(h, "/sitemap.xml")).not.toContain("<sitemap>");
   });
 
-  test("omits an access-policied entry type's scope", async () => {
-    // A sitemap publishes URLs to crawlers; a gated type's slugs alone would
-    // reveal what exists.
-    const h = await createHarness([membersOnlyPlugin]);
-    await seedPost(h);
+  test("lists a policied type entry by entry, as anonymous visitors may list it", async () => {
+    // A members page sits inside the first 1,000 rows, so a page filtered
+    // after paging would come up short and the count would ask for a third.
+    const h = await createHarness([eduscopePlugin]);
+    await seedEduscope(h);
+
+    const index = await bodyOf(h, "/sitemap.xml");
+    const first = await bodyOf(h, "/sitemap-entries-page-1.xml");
+    const second = await bodyOf(h, "/sitemap-entries-page-2.xml");
+
+    expect(index).toContain("https://cms.example/sitemap-entries-page-1.xml");
+    expect(index).toContain("https://cms.example/sitemap-entries-page-2.xml");
+    expect(index).not.toContain("sitemap-entries-page-3.xml");
+    expect(locsIn(first)).toHaveLength(1000);
+    expect(locsIn(second)).toHaveLength(1);
+    expect(first + second).not.toContain("/members-page<");
+  });
+
+  test("a member's request lists what a crawler's would", async () => {
+    const h = await createHarness([eduscopePlugin]);
+    await seedEduscope(h);
+    const member = await h.seedUser("subscriber");
+
+    const res = await h.fetch("/sitemap-entries-page-1.xml", { as: member });
+    const body = await res.text();
+
+    expect(body).toContain("<loc>https://cms.example/page/page-0</loc>");
+    expect(body).not.toContain("/members-page<");
+  });
+
+  test("lists a soft-challenged entry, which answers with its teaser", async () => {
+    const h = await createHarness([eduscopePlugin]);
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
-      type: "lesson",
-      slug: "members-only-lesson",
-      title: "Lesson",
+      type: "page",
+      slug: "teaser-page",
+      title: "Teaser",
       content: null,
       status: "published",
       authorId: author.id,
       publishedAt: new Date(),
+      meta: { [ACCESS_POLICY_META_KEY]: "teaser" },
     });
 
-    const index = await bodyOf(h, "/sitemap.xml");
-    expect(index).toContain("https://cms.example/sitemap-entries-post-1.xml");
-    expect(index).not.toContain("sitemap-entries-lesson-1.xml");
-    // Dropping the scope drops the route with it, so there is no sub-sitemap
-    // to fetch directly — a 404, not an empty urlset.
-    const direct = await h.dispatch(
-      new Request("https://cms.example/sitemap-entries-lesson-1.xml"),
+    expect(await bodyOf(h, "/sitemap-entries-page-1.xml")).toContain(
+      "<loc>https://cms.example/page/teaser-page</loc>",
     );
-    expect(direct.status).toBe(404);
   });
 
   test("an entry type and a taxonomy sharing a name each get a sub-sitemap", async () => {
@@ -1055,6 +1134,51 @@ describe("a contributed sitemap", () => {
     expect(sub).toContain("<urlset");
     expect(sub).not.toContain("<url>");
   });
+
+  describe("naming the access policy its URLs answer to", () => {
+    function policiedSource(access: SitemapSource["access"]) {
+      const count = vi.fn(() => 1);
+      const urls = vi.fn(() => [{ loc: "https://cms.example/courses/intro" }]);
+      const plugin = definePlugin("courses", (ctx) => {
+        ctx.registerSitemap("courses", { count, urls, access });
+      });
+      return { plugin, count, urls };
+    }
+
+    test("is left out, never asked, when anonymous visitors are refused", async () => {
+      const { plugin, count, urls } = policiedSource(authenticatedPolicy);
+      const h = await createHarness([plugin]);
+      const member = await h.seedUser("subscriber");
+
+      const index = await bodyOf(h, "/sitemap.xml");
+      const asMember = await (
+        await h.fetch("/sitemap.xml", { as: member })
+      ).text();
+      const sub = await bodyOf(h, "/sitemap-courses-1.xml");
+
+      expect(index).not.toContain("sitemap-courses-1.xml");
+      expect(asMember).not.toContain("sitemap-courses-1.xml");
+      expect(sub).toContain("<urlset");
+      expect(sub).not.toContain("<url>");
+      expect(count).toHaveBeenCalledTimes(0);
+      expect(urls).toHaveBeenCalledTimes(0);
+    });
+
+    test.each([
+      ["a public policy", anonymousPolicy],
+      ["a soft challenge", teaserPolicy],
+    ])("is listed under %s", async (_name, access) => {
+      const { plugin } = policiedSource(access);
+      const h = await createHarness([plugin]);
+
+      expect(await bodyOf(h, "/sitemap.xml")).toContain(
+        "<loc>https://cms.example/sitemap-courses-1.xml</loc>",
+      );
+      expect(await bodyOf(h, "/sitemap-courses-1.xml")).toContain(
+        "<loc>https://cms.example/courses/intro</loc>",
+      );
+    });
+  });
 });
 
 describe("the site's sitemap policy", () => {
@@ -1208,14 +1332,16 @@ describe("sitemap scopes at boot", () => {
     },
   );
 
-  // A gated type is registered but lists nothing, so a policy for it would
-  // never apply: the key fails like an unknown one, and says why.
-  test("a policy key naming a registered but unlisted scope fails", async () => {
-    await expect(
-      createHarness([membersOnlyPlugin], {
-        seo: { sitemaps: { entries: { lesson: false } } },
-      }),
-    ).rejects.toThrow(/sitemaps\.entries\.lesson.*public.*access policy/s);
+  test("a policy key naming a policied type boots and applies", async () => {
+    const h = await createHarness([membersOnlyPlugin], {
+      seo: { sitemaps: { entries: { lesson: false } } },
+    });
+    await seedPost(h);
+
+    const index = await bodyOf(h, "/sitemap.xml");
+
+    expect(index).toContain("sitemap-entries-post-1.xml");
+    expect(index).not.toContain("sitemap-entries-lesson-");
   });
 });
 
@@ -1272,6 +1398,65 @@ describe("a sitemap at the edge", () => {
     );
     // And both carry the set-wide tag the indexing toggle purges by.
     expect(tagsFor(put, "/sitemap-entries-post-1.xml")).toContain(SITEMAP_TAG);
+  });
+
+  test("stores llms.txt under the set-wide tag and every public type's", async () => {
+    const { cdn, put } = cdnStub();
+    const twoTypes = definePlugin("two-types", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerEntryType("page", { label: "Pages", isPublic: true });
+      ctx.registerEntryType("note", { label: "Notes", isPublic: false });
+    });
+    const h = await createHarness([twoTypes], { cdn });
+
+    const res = await h.dispatch(new Request("https://cms.example/llms.txt"));
+    await h.drainDeferred();
+
+    expect(res.headers.get("cache-control")).toBe(
+      "public, max-age=0, s-maxage=3600",
+    );
+    const tags = tagsFor(put, "/llms.txt");
+    expect(tags).toEqual(
+      expect.arrayContaining([SITEMAP_TAG, typeTag("post"), typeTag("page")]),
+    );
+    expect(tags).not.toContain(typeTag("note"));
+  });
+
+  test("changing an entry from public to members retires its sitemap page and llms.txt", async () => {
+    const { cdn, put, purgeTags } = cdnStub();
+    const h = await createHarness([eduscopePlugin], { cdn });
+    const admin = await h.seedUser("admin");
+    const page = await h.factory.entry.create({
+      type: "page",
+      slug: "open",
+      title: "Open",
+      content: null,
+      status: "published",
+      authorId: admin.id,
+      publishedAt: new Date(),
+    });
+    await bodyOf(h, "/sitemap-entries-page-1.xml");
+    await bodyOf(h, "/llms.txt");
+    await h.drainDeferred();
+
+    const updated = await h.fetch("/_plumix/rpc/entry/update", {
+      as: admin,
+      json: { json: { id: page.id, access: "members" }, meta: [] },
+    });
+    updated.assertStatus(200);
+    await h.drainDeferred();
+
+    const purged = new Set(purgeTags.mock.calls.flatMap(([tags]) => [...tags]));
+    const retired = Object.fromEntries(
+      ["/sitemap-entries-page-1.xml", "/llms.txt"].map((path) => [
+        path,
+        tagsFor(put, path).some((tag) => purged.has(tag)),
+      ]),
+    );
+    expect(retired).toEqual({
+      "/sitemap-entries-page-1.xml": true,
+      "/llms.txt": true,
+    });
   });
 
   test("names only its own tags, not one per picture it lists", async () => {
@@ -1778,21 +1963,27 @@ describe("/llms.txt", () => {
     expect((await llms(h)).body.startsWith("# cms.example")).toBe(true);
   });
 
-  test("offers no map while the site is held out of the index", async () => {
+  test("offers no map and no entries while the site is held out of the index", async () => {
     const h = await createHarness();
     await setSettings(h, "seo", { indexable: false });
-
-    expect((await llms(h)).body).not.toContain("/sitemap.xml");
-  });
-
-  test("offers no map to a site that blocks AI crawlers", async () => {
-    const h = await createHarness();
-    await setSettings(h, "seo", { block_ai_crawlers: true });
+    await seedPost(h);
 
     const { body } = await llms(h);
 
     expect(body).not.toContain("/sitemap.xml");
-    expect(body).toContain("not offered");
+    expect(body).not.toContain("## Posts");
+  });
+
+  test("offers no map and no entries to a site that blocks AI crawlers", async () => {
+    const h = await createHarness();
+    await setSettings(h, "seo", { block_ai_crawlers: true });
+    await seedPost(h);
+
+    const { body } = await llms(h);
+
+    expect(body).toBe(
+      "# cms.example\n\nThis site's content is not offered for AI training or retrieval.\n",
+    );
   });
 
   test("is base-prefixed under a base path", async () => {
@@ -1816,6 +2007,207 @@ describe("/llms.txt", () => {
     const h = await createHarness([blogPlugin, rewrite]);
 
     expect((await llms(h)).body.endsWith("## Docs\n")).toBe(true);
+  });
+
+  describe("lists the entries anonymous visitors may list", () => {
+    const postsAndPages = definePlugin("posts-and-pages", (ctx) => {
+      ctx.registerEntryType("post", {
+        label: "Post",
+        labels: { plural: "Posts" },
+        isPublic: true,
+      });
+      ctx.registerEntryType("page", {
+        label: "Page",
+        labels: { plural: "Pages" },
+        isPublic: true,
+      });
+    });
+
+    async function seedEntry(
+      h: DispatcherHarness,
+      entry: {
+        readonly type: string;
+        readonly slug: string;
+        readonly title: string;
+        readonly excerpt?: string | null;
+        readonly content?: Record<string, unknown>;
+        readonly meta?: Record<string, JsonValue>;
+        readonly publishedAt?: Date;
+      },
+    ): Promise<void> {
+      const author = await h.seedUser("admin");
+      await h.factory.entry.create({
+        content: null,
+        status: "published",
+        authorId: author.id,
+        publishedAt: new Date(),
+        ...entry,
+      });
+    }
+
+    test("one section per type, in registry order, before the sitemap", async () => {
+      const h = await createHarness([postsAndPages]);
+      await setSettings(h, "site", { title: "Acme" });
+      await seedEntry(h, {
+        type: "page",
+        slug: "about",
+        title: "About",
+        excerpt: "Who we are.",
+      });
+      await seedEntry(h, {
+        type: "post",
+        slug: "hello",
+        title: "Hello [world]",
+        excerpt: "  A first\n  post.  ",
+      });
+      await seedEntry(h, {
+        type: "post",
+        slug: "bare",
+        title: "Bare",
+        excerpt: null,
+        publishedAt: new Date("2020-01-01T00:00:00.000Z"),
+      });
+
+      expect((await llms(h)).body).toBe(
+        "# Acme\n" +
+          "\n## Posts\n\n" +
+          "- [Hello \\[world\\]](https://cms.example/post/hello): A first post.\n" +
+          "- [Bare](https://cms.example/post/bare)\n" +
+          "\n## Pages\n\n" +
+          "- [About](https://cms.example/page/about): Who we are.\n" +
+          "\n## Sitemap\n\n" +
+          "- [XML sitemap](https://cms.example/sitemap.xml): every URL this site offers to search engines.\n",
+      );
+    });
+
+    test("a teaser gives its excerpt and never its body", async () => {
+      const h = await createHarness([eduscopePlugin]);
+      await seedEntry(h, {
+        type: "page",
+        slug: "teaser",
+        title: "Teaser",
+        excerpt: "What members learn.",
+        content: {
+          version: "plumix.v2",
+          blocks: [
+            {
+              id: "p",
+              name: "core/paragraph",
+              attrs: { text: "The secret is rockwool." },
+            },
+          ],
+        },
+        meta: { [ACCESS_POLICY_META_KEY]: "teaser" },
+      });
+
+      const { body } = await llms(h);
+
+      expect(body).toContain(
+        "- [Teaser](https://cms.example/page/teaser): What members learn.\n",
+      );
+      expect(body).not.toContain("rockwool");
+    });
+
+    test("a members-only entry and a noindex entry are absent", async () => {
+      const h = await createHarness([eduscopePlugin]);
+      await seedEntry(h, { type: "page", slug: "open", title: "Open" });
+      await seedEntry(h, {
+        type: "page",
+        slug: "members",
+        title: "Members",
+        meta: { [ACCESS_POLICY_META_KEY]: "members" },
+      });
+      await seedEntry(h, {
+        type: "page",
+        slug: "hidden",
+        title: "Hidden",
+        meta: { seo_noindex: true },
+      });
+
+      const { body } = await llms(h);
+
+      expect(body).toContain("/page/open)");
+      expect(body).not.toContain("/page/members");
+      expect(body).not.toContain("/page/hidden");
+    });
+
+    test("a type the site defaulted out of the index gets no section", async () => {
+      const h = await createHarness([postsAndPages]);
+      await setSettings(h, "seo", { "type:post:indexable": false });
+      await seedEntry(h, { type: "post", slug: "hello", title: "Hello" });
+      await seedEntry(h, { type: "page", slug: "about", title: "About" });
+
+      const { body } = await llms(h);
+
+      expect(body).not.toContain("## Posts");
+      expect(body).toContain("## Pages");
+    });
+
+    async function seedNumberedPosts(
+      h: DispatcherHarness,
+      count: number,
+    ): Promise<void> {
+      const author = await h.seedUser("admin");
+      const start = Date.parse("2026-01-01T00:00:00.000Z");
+      const rows = Array.from({ length: count }, (_, i) =>
+        h.factory.entry.build({
+          type: "post",
+          slug: `post-${String(i)}`,
+          title: `Post ${String(i)}`,
+          status: "published",
+          authorId: author.id,
+          publishedAt: new Date(start + i * 60_000),
+        }),
+      );
+      await h.db.insert(entries).values(rows);
+    }
+
+    test("lists a type's 50 newest entries, newest first", async () => {
+      const h = await createHarness();
+      await seedNumberedPosts(h, 60);
+
+      const lines = (await llms(h)).body
+        .split("\n")
+        .filter((line) => line.startsWith("- [Post "));
+
+      expect(lines).toHaveLength(50);
+      expect(lines[0]).toBe("- [Post 59](https://cms.example/post/post-59)");
+      expect(lines[49]).toBe("- [Post 10](https://cms.example/post/post-10)");
+    });
+
+    test("costs the same entries queries however many entries a type holds", async () => {
+      async function entriesQueries(posts: number): Promise<number> {
+        let queries = 0;
+        const h = await createHarness([blogPlugin], {
+          telemetry: {
+            consumers: [
+              {
+                id: "entries-queries",
+                onRequestEnd: (snapshot) => {
+                  queries = flattenSpans(snapshot.spans).filter((span) => {
+                    const sql = span.attributes["db.sql"];
+                    return (
+                      span.name.startsWith("db: ") &&
+                      typeof sql === "string" &&
+                      sql.includes('"entries"')
+                    );
+                  }).length;
+                },
+              },
+            ],
+          },
+        });
+        await seedNumberedPosts(h, posts);
+        await bodyOf(h, "/llms.txt");
+        await h.drainDeferred();
+        return queries;
+      }
+
+      const one = await entriesQueries(1);
+
+      expect(one).toBeGreaterThan(0);
+      expect(await entriesQueries(60)).toBe(one);
+    });
   });
 
   test("with llmsTxt off, a site plugin serves its own", async () => {
@@ -1914,28 +2306,42 @@ describe("IndexNow", () => {
     return h;
   }
 
-  test("says nothing about an entry of an access-policied type", async () => {
-    // Otherwise the ping would leak the URL the sitemap withholds.
+  // The editor saving it is signed in, so their own request would admit
+  // every choice; the ping is public, so it asks for anonymous visitors.
+  test.each([
+    ["a members-only entry is never submitted", "members", 0],
+    ["a public entry is submitted", undefined, 1],
+    ["a soft-challenged entry is submitted", "teaser", 1],
+  ] as const)("%s, whoever saves it", async (_name, choice, submissions) => {
     const fetch = stubbedFetch();
-    const h = await createHarness([
-      membersOnlyPlugin,
-      lifecycleFirer("entry:published"),
-    ]);
+    const h = await createHarness([eduscopePlugin]);
     await setSettings(h, "seo", { indexnow_key: KEY });
     const author = await h.seedUser("admin");
-    await h.factory.entry.create({
-      type: "lesson",
+    const page = await h.factory.entry.create({
+      type: "page",
       slug: "hello",
-      title: "Lesson",
+      title: "Hello",
       content: null,
       status: "published",
       authorId: author.id,
       publishedAt: new Date(),
+      ...(choice === undefined
+        ? {}
+        : { meta: { [ACCESS_POLICY_META_KEY]: choice } }),
     });
 
-    await publish(h);
+    const saved = await h.fetch("/_plumix/rpc/entry/update", {
+      as: await h.seedUser("editor"),
+      json: { json: { id: page.id, title: "Hello again" }, meta: [] },
+    });
+    saved.assertStatus(200);
+    await h.drainDeferred();
 
-    expect(fetch).not.toHaveBeenCalled();
+    expect(
+      fetch.mock.calls.filter(
+        ([url]) => url === "https://api.indexnow.org/indexnow",
+      ),
+    ).toHaveLength(submissions);
   });
 
   test("is off until a key is configured", async () => {

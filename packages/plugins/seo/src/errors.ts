@@ -82,8 +82,8 @@ export class SeoError extends Error {
     return new SeoError(
       "unknown_sitemap_policy_key",
       `seo: sitemaps.${ctx.key} names no sitemap scope, so its policy would ` +
-        `never apply. A scope is a public entry type or taxonomy with no ` +
-        `access policy, or one a plugin contributes with \`registerSitemap\`.`,
+        `never apply. A scope is a public entry type or taxonomy, or one a ` +
+        `plugin contributes with \`registerSitemap\`.`,
       ctx,
     );
   }

@@ -17,17 +17,6 @@ export function publicTargets<T extends PublicTarget>(
 }
 
 /**
- * False for an access-gated type: a crawler has no session, so even its slugs
- * would leak. Kept apart from {@link publicTargets} so editors still write
- * search copy for it.
- */
-export function isCrawlableType(
-  type: { readonly access?: unknown } | undefined,
-): boolean {
-  return type?.access === undefined;
-}
-
-/**
  * The entry type this page answers for: an entry answers for its own, an
  * archive for the type it lists, and every other page kind for none.
  */

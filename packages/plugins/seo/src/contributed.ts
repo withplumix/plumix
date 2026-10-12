@@ -1,4 +1,5 @@
 import type { PluginContextExtensions } from "plumix";
+import type { AccessPolicy } from "plumix/auth";
 import type { AppContext } from "plumix/plugin";
 
 import type { SitemapUrl } from "./sitemap.js";
@@ -30,6 +31,11 @@ export interface SitemapSource {
     ctx: AppContext,
     page: number,
   ) => Promise<string | undefined> | string | undefined;
+  /**
+   * The policy its URLs answer to, such as the one the archive it lists was
+   * registered with; seo asks it for an anonymous visitor.
+   */
+  readonly access?: AccessPolicy;
 }
 
 declare module "plumix" {

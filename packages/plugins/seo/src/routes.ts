@@ -3,14 +3,16 @@ import type {
   PluginAfterSetupContext,
   PluginSetupContext,
 } from "plumix/plugin";
+import { anonymousContext } from "plumix/auth";
 import { enqueuePurgeTags, typeTag } from "plumix/db";
 import { tagCdnEntry } from "plumix/plugin";
 import { withBasePath } from "plumix/support";
 
 import type { ContributedSitemap } from "./contributed.js";
 import type { SeoSitemapsOptions, SitemapScope } from "./sitemap.js";
-import { handleLlmsTxt, LLMS_PATH } from "./llms.js";
+import { LLMS_PATH, llmsTxtBody } from "./llms.js";
 import { handleRobotsTxt } from "./robots.js";
+import { publicTargets } from "./scope.js";
 import {
   loadSeoSettings,
   SEO_ROBOTS_GROUP,
@@ -22,6 +24,7 @@ import {
   collectSitemapUrls,
   renderSitemapIndex,
   renderSubSitemap,
+  scopeAdmitsReader,
   scopeIsOffered,
   SITEMAP_INDEX_PATH,
   sitemapIndexEntries,
@@ -39,8 +42,8 @@ const ROBOTS_PATH = "/robots.txt";
 const SITEMAP_CACHE_CONTROL = "public, max-age=0, s-maxage=3600";
 
 /**
- * On every sitemap response: flipping the indexing toggle must retire the whole
- * set, the one legitimately global invalidation.
+ * On every sitemap response and on `llms.txt`: flipping the indexing toggle
+ * must retire the whole set, the one legitimately global invalidation.
  */
 export const SITEMAP_TAG = "seo:sitemap";
 
@@ -74,19 +77,28 @@ function xmlResponse(body: string): Response {
   });
 }
 
+/**
+ * A sitemap lists what anonymous visitors may list, whoever asks for it. The
+ * tags go on the request's own `ctx`: the reader keeps a memo of its own.
+ */
 async function handleSitemapIndex(
   ctx: AppContext,
   scopes: readonly SitemapScope[],
 ): Promise<Response> {
+  const reader = anonymousContext(ctx);
   // `tagCdnEntry` unions, so scopes sharing a type tag need no dedupe here.
   tagCdnEntry(ctx, [SITEMAP_TAG, ...scopes.flatMap((scope) => scope.tags)]);
   // A site held out of the index is held out of search, and so is a scope its
   // own default holds out: either way the scope simply leaves the set.
   const settings = await loadSeoSettings(ctx);
-  const listed = scopes.filter((scope) => scopeIsOffered(scope, settings));
+  const offered = scopes.filter((scope) => scopeIsOffered(scope, settings));
+  const admitted = await Promise.all(
+    offered.map((scope) => scopeAdmitsReader(reader, scope)),
+  );
+  const listed = offered.filter((_, index) => admitted[index] === true);
   return xmlResponse(
     renderSitemapIndex(
-      await sitemapIndexEntries(ctx, listed),
+      await sitemapIndexEntries(reader, listed),
       stylesheetHref(ctx),
     ),
   );
@@ -97,12 +109,31 @@ async function handleSubSitemap(
   scope: SitemapScope,
   page: number,
 ): Promise<Response> {
+  const reader = anonymousContext(ctx);
   tagCdnEntry(ctx, [SITEMAP_TAG, ...scope.tags]);
   const settings = await loadSeoSettings(ctx);
-  const urls = scopeIsOffered(scope, settings)
-    ? await collectSitemapUrls(ctx, scope, page)
-    : [];
+  const urls =
+    scopeIsOffered(scope, settings) && (await scopeAdmitsReader(reader, scope))
+      ? await collectSitemapUrls(reader, scope, page)
+      : [];
   return xmlResponse(renderSubSitemap(urls, stylesheetHref(ctx)));
+}
+
+/**
+ * Tagged with every public type, since any of them may list an entry here: a
+ * write to one, an access choice included, retires the file.
+ */
+async function handleLlmsTxt(ctx: AppContext): Promise<Response> {
+  tagCdnEntry(ctx, [
+    SITEMAP_TAG,
+    ...publicTargets(ctx.plugins.entryTypes).map((type) => typeTag(type.name)),
+  ]);
+  return new Response(await llmsTxtBody(ctx), {
+    headers: {
+      "content-type": "text/markdown; charset=utf-8",
+      "cache-control": SITEMAP_CACHE_CONTROL,
+    },
+  });
 }
 
 /**
@@ -123,6 +154,7 @@ export function registerSeoRoutes(
   if (options.llmsTxt) {
     ctx.registerPublicRoute({
       path: LLMS_PATH,
+      cacheable: true,
       handler: (_request, appCtx) => handleLlmsTxt(appCtx),
     });
   }

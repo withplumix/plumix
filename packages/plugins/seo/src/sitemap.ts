@@ -1,5 +1,8 @@
 import type { PluginRegistry } from "plumix";
+import type { AccessPolicy } from "plumix/auth";
+import type { SQL } from "plumix/db";
 import type { AppContext } from "plumix/plugin";
+import { policyAdmits } from "plumix/auth";
 import { and, eq, publicEntryRows, sql, typeTag } from "plumix/db";
 import { buildEntryPermalinks, buildTermArchiveUrls } from "plumix/plugin";
 import { entries, terms } from "plumix/schema";
@@ -10,7 +13,7 @@ import type { SeoSettings } from "./settings.js";
 import { entryImages } from "./entry-images.js";
 import { SeoError } from "./errors.js";
 import { SEO_META_KEYS } from "./overrides.js";
-import { isCrawlableType, publicTargets } from "./scope.js";
+import { publicTargets } from "./scope.js";
 
 /**
  * Well under the sitemaps.org 50k cap, and small enough to build + hold in
@@ -179,6 +182,8 @@ export interface SitemapScope {
   readonly policy: SitemapScopePolicy;
   /** Whether the site's `sitemaps` option set this scope to `false`. */
   readonly dropped: boolean;
+  /** The policy a contributed scope's URLs answer to, when it names one. */
+  readonly access?: AccessPolicy;
   readonly tags: readonly string[];
   /**
    * One element per page the index lists, each with the newest `lastmod`
@@ -261,11 +266,17 @@ function offsetFor(page: number): number {
   return (page - 1) * SITEMAP_PAGE_SIZE;
 }
 
-/** `null` where the site has no public type, so there is nothing to list. */
-async function publishedEntriesOf(ctx: AppContext, type: string) {
+/**
+ * One rule for the sitemap's count, its pages and `llms.txt`, asked through
+ * `anonymousContext(ctx)`. `null` where the site has no public type.
+ */
+export async function listedEntriesOf(
+  ctx: AppContext,
+  type: string,
+): Promise<SQL | null> {
   const listed = await publicEntryRows(ctx);
   if (listed === null) return null;
-  return and(listed, eq(entries.type, type), entryIsIndexable);
+  return and(listed, eq(entries.type, type), entryIsIndexable) ?? null;
 }
 
 function listedTermsOf(taxonomy: string) {
@@ -277,7 +288,7 @@ async function entryPages(
   ctx: AppContext,
   type: string,
 ): Promise<SitemapIndexPage[]> {
-  const where = await publishedEntriesOf(ctx, type);
+  const where = await listedEntriesOf(ctx, type);
   if (where === null) return [];
   const ranked = ctx.db
     .select({
@@ -306,7 +317,7 @@ async function entryUrls(
   type: string,
   page: number,
 ): Promise<SitemapUrl[]> {
-  const where = await publishedEntriesOf(ctx, type);
+  const where = await listedEntriesOf(ctx, type);
   if (where === null) return [];
   const rows = await ctx.db
     .select({
@@ -403,7 +414,6 @@ export function sitemapScopes(
     });
   };
   for (const type of publicTargets(plugins.entryTypes)) {
-    if (!isCrawlableType(type)) continue;
     add({
       ref: { kind: "entries", name: type.name },
       tags: [typeTag(type.name)],
@@ -425,6 +435,7 @@ export function sitemapScopes(
     add({
       ref: { kind: "contributed", name },
       tags: source.tags ?? [],
+      ...(source.access === undefined ? {} : { access: source.access }),
       pages: (ctx) => contributedPages(ctx, source),
       urls: source.urls,
     });
@@ -516,4 +527,19 @@ export function scopeIsOffered(
     case "contributed":
       return true;
   }
+}
+
+/**
+ * Asked once per request. A refused scope leaves the sitemap as a dropped one
+ * does, its source never called.
+ */
+export function scopeAdmitsReader(
+  reader: AppContext,
+  scope: SitemapScope,
+): Promise<boolean> {
+  const { access } = scope;
+  if (access === undefined) return Promise.resolve(true);
+  return reader.memo(`seo:sitemap-access:${scope.ref.name}`, () =>
+    policyAdmits(reader, access, "listing"),
+  );
 }

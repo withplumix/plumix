@@ -209,7 +209,7 @@ export const listing = fallback(({ data }) =>
 
 Each policy resolves once per request, however many entries a page lists, and the rows are matched in the one query that lists them. A listing that asks a policy about a signed-in member is personal to them, so the [shared cache](/deployment/cdn/) stores only the anonymous version of it.
 
-Plugin code reads entries through the same rules: `publicEntryRows(ctx)` from `plumix/db` is the condition a public listing adds to its query, and it answers for the request's own principal. When the output is public but the request is someone else's, such as a card scraped later, a ping sent after an editor saves, or a cron's artefact, ask through `anonymousContext(ctx)` from `plumix/auth`. It is the same context with no user, no token scopes and no capabilities, so a rule asked through it answers what anonymous visitors may see. `entryPolicyAdmits(ctx, entry, "listing" | "content")` asks one entry's policy the same way.
+Plugin code reads entries through the same rules: `publicEntryRows(ctx)` from `plumix/db` is the condition a public listing adds to its query, and it answers for the request's own principal. When the output is public but the request is someone else's, such as a card scraped later, a ping sent after an editor saves, or a cron's artefact, ask through `anonymousContext(ctx)` from `plumix/auth`. It is the same context with no user, no token scopes and no capabilities, so a rule asked through it answers what anonymous visitors may see. `entryPolicyAdmits(ctx, entry, "listing" | "content")` asks one entry's policy the same way, and `policyAdmits(ctx, policy, "listing" | "content")` asks a policy you hold, such as an archive's.
 
 ## Related
 

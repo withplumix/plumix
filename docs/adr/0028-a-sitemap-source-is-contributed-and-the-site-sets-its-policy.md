@@ -33,6 +33,9 @@ type and a taxonomy sharing one silently lost the taxonomy's sub-sitemap.
   removed rather than kept as a second way in, and `ctx.registerSitemap`
   replaces it (#2821). An archive that wants a sitemap calls it like any other
   plugin.
+- **A source may name the access policy its URLs answer to.** Seo asks it for
+  an anonymous visitor, whoever requests the sitemap, and leaves the scope out
+  on refusal, as `false` does, without calling the source.
 - **Only seo-built sitemaps are listed.** The index names no outside XML; a
   sitemap seo did not build is not seo's to gate. A site advertises one with a
   `Sitemap:` line through `seo:robots-txt`.

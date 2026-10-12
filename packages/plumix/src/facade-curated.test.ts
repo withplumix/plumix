@@ -96,6 +96,12 @@ const CORE_WITHHELD: readonly Withholding[] = [
   },
   {
     reason:
+      "the outcome-to-admission mapping `policyAdmits` and core's entry " +
+      "access rule share. A plugin asks `policyAdmits` or `entryPolicyAdmits`.",
+    names: ["admissionMeets", "admissionOf"],
+  },
+  {
+    reason:
       "the sign-in flows' own machinery — ceremonies, session and token " +
       "primitives, CSRF and redirect checks, capability resolution. A " +
       "site configures them through `auth()`; a runtime composes an " +
