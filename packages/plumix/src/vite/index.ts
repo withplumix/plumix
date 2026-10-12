@@ -170,8 +170,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       // to inject after the theme's own `link[]`.
       const build = {
         manifest: true,
-        // Vite strips legal comments when minifying and expects
-        // `build.license` to carry them (rolldown-vite#497).
+        // Vite strips legal comments on minify; `build.license` carries them (rolldown-vite#497).
         license: { fileName: "THIRD-PARTY-NOTICES.md" },
       };
       // @cloudflare/vite-plugin falls back to its private entry only when no
