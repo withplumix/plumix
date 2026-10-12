@@ -24,7 +24,14 @@ export function createCardRegistry(
     load: (themeCards) => {
       rules = [...themeCards, ...defaults];
     },
-    resolve: (node, data) => resolveRule(rules, node, data),
+    resolve: (node, data) => {
+      const rule = resolveRule(rules, node, data);
+      // A plugin archive is opted in by a rule naming it. The catch-all,
+      // the plugin's own default included, would hand every one a card.
+      return node.kind === "archiveType" && rule?.match === undefined
+        ? undefined
+        : rule;
+    },
     list: () => rules,
   };
 }

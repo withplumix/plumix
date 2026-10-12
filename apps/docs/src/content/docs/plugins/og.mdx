@@ -22,13 +22,14 @@ The route answers a request carrying a matching `If-None-Match` with `304`. With
 
 `<target>` names the page a card is about — `entry/12`, `term/3`, `archive/post`, `author/7`, `date/2026-03`, `front-page` — and each of those six gets a card from the bundled template with nothing configured. See [which page kinds have a card](#which-page-kinds-have-a-card) for when each one is served.
 
-<Aside type="note" title="Three page kinds have no card">
-  A search page, a `registerArchiveType` archive and a `registerView` view get
-  none: a search page's subject is whatever the visitor typed, so a card per
-  query would fill your bucket from the query string, and a plugin archive or
-  view is resolved by its own plugin from route parameters no card URL can name.
-  `card.search()` and `card.forArchiveType()` rules still type-check and resolve
-  — they are simply never addressed.
+A `registerArchiveType` archive gets a card too, once a `card.forArchiveType(name)` rule names it: see [plugin archives](#plugin-archives).
+
+<Aside type="note" title="Two page kinds have no card">
+  A search page and a `registerView` view get none: a search page's subject is
+  whatever the visitor typed, so a card per query would fill your bucket from
+  the query string, and a view is a per-visitor page with nothing to share.
+  `card.search()` rules still type-check and resolve — they are simply never
+  addressed.
 </Aside>
 
 ## Quickstart
@@ -274,6 +275,29 @@ A listing page that lists nothing answers `404`, the way a draft entry's card do
 </Aside>
 
 An archive whose entry type carries an `access` policy is refused on the same terms its listing page is, asked of a scraper carrying no session — otherwise a theme card rendering `data.entries` would put gated titles on a public, immutable, edge-cached URL.
+
+### Plugin archives
+
+An archive a plugin registers with `registerArchiveType` has no card until a `card.forArchiveType(name)` rule names it. The rule is the opt-in, so the bundled template and a theme's `card.fallback()` never reach one. With the rule in place, the page's head carries the card like any other page's, and nothing else is needed: no option on `registerArchiveType`, and no route or head code in the theme.
+
+```ts no-typecheck
+ogCards: [
+  card.forArchiveType("location").define({
+    key: ({ data }) => cardKey.of("location", data.place),
+    render: ({ data }) => ({ type: "text", text: `Courses in ${data.place}` }),
+  }),
+];
+```
+
+The target names the page by the route parameters it was matched with, keys sorted and each name and value one URL-encoded segment: `/london` on a `/:location` route is `archive-type/location/location/london`, and `/leeds/maths` on `/:location/:catalogue` is `archive-type/location/catalogue/maths/location/leeds`. An archive with several routes needs nothing more. The route rebuilds the page by calling the archive's own `resolve` with those parameters as an anonymous visitor, so a card exists only where a page does.
+
+| The archive                | Shareable when                                                  |
+| -------------------------- | --------------------------------------------------------------- |
+| Resolves the parameters    | `resolve` returns a page rather than `null` or `pageNotFound()` |
+| Carries an `access` policy | The policy grants an anonymous visitor the page                 |
+| Declares `entries`         | It lists something; the card renders from page one              |
+
+The stored card carries the page's own tags at the edge: core's tags for what a listing archive lists, or the `tags` an unlisted archive's `resolve` returns. Purging the page purges its card.
 
 ## Building a card
 

@@ -98,7 +98,36 @@ describe("cardIdentityFor", () => {
     expect(cardIdentityFor(deeper)).toMatchObject({ kind: "listing", page: 4 });
   });
 
-  test.each(["search", "archiveType", "error"])(
+  test("names a plugin archive by the route params it was matched with", () => {
+    const data = page({ kind: "archiveType", name: "location" });
+    delete (data as { pagination?: unknown }).pagination;
+
+    expect(cardIdentityFor(data, { location: "leeds" })).toEqual({
+      kind: "listing",
+      page: 1,
+      target: {
+        kind: "archiveType",
+        name: "location",
+        params: { location: "leeds" },
+      },
+      node: { kind: "archiveType", name: "location" },
+    });
+  });
+
+  test("names a listing plugin archive's later page by its first", () => {
+    const deeper = page({
+      kind: "archiveType",
+      name: "series",
+      pagination: { page: 3 },
+    });
+
+    expect(cardIdentityFor(deeper, { name: "news", page: "3" })).toMatchObject({
+      page: 3,
+      target: { kind: "archiveType", name: "series", params: { name: "news" } },
+    });
+  });
+
+  test.each(["search", "archiveType", "view", "error"])(
     "has no identity for a %s page",
     (kind) => {
       expect(cardIdentityFor(page({ kind }))).toBeNull();
@@ -119,11 +148,37 @@ describe("card target paths", () => {
     // The year is padded so the segment stays four digits, which is the only
     // width `parseCardTargetPath` reads one at.
     [{ kind: "date", year: 26, month: null, day: null }, "date/0026"],
+    [
+      { kind: "archiveType", name: "schools", params: {} },
+      "archive-type/schools",
+    ],
+    [
+      {
+        kind: "archiveType",
+        name: "location",
+        params: { catalogue: "maths", location: "leeds" },
+      },
+      "archive-type/location/catalogue/maths/location/leeds",
+    ],
+    [
+      { kind: "archiveType", name: "find", params: { q: "a b/c" } },
+      "archive-type/find/q/a%20b%2Fc",
+    ],
   ];
 
   test.each(cases)("round-trips %o through %s", (target, path) => {
     expect(cardTargetPath(target)).toBe(path);
     expect(parseCardTargetPath(path)).toEqual(target);
+  });
+
+  test("names a plugin archive's params in key order, whatever order it got them in", () => {
+    expect(
+      cardTargetPath({
+        kind: "archiveType",
+        name: "location",
+        params: { location: "leeds", catalogue: "maths" },
+      }),
+    ).toBe("archive-type/location/catalogue/maths/location/leeds");
   });
 
   test.each([
@@ -145,6 +200,13 @@ describe("card target paths", () => {
     "date/26",
     "date/2026-03-04-05",
     "../entry/12",
+    "archive-type",
+    "archive-type/location/location",
+    // One page, one URL: keys out of order and needless escapes are refused.
+    "archive-type/location/location/leeds/catalogue/maths",
+    "archive-type/location/location/%6Ceeds",
+    "archive-type/location/location/%E0",
+    "archive-type/location/location/leeds/location/york",
   ])("refuses %s", (path) => {
     expect(parseCardTargetPath(path)).toBeNull();
   });

@@ -179,6 +179,11 @@ export type {
   ListingPageTarget,
   ResolvedListingPage,
 } from "./route/render/page-data.js";
+export { resolveArchiveTypePage } from "./route/render/archive-type-page.js";
+export type {
+  ArchiveTypePageTarget,
+  ResolvedArchiveTypePage,
+} from "./route/render/archive-type-page.js";
 export { resolveReferences } from "./meta/core.js";
 export type {
   ResolvedMeta,

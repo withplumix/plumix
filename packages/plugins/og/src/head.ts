@@ -94,7 +94,7 @@ async function cardPageData(
   ctx: AppContext,
   data: TemplateData,
 ): Promise<TemplateData> {
-  const identity = cardIdentityFor(data);
+  const identity = cardIdentityFor(data, ctx.resolvedRoute?.params);
   if (identity === null) return data;
   const differs =
     identity.kind === "entry" ? isPreviewRender(ctx) : identity.page !== 1;
@@ -149,8 +149,8 @@ export type CardChoice =
 export async function chooseCard(input: CardChoiceInput): Promise<CardChoice> {
   const { data, ctx, cards, featured, extension } = input;
   const shareable = input.shareable ?? isShareablePage;
-  // Search pages and plugin archives match rules but have no card URL.
-  const identity = cardIdentityFor(data);
+  // Search pages and views match rules but have no card URL.
+  const identity = cardIdentityFor(data, ctx.resolvedRoute?.params);
   if (identity === null) {
     return { card: null, photo: null, rule: null, skipped: "page-kind" };
   }

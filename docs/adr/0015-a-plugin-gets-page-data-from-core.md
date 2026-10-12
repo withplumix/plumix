@@ -21,8 +21,9 @@ included. An entry had no such call.
 This follows from [ADR 0002](0002-core-owns-what-would-be-wrong.md). Page data
 that differs by caller is not _absent_ in one place. It is _wrong_ in one of
 them, so core owns producing it. The calls are `resolveEntryData(ctx, row)` for
-one entry, `resolveEntryList(ctx, rows)` for a batch, and `resolveListingPage(ctx,
-target)` for a listing page. `resolveEntryData` is the call core's single-entry
+one entry, `resolveEntryList(ctx, rows)` for a batch, `resolveListingPage(ctx,
+target)` for a listing page, and `resolveArchiveTypePage(ctx, target)` for a
+plugin archive's page. `resolveEntryData` is the call core's single-entry
 route makes. It resolves the row, applies `resolve:single:data`, and expands the
 title a subscriber rewrote. `plumix/plugin` no longer exports the raw
 row assembler, `buildResolvedEntries`.
