@@ -10,6 +10,7 @@ const NOJS_EMAIL = "grace@example.test";
 const OLDER_PAGES_SLUG = "older-comments";
 /** Three pages at the playground's `rootsPerPage` of 2, the last holding one. */
 const OLDER_PAGES_ROOTS = 5;
+const MAGIC_LINK_EMAIL = "magic@example.test";
 
 /**
  * Seeding from a spec races the live worker for the D1 write lock and
@@ -28,6 +29,7 @@ export default async function globalSetup(): Promise<void> {
 
   const factories = factoriesFor(db);
   const author = await factories.user.create({});
+  await factories.user.create({ email: MAGIC_LINK_EMAIL, role: "editor" });
   const single = await factories.entry.create({
     type: "post",
     title: "Moderate me",
@@ -101,6 +103,7 @@ export default async function globalSetup(): Promise<void> {
       bulkEntryId: bulkEntry.id,
       bulkIds: [first.id, second.id],
       olderPagesSlug: OLDER_PAGES_SLUG,
+      magicLinkEmail: MAGIC_LINK_EMAIL,
     }),
     "utf8",
   );

@@ -222,6 +222,102 @@ test("dragging a recipe below the next one reorders the list", async ({
 
 `sourcePosition` and `targetPosition` give the point to press and release, measured from the top-left of that element's box. Both default to the centre, and a point may fall outside the box, as when a drag pans a canvas past its own handle. `steps` sets how many moves lead to the target (10 by default). `beforeDrop` runs at the target with the button still held, so a test can check that the drag is live before it drops. `dragTo` does not scroll, so bring both elements into view first.
 
+## Mail
+
+A test checks the mail your plugin sends by name, the same name `ctx.mail.send` takes. It never reads a mail server.
+
+### Faking mail
+
+The dispatcher and RPC harnesses each install a mail fake and expose it as `h.mail`. It records every mail `ctx.mail.send` sent, with its name, its props, the recipient and the rendered message. With no `mailer` in the harness config, the fake is the site's mailer too, so a site configured for magic links boots and nothing is delivered.
+
+```ts
+// src/welcome.test.ts
+import { createDispatcherHarness } from "plumix/test";
+import { test } from "vitest";
+
+test("requesting a magic link mails the user, and only that", async () => {
+  const h = await createDispatcherHarness({
+    config: { auth: { magicLink: { siteName: "Recipes" } } },
+  });
+  await h.factory.user.create({ email: "ann@example.test" });
+
+  await h.fetch("/_plumix/auth/magic-link/request", {
+    method: "POST",
+    json: { email: "ann@example.test" },
+  });
+
+  h.mail.assertSent("magicLink", { to: "ann@example.test" });
+  h.mail.assertNotSent("emailChange");
+});
+```
+
+To test the transport itself, pass your own `mailer` in the harness config. Your mailer then carries the mail and `h.mail` still records it. Pass `mailer: undefined` to test a site that has no mailer. `fakeMail()` from `plumix/test` builds a fake on its own, for a context you build with `createTestContext`. There, pass the fake as the `mailer` and its `record` as `onMailSent`.
+
+### Assertions
+
+Every assertion is typed against the mail registry, so a misspelled name or a `where` written for the wrong props fails to compile. A failing assertion throws a plain `Error` that lists the mail that was sent, by name and recipient, so it reads the same in Vitest, Bun's test runner or Playwright.
+
+| Assertion                                | Passes when                                                     |
+| ---------------------------------------- | --------------------------------------------------------------- |
+| `assertSent(name, { to, where, times })` | a matching mail was sent, exactly `times` times if you pass it. |
+| `assertNotSent(name, { to, where })`     | no matching mail was sent.                                      |
+| `assertNothingSent()`                    | no mail of any name was sent.                                   |
+| `assertSentCount(n)`                     | `n` mails were sent, whatever their names.                      |
+
+`to` matches the recipient's address and `where` takes the mail's props. `sent(name)` returns each mail of that name as `{ props, to, subject, text, html }`, for a check the assertions don't cover:
+
+```ts no-typecheck
+const [mail] = h.mail.sent("magicLink");
+expect(mail?.props.url).toContain("/_plumix/auth/magic-link/verify");
+```
+
+### Testing mail content
+
+`renderMail(name, props, options)` from `plumix/test` renders a mail the way sending does, with no recipient and no send. It returns `{ subject, text, html }`. `locale` picks the language, `siteName` names the site, and `config` carries the plugins that declare mail and the theme's and site's overrides, which apply as they do on a send:
+
+```ts
+// src/welcome-content.test.ts
+import { renderMail } from "plumix/test";
+import { expect, test } from "vitest";
+
+test("the magic-link subject is in German", async () => {
+  const { subject } = await renderMail(
+    "magicLink",
+    { url: "https://example.com/verify?token=t", ttlSeconds: 900 },
+    { locale: "de", siteName: "Recipes" },
+  );
+
+  expect(subject).toBe("Bei Recipes anmelden");
+});
+```
+
+### Mail in end-to-end tests
+
+`plumix dev` catches the mail of a site that has no `mailer`. The `mailbox` fixture of `test` from `plumix/test/playwright` reads that mail. `mailbox.latest(name, { to })` waits until a matching mail arrives, or the test times out. It returns the newest one, with its props and its rendered message. `mailbox.clear()` empties the caught mail, so a test starts from none:
+
+```ts
+// e2e/sign-in.spec.ts
+import { expect, test } from "plumix/test/playwright";
+
+test.use({ storageState: { cookies: [], origins: [] } });
+
+test("a user signs in through the magic link", async ({ page, mailbox }) => {
+  await mailbox.clear();
+  await page.goto("login");
+  await page.getByTestId("login-email-input").fill("ann@example.test");
+  await page.getByTestId("login-magic-link-submit").click();
+
+  const { props } = await mailbox.latest("magicLink", {
+    to: "ann@example.test",
+  });
+  await page.goto(props.url);
+
+  await expect(page.getByTestId("dashboard-welcome-heading")).toBeVisible();
+});
+```
+
+A site configured for magic links needs a `mailer` to build. To keep catching its mail under `plumix dev`, leave the mailer out there only: `mailer: process.env.PLUMIX_DEV ? undefined : yourMailer`.
+
 ## Related
 
 [Overview](/plugins/overview/) covers installing a plugin and the registration context your plugin's `setup` receives. [Project Structure](/getting-started/project-structure/) lists every `plumix` subpath, `plumix/test` and `plumix/vite` among them. [Content Modelling](/content-modelling/overview/) covers writing the descriptor these tests boot.

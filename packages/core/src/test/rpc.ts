@@ -20,6 +20,7 @@ import type { AuthMethodsSummary } from "../runtime/app.js";
 import type { PlumixEnv } from "../runtime/contract/bindings.js";
 import type { TestConfigInput } from "./config.js";
 import type { Factories } from "./factories.js";
+import type { MailFake } from "./mail-fake.js";
 import type { ActionSpy, FilterSpy } from "./spies.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { createSession } from "../auth/sessions.js";
@@ -30,10 +31,11 @@ import { HookRegistry as HookRegistryImpl } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { appRouter } from "../rpc/router.js";
 import { resolveAuthMethods } from "../runtime/app.js";
-import { testConfig } from "./config.js";
+import { mailerOrFake, testConfig } from "./config.js";
 import { silentLogger } from "./context.js";
 import { factoriesFor, userFactory } from "./factories.js";
 import { createTestDb } from "./harness.js";
+import { fakeMail } from "./mail-fake.js";
 import { spyAction, spyFilter } from "./spies.js";
 
 type TestDb = Awaited<ReturnType<typeof createTestDb>>;
@@ -85,6 +87,11 @@ export interface RpcHarnessBase<TUser extends User | null> {
   readonly client: RouterClient<typeof appRouter>;
   readonly user: TUser;
   readonly factory: Factories;
+  /**
+   * Records every mail `ctx.mail.send` sent. With no `mailer` in `config`, it
+   * is the transport too; `mailer: undefined` leaves the site with none.
+   */
+  readonly mail: MailFake;
   readonly spyAction: <TName extends ActionName>(
     name: TName,
   ) => ActionSpy<ActionArgs<TName>>;
@@ -125,6 +132,7 @@ function buildContext(
   authMethods: AuthMethodsSummary | undefined,
   authenticator: RequestAuthenticator | undefined,
   config: PlumixConfig,
+  mail: MailFake,
 ): AppContext {
   return createAppContext({
     db,
@@ -138,6 +146,7 @@ function buildContext(
     authMethods,
     authenticator,
     config,
+    onMailSent: mail.record,
   });
 }
 
@@ -168,6 +177,7 @@ function assemble<TUser extends User | null>(
   authMethods: AuthMethodsSummary | undefined,
   authenticator: RequestAuthenticator | undefined,
   config: PlumixConfig,
+  mail: MailFake,
 ): RpcHarnessBase<TUser> {
   const context = buildContext(
     db,
@@ -180,6 +190,7 @@ function assemble<TUser extends User | null>(
     authMethods,
     authenticator,
     config,
+    mail,
   );
   const client = createRouterClient(appRouter, { context });
 
@@ -192,6 +203,7 @@ function assemble<TUser extends User | null>(
     client,
     user,
     factory: factoriesFor(db),
+    mail,
     spyAction: (name) => spyAction(hooks, name),
     spyFilter: (name) => spyFilter(hooks, name),
     actingAs: async (userOrRole) => {
@@ -212,6 +224,7 @@ function assemble<TUser extends User | null>(
         authMethods,
         authenticator,
         config,
+        mail,
       );
     },
   };
@@ -231,7 +244,8 @@ export async function createRpcHarness(
   const hooks = options.hooks ?? new HookRegistryImpl();
   const plugins = options.plugins ?? createPluginRegistry();
   const env = options.env ?? {};
-  const config = testConfig(options.config);
+  const mail = fakeMail();
+  const config = testConfig(mailerOrFake(options.config, mail));
   const authMethods = options.auth && resolveAuthMethods(options.auth);
   // Build the same default registries `buildApp` would so the RPC
   // harness exercises validation against the real core specs.
@@ -261,6 +275,7 @@ export async function createRpcHarness(
       authMethods,
       options.authenticator,
       config,
+      mail,
     );
   }
 
@@ -277,5 +292,6 @@ export async function createRpcHarness(
     authMethods,
     options.authenticator,
     config,
+    mail,
   );
 }

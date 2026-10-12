@@ -48,6 +48,8 @@ export {
   spyFilter,
 } from "@plumix/core/test/browser";
 
+export { fakeMail } from "@plumix/core/test/browser";
+
 export { PluginRpcError, stubPluginRpc } from "./plugin-rpc.js";
 
 export { fakeFile, fakeImage } from "./fakes.js";
@@ -83,6 +85,7 @@ export const createTestContext: typeof node.createTestContext =
 export const createTracedContext: typeof node.createTracedContext = nodeOnly(
   "createTracedContext",
 );
+export const renderMail: typeof node.renderMail = nodeOnly("renderMail");
 export const generateSchemaSource: typeof node.generateSchemaSource = nodeOnly(
   "generateSchemaSource",
 );

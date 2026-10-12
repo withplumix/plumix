@@ -6,7 +6,6 @@ import type { DebugSnapshot } from "../request-history/snapshot.js";
 import { defineMail } from "../../mail/contract/define.js";
 import { definePlugin } from "../../plugin/define.js";
 import { createDispatcherHarness, DEV_ORIGIN } from "../../test/dispatcher.js";
-import { makeMailer } from "../../test/mailer.js";
 import { poCatalogs } from "../../test/po-catalog.js";
 import { DEBUG_REQUESTS_PATH } from "../request-history/path.js";
 
@@ -57,7 +56,10 @@ describe("mail under plumix dev with no mailer", () => {
   test("a magic-link request is logged and recorded in the request history", async () => {
     const logger = recordingLogger();
     const h = await createDispatcherHarness({
-      config: { auth: { magicLink: { siteName: "Dev Site" } } },
+      config: {
+        mailer: undefined,
+        auth: { magicLink: { siteName: "Dev Site" } },
+      },
       logger,
     });
     await h.factory.user.create({ email: "ann@example.test" });
@@ -90,7 +92,10 @@ describe("mail under plumix dev with no mailer", () => {
 
   test("the debug bar's Mail panel lists it, with HTML and text tabs", async () => {
     const h = await createDispatcherHarness({
-      config: { auth: { magicLink: { siteName: "Dev Site" } } },
+      config: {
+        mailer: undefined,
+        auth: { magicLink: { siteName: "Dev Site" } },
+      },
     });
     await h.factory.user.create({ email: "ann@example.test" });
     await h.dispatch(requestMagicLink("ann@example.test"));
@@ -117,7 +122,7 @@ describe("mail under plumix dev with no mailer", () => {
   });
 
   test("the Mail panel says so when a request sent none", async () => {
-    const h = await createDispatcherHarness();
+    const h = await createDispatcherHarness({ config: { mailer: undefined } });
     await h.dispatch(new Request(`${DEV_ORIGIN}/no-such-page`));
     await h.drainDeferred();
 
@@ -145,7 +150,10 @@ const SENT_PATH = "/_plumix/debug/mail/sent";
 describe("the caught-mail JSON at /_plumix/debug/mail/sent", () => {
   test("GET lists the caught mail, newest first", async () => {
     const h = await createDispatcherHarness({
-      config: { auth: { magicLink: { siteName: "Dev Site" } } },
+      config: {
+        mailer: undefined,
+        auth: { magicLink: { siteName: "Dev Site" } },
+      },
     });
     await h.factory.user.create({ email: "ann@example.test" });
     await h.factory.user.create({ email: "bob@example.test" });
@@ -174,7 +182,10 @@ describe("the caught-mail JSON at /_plumix/debug/mail/sent", () => {
 
   test("DELETE clears the caught mail", async () => {
     const h = await createDispatcherHarness({
-      config: { auth: { magicLink: { siteName: "Dev Site" } } },
+      config: {
+        mailer: undefined,
+        auth: { magicLink: { siteName: "Dev Site" } },
+      },
     });
     await h.factory.user.create({ email: "ann@example.test" });
     await h.dispatch(requestMagicLink("ann@example.test"));
@@ -193,7 +204,10 @@ describe("the caught-mail JSON at /_plumix/debug/mail/sent", () => {
 
   test("DELETE without the request header is refused and keeps the mail", async () => {
     const h = await createDispatcherHarness({
-      config: { auth: { magicLink: { siteName: "Dev Site" } } },
+      config: {
+        mailer: undefined,
+        auth: { magicLink: { siteName: "Dev Site" } },
+      },
     });
     await h.factory.user.create({ email: "ann@example.test" });
     await h.dispatch(requestMagicLink("ann@example.test"));
@@ -208,9 +222,9 @@ describe("the caught-mail JSON at /_plumix/debug/mail/sent", () => {
   });
 
   test("a configured mailer delivers, so nothing is caught", async () => {
-    const mailer = makeMailer();
+    // The harness's fake is the configured mailer.
     const h = await createDispatcherHarness({
-      config: { mailer, auth: { magicLink: { siteName: "Dev Site" } } },
+      config: { auth: { magicLink: { siteName: "Dev Site" } } },
     });
     await h.factory.user.create({ email: "ann@example.test" });
     await h.dispatch(requestMagicLink("ann@example.test"));
@@ -218,7 +232,7 @@ describe("the caught-mail JSON at /_plumix/debug/mail/sent", () => {
 
     const listed = await h.dispatch(new Request(`${DEV_ORIGIN}${SENT_PATH}`));
 
-    expect(mailer.sent).toHaveLength(1);
+    h.mail.assertSentCount(1);
     expect(await listed.json()).toEqual([]);
     // The request history still records what the mail rendered, and the read
     // above is not captured over it.
@@ -261,6 +275,7 @@ const welcomer = definePlugin("welcomer", {
 async function galleryHarness() {
   return createDispatcherHarness({
     config: {
+      mailer: undefined,
       auth: { magicLink: { siteName: "Dev Site" } },
       plugins: [welcomer],
       i18n: { defaultLocale: "en", locales: ["en", "de"] },
@@ -389,6 +404,7 @@ describe("the caught mail is capped by dev.history, like the request history", (
   test("a raised string limit keeps a long body whole", async () => {
     const h = await createDispatcherHarness({
       config: {
+        mailer: undefined,
         plugins: [noter],
         dev: { history: { maxStringLength: 20_000 } },
       },
@@ -401,7 +417,11 @@ describe("the caught mail is capped by dev.history, like the request history", (
 
   test("maxEntries keeps only the newest mail", async () => {
     const h = await createDispatcherHarness({
-      config: { plugins: [noter], dev: { history: { maxEntries: 1 } } },
+      config: {
+        mailer: undefined,
+        plugins: [noter],
+        dev: { history: { maxEntries: 1 } },
+      },
     });
 
     await sendNote(h, "a@example.test", 1);
@@ -414,7 +434,11 @@ describe("the caught mail is capped by dev.history, like the request history", (
 
   test("maxTotalBytes evicts the oldest mail past the budget", async () => {
     const h = await createDispatcherHarness({
-      config: { plugins: [noter], dev: { history: { maxTotalBytes: 3_000 } } },
+      config: {
+        mailer: undefined,
+        plugins: [noter],
+        dev: { history: { maxTotalBytes: 3_000 } },
+      },
     });
 
     await sendNote(h, "a@example.test", 2000);

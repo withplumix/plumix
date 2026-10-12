@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import type { Db } from "../../context/app-context.js";
 import type { MailSender } from "../../mail/contract/registry.js";
+import type { MailFake } from "../../test/mail-fake.js";
 import type { Mailer } from "../contract/mailer.js";
 import { and, eq } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
@@ -10,7 +11,7 @@ import { users } from "../../db/schema/users.js";
 import { createTestContext } from "../../test/context.js";
 import { authTokenFactory, userFactory } from "../../test/factories.js";
 import { createTestDb } from "../../test/harness.js";
-import { makeMailer } from "../../test/mailer.js";
+import { fakeMail } from "../../test/mail-fake.js";
 import { hashToken } from "../tokens.js";
 import {
   cancelEmailChange,
@@ -22,11 +23,12 @@ import {
 const ORIGIN = "https://cms.example";
 const SITE_NAME = "Test Site";
 
-/** `ctx.mail` on a site whose transport is `mailer`. */
-function mailVia(db: Db, mailer: Mailer): MailSender {
+/** `ctx.mail` on a site whose transport is `mailer`, recorded by `mail`. */
+function mailVia(db: Db, mail: MailFake, mailer: Mailer = mail): MailSender {
   return createTestContext({
     db,
     config: { mailer, auth: { magicLink: { siteName: SITE_NAME } } },
+    onMailSent: mail.record,
   }).mail;
 }
 
@@ -36,13 +38,13 @@ describe("requestEmailChange", () => {
     const user = await userFactory.transient({ db }).create({
       email: "alice@old.example",
     });
-    const mailer = makeMailer();
+    const mail = fakeMail();
 
     const result = await requestEmailChange(db, {
       userId: user.id,
       newEmail: "alice@new.example",
       origin: ORIGIN,
-      mail: mailVia(db, mailer),
+      mail: mailVia(db, mail),
     });
 
     expect(result.token.length).toBeGreaterThan(20);
@@ -62,11 +64,11 @@ describe("requestEmailChange", () => {
     expect(stored?.hash).toBe(await hashToken(result.token));
     expect(stored?.email).toBe("alice@new.example");
 
-    expect(mailer.sent).toHaveLength(1);
-    expect(mailer.sent[0]?.to).toBe("alice@new.example");
-    expect(mailer.sent[0]?.text).toContain("alice@old.example");
-    expect(mailer.sent[0]?.text).toContain("alice@new.example");
-    expect(mailer.sent[0]?.text).toContain(ORIGIN);
+    mail.assertSent("emailChange", { to: "alice@new.example", times: 1 });
+    const [sent] = mail.sent("emailChange");
+    expect(sent?.text).toContain("alice@old.example");
+    expect(sent?.text).toContain("alice@new.example");
+    expect(sent?.text).toContain(ORIGIN);
   });
 
   test("rejects when the new email matches the current one", async () => {
@@ -74,17 +76,17 @@ describe("requestEmailChange", () => {
     const user = await userFactory.transient({ db }).create({
       email: "same@example.test",
     });
-    const mailer = makeMailer();
+    const mail = fakeMail();
 
     await expect(
       requestEmailChange(db, {
         userId: user.id,
         newEmail: "same@example.test",
         origin: ORIGIN,
-        mail: mailVia(db, mailer),
+        mail: mailVia(db, mail),
       }),
     ).rejects.toThrow(EmailChangeError);
-    expect(mailer.sent).toHaveLength(0);
+    mail.assertNothingSent();
   });
 
   test("rejects when another user already has the new email", async () => {
@@ -93,14 +95,14 @@ describe("requestEmailChange", () => {
       email: "a@example.test",
     });
     await userFactory.transient({ db }).create({ email: "b@example.test" });
-    const mailer = makeMailer();
+    const mail = fakeMail();
 
     await expect(
       requestEmailChange(db, {
         userId: userA.id,
         newEmail: "b@example.test",
         origin: ORIGIN,
-        mail: mailVia(db, mailer),
+        mail: mailVia(db, mail),
       }),
     ).rejects.toMatchObject({ code: "email_taken" });
   });
@@ -111,14 +113,14 @@ describe("requestEmailChange", () => {
       email: "alice@example.test",
       disabledAt: new Date(),
     });
-    const mailer = makeMailer();
+    const mail = fakeMail();
 
     await expect(
       requestEmailChange(db, {
         userId: user.id,
         newEmail: "alice@new.example",
         origin: ORIGIN,
-        mail: mailVia(db, mailer),
+        mail: mailVia(db, mail),
       }),
     ).rejects.toMatchObject({ code: "account_disabled" });
   });
@@ -128,19 +130,19 @@ describe("requestEmailChange", () => {
     const user = await userFactory.transient({ db }).create({
       email: "alice@old.example",
     });
-    const mailer = makeMailer();
+    const mail = fakeMail();
 
     const first = await requestEmailChange(db, {
       userId: user.id,
       newEmail: "alice@new1.example",
       origin: ORIGIN,
-      mail: mailVia(db, mailer),
+      mail: mailVia(db, mail),
     });
     const second = await requestEmailChange(db, {
       userId: user.id,
       newEmail: "alice@new2.example",
       origin: ORIGIN,
-      mail: mailVia(db, mailer),
+      mail: mailVia(db, mail),
     });
 
     // The first link no longer verifies — the row was purged before
@@ -157,14 +159,17 @@ describe("requestEmailChange", () => {
   test("swallows mailer transport failures (still persists the token)", async () => {
     const db = await createTestDb();
     const user = await userFactory.transient({ db }).create({});
-    const mailer = makeMailer({ failWith: new Error("smtp down") });
+    const mail = fakeMail();
+    const mailer: Mailer = {
+      send: () => Promise.reject(new Error("smtp down")),
+    };
     const warned: unknown[] = [];
 
     const result = await requestEmailChange(db, {
       userId: user.id,
       newEmail: "alice@new.example",
       origin: ORIGIN,
-      mail: mailVia(db, mailer),
+      mail: mailVia(db, mail, mailer),
       logger: { warn: (msg, meta) => warned.push({ msg, meta }) },
     });
 
@@ -190,7 +195,7 @@ describe("verifyEmailChange", () => {
       userId: user.id,
       newEmail: "alice@new.example",
       origin: ORIGIN,
-      mail: mailVia(db, makeMailer()),
+      mail: mailVia(db, fakeMail()),
     });
 
     const result = await verifyEmailChange(db, token);
@@ -251,7 +256,7 @@ describe("verifyEmailChange", () => {
       userId: user.id,
       newEmail: "alice@new.example",
       origin: ORIGIN,
-      mail: mailVia(db, makeMailer()),
+      mail: mailVia(db, fakeMail()),
     });
     // Race: another user grabs the target email before the click lands.
     await userFactory.transient({ db }).create({
@@ -270,7 +275,7 @@ describe("verifyEmailChange", () => {
       userId: user.id,
       newEmail: "alice@new.example",
       origin: ORIGIN,
-      mail: mailVia(db, makeMailer()),
+      mail: mailVia(db, fakeMail()),
     });
     await verifyEmailChange(db, token);
 
@@ -286,7 +291,7 @@ describe("verifyEmailChange", () => {
       userId: user.id,
       newEmail: "alice@new.example",
       origin: ORIGIN,
-      mail: mailVia(db, makeMailer()),
+      mail: mailVia(db, fakeMail()),
     });
     await db
       .update(users)
@@ -307,7 +312,7 @@ describe("cancelEmailChange", () => {
       userId: user.id,
       newEmail: "alice@new.example",
       origin: ORIGIN,
-      mail: mailVia(db, makeMailer()),
+      mail: mailVia(db, fakeMail()),
     });
 
     const result = await cancelEmailChange(db, { userId: user.id });

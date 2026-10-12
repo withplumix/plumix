@@ -620,7 +620,10 @@ describe("auth.mailer.testSend", () => {
   });
 
   test("rejects when no mailer is configured (CONFLICT/mailer_not_configured)", async () => {
-    const h = await createRpcHarness({ authAs: "admin" });
+    const h = await createRpcHarness({
+      authAs: "admin",
+      config: { mailer: undefined },
+    });
     await expect(
       h.client.auth.mailer.testSend({ to: "ops@example.com" }),
     ).rejects.toMatchObject({

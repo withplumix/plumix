@@ -10,6 +10,7 @@ export type { BuildAdminPluginChunkOptions } from "./build-admin-chunk.js";
 export { buildAdminPluginChunkForE2E } from "./build-admin-chunk.js";
 export type { DragToOptions } from "./drag-to.js";
 export { dragTo } from "./drag-to.js";
+export type { Mailbox } from "./mailbox.js";
 export type { OpenPlaygroundDbOptions } from "./open-playground-db.js";
 export { openPlaygroundDb } from "./open-playground-db.js";
 export type { PlumixE2EConfigOptions } from "./playwright-config.js";
