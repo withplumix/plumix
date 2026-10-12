@@ -89,10 +89,6 @@ const blogWithTaxonomyPlugin = definePlugin("blog-tax", (ctx) => {
   });
 });
 
-/**
- * A `post` type whose entries each choose a policy: none (the open default),
- * members only, or a soft paywall that lists the post as a teaser.
- */
 const postsWithAccess = definePlugin("posts-with-access", (ctx) => {
   ctx.registerEntryType("post", {
     label: "Posts",
@@ -121,25 +117,37 @@ const POST_BODY = {
   blocks: [{ id: "p", name: "core/paragraph", attrs: { text: "Body text" } }],
 } as const;
 
-/** One open, one members-only and one teaser post, each with an excerpt. */
 async function seedPolicied(h: DispatcherHarness): Promise<void> {
   const author = await h.seedUser("admin");
-  for (const [slug, title, key] of [
-    ["open", "Open Post", undefined],
-    ["members", "Members Post", "members"],
-    ["teaser", "Teaser Post", "teaser"],
-  ] as const) {
-    await h.factory.entry.create({
-      type: "post",
-      slug,
-      title,
-      excerpt: `${title} excerpt`,
-      content: POST_BODY,
-      status: "published",
-      authorId: author.id,
-      meta: key === undefined ? {} : { [ACCESS_POLICY_META_KEY]: key },
-    });
-  }
+  await h.factory.entry.create({
+    type: "post",
+    slug: "open",
+    title: "Open Post",
+    excerpt: "Open Post excerpt",
+    content: POST_BODY,
+    status: "published",
+    authorId: author.id,
+  });
+  await h.factory.entry.create({
+    type: "post",
+    slug: "members",
+    title: "Members Post",
+    excerpt: "Members Post excerpt",
+    content: POST_BODY,
+    status: "published",
+    authorId: author.id,
+    meta: { [ACCESS_POLICY_META_KEY]: "members" },
+  });
+  await h.factory.entry.create({
+    type: "post",
+    slug: "teaser",
+    title: "Teaser Post",
+    excerpt: "Teaser Post excerpt",
+    content: POST_BODY,
+    status: "published",
+    authorId: author.id,
+    meta: { [ACCESS_POLICY_META_KEY]: "teaser" },
+  });
 }
 
 async function seedPost(
@@ -226,19 +234,21 @@ describe("feed routes", () => {
     expect(body).not.toContain("Draft Post");
   });
 
-  test("a policied type's feed lists an anonymous reader the public posts and not the members ones", async () => {
-    const h = await harness(postsWithAccess);
-    await seedPolicied(h);
+  test.each(["/feed", "/post/feed", "/post/feed/atom"])(
+    "a policied type's %s lists an anonymous reader the public posts and not the members ones",
+    async (path) => {
+      const h = await harness(postsWithAccess);
+      await seedPolicied(h);
 
-    for (const path of ["/feed", "/post/feed", "/post/feed/atom"]) {
       const res = await h.fetch(path);
+
       res.assertStatus(200);
       const body = await res.text();
       expect(body).toContain("Open Post");
       expect(body).toContain("Teaser Post");
       expect(body).not.toContain("Members Post");
-    }
-  });
+    },
+  );
 
   test("a type's feed sits beside its archive page, and a type with no archive page has none", async () => {
     const news = definePlugin("news", (ctx) => {
@@ -272,54 +282,60 @@ describe("feed routes", () => {
     (await h.fetch("/note/feed")).assertStatus(404);
   });
 
-  test("a soft-challenged post's item carries its excerpt and no body", async () => {
+  test("a soft-challenged post's RSS item carries its excerpt and no body", async () => {
     const h = await harness(postsWithAccess);
     await seedPolicied(h);
 
     const rss = await (await h.fetch("/post/feed")).text();
-    const rssItem = /<item><title>Teaser Post<\/title>.*?<\/item>/.exec(
-      rss,
-    )?.[0];
-    expect(rssItem).toContain("<description>Teaser Post excerpt</description>");
-    expect(rssItem).not.toContain("content:encoded");
-    expect(rssItem).not.toContain("Body text");
+
+    const item = /<item><title>Teaser Post<\/title>.*?<\/item>/.exec(rss)?.[0];
+    expect(item).toContain("<description>Teaser Post excerpt</description>");
+    expect(item).not.toContain("content:encoded");
+    expect(item).not.toContain("Body text");
+  });
+
+  test("a soft-challenged post's Atom entry carries its excerpt and no body", async () => {
+    const h = await harness(postsWithAccess);
+    await seedPolicied(h);
 
     const atom = await (await h.fetch("/post/feed/atom")).text();
-    const atomEntry = /<entry><title>Teaser Post<\/title>.*?<\/entry>/.exec(
+
+    const entry = /<entry><title>Teaser Post<\/title>.*?<\/entry>/.exec(
       atom,
     )?.[0];
-    expect(atomEntry).toContain("<summary>Teaser Post excerpt</summary>");
-    expect(atomEntry).not.toContain("<content");
-    expect(atomEntry).not.toContain("Body text");
+    expect(entry).toContain("<summary>Teaser Post excerpt</summary>");
+    expect(entry).not.toContain("<content");
+    expect(entry).not.toContain("Body text");
   });
 
-  test("a type whose every post is members-only serves an anonymous reader an empty feed", async () => {
-    // The feed exists for every reader; which posts it lists is the reader's.
-    const members = definePlugin("members", (ctx) => {
-      ctx.registerEntryType("post", {
-        label: "Posts",
-        isPublic: true,
-        hasArchive: "posts",
-        access: { default: membersOnlyPolicy },
+  test.each(["/feed", "/feed/atom", "/posts/feed"])(
+    "a type whose every post is members-only serves an anonymous reader an empty %s",
+    async (path) => {
+      const members = definePlugin("members", (ctx) => {
+        ctx.registerEntryType("post", {
+          label: "Posts",
+          isPublic: true,
+          hasArchive: "posts",
+          access: { default: membersOnlyPolicy },
+        });
       });
-    });
-    const h = await harness(members);
-    const author = await h.seedUser("admin");
-    await h.factory.entry.create({
-      type: "post",
-      slug: "members-only",
-      title: "Members Only",
-      content: null,
-      status: "published",
-      authorId: author.id,
-    });
+      const h = await harness(members);
+      const author = await h.seedUser("admin");
+      await h.factory.entry.create({
+        type: "post",
+        slug: "members-only",
+        title: "Members Only",
+        content: null,
+        status: "published",
+        authorId: author.id,
+      });
 
-    for (const path of ["/feed", "/feed/atom", "/posts/feed"]) {
       const res = await h.fetch(path);
+
       res.assertStatus(200);
       expect(await res.text()).not.toContain("Members Only");
-    }
-  });
+    },
+  );
 
   test("an unknown entry type 404s", async () => {
     const h = await harness(blogPlugin);
@@ -1820,39 +1836,39 @@ describe("a feed at the edge", () => {
     expect(put).toHaveBeenCalledOnce();
   });
 
-  test("changing a post's access choice purges the feeds it can appear in", async () => {
-    const { cdn, put, purgeTags } = cdnStub();
-    const h = await createDispatcherHarness({
-      cdn,
-      config: { plugins: [postsWithAccess, feeds()] },
-    });
-    const admin = await h.seedUser("admin");
-    const post = await h.factory.entry.create({
-      type: "post",
-      slug: "open",
-      title: "Open Post",
-      content: null,
-      status: "published",
-      authorId: admin.id,
-    });
-    const paths = ["/feed", "/post/feed"];
-    for (const path of paths) (await h.fetch(path)).assertStatus(200);
-    await h.drainDeferred();
+  test.each(["/feed", "/post/feed"])(
+    "changing a post's access choice purges the cached %s",
+    async (path) => {
+      const { cdn, put, purgeTags } = cdnStub();
+      const h = await createDispatcherHarness({
+        cdn,
+        config: { plugins: [postsWithAccess, feeds()] },
+      });
+      const admin = await h.seedUser("admin");
+      const post = await h.factory.entry.create({
+        type: "post",
+        slug: "open",
+        title: "Open Post",
+        content: null,
+        status: "published",
+        authorId: admin.id,
+      });
+      (await h.fetch(path)).assertStatus(200);
+      await h.drainDeferred();
 
-    const updated = await h.fetch("/_plumix/rpc/entry/update", {
-      as: admin,
-      json: { json: { id: post.id, access: "members" }, meta: [] },
-    });
-    updated.assertStatus(200);
-    await h.drainDeferred();
+      const updated = await h.fetch("/_plumix/rpc/entry/update", {
+        as: admin,
+        json: { json: { id: post.id, access: "members" }, meta: [] },
+      });
+      updated.assertStatus(200);
+      await h.drainDeferred();
 
-    const purged = new Set(purgeTags.mock.calls.flatMap(([tags]) => [...tags]));
-    for (const path of paths) {
-      const stored = tagsFor(put, path);
-      expect(stored).not.toEqual([]);
-      expect(stored.some((tag) => purged.has(tag))).toBe(true);
-    }
-  });
+      const purged = new Set(
+        purgeTags.mock.calls.flatMap(([tags]) => [...tags]),
+      );
+      expect(tagsFor(put, path).some((tag) => purged.has(tag))).toBe(true);
+    },
+  );
 
   test("publishing a post purges every cached feed it can appear in", async () => {
     const { cdn, put, purgeTags } = cdnStub();

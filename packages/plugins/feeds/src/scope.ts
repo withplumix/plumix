@@ -10,8 +10,8 @@ export interface FeedScope {
 }
 
 /**
- * A type declaring `access` is syndicated too: `publicEntryRows` asks each
- * entry's policy for the requesting reader (ADR 0037).
+ * `publicEntryRows` applies each entry's policy, so a type's `access` is no
+ * reason to skip it.
  */
 export function isSyndicatableEntryType(
   type: RegisteredEntryType | undefined,
