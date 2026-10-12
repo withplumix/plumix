@@ -120,7 +120,4 @@ export const RETIRED_TIER_PENDING: readonly string[] = [
   "packages/runtimes/bun/src/commands/migrations.build.test.ts",
   "packages/runtimes/bun/src/entry.build.test.ts",
   "packages/runtimes/node/src/commands/dev.build.test.ts",
-  "packages/runtimes/node/src/commands/migrations.build.test.ts",
-  "packages/runtimes/node/src/entry.build.test.ts",
-  "packages/runtimes/node/src/http/assets.build.test.ts",
 ];

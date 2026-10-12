@@ -43,19 +43,6 @@ export const rpc = (origin: string, path: string): Promise<Response> =>
     body: JSON.stringify({ json: {} }),
   });
 
-/** A stub runtime and database: enough for a client build. */
-export const STUB_CONFIG = `import { auth } from "plumix/auth";
-import { defineTheme, fallback } from "plumix/theme";
-import { plumix } from "plumix";
-
-export default plumix({
-  runtime: { name: "stub", handler: {}, generateEntry: () => "" },
-  database: { kind: "stub", connect: () => ({ db: {} }) },
-  auth: auth({ passkey: { rpName: "x", rpId: "localhost", origin: "http://localhost:3000" } }),
-  theme: defineTheme({ templates: [fallback(() => null)] }),
-});
-`;
-
 /**
  * Its `node_modules` is a real directory of links, so packages resolve the
  * way they do from an app root.

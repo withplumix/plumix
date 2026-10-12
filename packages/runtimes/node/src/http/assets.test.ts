@@ -71,6 +71,13 @@ describe("the disk layer", () => {
     ).toBeNull();
   });
 
+  test("the admin shell is not cached as immutable", async () => {
+    const shell = await get("/_plumix/admin/");
+
+    expect(shell.status).toBe(200);
+    expect(shell.headers.get("cache-control")).toBeNull();
+  });
+
   test.skipIf(!unprivileged)(
     "a file that fails to open answers 500 with no immutable header",
     async () => {
