@@ -87,7 +87,7 @@ export const GATES: readonly Gate[] = [
 export const GATES_LEFT_TO_CI: readonly Gate[] = [
   {
     name: "publint",
-    command: `pnpm exec turbo run publint ${TURBO_GATE_FLAGS}`,
+    command: `pnpm exec turbo run publint surface:check ${TURBO_GATE_FLAGS}`,
   },
   {
     name: "attw",

@@ -193,27 +193,8 @@
     },
     "test:build": {
       // Tests that need the build graph (`*.build.test.ts`): plumix inspects
-      // the artifacts of a real Vite build and the façade's published types,
-      // and the docs content checks compile samples against the `.d.ts` files.
+      // the artifacts of a real Vite build, and the docs content checks compile samples against the `.d.ts` files.
       "dependsOn": ["build", "^build"],
-      "outputLogs": "new-only"
-    },
-    "@plumix/published-surface#test:build": {
-      // Coverage is read from the workspace, not from this package's own
-      // dependencies: a new package's manifest, or a `plumix` entry that stops
-      // curating, moves the verdict without touching anything `^build`
-      // hashes. Without these inputs turbo would replay a green for exactly
-      // the PR that publishes a package nobody recorded. Same `pkg#task`
-      // caveat as above: the base `dependsOn` is repeated.
-      "dependsOn": ["build", "^build"],
-      "inputs": [
-        "$TURBO_DEFAULT$",
-        "$TURBO_ROOT$/pnpm-workspace.yaml",
-        "$TURBO_ROOT$/packages/**/package.json",
-        "$TURBO_ROOT$/packages/plumix/src/**/*.ts",
-        "$TURBO_ROOT$/packages/plumix/test/facade-entries.ts",
-        "!$TURBO_ROOT$/**/node_modules/**"
-      ],
       "outputLogs": "new-only"
     },
     "@plumix-apps/docs#test:build": {
@@ -333,6 +314,22 @@
         "!**/*.spec.ts",
         "!e2e/**",
         "!screenshots/**"
+      ],
+      "outputLogs": "new-only"
+    },
+    "surface:check": {
+      // Coverage is read from the workspace, not from this package's own
+      // dependencies: a new package's manifest, or a `plumix` entry that stops
+      // curating, moves the verdict without touching anything `^build`
+      // hashes. Without these inputs turbo would replay a green for exactly
+      // the PR that publishes a package nobody recorded.
+      "dependsOn": ["build", "^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/pnpm-workspace.yaml",
+        "$TURBO_ROOT$/packages/**/package.json",
+        "$TURBO_ROOT$/packages/plumix/src/**/*.ts",
+        "!$TURBO_ROOT$/**/node_modules/**"
       ],
       "outputLogs": "new-only"
     },

@@ -116,7 +116,6 @@ export const RETIRED_TIER_PENDING: readonly string[] = [
   "packages/plugins/menu/src/admin/MenusShell.browser.test.tsx",
   "packages/plugins/og/src/admin/CardPreviewPanel.browser.test.tsx",
   "packages/plugins/seo/src/admin/SerpPreviewPanel.browser.test.tsx",
-  "packages/plumix/src/facade-types.build.test.ts",
   "packages/plumix/src/test/fakes.browser.test.ts",
   "packages/plumix/src/test/node-only.browser.test.ts",
   "packages/plumix/src/test/plugin-rpc.browser.test.ts",
@@ -133,5 +132,4 @@ export const RETIRED_TIER_PENDING: readonly string[] = [
   "packages/runtimes/node/src/entry.build.test.ts",
   "packages/runtimes/node/src/http/assets.build.test.ts",
   "packages/runtimes/node/src/images.build.test.ts",
-  "tooling/published-surface/test/roster.build.test.ts",
 ];

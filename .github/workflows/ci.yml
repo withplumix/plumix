@@ -227,6 +227,7 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup
       - run: pnpm publint
+      - run: pnpm surface:check
 
   attw:
     name: Are The Types Wrong

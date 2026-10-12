@@ -4,10 +4,7 @@ import ts from "typescript";
 
 import { SHARED_ADMIN_RUNTIME_SPECIFIERS } from "@plumix/core/admin";
 
-import {
-  CURATED_REEXPORT,
-  subpathsMatching,
-} from "../../packages/plumix/test/facade-entries.js";
+import { CURATED_REEXPORT, subpathsMatching } from "./facade.ts";
 
 export const REPO_ROOT = resolve(import.meta.dirname, "../..");
 
