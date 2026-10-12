@@ -56,12 +56,12 @@ export async function resolveArchiveTypePage(
   }
 }
 
-/** Why a URL has no page behind it: the hint core's route 404s with. */
+/** Why a URL has no page behind it, as the hint its 404 carries. */
 export interface MissingArchiveTypePage {
   readonly missing: string;
 }
 
-/** The one resolution core's own route and {@link resolveArchiveTypePage} share. */
+/** A plugin archive's page, or why it has none. */
 export async function archiveTypePage(
   ctx: AppContext,
   archive: RegisteredArchiveType,

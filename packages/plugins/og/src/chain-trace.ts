@@ -24,7 +24,7 @@ export type OgChainOutcome =
 
 /** Why the page carries no generated card. */
 export type OgCardSkip =
-  /** A search page or a plugin archive: no identity a card URL could name. */
+  /** A search page or a view: no identity a card URL could name. */
   | "page-kind"
   | "no-rule"
   /** The connected renderer makes a format scrapers do not render. */

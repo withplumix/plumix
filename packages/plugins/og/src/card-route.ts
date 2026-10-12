@@ -183,7 +183,17 @@ async function resolveCardPage(
     page.data,
     target.kind === "archiveType" ? target.params : undefined,
   );
-  return identity === null ? null : { ...page, node: identity.node };
+  if (identity === null) return null;
+  // A listing archive's later page is named by its first, so a `page` param
+  // here would hold a second card for the same page.
+  if (
+    target.kind === "archiveType" &&
+    identity.kind === "listing" &&
+    cardTargetPath(identity.target) !== cardTargetPath(target)
+  ) {
+    return null;
+  }
+  return { ...page, node: identity.node };
 }
 
 /**

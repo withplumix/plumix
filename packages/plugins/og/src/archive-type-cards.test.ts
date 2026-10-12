@@ -160,13 +160,10 @@ describe("a plugin archive's card", () => {
     );
     expect(catalogue).not.toBe(location);
     expect(await advertisedCard(harness, "/leeds/maths")).toBe(catalogue);
-    const bodies = await Promise.all(
-      [location, catalogue].map(async (path) =>
-        (await harness.fetch(path ?? "")).assertStatus(200).text(),
-      ),
-    );
-    expect(bodies[0]).toContain("<text>Courses in Leeds</text>");
-    expect(bodies[1]).toContain("<text>maths in Leeds</text>");
+    const locationBody = await (await harness.fetch(location ?? "")).text();
+    const catalogueBody = await (await harness.fetch(catalogue ?? "")).text();
+    expect(locationBody).toContain("<text>Courses in Leeds</text>");
+    expect(catalogueBody).toContain("<text>maths in Leeds</text>");
   });
 
   test.each([
@@ -221,6 +218,21 @@ describe("a plugin archive's card", () => {
     expect(await advertisedCard(harness, "/series/design/page/2")).toBe(path);
     const body = await (await harness.fetch(path ?? "")).text();
     expect(body).toContain("<text>2 in the series</text>");
+  });
+
+  test("has no second URL for a later page of a listing archive", async () => {
+    const harness = await directoryHarness();
+    const first = await seedEntry(harness, { slug: "one" });
+    const second = await seedEntry(harness, { slug: "two" });
+    await seedTerm(harness, { slug: "design", entryIds: [first, second] });
+    const path = await advertisedCard(harness, "/series/design");
+    const digest = path?.match(/([0-9a-f]{16})\.png$/)?.[1] ?? "";
+
+    (
+      await harness.fetch(
+        `/_plumix/og/card/archive-type/series/name/design/page/2/${digest}.png`,
+      )
+    ).assertStatus(404);
   });
 
   test("is withheld from a listing archive that lists nothing", async () => {

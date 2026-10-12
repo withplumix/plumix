@@ -25,8 +25,7 @@ const OUTCOME_LABEL: Record<OgChainOutcome, string> = {
 const SKIP_REASON: Record<OgCardSkip, string> = {
   "page-kind":
     "This page kind cannot be named by a card URL — a search page's subject " +
-    "is whatever was typed, and a plugin archive resolves from route " +
-    "parameters",
+    "is whatever was typed, and a view is an app page, not a listing",
   "no-rule": "No card rule matched",
   "renderer-format":
     "The renderer's format is not scraper-safe, so the route serves the card " +
