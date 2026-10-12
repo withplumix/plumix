@@ -47,6 +47,9 @@ export {
   toRegisteredTermTaxonomy,
 } from "@plumix/core/test";
 
+// Faking mail and rendering it without a send.
+export { fakeMail, renderMail } from "@plumix/core/test";
+
 // Hook spies, matchers and WebAuthn fixtures.
 export {
   buildAssertion,

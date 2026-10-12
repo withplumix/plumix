@@ -1,4 +1,4 @@
-import { plumix } from "plumix";
+import { consoleMailer, plumix } from "plumix";
 import { auth } from "plumix/auth";
 
 import { blog } from "@plumix/plugin-blog";
@@ -33,7 +33,11 @@ export default plumix({
       rpId,
       origin,
     },
+    magicLink: { siteName: "Comments playground" },
   }),
+  // `plumix dev` catches mail only on a site with no mailer; a build of a
+  // magic-link site needs one.
+  mailer: process.env.PLUMIX_DEV ? undefined : consoleMailer(),
   plugins: [blog(), comments({ entryTypes: ["post"], rootsPerPage: 2 })],
   theme,
   i18n: { defaultLocale: "en", locales: ["en", "de"] },

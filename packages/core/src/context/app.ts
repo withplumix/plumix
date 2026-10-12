@@ -9,6 +9,7 @@ import type { PlumixConfig } from "../config.js";
 import type { HookExecutor } from "../hooks/registry.js";
 import type { MailCatalogs } from "../mail/catalogs.js";
 import type { DeclaredMails } from "../mail/declared.js";
+import type { SentMail } from "../mail/sender.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { PlumixEnv } from "../runtime/contract/bindings.js";
 import type { EnvInput } from "../runtime/contract/env-input.js";
@@ -105,6 +106,8 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
    */
   readonly mails?: DeclaredMails;
   readonly mailCatalogs?: MailCatalogs;
+  /** Called with each mail the mailer accepted. */
+  readonly onMailSent?: (sent: SentMail) => void;
   readonly appContextExtensions?: ReadonlyMap<
     string,
     { readonly value: unknown }
@@ -216,7 +219,10 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
         origin,
         args.config.basePath,
       ),
-      onSent: devMailWiring?.onSent,
+      onSent: (sent) => {
+        devMailWiring?.onSent(sent);
+        args.onMailSent?.(sent);
+      },
     }),
     locale,
     authMethods: args.authMethods ?? NO_AUTH_METHODS,

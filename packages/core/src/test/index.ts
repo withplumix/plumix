@@ -67,6 +67,12 @@ export { createRequestMemo } from "../context/memo.js";
 export { createDeferQueue } from "./defer.js";
 export type { DeferQueue } from "./defer.js";
 
+export { fakeMail } from "./mail-fake.js";
+export type { CapturedMail, MailFake } from "./mail-fake.js";
+
+export { renderMail } from "./render-mail.js";
+export type { RenderMailOptions } from "./render-mail.js";
+
 export { createRpcHarness } from "./rpc.js";
 export type {
   RpcHarness,

@@ -1,5 +1,6 @@
 import type { PlumixAuthInput } from "../auth/config.js";
 import type { PlumixConfig, PlumixConfigInput } from "../config.js";
+import type { MailFake } from "./mail-fake.js";
 import { auth } from "../auth/config.js";
 import { plumix } from "../runtime/define-config.js";
 import { defaultTestTheme } from "./default-theme.js";
@@ -42,4 +43,16 @@ export function testConfig(input: TestConfigInput = {}): PlumixConfig {
     theme: slots.theme ?? defaultTestTheme,
     auth: auth({ ...authInput, passkey: authInput?.passkey ?? testPasskey }),
   });
+}
+
+/**
+ * A harness's fake is the transport unless the test names a `mailer`; naming
+ * `undefined` leaves the site with none.
+ */
+export function mailerOrFake(
+  input: TestConfigInput | undefined,
+  fake: MailFake,
+): TestConfigInput {
+  if (input === undefined) return { mailer: fake };
+  return "mailer" in input ? input : { ...input, mailer: fake };
 }

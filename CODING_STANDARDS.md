@@ -338,9 +338,10 @@ only a boundary Plumix doesn't own, and keep it narrow.
    shared conformance suites (`plumix/test/conformance`), which is what keeps the fakes honest. Add
    a new fake there, as high up as every caller can use it.
 3. **Stub.** Only a boundary outside Plumix: a third-party HTTP API, the clock, randomness, a
-   platform global (`vi.stubGlobal`). A slot Plumix defines, like the `Mailer`, has a fake: core's
-   `makeMailer` (`packages/core/src/test/mailer.ts`, tested by `mailer.test.ts`) captures what was
-   sent. Inject the dependency when the code doesn't take one yet: add the seam to the source.
+   platform global (`vi.stubGlobal`). A slot Plumix defines, like the `Mailer`, has a fake:
+   `fakeMail` from `plumix/test`, which the dispatcher and RPC harnesses install as `h.mail`,
+   records what was sent. Inject the dependency when the code doesn't take one yet: add the seam to
+   the source.
 4. **Never mock a module.** `vi.mock` couples a test to where code lives; the
    `plumix/no-module-mocking` lint rule rejects it. Wrap a third-party type behind an interface
    Plumix owns and double that.

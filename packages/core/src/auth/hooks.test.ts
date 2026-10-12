@@ -9,7 +9,6 @@ import {
   generatePasskeyKeyPair,
   randomCredentialId,
 } from "../test/fixtures/webauthn.js";
-import { makeMailer } from "../test/mailer.js";
 import { createRpcHarness } from "../test/rpc.js";
 import { SESSION_COOKIE_NAME } from "./cookies.js";
 import { generateToken, hashToken } from "./tokens.js";
@@ -267,9 +266,8 @@ describe("auth hooks — passkey signed_in / signed_out / credential:created", (
   });
 
   test("user:signed_in fires with method=magic_link, firstSignIn=false on existing-user verify", async () => {
-    const mailer = makeMailer();
     const h = await createDispatcherHarness({
-      config: { mailer: mailer, auth: { magicLink: { siteName: "Test" } } },
+      config: { auth: { magicLink: { siteName: "Test" } } },
     });
     const seeded = await h.factory.user.create({
       email: "alice@example.test",
@@ -302,9 +300,8 @@ describe("auth hooks — passkey signed_in / signed_out / credential:created", (
   test("user:signed_in fires with firstSignIn=true on magic-link signup", async () => {
     // Pre-seed: at least one user exists (so signup isn't bootstrap-
     // gated) + the email's domain is on the allowlist.
-    const mailer = makeMailer();
     const h = await createDispatcherHarness({
-      config: { mailer: mailer, auth: { magicLink: { siteName: "Test" } } },
+      config: { auth: { magicLink: { siteName: "Test" } } },
     });
     await h.factory.user.create({ email: "existing@allowed.test" });
     await h.factory.allowedDomain.create({

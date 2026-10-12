@@ -25,6 +25,7 @@ import type {
 import type { BoundSlots } from "../runtime/handler.js";
 import type { TestConfigInput } from "./config.js";
 import type { Factories } from "./factories.js";
+import type { MailFake } from "./mail-fake.js";
 import type { HarnessFetchOptions } from "./request.js";
 import type { ActionSpy, FilterSpy } from "./spies.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
@@ -35,11 +36,12 @@ import { requestStore } from "../context/stores.js";
 import { buildApp } from "../runtime/app.js";
 import { createPlumixDispatcher } from "../runtime/dispatcher.js";
 import { bindSlots, requestContextArgs } from "../runtime/handler.js";
-import { testConfig } from "./config.js";
+import { mailerOrFake, testConfig } from "./config.js";
 import { silentLogger } from "./context.js";
 import { createDeferQueue } from "./defer.js";
 import { factoriesFor, userFactory } from "./factories.js";
 import { createTestDb } from "./harness.js";
+import { fakeMail } from "./mail-fake.js";
 import { appendCookie, buildRequest, TestResponse } from "./request.js";
 import { spyAction, spyFilter } from "./spies.js";
 
@@ -170,6 +172,11 @@ export interface DispatcherHarness {
    * after a dispatch, before asserting on deferred side effects.
    */
   readonly drainDeferred: () => Promise<void>;
+  /**
+   * Records every mail `ctx.mail.send` sent. With no `mailer` in `config`, it
+   * is the transport too; `mailer: undefined` leaves the site with none.
+   */
+  readonly mail: MailFake;
 }
 
 /**
@@ -182,8 +189,9 @@ function createContextFactory(args: {
   readonly db: Db;
   readonly env: PlumixEnv;
   readonly defer: DeferFn;
+  readonly mail: MailFake;
 }): (request: Request, clientAddress?: string) => AppContext {
-  const { app, options, db, env, defer } = args;
+  const { app, options, db, env, defer, mail } = args;
   // The harness config declares no storage or kv slot, so a test hands in the
   // connected store directly; image delivery and cdn bind through the config.
   const slots: BoundSlots = {
@@ -204,6 +212,7 @@ function createContextFactory(args: {
         slots,
       }),
       logger: options.logger ?? silentLogger,
+      onMailSent: mail.record,
     });
 }
 
@@ -213,8 +222,9 @@ export async function createDispatcherHarness(
   const db = options.db ?? (await createTestDb());
   const env = options.env ?? {};
   const { cdn } = options;
+  const mail = fakeMail();
   const config = testConfig({
-    ...options.config,
+    ...mailerOrFake(options.config, mail),
     // Declared as well as bound: core subscribes its entry-mutation purges only
     // where the config names a cdn, so a stub bound alone would never see one.
     cdn: cdn === undefined ? undefined : { kind: "test", connect: () => cdn },
@@ -226,7 +236,14 @@ export async function createDispatcherHarness(
   const app: PlumixApp = { ...built, ...options.coldInterfaces };
   const dispatcher = createPlumixDispatcher(app);
   const { defer, drainDeferred } = createDeferQueue();
-  const withRequest = createContextFactory({ app, options, db, env, defer });
+  const withRequest = createContextFactory({
+    app,
+    options,
+    db,
+    env,
+    defer,
+    mail,
+  });
 
   const harness: DispatcherHarness = {
     db,
@@ -258,6 +275,7 @@ export async function createDispatcherHarness(
     spyAction: (name) => spyAction(app.hooks, name),
     spyFilter: (name) => spyFilter(app.hooks, name),
     drainDeferred,
+    mail,
   };
   return harness;
 }

@@ -3,12 +3,14 @@ import { readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { test as base } from "@playwright/test";
 
+import type { Mailbox } from "./mailbox.js";
 import {
   captureDbBaseline,
   parseDbBaseline,
   restoreDbBaseline,
   serializeDbBaseline,
 } from "./db-baseline.js";
+import { createMailbox } from "./mailbox.js";
 import { openPlaygroundDb } from "./open-playground-db.js";
 import { resolvePlaygroundDbPath } from "./runtime-e2e.js";
 
@@ -31,14 +33,22 @@ interface PlumixWorkerFixtures {
   readonly plumixDbBaseline: void;
 }
 
+interface PlumixTestFixtures {
+  /** Reads the mail `plumix dev` caught, through the test's `request`. */
+  readonly mailbox: Mailbox;
+}
+
 /**
  * `test` with the database baseline restored once per worker, which for a retry
  * means once per attempt; per-test resets would break `describe.serial` suites.
  */
 export const test = base.extend<
-  object,
+  PlumixTestFixtures,
   PlumixWorkerOptions & PlumixWorkerFixtures
 >({
+  mailbox: async ({ request }, use) => {
+    await use(createMailbox(request));
+  },
   plumixPlayground: [undefined, { scope: "worker", option: true }],
   plumixDbBaseline: [
     async ({ plumixPlayground }, use, workerInfo) => {

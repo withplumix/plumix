@@ -35,6 +35,8 @@ export {
 
 export { createDeferQueue } from "./defer.js";
 
+export { fakeMail } from "./mail-fake.js";
+
 export { DEV_ORIGIN, plumixRequest } from "./plumix-request.js";
 
 export { RpcReplyError, stubRpcEndpoint } from "./rpc-stub.js";

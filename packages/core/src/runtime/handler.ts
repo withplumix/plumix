@@ -395,6 +395,7 @@ export function requestContextArgs({
     bootstrapAllowed: app.bootstrapAllowed,
     mails: app.mails,
     mailCatalogs: app.mailCatalogs,
+    onMailSent: undefined,
     origin: app.origin,
     appContextExtensions: app.appContextExtensions,
   };
