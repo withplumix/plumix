@@ -11,7 +11,12 @@ const subscribe = (): typeof noop => noop;
 
 function read(): LocaleDirection {
   if (typeof document === "undefined") return "ltr";
-  return document.documentElement.dir === "rtl" ? "rtl" : "ltr";
+  return directionOf(document.documentElement.dir);
+}
+
+/** A `dir` attribute's direction; anything but `rtl` reads as `ltr`. */
+export function directionOf(dir: string): LocaleDirection {
+  return dir === "rtl" ? "rtl" : "ltr";
 }
 
 /** For JS-side RTL logic only; CSS should prefer Tailwind's `rtl:` variant. */
