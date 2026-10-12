@@ -100,7 +100,6 @@ export const RETIRED_TIER_PENDING: readonly string[] = [
   "packages/core/src/dev/ui/island-overlay.browser.test.tsx",
   "packages/core/src/dev/ui/overlay-shell.browser.test.tsx",
   "packages/core/src/dev/ui/terminal-forward.browser.test.tsx",
-  "packages/create-plumix-app/src/index.build.test.ts",
   "packages/plugins/audit-log/src/admin/AuditLogShell.browser.test.tsx",
   "packages/plugins/comments/src/admin/CommentsShell.browser.test.tsx",
   "packages/plugins/comments/src/form/comment-island.browser.test.tsx",
@@ -129,5 +128,4 @@ export const RETIRED_TIER_PENDING: readonly string[] = [
   "packages/runtimes/node/src/commands/migrations.build.test.ts",
   "packages/runtimes/node/src/entry.build.test.ts",
   "packages/runtimes/node/src/http/assets.build.test.ts",
-  "packages/runtimes/node/src/images.build.test.ts",
 ];

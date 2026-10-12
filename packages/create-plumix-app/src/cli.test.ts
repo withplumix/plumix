@@ -39,6 +39,17 @@ const noopRunner: CommandRunner = { run: () => Promise.resolve({ ok: true }) };
 const run = (argv: readonly string[], io: CliIO): Promise<number> =>
   runCli(argv, io, { runner: noopRunner, userAgent: "pnpm/8.0.0 npm/? node" });
 
+function recordingRunner(): { runner: CommandRunner; calls: string[] } {
+  const calls: string[] = [];
+  const runner: CommandRunner = {
+    run: (command, args) => {
+      calls.push([command, ...args].join(" "));
+      return Promise.resolve({ ok: true });
+    },
+  };
+  return { runner, calls };
+}
+
 describe("runCli", () => {
   let tmp: string;
 
@@ -283,6 +294,62 @@ describe("runCli", () => {
 
     expect(code).toBe(0);
     expect(existsSync(join(target, "bunfig.toml"))).toBe(true);
+  });
+
+  test("installs and runs post-scaffold steps with pnpm when pnpm invoked it", async () => {
+    const { io, stdout } = captureIO();
+    const { runner, calls } = recordingRunner();
+
+    const code = await runCli([join(tmp, "site"), "-y", "--no-git"], io, {
+      runner,
+      userAgent: "pnpm/10.0.0 npm/? node/v24",
+    });
+
+    expect(code).toBe(0);
+    expect(calls).toEqual(["pnpm install", "pnpm exec plumix migrate"]);
+    expect(stdout.join("\n")).toContain("pnpm dev");
+  });
+
+  test("installs and runs post-scaffold steps with bun when bun invoked it", async () => {
+    const { io, stdout } = captureIO();
+    const { runner, calls } = recordingRunner();
+
+    const code = await runCli([join(tmp, "site"), "-y", "--no-git"], io, {
+      runner,
+      userAgent: "bun/1.4.2 npm/? node/v24.3.0 linux x64",
+    });
+
+    expect(code).toBe(0);
+    expect(calls).toEqual(["bun install", "bun x plumix migrate"]);
+    expect(stdout.join("\n")).toContain("bun dev");
+  });
+
+  test("falls back to npm when no user agent is set", async () => {
+    const { io, stdout } = captureIO();
+    const { runner, calls } = recordingRunner();
+
+    const code = await runCli([join(tmp, "site"), "-y", "--no-git"], io, {
+      runner,
+    });
+
+    expect(code).toBe(0);
+    expect(calls).toEqual(["npm install", "npm exec -- plumix migrate"]);
+    expect(stdout.join("\n")).toContain("npm run dev");
+  });
+
+  test("an explicit --pm wins over the user agent", async () => {
+    const { io, stdout } = captureIO();
+    const { runner, calls } = recordingRunner();
+
+    const code = await runCli(
+      [join(tmp, "site"), "-y", "--no-git", "--pm", "yarn"],
+      io,
+      { runner, userAgent: "pnpm/10.0.0 npm/? node/v24" },
+    );
+
+    expect(code).toBe(0);
+    expect(calls).toEqual(["yarn install", "yarn exec plumix migrate"]);
+    expect(stdout.join("\n")).toContain("yarn dev");
   });
 
   test("exits 1 with a listing error for an unknown --runtime", async () => {
