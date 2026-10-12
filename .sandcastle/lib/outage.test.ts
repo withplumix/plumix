@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import {
   looksLikeTheRunBeingOver,
   retryWhatGitHubDropped,
+  retryWhatGitHubDroppedNow,
   waitOutALimit,
   whenTheLimitLifts,
 } from "./outage.js";
@@ -277,5 +278,43 @@ describe("retryWhatGitHubDropped", () => {
       retryWhatGitHubDropped(push.attempt, async () => {}),
     ).rejects.toThrow("Internal Server Error");
     expect(push.calls()).toBeLessThan(10);
+  });
+});
+
+describe("retryWhatGitHubDroppedNow", () => {
+  const ISSUE_READ_ANSWERED_BY_A_502 =
+    "Command failed: gh api repos/withplumix/plumix/issues/2284/dependencies/blocked_by\ngh: Server Error (HTTP 502)";
+
+  const failingThenAnswering = (failures: readonly string[]) => {
+    let calls = 0;
+    return {
+      attempt: () => {
+        const failure = failures[calls];
+        calls += 1;
+        if (failure !== undefined) throw new Error(failure);
+        return "0";
+      },
+      calls: () => calls,
+    };
+  };
+
+  test("a gh call GitHub answered with a 502 is tried again until it answers", () => {
+    const read = failingThenAnswering([ISSUE_READ_ANSWERED_BY_A_502]);
+    const paused: number[] = [];
+
+    expect(
+      retryWhatGitHubDroppedNow(read.attempt, (ms) => paused.push(ms)),
+    ).toBe("0");
+    expect(read.calls()).toBe(2);
+    expect(paused).toHaveLength(1);
+  });
+
+  test("a gh call refused for what it asked fails at once", () => {
+    const read = failingThenAnswering(["gh: Not Found (HTTP 404)"]);
+
+    expect(() => retryWhatGitHubDroppedNow(read.attempt, () => {})).toThrow(
+      "HTTP 404",
+    );
+    expect(read.calls()).toBe(1);
   });
 });

@@ -93,3 +93,18 @@ export const retryWhatGitHubDropped = async <T>(
   }
   return attempt();
 };
+
+export const retryWhatGitHubDroppedNow = <T>(
+  attempt: () => T,
+  pause: (ms: number) => void,
+): T => {
+  for (const ms of PAUSES_BEFORE_ANOTHER_TRY_MS) {
+    try {
+      return attempt();
+    } catch (error) {
+      if (!GITHUB_DROPPED_IT.test(String(error))) throw error;
+      pause(ms);
+    }
+  }
+  return attempt();
+};
