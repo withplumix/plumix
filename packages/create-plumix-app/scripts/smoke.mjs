@@ -355,8 +355,11 @@ function signalGroup(child, signal) {
   }
 }
 
+const hasExited = (child) =>
+  child.exitCode !== null || child.signalCode !== null;
+
 function stop(child) {
-  if (child.exitCode !== null || child.signalCode !== null) return;
+  if (hasExited(child)) return;
   signalGroup(child, "SIGKILL");
 }
 
@@ -365,13 +368,12 @@ function stop(child) {
 const STOP_WINDOW_MS = 15_000;
 
 /**
- * Asks the server to stop the way a process manager does, and waits for it to
- * exit by itself. Its exit code is the unit tests': a drain exits 0, a cut
- * deadline 1. Whatever is still running when the window closes is killed.
+ * Sends SIGTERM and waits for the server to exit by itself. Whatever the
+ * window closes on is killed. Resolves to whether it exited in time.
  */
-async function stopsOnSigterm(child) {
+async function terminate(child) {
   const exited = new Promise((done) => {
-    if (child.exitCode !== null || child.signalCode !== null) done(true);
+    if (hasExited(child)) done(true);
     else child.once("exit", () => done(true));
   });
   signalGroup(child, "SIGTERM");
@@ -383,7 +385,6 @@ async function stopsOnSigterm(child) {
     }),
   ]);
   clearTimeout(timer);
-  // Anything the server left behind in its group goes too.
   signalGroup(child, "SIGKILL");
   return stopped;
 }
@@ -450,9 +451,7 @@ async function boot(appDir, combo) {
   const port = await freePort();
   const logFile = join(appDir, "server.log");
   const log = createWriteStream(logFile);
-  // `exec`, so the child is the start command itself rather than a shell that
-  // dash keeps around it: the stop step waits for this process to exit, and a
-  // shell would die on SIGTERM whatever the server does.
+  // `exec`: a shell would die on SIGTERM whatever the server does.
   const child = spawn(`exec ${plan.start}`, {
     cwd: appDir,
     env: { ...env, PORT: String(port) },
@@ -472,7 +471,7 @@ async function boot(appDir, combo) {
     printLogTail();
     throw err;
   }
-  if (!(await stopsOnSigterm(child))) {
+  if (!(await terminate(child))) {
     printLogTail();
     throw new Error(
       `${combo.name}: the server did not exit within ${STOP_WINDOW_MS / 1000} s of SIGTERM.`,
