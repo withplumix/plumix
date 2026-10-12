@@ -318,6 +318,25 @@ test("a user signs in through the magic link", async ({ page, mailbox }) => {
 
 A site configured for magic links needs a `mailer` to build. To keep catching its mail under `plumix dev`, leave the mailer out there only: `mailer: process.env.PLUMIX_DEV ? undefined : yourMailer`.
 
+### Passkeys in end-to-end tests
+
+The `passkey` fixture of `test` from `plumix/test/playwright` is the user's device. Ask for it and the page gets a Chromium virtual authenticator, so a passkey sign-in or registration runs with no hardware. `passkey.credentials()` lists the credentials the authenticator holds, so a test can assert that a ceremony stored one. The authenticator is removed when the test ends, and a test that doesn't ask for `passkey` gets none. Virtual authenticators need Chromium: asking for `passkey` in another browser throws.
+
+```ts
+// e2e/bootstrap.spec.ts
+import { expect, test } from "plumix/test/playwright";
+
+test("the first admin signs up with a passkey", async ({ page, passkey }) => {
+  await page.goto("bootstrap");
+  await page.getByTestId("bootstrap-email-input").fill("ann@example.test");
+  await page.getByTestId("bootstrap-name-input").fill("Ann");
+  await page.getByTestId("bootstrap-submit").click();
+
+  await expect(page.getByTestId("dashboard-welcome-heading")).toBeVisible();
+  await expect.poll(() => passkey.credentials()).toHaveLength(1);
+});
+```
+
 ## Related
 
 [Overview](/plugins/overview/) covers installing a plugin and the registration context your plugin's `setup` receives. [Project Structure](/getting-started/project-structure/) lists every `plumix` subpath, `plumix/test` and `plumix/vite` among them. [Content Modelling](/content-modelling/overview/) covers writing the descriptor these tests boot.
