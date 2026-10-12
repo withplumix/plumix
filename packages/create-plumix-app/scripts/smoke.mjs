@@ -1,5 +1,6 @@
 // Scaffolds representative projects and proves they typecheck, build and
-// serve: each built server is started and requested before the next combo.
+// serve: each built server is started, requested and stopped with SIGTERM
+// before the next combo.
 // Each runtime's all-plugins project then runs `plumix dev` and drives the
 // editor in Chromium.
 //
@@ -344,15 +345,47 @@ function freePort() {
   });
 }
 
-// Detached, so the negative pid reaches everything the shell started —
+// Detached, so the negative pid reaches everything the server started —
 // wrangler's workerd above all.
-function stop(child) {
-  if (child.exitCode !== null || child.signalCode !== null) return;
+function signalGroup(child, signal) {
   try {
-    process.kill(-child.pid, "SIGKILL");
+    process.kill(-child.pid, signal);
   } catch {
     // Already gone.
   }
+}
+
+function stop(child) {
+  if (child.exitCode !== null || child.signalCode !== null) return;
+  signalGroup(child, "SIGKILL");
+}
+
+// Core's `DRAIN_DEADLINE_MS` (10 s), plus 5 s for the runtime to exit once
+// the drain is done.
+const STOP_WINDOW_MS = 15_000;
+
+/**
+ * Asks the server to stop the way a process manager does, and waits for it to
+ * exit by itself. Its exit code is the unit tests': a drain exits 0, a cut
+ * deadline 1. Whatever is still running when the window closes is killed.
+ */
+async function stopsOnSigterm(child) {
+  const exited = new Promise((done) => {
+    if (child.exitCode !== null || child.signalCode !== null) done(true);
+    else child.once("exit", () => done(true));
+  });
+  signalGroup(child, "SIGTERM");
+  let timer;
+  const stopped = await Promise.race([
+    exited,
+    new Promise((done) => {
+      timer = setTimeout(() => done(false), STOP_WINDOW_MS);
+    }),
+  ]);
+  clearTimeout(timer);
+  // Anything the server left behind in its group goes too.
+  signalGroup(child, "SIGKILL");
+  return stopped;
 }
 
 /**
@@ -403,7 +436,7 @@ async function assertServes(base, child) {
   }
 }
 
-async function boot(appDir) {
+async function boot(appDir, combo) {
   const runtime = installedRuntime(appDir);
   const plan = planBoot(runtime.name, runtime.e2e);
   // The project's bins first, so `plumix`, `wrangler` and whatever they spawn
@@ -417,7 +450,10 @@ async function boot(appDir) {
   const port = await freePort();
   const logFile = join(appDir, "server.log");
   const log = createWriteStream(logFile);
-  const child = spawn(plan.start, {
+  // `exec`, so the child is the start command itself rather than a shell that
+  // dash keeps around it: the stop step waits for this process to exit, and a
+  // shell would die on SIGTERM whatever the server does.
+  const child = spawn(`exec ${plan.start}`, {
     cwd: appDir,
     env: { ...env, PORT: String(port) },
     shell: true,
@@ -426,14 +462,21 @@ async function boot(appDir) {
   });
   child.stdout.pipe(log);
   child.stderr.pipe(log);
+  // The temp dir goes with the combo, so surface the server's output now.
+  const printLogTail = () =>
+    console.error(readFileSync(logFile, "utf8").slice(-4000));
   try {
     await assertServes(`http://127.0.0.1:${port}`, child);
   } catch (err) {
-    // The temp dir goes with the combo, so surface the server's output now.
-    console.error(readFileSync(logFile, "utf8").slice(-4000));
-    throw err;
-  } finally {
     stop(child);
+    printLogTail();
+    throw err;
+  }
+  if (!(await stopsOnSigterm(child))) {
+    printLogTail();
+    throw new Error(
+      `${combo.name}: the server did not exit within ${STOP_WINDOW_MS / 1000} s of SIGTERM.`,
+    );
   }
 }
 
@@ -525,7 +568,7 @@ async function smoke(combo, tarballs) {
     run(pm, ["run", "typecheck"], app);
     run(pm, ["run", "build"], app);
     if (combo.secondLocale) assertCatalogsStaged(app, combo.excluded);
-    await boot(app);
+    await boot(app, combo);
     if (combo.devEditor) await driveEditorUnderDev(app, combo);
     console.log(`=== ${combo.name}: ok ===`);
   } finally {
@@ -540,7 +583,7 @@ try {
   const combos = planSmokeCombos(await loadRegistry(REPO));
   for (const combo of combos) await smoke(combo, tarballs);
   console.log(
-    `\nSmoke check passed: ${combos.length} generated projects typecheck, build and serve.`,
+    `\nSmoke check passed: ${combos.length} generated projects typecheck, build, serve and stop.`,
   );
 } finally {
   rmSync(packs, { recursive: true, force: true });
