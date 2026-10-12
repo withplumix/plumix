@@ -36,4 +36,13 @@ export default plumix({
   }),
   plugins: [blog(), comments({ entryTypes: ["post"], rootsPerPage: 2 })],
   theme,
+  i18n: { defaultLocale: "en", locales: ["en", "de"] },
+  mail: {
+    overrides: {
+      magicLink: {
+        html: (props) =>
+          `<p>Comments playground</p><p><a href="${props.url}">Sign in</a></p>`,
+      },
+    },
+  },
 });

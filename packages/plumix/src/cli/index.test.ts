@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type {
@@ -7,7 +10,7 @@ import type {
 } from "@plumix/core";
 import { auth, definePlugin, plumix } from "@plumix/core";
 
-import { resolveCommandApp, runCommand } from "./index.js";
+import { resolveCommandApp, run, runCommand } from "./index.js";
 import { report } from "./report.js";
 
 const command = (overrides: Partial<CommandDefinition>): CommandDefinition => ({
@@ -99,7 +102,7 @@ describe("runCommand", () => {
     };
   }
 
-  function run(name: string, events: string[]): Promise<void> {
+  function runNamed(name: string, events: string[]): Promise<void> {
     return runCommand(
       name,
       command({
@@ -122,7 +125,7 @@ describe("runCommand", () => {
     vi.spyOn(report, "info").mockImplementation(() => undefined);
     const events: string[] = [];
 
-    await run("dev", events);
+    await runNamed("dev", events);
 
     expect(events).toEqual([
       "open local",
@@ -135,8 +138,54 @@ describe("runCommand", () => {
   test("another command runs without migrating", async () => {
     const events: string[] = [];
 
-    await run("build", events);
+    await runNamed("build", events);
 
     expect(events).toEqual(["run build"]);
   });
+});
+
+/**
+ * A config that records whether it was evaluated as `plumix dev`, the way
+ * core's `plumix()` reads it to let a dev site go without a mailer.
+ */
+const DEV_PROBE = `
+(globalThis as unknown as Record<string, unknown>).__plumixConfigDev =
+  process.env.PLUMIX_DEV ?? "";
+export default {
+  runtime: { name: "test", handler: {}, generateEntry: () => "" },
+  database: { kind: "d1" },
+  auth: { passkey: {} },
+};
+`;
+
+const probe = globalThis as unknown as { __plumixConfigDev?: string };
+
+describe("run", () => {
+  const original = process.env.PLUMIX_DEV;
+  const dirs: string[] = [];
+  afterEach(() => {
+    for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true });
+    if (original === undefined) delete process.env.PLUMIX_DEV;
+    else process.env.PLUMIX_DEV = original;
+    delete probe.__plumixConfigDev;
+  });
+
+  // The fixture's runtime ships no commands, so each run stops at an unknown
+  // command after the config has loaded.
+  test.each([
+    ["dev", "1"],
+    ["build", ""],
+  ])(
+    "`plumix %s` evaluates the config with PLUMIX_DEV=%j",
+    async (name, dev) => {
+      delete process.env.PLUMIX_DEV;
+      const dir = mkdtempSync(join(tmpdir(), "plumix-run-"));
+      dirs.push(dir);
+      writeFileSync(join(dir, "plumix.config.ts"), DEV_PROBE);
+
+      await expect(run(["--cwd", dir, name])).rejects.toThrow(name);
+
+      expect(probe.__plumixConfigDev).toBe(dev);
+    },
+  );
 });

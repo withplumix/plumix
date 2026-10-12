@@ -69,7 +69,10 @@ export interface DevInput {
    * which render stored snapshots with no bar.
    */
   readonly panels?: DebugPanelsInput;
-  /** Shared by the debug bar, its read routes and the dev MCP tools. */
+  /**
+   * Shared by the debug bar, its read routes and the dev MCP tools. The same
+   * caps bound the mail dev catches.
+   */
   readonly history?: DebugHistoryStoreOptions;
 }
 

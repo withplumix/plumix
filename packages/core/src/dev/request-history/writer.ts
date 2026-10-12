@@ -1,6 +1,7 @@
 import type { TelemetryConsumer } from "../../context/telemetry.js";
 import type { DebugHistoryStore } from "./store.js";
 import { stripBasePath } from "../../base-path.js";
+import { isDebugMailPath } from "../mail/path.js";
 import { isDebugRequestsPath } from "./path.js";
 import { projectDebugSnapshot } from "./snapshot.js";
 
@@ -35,9 +36,14 @@ export function debugHistoryConsumer(
 
 /**
  * The URL still carries any base-path mount; a path outside it is never ours.
+ * The mail routes count, or polling caught mail would evict its sender.
  */
 function isRingReader(pathname: string, basePath: string): boolean {
   const stripped = stripBasePath(pathname, basePath);
   if (stripped === null) return false;
-  return isDebugRequestsPath(stripped) || stripped === MCP_PATH;
+  return (
+    isDebugRequestsPath(stripped) ||
+    isDebugMailPath(stripped) ||
+    stripped === MCP_PATH
+  );
 }
