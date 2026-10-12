@@ -1,5 +1,5 @@
 import type { JsonObject } from "../../json.js";
-import { SAFE_HREF } from "../../blocks/marks/safe-href.js";
+import { sanitizeHref } from "../../blocks/marks/safe-href.js";
 import { escapeHtml } from "../../escape-html.js";
 
 /**
@@ -97,8 +97,10 @@ function applyMarks(
         out = `<s>${out}</s>`;
         break;
       case "link": {
+        // Re-checked here: content also reaches the column via seeds and
+        // scripts, past the editor.
         const href = sanitizeHref(mark.attrs?.href);
-        if (href === null) break;
+        if (href === undefined) break;
         out = `<a href="${escapeAttr(href)}" rel="noopener noreferrer nofollow">${out}</a>`;
         break;
       }
@@ -125,15 +127,4 @@ function clampHeadingLevel(level: unknown): 1 | 2 | 3 | 4 | 5 | 6 {
   if (level < 1) return 1;
   if (level > 6) return 6;
   return Math.trunc(level) as 1 | 2 | 3 | 4 | 5 | 6;
-}
-
-/**
- * Re-checked here: content also reaches the column via seeds and scripts, past
- * the editor.
- */
-function sanitizeHref(href: unknown): string | null {
-  if (typeof href !== "string") return null;
-  const trimmed = href.trim();
-  if (trimmed === "") return null;
-  return SAFE_HREF.test(trimmed) ? trimmed : null;
 }

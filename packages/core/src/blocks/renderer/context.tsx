@@ -25,9 +25,9 @@ import { serializeRenderEnv } from "../render-env.js";
 import { RendererError } from "./errors.js";
 
 /**
- * `blocks/` sits in the foundation layer, below `auth/` and `route/`: core's
- * `AuthenticatedUser` extends `RendererUser`, and the types below mirror
- * `ResolvedEntity` structurally.
+ * `blocks/` sits in the foundation layer, below `auth/` and `route/`, so it
+ * declares the user and OAuth provider shapes core builds on; the queried entry
+ * types below mirror `ResolvedEntity` structurally.
  */
 export interface RendererUser {
   readonly id: number;
@@ -41,7 +41,6 @@ export interface RendererUser {
   readonly meta: JsonObject;
 }
 
-/** Core's `AuthMethodsSummary` lists its OAuth providers as this type. */
 export interface RendererOAuthProvider {
   /** Map key in `auth.oauth.providers`; the URL path segment. */
   readonly key: string;
