@@ -191,6 +191,26 @@ describe("the /_plumix/image layer — same-origin sources", () => {
     expect((await decoded(explicit)).format).toBe("jpeg");
   });
 
+  test("If-None-Match carrying a same-origin variant's etag answers 304", async () => {
+    const origin = await site(
+      images({ cacheDir: mkdtempSync(join(cacheDir, "revalidate-")) }),
+    );
+    const first = await get(origin, "src=/pic.png&w=320", {
+      accept: "image/webp",
+    });
+
+    const etag = first.headers.get("etag") ?? "";
+    expect(etag).toBeTruthy();
+
+    const again = await get(origin, "src=/pic.png&w=320", {
+      accept: "image/webp",
+      "if-none-match": etag,
+    });
+
+    expect(again.status).toBe(304);
+    expect(await again.text()).toBe("");
+  });
+
   test("a gated source answers with the status the handler gave it", async () => {
     const origin = await site(images({ cacheDir }));
     expect((await get(origin, "src=/gated.png&w=320")).status).toBe(401);

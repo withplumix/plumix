@@ -1,11 +1,18 @@
 import { join } from "node:path";
 import type { ServerResponse } from "node:http";
-import type { Connect, Logger, Plugin, ViteDevServer } from "vite";
+import type {
+  Connect,
+  InlineConfig,
+  Logger,
+  Plugin,
+  ViteDevServer,
+} from "vite";
 import type { EvaluatedModules, ModuleRunner } from "vite/module-runner";
 import {
   createRunnableDevEnvironment,
   createServer,
   isRunnableDevEnvironment,
+  mergeConfig,
   normalizePath,
 } from "vite";
 
@@ -116,6 +123,13 @@ export interface DevCommandOptions<Entry extends DevEntry> {
     /** The staged public dir, where admin deep links resolve to the shell. */
     readonly publicDir: string;
   }) => Promise<LoadedSite>;
+  /**
+   * Test seam: merged over the dev server's own Vite config, so a test can
+   * add a resolver and take an ephemeral port.
+   */
+  readonly vite?: InlineConfig;
+  /** Test seam: the built admin the plumix plugin stages. */
+  readonly adminDir?: string;
 }
 
 const SERVER_ENVIRONMENT = "server";
@@ -129,12 +143,12 @@ async function respond(res: ServerResponse, response: Response): Promise<void> {
 
 /**
  * Rebuilds the entry on the first request after an edit. Accepts `--port` and
- * `--host`.
+ * `--host`. Resolves with the listening server.
  */
 export async function runDevCommand<Entry extends DevEntry>(
   ctx: CommandContext,
   options: DevCommandOptions<Entry>,
-): Promise<void> {
+): Promise<ViteDevServer> {
   const { port, host } = parseDevArgs(ctx.argv);
   const reloader = createSiteReloader();
   // `.env` is every self-hosted runtime's env file, and the shell wins over it.
@@ -251,17 +265,27 @@ export async function runDevCommand<Entry extends DevEntry>(
     },
   };
 
-  const server = await createServer({
-    configFile: false,
-    root: ctx.cwd,
-    // No `index.html` fallback: the entry answers every request Vite does not.
-    appType: "custom",
-    plugins: [dev, plumix({ configFile: ctx.configPath })],
-    // `strictPort` when --port is explicit: an e2e harness points playwright
-    // at the requested port and needs a fail-fast, not vite's silent
-    // fallback to the next free one.
-    server: { port, strictPort: port !== undefined, host },
-  });
+  const server = await createServer(
+    mergeConfig(
+      {
+        configFile: false,
+        root: ctx.cwd,
+        // No `index.html` fallback: the entry answers every request Vite does
+        // not.
+        appType: "custom",
+        plugins: [
+          dev,
+          plumix({ configFile: ctx.configPath, adminDir: options.adminDir }),
+        ],
+        // `strictPort` when --port is explicit: an e2e harness points
+        // playwright at the requested port and needs a fail-fast, not vite's
+        // silent fallback to the next free one.
+        server: { port, strictPort: port !== undefined, host },
+      },
+      options.vite ?? {},
+    ),
+  );
   await server.listen();
   server.printUrls();
+  return server;
 }

@@ -1,4 +1,5 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { get } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -30,7 +31,7 @@ import type { CronOverrides, ServeProcessOptions } from "./site.js";
 import { node } from "./adapter.js";
 import { listen } from "./http/test-support.js";
 import { nodeSqlite } from "./node-sqlite.js";
-import { createNodeSite, serveProcess } from "./site.js";
+import { createNodeSite, loadEnvFileWhenMain, serveProcess } from "./site.js";
 import { virtualClock } from "./test/virtual-clock.js";
 
 const auth = authConfig({
@@ -353,6 +354,187 @@ describe("createNodeSite — migrations at startup", () => {
       "plumix: migrations failed; not serving",
       expect.any(Error),
     );
+  });
+});
+
+describe("createNodeSite — shutdown", () => {
+  // A promise the test settles, and a way to settle it.
+  function gate() {
+    let open: () => void = () => undefined;
+    const opened = new Promise<void>((resolve) => (open = resolve));
+    return { opened, open };
+  }
+
+  // `/slow` answers once the test releases it; `/defer` hands the site work
+  // the test finishes; `/defer-stuck` hands it work that never settles.
+  function probes() {
+    const arrived = gate();
+    const release = gate();
+    const deferred = gate();
+    let drained = false;
+    const plugin = definePlugin("probes", (ctx) => {
+      ctx.registerPublicRoute({
+        path: "/slow",
+        handler: async () => {
+          arrived.open();
+          await release.opened;
+          return new Response("slow response");
+        },
+      });
+      ctx.registerPublicRoute({
+        path: "/defer",
+        handler: (_request, app) => {
+          app.defer(deferred.opened.then(() => void (drained = true)));
+          return new Response("deferred");
+        },
+      });
+      ctx.registerPublicRoute({
+        path: "/defer-stuck",
+        handler: (_request, app) => {
+          app.defer(new Promise(() => undefined));
+          return new Response("stuck");
+        },
+      });
+    });
+    return {
+      plugin,
+      arrived: arrived.opened,
+      release: release.open,
+      finish: deferred.open,
+      drained: () => drained,
+    };
+  }
+
+  // No keep-alive: an idle socket left open after the response would hold the
+  // drain until its own timeout, which is not what this case is about.
+  function getOnce(url: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      get(url, { agent: false }, (res) => {
+        let body = "";
+        res.on("data", (chunk: Buffer) => (body += chunk.toString()));
+        res.on("end", () => resolve(body));
+      }).on("error", reject);
+    });
+  }
+
+  async function serving(site: Awaited<ReturnType<typeof siteFor>>["site"]) {
+    const exit = vi.fn();
+    const running = serveProcess({
+      listener: site.listener,
+      startCron: site.startCron,
+      dispose: site.dispose,
+      cron: false,
+      exit,
+      drainDeadlineMs: 600,
+    });
+    servers.push(running.server);
+    if (!running.server.listening) {
+      await new Promise((up) => running.server.once("listening", up));
+    }
+    const { port } = running.server.address() as AddressInfo;
+    return { exit, origin: `http://127.0.0.1:${String(port)}`, ...running };
+  }
+
+  beforeEach(() => {
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test("SIGTERM lets an in-flight response finish, then exits 0", async () => {
+    const probe = probes();
+    const { site } = await siteFor({ plugins: [probe.plugin] });
+    const { exit, drain, origin } = await serving(site);
+    const pending = getOnce(`${origin}/slow`);
+    await probe.arrived;
+
+    const draining = drain("SIGTERM");
+    probe.release();
+
+    expect(await pending).toBe("slow response");
+    await draining;
+    expect(exit).toHaveBeenCalledWith(0);
+  });
+
+  test("SIGTERM waits for pending deferred work, then exits 0", async () => {
+    const probe = probes();
+    const { site } = await siteFor({ plugins: [probe.plugin] });
+    const response = await site.handler.fetch(
+      new Request("https://cms.example/defer"),
+    );
+    expect(await response.text()).toBe("deferred");
+    const { exit, drain } = await serving({
+      ...site,
+      // The work finishes only once the drain is already waiting on it, on a
+      // later turn of the event loop than a drain that skipped it would exit.
+      dispose: (options) => {
+        const disposed = site.dispose(options);
+        setTimeout(probe.finish, 25);
+        return disposed;
+      },
+    });
+
+    await drain("SIGTERM");
+
+    expect(probe.drained()).toBe(true);
+    expect(exit).toHaveBeenCalledWith(0);
+  });
+
+  test("a stuck deferred task is cut at the deadline, and the process exits 1 naming it", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const probe = probes();
+    const { site } = await siteFor({ plugins: [probe.plugin] });
+    await site.handler.fetch(new Request("https://cms.example/defer-stuck"));
+    const { exit, drain } = await serving(site);
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+
+    const draining = drain("SIGTERM");
+    await vi.advanceTimersByTimeAsync(599);
+    expect(exit).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(exit).toHaveBeenCalledWith(1);
+    expect(error).toHaveBeenCalledWith(
+      "plumix: exiting with 1 deferred task(s) abandoned",
+    );
+    await draining;
+  });
+});
+
+describe("loadEnvFileWhenMain", () => {
+  let cwd: string;
+  beforeEach(() => {
+    cwd = process.cwd();
+    process.chdir(dir);
+  });
+  afterEach(() => {
+    process.chdir(cwd);
+  });
+
+  test("loads .env from the working directory, and a variable the environment already set wins", () => {
+    writeFileSync(join(dir, ".env"), "PROBE_A=fromfile\nPROBE_B=fromfile\n");
+    vi.stubEnv("PROBE_A", "platform");
+    vi.stubEnv("PROBE_B", undefined);
+
+    loadEnvFileWhenMain(true);
+
+    expect(process.env).toMatchObject({
+      PROBE_A: "platform",
+      PROBE_B: "fromfile",
+    });
+  });
+
+  test("with no .env file it loads nothing and does not throw", () => {
+    vi.stubEnv("PROBE_A", undefined);
+
+    loadEnvFileWhenMain(true);
+
+    expect(process.env).not.toHaveProperty("PROBE_A");
   });
 });
 
