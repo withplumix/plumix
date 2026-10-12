@@ -90,8 +90,11 @@ Every package outside the framework imports Plumix only through `plumix` and its
 boundary lets the internal packages refactor freely while the published surface stays stable. The
 `noInternalImports` ESLint config in `@plumix/eslint-config` catches it in the packages that opt in.
 
-`tooling/published-surface` records a reason for every export a consumer can import. A PR that adds
-an export adds its row there.
+`tooling/published-surface` records a reason for every export a consumer can import, except on the
+`plumix` subpaths another guard owns (`OWNED_ELSEWHERE` in `tooling/published-surface/surface.ts`):
+a curated re-export such as `plumix/db` or `plumix/plugin` is guarded by
+`packages/plumix/src/facade-curated.test.ts`. A PR that adds an export records it with the guard that
+owns its subpath.
 
 ### Runtimes
 
