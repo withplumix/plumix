@@ -274,7 +274,6 @@ test.describe("plugin field type registered via window.plumix", () => {
               key: "preview",
               label: "Preview",
               type: "string",
-              // Registered by the e2e fixture plugin's adminEntry.
               inputType: "runtime-proof-sibling",
             },
           ],

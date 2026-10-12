@@ -8,9 +8,6 @@ import { formatTemporalValue } from "@plumix/core/manifest";
 
 import type { LookupItem } from "./lookup/types.js";
 
-// How a meta-box field's stored value maps to and from what its control shows
-// and emits.
-
 /**
  * Meta values arrive as `unknown` because the registry isn't per-type-generic.
  */

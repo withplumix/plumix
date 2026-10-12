@@ -3,9 +3,6 @@ import type { EntryFieldScope } from "@plumix/core/fields";
 
 import type { LookupItem } from "./lookup/types.js";
 
-// A picked entry stores its permalink as a plain URL, so renaming the entry
-// doesn't retarget the link.
-
 /**
  * Display-state view of the value. Absent optionals render as empty
  * string / off so the inputs stay controlled.

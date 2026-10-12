@@ -3,6 +3,7 @@ import { ORPCError } from "@orpc/client";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import {
+  LAST_PASSKEY_MESSAGE,
   mintApiTokenErrorDescriptor,
   passkeyDeleteErrorDescriptor,
   passkeyEnrollErrorDescriptor,
@@ -100,5 +101,66 @@ describe("profile error descriptors", () => {
       id: "apiTokens.revoke.fallback",
       message: "Couldn't revoke. Try again.",
     });
+  });
+});
+
+describe("profile error descriptors that name the failure", () => {
+  const withReason = (reason: string): ORPCError<string, unknown> =>
+    new ORPCError("CONFLICT", { data: { reason } });
+
+  test.each([
+    ["email_taken", "userEdit.email.error.taken"],
+    ["mailer_not_configured", "userEdit.email.error.mailerNotConfigured"],
+    ["account_disabled", "userEdit.email.error.accountDisabled"],
+  ])("an email change rejected as %s gets its own copy", (reason, id) => {
+    expect(requestEmailChangeErrorDescriptor(withReason(reason)).id).toBe(id);
+  });
+
+  test("renaming a passkey that is gone says so", () => {
+    expect(passkeyRenameErrorDescriptor(new ORPCError("NOT_FOUND")).id).toBe(
+      "profile.passkeys.notFound",
+    );
+  });
+
+  test("deleting a passkey that is gone says so", () => {
+    expect(passkeyDeleteErrorDescriptor(new ORPCError("NOT_FOUND")).id).toBe(
+      "profile.passkeys.notFound",
+    );
+  });
+
+  test("deleting the last passkey gives the keep-one copy", () => {
+    expect(passkeyDeleteErrorDescriptor(withReason("last_credential"))).toBe(
+      LAST_PASSKEY_MESSAGE,
+    );
+  });
+
+  test.each([
+    ["user_cancelled", "profile.passkeys.enroll.cancelled"],
+    [
+      "credential_already_registered",
+      "profile.passkeys.enroll.alreadyRegistered",
+    ],
+    ["no_authenticator", "profile.passkeys.enroll.noAuthenticator"],
+    ["network_error", "profile.passkeys.enroll.networkError"],
+    ["email_mismatch", "profile.passkeys.enroll.emailMismatch"],
+  ] as const)(
+    "enrolling a passkey that fails as %s gets its own copy",
+    (code, id) => {
+      expect(
+        passkeyEnrollErrorDescriptor(PasskeyError.ofCode({ code })).id,
+      ).toBe(id);
+    },
+  );
+
+  test("revoking the session in use says it can't be revoked", () => {
+    expect(revokeSessionErrorDescriptor(withReason("current_session")).id).toBe(
+      "profile.sessions.revoke.current",
+    );
+  });
+
+  test("revoking a session that is gone says so", () => {
+    expect(revokeSessionErrorDescriptor(new ORPCError("NOT_FOUND")).id).toBe(
+      "profile.sessions.revoke.notFound",
+    );
   });
 });

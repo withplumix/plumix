@@ -1,6 +1,3 @@
-// Fixture field type for plugins.spec.ts: renders a sibling field's live value,
-// the way a plugin field reacting to its box (a slug from a title) would.
-
 import type { ReactNode } from "react";
 
 export function SiblingField({

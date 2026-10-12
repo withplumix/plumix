@@ -785,8 +785,6 @@ function renderTextLikeField(ctx: NativeInputContext): ReactNode {
     );
   }
 
-  // Shared shape for `text` / `email` / `url` / `password` / unknown
-  // fallback.
   const Control = ctx.adorned ? InputGroupInput : Input;
   return (
     <Control

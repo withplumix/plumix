@@ -8,8 +8,6 @@ import {
   rpcErrorReason,
 } from "@plumix/core/admin";
 
-// What each profile card shows when one of its mutations fails.
-
 const M = {
   emailTaken: defineMessage({
     id: "userEdit.email.error.taken",
@@ -28,8 +26,6 @@ const M = {
     id: "userEdit.email.error.requestFallback",
     message: "Couldn't request the change. Try again.",
   }),
-  // Shared "this passkey is gone" — surfaced by both the rename and
-  // delete error helpers when the server returns NOT_FOUND.
   passkeyNotFound: defineMessage({
     id: "profile.passkeys.notFound",
     message: "This passkey no longer exists. Refresh the list.",
@@ -92,11 +88,6 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-/**
- * Shared "must keep one" copy — used as both the delete-disabled tooltip on
- * the row button and the explicit `last_credential` reason returned by the
- * server.
- */
 export const LAST_PASSKEY_MESSAGE = defineMessage({
   id: "profile.passkeys.lastCredential",
   message: "You can't delete your last passkey. Add another one first.",

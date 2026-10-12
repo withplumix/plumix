@@ -1,6 +1,3 @@
-// What an author does to each kind of meta-box field on the plain form, and
-// the meta patch the next save sends. The value rules are unit tests.
-
 import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
