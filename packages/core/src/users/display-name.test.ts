@@ -9,15 +9,11 @@ describe("userDisplayName", () => {
     ).toBe("Alex Rivera");
   });
 
-  test("falls back to the email when the name is null, absent or blank", () => {
-    expect(userDisplayName({ name: null, email: "alex@cms.example" })).toBe(
-      "alex@cms.example",
-    );
-    expect(userDisplayName({ email: "alex@cms.example" })).toBe(
-      "alex@cms.example",
-    );
-    expect(userDisplayName({ name: "   ", email: "alex@cms.example" })).toBe(
-      "alex@cms.example",
-    );
+  test.each([
+    ["null", { name: null, email: "alex@cms.example" }],
+    ["absent", { email: "alex@cms.example" }],
+    ["blank", { name: "   ", email: "alex@cms.example" }],
+  ])("falls back to the email when the name is %s", (_case, user) => {
+    expect(userDisplayName(user)).toBe("alex@cms.example");
   });
 });
