@@ -191,7 +191,9 @@ An entry type registered with `access` lets an editor pick a policy per entry, a
 A soft challenge admits a visitor to the listing but not the body. Such an entry is listed with its title, excerpt, URL and images, carries `contentGated: true`, and has `content` and `contentBlocks` set to `null`, so a theme renders a teaser. Every other entry carries `contentGated: false`. The same holds for any list resolved through `resolveEntryList` from `plumix/plugin`, a plugin's own included, and for the REST API; only the entry's own page receives the body, and its template serves the teaser:
 
 ```tsx
-fallback(({ data }) =>
+import { fallback } from "plumix/theme";
+
+export const listing = fallback(({ data }) =>
   "entries" in data ? (
     <ul>
       {data.entries.map((entry) => (
