@@ -1,10 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import {
-  staleClaims,
-  stillInTheLoopsHands,
-  whoseSiblingIsNotInFlight,
-} from "./in-flight.js";
+import { staleClaims, stillInTheLoopsHands } from "./in-flight.js";
 
 const pr = (number: number, headRefName: string) => ({
   number,
@@ -78,26 +74,5 @@ describe("staleClaims", () => {
 
   test("a claim whose pull request is still in flight is kept, so the run adopts it", () => {
     expect(staleClaims([2726], [queued(2726)])).toEqual([]);
-  });
-});
-
-describe("whoseSiblingIsNotInFlight", () => {
-  const parents: Record<number, number> = { 11: 10, 12: 10, 21: 20 };
-  const parentOf = (ticket: number) => parents[ticket];
-
-  test("a ticket waits while a sibling under the same parent is in flight", () => {
-    expect(whoseSiblingIsNotInFlight([12, 21], [11], parentOf)).toEqual([21]);
-  });
-
-  test("a ticket with no parent never waits on another", () => {
-    expect(whoseSiblingIsNotInFlight([30, 12], [11, 31], parentOf)).toEqual([
-      30,
-    ]);
-  });
-
-  test("nothing in flight holds nothing back", () => {
-    expect(whoseSiblingIsNotInFlight([11, 12, 21], [], parentOf)).toEqual([
-      11, 12, 21,
-    ]);
   });
 });

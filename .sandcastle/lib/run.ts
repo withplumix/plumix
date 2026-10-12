@@ -40,6 +40,7 @@ export type RepairOutcome =
   | { readonly status: "not-this-branch"; readonly reason: string };
 
 export const REPAIRS_A_PULL_REQUEST_GETS = 2;
+export const REBASES_A_PULL_REQUEST_GETS = 5;
 
 const failedOnItsOwnChecks = (refusal: MergeOutcome): boolean =>
   refusal.status === "failed" &&
@@ -103,16 +104,22 @@ export const runShipLoop = async (
       ports.requeue(pullRequest);
       outcome = await ports.confirm(pullRequest);
     }
-    for (
-      let repairs = 0;
-      outcome.status !== "merged" &&
-      !outcome.needsAPerson &&
-      repairs < REPAIRS_A_PULL_REQUEST_GETS;
-      repairs += 1
-    ) {
-      ports.say(
-        `  #${pullRequest.number} refused (${outcome.reason}), repairing (${repairs + 1}/${REPAIRS_A_PULL_REQUEST_GETS})`,
-      );
+    let repairs = 0;
+    let rebases = 0;
+    while (outcome.status !== "merged" && !outcome.needsAPerson) {
+      if (outcome.conflicted) {
+        if (rebases === REBASES_A_PULL_REQUEST_GETS) break;
+        rebases += 1;
+        ports.say(
+          `  #${pullRequest.number} refused (${outcome.reason}), rebasing (${rebases}/${REBASES_A_PULL_REQUEST_GETS})`,
+        );
+      } else {
+        if (repairs === REPAIRS_A_PULL_REQUEST_GETS) break;
+        repairs += 1;
+        ports.say(
+          `  #${pullRequest.number} refused (${outcome.reason}), repairing (${repairs}/${REPAIRS_A_PULL_REQUEST_GETS})`,
+        );
+      }
       const repaired = await sandboxes.runFirst(() =>
         ports.repair(ticket, pullRequest, outcome),
       );
