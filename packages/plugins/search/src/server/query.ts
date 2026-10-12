@@ -6,6 +6,7 @@ import {
   resolveEntryList,
 } from "plumix/plugin";
 import { entries, terms } from "plumix/schema";
+import { escapeHtml } from "plumix/support";
 
 import type { SearchSourceType } from "../db/schema.js";
 import type { RankingAlgorithm, RankingWeights } from "../ranking.js";
@@ -30,8 +31,9 @@ export interface SearchResult {
   readonly title: string;
   readonly url: string;
   /**
-   * Escaped HTML with `<mark>` highlights, safe as element content but not in
-   * an attribute. Without an index it is the whole excerpt, unmarked.
+   * Escaped HTML with `<mark>` highlights, safe in element content, not an
+   * attribute. Without an index, or for a teaser, it is the whole excerpt,
+   * unmarked.
    */
   readonly snippet: string;
   /**
@@ -79,8 +81,9 @@ function isAskablePage(page: number): boolean {
 }
 
 /**
- * Clamped to what an anonymous reader may see by joining `entries`, since
- * copying status into the projection would re-tokenize on every publish.
+ * Clamped to what the searcher may list by joining `entries`, since copying
+ * status or an access choice into the projection would re-tokenize on every
+ * change.
  */
 export async function runSearch(
   ctx: AppContext,
@@ -265,20 +268,28 @@ async function recentRows(
   }));
 }
 
+interface ResolvedEntryFacts {
+  readonly title: string;
+  readonly excerpt: string | null;
+  readonly contentGated: boolean;
+}
+
 /**
  * The index holds raw titles so an expanded `[year]` does not freeze into it.
+ * `contentGated` is the searcher's own, so a teaser's snippet keeps off its
+ * body.
  */
-async function resolvedEntryTitles(
+async function resolvedEntryFacts(
   ctx: AppContext,
   ids: readonly number[],
-): Promise<ReadonlyMap<number, string>> {
+): Promise<ReadonlyMap<number, ResolvedEntryFacts>> {
   if (ids.length === 0) return new Map();
   const rows = await ctx.db
     .select()
     .from(entries)
     .where(inArray(entries.id, [...ids]));
   const resolved = await resolveEntryList(ctx, rows);
-  return new Map(resolved.map((entry) => [entry.id, entry.title]));
+  return new Map(resolved.map((entry) => [entry.id, entry]));
 }
 
 async function toResults(
@@ -316,10 +327,10 @@ async function toResults(
       });
     }
   });
-  const [entryUrls, termUrls, entryTitles] = await Promise.all([
+  const [entryUrls, termUrls, entryFacts] = await Promise.all([
     buildEntryPermalinks(ctx, entryRows),
     buildTermArchiveUrls(ctx, termRows),
-    resolvedEntryTitles(
+    resolvedEntryFacts(
       ctx,
       entryRows.map(({ id }) => id),
     ),
@@ -334,14 +345,16 @@ async function toResults(
   return rows.map((row, i) => {
     const url = urls[i];
     if (url === null || url === undefined) return null;
+    const facts = row.kind === "entry" ? entryFacts.get(row.id) : undefined;
     return {
       kind: row.kind,
       id: row.id,
-      title:
-        (row.kind === "entry" ? entryTitles.get(row.id) : undefined) ??
-        row.title,
+      title: facts?.title ?? row.title,
       url,
-      snippet: highlightSnippet(row.snippet),
+      // The index's snippet may quote the body, which a teaser withholds.
+      snippet: facts?.contentGated
+        ? escapeHtml(facts.excerpt ?? "")
+        : highlightSnippet(row.snippet),
       score: row.score,
     };
   });

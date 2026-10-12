@@ -1,4 +1,5 @@
 import type { AppContext, MutablePluginRegistry } from "plumix/plugin";
+import { ACCESS_POLICY_META_KEY } from "plumix/auth";
 import { defineEntryContent } from "plumix/blocks";
 import { sql } from "plumix/db";
 import { definePlugin } from "plumix/plugin";
@@ -324,9 +325,8 @@ describe("runSearch", () => {
     }
   });
 
-  test("an entry type under an access policy is never searchable", async () => {
-    // A snippet is body text around a word the visitor chose, so indexing a
-    // gated type would hand an anonymous reader its prose a query at a time.
+  test("an entry whose policy lists it to nobody is not a result", async () => {
+    // Indexed all the same: the policy is applied when the search runs.
     plugins.entryTypes.set(
       "members",
       toRegisteredEntryType(
@@ -354,6 +354,60 @@ describe("runSearch", () => {
     await indexEntries(ctx, [entry.id]);
 
     expect((await search("hydroponics")).results).toEqual([]);
+  });
+
+  test("filtering by access never leaves a page short", async () => {
+    // Visitors may list the default and are refused `members`, so a page
+    // filtered after ranking would come back with gaps.
+    plugins.entryTypes.set(
+      "post",
+      toRegisteredEntryType(
+        "post",
+        {
+          label: "Posts",
+          access: {
+            default: {
+              segments: [],
+              resolve: () => ({ type: "grant" as const, segment: "public" }),
+            },
+            policies: [
+              {
+                key: "members",
+                label: "Members",
+                policy: {
+                  segments: [],
+                  resolve: () => ({
+                    type: "challenge" as const,
+                    kind: "subscribe",
+                  }),
+                },
+              },
+            ],
+          },
+        },
+        "test",
+      ),
+    );
+    const listed: number[] = [];
+    for (let i = 0; i < 6; i += 1) {
+      const members = i % 2 === 1;
+      const entry = await publish({
+        title: `Hydroponics ${String(i)}`,
+        slug: `s${String(i)}`,
+        ...(members ? { meta: { [ACCESS_POLICY_META_KEY]: "members" } } : {}),
+      });
+      if (!members) listed.push(entry.id);
+    }
+
+    const first = await search("hydroponics", 1);
+    const second = await search("hydroponics", 2);
+
+    expect(first).toMatchObject({ hasMore: true });
+    expect(first.results).toHaveLength(2);
+    expect(second).toMatchObject({ hasMore: false });
+    expect(
+      [...first.results, ...second.results].map((result) => result.id).sort(),
+    ).toEqual(listed.sort());
   });
 
   test("a page of nested results costs the same queries however many it holds", async () => {

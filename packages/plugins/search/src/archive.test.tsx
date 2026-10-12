@@ -1,9 +1,17 @@
+import type { CdnStore, ConnectedCdn } from "plumix";
 import type { User } from "plumix/schema";
 import type { DispatcherHarness } from "plumix/test";
+import {
+  ACCESS_POLICY_META_KEY,
+  anonymousPolicy,
+  challenge,
+  definePolicy,
+  grant,
+} from "plumix/auth";
 import { defineEntryContent } from "plumix/blocks";
-import { pageFacts } from "plumix/plugin";
+import { definePlugin, pageFacts } from "plumix/plugin";
 import { defineTheme, fallback, forArchiveType } from "plumix/theme";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { SearchHarness } from "./test/db.js";
 import { search } from "./index.js";
@@ -240,6 +248,122 @@ describe("the search page", () => {
     const body = await (await h.fetch("/search/hydroponics")).text();
 
     expect(body).toContain('data-testid="count">0<');
+  });
+});
+
+/**
+ * Hard, not soft: a soft challenge still lists. `authenticatedPolicy` would
+ * redirect to a sign-in page this harness does not route.
+ */
+const membersOnly = definePolicy({
+  segments: ["members"],
+  resolve: (c) => (c.user ? grant("members") : challenge("subscribe")),
+});
+
+const policiedPages = definePlugin("policied-pages", (ctx) => {
+  ctx.registerEntryType("page", {
+    label: "Pages",
+    isPublic: true,
+    access: {
+      default: anonymousPolicy,
+      policies: [
+        { key: "members", label: "Members", policy: membersOnly },
+        {
+          key: "teaser",
+          label: "Teaser",
+          policy: definePolicy({
+            segments: ["members"],
+            resolve: (c) =>
+              c.user ? grant("members") : challenge("paywall", { soft: true }),
+          }),
+        },
+      ],
+    },
+  });
+});
+
+describe("entries under an access policy", () => {
+  const put = vi.fn<CdnStore["put"]>(() => Promise.resolve());
+
+  beforeEach(async () => {
+    put.mockClear();
+    const cdn: ConnectedCdn = {
+      decorate: (response) => response,
+      store: { match: () => Promise.resolve(undefined), put },
+    };
+    ({
+      h,
+      admin,
+      runSchedule: index,
+    } = await createSearchHarness({
+      cdn,
+      config: { plugins: [contentPlugin, policiedPages, search()], theme },
+    }));
+  });
+
+  async function publishPage(
+    slug: string,
+    access: string | undefined,
+    overrides: Record<string, unknown> = {},
+  ): Promise<void> {
+    await publish({
+      type: "page",
+      slug,
+      title: `Hydroponics ${slug}`,
+      ...(access === undefined
+        ? {}
+        : { meta: { [ACCESS_POLICY_META_KEY]: access } }),
+      ...overrides,
+    });
+  }
+
+  test("a visitor finds only the public page, a member finds both", async () => {
+    await publishPage("open", undefined);
+    await publishPage("inside", "members");
+    await index();
+    const member = await h.seedUser("subscriber");
+
+    const anonymous = await (await h.fetch("/search/hydroponics")).text();
+    expect(anonymous).toContain('data-testid="count">1<');
+    expect(anonymous).toContain("/page/open");
+    expect(anonymous).not.toContain("/page/inside");
+
+    const signedIn = await (
+      await h.fetch("/search/hydroponics", { as: member })
+    ).text();
+    expect(signedIn).toContain('data-testid="count">2<');
+    expect(signedIn).toContain("/page/inside");
+  });
+
+  test("a member's results page is never stored for the next visitor", async () => {
+    await publishPage("inside", "members");
+    await index();
+    const member = await h.seedUser("subscriber");
+
+    const response = await h.fetch("/search/hydroponics", { as: member });
+    await h.drainDeferred();
+
+    expect(await response.text()).toContain("/page/inside");
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(put).not.toHaveBeenCalled();
+  });
+
+  test("a teaser's snippet comes from its excerpt, never its body", async () => {
+    await publishPage("teaser", "teaser", {
+      excerpt: "What a greenhouse grows in winter",
+      content: defineEntryContent([
+        paragraph("<p>The members method: rockwool soaked overnight</p>"),
+      ]),
+    });
+    await index();
+
+    const body = await (await h.fetch("/search/rockwool")).text();
+
+    // Found by its body, which the index holds for ranking, and shown by its
+    // excerpt, which the teaser lists.
+    expect(body).toContain("/page/teaser");
+    expect(body).toContain("What a greenhouse grows in winter");
+    expect(body).not.toContain("soaked");
   });
 });
 

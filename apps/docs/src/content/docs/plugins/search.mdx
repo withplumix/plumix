@@ -123,6 +123,23 @@ The page states two facts about itself that core surfaces on `PageFacts`: `page`
 
 The page is not edge-cached, for the reason core leaves its own out: the query space is unbounded, so every distinct string a crawler tried would mint a cache entry.
 
+### Gated entries
+
+An entry type with an [`access` policy](/access/overview/) is indexed like any other type. Its policy is applied when a search runs, per entry and for the visitor searching, inside the same query that ranks the results. A page is never cut short by filtering, and `nextUrl` is there only when another page of results is:
+
+- A visitor with no session finds what an anonymous visitor may list. An entry whose policy redirects or hard-challenges that visitor is not a result.
+- A signed-in member finds the entries their policies let them list. That page is rendered for them alone and leaves as `private, no-store`.
+- An entry whose policy lists it but holds its content back, a soft `challenge`, is a teaser. A word anywhere in it finds it, its body included, but its snippet is its whole excerpt, unhighlighted, never the text around the match. A search can tell a visitor that a word is somewhere in a teaser's body, and not what surrounds it.
+
+Changing an entry's access choice takes effect on the next search, with no reindex.
+
+<Aside type="caution" title="Rebuild once after upgrading to 0.2">
+  Before 0.2, an entry type under an access policy was never indexed. Entries
+  saved since the upgrade reach the index on their own, but the rest stay
+  unfindable until a [rebuild](#rebuilding-the-index) walks them. Start one
+  rebuild after upgrading.
+</Aside>
+
 ### What a query means
 
 A query is whatever a visitor typed, treated as words to look for. Adding a word narrows the results, a quoted phrase matches exactly, `-word` rules a word out, and FTS5's own operators are inert. Any string compiles to a valid search, so an unbalanced quote returns nothing rather than an error page.
@@ -211,9 +228,7 @@ Marking an existing field searchable needs nothing else. The extractor version h
 
 ### What is never indexed
 
-Three exclusions are not settings, because a setting is something a site can get wrong.
-
-**An entry type under an access policy** is kept out of the projection entirely. A snippet is body text around a word the visitor chose, so indexing a members-only type would hand an anonymous reader its prose a query at a time. Keeping it out of the table is what makes that impossible rather than dependent on a predicate; the cost is that a gated type is ranked nowhere.
+Two exclusions are not settings, because a setting is something a site can get wrong.
 
 **A capability-gated meta field**, whatever it declared, and a `password` field with it. A value only some editors may read cannot be in a document a visitor searches. Both are silent: the declaration is honored where it can be and dropped where honoring it would leak.
 
@@ -225,7 +240,7 @@ Term meta is not indexed either — a taxonomy has no such declaration.
 
 The palette's Content results are ranked out of the same index, so the entry an editor wants is near the top rather than merely the one edited most recently, and a word from the middle of a body finds it.
 
-Nothing is configured. Core's handler stays registered underneath, and handlers sharing a group fill it between them: the ranked matches lead and core's title-and-excerpt matches fill whatever is left. That is the whole of the degrading story — no switch and no health check. Whatever the index cannot answer, core still does: a type under an access policy, an entry not yet projected, every type before the index exists, and a half-typed word, since the index matches whole terms and an editor mid-word has not typed one. The cost is that both queries run on every keystroke.
+Nothing is configured. Core's handler stays registered underneath, and handlers sharing a group fill it between them: the ranked matches lead and core's title-and-excerpt matches fill whatever is left. That is the whole of the degrading story — no switch and no health check. Whatever the index cannot answer, core still does: an entry not yet projected, every type before the index exists, and a half-typed word, since the index matches whole terms and an editor mid-word has not typed one. The cost is that both queries run on every keystroke.
 
 Who may see what stays core's decision. Both handlers build on the same clause, so an author sees their own drafts and nobody else's, and a trashed entry appears in neither. The ranked half asks for one thing more — the caller must be able to **edit** the type, not merely read it. A ranked result is a body-text match, so answering one says a word appears somewhere inside an entry, and `entry:<type>:read` bottoms out at the subscriber tier: on a site with open signup, every reader holds it for every registered type. Core's title match still answers those types.
 
@@ -317,7 +332,7 @@ Search roughly doubles the size of the database. On Cloudflare D1, whose per-dat
 
 [Overview](/plugins/overview/) covers installing a plugin and the version track this one is on, and [Deployment](/deployment/overview/) the migrations this plugin cannot skip.
 
-What gets indexed is decided where content is declared: [Entry Types](/content-modelling/entry-types/) carries `excludeFromSearch` and `isPublic`, [Taxonomies](/content-modelling/taxonomies/) the same two for terms, and [Meta Boxes](/fields/meta-boxes/) the fields `.searchable()` is chained onto. [Blocks](/blocks/overview/) covers the text declaration a block makes, and [Access & Identity](/access/overview/) the policy that keeps a gated type out of the projection altogether.
+What gets indexed is decided where content is declared: [Entry Types](/content-modelling/entry-types/) carries `excludeFromSearch` and `isPublic`, [Taxonomies](/content-modelling/taxonomies/) the same two for terms, and [Meta Boxes](/fields/meta-boxes/) the fields `.searchable()` is chained onto. [Blocks](/blocks/overview/) covers the text declaration a block makes, and [Access & Identity](/access/overview/) the policies a search applies to each entry.
 
 The results page is a plugin archive: [Templates](/themes/templates/) covers `forArchiveType`, [Template Data](/themes/template-data/) the payload it receives, and [Routing](/routing/overview/) the priority that lets it claim a route core already had.
 
