@@ -174,8 +174,8 @@ function scopeConditions(scope: EntryFieldScope | undefined): ScopedEntryQuery {
 
 /**
  * Without `read`, public nav (no principal) still gets a public type's
- * published rows its access policy admits. Arms must parenthesize themselves: drizzle leaves a lone
- * `or` operand bare.
+ * published rows its access policy admits. Arms must parenthesize themselves:
+ * drizzle leaves a lone `or` operand bare.
  */
 async function visibleTypeRows(
   ctx: AppContext,

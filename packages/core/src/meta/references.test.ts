@@ -1675,8 +1675,8 @@ describe("reference hydration memo (request-scoped)", () => {
     });
   });
 
-  // An adapter's `hydrate` answers the asker, and `asAnonymous` shares this
-  // memo, so the memo keys on the asker too.
+  // An adapter's `hydrate` answers the asker, and a principal-stripped
+  // context shares this memo, so the memo keys on the asker too.
   test("a principal-stripped context sharing the memo hydrates for itself", async () => {
     const { registry, findField } = registryWithEntryRef();
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });

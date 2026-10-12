@@ -199,7 +199,7 @@ describe("listEntryPage paging", () => {
   });
 
   test("a policied type's listing costs the same fixed number of queries", async () => {
-    // #2933: rows are matched by stored key in the listing's own query, so a
+    // Rows are matched by stored key in the listing's own query, so a
     // gated row adds no lookup of its own.
     const pages = definePlugin("pages", (setup) => {
       setup.registerEntryType("page", {

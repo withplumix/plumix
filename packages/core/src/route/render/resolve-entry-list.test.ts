@@ -765,7 +765,7 @@ describe("resolveEntryList role images", () => {
   });
 });
 
-// #2933: a plugin listing entries its own way still gets the teaser.
+// A plugin listing entries its own way still gets the teaser.
 describe("resolveEntryList and an entry's access policy", () => {
   const teaserPages = definePlugin("teaser-pages", (ctx) => {
     ctx.registerEntryType("page", {
@@ -798,20 +798,21 @@ describe("resolveEntryList and an entry's access policy", () => {
       config: { plugins: [teaserPages] },
     });
     const author = await harness.seedUser("admin");
-    const [open, teaser] = await Promise.all(
-      ([{}, { [ACCESS_POLICY_META_KEY]: "teaser" }] as JsonObject[]).map(
-        (meta, index) =>
-          harness.factory.entry.create({
-            type: "page",
-            slug: `page-${String(index)}`,
-            status: "published",
-            authorId: author.id,
-            content: BODY,
-            meta,
-          }),
-      ),
-    );
-    if (open === undefined || teaser === undefined) throw new Error("seed");
+    const open = await harness.factory.entry.create({
+      type: "page",
+      slug: "open",
+      status: "published",
+      authorId: author.id,
+      content: BODY,
+    });
+    const teaser = await harness.factory.entry.create({
+      type: "page",
+      slug: "teaser",
+      status: "published",
+      authorId: author.id,
+      content: BODY,
+      meta: { [ACCESS_POLICY_META_KEY]: "teaser" },
+    });
 
     const resolved = await run(() => resolveEntryList(ctx, [open, teaser]));
 

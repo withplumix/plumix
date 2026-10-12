@@ -152,17 +152,18 @@ describe("readableEntryRows", () => {
     });
   }
 
-  test("matches referenceableEntryRows wherever the caller holds read", async () => {
-    // `read` is all `readableEntryRows` asks on top, so a tier holding it
-    // must not tell the two apart; other tiers are skipped.
-    for (const [tier, { capabilities }] of Object.entries(TIERS)) {
-      const ctx = viewer(capabilities);
-      if ((await readableEntryRows(ctx, "post")) === null) continue;
-      expect(await selectedReferenceable(ctx), tier).toEqual(
-        await selected(ctx),
-      );
-    }
-  });
+  // `read` is all `readableEntryRows` asks on top, so a tier holding it must
+  // not tell the two apart.
+  test.each(["reader", "contributor", "editor"] as const)(
+    "matches referenceableEntryRows for a %s",
+    async (tier) => {
+      const ctx = viewer(TIERS[tier].capabilities);
+
+      const referenceable = await selectedReferenceable(ctx);
+
+      expect(referenceable).toEqual(await selected(ctx));
+    },
+  );
 
   test("an anonymous caller holding edit_own is owed published rows only", async () => {
     const ctx = viewer(TIERS.contributor.capabilities, null);
@@ -509,10 +510,8 @@ describe("an entry type whose default admits nobody anonymous", () => {
     };
     const stored = await gated.select().from(entries).orderBy(asc(entries.id));
 
-    const readable: string[] = [];
-    for (const row of stored) {
-      if (await canReadEntry(reader, row)) readable.push(row.slug);
-    }
+    const readable = await readableBy(reader, stored);
+
     expect(readable).toEqual(["open"]);
     expect(await readableSlugs(reader)).toEqual(readable);
   });
