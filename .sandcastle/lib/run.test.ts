@@ -3,7 +3,11 @@ import { describe, expect, test } from "vitest";
 import type { MergeOutcome, Ticket } from "./github.js";
 import type { ShipPorts } from "./run.js";
 import { drainingFrom } from "./lanes.js";
-import { REPAIRS_A_PULL_REQUEST_GETS, runShipLoop } from "./run.js";
+import {
+  REBASES_A_PULL_REQUEST_GETS,
+  REPAIRS_A_PULL_REQUEST_GETS,
+  runShipLoop,
+} from "./run.js";
 
 const ticket = (number: number): Ticket => ({ number, title: `t${number}` });
 
@@ -299,6 +303,54 @@ describe("runShipLoop", () => {
     expect(repairs).toBe(REPAIRS_A_PULL_REQUEST_GETS);
     expect(parked).toHaveLength(1);
     expect(parked[0]?.reason).toContain("failing checks");
+  });
+
+  test("a branch that keeps conflicting as siblings land is rebased without spending its repairs", async () => {
+    const conflicted: MergeOutcome = {
+      ...ciRed,
+      failingChecks: [],
+      conflicted: true,
+    };
+    const refusals = [
+      conflicted,
+      conflicted,
+      conflicted,
+      ...Array.from({ length: REPAIRS_A_PULL_REQUEST_GETS }, () => ciRed),
+    ];
+    let confirms = 0;
+    let repairs = 0;
+    const { ports: p, parked } = ports({
+      nextTicket: drainingFrom([ticket(1)]),
+      confirm: async () => refusals[confirms++] ?? merged,
+      rerunFailedChecks: async () => false,
+      repair: async () => {
+        repairs += 1;
+        return { status: "repaired" } as const;
+      },
+    });
+
+    const report = await runShipLoop(p, allLanes);
+
+    expect(repairs).toBe(3 + REPAIRS_A_PULL_REQUEST_GETS);
+    expect(parked).toEqual([]);
+    expect(report.merged).toHaveLength(1);
+  });
+
+  test("a branch still conflicting after every rebase is parked", async () => {
+    let rebases = 0;
+    const { ports: p, parked } = ports({
+      nextTicket: drainingFrom([ticket(1)]),
+      confirm: async () => ({ ...ciRed, failingChecks: [], conflicted: true }),
+      repair: async () => {
+        rebases += 1;
+        return { status: "repaired" } as const;
+      },
+    });
+
+    await runShipLoop(p, allLanes);
+
+    expect(rebases).toBe(REBASES_A_PULL_REQUEST_GETS);
+    expect(parked).toHaveLength(1);
   });
 
   test("a repair the fixer declines parks at once, with the fixer's reason", async () => {

@@ -49,17 +49,3 @@ export const staleClaims = (
     (ticketNumber) =>
       !inFlight.some(({ ticket }) => ticket.number === ticketNumber),
   );
-
-export const whoseSiblingIsNotInFlight = (
-  candidates: readonly number[],
-  inFlight: readonly number[],
-  parentOf: (ticket: number) => number | undefined,
-): readonly number[] => {
-  const busyParents = new Set(
-    inFlight.map(parentOf).filter((parent) => parent !== undefined),
-  );
-  return candidates.filter((ticket) => {
-    const parent = parentOf(ticket);
-    return parent === undefined || !busyParents.has(parent);
-  });
-};
