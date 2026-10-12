@@ -1,5 +1,10 @@
 import type { AppContext, MutablePluginRegistry } from "plumix/plugin";
-import { ACCESS_POLICY_META_KEY } from "plumix/auth";
+import {
+  ACCESS_POLICY_META_KEY,
+  anonymousPolicy,
+  challenge,
+  definePolicy,
+} from "plumix/auth";
 import { defineEntryContent } from "plumix/blocks";
 import { sql } from "plumix/db";
 import { definePlugin } from "plumix/plugin";
@@ -28,6 +33,36 @@ let ctx: AppContext;
 let plugins: MutablePluginRegistry;
 let authorId: number;
 let drainDeferred: () => Promise<void>;
+
+/** Lists every entry of `post` to a visitor and withholds its body. */
+const teaserPosts = () =>
+  plugins.entryTypes.set(
+    "post",
+    toRegisteredEntryType(
+      "post",
+      {
+        label: "Posts",
+        access: {
+          default: definePolicy({
+            resolve: () => challenge("paywall", { soft: true }),
+          }),
+        },
+      },
+      "test",
+    ),
+  );
+
+/** A teaser whose excerpt and body hold different words. */
+const teaser = (slug: string, publishedAt = new Date()) =>
+  publish({
+    title: `Teaser ${slug}`,
+    slug,
+    publishedAt,
+    excerpt: `What a greenhouse grows, hydroponics ${slug}`,
+    content: defineEntryContent([
+      paragraph("<p>The members method: hydroponics soaked overnight</p>"),
+    ]),
+  });
 
 beforeEach(async () => {
   ({ db, ctx, plugins, authorId, drainDeferred } = await createSearchContext());
@@ -420,6 +455,89 @@ describe("runSearch", () => {
     });
   });
 
+  test("a teaser answered newest first still shows its excerpt, not its body", async () => {
+    teaserPosts();
+    for (const year of [2020, 2021, 2022]) {
+      await teaser(`t${String(year)}`, new Date(year, 0, 1));
+    }
+
+    const { results } = await searchAt("hydroponics", 2);
+
+    // No score: the recency plan answered, not ranking.
+    expect(results.every((result) => result.score === null)).toBe(true);
+    expect(results.map((result) => result.snippet)).toEqual([
+      "What a greenhouse grows, hydroponics t2022",
+      "What a greenhouse grows, hydroponics t2021",
+    ]);
+  });
+
+  test("a page costs the same queries however many refused entries the filter passes over", async () => {
+    const membersOnly = definePolicy({
+      resolve: () => challenge("subscribe"),
+    });
+    const policiedPages = definePlugin("policied-pages", (regCtx) => {
+      regCtx.registerEntryType("page", {
+        label: "Pages",
+        isPublic: true,
+        access: {
+          default: anonymousPolicy,
+          policies: [{ key: "members", label: "Members", policy: membersOnly }],
+        },
+      });
+    });
+
+    // Three listed pages with `refused` members pages interleaved, so a
+    // filter applied after ranking would have to fetch again to fill a page.
+    async function searchMixed(refused: number): Promise<{
+      readonly queries: number;
+      readonly page: Awaited<ReturnType<typeof runSearch>>;
+      readonly listed: readonly number[];
+    }> {
+      const {
+        harness,
+        ctx: tracedCtx,
+        run,
+        dbQueryCount,
+      } = await createTracedContext({ config: { plugins: [policiedPages] } });
+      await applySearchSchema(harness.db);
+      const author = await harness.factory.user.create();
+      const listed: number[] = [];
+      for (let i = 0; i < Math.max(3, refused); i++) {
+        for (const members of [false, true]) {
+          if (members ? i >= refused : i >= 3) continue;
+          const entry = await harness.factory.entry.create({
+            type: "page",
+            slug: `p-${String(i)}-${String(members)}`,
+            title: "Wombat",
+            status: "published",
+            publishedAt: new Date(),
+            authorId: author.id,
+            ...(members
+              ? { meta: { [ACCESS_POLICY_META_KEY]: "members" } }
+              : {}),
+          });
+          await indexEntries(tracedCtx, [entry.id]);
+          if (!members) listed.push(entry.id);
+        }
+      }
+      const page = await run(() =>
+        runSearch(tracedCtx, { query: "wombat", page: 1, perPage: 2 }),
+      );
+      return { queries: dbQueryCount(), page, listed };
+    }
+
+    const open = await searchMixed(0);
+    const mixed = await searchMixed(4);
+
+    expect(mixed.page.results).toHaveLength(2);
+    expect(mixed.page.hasMore).toBe(true);
+    expect(mixed.listed).toEqual(
+      expect.arrayContaining(mixed.page.results.map((result) => result.id)),
+    );
+    expect(open.queries).toBeGreaterThan(0);
+    expect(mixed.queries).toBe(open.queries);
+  });
+
   test("a page of nested results costs the same queries however many it holds", async () => {
     const pagesPlugin = definePlugin("pages", (regCtx) => {
       regCtx.registerEntryType("page", {
@@ -585,6 +703,18 @@ describe("runSearch without an index", () => {
       score: null,
     });
     expect(result?.snippet).not.toContain("<mark>");
+  });
+
+  test("a teaser's degraded snippet is its excerpt, not its body", async () => {
+    teaserPosts();
+    await teaser("t");
+    await dropSearchIndex(db);
+
+    const { results } = await search("hydroponics");
+
+    expect(results.map((result) => result.snippet)).toEqual([
+      "What a greenhouse grows, hydroponics t",
+    ]);
   });
 
   test("clamps to what a visitor may see, as the indexed page does", async () => {
