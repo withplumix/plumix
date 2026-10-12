@@ -9,7 +9,6 @@ import { mailSite, renderDeclaredMail } from "../mail/sender.js";
 import { mailerOrFake, testConfig } from "./config.js";
 import { fakeMail } from "./mail-fake.js";
 
-/** The origin every harness request is built on. */
 const TEST_ORIGIN = "https://cms.example";
 
 export interface RenderMailOptions {
@@ -20,8 +19,8 @@ export interface RenderMailOptions {
   /** The plugins that declare mail, and the theme and site overrides. */
   readonly config?: TestConfigInput;
   /**
-   * Compiled catalogs by locale, merged over core's, as the dispatcher harness
-   * takes them: a plugin's own translations, which a build supplies otherwise.
+   * Compiled catalogs by locale, merged over core's: a plugin's own
+   * translations, which a build supplies otherwise.
    */
   readonly pluginCatalogs?: PluginCatalogs;
 }
@@ -35,7 +34,7 @@ export async function renderMail<Name extends MailName>(
   props: MailRegistry[Name],
   options: RenderMailOptions = {},
 ): Promise<Omit<EmailMessage, "to">> {
-  // Rendering sends nothing, so a magic-link config needs no mailer of its own.
+  // A magic-link config will not build without a mailer, though nothing sends.
   const config = testConfig(mailerOrFake(options.config, fakeMail()));
   const declared = declareMails({
     plugins: config.plugins,

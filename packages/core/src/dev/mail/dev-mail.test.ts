@@ -222,7 +222,6 @@ describe("the caught-mail JSON at /_plumix/debug/mail/sent", () => {
   });
 
   test("a configured mailer delivers, so nothing is caught", async () => {
-    // The harness's fake is the configured mailer.
     const h = await createDispatcherHarness({
       config: { auth: { magicLink: { siteName: "Dev Site" } } },
     });

@@ -37,10 +37,7 @@ export interface MailFake extends Mailer {
   readonly sent: <Name extends MailName>(
     name: Name,
   ) => readonly CapturedMail<Name>[];
-  /**
-   * Takes each mail the transport accepted. The harnesses call it; a context
-   * built by hand passes it as `onMailSent`.
-   */
+  /** Takes each mail the transport accepted, as `onMailSent` feeds it. */
   readonly record: (sent: SentMail) => void;
 }
 

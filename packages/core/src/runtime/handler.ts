@@ -395,7 +395,6 @@ export function requestContextArgs({
     bootstrapAllowed: app.bootstrapAllowed,
     mails: app.mails,
     mailCatalogs: app.mailCatalogs,
-    // Only a test's mail fake listens.
     onMailSent: undefined,
     origin: app.origin,
     appContextExtensions: app.appContextExtensions,
