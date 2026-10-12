@@ -1,6 +1,7 @@
 import type { Messages } from "@lingui/core";
 import { i18n } from "@lingui/core";
 
+import type { PluginI18nManifest } from "@plumix/core/manifest";
 import { setI18nResolver } from "@plumix/core/validation";
 
 import {
@@ -9,7 +10,6 @@ import {
   EDITOR_CATALOGS,
   PLUGIN_CATALOGS,
 } from "./catalog-globs.js";
-import { readManifest } from "./manifest.js";
 import { createPluginCatalogLoader } from "./plugin-catalogs.js";
 
 type CatalogMap = Record<string, () => Promise<{ messages: Messages }>>;
@@ -45,14 +45,24 @@ export const pluginCatalogLoaderRef: { current: PluginCatalogLoader } = {
   current: NOOP_LOADER,
 };
 
+interface BootI18nInput {
+  /** The page's `<html lang>`. */
+  readonly lang: string;
+  /** The manifest's third-party plugin catalogs. */
+  readonly pluginI18n?: PluginI18nManifest;
+  readonly catalogs?: AdminCatalogs;
+}
+
 /**
  * Unknown locales fall back to the source locale. Never throws: a missing
  * catalog leaves Lingui on descriptor messages.
  */
-export async function bootI18n(
-  catalogs: AdminCatalogs = BUNDLED_CATALOGS,
-): Promise<void> {
-  const tag = document.documentElement.lang.toLowerCase().split("-")[0] ?? "";
+export async function bootI18n({
+  lang,
+  pluginI18n = {},
+  catalogs = BUNDLED_CATALOGS,
+}: BootI18nInput): Promise<void> {
+  const tag = lang.toLowerCase().split("-")[0] ?? "";
   const requested = catalogs.admin[`../../locales/${tag}.mjs`];
   const fallback = catalogs.admin[`../../locales/${SOURCE_LOCALE}.mjs`];
   const adminLoader = requested ?? fallback;
@@ -87,7 +97,6 @@ export async function bootI18n(
   setI18nResolver((d) => i18n._(d));
 
   // Third-party plugins: manifest-driven runtime fetch + merge.
-  const pluginI18n = readManifest().pluginI18n ?? {};
   pluginCatalogLoaderRef.current = createPluginCatalogLoader({
     manifest: pluginI18n,
   });
