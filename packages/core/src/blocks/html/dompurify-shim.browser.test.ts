@@ -246,6 +246,11 @@ describe("dompurify-shim — URL policy agrees with sanitize-html", () => {
     "vbscript:x",
     "ftp://example.com",
     "view-source:https://example.com",
+    "&#106;avascript:alert(1)",
+    "javascript&colon;alert(1)",
+    "\u0001javascript:alert(1)",
+    "https:",
+    "mailto:",
   ];
 
   function keptHref(out: string): string | null {

@@ -107,7 +107,6 @@ export const columnsBlock = defineBlock({
       defaultChildren: DEFAULT_COLUMNS,
     },
   ],
-  // Seeds the inspector control with the value render falls back to.
   defaults: { stackAt: DEFAULT_STACK_AT },
   // A flex row with a gap. Responsive stacking rides a scoped media query keyed
   // off `stackAt` (see render), not a seeded bucket, so the preset owns it.

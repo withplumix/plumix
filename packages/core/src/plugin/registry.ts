@@ -347,10 +347,7 @@ export interface SettingsPageOptions {
   readonly label: Label;
   readonly description?: Label;
   readonly groups: readonly string[];
-  /**
-   * Admin menu ordering, sorted by `byPriorityThen` as entry types are:
-   * lower first, unset last, ties by name.
-   */
+  /** Admin menu ordering: lower first, unset last, ties by name. */
   readonly priority?: number;
 }
 

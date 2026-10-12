@@ -369,8 +369,7 @@ function readRenderer(namespace: ModuleNamespace): RendererModule {
 
 /**
  * Test seam: a unit test has no renderer chunk URL to import, so it injects
- * the (statically imported) renderer module directly. The renderer's
- * counterpart to `setDynamicImport`.
+ * the (statically imported) renderer module directly.
  */
 export function setRendererImport(
   fn: () => Promise<RendererModule>,

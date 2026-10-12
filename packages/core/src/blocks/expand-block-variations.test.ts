@@ -104,9 +104,9 @@ describe("expandBlockVariations", () => {
           {
             slug: "transform-only",
             title: "Transform only",
-            // As at a real boot — commitBlockVariations rejects a
-            // transform-scope variation without attrs, so the fixture
-            // carries one even though this test only exercises expansion.
+            // commitBlockVariations rejects a transform-scope variation without
+            // attrs, so the fixture carries one even though this test only
+            // exercises expansion.
             attrs: { variant: "transform" },
             scope: ["transform"],
           },

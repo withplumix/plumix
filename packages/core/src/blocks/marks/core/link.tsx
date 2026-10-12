@@ -20,7 +20,6 @@ export const linkSchema = Mark.create({
         tag: "a[href]",
         getAttrs: (node) => {
           if (!(node instanceof HTMLElement)) return false;
-          // A pasted `javascript:` link drops the mark, never reaching the doc.
           const href = sanitizeHref(node.getAttribute("href"));
           if (!href) return false;
           const target = node.getAttribute("target");
