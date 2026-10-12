@@ -67,11 +67,7 @@ export const nameField = v.pipe(
 export const SLUG_MAX_LENGTH = 200;
 export const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-/**
- * RFC 1035-ish domain shape: labels of [a-z0-9] (with internal hyphens),
- * 1–63 chars per label, total <= 253. We don't accept punycode-encoded
- * names directly — callers should normalise to ASCII before sending.
- */
+/** Callers normalise a domain to ASCII before matching it. */
 export const domainPattern =
   /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 
