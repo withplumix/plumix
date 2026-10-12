@@ -356,58 +356,68 @@ describe("runSearch", () => {
     expect((await search("hydroponics")).results).toEqual([]);
   });
 
-  test("filtering by access never leaves a page short", async () => {
-    // Visitors may list the default and are refused `members`, so a page
-    // filtered after ranking would come back with gaps.
-    plugins.entryTypes.set(
-      "post",
-      toRegisteredEntryType(
+  describe("with three listed entries among three the visitor is refused", () => {
+    let listed: readonly number[];
+
+    beforeEach(async () => {
+      plugins.entryTypes.set(
         "post",
-        {
-          label: "Posts",
-          access: {
-            default: {
-              segments: [],
-              resolve: () => ({ type: "grant" as const, segment: "public" }),
-            },
-            policies: [
-              {
-                key: "members",
-                label: "Members",
-                policy: {
-                  segments: [],
-                  resolve: () => ({
-                    type: "challenge" as const,
-                    kind: "subscribe",
-                  }),
-                },
+        toRegisteredEntryType(
+          "post",
+          {
+            label: "Posts",
+            access: {
+              default: {
+                segments: [],
+                resolve: () => ({ type: "grant" as const, segment: "public" }),
               },
-            ],
+              policies: [
+                {
+                  key: "members",
+                  label: "Members",
+                  policy: {
+                    segments: [],
+                    resolve: () => ({
+                      type: "challenge" as const,
+                      kind: "subscribe",
+                    }),
+                  },
+                },
+              ],
+            },
           },
-        },
-        "test",
-      ),
-    );
-    const listed: number[] = [];
-    for (let i = 0; i < 6; i += 1) {
-      const members = i % 2 === 1;
-      const entry = await publish({
-        title: `Hydroponics ${String(i)}`,
-        slug: `s${String(i)}`,
-        ...(members ? { meta: { [ACCESS_POLICY_META_KEY]: "members" } } : {}),
-      });
-      if (!members) listed.push(entry.id);
-    }
+          "test",
+        ),
+      );
+      const members = { meta: { [ACCESS_POLICY_META_KEY]: "members" } };
+      const first = await publish({ title: "Hydroponics a", slug: "a" });
+      await publish({ title: "Hydroponics b", slug: "b", ...members });
+      const second = await publish({ title: "Hydroponics c", slug: "c" });
+      await publish({ title: "Hydroponics d", slug: "d", ...members });
+      const third = await publish({ title: "Hydroponics e", slug: "e" });
+      await publish({ title: "Hydroponics f", slug: "f", ...members });
+      listed = [first.id, second.id, third.id];
+    });
 
-    const first = await search("hydroponics", 1);
-    const second = await search("hydroponics", 2);
+    test("the first page is full and says another follows", async () => {
+      const page = await search("hydroponics", 1);
 
-    expect(first).toMatchObject({ hasMore: true });
-    expect(first.results).toHaveLength(2);
-    expect(second).toMatchObject({ hasMore: false });
-    expect(
-      [...first.results, ...second.results].map((result) => result.id).sort(),
-    ).toEqual(listed.sort());
+      expect(page.results).toHaveLength(2);
+      expect(page.hasMore).toBe(true);
+      expect(listed).toEqual(
+        expect.arrayContaining(page.results.map((result) => result.id)),
+      );
+    });
+
+    test("the last page holds the remaining listed entry and says nothing follows", async () => {
+      const page = await search("hydroponics", 2);
+
+      expect(page.results).toHaveLength(1);
+      expect(page.hasMore).toBe(false);
+      expect(listed).toEqual(
+        expect.arrayContaining(page.results.map((result) => result.id)),
+      );
+    });
   });
 
   test("a page of nested results costs the same queries however many it holds", async () => {

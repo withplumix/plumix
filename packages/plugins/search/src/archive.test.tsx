@@ -317,22 +317,31 @@ describe("entries under an access policy", () => {
     });
   }
 
-  test("a visitor finds only the public page, a member finds both", async () => {
+  test("a visitor finds only the public page", async () => {
+    await publishPage("open", undefined);
+    await publishPage("inside", "members");
+    await index();
+
+    const body = await (await h.fetch("/search/hydroponics")).text();
+
+    expect(body).toContain('data-testid="count">1<');
+    expect(body).toContain("/page/open");
+    expect(body).not.toContain("/page/inside");
+  });
+
+  test("a member finds the public page and the members page", async () => {
     await publishPage("open", undefined);
     await publishPage("inside", "members");
     await index();
     const member = await h.seedUser("subscriber");
 
-    const anonymous = await (await h.fetch("/search/hydroponics")).text();
-    expect(anonymous).toContain('data-testid="count">1<');
-    expect(anonymous).toContain("/page/open");
-    expect(anonymous).not.toContain("/page/inside");
-
-    const signedIn = await (
+    const body = await (
       await h.fetch("/search/hydroponics", { as: member })
     ).text();
-    expect(signedIn).toContain('data-testid="count">2<');
-    expect(signedIn).toContain("/page/inside");
+
+    expect(body).toContain('data-testid="count">2<');
+    expect(body).toContain("/page/open");
+    expect(body).toContain("/page/inside");
   });
 
   test("a member's results page is never stored for the next visitor", async () => {
@@ -359,8 +368,6 @@ describe("entries under an access policy", () => {
 
     const body = await (await h.fetch("/search/rockwool")).text();
 
-    // Found by its body, which the index holds for ranking, and shown by its
-    // excerpt, which the teaser lists.
     expect(body).toContain("/page/teaser");
     expect(body).toContain("What a greenhouse grows in winter");
     expect(body).not.toContain("soaked");
