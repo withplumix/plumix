@@ -10,6 +10,7 @@ export type {
 } from "@plumix/core/blocks";
 
 export {
+  alwaysTo,
   consoleMailer,
   defineConfig,
   plumix,

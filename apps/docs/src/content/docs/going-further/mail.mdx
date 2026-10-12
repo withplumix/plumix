@@ -1,6 +1,6 @@
 ---
 title: Mail
-description: How core and plugins declare a mail by name with defineMail, send it with ctx.mail.send, and how a site or theme overrides its subject, text or HTML, and how a mail is localized for its recipient.
+description: How core and plugins declare a mail by name with defineMail, send it with ctx.mail.send, and how a site or theme overrides its subject, text or HTML, how a mail is localized for its recipient, and how a staging site routes every mail to one inbox.
 tier: P1
 sidebar:
   order: 30
@@ -159,6 +159,35 @@ Core's mails take these props. Both URLs are the single-use links core generates
 `ctx.t(descriptor, values)` resolves a descriptor against core's mail catalog and every installed plugin's catalog, in the locale the mail renders in, and falls back to the descriptor's English `message`. Only `{name}` placeholders are filled, so a count that needs a plural takes one message per form.
 
 A plugin's mail strings go in the same catalogs as the rest of its strings, through its `i18n` slot. [Plugin i18n](/plugins/i18n/) covers the catalogs; write the descriptors as object literals, since a mail renders on the server and no Babel macro pass reads it.
+
+## Staging
+
+A staging site that runs on a copy of production data would mail real people. `alwaysTo(address, transport)` wraps the site's mailer so every mail goes to `address` instead, whoever it was for.
+
+```ts
+import type { Mailer } from "plumix";
+import { alwaysTo } from "plumix";
+
+declare module "plumix" {
+  interface PlumixEnv {
+    readonly STAGING_INBOX: string;
+    readonly RESEND_API_KEY: string;
+  }
+}
+
+declare function resend(apiKey: string): Mailer;
+
+export const mailer = alwaysTo(
+  (env) => env.STAGING_INBOX,
+  (env) => resend(env.RESEND_API_KEY),
+);
+```
+
+Both arguments take an `EnvInput`, so the inbox and the transport's key can both come from the deploy's secrets. Pass plain values when they are not secret: `alwaysTo("qa@example.com", consoleMailer())`.
+
+An `EmailMessage` carries no headers, so the original recipient goes in the body. The text starts with `Originally to: <address>`, and an HTML body starts with the same line as a small banner. Subject and the rest of the body are unchanged.
+
+The address is checked when the mailer is resolved, which happens as a request's context is built. An empty or malformed one throws a `ConfigError` that names it, so a site with a missing `STAGING_INBOX` fails its requests instead of quietly mailing nobody.
 
 ## Related
 

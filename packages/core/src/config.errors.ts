@@ -1,9 +1,10 @@
-type ConfigErrorCode = "magic_link_requires_mailer";
+type ConfigErrorCode =
+  "magic_link_requires_mailer" | "always_to_invalid_address";
 
 /**
- * Cross-field config invariant violated in {@link plumix} — surfaced at app
- * build time rather than on the first request. Mirrors the named-error
- * convention (umbrella #232).
+ * Config invariant violated in {@link plumix} or by a config value as it
+ * resolves — surfaced at app build or request-context time. Mirrors the
+ * named-error convention (umbrella #232).
  */
 export class ConfigError extends Error {
   static {
@@ -22,6 +23,13 @@ export class ConfigError extends Error {
       "magic_link_requires_mailer",
       "plumix(): `auth.magicLink` requires a top-level `mailer` " +
         "(use `consoleMailer()` for dev or pass your own `Mailer`).",
+    );
+  }
+
+  static alwaysToInvalidAddress(address: string): ConfigError {
+    return new ConfigError(
+      "always_to_invalid_address",
+      `alwaysTo(): ${JSON.stringify(address)} is not an email address.`,
     );
   }
 }
