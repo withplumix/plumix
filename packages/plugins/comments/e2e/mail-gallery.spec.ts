@@ -30,18 +30,29 @@ test.describe("the dev mail gallery", () => {
     ).toContainText("Comments playground");
   });
 
-  test("switching the locale renders the subject in that language", async ({
+  test("switching the locale renders every subject in that language", async ({
     page,
   }) => {
     await page.goto(GALLERY);
-    const subject = page
-      .getByTestId(preview("magicLink"))
-      .getByTestId("plumix-mail-subject");
-    await expect(subject).toHaveText(/^Sign in to /);
+    const subject = (name: string) =>
+      page.getByTestId(preview(name)).getByTestId("plumix-mail-subject");
+    await expect(subject("magicLink")).toHaveText(/^Sign in to /);
+    await expect(subject("emailChange")).toHaveText(
+      /^Confirm your new email for /,
+    );
+    await expect(subject("commentAwaitingModeration")).toHaveText(
+      "A comment is awaiting moderation",
+    );
 
     await page.getByTestId("plumix-mail-locale-de").click();
 
-    await expect(subject).toHaveText(/^Bei .+ anmelden$/);
+    await expect(subject("magicLink")).toHaveText(/^Bei .+ anmelden$/);
+    await expect(subject("emailChange")).toHaveText(
+      /^Bestätigen Sie Ihre neue E-Mail für /,
+    );
+    await expect(subject("commentAwaitingModeration")).toHaveText(
+      "Ein Kommentar wartet auf Freigabe",
+    );
   });
 
   test("the text tab shows the plain-text body", async ({ page }) => {
