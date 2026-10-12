@@ -192,8 +192,8 @@
       "cache": false
     },
     "test:build": {
-      // Tests that need the build graph (`*.build.test.ts`): plumix inspects
-      // the artifacts of a real Vite build.
+      // Tests that need the build graph (`*.build.test.ts`): the runtimes run
+      // the built CLI or server.
       "dependsOn": ["build", "^build"],
       "outputLogs": "new-only"
     },

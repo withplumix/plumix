@@ -71,12 +71,15 @@ export async function assemblePluginAdminBundle({
   adminDest,
   projectRoot,
   blockModules = [],
+  themeCssPath = ADMIN_THEME_CSS,
 }: {
   readonly plugins: readonly AnyPluginDescriptor[];
   readonly registry: PluginRegistry;
   readonly adminDest: string;
   readonly projectRoot: string;
   readonly blockModules?: readonly BlockModuleRef[];
+  /** The stylesheet whose `@theme` the sidecar compiles against. */
+  readonly themeCssPath?: string;
 }): Promise<AssembledBundle | null> {
   const withEntry = plugins.filter(
     (p): p is AnyPluginDescriptor & { adminEntry: string } =>
@@ -141,6 +144,7 @@ export async function assemblePluginAdminBundle({
     sourceDirs: resolvedEntries.map((entry) => dirname(entry)),
     outFile: resolve(pluginsOutDir, "site-bundle.css"),
     projectRoot,
+    themeCssPath,
   });
 
   return {
@@ -232,12 +236,14 @@ async function compilePluginCss({
   sourceDirs,
   outFile,
   projectRoot,
+  themeCssPath,
 }: {
   readonly sourceDirs: readonly string[];
   readonly outFile: string;
   readonly projectRoot: string;
+  readonly themeCssPath: string;
 }): Promise<boolean> {
-  const themeCss = await readFile(ADMIN_THEME_CSS, "utf8").catch(() => null);
+  const themeCss = await readFile(themeCssPath, "utf8").catch(() => null);
   if (themeCss === null) {
     // `@plumix/admin` isn't built yet in a workspace dev run; production
     // installs always ship it.

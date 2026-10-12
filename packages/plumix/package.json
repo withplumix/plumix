@@ -207,7 +207,6 @@
     "lint": "eslint",
     "publint": "publint",
     "test:unit": "vitest run",
-    "test:build": "vitest run --config vitest.build.config.ts",
     "typecheck": "tsc"
   },
   "dependencies": {
