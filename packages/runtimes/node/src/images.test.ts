@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { ImagesError } from "./errors.js";
-import { images } from "./images.js";
+import { createImages, images } from "./images.js";
 
 const params = (url: string) => new URL(url, "http://localhost").searchParams;
 
@@ -122,5 +122,25 @@ describe("images() — URL math onto /_plumix/image", () => {
     expect(cms?.url("/a.png", { width: 320 })).toMatch(/^\/cms\/_plumix\//);
     expect(blog?.url("/a.png", { width: 320 })).toMatch(/^\/blog\/_plumix\//);
     expect(slot.url("/a.png", { width: 320 })).toMatch(/^\/_plumix\//);
+  });
+
+  test("connect() names sharp when it is not installed", () => {
+    const notInstalled = () => {
+      throw Object.assign(new Error("Cannot find module 'sharp'"), {
+        code: "MODULE_NOT_FOUND",
+      });
+    };
+    const slot = createImages({}, notInstalled);
+
+    let thrown: unknown;
+    try {
+      slot.connect?.({});
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(ImagesError);
+    expect(thrown).toMatchObject({ code: "sharp_missing" });
+    expect((thrown as ImagesError).message).toMatch(/`sharp`.*not installed/);
   });
 });

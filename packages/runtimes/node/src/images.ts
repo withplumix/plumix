@@ -76,16 +76,19 @@ function resolveConfig(config: ImagesConfig): ResolvedImagesConfig {
   };
 }
 
-const ownRequire = createRequire(import.meta.url);
+/** How `sharp` is required; a test passes one that fails as if uninstalled. */
+type RequireSharp = (id: "sharp") => typeof SharpModule;
+
+const ownRequire: RequireSharp = createRequire(import.meta.url);
 
 /**
  * `sharp` is an optional peer, so a site without images() installs nothing
  * native; a missing package is named on first use.
  */
-function loadSharp(): typeof SharpModule {
+function loadSharp(requireSharp: RequireSharp): typeof SharpModule {
   let loaded: typeof SharpModule;
   try {
-    loaded = ownRequire("sharp") as typeof SharpModule;
+    loaded = requireSharp("sharp");
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "MODULE_NOT_FOUND") {
       throw ImagesError.sharpMissing({ cause: error });
@@ -111,13 +114,21 @@ function loadSharp(): typeof SharpModule {
  * ```
  */
 export function images(config: ImagesConfig = {}): NodeImageDelivery {
+  return createImages(config, ownRequire);
+}
+
+/** `images()` with how `sharp` is required left open; not re-exported. */
+export function createImages(
+  config: ImagesConfig,
+  requireSharp: RequireSharp,
+): NodeImageDelivery {
   const resolved = resolveConfig(config);
   let sharp: typeof SharpModule | undefined;
   const slot: NodeImageDelivery = {
     kind: "node-images",
     acceptsRelativeSources: true,
     config: resolved,
-    sharp: () => (sharp ??= loadSharp()),
+    sharp: () => (sharp ??= loadSharp(requireSharp)),
     cache: createVariantCache(resolved.cacheDir, resolved.cacheSize),
     purge: (sourceUrl) => slot.cache.purge(imageSourceKey(sourceUrl)),
     url: (sourceUrl, opts) =>
