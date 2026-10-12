@@ -443,7 +443,7 @@ describe("i18nCommand", () => {
     });
 
     test("--src narrows the scan so descriptors outside the dir don't count as drift", async () => {
-      // Mirrors core: the bar's strings live in src/bar and own the
+      // Laid out like core: the bar's strings live in src/bar and own the
       // catalog; descriptors elsewhere are translated by another
       // package and must not be reported as missing.
       seedPlugin({

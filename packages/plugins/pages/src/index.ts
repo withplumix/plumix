@@ -8,7 +8,7 @@ import { applyOverride, definePlugin, PLUGIN_I18N_SLOT } from "plumix/plugin";
 
 /**
  * Plain descriptor literals — plugin source runs server-side without
- * the Babel macro pipeline. Per-entity table mirrors `blog`'s shape;
+ * the Babel macro pipeline. Per-entity table shaped like `blog`'s;
  * `satisfies EntryTypeLabels` catches typo-renames at compile time.
  */
 const PAGE_LABELS = {

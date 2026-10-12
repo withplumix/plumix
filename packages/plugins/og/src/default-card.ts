@@ -132,6 +132,7 @@ function pageTitle(data: TemplateData, ctx: AppContext): string {
 
 /**
  * Must match core's date-archive title; not `dateSegment`, which pads the year.
+ * Guarded by: packages/plugins/og/src/card-pages.test.ts
  */
 function dateTitle(
   year: number,

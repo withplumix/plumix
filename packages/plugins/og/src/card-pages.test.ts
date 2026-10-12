@@ -81,6 +81,31 @@ describe("the default card past entries", () => {
     expect(await response.assertStatus(200).text()).toContain("2026-03");
   });
 
+  test.each([
+    ["year", "/2026", { month: null, day: null }],
+    ["month", "/2026/03", { month: 3, day: null }],
+    ["day", "/2026/03/04", { month: 3, day: 4 }],
+  ] as const)(
+    "titles a %s archive's card with the title core gives its page",
+    async (_granularity, path, { month, day }) => {
+      const harness = await createHarness();
+      await seedEntry(harness, { publishedAt: new Date(PUBLISHED_AT) });
+      const page = await (await harness.fetch(path)).text();
+      const title = /<title>([^<]*)<\/title>/.exec(page)?.[1];
+
+      const response = await fetchCard(harness, {
+        kind: "date",
+        year: 2026,
+        month,
+        day,
+      });
+
+      expect(await response.assertStatus(200).text()).toContain(
+        `<text>${String(title)}</text>`,
+      );
+    },
+  );
+
   test("serves the front page's card as the site over its tagline", async () => {
     const harness = await createHarness();
     await harness.factory.setting.create({

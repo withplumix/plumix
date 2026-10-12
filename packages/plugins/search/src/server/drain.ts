@@ -66,6 +66,7 @@ export async function backfillTerms(ctx: AppContext): Promise<number> {
 
   // The comparison mirrors what `indexTerms` writes, so a term it has just
   // re-projected matches again and drops out of the next run.
+  // Guarded by: packages/plugins/search/src/server/drain.test.ts
   const outdated = await ctx.db.all<{ id: number }>(sql`
     SELECT terms.id AS id
       FROM terms

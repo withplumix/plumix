@@ -10,8 +10,8 @@ export interface AuditService {
 }
 
 /**
- * Mirrors core's 256 KiB meta cap, so one subscriber-built `properties`
- * envelope can't blow the SQLite column limit.
+ * Caps one subscriber-built `properties` envelope, so it can't blow the
+ * SQLite column limit.
  */
 const MAX_PROPERTIES_BYTES = 256 * 1024;
 

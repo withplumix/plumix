@@ -24,6 +24,7 @@ import {
 import { Trans, useLingui } from "plumix/i18n";
 
 import type { MediaRouter } from "../rpc.js";
+import { MAX_SEARCH_LENGTH } from "../search.js";
 import { mediaRpc } from "./rpc.js";
 
 /**
@@ -522,10 +523,9 @@ export function MediaLibrary({
               }}
               placeholder={i18n._(M.searchPlaceholder)}
               // Placeholder is not an accessible name (it clears on
-              // input); name the field explicitly. maxLength mirrors the
-              // server's 200-char cap on media.list's search input.
+              // input); name the field explicitly.
               aria-label={i18n._(M.searchPlaceholder)}
-              maxLength={200}
+              maxLength={MAX_SEARCH_LENGTH}
               data-testid="media-library-search"
               className="w-56"
             />

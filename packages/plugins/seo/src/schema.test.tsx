@@ -2,12 +2,12 @@ import type { AnyPluginDescriptor, JsonValue, ThemeDescriptor } from "plumix";
 import type { DispatcherHarness } from "plumix/test";
 import type { TemplateData } from "plumix/theme";
 import { definePlugin } from "plumix/plugin";
-import { createDispatcherHarness } from "plumix/test";
+import { createDispatcherHarness, createTestContext } from "plumix/test";
 import { defineTheme, fallback } from "plumix/theme";
 import { describe, expect, test, vi } from "vitest";
 
 import type { SchemaPiece } from "./schema.js";
-import { Breadcrumbs } from "./breadcrumbs.js";
+import { Breadcrumbs, breadcrumbTrail } from "./breadcrumbs.js";
 import { seo } from "./index.js";
 
 const blogPlugin = definePlugin("blog", (ctx) => {
@@ -581,6 +581,29 @@ describe("breadcrumbs", () => {
       "https://cms.example/post",
       undefined,
     ]);
+  });
+
+  test("links an archive exactly when the router serves it", async () => {
+    const hidden = definePlugin("hidden", (ctx) => {
+      ctx.registerEntryType("secret", {
+        label: "Secrets",
+        isPublic: false,
+        hasArchive: true,
+        supports: ["title"],
+      });
+    });
+    const h = await createHarness([blogPlugin, hidden, seo()]);
+    await seedPost(h);
+    const ctx = createTestContext({ db: h.db, plugins: h.app.plugins });
+
+    for (const type of ["post", "secret"]) {
+      const data = { kind: "entry", entry: { type, title: "Hello" } };
+      const trail = breadcrumbTrail(ctx, data as unknown as TemplateData);
+      const archive = new Request(`https://cms.example/${type}`);
+      const served = (await h.dispatch(archive)).status === 200;
+
+      expect(trail.some((step) => step.url === archive.url)).toBe(served);
+    }
   });
 
   test("with structured data off, the theme's trail still renders", async () => {

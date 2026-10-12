@@ -184,7 +184,7 @@ const forDate: DateTargets<CardSelector<DateArchiveData>> = dateTargets(
 );
 
 /**
- * Mirrors the template builders, except `card.archive()` is the `entryType`
+ * Named like the template builders, except `card.archive()` is the `entryType`
  * tier and `card.taxonomy()` the `term` tier.
  *
  * @example

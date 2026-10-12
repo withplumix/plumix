@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import * as path from "node:path";
 import type { Rule } from "eslint";
@@ -11,20 +10,6 @@ type Comment = ReturnType<
 
 const COUPLING =
   /\bmirrors\b|\bkeeps?\b(?:[^.]|\.(?!\s|$))*?\bin sync\b|\bkept in sync\b|\bmust match\b|\bmust stay in step\b/i;
-
-/** A coupling comment the rule skips, identified by its file and line hash. */
-export interface BaselineEntry {
-  readonly file: string;
-  readonly hash: string;
-}
-
-/**
- * Keyed by the line's text, not its number, so an edit elsewhere in the file
- * leaves the entry matching.
- */
-export function lineHash(text: string): string {
-  return createHash("sha256").update(text.trim()).digest("hex").slice(0, 16);
-}
 
 /** Vitest's unit, build and browser suites, and Playwright specs. */
 const TEST_FILE = /\.(test|spec)\.tsx?$/;
@@ -60,7 +45,7 @@ function blockProse(block: readonly Comment[]): {
 }
 
 /** Lint runs from each package, so a guard path resolves from the repo root. */
-export function repoRootOf(file: string): string {
+function repoRootOf(file: string): string {
   let dir = path.dirname(file);
   while (!existsSync(path.join(dir, "pnpm-workspace.yaml"))) {
     const parent = path.dirname(dir);
@@ -89,26 +74,7 @@ export const syncCommentGuarded: Rule.RuleModule = {
       guardNotTest:
         "`Guarded by:` names {{guard}}, which is not a test file (`*.test.ts(x)` or a Playwright `*.spec.ts(x)`). Name the test that fails when the coupling breaks.",
     },
-    schema: [
-      {
-        type: "object",
-        properties: {
-          baseline: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                file: { type: "string" },
-                hash: { type: "string" },
-              },
-              required: ["file", "hash"],
-              additionalProperties: false,
-            },
-          },
-        },
-        additionalProperties: false,
-      },
-    ],
+    schema: [],
   },
   create(context) {
     const { sourceCode } = context;
@@ -118,18 +84,6 @@ export const syncCommentGuarded: Rule.RuleModule = {
       return sourceCode.lines[line - 1]?.slice(0, column).trim() === "";
     };
     const root = repoRootOf(context.filename);
-    const file = path
-      .relative(root, context.filename)
-      .split(path.sep)
-      .join("/");
-    const options = context.options[0] as
-      { baseline?: readonly BaselineEntry[] } | undefined;
-    // Counted, so a verbatim copy of a baselined line is held to the rule.
-    const baselined = new Map<string, number>();
-    for (const entry of options?.baseline ?? []) {
-      if (entry.file !== file) continue;
-      baselined.set(entry.hash, (baselined.get(entry.hash) ?? 0) + 1);
-    }
     const report = (line: number, messageId: string, guard = ""): void => {
       context.report({
         loc: {
@@ -149,12 +103,7 @@ export const syncCommentGuarded: Rule.RuleModule = {
           if (coupling === null) continue;
           const guard = GUARD.exec(prose.text);
           if (guard === null) {
-            const line = lineAt(prose.lines, coupling.index);
-            const text = sourceCode.lines[line - 1] ?? "";
-            const hash = lineHash(text);
-            const remaining = baselined.get(hash) ?? 0;
-            if (remaining > 0) baselined.set(hash, remaining - 1);
-            else report(line, "unguarded");
+            report(lineAt(prose.lines, coupling.index), "unguarded");
             continue;
           }
           const guardPath = guard[1]?.replace(/^`|[`.,;:)]+$/g, "") ?? "";

@@ -1,6 +1,7 @@
 import type { ViteUserConfig } from "vitest/config";
 
-// Mirrors `tooling/vitest/tiers.ts`; `test-config.test.ts` holds the two equal.
+// Mirrors `tooling/vitest/tiers.ts`.
+// Guarded by: packages/plumix/src/vite/test-config.test.ts
 
 /**
  * The globs reach the whole package: vitest concatenates a config's own

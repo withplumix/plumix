@@ -247,7 +247,7 @@ describe("createAuditExtension — integration with the real AuditService", () =
 
     const { ctx, flush } = realServiceCtx(adminUser);
     audit.log(ctx, { event: "x:1", subject: { type: "x", id: 1, label: "1" } });
-    // Direct service.record mirrors what an internal hook listener
+    // Direct service.record does what an internal hook listener
     // does — no await between, so the buffer is still alive.
     service.record(ctx, {
       event: "entry:published",

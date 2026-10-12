@@ -1,15 +1,21 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join, sep } from "node:path";
+import { existsSync, globSync, readFileSync } from "node:fs";
+import { dirname, join, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Plugin } from "vitest/config";
 
-/**
- * Mirrors `pnpm-workspace.yaml`'s non-glob prefixes; playgrounds are never
- * imported by name.
- */
-const PACKAGE_ROOTS = ["packages", "packages/plugins", "packages/runtimes"];
-
 const REPO_ROOT = fileURLToPath(new URL("../../", import.meta.url));
+
+/**
+ * The `packages:` globs. A package with no `dist` export, like a playground
+ * or a tooling config, resolves to no source and falls through.
+ */
+function workspaceGlobs(): string[] {
+  const yaml = readFileSync(join(REPO_ROOT, "pnpm-workspace.yaml"), "utf8");
+  const block = /^packages:\n((?:[ \t]+.*\n|\s*\n)*)/m.exec(yaml)?.[1] ?? "";
+  return [...block.matchAll(/^\s+-\s+"?([^"\s#]+)"?/gm)].flatMap(([, glob]) =>
+    glob ? [glob] : [],
+  );
+}
 
 /**
  * Compiled catalogs have no source form; the stub lets `test` skip
@@ -28,26 +34,23 @@ interface WorkspacePackage {
 
 function loadWorkspacePackages(): Map<string, WorkspacePackage> {
   const map = new Map<string, WorkspacePackage>();
-  for (const root of PACKAGE_ROOTS) {
-    const base = join(REPO_ROOT, root);
-    if (!existsSync(base)) continue;
-    for (const entry of readdirSync(base, { withFileTypes: true })) {
-      if (!entry.isDirectory()) continue;
-      const dir = join(base, entry.name);
-      const manifest = join(dir, "package.json");
-      if (!existsSync(manifest)) continue;
-      const pkg = JSON.parse(readFileSync(manifest, "utf8")) as {
-        name?: string;
-        exports?: Record<string, unknown>;
-        browser?: Record<string, string>;
-      };
-      if (pkg.name && pkg.exports)
-        map.set(pkg.name, {
-          dir,
-          exports: pkg.exports,
-          browser: pkg.browser ?? {},
-        });
-    }
+  const manifests = globSync(
+    workspaceGlobs().map((glob) => `${glob}/package.json`),
+    { cwd: REPO_ROOT },
+  );
+  for (const manifest of manifests) {
+    const path = join(REPO_ROOT, manifest);
+    const pkg = JSON.parse(readFileSync(path, "utf8")) as {
+      name?: string;
+      exports?: Record<string, unknown>;
+      browser?: Record<string, string>;
+    };
+    if (pkg.name && pkg.exports)
+      map.set(pkg.name, {
+        dir: dirname(path),
+        exports: pkg.exports,
+        browser: pkg.browser ?? {},
+      });
   }
   return map;
 }

@@ -84,9 +84,7 @@ nothing checks. Collapse the duplication first, so one source holds the fact. Wh
 can't be collapsed, bind them with a test that fails when they drift, and name it with
 `Guarded by: <repo-relative test path>` on one of the comment's lines. When the comment describes
 a resemblance rather than an invariant, reword it. `plumix/sync-comment-guarded` enforces this
-and skips only the occurrences in `tooling/eslint/sync-comment-baseline.json`, which shrinks and
-never grows: remove a fixed occurrence's entry with
-`pnpm --filter @plumix/eslint-config sync-baseline`
+with no exceptions
 ([ADR 0038](docs/adr/0038-a-coupled-invariant-is-collapsed-or-guarded-by-a-test.md)).
 
 A `plumix/*` rule ships only when it has zero false positives on the tree: every hit is a genuine

@@ -13,7 +13,6 @@
     "clean": "git clean -xdf .cache .turbo node_modules",
     "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path ../../.prettierignore",
     "lint": "eslint",
-    "sync-baseline": "tsx scripts/sync-baseline.ts",
     "test:unit": "vitest run",
     "typecheck": "tsc --noEmit"
   },
@@ -36,7 +35,6 @@
     "@vitest/coverage-v8": "catalog:vitest",
     "eslint": "catalog:",
     "prettier": "catalog:",
-    "tsx": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:vitest"
   },
