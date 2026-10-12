@@ -93,7 +93,7 @@ function normalize(value: unknown): PlumixManifest {
  */
 let snapshot: PlumixManifest | undefined;
 
-function currentManifest(): PlumixManifest {
+export function currentManifest(): PlumixManifest {
   return (snapshot ??= readManifest());
 }
 
