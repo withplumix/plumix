@@ -281,8 +281,7 @@ describe("chainAuthenticators / defaultAuthenticator", () => {
 describe("RequestAuthenticator interface", () => {
   test("a one-method custom authenticator slots in", async () => {
     // Smoke test for the contract — any object satisfying the interface
-    // can replace the default. Mirrors how `cfAccess()` (a future
-    // factory) will be shaped: pure function from request → user.
+    // can replace the default: a pure function from request → user.
     const db = await createTestDb();
     const seeded = await userFactory.transient({ db }).create({
       email: "trusted@enterprise.example",

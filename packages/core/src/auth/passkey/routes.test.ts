@@ -494,8 +494,8 @@ describe("invite register — options", () => {
   test("404 when the invited user was deleted after the invite", async () => {
     const h = await createDispatcherHarness();
     const { user, token } = await seedInvite(h);
-    // Remove the user; the token row cascades away via the FK. This mirrors
-    // the admin-deletes-invitee race — a prior invite URL is now invalid.
+    // Remove the user; the token row cascades away via the FK. This is the
+    // admin-deletes-invitee race — a prior invite URL is now invalid.
     const { users } = await import("../../db/schema/users.js");
     await h.db.delete(users).where(eq(users.id, user.id));
 
@@ -724,6 +724,21 @@ describe("passkey signout", () => {
     const setCookie = response.headers.get("set-cookie");
     expect(setCookie).toContain(`${SESSION_COOKIE_NAME}=`);
     expect(setCookie).toContain("Max-Age=0");
+  });
+
+  test("under a basePath the cookie is cleared from the base-scoped path", async () => {
+    const h = await createDispatcherHarness({
+      config: { basePath: "/custom-directory" },
+    });
+    const response = await h.dispatch(
+      plumixRequest("/custom-directory/_plumix/auth/signout", {
+        method: "POST",
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("set-cookie")).toContain(
+      "Path=/custom-directory",
+    );
   });
 
   test("invalidates an existing session", async () => {

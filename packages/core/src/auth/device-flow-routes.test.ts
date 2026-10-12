@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
 
 import { deviceCodes } from "../db/schema/device_codes.js";
@@ -7,6 +10,7 @@ import { API_TOKEN_PREFIX } from "./api-tokens.js";
 const DEVICE_CODE_PATH = "/_plumix/auth/device/code";
 const DEVICE_TOKEN_PATH = "/_plumix/auth/device/token";
 const DEVICE_GRANT = "urn:ietf:params:oauth:grant-type:device_code";
+const ADMIN_MOUNT = "/_plumix/admin";
 
 describe("POST /_plumix/auth/device/code", () => {
   test("returns the RFC 8628 fields for a fresh session", async () => {
@@ -25,6 +29,28 @@ describe("POST /_plumix/auth/device/code", () => {
     );
     expect(body.expires_in).toBeGreaterThan(0);
     expect(body.interval).toBeGreaterThan(0);
+  });
+
+  test("verification_uri points at a page the admin router declares", async () => {
+    const h = await createDispatcherHarness();
+    const response = await h.dispatch(
+      plumixRequest(DEVICE_CODE_PATH, { method: "POST" }),
+    );
+    const body = (await response.json()) as { verification_uri: string };
+    const { pathname } = new URL(body.verification_uri);
+    expect(pathname.startsWith(`${ADMIN_MOUNT}/`)).toBe(true);
+
+    const routeTree = readFileSync(
+      join(
+        dirname(fileURLToPath(import.meta.url)),
+        "../../../admin/src/routeTree.gen.ts",
+      ),
+      "utf8",
+    );
+    const fullPaths = /interface FileRoutesByFullPath \{([^}]*)\}/.exec(
+      routeTree,
+    )?.[1];
+    expect(fullPaths).toContain(`"${pathname.slice(ADMIN_MOUNT.length)}":`);
   });
 
   test("rejects POSTs without the X-Plumix-Request CSRF header", async () => {

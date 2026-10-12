@@ -102,6 +102,7 @@ const CORE_WITHHELD: readonly Withholding[] = [
       "authenticator from the cookie and identity helpers that stay.",
     names: [
       "mintSessionAndCookie",
+      "sessionCookieScope",
       "announceSignIn",
       "createSession",
       "validateSession",

@@ -37,9 +37,8 @@ export const enable = base
       throw errors.CONFLICT({ data: { reason: "update_failed" } });
     }
 
-    // Mirrors the status_changed action fired by `user.disable` — one
-    // hook covers both transitions so plugins observing "account
-    // activity state changed" don't need to subscribe to two events.
+    // One `user:status_changed` hook covers enable and disable, so plugins
+    // observing "account activity state changed" don't need two events.
     await context.hooks.doAction(
       "user:status_changed",
       updated,

@@ -162,7 +162,7 @@ describe("termLookupAdapter", () => {
     expect(result?.label).toBe("Resolved");
     // Wire-contract pin — every term row carries `targetType` (the
     // taxonomy name) so the admin picker can cascade through the
-    // taxonomy's per-type labels. Mirrors the entry adapter test.
+    // taxonomy's per-type labels.
     expect(result?.targetType).toBe("category");
   });
 

@@ -1,6 +1,6 @@
 import type { CredentialTransport } from "../../db/schema/credentials.js";
 
-// WebAuthn options shapes — what the server hands the browser. Mirrors the
+// WebAuthn options shapes — what the server hands the browser. Follows the
 // PublicKeyCredentialCreationOptions / RequestOptions shape but with strings
 // (base64url-encoded) instead of ArrayBuffers, so it serializes to JSON.
 

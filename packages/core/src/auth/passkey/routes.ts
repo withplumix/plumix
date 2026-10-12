@@ -5,7 +5,6 @@ import type { User } from "../../db/schema/users.js";
 import type { AuthFlowApp } from "../flow-app.js";
 import type { ValidInvite } from "../invite.js";
 import type { AuthenticationResponse } from "./types.js";
-import { withBasePath } from "../../base-path.js";
 import { eq, isUniqueConstraintError } from "../../db/index.js";
 import { credentials } from "../../db/schema/credentials.js";
 import { users } from "../../db/schema/users.js";
@@ -14,18 +13,18 @@ import { listUserMetaFields } from "../../plugin/manifest.js";
 import { jsonResponse } from "../../runtime/contract/http.js";
 import { authenticateSession } from "../authenticator.js";
 import { provisionUser } from "../bootstrap.js";
-import {
-  buildSessionDeletionCookie,
-  isSecureRequest,
-  readSessionCookie,
-} from "../cookies.js";
+import { buildSessionDeletionCookie, readSessionCookie } from "../cookies.js";
 import {
   consumeInviteToken,
   InviteError,
   validateInviteToken,
 } from "../invite.js";
 import { invalidateSession, validateSession } from "../sessions.js";
-import { announceSignIn, mintSessionAndCookie } from "../sign-in.js";
+import {
+  announceSignIn,
+  mintSessionAndCookie,
+  sessionCookieScope,
+} from "../sign-in.js";
 import { beginAuthentication, finishAuthentication } from "./authenticate.js";
 import { resolvePasskeyOrigins } from "./config.js";
 import { PasskeyError } from "./errors.js";
@@ -390,13 +389,7 @@ export async function handleSignout(
       await ctx.hooks.doAction("user:signed_out", validated.user, ctx);
     }
   }
-  const cookie = buildSessionDeletionCookie({
-    secure: isSecureRequest(ctx.request),
-    sameSite: "Lax",
-    // Must match the Path the session was minted with (see
-    // mintSessionAndCookie) or the browser won't clear it.
-    path: withBasePath("/", ctx.config.basePath),
-  });
+  const cookie = buildSessionDeletionCookie(sessionCookieScope(ctx));
   // Without the IdP logout URL, an external session (CF Access, SAML) would
   // silently re-authenticate the next request.
   const redirectTo = sanitiseSignOutUrl(
