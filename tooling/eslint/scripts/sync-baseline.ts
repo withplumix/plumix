@@ -13,6 +13,9 @@ const BASELINE = path.join(
 );
 const root = repoRootOf(BASELINE);
 
+/** The rule suite's violating inputs, which `eslint.config.ts` ignores. */
+const RULE_FIXTURES = "tooling/eslint/test/fixtures/";
+
 const linted = new Map<string, boolean>();
 
 /**
@@ -48,6 +51,7 @@ function lintedFiles(): SourceFile[] {
     .split("\0")
     .filter((file) => file !== "")
     .filter(isLintedFile)
+    .filter((file) => !file.startsWith(RULE_FIXTURES))
     .filter((file) => packageLints(path.posix.dirname(file)))
     .map((file) => ({
       file,

@@ -414,5 +414,9 @@
   {
     "file": "packages/runtimes/node/src/node-sqlite-client.ts",
     "hash": "3f4b840d03cb85f1"
+  },
+  {
+    "file": "tooling/vitest/source-resolver.ts",
+    "hash": "74505c4f77057791"
   }
 ]
