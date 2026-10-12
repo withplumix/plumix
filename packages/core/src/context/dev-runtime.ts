@@ -103,14 +103,8 @@ export interface DebugHistoryStore {
   get(): readonly DebugHistoryEntry[];
 }
 
-/**
- * A mail `plumix dev` caught instead of sending, because the site has no
- * `mailer`. Inert JSON, like a history entry.
- */
-export interface CaughtMail {
-  readonly id: string;
-  /** When it was caught (epoch ms). */
-  readonly at: number;
+/** A mail a request sent under `plumix dev`, as its history records it. */
+export interface RecordedMail {
   readonly name: string;
   readonly props: JsonValue;
   readonly to: string;
@@ -118,6 +112,16 @@ export interface CaughtMail {
   readonly subject: string;
   readonly text: string;
   readonly html?: string;
+}
+
+/**
+ * A mail `plumix dev` caught instead of sending, because the site has no
+ * `mailer`. Inert JSON, like a history entry.
+ */
+export interface CaughtMail extends RecordedMail {
+  readonly id: string;
+  /** When it was caught (epoch ms). */
+  readonly at: number;
 }
 
 /** The mail `plumix dev` caught, bounded by the same `config.dev.history`. */

@@ -1,6 +1,6 @@
 import type { Mailer } from "../../auth/contract/mailer.js";
 import type { Logger } from "../../context/app-context.js";
-import type { DevRuntime } from "../../context/dev-runtime.js";
+import type { DevRuntime, RecordedMail } from "../../context/dev-runtime.js";
 import type { TelemetryCollector } from "../../context/telemetry.js";
 import type { JsonValue } from "../../json.js";
 import type { SentMail } from "../../mail/sender.js";
@@ -28,7 +28,12 @@ export function devMail(input: DevMailInput): DevMail {
     onSent: ({ name, props, locale, message }) => {
       // Props are whatever the mail declared; the history store sanitizes
       // each snapshot into JSON, so a `Date` or a class instance is safe here.
-      const recorded = { name, locale, props: props as JsonValue, ...message };
+      const recorded = {
+        name,
+        locale,
+        props: props as JsonValue,
+        ...message,
+      } satisfies RecordedMail;
       input.telemetry().record(DEBUG_MAIL_PANEL_ID, recorded);
       if (configured === undefined) {
         dev.mail.save({ id: crypto.randomUUID(), at: Date.now(), ...recorded });

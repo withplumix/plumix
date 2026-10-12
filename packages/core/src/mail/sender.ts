@@ -15,7 +15,7 @@ import { users } from "../db/schema/users.js";
 import { findEnabledLocale } from "../i18n/locale-registry.js";
 import { MailerNotConfigured, MailError } from "./contract/errors.js";
 
-interface CreateMailSenderInput {
+interface CreateMailSenderInput extends MailSite {
   readonly mails: DeclaredMails;
   readonly catalogs: MailCatalogs;
   readonly mailer: Mailer | undefined;
@@ -24,8 +24,6 @@ interface CreateMailSenderInput {
   readonly i18n: LocaleRegistry;
   /** The request's resolved locale, the site default when it has none. */
   readonly locale: string;
-  readonly siteName: string;
-  readonly baseUrl: string;
   /** Called with each mail the mailer accepted. */
   readonly onSent?: (sent: SentMail) => void;
 }
@@ -39,11 +37,16 @@ export interface SentMail {
 }
 
 /** Where a site's mails say they come from: its name and public root. */
+interface MailSite {
+  readonly siteName: string;
+  readonly baseUrl: string;
+}
+
 export function mailSite(
   magicLinkSiteName: string | undefined,
   origin: string,
   basePath: string,
-): { readonly siteName: string; readonly baseUrl: string } {
+): MailSite {
   return {
     // The magic-link slot names the site; a site without it is named by its
     // host.
@@ -52,13 +55,11 @@ export function mailSite(
   };
 }
 
-interface RenderMailInput {
+interface RenderMailInput extends MailSite {
   readonly mail: AnyMailDefinition;
   readonly props: unknown;
   readonly locale: string;
   readonly catalogs: MailCatalogs;
-  readonly siteName: string;
-  readonly baseUrl: string;
 }
 
 /** A declared mail rendered in `locale`, with no recipient and no send. */
