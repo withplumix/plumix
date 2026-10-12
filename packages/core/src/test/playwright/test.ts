@@ -4,6 +4,7 @@ import { dirname, join, resolve } from "node:path";
 import { test as base } from "@playwright/test";
 
 import type { Mailbox } from "./mailbox.js";
+import type { Passkey } from "./passkey.js";
 import {
   captureDbBaseline,
   parseDbBaseline,
@@ -12,6 +13,7 @@ import {
 } from "./db-baseline.js";
 import { createMailbox } from "./mailbox.js";
 import { openPlaygroundDb } from "./open-playground-db.js";
+import { addVirtualPasskey } from "./passkey.js";
 import { resolvePlaygroundDbPath } from "./runtime-e2e.js";
 
 /**
@@ -36,6 +38,11 @@ interface PlumixWorkerFixtures {
 interface PlumixTestFixtures {
   /** Reads the mail `plumix dev` caught, through the test's `request`. */
   readonly mailbox: Mailbox;
+  /**
+   * The user's device: asking for it gives the page a Chromium virtual
+   * authenticator, removed when the test ends.
+   */
+  readonly passkey: Passkey;
 }
 
 /**
@@ -48,6 +55,13 @@ export const test = base.extend<
 >({
   mailbox: async ({ request }, use) => {
     await use(createMailbox(request));
+  },
+  passkey: async ({ page, browserName }, use) => {
+    const device = await addVirtualPasskey(browserName, () =>
+      page.context().newCDPSession(page),
+    );
+    await use(device.passkey);
+    await device.remove();
   },
   plumixPlayground: [undefined, { scope: "worker", option: true }],
   plumixDbBaseline: [

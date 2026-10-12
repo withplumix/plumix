@@ -13,6 +13,7 @@ export { dragTo } from "./drag-to.js";
 export type { Mailbox } from "./mailbox.js";
 export type { OpenPlaygroundDbOptions } from "./open-playground-db.js";
 export { openPlaygroundDb } from "./open-playground-db.js";
+export type { Passkey } from "./passkey.js";
 export type { PlumixE2EConfigOptions } from "./playwright-config.js";
 export { definePlumixE2EConfig, resolveE2EPort } from "./playwright-config.js";
 export { runtimeSpec } from "./runtime-spec.js";
