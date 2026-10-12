@@ -4,7 +4,6 @@ import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 
 import { visibleFieldsIn } from "./use-visible-fields.js";
 
-/** The wire shape a `.visibleWhen(layout.is("video"))` chain compiles to. */
 const FIELDS: readonly MetaBoxFieldManifestEntry[] = [
   { key: "layout", label: "Layout", type: "string", inputType: "text" },
   {

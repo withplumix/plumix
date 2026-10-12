@@ -30,7 +30,6 @@ export function numberInputValue(raw: string): number | null | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-/** The ISO-shaped strings native inputs emit are stored as-is. */
 export function temporalInputValue(raw: string): string | null {
   return raw === "" ? null : raw;
 }
@@ -73,10 +72,6 @@ const TEXT_INPUT_TYPES: ReadonlySet<string> = new Set([
   "password",
 ]);
 
-/**
- * Whether the text input renders this type as itself; any other type reaching
- * it is a plugin-specific one falling back to text.
- */
 export function isBuiltinInputType(inputType: string): boolean {
   return TEXT_INPUT_TYPES.has(inputType);
 }

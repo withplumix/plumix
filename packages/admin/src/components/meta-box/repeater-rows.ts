@@ -14,7 +14,6 @@ export function repeaterRows(raw: unknown): readonly ResolvedMeta[] {
   );
 }
 
-/** Every subfield gets a slot, starting from its starting value. */
 export function newRepeaterRow(
   subFields: readonly MetaBoxFieldManifestEntry[],
 ): ResolvedMeta {
@@ -23,9 +22,6 @@ export function newRepeaterRow(
   return { ...blank, ...startingMeta(subFields) };
 }
 
-/**
- * Without `.collapsed()`, the first sub-field holding a non-empty primitive.
- */
 export function rowSummary(
   row: ResolvedMeta,
   subFields: readonly MetaBoxFieldManifestEntry[],
@@ -48,7 +44,6 @@ export function rowSummary(
   return null;
 }
 
-/** A select / radio value resolves to its translated label. */
 function cellSummary(
   value: unknown,
   field: MetaBoxFieldManifestEntry | undefined,

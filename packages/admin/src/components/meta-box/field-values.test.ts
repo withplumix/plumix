@@ -65,6 +65,10 @@ describe("temporalDisplayValue", () => {
     expect(temporalDisplayValue(inputType, value)).toBe(expected);
   });
 
+  test("an invalid Date shows nothing", () => {
+    expect(temporalDisplayValue("date", new Date(Number.NaN))).toBe("");
+  });
+
   test("a stored string shows unchanged", () => {
     expect(temporalDisplayValue("date", "2026-05-03")).toBe("2026-05-03");
   });
@@ -103,8 +107,11 @@ describe("option values", () => {
     expect(decodeOptionValue(encodeOptionValue(""))).toBe("");
   });
 
-  test("any other option value passes through unchanged", () => {
+  test("any other option value encodes unchanged", () => {
     expect(encodeOptionValue("a")).toBe("a");
+  });
+
+  test("any other option value decodes unchanged", () => {
     expect(decodeOptionValue("a")).toBe("a");
   });
 });
@@ -135,9 +142,9 @@ describe("toggleStateText", () => {
   });
 
   test("a switch with no on/off text shows none", () => {
-    expect(toggleStateText(field({ inputType: "toggle" }), true)).toBe(
-      undefined,
-    );
+    expect(
+      toggleStateText(field({ inputType: "toggle" }), true),
+    ).toBeUndefined();
   });
 });
 
@@ -172,9 +179,12 @@ describe("referenceValueId", () => {
     expect(referenceValueId({ id: "42", name: "Eva" })).toBe("42");
   });
 
-  test.each([null, "", { id: "" }])("%j holds no reference", (value) => {
-    expect(referenceValueId(value)).toBeNull();
-  });
+  test.each([null, "", { id: "" }, [{ id: "42" }]])(
+    "%j holds no reference",
+    (value) => {
+      expect(referenceValueId(value)).toBeNull();
+    },
+  );
 });
 
 describe("referenceValueSummary", () => {
