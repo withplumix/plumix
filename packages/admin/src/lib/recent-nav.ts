@@ -1,24 +1,40 @@
 const RECENT_KEY = "plumix.v2.palette.recent";
 const MAX_STORED = 8;
 
+type RecentNavStorage = Pick<Storage, "getItem" | "setItem">;
+
+/**
+ * Reads `localStorage` only when called, so a browser that blocks storage
+ * throws inside the callers' `try` rather than at a default parameter.
+ */
+const browserStorage: RecentNavStorage = {
+  getItem: (key) => localStorage.getItem(key),
+  setItem: (key, value) => localStorage.setItem(key, value),
+};
+
 /** Push a destination to the front of the recently-visited list
  *  (deduped, capped). Silent on failure — recents are a convenience,
  *  not worth surfacing a quota/private-mode error per navigation. */
-export function recordRecentNav(to: string): void {
+export function recordRecentNav(
+  to: string,
+  storage: RecentNavStorage = browserStorage,
+): void {
   try {
-    const next = [to, ...readRecentNav().filter((t) => t !== to)].slice(
+    const next = [to, ...readRecentNav(storage).filter((t) => t !== to)].slice(
       0,
       MAX_STORED,
     );
-    localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+    storage.setItem(RECENT_KEY, JSON.stringify(next));
   } catch {
     /* empty */
   }
 }
 
-export function readRecentNav(): readonly string[] {
+export function readRecentNav(
+  storage: RecentNavStorage = browserStorage,
+): readonly string[] {
   try {
-    const raw = localStorage.getItem(RECENT_KEY);
+    const raw = storage.getItem(RECENT_KEY);
     if (raw === null) return [];
     const parsed: unknown = JSON.parse(raw);
     return Array.isArray(parsed)
