@@ -1,10 +1,10 @@
+import type { EntryAccessSubject } from "../access/contract/access-key.js";
 import type {
   AppContext,
   AuthenticatedAppContext,
 } from "../context/app-context.js";
 import type { SQL } from "../db/index.js";
 import type { Entry } from "../db/schema/entries.js";
-import type { EntryAccessSubject } from "./entry-access.js";
 import {
   entryCapabilityNamespace,
   namespacedEntryCapability,

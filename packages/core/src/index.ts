@@ -182,6 +182,8 @@ export type {
   WithResolvedMeta,
 } from "./meta/contract/bags.js";
 export { readEntryType } from "./entries/read-service.js";
+export type { EntryAdmission } from "./entries/entry-access.js";
+export { entryPolicyAdmits } from "./entries/entry-access.js";
 // A capability named by the resource it guards (#2436): the registry spells
 // the string, so a pooled type's namespace is never written by hand.
 export {

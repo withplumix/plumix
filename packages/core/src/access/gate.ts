@@ -3,9 +3,9 @@ import type { EntryTypeAccess } from "../plugin/manifest.js";
 import type { RouteMatch } from "../route/match.js";
 import type { AccessPolicy, Gate } from "./policy.js";
 import { withBasePath } from "../base-path.js";
-import { readAccessKey } from "../entries/entry-access.js";
 import { resolveSingleEntry } from "../route/single-entry.js";
 import { redirectTo } from "../runtime/contract/http.js";
+import { readAccessKey } from "./contract/access-key.js";
 
 /**
  * A role denial is 403 because re-authenticating wouldn't help; every other

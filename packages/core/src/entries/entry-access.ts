@@ -1,9 +1,11 @@
-import type { AccessOutcome } from "../access/contract/policy.js";
-import type { AccessPolicy } from "../access/policy.js";
+import type { EntryAccessSubject } from "../access/contract/access-key.js";
+import type {
+  AccessOutcome,
+  AccessPolicyFor,
+} from "../access/contract/policy.js";
 import type { AppContext } from "../context/app-context.js";
 import type { SQL } from "../db/index.js";
-import type { JsonObject } from "../json.js";
-import type { ResolvedMeta } from "../meta/contract/bags.js";
+import { readAccessKey } from "../access/contract/access-key.js";
 import { ACCESS_POLICY_META_KEY } from "../access/contract/meta-key.js";
 import { inArray, isNull, notInArray, or, sql } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
@@ -19,15 +21,6 @@ type Admits = EntryAdmission | "nothing";
 interface TypeAdmission {
   readonly default: Admits;
   readonly byKey: ReadonlyMap<string, Admits>;
-}
-
-/** The parts of an entry its access policy is chosen by. */
-export interface EntryAccessSubject {
-  readonly type: string;
-  /**
-   * Either form works: the access key is a plain string that survives decoding.
-   */
-  readonly meta?: JsonObject | ResolvedMeta | null;
 }
 
 /**
@@ -91,8 +84,9 @@ function typeAdmission(
   if (access === undefined) return Promise.resolve(undefined);
   const principal = ctx.user === null ? "anonymous" : `user:${ctx.user.id}`;
   return ctx.memo(`core:entry-access:${type}:${principal}`, async () => {
-    const admits = async (policy: AccessPolicy): Promise<Admits> =>
-      admitsOf(await policy.resolve(ctx));
+    const admits = async (
+      policy: AccessPolicyFor<AppContext>,
+    ): Promise<Admits> => admitsOf(await policy.resolve(ctx));
     const [fallback, chosen] = await Promise.all([
       admits(access.default),
       Promise.all(
@@ -118,15 +112,4 @@ function admitsOf(outcome: AccessOutcome): Admits {
 function meets(admits: Admits, level: EntryAdmission): boolean {
   if (admits === "nothing") return false;
   return level === "listing" || admits === "content";
-}
-
-/**
- * The per-entry access choice stored under the reserved meta key, or
- * `undefined` when unset (or stored as a non-string by some out-of-band write).
- */
-export function readAccessKey(
-  meta: EntryAccessSubject["meta"],
-): string | undefined {
-  const value = meta?.[ACCESS_POLICY_META_KEY];
-  return typeof value === "string" ? value : undefined;
 }

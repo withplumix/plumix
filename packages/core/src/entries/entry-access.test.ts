@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
+import type { EntryAccessSubject } from "../access/contract/access-key.js";
 import type { AppContext, AuthenticatedUser } from "../context/app-context.js";
 import type { EntryTypeAccess } from "../plugin/manifest.js";
-import type { EntryAccessSubject } from "./entry-access.js";
 import { anonymousContext } from "../access/anonymous-context.js";
 import { ACCESS_POLICY_META_KEY } from "../access/contract/meta-key.js";
 import {
