@@ -62,15 +62,43 @@ IndexNow ping after an editor saves, or a cron's output, must say what
 anonymous visitors may see, not what its requester may. `anonymousContext(ctx)`
 derives a context with no user, no token scopes and an anonymous `auth.can`,
 over the same `db` and `plugins`, with its memo entries kept apart from the
-request's. Passing it to the rules answers for anonymous visitors. plugin-og
-and plugin-comments use it in place of `entryAllowsAnonymousAccess`, which is
-removed.
+request's. Passing it to the rules answers for anonymous visitors.
+
+### The policy on its own: `entryPolicyAdmits`
+
+plugin-og and plugin-comments ask a narrower question than any rule above:
+does this entry's policy admit an anonymous visitor, whatever its status or
+type? None of the rules answers it. `canReadEntry` and `readableEntryRows`
+start from the `read` capability, and an anonymous principal holds none, so
+asked through `anonymousContext` they refuse every entry. `publicEntryRows`
+adds publication and a public type, so og would lose the card preview it draws
+for a draft, and comments would refuse entries of a type with no public
+archive.
+
+> **`plumix/auth` exports `entryPolicyAdmits(ctx, entry, level)`, the one-entry
+> form of the condition the rules share, with `level` `"listing"` or
+> `"content"` (`EntryAdmission`). It weighs the policy alone, for `ctx`'s
+> principal. A plugin asks for anonymous visitors by passing
+> `anonymousContext(ctx)`, so the old function's job is the composition of two
+> exports rather than a function of its own.**
+
+`entryAllowsAnonymousAccess` is removed with no shim. It did the same job with
+the anonymity built in, which is the second way of asking on someone else's
+behalf this record rules out.
 
 ## Considered options
 
 - **Exclude a policied type whole** (rejected; it was #2555's rule). It keeps
   gated entries out, and every public entry of the type with them. A site that
   gates one page loses its pages from the sitemap, the feed and search.
+- **Keep `entryAllowsAnonymousAccess`, or keep plugins on the named rules
+  alone** (rejected). Keeping it leaves a second way to ask for someone else
+  beside `anonymousContext`. Routing og and comments through `canReadEntry`
+  needs an anonymous `read` capability core does not grant, and through
+  `publicEntryRows` changes what they accept (drafts for og's preview,
+  non-public types for comments). A policy-only predicate that takes the
+  principal from its context is the smallest surface that keeps their
+  behaviour.
 - **A `readableBy` option on queries** (rejected). A caller choosing whose
   access a query applies puts a security decision on every call site, and the
   default is whichever a caller forgets. The principal is already on the
