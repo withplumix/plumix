@@ -65,8 +65,20 @@ export function sanitizeHtml(
   allowlist: HtmlAllowlist = BASELINE_HTML_ALLOWLIST,
 ): string {
   if (typeof raw !== "string" || raw === "") return "";
+  return sanitize(raw, engineOptions(allowlist));
+}
+
+interface EngineOptions {
+  readonly allowedTags: string[];
+  readonly allowedAttributes: Record<string, string[]>;
+  readonly allowedSchemes: string[];
+  readonly allowProtocolRelative: boolean;
+}
+
+/** The floored allowlist in the option shape the sanitize engines read. */
+export function engineOptions(allowlist: HtmlAllowlist): EngineOptions {
   const floored = enforceHtmlFloors(allowlist);
-  return sanitize(raw, {
+  return {
     allowedTags: [...floored.allowedTags],
     allowedAttributes: Object.fromEntries(
       Object.entries(floored.allowedAttributes).map(([tag, attrs]) => [
@@ -80,5 +92,5 @@ export function sanitizeHtml(
       ? [...floored.allowedSchemes]
       : ["http", "https", "mailto", "tel"],
     allowProtocolRelative: floored.allowProtocolRelative ?? false,
-  });
+  };
 }

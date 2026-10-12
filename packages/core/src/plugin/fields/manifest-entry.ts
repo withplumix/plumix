@@ -17,9 +17,9 @@ import type {
 import { projectMetaBoxField } from "./project-field.js";
 
 /**
- * Client-safe field descriptor inside a meta box. Mirrors `MetaBoxField`
- * minus the server-only `sanitize` and `validate` callbacks, which run on
- * the server and have no serialisable stand-in.
+ * Client-safe field descriptor inside a meta box, projected from a
+ * `MetaBoxField` by `projectMetaBoxField`. The server-only `sanitize` and
+ * `validate` callbacks have no serialisable stand-in, so they stay behind.
  */
 export interface MetaBoxFieldManifestEntry {
   readonly key: string;

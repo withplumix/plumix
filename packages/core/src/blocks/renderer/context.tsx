@@ -7,6 +7,7 @@ import type { HydratedEntry } from "../context-bags.js";
 import type { LoadedDeps } from "../deps.js";
 import type { EntryContent } from "../entry-content.js";
 import type { CompiledCatalog } from "../i18n-label.js";
+import type { PlumixRenderMode } from "../island-mode.js";
 import type { ResolvedBlockLoaders } from "../loaders.js";
 import type {
   BlockNode,
@@ -24,25 +25,18 @@ import { renderBlockTree } from "../render-block-tree.js";
 import { serializeRenderEnv } from "../render-env.js";
 import { RendererError } from "./errors.js";
 
-/**
- * `blocks/` sits in the foundation layer, below `auth/` and `route/` — these
- * mirror `AuthenticatedUser` / `ResolvedEntity` structurally.
- */
 export interface RendererUser {
   readonly id: number;
   readonly email: string;
+  /** Display name from `users.name`; null when the user never set one. */
   readonly name?: string | null;
   readonly role: string;
-  /** Mirrors core's `AuthenticatedUser.meta`, which is the `users.meta`
-   *  column verbatim. */
+  /** The `users.meta` column verbatim; the field pipeline never runs on it. */
   readonly meta: JsonObject;
 }
 
-/**
- * Mirrors core's `AuthMethodsSummary` structurally — blocks sits below core in
- * the build graph and can't import it.
- */
 export interface RendererOAuthProvider {
+  /** Map key in `auth.oauth.providers`; the URL path segment. */
   readonly key: string;
   readonly label: string;
 }
@@ -59,7 +53,7 @@ export type RendererQueriedEntry =
   | { readonly kind: "author"; readonly id: number }
   | { readonly kind: "entryType"; readonly entryType: string };
 
-export type PlumixRenderMode = "live" | "preview" | "edit";
+export type { PlumixRenderMode } from "../island-mode.js";
 
 export interface PlumixContextValue {
   readonly registry: BlockRegistry;

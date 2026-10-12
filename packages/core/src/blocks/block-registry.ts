@@ -45,7 +45,7 @@ export interface BlockInput {
   readonly defaultChildren?: readonly BlockNode[];
   /**
    * Binds the input to a CSS property in `node.style` instead of an attr, so
-   * the control stays in sync with the Styles tab.
+   * the control and the Styles tab edit the same value.
    */
   readonly styleProperty?: string;
   /**

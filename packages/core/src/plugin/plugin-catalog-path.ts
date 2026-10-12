@@ -6,8 +6,7 @@ export function pluginCatalogUrl(pluginId: string, locale: string): string {
 
 /** Filesystem path (relative to the admin asset root) where the plumix
  *  Vite plugin must stage `<plugin.i18n.catalogPath>/<locale>.mjs`.
- *  Mirrors `pluginCatalogUrl` so a single edit retargets both ends of
- *  the runtime fetch. */
+ *  `pluginCatalogUrl` builds on it, so one edit retargets both ends. */
 export function pluginCatalogStagedPath(
   pluginId: string,
   locale: string,

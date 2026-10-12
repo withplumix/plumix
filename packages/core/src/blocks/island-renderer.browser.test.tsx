@@ -9,7 +9,7 @@ describe("island renderer mount()", () => {
 
   afterEach(async () => {
     // Unmount + drain a macrotask so React 19's scheduler tears the root
-    // down before the next test (mirrors the island-element suite).
+    // down before the next test.
     active?.unmount();
     active = null;
     document.body.innerHTML = "";

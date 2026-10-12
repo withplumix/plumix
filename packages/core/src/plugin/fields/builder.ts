@@ -219,7 +219,7 @@ export function text<K extends string>(key: K): StringFieldBuilder<"text", K> {
   return new StringFieldBuilder("text", key);
 }
 
-/** Multi-line text input. Storage shape mirrors `text`. */
+/** Multi-line text input, stored as a string like `text`. */
 export function textarea<K extends string>(
   key: K,
 ): StringFieldBuilder<"textarea", K> {

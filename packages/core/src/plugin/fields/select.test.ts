@@ -254,7 +254,7 @@ describe("select() phantom value typing — single value", () => {
   });
 
   test("phantom key + stored shape feed the contribution fold", () => {
-    // `_key` carries the literal; `_stored` mirrors the chassis rules —
+    // `_key` carries the literal; `_stored` follows the chassis rules —
     // `.default()` narrows nothing (a cleared field is stored absent),
     // `.required()` is write-enforced so storage narrows too.
     const _plain = select("size").options(["s", "m"]);

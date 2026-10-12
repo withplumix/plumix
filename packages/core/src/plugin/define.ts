@@ -30,9 +30,8 @@ export type PluginProvides<TState = undefined> = (
 type PluginStateFactory<TState> = () => TState | Promise<TState>;
 
 export interface PluginI18nSlot {
-  /** Source locale every msgid is authored in. Mirrors lingui.config
-   *  but lives on the manifest so admin can resolve plugin catalog
-   *  paths without re-parsing the plugin's lingui config at runtime. */
+  /** Source locale every msgid is authored in. Admin reads it from the
+   *  manifest to resolve plugin catalog paths, never the lingui config. */
   readonly sourceLocale: string;
   /** Locales the plugin ships catalogs for. Intersected with the
    *  site's enabled locales before any URL is generated — declaring
@@ -117,7 +116,9 @@ export function pluginAdminEntryPath(packageName: string): string {
 }
 
 /** The catalogs first-party plugins ship, not the site's enabled locales;
- *  those are intersected at render time. */
+ *  those are intersected at render time. Must match the defaults of
+ *  `defineLinguiConfig()`.
+ *  Guarded by: packages/core/src/plugin/define.test.ts */
 export const PLUGIN_I18N_SLOT: PluginI18nSlot = {
   sourceLocale: "en",
   locales: ["en", "uk", "ar", "de", "zh-CN"],

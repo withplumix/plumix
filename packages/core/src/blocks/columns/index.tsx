@@ -23,12 +23,13 @@ const DEFAULT_COLUMNS: readonly BlockNode[] = [
 
 const STACK_AT = ["tablet", "mobile", "never"] as const;
 type StackAt = (typeof STACK_AT)[number];
+const DEFAULT_STACK_AT: StackAt = "tablet";
 
 function pickStackAt(raw: unknown): StackAt {
   return typeof raw === "string" &&
     (STACK_AT as readonly string[]).includes(raw)
     ? (raw as StackAt)
-    : "tablet";
+    : DEFAULT_STACK_AT;
 }
 
 /**
@@ -106,9 +107,7 @@ export const columnsBlock = defineBlock({
       defaultChildren: DEFAULT_COLUMNS,
     },
   ],
-  // Seeds the inspector control; keep in sync with pickStackAt's render
-  // default.
-  defaults: { stackAt: "tablet" },
+  defaults: { stackAt: DEFAULT_STACK_AT },
   // A flex row with a gap. Responsive stacking rides a scoped media query keyed
   // off `stackAt` (see render), not a seeded bucket, so the preset owns it.
   defaultStyles: {

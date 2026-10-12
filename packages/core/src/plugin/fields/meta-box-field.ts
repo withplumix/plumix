@@ -124,7 +124,7 @@ export interface StringMetaBoxField<I extends string = StringInputType>
 /** Single-line text input. */
 export type TextMetaBoxField = StringMetaBoxField<"text">;
 
-/** Multi-line text input. Storage shape mirrors `text`. */
+/** Multi-line text input, stored as a string like `text`. */
 export type TextareaMetaBoxField = StringMetaBoxField<"textarea">;
 
 /** RFC-5322-shaped email input. */
@@ -135,8 +135,8 @@ export type UrlMetaBoxField = StringMetaBoxField<"url">;
 
 /**
  * Masked-input password field. Visually hides characters in the admin
- * so values aren't shoulder-surfable in shared sessions; storage
- * shape mirrors `text`.
+ * so values aren't shoulder-surfable in shared sessions; stored as a
+ * string like `text`.
  */
 export type PasswordMetaBoxField = StringMetaBoxField<"password">;
 

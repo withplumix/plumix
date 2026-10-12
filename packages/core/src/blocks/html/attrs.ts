@@ -2,7 +2,7 @@ import type { JsonObject } from "../../json.js";
 
 // React escapes values, so the threat is the KEY: `dangerouslySetInnerHTML`
 // injects markup and lowercase `onclick` renders a live handler. Render is the
-// boundary; the editor only mirrors it.
+// boundary, not the editor.
 
 /**
  * Safe global attributes that work as-is when spread as lowercase React props.

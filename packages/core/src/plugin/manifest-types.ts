@@ -22,6 +22,7 @@ import type { FrameworkRoutes } from "../route/contract/framework-routes.js";
 import type { NamedTemplateChoice } from "../route/contract/named-template.js";
 import type { MetaBoxFieldManifestEntry } from "./fields/manifest-entry.js";
 import type {
+  DashboardWidgetOptions,
   EntryMenuIcon,
   EntryTypeLabels,
   PluginComponentRef,
@@ -38,17 +39,15 @@ export { startingMeta } from "./fields/starting-meta.js";
 export type { StartingMetaField } from "./fields/starting-meta.js";
 
 /**
- * Wire shape intentionally equals DashboardWidgetOptions (minus
- * registeredBy) — unlike e.g. FieldTypeManifestEntry, a widget's options
- * carry nothing server-only to drop, so the manifest entry just mirrors
- * them as the admin-facing boundary.
+ * Unlike e.g. FieldTypeManifestEntry, a widget's options carry nothing
+ * server-only to drop, so the wire shape is the options with the capability
+ * resolved to its string.
  */
-export interface DashboardWidgetManifestEntry {
-  readonly id: string;
-  readonly title: Label;
+export interface DashboardWidgetManifestEntry extends Omit<
+  DashboardWidgetOptions,
+  "capability"
+> {
   readonly capability?: string;
-  readonly component: PluginComponentRef;
-  readonly priority?: number;
 }
 
 /**

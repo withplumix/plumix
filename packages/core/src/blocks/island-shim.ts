@@ -16,8 +16,7 @@ export const InsideIslandContext = createContext(false);
 
 /**
  * Default prefetch trigger per hydration trigger — the chunk warms before
- * the user reaches the island. Mirrors the table the transform used to
- * bake into every shim.
+ * the user reaches the island.
  */
 const PREFETCH_DEFAULTS: Readonly<Record<string, string>> = {
   load: "load",

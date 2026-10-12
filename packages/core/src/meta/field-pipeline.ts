@@ -12,14 +12,12 @@ import type {
   TemporalInputType,
 } from "../plugin/manifest.js";
 import type { ResolvedMeta } from "./contract/bags.js";
+import { SAFE_HREF } from "../blocks/marks/safe-href.js";
 import { isJsonArray, isJsonObject } from "../json.js";
 import { HEX_COLOR } from "../plugin/fields/color.js";
 import { isFieldVisible } from "../plugin/fields/condition.js";
 import { parseLinkValue } from "../plugin/fields/link.js";
-import {
-  SAFE_HREF_RE,
-  walkRichtextDoc,
-} from "../plugin/fields/richtext-validate.js";
+import { walkRichtextDoc } from "../plugin/fields/richtext-validate.js";
 import {
   formatTemporalValue,
   isTemporalInputType,
@@ -649,7 +647,7 @@ function checkConstraints(
   if (field.inputType === "url" && typeof value === "string") {
     // Security gate, not a business rule — the value is destined for a
     // rendered href, so script-bearing schemes hard-fail even in draft mode.
-    if (value !== "" && !SAFE_HREF_RE.test(value)) {
+    if (value !== "" && !SAFE_HREF.test(value)) {
       return [{ path, message: META_FIELD_MESSAGES.invalidUrl }];
     }
   }

@@ -118,7 +118,8 @@ declare module "./contributions.js" {
 /**
  * Never invoked — the drift check is purely compile-time. When a
  * contribution declaration exists for a box id / group name, the
- * registration call must match it; undeclared ids stay unconstrained.
+ * registration call is type-checked against it; undeclared ids stay
+ * unconstrained.
  */
 const _driftChecks = (ctx: PluginSetupContext) => {
   ctx.registerEntryMetaBox("cxArticle", {

@@ -1,29 +1,16 @@
 // The browser bundle swaps `sanitize-html` for this shim. The engines emit
 // byte-different markup, so these assert security properties rather than
 // serialization.
+import serverSanitize from "sanitize-html/index.js";
 import { describe, expect, test } from "vitest";
 
 import type { HtmlAllowlist } from "./sanitize.js";
 import { createBlockRegistry } from "../index.js";
 import { buildHtmlAllowlist } from "./build-allowlist.js";
 import sanitize from "./dompurify-shim.js";
-import { enforceHtmlFloors } from "./floors.js";
-import { BASELINE_HTML_ALLOWLIST } from "./sanitize.js";
+import { BASELINE_HTML_ALLOWLIST, engineOptions } from "./sanitize.js";
 
-/**
- * Mirror how `sanitizeHtml` normalizes the allowlist into the option shape the
- * engine (sanitize-html / this shim) consumes.
- */
-const opts = {
-  allowedTags: [...BASELINE_HTML_ALLOWLIST.allowedTags],
-  allowedAttributes: Object.fromEntries(
-    Object.entries(BASELINE_HTML_ALLOWLIST.allowedAttributes).map(
-      ([tag, attrs]) => [tag, [...attrs]],
-    ),
-  ),
-  allowedSchemes: [...(BASELINE_HTML_ALLOWLIST.allowedSchemes ?? [])],
-  allowProtocolRelative: BASELINE_HTML_ALLOWLIST.allowProtocolRelative ?? false,
-};
+const opts = engineOptions(BASELINE_HTML_ALLOWLIST);
 
 function run(raw: unknown): string {
   return sanitize(raw, opts);
@@ -166,21 +153,8 @@ describe("dompurify-shim — baseline allowlist parity", () => {
 // verbatim, so overrides are driven through this engine too. These pin that the
 // floor holds without DOMPurify's own URI regexp.
 describe("dompurify-shim — operator-override allowlists", () => {
-  // Mirrors what `sanitizeHtml` hands the engine: the floored allowlist,
-  // mapped into the option shape.
   function runFloored(raw: string, allowlist: HtmlAllowlist): string {
-    const floored = enforceHtmlFloors(allowlist);
-    return sanitize(raw, {
-      allowedTags: [...floored.allowedTags],
-      allowedAttributes: Object.fromEntries(
-        Object.entries(floored.allowedAttributes).map(([tag, attrs]) => [
-          tag,
-          [...attrs],
-        ]),
-      ),
-      allowedSchemes: [...(floored.allowedSchemes ?? [])],
-      allowProtocolRelative: floored.allowProtocolRelative ?? false,
-    });
+    return sanitize(raw, engineOptions(allowlist));
   }
 
   function runBuilt(
@@ -246,5 +220,62 @@ describe("dompurify-shim — operator-override allowlists", () => {
     expect(out).not.toMatch(/script/i);
     expect(parse(out).querySelector("p")?.hasAttribute("onclick")).toBe(false);
     expect(parse(out).querySelector("p")?.textContent).toBe("hi");
+  });
+});
+
+// The `browser` field remaps the bare `sanitize-html` specifier to this shim,
+// so the server engine is imported by its file path.
+describe("dompurify-shim — URL policy agrees with sanitize-html", () => {
+  const HREFS = [
+    "https://example.com/a",
+    "HTTP://example.com",
+    "mailto:a@example.com",
+    "tel:+100",
+    "/root",
+    "#fragment",
+    "?query=1",
+    "./sibling",
+    "../parent",
+    "plain/relative",
+    "//evil.example/x",
+    "javascript:alert(1)",
+    "JaVaScRiPt:alert(1)",
+    "java\tscript:alert(1)",
+    " javascript:alert(1)",
+    "data:text/html,x",
+    "vbscript:x",
+    "ftp://example.com",
+    "view-source:https://example.com",
+    "&#106;avascript:alert(1)",
+    "javascript&colon;alert(1)",
+    "\u0001javascript:alert(1)",
+    "https:",
+    "mailto:",
+  ];
+
+  function keptHref(out: string): string | null {
+    return parse(out).querySelector("a")?.getAttribute("href") ?? null;
+  }
+
+  test.each(HREFS)("both engines treat the href %j alike", (href) => {
+    const raw = `<a href="${href}">x</a>`;
+    expect(keptHref(run(raw))).toBe(keptHref(serverSanitize(raw, opts)));
+  });
+
+  const SRC_ALLOWLIST = engineOptions({
+    ...BASELINE_HTML_ALLOWLIST,
+    allowedTags: [...BASELINE_HTML_ALLOWLIST.allowedTags, "img"],
+    allowedAttributes: { img: ["src"] },
+  });
+
+  function keptSrc(out: string): string | null {
+    return parse(out).querySelector("img")?.getAttribute("src") ?? null;
+  }
+
+  test.each(HREFS)("both engines treat the img src %j alike", (src) => {
+    const raw = `<img src="${src}">`;
+    expect(keptSrc(sanitize(raw, SRC_ALLOWLIST))).toBe(
+      keptSrc(serverSanitize(raw, SRC_ALLOWLIST)),
+    );
   });
 });

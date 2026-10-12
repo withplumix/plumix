@@ -1,17 +1,6 @@
 import { Mark, mergeAttributes } from "@tiptap/core";
 
-/**
- * Same allowlist `renderInline` uses; kept in sync deliberately so a
- * pasted `javascript:` URL never reaches the editor doc.
- */
-const SAFE_HREF = /^(https?:\/\/|mailto:|tel:|\/|#|\?|\.\.?\/)/i;
-
-function sanitizeHref(raw: unknown): string | undefined {
-  if (typeof raw !== "string") return undefined;
-  const trimmed = raw.trim();
-  if (trimmed === "" || !SAFE_HREF.test(trimmed)) return undefined;
-  return trimmed;
-}
+import { sanitizeHref } from "../safe-href.js";
 
 export const linkSchema = Mark.create({
   name: "link",
