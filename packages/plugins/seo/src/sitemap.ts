@@ -262,8 +262,8 @@ function offsetFor(page: number): number {
 }
 
 /** `null` where the site has no public type, so there is nothing to list. */
-function publishedEntriesOf(ctx: AppContext, type: string) {
-  const listed = publicEntryRows(ctx.plugins);
+async function publishedEntriesOf(ctx: AppContext, type: string) {
+  const listed = await publicEntryRows(ctx);
   if (listed === null) return null;
   return and(listed, eq(entries.type, type), entryIsIndexable);
 }
@@ -277,7 +277,7 @@ async function entryPages(
   ctx: AppContext,
   type: string,
 ): Promise<SitemapIndexPage[]> {
-  const where = publishedEntriesOf(ctx, type);
+  const where = await publishedEntriesOf(ctx, type);
   if (where === null) return [];
   const ranked = ctx.db
     .select({
@@ -306,7 +306,7 @@ async function entryUrls(
   type: string,
   page: number,
 ): Promise<SitemapUrl[]> {
-  const where = publishedEntriesOf(ctx, type);
+  const where = await publishedEntriesOf(ctx, type);
   if (where === null) return [];
   const rows = await ctx.db
     .select({

@@ -50,7 +50,7 @@ export async function planForQuery(
   if ((counted?.matches ?? 0) <= threshold) return "ranked";
 
   // No entry to walk, so recency has nothing to be cheap at.
-  const entryRows = searchableEntryRows(ctx, types);
+  const entryRows = await searchableEntryRows(ctx, types);
   if (entryRows === null) return "ranked";
 
   const [reachable] = await ctx.db.all<{ found: number }>(sql`

@@ -3,6 +3,11 @@ import { describe, expect, test } from "vitest";
 import type { EntryFieldScope } from "../../../plugin/fields/entry.js";
 import type { MutablePluginRegistry } from "../../../plugin/manifest.js";
 import type { AuthenticatedRpcHarness } from "../../../test/rpc.js";
+import { ACCESS_POLICY_META_KEY } from "../../../access/contract/meta-key.js";
+import {
+  anonymousPolicy,
+  authenticatedPolicy,
+} from "../../../access/policy.js";
 import { withUser } from "../../../auth/with-user.js";
 import { definePlugin } from "../../../plugin/define.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
@@ -12,6 +17,7 @@ import {
   RESERVED_TYPES,
 } from "../../../revisions/slug-codec.js";
 import { entryFactory, userFactory } from "../../../test/factories.js";
+import { pooledEntryTypeRegistry } from "../../../test/pooled-entry-types.js";
 import { authedCtx, createRpcHarness } from "../../../test/rpc.js";
 import { createTracedContext } from "../../../test/traced-context.js";
 import { entryLookupAdapter } from "./lookup.js";
@@ -719,5 +725,61 @@ describe("entryLookupAdapter", () => {
     ]);
     expect(one.queries).toBeGreaterThan(0);
     expect(four.queries).toBe(one.queries);
+  });
+});
+
+describe("entryLookupAdapter and an entry's access policy", () => {
+  const pagesWithAccess = definePlugin("pages-with-access", (ctx) => {
+    ctx.registerEntryType("page", {
+      label: "Pages",
+      isPublic: true,
+      access: {
+        default: anonymousPolicy,
+        policies: [
+          { key: "members", label: "Members", policy: authenticatedPolicy },
+        ],
+      },
+    });
+  });
+
+  async function seeded() {
+    const h = await createRpcHarness({
+      plugins: await pooledEntryTypeRegistry(pagesWithAccess),
+    });
+    const author = await userFactory
+      .transient({ db: h.context.db })
+      .create({ role: "admin" });
+    const create = (slug: string, key?: string) =>
+      entryFactory.transient({ db: h.context.db }).create({
+        type: "page",
+        status: "published",
+        authorId: author.id,
+        slug,
+        meta: key === undefined ? {} : { [ACCESS_POLICY_META_KEY]: key },
+      });
+    const ids = [
+      (await create("public-page")).id,
+      (await create("members-page", "members")).id,
+    ];
+    return { ctx: h.context, ids: ids.map(String) };
+  }
+
+  test("hydrate() resolves an anonymous render only the references its policy admits", async () => {
+    const { ctx, ids } = await seeded();
+
+    const rows = await entryLookupAdapter.hydrate(ctx, {
+      ids,
+      scope: PAGE,
+    });
+
+    expect(rows.map((row) => row.slug)).toEqual(["public-page"]);
+  });
+
+  test("list() offers an anonymous caller only the entries its policy admits", async () => {
+    const { ctx } = await seeded();
+
+    const rows = await entryLookupAdapter.list(ctx, { scope: PAGE });
+
+    expect(rows.map((row) => row.href)).toEqual(["/page/public-page"]);
   });
 });

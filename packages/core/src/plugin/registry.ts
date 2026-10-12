@@ -140,10 +140,7 @@ export interface EntryTypeOptions {
   };
   /** Page size for this type's archive route. Default 20. */
   readonly archivePerPage?: number;
-  /**
-   * Gates only the entry's own single and archive routes. A gated entry still
-   * surfaces on aggregates (front page, archives, search, feeds, sitemap).
-   */
+  /** Applies per entry on every read surface; see ADR 0037. */
   readonly access?: EntryTypeAccess;
 }
 

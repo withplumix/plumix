@@ -4,11 +4,11 @@ import { and, inArray, publicEntryRows, sql } from "plumix/db";
 import { entries } from "plumix/schema";
 
 /** `null` when the site has no public entry type. */
-export function searchableEntryRows(
+export async function searchableEntryRows(
   ctx: AppContext,
   types: readonly string[],
-): SQL | null {
-  const listed = publicEntryRows(ctx.plugins);
+): Promise<SQL | null> {
+  const listed = await publicEntryRows(ctx);
   if (listed === null) return null;
   return sql`(${and(listed, inArray(entries.type, types))})`;
 }

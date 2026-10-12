@@ -184,6 +184,33 @@ Two role checks sit outside it, and token scopes do not reach either. `canAccess
 
 Not every signed-in principal is staff. `STAFF_MIN_ROLE` is `contributor`, so Plumix redirects a signed-in `subscriber` to the site root rather than hand over a shell whose every call would answer 403. That is the tier open signup hands out, and it is the tier a theme's own membership area is built on.
 
+## Gated entries on every surface
+
+An entry type registered with `access` lets an editor pick a policy per entry, and that choice holds wherever the entry appears, not only on its own page. The front page, the entry-type, taxonomy, author and date archives, core's search page, the REST API, the RPC reads and the reference lookups all list an entry only when its policy admits the principal asking. A signed-in member sees the members-only entries an anonymous visitor does not. Someone who may edit an entry (`edit_any`, or `edit_own` over their own) reads it in the admin and the API whatever its policy says.
+
+A soft challenge admits a visitor to the listing but not the body. Such an entry is listed with its title, excerpt, URL and images, carries `contentGated: true`, and has `content` and `contentBlocks` set to `null`, so a theme renders a teaser. Every other entry carries `contentGated: false`. The same holds for any list resolved through `resolveEntryList` from `plumix/plugin`, a plugin's own included, and for the REST API; only the entry's own page receives the body, and its template serves the teaser:
+
+```tsx
+import { fallback } from "plumix/theme";
+
+export const listing = fallback(({ data }) =>
+  "entries" in data ? (
+    <ul>
+      {data.entries.map((entry) => (
+        <li key={entry.id}>
+          <a href={entry.url ?? "#"}>{entry.title}</a>
+          {entry.contentGated ? <p>{entry.excerpt}</p> : null}
+        </li>
+      ))}
+    </ul>
+  ) : null,
+);
+```
+
+Each policy resolves once per request, however many entries a page lists, and the rows are matched in the one query that lists them. A listing that asks a policy about a signed-in member is personal to them, so the [shared cache](/deployment/cdn/) stores only the anonymous version of it.
+
+Plugin code reads entries through the same rules: `publicEntryRows(ctx)` from `plumix/db` is the condition a public listing adds to its query, and it answers for the request's own principal. When the output is public but the request is someone else's, such as a card scraped later, a ping sent after an editor saves, or a cron's artefact, ask through `anonymousContext(ctx)` from `plumix/auth`. It is the same context with no user, no token scopes and no capabilities, so a rule asked through it answers what anonymous visitors may see. `entryPolicyAdmits(ctx, entry, "listing" | "content")` asks one entry's policy the same way.
+
 ## Related
 
 The capabilities above are not written by hand. [Content Modelling](/content-modelling/overview/) covers the registrations that mint them, so the names you choose for an entry type and a taxonomy decide the capability strings that gate them. The auth slot sits in `plumix.config.ts` alongside the rest of the site's configuration, described in [Configuration](/getting-started/configuration/), and any value in it that is a secret takes an `(env) => …` resolver rather than a literal, covered in [Secrets](/deployment/secrets/). A [theme](/themes/overview/) reads the same principal the admin does, which is how a signed-in principal gets a different page from an anonymous one.

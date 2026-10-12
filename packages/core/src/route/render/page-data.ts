@@ -31,7 +31,7 @@ import { listEntryPage } from "./entry-listing.js";
 import {
   expandEntryTitle,
   resolveAuthorRow,
-  resolveEntryList,
+  resolveEntries,
   resolveTerm,
 } from "./resolve-entry-list.js";
 
@@ -246,10 +246,10 @@ export async function resolveEntryData(
   ctx: AppContext,
   row: Entry,
 ): Promise<EntryData> {
-  const [entry] = await resolveEntryList(ctx, [row]);
+  const [entry] = await resolveEntries(ctx, [row]);
   if (!entry) {
     // eslint-disable-next-line no-restricted-syntax -- diagnostic throw
-    throw new Error("resolveEntryList: empty result for one row");
+    throw new Error("resolveEntries: empty result for one row");
   }
   const data = await ctx.hooks.applyFilter("resolve:single:data", {
     kind: "entry",

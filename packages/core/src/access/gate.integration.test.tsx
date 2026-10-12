@@ -9,6 +9,7 @@ import type {
   EntryData,
 } from "../route/contract/resolved-entry.js";
 import type { ConnectedCdn } from "../runtime/contract/slots.js";
+import type { TemplateData } from "../theme.js";
 import type { AccessPolicy } from "./policy.js";
 import { defineBlock } from "../blocks/index.js";
 import { BlockRenderer, useUser } from "../blocks/renderer/index.js";
@@ -1384,5 +1385,270 @@ describe("access gate — a render that reads the principal is personal (#2915)"
 
     expect(await response.text()).toContain('<html lang="en"');
     expect(store.size).toBe(1);
+  });
+});
+
+const membersResolver = vi.fn(authenticatedPolicy.resolve);
+/**
+ * A `page` type public by default, with a members policy and a soft teaser an
+ * editor may pick per entry.
+ */
+const pagesWithAccess = definePlugin("pages-with-access", (ctx) => {
+  ctx.registerEntryType("page", {
+    label: "Pages",
+    isPublic: true,
+    hasArchive: true,
+    termTaxonomies: ["topic"],
+    access: {
+      default: anonymousPolicy,
+      policies: [
+        {
+          key: "members",
+          label: "Members",
+          policy: definePolicy({ resolve: membersResolver }),
+        },
+        {
+          key: "teaser",
+          label: "Teaser",
+          policy: definePolicy({
+            resolve: (c) =>
+              c.user
+                ? grant("authenticated")
+                : challenge("paywall", { soft: true }),
+          }),
+        },
+      ],
+    },
+  });
+  ctx.registerTermTaxonomy("topic", { label: "Topics", entryTypes: ["page"] });
+  ctx.registerArchiveType("library", {
+    routes: ["/library"],
+    access: authenticatedPolicy,
+    cacheable: true,
+    entries: (query) => query.ofTypes("page"),
+    title: "Library",
+  });
+});
+
+/** Every listing, as the slugs it carries and whether each kept its body. */
+function Listing({ data }: { readonly data: TemplateData }) {
+  if (!("entries" in data)) return null;
+  return (
+    <ul>
+      {data.entries.map((listed) => (
+        <li
+          key={listed.id}
+          data-testid={`listed-${listed.slug}`}
+          data-content-gated={String(listed.contentGated)}
+          data-has-body={String(
+            listed.content !== null || listed.contentBlocks !== null,
+          )}
+        />
+      ))}
+    </ul>
+  );
+}
+
+const listingTheme = defineTheme({
+  templates: [
+    entry(({ data }) => <p data-testid="single">{data.entry.title}</p>),
+    fallback(({ data }) => <Listing data={data} />),
+  ],
+});
+
+const PAGE_BODY = {
+  version: "plumix.v2",
+  blocks: [{ id: "p", name: "core/paragraph", attrs: {} }],
+} as const;
+
+async function seedPages(
+  h: Awaited<ReturnType<typeof createDispatcherHarness>>,
+) {
+  const author = await h.seedUser("admin");
+  const topic = await h.factory.term.create({
+    taxonomy: "topic",
+    slug: "news",
+  });
+  for (const [slug, key] of [
+    ["public-page", undefined],
+    ["members-page", "members"],
+    ["teaser-page", "teaser"],
+  ] as const) {
+    const page = await h.factory.entry.create({
+      type: "page",
+      slug,
+      title: `${slug} title`,
+      content: PAGE_BODY,
+      status: "published",
+      publishedAt: new Date("2026-03-04T00:00:00.000Z"),
+      authorId: author.id,
+      parentId: null,
+      meta: key === undefined ? {} : { [ACCESS_POLICY_META_KEY]: key },
+    });
+    await h.factory.entryTerm.create({ entryId: page.id, termId: topic.id });
+  }
+  return author;
+}
+
+function listedSlugs(html: string): string[] {
+  return [...html.matchAll(/data-testid="listed-([^"]+)"/g)].map(
+    (match) => match[1] ?? "",
+  );
+}
+
+describe("access on every listing", () => {
+  const surfaces = [
+    ["the front page", () => "/"],
+    ["the entry-type archive", () => "/page"],
+    ["a taxonomy archive", () => "/topic/news"],
+    ["an author archive", (authorSlug: string) => `/authors/${authorSlug}`],
+    ["a date archive", () => "/2026/03"],
+    ["search", () => "/search/title"],
+  ] as const;
+
+  test.each(surfaces)(
+    "%s lists an anonymous visitor only what their policy admits",
+    async (_surface, path) => {
+      const h = await createDispatcherHarness({
+        config: { plugins: [pagesWithAccess], theme: listingTheme },
+      });
+      const author = await seedPages(h);
+
+      const response = await h.dispatch(
+        new Request(`https://cms.example${path(author.slug)}`),
+      );
+
+      expect(response.status).toBe(200);
+      expect(listedSlugs(await response.text()).sort()).toEqual([
+        "public-page",
+        "teaser-page",
+      ]);
+    },
+  );
+
+  test.each(surfaces)(
+    "%s lists a signed-in member the members page too",
+    async (_surface, path) => {
+      const h = await createDispatcherHarness({
+        config: { plugins: [pagesWithAccess], theme: listingTheme },
+      });
+      const author = await seedPages(h);
+      const member = await h.seedUser("subscriber");
+
+      const response = await h.dispatch(
+        await authed(h, path(author.slug), member.id),
+      );
+
+      expect(listedSlugs(await response.text()).sort()).toEqual([
+        "members-page",
+        "public-page",
+        "teaser-page",
+      ]);
+    },
+  );
+
+  test("a soft-challenged entry is listed anonymously as a teaser, without its body", async () => {
+    const h = await createDispatcherHarness({
+      config: { plugins: [pagesWithAccess], theme: listingTheme },
+    });
+    await seedPages(h);
+
+    const html = await (
+      await h.dispatch(new Request("https://cms.example/page"))
+    ).text();
+
+    expect(html).toContain(
+      'data-testid="listed-teaser-page" data-content-gated="true" data-has-body="false"',
+    );
+    expect(html).toContain(
+      'data-testid="listed-public-page" data-content-gated="false" data-has-body="true"',
+    );
+  });
+
+  test("a soft-challenged entry's own page still serves the teaser", async () => {
+    const h = await createDispatcherHarness({
+      config: { plugins: [pagesWithAccess], theme: listingTheme },
+    });
+    await seedPages(h);
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/page/teaser-page"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("teaser-page title");
+  });
+
+  test("a member's listing keeps every body their policy allows", async () => {
+    const h = await createDispatcherHarness({
+      config: { plugins: [pagesWithAccess], theme: listingTheme },
+    });
+    await seedPages(h);
+    const member = await h.seedUser("subscriber");
+
+    const html = await (
+      await h.dispatch(await authed(h, "/page", member.id))
+    ).text();
+
+    expect(html).toContain(
+      'data-testid="listed-teaser-page" data-content-gated="false" data-has-body="true"',
+    );
+  });
+
+  test("each policy resolves once per request however many rows are listed", async () => {
+    const h = await createDispatcherHarness({
+      config: { plugins: [pagesWithAccess], theme: listingTheme },
+    });
+    await seedPages(h);
+    for (const slug of ["more-1", "more-2", "more-3"]) {
+      await h.factory.entry.create({
+        type: "page",
+        slug,
+        status: "published",
+        publishedAt: new Date("2026-03-04T00:00:00.000Z"),
+        authorId: (await h.seedUser("admin")).id,
+        meta: { [ACCESS_POLICY_META_KEY]: "members" },
+      });
+    }
+    membersResolver.mockClear();
+
+    await h.dispatch(new Request("https://cms.example/"));
+
+    expect(membersResolver).toHaveBeenCalledTimes(1);
+  });
+
+  test("a member's listing that includes a gated entry is never stored; the anonymous one is, without it", async () => {
+    const { cdn, store, put } = memoryCdn();
+    const h = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [pagesWithAccess], theme: listingTheme },
+    });
+    await seedPages(h);
+    const member = await h.seedUser("subscriber");
+
+    const memberListing = await h.dispatch(
+      await authed(h, "/library", member.id),
+    );
+    await h.drainDeferred();
+
+    expect(listedSlugs(await memberListing.text())).toContain("members-page");
+    expect(memberListing.headers.get("cache-control")).toBe(
+      "private, no-store",
+    );
+    expect(put).not.toHaveBeenCalled();
+
+    const anonymousListing = await h.dispatch(
+      new Request("https://cms.example/"),
+    );
+    await h.drainDeferred();
+
+    expect(listedSlugs(await anonymousListing.text())).not.toContain(
+      "members-page",
+    );
+    expect(store.size).toBe(1);
+    const stored = [...store.values()][0]?.response.clone();
+    expect(listedSlugs((await stored?.text()) ?? "")).not.toContain(
+      "members-page",
+    );
   });
 });

@@ -1,15 +1,11 @@
 import type { AppContext } from "../context/app-context.js";
-import type { JsonObject } from "../json.js";
-import type { ResolvedMeta } from "../meta/contract/bags.js";
 import type { EntryTypeAccess } from "../plugin/manifest.js";
 import type { RouteMatch } from "../route/match.js";
 import type { AccessPolicy, Gate } from "./policy.js";
 import { withBasePath } from "../base-path.js";
-import { resolveLocale } from "../i18n/resolve-locale.js";
 import { resolveSingleEntry } from "../route/single-entry.js";
 import { redirectTo } from "../runtime/contract/http.js";
-import { ACCESS_POLICY_META_KEY } from "./contract/meta-key.js";
-import { resolveAccess } from "./policy.js";
+import { readAccessKey } from "./contract/access-key.js";
 
 /**
  * A role denial is 403 because re-authenticating wouldn't help; every other
@@ -64,60 +60,6 @@ export function selectEntryPolicy(
     if (chosen) return chosen.policy;
   }
   return access.default;
-}
-
-/** The parts of an entry an access decision reads. */
-export interface EntryAccessSubject {
-  readonly type: string;
-  /**
-   * Either form works: the access key is a plain string that survives decoding.
-   */
-  readonly meta?: JsonObject | ResolvedMeta | null;
-}
-
-/**
- * The per-entry access choice stored under the reserved meta key, or
- * `undefined` when unset (or stored as a non-string by some out-of-band write).
- */
-function readAccessKey(meta: EntryAccessSubject["meta"]): string | undefined {
-  const value = meta?.[ACCESS_POLICY_META_KEY];
-  return typeof value === "string" ? value : undefined;
-}
-
-/**
- * Resolves against an anonymous principal whoever asks, so a publicly cached
- * artefact gets a principal-invariant answer. Weighs only the access policy,
- * not publication status.
- */
-export async function entryAllowsAnonymousAccess(
-  ctx: AppContext,
-  entry: EntryAccessSubject,
-): Promise<boolean> {
-  const access = ctx.plugins.entryTypes.get(entry.type)?.access;
-  if (access === undefined) return true;
-  const policy = selectEntryPolicy(access, readAccessKey(entry.meta));
-  const { gate } = await resolveAccess(asAnonymous(ctx), policy);
-  return gateAllowsRender(gate);
-}
-
-/**
- * Drops everything the principal confers, or a capability check would use the
- * asker's privileges. `ctx.request` keeps the cookie for its URL and headers;
- * re-authenticating from it defeats this.
- */
-function asAnonymous(ctx: AppContext): AppContext {
-  return {
-    ...ctx,
-    user: null,
-    tokenScopes: null,
-    auth: { can: () => false },
-    locale: resolveLocale({
-      request: ctx.request,
-      user: null,
-      i18n: ctx.config.i18n,
-    }),
-    access: null,
-  };
 }
 
 function gateAllowsRender(gate: Gate): boolean {

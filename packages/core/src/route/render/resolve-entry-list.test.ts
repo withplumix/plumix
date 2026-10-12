@@ -3,6 +3,14 @@ import { describe, expect, test } from "vitest";
 import type { JsonObject } from "../../json.js";
 import type { TemplateData } from "../../theme.js";
 import type { ResolvedNode } from "./rule-resolver.js";
+import { ACCESS_POLICY_META_KEY } from "../../access/contract/meta-key.js";
+import {
+  anonymousPolicy,
+  challenge,
+  definePolicy,
+  grant,
+} from "../../access/policy.js";
+import { withUser } from "../../auth/with-user.js";
 import { eq } from "../../db/index.js";
 import { users } from "../../db/schema/users.js";
 import { definePlugin } from "../../plugin/define.js";
@@ -756,4 +764,102 @@ describe("resolveEntryList role images", () => {
 
     expect(entry?.images.featured).toBeNull();
   });
+});
+
+describe("resolveEntryList and an entry's access policy", () => {
+  const teaserPages = definePlugin("teaser-pages", (ctx) => {
+    ctx.registerEntryType("page", {
+      label: "Pages",
+      isPublic: true,
+      access: {
+        default: anonymousPolicy,
+        policies: [
+          {
+            key: "teaser",
+            label: "Teaser",
+            policy: definePolicy({
+              resolve: (c) =>
+                c.user
+                  ? grant("authenticated")
+                  : challenge("paywall", { soft: true }),
+            }),
+          },
+          {
+            key: "paywall",
+            label: "Paywall",
+            policy: definePolicy({
+              resolve: () => challenge("paywall", { soft: true }),
+            }),
+          },
+        ],
+      },
+    });
+  });
+  const BODY = {
+    version: "plumix.v2",
+    blocks: [{ id: "p", name: "core/paragraph", attrs: {} }],
+  } as const;
+
+  test("drops the body of an entry its policy lists only as a teaser, and flags it", async () => {
+    const { harness, ctx, run } = await createTracedContext({
+      config: { plugins: [teaserPages] },
+    });
+    const author = await harness.seedUser("admin");
+    const open = await harness.factory.entry.create({
+      type: "page",
+      slug: "open",
+      status: "published",
+      authorId: author.id,
+      content: BODY,
+    });
+    const teaser = await harness.factory.entry.create({
+      type: "page",
+      slug: "teaser",
+      status: "published",
+      authorId: author.id,
+      content: BODY,
+      meta: { [ACCESS_POLICY_META_KEY]: "teaser" },
+    });
+
+    const resolved = await run(() => resolveEntryList(ctx, [open, teaser]));
+
+    expect(
+      resolved.map((entry) => ({
+        contentGated: entry.contentGated,
+        content: entry.content,
+        contentBlocks: entry.contentBlocks,
+      })),
+    ).toEqual([
+      { contentGated: false, content: BODY, contentBlocks: BODY },
+      { contentGated: true, content: null, contentBlocks: null },
+    ]);
+  });
+
+  test.each([
+    ["an editor holding edit_any", "editor", "other", false],
+    ["the author holding edit_own", "author", "viewer", false],
+    ["a reader who may edit nothing", "subscriber", "other", true],
+  ] as const)(
+    "%s: a paywalled body is withheld unless they may edit the entry",
+    async (_who, role, writer, gated) => {
+      const { harness, ctx, run } = await createTracedContext({
+        config: { plugins: [teaserPages] },
+      });
+      const viewer = await harness.seedUser(role);
+      const authors = { viewer, other: await harness.seedUser("admin") };
+      const row = await harness.factory.entry.create({
+        type: "page",
+        status: "published",
+        authorId: authors[writer].id,
+        content: BODY,
+        meta: { [ACCESS_POLICY_META_KEY]: "paywall" },
+      });
+
+      const [entry] = await run(() =>
+        resolveEntryList(withUser(ctx, viewer), [row]),
+      );
+
+      expect(entry?.contentGated).toBe(gated);
+    },
+  );
 });

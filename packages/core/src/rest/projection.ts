@@ -56,6 +56,7 @@ export function projectEntry(
     title: entry.title,
     excerpt: entry.excerpt,
     content: entry.content,
+    contentGated: entry.contentGated,
     status: entry.status,
     publishedAt: entry.publishedAt,
     createdAt: entry.createdAt,

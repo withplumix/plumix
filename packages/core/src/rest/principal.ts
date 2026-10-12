@@ -1,10 +1,11 @@
 import type { AppContext, AuthenticatedUser } from "../context/app-context.js";
 import { authenticateBearer, hasBearerToken } from "../auth/bearer.js";
-import { withUser } from "../auth/with-user.js";
+import { makeAuthCan } from "../auth/with-user.js";
 
 /**
- * Anonymous requests read through the lowest role, so the entry services'
- * status clamping and hide-existence policy apply unchanged.
+ * Anonymous requests hold the lowest role's capabilities, so the entry
+ * services' clamping applies unchanged. The principal stays nobody, which an
+ * access policy reads.
  */
 const PUBLIC_PRINCIPAL: AuthenticatedUser = {
   id: 0,
@@ -26,7 +27,15 @@ export async function resolveRestPrincipal(
   ctx: AppContext,
 ): Promise<RestPrincipal> {
   if (!hasBearerToken(ctx.request)) {
-    return { kind: "anonymous", ctx: withUser(ctx, PUBLIC_PRINCIPAL) };
+    return {
+      kind: "anonymous",
+      ctx: {
+        ...ctx,
+        user: null,
+        tokenScopes: null,
+        auth: { can: makeAuthCan(ctx.plugins, PUBLIC_PRINCIPAL, null) },
+      },
+    };
   }
   const authed = await authenticateBearer(ctx);
   return authed ? { kind: "authed", ctx: authed } : { kind: "unauthorized" };

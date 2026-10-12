@@ -1,7 +1,10 @@
 import { describe, expect, test } from "vitest";
 
+import { ACCESS_POLICY_META_KEY } from "../../../access/contract/meta-key.js";
+import { anonymousPolicy, rolePolicy } from "../../../access/policy.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
+import { definePlugin } from "../../../plugin/define.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { pooledEntryTypeRegistry } from "../../../test/pooled-entry-types.js";
 import { createRpcHarness } from "../../../test/rpc.js";
@@ -654,5 +657,67 @@ describe("entry.get", () => {
       .where(eq(entries.id, post.id));
     const got = await h.client.entry.get({ id: post.id });
     expect(got.meta).toEqual({ meta_title: "Seeded", is_featured: true });
+  });
+});
+
+describe("an entry type with an access policy", () => {
+  const pagesWithAccess = definePlugin("pages-with-access", (ctx) => {
+    ctx.registerEntryType("page", {
+      label: "Pages",
+      isPublic: true,
+      access: {
+        default: anonymousPolicy,
+        policies: [
+          { key: "staff", label: "Staff", policy: rolePolicy("editor") },
+        ],
+      },
+    });
+  });
+
+  async function harnessAs(role: "subscriber" | "editor") {
+    const h = await createRpcHarness({
+      authAs: role,
+      plugins: await pooledEntryTypeRegistry(pagesWithAccess),
+    });
+    const author = await h.factory.user.create({ role: "admin" });
+    await h.factory.published.create({
+      authorId: author.id,
+      type: "page",
+      slug: "public-page",
+    });
+    const staff = await h.factory.published.create({
+      authorId: author.id,
+      type: "page",
+      slug: "staff-page",
+      meta: { [ACCESS_POLICY_META_KEY]: "staff" },
+    });
+    return { h, staff };
+  }
+
+  test("entry.list leaves out a published entry its policy refuses the caller", async () => {
+    const { h } = await harnessAs("subscriber");
+
+    const rows = await h.client.entry.list({ type: "page" });
+
+    expect(rows.map((row) => row.slug)).toEqual(["public-page"]);
+  });
+
+  test("entry.get answers not found for it", async () => {
+    const { h, staff } = await harnessAs("subscriber");
+
+    await expect(h.client.entry.get({ id: staff.id })).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+  });
+
+  test("an editor's entry.list shows both", async () => {
+    const { h } = await harnessAs("editor");
+
+    const rows = await h.client.entry.list({ type: "page" });
+
+    expect(rows.map((row) => row.slug).sort()).toEqual([
+      "public-page",
+      "staff-page",
+    ]);
   });
 });

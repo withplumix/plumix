@@ -1,6 +1,6 @@
 import type { SQL } from "drizzle-orm";
 
-import type { EntryViewer } from "../../../entries/visibility.js";
+import type { AppContext } from "../../../context/app-context.js";
 import type { EntryFieldScope } from "../../../plugin/fields/entry.js";
 import type {
   EntryReferenceSummary,
@@ -8,7 +8,7 @@ import type {
   LookupResult,
 } from "../../../plugin/lookup.js";
 import { entryTag } from "../../../cdn/contract/tags.js";
-import { and, eq, inArray, like, ne, or, sql } from "../../../db/index.js";
+import { and, eq, inArray, like, ne, or } from "../../../db/index.js";
 import { entries, ENTRY_STATUSES } from "../../../db/schema/entries.js";
 import { isAuthoredEntryType } from "../../../entries/authored.js";
 import {
@@ -51,7 +51,9 @@ export const entryLookupAdapter = {
     // could name a type and read its drafts. `undefined` means every type was
     // dropped.
     const visibility = or(
-      ...entryTypes.map((type) => visibleTypeRows(ctx, type)),
+      ...(await Promise.all(
+        entryTypes.map((type) => visibleTypeRows(ctx, type)),
+      )),
     );
     if (visibility === undefined) return [];
     conditions.push(visibility);
@@ -93,7 +95,9 @@ export const entryLookupAdapter = {
     // stay invisible. ANDed onto the scope, because a field's `scope.status`
     // can only narrow what the reader may see.
     const visibility = or(
-      ...entryTypes.map((type) => referenceableEntryRows(ctx, type)),
+      ...(await Promise.all(
+        entryTypes.map((type) => referenceableEntryRows(ctx, type)),
+      )),
     );
     if (visibility !== undefined) conditions.push(visibility);
     conditions.push(inArray(entries.id, numericIds));
@@ -170,14 +174,17 @@ function scopeConditions(scope: EntryFieldScope | undefined): ScopedEntryQuery {
 
 /**
  * Without `read`, public nav (no principal) still gets a public type's
- * published rows. Arms must parenthesize themselves: drizzle leaves a lone
- * `or` operand bare.
+ * published rows its access policy admits. Arms must parenthesize themselves:
+ * drizzle leaves a lone `or` operand bare.
  */
-function visibleTypeRows(ctx: EntryViewer, type: string): SQL | undefined {
-  const readable = readableEntryRows(ctx, type);
+async function visibleTypeRows(
+  ctx: AppContext,
+  type: string,
+): Promise<SQL | undefined> {
+  const readable = await readableEntryRows(ctx, type);
   if (readable !== null) return readable;
   if (!ctx.plugins.entryTypes.get(type)?.isPublic) return undefined;
-  return sql`(${and(eq(entries.type, type), eq(entries.status, "published"))})`;
+  return referenceableEntryRows(ctx, type);
 }
 
 function clampLimit(requested: number | undefined): number {

@@ -53,6 +53,11 @@ export interface ResolvedEntry extends WithResolvedMeta<Entry> {
   readonly terms: readonly ResolvedTerm[];
   readonly author: ResolvedAuthor;
   readonly url: string | null;
+  /**
+   * A listed entry whose policy refuses this caller the body (a soft
+   * challenge's teaser); `content` and `contentBlocks` are null.
+   */
+  readonly contentGated: boolean;
 }
 
 /**

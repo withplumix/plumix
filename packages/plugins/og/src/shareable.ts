@@ -1,7 +1,7 @@
 import type { TemplateData } from "plumix";
 import type { EntryAccessSubject } from "plumix/auth";
 import type { AppContext } from "plumix/plugin";
-import { entryAllowsAnonymousAccess } from "plumix/auth";
+import { anonymousContext, entryPolicyAdmits } from "plumix/auth";
 
 /**
  * A listing needs at least one published entry, so strangers can't fill the
@@ -21,7 +21,11 @@ export async function isShareablePage(
     case "entryType":
       return (
         data.pagination.total > 0 &&
-        (await entryAllowsAnonymousAccess(ctx, { type: data.contentType }))
+        (await entryPolicyAdmits(
+          anonymousContext(ctx),
+          { type: data.contentType },
+          "listing",
+        ))
       );
     case "term":
     case "author":
@@ -66,5 +70,5 @@ export async function isReachableEntry(
 ): Promise<boolean> {
   const entryType = ctx.plugins.entryTypes.get(entry.type);
   if (!entryType?.isPublic) return false;
-  return entryAllowsAnonymousAccess(ctx, entry);
+  return entryPolicyAdmits(anonymousContext(ctx), entry, "listing");
 }

@@ -183,7 +183,7 @@ async function rankedRows(
 ): Promise<MatchedRow[]> {
   // One query for entries and terms, because bm25 is not comparable across
   // queries. Tiebreak on the document id: `source_id` is unique only per kind.
-  const entryRows = searchableEntryRows(ctx, types) ?? sql`FALSE`;
+  const entryRows = (await searchableEntryRows(ctx, types)) ?? sql`FALSE`;
   return await ctx.db.all<MatchedRow>(sql`
     SELECT documents.source_type AS kind,
            documents.source_id AS id,
@@ -218,7 +218,7 @@ async function recentRows(
   ctx: AppContext,
   { match, types, limit, offset }: ReadArgs,
 ): Promise<MatchedRow[]> {
-  const entryRows = searchableEntryRows(ctx, types);
+  const entryRows = await searchableEntryRows(ctx, types);
   if (entryRows === null) return [];
   const page = await ctx.db.all<
     Omit<MatchedRow, "snippet" | "score"> & {

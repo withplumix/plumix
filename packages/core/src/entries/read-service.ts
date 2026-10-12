@@ -92,7 +92,7 @@ export async function listEntryRows(
 ): Promise<readonly Entry[]> {
   const type = input.type ?? "post";
   if (!isAuthoredEntryType(type)) throw EntryReadError.reservedType(type);
-  const readable = readableEntryRows(ctx, type);
+  const readable = await readableEntryRows(ctx, type);
   if (readable === null) {
     throw EntryReadError.forbidden(
       entryCapabilityByName(ctx.plugins, type, "read"),
@@ -174,7 +174,9 @@ export async function findReadableEntry(
 ): Promise<Entry> {
   const row = await loadAuthoredEntry(ctx.db, input.id);
   if (!row) throw EntryReadError.notFound(input.id);
-  if (!canReadEntry(ctx, row)) throw EntryReadError.notFound(input.id);
+  if (!(await canReadEntry(ctx, row))) {
+    throw EntryReadError.notFound(input.id);
+  }
   return row;
 }
 

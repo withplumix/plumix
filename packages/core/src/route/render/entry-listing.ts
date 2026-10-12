@@ -17,11 +17,14 @@ import { resolveEntryList } from "./resolve-entry-list.js";
 
 /**
  * With no public type routed, this is `none()`: an empty archive, not an open
- * one.
+ * one. Publication and the access policy wait for the listing, which reapplies
+ * `publicEntryRows` with the request.
  */
 export function publicEntriesQuery(plugins: PluginRegistry): EntryQuery {
-  const guard = publicEntryRows(plugins);
-  return guard === null ? entryQuery().none() : entryQuery().where(guard);
+  const types = publicEntryTypeNames(plugins);
+  return types.length === 0
+    ? entryQuery().none()
+    : entryQuery().ofTypes(...types);
 }
 
 /** The types the query can list, or every public type when it names none. */
@@ -61,9 +64,9 @@ export async function listEntryPage(
   const narrowed = await compileEntryQuery(ctx, query);
   if (narrowed === null) return null;
 
-  // A null `where` is a site routing no public type at all: no entry can be
-  // listed, and `paginatedEntries` answers it without a round-trip.
-  const guard = publicEntryRows(ctx.plugins);
+  // A null `where` is a site with nothing this principal may list, and
+  // `paginatedEntries` answers it without a round-trip.
+  const guard = await publicEntryRows(ctx);
   const result = await paginatedEntries(
     ctx,
     guard === null ? null : sql`${guard} and ${narrowed}`,
