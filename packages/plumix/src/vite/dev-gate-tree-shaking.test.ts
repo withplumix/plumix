@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -23,9 +23,6 @@ const GATED_DEV_MODULES = [
   "runtime/dev.ts",
 ];
 
-/** A real Vite build — give it room beyond vitest's 5s default. */
-const BUILD_TIMEOUT_MS = 30_000;
-
 const coreSrc = fileURLToPath(new URL("../../../core/src/", import.meta.url));
 
 async function bundledCoreModules(plumixDev: string): Promise<Set<string>> {
@@ -45,7 +42,7 @@ async function bundledCoreModules(plumixDev: string): Promise<Set<string>> {
       "process.env.PLUMIX_DEV": plumixDev,
     },
     build: { ssr: entry, write: false, minify: true },
-  });
+  }).finally(() => rmSync(dir, { recursive: true, force: true }));
   const outputs = (
     Array.isArray(result) ? result : [result]
   ) as readonly Rolldown.RolldownOutput[];
@@ -63,21 +60,13 @@ async function bundledCoreModules(plumixDev: string): Promise<Set<string>> {
 }
 
 describe("the dev-server gate in a bundle of core", () => {
-  test(
-    "a dev build (PLUMIX_DEV set) includes every gated dev module",
-    async () => {
-      const modules = await bundledCoreModules('"1"');
-      expect(GATED_DEV_MODULES.filter((m) => !modules.has(m))).toEqual([]);
-    },
-    BUILD_TIMEOUT_MS,
-  );
+  test("a dev build (PLUMIX_DEV set) includes every gated dev module", async () => {
+    const modules = await bundledCoreModules('"1"');
+    expect(GATED_DEV_MODULES.filter((m) => !modules.has(m))).toEqual([]);
+  });
 
-  test(
-    "a production build (PLUMIX_DEV empty) includes no gated dev module",
-    async () => {
-      const modules = await bundledCoreModules('""');
-      expect(GATED_DEV_MODULES.filter((m) => modules.has(m))).toEqual([]);
-    },
-    BUILD_TIMEOUT_MS,
-  );
+  test("a production build (PLUMIX_DEV empty) includes no gated dev module", async () => {
+    const modules = await bundledCoreModules('""');
+    expect(GATED_DEV_MODULES.filter((m) => modules.has(m))).toEqual([]);
+  });
 });

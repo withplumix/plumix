@@ -1,14 +1,11 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Rolldown } from "vite";
 import { build } from "vite";
-import { expect, test } from "vitest";
+import { beforeAll, describe, expect, test } from "vitest";
 
 import { plumixSourceResolver } from "@plumix/vitest-config/source-resolver";
-
-/** A real Vite build — give it room beyond vitest's 5s default. */
-const BUILD_TIMEOUT_MS = 30_000;
 
 const REACT_MODULE = /[\\/]node_modules[\\/](?:react|react-dom)[\\/]/;
 
@@ -42,9 +39,11 @@ function eagerModules(
   return [...seen].flatMap((c) => c.moduleIds);
 }
 
-test(
-  "the islands element chunk carries no React; the lazy renderer chunk does",
-  async () => {
+describe("the islands chunks", () => {
+  let element: readonly string[];
+  let renderer: readonly string[];
+
+  beforeAll(async () => {
     const dir = mkdtempSync(join(tmpdir(), "plumix-islands-chunks-"));
     writeFileSync(
       join(dir, "runtime.js"),
@@ -78,7 +77,7 @@ test(
           },
         },
       },
-    });
+    }).finally(() => rmSync(dir, { recursive: true, force: true }));
     const outputs = (
       Array.isArray(result) ? result : [result]
     ) as readonly Rolldown.RolldownOutput[];
@@ -86,11 +85,15 @@ test(
       o.output.filter((c): c is OutputChunk => c.type === "chunk"),
     );
 
-    const element = eagerModules(chunks, "plumix-islands-runtime");
-    const renderer = eagerModules(chunks, "plumix-islands-renderer");
+    element = eagerModules(chunks, "plumix-islands-runtime");
+    renderer = eagerModules(chunks, "plumix-islands-renderer");
+  });
 
+  test("the eager element chunk carries no React", () => {
     expect(element.filter((id) => REACT_MODULE.test(id))).toEqual([]);
+  });
+
+  test("the lazy renderer chunk carries React", () => {
     expect(renderer.some((id) => REACT_MODULE.test(id))).toBe(true);
-  },
-  BUILD_TIMEOUT_MS,
-);
+  });
+});
