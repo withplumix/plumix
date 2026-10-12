@@ -1,5 +1,5 @@
 import type { BlockTextRoster } from "plumix/blocks";
-import type { PluginRegistry, RegisteredEntryType } from "plumix/plugin";
+import type { PluginRegistry } from "plumix/plugin";
 import { extractBlockText, isEntryContent } from "plumix/blocks";
 
 import type { SearchableMetaField } from "./meta-text.js";
@@ -29,21 +29,15 @@ export function entryDocumentBody(
 }
 
 /**
- * Excludes unregistered types (revisions, autosaves) and access-policed ones,
- * whose snippets would leak gated prose. Ignores `excludeFromSearch`: the admin
+ * Excludes unregistered types (revisions, autosaves). An access policy is
+ * applied when a search runs, not here. Ignores `excludeFromSearch`: the admin
  * palette reads the same index.
  */
 export function isIndexableEntryType(
   plugins: PluginRegistry,
   type: string,
 ): boolean {
-  return isIndexableSpec(plugins.entryTypes.get(type));
-}
-
-function isIndexableSpec(
-  spec: RegisteredEntryType | undefined,
-): spec is RegisteredEntryType {
-  return spec !== undefined && spec.access === undefined;
+  return plugins.entryTypes.has(type);
 }
 
 /** Every type whose entries the projection holds, for the write side. */
@@ -61,7 +55,7 @@ export function isSearchableEntryType(
   type: string,
 ): boolean {
   const spec = plugins.entryTypes.get(type);
-  if (!isIndexableSpec(spec)) return false;
+  if (spec === undefined) return false;
   return !spec.excludeFromSearch;
 }
 

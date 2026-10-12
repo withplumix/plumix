@@ -1,4 +1,10 @@
 import type { AppContext, MutablePluginRegistry } from "plumix/plugin";
+import {
+  ACCESS_POLICY_META_KEY,
+  anonymousPolicy,
+  challenge,
+  definePolicy,
+} from "plumix/auth";
 import { defineEntryContent } from "plumix/blocks";
 import { sql } from "plumix/db";
 import { definePlugin } from "plumix/plugin";
@@ -27,6 +33,24 @@ let ctx: AppContext;
 let plugins: MutablePluginRegistry;
 let authorId: number;
 let drainDeferred: () => Promise<void>;
+
+/** Lists every entry of `post` to a visitor and withholds its body. */
+const teaserPosts = () =>
+  plugins.entryTypes.set(
+    "post",
+    toRegisteredEntryType(
+      "post",
+      {
+        label: "Posts",
+        access: {
+          default: definePolicy({
+            resolve: () => challenge("paywall", { soft: true }),
+          }),
+        },
+      },
+      "test",
+    ),
+  );
 
 beforeEach(async () => {
   ({ db, ctx, plugins, authorId, drainDeferred } = await createSearchContext());
@@ -324,9 +348,8 @@ describe("runSearch", () => {
     }
   });
 
-  test("an entry type under an access policy is never searchable", async () => {
-    // A snippet is body text around a word the visitor chose, so indexing a
-    // gated type would hand an anonymous reader its prose a query at a time.
+  test("an entry whose policy lists it to nobody is not a result", async () => {
+    // Indexed all the same: the policy is applied when the search runs.
     plugins.entryTypes.set(
       "members",
       toRegisteredEntryType(
@@ -354,6 +377,180 @@ describe("runSearch", () => {
     await indexEntries(ctx, [entry.id]);
 
     expect((await search("hydroponics")).results).toEqual([]);
+  });
+
+  describe("with three listed entries among three the visitor is refused", () => {
+    let listed: readonly number[];
+
+    beforeEach(async () => {
+      plugins.entryTypes.set(
+        "post",
+        toRegisteredEntryType(
+          "post",
+          {
+            label: "Posts",
+            access: {
+              default: {
+                segments: [],
+                resolve: () => ({ type: "grant" as const, segment: "public" }),
+              },
+              policies: [
+                {
+                  key: "members",
+                  label: "Members",
+                  policy: {
+                    segments: [],
+                    resolve: () => ({
+                      type: "challenge" as const,
+                      kind: "subscribe",
+                    }),
+                  },
+                },
+              ],
+            },
+          },
+          "test",
+        ),
+      );
+      const members = { meta: { [ACCESS_POLICY_META_KEY]: "members" } };
+      const first = await publish({ title: "Hydroponics a", slug: "a" });
+      await publish({ title: "Hydroponics b", slug: "b", ...members });
+      const second = await publish({ title: "Hydroponics c", slug: "c" });
+      await publish({ title: "Hydroponics d", slug: "d", ...members });
+      const third = await publish({ title: "Hydroponics e", slug: "e" });
+      await publish({ title: "Hydroponics f", slug: "f", ...members });
+      listed = [first.id, second.id, third.id];
+    });
+
+    test("the first page is full and says another follows", async () => {
+      const page = await search("hydroponics", 1);
+
+      expect(page.results).toHaveLength(2);
+      expect(page.hasMore).toBe(true);
+      expect(listed).toEqual(
+        expect.arrayContaining(page.results.map((result) => result.id)),
+      );
+    });
+
+    test("the last page holds the remaining listed entry and says nothing follows", async () => {
+      const page = await search("hydroponics", 2);
+
+      expect(page.results).toHaveLength(1);
+      expect(page.hasMore).toBe(false);
+      expect(listed).toEqual(
+        expect.arrayContaining(page.results.map((result) => result.id)),
+      );
+    });
+  });
+
+  test("a teaser answered newest first still shows its excerpt, not its body", async () => {
+    teaserPosts();
+    const body = defineEntryContent([
+      paragraph("<p>The members method: hydroponics soaked overnight</p>"),
+    ]);
+    await publish({
+      title: "Teaser 2020",
+      slug: "t2020",
+      publishedAt: new Date(2020, 0, 1),
+      excerpt: "What a greenhouse grows, hydroponics 2020",
+      content: body,
+    });
+    await publish({
+      title: "Teaser 2021",
+      slug: "t2021",
+      publishedAt: new Date(2021, 0, 1),
+      excerpt: "What a greenhouse grows, hydroponics 2021",
+      content: body,
+    });
+    await publish({
+      title: "Teaser 2022",
+      slug: "t2022",
+      publishedAt: new Date(2022, 0, 1),
+      excerpt: "What a greenhouse grows, hydroponics 2022",
+      content: body,
+    });
+
+    const { results } = await searchAt("hydroponics", 2);
+
+    // No score: the recency plan answered, not ranking.
+    expect(results.every((result) => result.score === null)).toBe(true);
+    expect(results.map((result) => result.snippet)).toEqual([
+      "What a greenhouse grows, hydroponics 2022",
+      "What a greenhouse grows, hydroponics 2021",
+    ]);
+  });
+
+  test("a page costs the same queries however many refused entries the filter passes over", async () => {
+    const membersOnly = definePolicy({
+      resolve: () => challenge("subscribe"),
+    });
+    const policiedPages = definePlugin("policied-pages", (regCtx) => {
+      regCtx.registerEntryType("page", {
+        label: "Pages",
+        isPublic: true,
+        access: {
+          default: anonymousPolicy,
+          policies: [{ key: "members", label: "Members", policy: membersOnly }],
+        },
+      });
+    });
+
+    // Each listed page is followed by `refusedPerListed` members pages, so a
+    // filter applied after ranking would have to fetch again to fill a page.
+    async function searchMixed(refusedPerListed: number): Promise<{
+      readonly queries: number;
+      readonly page: Awaited<ReturnType<typeof runSearch>>;
+      readonly listed: readonly number[];
+    }> {
+      const {
+        harness,
+        ctx: tracedCtx,
+        run,
+        dbQueryCount,
+      } = await createTracedContext({ config: { plugins: [policiedPages] } });
+      await applySearchSchema(harness.db);
+      const author = await harness.factory.user.create();
+      const listed: number[] = [];
+      for (let i = 0; i < 3; i++) {
+        const entry = await harness.factory.entry.create({
+          type: "page",
+          slug: `open-${String(i)}`,
+          title: "Wombat",
+          status: "published",
+          publishedAt: new Date(),
+          authorId: author.id,
+        });
+        await indexEntries(tracedCtx, [entry.id]);
+        listed.push(entry.id);
+        for (let j = 0; j < refusedPerListed; j++) {
+          const refused = await harness.factory.entry.create({
+            type: "page",
+            slug: `members-${String(i)}-${String(j)}`,
+            title: "Wombat",
+            status: "published",
+            publishedAt: new Date(),
+            authorId: author.id,
+            meta: { [ACCESS_POLICY_META_KEY]: "members" },
+          });
+          await indexEntries(tracedCtx, [refused.id]);
+        }
+      }
+      const page = await run(() =>
+        runSearch(tracedCtx, { query: "wombat", page: 1, perPage: 2 }),
+      );
+      return { queries: dbQueryCount(), page, listed };
+    }
+
+    const open = await searchMixed(0);
+    const mixed = await searchMixed(2);
+
+    expect(mixed.page.results).toHaveLength(2);
+    expect(mixed.page.hasMore).toBe(true);
+    expect(mixed.listed).toEqual(
+      expect.arrayContaining(mixed.page.results.map((result) => result.id)),
+    );
+    expect(open.queries).toBeGreaterThan(0);
+    expect(mixed.queries).toBe(open.queries);
   });
 
   test("a page of nested results costs the same queries however many it holds", async () => {
@@ -521,6 +718,25 @@ describe("runSearch without an index", () => {
       score: null,
     });
     expect(result?.snippet).not.toContain("<mark>");
+  });
+
+  test("a teaser's degraded snippet is its excerpt, not its body", async () => {
+    teaserPosts();
+    await publish({
+      title: "Teaser t",
+      slug: "t",
+      excerpt: "What a greenhouse grows, hydroponics t",
+      content: defineEntryContent([
+        paragraph("<p>The members method: hydroponics soaked overnight</p>"),
+      ]),
+    });
+    await dropSearchIndex(db);
+
+    const { results } = await search("hydroponics");
+
+    expect(results.map((result) => result.snippet)).toEqual([
+      "What a greenhouse grows, hydroponics t",
+    ]);
   });
 
   test("clamps to what a visitor may see, as the indexed page does", async () => {

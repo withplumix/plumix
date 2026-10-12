@@ -130,10 +130,10 @@ describe("isSearchableEntryType", () => {
     ).toBe(false);
   });
 
-  test("a type under an access policy is not, on any surface", () => {
+  test("a type under an access policy is, each search applying the policy", () => {
     expect(
       isSearchableEntryType(registryWith("members", GATED), "members"),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   test("an unregistered type — a revision, an autosave — is not", () => {
@@ -159,10 +159,10 @@ describe("isIndexableEntryType", () => {
     ).toBe(true);
   });
 
-  test("a type under an access policy is not", () => {
+  test("a type under an access policy is too", () => {
     expect(
       isIndexableEntryType(registryWith("members", GATED), "members"),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   test("an unregistered type — a revision, an autosave — is not", () => {

@@ -25,10 +25,7 @@ let ctx: AppContext;
 let plugins: MutablePluginRegistry;
 let authorId: number;
 
-/**
- * An entry type nothing may index: `policyForMatch` reads the type's own
- * policy first, so gating is total at the type level.
- */
+/** An entry type under an access policy, which a search applies, not the index. */
 const GATED = {
   access: {
     default: {
@@ -92,7 +89,7 @@ describe("indexEntries", () => {
     expect(await matches("hydroponics")).toEqual([entry.id]);
   });
 
-  test("never indexes an entry type under an access policy", async () => {
+  test("indexes an entry type under an access policy", async () => {
     plugins.entryTypes.set(
       "members",
       toRegisteredEntryType("members", { label: "Members", ...GATED }, "test"),
@@ -101,7 +98,7 @@ describe("indexEntries", () => {
 
     await indexEntries(ctx, [entry.id]);
 
-    expect(await matches("hydroponics")).toEqual([]);
+    expect(await matches("hydroponics")).toEqual([entry.id]);
   });
 
   test("drops an entry that has gone from the database", async () => {
@@ -114,14 +111,14 @@ describe("indexEntries", () => {
     expect(await matches("hydroponics")).toEqual([]);
   });
 
-  test("drops an entry whose type came under an access policy", async () => {
+  test("keeps an entry whose type came under an access policy", async () => {
     const entry = await seed({ title: "Hydroponics" });
     await indexEntries(ctx, [entry.id]);
 
     plugins.entryTypes.set("post", postType(GATED));
     await indexEntries(ctx, [entry.id]);
 
-    expect(await matches("hydroponics")).toEqual([]);
+    expect(await matches("hydroponics")).toEqual([entry.id]);
   });
 
   test("re-indexing an entry whose text has not moved rewrites nothing", async () => {
