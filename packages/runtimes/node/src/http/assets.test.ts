@@ -5,6 +5,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { get as httpGet } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describeAssetsContract } from "plumix/test/conformance";
@@ -33,6 +34,7 @@ beforeAll(() => {
   writeFileSync(join(root, "assets/unreadable-000000.js"), CHUNK);
   chmodSync(join(root, "assets/unreadable-000000.js"), 0o000);
   writeFileSync(join(root, ".env"), "SECRET=1");
+  writeFileSync(join(base, "secret.txt"), "outside the root");
 });
 
 afterAll(() => {
@@ -78,6 +80,18 @@ describe("the disk layer", () => {
     expect(shell.headers.get("cache-control")).toBeNull();
   });
 
+  test.each([
+    "/%2e%2e/secret.txt",
+    "/..%2fsecret.txt",
+    "/assets/..%2f..%2fsecret.txt",
+    "/assets/%2e%2e%2f%2e%2e%2fsecret.txt",
+    "/.env",
+  ])("%s, out of the root or a dotfile inside it, is 404", async (path) => {
+    const response = await get(path);
+
+    expect(response.status).toBe(404);
+  });
+
   test.skipIf(!unprivileged)(
     "a file that fails to open answers 500 with no immutable header",
     async () => {
@@ -111,6 +125,22 @@ describe("the layer as a Node middleware", () => {
     const chunk = await fetch(`${origin}/assets/client-def456.js`);
     expect(chunk.status).toBe(200);
     expect(await chunk.text()).toBe(CHUNK);
+  });
+
+  test("a raw request line climbing out of the root reaches the next handler, not the file", async () => {
+    const origin = await serve();
+
+    // `fetch` normalises `..` away; a raw request sends the path as written.
+    const body = await new Promise<string>((resolve, reject) => {
+      const { hostname, port } = new URL(origin);
+      httpGet({ hostname, port, path: "/../secret.txt" }, (res) => {
+        let text = "";
+        res.on("data", (chunk: Buffer) => (text += chunk.toString()));
+        res.on("end", () => resolve(text));
+      }).on("error", reject);
+    });
+
+    expect(body).toBe("handler");
   });
 
   test("hands a path it does not hold, and a non-GET, to the next handler", async () => {
