@@ -52,18 +52,6 @@ const teaserPosts = () =>
     ),
   );
 
-/** A teaser whose excerpt and body hold different words. */
-const teaser = (slug: string, publishedAt = new Date()) =>
-  publish({
-    title: `Teaser ${slug}`,
-    slug,
-    publishedAt,
-    excerpt: `What a greenhouse grows, hydroponics ${slug}`,
-    content: defineEntryContent([
-      paragraph("<p>The members method: hydroponics soaked overnight</p>"),
-    ]),
-  });
-
 beforeEach(async () => {
   ({ db, ctx, plugins, authorId, drainDeferred } = await createSearchContext());
 });
@@ -457,17 +445,38 @@ describe("runSearch", () => {
 
   test("a teaser answered newest first still shows its excerpt, not its body", async () => {
     teaserPosts();
-    for (const year of [2020, 2021, 2022]) {
-      await teaser(`t${String(year)}`, new Date(year, 0, 1));
-    }
+    const body = defineEntryContent([
+      paragraph("<p>The members method: hydroponics soaked overnight</p>"),
+    ]);
+    await publish({
+      title: "Teaser 2020",
+      slug: "t2020",
+      publishedAt: new Date(2020, 0, 1),
+      excerpt: "What a greenhouse grows, hydroponics 2020",
+      content: body,
+    });
+    await publish({
+      title: "Teaser 2021",
+      slug: "t2021",
+      publishedAt: new Date(2021, 0, 1),
+      excerpt: "What a greenhouse grows, hydroponics 2021",
+      content: body,
+    });
+    await publish({
+      title: "Teaser 2022",
+      slug: "t2022",
+      publishedAt: new Date(2022, 0, 1),
+      excerpt: "What a greenhouse grows, hydroponics 2022",
+      content: body,
+    });
 
     const { results } = await searchAt("hydroponics", 2);
 
     // No score: the recency plan answered, not ranking.
     expect(results.every((result) => result.score === null)).toBe(true);
     expect(results.map((result) => result.snippet)).toEqual([
-      "What a greenhouse grows, hydroponics t2022",
-      "What a greenhouse grows, hydroponics t2021",
+      "What a greenhouse grows, hydroponics 2022",
+      "What a greenhouse grows, hydroponics 2021",
     ]);
   });
 
@@ -486,9 +495,9 @@ describe("runSearch", () => {
       });
     });
 
-    // Three listed pages with `refused` members pages interleaved, so a
+    // Each listed page is followed by `refusedPerListed` members pages, so a
     // filter applied after ranking would have to fetch again to fill a page.
-    async function searchMixed(refused: number): Promise<{
+    async function searchMixed(refusedPerListed: number): Promise<{
       readonly queries: number;
       readonly page: Awaited<ReturnType<typeof runSearch>>;
       readonly listed: readonly number[];
@@ -502,22 +511,28 @@ describe("runSearch", () => {
       await applySearchSchema(harness.db);
       const author = await harness.factory.user.create();
       const listed: number[] = [];
-      for (let i = 0; i < Math.max(3, refused); i++) {
-        for (const members of [false, true]) {
-          if (members ? i >= refused : i >= 3) continue;
-          const entry = await harness.factory.entry.create({
+      for (let i = 0; i < 3; i++) {
+        const entry = await harness.factory.entry.create({
+          type: "page",
+          slug: `open-${String(i)}`,
+          title: "Wombat",
+          status: "published",
+          publishedAt: new Date(),
+          authorId: author.id,
+        });
+        await indexEntries(tracedCtx, [entry.id]);
+        listed.push(entry.id);
+        for (let j = 0; j < refusedPerListed; j++) {
+          const refused = await harness.factory.entry.create({
             type: "page",
-            slug: `p-${String(i)}-${String(members)}`,
+            slug: `members-${String(i)}-${String(j)}`,
             title: "Wombat",
             status: "published",
             publishedAt: new Date(),
             authorId: author.id,
-            ...(members
-              ? { meta: { [ACCESS_POLICY_META_KEY]: "members" } }
-              : {}),
+            meta: { [ACCESS_POLICY_META_KEY]: "members" },
           });
-          await indexEntries(tracedCtx, [entry.id]);
-          if (!members) listed.push(entry.id);
+          await indexEntries(tracedCtx, [refused.id]);
         }
       }
       const page = await run(() =>
@@ -527,7 +542,7 @@ describe("runSearch", () => {
     }
 
     const open = await searchMixed(0);
-    const mixed = await searchMixed(4);
+    const mixed = await searchMixed(2);
 
     expect(mixed.page.results).toHaveLength(2);
     expect(mixed.page.hasMore).toBe(true);
@@ -707,7 +722,14 @@ describe("runSearch without an index", () => {
 
   test("a teaser's degraded snippet is its excerpt, not its body", async () => {
     teaserPosts();
-    await teaser("t");
+    await publish({
+      title: "Teaser t",
+      slug: "t",
+      excerpt: "What a greenhouse grows, hydroponics t",
+      content: defineEntryContent([
+        paragraph("<p>The members method: hydroponics soaked overnight</p>"),
+      ]),
+    });
     await dropSearchIndex(db);
 
     const { results } = await search("hydroponics");

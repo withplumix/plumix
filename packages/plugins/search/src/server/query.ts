@@ -1,3 +1,4 @@
+import type { ResolvedEntry } from "plumix";
 import type { AppContext } from "plumix/plugin";
 import { inArray, sql } from "plumix/db";
 import {
@@ -31,8 +32,8 @@ export interface SearchResult {
   readonly title: string;
   readonly url: string;
   /**
-   * Escaped HTML with `<mark>` highlights, safe in element content, not an
-   * attribute. Without an index, or for a teaser, it is the whole excerpt,
+   * Escaped HTML with `<mark>` highlights, safe as element content but not in
+   * an attribute. Without an index, or for a teaser, it is the whole excerpt,
    * unmarked.
    */
   readonly snippet: string;
@@ -268,11 +269,10 @@ async function recentRows(
   }));
 }
 
-interface ResolvedEntryFacts {
-  readonly title: string;
-  readonly excerpt: string | null;
-  readonly contentGated: boolean;
-}
+type ResolvedEntryFacts = Pick<
+  ResolvedEntry,
+  "title" | "excerpt" | "contentGated"
+>;
 
 /**
  * The index holds raw titles so an expanded `[year]` does not freeze into it.
