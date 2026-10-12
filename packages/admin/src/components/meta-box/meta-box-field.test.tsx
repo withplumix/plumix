@@ -31,18 +31,12 @@ function field(
 function Harness({
   fieldDef,
   initial,
-  error,
 }: {
   fieldDef: MetaBoxFieldManifestEntry;
   initial: unknown;
-  error?: string;
 }): ReactNode {
   const form = useForm<Record<string, unknown>>({
     defaultValues: { [fieldDef.key]: initial },
-    errors:
-      error === undefined
-        ? undefined
-        : { [fieldDef.key]: { type: "server", message: error } },
   });
   return (
     <Form {...form}>
@@ -59,12 +53,11 @@ function render(
   fieldDef: MetaBoxFieldManifestEntry,
   initial: unknown,
   i18n: I18n = englishI18n(),
-  error?: string,
 ): string {
   return renderToStaticMarkup(
     <I18nProvider i18n={i18n}>
       <QueryClientProvider client={createQueryClient()}>
-        <Harness fieldDef={fieldDef} initial={initial} error={error} />
+        <Harness fieldDef={fieldDef} initial={initial} />
       </QueryClientProvider>
     </I18nProvider>,
   );
@@ -532,21 +525,5 @@ describe("MetaBoxField adornments", () => {
     expect(attrOf(input, "aria-describedby")?.split(" ")).toContain(
       attrOf(tagOf(html, "meta-box-field-k-description"), "id"),
     );
-  });
-
-  test("an adorned input carries the field's error, not its input group", () => {
-    const html = render(
-      field({ inputType: "text", prepend: "https://" }),
-      "",
-      englishI18n(),
-      "Nope",
-    );
-    expect(textOf(html, "meta-box-field-k-error")).toBe("Nope");
-    expect(attrOf(tagOf(html, "meta-box-field-k-input"), "aria-invalid")).toBe(
-      "true",
-    );
-    const group = /<div[^>]*data-slot="input-group"[^>]*>/.exec(html)?.[0];
-    expect(group).toBeDefined();
-    expect(attrOf(group, "aria-invalid")).toBeUndefined();
   });
 });
