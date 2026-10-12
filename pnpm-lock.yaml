@@ -586,66 +586,27 @@ importers:
       '@astrojs/check':
         specifier: ^0.9.10
         version: 0.9.10(prettier-plugin-astro@1.1.0(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(prettier@3.9.9))(prettier@3.9.9)(typescript@6.0.3)
-      '@cloudflare/workers-types':
-        specifier: catalog:cloudflare
-        version: 5.20261004.1
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint
       '@plumix/prettier-config':
         specifier: workspace:*
         version: link:../../tooling/prettier
-      '@plumix/typescript-config':
-        specifier: workspace:*
-        version: link:../../tooling/typescript
-      '@plumix/vitest-config':
-        specifier: workspace:*
-        version: link:../../tooling/vitest
-      '@types/mdast':
-        specifier: ^4.0.4
-        version: 4.0.4
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.19.1
-      '@types/react':
-        specifier: catalog:react
-        version: 19.3.0
-      '@vitest/coverage-v8':
-        specifier: catalog:vitest
-        version: 5.0.3(@vitest/browser@5.0.3)(vitest@5.0.3)
       eslint:
         specifier: 'catalog:'
         version: 10.11.0(jiti@2.7.0)(supports-color@10.2.2)
-      plumix:
-        specifier: workspace:*
-        version: link:../../packages/plumix
       prettier:
         specifier: 'catalog:'
         version: 3.9.9
-      remark-mdx:
-        specifier: ^3.1.1
-        version: 3.1.1(supports-color@10.2.2)
-      remark-parse:
-        specifier: ^11.0.0
-        version: 11.0.0(supports-color@10.2.2)
       sharp:
         specifier: 'catalog:'
         version: 0.35.5(@types/node@24.19.1)
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
-      unified:
-        specifier: ^11.0.5
-        version: 11.0.5
-      vitest:
-        specifier: catalog:vitest
-        version: 5.0.3(@types/node@24.19.1)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.3.2(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       wrangler:
         specifier: catalog:cloudflare
         version: 4.147.0(@cloudflare/workers-types@5.20261004.1)(@types/node@24.19.1)
-      yaml:
-        specifier: ^2.9.1
-        version: 2.9.1
 
   apps/marketing:
     dependencies:
