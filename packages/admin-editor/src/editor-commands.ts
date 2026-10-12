@@ -186,9 +186,8 @@ export function buildEditorCommands(
   return commands;
 }
 
-/** Filter the roster by the author's query, a case-insensitive substring of
- *  the title or a keyword. `toText` is the caller's i18n-bound `Label`
- *  resolver. */
+/** Filter the roster by the author's query. `toText` is the caller's i18n-bound
+ *  `Label` resolver. */
 export function selectEditorCommands(
   commands: readonly EditorCommand[],
   query: string,

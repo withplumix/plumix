@@ -94,7 +94,6 @@ const noop = (): void => undefined;
 
 const FIELD_TESTID = (name: string): string => `block-input-${name}`;
 
-/** Renders one control per `BlockInput` kind, so plugin blocks keep theirs. */
 export function BlockInputControl({
   input,
   value,

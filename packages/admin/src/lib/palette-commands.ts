@@ -44,14 +44,13 @@ export function _resetPaletteCommands(): void {
   registered.clear();
 }
 
-/** Case-insensitive substring match; a blank query matches everything. */
+/** A blank query matches everything. */
 export function matchesQuery(texts: readonly string[], query: string): boolean {
   const needle = query.trim().toLowerCase();
   return needle.length === 0 || texts.join(" ").toLowerCase().includes(needle);
 }
 
-/** `toText` is the caller's i18n-bound `Label` resolver; capability gating
- *  goes through the same `hasCap` the sidebar uses. */
+/** `toText` is the caller's i18n-bound `Label` resolver. */
 export function selectCommands(
   commands: readonly PaletteCommand[],
   capabilities: readonly string[],
