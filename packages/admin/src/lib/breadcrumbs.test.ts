@@ -82,11 +82,10 @@ function labels(crumbs: readonly Crumb[]): readonly {
 }
 
 describe("pathToCrumbs", () => {
-  test("dashboard", () => {
-    expect(labels(pathToCrumbs("/", FIXTURE))).toEqual([
+  test.each(["/", ""])("dashboard at %j", (pathname) => {
+    expect(labels(pathToCrumbs(pathname, FIXTURE))).toEqual([
       { label: "Dashboard" },
     ]);
-    expect(labels(pathToCrumbs("", FIXTURE))).toEqual([{ label: "Dashboard" }]);
   });
 
   test("entries list resolves the plural label from manifest (no link on leaf)", () => {
@@ -137,16 +136,15 @@ describe("pathToCrumbs", () => {
     ]);
   });
 
-  test("terms create/edit leaf carries no ICU `values` map post-widening", () => {
-    const createLeaf = pathToCrumbs("/terms/category/create", FIXTURE).at(-1);
-    expect(createLeaf).toBeDefined();
-    expect(typeof createLeaf?.label).toBe("object");
-    expect(createLeaf?.values).toBeUndefined();
-
-    const editLeaf = pathToCrumbs("/terms/category/7/edit", FIXTURE).at(-1);
-    expect(typeof editLeaf?.label).toBe("object");
-    expect(editLeaf?.values).toBeUndefined();
-  });
+  test.each(["/terms/category/create", "/terms/category/7/edit"])(
+    "terms leaf at %s carries no ICU `values` map",
+    (pathname) => {
+      const leaf = pathToCrumbs(pathname, FIXTURE).at(-1);
+      expect(leaf).toBeDefined();
+      expect(typeof leaf?.label).toBe("object");
+      expect(leaf?.values).toBeUndefined();
+    },
+  );
 
   test("users edit: list crumb is a link", () => {
     expect(labels(pathToCrumbs("/users/3/edit", FIXTURE))).toEqual([
@@ -155,27 +153,34 @@ describe("pathToCrumbs", () => {
     ]);
   });
 
-  test("settings list + page", () => {
+  test("settings list", () => {
     expect(labels(pathToCrumbs("/settings", FIXTURE))).toEqual([
       { label: "Settings" },
     ]);
+  });
+
+  test("settings page links back to the list", () => {
     expect(labels(pathToCrumbs("/settings/general", FIXTURE))).toEqual([
       { label: "Settings", to: "/settings" },
       { label: "General" },
     ]);
   });
 
-  test("profile + plugin pages", () => {
+  test("profile", () => {
     expect(labels(pathToCrumbs("/profile", FIXTURE))).toEqual([
       { label: "Profile" },
     ]);
-    // Registered plugin page → resolves to its declared label, no
-    // synthetic "Pages" parent (would collide with the entry-type Pages
-    // surface in the user's sidebar).
+  });
+
+  test("a registered plugin page resolves to its declared label with no parent", () => {
+    // No synthetic "Pages" parent: it would collide with the entry-type
+    // Pages surface in the user's sidebar.
     expect(labels(pathToCrumbs("/pages/media", FIXTURE))).toEqual([
       { label: "Media Library" },
     ]);
-    // Unregistered plugin path → fall back to URL slug, still no parent.
+  });
+
+  test("an unregistered plugin path falls back to the URL slug with no parent", () => {
     expect(labels(pathToCrumbs("/pages/unknown", FIXTURE))).toEqual([
       { label: "unknown" },
     ]);

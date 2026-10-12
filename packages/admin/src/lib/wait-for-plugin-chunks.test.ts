@@ -8,10 +8,12 @@ async function isSettled(promise: Promise<unknown>): Promise<boolean> {
   void promise.then(() => {
     settled = true;
   });
-  // A macrotask turn runs every microtask queued before it.
-  await new Promise<void>((resolve) => {
-    setImmediate(resolve);
-  });
+  // Each await yields one microtask turn; four outlast the `then` hops inside
+  // `Promise.all`.
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
   return settled;
 }
 

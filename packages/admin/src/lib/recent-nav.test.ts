@@ -65,9 +65,25 @@ describe("recordRecentNav / readRecentNav", () => {
 
   test("caps the stored list", () => {
     const storage = memoryStorage();
-    for (let i = 0; i < 12; i++) recordRecentNav(`/p${String(i)}`, storage);
-    expect(readRecentNav(storage)).toHaveLength(8);
-    expect(readRecentNav(storage)[0]).toBe("/p11");
+    recordRecentNav("/a", storage);
+    recordRecentNav("/b", storage);
+    recordRecentNav("/c", storage);
+    recordRecentNav("/d", storage);
+    recordRecentNav("/e", storage);
+    recordRecentNav("/f", storage);
+    recordRecentNav("/g", storage);
+    recordRecentNav("/h", storage);
+    recordRecentNav("/i", storage);
+    expect(readRecentNav(storage)).toEqual([
+      "/i",
+      "/h",
+      "/g",
+      "/f",
+      "/e",
+      "/d",
+      "/c",
+      "/b",
+    ]);
   });
 
   test("recording to blocked storage is silent", () => {
