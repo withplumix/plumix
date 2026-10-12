@@ -1,7 +1,9 @@
 import type { TemplateData } from "plumix";
 import type { AppContext, ResolvedNode } from "plumix/plugin";
+import { anonymousContext } from "plumix/auth";
 import { eq } from "plumix/db";
 import {
+  resolveArchiveTypePage,
   resolveEntryData,
   resolveListingPage,
   serveRenderedAsset,
@@ -116,7 +118,7 @@ export function createCardRoute(
     if (asked.digest !== identity.digest) {
       return redirect(cardUrl(ctx, asked.target, identity.digest, extension));
     }
-    tagCdnEntry(ctx, [identity.key.tag]);
+    tagCdnEntry(ctx, [identity.key.tag, ...page.tags]);
 
     let response: Response;
     try {
@@ -166,17 +168,22 @@ function redirect(location: string): Response {
 interface CardPage {
   readonly node: ResolvedNode;
   readonly data: TemplateData;
+  /** The page's own purge tags, which the stored card is purged with. */
+  readonly tags: readonly string[];
 }
 
 async function resolveCardPage(
   ctx: AppContext,
   target: CardTarget,
 ): Promise<CardPage | null> {
-  const data = await cardTargetData(ctx, target);
-  if (data === null || !(await isShareablePage(ctx, data))) return null;
+  const page = await cardTargetPage(ctx, target);
+  if (page === null || !(await isShareablePage(ctx, page.data))) return null;
 
-  const identity = cardIdentityFor(data);
-  return identity === null ? null : { node: identity.node, data };
+  const identity = cardIdentityFor(
+    page.data,
+    target.kind === "archiveType" ? target.params : undefined,
+  );
+  return identity === null ? null : { ...page, node: identity.node };
 }
 
 /**
@@ -187,9 +194,27 @@ export async function cardTargetData(
   ctx: AppContext,
   target: CardTarget,
 ): Promise<TemplateData | null> {
-  return target.kind === "entry"
-    ? entryData(ctx, target.id)
-    : ((await resolveListingPage(ctx, target))?.data ?? null);
+  return (await cardTargetPage(ctx, target))?.data ?? null;
+}
+
+async function cardTargetPage(
+  ctx: AppContext,
+  target: CardTarget,
+): Promise<Omit<CardPage, "node"> | null> {
+  switch (target.kind) {
+    case "entry": {
+      const data = await entryData(ctx, target.id);
+      return data === null ? null : { data, tags: [] };
+    }
+    // A plugin's resolver may read who is asking, so it is asked as the
+    // stranger a public card is shown to.
+    case "archiveType":
+      return resolveArchiveTypePage(anonymousContext(ctx), target);
+    default: {
+      const page = await resolveListingPage(ctx, target);
+      return page === null ? null : { data: page.data, tags: [] };
+    }
+  }
 }
 
 /**

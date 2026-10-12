@@ -1,17 +1,7 @@
 import type { AppContext } from "../context/app-context.js";
 import type { Entry } from "../db/schema/entries.js";
-import type {
-  ArchiveEntries,
-  RegisteredArchiveType,
-  TitledListingArchiveResolution,
-} from "../plugin/manifest.js";
-import type { EntryListing } from "./contract/entry-listing.js";
 import type { RouteIntent } from "./contract/intent.js";
-import type {
-  ListingArchiveData,
-  SearchData,
-  ViewData,
-} from "./contract/resolved-entry.js";
+import type { SearchData, ViewData } from "./contract/resolved-entry.js";
 import type { RouteMatch } from "./match.js";
 import type { ResolvedListingPage } from "./render/page-data.js";
 import type { RenderEnv } from "./render/render-env.js";
@@ -30,12 +20,12 @@ import {
   permanentRedirect,
   redirect,
 } from "../runtime/contract/http.js";
-import { archiveEntries, termSlugParam } from "./archive-entries.js";
+import { termSlugParam } from "./archive-entries.js";
 import { isPageOutcome } from "./contract/page-outcome.js";
 import { resolveEditMode } from "./edit-mode.js";
 import { buildTermArchiveUrl } from "./permalink.js";
 import { previewTokenGrantsEntry, readPreviewToken } from "./preview.js";
-import { listEntryPage, listingCdnTags } from "./render/entry-listing.js";
+import { archiveTypePage } from "./render/archive-type-page.js";
 import {
   archiveData,
   authorData,
@@ -308,23 +298,20 @@ async function resolveCustom(
   // A compiled route always names a registered archive; the guard is a
   // defensive 404 rather than a throw if the two ever drift.
   if (!archive) return notFound("public-custom-archive-not-registered");
-  if (archive.entries !== undefined) {
-    return resolveListingArchive(ctx, archive, params, renderEnv);
-  }
 
-  const result = await archive.resolve(ctx, params);
-  if (result === null) return notFound("public-custom-archive-not-found");
+  const page = await archiveTypePage(ctx, archive, params);
+  if ("missing" in page) return notFound(page.missing);
 
   // Declared through the read-through's tag accumulator, so a publish of any
   // listed type purges this page, as for built-in archives.
-  if (result.tags) declarePageTags(ctx, result.tags);
+  declarePageTags(ctx, page.tags);
 
   const html = await renderThroughTheme({
     ctx,
     renderEnv,
-    node: { kind: "archiveType", name: intent.name },
-    data: result.data,
-    title: result.title,
+    node: page.node,
+    data: page.data,
+    title: page.title,
   });
   return htmlResponseOrNotFound(html, "public-custom-archive-no-template");
 }
@@ -364,84 +351,6 @@ async function resolveView(
     title: result.title,
   });
   return htmlResponseOrNotFound(html, "public-view-no-template");
-}
-
-type ListingArchiveType = Extract<
-  RegisteredArchiveType,
-  { entries: ArchiveEntries }
->;
-
-async function resolveListingArchive(
-  ctx: AppContext,
-  archive: ListingArchiveType,
-  params: Record<string, string>,
-  renderEnv: RenderEnv,
-): Promise<Response> {
-  const query = archiveEntries(
-    ctx,
-    { kind: "archiveType", name: archive.name },
-    params,
-  );
-  if (query === null) return notFound("public-custom-archive-no-entries");
-
-  const page = parsePageParam(params.page);
-  const listing = await listEntryPage(ctx, query, {
-    page,
-    perPage: archive.perPage ?? DEFAULT_ARCHIVE_PER_PAGE,
-  });
-  // Three distinct 404 hints, because each is a different bug: declined params,
-  // an unresolved term or author, a page past the end.
-  if (listing === null) {
-    return notFound("public-custom-archive-query-unresolved");
-  }
-  if (listing.outOfRange) {
-    return notFound("public-custom-archive-page-out-of-range");
-  }
-
-  const resolution = await nameListingPage(ctx, archive, params, listing);
-  if (resolution === null) return notFound("public-custom-archive-not-found");
-
-  declarePageTags(ctx, listingCdnTags(ctx.plugins, query));
-
-  // Core's half last: the archive's name and page are facts about the request,
-  // not fields a resolver gets to restate differently.
-  const data: ListingArchiveData = {
-    ...resolution.data,
-    kind: "archiveType",
-    name: archive.name,
-    page,
-    entries: listing.entries,
-    pagination: listing.pagination,
-  };
-  const html = await renderThroughTheme({
-    ctx,
-    renderEnv,
-    node: { kind: "archiveType", name: archive.name },
-    data,
-    title: resolution.title,
-  });
-  return htmlResponseOrNotFound(html, "public-custom-archive-no-template");
-}
-
-/**
- * Asked per arm so the types guarantee a title exists; the arm that declares a
- * `title` is the arm whose resolver cannot return one.
- */
-async function nameListingPage(
-  ctx: AppContext,
-  archive: ListingArchiveType,
-  params: Record<string, string>,
-  listing: EntryListing,
-): Promise<TitledListingArchiveResolution | null> {
-  if (archive.title === undefined) return archive.resolve(ctx, params, listing);
-
-  const title =
-    typeof archive.title === "function" ? archive.title(params) : archive.title;
-  const resolution =
-    archive.resolve === undefined
-      ? {}
-      : await archive.resolve(ctx, params, listing);
-  return resolution === null ? null : { ...resolution, title };
 }
 
 async function resolveSingle(

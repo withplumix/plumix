@@ -1,7 +1,9 @@
-import type { TemplateData } from "plumix";
+import type { ArchiveTypeData, TemplateData } from "plumix";
 import type { EntryAccessSubject } from "plumix/auth";
 import type { AppContext } from "plumix/plugin";
 import { anonymousContext, entryPolicyAdmits } from "plumix/auth";
+
+import { isListingArchive } from "./card-target.js";
 
 /**
  * A listing needs at least one published entry, so strangers can't fill the
@@ -31,11 +33,28 @@ export async function isShareablePage(
     case "author":
     case "date":
       return data.pagination.total > 0;
-    // Search and plugin archives have no card URL to be shareable at — see
-    // `CardTarget` for why neither can be addressed by identity.
+    case "archiveType":
+      return isShareableArchiveType(ctx, data);
+    // Search and views have no card URL to be shareable at.
     default:
       return false;
   }
+}
+
+/**
+ * A policied archive renders live, so only a policy granting an anonymous
+ * visitor the page lets a public, shared-cached card stand for it.
+ */
+async function isShareableArchiveType(
+  ctx: AppContext,
+  data: ArchiveTypeData,
+): Promise<boolean> {
+  const archive = ctx.plugins.archiveTypes.get(data.name);
+  if (archive === undefined) return false;
+  if (isListingArchive(data) && data.pagination.total === 0) return false;
+  if (archive.access === undefined) return true;
+  const outcome = await archive.access.resolve(anonymousContext(ctx));
+  return outcome.type === "grant";
 }
 
 /** {@link isShareablePage} minus the status check, so drafts preview. */
