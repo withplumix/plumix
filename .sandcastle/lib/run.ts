@@ -113,7 +113,7 @@ export const runShipLoop = async (
       ports.say(
         `  #${pullRequest.number} refused (${outcome.reason}), repairing (${repairs + 1}/${REPAIRS_A_PULL_REQUEST_GETS})`,
       );
-      const repaired = await sandboxes.run(() =>
+      const repaired = await sandboxes.runFirst(() =>
         ports.repair(ticket, pullRequest, outcome),
       );
       if (repaired.status === "declined") {

@@ -116,9 +116,13 @@ const reviewItemSchema = z.object({
   why: z.string().default(""),
 });
 
+const specGapSchema = reviewItemSchema.extend({
+  needsADecision: z.boolean().default(false),
+});
+
 const reviewSchema = z.object({
   summary: z.string().default(""),
-  specGaps: z.array(reviewItemSchema).default([]),
+  specGaps: z.array(specGapSchema).default([]),
   notes: z.array(reviewItemSchema).default([]),
 });
 
@@ -135,18 +139,43 @@ export const readReviewTag = (stdout: string): Review | null => {
 const asLocation = ({ file, line }: ReviewItem): string =>
   `${file}${line ? `:${line}` : ""}`;
 
-const asFixBrief = (
-  specGaps: readonly ReviewItem[],
-  { title, body }: PullRequestCopy,
-): string =>
-  `${specGaps
+const asGapList = (gaps: readonly ReviewItem[]): string =>
+  gaps
     .map(
       (gap, index) =>
         `${index + 1}. ${asLocation(gap)} — ${gap.summary}\n   ${gap.why}`,
     )
-    .join(
-      "\n\n",
-    )}\n\nThe PR description the harness will publish reads:\n\n<pr>\ntitle: ${title}\nbody:\n${body}\n</pr>\n\nWhen a gap is in that description, or your fix makes it wrong, end with the whole corrected <pr> block in the same shape. The harness publishes the last one you emit.`;
+    .join("\n\n");
+
+type AfterReview =
+  | { readonly next: "gates" }
+  | { readonly next: "fix"; readonly gaps: readonly ReviewItem[] }
+  | { readonly next: "park"; readonly reason: string };
+
+export const afterReview = (review: Review, pass: number): AfterReview => {
+  const { specGaps } = review;
+  if (specGaps.length === 0) return { next: "gates" };
+  const closable = specGaps.filter(({ needsADecision }) => !needsADecision);
+  if (closable.length === 0) {
+    return {
+      next: "park",
+      reason: `${specGaps.length} spec gap(s) need a person's decision:\n\n${asGapList(specGaps)}`,
+    };
+  }
+  if (pass > MAX_REVIEW_FIX_ROUNDS) {
+    return {
+      next: "park",
+      reason: `${specGaps.length} spec gap(s) still open after ${MAX_REVIEW_FIX_ROUNDS} review rounds:\n\n${asGapList(specGaps)}`,
+    };
+  }
+  return { next: "fix", gaps: closable };
+};
+
+const asFixBrief = (
+  specGaps: readonly ReviewItem[],
+  { title, body }: PullRequestCopy,
+): string =>
+  `${asGapList(specGaps)}\n\nThe PR description the harness will publish reads:\n\n<pr>\ntitle: ${title}\nbody:\n${body}\n</pr>\n\nWhen a gap is in that description, or your fix makes it wrong, end with the whole corrected <pr> block in the same shape. The harness publishes the last one you emit.`;
 
 const asGateFailureBrief = ({ command, output }: GateFailure): string =>
   `The harness ran \`${command}\` and it failed. Fix it.\n\n\`\`\`\n${output}\n\`\`\``;
@@ -183,6 +212,8 @@ export const reviewBranch = async (
     EMIT_THE_REVIEW,
   );
 
+  const gaps = review?.specGaps ?? [];
+  const decisions = gaps.filter(({ needsADecision }) => needsADecision).length;
   journal.record({
     phase: `${phase}:findings`,
     kind: "review",
@@ -192,9 +223,9 @@ export const reviewBranch = async (
     outcome: review ? "ok" : "fail",
     detail: review ? undefined : "no readable <review> block",
     findings: {
-      total: (review?.specGaps.length ?? 0) + (review?.notes.length ?? 0),
-      high: review?.specGaps.length ?? 0,
-      medium: 0,
+      total: gaps.length + (review?.notes.length ?? 0),
+      high: gaps.length - decisions,
+      medium: decisions,
       low: review?.notes.length ?? 0,
       parsed: review !== null,
     },
@@ -418,27 +449,24 @@ export const shipTicket = async (
       }
       summaries.push(review.summary);
       notes = review.notes;
-      if (review.specGaps.length === 0) break;
+      const next = afterReview(review, pass);
+      if (next.next === "gates") break;
+      if (next.next === "park")
+        return { status: "blocked", reason: next.reason };
 
-      if (pass > MAX_REVIEW_FIX_ROUNDS) {
-        return {
-          status: "blocked",
-          reason: `${review.specGaps.length} spec gap(s) still open after ${MAX_REVIEW_FIX_ROUNDS} review rounds`,
-        };
-      }
       say(
-        `--- fix ${review.specGaps.length} spec gap(s) (${pass}/${MAX_REVIEW_FIX_ROUNDS}) ---`,
+        `--- fix ${next.gaps.length} spec gap(s) (${pass}/${MAX_REVIEW_FIX_ROUNDS}) ---`,
       );
       const fixed = await fixer.apply(
         `fix#review${pass}`,
-        asFixBrief(review.specGaps, pullRequestCopy),
+        asFixBrief(next.gaps, pullRequestCopy),
       );
       pullRequestCopy = fixed.pullRequestCopy ?? pullRequestCopy;
       const { declined } = fixed;
       if (declined) {
         return {
           status: "blocked",
-          reason: `${review.specGaps.length} spec gap(s) stand and the fixer changed nothing:\n\n${declined.reason}`,
+          reason: `${next.gaps.length} spec gap(s) stand and the fixer changed nothing:\n\n${declined.reason}\n\n${asGapList(next.gaps)}`,
         };
       }
     }

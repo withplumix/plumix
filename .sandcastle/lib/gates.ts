@@ -68,6 +68,14 @@ export const GATES: readonly Gate[] = [
   { name: "i18n", command: "pnpm i18n:check" },
   { name: "knip", command: "pnpm knip" },
   {
+    name: "lint",
+    command: `pnpm exec turbo run lint --continue ${TURBO_GATE_FLAGS} -- --cache --cache-location .cache/.eslintcache`,
+  },
+  {
+    name: "typecheck",
+    command: `pnpm exec turbo run typecheck ${TURBO_GATE_FLAGS}`,
+  },
+  {
     name: "test",
     command: `pnpm exec turbo run test:unit test:build --continue --concurrency=2 ${TURBO_GATE_FLAGS}`,
   },
@@ -92,14 +100,6 @@ export const GATES_LEFT_TO_CI: readonly Gate[] = [
   {
     name: "attw",
     command: `pnpm exec turbo run attw ${TURBO_GATE_FLAGS}`,
-  },
-  {
-    name: "lint",
-    command: `pnpm exec turbo run lint --continue ${TURBO_GATE_FLAGS} -- --cache --cache-location .cache/.eslintcache`,
-  },
-  {
-    name: "typecheck",
-    command: `pnpm exec turbo run typecheck ${TURBO_GATE_FLAGS}`,
   },
 ];
 

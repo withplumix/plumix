@@ -4,6 +4,7 @@ import type { RunAgentPhase } from "./agent.js";
 import { CHANGESET_GATE, GATES, underAnOrphanReaper } from "./gates.js";
 import { SETUP_STEPS, workersALaneOversubscribes } from "./sandbox.js";
 import {
+  afterReview,
   asReviewNote,
   fixerFor,
   gatesUntilGreen,
@@ -135,6 +136,15 @@ describe("gate applicability", () => {
     expect(unconditional).toContain("format");
     expect(unconditional).toContain("test");
     expect(unconditional).toContain("knip");
+  });
+
+  test("lint and typecheck run before the pull request, so CI does not find what they would", () => {
+    const unconditional = GATES.filter(({ appliesWhen }) => !appliesWhen).map(
+      ({ name }) => name,
+    );
+
+    expect(unconditional).toContain("lint");
+    expect(unconditional).toContain("typecheck");
   });
 });
 
@@ -337,6 +347,89 @@ describe("reviewBranch", () => {
     expect(phases).toEqual(["review#2", "review#2:ask-again1"]);
     expect(review?.specGaps).toHaveLength(1);
     expect(recorded).toEqual([{ phase: "review#2:findings", high: 1, low: 2 }]);
+  });
+
+  test("journals gaps that need a decision apart from the ones the fixer can close", async () => {
+    const recorded: { high?: number; medium?: number }[] = [];
+
+    await reviewBranch(
+      async () =>
+        ranWith(
+          reviewBlock({
+            summary: "",
+            specGaps: [
+              { file: "a.ts", summary: "criterion 1 unmet" },
+              { file: "b.ts", summary: "brief vs code", needsADecision: true },
+            ],
+            notes: [],
+          }),
+        ),
+      {
+        record: ({ findings }) =>
+          recorded.push({ high: findings?.high, medium: findings?.medium }),
+      },
+      TICKET,
+      1,
+      "body",
+    );
+
+    expect(recorded).toEqual([{ high: 1, medium: 1 }]);
+  });
+});
+
+describe("afterReview", () => {
+  const review = (specGaps: { summary: string; needsADecision?: boolean }[]) =>
+    readReviewTag(
+      reviewBlock({
+        summary: "",
+        specGaps: specGaps.map((gap) => ({ file: "a.ts", why: "w", ...gap })),
+        notes: [],
+      }),
+    )!;
+
+  test("a review with no spec gaps lets the branch go to the gates", () => {
+    expect(afterReview(review([]), 1)).toEqual({ next: "gates" });
+  });
+
+  test("the fixer is handed only the gaps it can close", () => {
+    const next = afterReview(
+      review([
+        { summary: "criterion 2 unmet" },
+        { summary: "the brief contradicts the code", needsADecision: true },
+      ]),
+      1,
+    );
+
+    expect(next.next).toBe("fix");
+    expect(
+      next.next === "fix" && next.gaps.map(({ summary }) => summary),
+    ).toEqual(["criterion 2 unmet"]);
+  });
+
+  test("gaps that need a decision park the ticket at once, naming each one", () => {
+    const next = afterReview(
+      review([
+        {
+          summary: "the adapter shape departs from the brief",
+          needsADecision: true,
+        },
+      ]),
+      1,
+    );
+
+    expect(next.next).toBe("park");
+    expect(next.next === "park" && next.reason).toContain(
+      "a.ts — the adapter shape departs from the brief",
+    );
+  });
+
+  test("gaps still open after every fix round park the ticket, naming each one", () => {
+    const next = afterReview(review([{ summary: "criterion 2 unmet" }]), 4);
+
+    expect(next.next).toBe("park");
+    expect(next.next === "park" && next.reason).toContain(
+      "a.ts — criterion 2 unmet",
+    );
   });
 });
 

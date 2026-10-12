@@ -36,6 +36,12 @@ as the ticket pins it, and put your disagreement in `notes`.
   typecheck, a lint or a build passes is met by the harness's gates, which run
   after this phase; it is never a spec gap, and neither you nor the implementer
   runs those suites to prove it.
+- **A gap no change to the branch can close** gets `"needsADecision": true`:
+  the brief contradicts the code or `main`, a pinned criterion cannot be met as
+  written, or the branch departs from a pinned contract and only the ticket's
+  owner can say which side gives. The harness parks the ticket with these gaps
+  listed instead of sending them to the implementer, so `why` names the choice
+  the person has to make.
 
 `notes` hold only the smells you left and your disagreements with a pinned
 decision. A rule about how the work was done, such as test-first order, leaves
@@ -64,7 +70,7 @@ is empty. `why` in a spec gap says what the ticket asks and what the diff does
 instead.
 
 <review>
-{"summary": "what you changed", "specGaps": [{"file": "path/to/file.ts", "line": 42, "summary": "criterion 2 is not met", "why": "..."}], "notes": [{"file": "path/to/file.ts", "line": 7, "summary": "what you left", "why": "why"}]}
+{"summary": "what you changed", "specGaps": [{"file": "path/to/file.ts", "line": 42, "summary": "criterion 2 is not met", "why": "...", "needsADecision": false}], "notes": [{"file": "path/to/file.ts", "line": 7, "summary": "what you left", "why": "why"}]}
 </review>
 
 <promise>COMPLETE</promise>

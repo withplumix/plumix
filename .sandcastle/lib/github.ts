@@ -6,7 +6,11 @@ import type {
   MergeOutcome,
   PullRequestSnapshot,
 } from "./verdict.js";
-import { stillInTheLoopsHands, ticketOfLoopBranch } from "./in-flight.js";
+import {
+  stillInTheLoopsHands,
+  ticketOfLoopBranch,
+  whoseSiblingIsNotInFlight,
+} from "./in-flight.js";
 import { blockersNamedIn } from "./named-blockers.js";
 import { retryWhatGitHubDropped } from "./outage.js";
 import {
@@ -144,18 +148,43 @@ const waitsOnANamedBlocker = (ticketNumber: number): boolean => {
   );
 };
 
+const parentOf = (ticketNumber: number): number | undefined => {
+  const url = gh([
+    "api",
+    `repos/${REPO_SLUG}/issues/${ticketNumber}`,
+    "--jq",
+    ".parent_issue_url // empty",
+  ]).trim();
+  return url ? Number(url.split("/").pop()) : undefined;
+};
+
 export const firstUnblockedUnassignedTicket = (
   alreadyTaken: ReadonlySet<number>,
 ): Ticket | undefined => {
-  const waiting = listReadyTickets()
-    .filter(
-      ({ assignees, number }) =>
-        assignees.length === 0 && !alreadyTaken.has(number),
-    )
+  const ready = listReadyTickets();
+  const isTaken = ({ assignees, number }: ListedTicket): boolean =>
+    assignees.length > 0 || alreadyTaken.has(number);
+  const waiting = ready
+    .filter((ticket) => !isTaken(ticket))
     .sort((a, b) => a.number - b.number);
+
+  const parents = new Map<number, number | undefined>();
+  const cachedParentOf = (ticketNumber: number): number | undefined => {
+    if (!parents.has(ticketNumber))
+      parents.set(ticketNumber, parentOf(ticketNumber));
+    return parents.get(ticketNumber);
+  };
+  const clearOfSiblings = new Set(
+    whoseSiblingIsNotInFlight(
+      waiting.map(({ number }) => number),
+      ready.filter(isTaken).map(({ number }) => number),
+      cachedParentOf,
+    ),
+  );
 
   for (const { number, title } of waiting) {
     if (
+      clearOfSiblings.has(number) &&
       countOpenBlockers(number) === 0 &&
       !isParentIssue(number) &&
       !waitsOnANamedBlocker(number)
