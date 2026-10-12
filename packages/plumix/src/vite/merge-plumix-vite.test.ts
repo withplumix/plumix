@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { UserConfig } from "vite";
 import { build, createLogger, mergeConfig } from "vite";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { plumix } from "./index.js";
 import { SERIALIZE_VIRTUAL_ID } from "./island-transform.js";
@@ -138,6 +138,54 @@ describe("plumix() vite plugin — `config()` merges plumix.config.vite", () => 
       if (previous === undefined) delete process.env.PLUMIX_EDITOR;
       else process.env.PLUMIX_EDITOR = previous;
     }
+  });
+
+  describe("Workers Builds env", () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    async function buildDefine(): Promise<Record<string, string> | undefined> {
+      const configPath = join(dir, "plumix.config.mjs");
+      writeFileSync(
+        configPath,
+        `export default {
+          runtime: { name: 'x', handler: {}, generateEntry: () => '' },
+          database: { kind: 'x' },
+          auth: { passkey: {} },
+        };`,
+        "utf8",
+      );
+      const plugin = plumix({ configFile: configPath });
+      const result = await (
+        plugin.config as (userConfig: unknown, env: unknown) => Promise<unknown>
+      )({ root: dir }, { command: "build", mode: "production" });
+      return (result as { define?: Record<string, string> }).define;
+    }
+
+    test("defines WORKERS_CI and WORKERS_CI_BRANCH from the build's env, since a deployed Worker's process.env is empty", async () => {
+      vi.stubEnv("WORKERS_CI", "1");
+      vi.stubEnv("WORKERS_CI_BRANCH", "feat/x");
+
+      const define = await buildDefine();
+
+      expect(define?.["process.env.WORKERS_CI"]).toBe(JSON.stringify("1"));
+      expect(define?.["process.env.WORKERS_CI_BRANCH"]).toBe(
+        JSON.stringify("feat/x"),
+      );
+    });
+
+    test("defines both as empty strings when the build runs outside Workers Builds", async () => {
+      vi.stubEnv("WORKERS_CI", undefined);
+      vi.stubEnv("WORKERS_CI_BRANCH", undefined);
+
+      const define = await buildDefine();
+
+      expect(define?.["process.env.WORKERS_CI"]).toBe(JSON.stringify(""));
+      expect(define?.["process.env.WORKERS_CI_BRANCH"]).toBe(
+        JSON.stringify(""),
+      );
+    });
   });
 
   // Builds `entry.js` with the `build` options the plugin's `config()` returns

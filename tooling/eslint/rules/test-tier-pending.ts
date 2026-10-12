@@ -122,8 +122,6 @@ export const RETIRED_TIER_PENDING: readonly string[] = [
   "packages/runtimes/bun/src/commands/dev.build.test.ts",
   "packages/runtimes/bun/src/commands/migrations.build.test.ts",
   "packages/runtimes/bun/src/entry.build.test.ts",
-  "packages/runtimes/cloudflare/src/commands/dev.build.test.ts",
-  "packages/runtimes/cloudflare/src/deploy-origin.build.test.ts",
   "packages/runtimes/node/src/commands/dev.build.test.ts",
   "packages/runtimes/node/src/commands/migrations.build.test.ts",
   "packages/runtimes/node/src/entry.build.test.ts",
