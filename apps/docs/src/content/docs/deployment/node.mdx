@@ -114,6 +114,16 @@ The two exports do not serve the same paths. `listener` runs the whole stack the
 
 A rolling deploy that sends `SIGTERM` and waits ten seconds loses nothing that can finish in that window: the process stops accepting, stops the scheduler, lets in-flight responses finish and drains deferred work such as telemetry delivery, all within one ten-second budget, then exits `0`. Whatever is still running at the deadline — a scheduled run, a response or deferred work — is cut, and the process exits `1` saying which. A second signal exits at once.
 
+## Logs
+
+A built server writes each line Plumix logs through its logger (`ctx.logger`, a request or scheduled run that fails, deferred work that rejects or is abandoned, the cron runner) to stdout as one JSON object: `level`, `message`, `time` and whatever else the call carried, with an error as its `name`, `message` and `stack`. Some warnings still go straight to the console as plain text: the server's own start and shutdown lines (`listening on`, `draining`), and a few from core, such as an unregistered block or a hook that threw. `plumix dev` prints its usual readable output instead.
+
+```text
+{"level":"error","message":"[plumix] scheduled task \"recipes:reindex\" failed: boom","time":"2026-10-11T09:30:00.000Z","plugin":"recipes","taskId":"reindex","error":{"name":"Error","message":"boom","stack":"Error: boom\n    at …"}}
+```
+
+The process keeps nothing itself, so whatever runs it keeps the logs. Under systemd, journald stores stdout, and `journalctl -u my-site -o cat` prints it back. A container platform forwards stdout to its log drain, and a process manager like PM2 writes it to a file it rotates. `plumix doctor` reports where the logs go.
+
 ## Behind a proxy
 
 Off by default, the server takes the scheme from its own socket, the host from `Host`, and the visitor's address from the socket, so a visitor reaching the process directly cannot forge any of them. Behind a TLS-terminating reverse proxy that is wrong: every request looks like plain `http` from the proxy's address, so the session cookie is not `Secure`, the passkey origin does not match, and sessions record the proxy. Turn the flag on:

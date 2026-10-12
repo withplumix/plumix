@@ -1,11 +1,15 @@
-import type { CommandDefinition, PlumixConfig } from "@plumix/core";
+import type {
+  CommandDefinition,
+  DiagnosticFinding,
+  PlumixConfig,
+} from "@plumix/core";
 
 import { report } from "../report.js";
 
 export const doctorCommand: CommandDefinition = {
   describe: "Print a diagnostic snapshot of your Plumix project",
   run(ctx) {
-    const { app, cwd, configPath } = ctx;
+    const { app, cwd, configPath, runtimeDiagnose } = ctx;
     const tableCount = countTables(app.config);
 
     report.info("Plumix doctor");
@@ -22,8 +26,17 @@ export const doctorCommand: CommandDefinition = {
     report.info(`  schema tables:  ${tableCount}`);
     report.info(`  node:           ${process.version}`);
     report.info(`  platform:       ${process.platform}`);
+    if (runtimeDiagnose) printFindings(runtimeDiagnose(cwd));
   },
 };
+
+function printFindings(findings: readonly DiagnosticFinding[]): void {
+  report.info("  deploy:");
+  for (const { level, message, fix } of findings) {
+    report.info(`    ${level.padEnd(5)} ${message}`);
+    if (fix !== undefined) report.info(`          fix: ${fix}`);
+  }
+}
 
 function countTables(config: PlumixConfig): number {
   let count = 0;

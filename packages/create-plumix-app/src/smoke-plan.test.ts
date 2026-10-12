@@ -4,6 +4,7 @@ import type { PluginDescriptor, RuntimeDescriptor } from "./compose/types.js";
 import type { Registry } from "./registry.js";
 import { loadRegistry } from "./registry.js";
 import {
+  doctorFailure,
   planBoot,
   planInstall,
   planSmokeCombos,
@@ -143,7 +144,7 @@ describe("planInstall", () => {
 });
 
 describe("planBoot", () => {
-  it("migrates through the runtime's cli prefix, then starts its start command", () => {
+  it("migrates and runs doctor through the runtime's cli prefix, then starts its start command", () => {
     expect(
       planBoot("@plumix/runtime-bun", {
         cli: "bun --bun node_modules/plumix/bin/plumix.mjs",
@@ -151,6 +152,7 @@ describe("planBoot", () => {
       }),
     ).toEqual({
       migrate: ["bun --bun node_modules/plumix/bin/plumix.mjs migrate"],
+      doctor: "bun --bun node_modules/plumix/bin/plumix.mjs doctor",
       start: "bun dist/server/worker.js",
     });
   });
@@ -247,5 +249,31 @@ describe("summarizePlaywrightFailures", () => {
       "editor.spec.ts › canvas › a block is selectable: pageerror on http://localhost:3000/_plumix/admin/: SyntaxError",
       "editor.spec.ts › canvas › a block is selectable: expect(locator).toBeVisible() failed",
     ]);
+  });
+});
+
+describe("doctorFailure", () => {
+  const snapshot = "Plumix doctor\n  runtime:        cloudflare\n";
+
+  it("passes output whose deploy findings are all ok", () => {
+    expect(
+      doctorFailure(
+        `${snapshot}  deploy:\n    ok    Workers Logs is on in wrangler.jsonc\n`,
+      ),
+    ).toBeUndefined();
+  });
+
+  it("fails output with a warn finding", () => {
+    expect(
+      doctorFailure(
+        `${snapshot}  deploy:\n    warn  Workers Logs is off in wrangler.jsonc\n          fix: Add it\n`,
+      ),
+    ).toBe("plumix doctor warns on a fresh scaffold");
+  });
+
+  it("fails output with no ok finding, as when the runtime exports no diagnose", () => {
+    expect(doctorFailure(snapshot)).toBe(
+      "plumix doctor reported no deploy finding, so the runtime's diagnose never ran",
+    );
   });
 });

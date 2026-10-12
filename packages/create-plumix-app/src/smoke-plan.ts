@@ -143,9 +143,10 @@ export interface RuntimeSmokeFields {
   readonly cli?: string;
 }
 
-/** Shell commands a combo runs after `build`: migrations, then the server. */
+/** Shell commands a combo runs after `build`: doctor, migrations, then the server. */
 export interface SmokeBoot {
   readonly migrate: readonly string[];
+  readonly doctor: string;
   readonly start: string;
 }
 
@@ -165,6 +166,7 @@ export function planBoot(
   // reads, the local D1 on Cloudflare.
   return {
     migrate: [`${cli} migrate`],
+    doctor: `${cli} doctor`,
     start,
   };
 }
@@ -220,4 +222,18 @@ export function summarizePlaywrightFailures(report: {
   };
   for (const suite of report.suites) visit(suite, []);
   return lines;
+}
+
+/**
+ * Why `plumix doctor`'s output fails a fresh scaffold, or undefined when it
+ * passes. No `ok` line means the runtime's `diagnose` never ran.
+ */
+export function doctorFailure(output: string): string | undefined {
+  if (/^\s+warn\s/m.test(output)) {
+    return "plumix doctor warns on a fresh scaffold";
+  }
+  if (!/^\s+ok\s/m.test(output)) {
+    return "plumix doctor reported no deploy finding, so the runtime's diagnose never ran";
+  }
+  return undefined;
 }

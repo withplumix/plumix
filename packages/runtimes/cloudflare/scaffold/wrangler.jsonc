@@ -26,4 +26,8 @@
   "triggers": {
     "crons": ["0 3 * * *", "*/5 * * * *"],
   },
+  // Workers Logs keeps request errors, console output and exceptions; without
+  // it a deployed Worker records nothing. Lower `head_sampling_rate` (0-1) on
+  // a busy site to log a share of requests.
+  "observability": { "enabled": true },
 }

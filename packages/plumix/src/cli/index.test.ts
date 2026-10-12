@@ -113,6 +113,7 @@ describe("runCommand", () => {
         argv: [],
         loaded: { config: testConfig(), configPath: "/site/plumix.config.ts" },
         runtimeMigrations: recordingRuntime(events),
+        runtimeDiagnose: undefined,
       },
     );
   }

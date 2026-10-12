@@ -194,7 +194,7 @@ A custom production domain breaks that span, and no configuration can restore it
 
 ## Checking the deploy
 
-`plumix doctor` prints what the CLI resolved from your config, which is the runtime name, the database kind, the plugins with their versions, and a `schema tables` count. That count sums the tables the plugins declare and nothing else, so a project with no schema-carrying plugin reports 0 even though core's `entries`, `terms`, `users`, `sessions` and `credentials` are all in the generated schema. Run it before a deploy after adding a plugin, to confirm its tables arrived. This works the same way on both runtimes.
+`plumix doctor` prints what the CLI resolved from your config, which is the runtime name, the database kind, the plugins with their versions, and a `schema tables` count. That count sums the tables the plugins declare and nothing else, so a project with no schema-carrying plugin reports 0 even though core's `entries`, `terms`, `users`, `sessions` and `credentials` are all in the generated schema. Run it before a deploy after adding a plugin, to confirm its tables arrived. It also lists what the runtime found in your deploy config: on Cloudflare it warns when the deploy would keep no logs, and on Node and Bun it says where the logs go. The command works the same way on every runtime.
 
 ## Related
 

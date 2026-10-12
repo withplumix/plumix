@@ -108,6 +108,28 @@ describe("plumix CLI dispatch", () => {
     expect(info).toHaveBeenCalledWith(expect.stringContaining("Usage:"));
   });
 
+  test("doctor prints the findings the runtime's commands module diagnoses", async () => {
+    writeFileSync(
+      join(dir, "plumix.config.mjs"),
+      VALID_CONFIG.replace(
+        'name: "test",',
+        'name: "test", commandsModule: "./commands.mjs",',
+      ),
+    );
+    writeFileSync(
+      join(dir, "commands.mjs"),
+      `export const diagnose = (cwd) => [
+        { level: "warn", message: "Logs are off in " + cwd, fix: "Turn them on" },
+      ];`,
+    );
+    const info = vi.spyOn(report, "info").mockImplementation(() => undefined);
+
+    await run(["--cwd", dir, "doctor"]);
+
+    expect(info).toHaveBeenCalledWith(`    warn  Logs are off in ${dir}`);
+    expect(info).toHaveBeenCalledWith("          fix: Turn them on");
+  });
+
   test("--version prints without requiring a config", async () => {
     const info = vi.spyOn(report, "info").mockImplementation(() => undefined);
     const emptyDir = mkdtempSync(join(tmpdir(), "plumix-cli-version-"));

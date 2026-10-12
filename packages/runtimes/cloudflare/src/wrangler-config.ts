@@ -21,6 +21,8 @@ interface LoadedWranglerConfig {
   readonly d1Databases: readonly D1BindingEntry[];
   readonly compatibilityDate?: string;
   readonly accountId?: string;
+  /** Whether Workers Logs keeps the deployed Worker's logs. */
+  readonly observabilityEnabled: boolean;
 }
 
 /**
@@ -50,14 +52,24 @@ export function loadWranglerConfig(cwd: string): LoadedWranglerConfig | null {
 
     const { compatibility_date: compatibilityDate, account_id: accountId } =
       parsed as { compatibility_date?: unknown; account_id?: unknown };
+    const { observability } = parsed as { observability?: unknown };
     return {
       filename,
       d1Databases,
+      observabilityEnabled: isEnabled(observability),
       ...(typeof compatibilityDate === "string" ? { compatibilityDate } : {}),
       ...(typeof accountId === "string" ? { accountId } : {}),
     };
   }
   return null;
+}
+
+function isEnabled(block: unknown): boolean {
+  return (
+    typeof block === "object" &&
+    block !== null &&
+    (block as { enabled?: unknown }).enabled === true
+  );
 }
 
 function tryRead(path: string): string | null {

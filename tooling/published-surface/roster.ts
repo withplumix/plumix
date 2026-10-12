@@ -588,9 +588,10 @@ export const ROSTER: Readonly<
     "./commands": [
       {
         reason:
-          "the CLI commands `plumix` loads from the configured runtime, and " +
-          "how `plumix migrate` opens its database",
-        names: ["commands", "migrations"],
+          "the CLI commands `plumix` loads from the configured runtime, " +
+          "how `plumix migrate` opens its database, and what `plumix doctor` " +
+          "checks in its deploy config",
+        names: ["commands", "migrations", "diagnose"],
       },
     ],
   },
@@ -635,9 +636,10 @@ export const ROSTER: Readonly<
     "./commands": [
       {
         reason:
-          "the CLI commands `plumix` loads from the configured runtime, and " +
-          "how `plumix migrate` opens its database",
-        names: ["commands", "migrations"],
+          "the CLI commands `plumix` loads from the configured runtime, " +
+          "how `plumix migrate` opens its database, and what `plumix doctor` " +
+          "checks in its deploy config",
+        names: ["commands", "migrations", "diagnose"],
       },
     ],
     "./demo": [
@@ -731,9 +733,10 @@ export const ROSTER: Readonly<
     "./commands": [
       {
         reason:
-          "the CLI commands `plumix` loads from the configured runtime, and " +
-          "how `plumix migrate` opens its database",
-        names: ["commands", "migrations"],
+          "the CLI commands `plumix` loads from the configured runtime, " +
+          "how `plumix migrate` opens its database, and what `plumix doctor` " +
+          "checks in its deploy config",
+        names: ["commands", "migrations", "diagnose"],
       },
     ],
   },

@@ -57,6 +57,10 @@ const failing = definePlugin("failing", (ctx) => {
   });
 });
 
+/** A built site logs to stdout; the spy keeps it out of the test output and holds what was written. */
+const captureStdout = () =>
+  vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
 const quiet = () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() });
 
 let dir: string;
@@ -163,9 +167,7 @@ function tables(): unknown[] {
 
 describe("createNodeSite — scheduled", () => {
   test("answers with the run's report, so a failed task is not swallowed", async () => {
-    const error = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => undefined);
+    captureStdout();
     const { site } = await siteFor({ plugins: [failing] });
 
     const report = await site.handler.scheduled({
@@ -175,18 +177,12 @@ describe("createNodeSite — scheduled", () => {
 
     // `ran` also counts core's own `*/5` task, which shares this minute.
     expect(report).toMatchObject({ failed: ["failing:always-fails"] });
-    expect(error).toHaveBeenCalledWith(
-      `[plumix] scheduled task "failing:always-fails" failed: boom`,
-      expect.objectContaining({ taskId: "always-fails", plugin: "failing" }),
-    );
   });
 
   test("the report reaches the scheduler's failure logging", async () => {
     // The whole chain the shipped cron path walks; dropping the return anywhere
     // leaves an operator with silence.
-    const error = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => undefined);
+    captureStdout();
     const { site } = await siteFor({ plugins: [failing] });
     const clock = virtualClock("2026-09-07T02:58:00Z");
     const logger = quiet();
@@ -201,10 +197,6 @@ describe("createNodeSite — scheduled", () => {
 
     expect(logger.error).toHaveBeenCalledWith(
       `[plumix] cron "${CRON}": 1 task(s) failed: failing:always-fails`,
-    );
-    expect(error).toHaveBeenCalledWith(
-      `[plumix] scheduled task "failing:always-fails" failed: boom`,
-      expect.objectContaining({ taskId: "always-fails", plugin: "failing" }),
     );
   });
 
@@ -221,6 +213,73 @@ describe("createNodeSite — scheduled", () => {
     await cron.stop();
 
     expect(connected).toContain(SCHEDULED_PATH);
+  });
+});
+
+describe("createNodeSite — logs", () => {
+  test("a built site writes each log call to stdout as one JSON line, with the error's stack", async () => {
+    const stdout = captureStdout();
+    const { site } = await siteFor({ plugins: [failing] });
+
+    await site.handler.scheduled({
+      cron: CRON,
+      scheduledTime: Date.parse("2026-09-07T03:00:00Z"),
+    });
+
+    const lines = stdout.mock.calls.map(([chunk]) => String(chunk));
+    expect(lines.every((line) => line.endsWith("\n"))).toBe(true);
+    expect(lines.map((line) => JSON.parse(line) as unknown)).toContainEqual(
+      expect.objectContaining({
+        level: "error",
+        message: `[plumix] scheduled task "failing:always-fails" failed: boom`,
+        plugin: "failing",
+        error: expect.objectContaining({
+          name: "Error",
+          message: "boom",
+          stack: expect.stringContaining("Error: boom") as unknown,
+        }) as unknown,
+      }),
+    );
+  });
+
+  test("under dev a site keeps logging to the console, not JSON on stdout", async () => {
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const stdout = captureStdout();
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const { site } = await siteFor({ plugins: [failing] });
+
+    await site.handler.scheduled({
+      cron: CRON,
+      scheduledTime: Date.parse("2026-09-07T03:00:00Z"),
+    });
+
+    expect(error).toHaveBeenCalledWith(
+      `[plumix] scheduled task "failing:always-fails" failed: boom`,
+      expect.objectContaining({ taskId: "always-fails", plugin: "failing" }),
+    );
+    expect(stdout).not.toHaveBeenCalled();
+  });
+
+  test("a built site's cron writes its own lines as JSON too", async () => {
+    const stdout = captureStdout();
+    const { site } = await siteFor({ plugins: [failing] });
+    const clock = virtualClock("2026-09-07T02:58:00Z");
+
+    const cron = await site.startCron({ lease: false, clock });
+    await clock.advanceTo("2026-09-07T03:00:30Z");
+    await cron.stop();
+
+    const records = stdout.mock.calls.map(
+      ([chunk]) => JSON.parse(String(chunk)) as unknown,
+    );
+    expect(records).toContainEqual(
+      expect.objectContaining({
+        level: "error",
+        message: `[plumix] cron "${CRON}": 1 task(s) failed: failing:always-fails`,
+      }),
+    );
   });
 });
 

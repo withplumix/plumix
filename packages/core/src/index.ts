@@ -16,6 +16,7 @@ export * from "./config.js";
 export { defineConfig, plumix } from "./runtime/define-config.js";
 export * from "./context/index.js";
 export { consoleLogger, createAppContext } from "./context/app.js";
+export { createJsonLogger } from "./context/json-logger.js";
 export type { CreateAppContextArgs } from "./context/app.js";
 export { withUser } from "./auth/with-user.js";
 // Drizzle operators and schema tables live on `plumix/db` and `plumix/schema`
@@ -89,7 +90,10 @@ export {
   createPlumixHandler,
   createRuntimeHandler,
 } from "./runtime/handler.js";
-export type { PlumixHandlerOptions } from "./runtime/handler.js";
+export type {
+  PlumixHandlerOptions,
+  RuntimeHandlerOptions,
+} from "./runtime/handler.js";
 // `notFound` is already the template-rule builder's name on this surface, so
 // the refusal that answers a request is published under the longer one.
 export {

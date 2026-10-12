@@ -1,6 +1,7 @@
 export {
   buildApp,
   connectScheduledDb,
+  createJsonLogger,
   createPlumixHandler,
   createRuntimeHandler,
   createScheduledRunGuard,
@@ -92,6 +93,7 @@ export type {
   RequestScopedDbArgs,
   RequestTrustOptions,
   RuntimeAdapter,
+  RuntimeHandlerOptions,
   RuntimeHandlerSpec,
   ScheduledEvent,
   ScheduledRunGuard,

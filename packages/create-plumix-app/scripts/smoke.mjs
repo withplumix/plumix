@@ -56,6 +56,7 @@ const { loadRegistry } = await import(
   join(REPO, "packages/create-plumix-app/dist/registry.js")
 );
 const {
+  doctorFailure,
   planBoot,
   planInstall,
   planSmokeCombos,
@@ -445,6 +446,23 @@ async function assertServes(base, child) {
   }
 }
 
+/**
+ * Through the runtime's cli, so the installed runtime's `diagnose` reads
+ * the scaffold's config.
+ */
+function assertDoctorClean(appDir) {
+  const bin = join(appDir, "node_modules", ".bin");
+  const runtime = installedRuntime(appDir);
+  const { doctor } = planBoot(runtime.name, runtime.e2e);
+  const output = execSync(`${doctor} 2>&1`, {
+    cwd: appDir,
+    env: { ...process.env, PATH: `${bin}${delimiter}${process.env.PATH}` },
+    encoding: "utf8",
+  });
+  const failure = doctorFailure(output);
+  if (failure !== undefined) throw new Error(`${failure}:\n${output}`);
+}
+
 async function boot(appDir, combo) {
   const runtime = installedRuntime(appDir);
   const plan = planBoot(runtime.name, runtime.e2e);
@@ -574,6 +592,7 @@ async function smoke(combo, tarballs) {
     run(pm, ["run", "typecheck"], app);
     run(pm, ["run", "build"], app);
     if (combo.secondLocale) assertCatalogsStaged(app, combo.excluded);
+    assertDoctorClean(app);
     await boot(app, combo);
     if (combo.devEditor) await driveEditorUnderDev(app, combo);
     console.log(`=== ${combo.name}: ok ===`);
