@@ -68,8 +68,12 @@ import {
   TableRow,
 } from "@plumix/admin-ui/table";
 import { Textarea } from "@plumix/admin-ui/textarea";
-import { describeRpcError } from "@plumix/core/admin";
 import { vMessage } from "@plumix/core/validation";
+
+import {
+  mintApiTokenErrorDescriptor,
+  revokeApiTokenErrorDescriptor,
+} from "./profile-errors.js";
 
 // Self and admin call separate procedures so the audit log tells "revoked their
 // own" from "admin revoked theirs". Only the owner can mint.
@@ -91,15 +95,6 @@ const M = {
   expiresNever: defineMessage({
     id: "apiTokens.expiry.never",
     message: "Never",
-  }),
-  // Mutation error fallbacks.
-  mintFallback: defineMessage({
-    id: "apiTokens.mint.fallback",
-    message: "Couldn't mint token. Try again.",
-  }),
-  revokeFallback: defineMessage({
-    id: "apiTokens.revoke.fallback",
-    message: "Couldn't revoke. Try again.",
   }),
   // Placeholder copy.
   namePlaceholder: defineMessage({
@@ -324,7 +319,7 @@ function ApiTokensCardView({
                     });
                   },
                   onError: (err) => {
-                    setCreateError(describeRpcError(err, {}, M.mintFallback));
+                    setCreateError(mintApiTokenErrorDescriptor(err));
                   },
                 },
               );
@@ -480,7 +475,7 @@ function ApiTokensCardView({
                 onRevoke(revokeTarget.id, {
                   onSuccess: () => setRevokeTarget(null),
                   onError: (err) => {
-                    setRevokeError(describeRpcError(err, {}, M.revokeFallback));
+                    setRevokeError(revokeApiTokenErrorDescriptor(err));
                   },
                 });
               }}

@@ -653,7 +653,7 @@ msgid "userEdit.email.dialog.cancel"
 msgstr "Скасувати"
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.cancelled"
 msgstr "Скасовано. Натисніть «Додати passkey», коли будете готові."
 
@@ -897,7 +897,7 @@ msgid "terms.create.error.createFallback"
 msgstr "Не вдалося створити термін. Спробуйте знову."
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.delete.fallback"
 msgstr "Не вдалося видалити passkey. Спробуйте знову."
 
@@ -922,12 +922,12 @@ msgid "editor.toast.discardFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.emailMismatch"
 msgstr "Не вдалося зареєструвати — увійдіть знову та спробуйте."
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.fallback"
 msgstr "Не вдалося зареєструвати passkey. Спробуйте знову."
 
@@ -977,7 +977,7 @@ msgid "auth.device.lookup.error.fallback"
 msgstr "Не вдалося знайти цей код. Спробуйте знову."
 
 #. js-lingui-explicit-id
-#: src/components/profile/api-tokens-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "apiTokens.mint.fallback"
 msgstr "Не вдалося створити токен. Спробуйте знову."
 
@@ -1012,12 +1012,12 @@ msgid "oauth.error.profileFetchFailed"
 msgstr "Не вдалося прочитати ваш профіль. Спробуйте знову."
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.rename.fallback"
 msgstr "Не вдалося перейменувати passkey. Спробуйте знову."
 
 #. js-lingui-explicit-id
-#: src/components/profile/user-email-field.tsx
+#: src/components/profile/profile-errors.ts
 msgid "userEdit.email.error.requestFallback"
 msgstr "Не вдалося надіслати запит на зміну. Спробуйте знову."
 
@@ -1027,17 +1027,17 @@ msgid "editor.revision.restoreFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/components/profile/sessions-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.sessions.revokeAll.fallback"
 msgstr "Не вдалося завершити сеанси. Спробуйте знову."
 
 #. js-lingui-explicit-id
-#: src/components/profile/sessions-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.sessions.revoke.fallback"
 msgstr "Не вдалося завершити сеанс. Спробуйте знову."
 
 #. js-lingui-explicit-id
-#: src/components/profile/api-tokens-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "apiTokens.revoke.fallback"
 msgstr "Не вдалося скасувати. Спробуйте знову."
 
@@ -1475,7 +1475,7 @@ msgid "userEdit.email.label"
 msgstr "Email"
 
 #. js-lingui-explicit-id
-#: src/components/profile/user-email-field.tsx
+#: src/components/profile/profile-errors.ts
 msgid "userEdit.email.error.mailerNotConfigured"
 msgstr "Зміна email потребує налаштованого magic-link mailer на сервері. Передайте `auth.magicLink` та `mailer:` в `plumix({...})`, щоб увімкнути."
 
@@ -2188,7 +2188,7 @@ msgid "fieldValues.column.unconvertible"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.networkError"
 msgstr "Мережна помилка. Перевірте з'єднання та спробуйте знову."
 
@@ -3372,12 +3372,12 @@ msgid "passkey.error.emailMismatch"
 msgstr "Цей email не збігається з обліковим записом, у який ви ввійшли."
 
 #. js-lingui-explicit-id
-#: src/components/profile/user-email-field.tsx
+#: src/components/profile/profile-errors.ts
 msgid "userEdit.email.error.taken"
 msgstr "Цей email уже використовується в іншому обліковому записі."
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.alreadyRegistered"
 msgstr "Цей passkey уже зареєстровано на цьому обліковому записі."
 
@@ -3494,7 +3494,7 @@ msgid "userInvite.description"
 msgstr "Вони зареєструють passkey під час першого відкриття посилання запрошення. Пароль не потрібен."
 
 #. js-lingui-explicit-id
-#: src/components/profile/user-email-field.tsx
+#: src/components/profile/profile-errors.ts
 msgid "userEdit.email.error.accountDisabled"
 msgstr "Цей обліковий запис вимкнено."
 
@@ -3539,7 +3539,7 @@ msgid "profile.sessions.thisDevice"
 msgstr "Цей пристрій"
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.noAuthenticator"
 msgstr "Цей пристрій не підтримує passkeys."
 
@@ -3579,7 +3579,7 @@ msgid "passkey.error.invalidRpId"
 msgstr "Цей passkey непридатний для цього сайту."
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.notFound"
 msgstr "Цей passkey більше не існує. Оновіть список."
 
@@ -3609,7 +3609,7 @@ msgid "metaBox.repeater.rowError"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/components/profile/sessions-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.sessions.revoke.notFound"
 msgstr "Цей сеанс більше не існує. Оновіть список."
 
@@ -3884,12 +3884,12 @@ msgid "entries.list.trashDialog.description"
 msgstr "Ви зможете відновити його з кошика пізніше."
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.lastCredential"
 msgstr "Не можна видалити останній passkey. Спочатку додайте інший."
 
 #. js-lingui-explicit-id
-#: src/components/profile/sessions-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.sessions.revoke.current"
 msgstr "Не можна завершити сеанс, який ви використовуєте просто зараз."
 

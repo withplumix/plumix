@@ -30,11 +30,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@plumix/admin-ui/card";
+
 import {
-  describeRpcError,
-  rpcErrorCode,
-  rpcErrorReason,
-} from "@plumix/core/admin";
+  revokeAllSessionsErrorDescriptor,
+  revokeSessionErrorDescriptor,
+} from "./profile-errors.js";
 
 const M = {
   unknownDevice: defineMessage({
@@ -48,23 +48,6 @@ const M = {
     message: "{browser} on {os}",
     comment:
       "browser: e.g. 'Safari', 'Chrome'; os: e.g. 'macOS', 'Windows 11'. Vendor names interpolate verbatim; the connector word is localizable.",
-  }),
-  // Mutation error fallbacks.
-  revokeAllFallback: defineMessage({
-    id: "profile.sessions.revokeAll.fallback",
-    message: "Couldn't revoke sessions. Try again.",
-  }),
-  revokeCurrent: defineMessage({
-    id: "profile.sessions.revoke.current",
-    message: "You can't revoke the session you're using right now.",
-  }),
-  revokeNotFound: defineMessage({
-    id: "profile.sessions.revoke.notFound",
-    message: "This session no longer exists. Refresh the list.",
-  }),
-  revokeFallback: defineMessage({
-    id: "profile.sessions.revoke.fallback",
-    message: "Couldn't revoke the session. Try again.",
   }),
 } satisfies Record<string, MessageDescriptor>;
 
@@ -105,7 +88,7 @@ export function SessionsCard(): ReactNode {
     onError: (err) => {
       setRevokeAllFeedback({
         kind: "error",
-        message: describeRpcError(err, {}, M.revokeAllFallback),
+        message: revokeAllSessionsErrorDescriptor(err),
       });
     },
   });
@@ -204,7 +187,7 @@ function SessionRow({ session, onChanged }: SessionRowProps): ReactNode {
       await onChanged();
     },
     onError: (err) => {
-      setError(formatRevokeError(err));
+      setError(revokeSessionErrorDescriptor(err));
     },
   });
 
@@ -413,10 +396,4 @@ function useDeviceLabel(ua: ReturnType<typeof parseUserAgent>): string {
   if (ua.browser) return ua.browser;
   if (ua.os) return ua.os;
   return label(M.unknownDevice);
-}
-
-function formatRevokeError(err: unknown): MessageDescriptor {
-  if (rpcErrorReason(err) === "current_session") return M.revokeCurrent;
-  if (rpcErrorCode(err) === "NOT_FOUND") return M.revokeNotFound;
-  return describeRpcError(err, {}, M.revokeFallback);
 }

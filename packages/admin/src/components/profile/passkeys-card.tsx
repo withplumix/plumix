@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { toDate } from "@/lib/dates.js";
 import { orpc } from "@/lib/orpc.js";
-import { PasskeyError } from "@/lib/passkey-errors.js";
 import { registerWithPasskey } from "@/lib/passkey.js";
 import { useFormatters } from "@/lib/use-formatters.js";
 import { useLabel } from "@/lib/use-label.js";
@@ -33,11 +32,13 @@ import {
 } from "@plumix/admin-ui/card";
 import { Field, FieldLabel } from "@plumix/admin-ui/field";
 import { Input } from "@plumix/admin-ui/input";
+
 import {
-  describeRpcError,
-  rpcErrorCode,
-  rpcErrorReason,
-} from "@plumix/core/admin";
+  LAST_PASSKEY_MESSAGE,
+  passkeyDeleteErrorDescriptor,
+  passkeyEnrollErrorDescriptor,
+  passkeyRenameErrorDescriptor,
+} from "./profile-errors.js";
 
 const M = {
   unnamed: defineMessage({
@@ -61,51 +62,6 @@ const M = {
   nameEmpty: defineMessage({
     id: "profile.passkeys.rename.nameEmpty",
     message: "Name can't be empty.",
-  }),
-  // Shared "this passkey is gone" — surfaced by both the rename and
-  // delete error helpers when the server returns NOT_FOUND.
-  notFound: defineMessage({
-    id: "profile.passkeys.notFound",
-    message: "This passkey no longer exists. Refresh the list.",
-  }),
-  // Shared "must keep one" copy — used as both the delete-disabled
-  // tooltip on the row button and the explicit `last_credential`
-  // reason returned by the server.
-  lastCredential: defineMessage({
-    id: "profile.passkeys.lastCredential",
-    message: "You can't delete your last passkey. Add another one first.",
-  }),
-  renameFallback: defineMessage({
-    id: "profile.passkeys.rename.fallback",
-    message: "Couldn't rename the passkey. Try again.",
-  }),
-  deleteFallback: defineMessage({
-    id: "profile.passkeys.delete.fallback",
-    message: "Couldn't delete the passkey. Try again.",
-  }),
-  enrollCancelled: defineMessage({
-    id: "profile.passkeys.enroll.cancelled",
-    message: "Cancelled. Tap Add passkey when you're ready.",
-  }),
-  enrollAlreadyRegistered: defineMessage({
-    id: "profile.passkeys.enroll.alreadyRegistered",
-    message: "That passkey is already registered on this account.",
-  }),
-  enrollNoAuthenticator: defineMessage({
-    id: "profile.passkeys.enroll.noAuthenticator",
-    message: "This device doesn't support passkeys.",
-  }),
-  enrollNetworkError: defineMessage({
-    id: "profile.passkeys.enroll.networkError",
-    message: "Network error. Check your connection and try again.",
-  }),
-  enrollEmailMismatch: defineMessage({
-    id: "profile.passkeys.enroll.emailMismatch",
-    message: "Couldn't enrol — re-sign-in and try again.",
-  }),
-  enrollFallback: defineMessage({
-    id: "profile.passkeys.enroll.fallback",
-    message: "Couldn't enrol the passkey. Try again.",
   }),
 } satisfies Record<string, MessageDescriptor>;
 
@@ -147,7 +103,7 @@ export function PasskeysCard({ userEmail }: PasskeysCardProps): ReactNode {
     },
     onSuccess: () => invalidateList(),
     onError: (err) => {
-      setEnrollError(formatPasskeyEnrollError(err));
+      setEnrollError(passkeyEnrollErrorDescriptor(err));
     },
   });
 
@@ -264,7 +220,7 @@ function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
       await onChanged();
     },
     onError: (err) => {
-      setRenameError(formatRenameError(err));
+      setRenameError(passkeyRenameErrorDescriptor(err));
     },
   });
 
@@ -278,7 +234,7 @@ function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
       await onChanged();
     },
     onError: (err) => {
-      setDeleteError(formatDeleteError(err));
+      setDeleteError(passkeyDeleteErrorDescriptor(err));
     },
   });
 
@@ -423,7 +379,7 @@ function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
                 setConfirmingDelete(true);
               }}
               disabled={isLast}
-              title={isLast ? label(M.lastCredential) : undefined}
+              title={isLast ? label(LAST_PASSKEY_MESSAGE) : undefined}
               data-testid="profile-passkey-delete-button"
             >
               <Trans id="profile.passkeys.delete.button" message="Delete" />
@@ -506,34 +462,4 @@ function pickTransportDescriptor(cred: PasskeyWire): MessageDescriptor | null {
   if (transports.includes("internal")) return M.transportInternal;
   if (transports.includes("hybrid")) return M.transportHybrid;
   return M.transportSecurityKey;
-}
-
-function formatRenameError(err: unknown): MessageDescriptor {
-  if (rpcErrorCode(err) === "NOT_FOUND") return M.notFound;
-  return describeRpcError(err, {}, M.renameFallback);
-}
-
-function formatDeleteError(err: unknown): MessageDescriptor {
-  if (rpcErrorReason(err) === "last_credential") return M.lastCredential;
-  if (rpcErrorCode(err) === "NOT_FOUND") return M.notFound;
-  return describeRpcError(err, {}, M.deleteFallback);
-}
-
-/** No `registration_closed`: signed-in users always pass that check. */
-function formatPasskeyEnrollError(err: unknown): MessageDescriptor {
-  if (err instanceof PasskeyError) {
-    switch (err.code) {
-      case "user_cancelled":
-        return M.enrollCancelled;
-      case "credential_already_registered":
-        return M.enrollAlreadyRegistered;
-      case "no_authenticator":
-        return M.enrollNoAuthenticator;
-      case "network_error":
-        return M.enrollNetworkError;
-      case "email_mismatch":
-        return M.enrollEmailMismatch;
-    }
-  }
-  return describeRpcError(err, {}, M.enrollFallback);
 }
