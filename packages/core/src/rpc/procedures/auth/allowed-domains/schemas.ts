@@ -1,20 +1,13 @@
 import * as v from "valibot";
 
 import { USER_ROLES } from "../../../../db/schema/users.js";
-
-/**
- * RFC 1035-ish domain shape: labels of [a-z0-9] (with internal hyphens),
- * 1–63 chars per label, total <= 253. We don't accept punycode-encoded
- * names directly — callers should normalise to ASCII before sending.
- */
-const DOMAIN_REGEX =
-  /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
+import { domainPattern } from "../../../contract/validation.js";
 
 const domainSchema = v.pipe(
   v.string(),
   v.trim(),
   v.toLowerCase(),
-  v.regex(DOMAIN_REGEX, "domain must be a valid hostname"),
+  v.regex(domainPattern, "domain must be a valid hostname"),
 );
 
 const roleSchema = v.picklist(USER_ROLES);

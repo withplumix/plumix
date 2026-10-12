@@ -99,8 +99,8 @@ export function EditorToolbar({
         {hasStarters ? <PickStarterButton /> : null}
       </div>
       <DeviceZoomControls />
-      {/* Mirrors the left cluster's flex-1 so the device/zoom controls stay
-          centered. */}
+      {/* Both side clusters grow equally, which centers the device/zoom
+          controls. */}
       <div className="flex flex-1 justify-end">
         <ShortcutsButton />
       </div>

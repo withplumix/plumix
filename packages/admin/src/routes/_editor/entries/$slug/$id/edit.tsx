@@ -645,8 +645,7 @@ function EntryEditor({
   }, [autosave, navigate, slug]);
 
   // `EditorRoute` renders `?revision=<id>` as the read-only `RevisionPreview`,
-  // so previewing a revision is a search-param navigation. Mirrors the
-  // plain-form editor's history button.
+  // so previewing a revision is a search-param navigation.
   const handleRevisionPreview = useCallback(
     (revisionId: number): void => {
       void navigate({ search: (prev) => ({ ...prev, revision: revisionId }) });

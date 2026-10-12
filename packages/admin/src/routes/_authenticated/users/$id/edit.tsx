@@ -211,7 +211,7 @@ function UserEditRoute(): ReactNode {
   const isSelf = userId === session.id;
 
   // Self can't self-promote, self-disable, or self-delete — the `!isSelf`
-  // gate mirrors WP's user-edit UX and keeps the last-admin-lockout
+  // gate follows WP's user-edit UX and keeps the last-admin-lockout
   // surface entirely server-side.
   function otherUserCap(cap: string): boolean {
     return !isSelf && hasCap(session.capabilities, cap);

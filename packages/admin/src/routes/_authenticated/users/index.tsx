@@ -19,7 +19,7 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import * as v from "valibot";
 
 import type { Label } from "@plumix/core/i18n";
-import type { User, UserRole } from "@plumix/core/schema";
+import type { UserRole } from "@plumix/core/schema";
 import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
 import { Badge } from "@plumix/admin-ui/badge";
 import { Button } from "@plumix/admin-ui/button";
@@ -269,13 +269,7 @@ function UsersListRoute(): ReactNode {
   );
 }
 
-/**
- * Mirrors the `user.list` row so the column builder needn't reach into core's
- * RPC internals.
- */
-type UserListRow = User & {
-  readonly lastSignInAt: Date | string | null;
-};
+type UserListRow = Awaited<ReturnType<typeof orpc.user.list.call>>[number];
 
 function buildColumns({
   currentUserId,

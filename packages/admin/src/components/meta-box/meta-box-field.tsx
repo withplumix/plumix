@@ -728,8 +728,7 @@ function renderRichtextField({
 
 /**
  * Footprint-matching placeholder shown while the editor chunk loads, so the
- * form doesn't jump when Tiptap resolves. Mirrors the toolbar + min-height of
- * the real field.
+ * form doesn't jump when Tiptap resolves.
  */
 function RichTextFieldSkeleton({ testId }: { testId: string }): ReactNode {
   return (

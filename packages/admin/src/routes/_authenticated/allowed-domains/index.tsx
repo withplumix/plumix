@@ -42,7 +42,7 @@ import {
 } from "@plumix/admin-ui/select";
 import { Toggle } from "@plumix/admin-ui/toggle";
 import { describeRpcError } from "@plumix/core/admin";
-import { vMessage } from "@plumix/core/validation";
+import { domainPattern, vMessage } from "@plumix/core/validation";
 
 const USER_ROLES = [
   "subscriber",
@@ -76,20 +76,13 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-/**
- * Mirrors the server schema in
- * packages/core/src/rpc/procedures/auth/allowed-domains/schemas.ts.
- */
-const DOMAIN_REGEX =
-  /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
-
 const createFormSchema = v.object({
   domain: v.pipe(
     v.string(),
     v.trim(),
     v.toLowerCase(),
     v.regex(
-      DOMAIN_REGEX,
+      domainPattern,
       vMessage(
         defineMessage({
           id: "allowedDomains.add.domain.invalid",

@@ -64,9 +64,9 @@ const M = {
 const ROOT_VALUE = "__root__";
 
 /**
- * Client-side shape mirrors `termCreateInputSchema` / `termUpdateInputSchema`
- * on the server. Slug is optional at the form level — the server derives
- * it from the name if omitted (see `term.create` handler).
+ * Client-side checks for instant feedback; the server's term schemas stay the
+ * authoritative gate. Slug is optional here because `term.create` derives it
+ * from the name.
  */
 const termFormSchema = v.object({
   name: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(200)),

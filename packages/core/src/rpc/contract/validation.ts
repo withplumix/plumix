@@ -67,6 +67,10 @@ export const nameField = v.pipe(
 export const SLUG_MAX_LENGTH = 200;
 export const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
+/** Callers normalise a domain to ASCII before matching it. */
+export const domainPattern =
+  /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
+
 /**
  * Canonical row-id shape for RPC inputs. MAX_SAFE_INTEGER cap rejects
  * integer-valued numbers like `1e21` that pass `v.integer()` but lose

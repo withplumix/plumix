@@ -298,8 +298,22 @@ function setNodeHidden(
 
 /**
  * Rebuilt so the renamed key keeps its position; a spread would move it to the
- * end.
+ * end. Null when `from` is missing or `to` is taken.
  */
+function renameKeyInPlace(
+  current: Readonly<Record<string, string>>,
+  from: string,
+  to: string,
+): Record<string, string> | null {
+  // Covers from===to too: the source key is then also the (taken) target.
+  if (!(from in current) || to in current) return null;
+  const next: Record<string, string> = {};
+  for (const [key, val] of Object.entries(current)) {
+    next[key === from ? to : key] = val;
+  }
+  return next;
+}
+
 function renameNodeStyleProperty(
   node: BlockNode,
   bucket: StyleBucket,
@@ -307,13 +321,8 @@ function renameNodeStyleProperty(
   to: string,
 ): BlockNode {
   const slot: ResponsiveStyleSlot = node.style ?? {};
-  const current: ResponsiveStyleBucket = slot[bucket] ?? {};
-  // Covers from===to too: the source key is then also the (taken) target.
-  if (!(from in current) || to in current) return node;
-  const nextBucket: Record<string, string> = {};
-  for (const [key, val] of Object.entries(current)) {
-    nextBucket[key === from ? to : key] = val;
-  }
+  const nextBucket = renameKeyInPlace(slot[bucket] ?? {}, from, to);
+  if (nextBucket === null) return node;
   const nextSlot: Record<string, ResponsiveStyleBucket> = { ...slot };
   nextSlot[bucket] = nextBucket;
   return { ...node, style: nextSlot };
@@ -341,22 +350,14 @@ function setNodeHtmlAttr(
   return { ...node, htmlAttrs };
 }
 
-/**
- * Rename one HTML attribute in place, keeping its value + position. No-op when
- * the source is missing or the target is taken (mirrors the style rename).
- */
+/** Rename one HTML attribute in place, keeping its value + position. */
 function renameNodeHtmlAttr(
   node: BlockNode,
   from: string,
   to: string,
 ): BlockNode {
-  const current: Readonly<Record<string, string>> = node.htmlAttrs ?? {};
-  if (!(from in current) || to in current) return node;
-  const next: Record<string, string> = {};
-  for (const [key, val] of Object.entries(current)) {
-    next[key === from ? to : key] = val;
-  }
-  return { ...node, htmlAttrs: next };
+  const next = renameKeyInPlace(node.htmlAttrs ?? {}, from, to);
+  return next === null ? node : { ...node, htmlAttrs: next };
 }
 
 export type EditorStore = EditorState & EditorActions;

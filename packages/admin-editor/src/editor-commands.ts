@@ -57,6 +57,7 @@ export interface EditorCommandContext {
 /**
  * Data descriptors carry no call site the extractor sees, so admin mirrors them
  * to pull the ids into its catalog.
+ * Guarded by: packages/admin/src/lib/editor-command-i18n.test.ts
  */
 export const EDITOR_COMMAND_DESCRIPTORS = {
   xray: {
@@ -186,7 +187,7 @@ export function buildEditorCommands(
 }
 
 /** Filter the roster by the author's query. `toText` is the caller's i18n-bound
- *  `Label` resolver; mirrors the shell palette's `selectCommands`. */
+ *  `Label` resolver. */
 export function selectEditorCommands(
   commands: readonly EditorCommand[],
   query: string,
