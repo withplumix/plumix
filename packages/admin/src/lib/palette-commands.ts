@@ -44,23 +44,27 @@ export function _resetPaletteCommands(): void {
   registered.clear();
 }
 
-/** `toText` is the caller's i18n-bound `Label` resolver; capability
- *  gating mirrors the sidebar's. */
+/** Case-insensitive substring match; a blank query matches everything. */
+export function matchesQuery(texts: readonly string[], query: string): boolean {
+  const needle = query.trim().toLowerCase();
+  return needle.length === 0 || texts.join(" ").toLowerCase().includes(needle);
+}
+
+/** `toText` is the caller's i18n-bound `Label` resolver; capability gating
+ *  goes through the same `hasCap` the sidebar uses. */
 export function selectCommands(
   commands: readonly PaletteCommand[],
   capabilities: readonly string[],
   query: string,
   toText: (label: Label) => string,
 ): readonly PaletteCommand[] {
-  const needle = query.trim().toLowerCase();
   return commands.filter((command) => {
     if (command.capability && !hasCap(capabilities, command.capability)) {
       return false;
     }
-    if (needle.length === 0) return true;
-    const haystack = [toText(command.title), ...(command.keywords ?? [])].join(
-      " ",
+    return matchesQuery(
+      [toText(command.title), ...(command.keywords ?? [])],
+      query,
     );
-    return haystack.toLowerCase().includes(needle);
   });
 }

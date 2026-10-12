@@ -110,7 +110,7 @@ const registry: BlockRegistry = createBlockRegistry([
 
 const NO_CAPS: ReadonlySet<string> = new Set();
 
-/** Mirrors the config provider PlumixEditor mounts in prod. */
+/** The config provider PlumixEditor mounts in prod. */
 function Config({
   resolve,
   children,

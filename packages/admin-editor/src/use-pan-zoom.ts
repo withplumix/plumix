@@ -173,7 +173,7 @@ export function usePanZoom({
     [panByClientDelta, commitLive],
   );
 
-  // Keep the live ref in sync with the store between gestures, so discrete
+  // Copy the store's view into the live ref between gestures, so discrete
   // actions (toolbar zoom, device switch, shortcuts) seed the next gesture.
   useEffect(() => {
     if (!gesturingRef.current) liveViewRef.current = { zoom, panX, panY };

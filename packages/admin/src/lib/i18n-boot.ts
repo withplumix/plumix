@@ -30,11 +30,11 @@ const BUNDLED_CATALOGS: AdminCatalogs = {
 };
 
 /**
- * Source locale: the language `descriptor.message` strings are authored
- * in. When a user's locale isn't compiled (yet, or at all), we fall
- * back here. Mirrors `lingui.config.ts:sourceLocale`.
+ * The locale `descriptor.message` strings are authored in, and the fallback
+ * for an uncompiled one. Mirrors `lingui.config.ts:sourceLocale`, which the
+ * bundle can't import. Guarded by: packages/admin/src/lib/i18n-boot.test.ts
  */
-const SOURCE_LOCALE = "en";
+export const SOURCE_LOCALE = "en";
 
 type PluginCatalogLoader = (pluginId: string, locale: string) => Promise<void>;
 

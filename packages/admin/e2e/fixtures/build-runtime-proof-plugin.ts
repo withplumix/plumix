@@ -27,8 +27,8 @@ await buildAdminPluginChunkForE2E({
 // relocatable under a runtime basePath; production's `serveAdmin` injects a
 // `<base href>` to anchor the relative asset URLs. `vite preview` doesn't, so
 // SPA deep-link reloads (`/_plumix/admin/entries/posts/1/edit`) would resolve
-// `./assets/*` against the wrong path and 404. Inject the same `<base href>`
-// here so the preview mirrors the worker.
+// `./assets/*` against the wrong path and 404. Inject a `<base href>` here so
+// the preview resolves them as a served admin does.
 const indexHtmlPath = resolve(ADMIN_ROOT, "dist/index.html");
 const indexHtml = readFileSync(indexHtmlPath, "utf8");
 if (!indexHtml.includes("<base ")) {

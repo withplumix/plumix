@@ -44,7 +44,7 @@ describe("buildLocaleSwitchUrl", () => {
   });
 
   test("preserves sibling search params and coerces numeric values", () => {
-    // Mirrors login's `email_change_success` round-trip: TanStack
+    // Login's `email_change_success` round-trip is this case: TanStack
     // Router's search parser hands back number-typed values that need
     // to land in `URLSearchParams` as strings.
     const url = buildLocaleSwitchUrl(

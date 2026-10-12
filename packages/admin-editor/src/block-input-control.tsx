@@ -94,10 +94,7 @@ const noop = (): void => undefined;
 
 const FIELD_TESTID = (name: string): string => `block-input-${name}`;
 
-/**
- * Mirrors the kinds the Puck field translator supports so plugin blocks render
- * unchanged.
- */
+/** Renders one control per `BlockInput` kind, so plugin blocks keep theirs. */
 export function BlockInputControl({
   input,
   value,
@@ -268,8 +265,8 @@ export function BlockInputControl({
 }
 
 /**
- * Mirrors the field's footprint so the panel doesn't jump when the editor
- * loads.
+ * Sized like the field's toolbar and body so the panel doesn't jump when the
+ * editor loads.
  */
 function RichTextFieldSkeleton({
   testId,

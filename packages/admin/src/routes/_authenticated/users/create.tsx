@@ -75,9 +75,8 @@ const M = {
 } satisfies Record<string, MessageDescriptor>;
 
 /**
- * Client-side validation mirrors `userInviteInputSchema` on the server so
- * the user gets instant feedback; the server remains the authoritative
- * gate.
+ * Client-side checks so the user gets instant feedback;
+ * `userInviteInputSchema` on the server remains the authoritative gate.
  */
 const inviteFormSchema = v.object({
   email: v.pipe(

@@ -4,6 +4,7 @@ import { afterEach, describe, expect, test } from "vitest";
 import { assertMetaBoxFields } from "../../plugin/validation/meta-box-fields.js";
 import { settingsUpsertInputSchema } from "../procedures/settings/schemas.js";
 import {
+  domainPattern,
   emailField,
   idParam,
   idPathParam,
@@ -42,6 +43,25 @@ describe("shared schema messages — translatable via setI18nResolver", () => {
     const result = v.safeParse(idPathParam, "abc");
     expect(result.success).toBe(false);
     expect(result.issues?.[0]?.message).toBe("id-err:validate.id.format");
+  });
+});
+
+describe("domainPattern", () => {
+  test.each(["example.com", "sub.example.co.uk", "a-b.io"])(
+    "accepts the hostname %s",
+    (domain) => {
+      expect(domainPattern.test(domain)).toBe(true);
+    },
+  );
+
+  test.each([
+    "localhost",
+    "-example.com",
+    "example-.com",
+    "Example.com",
+    `${"a".repeat(64)}.com`,
+  ])("rejects %s", (domain) => {
+    expect(domainPattern.test(domain)).toBe(false);
   });
 });
 

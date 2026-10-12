@@ -27,7 +27,7 @@ const tokens: ThemeTokens = {
 const NO_CAPS: ReadonlySet<string> = new Set();
 const registry = createBlockRegistry([{ name: "core/x", render: () => null }]);
 
-/** Mirrors the config provider PlumixEditor mounts in prod. */
+/** The config provider PlumixEditor mounts in prod. */
 function Config({
   resolve,
   children,

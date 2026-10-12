@@ -2,6 +2,7 @@ import type { Label } from "@plumix/core/i18n";
 import type { CoreIconName, PlumixManifest } from "@plumix/core/manifest";
 
 import { visibleAdminNav } from "./manifest.js";
+import { matchesQuery } from "./palette-commands.js";
 
 interface PaletteNavItem {
   readonly to: string;
@@ -28,19 +29,13 @@ export function paletteNavItems(
   );
 }
 
-/** `toText` is the caller's i18n-bound `Label` resolver; mirrors
- *  `selectCommands`. */
+/** `toText` is the caller's i18n-bound `Label` resolver. */
 export function selectNavItems(
   items: readonly PaletteNavItem[],
   query: string,
   toText: (label: Label) => string,
 ): readonly PaletteNavItem[] {
-  const needle = query.trim().toLowerCase();
-  if (needle.length === 0) return items;
-  return items.filter((item) => {
-    const haystack = [item.label, ...(item.keywords ?? [])]
-      .map(toText)
-      .join(" ");
-    return haystack.toLowerCase().includes(needle);
-  });
+  return items.filter((item) =>
+    matchesQuery([item.label, ...(item.keywords ?? [])].map(toText), query),
+  );
 }

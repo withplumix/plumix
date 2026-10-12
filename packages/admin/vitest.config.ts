@@ -16,7 +16,7 @@ export default mergeConfig(
       alias: {
         "@": fileURLToPath(new URL("./src", import.meta.url)),
         // Vitest doesn't run the Lingui Babel preset, so the real macro
-        // throws at load; this stub mirrors what Babel produces.
+        // throws at load; this stub hands the descriptor back unchanged.
         "@lingui/core/macro": fileURLToPath(
           new URL("./test/lingui-macro-stub.ts", import.meta.url),
         ),
