@@ -1,10 +1,9 @@
 import * as path from "node:path";
-import { includeIgnoreFile } from "@eslint/compat";
 import eslint from "@eslint/js";
 import importXPlugin from "eslint-plugin-import-x";
 import sonarjsPlugin from "eslint-plugin-sonarjs";
 import turboPlugin from "eslint-plugin-turbo";
-import { defineConfig } from "eslint/config";
+import { defineConfig, includeIgnoreFile } from "eslint/config";
 import tseslint from "typescript-eslint";
 
 import { plumixPlugin } from "./rules/index.js";

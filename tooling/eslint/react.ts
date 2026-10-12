@@ -47,7 +47,7 @@ export const reactConfig = defineConfig(
       ...reactPlugin.configs.flat["jsx-runtime"]?.languageOptions,
     },
   },
-  reactHooks.configs.flat["recommended-latest"]!,
+  reactHooks.configs.flat["recommended-latest"],
   // The preset ships these three as `warn`; a warning blocks nothing, so they
   // are errors like every other rule. Unscoped, like the preset itself.
   {

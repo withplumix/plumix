@@ -1,7 +1,7 @@
 /**
- * The test files ADR 0042 retires that are still waiting to move into the unit,
- * e2e or smoke tier (#3035, #3036). Hand-authored: a migration removes its
- * files here, nothing adds to it, and the list is done when it is empty.
+ * Tests ADR 0042 retires, still awaiting their move to the unit, e2e or smoke
+ * tier (#3035, #3036). Hand-authored: a migration only removes entries, and the
+ * list is done when empty.
  */
 export const RETIRED_TIER_PENDING: readonly string[] = [
   "apps/docs/src/content-checks/code-samples.build.test.ts",

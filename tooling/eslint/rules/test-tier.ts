@@ -144,7 +144,7 @@ export const testTier: Rule.RuleModule = {
         for (const comment of sourceCode.getAllComments()) {
           if (comment.value.includes("@vitest-environment"))
             context.report({
-              loc: comment.loc ?? program.loc ?? { line: 1, column: 0 },
+              loc: comment.loc ?? program.loc,
               messageId: "environmentDocblock",
             });
         }
@@ -152,15 +152,14 @@ export const testTier: Rule.RuleModule = {
         // A lib global (`document` from lib.dom) resolves to a variable with no
         // declaration under typescript-eslint and to nothing under espree;
         // either way no binding in this file is being read.
-        const reads: Scope.Reference[] = (
-          sourceCode.scopeManager?.scopes ?? []
-        ).flatMap((scope) =>
-          scope.references.filter(
-            (reference) =>
-              DOM_GLOBALS.has(reference.identifier.name) &&
-              (reference.resolved === null ||
-                reference.resolved.defs.length === 0),
-          ),
+        const reads: Scope.Reference[] = sourceCode.scopeManager.scopes.flatMap(
+          (scope) =>
+            scope.references.filter(
+              (reference) =>
+                DOM_GLOBALS.has(reference.identifier.name) &&
+                (reference.resolved === null ||
+                  reference.resolved.defs.length === 0),
+            ),
         );
         for (const reference of reads) {
           const identifier = reference.identifier as Rule.Node;
@@ -185,7 +184,6 @@ export const testTier: Rule.RuleModule = {
         checkProcessModule(node, node.source);
       },
       CallExpression(node) {
-        if (node.type !== "CallExpression") return;
         const { callee } = node;
         if (
           callee.type !== "MemberExpression" ||
