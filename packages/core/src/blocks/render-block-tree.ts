@@ -25,6 +25,7 @@ import type {
 } from "./styles/style-emitter.js";
 import { blockSlotKeys } from "./block-slots.js";
 import { blockDepKeys, pickDeps } from "./deps.js";
+import { isDevMode } from "./dev-mode.js";
 import { editAppender } from "./edit-appender.js";
 import { safeHtmlAttrs } from "./html/attrs.js";
 import { resolveRootTag } from "./html/root-tag.js";
@@ -239,11 +240,6 @@ function renderUnknown(name: string, devState: DevWarnState): ReactNode {
     console.warn(`[plumix:blocks] Unregistered block name: ${name}`);
   }
   return createElement("template", { "data-plumix-unknown-block": name });
-}
-
-function isDevMode(): boolean {
-  if (typeof process === "undefined") return false;
-  return process.env.NODE_ENV !== "production";
 }
 
 /**

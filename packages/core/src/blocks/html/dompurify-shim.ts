@@ -28,6 +28,7 @@ const URI_ATTRS = new Set([
 /**
  * Mirrors sanitize-html's URL policy. Control and whitespace chars browsers
  * ignore are stripped so `java\tscript:` can't smuggle a scheme past the check.
+ * Guarded by: packages/core/src/blocks/html/dompurify-shim.browser.test.ts
  */
 function isAllowedUri(
   value: string,

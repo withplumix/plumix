@@ -33,14 +33,17 @@ export interface RendererUser {
   readonly email: string;
   readonly name?: string | null;
   readonly role: string;
-  /** Mirrors core's `AuthenticatedUser.meta`, which is the `users.meta`
-   *  column verbatim. */
+  /**
+   * Mirrors core's `AuthenticatedUser.meta`, which is the `users.meta` column
+   * verbatim. Guarded by: packages/core/src/blocks/renderer/context.test.ts
+   */
   readonly meta: JsonObject;
 }
 
 /**
  * Mirrors core's `AuthMethodsSummary` structurally — blocks sits below core in
  * the build graph and can't import it.
+ * Guarded by: packages/core/src/blocks/renderer/context.test.ts
  */
 export interface RendererOAuthProvider {
   readonly key: string;

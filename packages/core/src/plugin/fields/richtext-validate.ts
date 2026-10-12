@@ -4,6 +4,8 @@
 
 import * as v from "valibot";
 
+import { SAFE_HREF } from "../../blocks/marks/safe-href.js";
+
 /**
  * `looseObject` keeps `content` / `marks` / `attrs` reachable without this
  * schema claiming anything about them.
@@ -23,14 +25,6 @@ const IMPLICIT_NODES: ReadonlySet<string> = new Set([
   "hardBreak",
   "listItem",
 ]);
-
-/**
- * Final href gate. Mirrors the regex in `route/render/tiptap.ts`'s
- * `sanitizeHref` — keep them in sync. Blocks `javascript:`, `data:`,
- * `vbscript:`, `file:` and their variants. Fragment / query-only /
- * relative refs pass.
- */
-export const SAFE_HREF_RE = /^(https?:\/\/|mailto:|tel:|\/|#|\?|\.\.?\/)/i;
 
 /**
  * The 256 KiB byte cap alone admits ~8.5k levels, enough to blow the stack;
@@ -241,7 +235,7 @@ function walkMark(
     const attrs = mark.attrs as Readonly<Record<string, unknown>>;
     const href = attrs.href;
     if (href !== undefined && href !== null && href !== "") {
-      if (typeof href !== "string" || !SAFE_HREF_RE.test(href.trim())) {
+      if (typeof href !== "string" || !SAFE_HREF.test(href.trim())) {
         throw RichtextValidationError.unsafeHref({
           path,
           hrefType: typeof href,

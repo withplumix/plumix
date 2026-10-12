@@ -10,8 +10,8 @@ import type {
   MetaBoxFieldSpan,
   MetaBoxFieldValidate,
 } from "./meta-box-field.js";
+import { SAFE_HREF } from "../../blocks/marks/safe-href.js";
 import { humanizeFieldKey } from "./builder.js";
-import { SAFE_HREF_RE } from "./richtext-validate.js";
 
 export type { LinkValue } from "./meta-box-field.js";
 
@@ -197,7 +197,7 @@ export function parseLinkValue(value: unknown): LinkValue | null {
     return null;
   }
   const { url, label, newTab } = value as Record<string, unknown>;
-  if (typeof url !== "string" || !SAFE_HREF_RE.test(url)) return null;
+  if (typeof url !== "string" || !SAFE_HREF.test(url)) return null;
   if (label !== undefined && typeof label !== "string") return null;
   if (newTab !== undefined && typeof newTab !== "boolean") return null;
   return {

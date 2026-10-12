@@ -30,9 +30,9 @@ export type PluginProvides<TState = undefined> = (
 type PluginStateFactory<TState> = () => TState | Promise<TState>;
 
 export interface PluginI18nSlot {
-  /** Source locale every msgid is authored in. Mirrors lingui.config
-   *  but lives on the manifest so admin can resolve plugin catalog
-   *  paths without re-parsing the plugin's lingui config at runtime. */
+  /** Source locale every msgid is authored in: the plugin's lingui
+   *  config `sourceLocale`, declared again here so admin can resolve
+   *  plugin catalog paths without re-parsing that config at runtime. */
   readonly sourceLocale: string;
   /** Locales the plugin ships catalogs for. Intersected with the
    *  site's enabled locales before any URL is generated — declaring

@@ -3,6 +3,7 @@ import { createElement } from "react";
 
 import type { JsonObject } from "../../json.js";
 import { SIMPLE_MARK_TAGS } from "./core/simple-configs.js";
+import { sanitizeHref } from "./safe-href.js";
 
 interface TiptapMark {
   readonly type: string;
@@ -20,24 +21,13 @@ interface TiptapBlockNode {
   readonly content?: readonly (TiptapTextNode | TiptapBlockNode)[];
 }
 
-/**
- * Mirrors `marks/core/link.tsx`; the walker re-checks so a value that
- * sneaks past the schema (migrated content, hand-edited storage)
- * never reaches the rendered anchor.
- */
-const SAFE_HREF = /^(https?:\/\/|mailto:|tel:|\/|#|\?|\.\.?\/)/i;
-function sanitizeHref(raw: unknown): string | undefined {
-  if (typeof raw !== "string") return undefined;
-  const trimmed = raw.trim();
-  if (trimmed === "" || !SAFE_HREF.test(trimmed)) return undefined;
-  return trimmed;
-}
-
 function wrapMark(mark: TiptapMark, child: ReactNode, key: string): ReactNode {
   const simpleTag: keyof JSX.IntrinsicElements | undefined =
     SIMPLE_MARK_TAGS[mark.type];
   if (simpleTag) return createElement(simpleTag, { key }, child);
   if (mark.type === "link") {
+    // Re-checked here: migrated content or hand-edited storage never passed
+    // the editor's schema.
     const href = sanitizeHref(mark.attrs?.href);
     if (!href) return child;
     return createElement(

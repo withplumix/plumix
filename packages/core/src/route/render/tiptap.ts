@@ -1,4 +1,5 @@
 import type { JsonObject } from "../../json.js";
+import { SAFE_HREF } from "../../blocks/marks/safe-href.js";
 import { escapeHtml } from "../../escape-html.js";
 
 /**
@@ -127,11 +128,9 @@ function clampHeadingLevel(level: unknown): 1 | 2 | 3 | 4 | 5 | 6 {
 }
 
 /**
- * Independent of the editor's allowlist: content also reaches the column via
- * seeds and scripts.
+ * Re-checked here: content also reaches the column via seeds and scripts, past
+ * the editor.
  */
-const SAFE_HREF = /^(https?:\/\/|mailto:|tel:|\/|#|\?|\.\.?\/)/i;
-
 function sanitizeHref(href: unknown): string | null {
   if (typeof href !== "string") return null;
   const trimmed = href.trim();

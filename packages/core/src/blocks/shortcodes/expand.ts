@@ -3,6 +3,7 @@ import type {
   ShortcodeRegistry,
   ShortcodeSpec,
 } from "./types.js";
+import { isDevMode } from "../dev-mode.js";
 
 /**
  * A tag plus its optional attribute run, shared by both token branches.
@@ -95,13 +96,4 @@ function warnDev(message: string, error?: unknown): void {
   } else {
     console.warn(`[plumix:blocks] ${message}`);
   }
-}
-
-/**
- * Mirrors `render-block-tree`'s in-package dev signal; kept inline so this
- * leaf module stays a pure dependency of a future `@plumix/plugin-seo`.
- */
-function isDevMode(): boolean {
-  if (typeof process === "undefined") return false;
-  return process.env.NODE_ENV !== "production";
 }

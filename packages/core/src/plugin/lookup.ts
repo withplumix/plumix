@@ -53,7 +53,7 @@ export interface ReferenceHydrationShapes {
 /** Hydrated shape of an `entry` reference — enough to render a link. */
 export interface EntryReferenceSummary extends HydratedReference {
   readonly type: string;
-  /** `null` mirrors `LookupResult.label`: no human-authored title. */
+  /** `null` when the entry has no human-authored title. */
   readonly title: string | null;
   readonly slug: string;
   /** Permalink; `null` when the entry has no public URL. */
