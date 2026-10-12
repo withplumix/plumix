@@ -79,6 +79,20 @@ Lint enforces the mechanical part in all linted code, tests included: a comment 
 (`plumix/no-jsdoc-in-function-body`); and no code is left commented out
 (`sonarjs/no-commented-code`).
 
+A comment that claims a coupling ("mirrors", "keep … in sync", "must match") is an invariant
+nothing checks. Collapse the duplication first, so one source holds the fact. When the copies
+can't be collapsed, bind them with a test that fails when they drift, and name it with
+`Guarded by: <repo-relative test path>` on one of the comment's lines. When the comment describes
+a resemblance rather than an invariant, reword it. `plumix/sync-comment-guarded` enforces this
+and skips only the occurrences in `tooling/eslint/sync-comment-baseline.json`, which shrinks and
+never grows: remove a fixed occurrence's entry with
+`pnpm --filter @plumix/eslint-config sync-baseline`
+([ADR 0038](docs/adr/0038-a-coupled-invariant-is-collapsed-or-guarded-by-a-test.md)).
+
+A `plumix/*` rule ships only when it has zero false positives on the tree: every hit is a genuine
+violation, with only the existing named escape hatches (`// Safety:`, `Not JSON:`). A baseline
+that only shrinks may list the genuine violations still awaiting a fix, never a false positive.
+
 **In review**, treat every added comment line as a finding until it passes these rules. Name the
 refactor that would make it unnecessary, or say which rule it breaks. Lint can't tell a why from a
 what; review can.

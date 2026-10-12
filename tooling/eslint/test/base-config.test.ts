@@ -315,6 +315,16 @@ describe("plumix/prefer-jsdoc", () => {
   });
 });
 
+describe("plumix/sync-comment-guarded", () => {
+  it("rejects a new coupling comment that names no guarding test", async () => {
+    await expect(
+      messageIdReports("plumix/sync-comment-guarded")(
+        "src/sync-comment.violations.ts",
+      ),
+    ).resolves.toEqual([{ messageId: "unguarded", line: 3 }]);
+  });
+});
+
 describe("sonarjs/no-commented-code", () => {
   it("rejects code left behind in a comment", async () => {
     await expect(

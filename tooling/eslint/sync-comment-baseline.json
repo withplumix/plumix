@@ -1,0 +1,418 @@
+[
+  {
+    "file": "apps/docs/src/content-checks/content-tree.ts",
+    "hash": "94b76d32d0702fb0"
+  },
+  {
+    "file": "packages/admin-editor/src/block-input-control.tsx",
+    "hash": "b9d10e593d110d85"
+  },
+  {
+    "file": "packages/admin-editor/src/block-input-control.tsx",
+    "hash": "c7c58e72f1bb5b22"
+  },
+  {
+    "file": "packages/admin-editor/src/block-inspector.browser.test.tsx",
+    "hash": "af97156b3ca09979"
+  },
+  {
+    "file": "packages/admin-editor/src/editor-commands.ts",
+    "hash": "031521c85a36e2c0"
+  },
+  {
+    "file": "packages/admin-editor/src/editor-commands.ts",
+    "hash": "92a24e43a7ac408b"
+  },
+  {
+    "file": "packages/admin-editor/src/editor-toolbar.tsx",
+    "hash": "e473055784929bea"
+  },
+  {
+    "file": "packages/admin-editor/src/store.ts",
+    "hash": "a6b709a422487e38"
+  },
+  {
+    "file": "packages/admin-editor/src/styles-tab.browser.test.tsx",
+    "hash": "af97156b3ca09979"
+  },
+  {
+    "file": "packages/admin-editor/src/use-pan-zoom.ts",
+    "hash": "96230bad3d6c97cd"
+  },
+  {
+    "file": "packages/admin/e2e/fixtures/build-runtime-proof-plugin.ts",
+    "hash": "ee383bdda0a790d9"
+  },
+  {
+    "file": "packages/admin/src/components/meta-box/meta-box-field.tsx",
+    "hash": "d171d3875c6c6eb0"
+  },
+  {
+    "file": "packages/admin/src/components/taxonomy/term-form.tsx",
+    "hash": "9e174471ecd1ad8a"
+  },
+  {
+    "file": "packages/admin/src/lib/i18n-boot.ts",
+    "hash": "81049fc944c71edc"
+  },
+  {
+    "file": "packages/admin/src/lib/palette-commands.ts",
+    "hash": "71183ec62ef8b535"
+  },
+  {
+    "file": "packages/admin/src/lib/palette-nav.ts",
+    "hash": "16caca2373f379f6"
+  },
+  {
+    "file": "packages/admin/src/routes/_auth/-locale-param.browser.test.ts",
+    "hash": "e708a3ac1d5c7d59"
+  },
+  {
+    "file": "packages/admin/src/routes/_authenticated/allowed-domains/index.tsx",
+    "hash": "b4e2686b5e5cfc50"
+  },
+  {
+    "file": "packages/admin/src/routes/_authenticated/users/$id/edit.tsx",
+    "hash": "06bd22029029f148"
+  },
+  {
+    "file": "packages/admin/src/routes/_authenticated/users/create.tsx",
+    "hash": "c5c90b373c7c3a55"
+  },
+  {
+    "file": "packages/admin/src/routes/_authenticated/users/index.tsx",
+    "hash": "3fbbef016db5067e"
+  },
+  {
+    "file": "packages/admin/src/routes/_editor/entries/$slug/$id/edit.tsx",
+    "hash": "1cbcef3c296e16f6"
+  },
+  {
+    "file": "packages/admin/vitest.config.ts",
+    "hash": "43660829f52dc326"
+  },
+  {
+    "file": "packages/core/src/admin-bar/core-contributors.ts",
+    "hash": "5cf7b444b2c2e42d"
+  },
+  {
+    "file": "packages/core/src/auth/authenticator.test.ts",
+    "hash": "21bccb8fb024f862"
+  },
+  {
+    "file": "packages/core/src/auth/cookies.ts",
+    "hash": "9e50f7d161f84237"
+  },
+  {
+    "file": "packages/core/src/auth/device-flow-routes.ts",
+    "hash": "738946b968b840b6"
+  },
+  {
+    "file": "packages/core/src/auth/magic-link/index.ts",
+    "hash": "524fe7d231acd53c"
+  },
+  {
+    "file": "packages/core/src/auth/oauth/routes.test.ts",
+    "hash": "4cb4c0fb1df3edc1"
+  },
+  {
+    "file": "packages/core/src/auth/passkey/routes.test.ts",
+    "hash": "d791eef1b77cc693"
+  },
+  {
+    "file": "packages/core/src/auth/passkey/routes.ts",
+    "hash": "44cfa0b1f7799419"
+  },
+  {
+    "file": "packages/core/src/auth/passkey/types.ts",
+    "hash": "00d322a634f1056e"
+  },
+  {
+    "file": "packages/core/src/blocks/columns/index.tsx",
+    "hash": "6a1c702c9c52133e"
+  },
+  {
+    "file": "packages/core/src/blocks/expand-block-variations.test.ts",
+    "hash": "3e428c17b0c9e9e5"
+  },
+  {
+    "file": "packages/core/src/blocks/html/attrs.ts",
+    "hash": "a72dc2aa6a05719e"
+  },
+  {
+    "file": "packages/core/src/blocks/html/dompurify-shim.browser.test.ts",
+    "hash": "c94e5183551021ad"
+  },
+  {
+    "file": "packages/core/src/blocks/html/dompurify-shim.ts",
+    "hash": "4849e0b6302bd370"
+  },
+  {
+    "file": "packages/core/src/blocks/island-element.ts",
+    "hash": "07ba9dbcce294094"
+  },
+  {
+    "file": "packages/core/src/blocks/island-renderer.browser.test.tsx",
+    "hash": "cdbcec5d0fadd108"
+  },
+  {
+    "file": "packages/core/src/blocks/island-shim.ts",
+    "hash": "8b76d000089e7d35"
+  },
+  {
+    "file": "packages/core/src/blocks/marks/core/link.tsx",
+    "hash": "fb39965bd55bbc64"
+  },
+  {
+    "file": "packages/core/src/blocks/marks/render-inline.tsx",
+    "hash": "c07e19ec3cb461dd"
+  },
+  {
+    "file": "packages/core/src/blocks/renderer/context.tsx",
+    "hash": "8bb50fdebe508eb8"
+  },
+  {
+    "file": "packages/core/src/blocks/renderer/context.tsx",
+    "hash": "e354bcad54040613"
+  },
+  {
+    "file": "packages/core/src/blocks/shortcodes/expand.ts",
+    "hash": "2e5b8b144546ca18"
+  },
+  {
+    "file": "packages/core/src/dev/debug-panels/core-panels.ts",
+    "hash": "77a70d5ca1042f0d"
+  },
+  {
+    "file": "packages/core/src/dev/server/context.ts",
+    "hash": "678445b3a6389ce3"
+  },
+  {
+    "file": "packages/core/src/dev/server/panels/collect.tsx",
+    "hash": "683745552d8e7f86"
+  },
+  {
+    "file": "packages/core/src/meta/core.ts",
+    "hash": "76e43fd92d73f564"
+  },
+  {
+    "file": "packages/core/src/meta/field-pipeline.ts",
+    "hash": "ee15e7937d3381c5"
+  },
+  {
+    "file": "packages/core/src/plugin/define.ts",
+    "hash": "a03c7ce9c9e84f74"
+  },
+  {
+    "file": "packages/core/src/plugin/fields/builder.ts",
+    "hash": "8c16c1c331236c38"
+  },
+  {
+    "file": "packages/core/src/plugin/fields/contributions.test.ts",
+    "hash": "5285d968d2a0808e"
+  },
+  {
+    "file": "packages/core/src/plugin/fields/manifest-entry.ts",
+    "hash": "5b8eea2c8a1f8f39"
+  },
+  {
+    "file": "packages/core/src/plugin/fields/meta-box-field.ts",
+    "hash": "637e263acd22a3eb"
+  },
+  {
+    "file": "packages/core/src/plugin/fields/meta-box-field.ts",
+    "hash": "8c16c1c331236c38"
+  },
+  {
+    "file": "packages/core/src/plugin/fields/richtext-validate.ts",
+    "hash": "01297d1783f28d16"
+  },
+  {
+    "file": "packages/core/src/plugin/fields/select.test.ts",
+    "hash": "abb6bbf3550a1a1e"
+  },
+  {
+    "file": "packages/core/src/plugin/lookup.ts",
+    "hash": "e2d78e4b54b57888"
+  },
+  {
+    "file": "packages/core/src/plugin/manifest-types.ts",
+    "hash": "02a1a1860dd54cca"
+  },
+  {
+    "file": "packages/core/src/plugin/plugin-catalog-path.ts",
+    "hash": "a4f8f560874641d8"
+  },
+  {
+    "file": "packages/core/src/plugin/registry.ts",
+    "hash": "3be4697c9d1041e2"
+  },
+  {
+    "file": "packages/core/src/route/current.ts",
+    "hash": "b57774d47ae1b5e9"
+  },
+  {
+    "file": "packages/core/src/route/redirects.ts",
+    "hash": "eee998e710d28955"
+  },
+  {
+    "file": "packages/core/src/route/render/inject-editor-bootstrap.ts",
+    "hash": "d40b5cd4c5029b0d"
+  },
+  {
+    "file": "packages/core/src/rpc/procedures/auth/api-tokens/schemas.ts",
+    "hash": "c2b64bf99a43db7c"
+  },
+  {
+    "file": "packages/core/src/rpc/procedures/entry/duplicate.test.ts",
+    "hash": "3bf0b76ed6e7d660"
+  },
+  {
+    "file": "packages/core/src/rpc/procedures/entry/lookup.ts",
+    "hash": "07245653cc3bd8a0"
+  },
+  {
+    "file": "packages/core/src/rpc/procedures/entry/update.test.ts",
+    "hash": "026e495ce2818cb2"
+  },
+  {
+    "file": "packages/core/src/rpc/procedures/entry/update.ts",
+    "hash": "b2a4caa78e98d9b2"
+  },
+  {
+    "file": "packages/core/src/rpc/procedures/term/lookup.test.ts",
+    "hash": "a2ba328c9752c2a5"
+  },
+  {
+    "file": "packages/core/src/rpc/procedures/user/enable.ts",
+    "hash": "e4085dd8c3573521"
+  },
+  {
+    "file": "packages/core/src/runtime/dispatcher.ts",
+    "hash": "22929bdeb1c4212b"
+  },
+  {
+    "file": "packages/core/src/search/contract/search-terms.ts",
+    "hash": "cb5be8c3e51e8148"
+  },
+  {
+    "file": "packages/core/src/template-deps-core.ts",
+    "hash": "29b77b280159fefc"
+  },
+  {
+    "file": "packages/core/src/terms/errors.ts",
+    "hash": "dcf66e7aeed9fd5e"
+  },
+  {
+    "file": "packages/core/src/test/defer.test.ts",
+    "hash": "89675f7854103e01"
+  },
+  {
+    "file": "packages/core/src/test/dispatcher.ts",
+    "hash": "0e1f9e2a047e1129"
+  },
+  {
+    "file": "packages/core/src/test/dispatcher.ts",
+    "hash": "51c1c3d5bd3eecce"
+  },
+  {
+    "file": "packages/core/src/test/dispatcher.ts",
+    "hash": "c82552936f692915"
+  },
+  {
+    "file": "packages/core/src/test/factories.ts",
+    "hash": "1bc76eadb87a95ee"
+  },
+  {
+    "file": "packages/core/src/test/match.ts",
+    "hash": "c60b9ace7698bf82"
+  },
+  {
+    "file": "packages/core/src/test/playwright/runtime-e2e.ts",
+    "hash": "cee7c6b088e398a4"
+  },
+  {
+    "file": "packages/create-plumix-app/src/catalog.test.ts",
+    "hash": "b2facf36d7fac209"
+  },
+  {
+    "file": "packages/create-plumix-app/src/cli.ts",
+    "hash": "c87555ee425aa341"
+  },
+  {
+    "file": "packages/plugins/audit-log/src/server/auditExtension.test.ts",
+    "hash": "c7feeea521ccd23c"
+  },
+  {
+    "file": "packages/plugins/audit-log/src/server/auditService.ts",
+    "hash": "8439357ff788b37c"
+  },
+  {
+    "file": "packages/plugins/comments/src/server/rest.ts",
+    "hash": "6e62e287d0ad4fae"
+  },
+  {
+    "file": "packages/plugins/media/src/admin/MediaLibrary.tsx",
+    "hash": "b1ec1d428d0e983b"
+  },
+  {
+    "file": "packages/plugins/menu/e2e/menu.spec.ts",
+    "hash": "2b403f77e931cc60"
+  },
+  {
+    "file": "packages/plugins/og/src/card.ts",
+    "hash": "38cd684852c44ba5"
+  },
+  {
+    "file": "packages/plugins/og/src/default-card.ts",
+    "hash": "ec069f21fdcf3f6e"
+  },
+  {
+    "file": "packages/plugins/pages/src/index.ts",
+    "hash": "26c46386dd2db20a"
+  },
+  {
+    "file": "packages/plugins/search/src/server/drain.ts",
+    "hash": "f34cfbb9bbeb63d1"
+  },
+  {
+    "file": "packages/plugins/seo/src/breadcrumbs.tsx",
+    "hash": "651fa83009f7cf6e"
+  },
+  {
+    "file": "packages/plumix/src/admin/plugin-rpc.ts",
+    "hash": "c9526ef0f6de162c"
+  },
+  {
+    "file": "packages/plumix/src/cli/commands/i18n.test.ts",
+    "hash": "e7989682094e6231"
+  },
+  {
+    "file": "packages/plumix/src/vite/test-config.ts",
+    "hash": "e66e6af7d0835664"
+  },
+  {
+    "file": "packages/plumix/test/vite-plugin-chunks.test.ts",
+    "hash": "adcdca7d7a6a6b49"
+  },
+  {
+    "file": "packages/runtimes/bun/src/images.ts",
+    "hash": "3f65fec8669ef47d"
+  },
+  {
+    "file": "packages/runtimes/cloudflare/src/adapter.ts",
+    "hash": "b873a51ba714bc0c"
+  },
+  {
+    "file": "packages/runtimes/node/src/images.ts",
+    "hash": "3f65fec8669ef47d"
+  },
+  {
+    "file": "packages/runtimes/node/src/node-sqlite-client.ts",
+    "hash": "3f4b840d03cb85f1"
+  },
+  {
+    "file": "tooling/vitest/source-resolver.ts",
+    "hash": "74505c4f77057791"
+  }
+]

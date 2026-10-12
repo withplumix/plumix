@@ -22,7 +22,7 @@ function countWords(comments: readonly Comment[]): number {
     .filter((word) => WORD.test(word)).length;
 }
 
-function groupIntoBlocks(
+export function groupIntoBlocks(
   comments: readonly Comment[],
   startsOwnLine: (comment: Comment) => boolean,
 ): Comment[][] {
