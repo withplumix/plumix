@@ -94,9 +94,8 @@ export interface CreateDispatcherHarnessOptions {
   >;
   /**
    * Vite-emitted asset manifest. Tests that exercise the renderer's
-   * `<link rel="stylesheet">` auto-injection pass a stub manifest here;
-   * the default empty object mirrors the runtime's "no client entries"
-   * fallback.
+   * `<link rel="stylesheet">` auto-injection pass a stub manifest here.
+   * Omitted, the app falls back to an empty manifest: no client entries.
    */
   readonly assetManifest?: AssetManifest;
   /**
@@ -149,7 +148,7 @@ export interface DispatcherHarness {
     readonly entryId: number;
     readonly userId: number;
   }) => Promise<string>;
-  /** Pre-bound factories. Mirrors the `factory` surface of createRpcHarness. */
+  /** Pre-bound factories, the same `factoriesFor(db)` as createRpcHarness. */
   readonly factory: Factories;
   /**
    * Record every invocation of the named action. Call assertions on the
@@ -167,7 +166,7 @@ export interface DispatcherHarness {
   ) => FilterSpy<FilterInput<TName>, FilterRest<TName>>;
   /**
    * Await everything routed through `ctx.defer` so far (telemetry snapshot
-   * delivery, CDN purges). Mirrors the platform's `waitUntil`: call
+   * delivery, CDN purges). Stands in for the platform's `waitUntil`: call
    * after a dispatch, before asserting on deferred side effects.
    */
   readonly drainDeferred: () => Promise<void>;

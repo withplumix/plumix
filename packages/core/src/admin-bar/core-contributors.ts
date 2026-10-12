@@ -4,6 +4,7 @@ import type { AdminBarNode, BarRenderContext } from "./types.js";
 import { entryCapabilityByName } from "../access/contract/entry-capabilities.js";
 import { labelSourceText } from "../i18n/label.js";
 import { deriveAdminSlug } from "../plugin/manifest.js";
+import { userDisplayName } from "../users/display-name.js";
 import { barMessages } from "./i18n.js";
 
 const SITE_POSITION = 10;
@@ -138,15 +139,12 @@ function accountContributor(
   ctx: BarRenderContext,
 ): readonly AdminBarNode[] {
   const strings = barMessages(ctx.locale);
-  // WP-style "Howdy, {display name}" — fall back to the email when the user
-  // never set a name. Also seeds the mobile avatar initial. Mirrors the
-  // display-name derivation in `rpc/procedures/user/lookup.ts`.
-  const name = ctx.user.name?.trim();
+  // WP-style "Howdy, {display name}". Also seeds the mobile avatar initial.
   return [
     ...nodes,
     {
       id: "account",
-      title: name !== undefined && name !== "" ? name : ctx.user.email,
+      title: userDisplayName(ctx.user),
       group: "account",
       position: ACCOUNT_POSITION,
     },

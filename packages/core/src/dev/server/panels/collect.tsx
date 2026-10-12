@@ -4,16 +4,10 @@ import type { AppContext } from "../../../context/app-context.js";
 import type { HookExecutor } from "../../../hooks/registry.js";
 import type { RenderedDevErrorPanel } from "../../ui/index.js";
 import type { DevErrorPanel } from "./types.js";
+import { DEFAULT_PANEL_ORDER } from "../../debug-panels/collect.js";
 import { DevErrorEmptyNote } from "../../ui/panel-primitives.js";
 
 import "./types.js";
-
-/**
- * Unordered panels sort after every explicitly-ordered one. Finite (not
- * Infinity) so two unordered panels compare as 0, not NaN. Mirrors the debug
- * bar's collector.
- */
-const DEFAULT_PANEL_ORDER = Number.MAX_SAFE_INTEGER;
 
 /**
  * Isolates each `error_page:panels` handler so a throw during collection can't

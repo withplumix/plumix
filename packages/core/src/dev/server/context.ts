@@ -1,6 +1,5 @@
 import type { AppContext } from "../../context/app-context.js";
 import type { TelemetrySpan } from "../../context/telemetry.js";
-import type { JsonValue } from "../../json.js";
 import type { ResolvedEntity } from "../../route/current.js";
 import type {
   DevErrorContext,
@@ -9,6 +8,7 @@ import type {
   DevErrorTimeline,
   DevErrorTimelineRow,
 } from "../ui/index.js";
+import { isJsonArray } from "../../json.js";
 
 export type DevErrorContextSource = Pick<
   AppContext,
@@ -64,16 +64,6 @@ function describeEntity(entity: ResolvedEntity | null): string | undefined {
 }
 
 /**
- * `Array.isArray` widens a readonly-array union to `any[]`; a dedicated guard
- * keeps the elements typed as JsonValue (mirrors the debug bar's db panel).
- */
-function isJsonArray(
-  value: JsonValue | undefined,
-): value is readonly JsonValue[] {
-  return Array.isArray(value);
-}
-
-/**
  * Not shared with the debug bar's db panel: the error page must render when
  * the bar is disabled, and it projects a different shape.
  */
@@ -84,7 +74,7 @@ function collectQueries(spans: readonly TelemetrySpan[]): DevErrorQuery[] {
     const failed = span.status === "error";
     if (typeof sql === "string") {
       rows.push({ sql, durationMs: span.durationMs, failed });
-    } else if (isJsonArray(batch)) {
+    } else if (batch !== undefined && isJsonArray(batch)) {
       // A failed batch reports no statement index (see `batchFailed` on
       // DevErrorQuery), so the group is flagged, never an individual row.
       for (const stmt of batch) {

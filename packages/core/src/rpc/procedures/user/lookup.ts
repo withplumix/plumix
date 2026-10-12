@@ -9,6 +9,7 @@ import type {
 } from "../../../plugin/lookup.js";
 import { and, inArray, isNull, like, or, sql } from "../../../db/index.js";
 import { users } from "../../../db/schema/users.js";
+import { userDisplayName } from "../../../users/display-name.js";
 
 const DEFAULT_LIST_LIMIT = 20;
 const MAX_LIST_LIMIT = 100;
@@ -117,11 +118,9 @@ function toLookupResult(row: {
   readonly name: string | null;
   readonly role: UserRole;
 }): LookupResult {
-  const trimmedName = row.name?.trim();
   return {
     id: String(row.id),
-    label:
-      trimmedName !== undefined && trimmedName !== "" ? trimmedName : row.email,
+    label: userDisplayName(row),
     subtitle: row.name ? `${row.email} · ${row.role}` : row.role,
   };
 }

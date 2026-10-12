@@ -1,6 +1,6 @@
 // Injects the visual-editor runtime `<script>` only when the edit gate
-// authorized it (see resolveEditMode). Mirrors injectIslandsBootstrap, but
-// gated on the edit-mode decision rather than page content.
+// authorized it (see resolveEditMode). Works like injectIslandsBootstrap,
+// but gated on the edit-mode decision rather than page content.
 
 import type { AssetManifest, ViteCommand } from "./asset-manifest.js";
 import { resolveEntryUrl } from "./asset-manifest.js";

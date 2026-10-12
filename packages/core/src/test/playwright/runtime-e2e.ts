@@ -81,8 +81,8 @@ export function readRuntimeE2E(playgroundDir: string): RuntimeE2E {
 }
 
 /**
- * The playground database's absolute path. Exactly one file must match: none
- * means unmigrated, several means the glob is too wide.
+ * The playground database's absolute path. The glob must find exactly one
+ * file: none means unmigrated, several means the glob is too wide.
  */
 export function resolvePlaygroundDbPath(playgroundDir: string): string {
   const { packageName, database } = readRuntimeE2E(playgroundDir);

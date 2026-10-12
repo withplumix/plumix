@@ -1140,8 +1140,9 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Mirrors the apply step's storage-shape guards so no work is enqueued that
- * would be skipped.
+ * The reference pass's only storage-shape guard: a non-array multi or a
+ * non-string single yields null and is left untouched, and the apply step
+ * writes only the ids returned here.
  */
 function referenceCandidateIds(
   target: ReferenceTarget,

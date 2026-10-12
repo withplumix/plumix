@@ -1,7 +1,7 @@
 /**
  * Domain error the terms read service throws. The `data` discriminant carries
  * what each transport needs — oRPC maps it via {@link toRpcTermReadError}.
- * Mirrors `src/entries/errors.ts`.
+ * Same shape as `src/entries/errors.ts`.
  */
 export class TermReadError extends Error {
   static {

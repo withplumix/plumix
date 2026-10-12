@@ -3,8 +3,8 @@ import type { AppContext } from "../context/app-context.js";
 export type { ResolvedEntity } from "./contract/resolved-entity.js";
 
 /**
- * Mirrors the menu item's `source` shape, plus `custom` for URL items that have
- * no upstream id.
+ * What a link points at: an entry or term by id, or a `custom` URL for items
+ * that have no upstream id, such as a menu item's.
  */
 export type CurrentSource =
   | { readonly kind: "entry"; readonly id: number }

@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 
 import type { TelemetrySpan } from "../../../context/telemetry.js";
-import type { JsonValue } from "../../../json.js";
 import type { DebugSnapshot } from "../../request-history/snapshot.js";
 import type { DebugPanel } from "../types.js";
 import { queryKind } from "../../../db/query-kind.js";
+import { isJsonArray } from "../../../json.js";
 import { describeSqlParam } from "../format-param.js";
 import { tokenizeSql } from "../highlight-sql.js";
 import { DebugSection } from "../primitives.js";
@@ -26,16 +26,6 @@ function asParams(value: unknown): readonly unknown[] {
 }
 
 /**
- * `Array.isArray` narrows a readonly-array union to `any[]`; a dedicated
- * guard keeps the elements typed as JsonValue.
- */
-function isJsonArray(
-  value: JsonValue | undefined,
-): value is readonly JsonValue[] {
-  return Array.isArray(value);
-}
-
-/**
  * Walks the span tree collecting what the driver wraps emit: a `db.sql` span
  * is one query row; a `db.batch` span flattens into one row per statement.
  */
@@ -49,7 +39,7 @@ function collectQueryRows(spans: readonly TelemetrySpan[]): QueryRow[] {
     } = span.attributes;
     if (typeof sql === "string") {
       rows.push({ sql, params: asParams(params), durationMs: span.durationMs });
-    } else if (isJsonArray(batch)) {
+    } else if (batch !== undefined && isJsonArray(batch)) {
       for (const stmt of batch) {
         if (typeof stmt !== "object" || stmt === null || isJsonArray(stmt)) {
           continue;
