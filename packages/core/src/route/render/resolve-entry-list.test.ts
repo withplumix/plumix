@@ -10,6 +10,7 @@ import {
   definePolicy,
   grant,
 } from "../../access/policy.js";
+import { withUser } from "../../auth/with-user.js";
 import { eq } from "../../db/index.js";
 import { users } from "../../db/schema/users.js";
 import { definePlugin } from "../../plugin/define.js";
@@ -784,6 +785,13 @@ describe("resolveEntryList and an entry's access policy", () => {
                   : challenge("paywall", { soft: true }),
             }),
           },
+          {
+            key: "paywall",
+            label: "Paywall",
+            policy: definePolicy({
+              resolve: () => challenge("paywall", { soft: true }),
+            }),
+          },
         ],
       },
     });
@@ -827,4 +835,32 @@ describe("resolveEntryList and an entry's access policy", () => {
       { contentGated: true, content: null, contentBlocks: null },
     ]);
   });
+
+  test.each([
+    ["an editor holding edit_any", "editor", false, false],
+    ["the author holding edit_own", "author", true, false],
+    ["a reader who may edit nothing", "subscriber", false, true],
+  ] as const)(
+    "%s: a paywalled body is withheld unless they may edit the entry",
+    async (_who, role, ownsIt, gated) => {
+      const { harness, ctx, run } = await createTracedContext({
+        config: { plugins: [teaserPages] },
+      });
+      const viewer = await harness.seedUser(role);
+      const other = await harness.seedUser("admin");
+      const row = await harness.factory.entry.create({
+        type: "page",
+        status: "published",
+        authorId: ownsIt ? viewer.id : other.id,
+        content: BODY,
+        meta: { [ACCESS_POLICY_META_KEY]: "paywall" },
+      });
+
+      const [entry] = await run(() =>
+        resolveEntryList(withUser(ctx, viewer), [row]),
+      );
+
+      expect(entry?.contentGated).toBe(gated);
+    },
+  );
 });

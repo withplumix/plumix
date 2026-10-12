@@ -49,7 +49,9 @@ serves its teaser as before. A `redirect` or a hard
 The earned-unpublished half of `readableEntryRows` and `canReadEntry` already
 belonged to whoever may edit the row. The published half follows: `edit_any`,
 or `edit_own` over a row the principal wrote, reads the row whatever its policy
-says. An editor working in the admin sees the content they manage.
+says, and `resolveEntryList` hands them its body even where the policy lists it
+as a teaser. An editor working in the admin or the API sees the content they
+manage.
 `publicEntryRows` has no such bypass: it is what the principal is shown as a
 reader.
 

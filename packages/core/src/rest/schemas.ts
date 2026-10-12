@@ -52,6 +52,8 @@ export const publicEntrySchema = v.object({
   title: v.string(),
   excerpt: v.nullable(v.string()),
   content: v.unknown(),
+  // A soft challenge's teaser: listed, with `content` null.
+  contentGated: v.boolean(),
   status: v.string(),
   publishedAt: v.nullable(v.date()),
   createdAt: v.date(),

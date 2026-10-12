@@ -17,6 +17,7 @@ import { memoBatch } from "../../context/memo.js";
 import { entryTerm } from "../../db/schema/entry_term.js";
 import { terms } from "../../db/schema/terms.js";
 import { users } from "../../db/schema/users.js";
+import { canEditEntry } from "../../entries/editability.js";
 import { entryPolicyAdmits } from "../../entries/entry-access.js";
 import {
   projectImageRoles,
@@ -134,8 +135,8 @@ export async function expandEntryTitle(
 }
 
 /**
- * Entries as a theme lists them. An entry whose policy admits the listing but
- * not its body, a soft challenge's teaser, comes without its body.
+ * Entries as a theme lists them. A soft challenge's teaser comes without its
+ * body, unless the caller may edit the entry.
  */
 export async function resolveEntryList(
   ctx: AppContext,
@@ -143,6 +144,7 @@ export async function resolveEntryList(
 ): Promise<readonly ResolvedEntry[]> {
   return Promise.all(
     (await resolveEntries(ctx, rows)).map(async (entry) =>
+      canEditEntry(ctx, entry) ||
       (await entryPolicyAdmits(
         ctx,
         { type: entry.type, meta: entry.storedMeta },
