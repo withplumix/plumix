@@ -9,12 +9,12 @@ import type {
   MarkSpec,
   ShortcodeRegistry,
 } from "../blocks/index.js";
+import type { RendererUser } from "../blocks/renderer/context.js";
 import type { PlumixConfig } from "../config.js";
 import type * as coreSchema from "../db/schema/index.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { HookExecutor } from "../hooks/registry.js";
 import type { ResolvedLocale } from "../i18n/locale-registry.js";
-import type { JsonObject } from "../json.js";
 import type { MailSender } from "../mail/contract/registry.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { ResolvedEntity } from "../route/contract/resolved-entity.js";
@@ -44,16 +44,8 @@ export type CoreSchema = {
 export type Db<TSchema extends Record<string, unknown> = CoreSchema> =
   BaseSQLiteDatabase<"async" | "sync", unknown, TSchema>;
 
-export interface AuthenticatedUser {
-  readonly id: number;
-  readonly email: string;
-  /** Display name from `users.name`; null when the user never set one. */
-  readonly name?: string | null;
+export interface AuthenticatedUser extends RendererUser {
   readonly role: UserRole;
-  /** The stored `users.meta` bag, verbatim — this projection never runs the
-   *  field pipeline, so it is the column's own {@link JsonObject}, not the
-   *  hydrated `ResolvedMeta` the RPC read surfaces return. */
-  readonly meta: JsonObject;
 }
 
 /**

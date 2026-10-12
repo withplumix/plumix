@@ -25,27 +25,25 @@ import { serializeRenderEnv } from "../render-env.js";
 import { RendererError } from "./errors.js";
 
 /**
- * `blocks/` sits in the foundation layer, below `auth/` and `route/` — these
- * mirror `AuthenticatedUser` / `ResolvedEntity` structurally.
+ * `blocks/` sits in the foundation layer, below `auth/` and `route/`: core's
+ * `AuthenticatedUser` extends `RendererUser`, and the types below mirror
+ * `ResolvedEntity` structurally.
  */
 export interface RendererUser {
   readonly id: number;
   readonly email: string;
+  /** Display name from `users.name`; null when the user never set one. */
   readonly name?: string | null;
   readonly role: string;
-  /**
-   * Mirrors core's `AuthenticatedUser.meta`, which is the `users.meta` column
-   * verbatim. Guarded by: packages/core/src/blocks/renderer/context.test.ts
-   */
+  /** The stored `users.meta` bag, verbatim — this projection never runs the
+   *  field pipeline, so it is the column's own {@link JsonObject}, not the
+   *  hydrated `ResolvedMeta` the RPC read surfaces return. */
   readonly meta: JsonObject;
 }
 
-/**
- * Mirrors core's `AuthMethodsSummary` structurally — blocks sits below core in
- * the build graph and can't import it.
- * Guarded by: packages/core/src/blocks/renderer/context.test.ts
- */
+/** Core's `AuthMethodsSummary` lists its OAuth providers as this type. */
 export interface RendererOAuthProvider {
+  /** Map key in `auth.oauth.providers`; the URL path segment. */
   readonly key: string;
   readonly label: string;
 }

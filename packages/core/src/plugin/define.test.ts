@@ -9,6 +9,8 @@ import {
   vi,
 } from "vitest";
 
+import { defineLinguiConfig } from "@plumix/lingui-config";
+
 import {
   definePlugin,
   PLUGIN_I18N_SLOT,
@@ -125,6 +127,12 @@ describe("pluginAdminEntryPath", () => {
 });
 
 describe("PLUGIN_I18N_SLOT", () => {
+  test("declares the source locale and locales a first-party plugin's lingui config extracts", () => {
+    const lingui = defineLinguiConfig();
+    expect(PLUGIN_I18N_SLOT.sourceLocale).toBe(lingui.sourceLocale);
+    expect(PLUGIN_I18N_SLOT.locales).toEqual(lingui.locales);
+  });
+
   test("is the shared five-locale catalog declaration every first-party plugin ships", () => {
     expect(PLUGIN_I18N_SLOT).toEqual({
       sourceLocale: "en",
