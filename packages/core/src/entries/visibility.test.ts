@@ -263,7 +263,6 @@ describe("a type pooled onto another's capabilities", () => {
   });
 });
 
-// One public page and one members page, the shape #2933's criteria name.
 describe("an entry type with an access policy", () => {
   let policied: TestDb;
   let registry: PluginRegistry;
@@ -417,5 +416,104 @@ describe("an entry type with an access policy", () => {
       "stale",
       "sealed",
     ]);
+  });
+});
+
+describe("an entry type whose default admits nobody anonymous", () => {
+  let gated: TestDb;
+  let registry: PluginRegistry;
+
+  beforeAll(async () => {
+    gated = await createTestDb();
+    registry = await pooledEntryTypeRegistry(
+      definePlugin("members-pages", (ctx) => {
+        ctx.registerEntryType("page", {
+          label: "Pages",
+          isPublic: true,
+          access: {
+            default: authenticatedPolicy,
+            policies: [{ key: "open", label: "Open", policy: anonymousPolicy }],
+          },
+        });
+      }),
+    );
+    const factory = factoriesFor(gated);
+    const author = await factory.user.create({ role: "author" });
+    for (const [slug, meta] of [
+      ["unset", {}],
+      ["open", { [ACCESS_POLICY_META_KEY]: "open" }],
+      ["stale", { [ACCESS_POLICY_META_KEY]: "ghost" }],
+      ["numeric", { [ACCESS_POLICY_META_KEY]: 7 }],
+      ["listed", { [ACCESS_POLICY_META_KEY]: ["open"] }],
+    ] as const) {
+      await factory.entry.create({
+        type: "page",
+        authorId: author.id,
+        status: "published",
+        slug,
+        publishedAt: new Date(),
+        meta,
+      });
+    }
+  });
+
+  async function listedSlugs(ctx: AppContext): Promise<string[]> {
+    const clause = await publicEntryRows(ctx);
+    if (clause === null) return [];
+    const found = await gated
+      .select({ slug: entries.slug })
+      .from(entries)
+      .where(clause)
+      .orderBy(asc(entries.id));
+    return found.map((row) => row.slug);
+  }
+
+  async function readableSlugs(ctx: AppContext): Promise<string[]> {
+    const clause = await readableEntryRows(ctx, "page");
+    if (clause === null) return [];
+    const found = await gated
+      .select({ slug: entries.slug })
+      .from(entries)
+      .where(clause)
+      .orderBy(asc(entries.id));
+    return found.map((row) => row.slug);
+  }
+
+  test("an anonymous visitor is listed only the entry that chose the open policy", async () => {
+    const ctx = createTestContext({ db: gated, plugins: registry });
+
+    expect(await listedSlugs(ctx)).toEqual(["open"]);
+  });
+
+  test("a signed-in member is listed every entry, a malformed key falling to the default", async () => {
+    const member = await factoriesFor(gated).user.create();
+    const ctx = createTestContext({
+      db: gated,
+      plugins: registry,
+      user: member,
+    });
+
+    expect(await listedSlugs(ctx)).toEqual([
+      "unset",
+      "open",
+      "stale",
+      "numeric",
+      "listed",
+    ]);
+  });
+
+  test("canReadEntry and readableEntryRows admit the same entries", async () => {
+    const reader: AppContext = {
+      ...createTestContext({ db: gated, plugins: registry }),
+      auth: { can: (capability) => capability === "entry:page:read" },
+    };
+    const stored = await gated.select().from(entries).orderBy(asc(entries.id));
+
+    const readable: string[] = [];
+    for (const row of stored) {
+      if (await canReadEntry(reader, row)) readable.push(row.slug);
+    }
+    expect(readable).toEqual(["open"]);
+    expect(await readableSlugs(reader)).toEqual(readable);
   });
 });

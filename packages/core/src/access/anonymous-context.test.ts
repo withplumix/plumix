@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 
+import type { AppContext } from "../context/app-context.js";
 import { asc } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { publicEntryRows } from "../entries/visibility.js";
@@ -50,21 +51,24 @@ async function editorContext() {
   return createTestContext({ db, plugins: registry, user: editor });
 }
 
+async function listedSlugs(ctx: AppContext): Promise<string[]> {
+  const clause = await publicEntryRows(ctx);
+  if (clause === null) return [];
+  const rows = await ctx.db
+    .select({ slug: entries.slug })
+    .from(entries)
+    .where(clause)
+    .orderBy(asc(entries.id));
+  return rows.map((row) => row.slug);
+}
+
 describe("anonymousContext", () => {
   test("publicEntryRows asked through it leaves out members entries whoever is signed in", async () => {
     const ctx = await editorContext();
 
-    const clause = await publicEntryRows(anonymousContext(ctx));
-    const rows =
-      clause === null
-        ? []
-        : await ctx.db
-            .select({ slug: entries.slug })
-            .from(entries)
-            .where(clause)
-            .orderBy(asc(entries.id));
+    const slugs = await listedSlugs(anonymousContext(ctx));
 
-    expect(rows.map((row) => row.slug)).toEqual(["public-page"]);
+    expect(slugs).toEqual(["public-page"]);
   });
 
   test("carries no principal and holds no capability", async () => {

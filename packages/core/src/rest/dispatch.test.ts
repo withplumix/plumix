@@ -201,7 +201,7 @@ describe("REST API — entries list", () => {
   });
 });
 
-describe("REST API — an entry's access policy (#2933)", () => {
+describe("REST API — an entry's access policy", () => {
   const pagesWithAccess = definePlugin("pages-with-access", (ctx) => {
     ctx.registerEntryType("page", {
       label: "Pages",

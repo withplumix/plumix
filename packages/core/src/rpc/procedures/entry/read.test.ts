@@ -660,7 +660,6 @@ describe("entry.get", () => {
   });
 });
 
-// #2933: a public page and a page only editors may see.
 describe("an entry type with an access policy", () => {
   const pagesWithAccess = definePlugin("pages-with-access", (ctx) => {
     ctx.registerEntryType("page", {

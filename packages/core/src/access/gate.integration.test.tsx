@@ -1389,8 +1389,8 @@ describe("access gate — a render that reads the principal is personal (#2915)"
 });
 
 /**
- * #2933's `page` type: public by default, with a members policy and a soft
- * teaser an editor may pick per entry.
+ * A `page` type public by default, with a members policy and a soft teaser an
+ * editor may pick per entry.
  */
 const membersResolver = vi.fn(authenticatedPolicy.resolve);
 const pagesWithAccess = definePlugin("pages-with-access", (ctx) => {
@@ -1496,7 +1496,7 @@ function listedSlugs(html: string): string[] {
   );
 }
 
-describe("access on every listing (#2933)", () => {
+describe("access on every listing", () => {
   const surfaces = [
     ["the front page", () => "/"],
     ["the entry-type archive", () => "/page"],

@@ -149,15 +149,16 @@ function compiledFor(plugins: PluginRegistry): CompiledFeedRoutes {
   return routes;
 }
 
+function hasPublicType(plugins: PluginRegistry): boolean {
+  return [...plugins.entryTypes.values()].some((type) => type.isPublic);
+}
+
 function servesListing(
   plugins: PluginRegistry,
   key: string,
   listing: string,
 ): boolean {
-  // A site with no public type has no listing to syndicate.
-  if (![...plugins.entryTypes.values()].some((type) => type.isPublic)) {
-    return false;
-  }
+  if (!hasPublicType(plugins)) return false;
   return !compiledFor(plugins).laterPages.some(
     (route) =>
       route.archive === key && route.pattern.test({ pathname: listing }),

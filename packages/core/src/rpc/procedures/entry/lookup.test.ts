@@ -728,7 +728,6 @@ describe("entryLookupAdapter", () => {
   });
 });
 
-// #2933: an anonymous render resolving references, and the public picker.
 describe("entryLookupAdapter and an entry's access policy", () => {
   const pagesWithAccess = definePlugin("pages-with-access", (ctx) => {
     ctx.registerEntryType("page", {
