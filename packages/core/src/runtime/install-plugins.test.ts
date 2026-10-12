@@ -653,7 +653,7 @@ describe("plugin state", () => {
       setup: () => undefined,
     });
     const broken = definePlugin("broken", {
-      state: () => {
+      state: (): { ready: boolean } => {
         throw boom;
       },
       setup: () => undefined,
