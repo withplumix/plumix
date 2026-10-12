@@ -242,6 +242,7 @@ const failing = definePlugin("failing", (ctx) => {
 
 describe("the site's logs", () => {
   afterEach(() => {
+    vi.unstubAllEnvs();
     vi.restoreAllMocks();
   });
 
@@ -281,5 +282,38 @@ describe("the site's logs", () => {
         }) as unknown,
       }),
     );
+  });
+
+  test("under dev a site keeps logging to the console, not JSON on stdout", async () => {
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const stdout = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const site = createBunSite({
+      config: plumix({
+        runtime: bun(),
+        database: bunSqlite({ path: join(dir, "site.sqlite") }),
+        auth,
+        theme,
+        plugins: [failing],
+      }),
+      assetManifest: {},
+      entryUrl: pathToFileURL(join(dir, "dist/server/worker.js")).href,
+    });
+
+    await site.handler.scheduled({
+      cron: CRON,
+      scheduledTime: Date.parse("2026-09-07T03:00:00Z"),
+    });
+    await site.dispose();
+
+    expect(error).toHaveBeenCalledWith(
+      `[plumix] scheduled task "failing:always-fails" failed: boom`,
+      expect.objectContaining({ taskId: "always-fails", plugin: "failing" }),
+    );
+    expect(stdout).not.toHaveBeenCalled();
   });
 });

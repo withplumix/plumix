@@ -242,6 +242,26 @@ describe("createNodeSite — logs", () => {
     );
   });
 
+  test("under dev a site keeps logging to the console, not JSON on stdout", async () => {
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const stdout = captureStdout();
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const { site } = await siteFor({ plugins: [failing] });
+
+    await site.handler.scheduled({
+      cron: CRON,
+      scheduledTime: Date.parse("2026-09-07T03:00:00Z"),
+    });
+
+    expect(error).toHaveBeenCalledWith(
+      `[plumix] scheduled task "failing:always-fails" failed: boom`,
+      expect.objectContaining({ taskId: "always-fails", plugin: "failing" }),
+    );
+    expect(stdout).not.toHaveBeenCalled();
+  });
+
   test("a built site's cron writes its own lines as JSON too", async () => {
     const stdout = captureStdout();
     const { site } = await siteFor({ plugins: [failing] });

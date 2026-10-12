@@ -185,6 +185,27 @@ describe("createPlumixHandler — fetch", () => {
     expect(consoleError).not.toHaveBeenCalled();
   });
 
+  test("a logger that throws while reporting a failed request still lets the 500 through", async () => {
+    const logger = spyLogger();
+    logger.error.mockImplementation(() => {
+      throw new Error("EPIPE");
+    });
+    const handler = await handlerFor(
+      {
+        database: {
+          kind: "bound",
+          requiredBindings: ["DB"],
+          connect: () => ({ db: {} }),
+        },
+      },
+      { logger },
+    );
+
+    const response = await handler.fetch(request(), { env: {} });
+
+    expect(response.status).toBe(500);
+  });
+
   test("binding validation is memoised per handler: the first env's verdict holds", async () => {
     const handler = await handlerFor({
       database: {
