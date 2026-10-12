@@ -756,11 +756,24 @@ export function matchPluginRawRoute(
   return null;
 }
 
-/** No auth gate: a route at the site root is public by construction. */
-function servePublicRoute(
+/**
+ * No auth gate: a route at the site root is public by construction. A
+ * privileged request renders live as itself, since its listing may be its own.
+ */
+async function servePublicRoute(
   match: PublicRouteMatch,
   ctx: AppContext,
 ): Promise<Response> {
+  if (requestIsPrivileged(ctx.request, ctxHasSession(ctx))) {
+    const reader = await loadUserForPublicRequest(ctx);
+    const response = await match.route.handler(
+      reader.request,
+      reader,
+      match.params,
+    );
+    markAudience(response, reader, PRIVATE_SEGMENT);
+    return response;
+  }
   const run = async () => match.route.handler(ctx.request, ctx, match.params);
   const cdn = ctx.cdn;
   if (match.route.cacheable !== true || cdn === undefined) return run();

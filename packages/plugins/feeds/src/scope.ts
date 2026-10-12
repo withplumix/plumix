@@ -10,14 +10,13 @@ export interface FeedScope {
 }
 
 /**
- * A type declaring `access` is excluded even where an entry's policy would
- * admit anyone: feeds are sessionless and shared-cached, so there's no
- * principal.
+ * A type declaring `access` is syndicated too: `publicEntryRows` asks each
+ * entry's policy for the requesting reader (ADR 0037).
  */
 export function isSyndicatableEntryType(
   type: RegisteredEntryType | undefined,
 ): boolean {
-  return type !== undefined && type.isPublic && type.access === undefined;
+  return type?.isPublic === true;
 }
 
 export function syndicatableEntryTypeNames(plugins: PluginRegistry): string[] {

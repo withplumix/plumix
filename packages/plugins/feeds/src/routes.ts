@@ -20,8 +20,8 @@ export function feedUnder(path: string): string {
 }
 
 /**
- * An `access`-policied archive gets no feed: core matches public routes ahead
- * of the access gate and principal loading, so there is no reader to check.
+ * A plugin archive declaring `access` gets no feed: core matches public routes
+ * ahead of the access gate, so nothing would check its policy.
  */
 function hasFeed(plugins: PluginRegistry, archive: EntryArchive): boolean {
   switch (archive.kind) {

@@ -213,8 +213,9 @@ export interface PluginSetupContextBase {
 
   /**
    * Always answers, ahead of redirects and pages; GET/HEAD only. Without
-   * `access`, `ctx.user` is null. `ctx.request` has `basePath` stripped: build
-   * URLs from `ctx.origin` + `ctx.config.basePath`. Duplicate paths throw.
+   * `access`, only a signed-in request loads `ctx.user`, rendering `private`.
+   * `ctx.request` drops `basePath`; prefix URLs with `ctx.config.basePath`.
+   * Duplicate paths throw.
    */
   registerPublicRoute(options: PublicRouteOptions): void;
 

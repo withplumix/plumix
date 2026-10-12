@@ -47,6 +47,16 @@ A term feed sits directly under the term's own archive, wherever that is: a hier
   meaningful answer and an empty feed is not.
 </Aside>
 
+### Gated entries
+
+An entry type with an [`access` policy](/access/overview/) has feeds like any other type, and its entries are in the front page, term, author and date feeds too. The policy is asked per entry, for the reader requesting the feed, through the same read rule the archive's page uses:
+
+- A request with no session gets what an anonymous visitor may list. An entry whose policy redirects or hard-challenges that visitor is left out. That anonymous feed is the one the CDN stores, and a write to any entry of the type purges it, a change of the entry's access choice included.
+- A signed-in request gets the entries its reader may list. That feed is rendered for that reader alone. It is never read from or written to the CDN, and it leaves as `private, no-store`. Most feed readers send no session, so they get the anonymous feed.
+- An entry whose policy lists it but holds its content back, a soft `challenge`, is a teaser. Its item carries the title, link, dates and excerpt. A feed item never carries an entry's body, so nothing gated rides out in one.
+
+A feed whose entries are all gated is still served. An anonymous reader gets a valid feed with no items, as the archive's page lists nothing.
+
 ## Quickstart
 
 Install the package with whichever package manager the project uses:
@@ -189,7 +199,7 @@ The feed paths follow from the archive's routes, so there is nothing to keep in 
 
 Params `entries` answers `null` for are a 404 on the page and the feed together, and the page advertises nothing. Because `entries` records intent rather than resolving it, a page asking whether it has a feed costs no query.
 
-An archive declaring an `access` policy gets no feed at all. A feed is a registered public route, which core answers ahead of the access gate and ahead of loading a principal, so there is no reader there to check a policy against — serving one would hand the archive's entries to anyone who asked.
+An archive declaring an `access` policy gets no feed at all. A feed is a registered public route, which core answers ahead of the access gate, so nothing would check the archive's policy, and serving one would hand the archive's entries to anyone who asked. An entry type's `access` is a different matter, which [Gated entries](#gated-entries) covers.
 
 Two archives can match one URL. A feed is served only where the feed route that answers it belongs to the archive whose page is there: a `/:section` archive outranking a type archive at `/news` owns the page at `/news`, but the type's literal `/news/feed` route answers that feed URL, so it is a 404 and the page advertises nothing rather than a feed of different entries.
 
