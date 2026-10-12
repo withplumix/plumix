@@ -106,7 +106,7 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
    */
   readonly mails?: DeclaredMails;
   readonly mailCatalogs?: MailCatalogs;
-  /** Called with each mail the mailer accepted: how a test's mail fake records. */
+  /** Called with each mail the mailer accepted. */
   readonly onMailSent?: (sent: SentMail) => void;
   readonly appContextExtensions?: ReadonlyMap<
     string,

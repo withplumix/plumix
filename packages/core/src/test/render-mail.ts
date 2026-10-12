@@ -33,8 +33,8 @@ export function renderMail<Name extends MailName>(
 }
 
 /**
- * {@link renderMail} against the given catalogs: core's unit tests hand in the
- * committed `.po`, since they resolve compiled catalogs to empty ones.
+ * {@link renderMail} against the given catalogs, for a caller whose compiled
+ * catalogs are not the real ones.
  */
 export async function renderMailIn<Name extends MailName>(
   catalogs: MailCatalogs,

@@ -35,8 +35,8 @@ export default plumix({
     },
     magicLink: { siteName: "Comments playground" },
   }),
-  // `plumix dev` catches mail, for the e2e mailbox, only on a site with no
-  // mailer; a build of a magic-link site needs one.
+  // `plumix dev` catches mail only on a site with no mailer; a build of a
+  // magic-link site needs one.
   mailer: process.env.PLUMIX_DEV ? undefined : consoleMailer(),
   plugins: [blog(), comments({ entryTypes: ["post"], rootsPerPage: 2 })],
   theme,
