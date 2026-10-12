@@ -34,6 +34,8 @@ beforeAll(() => {
   writeFileSync(join(root, "assets/unreadable-000000.js"), CHUNK);
   chmodSync(join(root, "assets/unreadable-000000.js"), 0o000);
   writeFileSync(join(root, ".env"), "SECRET=1");
+  mkdirSync(join(root, ".vite"));
+  writeFileSync(join(root, ".vite/manifest.json"), "{}");
   writeFileSync(join(base, "secret.txt"), "outside the root");
 });
 
@@ -86,6 +88,7 @@ describe("the disk layer", () => {
     "/assets/..%2f..%2fsecret.txt",
     "/assets/%2e%2e%2f%2e%2e%2fsecret.txt",
     "/.env",
+    "/.vite/manifest.json",
   ])("%s, out of the root or a dotfile inside it, is 404", async (path) => {
     const response = await get(path);
 

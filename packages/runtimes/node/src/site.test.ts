@@ -467,10 +467,11 @@ describe("createNodeSite — shutdown", () => {
     expect(await response.text()).toBe("deferred");
     const { exit, drain } = await serving({
       ...site,
-      // The work finishes only once the drain is already waiting on it.
+      // The work finishes only once the drain is already waiting on it, on a
+      // later turn of the event loop than a drain that skipped it would exit.
       dispose: (options) => {
         const disposed = site.dispose(options);
-        probe.finish();
+        setTimeout(probe.finish, 25);
         return disposed;
       },
     });

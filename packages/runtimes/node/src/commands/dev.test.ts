@@ -1,5 +1,4 @@
 import {
-  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -99,13 +98,9 @@ function origin(): string {
   return `http://127.0.0.1:${String(port)}`;
 }
 
-/** `""` while a restart has the port closed, so a poll keeps polling. */
+/** Rejects while a restart has the port closed, so a poll keeps polling. */
 async function text(path: string): Promise<string> {
-  try {
-    return await (await fetch(`${origin()}${path}`)).text();
-  } catch {
-    return "";
-  }
+  return (await fetch(`${origin()}${path}`)).text();
 }
 
 /**
@@ -131,12 +126,9 @@ function getWithHost(
   });
 }
 
-const closedConnections = () => {
-  const closed = join(dir, "closed.log");
-  return existsSync(closed)
-    ? readFileSync(closed, "utf8").split("\n").filter(Boolean).length
-    : 0;
-};
+const closedConnections = () =>
+  readFileSync(join(dir, "closed.log"), "utf8").split("\n").filter(Boolean)
+    .length;
 
 beforeAll(async () => {
   undoSourceConfigs = loadConfigsFromSource();
@@ -163,6 +155,7 @@ beforeAll(async () => {
   writeFileSync(join(dir, CONFIG_FILE), config(dir));
   writeFileSync(join(dir, "greeting.mjs"), 'export const greeting = "v1";\n');
   writeFileSync(join(dir, "dep.mjs"), 'export const tag = "none";\n');
+  writeFileSync(join(dir, "closed.log"), "");
   writeFileSync(join(dir, "probe.css"), "body { color: red }\n");
   writeFileSync(join(dir, ".env"), "PROBE_SECRET=from-dotenv\n");
   // Imported by nothing at start, so the scan cannot pre-bundle it.
@@ -233,11 +226,7 @@ describe("plumix dev on the node runtime", { timeout: 240_000 }, () => {
     const served = await text("/probe/alive");
 
     expect(served).toBe("alive");
-    expect(listen.mock.calls).not.toContainEqual([
-      0,
-      "127.0.0.2",
-      expect.any(Function),
-    ]);
+    expect(listen.mock.calls.flat()).not.toContain("127.0.0.2");
   });
 
   test("the plugin's dev error source endpoint answers", async () => {
@@ -309,14 +298,7 @@ describe("plumix dev on the node runtime", { timeout: 240_000 }, () => {
   test("a boot failure renders the dev boot-error page, and the next good edit recovers", async () => {
     writeFileSync(join(dir, CONFIG_FILE), config(dir, "[probes, probes]"));
     await expect
-      .poll(
-        () =>
-          fetch(`${origin()}/`).then(
-            (r) => r.status,
-            () => 0,
-          ),
-        POLL,
-      )
+      .poll(() => fetch(`${origin()}/`).then((r) => r.status), POLL)
       .toBe(500);
     const page = await fetch(`${origin()}/`);
     expect(page.headers.get("content-type")).toContain("text/html");

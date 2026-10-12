@@ -199,8 +199,8 @@ describe("the /_plumix/image layer — same-origin sources", () => {
       accept: "image/webp",
     });
 
-    const etag = first.headers.get("etag");
-    if (etag === null) throw new Error("the first response carried no etag");
+    const etag = first.headers.get("etag") ?? "";
+    expect(etag).toBeTruthy();
 
     const again = await get(origin, "src=/pic.png&w=320", {
       accept: "image/webp",
