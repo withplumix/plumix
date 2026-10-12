@@ -180,10 +180,6 @@
     "hash": "2e5b8b144546ca18"
   },
   {
-    "file": "packages/core/src/config.errors.ts",
-    "hash": "0eb4a7741ac1da9d"
-  },
-  {
     "file": "packages/core/src/dev/debug-panels/core-panels.ts",
     "hash": "77a70d5ca1042f0d"
   },

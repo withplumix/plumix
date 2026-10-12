@@ -3,7 +3,7 @@ type ConfigErrorCode =
 
 /**
  * Config invariant violated in {@link plumix} or by a config value as it
- * resolves — surfaced at app build or request-context time. Mirrors the
+ * resolves — surfaced at app build or request-context time. Follows the
  * named-error convention (umbrella #232).
  */
 export class ConfigError extends Error {
