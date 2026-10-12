@@ -18,11 +18,12 @@ import type { RenderEnv } from "./render/render-env.js";
 import { verifyPreviewGrant } from "../auth/preview-token.js";
 import { withBasePath } from "../base-path.js";
 import { declarePageTags } from "../cdn/contract/page-tags.js";
-import { and, eq, inArray, isNotNull } from "../db/index.js";
+import { and, inArray } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { entrySearchCondition } from "../db/search-conditions.js";
 import { canEditEntry } from "../entries/editability.js";
 import { findAuthorBySlug, findTermBySlug } from "../entries/slug-lookups.js";
+import { publicEntryRows } from "../entries/visibility.js";
 import { getAutosave, overlayAutosave } from "../revisions/repository.js";
 import {
   notFound,
@@ -34,7 +35,11 @@ import { isPageOutcome } from "./contract/page-outcome.js";
 import { resolveEditMode } from "./edit-mode.js";
 import { buildTermArchiveUrl } from "./permalink.js";
 import { previewTokenGrantsEntry, readPreviewToken } from "./preview.js";
-import { listEntryPage, listingCdnTags } from "./render/entry-listing.js";
+import {
+  listEntryPage,
+  listingCdnTags,
+  withoutGatedContent,
+} from "./render/entry-listing.js";
 import {
   archiveData,
   authorData,
@@ -173,12 +178,15 @@ async function resolveSearch(
   const searchableTypes = Array.from(ctx.plugins.entryTypes.entries())
     .filter(([, spec]) => spec.isPublic && !spec.excludeFromSearch)
     .map(([key]) => key);
-  const where =
+  const listable =
     searchableTypes.length === 0 || query === ""
       ? null
+      : await publicEntryRows(ctx);
+  const where =
+    listable === null
+      ? null
       : and(
-          eq(entries.status, "published"),
-          isNotNull(entries.publishedAt),
+          listable,
           inArray(entries.type, searchableTypes),
           entrySearchCondition({ value: query, exclude: false }),
         );
@@ -192,7 +200,10 @@ async function resolveSearch(
   const initial: SearchData = {
     kind: "search",
     query,
-    entries: await resolveEntryList(ctx, result.rows),
+    entries: await withoutGatedContent(
+      ctx,
+      await resolveEntryList(ctx, result.rows),
+    ),
     pagination: {
       page,
       perPage: DEFAULT_ARCHIVE_PER_PAGE,

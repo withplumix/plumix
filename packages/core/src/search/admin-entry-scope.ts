@@ -44,10 +44,10 @@ export interface AdminEntryScope {
  * Shared so the palette and a search plugin agree exactly on who sees what.
  * Hides trash. Group order ignores `reach`. Null when nothing is in reach.
  */
-export function adminEntryScope(
-  ctx: Pick<AppContext, "user" | "auth" | "plugins">,
+export async function adminEntryScope(
+  ctx: AppContext,
   { reach = "read" }: AdminEntryScopeOptions = {},
-): AdminEntryScope | null {
+): Promise<AdminEntryScope | null> {
   const notTrash = not(eq(entries.status, "trash"));
 
   const readable = [...ctx.plugins.entryTypes]
@@ -61,11 +61,13 @@ export function adminEntryScope(
   const groups = readable.filter(
     ({ type }) => reach === "read" || canReadUnpublished(ctx, type),
   );
+  const readableRows = await Promise.all(
+    groups.map(({ type }) => readableEntryRows(ctx, type)),
+  );
   const visible = or(
-    ...groups.flatMap(({ type }) => {
-      const rows = readableEntryRows(ctx, type);
-      return rows === null ? [] : [and(rows, notTrash)];
-    }),
+    ...readableRows.flatMap((rows) =>
+      rows === null ? [] : [and(rows, notTrash)],
+    ),
   );
   if (visible === undefined) return null;
   return { groups, visible: sql`(${visible})` };

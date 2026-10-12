@@ -33,7 +33,7 @@ export const duplicate = base
 
     // A create cap alone would let a caller harvest a draft they can't see.
     // 404, not 403, to avoid leaking the row's existence.
-    if (!canReadEntry(context, source)) {
+    if (!(await canReadEntry(context, source))) {
       throw errors.NOT_FOUND({ data: { kind: "entry", id: filtered.id } });
     }
 

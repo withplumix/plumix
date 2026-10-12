@@ -1,18 +1,26 @@
-import { beforeAll, describe, expect, test } from "vitest";
+import { beforeAll, describe, expect, test, vi } from "vitest";
 
-import type { AuthenticatedUser } from "../context/app-context.js";
+import type { AppContext, AuthenticatedUser } from "../context/app-context.js";
 import type { SQL } from "../db/index.js";
 import type { Entry } from "../db/schema/entries.js";
 import type { PluginRegistry } from "../plugin/registry.js";
-import type { EntryViewer } from "./visibility.js";
+import { ACCESS_POLICY_META_KEY } from "../access/contract/meta-key.js";
+import {
+  anonymousPolicy,
+  authenticatedPolicy,
+  challenge,
+  definePolicy,
+} from "../access/policy.js";
 import { asc } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
-import { createPluginRegistry } from "../plugin/manifest.js";
+import { definePlugin } from "../plugin/define.js";
+import { createTestContext } from "../test/context.js";
 import { factoriesFor } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
 import { pooledEntryTypeRegistry } from "../test/pooled-entry-types.js";
 import {
   canReadEntry,
+  publicEntryRows,
   readableEntryRows,
   referenceableEntryRows,
 } from "./visibility.js";
@@ -56,22 +64,33 @@ beforeAll(async () => {
 function viewer(
   capabilities: readonly string[],
   user: AuthenticatedUser | null = caller,
-): EntryViewer {
+): AppContext {
   return {
+    ...createTestContext({ db }),
     user,
     auth: { can: (capability: string) => capabilities.includes(capability) },
-    plugins: createPluginRegistry(),
   };
 }
 
-async function selected(ctx: EntryViewer): Promise<string[]> {
-  const clause = readableEntryRows(ctx, "post");
+async function readableBy(
+  ctx: AppContext,
+  candidates: readonly Entry[],
+): Promise<string[]> {
+  const readable: string[] = [];
+  for (const row of candidates) {
+    if (await canReadEntry(ctx, row)) readable.push(row.slug);
+  }
+  return readable;
+}
+
+async function selected(ctx: AppContext): Promise<string[]> {
+  const clause = await readableEntryRows(ctx, "post");
   if (clause === null) return [];
   return slugsWhere(clause);
 }
 
-async function selectedReferenceable(ctx: EntryViewer): Promise<string[]> {
-  return slugsWhere(referenceableEntryRows(ctx, "post"));
+async function selectedReferenceable(ctx: AppContext): Promise<string[]> {
+  return slugsWhere(await referenceableEntryRows(ctx, "post"));
 }
 
 async function slugsWhere(clause: SQL): Promise<string[]> {
@@ -126,9 +145,7 @@ describe("readableEntryRows", () => {
     test(`selects the rows canReadEntry admits for a ${tier}`, async () => {
       const ctx = viewer(capabilities);
 
-      const byPredicate = rows
-        .filter((row) => canReadEntry(ctx, row))
-        .map((row) => row.slug);
+      const byPredicate = await readableBy(ctx, rows);
 
       expect(byPredicate).toEqual(sees);
       expect(await selected(ctx)).toEqual(sees);
@@ -140,7 +157,7 @@ describe("readableEntryRows", () => {
     // must not tell the two apart; other tiers are skipped.
     for (const [tier, { capabilities }] of Object.entries(TIERS)) {
       const ctx = viewer(capabilities);
-      if (readableEntryRows(ctx, "post") === null) continue;
+      if ((await readableEntryRows(ctx, "post")) === null) continue;
       expect(await selectedReferenceable(ctx), tier).toEqual(
         await selected(ctx),
       );
@@ -150,18 +167,16 @@ describe("readableEntryRows", () => {
   test("an anonymous caller holding edit_own is owed published rows only", async () => {
     const ctx = viewer(TIERS.contributor.capabilities, null);
 
-    const byPredicate = rows
-      .filter((row) => canReadEntry(ctx, row))
-      .map((row) => row.slug);
+    const byPredicate = await readableBy(ctx, rows);
 
     expect(byPredicate).toEqual(PUBLISHED);
     expect(await selected(ctx)).toEqual(PUBLISHED);
   });
 
-  test("is null for a type the caller may not read", () => {
-    expect(readableEntryRows(viewer(["entry:post:edit_any"]), "post")).toBe(
-      null,
-    );
+  test("is null for a type the caller may not read", async () => {
+    expect(
+      await readableEntryRows(viewer(["entry:post:edit_any"]), "post"),
+    ).toBe(null);
   });
 });
 
@@ -196,12 +211,12 @@ describe("a type pooled onto another's capabilities", () => {
     }
   });
 
-  function pooledViewer(capabilities: readonly string[]): EntryViewer {
+  function pooledViewer(capabilities: readonly string[]): AppContext {
     return { ...viewer(capabilities), plugins: pooled };
   }
 
-  async function selectedOf(ctx: EntryViewer, type: string): Promise<string[]> {
-    const clause = readableEntryRows(ctx, type);
+  async function selectedOf(ctx: AppContext, type: string): Promise<string[]> {
+    const clause = await readableEntryRows(ctx, type);
     if (clause === null) return [];
     const found = await db
       .select({ slug: entries.slug })
@@ -219,9 +234,7 @@ describe("a type pooled onto another's capabilities", () => {
       "news-published-theirs",
     ];
 
-    const byPredicate = newsRows
-      .filter((row) => canReadEntry(ctx, row))
-      .map((row) => row.slug);
+    const byPredicate = await readableBy(ctx, newsRows);
 
     expect(byPredicate).toEqual(sees);
     expect(await selectedOf(ctx, "news")).toEqual(sees);
@@ -231,9 +244,7 @@ describe("a type pooled onto another's capabilities", () => {
     const ctx = pooledViewer(TIERS.reader.capabilities);
     const sees = ["news-published-mine", "news-published-theirs"];
 
-    const byPredicate = newsRows
-      .filter((row) => canReadEntry(ctx, row))
-      .map((row) => row.slug);
+    const byPredicate = await readableBy(ctx, newsRows);
 
     expect(byPredicate).toEqual(sees);
     expect(await selectedOf(ctx, "news")).toEqual(sees);
@@ -249,5 +260,162 @@ describe("a type pooled onto another's capabilities", () => {
     expect(news.some((slug) => !slug.startsWith("news-"))).toBe(false);
     expect(posts.some((slug) => slug.startsWith("news-"))).toBe(false);
     expect(posts).toEqual(TIERS.editor.sees);
+  });
+});
+
+// One public page and one members page, the shape #2933's criteria name.
+describe("an entry type with an access policy", () => {
+  let policied: TestDb;
+  let registry: PluginRegistry;
+  let author: AuthenticatedUser;
+  const pages: Entry[] = [];
+  const membersResolver = vi.fn(authenticatedPolicy.resolve);
+
+  beforeAll(async () => {
+    policied = await createTestDb();
+    registry = await pooledEntryTypeRegistry(
+      definePlugin("pages", (ctx) => {
+        ctx.registerEntryType("page", {
+          label: "Pages",
+          isPublic: true,
+          access: {
+            default: anonymousPolicy,
+            policies: [
+              {
+                key: "members",
+                label: "Members",
+                policy: definePolicy({ resolve: membersResolver }),
+              },
+              {
+                key: "sealed",
+                label: "Sealed",
+                policy: definePolicy({ resolve: () => challenge("forbidden") }),
+              },
+            ],
+          },
+        });
+      }),
+    );
+    const factory = factoriesFor(policied);
+    author = await factory.user.create({ role: "author" });
+    for (const [slug, meta] of [
+      ["public", {}],
+      ["members", { [ACCESS_POLICY_META_KEY]: "members" }],
+      ["stale", { [ACCESS_POLICY_META_KEY]: "ghost" }],
+      ["sealed", { [ACCESS_POLICY_META_KEY]: "sealed" }],
+    ] as const) {
+      pages.push(
+        await factory.entry.create({
+          type: "page",
+          authorId: author.id,
+          status: "published",
+          slug,
+          publishedAt: new Date(),
+          meta,
+        }),
+      );
+    }
+  });
+
+  async function publicSlugs(ctx: AppContext): Promise<string[]> {
+    const clause = await publicEntryRows(ctx);
+    if (clause === null) return [];
+    const found = await policied
+      .select({ slug: entries.slug })
+      .from(entries)
+      .where(clause)
+      .orderBy(asc(entries.id));
+    return found.map((row) => row.slug);
+  }
+
+  test("publicEntryRows lists an anonymous principal only the rows its policy admits", async () => {
+    const ctx = createTestContext({ db: policied, plugins: registry });
+
+    expect(await publicSlugs(ctx)).toEqual(["public", "stale"]);
+  });
+
+  test("publicEntryRows lists a signed-in member the members page too", async () => {
+    const member = await factoriesFor(policied).user.create();
+    const ctx = createTestContext({
+      db: policied,
+      plugins: registry,
+      user: member,
+    });
+
+    expect(await publicSlugs(ctx)).toEqual(["public", "members", "stale"]);
+  });
+
+  test("resolves each policy once per request however often the rule is asked", async () => {
+    const ctx = createTestContext({ db: policied, plugins: registry });
+    membersResolver.mockClear();
+
+    await publicSlugs(ctx);
+    await publicSlugs(ctx);
+
+    expect(membersResolver).toHaveBeenCalledTimes(1);
+  });
+
+  function pageReader(
+    capabilities: readonly string[],
+    user: AuthenticatedUser | null,
+  ): AppContext {
+    return {
+      ...createTestContext({ db: policied, plugins: registry }),
+      user,
+      auth: { can: (capability: string) => capabilities.includes(capability) },
+    };
+  }
+
+  async function readableSlugs(ctx: AppContext): Promise<string[]> {
+    const clause = await readableEntryRows(ctx, "page");
+    const bySql =
+      clause === null
+        ? []
+        : (
+            await policied
+              .select({ slug: entries.slug })
+              .from(entries)
+              .where(clause)
+              .orderBy(asc(entries.id))
+          ).map((row) => row.slug);
+    const byPredicate = await readableBy(ctx, pages);
+    expect(bySql).toEqual(byPredicate);
+    return byPredicate;
+  }
+
+  test("readableEntryRows admits a reader with no principal only the published rows its policy admits", async () => {
+    const ctx = pageReader(["entry:page:read"], null);
+
+    expect(await readableSlugs(ctx)).toEqual(["public", "stale"]);
+  });
+
+  test("readableEntryRows admits a signed-in member the members page", async () => {
+    const member = await factoriesFor(policied).user.create();
+    const ctx = pageReader(["entry:page:read"], member);
+
+    expect(await readableSlugs(ctx)).toEqual(["public", "members", "stale"]);
+  });
+
+  test("an editor reads every row whatever its policy", async () => {
+    const editor = await factoriesFor(policied).user.create({ role: "editor" });
+    const ctx = pageReader(["entry:page:read", "entry:page:edit_any"], editor);
+
+    expect(await readableSlugs(ctx)).toEqual([
+      "public",
+      "members",
+      "stale",
+      "sealed",
+    ]);
+  });
+
+  test("an author reads the rows they wrote whatever their policy", async () => {
+    const ctx = pageReader(["entry:page:read", "entry:page:edit_own"], author);
+
+    expect(await readableSlugs(ctx)).toEqual([
+      "public",
+      "members",
+      "stale",
+      "sealed",
+    ]);
   });
 });

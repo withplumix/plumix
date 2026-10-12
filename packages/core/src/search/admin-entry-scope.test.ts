@@ -5,12 +5,12 @@ import { asc } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { toRegisteredEntryType } from "../plugin/registry.js";
+import { createTestContext } from "../test/context.js";
 import { factoriesFor } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
 import { adminEntryScope } from "./admin-entry-scope.js";
 
 type TestDb = Awaited<ReturnType<typeof createTestDb>>;
-type ScopeContext = Pick<AppContext, "user" | "auth" | "plugins">;
 
 let db: TestDb;
 let caller: AuthenticatedUser;
@@ -26,7 +26,7 @@ beforeEach(async () => {
 });
 
 /** A caller holding exactly `capabilities` over a site with two types. */
-function contextFor(capabilities: readonly string[]): ScopeContext {
+function contextFor(capabilities: readonly string[]): AppContext {
   const plugins = createPluginRegistry();
   for (const type of ["post", "ledger"]) {
     plugins.entryTypes.set(
@@ -35,9 +35,9 @@ function contextFor(capabilities: readonly string[]): ScopeContext {
     );
   }
   return {
+    ...createTestContext({ db, plugins }),
     user: caller,
     auth: { can: (capability: string) => capabilities.includes(capability) },
-    plugins,
   };
 }
 
@@ -58,8 +58,8 @@ async function seed(
 }
 
 /** What this caller may be shown, by title. */
-async function shown(ctx: ScopeContext): Promise<string[]> {
-  const scope = adminEntryScope(ctx);
+async function shown(ctx: AppContext): Promise<string[]> {
+  const scope = await adminEntryScope(ctx);
   if (scope === null) return [];
   const rows = await db
     .select({ title: entries.title })
@@ -70,8 +70,8 @@ async function shown(ctx: ScopeContext): Promise<string[]> {
 }
 
 describe("adminEntryScope", () => {
-  test("is null when the caller may read no type at all", () => {
-    expect(adminEntryScope(contextFor([]))).toBeNull();
+  test("is null when the caller may read no type at all", async () => {
+    expect(await adminEntryScope(contextFor([]))).toBeNull();
   });
 
   test("a reader sees published entries and no unpublished one", async () => {
@@ -118,33 +118,33 @@ describe("adminEntryScope", () => {
     expect(await shown(contextFor(["entry:post:read"]))).toEqual([post]);
   });
 
-  test("the edit reach drops a type the caller may only read", () => {
+  test("the edit reach drops a type the caller may only read", async () => {
     const ctx = contextFor([
       "entry:post:read",
       "entry:ledger:read",
       "entry:ledger:edit_own",
     ]);
 
-    const scope = adminEntryScope(ctx, { reach: "edit" });
+    const scope = await adminEntryScope(ctx, { reach: "edit" });
 
     expect(scope?.groups.map((group) => group.key)).toEqual(["entry:ledger"]);
   });
 
-  test("the edit reach is null for a caller who may only read", () => {
+  test("the edit reach is null for a caller who may only read", async () => {
     const ctx = contextFor(["entry:post:read", "entry:ledger:read"]);
 
-    expect(adminEntryScope(ctx, { reach: "edit" })).toBeNull();
+    expect(await adminEntryScope(ctx, { reach: "edit" })).toBeNull();
   });
 
-  test("a group sits in the same place at either reach", () => {
+  test("a group sits in the same place at either reach", async () => {
     const ctx = contextFor([
       "entry:post:read",
       "entry:ledger:read",
       "entry:ledger:edit_any",
     ]);
 
-    const read = adminEntryScope(ctx);
-    const edit = adminEntryScope(ctx, { reach: "edit" });
+    const read = await adminEntryScope(ctx);
+    const edit = await adminEntryScope(ctx, { reach: "edit" });
 
     expect(edit?.groups[0]?.priority).toBe(
       read?.groups.find((group) => group.key === "entry:ledger")?.priority,

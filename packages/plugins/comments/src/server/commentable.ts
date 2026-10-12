@@ -1,5 +1,5 @@
 import type { AppContext } from "plumix/plugin";
-import { entryAllowsAnonymousAccess } from "plumix/auth";
+import { anonymousContext, entryPolicyAdmits } from "plumix/auth";
 import { loadAuthoredEntry } from "plumix/db";
 
 import type { ResolvedCommentsConfig } from "../config.js";
@@ -34,7 +34,7 @@ export async function resolveCommentableEntry(
   if (entry?.status !== "published") {
     return { ok: false, reason: "entry_not_found" };
   }
-  if (!(await entryAllowsAnonymousAccess(ctx, entry))) {
+  if (!(await entryPolicyAdmits(anonymousContext(ctx), entry, "listing"))) {
     return { ok: false, reason: "entry_not_found" };
   }
   const supports = ctx.plugins.entryTypes.get(entry.type)?.supports;

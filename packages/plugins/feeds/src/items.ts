@@ -44,7 +44,7 @@ async function feedWhere(
   ctx: AppContext,
   target: ArchiveAtPath,
 ): Promise<SQL | null> {
-  const guard = publicEntryRows(ctx.plugins);
+  const guard = await publicEntryRows(ctx);
   if (guard === null) return null;
   const syndicatable = syndicatableEntryTypeNames(ctx.plugins);
   // An empty narrowing compiles to `false` and would serve an empty feed rather

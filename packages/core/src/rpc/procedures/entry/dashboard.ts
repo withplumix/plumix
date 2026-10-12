@@ -12,19 +12,19 @@ import { entryRecentActivityInputSchema } from "./schemas.js";
  * Rows of every registered type the caller may read. Reserved rows
  * (revision/autosave) aren't registered types, so they're excluded for free.
  */
-function readableRowsOfAnyType(
+async function readableRowsOfAnyType(
   context: AuthenticatedAppContext,
-): SQL | undefined {
-  return or(
-    ...[...context.plugins.entryTypes.keys()].flatMap((type) => {
-      const rows = readableEntryRows(context, type);
-      return rows === null ? [] : [rows];
-    }),
+): Promise<SQL | undefined> {
+  const readable = await Promise.all(
+    [...context.plugins.entryTypes.keys()].map((type) =>
+      readableEntryRows(context, type),
+    ),
   );
+  return or(...readable.filter((rows) => rows !== null));
 }
 
 export const stats = base.use(authenticated).handler(async ({ context }) => {
-  const where = readableRowsOfAnyType(context);
+  const where = await readableRowsOfAnyType(context);
   if (!where) return [];
   const rows = await context.db
     .select({
@@ -46,7 +46,7 @@ export const recentActivity = base
   .use(authenticated)
   .input(entryRecentActivityInputSchema)
   .handler(async ({ input, context }) => {
-    const readable = readableRowsOfAnyType(context);
+    const readable = await readableRowsOfAnyType(context);
     if (!readable) return [];
     return context.db
       .select({

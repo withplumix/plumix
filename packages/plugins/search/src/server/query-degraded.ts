@@ -29,7 +29,7 @@ export async function degradedRows(
 ): Promise<MatchedRow[]> {
   const terms = tokenizeSearchQuery(query);
   if (terms.length === 0) return [];
-  const entryRows = searchableEntryRows(ctx, types);
+  const entryRows = await searchableEntryRows(ctx, types);
   if (entryRows === null) return [];
 
   const rows = await ctx.db

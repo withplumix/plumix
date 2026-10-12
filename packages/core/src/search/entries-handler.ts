@@ -23,7 +23,7 @@ export async function entriesSearchHandler(
   const tokens = tokenizeSearchQuery(input.query);
   if (tokens.length === 0) return [];
 
-  const scope = adminEntryScope(ctx);
+  const scope = await adminEntryScope(ctx);
   if (scope === null) return [];
 
   const rows = await ctx.db

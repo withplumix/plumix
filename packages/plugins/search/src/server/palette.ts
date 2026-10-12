@@ -49,7 +49,7 @@ async function rankedEntryGroups(
 ): Promise<readonly SearchGroup[]> {
   const match = toMatchExpression(input.query);
   if (match === null) return [];
-  const scope = adminEntryScope(ctx, { reach: "edit" });
+  const scope = await adminEntryScope(ctx, { reach: "edit" });
   if (scope === null) return [];
 
   const weights = rankingWeights(ranking);

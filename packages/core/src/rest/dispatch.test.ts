@@ -8,6 +8,8 @@ import type {
   DispatcherHarness,
 } from "../test/dispatcher.js";
 import { entryCapability } from "../access/contract/capability.js";
+import { ACCESS_POLICY_META_KEY } from "../access/contract/meta-key.js";
+import { anonymousPolicy, authenticatedPolicy } from "../access/policy.js";
 import { isJsonObject } from "../json.js";
 import { definePlugin } from "../plugin/define.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
@@ -196,6 +198,75 @@ describe("REST API — entries list", () => {
     expect(body.data[0]?.title).toBe("Live");
     expect(body.meta).toMatchObject({ page: 1, per_page: 20 });
     expect(body).toHaveProperty("links");
+  });
+});
+
+describe("REST API — an entry's access policy (#2933)", () => {
+  const pagesWithAccess = definePlugin("pages-with-access", (ctx) => {
+    ctx.registerEntryType("page", {
+      label: "Pages",
+      isPublic: true,
+      access: {
+        default: anonymousPolicy,
+        policies: [
+          { key: "members", label: "Members", policy: authenticatedPolicy },
+        ],
+      },
+    });
+  });
+
+  async function pagesHarness(): Promise<{
+    readonly h: DispatcherHarness;
+    readonly members: number;
+  }> {
+    const h = await restHarness({
+      config: { plugins: [blog, pagesWithAccess] },
+    });
+    const author = await h.factory.user.create({ role: "author" });
+    await h.factory.entry.create({
+      type: "page",
+      status: "published",
+      authorId: author.id,
+      title: "Public page",
+    });
+    const members = await h.factory.entry.create({
+      type: "page",
+      status: "published",
+      authorId: author.id,
+      title: "Members page",
+      meta: { [ACCESS_POLICY_META_KEY]: "members" },
+    });
+    return { h, members: members.id };
+  }
+
+  async function listedTitles(res: Response): Promise<unknown[]> {
+    const body = (await res.json()) as ListEnvelope;
+    return body.data.map((entry) => entry.title).sort();
+  }
+
+  test("an anonymous list shows only the public page", async () => {
+    const { h } = await pagesHarness();
+
+    const res = await h.dispatch(apiGet("/_plumix/api/v1/pages"));
+
+    expect(await listedTitles(res)).toEqual(["Public page"]);
+  });
+
+  test("an anonymous read of the members page is a 404", async () => {
+    const { h, members } = await pagesHarness();
+
+    const res = await h.dispatch(apiGet(`/_plumix/api/v1/pages/${members}`));
+
+    expect(res.status).toBe(404);
+  });
+
+  test("a signed-in member's list shows both", async () => {
+    const { h } = await pagesHarness();
+    const { secret } = await mintPat(h, { role: "subscriber" });
+
+    const res = await h.dispatch(bearerGet("/_plumix/api/v1/pages", secret));
+
+    expect(await listedTitles(res)).toEqual(["Members page", "Public page"]);
   });
 });
 

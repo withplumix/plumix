@@ -27,8 +27,9 @@ export type { VisitorMeta, VisitorMetaOptions } from "./visitor-meta.js";
 // So a surface can hand a plugin a query already restricted to what it may
 // show, with no way to widen it.
 export { compileEntryQuery, entryQuery } from "../entries/query.js";
-// What every archive's query is born holding, for a surface reading archive
-// entries outside core's listing reader.
+// What a listing may show the request's principal, for a surface reading
+// archive entries outside core's listing reader. `anonymousContext(ctx)` asks
+// it for every visitor.
 export { publicEntryRows } from "../entries/visibility.js";
 // Load an entry by id the way core does: a revision or autosave row answers as
 // missing, so a plugin taking an id from a visitor cannot reach editor history.
