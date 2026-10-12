@@ -1,15 +1,16 @@
-// Accept-invite needs mocked WebAuthn, which this suite lacks.
-
-import { expect, test } from "@playwright/test";
+import type { User } from "@plumix/core/schema";
+import { expect, test } from "@plumix/core/test/playwright";
 
 import { expectNoAxeViolations } from "./support/axe.js";
 import {
   anonymousSession,
   AUTHED_ADMIN,
+  mockManifest,
   mockRpc,
   mockRpcWithCapture,
   mockSession,
   rpcConflictBody,
+  rpcOkBody,
 } from "./support/rpc-mock.js";
 
 test.describe("/bootstrap", () => {
@@ -31,6 +32,45 @@ test.describe("/login", () => {
     await page.goto("login");
     await expect(page.getByTestId("login-heading")).toBeVisible();
     await expectNoAxeViolations(page);
+  });
+
+  test("picking a language reloads the sign-in form in it and keeps it on the next visit", async ({
+    page,
+  }) => {
+    // Stands in for the server's locale resolution, which `vite preview`
+    // lacks: `?lang=`, then the cookie. Set as parsing ends, before the
+    // admin's module script reads `<html lang>`.
+    await page.addInitScript(() => {
+      document.addEventListener(
+        "readystatechange",
+        () => {
+          const lang =
+            new URL(location.href).searchParams.get("lang") ??
+            /(?:^|; )plumix_locale=([^;]+)/.exec(document.cookie)?.[1];
+          if (lang) document.documentElement.lang = lang;
+        },
+        { once: true },
+      );
+    });
+    await mockManifest(page, {
+      i18n: {
+        defaultLocale: "en",
+        locales: [
+          { code: "en", label: "English", direction: "ltr", enabled: true },
+          { code: "de", label: "Deutsch", direction: "ltr", enabled: true },
+        ],
+      },
+    });
+    await mockSession(page, anonymousSession());
+    await page.goto("login");
+    await expect(page.getByTestId("login-heading")).toHaveText("Sign in");
+
+    await page.getByTestId("login-locale-switcher-trigger").click();
+    await page.getByTestId("login-locale-switcher-option-de").click();
+    await expect(page.getByTestId("login-heading")).toHaveText("Anmelden");
+
+    await page.goto("login");
+    await expect(page.getByTestId("login-heading")).toHaveText("Anmelden");
   });
 
   test("?email_change_success=1 renders the success alert", async ({
@@ -185,6 +225,99 @@ test.describe("/auth/device", () => {
 
     await expect(page.getByTestId("auth-device-lookup-error")).toContainText(
       "expired",
+    );
+  });
+});
+
+const ADMIN: User = {
+  id: 1,
+  slug: "admin",
+  email: "admin@example.test",
+  name: "Admin",
+  avatarUrl: null,
+  role: "admin",
+  meta: {},
+  emailVerifiedAt: new Date("2026-04-20T00:00:00Z"),
+  disabledAt: null,
+  createdAt: new Date("2026-04-20T00:00:00Z"),
+  updatedAt: new Date("2026-04-20T00:00:00Z"),
+};
+
+test.describe("passkeys", () => {
+  test("an admin who adds a passkey signs back in with it", async ({
+    page,
+    passkey,
+  }) => {
+    let signedIn = true;
+    let signedInWith: string | undefined;
+    await mockRpc(page, {
+      "/user/get": ADMIN,
+      "/auth/credentials/list": [],
+      "/auth/sessions/list": [],
+      "/auth/apiTokens/list": [],
+      "/entry/stats": [],
+      "/entry/recentActivity": [],
+    });
+    await page.route("**/_plumix/rpc/auth/session", (route) =>
+      route.fulfill({
+        contentType: "application/json",
+        body: rpcOkBody(signedIn ? AUTHED_ADMIN : anonymousSession()),
+      }),
+    );
+    // The server's half of each ceremony; the browser's half runs for real
+    // against the virtual authenticator, which checks the origin's rp id.
+    await page.route("**/_plumix/auth/passkey/register/options", (route) =>
+      route.fulfill({
+        json: {
+          rp: { id: "localhost", name: "Plumix" },
+          user: { id: "dXNlci0x", name: ADMIN.email, displayName: "Admin" },
+          challenge: "cmVnaXN0ZXItY2hhbGxlbmdl",
+          pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+          authenticatorSelection: {
+            residentKey: "required",
+            userVerification: "preferred",
+          },
+          attestation: "none",
+        },
+      }),
+    );
+    await page.route("**/_plumix/auth/passkey/register/verify", (route) =>
+      route.fulfill({ json: { userId: 1 } }),
+    );
+    await page.route("**/_plumix/auth/signout", (route) => {
+      signedIn = false;
+      return route.fulfill({ json: { ok: true, redirectTo: null } });
+    });
+    await page.route("**/_plumix/auth/passkey/login/options", (route) =>
+      route.fulfill({
+        json: {
+          rpId: "localhost",
+          challenge: "c2lnbi1pbi1jaGFsbGVuZ2U",
+          userVerification: "preferred",
+        },
+      }),
+    );
+    await page.route("**/_plumix/auth/passkey/login/verify", (route) => {
+      signedInWith = (route.request().postDataJSON() as { rawId: string })
+        .rawId;
+      signedIn = true;
+      return route.fulfill({ json: { userId: 1 } });
+    });
+
+    await page.goto("profile");
+    await page.getByTestId("profile-passkeys-enroll-button").click();
+    await expect.poll(() => passkey.credentials()).toHaveLength(1);
+
+    await page.getByTestId("user-menu-trigger").click();
+    await page.getByTestId("user-menu-sign-out").click();
+    await expect(page.getByTestId("login-heading")).toBeVisible();
+    await page.getByTestId("login-passkey-submit").click();
+
+    await expect(page.getByTestId("dashboard-welcome-heading")).toBeVisible();
+    const [stored] = await passkey.credentials();
+    // CDP reports the raw id in base64; the ceremony posts it in base64url.
+    expect(signedInWith).toBe(
+      Buffer.from(stored?.credentialId ?? "", "base64").toString("base64url"),
     );
   });
 });

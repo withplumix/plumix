@@ -58,11 +58,16 @@ function BootstrapRoute(): ReactNode {
 
   const handleLocaleSelect = (code: string): void => {
     writeLocaleCookie(code);
-    window.location.assign(buildLocaleSwitchUrl(search, code));
+    window.location.assign(
+      buildLocaleSwitchUrl(search, code, window.location.pathname),
+    );
   };
 
   const createAccount = useMutation({
-    mutationFn: registerWithPasskey,
+    // Wrapped, not passed directly: TanStack calls `mutationFn(variables, context)`,
+    // and the context would land in `registerWithPasskey`'s `credentials`.
+    mutationFn: (input: Parameters<typeof registerWithPasskey>[0]) =>
+      registerWithPasskey(input),
     onMutate: () => setErrorCode(null),
     onSuccess: async () => {
       await refetchSession(router.options.context.queryClient);

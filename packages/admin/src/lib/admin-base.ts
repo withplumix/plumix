@@ -6,8 +6,14 @@ import { ADMIN_BASE_PATH } from "./constants.js";
  */
 export function adminBasePath(): string {
   if (typeof document === "undefined") return "";
-  // eslint-disable-next-line lingui/no-unlocalized-strings -- DOM selector + attribute, not UI copy
-  const href = document.querySelector("base")?.getAttribute("href");
+  return basePathFromBaseHref(
+    // eslint-disable-next-line lingui/no-unlocalized-strings -- DOM selector + attribute, not UI copy
+    document.querySelector("base")?.getAttribute("href") ?? null,
+  );
+}
+
+/** `null` means the page has no `<base href>`. */
+export function basePathFromBaseHref(href: string | null): string {
   if (!href) return "";
   // Resolve a possibly-relative href against a throwaway origin; only the
   // pathname matters. Trim the `/_plumix/admin` mount suffix to leave the

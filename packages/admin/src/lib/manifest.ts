@@ -27,10 +27,14 @@ import {
 } from "@plumix/core/manifest";
 
 export function readManifest(doc: Document = document): PlumixManifest {
-  const el = doc.getElementById(MANIFEST_SCRIPT_ID);
-  if (!el) return {};
-  const text = el.textContent;
-  if (text.trim() === "") return {};
+  return parseManifest(
+    doc.getElementById(MANIFEST_SCRIPT_ID)?.textContent ?? null,
+  );
+}
+
+/** `text` is the manifest `<script>`'s content, `null` when there is none. */
+export function parseManifest(text: string | null): PlumixManifest {
+  if (text === null || text.trim() === "") return {};
   try {
     const parsed = JSON.parse(text) as unknown;
     return normalize(parsed);
@@ -93,7 +97,7 @@ function normalize(value: unknown): PlumixManifest {
  */
 let snapshot: PlumixManifest | undefined;
 
-function currentManifest(): PlumixManifest {
+export function currentManifest(): PlumixManifest {
   return (snapshot ??= readManifest());
 }
 

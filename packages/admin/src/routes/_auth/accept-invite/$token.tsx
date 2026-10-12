@@ -56,7 +56,9 @@ function AcceptInviteRoute(): ReactNode {
 
   const handleLocaleSelect = (code: string): void => {
     writeLocaleCookie(code);
-    window.location.assign(buildLocaleSwitchUrl(search, code));
+    window.location.assign(
+      buildLocaleSwitchUrl(search, code, window.location.pathname),
+    );
   };
 
   const accept = useMutation({

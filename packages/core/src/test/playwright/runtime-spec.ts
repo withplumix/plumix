@@ -1,33 +1,10 @@
-import type { BrowserContext, Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 import { CONTENT_LIST_ROWS, PNG_1X1 } from "./site-fixtures.js";
 import { expect, test } from "./test.js";
 
 const POST_TITLE = "Hello from the runtime spec";
 const POST_SLUG = "hello-from-the-runtime-spec";
-
-/**
- * A browser-held passkey via Chromium's virtual authenticator, so the bootstrap
- * ceremony runs end-to-end with no hardware and the server sees a real
- * attestation.
- */
-async function installVirtualPasskey(
-  context: BrowserContext,
-  page: Page,
-): Promise<void> {
-  const cdp = await context.newCDPSession(page);
-  await cdp.send("WebAuthn.enable");
-  await cdp.send("WebAuthn.addVirtualAuthenticator", {
-    options: {
-      protocol: "ctap2",
-      transport: "internal",
-      hasResidentKey: true,
-      hasUserVerification: true,
-      isUserVerified: true,
-      automaticPresenceSimulation: true,
-    },
-  });
-}
 
 function entryUpdated(page: Page): Promise<unknown> {
   return page.waitForResponse(
@@ -43,10 +20,9 @@ function entryUpdated(page: Page): Promise<unknown> {
 export function runtimeSpec(): void {
   test("bootstrap → publish an entry → read it → upload media → sign out", async ({
     page,
-    context,
+    passkey,
   }) => {
     await test.step("bootstrap the first admin with a passkey", async () => {
-      await installVirtualPasskey(context, page);
       // The admin root sends a fresh site to the bootstrap form.
       await page.goto("./");
       await expect(page.getByTestId("bootstrap-heading")).toBeVisible();
@@ -56,6 +32,7 @@ export function runtimeSpec(): void {
       await page.getByTestId("bootstrap-name-input").fill("First Admin");
       await page.getByTestId("bootstrap-submit").click();
       await expect(page.getByTestId("dashboard-welcome-heading")).toBeVisible();
+      await expect.poll(() => passkey.credentials()).toHaveLength(1);
     });
 
     await test.step("create and publish an entry", async () => {

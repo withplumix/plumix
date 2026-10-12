@@ -6,6 +6,7 @@ import { createRoot } from "react-dom/client";
 
 import { App } from "./App.js";
 import { bootI18n } from "./lib/i18n-boot.js";
+import { readManifest } from "./lib/manifest.js";
 import { bootPlumixGlobals } from "./lib/plumix-globals.js";
 import { waitForPluginChunks } from "./lib/wait-for-plugin-chunks.js";
 
@@ -23,7 +24,10 @@ if (!rootElement) throw new Error("Missing #root element");
  * Can't gate the mount: a network blip on a catalog would leave the admin
  * blank.
  */
-const i18nReady = bootI18n().catch((error: unknown) => {
+const i18nReady = bootI18n({
+  lang: document.documentElement.lang,
+  pluginI18n: readManifest().pluginI18n,
+}).catch((error: unknown) => {
   console.error("plumix i18n boot failed; rendering with source locale", error);
 });
 

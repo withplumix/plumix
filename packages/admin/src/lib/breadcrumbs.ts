@@ -2,8 +2,10 @@ import type { MessageDescriptor } from "@lingui/core";
 import { defineMessage } from "@lingui/core/macro";
 
 import type { Label } from "@plumix/core/i18n";
+import type { PlumixManifest } from "@plumix/core/manifest";
 
 import {
+  currentManifest,
   findEntryTypeBySlug,
   findPluginPageByPath,
   findSettingsPageByName,
@@ -45,33 +47,39 @@ const M = {
 } satisfies Record<string, MessageDescriptor>;
 
 /** Labels come from the manifest so dynamic segments match the sidebar. */
-export function pathToCrumbs(pathname: string): readonly Crumb[] {
+export function pathToCrumbs(
+  pathname: string,
+  source: PlumixManifest = currentManifest(),
+): readonly Crumb[] {
   if (pathname === "/") return [{ label: M.dashboard }];
   const parts = pathname.split("/").filter((p) => p.length > 0);
   if (parts.length === 0) return [{ label: M.dashboard }];
 
   switch (parts[0]) {
     case "entries":
-      return entriesCrumbs(parts);
+      return entriesCrumbs(parts, source);
     case "terms":
-      return taxonomiesCrumbs(parts);
+      return taxonomiesCrumbs(parts, source);
     case "users":
       return usersCrumbs(parts);
     case "settings":
-      return settingsCrumbs(parts);
+      return settingsCrumbs(parts, source);
     case "profile":
       return [{ label: M.profile }];
     case "pages":
-      return pluginPagesCrumbs(parts);
+      return pluginPagesCrumbs(parts, source);
     default:
       return [{ label: M.admin }];
   }
 }
 
-function entriesCrumbs(parts: readonly string[]): readonly Crumb[] {
+function entriesCrumbs(
+  parts: readonly string[],
+  source: PlumixManifest,
+): readonly Crumb[] {
   const slug = parts[1];
   if (slug === undefined) return [{ label: M.entries }];
-  const entry = findEntryTypeBySlug(slug);
+  const entry = findEntryTypeBySlug(slug, source);
   const label: Label = entry?.labels?.plural ?? entry?.label ?? slug;
   const list: Crumb = { label, to: `/entries/${slug}` };
   if (parts[2] === "create")
@@ -81,10 +89,13 @@ function entriesCrumbs(parts: readonly string[]): readonly Crumb[] {
   return [{ label: M.entries }, { ...list, to: undefined }];
 }
 
-function taxonomiesCrumbs(parts: readonly string[]): readonly Crumb[] {
+function taxonomiesCrumbs(
+  parts: readonly string[],
+  source: PlumixManifest,
+): readonly Crumb[] {
   const name = parts[1];
   if (name === undefined) return [{ label: M.terms }];
-  const tax = findTermTaxonomyByName(name);
+  const tax = findTermTaxonomyByName(name, source);
   const label: Label = tax?.label ?? name;
   const list: Crumb = { label, to: `/terms/${name}` };
   // The parent crumb already carries the taxonomy's label.
@@ -102,10 +113,13 @@ function usersCrumbs(parts: readonly string[]): readonly Crumb[] {
   return [{ label: M.users }];
 }
 
-function pluginPagesCrumbs(parts: readonly string[]): readonly Crumb[] {
+function pluginPagesCrumbs(
+  parts: readonly string[],
+  source: PlumixManifest,
+): readonly Crumb[] {
   // No parent crumb: "Pages > X" would collide with the "Pages" entry type.
   const path = `/${parts.join("/")}`;
-  const item = findPluginPageByPath(path);
+  const item = findPluginPageByPath(path, source);
   if (item) return [{ label: item.label }];
   // Unknown plugin path — keep the URL slug as a placeholder so the
   // user doesn't see an opaque "Admin" header during a 404.
@@ -117,10 +131,13 @@ function pluginPagesCrumbs(parts: readonly string[]): readonly Crumb[] {
   return [{ label: tail }];
 }
 
-function settingsCrumbs(parts: readonly string[]): readonly Crumb[] {
+function settingsCrumbs(
+  parts: readonly string[],
+  source: PlumixManifest,
+): readonly Crumb[] {
   const name = parts[1];
   if (name === undefined) return [{ label: M.settings }];
-  const page = findSettingsPageByName(name);
+  const page = findSettingsPageByName(name, source);
   return [
     { label: M.settings, to: "/settings" },
     { label: page?.label ?? name },

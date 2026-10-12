@@ -45,6 +45,9 @@ interface ServerAuthenticationOptions {
   }[];
 }
 
+/** The part of `navigator.credentials` the ceremonies call. */
+export type CredentialsApi = Pick<CredentialsContainer, "create" | "get">;
+
 interface VerifySuccess {
   readonly userId: number;
 }
@@ -210,17 +213,20 @@ function encodeAuthenticationCredential(
   };
 }
 
-export async function registerWithPasskey(input: {
-  email: string;
-  name?: string;
-}): Promise<VerifySuccess> {
+export async function registerWithPasskey(
+  input: {
+    email: string;
+    name?: string;
+  },
+  credentials: CredentialsApi = navigator.credentials,
+): Promise<VerifySuccess> {
   const options = await postJson<ServerRegistrationOptions>(
     "/_plumix/auth/passkey/register/options",
     { email: input.email, ...(input.name ? { name: input.name } : {}) },
   );
 
   const credential = await callCredentialsApi(() =>
-    navigator.credentials.create({
+    credentials.create({
       publicKey: decodeRegistrationOptions(options),
     }),
   );
@@ -252,10 +258,13 @@ interface InviteAcceptSuccess extends VerifySuccess {
 }
 
 /** Consumes the token: a second attempt returns `invalid_token`. */
-export async function acceptInviteWithPasskey(input: {
-  token: string;
-  name?: string;
-}): Promise<InviteAcceptSuccess> {
+export async function acceptInviteWithPasskey(
+  input: {
+    token: string;
+    name?: string;
+  },
+  credentials: CredentialsApi = navigator.credentials,
+): Promise<InviteAcceptSuccess> {
   const { options, invitee } = await postJson<InviteOptionsResponse>(
     "/_plumix/auth/invite/register/options",
     {
@@ -265,7 +274,7 @@ export async function acceptInviteWithPasskey(input: {
   );
 
   const credential = await callCredentialsApi(() =>
-    navigator.credentials.create({
+    credentials.create({
       publicKey: decodeRegistrationOptions(options),
     }),
   );
@@ -287,6 +296,7 @@ export async function acceptInviteWithPasskey(input: {
 
 export async function signInWithPasskey(
   email?: string,
+  credentials: CredentialsApi = navigator.credentials,
 ): Promise<VerifySuccess> {
   const options = await postJson<ServerAuthenticationOptions>(
     "/_plumix/auth/passkey/login/options",
@@ -294,7 +304,7 @@ export async function signInWithPasskey(
   );
 
   const credential = await callCredentialsApi(() =>
-    navigator.credentials.get({
+    credentials.get({
       publicKey: decodeAuthenticationOptions(options),
     }),
   );
