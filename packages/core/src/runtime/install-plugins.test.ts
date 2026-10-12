@@ -642,6 +642,28 @@ describe("plugin state", () => {
 
     expect(seen).toEqual([undefined, undefined, undefined]);
   });
+
+  test("an error thrown by state propagates unwrapped, before any provides runs", async () => {
+    const boom = new Error("boom");
+    const provided: string[] = [];
+    const first = definePlugin("first", {
+      provides: () => {
+        provided.push("first");
+      },
+      setup: () => undefined,
+    });
+    const broken = definePlugin("broken", {
+      state: () => {
+        throw boom;
+      },
+      setup: () => undefined,
+    });
+
+    await expect(
+      installPlugins({ hooks: new HookRegistry(), plugins: [first, broken] }),
+    ).rejects.toBe(boom);
+    expect(provided).toEqual([]);
+  });
 });
 
 describe("plugin id validation", () => {

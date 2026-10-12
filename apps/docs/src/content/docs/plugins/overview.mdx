@@ -207,6 +207,8 @@ One step runs earlier than that and does not care about order. A descriptor's op
 
 `provides` has a second call, `extendAppContext`, which puts a helper on the per-request context instead of the setup context. That is the one `@plumix/plugin-audit-log` uses for `audit`, so `ctx.audit` is there for any plugin's routes, hooks and RPC procedures at request time, and no plugin's `setup` can reach it.
 
+Public URLs do not depend on array order either. The router compiles taxonomy rules ahead of entry-type rules and sorts every rule by a priority number, so a plugin whose entry type sits at the URL root cannot shadow another plugin's routes by being listed first. [Routing](/routing/overview/) covers how a URL reaches the rule that serves it.
+
 ### Keeping state across hooks
 
 A plugin that builds something in `provides` and reads it again in `setup` or `afterSetup` declares it with `state`. Core calls `state` once per install, before any plugin's `provides`, and passes what it returns as the second argument to all three hooks. Here other plugins name badges during their `setup`, and the badges plugin turns each into a capability once they all have:
@@ -239,8 +241,6 @@ export const badges = definePlugin("acme-badges", {
 ```
 
 State goes in `state`, never in the plugin factory's closure. A descriptor can be installed more than once (a build installs it alongside the running app), and each install needs its own. The state is private to the plugin's own hooks; share anything through `extendPluginContext` or `extendAppContext`.
-
-Public URLs do not depend on array order either. The router compiles taxonomy rules ahead of entry-type rules and sorts every rule by a priority number, so a plugin whose entry type sits at the URL root cannot shadow another plugin's routes by being listed first. [Routing](/routing/overview/) covers how a URL reaches the rule that serves it.
 
 ## Adding an image role
 

@@ -1,3 +1,4 @@
+import type { PluginDescriptor } from "plumix/plugin";
 import {
   definePlugin,
   PLUGIN_I18N_SLOT,
@@ -116,7 +117,9 @@ export interface SeoOptions {
  * plumix({ plugins: [seo()] });
  * ```
  */
-export function seo(options: SeoOptions = {}) {
+export function seo(
+  options: SeoOptions = {},
+): PluginDescriptor<{ contributed: ContributedSitemap[] }> {
   const headOptions = {
     articleTags: options.articleTags ?? true,
     structuredData: options.structuredData ?? true,
