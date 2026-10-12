@@ -25,19 +25,13 @@ import { renderBlockTree } from "../render-block-tree.js";
 import { serializeRenderEnv } from "../render-env.js";
 import { RendererError } from "./errors.js";
 
-/**
- * `blocks/` sits in the foundation layer, below `auth/` and `route/`, so it
- * declares the user, OAuth provider and queried-entry shapes core builds on.
- */
 export interface RendererUser {
   readonly id: number;
   readonly email: string;
   /** Display name from `users.name`; null when the user never set one. */
   readonly name?: string | null;
   readonly role: string;
-  /** The stored `users.meta` bag, verbatim — this projection never runs the
-   *  field pipeline, so it is the column's own {@link JsonObject}, not the
-   *  hydrated `ResolvedMeta` the RPC read surfaces return. */
+  /** The `users.meta` column verbatim; the field pipeline never runs on it. */
   readonly meta: JsonObject;
 }
 

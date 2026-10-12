@@ -261,4 +261,21 @@ describe("dompurify-shim — URL policy agrees with sanitize-html", () => {
     const raw = `<a href="${href}">x</a>`;
     expect(keptHref(run(raw))).toBe(keptHref(serverSanitize(raw, opts)));
   });
+
+  const SRC_ALLOWLIST = engineOptions({
+    ...BASELINE_HTML_ALLOWLIST,
+    allowedTags: [...BASELINE_HTML_ALLOWLIST.allowedTags, "img"],
+    allowedAttributes: { img: ["src"] },
+  });
+
+  function keptSrc(out: string): string | null {
+    return parse(out).querySelector("img")?.getAttribute("src") ?? null;
+  }
+
+  test.each(HREFS)("both engines treat the img src %j alike", (src) => {
+    const raw = `<img src="${src}">`;
+    expect(keptSrc(sanitize(raw, SRC_ALLOWLIST))).toBe(
+      keptSrc(serverSanitize(raw, SRC_ALLOWLIST)),
+    );
+  });
 });

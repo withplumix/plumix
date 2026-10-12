@@ -117,7 +117,7 @@ export function pluginAdminEntryPath(packageName: string): string {
 
 /** The catalogs first-party plugins ship, not the site's enabled locales;
  *  those are intersected at render time. Must match the defaults of
- *  `defineLinguiConfig()`, which first-party lingui configs use.
+ *  `defineLinguiConfig()`.
  *  Guarded by: packages/core/src/plugin/define.test.ts */
 export const PLUGIN_I18N_SLOT: PluginI18nSlot = {
   sourceLocale: "en",

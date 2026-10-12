@@ -75,10 +75,7 @@ interface EngineOptions {
   readonly allowProtocolRelative: boolean;
 }
 
-/**
- * The floored allowlist in the option shape both engines read: sanitize-html
- * on the server and `dompurify-shim.ts` in the browser.
- */
+/** The floored allowlist in the option shape the sanitize engines read. */
 export function engineOptions(allowlist: HtmlAllowlist): EngineOptions {
   const floored = enforceHtmlFloors(allowlist);
   return {
