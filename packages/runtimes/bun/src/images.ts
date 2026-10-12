@@ -112,7 +112,7 @@ async function probeEncodable(): Promise<readonly ImageFormat[]> {
 
 /**
  * A same-origin source resolves through the site's handler, so media gating
- * applies; a remote one must match `remotePatterns`.
+ * applies; a remote one is fetched only when it matches `remotePatterns`.
  *
  * @example
  * ```ts

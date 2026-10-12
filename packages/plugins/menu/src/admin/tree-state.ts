@@ -1,6 +1,9 @@
 import type { EditorAction, EditorItem, ItemKey } from "./editor-state.js";
 import { collectSubtreeKeys, computeDepths } from "./editor-state.js";
 
+/** How far right a row sits per level, and how far a drag moves it one level. */
+export const INDENTATION_WIDTH = 24;
+
 interface Projection {
   readonly parentKey: ItemKey | null;
   readonly depth: number;

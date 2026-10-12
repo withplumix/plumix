@@ -9,6 +9,7 @@ import * as v from "valibot";
 
 import { mediaAcceptSchema } from "./accept.js";
 import { parseMediaMeta } from "./meta.js";
+import { MAX_SEARCH_LENGTH } from "./search.js";
 
 export const MEDIA_ENTRY_TYPE = "media";
 export const MEDIA_READ_CAPABILITY = entryCapability(MEDIA_ENTRY_TYPE, "read");
@@ -31,7 +32,9 @@ export const mediaListInputSchema = v.object({
   // array form matches the listed MIMEs exactly. Pushed into SQL so `limit`
   // counts only matching rows.
   accept: v.optional(mediaAcceptSchema),
-  search: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(200))),
+  search: v.optional(
+    v.pipe(v.string(), v.trim(), v.maxLength(MAX_SEARCH_LENGTH)),
+  ),
 });
 
 type MediaListInput = v.InferOutput<typeof mediaListInputSchema>;

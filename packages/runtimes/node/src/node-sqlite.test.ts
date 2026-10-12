@@ -123,6 +123,23 @@ describe("raw sql template parameters", () => {
         .get(),
     ).toEqual({ id: 2 });
   });
+
+  test("binds a boolean and a Date as the libsql adapter does", async () => {
+    const node = open(join(dir, "node.sqlite"));
+    const remote = libsql({
+      url: `file:${join(dir, "libsql.sqlite")}`,
+    }).connect({}, new Request("https://cms.example/"), schema).db as Db;
+    const stored = async (db: Db) => {
+      await db.run(sql`CREATE TABLE flags (on_ INTEGER, off INTEGER, at)`);
+      const at = new Date(Date.UTC(2030, 0, 1));
+      await db.run(sql`INSERT INTO flags VALUES (${true}, ${false}, ${at})`);
+      return db.all(
+        sql`SELECT on_, typeof(on_), off, at, typeof(at) FROM flags`,
+      );
+    };
+
+    expect(await stored(node)).toEqual(await stored(remote));
+  });
 });
 
 /**

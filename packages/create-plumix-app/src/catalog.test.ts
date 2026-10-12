@@ -144,7 +144,7 @@ describe("loadCatalogContext", () => {
   test("reads the catalog and workspace package versions from the monorepo", async () => {
     const ctx = await loadCatalogContext(REPO_ROOT);
 
-    // The catalog mirrors pnpm-workspace.yaml — no hand-kept copy.
+    // The catalog is read from pnpm-workspace.yaml — no hand-kept copy.
     const catalog = parseWorkspaceCatalog(
       readFileSync(join(REPO_ROOT, "pnpm-workspace.yaml"), "utf8"),
     );

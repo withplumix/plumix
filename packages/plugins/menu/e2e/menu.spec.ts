@@ -5,11 +5,7 @@ import { entries } from "plumix/schema";
 import { factoriesFor } from "plumix/test";
 import { dragTo, expect, openPlaygroundDb, test } from "plumix/test/playwright";
 
-/**
- * MenuItemEditor.tsx — must match the constant in the component
- * because drag projection compares `delta.x` against this width.
- */
-const INDENTATION_WIDTH = 24;
+import { INDENTATION_WIDTH } from "../src/admin/tree-state.js";
 
 /**
  * Read rather than hard-coded: the slug is the server's to choose, and this

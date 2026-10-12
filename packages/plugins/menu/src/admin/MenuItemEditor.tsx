@@ -70,9 +70,11 @@ import {
   useSaveMenu,
   useSearchTargets,
 } from "./queries.js";
-import { dragEndToAction, getProjection } from "./tree-state.js";
-
-const INDENTATION_WIDTH = 24;
+import {
+  dragEndToAction,
+  getProjection,
+  INDENTATION_WIDTH,
+} from "./tree-state.js";
 
 /**
  * Descriptors that need runtime indirection — used outside JSX (aria

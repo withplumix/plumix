@@ -23,13 +23,13 @@ kept arriving.
   fails when they drift and name it in `Guarded by:`.
 - **Reword prose.** "Mirrors" often describes a resemblance, not an invariant.
   Such a comment is reworded so it claims no coupling.
-- **A baseline holds today's occurrences.** `tooling/eslint/sync-comment-baseline.json`
-  lists each unguarded occurrence as its file and a hash of its line's text.
-  The rule skips exactly those, so a new comment is held to the rule at once.
-  The package's `sync-baseline` script regenerates the file and refuses to
-  grow it, and CI's Lint job fails when an entry no longer matches its file,
-  so each burn-down slice removes its entries in the same change. The pattern
-  is the one #2722 used to take `@shadcn/lint` to zero.
+- **A baseline held the occurrences the rule found when it landed.** It
+  listed each unguarded occurrence as its file and a hash of its line's text,
+  and the rule skipped exactly those, so a new comment was held to the rule at
+  once. Each burn-down slice removed its entries, and the last one (#2951)
+  deleted the baseline, its script and CI's stale-entry check. The rule now
+  applies with no exceptions. The pattern is the one #2722 used to take
+  `@shadcn/lint` to zero.
 - **The false-positive bar.** A `plumix/*` rule ships only when it has zero
   hits on the tree after the genuine violations are fixed, with only the
   existing named escape hatches (`// Safety:`, `Not JSON:`). A baseline may

@@ -10,7 +10,7 @@ import { basePath } from "./runtime.js";
 
 /**
  * Import `TRouter` with `import type` so server code stays out of the admin
- * bundle. `pluginId` must match what the plugin passed to `definePlugin`.
+ * bundle. `pluginId` is the id the plugin passed to `definePlugin`.
  */
 export function createPluginRpcClient<TRouter extends PluginRpcRouter>(
   pluginId: string,

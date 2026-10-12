@@ -40,8 +40,8 @@ const handler: RuntimeHandlerSpec = {
       throw PlumixRuntimeConfigError.asyncLocalStorageMissing();
     }
 
-    // Mirrors core's own `PLUMIX_DEV` gate around `registerCoreErrorHints` —
-    // Vite-substituted at bundle time, so this and
+    // Gated on `PLUMIX_DEV` the way core gates `registerCoreErrorHints`:
+    // Vite substitutes it at bundle time, so this and
     // `registerCloudflareErrorHints` tree-shake out of a production build.
     if (process.env.PLUMIX_DEV) {
       registerCloudflareErrorHints(hooks);

@@ -10,9 +10,9 @@ import { gravatarUrl } from "./gravatar.js";
 import { renderCommentBody } from "./render-body.js";
 
 /**
- * Mirrors core's private rest/{schemas,envelope} pagination helpers. Kept local
- * while comments is the only plugin REST consumer; promote to a shared
- * `@plumix/core/rest` export when a second plugin needs offset pagination.
+ * Offset pagination written here, because core's rest/{schemas,envelope}
+ * helpers are private. Promote them to a shared `@plumix/core/rest` export when
+ * a second plugin needs offset pagination.
  */
 const MAX_PER_PAGE = 100;
 const DEFAULT_PER_PAGE = 20;

@@ -53,6 +53,7 @@ function dateName(
 /**
  * Mirrors the router: a non-public type has no archive route even with
  * `hasArchive`, so `archiveSlugForEntryType` alone would link a dead URL.
+ * Guarded by: packages/plugins/seo/src/schema.test.tsx
  */
 function archiveStep(ctx: AppContext, type: string): BreadcrumbItem | null {
   const registered = ctx.plugins.entryTypes.get(type);

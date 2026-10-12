@@ -10,9 +10,6 @@ RuleTester.itOnly = it.only;
 
 const filename = path.join(import.meta.dirname, "example.ts");
 
-/** The `sha256sum` of the trimmed first fixture line below, cut to 16 characters. */
-const MIRRORS_HASH = "98a57b9564263b90";
-
 new RuleTester().run("plumix/sync-comment-guarded", syncCommentGuarded, {
   valid: [
     { code: "// The cache holds one entry per slug.\nconst a = 1;", filename },
@@ -34,54 +31,15 @@ new RuleTester().run("plumix/sync-comment-guarded", syncCommentGuarded, {
       code: "/**\n * Keep the two rosters in sync.\n *\n * Guarded by: tooling/eslint/test/base-config.test.ts.\n */\nconst a = 1;",
       filename,
     },
-    {
-      code: "const a = 1;\n  // Mirrors the server's list.\nconst b = 2;",
-      filename,
-      options: [
-        {
-          baseline: [
-            { file: "tooling/eslint/rules/example.ts", hash: MIRRORS_HASH },
-          ],
-        },
-      ],
-    },
   ],
   invalid: [
     {
-      code: "// Mirrors the server's list.\nconst a = 1;",
-      filename,
-      options: [
-        {
-          baseline: [
-            { file: "tooling/eslint/rules/other.ts", hash: MIRRORS_HASH },
-          ],
-        },
-      ],
-      errors: [{ messageId: "unguarded", line: 1 }],
-    },
-    {
-      code: "// Mirrors the client's list.\nconst a = 1;",
-      filename,
-      options: [
-        {
-          baseline: [
-            { file: "tooling/eslint/rules/example.ts", hash: MIRRORS_HASH },
-          ],
-        },
-      ],
-      errors: [{ messageId: "unguarded", line: 1 }],
-    },
-    {
       code: "// Mirrors the server's list.\nconst a = 1;\n\n// Mirrors the server's list.\nconst b = 2;",
       filename,
-      options: [
-        {
-          baseline: [
-            { file: "tooling/eslint/rules/example.ts", hash: MIRRORS_HASH },
-          ],
-        },
+      errors: [
+        { messageId: "unguarded", line: 1 },
+        { messageId: "unguarded", line: 4 },
       ],
-      errors: [{ messageId: "unguarded", line: 4 }],
     },
     {
       code: "// Mirrors the server's list.\n// Guarded by: tooling/eslint/test/no-such.test.ts\nconst a = 1;",

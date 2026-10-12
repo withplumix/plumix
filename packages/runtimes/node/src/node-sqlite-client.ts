@@ -51,7 +51,10 @@ export type NodeSqliteDatabase<
 const arrays = (rows: unknown): SQLOutputValue[][] =>
   rows as SQLOutputValue[][];
 
-/** Mirrors libsql's `valueToSql`. */
+/**
+ * Mirrors libsql's `valueToSql`.
+ * Guarded by: packages/runtimes/node/src/node-sqlite.test.ts
+ */
 const bind = (params: BindValue[]): SQLInputValue[] =>
   params.map((value) => {
     if (typeof value === "boolean") return value ? 1 : 0;

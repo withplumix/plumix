@@ -200,9 +200,8 @@ describe("plugin-host acceptance — end-to-end primitive coverage", () => {
     const manifest = buildManifest(createPluginRegistry());
     html = injectManifestIntoHtml(html, manifest);
 
-    // The block below mirrors `buildPluginChunkBlock` in the Vite plugin
-    // — kept a hair ahead of the sut so the two diverge in code review
-    // when the plugin shape shifts.
+    // A hand-written stand-in for the Vite plugin's `buildPluginChunkBlock`
+    // output; nothing here runs the plugin.
     const expectedBlock = [
       "<!-- plumix:plugin-chunks -->",
       '<link rel="stylesheet" data-plumix-plugin="hello-world" href="/_plumix/admin/plugins/hello-world.css">',

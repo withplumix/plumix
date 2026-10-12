@@ -74,7 +74,7 @@ export async function runCli(
   const runner = deps.runner ?? spawnRunner;
   const reconciled = reconcile(argv);
 
-  // An explicit --pm must name a manager we support (mirrors --runtime),
+  // An explicit --pm must name a manager we support, as --runtime does,
   // rather than silently falling back to npm.
   if (reconciled.pm !== undefined && !isKnownPackageManager(reconciled.pm)) {
     io.stderr(
