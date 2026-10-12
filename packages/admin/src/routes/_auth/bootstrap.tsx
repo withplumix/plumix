@@ -64,7 +64,8 @@ function BootstrapRoute(): ReactNode {
   };
 
   const createAccount = useMutation({
-    mutationFn: registerWithPasskey,
+    mutationFn: (input: Parameters<typeof registerWithPasskey>[0]) =>
+      registerWithPasskey(input),
     onMutate: () => setErrorCode(null),
     onSuccess: async () => {
       await refetchSession(router.options.context.queryClient);
