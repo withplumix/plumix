@@ -123,6 +123,17 @@ Three more entries are emitted on every build and each becomes its own client ch
 
 Vite then builds twice, client first and worker second, because the worker bakes the client's asset manifest into its own bundle. The output is a `dist/client` directory of static assets and a `dist/<worker-name>/` directory holding the worker bundle and a `wrangler.json` the Cloudflare Vite plugin writes from your `wrangler.jsonc`. The plugin also drops a `.wrangler/deploy/config.json` redirect pointing at that copy, so `plumix deploy` ships the built snapshot rather than re-reading the file you edited.
 
+Each output also gets a `THIRD-PARTY-NOTICES.md` listing the name, version, licence and licence text of every dependency that build bundled. The one in `dist/client` is a static asset, so it is served publicly at `/THIRD-PARTY-NOTICES.md`. The one in `dist/<worker-name>/` covers the worker bundle and stays with it. The prebuilt admin carries its own notices under `/_plumix/admin/`. The files come from Vite's `build.license`, and you turn them off through Vite's own option in `plumix.config.ts`:
+
+```ts no-typecheck title="plumix.config.ts"
+import { plumix } from "plumix";
+
+export default plumix({
+  // …your runtime, database and auth
+  vite: { build: { license: false } },
+});
+```
+
 ## Build time against request time
 
 Your config module evaluates twice. `plumix build` runs it on your machine to write `.plumix/schema.ts` and `.plumix/worker.ts`, and that generated entry imports it again, so it also runs once per isolate inside the deployed Worker. The Vite plugin freezes six `process.env` member expressions into the bundle as literals, `WORKERS_CI`, `WORKERS_CI_BRANCH`, `PLUMIX_DEV`, `PLUMIX_EDITOR`, `PLUMIX_EDITOR_PATH_MAP` and `PLUMIX_FORWARD_ERRORS`, and it rewrites those spellings and nothing else. Every other read of `process.env` runs inside the Worker, where your shell is not. Reading one of the six through a variable instead of writing `process.env.NAME` out in full puts it on the wrong side of that line, and the value never reaches the deploy.
