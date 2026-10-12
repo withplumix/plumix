@@ -93,6 +93,11 @@ const ADMIN_BUNDLED_PLUGINS_DIR =
 
 export interface PlumixVitePluginOptions {
   readonly configFile?: string;
+  /**
+   * Test seam: the built admin to stage, in place of `@plumix/admin`'s
+   * `dist`, so a test runs the dev server with no package built.
+   */
+  readonly adminDir?: string;
 }
 
 const ASSET_MANIFEST_VIRTUAL_ID = "virtual:plumix/asset-manifest";
@@ -326,6 +331,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
         emitted.registry,
         root,
         emitted.editorBlockModules,
+        options.adminDir,
       );
     },
     // No watcher on workspace `public/` here — Vite serves `publicDir`
@@ -454,6 +460,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
               emitted.registry,
               root,
               emitted.editorBlockModules,
+              options.adminDir,
             );
             server.ws.send({ type: "full-reload" });
           })
@@ -601,12 +608,13 @@ async function stageAdminAssets(
   registry: PluginRegistry,
   projectRoot: string,
   blockModules: readonly BlockModuleRef[],
+  adminDir = ADMIN_SOURCE_DIR,
 ): Promise<void> {
   await stageIntoPlace({
     stagingRoot: adminStagingRoot(projectRoot),
     dest: resolve(publicDir, "_plumix/admin"),
     populate: async (staging) => {
-      await cp(ADMIN_SOURCE_DIR, staging, { recursive: true });
+      await cp(adminDir, staging, { recursive: true });
       await stageAdminInto(
         staging,
         manifest,

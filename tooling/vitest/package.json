@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./base": "./base.ts",
+    "./source-loader": "./source-loader.ts",
     "./source-resolver": "./source-resolver.ts",
     "./tiers": "./tiers.ts"
   },

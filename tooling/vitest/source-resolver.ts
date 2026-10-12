@@ -166,3 +166,23 @@ export function plumixSourceResolver(): Plugin {
     },
   };
 }
+
+/**
+ * Every workspace export as tsconfig `paths`, each to the file
+ * `plumixSourceResolver()` resolves it to for the node tier.
+ */
+export function plumixSourcePaths(): Record<string, string[]> {
+  const paths: Record<string, string[]> = {};
+  for (const [name, pkg] of loadWorkspacePackages()) {
+    for (const [key, entry] of Object.entries(pkg.exports)) {
+      const target = distTarget(entry, false);
+      if (!target) continue;
+      const specifier = `${name}${key.slice(1)}`;
+      const source = target.includes("/locales/")
+        ? EMPTY_CATALOG
+        : sourceCandidate(pkg.dir, target);
+      if (source) paths[specifier] = [source];
+    }
+  }
+  return paths;
+}
