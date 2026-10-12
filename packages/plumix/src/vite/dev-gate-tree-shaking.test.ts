@@ -1,49 +1,48 @@
-import { mkdtempSync, realpathSync, writeFileSync } from "node:fs";
-import { createRequire } from "node:module";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, relative, sep } from "node:path";
+import { join, relative, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { Rolldown } from "vite";
 import { build } from "vite";
 import { describe, expect, test } from "vitest";
 
+import { plumixSourceResolver } from "@plumix/vitest-config/source-resolver";
+
 // A helper or exported constant standing in for the `process.env.PLUMIX_DEV`
 // literal does not fold across modules, so the dev code would ship.
 
-/** The gated dev modules, as paths under core's `dist/`. */
+/** The gated dev modules, as paths under core's `src/`. */
 const GATED_DEV_MODULES = [
-  "dev/history-routes.js",
-  "dev/request-history/writer.js",
-  "dev/debug-bar/consumer.js",
-  "dev/debug-bar/component.js",
-  "dev/debug-panels/core-panels.js",
-  "dev/server/hints/core-hints.js",
-  "dev/server/respond.js",
-  "runtime/dev.js",
+  "dev/history-routes.tsx",
+  "dev/request-history/writer.ts",
+  "dev/debug-bar/consumer.ts",
+  "dev/debug-bar/component.tsx",
+  "dev/debug-panels/core-panels.ts",
+  "dev/server/hints/core-hints.ts",
+  "dev/server/respond.ts",
+  "runtime/dev.ts",
 ];
 
-const require = createRequire(import.meta.url);
-const coreEntry = realpathSync(require.resolve("@plumix/core"));
-const coreDist = dirname(coreEntry);
+const coreSrc = fileURLToPath(new URL("../../../core/src/", import.meta.url));
 
 async function bundledCoreModules(plumixDev: string): Promise<Set<string>> {
   const dir = mkdtempSync(join(tmpdir(), "plumix-dev-gate-"));
   const entry = join(dir, "entry.js");
-  // Absolute-path import so core's own dependencies resolve from its
-  // node_modules, not the temp dir.
   writeFileSync(
     entry,
-    `export { buildApp, createPlumixDispatcher, createRuntimeHandler } from ${JSON.stringify(coreEntry)};\n`,
+    `export { buildApp, createPlumixDispatcher, createRuntimeHandler } from "@plumix/core";\n`,
   );
   const result = await build({
     root: dir,
     logLevel: "silent",
     configFile: false,
+    plugins: [plumixSourceResolver()],
     define: {
       "process.env.NODE_ENV": '"production"',
       "process.env.PLUMIX_DEV": plumixDev,
     },
     build: { ssr: entry, write: false, minify: true },
-  });
+  }).finally(() => rmSync(dir, { recursive: true, force: true }));
   const outputs = (
     Array.isArray(result) ? result : [result]
   ) as readonly Rolldown.RolldownOutput[];
@@ -52,7 +51,7 @@ async function bundledCoreModules(plumixDev: string): Promise<Set<string>> {
     for (const chunk of output.output) {
       if (chunk.type !== "chunk") continue;
       for (const id of chunk.moduleIds) {
-        const path = relative(coreDist, id.split("?")[0] ?? id);
+        const path = relative(coreSrc, id.split("?")[0] ?? id);
         modules.add(path.split(sep).join("/"));
       }
     }

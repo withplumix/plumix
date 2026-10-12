@@ -185,8 +185,7 @@ The cases that look like a fourth kind each have a tier:
 - **A CLI command** is a unit test of its command function, called in-process with its arguments.
   Running the installed binary in a scaffolded project is smoke.
 - **A build's output.** A unit test may run Vite or esbuild in-process over a fixture it builds from
-  source, and assert on what that build produced: a chunk's size, a dev module tree-shaken out. What
-  a scaffolded project's production build contains is smoke.
+  source, and assert on what that build produced: a chunk's size, a dev module tree-shaken out.
 - **A published package's surface.** What a package exports and declares is checked by the publish
   gates (publint, attw and the `tooling/published-surface` roster), not by a test.
 - **A behaviour only a browser has**: the DOMPurify sanitizer, an island's loading strategy,
