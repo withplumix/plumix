@@ -447,12 +447,14 @@ async function assertServes(base, child) {
 }
 
 /**
- * Through the project's own bin, so the installed runtime's `diagnose` reads
+ * Through the runtime's cli, so the installed runtime's `diagnose` reads
  * the scaffold's config.
  */
 function assertDoctorClean(appDir) {
   const bin = join(appDir, "node_modules", ".bin");
-  const output = execSync("plumix doctor 2>&1", {
+  const runtime = installedRuntime(appDir);
+  const { doctor } = planBoot(runtime.name, runtime.e2e);
+  const output = execSync(`${doctor} 2>&1`, {
     cwd: appDir,
     env: { ...process.env, PATH: `${bin}${delimiter}${process.env.PATH}` },
     encoding: "utf8",

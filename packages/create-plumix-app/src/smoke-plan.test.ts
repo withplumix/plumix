@@ -144,7 +144,7 @@ describe("planInstall", () => {
 });
 
 describe("planBoot", () => {
-  it("migrates through the runtime's cli prefix, then starts its start command", () => {
+  it("migrates and runs doctor through the runtime's cli prefix, then starts its start command", () => {
     expect(
       planBoot("@plumix/runtime-bun", {
         cli: "bun --bun node_modules/plumix/bin/plumix.mjs",
@@ -152,6 +152,7 @@ describe("planBoot", () => {
       }),
     ).toEqual({
       migrate: ["bun --bun node_modules/plumix/bin/plumix.mjs migrate"],
+      doctor: "bun --bun node_modules/plumix/bin/plumix.mjs doctor",
       start: "bun dist/server/worker.js",
     });
   });
