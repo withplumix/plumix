@@ -2,31 +2,29 @@ import type { AppContext } from "../../context/app-context.js";
 import type { EntryQuery } from "../../entries/contract/query.js";
 import type { PluginRegistry } from "../../plugin/manifest.js";
 import type { EntryListing } from "../contract/entry-listing.js";
-import type { ResolvedEntry } from "../contract/resolved-entry.js";
 import { typeTag } from "../../cdn/contract/tags.js";
 import { sql } from "../../db/index.js";
-import { entryPolicyAdmits } from "../../entries/entry-access.js";
 import {
   compileEntryQuery,
   entryQuery,
   entryQueryOrder,
   entryQueryTypeNames,
 } from "../../entries/query.js";
-import {
-  publicEntryRows,
-  publishedPublicEntryRows,
-} from "../../entries/visibility.js";
+import { publicEntryRows } from "../../entries/visibility.js";
 import { publicEntryTypeNames } from "../../plugin/registry.js";
 import { paginatedEntries } from "./page-data.js";
 import { resolveEntryList } from "./resolve-entry-list.js";
 
 /**
  * With no public type routed, this is `none()`: an empty archive, not an open
- * one. The access policy waits for the listing, which has the request.
+ * one. Publication and the access policy wait for the listing, which reapplies
+ * `publicEntryRows` with the request.
  */
 export function publicEntriesQuery(plugins: PluginRegistry): EntryQuery {
-  const guard = publishedPublicEntryRows(plugins);
-  return guard === null ? entryQuery().none() : entryQuery().where(guard);
+  const types = publicEntryTypeNames(plugins);
+  return types.length === 0
+    ? entryQuery().none()
+    : entryQuery().ofTypes(...types);
 }
 
 /** The types the query can list, or every public type when it names none. */
@@ -77,12 +75,7 @@ export async function listEntryPage(
     entryQueryOrder(query),
   );
   return {
-    entries: result.outOfRange
-      ? []
-      : await withoutGatedContent(
-          ctx,
-          await resolveEntryList(ctx, result.rows),
-        ),
+    entries: result.outOfRange ? [] : await resolveEntryList(ctx, result.rows),
     pagination: {
       page,
       perPage,
@@ -91,25 +84,4 @@ export async function listEntryPage(
     },
     outOfRange: result.outOfRange,
   };
-}
-
-/**
- * An entry whose policy admits it to the listing but not its body, a soft
- * challenge's teaser, keeps its title, excerpt, URL and images.
- */
-export function withoutGatedContent(
-  ctx: AppContext,
-  listed: readonly ResolvedEntry[],
-): Promise<readonly ResolvedEntry[]> {
-  return Promise.all(
-    listed.map(async (entry) =>
-      (await entryPolicyAdmits(
-        ctx,
-        { type: entry.type, meta: entry.storedMeta },
-        "content",
-      ))
-        ? entry
-        : { ...entry, content: null, contentBlocks: null, contentGated: true },
-    ),
-  );
 }

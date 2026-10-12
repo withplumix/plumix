@@ -4,7 +4,6 @@ import type {
 } from "../context/app-context.js";
 import type { SQL } from "../db/index.js";
 import type { Entry } from "../db/schema/entries.js";
-import type { PluginRegistry } from "../plugin/manifest.js";
 import type { EntryAccessSubject } from "./entry-access.js";
 import {
   entryCapabilityNamespace,
@@ -166,15 +165,6 @@ export async function publicEntryRows(ctx: AppContext): Promise<SQL | null> {
     open.length > 0 ? [inArray(entries.type, open), ...policied] : policied;
   if (arms.length === 0) return null;
   return sql`(${and(publishedPublicRows(types), sql`(${or(...arms)})`)})`;
-}
-
-/**
- * {@link publicEntryRows} before the access policy, which needs the request:
- * the base of an archive's query, which a listing narrows again.
- */
-export function publishedPublicEntryRows(plugins: PluginRegistry): SQL | null {
-  const types = publicEntryTypeNames(plugins);
-  return types.length === 0 ? null : sql`(${publishedPublicRows(types)})`;
 }
 
 function publishedPublicRows(types: readonly string[]): SQL | undefined {

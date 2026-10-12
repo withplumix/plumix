@@ -1439,7 +1439,7 @@ function Listing({ data }: { readonly data: TemplateData }) {
         <li
           key={listed.id}
           data-testid={`listed-${listed.slug}`}
-          data-content-gated={String(listed.contentGated === true)}
+          data-content-gated={String(listed.contentGated)}
           data-has-body={String(
             listed.content !== null || listed.contentBlocks !== null,
           )}

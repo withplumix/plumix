@@ -4,6 +4,8 @@ import type { AppContext } from "../../context/app-context.js";
 import type { EntryQuery } from "../../entries/contract/query.js";
 import type { DispatcherHarness } from "../../test/dispatcher.js";
 import type { EntryPage } from "./entry-listing.js";
+import { ACCESS_POLICY_META_KEY } from "../../access/contract/meta-key.js";
+import { anonymousPolicy, authenticatedPolicy } from "../../access/policy.js";
 import { entryQuery } from "../../entries/query.js";
 import { definePlugin } from "../../plugin/define.js";
 import { createTestContext } from "../../test/context.js";
@@ -192,6 +194,45 @@ describe("listEntryPage paging", () => {
     };
 
     // Count, page, the authors of the page, the terms of the page.
+    expect(await cost(1)).toBe(4);
+    expect(await cost(20)).toBe(4);
+  });
+
+  test("a policied type's listing costs the same fixed number of queries", async () => {
+    // #2933: rows are matched by stored key in the listing's own query, so a
+    // gated row adds no lookup of its own.
+    const pages = definePlugin("pages", (setup) => {
+      setup.registerEntryType("page", {
+        label: "Pages",
+        isPublic: true,
+        access: {
+          default: anonymousPolicy,
+          policies: [
+            { key: "members", label: "Members", policy: authenticatedPolicy },
+          ],
+        },
+      });
+    });
+    const cost = async (perPage: number): Promise<number> => {
+      const traced = await createTracedContext({
+        config: { plugins: [blog, pages] },
+      });
+      for (const key of ["members", undefined, "members", undefined]) {
+        await traced.harness.factory.entry.create({
+          type: "page",
+          status: "published",
+          publishedAt: new Date("2026-03-04T00:00:00.000Z"),
+          authorId: (await traced.harness.seedUser("admin")).id,
+          meta: key === undefined ? {} : { [ACCESS_POLICY_META_KEY]: key },
+        });
+      }
+      const before = traced.dbQueryCount();
+      await traced.run(async () => {
+        await listEntryPage(traced.ctx, entryQuery(), { page: 1, perPage });
+      });
+      return traced.dbQueryCount() - before;
+    };
+
     expect(await cost(1)).toBe(4);
     expect(await cost(20)).toBe(4);
   });

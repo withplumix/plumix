@@ -35,11 +35,7 @@ import { isPageOutcome } from "./contract/page-outcome.js";
 import { resolveEditMode } from "./edit-mode.js";
 import { buildTermArchiveUrl } from "./permalink.js";
 import { previewTokenGrantsEntry, readPreviewToken } from "./preview.js";
-import {
-  listEntryPage,
-  listingCdnTags,
-  withoutGatedContent,
-} from "./render/entry-listing.js";
+import { listEntryPage, listingCdnTags } from "./render/entry-listing.js";
 import {
   archiveData,
   authorData,
@@ -200,10 +196,7 @@ async function resolveSearch(
   const initial: SearchData = {
     kind: "search",
     query,
-    entries: await withoutGatedContent(
-      ctx,
-      await resolveEntryList(ctx, result.rows),
-    ),
+    entries: await resolveEntryList(ctx, result.rows),
     pagination: {
       page,
       perPage: DEFAULT_ARCHIVE_PER_PAGE,

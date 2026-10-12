@@ -162,6 +162,7 @@ function sampleEntry(target: SampleTarget): ResolvedEntry {
     slug: target.kind === "entry" ? target.slug : SAMPLE_SLUG,
     content: null,
     contentBlocks: null,
+    contentGated: false,
     excerpt: SAMPLE_EXCERPT,
     status: "published",
     authorId: AUTHOR.id,

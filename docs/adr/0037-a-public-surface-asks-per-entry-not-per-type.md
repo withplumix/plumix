@@ -37,9 +37,11 @@ A policy's gate admits a principal to two things:
   `challenge`;
 - **the content** (the body) only when it is `allow`.
 
-So a soft-challenged entry is listed as a teaser. Core's listings hand a theme
-that entry with `contentGated: true` and no `content` or `contentBlocks`, and
-the entry's own page serves its teaser as before. A `redirect` or a hard
+So a soft-challenged entry is listed as a teaser. `resolveEntryList`, which
+every listing resolves its rows through (core's archives and search, a plugin's
+own list, the REST API), hands that entry over with `contentGated: true` and no
+`content` or `contentBlocks`. The entry's own page still receives the body and
+serves its teaser as before. A `redirect` or a hard
 `challenge` keeps the entry out of the listing altogether.
 
 ## Editors

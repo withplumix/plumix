@@ -188,7 +188,7 @@ Not every signed-in principal is staff. `STAFF_MIN_ROLE` is `contributor`, so Pl
 
 An entry type registered with `access` lets an editor pick a policy per entry, and that choice holds wherever the entry appears, not only on its own page. The front page, the entry-type, taxonomy, author and date archives, core's search page, the REST API, the RPC reads and the reference lookups all list an entry only when its policy admits the principal asking. A signed-in member sees the members-only entries an anonymous visitor does not. Someone who may edit an entry (`edit_any`, or `edit_own` over their own) reads it in the admin and the API whatever its policy says.
 
-A soft challenge admits a visitor to the listing but not the body. Such an entry is listed with its title, excerpt, URL and images, carries `contentGated: true`, and has `content` and `contentBlocks` set to `null`, so a theme renders a teaser:
+A soft challenge admits a visitor to the listing but not the body. Such an entry is listed with its title, excerpt, URL and images, carries `contentGated: true`, and has `content` and `contentBlocks` set to `null`, so a theme renders a teaser. Every other entry carries `contentGated: false`. The same holds for any list resolved through `resolveEntryList` from `plumix/plugin`, a plugin's own included, and for the REST API; only the entry's own page receives the body, and its template serves the teaser:
 
 ```tsx
 fallback(({ data }) =>

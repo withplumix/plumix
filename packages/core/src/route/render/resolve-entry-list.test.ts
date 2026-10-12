@@ -3,6 +3,13 @@ import { describe, expect, test } from "vitest";
 import type { JsonObject } from "../../json.js";
 import type { TemplateData } from "../../theme.js";
 import type { ResolvedNode } from "./rule-resolver.js";
+import { ACCESS_POLICY_META_KEY } from "../../access/contract/meta-key.js";
+import {
+  anonymousPolicy,
+  challenge,
+  definePolicy,
+  grant,
+} from "../../access/policy.js";
 import { eq } from "../../db/index.js";
 import { users } from "../../db/schema/users.js";
 import { definePlugin } from "../../plugin/define.js";
@@ -755,5 +762,68 @@ describe("resolveEntryList role images", () => {
     const [entry] = await run(() => resolveEntryList(ctx, [row]));
 
     expect(entry?.images.featured).toBeNull();
+  });
+});
+
+// #2933: a plugin listing entries its own way still gets the teaser.
+describe("resolveEntryList and an entry's access policy", () => {
+  const teaserPages = definePlugin("teaser-pages", (ctx) => {
+    ctx.registerEntryType("page", {
+      label: "Pages",
+      isPublic: true,
+      access: {
+        default: anonymousPolicy,
+        policies: [
+          {
+            key: "teaser",
+            label: "Teaser",
+            policy: definePolicy({
+              resolve: (c) =>
+                c.user
+                  ? grant("authenticated")
+                  : challenge("paywall", { soft: true }),
+            }),
+          },
+        ],
+      },
+    });
+  });
+  const BODY = {
+    version: "plumix.v2",
+    blocks: [{ id: "p", name: "core/paragraph", attrs: {} }],
+  } as const;
+
+  test("drops the body of an entry its policy lists only as a teaser, and flags it", async () => {
+    const { harness, ctx, run } = await createTracedContext({
+      config: { plugins: [teaserPages] },
+    });
+    const author = await harness.seedUser("admin");
+    const [open, teaser] = await Promise.all(
+      ([{}, { [ACCESS_POLICY_META_KEY]: "teaser" }] as JsonObject[]).map(
+        (meta, index) =>
+          harness.factory.entry.create({
+            type: "page",
+            slug: `page-${String(index)}`,
+            status: "published",
+            authorId: author.id,
+            content: BODY,
+            meta,
+          }),
+      ),
+    );
+    if (open === undefined || teaser === undefined) throw new Error("seed");
+
+    const resolved = await run(() => resolveEntryList(ctx, [open, teaser]));
+
+    expect(
+      resolved.map((entry) => ({
+        contentGated: entry.contentGated,
+        content: entry.content,
+        contentBlocks: entry.contentBlocks,
+      })),
+    ).toEqual([
+      { contentGated: false, content: BODY, contentBlocks: BODY },
+      { contentGated: true, content: null, contentBlocks: null },
+    ]);
   });
 });
