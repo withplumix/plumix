@@ -97,9 +97,8 @@ interface ReadThroughRouteArgs {
 }
 
 /**
- * No segment axis: `cacheable: true` claims every visitor gets the same
- * document, so signed-in visitors share the entry. Freshness and tags stay the
- * handler's to declare.
+ * No segment axis: `cacheable: true` claims every anonymous visitor gets the
+ * same document. Freshness and tags stay the handler's to declare.
  */
 export async function readThroughRoute(
   args: ReadThroughRouteArgs,

@@ -207,6 +207,24 @@ describe("public route dispatch — CDN", () => {
     expect(await response.text()).toBe("CACHED");
   });
 
+  test("a signed-in request neither reads nor fills the stored entry", async () => {
+    const { cdn, match, put } = cdnStub(
+      new Response("CACHED", { status: 200 }),
+    );
+    const harness = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [sitemap] },
+    });
+    const reader = await harness.seedUser("subscriber");
+
+    const response = await harness.fetch("/sitemap.xml", { as: reader });
+    await harness.drainDeferred();
+
+    expect(await response.text()).toBe("<urlset/>");
+    expect(match).not.toHaveBeenCalled();
+    expect(put).not.toHaveBeenCalled();
+  });
+
   test("a route that did not opt in never touches the CDN", async () => {
     const { cdn, match, put } = cdnStub(
       new Response("CACHED", { status: 200 }),
@@ -387,7 +405,7 @@ describe("public route dispatch — access policy", () => {
     expect(response.headers.get("x-plumix-challenge")).toBeNull();
   });
 
-  test("a route with no policy still sees no user, however the request signed in", async () => {
+  test("a route with no policy sees a signed-in reader as themselves", async () => {
     const plugin = definePlugin("feeds", (ctx) => {
       ctx.registerPublicRoute({
         path: "/feed",
@@ -402,6 +420,8 @@ describe("public route dispatch — access policy", () => {
 
     const response = await harness.fetch("/feed", { as: admin });
 
-    expect(await response.json()).toEqual({ userId: null });
+    expect(await response.json()).toEqual({ userId: admin.id });
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(response.headers.get("vary")?.toLowerCase()).toContain("cookie");
   });
 });

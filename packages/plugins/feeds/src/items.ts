@@ -38,7 +38,8 @@ declare module "plumix" {
 
 /**
  * `null` means 404. The public-entries rule is ANDed on again so a query built
- * from scratch can't syndicate a draft; access-policied types are dropped.
+ * from scratch can't syndicate a draft or an entry its policy keeps from this
+ * reader.
  */
 async function feedWhere(
   ctx: AppContext,
