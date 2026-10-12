@@ -127,7 +127,6 @@ export async function assemblePluginAdminBundle({
     // but `error.constructor.name` would otherwise surface the mangled
     // identifier (`class PasskeyError` → `class e`).
     keepNames: true,
-    legalComments: "none",
     logLevel: "warning",
     define: { "process.env.NODE_ENV": '"production"' },
     plugins: [pluginRuntimeAliasPlugin()],

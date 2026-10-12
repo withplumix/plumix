@@ -168,7 +168,12 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       // which the worker imports through `virtual:plumix/asset-manifest` so
       // the SSR renderer knows which hashed `<link rel="stylesheet">` tags
       // to inject after the theme's own `link[]`.
-      const build = { manifest: true };
+      const build = {
+        manifest: true,
+        // Vite strips legal comments when minifying and expects
+        // `build.license` to carry them (rolldown-vite#497).
+        license: { fileName: "THIRD-PARTY-NOTICES.md" },
+      };
       // @cloudflare/vite-plugin falls back to its private entry only when no
       // client input is set. Each `"use client"` module becomes its own input
       // so Vite emits one hashed chunk per island.
