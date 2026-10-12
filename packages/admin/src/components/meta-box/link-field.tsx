@@ -9,8 +9,6 @@ import { useUntitledLabel } from "@/lib/use-untitled-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
 
-import type { JsonObject } from "@plumix/core";
-import type { EntryFieldScope } from "@plumix/core/fields";
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 import { Button } from "@plumix/admin-ui/button";
 import {
@@ -22,12 +20,16 @@ import { Input } from "@plumix/admin-ui/input";
 import { InputGroupInput } from "@plumix/admin-ui/input-group";
 import { Switch } from "@plumix/admin-ui/switch";
 
+import type { LinkDraft } from "./link-value.js";
 import { AdornedControl } from "./adorned-control.js";
+import {
+  linkDraftFromValue,
+  linkPickerScope,
+  linkValueFromDraft,
+  pickableLinkItems,
+} from "./link-value.js";
 import { renderLookupListBody } from "./lookup/list-body.js";
 import { useLookupSearch } from "./lookup/use-lookup-search.js";
-
-// A picked entry stores its permalink as a plain URL, so renaming the entry
-// doesn't retarget the link.
 
 const M = {
   url: defineMessage({
@@ -52,28 +54,6 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-/**
- * Display-state view of the value. Absent optionals render as empty
- * string / off so the inputs stay controlled.
- */
-interface LinkDraft {
-  readonly url: string;
-  readonly label: string;
-  readonly newTab: boolean;
-}
-
-function toDraft(value: unknown): LinkDraft {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return { url: "", label: "", newTab: false };
-  }
-  const { url, label, newTab } = value as JsonObject;
-  return {
-    url: typeof url === "string" ? url : "",
-    label: typeof label === "string" ? label : "",
-    newTab: newTab === true,
-  };
-}
-
 function sameDraft(a: LinkDraft, b: LinkDraft): boolean {
   return a.url === b.url && a.label === b.label && a.newTab === b.newTab;
 }
@@ -93,9 +73,7 @@ export function LinkField({
   const untitledLabel = useUntitledLabel();
   const [open, setOpen] = useState(false);
 
-  // A draft without a URL emits `null`: the server rejects `{ url: "" }`, yet
-  // link text typed first must survive in the UI.
-  const externalDraft = toDraft(rhf.value);
+  const externalDraft = linkDraftFromValue(rhf.value);
   const [draft, setDraft] = useState(externalDraft);
   const [lastSynced, setLastSynced] = useState(externalDraft);
   if (!sameDraft(externalDraft, lastSynced)) {
@@ -105,29 +83,16 @@ export function LinkField({
 
   const update = (next: LinkDraft): void => {
     setDraft(next);
-    const value =
-      next.url === ""
-        ? null
-        : {
-            url: next.url,
-            ...(next.label !== "" ? { label: next.label } : {}),
-            ...(next.newTab ? { newTab: true } : {}),
-          };
+    const value = linkValueFromDraft(next);
     // Track what we emitted so the resync branch only fires for
     // changes made outside this control.
-    setLastSynced(toDraft(value));
+    setLastSynced(linkDraftFromValue(value));
     rhf.onChange(value);
   };
 
-  const entryTypes = publicEntryTypeNames();
-
-  // Only published entries have a permalink worth storing — a draft's
-  // URL would 404 (and go stale on slug edits). `satisfies` keeps the
-  // status literal tracking the `EntryStatus` vocabulary.
-  const scope = { entryTypes, status: "published" } satisfies EntryFieldScope;
+  const scope = linkPickerScope(publicEntryTypeNames());
   const search = useLookupSearch({ kind: "entry", scope, enabled: open });
-  // Only entries with a public URL can back a link value.
-  const items = search.items.filter((item) => item.href !== undefined);
+  const items = pickableLinkItems(search.items);
 
   // Adornments frame the URL only: the link text is display copy, and a
   // scheme or path affix belongs to the address.
@@ -162,7 +127,7 @@ export function LinkField({
         ) : (
           urlInput
         )}
-        {entryTypes.length > 0 ? (
+        {scope ? (
           <Button
             type="button"
             variant="outline"

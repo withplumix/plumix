@@ -21,9 +21,9 @@ import {
 } from "@plumix/admin-ui/dialog";
 import { Pencil, PlusIcon, TriangleAlert } from "@plumix/admin-ui/icons";
 import { SortableList } from "@plumix/admin-ui/sortable";
-import { isFieldVisible, startingMeta } from "@plumix/core/manifest";
 
 import { MetaBoxField } from "./meta-box-field.js";
+import { newRepeaterRow, repeaterRows, rowSummary } from "./repeater-rows.js";
 import { useVisibleFields } from "./use-visible-fields.js";
 
 // Row ids are index-derived: dnd-kit only needs stability within one drag, and
@@ -63,17 +63,6 @@ const REMOVE_ROW_LABEL = defineMessage({
   message: "Remove",
 });
 
-/**
- * Malformed rows drop from display; the validator still rejects them on save.
- */
-function asRows(raw: unknown): readonly ResolvedMeta[] {
-  if (!Array.isArray(raw)) return [];
-  return raw.filter(
-    (r): r is ResolvedMeta =>
-      typeof r === "object" && r !== null && !Array.isArray(r),
-  );
-}
-
 export function RepeaterField({
   field,
   rhf,
@@ -98,7 +87,7 @@ export function RepeaterField({
   // A nested subfield write doesn't re-render the Controller, so a stale
   // `rhf.value` would let the next commit drop the just-edited fields.
   const watched = useWatch({ control, name: rhf.name }) as unknown;
-  const rows = asRows(watched ?? rhf.value);
+  const rows = repeaterRows(watched ?? rhf.value);
 
   // A sub-field error is invisible while its dialog is closed, so flag the row.
   const formState = useFormState({ control, name: rhf.name });
@@ -137,10 +126,7 @@ export function RepeaterField({
 
   const handleAdd = (): void => {
     if (atMax) return;
-    // Every subfield gets a slot, starting from its starting value.
-    const blank: Record<string, unknown> = {};
-    for (const sf of subFields) blank[sf.key] = null;
-    commit([...rows, { ...blank, ...startingMeta(subFields) }]);
+    commit([...rows, newRepeaterRow(subFields)]);
     // Open the editor on the row we just appended so authoring is one click.
     setEditingIndex(rows.length);
   };
@@ -404,55 +390,6 @@ function CountSuffix({
         comment="max: upper bound on the repeater row count"
       />
     );
-  }
-  return null;
-}
-
-/**
- * Without `.collapsed()`, the first sub-field holding a non-empty primitive.
- */
-function rowSummary(
-  row: ResolvedMeta,
-  subFields: readonly MetaBoxFieldManifestEntry[],
-  collapsedKey: string | undefined,
-  renderLabel: ReturnType<typeof useLabel>,
-): string | null {
-  // A hidden cell must not label the row: the author cannot open it to see
-  // where the summary came from.
-  const visible = subFields.filter((sf) => isFieldVisible(sf, row));
-  if (collapsedKey !== undefined) {
-    const sf = visible.find((f) => f.key === collapsedKey);
-    // Hidden in this row: fall through to the scan rather than leave the row
-    // unlabelled, since a visible sibling can still name it.
-    if (sf) return cellSummary(row[collapsedKey], sf, renderLabel);
-  }
-  for (const sf of visible) {
-    const summary = cellSummary(row[sf.key], sf, renderLabel);
-    if (summary !== null) return summary;
-  }
-  return null;
-}
-
-/** A select / radio value resolves to its translated label. */
-function cellSummary(
-  value: unknown,
-  field: MetaBoxFieldManifestEntry | undefined,
-  renderLabel: ReturnType<typeof useLabel>,
-): string | null {
-  const raw = primitiveToString(value);
-  if (raw === null) return null;
-  const option = field?.options?.find((opt) => opt.value === raw);
-  return option ? renderLabel(option.label) : raw;
-}
-
-/**
- * A stored primitive as a display string, or null when it's absent/blank or
- * a non-primitive (a nested group/repeater/reference).
- */
-function primitiveToString(value: unknown): string | null {
-  if (typeof value === "string") return value === "" ? null : value;
-  if (typeof value === "number" || typeof value === "boolean") {
-    return String(value);
   }
   return null;
 }

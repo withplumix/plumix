@@ -1,3 +1,4 @@
+import type { I18n } from "@lingui/core";
 import { useCallback, useEffect } from "react";
 import { useLingui } from "@lingui/react";
 import * as v from "valibot";
@@ -59,13 +60,15 @@ function isMetaFieldServerError(item: unknown): item is MetaFieldServerError {
 /** Resolver for server error messages. Unlike `useLabel`, interpolates
  *  a descriptor's `values` (`{max}` → `5`) — constraint messages carry
  *  their bound on the wire. */
+export function resolveMetaFieldMessage(i18n: I18n, message: Label): string {
+  if (typeof message === "string") return message;
+  return i18n._(message.id, message.values, { message: message.message });
+}
+
 export function useMetaFieldMessage(): (message: Label) => string {
   const { i18n } = useLingui();
   return useCallback(
-    (message) => {
-      if (typeof message === "string") return message;
-      return i18n._(message.id, message.values, { message: message.message });
-    },
+    (message) => resolveMetaFieldMessage(i18n, message),
     [i18n],
   );
 }

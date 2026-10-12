@@ -27,15 +27,28 @@ export function useBagValues({ name, control }: BagLocation = {}):
     name: string;
     control?: Control;
   });
+  return asBag(bag);
+}
+
+function asBag(bag: unknown): MetaBoxSiblingValues | undefined {
   return bag !== null && typeof bag === "object" && !Array.isArray(bag)
     ? (bag as MetaBoxSiblingValues)
     : undefined;
 }
 
-/** The server drops condition-hidden keys from the write patch to match. */
+/**
+ * The server drops condition-hidden keys from the write patch to match. A bag
+ * that is missing or not an object hides every conditional field.
+ */
+export function visibleFieldsIn<
+  F extends { readonly visibleWhen?: MetaFieldCondition },
+>(fields: readonly F[], bag: unknown): readonly F[] {
+  const values = asBag(bag) ?? {};
+  return fields.filter((field) => isFieldVisible(field, values));
+}
+
 export function useVisibleFields<
   F extends { readonly visibleWhen?: MetaFieldCondition },
 >(fields: readonly F[], location: BagLocation = {}): readonly F[] {
-  const values = useBagValues(location) ?? {};
-  return fields.filter((field) => isFieldVisible(field, values));
+  return visibleFieldsIn(fields, useBagValues(location));
 }
