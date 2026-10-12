@@ -1,5 +1,6 @@
 import type { AnchorHTMLAttributes, ReactNode } from "react";
 
+import { withBasePath } from "../../base-path.js";
 import { useBasePath } from "./context.js";
 
 /**
@@ -31,15 +32,6 @@ export type LinkProps = AnchorAttrs & {
         readonly entry?: never;
       }
   );
-
-/**
- * Mirror of core's `withBasePath` — blocks sits below core in the build
- * graph and can't import it.
- */
-function withBasePath(path: string, basePath: string): string {
-  if (basePath === "") return path;
-  return path === "/" ? basePath : `${basePath}${path}`;
-}
 
 /** Absolute (`https:`, `mailto:`, `tel:`, …) or protocol-relative (`//`). */
 function isExternal(href: string): boolean {

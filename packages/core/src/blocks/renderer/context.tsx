@@ -7,6 +7,7 @@ import type { HydratedEntry } from "../context-bags.js";
 import type { LoadedDeps } from "../deps.js";
 import type { EntryContent } from "../entry-content.js";
 import type { CompiledCatalog } from "../i18n-label.js";
+import type { PlumixRenderMode } from "../island-mode.js";
 import type { ResolvedBlockLoaders } from "../loaders.js";
 import type {
   BlockNode,
@@ -26,8 +27,7 @@ import { RendererError } from "./errors.js";
 
 /**
  * `blocks/` sits in the foundation layer, below `auth/` and `route/`, so it
- * declares the user and OAuth provider shapes core builds on; the queried entry
- * types below mirror `ResolvedEntity` structurally.
+ * declares the user, OAuth provider and queried-entry shapes core builds on.
  */
 export interface RendererUser {
   readonly id: number;
@@ -59,7 +59,7 @@ export type RendererQueriedEntry =
   | { readonly kind: "author"; readonly id: number }
   | { readonly kind: "entryType"; readonly entryType: string };
 
-export type PlumixRenderMode = "live" | "preview" | "edit";
+export type { PlumixRenderMode } from "../island-mode.js";
 
 export interface PlumixContextValue {
   readonly registry: BlockRegistry;

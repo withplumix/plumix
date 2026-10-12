@@ -1,8 +1,9 @@
 // Standalone so the React-free element chunk never imports the renderer.
 
-/** The page render mode, mirrored from the renderer's `PlumixRenderMode`.
- *  `null` is the ordinary page (no editor marker present). */
-export type IslandPageMode = "live" | "preview" | "edit" | null;
+export type PlumixRenderMode = "live" | "preview" | "edit";
+
+/** `null` is the ordinary page (no editor marker present). */
+export type IslandPageMode = PlumixRenderMode | null;
 
 /** In edit mode an island stays as its static SSR output — selectable, not
  *  interactive. Every other mode (preview, live, or no marker) hydrates. */
