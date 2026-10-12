@@ -51,16 +51,23 @@ export async function installPlugins({
     registry.pluginIds.push(descriptor.id);
   }
 
+  // Per call, not per descriptor: the same descriptor installed into two apps
+  // gets two states.
+  const states: unknown[] = [];
+  for (const descriptor of plugins) {
+    states.push(await descriptor.state?.());
+  }
+
   const pluginExtensions = new Map<string, ContextExtensionEntry>();
   const appContextExtensions = new Map<string, ContextExtensionEntry>();
-  for (const descriptor of plugins) {
+  for (const [index, descriptor] of plugins.entries()) {
     if (!descriptor.provides) continue;
     const providesCtx = createPluginProvidesContext({
       pluginId: descriptor.id,
       pluginExtensions,
       appExtensions: appContextExtensions,
     });
-    await descriptor.provides(providesCtx);
+    await descriptor.provides(providesCtx, states[index]);
   }
 
   const mergedPluginExtensions = new Map<string, unknown>();
@@ -68,7 +75,7 @@ export async function installPlugins({
     mergedPluginExtensions.set(key, entry.value);
   }
 
-  for (const descriptor of plugins) {
+  for (const [index, descriptor] of plugins.entries()) {
     const ctx = createPluginSetupContext({
       pluginId: descriptor.id,
       hooks,
@@ -78,10 +85,10 @@ export async function installPlugins({
     for (const spec of descriptor.shortcodes ?? []) {
       ctx.registerShortcode(spec);
     }
-    await descriptor.setup(ctx, undefined);
+    await descriptor.setup(ctx, states[index]);
   }
 
-  for (const descriptor of plugins) {
+  for (const [index, descriptor] of plugins.entries()) {
     if (!descriptor.afterSetup) continue;
     const ctx = createPluginAfterSetupContext({
       pluginId: descriptor.id,
@@ -89,7 +96,7 @@ export async function installPlugins({
       registry,
       extensions: mergedPluginExtensions,
     });
-    await descriptor.afterSetup(ctx);
+    await descriptor.afterSetup(ctx, states[index]);
   }
 
   return { hooks, registry, appContextExtensions };

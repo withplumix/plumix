@@ -209,6 +209,39 @@ One step runs earlier than that and does not care about order. A descriptor's op
 
 Public URLs do not depend on array order either. The router compiles taxonomy rules ahead of entry-type rules and sorts every rule by a priority number, so a plugin whose entry type sits at the URL root cannot shadow another plugin's routes by being listed first. [Routing](/routing/overview/) covers how a URL reaches the rule that serves it.
 
+## Keeping state across hooks
+
+A plugin that builds something in `provides` and reads it again in `setup` or `afterSetup` declares it with `state`. Core calls `state` once per install, before any plugin's `provides`, and passes what it returns as the second argument to all three hooks. Here other plugins name badges during their `setup`, and the badges plugin turns each into a capability once they all have:
+
+```ts
+// A `declare module` block needs the module itself in scope.
+import type { PluginContextExtensions } from "plumix";
+import { definePlugin } from "plumix/plugin";
+
+declare module "plumix" {
+  interface PluginContextExtensions {
+    registerBadge(name: string): void;
+  }
+}
+
+export const badges = definePlugin("acme-badges", {
+  state: () => ({ names: new Set<string>() }),
+  provides: (ctx, { names }) => {
+    ctx.extendPluginContext("registerBadge", (name) => {
+      names.add(name);
+    });
+  },
+  setup: () => undefined,
+  afterSetup: (ctx, { names }) => {
+    for (const name of names) {
+      ctx.registerCapability(`badge:${name}`, "editor");
+    }
+  },
+});
+```
+
+State goes in `state`, never in the plugin factory's closure. A descriptor can be installed more than once (a build installs it alongside the running app), and each install needs its own. The state is private to the plugin's own hooks; share anything through `extendPluginContext` or `extendAppContext`.
+
 ## Adding an image role
 
 Some of what a plugin registers is a name other code then asks for, and an [image role](/fields/field-types/#image-roles) is the clearest small example. Core ships `featured` and `ogImage`; a listing thumbnail distinct from the share image is a role you add. A theme has no setup hook, so a site declares its own as a one-file plugin like this.

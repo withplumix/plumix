@@ -1,5 +1,4 @@
-import type { JsonValue, ThemeDescriptor } from "plumix";
-import type { PluginDescriptor } from "plumix/plugin";
+import type { AnyPluginDescriptor, JsonValue, ThemeDescriptor } from "plumix";
 import type { DispatcherHarness } from "plumix/test";
 import type { TemplateData } from "plumix/theme";
 import { definePlugin } from "plumix/plugin";
@@ -40,7 +39,7 @@ const trailTheme = defineTheme({
 });
 
 function createHarness(
-  plugins: readonly PluginDescriptor[] = [blogPlugin, seo()],
+  plugins: readonly AnyPluginDescriptor[] = [blogPlugin, seo()],
   themeOverride: ThemeDescriptor = theme,
 ): Promise<DispatcherHarness> {
   return createDispatcherHarness({

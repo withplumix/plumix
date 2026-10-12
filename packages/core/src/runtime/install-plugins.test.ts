@@ -548,6 +548,124 @@ describe("installPlugins", () => {
   });
 });
 
+describe("plugin state", () => {
+  test("provides, setup and afterSetup receive the one state its factory created", async () => {
+    let created = 0;
+    const seen: object[] = [];
+    const plugin = definePlugin("stateful", {
+      state: () => {
+        created += 1;
+        return { forms: [] as string[] };
+      },
+      provides: (_ctx, state) => {
+        seen.push(state);
+      },
+      setup: (_ctx, state) => {
+        seen.push(state);
+      },
+      afterSetup: (_ctx, state) => {
+        seen.push(state);
+      },
+    });
+
+    await installPlugins({ hooks: new HookRegistry(), plugins: [plugin] });
+
+    expect(created).toBe(1);
+    expect(seen).toHaveLength(3);
+    expect(seen[1]).toBe(seen[0]);
+    expect(seen[2]).toBe(seen[0]);
+  });
+
+  test("each install of the same descriptor gets its own state", async () => {
+    const seen: object[] = [];
+    const plugin = definePlugin("stateful", {
+      state: () => ({ forms: [] as string[] }),
+      setup: (_ctx, state) => {
+        seen.push(state);
+      },
+    });
+
+    await installPlugins({ hooks: new HookRegistry(), plugins: [plugin] });
+    await installPlugins({ hooks: new HookRegistry(), plugins: [plugin] });
+
+    expect(seen).toHaveLength(2);
+    expect(seen[1]).not.toBe(seen[0]);
+  });
+
+  test("an async state is awaited before any plugin's provides runs", async () => {
+    const order: string[] = [];
+    const first = definePlugin("first", {
+      provides: () => {
+        order.push("first:provides");
+      },
+      setup: () => undefined,
+    });
+    const second = definePlugin("second", {
+      state: async () => {
+        await Promise.resolve();
+        order.push("second:state");
+        return { ready: true };
+      },
+      provides: (_ctx, state) => {
+        order.push(`second:provides:${String(state.ready)}`);
+      },
+      setup: () => undefined,
+    });
+
+    await installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [first, second],
+    });
+
+    expect(order).toEqual([
+      "second:state",
+      "first:provides",
+      "second:provides:true",
+    ]);
+  });
+
+  test("a descriptor without state receives undefined in every hook", async () => {
+    const seen: unknown[] = [];
+    const plugin = definePlugin("stateless", {
+      provides: (_ctx, state) => {
+        seen.push(state);
+      },
+      setup: (_ctx, state) => {
+        seen.push(state);
+      },
+      afterSetup: (_ctx, state) => {
+        seen.push(state);
+      },
+    });
+
+    await installPlugins({ hooks: new HookRegistry(), plugins: [plugin] });
+
+    expect(seen).toEqual([undefined, undefined, undefined]);
+  });
+
+  test("an error thrown by state propagates unwrapped, before any provides runs", async () => {
+    const boom = new Error("boom");
+    const provided: string[] = [];
+    const first = definePlugin("first", {
+      provides: () => {
+        provided.push("first");
+      },
+      setup: () => undefined,
+    });
+    const broken = definePlugin("broken", {
+      state: (): { ready: boolean } => {
+        throw boom;
+      },
+      setup: () => undefined,
+    });
+
+    await expect(
+      installPlugins({ hooks: new HookRegistry(), plugins: [first, broken] }),
+    ).rejects.toBe(boom);
+    expect(provided).toEqual([]);
+  });
+});
+
 describe("plugin id validation", () => {
   test("definePlugin rejects an empty id", () => {
     expect(() => definePlugin("", () => undefined)).toThrow(/between 1 and/);

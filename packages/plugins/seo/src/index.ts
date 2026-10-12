@@ -5,11 +5,12 @@ import {
   pluginAdminEntryPath,
 } from "plumix/plugin";
 
+import type { ContributedSitemap } from "./contributed.js";
 import type { SeoMetaBoxOptions } from "./meta-box.js";
 import type { SeoSitemapsOptions } from "./sitemap.js";
 // Also anchors the `registerSitemap` augmentation, as the imports below do
 // theirs.
-import { contributedSitemaps, createRegisterSitemap } from "./contributed.js";
+import { createRegisterSitemap } from "./contributed.js";
 import { applySeoHead } from "./head.js";
 import { assertIndexViewsNameViews } from "./indexable.js";
 import { registerIndexNow } from "./indexnow.js";
@@ -116,7 +117,9 @@ export interface SeoOptions {
  * plumix({ plugins: [seo()] });
  * ```
  */
-export function seo(options: SeoOptions = {}): PluginDescriptor {
+export function seo(
+  options: SeoOptions = {},
+): PluginDescriptor<{ contributed: ContributedSitemap[] }> {
   const headOptions = {
     articleTags: options.articleTags ?? true,
     structuredData: options.structuredData ?? true,
@@ -129,8 +132,12 @@ export function seo(options: SeoOptions = {}): PluginDescriptor {
     i18n: PLUGIN_I18N_SLOT,
     // One list per install, not per `seo()` call: a descriptor is a value that
     // may be installed into more than one app.
-    provides: (ctx) => {
-      ctx.extendPluginContext("registerSitemap", createRegisterSitemap());
+    state: () => ({ contributed: [] as ContributedSitemap[] }),
+    provides: (ctx, { contributed }) => {
+      ctx.extendPluginContext(
+        "registerSitemap",
+        createRegisterSitemap(contributed),
+      );
     },
     setup: (ctx) => {
       registerSeoSettingsDefaults(ctx);
@@ -152,15 +159,10 @@ export function seo(options: SeoOptions = {}): PluginDescriptor {
     },
     // Each of these is scoped to what the site registered, so it waits for
     // every plugin's `setup` to have registered it.
-    afterSetup: (ctx) => {
+    afterSetup: (ctx, { contributed }) => {
       assertIndexViewsNameViews(headOptions.indexViews, ctx.plugins.views);
       registerSeoSettings(ctx);
-      registerSitemapRoutes(
-        ctx,
-        options.sitemaps ?? {},
-        // eslint-disable-next-line @typescript-eslint/unbound-method -- an identity key, never called
-        contributedSitemaps(ctx.registerSitemap),
-      );
+      registerSitemapRoutes(ctx, options.sitemaps ?? {}, contributed);
       registerSeoEditorSurfaces(ctx, options.metaBox ?? {});
     },
   });

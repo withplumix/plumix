@@ -930,6 +930,23 @@ describe("a contributed sitemap", () => {
     );
   });
 
+  test("stays out of another app the same seo descriptor boots", async () => {
+    const descriptor = seo();
+    await createDispatcherHarness({
+      config: { plugins: [extraPlugin, descriptor] },
+    });
+    const second = await createDispatcherHarness({
+      config: { plugins: [descriptor] },
+    });
+
+    expect(await bodyOf(second, "/sitemap.xml")).not.toContain(
+      "sitemap-extra-1",
+    );
+    expect(await bodyOf(second, "/sitemap-extra-1.xml")).not.toContain(
+      "locations/leeds",
+    );
+  });
+
   const contributor = (pluginId: string, name: string) =>
     definePlugin(pluginId, (ctx) => {
       ctx.registerSitemap(name, { count: () => 0, urls: () => [] });

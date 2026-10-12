@@ -8,18 +8,26 @@ import type {
 } from "./setup-context-types.js";
 import { PluginDefinitionError } from "./errors.js";
 
-export type PluginSetup<TConfig> = (
+export type PluginSetup<TState = undefined> = (
   ctx: PluginSetupContext,
-  config: TConfig,
+  state: TState,
 ) => void | Promise<void>;
 
-export type PluginAfterSetup = (
+export type PluginAfterSetup<TState = undefined> = (
   ctx: PluginAfterSetupContext,
+  state: TState,
 ) => void | Promise<void>;
 
-export type PluginProvides = (
+export type PluginProvides<TState = undefined> = (
   ctx: PluginProvidesContext,
+  state: TState,
 ) => void | Promise<void>;
+
+/**
+ * Called once per install, before any plugin's `provides`. A descriptor can
+ * be installed more than once, so a factory's closure is not per install.
+ */
+type PluginStateFactory<TState> = () => TState | Promise<TState>;
 
 export interface PluginI18nSlot {
   /** Source locale every msgid is authored in. Mirrors lingui.config
@@ -35,16 +43,21 @@ export interface PluginI18nSlot {
   readonly catalogPath: string;
 }
 
-export interface PluginDescriptor<TConfig = undefined> {
+export interface PluginDescriptor<TState = undefined> {
   readonly id: string;
   readonly version?: string;
-  readonly provides?: PluginProvides;
-  readonly setup: PluginSetup<TConfig>;
+  /**
+   * What this install keeps for its own hooks, passed as their second
+   * argument. Never put on a context, so other plugins never see it.
+   */
+  readonly state?: PluginStateFactory<TState>;
+  readonly provides?: PluginProvides<TState>;
+  readonly setup: PluginSetup<TState>;
   /**
    * Runs after every plugin's `setup`, in array order, for registrations
    * derived from what other plugins registered.
    */
-  readonly afterSetup?: PluginAfterSetup;
+  readonly afterSetup?: PluginAfterSetup<TState>;
   /**
    * Declared rather than registered so the build can ship them to the editor
    * canvas, where a body expands as it does on the page.
@@ -85,10 +98,12 @@ export interface DefinePluginOptions {
   readonly i18n?: PluginI18nSlot;
 }
 
-export interface DefinePluginInput<TConfig> extends DefinePluginOptions {
-  readonly provides?: PluginProvides;
-  readonly setup: PluginSetup<TConfig>;
-  readonly afterSetup?: PluginAfterSetup;
+export interface DefinePluginInput<TState> extends DefinePluginOptions {
+  /** See {@link PluginDescriptor.state}. */
+  readonly state?: PluginStateFactory<TState>;
+  readonly provides?: PluginProvides<TState>;
+  readonly setup: PluginSetup<TState>;
+  readonly afterSetup?: PluginAfterSetup<TState>;
   /** See {@link PluginDescriptor.shortcodes}. */
   readonly shortcodes?: readonly ShortcodeSpec[];
   /** See {@link PluginDescriptor.mails}. */
@@ -131,20 +146,21 @@ export function assertValidPluginId(id: string): void {
   }
 }
 
-export function definePlugin<TConfig = undefined>(
+export function definePlugin<TState = undefined>(
   id: string,
-  setup: PluginSetup<TConfig>,
+  input: DefinePluginInput<TState>,
+): PluginDescriptor<TState>;
+/** Last, so `ReturnType<typeof definePlugin>` names a stateless descriptor. */
+export function definePlugin(
+  id: string,
+  setup: PluginSetup,
   options?: DefinePluginOptions,
-): PluginDescriptor<TConfig>;
-export function definePlugin<TConfig = undefined>(
+): PluginDescriptor;
+export function definePlugin<TState = undefined>(
   id: string,
-  input: DefinePluginInput<TConfig>,
-): PluginDescriptor<TConfig>;
-export function definePlugin<TConfig = undefined>(
-  id: string,
-  setupOrInput: PluginSetup<TConfig> | DefinePluginInput<TConfig>,
+  setupOrInput: PluginSetup<TState> | DefinePluginInput<TState>,
   legacyOptions?: DefinePluginOptions,
-): PluginDescriptor<TConfig> {
+): PluginDescriptor<TState> {
   assertValidPluginId(id);
   if (typeof setupOrInput === "function") {
     warnIfSchemaWithoutSchemaModule(id, legacyOptions);
@@ -168,6 +184,7 @@ export function definePlugin<TConfig = undefined>(
   return {
     id,
     version: setupOrInput.version,
+    state: setupOrInput.state,
     provides: setupOrInput.provides,
     setup: setupOrInput.setup,
     afterSetup: setupOrInput.afterSetup,

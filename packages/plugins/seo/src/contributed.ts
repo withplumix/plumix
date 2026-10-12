@@ -70,18 +70,13 @@ function assertContributable(name: string, pluginId: string): void {
 type RegisterSitemap = PluginContextExtensions["registerSitemap"];
 
 /**
- * Keyed by the install's `registerSitemap`: core puts that same function on
- * every setup context, which is how `afterSetup` finds its install's list.
+ * A `registerSitemap` collecting into `contributed`, one install's list, in
+ * call order.
  */
-const contributions = new WeakMap<RegisterSitemap, ContributedSitemap[]>();
-
-/** A fresh `registerSitemap` for one install, collecting into its own list. */
-export function createRegisterSitemap(): RegisterSitemap {
-  const contributed: ContributedSitemap[] = [];
-  const registerSitemap: RegisterSitemap = function registerSitemap(
-    name,
-    source,
-  ) {
+export function createRegisterSitemap(
+  contributed: ContributedSitemap[],
+): RegisterSitemap {
+  return function registerSitemap(name, source) {
     assertContributable(name, this.id);
     const existing = contributed.find((entry) => entry.name === name);
     if (existing) {
@@ -93,15 +88,4 @@ export function createRegisterSitemap(): RegisterSitemap {
     }
     contributed.push({ name, pluginId: this.id, source });
   };
-  contributions.set(registerSitemap, contributed);
-  return registerSitemap;
-}
-
-/**
- * What every plugin contributed through this `registerSitemap`, in call order.
- */
-export function contributedSitemaps(
-  registerSitemap: RegisterSitemap,
-): readonly ContributedSitemap[] {
-  return contributions.get(registerSitemap) ?? [];
 }

@@ -1,5 +1,13 @@
 import type { MockInstance } from "vitest";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  expectTypeOf,
+  test,
+  vi,
+} from "vitest";
 
 import {
   definePlugin,
@@ -57,6 +65,46 @@ describe("definePlugin — schemaModule warning", () => {
     definePlugin("test_plugin_repeat", noop, { schema: { someTable: {} } });
     definePlugin("test_plugin_repeat", noop, { schema: { someTable: {} } });
     expect(warnSpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("definePlugin — state", () => {
+  test("types every hook's state from what the factory returns", () => {
+    definePlugin("typed_state", {
+      state: () => ({ registry: new Map<string, number>() }),
+      provides: (_ctx, state) => {
+        expectTypeOf(state).toEqualTypeOf<{ registry: Map<string, number> }>();
+      },
+      setup: (_ctx, state) => {
+        expectTypeOf(state).toEqualTypeOf<{ registry: Map<string, number> }>();
+      },
+      afterSetup: (_ctx, state) => {
+        expectTypeOf(state).toEqualTypeOf<{ registry: Map<string, number> }>();
+      },
+    });
+  });
+
+  test("types an async factory's state as the value it resolves to", () => {
+    definePlugin("async_state", {
+      state: async () => {
+        await Promise.resolve();
+        return { ready: true };
+      },
+      setup: (_ctx, state) => {
+        expectTypeOf(state).toEqualTypeOf<{ ready: boolean }>();
+      },
+    });
+  });
+
+  test("types the state as undefined when the descriptor has no factory", () => {
+    definePlugin("no_state", {
+      setup: (_ctx, state) => {
+        expectTypeOf(state).toEqualTypeOf<undefined>();
+      },
+    });
+    definePlugin("shorthand", (_ctx, state) => {
+      expectTypeOf(state).toEqualTypeOf<undefined>();
+    });
   });
 });
 

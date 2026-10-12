@@ -128,12 +128,6 @@ declare module "plumix" {
 
 type RegisterForm = PluginContextExtensions["registerForm"];
 
-/**
- * Keyed by the install's `registerForm`, which core also puts on the setup
- * context.
- */
-const registries = new WeakMap<RegisterForm, FormRegistry>();
-
 export function forms(options: FormsConfig = {}) {
   const defaultRetentionDays = retentionDefault(options.retentionDays);
   return definePlugin("forms", {
@@ -145,21 +139,17 @@ export function forms(options: FormsConfig = {}) {
     // migration history.
     schemaModule: "@plumix/plugin-forms/schema",
     i18n: PLUGIN_I18N_SLOT,
-    provides: (ctx) => {
-      // Per install, not per `forms()` call: a descriptor may be installed
-      // into more than one app.
-      const registry = createFormRegistry(defaultRetentionDays);
+    // Per install, not per `forms()` call: a descriptor may be installed
+    // into more than one app.
+    state: () => ({ registry: createFormRegistry(defaultRetentionDays) }),
+    provides: (ctx, { registry }) => {
       const registerForm: RegisterForm = function registerForm(form) {
         registry.register(form, this.id);
       };
-      registries.set(registerForm, registry);
       ctx.extendAppContext("forms", { get: (slug) => registry.get(slug) });
       ctx.extendPluginContext("registerForm", registerForm);
     },
-    setup: (ctx) => {
-      // eslint-disable-next-line @typescript-eslint/unbound-method -- an identity key, never called
-      const registry = registries.get(ctx.registerForm);
-      if (registry === undefined) throw FormsError.setupWithoutProvides();
+    setup: (ctx, { registry }) => {
       for (const form of options.forms ?? []) registry.register(form, "config");
       // Site-wide: any meta box can use `tel` too.
       ctx.registerFieldType({
