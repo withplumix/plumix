@@ -368,23 +368,35 @@ function stop(child) {
 const STOP_WINDOW_MS = 15_000;
 
 /**
- * Sends SIGTERM and waits for the server to exit by itself. Whatever the
- * window closes on is killed. Resolves to whether it exited in time.
+ * Whether anything in the server's group is still running. A zombie has
+ * exited and only waits to be reaped, which a container whose PID 1 reaps no
+ * orphans never does, so it doesn't count.
+ */
+function groupRunning(child) {
+  return execFileSync("ps", ["-A", "-o", "pgid=,stat="], { encoding: "utf8" })
+    .split("\n")
+    .map((line) => line.trim().split(/\s+/))
+    .some(
+      ([pgid, stat]) => Number(pgid) === child.pid && !stat?.startsWith("Z"),
+    );
+}
+
+/**
+ * Sends SIGTERM and waits for the whole group to exit by itself, so a child
+ * that outlives the server fails too. Whatever the window closes on is
+ * killed. Resolves to whether the group exited in time.
  */
 async function terminate(child) {
-  const exited = new Promise((done) => {
-    if (hasExited(child)) done(true);
-    else child.once("exit", () => done(true));
-  });
   signalGroup(child, "SIGTERM");
-  let timer;
-  const stopped = await Promise.race([
-    exited,
-    new Promise((done) => {
-      timer = setTimeout(() => done(false), STOP_WINDOW_MS);
-    }),
-  ]);
-  clearTimeout(timer);
+  const deadline = Date.now() + STOP_WINDOW_MS;
+  let stopped = true;
+  while (groupRunning(child)) {
+    if (Date.now() > deadline) {
+      stopped = false;
+      break;
+    }
+    await new Promise((wait) => setTimeout(wait, 200));
+  }
   signalGroup(child, "SIGKILL");
   return stopped;
 }
@@ -451,8 +463,7 @@ async function boot(appDir, combo) {
   const port = await freePort();
   const logFile = join(appDir, "server.log");
   const log = createWriteStream(logFile);
-  // `exec`: a shell would die on SIGTERM whatever the server does.
-  const child = spawn(`exec ${plan.start}`, {
+  const child = spawn(plan.start, {
     cwd: appDir,
     env: { ...env, PORT: String(port) },
     shell: true,
