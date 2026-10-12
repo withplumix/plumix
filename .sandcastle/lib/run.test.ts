@@ -636,6 +636,42 @@ describe("runShipLoop", () => {
     expect(busiest).toBeLessThanOrEqual(2);
   });
 
+  test("a repair waiting for a slot takes it ahead of a ticket that asked first", async () => {
+    const pause = (ms: number) =>
+      new Promise((resolve) => setTimeout(resolve, ms));
+    const started: string[] = [];
+    const refusedOnce = new Set<number>();
+    const { ports: p } = ports({
+      nextTicket: drainingFrom([ticket(1), ticket(2), ticket(3)]),
+      ship: async (t) => {
+        started.push(`ship ${t.number}`);
+        if (t.number > 1) await pause(20);
+        return {
+          status: "queued",
+          pullRequest: { number: 100 + t.number, url: `pr/${t.number}` },
+        };
+      },
+      confirm: async (pr) => {
+        await pause(5);
+        if (pr.number === 103 || refusedOnce.has(pr.number)) return merged;
+        refusedOnce.add(pr.number);
+        return ciRed;
+      },
+      rerunFailedChecks: async () => false,
+      repair: async (_t, pr) => {
+        started.push(`repair ${pr.number}`);
+        await pause(20);
+        return { status: "repaired" } as const;
+      },
+    });
+
+    await runShipLoop(p, { lanes: 1, withinBudget: () => true });
+
+    expect(started.indexOf("repair 102")).toBeLessThan(
+      started.indexOf("ship 3"),
+    );
+  });
+
   test("a pull request an earlier run left in flight is confirmed, and repaired, by this run", async () => {
     const repaired: number[] = [];
     let confirms = 0;
