@@ -44,7 +44,7 @@ const config: KnipConfig = {
       entry: ["*.json"],
     },
     // The covered packages are devDependencies so turbo's `^build` builds them
-    // before the roster suite reads their `.d.ts` by path; nothing imports them.
+    // before `surface:check` reads their `.d.ts` by path; nothing imports them.
     "tooling/published-surface": {
       ignoreDependencies: [/^@plumix\/(?:plugin|runtime)-/, "plumix"],
     },

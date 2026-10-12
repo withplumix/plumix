@@ -29,6 +29,7 @@
     "release": "pnpm run build && changeset publish",
     "smoke": "node .github/scripts/smoke.mjs",
     "smoke:scaffold": "turbo run smoke:scaffold",
+    "surface:check": "turbo run surface:check",
     "test": "turbo run test:unit test:build",
     "test:unit": "turbo run test:unit --concurrency=2",
     "test:build": "turbo run test:build",

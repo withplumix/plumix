@@ -187,6 +187,14 @@ describe("the test gate", () => {
   });
 });
 
+describe("the publint gate", () => {
+  test("also runs surface:check, the second step of CI's Publint job", () => {
+    const gate = GATES_LEFT_TO_CI.find(({ name }) => name === "publint");
+
+    expect(gate?.command).toMatch(/turbo run publint surface:check /);
+  });
+});
+
 describe("a gate command runs under an orphan reaper", () => {
   // `sleep infinity` as PID 1 never reaps orphans, and a zombie still answers
   // `kill -0`, so waiting for one to exit runs out the timeout.

@@ -40,6 +40,7 @@ Run everything from the root. Most root scripts run the turbo task of the same n
 | `knip`                            | Unused files, exports and dependencies.                                                                             |
 | `migrations:check`                | Regenerates each table-owning package's migration history, then fails naming any whose `migrations/` changed.       |
 | `publint` / `attw`                | Check each published package's `package.json` and its types as consumers resolve them.                              |
+| `surface:check`                   | Fails on an export with no reasoned row in the published-surface roster, or a `plumix` type off its role.           |
 | `commitlint`                      | Lint commit messages.                                                                                               |
 | `check-no-major`                  | Fails when a changeset would take a package to 1.0.                                                                 |
 | `smoke`                           | Publish to a throwaway registry, scaffold an app from it, and boot it.                                              |
