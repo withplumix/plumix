@@ -1,7 +1,8 @@
 import { describe, expect, test } from "vitest";
 
+import { createMailCatalogs } from "../mail/catalogs.js";
 import { poCatalogs } from "./po-catalog.js";
-import { renderMail } from "./render-mail.js";
+import { renderMail, renderMailIn } from "./render-mail.js";
 
 const PREVIEW = {
   url: "https://example.com/_plumix/auth/magic-link/verify?token=preview",
@@ -10,13 +11,14 @@ const PREVIEW = {
 
 describe("renderMail", () => {
   test("renders a mail in the locale asked for", async () => {
-    const rendered = await renderMail("magicLink", PREVIEW, {
+    // Core's own catalog, which unit tests otherwise resolve to empty.
+    const catalogs = createMailCatalogs(
+      poCatalogs({ de: new URL("../../locales/mail-de.po", import.meta.url) }),
+    );
+
+    const rendered = await renderMailIn(catalogs, "magicLink", PREVIEW, {
       locale: "de",
       siteName: "Test Site",
-      // Core's own catalog, which unit tests otherwise resolve to empty.
-      pluginCatalogs: poCatalogs({
-        de: new URL("../../locales/mail-de.po", import.meta.url),
-      }),
     });
 
     expect(rendered.subject).toBe("Bei Test Site anmelden");

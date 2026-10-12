@@ -1,6 +1,6 @@
 import type { EmailMessage } from "../auth/contract/mailer.js";
+import type { MailCatalogs } from "../mail/catalogs.js";
 import type { MailName, MailRegistry } from "../mail/contract/registry.js";
-import type { PluginCatalogs } from "../route/render/block-catalog.js";
 import type { TestConfigInput } from "./config.js";
 import { createMailCatalogs } from "../mail/catalogs.js";
 import { MailError } from "../mail/contract/errors.js";
@@ -18,18 +18,26 @@ export interface RenderMailOptions {
   readonly siteName?: string;
   /** The plugins that declare mail, and the theme and site overrides. */
   readonly config?: TestConfigInput;
-  /**
-   * Compiled catalogs by locale, merged over core's: a plugin's own
-   * translations, which a build supplies otherwise.
-   */
-  readonly pluginCatalogs?: PluginCatalogs;
 }
 
 /**
  * A mail rendered as `ctx.mail.send` renders it, overrides included, with no
  * recipient and no send. Throws `MailError` for a name nobody declares.
  */
-export async function renderMail<Name extends MailName>(
+export function renderMail<Name extends MailName>(
+  name: Name,
+  props: MailRegistry[Name],
+  options: RenderMailOptions = {},
+): Promise<Omit<EmailMessage, "to">> {
+  return renderMailIn(createMailCatalogs(), name, props, options);
+}
+
+/**
+ * {@link renderMail} against the given catalogs: core's unit tests hand in the
+ * committed `.po`, since they resolve compiled catalogs to empty ones.
+ */
+export async function renderMailIn<Name extends MailName>(
+  catalogs: MailCatalogs,
   name: Name,
   props: MailRegistry[Name],
   options: RenderMailOptions = {},
@@ -51,7 +59,7 @@ export async function renderMail<Name extends MailName>(
     mail: declared.mail,
     props,
     locale: options.locale ?? config.i18n.defaultLocale.code,
-    catalogs: createMailCatalogs(options.pluginCatalogs),
+    catalogs,
     ...site,
     siteName: options.siteName ?? site.siteName,
   });
