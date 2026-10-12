@@ -32,7 +32,7 @@ describe("createDeferQueue", () => {
   });
 
   test("rejections in queued promises don't bubble out of drainDeferred", async () => {
-    // The harness mirrors the production fire-and-forget contract —
+    // The harness keeps the production fire-and-forget contract —
     // a misbehaving deferred task can't fail an unrelated test by
     // surfacing as an unhandled rejection inside `drainDeferred`.
     const { defer, drainDeferred } = createDeferQueue();

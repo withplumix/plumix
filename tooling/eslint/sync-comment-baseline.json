@@ -92,10 +92,6 @@
     "hash": "43660829f52dc326"
   },
   {
-    "file": "packages/core/src/admin-bar/core-contributors.ts",
-    "hash": "5cf7b444b2c2e42d"
-  },
-  {
     "file": "packages/core/src/blocks/columns/index.tsx",
     "hash": "6a1c702c9c52133e"
   },
@@ -148,26 +144,6 @@
     "hash": "2e5b8b144546ca18"
   },
   {
-    "file": "packages/core/src/dev/debug-panels/core-panels.ts",
-    "hash": "77a70d5ca1042f0d"
-  },
-  {
-    "file": "packages/core/src/dev/server/context.ts",
-    "hash": "678445b3a6389ce3"
-  },
-  {
-    "file": "packages/core/src/dev/server/panels/collect.tsx",
-    "hash": "683745552d8e7f86"
-  },
-  {
-    "file": "packages/core/src/meta/core.ts",
-    "hash": "76e43fd92d73f564"
-  },
-  {
-    "file": "packages/core/src/meta/field-pipeline.ts",
-    "hash": "ee15e7937d3381c5"
-  },
-  {
     "file": "packages/core/src/plugin/define.ts",
     "hash": "a03c7ce9c9e84f74"
   },
@@ -214,62 +190,6 @@
   {
     "file": "packages/core/src/plugin/registry.ts",
     "hash": "3be4697c9d1041e2"
-  },
-  {
-    "file": "packages/core/src/route/current.ts",
-    "hash": "b57774d47ae1b5e9"
-  },
-  {
-    "file": "packages/core/src/route/redirects.ts",
-    "hash": "eee998e710d28955"
-  },
-  {
-    "file": "packages/core/src/route/render/inject-editor-bootstrap.ts",
-    "hash": "d40b5cd4c5029b0d"
-  },
-  {
-    "file": "packages/core/src/runtime/dispatcher.ts",
-    "hash": "22929bdeb1c4212b"
-  },
-  {
-    "file": "packages/core/src/search/contract/search-terms.ts",
-    "hash": "cb5be8c3e51e8148"
-  },
-  {
-    "file": "packages/core/src/template-deps-core.ts",
-    "hash": "29b77b280159fefc"
-  },
-  {
-    "file": "packages/core/src/terms/errors.ts",
-    "hash": "dcf66e7aeed9fd5e"
-  },
-  {
-    "file": "packages/core/src/test/defer.test.ts",
-    "hash": "89675f7854103e01"
-  },
-  {
-    "file": "packages/core/src/test/dispatcher.ts",
-    "hash": "0e1f9e2a047e1129"
-  },
-  {
-    "file": "packages/core/src/test/dispatcher.ts",
-    "hash": "51c1c3d5bd3eecce"
-  },
-  {
-    "file": "packages/core/src/test/dispatcher.ts",
-    "hash": "c82552936f692915"
-  },
-  {
-    "file": "packages/core/src/test/factories.ts",
-    "hash": "1bc76eadb87a95ee"
-  },
-  {
-    "file": "packages/core/src/test/match.ts",
-    "hash": "c60b9ace7698bf82"
-  },
-  {
-    "file": "packages/core/src/test/playwright/runtime-e2e.ts",
-    "hash": "cee7c6b088e398a4"
   },
   {
     "file": "packages/create-plumix-app/src/catalog.test.ts",

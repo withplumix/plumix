@@ -72,7 +72,7 @@ function compileStringRule(
 }
 
 /**
- * Mirrors Apache/nginx backref syntax. One pass, so an escaped `$$1` stays
+ * Uses Apache/nginx backref syntax. One pass, so an escaped `$$1` stays
  * literal and captured text is never rescanned.
  */
 function substituteBackrefs(to: string, match: RegExpExecArray): string {

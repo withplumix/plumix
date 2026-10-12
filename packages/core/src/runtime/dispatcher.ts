@@ -185,7 +185,7 @@ function enforcePlumixCsrf(
     if (!acceptsFormPost(app, ctx, pathname)) {
       return forbidden("csrf_header_missing");
     }
-    // Only the Origin check remains, so it must match, not merely be absent.
+    // Only the Origin check remains, so it must pass, not merely be absent.
     return enforceOrigin(app, ctx);
   }
   // Defense-in-depth against a misconfigured CORS layer; the header alone

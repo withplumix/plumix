@@ -6,7 +6,7 @@ import type { DebugPanel } from "./types.js";
  * Unordered panels sort after every explicitly-ordered one. Finite (not
  * Infinity) so two unordered panels compare as 0, not NaN.
  */
-const DEFAULT_PANEL_ORDER = Number.MAX_SAFE_INTEGER;
+export const DEFAULT_PANEL_ORDER = Number.MAX_SAFE_INTEGER;
 
 /**
  * Isolates each `debug:panels` handler so a throw during collection can't take

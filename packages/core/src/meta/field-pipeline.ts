@@ -283,7 +283,8 @@ function applyCompositeSanitize<T extends JsonValue>(
       value: assembled,
     };
   }
-  // Mirrors the scalar path — see `runFieldPipeline`.
+  // A callback that returns nothing leaves nothing to persist, so the
+  // assembled value stands.
   if (transformed === undefined) {
     return { result: { errors: [] }, value: assembled };
   }

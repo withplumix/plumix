@@ -287,7 +287,7 @@ export const allowedDomainFactory = Factory.define<
 /**
  * Pre-seeded credential for tests that exercise "already registered" flows.
  * Callers must supply userId and publicKey; everything else has a sensible
- * default. Buffer cast mirrors the runtime pattern in register.ts.
+ * default.
  */
 export const credentialFactory = Factory.define<
   NewCredential,
@@ -312,6 +312,8 @@ export const credentialFactory = Factory.define<
   return {
     id: params.id ?? `cred-${sequence}-${processToken}`,
     userId,
+    // Drizzle types the blob column as `Buffer`; the drivers accept a plain
+    // Uint8Array at runtime.
     publicKey: publicKey as Buffer,
     counter: params.counter ?? 0,
     deviceType: params.deviceType ?? "single_device",

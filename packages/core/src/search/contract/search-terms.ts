@@ -1,4 +1,4 @@
-// Mirrors WordPress's search parsing, minus its English-biased stopwords:
+// Follows WordPress's search parsing, minus its English-biased stopwords:
 // https://developer.wordpress.org/reference/classes/wp_query/parse_search/
 
 /**

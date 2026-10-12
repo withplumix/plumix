@@ -41,7 +41,7 @@ export function deepEqual(a: unknown, b: unknown): boolean {
 
 /**
  * Partial match with `expect.toMatchObject` semantics: `actual` may have extra
- * keys; arrays must match in length, elements matched recursively.
+ * keys; arrays must have equal length, elements matched recursively.
  */
 export function partialMatch(actual: unknown, expected: unknown): boolean {
   if (Object.is(actual, expected)) return true;

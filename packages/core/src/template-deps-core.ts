@@ -22,7 +22,7 @@ declare module "./blocks/deps.js" {
 
 /**
  * Seed the plugin registry with built-in template deps before plugin
- * `setup()` runs. Mirrors `registerCoreLookupAdapters` — core's slot
+ * `setup()` runs. Like `registerCoreLookupAdapters`, core's slot
  * lands first so a plugin `ctx.registerTemplateDep("settings", ...)`
  * trips the boot-time collision guard.
  */
