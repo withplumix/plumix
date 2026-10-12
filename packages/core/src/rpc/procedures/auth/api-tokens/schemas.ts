@@ -35,8 +35,7 @@ const capabilitySchema = v.pipe(
 
 /**
  * `null` inherits the role's caps; an array narrows the token to it. `[]` is
- * legal: every `auth.can` is false. Capped at 128 against a hostile minter or
- * device-flow approver.
+ * legal: every `auth.can` is false. Capped at 128 against a hostile minter.
  */
 export const tokenScopesSchema = v.optional(
   v.union([

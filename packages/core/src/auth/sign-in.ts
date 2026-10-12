@@ -12,7 +12,7 @@ interface MintedSession {
   readonly cookieHeader: string;
 }
 
-/** Where the session cookie lives; sign-out clears it from the same place. */
+/** Attributes that decide which requests carry the session cookie. */
 export function sessionCookieScope(
   ctx: AppContext,
 ): Pick<SessionCookieOptions, "secure" | "sameSite" | "path"> {

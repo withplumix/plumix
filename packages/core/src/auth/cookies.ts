@@ -4,7 +4,7 @@ export const SESSION_COOKIE_NAME = "plumix_session";
 
 export interface SessionCookieOptions {
   readonly name?: string;
-  /** Cookie Max-Age in seconds; sign-in passes the session's sliding TTL. */
+  /** Cookie Max-Age in seconds. */
   readonly maxAgeSeconds: number;
   /** Set Secure when serving over HTTPS — auto-detected from request URL. */
   readonly secure: boolean;

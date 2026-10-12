@@ -1106,9 +1106,8 @@ describe("entry.update", () => {
     });
   });
 
-  // Same rule as the publish gate: a caller cannot fix a field they are not
-  // allowed to write, so switching one visible must not hand them an error
-  // about it.
+  // A caller cannot fix a field they are not allowed to write, so switching
+  // one visible must not hand them an error about it.
   test("meta: an edit is not held to a field its author cannot write", async () => {
     const plugins = createPluginRegistry();
     plugins.entryMetaBoxes.set("layout-box", {

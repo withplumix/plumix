@@ -40,7 +40,6 @@ describe("POST /_plumix/auth/device/code", () => {
     const { pathname } = new URL(body.verification_uri);
     expect(pathname.startsWith(`${ADMIN_MOUNT}/`)).toBe(true);
 
-    // The admin's file routes become this generated table.
     const routeTree = readFileSync(
       join(
         dirname(fileURLToPath(import.meta.url)),

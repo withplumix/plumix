@@ -698,7 +698,7 @@ describe("oauth callback route", () => {
   });
 
   test("worked theme wiring: start → callback returns the visitor to redirectTo", async () => {
-    // Plays a theme "Continue with GitHub" link carrying ?redirectTo; the
+    // A theme's "Continue with GitHub" link carries ?redirectTo; the
     // whole round-trip lands the visitor back on the page, signed in.
     const h = await createDispatcherHarness({
       config: { auth: { oauth: { providers: TEST_OAUTH } } },
