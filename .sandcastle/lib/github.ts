@@ -12,7 +12,7 @@ import {
   whoseSiblingIsNotInFlight,
 } from "./in-flight.js";
 import { blockersNamedIn } from "./named-blockers.js";
-import { retryWhatGitHubDropped } from "./outage.js";
+import { retryWhatGitHubDropped, retryWhatGitHubDroppedNow } from "./outage.js";
 import {
   DECISION_LABEL,
   HUMAN_LABEL,
@@ -41,12 +41,20 @@ export interface QueuedPullRequest {
 
 export type { MergeOutcome } from "./verdict.js";
 
+const blockFor = (ms: number): void => {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+};
+
 const gh = (args: readonly string[]): string =>
-  execFileSync("gh", [...args], {
-    cwd: REPO_ROOT,
-    encoding: "utf8",
-    maxBuffer: 32 * 1024 * 1024,
-  });
+  retryWhatGitHubDroppedNow(
+    () =>
+      execFileSync("gh", [...args], {
+        cwd: REPO_ROOT,
+        encoding: "utf8",
+        maxBuffer: 32 * 1024 * 1024,
+      }),
+    blockFor,
+  );
 
 const ghJson = <T>(args: readonly string[]): T => JSON.parse(gh(args)) as T;
 
