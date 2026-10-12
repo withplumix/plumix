@@ -38,7 +38,7 @@ describe("nextSearchForLang", () => {
 
 describe("buildLocaleSwitchUrl", () => {
   test("emits `?lang=<code>` against the current pathname", () => {
-    expect(buildLocaleSwitchUrl({}, "uk")).toBe(
+    expect(buildLocaleSwitchUrl({}, "uk", window.location.pathname)).toBe(
       `${window.location.pathname}?lang=uk`,
     );
   });
@@ -50,6 +50,7 @@ describe("buildLocaleSwitchUrl", () => {
     const url = buildLocaleSwitchUrl(
       { redirect_to: "/", email_change_success: 1 },
       "de",
+      window.location.pathname,
     );
     expect(url).toContain("lang=de");
     expect(url).toContain("redirect_to=%2F");

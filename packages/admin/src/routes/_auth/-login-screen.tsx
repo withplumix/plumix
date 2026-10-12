@@ -120,7 +120,9 @@ export function LoginScreen({ search }: { search: LoginSearch }): ReactNode {
   // wire.
   const handleLocaleSelect = (code: string): void => {
     writeLocaleCookie(code);
-    window.location.assign(buildLocaleSwitchUrl(search, code));
+    window.location.assign(
+      buildLocaleSwitchUrl(search, code, window.location.pathname),
+    );
   };
 
   const oauthErrorMessage = renderOAuthError(search.oauth_error);

@@ -24,6 +24,7 @@ export function nextSearchForLang(
 export function buildLocaleSwitchUrl(
   currentSearch: JsonObject,
   nextCode: string,
+  pathname: string,
 ): string {
   const nextSearch = nextSearchForLang(currentSearch, nextCode);
   const params = new URLSearchParams();
@@ -31,7 +32,7 @@ export function buildLocaleSwitchUrl(
     if (typeof raw === "string") params.set(k, raw);
     else if (typeof raw === "number") params.set(k, String(raw));
   }
-  return `${window.location.pathname}?${params.toString()}`;
+  return `${pathname}?${params.toString()}`;
 }
 
 /** `secure` defaults to the current scheme; tests pass `false` to
