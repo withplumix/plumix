@@ -355,11 +355,8 @@ function signalGroup(child, signal) {
   }
 }
 
-const hasExited = (child) =>
-  child.exitCode !== null || child.signalCode !== null;
-
 function stop(child) {
-  if (hasExited(child)) return;
+  if (child.exitCode !== null || child.signalCode !== null) return;
   signalGroup(child, "SIGKILL");
 }
 
@@ -368,9 +365,8 @@ function stop(child) {
 const STOP_WINDOW_MS = 15_000;
 
 /**
- * Whether anything in the server's group is still running. A zombie has
- * exited and only waits to be reaped, which a container whose PID 1 reaps no
- * orphans never does, so it doesn't count.
+ * A zombie has exited and only waits to be reaped, which a container whose
+ * PID 1 reaps no orphans never does, so it doesn't count as running.
  */
 function groupRunning(child) {
   return execFileSync("ps", ["-A", "-o", "pgid=,stat="], { encoding: "utf8" })
@@ -382,23 +378,23 @@ function groupRunning(child) {
 }
 
 /**
- * Sends SIGTERM and waits for the whole group to exit by itself, so a child
- * that outlives the server fails too. Whatever the window closes on is
- * killed. Resolves to whether the group exited in time.
+ * Waits for the whole group, not just the shell that spawned the server: a
+ * child that outlives the server must fail the combo too. Resolves to
+ * whether the group exited in time.
  */
 async function terminate(child) {
   signalGroup(child, "SIGTERM");
   const deadline = Date.now() + STOP_WINDOW_MS;
-  let stopped = true;
-  while (groupRunning(child)) {
-    if (Date.now() > deadline) {
-      stopped = false;
-      break;
+  try {
+    while (groupRunning(child)) {
+      if (Date.now() > deadline) return false;
+      await new Promise((wait) => setTimeout(wait, 200));
     }
-    await new Promise((wait) => setTimeout(wait, 200));
+    return true;
+  } finally {
+    // Also when `ps` throws, so no server outlives its combo.
+    signalGroup(child, "SIGKILL");
   }
-  signalGroup(child, "SIGKILL");
-  return stopped;
 }
 
 /**
