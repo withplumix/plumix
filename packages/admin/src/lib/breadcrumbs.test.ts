@@ -1,10 +1,9 @@
 import { i18n } from "@lingui/core";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vitest";
 
 import type { PlumixManifest } from "@plumix/core/manifest";
 
 import type { Crumb } from "./breadcrumbs.js";
-import { clearManifest, seedManifest } from "../../test/manifest.js";
 import { pathToCrumbs } from "./breadcrumbs.js";
 
 const FIXTURE: PlumixManifest = {
@@ -63,15 +62,10 @@ const FIXTURE: PlumixManifest = {
 };
 
 beforeEach(() => {
-  seedManifest(FIXTURE);
   // Source-locale renders use `descriptor.message` directly; explicit en
   // catalog keeps the resolver on the cheap path.
   i18n.load({ en: {} });
   i18n.activate("en");
-});
-
-afterEach(() => {
-  clearManifest();
 });
 
 function labels(crumbs: readonly Crumb[]): readonly {
@@ -89,19 +83,21 @@ function labels(crumbs: readonly Crumb[]): readonly {
 
 describe("pathToCrumbs", () => {
   test("dashboard", () => {
-    expect(labels(pathToCrumbs("/"))).toEqual([{ label: "Dashboard" }]);
-    expect(labels(pathToCrumbs(""))).toEqual([{ label: "Dashboard" }]);
+    expect(labels(pathToCrumbs("/", FIXTURE))).toEqual([
+      { label: "Dashboard" },
+    ]);
+    expect(labels(pathToCrumbs("", FIXTURE))).toEqual([{ label: "Dashboard" }]);
   });
 
   test("entries list resolves the plural label from manifest (no link on leaf)", () => {
-    expect(labels(pathToCrumbs("/entries/posts"))).toEqual([
+    expect(labels(pathToCrumbs("/entries/posts", FIXTURE))).toEqual([
       { label: "Entries" },
       { label: "Posts" },
     ]);
   });
 
   test("entries create: list crumb is a link, action crumb is leaf", () => {
-    expect(labels(pathToCrumbs("/entries/posts/create"))).toEqual([
+    expect(labels(pathToCrumbs("/entries/posts/create", FIXTURE))).toEqual([
       { label: "Entries" },
       { label: "Posts", to: "/entries/posts" },
       { label: "Create" },
@@ -109,7 +105,7 @@ describe("pathToCrumbs", () => {
   });
 
   test("entries edit: list crumb is a link, edit crumb is leaf", () => {
-    expect(labels(pathToCrumbs("/entries/posts/42/edit"))).toEqual([
+    expect(labels(pathToCrumbs("/entries/posts/42/edit", FIXTURE))).toEqual([
       { label: "Entries" },
       { label: "Posts", to: "/entries/posts" },
       { label: "Edit" },
@@ -117,7 +113,7 @@ describe("pathToCrumbs", () => {
   });
 
   test("entries with unknown slug falls back to the raw segment", () => {
-    expect(labels(pathToCrumbs("/entries/widgets"))).toEqual([
+    expect(labels(pathToCrumbs("/entries/widgets", FIXTURE))).toEqual([
       { label: "Entries" },
       { label: "widgets" },
     ]);
@@ -126,7 +122,7 @@ describe("pathToCrumbs", () => {
   test("terms create: leaf is the generic Create crumb (no noun interpolation)", () => {
     // The parent crumb already carries the plural label, so the leaf stays
     // noun-less and locale-safe.
-    expect(labels(pathToCrumbs("/terms/category/create"))).toEqual([
+    expect(labels(pathToCrumbs("/terms/category/create", FIXTURE))).toEqual([
       { label: "Terms" },
       { label: "Categories", to: "/terms/category" },
       { label: "Create" },
@@ -134,7 +130,7 @@ describe("pathToCrumbs", () => {
   });
 
   test("terms edit: leaf is the generic Edit crumb (no noun interpolation)", () => {
-    expect(labels(pathToCrumbs("/terms/category/7/edit"))).toEqual([
+    expect(labels(pathToCrumbs("/terms/category/7/edit", FIXTURE))).toEqual([
       { label: "Terms" },
       { label: "Categories", to: "/terms/category" },
       { label: "Edit" },
@@ -142,47 +138,53 @@ describe("pathToCrumbs", () => {
   });
 
   test("terms create/edit leaf carries no ICU `values` map post-widening", () => {
-    const createLeaf = pathToCrumbs("/terms/category/create").at(-1);
+    const createLeaf = pathToCrumbs("/terms/category/create", FIXTURE).at(-1);
     expect(createLeaf).toBeDefined();
     expect(typeof createLeaf?.label).toBe("object");
     expect(createLeaf?.values).toBeUndefined();
 
-    const editLeaf = pathToCrumbs("/terms/category/7/edit").at(-1);
+    const editLeaf = pathToCrumbs("/terms/category/7/edit", FIXTURE).at(-1);
     expect(typeof editLeaf?.label).toBe("object");
     expect(editLeaf?.values).toBeUndefined();
   });
 
   test("users edit: list crumb is a link", () => {
-    expect(labels(pathToCrumbs("/users/3/edit"))).toEqual([
+    expect(labels(pathToCrumbs("/users/3/edit", FIXTURE))).toEqual([
       { label: "Users", to: "/users" },
       { label: "Edit user" },
     ]);
   });
 
   test("settings list + page", () => {
-    expect(labels(pathToCrumbs("/settings"))).toEqual([{ label: "Settings" }]);
-    expect(labels(pathToCrumbs("/settings/general"))).toEqual([
+    expect(labels(pathToCrumbs("/settings", FIXTURE))).toEqual([
+      { label: "Settings" },
+    ]);
+    expect(labels(pathToCrumbs("/settings/general", FIXTURE))).toEqual([
       { label: "Settings", to: "/settings" },
       { label: "General" },
     ]);
   });
 
   test("profile + plugin pages", () => {
-    expect(labels(pathToCrumbs("/profile"))).toEqual([{ label: "Profile" }]);
+    expect(labels(pathToCrumbs("/profile", FIXTURE))).toEqual([
+      { label: "Profile" },
+    ]);
     // Registered plugin page → resolves to its declared label, no
     // synthetic "Pages" parent (would collide with the entry-type Pages
     // surface in the user's sidebar).
-    expect(labels(pathToCrumbs("/pages/media"))).toEqual([
+    expect(labels(pathToCrumbs("/pages/media", FIXTURE))).toEqual([
       { label: "Media Library" },
     ]);
     // Unregistered plugin path → fall back to URL slug, still no parent.
-    expect(labels(pathToCrumbs("/pages/unknown"))).toEqual([
+    expect(labels(pathToCrumbs("/pages/unknown", FIXTURE))).toEqual([
       { label: "unknown" },
     ]);
   });
 
   test("unknown top-level segment falls back to Admin", () => {
-    expect(labels(pathToCrumbs("/whatever"))).toEqual([{ label: "Admin" }]);
+    expect(labels(pathToCrumbs("/whatever", FIXTURE))).toEqual([
+      { label: "Admin" },
+    ]);
   });
 
   test("translated labels resolve via active catalog", () => {
@@ -195,7 +197,7 @@ describe("pathToCrumbs", () => {
       },
     });
     i18n.activate("de");
-    expect(labels(pathToCrumbs("/entries/posts/create"))).toEqual([
+    expect(labels(pathToCrumbs("/entries/posts/create", FIXTURE))).toEqual([
       { label: "Einträge" },
       { label: "Posts", to: "/entries/posts" }, // manifest-derived, untranslated
       { label: "Erstellen" },

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { CredentialsApi } from "./passkey.js";
 import { bufferToBase64url } from "./base64url.js";
 import { PasskeyError } from "./passkey-errors.js";
 import {
@@ -79,19 +80,17 @@ function fakeAssertionCredential(): PublicKeyCredential {
 }
 
 let fetchMock: FetchMock;
-let credentialsCreate: ReturnType<typeof vi.fn>;
-let credentialsGet: ReturnType<typeof vi.fn>;
+let credentialsCreate: ReturnType<typeof vi.fn<CredentialsApi["create"]>>;
+let credentialsGet: ReturnType<typeof vi.fn<CredentialsApi["get"]>>;
+let credentials: CredentialsApi;
 
 beforeEach(() => {
   fetchMock = vi.fn<typeof fetch>();
   vi.stubGlobal("fetch", fetchMock);
 
-  credentialsCreate = vi.fn();
-  credentialsGet = vi.fn();
-  Object.defineProperty(globalThis.navigator, "credentials", {
-    configurable: true,
-    value: { create: credentialsCreate, get: credentialsGet },
-  });
+  credentialsCreate = vi.fn<CredentialsApi["create"]>();
+  credentialsGet = vi.fn<CredentialsApi["get"]>();
+  credentials = { create: credentialsCreate, get: credentialsGet };
 });
 
 afterEach(() => {
@@ -105,10 +104,10 @@ describe("registerWithPasskey", () => {
       .mockResolvedValueOnce(jsonResponse({ userId: 42 }));
     credentialsCreate.mockResolvedValue(fakeCreatedCredential());
 
-    const result = await registerWithPasskey({
-      email: "a@example.test",
-      name: "Alice",
-    });
+    const result = await registerWithPasskey(
+      { email: "a@example.test", name: "Alice" },
+      credentials,
+    );
     expect(result).toEqual({ userId: 42 });
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -141,7 +140,10 @@ describe("registerWithPasskey", () => {
       jsonResponse({ error: "registration_closed" }, 403),
     );
 
-    const rejection = registerWithPasskey({ email: "x@example.test" });
+    const rejection = registerWithPasskey(
+      { email: "x@example.test" },
+      credentials,
+    );
     await expect(rejection).rejects.toBeInstanceOf(PasskeyError);
     await expect(rejection).rejects.toMatchObject({
       code: "registration_closed",
@@ -165,7 +167,7 @@ describe("registerWithPasskey", () => {
       credentialsCreate.mockRejectedValue(new DOMException("x", domName));
 
       await expect(
-        registerWithPasskey({ email: "a@example.test" }),
+        registerWithPasskey({ email: "a@example.test" }, credentials),
       ).rejects.toMatchObject({ code: expectedCode });
     },
   );
@@ -178,7 +180,7 @@ describe("signInWithPasskey", () => {
       .mockResolvedValueOnce(jsonResponse({ userId: 7 }));
     credentialsGet.mockResolvedValue(fakeAssertionCredential());
 
-    const result = await signInWithPasskey("a@example.test");
+    const result = await signInWithPasskey("a@example.test", credentials);
     expect(result).toEqual({ userId: 7 });
 
     const optionsCall = callAt(fetchMock, 0);
@@ -201,14 +203,16 @@ describe("signInWithPasskey", () => {
       .mockResolvedValueOnce(jsonResponse({ userId: 1 }));
     credentialsGet.mockResolvedValue(fakeAssertionCredential());
 
-    await signInWithPasskey();
+    await signInWithPasskey(undefined, credentials);
     expect(JSON.parse(callAt(fetchMock, 0)[1]?.body as string)).toEqual({});
   });
 
   test("network failure → network_error", async () => {
     fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
 
-    await expect(signInWithPasskey()).rejects.toMatchObject({
+    await expect(
+      signInWithPasskey(undefined, credentials),
+    ).rejects.toMatchObject({
       code: "network_error",
     });
   });
@@ -221,7 +225,9 @@ describe("signInWithPasskey", () => {
       );
     credentialsGet.mockResolvedValue(fakeAssertionCredential());
 
-    await expect(signInWithPasskey()).rejects.toMatchObject({
+    await expect(
+      signInWithPasskey(undefined, credentials),
+    ).rejects.toMatchObject({
       code: "credential_not_found",
     });
   });
@@ -291,10 +297,10 @@ describe("acceptInviteWithPasskey", () => {
       .mockResolvedValueOnce(jsonResponse({ userId: 99 }));
     credentialsCreate.mockResolvedValue(fakeCreatedCredential());
 
-    const result = await acceptInviteWithPasskey({
-      token: "invite-token-xyz",
-      name: "Invited",
-    });
+    const result = await acceptInviteWithPasskey(
+      { token: "invite-token-xyz", name: "Invited" },
+      credentials,
+    );
     expect(result.userId).toBe(99);
     expect(result.invitee.email).toBe("invited@example.test");
 
@@ -333,7 +339,7 @@ describe("acceptInviteWithPasskey", () => {
       jsonResponse({ error: "invalid_token" }, 404),
     );
 
-    const rejection = acceptInviteWithPasskey({ token: "bogus" });
+    const rejection = acceptInviteWithPasskey({ token: "bogus" }, credentials);
     await expect(rejection).rejects.toBeInstanceOf(PasskeyError);
     await expect(rejection).rejects.toMatchObject({ code: "invalid_token" });
     // Options call failed → credential create never fired.
@@ -351,7 +357,7 @@ describe("acceptInviteWithPasskey", () => {
       .mockResolvedValueOnce(jsonResponse({ userId: 1 }));
     credentialsCreate.mockResolvedValue(fakeCreatedCredential());
 
-    await acceptInviteWithPasskey({ token: "t" });
+    await acceptInviteWithPasskey({ token: "t" }, credentials);
     const optionsCall = callAt(fetchMock, 0);
     expect(JSON.parse(optionsCall[1]?.body as string)).toEqual({ token: "t" });
   });

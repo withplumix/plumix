@@ -6,12 +6,7 @@ import type {
   SettingsPageManifestEntry,
   UserMetaBoxManifestEntry,
 } from "@plumix/core/manifest";
-import {
-  buildManifest,
-  createPluginRegistry,
-  injectManifestIntoHtml,
-  MANIFEST_SCRIPT_ID,
-} from "@plumix/core/manifest";
+import { buildManifest, createPluginRegistry } from "@plumix/core/manifest";
 
 import {
   accessPoliciesForType,
@@ -20,11 +15,12 @@ import {
   findSettingsGroupByName,
   findSettingsPageByName,
   findTermTaxonomyByName,
+  getConfiguredSlots,
   getPatterns,
   getThemeBreakpoints,
   groupsForSettingsPage,
   namedTemplatesForType,
-  readManifest,
+  parseManifest,
   visibleDashboardWidgets,
   visibleEntryTypes,
   visibleSettingsPages,
@@ -32,46 +28,23 @@ import {
   visibleUserMetaBoxes,
 } from "./manifest.js";
 
-/** The only path that exercises the normalizer; the `source` param skips it. */
-function readManifestAcrossTheWire(manifest: PlumixManifest): PlumixManifest {
-  const html = injectManifestIntoHtml(
-    `<script id="${MANIFEST_SCRIPT_ID}" type="application/json"></script>`,
-    manifest,
-  );
-  const doc = new DOMParser().parseFromString(html, "text/html");
-  return readManifest(doc);
-}
-
-function withManifestScript(json: string): Document {
-  const doc = document.implementation.createHTMLDocument("test");
-  const script = doc.createElement("script");
-  script.id = "plumix-manifest";
-  script.type = "application/json";
-  script.textContent = json;
-  doc.body.appendChild(script);
-  return doc;
-}
-
-describe("readManifest", () => {
+describe("parseManifest", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
   test("returns empty manifest when the script tag is absent", () => {
-    const doc = document.implementation.createHTMLDocument("test");
-    expect(readManifest(doc)).toEqual({});
+    expect(parseManifest(null)).toEqual({});
   });
 
   test("parses the injected JSON payload", () => {
-    // Raw JSON payload — readManifest doesn't synthesize labels; the
+    // Raw JSON payload — parseManifest doesn't synthesize labels; the
     // tested behaviour is "round-trip a posted JSON shape", separate
     // from the wire-required `labels` field on manifest entries.
-    const doc = withManifestScript(
-      JSON.stringify({
-        entryTypes: [{ name: "post", label: "Posts" }],
-      }),
-    );
-    expect(readManifest(doc)).toEqual({
+    const text = JSON.stringify({
+      entryTypes: [{ name: "post", label: "Posts" }],
+    });
+    expect(parseManifest(text)).toEqual({
       entryTypes: [{ name: "post", label: "Posts" }],
     });
   });
@@ -84,16 +57,16 @@ describe("readManifest", () => {
         { code: "ar", label: "العربية", direction: "rtl", enabled: true },
       ],
     };
-    const doc = withManifestScript(JSON.stringify({ i18n }));
-    expect(readManifest(doc).i18n).toEqual(i18n);
+    const text = JSON.stringify({ i18n });
+    expect(parseManifest(text).i18n).toEqual(i18n);
   });
 
   test("carries theme tokens through to consumers", () => {
     const tokens = {
       colors: { brand: { value: "#0070f3", label: "Brand" } },
     };
-    const doc = withManifestScript(JSON.stringify({ tokens }));
-    expect(readManifest(doc).tokens).toEqual(tokens);
+    const text = JSON.stringify({ tokens });
+    expect(parseManifest(text).tokens).toEqual(tokens);
   });
 
   test("carries the configured-slot roster through to consumers", () => {
@@ -104,52 +77,46 @@ describe("readManifest", () => {
       cdn: false,
       mailer: true,
     };
-    const doc = withManifestScript(JSON.stringify({ configuredSlots }));
-    expect(readManifest(doc).configuredSlots).toEqual(configuredSlots);
+    const text = JSON.stringify({ configuredSlots });
+    expect(parseManifest(text).configuredSlots).toEqual(configuredSlots);
   });
 
   test("empty payload falls back to empty manifest", () => {
-    const doc = withManifestScript("");
-    expect(readManifest(doc)).toEqual({});
+    expect(parseManifest("")).toEqual({});
   });
 
   test("malformed JSON logs and falls back without throwing", () => {
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {
       // swallow expected error log
     });
-    const doc = withManifestScript("{not-json");
-    expect(readManifest(doc)).toEqual({});
+    expect(parseManifest("{not-json")).toEqual({});
     expect(errSpy).toHaveBeenCalledOnce();
   });
 
   test("non-array entryTypes coerces to empty array", () => {
-    const doc = withManifestScript(JSON.stringify({ entryTypes: "oops" }));
-    expect(readManifest(doc)).toEqual({});
+    const text = JSON.stringify({ entryTypes: "oops" });
+    expect(parseManifest(text)).toEqual({});
   });
 
   test("non-array metaBoxes is dropped from the result", () => {
-    const doc = withManifestScript(
-      JSON.stringify({ entryTypes: [], entryMetaBoxes: "oops" }),
-    );
-    const result = readManifest(doc);
+    const text = JSON.stringify({ entryTypes: [], entryMetaBoxes: "oops" });
+    const result = parseManifest(text);
     expect(result.entryTypes).toEqual([]);
     expect(result.entryMetaBoxes).toBeUndefined();
   });
 
   test("parses the injected JSON payload with metaBoxes", () => {
-    const doc = withManifestScript(
-      JSON.stringify({
-        entryMetaBoxes: [
-          {
-            id: "seo",
-            label: "SEO",
-            entryTypes: ["post"],
-            fields: [],
-          },
-        ],
-      }),
-    );
-    expect(readManifest(doc)).toEqual({
+    const text = JSON.stringify({
+      entryMetaBoxes: [
+        {
+          id: "seo",
+          label: "SEO",
+          entryTypes: ["post"],
+          fields: [],
+        },
+      ],
+    });
+    expect(parseManifest(text)).toEqual({
       entryMetaBoxes: [
         {
           id: "seo",
@@ -162,18 +129,16 @@ describe("readManifest", () => {
   });
 
   test("parses the injected JSON payload with termTaxonomies", () => {
-    const doc = withManifestScript(
-      JSON.stringify({
-        termTaxonomies: [
-          {
-            name: "category",
-            label: "Categories",
-            isHierarchical: true,
-          },
-        ],
-      }),
-    );
-    expect(readManifest(doc)).toEqual({
+    const text = JSON.stringify({
+      termTaxonomies: [
+        {
+          name: "category",
+          label: "Categories",
+          isHierarchical: true,
+        },
+      ],
+    });
+    expect(parseManifest(text)).toEqual({
       termTaxonomies: [
         {
           name: "category",
@@ -185,10 +150,11 @@ describe("readManifest", () => {
   });
 
   test("non-array termTaxonomies is dropped from the result", () => {
-    const doc = withManifestScript(
-      JSON.stringify({ entryTypes: [], termTaxonomies: "not-an-array" }),
-    );
-    expect(readManifest(doc).termTaxonomies).toBeUndefined();
+    const text = JSON.stringify({
+      entryTypes: [],
+      termTaxonomies: "not-an-array",
+    });
+    expect(parseManifest(text).termTaxonomies).toBeUndefined();
   });
 
   test("a plugin-registered dashboard widget survives projection and normalization", () => {
@@ -201,7 +167,8 @@ describe("readManifest", () => {
     });
     const manifest = buildManifest(registry, { tokens: {} });
 
-    const read = readManifestAcrossTheWire(manifest);
+    // The only path that exercises the normalizer; the `source` param skips it.
+    const read = parseManifest(JSON.stringify(manifest));
 
     expect(visibleDashboardWidgets([], read).map((w) => w.id)).toEqual([
       "widget-plugin:hello",
@@ -215,7 +182,7 @@ describe("readManifest", () => {
       breakpoints,
     });
 
-    const read = readManifestAcrossTheWire(manifest);
+    const read = parseManifest(JSON.stringify(manifest));
 
     expect(getThemeBreakpoints(read)).toEqual(breakpoints);
   });
@@ -742,27 +709,25 @@ describe("visibleDashboardWidgets", () => {
 });
 
 describe("getPatterns", () => {
-  test("readManifest carries the patterns slice through normalization", () => {
-    const doc = withManifestScript(
-      JSON.stringify({
-        patterns: [
-          {
-            name: "starter/hero",
-            title: "Hero",
-            category: "hero",
-            content: [],
-          },
-          {
-            name: "starter/cta",
-            title: "CTA",
-            category: "cta",
-            content: [],
-          },
-        ],
-      }),
-    );
+  test("parseManifest carries the patterns slice through normalization", () => {
+    const text = JSON.stringify({
+      patterns: [
+        {
+          name: "starter/hero",
+          title: "Hero",
+          category: "hero",
+          content: [],
+        },
+        {
+          name: "starter/cta",
+          title: "CTA",
+          category: "cta",
+          content: [],
+        },
+      ],
+    });
 
-    expect(readManifest(doc).patterns).toEqual([
+    expect(parseManifest(text).patterns).toEqual([
       { name: "starter/hero", title: "Hero", category: "hero", content: [] },
       { name: "starter/cta", title: "CTA", category: "cta", content: [] },
     ]);
@@ -779,5 +744,17 @@ describe("getPatterns", () => {
       content: [],
     };
     expect(getPatterns({ patterns: [heroEntry] })).toEqual([heroEntry]);
+  });
+});
+
+describe("getConfiguredSlots", () => {
+  test("reports every slot unconfigured when the manifest names none", () => {
+    expect(getConfiguredSlots({})).toEqual({
+      storage: false,
+      imageDelivery: false,
+      kv: false,
+      cdn: false,
+      mailer: false,
+    });
   });
 });
