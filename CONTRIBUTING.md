@@ -125,8 +125,8 @@ Regenerate it with the script that owns it and commit the result with your chang
 Each folder under `packages/runtimes/` runs a Plumix site on one runtime, using that runtime's own primitives ([ADR 0019](docs/adr/0019-a-runtime-adapter-uses-its-runtimes-primitives-and-is-tested-on-that-runtime.md)). The shared suites know no runtime. An adapter tells them how to run it through the `plumix` block in its `package.json`.
 
 - `plumix.scaffold` is what `create-plumix-app` writes into a new project on this runtime: imports, config slots, dependencies, files, and the `packageManager` the project installs with (pnpm by default).
-- `plumix.e2e` is what the e2e suites and the scaffold smoke need: `start` serves the built output on `PORT`, `wipe` lists what a run deletes first, `database` says where the database ends up, and `cli` runs the `plumix` CLI (the package's bin by default).
-- An adapter proves itself with a `playground/` that runs the shared `runtimeSpec` from `plumix/test/playwright`. The scaffold smoke (`pnpm smoke:scaffold`) builds a project for each runtime, applies its migrations through `cli`, starts it, and requests `/`, the admin and the `auth/session` RPC. Its `all-plugins` project then runs `plumix dev` and drives the editor in Chromium.
+- `plumix.e2e` is what the e2e suites and the scaffold smoke need: `start` serves the built output on `PORT` and, with everything it starts, exits on `SIGTERM`, `wipe` lists what a run deletes first, `database` says where the database ends up, and `cli` runs the `plumix` CLI (the package's bin by default).
+- An adapter proves itself with a `playground/` that runs the shared `runtimeSpec` from `plumix/test/playwright`. The scaffold smoke (`pnpm smoke:scaffold`) builds a project for each runtime, applies its migrations through `cli`, starts it, requests `/`, the admin and the `auth/session` RPC, then stops it with `SIGTERM` and waits for it to exit. Its `all-plugins` project then runs `plumix dev` and drives the editor in Chromium.
 
 ### Packages that own tables
 

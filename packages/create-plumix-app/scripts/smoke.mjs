@@ -1,5 +1,6 @@
 // Scaffolds representative projects and proves they typecheck, build and
-// serve: each built server is started and requested before the next combo.
+// serve: each built server is started, requested and stopped with SIGTERM
+// before the next combo.
 // Each runtime's all-plugins project then runs `plumix dev` and drives the
 // editor in Chromium.
 //
@@ -344,14 +345,55 @@ function freePort() {
   });
 }
 
-// Detached, so the negative pid reaches everything the shell started —
+// Detached, so the negative pid reaches everything the server started —
 // wrangler's workerd above all.
-function stop(child) {
-  if (child.exitCode !== null || child.signalCode !== null) return;
+function signalGroup(child, signal) {
   try {
-    process.kill(-child.pid, "SIGKILL");
+    process.kill(-child.pid, signal);
   } catch {
     // Already gone.
+  }
+}
+
+function stop(child) {
+  if (child.exitCode !== null || child.signalCode !== null) return;
+  signalGroup(child, "SIGKILL");
+}
+
+// Core's `DRAIN_DEADLINE_MS` (10 s), plus 5 s for the runtime to exit once
+// the drain is done.
+const STOP_WINDOW_MS = 15_000;
+
+/**
+ * A zombie has exited and only waits to be reaped, which a container whose
+ * PID 1 reaps no orphans never does, so it doesn't count as running.
+ */
+function groupRunning(child) {
+  return execFileSync("ps", ["-A", "-o", "pgid=,stat="], { encoding: "utf8" })
+    .split("\n")
+    .map((line) => line.trim().split(/\s+/))
+    .some(
+      ([pgid, stat]) => Number(pgid) === child.pid && !stat?.startsWith("Z"),
+    );
+}
+
+/**
+ * Waits for the whole group, not just the shell that spawned the server: a
+ * child that outlives the server must fail the combo too. Resolves to
+ * whether the group exited in time.
+ */
+async function terminate(child) {
+  signalGroup(child, "SIGTERM");
+  const deadline = Date.now() + STOP_WINDOW_MS;
+  try {
+    while (groupRunning(child)) {
+      if (Date.now() > deadline) return false;
+      await new Promise((wait) => setTimeout(wait, 200));
+    }
+    return true;
+  } finally {
+    // Also when `ps` throws, so no server outlives its combo.
+    signalGroup(child, "SIGKILL");
   }
 }
 
@@ -403,7 +445,7 @@ async function assertServes(base, child) {
   }
 }
 
-async function boot(appDir) {
+async function boot(appDir, combo) {
   const runtime = installedRuntime(appDir);
   const plan = planBoot(runtime.name, runtime.e2e);
   // The project's bins first, so `plumix`, `wrangler` and whatever they spawn
@@ -426,14 +468,21 @@ async function boot(appDir) {
   });
   child.stdout.pipe(log);
   child.stderr.pipe(log);
+  // The temp dir goes with the combo, so surface the server's output now.
+  const printLogTail = () =>
+    console.error(readFileSync(logFile, "utf8").slice(-4000));
   try {
     await assertServes(`http://127.0.0.1:${port}`, child);
   } catch (err) {
-    // The temp dir goes with the combo, so surface the server's output now.
-    console.error(readFileSync(logFile, "utf8").slice(-4000));
-    throw err;
-  } finally {
     stop(child);
+    printLogTail();
+    throw err;
+  }
+  if (!(await terminate(child))) {
+    printLogTail();
+    throw new Error(
+      `${combo.name}: the server did not exit within ${STOP_WINDOW_MS / 1000} s of SIGTERM.`,
+    );
   }
 }
 
@@ -525,7 +574,7 @@ async function smoke(combo, tarballs) {
     run(pm, ["run", "typecheck"], app);
     run(pm, ["run", "build"], app);
     if (combo.secondLocale) assertCatalogsStaged(app, combo.excluded);
-    await boot(app);
+    await boot(app, combo);
     if (combo.devEditor) await driveEditorUnderDev(app, combo);
     console.log(`=== ${combo.name}: ok ===`);
   } finally {
@@ -540,7 +589,7 @@ try {
   const combos = planSmokeCombos(await loadRegistry(REPO));
   for (const combo of combos) await smoke(combo, tarballs);
   console.log(
-    `\nSmoke check passed: ${combos.length} generated projects typecheck, build and serve.`,
+    `\nSmoke check passed: ${combos.length} generated projects typecheck, build, serve and stop.`,
   );
 } finally {
   rmSync(packs, { recursive: true, force: true });
