@@ -209,7 +209,7 @@ One step runs earlier than that and does not care about order. A descriptor's op
 
 Public URLs do not depend on array order either. The router compiles taxonomy rules ahead of entry-type rules and sorts every rule by a priority number, so a plugin whose entry type sits at the URL root cannot shadow another plugin's routes by being listed first. [Routing](/routing/overview/) covers how a URL reaches the rule that serves it.
 
-### Keeping state across hooks
+## Keeping state across hooks
 
 A plugin that builds something in `provides` and reads it again in `setup` or `afterSetup` declares it with `state`. Core calls `state` once per install, before any plugin's `provides`, and passes what it returns as the second argument to all three hooks. Here other plugins name badges during their `setup`, and the badges plugin turns each into a capability once they all have:
 
