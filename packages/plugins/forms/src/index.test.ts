@@ -14,7 +14,7 @@ import {
   TEL_INPUT_TYPE,
 } from "./contract.js";
 import { defineForm } from "./define-form.js";
-import { forms, FormsError, SUBMISSION_MODERATE_CAPABILITY } from "./index.js";
+import { forms, SUBMISSION_MODERATE_CAPABILITY } from "./index.js";
 import { createFormsHarness, seedPageWithForm } from "./test/harness.js";
 
 const contact = defineForm("contact", {
@@ -94,10 +94,16 @@ describe("forms registration", () => {
     expect(await response.text()).toContain('data-plumix-form="newsletter"');
   });
 
-  // `setup` finds its registry through what `provides` handed out, so one run
-  // alone has no forms to serve — the theme's `ctx.forms` included.
-  test("refuses a setup run without its provides", () => {
-    expect(() => forms().setup({} as never, undefined)).toThrow(FormsError);
+  test("keeps a form one app registered out of another app the same descriptor boots", async () => {
+    const descriptor = forms();
+    await createFormsHarness([descriptor, newsletterPlugin]);
+    const second = await createFormsHarness([descriptor]);
+    await seedPageWithForm(second, "newsletter");
+
+    const response = await second.fetch("/posts/page-with-form");
+
+    response.assertStatus(200);
+    expect(await response.text()).not.toContain("plumix-form");
   });
 
   test("two forms sharing a slug are rejected at boot, naming both", async () => {
