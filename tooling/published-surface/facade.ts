@@ -35,16 +35,16 @@ export function subpathsMatching(pattern: RegExp): string[] {
     .sort();
 }
 
-/**
- * The types that have no role subpath, so the root is their only home. Every
- * other type core's barrel exports sits on the root and on exactly one other
- * subpath.
- */
 interface RootOnly {
   readonly reason: string;
   readonly names: readonly string[];
 }
 
+/**
+ * The types that have no role subpath, so the root is their only home. Every
+ * other type core's barrel exports sits on the root and on exactly one other
+ * subpath.
+ */
 const ROOT_ONLY_TYPES: readonly RootOnly[] = [
   {
     reason:

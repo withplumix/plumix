@@ -193,7 +193,8 @@
     },
     "test:build": {
       // Tests that need the build graph (`*.build.test.ts`): plumix inspects
-      // the artifacts of a real Vite build, and the docs content checks compile samples against the `.d.ts` files.
+      // the artifacts of a real Vite build, and the docs content checks
+      // compile samples against the `.d.ts` files.
       "dependsOn": ["build", "^build"],
       "outputLogs": "new-only"
     },
