@@ -212,7 +212,8 @@ function toEntrySummary(
   return {
     id: String(row.id),
     type: row.type,
-    // `null` mirrors `LookupResult.label` — consumers localize the fallback.
+    // `null` for a blank title, as `LookupResult.label` — consumers localize
+    // the fallback.
     title: trimmedTitle !== "" ? trimmedTitle : null,
     slug: row.slug,
     url,

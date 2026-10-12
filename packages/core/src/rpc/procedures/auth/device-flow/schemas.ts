@@ -1,5 +1,7 @@
 import * as v from "valibot";
 
+import { tokenScopesSchema } from "../api-tokens/schemas.js";
+
 /**
  * Accepts either case and a missing dash for pasting, then normalises to
  * the canonical "ABCD-EFGH" the server primitive expects.
@@ -27,26 +29,6 @@ const tokenNameSchema = v.pipe(
   v.regex(/^[^\r\n]+$/, "name must not contain newlines"),
 );
 
-const capabilitySchema = v.pipe(
-  v.string(),
-  v.minLength(1, "capability must be non-empty"),
-  v.maxLength(96, "capability must be ≤ 96 chars"),
-  v.regex(/^[A-Za-z0-9_:.\-*]+$/, "capability uses [A-Za-z0-9_:.\\-*] only"),
-);
-
-/**
- * `null` inherits the role's caps; an array narrows the token to its
- * intersection with the role. `[]` is legal, as in `api_tokens.scopes`.
- * Capped against a hostile approver.
- */
-const scopesSchema = v.optional(
-  v.union([
-    v.null(),
-    v.pipe(v.array(capabilitySchema), v.maxLength(128, "≤ 128 scopes")),
-  ]),
-  null,
-);
-
 export const deviceFlowLookupInputSchema = v.object({
   userCode: userCodeSchema,
 });
@@ -54,7 +36,7 @@ export const deviceFlowLookupInputSchema = v.object({
 export const deviceFlowApproveInputSchema = v.object({
   userCode: userCodeSchema,
   tokenName: tokenNameSchema,
-  scopes: scopesSchema,
+  scopes: tokenScopesSchema,
 });
 
 export const deviceFlowDenyInputSchema = v.object({

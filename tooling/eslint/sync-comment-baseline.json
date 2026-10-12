@@ -96,38 +96,6 @@
     "hash": "5cf7b444b2c2e42d"
   },
   {
-    "file": "packages/core/src/auth/authenticator.test.ts",
-    "hash": "21bccb8fb024f862"
-  },
-  {
-    "file": "packages/core/src/auth/cookies.ts",
-    "hash": "9e50f7d161f84237"
-  },
-  {
-    "file": "packages/core/src/auth/device-flow-routes.ts",
-    "hash": "738946b968b840b6"
-  },
-  {
-    "file": "packages/core/src/auth/magic-link/index.ts",
-    "hash": "524fe7d231acd53c"
-  },
-  {
-    "file": "packages/core/src/auth/oauth/routes.test.ts",
-    "hash": "4cb4c0fb1df3edc1"
-  },
-  {
-    "file": "packages/core/src/auth/passkey/routes.test.ts",
-    "hash": "d791eef1b77cc693"
-  },
-  {
-    "file": "packages/core/src/auth/passkey/routes.ts",
-    "hash": "44cfa0b1f7799419"
-  },
-  {
-    "file": "packages/core/src/auth/passkey/types.ts",
-    "hash": "00d322a634f1056e"
-  },
-  {
     "file": "packages/core/src/blocks/columns/index.tsx",
     "hash": "6a1c702c9c52133e"
   },
@@ -258,34 +226,6 @@
   {
     "file": "packages/core/src/route/render/inject-editor-bootstrap.ts",
     "hash": "d40b5cd4c5029b0d"
-  },
-  {
-    "file": "packages/core/src/rpc/procedures/auth/api-tokens/schemas.ts",
-    "hash": "c2b64bf99a43db7c"
-  },
-  {
-    "file": "packages/core/src/rpc/procedures/entry/duplicate.test.ts",
-    "hash": "3bf0b76ed6e7d660"
-  },
-  {
-    "file": "packages/core/src/rpc/procedures/entry/lookup.ts",
-    "hash": "07245653cc3bd8a0"
-  },
-  {
-    "file": "packages/core/src/rpc/procedures/entry/update.test.ts",
-    "hash": "026e495ce2818cb2"
-  },
-  {
-    "file": "packages/core/src/rpc/procedures/entry/update.ts",
-    "hash": "b2a4caa78e98d9b2"
-  },
-  {
-    "file": "packages/core/src/rpc/procedures/term/lookup.test.ts",
-    "hash": "a2ba328c9752c2a5"
-  },
-  {
-    "file": "packages/core/src/rpc/procedures/user/enable.ts",
-    "hash": "e4085dd8c3573521"
   },
   {
     "file": "packages/core/src/runtime/dispatcher.ts",

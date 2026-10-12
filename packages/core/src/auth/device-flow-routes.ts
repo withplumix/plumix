@@ -9,7 +9,10 @@ import { exchangeDeviceCode, requestDeviceCode } from "./device-flow.js";
 /** RFC 8628 §3.4 grant_type identifier. */
 const DEVICE_CODE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code";
 
-/** Must match the admin router's `/auth/device` page. */
+/**
+ * Must match the admin router's `/auth/device` page.
+ * Guarded by: packages/core/src/auth/device-flow-routes.test.ts
+ */
 const VERIFICATION_PATH = "/_plumix/admin/auth/device";
 
 /** Only a fallback: the approval form requires a token name. */

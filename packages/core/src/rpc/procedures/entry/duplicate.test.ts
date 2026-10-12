@@ -8,10 +8,7 @@ import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { toRegisteredTermTaxonomy } from "../../../plugin/registry.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
-/**
- * Minimal taxonomy registry so `entry.update` accepts a `category`
- * term patch — mirrors the scaffold in terms.test.ts.
- */
+/** Minimal taxonomy registry so `entry.update` accepts a `category` term patch. */
 function categoryRegistry() {
   const registry = createPluginRegistry();
   const name = "category";

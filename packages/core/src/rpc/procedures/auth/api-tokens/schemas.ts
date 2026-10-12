@@ -25,10 +25,7 @@ const expiresInDaysSchema = v.union([
   v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(365 * 5)),
 ]);
 
-/**
- * Capability strings — `entry:post:read`, `settings:manage`, etc.
- * Same shape as device-flow's scope schema (kept in sync).
- */
+/** Capability strings — `entry:post:read`, `settings:manage`, etc. */
 const capabilitySchema = v.pipe(
   v.string(),
   v.minLength(1, "capability must be non-empty"),
@@ -37,11 +34,11 @@ const capabilitySchema = v.pipe(
 );
 
 /**
- * `null` inherits the role's caps; an array narrows to it. `[]` is legal: the
- * token authenticates but every `auth.can` is false. Capped at 128 against a
- * hostile self-mint.
+ * `null` inherits the role's caps; an array narrows the token to it. `[]` is
+ * legal: every `auth.can` is false. Capped at 128 against a hostile minter or
+ * device-flow approver.
  */
-const scopesSchema = v.optional(
+export const tokenScopesSchema = v.optional(
   v.union([
     v.null(),
     v.pipe(v.array(capabilitySchema), v.maxLength(128, "≤ 128 scopes")),
@@ -54,7 +51,7 @@ export const apiTokensListInputSchema = v.optional(v.object({}), {});
 export const apiTokensCreateInputSchema = v.object({
   name: tokenNameSchema,
   expiresInDays: v.optional(expiresInDaysSchema, 90),
-  scopes: scopesSchema,
+  scopes: tokenScopesSchema,
 });
 
 export const apiTokensRevokeInputSchema = v.object({

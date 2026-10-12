@@ -1,4 +1,4 @@
-// Public magic-link surface. Mirrors the OAuth barrel: errors + route
+// Public magic-link surface, laid out like the OAuth barrel: errors + route
 // handlers leave the package; the request/verify implementations are
 // internal (the dispatcher imports them by file path).
 
