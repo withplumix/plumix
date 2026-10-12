@@ -12,6 +12,7 @@ import {
 import { and, eq, inArray, isNotNull, or, sql } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { publicEntryTypeNames } from "../plugin/registry.js";
+import { canEditEntry } from "./editability.js";
 import { entryPolicyAdmits, policyAdmittedRows } from "./entry-access.js";
 
 export type EntryViewer = Pick<AppContext, "user" | "auth" | "plugins">;
@@ -40,7 +41,7 @@ export async function canReadEntry(
   if (!ctx.auth.can(namespacedEntryCapability(namespace, "read"))) return false;
   if (entry.status === "published") {
     return (
-      mayEditPublished(ctx, entry) ||
+      canEditEntry(ctx, entry) ||
       (await entryPolicyAdmits(ctx, entry, "listing"))
     );
   }
@@ -48,19 +49,6 @@ export async function canReadEntry(
   return (
     ctx.auth.can(namespacedEntryCapability(namespace, "edit_any")) ||
     entry.authorId === ctx.user?.id
-  );
-}
-
-/** `edit_any`, or `edit_own` over a row the caller wrote. */
-function mayEditPublished(ctx: EntryViewer, entry: EntryRow): boolean {
-  const namespace = entryCapabilityNamespace(ctx.plugins, entry.type);
-  if (ctx.auth.can(namespacedEntryCapability(namespace, "edit_any"))) {
-    return true;
-  }
-  return (
-    ctx.user !== null &&
-    entry.authorId === ctx.user.id &&
-    ctx.auth.can(namespacedEntryCapability(namespace, "edit_own"))
   );
 }
 
@@ -154,13 +142,16 @@ function earnedUnpublishedRows(ctx: EntryViewer, type: string): SQL | null {
 export async function publicEntryRows(ctx: AppContext): Promise<SQL | null> {
   const types = publicEntryTypeNames(ctx.plugins);
   if (types.length === 0) return null;
+  const admittedByType = await Promise.all(
+    types.map((type) => policyAdmittedRows(ctx, type, "listing")),
+  );
   const open: string[] = [];
   const policied: SQL[] = [];
-  for (const type of types) {
-    const admitted = await policyAdmittedRows(ctx, type, "listing");
+  types.forEach((type, index) => {
+    const admitted = admittedByType[index];
     if (admitted === undefined) open.push(type);
     else policied.push(sql`(${and(eq(entries.type, type), admitted)})`);
-  }
+  });
   const arms =
     open.length > 0 ? [inArray(entries.type, open), ...policied] : policied;
   if (arms.length === 0) return null;

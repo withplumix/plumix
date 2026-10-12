@@ -766,7 +766,6 @@ describe("resolveEntryList role images", () => {
   });
 });
 
-// A plugin listing entries its own way still gets the teaser.
 describe("resolveEntryList and an entry's access policy", () => {
   const teaserPages = definePlugin("teaser-pages", (ctx) => {
     ctx.registerEntryType("page", {
@@ -837,21 +836,21 @@ describe("resolveEntryList and an entry's access policy", () => {
   });
 
   test.each([
-    ["an editor holding edit_any", "editor", false, false],
-    ["the author holding edit_own", "author", true, false],
-    ["a reader who may edit nothing", "subscriber", false, true],
+    ["an editor holding edit_any", "editor", "other", false],
+    ["the author holding edit_own", "author", "viewer", false],
+    ["a reader who may edit nothing", "subscriber", "other", true],
   ] as const)(
     "%s: a paywalled body is withheld unless they may edit the entry",
-    async (_who, role, ownsIt, gated) => {
+    async (_who, role, writer, gated) => {
       const { harness, ctx, run } = await createTracedContext({
         config: { plugins: [teaserPages] },
       });
       const viewer = await harness.seedUser(role);
-      const other = await harness.seedUser("admin");
+      const authors = { viewer, other: await harness.seedUser("admin") };
       const row = await harness.factory.entry.create({
         type: "page",
         status: "published",
-        authorId: ownsIt ? viewer.id : other.id,
+        authorId: authors[writer].id,
         content: BODY,
         meta: { [ACCESS_POLICY_META_KEY]: "paywall" },
       });

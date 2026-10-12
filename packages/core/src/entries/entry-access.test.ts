@@ -71,7 +71,6 @@ describe("entryPolicyAdmits asked through anonymousContext", () => {
     column: access,
   });
 
-  // A public type carrying one selectable policy an entry may gate itself with.
   const memberSpace: EntryTypeAccess = {
     default: anonymousPolicy,
     policies: [
@@ -143,8 +142,6 @@ describe("entryPolicyAdmits asked through anonymousContext", () => {
   });
 
   it("allows an entry behind a soft challenge", async () => {
-    // A soft gate renders a public teaser at 200 at the plain URL, so the
-    // entry is shareable — and the route, asked anonymously, agrees.
     const c = await ctx({
       entryTypes: withType({
         default: definePolicy({

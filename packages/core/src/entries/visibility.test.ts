@@ -76,11 +76,12 @@ async function readableBy(
   ctx: AppContext,
   candidates: readonly Entry[],
 ): Promise<string[]> {
-  const readable: string[] = [];
-  for (const row of candidates) {
-    if (await canReadEntry(ctx, row)) readable.push(row.slug);
-  }
-  return readable;
+  const verdicts = await Promise.all(
+    candidates.map((row) => canReadEntry(ctx, row)),
+  );
+  return candidates
+    .filter((_, index) => verdicts[index])
+    .map((row) => row.slug);
 }
 
 async function selected(ctx: AppContext): Promise<string[]> {

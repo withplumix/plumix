@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from "vitest";
 
 import type { AppContext } from "../../context/app-context.js";
 import type { EntryQuery } from "../../entries/contract/query.js";
+import type { JsonObject } from "../../json.js";
 import type { DispatcherHarness } from "../../test/dispatcher.js";
 import type { EntryPage } from "./entry-listing.js";
 import { ACCESS_POLICY_META_KEY } from "../../access/contract/meta-key.js";
@@ -217,13 +218,20 @@ describe("listEntryPage paging", () => {
       const traced = await createTracedContext({
         config: { plugins: [blog, pages] },
       });
-      for (const key of ["members", undefined, "members", undefined]) {
+      const author = await traced.harness.seedUser("admin");
+      const metas: JsonObject[] = [
+        { [ACCESS_POLICY_META_KEY]: "members" },
+        {},
+        { [ACCESS_POLICY_META_KEY]: "members" },
+        {},
+      ];
+      for (const meta of metas) {
         await traced.harness.factory.entry.create({
           type: "page",
           status: "published",
           publishedAt: new Date("2026-03-04T00:00:00.000Z"),
-          authorId: (await traced.harness.seedUser("admin")).id,
-          meta: key === undefined ? {} : { [ACCESS_POLICY_META_KEY]: key },
+          authorId: author.id,
+          meta,
         });
       }
       const before = traced.dbQueryCount();

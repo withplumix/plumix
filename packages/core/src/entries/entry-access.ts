@@ -1,4 +1,5 @@
 import type { AccessOutcome } from "../access/contract/policy.js";
+import type { AccessPolicy } from "../access/policy.js";
 import type { AppContext } from "../context/app-context.js";
 import type { SQL } from "../db/index.js";
 import type { JsonObject } from "../json.js";
@@ -68,9 +69,9 @@ export async function policyAdmittedRows(
   const stored = sql`json_extract(${entries.meta}, ${STORED_KEY_PATH})`;
   const arms: SQL[] = [];
   if (admitted.length > 0) arms.push(inArray(stored, admitted));
-  // A missing, stale or non-string key falls to `default`, as on the gate.
   if (defaultAdmitted) {
-    arms.push(sql`(${or(isNull(stored), notInArray(stored, keys))})`);
+    const fallsToDefault = or(isNull(stored), notInArray(stored, keys));
+    arms.push(sql`(${fallsToDefault})`);
   }
   return arms.length === 0 ? sql`0` : sql`(${or(...arms)})`;
 }
@@ -90,18 +91,21 @@ function typeAdmission(
   if (access === undefined) return Promise.resolve(undefined);
   const principal = ctx.user === null ? "anonymous" : `user:${ctx.user.id}`;
   return ctx.memo(`core:entry-access:${type}:${principal}`, async () => {
-    const policies = access.policies ?? [];
-    const [fallback, ...chosen] = await Promise.all(
-      [access.default, ...policies.map((p) => p.policy)].map(async (policy) =>
-        admitsOf(await policy.resolve(ctx)),
+    const admits = async (policy: AccessPolicy): Promise<Admits> =>
+      admitsOf(await policy.resolve(ctx));
+    const [fallback, chosen] = await Promise.all([
+      admits(access.default),
+      Promise.all(
+        (access.policies ?? []).map(
+          async ({ key, policy }) => [key, await admits(policy)] as const,
+        ),
       ),
-    );
+    ]);
     const byKey = new Map<string, Admits>();
-    policies.forEach((p, index) => {
-      // The first policy with a key wins, as `selectEntryPolicy` picks it.
-      if (!byKey.has(p.key)) byKey.set(p.key, chosen[index] ?? "nothing");
-    });
-    return { default: fallback ?? "nothing", byKey };
+    for (const [key, admits] of chosen) {
+      if (!byKey.has(key)) byKey.set(key, admits);
+    }
+    return { default: fallback, byKey };
   });
 }
 

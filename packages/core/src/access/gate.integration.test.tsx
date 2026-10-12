@@ -1388,11 +1388,11 @@ describe("access gate — a render that reads the principal is personal (#2915)"
   });
 });
 
+const membersResolver = vi.fn(authenticatedPolicy.resolve);
 /**
  * A `page` type public by default, with a members policy and a soft teaser an
  * editor may pick per entry.
  */
-const membersResolver = vi.fn(authenticatedPolicy.resolve);
 const pagesWithAccess = definePlugin("pages-with-access", (ctx) => {
   ctx.registerEntryType("page", {
     label: "Pages",
