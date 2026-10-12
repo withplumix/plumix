@@ -4,8 +4,6 @@
  * list is done when empty.
  */
 export const RETIRED_TIER_PENDING: readonly string[] = [
-  "apps/docs/src/content-checks/code-samples.build.test.ts",
-  "apps/docs/src/content-checks/index.build.test.ts",
   "packages/admin-editor/src/block-catalog-tab.browser.test.tsx",
   "packages/admin-editor/src/block-input-control.browser.test.tsx",
   "packages/admin-editor/src/block-inspector.browser.test.tsx",

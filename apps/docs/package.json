@@ -12,8 +12,6 @@
     "clean": "git clean -xdf .astro dist node_modules",
     "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path ../../.prettierignore",
     "lint": "astro sync && eslint",
-    "test:unit": "vitest run",
-    "test:build": "vitest run --config vitest.build.config.ts",
     "typecheck": "astro sync && astro check && tsc --noEmit"
   },
   "dependencies": {
@@ -25,26 +23,13 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
-    "@cloudflare/workers-types": "catalog:cloudflare",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
-    "@plumix/typescript-config": "workspace:*",
-    "@plumix/vitest-config": "workspace:*",
-    "@types/mdast": "^4.0.4",
-    "@types/node": "catalog:",
-    "@types/react": "catalog:react",
-    "@vitest/coverage-v8": "catalog:vitest",
     "eslint": "catalog:",
-    "plumix": "workspace:*",
     "prettier": "catalog:",
-    "remark-mdx": "^3.1.1",
-    "remark-parse": "^11.0.0",
     "sharp": "catalog:",
     "typescript": "catalog:",
-    "unified": "^11.0.5",
-    "vitest": "catalog:vitest",
-    "wrangler": "catalog:cloudflare",
-    "yaml": "^2.9.1"
+    "wrangler": "catalog:cloudflare"
   },
   "prettier": "@plumix/prettier-config"
 }

@@ -1,9 +1,5 @@
 [
   {
-    "file": "apps/docs/src/content-checks/content-tree.ts",
-    "hash": "94b76d32d0702fb0"
-  },
-  {
     "file": "packages/admin-editor/src/block-input-control.tsx",
     "hash": "b9d10e593d110d85"
   },

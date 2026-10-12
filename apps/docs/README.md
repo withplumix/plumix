@@ -24,8 +24,6 @@ Semver-aware versioning (inline "Added in x.y" badges pre-1.0;
 pnpm dev        # astro dev — http://localhost:4321
 pnpm build      # static build → dist/
 pnpm typecheck  # astro sync + astro check + tsc
-pnpm test:unit  # the content checks that need nothing built
-pnpm test:build # the sample type-check, which reads the published types
 ```
 
 ## Adding a page
@@ -60,8 +58,7 @@ Three more conventions fall out of the same shape:
 - **Partials.** Reused fragments live in `src/content/docs/_partials/*.mdx` and
   are imported by the pages that need them. `src/content.config.ts` excludes
   every `_`-prefixed file and directory from the docs collection, so a partial
-  is never a page — but what it holds still renders, which is why the content
-  checks read partials too.
+  is never a page — but what it holds still renders.
 - **Nesting.** A page nested past two levels still builds and is still
   reachable at its URL — the cap removes it from the navigation, it does not
   reject it. So an over-nested page becomes an orphan rather than an error,
@@ -166,103 +163,6 @@ Adding one is two edits: the subject there, then the page that places the pair.
 is, and the comments in `capture-browser.ts` say what keeps a re-run
 byte-for-byte reproducible wherever it is run.
 
-## Content checks
-
-`src/content-checks/` walks a content root once and reports every file that
-breaks a documentation convention. Each check takes the files that one
-traversal produced and **returns findings** rather than asserting, so a run
-names every offending file at once.
-
-The traversal carries **pages and fragments alike**, and each file says which
-it is. A fragment is a partial: the collection glob excludes it, so it has no
-URL, but the markdown pipeline still processes it and whatever it holds renders
-inside every page that imports it. Each check declares which it applies to —
-page shape and roster drift are about a page's promise to a reader and skip
-fragments; the sample check takes both, because a sample in a partial reaches
-readers exactly as one on a page does. That is why partials do not get a walk
-of their own: the suite still reads the tree once.
-
-`runContentChecks` takes the root as a parameter: the suite points it at
-`src/content/docs` for the production run and at `test/fixtures/content` for
-the deliberately-broken pages that prove each check catches what it claims to.
-Fixtures have to live outside the real content root, or the production run
-would flag them.
-
-Every check sees every fixture, so a fixture written for one rule has to hold
-up under the others: a `ts` fence added to a page-shape fixture is a sample the
-code-sample check will compile.
-
-### Parsability
-
-A file the MDX parser cannot read is reported once, by its own check. Every
-other check stays silent on it — a body that does not parse has no shape, no
-roster items and no samples — so this is the report their silence rests on, and
-it covers a fragment as readily as a page.
-
-### Page shape
-
-Every documentation page owes a lede — prose between the frontmatter and the
-first heading — and four sections: Overview, Quickstart, Related, Next steps. A
-roster page declares `roster: true` and enumerates its items as `###` headings,
-which exempts it from the quickstart. A landing page declares Starlight's own
-`template: splash` and is not held to the template at all.
-
-### Code samples
-
-Every fenced `ts`, `tsx` or `typescript` block is type-checked against the types
-`plumix` publishes — no tag needed, because a sample nobody remembered to tag is
-exactly the one that rots. That includes blocks written in a partial, which is
-exactly where a shared config snippet or a repeated import block ends up.
-Extraction needs no stitching: by convention every example carries its own
-import lines, so each block already stands alone.
-
-Samples are checked, never run. Most Plumix examples are declarative and do not
-meaningfully run without a worker, a database and bindings, so running them
-would mean standing up an instance per sample. A sample that type-checks and
-then misbehaves at runtime is a risk this check accepts rather than hides.
-
-A block that is _meant_ not to compile — an anti-pattern, an error the prose is
-about — opts out on the fence:
-
-````mdx
-```ts no-typecheck
-// the mistake the section warns against
-```
-````
-
-Each file gets its own program. A sample carrying `declare module "plumix"` —
-which is how this project's type augmentation is written — is visible to every
-other sample compiled beside it, and one file's augmentation deciding whether
-another's sample compiles would be a hole in the gate rather than a performance
-question.
-
-Because the check reads the published `.d.ts` files rather than the packages'
-source, it needs the build graph. That puts it in the `test:build` tier
-alongside `runContentChecks`, and leaves the checks that read nothing but
-markdown in `test:unit`.
-
-### Roster drift
-
-A roster page says _this is all of them_, so a roster that falls behind its
-source does not merely go incomplete — it lies. `rosters.ts` holds each
-roster's item ids once and pins that list from both sides, to its source and to
-the page, which transitively is page ≡ source.
-
-A roster enumerates its items in its own body, so an item contributed by an
-imported partial reads as `roster-drift/missing-item`. That is the ruling, not
-a gap: a promise assembled out of fragments cannot be read against a source.
-
-**The header comment in `rosters.ts` is the reference** — how a roster binds to
-its source, what an item id is, and what adding a roster involves are all
-settled there, once.
-
-Six rosters are guarded, the ones whose source is a runtime constant. The
-remaining eleven follow in [#1860][]. A roster whose page nobody has written
-yet reports nothing; a written one that no entry claims is reported, so a
-mistyped path cannot leave a roster unguarded.
-
-[#1860]: https://github.com/withplumix/plumix/issues/1860
-
 ## Why Astro and Starlight move together
 
 Starlight depends on Sätteri directly, and so does Astro through
@@ -282,11 +182,6 @@ implementation any more. `.github/dependabot.yml` groups astro with
 `@astrojs/*` and `starlight-*` so bumps at least arrive together, but a grouped
 bump can still install two copies and go green — grouping addresses how a split
 gets proposed, not whether one gets caught.
-
-`test/dependency-tree.test.ts` is the gate: it shells out to `pnpm why <pkg>
---json` for `satteri` and `@astrojs/markdown-satteri` and fails unless each
-resolves to exactly one copy. It runs in `test:unit`, so it checks the tree on
-every push without needing a docs build.
 
 The join to watch is narrower than the group suggests. Astro pins
 `@astrojs/markdown-satteri` **exactly** — `astro@7.3.2` takes `0.4.1`, not

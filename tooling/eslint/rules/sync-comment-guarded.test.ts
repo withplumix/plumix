@@ -22,7 +22,7 @@ new RuleTester().run("plumix/sync-comment-guarded", syncCommentGuarded, {
     },
     ...[
       "tooling/eslint/test/base-config.test.ts",
-      "apps/docs/src/content-checks/code-samples.build.test.ts",
+      "packages/plumix/src/vite/dev-gate-tree-shaking.build.test.ts",
       "packages/admin-editor/src/block-catalog-tab.browser.test.tsx",
       "apps/demo/e2e/demo.spec.ts",
       "`tooling/eslint/test/base-config.test.ts`.",
