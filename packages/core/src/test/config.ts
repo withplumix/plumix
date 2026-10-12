@@ -50,8 +50,9 @@ export function testConfig(input: TestConfigInput = {}): PlumixConfig {
  * `undefined` leaves the site with none.
  */
 export function mailerOrFake(
-  input: TestConfigInput = {},
+  input: TestConfigInput | undefined,
   fake: MailFake,
 ): TestConfigInput {
+  if (input === undefined) return { mailer: fake };
   return "mailer" in input ? input : { ...input, mailer: fake };
 }

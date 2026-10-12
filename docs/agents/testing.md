@@ -7,8 +7,9 @@ How the test suites run and where their shared helpers live. The rules for writi
 
 A consumer package imports its unit-test kit from `plumix/test`: the harnesses
 (`createRpcHarness`, the dispatcher), the fishery factories, `stubPluginRpc`, the block render
-helpers, and the `fakeFile`/`fakeImage` upload fakes. `plumix/test/conformance` holds the contract
-suites a runtime's slots pass. An e2e suite imports `test`, `expect` and its fixtures (`PNG_1X1`,
+helpers, the `fakeFile`/`fakeImage` upload fakes, and the mail kit: `fakeMail`, which both harnesses
+install as `h.mail`, and `renderMail`. `plumix/test/conformance` holds the contract suites a
+runtime's slots pass. An e2e suite imports `test`, `expect` and its fixtures (`mailbox`, `PNG_1X1`,
 the shared `runtimeSpec`) from `plumix/test/playwright`.
 
 ## Admin test helpers
