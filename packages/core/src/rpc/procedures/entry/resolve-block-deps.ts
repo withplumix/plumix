@@ -20,7 +20,7 @@ export const resolveBlockDeps = base
   .input(entryResolveBlockDepsInputSchema)
   .handler(async ({ input, context, errors }) => {
     const live = await loadAuthoredEntry(context.db, input.id);
-    if (!live || !canReadEntry(context, live)) {
+    if (!live || !(await canReadEntry(context, live))) {
       throw errors.NOT_FOUND({ data: { kind: "entry", id: input.id } });
     }
     if (!isEntryContent(input.content)) return { deps: {} };
