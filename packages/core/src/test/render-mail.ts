@@ -19,7 +19,10 @@ export interface RenderMailOptions {
   readonly siteName?: string;
   /** The plugins that declare mail, and the theme and site overrides. */
   readonly config?: TestConfigInput;
-  /** Plugin compiled catalogs by locale, as the dispatcher harness takes. */
+  /**
+   * Compiled catalogs by locale, merged over core's, as the dispatcher harness
+   * takes them: a plugin's own translations, which a build supplies otherwise.
+   */
   readonly pluginCatalogs?: PluginCatalogs;
 }
 

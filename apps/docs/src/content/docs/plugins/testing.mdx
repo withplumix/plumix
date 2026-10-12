@@ -273,7 +273,7 @@ expect(mail?.props.url).toContain("/_plumix/auth/magic-link/verify");
 
 ### Testing mail content
 
-`renderMail(name, props, options)` from `plumix/test` renders a mail the way sending does, with no recipient and no send. It returns `{ subject, text, html }`. `locale` picks the language, `siteName` names the site, and `config` carries the plugins that declare mail and the theme's and site's overrides, which apply as they do on a send:
+`renderMail(name, props, options)` from `plumix/test` renders a mail the way sending does, with no recipient and no send. It returns `{ subject, text, html }`. `locale` picks the language, `siteName` names the site, and `config` carries the plugins that declare mail and the theme's and site's overrides, which apply as they do on a send. `pluginCatalogs` takes compiled catalogs by locale, the same option `createDispatcherHarness` takes. Pass your plugin's own catalog there to check its translated mail, because a test has no build to supply it:
 
 ```ts
 // src/welcome-content.test.ts
