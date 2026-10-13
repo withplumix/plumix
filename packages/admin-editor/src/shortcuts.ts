@@ -229,14 +229,15 @@ export function forwardedShortcutId(
   return null;
 }
 
+const TYPING_TAGS = /^(INPUT|TEXTAREA|SELECT)$/;
+
 /**
- * `instanceof` holds only because the iframe loads its own copy of this module;
- * sharing one across realms would need a duck-typed check.
+ * Read structurally, so a node from another realm (the canvas iframe's own
+ * document) answers the same as one from this window.
  */
 export function isTypingTarget(target: EventTarget | null): boolean {
-  return (
-    target instanceof HTMLElement &&
-    (target.isContentEditable ||
-      /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
-  );
+  if (target === null) return false;
+  if ("isContentEditable" in target && target.isContentEditable === true)
+    return true;
+  return "tagName" in target && TYPING_TAGS.test(String(target.tagName));
 }

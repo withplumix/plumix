@@ -32,6 +32,8 @@ interface ConnectCanvasOptions {
   readonly frameWindow: Window;
   /** Messages from any other origin are dropped. */
   readonly origin: string;
+  /** Where the other half's messages arrive; the window by default. */
+  readonly messageTarget?: EventTarget;
   readonly onGeometry?: (
     rects: readonly BlockRect[],
     slots: readonly SlotRect[],
@@ -73,6 +75,7 @@ export function connectCanvas({
   store,
   frameWindow,
   origin,
+  messageTarget = window,
   onGeometry,
   onWheel,
   onKey,
@@ -106,7 +109,8 @@ export function connectCanvas({
     });
   };
 
-  const onMessage = (event: MessageEvent): void => {
+  const onMessage = (event: Event): void => {
+    if (!(event instanceof MessageEvent)) return;
     const message = parseEnvelope(
       EDITOR_BRIDGE_CHANNEL,
       event.data,
@@ -164,7 +168,7 @@ export function connectCanvas({
     }
   };
 
-  window.addEventListener("message", onMessage);
+  messageTarget.addEventListener("message", onMessage);
 
   let previousTree = store.getState().tree;
   let previousXray = store.getState().xray;
@@ -191,7 +195,7 @@ export function connectCanvas({
     pushDeps: (deps) => post({ type: "host:deps", deps }),
     dispose: () => {
       clearInterval(retryTimer);
-      window.removeEventListener("message", onMessage);
+      messageTarget.removeEventListener("message", onMessage);
       unsubscribe();
     },
   };

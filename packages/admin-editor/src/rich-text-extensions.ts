@@ -61,6 +61,47 @@ export function allowsNode(
     : (options.nodes?.includes(name) ?? false);
 }
 
+/** The inline marks the toolbar has a toggle for, in toolbar order. */
+const TOOLBAR_MARKS = [
+  "bold",
+  "italic",
+  "underline",
+  "strike",
+  "code",
+  "highlight",
+  "subscript",
+  "superscript",
+] as const;
+
+export type ToolbarMark = (typeof TOOLBAR_MARKS)[number];
+
+export interface ToolbarControls {
+  readonly marks: readonly ToolbarMark[];
+  /** The paragraph and heading format select. */
+  readonly format: boolean;
+  readonly bulletList: boolean;
+  readonly orderedList: boolean;
+  readonly blockquote: boolean;
+  readonly link: boolean;
+}
+
+/**
+ * A control for content the schema can't hold would produce what the server
+ * rejects, so the toolbar offers only what `allow` admits.
+ */
+export function toolbarControls(
+  allow: RichTextExtensionOptions | undefined,
+): ToolbarControls {
+  return {
+    marks: TOOLBAR_MARKS.filter((name) => allowsMark(allow, name)),
+    format: allowsNode(allow, "heading"),
+    bulletList: allowsNode(allow, "bulletList"),
+    orderedList: allowsNode(allow, "orderedList"),
+    blockquote: allowsNode(allow, "blockquote"),
+    link: allowsMark(allow, "link"),
+  };
+}
+
 /**
  * Explicit list, not StarterKit: `configure({ bold: false })` disables but
  * still bundles an extension. Disallowed nodes and marks are dropped from the

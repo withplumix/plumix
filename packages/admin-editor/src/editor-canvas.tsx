@@ -30,12 +30,12 @@ import {
   DEFAULT_BLOCK_CONTEXT,
   editAppender,
   HtmlAllowlistProvider,
-  parseLoaderData,
 } from "@plumix/core/blocks";
 import { BlockTree, PlumixProvider } from "@plumix/core/blocks/renderer";
 
 import type { RuntimeConnection } from "./connect-runtime.js";
 import { mergeDeps, unresolvedDeps } from "./block-deps.js";
+import { canvasContextValue } from "./canvas-context.js";
 import { clipboardOpFromEvent } from "./clipboard-ops.js";
 import { connectRuntime } from "./connect-runtime.js";
 import { mergeLoaderData } from "./merge-loader-data.js";
@@ -48,6 +48,8 @@ interface EditorCanvasProps {
   readonly origin: string;
   /** Seed tree for first paint, before the host pushes. */
   readonly initialTree?: readonly BlockNode[];
+  /** The loader results the SSR render embedded; scoped refreshes merge in. */
+  readonly initialLoaderData?: ResolvedBlockLoaders;
   readonly tokens?: ThemeTokens;
   readonly breakpoints?: ThemeBreakpoints;
   readonly htmlAllowlist?: HtmlAllowlist;
@@ -67,12 +69,15 @@ const XRAY_STYLE = `[data-plumix-xray] [data-plumix-block] {
   outline-offset: -1px;
 }`;
 
+const NO_LOADER_DATA: ResolvedBlockLoaders = new Map();
+
 /** Runs inside the editor iframe and never owns the tree; the host does. */
 export function EditorCanvas({
   registry,
   shortcodes,
   origin,
   initialTree = [],
+  initialLoaderData = NO_LOADER_DATA,
   tokens,
   breakpoints,
   htmlAllowlist = BASELINE_HTML_ALLOWLIST,
@@ -81,13 +86,9 @@ export function EditorCanvas({
   deps: seededDeps = {},
 }: EditorCanvasProps): ReactElement {
   const [tree, setTree] = useState<readonly BlockNode[]>(initialTree);
-  // Read once, before React replaces the mount root's children; stable across
-  // edits so loaders never re-run on a keystroke.
-  const [loaderData, setLoaderData] = useState<ResolvedBlockLoaders>(() =>
-    parseLoaderData(
-      document.querySelector("[data-plumix-loader-data]")?.textContent ?? "",
-    ),
-  );
+  // Stable across edits so loaders never re-run on a keystroke.
+  const [loaderData, setLoaderData] =
+    useState<ResolvedBlockLoaders>(initialLoaderData);
   const [deps, setDeps] = useState<LoadedDeps>(seededDeps);
   // The declared keys last asked for, so a loader that keeps failing isn't
   // asked again on every keystroke.
@@ -321,20 +322,19 @@ export function EditorCanvas({
   return (
     <HtmlAllowlistProvider value={htmlAllowlist}>
       <PlumixProvider
-        value={{
-          registry,
-          mode: "edit",
-          tokens,
-          breakpoints,
-          loaderData,
-          // The host's locale once it arrives, so it matches the catalog the
-          // host pushed alongside it; the page's until then.
-          locale: config?.locale ?? locale,
-          catalog: config?.catalog,
-          shortcodes,
-          entry,
-          deps,
-        }}
+        value={canvasContextValue(
+          {
+            registry,
+            tokens,
+            breakpoints,
+            loaderData,
+            locale,
+            shortcodes,
+            entry,
+            deps,
+          },
+          config,
+        )}
       >
         <div
           ref={containerRef}

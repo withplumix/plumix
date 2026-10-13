@@ -5,6 +5,7 @@ import {
   EDITOR_SHORTCUTS,
   forwardedShortcut,
   forwardedShortcutId,
+  isTypingTarget,
   matchesShortcut,
   SHORTCUT_GROUP_IDS,
   shortcutsInGroup,
@@ -209,5 +210,30 @@ describe("forwardedShortcut", () => {
     expect(
       forwardedShortcut(key({ key: "s", code: "KeyS", metaKey: true })),
     ).toBeNull();
+  });
+});
+
+describe("isTypingTarget", () => {
+  function element(tagName: string, isContentEditable = false): EventTarget {
+    return Object.assign(new EventTarget(), { tagName, isContentEditable });
+  }
+
+  test.each(["INPUT", "TEXTAREA", "SELECT"])(
+    "a %s is a typing target",
+    (tag) => {
+      expect(isTypingTarget(element(tag))).toBe(true);
+    },
+  );
+
+  test("editable content is a typing target", () => {
+    expect(isTypingTarget(element("DIV", true))).toBe(true);
+  });
+
+  test("any other element is not a typing target", () => {
+    expect(isTypingTarget(element("DIV"))).toBe(false);
+  });
+
+  test("no target is not a typing target", () => {
+    expect(isTypingTarget(null)).toBe(false);
   });
 });

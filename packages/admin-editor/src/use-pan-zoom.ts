@@ -9,6 +9,7 @@ import {
 
 import type { Geometry } from "./canvas-geometry.js";
 import type { View } from "./canvas-view.js";
+import type { LiveView } from "./live-view.js";
 import {
   centerOnRect,
   clampPanToFrame,
@@ -16,6 +17,7 @@ import {
   stageTransform,
   wheelToView,
 } from "./canvas-view.js";
+import { createLiveView } from "./live-view.js";
 import {
   useCameraStore,
   useCameraStoreApi,
@@ -81,40 +83,39 @@ export function usePanZoom({
 
   const stageRef = useRef<HTMLDivElement>(null);
   const liveViewRef = useRef<View>({ zoom, panX, panY });
-  const gesturingRef = useRef(false);
   const [gesturing, setGesturing] = useState(false);
-  const commitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const gestureRef = useRef<LiveView | null>(null);
 
-  // Commit the live gesture view to the store (one render) and end the gesture.
-  const commitLive = useCallback((): void => {
-    if (commitTimerRef.current) {
-      clearTimeout(commitTimerRef.current);
-      commitTimerRef.current = null;
-    }
-    if (!gesturingRef.current) return;
-    gesturingRef.current = false;
-    setGesturing(false);
-    camera.getState().applyView(liveViewRef.current);
+  useEffect(() => {
+    const gesture = createLiveView({
+      settleMs: 150,
+      apply: (view) => {
+        liveViewRef.current = view;
+        stageRef.current?.style.setProperty(
+          "--stage-transform",
+          stageTransform(view),
+        );
+      },
+      commit: (view) => {
+        setGesturing(false);
+        camera.getState().applyView(view);
+      },
+    });
+    gestureRef.current = gesture;
+    return () => {
+      gesture.cancel();
+      gestureRef.current = null;
+    };
   }, [camera]);
 
-  // Apply a view live: write the transform straight to the DOM (no render),
-  // track it in the ref, and debounce a single commit when the gesture idles.
-  const applyLive = useCallback(
-    (view: View): void => {
-      liveViewRef.current = view;
-      const el = stageRef.current;
-      if (el) {
-        el.style.setProperty("--stage-transform", stageTransform(view));
-      }
-      if (!gesturingRef.current) {
-        gesturingRef.current = true;
-        setGesturing(true);
-      }
-      if (commitTimerRef.current) clearTimeout(commitTimerRef.current);
-      commitTimerRef.current = setTimeout(commitLive, 150);
-    },
-    [commitLive],
-  );
+  const commitLive = useCallback((): void => gestureRef.current?.settle(), []);
+
+  const applyLive = useCallback((view: View): void => {
+    const gesture = gestureRef.current;
+    if (!gesture) return;
+    if (!gesture.gesturing()) setGesturing(true);
+    gesture.move(view);
+  }, []);
 
   // Pan the stage by a client-pixel delta from a drag start, clamped to the
   // frame. Shared by the space-drag handler and the canvas handle strip.
@@ -176,21 +177,14 @@ export function usePanZoom({
   // Copy the store's view into the live ref between gestures, so discrete
   // actions (toolbar zoom, device switch, shortcuts) seed the next gesture.
   useEffect(() => {
-    if (!gesturingRef.current) liveViewRef.current = { zoom, panX, panY };
+    if (!gestureRef.current?.gesturing())
+      liveViewRef.current = { zoom, panX, panY };
   }, [zoom, panX, panY]);
-
-  // Don't leave a pending commit dangling on unmount.
-  useEffect(
-    () => () => {
-      if (commitTimerRef.current) clearTimeout(commitTimerRef.current);
-    },
-    [],
-  );
 
   // An incidental re-render mid-gesture would otherwise flash the stale
   // committed transform.
   useLayoutEffect(() => {
-    if (gesturingRef.current && stageRef.current) {
+    if (gestureRef.current?.gesturing() && stageRef.current) {
       stageRef.current.style.setProperty(
         "--stage-transform",
         stageTransform(liveViewRef.current),

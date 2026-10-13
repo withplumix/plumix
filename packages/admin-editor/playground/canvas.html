@@ -6,7 +6,16 @@
     <title>Plumix editor canvas</title>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- A theme's chrome around the content root, as a themed route renders it. -->
+    <header data-testid="theme-chrome">
+      <details data-testid="theme-chrome-menu">
+        <summary data-testid="theme-chrome-menu-toggle">Menu</summary>
+        <a href="./elsewhere.html">Another page</a>
+      </details>
+    </header>
+    <main data-plumix-content-root>
+      <div id="root"></div>
+    </main>
     <script type="module" src="./canvas.tsx"></script>
   </body>
 </html>

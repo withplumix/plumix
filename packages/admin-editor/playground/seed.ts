@@ -3,6 +3,7 @@ import type { BlockNode } from "@plumix/core/blocks";
 import type { InserterPattern } from "../src/block-catalog.js";
 import { COPY_SEED } from "./copy-block.js";
 import { FEED_SEED } from "./feed-block.js";
+import { SEARCH_SEED } from "./search-block.js";
 
 export const SEED_BLOCKS: readonly BlockNode[] = [
   {
@@ -91,6 +92,14 @@ export const SEED_BLOCKS: readonly BlockNode[] = [
   },
   FEED_SEED,
   COPY_SEED,
+  {
+    id: "link-text",
+    name: "core/rich-text",
+    attrs: {
+      body: '<p>Read <a href="./elsewhere.html">another page</a> of the site.</p>',
+    },
+  },
+  SEARCH_SEED,
 ];
 
 export const SEED_PATTERNS: readonly InserterPattern[] = [

@@ -3,21 +3,13 @@ import { useEffect, useRef, useState } from "react";
 
 import type { View } from "./canvas-view.js";
 import type { EditorShortcutId } from "./shortcuts.js";
+import { canvasHandlesHostKey, runCanvasShortcut } from "./canvas-shortcuts.js";
 import { useCameraStoreApi, useEditorStoreApi } from "./provider.js";
 import {
   forwardedShortcut,
   forwardedShortcutId,
   isTypingTarget,
 } from "./shortcuts.js";
-
-const HOST_HANDLED: ReadonlySet<EditorShortcutId> = new Set([
-  "help.open",
-  "palette.open",
-  "history.undo",
-  "history.redo",
-  "panels.toggle",
-  "selection.delete",
-]);
 
 type CanvasKeyHandler = (
   down: boolean,
@@ -74,25 +66,18 @@ export function useCanvasKeys({
       dragging = false;
       setPanReady(false);
     };
+    const deps = {
+      store,
+      camera,
+      zoomToSelection,
+      togglePanels: () =>
+        window.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "b", metaKey: true }),
+        ),
+    };
     const run = (id: EditorShortcutId | null, down: boolean): void => {
       if (id !== "canvas.pan") {
-        if (!down) return;
-        if (id === "canvas.fit") camera.getState().enableFit();
-        else if (id === "canvas.frameSelection") zoomToSelection();
-        else if (id === "canvas.actualSize") camera.getState().zoomToCenter(1);
-        else if (id === "canvas.xray") store.getState().toggleXray();
-        else if (id === "help.open") store.getState().setShortcutsOpen(true);
-        else if (id === "palette.open") store.getState().setPaletteOpen(true);
-        else if (id === "history.undo") store.getState().undo();
-        else if (id === "history.redo") store.getState().redo();
-        else if (id === "selection.delete") store.getState().removeSelected();
-        // The vendored sidebar owns Cmd+B through its own window listener, so
-        // a press forwarded from the canvas is replayed where it listens.
-        else if (id === "panels.toggle") {
-          window.dispatchEvent(
-            new KeyboardEvent("keydown", { key: "b", metaKey: true }),
-          );
-        }
+        if (down && id) runCanvasShortcut(id, deps);
         return;
       }
       if (!down) exitPan();
@@ -111,9 +96,7 @@ export function useCanvasKeys({
       // Skip auto-repeat: a held key must not re-fire the x-ray toggle.
       if (e.repeat || isTypingTarget(e.target)) return;
       const claimed = forwardedShortcut(e);
-      // These have their own host listeners, so here they only arrive
-      // forwarded.
-      if (!claimed || HOST_HANDLED.has(claimed.id)) return;
+      if (!claimed || !canvasHandlesHostKey(claimed.id)) return;
       if (claimed.id === "canvas.pan") e.preventDefault();
       run(claimed.id, true);
     };
