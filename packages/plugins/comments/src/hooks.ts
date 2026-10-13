@@ -74,8 +74,6 @@ export function usePlumixCommentForm(options: {
   const submit = useSingleFlight(
     async (draft: CommentDraft): Promise<CommentStatus | null> => {
       setSubmitting(true);
-      // Cleared with the errors: a resubmit that fails must not leave
-      // last time's status standing beside this time's refusals.
       setOutcome(UNANSWERED);
       try {
         const answer = await postComment(submitAction(basePath), {
@@ -138,8 +136,7 @@ export function usePlumixCommentThread(options: {
   const [thread, setThread] = useState(() => openThread(options.cursor));
   const [loading, setLoading] = useState(false);
 
-  // The same guard `usePlumixCommentForm.submit` keeps, for the same
-  // reason: a second press in one tick would append one page twice.
+  // Guarded: a second press in one tick would append one page twice.
   const load = useSingleFlight(async (): Promise<void> => {
     if (!thread.hasMore) return;
     setLoading(true);

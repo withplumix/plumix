@@ -48,8 +48,9 @@ export type CommentAnswer =
  * A held comment isn't in the thread yet, so "posted" would read as lost.
  * Spam and trash get the held message: the filing isn't the sender's to learn.
  */
-export const confirmationFor = (status: CommentStatus): string =>
-  labelSourceText(status === "approved" ? POSTED : HELD);
+export function confirmationFor(status: CommentStatus): string {
+  return labelSourceText(status === "approved" ? POSTED : HELD);
+}
 
 /**
  * Sends JSON with the CSRF header, so the submission keeps the session a
