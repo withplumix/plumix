@@ -92,7 +92,4 @@ export const RETIRED_TIER_PENDING: readonly string[] = [
   "packages/plugins/og/src/admin/CardPreviewPanel.browser.test.tsx",
   "packages/plugins/seo/src/admin/SerpPreviewPanel.browser.test.tsx",
   "packages/plumix/src/test/node-only.browser.test.ts",
-  "packages/runtimes/bun/src/commands/dev.build.test.ts",
-  "packages/runtimes/bun/src/commands/migrations.build.test.ts",
-  "packages/runtimes/bun/src/entry.build.test.ts",
 ];

@@ -14,6 +14,7 @@ import type {
   ScheduledRunnerOptions,
   ScheduledRunReport,
   Scheduler,
+  SchedulerClock,
 } from "plumix/runtime";
 import { applyBuiltMigrations } from "plumix/cli";
 import {
@@ -263,6 +264,21 @@ export function loadEnvFileWhenMain(main: boolean): void {
   }
 }
 
+/** Where `SIGTERM` and `SIGINT` arrive: the process, bar a test. */
+interface SignalSource {
+  on(signal: NodeJS.Signals, listener: (signal: NodeJS.Signals) => void): void;
+  off(signal: NodeJS.Signals, listener: (signal: NodeJS.Signals) => void): void;
+}
+
+export interface ServeProcessOptions {
+  /** Test seam: where the shutdown signals arrive, so a drain needs no real one. */
+  readonly signals?: SignalSource;
+  /** Test seam: what the drain reads its deadline from and sleeps on. */
+  readonly clock?: SchedulerClock;
+  /** Test seam: what ends the process. */
+  readonly exit?: (code: number) => void;
+}
+
 /**
  * Returns the `Server` for the entry to default-export, which Bun does not
  * serve twice. A failed {@link BunSite.migrate} ends the process with exit
@@ -270,12 +286,17 @@ export function loadEnvFileWhenMain(main: boolean): void {
  */
 export async function serveProcess(
   site: BunSite,
+  {
+    signals = process,
+    clock = processClock,
+    exit = (code) => process.exit(code),
+  }: ServeProcessOptions = {},
 ): Promise<Server<undefined> | undefined> {
   try {
     await site.migrate();
   } catch (error) {
     console.error("plumix: migrations failed; not serving", error);
-    process.exit(1);
+    exit(1);
     return undefined;
   }
   /* eslint-disable turbo/no-undeclared-env-vars -- the built site reads these when it runs, not during any turbo task */
@@ -304,26 +325,25 @@ export async function serveProcess(
   // Both listeners come off, so a second signal of either kind falls to the
   // default action and ends the process at once.
   const drain = async (signal: NodeJS.Signals): Promise<void> => {
-    process.off("SIGTERM", shutdown);
-    process.off("SIGINT", shutdown);
+    signals.off("SIGTERM", shutdown);
+    signals.off("SIGINT", shutdown);
     console.log(`plumix: ${signal} received, draining`);
-    const deadline = Date.now() + DRAIN_DEADLINE_MS;
+    const deadline = clock.now() + DRAIN_DEADLINE_MS;
     // On Bun 1.4 `stop()` resolves once the in-flight requests have finished.
     const stopped = server.stop().then(() => true);
     // Before `dispose()`: a firing started behind the drain would hand it more
     // deferred work.
     stopping = true;
     const cronSettled =
-      (await scheduler?.stop({ timeoutMs: remainingMs(deadline) })) ?? true;
+      (await scheduler?.stop({ timeoutMs: remainingMs(clock, deadline) })) ??
+      true;
     const finished = await Promise.race([
       stopped,
-      // Unref'd: when the stop wins, this timer outlives the race, and a
-      // pending tick must not be what keeps the process alive.
-      sleep(remainingMs(deadline), false, { ref: false }),
+      clock.sleep(remainingMs(clock, deadline)).then(() => false),
     ]);
     if (!finished) await server.stop(true);
     const { abandoned } = await site.dispose({
-      timeoutMs: remainingMs(deadline),
+      timeoutMs: remainingMs(clock, deadline),
     });
     if (!cronSettled) {
       console.error(
@@ -340,16 +360,25 @@ export async function serveProcess(
         `plumix: exiting with ${String(abandoned)} deferred task(s) abandoned`,
       );
     }
-    process.exit(!cronSettled || !finished || abandoned > 0 ? 1 : 0);
+    exit(!cronSettled || !finished || abandoned > 0 ? 1 : 0);
   };
   const shutdown = (signal: NodeJS.Signals): void => void drain(signal);
-  process.on("SIGTERM", shutdown);
-  process.on("SIGINT", shutdown);
+  signals.on("SIGTERM", shutdown);
+  signals.on("SIGINT", shutdown);
   return server;
 }
 
-function remainingMs(deadline: number): number {
-  return Math.max(0, deadline - Date.now());
+/**
+ * Unref'd: when the stop wins, the drain's timer outlives the race, and a
+ * pending tick must not be what keeps the process alive.
+ */
+const processClock: SchedulerClock = {
+  now: () => Date.now(),
+  sleep: (ms) => sleep(ms, undefined, { ref: false }),
+};
+
+function remainingMs(clock: SchedulerClock, deadline: number): number {
+  return Math.max(0, deadline - clock.now());
 }
 
 /**

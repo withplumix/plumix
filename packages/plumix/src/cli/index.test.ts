@@ -188,4 +188,33 @@ describe("run", () => {
       expect(probe.__plumixConfigDev).toBe(dev);
     },
   );
+
+  test("a commands module that refuses to load with its own CliError is reported in its terms", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "plumix-run-"));
+    dirs.push(dir);
+    const commandsModule = join(dir, "commands.ts");
+    writeFileSync(
+      commandsModule,
+      `import { CliError } from "@plumix/core/cli";
+class RefusingCliError extends CliError {}
+throw new RefusingCliError("refused_here", "This runtime's commands refuse", "Run them elsewhere.", undefined);
+`,
+    );
+    writeFileSync(
+      join(dir, "plumix.config.ts"),
+      `export default {
+  runtime: { name: "test", handler: {}, generateEntry: () => "", commandsModule: ${JSON.stringify(commandsModule)} },
+  database: { kind: "d1" },
+  auth: { passkey: {} },
+};
+`,
+    );
+
+    const running = run(["--cwd", dir, "build"]);
+
+    await expect(running).rejects.toMatchObject({
+      code: "refused_here",
+      hint: "Run them elsewhere.",
+    });
+  });
 });
