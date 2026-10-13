@@ -910,6 +910,29 @@ test.describe("editor playground", () => {
     expect(leftFor).toEqual([]);
   });
 
+  test("middle-clicking a link in the canvas opens no other page", async ({
+    page,
+    context,
+  }) => {
+    const leftFor: string[] = [];
+    context.on("request", (request) => {
+      if (request.url().includes("/elsewhere.html"))
+        leftFor.push(request.url());
+    });
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+
+    await canvas
+      .locator('[data-plumix-id="link-text"] a')
+      .click({ button: "middle" });
+
+    // A middle-click selects nothing, so a later selection marks it handled.
+    await canvas.locator('[data-plumix-id="heading-1"]').click();
+    await expect(page.getByTestId("plumix-overlay-selected")).toBeVisible();
+    expect(leftFor).toEqual([]);
+    expect(context.pages()).toHaveLength(1);
+  });
+
   test("submitting a form in the canvas leaves the frame on its page", async ({
     page,
   }) => {
