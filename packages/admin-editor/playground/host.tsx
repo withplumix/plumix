@@ -15,6 +15,7 @@ import {
 import { PlumixEditor } from "../src/plumix-editor.js";
 import { copySpec, resolveCopyDeps } from "./copy-block.js";
 import { feedSpec } from "./feed-block.js";
+import { searchSpec } from "./search-block.js";
 import { SEED_BLOCKS, SEED_PATTERNS } from "./seed.js";
 
 import "./playground.css";
@@ -51,7 +52,12 @@ const withVariations = coreBlocks.map((spec): BlockSpec =>
       }
     : spec,
 );
-const registry = createBlockRegistry([...withVariations, feedSpec, copySpec]);
+const registry = createBlockRegistry([
+  ...withVariations,
+  feedSpec,
+  copySpec,
+  searchSpec,
+]);
 
 /**
  * Seed theme tokens so the Styles tab's token-or-custom controls have options.

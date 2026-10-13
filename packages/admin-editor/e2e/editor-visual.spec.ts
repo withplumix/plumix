@@ -881,4 +881,166 @@ test.describe("editor playground", () => {
 
     await expect(page.getByTestId("plumix-overlay-selected")).toBeVisible();
   });
+
+  test("hovering a canvas block outlines it on the host", async ({ page }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+
+    await canvas.locator('[data-plumix-id="intro"]').hover();
+
+    await expect(page.getByTestId("plumix-overlay-hover")).toBeVisible();
+  });
+
+  test("clicking a link in the canvas leaves the frame on its page", async ({
+    page,
+  }) => {
+    const leftFor: string[] = [];
+    page.on("request", (request) => {
+      if (request.url().includes("/elsewhere.html"))
+        leftFor.push(request.url());
+    });
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+
+    await canvas.locator('[data-plumix-id="link-text"] a').click();
+
+    // The click still reaches the block, so selecting it shows it was handled.
+    await expect(page.getByTestId("plumix-overlay-selected")).toBeVisible();
+    await expect(canvas.locator('[data-plumix-id="link-text"]')).toBeVisible();
+    expect(leftFor).toEqual([]);
+  });
+
+  test("submitting a form in the canvas leaves the frame on its page", async ({
+    page,
+  }) => {
+    const leftFor: string[] = [];
+    page.on("request", (request) => {
+      if (request.url().includes("/search-results.html"))
+        leftFor.push(request.url());
+    });
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+
+    await canvas.getByTestId("search-submit").click();
+
+    await expect(page.getByTestId("plumix-overlay-selected")).toBeVisible();
+    await expect(canvas.getByTestId("search-form")).toBeVisible();
+    expect(leftFor).toEqual([]);
+  });
+
+  test("theme chrome around the content root ignores clicks", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+    await expect(canvas.locator('[data-plumix-id="heading-1"]')).toBeVisible();
+    // The canvas marks the chrome once it mounts; wait for that, not the clock.
+    await expect(canvas.getByTestId("theme-chrome")).toHaveAttribute(
+      "data-plumix-chrome",
+      "",
+    );
+    const menu = canvas.getByTestId("theme-chrome-menu");
+
+    // Forced: an inert element takes no pointer, so actionability never passes.
+    await canvas.getByTestId("theme-chrome-menu-toggle").click({ force: true });
+
+    await expect(menu).not.toHaveAttribute("open");
+  });
+
+  test("clicking into the canvas dismisses the open inserter", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+    await canvas.locator('[data-plumix-id="col-left-text"]').click();
+    await page.getByTestId("selection-toolbar-delete").click();
+    await canvas
+      .locator('[data-plumix-add][data-plumix-add-parent="col-left"]')
+      .click();
+    const popover = page.getByTestId("plumix-inserter-popover");
+    await expect(popover).toBeVisible();
+
+    await canvas.locator('[data-plumix-id="heading-1"]').click();
+
+    await expect(popover).toBeHidden();
+  });
+
+  test("dragging over a slot that refuses the block marks it until release", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+    const refused = page.getByTestId("plumix-slot-refused-indicator");
+    await canvas.locator('[data-plumix-id="heading-1"]').click();
+    await expect(page.getByTestId("selection-toolbar-drag")).toBeVisible();
+    // The columns slot takes only columns: the gap between the two is its own,
+    // outside either column's content slot.
+    const [left, right] = await settledBoxes(
+      canvas.locator('[data-plumix-id="col-left"]'),
+      canvas.locator('[data-plumix-id="col-right"]'),
+    );
+    const gapX = (left.x + left.width + right.x) / 2;
+
+    await dragTo(
+      page,
+      page.getByTestId("selection-toolbar-drag"),
+      canvas.locator('[data-plumix-id="columns-1"]'),
+      {
+        targetPosition: (box) => ({ x: gapX - box.x, y: box.height / 2 }),
+        beforeDrop: () => expect(refused).toBeVisible(),
+      },
+    );
+
+    await expect(refused).toBeHidden();
+    await expect(
+      canvas.locator(
+        '[data-plumix-id="columns-1"] [data-plumix-id="heading-1"]',
+      ),
+    ).toHaveCount(0);
+  });
+
+  test("the rail's link popover links the selected text", async ({ page }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+    await canvas.locator('[data-plumix-id="intro"]').click();
+    await page.getByTestId("block-input-body-editor").click();
+    await page.keyboard.press("ControlOrMeta+A");
+    await page.getByTestId("block-input-body-link").click();
+    // No link under the selection yet, so there is nothing to remove.
+    await expect(page.getByTestId("block-input-body-link-url")).toBeVisible();
+    await expect(page.getByTestId("block-input-body-link-remove")).toHaveCount(
+      0,
+    );
+
+    await page
+      .getByTestId("block-input-body-link-url")
+      .fill("https://example.test/");
+    await page.getByTestId("block-input-body-link-apply").click();
+
+    await expect(
+      canvas.locator(
+        '[data-plumix-id="intro"] a[href="https://example.test/"]',
+      ),
+    ).toBeVisible();
+  });
+
+  test("turning a text block into a heading keeps the caret where the author types", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+    await canvas.locator('[data-plumix-id="col-left-text"]').click();
+    const editor = page.getByTestId("block-input-body-editor");
+    await editor.click();
+    await page.getByTestId("block-input-body-format").click();
+    await page.getByTestId("block-input-body-format-h2").click();
+    await editor.locator("h2").click();
+
+    await page.keyboard.press("End");
+    await page.keyboard.type(" Typed on");
+
+    await expect(
+      canvas.locator('[data-plumix-id="col-left-text"] h2'),
+    ).toHaveText("Left column. Typed on");
+  });
 });
