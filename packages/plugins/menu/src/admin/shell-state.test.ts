@@ -5,6 +5,7 @@ import {
   boundMenuSlug,
   conflictShown,
   linkedTargetText,
+  locationCheckbox,
   maxDepthRejected,
   menusPageState,
   pickerChoice,
@@ -58,6 +59,29 @@ describe("boundMenuSlug", () => {
 
   test("a location bound to a menu not in the list shows no menu", () => {
     expect(boundMenuSlug(99, [MAIN, FOOTER])).toBeNull();
+  });
+});
+
+describe("locationCheckbox", () => {
+  test("a location bound to this menu is checked, and unchecking unbinds it", () => {
+    expect(locationCheckbox(7, 7, "main")).toEqual({
+      checked: true,
+      toggleTo: null,
+    });
+  });
+
+  test("a location bound to another menu is unchecked, and checking binds this one", () => {
+    expect(locationCheckbox(8, 7, "main")).toEqual({
+      checked: false,
+      toggleTo: "main",
+    });
+  });
+
+  test("an unbound location is unchecked, and checking binds this menu", () => {
+    expect(locationCheckbox(null, 7, "main")).toEqual({
+      checked: false,
+      toggleTo: "main",
+    });
   });
 });
 

@@ -61,6 +61,19 @@ export function boundMenuSlug(
   return menus.find((menu) => menu.id === boundTermId)?.slug ?? null;
 }
 
+/**
+ * A settings-panel checkbox: checked when the location is bound to this menu,
+ * and the `termSlug` a click sends to flip it.
+ */
+export function locationCheckbox(
+  boundTermId: number | null,
+  termId: number,
+  slug: string,
+): { readonly checked: boolean; readonly toggleTo: string | null } {
+  const checked = boundTermId === termId;
+  return { checked, toggleTo: checked ? null : slug };
+}
+
 export function termSlugFromSelect(value: string): string | null {
   return value === UNASSIGNED_VALUE ? null : value;
 }

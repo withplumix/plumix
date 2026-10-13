@@ -72,6 +72,7 @@ import {
 import {
   conflictShown,
   linkedTargetText,
+  locationCheckbox,
   maxDepthRejected,
   pickerChoice,
   pickerPanelFor,
@@ -174,7 +175,11 @@ function LocationsBindings({
   return (
     <div data-testid="menu-settings-locations" className="flex flex-col gap-1">
       {(locations.data ?? []).map((row) => {
-        const isBound = row.boundTermId === termId;
+        const { checked, toggleTo } = locationCheckbox(
+          row.boundTermId,
+          termId,
+          slug,
+        );
         return (
           <label
             key={row.id}
@@ -183,11 +188,11 @@ function LocationsBindings({
           >
             <Checkbox
               data-testid={`menu-settings-location-${row.id}`}
-              checked={isBound}
+              checked={checked}
               onCheckedChange={() => {
                 assign.mutate({
                   location: row.id,
-                  termSlug: isBound ? null : slug,
+                  termSlug: toggleTo,
                 });
               }}
             />
