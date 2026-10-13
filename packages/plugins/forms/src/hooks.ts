@@ -1,20 +1,15 @@
 // No `"use client"`: the SSR pass replaces every export of such a module
 // with an island shim, which would break these hooks.
 import type { MetaBoxFieldManifestEntry } from "plumix/fields";
-import { useCallback, useMemo, useRef, useState } from "react";
-import { documentBasePath } from "plumix/blocks/renderer";
+import { useCallback, useMemo, useState } from "react";
+import { documentBasePath, useSingleFlight } from "plumix/blocks/renderer";
 
 import type { FormAnswersOf, FormDefinition, FormWire } from "./define-form.js";
 import type { FormFieldError } from "./types.js";
-import { writeSubmittedValues } from "./answers.js";
-import {
-  FORM_SLUG_FIELD,
-  SUBMIT_PATH,
-  TOKEN_FIELD,
-  TOKEN_PATH,
-} from "./contract.js";
+import { SUBMIT_PATH, TOKEN_PATH } from "./contract.js";
 import {
   postSubmission,
+  submissionBody,
   unreachable,
   useTimingToken,
   withoutNulls,
@@ -70,22 +65,15 @@ export function usePlumixForm<F extends FormDefinition = FormDefinition>(
   const [submitting, setSubmitting] = useState(false);
   const [confirmation, setConfirmation] = useState<string | null>(null);
 
-  // A ref, not `submitting`: a second press in the same tick beats the
-  // re-render and would store two rows.
-  const inFlight = useRef(false);
-
-  const submit = useCallback(
+  // Guarded, not left to `submitting`: a second press in the same tick
+  // beats the re-render and would store two rows.
+  const send = useSingleFlight(
     async (answers: FormSubmitAnswers<F>): Promise<void> => {
-      if (inFlight.current) return;
-      inFlight.current = true;
-      const body = writeSubmittedValues(wire.fields, answers);
-      body.set(FORM_SLUG_FIELD, wire.slug);
-      if (token !== null) body.set(TOKEN_FIELD, token);
       setSubmitting(true);
       try {
         const reply = await postSubmission(
           `${documentBasePath()}${SUBMIT_PATH}`,
-          body,
+          submissionBody(wire, answers, token),
         );
         if (reply === "unreachable") {
           setErrors(unreachable);
@@ -98,11 +86,15 @@ export function usePlumixForm<F extends FormDefinition = FormDefinition>(
         }
         setErrors(reply.errors);
       } finally {
-        inFlight.current = false;
         setSubmitting(false);
       }
     },
-    [wire, token],
+  );
+  const submit = useCallback(
+    async (answers: FormSubmitAnswers<F>): Promise<void> => {
+      await send(answers);
+    },
+    [send],
   );
 
   const errorFor = useCallback(
