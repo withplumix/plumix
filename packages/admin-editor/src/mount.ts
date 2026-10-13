@@ -1,18 +1,9 @@
 import { createElement } from "react";
 import { createRoot } from "react-dom/client";
 
-import type {
-  BlockNode,
-  BlockRegistry,
-  RenderEnv,
-  ShortcodeRegistry,
-} from "@plumix/core/blocks";
-import {
-  isEntryContent,
-  parseLoaderData,
-  parseRenderEnv,
-} from "@plumix/core/blocks";
+import type { BlockRegistry, ShortcodeRegistry } from "@plumix/core/blocks";
 
+import { parseCanvasSeed } from "./canvas-seed.js";
 import { EditorCanvas } from "./editor-canvas.js";
 
 interface MountEditorOptions {
@@ -33,42 +24,17 @@ export function mountEditorRuntime({
   const root = doc.querySelector("[data-plumix-content-root]");
   if (!(root instanceof Element)) return null;
 
-  const initialTree = readInitialTree(doc);
-  // Read before React replaces the root's children, the embed among them.
-  const initialLoaderData = parseLoaderData(
-    doc.querySelector("[data-plumix-loader-data]")?.textContent ?? "",
-  );
+  const embed = (selector: string): string =>
+    doc.querySelector(selector)?.textContent ?? "";
+  // Read before React replaces the root's children, the embeds among them.
+  const seed = parseCanvasSeed({
+    initialTree: embed("[data-plumix-initial-tree]"),
+    renderEnv: embed("[data-plumix-render-env]"),
+    loaderData: embed("[data-plumix-loader-data]"),
+  });
   const reactRoot = createRoot(root);
   reactRoot.render(
-    createElement(EditorCanvas, {
-      ...readRenderEnv(doc),
-      registry,
-      shortcodes,
-      origin,
-      initialTree,
-      initialLoaderData,
-    }),
+    createElement(EditorCanvas, { ...seed, registry, shortcodes, origin }),
   );
   return () => reactRoot.unmount();
-}
-
-function readInitialTree(doc: Document): readonly BlockNode[] {
-  const script = doc.querySelector("[data-plumix-initial-tree]");
-  if (!script?.textContent) return [];
-  try {
-    const parsed: unknown = JSON.parse(script.textContent);
-    return isEntryContent(parsed) ? parsed.blocks : [];
-  } catch {
-    return [];
-  }
-}
-
-/**
- * The SSR embeds what the canvas — a fresh React tree with no server context —
- * would otherwise have to guess; `parseRenderEnv` says what and why.
- */
-function readRenderEnv(doc: Document): RenderEnv {
-  return parseRenderEnv(
-    doc.querySelector("[data-plumix-render-env]")?.textContent ?? "",
-  );
 }
