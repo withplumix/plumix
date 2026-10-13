@@ -92,7 +92,7 @@ export interface ExternalIdentityInput {
   readonly providerAccount?: ProviderAccount;
 }
 
-export interface ProviderAccount {
+interface ProviderAccount {
   readonly provider: string;
   readonly accountId: string;
 }
