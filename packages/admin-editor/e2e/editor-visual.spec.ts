@@ -747,6 +747,20 @@ test.describe("editor playground", () => {
     await expect(heading).toHaveCount(0);
   });
 
+  test("Cmd/Ctrl+B hides the panels from canvas focus", async ({ page }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+    const rails = page.locator('[data-slot="sidebar"]');
+    await expect(rails.first()).toHaveAttribute("data-state", "expanded");
+
+    // Focus inside the iframe: the host replays the forwarded press where the
+    // sidebar listens.
+    await canvas.locator('[data-plumix-id="heading-1"]').click();
+    await page.keyboard.press("ControlOrMeta+KeyB");
+
+    await expect(rails.first()).toHaveAttribute("data-state", "collapsed");
+  });
+
   test("group then ungroup selected blocks via the toolbar", async ({
     page,
   }) => {
