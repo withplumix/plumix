@@ -1,14 +1,8 @@
-import {
-  globSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import type { MigrationLocation, PlumixApp } from "plumix";
+import type { GetPlatformProxyOptions, PlatformProxy } from "wrangler";
 import { createDispatcherHarness } from "plumix/test";
 import {
   afterEach,
@@ -19,18 +13,9 @@ import {
   test,
   vi,
 } from "vitest";
-import { getPlatformProxy } from "wrangler";
 
 import { d1 } from "../d1.js";
 import { migrations, migrationsDeps } from "./migrations.js";
-
-/** Core's shipped history, read from the workspace. */
-const CORE = {
-  migrationsFolder: fileURLToPath(
-    new URL("../../../../core/migrations", import.meta.url),
-  ),
-  migrationsTable: "__drizzle_migrations_core",
-};
 
 const D1_ENTRY = {
   binding: "DB",
@@ -70,85 +55,101 @@ function writeWrangler(d1: readonly object[]): void {
 const open = (location: MigrationLocation, binding?: string) =>
   migrations.open({ cwd: dir, config: app.config, location, binding });
 
-/** The glob the playground's e2e reads its database from. */
-const localDatabases = () =>
-  globSync(".wrangler/state/v3/d1/miniflare-D1DatabaseObject/*.sqlite", {
-    cwd: dir,
-  }).filter((file) => !file.endsWith("metadata.sqlite"));
+interface WranglerCall {
+  options: GetPlatformProxyOptions;
+  config: unknown;
+}
 
-// Each test starts one proxy: a workerd start is most of its time.
+/**
+ * Stands in for wrangler's `getPlatformProxy`, recording the options and the
+ * config file Plumix hands it. The file is read at call time: `close()`
+ * deletes it.
+ */
+function stubWrangler(): WranglerCall[] {
+  const calls: WranglerCall[] = [];
+  vi.spyOn(migrationsDeps, "getPlatformProxy").mockImplementation((options) => {
+    const config = JSON.parse(
+      readFileSync(options.configPath ?? "", "utf8"),
+    ) as { d1_databases: { binding: string }[] };
+    calls.push({ options, config });
+    const binding = config.d1_databases[0]?.binding ?? "";
+    return Promise.resolve({
+      env: { [binding]: {} },
+      dispose: () => Promise.resolve(),
+    } as unknown as PlatformProxy);
+  });
+  return calls;
+}
 
 describe("cloudflare migrations", () => {
-  test("applies locally to the D1 `plumix dev` reads, under the project's .wrangler/state", async () => {
+  test("opens the local D1 `plumix dev` reads, persisted under the project's .wrangler/state", async () => {
     writeWrangler([D1_ENTRY]);
+    const calls = stubWrangler();
 
     const db = await open("local");
-    try {
-      await db.migrate(CORE);
-      expect(
-        await db.all("SELECT name FROM sqlite_master WHERE type = 'trigger'"),
-      ).toHaveLength(3);
-    } finally {
-      await db.close();
-    }
+    await db.close();
 
-    expect(localDatabases()).toHaveLength(1);
+    expect(calls).toEqual([
+      {
+        options: {
+          configPath: expect.any(String) as unknown,
+          persist: { path: join(dir, ".wrangler/state/v3") },
+          remoteBindings: false,
+        },
+        config: {
+          name: "plumix-migrate",
+          compatibility_date: "2026-04-01",
+          account_id: "acc123",
+          d1_databases: [D1_ENTRY],
+        },
+      },
+    ]);
   });
 
-  test("a memory database leaves the local one alone", async () => {
+  test("a memory database persists nothing", async () => {
     writeWrangler([D1_ENTRY]);
+    const calls = stubWrangler();
 
     const db = await open("memory");
-    try {
-      await db.migrate(CORE);
-    } finally {
-      await db.close();
-    }
+    await db.close();
 
-    expect(localDatabases()).toEqual([]);
+    expect(calls).toEqual([
+      {
+        options: {
+          configPath: expect.any(String) as unknown,
+          persist: false,
+          remoteBindings: false,
+        },
+        config: {
+          name: "plumix-migrate",
+          compatibility_date: "2026-04-01",
+          account_id: "acc123",
+          d1_databases: [D1_ENTRY],
+        },
+      },
+    ]);
   });
 
   test("--remote reaches the binding through wrangler's remote bindings", async () => {
     writeWrangler([D1_ENTRY]);
-    const seen: { options: unknown; config: unknown }[] = [];
-    // The proxy wrangler would start against the remote database, stood in
-    // for by a local one: what reaches wrangler is the point here.
-    vi.spyOn(migrationsDeps, "getPlatformProxy").mockImplementation(
-      async (options) => {
-        seen.push({
-          options,
-          config: JSON.parse(
-            readFileSync(options.configPath ?? "", "utf8"),
-          ) as unknown,
-        });
-        return getPlatformProxy({
-          configPath: options.configPath,
-          persist: false,
-          remoteBindings: false,
-        });
-      },
-    );
+    const calls = stubWrangler();
 
     const db = await open("remote");
-    try {
-      await db.migrate(CORE);
-      expect(
-        await db.all("SELECT count(*) AS n FROM __drizzle_migrations_core"),
-      ).toEqual([{ n: 2 }]);
-    } finally {
-      await db.close();
-    }
+    await db.close();
 
-    expect(seen).toEqual([
+    expect(calls).toEqual([
       {
-        options: expect.objectContaining({
-          remoteBindings: true,
+        options: {
+          configPath: expect.any(String) as unknown,
           persist: false,
-        }) as unknown,
-        config: expect.objectContaining({
+          remoteBindings: true,
+        },
+        config: {
+          name: "plumix-migrate",
+          compatibility_date: "2026-04-01",
           account_id: "acc123",
           d1_databases: [{ ...D1_ENTRY, remote: true }],
-        }) as unknown,
+        },
       },
     ]);
   });
@@ -160,9 +161,35 @@ describe("cloudflare migrations", () => {
       code: "migrate_ambiguous_binding",
       message: expect.stringContaining("DB, ARCHIVE") as unknown,
     });
+  });
+
+  test("with several D1 bindings, --binding opens the one it names", async () => {
+    writeWrangler([
+      D1_ENTRY,
+      { ...D1_ENTRY, binding: "ARCHIVE", database_name: "archive" },
+    ]);
+    const calls = stubWrangler();
 
     const db = await open("local", "ARCHIVE");
     await db.close();
+
+    expect(calls).toEqual([
+      {
+        options: {
+          configPath: expect.any(String) as unknown,
+          persist: { path: join(dir, ".wrangler/state/v3") },
+          remoteBindings: false,
+        },
+        config: {
+          name: "plumix-migrate",
+          compatibility_date: "2026-04-01",
+          account_id: "acc123",
+          d1_databases: [
+            { ...D1_ENTRY, binding: "ARCHIVE", database_name: "archive" },
+          ],
+        },
+      },
+    ]);
   });
 
   test("with several D1 bindings and no --binding, opens the one the config's d1() slot names", async () => {
@@ -170,15 +197,7 @@ describe("cloudflare migrations", () => {
       D1_ENTRY,
       { ...D1_ENTRY, binding: "ARCHIVE", database_name: "archive" },
     ]);
-    const proxied: unknown[] = [];
-    vi.spyOn(migrationsDeps, "getPlatformProxy").mockImplementation(
-      (options) => {
-        proxied.push(
-          JSON.parse(readFileSync(options.configPath ?? "", "utf8")),
-        );
-        return getPlatformProxy(options);
-      },
-    );
+    const calls = stubWrangler();
 
     const db = await migrations.open({
       cwd: dir,
@@ -188,10 +207,22 @@ describe("cloudflare migrations", () => {
     });
     await db.close();
 
-    expect(proxied).toEqual([
-      expect.objectContaining({
-        d1_databases: [expect.objectContaining({ binding: "ARCHIVE" })],
-      }),
+    expect(calls).toEqual([
+      {
+        options: {
+          configPath: expect.any(String) as unknown,
+          persist: false,
+          remoteBindings: false,
+        },
+        config: {
+          name: "plumix-migrate",
+          compatibility_date: "2026-04-01",
+          account_id: "acc123",
+          d1_databases: [
+            { ...D1_ENTRY, binding: "ARCHIVE", database_name: "archive" },
+          ],
+        },
+      },
     ]);
   });
 
