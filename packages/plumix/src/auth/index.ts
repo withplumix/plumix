@@ -19,6 +19,7 @@ export {
   entitlement,
   entitlementSegment,
   entryPolicyAdmits,
+  policyAdmits,
   ExternalIdentityError,
   github,
   google,

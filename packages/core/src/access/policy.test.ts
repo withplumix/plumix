@@ -15,6 +15,7 @@ import {
   entitlementSegment,
   grant,
   isBuiltinSegment,
+  policyAdmits,
   principalSegment,
   redirectToLogin,
   resolveAccess,
@@ -290,4 +291,33 @@ describe("segment helpers", () => {
     expect(principalSegment(null)).toBe("anonymous");
     expect(principalSegment(user("editor"))).toBe("authenticated");
   });
+});
+
+describe("policyAdmits", () => {
+  const outcomes = [
+    ["a grant", grant("anonymous"), { listing: true, content: true }],
+    [
+      "a soft challenge",
+      challenge("paywall", { soft: true }),
+      { listing: true, content: false },
+    ],
+    [
+      "a hard challenge",
+      challenge("forbidden"),
+      { listing: false, content: false },
+    ],
+    ["a redirect", redirectToLogin(), { listing: false, content: false }],
+  ] as const;
+
+  it.each(outcomes)(
+    "answers %s at each level",
+    async (_name, outcome, expected) => {
+      const policy = definePolicy({ resolve: () => outcome });
+      const answers = {
+        listing: await policyAdmits(ctx(null), policy, "listing"),
+        content: await policyAdmits(ctx(null), policy, "content"),
+      };
+      expect(answers).toEqual(expected);
+    },
+  );
 });

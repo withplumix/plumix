@@ -1,10 +1,10 @@
 import type { AppContext, PluginSetupContext } from "plumix/plugin";
 import type { Entry } from "plumix/schema";
+import { anonymousContext, entryPolicyAdmits } from "plumix/auth";
 import { buildEntryPermalink } from "plumix/plugin";
 import { withBasePath } from "plumix/support";
 
 import { readSeoOverrides } from "./overrides.js";
-import { isCrawlableType } from "./scope.js";
 import { loadSeoSettings } from "./settings.js";
 
 /**
@@ -41,7 +41,11 @@ async function submit(ctx: AppContext, entry: Entry): Promise<void> {
   if (entry.status !== "published") return;
   const entryType = ctx.plugins.entryTypes.get(entry.type);
   if (entryType?.isPublic === false) return;
-  if (!isCrawlableType(entryType)) return;
+  // Asked for anonymous visitors: the editor saving it may read what a
+  // crawler may not.
+  if (!(await entryPolicyAdmits(anonymousContext(ctx), entry, "listing"))) {
+    return;
+  }
   if (readSeoOverrides(entry.meta).noindex) return;
 
   const settings = await loadSeoSettings(ctx);

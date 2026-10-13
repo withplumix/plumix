@@ -379,6 +379,8 @@ Each scope's sub-sitemap answers at a URL named by its kind, so an entry type an
 
 Entry scopes list published entries with a `lastmod`; taxonomy scopes list term archives. Drafts, scheduled entries, non-public types and anything marked **Hide from search engines** never appear — the exclusion is a `WHERE`, so the count driving the index's pagination and the page it pages agree. `entries` and `terms` belong to seo, so a `registerSitemap` call naming `entries` or `terms`, or a name starting `entries-` or `terms-`, fails the boot naming its plugin. Two plugins contributing one name fail the boot naming both.
 
+An entry type with an [access policy](/access/overview/) gets its scope like any other, and each entry is listed when its policy lets anonymous visitors list it. The sitemap asks that for anonymous visitors whoever requests it, so a signed-in member fetching `/sitemap.xml` sees what a crawler sees. A members-only entry is never listed. A soft-challenged entry is, since its page answers 200 with a teaser. The check is part of the same `WHERE`, so a page of 1,000 URLs is still full.
+
 Scopes are enumerated when the theme is ready, so the routes the plugin claims are exactly the scopes the site registered — `/sitemap-entries-nope-1.xml` is a 404, not an empty document, and a page segment that is not a page number is a 404 too.
 
 A site with indexing turned off publishes an empty index and empty URL lists, so a crawler that already knows the URL learns nothing from it.
@@ -399,7 +401,7 @@ seo({
 });
 ```
 
-`false` leaves a scope out: it is absent from the index and its sub-sitemap serves an empty `<urlset>`. That is about the sitemap only — a page of a dropped type still says `index` in its head, which the **Hide from search engines** settings decide. A policy object is the default for every URL in the scope. `changefreq` takes the sitemaps.org vocabulary (`always`, `hourly`, `daily`, `weekly`, `monthly`, `yearly`, `never`), and `priority` is 0.0–1.0, which the plugin does not clamp. A key that names no scope fails the boot, naming the key — a misspelt name, and also a registered type the sitemap never lists because it is not public or carries an access policy, since its policy would never apply.
+`false` leaves a scope out: it is absent from the index and its sub-sitemap serves an empty `<urlset>`. That is about the sitemap only — a page of a dropped type still says `index` in its head, which the **Hide from search engines** settings decide. A policy object is the default for every URL in the scope. `changefreq` takes the sitemaps.org vocabulary (`always`, `hourly`, `daily`, `weekly`, `monthly`, `yearly`, `never`), and `priority` is 0.0–1.0, which the plugin does not clamp. A key that names no scope fails the boot, naming the key — a misspelt name, and also a registered type the sitemap never lists because it is not public, since its policy would never apply.
 
 For one URL, a value its scope's provider set — a contributed source's `urls` — beats the site's default, and the `seo:sitemap:urls` filter below sees the merged values and has the last word. A URL that ends up with neither field writes neither element. Google ignores both fields; they are there for parity with an existing sitemap and for crawlers that read them.
 
@@ -449,11 +451,21 @@ ctx.registerSitemap("locations", {
 });
 ```
 
-Its sub-sitemap answers at `/sitemap-locations-<page>.xml`. `registerSitemap` exists on the setup context only while seo is installed, so a plugin that calls it declares `@plumix/plugin-seo` as an optional peer. An archive registered with `registerArchiveType` that wants a sitemap calls it the same way, under the archive's name. Seo does not read the archive, so an `access` policy on it does not hold the sitemap out: a source lists only URLs the public may see.
+Its sub-sitemap answers at `/sitemap-locations-<page>.xml`. `registerSitemap` exists on the setup context only while seo is installed, so a plugin that calls it declares `@plumix/plugin-seo` as an optional peer. An archive registered with `registerArchiveType` that wants a sitemap calls it the same way, under the archive's name. Seo does not read the archive, so a source whose URLs answer to an access policy names it as `access`, such as the one the archive was registered with:
+
+```ts no-typecheck
+ctx.registerSitemap("courses", {
+  count: (appCtx) => countCourses(appCtx),
+  urls: (appCtx, page) => courseUrls(appCtx, page),
+  access: membersPolicy,
+});
+```
+
+Seo asks that policy for an anonymous visitor, whoever requests the sitemap. When it refuses, the scope is left out as a `false` policy leaves it: it is absent from the index, its sub-sitemap serves an empty `<urlset>`, and `count`, `lastmod` and `urls` are never called. A policy that grants or soft-challenges keeps the scope listed. A source with no `access` lists whatever its `urls` answer, so it lists only URLs the public may see.
 
 ### Caching
 
-Sitemap responses declare `public, max-age=0, s-maxage=3600` and go through the CDN when one is configured. Each scope stores under its own tags — `t:<type>` for an entry type, the `t:<type>` tags of a taxonomy's entry types for a taxonomy — so publishing a post retires the post scope and leaves the rest of the set alone. Saving the settings group purges all of them, since the indexing toggle decides whether any of them have URLs at all.
+Sitemap responses declare `public, max-age=0, s-maxage=3600` and go through the CDN when one is configured. Each scope stores under its own tags — `t:<type>` for an entry type, the `t:<type>` tags of a taxonomy's entry types for a taxonomy — so publishing a post retires the post scope and leaves the rest of the set alone. Saving the settings group purges all of them, since the indexing toggle decides whether any of them have URLs at all. `/llms.txt` declares the same header and is stored under the set-wide tag and the `t:<type>` tag of every public entry type, so an entry write, a change of access choice included, retires it with the sitemap page that lists the entry.
 
 A scope with no tags to contribute rides the one-hour window instead of a purge: a taxonomy registered with no `entryTypes` has none to name, and so does a contributed source that omits `tags`. Declare `tags` on a source whose content changes more often than that.
 
@@ -461,9 +473,20 @@ With no CDN configured, every sitemap is generated per request.
 
 ## llms.txt
 
-`/llms.txt` is the [llmstxt.org](https://llmstxt.org/) convention: a small Markdown file naming the site, its tagline and what is worth reading. Unless the site set [`llmsTxt: false`](#options), the plugin serves the site title and tagline from the Site identity group — falling back to the host when no title is set — and links the sitemap index.
+`/llms.txt` is the [llmstxt.org](https://llmstxt.org/) convention: a small Markdown file naming the site, its tagline and what is worth reading. Unless the site set [`llmsTxt: false`](#options), the plugin serves the site title and tagline from the Site identity group — falling back to the host when no title is set — then one section per public entry type, and links the sitemap index last.
 
-The map is offered only to a site that wants to be read this way. One held out of the index has nothing to offer, and one that blocks AI crawlers has already said the opposite of what a map here would say, so both get the heading and a sentence instead of a list. The file is still served either way: a crawler that fetches it gets an answer rather than a 404 it would read as "not implemented yet".
+Each section is headed by the type's plural label and lists its 50 newest entries, newest first, one line each:
+
+```md
+## Posts
+
+- [Hello world](https://example.com/post/hello-world): The entry's excerpt.
+- [An entry with no excerpt](https://example.com/post/bare)
+```
+
+An entry is listed by the sitemap's rule, asked for anonymous visitors: published, not marked **Hide from search engines**, and listable under its access policy. A type held out of the index by default gets no section, and neither does a type with nothing listed. The `sitemaps` option does not apply here, and views and terms are not listed. A blank title reads `Untitled`, and the line ends at the link when the excerpt is empty. No entry ever contributes its body, so a soft-challenged entry gives its excerpt like any other. The 50-per-type cap is fixed; reshape the file through the filter below.
+
+The map is offered only to a site that wants to be read this way. One held out of the index has nothing to offer, and one that blocks AI crawlers has already said the opposite of what a map here would say, so both get the heading and a sentence instead of the entry sections and the map. The file is still served either way: a crawler that fetches it gets an answer rather than a 404 it would read as "not implemented yet".
 
 To list the pages that actually matter — a handbook, an API reference — rewrite the body:
 
@@ -478,7 +501,7 @@ ctx.addFilter(
 
 Setting an **IndexNow key** turns on notification. Publishing or updating an entry submits its URL to the shared IndexNow endpoint, which fans out to every participating engine, so a change is picked up in minutes rather than at the next crawl. The key is served at `/indexnow-key.txt`, which the submission names as its `keyLocation` — the ownership proof an engine fetches back.
 
-Every gate the head and the sitemap apply is applied here too. A draft, an entry an editor marked **Hide from search engines**, an entry of a non-public type and a site held out of the index are never submitted — a page nobody may index is a page nobody is told about.
+Every gate the head and the sitemap apply is applied here too. A draft, an entry an editor marked **Hide from search engines**, an entry of a non-public type and a site held out of the index are never submitted — a page nobody may index is a page nobody is told about. An entry's access policy is asked for anonymous visitors, not for the editor saving it, so a members-only entry is never submitted, and a public or soft-challenged one is.
 
 One publish is one submission: `entry.update` fires `entry:updated` and `entry:published` for a publish transition, and both reach this, so the submission is memoized per entry for the request — a duplicate is what an endpoint's abuse handling watches for.
 

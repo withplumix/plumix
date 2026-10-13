@@ -5,8 +5,10 @@ import type {
   AccessOutcome,
   AccessPolicyFor,
   AccessResolverFor,
+  EntryAdmission,
 } from "./contract/policy.js";
 import { USER_ROLES } from "../db/schema/users.js";
+import { admissionMeets, admissionOf } from "./contract/policy.js";
 import { roleLevel } from "./contract/rbac.js";
 import { PRIVATE_SEGMENT } from "./contract/segments.js";
 
@@ -17,7 +19,7 @@ export type {
   Gate,
   Segment,
 } from "./contract/access.js";
-export type { AccessOutcome } from "./contract/policy.js";
+export type { AccessOutcome, EntryAdmission } from "./contract/policy.js";
 
 const ENTITLEMENT_PREFIX = "entitlement:";
 
@@ -100,6 +102,18 @@ export class AccessError extends Error {
       `resolveAccess: policy granted segment "${segment}", which is neither a built-in segment nor declared in the policy's segments space`,
     );
   }
+}
+
+/**
+ * Whether `policy` admits `ctx`'s principal at `level`. Ask it through
+ * `anonymousContext` for what anonymous visitors may have.
+ */
+export async function policyAdmits(
+  ctx: AppContext,
+  policy: AccessPolicy,
+  level: EntryAdmission,
+): Promise<boolean> {
+  return admissionMeets(admissionOf(await policy.resolve(ctx)), level);
 }
 
 /**

@@ -1,20 +1,15 @@
 import type { EntryAccessSubject } from "../access/contract/access-key.js";
 import type {
-  AccessOutcome,
   AccessPolicyFor,
+  EntryAdmission,
 } from "../access/contract/policy.js";
 import type { AppContext } from "../context/app-context.js";
 import type { SQL } from "../db/index.js";
 import { readAccessKey } from "../access/contract/access-key.js";
 import { ACCESS_POLICY_META_KEY } from "../access/contract/meta-key.js";
+import { admissionMeets, admissionOf } from "../access/contract/policy.js";
 import { inArray, isNull, notInArray, or, sql } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
-
-/**
- * What a policy's gate lets its principal have of an entry. A soft challenge
- * lists the entry as a teaser; only `allow` hands over its body.
- */
-export type EntryAdmission = "content" | "listing";
 
 type Admits = EntryAdmission | "nothing";
 
@@ -39,7 +34,7 @@ export async function entryPolicyAdmits(
     key === undefined
       ? admission.default
       : (admission.byKey.get(key) ?? admission.default);
-  return meets(admits, level);
+  return admissionMeets(admits, level);
 }
 
 /**
@@ -55,9 +50,9 @@ export async function policyAdmittedRows(
   if (admission === undefined) return undefined;
   const keys = [...admission.byKey.keys()];
   const admitted = keys.filter((key) =>
-    meets(admission.byKey.get(key) ?? "nothing", level),
+    admissionMeets(admission.byKey.get(key) ?? "nothing", level),
   );
-  const defaultAdmitted = meets(admission.default, level);
+  const defaultAdmitted = admissionMeets(admission.default, level);
   if (defaultAdmitted && admitted.length === keys.length) return undefined;
   const stored = sql`json_extract(${entries.meta}, ${STORED_KEY_PATH})`;
   const arms: SQL[] = [];
@@ -86,7 +81,7 @@ function typeAdmission(
   return ctx.memo(`core:entry-access:${type}:${principal}`, async () => {
     const admits = async (
       policy: AccessPolicyFor<AppContext>,
-    ): Promise<Admits> => admitsOf(await policy.resolve(ctx));
+    ): Promise<Admits> => admissionOf(await policy.resolve(ctx));
     const [fallback, chosen] = await Promise.all([
       admits(access.default),
       Promise.all(
@@ -101,15 +96,4 @@ function typeAdmission(
     }
     return { default: fallback, byKey };
   });
-}
-
-function admitsOf(outcome: AccessOutcome): Admits {
-  if (outcome.type === "grant") return "content";
-  if (outcome.type === "challenge" && outcome.soft === true) return "listing";
-  return "nothing";
-}
-
-function meets(admits: Admits, level: EntryAdmission): boolean {
-  if (admits === "nothing") return false;
-  return level === "listing" || admits === "content";
 }
