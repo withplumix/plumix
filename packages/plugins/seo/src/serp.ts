@@ -50,3 +50,19 @@ export function resolveSerp(
     reason: excluded ? "entry_override" : preview.reason,
   };
 }
+
+/** How a SERP line sits against the length a search engine keeps. */
+export type SerpLineState = "empty" | "fits" | "over";
+
+export interface SerpLineMeasure {
+  readonly length: number;
+  readonly state: SerpLineState;
+}
+
+export function measureSerpLine(value: string, limit: number): SerpLineMeasure {
+  // Characters as the author sees them: a count over code units would report
+  // an emoji or a combining accent as two.
+  const length = [...value].length;
+  if (length === 0) return { length, state: "empty" };
+  return { length, state: length > limit ? "over" : "fits" };
+}
