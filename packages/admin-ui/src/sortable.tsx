@@ -1,10 +1,5 @@
-import type {
-  Announcements,
-  DragEndEvent,
-  UniqueIdentifier,
-} from "@dnd-kit/core";
+import type { DragEndEvent } from "@dnd-kit/core";
 import type { CSSProperties, ReactNode } from "react";
-import { useRef } from "react";
 import {
   DndContext,
   KeyboardSensor,
@@ -24,6 +19,7 @@ import { CSS } from "@dnd-kit/utilities";
 
 import { Button } from "./button.js";
 import { GripVertical, X } from "./icons.js";
+import { dragAnnouncements } from "./sortable-announcements.js";
 import { cn } from "./utils.js";
 
 /**
@@ -88,36 +84,13 @@ export function SortableList<T extends { readonly id: string }>({
     onReorder(arrayMove([...items], oldIndex, newIndex));
   };
 
-  const at = (id: UniqueIdentifier): SortablePosition => ({
-    position: items.findIndex((i) => i.id === id) + 1,
-    total: items.length,
-  });
-
-  // dnd-kit fires `onDragOver` on drag start over the item's own slot, which
-  // would talk over "picked up"; speak only on reaching a new slot.
-  const announcedOverId = useRef<UniqueIdentifier | null>(null);
-  const dndAnnouncements: Announcements = {
-    onDragStart: ({ active }) => {
-      announcedOverId.current = active.id;
-      return announcements.pickedUp(at(active.id));
-    },
-    onDragOver: ({ over }) => {
-      if (!over || over.id === announcedOverId.current) return undefined;
-      announcedOverId.current = over.id;
-      return announcements.movedTo(at(over.id));
-    },
-    onDragEnd: ({ active, over }) =>
-      announcements.dropped(at(over ? over.id : active.id)),
-    onDragCancel: ({ active }) => announcements.cancelled(at(active.id)),
-  };
-
   return (
     <DndContext
       sensors={sensors}
       modifiers={[restrictToVerticalAxis]}
       onDragEnd={handleDragEnd}
       accessibility={{
-        announcements: dndAnnouncements,
+        announcements: dragAnnouncements(items, announcements),
         screenReaderInstructions: { draggable: announcements.instructions },
       }}
     >
