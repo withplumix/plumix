@@ -60,7 +60,9 @@ describe("EditorCanvas", () => {
 
     // The page's server render, then the canvas mounted over it from the same
     // embeds: the author must not watch the text flip.
-    function serverThenCanvas(body: string): [string, string] {
+    function serverThenCanvas(
+      body: string,
+    ): [string | undefined, string | undefined] {
       const blocks = [{ id: "e1", name: "core/rich-text", attrs: { body } }];
       const env = {
         locale: "de",
