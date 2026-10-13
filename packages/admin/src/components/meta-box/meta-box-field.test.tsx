@@ -73,7 +73,7 @@ function textOf(html: string, testId: string): string | undefined {
   const match = new RegExp(
     `data-testid="${testId}"[^<>]*>(.*?)</(?:span|p|button|label|div)>`,
   ).exec(html);
-  return match?.[1]?.replace(/<[^>]*>/g, "");
+  return match?.[1]?.split(/<[^>]*>/).join("");
 }
 
 function attrOf(tag: string | undefined, attr: string): string | undefined {
