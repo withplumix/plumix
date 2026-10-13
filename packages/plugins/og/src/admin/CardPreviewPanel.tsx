@@ -53,26 +53,30 @@ function LoadedPreview({
   });
   const preview = query.data;
   const view = preview ? describeCardPreview(preview) : null;
+  let image: ReactNode = null;
+  if (preview && view?.showImage && preview.src !== null) {
+    image = (
+      <img
+        src={preview.src}
+        alt={i18n._(M.alt)}
+        className="h-full w-full object-contain"
+        data-testid={`${testId}-image`}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col gap-2" data-testid={testId}>
       <div className="bg-muted aspect-og-card flex items-center justify-center overflow-hidden rounded border">
-        {preview && view ? (
-          view.showImage && preview.src !== null ? (
-            <img
-              src={preview.src}
-              alt={i18n._(M.alt)}
-              className="h-full w-full object-contain"
-              data-testid={`${testId}-image`}
-            />
-          ) : null
-        ) : (
+        {view === null ? (
           <span
             className="text-muted-foreground px-3 text-center text-xs"
             data-testid={`${testId}-status`}
           >
             {i18n._(query.isPending ? M.loading : M.failed)}
           </span>
+        ) : (
+          image
         )}
       </div>
       {view ? (

@@ -84,10 +84,6 @@ export function filterToRpcInput(
   return out;
 }
 
-/**
- * The changed fields a row's Changes cell names, capped at a few, or `null`
- * when the row carries no diff.
- */
 export function diffPreviewFields(
   properties: AuditLogRowDTO["properties"],
 ): { readonly shown: readonly string[]; readonly overflow: number } | null {
@@ -103,7 +99,6 @@ export function diffPreviewFields(
 
 export type AuditLogBodyState = "loading" | "error" | "empty" | "rows";
 
-/** Which body the shell shows under its filters. */
 export function auditLogBodyState(list: {
   readonly isLoading: boolean;
   readonly error: unknown;

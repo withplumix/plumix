@@ -29,7 +29,6 @@ export function useAuditLogList(
   });
 }
 
-/** The first page carries no cursor; each later page carries the last one. */
 export function auditLogPageInput(
   filter: AuditLogFilter,
   cursor: string | undefined,

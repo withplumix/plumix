@@ -53,7 +53,6 @@ export function menusPageState(menus: {
   return (menus.data ?? []).length === 0 ? "empty" : "ready";
 }
 
-/** The slug of the menu a location is bound to, or `null` when it has none. */
 export function boundMenuSlug(
   boundTermId: number | null,
   menus: readonly MenuListItem[],
@@ -62,7 +61,6 @@ export function boundMenuSlug(
   return menus.find((menu) => menu.id === boundTermId)?.slug ?? null;
 }
 
-/** A location select's value as the `termSlug` `assignLocation` takes. */
 export function termSlugFromSelect(value: string): string | null {
   return value === UNASSIGNED_VALUE ? null : value;
 }
@@ -136,11 +134,6 @@ export function searchResultsState(query: {
   return (query.data?.items ?? []).length === 0 ? "empty" : "results";
 }
 
-/**
- * What choosing a search result does: adds it, or replaces the link of the
- * item being re-linked, and the words announcing it. The announcement takes
- * the result's name as `label`.
- */
 export function pickerChoice(
   kind: "entry" | "term",
   item: LinkTarget,

@@ -34,7 +34,6 @@ export interface CardPreviewView {
   readonly showImage: boolean;
 }
 
-/** What the panel says about a preview, and whether its frame shows an image. */
 export function describeCardPreview(preview: CardPreview): CardPreviewView {
   return {
     outcome: OUTCOMES[preview.outcome],

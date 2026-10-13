@@ -21,7 +21,6 @@ const REASONS: Record<
   view: M.reasonView,
 };
 
-/** Why the page is held out of search, or `null` when it is offered. */
 export function exclusionReason(
   reason: IndexabilityReason,
 ): MessageDescriptor | null {

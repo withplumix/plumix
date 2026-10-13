@@ -51,7 +51,6 @@ export function resolveSerp(
   };
 }
 
-/** How a SERP line sits against the length a search engine keeps. */
 export type SerpLineState = "empty" | "fits" | "over";
 
 export interface SerpLineMeasure {
