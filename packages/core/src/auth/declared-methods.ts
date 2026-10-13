@@ -24,7 +24,6 @@ interface CompiledRoute {
 export interface DeclaredAuthMethod {
   /** `core`, or the id of the plugin that declared it. */
   readonly owner: string;
-  /** Names its query parameters and is `user:signed_in`'s `method`. */
   readonly key: string;
   readonly method: AuthMethodDefinition;
   readonly routes: readonly CompiledRoute[];

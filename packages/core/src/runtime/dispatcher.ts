@@ -822,7 +822,6 @@ function withoutAmbientSession(
   return { ...ctx, authenticator: anonymousAuthenticator };
 }
 
-/** Runs `serve` in the scoped context, entering it in the request store. */
 function servedWithoutAmbientSession(
   route: Pick<RegisteredRawRoute | AuthMethodRoute, "formPost">,
   ctx: AppContext,
