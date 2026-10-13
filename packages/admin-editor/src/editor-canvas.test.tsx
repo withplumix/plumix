@@ -84,7 +84,14 @@ describe("EditorCanvas", () => {
           origin={ORIGIN}
         />,
       );
-      return [server, canvas];
+      return [blockMarkup(server), blockMarkup(canvas)];
+    }
+
+    // The block's own element, whatever the content root around it carries.
+    function blockMarkup(html: string): string | undefined {
+      return /<div data-plumix-block="core\/rich-text" data-plumix-id="e1">.*?<\/div><\/div>/s.exec(
+        html,
+      )?.[0];
     }
 
     test.each([
@@ -95,8 +102,10 @@ describe("EditorCanvas", () => {
     ])("%s", (_, body, rendered) => {
       const [server, canvas] = serverThenCanvas(body);
 
-      expect(server).toContain(rendered);
-      expect(canvas).toContain(rendered);
+      expect(server).toBe(
+        `<div data-plumix-block="core/rich-text" data-plumix-id="e1"><div>${rendered}</div></div>`,
+      );
+      expect(canvas).toBe(server);
     });
   });
 
