@@ -35,6 +35,7 @@ import { BlockTree, PlumixProvider } from "@plumix/core/blocks/renderer";
 
 import type { RuntimeConnection } from "./connect-runtime.js";
 import { mergeDeps, unresolvedDeps } from "./block-deps.js";
+import { canvasContextValue } from "./canvas-context.js";
 import { clipboardOpFromEvent } from "./clipboard-ops.js";
 import { connectRuntime } from "./connect-runtime.js";
 import { mergeLoaderData } from "./merge-loader-data.js";
@@ -321,20 +322,19 @@ export function EditorCanvas({
   return (
     <HtmlAllowlistProvider value={htmlAllowlist}>
       <PlumixProvider
-        value={{
-          registry,
-          mode: "edit",
-          tokens,
-          breakpoints,
-          loaderData,
-          // The host's locale once it arrives, so it matches the catalog the
-          // host pushed alongside it; the page's until then.
-          locale: config?.locale ?? locale,
-          catalog: config?.catalog,
-          shortcodes,
-          entry,
-          deps,
-        }}
+        value={canvasContextValue(
+          {
+            registry,
+            tokens,
+            breakpoints,
+            loaderData,
+            locale,
+            shortcodes,
+            entry,
+            deps,
+          },
+          config,
+        )}
       >
         <div
           ref={containerRef}
