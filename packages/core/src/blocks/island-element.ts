@@ -290,21 +290,9 @@ export class PlumixIslandElement extends HTMLElement {
  */
 type ModuleNamespace = Readonly<Record<string, unknown>>;
 
-/**
- * Swappable because unit tests have no real chunk URLs. The URL comes off the
- * page at runtime, so Vite has nothing to analyze.
- */
-let dynamicImport: (url: string) => Promise<ModuleNamespace> = (url) =>
-  import(/* @vite-ignore */ url);
-
-export function setDynamicImport(
-  fn: (url: string) => Promise<ModuleNamespace>,
-): () => void {
-  const prev = dynamicImport;
-  dynamicImport = fn;
-  return () => {
-    dynamicImport = prev;
-  };
+/** The URL comes off the page at runtime, so Vite has nothing to analyze. */
+function dynamicImport(url: string): Promise<ModuleNamespace> {
+  return import(/* @vite-ignore */ url);
 }
 
 /**
@@ -322,7 +310,7 @@ export function setRendererUrl(url: string): void {
  * island can retry after a deploy race.
  */
 let rendererPromise: Promise<RendererModule> | null = null;
-let loadRenderer: () => Promise<RendererModule> = () => {
+function loadRenderer(): Promise<RendererModule> {
   if (rendererUrl === null) {
     return Promise.reject(new Error("island renderer URL not set"));
   }
@@ -333,7 +321,7 @@ let loadRenderer: () => Promise<RendererModule> = () => {
     },
   );
   return rendererPromise;
-};
+}
 
 /**
  * Same deploy-during-load defense as `loadComponent`, since the renderer URL is
@@ -351,21 +339,6 @@ async function importRendererWithRetry(url: string): Promise<RendererModule> {
  */
 function readRenderer(namespace: ModuleNamespace): RendererModule {
   return { mount: namespace.mount as RendererModule["mount"] };
-}
-
-/**
- * Test seam: a unit test has no renderer chunk URL to import, so it injects
- * the (statically imported) renderer module directly.
- */
-export function setRendererImport(
-  fn: () => Promise<RendererModule>,
-): () => void {
-  const prev = loadRenderer;
-  loadRenderer = fn;
-  return () => {
-    loadRenderer = prev;
-    rendererPromise = null;
-  };
 }
 
 /**
