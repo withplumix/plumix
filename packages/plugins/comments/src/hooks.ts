@@ -6,12 +6,7 @@ import { useSingleFlight } from "plumix/blocks/renderer";
 import type { ResolvedComment } from "./server/load-thread.js";
 import type { CommentFormOutcome } from "./thread-state.js";
 import type { CommentFormError, CommentStatus } from "./types.js";
-import {
-  applyCommentPage,
-  formAfterAnswer,
-  openThread,
-  UNANSWERED,
-} from "./thread-state.js";
+import { formAfterAnswer, threadPager, UNANSWERED } from "./thread-state.js";
 import { fetchCommentPage, postComment, submitAction } from "./wire.js";
 
 export type { ResolvedComment } from "./server/load-thread.js";
@@ -133,16 +128,21 @@ export function usePlumixCommentThread(options: {
   readonly basePath?: string;
 }): PlumixCommentThreadState {
   const { entryId, basePath } = options;
-  const [thread, setThread] = useState(() => openThread(options.cursor));
+  // The pager, not the render, says which page is next: a press after a
+  // page lands but before it renders must not ask for that page again.
+  const [pager] = useState(() => threadPager(options.cursor));
+  const [thread, setThread] = useState(() => pager.current());
   const [loading, setLoading] = useState(false);
 
   // Guarded: a second press in one tick would append one page twice.
   const load = useSingleFlight(async (): Promise<void> => {
-    if (!thread.hasMore) return;
+    if (!pager.current().hasMore) return;
     setLoading(true);
     try {
-      const answer = await fetchCommentPage(entryId, thread.cursor, basePath);
-      setThread((current) => applyCommentPage(current, answer));
+      const next = await pager.next((cursor) =>
+        fetchCommentPage(entryId, cursor, basePath),
+      );
+      if (next !== null) setThread(next);
     } finally {
       setLoading(false);
     }

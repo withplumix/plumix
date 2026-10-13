@@ -7,6 +7,7 @@ import {
   formAfterAnswer,
   openThread,
   threadError,
+  threadPager,
 } from "./thread-state.js";
 
 function comment(id: number): ResolvedComment {
@@ -129,5 +130,53 @@ describe("threadError", () => {
     expect(threadError("unreachable")).toBe(
       "Those comments could not be loaded. Please try again.",
     );
+  });
+});
+
+describe("threadPager", () => {
+  test("asks for the page after the one that just landed, before any render", async () => {
+    const pager = threadPager("100_3");
+    const asked: (string | null)[] = [];
+    await pager.next((cursor) => {
+      asked.push(cursor);
+      return Promise.resolve({
+        ok: true,
+        comments: [comment(3)],
+        hasMore: true,
+        nextCursor: "50_2",
+      });
+    });
+
+    await pager.next((cursor) => {
+      asked.push(cursor);
+      return Promise.resolve({
+        ok: true,
+        comments: [comment(2)],
+        hasMore: false,
+        nextCursor: null,
+      });
+    });
+
+    expect(asked).toEqual(["100_3", "50_2"]);
+  });
+
+  test("makes no request once a page said there are no more", async () => {
+    const pager = threadPager("100_3");
+    await pager.next(() =>
+      Promise.resolve({
+        ok: true,
+        comments: [comment(3)],
+        hasMore: false,
+        nextCursor: null,
+      }),
+    );
+    const asked: (string | null)[] = [];
+
+    await pager.next((cursor) => {
+      asked.push(cursor);
+      return Promise.resolve({ ok: false, reason: "unreachable" });
+    });
+
+    expect(asked).toEqual([]);
   });
 });

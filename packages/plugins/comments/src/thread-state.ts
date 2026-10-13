@@ -52,6 +52,30 @@ export function applyCommentPage(
   };
 }
 
+export interface ThreadPager {
+  current(): CommentThreadState;
+  /** Null, asking nothing, once a page said there are no more. */
+  next(
+    fetchPage: (cursor: string | null) => Promise<CommentPageAnswer>,
+  ): Promise<CommentThreadState | null>;
+}
+
+/**
+ * Holds the thread outside React, so a load made before the last page's
+ * render asks for the page after it rather than the one just fetched.
+ */
+export function threadPager(cursor: string | null): ThreadPager {
+  let state = openThread(cursor);
+  return {
+    current: () => state,
+    async next(fetchPage) {
+      if (!state.hasMore) return null;
+      state = applyCommentPage(state, await fetchPage(state.cursor));
+      return state;
+    },
+  };
+}
+
 /** Why a page of older comments came back empty-handed. */
 export function threadError(
   reason: CommentRefusalCode | "unreachable",
