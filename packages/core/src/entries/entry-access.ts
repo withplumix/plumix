@@ -1,11 +1,13 @@
 import type { EntryAccessSubject } from "../access/contract/access-key.js";
-import type { AccessPolicyFor } from "../access/contract/policy.js";
-import type { EntryAdmission } from "../access/policy.js";
+import type {
+  AccessPolicyFor,
+  EntryAdmission,
+} from "../access/contract/policy.js";
 import type { AppContext } from "../context/app-context.js";
 import type { SQL } from "../db/index.js";
 import { readAccessKey } from "../access/contract/access-key.js";
 import { ACCESS_POLICY_META_KEY } from "../access/contract/meta-key.js";
-import { admissionMeets, admissionOf } from "../access/policy.js";
+import { admissionMeets, admissionOf } from "../access/contract/policy.js";
 import { inArray, isNull, notInArray, or, sql } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 
