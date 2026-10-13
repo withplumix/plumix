@@ -1,7 +1,11 @@
+import { EventEmitter } from "node:events";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { request as httpRequest } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import type { Server } from "bun";
+import type { PluginDescriptor } from "plumix/plugin";
 import { Database } from "bun:sqlite";
 import { plumix } from "plumix";
 import { auth as authConfig } from "plumix/auth";
@@ -25,7 +29,8 @@ import {
 import type { BunConfig } from "./adapter.js";
 import { bun } from "./adapter.js";
 import { bunSqlite } from "./bun-sqlite.js";
-import { createBunSite, serveProcess } from "./site.js";
+import { createBunSite, loadEnvFileWhenMain, serveProcess } from "./site.js";
+import { virtualClock } from "./test/virtual-clock.js";
 
 const CHUNK = "export const client = 1;";
 
@@ -39,6 +44,42 @@ const echo = definePlugin("echo", (ctx) => {
     path: "/whoami",
     handler: (request, app) =>
       Response.json({ url: request.url, address: app.clientAddress ?? null }),
+  });
+});
+
+/** The signal of each `/stream` request, in arrival order. */
+const streamSignals: AbortSignal[] = [];
+
+const wire = definePlugin("wire", (ctx) => {
+  ctx.registerPublicRoute({
+    path: "/cookies",
+    handler: () => {
+      const headers = new Headers();
+      headers.append("set-cookie", "first=1; Path=/; HttpOnly");
+      headers.append("set-cookie", "second=2; Path=/; HttpOnly");
+      return new Response("cookies", { headers });
+    },
+  });
+  ctx.registerPublicRoute({
+    path: "/events",
+    handler: () =>
+      new Response("data: first\n\n", {
+        headers: { "content-type": "text/event-stream" },
+      }),
+  });
+  // One chunk, then held open until the client goes.
+  ctx.registerPublicRoute({
+    path: "/stream",
+    handler: (request) => {
+      streamSignals.push(request.signal);
+      return new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode("first chunk"));
+          },
+        }),
+      );
+    },
   });
 });
 
@@ -61,28 +102,32 @@ afterAll(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
+function siteFor(config: BunConfig) {
+  return createBunSite({
+    config: plumix({
+      runtime: bun(config),
+      database: bunSqlite({ path: join(dir, "site.sqlite") }),
+      auth,
+      theme,
+      plugins: [echo, wire],
+    }),
+    assetManifest: {},
+    entryUrl: pathToFileURL(join(dir, "dist/server/worker.js")).href,
+  });
+}
+
 /**
  * The site's serve options on a real `Bun.serve`, so the address and the URL
  * are what Bun hands a request from a real socket.
  */
 async function served(
   config: BunConfig,
-  body: (origin: string) => Promise<void>,
+  body: (origin: string, server: Server<undefined>) => Promise<void>,
 ): Promise<void> {
-  const site = createBunSite({
-    config: plumix({
-      runtime: bun(config),
-      database: bunSqlite({ path: join(dir, "site.sqlite") }),
-      auth,
-      theme,
-      plugins: [echo],
-    }),
-    assetManifest: {},
-    entryUrl: pathToFileURL(join(dir, "dist/server/worker.js")).href,
-  });
+  const site = siteFor(config);
   const server = Bun.serve({ ...site.serve, port: 0, hostname: "127.0.0.1" });
   try {
-    await body(`http://127.0.0.1:${String(server.port)}`);
+    await body(`http://127.0.0.1:${String(server.port)}`, server);
   } finally {
     await server.stop(true);
     await site.dispose();
@@ -124,6 +169,87 @@ describe("the site on Bun.serve", () => {
       const fallthrough = await fetch(`${origin}/whoami`);
       expect(fallthrough.status).toBe(200);
     }));
+
+  test("delivers each cookie a response sets as its own Set-Cookie header", () =>
+    served({}, async (origin) => {
+      const response = await fetch(`${origin}/cookies`);
+
+      expect(response.headers.getSetCookie()).toEqual([
+        "first=1; Path=/; HttpOnly",
+        "second=2; Path=/; HttpOnly",
+      ]);
+    }));
+
+  test("a client disconnecting mid-stream aborts the request's signal", () =>
+    served({}, async (origin) => {
+      streamSignals.length = 0;
+      await new Promise<void>((resolve, reject) => {
+        const request = httpRequest(`${origin}/stream`, (response) => {
+          response.once("data", () => {
+            request.destroy();
+            resolve();
+          });
+        });
+        request.on("error", (error: NodeJS.ErrnoException) => {
+          if (error.code !== "ECONNRESET") reject(error);
+        });
+        request.end();
+      });
+
+      await vi.waitFor(() => expect(streamSignals[0]?.aborted).toBe(true));
+    }));
+
+  // `/whoami` takes only GET, so a body Bun lets through reaches the site and
+  // is answered 405.
+  test.each([
+    { bytes: 2048, status: 413 },
+    { bytes: 1024, status: 405 },
+  ])(
+    "under a 1024-byte body limit, a $bytes-byte body is answered $status",
+    ({ bytes, status }) =>
+      served({ bodySizeLimit: 1024 }, async (origin) => {
+        const response = await fetch(`${origin}/whoami`, {
+          method: "POST",
+          body: "x".repeat(bytes),
+        });
+
+        expect(response.status).toBe(status);
+      }),
+  );
+
+  test("exempts an event stream from the idle timeout", () =>
+    served({}, async (origin, server) => {
+      const timeout = vi.spyOn(server, "timeout");
+
+      await (await fetch(`${origin}/events`)).text();
+
+      expect(timeout).toHaveBeenCalledExactlyOnceWith(expect.any(Request), 0);
+    }));
+
+  test("leaves every other response to the idle timeout", () =>
+    served({}, async (origin, server) => {
+      const timeout = vi.spyOn(server, "timeout");
+
+      await (await fetch(`${origin}/whoami`)).text();
+
+      expect(timeout).not.toHaveBeenCalled();
+    }));
+});
+
+describe("createBunSite — serve options", () => {
+  // Bun's own default of 10 would cut a render slower than that.
+  test.each([
+    { config: {}, idleTimeout: 30 },
+    { config: { idleTimeout: 0 }, idleTimeout: 0 },
+    { config: { idleTimeout: 120 }, idleTimeout: 120 },
+  ])(
+    "with $config, Bun.serve idles connections out after $idleTimeout s",
+    ({ config, idleTimeout }) => {
+      const site = siteFor(config);
+
+      expect(site.serve.idleTimeout).toBe(idleTimeout);
+    },
+  );
 });
 
 describe("the served process migrates before it listens", () => {
@@ -227,6 +353,280 @@ describe("the served process migrates before it listens", () => {
       "plumix: migrations failed; not serving",
       expect.any(Error),
     );
+  });
+});
+
+describe("serveProcess", () => {
+  let project: string;
+  const servers: { stop: (force: boolean) => Promise<void> }[] = [];
+
+  beforeEach(() => {
+    project = mkdtempSync(join(tmpdir(), "plumix-bun-process-"));
+    vi.stubEnv("PORT", "0");
+    vi.stubEnv("HOST", "127.0.0.1");
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+    vi.spyOn(process.stderr, "write").mockReturnValue(true);
+  });
+
+  afterEach(async () => {
+    await Promise.all(servers.splice(0).map((server) => server.stop(true)));
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+    rmSync(project, { recursive: true, force: true });
+  });
+
+  // A promise the test settles, and a way to settle it.
+  function gate() {
+    let open: () => void = () => undefined;
+    const opened = new Promise<void>((resolve) => (open = resolve));
+    return { opened, open };
+  }
+
+  // `/slow` answers once the test releases it; `/defer` hands the site work
+  // the test finishes; `/defer-stuck` hands it work that never settles.
+  function probes() {
+    const arrived = gate();
+    const release = gate();
+    const deferred = gate();
+    let drained = false;
+    const plugin = definePlugin("probes", (ctx) => {
+      ctx.registerPublicRoute({
+        path: "/slow",
+        handler: async () => {
+          arrived.open();
+          await release.opened;
+          return new Response("slow response");
+        },
+      });
+      ctx.registerPublicRoute({
+        path: "/defer",
+        handler: (_request, app) => {
+          app.defer(deferred.opened.then(() => void (drained = true)));
+          return new Response("deferred");
+        },
+      });
+      ctx.registerPublicRoute({
+        path: "/defer-stuck",
+        handler: (_request, app) => {
+          app.defer(new Promise(() => undefined));
+          return new Response("stuck");
+        },
+      });
+    });
+    return {
+      plugin,
+      arrived: arrived.opened,
+      release: release.open,
+      finish: deferred.open,
+      drained: () => drained,
+    };
+  }
+
+  // The histories shipped beside the entry, as `plumix build` does.
+  function siteWith(plugins: PluginDescriptor[] = []) {
+    const config = plumix({
+      runtime: bun({}),
+      database: bunSqlite({ path: join(project, "site.sqlite") }),
+      auth,
+      theme,
+      plugins,
+    });
+    copyOwnerHistories(
+      { cwd: project, configPath: join(project, "plumix.config.ts"), config },
+      join(project, "dist/server"),
+    );
+    return createBunSite({
+      config,
+      assetManifest: {},
+      entryUrl: pathToFileURL(join(project, "dist/server/worker.js")).href,
+    });
+  }
+
+  // The signals and the clock are the test's, so a drain runs without a real
+  // signal and its deadline passes without the real ten seconds.
+  async function serving(site: ReturnType<typeof siteWith>) {
+    const signals = new EventEmitter();
+    const clock = virtualClock("2026-10-13T10:00:00Z");
+    const exit = vi.fn<(code: number) => void>();
+    const server = await serveProcess(site, { signals, clock, exit });
+    assert(server);
+    servers.push(server);
+    return {
+      signals,
+      clock,
+      exit,
+      origin: `http://127.0.0.1:${String(server.port)}`,
+    };
+  }
+
+  test("listens on the port it was given and says so once", async () => {
+    const log = vi.mocked(console.log);
+
+    const { origin } = await serving(siteWith());
+
+    expect(log).toHaveBeenCalledExactlyOnceWith(
+      `plumix: listening on ${origin}`,
+    );
+    expect((await fetch(`${origin}/`)).status).toBe(200);
+  });
+
+  test("SIGTERM lets an in-flight response finish, then exits 0", async () => {
+    const probe = probes();
+    const { signals, exit, origin } = await serving(siteWith([probe.plugin]));
+    const pending = fetch(`${origin}/slow`);
+    await probe.arrived;
+
+    signals.emit("SIGTERM", "SIGTERM");
+    probe.release();
+
+    expect(await (await pending).text()).toBe("slow response");
+    await vi.waitFor(() => expect(exit).toHaveBeenCalledWith(0));
+  });
+
+  test("SIGTERM waits for pending deferred work, then exits 0", async () => {
+    const probe = probes();
+    const site = siteWith([probe.plugin]);
+    await site.handler.fetch(new Request("http://localhost/defer"));
+    const { signals, exit } = await serving({
+      ...site,
+      // The work finishes only once the drain is already waiting on it.
+      dispose: (options) => {
+        const disposed = site.dispose(options);
+        probe.finish();
+        return disposed;
+      },
+    });
+    const drainedAtExit: boolean[] = [];
+    exit.mockImplementation(() => void drainedAtExit.push(probe.drained()));
+
+    signals.emit("SIGTERM", "SIGTERM");
+
+    await vi.waitFor(() => expect(exit).toHaveBeenCalledWith(0));
+    expect(drainedAtExit).toEqual([true]);
+  });
+
+  test("at the deadline it cuts what is still running, and exits 1 naming it", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    // The abandoned work's warning, which a built site logs as JSON.
+    vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    const probe = probes();
+    const site = siteWith([probe.plugin]);
+    await site.handler.fetch(new Request("http://localhost/defer-stuck"));
+    const { signals, clock, exit, origin } = await serving(site);
+    const stuck = fetch(`${origin}/slow`).then(
+      (response) => response.text(),
+      () => "cut",
+    );
+    await probe.arrived;
+    signals.emit("SIGTERM", "SIGTERM");
+    await vi.waitFor(() => expect(clock.sleeping()).toBe(1));
+
+    await clock.advanceTo("2026-10-13T10:00:09.999Z");
+    expect(exit).not.toHaveBeenCalled();
+    await clock.advanceTo("2026-10-13T10:00:10Z");
+
+    await vi.waitFor(() => expect(exit).toHaveBeenCalledWith(1));
+    expect(await stuck).toBe("cut");
+    expect(error).toHaveBeenCalledWith(
+      "plumix: exiting with in-flight responses cut; the 10000ms shutdown budget ran out",
+    );
+    expect(error).toHaveBeenCalledWith(
+      "plumix: exiting with 1 deferred task(s) abandoned",
+    );
+    probe.release();
+  });
+
+  test("takes both signal listeners off at the first signal, so a second one ends the process at once", async () => {
+    const { signals } = await serving(siteWith());
+
+    signals.emit("SIGTERM", "SIGTERM");
+
+    expect(console.log).toHaveBeenCalledWith(
+      "plumix: SIGTERM received, draining",
+    );
+    expect(signals.listenerCount("SIGTERM")).toBe(0);
+    expect(signals.listenerCount("SIGINT")).toBe(0);
+  });
+});
+
+describe("the site's cron", () => {
+  test("fires a task declared on * * * * * at the minute boundary", async () => {
+    const fired: string[] = [];
+    const ticking = definePlugin("ticking", (ctx) => {
+      ctx.registerScheduledTask({
+        id: "tick",
+        cron: "* * * * *",
+        handler: () => void fired.push("tick"),
+      });
+    });
+    const site = createBunSite({
+      config: plumix({
+        runtime: bun(),
+        database: bunSqlite({ path: join(dir, "site.sqlite") }),
+        auth,
+        theme,
+        plugins: [ticking],
+      }),
+      assetManifest: {},
+      entryUrl: pathToFileURL(join(dir, "dist/server/worker.js")).href,
+    });
+    const clock = virtualClock("2026-10-13T10:00:30Z");
+    const cron = await site.startCron({ lease: false, clock });
+
+    await clock.advanceTo("2026-10-13T10:00:59.999Z");
+    const beforeTheBoundary = [...fired];
+    await clock.advanceTo("2026-10-13T10:01:00Z");
+    await cron.stop();
+    await site.dispose();
+
+    expect(beforeTheBoundary).toEqual([]);
+    expect(fired).toEqual(["tick"]);
+  });
+});
+
+describe("loadEnvFileWhenMain", () => {
+  let project: string;
+  let cwd: string;
+
+  beforeEach(() => {
+    project = mkdtempSync(join(tmpdir(), "plumix-bun-env-"));
+    cwd = process.cwd();
+    process.chdir(project);
+  });
+
+  afterEach(() => {
+    process.chdir(cwd);
+    vi.unstubAllEnvs();
+    rmSync(project, { recursive: true, force: true });
+  });
+
+  test("fills from .env what the environment left unset, the environment wins, and .env.local is never read", () => {
+    writeFileSync(
+      join(project, ".env"),
+      "PROBE_A=fromfile\nPROBE_B=fromfile\n",
+    );
+    writeFileSync(join(project, ".env.local"), "PROBE_C=local\n");
+    vi.stubEnv("PROBE_A", "platform");
+    vi.stubEnv("PROBE_B", undefined);
+    vi.stubEnv("PROBE_C", undefined);
+
+    loadEnvFileWhenMain(true);
+
+    expect(process.env).toMatchObject({
+      PROBE_A: "platform",
+      PROBE_B: "fromfile",
+    });
+    expect(process.env).not.toHaveProperty("PROBE_C");
+  });
+
+  test("with no .env it loads nothing and does not throw", () => {
+    vi.stubEnv("PROBE_A", undefined);
+
+    loadEnvFileWhenMain(true);
+
+    expect(process.env).not.toHaveProperty("PROBE_A");
   });
 });
 

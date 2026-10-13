@@ -191,8 +191,9 @@ The cases that look like a fourth kind each have a tier:
   `page.evaluate`. A matrix of inputs is one test per input, declared in a loop at the top of the
   spec.
 - **A runtime server's process behaviour.** The request rules (timeouts, body limits, trusted
-  proxies) are unit tests of the handler. That the built server starts on the runtime with one
-  listener, answers, and exits within its deadline on `SIGTERM` is smoke.
+  proxies) are unit tests of the handler. That the built server starts on the runtime, answers, and
+  exits within its deadline on `SIGTERM` is smoke. That it opens one listener is a unit test of what
+  the adapter's entry hands the runtime.
 
 A behaviour is tested once, in the lowest tier that can observe it. A higher tier proves the parts
 connect, not the rules a lower tier already covers. When e2e or smoke finds a bug in logic, the fix
@@ -381,7 +382,9 @@ matter.
   defined, or logic that was removed.
 - **Deterministic and hermetic.** Fake the clock (`vi.useFakeTimers`, an injected `now`), seed
   randomness, and wait on a condition, never a delay. Each test builds its own state and passes in
-  any order.
+  any order. A test gives the same result on every OS a contributor develops on: it reads nothing
+  only one OS has (`/proc`), and where the outcome depends on a host capability (which image
+  encoders exist) it pins that capability (`Bun.Image.backend = "bun"`) or takes it through a seam.
 - **A flaky test is a bug.** Unit tests never retry, and lint rejects a `test.retry` in a
   Vitest config. E2E retries twice on CI (the shared Playwright config), so a slow runner does not
   block a merge, and a test Playwright reports as flaky is fixed in the change that finds it. When

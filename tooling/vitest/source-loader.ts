@@ -37,16 +37,21 @@ export function loadConfigsFromSource(): () => void {
   );
   const previous = process.env[JITI_TSCONFIG_PATHS];
   process.env[JITI_TSCONFIG_PATHS] = dir;
-  const hooks = registerHooks({
-    resolve(specifier, context, nextResolve) {
-      const sibling = tsSibling(specifier, context.parentURL);
-      return sibling === null
-        ? nextResolve(specifier, context)
-        : { url: pathToFileURL(sibling).href, shortCircuit: true };
-    },
-  });
+  // Bun has no `registerHooks`, and its own resolver already maps `./x.js` to
+  // an `x.ts` or `x.tsx` sibling.
+  const hooks =
+    "Bun" in globalThis
+      ? undefined
+      : registerHooks({
+          resolve(specifier, context, nextResolve) {
+            const sibling = tsSibling(specifier, context.parentURL);
+            return sibling === null
+              ? nextResolve(specifier, context)
+              : { url: pathToFileURL(sibling).href, shortCircuit: true };
+          },
+        });
   return () => {
-    hooks.deregister();
+    hooks?.deregister();
     if (previous === undefined) delete process.env[JITI_TSCONFIG_PATHS];
     else process.env[JITI_TSCONFIG_PATHS] = previous;
     rmSync(dir, { recursive: true, force: true });

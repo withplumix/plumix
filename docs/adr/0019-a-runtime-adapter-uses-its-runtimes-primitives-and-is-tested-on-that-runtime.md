@@ -60,9 +60,10 @@ secret`.
 ## How a runtime is tested
 
 Layer 2 below is superseded by [ADR 0042](0042-tests-come-in-three-tiers.md). Its request rules
-(timeouts, body limits, trust) are unit tests of the handler. Starting with one listener, answering,
-and exiting within the deadline on `SIGTERM` are smoke steps; the smoke stops its server with
-`SIGKILL` today, and #3036 adds the `SIGTERM` step. The other layers stand.
+(timeouts, body limits, trust) are unit tests of the handler. Starting, answering, and exiting
+within the deadline on `SIGTERM` are smoke steps; the smoke stops its server with `SIGKILL` today,
+and #3036 adds the `SIGTERM` step. Opening one listener is a unit test of what the adapter's entry
+hands the runtime. The other layers stand.
 
 A fake built-in shares the assumption under test and cannot fail. So
 runtime-touching code is tested on the runtime, and nothing substitutes the

@@ -73,9 +73,10 @@ the reasons.
   `*.build.test.ts` run and the `browser` build of `plumix/test` are retired.
 - Supersedes layer 2 of ADR 0019's "How a runtime is tested", the build-lane
   suite that spawns the built server: its request rules (timeouts, body limits,
-  trust) are unit tests of the handler, and starting with one listener,
-  answering and exiting within the deadline on `SIGTERM` are smoke steps, which
-  #3036 adds. Its other three layers stand.
+  trust) are unit tests of the handler, and starting, answering and exiting
+  within the deadline on `SIGTERM` are smoke steps, while opening one listener
+  is a unit test of what the adapter's entry hands the runtime, which #3036
+  adds. Its other three layers stand.
 - The 112 `*.browser.test.*` files move to unit or e2e (#3035), and the 18
   `*.build.test.ts` suites move to unit or smoke (#3036).
 - The `plumix/test-tier` lint rule points a DOM-touching unit test at a
