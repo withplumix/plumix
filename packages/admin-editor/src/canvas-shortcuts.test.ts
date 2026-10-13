@@ -79,7 +79,7 @@ describe("runCanvasShortcut", () => {
     expect(camera.getState().zoom).toBe(1);
   });
 
-  test("panels.toggle shows or hides the panels", () => {
+  test("panels.toggle hands the press to the host's sidebar", () => {
     const togglePanels = vi.fn();
 
     runCanvasShortcut("panels.toggle", {

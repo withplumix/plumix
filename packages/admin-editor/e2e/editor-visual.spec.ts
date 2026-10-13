@@ -1076,7 +1076,6 @@ test.describe("editor playground", () => {
     await page.getByTestId("block-input-body-editor").click();
     await page.keyboard.press("ControlOrMeta+A");
     await page.getByTestId("block-input-body-link").click();
-    // No link under the selection yet, so there is nothing to remove.
     await expect(page.getByTestId("block-input-body-link-url")).toBeVisible();
     await expect(page.getByTestId("block-input-body-link-remove")).toHaveCount(
       0,
