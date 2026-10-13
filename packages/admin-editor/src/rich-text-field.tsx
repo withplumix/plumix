@@ -38,13 +38,12 @@ import { Toggle } from "@plumix/admin-ui/toggle";
 import { HEADING_LEVELS } from "@plumix/core/blocks";
 
 import type { LinkChange } from "./link-edit.js";
-import type { RichTextExtensionOptions } from "./rich-text-extensions.js";
-import { applyLink, linkHrefAt, removeLink } from "./link-edit.js";
-import {
-  allowsMark,
-  allowsNode,
-  richTextExtensions,
+import type {
+  RichTextExtensionOptions,
+  ToolbarMark,
 } from "./rich-text-extensions.js";
+import { applyLink, linkHrefAt, removeLink } from "./link-edit.js";
+import { richTextExtensions, toolbarControls } from "./rich-text-extensions.js";
 
 // Re-exported so JSON-mode consumers (the metabox `richtext()` field) can
 // name the value type without taking a direct Tiptap dependency.
@@ -73,41 +72,18 @@ interface JsonRichTextFieldProps extends RichTextFieldCommonProps {
 
 type RichTextFieldProps = HtmlRichTextFieldProps | JsonRichTextFieldProps;
 
-const MARKS = [
-  { name: "bold", icon: Bold, testId: "bold", label: "Bold" },
-  { name: "italic", icon: Italic, testId: "italic", label: "Italic" },
-  {
-    name: "underline",
-    icon: Underline,
-    testId: "underline",
-    label: "Underline",
-  },
-  {
-    name: "strike",
-    icon: Strikethrough,
-    testId: "strike",
-    label: "Strikethrough",
-  },
-  { name: "code", icon: Code2, testId: "code", label: "Inline code" },
-  {
-    name: "highlight",
-    icon: Highlighter,
-    testId: "highlight",
-    label: "Highlight",
-  },
-  {
-    name: "subscript",
-    icon: Subscript,
-    testId: "subscript",
-    label: "Subscript",
-  },
-  {
-    name: "superscript",
-    icon: Superscript,
-    testId: "superscript",
-    label: "Superscript",
-  },
-] as const;
+const MARKS: Readonly<
+  Record<ToolbarMark, { readonly icon: typeof Bold; readonly label: string }>
+> = {
+  bold: { icon: Bold, label: "Bold" },
+  italic: { icon: Italic, label: "Italic" },
+  underline: { icon: Underline, label: "Underline" },
+  strike: { icon: Strikethrough, label: "Strikethrough" },
+  code: { icon: Code2, label: "Inline code" },
+  highlight: { icon: Highlighter, label: "Highlight" },
+  subscript: { icon: Subscript, label: "Subscript" },
+  superscript: { icon: Superscript, label: "Superscript" },
+};
 
 /**
  * The active-mark/-node flags the toolbar paints its pressed state from.
@@ -208,7 +184,7 @@ export function RichTextField(props: RichTextFieldProps): ReactElement {
       editor
         ? {
             marks: Object.fromEntries(
-              MARKS.map(({ name }) => [name, editor.isActive(name)]),
+              Object.keys(MARKS).map((name) => [name, editor.isActive(name)]),
             ),
             link: editor.isActive("link"),
             bulletList: editor.isActive("bulletList"),
@@ -222,20 +198,13 @@ export function RichTextField(props: RichTextFieldProps): ReactElement {
         : null,
   });
 
-  // A button for content the schema can't hold would produce what the server
-  // rejects.
   const controlDisabled = !editor || disabled;
-  const visibleMarks = MARKS.filter(({ name }) => allowsMark(allow, name));
-  const showHeadings = allowsNode(allow, "heading");
-  const showBulletList = allowsNode(allow, "bulletList");
-  const showOrderedList = allowsNode(allow, "orderedList");
-  const showBlockquote = allowsNode(allow, "blockquote");
-  const showLink = allowsMark(allow, "link");
+  const controls = toolbarControls(allow);
 
   return (
     <div className="flex flex-col gap-1.5" data-testid={testId}>
       <div className="flex flex-wrap items-center gap-0.5" role="toolbar">
-        {showHeadings ? (
+        {controls.format ? (
           <Select
             disabled={controlDisabled}
             value={
@@ -270,19 +239,22 @@ export function RichTextField(props: RichTextFieldProps): ReactElement {
             </SelectContent>
           </Select>
         ) : null}
-        {visibleMarks.map(({ name, icon: Icon, testId: suffix, label }) => (
-          <ToolbarToggle
-            key={name}
-            testId={`${testId}-${suffix}`}
-            label={label}
-            pressed={active?.marks[name] ?? false}
-            disabled={controlDisabled}
-            onToggle={() => editor?.chain().focus().toggleMark(name).run()}
-          >
-            <Icon />
-          </ToolbarToggle>
-        ))}
-        {showBulletList ? (
+        {controls.marks.map((name) => {
+          const { icon: Icon, label } = MARKS[name];
+          return (
+            <ToolbarToggle
+              key={name}
+              testId={`${testId}-${name}`}
+              label={label}
+              pressed={active?.marks[name] ?? false}
+              disabled={controlDisabled}
+              onToggle={() => editor?.chain().focus().toggleMark(name).run()}
+            >
+              <Icon />
+            </ToolbarToggle>
+          );
+        })}
+        {controls.bulletList ? (
           <ToolbarToggle
             testId={`${testId}-bullet-list`}
             label="Bullet list"
@@ -293,7 +265,7 @@ export function RichTextField(props: RichTextFieldProps): ReactElement {
             <List />
           </ToolbarToggle>
         ) : null}
-        {showOrderedList ? (
+        {controls.orderedList ? (
           <ToolbarToggle
             testId={`${testId}-ordered-list`}
             label="Numbered list"
@@ -304,7 +276,7 @@ export function RichTextField(props: RichTextFieldProps): ReactElement {
             <ListOrdered />
           </ToolbarToggle>
         ) : null}
-        {showBlockquote ? (
+        {controls.blockquote ? (
           <ToolbarToggle
             testId={`${testId}-blockquote`}
             label="Blockquote"
@@ -315,7 +287,7 @@ export function RichTextField(props: RichTextFieldProps): ReactElement {
             <Quote />
           </ToolbarToggle>
         ) : null}
-        {showLink ? (
+        {controls.link ? (
           <LinkPopover
             editor={editor}
             active={active?.link ?? false}
