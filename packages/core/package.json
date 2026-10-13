@@ -171,6 +171,7 @@
     "i18n:compile": "node bin/plumix-compile-catalogs.mjs --dts",
     "lint": "eslint",
     "publint": "publint",
+    "test:e2e": "playwright test --config=e2e/playwright.config.ts",
     "test:unit": "vitest run",
     "typecheck": "tsc"
   },

@@ -322,7 +322,18 @@ const config: KnipConfig = {
     // Core's lingui config is loaded by the i18n pipeline, which knip
     // can't see.
     "packages/core": {
-      entry: ["lingui.config.ts", ...coreExportEntries],
+      // With knip's playwright plugin off, the e2e rig is listed by hand, as
+      // for the plugin suites.
+      entry: [
+        "lingui.config.ts",
+        ...coreExportEntries,
+        "e2e/globalSetup.ts",
+        "e2e/*.spec.ts",
+      ],
+      playwright: false,
+    },
+    "packages/core/playground": {
+      entry: ["plumix.config.ts"],
     },
     // The editor's lingui config is loaded by the CLI, which knip can't see.
     "packages/admin-editor": {

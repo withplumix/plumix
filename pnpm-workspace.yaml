@@ -6,6 +6,7 @@ packages:
   - "packages/admin-editor"
   - "packages/admin-ui"
   - "packages/core"
+  - "packages/core/playground"
   - "packages/create-plumix-app"
   - "packages/plumix"
   - "packages/runtimes/*"
