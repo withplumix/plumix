@@ -12,9 +12,11 @@ const BARREL = "index";
  * The only hand-maintained part of the roster: a `src/` module left out of a
  * list it would otherwise be derived into, and why.
  */
+type RosterList = "barrel" | "exports";
+
 interface RosterException {
   /** `exports` omits it from the barrel too, which is the `.` export. */
-  readonly omitFrom: "barrel" | "exports";
+  readonly omitFrom: RosterList;
   readonly reason: string;
 }
 
@@ -47,7 +49,7 @@ interface Manifest {
   exports?: Readonly<Record<string, ExportTarget>>;
 }
 
-function inList(list: "barrel" | "exports", name: string): boolean {
+function inList(list: RosterList, name: string): boolean {
   const omitFrom = EXCEPTIONS[name]?.omitFrom;
   return omitFrom !== "exports" && omitFrom !== list;
 }
