@@ -107,6 +107,14 @@
       "outputs": [],
       "outputLogs": "new-only"
     },
+    "@plumix/core#lint": {
+      // Core's playground is linted here, and reaches core through `plumix`,
+      // whose exports point at core's own `dist/` — which `^build` never
+      // builds.
+      "dependsOn": ["^topo", "^build", "build", "i18n:compile"],
+      "outputs": [],
+      "outputLogs": "new-only"
+    },
     "typecheck": {
       "dependsOn": ["^topo", "^build", "i18n:compile"],
       "outputs": [".cache/typecheck.tsbuildinfo"],
