@@ -5,8 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import type { JsonObject } from "@plumix/core";
 
 import type { LookupItem } from "./types.js";
+import { lookupSearchInput } from "./lookup-search-input.js";
 
-/** Trims only the RPC query, so the user's spaces survive in the input. */
 export function useLookupSearch({
   kind,
   scope,
@@ -24,7 +24,7 @@ export function useLookupSearch({
   const [query, setQuery] = useState("");
   const listQuery = useQuery({
     ...orpc.lookup.list.queryOptions({
-      input: { kind, query: query.trim() || undefined, scope, limit: 20 },
+      input: lookupSearchInput({ kind, scope, query }),
     }),
     enabled,
   });

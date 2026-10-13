@@ -653,7 +653,7 @@ msgid "userEdit.email.dialog.cancel"
 msgstr "Cancel"
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.cancelled"
 msgstr "Cancelled. Tap Add passkey when you're ready."
 
@@ -897,7 +897,7 @@ msgid "terms.create.error.createFallback"
 msgstr "Couldn't create the term. Try again."
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.delete.fallback"
 msgstr "Couldn't delete the passkey. Try again."
 
@@ -922,12 +922,12 @@ msgid "editor.toast.discardFailed"
 msgstr "Couldn't discard the draft — try again."
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.emailMismatch"
 msgstr "Couldn't enrol — re-sign-in and try again."
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.fallback"
 msgstr "Couldn't enrol the passkey. Try again."
 
@@ -977,7 +977,7 @@ msgid "auth.device.lookup.error.fallback"
 msgstr "Couldn't look up that code. Try again."
 
 #. js-lingui-explicit-id
-#: src/components/profile/api-tokens-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "apiTokens.mint.fallback"
 msgstr "Couldn't mint token. Try again."
 
@@ -1012,12 +1012,12 @@ msgid "oauth.error.profileFetchFailed"
 msgstr "Couldn't read your profile. Try again."
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.rename.fallback"
 msgstr "Couldn't rename the passkey. Try again."
 
 #. js-lingui-explicit-id
-#: src/components/profile/user-email-field.tsx
+#: src/components/profile/profile-errors.ts
 msgid "userEdit.email.error.requestFallback"
 msgstr "Couldn't request the change. Try again."
 
@@ -1027,17 +1027,17 @@ msgid "editor.revision.restoreFailed"
 msgstr "Couldn't restore this revision — try again."
 
 #. js-lingui-explicit-id
-#: src/components/profile/sessions-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.sessions.revokeAll.fallback"
 msgstr "Couldn't revoke sessions. Try again."
 
 #. js-lingui-explicit-id
-#: src/components/profile/sessions-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.sessions.revoke.fallback"
 msgstr "Couldn't revoke the session. Try again."
 
 #. js-lingui-explicit-id
-#: src/components/profile/api-tokens-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "apiTokens.revoke.fallback"
 msgstr "Couldn't revoke. Try again."
 
@@ -1475,7 +1475,7 @@ msgid "userEdit.email.label"
 msgstr "Email"
 
 #. js-lingui-explicit-id
-#: src/components/profile/user-email-field.tsx
+#: src/components/profile/profile-errors.ts
 msgid "userEdit.email.error.mailerNotConfigured"
 msgstr "Email change requires a magic-link mailer to be configured server-side. Pass `auth.magicLink` and `mailer:` to `plumix({...})` to enable."
 
@@ -2188,7 +2188,7 @@ msgid "fieldValues.column.unconvertible"
 msgstr "Needs you"
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.networkError"
 msgstr "Network error. Check your connection and try again."
 
@@ -3372,12 +3372,12 @@ msgid "passkey.error.emailMismatch"
 msgstr "That email doesn't match your signed-in account."
 
 #. js-lingui-explicit-id
-#: src/components/profile/user-email-field.tsx
+#: src/components/profile/profile-errors.ts
 msgid "userEdit.email.error.taken"
 msgstr "That email is already in use on another account."
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.alreadyRegistered"
 msgstr "That passkey is already registered on this account."
 
@@ -3494,7 +3494,7 @@ msgid "userInvite.description"
 msgstr "They'll enrol a passkey the first time they open the invite link. No password required."
 
 #. js-lingui-explicit-id
-#: src/components/profile/user-email-field.tsx
+#: src/components/profile/profile-errors.ts
 msgid "userEdit.email.error.accountDisabled"
 msgstr "This account is disabled."
 
@@ -3539,7 +3539,7 @@ msgid "profile.sessions.thisDevice"
 msgstr "This device"
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.noAuthenticator"
 msgstr "This device doesn't support passkeys."
 
@@ -3579,7 +3579,7 @@ msgid "passkey.error.invalidRpId"
 msgstr "This passkey isn't usable on this site."
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.notFound"
 msgstr "This passkey no longer exists. Refresh the list."
 
@@ -3609,7 +3609,7 @@ msgid "metaBox.repeater.rowError"
 msgstr "This row has an error"
 
 #. js-lingui-explicit-id
-#: src/components/profile/sessions-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.sessions.revoke.notFound"
 msgstr "This session no longer exists. Refresh the list."
 
@@ -3884,12 +3884,12 @@ msgid "entries.list.trashDialog.description"
 msgstr "You can restore it from the Trash view later."
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.lastCredential"
 msgstr "You can't delete your last passkey. Add another one first."
 
 #. js-lingui-explicit-id
-#: src/components/profile/sessions-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.sessions.revoke.current"
 msgstr "You can't revoke the session you're using right now."
 

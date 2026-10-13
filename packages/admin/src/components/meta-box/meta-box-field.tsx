@@ -43,12 +43,28 @@ import { Switch } from "@plumix/admin-ui/switch";
 import { Textarea } from "@plumix/admin-ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
 import { CANONICAL_INPUT_TYPES } from "@plumix/core/fields";
-import { formatTemporalValue } from "@plumix/core/manifest";
 
 import type { LookupItem } from "./lookup/types.js";
 import { AdornedControl } from "./adorned-control.js";
+import {
+  asString,
+  decodeOptionValue,
+  encodeOptionValue,
+  htmlInputType,
+  isAdorned,
+  isBuiltinInputType,
+  numberInputValue,
+  orderedSelection,
+  referenceValueId,
+  referenceValueSummary,
+  resetKeyFor,
+  siblingBagName,
+  temporalDisplayValue,
+  temporalInputValue,
+  toggleStateText,
+} from "./field-values.js";
 import { GroupField } from "./group-field.js";
-import { evaluateJsonDraft } from "./json-draft.js";
+import { evaluateJsonDraft, formatJsonDraft } from "./json-draft.js";
 import { LinkField } from "./link-field.js";
 import { MultiReferencePicker } from "./multi-reference-picker.js";
 import { PluginFieldErrorBoundary } from "./plugin-field-error-boundary.js";
@@ -138,7 +154,7 @@ export function MetaBoxField({
         if (field.inputType === "toggle") {
           // Label-above so the switch lines up with text inputs sharing its
           // grid row.
-          const stateText = rhf.value === true ? field.onText : field.offText;
+          const stateText = toggleStateText(field, rhf.value);
           return (
             <FormItem span={span} data-testid={testIdPrefix}>
               <FormLabel>{labelText}</FormLabel>
@@ -226,9 +242,7 @@ export function MetaBoxField({
         }
 
         const adorned =
-          ADORNED_INPUT_TYPES.has(field.inputType) &&
-          (field.prepend !== undefined || field.append !== undefined) &&
-          getPluginFieldType(field.inputType) === undefined;
+          isAdorned(field) && getPluginFieldType(field.inputType) === undefined;
         const control = (
           <FormControl>
             {renderNativeInput({
@@ -269,31 +283,6 @@ export function MetaBoxField({
 }
 
 /**
- * Keyed by `inputType`, not the keys' presence, so stray adornments on other
- * types render nothing. `link` places its own.
- */
-const ADORNED_INPUT_TYPES: ReadonlySet<string> = new Set([
-  "text",
-  "email",
-  "url",
-  "password",
-  "number",
-  "textarea",
-]);
-
-/**
- * Radix reserves "" for "no selection", but a plugin may legitimately register
- * an option whose value is "".
- */
-const EMPTY_OPTION_VALUE = "__plumix_empty__";
-function encodeOptionValue(value: string): string {
-  return value === "" ? EMPTY_OPTION_VALUE : value;
-}
-function decodeOptionValue(value: string): string {
-  return value === EMPTY_OPTION_VALUE ? "" : value;
-}
-
-/**
  * A component so only the plugin branch subscribes to sibling values; built-in
  * inputs keep re-rendering one field per keystroke.
  */
@@ -321,10 +310,8 @@ function PluginFieldSlot({
   );
 }
 
-/** A box at the form root (the settings card) reads the whole form. */
 function useSiblingValues(name: string): MetaBoxSiblingValues | undefined {
-  const dot = name.lastIndexOf(".");
-  return useBagValues({ name: dot === -1 ? undefined : name.slice(0, dot) });
+  return useBagValues({ name: siblingBagName(name) });
 }
 
 /**
@@ -403,14 +390,8 @@ function renderNumberField(ctx: NativeInputContext): ReactNode {
       max={field.max}
       step={field.step ?? 1}
       onChange={(e) => {
-        const raw = e.target.value;
-        if (raw === "") {
-          rhf.onChange(null);
-          return;
-        }
-        // Partial input like "-" or "1e" parses to NaN.
-        const parsed = Number(raw);
-        if (Number.isFinite(parsed)) rhf.onChange(parsed);
+        const next = numberInputValue(e.target.value);
+        if (next !== undefined) rhf.onChange(next);
       }}
     />
   );
@@ -619,9 +600,7 @@ function renderCheckboxListField({
               const next = new Set(selected);
               if (checked === true) next.add(opt.value);
               else next.delete(opt.value);
-              rhf.onChange(
-                options.filter((o) => next.has(o.value)).map((o) => o.value),
-              );
+              rhf.onChange(orderedSelection(options, next));
             }}
             id={`${testId}-${opt.value}`}
             data-testid={`${testId}-${opt.value}`}
@@ -655,13 +634,8 @@ function renderMultiButtonsField({
       value={selected}
       disabled={disabled}
       onValueChange={(next) => {
-        // Emit in declared-option order (Radix reports click order), so
-        // the stored array is identical across the multi appearances —
-        // appearance is a pure-UI axis, ordering included.
-        const picked = new Set(next);
-        rhf.onChange(
-          options.filter((o) => picked.has(o.value)).map((o) => o.value),
-        );
+        // Radix reports click order.
+        rhf.onChange(orderedSelection(options, next));
       }}
       onBlur={rhf.onBlur}
       aria-label={labelText}
@@ -745,26 +719,18 @@ function RichTextFieldSkeleton({ testId }: { testId: string }): ReactNode {
 
 function renderDateTimeField(ctx: NativeInputContext): ReactNode {
   const { field, rhf } = ctx;
-  // The ISO-shaped strings native inputs emit are stored as-is.
-  const htmlType =
-    field.inputType === "datetime" ? "datetime-local" : field.inputType;
   return (
     <Input
       {...nativeCommonProps(ctx)}
-      type={htmlType}
-      value={
-        rhf.value instanceof Date
-          ? asTemporalInputValue(
-              field.inputType as TemporalInputType,
-              rhf.value,
-            )
-          : asString(rhf.value)
-      }
+      type={htmlInputType(field.inputType)}
+      value={temporalDisplayValue(
+        field.inputType as TemporalInputType,
+        rhf.value,
+      )}
       min={field.min}
       max={field.max}
       onChange={(e) => {
-        const raw = e.target.value;
-        rhf.onChange(raw === "" ? null : raw);
+        rhf.onChange(temporalInputValue(e.target.value));
       }}
     />
   );
@@ -811,12 +777,7 @@ function renderRadioField({
 function renderTextLikeField(ctx: NativeInputContext): ReactNode {
   const { field, rhf } = ctx;
   const placeholderText = fieldPlaceholder(ctx);
-  if (
-    field.inputType !== "text" &&
-    field.inputType !== "email" &&
-    field.inputType !== "url" &&
-    field.inputType !== "password"
-  ) {
+  if (!isBuiltinInputType(field.inputType)) {
     // A plugin-specific type falls back to text rather than crashing the
     // editor.
     console.warn(
@@ -824,20 +785,11 @@ function renderTextLikeField(ctx: NativeInputContext): ReactNode {
     );
   }
 
-  // Shared shape for `text` / `email` / `url` / `password` / unknown
-  // fallback. The native `type` attribute drives both browser
-  // validation (email / url) and visual masking (password).
-  const htmlType =
-    field.inputType === "email" ||
-    field.inputType === "url" ||
-    field.inputType === "password"
-      ? field.inputType
-      : "text";
   const Control = ctx.adorned ? InputGroupInput : Input;
   return (
     <Control
       {...nativeCommonProps(ctx)}
-      type={htmlType}
+      type={htmlInputType(field.inputType)}
       value={asString(rhf.value)}
       placeholder={placeholderText}
       maxLength={field.maxLength}
@@ -894,7 +846,7 @@ function renderNativeInput(ctx: NativeInputContext): ReactNode {
         testId={testId}
         // A different value re-attempts instead of staying stuck on the
         // placeholder.
-        resetKey={stringifyForResetKey(rhf.value)}
+        resetKey={resetKeyFor(rhf.value)}
       >
         <PluginFieldSlot
           Renderer={PluginRenderer}
@@ -967,64 +919,6 @@ function renderNativeInput(ctx: NativeInputContext): ReactNode {
 }
 
 /**
- * Reads arrive hydrated as `{ id, ... }`; drafts and `.returns("id")` opt-outs
- * carry the bare id.
- */
-function referenceValueId(value: unknown): string | null {
-  if (typeof value === "string" && value !== "") return value;
-  if (typeof value === "object" && value !== null && !Array.isArray(value)) {
-    const id = (value as { readonly id?: unknown }).id;
-    if (typeof id === "string" && id !== "") return id;
-  }
-  return null;
-}
-
-/**
- * Null on a missing label so the picker's lookup can offer its richer fallback
- * (untitled chrome, email). No subtitle: the public-safe summary lacks it.
- */
-function referenceValueSummary(value: unknown): LookupItem | null {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return null;
-  }
-  const summary = value as JsonObject;
-  if (typeof summary.id !== "string" || summary.id === "") return null;
-  const label =
-    typeof summary.title === "string"
-      ? summary.title
-      : typeof summary.name === "string"
-        ? summary.name
-        : null;
-  if (label === null) return null;
-  return { id: summary.id, label };
-}
-
-/**
- * Meta values arrive as `unknown` because the registry isn't per-type-generic.
- */
-function asString(value: unknown): string {
-  if (value === null || value === undefined) return "";
-  if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
-  return "";
-}
-
-/**
- * A `.returns("date")` value's wall-clock anchors to UTC; the server's own
- * formatter keeps the display timezone-invariant.
- */
-function asTemporalInputValue(
-  inputType: TemporalInputType,
-  value: Date,
-): string {
-  return Number.isNaN(value.getTime())
-    ? ""
-    : formatTemporalValue(inputType, value);
-}
-
-/**
  * `<input type="number">` needs an empty string (not `0`) to render an
  * empty field, and a number-or-string for a valued field. Non-numeric
  * input drops to empty rather than rendering "NaN".
@@ -1067,7 +961,7 @@ function JsonControl({
   testId: string;
 }): React.ReactNode {
   const labelFn = useLabel();
-  const initialFormatted = formatInitial(value);
+  const initialFormatted = formatJsonDraft(value);
   const [draft, setDraft] = useState(initialFormatted);
   const [error, setError] = useState<MessageDescriptor | null>(null);
   // Picks up external resyncs like `form.reset()`. setState during render is
@@ -1128,27 +1022,4 @@ function JsonEditorSkeleton({ testId }: { testId: string }): React.ReactNode {
       aria-busy="true"
     />
   );
-}
-
-function formatInitial(value: unknown): string {
-  if (value === null || value === undefined) return "";
-  try {
-    return JSON.stringify(value, null, 2);
-  } catch {
-    return "";
-  }
-}
-
-/**
- * Cycles and BigInts fall back to a constant, so the boundary won't reset on
- * them.
- */
-function stringifyForResetKey(value: unknown): string {
-  if (typeof value === "string") return value;
-  if (value === null || value === undefined) return "";
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return "__unserializable__";
-  }
 }

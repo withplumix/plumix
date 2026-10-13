@@ -16,8 +16,8 @@ import {
 } from "@plumix/admin-ui/command";
 import { Skeleton } from "@plumix/admin-ui/skeleton";
 
+import type { ResolvedReference } from "./lookup/reference-resolve.js";
 import type { LookupItem } from "./lookup/types.js";
-import type { ResolvedReference } from "./lookup/use-reference-resolve.js";
 import { renderLookupListBody } from "./lookup/list-body.js";
 import { useLookupSearch } from "./lookup/use-lookup-search.js";
 import { useReferenceResolve } from "./lookup/use-reference-resolve.js";

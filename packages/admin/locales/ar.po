@@ -653,7 +653,7 @@ msgid "userEdit.email.dialog.cancel"
 msgstr "إلغاء"
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.cancelled"
 msgstr "أُلغي. اضغط «إضافة passkey» عندما تكون جاهزاً."
 
@@ -897,7 +897,7 @@ msgid "terms.create.error.createFallback"
 msgstr "تعذّر إنشاء المصطلح. حاول مرة أخرى."
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.delete.fallback"
 msgstr "تعذّر حذف passkey. حاول مرة أخرى."
 
@@ -922,12 +922,12 @@ msgid "editor.toast.discardFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.emailMismatch"
 msgstr "تعذّر التسجيل — سجّل الدخول من جديد وحاول مرة أخرى."
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.fallback"
 msgstr "تعذّر تسجيل passkey. حاول مرة أخرى."
 
@@ -977,7 +977,7 @@ msgid "auth.device.lookup.error.fallback"
 msgstr "تعذّر البحث عن ذلك الرمز. حاول مرة أخرى."
 
 #. js-lingui-explicit-id
-#: src/components/profile/api-tokens-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "apiTokens.mint.fallback"
 msgstr "تعذّر إنشاء الرمز. حاول مرة أخرى."
 
@@ -1012,12 +1012,12 @@ msgid "oauth.error.profileFetchFailed"
 msgstr "تعذّر قراءة ملفك الشخصي. حاول مرة أخرى."
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.rename.fallback"
 msgstr "تعذّر إعادة تسمية passkey. حاول مرة أخرى."
 
 #. js-lingui-explicit-id
-#: src/components/profile/user-email-field.tsx
+#: src/components/profile/profile-errors.ts
 msgid "userEdit.email.error.requestFallback"
 msgstr "تعذّر طلب التغيير. حاول مرة أخرى."
 
@@ -1027,17 +1027,17 @@ msgid "editor.revision.restoreFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/components/profile/sessions-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.sessions.revokeAll.fallback"
 msgstr "تعذّر إبطال الجلسات. حاول مرة أخرى."
 
 #. js-lingui-explicit-id
-#: src/components/profile/sessions-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.sessions.revoke.fallback"
 msgstr "تعذّر إبطال الجلسة. حاول مرة أخرى."
 
 #. js-lingui-explicit-id
-#: src/components/profile/api-tokens-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "apiTokens.revoke.fallback"
 msgstr "تعذّر الإلغاء. حاول مرة أخرى."
 
@@ -1475,7 +1475,7 @@ msgid "userEdit.email.label"
 msgstr "البريد الإلكتروني"
 
 #. js-lingui-explicit-id
-#: src/components/profile/user-email-field.tsx
+#: src/components/profile/profile-errors.ts
 msgid "userEdit.email.error.mailerNotConfigured"
 msgstr "تغيير البريد يتطلب تكوين magic-link mailer على الخادم. مرّر `auth.magicLink` و `mailer:` إلى `plumix({...})` للتفعيل."
 
@@ -2188,7 +2188,7 @@ msgid "fieldValues.column.unconvertible"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.networkError"
 msgstr "خطأ شبكة. تحقق من اتصالك وحاول مرة أخرى."
 
@@ -3372,12 +3372,12 @@ msgid "passkey.error.emailMismatch"
 msgstr "هذا البريد لا يطابق حسابك الذي سجّلت دخوله."
 
 #. js-lingui-explicit-id
-#: src/components/profile/user-email-field.tsx
+#: src/components/profile/profile-errors.ts
 msgid "userEdit.email.error.taken"
 msgstr "هذا البريد مستخدَم في حساب آخر."
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.alreadyRegistered"
 msgstr "هذا passkey مسجَّل بالفعل في هذا الحساب."
 
@@ -3494,7 +3494,7 @@ msgid "userInvite.description"
 msgstr "سيسجّلون passkey في أول فتح لرابط الدعوة. لا حاجة لكلمة مرور."
 
 #. js-lingui-explicit-id
-#: src/components/profile/user-email-field.tsx
+#: src/components/profile/profile-errors.ts
 msgid "userEdit.email.error.accountDisabled"
 msgstr "هذا الحساب معطّل."
 
@@ -3539,7 +3539,7 @@ msgid "profile.sessions.thisDevice"
 msgstr "هذا الجهاز"
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.noAuthenticator"
 msgstr "هذا الجهاز لا يدعم passkeys."
 
@@ -3579,7 +3579,7 @@ msgid "passkey.error.invalidRpId"
 msgstr "هذا passkey غير قابل للاستخدام على هذا الموقع."
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.notFound"
 msgstr "لم يعد هذا passkey موجوداً. حدّث القائمة."
 
@@ -3609,7 +3609,7 @@ msgid "metaBox.repeater.rowError"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/components/profile/sessions-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.sessions.revoke.notFound"
 msgstr "لم تعد هذه الجلسة موجودة. حدّث القائمة."
 
@@ -3884,12 +3884,12 @@ msgid "entries.list.trashDialog.description"
 msgstr "يمكنك استعادته من المهملات لاحقاً."
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.lastCredential"
 msgstr "لا يمكن حذف آخر passkey لديك. أضف واحداً آخر أولاً."
 
 #. js-lingui-explicit-id
-#: src/components/profile/sessions-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.sessions.revoke.current"
 msgstr "لا يمكنك إبطال الجلسة التي تستخدمها الآن."
 

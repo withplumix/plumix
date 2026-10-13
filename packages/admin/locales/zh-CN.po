@@ -653,7 +653,7 @@ msgid "userEdit.email.dialog.cancel"
 msgstr "取消"
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.cancelled"
 msgstr "已取消。准备好后请点击「添加 Passkey」。"
 
@@ -897,7 +897,7 @@ msgid "terms.create.error.createFallback"
 msgstr "无法创建术语。请重试。"
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.delete.fallback"
 msgstr "无法删除 Passkey。请重试。"
 
@@ -922,12 +922,12 @@ msgid "editor.toast.discardFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.emailMismatch"
 msgstr "注册失败 — 请重新登录后再试。"
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.fallback"
 msgstr "无法注册 Passkey。请重试。"
 
@@ -977,7 +977,7 @@ msgid "auth.device.lookup.error.fallback"
 msgstr "无法查找此代码。请重试。"
 
 #. js-lingui-explicit-id
-#: src/components/profile/api-tokens-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "apiTokens.mint.fallback"
 msgstr "无法创建令牌。请重试。"
 
@@ -1012,12 +1012,12 @@ msgid "oauth.error.profileFetchFailed"
 msgstr "无法读取您的个人资料。请重试。"
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.rename.fallback"
 msgstr "无法重命名 Passkey。请重试。"
 
 #. js-lingui-explicit-id
-#: src/components/profile/user-email-field.tsx
+#: src/components/profile/profile-errors.ts
 msgid "userEdit.email.error.requestFallback"
 msgstr "无法请求更改。请重试。"
 
@@ -1027,17 +1027,17 @@ msgid "editor.revision.restoreFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/components/profile/sessions-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.sessions.revokeAll.fallback"
 msgstr "无法登出会话。请重试。"
 
 #. js-lingui-explicit-id
-#: src/components/profile/sessions-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.sessions.revoke.fallback"
 msgstr "无法登出会话。请重试。"
 
 #. js-lingui-explicit-id
-#: src/components/profile/api-tokens-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "apiTokens.revoke.fallback"
 msgstr "撤销失败。请重试。"
 
@@ -1475,7 +1475,7 @@ msgid "userEdit.email.label"
 msgstr "电子邮箱"
 
 #. js-lingui-explicit-id
-#: src/components/profile/user-email-field.tsx
+#: src/components/profile/profile-errors.ts
 msgid "userEdit.email.error.mailerNotConfigured"
 msgstr "电子邮箱更改需要服务器端配置 Magic Link 邮件发送器。请向 `plumix({...})` 传入 `auth.magicLink` 和 `mailer:` 以启用。"
 
@@ -2188,7 +2188,7 @@ msgid "fieldValues.column.unconvertible"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.networkError"
 msgstr "网络错误。请检查您的连接并重试。"
 
@@ -3372,12 +3372,12 @@ msgid "passkey.error.emailMismatch"
 msgstr "此电子邮箱与您当前登录的账户不匹配。"
 
 #. js-lingui-explicit-id
-#: src/components/profile/user-email-field.tsx
+#: src/components/profile/profile-errors.ts
 msgid "userEdit.email.error.taken"
 msgstr "此电子邮箱已被另一个账户使用。"
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.alreadyRegistered"
 msgstr "此 Passkey 已在此账户中注册。"
 
@@ -3494,7 +3494,7 @@ msgid "userInvite.description"
 msgstr "首次打开邀请链接时,他们会注册一个 Passkey。无需密码。"
 
 #. js-lingui-explicit-id
-#: src/components/profile/user-email-field.tsx
+#: src/components/profile/profile-errors.ts
 msgid "userEdit.email.error.accountDisabled"
 msgstr "此账户已停用。"
 
@@ -3539,7 +3539,7 @@ msgid "profile.sessions.thisDevice"
 msgstr "此设备"
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.noAuthenticator"
 msgstr "此设备不支持 Passkey。"
 
@@ -3579,7 +3579,7 @@ msgid "passkey.error.invalidRpId"
 msgstr "此 Passkey 不能在此站点使用。"
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.notFound"
 msgstr "此 Passkey 不再存在。请刷新列表。"
 
@@ -3609,7 +3609,7 @@ msgid "metaBox.repeater.rowError"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/components/profile/sessions-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.sessions.revoke.notFound"
 msgstr "此会话不再存在。请刷新列表。"
 
@@ -3884,12 +3884,12 @@ msgid "entries.list.trashDialog.description"
 msgstr "您可以稍后从回收站视图中恢复。"
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.lastCredential"
 msgstr "您不能删除最后一个 Passkey。请先添加另一个。"
 
 #. js-lingui-explicit-id
-#: src/components/profile/sessions-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.sessions.revoke.current"
 msgstr "您不能登出当前正在使用的会话。"
 

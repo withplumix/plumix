@@ -653,7 +653,7 @@ msgid "userEdit.email.dialog.cancel"
 msgstr "Abbrechen"
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.cancelled"
 msgstr "Abgebrochen. Tippen Sie auf «Passkey hinzufügen», wenn Sie bereit sind."
 
@@ -897,7 +897,7 @@ msgid "terms.create.error.createFallback"
 msgstr "Begriff konnte nicht erstellt werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.delete.fallback"
 msgstr "Passkey konnte nicht gelöscht werden. Bitte erneut versuchen."
 
@@ -922,12 +922,12 @@ msgid "editor.toast.discardFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.emailMismatch"
 msgstr "Registrierung fehlgeschlagen — erneut anmelden und nochmals versuchen."
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.fallback"
 msgstr "Passkey konnte nicht registriert werden. Bitte erneut versuchen."
 
@@ -977,7 +977,7 @@ msgid "auth.device.lookup.error.fallback"
 msgstr "Dieser Code konnte nicht gefunden werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
-#: src/components/profile/api-tokens-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "apiTokens.mint.fallback"
 msgstr "Token konnte nicht erstellt werden. Bitte erneut versuchen."
 
@@ -1012,12 +1012,12 @@ msgid "oauth.error.profileFetchFailed"
 msgstr "Ihr Profil konnte nicht gelesen werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.rename.fallback"
 msgstr "Passkey konnte nicht umbenannt werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
-#: src/components/profile/user-email-field.tsx
+#: src/components/profile/profile-errors.ts
 msgid "userEdit.email.error.requestFallback"
 msgstr "Änderung konnte nicht angefordert werden. Bitte erneut versuchen."
 
@@ -1027,17 +1027,17 @@ msgid "editor.revision.restoreFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/components/profile/sessions-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.sessions.revokeAll.fallback"
 msgstr "Sitzungen konnten nicht beendet werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
-#: src/components/profile/sessions-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.sessions.revoke.fallback"
 msgstr "Sitzung konnte nicht beendet werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
-#: src/components/profile/api-tokens-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "apiTokens.revoke.fallback"
 msgstr "Widerruf fehlgeschlagen. Bitte erneut versuchen."
 
@@ -1475,7 +1475,7 @@ msgid "userEdit.email.label"
 msgstr "E-Mail"
 
 #. js-lingui-explicit-id
-#: src/components/profile/user-email-field.tsx
+#: src/components/profile/profile-errors.ts
 msgid "userEdit.email.error.mailerNotConfigured"
 msgstr "Eine E-Mail-Änderung erfordert einen serverseitig konfigurierten Magic-Link-Mailer. Übergeben Sie `auth.magicLink` und `mailer:` an `plumix({...})` zum Aktivieren."
 
@@ -2188,7 +2188,7 @@ msgid "fieldValues.column.unconvertible"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.networkError"
 msgstr "Netzwerkfehler. Verbindung prüfen und erneut versuchen."
 
@@ -3372,12 +3372,12 @@ msgid "passkey.error.emailMismatch"
 msgstr "Diese E-Mail stimmt nicht mit Ihrem angemeldeten Konto überein."
 
 #. js-lingui-explicit-id
-#: src/components/profile/user-email-field.tsx
+#: src/components/profile/profile-errors.ts
 msgid "userEdit.email.error.taken"
 msgstr "Diese E-Mail wird bereits in einem anderen Konto verwendet."
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.alreadyRegistered"
 msgstr "Dieser Passkey ist bereits in diesem Konto registriert."
 
@@ -3494,7 +3494,7 @@ msgid "userInvite.description"
 msgstr "Sie registrieren einen Passkey beim ersten Öffnen des Einladungslinks. Kein Passwort erforderlich."
 
 #. js-lingui-explicit-id
-#: src/components/profile/user-email-field.tsx
+#: src/components/profile/profile-errors.ts
 msgid "userEdit.email.error.accountDisabled"
 msgstr "Dieses Konto ist deaktiviert."
 
@@ -3539,7 +3539,7 @@ msgid "profile.sessions.thisDevice"
 msgstr "Dieses Gerät"
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.enroll.noAuthenticator"
 msgstr "Dieses Gerät unterstützt keine Passkeys."
 
@@ -3579,7 +3579,7 @@ msgid "passkey.error.invalidRpId"
 msgstr "Dieser Passkey ist auf dieser Website nicht verwendbar."
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.notFound"
 msgstr "Dieser Passkey existiert nicht mehr. Liste aktualisieren."
 
@@ -3609,7 +3609,7 @@ msgid "metaBox.repeater.rowError"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/components/profile/sessions-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.sessions.revoke.notFound"
 msgstr "Diese Sitzung existiert nicht mehr. Liste aktualisieren."
 
@@ -3884,12 +3884,12 @@ msgid "entries.list.trashDialog.description"
 msgstr "Sie können ihn später aus der Papierkorb-Ansicht wiederherstellen."
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.lastCredential"
 msgstr "Sie können Ihren letzten Passkey nicht löschen. Fügen Sie zuerst einen weiteren hinzu."
 
 #. js-lingui-explicit-id
-#: src/components/profile/sessions-card.tsx
+#: src/components/profile/profile-errors.ts
 msgid "profile.sessions.revoke.current"
 msgstr "Sie können die Sitzung, die Sie gerade verwenden, nicht beenden."
 

@@ -12,3 +12,13 @@ export function evaluateJsonDraft(raw: string): JsonDraftResult {
     return { kind: "error" };
   }
 }
+
+/** The editor's starting text for a stored value; unserializable seeds empty. */
+export function formatJsonDraft(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return "";
+  }
+}

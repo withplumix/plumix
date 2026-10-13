@@ -6,6 +6,7 @@ import type { PlumixManifest } from "@plumix/core/manifest";
 import { editorEntry } from "./support/editor.js";
 import {
   AUTHED_ADMIN,
+  MANIFEST_WITH_PLAIN_FORM_TYPE,
   MANIFEST_WITH_POST,
   mockManifest,
   mockRpc,
@@ -253,5 +254,62 @@ test.describe("plugin block registered via window.plumix bridge", () => {
     await expect(
       page.getByTestId("block-catalog-item-test/fake"),
     ).toBeVisible();
+  });
+});
+
+test.describe("plugin field type registered via window.plumix", () => {
+  test("a plugin field type re-renders with its box's sibling values", async ({
+    page,
+  }) => {
+    const bio = MANIFEST_WITH_PLAIN_FORM_TYPE.entryMetaBoxes?.[0];
+    if (!bio) throw new Error("the plain-form fixture lost its bio box");
+    await mockManifest(page, {
+      ...MANIFEST_WITH_PLAIN_FORM_TYPE,
+      entryMetaBoxes: [
+        {
+          ...bio,
+          fields: [
+            ...bio.fields,
+            {
+              key: "preview",
+              label: "Preview",
+              type: "string",
+              inputType: "runtime-proof-sibling",
+            },
+          ],
+        },
+      ],
+    });
+    await mockRpc(page, {
+      "/auth/session": withCapabilities(
+        AUTHED_ADMIN,
+        "entry:author:edit_any",
+        "entry:author:read",
+      ),
+      "/entry/get": {
+        id: 1,
+        type: "author",
+        parentId: null,
+        title: "Jane Doe",
+        slug: "author-1",
+        content: null,
+        excerpt: null,
+        status: "draft",
+        authorId: 1,
+        sortOrder: 0,
+        publishedAt: null,
+        createdAt: new Date("2026-05-20T00:00:00Z"),
+        updatedAt: new Date("2026-05-20T00:00:00Z"),
+        meta: { headline: "Staff writer" },
+      },
+    });
+
+    await page.goto("entries/authors/1/edit");
+    const siblings = page.getByTestId("meta-box-field-preview-input-siblings");
+    await expect(siblings).toHaveText("Staff writer");
+
+    await page.getByTestId("meta-box-field-headline-input").fill("Editor");
+
+    await expect(siblings).toHaveText("Editor");
   });
 });

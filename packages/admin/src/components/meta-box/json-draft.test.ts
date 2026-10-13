@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { evaluateJsonDraft } from "./json-draft.js";
+import { evaluateJsonDraft, formatJsonDraft } from "./json-draft.js";
 
 describe("evaluateJsonDraft", () => {
   test("blank (or whitespace-only) input clears the value", () => {
@@ -25,5 +25,15 @@ describe("evaluateJsonDraft", () => {
     // The engine's parse message is English the admin didn't choose, so the
     // result carries only the fact of the failure.
     expect(evaluateJsonDraft("{not-json")).toEqual({ kind: "error" });
+  });
+});
+
+describe("formatJsonDraft", () => {
+  test("a stored value seeds the editor as indented JSON", () => {
+    expect(formatJsonDraft({ a: 1 })).toBe('{\n  "a": 1\n}');
+  });
+
+  test("no stored value seeds an empty editor", () => {
+    expect(formatJsonDraft(null)).toBe("");
   });
 });

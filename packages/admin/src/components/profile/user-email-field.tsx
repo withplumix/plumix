@@ -33,8 +33,10 @@ import {
 } from "@plumix/admin-ui/form";
 import { Input } from "@plumix/admin-ui/input";
 import { Label as UILabel } from "@plumix/admin-ui/label";
-import { describeRpcError } from "@plumix/core/admin";
 import { vMessage } from "@plumix/core/validation";
+
+import { emailChangeAvailability } from "./email-change-availability.js";
+import { requestEmailChangeErrorDescriptor } from "./profile-errors.js";
 
 // A change is confirmed by magic link, so without magic-link sign-in the email
 // is read-only. The server's auth gate decides self vs admin.
@@ -58,24 +60,6 @@ const M = {
   newEmailPlaceholder: defineMessage({
     id: "userEdit.email.placeholder",
     message: "new@example.com",
-  }),
-  // Mutation error fallbacks.
-  emailTaken: defineMessage({
-    id: "userEdit.email.error.taken",
-    message: "That email is already in use on another account.",
-  }),
-  mailerNotConfigured: defineMessage({
-    id: "userEdit.email.error.mailerNotConfigured",
-    message:
-      "Email change requires a magic-link mailer to be configured server-side. Pass `auth.magicLink` and `mailer:` to `plumix({...})` to enable.",
-  }),
-  accountDisabled: defineMessage({
-    id: "userEdit.email.error.accountDisabled",
-    message: "This account is disabled.",
-  }),
-  requestFallback: defineMessage({
-    id: "userEdit.email.error.requestFallback",
-    message: "Couldn't request the change. Try again.",
   }),
 } satisfies Record<string, MessageDescriptor>;
 
@@ -111,7 +95,10 @@ export function UserEmailField({
   );
   const pending = pendingQuery.data?.pending ?? null;
   const signInMethods = useQuery(orpc.auth.signInMethods.queryOptions());
-  const magicLinkEnabled = signInMethods.data?.magicLink;
+  const availability = emailChangeAvailability({
+    canEdit,
+    magicLink: signInMethods.data?.magicLink,
+  });
 
   const invalidate = (): Promise<void> =>
     queryClient.invalidateQueries({
@@ -134,7 +121,7 @@ export function UserEmailField({
       await invalidate();
     },
     onError: (err) => {
-      setError(formatRequestError(err));
+      setError(requestEmailChangeErrorDescriptor(err));
     },
   });
 
@@ -161,7 +148,7 @@ export function UserEmailField({
         >
           {email}
         </p>
-        {canEdit && magicLinkEnabled === true ? (
+        {availability === "offer" ? (
           <Button
             type="button"
             variant="outline"
@@ -177,7 +164,7 @@ export function UserEmailField({
           </Button>
         ) : null}
       </div>
-      {canEdit && magicLinkEnabled === false ? (
+      {availability === "unavailable" ? (
         <p
           className="text-muted-foreground text-sm"
           data-testid="user-edit-email-change-unavailable"
@@ -378,14 +365,4 @@ function ChangeEmailDialog({
       </AlertDialogContent>
     </AlertDialog>
   );
-}
-
-const REQUEST_ERRORS: Readonly<Record<string, MessageDescriptor>> = {
-  email_taken: M.emailTaken,
-  mailer_not_configured: M.mailerNotConfigured,
-  account_disabled: M.accountDisabled,
-};
-
-function formatRequestError(err: unknown): MessageDescriptor {
-  return describeRpcError(err, REQUEST_ERRORS, M.requestFallback);
 }
