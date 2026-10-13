@@ -474,7 +474,9 @@ describe("plumix/test-tier", () => {
   });
 
   it("stays silent on a vitest config that picks no environment", async () => {
-    await expect(tierReports("vitest.build.config.ts")).resolves.toEqual([]);
+    await expect(
+      tierReports("vitest.no-environment.config.ts"),
+    ).resolves.toEqual([]);
   });
 
   it("rejects DOM imports and DOM globals in a Node-tier test", async () => {
@@ -492,13 +494,17 @@ describe("plumix/test-tier", () => {
     );
   });
 
-  it.each([
-    "src/test-tier.retired.browser.test.tsx",
-    "src/test-tier.retired.build.test.ts",
-  ])("rejects %s, a file in a retired tier", async (fixture) => {
-    const reports = await tierReports(fixture);
+  it("rejects a file in the retired browser tier", async () => {
+    const reports = await tierReports("src/test-tier.retired.browser.test.tsx");
     expect(reports.map(({ line }) => line)).toEqual([1]);
     expect(reports[0]?.message).toContain("ADR 0042");
+  });
+
+  it("rejects a file in the retired build tier, and earns it no child process", async () => {
+    const reports = await tierReports("src/test-tier.retired.build.test.ts");
+    expect(reports.map(({ line }) => line)).toEqual([1, 1]);
+    expect(reports[0]?.message).toContain("ADR 0042");
+    expect(reports[1]?.message).toContain("smoke");
   });
 
   it("stays silent on a retired-tier file the pending list names", async () => {

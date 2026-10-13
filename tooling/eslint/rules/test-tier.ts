@@ -116,10 +116,7 @@ export const testTier: Rule.RuleModule = {
       (BROWSER_TEST_FILE.test(name) || BUILD_TEST_FILE.test(name)) &&
       !listed(pending);
     const processBanned =
-      nodeTierTest &&
-      !BUILD_TEST_FILE.test(name) &&
-      !listed(pending) &&
-      !listed(processSubjects);
+      nodeTierTest && !listed(pending) && !listed(processSubjects);
 
     function checkProcessModule(
       node: Rule.Node,
