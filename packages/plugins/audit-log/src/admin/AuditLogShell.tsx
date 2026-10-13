@@ -13,14 +13,17 @@ import {
 } from "plumix/admin/ui";
 import { formatDate, Trans, useLingui } from "plumix/i18n";
 
-import type {
-  AuditLogFilter,
-  AuditLogRowDTO,
-  DateRangePreset,
-} from "./queries.js";
-import { presetToRange, useAuditLogList } from "./queries.js";
-
-const MAX_DIFF_PREVIEW_FIELDS = 3;
+import type { FilterState } from "./filters.js";
+import type { AuditLogRowDTO, DateRangePreset } from "./queries.js";
+import {
+  auditLogBodyState,
+  diffPreviewFields,
+  EMPTY_FILTERS,
+  filtersFromSearchParams,
+  filtersToSearchParams,
+  filterToRpcInput,
+} from "./filters.js";
+import { useAuditLogList } from "./queries.js";
 
 /**
  * Radix Select forbids an empty-string item value, so the "any" filter choice
@@ -106,80 +109,6 @@ const EVENT_PREFIXES = [
   "settings:",
 ] as const;
 
-interface FilterState {
-  readonly preset: DateRangePreset | "all";
-  readonly actorId: string;
-  readonly subjectType: string;
-  readonly eventPrefix: string;
-}
-
-const EMPTY_FILTERS: FilterState = {
-  preset: "all",
-  actorId: "",
-  subjectType: "",
-  eventPrefix: "",
-};
-
-/**
- * Filter state in `window.location.search` enables reload + shared-link
- * hydration. Empty fields are skipped so EMPTY_FILTERS produces a clean URL
- * instead of `?preset=all&actorId=&...`.
- */
-function filtersToSearchParams(state: FilterState): URLSearchParams {
-  const params = new URLSearchParams();
-  if (state.preset !== "all") params.set("preset", state.preset);
-  if (state.actorId !== "") params.set("actorId", state.actorId);
-  if (state.subjectType !== "") params.set("subjectType", state.subjectType);
-  if (state.eventPrefix !== "") params.set("eventPrefix", state.eventPrefix);
-  return params;
-}
-
-function parsePreset(raw: string | null): FilterState["preset"] {
-  switch (raw) {
-    case "today":
-    case "last7":
-    case "last30":
-    case "custom":
-      return raw;
-    default:
-      return "all";
-  }
-}
-
-function filtersFromSearchParams(search: string): FilterState {
-  const params = new URLSearchParams(search);
-  return {
-    preset: parsePreset(params.get("preset")),
-    actorId: params.get("actorId") ?? "",
-    subjectType: params.get("subjectType") ?? "",
-    eventPrefix: params.get("eventPrefix") ?? "",
-  };
-}
-
-function filterToRpcInput(state: FilterState): AuditLogFilter {
-  const out: {
-    actorId?: number;
-    subjectType?: string;
-    eventPrefix?: string;
-    occurredAfter?: number;
-    occurredBefore?: number;
-  } = {};
-  if (state.preset !== "all" && state.preset !== "custom") {
-    const range = presetToRange(state.preset);
-    if (range.occurredAfter !== undefined)
-      out.occurredAfter = range.occurredAfter;
-    if (range.occurredBefore !== undefined)
-      out.occurredBefore = range.occurredBefore;
-  }
-  if (state.actorId !== "") {
-    const parsed = Number(state.actorId);
-    if (Number.isInteger(parsed)) out.actorId = parsed;
-  }
-  if (state.subjectType !== "") out.subjectType = state.subjectType;
-  if (state.eventPrefix !== "") out.eventPrefix = state.eventPrefix;
-  return out;
-}
-
 /**
  * `popstate` covers browser back/forward; for our own writes we dispatch
  * the event explicitly after `replaceState` since neither push/replace fire
@@ -235,6 +164,7 @@ export function AuditLogShell(): ReactNode {
     [list.error],
   );
 
+  const body = auditLogBodyState(list);
   const rows = list.data?.pages.flatMap((p) => p.rows) ?? [];
 
   return (
@@ -249,13 +179,13 @@ export function AuditLogShell(): ReactNode {
           setFilters(EMPTY_FILTERS);
         }}
       />
-      {list.isLoading ? (
+      {body === "loading" ? (
         <div data-testid="audit-log-loading" />
-      ) : loadError ? (
+      ) : body === "error" && loadError ? (
         <div data-testid="audit-log-error" className="text-destructive text-sm">
           {i18n._(loadError)}
         </div>
-      ) : rows.length === 0 ? (
+      ) : body === "empty" ? (
         <p
           data-testid="audit-log-empty"
           className="text-muted-foreground text-sm"
@@ -485,15 +415,12 @@ function DiffPreview({
   readonly properties: AuditLogRowDTO["properties"];
 }): ReactNode {
   const { i18n } = useLingui();
-  const diff = properties.diff;
-  if (!diff || typeof diff !== "object" || Array.isArray(diff)) return null;
-  const fields = Object.keys(diff);
-  if (fields.length === 0) return null;
-  const preview = fields.slice(0, MAX_DIFF_PREVIEW_FIELDS).join(", ");
-  const overflow = fields.length - MAX_DIFF_PREVIEW_FIELDS;
+  const fields = diffPreviewFields(properties);
+  if (fields === null) return null;
+  const { overflow } = fields;
   return (
     <span data-testid="audit-log-diff-preview">
-      {preview}
+      {fields.shown.join(", ")}
       {overflow > 0
         ? i18n._(
             M.diffOverflow.id,
