@@ -158,7 +158,22 @@ describe("plumix deploy — data migrations", () => {
     }
   }
 
-  test("applies a pending data migration before wrangler deploy, and the next deploy reports it up to date", async () => {
+  test("applies a pending data migration before wrangler deploy", async () => {
+    localD1();
+    const lines: string[] = [];
+    vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+      lines.push(String(chunk));
+      return true;
+    });
+
+    await deployCommand.run(siteDataMigration(SEED_BETA));
+
+    expect(lines.join("")).toMatch(/site: applied 1 data migration\n/);
+    expect(events).toEqual(["wrangler deploy"]);
+    expect(await recorded()).toEqual([{ owner: "site", name: "seed-beta" }]);
+  });
+
+  test("the next deploy reports the data migration up to date", async () => {
     localD1();
     const lines: string[] = [];
     vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
@@ -166,15 +181,12 @@ describe("plumix deploy — data migrations", () => {
       return true;
     });
     const ctx = siteDataMigration(SEED_BETA);
-
     await deployCommand.run(ctx);
-    expect(lines.join("")).toMatch(/site: applied 1 data migration\n/);
     lines.length = 0;
 
     await deployCommand.run(ctx);
 
     expect(lines.join("")).toMatch(/site: data migrations up to date\n/);
-    expect(events).toEqual(["wrangler deploy", "wrangler deploy"]);
     expect(await recorded()).toEqual([{ owner: "site", name: "seed-beta" }]);
   });
 

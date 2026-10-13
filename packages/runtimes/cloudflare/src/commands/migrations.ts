@@ -99,7 +99,7 @@ function migrationDatabase(
   d1: D1Database,
   dispose: () => Promise<void>,
 ): MigrationDatabase {
-  // The casing every runtime's request database uses.
+  // A query builder over a column needs the request database's snake_case.
   const db = drizzle(d1, { casing: "snake_case" });
   return {
     drizzle: db,

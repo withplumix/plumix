@@ -617,13 +617,17 @@ async up({ db }) {
 }];
 `;
 
-    test("a plugin with no tables renames a settings key, and a second run reports it up to date without running it", async () => {
+    // A migrated database holding `flags.beta_enabled`, and the plugin whose
+    // data migration renames it.
+    async function siteWithBetaFlag() {
       await migrateCommand.run(applyCtx([]));
       insertSetting("flags", "beta_enabled", "true");
       installDataMigrations("@acme/plugin-flags", RENAME_BETA);
-      const plugins = [
-        dataPlugin("flags", "@acme/plugin-flags/data-migrations"),
-      ];
+      return [dataPlugin("flags", "@acme/plugin-flags/data-migrations")];
+    }
+
+    test("a plugin with no tables renames a settings key", async () => {
+      const plugins = await siteWithBetaFlag();
       const lines: string[] = [];
       vi.spyOn(report, "info").mockImplementation((line) => lines.push(line));
       vi.spyOn(report, "success").mockImplementation((line) =>
@@ -642,7 +646,13 @@ async up({ db }) {
         "@acme/plugin-flags: applied 1 data migration",
         "  applied rename-beta",
       ]);
-      lines.length = 0;
+    });
+
+    test("a second run reports a data migration up to date without running it", async () => {
+      const plugins = await siteWithBetaFlag();
+      await migrateCommand.run(applyCtx([], plugins));
+      const lines: string[] = [];
+      vi.spyOn(report, "info").mockImplementation((line) => lines.push(line));
 
       await migrateCommand.run(applyCtx([], plugins));
 
@@ -653,6 +663,7 @@ async up({ db }) {
         { value: "1" },
       ]);
     });
+
     test("every owner's schema migrations finish before any data migration starts", async () => {
       installDataMigrations(
         "@acme/plugin-seed",
@@ -714,7 +725,9 @@ async up({ db }) {
         "site: applied 3 data migrations",
       ]);
     });
-    test("a throwing up fails naming its owner and name, records nothing, runs nothing after it, and the next run retries it", async () => {
+    // `broken` throws until the `fixed` setting exists; `first` and `after`
+    // are its neighbours in the plugin's list, `site1` is the site's.
+    function siteWithBrokenMigration() {
       const failing = `export default [
   { name: "first", async up({ db }) {
     await db.run("CREATE TABLE IF NOT EXISTS runs (n integer PRIMARY KEY AUTOINCREMENT, name text NOT NULL)");
@@ -733,14 +746,19 @@ async up({ db }) {
         [],
         [dataPlugin("flags", "@acme/plugin-flags/data-migrations")],
       );
-      const run = () =>
-        migrateCommand.run({
+      return async () => {
+        await migrateCommand.run({
           ...ctx,
           app: {
             ...ctx.app,
             config: { ...ctx.app.config, dataMigrations: "./site-data.mjs" },
           },
         });
+      };
+    }
+
+    test("a throwing up fails naming its owner and name", async () => {
+      const run = siteWithBrokenMigration();
 
       await expect(run()).rejects.toMatchObject({
         code: "migrate_data_failed",
@@ -748,14 +766,26 @@ async up({ db }) {
           /@acme\/plugin-flags.+"broken".+the flag is gone/,
         ) as unknown,
       });
+    });
+
+    test("a throwing up is not recorded and nothing after it runs", async () => {
+      const run = siteWithBrokenMigration();
+
+      await run().catch(() => undefined);
+
       expect(query("SELECT name FROM runs ORDER BY n")).toEqual([
         { name: "first" },
       ]);
       expect(query(`SELECT owner, name FROM __plumix_data_migrations`)).toEqual(
         [{ owner: "@acme/plugin-flags", name: "first" }],
       );
+    });
 
+    test("the next run applies a failed data migration once its cause is fixed", async () => {
+      const run = siteWithBrokenMigration();
+      await run().catch(() => undefined);
       insertSetting("flags", "fixed", "true");
+
       await run();
 
       expect(query("SELECT name FROM runs ORDER BY n")).toEqual(
@@ -938,9 +968,13 @@ export default [
 ];
 `;
 
-    test("the server applies every owner's schema, then the bundle's data migrations, and a second start runs nothing", async () => {
+    async function buildRename(): Promise<string> {
       writeFileSync(join(dir, "site-data.ts"), RENAME);
-      const serverDir = await build({ dataMigrations: "./site-data.ts" });
+      return build({ dataMigrations: "./site-data.ts" });
+    }
+
+    test("the server applies every owner's schema, then the bundle's data migrations", async () => {
+      const serverDir = await buildRename();
       const lines: string[] = [];
       vi.spyOn(report, "success").mockImplementation((line) =>
         lines.push(line),
@@ -956,7 +990,12 @@ export default [
         "@acme/plugin-widgets: applied 1 migration",
         "site: applied 1 data migration",
       ]);
-      lines.length = 0;
+    });
+
+    test("a second start of the server reports the bundle's data migrations up to date and runs nothing", async () => {
+      const serverDir = await buildRename();
+      await serve(serverDir);
+      const lines: string[] = [];
       vi.spyOn(report, "info").mockImplementation((line) => lines.push(line));
 
       await serve(serverDir);

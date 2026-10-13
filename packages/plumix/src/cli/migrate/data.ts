@@ -67,8 +67,8 @@ export async function applyDataMigrations(
   owners: readonly DataMigrationOwner[],
 ): Promise<void> {
   assertUniqueNames(owners);
-  // A site none of whose owners declares any gets no tracking table.
-  if (owners.every(({ migrations }) => migrations.length === 0)) return;
+  const declaresAny = owners.some(({ migrations }) => migrations.length > 0);
+  if (!declaresAny) return;
   await db.batch([
     {
       sql: `CREATE TABLE IF NOT EXISTS "${DATA_MIGRATIONS_TABLE}" (owner text NOT NULL, name text NOT NULL, applied_at integer NOT NULL, PRIMARY KEY (owner, name))`,

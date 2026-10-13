@@ -61,30 +61,36 @@ async function built(): Promise<unknown> {
 }
 
 describe("the data-migrations bundle a build ships beside the server", () => {
-  test("lists the plugin's and the site's data migrations under their owners, in run order, and warns of nothing", async () => {
+  const pluginAndSiteMigrations = () => {
     installPlugin("@acme/plugin-flags", migrations("rename-beta", "backfill"));
     writeFileSync(join(dir, "data-migrations.ts"), migrations("seed"));
-    const warn = vi.spyOn(console, "warn");
-    const log = vi.spyOn(console, "log");
+    return site({
+      plugins: [
+        {
+          id: "flags",
+          setup: () => undefined,
+          dataMigrations: "@acme/plugin-flags/data-migrations",
+        },
+      ],
+      dataMigrations: "./data-migrations.ts",
+    });
+  };
 
-    await buildDataMigrations(
-      site({
-        plugins: [
-          {
-            id: "flags",
-            setup: () => undefined,
-            dataMigrations: "@acme/plugin-flags/data-migrations",
-          },
-        ],
-        dataMigrations: "./data-migrations.ts",
-      }),
-      SERVER,
-    );
+  test("lists the plugin's and the site's data migrations under their owners, in run order", async () => {
+    await buildDataMigrations(pluginAndSiteMigrations(), SERVER);
 
     expect(await built()).toEqual([
       { owner: "@acme/plugin-flags", names: ["rename-beta", "backfill"] },
       { owner: "site", names: ["seed"] },
     ]);
+  });
+
+  test("builds the plugin's and the site's data migrations without printing anything", async () => {
+    const warn = vi.spyOn(console, "warn");
+    const log = vi.spyOn(console, "log");
+
+    await buildDataMigrations(pluginAndSiteMigrations(), SERVER);
+
     expect([...warn.mock.calls, ...log.mock.calls]).toEqual([]);
   });
 
