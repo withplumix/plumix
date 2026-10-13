@@ -357,3 +357,164 @@ describe("a sign-in method's redirectTo", () => {
     expect(response.headers.get("location")).toBe("/blog/_plumix/admin");
   });
 });
+
+describe("a sign-in method's kernel", () => {
+  const seen: { input?: unknown; spyCallsAtAfterSession?: number } = {};
+  let spyCalls: () => number = () => 0;
+
+  const probe = defineAuthMethod({
+    name: "probe",
+    label: "Probe",
+    routes: {
+      input: {
+        method: "POST",
+        formPost: true,
+        handler: async (auth) => {
+          seen.input = await auth.readInput();
+          return auth.notice("read");
+        },
+      },
+      "account/:id": {
+        method: "POST",
+        handler: (auth) =>
+          auth.proveIdentity(
+            { userId: Number(auth.params.id) },
+            {
+              afterSession: () => {
+                seen.spyCallsAtAfterSession = spyCalls();
+              },
+            },
+          ),
+      },
+    },
+  });
+
+  function probeSite(): TestConfigInput {
+    return {
+      plugins: [
+        definePlugin("probe-plugin", {
+          setup: () => undefined,
+          authMethods: [probe],
+        }),
+      ],
+    };
+  }
+
+  function probeRequest(path: string, init: RequestInit): Request {
+    return new Request(`https://cms.example/_plumix/auth/probe/${path}`, init);
+  }
+
+  test("reads a form post's urlencoded fields as strings", async () => {
+    const h = await createDispatcherHarness({ config: probeSite() });
+
+    await h.dispatch(
+      probeRequest("input", {
+        method: "POST",
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+          origin: "https://cms.example",
+        },
+        body: "email=a%40b.example&redirectTo=%2Faccount",
+      }),
+    );
+
+    expect(seen.input).toEqual({
+      email: "a@b.example",
+      redirectTo: "/account",
+    });
+  });
+
+  test("reads a multipart form post's fields and drops its files", async () => {
+    const h = await createDispatcherHarness({ config: probeSite() });
+    const body = new FormData();
+    body.set("email", "a@b.example");
+    body.set("upload", new File(["x"], "x.txt"));
+
+    await h.dispatch(
+      probeRequest("input", {
+        method: "POST",
+        headers: { origin: "https://cms.example" },
+        body,
+      }),
+    );
+
+    expect(seen.input).toEqual({ email: "a@b.example" });
+  });
+
+  test("reads a fetch's JSON body", async () => {
+    const h = await createDispatcherHarness({ config: probeSite() });
+
+    await h.dispatch(
+      probeRequest("input", {
+        method: "POST",
+        headers: { "x-plumix-request": "1" },
+        body: JSON.stringify({ email: "a@b.example" }),
+      }),
+    );
+
+    expect(seen.input).toEqual({ email: "a@b.example" });
+  });
+
+  test("reads null when the body doesn't parse", async () => {
+    const h = await createDispatcherHarness({ config: probeSite() });
+
+    await h.dispatch(
+      probeRequest("input", {
+        method: "POST",
+        headers: { "x-plumix-request": "1" },
+        body: "not json",
+      }),
+    );
+
+    expect(seen.input).toBeNull();
+  });
+
+  test("runs afterSession after the session exists and before user:signed_in", async () => {
+    const h = await createDispatcherHarness({ config: probeSite() });
+    const user = await h.factory.user.create({ email: "alice@example.com" });
+    const spy = h.spyAction("user:signed_in");
+    spyCalls = () => spy.callCount;
+
+    const response = await h.dispatch(
+      probeRequest(`account/${user.id}`, {
+        method: "POST",
+        headers: { "x-plumix-request": "1" },
+      }),
+    );
+
+    expect(response.headers.get("set-cookie")).toMatch(/^plumix_session=/);
+    expect(seen.spyCallsAtAfterSession).toBe(0);
+    spy.assertCalledOnce();
+    expect(spy.lastArgs?.[1]).toEqual({ method: "probe", firstSignIn: false });
+  });
+
+  test("refuses an account proof whose user is gone as 403 link_broken", async () => {
+    const h = await createDispatcherHarness({ config: probeSite() });
+
+    const response = await h.dispatch(
+      probeRequest("account/987654", {
+        method: "POST",
+        headers: { "x-plumix-request": "1" },
+      }),
+    );
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: "link_broken" });
+  });
+
+  test("refuses an account proof for a disabled user as 403 account_disabled", async () => {
+    const h = await createDispatcherHarness({ config: probeSite() });
+    const user = await h.factory.user.create({ disabledAt: new Date() });
+
+    const response = await h.dispatch(
+      probeRequest(`account/${user.id}`, {
+        method: "POST",
+        headers: { "x-plumix-request": "1" },
+      }),
+    );
+
+    expect(response.status).toBe(403);
+    expect(response.headers.get("set-cookie")).toBeNull();
+    expect(await response.json()).toEqual({ error: "account_disabled" });
+  });
+});
