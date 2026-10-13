@@ -14,7 +14,6 @@ export const RETIRED_TIER_PENDING: readonly string[] = [
   "packages/admin-editor/src/editor-toolbar.browser.test.tsx",
   "packages/admin-editor/src/json-inspector.browser.test.tsx",
   "packages/admin-editor/src/layers-tab.browser.test.tsx",
-  "packages/admin-editor/src/mount.browser.test.tsx",
   "packages/admin-editor/src/plumix-editor.browser.test.tsx",
   "packages/admin-editor/src/rich-text-field.browser.test.tsx",
   "packages/admin-editor/src/selection-toolbar.browser.test.tsx",
