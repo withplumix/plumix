@@ -20,7 +20,7 @@ describe("CardPreviewPanel", () => {
     expect(html).toContain("Save the entry to see how it will be shared.");
   });
 
-  test("offers no refresh a read-only form would honour", () => {
+  test("a read-only form disables the refresh button", () => {
     const client = new QueryClient();
     client.setQueryData(["og", "card-preview", 7], {
       outcome: "card",
@@ -36,8 +36,8 @@ describe("CardPreviewPanel", () => {
       </I18nProvider>,
     );
 
-    expect(
-      /<button[^>]*data-testid="preview-refresh"[^>]*>/.exec(html)?.[0],
-    ).toContain('disabled=""');
+    expect(html).toMatch(
+      /<button(?=[^>]*data-testid="preview-refresh")(?=[^>]*disabled="")/,
+    );
   });
 });

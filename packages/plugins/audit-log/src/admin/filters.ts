@@ -21,11 +21,7 @@ export const EMPTY_FILTERS: FilterState = {
   eventPrefix: "",
 };
 
-/**
- * Filter state in `window.location.search` enables reload + shared-link
- * hydration. Empty fields are skipped so EMPTY_FILTERS produces a clean URL
- * instead of `?preset=all&actorId=&...`.
- */
+/** Empty fields are skipped, so EMPTY_FILTERS gives a clean URL, not `?preset=all&actorId=&...`. */
 export function filtersToSearchParams(state: FilterState): URLSearchParams {
   const params = new URLSearchParams();
   if (state.preset !== "all") params.set("preset", state.preset);

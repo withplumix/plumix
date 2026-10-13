@@ -136,7 +136,7 @@ describe("maxDepthRejected", () => {
 });
 
 describe("pickerPanelFor", () => {
-  test("a plugin lookup kind's tab shows the unavailable panel and never searches", () => {
+  test("a plugin lookup kind's tab shows the unavailable panel", () => {
     expect(pickerPanelFor({ kind: "media", tabLabel: "Media" })).toEqual({
       panel: "unsupported",
     });
@@ -201,7 +201,7 @@ describe("pickerChoice", () => {
     });
   });
 
-  test("each add of a result is announced as an add, however often it repeats", () => {
+  test("adding a result is announced as an add", () => {
     expect(
       pickerChoice("entry", { id: "11", label: "About us" }, null).announcement,
     ).toMatchObject({ message: "Added {label} to the menu" });

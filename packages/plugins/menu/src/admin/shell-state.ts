@@ -4,10 +4,7 @@ import { ORPCError } from "@orpc/client";
 import type { EditorAction, EditorItem, ItemKey } from "./editor-state.js";
 import type { LinkTarget, MenuListItem, PickerTab } from "./queries.js";
 
-/**
- * Plain descriptor literals, resolved at the consume site via
- * `useLingui()._()`.
- */
+/** Plain literals: the package builds with plain `tsc`, no Lingui macro pass. */
 const M = {
   addedAnnouncement: {
     id: "plugin.menu.itemEditor.addedAnnouncement",
@@ -44,7 +41,6 @@ export const UNASSIGNED_VALUE = "__unassigned__";
 
 export type MenusPageState = "loading" | "empty" | "ready";
 
-/** `empty` still shows the page, with the create-first-menu CTA under it. */
 export function menusPageState(menus: {
   readonly isLoading: boolean;
   readonly data: readonly MenuListItem[] | undefined;
@@ -61,10 +57,6 @@ export function boundMenuSlug(
   return menus.find((menu) => menu.id === boundTermId)?.slug ?? null;
 }
 
-/**
- * A settings-panel checkbox: checked when the location is bound to this menu,
- * and the `termSlug` a click sends to flip it.
- */
 export function locationCheckbox(
   boundTermId: number | null,
   termId: number,
