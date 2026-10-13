@@ -3,16 +3,10 @@
 import type { IslandProps } from "plumix/blocks";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
-import { useIsLive } from "plumix/blocks/renderer";
-import { labelSourceText } from "plumix/i18n";
+import { useIsLive, useSingleFlight } from "plumix/blocks/renderer";
 
-import type {
-  CommentFormError,
-  CommentFormValues,
-  CommentStatus,
-} from "../types.js";
-import { HELD, POSTED } from "../messages.js";
-import { postComment } from "../wire.js";
+import type { CommentFormError, CommentFormValues } from "../types.js";
+import { confirmationFor, postComment } from "../wire.js";
 import { CommentMarkup } from "./comment-markup.js";
 
 interface CommentIslandProps {
@@ -23,13 +17,6 @@ interface CommentIslandProps {
   readonly idBase: string;
   readonly requireEmail: boolean;
 }
-
-/**
- * A held comment isn't in the thread yet, so "posted" would read as lost.
- * Spam and trash get the held message: the filing isn't the sender's to learn.
- */
-const confirmationFor = (status: CommentStatus): string =>
-  labelSourceText(status === "approved" ? POSTED : HELD);
 
 const readValues = (form: HTMLFormElement): CommentFormValues => {
   const data = new FormData(form);
@@ -61,10 +48,6 @@ export function CommentIsland({
   const summary = useRef<HTMLDivElement>(null);
   const confirmed = useRef<HTMLDivElement>(null);
 
-  // A ref, not `busy` state: a second press in the same tick reads stale state
-  // and would insert two rows.
-  const inFlight = useRef(false);
-
   // Focus follows the outcome for screen readers. Every failure sets a fresh
   // array, so a repeat failure moves focus again.
   useEffect(() => {
@@ -74,9 +57,9 @@ export function CommentIsland({
     if (confirmation !== null) confirmed.current?.focus();
   }, [confirmation]);
 
-  async function submit(form: HTMLFormElement): Promise<void> {
-    if (inFlight.current) return;
-    inFlight.current = true;
+  // Guarded, not left to `busy`: a second press in the same tick reads
+  // stale state and would insert two rows.
+  const submit = useSingleFlight(async (form: HTMLFormElement) => {
     setBusy(true);
     try {
       const answer = await postComment(action, {
@@ -91,10 +74,9 @@ export function CommentIsland({
       }
       setErrors(answer.errors);
     } finally {
-      inFlight.current = false;
       setBusy(false);
     }
-  }
+  });
 
   if (confirmation !== null) {
     return (

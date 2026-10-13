@@ -312,7 +312,7 @@ msgid "plugin.forms.inbox.detail.bound"
 msgstr "Bound to"
 
 #. js-lingui-explicit-id
-#: src/admin/SubmissionsShell.tsx
+#: src/admin/table.ts
 msgid "plugin.forms.inbox.detail.boundValue"
 msgstr "{type, select, term {Term} author {Author} other {Entry}} #{id}"
 

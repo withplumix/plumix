@@ -45,7 +45,13 @@ import {
   useSubmissionCounts,
   useSubmissions,
 } from "./queries.js";
-import { formFilterOptions } from "./table.js";
+import {
+  boundLabel,
+  countFor,
+  detailViewState,
+  formFilterOptions,
+  inboxViewState,
+} from "./table.js";
 
 /**
  * Radix Select forbids an empty-string item value, so "every form"
@@ -103,17 +109,6 @@ const EXPORT_FORMATS = [
   { format: "json", label: M.exportJson },
 ] as const;
 
-/**
- * A form may be called `constructor`; a bare index would return an
- * inherited function, which React throws on.
- */
-function countFor(
-  counts: Readonly<Record<string, number>> | undefined,
-  key: string,
-): number {
-  return counts && Object.hasOwn(counts, key) ? (counts[key] ?? 0) : 0;
-}
-
 function useAnswerWords(): AnswerWords {
   const { i18n } = useLingui();
   return { yes: i18n._(M.yes), no: i18n._(M.no) };
@@ -130,6 +125,7 @@ export function SubmissionsShell(): ReactNode {
 
   const rows = list.data?.pages.flatMap((page) => page.submissions) ?? [];
   const columns = submissionColumns(rows, MAX_COLUMNS);
+  const view = inboxViewState(list, rows);
   const words = useAnswerWords();
 
   const formOptions = formFilterOptions(
@@ -242,9 +238,9 @@ export function SubmissionsShell(): ReactNode {
         </div>
       </div>
 
-      {list.isLoading ? (
+      {view === "loading" ? (
         <div data-testid="forms-submissions-loading" />
-      ) : list.error instanceof Error ? (
+      ) : view === "error" ? (
         <p
           data-testid="forms-submissions-error"
           className="text-destructive text-sm"
@@ -254,7 +250,7 @@ export function SubmissionsShell(): ReactNode {
             message="Failed to load submissions"
           />
         </p>
-      ) : rows.length === 0 ? (
+      ) : view === "empty" ? (
         <p
           data-testid="forms-submissions-empty"
           className="text-muted-foreground text-sm"
@@ -392,7 +388,7 @@ function SubmissionDetail({
   const setStatus = useSetSubmissionStatus();
   const setNote = useSetSubmissionNote();
   const remove = useDeleteSubmission();
-  const row = submission.data;
+  const detail = detailViewState(submission);
   // One line for whichever write failed: three buttons and a save that
   // silently re-enable are indistinguishable from three that worked.
   const failure = setStatus.error ?? setNote.error ?? remove.error;
@@ -404,7 +400,7 @@ function SubmissionDetail({
     [failure],
   );
 
-  if (submission.isLoading) {
+  if (detail.kind === "loading") {
     return (
       <aside
         data-testid="forms-detail-loading"
@@ -412,7 +408,7 @@ function SubmissionDetail({
       />
     );
   }
-  if (!row) {
+  if (detail.kind === "gone") {
     return (
       <aside
         data-testid="forms-detail-gone"
@@ -436,6 +432,8 @@ function SubmissionDetail({
       </aside>
     );
   }
+  const { row } = detail;
+  const bound = boundLabel(row.bound);
   return (
     <aside
       data-testid="forms-detail"
@@ -493,7 +491,10 @@ function SubmissionDetail({
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel disabled={remove.isPending}>
+                <AlertDialogCancel
+                  data-testid="forms-detail-delete-cancel"
+                  disabled={remove.isPending}
+                >
                   <Trans id="plugin.forms.inbox.cancel" message="Cancel" />
                 </AlertDialogCancel>
                 <AlertDialogAction
@@ -577,15 +578,7 @@ function SubmissionDetail({
           <Trans id="plugin.forms.inbox.detail.bound" message="Bound to" />
         </dt>
         <dd data-testid="forms-detail-bound">
-          {row.bound ? (
-            <Trans
-              id="plugin.forms.inbox.detail.boundValue"
-              message="{type, select, term {Term} author {Author} other {Entry}} #{id}"
-              values={{ type: row.bound.type, id: row.bound.id }}
-            />
-          ) : (
-            NONE
-          )}
+          {bound === null ? NONE : i18n._(bound)}
         </dd>
         <dt>
           <Trans id="plugin.forms.inbox.detail.ipHash" message="IP hash" />

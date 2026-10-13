@@ -3,7 +3,11 @@ import { CSRF_HEADER_NAME, CSRF_HEADER_VALUE } from "plumix/blocks";
 import { labelSourceText } from "plumix/i18n";
 import * as v from "valibot";
 
+import type { SubmittedValues } from "./answers.js";
+import type { FormWire } from "./define-form.js";
 import type { FormFieldError, FormSubmitResponse } from "./types.js";
+import { writeSubmittedValues } from "./answers.js";
+import { FORM_SLUG_FIELD, TOKEN_FIELD } from "./contract.js";
 import { UNREACHABLE } from "./messages.js";
 
 /**
@@ -70,22 +74,48 @@ export async function postSubmission(
   }
 }
 
+/**
+ * The body the rendered form would post for these answers. An omitted
+ * field falls back to its declared default.
+ */
+export function submissionBody(
+  wire: FormWire,
+  answers: SubmittedValues,
+  token: string | null,
+): URLSearchParams {
+  const body = writeSubmittedValues(wire.fields, answers);
+  body.set(FORM_SLUG_FIELD, wire.slug);
+  if (token !== null) body.set(TOKEN_FIELD, token);
+  return body;
+}
+
+/**
+ * Null when the endpoint would not issue one: the form then submits
+ * untimed, like any no-JavaScript submission.
+ */
+export async function fetchTimingToken(
+  tokenPath: string,
+  signal?: AbortSignal,
+): Promise<string | null> {
+  try {
+    const response = await fetch(tokenPath, {
+      headers: { accept: "application/json" },
+      signal,
+    });
+    const payload = v.safeParse(TokenResponse, await response.json());
+    return payload.success ? payload.output.token : null;
+  } catch {
+    return null;
+  }
+}
+
 export function useTimingToken(tokenPath: string): string | null {
   const [token, setToken] = useState<string | null>(null);
   useEffect(() => {
     const aborter = new AbortController();
-    void (async () => {
-      try {
-        const response = await fetch(tokenPath, {
-          headers: { accept: "application/json" },
-          signal: aborter.signal,
-        });
-        const payload = v.safeParse(TokenResponse, await response.json());
-        if (payload.success) setToken(payload.output.token);
-      } catch {
-        // Submits untimed, like any no-JavaScript submission.
-      }
-    })();
+    void fetchTimingToken(tokenPath, aborter.signal).then((fetched) => {
+      if (fetched !== null) setToken(fetched);
+    });
     return () => {
       aborter.abort();
     };

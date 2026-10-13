@@ -11,6 +11,10 @@ interface Fixtures {
   readonly pendingId: number;
   readonly bulkEntryId: number;
   readonly bulkIds: number[];
+  readonly detailEntryId: number;
+  readonly detailId: number;
+  readonly detailEmail: string;
+  readonly detailIpHash: string;
 }
 const fixtures = JSON.parse(
   readFileSync(resolve(process.cwd(), "e2e-fixtures.json"), "utf8"),
@@ -58,6 +62,24 @@ test("moderator bulk-approves selected comments", async ({ page }) => {
   await expect(
     page.getByTestId(`comment-row-${String(secondId)}`),
   ).toBeHidden();
+});
+
+test("moderator opens a comment and sees its author's email and IP hash", async ({
+  page,
+}) => {
+  await page.goto("pages/comments");
+  await page
+    .getByTestId("comments-entry-filter")
+    .fill(String(fixtures.detailEntryId));
+
+  await page.getByTestId(`comment-open-${String(fixtures.detailId)}`).click();
+
+  await expect(page.getByTestId("comment-detail-email")).toHaveText(
+    fixtures.detailEmail,
+  );
+  await expect(page.getByTestId("comment-detail-ip")).toHaveText(
+    fixtures.detailIpHash,
+  );
 });
 
 test("admin page ships styled controls", async ({ page }) => {

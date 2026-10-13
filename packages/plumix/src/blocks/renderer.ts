@@ -17,6 +17,7 @@ export {
   useIsPreview,
   usePlumixMode,
   useQueriedEntry,
+  useSingleFlight,
   useTokens,
   useUser,
   VISUALLY_HIDDEN_STYLE,

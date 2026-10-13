@@ -23,6 +23,7 @@ import type {
   SubmissionsPage,
 } from "../types.js";
 import { EXPORT_PATH } from "../contract.js";
+import { submissionsPageInput } from "./table.js";
 
 const rpc = createPluginRpcClient<SubmissionsRouter>("forms");
 
@@ -77,9 +78,7 @@ export function useSubmissions(
   return useInfiniteQuery({
     queryKey: [...SUBMISSIONS_KEY, "list", filter],
     queryFn: ({ pageParam }) =>
-      rpc.list(
-        pageParam === undefined ? filter : { ...filter, cursor: pageParam },
-      ),
+      rpc.list(submissionsPageInput(filter, pageParam)),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     // A filter change is a new query key. Without this the table blanks

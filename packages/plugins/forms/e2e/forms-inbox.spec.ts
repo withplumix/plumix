@@ -9,6 +9,7 @@ import { expect, test } from "plumix/test/playwright";
 interface Fixtures {
   readonly answeredId: number;
   readonly retiredId: number;
+  readonly doomedId: number;
 }
 const fixtures = JSON.parse(
   readFileSync(resolve(process.cwd(), "e2e-fixtures.json"), "utf8"),
@@ -89,4 +90,30 @@ test("an administrator exports what the filters name", async ({ page }) => {
   expect(body).toContain("What we used to ask");
   expect(body).toContain("Still readable");
   expect(body).not.toContain("Ada Lovelace");
+});
+
+test("an administrator deletes a submission only once they confirm", async ({
+  page,
+}) => {
+  await page.goto(INBOX);
+  await page.getByTestId("forms-form-filter").click();
+  await page.getByTestId("forms-form-filter-callback").click();
+  const id = String(fixtures.doomedId);
+  const row = page.getByTestId(`forms-submission-row-${id}`);
+  await page.getByTestId(`forms-open-${id}`).click();
+
+  // Backing out of the question deletes nothing.
+  await page.getByTestId("forms-detail-delete").click();
+  await page.getByTestId("forms-detail-delete-cancel").click();
+  await page.reload();
+  await page.getByTestId("forms-form-filter").click();
+  await page.getByTestId("forms-form-filter-callback").click();
+  await expect(row).toBeVisible();
+
+  await page.getByTestId(`forms-open-${id}`).click();
+  await page.getByTestId("forms-detail-delete").click();
+  await page.getByTestId("forms-detail-delete-confirm").click();
+
+  await expect(page.getByTestId("forms-detail")).toBeHidden();
+  await expect(row).toBeHidden();
 });

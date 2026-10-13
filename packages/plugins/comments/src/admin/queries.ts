@@ -27,6 +27,35 @@ export function useCommentCounts(): UseQueryResult<CommentsOutputs["counts"]> {
 
 type QueueFilters = Pick<CommentsInputs["list"], "search" | "entryId">;
 
+/**
+ * Blank filter boxes ask for nothing; an entry box that holds no number is
+ * as good as blank.
+ */
+export function queueFilters(
+  search: string,
+  entryFilter: string,
+): QueueFilters {
+  const entryId = Number.parseInt(entryFilter, 10);
+  return {
+    search: search.trim() || undefined,
+    entryId: Number.isFinite(entryId) ? entryId : undefined,
+  };
+}
+
+/** Which of its four states the moderation queue shows. */
+export type QueueView = "loading" | "error" | "empty" | "rows";
+
+export function queueView(
+  list: Pick<
+    UseQueryResult<readonly unknown[]>,
+    "isLoading" | "isError" | "data"
+  >,
+): QueueView {
+  if (list.isLoading) return "loading";
+  if (list.isError) return "error";
+  return (list.data ?? []).length === 0 ? "empty" : "rows";
+}
+
 export function useCommentList(
   status: CommentStatus,
   filters: QueueFilters = {},

@@ -3,7 +3,7 @@
 import type { IslandProps } from "plumix/blocks";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useIsLive } from "plumix/blocks/renderer";
+import { useIsLive, useSingleFlight } from "plumix/blocks/renderer";
 
 import type { FormWire } from "../define-form.js";
 import type { FormStep } from "../steps.js";
@@ -52,9 +52,6 @@ export function FormIsland({
   const [errors, setErrors] = useState<readonly FormFieldError[]>([]);
   const token = useTimingToken(tokenPath);
   const [busy, setBusy] = useState(false);
-  // A ref, not `busy`: a double Enter in one tick beats the re-render and
-  // would store two rows.
-  const inFlight = useRef(false);
   // Which rows each repeater is showing. Empty until the visitor adds or
   // removes one, so the first render is the markup the server sent.
   const [rows, setRows] = useState<FormRowState>({});
@@ -140,42 +137,40 @@ export function FormIsland({
     setMoves((count) => count + 1);
   }
 
-  async function submit(
-    posted: string,
-    posture: readonly FormStep[],
-  ): Promise<void> {
-    if (inFlight.current) return;
-    inFlight.current = true;
-    setBusy(true);
-    try {
-      const reply = await postSubmission(action, new URLSearchParams(posted));
-      if (reply === "unreachable") {
-        setErrors(unreachable);
-        return;
+  // Guarded, not left to `busy`: a double Enter in one tick beats the
+  // re-render and would store two rows.
+  const submit = useSingleFlight(
+    async (posted: string, posture: readonly FormStep[]): Promise<void> => {
+      setBusy(true);
+      try {
+        const reply = await postSubmission(action, new URLSearchParams(posted));
+        if (reply === "unreachable") {
+          setErrors(unreachable);
+          return;
+        }
+        if (reply.ok) {
+          clearProgress(key);
+          setConfirmation(reply.message);
+          return;
+        }
+        const failed = reply.errors;
+        setErrors(failed);
+        // The server answered, so the challenge it was sent is spent
+        // whether or not it was what the answer objected to.
+        setRefusals((count) => count + 1);
+        // A refused answer may be on an earlier step; show it so the
+        // summary links work, judged against the submitted steps.
+        const at = posture.findIndex((one) =>
+          one.fields.some((field) =>
+            failed.some((error) => error.field === field.key),
+          ),
+        );
+        keep({ step: at >= 0 ? at : step, body: posted });
+      } finally {
+        setBusy(false);
       }
-      if (reply.ok) {
-        clearProgress(key);
-        setConfirmation(reply.message);
-        return;
-      }
-      const failed = reply.errors;
-      setErrors(failed);
-      // The server answered, so the challenge it was sent is spent
-      // whether or not it was what the answer objected to.
-      setRefusals((count) => count + 1);
-      // A refused answer may be on an earlier step; show it so the
-      // summary links work, judged against the submitted steps.
-      const at = posture.findIndex((one) =>
-        one.fields.some((field) =>
-          failed.some((error) => error.field === field.key),
-        ),
-      );
-      keep({ step: at >= 0 ? at : step, body: posted });
-    } finally {
-      inFlight.current = false;
-      setBusy(false);
-    }
-  }
+    },
+  );
 
   // The answers so far with the step on screen folded in — what every
   // handler below reasons about, and what a reload is given back.
