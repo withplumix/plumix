@@ -37,7 +37,9 @@ import {
 import { Toggle } from "@plumix/admin-ui/toggle";
 import { HEADING_LEVELS } from "@plumix/core/blocks";
 
+import type { LinkChange } from "./link-edit.js";
 import type { RichTextExtensionOptions } from "./rich-text-extensions.js";
+import { applyLink, linkHrefAt, removeLink } from "./link-edit.js";
 import {
   allowsMark,
   allowsNode,
@@ -415,23 +417,15 @@ export function LinkPopover({
     if (next && editor) {
       const { from, to } = editor.state.selection;
       range.current = { from, to };
-      setHref((editor.getAttributes("link").href as string | undefined) ?? "");
+      setHref(linkHrefAt(editor.state));
     }
     setOpen(next);
   };
 
-  // `extendMarkRange` widens a caret inside a link to the whole link. An empty
-  // url removes it.
-  const applyHref = (url: string): void => {
+  const edit = (change: LinkChange): void => {
     if (!editor || !range.current) return;
-    const chain = editor
-      .chain()
-      .focus()
-      .setTextSelection(range.current)
-      .extendMarkRange("link");
-    if (url) chain.setMark("link", { href: url });
-    else chain.unsetMark("link");
-    chain.run();
+    editor.view.dispatch(change(editor.state, range.current));
+    editor.commands.focus();
     setOpen(false);
   };
 
@@ -455,7 +449,8 @@ export function LinkPopover({
           data-testid={`${testId}-link-form`}
           onSubmit={(e) => {
             e.preventDefault();
-            applyHref(href.trim());
+            const url = href.trim();
+            edit((state, range) => applyLink(state, range, url));
           }}
         >
           <Input
@@ -483,7 +478,7 @@ export function LinkPopover({
               data-testid={`${testId}-link-remove`}
               title="Remove link"
               aria-label="Remove link"
-              onClick={() => applyHref("")}
+              onClick={() => edit(removeLink)}
             >
               <Trash2 />
             </Button>
