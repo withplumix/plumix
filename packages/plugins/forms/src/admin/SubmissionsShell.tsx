@@ -491,7 +491,10 @@ function SubmissionDetail({
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel disabled={remove.isPending}>
+                <AlertDialogCancel
+                  data-testid="forms-detail-delete-cancel"
+                  disabled={remove.isPending}
+                >
                   <Trans id="plugin.forms.inbox.cancel" message="Cancel" />
                 </AlertDialogCancel>
                 <AlertDialogAction

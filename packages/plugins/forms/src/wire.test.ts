@@ -1,8 +1,10 @@
 import type { Mock } from "vitest";
 import { CSRF_HEADER_NAME, CSRF_HEADER_VALUE } from "plumix/blocks";
+import { email, text, toggle } from "plumix/fields";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import { postSubmission } from "./wire.js";
+import { defineForm, toFormWire } from "./define-form.js";
+import { fetchTimingToken, postSubmission, submissionBody } from "./wire.js";
 
 type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -80,5 +82,73 @@ describe("postSubmission", () => {
     await expect(
       postSubmission("/submit", new URLSearchParams()),
     ).resolves.toBe("unreachable");
+  });
+});
+
+const subscribe = toFormWire(
+  defineForm("subscribe", {
+    fields: [
+      email("email").required(),
+      text("name"),
+      toggle("weekly").default(true),
+    ],
+  }),
+);
+
+describe("submissionBody", () => {
+  test("names the form the answers are for", () => {
+    const body = submissionBody(subscribe, { email: "ada@example.test" }, null);
+
+    expect(body.get("__plumix_form")).toBe("subscribe");
+    expect(body.get("email")).toBe("ada@example.test");
+  });
+
+  // Without the empty answer a checkbox posts beside itself, a toggle
+  // switched off would read as its default, which is on.
+  test("posts a toggle switched off as the rendered form would", () => {
+    const body = submissionBody(
+      subscribe,
+      { email: "ada@example.test", weekly: false },
+      null,
+    );
+
+    expect(body.getAll("weekly")).toEqual([""]);
+  });
+
+  test("carries the timing token it was handed", () => {
+    const body = submissionBody(
+      subscribe,
+      { email: "ada@example.test" },
+      "t-1",
+    );
+
+    expect(body.get("__plumix_token")).toBe("t-1");
+  });
+
+  test("submits untimed without a token", () => {
+    const body = submissionBody(subscribe, { email: "ada@example.test" }, null);
+
+    expect(body.has("__plumix_token")).toBe(false);
+  });
+});
+
+describe("fetchTimingToken", () => {
+  test("resolves to the token the endpoint issued", async () => {
+    const fetchMock = answering(Promise.resolve(json({ token: "t-1" })));
+
+    await expect(fetchTimingToken("/_plumix/forms/token")).resolves.toBe("t-1");
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/_plumix/forms/token");
+  });
+
+  test("resolves to null when the request never lands", async () => {
+    answering(Promise.reject(new Error("offline")));
+
+    await expect(fetchTimingToken("/_plumix/forms/token")).resolves.toBeNull();
+  });
+
+  test("resolves to null when the answer is not a token", async () => {
+    answering(Promise.resolve(json({ ok: true, message: "Thanks." })));
+
+    await expect(fetchTimingToken("/_plumix/forms/token")).resolves.toBeNull();
   });
 });

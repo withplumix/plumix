@@ -73,9 +73,21 @@ export default async function globalSetup(): Promise<void> {
     handlerError: "SMTP refused",
   });
 
+  // The delete spec's own row, under a slug nothing else submits to, so the
+  // inbox filtered to it shows this row alone.
+  const doomed = await seed.create({
+    form: "callback",
+    answers: { phone: "555-0100" },
+    labels: { phone: { label: "Phone" } },
+  });
+
   await writeFile(
     resolve(process.cwd(), "e2e-fixtures.json"),
-    JSON.stringify({ answeredId: answered.id, retiredId: retired.id }),
+    JSON.stringify({
+      answeredId: answered.id,
+      retiredId: retired.id,
+      doomedId: doomed.id,
+    }),
     "utf8",
   );
 }

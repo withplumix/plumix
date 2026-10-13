@@ -11,6 +11,10 @@ const OLDER_PAGES_SLUG = "older-comments";
 /** Three pages at the playground's `rootsPerPage` of 2, the last holding one. */
 const OLDER_PAGES_ROOTS = 5;
 const MAGIC_LINK_EMAIL = "magic@example.test";
+const ISLAND_SLUG = "comment-with-javascript";
+const ISLAND_EMAIL = "lin@example.test";
+const DETAIL_EMAIL = "hedy@example.test";
+const DETAIL_IP_HASH = "5f1e0c9a";
 
 /**
  * Seeding from a spec races the live worker for the D1 write lock and
@@ -82,6 +86,37 @@ export default async function globalSetup(): Promise<void> {
     });
   }
 
+  // The island spec's post. Its address already has an approved comment,
+  // so the `first_time` policy approves what the spec posts.
+  const island = await factories.entry.create({
+    type: "post",
+    title: "Comment with JavaScript",
+    slug: ISLAND_SLUG,
+    authorId: author.id,
+    status: "published",
+  });
+  await seed.create({
+    entryId: island.id,
+    status: "approved",
+    authorName: "Lin",
+    authorEmail: ISLAND_EMAIL,
+    bodyMd: "already approved",
+  });
+
+  // On an entry of its own, so the detail spec can filter the queue to it.
+  const detailEntry = await factories.entry.create({
+    type: "post",
+    title: "Detail target",
+    authorId: author.id,
+    status: "published",
+  });
+  const detail = await seed.create({
+    entryId: detailEntry.id,
+    status: "pending",
+    authorEmail: DETAIL_EMAIL,
+    ipHash: DETAIL_IP_HASH,
+  });
+
   const bulkEntry = await factories.entry.create({
     type: "post",
     title: "Bulk target",
@@ -104,6 +139,12 @@ export default async function globalSetup(): Promise<void> {
       bulkIds: [first.id, second.id],
       olderPagesSlug: OLDER_PAGES_SLUG,
       magicLinkEmail: MAGIC_LINK_EMAIL,
+      islandSlug: ISLAND_SLUG,
+      islandEmail: ISLAND_EMAIL,
+      detailEntryId: detailEntry.id,
+      detailId: detail.id,
+      detailEmail: DETAIL_EMAIL,
+      detailIpHash: DETAIL_IP_HASH,
     }),
     "utf8",
   );
