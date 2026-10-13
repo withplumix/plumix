@@ -6,8 +6,6 @@ import {
   storedJson,
 } from "./rich-text-stored.js";
 
-// The editor keeps an empty paragraph after a trailing block so the caret can
-// leave it; it is not the author's.
 describe("storedHtml", () => {
   test("a heading stores no trailing empty paragraph", () => {
     expect(storedHtml("<h2>Hi</h2><p></p>")).toBe("<h2>Hi</h2>");

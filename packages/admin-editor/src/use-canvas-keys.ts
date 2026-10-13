@@ -70,8 +70,6 @@ export function useCanvasKeys({
       store,
       camera,
       zoomToSelection,
-      // A press forwarded from the canvas is replayed where the sidebar
-      // listens.
       togglePanels: () =>
         window.dispatchEvent(
           new KeyboardEvent("keydown", { key: "b", metaKey: true }),

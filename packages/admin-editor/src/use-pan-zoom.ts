@@ -86,8 +86,6 @@ export function usePanZoom({
   const [gesturing, setGesturing] = useState(false);
   const gestureRef = useRef<LiveView | null>(null);
 
-  // The transform goes straight to the DOM (no render), tracked in the ref,
-  // and the store gets one commit when the gesture idles.
   useEffect(() => {
     const gesture = createLiveView({
       settleMs: 150,
@@ -105,13 +103,11 @@ export function usePanZoom({
     });
     gestureRef.current = gesture;
     return () => {
-      // Don't leave a pending commit dangling on unmount.
       gesture.cancel();
       gestureRef.current = null;
     };
   }, [camera]);
 
-  // Commit the live gesture view to the store (one render) and end the gesture.
   const commitLive = useCallback((): void => gestureRef.current?.settle(), []);
 
   const applyLive = useCallback((view: View): void => {

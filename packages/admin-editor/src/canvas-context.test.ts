@@ -15,11 +15,8 @@ describe("canvasContextValue", () => {
   test("renders at the page's locale until the host's config arrives", () => {
     const value = canvasContextValue(props, undefined);
 
-    expect([value.mode, value.locale, value.catalog]).toEqual([
-      "edit",
-      "en",
-      undefined,
-    ]);
+    expect(value).toMatchObject({ mode: "edit", locale: "en" });
+    expect(value.catalog).toBeUndefined();
   });
 
   test("renders at the host's locale with its pushed catalog", () => {
@@ -27,10 +24,6 @@ describe("canvasContextValue", () => {
 
     const value = canvasContextValue(props, { locale: "de", catalog });
 
-    expect([value.mode, value.locale, value.catalog]).toEqual([
-      "edit",
-      "de",
-      catalog,
-    ]);
+    expect(value).toMatchObject({ mode: "edit", locale: "de", catalog });
   });
 });

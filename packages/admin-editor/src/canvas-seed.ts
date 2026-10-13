@@ -17,8 +17,8 @@ export interface CanvasSeedEmbeds {
 }
 
 /**
- * The SSR embeds what the canvas, a fresh React tree with no server context,
- * would otherwise have to guess; `parseRenderEnv` says what and why.
+ * What the SSR render embedded, which the canvas, a fresh React tree with no
+ * server context, would otherwise have to guess.
  */
 export type CanvasSeed = RenderEnv & {
   readonly initialTree: readonly BlockNode[];

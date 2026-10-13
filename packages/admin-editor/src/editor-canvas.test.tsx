@@ -95,10 +95,8 @@ describe("EditorCanvas", () => {
     ])("%s", (_, body, rendered) => {
       const [server, canvas] = serverThenCanvas(body);
 
-      expect([server.includes(rendered), canvas.includes(rendered)]).toEqual([
-        true,
-        true,
-      ]);
+      expect(server).toContain(rendered);
+      expect(canvas).toContain(rendered);
     });
   });
 

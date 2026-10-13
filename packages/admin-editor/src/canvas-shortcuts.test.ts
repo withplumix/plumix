@@ -27,6 +27,58 @@ describe("runCanvasShortcut", () => {
     expect(store.getState().tree.map((node) => node.id)).toEqual(["b"]);
   });
 
+  test("history.undo and history.redo step through the edits", () => {
+    const store = createEditorStore(treeBlocks, {
+      tree: [{ id: "a", name: "core/x" }],
+    });
+    const deps = {
+      store,
+      camera: createCameraStore(),
+      zoomToSelection: noop,
+      togglePanels: noop,
+    };
+    store.getState().select("a");
+    store.getState().removeSelected();
+
+    runCanvasShortcut("history.undo", deps);
+    const afterUndo = store.getState().tree.map((node) => node.id);
+    runCanvasShortcut("history.redo", deps);
+
+    expect(afterUndo).toEqual(["a"]);
+    expect(store.getState().tree).toEqual([]);
+  });
+
+  test.each([
+    ["canvas.xray", "xray"],
+    ["help.open", "shortcutsOpen"],
+    ["palette.open", "paletteOpen"],
+  ] as const)("%s turns %s on", (id, flag) => {
+    const store = createEditorStore(treeBlocks);
+
+    runCanvasShortcut(id, {
+      store,
+      camera: createCameraStore(),
+      zoomToSelection: noop,
+      togglePanels: noop,
+    });
+
+    expect(store.getState()[flag]).toBe(true);
+  });
+
+  test("canvas.actualSize zooms to 100%", () => {
+    const camera = createCameraStore();
+    camera.getState().zoomToCenter(2);
+
+    runCanvasShortcut("canvas.actualSize", {
+      store: createEditorStore(treeBlocks),
+      camera,
+      zoomToSelection: noop,
+      togglePanels: noop,
+    });
+
+    expect(camera.getState().zoom).toBe(1);
+  });
+
   test("panels.toggle shows or hides the panels", () => {
     const togglePanels = vi.fn();
 
@@ -42,7 +94,6 @@ describe("runCanvasShortcut", () => {
 });
 
 describe("canvasHandlesHostKey", () => {
-  // The host's own listeners answer these; answering again would act twice.
   test.each([
     "history.undo",
     "history.redo",

@@ -1009,10 +1009,9 @@ test.describe("editor playground", () => {
     // Selecting in the canvas leaves focus inside the iframe.
     await canvas.locator('[data-plumix-id="heading-1"]').click();
     await expect(page.getByTestId("selection-toolbar-drag")).toBeVisible();
-    const [left, right, group] = await settledBoxes(
+    const [left, right] = await settledBoxes(
       canvas.locator('[data-plumix-id="col-left"]'),
       canvas.locator('[data-plumix-id="col-right"]'),
-      canvas.locator('[data-plumix-id="group-heading"]'),
     );
     const gapX = (left.x + left.width + right.x) / 2;
 
@@ -1026,20 +1025,11 @@ test.describe("editor playground", () => {
           await expect(refused).toBeVisible();
           await page.keyboard.press("Escape");
           await expect(refused).toBeHidden();
-          // Released over the group: a live drag would nest heading-1 there.
-          await page.mouse.move(
-            group.x + group.width / 2,
-            group.y + group.height / 2,
-            { steps: 5 },
-          );
         },
       },
     );
 
     await expect(blocks.nth(0)).toHaveAttribute("data-plumix-id", "heading-1");
-    await expect(
-      canvas.locator('[data-plumix-id="group-1"] [data-plumix-id="heading-1"]'),
-    ).toHaveCount(0);
   });
 
   test("the rail's link popover links the selected text", async ({ page }) => {

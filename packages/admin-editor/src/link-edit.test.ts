@@ -93,6 +93,20 @@ describe("applyLink", () => {
     ]);
   });
 
+  test("a collapsed caret outside a link links the text typed next", () => {
+    const state = stateOf([{ type: "text", text: "text" }], {
+      from: 3,
+      to: 3,
+    });
+
+    const tr = applyLink(state, { from: 3, to: 3 }, "https://example.test");
+    const next = state.apply(tr);
+
+    expect(next.storedMarks?.map((mark) => String(mark.attrs.href))).toEqual([
+      "https://example.test",
+    ]);
+  });
+
   test("a collapsed caret inside a link edits the whole link", () => {
     const state = stateOf([linked("link", "https://old.test")], {
       from: 3,
@@ -104,6 +118,34 @@ describe("applyLink", () => {
     expect(paragraphOf(state.apply(tr))).toEqual([
       linkedTo("link", "https://new.test"),
     ]);
+  });
+});
+
+describe("applyLink on a link with other attributes", () => {
+  test("keeps them when it changes the href", () => {
+    const state = stateOf(
+      [
+        {
+          type: "text",
+          text: "link",
+          marks: [
+            {
+              type: "link",
+              attrs: { href: "https://old.test", target: "_blank" },
+            },
+          ],
+        },
+      ],
+      { from: 1, to: 5 },
+    );
+
+    const tr = applyLink(state, { from: 1, to: 5 }, "https://new.test");
+
+    const [run] = paragraphOf(state.apply(tr)) ?? [];
+    expect(run?.marks?.[0]?.attrs).toMatchObject({
+      href: "https://new.test",
+      target: "_blank",
+    });
   });
 });
 
