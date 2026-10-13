@@ -1,6 +1,5 @@
 import { describe, expect, test } from "vitest";
 
-import type { ResolvedComment } from "./server/load-thread.js";
 import { stubFetch } from "./test/fetch.js";
 import {
   confirmationFor,
@@ -156,13 +155,6 @@ function wireComment(
   };
 }
 
-function everyCreatedAt(comments: readonly ResolvedComment[]): unknown[] {
-  return comments.flatMap((comment) => [
-    comment.createdAt,
-    ...everyCreatedAt(comment.replies),
-  ]);
-}
-
 describe("fetchCommentPage", () => {
   test("asks for the page after the cursor it was handed", async () => {
     endpoint.answering({ comments: [], hasMore: false, nextCursor: null });
@@ -209,11 +201,20 @@ describe("fetchCommentPage", () => {
 
     const answer = await fetchCommentPage(7, "100_3", "");
 
-    expect(answer.ok && everyCreatedAt(answer.comments)).toEqual([
-      new Date("2026-06-04T00:00:00.000Z"),
-      new Date("2026-06-05T00:00:00.000Z"),
-      new Date("2026-06-06T00:00:00.000Z"),
-    ]);
+    expect(answer).toMatchObject({
+      ok: true,
+      comments: [
+        {
+          createdAt: new Date("2026-06-04T00:00:00.000Z"),
+          replies: [
+            {
+              createdAt: new Date("2026-06-05T00:00:00.000Z"),
+              replies: [{ createdAt: new Date("2026-06-06T00:00:00.000Z") }],
+            },
+          ],
+        },
+      ],
+    });
   });
 
   test("names the refusal the route answered with", async () => {

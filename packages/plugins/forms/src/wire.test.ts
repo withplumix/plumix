@@ -103,8 +103,8 @@ describe("submissionBody", () => {
     expect(body.get("email")).toBe("ada@example.test");
   });
 
-  // Without the empty answer a checkbox posts beside itself, a toggle
-  // switched off would read as its default, which is on.
+  // An unchecked toggle posts nothing, so without the empty answer it would
+  // read as its default, which is on.
   test("posts a toggle switched off as the rendered form would", () => {
     const body = submissionBody(
       subscribe,
