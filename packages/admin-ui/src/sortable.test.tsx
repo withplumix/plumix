@@ -12,11 +12,6 @@ const announcements: SortableAnnouncements = {
   cancelled: () => "",
 };
 
-function labelOf(markup: string, testId: string): string | undefined {
-  const tag = new RegExp(`<[^>]*data-testid="${testId}"[^>]*>`).exec(markup);
-  return /aria-label="([^"]*)"/.exec(tag?.[0] ?? "")?.[1];
-}
-
 describe("SortableList", () => {
   test("the handle and the remove button carry the labels the caller passes", () => {
     const markup = renderToStaticMarkup(
@@ -32,7 +27,11 @@ describe("SortableList", () => {
       />,
     );
 
-    expect(labelOf(markup, "list-row-a-handle")).toBe("reorder-label");
-    expect(labelOf(markup, "list-row-a-remove")).toBe("remove-label");
+    expect(markup).toContain(
+      'aria-label="reorder-label" data-testid="list-row-a-handle"',
+    );
+    expect(markup).toContain(
+      'aria-label="remove-label" data-testid="list-row-a-remove"',
+    );
   });
 });

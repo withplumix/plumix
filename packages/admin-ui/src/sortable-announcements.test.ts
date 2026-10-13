@@ -25,29 +25,43 @@ function slot(id: string): Active & Over {
 const a = slot("a");
 const b = slot("b");
 
-function announcementsForAB() {
-  return dragAnnouncements([{ id: "a" }, { id: "b" }], announcements);
-}
-
 describe("dragAnnouncements", () => {
-  test("announces the positions a drag picks up from and drops at", () => {
-    const drag = announcementsForAB();
+  test("picking an item up announces the position it starts at", () => {
+    const drag = dragAnnouncements([{ id: "a" }, { id: "b" }], announcements);
 
     expect(drag.onDragStart({ active: a })).toBe("picked-up 1/2");
+  });
+
+  test("dropping an item announces the position it lands at", () => {
+    const drag = dragAnnouncements([{ id: "a" }, { id: "b" }], announcements);
+
     expect(drag.onDragEnd({ active: a, over: b })).toBe("dropped 2/2");
   });
 
-  test("announces each slot a drag moves to, including the one it started from", () => {
-    const drag = announcementsForAB();
+  test("the over event over the item's own slot right after pick-up stays silent", () => {
+    const drag = dragAnnouncements([{ id: "a" }, { id: "b" }], announcements);
     drag.onDragStart({ active: a });
 
     expect(drag.onDragOver({ active: a, over: a })).toBeUndefined();
+  });
+
+  test("moving to another slot announces it", () => {
+    const drag = dragAnnouncements([{ id: "a" }, { id: "b" }], announcements);
+    drag.onDragStart({ active: a });
+
     expect(drag.onDragOver({ active: a, over: b })).toBe("moved-to 2/2");
+  });
+
+  test("moving back to the slot it started from announces it", () => {
+    const drag = dragAnnouncements([{ id: "a" }, { id: "b" }], announcements);
+    drag.onDragStart({ active: a });
+    drag.onDragOver({ active: a, over: b });
+
     expect(drag.onDragOver({ active: a, over: a })).toBe("moved-to 1/2");
   });
 
   test("a cancelled drag announces the position the item returns to", () => {
-    const drag = announcementsForAB();
+    const drag = dragAnnouncements([{ id: "a" }, { id: "b" }], announcements);
     drag.onDragStart({ active: a });
     drag.onDragOver({ active: a, over: b });
 
