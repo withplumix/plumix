@@ -134,6 +134,22 @@ describe("a plugin's sign-in method", () => {
     expect(user?.role).toBe("contributor");
   });
 
+  test("signs up the email exactly as the method proved it", async () => {
+    const h = await createDispatcherHarness({
+      config: fixtureSite({
+        auth: { selfSignup: { defaultRole: "contributor" } },
+      }),
+    });
+    await h.seedUser("admin");
+
+    await h.dispatch(fetchStart("Bob@Anywhere.example"));
+
+    const user = await h.db.query.users.findFirst({
+      where: (u, { eq }) => eq(u.email, "Bob@Anywhere.example"),
+    });
+    expect(user?.role).toBe("contributor");
+  });
+
   test("refuses a domain that isn't allowed with ?fixture_error=domain_not_allowed", async () => {
     const h = await createDispatcherHarness({ config: fixtureSite() });
     await h.seedUser("admin");

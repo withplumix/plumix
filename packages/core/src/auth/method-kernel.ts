@@ -169,7 +169,7 @@ async function proveEmail(
 ): Promise<ProvenAccount> {
   const { selfSignup } = app.config.auth;
   const { user, created } = await resolveExternalIdentity(ctx.db, {
-    email: proof.email.trim().toLowerCase(),
+    email: proof.email,
     emailVerified: proof.emailVerified,
     name: proof.profile?.name,
     avatarUrl: proof.profile?.avatarUrl,
