@@ -507,6 +507,50 @@ test.describe("editor document tab", () => {
     expect(captures.at(-1)).not.toHaveProperty("saveAs");
   });
 
+  test("editing the excerpt reloads the canvas preview", async ({ page }) => {
+    await mockManifest(page, {
+      ...MANIFEST_WITH_POST,
+      entryTypes: [
+        {
+          name: "post",
+          capabilityType: "post",
+          adminSlug: "posts",
+          isPublic: true,
+          showUI: true,
+          showInSidebar: true,
+          label: "Posts",
+          labels: { singular: "Post", plural: "Posts" },
+          supports: ["title", "editor", "slug", "excerpt"],
+        },
+      ],
+    });
+    const captures = await mockRpcWithCapture(page, {
+      captureSuffix: "/entry/update",
+      captureResponse: { ...editorEntry(), updatedAt: T0 },
+      handlers: {
+        "/auth/session": AUTHED_ADMIN,
+        "/entry/get": editorEntry(),
+        "/entry/list": [],
+        "/entry/createPreviewLink": PREVIEW_LINK,
+      },
+    });
+    // The excerpt renders into the theme's shell, which the bridge never
+    // pushes, so the canvas has to load its page again.
+    const previewLoads: string[] = [];
+    page.on("request", (request) => {
+      if (request.url().includes(PREVIEW_LINK.url))
+        previewLoads.push(request.url());
+    });
+    await page.goto("entries/posts/1/edit");
+    await expect.poll(() => previewLoads.length).toBe(1);
+    await page.getByTestId("plumix-tab-page").click();
+
+    await page.getByTestId("entry-excerpt-input").fill("Hand-written summary");
+
+    await expect.poll(() => captures.length).toBe(1);
+    await expect.poll(() => previewLoads.length).toBe(2);
+  });
+
   test("excerpt input is absent when the type lacks excerpt support", async ({
     page,
   }) => {
