@@ -1,5 +1,9 @@
 # Each table owner ships its own migration history
 
+Amended by [ADR 0044](0044-data-migrations-run-in-typescript-after-every-schema-migration.md),
+which adds data migrations from any owner, with or without tables, run after
+every history, and a built Node or Bun server's start to where migrations run.
+
 Core and every plugin declare tables, and today every site diffs all of them
 into one history of its own with drizzle-kit. `create-plumix-app` commits that
 history (`drizzle/`) in the site's first commit, and production replays it. So

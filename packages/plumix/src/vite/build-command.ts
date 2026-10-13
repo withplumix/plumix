@@ -6,6 +6,7 @@ import type { CommandContext, RuntimeAdapter } from "@plumix/core";
 import type { ServerEnvironmentOptions } from "./server-environment.js";
 import { copyOwnerHistories } from "../cli/migrate/built.js";
 import { buildAppClientFirst } from "./build-order.js";
+import { buildDataMigrations } from "./data-migrations-bundle.js";
 import { emitPlumixSources, plumix } from "./index.js";
 import { serverEnvironment } from "./server-environment.js";
 
@@ -16,7 +17,8 @@ export interface BuildCommandOptions {
 
 /**
  * A self-hosted runtime's `plumix build`: the plumix sources emitted, then
- * `dist/client`, the server bundle beside it, and the histories it applies.
+ * `dist/client`, the server bundle beside it, and the histories and data
+ * migrations it applies.
  */
 export async function runBuildCommand(
   ctx: CommandContext,
@@ -36,8 +38,11 @@ export async function runBuildCommand(
     builder: { buildApp: buildAppClientFirst },
   });
   await builder.buildApp();
-  copyOwnerHistories(
-    { cwd: ctx.cwd, configPath: ctx.configPath, config: ctx.app.config },
-    join(ctx.cwd, server.outDir),
-  );
+  const site = {
+    cwd: ctx.cwd,
+    configPath: ctx.configPath,
+    config: ctx.app.config,
+  };
+  copyOwnerHistories(site, join(ctx.cwd, server.outDir));
+  await buildDataMigrations(site, server);
 }

@@ -84,13 +84,13 @@ This is the path from a scaffolded site to a running process.
    bun run dev
    ```
 
-4. **Build.** The build writes `dist/client` for the browser and `dist/server/worker.js` to run. Everything the server needs is inlined into that one file, except `bun:` modules and native packages. Every table owner's migration history lands beside it, in `dist/server/migrations/`.
+4. **Build.** The build writes `dist/client` for the browser and `dist/server/worker.js` to run. Everything the server needs is inlined into that one file, except `bun:` modules and native packages. Every table owner's migration history lands beside it, in `dist/server/migrations/`, and the plugins' and the site's [data migrations](/plugins/overview/#data-migrations) land there as a bundle of their own, `dist/server/migrations/data-migrations.js`, which the server imports only when it starts.
 
    ```sh
    bun run build
    ```
 
-5. **Run.** The built server runs on plain `bun`; `--bun` is only for the CLI. It applies every pending migration in `dist/server/migrations/` to its database before it listens, and exits `1` without listening if one fails.
+5. **Run.** The built server runs on plain `bun`; `--bun` is only for the CLI. It applies every pending migration in `dist/server/migrations/` to its database, then the pending data migrations in `dist/server/migrations/data-migrations.js`, before it listens, and exits `1` without listening if one of either kind fails.
 
    ```sh
    PORT=3000 bun dist/server/worker.js
@@ -238,11 +238,11 @@ Mount a volume over `data/` and the database and uploads survive a redeploy. The
 
 ### Migrations run where the volume is
 
-The built server applies its pending migrations to the database on the volume each time it starts, before it listens, so the image needs no migration step and no entrypoint script. A start against an up-to-date database applies nothing.
+The built server applies its pending migrations to the database on the volume each time it starts, the histories first and then `dist/server/migrations/data-migrations.js`, before it listens, so the image needs no migration step and no entrypoint script. A start against an up-to-date database applies nothing.
 
 ### A multi-stage Dockerfile
 
-Two stages on the official `oven/bun` image: one that installs every dependency and builds, one that installs only production dependencies and runs. The build stage's source and dev dependencies never reach the image that ships, and neither does the config: the server bundle carries it, and `dist/server/migrations/` carries every history it applies. As `Dockerfile`:
+Two stages on the official `oven/bun` image: one that installs every dependency and builds, one that installs only production dependencies and runs. The build stage's source and dev dependencies never reach the image that ships, and neither does the config: the server bundle carries it, and `dist/server/migrations/` carries every history it applies and the `data-migrations.js` it runs after them. As `Dockerfile`:
 
 ```dockerfile
 FROM oven/bun:1.4.2 AS build
@@ -323,7 +323,7 @@ Public pages render on every request until the site sits behind a CDN with the `
 
 ## Commands the runtime adds
 
-`plumix dev` applies pending migrations, then runs the site in Vite on Bun, and accepts `--port` and `--host`. `plumix build` builds the client first and the server second, because the server bakes the client's asset manifest into its bundle, and copies every table owner's history into `dist/server/migrations/`. `plumix migrate` applies every table owner's migrations to the file `bunSqlite` names, through `bun:sqlite`; it has no `--remote`. There is no `deploy` and no `types`: the deployment artefact is a directory and a command. Each runs as `bun --bun plumix <command>`.
+`plumix dev` applies pending migrations, then runs the site in Vite on Bun, and accepts `--port` and `--host`. `plumix build` builds the client first and the server second, because the server bakes the client's asset manifest into its bundle, copies every table owner's history into `dist/server/migrations/`, and bundles the plugins' and the site's data migrations into `dist/server/migrations/data-migrations.js`, which the server runs after the histories. `plumix migrate` applies every owner's migrations, then its data migrations, to the file `bunSqlite` names, through `bun:sqlite`; it has no `--remote`. There is no `deploy` and no `types`: the deployment artefact is a directory and a command. Each runs as `bun --bun plumix <command>`.
 
 ## Related
 

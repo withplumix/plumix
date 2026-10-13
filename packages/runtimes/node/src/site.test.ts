@@ -98,6 +98,8 @@ interface SiteOptions {
    * `plumix build` does, for the server to apply when it starts.
    */
   readonly unmigrated?: boolean;
+  /** The `migrations/data-migrations.js` an unmigrated site ships. */
+  readonly dataMigrations?: string;
 }
 
 /**
@@ -108,6 +110,7 @@ async function siteFor({
   plugins = [],
   runtime = {},
   unmigrated = false,
+  dataMigrations = "export default [];\n",
 }: SiteOptions = {}) {
   const inner = nodeSqlite({ path: join(dir, "site.sqlite") });
   if (!unmigrated) {
@@ -143,6 +146,10 @@ async function siteFor({
     copyOwnerHistories(
       { cwd: dir, configPath: join(dir, "plumix.config.ts"), config },
       join(dir, "server"),
+    );
+    writeFileSync(
+      join(dir, "server/migrations/data-migrations.js"),
+      dataMigrations,
     );
   }
   const site = createNodeSite({
@@ -392,6 +399,111 @@ describe("createNodeSite — migrations at startup", () => {
     expect(stderr.mock.calls.map(([chunk]) => String(chunk))).toEqual([
       "core: up to date\n",
     ]);
+  });
+
+  // A built site's data bundle, written by hand: its `up` runs a SQL string,
+  // so it imports nothing.
+  const flagsBundle = (up: string) => `export default [
+  {
+    owner: "@acme/plugin-flags",
+    migrations: [
+      {
+        name: "seed-beta",
+        async up({ db }) {
+          ${up}
+        },
+      },
+    ],
+  },
+];
+`;
+  const SEED_BETA = flagsBundle(
+    `await db.run("INSERT INTO settings (\\"group\\", key, value) VALUES ('flags', 'beta', 'true')");`,
+  );
+
+  function recorded(): unknown[] {
+    const db = new DatabaseSync(join(dir, "site.sqlite"));
+    try {
+      return db
+        .prepare(`SELECT owner, name FROM __plumix_data_migrations`)
+        .all();
+    } finally {
+      db.close();
+    }
+  }
+
+  test("applies a pending data migration after the histories, before it listens", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    const { site } = await siteFor({
+      unmigrated: true,
+      dataMigrations: SEED_BETA,
+    });
+
+    const running = await site.serveWhenMain(true);
+    assert(running);
+    servers.push(running.server);
+
+    const db = new DatabaseSync(join(dir, "site.sqlite"));
+    try {
+      expect(
+        db.prepare(`SELECT key FROM settings WHERE "group" = 'flags'`).all(),
+      ).toEqual([{ key: "beta" }]);
+    } finally {
+      db.close();
+    }
+    expect(stderr.mock.calls.map(([chunk]) => String(chunk))).toContainEqual(
+      expect.stringMatching(
+        / @acme\/plugin-flags: applied 1 data migration\n$/,
+      ),
+    );
+  });
+
+  test("a second start reports its data migrations up to date and runs none", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    const { site } = await siteFor({
+      unmigrated: true,
+      dataMigrations: SEED_BETA,
+    });
+    const first = await site.serveWhenMain(true);
+    assert(first);
+    servers.push(first.server);
+    stderr.mockClear();
+
+    // A rerun of the insert would fail on the settings primary key.
+    const second = await site.serveWhenMain(true);
+    assert(second);
+    servers.push(second.server);
+
+    expect(stderr.mock.calls.map(([chunk]) => String(chunk))).toEqual([
+      "core: up to date\n",
+      "@acme/plugin-flags: data migrations up to date\n",
+    ]);
+  });
+
+  test("a throwing data migration exits non-zero without listening or recording it", async () => {
+    const exit = vi
+      .spyOn(process, "exit")
+      .mockImplementation(() => undefined as never);
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    const { site } = await siteFor({
+      unmigrated: true,
+      dataMigrations: flagsBundle(`throw new Error("the flag is gone");`),
+    });
+
+    const running = await site.serveWhenMain(true);
+
+    expect(running).toBeUndefined();
+    expect(exit).toHaveBeenCalledWith(1);
+    expect(error).toHaveBeenCalledWith(
+      "plumix: migrations failed; not serving",
+      expect.objectContaining({ code: "migrate_data_failed" }),
+    );
+    expect(recorded()).toEqual([]);
   });
 
   test("a failed apply exits non-zero without listening", async () => {

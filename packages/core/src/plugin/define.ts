@@ -69,6 +69,11 @@ export interface PluginDescriptor<TState = undefined> {
   readonly mails?: readonly AnyMailDefinition[];
   readonly schema?: SchemaModule;
   readonly schemaModule?: string;
+  /**
+   * A module whose default export is this plugin's ordered data migrations,
+   * resolved from the site like `schemaModule`. Needs no tables.
+   */
+  readonly dataMigrations?: string;
   /** Translation catalog declaration — opts the plugin into the i18n
    *  pipeline. Omit to keep all labels rendered as their authored
    *  strings (no translation lookup, no catalog discovery). */
@@ -90,6 +95,8 @@ export interface DefinePluginOptions {
   readonly version?: string;
   readonly schema?: SchemaModule;
   readonly schemaModule?: string;
+  /** See {@link PluginDescriptor.dataMigrations}. */
+  readonly dataMigrations?: string;
   readonly adminEntry?: string;
   readonly adminChunk?: string;
   readonly adminCss?: string;
@@ -171,6 +178,7 @@ export function definePlugin<TState = undefined>(
       setup: setupOrInput,
       schema: legacyOptions?.schema,
       schemaModule: legacyOptions?.schemaModule,
+      dataMigrations: legacyOptions?.dataMigrations,
       adminEntry: legacyOptions?.adminEntry,
       adminChunk: legacyOptions?.adminChunk,
       adminCss: legacyOptions?.adminCss,
@@ -193,6 +201,7 @@ export function definePlugin<TState = undefined>(
     mails: setupOrInput.mails,
     schema: setupOrInput.schema,
     schemaModule: setupOrInput.schemaModule,
+    dataMigrations: setupOrInput.dataMigrations,
     adminEntry: setupOrInput.adminEntry,
     adminChunk: setupOrInput.adminChunk,
     adminCss: setupOrInput.adminCss,

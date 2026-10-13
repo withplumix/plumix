@@ -43,7 +43,7 @@ plumix --help
 
 Starts the dev server. What it wraps is the runtime's: on Cloudflare it is Vite with `@cloudflare/vite-plugin`, and it accepts `--port` and `--inspector-port`; on Node it is Vite alone, and it accepts `--port` and `--host`. Neither runtime has the CLI build the app up front — `dev` opts out via `deferApp` on both, so a broken config renders as a boot-error page in the browser instead of aborting the terminal before the server is up.
 
-Before the server starts, `dev` migrates the local database. When the site's own tables are ahead of its `migrations/`, it writes the next migration there, as [`migrate generate`](#migrate) does, and prints the file to commit. It then applies every owner's pending migrations, as `plumix migrate` does, adopting a database set up by an earlier release. When drizzle-kit needs a rename answered and has no terminal to ask in, `dev` stops with the same advice `migrate generate` gives. On a runtime whose commands module exports no `migrations`, it migrates nothing.
+Before the server starts, `dev` migrates the local database. When the site's own tables are ahead of its `migrations/`, it writes the next migration there, as [`migrate generate`](#migrate) does, and prints the file to commit. It then applies every owner's pending migrations and then every pending data migration, as `plumix migrate` does, adopting a database set up by an earlier release. When drizzle-kit needs a rename answered and has no terminal to ask in, `dev` stops with the same advice `migrate generate` gives. On a runtime whose commands module exports no `migrations`, it migrates nothing.
 
 ```bash
 plumix dev
@@ -52,7 +52,7 @@ plumix dev --port 3000
 
 ### `build`
 
-Builds the deployable artefact. On Cloudflare that is the Worker bundle; on Node and Bun it is `dist/client` for the browser and `dist/server` to run, built client-first because the server bundle bakes in the client's asset manifest. Every table owner's history is copied beside the server, as `dist/server/migrations/<owner>/`, and the built server applies what is pending when it starts, before it listens. A failed apply exits it `1` without listening.
+Builds the deployable artefact. On Cloudflare that is the Worker bundle; on Node and Bun it is `dist/client` for the browser and `dist/server` to run, built client-first because the server bundle bakes in the client's asset manifest. Every table owner's history is copied beside the server, as `dist/server/migrations/<owner>/`, and the plugins' and the site's data migrations are bundled on their own into `dist/server/migrations/data-migrations.js`, never into the server bundle; a site that declares none gets the file with an empty list. The built server applies the pending histories, then the pending data migrations, when it starts, before it listens. A failed apply exits it `1` without listening. On Cloudflare the Worker carries no data migration, and `build` writes no data bundle.
 
 ```bash
 plumix build
@@ -60,7 +60,7 @@ plumix build
 
 ### `deploy`
 
-Cloudflare only. Runs the [check](#migrate) that the site's own tables are not ahead of its history, applies every owner's pending migrations to the deployed D1 database, as `plumix migrate --remote` does, then runs `wrangler deploy` with every argument after `deploy` appended unchanged. A failed check or apply exits non-zero, and `wrangler deploy` never runs.
+Cloudflare only. Runs the [check](#migrate) that the site's own tables are not ahead of its history, applies every owner's pending migrations and then every pending data migration to the deployed D1 database, as `plumix migrate --remote` does, then runs `wrangler deploy` with every argument after `deploy` appended unchanged. A failed check or apply exits non-zero, and `wrangler deploy` never runs.
 
 ```bash
 plumix deploy
@@ -79,9 +79,11 @@ plumix types
 
 Applies every table owner's pending migrations. The owners run in order: core first, then each package a plugin's `schemaModule` resolves into, in the order the plugins appear in `plugins`, then the site itself when a plugin's `schemaModule` lands inside the site's own package (the one holding `plumix.config.ts`, or the file `--config` names) and the site has a `migrations/` folder at its root. Each package ships its own history, and each owner records what it applied in a table of its own, `__drizzle_migrations_<owner>`: `core`, `site`, or the package name lowercased with each run of other characters replaced by `_` (`@plumix/plugin-comments` records in `__drizzle_migrations_plumix_plugin_comments`). It prints a line per owner, such as `core: applied 2 migrations` or `core: up to date`, and under it each migration it applied, with its date and a short hash.
 
+After every owner's migrations it runs the [data migrations](/plugins/overview/#data-migrations): core's, then each plugin's `dataMigrations` module in the order of `plugins`, then the site's, from the module a plugin inside the site's package names and the config's own `dataMigrations`, a path relative to `plumix.config.ts`. The CLI imports them in its own process. Each is recorded under its owner and name in `__plumix_data_migrations` once its `up` resolves, and is skipped from then on. Each owner that declares any prints `<owner>: applied 1 data migration`, with each name under it, or `<owner>: data migrations up to date`. A duplicate name within one owner fails with `migrate_data_duplicate_name` before any data migration runs. An `up` that throws stops the run with `migrate_data_failed`, naming the owner, the data migration and the cause; it is not recorded, nothing after it runs, and the next run retries it. A module that does not resolve fails with `migrate_data_module_unresolved` before the database opens.
+
 Without a flag it applies to the local database. `--remote` applies to the deployed one, and only Cloudflare accepts it: it reaches the D1 database `wrangler.jsonc` names through wrangler's remote bindings, so it needs `wrangler login` or an API token, as wrangler does. On Node and Bun `--remote` fails, naming the runtime. On Cloudflare the local database is the D1 copy `plumix dev` uses, under `.wrangler/state/v3`. When the wrangler config declares more than one D1 binding, `--binding <name>` picks one, and the error without it names the bindings it found.
 
-`plumix migrate fresh` deletes the local database and applies every owner from nothing. It deletes the paths the runtime names as its local state: `.wrangler/state` on Cloudflare, and `data` on Node and Bun, which takes uploads stored under `data/` with it. It refuses `--remote`. `plumix migrate status` lists each owner in order with its applied and pending migrations, each with its date and a short hash.
+`plumix migrate fresh` deletes the local database and applies every owner from nothing. It deletes the paths the runtime names as its local state: `.wrangler/state` on Cloudflare, and `data` on Node and Bun, which takes uploads stored under `data/` with it. It refuses `--remote`. `plumix migrate status` lists each owner in order with its applied and pending migrations, each with its date and a short hash, then each owner that declares data migrations with its applied and pending ones by name.
 
 `plumix migrate`, `plumix migrate fresh` and `plumix deploy` never write a migration. When the site owns tables, each first checks its history: it runs `drizzle-kit generate` into a temporary copy of the site's `migrations/`, and if that writes anything, the site's tables are ahead of their history. The command then fails with `migrate_site_drifted` before it deletes, opens or deploys anything, naming the files a generate would write; run `plumix migrate generate`, or `plumix dev`, and commit what it writes. A site that owns no tables never drifts.
 

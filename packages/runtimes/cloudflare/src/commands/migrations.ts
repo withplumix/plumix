@@ -99,8 +99,11 @@ function migrationDatabase(
   d1: D1Database,
   dispose: () => Promise<void>,
 ): MigrationDatabase {
+  // A query builder over a column needs the request database's snake_case.
+  const db = drizzle(d1, { casing: "snake_case" });
   return {
-    migrate: (folder) => migrate(drizzle(d1), folder),
+    drizzle: db,
+    migrate: (folder) => migrate(db, folder),
     async all(sql) {
       const { results } = await d1.prepare(sql).all();
       return results;

@@ -35,10 +35,11 @@ export {
   sumDistinct,
 } from "@plumix/core/db";
 
-// Introspection, bulk-write limits and write-result helpers.
+// Introspection, bulk-write limits, write-result helpers and data migrations.
 export {
   chunkForD1,
   D1_MAX_BOUND_PARAMETERS,
+  defineDataMigration,
   getTableColumns,
   getTableName,
   is,

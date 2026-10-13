@@ -115,3 +115,97 @@ describe("plumix deploy", () => {
     expect(events).toEqual([]);
   });
 });
+
+describe("plumix deploy — data migrations", () => {
+  // One local D1 kept on disk, so a second deploy sees what the first wrote.
+  function localD1(): void {
+    vi.spyOn(migrationsDeps, "getPlatformProxy").mockImplementation((options) =>
+      getPlatformProxy({
+        configPath: options.configPath,
+        persist: { path: join(dir, "state") },
+        remoteBindings: false,
+      }),
+    );
+  }
+
+  // Its `up` inserts a settings row, which a rerun would fail on the key.
+  function siteDataMigration(up: string): CommandContext {
+    writeFileSync(
+      join(dir, "data.mjs"),
+      `export default [{ name: "seed-beta", async up({ db }) { ${up} } }];\n`,
+    );
+    const ctx = deployCtx([]);
+    return {
+      ...ctx,
+      app: { ...app, config: { ...app.config, dataMigrations: "./data.mjs" } },
+    };
+  }
+
+  const SEED_BETA = `await db.run("INSERT INTO settings (\\"group\\", key, value) VALUES ('flags', 'beta', 'true')");`;
+
+  async function recorded(): Promise<unknown[]> {
+    const proxy = await getPlatformProxy<{ DB: D1Database }>({
+      configPath: join(dir, "wrangler.jsonc"),
+      persist: { path: join(dir, "state") },
+    });
+    try {
+      const { results } = await proxy.env.DB.prepare(
+        "SELECT owner, name FROM __plumix_data_migrations",
+      ).all();
+      return results;
+    } finally {
+      await proxy.dispose();
+    }
+  }
+
+  test("applies a pending data migration before wrangler deploy", async () => {
+    localD1();
+    const lines: string[] = [];
+    vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+      lines.push(String(chunk));
+      return true;
+    });
+
+    await deployCommand.run(siteDataMigration(SEED_BETA));
+
+    expect(lines.join("")).toMatch(/site: applied 1 data migration\n/);
+    expect(events).toEqual(["wrangler deploy"]);
+    expect(await recorded()).toEqual([{ owner: "site", name: "seed-beta" }]);
+  });
+
+  test("the next deploy reports the data migration up to date", async () => {
+    localD1();
+    const lines: string[] = [];
+    vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+      lines.push(String(chunk));
+      return true;
+    });
+    const ctx = siteDataMigration(SEED_BETA);
+    await deployCommand.run(ctx);
+    lines.length = 0;
+
+    await deployCommand.run(ctx);
+
+    expect(lines.join("")).toMatch(/site: data migrations up to date\n/);
+    expect(await recorded()).toEqual([{ owner: "site", name: "seed-beta" }]);
+  });
+
+  test("a throwing data migration fails the deploy before wrangler runs, leaving it unrecorded", async () => {
+    localD1();
+    vi.spyOn(process.stderr, "write").mockReturnValue(true);
+
+    await expect(
+      deployCommand.run(
+        siteDataMigration(`throw new Error("the flag is gone");`),
+      ),
+    ).rejects.toMatchObject({
+      code: "migrate_data_failed",
+      message: expect.stringMatching(
+        /site.+"seed-beta".+the flag is gone/,
+      ) as unknown,
+    });
+
+    expect(events).toEqual([]);
+    expect(await recorded()).toEqual([]);
+  });
+});

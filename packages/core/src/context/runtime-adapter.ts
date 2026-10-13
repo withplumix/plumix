@@ -3,7 +3,7 @@ import type { HookRegistry } from "../hooks/registry.js";
 import type { RegisteredScheduledTask } from "../plugin/registry.js";
 import type { PlumixEnv } from "../runtime/contract/bindings.js";
 import type { AssetsBinding } from "../runtime/contract/slots.js";
-import type { AppContext } from "./app-context.js";
+import type { AppContext, DataMigrationDb } from "./app-context.js";
 
 export interface Invocation {
   /** The runtime's configuration bag: bindings, secrets and plain vars. */
@@ -176,6 +176,8 @@ export interface MigrationStatement {
  */
 export interface MigrationDatabase {
   migrate(folder: MigrationFolder): Promise<void>;
+  /** drizzle over the same driver, with no schema: a data migration's `db`. */
+  readonly drizzle: DataMigrationDb;
   all(sql: string): Promise<readonly MigrationRow[]>;
   /** Runs every statement, or none of them. */
   batch(statements: readonly MigrationStatement[]): Promise<void>;

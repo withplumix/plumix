@@ -332,6 +332,141 @@ END;
 
 It applies after the migrations before it, so the DDL lands behind the tables it references. Like any migration that has reached a database, it is never edited afterwards. A change is a new migration.
 
+## Data migrations
+
+A release that changes the shape of data the plugin already stored, such as a renamed settings key, reshaped meta or a value every row now needs, ships a data migration. It is a TypeScript step with a `name` and an `up` that receives a drizzle database as `db`. Build it with `defineDataMigration` from `plumix/db`, and import tables from `plumix/schema` or the plugin's own schema module. A plugin needs no tables and no `schemaModule` to ship one.
+
+The plugin names a module whose default export is its data migrations in the order they run, and points `dataMigrations` at it the way `schemaModule` points at a schema:
+
+```ts
+// src/index.ts
+import { definePlugin } from "plumix/plugin";
+
+export const flags = definePlugin("acme_flags", {
+  setup() {},
+  dataMigrations: "@acme/plugin-flags/data-migrations",
+});
+```
+
+Export that subpath from the package's `exports`, as you would `./schema`. A site lists its own in `plumix.config.ts`, as `dataMigrations: "./data-migrations.ts"`, a path relative to the config file.
+
+### Recipes
+
+Rename a settings key:
+
+```ts
+// src/data-migrations.ts
+import { and, defineDataMigration, eq } from "plumix/db";
+import { settings } from "plumix/schema";
+
+export const renameBetaEnabled = defineDataMigration({
+  name: "rename-beta-enabled",
+  async up({ db }) {
+    await db
+      .update(settings)
+      .set({ key: "beta" })
+      .where(
+        and(eq(settings.group, "acme_flags"), eq(settings.key, "beta_enabled")),
+      );
+  },
+});
+
+export default [renameBetaEnabled];
+```
+
+Rename a meta key. Meta is a JSON column, so the rename is `json_set` and `json_remove` in one statement. The `->` operator keeps an object or array as JSON rather than turning it into a string:
+
+```ts
+import { defineDataMigration, sql } from "plumix/db";
+
+export const renameSubtitle = defineDataMigration({
+  name: "rename-subtitle-meta",
+  async up({ db }) {
+    await db.run(sql`
+      UPDATE entries
+      SET meta = json_remove(json_set(meta, '$.tagline', meta -> '$.subtitle'), '$.subtitle')
+      WHERE json_type(meta, '$.subtitle') IS NOT NULL
+    `);
+  },
+});
+```
+
+Backfill a value. D1 caps the parameters one statement binds, so update by id in `chunkForD1` batches:
+
+```ts
+import {
+  and,
+  chunkForD1,
+  defineDataMigration,
+  eq,
+  inArray,
+  sql,
+} from "plumix/db";
+import { entries } from "plumix/schema";
+
+export const backfillFeatured = defineDataMigration({
+  name: "backfill-featured",
+  async up({ db }) {
+    const rows = await db
+      .select({ id: entries.id })
+      .from(entries)
+      .where(
+        and(
+          eq(entries.type, "post"),
+          sql`json_type(${entries.meta}, '$.featured') IS NULL`,
+        ),
+      );
+    for (const ids of chunkForD1(rows.map((row) => row.id))) {
+      await db
+        .update(entries)
+        .set({
+          meta: sql`json_set(${entries.meta}, '$.featured', json('false'))`,
+        })
+        .where(inArray(entries.id, ids));
+    }
+  },
+});
+```
+
+A test calls `up` directly against the test harness's database, then reads what it left:
+
+```ts
+// src/data-migrations.test.ts
+import { eq } from "plumix/db";
+import { settings } from "plumix/schema";
+import { createTestDb } from "plumix/test";
+import { expect, test } from "vitest";
+
+import { renameBetaEnabled } from "./data-migrations.js";
+
+test("renames the beta flag", async () => {
+  const db = await createTestDb();
+  await db
+    .insert(settings)
+    .values({ group: "acme_flags", key: "beta_enabled", value: true });
+
+  await renameBetaEnabled.up({ db });
+
+  expect(
+    await db.select().from(settings).where(eq(settings.group, "acme_flags")),
+  ).toEqual([{ group: "acme_flags", key: "beta", value: true }]);
+});
+```
+
+### When they run
+
+Data migrations run wherever schema migrations do, and always after every owner's schema migrations, so an `up` can read a column a schema migration of the same release added. They run in owner order: core's, then each plugin's in the order of `plugins`, then the site's, each list in its own order. `plumix dev` runs them on start, and `plumix migrate` and `plumix migrate --remote` run them by hand. On Node and Bun the built server runs them when it starts, before it listens. On Cloudflare, `plumix deploy` runs them against D1 before `wrangler deploy`, so the previous Worker serves the reshaped data until the new one is live.
+
+Each one is recorded in `__plumix_data_migrations` under its owner and name once its `up` resolves, and never runs again. `plumix migrate` prints `applied 1 data migration` or `data migrations up to date` for each owner that has any, and `plumix migrate status` lists each one as applied or pending.
+
+### Rules
+
+- **A released data migration never changes.** Sites that already ran it will not run it again.
+- **Renaming one runs it again**, because the name is what is recorded.
+- **Fix forward.** A mistake is corrected by a new data migration, never by editing the old one. There is no `down()`.
+- **Write `up` so it can run again.** When an `up` throws, the run stops, nothing after it runs, and it is not recorded, so the next run retries it. It runs outside a transaction, because D1 cannot hold one open across TypeScript, so a retry may find some of its work done. Filter on the old shape, as the recipes above do.
+- **Downgrades aren't supported.** Rolling back is restoring the database: [D1 Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/) on Cloudflare, or a copy of the SQLite file taken before the upgrade on Node and Bun.
+
 ## Plugins that ship admin UI
 
 Five add a page of their own: media has the library at `/media`, menu has the menu builder at `/menus`, comments has the moderation queue at `/comments`, audit-log has the activity feed at `/audit-log`, and forms has the submissions inbox at `/form-submissions`. Two add a surface without adding a page — seo contributes a page under Settings and a preview of how an entry will read in search results to the editor sidebar, and og contributes a preview of its social card to the same sidebar, but only when `og({ preview })` asks for the box, since rendering it is the only reason that chunk exists. Blog, pages, feeds and search ship no admin UI at all.

@@ -11,7 +11,7 @@ import { createRequire } from "node:module";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import type { SourceMapInput } from "@jridgewell/trace-mapping";
 import type { IncomingMessage } from "node:http";
-import type { BuildEnvironmentOptions, Plugin, UserConfig } from "vite";
+import type { Plugin, UserConfig } from "vite";
 import * as v from "valibot";
 import { mergeConfig } from "vite";
 
@@ -77,6 +77,7 @@ import {
 import { generatePluginCatalogsSource } from "./plugin-catalogs-codegen.js";
 import { stageUserPublic } from "./public-staging.js";
 import { stageIntoPlace } from "./stage-into-place.js";
+import { withoutUseClientWarning } from "./use-client-warning.js";
 import { generateWorkerExportsSource } from "./worker-exports-codegen.js";
 
 /**
@@ -796,28 +797,6 @@ function escapeAttribute(value: string): string {
     .replace(/&/g, "&amp;")
     .replace(/"/g, "&quot;")
     .replace(/</g, "&lt;");
-}
-
-type OnLog = NonNullable<
-  NonNullable<BuildEnvironmentOptions["rolldownOptions"]>["onLog"]
->;
-
-/**
- * Plumix gives `"use client"` its meaning itself, so Rolldown's directive
- * warning is noise; @vitejs/plugin-react drops it too.
- */
-function withoutUseClientWarning(next: OnLog | undefined): OnLog {
-  return (level, log, defaultHandler) => {
-    if (
-      level === "warn" &&
-      log.code === "MODULE_LEVEL_DIRECTIVE" &&
-      log.message.includes('"use client"')
-    ) {
-      return;
-    }
-    if (next) next(level, log, defaultHandler);
-    else defaultHandler(level, log);
-  };
 }
 
 /**

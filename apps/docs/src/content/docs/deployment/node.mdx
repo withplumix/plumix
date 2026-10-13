@@ -90,13 +90,13 @@ This is the path from a scaffolded site to a running process. It assumes a site 
    plumix dev --port 3000
    ```
 
-3. **Build.** The build writes `dist/client` for the browser and `dist/server/worker.js` to run. Everything the server needs is inlined into that one file, except native packages, which it imports at runtime. Every table owner's migration history lands beside it, in `dist/server/migrations/`. The build keeps `sharp`, `better-sqlite3` and the libsql client family external without you listing them. Name any other package the bundle must import rather than inline in `node({ build: { external: [...] } })`. After you change that list, restart the dev server.
+3. **Build.** The build writes `dist/client` for the browser and `dist/server/worker.js` to run. Everything the server needs is inlined into that one file, except native packages, which it imports at runtime. Every table owner's migration history lands beside it, in `dist/server/migrations/`, and the plugins' and the site's [data migrations](/plugins/overview/#data-migrations) land there as a bundle of their own, `dist/server/migrations/data-migrations.js`, which the server imports only when it starts. The build keeps `sharp`, `better-sqlite3` and the libsql client family external without you listing them. Name any other package the bundle must import rather than inline in `node({ build: { external: [...] } })`. After you change that list, restart the dev server.
 
    ```sh
    plumix build
    ```
 
-4. **Run.** The process applies every pending migration in `dist/server/migrations/` to its database, then listens on `PORT` and `HOST`, defaulting to `3000` and `0.0.0.0`. If a migration fails, it exits `1` without listening.
+4. **Run.** The process applies every pending migration in `dist/server/migrations/` to its database, then the pending data migrations in `dist/server/migrations/data-migrations.js`, then listens on `PORT` and `HOST`, defaulting to `3000` and `0.0.0.0`. If a migration of either kind fails, it exits `1` without listening.
 
    ```sh
    PORT=3000 node dist/server/worker.js
@@ -206,7 +206,7 @@ Mount a volume over `data/` and the database and uploads survive a redeploy. The
 
 ### Migrations run where the volume is
 
-The built server applies its pending migrations to the database on the volume each time it starts, before it listens, so the image needs no migration step and no entrypoint script. A start against an up-to-date database applies nothing.
+The built server applies its pending migrations to the database on the volume each time it starts, the histories first and then `dist/server/migrations/data-migrations.js`, before it listens, so the image needs no migration step and no entrypoint script. A start against an up-to-date database applies nothing.
 
 ### Environment and shutdown
 
@@ -242,13 +242,13 @@ EXPOSE 3000
 CMD ["node", "dist/server/worker.js"]
 ```
 
-`COPY package.json pnpm-lock.yaml ./` before `COPY . .` means an edit to source alone reuses the installed layer; a lockfile change is the only thing that busts it. Secrets are absent from both stages — they arrive with `docker run --env-file` or whatever the platform's equivalent is, never as a build argument. List `.env` in `.dockerignore` so `COPY . .` cannot carry a local one into the image: the built server would load it.
+`COPY --from=build /app/dist ./dist` carries the migration histories and `data-migrations.js` with the server, so the runtime stage needs neither `plumix.config.ts` nor the packages' sources to migrate. `COPY package.json pnpm-lock.yaml ./` before `COPY . .` means an edit to source alone reuses the installed layer; a lockfile change is the only thing that busts it. Secrets are absent from both stages — they arrive with `docker run --env-file` or whatever the platform's equivalent is, never as a build argument. List `.env` in `.dockerignore` so `COPY . .` cannot carry a local one into the image: the built server would load it.
 
 ## Assembling your own server
 
 The generated entry holds only imports and one call. The package exports every layer it stacks, for a host that assembles its own server.
 
-- `createNodeSite({ config, assetManifest, pluginCatalogs, entryUrl })` is what the entry calls, and `pluginCatalogs` is optional. It returns `handler`, `listener`, `dispose`, `startCron(overrides)` and `serveWhenMain(main)`. `handler` is the `{ fetch, scheduled }` pair, and `scheduled` answers with the run's report. `startCron` hands back a handle whose `stop({ timeoutMs })` waits at most that long for the firing in flight and resolves `false` if it was still running. `serveWhenMain` applies the migrations the build shipped beside the entry, exiting `1` if they fail, then runs the site as a process with the `http` server, cron and the shutdown protocol. It skips cron when the config sets `cron: false`, and does nothing when `main` is false.
+- `createNodeSite({ config, assetManifest, pluginCatalogs, entryUrl })` is what the entry calls, and `pluginCatalogs` is optional. It returns `handler`, `listener`, `dispose`, `startCron(overrides)` and `serveWhenMain(main)`. `handler` is the `{ fetch, scheduled }` pair, and `scheduled` answers with the run's report. `startCron` hands back a handle whose `stop({ timeoutMs })` waits at most that long for the firing in flight and resolves `false` if it was still running. `serveWhenMain` applies the migrations the build shipped beside the entry, the histories and then `migrations/data-migrations.js`, exiting `1` if they fail, then runs the site as a process with the `http` server, cron and the shutdown protocol. It skips cron when the config sets `cron: false`, and does nothing when `main` is false.
 - `createRequestListener(handle, { trustProxy, bodySizeLimit })` is the `node:http` bridge the built server and the dev server share. Each request becomes a `Request` with a streamed body and an `AbortSignal` that fires when the client disconnects. The bridge answers 400 to a path `decodeURI` rejects, a `Host` the URL parser refuses, or a method `fetch` forbids. After the response it drains any body the handler left unread, so the connection stays usable.
 - `createAssetsLayer({ root })` is the disk layer over `dist/client`. `serve(req, res, next)` answers a GET or HEAD for a file it holds, and `fetch(request)` is the assets binding core reads for admin deep links. It never serves a path that escapes the root or a dotfile other than `.well-known`. Files under `/assets/` carry an immutable cache header.
 - `createImageLayer(imageDelivery, { fetch })` is the `/_plumix/image` route as Connect-style middleware. It serves when the config's `imageDelivery` is this package's `images()` and passes every request through otherwise.
@@ -261,7 +261,7 @@ Public pages are a different story. A process with no CDN in front of it renders
 
 ## Commands the runtime adds
 
-`plumix dev` applies pending migrations, then runs the Vite server described in the quickstart, and accepts `--port` and `--host`. `plumix build` builds the client first and the server second, because the server bakes the client's asset manifest into its bundle, and copies every table owner's history into `dist/server/migrations/`. `plumix migrate` applies every table owner's migrations to the file `nodeSqlite` names; it has no `--remote`. There is no `deploy` and no `types`: the deployment artefact is a directory and a command.
+`plumix dev` applies pending migrations, then runs the Vite server described in the quickstart, and accepts `--port` and `--host`. `plumix build` builds the client first and the server second, because the server bakes the client's asset manifest into its bundle, copies every table owner's history into `dist/server/migrations/`, and bundles the plugins' and the site's data migrations into `dist/server/migrations/data-migrations.js`, which the server runs after the histories. `plumix migrate` applies every owner's migrations, then its data migrations, to the file `nodeSqlite` names; it has no `--remote`. There is no `deploy` and no `types`: the deployment artefact is a directory and a command.
 
 ## Related
 

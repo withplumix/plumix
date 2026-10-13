@@ -44,6 +44,15 @@ export type CoreSchema = {
 export type Db<TSchema extends Record<string, unknown> = CoreSchema> =
   BaseSQLiteDatabase<"async" | "sync", unknown, TSchema>;
 
+/**
+ * Not JSON: drizzle's tables by name. Open, so a database with no schema
+ * registered and the test harness's both fit.
+ */
+type AnySchema = Record<string, unknown>;
+
+/** What a data migration's `up` reshapes: drizzle promising no schema. */
+export type DataMigrationDb = Db<AnySchema>;
+
 export interface AuthenticatedUser extends RendererUser {
   readonly role: UserRole;
 }

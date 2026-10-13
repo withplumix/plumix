@@ -329,6 +329,10 @@ What a runtime adapter hands core for one call into the runtime handler: the `en
 The ordered migrations that build the tables one owner declares — core, a plugin, or a site's own tables — shipped and committed with that owner and replayed by every database it reaches. Source its owner alone writes: it only grows, and nothing that applies it ever deletes or rewrites it. A site's database is built from every history its config pulls in, each migration applied once: owner by owner (core, then plugins in config order, then the site), each history in its own order.
 _Avoid_: migrations folder, `drizzle/` (a folder holds a history; it is not the concept)
 
+**Data migration**:
+A named, forward-only TypeScript step that reshapes data an owner already stored (renames a settings key, rewrites JSON meta, backfills a value), declared with `defineDataMigration` by core, a plugin (with or without tables) or the site. Every owner's data migrations run after every migration history, wherever those apply: core's, then plugins' in config order, then the site's, each list in its own order. Each is recorded once its `up` succeeds, by owner and name, and never runs again; a mistake is fixed by a new one, never by a `down`.
+_Avoid_: seed, data patch, `post_update` (a seed fills an empty database; a data migration reshapes one that has data)
+
 **Config slot**:
 A named key of the `plumix()` call in `plumix.config.ts`. Slots are siblings rather than a bundle, though one may still require another's platform: a slot naming a Cloudflare binding needs the Cloudflare runtime beside it. See the disambiguation note — distinct from a descriptor slot, a slot input and a template slot. Read at runtime as `ctx.config.<slot>`. A slot that binds to the platform is also connected as a service on the context (`ctx.storage`).
 

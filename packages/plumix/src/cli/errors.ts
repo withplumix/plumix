@@ -23,6 +23,9 @@ type PlumixCliErrorCode =
   | "migrate_owner_history_missing"
   | "migrate_adoption_mismatch"
   | "migrate_site_drifted"
+  | "migrate_data_module_unresolved"
+  | "migrate_data_duplicate_name"
+  | "migrate_data_failed"
   | "config_not_found_explicit"
   | "config_not_found_default"
   | "config_load_failed"
@@ -300,6 +303,43 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
       `The site's own tables are ahead of its migrations/: generating would write ${ctx.files.join(", ")}`,
       "Nothing was changed. Run `plumix migrate generate` (or `plumix dev`), commit the migration it writes, then run this again.",
       undefined,
+    );
+  }
+
+  static migrateDataModuleUnresolved(ctx: {
+    spec: string;
+    cause: unknown;
+  }): PlumixCliError {
+    return new PlumixCliError(
+      "migrate_data_module_unresolved",
+      `Could not resolve the dataMigrations module "${ctx.spec}" from this site`,
+      "A plugin's `dataMigrations` resolves like its `schemaModule`; the config's resolves relative to the config file. Nothing was applied.",
+      ctx.cause,
+    );
+  }
+
+  static migrateDataDuplicateName(ctx: {
+    owner: string;
+    name: string;
+  }): PlumixCliError {
+    return new PlumixCliError(
+      "migrate_data_duplicate_name",
+      `${ctx.owner} declares the data migration "${ctx.name}" more than once`,
+      "A data migration's name is unique within its owner: it is what the run records. No data migration ran.",
+      undefined,
+    );
+  }
+
+  static migrateDataFailed(ctx: {
+    owner: string;
+    name: string;
+    cause: unknown;
+  }): PlumixCliError {
+    return new PlumixCliError(
+      "migrate_data_failed",
+      `${ctx.owner}: the data migration "${ctx.name}" failed: ${ctx.cause instanceof Error ? ctx.cause.message : String(ctx.cause)}`,
+      "It was not recorded and nothing after it ran. Fix the cause and run this again: the next run retries it, so its `up` must be safe to run again.",
+      ctx.cause,
     );
   }
 
