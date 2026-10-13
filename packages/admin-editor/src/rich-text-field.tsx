@@ -44,6 +44,11 @@ import type {
 } from "./rich-text-extensions.js";
 import { applyLink, linkHrefAt, removeLink } from "./link-edit.js";
 import { richTextExtensions, toolbarControls } from "./rich-text-extensions.js";
+import {
+  contentNeedsReset,
+  storedHtml,
+  storedJson,
+} from "./rich-text-stored.js";
 
 // Re-exported so JSON-mode consumers (the metabox `richtext()` field) can
 // name the value type without taking a direct Tiptap dependency.
@@ -100,29 +105,6 @@ interface ActiveState {
   readonly headingLevel: number | null;
 }
 
-/**
- * The trailing-node extension's empty paragraph is the editor's, not the
- * author's. The sync guard compares this same form, or every keystroke resets
- * the editor.
- */
-function storedHtml(editor: Editor): string {
-  const html = editor.getHTML();
-  return html !== EMPTY_PARAGRAPH && html.endsWith(EMPTY_PARAGRAPH)
-    ? html.slice(0, -EMPTY_PARAGRAPH.length)
-    : html;
-}
-
-function storedJson(editor: Editor): JSONContent {
-  const doc = editor.getJSON();
-  const nodes = doc.content;
-  const last = nodes.at(-1);
-  return nodes.length > 1 && last?.type === "paragraph" && !last.content
-    ? { ...doc, content: nodes.slice(0, -1) }
-    : doc;
-}
-
-const EMPTY_PARAGRAPH = "<p></p>";
-
 export function RichTextField(props: RichTextFieldProps): ReactElement {
   const { testId, allow, ariaLabel } = props;
   const disabled = props.disabled ?? false;
@@ -133,8 +115,9 @@ export function RichTextField(props: RichTextFieldProps): ReactElement {
   const emitRef = useRef<(editor: Editor) => void>(() => undefined);
   useEffect(() => {
     emitRef.current = (editor: Editor): void => {
-      if (props.serialization === "json") props.onChange(storedJson(editor));
-      else props.onChange(storedHtml(editor));
+      if (props.serialization === "json")
+        props.onChange(storedJson(editor.getJSON()));
+      else props.onChange(storedHtml(editor.getHTML()));
     };
   });
 
@@ -154,20 +137,17 @@ export function RichTextField(props: RichTextFieldProps): ReactElement {
     onUpdate: ({ editor }) => emitRef.current(editor),
   });
 
-  // Relies on the host storing back the exact value emitted; any
-  // re-serialization between onChange and `value` would reset the caret
-  // mid-type.
   useEffect(() => {
     if (!editor) return;
-    if (props.serialization === "json") {
-      const next = props.value;
-      if (next == null) {
-        if (!editor.isEmpty)
-          editor.commands.setContent(null, { emitUpdate: false });
-      } else if (JSON.stringify(next) !== JSON.stringify(storedJson(editor))) {
-        editor.commands.setContent(next, { emitUpdate: false });
-      }
-    } else if (props.value !== storedHtml(editor)) {
+    const json = props.serialization === "json";
+    if (
+      contentNeedsReset(
+        json ? "json" : "html",
+        props.value,
+        json ? editor.getJSON() : editor.getHTML(),
+        editor.isEmpty,
+      )
+    ) {
       editor.commands.setContent(props.value, { emitUpdate: false });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- serialization is stable per instance; value drives the sync
