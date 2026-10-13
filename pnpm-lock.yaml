@@ -211,8 +211,8 @@ catalogs:
       specifier: ^3.9.9
       version: 3.9.9
     publint:
-      specifier: ^0.3.24
-      version: 0.3.24
+      specifier: ^0.3.25
+      version: 0.3.25
     radix-ui:
       specifier: ^1.6.7
       version: 1.6.7
@@ -803,7 +803,7 @@ importers:
         version: 3.9.9
       publint:
         specifier: 'catalog:'
-        version: 0.3.24
+        version: 0.3.25
       radix-ui:
         specifier: 'catalog:'
         version: 1.6.7(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -969,7 +969,7 @@ importers:
         version: 3.9.9
       publint:
         specifier: 'catalog:'
-        version: 0.3.24
+        version: 0.3.25
       react:
         specifier: catalog:react
         version: 19.3.0
@@ -1066,7 +1066,7 @@ importers:
         version: 3.9.9
       publint:
         specifier: 'catalog:'
-        version: 0.3.24
+        version: 0.3.25
       react:
         specifier: catalog:react
         version: 19.3.0
@@ -1220,7 +1220,7 @@ importers:
         version: 3.9.9
       publint:
         specifier: 'catalog:'
-        version: 0.3.24
+        version: 0.3.25
       react:
         specifier: catalog:react
         version: 19.3.0
@@ -1360,7 +1360,7 @@ importers:
         version: 3.9.9
       publint:
         specifier: 'catalog:'
-        version: 0.3.24
+        version: 0.3.25
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -1463,7 +1463,7 @@ importers:
         version: 3.9.9
       publint:
         specifier: 'catalog:'
-        version: 0.3.24
+        version: 0.3.25
       react:
         specifier: catalog:react
         version: 19.3.0
@@ -1555,7 +1555,7 @@ importers:
         version: 3.9.9
       publint:
         specifier: 'catalog:'
-        version: 0.3.24
+        version: 0.3.25
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -1692,7 +1692,7 @@ importers:
         version: 3.9.9
       publint:
         specifier: 'catalog:'
-        version: 0.3.24
+        version: 0.3.25
       react:
         specifier: catalog:react
         version: 19.3.0
@@ -1777,7 +1777,7 @@ importers:
         version: 3.9.9
       publint:
         specifier: 'catalog:'
-        version: 0.3.24
+        version: 0.3.25
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -1917,7 +1917,7 @@ importers:
         version: 3.9.9
       publint:
         specifier: 'catalog:'
-        version: 0.3.24
+        version: 0.3.25
       react:
         specifier: catalog:react
         version: 19.3.0
@@ -2042,7 +2042,7 @@ importers:
         version: 3.9.9
       publint:
         specifier: 'catalog:'
-        version: 0.3.24
+        version: 0.3.25
       react:
         specifier: catalog:react
         version: 19.3.0
@@ -2173,7 +2173,7 @@ importers:
         version: 3.9.9
       publint:
         specifier: 'catalog:'
-        version: 0.3.24
+        version: 0.3.25
       react:
         specifier: catalog:react
         version: 19.3.0
@@ -2301,7 +2301,7 @@ importers:
         version: 3.9.9
       publint:
         specifier: 'catalog:'
-        version: 0.3.24
+        version: 0.3.25
       react:
         specifier: catalog:react
         version: 19.3.0
@@ -2395,7 +2395,7 @@ importers:
         version: 3.9.9
       publint:
         specifier: 'catalog:'
-        version: 0.3.24
+        version: 0.3.25
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -2478,7 +2478,7 @@ importers:
         version: 3.9.9
       publint:
         specifier: 'catalog:'
-        version: 0.3.24
+        version: 0.3.25
       react:
         specifier: catalog:react
         version: 19.3.0
@@ -2572,7 +2572,7 @@ importers:
         version: 3.9.9
       publint:
         specifier: 'catalog:'
-        version: 0.3.24
+        version: 0.3.25
       react:
         specifier: catalog:react
         version: 19.3.0
@@ -2724,7 +2724,7 @@ importers:
         version: 3.9.9
       publint:
         specifier: 'catalog:'
-        version: 0.3.24
+        version: 0.3.25
       radix-ui:
         specifier: 'catalog:'
         version: 1.6.7(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -2794,7 +2794,7 @@ importers:
         version: 3.9.9
       publint:
         specifier: 'catalog:'
-        version: 0.3.24
+        version: 0.3.25
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -2895,7 +2895,7 @@ importers:
         version: 3.9.9
       publint:
         specifier: 'catalog:'
-        version: 0.3.24
+        version: 0.3.25
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -2993,7 +2993,7 @@ importers:
         version: 3.9.9
       publint:
         specifier: 'catalog:'
-        version: 0.3.24
+        version: 0.3.25
       sharp:
         specifier: 'catalog:'
         version: 0.35.5(@types/node@24.19.1)
@@ -10488,8 +10488,8 @@ packages:
     engines: {node: '>=24.0.0'}
     hasBin: true
 
-  publint@0.3.24:
-    resolution: {integrity: sha512-9zS56KrKBoqi5Qt8h92uMP8TTM9AYZSgnmCo4u2priMqkOZvQnTsziZ2p5LJ2ywbYkAjoCDp2jda9u4cgFefIw==}
+  publint@0.3.25:
+    resolution: {integrity: sha512-WMMbn/d7JqRlfXQL/JUI4n5skC8cJ5WVr8/wT5mmiYWkUdENkZr1I5rgs2+dQPVRgoJd+JRYtB46MTsuDylw9g==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -19686,7 +19686,7 @@ snapshots:
     dependencies:
       commander: 13.1.0
 
-  publint@0.3.24:
+  publint@0.3.25:
     dependencies:
       '@publint/pack': 0.1.7
       package-manager-detector: 1.8.0
