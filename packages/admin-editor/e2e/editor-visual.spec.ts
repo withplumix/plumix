@@ -1093,6 +1093,30 @@ test.describe("editor playground", () => {
     ).toBeVisible();
   });
 
+  test("applying a link from a caret inside one keeps the whole link selected", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+    await canvas.locator('[data-plumix-id="link-text"]').click();
+    const editor = page.getByTestId("block-input-body-editor");
+    await editor.locator("a").click();
+    await page.getByTestId("block-input-body-link").click();
+    await page
+      .getByTestId("block-input-body-link-url")
+      .fill("https://example.test/");
+
+    await page.getByTestId("block-input-body-link-apply").click();
+
+    await expect(editor.locator("a")).toHaveAttribute(
+      "href",
+      "https://example.test/",
+    );
+    expect(await page.evaluate(() => window.getSelection()?.toString())).toBe(
+      "another page",
+    );
+  });
+
   test("turning a text block into a heading keeps the caret where the author types", async ({
     page,
   }) => {

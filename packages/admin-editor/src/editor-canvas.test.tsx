@@ -18,7 +18,6 @@ import { EditorCanvas } from "./editor-canvas.js";
 const registry = createBlockRegistry(coreBlocks);
 const ORIGIN = "http://localhost:3000";
 
-/** What the SSR embeds in the content root for a tree of `blocks`. */
 const treeEmbed = (blocks: readonly unknown[]): string =>
   JSON.stringify({ version: "plumix.v2", blocks });
 

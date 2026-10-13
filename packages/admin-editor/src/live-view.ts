@@ -7,7 +7,6 @@ export interface LiveView {
   readonly move: (view: View) => void;
   /** Commits the last view now and ends the gesture; a no-op between them. */
   readonly settle: () => void;
-  /** Drops a pending commit. */
   readonly cancel: () => void;
 }
 

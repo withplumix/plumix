@@ -376,7 +376,6 @@ export function LinkPopover({
 
   const edit = (change: LinkChange): void => {
     if (!editor || !range.current) return;
-    // The edited link stays selected, a caret's whole link included.
     const edited = linkRange(editor.state, range.current);
     editor.view.dispatch(change(editor.state, range.current));
     editor.chain().focus().setTextSelection(edited).run();

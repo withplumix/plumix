@@ -16,7 +16,6 @@ const HOST_HANDLED: ReadonlySet<EditorShortcutId> = new Set([
   "selection.delete",
 ]);
 
-/** Whether a press of `id` in the host is the canvas keys' to answer. */
 export function canvasHandlesHostKey(id: EditorShortcutId): boolean {
   return !HOST_HANDLED.has(id);
 }
