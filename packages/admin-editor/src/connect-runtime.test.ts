@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vitest";
 
 import type { BlockNode, LoadedDeps } from "@plumix/core/blocks";
 import type {
@@ -11,6 +11,13 @@ import { connectRuntime } from "./connect-runtime.js";
 
 const ORIGIN = "http://localhost:3000";
 
+/** Where the other half's messages arrive, in place of the window. */
+let bus: EventTarget;
+
+beforeEach(() => {
+  bus = new EventTarget();
+});
+
 function fakeParent(): { win: Window; posted: unknown[] } {
   const posted: unknown[] = [];
   const win = {
@@ -20,7 +27,7 @@ function fakeParent(): { win: Window; posted: unknown[] } {
 }
 
 function fromHost(message: unknown, origin = ORIGIN): void {
-  window.dispatchEvent(
+  bus.dispatchEvent(
     new MessageEvent("message", {
       data: encode(EDITOR_BRIDGE_CHANNEL, message),
       origin,
@@ -37,6 +44,7 @@ describe("connectRuntime (canvas/iframe side)", () => {
     const { win, posted } = fakeParent();
     const conn = connectRuntime({
       parentWindow: win,
+      messageTarget: bus,
       origin: ORIGIN,
       onTree: () => undefined,
     });
@@ -53,6 +61,7 @@ describe("connectRuntime (canvas/iframe side)", () => {
     const { win } = fakeParent();
     const conn = connectRuntime({
       parentWindow: win,
+      messageTarget: bus,
       origin: ORIGIN,
       onTree: (tree) => seen.push(tree),
     });
@@ -69,6 +78,7 @@ describe("connectRuntime (canvas/iframe side)", () => {
     const { win } = fakeParent();
     const conn = connectRuntime({
       parentWindow: win,
+      messageTarget: bus,
       origin: ORIGIN,
       onTree: () => undefined,
       onLoaderData: (data) => seen.push(data),
@@ -86,6 +96,7 @@ describe("connectRuntime (canvas/iframe side)", () => {
     const { win } = fakeParent();
     const conn = connectRuntime({
       parentWindow: win,
+      messageTarget: bus,
       origin: ORIGIN,
       onTree: () => undefined,
       onDeps: (deps) => seen.push(deps),
@@ -102,6 +113,7 @@ describe("connectRuntime (canvas/iframe side)", () => {
     const { win, posted } = fakeParent();
     const conn = connectRuntime({
       parentWindow: win,
+      messageTarget: bus,
       origin: ORIGIN,
       onTree: () => undefined,
     });
@@ -120,6 +132,7 @@ describe("connectRuntime (canvas/iframe side)", () => {
     const { win, posted } = fakeParent();
     const conn = connectRuntime({
       parentWindow: win,
+      messageTarget: bus,
       origin: ORIGIN,
       onTree: () => undefined,
     });
@@ -137,6 +150,7 @@ describe("connectRuntime (canvas/iframe side)", () => {
     const { win, posted } = fakeParent();
     const conn = connectRuntime({
       parentWindow: win,
+      messageTarget: bus,
       origin: ORIGIN,
       onTree: () => undefined,
     });
@@ -158,6 +172,7 @@ describe("connectRuntime (canvas/iframe side)", () => {
     const { win, posted } = fakeParent();
     const conn = connectRuntime({
       parentWindow: win,
+      messageTarget: bus,
       origin: ORIGIN,
       onTree: () => undefined,
     });
@@ -178,6 +193,7 @@ describe("connectRuntime (canvas/iframe side)", () => {
     const { win } = fakeParent();
     const conn = connectRuntime({
       parentWindow: win,
+      messageTarget: bus,
       origin: ORIGIN,
       onTree: () => undefined,
       onConfig: (config) => seen.push(config),
@@ -190,23 +206,36 @@ describe("connectRuntime (canvas/iframe side)", () => {
     conn.dispose();
   });
 
-  test("reportRequestAdd posts canvas:requestAdd to the host", () => {
+  test("reportRequestAdd posts canvas:requestAdd with the slot to the host", () => {
     const { win, posted } = fakeParent();
     const conn = connectRuntime({
       parentWindow: win,
+      messageTarget: bus,
       origin: ORIGIN,
       onTree: () => undefined,
     });
 
     conn.reportRequestAdd("g1", "content");
+
     expect(messages(posted)).toContainEqual({
       type: "canvas:requestAdd",
       parentId: "g1",
       slotKey: "content",
     });
+    conn.dispose();
+  });
 
-    // Root (no args) omits the slot identity.
+  test("a root reportRequestAdd posts canvas:requestAdd with no slot", () => {
+    const { win, posted } = fakeParent();
+    const conn = connectRuntime({
+      parentWindow: win,
+      messageTarget: bus,
+      origin: ORIGIN,
+      onTree: () => undefined,
+    });
+
     conn.reportRequestAdd();
+
     expect(messages(posted)).toContainEqual({ type: "canvas:requestAdd" });
     conn.dispose();
   });
@@ -216,6 +245,7 @@ describe("connectRuntime (canvas/iframe side)", () => {
     const { win } = fakeParent();
     const conn = connectRuntime({
       parentWindow: win,
+      messageTarget: bus,
       origin: ORIGIN,
       onTree: (tree) => seen.push(tree),
     });

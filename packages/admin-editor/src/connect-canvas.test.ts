@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { BlockNode } from "@plumix/core/blocks";
 import { EDITOR_BRIDGE_CHANNEL, encode } from "@plumix/core/blocks/renderer";
@@ -9,6 +9,13 @@ import { createEditorStore } from "./store.js";
 
 const ORIGIN = "http://localhost:3000";
 
+/** Where the other half's messages arrive, in place of the window. */
+let bus: EventTarget;
+
+beforeEach(() => {
+  bus = new EventTarget();
+});
+
 function fakeFrame(): { win: Window; posted: unknown[] } {
   const posted: unknown[] = [];
   const win = {
@@ -18,7 +25,7 @@ function fakeFrame(): { win: Window; posted: unknown[] } {
 }
 
 function fromCanvas(message: unknown, origin = ORIGIN): void {
-  window.dispatchEvent(
+  bus.dispatchEvent(
     new MessageEvent("message", {
       data: encode(EDITOR_BRIDGE_CHANNEL, message),
       origin,
@@ -37,7 +44,12 @@ describe("connectCanvas", () => {
     const tree: readonly BlockNode[] = [{ id: "a", name: "core/heading" }];
     const store = createEditorStore(treeBlocks, { tree });
     const { win, posted } = fakeFrame();
-    const conn = connectCanvas({ store, frameWindow: win, origin: ORIGIN });
+    const conn = connectCanvas({
+      store,
+      frameWindow: win,
+      origin: ORIGIN,
+      messageTarget: bus,
+    });
 
     fromCanvas({ type: "canvas:ready" });
 
@@ -49,7 +61,12 @@ describe("connectCanvas", () => {
   test("a canvas:select message updates the store's active block", () => {
     const store = createEditorStore(treeBlocks);
     const { win } = fakeFrame();
-    const conn = connectCanvas({ store, frameWindow: win, origin: ORIGIN });
+    const conn = connectCanvas({
+      store,
+      frameWindow: win,
+      origin: ORIGIN,
+      messageTarget: bus,
+    });
 
     fromCanvas({ type: "canvas:select", id: "x" });
 
@@ -64,6 +81,7 @@ describe("connectCanvas", () => {
     const conn = connectCanvas({
       store,
       frameWindow: win,
+      messageTarget: bus,
       origin: ORIGIN,
       onWheel,
     });
@@ -94,6 +112,7 @@ describe("connectCanvas", () => {
     const conn = connectCanvas({
       store,
       frameWindow: win,
+      messageTarget: bus,
       origin: ORIGIN,
       onKey,
     });
@@ -120,6 +139,7 @@ describe("connectCanvas", () => {
     const conn = connectCanvas({
       store,
       frameWindow: win,
+      messageTarget: bus,
       origin: ORIGIN,
       onRequestAdd,
     });
@@ -144,6 +164,7 @@ describe("connectCanvas", () => {
     const conn = connectCanvas({
       store,
       frameWindow: win,
+      messageTarget: bus,
       origin: ORIGIN,
       config: { locale: "fr", catalog },
     });
@@ -160,7 +181,12 @@ describe("connectCanvas", () => {
   test("sends no host:config when no config is given", () => {
     const store = createEditorStore(treeBlocks);
     const { win, posted } = fakeFrame();
-    const conn = connectCanvas({ store, frameWindow: win, origin: ORIGIN });
+    const conn = connectCanvas({
+      store,
+      frameWindow: win,
+      origin: ORIGIN,
+      messageTarget: bus,
+    });
 
     fromCanvas({ type: "canvas:ready" });
 
@@ -173,7 +199,12 @@ describe("connectCanvas", () => {
   test("an additive canvas:select extends the selection set", () => {
     const store = createEditorStore(treeBlocks);
     const { win } = fakeFrame();
-    const conn = connectCanvas({ store, frameWindow: win, origin: ORIGIN });
+    const conn = connectCanvas({
+      store,
+      frameWindow: win,
+      origin: ORIGIN,
+      messageTarget: bus,
+    });
 
     fromCanvas({ type: "canvas:select", id: "x" });
     fromCanvas({ type: "canvas:select", id: "y", additive: true });
@@ -186,7 +217,12 @@ describe("connectCanvas", () => {
   test("re-pushes the tree when the store tree changes after ready", () => {
     const store = createEditorStore(treeBlocks);
     const { win, posted } = fakeFrame();
-    const conn = connectCanvas({ store, frameWindow: win, origin: ORIGIN });
+    const conn = connectCanvas({
+      store,
+      frameWindow: win,
+      origin: ORIGIN,
+      messageTarget: bus,
+    });
     fromCanvas({ type: "canvas:ready" });
     posted.length = 0;
 
@@ -200,7 +236,12 @@ describe("connectCanvas", () => {
   test("pushLoaderData posts host:loader-data to the canvas", () => {
     const store = createEditorStore(treeBlocks);
     const { win, posted } = fakeFrame();
-    const conn = connectCanvas({ store, frameWindow: win, origin: ORIGIN });
+    const conn = connectCanvas({
+      store,
+      frameWindow: win,
+      origin: ORIGIN,
+      messageTarget: bus,
+    });
 
     conn.pushLoaderData({ "blk-1": { posts: ["fresh"] } });
 
@@ -220,6 +261,7 @@ describe("connectCanvas", () => {
     const conn = connectCanvas({
       store,
       frameWindow: win,
+      messageTarget: bus,
       origin: ORIGIN,
       onRequestDeps,
     });
@@ -234,7 +276,12 @@ describe("connectCanvas", () => {
   test("pushDeps posts host:deps to the canvas", () => {
     const store = createEditorStore(treeBlocks);
     const { win, posted } = fakeFrame();
-    const conn = connectCanvas({ store, frameWindow: win, origin: ORIGIN });
+    const conn = connectCanvas({
+      store,
+      frameWindow: win,
+      origin: ORIGIN,
+      messageTarget: bus,
+    });
 
     conn.pushDeps({ menus: { footer: "menu:footer" } });
 
@@ -247,41 +294,68 @@ describe("connectCanvas", () => {
     conn.dispose();
   });
 
-  test("re-announces hello until the canvas acks, then stops", () => {
-    vi.useFakeTimers();
-    try {
-      const store = createEditorStore(treeBlocks);
-      const { win, posted } = fakeFrame();
-      const conn = connectCanvas({ store, frameWindow: win, origin: ORIGIN });
-      const helloCount = (): number =>
-        posted.filter(
-          (p) =>
-            (p as { message?: { kind?: string } }).message?.kind === "hello",
-        ).length;
-
-      expect(helloCount()).toBe(1); // sent once on connect
-      vi.advanceTimersByTime(500);
-      expect(helloCount()).toBeGreaterThan(1); // retried while waiting
-
-      const afterAck = helloCount();
-      fromCanvas({ kind: "ack" });
-      vi.advanceTimersByTime(500);
-      expect(helloCount()).toBe(afterAck); // stops once ready
-
-      conn.dispose();
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
   test("ignores messages from a foreign origin", () => {
     const store = createEditorStore(treeBlocks);
     const { win } = fakeFrame();
-    const conn = connectCanvas({ store, frameWindow: win, origin: ORIGIN });
+    const conn = connectCanvas({
+      store,
+      frameWindow: win,
+      origin: ORIGIN,
+      messageTarget: bus,
+    });
 
     fromCanvas({ type: "canvas:select", id: "evil" }, "http://evil.test");
 
     expect(store.getState().activeId).toBeNull();
+    conn.dispose();
+  });
+});
+
+describe("connectCanvas hello retry", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function helloCount(posted: unknown[]): number {
+    return posted.filter(
+      (p) => (p as { message?: { kind?: string } }).message?.kind === "hello",
+    ).length;
+  }
+
+  test("re-announces hello every 250ms while the canvas has not acked", () => {
+    const store = createEditorStore(treeBlocks);
+    const { win, posted } = fakeFrame();
+    const conn = connectCanvas({
+      store,
+      frameWindow: win,
+      origin: ORIGIN,
+      messageTarget: bus,
+    });
+
+    vi.advanceTimersByTime(500);
+
+    expect(helloCount(posted)).toBe(3);
+    conn.dispose();
+  });
+
+  test("stops re-announcing hello once the canvas acks", async () => {
+    const store = createEditorStore(treeBlocks);
+    const { win, posted } = fakeFrame();
+    const conn = connectCanvas({
+      store,
+      frameWindow: win,
+      origin: ORIGIN,
+      messageTarget: bus,
+    });
+    fromCanvas({ kind: "ack" });
+
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(helloCount(posted)).toBe(1);
     conn.dispose();
   });
 });

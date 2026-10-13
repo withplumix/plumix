@@ -8,8 +8,6 @@ export const RETIRED_TIER_PENDING: readonly string[] = [
   "packages/admin-editor/src/block-input-control.browser.test.tsx",
   "packages/admin-editor/src/block-inspector.browser.test.tsx",
   "packages/admin-editor/src/canvas-frame.browser.test.tsx",
-  "packages/admin-editor/src/connect-canvas.browser.test.ts",
-  "packages/admin-editor/src/connect-runtime.browser.test.ts",
   "packages/admin-editor/src/editor-canvas.browser.test.tsx",
   "packages/admin-editor/src/editor-command-palette.browser.test.tsx",
   "packages/admin-editor/src/editor-config-context.browser.test.tsx",
