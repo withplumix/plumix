@@ -46,9 +46,10 @@ export function mount(
         root.render(node);
         return;
       }
-      // Inline `PLUMIX_DEV` so `hydrateRoot` tree-shakes out of production
-      // builds.
-      if (process.env.PLUMIX_DEV && hydrate) {
+      const kind = islandRootKind(Boolean(process.env.PLUMIX_DEV), hydrate);
+      // The inline `PLUMIX_DEV` at each branch is what folds: a function's
+      // result does not, and the dev handlers would ship to production.
+      if (process.env.PLUMIX_DEV && kind === "hydrate") {
         // The last moment the SSR HTML exists: on a mismatch React re-renders
         // the subtree in place.
         const server = element.innerHTML;
@@ -60,12 +61,10 @@ export function mount(
         });
         return;
       }
-      // Production (both the `createRoot` default handling) and a dev
-      // client-only island (no server output to hydrate, but still wired to the
-      // overlay).
-      root = process.env.PLUMIX_DEV
-        ? createRoot(element, { onUncaughtError: reportIslandError(element) })
-        : createRoot(element);
+      root =
+        process.env.PLUMIX_DEV && kind === "create-reporting"
+          ? createRoot(element, { onUncaughtError: reportIslandError(element) })
+          : createRoot(element);
       root.render(node);
     },
     unmount() {
@@ -114,7 +113,20 @@ function reportIslandMismatch(
   };
 }
 
-function mergeSlotProps(
+/**
+ * Dev hydrates a server-rendered island so a divergence reaches the overlay,
+ * and a client-only one still reports its errors.
+ */
+export function islandRootKind(
+  dev: boolean,
+  hydrate: boolean,
+): "hydrate" | "create-reporting" | "create" {
+  if (!dev) return "create";
+  return hydrate ? "hydrate" : "create-reporting";
+}
+
+/** Each slot's raw HTML becomes a `<StaticHtml>` element on its named prop. */
+export function mergeSlotProps(
   props: SerializedProps,
   slotHtml: Readonly<Record<string, string>>,
 ): SerializedProps {

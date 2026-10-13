@@ -4,16 +4,14 @@
 
 import type { IslandStrategy } from "../island-element.js";
 import { publishIslandStrategy } from "../island-global.js";
-
-const DEFAULT_ROOT_MARGIN = "200px";
+import { visibleRootMargin } from "./options.js";
 
 export const visibleStrategy: IslandStrategy = (loadFn, opts, el) => {
   if (isInViewport(el)) {
     void loadFn();
     return;
   }
-  const rootMargin =
-    typeof opts.rootMargin === "string" ? opts.rootMargin : DEFAULT_ROOT_MARGIN;
+  const rootMargin = visibleRootMargin(opts);
   const io = new IntersectionObserver(
     (entries) => {
       for (const entry of entries) {
