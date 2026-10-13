@@ -999,6 +999,49 @@ test.describe("editor playground", () => {
     ).toHaveCount(0);
   });
 
+  test("Escape cancels a block drag and clears the refused mark", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+    const refused = page.getByTestId("plumix-slot-refused-indicator");
+    const blocks = canvas.locator("[data-plumix-id]");
+    // Selecting in the canvas leaves focus inside the iframe.
+    await canvas.locator('[data-plumix-id="heading-1"]').click();
+    await expect(page.getByTestId("selection-toolbar-drag")).toBeVisible();
+    const [left, right, group] = await settledBoxes(
+      canvas.locator('[data-plumix-id="col-left"]'),
+      canvas.locator('[data-plumix-id="col-right"]'),
+      canvas.locator('[data-plumix-id="group-heading"]'),
+    );
+    const gapX = (left.x + left.width + right.x) / 2;
+
+    await dragTo(
+      page,
+      page.getByTestId("selection-toolbar-drag"),
+      canvas.locator('[data-plumix-id="columns-1"]'),
+      {
+        targetPosition: (box) => ({ x: gapX - box.x, y: box.height / 2 }),
+        beforeDrop: async () => {
+          await expect(refused).toBeVisible();
+          await page.keyboard.press("Escape");
+          await expect(refused).toBeHidden();
+          // Released over the group: a live drag would nest heading-1 there.
+          await page.mouse.move(
+            group.x + group.width / 2,
+            group.y + group.height / 2,
+            { steps: 5 },
+          );
+        },
+      },
+    );
+
+    await expect(blocks.nth(0)).toHaveAttribute("data-plumix-id", "heading-1");
+    await expect(
+      canvas.locator('[data-plumix-id="group-1"] [data-plumix-id="heading-1"]'),
+    ).toHaveCount(0);
+  });
+
   test("the rail's link popover links the selected text", async ({ page }) => {
     await page.goto("/");
     const canvas = page.frameLocator(CANVAS_FRAME);

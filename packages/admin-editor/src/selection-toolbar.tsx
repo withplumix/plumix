@@ -92,9 +92,11 @@ export function SelectionToolbar({
               })}
               disabled={multi}
               // Pointerdown (not click) starts the move; preventDefault stops
-              // the browser's text-selection drag from hijacking it.
+              // a text-selection drag, but leaves focus in the canvas iframe,
+              // where Escape never reaches the host's cancel.
               onPointerDown={(e) => {
                 e.preventDefault();
+                e.currentTarget.focus();
                 state.startMove(activeId);
               }}
               className="cursor-grab active:cursor-grabbing"
