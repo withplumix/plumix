@@ -9,8 +9,8 @@ interface PluginCatalogLoaderInput {
 }
 
 /**
- * The loader no-ops when the manifest declares no catalog for that plugin and
- * locale.
+ * Falls back to the source catalog because a production admin can't compile
+ * `descriptor.message`: without one, a placeholder renders raw.
  */
 export function createPluginCatalogLoader({
   manifest,
@@ -24,7 +24,8 @@ export function createPluginCatalogLoader({
   // dedups concurrent calls.
   const inflight = new Map<string, Promise<void>>();
   return function loadPluginCatalog(pluginId, locale) {
-    const url = manifest[pluginId]?.catalogs[locale];
+    const entry = manifest[pluginId];
+    const url = entry?.catalogs[locale] ?? entry?.catalogs[entry.sourceLocale];
     if (!url) return Promise.resolve();
     const key = `${pluginId}|${locale}`;
     const cached = inflight.get(key);

@@ -8,7 +8,6 @@ import {
   ADMIN_CATALOGS,
   BLOCKS_CATALOGS,
   EDITOR_CATALOGS,
-  PLUGIN_CATALOGS,
 } from "./catalog-globs.js";
 import { createPluginCatalogLoader } from "./plugin-catalogs.js";
 
@@ -17,14 +16,12 @@ type CatalogMap = Record<string, () => Promise<{ messages: Messages }>>;
 /** Injectable because the build-time globs can't be narrowed afterwards. */
 export interface AdminCatalogs {
   readonly admin: CatalogMap;
-  readonly plugins: CatalogMap;
   readonly editor: CatalogMap;
   readonly blocks: CatalogMap;
 }
 
 const BUNDLED_CATALOGS: AdminCatalogs = {
   admin: ADMIN_CATALOGS,
-  plugins: PLUGIN_CATALOGS,
   editor: EDITOR_CATALOGS,
   blocks: BLOCKS_CATALOGS,
 };
@@ -48,7 +45,7 @@ export const pluginCatalogLoaderRef: { current: PluginCatalogLoader } = {
 interface BootI18nInput {
   /** The page's `<html lang>`. */
   readonly lang: string;
-  /** The manifest's third-party plugin catalogs. */
+  /** The manifest's plugin catalogs. */
   readonly pluginI18n?: PluginI18nManifest;
   readonly catalogs?: AdminCatalogs;
 }
@@ -70,10 +67,6 @@ export async function bootI18n({
   const locale = requested ? tag : SOURCE_LOCALE;
 
   const adminMessages = (await adminLoader()).messages;
-  const workspaceMessages = await loadWorkspacePluginCatalogs(
-    catalogs.plugins,
-    locale,
-  );
   const editorMessages = await loadSourceFallbackCatalog(
     catalogs.editor,
     "../../../admin-editor/locales/",
@@ -88,7 +81,6 @@ export async function bootI18n({
   i18n.load(locale, {
     ...blocksMessages,
     ...editorMessages,
-    ...workspaceMessages,
     ...adminMessages,
   });
   i18n.activate(locale);
@@ -96,7 +88,7 @@ export async function bootI18n({
   // Server bundles skip this and fall back to `descriptor.message`.
   setI18nResolver((d) => i18n._(d));
 
-  // Third-party plugins: manifest-driven runtime fetch + merge.
+  // Plugins: manifest-driven runtime fetch + merge.
   pluginCatalogLoaderRef.current = createPluginCatalogLoader({
     manifest: pluginI18n,
   });
@@ -120,20 +112,4 @@ async function loadSourceFallbackCatalog(
     catalogs[`${prefix}${SOURCE_LOCALE}.mjs`];
   if (!loader) return {};
   return (await loader()).messages;
-}
-
-async function loadWorkspacePluginCatalogs(
-  plugins: CatalogMap,
-  locale: string,
-): Promise<Messages> {
-  const merged: Messages = {};
-  for (const [path, loader] of Object.entries(plugins)) {
-    // `../../../plugins/<id>/locales/<locale>.mjs` — match the
-    // requested locale's filename. No fallback at the plugin layer;
-    // missing translations fall through to `descriptor.message`.
-    if (!path.endsWith(`/locales/${locale}.mjs`)) continue;
-    const mod = await loader();
-    Object.assign(merged, mod.messages);
-  }
-  return merged;
 }

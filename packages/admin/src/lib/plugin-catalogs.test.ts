@@ -1,3 +1,4 @@
+import type { Messages } from "@lingui/core";
 import { i18n } from "@lingui/core";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -16,12 +17,14 @@ describe("createPluginCatalogLoader", () => {
   test("is a no-op when the manifest has no URL for that (plugin, locale)", async () => {
     const importCatalog = vi.fn();
     const load = createPluginCatalogLoader({
-      manifest: { plugin_x: { catalogs: { de: "/de.mjs" } } },
+      manifest: {
+        plugin_x: { sourceLocale: "en", catalogs: { de: "/de.mjs" } },
+      },
       importCatalog,
     });
 
     await load("plugin_y", "de"); // unknown plugin
-    await load("plugin_x", "fr"); // known plugin, unknown locale
+    await load("plugin_x", "fr"); // known plugin, no catalog and no source one
 
     expect(importCatalog).not.toHaveBeenCalled();
   });
@@ -32,7 +35,9 @@ describe("createPluginCatalogLoader", () => {
       .mockImplementation(() => undefined);
     const importCatalog = vi.fn(() => Promise.reject(new Error("net down")));
     const load = createPluginCatalogLoader({
-      manifest: { plugin_x: { catalogs: { de: "/de.mjs" } } },
+      manifest: {
+        plugin_x: { sourceLocale: "en", catalogs: { de: "/de.mjs" } },
+      },
       importCatalog,
     });
 
@@ -48,7 +53,9 @@ describe("createPluginCatalogLoader", () => {
       Promise.resolve({ messages: { foo: ["bar"] } }),
     );
     const load = createPluginCatalogLoader({
-      manifest: { plugin_x: { catalogs: { de: "/de.mjs" } } },
+      manifest: {
+        plugin_x: { sourceLocale: "en", catalogs: { de: "/de.mjs" } },
+      },
       importCatalog,
     });
 
@@ -66,6 +73,7 @@ describe("createPluginCatalogLoader", () => {
     const load = createPluginCatalogLoader({
       manifest: {
         plugin_x: {
+          sourceLocale: "en",
           catalogs: { de: "/_plumix/admin/plugins/plugin_x/locales/de.mjs" },
         },
       },
@@ -78,5 +86,27 @@ describe("createPluginCatalogLoader", () => {
       "/_plumix/admin/plugins/plugin_x/locales/de.mjs",
     );
     expect(i18n.messages["plugin.x.label"]).toEqual(["Translated"]);
+  });
+
+  test("a locale the plugin doesn't ship falls back to its source catalog", async () => {
+    // The production admin can't compile `descriptor.message`, so without a
+    // compiled catalog a placeholder renders raw: "Added {label} to the menu".
+    i18n.load({ fr: {} });
+    i18n.activate("fr");
+    // Through a variable, so `lingui extract` doesn't take it for a msgid.
+    const id = "plugin.x.added";
+    const messages: Messages = { [id]: ["Added ", ["label"]] };
+    const importCatalog = vi.fn(() => Promise.resolve({ messages }));
+    const load = createPluginCatalogLoader({
+      manifest: {
+        plugin_x: { sourceLocale: "en", catalogs: { en: "/en.mjs" } },
+      },
+      importCatalog,
+    });
+
+    await load("plugin_x", "fr");
+
+    expect(importCatalog).toHaveBeenCalledWith("/en.mjs");
+    expect(i18n._(id, { label: "Team page" })).toBe("Added Team page");
   });
 });

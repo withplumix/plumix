@@ -31,7 +31,7 @@ entry. No host, bridge or protocol changes.
   already declares, and the runtime entry passes it to `buildApp`.
 - **Canvas.** The host's existing `host:config` message carries the active
   locale and the catalog the admin already merged (its own, the editor's, each
-  workspace plugin's and the blocks package's). There is one merge, not a
+  plugin's and the blocks package's). There is one merge, not a
   second one for the canvas. Until that message arrives the canvas renders at
   the page's locale from the render-env embed (#2630) with English strings;
   the host's locale then replaces it, so the locale and the catalog a block

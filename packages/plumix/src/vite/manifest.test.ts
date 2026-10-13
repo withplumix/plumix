@@ -1,7 +1,4 @@
-import { mkdir, mkdtemp, realpath, rm, symlink } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { describe, expect, onTestFinished, test, vi } from "vitest";
+import { describe, expect, test } from "vitest";
 
 import { definePlugin, defineTheme } from "@plumix/core";
 
@@ -10,8 +7,6 @@ import { computeManifestAndRegistry } from "./manifest.js";
 const theme = defineTheme({ templates: () => null });
 
 const OPTIONS = {
-  projectRoot: "/nowhere",
-  bundledPluginsDir: null,
   theme,
   routes: { author: true, date: true, search: true },
 } as const;
@@ -100,35 +95,28 @@ describe("computeManifestAndRegistry", () => {
     expect(manifest.frameworkRoutes).toEqual({ author: false });
   });
 
-  test("a workspace-bundled plugin builds without a console line", async () => {
-    // The monorepo's own layout, expected on every site build there, so it is
-    // not worth a line.
-    const projectRoot = await realpath(
-      await mkdtemp(join(tmpdir(), "plumix-manifest-")),
-    );
-    onTestFinished(() => rm(projectRoot, { recursive: true, force: true }));
-    const bundledPluginsDir = join(projectRoot, "packages/plugins");
-    const pluginDir = join(bundledPluginsDir, "bundled");
-    await mkdir(pluginDir, { recursive: true });
-    await mkdir(join(projectRoot, "node_modules/@plumix"), { recursive: true });
-    await symlink(
-      pluginDir,
-      join(projectRoot, "node_modules/@plumix/plugin-bundled"),
-      "dir",
-    );
-    const bundled = definePlugin("bundled", {
-      i18n: { sourceLocale: "en", locales: ["en"], catalogPath: "./locales" },
+  test("a first-party plugin publishes its catalogs like any installed one", async () => {
+    // The admin bundle reads no plugin's catalogs at build time, so turbo has
+    // no hidden edge from admin's build to every plugin's i18n:compile.
+    const workspace = definePlugin("workspace", {
+      i18n: {
+        sourceLocale: "en",
+        locales: ["en", "de"],
+        catalogPath: "./locales",
+      },
       setup: () => undefined,
     });
-    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
-    onTestFinished(() => info.mockRestore());
 
-    await computeManifestAndRegistry([bundled], {
-      ...OPTIONS,
-      projectRoot,
-      bundledPluginsDir,
+    const { manifest } = await computeManifestAndRegistry([workspace], OPTIONS);
+
+    expect(manifest.pluginI18n).toEqual({
+      workspace: {
+        sourceLocale: "en",
+        catalogs: {
+          en: "/_plumix/admin/plugins/workspace/locales/en.mjs",
+          de: "/_plumix/admin/plugins/workspace/locales/de.mjs",
+        },
+      },
     });
-
-    expect(info).not.toHaveBeenCalled();
   });
 });

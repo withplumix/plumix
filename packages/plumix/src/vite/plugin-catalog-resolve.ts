@@ -1,4 +1,3 @@
-import { realpathSync } from "node:fs";
 import { copyFile, mkdir, stat } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, isAbsolute, resolve } from "node:path";
@@ -42,47 +41,6 @@ export function findPluginPackageRoot(input: {
     }
   }
   return null;
-}
-
-/**
- * The directory admin's `import.meta.glob` bakes plugin catalogs from. `null`
- * anywhere but the plumix monorepo, where nothing is baked in.
- */
-export function findAdminBundledPluginsDir(
-  adminPackageRoot: string,
-): string | null {
-  try {
-    return realpathSync(resolve(adminPackageRoot, "../plugins"));
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Decided by where the entry resolves to: under pnpm every entry is a symlink.
- * Any failure returns `false`, the safe direction: a redundant catalog fetch
- * beats silently-English admin strings.
- */
-export function isAdminBundledPlugin(input: {
-  readonly pluginId: string;
-  readonly projectRoot: string;
-  readonly bundledPluginsDir: string | null;
-}): boolean {
-  const { bundledPluginsDir } = input;
-  if (bundledPluginsDir === null) return false;
-  // Same id-to-package-name slack `findPluginPackageRoot` allows: `audit_log`
-  // is installed as `@plumix/plugin-audit-log`, and reading the literal id
-  // alone reports every such plugin as unbundled.
-  return packageNameCandidates(input.pluginId)
-    .filter((name) => name.startsWith("@plumix/"))
-    .some((name) => {
-      const entryPath = resolve(input.projectRoot, "node_modules", name);
-      try {
-        return dirname(realpathSync(entryPath)) === bundledPluginsDir;
-      } catch {
-        return false;
-      }
-    });
 }
 
 /**

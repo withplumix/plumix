@@ -121,20 +121,19 @@ import type { PluginI18nSlot } from "plumix";
 
 export const slot: PluginI18nSlot = {
   sourceLocale: "en",
-  // Serves nothing. The only declared locale is the source locale, and
-  // the projection drops that one.
+  // Serves the English catalog only, which every locale falls back to.
   locales: ["en"],
   catalogPath: "./locales",
 };
 ```
 
-**The projection drops it.** When the active locale is the source locale, Lingui returns each descriptor's own `message`, so a catalog for it would be a round trip to fetch strings the code already carries. `sourceLocale` is therefore excluded from the URL map — and a slot whose `locales` names only the source locale projects an empty map, which the manifest omits entirely. That plugin is indistinguishable from one with no slot at all.
+**The projection always ships it.** The production admin can't compile a descriptor's `message` at run time, so without a compiled catalog a string with a placeholder renders raw: `Added {label} to the menu`. The source catalog is therefore always in the URL map, whatever the site enables, and the admin falls back to it for any locale the plugin doesn't translate. `plumix build` fails when a plugin's `locales/` lacks the compiled `.mjs` for its source locale.
 
-List it in `locales` anyway: it keeps that array a faithful description of the `.po` files beside it.
+List it in `locales` too: it keeps that array a faithful description of the `.po` files beside it.
 
 ### locales
 
-Every locale the plugin ships a catalog for. Intersect this array with the site's enabled locales, drop the source locale, and what remains is the set of URLs the manifest emits.
+Every locale the plugin ships a catalog for. Intersect this array with the site's enabled locales, add the source locale, and that is the set of URLs the manifest emits.
 
 ```ts
 import type { PluginI18nSlot } from "plumix";
@@ -188,15 +187,7 @@ The projection intersects the plugin's `locales` with the locales the site has e
 
 The two mistakes are not symmetrical: over-declaring costs nothing, under-declaring costs the translation. Declare everything you ship.
 
-A site that configures no `i18n` resolves to `["en"]` rather than to nothing, so the intersection leaves only the source locale, which is dropped in turn. Until a site enables a second locale, a plugin's catalogs go nowhere — which is the state most sites installing your plugin are in.
-
-## Workspace plugins bypass the declaration
-
-Inside the Plumix repository, the admin bundles first-party plugin catalogs through an `import.meta.glob` over `packages/plugins/*/locales/*.mjs`. The build detects those plugins and skips URL emission for them, so the admin does not load the same catalog twice.
-
-The catch is that the glob reads the filesystem, not the slot. A workspace plugin's translations render correctly in that repository whether or not `locales` names them — the declaration is bypassed. It is only a site installing the same plugin **from npm** that goes through the manifest, and only there that a short `locales` array turns into missing translations.
-
-This is not hypothetical: five first-party plugins shipped Arabic, German, Ukrainian and Simplified Chinese catalogs while four of their slots declared English alone and the fifth declared English and German. Everything looked right in the monorepo the whole time.
+A site that configures no `i18n` resolves to `["en"]` rather than to nothing, so the intersection leaves only the source locale. Until a site enables a second locale, a plugin ships its source catalog alone, which is the state most sites installing your plugin are in.
 
 <Aside type="tip" title="Test the install, not the workspace">
   Verify a plugin's i18n by installing the built tarball into a site with a
