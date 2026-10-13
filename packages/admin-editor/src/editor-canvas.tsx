@@ -30,7 +30,6 @@ import {
   DEFAULT_BLOCK_CONTEXT,
   editAppender,
   HtmlAllowlistProvider,
-  parseLoaderData,
 } from "@plumix/core/blocks";
 import { BlockTree, PlumixProvider } from "@plumix/core/blocks/renderer";
 
@@ -48,6 +47,8 @@ interface EditorCanvasProps {
   readonly origin: string;
   /** Seed tree for first paint, before the host pushes. */
   readonly initialTree?: readonly BlockNode[];
+  /** The loader results the SSR render embedded; scoped refreshes merge in. */
+  readonly initialLoaderData?: ResolvedBlockLoaders;
   readonly tokens?: ThemeTokens;
   readonly breakpoints?: ThemeBreakpoints;
   readonly htmlAllowlist?: HtmlAllowlist;
@@ -67,12 +68,15 @@ const XRAY_STYLE = `[data-plumix-xray] [data-plumix-block] {
   outline-offset: -1px;
 }`;
 
+const NO_LOADER_DATA: ResolvedBlockLoaders = new Map();
+
 /** Runs inside the editor iframe and never owns the tree; the host does. */
 export function EditorCanvas({
   registry,
   shortcodes,
   origin,
   initialTree = [],
+  initialLoaderData = NO_LOADER_DATA,
   tokens,
   breakpoints,
   htmlAllowlist = BASELINE_HTML_ALLOWLIST,
@@ -81,13 +85,9 @@ export function EditorCanvas({
   deps: seededDeps = {},
 }: EditorCanvasProps): ReactElement {
   const [tree, setTree] = useState<readonly BlockNode[]>(initialTree);
-  // Read once, before React replaces the mount root's children; stable across
-  // edits so loaders never re-run on a keystroke.
-  const [loaderData, setLoaderData] = useState<ResolvedBlockLoaders>(() =>
-    parseLoaderData(
-      document.querySelector("[data-plumix-loader-data]")?.textContent ?? "",
-    ),
-  );
+  // Stable across edits so loaders never re-run on a keystroke.
+  const [loaderData, setLoaderData] =
+    useState<ResolvedBlockLoaders>(initialLoaderData);
   const [deps, setDeps] = useState<LoadedDeps>(seededDeps);
   // The declared keys last asked for, so a loader that keeps failing isn't
   // asked again on every keystroke.

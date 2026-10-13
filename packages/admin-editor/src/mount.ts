@@ -7,7 +7,11 @@ import type {
   RenderEnv,
   ShortcodeRegistry,
 } from "@plumix/core/blocks";
-import { isEntryContent, parseRenderEnv } from "@plumix/core/blocks";
+import {
+  isEntryContent,
+  parseLoaderData,
+  parseRenderEnv,
+} from "@plumix/core/blocks";
 
 import { EditorCanvas } from "./editor-canvas.js";
 
@@ -30,6 +34,10 @@ export function mountEditorRuntime({
   if (!(root instanceof Element)) return null;
 
   const initialTree = readInitialTree(doc);
+  // Read before React replaces the root's children, the embed among them.
+  const initialLoaderData = parseLoaderData(
+    doc.querySelector("[data-plumix-loader-data]")?.textContent ?? "",
+  );
   const reactRoot = createRoot(root);
   reactRoot.render(
     createElement(EditorCanvas, {
@@ -38,6 +46,7 @@ export function mountEditorRuntime({
       shortcodes,
       origin,
       initialTree,
+      initialLoaderData,
     }),
   );
   return () => reactRoot.unmount();
