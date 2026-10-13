@@ -1,3 +1,5 @@
+import "node:child_process";
+
 import { expect, test } from "vitest";
 
 test("reads what a build produced", () => {

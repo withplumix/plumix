@@ -32,8 +32,7 @@ Run everything from the root. Most root scripts run the turbo task of the same n
 | `typecheck` / `lint` / `lint:fix` | Type-check and lint. Both need upstream packages built (see below).                                                 |
 | `format` / `format:fix`           | Prettier: `format` checks, `format:fix` writes.                                                                     |
 | `test:unit`                       | Vitest in every package. It reads workspace packages from source and stubs the i18n catalogs, so it needs no build. |
-| `test:build`                      | The `*.build.test.ts` suites, which inspect what the build produced.                                                |
-| `test`                            | `test:unit` + `test:build`.                                                                                         |
+| `test`                            | `test:unit`.                                                                                                        |
 | `test:e2e`                        | Playwright, in the packages that have an `e2e/` suite.                                                              |
 | `docs:screenshots`                | Recapture the docs screenshots (needs Docker; see `CONTRIBUTING.md`).                                               |
 | `i18n:check`                      | Fails when `<Trans>`/`defineMessage` strings change without `lingui extract`.                                       |
@@ -52,7 +51,7 @@ Run everything from the root. Most root scripts run the turbo task of the same n
 
 **Runtime versions.** A runtime adapter's suites run on that runtime ([ADR 0019](docs/adr/0019-a-runtime-adapter-uses-its-runtimes-primitives-and-is-tested-on-that-runtime.md)). Install each runtime at the version its pin file at the repo root names (`.nvmrc`, `.<runtime>-version`).
 
-**A check covers only what it reads.** `test:unit` reads source; `typecheck`, `test:build`, e2e and anything served from a build read `dist/`. A green check on one side says nothing about the other, so rebuild before trusting a check that reads `dist/`.
+**A check covers only what it reads.** `test:unit` reads source; `typecheck`, e2e and anything served from a build read `dist/`. A green check on one side says nothing about the other, so rebuild before trusting a check that reads `dist/`.
 
 **Why typecheck needs a build.** Every published package's `exports` points `types` at `dist/`, so a package type-checks only once the packages it imports are built. Turbo builds them first (`typecheck` and `lint` depend on `^build` in `turbo.json`, plus the package's own `i18n:compile`); `pnpm --filter` runs the script alone, so it passes only when a `dist/` is already lying around. For one package, use turbo:
 

@@ -191,14 +191,8 @@
       "dependsOn": ["build", "^build"],
       "cache": false
     },
-    "test:build": {
-      // Tests that need the build graph (`*.build.test.ts`): the runtimes run
-      // the built CLI or server.
-      "dependsOn": ["build", "^build"],
-      "outputLogs": "new-only"
-    },
     "test:e2e": {
-      // Cached, like `test:unit`, `test:build` and `docs:screenshots` — which
+      // Cached, like `test:unit` and `docs:screenshots` — which
       // drives this same rig (#1949). With the inputs above, a hit means
       // nothing a suite exercises has moved; a change to core still runs all
       // fifteen, and a change to one plugin runs that plugin's.

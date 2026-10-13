@@ -77,7 +77,7 @@ export const GATES: readonly Gate[] = [
   },
   {
     name: "test",
-    command: `pnpm exec turbo run test:unit test:build --continue --concurrency=2 ${TURBO_GATE_FLAGS}`,
+    command: `pnpm exec turbo run test:unit --continue --concurrency=2 ${TURBO_GATE_FLAGS}`,
   },
   {
     name: "e2e",
@@ -149,7 +149,6 @@ const GATE_BEHIND_EACH_CI_CHECK: Readonly<Record<string, string>> = {
   Knip: "knip",
   i18n: "i18n",
   Test: "test",
-  "Test (build)": "test",
   "Test (e2e)": "e2e",
   Publint: "publint",
   "Are The Types Wrong": "attw",

@@ -60,7 +60,6 @@ describe("gateBehindCheck", () => {
   test.each([
     ["Commitlint", "commitlint"],
     ["Are The Types Wrong", "attw"],
-    ["Test (build)", "test"],
     ["Changesets", "changeset"],
   ])("CI's %s reproduces locally as the %s gate", (checkName, gateName) => {
     expect(gateBehindCheck(checkName)?.name).toBe(gateName);
@@ -184,6 +183,12 @@ describe("the test gate", () => {
     const gate = GATES.find((candidate) => candidate.name === "test");
 
     expect(gate?.command).toContain("--continue");
+  });
+
+  test("runs only the unit tier, the one test tier turbo runs", () => {
+    const gate = GATES.find((candidate) => candidate.name === "test");
+
+    expect(gate?.command).toMatch(/turbo run test:unit --/);
   });
 });
 
