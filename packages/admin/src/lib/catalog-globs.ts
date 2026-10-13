@@ -11,18 +11,8 @@ export const ADMIN_CATALOGS = import.meta.glob<{ messages: Messages }>(
   "../../locales/*.mjs",
 );
 
-/**
- * First-party workspace plugins ship catalogs via static glob — admin reads
- * them at zero runtime cost. Third-party plugins load via manifest URLs.
- */
-export const PLUGIN_CATALOGS = import.meta.glob<{ messages: Messages }>(
-  "../../../plugins/*/locales/*.mjs",
-);
-
-/**
- * The editor package ships its own chrome catalog, bundled into admin like a
- * workspace plugin, so merge it the same zero-runtime-cost way.
- */
+/** The editor package's chrome catalog: a real dependency of admin, so its
+ *  build is ordered before admin's. */
 export const EDITOR_CATALOGS = import.meta.glob<{ messages: Messages }>(
   "../../../admin-editor/locales/*.mjs",
 );

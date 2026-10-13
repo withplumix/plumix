@@ -390,11 +390,16 @@ export function configuredSlotsOf(
   } satisfies Record<InfrastructureSlot, boolean>;
 }
 
-/** Per-plugin catalog URL maps. Flat record keyed by plugin id so
- *  `manifest.pluginI18n[id]` is direct lookup; admin reads this
- *  shape verbatim. */
+/** `catalogs` always holds `sourceLocale`'s: a production admin can't compile
+ *  `descriptor.message`, so without it a placeholder renders raw. */
 export type PluginI18nManifest = Readonly<
-  Record<string, { readonly catalogs: Readonly<Record<string, string>> }>
+  Record<
+    string,
+    {
+      readonly sourceLocale: string;
+      readonly catalogs: Readonly<Record<string, string>>;
+    }
+  >
 >;
 
 export interface I18nManifest {

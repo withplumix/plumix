@@ -1,4 +1,3 @@
-import { realpathSync } from "node:fs";
 import { copyFile, mkdir, stat } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, isAbsolute, resolve } from "node:path";
@@ -45,47 +44,6 @@ export function findPluginPackageRoot(input: {
 }
 
 /**
- * The directory admin's `import.meta.glob` bakes plugin catalogs from. `null`
- * anywhere but the plumix monorepo, where nothing is baked in.
- */
-export function findAdminBundledPluginsDir(
-  adminPackageRoot: string,
-): string | null {
-  try {
-    return realpathSync(resolve(adminPackageRoot, "../plugins"));
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Decided by where the entry resolves to: under pnpm every entry is a symlink.
- * Any failure returns `false`, the safe direction: a redundant catalog fetch
- * beats silently-English admin strings.
- */
-export function isAdminBundledPlugin(input: {
-  readonly pluginId: string;
-  readonly projectRoot: string;
-  readonly bundledPluginsDir: string | null;
-}): boolean {
-  const { bundledPluginsDir } = input;
-  if (bundledPluginsDir === null) return false;
-  // Same id-to-package-name slack `findPluginPackageRoot` allows: `audit_log`
-  // is installed as `@plumix/plugin-audit-log`, and reading the literal id
-  // alone reports every such plugin as unbundled.
-  return packageNameCandidates(input.pluginId)
-    .filter((name) => name.startsWith("@plumix/"))
-    .some((name) => {
-      const entryPath = resolve(input.projectRoot, "node_modules", name);
-      try {
-        return dirname(realpathSync(entryPath)) === bundledPluginsDir;
-      } catch {
-        return false;
-      }
-    });
-}
-
-/**
  * Admin's runtime loader `import(url)`s same-origin paths under the default
  * CSP. A missing `.mjs` for a declared locale fails the build.
  */
@@ -97,12 +55,12 @@ export async function stagePluginCatalogs(
 ): Promise<void> {
   const pluginI18n = manifest.pluginI18n;
   if (!pluginI18n) return;
-  await Promise.all(
+  // Every catalog is checked before any is copied, so a missing one fails the
+  // build without leaving a half-staged admin behind.
+  const copies = await Promise.all(
     plugins.map(async (plugin) => {
       const entry = pluginI18n[plugin.id];
-      // No manifest entry = no `i18n` slot, or every declared locale
-      // was filtered out by site-locale intersection in `buildManifest`.
-      if (!entry || !plugin.i18n) return;
+      if (!entry || !plugin.i18n) return [];
       const { catalogPath } = plugin.i18n;
       const candidate = await resolveCatalogDir(
         plugin.id,
@@ -119,7 +77,7 @@ export async function stagePluginCatalogs(
           resolved: catalogPath,
         });
       }
-      await Promise.all(
+      return Promise.all(
         Object.keys(entry.catalogs).map(async (locale) => {
           const sourceFile = resolve(candidate, `${locale}.mjs`);
           try {
@@ -132,14 +90,21 @@ export async function stagePluginCatalogs(
               resolved: sourceFile,
             });
           }
-          const destFile = resolve(
-            adminDest,
-            pluginCatalogStagedPath(plugin.id, locale),
-          );
-          await mkdir(dirname(destFile), { recursive: true });
-          await copyFile(sourceFile, destFile);
+          return {
+            sourceFile,
+            destFile: resolve(
+              adminDest,
+              pluginCatalogStagedPath(plugin.id, locale),
+            ),
+          };
         }),
       );
+    }),
+  );
+  await Promise.all(
+    copies.flat().map(async ({ sourceFile, destFile }) => {
+      await mkdir(dirname(destFile), { recursive: true });
+      await copyFile(sourceFile, destFile);
     }),
   );
 }

@@ -112,7 +112,7 @@ describe("buildManifest", () => {
     expect(general?.groups).toContain("site");
   });
 
-  test("buildManifest projects plugin i18n catalog URLs intersected with site locales", () => {
+  test("buildManifest publishes the source catalog and the site-enabled ones", () => {
     const plugin = definePlugin("translated", {
       i18n: {
         sourceLocale: "en",
@@ -129,50 +129,15 @@ describe("buildManifest", () => {
       i18n,
       plugins: [plugin],
     });
-    // German is in both plugin.locales and site.locales → URL emitted.
-    // English is the source locale → no URL (Lingui renders descriptor.message).
-    // French is plugin-declared but not site-enabled → dropped.
+    // English is the source: always published, because a production admin
+    // can't compile `descriptor.message`, so a placeholder would render raw.
+    // German is site-enabled; French is not, so it is dropped.
     expect(manifest.pluginI18n).toEqual({
       translated: {
+        sourceLocale: "en",
         catalogs: {
+          en: "/_plumix/admin/plugins/translated/locales/en.mjs",
           de: "/_plumix/admin/plugins/translated/locales/de.mjs",
-        },
-      },
-    });
-  });
-
-  test("buildManifest skips pluginI18n URLs for ids in adminBundledPluginIds", () => {
-    // Admin's `import.meta.glob` already bakes workspace plugin catalogs into
-    // the bundle, so emitting URLs for them would double-load.
-    const bundled = definePlugin("bundled-plug", {
-      i18n: {
-        sourceLocale: "en",
-        locales: ["en", "de"],
-        catalogPath: "./locales",
-      },
-      setup: () => undefined,
-    });
-    const thirdParty = definePlugin("third-party-plug", {
-      i18n: {
-        sourceLocale: "en",
-        locales: ["en", "de"],
-        catalogPath: "./locales",
-      },
-      setup: () => undefined,
-    });
-    const i18n = resolveLocales({
-      defaultLocale: "en",
-      locales: ["en", "de"],
-    });
-    const manifest = buildManifest(createPluginRegistry(), {
-      i18n,
-      plugins: [bundled, thirdParty],
-      adminBundledPluginIds: new Set(["bundled-plug"]),
-    });
-    expect(manifest.pluginI18n).toEqual({
-      "third-party-plug": {
-        catalogs: {
-          de: "/_plumix/admin/plugins/third-party-plug/locales/de.mjs",
         },
       },
     });

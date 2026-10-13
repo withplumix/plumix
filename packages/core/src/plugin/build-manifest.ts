@@ -136,11 +136,6 @@ export function buildManifest(
       readonly id: string;
       readonly i18n?: PluginI18nSlot;
     }[];
-    /**
-     * Plugins whose catalogs the admin bundle already bakes in; emitting URLs
-     * for them would double-load. Read only alongside `plugins`.
-     */
-    readonly adminBundledPluginIds?: ReadonlySet<string>;
     /** Routed through options — like `tokens` — because slot presence is
      *  read off the site config, not the plugin registry. Omitted means no
      *  slot is configured. */
@@ -256,11 +251,7 @@ export function buildManifest(
       // affordance can be re-introduced when there's a consumer.
       locales: (options?.i18n?.locales ?? []).filter((l) => l.enabled),
     },
-    pluginI18n: projectPluginI18n(
-      options?.plugins,
-      options?.i18n,
-      options?.adminBundledPluginIds,
-    ),
+    pluginI18n: projectPluginI18n(options?.plugins, options?.i18n),
     configuredSlots,
     refusedAdminAreas,
     frameworkRoutes: { author: registry.frameworkRoutes.author },
@@ -272,29 +263,28 @@ function projectPluginI18n(
     | readonly { readonly id: string; readonly i18n?: PluginI18nSlot }[]
     | undefined,
   siteI18n: ResolvedI18n | undefined,
-  adminBundledPluginIds: ReadonlySet<string> | undefined,
 ): PluginI18nManifest {
   if (!plugins) return {};
   const siteLocales = new Set(
     (siteI18n?.locales ?? []).filter((l) => l.enabled).map((l) => l.code),
   );
-  const out: Record<string, { catalogs: Record<string, string> }> = {};
+  const out: Record<
+    string,
+    { sourceLocale: string; catalogs: Record<string, string> }
+  > = {};
   for (const plugin of plugins) {
     if (!plugin.i18n) continue;
-    // Workspace plugins are baked into admin via `import.meta.glob` —
-    // emitting URLs would mean admin double-loads at boot.
-    if (adminBundledPluginIds?.has(plugin.id)) continue;
-    const catalogs: Record<string, string> = {};
-    for (const locale of plugin.i18n.locales) {
-      if (locale === plugin.i18n.sourceLocale) continue;
+    const { sourceLocale, locales } = plugin.i18n;
+    const catalogs: Record<string, string> = {
+      [sourceLocale]: pluginCatalogUrl(plugin.id, sourceLocale),
+    };
+    for (const locale of locales) {
+      if (locale === sourceLocale) continue;
       // With no site i18n, keep the plugin's full locale list.
       if (siteLocales.size > 0 && !siteLocales.has(locale)) continue;
       catalogs[locale] = pluginCatalogUrl(plugin.id, locale);
     }
-    // Skip plugins whose entire locale set was intersected/dropped —
-    // a manifest entry with empty catalogs is wire noise that admin's
-    // boot loop would still iterate.
-    if (Object.keys(catalogs).length > 0) out[plugin.id] = { catalogs };
+    out[plugin.id] = { sourceLocale, catalogs };
   }
   return out;
 }

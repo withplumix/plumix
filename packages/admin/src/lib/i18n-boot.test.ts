@@ -22,7 +22,6 @@ const SHIPPED: AdminCatalogs = {
     "../../locales/en.mjs": catalog,
     "../../locales/de.mjs": catalog,
   },
-  plugins: {},
   editor: {},
   blocks: {},
 };

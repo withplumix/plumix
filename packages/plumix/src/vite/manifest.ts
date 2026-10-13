@@ -20,8 +20,6 @@ import {
   installPlugins,
 } from "@plumix/core";
 
-import { isAdminBundledPlugin } from "./plugin-catalog-resolve.js";
-
 type PluginDescriptors = Parameters<typeof installPlugins>[0]["plugins"];
 
 export interface ManifestBuildOptions {
@@ -45,11 +43,6 @@ export interface ManifestBuildOptions {
    * `buildApp` seeds its own. Required for the same reason as `theme`.
    */
   readonly routes: PlumixConfig["routes"];
-  readonly projectRoot: string;
-  /**
-   * Where `@plumix/admin` keeps the plugin catalogs it baked in, if anywhere.
-   */
-  readonly bundledPluginsDir: string | null;
 }
 
 /**
@@ -70,22 +63,6 @@ export async function computeManifestAndRegistry(
   // Plugins can still register from the theme they're handed; skipping this
   // would ship the admin a shorter list than the running worker has.
   await hooks.doAction("theme:ready", options.theme);
-  // A stale `@plumix/admin` dist misses a workspace plugin added since, whose
-  // strings then silently fall back to English. Rebuild @plumix/admin to
-  // refresh.
-  const adminBundledPluginIds = new Set(
-    plugins
-      .filter(
-        (p) =>
-          p.i18n !== undefined &&
-          isAdminBundledPlugin({
-            pluginId: p.id,
-            projectRoot: options.projectRoot,
-            bundledPluginsDir: options.bundledPluginsDir,
-          }),
-      )
-      .map((p) => p.id),
-  );
   // Forward plugin descriptors so `buildManifest` can emit
   // `pluginI18n` URL maps for plugins declaring an `i18n` slot
   // (slice 17 #697 runtime catalog registry).
@@ -93,7 +70,6 @@ export async function computeManifestAndRegistry(
     manifest: buildManifest(registry, {
       ...options,
       plugins,
-      adminBundledPluginIds,
     }),
     registry,
   };

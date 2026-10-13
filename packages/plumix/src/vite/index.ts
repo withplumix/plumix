@@ -71,7 +71,6 @@ import { computeManifestAndRegistry } from "./manifest.js";
 import { plumixPathAliases } from "./path-aliases.js";
 import {
   collectPluginCatalogFiles,
-  findAdminBundledPluginsDir,
   stagePluginCatalogs,
 } from "./plugin-catalog-resolve.js";
 import { generatePluginCatalogsSource } from "./plugin-catalogs-codegen.js";
@@ -89,8 +88,6 @@ const ADMIN_PACKAGE_ROOT = dirname(
   require.resolve("@plumix/admin/package.json"),
 );
 const ADMIN_SOURCE_DIR = resolve(ADMIN_PACKAGE_ROOT, "dist");
-const ADMIN_BUNDLED_PLUGINS_DIR =
-  findAdminBundledPluginsDir(ADMIN_PACKAGE_ROOT);
 
 export interface PlumixVitePluginOptions {
   readonly configFile?: string;
@@ -567,8 +564,6 @@ async function regenerate(
       refusedAdminAreas: config.runtime.refusedAdminAreas,
       theme: config.theme,
       routes: config.routes,
-      projectRoot: cwd,
-      bundledPluginsDir: ADMIN_BUNDLED_PLUGINS_DIR,
     },
   );
 
