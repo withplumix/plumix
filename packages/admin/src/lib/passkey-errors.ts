@@ -37,7 +37,9 @@ type PasskeyWireExtraErrorCode =
   | "email_mismatch"
   | "invalid_token"
   | "token_expired"
-  | "invalid_input";
+  | "invalid_input"
+  | "account_disabled"
+  | "link_broken";
 
 type PasskeyServerErrorCode = PasskeyClassErrorCode | PasskeyWireExtraErrorCode;
 
@@ -210,6 +212,15 @@ const MESSAGES: Record<PasskeyErrorCode, MessageDescriptor> = {
   email_mismatch: defineMessage({
     id: "passkey.error.emailMismatch",
     message: "That email doesn't match your signed-in account.",
+  }),
+  account_disabled: defineMessage({
+    id: "passkey.error.accountDisabled",
+    message: "That account is disabled.",
+  }),
+  link_broken: defineMessage({
+    id: "passkey.error.linkBroken",
+    message:
+      "This passkey's account can't be found. Contact your site administrator.",
   }),
 
   // --- server-side: invite acceptance ---

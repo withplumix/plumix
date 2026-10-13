@@ -8,6 +8,9 @@ export const MAGIC_LINK_ERROR_CODES = [
   // system is in zero-user state (bootstrap is passkey-only).
   "domain_not_allowed",
   "registration_closed",
+  "link_broken",
+  "invalid_input",
+  "magic_link_not_configured",
 ] as const;
 
 export type MagicLinkErrorCode = (typeof MAGIC_LINK_ERROR_CODES)[number];

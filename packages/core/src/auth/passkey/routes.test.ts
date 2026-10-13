@@ -2,9 +2,10 @@ import { describe, expect, test } from "vitest";
 
 import type { AuthResult } from "../../context/authenticator.js";
 import type { User } from "../../db/schema/users.js";
-import { eq } from "../../db/index.js";
+import { eq, sql } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { credentials } from "../../db/schema/credentials.js";
+import { sessions } from "../../db/schema/sessions.js";
 import { users } from "../../db/schema/users.js";
 import { definePlugin } from "../../plugin/define.js";
 import { text } from "../../plugin/fields/index.js";
@@ -864,6 +865,134 @@ describe("passkey signout", () => {
   });
 });
 
+function signOutFormPost(query = "", origin = "https://cms.example"): Request {
+  return new Request(`https://cms.example/_plumix/auth/signout${query}`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded",
+      origin,
+    },
+  });
+}
+
+describe("sign-out by form post and redirectTo", () => {
+  test("a same-site form post clears the session and lands on ?signed_out=1", async () => {
+    const h = await createDispatcherHarness();
+    const user = await h.seedUser("admin");
+    const signedIn = await h.authenticateRequest(signOutFormPost(), user.id);
+    const signedOut = h.spyAction("user:signed_out");
+
+    const response = await h.dispatch(signedIn);
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe(
+      "/_plumix/admin/login?signed_out=1",
+    );
+    expect(response.headers.get("set-cookie")).toContain("Max-Age=0");
+    expect(await h.db.$count(sessions)).toBe(0);
+    signedOut.assertCalledOnce();
+  });
+
+  test("a form post with ?redirectTo=/account lands on /account", async () => {
+    const h = await createDispatcherHarness();
+
+    const response = await h.dispatch(
+      signOutFormPost("?redirectTo=%2Faccount"),
+    );
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe("/account");
+  });
+
+  test("a form post under an authenticator with a signOutUrl lands on it", async () => {
+    const h = await createDispatcherHarness({
+      config: {
+        auth: {
+          authenticator: {
+            authenticate: () => Promise.resolve(null),
+            signOutUrl: () => "https://idp.example/logout",
+          },
+        },
+      },
+    });
+
+    const response = await h.dispatch(
+      signOutFormPost("?redirectTo=%2Faccount"),
+    );
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe("https://idp.example/logout");
+  });
+
+  test("a cross-origin form post is refused as csrf_origin_mismatch", async () => {
+    const h = await createDispatcherHarness();
+
+    const response = await h.dispatch(
+      signOutFormPost("", "https://evil.example"),
+    );
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({
+      error: "forbidden",
+      reason: "csrf_origin_mismatch",
+    });
+  });
+
+  test.each([
+    ["/account", "/account"],
+    ["https://evil.example/", "/"],
+    ["//evil.example", "/"],
+    ["/../x", "/"],
+  ])("a fetch's ?redirectTo=%s answers %s", async (value, expected) => {
+    const h = await createDispatcherHarness();
+
+    const response = await h.dispatch(
+      plumixRequest(
+        `/_plumix/auth/signout?${new URLSearchParams({ redirectTo: value }).toString()}`,
+        { method: "POST" },
+      ),
+    );
+
+    expect(await response.json()).toEqual({ ok: true, redirectTo: expected });
+  });
+
+  test("under base path /blog a fetch's ?redirectTo=/other answers /blog/", async () => {
+    const h = await createDispatcherHarness({ config: { basePath: "/blog" } });
+
+    const response = await h.dispatch(
+      plumixRequest("/blog/_plumix/auth/signout?redirectTo=%2Fother", {
+        method: "POST",
+      }),
+    );
+
+    expect(await response.json()).toEqual({ ok: true, redirectTo: "/blog/" });
+  });
+
+  test("a signOutUrl wins over ?redirectTo= for a fetch", async () => {
+    const h = await createDispatcherHarness({
+      config: {
+        auth: {
+          authenticator: {
+            authenticate: () => Promise.resolve(null),
+            signOutUrl: () => "https://idp.example/logout",
+          },
+        },
+      },
+    });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/auth/signout?redirectTo=%2Faccount", {
+        method: "POST",
+      }),
+    );
+
+    expect(await response.json()).toEqual({
+      ok: true,
+      redirectTo: "https://idp.example/logout",
+    });
+  });
+});
+
 // Driven through the dispatcher so a regression in the wire schema, CSRF gate
 // or session plumbing shows up here rather than at deploy time.
 describe("passkey end-to-end happy path", () => {
@@ -936,5 +1065,171 @@ describe("passkey end-to-end happy path", () => {
       },
     });
     loginVerifyRes.assertStatus(200).assertCookieSet(SESSION_COOKIE_NAME);
+  });
+});
+
+type Harness = Awaited<ReturnType<typeof createDispatcherHarness>>;
+
+/** Bootstraps a user with a passkey and hands back what signs in with it. */
+async function enrolledPasskey(h: Harness, email: string) {
+  const keyPair = generatePasskeyKeyPair();
+  const options = await h.fetch("/_plumix/auth/passkey/register/options", {
+    json: { email },
+  });
+  const { challenge } = await options.json<{ challenge: string }>();
+  const envelope = buildRegisterVerifyEnvelope({
+    keyPair,
+    rpId: "cms.example",
+    origin: "https://cms.example",
+    challenge,
+    credentialId: randomCredentialId(),
+  });
+  const registered = await h.fetch("/_plumix/auth/passkey/register/verify", {
+    json: envelope,
+  });
+  return { keyPair, envelope, registered };
+}
+
+async function loginVerify(
+  h: Harness,
+  enrolled: Awaited<ReturnType<typeof enrolledPasskey>>,
+  query = "",
+) {
+  const options = await h.fetch("/_plumix/auth/passkey/login/options", {
+    json: {},
+  });
+  const { challenge } = await options.json<{ challenge: string }>();
+  const assertion = buildAssertion({
+    keyPair: enrolled.keyPair,
+    rpId: "cms.example",
+    origin: "https://cms.example",
+    challenge,
+    counter: 1,
+  });
+  return h.fetch(`/_plumix/auth/passkey/login/verify${query}`, {
+    json: {
+      id: enrolled.envelope.id,
+      rawId: enrolled.envelope.id,
+      type: "public-key",
+      response: {
+        clientDataJSON: assertion.clientDataJSON,
+        authenticatorData: assertion.authenticatorData,
+        signature: assertion.signature,
+      },
+    },
+  });
+}
+
+describe("passkey verify answers", () => {
+  test("register verify answers the user and the admin to go to", async () => {
+    const h = await createDispatcherHarness();
+
+    const { registered } = await enrolledPasskey(h, "admin@cms.example");
+
+    const user = await h.db.query.users.findFirst({
+      where: eq(users.email, "admin@cms.example"),
+    });
+    expect(await registered.json()).toEqual({
+      userId: user?.id,
+      redirectTo: "/_plumix/admin",
+    });
+  });
+
+  test("login verify answers the user and the admin to go to", async () => {
+    const h = await createDispatcherHarness();
+    const enrolled = await enrolledPasskey(h, "admin@cms.example");
+
+    const response = await loginVerify(h, enrolled);
+
+    const user = await h.db.query.users.findFirst({
+      where: eq(users.email, "admin@cms.example"),
+    });
+    expect(await response.json()).toEqual({
+      userId: user?.id,
+      redirectTo: "/_plumix/admin",
+    });
+  });
+
+  test.each([
+    ["https://evil.example/", "/"],
+    ["//evil.example", "/"],
+    ["/../x", "/"],
+    ["/account", "/account"],
+  ])("login verify's ?redirectTo=%s answers %s", async (value, expected) => {
+    const h = await createDispatcherHarness();
+    const enrolled = await enrolledPasskey(h, "admin@cms.example");
+
+    const response = await loginVerify(
+      h,
+      enrolled,
+      `?${new URLSearchParams({ redirectTo: value }).toString()}`,
+    );
+
+    expect(await response.json()).toMatchObject({ redirectTo: expected });
+  });
+
+  test("login for a disabled account is refused with 403 account_disabled", async () => {
+    const h = await createDispatcherHarness();
+    const enrolled = await enrolledPasskey(h, "admin@cms.example");
+    await h.db
+      .update(users)
+      .set({ disabledAt: new Date() })
+      .where(eq(users.email, "admin@cms.example"));
+
+    const response = await loginVerify(h, enrolled);
+
+    response.assertStatus(403);
+    expect(await response.json()).toEqual({ error: "account_disabled" });
+    expect(response.headers.get("set-cookie")).toBeNull();
+  });
+
+  test("login whose user row is gone is refused with 403 link_broken", async () => {
+    const h = await createDispatcherHarness();
+    const enrolled = await enrolledPasskey(h, "admin@cms.example");
+    await h.db.run(sql`PRAGMA foreign_keys = OFF`);
+    await h.db.delete(users).where(eq(users.email, "admin@cms.example"));
+    await h.db.run(sql`PRAGMA foreign_keys = ON`);
+
+    const response = await loginVerify(h, enrolled);
+
+    response.assertStatus(403);
+    expect(await response.json()).toEqual({ error: "link_broken" });
+  });
+
+  test("invite verify answers the user and the admin to go to", async () => {
+    const h = await createDispatcherHarness();
+    const invitee = await h.seedUser("author");
+    const token = generateToken();
+    await h.factory.invite.create({
+      hash: await hashToken(token),
+      userId: invitee.id,
+      email: invitee.email,
+      role: "author",
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+    const optionsRes = await h.fetch("/_plumix/auth/invite/register/options", {
+      json: { token },
+    });
+    const { options } = await optionsRes.json<{
+      options: { challenge: string };
+    }>();
+
+    const response = await h.fetch("/_plumix/auth/invite/register/verify", {
+      json: {
+        token,
+        response: buildRegisterVerifyEnvelope({
+          keyPair: generatePasskeyKeyPair(),
+          rpId: "cms.example",
+          origin: "https://cms.example",
+          challenge: options.challenge,
+          credentialId: randomCredentialId(),
+        }),
+      },
+    });
+
+    expect(await response.json()).toEqual({
+      userId: invitee.id,
+      redirectTo: "/_plumix/admin",
+    });
   });
 });

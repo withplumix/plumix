@@ -1,21 +1,14 @@
-import type { AppContext } from "../../context/app-context.js";
+import type { AuthMethodKernel } from "../../plugin/auth-method.js";
 import type { OAuthProviderClient } from "../contract/oauth.js";
 import type { AuthFlowApp } from "../flow-app.js";
 import type { OAuthErrorCode } from "./errors.js";
 import { withBasePath } from "../../base-path.js";
 import { users } from "../../db/schema/users.js";
-import { startingMeta } from "../../plugin/fields/starting-meta.js";
-import { listUserMetaFields } from "../../plugin/manifest.js";
-import { loginErrorRedirect, redirectTo } from "../../runtime/contract/http.js";
-import { resolveLoginPath } from "../config.js";
-import { isSafeRedirect, resolveSafeRedirect } from "../redirect.js";
-import { announceSignIn, mintSessionAndCookie } from "../sign-in.js";
+import { redirectTo } from "../../runtime/contract/http.js";
 import { buildAuthorizeUrl, exchangeAndFetchProfile } from "./consumer.js";
 import { OAuthError } from "./errors.js";
-import { resolveOAuthUser } from "./signup.js";
 import { consumeOAuthState } from "./state.js";
 
-const ADMIN_PATH = "/_plumix/admin";
 const BOOTSTRAP_PATH = "/_plumix/admin/bootstrap";
 
 /**
@@ -24,13 +17,16 @@ const BOOTSTRAP_PATH = "/_plumix/admin/bootstrap";
  */
 const MAX_CODE_LENGTH = 4096;
 
+type OAuthKernel = AuthMethodKernel<OAuthErrorCode>;
+
 export async function handleOAuthStart(
-  ctx: AppContext,
+  auth: OAuthKernel,
   app: AuthFlowApp,
-  providerKey: string,
 ): Promise<Response> {
+  const { ctx } = auth;
+  const providerKey = auth.params.provider ?? "";
   const provider = pickProvider(app, providerKey);
-  if (!provider) return loginError(app, "provider_not_configured");
+  if (!provider) return auth.fail("provider_not_configured");
 
   // A signup before any user exists would fail confusingly or mint a powerless
   // non-admin.
@@ -47,10 +43,6 @@ export async function handleOAuthStart(
     providerKey,
   );
 
-  // Filtered here to keep junk out of the state row; the callback re-validates.
-  const requested = new URL(ctx.request.url).searchParams.get("redirectTo");
-  const redirectToPath = isSafeRedirect(requested) ? requested : undefined;
-
   try {
     const { url } = await buildAuthorizeUrl({
       db: ctx.db,
@@ -58,24 +50,25 @@ export async function handleOAuthStart(
       provider,
       redirectUri,
       env: ctx.env,
-      redirectTo: redirectToPath,
+      redirectTo: auth.readRedirectTo(),
     });
     return redirectTo(url);
   } catch (error) {
     ctx.logger.error("oauth_start_failed", { error, provider: providerKey });
-    return loginError(app, "code_exchange_failed");
+    return auth.fail("code_exchange_failed");
   }
 }
 
 export async function handleOAuthCallback(
-  ctx: AppContext,
+  auth: OAuthKernel,
   app: AuthFlowApp,
-  providerKey: string,
 ): Promise<Response> {
+  const { ctx } = auth;
+  const providerKey = auth.params.provider ?? "";
   const provider = pickProvider(app, providerKey);
-  if (!provider) return loginError(app, "provider_not_configured");
+  if (!provider) return auth.fail("provider_not_configured");
 
-  const url = new URL(ctx.request.url);
+  const url = new URL(auth.request.url);
   const state = url.searchParams.get("state");
 
   // Provider-side denial (user clicked Cancel, scope rejected, etc.)
@@ -83,16 +76,16 @@ export async function handleOAuthCallback(
   // TTL; consume it here so the slot is freed immediately.
   if (url.searchParams.has("error")) {
     if (state) await consumeOAuthState(ctx.db, state);
-    return loginError(app, "state_invalid");
+    return auth.fail("state_invalid");
   }
 
   const code = url.searchParams.get("code");
-  if (!code || !state) return loginError(app, "state_invalid");
-  if (code.length > MAX_CODE_LENGTH) return loginError(app, "state_invalid");
+  if (!code || !state) return auth.fail("state_invalid");
+  if (code.length > MAX_CODE_LENGTH) return auth.fail("state_invalid");
 
   const stored = await consumeOAuthState(ctx.db, state);
-  if (!stored) return loginError(app, "state_expired");
-  if (stored.provider !== providerKey) return loginError(app, "state_invalid");
+  if (!stored) return auth.fail("state_expired");
+  if (stored.provider !== providerKey) return auth.fail("state_invalid");
 
   const redirectUri = oauthCallbackUrl(
     ctx.origin,
@@ -100,38 +93,14 @@ export async function handleOAuthCallback(
     providerKey,
   );
 
+  let profile;
   try {
-    const profile = await exchangeAndFetchProfile({
+    profile = await exchangeAndFetchProfile({
       provider,
       code,
       redirectUri,
       codeVerifier: stored.codeVerifier,
       env: ctx.env,
-    });
-
-    const { user, created } = await resolveOAuthUser(ctx.db, {
-      provider: providerKey,
-      profile,
-      bootstrapAllowed: ctx.bootstrapAllowed,
-      selfSignup: app.config.auth.selfSignup,
-      meta: startingMeta(listUserMetaFields(ctx.plugins)),
-    });
-
-    const { cookieHeader } = await mintSessionAndCookie(ctx, app, user.id);
-
-    await announceSignIn(ctx, user, {
-      method: "oauth",
-      provider: providerKey,
-      firstSignIn: created,
-    });
-
-    // Already root-relative and includes any basePath, so honoured verbatim.
-    const destination = resolveSafeRedirect(
-      stored.redirectTo,
-      withBasePath(ADMIN_PATH, app.config.basePath),
-    );
-    return redirectTo(destination, {
-      "set-cookie": cookieHeader,
     });
   } catch (error) {
     if (error instanceof OAuthError) {
@@ -139,11 +108,24 @@ export async function handleOAuthCallback(
         provider: providerKey,
         code: error.code,
       });
-      return loginError(app, error.code);
+      return auth.fail(error.code);
     }
     ctx.logger.error("oauth_callback_failed", { error, provider: providerKey });
-    return loginError(app, "code_exchange_failed");
+    return auth.fail("code_exchange_failed");
   }
+
+  return auth.proveIdentity(
+    {
+      email: profile.email,
+      emailVerified: profile.emailVerified,
+      providerAccount: {
+        provider: providerKey,
+        accountId: profile.providerAccountId,
+      },
+      profile: { name: profile.name, avatarUrl: profile.avatarUrl },
+    },
+    { redirectTo: stored.redirectTo },
+  );
 }
 
 function pickProvider(
@@ -168,14 +150,4 @@ function oauthCallbackUrl(
 ): string {
   const path = `/_plumix/auth/oauth/${providerKey}/callback`;
   return `${origin}${withBasePath(path, basePath)}`;
-}
-
-function loginError(app: AuthFlowApp, code: OAuthErrorCode): Response {
-  // Relative location — keeps the same scheme/host/port the browser
-  // already used to reach us, no need to know the canonical origin.
-  return loginErrorRedirect(
-    withBasePath(resolveLoginPath(app.config.auth), app.config.basePath),
-    "oauth_error",
-    code,
-  );
 }

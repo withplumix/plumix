@@ -3,13 +3,14 @@ import { describe, expect, test, vi } from "vitest";
 import type { Session } from "../../db/schema/sessions.js";
 import type { CreateDispatcherHarnessOptions } from "../../test/dispatcher.js";
 import type { Mailer } from "../contract/mailer.js";
-import { eq } from "../../db/index.js";
+import { eq, sql } from "../../db/index.js";
 import { allowedDomains } from "../../db/schema/allowed_domains.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { sessions } from "../../db/schema/sessions.js";
 import { users } from "../../db/schema/users.js";
 import { definePlugin } from "../../plugin/define.js";
 import { text } from "../../plugin/fields/index.js";
+import { silentLogger } from "../../test/context.js";
 import { createDispatcherHarness } from "../../test/dispatcher.js";
 import { poCatalogs } from "../../test/po-catalog.js";
 
@@ -41,6 +42,21 @@ function postRequest(path: string, body: unknown): Request {
       "x-plumix-request": "1",
     },
     body: JSON.stringify(body),
+  });
+}
+
+function formPost(
+  path: string,
+  fields: Record<string, string>,
+  origin = "https://cms.example",
+): Request {
+  return new Request(`https://cms.example${path}`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded",
+      origin,
+    },
+    body: new URLSearchParams(fields).toString(),
   });
 }
 
@@ -196,8 +212,8 @@ describe("magic-link request route", () => {
     expect(sent[0]?.text).toMatch(/[?&]redirectTo=%2Faccount%2Fsaved/);
   });
 
-  test("omits an unsafe redirectTo from the emailed verify link", async () => {
-    const { mailer, sent } = captureMailer();
+  test("puts the site root in the emailed link for an unsafe redirectTo", async () => {
+    const { mailer } = captureMailer();
     const h = await createDispatcherHarness({
       config: {
         mailer,
@@ -215,7 +231,8 @@ describe("magic-link request route", () => {
         redirectTo: "https://evil.com",
       }),
     );
-    expect(sent[0]?.text).not.toContain("redirectTo");
+    const url = new URL(h.mail.sent("magicLink")[0]?.props.url ?? "");
+    expect(url.searchParams.get("redirectTo")).toBe("/");
   });
 
   test("is callable from a theme-origin page (custom header + Origin gate)", async () => {
@@ -307,6 +324,94 @@ describe("magic-link request route", () => {
       }),
     );
     expect(response.status).toBe(403);
+  });
+
+  test("a plain form post sends the link and lands on ?magic_link_sent=1", async () => {
+    const h = await createDispatcherHarness({
+      config: { auth: { magicLink: { siteName: "Plumix Test" } } },
+    });
+    await h.factory.user.create({ email: "alice@example.com" });
+
+    const response = await h.dispatch(
+      formPost("/_plumix/auth/magic-link/request", {
+        email: "alice@example.com",
+      }),
+    );
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe(
+      "/_plumix/admin/login?magic_link_sent=1",
+    );
+    h.mail.assertSent("magicLink", { to: "alice@example.com", times: 1 });
+  });
+
+  test("a form post with a malformed email lands on ?magic_link_error=invalid_input", async () => {
+    const h = await createDispatcherHarness({
+      config: { auth: { magicLink: { siteName: "Plumix Test" } } },
+    });
+
+    const response = await h.dispatch(
+      formPost("/_plumix/auth/magic-link/request", { email: "not-an-email" }),
+    );
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe(
+      "/_plumix/admin/login?magic_link_error=invalid_input",
+    );
+  });
+
+  test("a cross-origin form post is refused as csrf_origin_mismatch", async () => {
+    const h = await createDispatcherHarness({
+      config: { auth: { magicLink: { siteName: "Plumix Test" } } },
+    });
+
+    const response = await h.dispatch(
+      formPost(
+        "/_plumix/auth/magic-link/request",
+        { email: "alice@example.com" },
+        "https://evil.example",
+      ),
+    );
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({
+      error: "forbidden",
+      reason: "csrf_origin_mismatch",
+    });
+  });
+
+  test("a form post's redirectTo field rides into the emailed link", async () => {
+    const h = await createDispatcherHarness({
+      config: { auth: { magicLink: { siteName: "Plumix Test" } } },
+    });
+    await h.factory.user.create({ email: "alice@example.com" });
+
+    await h.dispatch(
+      formPost("/_plumix/auth/magic-link/request", {
+        email: "alice@example.com",
+        redirectTo: "/account",
+      }),
+    );
+
+    const url = new URL(h.mail.sent("magicLink")[0]?.props.url ?? "");
+    expect(url.searchParams.get("redirectTo")).toBe("/account");
+  });
+
+  test("a fetch's malformed body answers 400 invalid_input", async () => {
+    const h = await createDispatcherHarness({
+      config: { auth: { magicLink: { siteName: "Plumix Test" } } },
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/_plumix/auth/magic-link/request", {
+        method: "POST",
+        headers: { "x-plumix-request": "1" },
+        body: "{",
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "invalid_input" });
   });
 });
 
@@ -469,7 +574,7 @@ describe("magic-link verify route", () => {
     expect(response.headers.get("set-cookie")).toContain("plumix_session=");
   });
 
-  test("falls back to admin when the verify redirectTo is unsafe", async () => {
+  test("lands on the site root when the verify redirectTo is unsafe", async () => {
     const { mailer } = captureMailer();
     const h = await createDispatcherHarness({
       config: {
@@ -494,7 +599,7 @@ describe("magic-link verify route", () => {
       ),
     );
     expect(response.status).toBe(302);
-    expect(response.headers.get("location")).toBe("/_plumix/admin");
+    expect(response.headers.get("location")).toBe("/");
   });
 
   test("worked theme wiring: request with redirectTo → verify returns to the theme page", async () => {
@@ -597,6 +702,55 @@ describe("magic-link verify route", () => {
     expect(response.headers.get("location")).toContain(
       "magic_link_error=account_disabled",
     );
+  });
+
+  test("a token whose user row is gone is refused as link_broken", async () => {
+    const h = await createDispatcherHarness({
+      config: { auth: { magicLink: { siteName: "Plumix Test" } } },
+    });
+    const user = await h.factory.user.create({ email: "gone@example.com" });
+    const { token } = await h.factory.authToken.create({
+      userId: user.id,
+      email: user.email,
+    });
+    await h.db.run(sql`PRAGMA foreign_keys = OFF`);
+    await h.db.delete(users).where(eq(users.id, user.id));
+    await h.db.run(sql`PRAGMA foreign_keys = ON`);
+
+    const response = await h.dispatch(
+      getRequest(`/_plumix/auth/magic-link/verify?token=${token}`),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "/_plumix/admin/login?magic_link_error=link_broken",
+    );
+  });
+
+  test("an identity refusal is logged as sign_in_refused", async () => {
+    const warned: { msg: string; meta: unknown }[] = [];
+    const h = await createDispatcherHarness({
+      config: { auth: { magicLink: { siteName: "Plumix Test" } } },
+      logger: {
+        ...silentLogger,
+        warn: (msg, meta) => warned.push({ msg, meta }),
+      },
+    });
+    const user = await h.factory.user.create({ disabledAt: new Date() });
+    const { token } = await h.factory.authToken.create({
+      userId: user.id,
+      email: user.email,
+    });
+
+    await h.dispatch(
+      getRequest(`/_plumix/auth/magic-link/verify?token=${token}`),
+    );
+
+    expect(warned).toEqual([
+      {
+        msg: "sign_in_refused",
+        meta: { method: "magic_link", code: "account_disabled" },
+      },
+    ]);
   });
 
   test("oversized token is rejected as token_invalid", async () => {
@@ -923,6 +1077,149 @@ describe("magic-link verify route", () => {
       .from(authTokens)
       .where(eq(authTokens.type, "magic_link"));
     expect(remaining).toHaveLength(0);
+  });
+});
+
+describe("magic-link verify of a link issued to a new address", () => {
+  async function signUpHarness(
+    options: {
+      readonly selfSignup?: boolean;
+      readonly bootstrap?: boolean;
+    } = {},
+  ) {
+    return createDispatcherHarness({
+      config: {
+        auth: {
+          magicLink: { siteName: "Plumix Test" },
+          ...(options.selfSignup === true
+            ? { selfSignup: { defaultRole: "subscriber" } }
+            : {}),
+          ...(options.bootstrap === true
+            ? { bootstrapVia: "first-method-wins" }
+            : {}),
+        },
+      },
+    });
+  }
+
+  async function verifyLinkFor(
+    h: Awaited<ReturnType<typeof signUpHarness>>,
+    email: string,
+  ): Promise<Response> {
+    const { token } = await h.factory.authToken.create({ userId: null, email });
+    return h.dispatch(
+      getRequest(`/_plumix/auth/magic-link/verify?token=${token}`),
+    );
+  }
+
+  test("provisions a user with the domain's defaultRole, email verified", async () => {
+    const h = await signUpHarness();
+    await h.seedUser("admin");
+    await h.factory.allowedDomain.create({
+      domain: "example.com",
+      defaultRole: "author",
+      isEnabled: true,
+    });
+
+    await verifyLinkFor(h, "newcomer@example.com");
+
+    const created = await h.db.query.users.findFirst({
+      where: eq(users.email, "newcomer@example.com"),
+    });
+    expect(created?.role).toBe("author");
+    expect(created?.emailVerifiedAt).not.toBeNull();
+  });
+
+  test("selfSignup's default role wins over a matching allowed-domains role", async () => {
+    const h = await signUpHarness({ selfSignup: true });
+    await h.seedUser("admin");
+    await h.factory.allowedDomain.create({
+      domain: "example.com",
+      defaultRole: "author",
+      isEnabled: true,
+    });
+
+    await verifyLinkFor(h, "newcomer@example.com");
+
+    const created = await h.db.query.users.findFirst({
+      where: eq(users.email, "newcomer@example.com"),
+    });
+    expect(created?.role).toBe("subscriber");
+  });
+
+  test("without selfSignup an address with no allowed-domains row is refused", async () => {
+    const h = await signUpHarness();
+    await h.seedUser("admin");
+
+    const response = await verifyLinkFor(h, "newcomer@anywhere.test");
+
+    expect(response.headers.get("location")).toBe(
+      "/_plumix/admin/login?magic_link_error=domain_not_allowed",
+    );
+  });
+
+  test("is refused as registration_closed when the site has no users", async () => {
+    const h = await signUpHarness();
+    await h.factory.allowedDomain.create({
+      domain: "example.com",
+      defaultRole: "admin",
+      isEnabled: true,
+    });
+
+    const response = await verifyLinkFor(h, "newcomer@example.com");
+
+    expect(response.headers.get("location")).toBe(
+      "/_plumix/admin/login?magic_link_error=registration_closed",
+    );
+  });
+
+  test("mints the first admin under bootstrapVia first-method-wins", async () => {
+    const h = await signUpHarness({ bootstrap: true });
+    await h.factory.allowedDomain.create({
+      domain: "example.com",
+      defaultRole: "subscriber",
+      isEnabled: true,
+    });
+
+    await verifyLinkFor(h, "first@example.com");
+
+    const created = await h.db.query.users.findFirst({
+      where: eq(users.email, "first@example.com"),
+    });
+    expect(created?.role).toBe("admin");
+  });
+
+  test("signs into a user who took the address while the link was pending", async () => {
+    const h = await signUpHarness();
+    await h.seedUser("admin");
+    const raced = await h.factory.user.create({
+      email: "newcomer@example.com",
+      role: "subscriber",
+    });
+    const signedIn = h.spyAction("user:signed_in");
+
+    await verifyLinkFor(h, "newcomer@example.com");
+
+    expect(signedIn.lastArgs?.[0].id).toBe(raced.id);
+    expect(signedIn.lastArgs?.[1]).toEqual({
+      method: "magic_link",
+      firstSignIn: false,
+    });
+  });
+
+  test("is refused when the user who took the address is disabled", async () => {
+    const h = await signUpHarness();
+    await h.seedUser("admin");
+    await h.factory.user.create({
+      email: "newcomer@example.com",
+      disabledAt: new Date(),
+    });
+
+    const response = await verifyLinkFor(h, "newcomer@example.com");
+
+    expect(response.headers.get("location")).toBe(
+      "/_plumix/admin/login?magic_link_error=account_disabled",
+    );
   });
 });
 

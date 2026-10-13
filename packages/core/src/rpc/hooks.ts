@@ -406,8 +406,8 @@ declare module "../hooks/types.js" {
     "user:signed_in": (
       user: User,
       context: {
-        readonly method:
-          "passkey" | "magic_link" | "oauth" | "invite" | "external";
+        /** A sign-in method's key, or `external` for an authenticator. */
+        readonly method: string;
         readonly provider?: string;
         readonly firstSignIn: boolean;
       },

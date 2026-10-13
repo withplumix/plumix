@@ -3,11 +3,8 @@ import { base } from "../../base.js";
 
 /**
  * Rides the RPC rather than the manifest because the manifest is built
- * before the runtime env exists. Passkey is always on, so it isn't listed.
+ * before the runtime env exists.
  */
 export const signInMethods = base.handler(
-  ({ context }): Pick<AuthMethodsSummary, "magicLink" | "oauth"> => ({
-    magicLink: context.authMethods.magicLink,
-    oauth: context.authMethods.oauth,
-  }),
+  ({ context }): AuthMethodsSummary => context.authMethods,
 );

@@ -1,7 +1,9 @@
 import type { AccessPolicy, Segment } from "../access/policy.js";
 import type { RequestAuthenticator } from "../auth/authenticator.js";
+import type { AuthMethodRouteMatch } from "../auth/declared-methods.js";
 import type * as AuthFlowRoutes from "../auth/flow-routes.js";
 import type { AppContext } from "../context/app-context.js";
+import type { AuthMethodRoute } from "../plugin/auth-method.js";
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import type { ContentRoute, PublicRouteMatch } from "../route/index.js";
 import type { PlumixApp } from "./app.js";
@@ -21,7 +23,7 @@ import {
   hasMatchingOrigin,
   isLoopbackOrigin,
 } from "../auth/csrf.js";
-import { parseOAuthPath } from "../auth/oauth/match.js";
+import { matchAuthMethodRoute } from "../auth/declared-methods.js";
 import { withUser } from "../auth/with-user.js";
 import { stripBasePath, withBasePath } from "../base-path.js";
 import { declaredPageTags } from "../cdn/contract/page-tags.js";
@@ -70,6 +72,7 @@ const RPC_PREFIX = "/_plumix/rpc";
 const ADMIN_PREFIX = "/_plumix/admin";
 const AUTH_PREFIX = "/_plumix/auth/";
 const PLUMIX_PREFIX = "/_plumix/";
+const SIGNOUT_PATH = "/_plumix/auth/signout";
 const MCP_PATH = "/_plumix/mcp";
 const API_PREFIX = "/_plumix/api";
 /**
@@ -122,31 +125,14 @@ type RouteHandler = (ctx: AppContext, app: PlumixApp) => Promise<Response>;
 type AuthFlowRoute = (handlers: typeof AuthFlowRoutes) => RouteHandler;
 
 const POST_AUTH_ROUTES = new Map<string, AuthFlowRoute>([
-  [
-    "/_plumix/auth/passkey/register/options",
-    (h) => h.handlePasskeyRegisterOptions,
-  ],
-  [
-    "/_plumix/auth/passkey/register/verify",
-    (h) => h.handlePasskeyRegisterVerify,
-  ],
-  ["/_plumix/auth/passkey/login/options", (h) => h.handlePasskeyLoginOptions],
-  ["/_plumix/auth/passkey/login/verify", (h) => h.handlePasskeyLoginVerify],
-  [
-    "/_plumix/auth/invite/register/options",
-    (h) => h.handleInviteRegisterOptions,
-  ],
-  ["/_plumix/auth/invite/register/verify", (h) => h.handleInviteRegisterVerify],
-  ["/_plumix/auth/magic-link/request", (h) => h.handleMagicLinkRequest],
   ["/_plumix/auth/device/code", (h) => h.handleDeviceCodeRequest],
   [
     "/_plumix/auth/device/token",
     (h) => (ctx) => h.handleDeviceTokenExchange(ctx),
   ],
-  ["/_plumix/auth/signout", (h) => h.handleSignout],
+  [SIGNOUT_PATH, (h) => h.handleSignout],
 ]);
 
-const MAGIC_LINK_VERIFY_PATH = "/_plumix/auth/magic-link/verify";
 const EMAIL_CHANGE_VERIFY_PATH = "/_plumix/auth/verify-email";
 
 export type PlumixDispatcher = (ctx: AppContext) => Promise<Response>;
@@ -207,6 +193,17 @@ function acceptsFormPost(
   pathname: string,
 ): boolean {
   if (ctx.request.method !== "POST") return false;
+  // Keeps the ambient principal: it ends the requester's own session and asks
+  // that authenticator for its `signOutUrl`.
+  if (pathname === SIGNOUT_PATH) return true;
+  if (pathname.startsWith(AUTH_PREFIX)) {
+    const match = matchAuthMethodRoute(
+      app.declaredAuthMethods,
+      pathname,
+      "POST",
+    );
+    return match?.kind === "route" && match.route.formPost === true;
+  }
   if (coreAnswersPlumixPath(pathname)) return false;
   return (
     matchPluginRawRoute(app.rawRoutes, pathname, "POST")?.route.formPost ===
@@ -368,24 +365,17 @@ async function tryPlumixRoutes(
     return authRoute(handlers)(ctx, app);
   }
 
-  // Top-level GET navigations can't carry the CSRF header; the state token is
-  // the callback's CSRF anchor.
-  const oauth = parseOAuthPath(pathname);
-  if (oauth) {
-    if (ctx.request.method !== "GET") return methodNotAllowed(["GET"]);
-    const handlers = await loadAuthFlowRoutes();
-    return oauth.tail === "start"
-      ? handlers.handleOAuthStart(ctx, app, oauth.params.providerKey)
-      : handlers.handleOAuthCallback(ctx, app, oauth.params.providerKey);
+  const methodRoute = matchAuthMethodRoute(
+    app.declaredAuthMethods,
+    pathname,
+    ctx.request.method,
+  );
+  if (methodRoute !== null) {
+    return dispatchAuthMethodRoute(app, ctx, methodRoute);
   }
 
-  // Same shape: the single-use `?token=` is the CSRF anchor.
-  if (pathname === MAGIC_LINK_VERIFY_PATH) {
-    if (ctx.request.method !== "GET") return methodNotAllowed(["GET"]);
-    return (await loadAuthFlowRoutes()).handleMagicLinkVerify(ctx, app);
-  }
-
-  // Same anchor model; the link goes to the new mailbox, proving ownership.
+  // A top-level GET navigation can't carry the CSRF header; the single-use
+  // token is its anchor, and the link goes to the new mailbox.
   if (pathname === EMAIL_CHANGE_VERIFY_PATH) {
     if (ctx.request.method !== "GET") return methodNotAllowed(["GET"]);
     return (await loadAuthFlowRoutes()).handleEmailChangeVerify(ctx, app);
@@ -825,21 +815,51 @@ const anonymousAuthenticator: RequestAuthenticator = {
  * session.
  */
 function withoutAmbientSession(
-  route: RegisteredRawRoute,
+  route: Pick<RegisteredRawRoute | AuthMethodRoute, "formPost">,
   ctx: AppContext,
 ): AppContext {
   if (route.formPost !== true || hasCsrfHeader(ctx.request)) return ctx;
   return { ...ctx, authenticator: anonymousAuthenticator };
 }
 
+/** Runs `serve` in the scoped context, entering it in the request store. */
+function servedWithoutAmbientSession(
+  route: Pick<RegisteredRawRoute | AuthMethodRoute, "formPost">,
+  ctx: AppContext,
+  serve: (ctx: AppContext) => Promise<Response>,
+): Promise<Response> {
+  const scoped = withoutAmbientSession(route, ctx);
+  if (scoped === ctx) return serve(ctx);
+  // Otherwise `getContext()` would still hand out the session-bearing context.
+  return requestStore.run(scoped, () => serve(scoped));
+}
+
 function dispatchPluginRawRoute(
   route: RegisteredRawRoute,
   ctx: AppContext,
 ): Promise<Response> {
-  const scoped = withoutAmbientSession(route, ctx);
-  if (scoped === ctx) return serveRawRoute(route, ctx);
-  // Otherwise `getContext()` would still hand out the session-bearing context.
-  return requestStore.run(scoped, () => serveRawRoute(route, scoped));
+  return servedWithoutAmbientSession(route, ctx, (scoped) =>
+    serveRawRoute(route, scoped),
+  );
+}
+
+async function dispatchAuthMethodRoute(
+  app: PlumixApp,
+  ctx: AppContext,
+  match: AuthMethodRouteMatch,
+): Promise<Response> {
+  if (match.kind === "method-not-allowed") return methodNotAllowed(match.allow);
+  const { createAuthMethodKernel } = await import("../auth/method-kernel.js");
+  return servedWithoutAmbientSession(match.route, ctx, async (scoped) =>
+    match.route.handler(
+      createAuthMethodKernel({
+        ctx: scoped,
+        app,
+        declared: match.declared,
+        params: match.params,
+      }),
+    ),
+  );
 }
 
 /**

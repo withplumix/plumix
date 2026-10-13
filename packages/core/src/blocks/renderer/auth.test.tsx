@@ -51,7 +51,7 @@ function Methods(): React.ReactNode {
   if (!m) return <>none</>;
   return (
     <>
-      {`ml:${m.magicLink}`}
+      {m.methods.map((method) => method.name).join(",")}
       {m.oauth.map((p) => (
         <span key={p.key}>{p.label}</span>
       ))}
@@ -71,11 +71,13 @@ describe("useAuthMethods", () => {
   test("reports the configured methods for a login page to render from", () => {
     expect(
       renderWith({
-        passkey: true,
-        magicLink: true,
+        methods: [
+          { name: "passkey", label: "Passkey" },
+          { name: "magic-link", label: "Magic link" },
+        ],
         oauth: [{ key: "github", label: "GitHub" }],
       }),
-    ).toBe("ml:true<span>GitHub</span>");
+    ).toBe("passkey,magic-link<span>GitHub</span>");
   });
 
   test("returns null when the render supplies no methods", () => {

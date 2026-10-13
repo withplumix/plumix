@@ -62,7 +62,13 @@ async function renderSelf(): Promise<void> {
   stubRpc({
     "user/get": () => self,
     "user/pendingEmailChange": () => ({ pending: null }),
-    "auth/signInMethods": () => ({ magicLink: true, oauth: [] }),
+    "auth/signInMethods": () => ({
+      methods: [
+        { name: "passkey", label: "Passkey" },
+        { name: "magic-link", label: "Magic link" },
+      ],
+      oauth: [],
+    }),
     "auth/credentials/list": () => [],
     "auth/sessions/list": () => [],
     "auth/apiTokens/list": () => [],

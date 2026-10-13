@@ -1,5 +1,3 @@
-// `parseOAuthPath` stays out: the dispatcher imports it eagerly, and
-// re-exporting it here would pull these handlers onto the eager path.
 export {
   handleInviteRegisterOptions,
   handleInviteRegisterVerify,

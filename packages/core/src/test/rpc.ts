@@ -23,7 +23,10 @@ import type { Factories } from "./factories.js";
 import type { MailFake } from "./mail-fake.js";
 import type { ActionSpy, FilterSpy } from "./spies.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
-import { createSession } from "../auth/sessions.js";
+import { coreAuthMethods } from "../auth/core-methods.js";
+import { declareAuthMethods } from "../auth/declared-methods.js";
+import { resolvePasskeyConfig } from "../auth/passkey/config.js";
+import { createSession, DEFAULT_SESSION_POLICY } from "../auth/sessions.js";
 import { withUser } from "../auth/with-user.js";
 import { coreBlocks, coreMarks, createBlockRegistry } from "../blocks/index.js";
 import { createAppContext } from "../context/app.js";
@@ -231,6 +234,19 @@ function assemble<TUser extends User | null>(
   return harness;
 }
 
+/** Core's listing for `auth`, as `buildApp` projects it. */
+function listAuthMethods(
+  config: PlumixConfig,
+  auth: PlumixAuthConfig,
+): AuthMethodsSummary {
+  const core = coreAuthMethods({
+    config: { ...config, auth },
+    passkey: resolvePasskeyConfig(auth.passkey),
+    sessionPolicy: DEFAULT_SESSION_POLICY,
+  });
+  return resolveAuthMethods(declareAuthMethods({ core, plugins: [] }), auth);
+}
+
 export function createRpcHarness(
   options: AuthenticatedHarnessOptions,
 ): Promise<AuthenticatedRpcHarness>;
@@ -246,7 +262,7 @@ export async function createRpcHarness(
   const env = options.env ?? {};
   const mail = fakeMail();
   const config = testConfig(mailerOrFake(options.config, mail));
-  const authMethods = options.auth && resolveAuthMethods(options.auth);
+  const authMethods = options.auth && listAuthMethods(config, options.auth);
   // Build the same default registries `buildApp` would so the RPC
   // harness exercises validation against the real core specs.
   const pluginBlockSpecs = Array.from(plugins.blockSpecs.values()).map(

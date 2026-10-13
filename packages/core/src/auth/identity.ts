@@ -1,8 +1,9 @@
 import type { Db } from "../context/app-context.js";
 import type { User, UserRole } from "../db/schema/users.js";
 import type { JsonObject } from "../json.js";
-import { eq, isUniqueConstraintError } from "../db/index.js";
+import { and, eq, isUniqueConstraintError } from "../db/index.js";
 import { allowedDomains } from "../db/schema/allowed_domains.js";
+import { oauthAccounts } from "../db/schema/oauth_accounts.js";
 import { users } from "../db/schema/users.js";
 import { provisionUser } from "./bootstrap.js";
 
@@ -11,6 +12,7 @@ export type ExternalIdentityErrorCode =
   | "account_disabled"
   | "domain_not_allowed"
   | "registration_closed"
+  | "link_broken"
   | "default_role_required";
 
 export class ExternalIdentityError extends Error {
@@ -47,6 +49,10 @@ export class ExternalIdentityError extends Error {
     );
   }
 
+  static linkBroken(): ExternalIdentityError {
+    return new ExternalIdentityError("link_broken", "link_broken");
+  }
+
   static defaultRoleRequired(): ExternalIdentityError {
     return new ExternalIdentityError(
       "default_role_required",
@@ -79,6 +85,16 @@ export interface ExternalIdentityInput {
   readonly bootstrapAllowed?: boolean;
   /** Ignored for an existing user. */
   readonly meta: JsonObject;
+  /**
+   * An account at an identity provider. Once linked it signs its user in
+   * whatever email the provider reports.
+   */
+  readonly providerAccount?: ProviderAccount;
+}
+
+export interface ProviderAccount {
+  readonly provider: string;
+  readonly accountId: string;
 }
 
 export interface ResolvedExternalUser {
@@ -104,6 +120,58 @@ export async function resolveExternalIdentity(
 }
 
 async function resolveOnce(
+  db: Db,
+  input: ExternalIdentityInput,
+): Promise<ResolvedExternalUser> {
+  const { providerAccount } = input;
+  if (providerAccount === undefined) return resolveByEmail(db, input);
+  const linked = await findLinkedUser(db, providerAccount);
+  if (linked !== undefined) return { user: linked, created: false };
+  const resolved = await resolveByEmail(db, input);
+  await linkProviderAccount(db, providerAccount, resolved.user.id);
+  return resolved;
+}
+
+/** `undefined` when no link exists; throws when the link is unusable. */
+async function findLinkedUser(
+  db: Db,
+  account: ProviderAccount,
+): Promise<User | undefined> {
+  const link = await db.query.oauthAccounts.findFirst({
+    where: and(
+      eq(oauthAccounts.provider, account.provider),
+      eq(oauthAccounts.providerAccountId, account.accountId),
+    ),
+  });
+  if (!link) return undefined;
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, link.userId),
+  });
+  // The cascade didn't fire; a distinct code tells the user to contact
+  // support, not that they're disabled.
+  if (!user) throw ExternalIdentityError.linkBroken();
+  if (user.disabledAt) throw ExternalIdentityError.accountDisabled();
+  return user;
+}
+
+async function linkProviderAccount(
+  db: Db,
+  account: ProviderAccount,
+  userId: number,
+): Promise<void> {
+  try {
+    await db.insert(oauthAccounts).values({
+      provider: account.provider,
+      providerAccountId: account.accountId,
+      userId,
+    });
+  } catch (error) {
+    if (!isUniqueConstraintError(error)) throw error;
+    // A concurrent sign-in linked the same email-keyed user first.
+  }
+}
+
+async function resolveByEmail(
   db: Db,
   input: ExternalIdentityInput,
 ): Promise<ResolvedExternalUser> {

@@ -1,6 +1,7 @@
 import type { ShortcodeSpec } from "../blocks/index.js";
 import type { AnyMailDefinition } from "../mail/contract/registry.js";
 import type { SchemaModule } from "../runtime/contract/slots.js";
+import type { AuthMethodDefinition } from "./auth-method.js";
 import type { PluginProvidesContext } from "./provides-context.js";
 import type {
   PluginAfterSetupContext,
@@ -67,6 +68,11 @@ export interface PluginDescriptor<TState = undefined> {
    * fails it, and overrides are checked against them.
    */
   readonly mails?: readonly AnyMailDefinition[];
+  /**
+   * Sign-in methods, declared so a duplicate or reserved name fails boot. Each
+   * answers at `/_plumix/auth/<name>/`.
+   */
+  readonly authMethods?: readonly AuthMethodDefinition[];
   readonly schema?: SchemaModule;
   readonly schemaModule?: string;
   /**
@@ -114,6 +120,8 @@ export interface DefinePluginInput<TState> extends DefinePluginOptions {
   readonly shortcodes?: readonly ShortcodeSpec[];
   /** See {@link PluginDescriptor.mails}. */
   readonly mails?: readonly AnyMailDefinition[];
+  /** See {@link PluginDescriptor.authMethods}. */
+  readonly authMethods?: readonly AuthMethodDefinition[];
 }
 
 /** Takes the package name, not the plugin id: the two can diverge
@@ -199,6 +207,7 @@ export function definePlugin<TState = undefined>(
     afterSetup: setupOrInput.afterSetup,
     shortcodes: setupOrInput.shortcodes,
     mails: setupOrInput.mails,
+    authMethods: setupOrInput.authMethods,
     schema: setupOrInput.schema,
     schemaModule: setupOrInput.schemaModule,
     dataMigrations: setupOrInput.dataMigrations,

@@ -67,12 +67,18 @@ export function LoginScreen({ search }: { search: LoginSearch }): ReactNode {
   const renderOAuthError = useOAuthErrorMessage();
   const renderEmailChangeError = useEmailChangeErrorMessage();
   const [passkeyError, setPasskeyError] = useState<string | null>(null);
-  const [magicLinkSent, setMagicLinkSent] = useState(false);
+  // Not pinned to "1": a search round-tripped through other routes can
+  // reserialize.
+  const [magicLinkSent, setMagicLinkSent] = useState(
+    Boolean(search.magic_link_sent),
+  );
   const [magicLinkError, setMagicLinkError] =
     useState<MessageDescriptor | null>(null);
 
   const signInMethods = useQuery(orpc.auth.signInMethods.queryOptions());
-  const magicLinkEnabled = signInMethods.data?.magicLink === true;
+  const magicLinkEnabled =
+    signInMethods.data?.methods.some(({ name }) => name === "magic-link") ===
+    true;
   const oauth = signInMethods.data?.oauth ?? [];
 
   const signIn = useMutation({

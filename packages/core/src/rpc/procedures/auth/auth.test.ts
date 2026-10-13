@@ -122,18 +122,24 @@ describe("auth.signInMethods", () => {
   };
   const client = { clientId: "id", clientSecret: "secret" };
 
-  test("reports magic-link off and no OAuth for a passkey-only config", async () => {
+  test("lists passkey alone for a passkey-only config", async () => {
     const h = await createRpcHarness({ auth: auth({ passkey }) });
     const result = await h.client.auth.signInMethods({});
-    expect(result).toEqual({ magicLink: false, oauth: [] });
+    expect(result).toEqual({
+      methods: [{ name: "passkey", label: "Passkey" }],
+      oauth: [],
+    });
   });
 
-  test("reports magic-link on when auth.magicLink is configured", async () => {
+  test("lists magic link when auth.magicLink is configured", async () => {
     const h = await createRpcHarness({
       auth: auth({ passkey, magicLink: { siteName: "Acme" } }),
     });
     const result = await h.client.auth.signInMethods({});
-    expect(result.magicLink).toBe(true);
+    expect(result.methods).toContainEqual({
+      name: "magic-link",
+      label: "Magic link",
+    });
   });
 
   test("returns key + label per configured OAuth provider, in declared order", async () => {

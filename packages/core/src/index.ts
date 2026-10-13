@@ -30,6 +30,14 @@ export type { JsonObject, JsonValue } from "./json.js";
 // Stored meta, telemetry records and block props are `JsonValue` until
 // narrowed.
 export { isJsonArray, isJsonObject } from "./json.js";
+export { defineAuthMethod } from "./plugin/auth-method.js";
+export type {
+  AuthMethodDefinition,
+  AuthMethodKernel,
+  AuthMethodRoute,
+  IdentityProof,
+  IdentityRefusalCode,
+} from "./plugin/auth-method.js";
 export { defineMail } from "./mail/contract/define.js";
 export { MailerNotConfigured } from "./mail/contract/errors.js";
 export type {

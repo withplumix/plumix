@@ -1,8 +1,13 @@
 import { describe, expect, test } from "vitest";
 
-import { eq } from "../db/index.js";
+import { eq, sql } from "../db/index.js";
+import { oauthAccounts } from "../db/schema/oauth_accounts.js";
 import { users } from "../db/schema/users.js";
-import { allowedDomainFactory, userFactory } from "../test/factories.js";
+import {
+  allowedDomainFactory,
+  oauthAccountFactory,
+  userFactory,
+} from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
 import {
   ExternalIdentityError,
@@ -248,6 +253,181 @@ describe("resolveExternalIdentity — error type", () => {
         emailVerified: false,
       }),
     ).rejects.toBeInstanceOf(ExternalIdentityError);
+  });
+});
+
+describe("resolveExternalIdentity — provider account", () => {
+  const github = { provider: "github", accountId: "gh-123" };
+
+  test("a link whose user row is gone is refused as link_broken", async () => {
+    const db = await createTestDb();
+    // A row the cascade should have deleted but didn't; FKs are off only long
+    // enough to insert the dangling reference.
+    await db.run(sql`PRAGMA foreign_keys = OFF`);
+    await oauthAccountFactory.transient({ db }).create({
+      provider: "github",
+      providerAccountId: "gh-123",
+      userId: 9999,
+    });
+    await db.run(sql`PRAGMA foreign_keys = ON`);
+
+    await expect(
+      resolveExternalIdentity(db, {
+        meta: {},
+        email: "alice@example.com",
+        emailVerified: true,
+        providerAccount: github,
+      }),
+    ).rejects.toMatchObject({ code: "link_broken" });
+  });
+
+  test("an existing link wins over the email, even an unverified one", async () => {
+    const db = await createTestDb();
+    const seeded = await userFactory.transient({ db }).create({
+      email: "alice@example.com",
+      role: "editor",
+    });
+    await oauthAccountFactory.transient({ db }).create({
+      provider: "github",
+      providerAccountId: "gh-123",
+      userId: seeded.id,
+    });
+
+    const result = await resolveExternalIdentity(db, {
+      meta: {},
+      email: "renamed@elsewhere.example",
+      emailVerified: false,
+      providerAccount: github,
+    });
+    expect(result).toMatchObject({ created: false, user: { id: seeded.id } });
+  });
+
+  test("a link to a disabled user is refused as account_disabled", async () => {
+    const db = await createTestDb();
+    const seeded = await userFactory.transient({ db }).create({
+      email: "alice@example.com",
+      disabledAt: new Date(),
+    });
+    await oauthAccountFactory.transient({ db }).create({
+      provider: "github",
+      providerAccountId: "gh-123",
+      userId: seeded.id,
+    });
+
+    await expect(
+      resolveExternalIdentity(db, {
+        meta: {},
+        email: "alice@example.com",
+        emailVerified: true,
+        providerAccount: github,
+      }),
+    ).rejects.toMatchObject({ code: "account_disabled" });
+  });
+
+  test("a verified email match links the account to the existing user", async () => {
+    const db = await createTestDb();
+    const seeded = await userFactory.transient({ db }).create({
+      email: "alice@example.com",
+      role: "author",
+    });
+
+    await resolveExternalIdentity(db, {
+      meta: {},
+      email: "alice@example.com",
+      emailVerified: true,
+      providerAccount: github,
+    });
+
+    const link = await db.query.oauthAccounts.findFirst({
+      where: eq(oauthAccounts.providerAccountId, "gh-123"),
+    });
+    expect(link).toMatchObject({ provider: "github", userId: seeded.id });
+  });
+
+  test("a new user is linked and takes the profile", async () => {
+    const db = await createTestDb();
+    await userFactory.transient({ db }).create({ role: "admin" });
+    await allowedDomainFactory.transient({ db }).create({
+      domain: "example.com",
+      defaultRole: "contributor",
+      isEnabled: true,
+    });
+
+    const result = await resolveExternalIdentity(db, {
+      meta: {},
+      email: "alice@example.com",
+      emailVerified: true,
+      name: "Alice",
+      avatarUrl: "https://example.com/a.png",
+      providerAccount: github,
+    });
+
+    expect(result.created).toBe(true);
+    expect(result.user).toMatchObject({
+      name: "Alice",
+      avatarUrl: "https://example.com/a.png",
+      role: "contributor",
+    });
+    const link = await db.query.oauthAccounts.findFirst({
+      where: eq(oauthAccounts.providerAccountId, "gh-123"),
+    });
+    expect(link?.userId).toBe(result.user.id);
+  });
+
+  test("two sign-ins for one new email with different accounts share one user", async () => {
+    const db = await createTestDb();
+    await userFactory.transient({ db }).create({ role: "admin" });
+    await allowedDomainFactory.transient({ db }).create({
+      domain: "example.com",
+      defaultRole: "subscriber",
+      isEnabled: true,
+    });
+
+    const [a, b] = await Promise.all([
+      resolveExternalIdentity(db, {
+        meta: {},
+        email: "alice@example.com",
+        emailVerified: true,
+        providerAccount: { provider: "github", accountId: "race-1" },
+      }),
+      resolveExternalIdentity(db, {
+        meta: {},
+        email: "alice@example.com",
+        emailVerified: true,
+        providerAccount: { provider: "github", accountId: "race-2" },
+      }),
+    ]);
+
+    expect(a.user.id).toBe(b.user.id);
+    const links = await db.query.oauthAccounts.findMany({
+      where: eq(oauthAccounts.userId, a.user.id),
+    });
+    expect(links).toHaveLength(2);
+  });
+
+  test("two sign-ins for one provider account tolerate the link race", async () => {
+    const db = await createTestDb();
+    const seeded = await userFactory.transient({ db }).create({
+      email: "alice@example.com",
+      role: "editor",
+    });
+    const input = {
+      meta: {},
+      email: "alice@example.com",
+      emailVerified: true,
+      providerAccount: github,
+    };
+
+    const [a, b] = await Promise.all([
+      resolveExternalIdentity(db, input),
+      resolveExternalIdentity(db, input),
+    ]);
+
+    expect([a.user.id, b.user.id]).toEqual([seeded.id, seeded.id]);
+    const links = await db.query.oauthAccounts.findMany({
+      where: eq(oauthAccounts.providerAccountId, "gh-123"),
+    });
+    expect(links).toHaveLength(1);
   });
 });
 

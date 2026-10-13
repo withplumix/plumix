@@ -69,9 +69,8 @@ export async function consumeOAuthState(
   return {
     provider: payload.provider,
     codeVerifier: payload.codeVerifier,
-    // Only surface a string; the callback re-validates it against
-    // `isSafeRedirect` before honouring, so a hand-rolled row can't inject
-    // an off-origin destination here.
+    // Only surface a string; the callback re-validates it before honouring,
+    // so a hand-rolled row can't inject an off-origin destination here.
     ...(typeof payload.redirectTo === "string"
       ? { redirectTo: payload.redirectTo }
       : {}),

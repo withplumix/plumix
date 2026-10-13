@@ -1,10 +1,11 @@
 import type { RendererOAuthProvider } from "../../blocks/renderer/context.js";
 
 export interface AuthMethodsSummary {
-  /** Passkey is always configured, so this is always `true` today. */
-  readonly passkey: boolean;
-  /** True when `auth.magicLink` is configured. */
-  readonly magicLink: boolean;
+  /** The listed sign-in methods: core's, then each plugin's in plugin order. */
+  readonly methods: readonly {
+    readonly name: string;
+    readonly label: string;
+  }[];
   /** `{ key, label }` per configured OAuth provider; empty when none. */
   readonly oauth: readonly RendererOAuthProvider[];
 }

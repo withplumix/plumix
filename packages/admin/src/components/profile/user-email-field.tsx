@@ -97,7 +97,9 @@ export function UserEmailField({
   const signInMethods = useQuery(orpc.auth.signInMethods.queryOptions());
   const availability = emailChangeAvailability({
     canEdit,
-    magicLink: signInMethods.data?.magicLink,
+    magicLink: signInMethods.data?.methods.some(
+      ({ name }) => name === "magic-link",
+    ),
   });
 
   const invalidate = (): Promise<void> =>

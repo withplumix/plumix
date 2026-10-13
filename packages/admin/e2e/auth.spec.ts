@@ -83,6 +83,14 @@ test.describe("/login", () => {
     );
   });
 
+  test("?magic_link_sent=1 renders the sent card", async ({ page }) => {
+    await mockSession(page, anonymousSession());
+    await page.goto("login?magic_link_sent=1");
+    await expect(page.getByTestId("login-magic-link-sent")).toContainText(
+      "Check your email",
+    );
+  });
+
   test("?email_change_error=token_expired renders friendly copy", async ({
     page,
   }) => {
