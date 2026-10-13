@@ -69,6 +69,7 @@ test.describe("islands", () => {
         ?.remove();
     });
 
+    await expect(page.getByTestId("load-probe")).toHaveCount(0);
     expect(await islandEvents(page)).toEqual([
       { type: "plumix:unmount", exportName: "LoadProbe", message: null },
     ]);
@@ -89,6 +90,7 @@ test.describe("islands", () => {
         ?.remove();
     });
 
+    await expect(page.getByTestId("dormant-probe")).toHaveCount(0);
     expect(await islandEvents(page)).toEqual([]);
   });
 

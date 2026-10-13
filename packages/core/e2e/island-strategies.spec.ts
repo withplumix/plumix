@@ -2,6 +2,8 @@ import type { Page } from "@playwright/test";
 
 import { expect, test } from "@plumix/core/test/playwright";
 
+import { holdRequests } from "./support/hold-requests.js";
+
 /**
  * The above-the-fold `visible` island hydrating means the runtime has loaded
  * and every island on the page has registered its strategy.
@@ -9,19 +11,6 @@ import { expect, test } from "@plumix/core/test/playwright";
 async function gotoStrategies(page: Page): Promise<void> {
   await page.goto("/strategies");
   await expect(page.getByTestId("visible-above")).toHaveAttribute("data-live");
-}
-
-/** Holds every request for `pattern` until the returned release is called. */
-async function holdRequests(page: Page, pattern: string): Promise<() => void> {
-  let release = (): void => undefined;
-  const released = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  await page.route(pattern, async (route) => {
-    await released;
-    await route.continue();
-  });
-  return release;
 }
 
 test.describe("island loading strategies", () => {
@@ -39,6 +28,9 @@ test.describe("island loading strategies", () => {
     });
     await page.goto("/strategies");
 
+    expect(await page.evaluate(() => typeof requestIdleCallback)).toBe(
+      "undefined",
+    );
     await expect(page.getByTestId("idle-probe")).toHaveAttribute("data-live");
   });
 

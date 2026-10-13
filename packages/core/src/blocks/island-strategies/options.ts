@@ -1,6 +1,3 @@
-// What each strategy reads from an island's `opts` attribute, apart from the
-// DOM it drives.
-
 import type { JsonObject } from "../../json.js";
 import { isJsonArray } from "../../json.js";
 

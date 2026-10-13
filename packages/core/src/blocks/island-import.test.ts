@@ -34,19 +34,21 @@ describe("importWithRetry", () => {
     vi.useFakeTimers({ toFake: ["Date"], now: 1700 });
     const steps: string[] = [];
 
-    const mod = await importWithRetry(
-      (url) => {
+    const load = vi
+      .fn<(url: string) => Promise<{ default: string }>>()
+      .mockImplementationOnce((url) => {
         steps.push(`import ${url}`);
-        return steps.length === 1
-          ? Promise.reject(new Error("chunk gone"))
-          : Promise.resolve({ default: "chunk" });
-      },
-      "/assets/counter.js",
-      () => {
-        steps.push("wait");
-        return Promise.resolve();
-      },
-    );
+        return Promise.reject(new Error("chunk gone"));
+      })
+      .mockImplementationOnce((url) => {
+        steps.push(`import ${url}`);
+        return Promise.resolve({ default: "chunk" });
+      });
+
+    const mod = await importWithRetry(load, "/assets/counter.js", () => {
+      steps.push("wait");
+      return Promise.resolve();
+    });
 
     expect(mod).toEqual({ default: "chunk" });
     expect(steps).toEqual([

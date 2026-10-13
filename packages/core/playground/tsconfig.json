@@ -5,9 +5,8 @@
     "jsx": "react-jsx",
     // The islands are browser code.
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    // Resolve workspace packages from `src/` (not `dist/`) so the
-    // playground typechecks against live source. See the comment in
-    // packages/plugins/media/playground/tsconfig.json for the rationale.
+    // Resolve workspace packages from `src/` (not `dist/`) so the playground
+    // typechecks against live source.
     "paths": {
       "plumix": ["../../plumix/src/index.ts"],
       "plumix/auth": ["../../plumix/src/auth/index.ts"],

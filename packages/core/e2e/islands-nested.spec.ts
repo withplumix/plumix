@@ -1,5 +1,6 @@
 import { expect, test } from "@plumix/core/test/playwright";
 
+import { holdRequests } from "./support/hold-requests.js";
 import { islandEvents, recordIslandEvents } from "./support/island-events.js";
 
 test.describe("nested islands", () => {
@@ -8,14 +9,10 @@ test.describe("nested islands", () => {
   });
 
   test("a nested island hydrates after its parent", async ({ page }) => {
-    let releaseParent = (): void => undefined;
-    const parentHeld = new Promise<void>((resolve) => {
-      releaseParent = resolve;
-    });
-    await page.route("**/islands/nest-parent.ts*", async (route) => {
-      await parentHeld;
-      await route.continue();
-    });
+    const releaseParent = await holdRequests(
+      page,
+      "**/islands/nest-parent.ts*",
+    );
     await page.goto("/islands-nested");
     // The bystander shares the nested island's chunk, so once it is live a
     // nested island free to hydrate would be live too.
