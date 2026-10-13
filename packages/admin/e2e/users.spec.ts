@@ -494,7 +494,13 @@ test.describe("/users/$id/edit", () => {
 /**
  * The change control is offered only where magic-link sign-in is configured.
  */
-const MAGIC_LINK_ON = { magicLink: true, oauth: [] };
+const MAGIC_LINK_ON = {
+  methods: [
+    { name: "passkey", label: "Passkey" },
+    { name: "magic-link", label: "Magic link" },
+  ],
+  oauth: [],
+};
 
 test.describe("/users/$id/edit — email change (self)", () => {
   const self = user({ id: 1, email: "admin@example.test", role: "admin" });

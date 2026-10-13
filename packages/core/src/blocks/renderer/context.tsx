@@ -42,8 +42,11 @@ export interface RendererOAuthProvider {
 }
 
 export interface RendererAuthMethods {
-  readonly passkey: boolean;
-  readonly magicLink: boolean;
+  /** The listed sign-in methods: core's, then each plugin's in plugin order. */
+  readonly methods: readonly {
+    readonly name: string;
+    readonly label: string;
+  }[];
   readonly oauth: readonly RendererOAuthProvider[];
 }
 

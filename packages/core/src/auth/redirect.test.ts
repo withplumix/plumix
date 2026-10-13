@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { isSafeRedirect, resolveSafeRedirect } from "./redirect.js";
+import { isSafeRedirect, resolveRedirectTo } from "./redirect.js";
 
 describe("isSafeRedirect", () => {
   test.each([
@@ -63,17 +63,45 @@ describe("isSafeRedirect", () => {
   });
 });
 
-describe("resolveSafeRedirect", () => {
-  test("returns the candidate when it is safe", () => {
-    expect(resolveSafeRedirect("/account", "/fallback")).toBe("/account");
+describe("resolveRedirectTo", () => {
+  test.each([
+    ["/account", "/account"],
+    ["/account?tab=saved#top", "/account?tab=saved#top"],
+    ["/", "/"],
+  ])("keeps %j with no base path", (value, expected) => {
+    expect(resolveRedirectTo(value, "")).toBe(expected);
   });
 
-  test("falls back on an unsafe candidate", () => {
-    expect(resolveSafeRedirect("//evil.com", "/fallback")).toBe("/fallback");
+  test.each([
+    "https://evil.example/",
+    "//evil.example",
+    "/../x",
+    "/a/./b",
+    "/a/%2e%2E/b",
+    "/a/%2E",
+    "javascript:alert(1)",
+  ])("sends %j to the site root with no base path", (value) => {
+    expect(resolveRedirectTo(value, "")).toBe("/");
   });
 
-  test("falls back on an absent candidate", () => {
-    expect(resolveSafeRedirect(null, "/fallback")).toBe("/fallback");
-    expect(resolveSafeRedirect(undefined, "/fallback")).toBe("/fallback");
+  test("keeps a dot inside a segment and in the query", () => {
+    expect(resolveRedirectTo("/file.txt?next=/../x", "")).toBe(
+      "/file.txt?next=/../x",
+    );
   });
+
+  test.each([
+    ["/blog", "/blog"],
+    ["/blog/account", "/blog/account"],
+    ["/blog?x=1", "/blog?x=1"],
+  ])("keeps %j under base path /blog", (value, expected) => {
+    expect(resolveRedirectTo(value, "/blog")).toBe(expected);
+  });
+
+  test.each(["/other", "/blogger", "/", "/blog/../other", "//evil.example"])(
+    "sends %j to /blog/ under base path /blog",
+    (value) => {
+      expect(resolveRedirectTo(value, "/blog")).toBe("/blog/");
+    },
+  );
 });

@@ -24,6 +24,7 @@ import { useAuthMethods } from "../blocks/renderer/index.js";
 import { entryPurgeTags } from "../cdn/contract/tags.js";
 import { tagCdnEntry } from "../cdn/route-tags.js";
 import { getContext } from "../context/stores.js";
+import { defineAuthMethod } from "../plugin/auth-method.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback } from "../route/render/template-builders.js";
 import { defineTemplate } from "../template.js";
@@ -515,7 +516,6 @@ describe("dispatcher — CSRF", () => {
     "/_plumix/auth/passkey/login/verify",
     "/_plumix/auth/invite/register/options",
     "/_plumix/auth/invite/register/verify",
-    "/_plumix/auth/signout",
   ] as const;
 
   for (const path of authEndpoints) {
@@ -533,6 +533,23 @@ describe("dispatcher — CSRF", () => {
       expect(body.reason).toBe("csrf_header_missing");
     });
   }
+
+  test.each(["/_plumix/auth/signout", "/_plumix/auth/magic-link/request"])(
+    "POST %s with neither the CSRF header nor an Origin is forbidden",
+    async (path) => {
+      const h = await createDispatcherHarness();
+      const response = await h.dispatch(
+        new Request(`https://cms.example${path}`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: "{}",
+        }),
+      );
+      expect(response.status).toBe(403);
+      const body = (await response.json()) as { reason?: string };
+      expect(body.reason).toBe("csrf_origin_mismatch");
+    },
+  );
 
   test("GET /_plumix/admin is allowed without the CSRF header (safe method)", async () => {
     const h = await createDispatcherHarness();
@@ -928,13 +945,26 @@ describe("dispatcher — theme reads configured auth methods", () => {
     // component proves the configured methods reach the render tree.
     const LoginControls = (): ReturnType<typeof createElement> => {
       const methods = useAuthMethods();
-      return createElement("p", null, `passkey:${String(methods?.passkey)}`);
+      const names = methods?.methods.map((method) => method.name) ?? [];
+      return createElement("p", null, `methods:${names.join(",")}`);
     };
     const theme = defineTheme({
       templates: [fallback(() => createElement(LoginControls))],
     });
+    const signingIn = definePlugin("fixture-plugin", {
+      setup: () => undefined,
+      authMethods: [
+        defineAuthMethod({
+          name: "fixture",
+          label: "Fixture",
+          routes: {
+            start: { method: "POST", handler: () => new Response(null) },
+          },
+        }),
+      ],
+    });
     const h = await createDispatcherHarness({
-      config: { plugins: [blog], theme: theme },
+      config: { plugins: [blog, signingIn], theme: theme },
     });
     await seedHelloWorldPost(h);
 
@@ -943,7 +973,7 @@ describe("dispatcher — theme reads configured auth methods", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(await response.text()).toContain("passkey:true");
+    expect(await response.text()).toContain("methods:passkey,fixture");
   });
 });
 

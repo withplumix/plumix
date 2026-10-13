@@ -4,6 +4,7 @@ import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { PlumixAuthConfig } from "../auth/config.js";
 import type { AuthMethodsSummary } from "../auth/contract/auth-methods.js";
 import type { SessionPolicy } from "../auth/contract/sessions.js";
+import type { DeclaredAuthMethods } from "../auth/declared-methods.js";
 import type { PasskeyRuntimeConfig } from "../auth/passkey/config.js";
 import type { CapabilityResolver } from "../auth/rbac.js";
 import type {
@@ -38,6 +39,8 @@ import type { DevRuntime } from "./dev.js";
 import { adminBarChrome } from "../admin-bar/component.js";
 import { registerCoreAdminBarContributors } from "../admin-bar/core-contributors.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
+import { coreAuthMethods } from "../auth/core-methods.js";
+import { declareAuthMethods } from "../auth/declared-methods.js";
 import { resolvePasskeyConfig } from "../auth/passkey/config.js";
 import { getCapabilityResolver } from "../auth/rbac.js";
 import { DEFAULT_SESSION_POLICY } from "../auth/sessions.js";
@@ -88,12 +91,14 @@ export type { AuthMethodsSummary } from "../auth/contract/auth-methods.js";
  * accept.
  */
 export function resolveAuthMethods(
+  declared: DeclaredAuthMethods,
   authConfig: PlumixAuthConfig,
 ): AuthMethodsSummary {
   const providers = authConfig.oauth?.providers ?? {};
   return {
-    passkey: true,
-    magicLink: authConfig.magicLink !== undefined,
+    methods: [...declared.values()]
+      .filter(({ method }) => method.listed !== false)
+      .map(({ method }) => ({ name: method.name, label: method.label })),
     oauth: Object.entries(providers).map(([key, provider]) => ({
       key,
       label: provider.label,
@@ -146,6 +151,11 @@ export interface PlumixApp {
    * `auth.signInMethods` RPC); see {@link AuthMethodsSummary}.
    */
   readonly authMethods: AuthMethodsSummary;
+  /**
+   * Every sign-in method by name, core's and each plugin's, checked once at
+   * boot.
+   */
+  readonly declaredAuthMethods: DeclaredAuthMethods;
   readonly schema: SchemaModule;
   /**
    * Sorted route map compiled once at `buildApp` from the plugin registry.
@@ -341,11 +351,15 @@ export async function buildApp(
   }
 
   const passkey = resolvePasskeyConfig(config.auth.passkey);
-  const authMethods = resolveAuthMethods(config.auth);
   const sessionPolicy = config.auth.sessions ?? DEFAULT_SESSION_POLICY;
   const authenticator =
     config.auth.authenticator ?? defaultAuthenticator(sessionPolicy);
   const bootstrapAllowed = config.auth.bootstrapVia === "first-method-wins";
+  const declaredAuthMethods = declareAuthMethods({
+    core: coreAuthMethods({ config, passkey, sessionPolicy }),
+    plugins: config.plugins,
+  });
+  const authMethods = resolveAuthMethods(declaredAuthMethods, config.auth);
 
   // Last-write-wins gives core < plugin < theme.
   const blocks = createBlockRegistry([
@@ -429,6 +443,7 @@ export async function buildApp(
     authenticator,
     bootstrapAllowed,
     authMethods,
+    declaredAuthMethods,
     schema,
     routeMap: compileRouteMap(registry),
     redirects: assembleRedirects({

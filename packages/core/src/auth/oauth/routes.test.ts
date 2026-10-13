@@ -5,6 +5,7 @@ import { authTokens } from "../../db/schema/auth_tokens.js";
 import { oauthAccounts } from "../../db/schema/oauth_accounts.js";
 import { sessions } from "../../db/schema/sessions.js";
 import { users } from "../../db/schema/users.js";
+import { silentLogger } from "../../test/context.js";
 import { createDispatcherHarness } from "../../test/dispatcher.js";
 import { github } from "./providers/github.js";
 import { google } from "./providers/google.js";
@@ -207,7 +208,7 @@ describe("oauth start route", () => {
     expect(payload?.redirectTo).toBe("/account/saved");
   });
 
-  test("drops an unsafe redirectTo at start (not stored)", async () => {
+  test("stores the site root for an unsafe redirectTo at start", async () => {
     const h = await createDispatcherHarness({
       config: { auth: { oauth: { providers: TEST_OAUTH } } },
     });
@@ -222,10 +223,10 @@ describe("oauth start route", () => {
     const rows = await h.db.select().from(authTokens);
     const stateRow = rows.find((r) => r.type === "oauth_state");
     const payload = stateRow?.payload as { redirectTo?: string } | undefined;
-    expect(payload?.redirectTo).toBeUndefined();
+    expect(payload?.redirectTo).toBe("/");
   });
 
-  test("drops a TAB-smuggled protocol-relative redirectTo at start (not stored)", async () => {
+  test("stores the site root for a TAB-smuggled protocol-relative redirectTo", async () => {
     // `/%09/evil.com` decodes to `/<TAB>/evil.com`; the browser's URL parser
     // strips the TAB, reconstructing `//evil.com`. The validator must reject
     // it before it reaches the state row.
@@ -243,7 +244,25 @@ describe("oauth start route", () => {
     const rows = await h.db.select().from(authTokens);
     const stateRow = rows.find((r) => r.type === "oauth_state");
     const payload = stateRow?.payload as { redirectTo?: string } | undefined;
-    expect(payload?.redirectTo).toBeUndefined();
+    expect(payload?.redirectTo).toBe("/");
+  });
+
+  test("under base path /blog, stores /blog/ for a redirectTo outside it", async () => {
+    const h = await createDispatcherHarness({
+      config: { basePath: "/blog", auth: { oauth: { providers: TEST_OAUTH } } },
+    });
+    await h.seedUser("admin");
+
+    await h.dispatch(
+      new Request(
+        "https://cms.example/blog/_plumix/auth/oauth/github/start?redirectTo=%2Fother",
+      ),
+    );
+
+    const rows = await h.db.select().from(authTokens);
+    const stateRow = rows.find((r) => r.type === "oauth_state");
+    const payload = stateRow?.payload as { redirectTo?: string } | undefined;
+    expect(payload?.redirectTo).toBe("/blog/");
   });
 
   test("returns 405 on POST", async () => {
@@ -272,14 +291,31 @@ describe("oauth start route", () => {
     );
   });
 
-  test("returns 404 on a malformed provider key (uppercase / specials)", async () => {
+  test("a malformed provider key lands on oauth_error=provider_not_configured", async () => {
     const h = await createDispatcherHarness({
       config: { auth: { oauth: { providers: TEST_OAUTH } } },
     });
     const response = await h.dispatch(
       new Request("https://cms.example/_plumix/auth/oauth/Bad-Key!/start"),
     );
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe(
+      "/_plumix/admin/login?oauth_error=provider_not_configured",
+    );
+  });
+
+  test("a malformed provider key answers 405 on POST", async () => {
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+    });
+    const response = await h.dispatch(
+      new Request("https://cms.example/_plumix/auth/oauth/Bad-Key!/start", {
+        method: "POST",
+        headers: { "x-plumix-request": "1" },
+      }),
+    );
+    expect(response.status).toBe(405);
+    expect(response.headers.get("allow")).toBe("GET");
   });
 
   test("rejects `constructor` (prototype-chain key) as not configured", async () => {
@@ -529,7 +565,7 @@ describe("oauth callback route", () => {
     expect(response.headers.get("set-cookie")).toContain("plumix_session=");
   });
 
-  test("falls back to admin when the stored redirectTo is unsafe", async () => {
+  test("lands on the site root when the stored redirectTo is unsafe", async () => {
     const h = await createDispatcherHarness({
       config: { auth: { oauth: { providers: TEST_OAUTH } } },
     });
@@ -564,7 +600,7 @@ describe("oauth callback route", () => {
       `/_plumix/auth/oauth/github/callback?code=abc&state=${state}`,
     );
     expect(response.status).toBe(302);
-    expect(response.headers.get("location")).toBe("/_plumix/admin");
+    expect(response.headers.get("location")).toBe("/");
   });
 
   test("domain-gated signup creates a user with the domain's default role", async () => {
@@ -695,6 +731,42 @@ describe("oauth callback route", () => {
       where: eq(users.email, "stranger@notallowed.com"),
     });
     expect(stranger).toBeUndefined();
+  });
+
+  test("an identity refusal is logged as sign_in_refused", async () => {
+    const warned: { msg: string; meta: unknown }[] = [];
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+      logger: {
+        ...silentLogger,
+        warn: (msg, meta) => warned.push({ msg, meta }),
+      },
+    });
+    await h.seedUser("admin");
+    const state = await seedState(h, "google", "v-3");
+    answer({
+      "https://oauth2.googleapis.com/token": {
+        body: { access_token: "tk", token_type: "bearer" },
+      },
+      "https://openidconnect.googleapis.com/v1/userinfo": {
+        body: {
+          sub: "g-1",
+          email: "stranger@notallowed.com",
+          email_verified: true,
+          name: "Stranger",
+          picture: null,
+        },
+      },
+    });
+
+    await get(h, `/_plumix/auth/oauth/google/callback?code=abc&state=${state}`);
+
+    expect(warned).toEqual([
+      {
+        msg: "sign_in_refused",
+        meta: { method: "oauth", code: "domain_not_allowed" },
+      },
+    ]);
   });
 
   test("worked theme wiring: start → callback returns the visitor to redirectTo", async () => {

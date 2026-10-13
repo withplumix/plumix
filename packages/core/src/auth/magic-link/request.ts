@@ -37,8 +37,8 @@ interface RequestMagicLinkInput {
   readonly ttlSeconds?: number;
   readonly logger?: Pick<Logger, "warn">;
   /**
-   * Must already have passed `isSafeRedirect`; the verify route re-validates
-   * it.
+   * Must already have passed `resolveRedirectTo`; the verify route
+   * re-validates it.
    */
   readonly redirectTo?: string;
   readonly bootstrapAllowed?: boolean;

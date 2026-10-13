@@ -69,8 +69,7 @@ const CORE_MAIL_CATALOGS_ONLY: MailCatalogs = createMailCatalogs();
  * contexts). The real app always passes `app.authMethods`.
  */
 const NO_AUTH_METHODS: AuthMethodsSummary = Object.freeze({
-  passkey: false,
-  magicLink: false,
+  methods: Object.freeze([]),
   oauth: Object.freeze([]),
 });
 

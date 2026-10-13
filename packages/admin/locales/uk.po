@@ -1500,6 +1500,11 @@ msgid "login.magicLink.submit"
 msgstr "Надіслати посилання поштою"
 
 #. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.notConfigured"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.row.enabled"
 msgstr "Увімкнено"
@@ -1513,6 +1518,11 @@ msgstr "Увімкнення…"
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.email.invalid"
 msgstr "Введіть дійсну email-адресу"
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.invalidInput"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/-mailer-page.tsx
@@ -3322,6 +3332,11 @@ msgid "oauth.error.linkBroken"
 msgstr "Цей акаунт недосяжний. Зв'яжіться з адміністратором, щоб перепов'язати його."
 
 #. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.accountDisabled"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.accountDisabled"
 msgstr "Цей обліковий запис вимкнено."
@@ -3420,6 +3435,11 @@ msgstr "У цьому посиланні для входу бракує токе
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.tokenInvalid"
 msgstr "Це посилання для входу недійсне. Можливо, воно вже використане. Запросіть нове."
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.linkBroken"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/email-change-errors.ts
@@ -3582,6 +3602,11 @@ msgstr "Цей passkey непридатний для цього сайту."
 #: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.notFound"
 msgstr "Цей passkey більше не існує. Оновіть список."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.linkBroken"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx

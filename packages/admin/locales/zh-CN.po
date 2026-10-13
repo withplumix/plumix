@@ -1500,6 +1500,11 @@ msgid "login.magicLink.submit"
 msgstr "通过电子邮件发送链接"
 
 #. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.notConfigured"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.row.enabled"
 msgstr "已启用"
@@ -1513,6 +1518,11 @@ msgstr "启用中…"
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.email.invalid"
 msgstr "输入有效的电子邮箱地址"
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.invalidInput"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/-mailer-page.tsx
@@ -3322,6 +3332,11 @@ msgid "oauth.error.linkBroken"
 msgstr "此账户无法访问。请联系管理员重新链接。"
 
 #. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.accountDisabled"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.accountDisabled"
 msgstr "此账户已停用。"
@@ -3420,6 +3435,11 @@ msgstr "此登录链接缺少令牌。请请求新的链接并重试。"
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.tokenInvalid"
 msgstr "此登录链接无效。可能已被使用。请请求新的链接。"
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.linkBroken"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/email-change-errors.ts
@@ -3582,6 +3602,11 @@ msgstr "此 Passkey 不能在此站点使用。"
 #: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.notFound"
 msgstr "此 Passkey 不再存在。请刷新列表。"
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.linkBroken"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx

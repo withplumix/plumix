@@ -267,6 +267,10 @@ A credential binding a browser to a user: Plumix's own session cookie, or an ide
 The predicate answering whether a request carries a browser-session credential (as opposed to a bearer token).
 _Avoid_: carriesSession (not a real term — the predicate is `hasSession` / `requestHasSession`)
 
+**Sign-in method**:
+A way a person proves who they are and gets a session, such as a passkey, a magic link or OAuth. Core and plugins declare one with `defineAuthMethod`; its routes answer under `/_plumix/auth/<name>/`, and core's kernel mints the session. Distinct from an authenticator, which only reads one.
+_Avoid_: auth provider, login method
+
 **Authenticator**:
 A pluggable strategy that maps a request to who the user is. Read-only — it resolves credentials, it never mints sessions.
 _Avoid_: guard

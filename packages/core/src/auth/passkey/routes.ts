@@ -1,10 +1,13 @@
 import * as v from "valibot";
 
 import type { AppContext } from "../../context/app-context.js";
+import type { Credential } from "../../db/schema/credentials.js";
 import type { User } from "../../db/schema/users.js";
+import type { AuthMethodKernel } from "../../plugin/auth-method.js";
 import type { AuthFlowApp } from "../flow-app.js";
 import type { ValidInvite } from "../invite.js";
 import type { AuthenticationResponse } from "./types.js";
+import { withBasePath } from "../../base-path.js";
 import { eq, isUniqueConstraintError } from "../../db/index.js";
 import { credentials } from "../../db/schema/credentials.js";
 import { users } from "../../db/schema/users.js";
@@ -13,18 +16,17 @@ import { listUserMetaFields } from "../../plugin/manifest.js";
 import { jsonResponse } from "../../runtime/contract/http.js";
 import { authenticateSession } from "../authenticator.js";
 import { provisionUser } from "../bootstrap.js";
+import { resolveLoginPath } from "../config.js";
 import { buildSessionDeletionCookie, readSessionCookie } from "../cookies.js";
 import {
   consumeInviteToken,
   InviteError,
   validateInviteToken,
 } from "../invite.js";
+import { optionalRedirectTo } from "../redirect.js";
 import { invalidateSession, validateSession } from "../sessions.js";
-import {
-  announceSignIn,
-  mintSessionAndCookie,
-  sessionCookieScope,
-} from "../sign-in.js";
+import { sessionCookieScope } from "../sign-in.js";
+import { redirectFor, transportOf } from "../transport.js";
 import { beginAuthentication, finishAuthentication } from "./authenticate.js";
 import { resolvePasskeyOrigins } from "./config.js";
 import { PasskeyError } from "./errors.js";
@@ -160,9 +162,10 @@ async function findOrProvisionUser(
 }
 
 export async function handlePasskeyRegisterOptions(
-  ctx: AppContext,
+  auth: AuthMethodKernel,
   app: AuthFlowApp,
 ): Promise<Response> {
+  const { ctx } = auth;
   const input = await parseJson(ctx.request, registerOptionsInputSchema);
   if (!input) return invalidInput();
 
@@ -219,9 +222,10 @@ async function decideRegistrationPolicy(
 }
 
 export async function handlePasskeyRegisterVerify(
-  ctx: AppContext,
+  auth: AuthMethodKernel,
   app: AuthFlowApp,
 ): Promise<Response> {
+  const { ctx } = auth;
   const payload = await parseJson(ctx.request, registerResponseSchema);
   if (!payload) return invalidInput();
 
@@ -249,50 +253,11 @@ export async function handlePasskeyRegisterVerify(
       maxPerUser: passkey.maxCredentialsPerUser,
     });
 
-    // Look up the full user row for the hook payload (createSession
-    // doesn't return one). Cheap PK lookup on a path that's already
-    // doing several writes.
-    const user = await ctx.db.query.users.findFirst({
-      where: eq(users.id, verified.userId),
-    });
-
-    const { cookieHeader } = await mintSessionAndCookie(
-      ctx,
-      app,
-      verified.userId,
-    );
-
-    if (user) {
-      await ctx.hooks.doAction(
-        "credential:created",
-        {
-          id: credential.id,
-          userId: credential.userId,
-          name: credential.name,
-          deviceType: credential.deviceType,
-          isBackedUp: credential.isBackedUp,
-        },
-        {
-          actor: {
-            id: user.id,
-            email: user.email,
-            role: user.role,
-            meta: user.meta,
-          },
-        },
-        ctx,
-      );
-      await announceSignIn(ctx, user, {
-        method: "passkey",
-        firstSignIn: verified.ceremony === "bootstrap",
-      });
-    }
-
-    return jsonResponse(
+    return await auth.proveIdentity(
       { userId: verified.userId },
       {
-        status: 200,
-        headers: { "set-cookie": cookieHeader },
+        firstSignIn: verified.ceremony === "bootstrap",
+        afterSession: (user) => announceCredential(ctx, credential, user),
       },
     );
   } catch (error) {
@@ -301,10 +266,37 @@ export async function handlePasskeyRegisterVerify(
   }
 }
 
-export async function handlePasskeyLoginOptions(
+function announceCredential(
   ctx: AppContext,
+  credential: Credential,
+  user: User,
+): Promise<void> {
+  return ctx.hooks.doAction(
+    "credential:created",
+    {
+      id: credential.id,
+      userId: credential.userId,
+      name: credential.name,
+      deviceType: credential.deviceType,
+      isBackedUp: credential.isBackedUp,
+    },
+    {
+      actor: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        meta: user.meta,
+      },
+    },
+    ctx,
+  );
+}
+
+export async function handlePasskeyLoginOptions(
+  auth: AuthMethodKernel,
   app: AuthFlowApp,
 ): Promise<Response> {
+  const { ctx } = auth;
   const input = await parseJson(ctx.request, loginOptionsInputSchema);
   if (!input) return invalidInput();
 
@@ -328,9 +320,10 @@ export async function handlePasskeyLoginOptions(
 }
 
 export async function handlePasskeyLoginVerify(
-  ctx: AppContext,
+  auth: AuthMethodKernel,
   app: AuthFlowApp,
 ): Promise<Response> {
+  const { ctx } = auth;
   const payload = await parseJson(ctx.request, authenticationResponseSchema);
   if (!payload) return invalidInput();
 
@@ -346,29 +339,7 @@ export async function handlePasskeyLoginVerify(
       .set({ counter: verified.newSignatureCounter })
       .where(eq(credentials.id, verified.credential.id));
 
-    const { cookieHeader } = await mintSessionAndCookie(
-      ctx,
-      app,
-      verified.credential.userId,
-    );
-
-    const user = await ctx.db.query.users.findFirst({
-      where: eq(users.id, verified.credential.userId),
-    });
-    if (user) {
-      await announceSignIn(ctx, user, {
-        method: "passkey",
-        firstSignIn: false,
-      });
-    }
-
-    return jsonResponse(
-      { userId: verified.credential.userId },
-      {
-        status: 200,
-        headers: { "set-cookie": cookieHeader },
-      },
-    );
+    return await auth.proveIdentity({ userId: verified.credential.userId });
   } catch (error) {
     if (error instanceof PasskeyError) return passkeyError(ctx, error);
     throw error;
@@ -389,15 +360,30 @@ export async function handleSignout(
       await ctx.hooks.doAction("user:signed_out", validated.user, ctx);
     }
   }
-  const cookie = buildSessionDeletionCookie(sessionCookieScope(ctx));
+  const cookie = {
+    "set-cookie": buildSessionDeletionCookie(sessionCookieScope(ctx)),
+  };
   // Without the IdP logout URL, an external session (CF Access, SAML) would
   // silently re-authenticate the next request.
-  const redirectTo = sanitiseSignOutUrl(
-    ctx.authenticator.signOutUrl?.(ctx.request),
+  const redirectTo =
+    sanitiseSignOutUrl(ctx.authenticator.signOutUrl?.(ctx.request)) ??
+    optionalRedirectTo(
+      new URL(ctx.request.url).searchParams.get("redirectTo"),
+      app.config.basePath,
+    ) ??
+    null;
+  const transport = transportOf(ctx.request);
+  if (transport === "fetch") {
+    return jsonResponse({ ok: true, redirectTo }, { headers: cookie });
+  }
+  const loginPath = withBasePath(
+    resolveLoginPath(app.config.auth),
+    app.config.basePath,
   );
-  return jsonResponse(
-    { ok: true, redirectTo },
-    { status: 200, headers: { "set-cookie": cookie } },
+  return redirectFor(
+    transport,
+    redirectTo ?? `${loginPath}?signed_out=1`,
+    cookie,
   );
 }
 
@@ -427,9 +413,10 @@ const inviteRegisterVerifyInputSchema = v.object({
 });
 
 export async function handleInviteRegisterOptions(
-  ctx: AppContext,
+  auth: AuthMethodKernel,
   app: AuthFlowApp,
 ): Promise<Response> {
+  const { ctx } = auth;
   const input = await parseJson(ctx.request, inviteRegisterOptionsInputSchema);
   if (!input) return invalidInput();
 
@@ -451,9 +438,10 @@ export async function handleInviteRegisterOptions(
 }
 
 export async function handleInviteRegisterVerify(
-  ctx: AppContext,
+  auth: AuthMethodKernel,
   app: AuthFlowApp,
 ): Promise<Response> {
+  const { ctx } = auth;
   const input = await parseJson(ctx.request, inviteRegisterVerifyInputSchema);
   if (!input) return invalidInput();
 
@@ -476,34 +464,15 @@ export async function handleInviteRegisterVerify(
       maxPerUser: passkey.maxCredentialsPerUser,
     });
     await consumeInviteToken(ctx.db, invite.tokenHash);
-    const { cookieHeader } = await mintSessionAndCookie(ctx, app, user.id);
-    // Fired after the session exists so handlers see a fully enrolled user.
-    await ctx.hooks.doAction("user:registered", user, ctx);
-    await ctx.hooks.doAction(
-      "credential:created",
-      {
-        id: credential.id,
-        userId: credential.userId,
-        name: credential.name,
-        deviceType: credential.deviceType,
-        isBackedUp: credential.isBackedUp,
-      },
-      {
-        actor: {
-          id: user.id,
-          email: user.email,
-          role: user.role,
-          meta: user.meta,
-        },
-      },
-      ctx,
-    );
-    await announceSignIn(ctx, user, { method: "invite", firstSignIn: true });
-    return jsonResponse(
+    return await auth.proveIdentity(
       { userId: user.id },
       {
-        status: 200,
-        headers: { "set-cookie": cookieHeader },
+        firstSignIn: true,
+        // After the session exists, so handlers see a fully enrolled user.
+        afterSession: async (enrolled) => {
+          await ctx.hooks.doAction("user:registered", enrolled, ctx);
+          await announceCredential(ctx, credential, enrolled);
+        },
       },
     );
   } catch (error) {

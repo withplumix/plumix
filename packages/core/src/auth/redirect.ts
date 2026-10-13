@@ -31,9 +31,37 @@ export function isSafeRedirect(value: unknown): value is string {
   return true;
 }
 
-export function resolveSafeRedirect(
-  candidate: unknown,
-  fallback: string,
-): string {
-  return isSafeRedirect(candidate) ? candidate : fallback;
+/** A `.` or `..` segment, `%2e` included, in a path with no query or hash. */
+function hasDotSegment(path: string): boolean {
+  return path.split("/").some((segment) => /^(?:\.|%2e){1,2}$/i.test(segment));
+}
+
+function isUnderBasePath(path: string, basePath: string): boolean {
+  if (basePath === "") return true;
+  return path === basePath || path.startsWith(`${basePath}/`);
+}
+
+/**
+ * Keeps a safe, dot-free path under the base path, which the value carries as
+ * the browser sees it; anything else lands on the site root.
+ */
+export function resolveRedirectTo(value: string, basePath: string): string {
+  const path = value.split(/[?#]/, 1)[0] ?? "";
+  if (
+    isSafeRedirect(value) &&
+    !hasDotSegment(path) &&
+    isUnderBasePath(path, basePath)
+  ) {
+    return value;
+  }
+  return `${basePath}/`;
+}
+
+/** `undefined` for an absent or empty value; otherwise `resolveRedirectTo`'s. */
+export function optionalRedirectTo(
+  value: string | null | undefined,
+  basePath: string,
+): string | undefined {
+  if (value === null || value === undefined || value === "") return undefined;
+  return resolveRedirectTo(value, basePath);
 }

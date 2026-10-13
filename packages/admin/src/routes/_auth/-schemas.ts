@@ -18,6 +18,7 @@ export const loginSchema = v.object({
 export const loginSearchSchema = v.object({
   oauth_error: v.optional(v.string()),
   magic_link_error: v.optional(v.string()),
+  magic_link_sent: v.optional(v.union([v.string(), v.number()])),
   email_change_error: v.optional(v.string()),
   // TanStack Router JSON-decodes search values, so `=1` arrives as a number.
   email_change_success: v.optional(v.union([v.string(), v.number()])),

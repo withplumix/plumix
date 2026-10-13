@@ -1500,6 +1500,11 @@ msgid "login.magicLink.submit"
 msgstr "Link per E-Mail senden"
 
 #. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.notConfigured"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.row.enabled"
 msgstr "Aktiviert"
@@ -1513,6 +1518,11 @@ msgstr "Wird aktiviert…"
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.email.invalid"
 msgstr "Gültige E-Mail-Adresse eingeben"
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.invalidInput"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/-mailer-page.tsx
@@ -3322,6 +3332,11 @@ msgid "oauth.error.linkBroken"
 msgstr "Dieses Konto ist nicht erreichbar. Wenden Sie sich an einen Administrator, um es erneut zu verknüpfen."
 
 #. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.accountDisabled"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.accountDisabled"
 msgstr "Dieses Konto ist deaktiviert."
@@ -3420,6 +3435,11 @@ msgstr "Diesem Anmeldelink fehlt das Token. Fordern Sie einen neuen an und versu
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.tokenInvalid"
 msgstr "Dieser Anmeldelink ist nicht gültig. Möglicherweise wurde er bereits verwendet. Fordern Sie einen neuen an."
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.linkBroken"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/email-change-errors.ts
@@ -3582,6 +3602,11 @@ msgstr "Dieser Passkey ist auf dieser Website nicht verwendbar."
 #: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.notFound"
 msgstr "Dieser Passkey existiert nicht mehr. Liste aktualisieren."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.linkBroken"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx

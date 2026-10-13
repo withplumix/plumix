@@ -8,7 +8,10 @@ type AppBootErrorCode =
   | "public_route_pattern_invalid"
   | "invalid_scheduled_task_cron"
   | "mail_name_conflict"
-  | "mail_override_undeclared";
+  | "mail_override_undeclared"
+  | "auth_method_name_invalid"
+  | "auth_method_name_reserved"
+  | "auth_method_name_conflict";
 
 export class AppBootError extends Error {
   static {
@@ -151,6 +154,43 @@ export class AppBootError extends Error {
       "mail_name_conflict",
       `Plugin "${ctx.pluginId}" declares mail "${ctx.mail}", already ` +
         `declared by "${ctx.previousOwner}".`,
+      { pluginId: ctx.pluginId, previousOwner: ctx.previousOwner },
+    );
+  }
+
+  static authMethodNameInvalid(ctx: {
+    pluginId: string;
+    name: string;
+  }): AppBootError {
+    return new AppBootError(
+      "auth_method_name_invalid",
+      `Plugin "${ctx.pluginId}" declares sign-in method "${ctx.name}", ` +
+        `which is not a kebab-case slug.`,
+      { pluginId: ctx.pluginId },
+    );
+  }
+
+  static authMethodNameReserved(ctx: {
+    pluginId: string;
+    name: string;
+  }): AppBootError {
+    return new AppBootError(
+      "auth_method_name_reserved",
+      `Plugin "${ctx.pluginId}" declares sign-in method "${ctx.name}", but ` +
+        `core's /_plumix/auth/${ctx.name} routes answer there.`,
+      { pluginId: ctx.pluginId, previousOwner: "core" },
+    );
+  }
+
+  static authMethodNameConflict(ctx: {
+    pluginId: string;
+    name: string;
+    previousOwner: string;
+  }): AppBootError {
+    return new AppBootError(
+      "auth_method_name_conflict",
+      `Plugin "${ctx.pluginId}" declares sign-in method "${ctx.name}", ` +
+        `already declared by "${ctx.previousOwner}".`,
       { pluginId: ctx.pluginId, previousOwner: ctx.previousOwner },
     );
   }

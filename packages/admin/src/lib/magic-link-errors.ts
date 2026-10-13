@@ -34,6 +34,19 @@ const MESSAGES: Record<MagicLinkErrorCode, MessageDescriptor> = {
     message:
       "Self-signup is unavailable until an administrator has finished setup.",
   }),
+  link_broken: defineMessage({
+    id: "magicLink.error.linkBroken",
+    message:
+      "That sign-in link's account can't be found. Contact your site administrator.",
+  }),
+  invalid_input: defineMessage({
+    id: "magicLink.error.invalidInput",
+    message: "Enter a valid email address to get a sign-in link.",
+  }),
+  magic_link_not_configured: defineMessage({
+    id: "magicLink.error.notConfigured",
+    message: "Email sign-in links aren't available on this site.",
+  }),
 };
 
 const FALLBACK = defineMessage({

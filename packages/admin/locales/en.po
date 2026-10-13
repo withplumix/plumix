@@ -1500,6 +1500,11 @@ msgid "login.magicLink.submit"
 msgstr "Email me a link"
 
 #. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.notConfigured"
+msgstr "Email sign-in links aren't available on this site."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.row.enabled"
 msgstr "Enabled"
@@ -1513,6 +1518,11 @@ msgstr "Enabling…"
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.email.invalid"
 msgstr "Enter a valid email address"
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.invalidInput"
+msgstr "Enter a valid email address to get a sign-in link."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/-mailer-page.tsx
@@ -3322,6 +3332,11 @@ msgid "oauth.error.linkBroken"
 msgstr "That account can't be reached. Contact an administrator to re-link it."
 
 #. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.accountDisabled"
+msgstr "That account is disabled."
+
+#. js-lingui-explicit-id
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.accountDisabled"
 msgstr "That account is disabled."
@@ -3420,6 +3435,11 @@ msgstr "That sign-in link is missing its token. Request a new one and try again.
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.tokenInvalid"
 msgstr "That sign-in link isn't valid. It may have already been used. Request a new one."
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.linkBroken"
+msgstr "That sign-in link's account can't be found. Contact your site administrator."
 
 #. js-lingui-explicit-id
 #: src/lib/email-change-errors.ts
@@ -3582,6 +3602,11 @@ msgstr "This passkey isn't usable on this site."
 #: src/components/profile/profile-errors.ts
 msgid "profile.passkeys.notFound"
 msgstr "This passkey no longer exists. Refresh the list."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.linkBroken"
+msgstr "This passkey's account can't be found. Contact your site administrator."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx

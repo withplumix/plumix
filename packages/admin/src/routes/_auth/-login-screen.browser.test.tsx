@@ -23,7 +23,12 @@ async function renderLogin(): Promise<void> {
 
 describe("LoginScreen", () => {
   test("offers no magic link when the site has not configured it", async () => {
-    stubRpc({ "auth/signInMethods": () => ({ magicLink: false, oauth: [] }) });
+    stubRpc({
+      "auth/signInMethods": () => ({
+        methods: [{ name: "passkey", label: "Passkey" }],
+        oauth: [],
+      }),
+    });
     await renderLogin();
     await settleRpc();
 
@@ -33,7 +38,15 @@ describe("LoginScreen", () => {
   });
 
   test("offers the magic link when the site has configured it", async () => {
-    stubRpc({ "auth/signInMethods": () => ({ magicLink: true, oauth: [] }) });
+    stubRpc({
+      "auth/signInMethods": () => ({
+        methods: [
+          { name: "passkey", label: "Passkey" },
+          { name: "magic-link", label: "Magic link" },
+        ],
+        oauth: [],
+      }),
+    });
     await renderLogin();
 
     expect(
@@ -43,7 +56,15 @@ describe("LoginScreen", () => {
 
   test("shows the localized retry copy when the link request fails", async () => {
     // The magic-link request isn't an RPC, so the stub answers it 404.
-    stubRpc({ "auth/signInMethods": () => ({ magicLink: true, oauth: [] }) });
+    stubRpc({
+      "auth/signInMethods": () => ({
+        methods: [
+          { name: "passkey", label: "Passkey" },
+          { name: "magic-link", label: "Magic link" },
+        ],
+        oauth: [],
+      }),
+    });
     await renderLogin();
 
     fireEvent.change(screen.getByTestId("login-email-input"), {
@@ -57,7 +78,15 @@ describe("LoginScreen", () => {
   });
 
   test("asks for an email before requesting a link", async () => {
-    stubRpc({ "auth/signInMethods": () => ({ magicLink: true, oauth: [] }) });
+    stubRpc({
+      "auth/signInMethods": () => ({
+        methods: [
+          { name: "passkey", label: "Passkey" },
+          { name: "magic-link", label: "Magic link" },
+        ],
+        oauth: [],
+      }),
+    });
     await renderLogin();
 
     fireEvent.click(await screen.findByTestId("login-magic-link-submit"));
@@ -70,7 +99,10 @@ describe("LoginScreen", () => {
   test("renders a button per configured OAuth provider", async () => {
     stubRpc({
       "auth/signInMethods": () => ({
-        magicLink: false,
+        methods: [
+          { name: "passkey", label: "Passkey" },
+          { name: "oauth", label: "OAuth" },
+        ],
         oauth: [{ key: "github", label: "GitHub" }],
       }),
     });
