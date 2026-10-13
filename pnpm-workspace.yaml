@@ -177,8 +177,8 @@ catalogs:
     "@tiptap/extensions": ^3.31.4
     "@tiptap/react": ^3.31.4
   vite:
-    "@vitejs/plugin-react": ^6.1.1
-    vite: ^8.3.2
+    "@vitejs/plugin-react": ^6.1.2
+    vite: ^8.3.3
   vitest:
     "@vitest/browser-playwright": ^5.0.3
     "@vitest/coverage-v8": ^5.0.3
