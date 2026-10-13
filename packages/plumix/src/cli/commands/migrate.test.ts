@@ -34,6 +34,7 @@ import type {
 import { CORE_MIGRATIONS_FOLDER } from "@plumix/core/cli";
 import { createDispatcherHarness } from "@plumix/core/test";
 
+import { buildDataMigrations } from "../../vite/data-migrations-bundle.js";
 import { applyBuiltMigrations, copyOwnerHistories } from "../migrate/built.js";
 import { report } from "../report.js";
 import {
@@ -300,6 +301,7 @@ describe("applying owner histories", () => {
       });
     });
     return {
+      drizzle: db,
       migrate: (folder) =>
         migrate(
           db,
@@ -452,6 +454,51 @@ describe("applying owner histories", () => {
 
   const LOCAL = plugin("local", "./src/schema.ts");
 
+  // A package whose `./data-migrations` default-exports `source`'s list. The
+  // SQL is a string, so the module imports nothing.
+  function installDataMigrations(name: string, source: string): void {
+    const root = join(dir, "node_modules", name);
+    mkdirSync(root, { recursive: true });
+    writeFileSync(
+      join(root, "package.json"),
+      JSON.stringify({
+        name,
+        type: "module",
+        exports: { "./data-migrations": "./data-migrations.js" },
+      }),
+    );
+    writeFileSync(join(root, "data-migrations.js"), source);
+  }
+
+  const dataPlugin = (id: string, dataMigrations: string) =>
+    ({
+      id,
+      setup: () => undefined,
+      dataMigrations,
+    }) as unknown as PlumixApp["config"]["plugins"][number];
+
+  // A module whose migrations each append their name to `runs`.
+  const recording = (...names: string[]) =>
+    `export default ${JSON.stringify(names)}.map((name) => ({
+name,
+async up({ db }) {
+  await db.run("CREATE TABLE IF NOT EXISTS runs (n integer PRIMARY KEY AUTOINCREMENT, name text NOT NULL)");
+  await db.run(\`INSERT INTO runs (name) VALUES ('\${name}')\`);
+},
+}));
+`;
+
+  function insertSetting(group: string, key: string, value: string): void {
+    const raw = new DatabaseSync(join(dir, "site.sqlite"));
+    try {
+      raw
+        .prepare(`INSERT INTO settings ("group", key, value) VALUES (?, ?, ?)`)
+        .run(group, key, value);
+    } finally {
+      raw.close();
+    }
+  }
+
   function siteWithHistory(): void {
     cpSync(WIDGETS_MIGRATIONS, join(dir, "migrations"), { recursive: true });
     installPackage("@acme/plugin-widgets", null);
@@ -558,6 +605,201 @@ describe("applying owner histories", () => {
     });
   });
 
+  describe("data migrations", () => {
+    // Renames `flags.beta_enabled` to `flags.beta`, counting its runs in
+    // `flags.runs`.
+    const RENAME_BETA = `export default [{
+  name: "rename-beta",
+  async up({ db }) {
+    await db.run("UPDATE settings SET key = 'beta' WHERE \\"group\\" = 'flags' AND key = 'beta_enabled'");
+    await db.run("INSERT INTO settings (\\"group\\", key, value) VALUES ('flags', 'runs', '1') ON CONFLICT DO UPDATE SET value = value + 1");
+  },
+}];
+`;
+
+    test("a plugin with no tables renames a settings key, and a second run reports it up to date without running it", async () => {
+      await migrateCommand.run(applyCtx([]));
+      insertSetting("flags", "beta_enabled", "true");
+      installDataMigrations("@acme/plugin-flags", RENAME_BETA);
+      const plugins = [
+        dataPlugin("flags", "@acme/plugin-flags/data-migrations"),
+      ];
+      const lines: string[] = [];
+      vi.spyOn(report, "info").mockImplementation((line) => lines.push(line));
+      vi.spyOn(report, "success").mockImplementation((line) =>
+        lines.push(line),
+      );
+
+      await migrateCommand.run(applyCtx([], plugins));
+
+      expect(
+        query(`SELECT key, value FROM settings WHERE "group" = 'flags'`),
+      ).toEqual([
+        { key: "beta", value: "true" },
+        { key: "runs", value: "1" },
+      ]);
+      expect(lines.slice(-2)).toEqual([
+        "@acme/plugin-flags: applied 1 data migration",
+        "  applied rename-beta",
+      ]);
+      lines.length = 0;
+
+      await migrateCommand.run(applyCtx([], plugins));
+
+      expect(lines.at(-1)).toBe(
+        "@acme/plugin-flags: data migrations up to date",
+      );
+      expect(query(`SELECT value FROM settings WHERE key = 'runs'`)).toEqual([
+        { value: "1" },
+      ]);
+    });
+    test("every owner's schema migrations finish before any data migration starts", async () => {
+      installDataMigrations(
+        "@acme/plugin-seed",
+        `export default [{
+  name: "seed-widget",
+  async up({ db }) {
+    await db.run("INSERT INTO widgets (id, name) VALUES (1, 'seeded')");
+  },
+}];
+`,
+      );
+      installPackage("@acme/plugin-widgets", WIDGETS_MIGRATIONS);
+      // The seeding plugin comes first, so its data migration would run before
+      // the widgets history if owners ran schema and data in turn.
+      const plugins = [
+        dataPlugin("seed", "@acme/plugin-seed/data-migrations"),
+        plugin("widgets", "@acme/plugin-widgets/schema"),
+      ];
+
+      await migrateCommand.run(applyCtx([], plugins));
+
+      expect(query("SELECT name FROM widgets")).toEqual([{ name: "seeded" }]);
+    });
+    test("run in the order: each plugin package in config order, then the site, each list in array order", async () => {
+      installDataMigrations("@acme/plugin-b", recording("b1", "b2"));
+      installDataMigrations("@acme/plugin-a", recording("a1"));
+      // A plugin module inside the site's package is the site's.
+      writeFileSync(join(dir, "local-data.mjs"), recording("local1"));
+      writeFileSync(join(dir, "site-data.mjs"), recording("site1", "site2"));
+      const ctx = applyCtx(
+        [],
+        [
+          dataPlugin("b", "@acme/plugin-b/data-migrations"),
+          dataPlugin("local", "../local-data.mjs"),
+          dataPlugin("a", "@acme/plugin-a/data-migrations"),
+        ],
+      );
+      const lines: string[] = [];
+      vi.spyOn(report, "success").mockImplementation((line) =>
+        lines.push(line),
+      );
+
+      await migrateCommand.run({
+        ...ctx,
+        app: {
+          ...ctx.app,
+          config: { ...ctx.app.config, dataMigrations: "./site-data.mjs" },
+        },
+      });
+
+      expect(query("SELECT name FROM runs ORDER BY n")).toEqual(
+        ["b1", "b2", "a1", "local1", "site1", "site2"].map((name) => ({
+          name,
+        })),
+      );
+      expect(lines.filter((line) => line.includes("data migration"))).toEqual([
+        "@acme/plugin-b: applied 2 data migrations",
+        "@acme/plugin-a: applied 1 data migration",
+        "site: applied 3 data migrations",
+      ]);
+    });
+    test("a throwing up fails naming its owner and name, records nothing, runs nothing after it, and the next run retries it", async () => {
+      const failing = `export default [
+  { name: "first", async up({ db }) {
+    await db.run("CREATE TABLE IF NOT EXISTS runs (n integer PRIMARY KEY AUTOINCREMENT, name text NOT NULL)");
+    await db.run("INSERT INTO runs (name) VALUES ('first')");
+  } },
+  { name: "broken", async up({ db }) {
+    const fixed = await db.all("SELECT 1 FROM settings WHERE key = 'fixed'");
+    if (fixed.length === 0) throw new Error("the flag is gone");
+  } },
+  { name: "after", async up({ db }) { await db.run("INSERT INTO runs (name) VALUES ('after')"); } },
+];
+`;
+      installDataMigrations("@acme/plugin-flags", failing);
+      writeFileSync(join(dir, "site-data.mjs"), recording("site1"));
+      const ctx = applyCtx(
+        [],
+        [dataPlugin("flags", "@acme/plugin-flags/data-migrations")],
+      );
+      const run = () =>
+        migrateCommand.run({
+          ...ctx,
+          app: {
+            ...ctx.app,
+            config: { ...ctx.app.config, dataMigrations: "./site-data.mjs" },
+          },
+        });
+
+      await expect(run()).rejects.toMatchObject({
+        code: "migrate_data_failed",
+        message: expect.stringMatching(
+          /@acme\/plugin-flags.+"broken".+the flag is gone/,
+        ) as unknown,
+      });
+      expect(query("SELECT name FROM runs ORDER BY n")).toEqual([
+        { name: "first" },
+      ]);
+      expect(query(`SELECT owner, name FROM __plumix_data_migrations`)).toEqual(
+        [{ owner: "@acme/plugin-flags", name: "first" }],
+      );
+
+      insertSetting("flags", "fixed", "true");
+      await run();
+
+      expect(query("SELECT name FROM runs ORDER BY n")).toEqual(
+        ["first", "after", "site1"].map((name) => ({ name })),
+      );
+      expect(
+        query(
+          `SELECT owner, name FROM __plumix_data_migrations ORDER BY owner, name`,
+        ),
+      ).toEqual([
+        { owner: "@acme/plugin-flags", name: "after" },
+        { owner: "@acme/plugin-flags", name: "broken" },
+        { owner: "@acme/plugin-flags", name: "first" },
+        { owner: "site", name: "site1" },
+      ]);
+    });
+
+    test("a duplicate name within one owner fails before any data migration runs", async () => {
+      installDataMigrations("@acme/plugin-a", recording("a1"));
+      writeFileSync(
+        join(dir, "site-data.mjs"),
+        recording("site1", "site2", "site1"),
+      );
+      const ctx = applyCtx(
+        [],
+        [dataPlugin("a", "@acme/plugin-a/data-migrations")],
+      );
+
+      await expect(
+        migrateCommand.run({
+          ...ctx,
+          app: {
+            ...ctx.app,
+            config: { ...ctx.app.config, dataMigrations: "./site-data.mjs" },
+          },
+        }),
+      ).rejects.toMatchObject({
+        code: "migrate_data_duplicate_name",
+        message: expect.stringMatching(/^site .+"site1"/) as unknown,
+      });
+      expect(names("table")).not.toContain("runs");
+    });
+  });
+
   describe("a site whose own tables are ahead of its history", () => {
     const NEXT = {
       "0001_nickname.sql": "ALTER TABLE `widgets` ADD `nickname` text;",
@@ -633,11 +875,37 @@ describe("applying owner histories", () => {
   describe("the histories a build ships beside the server", () => {
     const WIDGETS = [plugin("widgets", "@acme/plugin-widgets/schema")];
 
-    function build(): string {
+    function installPlumixStub(): void {
+      const root = join(dir, "node_modules/plumix");
+      mkdirSync(root, { recursive: true });
+      writeFileSync(
+        join(root, "package.json"),
+        JSON.stringify({
+          name: "plumix",
+          type: "module",
+          exports: { "./db": "./stub.js", "./schema": "./stub.js" },
+        }),
+      );
+      writeFileSync(join(root, "stub.js"), "export {};\n");
+    }
+
+    async function build(
+      config: Partial<PlumixApp["config"]> = {},
+    ): Promise<string> {
       installPackage("@acme/plugin-widgets", WIDGETS_MIGRATIONS);
       const { cwd, configPath, app } = applyCtx([], WIDGETS);
+      const site = { cwd, configPath, config: { ...app.config, ...config } };
       const serverDir = join(dir, "dist/server");
-      copyOwnerHistories({ cwd, configPath, config: app.config }, serverDir);
+      copyOwnerHistories(site, serverDir);
+      // External, like a site's `build.external`: the unit tier has no
+      // `dist/` to bundle `plumix` from, so the import resolves to source at
+      // load; the stub lets the build resolve it.
+      installPlumixStub();
+      await buildDataMigrations(site, {
+        entry: ".plumix/worker.ts",
+        outDir: "dist/server",
+        external: ["plumix/db", "plumix/schema"],
+      });
       // The server runs from what the build wrote, not the installed packages.
       rmSync(join(dir, "node_modules/@acme/plugin-widgets"), {
         recursive: true,
@@ -653,18 +921,69 @@ describe("applying owner histories", () => {
         migrations: runtime(),
       });
 
-    test("lays each owner's history out under migrations/<owner>/", () => {
-      const serverDir = build();
+    // The site's data migration renames a settings key with the query
+    // builder on core's `settings` table and with `sql`.
+    const RENAME = `import { eq, sql } from "plumix/db";
+import { settings } from "plumix/schema";
+
+export default [
+  {
+    name: "rename-beta",
+    async up({ db }) {
+      await db.insert(settings).values({ group: "flags", key: "beta_enabled", value: true });
+      await db.update(settings).set({ key: "beta" }).where(eq(settings.key, "beta_enabled"));
+      await db.run(sql\`UPDATE settings SET value = json('false') WHERE key = \${"beta"}\`);
+    },
+  },
+];
+`;
+
+    test("the server applies every owner's schema, then the bundle's data migrations, and a second start runs nothing", async () => {
+      writeFileSync(join(dir, "site-data.ts"), RENAME);
+      const serverDir = await build({ dataMigrations: "./site-data.ts" });
+      const lines: string[] = [];
+      vi.spyOn(report, "success").mockImplementation((line) =>
+        lines.push(line),
+      );
+
+      await serve(serverDir);
+
+      expect(
+        query(`SELECT key, value FROM settings WHERE "group" = 'flags'`),
+      ).toEqual([{ key: "beta", value: "false" }]);
+      expect(lines).toEqual([
+        "core: applied 2 migrations",
+        "@acme/plugin-widgets: applied 1 migration",
+        "site: applied 1 data migration",
+      ]);
+      lines.length = 0;
+      vi.spyOn(report, "info").mockImplementation((line) => lines.push(line));
+
+      await serve(serverDir);
+
+      expect(lines).toEqual([
+        "core: up to date",
+        "@acme/plugin-widgets: up to date",
+        "site: data migrations up to date",
+      ]);
+      expect(query(`SELECT owner, name FROM __plumix_data_migrations`)).toEqual(
+        [{ owner: "site", name: "rename-beta" }],
+      );
+    });
+
+    test("lays each owner's history out under migrations/<owner>/", async () => {
+      const serverDir = await build();
 
       expect(readdirSync(join(serverDir, "migrations")).sort()).toEqual([
         "acme_plugin_widgets",
         "core",
+        "data-migrations.js",
         "owners.json",
       ]);
     });
 
     test("the server applies every owner's history in order, each in its own tracking table", async () => {
-      const serverDir = build();
+      const serverDir = await build();
       const lines: string[] = [];
       vi.spyOn(report, "success").mockImplementation((line) =>
         lines.push(line),
@@ -682,7 +1001,7 @@ describe("applying owner histories", () => {
     });
 
     test("against an up-to-date database the server applies nothing", async () => {
-      const serverDir = build();
+      const serverDir = await build();
       await serve(serverDir);
       const lines: string[] = [];
       vi.spyOn(report, "info").mockImplementation((line) => lines.push(line));
@@ -771,6 +1090,34 @@ describe("applying owner histories", () => {
       expect(columns("widgets")).toContain("nickname");
       expect(lines).toContain(
         "Wrote the site's next migration, migrations/0001_nickname.sql: commit it.",
+      );
+    });
+
+    test("applies the site's pending data migrations after the migration it wrote, which they can read", async () => {
+      siteWithHistory();
+      drizzleKitWrites(NEXT);
+      writeFileSync(
+        join(dir, "site-data.mjs"),
+        `export default [{
+  name: "nickname-widgets",
+  async up({ db }) {
+    await db.run("INSERT INTO widgets (id, name, nickname) VALUES (1, 'w', 'nick')");
+  },
+}];
+`,
+      );
+      const target = devTarget([LOCAL]);
+
+      await migrateForDev({
+        ...target,
+        config: { ...target.config, dataMigrations: "./site-data.mjs" },
+      });
+
+      expect(query("SELECT nickname FROM widgets")).toEqual([
+        { nickname: "nick" },
+      ]);
+      expect(query("SELECT owner, name FROM __plumix_data_migrations")).toEqual(
+        [{ owner: "site", name: "nickname-widgets" }],
       );
     });
 
@@ -959,6 +1306,33 @@ describe("applying owner histories", () => {
         /^core: 0 applied, 2 pending\n {2}pending .+\n {2}pending .+\n@acme\/plugin-widgets: 0 applied, 1 pending\n {2}pending 1970-01-01T00:00:01\.000Z [0-9a-f]{8}$/,
       );
     });
+    test("lists each owner's applied and pending data migrations after the schema status", async () => {
+      // A release that adds `a2` to the site's list.
+      writeFileSync(join(dir, "data-1.mjs"), recording("a1"));
+      writeFileSync(join(dir, "data-2.mjs"), recording("a1", "a2"));
+      const withData = (argv: readonly string[], file: string) => {
+        const ctx = applyCtx(argv);
+        return {
+          ...ctx,
+          app: {
+            ...ctx.app,
+            config: { ...ctx.app.config, dataMigrations: file },
+          },
+        };
+      };
+      await migrateCommand.run(withData([], "./data-1.mjs"));
+      const lines: string[] = [];
+      vi.spyOn(report, "info").mockImplementation((line) => lines.push(line));
+
+      await migrateCommand.run(withData(["status"], "./data-2.mjs"));
+
+      expect(lines.slice(-3)).toEqual([
+        "site: 1 data migration applied, 1 pending",
+        "  applied a1",
+        "  pending a2",
+      ]);
+      expect(lines[0]).toBe("core: 2 applied, 0 pending");
+    });
   });
 
   describe("adopting a database built from a legacy site history", () => {
@@ -997,6 +1371,17 @@ describe("applying owner histories", () => {
       lines.length = 0;
       await migrateCommand.run(applyCtx([]));
       expect(lines).toEqual(["core: up to date"]);
+    });
+
+    test("ignores the data-migrations tracking table as bookkeeping", async () => {
+      await buildLegacy();
+      new DatabaseSync(join(dir, "site.sqlite")).exec(
+        "CREATE TABLE __plumix_data_migrations (owner text NOT NULL, name text NOT NULL, applied_at integer NOT NULL, PRIMARY KEY (owner, name))",
+      );
+
+      await migrateCommand.run(applyCtx([]));
+
+      expect(trackingRows("__drizzle_migrations_core")).toBe(2);
     });
 
     test("refuses a schema that differs, naming the difference, and changes nothing", async () => {

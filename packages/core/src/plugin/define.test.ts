@@ -126,6 +126,26 @@ describe("pluginAdminEntryPath", () => {
   });
 });
 
+describe("definePlugin — dataMigrations", () => {
+  test("passes the module through to the descriptor, with no schemaModule", () => {
+    const plugin = definePlugin("flags", {
+      setup: noop,
+      dataMigrations: "@acme/plugin-flags/data-migrations",
+    });
+
+    expect(plugin.dataMigrations).toBe("@acme/plugin-flags/data-migrations");
+    expect(plugin.schemaModule).toBeUndefined();
+  });
+
+  test("passes it through from the setup-first form's options", () => {
+    const plugin = definePlugin("flags", noop, {
+      dataMigrations: "@acme/plugin-flags/data-migrations",
+    });
+
+    expect(plugin.dataMigrations).toBe("@acme/plugin-flags/data-migrations");
+  });
+});
+
 describe("PLUGIN_I18N_SLOT", () => {
   test("declares the source locale and locales a first-party plugin's lingui config extracts", () => {
     const lingui = defineLinguiConfig();

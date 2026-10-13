@@ -23,6 +23,10 @@ export type { SearchTerm } from "../search/contract/search-terms.js";
 export { settleMeta } from "../meta/settle-meta.js";
 export type { MetaOwner } from "../meta/settle-meta.js";
 export { readVisitorMeta } from "./visitor-meta.js";
+// A plugin's or site's data migrations, which the migrate runner reads.
+export { defineDataMigration } from "./data-migration.js";
+export type { DataMigration } from "./data-migration.js";
+export type { DataMigrationDb } from "../context/app-context.js";
 export type { VisitorMeta, VisitorMetaOptions } from "./visitor-meta.js";
 // So a surface can hand a plugin a query already restricted to what it may
 // show, with no way to widen it.

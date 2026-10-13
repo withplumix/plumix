@@ -6,17 +6,26 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 
 import type { PlumixConfig, RuntimeMigrations } from "@plumix/core";
 
+import type { DataMigrationOwner } from "./data.js";
 import type { MigrationOwner } from "./owners.js";
 import { adoptLegacyDatabase, applyOwners } from "./apply.js";
+import { applyDataMigrations, withCoreDataMigrations } from "./data.js";
 import { resolveOwners, TRACKING_TABLE_PREFIX } from "./owners.js";
 
 const MIGRATIONS_DIR = "migrations";
 
 /** Lists the owners in application order, each folder relative to it. */
 const MANIFEST = "owners.json";
+
+/**
+ * The plugin and site data migrations, which `plumix build` bundles here on
+ * its own, so the request bundle never carries them.
+ */
+const DATA_BUNDLE = "data-migrations.js";
 
 /**
  * Copies every owner's history beside the server bundle, as
@@ -59,9 +68,21 @@ export interface ApplyBuiltMigrationsOptions {
   readonly migrations: RuntimeMigrations;
 }
 
+/** The URL is computed at runtime, so the server bundle never inlines it. */
+async function builtDataMigrations(
+  serverDir: string,
+): Promise<readonly DataMigrationOwner[]> {
+  const url = pathToFileURL(join(serverDir, MIGRATIONS_DIR, DATA_BUNDLE)).href;
+  const bundle = (await import(/* @vite-ignore */ url)) as {
+    default: readonly DataMigrationOwner[];
+  };
+  return bundle.default;
+}
+
 /**
  * What a built server runs before it listens: the histories its build
- * shipped, applied to its database, adopting one built by a legacy history.
+ * shipped, applied to its database, adopting one built by a legacy history,
+ * then every owner's data migrations.
  */
 export async function applyBuiltMigrations({
   serverDir,
@@ -81,6 +102,10 @@ export async function applyBuiltMigrations({
       migrations.open({ cwd, config, location: "memory", binding: undefined }),
     );
     await applyOwners(db, owners);
+    await applyDataMigrations(
+      db,
+      withCoreDataMigrations(await builtDataMigrations(serverDir)),
+    );
   } finally {
     await db.close();
   }

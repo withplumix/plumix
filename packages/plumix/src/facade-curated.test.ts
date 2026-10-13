@@ -45,6 +45,11 @@ const CORE_WITHHELD: readonly Withholding[] = [
   },
   {
     reason:
+      "core's own data migrations, which only `plumix`'s migrate runner reads",
+    names: ["CORE_DATA_MIGRATIONS"],
+  },
+  {
+    reason:
       "the runtime-key half of the shim roster, which admin's runtime " +
       "object and `PlumixAdminRuntime` are typed against. A plugin " +
       "chunk reads those keys through `getRuntime`, not this map.",
@@ -285,6 +290,11 @@ const CURATED: Readonly<Record<string, Curated>> = {
           "generateSchemaSource",
           "CORE_MIGRATIONS_FOLDER",
         ],
+      },
+      {
+        reason:
+          "core's own data migrations, which only `plumix`'s migrate runner reads",
+        names: ["CORE_DATA_MIGRATIONS"],
       },
     ],
   },

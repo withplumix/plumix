@@ -25,6 +25,7 @@ import type {
 } from "@plumix/core";
 import { spawnCapturingStderr } from "@plumix/core/cli";
 
+import type { DataMigrationOwner } from "../migrate/data.js";
 import type { MigrationOwner } from "../migrate/owners.js";
 import { PlumixCliError } from "../errors.js";
 import {
@@ -32,6 +33,12 @@ import {
   applyOwners,
   reportStatus,
 } from "../migrate/apply.js";
+import { loadDataMigrations } from "../migrate/data-load.js";
+import {
+  applyDataMigrations,
+  reportDataStatus,
+  withCoreDataMigrations,
+} from "../migrate/data.js";
 import {
   nearestPackageRoot,
   resolveOwners,
@@ -42,7 +49,8 @@ import {
 import { report } from "../report.js";
 
 export const migrateCommand: CommandDefinition = {
-  describe: "Apply each table owner's migrations, or generate the site's",
+  describe:
+    "Apply each owner's schema then data migrations, or generate the site's",
   async run(ctx) {
     const target = migrationTarget(ctx);
     // `generate` takes no arguments, so it parses none.
@@ -63,13 +71,28 @@ export const migrateCommand: CommandDefinition = {
     if (sub === "fresh") {
       if (remote) throw PlumixCliError.migrateFreshRemote();
       await checkSiteDrift(target);
-      await withDatabase(target, { remote, binding }, applyOwners, () => {
-        wipeLocalState(target);
-      });
+      await withDatabase(
+        target,
+        { remote, binding },
+        async (db, owners, data) => {
+          await applyOwners(db, owners);
+          await applyDataMigrations(db, data);
+        },
+        () => {
+          wipeLocalState(target);
+        },
+      );
       return;
     }
     if (sub === "status") {
-      await withDatabase(target, { remote, binding }, reportStatus);
+      await withDatabase(
+        target,
+        { remote, binding },
+        async (db, owners, data) => {
+          await reportStatus(db, owners);
+          await reportDataStatus(db, data);
+        },
+      );
       return;
     }
     throw PlumixCliError.unknownSubcommand({
@@ -137,8 +160,8 @@ function runtimeMigrations(target: MigrationTarget): RuntimeMigrations {
 }
 
 /**
- * Owners resolve before anything is deleted or opened, so a missing history
- * fails with the database untouched.
+ * Owners resolve, and data migrations load, before anything is deleted or
+ * opened, so a missing history or module fails with the database untouched.
  */
 async function withDatabase(
   target: MigrationTarget,
@@ -153,6 +176,9 @@ async function withDatabase(
     });
   }
   const owners = resolveOwners(target.cwd, target.configPath, target.config);
+  const data = withCoreDataMigrations(
+    await loadDataMigrations(target.cwd, target.configPath, target.config),
+  );
   beforeOpen?.();
   const db = await migrations.open({
     cwd: target.cwd,
@@ -161,7 +187,7 @@ async function withDatabase(
     binding: database.binding,
   });
   try {
-    await work(db, owners, migrations);
+    await work(db, owners, data, migrations);
   } finally {
     await db.close();
   }
@@ -170,6 +196,7 @@ async function withDatabase(
 type MigrationWork = (
   db: MigrationDatabase,
   owners: readonly MigrationOwner[],
+  data: readonly DataMigrationOwner[],
   migrations: RuntimeMigrations,
 ) => Promise<void>;
 
@@ -178,7 +205,7 @@ function adoptAndApply(
   target: MigrationTarget,
   binding: string | undefined,
 ): MigrationWork {
-  return async (db, owners, migrations) => {
+  return async (db, owners, data, migrations) => {
     await adoptLegacyDatabase(
       db,
       owners,
@@ -193,6 +220,7 @@ function adoptAndApply(
         }),
     );
     await applyOwners(db, owners);
+    await applyDataMigrations(db, data);
   };
 }
 

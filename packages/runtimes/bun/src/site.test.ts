@@ -266,9 +266,9 @@ describe("the served process migrates before it listens", () => {
     rmSync(project, { recursive: true, force: true });
   });
 
-  // An empty database, with the histories shipped beside the entry as
-  // `plumix build` does.
-  function builtSite() {
+  // An empty database, with the histories and the data bundle shipped beside
+  // the entry as `plumix build` does.
+  function builtSite(dataMigrations = "export default [];\n") {
     const config = plumix({
       runtime: bun({}),
       database: bunSqlite({ path: join(project, "site.sqlite") }),
@@ -278,6 +278,10 @@ describe("the served process migrates before it listens", () => {
     copyOwnerHistories(
       { cwd: project, configPath: join(project, "plumix.config.ts"), config },
       join(project, "dist/server"),
+    );
+    writeFileSync(
+      join(project, "dist/server/migrations/data-migrations.js"),
+      dataMigrations,
     );
     return createBunSite({
       config,
@@ -326,6 +330,95 @@ describe("the served process migrates before it listens", () => {
     expect(stderr.mock.calls.map(([chunk]) => String(chunk))).toEqual([
       "core: up to date\n",
     ]);
+  });
+
+  // A built site's data bundle, written by hand: its `up` runs a SQL string,
+  // so it imports nothing.
+  const flagsBundle = (up: string) => `export default [
+  {
+    owner: "@acme/plugin-flags",
+    migrations: [
+      {
+        name: "seed-beta",
+        async up({ db }) {
+          ${up}
+        },
+      },
+    ],
+  },
+];
+`;
+  const SEED_BETA = flagsBundle(
+    `await db.run("INSERT INTO settings (\\"group\\", key, value) VALUES ('flags', 'beta', 'true')");`,
+  );
+
+  function rows(sql: string): unknown[] {
+    const db = new Database(join(project, "site.sqlite"));
+    try {
+      return db.query(sql).all();
+    } finally {
+      db.close();
+    }
+  }
+
+  test("applies a pending data migration after the histories, before it listens", async () => {
+    const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    const site = builtSite(SEED_BETA);
+
+    const server = await serveProcess(site);
+    assert(server);
+    servers.push(server);
+
+    expect(rows(`SELECT key FROM settings WHERE "group" = 'flags'`)).toEqual([
+      { key: "beta" },
+    ]);
+    expect(stderr.mock.calls.map(([chunk]) => String(chunk))).toContainEqual(
+      expect.stringMatching(
+        / @acme\/plugin-flags: applied 1 data migration\n$/,
+      ),
+    );
+  });
+
+  test("a second start reports its data migrations up to date and runs none", async () => {
+    const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    const site = builtSite(SEED_BETA);
+    const first = await serveProcess(site);
+    assert(first);
+    servers.push(first);
+    stderr.mockClear();
+
+    // A rerun of the insert would fail on the settings primary key.
+    const second = await serveProcess(site);
+    assert(second);
+    servers.push(second);
+
+    expect(stderr.mock.calls.map(([chunk]) => String(chunk))).toEqual([
+      "core: up to date\n",
+      "@acme/plugin-flags: data migrations up to date\n",
+    ]);
+  });
+
+  test("a throwing data migration exits non-zero without listening or recording it", async () => {
+    const exit = vi
+      .spyOn(process, "exit")
+      .mockImplementation(() => undefined as never);
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    const site = builtSite(flagsBundle(`throw new Error("the flag is gone");`));
+
+    const server = await serveProcess(site);
+
+    expect(server).toBeUndefined();
+    expect(exit).toHaveBeenCalledWith(1);
+    expect(error).toHaveBeenCalledWith(
+      "plumix: migrations failed; not serving",
+      expect.objectContaining({ code: "migrate_data_failed" }),
+    );
+    expect(rows("SELECT owner, name FROM __plumix_data_migrations")).toEqual(
+      [],
+    );
   });
 
   test("a failed apply exits non-zero without listening", async () => {
@@ -416,7 +509,8 @@ describe("serveProcess", () => {
     };
   }
 
-  // The histories shipped beside the entry, as `plumix build` does.
+  // The histories and an empty data bundle shipped beside the entry, as
+  // `plumix build` does.
   function siteWith(plugins: PluginDescriptor[] = []) {
     const config = plumix({
       runtime: bun({}),
@@ -428,6 +522,10 @@ describe("serveProcess", () => {
     copyOwnerHistories(
       { cwd: project, configPath: join(project, "plumix.config.ts"), config },
       join(project, "dist/server"),
+    );
+    writeFileSync(
+      join(project, "dist/server/migrations/data-migrations.js"),
+      "export default [];\n",
     );
     return createBunSite({
       config,

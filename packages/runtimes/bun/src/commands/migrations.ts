@@ -14,12 +14,14 @@ function settle<T>(work: () => T): Promise<T> {
 }
 
 function migrationDatabase(client: BunSqliteClient): MigrationDatabase {
+  const drizzle = drizzleBunSqlite(client, {});
   return {
+    drizzle,
     // drizzle's migrator splits each file on its own breakpoint marker, so a
     // trigger body arrives whole.
     migrate: (folder) =>
       settle(() => {
-        migrate(drizzleBunSqlite(client, {}), folder);
+        migrate(drizzle, folder);
       }),
     all: (sql) =>
       settle(() => client.prepare(sql).all() as Record<string, unknown>[]),

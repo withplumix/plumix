@@ -5,6 +5,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type {
   CommandDefinition,
+  MigrationDatabase,
   PlumixConfig,
   RuntimeMigrations,
 } from "@plumix/core";
@@ -87,6 +88,8 @@ describe("runCommand", () => {
       open: ({ location }) => {
         events.push(`open ${location}`);
         return Promise.resolve({
+          // No owner here declares a data migration, so nothing reads it.
+          drizzle: {} as MigrationDatabase["drizzle"],
           migrate: ({ migrationsTable }) => {
             events.push(`migrate ${migrationsTable}`);
             return Promise.resolve();

@@ -5,6 +5,7 @@ import type { MigrationDatabase } from "@plumix/core";
 import type { MigrationOwner } from "./owners.js";
 import { PlumixCliError } from "../errors.js";
 import { report } from "../report.js";
+import { DATA_MIGRATIONS_TABLE } from "./data.js";
 
 async function tableExists(
   db: MigrationDatabase,
@@ -94,7 +95,12 @@ export async function reportStatus(
  * Bookkeeping that belongs to SQLite, miniflare's D1, or a migrator, rather
  * than to any owner's schema.
  */
-const BOOKKEEPING_PREFIXES = ["sqlite_", "_cf_", "__drizzle_migrations"];
+const BOOKKEEPING_PREFIXES = [
+  "sqlite_",
+  "_cf_",
+  "__drizzle_migrations",
+  DATA_MIGRATIONS_TABLE,
+];
 
 async function hasTrackingTables(db: MigrationDatabase): Promise<boolean> {
   const rows = await db.all(

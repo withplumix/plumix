@@ -130,6 +130,11 @@ export interface PlumixConfigInput {
    */
   readonly theme?: ThemeDescriptor;
   readonly plugins?: readonly AnyPluginDescriptor[];
+  /**
+   * The site's own data migrations: a module, relative to this config file,
+   * whose default export is their ordered list. They run after the plugins'.
+   */
+  readonly dataMigrations?: string;
   readonly i18n?: I18nInput;
   /** Merged ahead of plugin and theme redirects; config wins on a tie. */
   readonly redirects?: readonly RedirectRule[];

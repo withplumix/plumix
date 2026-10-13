@@ -65,16 +65,16 @@ interface WranglerCall {
  * config file Plumix hands it. The file is read at call time: `close()`
  * deletes it.
  */
-function stubWrangler(): WranglerCall[] {
+function stubWrangler(binding: object = {}): WranglerCall[] {
   const calls: WranglerCall[] = [];
   vi.spyOn(migrationsDeps, "getPlatformProxy").mockImplementation((options) => {
     const config = JSON.parse(
       readFileSync(options.configPath ?? "", "utf8"),
     ) as { d1_databases: { binding: string }[] };
     calls.push({ options, config });
-    const binding = config.d1_databases[0]?.binding ?? "";
+    const name = config.d1_databases[0]?.binding ?? "";
     return Promise.resolve({
-      env: { [binding]: {} },
+      env: { [name]: binding },
       dispose: () => Promise.resolve(),
     } as unknown as PlatformProxy);
   });
@@ -104,6 +104,27 @@ describe("cloudflare migrations", () => {
         },
       },
     ]);
+  });
+
+  test("its drizzle runs a data migration's SQL on the D1 binding wrangler hands back", async () => {
+    writeWrangler([D1_ENTRY]);
+    const prepared: string[] = [];
+    const statement = {
+      bind: () => statement,
+      run: () => Promise.resolve({ success: true, results: [], meta: {} }),
+    };
+    stubWrangler({
+      prepare: (sql: string) => {
+        prepared.push(sql);
+        return statement;
+      },
+    });
+
+    const db = await open("local");
+    await db.drizzle.run("UPDATE settings SET key = 'beta'");
+    await db.close();
+
+    expect(prepared).toEqual(["UPDATE settings SET key = 'beta'"]);
   });
 
   test("a memory database persists nothing", async () => {

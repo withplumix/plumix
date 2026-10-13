@@ -83,6 +83,17 @@ describe("node migrations", () => {
     }
   });
 
+  test("its drizzle writes to the same database a data migration reshapes", async () => {
+    const db = await open(nodeSqlite({ path: "data/site.sqlite" }));
+    try {
+      await db.batch([{ sql: "CREATE TABLE t (id integer)", params: [] }]);
+      await db.drizzle.run("INSERT INTO t (id) VALUES (7)");
+      expect(await db.all("SELECT id FROM t")).toEqual([{ id: 7 }]);
+    } finally {
+      await db.close();
+    }
+  });
+
   test("opens a scratch database in memory, leaving the file alone", async () => {
     const db = await open(nodeSqlite({ path: "data/site.sqlite" }), "memory");
     await db.migrate(CORE);

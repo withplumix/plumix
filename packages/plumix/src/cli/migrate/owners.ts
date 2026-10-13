@@ -51,7 +51,7 @@ function resolveSchemaModule(cwd: string, spec: string): string {
   }
 }
 
-function readPackageName(root: string): string {
+export function readPackageName(root: string): string {
   const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as {
     name?: string;
   };
