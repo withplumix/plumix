@@ -551,6 +551,61 @@ test.describe("editor document tab", () => {
     await expect.poll(() => previewLoads.length).toBe(2);
   });
 
+  test("editing only the slug leaves the canvas preview as it is", async ({
+    page,
+  }) => {
+    await mockManifest(page, {
+      ...MANIFEST_WITH_POST,
+      entryTypes: [
+        {
+          name: "post",
+          capabilityType: "post",
+          adminSlug: "posts",
+          isPublic: true,
+          showUI: true,
+          showInSidebar: true,
+          label: "Posts",
+          labels: { singular: "Post", plural: "Posts" },
+          supports: ["title", "editor", "slug", "excerpt"],
+        },
+      ],
+    });
+    await mockRpcWithCapture(page, {
+      captureSuffix: "/entry/update",
+      captureResponse: { ...editorEntry(), updatedAt: T0 },
+      handlers: {
+        "/auth/session": AUTHED_ADMIN,
+        "/entry/get": editorEntry(),
+        "/entry/list": [],
+        "/entry/createPreviewLink": PREVIEW_LINK,
+      },
+    });
+    // The canvas loads a token URL, so the slug never reaches it. The autosave
+    // outwaits the reload's debounce, so a slug reload lands before the
+    // excerpt save.
+    const events: string[] = [];
+    page.on("request", (request) => {
+      if (request.url().includes(PREVIEW_LINK.url)) events.push("load");
+      else if (request.url().endsWith("/entry/update"))
+        events.push(
+          request.postData()?.includes("excerpt")
+            ? "save excerpt"
+            : "save slug",
+        );
+    });
+    await page.goto("entries/posts/1/edit");
+    await expect.poll(() => events).toEqual(["load"]);
+    await page.getByTestId("plumix-tab-page").click();
+
+    await page.getByTestId("entry-slug-input").fill("custom-slug");
+    await expect.poll(() => events).toEqual(["load", "save slug"]);
+    await page.getByTestId("entry-excerpt-input").fill("Hand-written summary");
+
+    await expect
+      .poll(() => events)
+      .toEqual(["load", "save slug", "save excerpt", "load"]);
+  });
+
   test("excerpt input is absent when the type lacks excerpt support", async ({
     page,
   }) => {
