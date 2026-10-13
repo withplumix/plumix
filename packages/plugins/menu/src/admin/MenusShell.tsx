@@ -30,17 +30,17 @@ import {
   useMenuList,
 } from "./queries.js";
 import {
+  boundMenuSlug,
+  menusPageState,
+  termSlugFromSelect,
+  UNASSIGNED_VALUE,
+} from "./shell-state.js";
+import {
   getSelectedMenuSlug,
   getSelectedTab,
   setSelectedMenu,
-  setSelectedTab,
+  withSelectedTab,
 } from "./url-state.js";
-
-/**
- * Radix Select forbids an empty-string item value, so the "unassigned" choice
- * carries a sentinel that maps back to `null` (no menu) on change.
- */
-const UNASSIGNED_VALUE = "__unassigned__";
 
 /**
  * Plain descriptor literals — the plugin package builds with plain
@@ -77,7 +77,7 @@ const TABS: readonly {
 export function MenusShell(): ReactNode {
   const menus = useMenuList();
   const createMenu = useCreateMenu();
-  const [tab, setTab] = useState<TabId>(getSelectedTab());
+  const [tab, setTab] = useState<TabId>(getSelectedTab(window.location.search));
   const [slug, setSlug] = useState<string | null>(getSelectedMenuSlug());
   const [createOpen, setCreateOpen] = useState(false);
   const [draftName, setDraftName] = useState("");
@@ -100,7 +100,11 @@ export function MenusShell(): ReactNode {
   }
 
   function handleTabChange(next: TabId): void {
-    setSelectedTab(next);
+    window.history.replaceState(
+      {},
+      "",
+      withSelectedTab(window.location.href, next),
+    );
     setTab(next);
   }
 
@@ -109,7 +113,8 @@ export function MenusShell(): ReactNode {
     setSlug(next);
   }
 
-  if (menus.isLoading) {
+  const pageState = menusPageState(menus);
+  if (pageState === "loading") {
     return <div data-testid="menus-shell-loading" />;
   }
   const menuList = menus.data ?? [];
@@ -188,7 +193,7 @@ export function MenusShell(): ReactNode {
       ) : (
         <LocationsPanel menus={menuList} />
       )}
-      {menuList.length === 0 ? (
+      {pageState === "empty" ? (
         <div
           data-testid="menus-empty-cta"
           className="text-muted-foreground text-sm"
@@ -309,7 +314,6 @@ function LocationsPanel({
 }): ReactNode {
   const locations = useLocationsList();
   const assign = useAssignLocation();
-  const slugFromTermId = new Map(menus.map((m) => [m.id, m.slug]));
 
   return (
     <div
@@ -321,11 +325,7 @@ function LocationsPanel({
           key={row.id}
           row={row}
           menus={menus}
-          currentSlug={
-            row.boundTermId === null
-              ? ""
-              : (slugFromTermId.get(row.boundTermId) ?? "")
-          }
+          currentSlug={boundMenuSlug(row.boundTermId, menus)}
           onChange={(termSlug) => {
             assign.mutate({ location: row.id, termSlug });
           }}
@@ -343,7 +343,7 @@ function LocationRow({
 }: {
   readonly row: MenuLocationRow;
   readonly menus: readonly MenuListItem[];
-  readonly currentSlug: string;
+  readonly currentSlug: string | null;
   readonly onChange: (termSlug: string | null) => void;
 }): ReactNode {
   const { i18n } = useLingui();
@@ -359,9 +359,9 @@ function LocationRow({
         {row.label}
       </span>
       <Select
-        value={currentSlug === "" ? UNASSIGNED_VALUE : currentSlug}
+        value={currentSlug ?? UNASSIGNED_VALUE}
         onValueChange={(next) => {
-          onChange(next === UNASSIGNED_VALUE ? null : next);
+          onChange(termSlugFromSelect(next));
         }}
       >
         <SelectTrigger

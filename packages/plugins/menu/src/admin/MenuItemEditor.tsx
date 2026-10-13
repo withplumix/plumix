@@ -17,7 +17,6 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ORPCError } from "@orpc/client";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   AlertDialog,
@@ -71,6 +70,14 @@ import {
   useSearchTargets,
 } from "./queries.js";
 import {
+  conflictShown,
+  linkedTargetText,
+  maxDepthRejected,
+  pickerChoice,
+  pickerPanelFor,
+  searchResultsState,
+} from "./shell-state.js";
+import {
   dragEndToAction,
   getProjection,
   INDENTATION_WIDTH,
@@ -104,31 +111,6 @@ const M = {
   untitledTarget: {
     id: "plugin.menu.itemEditor.untitledTarget",
     message: "(no title)",
-  },
-  addedAnnouncement: {
-    id: "plugin.menu.itemEditor.addedAnnouncement",
-    message: "Added {label} to the menu",
-    comment: "label: the title of the entry or term just added",
-  },
-  linkedTarget: {
-    id: "plugin.menu.itemEditor.linkedTarget",
-    message: "Links to {label}",
-    comment: "label: the title of the entry or term the item links to",
-  },
-  linkedEntryById: {
-    id: "plugin.menu.itemEditor.linkedEntryById",
-    message: "Links to entry #{id}",
-    comment: "id: the linked entry's id, shown when its title is unknown",
-  },
-  linkedTermById: {
-    id: "plugin.menu.itemEditor.linkedTermById",
-    message: "Links to term #{id}",
-    comment: "id: the linked term's id, shown when its title is unknown",
-  },
-  replacedAnnouncement: {
-    id: "plugin.menu.itemEditor.replacedAnnouncement",
-    message: "Replaced the link with {label}",
-    comment: "label: the title of the entry or term the item now links to",
   },
 } satisfies Record<string, MessageDescriptor>;
 
@@ -217,15 +199,6 @@ function LocationsBindings({
   );
 }
 
-function isReason(data: unknown, reason: string): boolean {
-  return (
-    typeof data === "object" &&
-    data !== null &&
-    "reason" in data &&
-    data.reason === reason
-  );
-}
-
 function MenuSettingsPanel({
   state,
   dispatch,
@@ -235,13 +208,8 @@ function MenuSettingsPanel({
 }): ReactNode {
   const save = useSaveMenu();
   const queryClient = useQueryClient();
-  // Dismissal is keyed to the version active at dismiss time, so a second
-  // `version_mismatch` from another editor re-arms the banner.
   const [dismissedAt, setDismissedAt] = useState<number | null>(null);
-  const isVersionMismatch =
-    save.error instanceof ORPCError &&
-    isReason(save.error.data, "version_mismatch");
-  const conflict = isVersionMismatch && dismissedAt !== state.version;
+  const conflict = conflictShown(save.error, dismissedAt, state.version);
   return (
     <div
       data-testid="menu-settings-panel"
@@ -335,10 +303,7 @@ function MaxDepthField({
     setLastSeen(state.maxDepth);
     setDraft(String(state.maxDepth));
   }
-  // The reducer ignores a value below the deepest existing depth; show that, or
-  // the input displays a number the next save won't send.
-  const parsed = Number.parseInt(draft, 10);
-  const rejected = Number.isFinite(parsed) && parsed !== state.maxDepth;
+  const rejected = maxDepthRejected(draft, state.maxDepth);
   return (
     <label
       data-testid="menu-settings-max-depth-row"
@@ -524,7 +489,8 @@ function PickerPanel({
   readonly relinkTargetKey: ItemKey | null;
   readonly dispatch: Dispatch<EditorAction>;
 }): ReactNode {
-  if (tab.kind === "custom") {
+  const panel = pickerPanelFor(tab);
+  if (panel.panel === "custom") {
     return (
       <CustomUrlPickerPanel
         relinkTargetKey={relinkTargetKey}
@@ -532,22 +498,17 @@ function PickerPanel({
       />
     );
   }
-  if (
-    (tab.kind === "entry" || tab.kind === "term") &&
-    tab.target !== undefined
-  ) {
+  if (panel.panel === "linked") {
     return (
       <LinkedTargetPickerPanel
-        kind={tab.kind}
-        target={tab.target}
+        kind={panel.kind}
+        target={panel.target}
         tabLabel={tab.tabLabel}
         relinkTargetKey={relinkTargetKey}
         dispatch={dispatch}
       />
     );
   }
-  // `MenuItemMeta` stores only custom, entry and term links, so a plugin
-  // lookup kind has nowhere to keep what it would pick.
   return (
     <div
       data-testid="menu-picker-unsupported-panel"
@@ -597,26 +558,15 @@ function LinkedTargetPickerPanel({
   }
 
   function choose(item: LinkTarget): void {
+    const { action, announcement } = pickerChoice(kind, item, relinkTargetKey);
+    dispatch(action);
     const label = nameOf(item);
-    const meta =
-      kind === "entry"
-        ? { kind, entryId: Number(item.id) }
-        : { kind, termId: Number(item.id) };
-    if (relinkTargetKey !== null) {
-      dispatch({
-        type: "relinkItem",
-        key: relinkTargetKey,
-        newMeta: meta,
-        linkedLabel: item.label,
-      });
-    } else {
-      // No title of its own: the item follows the linked title.
-      dispatch({ type: "addItem", title: null, meta, linkedLabel: item.label });
-    }
-    const descriptor =
-      relinkTargetKey === null ? M.addedAnnouncement : M.replacedAnnouncement;
     setAnnouncement((previous) => ({
-      text: i18n._(descriptor.id, { label }, { message: descriptor.message }),
+      text: i18n._(
+        announcement.id,
+        { label },
+        { message: announcement.message },
+      ),
       count: previous.count + 1,
     }));
     // Keep the query and the focus so several results go in a row.
@@ -624,14 +574,15 @@ function LinkedTargetPickerPanel({
   }
 
   function renderResults(): ReactNode {
-    if (search.isPending) {
+    const results = searchResultsState(search);
+    if (results === "loading") {
       return (
         <CommandEmpty>
           <Trans id="plugin.menu.itemEditor.searchLoading" message="Loading…" />
         </CommandEmpty>
       );
     }
-    if (search.isError) {
+    if (results === "error") {
       return (
         <CommandEmpty>
           <Trans
@@ -641,7 +592,7 @@ function LinkedTargetPickerPanel({
         </CommandEmpty>
       );
     }
-    if (search.data.items.length === 0) {
+    if (results === "empty") {
       return (
         <CommandEmpty>
           <Trans
@@ -651,7 +602,7 @@ function LinkedTargetPickerPanel({
         </CommandEmpty>
       );
     }
-    return search.data.items.map((item) => (
+    return (search.data?.items ?? []).map((item) => (
       <CommandItem
         key={item.id}
         value={item.id}
@@ -1068,38 +1019,13 @@ function ItemDetailFields({
   );
 }
 
-/**
- * Names what a linked item points at: its title when known, otherwise its
- * kind and id, so an untitled or vanished target isn't passed off as one
- * without a title.
- */
 function LinkedTargetLine({ item }: { readonly item: EditorItem }): ReactNode {
   const { i18n } = useLingui();
-  const { meta } = item;
-  if (meta.kind === "custom") return null;
-  let text: string;
-  if (item.linkedLabel !== null) {
-    text = i18n._(
-      M.linkedTarget.id,
-      { label: item.linkedLabel },
-      { message: M.linkedTarget.message },
-    );
-  } else if (meta.kind === "entry") {
-    text = i18n._(
-      M.linkedEntryById.id,
-      { id: meta.entryId },
-      { message: M.linkedEntryById.message },
-    );
-  } else {
-    text = i18n._(
-      M.linkedTermById.id,
-      { id: meta.termId },
-      { message: M.linkedTermById.message },
-    );
-  }
+  const text = linkedTargetText(item);
+  if (text === null) return null;
   return (
     <FieldDescription data-testid="menu-item-detail-linked">
-      {text}
+      {i18n._(text)}
     </FieldDescription>
   );
 }

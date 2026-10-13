@@ -9,15 +9,16 @@ export function setSelectedMenu(slug: string): void {
   window.history.replaceState({}, "", url);
 }
 
-export function setSelectedTab(tab: TabId): void {
-  const url = new URL(window.location.href);
-  if (tab === "edit") url.searchParams.delete("tab");
-  else url.searchParams.set("tab", tab);
-  window.history.replaceState({}, "", url);
+/** `edit` is the default tab, so it leaves no `?tab=` behind. */
+export function withSelectedTab(url: string, tab: TabId): string {
+  const next = new URL(url);
+  if (tab === "edit") next.searchParams.delete("tab");
+  else next.searchParams.set("tab", tab);
+  return next.href;
 }
 
-export function getSelectedTab(): TabId {
-  const value = new URL(window.location.href).searchParams.get("tab");
+export function getSelectedTab(search: string): TabId {
+  const value = new URLSearchParams(search).get("tab");
   return value === "locations" ? "locations" : "edit";
 }
 
