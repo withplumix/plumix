@@ -1,5 +1,6 @@
 import type { I18n } from "@lingui/core";
 import type { ReactNode } from "react";
+import { _resetManifest } from "@/lib/manifest.js";
 import {
   _resetPluginRegistry,
   registerPluginFieldType,
@@ -19,7 +20,9 @@ import { MetaBoxField } from "./meta-box-field.js";
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   _resetPluginRegistry();
+  _resetManifest();
 });
 
 function field(
@@ -332,6 +335,8 @@ describe("MetaBoxField sortable rows", () => {
   });
 
   test("a multi reference row's handle and remove button are named from the active catalog", () => {
+    // A row's untitled label reads the manifest `<script>`; this page has none.
+    vi.stubGlobal("document", { getElementById: () => null });
     const html = render(
       field({
         inputType: "userList",
