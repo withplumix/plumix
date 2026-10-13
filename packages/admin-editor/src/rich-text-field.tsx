@@ -42,7 +42,7 @@ import type {
   RichTextExtensionOptions,
   ToolbarMark,
 } from "./rich-text-extensions.js";
-import { applyLink, linkHrefAt, removeLink } from "./link-edit.js";
+import { applyLink, linkHrefAt, linkRange, removeLink } from "./link-edit.js";
 import { richTextExtensions, toolbarControls } from "./rich-text-extensions.js";
 import {
   contentNeedsReset,
@@ -376,8 +376,10 @@ export function LinkPopover({
 
   const edit = (change: LinkChange): void => {
     if (!editor || !range.current) return;
+    // The edited link stays selected, a caret's whole link included.
+    const edited = linkRange(editor.state, range.current);
     editor.view.dispatch(change(editor.state, range.current));
-    editor.commands.focus();
+    editor.chain().focus().setTextSelection(edited).run();
     setOpen(false);
   };
 

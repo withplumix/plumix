@@ -13,7 +13,7 @@ export function linkHrefAt(state: EditorState): string {
 }
 
 /** A range inside one link widens to all of it, so a caret edits the link. */
-function linkRange(state: EditorState, range: Range): Range {
+export function linkRange(state: EditorState, range: Range): Range {
   const type = getMarkType("link", state.schema);
   const link = getMarkRange(state.doc.resolve(range.from), type);
   return link && link.from <= range.from && link.to >= range.to ? link : range;

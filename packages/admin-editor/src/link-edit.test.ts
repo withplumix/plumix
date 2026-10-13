@@ -2,7 +2,7 @@ import type { JSONContent, Range } from "@tiptap/core";
 import { Editor } from "@tiptap/core";
 import { afterEach, describe, expect, test } from "vitest";
 
-import { applyLink, linkHrefAt, removeLink } from "./link-edit.js";
+import { applyLink, linkHrefAt, linkRange, removeLink } from "./link-edit.js";
 import { richTextExtensions } from "./rich-text-extensions.js";
 
 const editors: Editor[] = [];
@@ -63,6 +63,26 @@ describe("linkHrefAt", () => {
     const state = stateOf([{ type: "text", text: "text" }], { from: 1, to: 5 });
 
     expect(linkHrefAt(state)).toBe("");
+  });
+});
+
+describe("linkRange", () => {
+  test("widens a caret inside a link to the whole link", () => {
+    const state = stateOf(
+      [{ type: "text", text: "Read " }, linked("link", "https://old.test")],
+      { from: 8, to: 8 },
+    );
+
+    expect(linkRange(state, { from: 8, to: 8 })).toEqual({ from: 6, to: 10 });
+  });
+
+  test("keeps a range outside any link as it is", () => {
+    const state = stateOf([{ type: "text", text: "select me" }], {
+      from: 1,
+      to: 7,
+    });
+
+    expect(linkRange(state, { from: 1, to: 7 })).toEqual({ from: 1, to: 7 });
   });
 });
 
