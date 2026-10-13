@@ -4,9 +4,8 @@ export function cacheBustUrl(url: string, now: number): string {
 }
 
 /**
- * A deploy that lands mid-page-load leaves the page pointing at chunks the CDN
- * no longer serves, so a failed import waits, then tries once more at a
- * cache-busted URL. The retry's failure is the one that rejects.
+ * A deploy landing mid-page-load leaves the page pointing at chunks the CDN no
+ * longer serves. The retry's failure is the one that rejects.
  */
 export async function importWithRetry<T>(
   load: (url: string) => Promise<T>,
