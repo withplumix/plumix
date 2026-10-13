@@ -16,3 +16,26 @@ export function shouldHydrate(mode: IslandPageMode): boolean {
 export function clientOnlyPlaceholderLabel(exportName: string | null): string {
   return `Client-only: ${exportName ?? "default"}`;
 }
+
+/**
+ * Prototype-pollution defense: `mod["__proto__"]` would resolve to
+ * `Object.prototype` and be mounted as the component.
+ */
+const FORBIDDEN_EXPORT_KEYS: ReadonlySet<string> = new Set([
+  "__proto__",
+  "constructor",
+  "prototype",
+]);
+
+export function isForbiddenIslandExport(name: string): boolean {
+  return FORBIDDEN_EXPORT_KEYS.has(name);
+}
+
+/** Prefetch only helps when it fires strictly before hydration. */
+export function shouldPrefetch(
+  hydrateWhen: string,
+  prefetchWhen: string,
+): boolean {
+  if (hydrateWhen === "load" || hydrateWhen === "only") return false;
+  return hydrateWhen !== prefetchWhen;
+}

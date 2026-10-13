@@ -107,6 +107,14 @@
       "outputs": [],
       "outputLogs": "new-only"
     },
+    "@plumix/core#lint": {
+      // Core's playground is linted here, and reaches core through `plumix`,
+      // whose exports point at core's own `dist/` — which `^build` never
+      // builds.
+      "dependsOn": ["^topo", "^build", "build", "i18n:compile"],
+      "outputs": [],
+      "outputLogs": "new-only"
+    },
     "typecheck": {
       "dependsOn": ["^topo", "^build", "i18n:compile"],
       "outputs": [".cache/typecheck.tsbuildinfo"],
@@ -201,7 +209,7 @@
       // Cached, like `test:unit`, `test:build` and `docs:screenshots` — which
       // drives this same rig (#1949). With the inputs above, a hit means
       // nothing a suite exercises has moved; a change to core still runs all
-      // fifteen, and a change to one plugin runs that plugin's.
+      // sixteen, and a change to one plugin runs that plugin's.
       //
       // The root `test:e2e` script runs them under `--concurrency=4`. Each suite
       // holds a dev server and a Chromium for its whole run, so at turbo's
@@ -250,6 +258,20 @@
         "^build",
         "@plumix/plugin-blog#build",
         "@plumix/plugin-media#build"
+      ],
+      "passThroughEnv": ["PLUMIX_E2E_PORT_OFFSET"],
+      "outputLogs": "new-only"
+    },
+    "@plumix/core#test:e2e": {
+      // Core's playground is a consumer of `plumix` and the Cloudflare
+      // runtime, which both depend on this package — so `^build` cannot reach
+      // them without a cycle in the package graph. Named here instead, as for
+      // the Cloudflare entry above.
+      "dependsOn": [
+        "build",
+        "^build",
+        "plumix#build",
+        "@plumix/runtime-cloudflare#build"
       ],
       "passThroughEnv": ["PLUMIX_E2E_PORT_OFFSET"],
       "outputLogs": "new-only"

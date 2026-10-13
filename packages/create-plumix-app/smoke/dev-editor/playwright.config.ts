@@ -6,7 +6,7 @@ import { definePlumixE2EConfig } from "plumix/test/playwright";
 // afresh and runs `plumix dev` through the runtime's own CLI.
 const config: ReturnType<typeof definePlumixE2EConfig> = {
   ...definePlumixE2EConfig({
-    port: 3140,
+    port: 3150,
     configDir: import.meta.dirname,
     playground: "..",
     // The spec signs in with `actingAs` once the server has migrated.

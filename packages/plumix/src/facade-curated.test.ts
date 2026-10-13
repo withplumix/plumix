@@ -423,7 +423,14 @@ const CURATED: Readonly<Record<string, Curated>> = {
   },
   "./blocks/island-renderer": {
     mirrors: "@plumix/core/blocks/island-renderer",
-    withheld: [],
+    withheld: [
+      {
+        reason:
+          "the renderer's own root and slot decisions, exported for core's " +
+          "unit tests; a site mounts islands only through `mount`",
+        names: ["islandRootKind", "mergeSlotProps"],
+      },
+    ],
   },
   // Whole by value, not by `export *`: `Db` is typed over every key of core's
   // schema module, so a client built from this subpath needs each one.

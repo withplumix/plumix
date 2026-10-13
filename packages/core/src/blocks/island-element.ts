@@ -7,7 +7,13 @@ import type { IslandPageMode } from "./island-mode.js";
 import type { IslandRoot, MountOptions } from "./island-renderer.js";
 import type { SerializedProps } from "./serialize.js";
 import { islandStrategy } from "./island-global.js";
-import { clientOnlyPlaceholderLabel, shouldHydrate } from "./island-mode.js";
+import { importWithRetry } from "./island-import.js";
+import {
+  clientOnlyPlaceholderLabel,
+  isForbiddenIslandExport,
+  shouldHydrate,
+  shouldPrefetch,
+} from "./island-mode.js";
 import { deserializeProps } from "./serialize.js";
 
 /**
@@ -35,16 +41,6 @@ declare global {
 }
 
 const RETRY_DELAY_MS = 1000;
-
-/**
- * Prototype-pollution defense: `mod["__proto__"]` would resolve to
- * `Object.prototype` and be mounted as the component.
- */
-const FORBIDDEN_EXPORT_KEYS: ReadonlySet<string> = new Set([
-  "__proto__",
-  "constructor",
-  "prototype",
-]);
 
 export class PlumixIslandElement extends HTMLElement {
   static readonly observedAttributes: readonly string[] = ["props"];
@@ -194,7 +190,7 @@ export class PlumixIslandElement extends HTMLElement {
     this.prefetched = true;
     const chunkUrl = this.getAttribute("chunk-url");
     const exportName = this.getAttribute("component-export") ?? "default";
-    if (!chunkUrl || FORBIDDEN_EXPORT_KEYS.has(exportName)) return;
+    if (!chunkUrl || isForbiddenIslandExport(exportName)) return;
     void dynamicImport(chunkUrl).catch(() => undefined);
     void loadRenderer().catch(() => undefined);
   }
@@ -210,7 +206,7 @@ export class PlumixIslandElement extends HTMLElement {
       this.dispatchHydrationError(new Error("missing chunk-url attribute"));
       return;
     }
-    if (FORBIDDEN_EXPORT_KEYS.has(exportName)) {
+    if (isForbiddenIslandExport(exportName)) {
       this.dispatchHydrationError(
         new Error(`forbidden component-export key: ${exportName}`),
       );
@@ -252,23 +248,17 @@ export class PlumixIslandElement extends HTMLElement {
     exportName: string,
   ): Promise<ComponentType<SerializedProps> | null> {
     try {
-      const mod = await dynamicImport(chunkUrl);
+      // One retry per element: a second hydrate attempt imports once.
+      const mod = this.retried
+        ? await dynamicImport(chunkUrl)
+        : await importWithRetry(dynamicImport, chunkUrl, () => {
+            this.retried = true;
+            return sleep(RETRY_DELAY_MS);
+          });
       return mod[exportName] as ComponentType<SerializedProps>;
     } catch (err) {
-      if (this.retried) {
-        this.dispatchHydrationError(err);
-        return null;
-      }
-      this.retried = true;
-      await sleep(RETRY_DELAY_MS);
-      try {
-        const retryUrl = appendCacheBust(chunkUrl);
-        const mod = await dynamicImport(retryUrl);
-        return mod[exportName] as ComponentType<SerializedProps>;
-      } catch (retryErr) {
-        this.dispatchHydrationError(retryErr);
-        return null;
-      }
+      this.dispatchHydrationError(err);
+      return null;
     }
   }
 
@@ -300,21 +290,9 @@ export class PlumixIslandElement extends HTMLElement {
  */
 type ModuleNamespace = Readonly<Record<string, unknown>>;
 
-/**
- * Swappable because unit tests have no real chunk URLs. The URL comes off the
- * page at runtime, so Vite has nothing to analyze.
- */
-let dynamicImport: (url: string) => Promise<ModuleNamespace> = (url) =>
-  import(/* @vite-ignore */ url);
-
-export function setDynamicImport(
-  fn: (url: string) => Promise<ModuleNamespace>,
-): () => void {
-  const prev = dynamicImport;
-  dynamicImport = fn;
-  return () => {
-    dynamicImport = prev;
-  };
+/** The URL comes off the page at runtime, so Vite has nothing to analyze. */
+function dynamicImport(url: string): Promise<ModuleNamespace> {
+  return import(/* @vite-ignore */ url);
 }
 
 /**
@@ -332,7 +310,7 @@ export function setRendererUrl(url: string): void {
  * island can retry after a deploy race.
  */
 let rendererPromise: Promise<RendererModule> | null = null;
-let loadRenderer: () => Promise<RendererModule> = () => {
+function loadRenderer(): Promise<RendererModule> {
   if (rendererUrl === null) {
     return Promise.reject(new Error("island renderer URL not set"));
   }
@@ -343,20 +321,16 @@ let loadRenderer: () => Promise<RendererModule> = () => {
     },
   );
   return rendererPromise;
-};
+}
 
 /**
- * Same deploy-during-load defense as `loadComponent`: one retry with a
- * cache-bust hash before giving up, since the renderer URL is resolved
- * from the SSR manifest exactly like the per-island chunk URL.
+ * Same deploy-during-load defense as `loadComponent`, since the renderer URL is
+ * resolved from the SSR manifest exactly like the per-island chunk URL.
  */
 async function importRendererWithRetry(url: string): Promise<RendererModule> {
-  try {
-    return readRenderer(await dynamicImport(url));
-  } catch {
-    await sleep(RETRY_DELAY_MS);
-    return readRenderer(await dynamicImport(appendCacheBust(url)));
-  }
+  return readRenderer(
+    await importWithRetry(dynamicImport, url, () => sleep(RETRY_DELAY_MS)),
+  );
 }
 
 /**
@@ -365,21 +339,6 @@ async function importRendererWithRetry(url: string): Promise<RendererModule> {
  */
 function readRenderer(namespace: ModuleNamespace): RendererModule {
   return { mount: namespace.mount as RendererModule["mount"] };
-}
-
-/**
- * Test seam: a unit test has no renderer chunk URL to import, so it injects
- * the (statically imported) renderer module directly.
- */
-export function setRendererImport(
-  fn: () => Promise<RendererModule>,
-): () => void {
-  const prev = loadRenderer;
-  loadRenderer = fn;
-  return () => {
-    loadRenderer = prev;
-    rendererPromise = null;
-  };
 }
 
 /**
@@ -392,18 +351,8 @@ function readPageMode(): IslandPageMode {
   return null;
 }
 
-function appendCacheBust(url: string): string {
-  return `${url}#plumix-retry=${Date.now()}`;
-}
-
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/** Prefetch only helps when it fires strictly before hydration. */
-function shouldPrefetch(hydrateWhen: string, prefetchWhen: string): boolean {
-  if (hydrateWhen === "load" || hydrateWhen === "only") return false;
-  return hydrateWhen !== prefetchWhen;
 }
 
 function parseJsonAttr(raw: string | null): JsonObject {

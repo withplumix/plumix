@@ -1,22 +1,9 @@
 // Every event between trigger and hydration is queued and replayed in order,
 // so a click that lands while the chunk loads after a hover isn't lost.
 
-import type { JsonObject } from "../../json.js";
 import type { IslandStrategy, PlumixIslandElement } from "../island-element.js";
-import { isJsonArray } from "../../json.js";
 import { publishIslandStrategy } from "../island-global.js";
-
-/**
- * `pointerenter` doesn't bubble, so it can trigger hydration but is never
- * replayed.
- */
-const SUPPORTED_EVENTS = [
-  "pointerenter",
-  "focusin",
-  "pointerdown",
-  "click",
-  "keydown",
-] as const;
+import { INTERACTION_EVENTS, interactionEvents } from "./options.js";
 
 interface QueuedEvent {
   readonly type: string;
@@ -37,7 +24,7 @@ let listening = false;
 export const interactionStrategy: IslandStrategy = (loadFn, opts, el) => {
   registry.set(el, {
     loadFn,
-    events: readEvents(opts),
+    events: interactionEvents(opts),
     triggered: false,
     queue: [],
   });
@@ -45,21 +32,10 @@ export const interactionStrategy: IslandStrategy = (loadFn, opts, el) => {
   return () => registry.delete(el);
 };
 
-function readEvents(opts: JsonObject): ReadonlySet<string> {
-  const raw = opts.events;
-  // `isJsonArray`, not `Array.isArray`: the latter widens a `JsonValue` to
-  // `any[]` and leaves the readonly array on the object side of the union.
-  const list =
-    raw !== undefined && isJsonArray(raw)
-      ? raw.filter((e): e is string => typeof e === "string")
-      : null;
-  return new Set(list && list.length > 0 ? list : SUPPORTED_EVENTS);
-}
-
 function ensureListeners(): void {
   if (listening || typeof document === "undefined") return;
   listening = true;
-  for (const type of SUPPORTED_EVENTS) {
+  for (const type of INTERACTION_EVENTS) {
     document.addEventListener(type, onIntent, true);
   }
 }
