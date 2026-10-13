@@ -1970,8 +1970,9 @@ describe("/llms.txt", () => {
 
     const { body } = await llms(h);
 
-    expect(body).not.toContain("/sitemap.xml");
-    expect(body).not.toContain("## Posts");
+    expect(body).toBe(
+      "# cms.example\n\nThis site's content is not offered for AI training or retrieval.\n",
+    );
   });
 
   test("offers no map and no entries to a site that blocks AI crawlers", async () => {
@@ -2078,6 +2079,29 @@ describe("/llms.txt", () => {
           "\n## Sitemap\n\n" +
           "- [XML sitemap](https://cms.example/sitemap.xml): every URL this site offers to search engines.\n",
       );
+    });
+
+    test("a blank title reads Untitled, a backslash is escaped and a parenthesis in the URL is encoded", async () => {
+      const h = await createHarness([postsAndPages]);
+      await seedEntry(h, { type: "post", slug: "blank", title: "  " });
+      await seedEntry(h, {
+        type: "post",
+        slug: "back",
+        title: "A\\B",
+        publishedAt: new Date("2020-01-01T00:00:00.000Z"),
+      });
+      await seedEntry(h, {
+        type: "post",
+        slug: "a(b)",
+        title: "Paren",
+        publishedAt: new Date("2019-01-01T00:00:00.000Z"),
+      });
+
+      const { body } = await llms(h);
+
+      expect(body).toContain("- [Untitled](https://cms.example/post/blank)\n");
+      expect(body).toContain("- [A\\\\B](https://cms.example/post/back)\n");
+      expect(body).toContain("- [Paren](https://cms.example/post/a%28b%29)\n");
     });
 
     test("a teaser gives its excerpt and never its body", async () => {
