@@ -37,11 +37,14 @@ as the ticket pins it, and put your disagreement in `notes`.
   after this phase; it is never a spec gap, and neither you nor the implementer
   runs those suites to prove it.
 - **A gap no change to the branch can close** gets `"needsADecision": true`:
-  the brief contradicts the code or `main`, a pinned criterion cannot be met as
-  written, or the branch departs from a pinned contract and only the ticket's
-  owner can say which side gives. The harness parks the ticket with these gaps
-  listed instead of sending them to the implementer, so `why` names the choice
-  the person has to make.
+  the brief contradicts itself, the code or `main`, or a pinned criterion
+  cannot be met as written. Anything a change to the branch can close is not a
+  decision, however the brief words it: a bug, a missing criterion, an
+  unrequested addition, or the branch departing from a pinned contract, where
+  the fix is to follow the brief. Nor is a conflict with a rule this prompt
+  already settles, such as the empty changeset below. The harness parks the
+  ticket with decision gaps listed instead of sending them to the implementer,
+  so `why` names the choice the person has to make.
 
 `notes` hold only the smells you left and your disagreements with a pinned
 decision. A rule about how the work was done, such as test-first order, leaves
