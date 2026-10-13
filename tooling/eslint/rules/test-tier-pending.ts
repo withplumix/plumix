@@ -58,12 +58,8 @@ export const RETIRED_TIER_PENDING: readonly string[] = [
   "packages/core/src/dev/ui/island-overlay.browser.test.tsx",
   "packages/core/src/dev/ui/overlay-shell.browser.test.tsx",
   "packages/core/src/dev/ui/terminal-forward.browser.test.tsx",
-  "packages/plugins/audit-log/src/admin/AuditLogShell.browser.test.tsx",
   "packages/plugins/media/src/admin/MediaLibrary.browser.test.tsx",
   "packages/plugins/media/src/admin/rpc.browser.test.tsx",
   "packages/plugins/media/src/admin/upload.browser.test.tsx",
-  "packages/plugins/menu/src/admin/MenusShell.browser.test.tsx",
-  "packages/plugins/og/src/admin/CardPreviewPanel.browser.test.tsx",
-  "packages/plugins/seo/src/admin/SerpPreviewPanel.browser.test.tsx",
   "packages/plumix/src/test/node-only.browser.test.ts",
 ];

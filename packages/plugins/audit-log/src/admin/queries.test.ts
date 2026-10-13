@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { presetToRange } from "./queries.js";
+import { auditLogPageInput, presetToRange } from "./queries.js";
 
 describe("presetToRange", () => {
   const now = new Date("2026-05-10T18:30:00Z");
@@ -37,5 +37,19 @@ describe("presetToRange", () => {
 
   test("custom returns empty object — caller supplies bounds", () => {
     expect(presetToRange("custom", now)).toEqual({});
+  });
+});
+
+describe("auditLogPageInput", () => {
+  test("the first page asks with the filter alone", () => {
+    expect(auditLogPageInput({ eventPrefix: "user:" }, undefined)).toEqual({
+      eventPrefix: "user:",
+    });
+  });
+
+  test("load more asks with the cursor from the last page", () => {
+    expect(
+      auditLogPageInput({ eventPrefix: "user:" }, "page-2-cursor"),
+    ).toEqual({ eventPrefix: "user:", cursor: "page-2-cursor" });
   });
 });

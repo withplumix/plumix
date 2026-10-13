@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { SerpPreview } from "./serp.js";
-import { resolveSerp } from "./serp.js";
+import { measureSerpLine, resolveSerp } from "./serp.js";
 
 const preview: SerpPreview = {
   url: "https://cms.example/post/hello",
@@ -66,5 +66,33 @@ describe("resolveSerp", () => {
       indexable: false,
       reason: "site_private",
     });
+  });
+});
+
+describe("measureSerpLine", () => {
+  test("a line within the limit is counted and fits", () => {
+    expect(measureSerpLine("Hello", 60)).toEqual({ length: 5, state: "fits" });
+  });
+
+  test("a line exactly at the limit still fits", () => {
+    expect(measureSerpLine("x".repeat(60), 60)).toEqual({
+      length: 60,
+      state: "fits",
+    });
+  });
+
+  test("a title past the limit will be cut short", () => {
+    expect(measureSerpLine("x".repeat(61), 60)).toEqual({
+      length: 61,
+      state: "over",
+    });
+  });
+
+  test("an empty line says it is empty", () => {
+    expect(measureSerpLine("", 155)).toEqual({ length: 0, state: "empty" });
+  });
+
+  test("an emoji counts as the one character the author sees", () => {
+    expect(measureSerpLine("Hi 👋", 60).length).toBe(4);
   });
 });
