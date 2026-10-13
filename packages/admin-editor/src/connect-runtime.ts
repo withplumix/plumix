@@ -49,6 +49,8 @@ interface ConnectRuntimeOptions {
   readonly parentWindow: Window;
   /** Messages from any other origin are dropped. */
   readonly origin: string;
+  /** Where the other half's messages arrive; the window by default. */
+  readonly messageTarget?: EventTarget;
   readonly onTree: (tree: readonly BlockNode[]) => void;
   readonly onLoaderData?: (data: SerializedLoaderData) => void;
   readonly onDeps?: (deps: LoadedDeps) => void;
@@ -63,6 +65,7 @@ interface ConnectRuntimeOptions {
 export function connectRuntime({
   parentWindow,
   origin,
+  messageTarget = window,
   onTree,
   onLoaderData,
   onDeps,
@@ -78,7 +81,8 @@ export function connectRuntime({
     post({ type: "canvas:ready" });
   };
 
-  const onMessage = (event: MessageEvent): void => {
+  const onMessage = (event: Event): void => {
+    if (!(event instanceof MessageEvent)) return;
     const message = parseEnvelope(
       EDITOR_BRIDGE_CHANNEL,
       event.data,
@@ -112,7 +116,7 @@ export function connectRuntime({
     }
   };
 
-  window.addEventListener("message", onMessage);
+  messageTarget.addEventListener("message", onMessage);
   announce();
 
   return {
@@ -149,6 +153,6 @@ export function connectRuntime({
       }),
     reportClipboard: (op) => post({ type: "canvas:clipboard", op }),
     reportRequestDeps: (tree) => post({ type: "canvas:requestDeps", tree }),
-    dispose: () => window.removeEventListener("message", onMessage),
+    dispose: () => messageTarget.removeEventListener("message", onMessage),
   };
 }
