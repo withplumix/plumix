@@ -11,6 +11,8 @@ import type {
 } from "./queries.js";
 import {
   BULK_ACTIONS,
+  queueFilters,
+  queueView,
   useBulkModeration,
   useCommentCounts,
   useCommentList,
@@ -97,11 +99,8 @@ export function CommentsShell(): React.ReactElement {
   const [entryFilter, setEntryFilter] = useState("");
   const [picked, setPicked] = useState<ReadonlySet<number>>(new Set());
   const counts = useCommentCounts();
-  const entryId = Number.parseInt(entryFilter, 10);
-  const list = useCommentList(tab, {
-    search: search.trim() || undefined,
-    entryId: Number.isFinite(entryId) ? entryId : undefined,
-  });
+  const list = useCommentList(tab, queueFilters(search, entryFilter));
+  const view = queueView(list);
   const moderation = useModeration();
   const bulk = useBulkModeration();
 
@@ -205,13 +204,13 @@ export function CommentsShell(): React.ReactElement {
         </div>
       ) : null}
 
-      {list.isLoading ? (
+      {view === "loading" ? (
         <div data-testid="comments-loading" />
-      ) : list.isError ? (
+      ) : view === "error" ? (
         <div data-testid="comments-error" className="text-destructive text-sm">
           <Trans id="plugin.comments.error" message="Failed to load comments" />
         </div>
-      ) : (list.data ?? []).length === 0 ? (
+      ) : view === "empty" ? (
         // Tab-agnostic copy on purpose: interpolating the (translated)
         // status word mid-sentence breaks grammatical agreement in
         // several launch locales, so the queue name stays in the tab.

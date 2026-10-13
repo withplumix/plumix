@@ -8,7 +8,7 @@ import type { CommentRefusalCode } from "./refusals.js";
 import type { ResolvedComment } from "./server/load-thread.js";
 import type { CommentFormError, CommentStatus } from "./types.js";
 import { LIST_PATH, SUBMIT_PATH } from "./contract.js";
-import { UNREACHABLE } from "./messages.js";
+import { HELD, POSTED, UNREACHABLE } from "./messages.js";
 import { isRefusalCode, REFUSALS } from "./refusals.js";
 import { COMMENT_STATUSES } from "./types.js";
 
@@ -43,6 +43,13 @@ function refusalErrors(code: string): readonly CommentFormError[] {
 export type CommentAnswer =
   | { readonly ok: true; readonly status: CommentStatus }
   | { readonly ok: false; readonly errors: readonly CommentFormError[] };
+
+/**
+ * A held comment isn't in the thread yet, so "posted" would read as lost.
+ * Spam and trash get the held message: the filing isn't the sender's to learn.
+ */
+export const confirmationFor = (status: CommentStatus): string =>
+  labelSourceText(status === "approved" ? POSTED : HELD);
 
 /**
  * Sends JSON with the CSRF header, so the submission keeps the session a

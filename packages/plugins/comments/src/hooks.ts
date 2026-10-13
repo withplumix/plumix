@@ -1,12 +1,17 @@
 // No `"use client"`: SSR replaces every export of such a module with an island
 // shim, so a hook would return an element. Themes mark their own component.
-import { useCallback, useRef, useState } from "react";
-import { labelSourceText } from "plumix/i18n";
+import { useCallback, useState } from "react";
+import { useSingleFlight } from "plumix/blocks/renderer";
 
 import type { ResolvedComment } from "./server/load-thread.js";
+import type { CommentFormOutcome } from "./thread-state.js";
 import type { CommentFormError, CommentStatus } from "./types.js";
-import { LOAD_FAILED } from "./messages.js";
-import { REFUSALS } from "./refusals.js";
+import {
+  applyCommentPage,
+  formAfterAnswer,
+  openThread,
+  UNANSWERED,
+} from "./thread-state.js";
 import { fetchCommentPage, postComment, submitAction } from "./wire.js";
 
 export type { ResolvedComment } from "./server/load-thread.js";
@@ -60,42 +65,33 @@ export function usePlumixCommentForm(options: {
   readonly basePath?: string;
 }): PlumixCommentFormState {
   const { entryId, basePath } = options;
-  const [errors, setErrors] = useState<readonly CommentFormError[]>([]);
+  const [outcome, setOutcome] = useState<CommentFormOutcome>(UNANSWERED);
   const [submitting, setSubmitting] = useState(false);
-  const [status, setStatus] = useState<CommentStatus | null>(null);
 
-  // A ref, not `submitting` state: a second press in the same tick reads stale
-  // state and would insert two rows. Themes may not disable their control.
-  const inFlight = useRef(false);
-
-  const submit = useCallback(
+  // Guarded, not left to `submitting`: a second press in the same tick reads
+  // stale state and would insert two rows. Themes may not disable their
+  // control.
+  const submit = useSingleFlight(
     async (draft: CommentDraft): Promise<CommentStatus | null> => {
-      if (inFlight.current) return null;
-      inFlight.current = true;
       setSubmitting(true);
-      setErrors([]);
       // Cleared with the errors: a resubmit that fails must not leave
       // last time's status standing beside this time's refusals.
-      setStatus(null);
+      setOutcome(UNANSWERED);
       try {
         const answer = await postComment(submitAction(basePath), {
           entryId,
           ...draft,
         });
-        if (!answer.ok) {
-          setErrors(answer.errors);
-          return null;
-        }
-        setStatus(answer.status);
-        return answer.status;
+        const next = formAfterAnswer(answer);
+        setOutcome(next);
+        return next.status;
       } finally {
-        inFlight.current = false;
         setSubmitting(false);
       }
     },
-    [entryId, basePath],
   );
 
+  const { errors, status } = outcome;
   const errorFor = useCallback(
     (field: string): string | undefined =>
       errors.find((error) => error.field === field)?.message,
@@ -139,42 +135,25 @@ export function usePlumixCommentThread(options: {
   readonly basePath?: string;
 }): PlumixCommentThreadState {
   const { entryId, basePath } = options;
-  const [comments, setComments] = useState<readonly ResolvedComment[]>([]);
-  const [hasMore, setHasMore] = useState(options.cursor !== null);
+  const [thread, setThread] = useState(() => openThread(options.cursor));
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  // A ref because nothing renders it, and a retry after a failure must
-  // ask for the page that failed rather than the one after it.
-  const cursor = useRef(options.cursor);
+
   // The same guard `usePlumixCommentForm.submit` keeps, for the same
   // reason: a second press in one tick would append one page twice.
-  const inFlight = useRef(false);
-
-  const loadMore = useCallback(async (): Promise<void> => {
-    if (!hasMore || inFlight.current) return;
-    inFlight.current = true;
+  const load = useSingleFlight(async (): Promise<void> => {
+    if (!thread.hasMore) return;
     setLoading(true);
     try {
-      const answer = await fetchCommentPage(entryId, cursor.current, basePath);
-      if (!answer.ok) {
-        setError(
-          labelSourceText(
-            answer.reason === "unreachable"
-              ? LOAD_FAILED
-              : REFUSALS[answer.reason].message,
-          ),
-        );
-        return;
-      }
-      cursor.current = answer.nextCursor;
-      setComments((loaded) => [...loaded, ...answer.comments]);
-      setHasMore(answer.hasMore);
-      setError(null);
+      const answer = await fetchCommentPage(entryId, thread.cursor, basePath);
+      setThread((current) => applyCommentPage(current, answer));
     } finally {
-      inFlight.current = false;
       setLoading(false);
     }
-  }, [entryId, basePath, hasMore]);
+  });
+  const loadMore = useCallback(async (): Promise<void> => {
+    await load();
+  }, [load]);
 
+  const { comments, hasMore, error } = thread;
   return { comments, hasMore, loading, error, loadMore };
 }
