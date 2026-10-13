@@ -51,7 +51,7 @@ Run everything from the repo root. The Commands section of [`AGENTS.md`](AGENTS.
 
 ```bash
 pnpm build        # build every package
-pnpm test         # unit and build tests across the workspace
+pnpm test         # unit tests across the workspace
 pnpm typecheck
 pnpm lint
 pnpm format       # check formatting; pnpm format:fix writes it
