@@ -55,12 +55,12 @@ export async function stagePluginCatalogs(
 ): Promise<void> {
   const pluginI18n = manifest.pluginI18n;
   if (!pluginI18n) return;
-  await Promise.all(
+  // Every catalog is checked before any is copied, so a missing one fails the
+  // build without leaving a half-staged admin behind.
+  const copies = await Promise.all(
     plugins.map(async (plugin) => {
       const entry = pluginI18n[plugin.id];
-      // No manifest entry = no `i18n` slot, or every declared locale
-      // was filtered out by site-locale intersection in `buildManifest`.
-      if (!entry || !plugin.i18n) return;
+      if (!entry || !plugin.i18n) return [];
       const { catalogPath } = plugin.i18n;
       const candidate = await resolveCatalogDir(
         plugin.id,
@@ -77,7 +77,7 @@ export async function stagePluginCatalogs(
           resolved: catalogPath,
         });
       }
-      await Promise.all(
+      return Promise.all(
         Object.keys(entry.catalogs).map(async (locale) => {
           const sourceFile = resolve(candidate, `${locale}.mjs`);
           try {
@@ -90,14 +90,21 @@ export async function stagePluginCatalogs(
               resolved: sourceFile,
             });
           }
-          const destFile = resolve(
-            adminDest,
-            pluginCatalogStagedPath(plugin.id, locale),
-          );
-          await mkdir(dirname(destFile), { recursive: true });
-          await copyFile(sourceFile, destFile);
+          return {
+            sourceFile,
+            destFile: resolve(
+              adminDest,
+              pluginCatalogStagedPath(plugin.id, locale),
+            ),
+          };
         }),
       );
+    }),
+  );
+  await Promise.all(
+    copies.flat().map(async ({ sourceFile, destFile }) => {
+      await mkdir(dirname(destFile), { recursive: true });
+      await copyFile(sourceFile, destFile);
     }),
   );
 }

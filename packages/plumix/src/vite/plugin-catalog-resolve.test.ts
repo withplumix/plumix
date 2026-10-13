@@ -254,6 +254,15 @@ describe("stagePluginCatalogs — real FS", () => {
     ).toBe(true);
   });
 
+  test("a missing catalog fails the build before any catalog is staged", async () => {
+    await installPlugin(["en"]);
+
+    await expect(stage(["en", "uk"])).rejects.toThrow(/uk/);
+    expect(
+      existsSync(join(dest, pluginCatalogStagedPath("vendor", "en"))),
+    ).toBe(false);
+  });
+
   test("throws adminAssetNotFound when a declared locale has no compiled catalog", async () => {
     // `buildManifest` has already committed to a URL admin will fetch, so a
     // missing `.mjs` has to fail the build rather than 404 in production.
