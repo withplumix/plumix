@@ -111,6 +111,23 @@ describe("the admin-ui component roster", () => {
     expect(Object.keys(manifest.exports)).toEqual([".", "./button", "./icons"]);
   });
 
+  it("keeps an exports exception out of the exports map and the barrel", async () => {
+    const dir = await syncedPackage();
+    writeFileSync(
+      join(dir, "src/sortable-announcements.ts"),
+      "export const x = 1;\n",
+    );
+    await syncRoster(dir);
+    expect(readFileSync(join(dir, "src/index.ts"), "utf8")).not.toContain(
+      "sortable-announcements",
+    );
+    const manifest = JSON.parse(
+      readFileSync(join(dir, "package.json"), "utf8"),
+    ) as { exports: Record<string, unknown> };
+    expect(Object.keys(manifest.exports)).toEqual([".", "./button", "./icons"]);
+    expect(rosterDrift(dir)).toEqual([]);
+  });
+
   it("is a no-op when re-run on a synced package", async () => {
     const dir = await syncedPackage();
     const before = [
