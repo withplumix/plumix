@@ -1,6 +1,5 @@
 import { EventEmitter } from "node:events";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { request as httpRequest } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -102,14 +101,14 @@ afterAll(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-function siteFor(config: BunConfig) {
+function siteFor(config: BunConfig, plugins = [echo, wire]) {
   return createBunSite({
     config: plumix({
       runtime: bun(config),
       database: bunSqlite({ path: join(dir, "site.sqlite") }),
       auth,
       theme,
-      plugins: [echo, wire],
+      plugins,
     }),
     assetManifest: {},
     entryUrl: pathToFileURL(join(dir, "dist/server/worker.js")).href,
@@ -183,18 +182,13 @@ describe("the site on Bun.serve", () => {
   test("a client disconnecting mid-stream aborts the request's signal", () =>
     served({}, async (origin) => {
       streamSignals.length = 0;
-      await new Promise<void>((resolve, reject) => {
-        const request = httpRequest(`${origin}/stream`, (response) => {
-          response.once("data", () => {
-            request.destroy();
-            resolve();
-          });
-        });
-        request.on("error", (error: NodeJS.ErrnoException) => {
-          if (error.code !== "ECONNRESET") reject(error);
-        });
-        request.end();
+      const client = new AbortController();
+      const response = await fetch(`${origin}/stream`, {
+        signal: client.signal,
       });
+      await response.body?.getReader().read();
+
+      client.abort();
 
       await vi.waitFor(() => expect(streamSignals[0]?.aborted).toBe(true));
     }));
@@ -505,12 +499,9 @@ describe("serveProcess", () => {
     expect(drainedAtExit).toEqual([true]);
   });
 
-  test("at the deadline it cuts what is still running, and exits 1 naming it", async () => {
-    const error = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => undefined);
-    // The abandoned work's warning, which a built site logs as JSON.
-    vi.spyOn(process.stdout, "write").mockReturnValue(true);
+  // A response and a deferred task that never finish, with the drain started
+  // and sleeping toward its deadline.
+  async function drainingStalled() {
     const probe = probes();
     const site = siteWith([probe.plugin]);
     await site.handler.fetch(new Request("http://localhost/defer-stuck"));
@@ -522,9 +513,27 @@ describe("serveProcess", () => {
     await probe.arrived;
     signals.emit("SIGTERM", "SIGTERM");
     await vi.waitFor(() => expect(clock.sleeping()).toBe(1));
+    return { clock, exit, stuck, release: probe.release };
+  }
+
+  test("a millisecond before the deadline it has cut nothing", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { clock, exit, release } = await drainingStalled();
 
     await clock.advanceTo("2026-10-13T10:00:09.999Z");
+
     expect(exit).not.toHaveBeenCalled();
+    release();
+  });
+
+  test("at the deadline it cuts what is still running, and exits 1 naming it", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    // The abandoned work's warning, which a built site logs as JSON.
+    vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    const { clock, exit, stuck, release } = await drainingStalled();
+
     await clock.advanceTo("2026-10-13T10:00:10Z");
 
     await vi.waitFor(() => expect(exit).toHaveBeenCalledWith(1));
@@ -535,7 +544,7 @@ describe("serveProcess", () => {
     expect(error).toHaveBeenCalledWith(
       "plumix: exiting with 1 deferred task(s) abandoned",
     );
-    probe.release();
+    release();
   });
 
   test("takes both signal listeners off at the first signal, so a second one ends the process at once", async () => {
@@ -552,8 +561,18 @@ describe("serveProcess", () => {
 });
 
 describe("the site's cron", () => {
-  test("fires a task declared on * * * * * at the minute boundary", async () => {
-    const fired: string[] = [];
+  const fired: string[] = [];
+  let cleanups: (() => Promise<void>)[] = [];
+
+  afterEach(async () => {
+    fired.length = 0;
+    await Promise.all(cleanups.map((cleanup) => cleanup()));
+    cleanups = [];
+  });
+
+  // A task declared on `* * * * *`, with the cron started at half past the
+  // minute on a clock the test moves.
+  async function tickingEveryMinute() {
     const ticking = definePlugin("ticking", (ctx) => {
       ctx.registerScheduledTask({
         id: "tick",
@@ -561,28 +580,30 @@ describe("the site's cron", () => {
         handler: () => void fired.push("tick"),
       });
     });
-    const site = createBunSite({
-      config: plumix({
-        runtime: bun(),
-        database: bunSqlite({ path: join(dir, "site.sqlite") }),
-        auth,
-        theme,
-        plugins: [ticking],
-      }),
-      assetManifest: {},
-      entryUrl: pathToFileURL(join(dir, "dist/server/worker.js")).href,
-    });
+    const site = siteFor({}, [ticking]);
     const clock = virtualClock("2026-10-13T10:00:30Z");
     const cron = await site.startCron({ lease: false, clock });
+    cleanups.push(async () => {
+      await cron.stop();
+      await site.dispose();
+    });
+    return clock;
+  }
+
+  test("fires a task declared on * * * * * at the minute boundary", async () => {
+    const clock = await tickingEveryMinute();
+
+    await clock.advanceTo("2026-10-13T10:01:00Z");
+
+    expect(fired).toEqual(["tick"]);
+  });
+
+  test("fires nothing a millisecond before the minute boundary", async () => {
+    const clock = await tickingEveryMinute();
 
     await clock.advanceTo("2026-10-13T10:00:59.999Z");
-    const beforeTheBoundary = [...fired];
-    await clock.advanceTo("2026-10-13T10:01:00Z");
-    await cron.stop();
-    await site.dispose();
 
-    expect(beforeTheBoundary).toEqual([]);
-    expect(fired).toEqual(["tick"]);
+    expect(fired).toEqual([]);
   });
 });
 
