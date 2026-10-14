@@ -4,32 +4,21 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "plumix/admin/ui";
 import { useLingui } from "plumix/i18n";
 
-import type { IndexabilityReason } from "../indexable.js";
-import type { SerpOverrides } from "../serp.js";
+import type { SerpLineState, SerpOverrides } from "../serp.js";
 import {
+  measureSerpLine,
   resolveSerp,
   SERP_DESCRIPTION_LIMIT,
   SERP_TITLE_LIMIT,
 } from "../serp.js";
 import { M } from "./messages.js";
 import { fetchSerpPreview } from "./queries.js";
+import { exclusionReason } from "./serp-view.js";
 
-/**
- * Keyed by reason so a new arm fails the build rather than showing a blank
- * line. `default` (offered to search engines) shows no line at all.
- */
-const REASONS: Record<
-  Exclude<IndexabilityReason, "default">,
-  MessageDescriptor
-> = {
-  site_private: M.reasonSitePrivate,
-  entry_override: M.reasonEntryOverride,
-  type_default: M.reasonTypeDefault,
-  taxonomy_default: M.reasonTaxonomyDefault,
-  search_results: M.reasonSearchResults,
-  paginated: M.reasonPaginated,
-  not_found: M.reasonNotFound,
-  view: M.reasonView,
+const STATE_MESSAGES: Record<SerpLineState, MessageDescriptor> = {
+  empty: M.empty,
+  fits: M.withinLimit,
+  over: M.overLimit,
 };
 
 interface PanelProps {
@@ -96,6 +85,7 @@ function LoadedPreview({
   }
 
   const result = resolveSerp(preview, overrides);
+  const excludedBecause = exclusionReason(result.reason);
   return (
     <div className="flex flex-col gap-3" data-testid={testId}>
       <div className="bg-card flex flex-col gap-1 rounded border p-3">
@@ -132,12 +122,12 @@ function LoadedPreview({
         testId={`${testId}-description-length`}
       />
 
-      {result.reason === "default" ? null : (
+      {excludedBecause === null ? null : (
         <p
           className="text-destructive text-sm"
           data-testid={`${testId}-excluded`}
         >
-          {i18n._(M.excluded)} {i18n._(REASONS[result.reason])}
+          {i18n._(M.excluded)} {i18n._(excludedBecause)}
         </p>
       )}
 
@@ -168,10 +158,8 @@ function LengthMeter({
   readonly testId: string;
 }): ReactNode {
   const { i18n } = useLingui();
-  // Characters as the author sees them: a count over code units would report
-  // an emoji or a combining accent as two.
-  const length = [...value].length;
-  const over = length > limit;
+  const { length, state } = measureSerpLine(value, limit);
+  const over = state === "over";
   const filled = Math.min(100, (length / limit) * 100);
   return (
     <div className="flex flex-col gap-1" data-testid={testId}>
@@ -194,13 +182,8 @@ function LengthMeter({
         className="text-muted-foreground text-xs"
         data-testid={`${testId}-state`}
       >
-        {i18n._(lengthState(length, limit))}
+        {i18n._(STATE_MESSAGES[state])}
       </span>
     </div>
   );
-}
-
-function lengthState(length: number, limit: number): MessageDescriptor {
-  if (length === 0) return M.empty;
-  return length > limit ? M.overLimit : M.withinLimit;
 }

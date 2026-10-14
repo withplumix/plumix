@@ -1,37 +1,11 @@
-import type { MessageDescriptor } from "plumix/i18n";
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "plumix/admin/ui";
 import { useLingui } from "plumix/i18n";
 
-import type { OgCardSkip } from "../chain-trace.js";
-import type { CardPreviewOutcome } from "../preview.js";
+import { describeCardPreview } from "./card-preview-view.js";
 import { M } from "./messages.js";
 import { fetchCardPreview } from "./queries.js";
-
-/**
- * Keyed by the outcome and the skip reason themselves, so a value added on the
- * server fails the build here rather than reaching an editor as a blank line.
- */
-const OUTCOMES: Record<CardPreviewOutcome, MessageDescriptor> = {
-  "og-image": M.outcomeOgImage,
-  card: M.outcomeCard,
-  featured: M.outcomeFeatured,
-  "site-default": M.outcomeSiteDefault,
-  supplied: M.outcomeSupplied,
-};
-
-/**
- * Why there is no card. The answer to "why is my card not showing", which is
- * the question the box exists to make answerable.
- */
-const SKIPS: Record<OgCardSkip, MessageDescriptor> = {
-  "page-kind": M.skipPageKind,
-  "no-rule": M.skipNoRule,
-  "renderer-format": M.skipRendererFormat,
-  "not-shareable": M.skipNotShareable,
-  "featured-preferred": M.skipFeaturedPreferred,
-};
 
 interface PanelProps {
   readonly entryId: number | null;
@@ -78,40 +52,38 @@ function LoadedPreview({
     retry: false,
   });
   const preview = query.data;
+  const view = preview ? describeCardPreview(preview) : null;
+  let image: ReactNode = null;
+  if (preview && view?.showImage && preview.src !== null) {
+    image = (
+      <img
+        src={preview.src}
+        alt={i18n._(M.alt)}
+        className="h-full w-full object-contain"
+        data-testid={`${testId}-image`}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col gap-2" data-testid={testId}>
       <div className="bg-muted aspect-og-card flex items-center justify-center overflow-hidden rounded border">
-        {preview ? (
-          // An answer with no image is a chain that resolved to nothing, which
-          // the line below already says — so the frame stays empty rather than
-          // repeating it.
-          preview.src === null ? null : (
-            <img
-              src={preview.src}
-              alt={i18n._(M.alt)}
-              className="h-full w-full object-contain"
-              data-testid={`${testId}-image`}
-            />
-          )
-        ) : (
+        {view === null ? (
           <span
             className="text-muted-foreground px-3 text-center text-xs"
             data-testid={`${testId}-status`}
           >
             {i18n._(query.isPending ? M.loading : M.failed)}
           </span>
+        ) : (
+          image
         )}
       </div>
-      {preview ? (
+      {view ? (
         <div className="text-muted-foreground flex flex-col gap-1 text-sm">
-          <p data-testid={`${testId}-outcome`}>
-            {i18n._(OUTCOMES[preview.outcome])}
-          </p>
-          {preview.skipped === null ? null : (
-            <p data-testid={`${testId}-skipped`}>
-              {i18n._(SKIPS[preview.skipped])}
-            </p>
+          <p data-testid={`${testId}-outcome`}>{i18n._(view.outcome)}</p>
+          {view.skipped === null ? null : (
+            <p data-testid={`${testId}-skipped`}>{i18n._(view.skipped)}</p>
           )}
         </div>
       ) : null}

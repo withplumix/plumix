@@ -352,6 +352,89 @@ test("entry and term tabs add linked items picked from the keyboard, and an over
   await expect(reloaded.last()).toHaveAttribute("data-state", "ok");
 });
 
+test("deleting a menu asks first, and it is gone after a reload", async ({
+  page,
+}) => {
+  const db = await openPlaygroundDb({
+    cwd: resolve(process.cwd(), "playground"),
+  });
+  await factoriesFor(db).term.create({
+    taxonomy: "menu",
+    slug: "doomed",
+    name: "Doomed",
+  });
+
+  await page.goto("pages/menus");
+  await page.getByTestId("menus-selector-option-doomed").click();
+  await expect(page.getByTestId("menu-item-editor")).toBeVisible();
+
+  await page.getByTestId("menu-delete-button").click();
+  await expect(page.getByTestId("menu-delete-dialog")).toBeVisible();
+  const deleted = page.waitForResponse(
+    (r) => r.url().endsWith("/menu/delete") && r.status() === 200,
+  );
+  await page.getByTestId("menu-delete-confirm").click();
+  await deleted;
+
+  await page.reload();
+  await expect(page.getByTestId("menus-shell")).toBeVisible();
+  await expect(page.getByTestId("menus-selector-option-doomed")).toHaveCount(0);
+});
+
+test("adding the same result twice announces each add", async ({ page }) => {
+  const db = await openPlaygroundDb({
+    cwd: resolve(process.cwd(), "playground"),
+  });
+  const factories = factoriesFor(db);
+  const author = await factories.admin.create({
+    email: "announce-author@example.test",
+    slug: "announce-author",
+  });
+  await factories.entry.create({
+    type: "post",
+    title: "Team page",
+    slug: "team-page",
+    status: "published",
+    authorId: author.id,
+  });
+  await factories.term.create({
+    taxonomy: "menu",
+    slug: "announced",
+    name: "Announced",
+  });
+
+  await page.goto("pages/menus");
+  await page.getByTestId("menus-selector-option-announced").click();
+  await page.getByTestId("menu-picker-search-input").fill("Team");
+  const option = page
+    .getByTestId("menu-picker-linked-panel")
+    .locator("[data-testid^='menu-picker-option-']");
+  await expect(option).toHaveCount(1);
+
+  // A screen reader speaks a live region when its content is replaced, so an
+  // add has to put new text in the region even when it repeats.
+  const region = page.getByTestId("menu-picker-announcement");
+  await expect(region).toHaveAttribute("aria-live", "polite");
+  const announced = await region.evaluateHandle((node) => {
+    const seen: (string | null)[] = [];
+    new MutationObserver((records) => {
+      seen.push(
+        ...records.flatMap((record) =>
+          Array.from(record.addedNodes, (added) => added.textContent),
+        ),
+      );
+    }).observe(node, { childList: true, subtree: true });
+    return seen;
+  });
+
+  await option.click();
+  await option.click();
+
+  await expect
+    .poll(() => announced.evaluate((seen) => [...seen]))
+    .toEqual(["Added Team page to the menu", "Added Team page to the menu"]);
+});
+
 /**
  * Types into the open tab's search, waits for the only match, then picks it
  * with the keyboard alone.

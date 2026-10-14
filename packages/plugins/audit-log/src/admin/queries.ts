@@ -23,16 +23,17 @@ export function useAuditLogList(
 }> {
   return useInfiniteQuery({
     queryKey: [...AUDIT_LOG_LIST_KEY, filter],
-    queryFn: ({ pageParam }) => {
-      const input: ListInput =
-        pageParam === undefined
-          ? { ...filter }
-          : { ...filter, cursor: pageParam };
-      return rpc.list(input);
-    },
+    queryFn: ({ pageParam }) => rpc.list(auditLogPageInput(filter, pageParam)),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   });
+}
+
+export function auditLogPageInput(
+  filter: AuditLogFilter,
+  cursor: string | undefined,
+): ListInput {
+  return cursor === undefined ? { ...filter } : { ...filter, cursor };
 }
 
 export type DateRangePreset = "today" | "last7" | "last30" | "custom";

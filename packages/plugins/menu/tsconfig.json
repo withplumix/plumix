@@ -3,7 +3,7 @@
   "compilerOptions": {
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
-    "types": ["node", "@testing-library/jest-dom"]
+    "types": ["node"]
   },
-  "include": ["src", "e2e", "test"]
+  "include": ["src", "e2e"]
 }

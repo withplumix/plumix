@@ -4,7 +4,7 @@ import { expect, test } from "plumix/test/playwright";
 
 const fixtures = JSON.parse(
   readFileSync(resolve(process.cwd(), "e2e-fixtures.json"), "utf8"),
-) as { readonly draftId: number };
+) as { readonly draftId: number; readonly retitledId: number };
 
 const FIELD = "meta-box-field-og_card_preview-input";
 
@@ -26,4 +26,24 @@ test("the editor previews the draft's card and names the chain link", async ({
   await expect(page.getByTestId(`${FIELD}-outcome`)).toContainText(
     "card generated from this entry",
   );
+});
+
+test("refresh renders the card again for the entry as it now stands", async ({
+  page,
+}) => {
+  await page.goto(`entries/posts/${String(fixtures.retitledId)}/edit`);
+  await page.getByTestId("plumix-tab-page").click();
+  const image = page.getByTestId(`${FIELD}-image`);
+  await expect(image).toBeVisible({ timeout: 30_000 });
+  const before = await image.getAttribute("src");
+
+  const updated = page.waitForResponse(
+    (r) => r.url().endsWith("/entry/update") && r.status() === 200,
+  );
+  await page.getByTestId("plumix-editor-title-input").fill("After the retitle");
+  await updated;
+  await page.getByTestId(`${FIELD}-refresh`).click();
+
+  await expect(image).not.toHaveAttribute("src", before ?? "");
+  await expect(image).toHaveAttribute("src", /^data:image\/png;base64,/);
 });

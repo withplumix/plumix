@@ -30,9 +30,18 @@ export default async function globalSetup(): Promise<void> {
     authorId: author.id,
   });
 
+  // Retitled mid-test, so it stays apart from the draft the other spec reads.
+  const retitled = await factories.entry.create({
+    type: "post",
+    title: "Before the retitle",
+    slug: "before-the-retitle",
+    status: "draft",
+    authorId: author.id,
+  });
+
   await writeFile(
     resolve(process.cwd(), "e2e-fixtures.json"),
-    JSON.stringify({ draftId: draft.id }),
+    JSON.stringify({ draftId: draft.id, retitledId: retitled.id }),
     "utf8",
   );
 }
