@@ -579,18 +579,70 @@ async function replaceTables(
   };
 }
 
+interface StoredCopy {
+  readonly key: string;
+  readonly bytes: ArrayBuffer;
+  readonly contentType?: string;
+}
+
+/** Puts every object back as it was, and removes any the import added. */
+type RestoreObjects = () => Promise<void>;
+
+async function copyObjects(
+  storage: ConnectedObjectStorage,
+): Promise<StoredCopy[]> {
+  const copies: StoredCopy[] = [];
+  for (const key of await storedKeys(storage)) {
+    const found = await storage.get(key);
+    if (found === null) continue;
+    copies.push({
+      key,
+      bytes: await found.arrayBuffer(),
+      ...(found.contentType && { contentType: found.contentType }),
+    });
+  }
+  return copies;
+}
+
+async function restoreObjects(
+  storage: ConnectedObjectStorage,
+  copies: readonly StoredCopy[],
+): Promise<void> {
+  const kept = new Set(copies.map((copy) => copy.key));
+  for (const key of await storedKeys(storage)) {
+    if (!kept.has(key)) await storage.delete(key);
+  }
+  for (const copy of copies) {
+    await storage.put(copy.key, copy.bytes, {
+      ...(copy.contentType && { contentType: copy.contentType }),
+    });
+  }
+}
+
+/**
+ * Copies the bucket first, so a write that fails, or a database commit after
+ * it, restores the objects and the import stays all-or-nothing.
+ */
 async function replaceObjects(
   storage: ConnectedObjectStorage,
   from: DumpReader,
-): Promise<void> {
-  const stale = new Set(await storedKeys(storage));
-  for await (const object of from.objects()) {
-    await storage.put(object.key, object.body, {
-      ...(object.contentType && { contentType: object.contentType }),
-    });
-    stale.delete(object.key);
+): Promise<RestoreObjects> {
+  const copies = await copyObjects(storage);
+  const restore = (): Promise<void> => restoreObjects(storage, copies);
+  try {
+    const stale = new Set(copies.map((copy) => copy.key));
+    for await (const object of from.objects()) {
+      await storage.put(object.key, object.body, {
+        ...(object.contentType && { contentType: object.contentType }),
+      });
+      stale.delete(object.key);
+    }
+    for (const key of stale) await storage.delete(key);
+  } catch (error) {
+    await restore();
+    throw error;
   }
-  for (const key of stale) await storage.delete(key);
+  return restore;
 }
 
 function requireStorage(site: MemorySyncSite): ConnectedObjectStorage {
@@ -648,13 +700,22 @@ function openEnd(site: MemorySyncSite, options: OpenSyncEndOptions): SyncEnd {
       let report: SyncImportReport;
       try {
         report = await replaceTables(transaction, from, scopes, new Date());
-        if (dryRun) await transaction.rollback();
-        else await transaction.commit();
+        if (dryRun) {
+          await transaction.rollback();
+          return report;
+        }
+        const restore =
+          storage === undefined
+            ? undefined
+            : await replaceObjects(storage, from);
+        try {
+          await transaction.commit();
+        } catch (error) {
+          await restore?.();
+          throw error;
+        }
       } finally {
         transaction.close();
-      }
-      if (!dryRun && storage !== undefined) {
-        await replaceObjects(storage, from);
       }
       return report;
     },
