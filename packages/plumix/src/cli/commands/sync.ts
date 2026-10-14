@@ -231,6 +231,14 @@ function runtimeSyncOf(ctx: CommandContext): RuntimeSync {
   return ctx.runtimeSync;
 }
 
+/** Closes every end even when one close fails, then reports the first failure. */
+async function closeAll(ends: readonly SyncEnd[]): Promise<void> {
+  const closed = await Promise.allSettled(ends.map((end) => end.close()));
+  for (const result of closed) {
+    if (result.status === "rejected") throw result.reason;
+  }
+}
+
 export const syncCommand: CommandDefinition = {
   describe: "Replace the local or the deployed site's data with the other's",
   async run(ctx) {
@@ -283,7 +291,7 @@ export const syncCommand: CommandDefinition = {
         basePath: config.basePath,
       });
     } finally {
-      for (const end of ends) await end.close();
+      await closeAll(ends);
     }
   },
 };

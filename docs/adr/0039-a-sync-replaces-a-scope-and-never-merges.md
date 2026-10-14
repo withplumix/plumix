@@ -26,9 +26,11 @@ as a `RuntimeAdapter` member. This record supersedes it on those points.
   type, so menu items, revisions and media rows too), `entry_term` and
   `settings`. `users` is `users` and `credentials`. `media` is every object in
   the `storage` slot, with the target's extra objects deleted. `plugin:<id>` is
-  the tables a plugin's `schema` declares, ADR 0027's owner. No scope splits a
-  table with a `WHERE`: a split leaves rows on the target that reference rows
-  the replace removed.
+  the tables a plugin's `schema` declares, ADR 0027's owner. No scope a
+  user can select splits a table with a `WHERE`: a split leaves rows on the target
+  that reference rows the replace removed. The one `WHERE` is the CLI's own
+  selection of the local admins on a pull of `users`, which only reads the local
+  end to build the dump.
 - **Some scopes travel only together.** `users` needs `content`, because
   entries restrict the deletion of their authors. A plugin scope whose tables
   reference `content`'s needs `content`. The CLI refuses the pair before it

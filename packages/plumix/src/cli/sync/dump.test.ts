@@ -181,6 +181,16 @@ describe("a sync dump", () => {
     });
   });
 
+  test("a corrupt object index is invalid, naming it", async () => {
+    await writeSample();
+    writeFileSync(join(dir, "objects/index.ndjson"), "{ not json\n");
+
+    await expect(readDump(dir)).rejects.toMatchObject({
+      code: "sync_dump_invalid",
+      message: expect.stringContaining("objects/index.ndjson") as unknown,
+    });
+  });
+
   test("a table name that would leave the dump is invalid", async () => {
     await writeSample();
     rewriteManifest((manifest) => {

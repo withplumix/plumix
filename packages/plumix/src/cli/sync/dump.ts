@@ -246,22 +246,34 @@ async function checkCount(
   }
 }
 
-function parseRow(file: string, line: string): SyncRow {
+function parseLine<S extends v.GenericSchema>(
+  file: string,
+  line: string,
+  schema: S,
+  mismatch: (
+    issues: [v.BaseIssue<unknown>, ...v.BaseIssue<unknown>[]],
+  ) => string,
+): v.InferOutput<S> {
   let parsed: unknown;
   try {
     parsed = JSON.parse(line);
   } catch (cause) {
     throw invalid(file, cause instanceof Error ? cause.message : String(cause));
   }
-  const result = v.safeParse(DumpRowSchema, parsed);
-  if (!result.success) {
-    throw invalid(file, "a line is not a row of SQLite values");
-  }
+  const result = v.safeParse(schema, parsed);
+  if (!result.success) throw invalid(file, mismatch(result.issues));
+  return result.output;
+}
+
+function parseRow(file: string, line: string): SyncRow {
+  const row = parseLine(
+    file,
+    line,
+    DumpRowSchema,
+    () => "a line is not a row of SQLite values",
+  );
   return Object.fromEntries(
-    Object.entries(result.output).map(([column, value]) => [
-      column,
-      decodeValue(value),
-    ]),
+    Object.entries(row).map(([column, value]) => [column, decodeValue(value)]),
   );
 }
 
@@ -281,17 +293,19 @@ async function objectIndex(
     throw invalid(OBJECT_INDEX_FILE, "the file is missing");
   const entries: ObjectEntry[] = [];
   for await (const line of readLines(path)) {
-    const result = v.safeParse(ObjectEntrySchema, JSON.parse(line));
-    if (!result.success) {
-      throw invalid(OBJECT_INDEX_FILE, v.summarize(result.issues));
-    }
-    const file = `${OBJECTS_DIR}/${result.output.file}`;
+    const entry = parseLine(
+      OBJECT_INDEX_FILE,
+      line,
+      ObjectEntrySchema,
+      (issues) => v.summarize(issues),
+    );
+    const file = `${OBJECTS_DIR}/${entry.file}`;
     const objectPath = join(dir, file);
     if (!existsSync(objectPath)) throw invalid(file, "the file is missing");
-    if (statSync(objectPath).size !== result.output.size) {
+    if (statSync(objectPath).size !== entry.size) {
       throw invalid(file, "its size disagrees with the index");
     }
-    entries.push(result.output);
+    entries.push(entry);
   }
   if (entries.length !== expected) {
     throw invalid(

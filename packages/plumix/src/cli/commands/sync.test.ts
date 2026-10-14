@@ -210,6 +210,30 @@ describe("plumix sync, before anything opens", () => {
   });
 });
 
+describe("plumix sync, closing", () => {
+  test("a close that throws does not leave the other end open", async () => {
+    const ends = recording((await memorySyncEnds()).sync);
+    const sync: RuntimeSync = {
+      async open(options) {
+        const end = await ends.sync.open(options);
+        if (options.target !== "local") return end;
+        return {
+          ...end,
+          close: () => {
+            void end.close();
+            return Promise.reject(new Error("local close failed"));
+          },
+        };
+      },
+    };
+
+    await expect(
+      syncCommand.run(syncCtx(["pull", "--dry-run", "--url", REMOTE], sync)),
+    ).rejects.toThrow("local close failed");
+    expect(ends.calls).toContain("remote.close");
+  });
+});
+
 describe("plumix sync", () => {
   test("a head mismatch fails before the export", async () => {
     const ends = await seededEnds();
