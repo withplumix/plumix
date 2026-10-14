@@ -12,6 +12,7 @@ import {
   mockManifest,
   mockRpc,
   mockRpcWithCapture,
+  rpcOkBody,
   withCapabilities,
 } from "./support/rpc-mock.js";
 
@@ -140,6 +141,95 @@ test.describe("plain-form route for non-editor entry types", () => {
     };
     expect(lastInput.id).toBe(1);
     expect(lastInput.status).toBe("draft");
+  });
+
+  test("an edit autosaves through entry.update without pressing Save", async ({
+    page,
+  }) => {
+    const captures = await mockRpcWithCapture(page, {
+      captureSuffix: "/entry/update",
+      captureResponse: { ...authorEntry(1), updatedAt: T0 },
+      handlers: {
+        "/auth/session": AUTHED_AUTHOR_EDITOR,
+        "/entry/get": authorEntry(1),
+      },
+    });
+    await page.goto("entries/authors/1/edit");
+
+    await page.getByTestId("plain-form-title-input").fill("Jane Q. Doe");
+
+    await expect
+      .poll(() => captures)
+      .toEqual([expect.objectContaining({ title: "Jane Q. Doe" })]);
+  });
+
+  test("a rejected save pins the server's field error on its input, and the next save clears it", async ({
+    page,
+  }) => {
+    await mockManifest(page, {
+      ...MANIFEST_WITH_PLAIN_FORM_TYPE,
+      entryMetaBoxes: [
+        {
+          id: "bio",
+          label: "Biography",
+          entryTypes: ["author"],
+          fields: [
+            {
+              key: "headline",
+              label: "Headline",
+              type: "string",
+              inputType: "text",
+              prepend: "Title:",
+            },
+          ],
+        },
+      ],
+    });
+    await mockRpc(page, {
+      "/auth/session": AUTHED_AUTHOR_EDITOR,
+      "/entry/get": authorEntry(1),
+    });
+    let saves = 0;
+    await page.route("**/_plumix/rpc/entry/update", (route) => {
+      saves += 1;
+      if (saves > 1) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: rpcOkBody(authorEntry(1)),
+        });
+      }
+      return route.fulfill({
+        status: 409,
+        contentType: "application/json",
+        body: JSON.stringify({
+          json: {
+            defined: true,
+            code: "CONFLICT",
+            status: 409,
+            message: "Resource conflict",
+            data: {
+              reason: "meta_invalid_value",
+              key: "headline",
+              errors: [{ path: "headline", message: "Headline is taken" }],
+            },
+          },
+          meta: [],
+        }),
+      });
+    });
+    await page.goto("entries/authors/1/edit");
+    const input = page.getByTestId("meta-box-field-headline-input");
+    const error = page.getByTestId("meta-box-field-headline-error");
+
+    await page.getByTestId("plain-form-save-button").click();
+
+    await expect(error).toHaveText("Headline is taken");
+    await expect(input).toHaveAttribute("aria-invalid", "true");
+    // An autosave, not Save: submitting the form would clear the pin by itself.
+    await page.getByTestId("plain-form-title-input").fill("Jane Q. Doe");
+    await expect(error).toHaveCount(0);
+    await expect(input).not.toHaveAttribute("aria-invalid", "true");
   });
 
   // A field default is only the starting value of a new entry (ADR 0026): an

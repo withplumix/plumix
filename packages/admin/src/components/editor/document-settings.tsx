@@ -1,8 +1,13 @@
-import type { MultiSelectOption } from "@/components/form/multi-select.js";
+import type {
+  DocumentAccessPicker,
+  DocumentTaxonomyPicker,
+  DocumentTemplatePicker,
+} from "@/components/editor/document-pickers.js";
 import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement } from "react";
 import { useEffect, useRef } from "react";
+import { visibleDocumentPickers } from "@/components/editor/document-pickers.js";
 import { MultiSelect } from "@/components/form/multi-select.js";
 import { MetaBoxField } from "@/components/meta-box/meta-box-field.js";
 import { useVisibleFields } from "@/components/meta-box/use-visible-fields.js";
@@ -15,11 +20,7 @@ import { defineMessage } from "@lingui/core/macro";
 import { useForm, useWatch } from "react-hook-form";
 
 import type { ResolvedMeta } from "@plumix/core";
-import type {
-  AccessPolicyChoice,
-  EntryMetaBoxManifestEntry,
-  NamedTemplateChoice,
-} from "@plumix/core/manifest";
+import type { EntryMetaBoxManifestEntry } from "@plumix/core/manifest";
 import { Field, FieldLabel } from "@plumix/admin-ui/field";
 import { Form } from "@plumix/admin-ui/form";
 import { Input } from "@plumix/admin-ui/input";
@@ -95,23 +96,9 @@ interface DocumentSettingsPanelProps {
     readonly options: readonly DocumentParentOption[];
     readonly onChange: (next: number | null) => void;
   };
-  readonly template?: {
-    readonly value: string | null;
-    readonly options: readonly NamedTemplateChoice[];
-    readonly onChange: (next: string | null) => void;
-  };
-  readonly access?: {
-    readonly value: string | null;
-    readonly options: readonly AccessPolicyChoice[];
-    readonly onChange: (next: string | null) => void;
-  };
-  readonly taxonomies?: readonly {
-    readonly name: string;
-    readonly label: string;
-    readonly options: readonly MultiSelectOption[];
-    readonly value: readonly string[];
-    readonly onChange: (next: readonly string[]) => void;
-  }[];
+  readonly template?: DocumentTemplatePicker;
+  readonly access?: DocumentAccessPicker;
+  readonly taxonomies?: readonly DocumentTaxonomyPicker[];
   readonly metaBoxes?: {
     readonly boxes: readonly EntryMetaBoxManifestEntry[];
     readonly initialMeta: ResolvedMeta;
@@ -197,6 +184,11 @@ export function DocumentSettingsPanel({
   metaBoxes,
 }: DocumentSettingsPanelProps): ReactElement {
   const renderLabel = useLabel();
+  const {
+    template: templatePicker,
+    access: accessPicker,
+    taxonomies: taxonomyPickers,
+  } = visibleDocumentPickers({ template, access, taxonomies });
   return (
     <div
       className="flex flex-col gap-4 px-4 py-4"
@@ -269,15 +261,17 @@ export function DocumentSettingsPanel({
           </Select>
         </Field>
       ) : null}
-      {template && template.options.length > 0 ? (
+      {templatePicker ? (
         <Field className="gap-1.5">
           <FieldLabel htmlFor="entry-template-select">
             {renderLabel(M.template)}
           </FieldLabel>
           <Select
-            value={template.value ?? THEME_DEFAULT_VALUE}
+            value={templatePicker.value ?? THEME_DEFAULT_VALUE}
             onValueChange={(next) => {
-              template.onChange(next === THEME_DEFAULT_VALUE ? null : next);
+              templatePicker.onChange(
+                next === THEME_DEFAULT_VALUE ? null : next,
+              );
             }}
           >
             <SelectTrigger
@@ -294,7 +288,7 @@ export function DocumentSettingsPanel({
               >
                 {renderLabel(M.themeDefault)}
               </SelectItem>
-              {template.options.map((option) => (
+              {templatePicker.options.map((option) => (
                 <SelectItem
                   key={option.id}
                   value={option.id}
@@ -307,15 +301,17 @@ export function DocumentSettingsPanel({
           </Select>
         </Field>
       ) : null}
-      {access && access.options.length > 0 ? (
+      {accessPicker ? (
         <Field className="gap-1.5">
           <FieldLabel htmlFor="entry-visibility-select">
             {renderLabel(M.visibility)}
           </FieldLabel>
           <Select
-            value={access.value ?? ACCESS_DEFAULT_VALUE}
+            value={accessPicker.value ?? ACCESS_DEFAULT_VALUE}
             onValueChange={(next) => {
-              access.onChange(next === ACCESS_DEFAULT_VALUE ? null : next);
+              accessPicker.onChange(
+                next === ACCESS_DEFAULT_VALUE ? null : next,
+              );
             }}
           >
             <SelectTrigger
@@ -332,7 +328,7 @@ export function DocumentSettingsPanel({
               >
                 {renderLabel(M.accessDefault)}
               </SelectItem>
-              {access.options.map((option) => (
+              {accessPicker.options.map((option) => (
                 <SelectItem
                   key={option.key}
                   value={option.key}
@@ -345,7 +341,7 @@ export function DocumentSettingsPanel({
           </Select>
         </Field>
       ) : null}
-      {taxonomies?.map((taxonomy) => (
+      {taxonomyPickers.map((taxonomy) => (
         <Field key={taxonomy.name} className="gap-1.5">
           <FieldLabel htmlFor={`entry-taxonomy-${taxonomy.name}`}>
             {taxonomy.label}

@@ -31,6 +31,7 @@ import {
   TabsTrigger,
 } from "@plumix/admin-ui/tabs";
 
+import { revisionMessageInput } from "./revision-message.js";
 import { RevisionDiffDialog } from "./RevisionDiffDialog.js";
 
 const M = {
@@ -180,13 +181,7 @@ export function RevisionsSheet({
   }
 
   return (
-    <Sheet
-      open={open}
-      onOpenChange={(o) => {
-        onOpenChange(o);
-        if (!o) setDiffModalRevisionId(null);
-      }}
-    >
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetTrigger asChild>
         {triggerVariant === "icon" ? (
           <Button
@@ -415,13 +410,9 @@ function RevisionRow({
     setEditing(true);
   }
   async function save(): Promise<void> {
-    const next = draft.trim();
     setSaving(true);
     try {
-      await onSaveMessage({
-        revisionId: revision.id,
-        message: next.length === 0 ? null : next,
-      });
+      await onSaveMessage(revisionMessageInput(revision.id, draft));
       setEditing(false);
     } finally {
       setSaving(false);
