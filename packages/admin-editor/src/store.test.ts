@@ -47,6 +47,13 @@ describe("editor store", () => {
     expect(store.getState().starterOpen).toBe(true);
   });
 
+  test("a seeded selection selects every id, and the last one is active", () => {
+    const store = createEditorStore(treeBlocks, { selection: ["a", "b"] });
+
+    expect([...store.getState().selectedIds]).toEqual(["a", "b"]);
+    expect(store.getState().activeId).toBe("b");
+  });
+
   test("additive select extends the set, keeping the latest as active", () => {
     const store = createEditorStore(treeBlocks);
 

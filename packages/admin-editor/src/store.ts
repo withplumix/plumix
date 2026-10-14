@@ -435,12 +435,15 @@ export function createEditorStore(
   blocks: BlockSpecLookup,
   initial?: Partial<
     Pick<EditorState, "tree" | "device" | "breakpoints" | "starterOpen">
-  >,
+  > & {
+    /** Seeds the selection; the last id is the active block. */
+    readonly selection?: readonly string[];
+  },
 ): EditorStoreApi {
   return createStore<InternalStore>((set) => ({
     tree: initial?.tree ?? [],
-    selectedIds: new Set<string>(),
-    activeId: null,
+    selectedIds: new Set<string>(initial?.selection),
+    activeId: initial?.selection?.at(-1) ?? null,
     hoverId: null,
     device: initial?.device ?? "desktop",
     xray: false,

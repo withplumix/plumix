@@ -35,6 +35,7 @@ export function EditorProvider({
   zoom,
   breakpoints,
   starterOpen,
+  selection,
   children,
 }: {
   /** The block specs, which decide each node's slots for every tree edit. */
@@ -46,6 +47,8 @@ export function EditorProvider({
   /** Seeds the starter picker open (once) — the host sets this for a blank
    *  entry that has eligible starters. */
   readonly starterOpen?: boolean;
+  /** Seeds the selection (once); the last id is the active block. */
+  readonly selection?: readonly string[];
   readonly children: ReactNode;
 }): ReactElement {
   const [store] = useState<EditorStoreApi>(() =>
@@ -54,6 +57,7 @@ export function EditorProvider({
       device,
       breakpoints,
       starterOpen,
+      selection,
     }),
   );
   const [camera] = useState<CameraStoreApi>(() => createCameraStore({ zoom }));
