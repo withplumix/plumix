@@ -181,13 +181,7 @@ export function RevisionsSheet({
   }
 
   return (
-    <Sheet
-      open={open}
-      onOpenChange={(o) => {
-        onOpenChange(o);
-        if (!o) setDiffModalRevisionId(null);
-      }}
-    >
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetTrigger asChild>
         {triggerVariant === "icon" ? (
           <Button
