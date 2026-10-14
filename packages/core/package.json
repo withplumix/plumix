@@ -178,7 +178,7 @@
   "dependencies": {
     "@libsql/client": "catalog:",
     "@lingui/core": "catalog:lingui",
-    "@modelcontextprotocol/sdk": "^1.32.0",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "@orpc/client": "catalog:orpc",
     "@orpc/openapi": "catalog:orpc",
     "@orpc/server": "catalog:orpc",
@@ -196,7 +196,7 @@
     "drizzle-valibot": "catalog:drizzle",
     "fishery": "catalog:",
     "highlight.js": "^11.12.0",
-    "sanitize-html": "^2.17.7",
+    "sanitize-html": "^2.18.0",
     "valibot": "catalog:"
   },
   "peerDependencies": {
@@ -231,7 +231,7 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:react",
     "@types/react-dom": "catalog:react",
-    "@types/sanitize-html": "^2.16.1",
+    "@types/sanitize-html": "^2.16.2",
     "@vitest/browser-playwright": "catalog:vitest",
     "@vitest/coverage-v8": "catalog:vitest",
     "esbuild": "catalog:",
