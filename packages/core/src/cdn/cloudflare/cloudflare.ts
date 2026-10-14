@@ -134,10 +134,13 @@ function originStore(
  */
 const PURGE_TAG_LIMIT = 100;
 
-async function purgeGroup(
+type PurgeRequest =
+  { readonly tags: readonly string[] } | { readonly purge_everything: true };
+
+async function purgeCache(
   zoneId: string,
   purgeToken: string,
-  tags: readonly string[],
+  purge: PurgeRequest,
 ): Promise<void> {
   const response = await fetch(
     `https://api.cloudflare.com/client/v4/zones/${zoneId}/purge_cache`,
@@ -147,7 +150,7 @@ async function purgeGroup(
         authorization: `Bearer ${purgeToken}`,
         "content-type": "application/json",
       },
-      body: JSON.stringify({ tags }),
+      body: JSON.stringify(purge),
     },
   );
   if (!response.ok) {
@@ -172,7 +175,7 @@ async function purgeByTag(
   // One refused group must not cut the others short, so every call settles
   // before the first refusal is rethrown.
   const results = await Promise.allSettled(
-    groups.map((group) => purgeGroup(zoneId, purgeToken, group)),
+    groups.map((group) => purgeCache(zoneId, purgeToken, { tags: group })),
   );
   const refused = results.find((result) => result.status === "rejected");
   if (refused !== undefined) throw refused.reason;
@@ -203,6 +206,8 @@ export function cloudflare(config: CloudflareCdnConfig): CdnProvider {
       const connected: ConnectedCdn = {
         decorate: (response, tags) => decorate(response, config, tags),
         purgeTags: (tags) => purgeByTag(zoneId, purgeToken, tags),
+        purgeAll: () =>
+          purgeCache(zoneId, purgeToken, { purge_everything: true }),
       };
       if (cache === null) return connected;
       return { ...connected, store: originStore(cache, config) };

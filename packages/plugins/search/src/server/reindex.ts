@@ -1,4 +1,4 @@
-import type { AppContext } from "plumix/plugin";
+import type { AppContext, PluginSetupContext } from "plumix/plugin";
 import { and, asc, desc, eq, gt, inArray, sql } from "plumix/db";
 import { entries, entryChanges, terms } from "plumix/schema";
 
@@ -53,6 +53,17 @@ export async function startReindex(ctx: AppContext): Promise<SearchReindexRun> {
     .returning();
   if (run === undefined) throw SearchError.reindexInsertReturnedNoRow();
   return run;
+}
+
+/**
+ * A sync replaced the entries and terms wholesale, under ids the projection
+ * may hold for other rows, so the whole index is rebuilt.
+ */
+export function registerSyncReindex(ctx: PluginSetupContext): void {
+  ctx.addAction("sync:after", async (event, appCtx) => {
+    if (!event.scopes.includes("content")) return;
+    await startReindex(appCtx);
+  });
 }
 
 /**

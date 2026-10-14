@@ -97,3 +97,4 @@ export const generatePasskeyKeyPair: typeof node.generatePasskeyKeyPair =
   nodeOnly("generatePasskeyKeyPair");
 export const randomCredentialId: typeof node.randomCredentialId =
   nodeOnly("randomCredentialId");
+export const memorySync: typeof node.memorySync = nodeOnly("memorySync");

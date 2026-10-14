@@ -1,6 +1,12 @@
 // Separate from `./index.ts`, which pulls in jiti and valibot. Named exports,
 // not `export *`, so this stays the documented symbols.
 export { CliError, isCliError } from "@plumix/core/cli";
+export {
+  assertSameHeads,
+  readSyncHeads,
+  settleSync,
+  SyncError,
+} from "@plumix/core/cli";
 export { spawnCapturingStderr, spawnInherit } from "@plumix/core/cli";
 export { migrateBeforeDeploy } from "./commands/migrate.js";
 export { applyBuiltMigrations, copyOwnerHistories } from "./migrate/built.js";
@@ -13,12 +19,35 @@ export type {
   CommandDefinition,
   CommandRegistry,
   DiagnosticFinding,
+  DumpManifest,
+  DumpReader,
+  DumpTableCount,
+  DumpWriter,
   MigrationDatabase,
   MigrationFolder,
   MigrationLocation,
+  MigrationOwner,
   MigrationRow,
   MigrationStatement,
   OpenMigrationDatabaseOptions,
+  OpenSyncEndOptions,
   RuntimeDiagnose,
   RuntimeMigrations,
+  RuntimeSync,
+  SyncAfterEvent,
+  SyncDependentReport,
+  SyncDirection,
+  SyncEnd,
+  SyncImportReport,
+  SyncObject,
+  SyncRow,
+  SyncScope,
+  SyncScopeTable,
+  SyncSettleFailure,
+  SyncSettleReport,
+  SyncSnapshot,
+  SyncTableReport,
+  SyncTarget,
+  SyncValue,
 } from "@plumix/core";
+export type { SyncHeadsAt } from "@plumix/core/cli";

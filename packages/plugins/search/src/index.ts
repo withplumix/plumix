@@ -12,6 +12,7 @@ import {
   handleReindexStart,
   handleReindexStatus,
 } from "./server/reindex-route.js";
+import { registerSyncReindex } from "./server/reindex.js";
 
 export type { SearchArchiveData } from "./archive.js";
 export type { SearchResult } from "./server/query.js";
@@ -42,6 +43,7 @@ export function search(options: SearchConfig = {}): PluginDescriptor {
     schemaModule: "@plumix/plugin-search/schema",
     setup: (ctx) => {
       registerIndexInvalidator(ctx);
+      registerSyncReindex(ctx);
       ctx.registerCapability(REINDEX_CAPABILITY, "admin");
       // Routes rather than an RPC router: the plugin's own id is one of core's
       // reserved RPC namespaces, so `registerRpcRouter` is closed to it.

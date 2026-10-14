@@ -41,7 +41,15 @@ type PlumixCliErrorCode =
   | "port_flag_missing_value"
   | "port_flag_out_of_range"
   | "dev_host_empty"
-  | "dev_environment_not_runnable";
+  | "dev_environment_not_runnable"
+  | "sync_invalid_arguments"
+  | "sync_push_unconfirmed"
+  | "sync_unknown_scope"
+  | "sync_scope_requires"
+  | "sync_runtime_unsupported"
+  | "sync_remote_url_required"
+  | "sync_dump_invalid"
+  | "sync_settle_failed";
 
 /**
  * The errors only this package throws. Internal: a runtime adapter declares
@@ -505,6 +513,93 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
       "dev_environment_not_runnable",
       `plumix dev: the "${ctx.environment}" environment is not runnable`,
       undefined,
+      undefined,
+    );
+  }
+
+  static syncInvalidArguments(ctx: { cause: unknown }): PlumixCliError {
+    return new PlumixCliError(
+      "sync_invalid_arguments",
+      "plumix sync was given an argument it does not take",
+      "Usage: `plumix sync pull|push [--scope <scope>...] [--url <origin>] [--binding <name>] [--dry-run] [--yes]`.",
+      ctx.cause,
+    );
+  }
+
+  /** Refused before anything opens: a push replaces the deployed site's data. */
+  static syncPushUnconfirmed(): PlumixCliError {
+    return new PlumixCliError(
+      "sync_push_unconfirmed",
+      "plumix sync push replaces the deployed site's data and has no terminal to confirm it in",
+      "Nothing was opened. Pass `--dry-run` to see what it would change, then `--yes` to push.",
+      undefined,
+    );
+  }
+
+  static syncUnknownScope(ctx: {
+    scope: string;
+    available: readonly string[];
+  }): PlumixCliError {
+    return new PlumixCliError(
+      "sync_unknown_scope",
+      `There is no sync scope "${ctx.scope}"`,
+      `This site's scopes: ${ctx.available.join(", ")}. A plugin is a scope only when it owns tables.`,
+      undefined,
+    );
+  }
+
+  static syncScopeRequires(ctx: {
+    scope: string;
+    requires: string;
+    reason: string;
+  }): PlumixCliError {
+    return new PlumixCliError(
+      "sync_scope_requires",
+      `The ${ctx.scope} scope travels only with ${ctx.requires}: ${ctx.reason}`,
+      `Nothing was opened. Add \`--scope ${ctx.requires}\`.`,
+      undefined,
+    );
+  }
+
+  static syncRuntimeUnsupported(ctx: { runtime: string }): PlumixCliError {
+    return new PlumixCliError(
+      "sync_runtime_unsupported",
+      `The ${ctx.runtime} runtime cannot move data between environments yet`,
+      "Its commands module exports no `sync`. Nothing was opened.",
+      undefined,
+    );
+  }
+
+  static syncRemoteUrlRequired(): PlumixCliError {
+    return new PlumixCliError(
+      "sync_remote_url_required",
+      "plumix sync needs the deployed site's origin to reach its remote end",
+      "Pass `--url <origin>`, such as `--url https://example.com`. Nothing was opened.",
+      undefined,
+    );
+  }
+
+  /** A dump read back is checked before anything is imported from it. */
+  static syncDumpInvalid(ctx: {
+    file: string;
+    detail: string;
+  }): PlumixCliError {
+    return new PlumixCliError(
+      "sync_dump_invalid",
+      `The sync dump is invalid at ${ctx.file}: ${ctx.detail}`,
+      "Nothing was imported. A dump is only read by the release that wrote it; run the sync again to write a fresh one.",
+      undefined,
+    );
+  }
+
+  /** The data is already replaced, so only the steps after it are retried. */
+  static syncSettleFailed(ctx: {
+    failures: readonly { readonly step: string; readonly message: string }[];
+  }): PlumixCliError {
+    return new PlumixCliError(
+      "sync_settle_failed",
+      `The data was replaced, but ${String(ctx.failures.length)} step(s) after it failed:\n${ctx.failures.map((f) => `  - ${f.step}: ${f.message}`).join("\n")}`,
+      "The replaced data stays. Fix what failed, then run the sync again to repeat these steps.",
       undefined,
     );
   }

@@ -1,4 +1,14 @@
 export { CliError, isCliError } from "./errors.js";
+export {
+  assertSameHeads,
+  CORE_SYNC_SCOPE_TABLES,
+  headDifferences,
+  readSyncHeads,
+  SYNC_AUTH_TABLES,
+  SyncError,
+} from "./sync.js";
+export type { SyncHeadsAt } from "./sync.js";
+export { settleSync } from "../context/settle-sync.js";
 // Re-exported here so a CLI command can validate a schedule without reaching
 // through core's root barrel, which the cold-start guard keeps off this path.
 export type { CronSchedule } from "../runtime/contract/cron.js";

@@ -338,3 +338,36 @@ describe("search()", () => {
     await assertIndexIntact(h.db);
   });
 });
+
+describe("search() after a sync", () => {
+  async function settle(scopes: readonly string[]): Promise<Response> {
+    const { secret } = await h.factory.apiToken.create({ userId: admin.id });
+    return h.dispatch(
+      new Request("https://cms.example/_plumix/api/v1/system/sync/settle", {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${secret}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ scopes, direction: "push" }),
+      }),
+    );
+  }
+
+  test("a sync that replaced content starts a reindex", async () => {
+    const response = await settle(["content", "media"]);
+
+    expect(await response.json()).toEqual({ cdn: "none", failures: [] });
+    expect(await h.db.all(sql`SELECT status FROM search_reindex_runs`)).toEqual(
+      [{ status: "running" }],
+    );
+  });
+
+  test("a sync that left content alone starts no reindex", async () => {
+    await settle(["media"]);
+
+    expect(await h.db.all(sql`SELECT status FROM search_reindex_runs`)).toEqual(
+      [],
+    );
+  });
+});

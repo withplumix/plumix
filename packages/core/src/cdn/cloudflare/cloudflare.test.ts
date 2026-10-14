@@ -271,6 +271,37 @@ describe("connected cdn purgeTags", () => {
   });
 });
 
+describe("connected cdn purgeAll", () => {
+  function purgeAll(): Promise<void> {
+    const purge = connect().purgeAll;
+    if (purge === undefined) throw new Error("expected a purge of everything");
+    return purge();
+  }
+
+  it("POSTs purge_everything to the zone purge_cache endpoint with the bearer token", async () => {
+    await purgeAll();
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(
+      "https://api.cloudflare.com/client/v4/zones/zone-1/purge_cache",
+    );
+    expect(init.method).toBe("POST");
+    expect((init.headers as Record<string, string>).authorization).toBe(
+      "Bearer token-1",
+    );
+    expect(JSON.parse(init.body as string)).toEqual({
+      purge_everything: true,
+    });
+  });
+
+  it("rejects when the purge API refuses", async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 403 }));
+
+    await expect(purgeAll()).rejects.toThrow(/purge_cache responded 403/);
+  });
+});
+
 /**
  * Purging is a REST call to the zone, so an isolated `caches.default` can
  * never satisfy the contract on its own.
@@ -311,9 +342,13 @@ function purgeableZone(): { cache: FakeCache; purgeEndpoint: typeof fetch } {
     },
     purgeEndpoint: (_url, init) => {
       const body = typeof init?.body === "string" ? init.body : "{}";
-      const { tags } = JSON.parse(body) as { tags: string[] };
+      const purge = JSON.parse(body) as {
+        tags?: string[];
+        purge_everything?: true;
+      };
       for (const [url, entry] of entries) {
-        if (entry.tags.some((tag) => tags.includes(tag))) entries.delete(url);
+        const tagged = entry.tags.some((tag) => purge.tags?.includes(tag));
+        if (purge.purge_everything === true || tagged) entries.delete(url);
       }
       return Promise.resolve(new Response(null, { status: 200 }));
     },
@@ -327,7 +362,12 @@ describe("on a runtime with a response store", () => {
     globalThis.fetch = zone.purgeEndpoint;
   });
 
-  describeCdnContract({ connect, store: true, purgeTags: true });
+  describeCdnContract({
+    connect,
+    store: true,
+    purgeTags: true,
+    purgeAll: true,
+  });
 });
 
 describe("on a runtime with no response store", () => {
@@ -335,5 +375,5 @@ describe("on a runtime with no response store", () => {
     delete (globalThis as { caches?: unknown }).caches;
   });
 
-  describeCdnContract({ connect, purgeTags: true });
+  describeCdnContract({ connect, purgeTags: true, purgeAll: true });
 });

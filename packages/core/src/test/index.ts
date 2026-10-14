@@ -114,3 +114,15 @@ export {
   randomCredentialId,
 } from "./fixtures/webauthn.js";
 export type { PasskeyKeyPair } from "./fixtures/webauthn.js";
+
+// The reference sync transport, and the dump it reads and writes in memory.
+export { memorySync } from "./sync/memory-sync.js";
+export type { MemorySyncSite, MemorySyncSites } from "./sync/memory-sync.js";
+export { memoryDump } from "./sync/memory-dump.js";
+export type { MemoryDump, MemoryDumpHeader } from "./sync/memory-dump.js";
+export { memorySyncEnds } from "./sync/memory-ends.js";
+export type {
+  MemorySyncEnd,
+  MemorySyncEnds,
+  MemorySyncEndsOptions,
+} from "./sync/memory-ends.js";

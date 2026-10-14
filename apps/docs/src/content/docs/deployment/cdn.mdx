@@ -158,6 +158,12 @@ Publishing an entry enqueues `t:<type>` and `e:<id>`; editing a term enqueues th
 
 The purge runs after the response through `ctx.defer`, so a zone that refuses one is logged and the editor's publish still succeeds. Freshness is the backstop: anything a failed purge left behind expires on its own within `ttl`.
 
+## Purging everything
+
+`purgeAll` drops every response the CDN stores. Core calls it once after a [sync](/deployment/sync/#after-a-sync) has replaced the site's data, because a sync changes rows under every tag at once. Cloudflare's provider sends the zone a `purge_everything` call with the same purge token.
+
+Like `purgeTags`, it is optional: a vendor that can't purge everything leaves it out rather than shipping a no-op. A sync then reports that the CDN can't purge everything, and cached pages refresh as their `ttl` runs out.
+
 ## Rotating the purge token
 
 A deploy with working credentials fills the CDN. Redeploy without them — a rotated secret nobody carried over, an environment variable dropped in a config rewrite — and the provider goes inert on the next boot. New responses leave undecorated, publishing enqueues nothing, and no error appears anywhere, because the origin genuinely cannot see the entries the CDN already holds. Those pages then stay stale for the full freshness window, and a long `ttl` is a long time to be wrong.

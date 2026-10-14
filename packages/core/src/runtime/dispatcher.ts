@@ -75,6 +75,8 @@ const PLUMIX_PREFIX = "/_plumix/";
 const SIGNOUT_PATH = "/_plumix/auth/signout";
 const MCP_PATH = "/_plumix/mcp";
 const API_PREFIX = "/_plumix/api";
+/** Inlined like the debug prefixes below, so the eager graph skips the route. */
+const SYNC_SETTLE_PATH = "/_plumix/api/v1/system/sync/settle";
 /**
  * Inlined, not imported, so the eager graph touches no dev debug module. Keep
  * in step with `DEBUG_REQUESTS_PATH`.
@@ -273,6 +275,10 @@ async function tryColdInterfaces(
   pathname: string,
 ): Promise<Response | null> {
   if (pathname === MCP_PATH) return withNoStore(await dispatchMcp(app, ctx));
+  if (pathname === SYNC_SETTLE_PATH) {
+    const { handleSyncSettle } = await import("./sync-settle.js");
+    return withNoStore(await handleSyncSettle(ctx));
+  }
   if (pathname === API_PREFIX || pathname.startsWith(`${API_PREFIX}/`)) {
     return withNoStore(await dispatchRest(app, ctx));
   }

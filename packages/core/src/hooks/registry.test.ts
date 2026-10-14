@@ -327,3 +327,30 @@ describe("doAction", () => {
     });
   });
 });
+
+describe("getActionHandlers", () => {
+  test("returns an empty array when no action is registered", () => {
+    const registry = new HookRegistry();
+    expect(registry.getActionHandlers("test:args")).toEqual([]);
+  });
+
+  test("returns each listener with its plugin, by priority then insertion order", async () => {
+    const registry = new HookRegistry();
+    const seen: string[] = [];
+    registry.addAction(
+      "test:args",
+      (userId, detail) => {
+        seen.push(`b:${String(userId)}:${detail}`);
+      },
+      { priority: 100, plugin: "b" },
+    );
+    registry.addAction("test:args", () => undefined, { priority: 50 });
+
+    const [first, second] = registry.getActionHandlers("test:args");
+    await second?.fn(7, "x");
+
+    expect(first?.plugin).toBeNull();
+    expect(second?.plugin).toBe("b");
+    expect(seen).toEqual(["b:7:x"]);
+  });
+});

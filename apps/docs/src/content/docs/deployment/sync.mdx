@@ -1,0 +1,111 @@
+---
+title: Moving data between environments
+description: plumix sync pull and push replace one environment's content, users, media or plugin data with the other's — the dump format, the scopes, how references survive, and the safety rules around a push.
+tier: P1
+sidebar:
+  order: 17
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+`plumix sync pull` copies the deployed site's data into your local database. `plumix sync push` copies your local data to the deployed site. Either way the target's data in each chosen scope is replaced, never merged.
+
+## Overview
+
+A sync moves whole tables, one named scope at a time, with every row under the id it had on the source. It never matches rows by slug or title: content refers to other rows by id inside JSON (a menu item's `meta.entryId`, a revision's slug), so renumbering would break those references. [ADR 0039](https://github.com/withplumix/plumix/blob/main/docs/adr/0039-a-sync-replaces-a-scope-and-never-merges.md) records why.
+
+The runtime does the moving. A runtime adapter's commands module exports `sync`, and a runtime without one fails with `sync_runtime_unsupported`, naming it. [Runtime Adapters](/deployment/runtimes/#runtimeadaptercommandsmodule) covers the export.
+
+## Quickstart
+
+See what a pull would change, then pull:
+
+```bash
+plumix sync pull --url https://example.com --dry-run
+plumix sync pull --url https://example.com
+```
+
+Push your local content and media, confirming at the prompt:
+
+```bash
+plumix sync push --scope content --scope media --url https://example.com
+```
+
+## Commands
+
+```bash
+plumix sync pull|push [--scope <scope>...] [--url <origin>] [--binding <name>] [--dry-run] [--yes]
+```
+
+- `--url` is the deployed site's origin. One end of a sync is always the deployed site, so it is required; without it the command fails with `sync_remote_url_required`.
+- `--scope` names a scope, once per scope. Without one, the sync moves `content`.
+- `--binding` picks the database on a runtime that can have more than one, as `plumix migrate --binding` does.
+- `--dry-run` prints what the sync would change and changes nothing.
+- `--yes` skips a push's confirmation prompt.
+
+A sync runs these steps in order:
+
+1. A `push` without `--yes` or `--dry-run`, with no terminal to confirm in, fails with `sync_push_unconfirmed` before anything is opened.
+2. The scopes are resolved. An unknown one fails with `sync_unknown_scope`, and a scope named without the one it needs fails with `sync_scope_requires`.
+3. Both ends open, and their migrations are compared. When any owner's head differs, the sync fails with `sync_migrations_differ`, naming the owner and the end that is behind. Run `plumix migrate` on that end first, with `--remote` for the deployed site.
+4. The source is exported into a dump, which is then read back and checked.
+5. The target runs the import as a dry run, and the command prints, per table, the rows replaced, added and removed, then the rows outside the sync it would remove or clear, then the emails of the authors it would add as disabled users.
+6. With `--dry-run` it prints `Dry run: nothing was changed.` and stops.
+7. A push without `--yes` asks for confirmation. Answering no changes nothing.
+8. A push takes a snapshot of the deployed site and prints how to restore it.
+9. The target imports the dump.
+10. The target settles: every `sync:after` listener runs, then the whole CDN is purged. See [After a sync](#after-a-sync).
+
+A pull takes no snapshot and asks for no confirmation: it only ever overwrites your local database.
+
+## Scopes
+
+Each scope is whole tables. No scope splits a table with a filter, because a split would leave rows on the target that point at rows the sync removed.
+
+- `content`, the default: `terms`, `entries` (every entry type, so menu items, revisions and media rows too), `entry_term` and `settings`.
+- `media`: every object in the site's `storage` slot. The target's objects the source lacks are deleted.
+- `users`: `users` and `credentials`. It travels only with `content`, because an entry refuses the deletion of its author. `--scope users` alone fails with `sync_scope_requires`.
+- `plugin:<id>`: the tables a plugin's `schema` declares. A plugin whose tables reference `content`'s tables travels only with `content`. A plugin that owns no tables is not a scope.
+
+Tables load parents first: `users`, `credentials`, `terms`, `entries`, `entry_term`, `settings`, then each plugin's tables in config order. Tables a trigger maintains, like `entry_changes`, are in no scope; their triggers refill them as the rows land.
+
+Auth state never travels. `sessions`, `api_tokens`, `auth_tokens`, `device_codes` and `oauth_accounts` are in no scope and never in a dump.
+
+## References
+
+- **Ids travel verbatim.** A row keeps its id on the target.
+- **Users are matched by email.** Without the `users` scope, every column that references a user (an entry's author, a comment's author) is rewritten to the target's user with the same email. An author the target lacks is added as a disabled user, with the source's email, slug, name, avatar and role, and empty meta. A slug the target already has gets `-2`, `-3`, and so on. Nobody can sign in as an added user until an admin enables them. A user id stored inside JSON, rather than in a column that references `users`, is not rewritten.
+- **Rows outside the sync** that reference a replaced row through their own foreign key are removed, or cleared where the key sets null: comments on replaced entries, for example. The dry run counts them.
+- **Replacing `users`** keeps each of the target's sessions and API tokens whose user's email is in the dump, re-pointed to that user, and removes the rest. A pull of `users` also keeps every local admin: a remote user with the admin's email is imported as an admin and holds the admin's local passkeys instead of their own, which are bound to the deployed site and cannot sign in locally. An admin the deployed site lacks is imported under a free id, with their passkeys.
+
+## The dump
+
+A sync writes its dump under `.plumix/sync/<direction>-<timestamp>/` in your project, which the scaffold's `.gitignore` already ignores. It is deleted after a sync that succeeds. When a sync fails, the dump is kept and its path is printed.
+
+- `manifest.json` holds `format: 1`, the source's `origin` and `basePath`, the scopes, each table with its row count in load order, the number of authors and objects, and each migration owner's head.
+- `<table>.ndjson` holds one row per line. A value is a JSON string, number or null; a BLOB is `{"$blob":"<base64>"}`.
+- `authors.ndjson` holds the `id`, `email`, `slug`, `name`, `avatar_url` and `role` of every user the dump's rows reference. It is written only when `users` is not among the scopes.
+- `objects/index.ndjson` lists each object as `{ key, file, contentType, size }`, and `objects/<file>` holds its bytes. Files are numbered, never named after their key.
+
+A dump is checked whenever it is read. An unknown format, a malformed manifest, a missing table file or a count that disagrees with the manifest fails with `sync_dump_invalid`, naming the file.
+
+## After a sync
+
+The target settles once per sync, on a pull and a push alike. Core's `settleSync` runs every `sync:after` listener, then purges the whole CDN through `purgeAll`. Each step runs whatever the others did. `@plumix/plugin-search` starts a rebuild of its index, and `@plumix/plugin-og` deletes its stored cards, when `content` was among the scopes.
+
+When a step fails, the command fails with `sync_settle_failed`, says the data was replaced, and lists every failed step. A CDN that cannot purge everything is not a failure: the command says that cached pages refresh as their `ttl` runs out.
+
+On the deployed site, the settle runs inside the site through `POST /_plumix/api/v1/system/sync/settle`, with a body of `{ scopes, direction }`. It needs an API token whose user holds `settings:manage`, answers `401` without a token and `403` without the capability, and answers with the report: `{ cdn, failures }`, where `cdn` is `purged`, `cannot-purge`, `failed` or `none`.
+
+<Aside type="caution" title="A push replaces the deployed site's data">
+  Run it with `--dry-run` first and read the counts, especially the rows outside
+  the sync it would remove. The restore hint a push prints is how you undo it.
+</Aside>
+
+## Related
+
+[CLI Reference](/deployment/cli/#sync) lists `sync` beside the other commands. [CDN](/deployment/cdn/#purging-everything) covers `purgeAll`. [Runtime Adapters](/deployment/runtimes/#runtimeadaptercommandsmodule) covers the `sync` export a runtime implements and `describeSyncContract`, the suite it is held to.
+
+## Next steps
+
+Run `plumix sync pull --dry-run` against your deployed site to see what a pull would change before you rely on it.

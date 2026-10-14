@@ -70,6 +70,16 @@ export interface HookExecutor {
     readonly fn: FilterFn<TName>;
     readonly plugin: string | null;
   }[];
+  /**
+   * For a caller that has to know each listener's outcome, which `doAction`
+   * logs and swallows.
+   */
+  getActionHandlers<TName extends ActionName>(
+    name: TName,
+  ): readonly {
+    readonly fn: ActionFn<TName>;
+    readonly plugin: string | null;
+  }[];
   doAction<TName extends ActionName>(
     name: TName,
     ...args: ActionArgs<TName>
@@ -215,6 +225,20 @@ export class HookRegistry implements HookExecutor {
     if (!entries || entries.length === 0) return [];
     return sortEntries(entries).map((entry) => ({
       fn: entry.fn as FilterFn<TName>,
+      plugin: entry.plugin,
+    }));
+  }
+
+  getActionHandlers<TName extends ActionName>(
+    name: TName,
+  ): readonly {
+    readonly fn: ActionFn<TName>;
+    readonly plugin: string | null;
+  }[] {
+    const entries = this.#actions.get(name);
+    if (!entries || entries.length === 0) return [];
+    return sortEntries(entries).map((entry) => ({
+      fn: entry.fn as ActionFn<TName>,
       plugin: entry.plugin,
     }));
   }

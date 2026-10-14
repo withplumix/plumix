@@ -337,6 +337,16 @@ _Avoid_: migrations folder, `drizzle/` (a folder holds a history; it is not the 
 A named, forward-only TypeScript step that reshapes data an owner already stored (renames a settings key, rewrites JSON meta, backfills a value), declared with `defineDataMigration` by core, a plugin (with or without tables) or the site. Every owner's data migrations run after every migration history, wherever those apply: core's, then plugins' in config order, then the site's, each list in its own order. Each is recorded once its `up` succeeds, by owner and name, and never runs again; a mistake is fixed by a new one, never by a `down`.
 _Avoid_: seed, data patch, `post_update` (a seed fills an empty database; a data migration reshapes one that has data)
 
+**Sync**:
+Replacing one environment's data with the other's, one sync scope at a time, through `plumix sync pull` or `push`. A sync replaces whole tables with the source's rows under their own ids and never merges. See ADR 0039.
+_Avoid_: import, migration (a migration reshapes a database's schema or data in place; a sync copies data between two databases)
+
+**Sync scope**:
+A named set of whole tables a sync replaces: `content`, `users`, `plugin:<id>`, or `media`, which is the storage slot's objects. Auth state is in none.
+
+**Sync dump**:
+The directory a sync exports the source into and the target imports from: a versioned `manifest.json`, one NDJSON file per table, the authors its rows reference, and the media objects.
+
 **Config slot**:
 A named key of the `plumix()` call in `plumix.config.ts`. Slots are siblings rather than a bundle, though one may still require another's platform: a slot naming a Cloudflare binding needs the Cloudflare runtime beside it. See the disambiguation note — distinct from a descriptor slot, a slot input and a template slot. Read at runtime as `ctx.config.<slot>`. A slot that binds to the platform is also connected as a service on the context (`ctx.storage`).
 
@@ -483,6 +493,10 @@ them distinct by **always qualifying** them; bare use is a smell.
 - **template** — the **theme render unit** (this glossary) vs the stored
   **page-template** choice an entry can pick vs the **project template** in the
   scaffolder. Qualify when more than one is in play.
+- **snapshot** — the **revision** sense (capturing an entry into a revision)
+  vs a **sync snapshot** (what a push takes of the deployed database before
+  it replaces anything, to restore from). Qualify when more than one is in
+  play.
 - **read-through** — the **CDN** sense (a stored response, keyed by the
   request and purged by tag) vs the **rendered asset** sense (bytes behind a
   content-addressed storage key, which nothing purges). Qualify when more

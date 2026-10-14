@@ -21,3 +21,10 @@ export type {
   DatabaseContractBinding,
   DatabaseContractOptions,
 } from "./database.js";
+
+export { describeSyncContract } from "./sync.js";
+export type {
+  SyncContractEnds,
+  SyncContractOptions,
+  SyncContractSite,
+} from "./sync.js";

@@ -25,6 +25,7 @@ import {
 } from "./preview-box.js";
 import { advertisedExtension } from "./renderer.js";
 import { createOgRouter } from "./rpc.js";
+import { registerSyncCardReset } from "./sync.js";
 import { compileThemeTokens } from "./tokens.js";
 
 /**
@@ -129,6 +130,7 @@ export function og(options: OgPluginOptions = {}): PluginDescriptor {
         cards.load(theme.ogCards ?? []);
         tokens = compileThemeTokens(theme.tokens, palette);
       });
+      registerSyncCardReset(ctx);
       ctx.registerRoute({
         method: "GET",
         path: CARD_ROUTE_PATH,

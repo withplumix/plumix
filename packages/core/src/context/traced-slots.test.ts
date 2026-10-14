@@ -81,6 +81,23 @@ describe("traceCdn", () => {
     expect(telemetry.getSpans()).toEqual([]);
   });
 
+  test("purgeAll passes through unspanned, like purgeTags", async () => {
+    const telemetry = createTelemetryCollector();
+    let purged = 0;
+    const cdn = traceCdn(
+      {
+        ...stub(),
+        purgeAll: () => ((purged += 1), Promise.resolve()),
+      },
+      () => telemetry,
+    );
+
+    await cdn.purgeAll?.();
+
+    expect(purged).toBe(1);
+    expect(telemetry.getSpans()).toEqual([]);
+  });
+
   test("decorate passes through unspanned — it is header math, not I/O", () => {
     const telemetry = createTelemetryCollector();
     const cdn = traceCdn(

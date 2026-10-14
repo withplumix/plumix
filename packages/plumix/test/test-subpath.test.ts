@@ -9,6 +9,7 @@ import {
   entryFactory,
   factoriesFor,
   inviteFactory,
+  memorySync,
   plumixRequest,
   publishedEntry,
   tagTerm,
@@ -21,6 +22,7 @@ import {
   describeDatabaseContract,
   describeKvContract,
   describeObjectStorageContract,
+  describeSyncContract,
 } from "plumix/test/conformance";
 import { describe, expect, test } from "vitest";
 
@@ -39,6 +41,7 @@ describe("plumix/test subpath", () => {
       createTestDb,
       createDispatcherHarness,
       createRpcHarness,
+      memorySync,
       plumixRequest,
     ]) {
       expect(exp).toBeDefined();
@@ -75,6 +78,7 @@ describe("plumix/test/conformance subpath", () => {
       describeCdnContract,
       describeDatabaseContract,
       describeAssetsContract,
+      describeSyncContract,
     ]) {
       expect(suite).toBeTypeOf("function");
     }

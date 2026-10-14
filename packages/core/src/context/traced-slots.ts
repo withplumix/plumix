@@ -44,6 +44,7 @@ export function traceCdn(
     // Untraced on purpose: purges fire post-response (after the snapshot is
     // delivered), so a span here would dangle as an unfinished root.
     ...(cdn.purgeTags && { purgeTags: cdn.purgeTags.bind(cdn) }),
+    ...(cdn.purgeAll && { purgeAll: cdn.purgeAll.bind(cdn) }),
   };
 }
 

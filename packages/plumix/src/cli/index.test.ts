@@ -120,6 +120,7 @@ describe("runCommand", () => {
         loaded: { config: testConfig(), configPath: "/site/plumix.config.ts" },
         runtimeMigrations: recordingRuntime(events),
         runtimeDiagnose: undefined,
+        runtimeSync: undefined,
       },
     );
   }
@@ -219,5 +220,40 @@ throw new RefusingCliError("refused_here", "This runtime's commands refuse", "Ru
       code: "refused_here",
       hint: "Run them elsewhere.",
     });
+  });
+
+  test("a commands module's sync export reaches a command as its runtimeSync", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "plumix-run-"));
+    dirs.push(dir);
+    const commandsModule = join(dir, "commands.ts");
+    writeFileSync(
+      commandsModule,
+      `export const sync = { open: () => Promise.reject(new Error("unused")) };
+export const commands = {
+  probe: {
+    describe: "probe",
+    deferApp: true,
+    run: (ctx) => {
+      (globalThis as unknown as Record<string, unknown>).__plumixRuntimeSync = ctx.runtimeSync === sync;
+    },
+  },
+};
+`,
+    );
+    writeFileSync(
+      join(dir, "plumix.config.ts"),
+      `export default {
+  runtime: { name: "test", handler: {}, generateEntry: () => "", commandsModule: ${JSON.stringify(commandsModule)} },
+  database: { kind: "d1" },
+  auth: { passkey: {} },
+};
+`,
+    );
+
+    await run(["--cwd", dir, "probe"]);
+
+    expect(
+      (globalThis as unknown as Record<string, unknown>).__plumixRuntimeSync,
+    ).toBe(true);
   });
 });
