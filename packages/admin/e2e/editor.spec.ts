@@ -1859,8 +1859,6 @@ test.describe("editor revision preview", () => {
       page.getByTestId("revisions-sheet-item-42-comment-display"),
     ).toHaveText("Fixed the typo");
     expect(saved).toEqual([{ revisionId: 42, message: "Fixed the typo" }]);
-    // Reopening seeds the editor from the saved comment; Cancel closes it
-    // without saving again.
     await page.getByTestId("revisions-sheet-item-42-comment").click();
     await expect(
       page.getByTestId("revisions-sheet-item-42-comment-input"),
