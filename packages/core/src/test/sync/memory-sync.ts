@@ -18,6 +18,7 @@ import type { ConnectedObjectStorage } from "../../runtime/contract/slots.js";
 import { assertSameHeads, readSyncHeads } from "../../cli/sync.js";
 import { settleSync } from "../../context/settle-sync.js";
 import { resolveEnvInput } from "../../runtime/contract/env-input.js";
+import { collect, iterate } from "./memory-dump.js";
 
 /** One end of {@link memorySync}. */
 export interface MemorySyncSite {
@@ -92,19 +93,6 @@ function chunks<T>(items: readonly T[]): T[][] {
 
 function placeholders(count: number): string {
   return Array.from({ length: count }, () => "?").join(", ");
-}
-
-async function* iterate<T>(items: readonly T[]): AsyncIterable<T> {
-  for (const item of items) {
-    await Promise.resolve();
-    yield item;
-  }
-}
-
-async function collect<T>(items: AsyncIterable<T>): Promise<T[]> {
-  const collected: T[] = [];
-  for await (const item of items) collected.push(item);
-  return collected;
 }
 
 function scopeTables(scopes: readonly SyncScope[]): SyncScopeTable[] {

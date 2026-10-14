@@ -335,7 +335,6 @@ export interface SyncSettleFailure {
   readonly message: string;
 }
 
-/** Serializes as JSON: the settle endpoint answers with it. */
 export interface SyncSettleReport {
   /** `failed` when `purgeAll` threw; that failure is also in `failures`. */
   readonly cdn: "purged" | "cannot-purge" | "failed" | "none";

@@ -24,13 +24,13 @@ interface StoredObject {
   readonly bytes: Uint8Array<ArrayBuffer>;
 }
 
-async function collect<T>(items: AsyncIterable<T>): Promise<T[]> {
+export async function collect<T>(items: AsyncIterable<T>): Promise<T[]> {
   const collected: T[] = [];
   for await (const item of items) collected.push(item);
   return collected;
 }
 
-async function* iterate<T>(items: readonly T[]): AsyncIterable<T> {
+export async function* iterate<T>(items: readonly T[]): AsyncIterable<T> {
   for (const item of items) {
     await Promise.resolve();
     yield item;

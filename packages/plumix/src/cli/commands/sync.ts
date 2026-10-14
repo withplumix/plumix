@@ -154,7 +154,6 @@ interface SyncRun {
   readonly basePath: string;
 }
 
-/** Exports the source into the dump directory, then reads it back. */
 async function exportDump(run: SyncRun): Promise<DumpReader> {
   const writer = writeDump(run.dumpDir, {
     source: { origin: run.source.origin, basePath: run.basePath },
@@ -171,7 +170,6 @@ async function exportDump(run: SyncRun): Promise<DumpReader> {
   return keepLocalAdmins(dump, await exportLocalAdmins(run.target));
 }
 
-/** Whether to go on past the dry run; a push asks unless `--yes`. */
 async function confirmed(run: SyncRun): Promise<boolean> {
   if (run.args.dryRun) {
     report.info("Dry run: nothing was changed.");
