@@ -19,6 +19,8 @@ export interface CdnContractOptions {
   readonly store?: boolean;
   /** Whether this provider ships tag purge. Declared like {@link store}. */
   readonly purgeTags?: boolean;
+  /** Whether this provider can purge everything. Declared like {@link store}. */
+  readonly purgeAll?: boolean;
 }
 
 type Case = ContractCase<CdnContractOptions>;
@@ -53,6 +55,11 @@ function needsStore(options: CdnContractOptions): string | null {
  */
 function needsStoredPurge(options: CdnContractOptions): string | null {
   if (options.purgeTags !== true) return "the provider cannot purge by tag";
+  return needsStore(options);
+}
+
+function needsStoredPurgeAll(options: CdnContractOptions): string | null {
+  if (options.purgeAll !== true) return "the provider cannot purge everything";
   return needsStore(options);
 }
 
@@ -95,6 +102,7 @@ export const cdnContractCases: readonly Case[] = [
       const cdn = await options.connect();
       expect(cdn.store !== undefined).toBe(options.store === true);
       expect(cdn.purgeTags !== undefined).toBe(options.purgeTags === true);
+      expect(cdn.purgeAll !== undefined).toBe(options.purgeAll === true);
     },
   },
   {
@@ -276,6 +284,23 @@ export const cdnContractCases: readonly Case[] = [
       await store.put(request, new Response("kept"), ["t:page"]);
       await purge(["t:nothing"]);
       expect(await storedBody(store, request)).toBe("kept");
+    },
+  },
+  {
+    name: "purging everything drops every stored response",
+    skip: needsStoredPurgeAll,
+    run: async (options) => {
+      const cdn = await options.connect();
+      if (cdn.store === undefined || cdn.purgeAll === undefined) {
+        throw new Error("expected a store and a purge of everything");
+      }
+      const tagged = pageRequest("/tagged-page");
+      const untagged = pageRequest("/untagged-page");
+      await cdn.store.put(tagged, new Response("tagged"), ["t:post"]);
+      await cdn.store.put(untagged, new Response("untagged"), []);
+      await cdn.purgeAll();
+      expect(await storedBody(cdn.store, tagged)).toBeUndefined();
+      expect(await storedBody(cdn.store, untagged)).toBeUndefined();
     },
   },
 ];

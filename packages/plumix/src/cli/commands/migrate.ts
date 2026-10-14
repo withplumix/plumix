@@ -20,13 +20,13 @@ import type {
   CommandContext,
   CommandDefinition,
   MigrationDatabase,
+  MigrationOwner,
   PlumixConfig,
   RuntimeMigrations,
 } from "@plumix/core";
 import { spawnCapturingStderr } from "@plumix/core/cli";
 
 import type { DataMigrationOwner } from "../migrate/data.js";
-import type { MigrationOwner } from "../migrate/owners.js";
 import { PlumixCliError } from "../errors.js";
 import {
   adoptLegacyDatabase,

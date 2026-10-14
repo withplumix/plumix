@@ -1,6 +1,6 @@
 ---
 title: CLI Reference
-description: Every plumix command — the four built-ins, the ones a runtime contributes, and the global flags that precede any of them.
+description: Every plumix command — the built-ins, the ones a runtime contributes, and the global flags that precede any of them.
 tier: P1
 roster: true
 sidebar:
@@ -9,13 +9,13 @@ sidebar:
 
 import { Aside } from "@astrojs/starlight/components";
 
-`plumix <command> [options]` is the whole surface. Four commands ship with the package itself; a runtime adapter contributes the rest — which is why `deploy` and `types` exist on Cloudflare and not on Node, and why `plumix --help` groups them separately.
+`plumix <command> [options]` is the whole surface. Six commands ship with the package itself; a runtime adapter contributes the rest — which is why `deploy` and `types` exist on Cloudflare and not on Node, and why `plumix --help` groups them separately.
 
 ## Overview
 
-`plumix migrate`, `plumix cron`, `plumix meta`, `plumix doctor` and `plumix i18n` are built in: they run the same way regardless of which `runtime` a site configures. `dev`, `build`, and on some runtimes `deploy` and `types` come from `RuntimeAdapter.commandsModule` instead, so their behaviour is the adapter's to define. The same module tells `migrate` how to open the runtime's database, and whether it can reach a remote one. [Runtime Adapters](/deployment/runtimes/#the-adapter) covers `commandsModule` from the package-author side.
+`plumix migrate`, `plumix sync`, `plumix cron`, `plumix meta`, `plumix doctor` and `plumix i18n` are built in: they run the same way regardless of which `runtime` a site configures. `dev`, `build`, and on some runtimes `deploy` and `types` come from `RuntimeAdapter.commandsModule` instead, so their behaviour is the adapter's to define. The same module tells `migrate` how to open the runtime's database, and whether it can reach a remote one, and gives `sync` its transport. [Runtime Adapters](/deployment/runtimes/#the-adapter) covers `commandsModule` from the package-author side.
 
-`plumix --help` prints every command it can currently resolve, grouped by where it came from: a project with no `plumix.config.ts` in reach sees only the four built-ins, because loading the runtime's commands means loading the config first.
+`plumix --help` prints every command it can currently resolve, grouped by where it came from: a project with no `plumix.config.ts` in reach sees only the built-ins, because loading the runtime's commands means loading the config first.
 
 <Aside type="note" title="i18n runs without a config">
   Every other command loads `plumix.config.ts` before it runs — `i18n` does not,
@@ -26,7 +26,7 @@ import { Aside } from "@astrojs/starlight/components";
 
 ## Quickstart
 
-`plumix --help` from a project root is the fastest way to see what applies to it: the four built-ins always, and — once a config loads — the runtime's own commands beside them, grouped under its name.
+`plumix --help` from a project root is the fastest way to see what applies to it: the built-ins always, and — once a config loads — the runtime's own commands beside them, grouped under its name.
 
 ```bash
 plumix --help
@@ -98,6 +98,18 @@ plumix migrate generate
 ```
 
 The first `plumix migrate` against a database set up by an earlier release adopts it. Such a database has the old tracking table, `d1_migrations` on Cloudflare or `__drizzle_migrations` on Node and Bun, and no per-owner table yet. The command applies every owner's history to a scratch in-memory database and compares the two schemas: every table, index and trigger, and each table's columns. When they match, it records every owner's migrations as applied without running any DDL, and prints that the site's `drizzle/` folder is no longer read. When they differ, it changes nothing and fails, listing each difference. When a difference is a table the site's own schema declares and its `migrations/` has no migration for, the failure says to run `plumix migrate generate` first.
+
+### `sync`
+
+Replaces the local or the deployed site's data with the other's. `plumix sync pull` copies the deployed site into the local database; `plumix sync push` copies the local database to the deployed site. Each named scope is replaced whole, never merged, with every row under its own id. [Moving data between environments](/deployment/sync/) covers the scopes, the dump, how references survive and what runs afterwards.
+
+`--url <origin>` names the deployed site and is required. `--scope` names a scope, once per scope: `content` (the default), `media`, `users` (only with `content`) or `plugin:<id>`. `--dry-run` prints, per table, what the sync would replace, add and remove, then stops. A push asks for confirmation unless `--yes` is passed, and fails with `sync_push_unconfirmed` when there is no terminal to ask in. Both ends must have applied the same migrations; otherwise the sync fails with `sync_migrations_differ` before it exports anything. On a runtime whose commands module exports no `sync`, it fails with `sync_runtime_unsupported`.
+
+```bash
+plumix sync pull --url https://example.com --dry-run
+plumix sync pull --url https://example.com --scope content --scope media
+plumix sync push --url https://example.com --yes
+```
 
 ### `cron`
 
@@ -199,7 +211,7 @@ plumix --version
 
 ## Related
 
-[Runtime Adapters](/deployment/runtimes/#the-adapter) documents `commandsModule`, the seam a runtime uses to contribute `dev`, `build`, `deploy` and `types`, and to open its database for `migrate`. [Cloudflare Workers](/deployment/cloudflare/) and [Node.js](/deployment/node/) show what each runtime's commands look like from the operator's side, cron included.
+[Runtime Adapters](/deployment/runtimes/#the-adapter) documents `commandsModule`, the seam a runtime uses to contribute `dev`, `build`, `deploy` and `types`, to open its database for `migrate`, and to move data for `sync`. [Cloudflare Workers](/deployment/cloudflare/) and [Node.js](/deployment/node/) show what each runtime's commands look like from the operator's side, cron included.
 
 ## Next steps
 

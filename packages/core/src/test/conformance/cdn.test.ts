@@ -43,6 +43,9 @@ function byTag(
  */
 function storefulCdn(
   purge: (entries: Map<string, CachedEntry>, tags: readonly string[]) => void,
+  purgeAll: (entries: Map<string, CachedEntry>) => void = (entries) => {
+    entries.clear();
+  },
 ): ConnectedCdn {
   const entries = new Map<string, CachedEntry>();
   return {
@@ -50,6 +53,10 @@ function storefulCdn(
     store: mapEntries(entries),
     purgeTags: (tags) => {
       purge(entries, tags);
+      return Promise.resolve();
+    },
+    purgeAll: () => {
+      purgeAll(entries);
       return Promise.resolve();
     },
   };
@@ -91,6 +98,7 @@ describeCdnContract({
   connect: () => storefulCdn(byTag),
   store: true,
   purgeTags: true,
+  purgeAll: true,
 });
 
 describe("storeless, with purge", () => {
@@ -141,7 +149,7 @@ function leakyCdn(): ConnectedCdn {
   };
 }
 
-const stateful = { store: true, purgeTags: true } as const;
+const stateful = { store: true, purgeTags: true, purgeAll: true } as const;
 
 describe("cdn contract cases", () => {
   test("fail a cdn that stores a non-GET request", async () => {
@@ -168,6 +176,14 @@ describe("cdn contract cases", () => {
       ...stateful,
     });
     expect(failed).toContain("purging a tag drops every response carrying it");
+  });
+
+  test("fail a cdn whose purge of everything leaves a stored response", async () => {
+    const failed = await failingCases(cdnContractCases, {
+      connect: () => storefulCdn(byTag, () => undefined),
+      ...stateful,
+    });
+    expect(failed).toContain("purging everything drops every stored response");
   });
 
   test("fail a cdn whose purge empties the store", async () => {

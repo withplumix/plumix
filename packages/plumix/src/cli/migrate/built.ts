@@ -8,10 +8,13 @@ import {
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import type { PlumixConfig, RuntimeMigrations } from "@plumix/core";
+import type {
+  MigrationOwner,
+  PlumixConfig,
+  RuntimeMigrations,
+} from "@plumix/core";
 
 import type { DataMigrationOwner } from "./data.js";
-import type { MigrationOwner } from "./owners.js";
 import { adoptLegacyDatabase, applyOwners } from "./apply.js";
 import { applyDataMigrations, withCoreDataMigrations } from "./data.js";
 import { resolveOwners, TRACKING_TABLE_PREFIX } from "./owners.js";

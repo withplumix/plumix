@@ -1,8 +1,7 @@
 import { readMigrationFiles } from "drizzle-orm/migrator";
 
-import type { MigrationDatabase } from "@plumix/core";
+import type { MigrationDatabase, MigrationOwner } from "@plumix/core";
 
-import type { MigrationOwner } from "./owners.js";
 import { PlumixCliError } from "../errors.js";
 import { report } from "../report.js";
 import { DATA_MIGRATIONS_TABLE } from "./data.js";

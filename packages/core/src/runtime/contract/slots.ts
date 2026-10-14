@@ -255,6 +255,11 @@ export interface ConnectedCdn {
    * handle unpurgeable content.
    */
   readonly purgeTags?: (tags: readonly string[]) => Promise<void>;
+  /**
+   * Drops every stored response. Absent when the vendor can't, so a caller
+   * leaves cached pages to their TTL.
+   */
+  readonly purgeAll?: () => Promise<void>;
 }
 
 /**

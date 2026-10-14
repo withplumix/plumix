@@ -5,5 +5,6 @@ export {
   describeDatabaseContract,
   describeKvContract,
   describeObjectStorageContract,
+  describeSyncContract,
   fakeS3,
 } from "@plumix/core/test/conformance";

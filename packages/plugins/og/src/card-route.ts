@@ -37,6 +37,9 @@ export const CARD_ROUTE_PATH = "/card/*";
 export const OG_ROUTE_PREFIX = "/_plumix/og";
 const CARD_URL_PREFIX = `${OG_ROUTE_PREFIX}/card`;
 
+/** Where a rendered card is stored in the site's object storage. */
+export const CARD_STORAGE_PREFIX = "og/";
+
 /**
  * Absolute, since scrapers never resolve it. Content-addressed, since a changed
  * URL is the only way to refresh the image caches X, Facebook and LinkedIn
@@ -124,7 +127,7 @@ export function createCardRoute(
     try {
       response = await serveRenderedAsset({
         request,
-        key: `og/${cardAssetPath(asked.target, identity.digest, extension)}`,
+        key: `${CARD_STORAGE_PREFIX}${cardAssetPath(asked.target, identity.digest, extension)}`,
         contentType: renderer.contentType,
         storage: ctx.storage,
         render: () =>

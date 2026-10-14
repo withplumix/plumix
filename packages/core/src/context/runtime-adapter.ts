@@ -122,6 +122,10 @@ export interface CommandContext<App extends CommandApp = CommandApp> {
    * From the runtime's commands module; absent when the runtime declares none.
    */
   readonly runtimeDiagnose?: RuntimeDiagnose;
+  /**
+   * From the runtime's commands module; absent when the runtime declares none.
+   */
+  readonly runtimeSync?: RuntimeSync;
 }
 
 /** One thing `plumix doctor` reports about how a project will deploy. */
@@ -197,6 +201,176 @@ export interface RuntimeMigrations {
    */
   readonly legacyTable: string;
   open(options: OpenMigrationDatabaseOptions): Promise<MigrationDatabase>;
+}
+
+/** A table owner whose history applies to a site (ADR 0027). */
+export interface MigrationOwner extends MigrationFolder {
+  /** `core`, `site`, or the package name. */
+  readonly name: string;
+}
+
+/** Which end of a sync: the database `plumix dev` uses, or the deployed one. */
+export type SyncTarget = "local" | "remote";
+
+/** `pull` copies the remote end into the local one; `push` the reverse. */
+export type SyncDirection = "pull" | "push";
+
+export interface OpenSyncEndOptions {
+  readonly cwd: string;
+  readonly config: PlumixConfig;
+  readonly target: SyncTarget;
+  /** `--binding`, for a runtime that can have more than one database. */
+  readonly binding: string | undefined;
+  /** `--url`: the remote site's origin. Set whenever `target` is `remote`. */
+  readonly url: string | undefined;
+  /** In application order; {@link SyncEnd.heads} reads each one's head. */
+  readonly owners: readonly MigrationOwner[];
+}
+
+/** One table a scope selects: the whole table unless `where` narrows it. */
+export interface SyncScopeTable {
+  readonly table: string;
+  /** SQL Plumix wrote, never input. */
+  readonly where?: string;
+}
+
+/**
+ * What a sync replaces, named as `--scope` names it. `media` selects the
+ * storage slot's objects rather than tables.
+ */
+export interface SyncScope {
+  readonly name: string;
+  /** In load order: parents before the rows that reference them. */
+  readonly tables: readonly SyncScopeTable[];
+}
+
+/** A SQLite value as a sync carries it; a BLOB is its bytes. */
+export type SyncValue = string | number | null | Uint8Array;
+
+/** One row, each column name to its value. */
+export type SyncRow = Readonly<Record<string, SyncValue>>;
+
+/** Where a sync end exports to. Each call completes before the next starts. */
+export interface DumpWriter {
+  table(name: string, rows: AsyncIterable<SyncRow>): Promise<void>;
+  /**
+   * The users the dump's rows reference, written only when `users` is not
+   * among the scopes: `id`, `email`, `slug`, `name`, `avatar_url`, `role`.
+   */
+  authors(rows: AsyncIterable<SyncRow>): Promise<void>;
+  object(
+    key: string,
+    body: ReadableStream<Uint8Array>,
+    contentType?: string,
+  ): Promise<void>;
+}
+
+export interface DumpTableCount {
+  readonly name: string;
+  readonly rows: number;
+}
+
+/** A dump's `manifest.json`. */
+export interface DumpManifest {
+  readonly format: 1;
+  readonly source: { readonly origin: string; readonly basePath: string };
+  readonly scopes: readonly string[];
+  /** In load order. */
+  readonly tables: readonly DumpTableCount[];
+  readonly authors: number;
+  readonly objects: number;
+  /** Each owner's newest applied migration, as {@link SyncEnd.heads} reads it. */
+  readonly heads: Readonly<Record<string, string | null>>;
+}
+
+export interface SyncObject {
+  readonly key: string;
+  readonly contentType?: string;
+  readonly body: ReadableStream<Uint8Array>;
+}
+
+export interface DumpReader {
+  readonly manifest: DumpManifest;
+  rows(table: string): AsyncIterable<SyncRow>;
+  authors(): AsyncIterable<SyncRow>;
+  objects(): AsyncIterable<SyncObject>;
+}
+
+/** Rows matched by primary key. */
+export interface SyncTableReport {
+  readonly table: string;
+  readonly replaced: number;
+  readonly added: number;
+  readonly removed: number;
+}
+
+/** Rows outside the sync that referenced rows it replaced. */
+export interface SyncDependentReport {
+  readonly table: string;
+  readonly removed: number;
+  /** Rows kept with the reference set to null. */
+  readonly cleared: number;
+}
+
+export interface SyncImportReport {
+  readonly tables: readonly SyncTableReport[];
+  readonly dependents: readonly SyncDependentReport[];
+  /** Emails of the authors added as disabled users. */
+  readonly authorsAdded: readonly string[];
+}
+
+/** What a transport needs to restore the target as it was before a push. */
+export interface SyncSnapshot {
+  readonly id: string;
+}
+
+export interface SyncAfterEvent {
+  readonly scopes: readonly string[];
+  readonly direction: SyncDirection;
+}
+
+export interface SyncSettleFailure {
+  /** `plugin:<id>`, `core` or `cdn`. */
+  readonly step: string;
+  readonly message: string;
+}
+
+/** Serializes as JSON: the settle endpoint answers with it. */
+export interface SyncSettleReport {
+  /** `failed` when `purgeAll` threw; that failure is also in `failures`. */
+  readonly cdn: "purged" | "cannot-purge" | "failed" | "none";
+  readonly failures: readonly SyncSettleFailure[];
+}
+
+/** One end of a sync, opened for one command run. */
+export interface SyncEnd {
+  /** Remote: `url`. Local: `auth.passkey.origin` resolved against the local env. */
+  readonly origin: string;
+  heads(): Promise<Readonly<Record<string, string | null>>>;
+  exportData(scopes: readonly SyncScope[], into: DumpWriter): Promise<void>;
+  /**
+   * Replaces what the scopes select with the dump's rows. Throws
+   * `sync_migrations_differ` before any write when the dump's heads differ.
+   */
+  importData(
+    from: DumpReader,
+    scopes: readonly SyncScope[],
+    options: { readonly dryRun: boolean },
+  ): Promise<SyncImportReport>;
+  snapshot(): Promise<SyncSnapshot>;
+  restoreHint(snapshot: SyncSnapshot): string;
+  /** Runs core's `settleSync` inside the target site; never throws for a failed step. */
+  settle(event: SyncAfterEvent): Promise<SyncSettleReport>;
+  close(): Promise<void>;
+}
+
+/**
+ * How a runtime moves a site's data for `plumix sync`. A commands-module
+ * export, not an adapter member: a transport loads CLI tooling the server
+ * bundle must not carry.
+ */
+export interface RuntimeSync {
+  open(options: OpenSyncEndOptions): Promise<SyncEnd>;
 }
 
 export interface CommandDefinition<App extends CommandApp = CommandApp> {

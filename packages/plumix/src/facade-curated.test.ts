@@ -50,6 +50,18 @@ const CORE_WITHHELD: readonly Withholding[] = [
   },
   {
     reason:
+      "which tables each core sync scope holds, which only `plumix`'s sync " +
+      "command and core's sync contract read",
+    names: ["CORE_SYNC_SCOPE_TABLES", "SYNC_AUTH_TABLES"],
+  },
+  {
+    reason:
+      "the lines `sync_migrations_differ` lists; a transport calls " +
+      "`assertSameHeads`, which throws with them",
+    names: ["headDifferences"],
+  },
+  {
+    reason:
       "the runtime-key half of the shim roster, which admin's runtime " +
       "object and `PlumixAdminRuntime` are typed against. A plugin " +
       "chunk reads those keys through `getRuntime`, not this map.",
@@ -297,6 +309,18 @@ const CURATED: Readonly<Record<string, Curated>> = {
           "core's own data migrations, which only `plumix`'s migrate runner reads",
         names: ["CORE_DATA_MIGRATIONS"],
       },
+      {
+        reason:
+          "which tables each core sync scope holds, which only `plumix`'s " +
+          "sync command and core's sync contract read",
+        names: ["CORE_SYNC_SCOPE_TABLES", "SYNC_AUTH_TABLES"],
+      },
+      {
+        reason:
+          "the lines `sync_migrations_differ` lists; a transport calls " +
+          "`assertSameHeads`, which throws with them",
+        names: ["headDifferences"],
+      },
     ],
   },
   "./admin": {
@@ -515,6 +539,13 @@ const CURATED: Readonly<Record<string, Curated>> = {
           "`validateEntryContent` under a second name; it is published on " +
           "`plumix/blocks` under its own",
         names: ["validateContent"],
+      },
+      {
+        reason:
+          "the in-memory dump and two-site fixture behind core's and this " +
+          "package's own sync tests; a runtime runs `describeSyncContract` " +
+          "with ends of its own",
+        names: ["memoryDump", "memorySyncEnds"],
       },
     ],
   },
