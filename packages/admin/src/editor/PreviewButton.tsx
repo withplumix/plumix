@@ -1,6 +1,7 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement } from "react";
 import { useState } from "react";
+import { openMintedPreview } from "@/editor/open-minted-preview.js";
 import { copyText } from "@/lib/clipboard.js";
 import { toastError, toastSuccess } from "@/lib/toast.js";
 import { useLabel } from "@/lib/use-label.js";
@@ -56,22 +57,13 @@ export function PreviewButton({
   const [pending, setPending] = useState(false);
 
   function openPreview(): void {
-    // Opened synchronously so popup blockers allow it; the opener is nulled so
-    // the tab can't reach back into the editor.
-    const win = window.open("", "_blank");
     setPending(true);
-    mintPreviewLink()
-      .then(({ url }) => {
-        const href = new URL(url, window.location.origin).href;
-        if (win) {
-          win.opener = null;
-          win.location.href = href;
-        } else {
-          window.open(href, "_blank", "noopener,noreferrer");
-        }
-      })
+    openMintedPreview({
+      open: (url, target, features) => window.open(url, target, features),
+      origin: window.location.origin,
+      mint: mintPreviewLink,
+    })
       .catch(() => {
-        win?.close();
         toastError(renderLabel(M.failed));
       })
       .finally(() => {

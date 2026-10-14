@@ -7,7 +7,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import type { AppRouterClient } from "@plumix/core";
 import { RpcReplyError } from "@plumix/core/test/browser";
 
-import type { AutosaveGroup } from "./use-entry-autosave.js";
+import type { AutosaveGroup } from "./entry-autosave.js";
 import { settleRpc, stubRpc } from "../../test/rpc.js";
 import { AUTOSAVE_DEBOUNCE_MS } from "./autosave.js";
 import { useEntryAutosave } from "./use-entry-autosave.js";

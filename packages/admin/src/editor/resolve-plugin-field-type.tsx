@@ -8,7 +8,9 @@ import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 type PluginFieldComponent = NonNullable<ReturnType<typeof getPluginFieldType>>;
 
 /** Projects only what the reference pickers read: the `scope`. */
-function inputToField(input: BlockInput): MetaBoxFieldManifestEntry {
+export function blockInputToField(
+  input: BlockInput,
+): MetaBoxFieldManifestEntry {
   return {
     key: input.name,
     label: input.label ?? input.name,
@@ -53,7 +55,7 @@ export function resolvePluginFieldType(
     };
     return (
       <Component
-        field={inputToField(field as BlockInput)}
+        field={blockInputToField(field as BlockInput)}
         rhf={controller}
         disabled={disabled}
         testId={testId}
