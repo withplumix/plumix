@@ -24,6 +24,7 @@ import {
   mockManifest,
   mockRpc,
   mockRpcWithCapture,
+  rpcConflictBody,
   rpcErrorBody,
   rpcOkBody,
 } from "./support/rpc-mock.js";
@@ -883,6 +884,108 @@ test.describe("editor document tab", () => {
     expect(captures.at(-1)).not.toHaveProperty("saveAs");
   });
 
+  test("editing a meta field leaves an undeclared meta key out of the autosave", async ({
+    page,
+  }) => {
+    await mockManifest(page, {
+      ...MANIFEST_WITH_POST,
+      entryMetaBoxes: [
+        {
+          id: "showcase",
+          label: "Showcase",
+          entryTypes: ["post"],
+          fields: [
+            {
+              key: "subtitle",
+              label: "Subtitle",
+              type: "string",
+              inputType: "text",
+            },
+          ],
+        },
+      ],
+    });
+    const captures = await installEditorMocks(page, {
+      entry: {
+        ...editorEntry(),
+        meta: {
+          subtitle: "old",
+          featuredImage: { src: "/hero.jpg", alt: "Hero" },
+        },
+      },
+      handlers: { "/entry/createPreviewLink": PREVIEW_LINK },
+    });
+    await page.goto("entries/posts/1/edit");
+    await page.getByTestId("plumix-tab-page").click();
+
+    await page.getByTestId("meta-box-field-subtitle-input").fill("new");
+
+    await expect
+      .poll(() => captures)
+      .toEqual([expect.objectContaining({ meta: { subtitle: "new" } })]);
+  });
+
+  // A display-only renderer occupies a meta key it never writes, which must not
+  // read as a change on open.
+  test("opening an entry with stored meta sends no meta autosave", async ({
+    page,
+  }) => {
+    await mockManifest(page, {
+      ...MANIFEST_WITH_POST,
+      entryTypes: [
+        {
+          name: "post",
+          capabilityType: "post",
+          adminSlug: "posts",
+          isPublic: true,
+          showUI: true,
+          showInSidebar: true,
+          label: "Posts",
+          labels: { singular: "Post", plural: "Posts" },
+          supports: ["title", "editor", "slug", "excerpt"],
+        },
+      ],
+      entryMetaBoxes: [
+        {
+          id: "showcase",
+          label: "Showcase",
+          entryTypes: ["post"],
+          fields: [
+            {
+              key: "subtitle",
+              label: "Subtitle",
+              type: "string",
+              inputType: "text",
+            },
+            {
+              key: "card_preview",
+              label: "Card",
+              type: "json",
+              inputType: "runtime-proof-sibling",
+            },
+          ],
+        },
+      ],
+    });
+    const captures = await installEditorMocks(page, {
+      entry: { ...editorEntry(), meta: { subtitle: "old", accent: "#3366ff" } },
+      handlers: { "/entry/createPreviewLink": PREVIEW_LINK },
+    });
+    await page.goto("entries/posts/1/edit");
+    await page.getByTestId("plumix-tab-page").click();
+    await expect(
+      page.getByTestId("meta-box-field-card_preview-input-siblings"),
+    ).toBeAttached();
+
+    // The excerpt rides the same write as meta, so a meta change would join it.
+    await page.getByTestId("entry-excerpt-input").fill("Summary");
+
+    await expect
+      .poll(() => captures)
+      .toEqual([expect.objectContaining({ excerpt: "Summary" })]);
+    expect(captures[0]).not.toHaveProperty("meta");
+  });
+
   test("the template picker sends the chosen named template via the `template` field", async ({
     page,
   }) => {
@@ -1052,6 +1155,52 @@ test.describe("editor publishing & autosave", () => {
       status: "published",
       expectedLiveUpdatedAt: T1.toISOString(),
     });
+  });
+
+  test("navigating away with a pending edit sends it", async ({ page }) => {
+    const captures = await installEditorMocks(page, {
+      handlers: {
+        "/entry/list": [editorEntry()],
+        "/entry/createPreviewLink": PREVIEW_LINK,
+      },
+    });
+    // Frozen, so the debounce can't send the edit: only leaving the route can.
+    await page.clock.install();
+    await page.goto("entries/posts");
+    await page.getByTestId("content-list-row-1").click();
+    await page.getByTestId("plumix-tab-page").click();
+    await page.clock.pauseAt(new Date("2030-01-01T00:00:00Z"));
+
+    await page.getByTestId("entry-slug-input").fill("left-behind");
+    await page.goBack();
+
+    await expect
+      .poll(() => captures)
+      .toEqual([expect.objectContaining({ slug: "left-behind" })]);
+  });
+
+  // Unloading the document (reload, tab close, a link off the admin) runs no
+  // unmount, so the page itself holds the edit back.
+  test("leaving the page with a pending edit sends it and asks to confirm", async ({
+    page,
+  }) => {
+    const captures = await installEditorMocks(page, {
+      handlers: { "/entry/createPreviewLink": PREVIEW_LINK },
+    });
+    await page.goto("entries/posts/1/edit");
+    await page.getByTestId("plumix-tab-page").click();
+    await page.getByTestId("entry-slug-input").fill("left-behind");
+    const asked = page.waitForEvent("dialog");
+
+    await page.close({ runBeforeUnload: true });
+
+    // The open prompt blocks the page's timers, so the debounce can't send it.
+    const dialog = await asked;
+    expect(dialog.type()).toBe("beforeunload");
+    await expect
+      .poll(() => captures)
+      .toEqual([expect.objectContaining({ slug: "left-behind" })]);
+    await dialog.accept();
   });
 
   test("a failed publish surfaces an error toast instead of failing silently", async ({
@@ -1305,6 +1454,50 @@ test.describe("editor stale-draft dialog", () => {
     await expect(page.getByTestId("plumix-editor-layout")).toBeVisible();
   });
 
+  test("Use theirs discards the autosave, both choices disabled until it lands", async ({
+    page,
+  }) => {
+    await installAutosaveMocks(page, { autosaveUpdatedAt: T_STALE });
+    let release: (() => void) | undefined;
+    const landed = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const discards: unknown[] = [];
+    await page.route("**/_plumix/rpc/entry/discardDraft", async (route) => {
+      discards.push((route.request().postDataJSON() as { json: unknown }).json);
+      await landed;
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody({ id: 1 }),
+      });
+    });
+    // The live row the editor reseeds from carries no pending autosave.
+    await page.route("**/_plumix/rpc/entry/get", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: publishedEntryRpcBody(
+          publishedEntry({
+            autosaveUpdatedAt: discards.length === 0 ? T_STALE : null,
+            liveUpdatedAt: T_LIVE,
+          }),
+        ),
+      }),
+    );
+    await page.goto("entries/posts/1/edit");
+    await expect(page.getByTestId("stale-draft-dialog")).toBeVisible();
+
+    await page.getByTestId("stale-draft-use-theirs").click();
+
+    await expect(page.getByTestId("stale-draft-use-mine")).toBeDisabled();
+    await expect(page.getByTestId("stale-draft-use-theirs")).toBeDisabled();
+    await expect.poll(() => discards).toEqual([{ id: 1 }]);
+    release?.();
+    await expect(page.getByTestId("stale-draft-dialog")).toHaveCount(0);
+    await expect(page.getByTestId("plumix-editor-layout")).toBeVisible();
+  });
+
   test("Compare expands an inline side-by-side JSON diff", async ({ page }) => {
     await installAutosaveMocks(page, { autosaveUpdatedAt: T_STALE });
     await page.goto("entries/posts/1/edit");
@@ -1473,10 +1666,259 @@ test.describe("editor revision preview", () => {
     // against the wiring dropping `triggerVariant: "icon"`.
     await expect(trigger).toHaveAttribute("aria-label", "Revisions");
     await trigger.click();
-    await expect(page.getByTestId("revisions-sheet-list")).toBeVisible();
-    await page.getByTestId("revisions-sheet-item-42-select").click();
+    const row = page.getByTestId("revisions-sheet-item-42-select");
+    await expect(row).toContainText("Snapshot title");
+    await expect(row).toContainText("Ada Lovelace");
+    await row.click();
     await expect.poll(() => page.url()).toContain("revision=42");
     await expect(page.getByTestId("revision-preview-banner")).toBeVisible();
+    await expect(page.getByTestId("revisions-sheet-list")).toHaveCount(0);
+  });
+
+  test("the command palette's Revisions command opens the revisions sheet", async ({
+    page,
+  }) => {
+    await installPreviewMocks(page);
+    await page.goto("entries/posts/1/edit");
+    // Pressing before the layout mounts races the palette's key listener.
+    await expect(page.getByTestId("plumix-editor-layout")).toBeVisible();
+
+    await page.keyboard.press("ControlOrMeta+KeyK");
+    await page.getByTestId("plumix-command-revisions.open").click();
+
+    await expect(page.getByTestId("revisions-sheet-item-42")).toBeVisible();
+  });
+
+  test("a row's diff icon fetches both snapshots and opens the diff modal", async ({
+    page,
+  }) => {
+    await installPreviewMocks(page);
+    const snapshotRequests: unknown[] = [];
+    await page.route("**/_plumix/rpc/entry/revisions/get", (route) => {
+      snapshotRequests.push(
+        (route.request().postDataJSON() as { json: unknown }).json,
+      );
+      return route.fallback();
+    });
+    await page.goto("entries/posts/1/edit");
+    await page.getByTestId("revisions-sheet-trigger").click();
+    await expect(page.getByTestId("revisions-sheet-item-42")).toBeVisible();
+    expect(snapshotRequests).toEqual([]);
+
+    await page.getByTestId("revisions-sheet-item-42-diff").click();
+
+    const modal = page.getByTestId("revision-diff-modal");
+    await expect(modal).toContainText("Snapshot title");
+    await expect(modal).toContainText("Live title");
+    expect(snapshotRequests).toEqual([{ revisionId: 42 }]);
+  });
+
+  test("a failed snapshot fetch shows the diff modal's error state", async ({
+    page,
+  }) => {
+    await installPreviewMocks(page);
+    await page.route("**/_plumix/rpc/entry/revisions/get", (route) =>
+      route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: rpcErrorBody({ code: "INTERNAL_SERVER_ERROR" }),
+      }),
+    );
+    await page.goto("entries/posts/1/edit");
+    await page.getByTestId("revisions-sheet-trigger").click();
+
+    await page.getByTestId("revisions-sheet-item-42-diff").click();
+
+    await expect(page.getByTestId("revision-diff-modal-error")).toBeVisible();
+  });
+
+  // One Escape dismisses only the topmost Radix layer.
+  test("Escape closes the open diff modal, then the revisions sheet, leaving no modal behind", async ({
+    page,
+  }) => {
+    await installPreviewMocks(page);
+    await page.goto("entries/posts/1/edit");
+    await page.getByTestId("revisions-sheet-trigger").click();
+    await page.getByTestId("revisions-sheet-item-42-diff").click();
+    await expect(page.getByTestId("revision-diff-modal")).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("revision-diff-modal")).toHaveCount(0);
+    await expect(page.getByTestId("revisions-sheet-list")).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    await expect(page.getByTestId("revisions-sheet-list")).toHaveCount(0);
+    await expect(page.getByTestId("revision-diff-modal")).toHaveCount(0);
+  });
+
+  test("Load more fetches the next page of revisions from the previous cursor", async ({
+    page,
+  }) => {
+    await installPreviewMocks(page);
+    const pageRequests: unknown[] = [];
+    await page.route("**/_plumix/rpc/entry/revisions/list", (route) => {
+      const input = (
+        route.request().postDataJSON() as {
+          json: { readonly cursor: string | null };
+        }
+      ).json;
+      pageRequests.push(input);
+      const revision =
+        input.cursor === null
+          ? { id: 42, title: "Snapshot title", nextCursor: "cursor-42" }
+          : { id: 41, title: "Older snapshot", nextCursor: null };
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          json: {
+            revisions: [
+              {
+                id: revision.id,
+                title: revision.title,
+                updatedAt: T_REV,
+                authorId: 1,
+                authorName: "Ada Lovelace",
+                authorEmail: "ada@example.test",
+                message: null,
+              },
+            ],
+            nextCursor: revision.nextCursor,
+          },
+          meta: [[1, "revisions", 0, "updatedAt"]],
+        }),
+      });
+    });
+    await page.goto("entries/posts/1/edit");
+    await page.getByTestId("revisions-sheet-trigger").click();
+    await expect(page.getByTestId("revisions-sheet-item-42")).toBeVisible();
+
+    await page.getByTestId("revisions-sheet-load-more").click();
+
+    await expect(page.getByTestId("revisions-sheet-item-41")).toContainText(
+      "Older snapshot",
+    );
+    expect(pageRequests).toEqual([
+      { entryId: 1, cursor: null },
+      { entryId: 1, cursor: "cursor-42" },
+    ]);
+  });
+
+  test("a revision comment saved from the sheet shows inline in its row", async ({
+    page,
+  }) => {
+    await installPreviewMocks(page);
+    const saved: { revisionId: number; message: string | null }[] = [];
+    await page.route("**/_plumix/rpc/entry/revisions/setMessage", (route) => {
+      saved.push(
+        (
+          route.request().postDataJSON() as {
+            json: { revisionId: number; message: string | null };
+          }
+        ).json,
+      );
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody({ ok: true }),
+      });
+    });
+    await page.route("**/_plumix/rpc/entry/revisions/list", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          json: {
+            revisions: [
+              {
+                id: 42,
+                title: "Snapshot title",
+                updatedAt: T_REV,
+                authorId: 1,
+                authorName: "Ada Lovelace",
+                authorEmail: "ada@example.test",
+                message: saved.at(-1)?.message ?? null,
+              },
+            ],
+            nextCursor: null,
+          },
+          meta: [[1, "revisions", 0, "updatedAt"]],
+        }),
+      }),
+    );
+    await page.goto("entries/posts/1/edit");
+    await page.getByTestId("revisions-sheet-trigger").click();
+    await page.getByTestId("revisions-sheet-item-42-comment").click();
+    await page
+      .getByTestId("revisions-sheet-item-42-comment-input")
+      .fill("  Fixed the typo ");
+
+    await page.getByTestId("revisions-sheet-item-42-comment-save").click();
+
+    await expect(
+      page.getByTestId("revisions-sheet-item-42-comment-display"),
+    ).toHaveText("Fixed the typo");
+    expect(saved).toEqual([{ revisionId: 42, message: "Fixed the typo" }]);
+    // Reopening seeds the editor from the saved comment; Cancel closes it
+    // without saving again.
+    await page.getByTestId("revisions-sheet-item-42-comment").click();
+    await expect(
+      page.getByTestId("revisions-sheet-item-42-comment-input"),
+    ).toHaveValue("Fixed the typo");
+    await page.getByTestId("revisions-sheet-item-42-comment-cancel").click();
+    await expect(
+      page.getByTestId("revisions-sheet-item-42-comment-editor"),
+    ).toHaveCount(0);
+    expect(saved).toHaveLength(1);
+  });
+
+  test("Restore from the preview banner restores the revision, and a stale restore shows the conflict inline", async ({
+    page,
+  }) => {
+    await installPreviewMocks(page);
+    let release: (() => void) | undefined;
+    const answered = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const restores: unknown[] = [];
+    await page.route(
+      "**/_plumix/rpc/entry/revisions/restore",
+      async (route) => {
+        restores.push(
+          (route.request().postDataJSON() as { json: unknown }).json,
+        );
+        if (restores.length > 1) {
+          return route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: entryBody(liveEntry()),
+          });
+        }
+        await answered;
+        return route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: rpcConflictBody("stale_expected_updated_at"),
+        });
+      },
+    );
+    await page.goto("entries/posts/1/edit?revision=42");
+    const restore = page.getByTestId("revision-preview-restore");
+
+    await restore.click();
+
+    await expect(restore).toBeDisabled();
+    release?.();
+    await expect(
+      page.getByTestId("revision-preview-restore-error"),
+    ).toBeVisible();
+    await restore.click();
+    await expect.poll(() => page.url()).not.toContain("revision=");
+    await expect(page.getByTestId("revision-preview-banner")).toHaveCount(0);
+    expect(restores).toEqual([
+      { revisionId: 42, expectedLiveUpdatedAt: T_REV0.toISOString() },
+      { revisionId: 42, expectedLiveUpdatedAt: T_REV0.toISOString() },
+    ]);
   });
 });
 
