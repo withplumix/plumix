@@ -16,6 +16,11 @@ interface LoginLocaleSwitcherProps {
   readonly onSelect: (code: string) => void;
 }
 
+/** A single-locale site has nothing to switch to. */
+export function hasLocaleChoice(manifest: PlumixManifest): boolean {
+  return (manifest.i18n?.locales ?? []).length > 1;
+}
+
 /**
  * Persists nothing itself: pre-auth state must not fragment the public cache.
  */
@@ -25,8 +30,8 @@ export function LoginLocaleSwitcher({
   onSelect,
 }: LoginLocaleSwitcherProps): ReactNode {
   const { i18n } = useLingui();
+  if (!hasLocaleChoice(manifest)) return null;
   const locales = manifest.i18n?.locales ?? [];
-  if (locales.length <= 1) return null;
   return (
     <Select value={currentCode} onValueChange={onSelect}>
       <SelectTrigger

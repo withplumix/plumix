@@ -85,6 +85,16 @@ const MESSAGES: Record<MagicLinkRequestErrorCode, MessageDescriptor> = {
 
 const registry = createStrictErrorDescriptorRegistry(MESSAGES, "network");
 
+const EMAIL_REQUIRED = defineMessage({
+  id: "login.magicLink.emailRequired",
+  message: "Enter your email above first.",
+});
+
+/** Why a link can't be requested for `email` yet, or `null` when it can. */
+export function magicLinkEmailError(email: string): MessageDescriptor | null {
+  return email.trim() ? null : EMAIL_REQUIRED;
+}
+
 /** The descriptor the login screen shows for a failed link request. Anything
  *  that isn't a `MagicLinkRequestError` gets the generic `network` copy. */
 export function magicLinkRequestErrorDescriptor(

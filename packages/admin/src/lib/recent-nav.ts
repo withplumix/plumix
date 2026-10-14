@@ -62,3 +62,16 @@ export function selectRecentNavItems<T extends { readonly to: string }>(
   }
   return out;
 }
+
+/** Recents show only on an empty query: once typing, the filtered nav group
+ *  covers the same destinations. */
+export function recentPaletteItems<T extends { readonly to: string }>(
+  query: string,
+  navItems: readonly T[],
+  recents: readonly string[],
+  limit: number,
+): readonly T[] {
+  return query.length === 0
+    ? selectRecentNavItems(navItems, recents, limit)
+    : [];
+}

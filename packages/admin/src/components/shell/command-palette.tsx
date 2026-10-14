@@ -11,14 +11,17 @@ import {
 } from "@/lib/palette-commands.js";
 import { paletteNavItems, selectNavItems } from "@/lib/palette-nav.js";
 import {
-  parseGroupKey,
+  isPaletteSearching,
+  MIN_QUERY_LENGTH,
   resultHref,
+  resultRoute,
   shouldOpenInNewTab,
 } from "@/lib/palette-result.js";
+import { isPaletteToggleKey } from "@/lib/palette-shortcut.js";
 import {
   readRecentNav,
+  recentPaletteItems,
   recordRecentNav,
-  selectRecentNavItems,
 } from "@/lib/recent-nav.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
@@ -44,7 +47,6 @@ import { Kbd } from "@plumix/admin-ui/kbd";
 
 import { CoreIcon } from "./core-icon.js";
 
-const MIN_QUERY_LENGTH = 2;
 const DEBOUNCE_MS = 250;
 const RECENT_LIMIT = 5;
 
@@ -125,7 +127,7 @@ export function CommandPalette({
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent): void {
-      if (event.key === "k" && (event.metaKey || event.ctrlKey)) {
+      if (isPaletteToggleKey(event)) {
         event.preventDefault();
         setOpen((prev) => !prev);
       }
@@ -156,18 +158,11 @@ export function CommandPalette({
     trimmed,
     renderLabel,
   );
-  // Drop Recent once typing — the filtered nav group then covers the
-  // same destinations.
-  const recent =
-    open && trimmed.length === 0
-      ? selectRecentNavItems(navItems, readRecentNav(), RECENT_LIMIT)
-      : [];
+  const recent = open
+    ? recentPaletteItems(trimmed, navItems, readRecentNav(), RECENT_LIMIT)
+    : [];
   const groups = trimmed.length >= MIN_QUERY_LENGTH ? (search.data ?? []) : [];
-  // Suppress the empty state while debouncing/in flight so "no results"
-  // doesn't flash before the first response lands.
-  const searching =
-    trimmed.length >= MIN_QUERY_LENGTH &&
-    (trimmed !== debounced || search.isFetching);
+  const searching = isPaletteSearching(trimmed, debounced, search.isFetching);
 
   function dismiss(): void {
     setOpen(false);
@@ -180,43 +175,22 @@ export function CommandPalette({
     void navigate({ to });
   }
 
-  // Routes a result to its editor from the group key + id. Each domain
-  // owns its route (the server stays admin-route-agnostic).
+  // Each domain owns its route (the server stays admin-route-agnostic).
   function openResult(groupKey: string, id: string): void {
     // Every select pathway (click capture, Enter keydown) writes the ref
     // first, so it's never stale here.
     const newTab = newTabRef.current;
     newTabRef.current = false;
     dismiss();
+    const slugOf = (name: string): string =>
+      findEntryTypeByName(name)?.adminSlug ?? name;
     if (newTab) {
-      const url = resultHref(
-        groupKey,
-        id,
-        (name) => findEntryTypeByName(name)?.adminSlug ?? name,
-      );
+      const url = resultHref(groupKey, id, slugOf);
       if (url) window.open(url, "_blank", "noopener,noreferrer");
       return;
     }
-    const { domain, name } = parseGroupKey(groupKey);
-    switch (domain) {
-      case "entry": {
-        const slug = findEntryTypeByName(name)?.adminSlug ?? name;
-        void navigate({
-          to: "/entries/$slug/$id/edit",
-          params: { slug, id: Number(id) },
-        });
-        return;
-      }
-      case "term":
-        void navigate({
-          to: "/terms/$name/$id/edit",
-          params: { name, id: Number(id) },
-        });
-        return;
-      case "users":
-        void navigate({ to: "/users/$id/edit", params: { id: Number(id) } });
-        return;
-    }
+    const route = resultRoute(groupKey, id, slugOf);
+    if (route) void navigate({ to: route });
   }
 
   function captureNewTab(

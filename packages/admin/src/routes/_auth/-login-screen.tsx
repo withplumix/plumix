@@ -5,6 +5,7 @@ import { LoginLocaleSwitcher } from "@/components/login-locale-switcher.js";
 import { useEmailChangeErrorMessage } from "@/lib/email-change-errors.js";
 import { useMagicLinkErrorMessage } from "@/lib/magic-link-errors.js";
 import {
+  magicLinkEmailError,
   magicLinkRequestErrorDescriptor,
   requestMagicLink,
 } from "@/lib/magic-link.js";
@@ -16,7 +17,6 @@ import { signInWithPasskey } from "@/lib/passkey.js";
 import { refetchSession } from "@/lib/session.js";
 import { useLabel } from "@/lib/use-label.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { defineMessage } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
@@ -45,13 +45,6 @@ import { Separator } from "@plumix/admin-ui/separator";
 import type { LoginSearch } from "./-schemas.js";
 import { buildLocaleSwitchUrl, writeLocaleCookie } from "./-locale-param.js";
 import { loginSchema } from "./-schemas.js";
-
-const M = {
-  emailRequired: defineMessage({
-    id: "login.magicLink.emailRequired",
-    message: "Enter your email above first.",
-  }),
-} satisfies Record<string, MessageDescriptor>;
 
 /**
  * Split out of `login.tsx` so a test can mount the screen without the
@@ -114,12 +107,13 @@ export function LoginScreen({ search }: { search: LoginSearch }): ReactNode {
   });
 
   const onMagicLinkClick = (): void => {
-    const email = form.getValues("email").trim();
-    if (!email) {
-      setMagicLinkError(M.emailRequired);
+    const email = form.getValues("email");
+    const emailError = magicLinkEmailError(email);
+    if (emailError) {
+      setMagicLinkError(emailError);
       return;
     }
-    magicLink.mutate({ email });
+    magicLink.mutate({ email: email.trim() });
   };
 
   // `?lang=` covers the first SSR after reload, before the cookie is on the
