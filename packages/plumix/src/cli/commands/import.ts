@@ -107,7 +107,6 @@ async function readInput(
   if (statSync(path).isDirectory()) {
     return { kind: "dump", dump: await readDump(path) };
   }
-  // Already loaded: the app was built from it before this command ran.
   const { checkImportedMeta, slugify } = await import("@plumix/core");
   return {
     kind: "authoring",
@@ -197,11 +196,11 @@ async function load(run: ImportRun, dump: DumpReader): Promise<void> {
   }
   await run.target.importData(rewrittenDump, run.scopes, { dryRun: false });
   report.success(`Replaced the data on the ${run.targetName} site.`);
+  const directionIntoTarget = run.targetName === "local" ? "pull" : "push";
   describeSettle(
     await run.target.settle({
       scopes: run.scopes.map((scope) => scope.name),
-      // The end the data lands on, as a sync names it.
-      direction: run.targetName === "local" ? "pull" : "push",
+      direction: directionIntoTarget,
     }),
   );
 }

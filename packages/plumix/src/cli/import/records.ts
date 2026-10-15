@@ -2,7 +2,13 @@ import { createReadStream } from "node:fs";
 import { createInterface } from "node:readline";
 import * as v from "valibot";
 
-import type { JsonObject, PluginRegistry, SyncRow } from "@plumix/core";
+import type {
+  ImportedMeta,
+  ImportedMetaOwner,
+  JsonObject,
+  PluginRegistry,
+  SyncRow,
+} from "@plumix/core";
 
 import { PlumixCliError } from "../errors.js";
 
@@ -40,14 +46,10 @@ const AuthoringRecord = v.variant("type", [TermRecord, EntryRecord]);
 type TermRecord = v.InferOutput<typeof TermRecord>;
 type EntryRecord = v.InferOutput<typeof EntryRecord>;
 
-/** What a meta bag is checked with; `plumix import` passes core's. */
 type CheckMeta = (
-  owner: { readonly entryType: string } | { readonly taxonomy: string },
+  owner: ImportedMetaOwner,
   meta: JsonObject,
-) => Promise<
-  | { readonly meta: JsonObject; readonly errors?: undefined }
-  | { readonly meta?: undefined; readonly errors: readonly string[] }
->;
+) => Promise<ImportedMeta>;
 
 /** The rows an authoring file loads, in the dump's terms. */
 export interface AuthoringRows {
@@ -84,29 +86,22 @@ async function* numberedLines(
   }
 }
 
+type Fail = (line: number, reason: string) => void;
+
+interface ParsedRecords {
+  readonly terms: readonly Located<TermRecord>[];
+  readonly entries: readonly Located<EntryRecord>[];
+}
+
 function seconds(date: Date): number {
   return Math.floor(date.getTime() / 1000);
 }
 
-function termKey(taxonomy: string, slug: string): string {
-  return `${taxonomy}/${slug}`;
+function slugKey(owner: string, slug: string): string {
+  return `${owner}/${slug}`;
 }
 
-/**
- * Collects every failure before it throws `import_records_invalid`, so one run
- * names them all and nothing loads unless all pass. `file` is how errors name
- * `path`.
- */
-export async function readAuthoringRecords(
-  path: string,
-  file: string,
-  options: ReadAuthoringOptions,
-): Promise<AuthoringRows> {
-  const { registry } = options;
-  const errors: string[] = [];
-  const fail = (line: number, reason: string): void => {
-    errors.push(`${file}:${String(line)}: ${reason}`);
-  };
+async function parseRecords(path: string, fail: Fail): Promise<ParsedRecords> {
   const terms: Located<TermRecord>[] = [];
   const entries: Located<EntryRecord>[] = [];
   for await (const { line, text } of numberedLines(path)) {
@@ -128,31 +123,50 @@ export async function readAuthoringRecords(
       entries.push({ line, record: result.output });
     }
   }
+  return { terms, entries };
+}
 
-  const termIds = new Map<string, { id: number; line: number }>();
-  const termRows: SyncRow[] = [];
+interface TermRows {
+  readonly rows: readonly SyncRow[];
+  readonly ids: ReadonlyMap<string, number>;
+  /** Keys of the terms that failed, which their entries need not report again. */
+  readonly failed: ReadonlySet<string>;
+}
+
+async function termRowsOf(
+  terms: readonly Located<TermRecord>[],
+  options: ReadAuthoringOptions,
+  fail: Fail,
+): Promise<TermRows> {
+  const lines = new Map<string, number>();
+  const ids = new Map<string, number>();
+  const failed = new Set<string>();
+  const rows: SyncRow[] = [];
   for (const { line, record } of terms) {
-    if (!registry.termTaxonomies.has(record.taxonomy)) {
+    const key = slugKey(record.taxonomy, record.slug);
+    if (!options.registry.termTaxonomies.has(record.taxonomy)) {
       fail(line, `unknown taxonomy "${record.taxonomy}"`);
+      failed.add(key);
       continue;
     }
-    const key = termKey(record.taxonomy, record.slug);
-    const first = termIds.get(key);
+    const first = lines.get(key);
     if (first !== undefined) {
-      fail(line, `duplicate term ${key}, first on line ${String(first.line)}`);
+      fail(line, `duplicate term ${key}, first on line ${String(first)}`);
       continue;
     }
+    lines.set(key, line);
     const checked = await options.checkMeta(
       { taxonomy: record.taxonomy },
       (record.meta ?? {}) as JsonObject,
     );
     if (checked.errors !== undefined) {
       for (const reason of checked.errors) fail(line, reason);
+      failed.add(key);
       continue;
     }
-    const id = termRows.length + 1;
-    termIds.set(key, { id, line });
-    termRows.push({
+    const id = rows.length + 1;
+    ids.set(key, id);
+    rows.push({
       id,
       taxonomy: record.taxonomy,
       name: record.name,
@@ -161,41 +175,78 @@ export async function readAuthoringRecords(
       meta: JSON.stringify(checked.meta),
     });
   }
+  return { rows, ids, failed };
+}
 
+/** The ids of the terms an entry names, or `undefined` once any is refused. */
+function linkedTermIds(
+  line: number,
+  record: EntryRecord,
+  registry: PluginRegistry,
+  termRows: TermRows,
+  fail: Fail,
+): number[] | undefined {
+  const links: number[] = [];
+  let refused = false;
+  for (const ref of record.terms ?? []) {
+    const key = slugKey(ref.taxonomy, ref.slug);
+    const id = termRows.ids.get(key);
+    if (!registry.termTaxonomies.has(ref.taxonomy)) {
+      fail(line, `unknown taxonomy "${ref.taxonomy}"`);
+      refused = true;
+    } else if (id === undefined) {
+      if (!termRows.failed.has(key)) fail(line, `unknown term ${key}`);
+      refused = true;
+    } else if (links.includes(id)) {
+      fail(line, `term ${key} is listed twice`);
+      refused = true;
+    } else {
+      links.push(id);
+    }
+  }
+  return refused ? undefined : links;
+}
+
+function publishedAtOf(
+  record: EntryRecord,
+  status: string,
+  now: Date,
+): number | null {
+  if (record.publishedAt !== undefined) {
+    return seconds(new Date(record.publishedAt));
+  }
+  return status === "published" ? seconds(now) : null;
+}
+
+interface EntryRows {
+  readonly entries: readonly SyncRow[];
+  readonly entryTerms: readonly SyncRow[];
+  readonly authorIds: ReadonlyMap<string, number>;
+}
+
+async function entryRowsOf(
+  entries: readonly Located<EntryRecord>[],
+  termRows: TermRows,
+  options: ReadAuthoringOptions,
+  fail: Fail,
+): Promise<EntryRows> {
   const authorIds = new Map<string, number>();
-  const entryLines = new Map<string, number>();
-  const entryRows: SyncRow[] = [];
+  const lines = new Map<string, number>();
+  const rows: SyncRow[] = [];
   const entryTerms: SyncRow[] = [];
   for (const { line, record } of entries) {
-    if (!registry.entryTypes.has(record.entryType)) {
+    if (!options.registry.entryTypes.has(record.entryType)) {
       fail(line, `unknown entry type "${record.entryType}"`);
       continue;
     }
-    const key = termKey(record.entryType, record.slug);
-    const first = entryLines.get(key);
+    const key = slugKey(record.entryType, record.slug);
+    const first = lines.get(key);
     if (first !== undefined) {
       fail(line, `duplicate entry ${key}, first on line ${String(first)}`);
       continue;
     }
-    entryLines.set(key, line);
-    const links: number[] = [];
-    let linked = true;
-    for (const ref of record.terms ?? []) {
-      const refKey = termKey(ref.taxonomy, ref.slug);
-      const term = termIds.get(refKey);
-      if (!registry.termTaxonomies.has(ref.taxonomy)) {
-        fail(line, `unknown taxonomy "${ref.taxonomy}"`);
-        linked = false;
-      } else if (term === undefined) {
-        fail(line, `unknown term ${refKey}`);
-        linked = false;
-      } else if (links.includes(term.id)) {
-        fail(line, `term ${refKey} is listed twice`);
-        linked = false;
-      } else {
-        links.push(term.id);
-      }
-    }
+    lines.set(key, line);
+    const links = linkedTermIds(line, record, options.registry, termRows, fail);
     const checked = await options.checkMeta(
       { entryType: record.entryType },
       (record.meta ?? {}) as JsonObject,
@@ -204,18 +255,12 @@ export async function readAuthoringRecords(
       for (const reason of checked.errors) fail(line, reason);
       continue;
     }
-    if (!linked) continue;
+    if (links === undefined) continue;
     const authorId = authorIds.get(record.author) ?? authorIds.size + 1;
     authorIds.set(record.author, authorId);
-    const id = entryRows.length + 1;
+    const id = rows.length + 1;
     const status = record.status ?? "published";
-    const publishedAt =
-      record.publishedAt !== undefined
-        ? seconds(new Date(record.publishedAt))
-        : status === "published"
-          ? seconds(options.now)
-          : null;
-    entryRows.push({
+    rows.push({
       id,
       type: record.entryType,
       title: record.title,
@@ -228,13 +273,37 @@ export async function readAuthoringRecords(
       status,
       author_id: authorId,
       meta: JSON.stringify(checked.meta),
-      published_at: publishedAt,
+      published_at: publishedAtOf(record, status, options.now),
     });
     links.forEach((termId, sortOrder) => {
       entryTerms.push({ entry_id: id, term_id: termId, sort_order: sortOrder });
     });
   }
+  return { entries: rows, entryTerms, authorIds };
+}
 
+/**
+ * Collects every failure before it throws `import_records_invalid`, so one run
+ * names them all and nothing loads unless all pass. `file` is how errors name
+ * `path`.
+ */
+export async function readAuthoringRecords(
+  path: string,
+  file: string,
+  options: ReadAuthoringOptions,
+): Promise<AuthoringRows> {
+  const errors: string[] = [];
+  const fail: Fail = (line, reason) => {
+    errors.push(`${file}:${String(line)}: ${reason}`);
+  };
+  const parsed = await parseRecords(path, fail);
+  const termRows = await termRowsOf(parsed.terms, options, fail);
+  const { entries, entryTerms, authorIds } = await entryRowsOf(
+    parsed.entries,
+    termRows,
+    options,
+    fail,
+  );
   if (errors.length > 0) throw PlumixCliError.importRecordsInvalid({ errors });
   const authors = [...authorIds].map(([email, id]): SyncRow => ({
     id,
@@ -244,5 +313,5 @@ export async function readAuthoringRecords(
     avatar_url: null,
     role: "author",
   }));
-  return { terms: termRows, entries: entryRows, entryTerms, authors };
+  return { terms: termRows.rows, entries, entryTerms, authors };
 }

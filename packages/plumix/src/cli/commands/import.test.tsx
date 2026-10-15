@@ -461,3 +461,18 @@ describe("plumix import, a sync dump", () => {
     );
   });
 });
+
+describe("plumix import, a term that fails", () => {
+  test("is reported once, not again on every entry that uses it", async () => {
+    const site = await blogSite();
+    writeRecords("content.jsonl", [{ ...TOPIC, meta: { mood: "x" } }, POST]);
+
+    await expect(
+      importCommand.run(
+        importCtx(["content.jsonl"], site.sync, site.harness.app),
+      ),
+    ).rejects.toMatchObject({
+      message: expect.stringContaining("1 record(s)") as unknown,
+    });
+  });
+});

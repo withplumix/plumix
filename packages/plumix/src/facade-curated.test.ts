@@ -61,9 +61,7 @@ const CORE_WITHHELD: readonly Withholding[] = [
     names: ["headDifferences"],
   },
   {
-    reason:
-      "the check `plumix import` runs on each record's meta, which only " +
-      "that command reads",
+    reason: "the check an import runs on each record's meta, a CLI-only need",
     names: ["checkImportedMeta"],
   },
   {
