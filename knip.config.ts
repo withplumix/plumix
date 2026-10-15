@@ -15,16 +15,23 @@ const adminShimEntries = Object.keys(SHARED_ADMIN_RUNTIME_SPECIFIERS).map(
     `src/admin/${adminRuntimeShimSlug(spec as SharedAdminRuntimeSpecifier)}.ts`,
 );
 
+/** A `dist/` target as the `src/` module it is built from. */
+function sourceOf(target: string): string[] {
+  const built = /^\.\/dist\/(.+)\.js$/.exec(target);
+  return built === null ? [] : [`src/${built[1]}.{ts,tsx}`];
+}
+
 // Core's `exports` targets, as the `src/` modules they are built from. Knip
 // maps `dist` back to `src` through the tsconfig's outDir and rootDir, which
 // only tsconfig.build.json sets, so it can't follow the map to `src/` on its
 // own.
 const coreExportEntries = Object.values(corePackage.exports).flatMap(
-  ({ default: target }) => {
-    const built = /^\.\/dist\/(.+)\.js$/.exec(target);
-    return built === null ? [] : [`src/${built[1]}.{ts,tsx}`];
-  },
+  ({ default: target }) => sourceOf(target),
 );
+
+// The modules core's `browser` field swaps in, which nothing imports by name.
+// Knip doesn't read the `browser` field.
+const coreBrowserEntries = Object.values(corePackage.browser).flatMap(sourceOf);
 
 // A first-party plugin's `i18n:compile` is `plumix i18n compile`, which
 // resolves `@lingui/cli` from the plugin's own root at run time — so the
@@ -329,6 +336,7 @@ const config: KnipConfig = {
       entry: [
         "lingui.config.ts",
         ...coreExportEntries,
+        ...coreBrowserEntries,
         "e2e/globalSetup.ts",
         "e2e/*.spec.ts",
       ],

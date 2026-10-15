@@ -4,11 +4,7 @@
  * list is done when empty.
  */
 export const RETIRED_TIER_PENDING: readonly string[] = [
-  "packages/core/src/blocks/embed/EmbedFacade.browser.test.tsx",
-  "packages/core/src/blocks/html/dompurify-shim.browser.test.ts",
   "packages/core/src/blocks/island-renderer.browser.test.tsx",
-  "packages/core/src/blocks/renderer/document-base-path.browser.test.ts",
-  "packages/core/src/blocks/renderer/use-auth.browser.test.tsx",
   "packages/core/src/dev-client/index.browser.test.tsx",
   "packages/core/src/dev/ui/compile-overlay.browser.test.tsx",
   "packages/core/src/dev/ui/enhance.browser.test.tsx",
