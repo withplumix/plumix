@@ -37,7 +37,7 @@ export const seedFixture: Fixtures<{ seed: Seed }, object, PlaywrightTestArgs> =
 export async function openPost(
   editor: Editor,
   seed: Seed,
-  blocks: readonly BlockNode[] = [],
+  blocks: readonly BlockNode[],
 ): Promise<void> {
   const post = await seed.factories.entry.create({
     type: "post",
