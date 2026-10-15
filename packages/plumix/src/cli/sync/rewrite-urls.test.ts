@@ -1,10 +1,9 @@
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { describe, expect, test } from "vitest";
 
-import type { DumpReader, PlumixConfig, SyncRow } from "@plumix/core";
+import type { DumpReader, SyncRow } from "@plumix/core";
 import { memoryDump } from "@plumix/core/test";
 
-import { jsonColumns, rewriteUrls } from "./rewrite-urls.js";
+import { rewriteUrls } from "./rewrite-urls.js";
 
 async function* rowsOf(rows: readonly SyncRow[]): AsyncIterable<SyncRow> {
   for (const row of rows) {
@@ -30,7 +29,6 @@ async function prodDump(rows: readonly SyncRow[]): Promise<DumpReader> {
 }
 
 const LOCAL = { origin: "http://localhost:5173", basePath: "" };
-const ENTRY_JSON = new Map([["entries", new Set(["content", "meta"])]]);
 
 describe("rewriteUrls", () => {
   test.each([
@@ -43,7 +41,7 @@ describe("rewriteUrls", () => {
     const content = JSON.stringify({ url });
     const dump = await prodDump([{ id: 1, content }]);
 
-    const { dump: rewritten } = rewriteUrls(dump, LOCAL, ENTRY_JSON);
+    const { dump: rewritten } = rewriteUrls(dump, LOCAL);
 
     expect(await collect(rewritten.rows("entries"))).toEqual([
       { id: 1, content },
@@ -59,7 +57,7 @@ describe("rewriteUrls", () => {
       },
     ]);
 
-    const { dump: rewritten } = rewriteUrls(dump, LOCAL, ENTRY_JSON);
+    const { dump: rewritten } = rewriteUrls(dump, LOCAL);
 
     expect(await collect(rewritten.rows("entries"))).toEqual([
       {
@@ -75,7 +73,7 @@ describe("rewriteUrls", () => {
       { id: 1, excerpt: '["https://prod.example/a"]', content: null },
     ]);
 
-    const { dump: rewritten } = rewriteUrls(dump, LOCAL, ENTRY_JSON);
+    const { dump: rewritten } = rewriteUrls(dump, LOCAL);
 
     expect(await collect(rewritten.rows("entries"))).toEqual([
       { id: 1, excerpt: '["https://prod.example/a"]', content: null },
@@ -86,7 +84,7 @@ describe("rewriteUrls", () => {
     const content = '{"https://prod.example/a":1}';
     const dump = await prodDump([{ id: 1, content }]);
 
-    const { dump: rewritten } = rewriteUrls(dump, LOCAL, ENTRY_JSON);
+    const { dump: rewritten } = rewriteUrls(dump, LOCAL);
 
     expect(await collect(rewritten.rows("entries"))).toEqual([
       { id: 1, content },
@@ -100,11 +98,7 @@ describe("rewriteUrls", () => {
         meta: '{"a":"https://prod.example/a","b":"https://prod.example/b"}',
       },
     ]);
-    const { dump: rewritten, rewritten: counts } = rewriteUrls(
-      dump,
-      LOCAL,
-      ENTRY_JSON,
-    );
+    const { dump: rewritten, rewritten: counts } = rewriteUrls(dump, LOCAL);
     await collect(rewritten.rows("entries"));
 
     await collect(rewritten.rows("entries"));
@@ -113,20 +107,22 @@ describe("rewriteUrls", () => {
   });
 });
 
-describe("jsonColumns", () => {
-  test("names a plugin table's JSON columns beside core's", () => {
-    const forms = sqliteTable("forms", {
-      id: integer().primaryKey(),
-      title: text(),
-      fields: text({ mode: "json" }),
+describe("rewriteUrls, beyond the content tables", () => {
+  test("leaves a plugin table's JSON column alone", async () => {
+    const source = memoryDump({
+      source: { origin: "https://prod.example", basePath: "" },
+      scopes: ["plugin:forms"],
+      heads: { core: "1" },
     });
-    const config = {
-      plugins: [{ id: "forms", setup: () => undefined, schema: { forms } }],
-    } as unknown as PlumixConfig;
+    await source.writer.table(
+      "forms",
+      rowsOf([{ id: 1, fields: '{"action":"https://prod.example/send"}' }]),
+    );
 
-    const columns = jsonColumns(config);
+    const { dump: rewritten } = rewriteUrls(source.read(), LOCAL);
 
-    expect(columns.get("forms")).toEqual(new Set(["fields"]));
-    expect(columns.get("entries")).toEqual(new Set(["content", "meta"]));
+    expect(await collect(rewritten.rows("forms"))).toEqual([
+      { id: 1, fields: '{"action":"https://prod.example/send"}' },
+    ]);
   });
 });

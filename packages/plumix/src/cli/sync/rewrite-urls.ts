@@ -1,15 +1,7 @@
-import type { SQLiteTable as SQLiteTableType } from "drizzle-orm/sqlite-core";
-import { getTableColumns, getTableName, is } from "drizzle-orm";
-import { SQLiteTable } from "drizzle-orm/sqlite-core";
+import { getTableName } from "drizzle-orm";
 
-import type {
-  DumpReader,
-  JsonValue,
-  PlumixConfig,
-  SyncRow,
-  SyncValue,
-} from "@plumix/core";
-import * as coreSchema from "@plumix/core/schema";
+import type { DumpReader, JsonValue, SyncRow, SyncValue } from "@plumix/core";
+import { entries, settings, terms, users } from "@plumix/core/schema";
 
 /** Where a site lives: its origin, and the base path it is served under. */
 export interface SiteLocation {
@@ -23,31 +15,13 @@ export interface RewrittenDump {
   readonly rewritten: () => ReadonlyMap<string, number>;
 }
 
-/** Each table's columns that hold JSON, by their SQL names. */
-type JsonColumns = ReadonlyMap<string, ReadonlySet<string>>;
-
-function tablesIn(values: readonly unknown[]): SQLiteTableType[] {
-  return values.filter((value): value is SQLiteTableType =>
-    is(value, SQLiteTable),
-  );
-}
-
-export function jsonColumns(config: PlumixConfig): JsonColumns {
-  const tables = [
-    ...tablesIn(Object.values(coreSchema)),
-    ...config.plugins.flatMap((plugin) =>
-      tablesIn(Object.values(plugin.schema ?? {})),
-    ),
-  ];
-  const columns = new Map<string, Set<string>>();
-  for (const table of tables) {
-    const json = Object.values(getTableColumns(table))
-      .filter((column) => column.dataType === "json")
-      .map((column) => column.name);
-    if (json.length > 0) columns.set(getTableName(table), new Set(json));
-  }
-  return columns;
-}
+/** The JSON content whose URLs a sync rewrites, by SQL table and column. */
+const CONTENT_JSON_COLUMNS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
+  [getTableName(entries), new Set([entries.content.name, entries.meta.name])],
+  [getTableName(terms), new Set([terms.meta.name])],
+  [getTableName(users), new Set([users.meta.name])],
+  [getTableName(settings), new Set([settings.value.name])],
+]);
 
 export function siteUrl(site: SiteLocation): string {
   return `${new URL(site.origin).origin}${site.basePath}`;
@@ -128,7 +102,6 @@ function parseJson(text: string): JsonValue | undefined {
 export function rewriteUrls(
   dump: DumpReader,
   target: SiteLocation,
-  columns: JsonColumns,
 ): RewrittenDump {
   const from = siteUrl(dump.manifest.source);
   const to = siteUrl(target);
@@ -137,7 +110,7 @@ export function rewriteUrls(
   const counts = new Map<string, number>();
 
   async function* rows(table: string): AsyncIterable<SyncRow> {
-    const json = columns.get(table);
+    const json = CONTENT_JSON_COLUMNS.get(table);
     counts.set(table, 0);
     const count = (): void => {
       counts.set(table, (counts.get(table) ?? 0) + 1);

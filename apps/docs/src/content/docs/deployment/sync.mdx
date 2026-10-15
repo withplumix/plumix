@@ -83,7 +83,7 @@ Auth state never travels. `sessions`, `api_tokens`, `auth_tokens`, `device_codes
 
 A sync points the source's URLs at the target, so a pulled site links to itself rather than to production. The source is the dump manifest's `origin` and `basePath`; the target is the target end's origin (`--url` for the deployed site, `auth.passkey.origin` for the local one) and the site's `basePath`.
 
-- **Where.** Only inside the string values of JSON columns, as the drizzle tables of core and every plugin declare them: block trees and their rich-text links, entry, term and user meta, and settings. Each value is parsed and walked; nothing is found and replaced in raw SQL or text, so a serialized structure can't break. A column that is not JSON, and an object key, is left alone.
+- **Where.** Only inside the string values of core's JSON content: `entries.content` (block trees and their rich-text links), `entries.meta`, `terms.meta`, `users.meta` and `settings.value`. Each value is parsed and walked; nothing is found and replaced in raw SQL or text, so a serialized structure can't break. Every other column, a plugin's tables included, and every object key is left alone.
 - **What.** An absolute URL whose origin and base path match the source's exactly, wherever it sits in a string, an HTML block's `href` included. With the source at `https://prod.example` and a `basePath` of `/site`, `https://prod.example/site/a` becomes `http://localhost:5173/site/a` on a pull, and `https://prod.example/other`, `https://prod.example.com/`, another domain and a relative URL stay as they are.
 - **Report.** The dry run's summary ends with each table's count of rewritten values.
 

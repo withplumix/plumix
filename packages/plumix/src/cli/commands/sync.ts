@@ -7,7 +7,6 @@ import type {
   CommandContext,
   CommandDefinition,
   DumpReader,
-  PlumixConfig,
   RuntimeSync,
   SyncDirection,
   SyncEnd,
@@ -24,7 +23,7 @@ import { resolveOwners } from "../migrate/owners.js";
 import { report } from "../report.js";
 import { readDump, writeDump } from "../sync/dump.js";
 import { exportLocalAdmins, keepLocalAdmins } from "../sync/local-admins.js";
-import { jsonColumns, rewriteUrls, siteUrl } from "../sync/rewrite-urls.js";
+import { rewriteUrls, siteUrl } from "../sync/rewrite-urls.js";
 import { resolveScopes } from "../sync/scopes.js";
 
 const DIRECTIONS: readonly SyncDirection[] = ["pull", "push"];
@@ -175,7 +174,6 @@ interface SyncRun {
   readonly targetName: SyncTarget;
   readonly dumpDir: string;
   readonly basePath: string;
-  readonly config: PlumixConfig;
 }
 
 async function exportDump(run: SyncRun): Promise<DumpReader> {
@@ -198,7 +196,7 @@ async function preparedDump(run: SyncRun): Promise<RewrittenDump> {
     dump = await keepLocalAdmins(dump, await exportLocalAdmins(run.target));
   }
   if (!run.args.rewriteUrls) return { dump, rewritten: () => new Map() };
-  return rewriteUrls(dump, targetSite(run), jsonColumns(run.config));
+  return rewriteUrls(dump, targetSite(run));
 }
 
 async function confirmed(run: SyncRun): Promise<boolean> {
@@ -319,7 +317,6 @@ export const syncCommand: CommandDefinition = {
         targetName: pull ? "local" : "remote",
         dumpDir,
         basePath: config.basePath,
-        config,
       });
     } finally {
       await closeAll(ends);
