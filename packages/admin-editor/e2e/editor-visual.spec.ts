@@ -359,6 +359,18 @@ test.describe("editor playground", () => {
     await expect(page.getByTestId("block-input-body-editor")).toBeVisible();
   });
 
+  // Mounting the rail's Tiptap editor normalizes the stored body; that must
+  // not read as an author edit.
+  test("selecting a text block leaves undo disabled", async ({ page }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+
+    await canvas.locator('[data-plumix-id="intro"]').click();
+    await expect(page.getByTestId("block-input-body-editor")).toBeVisible();
+
+    await expect(page.getByTestId("plumix-undo")).toBeDisabled();
+  });
+
   test("typing in the rail flows live to the canvas without losing focus", async ({
     page,
   }) => {
@@ -601,6 +613,34 @@ test.describe("editor playground", () => {
     await expect(json).toContainText('"12px"');
   });
 
+  test("the Custom CSS section adds a declaration to the block's style", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+    await canvas.locator('[data-plumix-id="heading-1"]').click();
+    await page.getByTestId("plumix-tab-styles").click();
+    await page.getByTestId("styles-section-declarations").click();
+
+    await page.getByTestId("style-declaration-add-key").click();
+    await page
+      .getByTestId("style-declaration-add-key-option-letterSpacing")
+      .click();
+    await page.getByTestId("style-declaration-add-value").fill("0.05em");
+    await page.getByTestId("style-declaration-add-submit").click();
+
+    await expect(
+      page.getByTestId("style-declaration-letterSpacing-value"),
+    ).toHaveValue("0.05em");
+    // The add row resets for the next declaration.
+    await expect(page.getByTestId("style-declaration-add-value")).toHaveValue(
+      "",
+    );
+    await expect(
+      page.getByTestId("style-declaration-add-submit"),
+    ).toBeDisabled();
+  });
+
   test("a loader-backed block offers a scoped refresh that updates the canvas", async ({
     page,
   }) => {
@@ -761,6 +801,38 @@ test.describe("editor playground", () => {
     await expect(rails.first()).toHaveAttribute("data-state", "collapsed");
   });
 
+  test("Cmd/Ctrl+B collapses the rails", async ({ page }) => {
+    await page.goto("/");
+    const rails = page.locator('[data-slot="sidebar"]');
+    // See the x-ray test above: pressing before mount races the listener.
+    await expect(rails.first()).toHaveAttribute("data-state", "expanded");
+
+    await page.keyboard.press("ControlOrMeta+KeyB");
+
+    await expect(rails.first()).toHaveAttribute("data-state", "collapsed");
+  });
+
+  // Cmd+B is also the bold mark, so the chord must not collapse the panel the
+  // author is typing into.
+  test("Cmd/Ctrl+B in the rail's text editor bolds and leaves the rails open", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+    await canvas.locator('[data-plumix-id="intro"]').click();
+    const editor = page.getByTestId("block-input-body-editor");
+    await editor.click();
+    await page.keyboard.press("ControlOrMeta+A");
+
+    await page.keyboard.press("ControlOrMeta+KeyB");
+
+    await expect(editor.locator("strong")).toContainText("standalone harness");
+    await expect(page.locator('[data-slot="sidebar"]').first()).toHaveAttribute(
+      "data-state",
+      "expanded",
+    );
+  });
+
   test("group then ungroup selected blocks via the toolbar", async ({
     page,
   }) => {
@@ -791,6 +863,37 @@ test.describe("editor playground", () => {
     await expect(page.getByTestId("layer-group-heading")).toBeVisible();
   });
 
+  test("Delete on a focused layer removes its block and focuses the next row", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await page.getByTestId("plumix-tab-layers").click();
+    const group = page.getByTestId("layer-group-1");
+    await group.focus();
+
+    await page.keyboard.press("Delete");
+
+    await expect(group).toHaveCount(0);
+    // Past the deleted row's children, so keyboard work carries on.
+    await expect(page.getByTestId("layer-columns-1")).toBeFocused();
+  });
+
+  test("F2 renames a focused layer and returns focus to its row", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await page.getByTestId("plumix-tab-layers").click();
+    const row = page.getByTestId("layer-heading-1");
+    await row.focus();
+
+    await page.keyboard.press("F2");
+    await page.getByTestId("layer-rename-heading-1").fill("Page title");
+    await page.keyboard.press("Enter");
+
+    await expect(row).toBeFocused();
+    await expect(row).toContainText("Page title");
+  });
+
   // The cheatsheet's own chord is the one binding a unit test can only fake:
   // "?" is a shifted key whose `key` value the browser derives from the layout.
   test("? opens the shortcut cheatsheet, Escape closes it", async ({
@@ -808,6 +911,16 @@ test.describe("editor playground", () => {
 
     await page.keyboard.press("Escape");
     await expect(page.getByTestId("plumix-shortcuts-dialog")).toBeHidden();
+  });
+
+  test("the toolbar help button opens the shortcut cheatsheet", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    await page.getByTestId("plumix-shortcuts-trigger").click();
+
+    await expect(page.getByTestId("plumix-shortcuts-dialog")).toBeVisible();
   });
 
   test("? works with focus inside the canvas iframe (forwarded)", async ({
