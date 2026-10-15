@@ -1,5 +1,6 @@
 import type { EmbeddedAuthContext } from "../../auth/client/render-context.js";
 import type { AssetManifest, ViteCommand } from "./asset-manifest.js";
+import { AUTH_CONTEXT_ATTRIBUTE } from "../../auth/client/render-context.js";
 import { resolveEntryUrl } from "./asset-manifest.js";
 
 const DEV_ENTRY_PATH = "/.plumix/islands-entry.ts";
@@ -38,7 +39,7 @@ export function injectIslandsBootstrap(
   const authScript =
     auth === undefined
       ? ""
-      : `<script type="application/json" data-plumix-auth="">${JSON.stringify(
+      : `<script type="application/json" ${AUTH_CONTEXT_ATTRIBUTE}="">${JSON.stringify(
           auth,
         ).replace(/</g, "\\u003c")}</script>`;
   // A hydrated island has no `PlumixProvider` or `<base href>`, so this is its

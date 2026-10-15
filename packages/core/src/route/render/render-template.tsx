@@ -585,8 +585,7 @@ function renderTree({
   const authContext = {
     basePath: ctx.config.basePath,
     methods: ctx.authMethods,
-    // Read on demand, as `user` above: only an `authClient.useSession()` call
-    // makes the render personal.
+    // On demand: only an `authClient.useSession()` call makes the render personal.
     user: () => {
       const { user } = ctx;
       return user === null

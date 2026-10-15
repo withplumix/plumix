@@ -1,7 +1,3 @@
-// The browser's half of the passkey ceremonies: the server's options arrive
-// with base64url strings where WebAuthn wants buffers, and the credential goes
-// back the same way.
-
 /**
  * Non-readonly: DOM `PublicKeyCredentialCreationOptions` declares mutable
  * arrays, and this goes straight to `navigator.credentials.create`.

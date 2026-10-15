@@ -74,7 +74,6 @@ export const FOLDERS: Readonly<Record<string, Placement>> = {
   "meta/": server("capabilities"),
   "access/": server("capabilities"),
   "auth/": server("capabilities"),
-  // `plumix/auth/client`, which islands and the admin bundle.
   "auth/client/": client("capabilities"),
   "mail/": server("capabilities"),
   "entries/": server("capabilities"),

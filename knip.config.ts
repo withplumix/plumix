@@ -168,9 +168,7 @@ const config: KnipConfig = {
         // can't see.
         "src/blocks/island-runtime.ts",
         "src/blocks/island-renderer.ts",
-        // `plumix/auth/client` is imported by a theme's islands, a method's
-        // client half and the generated islands renderer entry, none of which
-        // this package holds.
+        // Imported by site and generated code knip can't see.
         "src/auth/client.ts",
         // The dev client error tools' single install entry is loaded by the
         // consumer's generated `.plumix/client-entry.ts` via a dev-gated

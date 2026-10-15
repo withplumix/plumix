@@ -1,5 +1,3 @@
-// `plumix/auth/client`: browser-safe, so a theme island or a plugin's method
-// half imports it. Its registries are augmented through `plumix` itself.
 export {
   authClient,
   defineAuthMethodClient,

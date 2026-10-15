@@ -3,9 +3,6 @@ import { defineMessage } from "@lingui/core/macro";
 
 import { createStrictErrorDescriptorRegistry } from "./error-descriptor-registry.js";
 
-// The login screen's copy for a link request, keyed by the code
-// `authClient.signIn.magicLink` resolves.
-
 type MagicLinkRequestErrorCode = "not_configured" | "invalid_input" | "network";
 
 const MESSAGES: Record<MagicLinkRequestErrorCode, MessageDescriptor> = {

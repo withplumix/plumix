@@ -5,19 +5,21 @@ test.use({ storageState: { cookies: [], origins: [] } });
 
 const FIXTURE_EMAIL = "fixture@example.test";
 
-// On a cold `plumix dev`, a browser's session RPC that follows the server's
-// first sign-in back to back fails in miniflare ("fetch failed"), with or
-// without `authClient`; two seconds apart it passes. This takes that first
-// sign-in, spaced out, from a request context of its own.
+// On a cold `plumix dev`, the session RPC right after the server's first
+// sign-in fails in miniflare ("fetch failed"), with or without `authClient`.
+// Sign in here until the RPC answers.
 test.beforeAll(async ({ playwright, baseURL }) => {
   const request = await playwright.request.newContext({ baseURL });
   const headers = { "x-plumix-request": "1" };
   await request.post("/_plumix/auth/fixture/sign-in", { headers, data: {} });
-  await new Promise((resolve) => setTimeout(resolve, 2000));
-  await request.post("/_plumix/rpc/auth/session", {
-    headers,
-    data: { json: {} },
-  });
+  await expect
+    .poll(async () => {
+      const response = await request
+        .post("/_plumix/rpc/auth/session", { headers, data: { json: {} } })
+        .catch(() => null);
+      return response?.ok() ?? false;
+    })
+    .toBe(true);
   await request.dispose();
 });
 

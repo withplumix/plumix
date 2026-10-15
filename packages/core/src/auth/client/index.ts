@@ -1,5 +1,3 @@
-// `plumix/auth/client`: browser-safe, never imports server code. Importing it
-// mounts core's own method halves.
 import { createAuthClient } from "./auth-client.js";
 import {
   currentAuthMethods,
@@ -17,7 +15,6 @@ const created = createAuthClient({
 
 export const authClient = created.authClient;
 
-/** Mounts plugin halves; the build's generated entries call it. */
 export const registerAuthMethodClients = created.registerAuthMethodClients;
 
 export { defineAuthMethodClient } from "./define.js";

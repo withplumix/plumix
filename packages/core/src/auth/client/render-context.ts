@@ -64,12 +64,12 @@ export function seedAuthContext(context: EmbeddedAuthContext): void {
   seeded = context;
 }
 
-/** The selector the islands bootstrap embeds the context under. */
-export const AUTH_CONTEXT_SELECTOR = "script[data-plumix-auth]";
+/** The attribute of the script the islands bootstrap embeds the context in. */
+export const AUTH_CONTEXT_ATTRIBUTE = "data-plumix-auth";
 
 function embedded(): EmbeddedAuthContext | null {
   if (seeded !== null || typeof document === "undefined") return seeded;
-  const script = document.querySelector(AUTH_CONTEXT_SELECTOR);
+  const script = document.querySelector(`script[${AUTH_CONTEXT_ATTRIBUTE}]`);
   if (script?.textContent) {
     seeded = JSON.parse(script.textContent) as EmbeddedAuthContext;
   }
