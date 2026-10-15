@@ -359,14 +359,21 @@ test.describe("editor playground", () => {
     await expect(page.getByTestId("block-input-body-editor")).toBeVisible();
   });
 
-  // Mounting the rail's Tiptap editor normalizes the stored body; that must
-  // not read as an author edit.
+  // Re-pointing the rail at a body the editor re-serializes (the link gains
+  // its rel/target) resets the editor's content; that reset must not read as
+  // an author edit.
   test("selecting a text block leaves undo disabled", async ({ page }) => {
     await page.goto("/");
     const canvas = page.frameLocator(CANVAS_FRAME);
-
+    const editor = page.getByTestId("block-input-body-editor");
     await canvas.locator('[data-plumix-id="intro"]').click();
-    await expect(page.getByTestId("block-input-body-editor")).toBeVisible();
+    await expect(editor).toContainText("standalone harness");
+
+    await canvas.locator('[data-plumix-id="link-text"]').click();
+    await expect(editor).toContainText("another page");
+    // A later render settles any write the reset would have queued.
+    await page.getByTestId("plumix-tab-layers").click();
+    await expect(page.getByTestId("layer-link-text")).toBeVisible();
 
     await expect(page.getByTestId("plumix-undo")).toBeDisabled();
   });
@@ -876,6 +883,22 @@ test.describe("editor playground", () => {
     await expect(group).toHaveCount(0);
     // Past the deleted row's children, so keyboard work carries on.
     await expect(page.getByTestId("layer-columns-1")).toBeFocused();
+  });
+
+  test("Backspace on a focused nested layer removes only that block", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await page.getByTestId("plumix-tab-layers").click();
+    const nested = page.getByTestId("layer-group-text");
+    await nested.focus();
+
+    await page.keyboard.press("Backspace");
+
+    await expect(nested).toHaveCount(0);
+    // Its container and sibling stay.
+    await expect(page.getByTestId("layer-group-1")).toBeVisible();
+    await expect(page.getByTestId("layer-group-heading")).toBeVisible();
   });
 
   test("F2 renames a focused layer and returns focus to its row", async ({
