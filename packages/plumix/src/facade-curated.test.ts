@@ -200,8 +200,8 @@ const CORE_WITHHELD: readonly Withholding[] = [
   {
     reason:
       "the contract between core and its own tooling — the Vite plugin, " +
-      "the CLI, the admin shell and the dispatcher read these from " +
-      "`@plumix/core` directly.",
+      "the CLI, the admin shell, the dispatcher and the Playwright editor " +
+      "fixture read these from `@plumix/core` directly.",
     names: [
       "pluginCatalogUrl",
       "pluginCatalogStagedPath",
@@ -213,6 +213,7 @@ const CORE_WITHHELD: readonly Withholding[] = [
       "termTaxonomyCapability",
       "serializeManifestScript",
       "injectManifestIntoHtml",
+      "readManifestScript",
       "CORE_NAV_GROUPS",
       "MANIFEST_SCRIPT_ID",
       "configuredSlotsOf",
