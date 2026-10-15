@@ -17,12 +17,6 @@ interface Seed {
   readonly authorId: number;
 }
 
-/** Top-level blocks by name, as an entry stores them. */
-const content = (...names: readonly string[]) => ({
-  version: "plumix.v2" as const,
-  blocks: names.map((name, index) => ({ id: `seeded-${String(index)}`, name })),
-});
-
 /** Each test signs in as its own admin, so its drafts are its own. */
 const test = base.extend<{ seed: Seed }>({
   seed: [
@@ -89,7 +83,6 @@ test("leaving with an unsaved edit prompts, and staying stores it", async ({
     authorId: seed.authorId,
   });
   await editor.open(post);
-  // A held write keeps the edit unsaved for as long as the test needs.
   const release = await holdRequests(page, "**/_plumix/rpc/entry/update");
   await editor.insert("core/separator");
 
@@ -123,7 +116,10 @@ test("discarding the draft puts the published blocks back", async ({
     type: "post",
     authorId: seed.authorId,
     status: "published",
-    content: content("core/separator"),
+    content: {
+      version: "plumix.v2",
+      blocks: [{ id: "published-separator", name: "core/separator" }],
+    },
   });
   await editor.open(post);
   await editor.insert("core/code");
@@ -140,7 +136,9 @@ test("discarding the draft puts the published blocks back", async ({
     expect(await editor.canvas.blocks()).toEqual(["core/separator"]);
   }).toPass();
   await editor.reload();
-  expect(await editor.stored()).toEqual(content("core/separator").blocks);
+  expect(await editor.stored()).toEqual([
+    { id: "published-separator", name: "core/separator" },
+  ]);
   expect(await editor.canvas.blocks()).toEqual(["core/separator"]);
 });
 
@@ -153,16 +151,23 @@ test("restoring a revision from its preview stores that revision's blocks", asyn
     type: "post",
     authorId: seed.authorId,
     status: "published",
-    content: content("core/separator"),
+    content: {
+      version: "plumix.v2",
+      blocks: [{ id: "live-separator", name: "core/separator" }],
+    },
   });
-  const earlier = content("core/code", "core/separator");
-  // A revision is an entry of type `revision` whose slug names its entry.
   const revision = await seed.factories.entry.create({
     authorId: seed.authorId,
     type: "revision",
     slug: `revision:${String(post.id)}:seeded`,
     status: "published",
-    content: earlier,
+    content: {
+      version: "plumix.v2",
+      blocks: [
+        { id: "earlier-code", name: "core/code" },
+        { id: "earlier-separator", name: "core/separator" },
+      ],
+    },
   });
   await editor.open(post);
 
@@ -182,6 +187,9 @@ test("restoring a revision from its preview stores that revision's blocks", asyn
     ]);
   }).toPass();
   await editor.reload();
-  expect(await editor.stored()).toEqual(earlier.blocks);
+  expect(await editor.stored()).toEqual([
+    { id: "earlier-code", name: "core/code" },
+    { id: "earlier-separator", name: "core/separator" },
+  ]);
   expect(await editor.canvas.blocks()).toEqual(["core/code", "core/separator"]);
 });
