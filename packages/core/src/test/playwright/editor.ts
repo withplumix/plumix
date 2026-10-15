@@ -438,14 +438,17 @@ export function createEditor(page: Page): Editor {
           const modal = page.getByTestId(`${testId}-modal`);
           const card = modal.getByTestId(`media-card-${text}`);
           // The library pages in as its sentinel scrolls into view.
-          await expect(async () => {
-            if ((await card.count()) === 0) {
-              await modal
-                .getByTestId("media-library-sentinel")
-                .scrollIntoViewIfNeeded();
-            }
-            await expect(card).toBeAttached({ timeout: 1_000 });
-          }).toPass();
+          await expect
+            .poll(async () => {
+              const paged = await card.count();
+              if (paged === 0) {
+                await modal
+                  .getByTestId("media-library-sentinel")
+                  .scrollIntoViewIfNeeded();
+              }
+              return paged;
+            })
+            .toBeGreaterThan(0);
           await card.click();
           await modal.getByTestId("media-library-picker-confirm").click();
           await expect(modal).toBeHidden();

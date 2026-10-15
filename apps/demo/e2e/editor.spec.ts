@@ -31,20 +31,55 @@ test("create starts an entry with an empty canvas", async ({ editor }) => {
   expect(await editor.canvas.blocks()).toEqual([]);
 });
 
-test("insert by click lands at the end, at the start, and beside a block", async ({
+test("insert by click appends the block at the end", async ({ editor }) => {
+  await editor.create("post");
+  await editor.insert("core/rich-text");
+
+  await editor.insert("core/separator");
+
+  expect(await editor.canvas.blocks()).toEqual([
+    "core/rich-text",
+    "core/separator",
+  ]);
+});
+
+test("insert by click at the start puts the block first", async ({
   editor,
 }) => {
   await editor.create("post");
+  await editor.insert("core/rich-text");
 
+  await editor.insert("core/code", { at: "start" });
+
+  expect(await editor.canvas.blocks()).toEqual(["core/code", "core/rich-text"]);
+});
+
+test("insert by click after a block puts the block right behind it", async ({
+  editor,
+}) => {
+  await editor.create("post");
   const text = await editor.insert("core/rich-text");
   await editor.insert("core/separator");
-  await editor.insert("core/code", { at: "start" });
+
   await editor.insert("core/html", { at: { after: text } });
-  await editor.insert("core/separator", { at: { before: text } });
 
   expect(await editor.canvas.blocks()).toEqual([
-    "core/code",
+    "core/rich-text",
+    "core/html",
     "core/separator",
+  ]);
+});
+
+test("insert by click before a block puts the block right ahead of it", async ({
+  editor,
+}) => {
+  await editor.create("post");
+  await editor.insert("core/rich-text");
+  const separator = await editor.insert("core/separator");
+
+  await editor.insert("core/html", { at: { before: separator } });
+
+  expect(await editor.canvas.blocks()).toEqual([
     "core/rich-text",
     "core/html",
     "core/separator",
@@ -63,114 +98,199 @@ test("insert by click into an empty slot nests the block", async ({
   expect(await editor.canvas.blocks()).toEqual(["core/group"]);
 });
 
-test("insert by drag lands at the end, at the start, beside and into a block", async ({
+test("insert by drag appends the block at the end", async ({ editor }) => {
+  await editor.create("post");
+  await editor.insert("core/separator", { via: "drag" });
+
+  await editor.insert("core/code", { via: "drag" });
+
+  expect(await editor.canvas.blocks()).toEqual(["core/separator", "core/code"]);
+});
+
+test("insert by drag at the start puts the block first", async ({ editor }) => {
+  await editor.create("post");
+  await editor.insert("core/separator", { via: "drag" });
+
+  await editor.insert("core/html", { via: "drag", at: "start" });
+
+  expect(await editor.canvas.blocks()).toEqual(["core/html", "core/separator"]);
+});
+
+test("insert by drag before a block puts the block right ahead of it", async ({
   editor,
 }) => {
   await editor.create("post");
-
-  const separator = await editor.insert("core/separator", { via: "drag" });
   await editor.insert("core/code", { via: "drag" });
-  await editor.insert("core/html", { via: "drag", at: "start" });
+  const separator = await editor.insert("core/separator", { via: "drag" });
+
   await editor.insert("core/rich-text", {
     via: "drag",
     at: { before: separator },
   });
+
+  expect(await editor.canvas.blocks()).toEqual([
+    "core/code",
+    "core/rich-text",
+    "core/separator",
+  ]);
+});
+
+test("insert by drag into a block nests the block", async ({ editor }) => {
+  await editor.create("post");
   const section = await editor.insert("core/section", { via: "drag" });
+
   const nested = await editor.insert("core/separator", {
     via: "drag",
     at: { into: section },
   });
 
   await expect(nested).toBeAttached();
-  expect(await editor.canvas.blocks()).toEqual([
-    "core/html",
-    "core/rich-text",
-    "core/separator",
-    "core/code",
-    "core/section",
-  ]);
+  expect(await editor.canvas.blocks()).toEqual(["core/section"]);
 });
 
-test("select and the toolbar move a block, climb to its parent and remove it", async ({
+test("moveDown swaps the selected block with the one after it", async ({
   editor,
 }) => {
   await editor.create("post");
   const code = await editor.insert("core/code");
   await editor.insert("core/separator");
-  const group = await editor.insert("core/group");
-  const nested = await editor.insert("core/rich-text", { at: { into: group } });
-
   await editor.select(code);
+
   await editor.toolbar.moveDown();
-  expect(await editor.canvas.blocks()).toEqual([
-    "core/separator",
-    "core/code",
-    "core/group",
-  ]);
-  await editor.toolbar.moveUp();
-  expect(await editor.canvas.blocks()).toEqual([
-    "core/code",
-    "core/separator",
-    "core/group",
-  ]);
 
-  await editor.select(nested);
-  await editor.toolbar.selectParent();
-  await editor.toolbar.remove();
-
-  expect(await editor.canvas.blocks()).toEqual(["core/code", "core/separator"]);
-  await expect(nested).toHaveCount(0);
+  expect(await editor.canvas.blocks()).toEqual(["core/separator", "core/code"]);
 });
 
-test("inspector sets and reads text, number and radio inputs by name", async ({
+test("moveUp swaps the selected block with the one before it", async ({
   editor,
 }) => {
+  await editor.create("post");
+  await editor.insert("core/code");
+  const separator = await editor.insert("core/separator");
+  await editor.select(separator);
+
+  await editor.toolbar.moveUp();
+
+  expect(await editor.canvas.blocks()).toEqual(["core/separator", "core/code"]);
+});
+
+test("selectParent selects the group around a nested block", async ({
+  editor,
+  page,
+}) => {
+  await editor.create("post");
+  const group = await editor.insert("core/group");
+  const nested = await editor.insert("core/rich-text", { at: { into: group } });
+  await editor.select(nested);
+
+  await editor.toolbar.selectParent();
+
+  await expect(page.getByTestId("plumix-overlay-selected")).toHaveAttribute(
+    "data-block-id",
+    (await group.getAttribute("data-plumix-id")) ?? "",
+  );
+});
+
+test("remove deletes the selected block", async ({ editor }) => {
+  await editor.create("post");
+  await editor.insert("core/code");
+  const separator = await editor.insert("core/separator");
+  await editor.select(separator);
+
+  await editor.toolbar.remove();
+
+  expect(await editor.canvas.blocks()).toEqual(["core/code"]);
+  await expect(separator).toHaveCount(0);
+});
+
+test("inspector sets and reads a text input by name", async ({ editor }) => {
+  await editor.create("post");
+  const rating = await editor.insert("demo/rating");
+
+  await editor.inspector.set("label", "Worth the trip");
+
+  expect(await editor.inspector.get("label")).toBe("Worth the trip");
+  await expect(rating).toContainText("Worth the trip");
+});
+
+test("inspector sets and reads a number input by name", async ({ editor }) => {
   await editor.create("post");
   const rating = await editor.insert("demo/rating");
 
   await editor.inspector.set("score", 4);
-  await editor.inspector.set("symbol", "heart");
-  await editor.inspector.set("label", "Worth the trip");
 
   expect(await editor.inspector.get("score")).toBe(4);
-  expect(await editor.inspector.get("symbol")).toBe("heart");
-  expect(await editor.inspector.get("label")).toBe("Worth the trip");
-  await expect(rating).toContainText("♥♥♥♥ Worth the trip");
+  await expect(rating).toContainText("★★★★");
 });
 
-test("inspector sets and reads select, checkbox, switch and combobox inputs", async ({
+test("inspector sets and reads a radio input by name", async ({ editor }) => {
+  await editor.create("post");
+  const rating = await editor.insert("demo/rating");
+
+  await editor.inspector.set("symbol", "heart");
+
+  expect(await editor.inspector.get("symbol")).toBe("heart");
+  await expect(rating).toContainText("♥♥♥");
+});
+
+test("inspector sets and reads a select input by name", async ({ editor }) => {
+  await editor.create("post");
+  await editor.insert("core/columns");
+
+  await editor.inspector.set("stackAt", "never");
+
+  expect(await editor.inspector.get("stackAt")).toBe("never");
+});
+
+test("inspector sets and reads a checkbox input by name", async ({
   editor,
 }) => {
   await editor.create("post");
-
   await editor.insert("core/columns");
-  await editor.inspector.set("stackAt", "never");
+
   await editor.inspector.set("reverseWhenStacked", true);
-  expect(await editor.inspector.get("stackAt")).toBe("never");
+
   expect(await editor.inspector.get("reverseWhenStacked")).toBe(true);
+});
 
+test("inspector sets and reads a switch input by name", async ({ editor }) => {
+  await editor.create("post");
   await editor.insert("core/details");
-  await editor.inspector.set("open", true);
-  expect(await editor.inspector.get("open")).toBe(true);
 
+  await editor.inspector.set("open", true);
+
+  expect(await editor.inspector.get("open")).toBe(true);
+});
+
+test("inspector sets and reads a combobox input by name", async ({
+  editor,
+}) => {
+  await editor.create("post");
   await editor.insert("core/code");
+
   await editor.inspector.set("language", "python");
+
   expect(await editor.inspector.get("language")).toBe("python");
 });
 
-test("inspector sets and reads a URL and a media picker", async ({
-  editor,
-}) => {
+test("inspector sets and reads a URL input by name", async ({ editor }) => {
   await editor.create("post");
   await editor.insert("media/image");
 
   await editor.inspector.set("src", "https://example.test/cover.png");
-  // The seed's first library row, the showcase post's cover.
-  await editor.inspector.set("media", 400);
 
   expect(await editor.inspector.get("src")).toBe(
     "https://example.test/cover.png",
   );
+});
+
+test("inspector sets and reads a media picker by name", async ({ editor }) => {
+  await editor.create("post");
+  await editor.insert("media/image");
+
+  // The seed's first library row, the showcase post's cover.
+  await editor.inspector.set("media", 400);
+
   expect(await editor.inspector.get("media")).toBe(
     "Cover: Typography & Elements: a theme test sheet",
   );
@@ -224,32 +344,90 @@ test("publish puts a published entry's pending edits live", async ({
   );
 });
 
-test("richText types, formats and links a text block", async ({ editor }) => {
+test("richText type writes the text into the block", async ({ editor }) => {
   await editor.create("post");
-  const heading = editor.richText(await editor.insert("core/rich-text"));
-  await heading.type("Plumix");
-  await heading.format("bold");
-  await heading.format("heading-2");
-  await heading.link("https://example.test/");
+  const text = editor.richText(await editor.insert("core/rich-text"));
 
-  const list = editor.richText(await editor.insert("core/rich-text"));
-  await list.type("First point");
-  await list.format("italic");
-  await list.format("bullet-list");
-
-  const quote = editor.richText(await editor.insert("core/rich-text"));
-  await quote.type("Quoted");
-  await quote.format("quote");
+  await text.type("Plumix");
   await editor.save();
 
-  const [first, second, third] = await editor.stored();
-  expect(first?.attrs?.body).toMatch(
-    /^<h2><strong><a href="https:\/\/example\.test\/"[^>]*>Plumix<\/a><\/strong><\/h2>$/,
+  expect(await editor.stored()).toMatchObject([
+    { attrs: { body: "<p>Plumix</p>" } },
+  ]);
+});
+
+test("richText format bold wraps the text in a strong mark", async ({
+  editor,
+}) => {
+  await editor.create("post");
+  const text = editor.richText(await editor.insert("core/rich-text"));
+  await text.type("Plumix");
+
+  await text.format("bold");
+  await editor.save();
+
+  expect(await editor.stored()).toMatchObject([
+    { attrs: { body: "<p><strong>Plumix</strong></p>" } },
+  ]);
+});
+
+test("richText format heading-2 turns the paragraph into a heading", async ({
+  editor,
+}) => {
+  await editor.create("post");
+  const text = editor.richText(await editor.insert("core/rich-text"));
+  await text.type("Plumix");
+
+  await text.format("heading-2");
+  await editor.save();
+
+  expect(await editor.stored()).toMatchObject([
+    { attrs: { body: "<h2>Plumix</h2>" } },
+  ]);
+});
+
+test("richText format bullet-list turns the paragraph into a list", async ({
+  editor,
+}) => {
+  await editor.create("post");
+  const text = editor.richText(await editor.insert("core/rich-text"));
+  await text.type("First point");
+
+  await text.format("bullet-list");
+  await editor.save();
+
+  expect(await editor.stored()).toMatchObject([
+    { attrs: { body: "<ul><li><p>First point</p></li></ul>" } },
+  ]);
+});
+
+test("richText format quote turns the paragraph into a quote", async ({
+  editor,
+}) => {
+  await editor.create("post");
+  const text = editor.richText(await editor.insert("core/rich-text"));
+  await text.type("Quoted");
+
+  await text.format("quote");
+  await editor.save();
+
+  expect(await editor.stored()).toMatchObject([
+    { attrs: { body: "<blockquote><p>Quoted</p></blockquote>" } },
+  ]);
+});
+
+test("richText link wraps the text in a link", async ({ editor }) => {
+  await editor.create("post");
+  const text = editor.richText(await editor.insert("core/rich-text"));
+  await text.type("Plumix");
+
+  await text.link("https://example.test/");
+  await editor.save();
+
+  const [block] = await editor.stored();
+  expect(block?.attrs?.body).toMatch(
+    /^<p><a href="https:\/\/example\.test\/"[^>]*>Plumix<\/a><\/p>$/,
   );
-  expect(second?.attrs?.body).toBe(
-    "<ul><li><p><em>First point</em></p></li></ul>",
-  );
-  expect(third?.attrs?.body).toBe("<blockquote><p>Quoted</p></blockquote>");
 });
 
 test("richText unlinks a linked text block", async ({ editor }) => {

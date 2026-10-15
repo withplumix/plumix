@@ -322,8 +322,7 @@ export function CanvasFrame({
           src={previewUrl}
           title="plumix-editor-canvas"
           data-testid="plumix-canvas-iframe"
-          // The canvas drops what it reports until the handshake completes;
-          // test fixtures wait on this before acting in it.
+          // The canvas drops what it reports until the handshake completes.
           data-canvas-state={canvasReady ? "ready" : "connecting"}
           onLoad={measureContent}
           // Click-through while a block drag or a space-pan is active so the
