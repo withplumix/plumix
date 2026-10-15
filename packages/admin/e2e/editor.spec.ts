@@ -347,6 +347,15 @@ test.describe("editor chrome & layout", () => {
     await expect(page.getByTestId("plumix-editor-toolbar")).toBeVisible();
   });
 
+  test("the back button returns to the entry list", async ({ page }) => {
+    await page.goto("entries/posts/1/edit");
+
+    await page.getByTestId("plumix-editor-back").click();
+
+    await page.waitForURL(/\/entries\/posts(\?|$)/);
+    await expect(page.getByTestId("content-list-heading")).toBeVisible();
+  });
+
   test("the canvas toolbar switches device and steps zoom", async ({
     page,
   }) => {
@@ -2039,6 +2048,21 @@ test.describe("editor starter modal", () => {
         ),
       )
       .toEqual(["core/rich-text", "core/rich-text"]);
+  });
+
+  test("Pick a starter re-opens the modal on an empty entry", async ({
+    page,
+  }) => {
+    await mockManifest(page, MANIFEST_WITH_EDITOR_PATTERNS);
+    await installEditorMocks(page, {
+      handlers: { "/entry/createPreviewLink": PREVIEW_LINK },
+    });
+    await page.goto("entries/posts/1/edit");
+    await dismissStarterModal(page);
+
+    await page.getByTestId("plumix-editor-replace-starter").click();
+
+    await expect(page.getByTestId("plumix-starter-modal")).toBeVisible();
   });
 
   // Inherits the file-level MANIFEST_WITH_POST, which registers no patterns.
