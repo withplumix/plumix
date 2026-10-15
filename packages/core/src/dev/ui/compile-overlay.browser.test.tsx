@@ -1,7 +1,10 @@
 /// <reference lib="dom" />
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { HmrClient, ViteErrorPayload } from "./compile-overlay.js";
+import type {
+  HmrClient,
+  ViteErrorPayload,
+} from "./compile-overlay-controller.js";
 import {
   compileErrorToInfo,
   installCompileErrorOverlay,

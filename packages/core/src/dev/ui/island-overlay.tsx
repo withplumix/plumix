@@ -7,25 +7,20 @@ import type { Root } from "react-dom/client";
 import { useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 
+import type { DevErrorFrame } from "./contract.js";
 import type {
-  DevErrorFrame,
-  DevErrorHydrationDiff,
-  DevErrorInfo,
-} from "./contract.js";
-import { deriveLabel, detailOf } from "../../blocks/island-events.js";
+  CapturedError,
+  IslandErrorLog,
+  IslandErrorLogState,
+} from "./island-error-log.js";
 import { enhanceDevError } from "./enhance.js";
 import { DevErrorBody } from "./error-page.js";
 import { DEV_ERROR_STACK_ENDPOINT } from "./frames.js";
+import { createIslandErrorLog } from "./island-error-log.js";
 import { DEV_OVERLAY_CSS, DevOverlayShell } from "./overlay-shell.js";
 import { DEV_ERROR_CSS } from "./tokens.js";
 
 const HOST_TAG = "plumix-dev-error-overlay";
-
-interface CapturedError {
-  readonly info: DevErrorInfo;
-  /** Set when the error carried its island element. */
-  readonly label?: string;
-}
 
 /**
  * Idempotent: a second install before teardown returns the existing teardown,
@@ -35,200 +30,40 @@ let active: IslandErrorOverlay | null = null;
 
 export function installIslandErrorOverlay(target: Window = window): () => void {
   if (active) return active.teardown;
-  const overlay = new IslandErrorOverlay(target);
-  overlay.install();
-  active = overlay;
-  return overlay.teardown;
+  active = new IslandErrorOverlay(target);
+  return active.teardown;
 }
 
+/** Mounts on the first capture and renders every change the log reports. */
 class IslandErrorOverlay {
-  /**
-   * Replaced (not mutated) on each change so React and the `ErrorBody` effect
-   * see a new reference and reconcile the resolved frames when they arrive.
-   */
-  private errors: CapturedError[] = [];
-  /**
-   * Identity dedup so a render loop or a doubly-dispatched failure (e.g. the
-   * hydration path and the window `error` handler both seeing it) counts once.
-   */
-  private readonly seenObjects = new WeakSet();
-  private readonly seenPrimitives = new Set<string>();
-  private active = 0;
-  /**
-   * Set by a genuine capture and consumed (reset) by the next `render`, so only
-   * that render pulses the count circle — not a reopen on a settled count.
-   */
-  private pulseNext = false;
-  private expanded = false;
   private host: HTMLElement | null = null;
   private root: Root | null = null;
-  /**
-   * Set on teardown so a late `resolveFrames` POST can't remount the overlay.
-   */
-  private torndown = false;
-  private readonly listeners: (() => void)[] = [];
+  private readonly log: IslandErrorLog;
+  private readonly onKeydown = (event: KeyboardEvent): void => {
+    // Collapse to the indicator without discarding the captured errors.
+    if (event.key === "Escape") this.log.collapse();
+  };
 
-  constructor(private readonly target: Window) {}
-
-  install(): void {
-    this.on("plumix:hydration-error", (event) => {
-      // Cancel the framework's default (a console log) — the overlay owns the
-      // surfacing now.
-      event.preventDefault();
-      const { error, element } = detailOf(event);
-      this.capture(error, element);
+  constructor(private readonly target: Window) {
+    this.log = createIslandErrorLog(target, {
+      resolveFrames: (stack) => fetchFrames(target, stack),
+      onChange: (state) => this.render(state),
     });
-    this.on("plumix:island-error", (event) => {
-      const { error, element, componentStack } = detailOf(event);
-      this.capture(error, element, componentStack);
-    });
-    this.on("plumix:island-hydration-mismatch", (event) => {
-      // No thrown error, since React recovered, so this is a synthesized entry
-      // rather than one built by `toDevErrorInfo`.
-      const { element, componentStack, server, client } = detailOf(event);
-      const diff =
-        server !== undefined && client !== undefined
-          ? { server, client }
-          : undefined;
-      this.captureMismatch(element, componentStack, diff);
-    });
-    this.on("error", (event) => {
-      // Skip `error` events with no error object — a cross-origin
-      // "Script error." or a resource-load 404 — nothing actionable to show.
-      // (`ErrorEvent.error` is typed `any`.)
-      const error: unknown = (event as ErrorEvent).error;
-      if (error == null) return;
-      this.capture(error);
-    });
-    this.on("unhandledrejection", (event) => {
-      this.capture((event as { reason?: unknown }).reason);
-    });
-    this.on("keydown", (event) => {
-      // Collapse to the indicator without discarding the captured errors.
-      if (this.expanded && (event as KeyboardEvent).key === "Escape") {
-        this.setExpanded(false);
-      }
-    });
+    target.addEventListener("keydown", this.onKeydown);
   }
 
-  private on(type: string, handler: (event: Event) => void): void {
-    this.target.addEventListener(type, handler);
-    this.listeners.push(() => this.target.removeEventListener(type, handler));
-  }
-
-  private capture(
-    error: unknown,
-    element?: HTMLElement,
-    componentStack?: string,
-  ): void {
-    if (this.isDuplicate(error)) return;
-    const entry = this.addEntry(toDevErrorInfo(error, componentStack), element);
-    void this.resolveFrames(entry);
-  }
-
-  /**
-   * A hydration mismatch has no thrown error and no JS stack, so it skips frame
-   * resolution; React's component stack is the signal.
-   */
-  private captureMismatch(
-    element?: HTMLElement,
-    componentStack?: string,
-    hydrationDiff?: DevErrorHydrationDiff,
-  ): void {
-    // Dedup by island + React stack (no error object to key on), so a
-    // doubly-dispatched identical mismatch counts once.
-    const key = `hydration-mismatch:${deriveLabel(element) ?? ""}:${componentStack ?? ""}`;
-    if (this.seenPrimitives.has(key)) return;
-    this.seenPrimitives.add(key);
-    const info: DevErrorInfo = {
-      name: "Hydration mismatch",
-      message: HYDRATION_MISMATCH_MESSAGE,
-      ...(componentStack !== undefined ? { componentStack } : {}),
-      ...(hydrationDiff !== undefined ? { hydrationDiff } : {}),
-    };
-    this.addEntry(info, element);
-  }
-
-  /**
-   * Push a resolved entry, point the overlay at it, and pulse the count. Shared
-   * by the error-capture paths (thrown errors, hydration mismatches).
-   */
-  private addEntry(info: DevErrorInfo, element?: HTMLElement): CapturedError {
-    const label = deriveLabel(element);
-    const entry: CapturedError = { info, ...(label ? { label } : {}) };
-    this.errors = [entry, ...this.errors];
-    // An expanded panel follows the entry being read as it shifts down, so the
-    // panel never swaps out from under the developer.
-    if (this.expanded) this.active += 1;
-    else this.active = 0;
-    // A genuine new error just landed — let the next render pulse the circle.
-    this.pulseNext = true;
-    this.render();
-    return entry;
-  }
-
-  /**
-   * Browser stacks point at Vite's served module URLs, so the dev resolver maps
-   * them back to the original `file:line` frames.
-   */
-  private async resolveFrames(entry: CapturedError): Promise<void> {
-    const { stack } = entry.info;
-    if (!stack) return;
-    try {
-      const response = await this.target.fetch(DEV_ERROR_STACK_ENDPOINT, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ stack }),
-      });
-      if (!response.ok) return;
-      const { frames } = (await response.json()) as {
-        frames?: readonly DevErrorFrame[];
-      };
-      if (!frames || frames.length === 0) return;
-      const index = this.errors.indexOf(entry);
-      if (index < 0) return;
-      const resolved: CapturedError = {
-        ...entry,
-        info: { ...entry.info, frames },
-      };
-      this.errors = this.errors.map((e, i) => (i === index ? resolved : e));
-      this.render();
-    } catch {
-      // Keep the raw stack when the resolver is unreachable.
-    }
-  }
-
-  private isDuplicate(error: unknown): boolean {
-    if (error !== null && typeof error === "object") {
-      if (this.seenObjects.has(error)) return true;
-      this.seenObjects.add(error);
-      return false;
-    }
-    const key = String(error);
-    if (this.seenPrimitives.has(key)) return true;
-    this.seenPrimitives.add(key);
-    return false;
-  }
-
-  private render(): void {
-    if (this.torndown) return;
+  private render(state: IslandErrorLogState): void {
     if (!this.host) this.mountHost();
     this.root?.render(
       <Overlay
-        errors={this.errors}
-        active={this.active}
-        pulse={this.pulseNext}
-        expanded={this.expanded}
+        {...state}
         shadowRoot={this.host?.shadowRoot ?? null}
-        onExpand={() => this.setExpanded(true)}
-        onCollapse={() => this.setExpanded(false)}
-        onPrev={() => this.step(-1)}
-        onNext={() => this.step(1)}
+        onExpand={() => this.log.expand()}
+        onCollapse={() => this.log.collapse()}
+        onPrev={() => this.log.step(-1)}
+        onNext={() => this.log.step(1)}
       />,
     );
-    // Consume the one-shot pulse: later renders (frame resolution, expand/
-    // collapse) must not re-fire the animation.
-    this.pulseNext = false;
   }
 
   private mountHost(): void {
@@ -247,31 +82,32 @@ class IslandErrorOverlay {
     });
   }
 
-  private setExpanded(expanded: boolean): void {
-    this.expanded = expanded;
-    this.render();
-  }
-
-  private step(delta: number): void {
-    const count = this.errors.length;
-    this.active = (this.active + delta + count) % count;
-    this.render();
-  }
-
-  private dispose(): void {
+  readonly teardown = (): void => {
+    this.log.teardown();
+    this.target.removeEventListener("keydown", this.onKeydown);
     this.root?.unmount();
     this.root = null;
     this.host?.remove();
     this.host = null;
-  }
-
-  readonly teardown = (): void => {
-    this.torndown = true;
-    for (const off of this.listeners) off();
-    this.listeners.length = 0;
-    this.dispose();
     if (active === this) active = null;
   };
+}
+
+/** The dev server's resolver, which holds Vite's per-module sourcemaps. */
+async function fetchFrames(
+  target: Window,
+  stack: string,
+): Promise<readonly DevErrorFrame[] | undefined> {
+  const response = await target.fetch(DEV_ERROR_STACK_ENDPOINT, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ stack }),
+  });
+  if (!response.ok) return undefined;
+  const { frames } = (await response.json()) as {
+    frames?: readonly DevErrorFrame[];
+  };
+  return frames;
 }
 
 function Overlay({
@@ -371,7 +207,11 @@ function Overlay({
   );
 }
 
-function ClientErrorBody({
+/**
+ * `DevErrorBody`, not the full `DevErrorPage`, so the dialog never shows the
+ * server-only context sections.
+ */
+export function ClientErrorBody({
   entry,
   shadowRoot,
 }: {
@@ -391,29 +231,6 @@ function ClientErrorBody({
     }
   }, [frames, shadowRoot]);
   return <DevErrorBody error={entry.info} />;
-}
-
-/** React's own recoverable-error wording is an internal we don't surface. */
-const HYDRATION_MISMATCH_MESSAGE =
-  "The island's server and client renders disagreed. React recovered by " +
-  "re-rendering it on the client; the usual cause is a non-deterministic " +
-  "render — a Date.now(), Math.random(), or locale/timezone read.";
-
-/**
- * Browser stacks arrive raw, so keep the stack string rather than parse frames
- * that would point at transformed positions.
- */
-function toDevErrorInfo(error: unknown, componentStack?: string): DevErrorInfo {
-  const componentPart = componentStack !== undefined ? { componentStack } : {};
-  if (error instanceof Error) {
-    return {
-      name: error.name,
-      message: error.message,
-      ...(error.stack ? { stack: error.stack } : {}),
-      ...componentPart,
-    };
-  }
-  return { name: "UnknownError", message: String(error), ...componentPart };
 }
 
 /**
