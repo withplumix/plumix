@@ -4,21 +4,6 @@
  * list is done when empty.
  */
 export const RETIRED_TIER_PENDING: readonly string[] = [
-  "packages/admin-editor/src/block-catalog-tab.browser.test.tsx",
-  "packages/admin-editor/src/block-input-control.browser.test.tsx",
-  "packages/admin-editor/src/block-inspector.browser.test.tsx",
-  "packages/admin-editor/src/editor-command-palette.browser.test.tsx",
-  "packages/admin-editor/src/editor-header.browser.test.tsx",
-  "packages/admin-editor/src/editor-toolbar.browser.test.tsx",
-  "packages/admin-editor/src/json-inspector.browser.test.tsx",
-  "packages/admin-editor/src/layers-tab.browser.test.tsx",
-  "packages/admin-editor/src/plumix-editor.browser.test.tsx",
-  "packages/admin-editor/src/selection-toolbar.browser.test.tsx",
-  "packages/admin-editor/src/shortcuts-dialog.browser.test.tsx",
-  "packages/admin-editor/src/starter-modal.browser.test.tsx",
-  "packages/admin-editor/src/style-control.browser.test.tsx",
-  "packages/admin-editor/src/styles-tab.browser.test.tsx",
-  "packages/admin-editor/src/use-style-field.browser.test.tsx",
   "packages/core/src/blocks/embed/EmbedFacade.browser.test.tsx",
   "packages/core/src/blocks/html/dompurify-shim.browser.test.ts",
   "packages/core/src/blocks/island-renderer.browser.test.tsx",
