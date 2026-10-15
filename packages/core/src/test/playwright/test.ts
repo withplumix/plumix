@@ -3,6 +3,7 @@ import { readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { test as base } from "@playwright/test";
 
+import type { Editor } from "./editor.js";
 import type { Mailbox } from "./mailbox.js";
 import type { Passkey } from "./passkey.js";
 import {
@@ -11,6 +12,7 @@ import {
   restoreDbBaseline,
   serializeDbBaseline,
 } from "./db-baseline.js";
+import { createEditor } from "./editor.js";
 import { createMailbox } from "./mailbox.js";
 import { openPlaygroundDb } from "./open-playground-db.js";
 import { addVirtualPasskey } from "./passkey.js";
@@ -36,6 +38,8 @@ interface PlumixWorkerFixtures {
 }
 
 interface PlumixTestFixtures {
+  /** Drives the block editor in `page`. */
+  readonly editor: Editor;
   /** Reads the mail `plumix dev` caught, through the test's `request`. */
   readonly mailbox: Mailbox;
   /**
@@ -53,6 +57,9 @@ export const test = base.extend<
   PlumixTestFixtures,
   PlumixWorkerOptions & PlumixWorkerFixtures
 >({
+  editor: async ({ page }, use) => {
+    await use(createEditor(page));
+  },
   mailbox: async ({ request }, use) => {
     await use(createMailbox(request));
   },

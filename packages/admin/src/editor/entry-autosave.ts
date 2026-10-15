@@ -41,6 +41,9 @@ export interface EntryAutosaveOptions<G extends Record<string, unknown>> {
   readonly onError: (err: unknown) => void;
   /** Whether a group write is in flight, reported as it changes. */
   readonly onSavingChange?: (saving: boolean) => void;
+  /** Whether an edit is waiting to be sent or in flight, reported as it
+   *  changes. */
+  readonly onUnsavedChange?: (unsaved: boolean) => void;
 }
 
 export interface EntryAutosave<G extends Record<string, unknown>> {
@@ -85,10 +88,18 @@ export function createEntryAutosave<G extends Record<string, unknown>>(
   // debounce tick; any write that lands re-arms it.
   let failed = false;
   let inFlight = 0;
+  let reportedUnsaved = false;
+  const reportUnsaved = (): void => {
+    const now = unsaved();
+    if (now === reportedUnsaved) return;
+    reportedUnsaved = now;
+    latest.onUnsavedChange?.(now);
+  };
   const track = (delta: 1 | -1): void => {
     const wasSaving = inFlight > 0;
     inFlight += delta;
     if (wasSaving !== inFlight > 0) latest.onSavingChange?.(inFlight > 0);
+    reportUnsaved();
   };
   // Only the live row carries the live token; a write that landed on the
   // per-user autosave row leaves it where it was.
@@ -102,7 +113,10 @@ export function createEntryAutosave<G extends Record<string, unknown>>(
       const group = latest.groups[key];
       const next = group.snapshot();
       const patch = group.diff(saved, next);
-      if (patch === null) return;
+      if (patch === null) {
+        reportUnsaved();
+        return;
+      }
       track(1);
       try {
         const response = await queue.run(async () => {
@@ -139,7 +153,10 @@ export function createEntryAutosave<G extends Record<string, unknown>>(
     };
     const debouncer = createDebouncer(() => save(), AUTOSAVE_DEBOUNCE_MS);
     return {
-      schedule: debouncer.call,
+      schedule: () => {
+        debouncer.call();
+        reportUnsaved();
+      },
       flush: debouncer.flush,
       cancel: debouncer.cancel,
       pending: debouncer.pending,
@@ -147,6 +164,8 @@ export function createEntryAutosave<G extends Record<string, unknown>>(
   }
 
   const runners: GroupRunner[] = [];
+  const unsaved = (): boolean =>
+    inFlight > 0 || runners.some((r) => r.pending());
   // Filled for every key of `groups` by the loop below.
   const schedule = {} as { [K in keyof G]: () => void };
   for (const key in initial.groups) {
@@ -165,6 +184,7 @@ export function createEntryAutosave<G extends Record<string, unknown>>(
       flush,
       cancel: () => {
         for (const r of runners) r.cancel();
+        reportUnsaved();
       },
       anchor: (updatedAt) => {
         liveUpdatedAt = updatedAt;
@@ -182,6 +202,6 @@ export function createEntryAutosave<G extends Record<string, unknown>>(
     sync: (options) => {
       latest = options;
     },
-    unsaved: () => inFlight > 0 || runners.some((r) => r.pending()),
+    unsaved,
   };
 }

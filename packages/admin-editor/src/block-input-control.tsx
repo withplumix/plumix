@@ -161,7 +161,12 @@ export function BlockInputControl({
               onChange(decodeOption(options, decodeSelectKey(next)))
             }
           >
-            <SelectTrigger id={id} data-testid={testId} className="w-full">
+            <SelectTrigger
+              id={id}
+              data-testid={testId}
+              data-value={optionKey(value)}
+              className="w-full"
+            >
               <SelectValue
                 placeholder={
                   input.placeholder
@@ -352,6 +357,7 @@ function ComboboxControl({
           aria-expanded={open}
           id={id}
           data-testid={testId}
+          data-value={current}
           data-placeholder={current === "" ? "" : undefined}
         >
           <span className="truncate">{triggerLabel}</span>

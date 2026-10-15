@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import {
   injectManifestIntoHtml,
+  readManifestScript,
   serializeManifestScript,
 } from "./manifest-script.js";
 import { emptyManifest, MANIFEST_SCRIPT_ID } from "./manifest-types.js";
@@ -168,5 +169,30 @@ describe("injectManifestIntoHtml", () => {
     expect(out).toMatch(
       /^<script id="plumix-manifest" type="application\/json">\{"entryTypes":\[\{"name":"post","capabilityType":"post","adminSlug":"posts","label":"Posts","isPublic":true,"showUI":true,"showInSidebar":true\}\]}<\/script>$/,
     );
+  });
+});
+
+describe("readManifestScript", () => {
+  test("reads back the manifest the admin shell was served with", () => {
+    const manifest = {
+      entryTypes: [
+        {
+          name: "post",
+          capabilityType: "post",
+          adminSlug: "posts",
+          label: "</script>",
+          isPublic: true,
+          showUI: true,
+          showInSidebar: true,
+        },
+      ],
+    };
+    const html = `<html><head>${serializeManifestScript(manifest)}</head></html>`;
+
+    expect(readManifestScript(html)).toEqual(manifest);
+  });
+
+  test("is null for a page that carries no manifest", () => {
+    expect(readManifestScript("<html></html>")).toBeNull();
   });
 });

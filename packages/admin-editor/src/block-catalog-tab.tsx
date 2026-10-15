@@ -137,7 +137,9 @@ export function BlockCatalog({
               testId={`block-catalog-item-${entryKey(entry)}`}
               icon={entry.icon}
               label={resolveLabel(entry.title, i18n)}
-              onPointerDown={() => startBlockDrag(entry)}
+              // The slot inserter floats over the canvas, where a drag
+              // started here would drop a second copy on release.
+              onPointerDown={target ? undefined : () => startBlockDrag(entry)}
               onClick={() => insertEntry(createNodeFromEntry(registry, entry))}
             />
           ))}

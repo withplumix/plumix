@@ -6,6 +6,7 @@ import {
   notFound,
 } from "plumix/theme";
 
+import { ratingBlock } from "./blocks/rating";
 import { fallback as fallbackTemplate } from "./templates/fallback";
 import { notFound as notFoundTemplate } from "./templates/not-found";
 import { page } from "./templates/page";
@@ -23,6 +24,7 @@ export const blogTheme = defineTheme({
     forEntryType("page").template(page),
     notFound(notFoundTemplate),
   ],
+  blocks: [ratingBlock],
   tokens: DEFAULT_TOKENS,
   css: ["./theme/styles.css"],
   document: {

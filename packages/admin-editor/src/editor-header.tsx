@@ -48,6 +48,9 @@ export interface DraftMode {
  *  `draftMode` is set the header shows save/publish/discard; otherwise a plain
  *  Publish button (disabled once published). */
 export interface PublishActions {
+  /** An edit or a publish is still on its way to the server. The header
+   *  reports it as `data-save-state`, which test fixtures wait on. */
+  readonly isSaving?: boolean;
   readonly onPublish?: () => void;
   readonly isPublished?: boolean;
   readonly isPublishing?: boolean;
@@ -91,6 +94,7 @@ export function EditorHeader({
     <header
       className="bg-background flex h-(--header-height) shrink-0 items-center gap-2 border-b px-3"
       data-testid="plumix-editor-header"
+      data-save-state={saveState(publish?.isSaving)}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2">
         {onBack ? (
@@ -175,6 +179,11 @@ export function EditorHeader({
       </div>
     </header>
   );
+}
+
+function saveState(isSaving: boolean | undefined): string | undefined {
+  if (isSaving === undefined) return undefined;
+  return isSaving ? "saving" : "saved";
 }
 
 /**

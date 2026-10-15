@@ -237,6 +237,7 @@ export function CanvasFrame({
       <div
         key={testId}
         data-testid={testId}
+        data-block-id={id}
         className={`plumix-canvas-overlay pointer-events-none z-10 outline-2 ${outline}`}
         style={
           {
@@ -313,6 +314,7 @@ export function CanvasFrame({
           ref={iframeRef}
           src={previewUrl}
           title="plumix-editor-canvas"
+          data-testid="plumix-canvas-iframe"
           onLoad={measureContent}
           // Click-through while a block drag or a space-pan is active so the
           // host receives the pointer events. Single declarative owner — no
