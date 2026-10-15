@@ -30,9 +30,6 @@ async function articleWithRevisions(
   return { entry, revisions };
 }
 
-/** How many revisions `entry.revisions.list` answers with per page. */
-const REVISIONS_PAGE_SIZE = 25;
-
 async function openRevisions(page: Page): Promise<void> {
   await page.getByTestId("revisions-sheet-trigger").click();
   await expect(page.getByTestId("revisions-sheet-list")).toBeVisible();
@@ -53,17 +50,16 @@ test.describe("the editor's revisions", () => {
     const { entry } = await articleWithRevisions(session, 2);
     await editor.open(entry);
 
-    const bothTabsList = async (): Promise<void> => {
-      await openRevisions(page);
-      await expect(rows(page)).toHaveText([/Take 2/, /Take 1/]);
-      await page.getByTestId("revisions-tab-publishes").click();
-      await expect(rows(page)).toHaveText([/Take 2/, /Take 1/]);
-    };
-
-    await bothTabsList();
+    await openRevisions(page);
+    await expect(rows(page)).toHaveText([/Take 2/, /Take 1/]);
+    await page.getByTestId("revisions-tab-publishes").click();
+    await expect(rows(page)).toHaveText([/Take 2/, /Take 1/]);
 
     await editor.reload();
-    await bothTabsList();
+    await openRevisions(page);
+    await expect(rows(page)).toHaveText([/Take 2/, /Take 1/]);
+    await page.getByTestId("revisions-tab-publishes").click();
+    await expect(rows(page)).toHaveText([/Take 2/, /Take 1/]);
     const stored = await editor.storedRevisions();
     expect(stored.map((r) => r.title)).toEqual(["Take 2", "Take 1"]);
   });
@@ -105,23 +101,26 @@ test.describe("the editor's revisions", () => {
     } = await articleWithRevisions(session, 1);
     await editor.open(entry);
     const modal = page.getByTestId("revision-diff-modal");
-    const diffShowsBothTitles = async (): Promise<void> => {
-      await openRevisions(page);
-      await page
-        .getByTestId(`revisions-sheet-item-${String(revision?.id)}-diff`)
-        .click();
-      await expect(
-        modal.getByTestId("revision-diff-modal-revision"),
-      ).toContainText('"title": "Take 1"');
-      await expect(
-        modal.getByTestId("revision-diff-modal-current"),
-      ).toContainText('"title": "Live title"');
-    };
+    const diffButton = `revisions-sheet-item-${String(revision?.id)}-diff`;
 
-    await diffShowsBothTitles();
+    await openRevisions(page);
+    await page.getByTestId(diffButton).click();
+    await expect(
+      modal.getByTestId("revision-diff-modal-revision"),
+    ).toContainText('"title": "Take 1"');
+    await expect(
+      modal.getByTestId("revision-diff-modal-current"),
+    ).toContainText('"title": "Live title"');
 
     await editor.reload();
-    await diffShowsBothTitles();
+    await openRevisions(page);
+    await page.getByTestId(diffButton).click();
+    await expect(
+      modal.getByTestId("revision-diff-modal-revision"),
+    ).toContainText('"title": "Take 1"');
+    await expect(
+      modal.getByTestId("revision-diff-modal-current"),
+    ).toContainText('"title": "Live title"');
     expect((await editor.storedDocument()).title).toBe("Live title");
     const [stored] = await editor.storedRevisions();
     expect(stored?.title).toBe("Take 1");
@@ -132,29 +131,29 @@ test.describe("the editor's revisions", () => {
     editor,
   }) => {
     const session = await signInAsAdmin(page);
-    const { entry } = await articleWithRevisions(
-      session,
-      REVISIONS_PAGE_SIZE + 1,
-    );
+    // `entry.revisions.list` answers 25 per page (`revisions.ts`).
+    const { entry } = await articleWithRevisions(session, 26);
     await editor.open(entry);
-    const loadMoreListsTheRest = async (): Promise<void> => {
-      await openRevisions(page);
-      await expect(rows(page)).toHaveCount(REVISIONS_PAGE_SIZE);
-      await expect(rows(page).last()).toContainText("Take 2");
-      await page.getByTestId("revisions-sheet-load-more").click();
-      await expect(rows(page)).toHaveCount(REVISIONS_PAGE_SIZE + 1);
-      await expect(rows(page).last()).toContainText("Take 1");
-      await expect(page.getByTestId("revisions-sheet-load-more")).toHaveCount(
-        0,
-      );
-    };
+    const loadMore = page.getByTestId("revisions-sheet-load-more");
 
-    await loadMoreListsTheRest();
+    await openRevisions(page);
+    await expect(rows(page)).toHaveCount(25);
+    await expect(rows(page).last()).toContainText("Take 2");
+    await loadMore.click();
+    await expect(rows(page)).toHaveCount(26);
+    await expect(rows(page).last()).toContainText("Take 1");
+    await expect(loadMore).toHaveCount(0);
 
     await editor.reload();
-    await loadMoreListsTheRest();
+    await openRevisions(page);
+    await expect(rows(page)).toHaveCount(25);
+    await expect(rows(page).last()).toContainText("Take 2");
+    await loadMore.click();
+    await expect(rows(page)).toHaveCount(26);
+    await expect(rows(page).last()).toContainText("Take 1");
+    await expect(loadMore).toHaveCount(0);
     const stored = await editor.storedRevisions();
-    expect(stored).toHaveLength(REVISIONS_PAGE_SIZE + 1);
+    expect(stored).toHaveLength(26);
     expect(stored.at(-1)?.title).toBe("Take 1");
   });
 });
