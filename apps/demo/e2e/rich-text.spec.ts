@@ -6,8 +6,6 @@ import type {
 } from "plumix/test/playwright";
 import { expect, test } from "plumix/test/playwright";
 
-type Body = string | RegExp;
-
 const HEADINGS = [
   { format: "heading-1", body: "<h1>Plumix</h1>" },
   { format: "heading-2", body: "<h2>Plumix</h2>" },
@@ -43,11 +41,17 @@ const BLOCKS = [
   readonly body: string;
 }[];
 
-/** The link's other attributes (`rel`) are the link mark's, not this test's. */
-const FIRST_LINK =
-  /^<p><a href="https:\/\/example\.test\/first"[^>]*>Plumix<\/a><\/p>$/;
-const SECOND_LINK =
-  /^<p><a href="https:\/\/example\.test\/second"[^>]*>Plumix<\/a><\/p>$/;
+/** Rendering drops an anchor's `rel` (`sanitize.ts`), so the canvas shows none. */
+const FIRST_LINK = {
+  stored:
+    '<p><a href="https://example.test/first" rel="noopener noreferrer nofollow">Plumix</a></p>',
+  shown: '<p><a href="https://example.test/first">Plumix</a></p>',
+} as const;
+const SECOND_LINK = {
+  stored:
+    '<p><a href="https://example.test/second" rel="noopener noreferrer nofollow">Plumix</a></p>',
+  shown: '<p><a href="https://example.test/second">Plumix</a></p>',
+} as const;
 
 async function enterDemo(page: Page): Promise<void> {
   await page.goto("/");
@@ -60,29 +64,26 @@ async function shownBody(editor: Editor): Promise<string> {
   return /^<div>(.*)<\/div>$/s.exec(html)?.[1] ?? html;
 }
 
-async function expectShown(editor: Editor, body: Body): Promise<void> {
-  const shown = expect.poll(() => shownBody(editor));
-  if (typeof body === "string") await shown.toBe(body);
-  else await shown.toMatch(body);
+async function expectShown(editor: Editor, body: string): Promise<void> {
+  await expect.poll(() => shownBody(editor)).toBe(body);
 }
 
-async function expectStored(editor: Editor, body: Body): Promise<void> {
-  const stored = (await editor.stored())[0]?.attrs?.body;
-  if (typeof body === "string") expect(stored).toBe(body);
-  else expect(stored).toMatch(body);
+async function expectStored(editor: Editor, body: string): Promise<void> {
+  expect((await editor.stored())[0]?.attrs?.body).toBe(body);
 }
 
-async function expectBody(editor: Editor, body: Body): Promise<void> {
+/** `shown` is what the canvas renders of `stored`, the same unless given. */
+async function expectBodyKept(
+  editor: Editor,
+  stored: string,
+  shown = stored,
+): Promise<void> {
   await editor.save();
-  await expectShown(editor, body);
-  await expectStored(editor, body);
-}
-
-async function expectBodyKept(editor: Editor, body: Body): Promise<void> {
-  await expectBody(editor, body);
+  await expectShown(editor, shown);
+  await expectStored(editor, stored);
   await editor.reload();
-  await expectStored(editor, body);
-  await expectShown(editor, body);
+  await expectStored(editor, stored);
+  await expectShown(editor, shown);
 }
 
 async function textBlock(editor: Editor): Promise<EditorRichText> {
@@ -145,7 +146,7 @@ test("a link is set on the text and stored", async ({ editor }) => {
 
   await text.link("https://example.test/first");
 
-  await expectBody(editor, FIRST_LINK);
+  await expectBodyKept(editor, FIRST_LINK.stored, FIRST_LINK.shown);
 });
 
 test("a link is edited to another address and stored", async ({ editor }) => {
@@ -154,7 +155,7 @@ test("a link is edited to another address and stored", async ({ editor }) => {
 
   await text.link("https://example.test/second");
 
-  await expectBody(editor, SECOND_LINK);
+  await expectBodyKept(editor, SECOND_LINK.stored, SECOND_LINK.shown);
 });
 
 test("a link is removed from the text and the removal is stored", async ({
