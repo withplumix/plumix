@@ -40,6 +40,12 @@ describe("CanvasFrame", () => {
     );
   });
 
+  test("reports the canvas as connecting until the bridge handshake completes", () => {
+    expect(renderToStaticMarkup(frame(false))).toContain(
+      'data-canvas-state="connecting"',
+    );
+  });
+
   test("hides the frame handle in read-only preview", () => {
     expect(renderToStaticMarkup(frame(true))).not.toContain(
       'data-testid="plumix-canvas-handle"',

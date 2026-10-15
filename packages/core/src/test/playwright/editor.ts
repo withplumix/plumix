@@ -107,11 +107,8 @@ export interface Editor {
   select: (block: Locator) => Promise<void>;
   readonly toolbar: EditorToolbar;
   readonly inspector: EditorInspector;
-  /**
-   * Edits a text block's rich text; `field` names the input when the block has
-   * more than one.
-   */
-  richText: (block: Locator, field?: string) => EditorRichText;
+  /** Edits a text block's rich text. */
+  richText: (block: Locator) => EditorRichText;
   /** Resolves once every edit so far, and any publish, has reached the server. */
   save: () => Promise<void>;
   /** Publishes the entry, or a published entry's pending edits. */
@@ -184,7 +181,8 @@ async function controlKind(
 }
 
 export function createEditor(page: Page): Editor {
-  const frame = page.getByTestId("plumix-canvas-iframe").contentFrame();
+  const iframe = page.getByTestId("plumix-canvas-iframe");
+  const frame = iframe.contentFrame();
   const canvasRoot = frame.getByTestId("plumix-editor-canvas");
   const header = page.getByTestId("plumix-editor-header");
   let adminSlugs: Promise<ReadonlyMap<string, string>> | undefined;
@@ -201,6 +199,7 @@ export function createEditor(page: Page): Editor {
   const ready = async (): Promise<void> => {
     await expect(header).toHaveAttribute("data-save-state", "saved");
     await expect(canvasRoot).toBeAttached();
+    await expect(iframe).toHaveAttribute("data-canvas-state", "ready");
   };
 
   const selected = page.getByTestId("plumix-overlay-selected");
@@ -326,12 +325,8 @@ export function createEditor(page: Page): Editor {
       );
     }
     const popover = page.getByTestId("plumix-inserter-popover");
-    // The canvas reports the click over the bridge, which drops it until the
-    // handshake completes, so retry until the inserter opens.
-    await expect(async () => {
-      await appender.click();
-      await expect(popover).toBeVisible({ timeout: 1_000 });
-    }).toPass();
+    await appender.click();
+    await expect(popover).toBeVisible();
     await popover.getByTestId(`block-catalog-item-${name}`).click();
     await expect(popover).toBeHidden();
   };
@@ -501,19 +496,16 @@ export function createEditor(page: Page): Editor {
     return Number(id);
   };
 
-  const richText = (block: Locator, field?: string): EditorRichText => {
+  const richText = (block: Locator): EditorRichText => {
     const selectText = async (
       range: "all" | "start" = "all",
     ): Promise<string> => {
       await select(block);
       await page.getByTestId("plumix-tab-block").click();
       const inspectorPanel = page.getByTestId("block-inspector");
-      const surface =
-        field === undefined
-          ? inspectorPanel
-              .locator('[data-testid^="block-input-"][data-testid$="-editor"]')
-              .first()
-          : inspectorPanel.getByTestId(`block-input-${field}-editor`);
+      const surface = inspectorPanel
+        .locator('[data-testid^="block-input-"][data-testid$="-editor"]')
+        .first();
       await surface.click();
       // A list or quote reports itself active from a caret inside it, not
       // from a selection of the whole document.
