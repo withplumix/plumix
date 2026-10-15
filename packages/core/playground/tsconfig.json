@@ -14,8 +14,9 @@
       "plumix/blocks/renderer": ["../../plumix/src/blocks/renderer.ts"],
       "plumix/plugin": ["../../plumix/src/plugin.ts"],
       "plumix/theme": ["../../plumix/src/theme/index.ts"],
+      "@plumix/plugin-media": ["../../plugins/media/src/index.ts"],
       "@plumix/runtime-cloudflare": ["../../runtimes/cloudflare/src/index.ts"]
     }
   },
-  "include": ["plumix.config.ts", "theme.ts", "islands", ".plumix"]
+  "include": ["plumix.config.ts", "theme.ts", "blocks", "islands", ".plumix"]
 }

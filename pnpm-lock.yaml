@@ -1218,6 +1218,9 @@ importers:
 
   packages/core/playground:
     dependencies:
+      '@plumix/plugin-media':
+        specifier: workspace:*
+        version: link:../../plugins/media
       '@plumix/runtime-cloudflare':
         specifier: workspace:*
         version: link:../../runtimes/cloudflare

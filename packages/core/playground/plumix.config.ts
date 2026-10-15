@@ -2,6 +2,7 @@ import { plumix } from "plumix";
 import { auth } from "plumix/auth";
 import { definePlugin } from "plumix/plugin";
 
+import { media } from "@plumix/plugin-media";
 import {
   cloudflare,
   cloudflareDeployOrigin,
@@ -36,6 +37,8 @@ export default plumix({
       ...deployOrigin,
     },
   }),
-  plugins: [content],
+  // No `storage:`, so a seeded media row's storage key is the URL it serves
+  // from, and the editor's media picker lists factory-made rows.
+  plugins: [content, media()],
   theme,
 });

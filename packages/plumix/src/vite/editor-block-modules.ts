@@ -74,7 +74,8 @@ function resolveModuleFile(
   fromFile: string,
 ): string | undefined {
   if (specifier.startsWith(".")) {
-    return probe(resolve(dirname(fromFile), specifier));
+    const path = resolve(dirname(fromFile), specifier);
+    return probe(path) ?? probe(path.replace(JS_EXT, ""));
   }
   try {
     return createRequire(fromFile).resolve(specifier);

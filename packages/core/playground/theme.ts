@@ -1,8 +1,10 @@
 import type { EntryData } from "plumix/theme";
 import type { ReactNode } from "react";
 import { createElement as h } from "react";
+import { BlockRenderer } from "plumix/blocks/renderer";
 import { defineTemplate, defineTheme, entry, fallback } from "plumix/theme";
 
+import { ratingBlock } from "./blocks/rating.js";
 import { Clicker, Counter } from "./islands/counter.js";
 import { LoadProbe } from "./islands/load-probe.js";
 import { NestParent } from "./islands/nest-parent.js";
@@ -132,9 +134,15 @@ const FIXTURES: Readonly<Record<string, () => ReactNode>> = {
 
 const page = defineTemplate<EntryData>({
   render: ({ data }): ReactNode =>
-    h("main", null, FIXTURES[data.entry.slug]?.() ?? null),
+    h(
+      "main",
+      null,
+      FIXTURES[data.entry.slug]?.() ??
+        h(BlockRenderer, { content: data.entry.contentBlocks }),
+    ),
 });
 
 export const theme = defineTheme({
+  blocks: [ratingBlock],
   templates: [fallback(() => null), entry(page)],
 });

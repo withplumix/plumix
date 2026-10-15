@@ -19,6 +19,7 @@ export type {
   EditorInsertOptions,
   EditorInspector,
   EditorRichText,
+  EditorStructureButton,
   EditorTextFormat,
   EditorToolbar,
 } from "./editor.js";

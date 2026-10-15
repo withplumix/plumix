@@ -257,15 +257,16 @@
       "outputLogs": "new-only"
     },
     "@plumix/core#test:e2e": {
-      // Core's playground is a consumer of `plumix` and the Cloudflare
-      // runtime, which both depend on this package — so `^build` cannot reach
-      // them without a cycle in the package graph. Named here instead, as for
-      // the Cloudflare entry above.
+      // Core's playground is a consumer of `plumix`, the Cloudflare runtime
+      // and the media plugin, which all depend on this package — so `^build`
+      // cannot reach them without a cycle in the package graph. Named here
+      // instead, as for the Cloudflare entry above.
       "dependsOn": [
         "build",
         "^build",
         "plumix#build",
-        "@plumix/runtime-cloudflare#build"
+        "@plumix/runtime-cloudflare#build",
+        "@plumix/plugin-media#build"
       ],
       "passThroughEnv": ["PLUMIX_E2E_PORT_OFFSET"],
       "outputLogs": "new-only"
