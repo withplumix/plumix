@@ -3,7 +3,6 @@ import { getTableName } from "drizzle-orm";
 import type { DumpReader, JsonValue, SyncRow, SyncValue } from "@plumix/core";
 import { entries, settings, terms, users } from "@plumix/core/schema";
 
-/** Where a site lives: its origin, and the base path it is served under. */
 export interface SiteLocation {
   readonly origin: string;
   readonly basePath: string;
@@ -15,7 +14,6 @@ export interface RewrittenDump {
   readonly rewritten: () => ReadonlyMap<string, number>;
 }
 
-/** The JSON content whose URLs a sync rewrites, by SQL table and column. */
 const CONTENT_JSON_COLUMNS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
   [getTableName(entries), new Set([entries.content.name, entries.meta.name])],
   [getTableName(terms), new Set([terms.meta.name])],
@@ -27,10 +25,8 @@ export function siteUrl(site: SiteLocation): string {
   return `${new URL(site.origin).origin}${site.basePath}`;
 }
 
-/** A character that would carry on the host, port or last path segment. */
-const CONTINUES = /[A-Za-z0-9\-._~:@%]/;
-/** A character that would make the match part of a longer scheme or word. */
-const PRECEDES = /[A-Za-z0-9+.-]/;
+const HOST_PORT_OR_SEGMENT_CHARACTER = /[A-Za-z0-9\-._~:@%]/;
+const SCHEME_OR_WORD_CHARACTER = /[A-Za-z0-9+.-]/;
 
 function replaceUrls(
   text: string,
@@ -45,8 +41,8 @@ function replaceUrls(
     const before = text[at - 1];
     const after = text[at + from.length];
     const bounded =
-      (before === undefined || !PRECEDES.test(before)) &&
-      (after === undefined || !CONTINUES.test(after));
+      (before === undefined || !SCHEME_OR_WORD_CHARACTER.test(before)) &&
+      (after === undefined || !HOST_PORT_OR_SEGMENT_CHARACTER.test(after));
     if (bounded) {
       result += text.slice(start, at) + to;
       start = at + from.length;
