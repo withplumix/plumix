@@ -75,6 +75,9 @@ export type EditorTextFormat =
   | "underline"
   | "strike"
   | "code"
+  | "highlight"
+  | "subscript"
+  | "superscript"
   | "paragraph"
   | `heading-${1 | 2 | 3 | 4 | 5 | 6}`
   | "bullet-list"
@@ -151,6 +154,9 @@ const MARKS: ReadonlySet<EditorTextFormat> = new Set([
   "underline",
   "strike",
   "code",
+  "highlight",
+  "subscript",
+  "superscript",
 ]);
 
 const isNested = (block: Locator): Promise<boolean> =>
@@ -196,10 +202,14 @@ export function createEditor(page: Page): Editor {
     return slug;
   };
 
+  // A dev server serves the canvas iframe's modules unbundled; under parallel
+  // workers that outlasts an assertion's 5s, so it waits like a page load.
   const ready = async (): Promise<void> => {
     await expect(header).toHaveAttribute("data-save-state", "saved");
-    await expect(canvasRoot).toBeAttached();
-    await expect(iframe).toHaveAttribute("data-canvas-state", "ready");
+    await expect(canvasRoot).toBeAttached({ timeout: 0 });
+    await expect(iframe).toHaveAttribute("data-canvas-state", "ready", {
+      timeout: 0,
+    });
   };
 
   const selected = page.getByTestId("plumix-overlay-selected");
@@ -509,7 +519,9 @@ export function createEditor(page: Page): Editor {
       const surface = inspectorPanel
         .locator('[data-testid^="block-input-"][data-testid$="-editor"]')
         .first();
-      await surface.click();
+      // A click in the middle can land in a trailing empty paragraph, and
+      // ProseMirror may sync that selection back over the key press below.
+      await surface.focus();
       // A list or quote reports itself active from a caret inside it, not
       // from a selection of the whole document.
       await page.keyboard.press(
