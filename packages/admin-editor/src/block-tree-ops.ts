@@ -125,6 +125,22 @@ export function flattenTree(
   return out;
 }
 
+/**
+ * The row that takes `id`'s place once it and its nested rows are gone: the
+ * next row past its subtree, else the one before it.
+ */
+export function rowAfterRemoving(
+  items: readonly FlatNode[],
+  id: string,
+): string | null {
+  const at = items.findIndex((item) => item.id === id);
+  if (at === -1) return null;
+  const depth = items[at]?.depth ?? 0;
+  let next = at + 1;
+  while (next < items.length && (items[next]?.depth ?? 0) > depth) next++;
+  return items[next]?.id ?? items[at - 1]?.id ?? null;
+}
+
 function arrayMove(
   items: readonly FlatNode[],
   from: number,

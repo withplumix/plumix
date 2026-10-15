@@ -13,6 +13,7 @@ import { resolveLabel } from "@plumix/core/i18n";
 
 import type { InserterPattern } from "./block-catalog.js";
 import {
+  catalogIsEmpty,
   createNodeFromEntry,
   entryKey,
   expandPattern,
@@ -90,7 +91,7 @@ export function BlockCatalog({
     onInsert?.();
   };
 
-  const empty = groups.length === 0 && matchedPatterns.length === 0;
+  const empty = catalogIsEmpty(groups, matchedPatterns);
   const searchLabel = i18n._({
     id: "editor.catalog.searchLabel",
     message: "Search blocks",

@@ -1,3 +1,4 @@
+import type { EntryContent } from "@plumix/core/blocks";
 import { byPriorityThen } from "@plumix/core/manifest";
 
 import type { InserterPattern } from "./block-catalog.js";
@@ -18,4 +19,13 @@ export function selectStarterPatterns(
           (entryType !== undefined && p.entryTypes.includes(entryType))),
     )
     .sort(byPriorityThen((p) => p.name));
+}
+
+/** Starters are offered to a blank entry only: never prepend a layout to real
+ *  work. */
+export function shouldOpenStarter(
+  content: EntryContent | undefined,
+  candidates: readonly InserterPattern[],
+): boolean {
+  return (content?.blocks.length ?? 0) === 0 && candidates.length > 0;
 }

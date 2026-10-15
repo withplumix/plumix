@@ -37,10 +37,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@plumix/admin-ui/tooltip";
-import { resolveRootTag, ROOT_TAGS } from "@plumix/core/blocks";
+import { ROOT_TAGS } from "@plumix/core/blocks";
 
 import type { StyleBucket } from "./store.js";
 import type { StyleDeclaration } from "./style-declarations.js";
+import type { TextMarkId, TextShadowParts } from "./styles-tab-model.js";
 import { findBlock } from "./block-tree-ops.js";
 import { useEditorConfig } from "./editor-config-context.js";
 import { HtmlAttributes } from "./html-attributes.js";
@@ -49,6 +50,22 @@ import { deviceBucket } from "./store.js";
 import { HEX6, StyleControl } from "./style-control.js";
 import { StyleDeclarations } from "./style-declarations.js";
 import { StyleFieldsProvider } from "./style-fields-context.js";
+import {
+  decodeKeyword,
+  DEFAULT_TEXT_SHADOW,
+  encodeKeyword,
+  formatBackgroundImageUrl,
+  formatTextShadow,
+  inheritedStyleValue,
+  KEYWORD_NONE,
+  parseBackgroundImageUrl,
+  parseTextShadow,
+  pressedTextMarks,
+  TAG_DEFAULT,
+  tagNameChoice,
+  TEXT_MARKS,
+  toggleTextMark,
+} from "./styles-tab-model.js";
 
 interface ControlSpec {
   readonly property: string;
@@ -60,16 +77,6 @@ interface ControlSpec {
   readonly options?: readonly string[];
   readonly fullWidth?: boolean;
 }
-
-/**
- * The buckets whose values cascade into each one, nearest first: the large
- * bucket has no @media, medium narrows it, small narrows medium.
- */
-const WIDER_BUCKETS: Readonly<Record<StyleBucket, readonly StyleBucket[]>> = {
-  large: [],
-  medium: ["large"],
-  small: ["medium", "large"],
-};
 
 type StyleGetter = (property: string) => string | undefined;
 type StyleSetter = (property: string) => (value: string | null) => void;
@@ -213,15 +220,8 @@ export function StylesTab(): ReactElement {
     const stored = current?.[property];
     return typeof stored === "string" && stored !== "" ? stored : undefined;
   };
-  // Styles cascade desktop-first, so an unset value renders the nearest wider
-  // device's; the controls show it so the author can see where it comes from.
-  const inheritedOf = (property: string): string | undefined => {
-    for (const wider of WIDER_BUCKETS[bucket]) {
-      const stored = block.style?.[wider]?.[property];
-      if (typeof stored === "string" && stored !== "") return stored;
-    }
-    return undefined;
-  };
+  const inheritedOf = (property: string): string | undefined =>
+    inheritedStyleValue(block.style, bucket, property);
   // Keep every string entry — including an empty one mid-retype — so clearing a
   // value doesn't unmount its row. Emission drops empties at sanitize time.
   const declarations: StyleDeclaration[] = Object.entries(
@@ -419,34 +419,12 @@ function GenericSection({
   );
 }
 
-/**
- * Underline and strikethrough share `text-decoration`, so they're mutually
- * exclusive.
- */
-const TEXT_MARKS = [
-  { id: "bold", property: "fontWeight", on: "bold", Icon: Bold, label: "Bold" },
-  {
-    id: "italic",
-    property: "fontStyle",
-    on: "italic",
-    Icon: Italic,
-    label: "Italic",
-  },
-  {
-    id: "underline",
-    property: "textDecoration",
-    on: "underline",
-    Icon: Underline,
-    label: "Underline",
-  },
-  {
-    id: "strikethrough",
-    property: "textDecoration",
-    on: "line-through",
-    Icon: Strikethrough,
-    label: "Strikethrough",
-  },
-] as const;
+const TEXT_MARK_ICONS: Readonly<Record<TextMarkId, typeof Bold>> = {
+  bold: Bold,
+  italic: Italic,
+  underline: Underline,
+  strikethrough: Strikethrough,
+};
 
 const TEXT_ALIGNMENTS = [
   { value: "left", Icon: AlignLeft, label: "Align left" },
@@ -500,31 +478,26 @@ function TextStyleControls({
             id: "editor.styles.textFormatting",
             message: "Text formatting",
           })}
-          value={TEXT_MARKS.filter((m) => valueOf(m.property) === m.on).map(
-            (m) => m.id,
-          )}
+          value={pressedTextMarks(valueOf)}
           onValueChange={(next) => {
-            // Radix hands back the full pressed set; write only the mark whose
-            // state flipped (exactly one per click).
-            for (const mark of TEXT_MARKS) {
-              const on = valueOf(mark.property) === mark.on;
-              const wantOn = next.includes(mark.id);
-              if (on !== wantOn) {
-                setter(mark.property)(wantOn ? mark.on : null);
-              }
+            for (const write of toggleTextMark(valueOf, next)) {
+              setter(write.property)(write.value);
             }
           }}
         >
-          {TEXT_MARKS.map((mark) => (
-            <TooltipToggleItem
-              key={mark.id}
-              value={mark.id}
-              testid={`style-mark-${mark.id}`}
-              label={markLabel(i18n, mark.id)}
-            >
-              <mark.Icon />
-            </TooltipToggleItem>
-          ))}
+          {TEXT_MARKS.map((mark) => {
+            const Icon = TEXT_MARK_ICONS[mark.id];
+            return (
+              <TooltipToggleItem
+                key={mark.id}
+                value={mark.id}
+                testid={`style-mark-${mark.id}`}
+                label={markLabel(i18n, mark.id)}
+              >
+                <Icon />
+              </TooltipToggleItem>
+            );
+          })}
         </ToggleGroup>
         <ToggleGroup
           type="single"
@@ -694,12 +667,6 @@ function LayoutControls({
   );
 }
 
-/**
- * Radix Select forbids an empty item value, so the "clear" choice carries a
- * sentinel that maps back to `null` (property absent) on change.
- */
-const KEYWORD_NONE = "__unset__";
-
 function KeywordControl({
   label,
   property,
@@ -719,8 +686,8 @@ function KeywordControl({
     <Field size="sm" data-testid={testId}>
       <FieldLabel htmlFor={controlId}>{label}</FieldLabel>
       <Select
-        value={value ?? KEYWORD_NONE}
-        onValueChange={(next) => onChange(next === KEYWORD_NONE ? null : next)}
+        value={encodeKeyword(value)}
+        onValueChange={(next) => onChange(decodeKeyword(next))}
       >
         <SelectTrigger
           id={controlId}
@@ -846,15 +813,6 @@ const SPACING_GROUPS = [
   },
 ] as const;
 
-/**
- * A non-url() value (a gradient set via raw CSS) yields "" rather than a form
- * the field can't represent.
- */
-function parseBackgroundImageUrl(value: string | undefined): string {
-  const match = value?.match(/^url\((['"]?)(.*)\1\)$/);
-  return match?.[2] ?? "";
-}
-
 function BackgroundImageField({
   value,
   onChange,
@@ -881,7 +839,7 @@ function BackgroundImageField({
           value: parseBackgroundImageUrl(value),
           onChange: (next) =>
             onChange(
-              typeof next === "string" && next !== "" ? `url("${next}")` : null,
+              typeof next === "string" ? formatBackgroundImageUrl(next) : null,
             ),
           onBlur: () => undefined,
           name: "backgroundImage",
@@ -913,10 +871,7 @@ function BackgroundImageControl({
       <Input
         id={inputId}
         value={parseBackgroundImageUrl(value)}
-        onChange={(e) => {
-          const url = e.target.value.trim();
-          onChange(url === "" ? null : `url("${url}")`);
-        }}
+        onChange={(e) => onChange(formatBackgroundImageUrl(e.target.value))}
         placeholder="https://…"
         data-testid="style-control-backgroundImage-url"
       />
@@ -947,40 +902,6 @@ function ShadowsEffectsControls({
       />
     </>
   );
-}
-
-/**
- * A text-shadow as its offset/blur/color parts. Enabling seeds a soft default;
- * each field recomposes the whole `x y blur color` value.
- */
-const DEFAULT_TEXT_SHADOW = { x: "1", y: "1", blur: "3", color: "#000000" };
-
-interface TextShadowParts {
-  readonly x: string;
-  readonly y: string;
-  readonly blur: string;
-  readonly color: string;
-}
-
-/**
- * Hex-only: a space-separated color like `rgb(0 0 0)` from raw CSS doesn't
- * round-trip and resets to the default hex on the next edit.
- */
-function parseTextShadow(value: string | undefined): TextShadowParts {
-  if (!value) return DEFAULT_TEXT_SHADOW;
-  const parts = value.trim().split(/\s+/);
-  const len = (raw: string | undefined, fallback: string): string =>
-    raw ? raw.replace("px", "") : fallback;
-  return {
-    x: len(parts[0], DEFAULT_TEXT_SHADOW.x),
-    y: len(parts[1], DEFAULT_TEXT_SHADOW.y),
-    blur: len(parts[2], DEFAULT_TEXT_SHADOW.blur),
-    color: parts[3] ?? DEFAULT_TEXT_SHADOW.color,
-  };
-}
-
-function formatTextShadow(parts: TextShadowParts): string {
-  return `${parts.x}px ${parts.y}px ${parts.blur}px ${parts.color}`;
 }
 
 function TextShadowControls({
@@ -1098,13 +1019,6 @@ function OpacityControl({
   );
 }
 
-/**
- * Radix Select forbids an empty item value, so "Default" (no override → the
- * block's own element) carries a sentinel that maps to an empty string.
- */
-const TAG_DEFAULT = "__default__";
-
-/** A stale value shows as "Default", matching what the renderer emits. */
 function TagNameField({
   value,
   onChange,
@@ -1112,7 +1026,6 @@ function TagNameField({
   readonly value: string | undefined;
   readonly onChange: (tagName: string) => void;
 }): ReactElement {
-  const resolved = resolveRootTag(value);
   const selectId = useId();
   return (
     <Field size="sm" data-testid="block-tag-name">
@@ -1120,7 +1033,7 @@ function TagNameField({
         <Trans id="editor.htmlAttrs.tagName" message="Tag name" />
       </FieldLabel>
       <Select
-        value={resolved ?? TAG_DEFAULT}
+        value={tagNameChoice(value)}
         onValueChange={(next) => onChange(next === TAG_DEFAULT ? "" : next)}
       >
         <SelectTrigger

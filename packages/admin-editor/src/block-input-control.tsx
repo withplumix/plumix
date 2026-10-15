@@ -37,6 +37,17 @@ import { Switch } from "@plumix/admin-ui/switch";
 import { Textarea } from "@plumix/admin-ui/textarea";
 import { resolveLabel } from "@plumix/core/i18n";
 
+import {
+  asString,
+  comboboxCreatable,
+  comboboxItems,
+  decodeOption,
+  decodeSelectKey,
+  encodeSelectKey,
+  optionKey,
+  parseNumberInput,
+} from "./block-input-options.js";
+
 /**
  * Lazy so the Tiptap + ProseMirror engine (~230 KB) splits into its own chunk,
  * fetched only when a rich-text block is selected.
@@ -127,12 +138,7 @@ export function BlockInputControl({
             data-testid={testId}
             type="number"
             value={asString(value)}
-            onChange={(e) => {
-              const next = e.target.valueAsNumber;
-              // Empty or unparseable (a lone "-"/"e" mid-typing) clears to
-              // null rather than poisoning the tree with NaN.
-              onChange(Number.isNaN(next) ? null : next);
-            }}
+            onChange={(e) => onChange(parseNumberInput(e.target.value))}
           />
         );
       case "checkbox":
@@ -297,18 +303,6 @@ function RichTextFieldSkeleton({
 }
 
 /**
- * Block attr values are primitives in practice; coerce only the primitive
- * kinds so a stray object can't stringify to "[object Object]".
- */
-function asString(value: unknown): string {
-  if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
-  return "";
-}
-
-/**
  * Not a native `<datalist>`, which hides its options until you type. Unknown
  * values round-trip.
  */
@@ -330,9 +324,8 @@ function ComboboxControl({
   const [query, setQuery] = useState("");
   const current = asString(value);
   const selected = options.find((opt) => optionKey(opt.value) === current);
-  const custom = query.trim();
-  const canCreate =
-    custom !== "" && !options.some((opt) => optionKey(opt.value) === custom);
+  const custom = comboboxCreatable(query, options);
+  const items = comboboxItems(options, (opt) => resolveLabel(opt.label, i18n));
 
   const commit = (next: JsonValue): void => {
     onChange(next);
@@ -380,7 +373,7 @@ function ComboboxControl({
             data-testid={`${testId}-search`}
           />
           <CommandList>
-            {canCreate ? (
+            {custom !== null ? (
               <CommandItem
                 value={custom}
                 onSelect={() => commit(custom)}
@@ -397,18 +390,16 @@ function ComboboxControl({
               </CommandEmpty>
             )}
             <CommandGroup>
-              {options.map((opt) => (
+              {items.map((item) => (
                 <CommandItem
-                  key={optionKey(opt.value)}
-                  value={optionKey(opt.value)}
-                  // cmdk filters on `value`; add the label so a search matches
-                  // the display text too (e.g. "C++" for the `cpp` value).
-                  keywords={[resolveLabel(opt.label, i18n)]}
-                  onSelect={() => commit(opt.value)}
-                  data-testid={`${testId}-option-${optionKey(opt.value)}`}
+                  key={item.value}
+                  value={item.value}
+                  keywords={[...item.keywords]}
+                  onSelect={() => commit(item.option.value)}
+                  data-testid={`${testId}-option-${item.value}`}
                 >
-                  {resolveLabel(opt.label, i18n)}
-                  {optionKey(opt.value) === current ? (
+                  {item.label}
+                  {item.value === current ? (
                     <Check className="ms-auto size-4" />
                   ) : null}
                 </CommandItem>
@@ -419,35 +410,4 @@ function ComboboxControl({
       </PopoverContent>
     </Popover>
   );
-}
-
-/**
- * DOM control values are strings; key options by their stringified value so
- * number/boolean options round-trip back to their typed form via decodeOption.
- */
-function optionKey(value: unknown): string {
-  return asString(value);
-}
-
-/**
- * Radix Select throws on an empty-string item value, but an option's key can
- * legitimately be "".
- */
-const SELECT_EMPTY = "__plumix_empty__";
-function encodeSelectKey(value: unknown): string {
-  // Unset maps to Radix's reserved "" so the trigger renders its placeholder.
-  if (value === undefined || value === null) return "";
-  const key = optionKey(value);
-  return key === "" ? SELECT_EMPTY : key;
-}
-function decodeSelectKey(key: string): string {
-  return key === SELECT_EMPTY ? "" : key;
-}
-
-function decodeOption(
-  options: readonly BlockInputOption[],
-  key: string,
-): BlockInputOption["value"] {
-  const match = options.find((opt) => optionKey(opt.value) === key);
-  return match ? match.value : key;
 }

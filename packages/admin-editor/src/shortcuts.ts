@@ -229,6 +229,33 @@ export function forwardedShortcutId(
   return null;
 }
 
+/** A host window keydown, as its shortcut handlers read it. */
+export interface KeydownLike extends KeyLike {
+  readonly repeat: boolean;
+  readonly target: EventTarget | null;
+}
+
+/**
+ * The history step a host keydown takes, or `null`. Skips edits in form
+ * controls / contenteditable so native field undo isn't hijacked.
+ */
+export function historyShortcut(event: KeydownLike): "undo" | "redo" | null {
+  // A held chord auto-repeats keydown; one press should be one step.
+  if (event.repeat || isTypingTarget(event.target)) return null;
+  if (matchesShortcut("history.redo", event)) return "redo";
+  if (matchesShortcut("history.undo", event)) return "undo";
+  return null;
+}
+
+/**
+ * Whether the palette is open after a keydown. No typing guard: Cmd+K types
+ * nothing, so it must reach the palette from any field.
+ */
+export function nextPaletteOpen(event: KeydownLike, open: boolean): boolean {
+  if (event.repeat || !matchesShortcut("palette.open", event)) return open;
+  return !open;
+}
+
 const TYPING_TAGS = /^(INPUT|TEXTAREA|SELECT)$/;
 
 /**
