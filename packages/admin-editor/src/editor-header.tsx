@@ -48,8 +48,7 @@ export interface DraftMode {
  *  `draftMode` is set the header shows save/publish/discard; otherwise a plain
  *  Publish button (disabled once published). */
 export interface PublishActions {
-  /** An edit or a publish is still on its way to the server. The header
-   *  reports it as `data-save-state`, which test fixtures wait on. */
+  /** An edit or a publish is still on its way to the server. */
   readonly isSaving?: boolean;
   readonly onPublish?: () => void;
   readonly isPublished?: boolean;

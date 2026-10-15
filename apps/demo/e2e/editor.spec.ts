@@ -1,6 +1,3 @@
-// The `editor` fixture against the real worker: one test per method, each
-// entering the demo first, since every visitor gets their own database.
-
 import type { Page } from "@playwright/test";
 import { expect, test } from "plumix/test/playwright";
 
@@ -14,6 +11,7 @@ async function enterDemo(page: Page): Promise<void> {
   await page.waitForURL(/\/_plumix\/admin/);
 }
 
+// Every visitor gets their own database, so each test enters the demo first.
 test.beforeEach(async ({ page }) => {
   await enterDemo(page);
 });
@@ -268,7 +266,6 @@ test("richText unlinks a linked text block", async ({ editor }) => {
   ]);
 });
 
-// The case "Testing your blocks in the editor" in the testing docs walks through.
 test("a site's own block is inserted, configured and stored", async ({
   editor,
 }) => {

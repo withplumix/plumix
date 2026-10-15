@@ -251,7 +251,7 @@ test("a rating is inserted, configured and stored", async ({ editor }) => {
 });
 ```
 
-`inspector.set(field, value)` and `inspector.get(field)` address an input by the `name` your block declares, the key `stored()` returns its value under, not by its visible label. They work every control the inspector renders: text, number, URL, select, radio, checkbox, switch, combobox, and a media picker, which takes a media id.
+`inspector.set(field, value)` and `inspector.get(field)` address an input by the `name` your block declares, the key `stored()` returns its value under, not by its visible label. They handle every control the inspector renders: text, number, URL, select, radio, checkbox, switch, combobox, and a media picker, which takes a media id.
 
 - **Navigation.** `editor.open({ type, id })` opens an existing entry, and `editor.create(type)` starts a new one.
 - **Canvas.** `editor.canvas.block(name, index?)` returns a locator for a block inside the canvas iframe, and `editor.canvas.blocks()` the names of the top-level blocks in order.

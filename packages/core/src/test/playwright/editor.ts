@@ -99,14 +99,11 @@ export interface EditorRichText {
  * shows, never on the clock.
  */
 export interface Editor {
-  /** Opens an existing entry in the editor. */
   open: (entry: EditorEntryRef) => Promise<void>;
-  /** Starts a new entry of `type` and opens it. */
   create: (type: string) => Promise<void>;
   readonly canvas: EditorCanvas;
   /** Inserts block `name` from the catalog and returns it in the canvas. */
   insert: (name: string, options?: EditorInsertOptions) => Promise<Locator>;
-  /** Selects a block, e.g. one `canvas.block` returned. */
   select: (block: Locator) => Promise<void>;
   readonly toolbar: EditorToolbar;
   readonly inspector: EditorInspector;
@@ -119,7 +116,6 @@ export interface Editor {
   save: () => Promise<void>;
   /** Publishes the entry, or a published entry's pending edits. */
   publish: () => Promise<void>;
-  /** Reloads the editor page. */
   reload: () => Promise<void>;
   /**
    * The open entry's block tree as the server stores it, read the way the
@@ -128,7 +124,6 @@ export interface Editor {
   stored: () => Promise<readonly BlockNode[]>;
 }
 
-/** Edit-mode markers core's renderer puts on every block in the canvas. */
 const BLOCK = "[data-plumix-id]";
 
 const attr = (name: string, value: string): string =>
@@ -162,7 +157,10 @@ const MARKS: ReadonlySet<EditorTextFormat> = new Set([
 ]);
 
 const isNested = (block: Locator): Promise<boolean> =>
-  block.evaluate((el) => el.parentElement?.closest("[data-plumix-id]") != null);
+  block.evaluate(
+    (el, selector) => el.parentElement?.closest(selector) != null,
+    BLOCK,
+  );
 
 type ControlKind = "text" | "number" | "toggle" | "choice" | "radio" | "media";
 
@@ -215,8 +213,9 @@ export function createEditor(page: Page): Editor {
         els.map((el) => el.getAttribute("data-plumix-id") ?? ""),
       );
   const idOf = async (block: Locator): Promise<string> => {
-    const id = await block.evaluate((el) =>
-      el.closest("[data-plumix-id]")?.getAttribute("data-plumix-id"),
+    const id = await block.evaluate(
+      (el, selector) => el.closest(selector)?.getAttribute("data-plumix-id"),
+      BLOCK,
     );
     if (!id) throw new Error("editor: that locator is not a canvas block.");
     return id;
@@ -227,13 +226,15 @@ export function createEditor(page: Page): Editor {
     return id;
   };
   const topLevelBlocks = (): Promise<{ id: string; name: string }[]> =>
-    canvasRoot.locator(BLOCK).evaluateAll((els) =>
-      els
-        .filter((el) => !el.parentElement?.closest("[data-plumix-id]"))
-        .map((el) => ({
-          id: el.getAttribute("data-plumix-id") ?? "",
-          name: el.getAttribute("data-plumix-block") ?? "",
-        })),
+    canvasRoot.locator(BLOCK).evaluateAll(
+      (els, selector) =>
+        els
+          .filter((el) => !el.parentElement?.closest(selector))
+          .map((el) => ({
+            id: el.getAttribute("data-plumix-id") ?? "",
+            name: el.getAttribute("data-plumix-block") ?? "",
+          })),
+      BLOCK,
     );
   const topLevel = async (): Promise<Locator[]> =>
     (await topLevelBlocks()).map(({ id }) => blockById(id));
@@ -275,7 +276,6 @@ export function createEditor(page: Page): Editor {
       .getByTestId(`block-catalog-item-${name}`);
   };
 
-  // No block when the entry is empty.
   const besideOf = async (
     at: Exclude<EditorInsertAt, { readonly into: Locator }>,
   ): Promise<{
@@ -290,8 +290,7 @@ export function createEditor(page: Page): Editor {
       : { block: at.before, before: true };
   };
 
-  // True when the block then needs moving up one.
-  const clickInsert = async (
+  const clickInsertNeedsMoveUp = async (
     name: string,
     at: EditorInsertAt,
   ): Promise<boolean> => {
@@ -378,7 +377,7 @@ export function createEditor(page: Page): Editor {
     const before = new Set(await blockIds());
     let moveUp = false;
     if (via === "drag") await dragInsert(name, at);
-    else moveUp = await clickInsert(name, at);
+    else moveUp = await clickInsertNeedsMoveUp(name, at);
     // The first new id in document order is the inserted block, ahead of any
     // children it was inserted with.
     let id: string | undefined;

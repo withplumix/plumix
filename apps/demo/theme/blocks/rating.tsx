@@ -3,10 +3,6 @@ import { defineBlock } from "plumix/blocks";
 
 const SYMBOLS = { star: "★", heart: "♥" } as const;
 
-/**
- * A review score: the demo's own block beside the core ones, and the one its
- * editor e2e configures through the inspector.
- */
 export const ratingBlock = defineBlock({
   name: "demo/rating",
   title: "Rating",
