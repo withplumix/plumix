@@ -32,7 +32,6 @@ function tablesIn(values: readonly unknown[]): SQLiteTableType[] {
   );
 }
 
-/** Core's and every plugin's JSON columns, as their drizzle tables declare them. */
 export function jsonColumns(config: PlumixConfig): JsonColumns {
   const tables = [
     ...tablesIn(Object.values(coreSchema)),
@@ -50,7 +49,7 @@ export function jsonColumns(config: PlumixConfig): JsonColumns {
   return columns;
 }
 
-function prefixOf(site: SiteLocation): string {
+export function siteUrl(site: SiteLocation): string {
   return `${new URL(site.origin).origin}${site.basePath}`;
 }
 
@@ -89,7 +88,6 @@ function isJsonArray(value: JsonValue): value is readonly JsonValue[] {
   return Array.isArray(value);
 }
 
-/** Rewrites the string values in a JSON value, counting the ones it changed. */
 function rewriteJson(
   value: JsonValue,
   rewrite: (text: string) => string | undefined,
@@ -132,8 +130,8 @@ export function rewriteUrls(
   target: SiteLocation,
   columns: JsonColumns,
 ): RewrittenDump {
-  const from = prefixOf(dump.manifest.source);
-  const to = prefixOf(target);
+  const from = siteUrl(dump.manifest.source);
+  const to = siteUrl(target);
   const rewrite = (text: string): string | undefined =>
     replaceUrls(text, from, to);
   const counts = new Map<string, number>();

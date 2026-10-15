@@ -631,4 +631,45 @@ describe("plumix sync, rewriting the source's URLs", () => {
       ]),
     );
   });
+
+  test("names the source and target by origin and base path, however --url ends", async () => {
+    const ends = await memorySyncEnds();
+    await seed(ends.remote, [
+      AUTHOR,
+      `INSERT INTO entries (id, type, title, slug, author_id, meta) VALUES (1, 'post', 'Hello', 'hello', 1, '{"a":"https://prod.example/site/a"}')`,
+    ]);
+
+    await syncCommand.run(
+      syncCtx(
+        ["pull", "--url", `${PROD}/`, "--dry-run"],
+        ends.sync,
+        siteAt("http://localhost:5173", "/site"),
+      ),
+    );
+
+    expect(lines).toContain(
+      "URLs to rewrite from https://prod.example/site to http://localhost:5173/site:",
+    );
+  });
+
+  test("a push points the local links in content at the deployed origin", async () => {
+    const ends = await memorySyncEnds();
+    await seed(ends.local, [
+      AUTHOR,
+      `INSERT INTO entries (id, type, title, slug, author_id, meta) VALUES (1, 'post', 'Hello', 'hello', 1, '{"a":"http://localhost:5173/a","b":"https://other.example/"}')`,
+    ]);
+    await seed(ends.remote, [AUTHOR]);
+
+    await syncCommand.run(
+      syncCtx(
+        ["push", "--url", PROD, "--yes"],
+        ends.sync,
+        siteAt("http://localhost:5173"),
+      ),
+    );
+
+    expect(await ends.remote.execute("SELECT meta FROM entries")).toEqual([
+      { meta: '{"a":"https://prod.example/a","b":"https://other.example/"}' },
+    ]);
+  });
 });

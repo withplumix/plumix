@@ -24,7 +24,7 @@ import { resolveOwners } from "../migrate/owners.js";
 import { report } from "../report.js";
 import { readDump, writeDump } from "../sync/dump.js";
 import { exportLocalAdmins, keepLocalAdmins } from "../sync/local-admins.js";
-import { jsonColumns, rewriteUrls } from "../sync/rewrite-urls.js";
+import { jsonColumns, rewriteUrls, siteUrl } from "../sync/rewrite-urls.js";
 import { resolveScopes } from "../sync/scopes.js";
 
 const DIRECTIONS: readonly SyncDirection[] = ["pull", "push"];
@@ -138,16 +138,18 @@ function describeImport(target: SyncTarget, result: SyncImportReport): void {
   }
 }
 
+function targetSite(run: SyncRun): SiteLocation {
+  return { origin: run.target.origin, basePath: run.basePath };
+}
+
 function describeRewrite(
   source: SiteLocation,
-  run: SyncRun,
+  target: SiteLocation,
   rewritten: ReadonlyMap<string, number>,
 ): void {
   const tables = [...rewritten].filter(([, count]) => count > 0);
   if (tables.length === 0) return;
-  report.info(
-    `URLs to rewrite from ${source.origin}${source.basePath} to ${run.target.origin}${run.basePath}:`,
-  );
+  report.info(`URLs to rewrite from ${siteUrl(source)} to ${siteUrl(target)}:`);
   for (const [table, count] of tables) {
     report.info(`  ${table}: ${String(count)} rewritten`);
   }
@@ -196,11 +198,7 @@ async function preparedDump(run: SyncRun): Promise<RewrittenDump> {
     dump = await keepLocalAdmins(dump, await exportLocalAdmins(run.target));
   }
   if (!run.args.rewriteUrls) return { dump, rewritten: () => new Map() };
-  return rewriteUrls(
-    dump,
-    { origin: run.target.origin, basePath: run.basePath },
-    jsonColumns(run.config),
-  );
+  return rewriteUrls(dump, targetSite(run), jsonColumns(run.config));
 }
 
 async function confirmed(run: SyncRun): Promise<boolean> {
@@ -222,7 +220,7 @@ async function replaceTarget(run: SyncRun): Promise<void> {
     run.targetName,
     await run.target.importData(dump, run.scopes, { dryRun: true }),
   );
-  describeRewrite(dump.manifest.source, run, rewritten());
+  describeRewrite(dump.manifest.source, targetSite(run), rewritten());
   if (!(await confirmed(run))) return;
   if (run.args.direction === "push") {
     const snapshot = await run.target.snapshot();
