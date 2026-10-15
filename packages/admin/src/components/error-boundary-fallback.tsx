@@ -1,6 +1,7 @@
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { errorDetail } from "@/lib/error-detail.js";
 import { Trans } from "@lingui/react";
 
 import { Button } from "@plumix/admin-ui/button";
@@ -18,9 +19,7 @@ export function ErrorBoundaryFallback({
   error,
 }: ErrorComponentProps): ReactNode {
   const [show, setShow] = useState(false);
-  // Shown verbatim: a client exception has no descriptor to map to, so its
-  // text is the only diagnostic, kept behind a toggle under a localized heading.
-  const detail = error instanceof Error ? error.message : String(error);
+  const detail = errorDetail(error);
   return (
     <div className="mx-auto my-12 flex max-w-2xl flex-col gap-4">
       <Empty>

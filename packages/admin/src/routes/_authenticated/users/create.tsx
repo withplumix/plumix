@@ -49,7 +49,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@plumix/admin-ui/select";
-import { describeRpcError } from "@plumix/core/admin";
 import { vMessage } from "@plumix/core/validation";
 
 import {
@@ -57,20 +56,13 @@ import {
   USER_ROLES,
   USERS_LIST_DEFAULT_SEARCH,
 } from "./-constants.js";
+import { describeInviteError } from "./-invite-errors.js";
 
 /** Descriptors used outside JSX — error setters, copy-button aria label. */
 const M = {
   copyAria: defineMessage({
     id: "userInvite.copy.aria",
     message: "Copy invite link",
-  }),
-  errEmailTaken: defineMessage({
-    id: "userInvite.error.emailTaken",
-    message: "A user with that email already exists.",
-  }),
-  errFallback: defineMessage({
-    id: "userInvite.error.fallback",
-    message: "Couldn't send invite. Try again.",
   }),
 } satisfies Record<string, MessageDescriptor>;
 
@@ -139,7 +131,7 @@ function InviteUserRoute(): ReactNode {
       });
     },
     onError: (err) => {
-      setServerError(mapInviteError(err));
+      setServerError(describeInviteError(err));
     },
   });
 
@@ -333,10 +325,6 @@ function InviteUserRoute(): ReactNode {
  */
 function buildInviteUrl(token: string): string {
   return `${window.location.origin}${ADMIN_BASE_PATH}/accept-invite/${token}`;
-}
-
-function mapInviteError(err: unknown): MessageDescriptor {
-  return describeRpcError(err, { email_taken: M.errEmailTaken }, M.errFallback);
 }
 
 function InviteSuccess({

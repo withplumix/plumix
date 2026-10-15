@@ -98,6 +98,22 @@ export function getPluginDashboardWidget(
 }
 
 /**
+ * Pairs each widget with its registered component. An unregistered widget is
+ * skipped silently rather than breaking the dashboard.
+ */
+export function mountedDashboardWidgets<
+  TWidget extends { readonly id: string },
+>(
+  widgets: readonly TWidget[],
+  lookup: (id: string) => ComponentType | undefined = getPluginDashboardWidget,
+): readonly { readonly widget: TWidget; readonly Component: ComponentType }[] {
+  return widgets.flatMap((widget) => {
+    const Component = lookup(widget.id);
+    return Component ? [{ widget, Component }] : [];
+  });
+}
+
+/**
  * Stops a plugin replacing a built-in input across the admin, by accident or to
  * harvest form data. `media` / `mediaList` are plugin-contributed, so
  * unreserved.

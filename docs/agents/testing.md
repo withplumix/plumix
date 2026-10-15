@@ -14,10 +14,13 @@ the shared `runtimeSpec`) from `plumix/test/playwright`.
 
 ## Admin test helpers
 
-`packages/admin/test/rpc.ts` has `stubRpc`, which answers the real oRPC client at the fetch
-boundary, so admin logic that calls the API is unit-tested in Node. The other files there
-(`renderWithI18n`, `renderWithRouter`, `seedManifest`) render into or write a DOM. Only the files
-on the `plumix/test-tier` pending list use them, and they leave with those files (#3035).
+`packages/admin/test/` holds two helpers for the admin's Node unit tests. `labelText` in
+`label-text.ts` resolves a `Label` to its text, for the `selectX(items, query, toText)` helpers,
+with no Lingui instance. `lingui-macro-stub.ts` stands in for `@lingui/core/macro`, which
+`vitest.config.ts` aliases to it because Vitest runs no Lingui Babel pass. A test that needs a
+rendered admin screen, a manifest or an RPC answer is an e2e spec: it seeds them with
+`mockManifest` and `mockRpc` from `e2e/support/rpc-mock.ts`, or with `page.route` for a failing
+RPC.
 
 ## A slow test
 

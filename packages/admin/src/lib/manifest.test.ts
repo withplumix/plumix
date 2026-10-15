@@ -19,6 +19,7 @@ import {
   getPatterns,
   getThemeBreakpoints,
   groupsForSettingsPage,
+  hasAuthorRoutes,
   namedTemplatesForType,
   parseManifest,
   visibleDashboardWidgets,
@@ -744,6 +745,20 @@ describe("getPatterns", () => {
       content: [],
     };
     expect(getPatterns({ patterns: [heroEntry] })).toEqual([heroEntry]);
+  });
+});
+
+describe("hasAuthorRoutes", () => {
+  test("keeps author routes where the site left them on", () => {
+    expect(hasAuthorRoutes({ frameworkRoutes: { author: true } })).toBe(true);
+  });
+
+  test("drops author routes where the site turned them off", () => {
+    expect(hasAuthorRoutes({ frameworkRoutes: { author: false } })).toBe(false);
+  });
+
+  test("keeps author routes when the manifest is silent", () => {
+    expect(hasAuthorRoutes({})).toBe(true);
   });
 });
 

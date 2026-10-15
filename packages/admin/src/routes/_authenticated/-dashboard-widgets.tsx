@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Suspense } from "react";
 import { PluginErrorBoundary } from "@/lib/plugin-error-boundary.js";
-import { getPluginDashboardWidget } from "@/lib/plugin-registry.js";
+import { mountedDashboardWidgets } from "@/lib/plugin-registry.js";
 import { useLabel } from "@/lib/use-label.js";
 
 import type { DashboardWidgetManifestEntry } from "@plumix/core/manifest";
@@ -13,20 +13,13 @@ import {
 } from "@plumix/admin-ui/card";
 import { Skeleton } from "@plumix/admin-ui/skeleton";
 
-/**
- * An unregistered widget is skipped silently rather than breaking the
- * dashboard.
- */
 export function DashboardWidgets({
   widgets,
 }: {
   readonly widgets: readonly DashboardWidgetManifestEntry[];
 }): ReactNode {
   const renderLabel = useLabel();
-  const mounted = widgets.flatMap((widget) => {
-    const Component = getPluginDashboardWidget(widget.id);
-    return Component ? [{ widget, Component }] : [];
-  });
+  const mounted = mountedDashboardWidgets(widgets);
   if (mounted.length === 0) return null;
 
   return (

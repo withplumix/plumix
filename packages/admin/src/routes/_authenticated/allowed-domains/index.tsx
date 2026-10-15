@@ -41,8 +41,9 @@ import {
   SelectValue,
 } from "@plumix/admin-ui/select";
 import { Toggle } from "@plumix/admin-ui/toggle";
-import { describeRpcError } from "@plumix/core/admin";
 import { domainPattern, vMessage } from "@plumix/core/validation";
+
+import { describeAllowedDomainError } from "./-errors.js";
 
 const USER_ROLES = [
   "subscriber",
@@ -65,14 +66,6 @@ const M = {
     id: "allowedDomains.row.deleteAria",
     message: "Delete {domain}",
     comment: "domain: the hostname being removed from the allowlist",
-  }),
-  errDomainExists: defineMessage({
-    id: "allowedDomains.error.domainExists",
-    message: "That domain is already configured.",
-  }),
-  errFallback: defineMessage({
-    id: "allowedDomains.error.fallback",
-    message: "Couldn't save the domain. Try again.",
   }),
 } satisfies Record<string, MessageDescriptor>;
 
@@ -128,7 +121,7 @@ function AllowedDomainsRoute(): ReactNode {
       await invalidateList();
       form.reset({ domain: "", defaultRole: "subscriber" });
     },
-    onError: (err) => setServerError(mapError(err)),
+    onError: (err) => setServerError(describeAllowedDomainError(err)),
   });
 
   const update = useMutation({
@@ -442,13 +435,5 @@ function DomainRow({
         )}
       </div>
     </li>
-  );
-}
-
-function mapError(err: unknown): MessageDescriptor {
-  return describeRpcError(
-    err,
-    { domain_exists: M.errDomainExists },
-    M.errFallback,
   );
 }
