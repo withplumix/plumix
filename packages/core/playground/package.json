@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@plumix/core": "workspace:*",
     "@plumix/plugin-media": "workspace:*",
     "@plumix/runtime-cloudflare": "workspace:*",
     "plumix": "workspace:*",

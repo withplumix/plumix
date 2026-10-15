@@ -13,6 +13,8 @@ import { NestParent } from "./islands/nest-parent.js";
 import { DivergeParent, DropParent } from "./islands/parents.js";
 import { PrefetchProbe } from "./islands/prefetch-probe.js";
 import { Probe } from "./islands/probe.js";
+import { SanitizeProbe } from "./islands/sanitize-probe.js";
+import { UseAuthProbe } from "./islands/use-auth-probe.js";
 
 /**
  * Markup no component emits: `await-children` and an unknown `client`. Vite's
@@ -131,12 +133,22 @@ function auth(): ReactNode {
   return h(AuthProbe, { client: "load" });
 }
 
+function sanitizer(): ReactNode {
+  return h(SanitizeProbe, { client: "load" });
+}
+
+function authHookIsland(): ReactNode {
+  return h(UseAuthProbe, { client: "load" });
+}
+
 const FIXTURES: Readonly<Record<string, () => ReactNode>> = {
   auth,
   islands,
   "islands-nested": islandsNested,
   "islands-raw": islandsRaw,
+  sanitizer,
   strategies,
+  "use-auth": authHookIsland,
 };
 
 function article(resolved: ResolvedEntry): ReactNode {

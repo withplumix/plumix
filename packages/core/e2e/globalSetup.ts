@@ -10,7 +10,9 @@ const FIXTURE_SLUGS = [
   "islands",
   "islands-nested",
   "islands-raw",
+  "sanitizer",
   "strategies",
+  "use-auth",
 ] as const;
 
 /**
@@ -42,4 +44,26 @@ export default async function globalSetup(): Promise<void> {
       publishedAt: new Date(),
     });
   }
+  // No fixture: the theme renders its stored blocks.
+  await factories.entry.create({
+    type: "page",
+    slug: "embed",
+    title: "embed",
+    authorId: author.id,
+    status: "published",
+    publishedAt: new Date(),
+    content: {
+      version: "plumix.v2",
+      blocks: [
+        {
+          id: "embed",
+          name: "core/embed",
+          attrs: {
+            url: "https://www.youtube.com/watch?v=abcdefghijk",
+            title: "Clip",
+          },
+        },
+      ],
+    },
+  });
 }

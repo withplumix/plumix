@@ -4,6 +4,7 @@ import type { CSSProperties, ReactElement } from "react";
 import { useState } from "react";
 
 import type { IslandProps } from "../island-props.js";
+import { embedFrameAttributes } from "./frame-attrs.js";
 
 interface EmbedFacadeProps {
   readonly src: string;
@@ -50,15 +51,13 @@ export function EmbedFacade(
       {loaded ? (
         <div className="plumix-embed" style={box}>
           <iframe
+            data-testid="embed-frame"
             src={src}
             title={title}
             loading="lazy"
-            referrerPolicy={
-              sandboxed ? "no-referrer" : "strict-origin-when-cross-origin"
-            }
             allowFullScreen={allowFullscreen === true}
             style={{ width: "100%", height: "100%", border: 0 }}
-            {...(sandboxed && { sandbox: "allow-scripts" })}
+            {...embedFrameAttributes(sandboxed)}
           />
         </div>
       ) : (
