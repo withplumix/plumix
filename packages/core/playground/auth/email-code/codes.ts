@@ -6,10 +6,8 @@ import { emailCodeMisses, emailCodes } from "./schema.js";
 /** How long a code stays good, and the window the per-email cap counts. */
 const CODE_TTL_MS = 10 * 60 * 1000;
 
-/** Codes one address may be sent per window. */
 const MAX_CODES_PER_EMAIL = 3;
 
-/** Wrong guesses one code survives. */
 const MAX_MISSES_PER_CODE = 5;
 
 export type CodeCheck =

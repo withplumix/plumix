@@ -27,8 +27,7 @@ const emailCodeMail = defineMail<EmailCodeMail>("emailCode", {
 const isObject = (input: JsonValue): input is JsonObject =>
   typeof input === "object" && input !== null && !Array.isArray(input);
 
-/** A string field of a fetch's JSON body or a form post's fields. */
-function field(input: JsonValue, name: string): string {
+function readStringField(input: JsonValue, name: string): string {
   const value = isObject(input) ? input[name] : undefined;
   return typeof value === "string" ? value.trim() : "";
 }
@@ -65,7 +64,10 @@ export const emailCode = definePlugin("email-code", {
           method: "POST",
           formPost: true,
           handler: async (auth) => {
-            const email = field(await auth.readInput(), "email").toLowerCase();
+            const email = readStringField(
+              await auth.readInput(),
+              "email",
+            ).toLowerCase();
             if (!EMAIL.test(email)) return auth.fail("invalid_input");
             const code = await issueCode(auth.ctx, email);
             if (code === null)
@@ -79,8 +81,8 @@ export const emailCode = definePlugin("email-code", {
           formPost: true,
           handler: async (auth) => {
             const input = await auth.readInput();
-            const email = field(input, "email").toLowerCase();
-            const code = field(input, "code");
+            const email = readStringField(input, "email").toLowerCase();
+            const code = readStringField(input, "code");
             if (!EMAIL.test(email) || code === "") {
               return auth.fail("invalid_input");
             }
