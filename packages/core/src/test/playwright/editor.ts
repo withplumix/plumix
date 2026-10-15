@@ -126,12 +126,12 @@ export interface EditorRichText {
 export interface EditorDocumentSettings {
   /** Picks a visibility policy by its key, or `null` for the type's default. */
   setVisibility: (policy: string | null) => Promise<void>;
-  /** The visibility picker's label: the chosen policy's, or "(default)". */
-  visibility: () => Promise<string>;
+  /** The visibility picker, whose text is the chosen policy's label, or "(default)". */
+  visibility: () => Promise<Locator>;
   /** Toggles each term, by id, in `taxonomy`'s picker. */
   toggleTerms: (taxonomy: string, termIds: readonly number[]) => Promise<void>;
-  /** The term picker's label: the chosen terms' names. */
-  terms: (taxonomy: string) => Promise<string>;
+  /** `taxonomy`'s term picker, whose text is the chosen terms' names. */
+  terms: (taxonomy: string) => Promise<Locator>;
 }
 
 /** The revisions sheet the editor header opens. */
@@ -145,8 +145,8 @@ export interface EditorRevisions {
   readonly rows: Locator;
   /** Loads the sheet's next page and resolves once it lists. */
   loadMore: () => Promise<void>;
-  /** Whether the sheet offers another page. */
-  hasMore: () => Promise<boolean>;
+  /** The button that loads the next page, present while the sheet has one. */
+  readonly loadMoreButton: Locator;
   /** Saves `text` as revision `revisionId`'s comment. */
   comment: (revisionId: number, text: string) => Promise<void>;
   /** Revision `revisionId`'s comment, as the sheet shows it. */
@@ -641,19 +641,17 @@ export function createEditor(page: Page): Editor {
     },
   };
 
-  const pageTab = async (): Promise<void> => {
+  const openPageTab = async (): Promise<void> => {
     await page.getByTestId("plumix-tab-page").click();
     await expect(page.getByTestId("entry-document-panel")).toBeVisible();
   };
   const visibilityPicker = page.getByTestId("entry-visibility-select");
   const termPicker = (taxonomy: string): Locator =>
     page.getByTestId(`entry-taxonomy-${taxonomy}`);
-  const labelOf = async (control: Locator): Promise<string> =>
-    ((await control.textContent()) ?? "").trim();
 
   const documentSettings: EditorDocumentSettings = {
     setVisibility: async (policy) => {
-      await pageTab();
+      await openPageTab();
       await visibilityPicker.click();
       const option = page.getByTestId(
         `entry-visibility-select-option-${policy ?? "default"}`,
@@ -662,11 +660,11 @@ export function createEditor(page: Page): Editor {
       await expect(option).toBeHidden();
     },
     visibility: async () => {
-      await pageTab();
-      return labelOf(visibilityPicker);
+      await openPageTab();
+      return visibilityPicker;
     },
     toggleTerms: async (taxonomy, termIds) => {
-      await pageTab();
+      await openPageTab();
       const picker = termPicker(taxonomy);
       await picker.click();
       await expect(picker).toHaveAttribute("aria-expanded", "true");
@@ -679,12 +677,12 @@ export function createEditor(page: Page): Editor {
       await expect(picker).toHaveAttribute("aria-expanded", "false");
     },
     terms: async (taxonomy) => {
-      await pageTab();
-      return labelOf(termPicker(taxonomy));
+      await openPageTab();
+      return termPicker(taxonomy);
     },
   };
 
-  const revisionRow = (id: number): string =>
+  const revisionTestId = (id: number): string =>
     `revisions-sheet-item-${String(id)}`;
   const revisionRows = page
     .getByTestId("revisions-sheet-list")
@@ -712,18 +710,18 @@ export function createEditor(page: Page): Editor {
       await loadMoreButton.click();
       await expect.poll(() => revisionRows.count()).toBeGreaterThan(before);
     },
-    hasMore: async () => (await loadMoreButton.count()) > 0,
+    loadMoreButton,
     comment: async (revisionId, text) => {
-      const row = revisionRow(revisionId);
+      const row = revisionTestId(revisionId);
       await page.getByTestId(`${row}-comment`).click();
       await page.getByTestId(`${row}-comment-input`).fill(text);
       await page.getByTestId(`${row}-comment-save`).click();
       await expect(page.getByTestId(`${row}-comment-editor`)).toHaveCount(0);
     },
     commentOf: (revisionId) =>
-      page.getByTestId(`${revisionRow(revisionId)}-comment-display`),
+      page.getByTestId(`${revisionTestId(revisionId)}-comment-display`),
     diff: async (revisionId) => {
-      await page.getByTestId(`${revisionRow(revisionId)}-diff`).click();
+      await page.getByTestId(`${revisionTestId(revisionId)}-diff`).click();
       const modal = page.getByTestId("revision-diff-modal");
       await expect(modal).toBeVisible();
       return {
@@ -927,7 +925,7 @@ export function createEditor(page: Page): Editor {
       return { title, meta, terms };
     },
     storedRevisions: async () => {
-      const revisions: EditorStoredRevision[] = [];
+      const stored: EditorStoredRevision[] = [];
       let cursor: string | null = null;
       do {
         const listed: StoredRevisionPage = await rpc(
@@ -935,7 +933,7 @@ export function createEditor(page: Page): Editor {
           REVISIONS_LIST_PATH,
           { entryId: entryId(), cursor },
         );
-        revisions.push(
+        stored.push(
           ...listed.revisions.map(({ id, title, message }) => ({
             id,
             title,
@@ -944,7 +942,7 @@ export function createEditor(page: Page): Editor {
         );
         cursor = listed.nextCursor;
       } while (cursor !== null);
-      return revisions;
+      return stored;
     },
   };
 }

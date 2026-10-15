@@ -1,6 +1,5 @@
 import { expect, test } from "@plumix/core/test/playwright";
 
-import { ACCESS_POLICY_META_KEY } from "../src/access/contract/meta-key.js";
 import { signInAsAdmin } from "./support/session.js";
 
 test.describe("the editor's Page tab", () => {
@@ -19,9 +18,9 @@ test.describe("the editor's Page tab", () => {
     await expect(
       editor.canvas.frame.getByTestId("article-visibility"),
     ).toHaveText("members");
-    expect(await editor.document.visibility()).toBe("Members only");
+    await expect(await editor.document.visibility()).toHaveText("Members only");
     const stored = await editor.storedDocument();
-    expect(stored.meta[ACCESS_POLICY_META_KEY]).toBe("members");
+    expect(stored.meta.__plumix_access).toBe("members");
   });
 
   test("a taxonomy picker persists", async ({ page, editor }) => {
@@ -43,7 +42,7 @@ test.describe("the editor's Page tab", () => {
     await expect(editor.canvas.frame.getByTestId("article-topics")).toHaveText(
       "Gardening",
     );
-    expect(await editor.document.terms("topic")).toBe("Gardening");
+    await expect(await editor.document.terms("topic")).toHaveText("Gardening");
     const stored = await editor.storedDocument();
     expect(stored.terms.topic).toEqual([topic.id]);
   });
@@ -56,7 +55,7 @@ test.describe("the editor's Page tab", () => {
     const entry = await factories.draft.create({
       type: "article",
       authorId: admin.id,
-      meta: { [ACCESS_POLICY_META_KEY]: "members" },
+      meta: { __plumix_access: "members" },
     });
     await editor.open(entry);
 
@@ -67,9 +66,9 @@ test.describe("the editor's Page tab", () => {
     await expect(
       editor.canvas.frame.getByTestId("article-visibility"),
     ).toHaveText("default");
-    expect(await editor.document.visibility()).toBe("(default)");
+    await expect(await editor.document.visibility()).toHaveText("(default)");
     const stored = await editor.storedDocument();
-    expect(stored.meta[ACCESS_POLICY_META_KEY]).toBeUndefined();
+    expect(stored.meta.__plumix_access).toBeUndefined();
   });
 
   test("a taxonomy picker drops a term", async ({ page, editor }) => {
@@ -100,7 +99,7 @@ test.describe("the editor's Page tab", () => {
     await expect(editor.canvas.frame.getByTestId("article-topics")).toHaveText(
       "Cooking",
     );
-    expect(await editor.document.terms("topic")).toBe("Cooking");
+    await expect(await editor.document.terms("topic")).toHaveText("Cooking");
     const stored = await editor.storedDocument();
     expect(stored.terms.topic).toEqual([cooking.id]);
   });

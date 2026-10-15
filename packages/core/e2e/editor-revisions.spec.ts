@@ -41,28 +41,26 @@ async function articleWithRevisions(
 }
 
 test.describe("the editor's revisions", () => {
-  test("the All and Publishes tabs list the entry's revisions, newest first", async ({
-    page,
-    editor,
-  }) => {
-    const session = await signInAsAdmin(page);
-    const entry = await articleWithRevisions(session, 2);
-    await editor.open(entry);
-    const { revisions } = editor;
+  for (const tab of ["all", "publishes"] as const) {
+    test(`the ${tab} tab lists the entry's revisions, newest first`, async ({
+      page,
+      editor,
+    }) => {
+      const session = await signInAsAdmin(page);
+      const entry = await articleWithRevisions(session, 2);
+      await editor.open(entry);
+      const { revisions } = editor;
 
-    await revisions.open();
-    await expect(revisions.rows).toHaveText([/Take 2/, /Take 1/]);
-    await revisions.open("publishes");
-    await expect(revisions.rows).toHaveText([/Take 2/, /Take 1/]);
+      await revisions.open(tab);
+      await expect(revisions.rows).toHaveText([/Take 2/, /Take 1/]);
 
-    await editor.reload();
-    await revisions.open();
-    await expect(revisions.rows).toHaveText([/Take 2/, /Take 1/]);
-    await revisions.open("publishes");
-    await expect(revisions.rows).toHaveText([/Take 2/, /Take 1/]);
-    const stored = await editor.storedRevisions();
-    expect(stored.map((r) => r.title)).toEqual(["Take 2", "Take 1"]);
-  });
+      await editor.reload();
+      await revisions.open(tab);
+      await expect(revisions.rows).toHaveText([/Take 2/, /Take 1/]);
+      const stored = await editor.storedRevisions();
+      expect(stored.map((r) => r.title)).toEqual(["Take 2", "Take 1"]);
+    });
+  }
 
   test("a comment on a revision persists", async ({ page, editor }) => {
     const session = await signInAsAdmin(page);
@@ -122,7 +120,7 @@ test.describe("the editor's revisions", () => {
     await revisions.loadMore();
     await expect(revisions.rows).toHaveCount(26);
     await expect(revisions.rows.last()).toContainText("Take 1");
-    expect(await revisions.hasMore()).toBe(false);
+    await expect(revisions.loadMoreButton).toHaveCount(0);
 
     await editor.reload();
     await revisions.open();
@@ -131,7 +129,7 @@ test.describe("the editor's revisions", () => {
     await revisions.loadMore();
     await expect(revisions.rows).toHaveCount(26);
     await expect(revisions.rows.last()).toContainText("Take 1");
-    expect(await revisions.hasMore()).toBe(false);
+    await expect(revisions.loadMoreButton).toHaveCount(0);
     const stored = await editor.storedRevisions();
     expect(stored).toHaveLength(26);
     expect(stored.at(-1)?.title).toBe("Take 1");
