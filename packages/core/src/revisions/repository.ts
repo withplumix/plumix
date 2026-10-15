@@ -1,7 +1,7 @@
 import { and, desc, eq, gte, inArray, like, lt, ne, or } from "drizzle-orm";
 
 import type { Db } from "../context/app-context.js";
-import type { Entry, EntryContent } from "../db/schema/entries.js";
+import type { Entry, EntryContent, NewEntry } from "../db/schema/entries.js";
 import type { JsonObject } from "../json.js";
 import { ACCESS_POLICY_META_KEY } from "../access/contract/meta-key.js";
 import { isUniqueConstraintError } from "../db/errors.js";
@@ -45,6 +45,26 @@ interface SnapshotInput {
   readonly authorId: number;
 }
 
+/** The revision row a save of `entry` writes, with a fresh slug. */
+export function revisionRow({ entry, authorId }: SnapshotInput): NewEntry {
+  return {
+    type: REVISION_TYPE,
+    parentId: null,
+    title: entry.title,
+    slug: buildRevisionSlug({ entryId: entry.id, nanoid: generateNanoid() }),
+    content: entry.content,
+    excerpt: entry.excerpt,
+    status: entry.status,
+    authorId,
+    sortOrder: 0,
+    meta: {
+      ...entry.meta,
+      ...encodeSnapshotEnvelope({ slug: entry.slug, parentId: entry.parentId }),
+    },
+    publishedAt: entry.publishedAt,
+  };
+}
+
 /**
  * Retries only on a unique-index collision (a nanoid coincidence), so schema
  * or FK bugs aren't masked as retry candidates.
@@ -53,30 +73,10 @@ export async function snapshotAsRevision(
   db: Db,
   input: SnapshotInput,
 ): Promise<Entry> {
-  const { entry, authorId } = input;
-  const meta = {
-    ...entry.meta,
-    ...encodeSnapshotEnvelope({ slug: entry.slug, parentId: entry.parentId }),
-  };
   async function attempt(): Promise<Entry> {
     const [row] = await db
       .insert(entries)
-      .values({
-        type: REVISION_TYPE,
-        parentId: null,
-        title: entry.title,
-        slug: buildRevisionSlug({
-          entryId: entry.id,
-          nanoid: generateNanoid(),
-        }),
-        content: entry.content,
-        excerpt: entry.excerpt,
-        status: entry.status,
-        authorId,
-        sortOrder: 0,
-        meta,
-        publishedAt: entry.publishedAt,
-      })
+      .values(revisionRow(input))
       .returning();
     if (!row) throw RevisionRepositoryError.insertReturnedNoRow();
     return row;

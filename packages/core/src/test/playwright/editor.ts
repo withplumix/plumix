@@ -14,6 +14,11 @@ export interface EditorEntryRef {
   readonly id: number;
 }
 
+/** A revision of the open entry: a row from the `revision` factory, or its id. */
+export interface EditorRevisionRef {
+  readonly id: number;
+}
+
 /** The canvas iframe, where the entry's blocks render. */
 export interface EditorCanvas {
   /** The canvas iframe itself, for what the methods here don't cover. */
@@ -139,6 +144,18 @@ export interface Editor {
   save: () => Promise<void>;
   /** Publishes the entry, or a published entry's pending edits. */
   publish: () => Promise<void>;
+  /** Leaves with the header's Back button, once the editor has closed. */
+  back: () => Promise<void>;
+  /**
+   * Discards a published entry's pending edits and resolves once the editor
+   * has reopened on the published state.
+   */
+  discard: () => Promise<void>;
+  /**
+   * Previews `revision` from the Revisions sheet and restores it, resolving
+   * once the editor has reopened on the restored state.
+   */
+  restoreRevision: (revision: EditorRevisionRef) => Promise<void>;
   reload: () => Promise<void>;
   /**
    * The open entry's block tree as the server stores it, read the way the
@@ -233,6 +250,18 @@ export function createEditor(page: Page): Editor {
     await expect(iframe).toHaveAttribute("data-canvas-state", "ready", {
       timeout: 0,
     });
+  };
+
+  // Discarding and restoring remount the editor, and the canvas iframe with
+  // it, so the old one detaching is what tells the new one apart.
+  const remounted = async (action: () => Promise<void>): Promise<void> => {
+    const before = await iframe.elementHandle();
+    await action();
+    await expect
+      .poll(() => before.evaluate((el) => el.isConnected))
+      .toBe(false);
+    await before.dispose();
+    await ready();
   };
 
   const selected = page.getByTestId("plumix-overlay-selected");
@@ -664,6 +693,26 @@ export function createEditor(page: Page): Editor {
       // Disabled from the click until the published state arrives, and after.
       await expect(button).toBeDisabled();
       await save();
+    },
+    back: async () => {
+      await page.getByTestId("plumix-editor-back").click();
+      await expect(header).toBeHidden();
+    },
+    discard: () =>
+      remounted(async () => {
+        await page.getByTestId("editor-draft-discard").click();
+        await page.getByTestId("editor-draft-discard-confirm").click();
+      }),
+    restoreRevision: async ({ id }) => {
+      await page.getByTestId("revisions-sheet-trigger").click();
+      await page
+        .getByTestId(`revisions-sheet-item-${String(id)}-select`)
+        .click();
+      const banner = page.getByTestId("revision-preview-banner");
+      await expect(banner).toBeVisible();
+      await remounted(() =>
+        banner.getByTestId("revision-preview-restore").click(),
+      );
     },
     reload: async () => {
       await page.reload();

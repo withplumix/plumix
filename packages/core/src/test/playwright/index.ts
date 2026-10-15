@@ -18,6 +18,7 @@ export type {
   EditorInsertAt,
   EditorInsertOptions,
   EditorInspector,
+  EditorRevisionRef,
   EditorRichText,
   EditorStructureButton,
   EditorTextFormat,

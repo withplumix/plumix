@@ -1,4 +1,5 @@
 import { resolve } from "node:path";
+import type { Page } from "@playwright/test";
 
 import type { Factories } from "@plumix/core/test";
 import { factoriesFor } from "@plumix/core/test";
@@ -10,6 +11,8 @@ import {
 } from "@plumix/core/test/playwright";
 
 import { holdRequests } from "./support/hold-requests.js";
+
+const ENTRY_UPDATE = "/_plumix/rpc/entry/update";
 
 interface Seed {
   readonly factories: Factories;
@@ -50,7 +53,25 @@ test("a new entry takes a block in its empty canvas and stores it", async ({
   expect(await editor.canvas.blocks()).toEqual(["core/separator"]);
 });
 
-test("the Back button flushes the last edit before it leaves", async ({
+/**
+ * In order: `sent` when an `entry.update` leaves the page, `stored` when it is
+ * answered, `left` when the page navigates.
+ */
+function recordLeaving(page: Page): string[] {
+  const events: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().endsWith(ENTRY_UPDATE)) events.push("sent");
+  });
+  page.on("requestfinished", (request) => {
+    if (request.url().endsWith(ENTRY_UPDATE)) events.push("stored");
+  });
+  page.on("framenavigated", (frame) => {
+    if (frame === page.mainFrame()) events.push("left");
+  });
+  return events;
+}
+
+test("the Back button sends the pending edit before it leaves", async ({
   editor,
   page,
   seed,
@@ -60,12 +81,15 @@ test("the Back button flushes the last edit before it leaves", async ({
     authorId: seed.authorId,
   });
   await editor.open(post);
+  const events = recordLeaving(page);
 
-  // Clicked inside autosave's debounce, so the edit is still pending.
   await editor.insert("core/separator");
-  await page.getByTestId("plumix-editor-back").click();
-  await page.waitForURL(/\/entries\/[^/]+$/);
+  events.push("back");
+  await editor.back();
 
+  // Sent after the click, so it was still waiting on autosave's debounce, and
+  // stored before the editor left.
+  expect(events).toEqual(["back", "sent", "stored", "left"]);
   await editor.open(post);
   expect((await editor.stored()).map(({ name }) => name)).toEqual([
     "core/separator",
@@ -83,11 +107,10 @@ test("leaving with an unsaved edit prompts, and staying stores it", async ({
     authorId: seed.authorId,
   });
   await editor.open(post);
-  const release = await holdRequests(page, "**/_plumix/rpc/entry/update");
+  // A held write keeps the edit unsaved for as long as the test needs.
+  const release = await holdRequests(page, `**${ENTRY_UPDATE}`);
   await editor.insert("core/separator");
 
-  // The page's script is paused while the prompt is open, so the flush lands
-  // once the author chooses to stay.
   let prompt: string | undefined;
   page.once("dialog", (dialog) => {
     prompt = dialog.type();
@@ -101,6 +124,33 @@ test("leaving with an unsaved edit prompts, and staying stores it", async ({
   await editor.save();
 
   await editor.reload();
+  expect((await editor.stored()).map(({ name }) => name)).toEqual([
+    "core/separator",
+  ]);
+  expect(await editor.canvas.blocks()).toEqual(["core/separator"]);
+});
+
+test("leaving anyway still stores the pending edit", async ({
+  editor,
+  page,
+  seed,
+}) => {
+  const post = await seed.factories.entry.create({
+    type: "post",
+    authorId: seed.authorId,
+  });
+  await editor.open(post);
+  await editor.insert("core/separator");
+
+  // Unloading takes autosave's debounce with it, so only the flush can store
+  // the edit.
+  page.once("dialog", (dialog) => void dialog.accept());
+  await page.evaluate(() => {
+    location.assign("/");
+  });
+  await page.waitForURL((url) => url.pathname === "/");
+
+  await editor.open(post);
   expect((await editor.stored()).map(({ name }) => name)).toEqual([
     "core/separator",
   ]);
@@ -126,15 +176,10 @@ test("discarding the draft puts the published blocks back", async ({
   await editor.save();
   await expect(page.getByTestId("editor-unpublished-changes")).toBeVisible();
 
-  await page.getByTestId("editor-draft-discard").click();
-  await page.getByTestId("editor-draft-discard-confirm").click();
+  await editor.discard();
 
   await expect(page.getByTestId("editor-unpublished-changes")).toBeHidden();
-  // The editor remounts on the published row, so a read can meet the old
-  // canvas as it detaches.
-  await expect(async () => {
-    expect(await editor.canvas.blocks()).toEqual(["core/separator"]);
-  }).toPass();
+  expect(await editor.canvas.blocks()).toEqual(["core/separator"]);
   await editor.reload();
   expect(await editor.stored()).toEqual([
     { id: "published-separator", name: "core/separator" },
@@ -144,7 +189,6 @@ test("discarding the draft puts the published blocks back", async ({
 
 test("restoring a revision from its preview stores that revision's blocks", async ({
   editor,
-  page,
   seed,
 }) => {
   const post = await seed.factories.entry.create({
@@ -156,36 +200,22 @@ test("restoring a revision from its preview stores that revision's blocks", asyn
       blocks: [{ id: "live-separator", name: "core/separator" }],
     },
   });
-  const revision = await seed.factories.entry.create({
-    authorId: seed.authorId,
-    type: "revision",
-    slug: `revision:${String(post.id)}:seeded`,
-    status: "published",
-    content: {
-      version: "plumix.v2",
-      blocks: [
-        { id: "earlier-code", name: "core/code" },
-        { id: "earlier-separator", name: "core/separator" },
-      ],
-    },
-  });
+  const revision = await seed.factories.revision
+    .transient({ of: post })
+    .create({
+      content: {
+        version: "plumix.v2",
+        blocks: [
+          { id: "earlier-code", name: "core/code" },
+          { id: "earlier-separator", name: "core/separator" },
+        ],
+      },
+    });
   await editor.open(post);
 
-  await page.getByTestId("revisions-sheet-trigger").click();
-  await page
-    .getByTestId(`revisions-sheet-item-${String(revision.id)}-select`)
-    .click();
-  const banner = page.getByTestId("revision-preview-banner");
-  await expect(banner).toBeVisible();
-  await banner.getByTestId("revision-preview-restore").click();
+  await editor.restoreRevision(revision);
 
-  await expect(banner).toBeHidden();
-  await expect(async () => {
-    expect(await editor.canvas.blocks()).toEqual([
-      "core/code",
-      "core/separator",
-    ]);
-  }).toPass();
+  expect(await editor.canvas.blocks()).toEqual(["core/code", "core/separator"]);
   await editor.reload();
   expect(await editor.stored()).toEqual([
     { id: "earlier-code", name: "core/code" },

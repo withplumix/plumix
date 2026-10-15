@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { validateApiToken } from "../auth/api-tokens.js";
 import { hashToken } from "../auth/tokens.js";
+import { listRevisions, snapshotAsRevision } from "../revisions/repository.js";
 import {
   allowedDomainFactory,
   apiTokenFactory,
@@ -10,6 +11,7 @@ import {
   deviceCodeFactory,
   entryFactory,
   oauthAccountFactory,
+  revisionFactory,
   sessionFactory,
   settingFactory,
   termFactory,
@@ -310,5 +312,53 @@ describe("authTokenFactory", () => {
     expect(Math.floor(minted.row.expiresAt.getTime() / 1000)).toBe(
       Math.floor(expiresAt.getTime() / 1000),
     );
+  });
+});
+
+describe("revisionFactory", () => {
+  test("writes the revision a save of its entry would", async () => {
+    const db = await createTestDb();
+    const user = await userFactory.transient({ db }).create({});
+    const entry = await entryFactory.transient({ db }).create({
+      authorId: user.id,
+      status: "published",
+      excerpt: "An excerpt",
+      content: { version: "plumix.v2", blocks: [] },
+    });
+
+    const seeded = await revisionFactory
+      .transient({ db, of: entry })
+      .create({ authorId: user.id });
+    const saved = await snapshotAsRevision(db, { entry, authorId: user.id });
+
+    const { id: _seededId, slug: _seededSlug, ...seededRow } = seeded;
+    const { id: _savedId, slug: _savedSlug, ...savedRow } = saved;
+    expect(seededRow).toEqual(savedRow);
+    const { revisions } = await listRevisions(db, {
+      entryId: entry.id,
+      limit: 10,
+    });
+    expect(revisions.map(({ id }) => id).sort()).toEqual(
+      [seeded.id, saved.id].sort(),
+    );
+  });
+
+  test("takes the content the entry had back then", async () => {
+    const db = await createTestDb();
+    const user = await userFactory.transient({ db }).create({});
+    const entry = await entryFactory
+      .transient({ db })
+      .create({ authorId: user.id });
+    const earlier = {
+      version: "plumix.v2" as const,
+      blocks: [{ id: "a", name: "core/separator" }],
+    };
+
+    const seeded = await revisionFactory
+      .transient({ db, of: entry })
+      .create({ content: earlier });
+
+    expect(seeded.content).toEqual(earlier);
+    expect(seeded.authorId).toBe(entry.authorId);
   });
 });
