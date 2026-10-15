@@ -6,21 +6,32 @@ import type {
 } from "plumix/test/playwright";
 import { expect, test } from "plumix/test/playwright";
 
-const HEADING_LEVELS = [1, 2, 3, 4, 5, 6] as const;
+type Body = string | RegExp;
 
-/** Every mark the rich-text toolbar has a toggle for, and the tag it stores. */
-const MARKS = [
-  { format: "bold", tag: "strong" },
-  { format: "italic", tag: "em" },
-  { format: "underline", tag: "u" },
-  { format: "strike", tag: "s" },
-  { format: "code", tag: "code" },
-  { format: "highlight", tag: "mark" },
-  { format: "subscript", tag: "sub" },
-  { format: "superscript", tag: "sup" },
+const HEADINGS = [
+  { format: "heading-1", body: "<h1>Plumix</h1>" },
+  { format: "heading-2", body: "<h2>Plumix</h2>" },
+  { format: "heading-3", body: "<h3>Plumix</h3>" },
+  { format: "heading-4", body: "<h4>Plumix</h4>" },
+  { format: "heading-5", body: "<h5>Plumix</h5>" },
+  { format: "heading-6", body: "<h6>Plumix</h6>" },
 ] as const satisfies readonly {
   readonly format: EditorTextFormat;
-  readonly tag: string;
+  readonly body: string;
+}[];
+
+const MARKS = [
+  { format: "bold", body: "<p><strong>Plumix</strong></p>" },
+  { format: "italic", body: "<p><em>Plumix</em></p>" },
+  { format: "underline", body: "<p><u>Plumix</u></p>" },
+  { format: "strike", body: "<p><s>Plumix</s></p>" },
+  { format: "code", body: "<p><code>Plumix</code></p>" },
+  { format: "highlight", body: "<p><mark>Plumix</mark></p>" },
+  { format: "subscript", body: "<p><sub>Plumix</sub></p>" },
+  { format: "superscript", body: "<p><sup>Plumix</sup></p>" },
+] as const satisfies readonly {
+  readonly format: EditorTextFormat;
+  readonly body: string;
 }[];
 
 const BLOCKS = [
@@ -32,14 +43,11 @@ const BLOCKS = [
   readonly body: string;
 }[];
 
-const escape = (text: string): string =>
-  text.replaceAll(/[.*+?^${}()|[\]\\/]/g, "\\$&");
-
-const exactly = (html: string): RegExp => new RegExp(`^${escape(html)}$`);
-
 /** The link's other attributes (`rel`) are the link mark's, not this test's. */
-const linked = (url: string): RegExp =>
-  new RegExp(`^<p><a href="${escape(url)}"[^>]*>Plumix</a></p>$`);
+const FIRST_LINK =
+  /^<p><a href="https:\/\/example\.test\/first"[^>]*>Plumix<\/a><\/p>$/;
+const SECOND_LINK =
+  /^<p><a href="https:\/\/example\.test\/second"[^>]*>Plumix<\/a><\/p>$/;
 
 async function enterDemo(page: Page): Promise<void> {
   await page.goto("/");
@@ -47,31 +55,36 @@ async function enterDemo(page: Page): Promise<void> {
   await page.waitForURL(/\/_plumix\/admin/);
 }
 
-/** The body as the canvas renders it, out of the block's own `<div>`. */
 async function shownBody(editor: Editor): Promise<string> {
   const html = await editor.canvas.block("core/rich-text").innerHTML();
   return /^<div>(.*)<\/div>$/s.exec(html)?.[1] ?? html;
 }
 
-const storedBody = async (editor: Editor): Promise<unknown> =>
-  (await editor.stored())[0]?.attrs?.body;
-
-/** Saves, then checks what the canvas shows and what the server stored. */
-async function expectBody(editor: Editor, body: RegExp): Promise<void> {
-  await editor.save();
-  await expect.poll(() => shownBody(editor)).toMatch(body);
-  expect(await storedBody(editor)).toMatch(body);
+async function expectShown(editor: Editor, body: Body): Promise<void> {
+  const shown = expect.poll(() => shownBody(editor));
+  if (typeof body === "string") await shown.toBe(body);
+  else await shown.toMatch(body);
 }
 
-/** `expectBody`, then again from a reload. */
-async function expectBodyKept(editor: Editor, body: RegExp): Promise<void> {
+async function expectStored(editor: Editor, body: Body): Promise<void> {
+  const stored = (await editor.stored())[0]?.attrs?.body;
+  if (typeof body === "string") expect(stored).toBe(body);
+  else expect(stored).toMatch(body);
+}
+
+async function expectBody(editor: Editor, body: Body): Promise<void> {
+  await editor.save();
+  await expectShown(editor, body);
+  await expectStored(editor, body);
+}
+
+async function expectBodyKept(editor: Editor, body: Body): Promise<void> {
   await expectBody(editor, body);
   await editor.reload();
-  expect(await storedBody(editor)).toMatch(body);
-  await expect.poll(() => shownBody(editor)).toMatch(body);
+  await expectStored(editor, body);
+  await expectShown(editor, body);
 }
 
-/** A new post holding one text block that reads "Plumix". */
 async function textBlock(editor: Editor): Promise<EditorRichText> {
   await editor.create("post");
   const text = editor.richText(await editor.insert("core/rich-text"));
@@ -84,18 +97,15 @@ test.beforeEach(async ({ page }) => {
   await enterDemo(page);
 });
 
-for (const level of HEADING_LEVELS) {
-  test(`the format dropdown turns the text into a level ${String(level)} heading`, async ({
+for (const { format, body } of HEADINGS) {
+  test(`the format dropdown turns the text into a ${format} heading`, async ({
     editor,
   }) => {
     const text = await textBlock(editor);
 
-    await text.format(`heading-${level}`);
+    await text.format(format);
 
-    await expectBodyKept(
-      editor,
-      exactly(`<h${String(level)}>Plumix</h${String(level)}>`),
-    );
+    await expectBodyKept(editor, body);
   });
 }
 
@@ -107,18 +117,16 @@ test("the format dropdown turns a heading back into a paragraph", async ({
 
   await text.format("paragraph");
 
-  await expectBodyKept(editor, exactly("<p>Plumix</p>"));
+  await expectBodyKept(editor, "<p>Plumix</p>");
 });
 
-for (const { format, tag } of MARKS) {
-  test(`the ${format} toggle wraps the text in a ${tag} mark`, async ({
-    editor,
-  }) => {
+for (const { format, body } of MARKS) {
+  test(`the ${format} toggle marks the text`, async ({ editor }) => {
     const text = await textBlock(editor);
 
     await text.format(format);
 
-    await expectBodyKept(editor, exactly(`<p><${tag}>Plumix</${tag}></p>`));
+    await expectBodyKept(editor, body);
   });
 }
 
@@ -128,21 +136,34 @@ for (const { format, body } of BLOCKS) {
 
     await text.format(format);
 
-    await expectBodyKept(editor, exactly(body));
+    await expectBodyKept(editor, body);
   });
 }
 
-test("a link is set, edited and removed, and each step is stored", async ({
-  editor,
-}) => {
+test("a link is set on the text and stored", async ({ editor }) => {
   const text = await textBlock(editor);
 
   await text.link("https://example.test/first");
-  await expectBody(editor, linked("https://example.test/first"));
+
+  await expectBody(editor, FIRST_LINK);
+});
+
+test("a link is edited to another address and stored", async ({ editor }) => {
+  const text = await textBlock(editor);
+  await text.link("https://example.test/first");
 
   await text.link("https://example.test/second");
-  await expectBody(editor, linked("https://example.test/second"));
+
+  await expectBody(editor, SECOND_LINK);
+});
+
+test("a link is removed from the text and the removal is stored", async ({
+  editor,
+}) => {
+  const text = await textBlock(editor);
+  await text.link("https://example.test/first");
 
   await text.unlink();
-  await expectBodyKept(editor, exactly("<p>Plumix</p>"));
+
+  await expectBodyKept(editor, "<p>Plumix</p>");
 });
