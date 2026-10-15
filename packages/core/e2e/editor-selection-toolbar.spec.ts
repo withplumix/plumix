@@ -1,20 +1,20 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test } from "plumix/test/playwright";
 
-// Every visitor gets their own database, so each test enters the demo first.
-test.beforeEach(async ({ page }) => {
-  await page.goto("/");
-  await page.getByTestId("try-editor").click();
-  await page.waitForURL(/\/_plumix\/admin/);
-});
+import { test as base, expect } from "@plumix/core/test/playwright";
+
+import { openPost, seedFixture } from "./support/seed.js";
+
+const test = base.extend(seedFixture);
+
+const CODE = { id: "code", name: "core/code" } as const;
+const SEPARATOR = { id: "separator", name: "core/separator" } as const;
 
 test("move up swaps the selected block with the one before it", async ({
   editor,
+  seed,
 }) => {
-  await editor.create("post");
-  await editor.insert("core/code");
-  const separator = await editor.insert("core/separator");
-  await editor.select(separator);
+  await openPost(editor, seed, [CODE, SEPARATOR]);
+  await editor.select(editor.canvas.block("core/separator"));
 
   await editor.toolbar.moveUp();
   await editor.save();
@@ -29,11 +29,10 @@ test("move up swaps the selected block with the one before it", async ({
 
 test("move down swaps the selected block with the one after it", async ({
   editor,
+  seed,
 }) => {
-  await editor.create("post");
-  const code = await editor.insert("core/code");
-  await editor.insert("core/separator");
-  await editor.select(code);
+  await openPost(editor, seed, [CODE, SEPARATOR]);
+  await editor.select(editor.canvas.block("core/code"));
 
   await editor.toolbar.moveDown();
   await editor.save();
@@ -49,18 +48,31 @@ test("move down swaps the selected block with the one after it", async ({
 test("select parent selects the group around a nested block and leaves the content as it was", async ({
   editor,
   page,
+  seed,
 }) => {
-  await editor.create("post");
-  const group = await editor.insert("core/group");
-  const nested = await editor.insert("core/rich-text", { at: { into: group } });
-  const groupId = await group.getAttribute("data-plumix-id");
-  await editor.select(nested);
+  const groupId = "group";
+  await openPost(editor, seed, [
+    {
+      id: groupId,
+      name: "core/group",
+      attrs: {
+        content: [
+          {
+            id: "nested",
+            name: "core/rich-text",
+            attrs: { body: "<p>Plumix</p>" },
+          },
+        ],
+      },
+    },
+  ]);
+  await editor.select(editor.canvas.block("core/rich-text"));
 
   await editor.toolbar.selectParent();
 
   await expect(page.getByTestId("plumix-overlay-selected")).toHaveAttribute(
     "data-block-id",
-    groupId ?? "",
+    groupId,
   );
   await editor.save();
   await editor.reload();
@@ -78,12 +90,11 @@ test("select parent selects the group around a nested block and leaves the conte
 test("the selection toolbar has no axe violations", async ({
   editor,
   page,
+  seed,
 }) => {
-  await editor.create("post");
-  await editor.insert("core/code");
-  const separator = await editor.insert("core/separator");
+  await openPost(editor, seed, [CODE, SEPARATOR]);
 
-  await editor.select(separator);
+  await editor.select(editor.canvas.block("core/separator"));
 
   await expect(page.getByTestId("plumix-selection-toolbar")).toBeVisible();
   const results = await new AxeBuilder({ page })

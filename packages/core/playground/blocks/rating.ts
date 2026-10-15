@@ -4,7 +4,10 @@ import { defineBlock } from "plumix/blocks";
 
 const SYMBOLS = { star: "★", heart: "♥" } as const;
 
-/** A number and a radio input, which no core block declares. */
+/**
+ * A number and a radio input, which no core block declares, and a label that
+ * tells one rating from another.
+ */
 export const ratingBlock = defineBlock({
   name: "playground/rating",
   title: "Rating",
@@ -21,13 +24,20 @@ export const ratingBlock = defineBlock({
         { label: "Hearts", value: "heart" },
       ],
     },
+    { name: "label", type: "text", label: "Label" },
   ],
-  defaults: { score: 3, symbol: "star" },
+  defaults: { score: 3, symbol: "star", label: "" },
   render: ({ attrs }): ReactNode => {
-    const { score, symbol } = attrs as {
+    const { score, symbol, label } = attrs as {
       readonly score?: number | null;
       readonly symbol?: keyof typeof SYMBOLS;
+      readonly label?: string;
     };
-    return h("p", null, SYMBOLS[symbol ?? "star"].repeat(score ?? 0));
+    return h(
+      "p",
+      null,
+      SYMBOLS[symbol ?? "star"].repeat(score ?? 0),
+      label ? ` ${label}` : null,
+    );
   },
 });

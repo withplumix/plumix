@@ -1,18 +1,18 @@
-import { expect, test } from "plumix/test/playwright";
+import { test as base, expect } from "@plumix/core/test/playwright";
 
-// Every visitor gets their own database, so each test enters the demo first.
-test.beforeEach(async ({ page }) => {
-  await page.goto("/");
-  await page.getByTestId("try-editor").click();
-  await page.waitForURL(/\/_plumix\/admin/);
-});
+import { openPost, seedFixture } from "./support/seed.js";
+
+const test = base.extend(seedFixture);
+
+const CODE = { id: "code", name: "core/code" } as const;
+const SEPARATOR = { id: "separator", name: "core/separator" } as const;
 
 test("a catalog click inserts the block right after the selected one", async ({
   editor,
+  seed,
 }) => {
-  await editor.create("post");
-  const code = await editor.insert("core/code");
-  await editor.insert("core/separator");
+  await openPost(editor, seed, [CODE, SEPARATOR]);
+  const code = editor.canvas.block("core/code");
 
   await editor.insert("core/html", { at: { after: code } });
   await editor.save();
@@ -30,9 +30,11 @@ test("a catalog click inserts the block right after the selected one", async ({
   ]);
 });
 
-test("a catalog drag to the end appends the block", async ({ editor }) => {
-  await editor.create("post");
-  await editor.insert("core/code", { via: "drag" });
+test("a catalog drag to the end appends the block", async ({
+  editor,
+  seed,
+}) => {
+  await openPost(editor, seed, [CODE]);
 
   await editor.insert("core/separator", { via: "drag" });
   await editor.save();
@@ -47,10 +49,10 @@ test("a catalog drag to the end appends the block", async ({ editor }) => {
 
 test("a catalog drag between two blocks inserts the block there", async ({
   editor,
+  seed,
 }) => {
-  await editor.create("post");
-  await editor.insert("core/code", { via: "drag" });
-  const separator = await editor.insert("core/separator", { via: "drag" });
+  await openPost(editor, seed, [CODE, SEPARATOR]);
+  const separator = editor.canvas.block("core/separator");
 
   await editor.insert("core/html", { via: "drag", at: { before: separator } });
   await editor.save();

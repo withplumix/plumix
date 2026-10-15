@@ -28,7 +28,6 @@
     "react": "catalog:react"
   },
   "devDependencies": {
-    "@axe-core/playwright": "catalog:",
     "@cloudflare/workers-types": "catalog:cloudflare",
     "@playwright/test": "catalog:",
     "@plumix/eslint-config": "workspace:*",
