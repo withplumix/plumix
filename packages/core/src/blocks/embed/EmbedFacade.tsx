@@ -51,6 +51,7 @@ export function EmbedFacade(
       {loaded ? (
         <div className="plumix-embed" style={box}>
           <iframe
+            data-testid="embed-frame"
             src={src}
             title={title}
             loading="lazy"
