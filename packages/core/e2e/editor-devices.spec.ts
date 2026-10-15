@@ -71,14 +71,12 @@ test("one property set per device keeps each device's own value", async ({
   await editor.save();
   await editor.reload();
   const block = editor.canvas.block("core/code");
-  for (const [device, width] of [
-    ["desktop", "300px"],
-    ["tablet", "200px"],
-    ["mobile", "100px"],
-  ] as const) {
-    await editor.device(device);
-    await expect(block).toHaveCSS("width", width);
-  }
+  await editor.device("desktop");
+  await expect(block).toHaveCSS("width", "300px");
+  await editor.device("tablet");
+  await expect(block).toHaveCSS("width", "200px");
+  await editor.device("mobile");
+  await expect(block).toHaveCSS("width", "100px");
   expect((await editor.stored())[0]?.style).toEqual({
     large: { width: "300px" },
     medium: { width: "200px" },

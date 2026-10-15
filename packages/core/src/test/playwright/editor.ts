@@ -492,6 +492,13 @@ export function createEditor(page: Page): Editor {
     return page.getByTestId(`layer-${id}`);
   };
 
+  const openRowMenu = async (block: Locator): Promise<string> => {
+    const id = await idOf(block);
+    await (await layerRow(block)).hover();
+    await page.getByTestId(`layer-menu-${id}`).click();
+    return id;
+  };
+
   const layers: EditorLayers = {
     row: layerRow,
     focus: async (block) => {
@@ -500,9 +507,7 @@ export function createEditor(page: Page): Editor {
       await expect(row).toBeFocused();
     },
     rename: async (block, label) => {
-      const id = await idOf(block);
-      await (await layerRow(block)).hover();
-      await page.getByTestId(`layer-menu-${id}`).click();
+      const id = await openRowMenu(block);
       await page.getByTestId(`layer-rename-action-${id}`).click();
       const input = page.getByTestId(`layer-rename-${id}`);
       await input.fill(label);
@@ -510,9 +515,7 @@ export function createEditor(page: Page): Editor {
       await expect(page.getByTestId(`layer-${id}`)).toHaveText(label);
     },
     act: async (block, action) => {
-      const id = await idOf(block);
-      await (await layerRow(block)).hover();
-      await page.getByTestId(`layer-menu-${id}`).click();
+      const id = await openRowMenu(block);
       const item = page.getByTestId(`layer-${action}-${id}`);
       await item.click();
       await expect(item).toBeHidden();

@@ -113,13 +113,8 @@ for (const { property, value, stored, css, given = {} } of CASES) {
   test(`the ${property} control styles the block in the canvas and is stored`, async ({
     editor,
   }) => {
-    const seeded = Object.keys(given).length > 0;
     await editor.open(
-      await seedPage([
-        seeded
-          ? { ...code("styled"), style: { large: given } }
-          : code("styled"),
-      ]),
+      await seedPage([{ ...code("styled"), style: { large: given } }]),
     );
     const block = editor.canvas.block("core/code");
     await editor.select(block);
