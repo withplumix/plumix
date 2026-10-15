@@ -329,6 +329,7 @@ function EntryEditor({
   const entryTypeName = entryType?.name;
   const capabilitySet = useMemo(() => new Set(capabilities), [capabilities]);
   const [hasLocalDraft, setHasLocalDraft] = useState(false);
+  const [hasUnsavedEdits, setHasUnsavedEdits] = useState(false);
   // Bumped after a template-rendered field (title/excerpt/meta/template)
   // autosaves; reloads the canvas so those fields — which live in the
   // server-rendered shell, not the block store the bridge pushes — refresh.
@@ -415,6 +416,7 @@ function EntryEditor({
     id,
     entryType: entry.type,
     liveUpdatedAt: entry.updatedAt,
+    onUnsavedChange: setHasUnsavedEdits,
     onError: (err) => {
       setMetaFieldErrors(extractMetaFieldErrors(err) ?? null);
       toastError(renderLabel(M.autosaveFailed));
@@ -922,10 +924,13 @@ function EntryEditor({
     });
   }, [discardDraft]);
 
+  const isSaving =
+    hasUnsavedEdits || publish.isPending || publishDraft.isPending;
   const publishActions = useMemo<PublishActions>(
     () =>
       isEditWithDraft
         ? {
+            isSaving,
             draftMode: {
               hasPendingDraft,
               onSaveDraft: handleSaveDraft,
@@ -937,11 +942,13 @@ function EntryEditor({
             },
           }
         : {
+            isSaving,
             onPublish: handlePublish,
             isPublished,
             isPublishing: publish.isPending,
           },
     [
+      isSaving,
       isEditWithDraft,
       hasPendingDraft,
       handleSaveDraft,

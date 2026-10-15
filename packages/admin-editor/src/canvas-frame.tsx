@@ -3,7 +3,7 @@ import type {
   ReactElement,
   PointerEvent as ReactPointerEvent,
 } from "react";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLingui } from "@lingui/react";
 
 import type { BlockNode, LoadedDeps } from "@plumix/core/blocks";
@@ -134,9 +134,11 @@ export function CanvasFrame({
     requestAdd,
     rejection,
   } = useCanvasDrag({ iframeRef, geometryRef, registry });
+  const [canvasReady, setCanvasReady] = useState(false);
   useEffect(() => {
     const frameWindow = iframeRef.current?.contentWindow;
     if (!frameWindow) return;
+    let disposed = false;
     const connection = connectCanvas({
       store,
       frameWindow,
@@ -168,7 +170,12 @@ export function CanvasFrame({
     });
     // Expose the loader-data push to the inspector's refresh control.
     if (loaderPushRef) loaderPushRef.current = connection.pushLoaderData;
+    void connection.whenReady.then(() => {
+      if (!disposed) setCanvasReady(true);
+    });
     return () => {
+      disposed = true;
+      setCanvasReady(false);
       if (loaderPushRef) loaderPushRef.current = null;
       connection.dispose();
     };
@@ -237,6 +244,7 @@ export function CanvasFrame({
       <div
         key={testId}
         data-testid={testId}
+        data-block-id={id}
         className={`plumix-canvas-overlay pointer-events-none z-10 outline-2 ${outline}`}
         style={
           {
@@ -313,6 +321,9 @@ export function CanvasFrame({
           ref={iframeRef}
           src={previewUrl}
           title="plumix-editor-canvas"
+          data-testid="plumix-canvas-iframe"
+          // The canvas drops what it reports until the handshake completes.
+          data-canvas-state={canvasReady ? "ready" : "connecting"}
           onLoad={measureContent}
           // Click-through while a block drag or a space-pan is active so the
           // host receives the pointer events. Single declarative owner — no

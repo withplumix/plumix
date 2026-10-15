@@ -1,8 +1,7 @@
 // No globalSetup / storageState: the demo mints its own session at `/demo`,
 // so the spec drives the same path a visitor does.
 
-import { expect, test } from "@playwright/test";
-import { CONTENT_LIST_ROWS } from "plumix/test/playwright";
+import { CONTENT_LIST_ROWS, expect, test } from "plumix/test/playwright";
 
 const POST_TITLE = "A post I made in the demo";
 
@@ -10,11 +9,12 @@ const POST_TITLE = "A post I made in the demo";
  * The richest seeded entry, pinned to a fixed id by the seed, so it's opened
  * directly rather than hunted in a paginated list.
  */
-const SHOWCASE_ID = 200;
+const SHOWCASE = { type: "post", id: 200 } as const;
 const SHOWCASE_SLUG = "typography-and-elements-a-theme-test-sheet";
 
 test("visitor enters the demo, creates a post, and it persists", async ({
   page,
+  editor,
 }) => {
   // The public showcase renders for cookieless visitors; the demo pill carries
   // the "Try the editor" CTA (it used to live in the theme header).
@@ -36,11 +36,8 @@ test("visitor enters the demo, creates a post, and it persists", async ({
 
   await page.getByTestId("plumix-tab-page").click();
   await expect(page.getByTestId("plumix-editor-title-input")).toBeVisible();
-  const updated = page.waitForResponse(
-    (r) => r.url().endsWith("/entry/update") && r.status() === 200,
-  );
   await page.getByTestId("plumix-editor-title-input").fill(POST_TITLE);
-  await updated;
+  await editor.save();
 
   // Persistence proof: reload the list and the row comes back from the DO.
   await page.goto("entries/posts");
@@ -59,58 +56,42 @@ test("visitor enters the demo, creates a post, and it persists", async ({
   expect(blocked.status()).toBe(403);
 });
 
-const CANVAS_FRAME = '[data-testid="plumix-canvas-frame"] iframe';
-
 test("the visual editor boots inside the demo — blocks are selectable, no demo pill in the canvas", async ({
   page,
+  editor,
 }) => {
   // Enter the demo (mints the session DO, redirects into the admin).
   await page.goto("/");
   await page.getByTestId("try-editor").click();
   await page.waitForURL(/\/_plumix\/admin/);
 
-  // Open the seeded showcase post in the editor (directly, by its pinned id).
-  await page.goto(`entries/posts/${String(SHOWCASE_ID)}/edit`);
-  await page.waitForURL(/\/entries\/posts\/\d+\/edit/);
-
-  // A booted editor runtime enters edit mode and renders the seeded blocks
-  // tagged; a read-only render has neither.
-  const canvas = page.frameLocator(CANVAS_FRAME);
-  await expect(canvas.locator('[data-plumix-mode="edit"]')).toBeAttached();
-  await expect(canvas.locator("[data-plumix-id]").first()).toBeVisible();
+  // Opening waits for the editor runtime to mount in the canvas, which it does
+  // only in edit mode; a read-only render has none.
+  await editor.open(SHOWCASE);
 
   // The host-side overlay is positioned from geometry the canvas reports over
-  // the bridge, so it proves runtime and bridge are live. The rail avoids the
-  // CSS-scaled canvas surface.
-  await page.getByTestId("plumix-tab-layers").click();
-  await page.locator("[data-testid^='layer-']").first().click();
-  await expect(page.getByTestId("plumix-overlay-selected")).toBeVisible();
+  // the bridge, so it proves runtime and bridge are live.
+  await editor.select(editor.canvas.block("core/rich-text"));
   await expect(page.getByTestId("plumix-selection-toolbar")).toBeVisible();
 
   // The demo pill must NOT float inside the editing surface.
-  await expect(canvas.locator("#plumix-demo-toolbar")).toHaveCount(0);
+  await expect(editor.canvas.frame.locator("#plumix-demo-toolbar")).toHaveCount(
+    0,
+  );
 });
 
 // A new entry has no content, yet the canvas still needs a root to mount
 // inserted blocks into.
 test("a block inserted into a new post renders in the canvas", async ({
   page,
+  editor,
 }) => {
   await page.goto("/");
   await page.getByTestId("try-editor").click();
   await page.waitForURL(/\/_plumix\/admin/);
 
-  await page.goto("entries/posts");
-  const navigated = page.waitForURL(/\/entries\/posts\/\d+\/edit/);
-  await page.getByTestId("content-list-new-button").click();
-  await navigated;
-
-  const canvas = page.frameLocator(CANVAS_FRAME);
-  await expect(canvas.locator("[data-plumix-content-root]")).toBeAttached();
-  await page.getByTestId("block-catalog-item-core/rich-text").click();
-  await expect(
-    canvas.locator('[data-plumix-block="core/rich-text"]'),
-  ).toBeVisible();
+  await editor.create("post");
+  await expect(await editor.insert("core/rich-text")).toBeVisible();
 });
 
 // Regression: the site origin came from the preset's placeholder passkey
@@ -208,12 +189,13 @@ test("a post renders the cover its featured role resolves to", async ({
 // library it opens is the per-session database's rows and nothing else.
 test("the Featured-image picker offers no upload in the demo", async ({
   page,
+  editor,
 }) => {
   await page.goto("/");
   await page.getByTestId("try-editor").click();
   await page.waitForURL(/\/_plumix\/admin/);
 
-  await page.goto(`entries/posts/${String(SHOWCASE_ID)}/edit`);
+  await editor.open(SHOWCASE);
   await page.getByTestId("plumix-tab-page").click();
   await page.getByTestId("meta-box-field-featuredImage-input-open").click();
 

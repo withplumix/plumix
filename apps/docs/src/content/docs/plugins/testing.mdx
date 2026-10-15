@@ -222,6 +222,44 @@ test("dragging a recipe below the next one reorders the list", async ({
 
 `sourcePosition` and `targetPosition` give the point to press and release, measured from the top-left of that element's box. Both default to the centre, and a point may fall outside the box, as when a drag pans a canvas past its own handle. `steps` sets how many moves lead to the target (10 by default). `beforeDrop` runs at the target with the button still held, so a test can check that the drag is live before it drops. `dragTo` does not scroll, so bring both elements into view first.
 
+## Testing your blocks in the editor
+
+The `editor` fixture from `plumix/test/playwright` drives the real block editor: it opens or creates an entry, inserts blocks from the catalog by click or drag, selects them, works the selection toolbar, fills the inspector, edits rich text, and saves. Each action waits on what the editor shows, never on a timer. `editor.stored()` returns the entry's block tree as the server stores it, so a test can assert on what was persisted.
+
+This spec inserts a site's own `demo/rating` block, configures it, and checks what was saved:
+
+```ts
+// e2e/rating.spec.ts
+import { expect, test } from "plumix/test/playwright";
+
+test("a rating is inserted, configured and stored", async ({ editor }) => {
+  await editor.create("post");
+
+  const rating = await editor.insert("demo/rating");
+  await editor.inspector.set("score", 5);
+  await editor.inspector.set("symbol", "heart");
+  await editor.inspector.set("label", "Would read again");
+  await editor.save();
+
+  await expect(rating).toContainText("Would read again");
+  expect(await editor.stored()).toMatchObject([
+    {
+      name: "demo/rating",
+      attrs: { score: 5, symbol: "heart", label: "Would read again" },
+    },
+  ]);
+});
+```
+
+`inspector.set(field, value)` and `inspector.get(field)` address an input by the `name` your block declares, the key `stored()` returns its value under, not by its visible label. They handle every control the inspector renders: text, number, URL, select, radio, checkbox, switch, combobox, and a media picker, which takes a media id.
+
+- **Navigation.** `editor.open({ type, id })` opens an existing entry, and `editor.create(type)` starts a new one.
+- **Canvas.** `editor.canvas.block(name, index?)` returns a locator for a block inside the canvas iframe, and `editor.canvas.blocks()` the names of the top-level blocks in order.
+- **Insert.** `editor.insert(name, { at, via })` puts the block at `"start"`, at `"end"` (the default), `{ after: block }`, `{ before: block }` or `{ into: block, slot? }`, and returns its locator. `via: "drag"` drops it from the catalog with `dragTo`; a click reaches a nested position only through an empty slot.
+- **Selection.** `editor.select(block)`, then `editor.toolbar.moveUp()`, `.moveDown()`, `.selectParent()` and `.remove()`.
+- **Rich text.** `editor.richText(block)` returns `type(text)`, `format(format)` (a mark such as `"bold"`, `"heading-2"`, `"bullet-list"` or `"quote"`), `link(url)` and `unlink()`.
+- **Saving.** `editor.save()` resolves once every edit has reached the server, `editor.publish()` publishes the entry or its pending edits, and `editor.reload()` reloads the editor.
+
 ## Mail
 
 A test checks the mail your plugin sends by name, the same name `ctx.mail.send` takes. It never reads a mail server.
