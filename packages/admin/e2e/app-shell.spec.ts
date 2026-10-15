@@ -211,29 +211,35 @@ test.describe("admin shell", () => {
   });
 });
 
+/** Fails the session probe, an error no route catches, so the router's
+ *  default error component renders. */
+async function failSessionProbe(page: Page): Promise<void> {
+  await page.route("**/_plumix/rpc/auth/session", (route) =>
+    route.fulfill({
+      status: 500,
+      contentType: "application/json",
+      // `defined`/`status` let the client decode the message; without them
+      // it reports the bare HTTP status text.
+      body: JSON.stringify({
+        json: {
+          defined: false,
+          code: "INTERNAL_SERVER_ERROR",
+          status: 500,
+          message: "session store unreachable",
+        },
+        meta: [],
+      }),
+    }),
+  );
+  await page.goto("");
+  await expect(page.getByTestId("error-boundary-title")).toBeVisible();
+}
+
 test.describe("error boundary", () => {
   test("an uncaught route error shows the fallback and Show error reveals its message", async ({
     page,
   }) => {
-    await page.route("**/_plumix/rpc/auth/session", (route) =>
-      route.fulfill({
-        status: 500,
-        contentType: "application/json",
-        // `defined`/`status` let the client decode the message; without them
-        // it reports the bare HTTP status text.
-        body: JSON.stringify({
-          json: {
-            defined: false,
-            code: "INTERNAL_SERVER_ERROR",
-            status: 500,
-            message: "session store unreachable",
-          },
-          meta: [],
-        }),
-      }),
-    );
-    await page.goto("");
-    await expect(page.getByTestId("error-boundary-title")).toBeVisible();
+    await failSessionProbe(page);
     await expect(page.getByTestId("error-boundary-message")).toHaveCount(0);
 
     await page.getByTestId("error-boundary-toggle").click();
@@ -241,6 +247,16 @@ test.describe("error boundary", () => {
     await expect(page.getByTestId("error-boundary-message")).toContainText(
       "session store unreachable",
     );
+  });
+
+  test("Hide error hides the revealed message again", async ({ page }) => {
+    await failSessionProbe(page);
+    await page.getByTestId("error-boundary-toggle").click();
+    await expect(page.getByTestId("error-boundary-message")).toBeVisible();
+
+    await page.getByTestId("error-boundary-toggle").click();
+
+    await expect(page.getByTestId("error-boundary-message")).toHaveCount(0);
   });
 });
 
