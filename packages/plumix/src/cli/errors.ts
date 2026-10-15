@@ -49,7 +49,10 @@ type PlumixCliErrorCode =
   | "sync_runtime_unsupported"
   | "sync_remote_url_required"
   | "sync_dump_invalid"
-  | "sync_settle_failed";
+  | "sync_settle_failed"
+  | "import_invalid_arguments"
+  | "import_unconfirmed"
+  | "import_records_invalid";
 
 /**
  * The errors only this package throws. Internal: a runtime adapter declares
@@ -600,6 +603,37 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
       "sync_settle_failed",
       `The data was replaced, but ${String(ctx.failures.length)} step(s) after it failed:\n${ctx.failures.map((f) => `  - ${f.step}: ${f.message}`).join("\n")}`,
       "The replaced data stays. Fix what failed, then run the sync again to repeat these steps.",
+      undefined,
+    );
+  }
+
+  static importInvalidArguments(ctx: { cause: unknown }): PlumixCliError {
+    return new PlumixCliError(
+      "import_invalid_arguments",
+      "plumix import was given arguments it does not take",
+      "Usage: `plumix import <dir|file.jsonl> [--url <origin>] [--binding <name>] [--dry-run] [--yes] [--no-rewrite-urls]`.",
+      ctx.cause,
+    );
+  }
+
+  /** Refused before anything opens: an import replaces the deployed site's content. */
+  static importUnconfirmed(): PlumixCliError {
+    return new PlumixCliError(
+      "import_unconfirmed",
+      "plumix import --url replaces the deployed site's data and has no terminal to confirm it in",
+      "Nothing was opened. Pass `--dry-run` to see what it would change, then `--yes` to import.",
+      undefined,
+    );
+  }
+
+  /** Every failing record, so one run reports them all. */
+  static importRecordsInvalid(ctx: {
+    errors: readonly string[];
+  }): PlumixCliError {
+    return new PlumixCliError(
+      "import_records_invalid",
+      `${String(ctx.errors.length)} record(s) cannot be imported:\n${ctx.errors.map((e) => `  - ${e}`).join("\n")}`,
+      "Nothing was opened or written. Fix the records, then import again.",
       undefined,
     );
   }

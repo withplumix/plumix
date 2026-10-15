@@ -161,6 +161,12 @@ const ROOT_ONLY_TYPES: readonly RootOnly[] = [
     reason: "the ambient hook store's frame, withheld with the store",
     names: ["HookFrame"],
   },
+  {
+    reason:
+      "the meta an import checks and the owner it checks it for, " +
+      "withheld with `checkImportedMeta`",
+    names: ["ImportedMeta", "ImportedMetaOwner"],
+  },
 ];
 
 function parseTsconfig(): ts.ParsedCommandLine {

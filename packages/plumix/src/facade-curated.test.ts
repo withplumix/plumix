@@ -61,6 +61,10 @@ const CORE_WITHHELD: readonly Withholding[] = [
     names: ["headDifferences"],
   },
   {
+    reason: "the check an import runs on each record's meta, a CLI-only need",
+    names: ["checkImportedMeta"],
+  },
+  {
     reason:
       "the runtime-key half of the shim roster, which admin's runtime " +
       "object and `PlumixAdminRuntime` are typed against. A plugin " +

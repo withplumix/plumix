@@ -9,11 +9,11 @@ sidebar:
 
 import { Aside } from "@astrojs/starlight/components";
 
-`plumix <command> [options]` is the whole surface. Six commands ship with the package itself; a runtime adapter contributes the rest — which is why `deploy` and `types` exist on Cloudflare and not on Node, and why `plumix --help` groups them separately.
+`plumix <command> [options]` is the whole surface. Seven commands ship with the package itself; a runtime adapter contributes the rest — which is why `deploy` and `types` exist on Cloudflare and not on Node, and why `plumix --help` groups them separately.
 
 ## Overview
 
-`plumix migrate`, `plumix sync`, `plumix cron`, `plumix meta`, `plumix doctor` and `plumix i18n` are built in: they run the same way regardless of which `runtime` a site configures. `dev`, `build`, and on some runtimes `deploy` and `types` come from `RuntimeAdapter.commandsModule` instead, so their behaviour is the adapter's to define. The same module tells `migrate` how to open the runtime's database, and whether it can reach a remote one, and gives `sync` its transport. [Runtime Adapters](/deployment/runtimes/#the-adapter) covers `commandsModule` from the package-author side.
+`plumix migrate`, `plumix sync`, `plumix import`, `plumix cron`, `plumix meta`, `plumix doctor` and `plumix i18n` are built in: they run the same way regardless of which `runtime` a site configures. `dev`, `build`, and on some runtimes `deploy` and `types` come from `RuntimeAdapter.commandsModule` instead, so their behaviour is the adapter's to define. The same module tells `migrate` how to open the runtime's database, and whether it can reach a remote one, and gives `sync` and `import` their transport. [Runtime Adapters](/deployment/runtimes/#the-adapter) covers `commandsModule` from the package-author side.
 
 `plumix --help` prints every command it can currently resolve, grouped by where it came from: a project with no `plumix.config.ts` in reach sees only the built-ins, because loading the runtime's commands means loading the config first.
 
@@ -109,6 +109,17 @@ Replaces the local or the deployed site's data with the other's. `plumix sync pu
 plumix sync pull --url https://example.com --dry-run
 plumix sync pull --url https://example.com --scope content --scope media
 plumix sync push --url https://example.com --yes
+```
+
+### `import`
+
+Replaces the local or the deployed site's content with a file's. `plumix import <dir>` loads a sync dump; `plumix import <file.jsonl>` loads authoring records, one JSON object per line, checked against the site's entry types, taxonomies and fields before anything is opened. A failing record fails the import with `import_records_invalid`, naming each record by file and line, and nothing is written. [Importing content](/deployment/sync/#importing-content) covers the authoring format.
+
+Without `--url` the import loads the local database. `--url <origin>` loads the deployed site instead, and then takes a snapshot first and asks for confirmation unless `--yes` is passed, failing with `import_unconfirmed` when there is no terminal to ask in. `--dry-run` prints what the import would replace, add and remove, then stops. A dump's URLs are rewritten to the target's origin and base path as `sync` rewrites them; `--no-rewrite-urls` turns that off.
+
+```bash
+plumix import content.jsonl --dry-run
+plumix import content.jsonl --url https://example.com --yes
 ```
 
 ### `cron`
