@@ -67,20 +67,20 @@ test.describe("the editor's revisions", () => {
       entry,
       revisions: [revision],
     } = await articleWithRevisions(session, 1);
-    const row = `revisions-sheet-item-${String(revision?.id)}`;
+    const rowId = `revisions-sheet-item-${String(revision?.id)}`;
     await editor.open(entry);
     await openRevisions(page);
 
-    await page.getByTestId(`${row}-comment`).click();
-    await page.getByTestId(`${row}-comment-input`).fill("Fixed the intro");
-    await page.getByTestId(`${row}-comment-save`).click();
-    await expect(page.getByTestId(`${row}-comment-display`)).toHaveText(
+    await page.getByTestId(`${rowId}-comment`).click();
+    await page.getByTestId(`${rowId}-comment-input`).fill("Fixed the intro");
+    await page.getByTestId(`${rowId}-comment-save`).click();
+    await expect(page.getByTestId(`${rowId}-comment-display`)).toHaveText(
       "Fixed the intro",
     );
 
     await editor.reload();
     await openRevisions(page);
-    await expect(page.getByTestId(`${row}-comment-display`)).toHaveText(
+    await expect(page.getByTestId(`${rowId}-comment-display`)).toHaveText(
       "Fixed the intro",
     );
     const [stored] = await storedRevisions(page, entry.id);

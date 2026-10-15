@@ -23,7 +23,6 @@ async function callRpc<T>(
 /** What the server stores for an entry beside its blocks. */
 export interface StoredEntry {
   readonly title: string;
-  readonly content: unknown;
   readonly meta: Readonly<Record<string, unknown>>;
   /** Term ids by taxonomy. */
   readonly terms: Readonly<Record<string, readonly number[]>>;

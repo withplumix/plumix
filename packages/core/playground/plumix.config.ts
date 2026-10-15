@@ -25,7 +25,7 @@ const content = definePlugin("core-playground-content", (setup) => {
     isPublic: true,
     rewrite: { slug: "posts" },
   });
-  // What the editor specs open: every document setting the Page tab offers.
+  // What the editor specs open: an article with a visibility policy and a topic taxonomy.
   setup.registerEntryType("article", {
     label: "Articles",
     isPublic: true,
