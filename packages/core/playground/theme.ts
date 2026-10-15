@@ -1,6 +1,7 @@
 import type { EntryData, ResolvedEntry } from "plumix/theme";
 import type { ReactNode } from "react";
 import { createElement as h } from "react";
+import { ACCESS_POLICY_META_KEY } from "plumix/auth";
 import { BlockRenderer } from "plumix/blocks/renderer";
 import { defineTemplate, defineTheme, entry, fallback } from "plumix/theme";
 
@@ -132,9 +133,18 @@ const FIXTURES: Readonly<Record<string, () => ReactNode>> = {
   strategies,
 };
 
-/** What the editor specs edit: the article's topics, then its blocks. */
+/**
+ * What the editor specs edit: the article's visibility choice and topics, then
+ * its blocks.
+ */
 function article(resolved: ResolvedEntry): ReactNode {
+  const visibility = resolved.storedMeta[ACCESS_POLICY_META_KEY];
   return [
+    h(
+      "p",
+      { key: "visibility", "data-testid": "article-visibility" },
+      typeof visibility === "string" ? visibility : "default",
+    ),
     h(
       "p",
       { key: "topics", "data-testid": "article-topics" },

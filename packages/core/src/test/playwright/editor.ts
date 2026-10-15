@@ -7,6 +7,7 @@ import { dragTo } from "./drag-to.js";
 
 const ADMIN_PATH = "/_plumix/admin/";
 const ENTRY_GET_PATH = "/_plumix/rpc/entry/get";
+const REVISIONS_LIST_PATH = "/_plumix/rpc/entry/revisions/list";
 
 /** An entry to open: a row from `openPlaygroundDb`, or its type and id. */
 export interface EditorEntryRef {
@@ -121,6 +122,23 @@ export interface EditorRichText {
   unlink: () => Promise<void>;
 }
 
+/** The open entry's document settings, as the server stores them. */
+export interface EditorStoredDocument {
+  readonly title: string;
+  /** The meta bag, the reserved `__plumix_*` keys (visibility, template) included. */
+  readonly meta: Readonly<Record<string, unknown>>;
+  /** Term ids by taxonomy. */
+  readonly terms: Readonly<Record<string, readonly number[]>>;
+}
+
+/** One of the open entry's revisions, as the server stores it. */
+export interface EditorStoredRevision {
+  readonly id: number;
+  readonly title: string;
+  /** The comment left on it, or `null`. */
+  readonly message: string | null;
+}
+
 /**
  * Drives the real block editor. Every action waits on what the editor itself
  * shows, never on the clock.
@@ -162,6 +180,20 @@ export interface Editor {
    * editor loads it: a published entry's pending edits included.
    */
   stored: () => Promise<readonly BlockNode[]>;
+  /** The open entry's title, meta and terms, read the way `stored` reads its blocks. */
+  storedDocument: () => Promise<EditorStoredDocument>;
+  /** Every one of the open entry's revisions, newest first. */
+  storedRevisions: () => Promise<readonly EditorStoredRevision[]>;
+}
+
+/** The parts of `entry.get`'s answer the fixture reads. */
+interface StoredEntryBody extends EditorStoredDocument {
+  readonly content: { readonly blocks?: readonly BlockNode[] } | null;
+}
+
+interface StoredRevisionPage {
+  readonly revisions: readonly EditorStoredRevision[];
+  readonly nextCursor: string | null;
 }
 
 const BLOCK = "[data-plumix-id]";
@@ -565,6 +597,25 @@ export function createEditor(page: Page): Editor {
     await expect(header).toHaveAttribute("data-save-state", "saved");
   };
 
+  const rpc = async <T>(
+    caller: string,
+    path: string,
+    input: unknown,
+  ): Promise<T> => {
+    const response = await page.request.post(path, {
+      headers: { "x-plumix-request": "1" },
+      data: { json: input },
+    });
+    if (!response.ok()) {
+      throw new Error(
+        `editor.${caller}: ${path} answered ${String(response.status())}.`,
+      );
+    }
+    return ((await response.json()) as { readonly json: T }).json;
+  };
+  const storedEntry = (caller: string): Promise<StoredEntryBody> =>
+    rpc(caller, ENTRY_GET_PATH, { id: entryId(), preview: true });
+
   const entryId = (): number => {
     const id = /\/entries\/[^/]+\/(\d+)\/edit/.exec(page.url())?.[1];
     if (id === undefined) throw new Error("editor: no entry is open.");
@@ -718,22 +769,30 @@ export function createEditor(page: Page): Editor {
       await page.reload();
       await ready();
     },
-    stored: async () => {
-      const response = await page.request.post(ENTRY_GET_PATH, {
-        headers: { "x-plumix-request": "1" },
-        data: { json: { id: entryId(), preview: true } },
-      });
-      if (!response.ok()) {
-        throw new Error(
-          `editor.stored: entry.get answered ${String(response.status())}.`,
+    stored: async () => (await storedEntry("stored")).content?.blocks ?? [],
+    storedDocument: async () => {
+      const { title, meta, terms } = await storedEntry("storedDocument");
+      return { title, meta, terms };
+    },
+    storedRevisions: async () => {
+      const revisions: EditorStoredRevision[] = [];
+      let cursor: string | null = null;
+      do {
+        const listed: StoredRevisionPage = await rpc(
+          "storedRevisions",
+          REVISIONS_LIST_PATH,
+          { entryId: entryId(), cursor },
         );
-      }
-      const body = (await response.json()) as {
-        readonly json: {
-          readonly content: { readonly blocks?: readonly BlockNode[] } | null;
-        };
-      };
-      return body.json.content?.blocks ?? [];
+        revisions.push(
+          ...listed.revisions.map(({ id, title, message }) => ({
+            id,
+            title,
+            message,
+          })),
+        );
+        cursor = listed.nextCursor;
+      } while (cursor !== null);
+      return revisions;
     },
   };
 }

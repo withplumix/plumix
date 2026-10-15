@@ -2,7 +2,6 @@ import { expect, test } from "@plumix/core/test/playwright";
 
 import { ACCESS_POLICY_META_KEY } from "../src/access/contract/meta-key.js";
 import { signInAsAdmin } from "./support/session.js";
-import { storedEntry } from "./support/stored.js";
 
 test.describe("the editor's Page tab", () => {
   test("the visibility control persists", async ({ page, editor }) => {
@@ -20,9 +19,12 @@ test.describe("the editor's Page tab", () => {
     await editor.save();
 
     await editor.reload();
+    await expect(
+      editor.canvas.frame.getByTestId("article-visibility"),
+    ).toHaveText("members");
     await page.getByTestId("plumix-tab-page").click();
     await expect(visibility).toHaveText("Members only");
-    const stored = await storedEntry(page, entry.id);
+    const stored = await editor.storedDocument();
     expect(stored.meta[ACCESS_POLICY_META_KEY]).toBe("members");
   });
 
@@ -53,7 +55,7 @@ test.describe("the editor's Page tab", () => {
     );
     await page.getByTestId("plumix-tab-page").click();
     await expect(picker).toHaveText("Gardening");
-    const stored = await storedEntry(page, entry.id);
+    const stored = await editor.storedDocument();
     expect(stored.terms.topic).toEqual([topic.id]);
   });
 });

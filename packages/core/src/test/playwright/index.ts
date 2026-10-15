@@ -20,6 +20,8 @@ export type {
   EditorInspector,
   EditorRevisionRef,
   EditorRichText,
+  EditorStoredDocument,
+  EditorStoredRevision,
   EditorStructureButton,
   EditorTextFormat,
   EditorToolbar,

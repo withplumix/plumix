@@ -5,7 +5,6 @@ import { expect, test } from "@plumix/core/test/playwright";
 import type { Entry } from "../src/db/schema/entries.js";
 import type { EditorSession } from "./support/session.js";
 import { signInAsAdmin } from "./support/session.js";
-import { storedRevisions } from "./support/stored.js";
 
 /** A published article with `count` revisions, the newest titled last. */
 async function articleWithRevisions(
@@ -54,11 +53,19 @@ test.describe("the editor's revisions", () => {
     const { entry } = await articleWithRevisions(session, 2);
     await editor.open(entry);
 
-    await openRevisions(page);
-    await expect(rows(page)).toHaveText([/Take 2/, /Take 1/]);
-    await page.getByTestId("revisions-tab-publishes").click();
+    const bothTabsList = async (): Promise<void> => {
+      await openRevisions(page);
+      await expect(rows(page)).toHaveText([/Take 2/, /Take 1/]);
+      await page.getByTestId("revisions-tab-publishes").click();
+      await expect(rows(page)).toHaveText([/Take 2/, /Take 1/]);
+    };
 
-    await expect(rows(page)).toHaveText([/Take 2/, /Take 1/]);
+    await bothTabsList();
+
+    await editor.reload();
+    await bothTabsList();
+    const stored = await editor.storedRevisions();
+    expect(stored.map((r) => r.title)).toEqual(["Take 2", "Take 1"]);
   });
 
   test("a comment on a revision persists", async ({ page, editor }) => {
@@ -83,7 +90,7 @@ test.describe("the editor's revisions", () => {
     await expect(page.getByTestId(`${rowId}-comment-display`)).toHaveText(
       "Fixed the intro",
     );
-    const [stored] = await storedRevisions(page, entry.id);
+    const [stored] = await editor.storedRevisions();
     expect(stored?.message).toBe("Fixed the intro");
   });
 
@@ -97,19 +104,27 @@ test.describe("the editor's revisions", () => {
       revisions: [revision],
     } = await articleWithRevisions(session, 1);
     await editor.open(entry);
-    await openRevisions(page);
-
-    await page
-      .getByTestId(`revisions-sheet-item-${String(revision?.id)}-diff`)
-      .click();
-
     const modal = page.getByTestId("revision-diff-modal");
-    await expect(
-      modal.getByTestId("revision-diff-modal-revision"),
-    ).toContainText('"title": "Take 1"');
-    await expect(
-      modal.getByTestId("revision-diff-modal-current"),
-    ).toContainText('"title": "Live title"');
+    const diffShowsBothTitles = async (): Promise<void> => {
+      await openRevisions(page);
+      await page
+        .getByTestId(`revisions-sheet-item-${String(revision?.id)}-diff`)
+        .click();
+      await expect(
+        modal.getByTestId("revision-diff-modal-revision"),
+      ).toContainText('"title": "Take 1"');
+      await expect(
+        modal.getByTestId("revision-diff-modal-current"),
+      ).toContainText('"title": "Live title"');
+    };
+
+    await diffShowsBothTitles();
+
+    await editor.reload();
+    await diffShowsBothTitles();
+    expect((await editor.storedDocument()).title).toBe("Live title");
+    const [stored] = await editor.storedRevisions();
+    expect(stored?.title).toBe("Take 1");
   });
 
   test("load more lists the revisions past the first page", async ({
@@ -122,14 +137,24 @@ test.describe("the editor's revisions", () => {
       REVISIONS_PAGE_SIZE + 1,
     );
     await editor.open(entry);
-    await openRevisions(page);
-    await expect(rows(page)).toHaveCount(REVISIONS_PAGE_SIZE);
-    await expect(rows(page).last()).toContainText("Take 2");
+    const loadMoreListsTheRest = async (): Promise<void> => {
+      await openRevisions(page);
+      await expect(rows(page)).toHaveCount(REVISIONS_PAGE_SIZE);
+      await expect(rows(page).last()).toContainText("Take 2");
+      await page.getByTestId("revisions-sheet-load-more").click();
+      await expect(rows(page)).toHaveCount(REVISIONS_PAGE_SIZE + 1);
+      await expect(rows(page).last()).toContainText("Take 1");
+      await expect(page.getByTestId("revisions-sheet-load-more")).toHaveCount(
+        0,
+      );
+    };
 
-    await page.getByTestId("revisions-sheet-load-more").click();
+    await loadMoreListsTheRest();
 
-    await expect(rows(page)).toHaveCount(REVISIONS_PAGE_SIZE + 1);
-    await expect(rows(page).last()).toContainText("Take 1");
-    await expect(page.getByTestId("revisions-sheet-load-more")).toHaveCount(0);
+    await editor.reload();
+    await loadMoreListsTheRest();
+    const stored = await editor.storedRevisions();
+    expect(stored).toHaveLength(REVISIONS_PAGE_SIZE + 1);
+    expect(stored.at(-1)?.title).toBe("Take 1");
   });
 });
