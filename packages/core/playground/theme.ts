@@ -1,6 +1,7 @@
-import type { EntryData } from "plumix/theme";
+import type { EntryData, ResolvedEntry } from "plumix/theme";
 import type { ReactNode } from "react";
 import { createElement as h } from "react";
+import { ACCESS_POLICY_META_KEY } from "plumix/auth";
 import { BlockRenderer } from "plumix/blocks/renderer";
 import { defineTemplate, defineTheme, entry, fallback } from "plumix/theme";
 
@@ -132,13 +133,32 @@ const FIXTURES: Readonly<Record<string, () => ReactNode>> = {
   strategies,
 };
 
+function article(resolved: ResolvedEntry): ReactNode {
+  const visibility = resolved.storedMeta[ACCESS_POLICY_META_KEY];
+  return [
+    h(
+      "p",
+      { key: "visibility", "data-testid": "article-visibility" },
+      typeof visibility === "string" ? visibility : "default",
+    ),
+    h(
+      "p",
+      { key: "topics", "data-testid": "article-topics" },
+      resolved.terms.map((term) => term.name).join(", "),
+    ),
+    h(BlockRenderer, { key: "blocks", content: resolved.contentBlocks }),
+  ];
+}
+
 const page = defineTemplate<EntryData>({
   render: ({ data }): ReactNode =>
     h(
       "main",
       null,
-      FIXTURES[data.entry.slug]?.() ??
-        h(BlockRenderer, { content: data.entry.contentBlocks }),
+      data.entry.type === "article"
+        ? article(data.entry)
+        : (FIXTURES[data.entry.slug]?.() ??
+            h(BlockRenderer, { content: data.entry.contentBlocks })),
     ),
 });
 

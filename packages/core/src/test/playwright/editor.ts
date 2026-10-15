@@ -7,6 +7,7 @@ import { dragTo } from "./drag-to.js";
 
 const ADMIN_PATH = "/_plumix/admin/";
 const ENTRY_GET_PATH = "/_plumix/rpc/entry/get";
+const REVISIONS_LIST_PATH = "/_plumix/rpc/entry/revisions/list";
 
 /** An entry to open: a row from `openPlaygroundDb`, or its type and id. */
 export interface EditorEntryRef {
@@ -121,6 +122,68 @@ export interface EditorRichText {
   unlink: () => Promise<void>;
 }
 
+/** The entry's settings in the Page tab beside the canvas. */
+export interface EditorDocumentSettings {
+  /** Picks a visibility policy by its key, or `null` for the type's default. */
+  setVisibility: (policy: string | null) => Promise<void>;
+  /** The visibility picker, whose text is the chosen policy's label, or "(default)". */
+  visibility: () => Promise<Locator>;
+  /** Toggles each term, by id, in `taxonomy`'s picker. */
+  toggleTerms: (taxonomy: string, termIds: readonly number[]) => Promise<void>;
+  /** `taxonomy`'s term picker, whose text is the chosen terms' names. */
+  terms: (taxonomy: string) => Promise<Locator>;
+}
+
+/** The revisions sheet the editor header opens. */
+export interface EditorRevisions {
+  /**
+   * Opens the sheet, if it isn't, on `tab` (`"all"` by default), and resolves
+   * once the tab lists.
+   */
+  open: (tab?: "all" | "publishes") => Promise<void>;
+  /** The open sheet's revision rows, in the order it lists them. */
+  readonly rows: Locator;
+  /** Loads the sheet's next page and resolves once it lists. */
+  loadMore: () => Promise<void>;
+  /** The button that loads the next page, present while the sheet has one. */
+  readonly loadMoreButton: Locator;
+  /** Saves `text` as revision `revisionId`'s comment. */
+  comment: (revisionId: number, text: string) => Promise<void>;
+  /** Revision `revisionId`'s comment, as the sheet shows it. */
+  commentOf: (revisionId: number) => Locator;
+  /** Opens a revision's diff, and returns its pane and the current entry's. */
+  diff: (
+    revisionId: number,
+  ) => Promise<{ readonly revision: Locator; readonly current: Locator }>;
+}
+
+/**
+ * The dialog the editor opens over an entry whose pending draft predates its
+ * last publish.
+ */
+export interface EditorStaleDraft {
+  readonly dialog: Locator;
+  /** Discards the draft for the published entry; resolves once the dialog closes. */
+  useTheirs: () => Promise<void>;
+}
+
+/** The open entry's document settings, as the server stores them. */
+export interface EditorStoredDocument {
+  readonly title: string;
+  /** The meta bag, the reserved `__plumix_*` keys (visibility, template) included. */
+  readonly meta: Readonly<Record<string, unknown>>;
+  /** Term ids by taxonomy. */
+  readonly terms: Readonly<Record<string, readonly number[]>>;
+}
+
+/** One of the open entry's revisions, as the server stores it. */
+export interface EditorStoredRevision {
+  readonly id: number;
+  readonly title: string;
+  /** The comment left on it, or `null`. */
+  readonly message: string | null;
+}
+
 /**
  * Drives the real block editor. Every action waits on what the editor itself
  * shows, never on the clock.
@@ -138,6 +201,9 @@ export interface Editor {
   undo: () => Promise<void>;
   /** Redoes the last undone edit with the header's Redo button. */
   redo: () => Promise<void>;
+  readonly staleDraft: EditorStaleDraft;
+  readonly revisions: EditorRevisions;
+  readonly document: EditorDocumentSettings;
   /** Edits a text block's rich text. */
   richText: (block: Locator) => EditorRichText;
   /** Resolves once every edit so far, and any publish, has reached the server. */
@@ -162,6 +228,20 @@ export interface Editor {
    * editor loads it: a published entry's pending edits included.
    */
   stored: () => Promise<readonly BlockNode[]>;
+  /** The open entry's title, meta and terms, read the way `stored` reads its blocks. */
+  storedDocument: () => Promise<EditorStoredDocument>;
+  /** Every one of the open entry's revisions, newest first. */
+  storedRevisions: () => Promise<readonly EditorStoredRevision[]>;
+}
+
+/** The parts of `entry.get`'s answer the fixture reads. */
+interface StoredEntryBody extends EditorStoredDocument {
+  readonly content: { readonly blocks?: readonly BlockNode[] } | null;
+}
+
+interface StoredRevisionPage {
+  readonly revisions: readonly EditorStoredRevision[];
+  readonly nextCursor: string | null;
 }
 
 const BLOCK = "[data-plumix-id]";
@@ -561,9 +641,127 @@ export function createEditor(page: Page): Editor {
     },
   };
 
+  const openPageTab = async (): Promise<void> => {
+    await page.getByTestId("plumix-tab-page").click();
+    await expect(page.getByTestId("entry-document-panel")).toBeVisible();
+  };
+  const visibilityPicker = page.getByTestId("entry-visibility-select");
+  const termPicker = (taxonomy: string): Locator =>
+    page.getByTestId(`entry-taxonomy-${taxonomy}`);
+
+  const documentSettings: EditorDocumentSettings = {
+    setVisibility: async (policy) => {
+      await openPageTab();
+      await visibilityPicker.click();
+      const option = page.getByTestId(
+        `entry-visibility-select-option-${policy ?? "default"}`,
+      );
+      await option.click();
+      await expect(option).toBeHidden();
+    },
+    visibility: async () => {
+      await openPageTab();
+      return visibilityPicker;
+    },
+    toggleTerms: async (taxonomy, termIds) => {
+      await openPageTab();
+      const picker = termPicker(taxonomy);
+      await picker.click();
+      await expect(picker).toHaveAttribute("aria-expanded", "true");
+      for (const id of termIds) {
+        await page
+          .getByTestId(`entry-taxonomy-${taxonomy}-option-${String(id)}`)
+          .click();
+      }
+      await page.keyboard.press("Escape");
+      await expect(picker).toHaveAttribute("aria-expanded", "false");
+    },
+    terms: async (taxonomy) => {
+      await openPageTab();
+      return termPicker(taxonomy);
+    },
+  };
+
+  const revisionTestId = (id: number): string =>
+    `revisions-sheet-item-${String(id)}`;
+  const revisionRows = page
+    .getByTestId("revisions-sheet-list")
+    .getByTestId(/^revisions-sheet-item-\d+$/);
+  const loadMoreButton = page.getByTestId("revisions-sheet-load-more");
+
+  const revisions: EditorRevisions = {
+    open: async (tab = "all") => {
+      const tabTrigger = page.getByTestId(`revisions-tab-${tab}`);
+      if (!(await tabTrigger.isVisible())) {
+        await page.getByTestId("revisions-sheet-trigger").click();
+      }
+      await tabTrigger.click();
+      await expect(tabTrigger).toHaveAttribute("data-state", "active");
+      await expect(
+        page
+          .getByTestId("revisions-sheet-list")
+          .or(page.getByTestId("revisions-sheet-empty"))
+          .or(page.getByTestId("revisions-sheet-error")),
+      ).toBeVisible();
+    },
+    rows: revisionRows,
+    loadMore: async () => {
+      const before = await revisionRows.count();
+      await loadMoreButton.click();
+      await expect.poll(() => revisionRows.count()).toBeGreaterThan(before);
+    },
+    loadMoreButton,
+    comment: async (revisionId, text) => {
+      const row = revisionTestId(revisionId);
+      await page.getByTestId(`${row}-comment`).click();
+      await page.getByTestId(`${row}-comment-input`).fill(text);
+      await page.getByTestId(`${row}-comment-save`).click();
+      await expect(page.getByTestId(`${row}-comment-editor`)).toHaveCount(0);
+    },
+    commentOf: (revisionId) =>
+      page.getByTestId(`${revisionTestId(revisionId)}-comment-display`),
+    diff: async (revisionId) => {
+      await page.getByTestId(`${revisionTestId(revisionId)}-diff`).click();
+      const modal = page.getByTestId("revision-diff-modal");
+      await expect(modal).toBeVisible();
+      return {
+        revision: modal.getByTestId("revision-diff-modal-revision"),
+        current: modal.getByTestId("revision-diff-modal-current"),
+      };
+    },
+  };
+
+  const staleDraftDialog = page.getByTestId("stale-draft-dialog");
+  const staleDraft: EditorStaleDraft = {
+    dialog: staleDraftDialog,
+    useTheirs: async () => {
+      await page.getByTestId("stale-draft-use-theirs").click();
+      await expect(staleDraftDialog).toHaveCount(0);
+    },
+  };
+
   const save = async (): Promise<void> => {
     await expect(header).toHaveAttribute("data-save-state", "saved");
   };
+
+  const rpc = async <T>(
+    caller: string,
+    path: string,
+    input: unknown,
+  ): Promise<T> => {
+    const response = await page.request.post(path, {
+      headers: { "x-plumix-request": "1" },
+      data: { json: input },
+    });
+    if (!response.ok()) {
+      throw new Error(
+        `editor.${caller}: ${path} answered ${String(response.status())}.`,
+      );
+    }
+    return ((await response.json()) as { readonly json: T }).json;
+  };
+  const storedEntry = (caller: string): Promise<StoredEntryBody> =>
+    rpc(caller, ENTRY_GET_PATH, { id: entryId(), preview: true });
 
   const entryId = (): number => {
     const id = /\/entries\/[^/]+\/(\d+)\/edit/.exec(page.url())?.[1];
@@ -682,6 +880,9 @@ export function createEditor(page: Page): Editor {
     inspector,
     undo: () => page.getByTestId("plumix-undo").click(),
     redo: () => page.getByTestId("plumix-redo").click(),
+    staleDraft,
+    revisions,
+    document: documentSettings,
     richText,
     save,
     publish: async () => {
@@ -718,22 +919,30 @@ export function createEditor(page: Page): Editor {
       await page.reload();
       await ready();
     },
-    stored: async () => {
-      const response = await page.request.post(ENTRY_GET_PATH, {
-        headers: { "x-plumix-request": "1" },
-        data: { json: { id: entryId(), preview: true } },
-      });
-      if (!response.ok()) {
-        throw new Error(
-          `editor.stored: entry.get answered ${String(response.status())}.`,
+    stored: async () => (await storedEntry("stored")).content?.blocks ?? [],
+    storedDocument: async () => {
+      const { title, meta, terms } = await storedEntry("storedDocument");
+      return { title, meta, terms };
+    },
+    storedRevisions: async () => {
+      const stored: EditorStoredRevision[] = [];
+      let cursor: string | null = null;
+      do {
+        const listed: StoredRevisionPage = await rpc(
+          "storedRevisions",
+          REVISIONS_LIST_PATH,
+          { entryId: entryId(), cursor },
         );
-      }
-      const body = (await response.json()) as {
-        readonly json: {
-          readonly content: { readonly blocks?: readonly BlockNode[] } | null;
-        };
-      };
-      return body.json.content?.blocks ?? [];
+        stored.push(
+          ...listed.revisions.map(({ id, title, message }) => ({
+            id,
+            title,
+            message,
+          })),
+        );
+        cursor = listed.nextCursor;
+      } while (cursor !== null);
+      return stored;
     },
   };
 }
