@@ -23,7 +23,9 @@ import {
   removeBlocks,
   removeTableColumn,
   removeTableRow,
+  rowAfterRemoving,
   selectionRoots,
+  topLevelIndexAfter,
   ungroupBlock,
 } from "./block-tree-ops.js";
 
@@ -140,6 +142,43 @@ describe("flattenTree", () => {
 
   test("returns an empty list for an empty tree", () => {
     expect(flattenTree([], treeBlocks)).toEqual([]);
+  });
+});
+
+describe("rowAfterRemoving", () => {
+  test("the next row past the removed row's children takes its place", () => {
+    const rows = flattenTree(
+      [...TREE, { id: "z", name: "core/heading" }],
+      treeBlocks,
+    );
+
+    expect(rowAfterRemoving(rows, "g")).toBe("z");
+  });
+
+  test("removing the last row hands its place to the one before it", () => {
+    const rows = flattenTree(TREE, treeBlocks);
+
+    expect(rowAfterRemoving(rows, "deep")).toBe("c2");
+  });
+
+  test("an unknown row hands its place to nothing", () => {
+    expect(rowAfterRemoving(flattenTree(TREE, treeBlocks), "nope")).toBeNull();
+  });
+});
+
+describe("topLevelIndexAfter", () => {
+  test("an insert lands right after the selected top-level block", () => {
+    expect(topLevelIndexAfter(TREE, "a", treeBlocks)).toBe(1);
+  });
+
+  test("a nested selection inserts after its top-level ancestor", () => {
+    const tree = [...TREE, { id: "z", name: "core/heading" }];
+
+    expect(topLevelIndexAfter(tree, "deep", treeBlocks)).toBe(2);
+  });
+
+  test("with nothing selected, an insert lands at the end", () => {
+    expect(topLevelIndexAfter(TREE, null, treeBlocks)).toBe(2);
   });
 });
 
