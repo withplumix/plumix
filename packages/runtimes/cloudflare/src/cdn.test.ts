@@ -20,8 +20,10 @@ const blog = definePlugin("blog", (ctx) => {
   ctx.registerEntryType("post", { label: "Posts", isPublic: true });
 });
 
-// The suite runs on Node, so `caches.default` is absent and the zone purge is
-// the stubbed `fetch`; Workers Caching is the recording fake bound per test.
+/**
+ * The suite runs on Node, so `caches.default` is absent and the zone purge is
+ * the stubbed `fetch`; Workers Caching is the recording fake bound per test.
+ */
 let purge: ReturnType<typeof vi.fn<WorkersCache["purge"]>>;
 let zoneFetch: ReturnType<typeof vi.fn<typeof fetch>>;
 const originalFetch = globalThis.fetch;
