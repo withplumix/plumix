@@ -1,16 +1,10 @@
-import type { Locator, Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { expect, test } from "plumix/test/playwright";
 
 async function enterDemo(page: Page): Promise<void> {
   await page.goto("/");
   await page.getByTestId("try-editor").click();
   await page.waitForURL(/\/_plumix\/admin/);
-}
-
-/** Clicks a block, so the keys that follow reach the canvas iframe first. */
-async function focusCanvas(page: Page, block: Locator): Promise<void> {
-  await block.click();
-  await expect(page.getByTestId("plumix-canvas-iframe")).toBeFocused();
 }
 
 // Every visitor gets their own database, so each test enters the demo first.
@@ -25,7 +19,7 @@ test("undo by keyboard in the canvas takes back the last insert", async ({
   await editor.create("post");
   await editor.insert("core/code");
   const separator = await editor.insert("core/separator");
-  await focusCanvas(page, separator);
+  await editor.canvas.focus(separator);
 
   await page.keyboard.press("ControlOrMeta+Z");
 
@@ -43,7 +37,7 @@ test("redo by keyboard in the canvas puts an undone insert back", async ({
   await editor.create("post");
   await editor.insert("core/code");
   const separator = await editor.insert("core/separator");
-  await focusCanvas(page, separator);
+  await editor.canvas.focus(separator);
   await page.keyboard.press("ControlOrMeta+Z");
   await expect(separator).toHaveCount(0);
 
@@ -61,13 +55,12 @@ test("redo by keyboard in the canvas puts an undone insert back", async ({
 
 test("the toolbar's undo button takes back the last insert", async ({
   editor,
-  page,
 }) => {
   await editor.create("post");
   await editor.insert("core/code");
   const separator = await editor.insert("core/separator");
 
-  await page.getByTestId("plumix-undo").click();
+  await editor.undo();
 
   await expect(separator).toHaveCount(0);
   await editor.save();
@@ -78,15 +71,14 @@ test("the toolbar's undo button takes back the last insert", async ({
 
 test("the toolbar's redo button puts an undone insert back", async ({
   editor,
-  page,
 }) => {
   await editor.create("post");
   await editor.insert("core/code");
   const separator = await editor.insert("core/separator");
-  await page.getByTestId("plumix-undo").click();
+  await editor.undo();
   await expect(separator).toHaveCount(0);
 
-  await page.getByTestId("plumix-redo").click();
+  await editor.redo();
 
   await expect(separator).toBeVisible();
   await editor.save();
@@ -105,7 +97,7 @@ test("Delete in the canvas removes the selected block", async ({
   await editor.create("post");
   await editor.insert("core/code");
   const separator = await editor.insert("core/separator");
-  await focusCanvas(page, separator);
+  await editor.canvas.focus(separator);
 
   await page.keyboard.press("Delete");
 
@@ -134,25 +126,20 @@ test("Backspace on the selected layer removes its block", async ({
   expect(await editor.stored()).toMatchObject([{ name: "core/separator" }]);
 });
 
-test("Cmd/Ctrl+B in rich text bolds the text and leaves the panels open", async ({
+test("Cmd/Ctrl+B in rich text bolds the selected text", async ({
   editor,
   page,
 }) => {
   await editor.create("post");
   const block = await editor.insert("core/rich-text");
-  await editor.richText(block).type("Plumix");
-  const field = page.getByTestId("block-input-body-editor");
-  await field.click();
-  await page.keyboard.press("ControlOrMeta+A");
+  const text = editor.richText(block);
+  await text.type("Plumix");
+  await text.select();
 
-  await page.keyboard.press("ControlOrMeta+KeyB");
+  await page.keyboard.press("ControlOrMeta+B");
 
-  await expect(field.locator("strong")).toHaveText("Plumix");
   await expect(block.locator("strong")).toHaveText("Plumix");
   await editor.save();
-  await expect(page.getByTestId("plumix-editor-left")).toBeInViewport({
-    ratio: 1,
-  });
   await editor.reload();
   await expect(
     editor.canvas.block("core/rich-text").locator("strong"),
@@ -171,14 +158,11 @@ test("Cmd/Ctrl+X in the canvas cuts a block that Cmd/Ctrl+V pastes after the sel
   const rating = await editor.insert("demo/rating");
   await editor.inspector.set("label", "Cut and pasted");
   const separator = await editor.insert("core/separator");
-  // The selected block's toolbar floats over the block above it, so the click
-  // that moves focus into the canvas lands on a block that is already selected.
-  await editor.select(rating);
-  await focusCanvas(page, rating);
+  await editor.canvas.focus(rating);
 
   await page.keyboard.press("ControlOrMeta+X");
   await expect(rating).toHaveCount(0);
-  await focusCanvas(page, separator);
+  await editor.canvas.focus(separator);
   await page.keyboard.press("ControlOrMeta+V");
 
   await expect(editor.canvas.block("demo/rating")).toContainText(

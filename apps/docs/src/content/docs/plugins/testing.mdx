@@ -254,10 +254,11 @@ test("a rating is inserted, configured and stored", async ({ editor }) => {
 `inspector.set(field, value)` and `inspector.get(field)` address an input by the `name` your block declares, the key `stored()` returns its value under, not by its visible label. They handle every control the inspector renders: text, number, URL, select, radio, checkbox, switch, combobox, and a media picker, which takes a media id.
 
 - **Navigation.** `editor.open({ type, id })` opens an existing entry, and `editor.create(type)` starts a new one.
-- **Canvas.** `editor.canvas.block(name, index?)` returns a locator for a block inside the canvas iframe, and `editor.canvas.blocks()` the names of the top-level blocks in order.
+- **Canvas.** `editor.canvas.block(name, index?)` returns a locator for a block inside the canvas iframe, `editor.canvas.blocks()` the names of the top-level blocks in order, and `editor.canvas.focus(block)` selects and clicks a block so the keys pressed next start inside the canvas.
 - **Insert.** `editor.insert(name, { at, via })` puts the block at `"start"`, at `"end"` (the default), `{ after: block }`, `{ before: block }` or `{ into: block, slot? }`, and returns its locator. `via: "drag"` drops it from the catalog with `dragTo`; a click reaches a nested position only through an empty slot.
 - **Selection.** `editor.select(block)`, then `editor.toolbar.moveUp()`, `.moveDown()`, `.selectParent()` and `.remove()`.
-- **Rich text.** `editor.richText(block)` returns `type(text)`, `format(format)` (a mark such as `"bold"`, `"heading-2"`, `"bullet-list"` or `"quote"`), `link(url)` and `unlink()`.
+- **Rich text.** `editor.richText(block)` returns `type(text)`, `select()` (the whole text, for keys pressed next), `format(format)` (a mark such as `"bold"`, `"heading-2"`, `"bullet-list"` or `"quote"`), `link(url)` and `unlink()`.
+- **History.** `editor.undo()` and `editor.redo()` press the header's Undo and Redo buttons.
 - **Saving.** `editor.save()` resolves once every edit has reached the server, `editor.publish()` publishes the entry or its pending edits, and `editor.reload()` reloads the editor.
 
 ## Mail
