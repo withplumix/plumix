@@ -7,6 +7,7 @@ import type {
   CommandContext,
   CommandDefinition,
   DumpReader,
+  PlumixConfig,
   RuntimeSync,
   SyncDirection,
   SyncEnd,
@@ -17,11 +18,13 @@ import type {
 } from "@plumix/core";
 import { assertSameHeads } from "@plumix/core/cli";
 
+import type { RewrittenDump, SiteLocation } from "../sync/rewrite-urls.js";
 import { PlumixCliError } from "../errors.js";
 import { resolveOwners } from "../migrate/owners.js";
 import { report } from "../report.js";
 import { readDump, writeDump } from "../sync/dump.js";
 import { exportLocalAdmins, keepLocalAdmins } from "../sync/local-admins.js";
+import { jsonColumns, rewriteUrls } from "../sync/rewrite-urls.js";
 import { resolveScopes } from "../sync/scopes.js";
 
 const DIRECTIONS: readonly SyncDirection[] = ["pull", "push"];
@@ -36,6 +39,7 @@ interface SyncArgs {
   readonly binding: string | undefined;
   readonly dryRun: boolean;
   readonly yes: boolean;
+  readonly rewriteUrls: boolean;
 }
 
 function isDirection(value: string | undefined): value is SyncDirection {
@@ -53,6 +57,7 @@ function parseSyncArgs(argv: readonly string[]): SyncArgs {
         binding: { type: "string" },
         "dry-run": { type: "boolean", default: false },
         yes: { type: "boolean", default: false },
+        "no-rewrite-urls": { type: "boolean", default: false },
       },
       allowPositionals: true,
       strict: true,
@@ -80,6 +85,7 @@ function parseSyncArgs(argv: readonly string[]): SyncArgs {
     binding: parsed.values.binding,
     dryRun: parsed.values["dry-run"],
     yes: parsed.values.yes,
+    rewriteUrls: !parsed.values["no-rewrite-urls"],
   };
 }
 
@@ -132,6 +138,21 @@ function describeImport(target: SyncTarget, result: SyncImportReport): void {
   }
 }
 
+function describeRewrite(
+  source: SiteLocation,
+  run: SyncRun,
+  rewritten: ReadonlyMap<string, number>,
+): void {
+  const tables = [...rewritten].filter(([, count]) => count > 0);
+  if (tables.length === 0) return;
+  report.info(
+    `URLs to rewrite from ${source.origin}${source.basePath} to ${run.target.origin}${run.basePath}:`,
+  );
+  for (const [table, count] of tables) {
+    report.info(`  ${table}: ${String(count)} rewritten`);
+  }
+}
+
 function describeSettle(settled: SyncSettleReport): void {
   if (settled.cdn === "purged") report.success("Purged the whole CDN.");
   if (settled.cdn === "cannot-purge") {
@@ -152,6 +173,7 @@ interface SyncRun {
   readonly targetName: SyncTarget;
   readonly dumpDir: string;
   readonly basePath: string;
+  readonly config: PlumixConfig;
 }
 
 async function exportDump(run: SyncRun): Promise<DumpReader> {
@@ -162,12 +184,23 @@ async function exportDump(run: SyncRun): Promise<DumpReader> {
   });
   await run.source.exportData(run.scopes, writer);
   await writer.finish();
-  const dump = await readDump(run.dumpDir);
+  return readDump(run.dumpDir);
+}
+
+async function preparedDump(run: SyncRun): Promise<RewrittenDump> {
+  let dump = await exportDump(run);
   const keepsAdmins =
     run.args.direction === "pull" &&
     run.scopes.some((scope) => scope.name === "users");
-  if (!keepsAdmins) return dump;
-  return keepLocalAdmins(dump, await exportLocalAdmins(run.target));
+  if (keepsAdmins) {
+    dump = await keepLocalAdmins(dump, await exportLocalAdmins(run.target));
+  }
+  if (!run.args.rewriteUrls) return { dump, rewritten: () => new Map() };
+  return rewriteUrls(
+    dump,
+    { origin: run.target.origin, basePath: run.basePath },
+    jsonColumns(run.config),
+  );
 }
 
 async function confirmed(run: SyncRun): Promise<boolean> {
@@ -184,11 +217,12 @@ async function confirmed(run: SyncRun): Promise<boolean> {
 }
 
 async function replaceTarget(run: SyncRun): Promise<void> {
-  const dump = await exportDump(run);
+  const { dump, rewritten } = await preparedDump(run);
   describeImport(
     run.targetName,
     await run.target.importData(dump, run.scopes, { dryRun: true }),
   );
+  describeRewrite(dump.manifest.source, run, rewritten());
   if (!(await confirmed(run))) return;
   if (run.args.direction === "push") {
     const snapshot = await run.target.snapshot();
@@ -287,6 +321,7 @@ export const syncCommand: CommandDefinition = {
         targetName: pull ? "local" : "remote",
         dumpDir,
         basePath: config.basePath,
+        config,
       });
     } finally {
       await closeAll(ends);
