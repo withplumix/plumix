@@ -1,10 +1,23 @@
-import type { AppContext } from "plumix/plugin";
-import { readEntryType } from "plumix/plugin";
+import type { EntryTypeOptions } from "plumix";
+import type { AppContext, AuthenticatedUser } from "plumix/plugin";
+import {
+  ACCESS_POLICY_META_KEY,
+  anonymousPolicy,
+  challenge,
+  definePolicy,
+  grant,
+} from "plumix/auth";
+import {
+  createPluginRegistry,
+  definePlugin,
+  readEntryType,
+} from "plumix/plugin";
 import {
   createTestContext,
   createTestDb,
   createTracedContext,
   factoriesFor,
+  toRegisteredEntryType,
 } from "plumix/test";
 import { describe, expect, test } from "vitest";
 
@@ -12,8 +25,47 @@ import { createRelatedPostsLoader, findRelatedEntries } from "./related.js";
 
 type TestDb = Awaited<ReturnType<typeof createTestDb>>;
 
-function ctxFor(db: TestDb): AppContext {
-  return createTestContext({ db });
+/** Hard, not soft: a soft challenge still lists the entry. */
+const membersOnlyPolicy = definePolicy({
+  segments: ["members"],
+  resolve: (c) => (c.user ? grant("members") : challenge("subscribe")),
+});
+
+const policiedPost: EntryTypeOptions = {
+  label: "Posts",
+  isPublic: true,
+  access: {
+    default: anonymousPolicy,
+    policies: [{ key: "members", label: "Members", policy: membersOnlyPolicy }],
+  },
+};
+
+const publicPosts = definePlugin("posts", (ctx) => {
+  ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+});
+
+/** A traced context whose `post` type every visitor may list. */
+function tracedContext(plugin = publicPosts) {
+  return createTracedContext({ config: { plugins: [plugin] } });
+}
+
+function ctxFor(
+  db: TestDb,
+  options: {
+    readonly post?: EntryTypeOptions;
+    readonly user?: AuthenticatedUser;
+  } = {},
+): AppContext {
+  const plugins = createPluginRegistry();
+  plugins.entryTypes.set(
+    "post",
+    toRegisteredEntryType(
+      "post",
+      options.post ?? { label: "Posts", isPublic: true },
+      "test",
+    ),
+  );
+  return createTestContext({ db, plugins, user: options.user });
 }
 
 describe("findRelatedEntries", () => {
@@ -61,6 +113,35 @@ describe("findRelatedEntries", () => {
     expect(related.map((e) => e.id)).toEqual([newer.id, older.id]);
   });
 
+  test("returns nothing when the entry's type is not public", async () => {
+    const db = await createTestDb();
+    const f = factoriesFor(db);
+    const author = await f.user.create({});
+    const topic = await f.term.create({ taxonomy: "category" });
+    const current = await f.entry.create({
+      type: "post",
+      status: "published",
+      publishedAt: new Date(2000),
+      authorId: author.id,
+    });
+    const sibling = await f.entry.create({
+      type: "post",
+      status: "published",
+      publishedAt: new Date(1000),
+      authorId: author.id,
+    });
+    await f.entryTerm.create({ entryId: current.id, termId: topic.id });
+    await f.entryTerm.create({ entryId: sibling.id, termId: topic.id });
+
+    const related = await findRelatedEntries(
+      ctxFor(db, { post: { label: "Posts", isPublic: false } }),
+      current.id,
+      3,
+    );
+
+    expect(related).toEqual([]);
+  });
+
   test("returns nothing when the entry has no terms", async () => {
     const db = await createTestDb();
     const f = factoriesFor(db);
@@ -76,7 +157,7 @@ describe("findRelatedEntries", () => {
   });
 
   test("shares the current entry's type read with earlier consumers in the request", async () => {
-    const { harness, ctx, run, dbQueryCount } = await createTracedContext();
+    const { harness, ctx, run, dbQueryCount } = await tracedContext();
     const f = harness.factory;
     const author = await f.user.create({});
     const topic = await f.term.create({ taxonomy: "category" });
@@ -113,7 +194,7 @@ describe("findRelatedEntries", () => {
     // libsql enforces no cap, so the statements' bound params are the only
     // place the ceiling is visible under test.
     const D1_BOUND_PARAMETER_CAP = 100;
-    const { harness, ctx, run, dbSpans } = await createTracedContext();
+    const { harness, ctx, run, dbSpans } = await tracedContext();
     const f = harness.factory;
     const author = await f.user.create({});
     const topic = await f.term.create({ taxonomy: "category" });
@@ -149,6 +230,70 @@ describe("findRelatedEntries", () => {
   });
 });
 
+describe("findRelatedEntries under an entry's access policy", () => {
+  async function seedMembersSibling(db: TestDb) {
+    const f = factoriesFor(db);
+    const author = await f.user.create({});
+    const topic = await f.term.create({ taxonomy: "category" });
+    const make = async (title: string, publishedAt: Date, meta = {}) => {
+      const entry = await f.entry.create({
+        type: "post",
+        title,
+        status: "published",
+        publishedAt,
+        authorId: author.id,
+        meta,
+      });
+      await f.entryTerm.create({ entryId: entry.id, termId: topic.id });
+      return entry;
+    };
+    const current = await make("Current", new Date(3000));
+    await make("Public sibling", new Date(2000));
+    await make("Members sibling", new Date(1000), {
+      [ACCESS_POLICY_META_KEY]: "members",
+    });
+    return current;
+  }
+
+  test("leaves out a sibling the anonymous reader's policy refuses", async () => {
+    const db = await createTestDb();
+    const current = await seedMembersSibling(db);
+
+    const related = await findRelatedEntries(
+      ctxFor(db, { post: policiedPost }),
+      current.id,
+      3,
+    );
+
+    expect(related.map((e) => e.title)).toEqual(["Public sibling"]);
+  });
+
+  test("lists a members sibling to a signed-in member without edit capability", async () => {
+    const db = await createTestDb();
+    const current = await seedMembersSibling(db);
+    const member = await factoriesFor(db).subscriber.create({});
+
+    const related = await findRelatedEntries(
+      ctxFor(db, {
+        post: policiedPost,
+        user: {
+          id: member.id,
+          email: member.email,
+          role: member.role,
+          meta: {},
+        },
+      }),
+      current.id,
+      3,
+    );
+
+    expect(related.map((e) => e.title)).toEqual([
+      "Public sibling",
+      "Members sibling",
+    ]);
+  });
+});
+
 describe("the configurable limit", () => {
   test("caps the strip at the requested size", async () => {
     const db = await createTestDb();
@@ -181,7 +326,7 @@ describe("the configurable limit", () => {
 
 describe("createRelatedPostsLoader", () => {
   test("honours the limit the plugin threads in from its options", async () => {
-    const { harness, ctx, run } = await createTracedContext();
+    const { harness, ctx, run } = await tracedContext();
     const f = harness.factory;
     const author = await f.user.create({});
     const topic = await f.term.create({ taxonomy: "category" });
@@ -216,7 +361,7 @@ describe("createRelatedPostsLoader", () => {
   });
 
   test("hands the strip its titles with shortcodes expanded", async () => {
-    const { harness, ctx, run } = await createTracedContext();
+    const { harness, ctx, run } = await tracedContext();
     const f = harness.factory;
     const author = await f.user.create({});
     const topic = await f.term.create({ taxonomy: "category" });
@@ -248,6 +393,66 @@ describe("createRelatedPostsLoader", () => {
 
     expect(related.strip?.map((entry) => entry.title)).toEqual([
       `Best of ${year}`,
+    ]);
+  });
+
+  test("lists a soft-challenged sibling to an anonymous reader without its body", async () => {
+    const teaserPosts = definePlugin("teaser-posts", (ctx) => {
+      ctx.registerEntryType("post", {
+        label: "Posts",
+        isPublic: true,
+        access: {
+          default: anonymousPolicy,
+          policies: [
+            {
+              key: "teaser",
+              label: "Teaser",
+              policy: definePolicy({
+                segments: ["members"],
+                resolve: (c) =>
+                  c.user
+                    ? grant("members")
+                    : challenge("paywall", { soft: true }),
+              }),
+            },
+          ],
+        },
+      });
+    });
+    const { harness, ctx, run } = await tracedContext(teaserPosts);
+    const f = harness.factory;
+    const author = await f.user.create({});
+    const topic = await f.term.create({ taxonomy: "category" });
+    const [current, teaser] = await Promise.all([
+      f.entry.create({
+        type: "post",
+        status: "published",
+        publishedAt: new Date(2000),
+        authorId: author.id,
+      }),
+      f.entry.create({
+        type: "post",
+        title: "Teaser",
+        status: "published",
+        publishedAt: new Date(1000),
+        authorId: author.id,
+        meta: { [ACCESS_POLICY_META_KEY]: "teaser" },
+      }),
+    ]);
+    await f.entryTerm.create({ entryId: current.id, termId: topic.id });
+    await f.entryTerm.create({ entryId: teaser.id, termId: topic.id });
+    ctx.resolvedEntity = { kind: "entry", id: current.id, preview: false };
+
+    const related = await run(() =>
+      createRelatedPostsLoader(undefined)({ slugs: ["strip"] }, ctx),
+    );
+
+    expect(related.strip).toEqual([
+      expect.objectContaining({
+        title: "Teaser",
+        contentGated: true,
+        content: null,
+      }),
     ]);
   });
 });
