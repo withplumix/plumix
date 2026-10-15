@@ -18,7 +18,7 @@ export const authClient = created.authClient;
 export const registerAuthMethodClients = created.registerAuthMethodClients;
 
 export { defineAuthMethodClient } from "./define.js";
-// The admin's: it is no server render, so it seeds its own context.
+// For a page no server render produced.
 export { seedAuthContext } from "./render-context.js";
 export type {
   AuthMethodClient,

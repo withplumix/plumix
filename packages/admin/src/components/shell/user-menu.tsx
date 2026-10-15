@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { SESSION_QUERY_KEY } from "@/lib/session.js";
+import { sanitiseRedirect } from "@/lib/sign-out-redirect.js";
 import { Trans } from "@lingui/react";
 import { useMutation } from "@tanstack/react-query";
 import { Link, useRouter } from "@tanstack/react-router";
@@ -123,17 +124,4 @@ export function UserMenu({ user }: { user: UserIdentity }): ReactNode {
       </DropdownMenuContent>
     </DropdownMenu>
   );
-}
-
-/**
- * The server sanitises the URL before sending it (https:// or a same-origin
- * path, no CR/LF); checked again so a server bug can't become a client-side
- * open redirect.
- */
-function sanitiseRedirect(value: string | null | undefined): string | null {
-  if (typeof value !== "string" || value.length === 0) return null;
-  if (/[\r\n]/.test(value)) return null;
-  const sameOriginPath = value.startsWith("/") && !value.startsWith("//");
-  const httpsAbsolute = value.startsWith("https://");
-  return sameOriginPath || httpsAbsolute ? value : null;
 }

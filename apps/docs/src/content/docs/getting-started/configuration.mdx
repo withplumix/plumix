@@ -129,7 +129,7 @@ Sign-in and session policy. `passkey` is required inside it and everything else 
 
 The seven optional keys are these.
 
-- `oauth` adds providers such as `github(...)`, each carrying its own client credentials. `authClient.signIn.oauth(provider)` takes any string until the config declares its providers to the type system, which a site scaffolded since `authClient` landed already does. An older site adds it at the end of `plumix.config.ts`, after binding the config to `const config` and default-exporting that, with `OAuthProvidersOf` imported from `plumix`:
+- `oauth` adds providers such as `github(...)`, each carrying its own client credentials. `authClient.signIn.oauth(provider)` takes any string until the config declares its providers to the type system. A scaffolded site already declares them; an older site adds it at the end of `plumix.config.ts`, after binding the config to `const config` and default-exporting that, with `OAuthProvidersOf` imported from `plumix`:
 
   ```ts no-typecheck
   declare module "plumix" {

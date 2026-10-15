@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import {
   createPluginRegistry,
@@ -185,7 +185,7 @@ describe("assemblePluginAdminBundle", () => {
     expect(result).not.toBeNull();
     // The host's `window.plumix.runtime`, which the shim reads.
     const registered: unknown[] = [];
-    (globalThis as { plumix?: unknown }).plumix = {
+    vi.stubGlobal("plumix", {
       runtime: {
         authClient: {
           defineAuthMethodClient: (name: string) => ({ name }),
@@ -194,7 +194,7 @@ describe("assemblePluginAdminBundle", () => {
           },
         },
       },
-    };
+    });
     try {
       await import(
         /* @vite-ignore */ pathToFileURL(
@@ -202,7 +202,7 @@ describe("assemblePluginAdminBundle", () => {
         ).href
       );
     } finally {
-      delete (globalThis as { plumix?: unknown }).plumix;
+      vi.unstubAllGlobals();
     }
     expect(registered).toEqual([{ name: "fixture" }]);
   });
