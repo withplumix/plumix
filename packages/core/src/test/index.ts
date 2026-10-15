@@ -13,6 +13,7 @@ export {
   draftEntry,
   publishedEntry,
   trashedEntry,
+  revisionFactory,
   termFactory,
   categoryTerm,
   tagTerm,

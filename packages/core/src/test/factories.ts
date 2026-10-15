@@ -39,6 +39,7 @@ import { sessions } from "../db/schema/sessions.js";
 import { settings } from "../db/schema/settings.js";
 import { terms } from "../db/schema/terms.js";
 import { users } from "../db/schema/users.js";
+import { revisionRow } from "../revisions/repository.js";
 
 interface DbTransient {
   db: Db;
@@ -127,6 +128,40 @@ export const entryFactory = Factory.define<
 export const draftEntry = entryFactory.params({ status: "draft" });
 export const publishedEntry = entryFactory.params({ status: "published" });
 export const trashedEntry = entryFactory.params({ status: "trash" });
+
+interface RevisionTransient extends DbTransient {
+  /** The entry the revision is a snapshot of. */
+  of: Entry;
+}
+
+/**
+ * A revision of the transient `of` entry, written as a save of it would be.
+ * Pass `content` (or another column) for the state it had back then.
+ */
+export const revisionFactory = Factory.define<
+  NewEntry,
+  RevisionTransient,
+  Entry,
+  Partial<NewEntry>
+>(({ transientParams, onCreate, params }) => {
+  onCreate(async (attrs) => {
+    const db = requireDb(transientParams);
+    const [row] = await db.insert(entries).values(attrs).returning();
+    if (!row) throw new Error("revisionFactory: insert returned no row");
+    return row;
+  });
+
+  const entry = transientParams.of;
+  if (entry === undefined) {
+    throw new Error(
+      "revisionFactory: requires its entry via .transient({ of })",
+    );
+  }
+  return {
+    ...revisionRow({ entry, authorId: params.authorId ?? entry.authorId }),
+    ...params,
+  };
+});
 
 export const termFactory = Factory.define<
   NewTerm,
@@ -477,6 +512,7 @@ export interface Factories {
   readonly tag: typeof tagTerm;
   readonly invite: typeof inviteFactory;
   readonly credential: typeof credentialFactory;
+  readonly revision: typeof revisionFactory;
   readonly session: typeof sessionFactory;
   readonly setting: typeof settingFactory;
   readonly entryTerm: typeof entryTermFactory;
@@ -504,6 +540,7 @@ export function factoriesFor(db: Db): Factories {
     tag: tagTerm.transient({ db }),
     invite: inviteFactory.transient({ db }),
     credential: credentialFactory.transient({ db }),
+    revision: revisionFactory.transient({ db }),
     session: sessionFactory.transient({ db }),
     setting: settingFactory.transient({ db }),
     entryTerm: entryTermFactory.transient({ db }),

@@ -261,6 +261,7 @@ test("a rating is inserted, configured and stored", async ({ editor }) => {
 - **Rich text.** `editor.richText(block)` returns `type(text)`, `select()` (the whole text, for keys pressed next), `format(format)` (a mark such as `"bold"`, `"heading-2"`, `"bullet-list"` or `"quote"`), `link(url)` and `unlink()`.
 - **History.** `editor.undo()` and `editor.redo()` press the header's Undo and Redo buttons.
 - **Saving.** `editor.save()` resolves once every edit has reached the server, `editor.publish()` publishes the entry or its pending edits, and `editor.reload()` reloads the editor.
+- **Lifecycle.** `editor.back()` leaves with the header's Back button, `editor.discard()` drops a published entry's pending edits, and `editor.restoreRevision(revision)` previews a revision from the Revisions sheet and restores it. A test seeds that revision with the `revision` factory: `.transient({ of: entry }).create({ content })` writes it as a save of `entry` would, with the content it had back then.
 
 ## Mail
 

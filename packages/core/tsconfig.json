@@ -8,10 +8,11 @@
     // base-config `allowJs` pulls the `.mjs` into the program and
     // emits stray `.js` siblings into locales/.
     "allowJs": false,
-    // The e2e suite imports core's own test kits by name, as Playwright
+    // The e2e suite imports core's own test kits and blocks by name, as Playwright
     // resolves them from `dist/`. `typecheck` builds only upstream packages,
     // so it reads them from source.
     "paths": {
+      "@plumix/core/blocks": ["./src/blocks/index.ts"],
       "@plumix/core/test": ["./src/test/index.ts"],
       "@plumix/core/test/playwright": ["./src/test/playwright/index.ts"]
     }

@@ -19,6 +19,7 @@ export {
   inviteFactory,
   oauthAccountFactory,
   publishedEntry,
+  revisionFactory,
   sessionFactory,
   settingFactory,
   subscriberUser,
