@@ -1,10 +1,14 @@
-import type { Page } from "@playwright/test";
 import type {
   Editor,
   EditorRichText,
   EditorTextFormat,
-} from "plumix/test/playwright";
-import { expect, test } from "plumix/test/playwright";
+} from "@plumix/core/test/playwright";
+import { test as base, expect } from "@plumix/core/test/playwright";
+
+import type { Seed } from "./support/seed.js";
+import { openPost, seedFixture } from "./support/seed.js";
+
+const test = base.extend(seedFixture);
 
 interface FormatCase {
   readonly format: EditorTextFormat;
@@ -49,12 +53,6 @@ const SECOND_LINK = {
   shown: '<p><a href="https://example.test/second">Plumix</a></p>',
 } as const;
 
-async function enterDemo(page: Page): Promise<void> {
-  await page.goto("/");
-  await page.getByTestId("try-editor").click();
-  await page.waitForURL(/\/_plumix\/admin/);
-}
-
 async function shownBody(editor: Editor): Promise<string> {
   const html = await editor.canvas.block("core/rich-text").innerHTML();
   return /^<div>(.*)<\/div>$/s.exec(html)?.[1] ?? html;
@@ -82,23 +80,24 @@ async function expectBodyKept(
   await expectShown(editor, shown);
 }
 
-async function textBlock(editor: Editor): Promise<EditorRichText> {
-  await editor.create("post");
-  const text = editor.richText(await editor.insert("core/rich-text"));
-  await text.type("Plumix");
-  return text;
+/** A post holding one text block of `body`. */
+async function textBlock(
+  editor: Editor,
+  seed: Seed,
+  body = "<p>Plumix</p>",
+): Promise<EditorRichText> {
+  await openPost(editor, seed, [
+    { id: "text", name: "core/rich-text", attrs: { body } },
+  ]);
+  return editor.richText(editor.canvas.block("core/rich-text"));
 }
-
-// Every visitor gets their own database, so each test enters the demo first.
-test.beforeEach(async ({ page }) => {
-  await enterDemo(page);
-});
 
 for (const { format, body } of HEADINGS) {
   test(`the format dropdown turns the text into a ${format} heading`, async ({
     editor,
+    seed,
   }) => {
-    const text = await textBlock(editor);
+    const text = await textBlock(editor, seed);
 
     await text.format(format);
 
@@ -108,9 +107,9 @@ for (const { format, body } of HEADINGS) {
 
 test("the format dropdown turns a heading back into a paragraph", async ({
   editor,
+  seed,
 }) => {
-  const text = await textBlock(editor);
-  await text.format("heading-2");
+  const text = await textBlock(editor, seed, "<h2>Plumix</h2>");
 
   await text.format("paragraph");
 
@@ -118,8 +117,8 @@ test("the format dropdown turns a heading back into a paragraph", async ({
 });
 
 for (const { format, body } of MARKS) {
-  test(`the ${format} toggle marks the text`, async ({ editor }) => {
-    const text = await textBlock(editor);
+  test(`the ${format} toggle marks the text`, async ({ editor, seed }) => {
+    const text = await textBlock(editor, seed);
 
     await text.format(format);
 
@@ -128,8 +127,8 @@ for (const { format, body } of MARKS) {
 }
 
 for (const { format, body } of BLOCKS) {
-  test(`the ${format} toggle wraps the paragraph`, async ({ editor }) => {
-    const text = await textBlock(editor);
+  test(`the ${format} toggle wraps the paragraph`, async ({ editor, seed }) => {
+    const text = await textBlock(editor, seed);
 
     await text.format(format);
 
@@ -137,17 +136,19 @@ for (const { format, body } of BLOCKS) {
   });
 }
 
-test("a link is set on the text and stored", async ({ editor }) => {
-  const text = await textBlock(editor);
+test("a link is set on the text and stored", async ({ editor, seed }) => {
+  const text = await textBlock(editor, seed);
 
   await text.link("https://example.test/first");
 
   await expectBodyKept(editor, FIRST_LINK.stored, FIRST_LINK.shown);
 });
 
-test("a link is edited to another address and stored", async ({ editor }) => {
-  const text = await textBlock(editor);
-  await text.link("https://example.test/first");
+test("a link is edited to another address and stored", async ({
+  editor,
+  seed,
+}) => {
+  const text = await textBlock(editor, seed, FIRST_LINK.stored);
 
   await text.link("https://example.test/second");
 
@@ -156,9 +157,9 @@ test("a link is edited to another address and stored", async ({ editor }) => {
 
 test("a link is removed from the text and the removal is stored", async ({
   editor,
+  seed,
 }) => {
-  const text = await textBlock(editor);
-  await text.link("https://example.test/first");
+  const text = await textBlock(editor, seed, FIRST_LINK.stored);
 
   await text.unlink();
 

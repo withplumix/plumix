@@ -1,40 +1,13 @@
-import { resolve } from "node:path";
 import type { Page } from "@playwright/test";
 
-import type { Factories } from "@plumix/core/test";
-import { factoriesFor } from "@plumix/core/test";
-import {
-  actingAs,
-  test as base,
-  expect,
-  openPlaygroundDb,
-} from "@plumix/core/test/playwright";
+import { test as base, expect } from "@plumix/core/test/playwright";
 
 import { holdRequests } from "./support/hold-requests.js";
+import { seedFixture } from "./support/seed.js";
+
+const test = base.extend(seedFixture);
 
 const ENTRY_UPDATE = "/_plumix/rpc/entry/update";
-
-interface Seed {
-  readonly factories: Factories;
-  /** The admin the page is signed in as. */
-  readonly authorId: number;
-}
-
-/** Each test signs in as its own admin, so its drafts are its own. */
-const test = base.extend<{ seed: Seed }>({
-  seed: [
-    async ({ context }, use) => {
-      const db = await openPlaygroundDb({
-        cwd: resolve(process.cwd(), "playground"),
-      });
-      const { user, storageState } = await actingAs(db, "admin");
-      await context.addCookies([...storageState.cookies]);
-      await use({ factories: factoriesFor(db), authorId: user.id });
-      db.$client.close();
-    },
-    { auto: true },
-  ],
-});
 
 test("a new entry takes a block in its empty canvas and stores it", async ({
   editor,

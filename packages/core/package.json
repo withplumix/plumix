@@ -219,6 +219,7 @@
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
+    "@axe-core/playwright": "catalog:",
     "@csstools/css-tokenizer": "^4.0.2",
     "@lingui/cli": "catalog:lingui",
     "@playwright/test": "catalog:",
