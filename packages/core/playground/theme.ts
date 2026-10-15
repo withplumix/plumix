@@ -148,6 +148,12 @@ function authHookIsland(): ReactNode {
 }
 
 /**
+ * A failed island unmounts, so a fixed row keeps the next one from sliding
+ * under the pointer that failed it.
+ */
+const rowStyle = { height: "3rem" };
+
+/**
  * Each island hydrates on interaction, so a fault raises nothing until a spec
  * acts on it.
  */
@@ -168,12 +174,6 @@ function devMismatch(): ReactNode {
     }),
   ].map((island, index) => h("div", { key: index, style: rowStyle }, island));
 }
-
-/**
- * A failed island unmounts, so a fixed row keeps the next one from sliding
- * under the pointer that failed it.
- */
-const rowStyle = { height: "3rem" };
 
 /** The dev error page's source view shows this line, markup and all. */
 function serverError(): never {

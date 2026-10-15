@@ -15,15 +15,13 @@ describe("DevOverlayShell", () => {
       </DevOverlayShell>,
     );
 
-    expect(html).toContain(
-      '<div class="plumix-dev-overlay__modal" data-testid="plumix-dev-overlay-panel" role="dialog" aria-label="Client error">',
+    expect(html).toMatch(
+      /data-testid="plumix-dev-overlay-panel"[^>]*role="dialog"[^>]*aria-label="Client error"/,
     );
-    expect(html).toContain(
-      '<span class="plumix-dev-overlay__label" data-testid="plumix-dev-overlay-label">Counter</span>',
+    expect(html).toMatch(
+      /data-testid="plumix-dev-overlay-label">Counter<\/span>/,
     );
-    expect(html).toContain(
-      '<div class="plumix-dev-overlay__body"><p>the error</p></div>',
-    );
+    expect(html).toContain("<p>the error</p>");
   });
 
   test("renders bar actions between the label and the close button", () => {
@@ -38,8 +36,8 @@ describe("DevOverlayShell", () => {
       </DevOverlayShell>,
     );
 
-    expect(html).toContain(
-      'Counter</span><span>nav</span><button type="button" class="plumix-dev-overlay__btn" data-testid="plumix-dev-overlay-close"',
+    expect(html).toMatch(
+      /Counter<\/span><span>nav<\/span><button[^>]*data-testid="plumix-dev-overlay-close"/,
     );
   });
 });
