@@ -248,52 +248,52 @@ msgid "plugin.media.altEditor.saved"
 msgstr "✓ Gespeichert"
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.storageNotConfigured"
 msgstr "Kein Speicher-Adapter konfiguriert — setzen Sie `storage:` in plumix.config.ts."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.payloadTooLarge"
 msgstr "Datei überschreitet die konfigurierte maxUploadSize."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.unsupportedMediaType"
 msgstr "Dieser Dateityp ist in den acceptedTypes des Medien-Plugins nicht erlaubt."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.mimeMismatch"
 msgstr "Die hochgeladenen Bytes entsprechen nicht dem deklarierten Dateityp."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.objectNotFound"
 msgstr "Upload erreichte den Speicher nicht — prüfen Sie die CORS-Regeln Ihres Buckets."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.alreadyConfirmed"
 msgstr "Dieser Upload wurde bereits in einem anderen Tab oder Gerät bestätigt."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.serverCouldntProcess"
 msgstr "Der Server konnte diesen Upload nicht verarbeiten. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.contentLengthRequired"
 msgstr "Upload ohne Content-Length — Ihr Browser oder Proxy verwendet möglicherweise Chunked Transfer."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.csrfTokenMissing"
 msgstr "Anfrage durch CSRF-Prüfung blockiert. Seite neu laden und erneut versuchen."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.generic"
 msgstr "Etwas ist schiefgelaufen. Bitte erneut versuchen."
 

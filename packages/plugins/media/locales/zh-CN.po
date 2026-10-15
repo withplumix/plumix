@@ -248,52 +248,52 @@ msgid "plugin.media.altEditor.saved"
 msgstr "✓ 已保存"
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.storageNotConfigured"
 msgstr "未配置存储适配器 — 请在 plumix.config.ts 中设置 `storage:`。"
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.payloadTooLarge"
 msgstr "文件超出了配置的 maxUploadSize。"
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.unsupportedMediaType"
 msgstr "媒体插件的 acceptedTypes 不允许此文件类型。"
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.mimeMismatch"
 msgstr "上传的字节与声明的文件类型不匹配。"
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.objectNotFound"
 msgstr "上传未到达存储 — 请检查存储桶的 CORS 规则。"
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.alreadyConfirmed"
 msgstr "此上传已被另一个标签页或设备确认。"
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.serverCouldntProcess"
 msgstr "服务器无法处理此上传。请重试。"
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.contentLengthRequired"
 msgstr "上传缺少 Content-Length — 您的浏览器/代理可能使用分块传输。"
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.csrfTokenMissing"
 msgstr "请求被 CSRF 检查拦截。请重新加载页面并重试。"
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.generic"
 msgstr "出了点问题。请重试。"
 

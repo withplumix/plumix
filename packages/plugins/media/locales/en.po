@@ -253,52 +253,52 @@ msgid "plugin.media.altEditor.saved"
 msgstr "✓ Saved"
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.storageNotConfigured"
 msgstr "No storage adapter is wired up — set `storage:` in plumix.config.ts."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.payloadTooLarge"
 msgstr "File exceeds the configured maxUploadSize."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.unsupportedMediaType"
 msgstr "This file type isn't allowed by the media plugin's acceptedTypes."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.mimeMismatch"
 msgstr "The uploaded bytes don't match the declared file type."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.objectNotFound"
 msgstr "Upload didn't reach storage — check your bucket's CORS rules."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.alreadyConfirmed"
 msgstr "This upload was already confirmed by another tab or device."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.serverCouldntProcess"
 msgstr "Server couldn't process this upload. Try again."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.contentLengthRequired"
 msgstr "Upload missing Content-Length — your browser/proxy may be using chunked transfer."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.csrfTokenMissing"
 msgstr "Request blocked by CSRF check. Reload the page and try again."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.generic"
 msgstr "Something went wrong. Try again."
 

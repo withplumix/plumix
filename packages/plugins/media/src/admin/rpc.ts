@@ -19,6 +19,22 @@ export const lookupRpc = createPluginRpcClient<LookupRouter>("lookup");
 export type MediaLookupItem =
   PluginRpcOutputs<LookupRouter>["list"]["items"][number];
 
+export interface MediaLabelsQuery {
+  readonly enabled: boolean;
+  readonly queryKey: readonly string[];
+  readonly queryFn: () => Promise<PluginRpcOutputs<LookupRouter>["list"]>;
+}
+
+/** Resolves the labels of `ids` through the core `lookup/list` procedure. */
+export function mediaLabelsQuery(ids: readonly string[]): MediaLabelsQuery {
+  return {
+    enabled: ids.length > 0,
+    queryKey: ["plugin-media", "lookup", [...ids].sort().join(" ")],
+    // The wire schema types its arrays mutable; the param keeps them readonly.
+    queryFn: () => lookupRpc.list({ kind: "media", ids: [...ids] }),
+  };
+}
+
 /**
  * Ids absent from the result are unresolved (deleted, unpublished, or still
  * loading); callers fall back to an id placeholder.
@@ -26,12 +42,7 @@ export type MediaLookupItem =
 export function useMediaLabels(
   ids: readonly string[],
 ): ReadonlyMap<string, MediaLookupItem> {
-  const query = useQuery({
-    enabled: ids.length > 0,
-    queryKey: ["plugin-media", "lookup", [...ids].sort().join(" ")],
-    // The wire schema types its arrays mutable; the param keeps them readonly.
-    queryFn: () => lookupRpc.list({ kind: "media", ids: [...ids] }),
-  });
+  const query = useQuery(mediaLabelsQuery(ids));
   const items = query.data?.items;
   return useMemo(
     () => new Map((items ?? []).map((item) => [item.id, item])),
