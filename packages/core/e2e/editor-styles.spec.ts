@@ -11,7 +11,7 @@ interface StyleCase {
   readonly stored?: string;
   /** The computed CSS that shows it in the canvas. */
   readonly css: readonly [property: string, value: string];
-  /** Set first, for a control that shows only alongside them. */
+  /** Seeded on the block, for a control that shows only alongside them. */
   readonly given?: Readonly<Record<string, string>>;
 }
 
@@ -113,12 +113,16 @@ for (const { property, value, stored, css, given = {} } of CASES) {
   test(`the ${property} control styles the block in the canvas and is stored`, async ({
     editor,
   }) => {
-    await editor.open(await seedPage([code("styled")]));
+    const seeded = Object.keys(given).length > 0;
+    await editor.open(
+      await seedPage([
+        seeded
+          ? { ...code("styled"), style: { large: given } }
+          : code("styled"),
+      ]),
+    );
     const block = editor.canvas.block("core/code");
     await editor.select(block);
-    for (const [first, firstValue] of Object.entries(given)) {
-      await editor.styles.set(first, firstValue);
-    }
 
     await editor.styles.set(property, value);
 

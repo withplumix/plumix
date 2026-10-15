@@ -31,6 +31,7 @@ test("F2 on a focused row renames its layer", async ({ editor, page }) => {
   await editor.save();
   await editor.reload();
   await expect(await editor.layers.row(first)).toHaveText("Intro snippet");
+  expect(await editor.canvas.blocks()).toEqual(["core/code", "core/code"]);
   expect(await editor.stored()).toMatchObject([
     { id: "first", label: "Intro snippet" },
     { id: "second" },
