@@ -37,7 +37,12 @@ import { resolveLabel } from "@plumix/core/i18n";
 import type { FlatNode } from "./block-tree-ops.js";
 import { blockExcerpt } from "./block-excerpt.js";
 import { BlockIcon } from "./block-icon.js";
-import { findBlock, flattenTree, projectMove } from "./block-tree-ops.js";
+import {
+  findBlock,
+  flattenTree,
+  projectMove,
+  rowAfterRemoving,
+} from "./block-tree-ops.js";
 import { createClipboardOps, pasteableAtRoot } from "./clipboard-ops.js";
 import { useEditorConfig } from "./editor-config-context.js";
 import { useEditorStore, useEditorStoreApi } from "./provider.js";
@@ -366,20 +371,4 @@ function LayerRow({
       )}
     </div>
   );
-}
-
-/**
- * The row that takes `id`'s place once it and its nested rows are gone: the
- * next row past its subtree, else the one before it.
- */
-function rowAfterRemoving(
-  items: readonly FlatNode[],
-  id: string,
-): string | null {
-  const at = items.findIndex((item) => item.id === id);
-  if (at === -1) return null;
-  const depth = items[at]?.depth ?? 0;
-  let next = at + 1;
-  while (next < items.length && (items[next]?.depth ?? 0) > depth) next++;
-  return items[next]?.id ?? items[at - 1]?.id ?? null;
 }

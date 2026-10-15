@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { Trans } from "@lingui/react";
 
 import type { JsonValue } from "@plumix/core/blocks";
@@ -9,8 +9,8 @@ import { Minus, Plus, RefreshCw } from "@plumix/admin-ui/icons";
 
 import { createNodeFromEntry } from "./block-catalog.js";
 import { BlockInputControl } from "./block-input-control.js";
-import { enclosingTableId, findBlock } from "./block-tree-ops.js";
 import { useEditorConfig } from "./editor-config-context.js";
+import { inspectorView } from "./inspector-view.js";
 import { useEditorStore, useLoaderPushRef } from "./provider.js";
 import { deviceBucket } from "./store.js";
 
@@ -38,11 +38,13 @@ export function BlockInspector({
   const loaderPushRef = useLoaderPushRef();
 
   const bucket = deviceBucket(device);
-  const block = activeId ? findBlock(tree, activeId, registry) : undefined;
-  // The table the selection sits in (the table itself, or the one owning the
-  // selected row/cell), so the table controls stay in reach while editing
-  // cells.
-  const tableId = block ? enclosingTableId(tree, block.id, registry) : null;
+  const canRefresh = Boolean(onRefreshBlockLoader);
+  const view = useMemo(
+    () => inspectorView(registry, tree, activeId, bucket, canRefresh),
+    [registry, tree, activeId, bucket, canRefresh],
+  );
+  const block = view?.block;
+  const tableId = view?.tableId ?? null;
   const handleChange = useCallback(
     (key: string, value: JsonValue): void => {
       if (activeId) updateBlockAttrs(activeId, { [key]: value });
@@ -85,7 +87,7 @@ export function BlockInspector({
     if (tableId) removeTableColumn(tableId);
   }, [tableId, removeTableColumn]);
 
-  if (!block) {
+  if (!view) {
     return (
       <div
         className="text-muted-foreground p-4 text-sm"
@@ -99,19 +101,9 @@ export function BlockInspector({
     );
   }
 
-  // A slot input as a control would overwrite the children with a string.
-  const spec = registry.get(block.name);
-  const inputs = (spec?.inputs ?? []).filter((input) => input.type !== "slot");
-  const canRefresh = Boolean(onRefreshBlockLoader && spec?.loaders);
-  const isColumns = block.name === "core/columns";
-  // Nothing to render would leave a blank panel, indistinguishable from one
-  // that failed to load.
-  const nothingToSet =
-    inputs.length === 0 && !isColumns && !tableId && !canRefresh;
-
   return (
     <div className="flex flex-col gap-4 p-4" data-testid="block-inspector">
-      {nothingToSet ? (
+      {view.nothingToSet ? (
         <p
           className="text-muted-foreground text-sm"
           data-testid="block-inspector-no-settings"
@@ -122,35 +114,32 @@ export function BlockInspector({
           />
         </p>
       ) : null}
-      {inputs.map((input) => {
-        // A cleared Custom-CSS declaration can leave "" in the bucket; read it
-        // as unset.
+      {view.inputs.map(({ input, value }) => {
         const styleProp = input.styleProperty;
-        const stored = styleProp
-          ? block.style?.[bucket]?.[styleProp]
-          : undefined;
-        const styleValue = stored === "" ? undefined : stored;
         return (
           <BlockInputControl
             key={input.name}
             input={input}
             resolvePluginFieldType={resolvePluginFieldType}
-            attrs={block.attrs}
-            value={styleProp ? styleValue : block.attrs?.[input.name]}
-            onChange={(value) => {
+            attrs={view.block.attrs}
+            value={value}
+            onChange={(next) => {
               if (!styleProp) {
-                handleChange(input.name, value);
+                handleChange(input.name, next);
                 return;
               }
               if (!activeId) return;
-              const next =
-                typeof value === "string" && value !== "" ? value : null;
-              updateBlockStyle(activeId, bucket, styleProp, next);
+              updateBlockStyle(
+                activeId,
+                bucket,
+                styleProp,
+                typeof next === "string" && next !== "" ? next : null,
+              );
             }}
           />
         );
       })}
-      {isColumns && (
+      {view.showAddColumn && (
         <Button
           type="button"
           variant="outline"
@@ -206,7 +195,7 @@ export function BlockInspector({
           </Button>
         </div>
       )}
-      {canRefresh && (
+      {view.showRefresh && (
         <Button
           type="button"
           variant="outline"

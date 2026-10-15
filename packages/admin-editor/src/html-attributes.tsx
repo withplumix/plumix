@@ -18,24 +18,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@plumix/admin-ui/popover";
-import { isAllowedHtmlAttr } from "@plumix/core/blocks";
 
-/**
- * Common allowlisted attributes offered as suggestions. The field still accepts
- * any name `isAllowedHtmlAttr` permits (e.g. an arbitrary `data-*`/`aria-*`).
- */
-const COMMON_ATTRS: readonly string[] = [
-  "id",
-  "title",
-  "role",
-  "lang",
-  "dir",
-  "aria-label",
-  "aria-describedby",
-  "aria-hidden",
-  "aria-live",
-  "data-testid",
-];
+import {
+  canAddHtmlAttr,
+  canRenameHtmlAttr,
+  htmlAttrName,
+  htmlAttrSuggestions,
+} from "./html-attribute-rules.js";
 
 interface HtmlAttributesProps {
   readonly attributes: Readonly<Record<string, string>>;
@@ -98,14 +87,8 @@ function AttrRow({
   const [keyDraft, setKeyDraft] = useState(name);
 
   const commitRename = (): void => {
-    // A mixed-case data-/aria- key passes the allowlist but React drops it at
-    // render.
-    const next = keyDraft.trim().toLowerCase();
-    const valid =
-      next !== name.toLowerCase() &&
-      isAllowedHtmlAttr(next) &&
-      !siblingKeys.some((k) => k.toLowerCase() === next);
-    if (valid) onRename(name, next);
+    const next = htmlAttrName(keyDraft);
+    if (canRenameHtmlAttr(name, next, siblingKeys)) onRename(name, next);
     else setKeyDraft(name);
   };
 
@@ -165,15 +148,7 @@ function AddAttr({
     message: "value",
   });
 
-  // Lowercase throughout: the renderer keeps only the lowercased form (React
-  // drops mixed-case data-/aria- props), so the editor offers and stores that.
-  const taken = new Set(existingKeys.map((k) => k.toLowerCase()));
-  const options = COMMON_ATTRS.filter((attr) => !taken.has(attr));
-  const custom = query.trim().toLowerCase();
-  const canCreate =
-    isAllowedHtmlAttr(custom) &&
-    !taken.has(custom) &&
-    !COMMON_ATTRS.includes(custom);
+  const { options, create } = htmlAttrSuggestions(query, existingKeys);
 
   const pick = (attr: string): void => {
     setName(attr);
@@ -181,7 +156,7 @@ function AddAttr({
     setOpen(false);
   };
 
-  const valid = name !== "" && !taken.has(name) && value.trim() !== "";
+  const valid = canAddHtmlAttr(name, value, existingKeys);
 
   return (
     <form
@@ -233,17 +208,17 @@ function AddAttr({
               data-testid="html-attr-add-key-search"
             />
             <CommandList>
-              {canCreate ? (
+              {create !== null ? (
                 <CommandItem
-                  value={custom}
-                  onSelect={() => pick(custom)}
+                  value={create}
+                  onSelect={() => pick(create)}
                   data-testid="html-attr-add-key-create"
                 >
                   <Plus className="me-2 size-4" />
                   <span className="sr-only">
                     <Trans id="editor.htmlAttrs.add.create" message="Create" />
                   </span>
-                  {custom}
+                  {create}
                 </CommandItem>
               ) : (
                 <CommandEmpty>

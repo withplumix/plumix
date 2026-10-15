@@ -14,6 +14,7 @@ import {
 } from "@plumix/core/blocks";
 
 import {
+  catalogIsEmpty,
   createNodeFromEntry,
   expandPattern,
   filterPatterns,
@@ -191,6 +192,48 @@ describe("groupInsertables", () => {
     }).flatMap((g) => g.entries.map((e) => e.name));
 
     expect(slugs).toEqual(["core/heading", "core/quote"]);
+  });
+});
+
+describe("catalogIsEmpty", () => {
+  const registry = createBlockRegistry([
+    spec({ name: "core/heading", title: "Heading" }),
+  ]);
+  const patterns: readonly BlockPattern[] = [
+    { name: "hero", title: "Hero banner", content: [] },
+  ];
+
+  test("a search that matches no block or pattern leaves the catalog empty", () => {
+    const query = "zzz";
+
+    expect(
+      catalogIsEmpty(
+        groupInsertables(registry, { capabilities: NO_CAPS, query }),
+        filterPatterns(patterns, query),
+      ),
+    ).toBe(true);
+  });
+
+  test("a matching pattern alone keeps the catalog from being empty", () => {
+    const query = "hero";
+
+    expect(
+      catalogIsEmpty(
+        groupInsertables(registry, { capabilities: NO_CAPS, query }),
+        filterPatterns(patterns, query),
+      ),
+    ).toBe(false);
+  });
+
+  test("a matching block alone keeps the catalog from being empty", () => {
+    const query = "head";
+
+    expect(
+      catalogIsEmpty(
+        groupInsertables(registry, { capabilities: NO_CAPS, query }),
+        filterPatterns(patterns, query),
+      ),
+    ).toBe(false);
   });
 });
 

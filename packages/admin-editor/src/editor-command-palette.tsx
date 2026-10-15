@@ -28,7 +28,7 @@ import {
 } from "./editor-commands.js";
 import { useEditorConfig } from "./editor-config-context.js";
 import { useEditorStore, useEditorStoreApi } from "./provider.js";
-import { matchesShortcut } from "./shortcuts.js";
+import { nextPaletteOpen } from "./shortcuts.js";
 
 const GROUP_LABELS: Record<EditorCommandGroupId, ReactNode> = {
   actions: <Trans id="editor.palette.group.actions" message="Actions" />,
@@ -56,12 +56,11 @@ export function EditorCommandPalette({
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
-      // No typing guard: Cmd+K types nothing, so it must reach the palette from
-      // any field.
-      if (event.repeat || !matchesShortcut("palette.open", event)) return;
+      const next = nextPaletteOpen(event, open);
+      if (next === open) return;
       // Cmd+K is the browser's own search-bar shortcut.
       event.preventDefault();
-      setPaletteOpen(!open);
+      setPaletteOpen(next);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

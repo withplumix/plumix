@@ -79,6 +79,14 @@ export function groupInsertables(
   return [...buckets].map(([category, entries]) => ({ category, entries }));
 }
 
+/** Whether a catalog search matched nothing to list, block or pattern. */
+export function catalogIsEmpty(
+  groups: readonly InsertableGroup[],
+  patterns: readonly InserterPattern[],
+): boolean {
+  return groups.length === 0 && patterns.length === 0;
+}
+
 /**
  * Variation slugs are only unique per parent block, so they're qualified by its
  * name.

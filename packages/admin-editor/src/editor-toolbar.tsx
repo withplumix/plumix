@@ -30,7 +30,7 @@ import {
   useEditorStore,
   useEditorStoreApi,
 } from "./provider.js";
-import { isTypingTarget, matchesShortcut } from "./shortcuts.js";
+import { historyShortcut } from "./shortcuts.js";
 
 const ZOOM_STEPS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
 
@@ -276,20 +276,15 @@ function DeviceZoomControls(): ReactElement {
   );
 }
 
-/**
- * Global undo/redo keyboard shortcuts (Cmd/Ctrl+Z, +Shift to redo). Skips
- * edits in form controls / contenteditable so native field undo isn't hijacked.
- */
+/** Global undo/redo keyboard shortcuts (Cmd/Ctrl+Z, +Shift to redo). */
 export function EditorShortcuts(): null {
   const store = useEditorStoreApi();
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
-      // A held chord auto-repeats keydown; one press should be one step.
-      if (event.repeat || isTypingTarget(event.target)) return;
-      const redo = matchesShortcut("history.redo", event);
-      if (!redo && !matchesShortcut("history.undo", event)) return;
+      const step = historyShortcut(event);
+      if (step === null) return;
       event.preventDefault();
-      if (redo) store.getState().redo();
+      if (step === "redo") store.getState().redo();
       else store.getState().undo();
     };
     window.addEventListener("keydown", onKey);

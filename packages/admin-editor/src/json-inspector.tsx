@@ -9,16 +9,15 @@ import {
   DialogTitle,
 } from "@plumix/admin-ui/dialog";
 
-import { findBlock } from "./block-tree-ops.js";
+import type { JsonScope } from "./json-scope.js";
 import { useEditorConfig } from "./editor-config-context.js";
+import { jsonForScope } from "./json-scope.js";
 import { useEditorStore } from "./provider.js";
 
 /**
  * Code-split: the highlighter only loads when the dialog first renders output.
  */
 const JsonHighlight = lazy(() => import("./json-highlight.js"));
-
-type JsonScope = "page" | "block";
 
 const OUTPUT_TESTID = "json-inspector-output";
 
@@ -40,9 +39,7 @@ export function JsonInspector(): ReactElement {
   const tree = useEditorStore((s) => s.tree);
   const activeId = useEditorStore((s) => s.activeId);
 
-  const block =
-    scope === "block" && activeId ? findBlock(tree, activeId, registry) : null;
-  const value = scope === "page" ? tree : block;
+  const json = jsonForScope(registry, tree, activeId, scope);
 
   return (
     <div className="flex min-h-0 flex-col gap-2" data-testid="json-inspector">
@@ -62,7 +59,7 @@ export function JsonInspector(): ReactElement {
           <Trans id="editor.json.block" message="Block" />
         </ScopeButton>
       </div>
-      {scope === "block" && !block ? (
+      {json === null ? (
         <p
           className="text-muted-foreground text-sm"
           data-testid="json-inspector-empty"
@@ -70,7 +67,7 @@ export function JsonInspector(): ReactElement {
           <Trans id="editor.json.empty" message="Select a block to inspect." />
         </p>
       ) : (
-        <JsonCode json={JSON.stringify(value, null, 2)} />
+        <JsonCode json={json} />
       )}
     </div>
   );

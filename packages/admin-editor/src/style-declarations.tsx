@@ -26,14 +26,12 @@ import {
   SelectValue,
 } from "@plumix/admin-ui/select";
 
-import { CSS_PROPERTIES } from "./css-properties.js";
+import {
+  canAddDeclaration,
+  canRenameDeclaration,
+  declarationSuggestions,
+} from "./style-declaration-rules.js";
 import { useStyleField } from "./use-style-field.js";
-
-/**
- * A camelCase standard property (`marginTop`) or a CSS custom property
- * (`--brand-gap`) — stricter than the render guard, which also tolerates junk.
- */
-const VALID_PROPERTY = /^(--)?[a-zA-Z][a-zA-Z-]*$/;
 
 /**
  * Radix Select forbids an empty-string item value, so the "clear" choice
@@ -115,12 +113,11 @@ function DeclarationRow({
 
   const commitRename = (): void => {
     const next = keyDraft.trim();
-    const valid =
-      next !== property &&
-      VALID_PROPERTY.test(next) &&
-      !siblingKeys.includes(next);
-    if (valid) onRename(property, next);
-    else setKeyDraft(property); // snap back on a no-op / invalid edit
+    if (canRenameDeclaration(property, next, siblingKeys)) {
+      onRename(property, next);
+    } else {
+      setKeyDraft(property); // snap back on a no-op / invalid edit
+    }
   };
 
   return (
@@ -223,16 +220,7 @@ function AddDeclaration({
     message: "value",
   });
 
-  const taken = new Set(existingKeys);
-  const options = CSS_PROPERTIES.filter((name) => !taken.has(name));
-  // Case-insensitive: `margintop` must not create a second declaration
-  // alongside the curated `marginTop`.
-  const custom = query.trim();
-  const known = new Set(
-    [...CSS_PROPERTIES, ...existingKeys].map((p) => p.toLowerCase()),
-  );
-  const canCreate =
-    VALID_PROPERTY.test(custom) && !known.has(custom.toLowerCase());
+  const { options, create } = declarationSuggestions(query, existingKeys);
 
   const pick = (name: string): void => {
     setProperty(name);
@@ -240,9 +228,7 @@ function AddDeclaration({
     setOpen(false);
   };
 
-  // Re-checked at submit: the property can be set elsewhere after picking, and
-  // the write overwrites unconditionally.
-  const valid = property !== "" && !taken.has(property) && value.trim() !== "";
+  const valid = canAddDeclaration(property, value, existingKeys);
 
   return (
     <form
@@ -294,17 +280,17 @@ function AddDeclaration({
               data-testid="style-declaration-add-key-search"
             />
             <CommandList>
-              {canCreate ? (
+              {create !== null ? (
                 <CommandItem
-                  value={custom}
-                  onSelect={() => pick(custom)}
+                  value={create}
+                  onSelect={() => pick(create)}
                   data-testid="style-declaration-add-key-create"
                 >
                   <Plus className="me-2 size-4" />
                   <span className="sr-only">
                     <Trans id="editor.styles.add.create" message="Create" />
                   </span>
-                  {custom}
+                  {create}
                 </CommandItem>
               ) : (
                 <CommandEmpty>

@@ -20,7 +20,7 @@ new RuleTester().run("plumix/sync-comment-guarded", syncCommentGuarded, {
     ...[
       "tooling/eslint/test/base-config.test.ts",
       "packages/runtimes/node/src/site.test.ts",
-      "packages/admin-editor/src/block-catalog-tab.browser.test.tsx",
+      "packages/admin-editor/src/block-catalog-tab.test.tsx",
       "apps/demo/e2e/demo.spec.ts",
       "`tooling/eslint/test/base-config.test.ts`.",
     ].map((guard) => ({

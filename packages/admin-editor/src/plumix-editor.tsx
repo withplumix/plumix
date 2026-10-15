@@ -44,7 +44,10 @@ import {
   useEditorStore,
   useEditorStoreApi,
 } from "./provider.js";
-import { selectStarterPatterns } from "./select-starter-patterns.js";
+import {
+  selectStarterPatterns,
+  shouldOpenStarter,
+} from "./select-starter-patterns.js";
 import { ShortcutsDialog } from "./shortcuts-dialog.js";
 import { StarterModal } from "./starter-modal.js";
 import { StylesTab } from "./styles-tab.js";
@@ -174,8 +177,7 @@ export function PlumixEditor({
     () => selectStarterPatterns(patterns ?? [], entryType),
     [patterns, entryType],
   );
-  const seedStarterOpen =
-    (defaultValue?.blocks.length ?? 0) === 0 && starterCandidates.length > 0;
+  const seedStarterOpen = shouldOpenStarter(defaultValue, starterCandidates);
 
   if (readOnly) {
     return (

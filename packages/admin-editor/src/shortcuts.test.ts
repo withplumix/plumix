@@ -5,8 +5,10 @@ import {
   EDITOR_SHORTCUTS,
   forwardedShortcut,
   forwardedShortcutId,
+  historyShortcut,
   isTypingTarget,
   matchesShortcut,
+  nextPaletteOpen,
   SHORTCUT_GROUP_IDS,
   shortcutsInGroup,
 } from "./shortcuts.js";
@@ -235,5 +237,98 @@ describe("isTypingTarget", () => {
 
   test("no target is not a typing target", () => {
     expect(isTypingTarget(null)).toBe(false);
+  });
+});
+
+describe("historyShortcut", () => {
+  const field = Object.assign(new EventTarget(), { tagName: "INPUT" });
+
+  test("Ctrl+Z undoes", () => {
+    expect(
+      historyShortcut({
+        ...key({ key: "z", ctrlKey: true }),
+        repeat: false,
+        target: null,
+      }),
+    ).toBe("undo");
+  });
+
+  test("Ctrl+Shift+Z redoes", () => {
+    expect(
+      historyShortcut({
+        ...key({ key: "Z", ctrlKey: true, shiftKey: true }),
+        repeat: false,
+        target: null,
+      }),
+    ).toBe("redo");
+  });
+
+  test("defers to a field's native undo while the author types", () => {
+    expect(
+      historyShortcut({
+        ...key({ key: "z", ctrlKey: true }),
+        repeat: false,
+        target: field,
+      }),
+    ).toBeNull();
+  });
+
+  test("a held chord's auto-repeat takes no further step", () => {
+    expect(
+      historyShortcut({
+        ...key({ key: "z", ctrlKey: true }),
+        repeat: true,
+        target: null,
+      }),
+    ).toBeNull();
+  });
+});
+
+describe("nextPaletteOpen", () => {
+  const field = Object.assign(new EventTarget(), { tagName: "INPUT" });
+
+  test("Cmd+K opens the palette", () => {
+    expect(
+      nextPaletteOpen(
+        { ...key({ key: "k", metaKey: true }), repeat: false, target: null },
+        false,
+      ),
+    ).toBe(true);
+  });
+
+  test("opens while the author is typing — Cmd+K types nothing", () => {
+    expect(
+      nextPaletteOpen(
+        { ...key({ key: "k", metaKey: true }), repeat: false, target: field },
+        false,
+      ),
+    ).toBe(true);
+  });
+
+  test("the chord toggles an open palette closed", () => {
+    expect(
+      nextPaletteOpen(
+        { ...key({ key: "k", ctrlKey: true }), repeat: false, target: null },
+        true,
+      ),
+    ).toBe(false);
+  });
+
+  test("a held chord's auto-repeat leaves the palette as it is", () => {
+    expect(
+      nextPaletteOpen(
+        { ...key({ key: "k", metaKey: true }), repeat: true, target: null },
+        true,
+      ),
+    ).toBe(true);
+  });
+
+  test("another key leaves the palette as it is", () => {
+    expect(
+      nextPaletteOpen(
+        { ...key({ key: "j", metaKey: true }), repeat: false, target: null },
+        false,
+      ),
+    ).toBe(false);
   });
 });

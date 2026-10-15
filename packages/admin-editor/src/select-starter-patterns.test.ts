@@ -3,7 +3,10 @@ import { describe, expect, test } from "vitest";
 import { byPriorityThen } from "@plumix/core/manifest";
 
 import type { InserterPattern } from "./block-catalog.js";
-import { selectStarterPatterns } from "./select-starter-patterns.js";
+import {
+  selectStarterPatterns,
+  shouldOpenStarter,
+} from "./select-starter-patterns.js";
 
 const blank = (
   overrides: Partial<InserterPattern> & { readonly name: string },
@@ -94,5 +97,28 @@ describe("selectStarterPatterns", () => {
     expect(selectStarterPatterns(patterns, "page")).toEqual(
       [...patterns].sort(byPriorityThen((p) => p.name)),
     );
+  });
+});
+
+describe("shouldOpenStarter", () => {
+  const starter = blank({ name: "starter/hero", target: "post-content" });
+
+  test("opens for a blank entry with eligible starters", () => {
+    expect(
+      shouldOpenStarter({ version: "plumix.v2", blocks: [] }, [starter]),
+    ).toBe(true);
+  });
+
+  test("stays closed when the entry already has content", () => {
+    expect(
+      shouldOpenStarter(
+        { version: "plumix.v2", blocks: [{ id: "h1", name: "core/heading" }] },
+        [starter],
+      ),
+    ).toBe(false);
+  });
+
+  test("stays closed when no starter is eligible", () => {
+    expect(shouldOpenStarter(undefined, [])).toBe(false);
   });
 });
