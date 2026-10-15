@@ -207,6 +207,26 @@ const recapturedScreenshotsInto = (
     worktreePath,
   );
 
+type AfterCiFix =
+  | { readonly next: "gates" }
+  | { readonly next: "decline"; readonly reason: string }
+  | { readonly next: "not-this-branch"; readonly reason: string };
+
+/**
+ * A rebase onto newer main can carry the fix itself, so a fixer with nothing
+ * to add then still sends the rebased branch through the gates to CI.
+ */
+export const afterCiFix = (
+  declined: { readonly reason: string; readonly notThisBranch: boolean } | null,
+  { rebaseMovedTheBranch }: { readonly rebaseMovedTheBranch: boolean },
+): AfterCiFix => {
+  if (!declined) return { next: "gates" };
+  if (declined.notThisBranch)
+    return { next: "not-this-branch", reason: declined.reason };
+  if (rebaseMovedTheBranch) return { next: "gates" };
+  return { next: "decline", reason: declined.reason };
+};
+
 export const repairPullRequest = async (
   ticket: Ticket,
   pullRequest: QueuedPullRequest,
@@ -247,6 +267,7 @@ export const repairPullRequest = async (
 
   try {
     say(`\n--- repair #${pullRequest.number}: rebase onto main ---`);
+    const headBefore = (await sandbox.exec("git rev-parse HEAD")).stdout.trim();
     const rebase = await sandbox.exec("git rebase origin/main");
     if (rebase.exitCode !== 0) {
       const resolved = await runAgentPhase("resolve-conflicts", IMPLEMENTER, {
@@ -303,14 +324,20 @@ export const repairPullRequest = async (
     if (brief) {
       say(`--- repair #${pullRequest.number}: fix what CI saw ---`);
       const { declined: fixDeclined } = await fixer.apply("repair:ci", brief);
-      if (fixDeclined?.notThisBranch) {
+      const headAfter = (
+        await sandbox.exec("git rev-parse HEAD")
+      ).stdout.trim();
+      const next = afterCiFix(fixDeclined, {
+        rebaseMovedTheBranch: headAfter !== headBefore,
+      });
+      if (next.next === "not-this-branch") {
         return {
           status: "not-this-branch",
-          reason: `${refusal.reason}\n\n${fixDeclined.reason}`,
+          reason: `${refusal.reason}\n\n${next.reason}`,
         };
       }
-      if (fixDeclined)
-        return declined(`${refusal.reason}\n\n${fixDeclined.reason}`);
+      if (next.next === "decline")
+        return declined(`${refusal.reason}\n\n${next.reason}`);
     }
 
     const toRun = gatesARepairRuns(refusal);

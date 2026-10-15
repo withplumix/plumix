@@ -11,6 +11,7 @@ import { describe, expect, test } from "vitest";
 
 import type { MergeOutcome } from "./verdict.js";
 import {
+  afterCiFix,
   aRerunCannotTurnItGreen,
   asCiEvidenceBrief,
   failedOnlyOnTheScreenshotDiff,
@@ -201,5 +202,45 @@ describe("recaptureScreenshots", () => {
         throw new Error("no artifact docs-screenshots");
       }, worktree),
     ).toBe(false);
+  });
+});
+
+describe("afterCiFix", () => {
+  const declinedBecause = (reason: string) => ({
+    reason,
+    notThisBranch: false,
+  });
+
+  test("a fix that changed the branch goes on to the gates", () => {
+    expect(afterCiFix(null, { rebaseMovedTheBranch: false })).toEqual({
+      next: "gates",
+    });
+  });
+
+  test("nothing left to fix after a rebase onto newer main still gates and pushes the rebased branch", () => {
+    // #3145: the rebase brought in main's fix, the fixer rightly committed
+    // nothing, and the stale head stayed on the PR.
+    expect(
+      afterCiFix(declinedBecause("the rebase already fixes it"), {
+        rebaseMovedTheBranch: true,
+      }),
+    ).toEqual({ next: "gates" });
+  });
+
+  test("a fixer that changes nothing on an unmoved branch declines", () => {
+    expect(
+      afterCiFix(declinedBecause("can't reproduce"), {
+        rebaseMovedTheBranch: false,
+      }),
+    ).toEqual({ next: "decline", reason: "can't reproduce" });
+  });
+
+  test("a failure the fixer pins on something else is not this branch's", () => {
+    expect(
+      afterCiFix(
+        { reason: "flaky runner", notThisBranch: true },
+        { rebaseMovedTheBranch: true },
+      ),
+    ).toEqual({ next: "not-this-branch", reason: "flaky runner" });
   });
 });
