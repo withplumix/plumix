@@ -2,7 +2,7 @@ import type { JsonObject, JsonValue } from "plumix";
 import { defineAuthMethod, defineMail, definePlugin } from "plumix/plugin";
 
 import type emailCodeClient from "./client.js";
-import { checkCode, issueCode } from "./codes.js";
+import { checkCode, CODE_TTL_MINUTES, issueCode } from "./codes.js";
 import * as schema from "./schema.js";
 
 interface EmailCodeMail {
@@ -20,12 +20,14 @@ declare module "plumix" {
 
 const emailCodeMail = defineMail<EmailCodeMail>("emailCode", {
   subject: () => "Your sign-in code",
-  text: ({ code }) => `Your sign-in code is ${code}. It expires in 10 minutes.`,
+  text: ({ code }) =>
+    `Your sign-in code is ${code}. It expires in ${CODE_TTL_MINUTES} minutes.`,
   preview: { code: "123456" },
 });
 
-const isObject = (input: JsonValue): input is JsonObject =>
-  typeof input === "object" && input !== null && !Array.isArray(input);
+function isObject(input: JsonValue): input is JsonObject {
+  return typeof input === "object" && input !== null && !Array.isArray(input);
+}
 
 function readStringField(input: JsonValue, name: string): string {
   const value = isObject(input) ? input[name] : undefined;

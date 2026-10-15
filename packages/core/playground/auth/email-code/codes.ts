@@ -4,7 +4,9 @@ import { and, count, desc, eq, gte } from "plumix/db";
 import { emailCodeMisses, emailCodes } from "./schema.js";
 
 /** How long a code stays good, and the window the per-email cap counts. */
-const CODE_TTL_MS = 10 * 60 * 1000;
+export const CODE_TTL_MINUTES = 10;
+
+const CODE_TTL_MS = CODE_TTL_MINUTES * 60 * 1000;
 
 const MAX_CODES_PER_EMAIL = 3;
 
@@ -22,7 +24,13 @@ async function hash(code: string): Promise<string> {
     .join("");
 }
 
-const windowStart = (): Date => new Date(Date.now() - CODE_TTL_MS);
+function liveCodes(email: string) {
+  const windowStart = new Date(Date.now() - CODE_TTL_MS);
+  return and(
+    eq(emailCodes.email, email),
+    gte(emailCodes.createdAt, windowStart),
+  );
+}
 
 /**
  * A fresh six-digit code, or `null` once `email` has its cap this window.
@@ -35,12 +43,7 @@ export async function issueCode(
   const [sent] = await ctx.db
     .select({ value: count() })
     .from(emailCodes)
-    .where(
-      and(
-        eq(emailCodes.email, email),
-        gte(emailCodes.createdAt, windowStart()),
-      ),
-    );
+    .where(liveCodes(email));
   if ((sent?.value ?? 0) >= MAX_CODES_PER_EMAIL) return null;
   const [random = 0] = crypto.getRandomValues(new Uint32Array(1));
   const code = String(random % 1_000_000).padStart(6, "0");
@@ -48,10 +51,7 @@ export async function issueCode(
   return code;
 }
 
-/**
- * Checks `code` against the newest code sent to `email`. A match deletes
- * every code the address holds, so it can't be used twice.
- */
+/** A match deletes every code the address holds, so a code can't be used twice. */
 export async function checkCode(
   ctx: AppContext,
   email: string,
@@ -60,12 +60,7 @@ export async function checkCode(
   const [latest] = await ctx.db
     .select()
     .from(emailCodes)
-    .where(
-      and(
-        eq(emailCodes.email, email),
-        gte(emailCodes.createdAt, windowStart()),
-      ),
-    )
+    .where(liveCodes(email))
     .orderBy(desc(emailCodes.id))
     .limit(1);
   if (latest === undefined) return "code_expired";

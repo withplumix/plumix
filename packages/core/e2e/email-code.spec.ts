@@ -73,26 +73,33 @@ test.describe("the email-code method from a theme island", () => {
 test.describe("the email-code method from a form with no script", () => {
   test.use({ javaScriptEnabled: false });
 
-  test("shows a wrong code's error on loginPath, then signs in", async ({
-    page,
-    mailbox,
-  }) => {
-    const email = `plain@${ALLOWED_DOMAIN}`;
+  test("shows a wrong code's error on loginPath", async ({ page, mailbox }) => {
+    const email = `wrong@${ALLOWED_DOMAIN}`;
     await mailbox.clear();
     await page.goto("/sign-in-no-script");
-
     await page.getByTestId("plain-sign-in-email").fill(email);
     await page.getByTestId("plain-sign-in-send-code").click();
     await expect(page.getByTestId("plain-sign-in-sent")).toBeVisible();
-    const { props } = await mailbox.latest("emailCode", { to: email });
-    const wrong = String((Number(props.code) + 1) % 1_000_000).padStart(6, "0");
+
     await page.getByTestId("plain-sign-in-email").fill(email);
-    await page.getByTestId("plain-sign-in-code").fill(wrong);
+    await page.getByTestId("plain-sign-in-code").fill("not-a-code");
     await page.getByTestId("plain-sign-in-submit").click();
+
     await expect(page.getByTestId("plain-sign-in-error")).toHaveAttribute(
       "data-code",
       "wrong_code",
     );
+  });
+
+  test("signs a reader in and lands on /account", async ({ page, mailbox }) => {
+    const email = `plain@${ALLOWED_DOMAIN}`;
+    await mailbox.clear();
+    await page.goto("/sign-in-no-script");
+    await page.getByTestId("plain-sign-in-email").fill(email);
+    await page.getByTestId("plain-sign-in-send-code").click();
+    await expect(page.getByTestId("plain-sign-in-sent")).toBeVisible();
+    const { props } = await mailbox.latest("emailCode", { to: email });
+
     await page.getByTestId("plain-sign-in-email").fill(email);
     await page.getByTestId("plain-sign-in-code").fill(props.code);
     await page.getByTestId("plain-sign-in-submit").click();

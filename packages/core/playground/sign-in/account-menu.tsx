@@ -4,10 +4,6 @@ import type { IslandProps } from "plumix/blocks";
 import type { ReactNode } from "react";
 import { authClient } from "plumix/auth/client";
 
-/**
- * Who is signed in, from the session the page rendered with. Signing out
- * updates it in place, with no reload.
- */
 export function AccountMenu(_props: IslandProps<object>): ReactNode {
   const { user, isPending } = authClient.useSession();
   if (isPending) return null;
