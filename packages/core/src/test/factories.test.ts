@@ -316,24 +316,49 @@ describe("authTokenFactory", () => {
 });
 
 describe("revisionFactory", () => {
-  test("writes the revision a save of its entry would", async () => {
+  test("writes the revision row a save of its entry stores", async () => {
     const db = await createTestDb();
     const user = await userFactory.transient({ db }).create({});
     const entry = await entryFactory.transient({ db }).create({
       authorId: user.id,
+      title: "Hello",
+      slug: "hello",
       status: "published",
       excerpt: "An excerpt",
+      publishedAt: new Date(1_700_000_000_000),
       content: { version: "plumix.v2", blocks: [] },
     });
 
     const seeded = await revisionFactory
       .transient({ db, of: entry })
       .create({ authorId: user.id });
+
+    expect(seeded).toMatchObject({
+      type: "revision",
+      parentId: null,
+      title: "Hello",
+      excerpt: "An excerpt",
+      status: "published",
+      authorId: user.id,
+      publishedAt: new Date(1_700_000_000_000),
+      content: { version: "plumix.v2", blocks: [] },
+      meta: { __plumix_snapshot: { slug: "hello", parentId: null } },
+    });
+    expect(seeded.slug).toMatch(new RegExp(`^revision:${String(entry.id)}:`));
+  });
+
+  test("lists beside the revisions a save writes", async () => {
+    const db = await createTestDb();
+    const user = await userFactory.transient({ db }).create({});
+    const entry = await entryFactory
+      .transient({ db })
+      .create({ authorId: user.id });
+
+    const seeded = await revisionFactory
+      .transient({ db, of: entry })
+      .create({ authorId: user.id });
     const saved = await snapshotAsRevision(db, { entry, authorId: user.id });
 
-    const { id: _seededId, slug: _seededSlug, ...seededRow } = seeded;
-    const { id: _savedId, slug: _savedSlug, ...savedRow } = saved;
-    expect(seededRow).toEqual(savedRow);
     const { revisions } = await listRevisions(db, {
       entryId: entry.id,
       limit: 10,

@@ -14,7 +14,7 @@ export interface EditorEntryRef {
   readonly id: number;
 }
 
-/** A revision of the open entry: a row from the `revision` factory, or its id. */
+/** A revision of the open entry, such as a row from the `revision` factory. */
 export interface EditorRevisionRef {
   readonly id: number;
 }
