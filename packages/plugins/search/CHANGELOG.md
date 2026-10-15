@@ -1,5 +1,21 @@
 # @plumix/plugin-search
 
+## 0.2.0
+
+### Minor Changes
+
+- [#2901](https://github.com/withplumix/plumix/pull/2901) [`1df6458`](https://github.com/withplumix/plumix/commit/1df6458c210daa8ff69ccaa76e7f2ac26e769561) Thanks [@nasyrov](https://github.com/nasyrov)! - Ships the plugin's migration history
+
+- [#3097](https://github.com/withplumix/plumix/pull/3097) [`c92bb82`](https://github.com/withplumix/plumix/commit/c92bb82e52fd073f4ad4b44c70518f53a804740e) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds entries of types with an `access` policy to search, each result listed only to a searcher who may see it and a soft-gated entry's snippet kept to its excerpt. Start one rebuild at `/_plumix/search/reindex` after upgrading, so entries of a policied type already in the database become findable.
+
+- [#3130](https://github.com/withplumix/plumix/pull/3130) [`6b10239`](https://github.com/withplumix/plumix/commit/6b1023929bc185d4b79fb12ea0d391e6029d8c0a) Thanks [@nasyrov](https://github.com/nasyrov)! - Starts a rebuild of the search index after a `plumix sync` that replaced the site's content.
+
+### Patch Changes
+
+- [#3076](https://github.com/withplumix/plumix/pull/3076) [`96ad9ca`](https://github.com/withplumix/plumix/commit/96ad9ca45c23cfd57b46a95b475f734e61a67ad0) Thanks [@nasyrov](https://github.com/nasyrov)! - Works with plumix 0.25.0, whose `publicEntryRows` takes the request context and whose `adminEntryScope` is async. Feeds, sitemaps and search list what they did before.
+
+- [#2964](https://github.com/withplumix/plumix/pull/2964) [`6da3d02`](https://github.com/withplumix/plumix/commit/6da3d02debc948f228187db31a87142f75ae1bb0) Thanks [@nasyrov](https://github.com/nasyrov)! - Drops its `sqlMigrations` declaration. The FTS5 index and its triggers come from the migration history the package ships, which `plumix migrate` applies.
+
 ## 0.1.2
 
 ### Patch Changes

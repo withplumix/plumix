@@ -1,5 +1,15 @@
 # @plumix/plugin-feeds
 
+## 0.4.0
+
+### Minor Changes
+
+- [#3096](https://github.com/withplumix/plumix/pull/3096) [`e826bd4`](https://github.com/withplumix/plumix/commit/e826bd4b57a1017631b08e8809e2b309b7aab3af) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds feeds for entry types with an `access` policy. Each feed lists the entries its reader may see: an anonymous reader gets the public ones, from a feed the CDN caches, and a signed-in reader gets their own, served privately. A soft-gated entry's item carries its excerpt and never its body.
+
+### Patch Changes
+
+- [#3076](https://github.com/withplumix/plumix/pull/3076) [`96ad9ca`](https://github.com/withplumix/plumix/commit/96ad9ca45c23cfd57b46a95b475f734e61a67ad0) Thanks [@nasyrov](https://github.com/nasyrov)! - Works with plumix 0.25.0, whose `publicEntryRows` takes the request context and whose `adminEntryScope` is async. Feeds, sitemaps and search list what they did before.
+
 ## 0.3.0
 
 ### Minor Changes

@@ -1,5 +1,23 @@
 # @plumix/plugin-og
 
+## 0.5.0
+
+### Minor Changes
+
+- [#3076](https://github.com/withplumix/plumix/pull/3076) [`96ad9ca`](https://github.com/withplumix/plumix/commit/96ad9ca45c23cfd57b46a95b475f734e61a67ad0) Thanks [@nasyrov](https://github.com/nasyrov)! - Asks whether an entry is shareable through plumix's `anonymousContext`, in place of the removed `entryAllowsAnonymousAccess`. Cards behave as before. Requires plumix 0.25.0.
+
+- [#3092](https://github.com/withplumix/plumix/pull/3092) [`598baf0`](https://github.com/withplumix/plumix/commit/598baf09033c123fb9b6b333835fc6db9bf215ba) Thanks [@nasyrov](https://github.com/nasyrov)! - Gives a `registerArchiveType` page a social card. Once a theme declares a `card.forArchiveType(name)` rule, every page of that archive carries `og:image` in its head, served from `/_plumix/og/card/archive-type/<name>/<param>/<value>…/<digest>.png` with the same storage, digest and edge caching as other cards. The route rebuilds the page through the archive's own `resolve` as an anonymous visitor, so a URL with no page, a page its `access` policy hides from anonymous visitors, or a listing archive that lists nothing gets no card. The stored card is purged with its page's tags. `plumix/plugin` adds `resolveArchiveTypePage`, which resolves a plugin archive's page from its route params through the same call core's route makes.
+
+- [#3130](https://github.com/withplumix/plumix/pull/3130) [`6b10239`](https://github.com/withplumix/plumix/commit/6b1023929bc185d4b79fb12ea0d391e6029d8c0a) Thanks [@nasyrov](https://github.com/nasyrov)! - Deletes the stored social cards after a `plumix sync` that replaced the site's content, so each is rendered again from the new content on its next request.
+
+- [#2887](https://github.com/withplumix/plumix/pull/2887) [`33a6a22`](https://github.com/withplumix/plumix/commit/33a6a22c964f78ac881e6bb73b0ddeb7bfb18275) Thanks [@nasyrov](https://github.com/nasyrov)! - Requires React 19.3. Move `react`, `react-dom`, `@types/react` and `@types/react-dom` in your site to `^19.3.0`; new projects from `create-plumix-app` start on it.
+
+### Patch Changes
+
+- [#2969](https://github.com/withplumix/plumix/pull/2969) [`6e44a7d`](https://github.com/withplumix/plumix/commit/6e44a7dddb710bf3f65ad47066e31475c7d4ade8) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `valibot` to 1.5.0 in the framework and the first-party plugins, `@valibot/to-json-schema` to 1.8.0, `@sindresorhus/slugify` to 3.0.1, `lucide-react` to 1.49.0 and `react-colorful` to 5.8.1 in the framework, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.62.4, `wrangler` 4.146, `@cloudflare/workers-types` 5.20261001.1) in `@plumix/runtime-cloudflare`.
+
+- [#3034](https://github.com/withplumix/plumix/pull/3034) [`fbd829d`](https://github.com/withplumix/plumix/commit/fbd829d5a349a97c3abba7214dbf9bbb2fff5552) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `@tanstack/react-query` to 5.104.1 and `@tanstack/react-router` to 1.170.41 in the framework and the first-party plugins, `@lingui/core` and `@lingui/react` to 6.9.0, the editor's `@tiptap/*` packages to 3.31.4 and `@modelcontextprotocol/sdk` to 1.32.0 in the framework, `vite` to 8.3.2 in the framework and the runtimes, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.62.5, `wrangler` 4.147) in `@plumix/runtime-cloudflare`.
+
 ## 0.4.0
 
 ### Minor Changes
