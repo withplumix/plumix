@@ -7,6 +7,7 @@ import {
   MANIFEST_WITH_TAXONOMIES,
   mockManifest,
   mockRpc,
+  rpcErrorBody,
   rpcOkBody,
 } from "./support/rpc-mock.js";
 
@@ -323,5 +324,51 @@ test.describe("/terms/$name/$id/edit", () => {
       .poll(() => (deleteInputs.at(-1) as { id?: number } | undefined)?.id)
       .toBe(42);
     await expect(page).toHaveURL(/\/terms\/category\?/);
+  });
+});
+
+test.describe("/terms/$name (list states)", () => {
+  test("surfaces the load-error alert when term.list rejects", async ({
+    page,
+  }) => {
+    await mockManifest(page, MANIFEST_WITH_TAXONOMIES);
+    await mockRpc(page, { "/auth/session": AUTHED_ADMIN });
+    await page.route("**/_plumix/rpc/term/list", (route) =>
+      route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: rpcErrorBody({ code: "INTERNAL_SERVER_ERROR", message: "boom" }),
+      }),
+    );
+    await page.goto("terms/category");
+
+    await expect(page.getByTestId("taxonomy-list-load-error")).toBeVisible();
+  });
+
+  test("a taxonomy's description renders under the list heading", async ({
+    page,
+  }) => {
+    await mockManifest(page, {
+      ...MANIFEST_WITH_TAXONOMIES,
+      termTaxonomies: [
+        {
+          name: "category",
+          label: "Categories",
+          isPublic: true,
+          showUI: true,
+          showInSidebar: true,
+          description: {
+            id: "e2e.category.description",
+            message: "Group posts by subject",
+          },
+        },
+      ],
+    });
+    await mockRpc(page, { "/auth/session": AUTHED_ADMIN, "/term/list": [] });
+    await page.goto("terms/category");
+
+    await expect(page.getByTestId("taxonomy-list-description")).toHaveText(
+      "Group posts by subject",
+    );
   });
 });

@@ -163,6 +163,36 @@ test.describe("plain-form route for non-editor entry types", () => {
       .toEqual([expect.objectContaining({ title: "Jane Q. Doe" })]);
   });
 
+  test("leaving the plain form with an unsaved edit still saves it", async ({
+    page,
+  }) => {
+    const captures = await mockRpcWithCapture(page, {
+      captureSuffix: "/entry/update",
+      captureResponse: { ...authorEntry(1), updatedAt: T0 },
+      handlers: {
+        "/auth/session": AUTHED_AUTHOR_EDITOR,
+        "/entry/list": [authorEntry(1)],
+        "/entry/get": authorEntry(1),
+      },
+    });
+    await page.clock.install();
+    await page.goto("entries/authors");
+    await page.getByTestId("content-list-row-1").click();
+    await expect(page.getByTestId("plain-form-title-input")).toHaveValue(
+      "Jane Doe",
+    );
+    // Held clock: the autosave debounce never elapses, so only leaving sends.
+    await page.clock.pauseAt(Date.now() + 60_000);
+
+    await page.getByTestId("plain-form-title-input").fill("Jane Q. Doe");
+    await page.goBack();
+
+    await expect(page.getByTestId("plain-form-layout")).toHaveCount(0);
+    await expect
+      .poll(() => captures)
+      .toEqual([expect.objectContaining({ title: "Jane Q. Doe" })]);
+  });
+
   test("a rejected save pins the server's field error on its input, and the next save clears it", async ({
     page,
   }) => {

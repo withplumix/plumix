@@ -1,12 +1,15 @@
 import { expect, test } from "@playwright/test";
 
 import type { User } from "@plumix/core/schema";
+import { emptyManifest } from "@plumix/core/manifest";
 
 import {
   AUTHED_ADMIN,
+  mockManifest,
   mockRpc,
   mockRpcWithCapture,
   rpcConflictBody,
+  rpcErrorBody,
   rpcOkBody,
 } from "./support/rpc-mock.js";
 
@@ -167,6 +170,35 @@ test.describe("/users", () => {
     // Router redirect lands on dashboard.
     await expect(page).toHaveURL(/_plumix\/admin\/?$/);
   });
+
+  test("surfaces the load-error alert when user.list rejects", async ({
+    page,
+  }) => {
+    await mockRpc(page, { "/auth/session": AUTHED_ADMIN });
+    await page.route("**/_plumix/rpc/user/list", (route) =>
+      route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: rpcErrorBody({ code: "INTERNAL_SERVER_ERROR", message: "boom" }),
+      }),
+    );
+    await page.goto("users");
+    await expect(page.getByTestId("users-list-load-error")).toBeVisible();
+  });
+
+  test("where email delivery is refused, /users offers no invite action", async ({
+    page,
+  }) => {
+    await mockManifest(page, {
+      ...emptyManifest(),
+      refusedAdminAreas: ["emailDelivery"],
+    });
+    await mockRpc(page, { "/auth/session": AUTHED_ADMIN, "/user/list": [] });
+    await page.goto("users");
+    await expect(page.getByTestId("users-list-empty-state")).toBeVisible();
+    await expect(page.getByTestId("users-list-invite-button")).toHaveCount(0);
+    await expect(page.getByTestId("users-list-empty-invite")).toHaveCount(0);
+  });
 });
 
 test.describe("/users/create", () => {
@@ -256,6 +288,19 @@ test.describe("/users/create", () => {
     // Route's beforeLoad redirects to /users.
     await expect(page).toHaveURL(/\/users/);
     await expect(page.getByTestId("users-list-heading")).toBeVisible();
+  });
+
+  test("where email delivery is refused, /users/create bounces to /users", async ({
+    page,
+  }) => {
+    await mockManifest(page, {
+      ...emptyManifest(),
+      refusedAdminAreas: ["emailDelivery"],
+    });
+    await mockRpc(page, { "/auth/session": AUTHED_ADMIN, "/user/list": [] });
+    await page.goto("users/create");
+    await expect(page.getByTestId("users-list-heading")).toBeVisible();
+    await expect(page.getByTestId("invite-email-input")).toHaveCount(0);
   });
 });
 
@@ -865,5 +910,77 @@ test.describe("/users/$id/edit — API tokens (admin oversight)", () => {
 
     expect(revokes[0]).toMatchObject({ id: "tok-v" });
     await expect(page.getByTestId("api-tokens-empty")).toBeVisible();
+  });
+});
+
+test.describe("/users/$id/edit — what the deployment refuses (self)", () => {
+  test("self-edit where the deployment refuses passkeys, API tokens and email delivery hides those surfaces", async ({
+    page,
+  }) => {
+    await mockManifest(page, {
+      ...emptyManifest(),
+      refusedAdminAreas: ["apiTokens", "passkeys", "emailDelivery"],
+    });
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/user/get": user({ id: 1, email: "admin@example.test", role: "admin" }),
+      "/user/pendingEmailChange": { pending: null },
+      "/auth/signInMethods": MAGIC_LINK_ON,
+      ...SELF_EDIT_LISTS,
+    });
+
+    await page.goto("users/1/edit");
+
+    await expect(page.getByTestId("profile-sessions-card")).toBeVisible();
+    await expect(page.getByTestId("user-edit-email")).toContainText(
+      "admin@example.test",
+    );
+    await expect(page.getByTestId("profile-passkeys-card")).toHaveCount(0);
+    await expect(page.getByTestId("api-tokens-card")).toHaveCount(0);
+    await expect(page.getByTestId("user-edit-email-change-button")).toHaveCount(
+      0,
+    );
+  });
+});
+
+test.describe("/users/$id/edit — Language card (self)", () => {
+  test("the Language card's switcher saves the chosen locale", async ({
+    page,
+  }) => {
+    await mockManifest(page, {
+      ...emptyManifest(),
+      i18n: {
+        defaultLocale: "en",
+        locales: [
+          { code: "en", label: "English", direction: "ltr", enabled: true },
+          { code: "uk", label: "Українська", direction: "ltr", enabled: true },
+        ],
+      },
+    });
+    const inputs = await mockRpcWithCapture(page, {
+      captureSuffix: "/user/setLocale",
+      captureResponse: { ok: true },
+      handlers: {
+        "/auth/session": AUTHED_ADMIN,
+        "/user/get": user({
+          id: 1,
+          email: "admin@example.test",
+          role: "admin",
+          meta: { locale: "en" },
+        }),
+        "/user/pendingEmailChange": { pending: null },
+        "/auth/signInMethods": MAGIC_LINK_ON,
+        ...SELF_EDIT_LISTS,
+      },
+    });
+    await page.goto("users/1/edit");
+    await expect(page.getByTestId("locale-switcher-trigger")).toContainText(
+      "English",
+    );
+
+    await page.getByTestId("locale-switcher-trigger").click();
+    await page.getByTestId("locale-switcher-option-uk").click();
+
+    await expect.poll(() => inputs).toEqual([{ code: "uk" }]);
   });
 });

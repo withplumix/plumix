@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import {
   readRecentNav,
+  recentPaletteItems,
   recordRecentNav,
   selectRecentNavItems,
 } from "./recent-nav.js";
@@ -44,6 +45,18 @@ describe("selectRecentNavItems", () => {
   test("drops recents that are no longer visible nav items", () => {
     const recent = selectRecentNavItems(NAV, ["/gone", "/users"], 5);
     expect(recent.map((i) => i.to)).toEqual(["/users"]);
+  });
+});
+
+describe("recentPaletteItems", () => {
+  test("an empty query offers the recent destinations", () => {
+    expect(recentPaletteItems("", NAV, ["/users"], 5)).toEqual([
+      { to: "/users" },
+    ]);
+  });
+
+  test("a typed query offers no recent destinations", () => {
+    expect(recentPaletteItems("us", NAV, ["/users"], 5)).toEqual([]);
   });
 });
 

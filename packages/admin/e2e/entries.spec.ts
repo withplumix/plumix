@@ -740,3 +740,34 @@ test.describe("/entries/$slug (list) — taxonomy filters", () => {
       .toEqual({ category: ["news"] });
   });
 });
+
+test.describe("/entries/$slug (list heading)", () => {
+  test("an entry type's description renders under the list heading", async ({
+    page,
+  }) => {
+    await mockManifest(page, {
+      ...emptyManifest(),
+      entryTypes: [
+        {
+          name: "post",
+          capabilityType: "post",
+          adminSlug: "posts",
+          isPublic: true,
+          showUI: true,
+          showInSidebar: true,
+          label: "Posts",
+          description: {
+            id: "e2e.post.description",
+            message: "Standard blog posts",
+          },
+        },
+      ],
+    });
+    await mockRpc(page, { "/auth/session": AUTHED_ADMIN, "/entry/list": [] });
+    await page.goto("entries/posts");
+
+    await expect(page.getByTestId("content-list-description")).toHaveText(
+      "Standard blog posts",
+    );
+  });
+});

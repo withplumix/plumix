@@ -1,6 +1,8 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
+import type { PlumixManifest } from "@plumix/core/manifest";
+
 import {
   AUTHED_ADMIN,
   MANIFEST_WITH_POST,
@@ -206,5 +208,144 @@ test.describe("admin shell", () => {
       (el) => el.closest('[role="menu"]')?.getAttribute("dir") ?? null,
     );
     expect(menuDir).toBe("rtl");
+  });
+});
+
+test.describe("error boundary", () => {
+  test("an uncaught route error shows the fallback and Show error reveals its message", async ({
+    page,
+  }) => {
+    await page.route("**/_plumix/rpc/auth/session", (route) =>
+      route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        // `defined`/`status` let the client decode the message; without them
+        // it reports the bare HTTP status text.
+        body: JSON.stringify({
+          json: {
+            defined: false,
+            code: "INTERNAL_SERVER_ERROR",
+            status: 500,
+            message: "session store unreachable",
+          },
+          meta: [],
+        }),
+      }),
+    );
+    await page.goto("");
+    await expect(page.getByTestId("error-boundary-title")).toBeVisible();
+    await expect(page.getByTestId("error-boundary-message")).toHaveCount(0);
+
+    await page.getByTestId("error-boundary-toggle").click();
+
+    await expect(page.getByTestId("error-boundary-message")).toContainText(
+      "session store unreachable",
+    );
+  });
+});
+
+const MANIFEST_WITH_NAV: PlumixManifest = {
+  ...MANIFEST_WITH_POST,
+  adminNav: [
+    {
+      id: "content",
+      label: "Content",
+      items: [
+        { to: "/entries/posts", label: "Posts" },
+        { to: "/users", label: "Users" },
+      ],
+    },
+  ],
+};
+
+async function openShell(page: Page): Promise<void> {
+  await mockManifest(page, MANIFEST_WITH_NAV);
+  await mockRpc(page, {
+    "/auth/session": AUTHED_ADMIN,
+    "/entry/stats": [],
+    "/entry/recentActivity": [],
+    "/entry/list": [],
+    "/user/list": [],
+    "/search/query": [
+      {
+        key: "entry:post",
+        label: "Posts",
+        priority: 10,
+        items: [{ id: "1", title: "Hello World" }],
+      },
+    ],
+  });
+  await page.goto("");
+  await expect(page.getByTestId("dashboard-tile-post-link")).toBeVisible();
+}
+
+test.describe("command palette", () => {
+  test("Cmd+K opens the command palette and Escape closes it", async ({
+    page,
+  }) => {
+    await openShell(page);
+
+    await page.keyboard.press("Meta+k");
+    await expect(page.getByTestId("command-palette-input")).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("command-palette-input")).toHaveCount(0);
+  });
+
+  test("selecting a palette nav item navigates there and closes the palette", async ({
+    page,
+  }) => {
+    await openShell(page);
+    await page.keyboard.press("Meta+k");
+
+    await page.getByTestId("command-palette-nav-/users").click();
+
+    await expect(page).toHaveURL(/\/users\?/);
+    await expect(page.getByTestId("command-palette-input")).toHaveCount(0);
+  });
+
+  test("a destination picked in the palette is offered under Recent next time", async ({
+    page,
+  }) => {
+    await openShell(page);
+    await page.keyboard.press("Meta+k");
+    await expect(page.getByTestId("command-palette-recent-/users")).toHaveCount(
+      0,
+    );
+    await page.getByTestId("command-palette-nav-/users").click();
+    await expect(page.getByTestId("users-list-heading")).toBeVisible();
+
+    await page.keyboard.press("Meta+k");
+
+    await expect(
+      page.getByTestId("command-palette-recent-/users"),
+    ).toBeVisible();
+    await expect(page.getByTestId("command-palette-nav-/users")).toBeVisible();
+  });
+
+  test("selecting a content search result opens its editor", async ({
+    page,
+  }) => {
+    await openShell(page);
+    await page.keyboard.press("Meta+k");
+    await page.getByTestId("command-palette-input").fill("hello");
+
+    await page.getByTestId("command-palette-result-entry:post:1").click();
+
+    // The manifest maps the `post` entry type to the `posts` admin slug.
+    await expect(page).toHaveURL(/\/entries\/posts\/1\/edit$/);
+  });
+
+  test("running the Edit profile palette command opens the profile", async ({
+    page,
+  }) => {
+    await openShell(page);
+    await page.keyboard.press("Meta+k");
+
+    await page.getByTestId("command-palette-command-core:profile").click();
+
+    // AUTHED_ADMIN.user.id === 1 — /profile redirects to /users/1.
+    await expect(page).toHaveURL(/\/users\/1\/edit$/);
+    await expect(page.getByTestId("command-palette-input")).toHaveCount(0);
   });
 });

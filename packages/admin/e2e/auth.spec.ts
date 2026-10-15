@@ -1,4 +1,5 @@
 import type { User } from "@plumix/core/schema";
+import { emptyManifest } from "@plumix/core/manifest";
 import { expect, test } from "@plumix/core/test/playwright";
 
 import { expectNoAxeViolations } from "./support/axe.js";
@@ -73,6 +74,36 @@ test.describe("/login", () => {
     await expect(page.getByTestId("login-heading")).toHaveText("Anmelden");
   });
 
+  test("/login offers a magic link and each OAuth provider the site configured", async ({
+    page,
+  }) => {
+    await mockRpc(page, {
+      "/auth/session": anonymousSession(),
+      "/auth/signInMethods": {
+        methods: [
+          { name: "passkey", label: "Passkey" },
+          { name: "magic-link", label: "Magic link" },
+          { name: "oauth", label: "OAuth" },
+        ],
+        oauth: [
+          { key: "github", label: "GitHub" },
+          { key: "google", label: "Google" },
+        ],
+      },
+    });
+    await page.goto("login");
+
+    await expect(page.getByTestId("login-magic-link-submit")).toBeVisible();
+    await expect(page.getByTestId("login-oauth-github")).toHaveAttribute(
+      "href",
+      "/_plumix/auth/oauth/github/start",
+    );
+    await expect(page.getByTestId("login-oauth-google")).toHaveAttribute(
+      "href",
+      "/_plumix/auth/oauth/google/start",
+    );
+  });
+
   test("?email_change_success=1 renders the success alert", async ({
     page,
   }) => {
@@ -113,6 +144,24 @@ test.describe("/login", () => {
 });
 
 test.describe("/auth/device", () => {
+  test("/auth/device sends the visitor home where device authorization is refused", async ({
+    page,
+  }) => {
+    await mockManifest(page, {
+      ...emptyManifest(),
+      refusedAdminAreas: ["deviceAuthorization"],
+    });
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/entry/stats": [],
+      "/entry/recentActivity": [],
+    });
+    await page.goto("auth/device");
+
+    await expect(page.getByTestId("dashboard-welcome-heading")).toBeVisible();
+    await expect(page.getByTestId("auth-device-heading")).toHaveCount(0);
+  });
+
   test("manual lookup → approve happy path", async ({ page }) => {
     const approves = await mockRpcWithCapture(page, {
       captureSuffix: "/auth/deviceFlow/approve",

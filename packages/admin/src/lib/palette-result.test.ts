@@ -1,6 +1,11 @@
 import { describe, expect, test } from "vitest";
 
-import { resultHref, shouldOpenInNewTab } from "./palette-result.js";
+import {
+  isPaletteSearching,
+  resultHref,
+  resultRoute,
+  shouldOpenInNewTab,
+} from "./palette-result.js";
 
 const slug = (name: string): string => (name === "post" ? "posts" : name);
 
@@ -23,6 +28,44 @@ describe("resultHref", () => {
 
   test("returns null for an unknown domain", () => {
     expect(resultHref("widget:thing", "1", slug)).toBeNull();
+  });
+});
+
+describe("resultRoute", () => {
+  test("routes an entry result to its editor under the type's admin slug", () => {
+    expect(resultRoute("entry:post", "1", slug)).toBe("/entries/posts/1/edit");
+  });
+
+  test("routes a term result to its taxonomy's term editor", () => {
+    expect(resultRoute("term:category", "7", slug)).toBe(
+      "/terms/category/7/edit",
+    );
+  });
+
+  test("routes a user result to the user editor", () => {
+    expect(resultRoute("users", "9", slug)).toBe("/users/9/edit");
+  });
+
+  test("routes nowhere for an unknown domain", () => {
+    expect(resultRoute("widget:thing", "1", slug)).toBeNull();
+  });
+});
+
+describe("isPaletteSearching", () => {
+  test("searching while a typed query waits out the debounce", () => {
+    expect(isPaletteSearching("hello", "hell", false)).toBe(true);
+  });
+
+  test("searching while the debounced query's request is in flight", () => {
+    expect(isPaletteSearching("hello", "hello", true)).toBe(true);
+  });
+
+  test("not searching once the debounced query's results have landed", () => {
+    expect(isPaletteSearching("hello", "hello", false)).toBe(false);
+  });
+
+  test("not searching for a query too short to search", () => {
+    expect(isPaletteSearching("h", "", false)).toBe(false);
   });
 });
 

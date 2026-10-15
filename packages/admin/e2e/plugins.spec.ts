@@ -313,3 +313,51 @@ test.describe("plugin field type registered via window.plumix", () => {
     await expect(siblings).toHaveText("Editor");
   });
 });
+
+test.describe("plugin dashboard widget registered via window.plumix", () => {
+  test("a plugin dashboard widget that throws shows its scoped fallback", async ({
+    page,
+  }) => {
+    await mockManifest(page, {
+      ...MANIFEST_WITH_POST,
+      dashboardWidgets: [
+        { id: "e2e:broken", title: "Broken widget", component: "Broken" },
+      ],
+    });
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/entry/stats": [],
+      "/entry/recentActivity": [],
+    });
+    // Registers as a plugin chunk would, at the bridge's first assignment.
+    await page.addInitScript(() => {
+      let trapped: unknown;
+      Object.defineProperty(window, "plumix", {
+        configurable: true,
+        get() {
+          return trapped;
+        },
+        set(value: {
+          registerPluginDashboardWidget?: (
+            id: string,
+            component: () => never,
+          ) => void;
+        }) {
+          trapped = value;
+          value.registerPluginDashboardWidget?.("e2e:broken", () => {
+            throw new Error("widget exploded");
+          });
+        },
+      });
+    });
+
+    await page.goto("");
+
+    await expect(
+      page
+        .getByTestId("dashboard-widget-e2e:broken")
+        .getByTestId("plugin-widget__error"),
+    ).toBeVisible();
+    await expect(page.getByTestId("dashboard-welcome-heading")).toBeVisible();
+  });
+});

@@ -17,4 +17,28 @@ describe("the admin area roster", () => {
     expect(isSurfaceOffered("passkeysCard", ["apiTokens"])).toBe(true);
     expect(isSurfaceOffered("passkeysCard", ["passkeys"])).toBe(false);
   });
+
+  test.each([
+    ["passkeysCard", "passkeys"],
+    ["selfApiTokens", "apiTokens"],
+    ["otherUsersApiTokens", "apiTokens"],
+    ["emailChange", "emailDelivery"],
+    ["userInvite", "emailDelivery"],
+    ["mailerPage", "emailDelivery"],
+    ["deviceAuthorizationPage", "deviceAuthorization"],
+  ] as const)("refusing %s's area %s hides it", (surface, area) => {
+    expect(isSurfaceOffered(surface, [area])).toBe(false);
+  });
+
+  test.each([
+    "passkeysCard",
+    "selfApiTokens",
+    "otherUsersApiTokens",
+    "emailChange",
+    "userInvite",
+    "mailerPage",
+    "deviceAuthorizationPage",
+  ] as const)("refusing only OAuth linking keeps %s", (surface) => {
+    expect(isSurfaceOffered(surface, ["oauthLinking"])).toBe(true);
+  });
 });

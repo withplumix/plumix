@@ -10,6 +10,7 @@ import {
   getPluginMarkSchema,
   getPluginPage,
   getRegisteredBlocks,
+  mountedDashboardWidgets,
   registerPluginBlock,
   registerPluginBlockEditor,
   registerPluginBlockSchema,
@@ -39,6 +40,27 @@ describe("plugin page registry", () => {
     expect(() => registerPluginPage("/menus", Stub)).toThrow(
       /already registered/,
     );
+  });
+});
+
+describe("mountedDashboardWidgets", () => {
+  test("pairs each widget with its registered component and skips the rest", () => {
+    const Hello = () => null;
+
+    const mounted = mountedDashboardWidgets(
+      [{ id: "demo:hello" }, { id: "demo:missing" }],
+      (id) => (id === "demo:hello" ? Hello : undefined),
+    );
+
+    expect(mounted).toEqual([
+      { widget: { id: "demo:hello" }, Component: Hello },
+    ]);
+  });
+
+  test("mounts nothing when no widget has a registered component", () => {
+    expect(
+      mountedDashboardWidgets([{ id: "demo:missing" }], () => undefined),
+    ).toEqual([]);
   });
 });
 
