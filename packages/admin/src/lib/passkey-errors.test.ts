@@ -1,6 +1,10 @@
 import { describe, expect, test } from "vitest";
 
-import { passkeyErrorDescriptor } from "./passkey-errors.js";
+import {
+  PasskeyError,
+  passkeyErrorDescriptor,
+  unwrapPasskeyResult,
+} from "./passkey-errors.js";
 
 describe("passkeyErrorDescriptor", () => {
   test("maps a known server code to a descriptor whose source message matches the expected copy", () => {
@@ -23,5 +27,25 @@ describe("passkeyErrorDescriptor", () => {
   test("falls back to the `unknown` descriptor for unrecognised codes", () => {
     const unknown = passkeyErrorDescriptor("something_the_server_added_later");
     expect(unknown.message).toMatch(/went wrong/i);
+  });
+});
+
+describe("unwrapPasskeyResult", () => {
+  test("hands a mutation the data of a ceremony that succeeded", () => {
+    expect(unwrapPasskeyResult({ data: { userId: 1 }, error: null })).toEqual({
+      userId: 1,
+    });
+  });
+
+  test("throws the failed ceremony's code as a PasskeyError", () => {
+    expect(() =>
+      unwrapPasskeyResult({
+        data: null,
+        error: {
+          code: "user_cancelled",
+          message: { id: "authClient.error.userCancelled" },
+        },
+      }),
+    ).toThrow(PasskeyError.userCancelled());
   });
 });

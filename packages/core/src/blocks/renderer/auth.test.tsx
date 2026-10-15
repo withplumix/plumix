@@ -1,14 +1,9 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import type { RendererAuthMethods, RendererUser } from "./context.js";
+import type { RendererUser } from "./context.js";
 import { createBlockRegistry } from "../block-registry.js";
-import {
-  PlumixProvider,
-  SignedIn,
-  SignedOut,
-  useAuthMethods,
-} from "./index.js";
+import { PlumixProvider, SignedIn, SignedOut } from "./index.js";
 
 const registry = createBlockRegistry([]);
 
@@ -43,44 +38,5 @@ describe("SignedOut", () => {
 
   test("renders nothing when a user is present", () => {
     expect(render(<SignedOut>Sign in</SignedOut>, user)).toBe("");
-  });
-});
-
-function Methods(): React.ReactNode {
-  const m = useAuthMethods();
-  if (!m) return <>none</>;
-  return (
-    <>
-      {m.methods.map((method) => method.name).join(",")}
-      {m.oauth.map((p) => (
-        <span key={p.key}>{p.label}</span>
-      ))}
-    </>
-  );
-}
-
-function renderWith(authMethods?: RendererAuthMethods): string {
-  return renderToStaticMarkup(
-    <PlumixProvider value={{ registry, authMethods }}>
-      <Methods />
-    </PlumixProvider>,
-  );
-}
-
-describe("useAuthMethods", () => {
-  test("reports the configured methods for a login page to render from", () => {
-    expect(
-      renderWith({
-        methods: [
-          { name: "passkey", label: "Passkey" },
-          { name: "magic-link", label: "Magic link" },
-        ],
-        oauth: [{ key: "github", label: "GitHub" }],
-      }),
-    ).toBe("passkey,magic-link<span>GitHub</span>");
-  });
-
-  test("returns null when the render supplies no methods", () => {
-    expect(renderWith()).toBe("none");
   });
 });

@@ -40,6 +40,10 @@
       "types": "./dist/auth/config.d.ts",
       "default": "./dist/auth/config.js"
     },
+    "./auth/client": {
+      "types": "./dist/auth/client/index.d.ts",
+      "default": "./dist/auth/client/index.js"
+    },
     "./blocks": {
       "types": "./dist/blocks/index.d.ts",
       "default": "./dist/blocks/index.js"

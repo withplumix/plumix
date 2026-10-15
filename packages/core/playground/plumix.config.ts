@@ -9,6 +9,7 @@ import {
   d1,
 } from "@plumix/runtime-cloudflare";
 
+import { fixtureSignIn } from "./auth/fixture.js";
 import { theme } from "./theme.js";
 
 // Root permalinks, so `/islands` is the `islands` page. Posts take drafts and
@@ -62,6 +63,6 @@ export default plumix({
   }),
   // No `storage:`, so a seeded media row's storage key is the URL it serves
   // from, and the editor's media picker lists factory-made rows.
-  plugins: [content, media()],
+  plugins: [content, media(), fixtureSignIn],
   theme,
 });

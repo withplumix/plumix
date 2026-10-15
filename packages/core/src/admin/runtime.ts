@@ -34,6 +34,9 @@ const SHIMS = {
   "radix-ui": { slug: "radix", runtimeKey: "radix" },
   sonner: { slug: "sonner", runtimeKey: "sonner" },
   "tailwind-merge": { slug: "tailwind-merge", runtimeKey: "tailwindMerge" },
+  // Shared so a plugin's method half registers on the host's `authClient`, and
+  // a plugin page reads its one session store.
+  "plumix/auth/client": { slug: "auth-client", runtimeKey: "authClient" },
 } as const satisfies Record<
   string,
   { readonly slug: string; readonly runtimeKey: string }

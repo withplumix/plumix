@@ -17,6 +17,7 @@ import type * as SonnerNs from "sonner";
 import type * as TailwindMergeNs from "tailwind-merge";
 
 import type { SharedAdminRuntimeKey } from "@plumix/core/admin";
+import type * as AuthClientNs from "@plumix/core/auth/client";
 import type {
   ConfiguredSlots,
   InfrastructureSlot,
@@ -39,6 +40,7 @@ interface SharedAdminNamespaces {
   radix: typeof RadixNs;
   sonner: typeof SonnerNs;
   tailwindMerge: typeof TailwindMergeNs;
+  authClient: typeof AuthClientNs;
 }
 
 /**

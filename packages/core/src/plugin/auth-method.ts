@@ -113,12 +113,21 @@ export interface AuthMethodDefinition<TCode extends string = string> {
   /** A kebab-case slug, mounted at `/_plumix/auth/<name>/`. */
   readonly name: string;
   readonly label: string;
-  /** `false` keeps it out of `useAuthMethods()` and `auth.signInMethods`. */
+  /**
+   * `false` keeps it out of `authClient.useAuthMethods()` and
+   * `auth.signInMethods`.
+   */
   readonly listed?: boolean;
   /** The codes `fail` accepts besides the identity refusals. */
   readonly errorCodes?: readonly TCode[];
   /** Keyed by path under the mount; a `:param` segment matches any one. */
   readonly routes: Readonly<Record<string, AuthMethodRoute<TCode>>>;
+  /**
+   * A browser-safe module default-exporting this method's
+   * `defineAuthMethodClient(name, …)`: a package subpath resolved from the
+   * site root (`"@acme/plumix-otp/client"`), or an absolute path.
+   */
+  readonly client?: string;
 }
 
 export function defineAuthMethod<const TCode extends string = never>(

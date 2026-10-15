@@ -129,7 +129,14 @@ Sign-in and session policy. `passkey` is required inside it and everything else 
 
 The seven optional keys are these.
 
-- `oauth` adds providers such as `github(...)`, each carrying its own client credentials.
+- `oauth` adds providers such as `github(...)`, each carrying its own client credentials. `authClient.signIn.oauth(provider)` takes any string until the config declares its providers to the type system. A scaffolded site already declares them; an older site adds it at the end of `plumix.config.ts`, after binding the config to `const config` and default-exporting that, with `OAuthProvidersOf` imported from `plumix`:
+
+  ```ts no-typecheck
+  declare module "plumix" {
+    interface OAuthProviderRegistry extends OAuthProvidersOf<typeof config> {}
+  }
+  ```
+
 - `magicLink` adds email sign-in, and it needs a top-level `mailer` or the build throws. `plumix dev` runs without one and catches the mail.
 - `sessions` replaces the session policy, which covers lifetime and renewal.
 - `authenticator` replaces how a request is identified. The default chains the session cookie and then the API-token bearer header. Override it for transparent SSO, such as `cfAccess({ teamDomain })`, and note the built-in login routes stay mounted, so firewall `/_plumix/auth/*` at the edge if you want them gone.

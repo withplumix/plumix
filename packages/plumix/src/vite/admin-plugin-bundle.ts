@@ -18,6 +18,7 @@ import {
 } from "@plumix/core";
 
 import type { BlockModuleRef } from "./block-module-resolver.js";
+import { authMethodClientsSource } from "./auth-method-clients-codegen.js";
 import {
   blockImportStatement,
   blockSpecsArrayExpr,
@@ -47,6 +48,9 @@ const ADMIN_SHIM_DIR = resolve(
   dirname(fileURLToPath(import.meta.url)),
   "../admin",
 );
+
+/** The shims' extension matches this module's: `.ts` when run from source. */
+const ADMIN_SHIM_EXT = import.meta.url.endsWith(".ts") ? ".ts" : ".js";
 
 /**
  * Resolve the `@theme` mapping from the installed @plumix/admin (same
@@ -85,9 +89,19 @@ export async function assemblePluginAdminBundle({
     (p): p is AnyPluginDescriptor & { adminEntry: string } =>
       typeof p.adminEntry === "string" && p.adminEntry.length > 0,
   );
-  // The bundle also carries theme/plugin block registrations, so build it when
-  // there are blocks even if no plugin declares an `adminEntry`.
-  if (withEntry.length === 0 && blockModules.length === 0) return null;
+  const cacheDir = resolve(projectRoot, ".plumix");
+  // Mounts each sign-in method's client half on the host's `authClient`
+  // through the `plumix/admin/auth-client` shim.
+  const methodClients = authMethodClientsSource(cacheDir, plugins);
+  // The bundle also carries theme/plugin block registrations and method
+  // clients, so build it for either even if no plugin declares an `adminEntry`.
+  if (
+    withEntry.length === 0 &&
+    blockModules.length === 0 &&
+    methodClients === ""
+  ) {
+    return null;
+  }
 
   for (const p of withEntry) {
     if (p.adminChunk) {
@@ -95,7 +109,6 @@ export async function assemblePluginAdminBundle({
     }
   }
 
-  const cacheDir = resolve(projectRoot, ".plumix");
   await mkdir(cacheDir, { recursive: true });
 
   // Namespace imports still execute module bodies, so imperative
@@ -112,7 +125,7 @@ export async function assemblePluginAdminBundle({
   });
 
   const entryFile = resolve(cacheDir, "admin-plugins-entry.mjs");
-  await writeFile(entryFile, `${synthesisedEntry}\n`);
+  await writeFile(entryFile, `${synthesisedEntry}\n${methodClients}`);
 
   const pluginsOutDir = resolve(adminDest, "plugins");
   await mkdir(pluginsOutDir, { recursive: true });
@@ -321,7 +334,7 @@ export async function resolveAndValidateEntry(
 const SHIM_PATHS: Readonly<Record<string, string>> = Object.fromEntries(
   Object.keys(SHARED_ADMIN_RUNTIME_SPECIFIERS).map((spec) => {
     const slug = adminRuntimeShimSlug(spec as SharedAdminRuntimeSpecifier);
-    return [spec, resolve(ADMIN_SHIM_DIR, `${slug}.js`)];
+    return [spec, resolve(ADMIN_SHIM_DIR, `${slug}${ADMIN_SHIM_EXT}`)];
   }),
 );
 

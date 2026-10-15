@@ -35,21 +35,6 @@ export interface RendererUser {
   readonly meta: JsonObject;
 }
 
-export interface RendererOAuthProvider {
-  /** Map key in `auth.oauth.providers`; the URL path segment. */
-  readonly key: string;
-  readonly label: string;
-}
-
-export interface RendererAuthMethods {
-  /** The listed sign-in methods: core's, then each plugin's in plugin order. */
-  readonly methods: readonly {
-    readonly name: string;
-    readonly label: string;
-  }[];
-  readonly oauth: readonly RendererOAuthProvider[];
-}
-
 export type RendererQueriedEntry =
   | { readonly kind: "entry"; readonly id: number; readonly preview: boolean }
   | { readonly kind: "term"; readonly id: number }
@@ -69,8 +54,6 @@ export interface PlumixContextValue {
   readonly breakpoints?: ThemeBreakpoints;
   readonly loaderData?: ResolvedBlockLoaders;
   readonly user?: RendererUser | null;
-  /** Configured auth methods, for a theme login/registration page. */
-  readonly authMethods?: RendererAuthMethods;
   readonly queriedEntry?: RendererQueriedEntry | null;
   /** Render locale, threaded to the walker for shortcode/`Intl` output. */
   readonly locale?: string;
@@ -228,15 +211,6 @@ export function useTokens(): ThemeTokens | undefined {
 
 export function useUser(): RendererUser | null {
   return usePlumixContext("useUser").user ?? null;
-}
-
-/**
- * The configured auth methods (passkey/magic-link on-off + OAuth providers),
- * for a theme's own login or registration page to render its controls from
- * config. Returns `null` outside a render that supplies them.
- */
-export function useAuthMethods(): RendererAuthMethods | null {
-  return usePlumixContext("useAuthMethods").authMethods ?? null;
 }
 
 export function useQueriedEntry(): RendererQueriedEntry | null {

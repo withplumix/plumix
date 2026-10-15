@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { base64urlToBuffer, bufferToBase64url } from "./base64url.js";
+import { base64urlToBuffer, bufferToBase64url } from "./webauthn.js";
 
 function str(bytes: number[]): ArrayBuffer {
   return new Uint8Array(bytes).buffer;

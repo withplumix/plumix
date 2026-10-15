@@ -168,6 +168,8 @@ const config: KnipConfig = {
         // can't see.
         "src/blocks/island-runtime.ts",
         "src/blocks/island-renderer.ts",
+        // Imported by site and generated code knip can't see.
+        "src/auth/client.ts",
         // The dev client error tools' single install entry is loaded by the
         // consumer's generated `.plumix/client-entry.ts` via a dev-gated
         // `import("plumix/core/dev-client")` — a runtime import knip can't see.
@@ -334,6 +336,9 @@ const config: KnipConfig = {
     },
     "packages/core/playground": {
       entry: ["plumix.config.ts"],
+      // A typecheck-only guard that the fixture method's augmentation types
+      // `authClient`; nothing imports it, as with apps/demo's.
+      ignore: ["auth/registry-guard.ts"],
     },
     // The editor's lingui config is loaded by the CLI, which knip can't see.
     "packages/admin-editor": {

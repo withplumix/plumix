@@ -74,6 +74,7 @@ export const FOLDERS: Readonly<Record<string, Placement>> = {
   "meta/": server("capabilities"),
   "access/": server("capabilities"),
   "auth/": server("capabilities"),
+  "auth/client/": client("capabilities"),
   "mail/": server("capabilities"),
   "entries/": server("capabilities"),
   "terms/": server("capabilities"),
@@ -159,6 +160,7 @@ export const CLIENT_SUBPATHS: readonly string[] = [
   "./blocks/island-events",
   "./blocks/island-runtime",
   "./blocks/island-renderer",
+  "./auth/client",
 ];
 
 const TOP = server("top");

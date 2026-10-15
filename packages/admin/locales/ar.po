@@ -158,7 +158,6 @@ msgstr "{count, plural, zero {# إدخال محدد} one {# إدخال محدد}
 
 #. count: number of settings groups this page surfaces
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/settings/-index.browser.test.tsx
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.pageSummary"
 msgstr "{count, plural, zero {لا توجد مجموعات} one {مجموعة واحدة} two {مجموعتان} few {# مجموعات} many {# مجموعة} other {# مجموعة}}"
@@ -306,7 +305,7 @@ msgid "terms.error.slugTaken"
 msgstr "يوجد مصطلح بهذا الـ slug في هذا التصنيف."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/users/create.tsx
+#: src/routes/_authenticated/users/-invite-errors.ts
 msgid "userInvite.error.emailTaken"
 msgstr "يوجد مستخدم بهذا البريد الإلكتروني بالفعل."
 
@@ -800,6 +799,12 @@ msgstr "أُرسل التأكيد إلى {email}. يدخل التغيير حيز
 msgid "auth.device.lookup.submit.idle"
 msgstr "متابعة"
 
+#. label: the sign-in method's display name, from the plugin that adds it
+#. js-lingui-explicit-id
+#: src/routes/_auth/-login-screen.tsx
+msgid "login.method.continueWith"
+msgstr ""
+
 #. label: the OAuth provider's display name (e.g. 'Google', 'GitHub')
 #. js-lingui-explicit-id
 #: src/routes/_auth/-login-screen.tsx
@@ -1057,7 +1062,7 @@ msgid "terms.edit.error.saveFallback"
 msgstr "تعذّر حفظ التغييرات. حاول مرة أخرى."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
+#: src/routes/_authenticated/allowed-domains/-errors.ts
 msgid "allowedDomains.error.fallback"
 msgstr "تعذّر حفظ النطاق. حاول مرة أخرى."
 
@@ -1072,12 +1077,12 @@ msgid "editor.entry.edit.saveFailed"
 msgstr "تعذّر الحفظ."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/users/create.tsx
+#: src/routes/_authenticated/users/-invite-errors.ts
 msgid "userInvite.error.fallback"
 msgstr "تعذّر إرسال الدعوة. حاول مرة أخرى."
 
 #. js-lingui-explicit-id
-#: src/lib/magic-link.ts
+#: src/lib/magic-link-request.ts
 msgid "magicLinkRequest.error.network"
 msgstr "تعذّر إرسال الرابط. حاول مرة أخرى."
 
@@ -1540,7 +1545,7 @@ msgid "validate.email.invalid"
 msgstr "أدخل بريداً إلكترونياً صالحاً."
 
 #. js-lingui-explicit-id
-#: src/lib/magic-link.ts
+#: src/lib/magic-link-request.ts
 msgid "magicLinkRequest.error.invalidInput"
 msgstr "أدخل بريداً إلكترونياً صالحاً."
 
@@ -1575,7 +1580,7 @@ msgid "auth.device.lookup.title"
 msgstr "أدخل الرمز من CLI"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/-login-screen.tsx
+#: src/lib/magic-link-request.ts
 msgid "login.magicLink.emailRequired"
 msgstr "أدخل بريدك الإلكتروني أعلاه أولاً."
 
@@ -1992,7 +1997,7 @@ msgid "metaBox.reference.loading"
 msgstr "جارٍ التحميل…"
 
 #. js-lingui-explicit-id
-#: src/lib/magic-link.ts
+#: src/lib/magic-link-request.ts
 msgid "magicLinkRequest.error.notConfigured"
 msgstr "تسجيل الدخول بـ magic-link غير مكوَّن على هذا الموقع."
 
@@ -3332,11 +3337,6 @@ msgid "oauth.error.linkBroken"
 msgstr "لا يمكن الوصول إلى ذلك الحساب. اتصل بالمدير لإعادة ربطه."
 
 #. js-lingui-explicit-id
-#: src/lib/passkey-errors.ts
-msgid "passkey.error.accountDisabled"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.accountDisabled"
 msgstr "هذا الحساب معطّل."
@@ -3345,6 +3345,11 @@ msgstr "هذا الحساب معطّل."
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.accountDisabled"
 msgstr "هذا الحساب معطّل."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.accountDisabled"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -3377,7 +3382,7 @@ msgid "entries.list.bulk.toastFailed"
 msgstr "لم ينجح ذلك — حاول مرة أخرى."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
+#: src/routes/_authenticated/allowed-domains/-errors.ts
 msgid "allowedDomains.error.domainExists"
 msgstr "هذا النطاق مُكوَّن بالفعل."
 

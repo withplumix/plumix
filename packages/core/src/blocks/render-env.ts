@@ -33,9 +33,6 @@ export const RENDER_ENV_POLICY = {
   user:
     "the author's own account (email, meta) stays out of the page source; " +
     "`useUser` in the canvas reads the signed-out `null`",
-  authMethods:
-    "no block input: `useAuthMethods` reads `null` in the canvas, as in any " +
-    "render that doesn't supply them",
   queriedEntry:
     "blocks read the entry itself through `entry`; `useQueriedEntry` reads " +
     "`null` in the canvas",

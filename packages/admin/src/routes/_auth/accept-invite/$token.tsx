@@ -2,8 +2,11 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { LoginLocaleSwitcher } from "@/components/login-locale-switcher.js";
 import { readManifest } from "@/lib/manifest.js";
-import { PasskeyError, usePasskeyErrorMessage } from "@/lib/passkey-errors.js";
-import { acceptInviteWithPasskey } from "@/lib/passkey.js";
+import {
+  PasskeyError,
+  unwrapPasskeyResult,
+  usePasskeyErrorMessage,
+} from "@/lib/passkey-errors.js";
 import { loadSession, refetchSession } from "@/lib/session.js";
 import { Trans, useLingui } from "@lingui/react";
 import { useMutation } from "@tanstack/react-query";
@@ -28,6 +31,7 @@ import {
   FormMessage,
 } from "@plumix/admin-ui/form";
 import { Input } from "@plumix/admin-ui/input";
+import { authClient } from "@plumix/core/auth/client";
 
 import { buildLocaleSwitchUrl, writeLocaleCookie } from "../-locale-param.js";
 import { langOnlySearchSchema } from "../-schemas.js";
@@ -62,11 +66,13 @@ function AcceptInviteRoute(): ReactNode {
   };
 
   const accept = useMutation({
-    mutationFn: (input: { name?: string }) =>
-      acceptInviteWithPasskey({
-        token,
-        ...(input.name ? { name: input.name } : {}),
-      }),
+    mutationFn: async (input: { name?: string }) =>
+      unwrapPasskeyResult(
+        await authClient.invite.register({
+          token,
+          ...(input.name ? { name: input.name } : {}),
+        }),
+      ),
     onMutate: () => {
       setErrorCode(null);
     },

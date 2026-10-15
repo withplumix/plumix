@@ -158,7 +158,6 @@ msgstr "{count, plural, one {# Eintrag ausgewählt} other {# Einträge ausgewäh
 
 #. count: number of settings groups this page surfaces
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/settings/-index.browser.test.tsx
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.pageSummary"
 msgstr "{count, plural, one {# Gruppe} other {# Gruppen}}"
@@ -306,7 +305,7 @@ msgid "terms.error.slugTaken"
 msgstr "Ein Begriff mit diesem Slug existiert bereits in dieser Taxonomie."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/users/create.tsx
+#: src/routes/_authenticated/users/-invite-errors.ts
 msgid "userInvite.error.emailTaken"
 msgstr "Ein Benutzer mit dieser E-Mail-Adresse existiert bereits."
 
@@ -800,6 +799,12 @@ msgstr "Bestätigung an {email} gesendet. Die Änderung tritt in Kraft, sobald d
 msgid "auth.device.lookup.submit.idle"
 msgstr "Weiter"
 
+#. label: the sign-in method's display name, from the plugin that adds it
+#. js-lingui-explicit-id
+#: src/routes/_auth/-login-screen.tsx
+msgid "login.method.continueWith"
+msgstr ""
+
 #. label: the OAuth provider's display name (e.g. 'Google', 'GitHub')
 #. js-lingui-explicit-id
 #: src/routes/_auth/-login-screen.tsx
@@ -1057,7 +1062,7 @@ msgid "terms.edit.error.saveFallback"
 msgstr "Änderungen konnten nicht gespeichert werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
+#: src/routes/_authenticated/allowed-domains/-errors.ts
 msgid "allowedDomains.error.fallback"
 msgstr "Domain konnte nicht gespeichert werden. Bitte erneut versuchen."
 
@@ -1072,12 +1077,12 @@ msgid "editor.entry.edit.saveFailed"
 msgstr "Speichern fehlgeschlagen."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/users/create.tsx
+#: src/routes/_authenticated/users/-invite-errors.ts
 msgid "userInvite.error.fallback"
 msgstr "Einladung konnte nicht gesendet werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
-#: src/lib/magic-link.ts
+#: src/lib/magic-link-request.ts
 msgid "magicLinkRequest.error.network"
 msgstr "Link konnte nicht gesendet werden. Bitte erneut versuchen."
 
@@ -1540,7 +1545,7 @@ msgid "validate.email.invalid"
 msgstr "Gültige E-Mail-Adresse eingeben."
 
 #. js-lingui-explicit-id
-#: src/lib/magic-link.ts
+#: src/lib/magic-link-request.ts
 msgid "magicLinkRequest.error.invalidInput"
 msgstr "Gültige E-Mail-Adresse eingeben."
 
@@ -1575,7 +1580,7 @@ msgid "auth.device.lookup.title"
 msgstr "Code aus Ihrer CLI eingeben"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/-login-screen.tsx
+#: src/lib/magic-link-request.ts
 msgid "login.magicLink.emailRequired"
 msgstr "Zuerst Ihre E-Mail oben eingeben."
 
@@ -1992,7 +1997,7 @@ msgid "metaBox.reference.loading"
 msgstr "Wird geladen…"
 
 #. js-lingui-explicit-id
-#: src/lib/magic-link.ts
+#: src/lib/magic-link-request.ts
 msgid "magicLinkRequest.error.notConfigured"
 msgstr "Magic-Link-Anmeldung ist auf dieser Website nicht konfiguriert."
 
@@ -3332,11 +3337,6 @@ msgid "oauth.error.linkBroken"
 msgstr "Dieses Konto ist nicht erreichbar. Wenden Sie sich an einen Administrator, um es erneut zu verknüpfen."
 
 #. js-lingui-explicit-id
-#: src/lib/passkey-errors.ts
-msgid "passkey.error.accountDisabled"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.accountDisabled"
 msgstr "Dieses Konto ist deaktiviert."
@@ -3345,6 +3345,11 @@ msgstr "Dieses Konto ist deaktiviert."
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.accountDisabled"
 msgstr "Dieses Konto ist deaktiviert."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.accountDisabled"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -3377,7 +3382,7 @@ msgid "entries.list.bulk.toastFailed"
 msgstr "Das hat nicht geklappt — bitte erneut versuchen."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
+#: src/routes/_authenticated/allowed-domains/-errors.ts
 msgid "allowedDomains.error.domainExists"
 msgstr "Diese Domain ist bereits konfiguriert."
 

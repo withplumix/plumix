@@ -5,6 +5,7 @@ import type {
   PlumixAuthInput,
 } from "../context/auth-config.js";
 import type { EnvInput } from "../runtime/contract/env-input.js";
+import type { OAuthProviderClient } from "./contract/oauth.js";
 import { USER_ROLES } from "../db/schema/users.js";
 import { OAUTH_PROVIDER_KEY_PATTERN } from "./contract/oauth.js";
 import { HTTPS_WILDCARD_PREFIX } from "./passkey/origin-policy.js";
@@ -302,7 +303,17 @@ function toIssues(
   }));
 }
 
-export function auth(input: PlumixAuthInput): PlumixAuthConfig {
+/** The config keeps the provider keys, so a site can type `signIn.oauth` by them. */
+export function auth<
+  TProviders extends Readonly<Record<string, OAuthProviderClient>> = Record<
+    never,
+    never
+  >,
+>(
+  input: PlumixAuthInput & {
+    readonly oauth?: { readonly providers: TProviders };
+  },
+): PlumixAuthConfig & { readonly oauth?: { readonly providers: TProviders } } {
   const result = v.safeParse(authInputSchema, input);
   if (!result.success) {
     const issues = toIssues(result.issues);

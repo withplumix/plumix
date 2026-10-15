@@ -33,6 +33,7 @@ import type { AssetManifest, ViteCommand } from "./asset-manifest.js";
 import type { RenderChrome, RenderEnv } from "./render-env.js";
 import type { ResolvedNode } from "./rule-resolver.js";
 import type { TemplateResolution } from "./template-hierarchy.js";
+import { renderWithAuthContext } from "../../auth/client/render-context.js";
 import {
   BlockLoaderError,
   collectBlockDepKeys,
@@ -550,7 +551,6 @@ function renderTree({
         get user() {
           return ctx.user;
         },
-        authMethods: ctx.authMethods,
         queriedEntry: ctx.resolvedEntity,
         locale: ctx.locale.code,
         catalog,
@@ -582,12 +582,30 @@ function renderTree({
     createElement(TemplateAdapter),
   );
   // The bulk of `render` self-time (#1494).
-  const rendered = ctx.telemetry.span("render: react", () =>
-    renderToString(
-      createElement(
-        HtmlAllowlistProvider,
-        { value: htmlAllowlist },
-        templateTree,
+  const authContext = {
+    basePath: ctx.config.basePath,
+    methods: ctx.authMethods,
+    // On demand: only an `authClient.useSession()` call makes the render personal.
+    user: () => {
+      const { user } = ctx;
+      return user === null
+        ? null
+        : {
+            id: user.id,
+            email: user.email,
+            name: user.name ?? null,
+            role: user.role,
+          };
+    },
+  };
+  const { rendered, session } = ctx.telemetry.span("render: react", () =>
+    renderWithAuthContext(authContext, () =>
+      renderToString(
+        createElement(
+          HtmlAllowlistProvider,
+          { value: htmlAllowlist },
+          templateTree,
+        ),
       ),
     ),
   );
@@ -638,6 +656,11 @@ function renderTree({
     assetManifest,
     command,
     ctx.config.basePath,
+    {
+      basePath: ctx.config.basePath,
+      methods: ctx.authMethods,
+      ...(session === undefined ? {} : { session }),
+    },
   );
   const withRuntimes = injectEditorBootstrap(
     withIslands,

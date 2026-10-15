@@ -15,6 +15,7 @@ import * as TailwindMergeNs from "tailwind-merge";
 
 import type { SharedAdminRuntimeKey } from "@plumix/core/admin";
 import type { ConfiguredSlots } from "@plumix/core/manifest";
+import * as AuthClientNs from "@plumix/core/auth/client";
 
 import { adminBasePath } from "./admin-base.js";
 import { pluginCatalogLoaderRef } from "./i18n-boot.js";
@@ -52,6 +53,7 @@ const runtime = {
   radix: RadixNs,
   sonner: SonnerNs,
   tailwindMerge: TailwindMergeNs,
+  authClient: AuthClientNs,
 } as const satisfies Record<SharedAdminRuntimeKey, unknown>;
 
 interface PlumixI18nGlobal {

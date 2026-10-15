@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { signOut } from "@/lib/passkey.js";
 import { SESSION_QUERY_KEY } from "@/lib/session.js";
+import { sanitiseRedirect } from "@/lib/sign-out-redirect.js";
 import { Trans } from "@lingui/react";
 import { useMutation } from "@tanstack/react-query";
 import { Link, useRouter } from "@tanstack/react-router";
@@ -16,6 +16,7 @@ import {
 } from "@plumix/admin-ui/dropdown-menu";
 import { ChevronsUpDown, LogOut, Settings, User } from "@plumix/admin-ui/icons";
 import { SidebarMenuButton, useSidebar } from "@plumix/admin-ui/sidebar";
+import { authClient } from "@plumix/core/auth/client";
 
 /**
  * Only the identity fields are rendered — a narrow slice of the session
@@ -29,7 +30,10 @@ export function UserMenu({ user }: { user: UserIdentity }): ReactNode {
   const router = useRouter();
 
   const signOutMutation = useMutation({
-    mutationFn: signOut,
+    mutationFn: async () => {
+      const { data } = await authClient.signOut();
+      return { redirectTo: sanitiseRedirect(data?.redirectTo) };
+    },
     onSettled: async (result) => {
       // Drop every cached query on sign-out: the next authed session might be
       // a different user, and permission-gated data must not leak across.

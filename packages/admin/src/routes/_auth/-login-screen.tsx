@@ -7,13 +7,15 @@ import { useMagicLinkErrorMessage } from "@/lib/magic-link-errors.js";
 import {
   magicLinkEmailError,
   magicLinkRequestErrorDescriptor,
-  requestMagicLink,
-} from "@/lib/magic-link.js";
+} from "@/lib/magic-link-request.js";
 import { readManifest } from "@/lib/manifest.js";
 import { useOAuthErrorMessage } from "@/lib/oauth-errors.js";
 import { orpc } from "@/lib/orpc.js";
-import { PasskeyError, usePasskeyErrorMessage } from "@/lib/passkey-errors.js";
-import { signInWithPasskey } from "@/lib/passkey.js";
+import {
+  PasskeyError,
+  unwrapPasskeyResult,
+  usePasskeyErrorMessage,
+} from "@/lib/passkey-errors.js";
 import { refetchSession } from "@/lib/session.js";
 import { useLabel } from "@/lib/use-label.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
@@ -22,6 +24,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 
+import type { AuthResult } from "@plumix/core/auth/client";
 import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
 import { Button } from "@plumix/admin-ui/button";
 import {
@@ -41,10 +44,36 @@ import {
 } from "@plumix/admin-ui/form";
 import { Input } from "@plumix/admin-ui/input";
 import { Separator } from "@plumix/admin-ui/separator";
+import { authClient } from "@plumix/core/auth/client";
 
 import type { LoginSearch } from "./-schemas.js";
 import { buildLocaleSwitchUrl, writeLocaleCookie } from "./-locale-param.js";
 import { loginSchema } from "./-schemas.js";
+
+/** Core's methods, which this screen renders controls of its own for. */
+const CORE_METHODS: ReadonlySet<string> = new Set([
+  /* eslint-disable lingui/no-unlocalized-strings -- method names, not UI copy */
+  "passkey",
+  "magic-link",
+  "oauth",
+  "invite",
+  /* eslint-enable lingui/no-unlocalized-strings */
+]);
+
+/** A plugin method's sign-in, which `authClient` mounts by camelCase name. */
+function pluginSignIn(
+  name: string,
+): (() => Promise<AuthResult<unknown>>) | undefined {
+  const key = name.replace(/-([a-z0-9])/g, (_, next: string) =>
+    next.toUpperCase(),
+  );
+  const signIns: Readonly<Record<string, unknown>> = authClient.signIn;
+  const run = signIns[key];
+  if (typeof run !== "function") return undefined;
+  // Safety: every method half's `signIn` resolves an `AuthResult`, and a
+  // plugin method the admin lists signs in with no arguments.
+  return run as () => Promise<AuthResult<unknown>>;
+}
 
 /** The route only hands this screen the validated search. */
 export function LoginScreen({ search }: { search: LoginSearch }): ReactNode {
@@ -70,9 +99,20 @@ export function LoginScreen({ search }: { search: LoginSearch }): ReactNode {
     signInMethods.data?.methods.some(({ name }) => name === "magic-link") ===
     true;
   const oauth = signInMethods.data?.oauth ?? [];
+  const pluginMethods = (signInMethods.data?.methods ?? []).filter(
+    ({ name }) => !CORE_METHODS.has(name),
+  );
+  const [methodError, setMethodError] = useState<MessageDescriptor | null>(
+    null,
+  );
 
   const signIn = useMutation({
-    mutationFn: (input: { email?: string }) => signInWithPasskey(input.email),
+    mutationFn: async (input: { email?: string }) =>
+      unwrapPasskeyResult(
+        await authClient.signIn.passkey(
+          input.email ? { email: input.email } : {},
+        ),
+      ),
     onMutate: () => setPasskeyError(null),
     onSuccess: async () => {
       await refetchSession(router.options.context.queryClient);
@@ -84,14 +124,35 @@ export function LoginScreen({ search }: { search: LoginSearch }): ReactNode {
   });
 
   const magicLink = useMutation({
-    mutationFn: (input: { email: string }) => requestMagicLink(input.email),
+    mutationFn: (input: { email: string }) =>
+      authClient.signIn.magicLink({ email: input.email }),
     onMutate: () => {
       setMagicLinkError(null);
       setMagicLinkSent(false);
     },
-    onSuccess: () => setMagicLinkSent(true),
-    onError: (err) => setMagicLinkError(magicLinkRequestErrorDescriptor(err)),
+    onSuccess: ({ error }) => {
+      if (error) {
+        setMagicLinkError(magicLinkRequestErrorDescriptor(error.code));
+        return;
+      }
+      setMagicLinkSent(true);
+    },
   });
+
+  const methodSignIn = useMutation({
+    mutationFn: async (name: string) => (await pluginSignIn(name)?.()) ?? null,
+    onMutate: () => setMethodError(null),
+    onSuccess: async (result) => {
+      if (result?.error) {
+        setMethodError(result.error.message);
+        return;
+      }
+      await refetchSession(router.options.context.queryClient);
+      await router.navigate({ to: "/" });
+    },
+  });
+  const pending =
+    signIn.isPending || magicLink.isPending || methodSignIn.isPending;
 
   const form = useForm({
     resolver: valibotResolver(loginSchema),
@@ -192,7 +253,7 @@ export function LoginScreen({ search }: { search: LoginSearch }): ReactNode {
                     <Input
                       type="email"
                       autoComplete="username webauthn"
-                      disabled={signIn.isPending || magicLink.isPending}
+                      disabled={pending}
                       data-testid="login-email-input"
                       {...field}
                     />
@@ -233,6 +294,12 @@ export function LoginScreen({ search }: { search: LoginSearch }): ReactNode {
               </Alert>
             ) : null}
 
+            {methodError ? (
+              <Alert variant="destructive" data-testid="login-method-error">
+                <AlertDescription>{renderLabel(methodError)}</AlertDescription>
+              </Alert>
+            ) : null}
+
             {emailChangeSuccess ? (
               <Alert data-testid="login-email-change-success">
                 <AlertDescription>
@@ -257,7 +324,7 @@ export function LoginScreen({ search }: { search: LoginSearch }): ReactNode {
               <Button
                 type="submit"
                 className="flex-1"
-                disabled={signIn.isPending || magicLink.isPending}
+                disabled={pending}
                 data-testid="login-passkey-submit"
               >
                 {signIn.isPending ? (
@@ -275,7 +342,7 @@ export function LoginScreen({ search }: { search: LoginSearch }): ReactNode {
                   variant="outline"
                   className="flex-1"
                   onClick={onMagicLinkClick}
-                  disabled={signIn.isPending || magicLink.isPending}
+                  disabled={pending}
                   data-testid="login-magic-link-submit"
                 >
                   {magicLink.isPending ? (
@@ -291,6 +358,31 @@ export function LoginScreen({ search }: { search: LoginSearch }): ReactNode {
             </div>
           </form>
         </Form>
+
+        {pluginMethods.length > 0 ? (
+          <div
+            className="mt-6 flex flex-col gap-3"
+            data-testid="login-plugin-methods"
+          >
+            {pluginMethods.map(({ name, label }) => (
+              <Button
+                key={name}
+                type="button"
+                variant="outline"
+                disabled={pending}
+                onClick={() => methodSignIn.mutate(name)}
+                data-testid={`login-method-${name}`}
+              >
+                <Trans
+                  id="login.method.continueWith"
+                  message="Continue with {label}"
+                  values={{ label: <bdi>{label}</bdi> }}
+                  comment="label: the sign-in method's display name, from the plugin that adds it"
+                />
+              </Button>
+            ))}
+          </div>
+        ) : null}
 
         {oauth.length > 0 ? (
           <div
@@ -311,7 +403,12 @@ export function LoginScreen({ search }: { search: LoginSearch }): ReactNode {
                 variant="outline"
                 data-testid={`login-oauth-${key}`}
               >
-                <a href={`/_plumix/auth/oauth/${key}/start`}>
+                <a
+                  href={authClient.url({
+                    method: "oauth",
+                    route: `${encodeURIComponent(key)}/start`,
+                  })}
+                >
                   <Trans
                     id="login.oauth.continueWith"
                     message="Continue with {label}"
