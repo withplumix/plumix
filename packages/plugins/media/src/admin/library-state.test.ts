@@ -7,11 +7,8 @@ describe("libraryUploadState", () => {
     expect(libraryUploadState(false).emptyState).toBe("storage-required");
   });
 
-  test("without a storage slot, there is no upload button and no dropzone", () => {
-    const state = libraryUploadState(false);
-
-    expect(state.offerUpload).toBe(false);
-    expect(state.emptyState).not.toBe("dropzone");
+  test("without a storage slot, there is no upload button", () => {
+    expect(libraryUploadState(false).offerUpload).toBe(false);
   });
 
   test("without a storage slot, a dropped file is not accepted", () => {
