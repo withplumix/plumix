@@ -225,4 +225,6 @@ const page = defineTemplate<EntryData>({
 export const theme = defineTheme({
   blocks: [ratingBlock],
   templates: [fallback(() => null), entry(page), ...signInTemplates],
+  // One token, so the editor specs can pick a style from the theme.
+  tokens: { color: { accent: { value: "#b5472d", label: "Accent" } } },
 });

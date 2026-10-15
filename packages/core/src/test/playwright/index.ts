@@ -13,12 +13,15 @@ export { dragTo } from "./drag-to.js";
 export type {
   Editor,
   EditorCanvas,
+  EditorDevice,
   EditorDocumentSettings,
   EditorEntryRef,
   EditorInputValue,
   EditorInsertAt,
   EditorInsertOptions,
   EditorInspector,
+  EditorLayerAction,
+  EditorLayers,
   EditorRevisionRef,
   EditorRevisions,
   EditorRichText,
@@ -26,7 +29,10 @@ export type {
   EditorStoredDocument,
   EditorStoredRevision,
   EditorStructureButton,
+  EditorStyleMark,
+  EditorStyles,
   EditorTextFormat,
+  EditorTextShadow,
   EditorToolbar,
 } from "./editor.js";
 export type { Mailbox } from "./mailbox.js";

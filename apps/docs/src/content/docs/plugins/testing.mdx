@@ -255,7 +255,7 @@ test("dragging a recipe below the next one reorders the list", async ({
 
 ### Testing your blocks in the editor
 
-The `editor` fixture from `plumix/test/playwright` drives the real block editor: it opens or creates an entry, inserts blocks from the catalog by click or drag, selects them, works the selection toolbar, fills the inspector, edits rich text, and saves. Each action waits on what the editor shows, never on a timer. `editor.stored()` returns the entry's block tree as the server stores it, so a test can assert on what was persisted.
+The `editor` fixture from `plumix/test/playwright` drives the real block editor: it opens or creates an entry, inserts blocks from the catalog by click or drag, selects them, works the selection toolbar and the Layers rail, fills the inspector, styles blocks per device, edits rich text, and saves. Each action waits on what the editor shows, never on a timer. `editor.stored()` returns the entry's block tree as the server stores it, so a test can assert on what was persisted.
 
 This spec inserts a site's own `demo/rating` block, configures it, and checks what was saved:
 
@@ -289,6 +289,9 @@ test("a rating is inserted, configured and stored", async ({ editor }) => {
 - **Insert.** `editor.insert(name, { at, via })` puts the block at `"start"`, at `"end"` (the default), `{ after: block }`, `{ before: block }` or `{ into: block, slot? }`, and returns its locator. `via: "drag"` drops it from the catalog with `dragTo`; a click reaches a nested position only through an empty slot.
 - **Selection.** `editor.select(block)`, then `editor.toolbar.moveUp()`, `.moveDown()`, `.selectParent()` and `.remove()`.
 - **Structure.** `editor.inspector.press(button)` presses a button that reshapes the selected block: `"add-column"` on a columns block, or `"add-table-row"`, `"add-table-column"`, `"remove-table-row"` and `"remove-table-column"` on a table or any block inside it.
+- **Layers.** `editor.layers.row(block)` returns a block's row, `.focus(block)` focuses it so the keys pressed next (Delete, F2) act on it, `.rename(block, label)` labels it through its menu, `.act(block, action)` runs `"copy"`, `"paste"`, `"duplicate"` or `"delete"` from its menu, and `.drag(block, onto)` drags it onto another row's place.
+- **Styles.** `editor.styles.set(property, value)` sets a style property of the selected block through its control, whether that control takes a typed value, a keyword or a toggle; `null` clears it. `.token(property, id)` picks a theme token, `.mark(mark)` presses a text formatting toggle, `.textShadow(shadow)` sets the text shadow, `.hide(device, hidden)` hides the block on a device, `.className(value)`, `.declare(property, value)`, `.tagName(tag)` and `.attribute(name, value)` work the Custom CSS and HTML attributes sections, and `.inherited(property)` reads the value an empty control inherits from a wider device.
+- **Devices.** `editor.device(device)` sizes the canvas to `"desktop"`, `"tablet"` or `"mobile"`. A style set after it lands in that device's bucket, `large`, `medium` or `small` in `stored()`.
 - **Rich text.** `editor.richText(block)` returns `type(text)`, `select()` (the whole text, for keys pressed next), `format(format)` (a mark such as `"bold"`, `"heading-2"`, `"bullet-list"` or `"quote"`), `link(url)` and `unlink()`.
 - **History.** `editor.undo()` and `editor.redo()` press the header's Undo and Redo buttons.
 - **Saving.** `editor.save()` resolves once every edit has reached the server, `editor.publish()` publishes the entry or its pending edits, and `editor.reload()` reloads the editor.

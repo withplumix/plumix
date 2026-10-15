@@ -65,6 +65,70 @@ export interface EditorToolbar {
   remove: () => Promise<void>;
 }
 
+/** What a Layers row's menu does to its block. */
+export type EditorLayerAction = "copy" | "paste" | "duplicate" | "delete";
+
+/** The Layers rail: one row per block, nested ones indented under theirs. */
+export interface EditorLayers {
+  /** `block`'s row. */
+  row: (block: Locator) => Promise<Locator>;
+  /** Focuses `block`'s row, so the keys pressed next act on it. */
+  focus: (block: Locator) => Promise<void>;
+  /** Labels `block`'s layer through its row's menu. */
+  rename: (block: Locator, label: string) => Promise<void>;
+  /** Runs one of the actions in `block`'s row menu. */
+  act: (block: Locator, action: EditorLayerAction) => Promise<void>;
+  /** Drags `block`'s row onto `onto`'s, so its block takes that place. */
+  drag: (block: Locator, onto: Locator) => Promise<void>;
+}
+
+/**
+ * The selected block's Styles tab. Every edit lands in the bucket of the
+ * device the canvas shows.
+ */
+export interface EditorStyles {
+  /**
+   * Sets a style property through its control: typed in, picked or toggled.
+   * `value` is what the control takes, so a fill image is its URL; `null`
+   * clears it.
+   */
+  set: (property: string, value: string | null) => Promise<void>;
+  /** Sets a style property to one of the theme's tokens, by its id. */
+  token: (property: string, id: string) => Promise<void>;
+  /** Presses a text formatting toggle, setting or clearing its style. */
+  mark: (mark: EditorStyleMark) => Promise<void>;
+  /** Turns the text shadow on with these parts, or off with `null`. */
+  textShadow: (shadow: EditorTextShadow | null) => Promise<void>;
+  /** Hides the block on a device, or shows it there again. */
+  hide: (device: EditorDevice, hidden: boolean) => Promise<void>;
+  /** Replaces the block's CSS classes, space-separated. */
+  className: (value: string) => Promise<void>;
+  /** Adds a raw CSS declaration; `property` is camelCase. */
+  declare: (property: string, value: string) => Promise<void>;
+  /** Renders the block as another element, or its own with `null`. */
+  tagName: (tag: string | null) => Promise<void>;
+  /** Adds an HTML attribute to the block's element. */
+  attribute: (name: string, value: string) => Promise<void>;
+  /**
+   * The placeholder a custom value's input shows while the active device
+   * sets none of its own: the value it inherits from a wider device.
+   */
+  inherited: (property: string) => Promise<string>;
+}
+
+/** The canvas width, and the style bucket an edit lands in. */
+export type EditorDevice = "desktop" | "tablet" | "mobile";
+
+export type EditorStyleMark = "bold" | "italic" | "underline" | "strikethrough";
+
+/** Offsets and blur in px, without the unit; the color as `#rrggbb`. */
+export interface EditorTextShadow {
+  readonly x: string;
+  readonly y: string;
+  readonly blur: string;
+  readonly color: string;
+}
+
 /**
  * Text, a number, a checkbox's boolean, or a choice's option value. A media
  * picker takes a media id and reads back its file name.
@@ -196,7 +260,11 @@ export interface Editor {
   insert: (name: string, options?: EditorInsertOptions) => Promise<Locator>;
   select: (block: Locator) => Promise<void>;
   readonly toolbar: EditorToolbar;
+  readonly layers: EditorLayers;
   readonly inspector: EditorInspector;
+  readonly styles: EditorStyles;
+  /** Sizes the canvas to `device`, whose style bucket edits then land in. */
+  device: (device: EditorDevice) => Promise<void>;
   /** Undoes the last edit with the header's Undo button. */
   undo: () => Promise<void>;
   /** Redoes the last undone edit with the header's Redo button. */
@@ -278,6 +346,12 @@ const MARKS: ReadonlySet<EditorTextFormat> = new Set([
   "subscript",
   "superscript",
 ]);
+
+/** The test id prefix of a property set by toggles not named after it. */
+const TOGGLE_PREFIX: Readonly<Record<string, string>> = { textAlign: "align" };
+
+/** A toggle that is on: a single choice's radio, or a pressed button. */
+const PRESSED = '[aria-checked="true"], [aria-pressed="true"]';
 
 const isNested = (block: Locator): Promise<boolean> =>
   block.evaluate(
@@ -407,6 +481,46 @@ export function createEditor(page: Page): Editor {
       const id = await selectedId();
       await page.getByTestId("selection-toolbar-delete").click();
       await expect(blockById(id)).toHaveCount(0);
+    },
+  };
+
+  // Clicked only when closed: the click would take focus off a focused row.
+  const layerRow = async (block: Locator): Promise<Locator> => {
+    const id = await idOf(block);
+    const tab = page.getByTestId("plumix-tab-layers");
+    if ((await tab.getAttribute("data-state")) !== "active") await tab.click();
+    return page.getByTestId(`layer-${id}`);
+  };
+
+  const layers: EditorLayers = {
+    row: layerRow,
+    focus: async (block) => {
+      const row = await layerRow(block);
+      await row.focus();
+      await expect(row).toBeFocused();
+    },
+    rename: async (block, label) => {
+      const id = await idOf(block);
+      await (await layerRow(block)).hover();
+      await page.getByTestId(`layer-menu-${id}`).click();
+      await page.getByTestId(`layer-rename-action-${id}`).click();
+      const input = page.getByTestId(`layer-rename-${id}`);
+      await input.fill(label);
+      await input.press("Enter");
+      await expect(page.getByTestId(`layer-${id}`)).toHaveText(label);
+    },
+    act: async (block, action) => {
+      const id = await idOf(block);
+      await (await layerRow(block)).hover();
+      await page.getByTestId(`layer-menu-${id}`).click();
+      const item = page.getByTestId(`layer-${action}-${id}`);
+      await item.click();
+      await expect(item).toBeHidden();
+    },
+    drag: async (block, onto) => {
+      const before = await blockIds();
+      await dragTo(page, await layerRow(block), await layerRow(onto));
+      await expect.poll(blockIds).not.toEqual(before);
     },
   };
 
@@ -638,6 +752,167 @@ export function createEditor(page: Page): Editor {
           return (await name.count()) > 0 ? name.textContent() : null;
         }
       }
+    },
+  };
+
+  const toggle = async (control: Locator): Promise<void> => {
+    const on = control.and(page.locator(PRESSED));
+    const was = await on.count();
+    await control.click();
+    await expect(on).toHaveCount(1 - was);
+  };
+
+  const stylesTab = async (): Promise<Locator> => {
+    await page.getByTestId("plumix-tab-styles").click();
+    const tab = page.getByTestId("styles-tab");
+    await expect(tab).toBeVisible();
+    return tab;
+  };
+
+  // The Custom CSS and HTML attributes sections start collapsed. A click in
+  // one still sliding open can land on whatever its controls are passing.
+  const styleSection = async (id: string): Promise<Locator> => {
+    const tab = await stylesTab();
+    const trigger = tab.getByTestId(`styles-section-${id}`);
+    if ((await trigger.getAttribute("data-state")) !== "open") {
+      await trigger.click();
+    }
+    await expect(trigger).toHaveAttribute("data-state", "open");
+    await tab.evaluate((el) =>
+      Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)),
+    );
+    return tab;
+  };
+
+  // Picked by key, not clicked: near the rail's foot the picker's list can
+  // open below the viewport. An unlisted key is offered as "create".
+  const addStyleRow = async (
+    section: Locator,
+    form: string,
+    key: string,
+    value: string,
+  ): Promise<void> => {
+    await section.getByTestId(`${form}-key`).click();
+    const search = page.getByTestId(`${form}-key-search`);
+    await search.fill(key);
+    await expect(
+      page
+        .getByTestId(`${form}-key-option-${key}`)
+        .or(page.getByTestId(`${form}-key-create`))
+        .first(),
+    ).toHaveAttribute("aria-selected", "true");
+    await search.press("Enter");
+    await expect(search).toBeHidden();
+    await section.getByTestId(`${form}-value`).fill(value);
+    await section.getByTestId(`${form}-submit`).click();
+  };
+
+  const styles: EditorStyles = {
+    set: async (property, value) => {
+      const tab = await stylesTab();
+      const prefix = `style-${TOGGLE_PREFIX[property] ?? property}-`;
+      const toggles = tab.locator(`[data-testid^=${JSON.stringify(prefix)}]`);
+      if ((await toggles.count()) > 0) {
+        const pressed = toggles.and(tab.locator(PRESSED));
+        if (value === null) {
+          if ((await pressed.count()) > 0) await pressed.click();
+          await expect(pressed).toHaveCount(0);
+          return;
+        }
+        const choice = tab.getByTestId(`${prefix}${value}`);
+        if ((await choice.and(pressed).count()) === 0) await choice.click();
+        await expect(choice.and(pressed)).toHaveCount(1);
+        return;
+      }
+      const testId = `style-control-${property}`;
+      const control = tab.getByTestId(testId);
+      await expect(control).toBeVisible();
+      const keyword = control.getByTestId(`${testId}-select`);
+      if ((await keyword.count()) > 0) {
+        await keyword.click();
+        await page.getByTestId(`${testId}-option-${value ?? "unset"}`).click();
+        await expect(keyword).toHaveText(value ?? "—");
+        return;
+      }
+      const custom = control.getByTestId(`${testId}-mode-custom`);
+      if ((await custom.count()) > 0) await custom.click();
+      const input = control.locator(
+        ["custom", "input", "url"]
+          .map((kind) => attr("data-testid", `${testId}-${kind}`))
+          .join(", "),
+      );
+      await input.fill(value ?? "");
+      await expect(input).toHaveValue(value ?? "");
+    },
+    token: async (property, id) => {
+      const tab = await stylesTab();
+      const testId = `style-control-${property}`;
+      await tab.getByTestId(`${testId}-mode-token`).click();
+      await tab.getByTestId(`${testId}-token`).click();
+      const option = page.getByTestId(`${testId}-token-${id}`);
+      await option.click();
+      await expect(option).toBeHidden();
+    },
+    mark: async (mark) => {
+      await toggle((await stylesTab()).getByTestId(`style-mark-${mark}`));
+    },
+    textShadow: async (shadow) => {
+      const tab = await stylesTab();
+      const on = tab.getByTestId("style-text-shadow-toggle");
+      if ((await on.getAttribute("aria-checked")) !== String(shadow !== null)) {
+        await toggle(on);
+      }
+      if (shadow === null) return;
+      for (const part of ["color", "x", "y", "blur"] as const) {
+        const input = tab.getByTestId(`style-text-shadow-${part}`);
+        await input.fill(shadow[part]);
+        await expect(input).toHaveValue(shadow[part]);
+      }
+    },
+    hide: async (device, hidden) => {
+      const tab = await stylesTab();
+      const flag = tab.getByTestId(`style-visibility-${device}`);
+      if ((await flag.getAttribute("aria-checked")) !== String(hidden)) {
+        await toggle(flag);
+      }
+    },
+    className: async (value) => {
+      const input = (await styleSection("declarations")).getByTestId(
+        "style-css-classes",
+      );
+      await input.fill(value);
+      await expect(input).toHaveValue(value);
+    },
+    declare: async (property, value) => {
+      const section = await styleSection("declarations");
+      await addStyleRow(section, "style-declaration-add", property, value);
+      await expect(
+        section.getByTestId(`style-declaration-${property}-value`),
+      ).toHaveValue(value);
+    },
+    tagName: async (tag) => {
+      const select = (await styleSection("html")).getByTestId(
+        "block-tag-name-select",
+      );
+      await select.click();
+      const option = page.getByTestId(
+        `block-tag-name-option-${tag ?? "default"}`,
+      );
+      await option.click();
+      await expect(option).toBeHidden();
+    },
+    attribute: async (name, value) => {
+      const section = await styleSection("html");
+      await addStyleRow(section, "html-attr-add", name, value);
+      await expect(section.getByTestId(`html-attr-${name}-value`)).toHaveValue(
+        value,
+      );
+    },
+    inherited: async (property) => {
+      const testId = `style-control-${property}`;
+      const input = (await stylesTab()).getByTestId(`${testId}-custom`);
+      await expect(input).toHaveValue("");
+      return (await input.getAttribute("placeholder")) ?? "";
     },
   };
 
@@ -877,7 +1152,14 @@ export function createEditor(page: Page): Editor {
     insert,
     select,
     toolbar,
+    layers,
     inspector,
+    styles,
+    device: async (device) => {
+      const button = page.getByTestId(`plumix-device-${device}`);
+      await button.click();
+      await expect(button).toHaveAttribute("aria-checked", "true");
+    },
     undo: () => page.getByTestId("plumix-undo").click(),
     redo: () => page.getByTestId("plumix-redo").click(),
     staleDraft,
