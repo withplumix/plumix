@@ -6,6 +6,11 @@ import type {
 } from "plumix/test/playwright";
 import { expect, test } from "plumix/test/playwright";
 
+interface FormatCase {
+  readonly format: EditorTextFormat;
+  readonly body: string;
+}
+
 const HEADINGS = [
   { format: "heading-1", body: "<h1>Plumix</h1>" },
   { format: "heading-2", body: "<h2>Plumix</h2>" },
@@ -13,10 +18,7 @@ const HEADINGS = [
   { format: "heading-4", body: "<h4>Plumix</h4>" },
   { format: "heading-5", body: "<h5>Plumix</h5>" },
   { format: "heading-6", body: "<h6>Plumix</h6>" },
-] as const satisfies readonly {
-  readonly format: EditorTextFormat;
-  readonly body: string;
-}[];
+] as const satisfies readonly FormatCase[];
 
 const MARKS = [
   { format: "bold", body: "<p><strong>Plumix</strong></p>" },
@@ -27,19 +29,13 @@ const MARKS = [
   { format: "highlight", body: "<p><mark>Plumix</mark></p>" },
   { format: "subscript", body: "<p><sub>Plumix</sub></p>" },
   { format: "superscript", body: "<p><sup>Plumix</sup></p>" },
-] as const satisfies readonly {
-  readonly format: EditorTextFormat;
-  readonly body: string;
-}[];
+] as const satisfies readonly FormatCase[];
 
 const BLOCKS = [
   { format: "bullet-list", body: "<ul><li><p>Plumix</p></li></ul>" },
   { format: "ordered-list", body: "<ol><li><p>Plumix</p></li></ol>" },
   { format: "quote", body: "<blockquote><p>Plumix</p></blockquote>" },
-] as const satisfies readonly {
-  readonly format: EditorTextFormat;
-  readonly body: string;
-}[];
+] as const satisfies readonly FormatCase[];
 
 /** Rendering drops an anchor's `rel` (`sanitize.ts`), so the canvas shows none. */
 const FIRST_LINK = {
