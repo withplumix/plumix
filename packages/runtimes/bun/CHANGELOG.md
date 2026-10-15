@@ -1,5 +1,23 @@
 # @plumix/runtime-bun
 
+## 0.2.0
+
+### Minor Changes
+
+- [#3070](https://github.com/withplumix/plumix/pull/3070) [`d0ecdab`](https://github.com/withplumix/plumix/commit/d0ecdab09b9b9cb7bb6f3c9aacfee470fb6dd2ab) Thanks [@nasyrov](https://github.com/nasyrov)! - Writes each line Plumix logs to stdout as one JSON object (`level`, `message`, `time`, the call's fields, and errors with their stack) from a built server, so a log drain or journald can parse it. `plumix dev` keeps its readable output, and `plumix doctor` reports where the logs go.
+
+- [#3110](https://github.com/withplumix/plumix/pull/3110) [`0470908`](https://github.com/withplumix/plumix/commit/047090819ead6db3d67ad4ae18979eb230890497) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds data migrations: forward-only TypeScript steps built with `defineDataMigration` from `plumix/db`, which core, a plugin (through `dataMigrations` on its descriptor, with or without tables) or the site (through `dataMigrations` in `plumix.config.ts`) declare. They run after every schema migration in `plumix dev`, `plumix migrate`, `plumix deploy` and a built Node or Bun server's start, are recorded per owner and name in `__plumix_data_migrations`, and show in `plumix migrate status`. `plumix build` on Node and Bun writes them to `dist/server/migrations/data-migrations.js`, beside the server and outside it. Each runtime's `MigrationDatabase` now carries `drizzle`.
+
+- [#2959](https://github.com/withplumix/plumix/pull/2959) [`46ce5f4`](https://github.com/withplumix/plumix/commit/46ce5f4246df6180e22005928cdb9a6e0915f9ce) Thanks [@nasyrov](https://github.com/nasyrov)! - Supports the new `plumix migrate`, which applies core's and each plugin's shipped migrations, and removes `plumix migrate apply`. On Cloudflare it opens the site's D1 binding through wrangler's `getPlatformProxy`: the local database `plumix dev` uses, or the deployed one with `--remote`. Pass `--binding <name>` when the wrangler config declares several D1 databases. It no longer runs `wrangler d1 migrations apply`, so `migrations_dir` is no longer needed. On Node and Bun it opens the configured SQLite file, and `--remote` is an error. The Bun scaffold's `migrate:apply` script is now `migrate`.
+
+- [#3068](https://github.com/withplumix/plumix/pull/3068) [`12be633`](https://github.com/withplumix/plumix/commit/12be6334be5c20ed2d0837310c927be182f46468) Thanks [@nasyrov](https://github.com/nasyrov)! - Applies migrations where the site runs. On Cloudflare, `plumix deploy` applies every pending migration to the remote D1 before it runs `wrangler deploy`, and a failed apply stops the deploy; on Workers Builds, set the deploy command to `npx plumix deploy`. Without `--binding`, migrations open the D1 binding the config's `d1()` slot names, so a wrangler config with several D1 databases needs no flag. The built Node and Bun servers apply the migrations their build shipped to their SQLite file before they listen, and exit 1 without listening when that fails. `serveWhenMain` on Node and `serveProcess` on Bun now return a promise, and `createBunSite` returns a `migrate` member. The Bun SQLite connection sets its busy timeout before switching to WAL, so a server starting while another migrates the same file waits instead of failing.
+
+### Patch Changes
+
+- [#3034](https://github.com/withplumix/plumix/pull/3034) [`fbd829d`](https://github.com/withplumix/plumix/commit/fbd829d5a349a97c3abba7214dbf9bbb2fff5552) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `@tanstack/react-query` to 5.104.1 and `@tanstack/react-router` to 1.170.41 in the framework and the first-party plugins, `@lingui/core` and `@lingui/react` to 6.9.0, the editor's `@tiptap/*` packages to 3.31.4 and `@modelcontextprotocol/sdk` to 1.32.0 in the framework, `vite` to 8.3.2 in the framework and the runtimes, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.62.5, `wrangler` 4.147) in `@plumix/runtime-cloudflare`.
+
+- [#3127](https://github.com/withplumix/plumix/pull/3127) [`4559226`](https://github.com/withplumix/plumix/commit/45592269fede4b4cdc5afab462da02b0d9c15fb2) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `vite` to 8.3.3 in the framework and the runtimes, and `sanitize-html` to 2.18.0 and `@modelcontextprotocol/sdk` to 1.32.1 in the framework.
+
 ## 0.1.0
 
 ### Minor Changes

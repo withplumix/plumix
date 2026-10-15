@@ -1,5 +1,17 @@
 # @plumix/plugin-media
 
+## 0.11.0
+
+### Minor Changes
+
+- [#2887](https://github.com/withplumix/plumix/pull/2887) [`33a6a22`](https://github.com/withplumix/plumix/commit/33a6a22c964f78ac881e6bb73b0ddeb7bfb18275) Thanks [@nasyrov](https://github.com/nasyrov)! - Requires React 19.3. Move `react`, `react-dom`, `@types/react` and `@types/react-dom` in your site to `^19.3.0`; new projects from `create-plumix-app` start on it.
+
+### Patch Changes
+
+- [#2969](https://github.com/withplumix/plumix/pull/2969) [`6e44a7d`](https://github.com/withplumix/plumix/commit/6e44a7dddb710bf3f65ad47066e31475c7d4ade8) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `valibot` to 1.5.0 in the framework and the first-party plugins, `@valibot/to-json-schema` to 1.8.0, `@sindresorhus/slugify` to 3.0.1, `lucide-react` to 1.49.0 and `react-colorful` to 5.8.1 in the framework, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.62.4, `wrangler` 4.146, `@cloudflare/workers-types` 5.20261001.1) in `@plumix/runtime-cloudflare`.
+
+- [#3034](https://github.com/withplumix/plumix/pull/3034) [`fbd829d`](https://github.com/withplumix/plumix/commit/fbd829d5a349a97c3abba7214dbf9bbb2fff5552) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `@tanstack/react-query` to 5.104.1 and `@tanstack/react-router` to 1.170.41 in the framework and the first-party plugins, `@lingui/core` and `@lingui/react` to 6.9.0, the editor's `@tiptap/*` packages to 3.31.4 and `@modelcontextprotocol/sdk` to 1.32.0 in the framework, `vite` to 8.3.2 in the framework and the runtimes, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.62.5, `wrangler` 4.147) in `@plumix/runtime-cloudflare`.
+
 ## 0.10.0
 
 ### Minor Changes
