@@ -80,7 +80,7 @@ A method's key is its name with `-` replaced by `_`, so the email-code method's 
 
 ## CSRF and formPost
 
-Every auth route requires the `X-Plumix-Request` header, which a cross-site page can't send, so a forged request never reaches the handler. `authClient` sends it on every call.
+Every route of a method requires the `X-Plumix-Request` header, which a cross-site page can't send, so a forged request never reaches the handler. `authClient` sends it on every call.
 
 A plain HTML form can't send it either. A route that a form with no script should reach declares `formPost: true`. It then also accepts a `POST` without the header, as long as it comes from the site's own origin, and that request runs with no signed-in visitor, so a forged form can't act as whoever is signed in. Both email-code routes declare it, which is what lets [a form with no script](/access/sign-in-in-your-theme/#a-form-that-works-with-no-script) sign someone in.
 
