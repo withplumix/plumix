@@ -46,6 +46,13 @@ describe("resultRoute", () => {
     expect(resultRoute("users", "9", slug)).toBe("/users/9/edit");
   });
 
+  test("encodes the slug, term name and id the way the router encodes a segment", () => {
+    expect(resultRoute("entry:a b", "1/2", () => "a b")).toBe(
+      "/entries/a%20b/1%2F2/edit",
+    );
+    expect(resultRoute("term:a/b", "7", slug)).toBe("/terms/a%2Fb/7/edit");
+  });
+
   test("routes nowhere for an unknown domain", () => {
     expect(resultRoute("widget:thing", "1", slug)).toBeNull();
   });
