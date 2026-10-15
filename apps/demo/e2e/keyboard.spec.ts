@@ -126,7 +126,7 @@ test("Backspace on the selected layer removes its block", async ({
   expect(await editor.stored()).toMatchObject([{ name: "core/separator" }]);
 });
 
-test("Cmd/Ctrl+B in rich text bolds the selected text", async ({
+test("Cmd/Ctrl+B in rich text bolds the text and leaves the panels open", async ({
   editor,
   page,
 }) => {
@@ -136,10 +136,15 @@ test("Cmd/Ctrl+B in rich text bolds the selected text", async ({
   await text.type("Plumix");
   await text.select();
 
-  await page.keyboard.press("ControlOrMeta+B");
+  await page.keyboard.press("ControlOrMeta+KeyB");
 
   await expect(block.locator("strong")).toHaveText("Plumix");
   await editor.save();
+  // The chord is also the panels toggle; the fixture has no reading of the
+  // editor's chrome, so the panel is read by its test id.
+  await expect(page.getByTestId("plumix-editor-left")).toBeInViewport({
+    ratio: 1,
+  });
   await editor.reload();
   await expect(
     editor.canvas.block("core/rich-text").locator("strong"),
