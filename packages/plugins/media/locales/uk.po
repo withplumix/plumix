@@ -248,52 +248,52 @@ msgid "plugin.media.altEditor.saved"
 msgstr "✓ Збережено"
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.storageNotConfigured"
 msgstr "Адаптер сховища не налаштований — задайте `storage:` у plumix.config.ts."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.payloadTooLarge"
 msgstr "Файл перевищує налаштований maxUploadSize."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.unsupportedMediaType"
 msgstr "Цей тип файлу не дозволено acceptedTypes медіаплагіна."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.mimeMismatch"
 msgstr "Завантажені байти не відповідають заявленому типу файлу."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.objectNotFound"
 msgstr "Завантаження не дійшло до сховища — перевірте правила CORS вашого bucket."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.alreadyConfirmed"
 msgstr "Це завантаження вже підтверджено в іншій вкладці або на іншому пристрої."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.serverCouldntProcess"
 msgstr "Сервер не зміг обробити це завантаження. Спробуйте ще раз."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.contentLengthRequired"
 msgstr "Завантаженню бракує Content-Length — ваш браузер або проксі, можливо, використовує chunked transfer."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.csrfTokenMissing"
 msgstr "Запит заблоковано перевіркою CSRF. Перезавантажте сторінку та спробуйте знову."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.generic"
 msgstr "Щось пішло не так. Спробуйте знову."
 

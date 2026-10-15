@@ -248,52 +248,52 @@ msgid "plugin.media.altEditor.saved"
 msgstr "✓ تم الحفظ"
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.storageNotConfigured"
 msgstr "لم يتم تكوين محوّل التخزين — عيّن `storage:` في plumix.config.ts."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.payloadTooLarge"
 msgstr "الملف يتجاوز maxUploadSize المُكوَّن."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.unsupportedMediaType"
 msgstr "نوع الملف هذا غير مسموح به في acceptedTypes لإضافة الوسائط."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.mimeMismatch"
 msgstr "البايتات المرفوعة لا تطابق نوع الملف المُعلَن."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.objectNotFound"
 msgstr "لم يصل الرفع إلى التخزين — تحقق من قواعد CORS للـ bucket."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.alreadyConfirmed"
 msgstr "تم تأكيد هذا الرفع بالفعل من علامة تبويب أو جهاز آخر."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.serverCouldntProcess"
 msgstr "تعذر على الخادم معالجة هذا الرفع. حاول مرة أخرى."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.contentLengthRequired"
 msgstr "الرفع يفتقد Content-Length — قد يستخدم متصفحك أو الوكيل chunked transfer."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.csrfTokenMissing"
 msgstr "تم حظر الطلب بواسطة فحص CSRF. أعد تحميل الصفحة وحاول مجدداً."
 
 #. js-lingui-explicit-id
-#: src/admin/MediaLibrary.tsx
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.generic"
 msgstr "حدث خطأ ما. حاول مجدداً."
 
