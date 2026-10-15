@@ -38,12 +38,12 @@ test.describe("a stale draft", () => {
       updatedAt: new Date(publishedAt.getTime() - 60_000),
     });
     await editor.open(entry);
-    const dialog = page.getByTestId("stale-draft-dialog");
+    const dialog = editor.staleDraft.dialog;
     const code = editor.canvas.block("core/code");
     await expect(dialog).toBeVisible();
     await expect(code).toHaveText("mine");
 
-    await page.getByTestId("stale-draft-use-theirs").click();
+    await editor.staleDraft.useTheirs();
 
     await expect(dialog).toHaveCount(0);
     await expect(code).toHaveText("theirs");

@@ -122,6 +122,51 @@ export interface EditorRichText {
   unlink: () => Promise<void>;
 }
 
+/** The entry's settings in the Page tab beside the canvas. */
+export interface EditorDocumentSettings {
+  /** Picks a visibility policy by its key, or `null` for the type's default. */
+  setVisibility: (policy: string | null) => Promise<void>;
+  /** The visibility picker's label: the chosen policy's, or "(default)". */
+  visibility: () => Promise<string>;
+  /** Toggles each term, by id, in `taxonomy`'s picker. */
+  toggleTerms: (taxonomy: string, termIds: readonly number[]) => Promise<void>;
+  /** The term picker's label: the chosen terms' names. */
+  terms: (taxonomy: string) => Promise<string>;
+}
+
+/** The revisions sheet the editor header opens. */
+export interface EditorRevisions {
+  /**
+   * Opens the sheet, if it isn't, on `tab` (`"all"` by default), and resolves
+   * once the tab lists.
+   */
+  open: (tab?: "all" | "publishes") => Promise<void>;
+  /** The open sheet's revision rows, in the order it lists them. */
+  readonly rows: Locator;
+  /** Loads the sheet's next page and resolves once it lists. */
+  loadMore: () => Promise<void>;
+  /** Whether the sheet offers another page. */
+  hasMore: () => Promise<boolean>;
+  /** Saves `text` as revision `revisionId`'s comment. */
+  comment: (revisionId: number, text: string) => Promise<void>;
+  /** Revision `revisionId`'s comment, as the sheet shows it. */
+  commentOf: (revisionId: number) => Locator;
+  /** Opens a revision's diff, and returns its pane and the current entry's. */
+  diff: (
+    revisionId: number,
+  ) => Promise<{ readonly revision: Locator; readonly current: Locator }>;
+}
+
+/**
+ * The dialog the editor opens over an entry whose pending draft predates its
+ * last publish.
+ */
+export interface EditorStaleDraft {
+  readonly dialog: Locator;
+  /** Discards the draft for the published entry; resolves once the dialog closes. */
+  useTheirs: () => Promise<void>;
+}
+
 /** The open entry's document settings, as the server stores them. */
 export interface EditorStoredDocument {
   readonly title: string;
@@ -156,6 +201,12 @@ export interface Editor {
   undo: () => Promise<void>;
   /** Redoes the last undone edit with the header's Redo button. */
   redo: () => Promise<void>;
+  /** The stale-draft dialog. */
+  readonly staleDraft: EditorStaleDraft;
+  /** The revisions sheet. */
+  readonly revisions: EditorRevisions;
+  /** The Page tab's document settings. */
+  readonly document: EditorDocumentSettings;
   /** Edits a text block's rich text. */
   richText: (block: Locator) => EditorRichText;
   /** Resolves once every edit so far, and any publish, has reached the server. */
@@ -593,6 +644,107 @@ export function createEditor(page: Page): Editor {
     },
   };
 
+  const pageTab = async (): Promise<void> => {
+    await page.getByTestId("plumix-tab-page").click();
+    await expect(page.getByTestId("entry-document-panel")).toBeVisible();
+  };
+  const visibilityPicker = page.getByTestId("entry-visibility-select");
+  const termPicker = (taxonomy: string): Locator =>
+    page.getByTestId(`entry-taxonomy-${taxonomy}`);
+  const labelOf = async (control: Locator): Promise<string> =>
+    ((await control.textContent()) ?? "").trim();
+
+  const documentSettings: EditorDocumentSettings = {
+    setVisibility: async (policy) => {
+      await pageTab();
+      await visibilityPicker.click();
+      const option = page.getByTestId(
+        `entry-visibility-select-option-${policy ?? "default"}`,
+      );
+      await option.click();
+      await expect(option).toBeHidden();
+    },
+    visibility: async () => {
+      await pageTab();
+      return labelOf(visibilityPicker);
+    },
+    toggleTerms: async (taxonomy, termIds) => {
+      await pageTab();
+      const picker = termPicker(taxonomy);
+      await picker.click();
+      await expect(picker).toHaveAttribute("aria-expanded", "true");
+      for (const id of termIds) {
+        await page
+          .getByTestId(`entry-taxonomy-${taxonomy}-option-${String(id)}`)
+          .click();
+      }
+      await page.keyboard.press("Escape");
+      await expect(picker).toHaveAttribute("aria-expanded", "false");
+    },
+    terms: async (taxonomy) => {
+      await pageTab();
+      return labelOf(termPicker(taxonomy));
+    },
+  };
+
+  const revisionRow = (id: number): string =>
+    `revisions-sheet-item-${String(id)}`;
+  const revisionRows = page
+    .getByTestId("revisions-sheet-list")
+    .getByTestId(/^revisions-sheet-item-\d+$/);
+  const loadMoreButton = page.getByTestId("revisions-sheet-load-more");
+
+  const revisions: EditorRevisions = {
+    open: async (tab = "all") => {
+      const tabTrigger = page.getByTestId(`revisions-tab-${tab}`);
+      if (!(await tabTrigger.isVisible())) {
+        await page.getByTestId("revisions-sheet-trigger").click();
+      }
+      await tabTrigger.click();
+      await expect(tabTrigger).toHaveAttribute("data-state", "active");
+      await expect(
+        page
+          .getByTestId("revisions-sheet-list")
+          .or(page.getByTestId("revisions-sheet-empty"))
+          .or(page.getByTestId("revisions-sheet-error")),
+      ).toBeVisible();
+    },
+    rows: revisionRows,
+    loadMore: async () => {
+      const before = await revisionRows.count();
+      await loadMoreButton.click();
+      await expect.poll(() => revisionRows.count()).toBeGreaterThan(before);
+    },
+    hasMore: async () => (await loadMoreButton.count()) > 0,
+    comment: async (revisionId, text) => {
+      const row = revisionRow(revisionId);
+      await page.getByTestId(`${row}-comment`).click();
+      await page.getByTestId(`${row}-comment-input`).fill(text);
+      await page.getByTestId(`${row}-comment-save`).click();
+      await expect(page.getByTestId(`${row}-comment-editor`)).toHaveCount(0);
+    },
+    commentOf: (revisionId) =>
+      page.getByTestId(`${revisionRow(revisionId)}-comment-display`),
+    diff: async (revisionId) => {
+      await page.getByTestId(`${revisionRow(revisionId)}-diff`).click();
+      const modal = page.getByTestId("revision-diff-modal");
+      await expect(modal).toBeVisible();
+      return {
+        revision: modal.getByTestId("revision-diff-modal-revision"),
+        current: modal.getByTestId("revision-diff-modal-current"),
+      };
+    },
+  };
+
+  const staleDraftDialog = page.getByTestId("stale-draft-dialog");
+  const staleDraft: EditorStaleDraft = {
+    dialog: staleDraftDialog,
+    useTheirs: async () => {
+      await page.getByTestId("stale-draft-use-theirs").click();
+      await expect(staleDraftDialog).toHaveCount(0);
+    },
+  };
+
   const save = async (): Promise<void> => {
     await expect(header).toHaveAttribute("data-save-state", "saved");
   };
@@ -733,6 +885,9 @@ export function createEditor(page: Page): Editor {
     inspector,
     undo: () => page.getByTestId("plumix-undo").click(),
     redo: () => page.getByTestId("plumix-redo").click(),
+    staleDraft,
+    revisions,
+    document: documentSettings,
     richText,
     save,
     publish: async () => {
