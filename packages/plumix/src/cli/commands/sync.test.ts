@@ -477,3 +477,199 @@ describe("plumix sync", () => {
     );
   });
 });
+
+const PROD = "https://prod.example";
+
+function siteAt(origin: string, basePath = ""): PlumixApp {
+  return {
+    ...base,
+    config: {
+      ...base.config,
+      basePath,
+      auth: {
+        ...base.config.auth,
+        passkey: { ...base.config.auth.passkey, origin },
+      },
+    },
+  };
+}
+
+describe("plumix sync, rewriting the source's URLs", () => {
+  test("a pull points the remote's links in content at the local origin, and leaves other domains alone", async () => {
+    const ends = await memorySyncEnds();
+    const content = JSON.stringify({
+      blocks: [
+        {
+          name: "core/paragraph",
+          attrs: {
+            text: {
+              type: "text",
+              text: "About",
+              marks: [
+                { type: "link", attrs: { href: "https://prod.example/about" } },
+              ],
+            },
+          },
+        },
+        { name: "core/button", attrs: { url: "https://prod.example/blog/x" } },
+        { name: "core/button", attrs: { url: "https://other.example/" } },
+      ],
+    });
+    await seed(ends.remote, [
+      AUTHOR,
+      `INSERT INTO entries (id, type, title, slug, author_id, content) VALUES (1, 'post', 'Hello', 'hello', 1, '${content}')`,
+    ]);
+
+    await syncCommand.run(
+      syncCtx(
+        ["pull", "--url", PROD],
+        ends.sync,
+        siteAt("http://localhost:5173"),
+      ),
+    );
+
+    const [row] = await ends.local.execute("SELECT content FROM entries");
+    expect(JSON.parse(String(row?.content))).toEqual({
+      blocks: [
+        {
+          name: "core/paragraph",
+          attrs: {
+            text: {
+              type: "text",
+              text: "About",
+              marks: [
+                {
+                  type: "link",
+                  attrs: { href: "http://localhost:5173/about" },
+                },
+              ],
+            },
+          },
+        },
+        { name: "core/button", attrs: { url: "http://localhost:5173/blog/x" } },
+        { name: "core/button", attrs: { url: "https://other.example/" } },
+      ],
+    });
+  });
+
+  test("on a base-path site, a pull rewrites the remote's URLs under that path and no others", async () => {
+    const ends = await memorySyncEnds();
+    await seed(ends.remote, [
+      AUTHOR,
+      `INSERT INTO entries (id, type, title, slug, author_id, meta) VALUES (1, 'post', 'Hello', 'hello', 1, '{"inside":"https://prod.example/site/a","outside":"https://prod.example/other"}')`,
+    ]);
+
+    await syncCommand.run(
+      syncCtx(
+        ["pull", "--url", PROD],
+        ends.sync,
+        siteAt("http://localhost:5173", "/site"),
+      ),
+    );
+
+    expect(await ends.local.execute("SELECT meta FROM entries")).toEqual([
+      {
+        meta: '{"inside":"http://localhost:5173/site/a","outside":"https://prod.example/other"}',
+      },
+    ]);
+  });
+
+  test("--no-rewrite-urls leaves content byte-identical", async () => {
+    const ends = await memorySyncEnds();
+    const content = '{ "url": "https://prod.example/about" }';
+    await seed(ends.remote, [
+      AUTHOR,
+      `INSERT INTO entries (id, type, title, slug, author_id, content) VALUES (1, 'post', 'Hello', 'hello', 1, '${content}')`,
+    ]);
+
+    await syncCommand.run(
+      syncCtx(
+        ["pull", "--url", PROD, "--no-rewrite-urls"],
+        ends.sync,
+        siteAt("http://localhost:5173"),
+      ),
+    );
+
+    expect(await ends.local.execute("SELECT content FROM entries")).toEqual([
+      { content: '{ "url": "https://prod.example/about" }' },
+    ]);
+  });
+
+  test("prints how many values it rewrote in each table", async () => {
+    const ends = await memorySyncEnds();
+    await seed(ends.remote, [
+      `INSERT INTO users (id, email, slug, role, meta) VALUES (1, 'alice@example.com', 'alice', 'admin', '{"site":"https://prod.example/"}')`,
+      `INSERT INTO terms (id, taxonomy, name, slug, meta) VALUES (1, 'category', 'News', 'news', '{"cover":"https://prod.example/news.jpg"}')`,
+      `INSERT INTO entries (id, type, title, slug, author_id, content) VALUES (1, 'post', 'Hello', 'hello', 1, '{"a":"https://prod.example/a","b":["https://prod.example/b"]}')`,
+      `INSERT INTO settings ("group", key, value) VALUES ('site', 'logo', '"https://prod.example/logo.svg"')`,
+    ]);
+
+    await syncCommand.run(
+      syncCtx(
+        [
+          "pull",
+          "--scope",
+          "users",
+          "--scope",
+          "content",
+          "--url",
+          PROD,
+          "--dry-run",
+        ],
+        ends.sync,
+        siteAt("http://localhost:5173"),
+      ),
+    );
+
+    expect(lines).toEqual(
+      expect.arrayContaining([
+        "URLs to rewrite from https://prod.example to http://localhost:5173:",
+        "  users: 1 rewritten",
+        "  terms: 1 rewritten",
+        "  entries: 2 rewritten",
+        "  settings: 1 rewritten",
+      ]),
+    );
+  });
+
+  test("names the source and target by origin and base path, however --url ends", async () => {
+    const ends = await memorySyncEnds();
+    await seed(ends.remote, [
+      AUTHOR,
+      `INSERT INTO entries (id, type, title, slug, author_id, meta) VALUES (1, 'post', 'Hello', 'hello', 1, '{"a":"https://prod.example/site/a"}')`,
+    ]);
+
+    await syncCommand.run(
+      syncCtx(
+        ["pull", "--url", `${PROD}/`, "--dry-run"],
+        ends.sync,
+        siteAt("http://localhost:5173", "/site"),
+      ),
+    );
+
+    expect(lines).toContain(
+      "URLs to rewrite from https://prod.example/site to http://localhost:5173/site:",
+    );
+  });
+
+  test("a push points the local links in content at the deployed origin", async () => {
+    const ends = await memorySyncEnds();
+    await seed(ends.local, [
+      AUTHOR,
+      `INSERT INTO entries (id, type, title, slug, author_id, meta) VALUES (1, 'post', 'Hello', 'hello', 1, '{"a":"http://localhost:5173/a","b":"https://other.example/"}')`,
+    ]);
+    await seed(ends.remote, [AUTHOR]);
+
+    await syncCommand.run(
+      syncCtx(
+        ["push", "--url", PROD, "--yes"],
+        ends.sync,
+        siteAt("http://localhost:5173"),
+      ),
+    );
+
+    expect(await ends.remote.execute("SELECT meta FROM entries")).toEqual([
+      { meta: '{"a":"https://prod.example/a","b":"https://other.example/"}' },
+    ]);
+  });
+});

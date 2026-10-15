@@ -521,7 +521,7 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
     return new PlumixCliError(
       "sync_invalid_arguments",
       "plumix sync was given an argument it does not take",
-      "Usage: `plumix sync pull|push [--scope <scope>...] [--url <origin>] [--binding <name>] [--dry-run] [--yes]`.",
+      "Usage: `plumix sync pull|push [--scope <scope>...] [--url <origin>] [--binding <name>] [--dry-run] [--yes] [--no-rewrite-urls]`.",
       ctx.cause,
     );
   }
