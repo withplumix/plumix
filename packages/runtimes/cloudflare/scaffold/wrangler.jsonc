@@ -30,4 +30,8 @@
   // it a deployed Worker records nothing. Lower `head_sampling_rate` (0-1) on
   // a busy site to log a share of requests.
   "observability": { "enabled": true },
+  // Workers Caching serves the anonymous public page without running the
+  // Worker. The \`cdn\` provider purges it on publish; it stays inert, caching
+  // nothing, until CF_ZONE_ID and CF_CACHE_PURGE_TOKEN are set.
+  "cache": { "enabled": true },
 }

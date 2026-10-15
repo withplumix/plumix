@@ -23,6 +23,8 @@ interface LoadedWranglerConfig {
   readonly accountId?: string;
   /** Whether Workers Logs keeps the deployed Worker's logs. */
   readonly observabilityEnabled: boolean;
+  /** Whether Workers Caching (`cache.enabled`) sits in front of the Worker. */
+  readonly workersCachingEnabled: boolean;
 }
 
 /**
@@ -52,11 +54,15 @@ export function loadWranglerConfig(cwd: string): LoadedWranglerConfig | null {
 
     const { compatibility_date: compatibilityDate, account_id: accountId } =
       parsed as { compatibility_date?: unknown; account_id?: unknown };
-    const { observability } = parsed as { observability?: unknown };
+    const { observability, cache } = parsed as {
+      observability?: unknown;
+      cache?: unknown;
+    };
     return {
       filename,
       d1Databases,
       observabilityEnabled: isEnabled(observability),
+      workersCachingEnabled: isEnabled(cache),
       ...(typeof compatibilityDate === "string" ? { compatibilityDate } : {}),
       ...(typeof accountId === "string" ? { accountId } : {}),
     };

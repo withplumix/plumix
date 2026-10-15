@@ -1,6 +1,8 @@
 import type { CommandContext } from "plumix";
 import type { Plugin } from "vite";
 
+import { workersCaching } from "./workers-caching.js";
+
 export async function createCloudflareVite(
   ctx: CommandContext,
   options: {
@@ -24,7 +26,10 @@ export async function createCloudflareVite(
       ? { inspectorPort: options.inspectorPort }
       : undefined,
   ) as unknown;
-  const plugins: Plugin[] = [plumix({ configFile: ctx.configPath })];
+  const plugins: Plugin[] = [
+    plumix({ configFile: ctx.configPath }),
+    workersCaching(ctx.cwd),
+  ];
   if (Array.isArray(cfResult)) {
     plugins.push(...(cfResult as Plugin[]));
   } else if (cfResult) {

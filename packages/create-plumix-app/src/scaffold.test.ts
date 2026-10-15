@@ -58,6 +58,25 @@ describe("scaffold — blank Cloudflare app", () => {
     expect(existsSync(join(target, ".gitignore"))).toBe(true);
   });
 
+  test("turns on Workers Caching and purges it through the runtime's cdn provider", async () => {
+    const target = join(tmp, "my-app");
+
+    await scaffold({ targetDir: target, runtimeId: "cloudflare" });
+
+    const wrangler = readFileSync(join(target, "wrangler.jsonc"), "utf8");
+    expect(wrangler).toContain('"cache": { "enabled": true }');
+    const config = readFileSync(join(target, "plumix.config.ts"), "utf8");
+    expect(config).toContain(
+      'import { cloudflare as cdn } from "@plumix/runtime-cloudflare/cdn";',
+    );
+    expect(config).toContain("  cdn: cdn({");
+    expect(config).toContain("readonly CF_ZONE_ID: string;");
+    expect(config).toContain("readonly CF_CACHE_PURGE_TOKEN: string;");
+    expect(readFileSync(join(target, ".env"), "utf8")).toContain(
+      "CF_ZONE_ID=\nCF_CACHE_PURGE_TOKEN=",
+    );
+  });
+
   test("registers no plugins for a blank app", async () => {
     const target = join(tmp, "blank");
 

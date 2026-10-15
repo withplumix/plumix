@@ -192,8 +192,9 @@ function credential(
 
 /**
  * Silently inert when either credential resolves empty. Cloudflare caches no
- * HTML without a zone Cache Rule, and pages held by Workers Caching
- * (`cache.enabled`) are beyond this provider's purge.
+ * HTML without a zone Cache Rule. Pages held by Workers Caching
+ * (`cache.enabled`) are beyond this provider's purge, so a Worker takes
+ * `cloudflare()` from `@plumix/runtime-cloudflare/cdn`, which wraps this one.
  */
 export function cloudflare(config: CloudflareCdnConfig): CdnProvider {
   return {

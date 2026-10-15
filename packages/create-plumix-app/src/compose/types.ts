@@ -19,6 +19,11 @@ export interface RuntimeDescriptor {
   /** Top-level `plumix({ ... })` slots, e.g. `runtime`, `database`. */
   readonly configSlots: Readonly<Record<string, string>>;
   /**
+   * Binding names a runtime slot's `(env) => ...` resolvers read, like the CDN
+   * provider's zone credentials. Written and declared beside the auth methods'.
+   */
+  readonly envVars?: readonly string[];
+  /**
    * Object members spliced into the passkey block: a deploy-origin spread, or a
    * literal pair.
    */

@@ -174,7 +174,20 @@ Workers KV rejects an `expirationTtl` under 60 seconds at write time, so treat t
 
 ## The CDN
 
-The `cdn` slot comes from core rather than from this package, because nothing about it is Workers-specific: the same `cloudflare()` provider from `plumix/cdn/cloudflare` runs behind the zone from a container or a VM. [CDN Caching](/deployment/cdn/) is that page — the slot's configuration, the cache rule a zone needs before it caches HTML, the tag vocabulary and what a publish purges. This section is what a Worker adds to it.
+The `cdn` slot's provider is core's `cloudflare()` from `plumix/cdn/cloudflare`, the one that runs behind the zone from a container or a VM. [CDN Caching](/deployment/cdn/) is that page — the slot's configuration, the tag vocabulary and what a publish purges. A Worker imports it from this package instead, with the same options, because one cache in front of a Worker is purged only from Worker code:
+
+```ts no-typecheck
+import { cloudflare as cdn } from "@plumix/runtime-cloudflare/cdn";
+
+export const cdnSlot = cdn({
+  ttl: 3600,
+  staleWhileRevalidate: 86400,
+  zoneId: (env) => env.CF_ZONE_ID,
+  purgeToken: (env) => env.CF_CACHE_PURGE_TOKEN,
+});
+```
+
+This section is what a Worker adds to that page.
 
 A Worker sits _inside_ the colo, in front of its own zone's cache, so the zone never holds the page the Worker hands back and correct headers on the way out are not enough to cache it. The provider therefore also writes each render into the Workers Cache API, and that stored copy is what a later request is answered from. It is the one place a runtime changes what caching does, and it is discovered rather than configured: the provider looks for `caches.default` and uses it when it is there.
 
@@ -186,11 +199,19 @@ A `workers.dev` deploy has no zone and so no `zoneId` to resolve, which is why c
 
 ### Workers Caching
 
-Cloudflare's Workers Caching — `"cache": { "enabled": true }` in `wrangler.jsonc` — is a different mechanism from the Cache API store above, and it is off by default. It puts a cache in front of the Worker entrypoint that reads the `Cache-Control` and `Cache-Tag` headers the provider already writes, so turning it on caches your pages and every cacheable plugin route beside them, sitemaps and social cards included.
+Cloudflare's Workers Caching — `"cache": { "enabled": true }` in `wrangler.jsonc` — puts a cache in front of the Worker entrypoint, and it is the recommended way to cache a Plumix site on Workers. It reads the `Cache-Control` and `Cache-Tag` headers the provider writes, needs no zone cache rule, and collapses concurrent requests for the same page into one render, which the Cache API store above does not. A scaffolded site has it on. An existing site opts in with one line in `wrangler.jsonc`:
 
-The provider cannot clear any of it. Workers Caching is purged through its own Worker-scoped binding, and the zone purge behind your `Cache Purge` token does not reach it. A publish would clear the Cache API entry and leave this one serving the old page until it expires on its own — and the `cdn` telemetry fact will not show you that it happened, because a hit never reaches the Worker to record one.
+```jsonc
+"cache": { "enabled": true },
+```
 
-Leave the flag off, on the purge argument above. It also caches more of the entrypoint than the `cdn` slot governs: every response the Worker returns passes through it, not only the ones the provider decorates. The platform's own endpoints are covered — RPC, the REST API and MCP declare `no-store` themselves, and the admin shell `private, no-cache` — so what is left undeclared is whatever a plugin's own route returns without saying. The scaffolded `wrangler.jsonc` does not set it.
+It holds only the anonymous public page. Every other segment's response leaves the Worker as `private, no-store`, which Workers Caching never stores, so the segment copies stay in the Cache API store. Both are needed, and a publish purges both.
+
+Its purge is reachable only from Worker code, through `cache.purge` from `cloudflare:workers`; the zone purge behind your `Cache Purge` token does not reach it. So `plumix build` and `plumix dev` read `cache.enabled` from your wrangler config, and when it is on the generated Worker hands that binding to the provider from `@plumix/runtime-cloudflare/cdn`. Each request's tags then go to the zone and to Workers Caching in the same flush, at most 1,000 tags per Workers Caching call, and a [sync](/deployment/sync/#after-a-sync) purges it of everything. A refused purge is logged with Cloudflare's errors and the publish still succeeds; the page then expires within `ttl`. Workers Caching purges always run at Cloudflare's free-tier rate limits, whatever the plan, so a site publishing in bulk can meet them.
+
+Two things keep it from working. Core's provider from `plumix/cdn/cloudflare` cannot reach the binding, so a Worker that imports that one leaves Workers Caching serving the old page after a publish. And the provider stays inert until `zoneId` and `purgeToken` resolve, so on a `workers.dev` host nothing is decorated for Workers Caching to store.
+
+It also caches more of the entrypoint than the `cdn` slot governs: every response the Worker returns passes through it, not only the ones the provider decorates. The platform's own endpoints are covered — RPC, the REST API and MCP declare `no-store` themselves, and the admin shell `private, no-cache` — so what is left undeclared is whatever a plugin's own route returns without saying.
 
 ## Scheduled tasks and cron triggers
 

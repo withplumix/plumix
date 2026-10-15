@@ -633,6 +633,21 @@ export const ROSTER: Readonly<
         names: ["surfaceScheduledFailure", "ScheduledFiring"],
       },
     ],
+    "./cdn": [
+      {
+        reason:
+          "the `cdn:` provider a Worker site config wires, which wraps " +
+          "`plumix/cdn/cloudflare`'s and also purges Workers Caching",
+        names: ["cloudflare"],
+      },
+      {
+        reason:
+          "what the Workers Caching module the generated Worker entry " +
+          "imports calls to hand `cloudflare:workers`'s `cache` to the " +
+          "provider, and that binding's shape",
+        names: ["bindWorkersCache", "WorkersCache"],
+      },
+    ],
     "./commands": [
       {
         reason:

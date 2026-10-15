@@ -13,9 +13,9 @@ export interface ResolvedContributions {
   /** Dependencies the fulfilled capabilities add to the app. */
   readonly deps: Record<string, string>;
   /**
-   * Secret binding names the selected auth methods need, deduped. Derived once
-   * here so the runtime's secrets file and the `PlumixEnv` augmentation that
-   * declares them can never drift.
+   * Secret binding names the runtime and the selected auth methods need,
+   * deduped. Derived once here so the runtime's secrets file and the
+   * `PlumixEnv` augmentation that declares them can never drift.
    */
   readonly envVars: string[];
 }
@@ -31,7 +31,12 @@ export function resolveContributions(
     wrangler: {},
     registrations: [],
     deps: {},
-    envVars: [...new Set(authMethods.flatMap((m) => m.envVars ?? []))],
+    envVars: [
+      ...new Set([
+        ...(runtime.envVars ?? []),
+        ...authMethods.flatMap((m) => m.envVars ?? []),
+      ]),
+    ],
   };
 
   const fulfilled = new Set<string>();
