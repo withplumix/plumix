@@ -7,50 +7,18 @@ import type { ReactElement } from "react";
 import type { Root } from "react-dom/client";
 import { createRoot } from "react-dom/client";
 
+import type {
+  CompileOverlayView,
+  HmrClient,
+  ViteErrorPayload,
+} from "./compile-overlay-controller.js";
 import type { DevErrorInfo } from "./contract.js";
+import { createCompileOverlayController } from "./compile-overlay-controller.js";
 import { DevErrorBody } from "./error-page.js";
 import { DEV_OVERLAY_CSS, DevOverlayShell } from "./overlay-shell.js";
 import { DEV_ERROR_CSS } from "./tokens.js";
 
 const HOST_TAG = "plumix-compile-error-overlay";
-
-/**
- * The erroring module recompiled or the page is reloading, so the fix landed.
- * Vite clears its own overlay on `vite:beforeUpdate` for the same reason.
- */
-const CLEAR_EVENTS = [
-  "vite:beforeUpdate",
-  "vite:afterUpdate",
-  "vite:beforeFullReload",
-] as const;
-
-/**
- * The subset of Vite's `ErrorPayload['err']` the overlay reads. Kept as a
- * local structural type so `@plumix/core` needs no `vite` dependency.
- */
-export interface ViteErrorPayload {
-  readonly message?: string;
-  /** The JS stack, when the error carried one (rare for transform errors). */
-  readonly stack?: string;
-  /** The code frame Vite computed — the offending lines with a caret. */
-  readonly frame?: string;
-  /** The plugin that threw, e.g. `vite:import-analysis`. */
-  readonly plugin?: string;
-  readonly loc?: {
-    readonly file?: string;
-    readonly line?: number;
-    readonly column?: number;
-  };
-}
-
-/**
- * Structural so a test can pass a fake and `@plumix/core` needn't depend on
- * `vite`.
- */
-export interface HmrClient {
-  on(event: string, cb: (payload?: { err?: ViteErrorPayload }) => void): void;
-  off?(event: string, cb: (payload?: { err?: ViteErrorPayload }) => void): void;
-}
 
 /**
  * Compile errors carry no resolvable JS stack, so Vite's own code frame is
@@ -96,8 +64,6 @@ export interface InstallOptions {
   readonly initialError?: { readonly err?: ViteErrorPayload };
 }
 
-let active: CompileErrorOverlay | null = null;
-
 /**
  * Idempotent: a second call before teardown, e.g. an HMR re-run of the client
  * entry, returns the existing teardown rather than stacking listeners.
@@ -106,77 +72,43 @@ export function installCompileErrorOverlay(
   hot: HmrClient,
   options: InstallOptions = {},
 ): () => void {
-  if (active) return active.teardown;
-  const overlay = new CompileErrorOverlay(
+  const view = new CompileOverlayDom(options.target ?? window, () =>
+    controller.dismiss(),
+  );
+  const controller = createCompileOverlayController(
     hot,
-    options.target ?? window,
+    view,
     options.initialError,
   );
-  overlay.install();
-  active = overlay;
-  return overlay.teardown;
+  return controller.teardown;
 }
 
-class CompileErrorOverlay {
-  private info: DevErrorInfo | null = null;
+/** Mounts the overlay on the first error shown, and unmounts it on hide. */
+class CompileOverlayDom implements CompileOverlayView {
   private host: HTMLElement | null = null;
   private root: Root | null = null;
-  private torndown = false;
-  /**
-   * Tracked so teardown removes the HMR subscriptions (Vite's `hot.off`) and a
-   * late event after teardown can't remount the overlay.
-   */
-  private readonly hmrHandlers: {
-    readonly event: string;
-    readonly handler: (payload?: { err?: ViteErrorPayload }) => void;
-  }[] = [];
-  private readonly onKeydown: (event: KeyboardEvent) => void;
+  private readonly onKeydown = (event: KeyboardEvent): void => {
+    if (event.key === "Escape") this.onClose();
+  };
 
   constructor(
-    private readonly hot: HmrClient,
     private readonly target: Window,
-    private readonly initialError?: { readonly err?: ViteErrorPayload },
-  ) {
-    this.onKeydown = (event) => {
-      if (this.info && event.key === "Escape") this.hide();
-    };
-  }
+    private readonly onClose: () => void,
+  ) {}
 
-  install(): void {
-    this.onHmr("vite:error", (payload) => this.show(payload?.err));
-    for (const event of CLEAR_EVENTS) this.onHmr(event, () => this.hide());
-    this.target.addEventListener("keydown", this.onKeydown);
-    // Replay an error that arrived before this listener was wired (the page
-    // loaded onto an already-broken module).
-    if (this.initialError?.err) this.show(this.initialError.err);
-  }
-
-  private onHmr(
-    event: string,
-    handler: (payload?: { err?: ViteErrorPayload }) => void,
-  ): void {
-    this.hot.on(event, handler);
-    this.hmrHandlers.push({ event, handler });
-  }
-
-  private show(err: ViteErrorPayload | undefined): void {
-    if (this.torndown || !err) return;
-    this.info = compileErrorToInfo(err);
-    this.render();
-  }
-
-  private hide(): void {
-    if (!this.info) return;
-    this.info = null;
-    this.dispose();
-  }
-
-  private render(): void {
-    if (this.torndown || !this.info) return;
-    if (!this.host) this.mountHost();
+  show(error: ViteErrorPayload): void {
+    if (!this.root) this.mountHost();
     this.root?.render(
-      <CompileModal info={this.info} onClose={() => this.hide()} />,
+      <CompileModal info={compileErrorToInfo(error)} onClose={this.onClose} />,
     );
+  }
+
+  hide(): void {
+    this.target.removeEventListener("keydown", this.onKeydown);
+    this.root?.unmount();
+    this.root = null;
+    this.host?.remove();
+    this.host = null;
   }
 
   private mountHost(): void {
@@ -193,25 +125,8 @@ class CompileErrorOverlay {
     this.root = createRoot(mount, {
       onUncaughtError: (error) => console.error(error),
     });
+    this.target.addEventListener("keydown", this.onKeydown);
   }
-
-  private dispose(): void {
-    this.root?.unmount();
-    this.root = null;
-    this.host?.remove();
-    this.host = null;
-  }
-
-  readonly teardown = (): void => {
-    this.torndown = true;
-    this.target.removeEventListener("keydown", this.onKeydown);
-    for (const { event, handler } of this.hmrHandlers) {
-      this.hot.off?.(event, handler);
-    }
-    this.hmrHandlers.length = 0;
-    this.dispose();
-    if (active === this) active = null;
-  };
 }
 
 /**

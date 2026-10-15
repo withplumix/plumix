@@ -9,11 +9,11 @@ export type {
   DevErrorTimelineRow,
   RenderedDevErrorPanel,
 } from "./contract.js";
+export type { InstallOptions } from "./compile-overlay.js";
 export type {
   HmrClient,
-  InstallOptions,
   ViteErrorPayload,
-} from "./compile-overlay.js";
+} from "./compile-overlay-controller.js";
 export { installCompileErrorOverlay } from "./compile-overlay.js";
 export { resolveEditorPathMap, resolveEditorTemplate } from "./editor.js";
 export { enhanceDevError } from "./enhance.js";

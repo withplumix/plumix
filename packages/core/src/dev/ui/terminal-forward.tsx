@@ -31,7 +31,15 @@ export interface ForwardedLog {
   readonly label?: string;
 }
 
+/** Where forwarding listens, patches the console and POSTs from. */
+export interface ForwardTarget extends EventTarget {
+  readonly console: Pick<Console, ConsoleMethod>;
+  readonly fetch: typeof fetch;
+}
+
 export interface TerminalForwardOptions {
+  /** Defaults to the global `window`. */
+  readonly target?: ForwardTarget;
   /** What to forward; defaults to `warn`. `off` installs nothing. */
   readonly level?: ForwardLevel;
   readonly endpoint?: string;
@@ -83,7 +91,7 @@ const CONSOLE_METHODS: Record<Exclude<ForwardLevel, "off">, ConsoleMethod[]> = {
 };
 
 class TerminalForwarder {
-  private readonly target: Window = window;
+  private readonly target: ForwardTarget;
   private readonly endpoint: string;
   private readonly schedule: (flush: () => void) => void;
   private readonly listeners: (() => void)[] = [];
@@ -96,6 +104,7 @@ class TerminalForwarder {
     private readonly level: Exclude<ForwardLevel, "off">,
     options: TerminalForwardOptions,
   ) {
+    this.target = options.target ?? window;
     this.endpoint = options.endpoint ?? DEV_ERROR_TERMINAL_ENDPOINT;
     this.schedule = options.schedule ?? defaultSchedule;
   }
@@ -117,11 +126,9 @@ class TerminalForwarder {
   }
 
   private patchConsole(method: ConsoleMethod): void {
-    // `console` lives on the global scope, not the `Window` interface itself.
-    const console = (this.target as Window & typeof globalThis).console;
+    const { console } = this.target;
     // Keep the original reference so teardown restores it identically; it is
     // only invoked with `.apply(console, …)`, so the unbound extraction is safe.
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     const original = console[method];
     const patched = (...args: unknown[]): void => {
       original.apply(console, args);

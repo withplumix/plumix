@@ -13,6 +13,8 @@ const FIXTURE_SLUGS = [
   "sanitizer",
   "strategies",
   "use-auth",
+  "dev-mismatch",
+  "server-error",
 ] as const;
 
 /**

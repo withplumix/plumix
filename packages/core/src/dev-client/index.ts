@@ -30,30 +30,50 @@ export interface DevClientOptions {
   readonly initialCompileError?: InstallOptions["initialError"];
 }
 
-/**
- * Each piece installs idempotently, so an HMR re-run never stacks listeners.
- */
-export function installDevClient(options: DevClientOptions = {}): () => void {
-  const teardowns: (() => void)[] = [];
+/** One piece of the dev client, and how to install it. */
+export interface DevClientPart {
+  readonly name: "island-overlay" | "terminal-forwarding" | "compile-overlay";
+  /** Installs the piece and returns its teardown. */
+  readonly install: () => () => void;
+}
+
+/** The pieces {@link installDevClient} installs, in install order. */
+export function devClientParts(
+  options: DevClientOptions = {},
+): DevClientPart[] {
+  const parts: DevClientPart[] = [];
   // The island dialog + terminal forwarder carry React-DOM weight; the
   // `PLUMIX_DEV` gate dead-code-eliminates them (and this branch) from a build.
   if (process.env.PLUMIX_DEV) {
-    teardowns.push(installIslandErrorOverlay());
-    teardowns.push(
-      installTerminalForwarding({
-        level: parseForwardLevel(process.env.PLUMIX_FORWARD_ERRORS),
-      }),
+    parts.push(
+      { name: "island-overlay", install: () => installIslandErrorOverlay() },
+      {
+        name: "terminal-forwarding",
+        install: () =>
+          installTerminalForwarding({
+            level: parseForwardLevel(process.env.PLUMIX_FORWARD_ERRORS),
+          }),
+      },
     );
   }
   // The compile overlay needs the Vite HMR client; the caller gates the whole
   // dynamic import on `import.meta.hot`, so `hot` is only ever present in dev.
-  if (options.hot) {
-    teardowns.push(
-      installCompileErrorOverlay(options.hot, {
-        initialError: options.initialCompileError,
-      }),
-    );
+  const { hot, initialCompileError } = options;
+  if (hot) {
+    parts.push({
+      name: "compile-overlay",
+      install: () =>
+        installCompileErrorOverlay(hot, { initialError: initialCompileError }),
+    });
   }
+  return parts;
+}
+
+/**
+ * Each piece installs idempotently, so an HMR re-run never stacks listeners.
+ */
+export function installDevClient(options: DevClientOptions = {}): () => void {
+  const teardowns = devClientParts(options).map((part) => part.install());
   return () => {
     for (const teardown of teardowns) teardown();
   };

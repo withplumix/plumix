@@ -595,6 +595,12 @@ const CURATED: Readonly<Record<string, Curated>> = {
           "DEV_ERROR_TERMINAL_ENDPOINT",
         ],
       },
+      {
+        reason:
+          "the pieces `installDevClient` installs, split out so core's unit " +
+          "test can read them; a site only ever calls `installDevClient`",
+        names: ["devClientParts"],
+      },
     ],
   },
   "./i18n": {
