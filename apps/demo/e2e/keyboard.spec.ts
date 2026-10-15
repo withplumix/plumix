@@ -145,7 +145,7 @@ test("Cmd/Ctrl+B in rich text bolds the text and leaves the panels open", async 
   await field.click();
   await page.keyboard.press("ControlOrMeta+A");
 
-  await page.keyboard.press("ControlOrMeta+B");
+  await page.keyboard.press("ControlOrMeta+KeyB");
 
   await expect(field.locator("strong")).toHaveText("Plumix");
   await expect(block.locator("strong")).toHaveText("Plumix");
