@@ -267,3 +267,35 @@ export class ScheduledRunError extends Error {
     );
   }
 }
+
+export class WorkersCachePurgeError extends Error {
+  static {
+    WorkersCachePurgeError.prototype.name = "WorkersCachePurgeError";
+  }
+
+  readonly code: "purge_failed";
+  readonly errors: readonly { code: number; message: string }[];
+
+  private constructor(
+    code: "purge_failed",
+    message: string,
+    errors: readonly { code: number; message: string }[],
+  ) {
+    super(message);
+    this.code = code;
+    this.errors = errors;
+  }
+
+  static purgeFailed(ctx: {
+    errors: readonly { code: number; message: string }[];
+  }): WorkersCachePurgeError {
+    const reasons = ctx.errors
+      .map((error) => `${String(error.code)} ${error.message}`)
+      .join("; ");
+    return new WorkersCachePurgeError(
+      "purge_failed",
+      `@plumix/runtime-cloudflare: Workers Caching refused a purge: ${reasons}`,
+      ctx.errors,
+    );
+  }
+}

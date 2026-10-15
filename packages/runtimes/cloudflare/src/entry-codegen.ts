@@ -17,6 +17,9 @@ export function generateEntry({ configModule }: EntrySourceOptions): string {
     // renders resolve plugin strings for the request locale.
     'import pluginCatalogs from "virtual:plumix/plugin-catalogs";',
     `import config from ${JSON.stringify(configModule)};`,
+    // Empty unless wrangler config enables Workers Caching. It must evaluate
+    // before the app connects its slots.
+    'import "virtual:plumix-cloudflare/workers-caching";',
     "",
     // Empty when no config slot contributes a worker export, such as a Durable
     // Object class.

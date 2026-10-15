@@ -27,6 +27,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./cdn": {
+      "types": "./dist/cdn.d.ts",
+      "default": "./dist/cdn.js"
+    },
     "./commands": {
       "types": "./dist/commands/index.d.ts",
       "default": "./dist/commands/index.js"
@@ -53,12 +57,18 @@
       "label": "Cloudflare",
       "description": "Cloudflare Workers + D1",
       "imports": [
-        "import { cloudflare, cloudflareDeployOrigin, d1 } from \"@plumix/runtime-cloudflare\";"
+        "import { cloudflare, cloudflareDeployOrigin, d1 } from \"@plumix/runtime-cloudflare\";",
+        "import { cloudflare as cdn } from \"@plumix/runtime-cloudflare/cdn\";"
       ],
       "configSlots": {
         "runtime": "cloudflare()",
-        "database": "d1({ binding: \"DB\", session: \"auto\" })"
+        "database": "d1({ binding: \"DB\", session: \"auto\" })",
+        "cdn": "cdn({ ttl: 3600, staleWhileRevalidate: 86400, zoneId: (env) => env.CF_ZONE_ID, purgeToken: (env) => env.CF_CACHE_PURGE_TOKEN })"
       },
+      "envVars": [
+        "CF_ZONE_ID",
+        "CF_CACHE_PURGE_TOKEN"
+      ],
       "authOrigin": "...cloudflareDeployOrigin({ workerName: \"__PROJECT_NAME__\", accountSubdomain: \"your-account\", localOrigin: \"http://localhost:5173\" })",
       "authOriginComment": "Set accountSubdomain to your workers.dev subdomain before deploying.",
       "deps": {

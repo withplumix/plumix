@@ -18,6 +18,7 @@ interface RawScaffoldMeta extends Contribution {
   readonly category?: string;
   readonly authOrigin?: string;
   readonly authOriginComment?: string;
+  readonly envVars?: readonly string[];
   readonly deps?: Record<string, string>;
   readonly devDeps?: Record<string, string>;
   readonly secretsFile?: string;
@@ -140,6 +141,7 @@ async function toRuntimeDescriptor(
     configSlots: meta.configSlots ?? {},
     authOrigin: meta.authOrigin,
     authOriginComment: meta.authOriginComment,
+    envVars: meta.envVars,
     deps: meta.deps ?? {},
     devDeps: meta.devDeps ?? {},
     secretsFile: meta.secretsFile ?? DEFAULT_SECRETS_FILE,

@@ -115,4 +115,15 @@ describe("cloudflare generateEntry", () => {
     // to a bare rethrow — identical to having no guard at all.
     expect(entry("./config.ts")).toContain("throw bootError;");
   });
+
+  // The module binds Workers Caching's purge when the site enables it, so it
+  // has to evaluate before the app connects its cdn.
+  test("imports the Workers Caching module ahead of building the app", () => {
+    const source = entry("./config.ts");
+    const imported = source.indexOf(
+      'import "virtual:plumix-cloudflare/workers-caching";',
+    );
+    expect(imported).toBeGreaterThan(-1);
+    expect(imported).toBeLessThan(source.indexOf("buildApp(config, {"));
+  });
 });

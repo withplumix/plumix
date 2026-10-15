@@ -100,6 +100,17 @@ describe("resolveContributions", () => {
     expect(resolveContributions(withAuth).envVars).toEqual(["X", "Y", "Z"]);
   });
 
+  it("puts the runtime's own env vars first, deduped with the auth methods'", () => {
+    const withAuth: Selection = {
+      ...select([]),
+      runtime: { ...runtime, envVars: ["W", "X"] },
+      authMethods: [
+        { id: "oauth", label: "OAuth", authEntry: "", envVars: ["X", "Y"] },
+      ],
+    };
+    expect(resolveContributions(withAuth).envVars).toEqual(["W", "X", "Y"]);
+  });
+
   it("gathers the dependencies a fulfilled capability adds, and none for one no plugin asked for", () => {
     expect(resolveContributions(select([media])).deps).toEqual({
       sharp: "catalog:",

@@ -17,7 +17,7 @@ A CDN provider does two jobs, and neither of them needs a particular runtime. On
 
 Where the runtime also offers an origin-side response store the provider uses that too — Cloudflare Workers does, through the Cache API. A Worker runs in front of its own zone's cache, so the zone never holds what the Worker hands back and the stored copy is what a later request is answered from. Which mechanism a host adds is the provider's business and never appears in configuration.
 
-Plumix ships one provider, `cloudflare()` from `plumix/cdn/cloudflare`. It lives in core rather than in a runtime package and carries no dependencies — a `fetch` call and some header writes — so a container deploy does not pull a Workers toolchain into its image to get caching.
+Plumix ships one provider, `cloudflare()` from `plumix/cdn/cloudflare`. It lives in core rather than in a runtime package and carries no dependencies — a `fetch` call and some header writes — so a container deploy does not pull a Workers toolchain into its image to get caching. A Worker imports it from `@plumix/runtime-cloudflare/cdn` instead: the same provider with the same options, plus the purge of Workers Caching that only Worker code can reach.
 
 ```ts
 import type { CdnProvider } from "plumix";
@@ -44,7 +44,7 @@ Every provider exports its bare vendor name, and importing it under the `cdn` al
 
 ## Quickstart
 
-This is the whole path for a site that is _not_ a Worker — a container, a droplet, a VM — sitting behind a Cloudflare zone. A Workers deploy takes steps 1 to 4 unchanged and skips the rest: it is already on the zone, its pages reach the cache through the Cache API rather than through a cache rule, and [Cloudflare Workers](/deployment/cloudflare/) covers what it sees instead.
+This is the whole path for a site that is _not_ a Worker — a container, a droplet, a VM — sitting behind a Cloudflare zone. A Workers deploy takes steps 1 to 4, importing the provider from `@plumix/runtime-cloudflare/cdn`, and skips the rest: it is already on the zone, its pages reach the cache through Workers Caching and the Cache API rather than through a cache rule, and [Cloudflare Workers](/deployment/cloudflare/) covers what it sees instead.
 
 <Steps>
 
@@ -96,23 +96,23 @@ Edge TTL is the load-bearing half. Left on a fixed number it overrides the `s-ma
   hold. It is a setup step you do once, by hand.
 </Aside>
 
-<Aside type="caution" title="Leave Workers Caching off">
-  Cloudflare's Workers Caching — `"cache": { "enabled": true }` in
-  `wrangler.jsonc`, off by default — reads the same headers this provider
-  writes but is purged only through its own Worker-scoped binding, so a publish
-  leaves it serving the old page. [Cloudflare
-  Workers](/deployment/cloudflare/#workers-caching) has the detail.
+<Aside type="tip" title="On a Worker, turn on Workers Caching instead">
+  A Worker needs no cache rule. Cloudflare's Workers Caching — `"cache": {
+  "enabled": true }` in `wrangler.jsonc` — reads the headers this provider
+  writes, and the provider from `@plumix/runtime-cloudflare/cdn` purges it on
+  publish. [Cloudflare Workers](/deployment/cloudflare/#workers-caching) has the
+  detail.
 </Aside>
 
 ## What each host caches
 
 The slot's configuration is identical across the three rows below. What differs is what the deploy has to cache _with_.
 
-| Deploy                                                    | How a copy is held                            | Segments other than `private` |
-| --------------------------------------------------------- | --------------------------------------------- | ----------------------------- |
-| Worker behind its own zone                                | The colo cache, written through the Cache API | Cached, keyed per segment     |
-| Container or VM behind a Cloudflare zone                  | The zone's cache, filled from the headers     | Rendered live                 |
-| Any host with no `cdn` slot, or with a credential missing | Nothing                                       | Rendered live                 |
+| Deploy                                                    | How a copy is held                                                                        | Segments other than `private` |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ----------------------------- |
+| Worker behind its own zone                                | Workers Caching for the anonymous page, and the colo cache, written through the Cache API | Cached, keyed per segment     |
+| Container or VM behind a Cloudflare zone                  | The zone's cache, filled from the headers                                                 | Rendered live                 |
+| Any host with no `cdn` slot, or with a credential missing | Nothing                                                                                   | Rendered live                 |
 
 The difference is where a hit is answered. A Worker still runs on every request; a hit means it found the page in the Cache API and returned it without rendering. Behind a CDN the site does not run on, a hit never reaches the site at all, so every request the origin does see is a miss by definition — which is why the telemetry `cdn` fact records whether a store was in play, rather than letting a storeless deploy read as a permanently failing cache.
 
@@ -160,7 +160,7 @@ The purge runs after the response through `ctx.defer`, so a zone that refuses on
 
 ## Purging everything
 
-`purgeAll` drops every response the CDN stores. Core calls it once after a [sync](/deployment/sync/#after-a-sync) has replaced the site's data, because a sync changes rows under every tag at once. Cloudflare's provider sends the zone a `purge_everything` call with the same purge token.
+`purgeAll` drops every response the CDN stores. Core calls it once after a [sync](/deployment/sync/#after-a-sync) has replaced the site's data, because a sync changes rows under every tag at once. Cloudflare's provider sends the zone a `purge_everything` call with the same purge token, and on a Worker with Workers Caching on it purges that of everything too.
 
 Like `purgeTags`, it is optional: a vendor that can't purge everything leaves it out rather than shipping a no-op. A sync then reports that the CDN can't purge everything, and cached pages refresh as their `ttl` runs out.
 
