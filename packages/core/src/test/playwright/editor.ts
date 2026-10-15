@@ -22,6 +22,11 @@ export interface EditorCanvas {
   block: (name: string, index?: number) => Locator;
   /** The names of the top-level blocks, in order. */
   blocks: () => Promise<readonly string[]>;
+  /**
+   * Selects `block` and clicks it, so the keys pressed next start in the
+   * canvas iframe rather than the editor around it.
+   */
+  focus: (block: Locator) => Promise<void>;
 }
 
 /**
@@ -91,6 +96,8 @@ export type EditorTextFormat =
 export interface EditorRichText {
   /** Types `text` over the block's text, replacing it. */
   type: (text: string) => Promise<void>;
+  /** Selects the whole text in its field, so the keys pressed next act on it. */
+  select: () => Promise<void>;
   /** Toggles a mark, a list or a quote, or sets the paragraph or heading level. */
   format: (format: EditorTextFormat) => Promise<void>;
   link: (url: string) => Promise<void>;
@@ -110,6 +117,10 @@ export interface Editor {
   select: (block: Locator) => Promise<void>;
   readonly toolbar: EditorToolbar;
   readonly inspector: EditorInspector;
+  /** Undoes the last edit with the header's Undo button. */
+  undo: () => Promise<void>;
+  /** Redoes the last undone edit with the header's Redo button. */
+  redo: () => Promise<void>;
   /** Edits a text block's rich text. */
   richText: (block: Locator) => EditorRichText;
   /** Resolves once every edit so far, and any publish, has reached the server. */
@@ -543,6 +554,9 @@ export function createEditor(page: Page): Editor {
         await expect(page.getByTestId(`${testId}-editor`)).toHaveText(text);
         await expect(block).toContainText(text);
       },
+      select: async () => {
+        await selectText();
+      },
       format: async (format) => {
         const isMark = MARKS.has(format);
         const testId = await selectText(isMark ? "all" : "start");
@@ -591,6 +605,13 @@ export function createEditor(page: Page): Editor {
     block: (name, index = 0) =>
       canvasRoot.locator(attr("data-plumix-block", name)).nth(index),
     blocks: async () => (await topLevelBlocks()).map(({ name }) => name),
+    // Selected first: the selected block's toolbar floats over the block above
+    // it, where the click would land instead.
+    focus: async (block) => {
+      await select(block);
+      await block.click();
+      await expect(iframe).toBeFocused();
+    },
   };
 
   return {
@@ -608,6 +629,8 @@ export function createEditor(page: Page): Editor {
     select,
     toolbar,
     inspector,
+    undo: () => page.getByTestId("plumix-undo").click(),
+    redo: () => page.getByTestId("plumix-redo").click(),
     richText,
     save,
     publish: async () => {
