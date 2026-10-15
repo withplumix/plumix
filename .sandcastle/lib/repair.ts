@@ -324,7 +324,9 @@ export const repairPullRequest = async (
     if (brief) {
       say(`--- repair #${pullRequest.number}: fix what CI saw ---`);
       const { declined: fixDeclined } = await fixer.apply("repair:ci", brief);
-      const headAfter = (await sandbox.exec("git rev-parse HEAD")).stdout.trim();
+      const headAfter = (
+        await sandbox.exec("git rev-parse HEAD")
+      ).stdout.trim();
       const next = afterCiFix(fixDeclined, {
         rebaseMovedTheBranch: headAfter !== headBefore,
       });

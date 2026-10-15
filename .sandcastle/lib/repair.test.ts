@@ -11,10 +11,10 @@ import { describe, expect, test } from "vitest";
 
 import type { MergeOutcome } from "./verdict.js";
 import {
+  afterCiFix,
   aRerunCannotTurnItGreen,
   asCiEvidenceBrief,
   failedOnlyOnTheScreenshotDiff,
-  afterCiFix,
   gatesARepairRuns,
   idsInJobUrl,
   recaptureScreenshots,
