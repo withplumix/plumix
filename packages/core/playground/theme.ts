@@ -132,7 +132,6 @@ const FIXTURES: Readonly<Record<string, () => ReactNode>> = {
   strategies,
 };
 
-/** A page that is no island fixture renders its blocks, for the editor. */
 const page = defineTemplate<EntryData>({
   render: ({ data }): ReactNode =>
     h(

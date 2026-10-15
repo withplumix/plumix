@@ -3,10 +3,6 @@ import type { Locator } from "@playwright/test";
 import type { Editor, EditorInputValue } from "@plumix/core/test/playwright";
 import { expect, test } from "@plumix/core/test/playwright";
 
-/**
- * Sets one input on a fresh block and checks the canvas, then reloads and
- * checks the stored attrs, the inspector and the canvas again.
- */
 async function setAndReload(
   editor: Editor,
   name: string,

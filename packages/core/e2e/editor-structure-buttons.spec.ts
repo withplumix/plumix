@@ -7,32 +7,21 @@ import { expect, test } from "@plumix/core/test/playwright";
 const children = (node: BlockNode | undefined, slot: string): BlockNode[] =>
   (node?.attrs?.[slot] as BlockNode[] | undefined) ?? [];
 
-/** The cells in each row of the canvas table, in order. */
 const canvasGrid = (table: Locator): Promise<number[]> =>
   table
     .locator("tr")
     .evaluateAll((rows) => rows.map((row) => row.children.length));
 
-/** The cells in each row of the stored table, in order. */
 async function storedGrid(editor: Editor): Promise<number[]> {
   const [table] = await editor.stored();
   return children(table, "rows").map((row) => children(row, "cells").length);
 }
 
-/** Every column in the canvas. */
-const columnsIn = (editor: Editor): Locator =>
-  editor.canvas.frame.locator('[data-plumix-block="core/column"]');
-
-/** Clicks a structure button in the selected block's inspector. */
 async function press(page: Page, testId: string): Promise<void> {
   await page.getByTestId("plumix-tab-block").click();
   await page.getByTestId("block-inspector").getByTestId(testId).click();
 }
 
-/**
- * Presses `button` on a fresh table, a header row and two body rows of three
- * cells, then checks the canvas, the stored tree and the reloaded canvas.
- */
 async function reshapeTable(
   editor: Editor,
   page: Page,
@@ -83,11 +72,12 @@ test("add column appends a column to a columns block", async ({
 }) => {
   await editor.create("page");
   await editor.insert("core/columns");
-  const column = columnsIn(editor);
-  await expect(column).toHaveCount(2);
+  await expect(editor.canvas.block("core/column", 1)).toBeVisible();
+  await expect(editor.canvas.block("core/column", 2)).toHaveCount(0);
 
   await press(page, "inspector-add-column");
-  await expect(column).toHaveCount(3);
+  await expect(editor.canvas.block("core/column", 2)).toBeVisible();
+  await expect(editor.canvas.block("core/column", 3)).toHaveCount(0);
 
   await editor.save();
   await editor.reload();
@@ -98,7 +88,8 @@ test("add column appends a column to a columns block", async ({
     "core/column",
     "core/column",
   ]);
-  await expect(column).toHaveCount(3);
+  await expect(editor.canvas.block("core/column", 2)).toBeVisible();
+  await expect(editor.canvas.block("core/column", 3)).toHaveCount(0);
 });
 
 test("removing a column leaves the columns block one fewer", async ({
@@ -106,16 +97,16 @@ test("removing a column leaves the columns block one fewer", async ({
 }) => {
   await editor.create("page");
   await editor.insert("core/columns");
-  const column = columnsIn(editor);
   await editor.select(editor.canvas.block("core/column", 1));
 
   await editor.toolbar.remove();
-  await expect(column).toHaveCount(1);
+  await expect(editor.canvas.block("core/column", 1)).toHaveCount(0);
 
   await editor.save();
   await editor.reload();
 
   const [columns] = await editor.stored();
   expect(children(columns, "columns")).toHaveLength(1);
-  await expect(column).toHaveCount(1);
+  await expect(editor.canvas.block("core/column", 0)).toBeVisible();
+  await expect(editor.canvas.block("core/column", 1)).toHaveCount(0);
 });
