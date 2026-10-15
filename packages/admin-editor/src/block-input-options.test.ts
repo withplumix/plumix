@@ -78,7 +78,7 @@ describe("comboboxItems", () => {
     // The control resolves each label through Lingui; here it reads as-is.
     const [item] = comboboxItems([{ label: "C++", value: "cpp" }], () => "C++");
 
-    expect([item?.value, item?.keywords]).toEqual(["cpp", ["C++"]]);
+    expect(item).toMatchObject({ value: "cpp", keywords: ["C++"] });
   });
 });
 

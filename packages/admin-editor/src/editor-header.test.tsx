@@ -43,10 +43,8 @@ describe("EditorHeader", () => {
   test("a read-only title (no handler) renders as static text", () => {
     const html = markup({ title: "Locked" });
 
-    expect([
-      /data-testid="plumix-editor-title"[^>]*>Locked</.test(html),
-      html.includes('data-testid="plumix-editor-title-input"'),
-    ]).toEqual([true, false]);
+    expect(html).toMatch(/data-testid="plumix-editor-title"[^>]*>Locked</);
+    expect(html).not.toContain('data-testid="plumix-editor-title-input"');
   });
 
   test("while discarding, the Discard and Publish buttons are disabled", () => {

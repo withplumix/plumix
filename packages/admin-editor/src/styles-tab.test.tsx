@@ -74,10 +74,10 @@ describe("StylesTab", () => {
       type === "mediaUrl" ? MediaPicker : undefined,
     );
 
-    expect([
-      html.includes('data-testid="style-control-backgroundImage-pick"'),
-      html.includes('data-testid="style-control-backgroundImage-url"'),
-    ]).toEqual([true, false]);
+    expect(html).toContain('data-testid="style-control-backgroundImage-pick"');
+    expect(html).not.toContain(
+      'data-testid="style-control-backgroundImage-url"',
+    );
   });
 
   test("the Background section takes a typed URL without a media picker", () => {

@@ -87,8 +87,6 @@ function AttrRow({
   const [keyDraft, setKeyDraft] = useState(name);
 
   const commitRename = (): void => {
-    // A mixed-case data-/aria- key passes the allowlist but React drops it at
-    // render.
     const next = htmlAttrName(keyDraft);
     if (canRenameHtmlAttr(name, next, siblingKeys)) onRename(name, next);
     else setKeyDraft(name);

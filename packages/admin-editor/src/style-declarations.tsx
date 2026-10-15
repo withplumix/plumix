@@ -115,7 +115,9 @@ function DeclarationRow({
     const next = keyDraft.trim();
     if (canRenameDeclaration(property, next, siblingKeys)) {
       onRename(property, next);
-    } else setKeyDraft(property); // snap back on a no-op / invalid edit
+    } else {
+      setKeyDraft(property); // snap back on a no-op / invalid edit
+    }
   };
 
   return (

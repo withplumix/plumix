@@ -811,7 +811,7 @@ test.describe("editor playground", () => {
   test("Cmd/Ctrl+B collapses the rails", async ({ page }) => {
     await page.goto("/");
     const rails = page.locator('[data-slot="sidebar"]');
-    // See the x-ray test above: pressing before mount races the listener.
+    // Pressing before the app mounts races its keydown listener.
     await expect(rails.first()).toHaveAttribute("data-state", "expanded");
 
     await page.keyboard.press("ControlOrMeta+KeyB");

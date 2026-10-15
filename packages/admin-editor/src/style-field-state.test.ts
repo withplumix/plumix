@@ -34,13 +34,13 @@ describe("styleFieldState — mode derivation", () => {
       options(),
     );
 
-    expect([state.mode, state.tokenId]).toEqual(["token", "lg"]);
+    expect(state).toMatchObject({ mode: "token", tokenId: "lg" });
   });
 
   test("a literal value drives custom mode", () => {
     const state = styleFieldState(padding, "20px", "token", options());
 
-    expect([state.mode, state.literalText]).toEqual(["custom", "20px"]);
+    expect(state).toMatchObject({ mode: "custom", literalText: "20px" });
   });
 
   test("with no value, mode defaults to token when the field has tokens", () => {
@@ -58,13 +58,13 @@ describe("styleFieldState — mode derivation", () => {
   test("with no value, a scale the theme declares no tokens for starts in custom mode", () => {
     const state = styleFieldState(fontSize, undefined, undefined, options());
 
-    expect([state.category, state.mode]).toEqual(["fontSize", "custom"]);
+    expect(state).toMatchObject({ category: "fontSize", mode: "custom" });
   });
 
   test("with no value and no token scale, mode is custom", () => {
     const state = styleFieldState(display, undefined, "token", options());
 
-    expect([state.hasTokens, state.mode]).toEqual([false, "custom"]);
+    expect(state).toMatchObject({ hasTokens: false, mode: "custom" });
   });
 });
 

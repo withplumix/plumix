@@ -34,9 +34,10 @@ describe("declarationSuggestions", () => {
   });
 
   test("excludes already-set properties", () => {
-    expect(declarationSuggestions("", ["color"]).options).not.toContain(
-      "color",
-    );
+    const { options } = declarationSuggestions("", ["color"]);
+
+    expect(options).toContain("display");
+    expect(options).not.toContain("color");
   });
 
   test("offers to create a property outside the curated list", () => {

@@ -27,7 +27,10 @@ describe("htmlAttrSuggestions", () => {
   });
 
   test("excludes already-set attributes from the common ones", () => {
-    expect(htmlAttrSuggestions("", ["id"]).options).not.toContain("id");
+    const { options } = htmlAttrSuggestions("", ["id"]);
+
+    expect(options).toContain("title");
+    expect(options).not.toContain("id");
   });
 });
 
