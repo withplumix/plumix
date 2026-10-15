@@ -64,6 +64,47 @@ test.describe.serial("@plumix/plugin-media — worker-driven happy path", () => 
     await expect(page.getByTestId("media-library-dropzone")).toBeVisible();
   });
 
+  test("a file dropped on the library uploads it", async ({ page }) => {
+    await page.goto("pages/media");
+    const library = page.getByTestId("media-library");
+    await expect(page.getByTestId("media-library-dropzone")).toBeVisible();
+
+    const dataTransfer = await page.evaluateHandle(
+      (bytes) => {
+        const transfer = new DataTransfer();
+        transfer.items.add(
+          new File([new Uint8Array(bytes)], "dropped.png", {
+            type: "image/png",
+          }),
+        );
+        return transfer;
+      },
+      [...PNG_1X1],
+    );
+    const confirmed = page.waitForResponse(
+      (r) => r.url().endsWith("/media/confirm") && r.status() === 200,
+    );
+    await library.dispatchEvent("drop", { dataTransfer });
+    await confirmed;
+
+    const cards = page.locator(
+      "[data-testid='media-library-grid'] > [data-testid^='media-card-']",
+    );
+    await expect(cards).toHaveCount(1);
+    await expect(cards.first()).toContainText("dropped.png");
+
+    // Serial suite: leave the library empty for the next case.
+    await cards.first().click();
+    await expect(page.getByTestId("media-detail-drawer")).toBeVisible();
+    const deleted = page.waitForResponse(
+      (r) => r.url().endsWith("/media/delete") && r.status() === 200,
+    );
+    await page.getByTestId("media-detail-delete").click();
+    await page.getByTestId("confirm-dialog-confirm").click();
+    await deleted;
+    await expect(cards).toHaveCount(0);
+  });
+
   test("filename search narrows the grid and clearing restores it", async ({
     page,
   }) => {
