@@ -35,21 +35,33 @@ interface SessionEnvelope {
   readonly json?: { readonly user?: AuthUser | null };
 }
 
-async function fetchSessionUser(signal: AbortSignal): Promise<AuthUser | null> {
-  const response = await fetch(`${documentBasePath()}${SESSION_PATH}`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      // The dispatcher rejects any /_plumix/* mutation missing this — the
-      // admin client sends it too.
-      [CSRF_HEADER_NAME]: CSRF_HEADER_VALUE,
-    },
-    body: JSON.stringify({ json: {} }),
-    signal,
-  });
-  if (!response.ok) return null;
-  const payload = (await response.json()) as SessionEnvelope;
-  return payload.json?.user ?? null;
+/**
+ * Never throws: a failed request or a non-2xx answer resolves to signed out.
+ * `fetchImpl` is the seam a test hands its own `fetch`.
+ */
+export async function fetchSessionUser(
+  basePath: string,
+  signal: AbortSignal,
+  fetchImpl: typeof fetch = fetch,
+): Promise<AuthUser | null> {
+  try {
+    const response = await fetchImpl(`${basePath}${SESSION_PATH}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        // The dispatcher rejects any /_plumix/* mutation missing this — the
+        // admin client sends it too.
+        [CSRF_HEADER_NAME]: CSRF_HEADER_VALUE,
+      },
+      body: JSON.stringify({ json: {} }),
+      signal,
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as SessionEnvelope;
+    return payload.json?.user ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -64,11 +76,11 @@ export function useAuth(): UseAuthResult {
 
   useEffect(() => {
     const controller = new AbortController();
-    void fetchSessionUser(controller.signal)
-      .catch(() => null)
-      .then((user) => {
+    void fetchSessionUser(documentBasePath(), controller.signal).then(
+      (user) => {
         if (!controller.signal.aborted) setState({ user, loading: false });
-      });
+      },
+    );
     return () => {
       controller.abort();
     };
