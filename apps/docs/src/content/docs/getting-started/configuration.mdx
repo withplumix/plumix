@@ -157,6 +157,23 @@ export const recipeAuth = auth({
 });
 ```
 
+**Migrating sign-in links.** The gate always sends `?redirectTo=`, and neither its name nor the redirect's 302 is configurable ([ADR 0033](https://github.com/withplumix/plumix/blob/main/docs/adr/0033-a-redirect-status-is-chosen-by-the-framework.md)). Links and bookmarks from a previous site that carry another name, such as `?callbackUrl=`, still work: your sign-in page reads the old name in an island and passes it on to [`authClient`](/getting-started/project-structure/#plumixauthclient) as `redirectTo`.
+
+```tsx no-typecheck
+import { authClient } from "plumix/auth/client";
+
+const redirectTo =
+  new URLSearchParams(location.search).get("callbackUrl") ?? undefined;
+
+await authClient.signIn.magicLink({ email, redirectTo });
+const githubHref = authClient.url(
+  { method: "oauth", route: "github/start" },
+  { redirectTo },
+);
+```
+
+The server validates `redirectTo` and keeps it only when it is a root-relative path inside the base path, sending the visitor to `/` otherwise, so the page needn't check it.
+
 The passkey block appears in two shapes across this site, and they are the same block. The literal shape above writes `rpId` and `origin` by hand, which is what a fixed hostname wants. The other shape spreads `cloudflareDeployOrigin({ ... })` into the block, which returns `rpId`, `origin` and sometimes `allowedOrigins` computed from the host a Cloudflare Workers Builds deploy is served on, and it is what the scaffolder writes into a new project. A build that runs anywhere else, your own machine included, gets the `localOrigin` fallback. Open your own `plumix.config.ts` and you will see the spread. `localOrigin` is an option of `cloudflareDeployOrigin`, not a passkey key, so it only exists in that shape.
 
 `rpId` is deliberately not an `EnvInput`. It anchors the credential, so a passkey enrolled against one value cannot verify against another, and it has to be constant across environments.
