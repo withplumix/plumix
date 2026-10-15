@@ -1,7 +1,8 @@
 import type { ResolvedEntry, TemplateDepLoader } from "plumix";
 import type { AppContext } from "plumix/plugin";
 import type { Entry } from "plumix/schema";
-import { and, desc, eq, inArray, isNotNull, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, ne } from "drizzle-orm";
+import { publicEntryRows } from "plumix/db";
 import { readEntryType, resolveEntryList } from "plumix/plugin";
 import { entries, entryTerm } from "plumix/schema";
 
@@ -21,8 +22,8 @@ export type RelatedPosts = readonly ResolvedEntry[];
 const RELATED_POSTS_LIMIT = 3;
 
 /**
- * Published entries sharing a term with `currentId` and of its type, newest
- * first, excluding itself.
+ * Entries the reader may list sharing a term with `currentId` and of its type,
+ * newest first, excluding itself.
  */
 export async function findRelatedEntries(
   ctx: AppContext,
@@ -31,6 +32,8 @@ export async function findRelatedEntries(
 ): Promise<readonly Entry[]> {
   const selfType = await readEntryType(ctx, currentId);
   if (selfType === null) return [];
+  const listable = await publicEntryRows(ctx);
+  if (listable === null) return [];
 
   // Terms and siblings stay subqueries: materialising either as an id list
   // binds one parameter per id, and D1 caps a statement at 100.
@@ -57,8 +60,7 @@ export async function findRelatedEntries(
       and(
         inArray(entries.id, siblingIds),
         eq(entries.type, selfType),
-        eq(entries.status, "published"),
-        isNotNull(entries.publishedAt),
+        listable,
       ),
     )
     .orderBy(desc(entries.publishedAt), desc(entries.id))
