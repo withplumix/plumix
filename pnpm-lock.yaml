@@ -516,6 +516,9 @@ importers:
         specifier: catalog:react
         version: 19.3.0
     devDependencies:
+      '@axe-core/playwright':
+        specifier: 'catalog:'
+        version: 4.13.0(playwright-core@1.63.0)
       '@cloudflare/workers-types':
         specifier: catalog:cloudflare
         version: 5.20261007.1
