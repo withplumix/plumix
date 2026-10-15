@@ -6,10 +6,6 @@ interface CodeSent {
   readonly ok: true;
 }
 
-/**
- * The method's browser half: `authClient.emailCode.sendCode` mails a code,
- * and `authClient.signIn.emailCode` trades it for a session.
- */
 const emailCodeClient = defineAuthMethodClient("email-code", (kernel) => ({
   sendCode: ({ email }: { readonly email: string }) =>
     kernel.post<CodeSent>("request", { email }),

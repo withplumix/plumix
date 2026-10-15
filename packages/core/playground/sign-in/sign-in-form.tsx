@@ -9,10 +9,6 @@ import { useIsLive } from "plumix/blocks/renderer";
 
 import { SIGN_IN_ERRORS } from "./messages.js";
 
-/**
- * Two steps in one form: mail a code, then trade it for a session. A passkey
- * button shows when the site lists passkeys.
- */
 export function SignInForm(_props: IslandProps<object>): ReactNode {
   const live = useIsLive();
   const { methods } = authClient.useAuthMethods();

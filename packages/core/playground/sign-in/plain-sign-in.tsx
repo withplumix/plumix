@@ -3,11 +3,6 @@ import { authClient } from "plumix/auth/client";
 
 import { SIGN_IN_ERRORS } from "./messages.js";
 
-/**
- * A sign-in form that works with no script. It is the site's `loginPath`, so
- * a form post that fails lands back here with `?email_code_error=<code>`, and
- * a sent code with `?email_code_sent=1`.
- */
 export function PlainSignIn({
   request,
 }: {

@@ -5,7 +5,7 @@ import {
   createDispatcherHarness,
   createTestDb,
 } from "plumix/test";
-import { expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 
 import { emailCode } from "./index.js";
 
@@ -22,6 +22,21 @@ async function harness(): Promise<DispatcherHarness> {
   return createDispatcherHarness({ db, config: { plugins: [emailCode] } });
 }
 
+// The code is random, so each test pins it to know a right and a wrong guess.
+const SENT_CODE = "123456";
+const WRONG_CODE = "654321";
+
+function pinSentCode(): void {
+  vi.spyOn(crypto, "getRandomValues").mockImplementation((array) => {
+    (array as Uint32Array)[0] = Number(SENT_CODE);
+    return array;
+  });
+}
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 const requestCode = (h: DispatcherHarness) =>
   h.fetch("/_plumix/auth/email-code/request", {
     method: "POST",
@@ -36,9 +51,9 @@ const verify = (h: DispatcherHarness, code: string) =>
 
 test("refuses a fourth code to one address within ten minutes", async () => {
   const h = await harness();
-  for (let sent = 0; sent < 3; sent++) {
-    (await requestCode(h)).assertStatus(200);
-  }
+  (await requestCode(h)).assertStatus(200);
+  (await requestCode(h)).assertStatus(200);
+  (await requestCode(h)).assertStatus(200);
 
   const res = await requestCode(h);
 
@@ -48,16 +63,16 @@ test("refuses a fourth code to one address within ten minutes", async () => {
 });
 
 test("refuses even the right code after five wrong guesses at it", async () => {
+  pinSentCode();
   const h = await harness();
   (await requestCode(h)).assertStatus(200);
-  const [mail] = h.mail.sent("emailCode");
-  const code = mail?.props.code ?? "";
-  const wrong = code === "000000" ? "111111" : "000000";
-  for (let guess = 0; guess < 5; guess++) {
-    (await verify(h, wrong)).assertStatus(400);
-  }
+  (await verify(h, WRONG_CODE)).assertStatus(400);
+  (await verify(h, WRONG_CODE)).assertStatus(400);
+  (await verify(h, WRONG_CODE)).assertStatus(400);
+  (await verify(h, WRONG_CODE)).assertStatus(400);
+  (await verify(h, WRONG_CODE)).assertStatus(400);
 
-  const res = await verify(h, code);
+  const res = await verify(h, SENT_CODE);
 
   res.assertStatus(429);
   expect(await res.json()).toEqual({ error: "too_many_attempts" });

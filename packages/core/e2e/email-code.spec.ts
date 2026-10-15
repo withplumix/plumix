@@ -14,7 +14,6 @@ declare module "../src/mail/contract/registry.js" {
 // Every test starts signed out; the default storage state is an admin's.
 test.use({ storageState: { cookies: [], origins: [] } });
 
-/** Sign-up on this domain is open; on any other it is closed. */
 const ALLOWED_DOMAIN = "allowed.test";
 
 // The baseline is restored once per worker, so the domain is seeded once too.
@@ -86,7 +85,7 @@ test.describe("the email-code method from a form with no script", () => {
     await page.getByTestId("plain-sign-in-send-code").click();
     await expect(page.getByTestId("plain-sign-in-sent")).toBeVisible();
     const { props } = await mailbox.latest("emailCode", { to: email });
-    const wrong = props.code === "000000" ? "111111" : "000000";
+    const wrong = String((Number(props.code) + 1) % 1_000_000).padStart(6, "0");
     await page.getByTestId("plain-sign-in-email").fill(email);
     await page.getByTestId("plain-sign-in-code").fill(wrong);
     await page.getByTestId("plain-sign-in-submit").click();
