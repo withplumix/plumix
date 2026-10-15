@@ -63,8 +63,6 @@ test("a text input sets a details block's summary", async ({ editor }) => {
   );
 });
 
-// No core block declares a number or radio input, so the playground's own
-// rating block carries both.
 test("a number input sets a rating's score", async ({ editor }) => {
   await setAndReload(editor, "playground/rating", "score", 4, (rating) =>
     expect(rating).toHaveText("★★★★"),
