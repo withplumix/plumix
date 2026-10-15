@@ -8,6 +8,12 @@ import { defineTemplate, defineTheme, entry, fallback } from "plumix/theme";
 import { ratingBlock } from "./blocks/rating.js";
 import { AuthProbe } from "./islands/auth-probe.js";
 import { Clicker, Counter } from "./islands/counter.js";
+import {
+  Failing,
+  Mismatch,
+  Suppressed,
+  ThrowOnClick,
+} from "./islands/dev-faults.js";
 import { LoadProbe } from "./islands/load-probe.js";
 import { NestParent } from "./islands/nest-parent.js";
 import { DivergeParent, DropParent } from "./islands/parents.js";
@@ -141,6 +147,39 @@ function authHookIsland(): ReactNode {
   return h(UseAuthProbe, { client: "load" });
 }
 
+/**
+ * Each island hydrates on interaction, so a fault raises nothing until a spec
+ * acts on it.
+ */
+function devMismatch(): ReactNode {
+  return [
+    h(Mismatch, { client: "interaction" }),
+    h(Suppressed, { client: "interaction" }),
+    h(ThrowOnClick, { client: "interaction" }),
+    h(Failing, {
+      client: "interaction",
+      testId: "failing-first",
+      message: "first island failed",
+    }),
+    h(Failing, {
+      client: "interaction",
+      testId: "failing-second",
+      message: "second island failed",
+    }),
+  ].map((island, index) => h("div", { key: index, style: rowStyle }, island));
+}
+
+/**
+ * A failed island unmounts, so a fixed row keeps the next one from sliding
+ * under the pointer that failed it.
+ */
+const rowStyle = { height: "3rem" };
+
+/** The dev error page's source view shows this line, markup and all. */
+function serverError(): never {
+  throw new Error("<b>server error</b>");
+}
+
 const FIXTURES: Readonly<Record<string, () => ReactNode>> = {
   auth,
   islands,
@@ -149,6 +188,8 @@ const FIXTURES: Readonly<Record<string, () => ReactNode>> = {
   sanitizer,
   strategies,
   "use-auth": authHookIsland,
+  "dev-mismatch": devMismatch,
+  "server-error": serverError,
 };
 
 function article(resolved: ResolvedEntry): ReactNode {
