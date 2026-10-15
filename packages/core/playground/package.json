@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Plumix consumer that renders core's island fixtures — for core's e2e suite",
+  "description": "Plumix consumer that renders core's island fixtures and hosts the block editor — for core's e2e suite",
   "license": "MIT",
   "scripts": {
     "build": "plumix build",
@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@plumix/plugin-media": "workspace:*",
     "@plumix/runtime-cloudflare": "workspace:*",
     "plumix": "workspace:*",
     "react": "catalog:react"

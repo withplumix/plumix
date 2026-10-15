@@ -46,6 +46,24 @@ describe("collectEditorBlockModules", () => {
     ]);
   });
 
+  test("resolves a theme the config imports with its authored `.js` extension", () => {
+    write("blocks.ts", "export const rating = {};");
+    write(
+      "theme.ts",
+      `import { defineTheme } from "plumix/theme";
+       import { rating } from "./blocks.js";
+       export const theme = defineTheme({ blocks: [rating] });`,
+    );
+    const source = `import { plumix } from "plumix";
+       import { theme } from "./theme.js";
+       export default plumix({ theme });`;
+    write("plumix.config.ts", source);
+
+    expect(collectEditorBlockModules(configPath(), source)).toEqual([
+      { module: join(dir, "blocks.ts"), exportName: "rating" },
+    ]);
+  });
+
   test("resolves a plugin's `registerBlocks` named binding to its export", () => {
     write("plugin/blocks.ts", "export const blocks = [];");
     write(
