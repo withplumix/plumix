@@ -113,6 +113,35 @@ describe("findRelatedEntries", () => {
     expect(related.map((e) => e.id)).toEqual([newer.id, older.id]);
   });
 
+  test("returns nothing when the entry's type is not public", async () => {
+    const db = await createTestDb();
+    const f = factoriesFor(db);
+    const author = await f.user.create({});
+    const topic = await f.term.create({ taxonomy: "category" });
+    const current = await f.entry.create({
+      type: "post",
+      status: "published",
+      publishedAt: new Date(2000),
+      authorId: author.id,
+    });
+    const sibling = await f.entry.create({
+      type: "post",
+      status: "published",
+      publishedAt: new Date(1000),
+      authorId: author.id,
+    });
+    await f.entryTerm.create({ entryId: current.id, termId: topic.id });
+    await f.entryTerm.create({ entryId: sibling.id, termId: topic.id });
+
+    const related = await findRelatedEntries(
+      ctxFor(db, { post: { label: "Posts", isPublic: false } }),
+      current.id,
+      3,
+    );
+
+    expect(related).toEqual([]);
+  });
+
   test("returns nothing when the entry has no terms", async () => {
     const db = await createTestDb();
     const f = factoriesFor(db);
@@ -201,7 +230,7 @@ describe("findRelatedEntries", () => {
   });
 });
 
-describe("an entry's access policy", () => {
+describe("findRelatedEntries under an entry's access policy", () => {
   async function seedMembersSibling(db: TestDb) {
     const f = factoriesFor(db);
     const author = await f.user.create({});
@@ -239,7 +268,7 @@ describe("an entry's access policy", () => {
     expect(related.map((e) => e.title)).toEqual(["Public sibling"]);
   });
 
-  test("lists a members sibling to a signed-in member who edits nothing", async () => {
+  test("lists a members sibling to a signed-in member without edit capability", async () => {
     const db = await createTestDb();
     const current = await seedMembersSibling(db);
     const member = await factoriesFor(db).subscriber.create({});
