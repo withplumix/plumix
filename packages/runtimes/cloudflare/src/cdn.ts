@@ -21,9 +21,8 @@ const PURGE_TAG_LIMIT = 1000;
 let workersCache: WorkersCache | null = null;
 
 /**
- * Called by the generated Worker entry when the site's wrangler config sets
- * `cache.enabled`, before the app connects its slots. `null` is a deploy with
- * Workers Caching off.
+ * Must run before the app connects its slots, which read the binding. `null` is
+ * a deploy with Workers Caching off.
  */
 export function bindWorkersCache(cache: WorkersCache | null): void {
   workersCache = cache;

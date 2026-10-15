@@ -10,10 +10,6 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { WorkersCache } from "./cdn.js";
 import { bindWorkersCache, cloudflare } from "./cdn.js";
 
-/**
- * The suite runs on Node, so `caches.default` is absent and the zone purge is
- * the `fetch` stubbed below; Workers Caching is the recording fake bound here.
- */
 const CONFIG: CloudflareCdnConfig = {
   ttl: 60,
   zoneId: "zone-1",
@@ -24,6 +20,8 @@ const blog = definePlugin("blog", (ctx) => {
   ctx.registerEntryType("post", { label: "Posts", isPublic: true });
 });
 
+// The suite runs on Node, so `caches.default` is absent and the zone purge is
+// the stubbed `fetch`; Workers Caching is the recording fake bound per test.
 let purge: ReturnType<typeof vi.fn<WorkersCache["purge"]>>;
 let zoneFetch: ReturnType<typeof vi.fn<typeof fetch>>;
 const originalFetch = globalThis.fetch;

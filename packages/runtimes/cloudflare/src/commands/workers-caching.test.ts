@@ -15,7 +15,6 @@ afterEach(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-/** What the Worker's entry imports, as the plugin serves it. */
 function moduleSource(): string {
   const plugin = workersCaching(root);
   const resolved = plugin.resolveId(
@@ -28,29 +27,24 @@ function moduleSource(): string {
 }
 
 const BINDS_WORKERS_CACHE = [
-  'import { cache } from "cloudflare:workers";',
-  'import { bindWorkersCache } from "@plumix/runtime-cloudflare/cdn";',
-  "bindWorkersCache(cache);",
-];
+  ["imports the Workers cache", 'import { cache } from "cloudflare:workers";'],
+  [
+    "imports the binder",
+    'import { bindWorkersCache } from "@plumix/runtime-cloudflare/cdn";',
+  ],
+  ["binds the cache", "bindWorkersCache(cache);"],
+] as const;
 
 describe("the Workers Caching module", () => {
-  test("binds the Workers cache when wrangler.jsonc enables it", () => {
-    writeFileSync(
-      join(root, "wrangler.jsonc"),
-      '{\n  // on\n  "cache": { "enabled": true },\n}',
-    );
+  describe.each([
+    ["wrangler.jsonc", '{\n  // on\n  "cache": { "enabled": true },\n}'],
+    ["wrangler.toml", "[cache]\nenabled = true\n"],
+  ])("when %s enables it", (filename, wrangler) => {
+    test.each(BINDS_WORKERS_CACHE)("%s", (_, line) => {
+      writeFileSync(join(root, filename), wrangler);
 
-    const source = moduleSource();
-
-    for (const line of BINDS_WORKERS_CACHE) expect(source).toContain(line);
-  });
-
-  test("binds the Workers cache when wrangler.toml enables it", () => {
-    writeFileSync(join(root, "wrangler.toml"), "[cache]\nenabled = true\n");
-
-    const source = moduleSource();
-
-    for (const line of BINDS_WORKERS_CACHE) expect(source).toContain(line);
+      expect(moduleSource()).toContain(line);
+    });
   });
 
   test.each([
