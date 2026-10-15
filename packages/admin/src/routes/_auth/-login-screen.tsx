@@ -46,10 +46,7 @@ import type { LoginSearch } from "./-schemas.js";
 import { buildLocaleSwitchUrl, writeLocaleCookie } from "./-locale-param.js";
 import { loginSchema } from "./-schemas.js";
 
-/**
- * Split out of `login.tsx` so a test can mount the screen without the
- * file-based route tree; the route only hands it the validated search.
- */
+/** The route only hands this screen the validated search. */
 export function LoginScreen({ search }: { search: LoginSearch }): ReactNode {
   const router = useRouter();
   const manifest = readManifest();

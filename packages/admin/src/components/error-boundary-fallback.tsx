@@ -19,7 +19,6 @@ export function ErrorBoundaryFallback({
   error,
 }: ErrorComponentProps): ReactNode {
   const [show, setShow] = useState(false);
-  // Kept behind a toggle under a localized heading.
   const detail = errorDetail(error);
   return (
     <div className="mx-auto my-12 flex max-w-2xl flex-col gap-4">
