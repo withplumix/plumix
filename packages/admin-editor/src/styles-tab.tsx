@@ -955,9 +955,7 @@ function TextShadowControls({
                   id={`${baseId}-${key}`}
                   type="number"
                   value={parts[key]}
-                  // Coalesce an emptied field to 0 so composition never emits a
-                  // malformed `text-shadow` (e.g. "px 1px 3px …").
-                  onChange={(e) => setPart(key)(e.target.value || "0")}
+                  onChange={(e) => setPart(key)(e.target.value)}
                   className="h-8"
                   data-testid={`style-text-shadow-${key}`}
                 />

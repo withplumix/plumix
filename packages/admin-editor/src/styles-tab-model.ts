@@ -79,8 +79,13 @@ export function parseTextShadow(value: string | undefined): TextShadowParts {
   };
 }
 
+/**
+ * Coalesces an emptied length to 0, so composition never emits a malformed
+ * `text-shadow` (e.g. "px 1px 3px …").
+ */
 export function formatTextShadow(parts: TextShadowParts): string {
-  return `${parts.x}px ${parts.y}px ${parts.blur}px ${parts.color}`;
+  const len = (raw: string): string => `${raw === "" ? "0" : raw}px`;
+  return `${len(parts.x)} ${len(parts.y)} ${len(parts.blur)} ${parts.color}`;
 }
 
 /**
