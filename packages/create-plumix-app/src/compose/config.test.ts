@@ -46,11 +46,11 @@ describe("assembleConfig — blank Cloudflare app", () => {
     expect(assemble(blankSelection("my-app"))).toBe(
       `import { cloudflare, cloudflareDeployOrigin, d1 } from "@plumix/runtime-cloudflare";
 import { auth } from "plumix/auth";
-import { plumix } from "plumix";
+import { plumix, type OAuthProvidersOf } from "plumix";
 
 import { theme } from "./theme";
 
-export default plumix({
+const config = plumix({
   runtime: cloudflare(),
   database: d1({ binding: "DB", session: "auto" }),
   auth: auth({
@@ -63,6 +63,14 @@ export default plumix({
   plugins: [],
   theme,
 });
+
+export default config;
+
+declare module "plumix" {
+  // Types \`authClient.signIn.oauth\`'s provider from the config above, so a
+  // provider added there needs no edit here.
+  interface OAuthProviderRegistry extends OAuthProvidersOf<typeof config> {}
+}
 `,
     );
   });
@@ -163,7 +171,9 @@ describe("assembleConfig — auth methods", () => {
   it("folds auth imports into the plumix import lines", () => {
     const config = withAuth([oauth, magicLink]);
     expect(config).toContain('import { auth, github } from "plumix/auth";');
-    expect(config).toContain('import { consoleMailer, plumix } from "plumix";');
+    expect(config).toContain(
+      'import { consoleMailer, plumix, type OAuthProvidersOf } from "plumix";',
+    );
   });
 
   it("injects each method's entry into the auth block", () => {
@@ -208,7 +218,16 @@ describe("assembleConfig — auth methods", () => {
     expect(config).toContain("    // Put its secrets in .env.");
   });
 
-  it("adds no augmentation when no method needs secrets", () => {
-    expect(withAuth([magicLink])).not.toContain("declare module");
+  it("declares no secret bindings when no method needs secrets", () => {
+    expect(withAuth([magicLink])).not.toContain("interface PlumixEnv");
+  });
+
+  it("derives the OAuth provider registry from the config beside the secret bindings", () => {
+    const config = withAuth([oauth]);
+    expect(config.match(/declare module "plumix"/g)).toHaveLength(1);
+    expect(config).toContain(
+      "  interface OAuthProviderRegistry extends OAuthProvidersOf<typeof config> {}",
+    );
+    expect(config).toContain("  interface PlumixEnv {");
   });
 });

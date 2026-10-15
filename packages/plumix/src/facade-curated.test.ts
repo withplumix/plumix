@@ -451,6 +451,17 @@ const CURATED: Readonly<Record<string, Curated>> = {
       },
     ],
   },
+  "./auth/client": {
+    mirrors: "@plumix/core/auth/client",
+    withheld: [
+      {
+        reason:
+          "the admin's own context seed: the admin is no server render, so " +
+          "it hands `authClient` its base path itself",
+        names: ["seedAuthContext"],
+      },
+    ],
+  },
   "./blocks/island-renderer": {
     mirrors: "@plumix/core/blocks/island-renderer",
     withheld: [

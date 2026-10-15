@@ -2,6 +2,7 @@ import type { MessageDescriptor } from "@lingui/core";
 import { defineMessage } from "@lingui/core/macro";
 
 import type { PasskeyErrorCode as CorePasskeyErrorCode } from "@plumix/core";
+import type { AuthResult } from "@plumix/core/auth/client";
 
 import { createStrictErrorDescriptorRegistry } from "./error-descriptor-registry.js";
 
@@ -99,6 +100,17 @@ export class PasskeyError extends Error {
   static ofCode(ctx: { code: PasskeyErrorCode }): PasskeyError {
     return new PasskeyError(ctx.code);
   }
+}
+
+/**
+ * A ceremony's `authClient` result for a mutation, which reports failure by
+ * throwing.
+ */
+export function unwrapPasskeyResult<T>(result: AuthResult<T>): T {
+  if (result.error) {
+    throw PasskeyError.ofCode({ code: result.error.code as PasskeyErrorCode });
+  }
+  return result.data;
 }
 
 const MESSAGES: Record<PasskeyErrorCode, MessageDescriptor> = {

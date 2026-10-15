@@ -1,3 +1,4 @@
+import type { EmbeddedAuthContext } from "../../auth/client/render-context.js";
 import type { AssetManifest, ViteCommand } from "./asset-manifest.js";
 import { resolveEntryUrl } from "./asset-manifest.js";
 
@@ -15,6 +16,7 @@ export function injectIslandsBootstrap(
   manifest: AssetManifest,
   command: ViteCommand,
   basePath = "",
+  auth?: EmbeddedAuthContext,
 ): string {
   if (!body.includes("<plumix-island")) return body;
   const src = resolveEntryUrl(
@@ -31,10 +33,19 @@ export function injectIslandsBootstrap(
     DEV_RENDERER_PATH,
     basePath,
   );
+  // `authClient`'s render context, so an island hydrates with what the server
+  // rendered. `<` is escaped so a label can't close the script.
+  const authScript =
+    auth === undefined
+      ? ""
+      : `<script type="application/json" data-plumix-auth="">${JSON.stringify(
+          auth,
+        ).replace(/</g, "\\u003c")}</script>`;
   // A hydrated island has no `PlumixProvider` or `<base href>`, so this is its
   // only base-path signal.
   return (
     body +
+    authScript +
     `<script type="module" src="${src}" data-plumix-renderer-url="${rendererUrl}" data-plumix-base-path="${basePath}"></script>`
   );
 }

@@ -1,11 +1,12 @@
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import {
   createPluginRegistry,
+  defineAuthMethod,
   definePlugin,
   HookRegistry,
   installPlugins,
@@ -151,6 +152,59 @@ describe("assemblePluginAdminBundle", () => {
     );
     expect(bundle).toContain("registerPluginBlock");
     expect(bundle).toContain("acme/widget");
+  });
+
+  test("builds for a site whose only admin contribution is a method client, registered through the host's auth-client shim", async () => {
+    const adminDest = resolve(workspace, "admin-dest");
+    await mkdir(adminDest, { recursive: true });
+    const client = resolve(workspace, "src/fixture-client.ts");
+    await writeFile(
+      client,
+      'import { defineAuthMethodClient } from "plumix/auth/client";\n' +
+        'export default defineAuthMethodClient("fixture", () => ({}));\n',
+    );
+    const withClient = definePlugin("fixture", {
+      setup: () => undefined,
+      authMethods: [
+        defineAuthMethod({
+          name: "fixture",
+          label: "Fixture",
+          routes: {},
+          client,
+        }),
+      ],
+    });
+
+    const result = await assemblePluginAdminBundle({
+      plugins: [withClient as AssemblerPlugin],
+      registry: emptyRegistry(),
+      adminDest,
+      projectRoot: workspace,
+    });
+
+    expect(result).not.toBeNull();
+    // The host's `window.plumix.runtime`, which the shim reads.
+    const registered: unknown[] = [];
+    (globalThis as { plumix?: unknown }).plumix = {
+      runtime: {
+        authClient: {
+          defineAuthMethodClient: (name: string) => ({ name }),
+          registerAuthMethodClients: (clients: readonly unknown[]) => {
+            registered.push(...clients);
+          },
+        },
+      },
+    };
+    try {
+      await import(
+        /* @vite-ignore */ pathToFileURL(
+          resolve(adminDest, "plugins/site-bundle.js"),
+        ).href
+      );
+    } finally {
+      delete (globalThis as { plumix?: unknown }).plumix;
+    }
+    expect(registered).toEqual([{ name: "fixture" }]);
   });
 
   test("auto-emits register* calls for ctx-registered admin pages and field types", async () => {

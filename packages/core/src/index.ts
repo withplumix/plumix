@@ -34,6 +34,12 @@ export type { JsonObject, JsonValue } from "./json.js";
 // narrowed.
 export { isJsonArray, isJsonObject } from "./json.js";
 export { defineAuthMethod } from "./plugin/auth-method.js";
+// Augmentation targets only: `authClient` itself is `plumix/auth/client`'s.
+export type {
+  AuthMethodRegistry,
+  OAuthProviderRegistry,
+  OAuthProvidersOf,
+} from "./auth/client/registry.js";
 export type {
   AuthMethodDefinition,
   AuthMethodKernel,

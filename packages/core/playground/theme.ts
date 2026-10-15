@@ -6,6 +6,7 @@ import { BlockRenderer } from "plumix/blocks/renderer";
 import { defineTemplate, defineTheme, entry, fallback } from "plumix/theme";
 
 import { ratingBlock } from "./blocks/rating.js";
+import { AuthProbe } from "./islands/auth-probe.js";
 import { Clicker, Counter } from "./islands/counter.js";
 import { LoadProbe } from "./islands/load-probe.js";
 import { NestParent } from "./islands/nest-parent.js";
@@ -126,7 +127,12 @@ function strategies(): ReactNode {
   ];
 }
 
+function auth(): ReactNode {
+  return h(AuthProbe, { client: "load" });
+}
+
 const FIXTURES: Readonly<Record<string, () => ReactNode>> = {
+  auth,
   islands,
   "islands-nested": islandsNested,
   "islands-raw": islandsRaw,

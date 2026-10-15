@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { toDate } from "@/lib/dates.js";
 import { orpc } from "@/lib/orpc.js";
-import { registerWithPasskey } from "@/lib/passkey.js";
+import { unwrapPasskeyResult } from "@/lib/passkey-errors.js";
 import { useFormatters } from "@/lib/use-formatters.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
@@ -32,6 +32,7 @@ import {
 } from "@plumix/admin-ui/card";
 import { Field, FieldLabel } from "@plumix/admin-ui/field";
 import { Input } from "@plumix/admin-ui/input";
+import { authClient } from "@plumix/core/auth/client";
 
 import {
   LAST_PASSKEY_MESSAGE,
@@ -97,7 +98,10 @@ export function PasskeysCard({ userEmail }: PasskeysCardProps): ReactNode {
     });
 
   const enroll = useMutation({
-    mutationFn: () => registerWithPasskey({ email: userEmail }),
+    mutationFn: async () =>
+      unwrapPasskeyResult(
+        await authClient.passkey.register({ email: userEmail }),
+      ),
     onMutate: () => {
       setEnrollError(null);
     },

@@ -158,7 +158,6 @@ msgstr "{count, plural, one {# запис вибрано} few {# записи в
 
 #. count: number of settings groups this page surfaces
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/settings/-index.browser.test.tsx
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.pageSummary"
 msgstr "{count, plural, one {# група} few {# групи} many {# груп} other {# груп}}"
@@ -306,7 +305,7 @@ msgid "terms.error.slugTaken"
 msgstr "Термін із таким slug уже існує в цій таксономії."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/users/create.tsx
+#: src/routes/_authenticated/users/-invite-errors.ts
 msgid "userInvite.error.emailTaken"
 msgstr "Користувач із такою електронною адресою вже існує."
 
@@ -800,6 +799,12 @@ msgstr "Підтвердження надіслано на {email}. Зміна �
 msgid "auth.device.lookup.submit.idle"
 msgstr "Продовжити"
 
+#. label: the sign-in method's display name, from the plugin that adds it
+#. js-lingui-explicit-id
+#: src/routes/_auth/-login-screen.tsx
+msgid "login.method.continueWith"
+msgstr ""
+
 #. label: the OAuth provider's display name (e.g. 'Google', 'GitHub')
 #. js-lingui-explicit-id
 #: src/routes/_auth/-login-screen.tsx
@@ -1057,7 +1062,7 @@ msgid "terms.edit.error.saveFallback"
 msgstr "Не вдалося зберегти зміни. Спробуйте знову."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
+#: src/routes/_authenticated/allowed-domains/-errors.ts
 msgid "allowedDomains.error.fallback"
 msgstr "Не вдалося зберегти домен. Спробуйте знову."
 
@@ -1072,12 +1077,12 @@ msgid "editor.entry.edit.saveFailed"
 msgstr "Не вдалося зберегти."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/users/create.tsx
+#: src/routes/_authenticated/users/-invite-errors.ts
 msgid "userInvite.error.fallback"
 msgstr "Не вдалося надіслати запрошення. Спробуйте знову."
 
 #. js-lingui-explicit-id
-#: src/lib/magic-link.ts
+#: src/lib/magic-link-request.ts
 msgid "magicLinkRequest.error.network"
 msgstr "Не вдалося надіслати посилання. Спробуйте знову."
 
@@ -1540,7 +1545,7 @@ msgid "validate.email.invalid"
 msgstr "Введіть дійсну email-адресу."
 
 #. js-lingui-explicit-id
-#: src/lib/magic-link.ts
+#: src/lib/magic-link-request.ts
 msgid "magicLinkRequest.error.invalidInput"
 msgstr "Введіть дійсну email-адресу."
 
@@ -1575,7 +1580,7 @@ msgid "auth.device.lookup.title"
 msgstr "Введіть код із вашого CLI"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/-login-screen.tsx
+#: src/lib/magic-link-request.ts
 msgid "login.magicLink.emailRequired"
 msgstr "Спочатку введіть email вище."
 
@@ -1992,7 +1997,7 @@ msgid "metaBox.reference.loading"
 msgstr "Завантаження…"
 
 #. js-lingui-explicit-id
-#: src/lib/magic-link.ts
+#: src/lib/magic-link-request.ts
 msgid "magicLinkRequest.error.notConfigured"
 msgstr "Вхід за magic-link не налаштований на цьому сайті."
 
@@ -3332,11 +3337,6 @@ msgid "oauth.error.linkBroken"
 msgstr "Цей акаунт недосяжний. Зв'яжіться з адміністратором, щоб перепов'язати його."
 
 #. js-lingui-explicit-id
-#: src/lib/passkey-errors.ts
-msgid "passkey.error.accountDisabled"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.accountDisabled"
 msgstr "Цей обліковий запис вимкнено."
@@ -3345,6 +3345,11 @@ msgstr "Цей обліковий запис вимкнено."
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.accountDisabled"
 msgstr "Цей обліковий запис вимкнено."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.accountDisabled"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -3377,7 +3382,7 @@ msgid "entries.list.bulk.toastFailed"
 msgstr "Не вдалося — спробуйте ще раз."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
+#: src/routes/_authenticated/allowed-domains/-errors.ts
 msgid "allowedDomains.error.domainExists"
 msgstr "Цей домен уже налаштовано."
 

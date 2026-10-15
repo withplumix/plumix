@@ -158,7 +158,6 @@ msgstr "{count, plural, one {# entry selected} other {# entries selected}}"
 
 #. count: number of settings groups this page surfaces
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/settings/-index.browser.test.tsx
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.pageSummary"
 msgstr "{count, plural, one {# group} other {# groups}}"
@@ -306,7 +305,7 @@ msgid "terms.error.slugTaken"
 msgstr "A term with that slug already exists in this taxonomy."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/users/create.tsx
+#: src/routes/_authenticated/users/-invite-errors.ts
 msgid "userInvite.error.emailTaken"
 msgstr "A user with that email already exists."
 
@@ -800,6 +799,12 @@ msgstr "Confirmation sent to {email}. The change takes effect once they click th
 msgid "auth.device.lookup.submit.idle"
 msgstr "Continue"
 
+#. label: the sign-in method's display name, from the plugin that adds it
+#. js-lingui-explicit-id
+#: src/routes/_auth/-login-screen.tsx
+msgid "login.method.continueWith"
+msgstr "Continue with {label}"
+
 #. label: the OAuth provider's display name (e.g. 'Google', 'GitHub')
 #. js-lingui-explicit-id
 #: src/routes/_auth/-login-screen.tsx
@@ -1057,7 +1062,7 @@ msgid "terms.edit.error.saveFallback"
 msgstr "Couldn't save the changes. Try again."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
+#: src/routes/_authenticated/allowed-domains/-errors.ts
 msgid "allowedDomains.error.fallback"
 msgstr "Couldn't save the domain. Try again."
 
@@ -1072,12 +1077,12 @@ msgid "editor.entry.edit.saveFailed"
 msgstr "Couldn't save."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/users/create.tsx
+#: src/routes/_authenticated/users/-invite-errors.ts
 msgid "userInvite.error.fallback"
 msgstr "Couldn't send invite. Try again."
 
 #. js-lingui-explicit-id
-#: src/lib/magic-link.ts
+#: src/lib/magic-link-request.ts
 msgid "magicLinkRequest.error.network"
 msgstr "Couldn't send the link. Try again."
 
@@ -1540,7 +1545,7 @@ msgid "validate.email.invalid"
 msgstr "Enter a valid email address."
 
 #. js-lingui-explicit-id
-#: src/lib/magic-link.ts
+#: src/lib/magic-link-request.ts
 msgid "magicLinkRequest.error.invalidInput"
 msgstr "Enter a valid email address."
 
@@ -1575,7 +1580,7 @@ msgid "auth.device.lookup.title"
 msgstr "Enter the code from your CLI"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/-login-screen.tsx
+#: src/lib/magic-link-request.ts
 msgid "login.magicLink.emailRequired"
 msgstr "Enter your email above first."
 
@@ -1992,7 +1997,7 @@ msgid "metaBox.reference.loading"
 msgstr "Loading…"
 
 #. js-lingui-explicit-id
-#: src/lib/magic-link.ts
+#: src/lib/magic-link-request.ts
 msgid "magicLinkRequest.error.notConfigured"
 msgstr "Magic-link sign-in isn't configured on this site."
 
@@ -3332,11 +3337,6 @@ msgid "oauth.error.linkBroken"
 msgstr "That account can't be reached. Contact an administrator to re-link it."
 
 #. js-lingui-explicit-id
-#: src/lib/passkey-errors.ts
-msgid "passkey.error.accountDisabled"
-msgstr "That account is disabled."
-
-#. js-lingui-explicit-id
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.accountDisabled"
 msgstr "That account is disabled."
@@ -3344,6 +3344,11 @@ msgstr "That account is disabled."
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.accountDisabled"
+msgstr "That account is disabled."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.accountDisabled"
 msgstr "That account is disabled."
 
 #. js-lingui-explicit-id
@@ -3377,7 +3382,7 @@ msgid "entries.list.bulk.toastFailed"
 msgstr "That didn't work — try again."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
+#: src/routes/_authenticated/allowed-domains/-errors.ts
 msgid "allowedDomains.error.domainExists"
 msgstr "That domain is already configured."
 

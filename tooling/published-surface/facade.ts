@@ -56,6 +56,7 @@ const ROOT_ONLY_TYPES: readonly RootOnly[] = [
       "AppContextExtensions",
       "ArchiveTypeOptions",
       "ArchiveTypeRegistry",
+      "AuthMethodRegistry",
       "DebugPanelRegistry",
       "EntryMetaContributions",
       "EntryTypeOptions",
@@ -64,6 +65,7 @@ const ROOT_ONLY_TYPES: readonly RootOnly[] = [
       "ImageRoles",
       "ListingArchiveTypeOptions",
       "LookupAdapterOptions",
+      "OAuthProviderRegistry",
       "PluginContextExtensions",
       "PlumixEnv",
       "ReferenceHydrationShapes",
@@ -77,6 +79,12 @@ const ROOT_ONLY_TYPES: readonly RootOnly[] = [
       "UserMetaContributions",
       "ViewRegistry",
     ],
+  },
+  {
+    reason:
+      'the helper a site\'s `declare module "plumix"` block derives ' +
+      "`OAuthProviderRegistry` from, so it sits beside its target",
+    names: ["OAuthProvidersOf"],
   },
   {
     reason:

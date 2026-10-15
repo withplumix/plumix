@@ -23,7 +23,7 @@ export function assembleConfig(
       ...imports,
       ...authImports,
       'import { auth } from "plumix/auth";',
-      'import { plumix } from "plumix";',
+      'import { plumix, type OAuthProvidersOf } from "plumix";',
     ].map(fill),
   );
 
@@ -57,16 +57,17 @@ export function assembleConfig(
 
   // A method's `(env) => ...` secret resolver needs its bindings declared, or
   // the config won't type-check.
-  const envAugmentation = envVars.length
+  const envComment = envVars.length
     ? [
-        "",
         `// Secret bindings — set them in ${runtime.secretsFile} locally and as secrets on the`,
         "// deploy in production. Declared so the (env) => ... resolvers type.",
-        'declare module "plumix" {',
+      ]
+    : [];
+  const envBindings = envVars.length
+    ? [
         "  interface PlumixEnv {",
         ...envVars.map((name) => `    readonly ${name}: string;`),
         "  }",
-        "}",
       ]
     : [];
 
@@ -75,7 +76,7 @@ export function assembleConfig(
     "",
     'import { theme } from "./theme";',
     "",
-    "export default plumix({",
+    "const config = plumix({",
     ...slotLines,
     "  auth: auth({",
     "    passkey: {",
@@ -87,6 +88,15 @@ export function assembleConfig(
     ...pluginsBlock,
     "  theme,",
     "});",
-    ...envAugmentation,
+    "",
+    "export default config;",
+    "",
+    ...envComment,
+    'declare module "plumix" {',
+    ...envBindings,
+    "  // Types `authClient.signIn.oauth`'s provider from the config above, so a",
+    "  // provider added there needs no edit here.",
+    "  interface OAuthProviderRegistry extends OAuthProvidersOf<typeof config> {}",
+    "}",
   ].join("\n")}\n`;
 }

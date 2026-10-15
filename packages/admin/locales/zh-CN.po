@@ -158,7 +158,6 @@ msgstr "{count, plural, other {已选择 # 个条目}}"
 
 #. count: number of settings groups this page surfaces
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/settings/-index.browser.test.tsx
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.pageSummary"
 msgstr "{count, plural, other {# 个分组}}"
@@ -306,7 +305,7 @@ msgid "terms.error.slugTaken"
 msgstr "该分类法中已存在使用此别名的术语。"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/users/create.tsx
+#: src/routes/_authenticated/users/-invite-errors.ts
 msgid "userInvite.error.emailTaken"
 msgstr "已存在使用此电子邮箱的用户。"
 
@@ -800,6 +799,12 @@ msgstr "确认邮件已发送至 {email}。点击链接后更改生效。"
 msgid "auth.device.lookup.submit.idle"
 msgstr "继续"
 
+#. label: the sign-in method's display name, from the plugin that adds it
+#. js-lingui-explicit-id
+#: src/routes/_auth/-login-screen.tsx
+msgid "login.method.continueWith"
+msgstr ""
+
 #. label: the OAuth provider's display name (e.g. 'Google', 'GitHub')
 #. js-lingui-explicit-id
 #: src/routes/_auth/-login-screen.tsx
@@ -1057,7 +1062,7 @@ msgid "terms.edit.error.saveFallback"
 msgstr "无法保存更改。请重试。"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
+#: src/routes/_authenticated/allowed-domains/-errors.ts
 msgid "allowedDomains.error.fallback"
 msgstr "无法保存域名。请重试。"
 
@@ -1072,12 +1077,12 @@ msgid "editor.entry.edit.saveFailed"
 msgstr "保存失败。"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/users/create.tsx
+#: src/routes/_authenticated/users/-invite-errors.ts
 msgid "userInvite.error.fallback"
 msgstr "无法发送邀请。请重试。"
 
 #. js-lingui-explicit-id
-#: src/lib/magic-link.ts
+#: src/lib/magic-link-request.ts
 msgid "magicLinkRequest.error.network"
 msgstr "无法发送链接。请重试。"
 
@@ -1540,7 +1545,7 @@ msgid "validate.email.invalid"
 msgstr "输入有效的电子邮箱地址。"
 
 #. js-lingui-explicit-id
-#: src/lib/magic-link.ts
+#: src/lib/magic-link-request.ts
 msgid "magicLinkRequest.error.invalidInput"
 msgstr "输入有效的电子邮箱地址。"
 
@@ -1575,7 +1580,7 @@ msgid "auth.device.lookup.title"
 msgstr "从您的 CLI 输入代码"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/-login-screen.tsx
+#: src/lib/magic-link-request.ts
 msgid "login.magicLink.emailRequired"
 msgstr "请先在上方输入您的电子邮箱。"
 
@@ -1992,7 +1997,7 @@ msgid "metaBox.reference.loading"
 msgstr "加载中…"
 
 #. js-lingui-explicit-id
-#: src/lib/magic-link.ts
+#: src/lib/magic-link-request.ts
 msgid "magicLinkRequest.error.notConfigured"
 msgstr "此站点未配置 Magic Link 登录。"
 
@@ -3332,11 +3337,6 @@ msgid "oauth.error.linkBroken"
 msgstr "此账户无法访问。请联系管理员重新链接。"
 
 #. js-lingui-explicit-id
-#: src/lib/passkey-errors.ts
-msgid "passkey.error.accountDisabled"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.accountDisabled"
 msgstr "此账户已停用。"
@@ -3345,6 +3345,11 @@ msgstr "此账户已停用。"
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.accountDisabled"
 msgstr "此账户已停用。"
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.accountDisabled"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -3377,7 +3382,7 @@ msgid "entries.list.bulk.toastFailed"
 msgstr "操作失败，请重试。"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
+#: src/routes/_authenticated/allowed-domains/-errors.ts
 msgid "allowedDomains.error.domainExists"
 msgstr "此域名已配置。"
 

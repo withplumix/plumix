@@ -6,6 +6,7 @@ import { actingAs, openPlaygroundDb } from "@plumix/core/test/playwright";
 
 /** The theme's `page` template renders each fixture by its slug. */
 const FIXTURE_SLUGS = [
+  "auth",
   "islands",
   "islands-nested",
   "islands-raw",
@@ -28,6 +29,8 @@ export default async function globalSetup(): Promise<void> {
   );
 
   const factories = factoriesFor(db);
+  // The account the playground's `fixture` sign-in method proves.
+  await factories.admin.create({ email: "fixture@example.test" });
   const author = await factories.user.create({});
   for (const slug of FIXTURE_SLUGS) {
     await factories.entry.create({

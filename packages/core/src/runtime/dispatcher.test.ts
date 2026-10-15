@@ -17,10 +17,10 @@ import type { PlumixApp } from "./app.js";
 import type { CdnStore, ConnectedCdn } from "./contract/slots.js";
 import { entryCapability } from "../access/contract/capability.js";
 import { requestHasSession } from "../auth/authenticator.js";
+import { authClient } from "../auth/client/index.js";
 import { readSessionCookie } from "../auth/cookies.js";
 import { withUser } from "../auth/with-user.js";
 import { defineBlock } from "../blocks/index.js";
-import { useAuthMethods } from "../blocks/renderer/index.js";
 import { entryPurgeTags } from "../cdn/contract/tags.js";
 import { tagCdnEntry } from "../cdn/route-tags.js";
 import { getContext } from "../context/stores.js";
@@ -936,17 +936,20 @@ describe("dispatcher — user-dependent render caching", () => {
   });
 });
 
-describe("dispatcher — theme reads configured auth methods", () => {
-  test("a theme component reads useAuthMethods() during a public render", async () => {
+describe("dispatcher — theme reads the auth client's render context", () => {
+  test("a theme component reads authClient's methods and base-pathed URLs during a public render", async () => {
     const blog = definePlugin("test-blog", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
     });
-    // A theme login page renders its controls from `useAuthMethods()`; here a
-    // component proves the configured methods reach the render tree.
+    // A theme login page renders its controls from `useAuthMethods()` and a
+    // plain sign-out form from `url()`; both must carry the render's context.
     const LoginControls = (): ReturnType<typeof createElement> => {
-      const methods = useAuthMethods();
-      const names = methods?.methods.map((method) => method.name) ?? [];
-      return createElement("p", null, `methods:${names.join(",")}`);
+      const names = authClient.useAuthMethods().methods.map(({ name }) => name);
+      return createElement(
+        "form",
+        { action: authClient.url("signOut", { redirectTo: "/" }) },
+        `methods:${names.join(",")}`,
+      );
     };
     const theme = defineTheme({
       templates: [fallback(() => createElement(LoginControls))],
@@ -964,16 +967,20 @@ describe("dispatcher — theme reads configured auth methods", () => {
       ],
     });
     const h = await createDispatcherHarness({
-      config: { plugins: [blog, signingIn], theme: theme },
+      config: { plugins: [blog, signingIn], theme: theme, basePath: "/blog" },
     });
     await seedHelloWorldPost(h);
 
     const response = await h.dispatch(
-      new Request("https://cms.example/post/hello-world"),
+      new Request("https://cms.example/blog/post/hello-world"),
     );
 
     expect(response.status).toBe(200);
-    expect(await response.text()).toContain("methods:passkey,fixture");
+    const html = await response.text();
+    expect(html).toContain("methods:passkey,fixture");
+    expect(html).toContain(
+      'action="/blog/_plumix/auth/signout?redirectTo=%2Fblog"',
+    );
   });
 });
 

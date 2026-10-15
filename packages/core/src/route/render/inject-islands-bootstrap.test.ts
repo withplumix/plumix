@@ -92,4 +92,28 @@ describe("injectIslandsBootstrap", () => {
       'data-plumix-renderer-url="/.plumix/islands-renderer-entry.ts"',
     );
   });
+
+  test("embeds the auth context, with any session the render read, for authClient to hydrate from", () => {
+    const body = '<plumix-island chunk-url="/x"></plumix-island>';
+    const auth = {
+      basePath: "/blog",
+      methods: {
+        methods: [{ name: "fixture", label: "</script>" }],
+        oauth: [],
+      },
+      session: {
+        user: { id: 7, email: "jane@example.test", name: null, role: "admin" },
+        isPending: false,
+      },
+    };
+
+    const out = injectIslandsBootstrap(body, {}, "build", "/blog", auth);
+
+    const embedded =
+      /<script type="application\/json" data-plumix-auth="">(.*?)<\/script>/.exec(
+        out,
+      )?.[1];
+    expect(embedded).not.toContain("</script>");
+    expect(JSON.parse(embedded ?? "null")).toEqual(auth);
+  });
 });

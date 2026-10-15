@@ -49,6 +49,19 @@ describe("extractConfigModules", () => {
     expect(result).toEqual({ theme: "./theme", plugins: [] });
   });
 
+  test("traces the scaffold's config, bound to a const and augmenting `plumix`", () => {
+    const result = extractConfigModules(
+      `import { plumix, type OAuthProvidersOf } from "plumix";
+       import { blogTheme } from "./theme";
+       const config = plumix({ theme: blogTheme });
+       export default config;
+       declare module "plumix" {
+         interface OAuthProviderRegistry extends OAuthProvidersOf<typeof config> {}
+       }`,
+    );
+    expect(result).toEqual({ theme: "./theme", plugins: [] });
+  });
+
   test("finds the factory even when `plumix` is imported under an alias", () => {
     const result = extractConfigModules(
       `import { plumix as p } from "plumix";

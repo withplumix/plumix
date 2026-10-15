@@ -2,8 +2,11 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { LoginLocaleSwitcher } from "@/components/login-locale-switcher.js";
 import { readManifest } from "@/lib/manifest.js";
-import { PasskeyError, usePasskeyErrorMessage } from "@/lib/passkey-errors.js";
-import { registerWithPasskey } from "@/lib/passkey.js";
+import {
+  PasskeyError,
+  unwrapPasskeyResult,
+  usePasskeyErrorMessage,
+} from "@/lib/passkey-errors.js";
 import { loadSession, refetchSession } from "@/lib/session.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { Trans, useLingui } from "@lingui/react";
@@ -29,6 +32,7 @@ import {
   FormMessage,
 } from "@plumix/admin-ui/form";
 import { Input } from "@plumix/admin-ui/input";
+import { authClient } from "@plumix/core/auth/client";
 
 import { buildLocaleSwitchUrl, writeLocaleCookie } from "./-locale-param.js";
 import { bootstrapSchema, langOnlySearchSchema } from "./-schemas.js";
@@ -64,10 +68,13 @@ function BootstrapRoute(): ReactNode {
   };
 
   const createAccount = useMutation({
-    // Wrapped, not passed directly: TanStack calls `mutationFn(variables, context)`,
-    // and the context would land in `registerWithPasskey`'s `credentials`.
-    mutationFn: (input: Parameters<typeof registerWithPasskey>[0]) =>
-      registerWithPasskey(input),
+    mutationFn: async (input: { email: string; name?: string }) =>
+      unwrapPasskeyResult(
+        await authClient.passkey.register({
+          email: input.email,
+          ...(input.name ? { name: input.name } : {}),
+        }),
+      ),
     onMutate: () => setErrorCode(null),
     onSuccess: async () => {
       await refetchSession(router.options.context.queryClient);

@@ -10,6 +10,7 @@
     "paths": {
       "plumix": ["../../plumix/src/index.ts"],
       "plumix/auth": ["../../plumix/src/auth/index.ts"],
+      "plumix/auth/client": ["../../plumix/src/auth/client.ts"],
       "plumix/blocks": ["../../plumix/src/blocks/index.ts"],
       "plumix/blocks/renderer": ["../../plumix/src/blocks/renderer.ts"],
       "plumix/plugin": ["../../plumix/src/plugin.ts"],
@@ -18,5 +19,12 @@
       "@plumix/runtime-cloudflare": ["../../runtimes/cloudflare/src/index.ts"]
     }
   },
-  "include": ["plumix.config.ts", "theme.ts", "blocks", "islands", ".plumix"]
+  "include": [
+    "plumix.config.ts",
+    "theme.ts",
+    "auth",
+    "blocks",
+    "islands",
+    ".plumix"
+  ]
 }

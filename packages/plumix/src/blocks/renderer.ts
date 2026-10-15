@@ -9,7 +9,6 @@ export {
   documentBasePath,
   matchesRemotePattern,
   useAuth,
-  useAuthMethods,
   useBasePath,
   useImageConfig,
   useIsEditing,

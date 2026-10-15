@@ -44,7 +44,7 @@ export function generateEditorEntrySource(
   );
 }
 
-function relativeSpecifier(fromDir: string, file: string): string {
+export function relativeSpecifier(fromDir: string, file: string): string {
   const path = relative(fromDir, file).split(sep).join("/");
   return path.startsWith(".") ? path : `./${path}`;
 }

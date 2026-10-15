@@ -208,6 +208,24 @@ export const recipeAuth = auth({
 });
 ```
 
+### plumix/auth/client
+
+`authClient`, for a theme's own sign-in or account page. It is browser-safe, so an island imports it. Each sign-in method appears under `authClient.signIn`, core's (`passkey`, `magicLink`, `oauth`) and every installed plugin's alike. Every call resolves `{ data, error }` rather than throwing, `url()` builds a base-pathed `action` for a form that works without script, and `useSession()` and `useAuthMethods()` read what the server rendered the page with. A plugin adds its method's browser half with `defineAuthMethodClient`. [ADR 0041](https://github.com/withplumix/plumix/blob/main/docs/adr/0041-a-sign-in-method-is-a-registered-extension.md) has the design.
+
+```tsx
+import { authClient } from "plumix/auth/client";
+
+export function AccountMenu(): React.ReactNode {
+  const { user } = authClient.useSession();
+  if (user === null) return null;
+  return (
+    <form method="post" action={authClient.url("signOut", { redirectTo: "/" })}>
+      <button type="submit">Sign out {user.email}</button>
+    </form>
+  );
+}
+```
+
 ### plumix/runtime
 
 What a runtime adapter composes an app from: `buildApp` and `createPlumixHandler`, scheduled tasks and their cron parser, query tracing, the in-memory `memoryKv` and `memoryStorage` a test or a local run stands in with, and the dev boot page. A site rarely imports it. The runtime adapter you install does.
@@ -247,7 +265,7 @@ export default {
 
 ## Extending the admin
 
-The admin ships precompiled and is closed for modification. A plugin contributes to it by shipping an `adminEntry` module, which the build bundles into a chunk the admin loads at runtime. Inside that chunk you write bare imports as normal, and the build rewrites `react`, `radix-ui`, `@tanstack/react-query` and eleven more to the shims below, so your chunk shares the shell's singletons rather than bundling its own. [`plumix/admin/react`](/getting-started/project-structure/#plumixadminreact) carries the worked example the other thirteen refer back to.
+The admin ships precompiled and is closed for modification. A plugin contributes to it by shipping an `adminEntry` module, which the build bundles into a chunk the admin loads at runtime. Inside that chunk you write bare imports as normal, and the build rewrites `react`, `radix-ui`, `@tanstack/react-query` and twelve more to the shims below, so your chunk shares the shell's singletons rather than bundling its own. [`plumix/admin/react`](/getting-started/project-structure/#plumixadminreact) carries the worked example the other fourteen refer back to.
 
 ### plumix/admin
 
@@ -340,6 +358,10 @@ The toast library. Same mechanism as the React shim above. `toast()` is a module
 ### plumix/admin/tailwind-merge
 
 The class-merging helper behind `cn()`. Same mechanism as the React shim above.
+
+### plumix/admin/auth-client
+
+The admin's own `authClient`. Same mechanism as the React shim above. A plugin's sign-in method half registers on it, and a plugin page that calls `authClient` signs in through the session the shell holds.
 
 ### plumix/admin/ui
 
