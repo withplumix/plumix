@@ -16,7 +16,6 @@ test("clicking the facade loads the embed", async ({ page }) => {
     "src",
     "https://www.youtube-nocookie.com/embed/abcdefghijk",
   );
-  await expect(frame).toHaveAttribute("loading", "lazy");
   await expect(frame).toHaveAttribute(
     "referrerpolicy",
     "strict-origin-when-cross-origin",

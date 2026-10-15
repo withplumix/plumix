@@ -35,10 +35,7 @@ interface SessionEnvelope {
   readonly json?: { readonly user?: AuthUser | null };
 }
 
-/**
- * Never throws: a failed request or a non-2xx answer resolves to signed out.
- * `fetchImpl` is the seam a test hands its own `fetch`.
- */
+/** Never throws: a failed request or a non-2xx answer resolves to signed out. */
 export async function fetchSessionUser(
   basePath: string,
   signal: AbortSignal,
@@ -49,8 +46,7 @@ export async function fetchSessionUser(
       method: "POST",
       headers: {
         "content-type": "application/json",
-        // The dispatcher rejects any /_plumix/* mutation missing this — the
-        // admin client sends it too.
+        // The dispatcher rejects any /_plumix/* mutation missing this.
         [CSRF_HEADER_NAME]: CSRF_HEADER_VALUE,
       },
       body: JSON.stringify({ json: {} }),

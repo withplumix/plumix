@@ -15,8 +15,7 @@ const adminShimEntries = Object.keys(SHARED_ADMIN_RUNTIME_SPECIFIERS).map(
     `src/admin/${adminRuntimeShimSlug(spec as SharedAdminRuntimeSpecifier)}.ts`,
 );
 
-/** A `dist/` target as the `src/` module it is built from. */
-function sourceOf(target: string): string[] {
+function srcEntriesOfDistTarget(target: string): string[] {
   const built = /^\.\/dist\/(.+)\.js$/.exec(target);
   return built === null ? [] : [`src/${built[1]}.{ts,tsx}`];
 }
@@ -26,12 +25,14 @@ function sourceOf(target: string): string[] {
 // only tsconfig.build.json sets, so it can't follow the map to `src/` on its
 // own.
 const coreExportEntries = Object.values(corePackage.exports).flatMap(
-  ({ default: target }) => sourceOf(target),
+  ({ default: target }) => srcEntriesOfDistTarget(target),
 );
 
 // The modules core's `browser` field swaps in, which nothing imports by name.
 // Knip doesn't read the `browser` field.
-const coreBrowserEntries = Object.values(corePackage.browser).flatMap(sourceOf);
+const coreBrowserEntries = Object.values(corePackage.browser).flatMap(
+  srcEntriesOfDistTarget,
+);
 
 // A first-party plugin's `i18n:compile` is `plumix i18n compile`, which
 // resolves `@lingui/cli` from the plugin's own root at run time — so the

@@ -10,7 +10,9 @@ import { fetchSessionUser, useAuth } from "./use-auth.js";
 
 interface SentRequest {
   readonly url: RequestInfo | URL;
-  readonly init: RequestInit;
+  readonly method: string | undefined;
+  readonly headers: HeadersInit | undefined;
+  readonly body: BodyInit | null | undefined;
 }
 
 /** A `fetch` that answers every request with `response` and records it. */
@@ -22,7 +24,12 @@ function answering(response: Response): {
   return {
     sent,
     fetch: (input, init = {}) => {
-      sent.push({ url: input, init });
+      sent.push({
+        url: input,
+        method: init.method,
+        headers: init.headers,
+        body: init.body,
+      });
       return Promise.resolve(response);
     },
   };
@@ -79,12 +86,17 @@ describe("fetchSessionUser", () => {
 
     await fetchSessionUser("", new AbortController().signal, server.fetch);
 
-    expect(server.sent).toHaveLength(1);
-    const [{ url, init }] = server.sent as [SentRequest];
-    expect(url).toBe("/_plumix/rpc/auth/session");
-    expect(init.method).toBe("POST");
-    expect(new Headers(init.headers).get("x-plumix-request")).toBe("1");
-    expect(init.body).toBe('{"json":{}}');
+    expect(server.sent).toEqual([
+      {
+        url: "/_plumix/rpc/auth/session",
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "X-Plumix-Request": "1",
+        },
+        body: '{"json":{}}',
+      },
+    ]);
   });
 
   test("prefixes a subdirectory base path to the endpoint", async () => {

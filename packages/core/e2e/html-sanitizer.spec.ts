@@ -624,10 +624,14 @@ test("the browser bundle sanitizes with the DOMPurify shim", async ({
 
   await openSanitizer(page);
 
-  expect(requested.some((url) => url.includes("/dompurify-shim.js"))).toBe(
-    true,
+  const shimRequests = requested.filter((url) =>
+    url.includes("/dompurify-shim.js"),
   );
-  expect(requested.filter((url) => url.includes("sanitize-html"))).toEqual([]);
+  const sanitizeHtmlRequests = requested.filter((url) =>
+    url.includes("sanitize-html"),
+  );
+  expect(shimRequests).not.toEqual([]);
+  expect(sanitizeHtmlRequests).toEqual([]);
 });
 
 for (const { name, input, allowlist, expected } of CASES) {
