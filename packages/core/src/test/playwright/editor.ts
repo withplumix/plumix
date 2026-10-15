@@ -201,11 +201,8 @@ export interface Editor {
   undo: () => Promise<void>;
   /** Redoes the last undone edit with the header's Redo button. */
   redo: () => Promise<void>;
-  /** The stale-draft dialog. */
   readonly staleDraft: EditorStaleDraft;
-  /** The revisions sheet. */
   readonly revisions: EditorRevisions;
-  /** The Page tab's document settings. */
   readonly document: EditorDocumentSettings;
   /** Edits a text block's rich text. */
   richText: (block: Locator) => EditorRichText;

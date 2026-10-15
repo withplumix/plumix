@@ -133,10 +133,6 @@ const FIXTURES: Readonly<Record<string, () => ReactNode>> = {
   strategies,
 };
 
-/**
- * What the editor specs edit: the article's visibility choice and topics, then
- * its blocks.
- */
 function article(resolved: ResolvedEntry): ReactNode {
   const visibility = resolved.storedMeta[ACCESS_POLICY_META_KEY];
   return [

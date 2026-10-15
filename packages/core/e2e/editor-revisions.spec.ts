@@ -4,28 +4,40 @@ import type { Entry } from "../src/db/schema/entries.js";
 import type { EditorSession } from "./support/session.js";
 import { signInAsAdmin } from "./support/session.js";
 
-/** A published article with `count` revisions, the newest titled last. */
-async function articleWithRevisions(
-  { admin, factories }: EditorSession,
-  count: number,
-): Promise<{ entry: Entry; revisions: Entry[] }> {
-  const entry = await factories.published.create({
+async function seedArticle({
+  admin,
+  factories,
+}: EditorSession): Promise<Entry> {
+  return factories.published.create({
     type: "article",
     title: "Live title",
     authorId: admin.id,
   });
-  const revisions: Entry[] = [];
+}
+
+async function seedRevision(
+  { admin, factories }: EditorSession,
+  entry: Entry,
+  take: number,
+): Promise<Entry> {
+  return factories.published.create({
+    type: "revision",
+    slug: `revision:${String(entry.id)}:take${String(take)}`,
+    title: `Take ${String(take)}`,
+    authorId: admin.id,
+  });
+}
+
+/** A published article with `count` revisions, the newest titled last. */
+async function articleWithRevisions(
+  session: EditorSession,
+  count: number,
+): Promise<Entry> {
+  const entry = await seedArticle(session);
   for (let take = 1; take <= count; take++) {
-    revisions.push(
-      await factories.published.create({
-        type: "revision",
-        slug: `revision:${String(entry.id)}:take${String(take)}`,
-        title: `Take ${String(take)}`,
-        authorId: admin.id,
-      }),
-    );
+    await seedRevision(session, entry, take);
   }
-  return { entry, revisions };
+  return entry;
 }
 
 test.describe("the editor's revisions", () => {
@@ -34,7 +46,7 @@ test.describe("the editor's revisions", () => {
     editor,
   }) => {
     const session = await signInAsAdmin(page);
-    const { entry } = await articleWithRevisions(session, 2);
+    const entry = await articleWithRevisions(session, 2);
     await editor.open(entry);
     const { revisions } = editor;
 
@@ -54,11 +66,8 @@ test.describe("the editor's revisions", () => {
 
   test("a comment on a revision persists", async ({ page, editor }) => {
     const session = await signInAsAdmin(page);
-    const {
-      entry,
-      revisions: [revision],
-    } = await articleWithRevisions(session, 1);
-    const id = revision?.id ?? 0;
+    const entry = await seedArticle(session);
+    const { id } = await seedRevision(session, entry, 1);
     await editor.open(entry);
     const { revisions } = editor;
     await revisions.open();
@@ -78,11 +87,8 @@ test.describe("the editor's revisions", () => {
     editor,
   }) => {
     const session = await signInAsAdmin(page);
-    const {
-      entry,
-      revisions: [revision],
-    } = await articleWithRevisions(session, 1);
-    const id = revision?.id ?? 0;
+    const entry = await seedArticle(session);
+    const { id } = await seedRevision(session, entry, 1);
     await editor.open(entry);
     const { revisions } = editor;
 
@@ -106,8 +112,7 @@ test.describe("the editor's revisions", () => {
     editor,
   }) => {
     const session = await signInAsAdmin(page);
-    // `entry.revisions.list` answers 25 per page (`revisions.ts`).
-    const { entry } = await articleWithRevisions(session, 26);
+    const entry = await articleWithRevisions(session, 26);
     await editor.open(entry);
     const { revisions } = editor;
 
