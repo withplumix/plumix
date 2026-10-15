@@ -314,6 +314,15 @@ describe("nextPaletteOpen", () => {
     ).toBe(false);
   });
 
+  test("a held chord's auto-repeat leaves the palette as it is", () => {
+    expect(
+      nextPaletteOpen(
+        { ...key({ key: "k", metaKey: true }), repeat: true, target: null },
+        true,
+      ),
+    ).toBe(true);
+  });
+
   test("another key leaves the palette as it is", () => {
     expect(
       nextPaletteOpen(

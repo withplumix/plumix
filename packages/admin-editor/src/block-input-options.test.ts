@@ -67,7 +67,8 @@ describe("parseNumberInput", () => {
     ["cleared", ""],
     ["a lone minus mid-typing", "-"],
     ["unparseable", "e"],
-  ])("clears to null when %s, never NaN", (_, text) => {
+    ["too large for a number", "1e999"],
+  ])("clears to null when %s, never NaN or Infinity", (_, text) => {
     expect(parseNumberInput(text)).toBeNull();
   });
 });

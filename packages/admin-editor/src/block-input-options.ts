@@ -48,13 +48,13 @@ export function decodeOption(
 }
 
 /**
- * Empty or unparseable (a lone "-"/"e" mid-typing) clears to null rather than
- * poisoning the tree with NaN.
+ * Empty or unparseable (a lone "-"/"e" mid-typing, or past what a number holds)
+ * clears to null rather than poisoning the tree with NaN or Infinity.
  */
 export function parseNumberInput(text: string): number | null {
   if (text.trim() === "") return null;
   const value = Number(text);
-  return Number.isNaN(value) ? null : value;
+  return Number.isFinite(value) ? value : null;
 }
 
 /** A combobox row: cmdk filters on `value`, and `keywords` let a search match
