@@ -17,4 +17,9 @@ test("clicking the facade loads the embed", async ({ page }) => {
     "https://www.youtube-nocookie.com/embed/abcdefghijk",
   );
   await expect(frame).toHaveAttribute("loading", "lazy");
+  await expect(frame).toHaveAttribute(
+    "referrerpolicy",
+    "strict-origin-when-cross-origin",
+  );
+  await expect(frame).not.toHaveAttribute("sandbox");
 });
