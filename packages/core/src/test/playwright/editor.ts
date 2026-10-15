@@ -66,12 +66,24 @@ export interface EditorToolbar {
 export type EditorInputValue = string | number | boolean | null;
 
 /**
+ * A button that reshapes the selected block: a columns block's `add-column`,
+ * or a table's rows and columns, from the table or any block inside it.
+ */
+export type EditorStructureButton =
+  | "add-column"
+  | "add-table-row"
+  | "add-table-column"
+  | "remove-table-row"
+  | "remove-table-column";
+
+/**
  * The selected block's settings. `field` is the input's `name` as the block
  * declares it, the key its value is stored under.
  */
 export interface EditorInspector {
   set: (field: string, value: EditorInputValue) => Promise<void>;
   get: (field: string) => Promise<EditorInputValue>;
+  press: (button: EditorStructureButton) => Promise<void>;
 }
 
 export type EditorTextFormat =
@@ -412,12 +424,16 @@ export function createEditor(page: Page): Editor {
     return blockById(id);
   };
 
+  const blockInspector = async (): Promise<Locator> => {
+    await page.getByTestId("plumix-tab-block").click();
+    return page.getByTestId("block-inspector");
+  };
+
   const inspectorControl = async (
     field: string,
   ): Promise<{ control: Locator; testId: string; kind: ControlKind }> => {
-    await page.getByTestId("plumix-tab-block").click();
     const testId = `block-input-${field}`;
-    const control = page.getByTestId("block-inspector").getByTestId(testId);
+    const control = (await blockInspector()).getByTestId(testId);
     await expect(control).toBeVisible();
     return { control, testId, kind: await controlKind(control, testId) };
   };
@@ -477,6 +493,12 @@ export function createEditor(page: Page): Editor {
           return;
         }
       }
+    },
+    // Every button adds or removes blocks, so the canvas's block ids change.
+    press: async (button) => {
+      const before = await blockIds();
+      await (await blockInspector()).getByTestId(`inspector-${button}`).click();
+      await expect.poll(blockIds).not.toEqual(before);
     },
     get: async (field) => {
       const { control, testId, kind } = await inspectorControl(field);

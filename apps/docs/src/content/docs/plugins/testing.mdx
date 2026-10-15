@@ -257,6 +257,7 @@ test("a rating is inserted, configured and stored", async ({ editor }) => {
 - **Canvas.** `editor.canvas.block(name, index?)` returns a locator for a block inside the canvas iframe, `editor.canvas.blocks()` the names of the top-level blocks in order, and `editor.canvas.focus(block)` selects and clicks a block so the keys pressed next start inside the canvas.
 - **Insert.** `editor.insert(name, { at, via })` puts the block at `"start"`, at `"end"` (the default), `{ after: block }`, `{ before: block }` or `{ into: block, slot? }`, and returns its locator. `via: "drag"` drops it from the catalog with `dragTo`; a click reaches a nested position only through an empty slot.
 - **Selection.** `editor.select(block)`, then `editor.toolbar.moveUp()`, `.moveDown()`, `.selectParent()` and `.remove()`.
+- **Structure.** `editor.inspector.press(button)` presses a button that reshapes the selected block: `"add-column"` on a columns block, or `"add-table-row"`, `"add-table-column"`, `"remove-table-row"` and `"remove-table-column"` on a table or any block inside it.
 - **Rich text.** `editor.richText(block)` returns `type(text)`, `select()` (the whole text, for keys pressed next), `format(format)` (a mark such as `"bold"`, `"heading-2"`, `"bullet-list"` or `"quote"`), `link(url)` and `unlink()`.
 - **History.** `editor.undo()` and `editor.redo()` press the header's Undo and Redo buttons.
 - **Saving.** `editor.save()` resolves once every edit has reached the server, `editor.publish()` publishes the entry or its pending edits, and `editor.reload()` reloads the editor.
