@@ -1,5 +1,5 @@
 import { plumix } from "plumix";
-import { auth } from "plumix/auth";
+import { anonymousPolicy, auth, authenticatedPolicy } from "plumix/auth";
 import { definePlugin } from "plumix/plugin";
 
 import { media } from "@plumix/plugin-media";
@@ -24,6 +24,23 @@ const content = definePlugin("core-playground-content", (setup) => {
     supports: ["title", "editor", "revisions", "autosave"],
     isPublic: true,
     rewrite: { slug: "posts" },
+  });
+  // What the editor specs open: every document setting the Page tab offers.
+  setup.registerEntryType("article", {
+    label: "Articles",
+    isPublic: true,
+    supports: ["title", "editor", "revisions", "autosave"],
+    termTaxonomies: ["topic"],
+    access: {
+      default: anonymousPolicy,
+      policies: [
+        { key: "members", label: "Members only", policy: authenticatedPolicy },
+      ],
+    },
+  });
+  setup.registerTermTaxonomy("topic", {
+    label: "Topics",
+    entryTypes: ["article"],
   });
 });
 

@@ -97,11 +97,13 @@ export function RevisionDiffDialog({
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <DiffPane
             label={renderLabel(M.thisRevision)}
+            testId="revision-diff-modal-revision"
             snapshot={revisionQuery.data}
             isError={revisionQuery.isError}
           />
           <DiffPane
             label={renderLabel(M.current)}
+            testId="revision-diff-modal-current"
             snapshot={currentQuery.data}
             isError={currentQuery.isError}
           />
@@ -113,10 +115,12 @@ export function RevisionDiffDialog({
 
 function DiffPane({
   label,
+  testId,
   snapshot,
   isError,
 }: {
   readonly label: string;
+  readonly testId: string;
   readonly snapshot: DiffSnapshot | undefined;
   readonly isError: boolean;
 }): ReactElement {
@@ -170,7 +174,10 @@ function DiffPane({
       >
         {label}
       </div>
-      <pre className="bg-muted max-h-96 overflow-auto rounded-md p-2 text-xs">
+      <pre
+        className="bg-muted max-h-96 overflow-auto rounded-md p-2 text-xs"
+        data-testid={testId}
+      >
         {JSON.stringify(snapshot, null, 2)}
       </pre>
     </section>

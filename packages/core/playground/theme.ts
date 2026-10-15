@@ -1,4 +1,4 @@
-import type { EntryData } from "plumix/theme";
+import type { EntryData, ResolvedEntry } from "plumix/theme";
 import type { ReactNode } from "react";
 import { createElement as h } from "react";
 import { BlockRenderer } from "plumix/blocks/renderer";
@@ -132,13 +132,27 @@ const FIXTURES: Readonly<Record<string, () => ReactNode>> = {
   strategies,
 };
 
+/** What the editor specs edit: the article's topics, then its blocks. */
+function article(resolved: ResolvedEntry): ReactNode {
+  return [
+    h(
+      "p",
+      { key: "topics", "data-testid": "article-topics" },
+      resolved.terms.map((term) => term.name).join(", "),
+    ),
+    h(BlockRenderer, { key: "blocks", content: resolved.contentBlocks }),
+  ];
+}
+
 const page = defineTemplate<EntryData>({
   render: ({ data }): ReactNode =>
     h(
       "main",
       null,
-      FIXTURES[data.entry.slug]?.() ??
-        h(BlockRenderer, { content: data.entry.contentBlocks }),
+      data.entry.type === "article"
+        ? article(data.entry)
+        : (FIXTURES[data.entry.slug]?.() ??
+          h(BlockRenderer, { content: data.entry.contentBlocks })),
     ),
 });
 
