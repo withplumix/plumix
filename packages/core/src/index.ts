@@ -12,6 +12,10 @@ export * from "./admin/index.js";
 export * from "./auth/index.js";
 export { normalizeBasePath, withBasePath } from "./base-path.js";
 export * from "./cli/index.js";
+// Off `./cli/index.js`: the field pipeline would ride every CLI start, while
+// `plumix import` reads it after the app is built.
+export { checkImportedMeta } from "./cli/import-meta.js";
+export type { ImportedMeta, ImportedMetaOwner } from "./cli/import-meta.js";
 export * from "./config.js";
 export { defineConfig, plumix } from "./runtime/define-config.js";
 export * from "./context/index.js";

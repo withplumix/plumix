@@ -1,6 +1,6 @@
 ---
 title: Moving data between environments
-description: plumix sync pull and push replace one environment's content, users, media or plugin data with the other's — the dump format, the scopes, how references survive, and the safety rules around a push.
+description: plumix sync pull and push replace one environment's content, users, media or plugin data with the other's, and plumix import loads content from files — the dump format, the scopes, how references survive, and the safety rules around a push.
 tier: P1
 sidebar:
   order: 17
@@ -112,6 +112,65 @@ On the deployed site, the settle runs inside the site through `POST /_plumix/api
   Run it with `--dry-run` first and read the counts, especially the rows outside
   the sync it would remove. The restore hint a push prints is how you undo it.
 </Aside>
+
+## Importing content
+
+`plumix import` loads content from files instead of from another environment, so a site moving from another stack can seed itself without its own scripts. It takes a sync dump directory, or a file of authoring records:
+
+```bash
+plumix import content.jsonl --dry-run
+plumix import content.jsonl
+plumix import content.jsonl --url https://example.com
+```
+
+```bash
+plumix import <dir|file.jsonl> [--url <origin>] [--binding <name>] [--dry-run] [--yes] [--no-rewrite-urls]
+```
+
+Without `--url` the import loads your local database. `--url` names the deployed site instead, and then a push's rules hold: the import asks for confirmation unless `--yes` is passed, fails with `import_unconfirmed` when there is no terminal to ask in, and takes a snapshot and prints how to restore it before it writes. Either way it runs the same dry run first and prints its counts, `--dry-run` stops there, and after the import the target settles as after a sync.
+
+### The authoring format
+
+An authoring file holds one JSON record per line. A blank line is skipped. A term:
+
+```json
+{ "type": "term", "taxonomy": "category", "slug": "news", "name": "News" }
+```
+
+An entry:
+
+```json
+{
+  "type": "entry",
+  "entryType": "post",
+  "slug": "hello",
+  "title": "Hello",
+  "author": "alice@example.com",
+  "content": { "blocks": [] },
+  "meta": { "subtitle": "A first post" },
+  "terms": [{ "taxonomy": "category", "slug": "news" }]
+}
+```
+
+- A term takes `taxonomy`, `slug` and `name`, and may take `description` and `meta`.
+- An entry takes `entryType`, `slug`, `title` and `author`, and may take `content` (the stored block tree), `excerpt`, `status` (`published`, the default, or `draft`), `publishedAt` (an ISO timestamp; a published entry without one is published at the time of the import), `meta` and `terms`.
+- `author` is an email, matched to a user [by email](#references). An author the site lacks is added as a disabled user with the `author` role.
+- `terms` refers to terms by taxonomy and slug, each one a term record in the same file. Ids are assigned on import, in file order.
+
+### Validation
+
+Every record is checked against the site before anything is opened:
+
+- its entry type and taxonomy are registered, and so is each taxonomy it refers to;
+- each `meta` key is a field the entry type or taxonomy registers, its value passes that field as a publish checks it, and every required field is there;
+- no two entries share a type and slug, and no two terms a taxonomy and slug;
+- every term an entry refers to is in the file.
+
+When any record fails, the import fails with `import_records_invalid`, listing each failure as `<file>:<line>: <reason>`, and writes nothing.
+
+### What it replaces
+
+An authoring file replaces the `content` scope's `terms`, `entries` and `entry_term`. It holds no settings, so the site keeps its own `settings`. A sync dump replaces the scopes its manifest names, exactly as a sync would, and is checked the same way: its format, its counts, and its migration heads against the target's. Its source's URLs are rewritten to the target's, as in [URLs](#urls); `--no-rewrite-urls` turns that off. Authoring records name no source, so nothing in them is rewritten.
 
 ## Related
 

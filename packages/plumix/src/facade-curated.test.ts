@@ -62,6 +62,12 @@ const CORE_WITHHELD: readonly Withholding[] = [
   },
   {
     reason:
+      "the check `plumix import` runs on each record's meta, which only " +
+      "that command reads",
+    names: ["checkImportedMeta"],
+  },
+  {
+    reason:
       "the runtime-key half of the shim roster, which admin's runtime " +
       "object and `PlumixAdminRuntime` are typed against. A plugin " +
       "chunk reads those keys through `getRuntime`, not this map.",

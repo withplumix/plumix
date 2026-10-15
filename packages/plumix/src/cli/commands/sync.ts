@@ -110,12 +110,15 @@ export const syncDeps = {
   now: (): Date => new Date(),
 };
 
-function dumpName(direction: SyncDirection, now: Date): string {
+export function dumpName(prefix: string, now: Date): string {
   const stamp = now.toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
-  return `${direction}-${stamp}`;
+  return `${prefix}-${stamp}`;
 }
 
-function describeImport(target: SyncTarget, result: SyncImportReport): void {
+export function describeImport(
+  target: SyncTarget,
+  result: SyncImportReport,
+): void {
   report.info(`Rows on the ${target} site:`);
   for (const table of result.tables) {
     report.info(
@@ -141,7 +144,7 @@ function targetSite(run: SyncRun): SiteLocation {
   return { origin: run.target.origin, basePath: run.basePath };
 }
 
-function describeRewrite(
+export function describeRewrite(
   source: SiteLocation,
   target: SiteLocation,
   rewritten: ReadonlyMap<string, number>,
@@ -154,7 +157,7 @@ function describeRewrite(
   }
 }
 
-function describeSettle(settled: SyncSettleReport): void {
+export function describeSettle(settled: SyncSettleReport): void {
   if (settled.cdn === "purged") report.success("Purged the whole CDN.");
   if (settled.cdn === "cannot-purge") {
     report.info(
@@ -250,7 +253,7 @@ async function replaceKeepingDumpOnFailure(
   rmSync(run.dumpDir, { recursive: true, force: true });
 }
 
-function runtimeSyncOf(ctx: CommandContext): RuntimeSync {
+export function runtimeSyncOf(ctx: CommandContext): RuntimeSync {
   if (ctx.runtimeSync === undefined) {
     throw PlumixCliError.syncRuntimeUnsupported({
       runtime: ctx.app.config.runtime.name,
@@ -260,7 +263,7 @@ function runtimeSyncOf(ctx: CommandContext): RuntimeSync {
 }
 
 /** Closes every end even when one close fails, then reports the first failure. */
-async function closeAll(ends: readonly SyncEnd[]): Promise<void> {
+export async function closeAll(ends: readonly SyncEnd[]): Promise<void> {
   const closed = await Promise.allSettled(ends.map((end) => end.close()));
   for (const result of closed) {
     if (result.status === "rejected") throw result.reason;
