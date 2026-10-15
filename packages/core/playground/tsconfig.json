@@ -11,6 +11,7 @@
       "plumix": ["../../plumix/src/index.ts"],
       "plumix/auth": ["../../plumix/src/auth/index.ts"],
       "plumix/auth/client": ["../../plumix/src/auth/client.ts"],
+      "plumix/db": ["../../plumix/src/db/index.ts"],
       "plumix/blocks": ["../../plumix/src/blocks/index.ts"],
       "plumix/blocks/renderer": ["../../plumix/src/blocks/renderer.ts"],
       "plumix/plugin": ["../../plumix/src/plugin.ts"],
@@ -25,6 +26,7 @@
     "auth",
     "blocks",
     "islands",
+    "sign-in",
     ".plumix"
   ]
 }

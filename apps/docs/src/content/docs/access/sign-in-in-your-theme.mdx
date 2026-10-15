@@ -1,0 +1,112 @@
+---
+title: Sign-in in Your Theme
+description: Build a theme's own sign-in page and account menu with authClient from plumix/auth/client, add a form that signs in with no script, and show the outcomes that land on loginPath.
+tier: P1
+sidebar:
+  order: 30
+---
+
+import { Aside, Code } from "@astrojs/starlight/components";
+
+import accountMenu from "../../../../../../packages/core/playground/sign-in/account-menu.tsx?raw";
+import messages from "../../../../../../packages/core/playground/sign-in/messages.ts?raw";
+import pages from "../../../../../../packages/core/playground/sign-in/pages.ts?raw";
+import plainSignIn from "../../../../../../packages/core/playground/sign-in/plain-sign-in.tsx?raw";
+import signInForm from "../../../../../../packages/core/playground/sign-in/sign-in-form.tsx?raw";
+import templates from "../../../../../../packages/core/playground/sign-in/templates.ts?raw";
+
+The admin has a login screen of its own, and a theme can have one too. `authClient` from `plumix/auth/client` is the one object a theme's sign-in page, account menu or plain HTML form calls. It carries every sign-in method the site installed, core's and every plugin's, and it handles the base path, the CSRF header and the session for you.
+
+## Overview
+
+`authClient` is browser-safe, so an island imports it, and it works during the server render too. It gives you:
+
+- **`authClient.signIn.<method>(…)`**, one call per sign-in method: `passkey`, `magicLink` and `oauth` from core, and each installed plugin's method under the camelCase of its name. A method can add more actions under its own name, such as `authClient.passkey.register()`.
+- **`authClient.signOut({ redirectTo })`**, which ends the session.
+- **`authClient.useSession()`**, which returns `{ user, isPending }`. It starts from the session the page was rendered with, and it updates after any call that signs someone in or out, with no reload.
+- **`authClient.useAuthMethods()`**, which returns the sign-in methods the site lists, each with its `name` and `label`, and the configured OAuth providers.
+- **`authClient.url(target, { redirectTo })`**, the base-pathed URL of a method's route or of sign-out, for a plain `<form action>` or `<a href>`.
+
+Every call resolves `{ data, error }` and never throws for an expected failure. `error` is `{ code, message }`. `code` is the server's code, such as `wrong_code`, or one the browser hit itself, such as `network_error` or `user_cancelled`. `message` is a Lingui message descriptor: `message.id` is the key in your own catalog, and `message.message` is the English text.
+
+Plumix ships no sign-in components. You write the markup, and `authClient` does the calls. Every sample on this page is a file of the playground that Plumix's own end-to-end tests sign in through. Its theme writes `createElement`, but a theme of yours can use JSX. The sign-in method these samples use is the email-code method that [Writing a Sign-in Method](/plugins/writing-an-auth-method/) builds. It mails a six-digit code (`authClient.emailCode.sendCode`) and trades the code for a session (`authClient.signIn.emailCode`).
+
+## Quickstart
+
+A sign-in page and an account page are per-visitor, so register each as a view. [App pages with `registerView`](/routing/overview/#app-pages-with-registerview) covers views. A plugin in the site registers the three pages this guide builds:
+
+<Code code={pages} lang="ts" title="sign-in/pages.ts" />
+
+The theme gives each view a template with [`forView`](/themes/templates/#forview), and spreads these rules into its `templates`:
+
+<Code code={templates} lang="ts" title="sign-in/templates.ts" />
+
+The rest of this page is the three components the templates render.
+
+## A sign-in page in an island
+
+The island below is a two-step form. The first submit mails a code, and the second trades the code for a session:
+
+<Code code={signInForm} lang="tsx" title="sign-in/sign-in-form.tsx" />
+
+- **`useAuthMethods()` decides what to offer.** The passkey button shows only when the site lists `passkey`. A method declared `listed: false` is left out, and so is a core method the site didn't configure, such as `magicLink` without its `auth()` block. The email-code method is unlisted, because the admin's login screen offers every listed method as a button that calls `signIn()` with no arguments. So the form offers it directly.
+- **`{ data, error }` drives the state.** A call that failed puts its `error` on the page. The form looks up its own copy by `error.code`, and falls back to the kernel's English `message.message` for a code it has no copy for.
+- **A successful sign-in navigates.** The call passed `redirectTo: "/account"`, so once the session exists the browser goes to `/account`. Leave `redirectTo` out and the page stays where it is, while every `useSession()` on it turns signed-in.
+
+A method's call runs only once its browser half is mounted. Plumix's Vite plugin mounts every installed method's half before an island renders, so in an island this always holds. A call to a method no plugin registered resolves `error.code` `method_not_registered`.
+
+## An account menu
+
+`useSession()` reads the session the page was rendered with, so a signed-in visitor sees their address on the first paint, before the island hydrates:
+
+<Code code={accountMenu} lang="tsx" title="sign-in/account-menu.tsx" />
+
+`isPending` is `true` only while the session is still unknown, such as on a page no server render produced. `signOut()` with no `redirectTo` leaves the visitor on the page, and the menu turns to its signed-out branch.
+
+`signOut({ redirectTo: "/" })` navigates instead. Either way it resolves `data.redirectTo`: the identity provider's logout URL when the site's authenticator has one, else the `redirectTo` you passed, else `null`. A provider's logout URL wins over yours, and it must be followed or the visitor is signed straight back in, so call `signOut` with a `redirectTo` on such a site.
+
+## A form that works with no script
+
+`authClient.url()` builds a form's `action` during the server render, base path included, so the form below signs someone in with JavaScript off. It is a server component, not an island:
+
+<Code code={plainSignIn} lang="tsx" title="sign-in/plain-sign-in.tsx" />
+
+- **The target** is `{ method, route }` for one of a method's routes, or `"signOut"` for sign-out. A form on a page only a signed-in visitor sees signs out with `action={authClient.url("signOut", { redirectTo: "/" })}`.
+- **`redirectTo`** goes on the URL's query. A route that proves an identity reads it from there, so a successful sign-in lands on `/account`.
+- **The route must accept a plain form.** A form can't send the `X-Plumix-Request` header that guards every auth route, so a route takes a plain form only when its method declares it `formPost`. The email-code method declares both of its routes that way. Core's magic-link request and sign-out accept one too. A `formPost` request must still come from the site's own origin, and it runs with no signed-in visitor, so a cross-site form can't act as whoever is signed in.
+- **Two buttons, one form.** The first button posts to the `request` route through `formAction`, and the second posts to `verify` through the form's own `action`.
+
+A form post is answered with a `303` redirect. A sign-in that worked lands on the `redirectTo`. Anything else lands on the site's `loginPath`, which the next section covers.
+
+## The redirectTo rules
+
+Pass `redirectTo` app-relative, as `/account`. `authClient` adds the base path before the value goes on the wire, so the same theme works on a site mounted under `/blog`.
+
+The server keeps a `redirectTo` only when it is a root-relative path inside the base path, with no `.` or `..` segment, no backslash and no control character. Anything else, such as `https://evil.example` or `//evil.example`, sends the visitor to the site root instead. A sign-in with no `redirectTo` at all is sent to the admin.
+
+A fetch sign-in answers JSON with the checked `redirectTo`. `authClient` navigates to it only when your call passed one. A navigation or a form post is answered with a redirect to it.
+
+## Outcomes on loginPath
+
+A navigation or a form post can't be answered with JSON, so a method answers it with a redirect to the site's `loginPath`, with a query parameter naming the outcome. A failure adds `<key>_error=<code>`, and a notice adds `<key>_<name>=1`. A method's key is its name with `-` replaced by `_`. So the email-code method lands a wrong code on `?email_code_error=wrong_code` and a sent code on `?email_code_sent=1`.
+
+`loginPath` defaults to the admin's login screen. Point it at the theme's page in `auth()`, as [Configuration](/getting-started/configuration/) describes, so the outcomes land where your form reads them. The playground points it at `/sign-in-no-script`.
+
+The page reads the parameter off the request and shows its own copy. The samples above share one table of it:
+
+<Code code={messages} lang="ts" title="sign-in/messages.ts" />
+
+Core adds codes of its own to every method's. When the identity a method proved isn't allowed an account, the answer is one of `email_unverified`, `account_disabled`, `domain_not_allowed`, `registration_closed` or `link_broken`. `domain_not_allowed` is what a new address gets when the site has no open `selfSignup` and the address's domain isn't one of its allowed domains. An existing user signs in whatever their domain. A fetch gets the same codes in `error.code`.
+
+<Aside type="caution" title="Keep loginPath ungated">
+  An access policy sends an anonymous visitor to `loginPath`. A `loginPath` page
+  that is gated itself sends the visitor back to the gate, round and round.
+</Aside>
+
+## Related
+
+[Access Overview](/access/overview/) covers how a request resolves to the principal `useSession()` reports. [Passkeys](/access/passkeys/) covers the ceremony behind `signIn.passkey()` and `passkey.register()`. [Writing a Sign-in Method](/plugins/writing-an-auth-method/) builds the email-code method these samples call, both its server and its browser half.
+
+## Next steps
+
+Read [Writing a Sign-in Method](/plugins/writing-an-auth-method/) to add a method of your own to `authClient.signIn`.

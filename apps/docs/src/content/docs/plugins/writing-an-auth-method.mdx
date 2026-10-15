@@ -1,0 +1,148 @@
+---
+title: Writing a Sign-in Method
+description: Add a sign-in method from a plugin with defineAuthMethod and defineAuthMethodClient, prove identities through the kernel, and type it into authClient — built around a worked email-code method.
+tier: P1
+sidebar:
+  order: 120
+---
+
+import { Code } from "@astrojs/starlight/components";
+
+import client from "../../../../../../packages/core/playground/auth/email-code/client.ts?raw";
+import codes from "../../../../../../packages/core/playground/auth/email-code/codes.ts?raw";
+import test from "../../../../../../packages/core/playground/auth/email-code/email-code.test.ts?raw";
+import method from "../../../../../../packages/core/playground/auth/email-code/index.ts?raw";
+import schema from "../../../../../../packages/core/playground/auth/email-code/schema.ts?raw";
+
+A sign-in method is a way a person proves who they are and gets a session, such as a passkey, a magic link or OAuth. Core's methods and a plugin's are declared the same way, so a plugin can add one of its own, such as SAML, a wallet or an enterprise identity provider. It then shows up on `authClient.signIn` next to core's, with types.
+
+## Overview
+
+A method has two halves:
+
+- **The server half**, `defineAuthMethod` from `plumix/plugin`, goes in the plugin's `authMethods`. Its routes answer under `/_plumix/auth/<name>/`, and each route's handler works through a kernel.
+- **The browser half**, `defineAuthMethodClient` from `plumix/auth/client`, is a module the server half names in `client`. It appears as `authClient.signIn.<camelCase name>`, with any extra actions under `authClient.<camelCase name>`.
+
+A method only proves an identity. It ends in the kernel's `proveIdentity`, and core decides everything after that: whether the address may have an account, whether the account is disabled, the session, and where the visitor lands.
+
+This page builds a complete method, `email-code`, which mails a six-digit code and trades it for a session. Every sample is a file of the playground that Plumix's own tests sign in through. [Sign-in in Your Theme](/access/sign-in-in-your-theme/) builds the theme pages that call it.
+
+## Quickstart
+
+The plugin declares the method, its mail and its tables:
+
+<Code code={method} lang="ts" title="auth/email-code/index.ts" />
+
+- **`name`** is a kebab-case slug, and the method's routes mount under `/_plumix/auth/email-code/`. Core's own `device`, `signout` and `verify-email` routes are names no method may take, and two plugins declaring one name fail the boot, naming both.
+- **`label`** is what `authClient.useAuthMethods()` lists. **`listed: false`** keeps the method out of that list. This one is unlisted because the admin's login screen offers every listed plugin method as a "Continue with" button that calls `signIn()` with no arguments, and this method needs an address and a code.
+- **`errorCodes`** are the codes the handlers pass to `fail`, besides the identity refusals core adds. Passing any other code is a type error.
+- **`routes`** are keyed by path under the mount. A `:param` segment matches any one segment, and the handler reads it from `params`.
+- **`client`** names the browser half: an absolute path, as here, or a package subpath resolved from the site root, such as `"@acme/plumix-otp/client"`.
+
+Install the plugin in `plumix.config.ts` like any other, and `authClient.signIn.emailCode` type-checks in the theme.
+
+## The kernel
+
+Each handler receives the kernel, bound to the request:
+
+| Member                           | What it is                                                                                                       |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `request`                        | The request, with the base path stripped.                                                                        |
+| `ctx`                            | The request's `AppContext`: `db`, `mail`, `logger` and the rest.                                                 |
+| `params`                         | The route's `:param` segments.                                                                                   |
+| `loginPath`                      | The site's `loginPath`, with the base path.                                                                      |
+| `readInput()`                    | A fetch's JSON body, or a form post's string fields. `null` when the body doesn't parse.                         |
+| `readRedirectTo(value?)`         | Checks `value`, or the request's `?redirectTo=`. `undefined` when absent or empty, the site root when unsafe.    |
+| `proveIdentity(proof, options?)` | Signs the proven account in and answers with its session cookie, or refuses with a `403`.                        |
+| `fail(code, { status? })`        | A failure. `status` defaults to `400`.                                                                           |
+| `notice(name, body?)`            | An outcome that isn't a sign-in, such as "code sent". `body` is what a fetch gets, `{ ok: true }` when left out. |
+
+### Proving an identity
+
+`proveIdentity` takes one of two proofs:
+
+- **An email proof**, `{ email, emailVerified }`, for a method that proved an address. `emailVerified` is `true` only when the method proved the caller owns the inbox, as a code mailed there does. It signs in the account with that address, or creates one where the site's sign-up rules allow. It can also carry `providerAccount: { provider, accountId }`, which links an external account so it signs its user in whatever address it reports later, and a `profile` with a `name` and `avatarUrl`, used only when the account is created.
+- **An account proof**, `{ userId }`, for a credential bound to one existing account, such as a passkey. It never creates an account.
+
+The second argument takes `redirectTo`, a value the method carried itself, such as through OAuth state, in place of the request's `?redirectTo=`. It also takes `afterSession(user)`, which runs once the session exists and before `user:signed_in`, and for an account proof, `firstSignIn`.
+
+### Answers by transport
+
+The kernel picks the shape of every answer from how the caller arrived. A handler returns what the kernel built and never shapes a response itself.
+
+| Answer          | A fetch with `X-Plumix-Request`                 | A navigation (`GET`)                    | A form post (`POST`)                    |
+| --------------- | ----------------------------------------------- | --------------------------------------- | --------------------------------------- |
+| `proveIdentity` | `{ userId, redirectTo }` and the session cookie | `302` to `redirectTo`, with the cookie  | `303` to `redirectTo`, with the cookie  |
+| `fail`          | `{ error: code }` with the status               | `302` to `loginPath?<key>_error=<code>` | `303` to `loginPath?<key>_error=<code>` |
+| `notice`        | `body`, with `200`                              | `302` to `loginPath?<key>_<name>=1`     | `303` to `loginPath?<key>_<name>=1`     |
+
+A method's key is its name with `-` replaced by `_`, so the email-code method's wrong code lands on `?email_code_error=wrong_code`. With no `redirectTo` at all, a sign-in is sent to the admin.
+
+## CSRF and formPost
+
+Every auth route requires the `X-Plumix-Request` header, which a cross-site page can't send, so a forged request never reaches the handler. `authClient` sends it on every call.
+
+A plain HTML form can't send it either. A route that a form with no script should reach declares `formPost: true`. It then also accepts a `POST` without the header, as long as it comes from the site's own origin, and that request runs with no signed-in visitor, so a forged form can't act as whoever is signed in. Both email-code routes declare it, which is what lets [a form with no script](/access/sign-in-in-your-theme/#a-form-that-works-with-no-script) sign someone in.
+
+## Limiting attempts
+
+The kernel has no rate limiter. How to throttle depends on the deploy's edge, its storage and its threat model, so a method that needs a limit owns it, or the site in front of it does. A six-digit code needs one: without a cap, a script could mail an address a thousand codes, or guess a code in a million tries.
+
+The email-code method caps both by counting rows of its own, which works on any deploy with no extra binding:
+
+<Code code={codes} lang="ts" title="auth/email-code/codes.ts" />
+
+The rows live in two tables of the method's own:
+
+<Code code={schema} lang="ts" title="auth/email-code/schema.ts" />
+
+This plugin lives in the site's folder, so its tables are the site's, and [`plumix migrate generate`](/deployment/cli/#migrate) writes their history to the site's `migrations/`. A method published as a package ships its own history instead, as [Plugins that own tables](/plugins/overview/#plugins-that-own-tables) describes.
+
+## The browser half
+
+The browser half gets a kernel bound to the method's mount, and returns its actions:
+
+<Code code={client} lang="ts" title="auth/email-code/client.ts" />
+
+| Kernel member                    | What it does                                                                                                                                                 |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `post<T>(route, body?, options)` | POSTs `body` as JSON with the CSRF header. A sign-in answer refreshes the session, and navigates to the server's `redirectTo` only when the call passed one. |
+| `url(route?, options)`           | The URL of `route` under the mount, with `redirectTo` on its query.                                                                                          |
+| `navigate(url)`                  | A full-page navigation, for a flow that leaves the site, such as an OAuth consent screen.                                                                    |
+| `fail(code)`                     | A failure the browser hit itself, such as a cancelled prompt.                                                                                                |
+
+`signIn` appears as `authClient.signIn.emailCode`, and every other action under `authClient.emailCode`, so `sendCode` is `authClient.emailCode.sendCode`. Every action resolves `{ data, error }`. Keep it so: a theme handles your method's failures the way it handles core's.
+
+The module must be browser-safe, because it ships to the browser. Plumix's Vite plugin reads every `client` from the loaded config and mounts each half before an island renders, and in the admin too. Nothing else registers it.
+
+### Typing it
+
+`authClient` learns about the method through `AuthMethodRegistry`, augmented with the browser half's type from the plugin's main entry, as the `declare module "plumix"` block in `index.ts` does. The theme sees it because `plumix.config.ts` imports the plugin. No `.d.ts` is generated, so a typecheck needs no dev server or build first. The key is the method's kebab-case name, and a call to a method no plugin registered is a type error.
+
+## What core decides
+
+The method proves who the caller is, and core keeps every other rule:
+
+- **Who may have an account.** A new address needs one of the site's allowed domains, or an open `selfSignup`. Otherwise the answer is `domain_not_allowed`. An email proof with `emailVerified: false` signs no one in and creates nothing, `email_unverified`.
+- **The first account.** While the site has no users, a method creates the first one only where bootstrap is allowed. Otherwise the answer is `registration_closed`.
+- **Disabled accounts**, `account_disabled`, and an account proof whose user is gone, `link_broken`.
+- **The session**, its cookie and the `user:signed_in` action.
+- **Where the visitor lands.** `redirectTo` is kept only when it is a root-relative path inside the base path, and sent to the site root otherwise.
+
+A refusal answers like a `fail` with a `403`, so the theme shows it next to the method's own codes.
+
+## Testing it
+
+The dispatcher harness boots the plugin against an in-memory database, and `h.mail` records the mail it sends. Apply the method's tables first:
+
+<Code code={test} lang="ts" title="auth/email-code/email-code.test.ts" />
+
+[Testing a Plugin](/plugins/testing/) covers the harness and the mail fake. Signing in through a theme's page is an end-to-end test: the playground's suite drives the pages from [Sign-in in Your Theme](/access/sign-in-in-your-theme/), with script and without.
+
+## Related
+
+[ADR 0041](https://github.com/withplumix/plumix/blob/main/docs/adr/0041-a-sign-in-method-is-a-registered-extension.md) records why a method only proves and core decides. [Passkeys](/access/passkeys/) covers one of core's methods, which run through the same kernel. [Mail](/going-further/mail/) covers `defineMail` and `ctx.mail.send`.
+
+## Next steps
+
+Build the pages that call the method in [Sign-in in Your Theme](/access/sign-in-in-your-theme/).

@@ -210,7 +210,7 @@ export const recipeAuth = auth({
 
 ### plumix/auth/client
 
-`authClient`, for a theme's own sign-in or account page. It is browser-safe, so an island imports it. Each sign-in method appears under `authClient.signIn`, core's (`passkey`, `magicLink`, `oauth`) and every installed plugin's alike. Every call resolves `{ data, error }` rather than throwing, `url()` builds a base-pathed `action` for a form that works without script, and `useSession()` and `useAuthMethods()` read what the server rendered the page with. A plugin adds its method's browser half with `defineAuthMethodClient`. [ADR 0041](https://github.com/withplumix/plumix/blob/main/docs/adr/0041-a-sign-in-method-is-a-registered-extension.md) has the design.
+`authClient`, for a theme's own sign-in or account page. It is browser-safe, so an island imports it. Each sign-in method appears under `authClient.signIn`, core's (`passkey`, `magicLink`, `oauth`) and every installed plugin's alike. Every call resolves `{ data, error }` rather than throwing, `url()` builds a base-pathed `action` for a form that works without script, and `useSession()` and `useAuthMethods()` read what the server rendered the page with. A plugin adds its method's browser half with `defineAuthMethodClient`. [Sign-in in Your Theme](/access/sign-in-in-your-theme/) builds the pages, and [Writing a Sign-in Method](/plugins/writing-an-auth-method/) the method. [ADR 0041](https://github.com/withplumix/plumix/blob/main/docs/adr/0041-a-sign-in-method-is-a-registered-extension.md) has the design.
 
 ```tsx
 import { authClient } from "plumix/auth/client";

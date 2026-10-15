@@ -9,7 +9,9 @@ import {
   d1,
 } from "@plumix/runtime-cloudflare";
 
+import { emailCode } from "./auth/email-code/index.js";
 import { fixtureSignIn } from "./auth/fixture.js";
+import { signInPages } from "./sign-in/pages.js";
 import { theme } from "./theme.js";
 
 // Root permalinks, so `/islands` is the `islands` page. Posts take drafts and
@@ -56,6 +58,8 @@ export default plumix({
   runtime: cloudflare(),
   database: d1({ binding: "DB", session: "auto" }),
   auth: auth({
+    // The no-script sign-in page, where a form post's notice or error lands.
+    loginPath: "/sign-in-no-script",
     passkey: {
       rpName: "Plumix — Core playground",
       ...deployOrigin,
@@ -63,6 +67,6 @@ export default plumix({
   }),
   // No `storage:`, so a seeded media row's storage key is the URL it serves
   // from, and the editor's media picker lists factory-made rows.
-  plugins: [content, media(), fixtureSignIn],
+  plugins: [content, media(), fixtureSignIn, emailCode, signInPages],
   theme,
 });

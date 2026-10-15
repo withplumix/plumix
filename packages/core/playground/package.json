@@ -15,6 +15,7 @@
     "@plumix/core": "workspace:*",
     "@plumix/plugin-media": "workspace:*",
     "@plumix/runtime-cloudflare": "workspace:*",
+    "drizzle-orm": "catalog:drizzle",
     "plumix": "workspace:*",
     "react": "catalog:react"
   },

@@ -156,7 +156,7 @@ export default defineConfig({
               label: "Access and Identity",
               paths: ["access/**"],
               description:
-                "how a request resolves to a principal, and passkey sign-in",
+                "how a request resolves to a principal, passkey sign-in, and a theme's own sign-in pages",
             },
             {
               label: "Going Further",

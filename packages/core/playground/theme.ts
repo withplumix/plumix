@@ -21,6 +21,7 @@ import { PrefetchProbe } from "./islands/prefetch-probe.js";
 import { Probe } from "./islands/probe.js";
 import { SanitizeProbe } from "./islands/sanitize-probe.js";
 import { UseAuthProbe } from "./islands/use-auth-probe.js";
+import { signInTemplates } from "./sign-in/templates.js";
 
 /**
  * Markup no component emits: `await-children` and an unknown `client`. Vite's
@@ -223,5 +224,5 @@ const page = defineTemplate<EntryData>({
 
 export const theme = defineTheme({
   blocks: [ratingBlock],
-  templates: [fallback(() => null), entry(page)],
+  templates: [fallback(() => null), entry(page), ...signInTemplates],
 });
