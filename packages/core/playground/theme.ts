@@ -158,7 +158,7 @@ const page = defineTemplate<EntryData>({
       data.entry.type === "article"
         ? article(data.entry)
         : (FIXTURES[data.entry.slug]?.() ??
-          h(BlockRenderer, { content: data.entry.contentBlocks })),
+            h(BlockRenderer, { content: data.entry.contentBlocks })),
     ),
 });
 
