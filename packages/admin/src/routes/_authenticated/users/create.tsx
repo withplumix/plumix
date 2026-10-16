@@ -320,8 +320,7 @@ function InviteUserRoute(): ReactNode {
 
 /**
  * Absolute URL so the admin can copy-paste into an email client without
- * post-processing. Admin is SPA-only so `window` is always defined here
- * (the browser test tier covers the test path).
+ * post-processing. Admin is SPA-only so `window` is always defined here.
  */
 function buildInviteUrl(token: string): string {
   return `${window.location.origin}${ADMIN_BASE_PATH}/accept-invite/${token}`;

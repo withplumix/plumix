@@ -608,7 +608,7 @@ export function publishedAgo(at: Date): string {
 
 ### plumix/test
 
-The one unit-test import, for both test tiers: an in-memory database, a request context factory, entity factories, hook spies and a request builder for server tests; `stubPluginRpc` and `PluginRpcError` for an admin component that calls its own procedures; `renderBlockSpecToHtml` and `renderBlockTreeToHtml` for a block; and `fakeFile` and `fakeImage` for an upload. A browser test gets a build of the same names, where a harness that needs Node throws and says which file the test belongs in. [Testing a plugin](/plugins/testing/) walks through both tiers.
+The one unit-test import: an in-memory database, a request context factory, entity factories, hook spies and a request builder for server tests; `stubPluginRpc` and `PluginRpcError` for admin code that calls its own procedures; `renderBlockSpecToHtml` and `renderBlockTreeToHtml` for a block; and `fakeFile` and `fakeImage` for an upload. [Testing a plugin](/plugins/testing/) walks through the unit and end-to-end tiers.
 
 ```ts
 import type { AppContext } from "plumix";

@@ -2,12 +2,8 @@
 // use, so the two cannot drift apart on the wire.
 
 import type { PluginRpcRouter } from "@plumix/core";
-import type {
-  RpcStub,
-  RpcStubCall,
-  RpcStubRoutes,
-} from "@plumix/core/test/browser";
-import { RpcReplyError, stubRpcEndpoint } from "@plumix/core/test/browser";
+import type { RpcStub, RpcStubCall, RpcStubRoutes } from "@plumix/core/test";
+import { RpcReplyError, stubRpcEndpoint } from "@plumix/core/test";
 
 /** One RPC request the client sent, decoded from the wire envelope. */
 export type PluginRpcCall<TRouter extends PluginRpcRouter = never> =

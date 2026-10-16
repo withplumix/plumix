@@ -1,6 +1,3 @@
-// The browser build of `plumix/test` serves this module as it is, so nothing
-// here may use a Node built-in.
-
 export interface FakeFileOptions {
   /** That many zero bytes. Ignored when `content` is given. */
   readonly size?: number;

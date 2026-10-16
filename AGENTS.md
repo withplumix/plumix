@@ -63,7 +63,7 @@ The same holds for every task with a `dependsOn`. `test:unit` has none, so `pnpm
 
 **Single test file.** Inside a package: `pnpm exec vitest run path/to/file.test.ts`. With coverage: `pnpm exec vitest run --coverage`.
 
-**Chromium.** Run `pnpm --filter @plumix/admin exec playwright install chromium` once before running the tests.
+**Chromium.** Run `pnpm --filter @plumix/admin exec playwright install chromium` once before running the e2e tests.
 
 **Tests.** Before writing or reviewing a test, read [`CODING_STANDARDS.md`](CODING_STANDARDS.md#tests): which tier it belongs to, what that tier may touch, the test-double order and the TDD loop. [`docs/agents/testing.md`](docs/agents/testing.md) lists the test kits and how to diagnose a slow test.
 

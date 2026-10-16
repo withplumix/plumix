@@ -56,7 +56,7 @@ function loadWorkspacePackages(): Map<string, WorkspacePackage> {
 }
 
 /**
- * The browser tier takes a `browser` condition first, as a bundler would.
+ * A client build takes a `browser` condition first, as a bundler would.
  */
 function distTarget(entry: unknown, browser: boolean): string | null {
   if (typeof entry === "string") return entry;
@@ -148,7 +148,7 @@ export function plumixSourceResolver(): Plugin {
     name: "plumix:source-resolver",
     enforce: "pre",
     resolveId(source, importer, options) {
-      // The node tier transforms for SSR; the browser tier does not.
+      // Vitest and a server build transform for SSR; a client build does not.
       const browser = options.ssr !== true;
       if (browser && importer !== undefined) {
         const remapped = browserRemap(packages, source, importer);

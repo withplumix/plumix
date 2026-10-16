@@ -280,6 +280,4 @@ export async function createDispatcherHarness(
   return harness;
 }
 
-// They carry no Node dependency, so they live apart from the harness for the
-// browser build of the test surface (`./browser.ts`) to reach them alone.
 export { DEV_ORIGIN, plumixRequest } from "./plumix-request.js";

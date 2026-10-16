@@ -3,6 +3,4 @@
  * tier (#3035, #3036). Hand-authored: a migration only removes entries, and the
  * list is done when empty.
  */
-export const RETIRED_TIER_PENDING: readonly string[] = [
-  "packages/plumix/src/test/node-only.browser.test.ts",
-];
+export const RETIRED_TIER_PENDING: readonly string[] = [];

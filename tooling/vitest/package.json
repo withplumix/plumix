@@ -19,9 +19,7 @@
     "@plumix/prettier-config": "workspace:*",
     "@plumix/typescript-config": "workspace:*",
     "@types/node": "catalog:",
-    "@vitest/browser-playwright": "catalog:vitest",
     "eslint": "catalog:",
-    "playwright": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:vitest"
