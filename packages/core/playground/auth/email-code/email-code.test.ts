@@ -49,6 +49,29 @@ function verify(h: DispatcherHarness, code: string) {
   });
 }
 
+/** Draws each value in turn, one per `getRandomValues` call. */
+function drawRandom(...values: number[]): void {
+  const spy = vi.spyOn(crypto, "getRandomValues");
+  for (const value of values) {
+    spy.mockImplementationOnce((array) => {
+      (array as Uint32Array)[0] = value;
+      return array;
+    });
+  }
+}
+
+test("redraws a random value from the range modulo would skew", async () => {
+  drawRandom(0xff_ff_ff_ff, 123456);
+  const h = await harness();
+
+  (await requestCode(h)).assertStatus(200);
+
+  h.mail.assertSent("emailCode", {
+    to: EMAIL,
+    where: (props) => props.code === "123456",
+  });
+});
+
 test("refuses a fourth code to one address within ten minutes", async () => {
   const h = await harness();
   (await requestCode(h)).assertStatus(200);

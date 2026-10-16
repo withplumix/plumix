@@ -24,6 +24,17 @@ async function hash(code: string): Promise<string> {
     .join("");
 }
 
+const CODE_SPACE = 1_000_000;
+
+/** Draws below the last whole multiple of the code space, so no code is likelier. */
+const UNBIASED_LIMIT = 2 ** 32 - (2 ** 32 % CODE_SPACE);
+
+function randomCode(): string {
+  const [random = 0] = crypto.getRandomValues(new Uint32Array(1));
+  if (random >= UNBIASED_LIMIT) return randomCode();
+  return String(random % CODE_SPACE).padStart(6, "0");
+}
+
 function liveCodes(email: string) {
   const windowStart = new Date(Date.now() - CODE_TTL_MS);
   return and(
@@ -45,8 +56,7 @@ export async function issueCode(
     .from(emailCodes)
     .where(liveCodes(email));
   if ((sent?.value ?? 0) >= MAX_CODES_PER_EMAIL) return null;
-  const [random = 0] = crypto.getRandomValues(new Uint32Array(1));
-  const code = String(random % 1_000_000).padStart(6, "0");
+  const code = randomCode();
   await ctx.db.insert(emailCodes).values({ email, codeHash: await hash(code) });
   return code;
 }
