@@ -6,8 +6,6 @@ sidebar:
   order: 110
 ---
 
-import { Aside } from "@astrojs/starlight/components";
-
 A plugin's tests come in two tiers. Unit tests are `*.test.ts` files beside your source. They run in Node with vitest and import their harnesses from `plumix/test`. End-to-end tests live in your plugin's `e2e/` folder. They drive a running site in Chromium with Playwright and import from `plumix/test/playwright`. Test a behaviour once, in the lowest tier that can observe it.
 
 ## Unit tests in Node
