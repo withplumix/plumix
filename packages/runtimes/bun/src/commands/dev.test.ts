@@ -1,4 +1,10 @@
-import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { AddressInfo } from "node:net";
@@ -45,6 +51,12 @@ export default plumix({
 const CONFIG_FILE = "plumix.config.ts";
 
 /**
+ * Inside the workspace, so a bare import from the site walks up to the pinned
+ * `node_modules`; from the OS temp dir Bun auto-installs the latest from npm.
+ */
+const SITES = join(import.meta.dirname, "../../.cache/dev-sites");
+
+/**
  * An edit lands on the watcher's schedule, and a restart re-evaluates the
  * config from workspace source: seconds on a fast disk, a minute on a slow one.
  */
@@ -80,7 +92,8 @@ beforeAll(async () => {
     '<!doctype html><title>admin</title><body><script id="plumix-manifest" type="application/json">{}</script></body>',
   );
 
-  dir = realpathSync(mkdtempSync(join(tmpdir(), "plumix-bun-dev-")));
+  mkdirSync(SITES, { recursive: true });
+  dir = realpathSync(mkdtempSync(join(SITES, "dev-")));
   writeFileSync(join(dir, CONFIG_FILE), config(dir));
   writeFileSync(join(dir, "greeting.mjs"), 'export const greeting = "v1";\n');
   writeFileSync(join(dir, ".env"), "PROBE_SECRET=from-dotenv\n");
