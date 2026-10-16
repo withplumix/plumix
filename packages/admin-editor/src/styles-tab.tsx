@@ -826,7 +826,7 @@ function BackgroundImageField({
     return <BackgroundImageControl value={value} onChange={onChange} />;
   }
   return (
-    <Field size="sm" data-testid="style-control-backgroundImage">
+    <Field size="sm">
       {/* FieldTitle, not FieldLabel: the picker is a plugin component whose
           focusable id we don't control, so a <label htmlFor> would be orphaned. */}
       <FieldTitle>
