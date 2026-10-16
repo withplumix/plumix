@@ -1,7 +1,7 @@
 import type { EditorStyleMark } from "@plumix/core/test/playwright";
 import { expect, test } from "@plumix/core/test/playwright";
 
-import { code, seedPage } from "./support/seed-page.js";
+import { code, seedImage, seedPage } from "./support/seed-page.js";
 
 interface StyleCase {
   readonly property: string;
@@ -54,12 +54,6 @@ const CASES: readonly StyleCase[] = [
     property: "background",
     value: "#00ff00",
     css: ["background-color", "rgb(0, 255, 0)"],
-  },
-  {
-    property: "backgroundImage",
-    value: IMAGE,
-    stored: `url("${IMAGE}")`,
-    css: ["background-image", `url("${IMAGE}")`],
   },
   { property: "color", value: "#ff0000", css: ["color", "rgb(255, 0, 0)"] },
   { property: "fontFamily", value: "serif", css: ["font-family", "serif"] },
@@ -135,6 +129,33 @@ for (const { property, value, stored, css, given = {} } of CASES) {
     ]);
   });
 }
+
+test("the backgroundImage control takes a library image and stores its URL", async ({
+  editor,
+}) => {
+  const image = await seedImage(IMAGE);
+  await editor.open(await seedPage([code("styled")]));
+  const block = editor.canvas.block("core/code");
+  await editor.select(block);
+
+  await editor.styles.set("backgroundImage", String(image));
+
+  await expect(block).toHaveCSS("background-image", `url("${IMAGE}")`);
+  await editor.save();
+  await editor.reload();
+  await expect(editor.canvas.block("core/code")).toHaveCSS(
+    "background-image",
+    `url("${IMAGE}")`,
+  );
+  expect(await editor.stored()).toEqual([
+    {
+      id: "styled",
+      name: "core/code",
+      attrs: { text: "styled" },
+      style: { large: { backgroundImage: `url("${IMAGE}")` } },
+    },
+  ]);
+});
 
 test("a theme token picked for a property is stored as its variable and styles the block", async ({
   editor,

@@ -89,8 +89,8 @@ export interface EditorLayers {
 export interface EditorStyles {
   /**
    * Sets a style property through its control: typed in, picked or toggled.
-   * `value` is what the control takes, so a fill image is its URL; `null`
-   * clears it.
+   * A fill image takes a media id with the media plugin, else a URL. `null`
+   * clears the property.
    */
   set: (property: string, value: string | null) => Promise<void>;
   /** Sets a style property to one of the theme's tokens, by its id. */
@@ -667,6 +667,31 @@ export function createEditor(page: Page): Editor {
   const radioOptions = (control: Locator, testId: string): Locator =>
     control.locator(`[data-testid^=${JSON.stringify(`${testId}-`)}]`);
 
+  const pickMedia = async (
+    control: Locator,
+    testId: string,
+    id: string,
+  ): Promise<void> => {
+    await control.getByTestId(`${testId}-open`).click();
+    const modal = page.getByTestId(`${testId}-modal`);
+    const card = modal.getByTestId(`media-card-${id}`);
+    // The library pages in as its sentinel scrolls into view.
+    await expect
+      .poll(async () => {
+        const paged = await card.count();
+        if (paged === 0) {
+          await modal
+            .getByTestId("media-library-sentinel")
+            .scrollIntoViewIfNeeded();
+        }
+        return paged;
+      })
+      .toBeGreaterThan(0);
+    await card.click();
+    await modal.getByTestId("media-library-picker-confirm").click();
+    await expect(modal).toBeHidden();
+  };
+
   const inspector: EditorInspector = {
     set: async (field, value) => {
       const { control, testId, kind } = await inspectorControl(field);
@@ -697,24 +722,7 @@ export function createEditor(page: Page): Editor {
             await expect(control.getByTestId(`${testId}-empty`)).toBeVisible();
             return;
           }
-          await control.getByTestId(`${testId}-open`).click();
-          const modal = page.getByTestId(`${testId}-modal`);
-          const card = modal.getByTestId(`media-card-${text}`);
-          // The library pages in as its sentinel scrolls into view.
-          await expect
-            .poll(async () => {
-              const paged = await card.count();
-              if (paged === 0) {
-                await modal
-                  .getByTestId("media-library-sentinel")
-                  .scrollIntoViewIfNeeded();
-              }
-              return paged;
-            })
-            .toBeGreaterThan(0);
-          await card.click();
-          await modal.getByTestId("media-library-picker-confirm").click();
-          await expect(modal).toBeHidden();
+          await pickMedia(control, testId, text);
           await expect(control.getByTestId(`${testId}-filename`)).toBeVisible();
           return;
         }
@@ -830,6 +838,16 @@ export function createEditor(page: Page): Editor {
       const testId = `style-control-${property}`;
       const control = tab.getByTestId(testId);
       await expect(control).toBeVisible();
+      if ((await control.getByTestId(`${testId}-open`).count()) > 0) {
+        if (value === null) {
+          await control.getByTestId(`${testId}-clear`).click();
+          await expect(control.getByTestId(`${testId}-empty`)).toBeVisible();
+          return;
+        }
+        await pickMedia(control, testId, value);
+        await expect(control.getByTestId(`${testId}-preview`)).toBeVisible();
+        return;
+      }
       const keyword = control.getByTestId(`${testId}-select`);
       if ((await keyword.count()) > 0) {
         await keyword.click();
