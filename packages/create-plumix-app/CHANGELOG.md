@@ -1,5 +1,11 @@
 # create-plumix-app
 
+## 0.9.0
+
+### Minor Changes
+
+- [#3148](https://github.com/withplumix/plumix/pull/3148) [`c7a5ddd`](https://github.com/withplumix/plumix/commit/c7a5ddd4ea99f9475a9b67991fa2ef5c69fe54ab) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `authClient` on `plumix/auth/client`, for a theme's own sign-in page: `authClient.signIn.passkey()`, `.magicLink()`, `.oauth(provider)` and each plugin method's `signIn` resolve `{ data, error }`, `signOut()` and `url()` carry the base path, and `useSession()` and `useAuthMethods()` read the server render. A plugin's `defineAuthMethod` names its browser half with `client`, written with `defineAuthMethodClient`. `plumix()` and `auth()` keep their OAuth provider keys, and a new `plumix.config.ts` declares `OAuthProviderRegistry` from them so `signIn.oauth` only takes a configured provider. Removes `useAuthMethods` from `plumix/blocks/renderer`; use `authClient.useAuthMethods()`.
+
 ## 0.8.0
 
 ### Minor Changes

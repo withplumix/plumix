@@ -1,5 +1,32 @@
 # plumix
 
+## 0.26.0
+
+### Minor Changes
+
+- [#3148](https://github.com/withplumix/plumix/pull/3148) [`c7a5ddd`](https://github.com/withplumix/plumix/commit/c7a5ddd4ea99f9475a9b67991fa2ef5c69fe54ab) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `authClient` on `plumix/auth/client`, for a theme's own sign-in page: `authClient.signIn.passkey()`, `.magicLink()`, `.oauth(provider)` and each plugin method's `signIn` resolve `{ data, error }`, `signOut()` and `url()` carry the base path, and `useSession()` and `useAuthMethods()` read the server render. A plugin's `defineAuthMethod` names its browser half with `client`, written with `defineAuthMethodClient`. `plumix()` and `auth()` keep their OAuth provider keys, and a new `plumix.config.ts` declares `OAuthProviderRegistry` from them so `signIn.oauth` only takes a configured provider. Removes `useAuthMethods` from `plumix/blocks/renderer`; use `authClient.useAuthMethods()`.
+
+- [#3142](https://github.com/withplumix/plumix/pull/3142) [`c8b7e55`](https://github.com/withplumix/plumix/commit/c8b7e550a8f44733ab4bd7022bd856549b65c489) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `editor.back()`, `editor.discard()` and `editor.restoreRevision()` to the `plumix/test/playwright` editor fixture, and a `revisionFactory` (`factories.revision`) to `plumix/test` that writes a revision the way saving its entry does.
+
+- [#3146](https://github.com/withplumix/plumix/pull/3146) [`0d8eba6`](https://github.com/withplumix/plumix/commit/0d8eba60e8ca61833293da9f112d734bab9aae76) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds Page tab, revisions sheet and stale-draft controls to the `editor` fixture in `plumix/test/playwright` (`editor.document`, `editor.revisions`, `editor.staleDraft`), plus `editor.storedDocument()` and `editor.storedRevisions()`, so a test can drive and assert an entry's visibility, terms and revisions as well as its blocks.
+
+- [#3145](https://github.com/withplumix/plumix/pull/3145) [`382905b`](https://github.com/withplumix/plumix/commit/382905b2b59d647710b771d7ce8111edd3cfefa1) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `editor.layers`, `editor.styles` and `editor.device(device)` to the `editor` fixture in `plumix/test/playwright`, so a test can rename, reorder, copy, duplicate and delete blocks from the Layers rail, set every control in the Styles tab, and style a block per device.
+
+- [#3141](https://github.com/withplumix/plumix/pull/3141) [`f80877d`](https://github.com/withplumix/plumix/commit/f80877d5a7440d3c275007486ed4254c8f8fcdf3) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `editor.inspector.press(button)` to the `plumix/test/playwright` editor fixture, which presses the inspector's add and remove buttons for columns and table rows and columns.
+
+- [#3144](https://github.com/withplumix/plumix/pull/3144) [`eff4ff2`](https://github.com/withplumix/plumix/commit/eff4ff21cf2a2b60a50ec1f9d676a167c388fc30) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `plumix import <dir|file.jsonl>`, which loads a sync dump or a file of authoring records into the local site, or the deployed one with `--url`. Every record is checked against the site's entry types, taxonomies and fields first, and a failing one is reported by file and line with nothing written.
+
+- [#3159](https://github.com/withplumix/plumix/pull/3159) [`b771ec6`](https://github.com/withplumix/plumix/commit/b771ec6a6f70e7cdcd0c70c8809f89f595d89814) Thanks [@nasyrov](https://github.com/nasyrov)! - Removes the browser test project from `defineTestConfig` and the browser build of `plumix/test`. Plugin tests run in Node, and browser behaviour belongs in Playwright e2e. Drop `@vitest/browser-playwright` from your dev dependencies.
+
+### Patch Changes
+
+- [#3141](https://github.com/withplumix/plumix/pull/3141) [`f80877d`](https://github.com/withplumix/plumix/commit/f80877d5a7440d3c275007486ed4254c8f8fcdf3) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the block editor leaving out a theme's blocks when `plumix.config.ts` imports the theme with a `.js` extension, as in `import { theme } from "./theme.js"`.
+- Updated dependencies []:
+  - @plumix/admin@0.26.0
+  - @plumix/admin-editor@0.26.0
+  - @plumix/admin-ui@0.26.0
+  - @plumix/core@0.26.0
+
 ## 0.25.0
 
 ### Minor Changes
