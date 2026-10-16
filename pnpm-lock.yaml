@@ -1193,6 +1193,9 @@ importers:
       '@plumix/runtime-cloudflare':
         specifier: workspace:*
         version: link:../../runtimes/cloudflare
+      drizzle-orm:
+        specifier: catalog:drizzle
+        version: 0.45.3(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
       plumix:
         specifier: workspace:*
         version: link:../../plumix

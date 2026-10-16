@@ -342,7 +342,9 @@ const config: KnipConfig = {
       playwright: false,
     },
     "packages/core/playground": {
-      entry: ["plumix.config.ts"],
+      // Core's vitest runs the fixture method's unit test; the playground
+      // has no vitest of its own.
+      entry: ["plumix.config.ts", "auth/**/*.test.ts"],
       // A typecheck-only guard that the fixture method's augmentation types
       // `authClient`; nothing imports it, as with apps/demo's.
       ignore: ["auth/registry-guard.ts"],

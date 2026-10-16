@@ -11,10 +11,12 @@
       "plumix": ["../../plumix/src/index.ts"],
       "plumix/auth": ["../../plumix/src/auth/index.ts"],
       "plumix/auth/client": ["../../plumix/src/auth/client.ts"],
+      "plumix/db": ["../../plumix/src/db/index.ts"],
       "plumix/blocks": ["../../plumix/src/blocks/index.ts"],
       "plumix/blocks/renderer": ["../../plumix/src/blocks/renderer.ts"],
       "plumix/plugin": ["../../plumix/src/plugin.ts"],
       "plumix/theme": ["../../plumix/src/theme/index.ts"],
+      "plumix/test": ["../../plumix/src/test/index.ts"],
       "@plumix/plugin-media": ["../../plugins/media/src/index.ts"],
       "@plumix/runtime-cloudflare": ["../../runtimes/cloudflare/src/index.ts"]
     }
@@ -25,6 +27,7 @@
     "auth",
     "blocks",
     "islands",
+    "sign-in",
     ".plumix"
   ]
 }

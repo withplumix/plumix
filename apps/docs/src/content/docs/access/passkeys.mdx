@@ -14,7 +14,7 @@ A passkey is a public-key credential the browser holds and Plumix verifies. Plum
 
 Enrolment and sign-in are two ceremonies, each two requests. The browser asks for options, the operating system prompts the person, and the browser sends the signed result back for verification. Plumix mounts four endpoints under `/_plumix/auth/passkey/`, two more under `/_plumix/auth/invite/register/` for the invitation rail, and `/_plumix/auth/signout`.
 
-Four admin surfaces drive them. The login screen calls the two `login/*` endpoints. The bootstrap screen and the profile Passkeys card both call the two `register/*` ones. The accept-invite screen calls the invite pair. You do not call any of them directly unless you are building a sign-in page of your own.
+Four admin surfaces drive them. The login screen calls the two `login/*` endpoints. The bootstrap screen and the profile Passkeys card both call the two `register/*` ones. The accept-invite screen calls the invite pair. You do not call any of them directly. A sign-in page of your own calls them through `authClient`, as [Sign-in in Your Theme](/access/sign-in-in-your-theme/) shows.
 
 Three values anchor the credential, and all three live in the `passkey` block.
 
