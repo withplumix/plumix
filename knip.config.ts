@@ -207,8 +207,6 @@ const config: KnipConfig = {
         "src/i18n/index.ts",
         "src/schema/index.ts",
         "src/test/index.ts",
-        // What `plumix/test` resolves to under the `browser` condition.
-        "src/test/browser.ts",
         "src/test/playwright.ts",
         "src/test/conformance.ts",
         "src/theme/index.ts",

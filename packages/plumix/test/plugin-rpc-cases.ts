@@ -5,7 +5,7 @@ import type { MenuRouter } from "./menu-router.js";
 import { createPluginRpcClient } from "../src/admin/plugin-rpc.js";
 import { PluginRpcError, stubPluginRpc } from "../src/test/plugin-rpc.js";
 
-/** Each tier brings its own `fetch`, `FormData` and `File` to the wire. */
+/** Node's own `fetch`, `FormData` and `File` carry each call over the wire. */
 export function describeStubPluginRpc(): void {
   afterEach(() => {
     vi.unstubAllGlobals();

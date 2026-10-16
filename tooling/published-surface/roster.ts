@@ -786,8 +786,8 @@ export const ROSTER: Readonly<
       },
       {
         reason:
-          "a plugin's whole vitest config: the Node and browser test tiers " +
-          "its test files pick by name (ADR 0021)",
+          "a plugin's whole vitest config: the one Node config its unit " +
+          "tests run in (ADR 0042)",
         names: ["defineTestConfig"],
       },
     ],

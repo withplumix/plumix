@@ -109,7 +109,6 @@
     "drizzle-kit": "catalog:drizzle",
     "eslint": "catalog:",
     "fishery": "catalog:",
-    "playwright": "catalog:",
     "plumix": "workspace:*",
     "prettier": "catalog:",
     "publint": "catalog:",

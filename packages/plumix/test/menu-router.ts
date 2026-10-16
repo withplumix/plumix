@@ -3,8 +3,8 @@ import * as v from "valibot";
 import { base } from "@plumix/core";
 
 /**
- * Only its type is under test; suites use `import type` so browser tests never
- * load core's root.
+ * Only its type is under test; suites use `import type`, as admin code does,
+ * so they never load core's root.
  */
 const _menuRouter = {
   list: base
