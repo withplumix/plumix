@@ -306,9 +306,14 @@ export const ROSTER: Readonly<
     ".": [
       {
         reason:
-          "the factory a site config installs, and the defaults its upload " +
-          "options start from",
-        names: ["media", "DEFAULT_ACCEPTED_TYPES", "DEFAULT_MAX_UPLOAD_SIZE"],
+          "the factory a site config installs, its options and the defaults " +
+          "its upload options start from",
+        names: [
+          "media",
+          "MediaPluginOptions",
+          "DEFAULT_ACCEPTED_TYPES",
+          "DEFAULT_MAX_UPLOAD_SIZE",
+        ],
       },
       {
         reason:

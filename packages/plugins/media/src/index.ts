@@ -93,7 +93,7 @@ const LIBRARY_GROUP_LABEL: Label = {
   message: "Library",
 };
 
-interface MediaPluginOptions {
+export interface MediaPluginOptions {
   readonly acceptedTypes?: readonly string[];
   /**
    * Bytes. Caps the declared `size`; the presigned PUT is signed for exactly
