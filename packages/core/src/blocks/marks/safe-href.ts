@@ -1,7 +1,4 @@
-/**
- * Every href check and HTML sanitizer reads this. A site-wide extension, if
- * ever added, is one setting all of them read (WordPress #18268).
- */
+/** A site-wide extension, if ever added, is one setting every consumer reads (WordPress #18268). */
 export const LINK_SCHEMES: readonly string[] = Object.freeze([
   "http",
   "https",
