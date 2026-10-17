@@ -1,6 +1,7 @@
 /**
- * Wire names, not drizzle field names, so the API stays stable if the TS
- * fields are renamed.
+ * Wire names, not drizzle fields, so a field rename keeps the API. Closed: a
+ * registrable column would reach the admin through its runtime manifest, never
+ * a copy.
  */
 export const ENTRY_LIST_ORDER_COLUMNS = [
   "updated_at",
