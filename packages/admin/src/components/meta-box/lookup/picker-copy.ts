@@ -11,7 +11,7 @@ import type { Label } from "@plumix/core/i18n";
 import type { PlumixManifest } from "@plumix/core/manifest";
 
 /** What a reference picker calls its search and its list states. */
-export interface ReferencePickerCopy {
+interface ReferencePickerCopy {
   readonly searchItems: Label;
   readonly notFound: Label;
   readonly noMatch: Label;

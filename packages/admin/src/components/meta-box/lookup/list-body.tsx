@@ -6,9 +6,8 @@ import { CommandEmpty, CommandItem } from "@plumix/admin-ui/command";
 import type { LookupItem } from "./types.js";
 
 /**
- * Shared notice / item-list body for lookup-backed pickers — the
- * reference pickers select by `item.id`, the link field's entry picker
- * by `item.href`. `notice` is the rendered `lookupListNotice`.
+ * Shared notice / item-list body for lookup-backed pickers: `notice` is the
+ * caller's loading, empty or error text, `null` to list the items.
  */
 export function renderLookupListBody({
   notice,
