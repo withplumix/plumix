@@ -43,12 +43,17 @@ twice in the first place. The mature answer is both.
   surface (RPC, REST, MCP, plugin code) spells them live in one module in core.
   A resource adopts the rule by using it, never by writing its own check, so
   every resource and every surface behaves the same.
-- **A guarded resource is one row with the concurrency columns:**
-  `updated_at` (milliseconds), `updated_by_id` and `updated_by_system`. An
-  entry, a term and a user are already one row each. Settings are stored one
-  row per key while an editor saves a whole group, so each group gets a row of
-  its own in `settings_groups` that carries the columns. A token spread across
-  key rows would lose a deleted key's change and need one check per row.
+- **Every guarded table carries the concurrency columns:** `updated_at`
+  (milliseconds), `updated_by_id` and `updated_by_system`. The unit an editor
+  saves is a scope of rows: one row for an entry, a term or a user (`id = ?`),
+  and every row of a group for settings (`group = ?`), since settings are stored
+  one row per key and saved a group at a time. A scope's token is the newest
+  `updated_at` among its rows, and an unsaved scope's is zero. Clearing a setting
+  keeps its row with an empty value, so a scope's token never moves backwards.
+- **A write is one statement.** The claim checks the scope's current token
+  inside the statement that writes; for a settings group that is a single
+  `INSERT … SELECT … WHERE <scope token> = ? ON CONFLICT DO UPDATE` over every
+  key in the patch, so all of them are written or none.
 - **The token is an opaque `etag`, with one name everywhere.** Every editable
   resource returns an `etag` string when read, and every write from a copy takes
   it back as `ifMatch`. Clients compare and send it; they never parse it. Today
