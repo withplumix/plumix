@@ -38,13 +38,23 @@ twice in the first place. The mature answer is both.
 
 ## What this means
 
+- **One core module does it for everything.** Producing an `etag`, the
+  conditional claim, the system bump, the conflict, the lease and the way each
+  surface (RPC, REST, MCP, plugin code) spells them live in one module in core.
+  A resource adopts the rule by using it, never by writing its own check, so
+  every resource and every surface behaves the same.
+- **A guarded resource is one row with the concurrency columns:**
+  `updated_at` (milliseconds), `updated_by_id` and `updated_by_system`. An
+  entry, a term and a user are already one row each. Settings are stored one
+  row per key while an editor saves a whole group, so each group gets a row of
+  its own in `settings_groups` that carries the columns. A token spread across
+  key rows would lose a deleted key's change and need one check per row.
 - **The token is an opaque `etag`, with one name everywhere.** Every editable
   resource returns an `etag` string when read, and every write from a copy takes
   it back as `ifMatch`. Clients compare and send it; they never parse it. Today
   core derives it from the resource's `updatedAt`, so changing what it is made
   of later breaks no client. There is no second concurrency concept: the menu's
-  `terms.version` folds into this rule when terms adopt it. A settings group is
-  one resource, with one `etag`.
+  `terms.version` folds into this rule when terms adopt it.
 - **`updatedAt` strictly increases.** Every write that moves the token sets it
   to the current time in milliseconds, or one millisecond past its previous
   value if that is later, so no two writes leave the same token at any write
