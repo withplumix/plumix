@@ -162,7 +162,7 @@ The opaque value that names the state a copy was taken from, called `etag` in ev
 _Avoid_: version, revision (a revision is a stored snapshot), timestamp (what it is made of is not the contract).
 
 **Conflict**:
-A write refused because its copy is out of date or its token is missing. It reports who last wrote the resource, and when. Never resolved on the user's behalf.
+A write refused because its copy is out of date or its token is missing. It reports when the resource changed; who is editing it comes from the edit lease. Never resolved on the user's behalf.
 
 **System write**:
 A write not made from a copy (scheduled publishing, bulk actions, trash and restore, import, sync). It moves the concurrency token without checking it, and ignores edit leases.
