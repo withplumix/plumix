@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
-import { sanitizeHtml } from "./sanitize.js";
+import { LINK_SCHEMES } from "../marks/safe-href.js";
+import { BASELINE_HTML_ALLOWLIST, sanitizeHtml } from "./sanitize.js";
 
 describe("sanitizeHtml — baseline allowlist", () => {
   test("returns empty string when input is empty", () => {
@@ -76,6 +77,26 @@ describe("sanitizeHtml — baseline allowlist", () => {
   ])("strips case- / whitespace- / entity-obfuscated %s", (href) => {
     const out = sanitizeHtml(`<a href="${href}">x</a>`);
     expect(out.toLowerCase()).not.toContain("javascript:");
+  });
+
+  test("allows the link schemes every href check allows", () => {
+    expect(BASELINE_HTML_ALLOWLIST.allowedSchemes).toEqual(LINK_SCHEMES);
+  });
+
+  test("preserves an sms: href", () => {
+    expect(sanitizeHtml('<a href="sms:+15551234">x</a>')).toBe(
+      '<a href="sms:+15551234">x</a>',
+    );
+  });
+
+  test("preserves an sms: href under an allowlist that names no schemes", () => {
+    const allowlist = {
+      allowedTags: ["a"],
+      allowedAttributes: { a: ["href"] },
+    };
+    expect(sanitizeHtml('<a href="sms:+15551234">x</a>', allowlist)).toBe(
+      '<a href="sms:+15551234">x</a>',
+    );
   });
 
   test("preserves root-relative, fragment, and query-only hrefs", () => {

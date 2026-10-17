@@ -119,7 +119,7 @@ A linked item's label follows the linked entry's title or term's name, so a rena
 
 Items nest into a tree up to the menu's max depth. The depth is 5 by default, and you can set it per menu anywhere from 1 to 20. The editor refuses to lower it below the depth the menu already uses. A single save holds at most 500 items.
 
-A custom URL is either relative (starting with `/`, `#`, `?`, `./` or `../`) or absolute with an `http`, `https`, `mailto` or `tel` scheme. Saving the menu refuses anything else, including `javascript:` and protocol-relative `//host` URLs.
+A custom URL is either relative (starting with `/`, `#`, `?`, `./` or `../`) or absolute with an `http`, `https`, `mailto`, `tel` or `sms` scheme, the same schemes every Plumix link accepts (`LINK_SCHEMES` from `plumix/blocks`). Saving the menu refuses anything else, including `javascript:`, protocol-relative `//host` URLs and a bare `mailto:`, `tel:` or `sms:`.
 
 Two editors can have the same menu open. Each save carries the version it was loaded at, so the server refuses the second save and the editor prompts a reload. It never silently overwrites the first.
 

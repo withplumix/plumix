@@ -40,6 +40,11 @@ describe("media/file v2", () => {
     expect(telHtml).toContain('href="tel:+15551234"');
   });
 
+  test.each(["#x", "?q"])("accepts the relative href %s", (href) => {
+    const html = renderBlockSpecToHtml(fileBlock, { href, filename: "x" });
+    expect(html).toContain(`href="${href}"`);
+  });
+
   test("falls back to 'Download' label when filename is absent", () => {
     const html = renderBlockSpecToHtml(fileBlock, {
       href: "/_plumix/media/x/y.zip",

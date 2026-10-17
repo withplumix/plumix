@@ -28,12 +28,14 @@ export {
   emitThemeTokenCss,
   isEntryContent,
   isBlockNodeArray,
+  LINK_SCHEMES,
   renderBlockTree,
   resolveThemeTokens,
   richTextBlock,
   resolveBlockTransforms,
   expandBlockVariations,
   extractBlockText,
+  sanitizeHref,
   validateEntryContent,
   // Re-exported for the SSR shim the Vite plugin generates for
   // `"use client"` modules. Not intended for direct consumption.

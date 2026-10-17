@@ -1,14 +1,7 @@
 import type { ReactNode } from "react";
 
 import { defineBlock } from "../block-registry.js";
-
-const SAFE_HREF = /^(https?:\/\/|mailto:|tel:|\/|#|\?|\.\.?\/)/i;
-
-function sanitizeHref(raw: unknown): string | undefined {
-  if (typeof raw !== "string") return undefined;
-  const trimmed = raw.trim();
-  return trimmed.length > 0 && SAFE_HREF.test(trimmed) ? trimmed : undefined;
-}
+import { sanitizeHref } from "../marks/safe-href.js";
 
 export const buttonBlock = defineBlock({
   name: "core/button",

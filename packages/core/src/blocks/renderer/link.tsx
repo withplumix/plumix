@@ -1,6 +1,7 @@
 import type { AnchorHTMLAttributes, ReactNode } from "react";
 
 import { withBasePath } from "../../base-path.js";
+import { sanitizeHref } from "../marks/safe-href.js";
 import { useBasePath } from "./context.js";
 
 /**
@@ -49,29 +50,18 @@ function externalRel(rel: string | undefined): string {
   return [...tokens].join(" ");
 }
 
-/**
- * Script-capable schemes that must never become a clickable href. Strip
- * whitespace/control chars (browsers ignore them inside the scheme) and peel
- * nested `view-source:` before testing.
- */
-function isDangerousHref(href: string): boolean {
-  // eslint-disable-next-line no-control-regex -- strips the control chars a scheme could hide behind
-  let s = href.replace(/[\u0000-\u0020\u007f-\u009f]/g, "").toLowerCase();
-  while (s.startsWith("view-source:")) s = s.slice("view-source:".length);
-  return /^(?:javascript|data|vbscript|blob):/.test(s);
-}
-
 export function Link(props: LinkProps): ReactNode {
   const basePath = useBasePath();
-  const { children, entry, term, href, rel, ...rest } = props;
+  const { children, entry, term, href: rawHref, rel, ...rest } = props;
 
   // Only the `href` member reaches the raw-href branches; `entry`/`term`
   // carry a pre-resolved, basePath-correct url.
   let resolved: string | null;
   let external = false;
+  const href = entry || term ? undefined : sanitizeHref(rawHref);
   if (entry) resolved = entry.url;
   else if (term) resolved = term.url;
-  else if (isDangerousHref(href)) resolved = null;
+  else if (href === undefined) resolved = null;
   else if (isExternal(href)) {
     external = true;
     resolved = href;

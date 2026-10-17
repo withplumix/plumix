@@ -1,4 +1,5 @@
 import type { HtmlAllowlist } from "./sanitize.js";
+import { BLOCKED_SCHEMES } from "../marks/safe-href.js";
 
 /**
  * Denied whatever an allowlist declares. Parser context switches are denied
@@ -58,18 +59,6 @@ function isAllowedAttr(name: string): boolean {
 }
 
 /**
- * Denied whatever an allowlist declares. `view-source` is listed because
- * sanitize-html keeps `view-source:javascript:` hrefs that DOMPurify rejects.
- */
-export const HARD_DENIED_SCHEMES: ReadonlySet<string> = new Set([
-  "javascript",
-  "vbscript",
-  "data",
-  "blob",
-  "view-source",
-]);
-
-/**
  * Lowercases names because the engines lowercase opposite sides:
  * `allowedTags: ["IFRAME"]` would otherwise render nothing on the server and a
  * live iframe in the editor.
@@ -100,7 +89,7 @@ export function enforceHtmlFloors(allowlist: HtmlAllowlist): HtmlAllowlist {
           new Set(
             allowlist.allowedSchemes
               .map((scheme) => scheme.toLowerCase())
-              .filter((scheme) => !HARD_DENIED_SCHEMES.has(scheme)),
+              .filter((scheme) => !BLOCKED_SCHEMES.has(scheme)),
           ),
         )
       : undefined,

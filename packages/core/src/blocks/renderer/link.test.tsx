@@ -92,4 +92,14 @@ describe("Link", () => {
       expect(render(<Link href={href}>x</Link>)).toBe("x");
     }
   });
+
+  test("refuses a scheme outside the link allow-list", () => {
+    expect(render(<Link href="ftp://example.com/f">x</Link>)).toBe("x");
+  });
+
+  test("renders an sms: href as an external link", () => {
+    expect(render(<Link href="sms:+15551234">Text</Link>)).toBe(
+      '<a href="sms:+15551234" rel="noopener noreferrer">Text</a>',
+    );
+  });
 });

@@ -264,6 +264,15 @@ const CASES: readonly SanitizerCase[] = [
     expected: "<a>x</a>",
   },
   {
+    name: "drops an override's file scheme",
+    input: '<a href="file:///etc/passwd">x</a>',
+    allowlist: {
+      ...BASELINE_HTML_ALLOWLIST,
+      allowedSchemes: ["https", "file"],
+    },
+    expected: "<a>x</a>",
+  },
+  {
     name: "drops an override's view-source wrapper",
     input: '<a href="view-source:javascript:alert(1)">x</a>',
     allowlist: {
@@ -341,6 +350,18 @@ const CASES: readonly SanitizerCase[] = [
     input: '<a href="tel:+100">x</a>',
     allowlist: undefined,
     expected: '<a href="tel:+100">x</a>',
+  },
+  {
+    name: 'keeps the href "sms:+100" as sanitize-html does',
+    input: '<a href="sms:+100">x</a>',
+    allowlist: undefined,
+    expected: '<a href="sms:+100">x</a>',
+  },
+  {
+    name: 'keeps the href "sms:+100" under an allowlist that names no schemes',
+    input: '<a href="sms:+100">x</a>',
+    allowlist: { allowedTags: ["a"], allowedAttributes: { a: ["href"] } },
+    expected: '<a href="sms:+100">x</a>',
   },
   {
     name: 'keeps the href "/root" as sanitize-html does',
