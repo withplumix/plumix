@@ -2,10 +2,11 @@ import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { DIALOG_CLOSE_LABEL } from "@/lib/dialog-labels.js";
+import { currentManifest } from "@/lib/manifest.js";
 import { useLabel } from "@/lib/use-label.js";
 import { useUntitledLabel } from "@/lib/use-untitled-label.js";
 import { defineMessage } from "@lingui/core/macro";
-import { Trans, useLingui } from "@lingui/react";
+import { Trans } from "@lingui/react";
 
 import type { JsonObject } from "@plumix/core";
 import { Button } from "@plumix/admin-ui/button";
@@ -19,15 +20,12 @@ import { Skeleton } from "@plumix/admin-ui/skeleton";
 import type { ResolvedReference } from "./lookup/reference-resolve.js";
 import type { LookupItem } from "./lookup/types.js";
 import { renderLookupListBody } from "./lookup/list-body.js";
+import { lookupListNotice, referencePickerCopy } from "./lookup/picker-copy.js";
 import { useLookupSearch } from "./lookup/use-lookup-search.js";
 import { useReferenceResolve } from "./lookup/use-reference-resolve.js";
 
 // Stores the bare id; only the display becomes a label.
 
-/**
- * `{kind}` interpolates the raw wire identifier; there's no localized noun map
- * yet.
- */
 const M = {
   selectIdle: defineMessage({
     id: "metaBox.reference.selectIdle",
@@ -48,17 +46,6 @@ const M = {
   orphan: defineMessage({
     id: "metaBox.reference.orphan",
     message: "Reference missing — re-pick or clear",
-  }),
-  dialogDescription: defineMessage({
-    id: "metaBox.reference.dialogDescription",
-    message: "Search and pick a {kind}",
-    comment:
-      "kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')",
-  }),
-  searchPlaceholder: defineMessage({
-    id: "metaBox.reference.searchPlaceholder",
-    message: "Search {kind}…",
-    comment: "kind: the entity type being searched (e.g. 'posts', 'tags')",
   }),
 } satisfies Record<string, MessageDescriptor>;
 
@@ -86,7 +73,6 @@ export function ReferencePicker({
   testId,
   initialSelected = null,
 }: ReferencePickerProps): ReactNode {
-  const { i18n } = useLingui();
   const labelFn = useLabel();
   const untitledLabel = useUntitledLabel();
   const [open, setOpen] = useState(false);
@@ -103,16 +89,13 @@ export function ReferencePicker({
 
   const search = useLookupSearch({ kind, scope, enabled: open });
 
-  const dialogDescription = i18n._(
-    M.dialogDescription.id,
-    { kind },
-    { message: M.dialogDescription.message },
-  );
-  const searchPlaceholder = i18n._(
-    M.searchPlaceholder.id,
-    { kind },
-    { message: M.searchPlaceholder.message },
-  );
+  const copy = referencePickerCopy(kind, scope, currentManifest());
+  const notice = lookupListNotice(copy, {
+    isLoading: search.isLoading,
+    isError: search.isError,
+    itemCount: search.items.length,
+    query: search.query,
+  });
 
   return (
     <div className="flex items-center gap-2" data-testid={testId}>
@@ -151,17 +134,17 @@ export function ReferencePicker({
         closeLabel={labelFn(DIALOG_CLOSE_LABEL)}
         onOpenChange={setOpen}
         title={label}
-        description={dialogDescription}
+        description={labelFn(copy.searchItems)}
       >
         <CommandInput
-          placeholder={searchPlaceholder}
+          placeholder={labelFn(copy.searchItems)}
           value={search.query}
           onValueChange={search.setQuery}
           data-testid={`${testId}-search`}
         />
         <CommandList>
           {renderLookupListBody({
-            isLoading: search.isLoading,
+            notice: notice === null ? null : labelFn(notice),
             items: search.items,
             testId,
             onSelect: (item) => {

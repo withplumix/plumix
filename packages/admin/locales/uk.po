@@ -69,6 +69,50 @@ msgstr ""
 #~ msgstr "Кожне збереження створює нову ревізію. Найновіші зверху."
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+#~ msgid "metaBox.multiReference.loading"
+#~ msgstr "Завантаження…"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/lookup/list-body.tsx
+#~ msgid "metaBox.reference.loading"
+#~ msgstr "Завантаження…"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+#~ msgid "metaBox.multiReference.noMatches"
+#~ msgstr "Збігів немає"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/lookup/list-body.tsx
+#~ msgid "metaBox.reference.noMatches"
+#~ msgstr "Збігів немає"
+
+#. kind: the entity type being searched (e.g. 'posts', 'tags')
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+#~ msgid "metaBox.multiReference.searchPlaceholder"
+#~ msgstr "Пошук {kind}…"
+
+#. kind: the entity type being searched (e.g. 'posts', 'tags')
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+#~ msgid "metaBox.reference.searchPlaceholder"
+#~ msgstr "Пошук {kind}…"
+
+#. kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+#~ msgid "metaBox.multiReference.dialogDescription"
+#~ msgstr "Знайдіть і виберіть записи {kind}"
+
+#. kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+#~ msgid "metaBox.reference.dialogDescription"
+#~ msgstr "Знайдіть і виберіть {kind}"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — нащадків не можна вибрати як батьківський елемент."
@@ -960,6 +1004,11 @@ msgstr "Не вдалося завантажити ці налаштування
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.loadFailed"
 msgstr "Не вдалося завантажити користувачів. Спробуйте знову."
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/lookup/picker-copy.ts
+msgid "metaBox.reference.user.loadErrorItems"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
@@ -1957,6 +2006,11 @@ msgid "users.list.loading"
 msgstr "Завантаження користувачів"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/lookup/picker-copy.ts
+msgid "metaBox.reference.user.loadingItems"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.stale.loading"
 msgstr ""
@@ -1984,16 +2038,6 @@ msgstr "Завантаження…"
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.loading"
-msgstr "Завантаження…"
-
-#. js-lingui-explicit-id
-#: src/components/meta-box/multi-reference-picker.tsx
-msgid "metaBox.multiReference.loading"
-msgstr "Завантаження…"
-
-#. js-lingui-explicit-id
-#: src/components/meta-box/lookup/list-body.tsx
-msgid "metaBox.reference.loading"
 msgstr "Завантаження…"
 
 #. js-lingui-explicit-id
@@ -2283,16 +2327,6 @@ msgid "type.generic.noMatch"
 msgstr "Збігів немає"
 
 #. js-lingui-explicit-id
-#: src/components/meta-box/multi-reference-picker.tsx
-msgid "metaBox.multiReference.noMatches"
-msgstr "Збігів немає"
-
-#. js-lingui-explicit-id
-#: src/components/meta-box/lookup/list-body.tsx
-msgid "metaBox.reference.noMatches"
-msgstr "Збігів немає"
-
-#. js-lingui-explicit-id
 #: src/components/form/multi-select.tsx
 msgid "form.multiSelect.empty"
 msgstr "Збігів немає."
@@ -2343,9 +2377,19 @@ msgid "apiTokens.empty.title"
 msgstr "Токенів ще немає"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/lookup/picker-copy.ts
+msgid "metaBox.reference.user.noMatch"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.empty.title"
 msgstr "За фільтром не знайдено користувачів"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/lookup/picker-copy.ts
+msgid "metaBox.reference.user.notFound"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
@@ -2868,30 +2912,6 @@ msgstr "Заплановано"
 msgid "apiTokens.col.scopes"
 msgstr "Дозволи"
 
-#. kind: the entity type being searched (e.g. 'posts', 'tags')
-#. js-lingui-explicit-id
-#: src/components/meta-box/multi-reference-picker.tsx
-msgid "metaBox.multiReference.searchPlaceholder"
-msgstr "Пошук {kind}…"
-
-#. kind: the entity type being searched (e.g. 'posts', 'tags')
-#. js-lingui-explicit-id
-#: src/components/meta-box/reference-picker.tsx
-msgid "metaBox.reference.searchPlaceholder"
-msgstr "Пошук {kind}…"
-
-#. kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')
-#. js-lingui-explicit-id
-#: src/components/meta-box/multi-reference-picker.tsx
-msgid "metaBox.multiReference.dialogDescription"
-msgstr "Знайдіть і виберіть записи {kind}"
-
-#. kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')
-#. js-lingui-explicit-id
-#: src/components/meta-box/reference-picker.tsx
-msgid "metaBox.reference.dialogDescription"
-msgstr "Знайдіть і виберіть {kind}"
-
 #. js-lingui-explicit-id
 #: src/components/meta-box/link-field.tsx
 msgid "metaBox.link.dialogDescription"
@@ -2910,6 +2930,11 @@ msgstr "Пошук записів…"
 #. js-lingui-explicit-id
 #: src/components/shell/command-palette.tsx
 msgid "palette.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/lookup/picker-copy.ts
+msgid "metaBox.reference.user.searchItems"
 msgstr ""
 
 #. js-lingui-explicit-id

@@ -69,6 +69,50 @@ msgstr ""
 #~ msgstr "Jede Speicherung erstellt eine neue Revision. Neueste zuerst."
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+#~ msgid "metaBox.multiReference.loading"
+#~ msgstr "Wird geladen…"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/lookup/list-body.tsx
+#~ msgid "metaBox.reference.loading"
+#~ msgstr "Wird geladen…"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+#~ msgid "metaBox.multiReference.noMatches"
+#~ msgstr "Keine Treffer"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/lookup/list-body.tsx
+#~ msgid "metaBox.reference.noMatches"
+#~ msgstr "Keine Treffer"
+
+#. kind: the entity type being searched (e.g. 'posts', 'tags')
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+#~ msgid "metaBox.multiReference.searchPlaceholder"
+#~ msgstr "{kind} suchen…"
+
+#. kind: the entity type being searched (e.g. 'posts', 'tags')
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+#~ msgid "metaBox.reference.searchPlaceholder"
+#~ msgstr "{kind} suchen…"
+
+#. kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+#~ msgid "metaBox.multiReference.dialogDescription"
+#~ msgstr "{kind}-Einträge suchen und auswählen"
+
+#. kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+#~ msgid "metaBox.reference.dialogDescription"
+#~ msgstr "{kind} suchen und auswählen"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — Untergeordnete können nicht als übergeordnet ausgewählt werden."
@@ -960,6 +1004,11 @@ msgstr "Diese Einstellungen konnten nicht geladen werden. Bitte erneut versuchen
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.loadFailed"
 msgstr "Benutzer konnten nicht geladen werden. Bitte erneut versuchen."
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/lookup/picker-copy.ts
+msgid "metaBox.reference.user.loadErrorItems"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
@@ -1957,6 +2006,11 @@ msgid "users.list.loading"
 msgstr "Benutzer werden geladen"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/lookup/picker-copy.ts
+msgid "metaBox.reference.user.loadingItems"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.stale.loading"
 msgstr ""
@@ -1984,16 +2038,6 @@ msgstr "Wird geladen…"
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.loading"
-msgstr "Wird geladen…"
-
-#. js-lingui-explicit-id
-#: src/components/meta-box/multi-reference-picker.tsx
-msgid "metaBox.multiReference.loading"
-msgstr "Wird geladen…"
-
-#. js-lingui-explicit-id
-#: src/components/meta-box/lookup/list-body.tsx
-msgid "metaBox.reference.loading"
 msgstr "Wird geladen…"
 
 #. js-lingui-explicit-id
@@ -2283,16 +2327,6 @@ msgid "type.generic.noMatch"
 msgstr "Keine Treffer"
 
 #. js-lingui-explicit-id
-#: src/components/meta-box/multi-reference-picker.tsx
-msgid "metaBox.multiReference.noMatches"
-msgstr "Keine Treffer"
-
-#. js-lingui-explicit-id
-#: src/components/meta-box/lookup/list-body.tsx
-msgid "metaBox.reference.noMatches"
-msgstr "Keine Treffer"
-
-#. js-lingui-explicit-id
 #: src/components/form/multi-select.tsx
 msgid "form.multiSelect.empty"
 msgstr "Keine Treffer."
@@ -2343,9 +2377,19 @@ msgid "apiTokens.empty.title"
 msgstr "Noch keine Tokens"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/lookup/picker-copy.ts
+msgid "metaBox.reference.user.noMatch"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.empty.title"
 msgstr "Keine Benutzer passen zu Ihrem Filter"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/lookup/picker-copy.ts
+msgid "metaBox.reference.user.notFound"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
@@ -2868,30 +2912,6 @@ msgstr "Geplant"
 msgid "apiTokens.col.scopes"
 msgstr "Berechtigungen"
 
-#. kind: the entity type being searched (e.g. 'posts', 'tags')
-#. js-lingui-explicit-id
-#: src/components/meta-box/multi-reference-picker.tsx
-msgid "metaBox.multiReference.searchPlaceholder"
-msgstr "{kind} suchen…"
-
-#. kind: the entity type being searched (e.g. 'posts', 'tags')
-#. js-lingui-explicit-id
-#: src/components/meta-box/reference-picker.tsx
-msgid "metaBox.reference.searchPlaceholder"
-msgstr "{kind} suchen…"
-
-#. kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')
-#. js-lingui-explicit-id
-#: src/components/meta-box/multi-reference-picker.tsx
-msgid "metaBox.multiReference.dialogDescription"
-msgstr "{kind}-Einträge suchen und auswählen"
-
-#. kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')
-#. js-lingui-explicit-id
-#: src/components/meta-box/reference-picker.tsx
-msgid "metaBox.reference.dialogDescription"
-msgstr "{kind} suchen und auswählen"
-
 #. js-lingui-explicit-id
 #: src/components/meta-box/link-field.tsx
 msgid "metaBox.link.dialogDescription"
@@ -2910,6 +2930,11 @@ msgstr "Beiträge suchen…"
 #. js-lingui-explicit-id
 #: src/components/shell/command-palette.tsx
 msgid "palette.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/lookup/picker-copy.ts
+msgid "metaBox.reference.user.searchItems"
 msgstr ""
 
 #. js-lingui-explicit-id

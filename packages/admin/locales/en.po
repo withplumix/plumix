@@ -69,6 +69,50 @@ msgstr ""
 #~ msgstr "Every save creates a new revision. Newest first."
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+#~ msgid "metaBox.multiReference.loading"
+#~ msgstr "Loading…"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/lookup/list-body.tsx
+#~ msgid "metaBox.reference.loading"
+#~ msgstr "Loading…"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+#~ msgid "metaBox.multiReference.noMatches"
+#~ msgstr "No matches"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/lookup/list-body.tsx
+#~ msgid "metaBox.reference.noMatches"
+#~ msgstr "No matches"
+
+#. kind: the entity type being searched (e.g. 'posts', 'tags')
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+#~ msgid "metaBox.multiReference.searchPlaceholder"
+#~ msgstr "Search {kind}…"
+
+#. kind: the entity type being searched (e.g. 'posts', 'tags')
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+#~ msgid "metaBox.reference.searchPlaceholder"
+#~ msgstr "Search {kind}…"
+
+#. kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+#~ msgid "metaBox.multiReference.dialogDescription"
+#~ msgstr "Search and pick {kind} entries"
+
+#. kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+#~ msgid "metaBox.reference.dialogDescription"
+#~ msgstr "Search and pick a {kind}"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — descendants can't be picked as parent."
@@ -960,6 +1004,11 @@ msgstr "Couldn't load these settings. Try again."
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.loadFailed"
 msgstr "Couldn't load users. Try again."
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/lookup/picker-copy.ts
+msgid "metaBox.reference.user.loadErrorItems"
+msgstr "Couldn’t load users. Try again."
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
@@ -1957,6 +2006,11 @@ msgid "users.list.loading"
 msgstr "Loading users"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/lookup/picker-copy.ts
+msgid "metaBox.reference.user.loadingItems"
+msgstr "Loading users…"
+
+#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.stale.loading"
 msgstr "Loading…"
@@ -1984,16 +2038,6 @@ msgstr "Loading…"
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.loading"
-msgstr "Loading…"
-
-#. js-lingui-explicit-id
-#: src/components/meta-box/multi-reference-picker.tsx
-msgid "metaBox.multiReference.loading"
-msgstr "Loading…"
-
-#. js-lingui-explicit-id
-#: src/components/meta-box/lookup/list-body.tsx
-msgid "metaBox.reference.loading"
 msgstr "Loading…"
 
 #. js-lingui-explicit-id
@@ -2283,16 +2327,6 @@ msgid "type.generic.noMatch"
 msgstr "No matches"
 
 #. js-lingui-explicit-id
-#: src/components/meta-box/multi-reference-picker.tsx
-msgid "metaBox.multiReference.noMatches"
-msgstr "No matches"
-
-#. js-lingui-explicit-id
-#: src/components/meta-box/lookup/list-body.tsx
-msgid "metaBox.reference.noMatches"
-msgstr "No matches"
-
-#. js-lingui-explicit-id
 #: src/components/form/multi-select.tsx
 msgid "form.multiSelect.empty"
 msgstr "No matches."
@@ -2343,9 +2377,19 @@ msgid "apiTokens.empty.title"
 msgstr "No tokens yet"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/lookup/picker-copy.ts
+msgid "metaBox.reference.user.noMatch"
+msgstr "No users match"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.empty.title"
 msgstr "No users match your filter"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/lookup/picker-copy.ts
+msgid "metaBox.reference.user.notFound"
+msgstr "No users yet"
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
@@ -2868,30 +2912,6 @@ msgstr "Scheduled"
 msgid "apiTokens.col.scopes"
 msgstr "Scopes"
 
-#. kind: the entity type being searched (e.g. 'posts', 'tags')
-#. js-lingui-explicit-id
-#: src/components/meta-box/multi-reference-picker.tsx
-msgid "metaBox.multiReference.searchPlaceholder"
-msgstr "Search {kind}…"
-
-#. kind: the entity type being searched (e.g. 'posts', 'tags')
-#. js-lingui-explicit-id
-#: src/components/meta-box/reference-picker.tsx
-msgid "metaBox.reference.searchPlaceholder"
-msgstr "Search {kind}…"
-
-#. kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')
-#. js-lingui-explicit-id
-#: src/components/meta-box/multi-reference-picker.tsx
-msgid "metaBox.multiReference.dialogDescription"
-msgstr "Search and pick {kind} entries"
-
-#. kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')
-#. js-lingui-explicit-id
-#: src/components/meta-box/reference-picker.tsx
-msgid "metaBox.reference.dialogDescription"
-msgstr "Search and pick a {kind}"
-
 #. js-lingui-explicit-id
 #: src/components/meta-box/link-field.tsx
 msgid "metaBox.link.dialogDescription"
@@ -2911,6 +2931,11 @@ msgstr "Search entries…"
 #: src/components/shell/command-palette.tsx
 msgid "palette.description"
 msgstr "Search to navigate the admin."
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/lookup/picker-copy.ts
+msgid "metaBox.reference.user.searchItems"
+msgstr "Search users"
 
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts

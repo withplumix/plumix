@@ -69,6 +69,50 @@ msgstr ""
 #~ msgstr "كل عملية حفظ تنشئ مراجعة جديدة. الأحدث أولاً."
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+#~ msgid "metaBox.multiReference.loading"
+#~ msgstr "جارٍ التحميل…"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/lookup/list-body.tsx
+#~ msgid "metaBox.reference.loading"
+#~ msgstr "جارٍ التحميل…"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+#~ msgid "metaBox.multiReference.noMatches"
+#~ msgstr "لا مطابقات"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/lookup/list-body.tsx
+#~ msgid "metaBox.reference.noMatches"
+#~ msgstr "لا مطابقات"
+
+#. kind: the entity type being searched (e.g. 'posts', 'tags')
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+#~ msgid "metaBox.multiReference.searchPlaceholder"
+#~ msgstr "البحث في {kind}…"
+
+#. kind: the entity type being searched (e.g. 'posts', 'tags')
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+#~ msgid "metaBox.reference.searchPlaceholder"
+#~ msgstr "البحث في {kind}…"
+
+#. kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+#~ msgid "metaBox.multiReference.dialogDescription"
+#~ msgstr "ابحث واختر إدخالات {kind}"
+
+#. kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+#~ msgid "metaBox.reference.dialogDescription"
+#~ msgstr "ابحث واختر {kind}"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — لا يمكن اختيار الأبناء كأب."
@@ -960,6 +1004,11 @@ msgstr "تعذّر تحميل هذه الإعدادات. حاول مرة أخر�
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.loadFailed"
 msgstr "تعذّر تحميل المستخدمين. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/lookup/picker-copy.ts
+msgid "metaBox.reference.user.loadErrorItems"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
@@ -1957,6 +2006,11 @@ msgid "users.list.loading"
 msgstr "جارٍ تحميل المستخدمين"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/lookup/picker-copy.ts
+msgid "metaBox.reference.user.loadingItems"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.stale.loading"
 msgstr ""
@@ -1984,16 +2038,6 @@ msgstr "جارٍ التحميل…"
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.loading"
-msgstr "جارٍ التحميل…"
-
-#. js-lingui-explicit-id
-#: src/components/meta-box/multi-reference-picker.tsx
-msgid "metaBox.multiReference.loading"
-msgstr "جارٍ التحميل…"
-
-#. js-lingui-explicit-id
-#: src/components/meta-box/lookup/list-body.tsx
-msgid "metaBox.reference.loading"
 msgstr "جارٍ التحميل…"
 
 #. js-lingui-explicit-id
@@ -2283,16 +2327,6 @@ msgid "type.generic.noMatch"
 msgstr "لا مطابقات"
 
 #. js-lingui-explicit-id
-#: src/components/meta-box/multi-reference-picker.tsx
-msgid "metaBox.multiReference.noMatches"
-msgstr "لا مطابقات"
-
-#. js-lingui-explicit-id
-#: src/components/meta-box/lookup/list-body.tsx
-msgid "metaBox.reference.noMatches"
-msgstr "لا مطابقات"
-
-#. js-lingui-explicit-id
 #: src/components/form/multi-select.tsx
 msgid "form.multiSelect.empty"
 msgstr "لا مطابقات."
@@ -2343,9 +2377,19 @@ msgid "apiTokens.empty.title"
 msgstr "لا رموز بعد"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/lookup/picker-copy.ts
+msgid "metaBox.reference.user.noMatch"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.empty.title"
 msgstr "لا يوجد مستخدمون يطابقون فلترك"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/lookup/picker-copy.ts
+msgid "metaBox.reference.user.notFound"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
@@ -2868,30 +2912,6 @@ msgstr "مجدول"
 msgid "apiTokens.col.scopes"
 msgstr "الصلاحيات"
 
-#. kind: the entity type being searched (e.g. 'posts', 'tags')
-#. js-lingui-explicit-id
-#: src/components/meta-box/multi-reference-picker.tsx
-msgid "metaBox.multiReference.searchPlaceholder"
-msgstr "البحث في {kind}…"
-
-#. kind: the entity type being searched (e.g. 'posts', 'tags')
-#. js-lingui-explicit-id
-#: src/components/meta-box/reference-picker.tsx
-msgid "metaBox.reference.searchPlaceholder"
-msgstr "البحث في {kind}…"
-
-#. kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')
-#. js-lingui-explicit-id
-#: src/components/meta-box/multi-reference-picker.tsx
-msgid "metaBox.multiReference.dialogDescription"
-msgstr "ابحث واختر إدخالات {kind}"
-
-#. kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')
-#. js-lingui-explicit-id
-#: src/components/meta-box/reference-picker.tsx
-msgid "metaBox.reference.dialogDescription"
-msgstr "ابحث واختر {kind}"
-
 #. js-lingui-explicit-id
 #: src/components/meta-box/link-field.tsx
 msgid "metaBox.link.dialogDescription"
@@ -2910,6 +2930,11 @@ msgstr "البحث في المنشورات…"
 #. js-lingui-explicit-id
 #: src/components/shell/command-palette.tsx
 msgid "palette.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/lookup/picker-copy.ts
+msgid "metaBox.reference.user.searchItems"
 msgstr ""
 
 #. js-lingui-explicit-id
