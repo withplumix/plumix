@@ -1,6 +1,11 @@
 import { describe, expect, test } from "vitest";
 
-import { BLOCKED_SCHEMES, LINK_SCHEMES, sanitizeHref } from "./safe-href.js";
+import {
+  BLOCKED_SCHEMES,
+  LINK_SCHEMES,
+  linkHrefPattern,
+  sanitizeHref,
+} from "./safe-href.js";
 
 describe("sanitizeHref", () => {
   // The suites below derive their cases from these rosters, so a member
@@ -53,6 +58,18 @@ describe("sanitizeHref", () => {
     "rejects %j",
     (href) => {
       expect(sanitizeHref(href)).toBeUndefined();
+    },
+  );
+});
+
+describe("linkHrefPattern", () => {
+  test.each([...BLOCKED_SCHEMES])(
+    "refuses the blocked scheme %s even when the allow-list names it",
+    (scheme) => {
+      const pattern = linkHrefPattern(["https", scheme]);
+      expect(pattern.test(`${scheme}:x`)).toBe(false);
+      expect(pattern.test(`${scheme.toUpperCase()}:x`)).toBe(false);
+      expect(pattern.test("https://example.com")).toBe(true);
     },
   );
 });

@@ -25,13 +25,18 @@ export const BLOCKED_SCHEMES: ReadonlySet<string> = new Set([
 const RELATIVE_REF = String.raw`\/|#|\?|\.\.?\/`;
 
 /**
- * Hrefs a link may carry: a `LINK_SCHEMES` scheme or a relative ref. Every
- * other scheme, `BLOCKED_SCHEMES` and their case variants included, fails.
+ * Hrefs a link may carry: one of `schemes` above the `BLOCKED_SCHEMES` floor,
+ * or a relative ref. Every other scheme and its case variants fail.
  */
-export const SAFE_HREF = new RegExp(
-  `^(${LINK_SCHEMES.map((scheme) => `${scheme}:`).join("|")}|${RELATIVE_REF})`,
-  "i",
-);
+export function linkHrefPattern(schemes: readonly string[]): RegExp {
+  const allowed = schemes
+    .map((scheme) => scheme.toLowerCase())
+    .filter((scheme) => !BLOCKED_SCHEMES.has(scheme))
+    .map((scheme) => `${scheme}:`);
+  return new RegExp(`^(${[...allowed, RELATIVE_REF].join("|")})`, "i");
+}
+
+export const SAFE_HREF = linkHrefPattern(LINK_SCHEMES);
 
 /** The trimmed href when it is safe, else `undefined`. */
 export function sanitizeHref(raw: unknown): string | undefined {
