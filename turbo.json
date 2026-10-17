@@ -120,6 +120,19 @@
       "outputs": [".cache/typecheck.tsbuildinfo"],
       "outputLogs": "new-only"
     },
+    "test:mutation": {
+      // The lines mutated are this branch's diff against MUTATION_BASE, a commit, so it is part of
+      // the hash. `^topo` as for `test:unit`: the tests run upstream packages from source.
+      "dependsOn": ["typecheck", "^topo"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tooling/stryker/**",
+        "$TURBO_ROOT$/scripts/**"
+      ],
+      "outputs": [".cache/mutation/summary.json", ".cache/mutation/raw.json"],
+      "env": ["MUTATION_BASE"],
+      "outputLogs": "new-only"
+    },
     "test:unit": {
       // Low-level tests: resolve workspace imports to source and stub
       // name-imported i18n catalogs (see tooling/vitest/source-resolver.ts), so

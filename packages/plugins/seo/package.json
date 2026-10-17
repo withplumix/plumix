@@ -54,6 +54,7 @@
     "lint": "eslint",
     "publint": "publint",
     "test:e2e": "playwright test --config=e2e/playwright.config.ts",
+    "test:mutation": "node ../../../scripts/test-mutation-package.ts",
     "test:unit": "vitest run",
     "typecheck": "tsc"
   },

@@ -46,6 +46,7 @@
     "format": "prettier --check . --ignore-path ../../../.gitignore --ignore-path ../../../.prettierignore",
     "lint": "eslint",
     "publint": "publint",
+    "test:mutation": "node ../../../scripts/test-mutation-package.ts",
     "test:unit": "vitest run",
     "typecheck": "tsc"
   },
