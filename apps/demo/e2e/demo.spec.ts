@@ -1,6 +1,9 @@
 // No globalSetup / storageState: the demo mints its own session at `/demo`,
 // so the spec drives the same path a visitor does.
 
+import { readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import type { APIRequestContext } from "@playwright/test";
 import { CONTENT_LIST_ROWS, expect, test } from "plumix/test/playwright";
 
 const POST_TITLE = "A post I made in the demo";
@@ -308,4 +311,71 @@ test("the demo pill names what's off in the visitor's language", async ({
     "Off in this demo: API-Tokens, Geräteanmeldung, Passkeys, OAuth-Anmeldung und E-Mail-Versand",
   );
   await context.close();
+});
+
+/**
+ * Editing the bootstrap under `plumix dev` rebuilds a session as a deploy that
+ * changes it does. Not `seed.sql`: a `.sql` edit restarts the server under
+ * every parallel spec.
+ */
+const DEMO_SQL = join(import.meta.dirname, "../demo-sql.ts");
+const BOOTSTRAP = "`${schemaSql}\\n${seedSql}`";
+const REBUILT_BOOTSTRAP = "`${schemaSql}\\n${seedSql}\\nSELECT 'e2e-rebuild';`";
+const TRAVEL = 1;
+const EUROPE = 6;
+const CULTURE = 5;
+
+function rpc(
+  request: APIRequestContext,
+  path: string,
+  input: Record<string, unknown>,
+) {
+  return request.post(`/_plumix/rpc/${path}`, {
+    headers: { "x-plumix-request": "1" },
+    data: { json: input },
+  });
+}
+
+test.describe("a rebuilt session database", () => {
+  // The edit lands on the watcher's schedule, and the init that follows it
+  // rebuilds the database.
+  test.setTimeout(120_000);
+
+  // Not a `finally`: a test timeout tears the body down without unwinding.
+  test.afterEach(async () => {
+    const current = await readFile(DEMO_SQL, "utf8");
+    if (current.includes(REBUILT_BOOTSTRAP)) {
+      await writeFile(DEMO_SQL, current.replace(REBUILT_BOOTSTRAP, BOOTSTRAP));
+    }
+  });
+
+  test("still enforces its foreign keys", async ({ page }) => {
+    await page.goto("/");
+    await page.getByTestId("try-editor").click();
+    await page.waitForURL(/\/_plumix\/admin/);
+
+    // A row the rebuild brings back proves it ran.
+    expect(
+      (await rpc(page.request, "term/delete", { id: CULTURE })).status(),
+    ).toBe(200);
+    const original = await readFile(DEMO_SQL, "utf8");
+    const edited = original.replace(BOOTSTRAP, REBUILT_BOOTSTRAP);
+    expect(edited, `${DEMO_SQL} must return ${BOOTSTRAP}`).not.toBe(original);
+    await writeFile(DEMO_SQL, edited);
+    await expect(async () => {
+      expect((await page.request.post("/_demo/init")).status()).toBe(200);
+      expect(
+        (await rpc(page.request, "term/get", { id: CULTURE })).status(),
+      ).toBe(200);
+    }).toPass({ timeout: 45_000 });
+
+    // `terms.parent_id` is `ON DELETE set null`, and term.delete leaves the
+    // children to it.
+    expect(
+      (await rpc(page.request, "term/delete", { id: TRAVEL })).status(),
+    ).toBe(200);
+    const europe = await rpc(page.request, "term/get", { id: EUROPE });
+    expect(europe.status()).toBe(200);
+    expect(await europe.json()).toMatchObject({ json: { parentId: null } });
+  });
 });

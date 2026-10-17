@@ -128,19 +128,53 @@ export async function initializeDemoStorage(
 }
 
 /**
- * SQLite ignores `PRAGMA foreign_keys` inside a transaction, and a DO coalesces
- * a turn's writes into one, so under workerd the OFF may not take effect.
+ * A DO wraps a turn's writes in one transaction, where SQLite ignores
+ * `PRAGMA foreign_keys`, so the drops defer the checks instead: that lasts only
+ * until the commit.
  */
 export async function dropDemoTables(sql: DemoSqlExecutor): Promise<void> {
-  const names = (await listUserTables(sql)).filter((name) =>
-    SAFE_IDENTIFIER.test(name),
-  );
+  const names = await listUserObjects(sql, "table");
   if (names.length === 0) return;
-  await sql.exec("PRAGMA foreign_keys = OFF");
-  for (const name of names) {
+  await sql.exec("PRAGMA defer_foreign_keys = ON");
+  // A drop's `set null` and cascades fire triggers, which fail to compile once
+  // a table they write to is gone.
+  for (const name of await listUserObjects(sql, "trigger")) {
+    await sql.exec(`DROP TRIGGER IF EXISTS "${name}"`);
+  }
+  for (const name of await childrenFirst(sql, names)) {
     await sql.exec(`DROP TABLE IF EXISTS "${name}"`);
   }
-  await sql.exec("PRAGMA foreign_keys = ON");
+}
+
+/**
+ * With foreign keys on, SQLite fails to compile a child's drop once a parent it
+ * references is gone, so a table drops after every table that references it.
+ */
+async function childrenFirst(
+  sql: DemoSqlExecutor,
+  names: readonly string[],
+): Promise<string[]> {
+  // A DO refuses the `pragma_foreign_key_list()` table-valued form.
+  const parents = new Map<string, Set<string>>();
+  for (const name of names) {
+    const references = await sql.query(`PRAGMA foreign_key_list("${name}")`);
+    parents.set(name, new Set(references.map((row) => String(row.table))));
+  }
+  const ordered: string[] = [];
+  let remaining = [...names];
+  while (remaining.length > 0) {
+    const unreferenced = remaining.filter(
+      (name) =>
+        !remaining.some(
+          (other) => other !== name && parents.get(other)?.has(name),
+        ),
+    );
+    // A reference cycle leaves none unreferenced: drop the rest as listed.
+    const next = unreferenced.length > 0 ? unreferenced : remaining;
+    ordered.push(...next);
+    remaining = remaining.filter((name) => !next.includes(name));
+  }
+  return ordered;
 }
 
 async function isInitializedAtVersion(
@@ -156,12 +190,17 @@ async function isInitializedAtVersion(
   }
 }
 
-async function listUserTables(sql: DemoSqlExecutor): Promise<string[]> {
+async function listUserObjects(
+  sql: DemoSqlExecutor,
+  type: "table" | "trigger",
+): Promise<string[]> {
   // Exclude SQLite (`sqlite_%`), Cloudflare (`_cf_%`), and miniflare-in-dev
-  // (`__miniflare_%`, matched by the `__*` GLOB) internal tables so cleanup
+  // (`__miniflare_%`, matched by the `__*` GLOB) internal objects so cleanup
   // never drops them.
   const rows = await sql.query(
-    "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' AND name NOT GLOB '__*'",
+    `SELECT name FROM sqlite_master WHERE type = '${type}' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' AND name NOT GLOB '__*'`,
   );
-  return rows.map((row) => String(row.name));
+  return rows
+    .map((row) => String(row.name))
+    .filter((name) => SAFE_IDENTIFIER.test(name));
 }
