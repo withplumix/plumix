@@ -170,7 +170,6 @@ export interface BlockSpec<
     readonly attrs: Attrs;
     readonly error: unknown;
   }) => ReactNode;
-  readonly inline?: boolean;
   /**
    * For elements a div can't wrap (`<td>`, `<tr>`) and to beat the theme's
    * element styles. Must spread `blockProps` onto a single host element; a

@@ -430,9 +430,6 @@ function renderNode(
   let final: ReactNode;
   if (spec.selfSeam) {
     final = createElement(Fragment, { key: node.id }, styleTag, rendered);
-  } else if (spec.inline) {
-    // Legacy: superseded by selfSeam.
-    final = createElement(Fragment, { key: node.id }, rendered);
   } else {
     final = createElement(
       tagName ?? "div",

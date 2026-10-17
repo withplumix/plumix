@@ -535,22 +535,28 @@ describe("renderBlockTree", () => {
     expect(html).toBe("<div><h2>No style</h2></div>");
   });
 
-  test("skips the universal wrapper for blocks with inline: true", () => {
+  test("keeps the style rules of a block that skips the wrapper", () => {
     const registry = createBlockRegistry([
       {
         name: "acme/carousel",
-        inline: true,
-        render: () => <div className="carousel-root" />,
+        selfSeam: true,
+        render: ({ blockProps }) => <div {...blockProps}>slides</div>,
       },
     ]);
     const tree: readonly BlockNode[] = [
-      { id: "1", name: "acme/carousel", attrs: {} },
+      {
+        id: "c1",
+        name: "acme/carousel",
+        attrs: {},
+        style: { large: { padding: "24px" } },
+      },
     ];
 
     const html = renderToStaticMarkup(renderBlockTree(tree, registry));
 
-    expect(html).toBe('<div class="carousel-root"></div>');
-    expect(html).not.toContain("data-plumix-block");
+    expect(html).toBe(
+      '<style>.plumix-block-c1 { padding: 24px; }</style><div class="plumix-block-c1">slides</div>',
+    );
   });
 
   describe("client islands (now handled by the Vite shim)", () => {
