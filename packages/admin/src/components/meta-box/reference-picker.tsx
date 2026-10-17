@@ -133,8 +133,8 @@ export function ReferencePicker({
         open={open}
         closeLabel={labelFn(DIALOG_CLOSE_LABEL)}
         onOpenChange={setOpen}
-        title={label}
-        description={labelFn(copy.searchItems)}
+        title={labelFn(copy.searchItems)}
+        description={label}
       >
         <CommandInput
           placeholder={labelFn(copy.searchItems)}

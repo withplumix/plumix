@@ -332,9 +332,12 @@ describe("MetaBoxField reference pickers", () => {
         multiple ? [] : null,
       );
 
+      expect(/data-slot="dialog-title"[^>]*>([^<]*)</.exec(html)?.[1]).toBe(
+        "Search Posts",
+      );
       expect(
         /data-slot="dialog-description"[^>]*>([^<]*)</.exec(html)?.[1],
-      ).toBe("Search Posts");
+      ).toBe("Label");
     },
   );
 });
