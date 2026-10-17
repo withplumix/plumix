@@ -24,6 +24,7 @@ import {
   syncRepoToMain,
 } from "./github.js";
 import { say } from "./log.js";
+import { surveyMutants } from "./mutation.js";
 import { MERGE_BASE } from "./repo.js";
 import {
   AN_HOUR_IN_SECONDS,
@@ -191,6 +192,7 @@ export const reviewBranch = async (
   ticket: Ticket,
   round: number,
   pullRequestBody: string,
+  mutation: string,
 ): Promise<Review | null> => {
   const phase = `review#${round}`;
   const reviewed = await runAgentPhase(phase, REVIEWER, {
@@ -199,6 +201,7 @@ export const reviewBranch = async (
       TICKET: String(ticket.number),
       BASE: MERGE_BASE,
       PR_BODY: pullRequestBody,
+      MUTATION: mutation,
     },
     maxIterations: 1,
     idleTimeoutSeconds: AN_HOUR_IN_SECONDS,
@@ -440,6 +443,7 @@ export const shipTicket = async (
         ticket,
         pass,
         pullRequestCopy.body,
+        await surveyMutants(sandbox),
       );
       if (!review) {
         return {

@@ -342,11 +342,32 @@ describe("reviewBranch", () => {
       TICKET,
       2,
       "body",
+      "",
     );
 
     expect(phases).toEqual(["review#2", "review#2:ask-again1"]);
     expect(review?.specGaps).toHaveLength(1);
     expect(recorded).toEqual([{ phase: "review#2:findings", high: 1, low: 2 }]);
+  });
+
+  test("hands the reviewer the lines mutation testing found", async () => {
+    const promptArgs: unknown[] = [];
+
+    await reviewBranch(
+      async (_phase, _agent, options) => {
+        promptArgs.push(options.promptArgs ?? {});
+        return ranWith(reviewBlock({ summary: "", specGaps: [], notes: [] }));
+      },
+      { record: () => {} },
+      TICKET,
+      1,
+      "body",
+      "# 1 surviving line in 1 package\n",
+    );
+
+    expect(promptArgs[0]).toMatchObject({
+      MUTATION: "# 1 surviving line in 1 package\n",
+    });
   });
 
   test("journals gaps that need a decision apart from the ones the fixer can close", async () => {
@@ -371,6 +392,7 @@ describe("reviewBranch", () => {
       TICKET,
       1,
       "body",
+      "",
     );
 
     expect(recorded).toEqual([{ high: 1, medium: 1 }]);
