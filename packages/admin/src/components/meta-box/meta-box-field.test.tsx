@@ -295,11 +295,23 @@ describe("MetaBoxField reference pickers", () => {
   });
 
   test.each([
-    { form: "single", inputType: "entry", type: "string", multiple: false },
-    { form: "multi", inputType: "entryList", type: "json", multiple: true },
+    {
+      form: "single",
+      inputType: "entry",
+      type: "string",
+      multiple: false,
+      initial: null,
+    },
+    {
+      form: "multi",
+      inputType: "entryList",
+      type: "json",
+      multiple: true,
+      initial: [],
+    },
   ] as const)(
     "a $form entry reference scoped to one type names its search with that type's label",
-    ({ inputType, type, multiple }) => {
+    ({ inputType, type, multiple, initial }) => {
       const manifest = {
         entryTypes: [
           {
@@ -329,7 +341,7 @@ describe("MetaBoxField reference pickers", () => {
             multiple,
           },
         }),
-        multiple ? [] : null,
+        initial,
       );
 
       expect(/data-slot="dialog-title"[^>]*>([^<]*)</.exec(html)?.[1]).toBe(

@@ -98,7 +98,7 @@ export function lookupListNotice(
   },
 ): Label | null {
   if (state.isLoading) return copy.loadingItems;
-  if (state.isError) return copy.loadErrorItems;
   if (state.itemCount > 0) return null;
+  if (state.isError) return copy.loadErrorItems;
   return state.query.trim() === "" ? copy.notFound : copy.noMatch;
 }

@@ -151,6 +151,12 @@ describe("lookupListNotice", () => {
     );
   });
 
+  test("a failed refetch that kept its items still lists them", () => {
+    expect(
+      lookupListNotice(POST_LABELS, { ...ready, isError: true, itemCount: 2 }),
+    ).toBeNull();
+  });
+
   test("a list with items shows no notice", () => {
     expect(
       lookupListNotice(POST_LABELS, { ...ready, itemCount: 2 }),
