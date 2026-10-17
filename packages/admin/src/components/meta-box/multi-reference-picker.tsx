@@ -2,11 +2,12 @@ import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { DIALOG_CLOSE_LABEL } from "@/lib/dialog-labels.js";
+import { currentManifest } from "@/lib/manifest.js";
 import { useLabel } from "@/lib/use-label.js";
 import { useSortableAnnouncements } from "@/lib/use-sortable-announcements.js";
 import { useUntitledLabel } from "@/lib/use-untitled-label.js";
 import { defineMessage } from "@lingui/core/macro";
-import { Trans, useLingui } from "@lingui/react";
+import { Trans } from "@lingui/react";
 
 import type { JsonObject } from "@plumix/core";
 import { Button } from "@plumix/admin-ui/button";
@@ -21,13 +22,10 @@ import { Skeleton } from "@plumix/admin-ui/skeleton";
 import { SortableList } from "@plumix/admin-ui/sortable";
 
 import type { LookupItem } from "./lookup/types.js";
+import { lookupListNotice, referencePickerCopy } from "./lookup/picker-copy.js";
 import { useLookupSearch } from "./lookup/use-lookup-search.js";
 import { useReferenceResolve } from "./lookup/use-reference-resolve.js";
 
-/**
- * `{kind}` interpolates the raw wire identifier; there's no localized noun map
- * yet.
- */
 const M = {
   resolveError: defineMessage({
     id: "metaBox.multiReference.resolveError",
@@ -57,17 +55,6 @@ const M = {
     id: "metaBox.multiReference.remove",
     message: "Remove",
   }),
-  dialogDescription: defineMessage({
-    id: "metaBox.multiReference.dialogDescription",
-    message: "Search and pick {kind} entries",
-    comment:
-      "kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')",
-  }),
-  searchPlaceholder: defineMessage({
-    id: "metaBox.multiReference.searchPlaceholder",
-    message: "Search {kind}…",
-    comment: "kind: the entity type being searched (e.g. 'posts', 'tags')",
-  }),
 } satisfies Record<string, MessageDescriptor>;
 
 interface MultiReferencePickerProps {
@@ -96,7 +83,6 @@ export function MultiReferencePicker({
   testId,
   initialSelected = [],
 }: MultiReferencePickerProps): ReactNode {
-  const { i18n } = useLingui();
   const labelFn = useLabel();
   const announcements = useSortableAnnouncements();
   const untitledLabel = useUntitledLabel();
@@ -141,16 +127,13 @@ export function MultiReferencePicker({
     };
   });
 
-  const dialogDescription = i18n._(
-    M.dialogDescription.id,
-    { kind },
-    { message: M.dialogDescription.message },
-  );
-  const searchPlaceholder = i18n._(
-    M.searchPlaceholder.id,
-    { kind },
-    { message: M.searchPlaceholder.message },
-  );
+  const copy = referencePickerCopy(kind, scope, currentManifest());
+  const notice = lookupListNotice(copy, {
+    isLoading: search.isLoading,
+    isError: search.isError,
+    itemCount: items.length,
+    query: search.query,
+  });
 
   return (
     <div className="flex flex-col gap-2" data-testid={testId}>
@@ -256,27 +239,18 @@ export function MultiReferencePicker({
         open={open}
         closeLabel={labelFn(DIALOG_CLOSE_LABEL)}
         onOpenChange={setOpen}
-        title={label}
-        description={dialogDescription}
+        title={labelFn(copy.searchItems)}
+        description={label}
       >
         <CommandInput
-          placeholder={searchPlaceholder}
+          placeholder={labelFn(copy.searchItems)}
           value={search.query}
           onValueChange={search.setQuery}
           data-testid={`${testId}-search`}
         />
         <CommandList>
-          {search.isLoading ? (
-            <CommandEmpty>
-              <Trans id="metaBox.multiReference.loading" message="Loading…" />
-            </CommandEmpty>
-          ) : items.length === 0 ? (
-            <CommandEmpty>
-              <Trans
-                id="metaBox.multiReference.noMatches"
-                message="No matches"
-              />
-            </CommandEmpty>
+          {notice !== null ? (
+            <CommandEmpty>{labelFn(notice)}</CommandEmpty>
           ) : (
             items.map((item) => {
               const alreadySelected = selectedSet.has(item.id);

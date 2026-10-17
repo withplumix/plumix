@@ -1,3 +1,6 @@
+import type { MessageDescriptor } from "@lingui/core";
+import { defineMessage } from "@lingui/core/macro";
+
 import type { JsonObject } from "@plumix/core";
 import type { EntryFieldScope } from "@plumix/core/fields";
 
@@ -58,4 +61,25 @@ export function pickableLinkItems(
   items: readonly LookupItem[],
 ): readonly LookupItem[] {
   return items.filter((item) => item.href !== undefined);
+}
+
+/**
+ * The link picker searches every public type at once, so it keeps its own
+ * noun-less notices rather than the reference pickers' per-type copy.
+ */
+export function linkListNotice(state: {
+  readonly isLoading: boolean;
+  readonly itemCount: number;
+}): MessageDescriptor | null {
+  if (state.isLoading) {
+    return defineMessage({
+      id: "metaBox.reference.loading",
+      message: "Loading…",
+    });
+  }
+  if (state.itemCount > 0) return null;
+  return defineMessage({
+    id: "metaBox.reference.noMatches",
+    message: "No matches",
+  });
 }

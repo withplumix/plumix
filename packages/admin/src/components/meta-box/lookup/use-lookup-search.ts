@@ -20,6 +20,7 @@ export function useLookupSearch({
   readonly setQuery: (next: string) => void;
   readonly items: readonly LookupItem[];
   readonly isLoading: boolean;
+  readonly isError: boolean;
 } {
   const [query, setQuery] = useState("");
   const listQuery = useQuery({
@@ -33,5 +34,6 @@ export function useLookupSearch({
     setQuery,
     items: listQuery.data?.items ?? [],
     isLoading: listQuery.isLoading,
+    isError: listQuery.isError,
   };
 }

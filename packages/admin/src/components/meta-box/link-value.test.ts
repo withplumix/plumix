@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import {
   linkDraftFromValue,
+  linkListNotice,
   linkPickerScope,
   linkValueFromDraft,
   pickableLinkItems,
@@ -70,5 +71,25 @@ describe("pickableLinkItems", () => {
     ).toEqual([
       { id: "1", label: "Pricing", targetType: "page", href: "/pricing" },
     ]);
+  });
+});
+
+describe("linkListNotice", () => {
+  test("a pending search says it is loading", () => {
+    expect(linkListNotice({ isLoading: true, itemCount: 0 })).toEqual({
+      id: "metaBox.reference.loading",
+      message: "Loading…",
+    });
+  });
+
+  test("an empty list says nothing matches", () => {
+    expect(linkListNotice({ isLoading: false, itemCount: 0 })).toEqual({
+      id: "metaBox.reference.noMatches",
+      message: "No matches",
+    });
+  });
+
+  test("a list with items shows no notice", () => {
+    expect(linkListNotice({ isLoading: false, itemCount: 1 })).toBeNull();
   });
 });

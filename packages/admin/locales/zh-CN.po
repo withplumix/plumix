@@ -69,6 +69,40 @@ msgstr ""
 #~ msgstr "每次保存都会创建一个新的修订版本。最新的在前。"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+#~ msgid "metaBox.multiReference.loading"
+#~ msgstr "加载中…"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+#~ msgid "metaBox.multiReference.noMatches"
+#~ msgstr "无匹配项"
+
+#. kind: the entity type being searched (e.g. 'posts', 'tags')
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+#~ msgid "metaBox.multiReference.searchPlaceholder"
+#~ msgstr "搜索 {kind}…"
+
+#. kind: the entity type being searched (e.g. 'posts', 'tags')
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+#~ msgid "metaBox.reference.searchPlaceholder"
+#~ msgstr "搜索 {kind}…"
+
+#. kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+#~ msgid "metaBox.multiReference.dialogDescription"
+#~ msgstr "搜索并选择 {kind} 条目"
+
+#. kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+#~ msgid "metaBox.reference.dialogDescription"
+#~ msgstr "搜索并选择 {kind}"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — 子项无法被选为父项。"
@@ -960,6 +994,11 @@ msgstr "无法加载此设置。请重试。"
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.loadFailed"
 msgstr "无法加载用户。请重试。"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/lookup/picker-copy.ts
+msgid "metaBox.reference.user.loadErrorItems"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
@@ -1957,6 +1996,11 @@ msgid "users.list.loading"
 msgstr "正在加载用户"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/lookup/picker-copy.ts
+msgid "metaBox.reference.user.loadingItems"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.stale.loading"
 msgstr ""
@@ -1987,12 +2031,7 @@ msgid "profile.sessions.loading"
 msgstr "加载中…"
 
 #. js-lingui-explicit-id
-#: src/components/meta-box/multi-reference-picker.tsx
-msgid "metaBox.multiReference.loading"
-msgstr "加载中…"
-
-#. js-lingui-explicit-id
-#: src/components/meta-box/lookup/list-body.tsx
+#: src/components/meta-box/link-value.ts
 msgid "metaBox.reference.loading"
 msgstr "加载中…"
 
@@ -2283,12 +2322,7 @@ msgid "type.generic.noMatch"
 msgstr "无匹配项"
 
 #. js-lingui-explicit-id
-#: src/components/meta-box/multi-reference-picker.tsx
-msgid "metaBox.multiReference.noMatches"
-msgstr "无匹配项"
-
-#. js-lingui-explicit-id
-#: src/components/meta-box/lookup/list-body.tsx
+#: src/components/meta-box/link-value.ts
 msgid "metaBox.reference.noMatches"
 msgstr "无匹配项"
 
@@ -2343,9 +2377,19 @@ msgid "apiTokens.empty.title"
 msgstr "暂无令牌"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/lookup/picker-copy.ts
+msgid "metaBox.reference.user.noMatch"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.empty.title"
 msgstr "没有匹配您筛选条件的用户"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/lookup/picker-copy.ts
+msgid "metaBox.reference.user.notFound"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
@@ -2868,30 +2912,6 @@ msgstr "已计划"
 msgid "apiTokens.col.scopes"
 msgstr "权限"
 
-#. kind: the entity type being searched (e.g. 'posts', 'tags')
-#. js-lingui-explicit-id
-#: src/components/meta-box/multi-reference-picker.tsx
-msgid "metaBox.multiReference.searchPlaceholder"
-msgstr "搜索 {kind}…"
-
-#. kind: the entity type being searched (e.g. 'posts', 'tags')
-#. js-lingui-explicit-id
-#: src/components/meta-box/reference-picker.tsx
-msgid "metaBox.reference.searchPlaceholder"
-msgstr "搜索 {kind}…"
-
-#. kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')
-#. js-lingui-explicit-id
-#: src/components/meta-box/multi-reference-picker.tsx
-msgid "metaBox.multiReference.dialogDescription"
-msgstr "搜索并选择 {kind} 条目"
-
-#. kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')
-#. js-lingui-explicit-id
-#: src/components/meta-box/reference-picker.tsx
-msgid "metaBox.reference.dialogDescription"
-msgstr "搜索并选择 {kind}"
-
 #. js-lingui-explicit-id
 #: src/components/meta-box/link-field.tsx
 msgid "metaBox.link.dialogDescription"
@@ -2910,6 +2930,11 @@ msgstr "搜索条目…"
 #. js-lingui-explicit-id
 #: src/components/shell/command-palette.tsx
 msgid "palette.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/lookup/picker-copy.ts
+msgid "metaBox.reference.user.searchItems"
 msgstr ""
 
 #. js-lingui-explicit-id

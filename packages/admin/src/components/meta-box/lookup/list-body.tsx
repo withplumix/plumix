@@ -1,43 +1,28 @@
 import type { useUntitledLabel } from "@/lib/use-untitled-label.js";
 import type { ReactNode } from "react";
-import { Trans } from "@lingui/react";
 
 import { CommandEmpty, CommandItem } from "@plumix/admin-ui/command";
 
 import type { LookupItem } from "./types.js";
 
 /**
- * Shared loading / empty / item-list body for lookup-backed pickers —
- * the reference pickers select by `item.id`, the link field's entry
- * picker by `item.href`.
+ * Shared notice / item-list body for lookup-backed pickers: `notice` is the
+ * caller's loading, empty or error text, `null` to list the items.
  */
 export function renderLookupListBody({
-  isLoading,
+  notice,
   items,
   testId,
   onSelect,
   untitledLabel,
 }: {
-  isLoading: boolean;
+  notice: string | null;
   items: readonly LookupItem[];
   testId: string;
   onSelect: (item: LookupItem) => void;
   untitledLabel: ReturnType<typeof useUntitledLabel>;
 }): ReactNode {
-  if (isLoading) {
-    return (
-      <CommandEmpty>
-        <Trans id="metaBox.reference.loading" message="Loading…" />
-      </CommandEmpty>
-    );
-  }
-  if (items.length === 0) {
-    return (
-      <CommandEmpty>
-        <Trans id="metaBox.reference.noMatches" message="No matches" />
-      </CommandEmpty>
-    );
-  }
+  if (notice !== null) return <CommandEmpty>{notice}</CommandEmpty>;
   return items.map((item) => (
     <CommandItem
       key={item.id}

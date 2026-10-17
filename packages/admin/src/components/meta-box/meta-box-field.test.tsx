@@ -11,7 +11,7 @@ import { I18nProvider } from "@lingui/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { renderToStaticMarkup } from "react-dom/server";
 import { useForm } from "react-hook-form";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 import { Form } from "@plumix/admin-ui/form";
@@ -234,6 +234,11 @@ describe("MetaBoxField colour input", () => {
 });
 
 describe("MetaBoxField reference pickers", () => {
+  // The picker copy reads the manifest `<script>`; this page has none.
+  beforeEach(() => {
+    vi.stubGlobal("document", { getElementById: () => null });
+  });
+
   test("an empty user reference says none is selected and offers Select", () => {
     const html = render(
       field({
@@ -288,6 +293,65 @@ describe("MetaBoxField reference pickers", () => {
     expect(add).toMatch(/\sdisabled=""/);
     expect(textOf(html, "meta-box-field-k-input-count")).toBe("2 / 2");
   });
+
+  test.each([
+    {
+      form: "single",
+      inputType: "entry",
+      type: "string",
+      multiple: false,
+      initial: null,
+    },
+    {
+      form: "multi",
+      inputType: "entryList",
+      type: "json",
+      multiple: true,
+      initial: [],
+    },
+  ] as const)(
+    "a $form entry reference scoped to one type names its search with that type's label",
+    ({ inputType, type, multiple, initial }) => {
+      const manifest = {
+        entryTypes: [
+          {
+            name: "post",
+            adminSlug: "posts",
+            label: "Posts",
+            labels: {
+              searchItems: {
+                id: "blog.post.searchItems",
+                message: "Search Posts",
+              },
+            },
+          },
+        ],
+      };
+      vi.stubGlobal("document", {
+        getElementById: () => ({ textContent: JSON.stringify(manifest) }),
+      });
+
+      const html = render(
+        field({
+          inputType,
+          type,
+          referenceTarget: {
+            kind: "entry",
+            scope: { entryTypes: ["post"] },
+            multiple,
+          },
+        }),
+        initial,
+      );
+
+      expect(/data-slot="dialog-title"[^>]*>([^<]*)</.exec(html)?.[1]).toBe(
+        "Search Posts",
+      );
+      expect(
+        /data-slot="dialog-description"[^>]*>([^<]*)</.exec(html)?.[1],
+      ).toBe("Label");
+    },
+  );
 });
 
 describe("MetaBoxField sortable rows", () => {

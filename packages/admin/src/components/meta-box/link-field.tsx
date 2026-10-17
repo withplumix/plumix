@@ -24,6 +24,7 @@ import type { LinkDraft } from "./link-value.js";
 import { AdornedControl } from "./adorned-control.js";
 import {
   linkDraftFromValue,
+  linkListNotice,
   linkPickerScope,
   linkValueFromDraft,
   pickableLinkItems,
@@ -93,6 +94,10 @@ export function LinkField({
   const scope = linkPickerScope(publicEntryTypeNames());
   const search = useLookupSearch({ kind: "entry", scope, enabled: open });
   const items = pickableLinkItems(search.items);
+  const notice = linkListNotice({
+    isLoading: search.isLoading,
+    itemCount: items.length,
+  });
 
   // Adornments frame the URL only: the link text is display copy, and a
   // scheme or path affix belongs to the address.
@@ -180,7 +185,7 @@ export function LinkField({
         />
         <CommandList>
           {renderLookupListBody({
-            isLoading: search.isLoading,
+            notice: notice === null ? null : labelFn(notice),
             items,
             testId,
             untitledLabel,
