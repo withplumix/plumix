@@ -1,8 +1,8 @@
 import type { BlockSpec } from "plumix/blocks";
 import type { CSSProperties, ReactElement } from "react";
-import { defineBlock } from "plumix/blocks";
+import { defineBlock, sanitizeHref } from "plumix/blocks";
 
-import { formatSize, normalizeFileMedia, sanitizeHref } from "./normalize.js";
+import { formatSize, normalizeFileMedia } from "./normalize.js";
 
 /**
  * Inline styles: the admin canvas iframe doesn't load the site stylesheet, so

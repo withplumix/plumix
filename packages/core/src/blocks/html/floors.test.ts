@@ -1,10 +1,10 @@
 import { describe, expect, test } from "vitest";
 
 import type { HtmlAllowlist } from "./sanitize.js";
+import { BLOCKED_SCHEMES } from "../marks/safe-href.js";
 import {
   enforceHtmlFloors,
   HARD_DENIED_ATTRS,
-  HARD_DENIED_SCHEMES,
   HARD_DENYLIST,
 } from "./floors.js";
 
@@ -22,13 +22,6 @@ describe("enforceHtmlFloors", () => {
   // deleted from a roster would take its coverage with it silently.
   test("the rosters are what they say they are", () => {
     expect([...HARD_DENIED_ATTRS]).toEqual(["style"]);
-    expect([...HARD_DENIED_SCHEMES]).toEqual([
-      "javascript",
-      "vbscript",
-      "data",
-      "blob",
-      "view-source",
-    ]);
   });
 
   test.each([...HARD_DENYLIST])("drops the denied tag `%s`", (tag) => {
@@ -92,16 +85,13 @@ describe("enforceHtmlFloors", () => {
     ).toEqual({});
   });
 
-  test.each([...HARD_DENIED_SCHEMES])(
-    "drops the denied scheme `%s`",
-    (scheme) => {
-      expect(
-        floor({ allowedSchemes: ["https", scheme] }).allowedSchemes,
-      ).toEqual(["https"]);
-    },
-  );
+  test.each([...BLOCKED_SCHEMES])("drops the denied scheme `%s`", (scheme) => {
+    expect(floor({ allowedSchemes: ["https", scheme] }).allowedSchemes).toEqual(
+      ["https"],
+    );
+  });
 
-  test.each([...HARD_DENIED_SCHEMES].map((s) => s.toUpperCase()))(
+  test.each([...BLOCKED_SCHEMES].map((s) => s.toUpperCase()))(
     "drops the denied scheme `%s` however it is spelled",
     (scheme) => {
       expect(floor({ allowedSchemes: [scheme] }).allowedSchemes).toEqual([]);

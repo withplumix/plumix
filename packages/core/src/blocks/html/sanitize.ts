@@ -1,6 +1,7 @@
 import sanitize from "sanitize-html";
 
 import { HEADING_TAGS } from "../headings.js";
+import { LINK_SCHEMES } from "../marks/safe-href.js";
 import { enforceHtmlFloors } from "./floors.js";
 
 /**
@@ -52,7 +53,7 @@ export const BASELINE_HTML_ALLOWLIST: HtmlAllowlist = Object.freeze({
     abbr: ["title"],
     code: ["data-language"],
   },
-  allowedSchemes: ["http", "https", "mailto", "tel"],
+  allowedSchemes: LINK_SCHEMES,
   allowProtocolRelative: false,
 });
 
@@ -86,11 +87,7 @@ export function engineOptions(allowlist: HtmlAllowlist): EngineOptions {
         [...attrs],
       ]),
     ),
-    // The floors never inspect this fallback, so it must stay free of
-    // `HARD_DENIED_SCHEMES` and match the baseline and the shim's default.
-    allowedSchemes: floored.allowedSchemes
-      ? [...floored.allowedSchemes]
-      : ["http", "https", "mailto", "tel"],
+    allowedSchemes: [...(floored.allowedSchemes ?? LINK_SCHEMES)],
     allowProtocolRelative: floored.allowProtocolRelative ?? false,
   };
 }

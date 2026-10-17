@@ -169,6 +169,9 @@ export type {
   TokenCategory,
 } from "./styles/types.js";
 
+// ─── Link schemes ───────────────────────────────────────────────────────────
+export { LINK_SCHEMES, sanitizeHref } from "./marks/safe-href.js";
+
 // ─── HTML sanitisation ──────────────────────────────────────────────────────
 export { isAllowedHtmlAttr, safeHtmlAttrs } from "./html/attrs.js";
 export { ROOT_TAGS, resolveRootTag } from "./html/root-tag.js";

@@ -1,6 +1,7 @@
 import type { AnchorHTMLAttributes, ReactNode } from "react";
 
 import { withBasePath } from "../../base-path.js";
+import { sanitizeHref } from "../marks/safe-href.js";
 import { useBasePath } from "./context.js";
 
 /**
@@ -49,37 +50,27 @@ function externalRel(rel: string | undefined): string {
   return [...tokens].join(" ");
 }
 
-/**
- * Script-capable schemes that must never become a clickable href. Strip
- * whitespace/control chars (browsers ignore them inside the scheme) and peel
- * nested `view-source:` before testing.
- */
-function isDangerousHref(href: string): boolean {
-  // eslint-disable-next-line no-control-regex -- strips the control chars a scheme could hide behind
-  let s = href.replace(/[\u0000-\u0020\u007f-\u009f]/g, "").toLowerCase();
-  while (s.startsWith("view-source:")) s = s.slice("view-source:".length);
-  return /^(?:javascript|data|vbscript|blob):/.test(s);
-}
-
 export function Link(props: LinkProps): ReactNode {
   const basePath = useBasePath();
   const { children, entry, term, href, rel, ...rest } = props;
 
-  // Only the `href` member reaches the raw-href branches; `entry`/`term`
-  // carry a pre-resolved, basePath-correct url.
+  // `entry`/`term` carry a pre-resolved, basePath-correct url, so only a raw
+  // `href` is checked.
   let resolved: string | null;
   let external = false;
+  const safeHref = entry || term ? undefined : sanitizeHref(href);
   if (entry) resolved = entry.url;
   else if (term) resolved = term.url;
-  else if (isDangerousHref(href)) resolved = null;
-  else if (isExternal(href)) {
+  else if (safeHref === undefined) resolved = null;
+  else if (isExternal(safeHref)) {
     external = true;
-    resolved = href;
+    resolved = safeHref;
   }
   // Root-relative hrefs take the basePath; fragment / query / relative hrefs
   // are already correct (withBasePath only handles root-relative paths).
-  else if (href.startsWith("/")) resolved = withBasePath(href, basePath);
-  else resolved = href;
+  else if (safeHref.startsWith("/")) {
+    resolved = withBasePath(safeHref, basePath);
+  } else resolved = safeHref;
 
   // Unresolvable target (draft with no permalink, or a refused href) degrades
   // to the children with no dead anchor.

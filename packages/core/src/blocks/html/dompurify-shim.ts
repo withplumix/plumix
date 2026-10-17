@@ -1,5 +1,7 @@
 import DOMPurify from "dompurify";
 
+import { LINK_SCHEMES } from "../marks/safe-href.js";
+
 /**
  * The `browser` field swaps `sanitize-html` (~230 KB) for this in browser
  * bundles. It must enforce exactly the server engine's tags, per-tag attributes
@@ -11,8 +13,6 @@ interface SanitizeOptions {
   readonly allowedSchemes?: readonly string[];
   readonly allowProtocolRelative?: boolean;
 }
-
-const DEFAULT_SCHEMES = ["http", "https", "mailto", "tel"];
 
 /** Scheme-checked even when the attribute is allowed for its tag. */
 const URI_ATTRS = new Set([
@@ -52,7 +52,7 @@ export default function sanitize(
 
   const allowedTags = [...(options.allowedTags ?? [])];
   const perTag = options.allowedAttributes ?? {};
-  const schemes = (options.allowedSchemes ?? DEFAULT_SCHEMES).map((s) =>
+  const schemes = (options.allowedSchemes ?? LINK_SCHEMES).map((s) =>
     s.toLowerCase(),
   );
   const allowProtocolRelative = options.allowProtocolRelative ?? false;

@@ -39,6 +39,15 @@ describe("core/button", () => {
     expect(html).toContain('<a href="https://example.com"');
   });
 
+  test("renders an <a> for an sms: href", () => {
+    const html = renderBlockSpecToHtml(buttonBlock, {
+      label: "Text us",
+      href: "sms:+15551234",
+    });
+
+    expect(html).toContain('<a href="sms:+15551234"');
+  });
+
   test("rejects unsafe href schemes (javascript:) and falls back to <button>", () => {
     const html = renderBlockSpecToHtml(buttonBlock, {
       label: "Click",

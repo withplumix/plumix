@@ -94,7 +94,7 @@ import { url } from "plumix/fields";
 export const sourceUrl = url("sourceUrl").placeholder("https://");
 ```
 
-The value is checked against the same allowlist rich-text link marks use, which admits relative forms along with `http`, `https`, `mailto` and `tel`, and rejects `javascript:` and `data:`. That one is a security gate rather than a business rule, so it also runs on a draft save.
+The value is checked against the same allowlist rich-text link marks use, which admits relative forms along with `http`, `https`, `mailto`, `tel` and `sms`, and rejects `javascript:` and `data:`. That one is a security gate rather than a business rule, so it also runs on a draft save.
 
 For a URL that needs link text or a new-tab flag beside it, reach for [`link`](#link) instead.
 
@@ -373,7 +373,7 @@ import { link } from "plumix/fields";
 export const video = link("video").label("Video walkthrough");
 ```
 
-The admin's entry picker can fill the URL from an entry, which stores that entry's permalink as a path. On write, the value is rebuilt from those three keys, so a stray property never persists, and the URL is checked against the same allowlist rich-text link marks use: relative forms, plus `http`, `https`, `mailto` and `tel`. A `javascript:` or `data:` URL fails, because the value ends up in an anchor `href`.
+The admin's entry picker can fill the URL from an entry, which stores that entry's permalink as a path. On write, the value is rebuilt from those three keys, so a stray property never persists, and the URL is checked against the same allowlist rich-text link marks use: relative forms, plus `http`, `https`, `mailto`, `tel` and `sms`. A `javascript:` or `data:` URL fails, because the value ends up in an anchor `href`.
 
 `.prepend()` and `.append()` frame the URL input only, not the link text beside it.
 
