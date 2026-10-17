@@ -156,7 +156,8 @@ one CI job, bar the smoke's editor spec, which Playwright runs inside the smoke
 workspace package and app; `.sandcastle`, the ship loop's own harness, sits outside the workspace
 and outside the tiers. Typecheck, lint, format, knip, publint, attw, `i18n:check`,
 `migrations:check` and the link check are **gates**, not tiers: they check code without running
-it, and a new check of that kind joins an existing gate.
+it, and a new check of that kind joins an existing gate. [Mutation testing](#mutation-testing) is
+neither: it reviews the unit tier.
 
 | Tier  | Proves                                               | Lives in                                                                                      | Runs with             | CI job             |
 | ----- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------- | ------------------ |
@@ -433,10 +434,36 @@ Every change is test-first, one cycle at a time:
 Review asks of every added or edited test:
 
 - Does it sit in the tier the placement questions pick, and touch only what that tier allows?
-- Would it fail if the behaviour it names broke? Break the rule in your head, or for real.
+- Would it fail if the behaviour it names broke? Break the rule in your head, or for real:
+  `pnpm test:mutation` breaks the lines a branch changed, one at a time.
 - Does its name state the behaviour, and do its assertions check that one behaviour?
 - Is it straight-line, with literal expected values and no logic of its own?
 - Did the change ship its tests with it? A change without its tests is incomplete.
+
+### Mutation testing
+
+`pnpm test:mutation` changes each line the branch changed in a small way (a condition flipped, an
+operator swapped, a value emptied) and runs the unit tests that cover it. A change no test notices
+is a survivor, and the summary lists each surviving line once
+([ADR 0049](docs/adr/0049-mutation-testing-reviews-the-lines-a-branch-changed.md)). It is neither a
+tier nor a gate: it asks a question of the unit tier, CI does not run it, and no score is a target.
+Run it before asking for review, and when reviewing a branch.
+
+Read a survivor as a question about the behaviour on its line:
+
+- **Survived:** a test ran the line and still passed with it changed. If the change breaks
+  something the issue, an ADR or the code's own comment promises, write the unit test that fails on
+  it, asserting the behaviour, not the mutation. Check it by editing the line into the mutant by
+  hand: the test fails, and passes again once the line is back.
+- **No test runs:** the line is untested. Start with a test that reaches it.
+- **Dismiss** a survivor only for a reason you can name: the change cannot be observed, or the only
+  test that could catch it would assert an implementation detail. A behaviour an e2e spec or another
+  package's suite already covers counts, since the run sees only the package's own unit tests. Say
+  which and why where the review records it.
+
+Never add an assertion only to kill a mutant, and never change production code to move a result.
+A dismissal that keeps coming back is a rule for `tooling/stryker/arid.ts`, not a comment in
+source.
 
 ### Timeouts
 
