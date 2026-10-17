@@ -74,18 +74,8 @@ msgstr ""
 #~ msgstr "Завантаження…"
 
 #. js-lingui-explicit-id
-#: src/components/meta-box/lookup/list-body.tsx
-#~ msgid "metaBox.reference.loading"
-#~ msgstr "Завантаження…"
-
-#. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 #~ msgid "metaBox.multiReference.noMatches"
-#~ msgstr "Збігів немає"
-
-#. js-lingui-explicit-id
-#: src/components/meta-box/lookup/list-body.tsx
-#~ msgid "metaBox.reference.noMatches"
 #~ msgstr "Збігів немає"
 
 #. kind: the entity type being searched (e.g. 'posts', 'tags')
@@ -2041,6 +2031,11 @@ msgid "profile.sessions.loading"
 msgstr "Завантаження…"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/link-value.ts
+msgid "metaBox.reference.loading"
+msgstr "Завантаження…"
+
+#. js-lingui-explicit-id
 #: src/lib/magic-link-request.ts
 msgid "magicLinkRequest.error.notConfigured"
 msgstr "Вхід за magic-link не налаштований на цьому сайті."
@@ -2324,6 +2319,11 @@ msgstr "Не налаштовано адаптер пошти. Передайт�
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.noMatch"
+msgstr "Збігів немає"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/link-value.ts
+msgid "metaBox.reference.noMatches"
 msgstr "Збігів немає"
 
 #. js-lingui-explicit-id

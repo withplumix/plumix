@@ -74,18 +74,8 @@ msgstr ""
 #~ msgstr "Wird geladen…"
 
 #. js-lingui-explicit-id
-#: src/components/meta-box/lookup/list-body.tsx
-#~ msgid "metaBox.reference.loading"
-#~ msgstr "Wird geladen…"
-
-#. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 #~ msgid "metaBox.multiReference.noMatches"
-#~ msgstr "Keine Treffer"
-
-#. js-lingui-explicit-id
-#: src/components/meta-box/lookup/list-body.tsx
-#~ msgid "metaBox.reference.noMatches"
 #~ msgstr "Keine Treffer"
 
 #. kind: the entity type being searched (e.g. 'posts', 'tags')
@@ -2041,6 +2031,11 @@ msgid "profile.sessions.loading"
 msgstr "Wird geladen…"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/link-value.ts
+msgid "metaBox.reference.loading"
+msgstr "Wird geladen…"
+
+#. js-lingui-explicit-id
 #: src/lib/magic-link-request.ts
 msgid "magicLinkRequest.error.notConfigured"
 msgstr "Magic-Link-Anmeldung ist auf dieser Website nicht konfiguriert."
@@ -2324,6 +2319,11 @@ msgstr "Kein Mailer-Adapter konfiguriert. Übergeben Sie einen `mailer:` an `plu
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.noMatch"
+msgstr "Keine Treffer"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/link-value.ts
+msgid "metaBox.reference.noMatches"
 msgstr "Keine Treffer"
 
 #. js-lingui-explicit-id

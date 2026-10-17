@@ -74,18 +74,8 @@ msgstr ""
 #~ msgstr "加载中…"
 
 #. js-lingui-explicit-id
-#: src/components/meta-box/lookup/list-body.tsx
-#~ msgid "metaBox.reference.loading"
-#~ msgstr "加载中…"
-
-#. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 #~ msgid "metaBox.multiReference.noMatches"
-#~ msgstr "无匹配项"
-
-#. js-lingui-explicit-id
-#: src/components/meta-box/lookup/list-body.tsx
-#~ msgid "metaBox.reference.noMatches"
 #~ msgstr "无匹配项"
 
 #. kind: the entity type being searched (e.g. 'posts', 'tags')
@@ -2041,6 +2031,11 @@ msgid "profile.sessions.loading"
 msgstr "加载中…"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/link-value.ts
+msgid "metaBox.reference.loading"
+msgstr "加载中…"
+
+#. js-lingui-explicit-id
 #: src/lib/magic-link-request.ts
 msgid "magicLinkRequest.error.notConfigured"
 msgstr "此站点未配置 Magic Link 登录。"
@@ -2324,6 +2319,11 @@ msgstr "未配置邮件发送器适配器。请向 `plumix({...})` 传入 `maile
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.noMatch"
+msgstr "无匹配项"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/link-value.ts
+msgid "metaBox.reference.noMatches"
 msgstr "无匹配项"
 
 #. js-lingui-explicit-id

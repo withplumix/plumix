@@ -74,18 +74,8 @@ msgstr ""
 #~ msgstr "Loading…"
 
 #. js-lingui-explicit-id
-#: src/components/meta-box/lookup/list-body.tsx
-#~ msgid "metaBox.reference.loading"
-#~ msgstr "Loading…"
-
-#. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 #~ msgid "metaBox.multiReference.noMatches"
-#~ msgstr "No matches"
-
-#. js-lingui-explicit-id
-#: src/components/meta-box/lookup/list-body.tsx
-#~ msgid "metaBox.reference.noMatches"
 #~ msgstr "No matches"
 
 #. kind: the entity type being searched (e.g. 'posts', 'tags')
@@ -2041,6 +2031,11 @@ msgid "profile.sessions.loading"
 msgstr "Loading…"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/link-value.ts
+msgid "metaBox.reference.loading"
+msgstr "Loading…"
+
+#. js-lingui-explicit-id
 #: src/lib/magic-link-request.ts
 msgid "magicLinkRequest.error.notConfigured"
 msgstr "Magic-link sign-in isn't configured on this site."
@@ -2324,6 +2319,11 @@ msgstr "No mailer adapter is configured. Pass a `mailer:` to `plumix({...})` (e.
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.noMatch"
+msgstr "No matches"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/link-value.ts
+msgid "metaBox.reference.noMatches"
 msgstr "No matches"
 
 #. js-lingui-explicit-id

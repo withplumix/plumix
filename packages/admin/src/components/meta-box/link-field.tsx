@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 import { useState } from "react";
 import { DIALOG_CLOSE_LABEL } from "@/lib/dialog-labels.js";
-import { currentManifest, publicEntryTypeNames } from "@/lib/manifest.js";
+import { publicEntryTypeNames } from "@/lib/manifest.js";
 import { useLabel } from "@/lib/use-label.js";
 import { useUntitledLabel } from "@/lib/use-untitled-label.js";
 import { defineMessage } from "@lingui/core/macro";
@@ -24,12 +24,12 @@ import type { LinkDraft } from "./link-value.js";
 import { AdornedControl } from "./adorned-control.js";
 import {
   linkDraftFromValue,
+  linkListNotice,
   linkPickerScope,
   linkValueFromDraft,
   pickableLinkItems,
 } from "./link-value.js";
 import { renderLookupListBody } from "./lookup/list-body.js";
-import { lookupListNotice, referencePickerCopy } from "./lookup/picker-copy.js";
 import { useLookupSearch } from "./lookup/use-lookup-search.js";
 
 const M = {
@@ -94,15 +94,10 @@ export function LinkField({
   const scope = linkPickerScope(publicEntryTypeNames());
   const search = useLookupSearch({ kind: "entry", scope, enabled: open });
   const items = pickableLinkItems(search.items);
-  const notice = lookupListNotice(
-    referencePickerCopy("entry", scope, currentManifest()),
-    {
-      isLoading: search.isLoading,
-      isError: search.isError,
-      itemCount: items.length,
-      query: search.query,
-    },
-  );
+  const notice = linkListNotice({
+    isLoading: search.isLoading,
+    itemCount: items.length,
+  });
 
   // Adornments frame the URL only: the link text is display copy, and a
   // scheme or path affix belongs to the address.

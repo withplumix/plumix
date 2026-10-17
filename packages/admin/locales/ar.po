@@ -74,18 +74,8 @@ msgstr ""
 #~ msgstr "جارٍ التحميل…"
 
 #. js-lingui-explicit-id
-#: src/components/meta-box/lookup/list-body.tsx
-#~ msgid "metaBox.reference.loading"
-#~ msgstr "جارٍ التحميل…"
-
-#. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 #~ msgid "metaBox.multiReference.noMatches"
-#~ msgstr "لا مطابقات"
-
-#. js-lingui-explicit-id
-#: src/components/meta-box/lookup/list-body.tsx
-#~ msgid "metaBox.reference.noMatches"
 #~ msgstr "لا مطابقات"
 
 #. kind: the entity type being searched (e.g. 'posts', 'tags')
@@ -2041,6 +2031,11 @@ msgid "profile.sessions.loading"
 msgstr "جارٍ التحميل…"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/link-value.ts
+msgid "metaBox.reference.loading"
+msgstr "جارٍ التحميل…"
+
+#. js-lingui-explicit-id
 #: src/lib/magic-link-request.ts
 msgid "magicLinkRequest.error.notConfigured"
 msgstr "تسجيل الدخول بـ magic-link غير مكوَّن على هذا الموقع."
@@ -2324,6 +2319,11 @@ msgstr "لم يتم تكوين محوّل بريد. مرّر `mailer:` إلى `p
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.noMatch"
+msgstr "لا مطابقات"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/link-value.ts
+msgid "metaBox.reference.noMatches"
 msgstr "لا مطابقات"
 
 #. js-lingui-explicit-id
