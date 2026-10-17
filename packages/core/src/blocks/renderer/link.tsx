@@ -52,24 +52,25 @@ function externalRel(rel: string | undefined): string {
 
 export function Link(props: LinkProps): ReactNode {
   const basePath = useBasePath();
-  const { children, entry, term, href: rawHref, rel, ...rest } = props;
+  const { children, entry, term, href, rel, ...rest } = props;
 
-  // Only the `href` member reaches the raw-href branches; `entry`/`term`
-  // carry a pre-resolved, basePath-correct url.
+  // `entry`/`term` carry a pre-resolved, basePath-correct url, so only a raw
+  // `href` is checked.
   let resolved: string | null;
   let external = false;
-  const href = entry || term ? undefined : sanitizeHref(rawHref);
+  const safeHref = entry || term ? undefined : sanitizeHref(href);
   if (entry) resolved = entry.url;
   else if (term) resolved = term.url;
-  else if (href === undefined) resolved = null;
-  else if (isExternal(href)) {
+  else if (safeHref === undefined) resolved = null;
+  else if (isExternal(safeHref)) {
     external = true;
-    resolved = href;
+    resolved = safeHref;
   }
   // Root-relative hrefs take the basePath; fragment / query / relative hrefs
   // are already correct (withBasePath only handles root-relative paths).
-  else if (href.startsWith("/")) resolved = withBasePath(href, basePath);
-  else resolved = href;
+  else if (safeHref.startsWith("/")) {
+    resolved = withBasePath(safeHref, basePath);
+  } else resolved = safeHref;
 
   // Unresolvable target (draft with no permalink, or a refused href) degrades
   // to the children with no dead anchor.
