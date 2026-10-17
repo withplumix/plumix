@@ -38,24 +38,33 @@ twice in the first place. The mature answer is both.
 
 ## What this means
 
-- **The token is `updatedAt`, and it strictly increases.** Every write sets it
+- **The token is an opaque `etag`, with one name everywhere.** Every editable
+  resource returns an `etag` string when read, and every write from a copy takes
+  it back as `ifMatch`. Clients compare and send it; they never parse it. Today
+  core derives it from the resource's `updatedAt`, so changing what it is made
+  of later breaks no client. There is no second concurrency concept: the menu's
+  `terms.version` folds into this rule when terms adopt it. A settings group is
+  one resource, with one `etag`.
+- **`updatedAt` strictly increases.** Every write that moves the token sets it
   to the current time in milliseconds, or one millisecond past its previous
   value if that is later, so no two writes leave the same token at any write
-  rate. There is no second concurrency concept beside it: the menu's
-  `terms.version` folds into this rule when terms adopt it. A settings group is
-  one resource, with one token.
-- **The check is part of the write.** `UPDATE … WHERE id = ? AND updated_at =
-?` is atomic on D1, Node and Bun without an interactive transaction, which D1
-  cannot hold across JavaScript and SQLite would hold as a lock on the whole
-  database. Zero rows changed is a conflict.
-- **Every surface states the token in its own protocol.** RPC takes it as a
-  required field (`expectedLiveUpdatedAt` for entries). REST sends an `ETag` and
-  requires `If-Match` on writes, answering `428 Precondition Required` when it is
-  missing and `412 Precondition Failed` when it is stale. An MCP write tool takes
-  it as a required argument and answers a conflict with the current resource, so
-  an agent re-reads, merges and retries. Plugin code passes it to core's write
-  API, or says `overwrite: true` out loud: last write wins only when someone asks
-  for it by name.
+  rate.
+- **Only editorial changes move the token.** A write moves it when it changes
+  something an editor can see or edit: a column, the terms, a registered meta
+  field, the status. A plugin's bookkeeping (a view counter, a computed cache)
+  lives in its own tables or in meta it declares as not editorial, and does not
+  move it, so editors never meet a conflict nobody caused.
+- **The check is part of the write.** A single conditional statement (`UPDATE …
+WHERE id = ? AND updated_at = ?`) is atomic on D1, Node and Bun without an
+  interactive transaction, which D1 cannot hold across JavaScript and SQLite
+  would hold as a lock on the whole database. Zero rows changed is a conflict.
+- **Every surface uses the same words.** RPC and MCP take `ifMatch` as a
+  required field and argument. REST sends the `etag` as an `ETag` header and
+  requires `If-Match` on writes, answering `428 Precondition Required` when it
+  is missing and `412 Precondition Failed` when it is stale. An MCP conflict
+  returns the current resource, so an agent re-reads, merges and retries. Plugin
+  code passes `ifMatch` to core's write API, or says `overwrite: true` out loud:
+  last write wins only when someone asks for it by name.
 - **System writes move the token without checking it.** Scheduled publishing,
   bulk actions, trash and restore, import and sync are not made from a copy.
   They set `updatedAt` and `updatedBy`, so any copy open elsewhere conflicts on
@@ -70,10 +79,12 @@ twice in the first place. The mature answer is both.
 - **An edit lease is held per user, renewed every 30 seconds while the editor is
   open, and lapses 120 seconds after the last renewal.** It records the user,
   the client and the surface. The user's own tabs share it, and the token still
-  catches a save from a stale one. Taking over is explicit; the previous holder
-  learns on their next renewal and turns read-only, keeping their unsaved work.
-  A lease refusal is `LOCKED` over RPC and MCP, and `423 Locked` over REST.
-  System writes ignore leases.
+  catches a save from a stale one. A lease refusal is `LOCKED` over RPC and
+  MCP, and `423 Locked` over REST, and names the holder. Taking over is always
+  explicit (`takeOver: true`) on every surface; the previous holder learns on
+  their next renewal and turns read-only, keeping their unsaved work. An agent
+  or API client that meets a lease stops and reports who holds it; it never
+  evicts a person unless told to. System writes ignore leases.
 - **The admin never hides a conflict.** It opens the entry read-only when
   another user holds it, offering to take over. On a conflict it pauses
   autosave, keeps the author's work and offers compare, keep mine (an explicit
@@ -93,11 +104,22 @@ twice in the first place. The mature answer is both.
   and write hooks run between the read and the write. No database lock can span
   the minutes between an editor loading an entry and saving it, which is where
   the lost update happens.
-- **A separate `version` counter** (rejected). It has no same-instant blind spot,
-  but neither does a strictly increasing `updatedAt`, and a counter is a second
-  concept for every reader of the row to learn. Contentful and Sanity carry
-  both a version and a timestamp; Plumix already sends `updatedAt` everywhere
-  and keeps one.
+- **A separate `version` column** (rejected for now). It has no same-instant
+  blind spot, but neither does a strictly increasing `updatedAt`, and it is a
+  second column every write must keep in step. Because the `etag` is opaque,
+  core can switch to one later without a client noticing.
+- **A timestamp field per resource, such as `expectedLiveUpdatedAt`**
+  (rejected). It names an implementation detail as the contract, and every
+  resource grows its own spelling. `etag`/`ifMatch` is HTTP's own vocabulary
+  and one word for every resource and surface.
+- **Every write moves the token** (rejected). Bookkeeping writes would raise
+  conflicts no editor caused, the false "someone else is editing" Ghost users
+  report against their own stale tabs.
+- **Leases that API writers ignore by default** (rejected). Payload enforces
+  locks in its REST and Local APIs but defaults `overrideLock` to `true`.
+  WordPress kept its post lock in the editor, and a user without the lock
+  overwrote the holder through the autosave REST endpoint until the check moved
+  into the controller (Trac #55659). A lock only the UI respects is not a lock.
 - **Detection only, as decided on 2026-08-30** (superseded). It tells the
   second editor after the work is done. WordPress added locking for that
   reason, Payload locks by default, and agents writing over a human mid-edit with a
