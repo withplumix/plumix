@@ -294,30 +294,35 @@ describe("MetaBoxField reference pickers", () => {
     expect(textOf(html, "meta-box-field-k-input-count")).toBe("2 / 2");
   });
 
-  test("an entry reference scoped to one type describes its search with that type's label", () => {
-    const manifest = {
-      entryTypes: [
-        {
-          name: "post",
-          adminSlug: "posts",
-          label: "Posts",
-          labels: {
-            searchItems: {
-              id: "blog.post.searchItems",
-              message: "Search Posts",
+  test.each([
+    { form: "single", inputType: "entry", type: "string", multiple: false },
+    { form: "multi", inputType: "entryList", type: "json", multiple: true },
+  ] as const)(
+    "a $form entry reference scoped to one type names its search with that type's label",
+    ({ inputType, type, multiple }) => {
+      const manifest = {
+        entryTypes: [
+          {
+            name: "post",
+            adminSlug: "posts",
+            label: "Posts",
+            labels: {
+              searchItems: {
+                id: "blog.post.searchItems",
+                message: "Search Posts",
+              },
             },
           },
-        },
-      ],
-    };
-    vi.stubGlobal("document", {
-      getElementById: () => ({ textContent: JSON.stringify(manifest) }),
-    });
-    for (const multiple of [false, true]) {
+        ],
+      };
+      vi.stubGlobal("document", {
+        getElementById: () => ({ textContent: JSON.stringify(manifest) }),
+      });
+
       const html = render(
         field({
-          inputType: multiple ? "entryList" : "entry",
-          type: multiple ? "json" : "string",
+          inputType,
+          type,
           referenceTarget: {
             kind: "entry",
             scope: { entryTypes: ["post"] },
@@ -326,11 +331,12 @@ describe("MetaBoxField reference pickers", () => {
         }),
         multiple ? [] : null,
       );
+
       expect(
         /data-slot="dialog-description"[^>]*>([^<]*)</.exec(html)?.[1],
       ).toBe("Search Posts");
-    }
-  });
+    },
+  );
 });
 
 describe("MetaBoxField sortable rows", () => {

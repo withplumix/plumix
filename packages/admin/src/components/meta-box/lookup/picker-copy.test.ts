@@ -1,7 +1,3 @@
-import {
-  GENERIC_ENTRY_TYPE_LABELS,
-  GENERIC_TERM_TAXONOMY_LABELS,
-} from "@/lib/type-labels.js";
 import { describe, expect, test } from "vitest";
 
 import type {
@@ -27,34 +23,16 @@ function entryType(
   } as EntryTypeManifestEntry;
 }
 
-function pick(
-  labels: Record<string, unknown>,
-): Record<(typeof KEYS)[number], unknown> {
-  return Object.fromEntries(KEYS.map((key) => [key, labels[key]])) as Record<
-    (typeof KEYS)[number],
-    unknown
-  >;
-}
-
-/** Each label's source message, so a test reads the English copy. */
-function messages(copy: object): Record<string, string | undefined> {
-  return Object.fromEntries(
-    Object.entries(copy).map(([key, label]) => [
-      key,
-      typeof label === "string"
-        ? label
-        : (label as { message?: string }).message,
-    ]),
-  );
-}
-
-const KEYS = [
-  "searchItems",
-  "notFound",
-  "noMatch",
-  "loadingItems",
-  "loadErrorItems",
-] as const;
+const GENERIC_COPY = {
+  searchItems: { id: "type.generic.searchItems", message: "Search…" },
+  notFound: { id: "type.generic.notFound", message: "Nothing yet" },
+  noMatch: { id: "type.generic.noMatch", message: "No matches" },
+  loadingItems: { id: "type.generic.loadingItems", message: "Loading…" },
+  loadErrorItems: {
+    id: "type.generic.loadErrorItems",
+    message: "Couldn’t load. Try again.",
+  },
+};
 
 const POST_LABELS = {
   searchItems: { id: "blog.post.searchItems", message: "Search Posts" },
@@ -81,7 +59,7 @@ describe("referencePickerCopy", () => {
     const manifest: PlumixManifest = { entryTypes: [entryType("page")] };
     expect(
       referencePickerCopy("entry", { entryTypes: ["page"] }, manifest),
-    ).toEqual(pick(GENERIC_ENTRY_TYPE_LABELS));
+    ).toEqual(GENERIC_COPY);
   });
 
   test("an entry field scoped to two types uses the generic labels", () => {
@@ -90,7 +68,7 @@ describe("referencePickerCopy", () => {
     };
     expect(
       referencePickerCopy("entry", { entryTypes: ["post", "page"] }, manifest),
-    ).toEqual(pick(GENERIC_ENTRY_TYPE_LABELS));
+    ).toEqual(GENERIC_COPY);
   });
 
   test("a term field scoped to one taxonomy uses that taxonomy's labels", () => {
@@ -105,18 +83,19 @@ describe("referencePickerCopy", () => {
     };
     expect(
       referencePickerCopy("term", { termTaxonomies: ["tag"] }, manifest),
-    ).toEqual({ ...pick(GENERIC_TERM_TAXONOMY_LABELS), ...labels });
+    ).toEqual({ ...GENERIC_COPY, ...labels });
   });
 
   test("a user field names users", () => {
-    const copy = referencePickerCopy("user", { roles: ["admin"] }, {});
-    expect(messages(copy)).toEqual({
-      searchItems: "Search users",
-      notFound: "No users yet",
-      noMatch: "No users match",
-      loadingItems: "Loading users…",
-      loadErrorItems: "Couldn’t load users. Try again.",
-    });
+    expect(referencePickerCopy("user", { roles: ["admin"] }, {})).toMatchObject(
+      {
+        searchItems: { message: "Search users" },
+        notFound: { message: "No users yet" },
+        noMatch: { message: "No users match" },
+        loadingItems: { message: "Loading users…" },
+        loadErrorItems: { message: "Couldn’t load users. Try again." },
+      },
+    );
   });
 
   test("a plugin's lookup kind uses the noun-less generic labels", () => {
@@ -125,7 +104,19 @@ describe("referencePickerCopy", () => {
     };
     expect(
       referencePickerCopy("media", { entryTypes: ["post"] }, manifest),
-    ).toEqual(pick(GENERIC_ENTRY_TYPE_LABELS));
+    ).toEqual(GENERIC_COPY);
+  });
+});
+
+describe("referencePickerCopy for a scope that names no known type", () => {
+  test("an entry field scoped to a type the manifest lacks uses the generic labels", () => {
+    expect(referencePickerCopy("entry", { entryTypes: ["ghost"] }, {})).toEqual(
+      GENERIC_COPY,
+    );
+  });
+
+  test("a term field with no taxonomy uses the generic labels", () => {
+    expect(referencePickerCopy("term", undefined, {})).toEqual(GENERIC_COPY);
   });
 });
 
