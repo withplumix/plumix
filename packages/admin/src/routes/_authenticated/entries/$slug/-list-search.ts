@@ -1,12 +1,19 @@
 import * as v from "valibot";
 
+import type { EntryStatus } from "@plumix/core/manifest";
 import {
   ENTRY_LIST_ORDER_COLUMNS,
   ENTRY_STATUSES,
 } from "@plumix/core/manifest";
 
-const STATUS_FILTER_VALUES = [...ENTRY_STATUSES, "all"] as const;
-export type StatusFilter = (typeof STATUS_FILTER_VALUES)[number];
+const LEADING_STATUS: EntryStatus = "published";
+
+export const STATUS_FILTER_VALUES = [
+  "all",
+  LEADING_STATUS,
+  ...ENTRY_STATUSES.filter((status) => status !== LEADING_STATUS),
+] as const;
+export type StatusFilter = "all" | EntryStatus;
 
 export type OrderBy = (typeof ENTRY_LIST_ORDER_COLUMNS)[number];
 

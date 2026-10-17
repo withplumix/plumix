@@ -61,7 +61,7 @@ import {
   SelectValue,
 } from "@plumix/admin-ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
-import { ENTRY_STATUSES, entryTypeCapability } from "@plumix/core/manifest";
+import { entryTypeCapability } from "@plumix/core/manifest";
 
 import type {
   AuthorFilter,
@@ -70,7 +70,10 @@ import type {
   StatusFilter,
 } from "./-list-search.js";
 import { EntriesBulkBar } from "./-entries-bulk-bar.js";
-import { entriesListSearchSchema } from "./-list-search.js";
+import {
+  entriesListSearchSchema,
+  STATUS_FILTER_VALUES,
+} from "./-list-search.js";
 
 type Entry = WithResolvedMeta<StoredEntry>;
 type Term = WithResolvedMeta<StoredTerm>;
@@ -246,13 +249,10 @@ const M = {
 const STATUS_FILTER_OPTIONS: {
   value: StatusFilter;
   label: MessageDescriptor;
-}[] = [
-  { value: "all", label: M.statusAll },
-  ...ENTRY_STATUSES.map((status) => ({
-    value: status,
-    label: ENTRY_STATUS_LABEL[status],
-  })),
-];
+}[] = STATUS_FILTER_VALUES.map((value) => ({
+  value,
+  label: value === "all" ? M.statusAll : ENTRY_STATUS_LABEL[value],
+}));
 
 function buildColumns({
   activeOrderBy,
