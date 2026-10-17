@@ -256,6 +256,37 @@ describe("dropDemoTables", () => {
     expect(pragma.rows[0]?.foreign_keys).toBe(1);
   });
 
+  test("drops tables that reference each other inside a transaction", async () => {
+    const client = createClient({ url: ":memory:" });
+    await client.execute("PRAGMA foreign_keys = ON");
+    await client.executeMultiple(`
+      CREATE TABLE left_side (
+        id INTEGER PRIMARY KEY,
+        right_id INTEGER REFERENCES right_side(id) ON DELETE set null
+      );
+      CREATE TABLE right_side (
+        id INTEGER PRIMARY KEY,
+        left_id INTEGER REFERENCES left_side(id) ON DELETE cascade
+      );
+    `);
+
+    const transaction = await client.transaction("write");
+    await dropDemoTables({
+      async exec(sql) {
+        await transaction.execute(sql);
+      },
+      async query(sql) {
+        return (await transaction.execute(sql)).rows;
+      },
+    });
+    await transaction.commit();
+
+    const remaining = await client.execute(
+      "SELECT name FROM sqlite_master WHERE type = 'table'",
+    );
+    expect(remaining.rows).toHaveLength(0);
+  });
+
   test("is a no-op on an empty database", async () => {
     const sql = memoryExecutor();
     await expect(dropDemoTables(sql)).resolves.toBeUndefined();
