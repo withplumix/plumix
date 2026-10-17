@@ -158,7 +158,7 @@ The act of capturing an entry's current state into a revision. Not the row itsel
 What a writer loaded and is editing: an entry, term, settings group or user as it stood when read. A write made from a copy must say which state it was taken from.
 
 **Concurrency token**:
-The opaque value that names the state a copy was taken from, called `etag` in every API and sent back as `ifMatch`. Every editorial change moves it forward; a write carrying one that is no longer current is a conflict.
+The opaque value that names the state a copy was taken from, called `etag` in every API and sent back as `ifMatch`. Every write to the resource moves it forward; a write carrying one that is no longer current is a conflict.
 _Avoid_: version, revision (a revision is a stored snapshot), timestamp (what it is made of is not the contract).
 
 **Conflict**:
