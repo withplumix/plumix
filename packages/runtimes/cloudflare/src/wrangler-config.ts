@@ -11,14 +11,29 @@ export interface D1BindingEntry {
   readonly binding?: string;
   readonly database_name?: string;
   readonly database_id?: string;
+  /** The database `wrangler dev` opens in place of `database_id`. */
+  readonly preview_database_id?: string;
+}
+
+/** A block's `previews`: absent, a Worker Preview takes the top level's. */
+interface WranglerPreviews {
+  readonly d1Databases: readonly D1BindingEntry[];
+}
+
+interface WranglerEnvironment {
+  readonly name: string;
+  readonly d1Databases: readonly D1BindingEntry[];
+  readonly previews?: WranglerPreviews;
 }
 
 /** Wrangler's config search order — first match wins. */
 const WRANGLER_FILENAMES = ["wrangler.jsonc", "wrangler.json", "wrangler.toml"];
 
-interface LoadedWranglerConfig {
+export interface LoadedWranglerConfig {
   readonly filename: string;
   readonly d1Databases: readonly D1BindingEntry[];
+  readonly previews?: WranglerPreviews;
+  readonly environments: readonly WranglerEnvironment[];
   readonly compatibilityDate?: string;
   readonly accountId?: string;
   /** Whether Workers Logs keeps the deployed Worker's logs. */
@@ -42,16 +57,7 @@ export function loadWranglerConfig(cwd: string): LoadedWranglerConfig | null {
       ? parseToml(text)
       : parseJsoncStrict(text, filename);
 
-    const rawD1 = (parsed as { d1_databases?: unknown }).d1_databases;
-    const d1Databases: D1BindingEntry[] = Array.isArray(rawD1)
-      ? rawD1.filter(
-          (entry): entry is D1BindingEntry =>
-            typeof entry === "object" &&
-            entry !== null &&
-            !Array.isArray(entry),
-        )
-      : [];
-
+    const previews = previewsOf(parsed);
     const { compatibility_date: compatibilityDate, account_id: accountId } =
       parsed as { compatibility_date?: unknown; account_id?: unknown };
     const { observability, cache } = parsed as {
@@ -60,7 +66,9 @@ export function loadWranglerConfig(cwd: string): LoadedWranglerConfig | null {
     };
     return {
       filename,
-      d1Databases,
+      d1Databases: d1DatabasesOf(parsed),
+      ...(previews === undefined ? {} : { previews }),
+      environments: environmentsOf(parsed),
       observabilityEnabled: isEnabled(observability),
       workersCachingEnabled: isEnabled(cache),
       ...(typeof compatibilityDate === "string" ? { compatibilityDate } : {}),
@@ -68,6 +76,36 @@ export function loadWranglerConfig(cwd: string): LoadedWranglerConfig | null {
     };
   }
   return null;
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function d1DatabasesOf(block: unknown): D1BindingEntry[] {
+  const raw = isObject(block) ? block.d1_databases : undefined;
+  return Array.isArray(raw)
+    ? raw.filter((entry): entry is D1BindingEntry => isObject(entry))
+    : [];
+}
+
+function previewsOf(block: unknown): WranglerPreviews | undefined {
+  const previews = isObject(block) ? block.previews : undefined;
+  if (!isObject(previews)) return undefined;
+  return { d1Databases: d1DatabasesOf(previews) };
+}
+
+function environmentsOf(parsed: unknown): WranglerEnvironment[] {
+  const env = isObject(parsed) ? parsed.env : undefined;
+  if (!isObject(env)) return [];
+  return Object.entries(env).map(([name, block]) => {
+    const previews = previewsOf(block);
+    return {
+      name,
+      d1Databases: d1DatabasesOf(block),
+      ...(previews === undefined ? {} : { previews }),
+    };
+  });
 }
 
 function isEnabled(block: unknown): boolean {

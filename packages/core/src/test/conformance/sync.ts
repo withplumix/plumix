@@ -69,6 +69,7 @@ function openOptions(target: SyncTarget): OpenSyncEndOptions {
         migrationsTable: "__drizzle_migrations_core",
       },
     ],
+    targetValues: {},
   };
 }
 

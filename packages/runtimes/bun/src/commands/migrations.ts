@@ -1,3 +1,4 @@
+import { relative } from "node:path";
 import type { MigrationDatabase, RuntimeMigrations } from "plumix/cli";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 
@@ -13,7 +14,10 @@ function settle<T>(work: () => T): Promise<T> {
   });
 }
 
-function migrationDatabase(client: BunSqliteClient): MigrationDatabase {
+function migrationDatabase(
+  client: BunSqliteClient,
+  summary: string,
+): MigrationDatabase {
   const drizzle = drizzleBunSqlite(client, {});
   return {
     drizzle,
@@ -42,6 +46,7 @@ function migrationDatabase(client: BunSqliteClient): MigrationDatabase {
       settle(() => {
         client.close();
       }),
+    target: { remote: false, summary, notes: [] },
   };
 }
 
@@ -50,7 +55,6 @@ function migrationDatabase(client: BunSqliteClient): MigrationDatabase {
  * root.
  */
 export const migrations: RuntimeMigrations = {
-  remote: false,
   legacyTable: "__drizzle_migrations",
   open({ cwd, config, location }) {
     const database = config.database;
@@ -61,6 +65,11 @@ export const migrations: RuntimeMigrations = {
     }
     const path =
       location === "memory" ? ":memory:" : databaseFile(database.config, cwd);
-    return Promise.resolve(migrationDatabase(openBunSqlite(path)));
+    return Promise.resolve(
+      migrationDatabase(
+        openBunSqlite(path),
+        location === "memory" ? "memory" : `local · ${relative(cwd, path)}`,
+      ),
+    );
   },
 };

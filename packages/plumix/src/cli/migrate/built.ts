@@ -97,12 +97,19 @@ export async function applyBuiltMigrations({
   const db = await migrations.open({
     cwd,
     config,
-    location: "local",
+    location: "site",
     binding: undefined,
+    targetValues: {},
   });
   try {
     await adoptLegacyDatabase(db, owners, [], migrations.legacyTable, () =>
-      migrations.open({ cwd, config, location: "memory", binding: undefined }),
+      migrations.open({
+        cwd,
+        config,
+        location: "memory",
+        binding: undefined,
+        targetValues: {},
+      }),
     );
     await applyOwners(db, owners);
     await applyDataMigrations(

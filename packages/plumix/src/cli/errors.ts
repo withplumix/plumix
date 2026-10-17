@@ -10,14 +10,15 @@ type PlumixCliErrorCode =
   | "cron_run_missing_expression"
   | "cron_run_unknown_schedule"
   | "unknown_subcommand"
+  | "unknown_option"
   | "runtime_commands_not_found"
   | "runtime_commands_load_failed"
   | "migrate_generate_no_drizzle_kit"
   | "migrate_generate_failed"
   | "migrate_invalid_arguments"
   | "migrate_runtime_unsupported"
-  | "migrate_remote_unsupported"
   | "migrate_fresh_remote"
+  | "migrate_unconfirmed"
   | "migrate_fresh_no_wipe"
   | "migrate_schema_module_unresolved"
   | "migrate_owner_history_missing"
@@ -59,6 +60,19 @@ type PlumixCliErrorCode =
  * its own subclass rather than borrowing these codes.
  */
 export class PlumixCliError extends CliError<PlumixCliErrorCode> {
+  static unknownOption(ctx: {
+    command: string;
+    option: string;
+    runtime: string;
+  }): PlumixCliError {
+    return new PlumixCliError(
+      "unknown_option",
+      `plumix ${ctx.command} takes no ${ctx.option} on the ${ctx.runtime} runtime`,
+      "Run `plumix --help` for the options this site's runtime adds.",
+      undefined,
+    );
+  }
+
   static unknownCommand(ctx: { command: string }): PlumixCliError {
     return new PlumixCliError(
       "unknown_command",
@@ -230,7 +244,7 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
     return new PlumixCliError(
       "migrate_invalid_arguments",
       "plumix migrate was given an argument it does not take",
-      "Usage: `plumix migrate [fresh | status | generate] [--remote] [--binding <name>]`.",
+      "Usage: `plumix migrate [fresh | status | generate] [--binding <name>] [--dry-run] [--yes]`, plus the target options `plumix --help` lists for the runtime.",
       ctx.cause,
     );
   }
@@ -244,20 +258,21 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
     );
   }
 
-  static migrateRemoteUnsupported(ctx: { runtime: string }): PlumixCliError {
+  static migrateFreshRemote(): PlumixCliError {
     return new PlumixCliError(
-      "migrate_remote_unsupported",
-      `--remote has no database to reach on the ${ctx.runtime} runtime`,
-      "Run `plumix migrate` where the database file lives, without `--remote`.",
+      "migrate_fresh_remote",
+      "plumix migrate fresh deletes the local database only and refuses a target option",
+      "Nothing was touched. Run `plumix migrate` with the target option to apply pending migrations to that database.",
       undefined,
     );
   }
 
-  static migrateFreshRemote(): PlumixCliError {
+  /** Refused after the plan prints and before anything is written. */
+  static migrateUnconfirmed(): PlumixCliError {
     return new PlumixCliError(
-      "migrate_fresh_remote",
-      "plumix migrate fresh deletes the local database only and refuses --remote",
-      "Nothing was touched. Run `plumix migrate --remote` to apply pending migrations to the remote database.",
+      "migrate_unconfirmed",
+      "plumix migrate writes to a deployed database and has no terminal to confirm it in",
+      "Nothing was changed. Pass `--dry-run` to see the plan, then `--yes` to apply it.",
       undefined,
     );
   }

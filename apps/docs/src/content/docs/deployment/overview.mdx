@@ -93,7 +93,7 @@ This is the path from a scaffolded recipe site to a live one. It assumes a site 
    plumix deploy
    ```
 
-   Core and every plugin that owns tables ship their own migration history. `plumix deploy` applies each one's pending migrations, and the site's own, to the D1 database `wrangler.jsonc` names, through wrangler's remote bindings, so it needs `wrangler login` or an API token, as wrangler does. Then it runs `wrangler deploy` with your arguments appended. When a migration fails, or the site's own tables are ahead of its `migrations/`, it stops before `wrangler deploy` runs.
+   Core and every plugin that owns tables ship their own migration history. `plumix deploy` builds the Worker, then applies each one's pending migrations, and the site's own, to the D1 database `wrangler.jsonc` names for the environment, through wrangler's remote bindings, so it needs `wrangler login` or an API token, as wrangler does. Then it runs `wrangler deploy` with your arguments appended. When a migration fails, or the site's own tables are ahead of its `migrations/`, it stops before `wrangler deploy` runs.
 
 5. **Set the secrets your resolvers read.** One command per key.
 

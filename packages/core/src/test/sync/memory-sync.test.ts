@@ -24,6 +24,7 @@ function openOptions(target: "local" | "remote"): OpenSyncEndOptions {
         migrationsTable: "__drizzle_migrations_core",
       },
     ],
+    targetValues: {},
   };
 }
 
@@ -63,6 +64,7 @@ describe("memorySync", () => {
           migrationsTable: "__drizzle_migrations_core",
         },
       ],
+      targetValues: {},
     });
 
     await expect(

@@ -109,6 +109,21 @@ export async function applyDataMigrations(
 }
 
 /** Each owner that declares data migrations, with what it applied and has pending. */
+/** Each owner that declares data migrations, with the ones it has pending. */
+export async function reportDataPending(
+  db: MigrationDatabase,
+  owners: readonly DataMigrationOwner[],
+): Promise<void> {
+  const applied = await appliedDataMigrations(db);
+  for (const { owner, migrations } of owners) {
+    const done = applied.get(owner) ?? new Set<string>();
+    const pending = migrations.filter(({ name }) => !done.has(name));
+    if (pending.length === 0) continue;
+    report.info(`${owner}: ${String(pending.length)} data pending`);
+    for (const { name } of pending) report.info(`  pending ${name}`);
+  }
+}
+
 export async function reportDataStatus(
   db: MigrationDatabase,
   owners: readonly DataMigrationOwner[],

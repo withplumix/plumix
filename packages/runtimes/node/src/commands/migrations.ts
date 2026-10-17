@@ -1,4 +1,4 @@
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
 import type { MigrationDatabase, RuntimeMigrations } from "plumix/cli";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 
@@ -14,7 +14,10 @@ function settle<T>(work: () => T): Promise<T> {
   });
 }
 
-function migrationDatabase(client: NodeSqliteClient): MigrationDatabase {
+function migrationDatabase(
+  client: NodeSqliteClient,
+  summary: string,
+): MigrationDatabase {
   const drizzle = drizzleNodeSqlite(client, {});
   return {
     drizzle,
@@ -42,6 +45,7 @@ function migrationDatabase(client: NodeSqliteClient): MigrationDatabase {
       settle(() => {
         client.close();
       }),
+    target: { remote: false, summary, notes: [] },
   };
 }
 
@@ -50,7 +54,6 @@ function migrationDatabase(client: NodeSqliteClient): MigrationDatabase {
  * root.
  */
 export const migrations: RuntimeMigrations = {
-  remote: false,
   legacyTable: "__drizzle_migrations",
   open({ cwd, config, location }) {
     const database = config.database;
@@ -61,6 +64,11 @@ export const migrations: RuntimeMigrations = {
     }
     const path =
       location === "memory" ? ":memory:" : resolve(cwd, database.config.path);
-    return Promise.resolve(migrationDatabase(openNodeSqlite(path)));
+    return Promise.resolve(
+      migrationDatabase(
+        openNodeSqlite(path),
+        location === "memory" ? "memory" : `local · ${relative(cwd, path)}`,
+      ),
+    );
   },
 };

@@ -142,7 +142,7 @@ With it on, the forwarded scheme, host and rightmost client address are believed
 
 `nodeSqlite({ path })` opens the file for concurrent readers, which is what lets a backup, a test or a second process read it while the server writes. It creates any missing parent directories and opens the connection with WAL journaling, a five-second busy timeout, `synchronous = NORMAL` and foreign keys on.
 
-A relative `path` resolves against the process's working directory, and the server applies its migrations to that same file. `plumix migrate` and `plumix dev` resolve it against the project root, so start the server from the project root to serve the file you developed against. Two things to know before you move a file around. It does not move to Cloudflare: D1 is a database of its own, so a site moving there runs `plumix migrate --remote` against a new D1 database. And for a remote or shared database, `plumix/db/libsql` stays selectable: point it at Turso or a libsql server and leave `nodeSqlite` out. The server applies migrations to a `nodeSqlite` file only, so a libsql database takes its migrations from its own tooling.
+A relative `path` resolves against the process's working directory, and the server applies its migrations to that same file. `plumix migrate` and `plumix dev` resolve it against the project root, so start the server from the project root to serve the file you developed against. Two things to know before you move a file around. It does not move to Cloudflare: D1 is a database of its own, so a site moving there runs `plumix migrate --production` against a new D1 database. And for a remote or shared database, `plumix/db/libsql` stays selectable: point it at Turso or a libsql server and leave `nodeSqlite` out. The server applies migrations to a `nodeSqlite` file only, so a libsql database takes its migrations from its own tooling.
 
 ## Storage
 
@@ -261,7 +261,7 @@ Public pages are a different story. A process with no CDN in front of it renders
 
 ## Commands the runtime adds
 
-`plumix dev` applies pending migrations, then runs the Vite server described in the quickstart, and accepts `--port` and `--host`. `plumix build` builds the client first and the server second, because the server bakes the client's asset manifest into its bundle, copies every table owner's history into `dist/server/migrations/`, and bundles the plugins' and the site's data migrations into `dist/server/migrations/data-migrations.js`, which the server runs after the histories. `plumix migrate` applies every owner's migrations, then its data migrations, to the file `nodeSqlite` names; it has no `--remote`. There is no `deploy` and no `types`: the deployment artefact is a directory and a command.
+`plumix dev` applies pending migrations, then runs the Vite server described in the quickstart, and accepts `--port` and `--host`. `plumix build` builds the client first and the server second, because the server bakes the client's asset manifest into its bundle, copies every table owner's history into `dist/server/migrations/`, and bundles the plugins' and the site's data migrations into `dist/server/migrations/data-migrations.js`, which the server runs after the histories. `plumix migrate` applies every owner's migrations, then its data migrations, to the file `nodeSqlite` names; it takes no target option. There is no `deploy` and no `types`: the deployment artefact is a directory and a command.
 
 ## Related
 

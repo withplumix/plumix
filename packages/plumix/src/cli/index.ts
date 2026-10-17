@@ -14,7 +14,7 @@ import type {
 } from "@plumix/core";
 import { isCliError } from "@plumix/core/cli";
 
-import type { CommandGroup } from "./help.js";
+import type { CommandGroup, TargetOptionGroup } from "./help.js";
 import type { LoadedConfig } from "./load-config.js";
 import { cronCommand } from "./commands/cron.js";
 import { doctorCommand } from "./commands/doctor.js";
@@ -57,7 +57,7 @@ interface CliArgs {
 
 function parseCli(argv: readonly string[]): CliArgs {
   // Every token after the command name passes through unparsed so subcommand
-  // flags like `--remote` survive.
+  // flags like `--production` survive.
   let cwd = process.cwd();
   let config: string | undefined;
   let help = false;
@@ -282,7 +282,29 @@ async function printHelp(args: CliArgs): Promise<void> {
       `help: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
-  report.info(formatHelp(buildGroups(loaded, runtimeModule.commands)));
+  report.info(
+    formatHelp(
+      buildGroups(loaded, runtimeModule.commands),
+      loaded && targetOptionGroup(loaded, runtimeModule),
+    ),
+  );
+}
+
+function targetOptionGroup(
+  loaded: LoadedConfig,
+  runtimeModule: RuntimeCommandsModule,
+): TargetOptionGroup {
+  const takers = [
+    ...(runtimeModule.migrations?.targetOptions ? ["migrate"] : []),
+    ...(runtimeModule.sync?.targetOptions ? ["sync", "import"] : []),
+  ];
+  return {
+    label: `${loaded.config.runtime.name} runtime target options (${takers.join(", ")})`,
+    options: {
+      ...runtimeModule.migrations?.targetOptions,
+      ...runtimeModule.sync?.targetOptions,
+    },
+  };
 }
 
 function buildGroups(

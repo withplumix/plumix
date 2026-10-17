@@ -1,7 +1,6 @@
 import { existsSync, rmSync } from "node:fs";
 import { join, relative } from "node:path";
 import { createInterface } from "node:readline/promises";
-import { parseArgs } from "node:util";
 
 import type {
   CommandContext,
@@ -14,6 +13,7 @@ import type {
   SyncScope,
   SyncSettleReport,
   SyncTarget,
+  TargetOptionValues,
 } from "@plumix/core";
 import { assertSameHeads } from "@plumix/core/cli";
 
@@ -25,6 +25,7 @@ import { readDump, writeDump } from "../sync/dump.js";
 import { exportLocalAdmins, keepLocalAdmins } from "../sync/local-admins.js";
 import { rewriteUrls, siteUrl } from "../sync/rewrite-urls.js";
 import { resolveScopes } from "../sync/scopes.js";
+import { parseCommandArgs } from "../target-options.js";
 
 const DIRECTIONS: readonly SyncDirection[] = ["pull", "push"];
 
@@ -39,31 +40,28 @@ interface SyncArgs {
   readonly dryRun: boolean;
   readonly yes: boolean;
   readonly rewriteUrls: boolean;
+  readonly targetValues: TargetOptionValues;
 }
 
 function isDirection(value: string | undefined): value is SyncDirection {
   return DIRECTIONS.includes(value as SyncDirection);
 }
 
-function parseSyncArgs(argv: readonly string[]): SyncArgs {
-  let parsed;
-  try {
-    parsed = parseArgs({
-      args: [...argv],
-      options: {
-        scope: { type: "string", multiple: true },
-        url: { type: "string" },
-        binding: { type: "string" },
-        "dry-run": { type: "boolean", default: false },
-        yes: { type: "boolean", default: false },
-        "no-rewrite-urls": { type: "boolean", default: false },
-      },
-      allowPositionals: true,
-      strict: true,
-    });
-  } catch (cause) {
-    throw PlumixCliError.syncInvalidArguments({ cause });
-  }
+function parseSyncArgs(ctx: CommandContext): SyncArgs {
+  const parsed = parseCommandArgs(ctx.argv, {
+    command: "sync",
+    runtime: ctx.app.config.runtime.name,
+    options: {
+      scope: { type: "string", multiple: true },
+      url: { type: "string" },
+      binding: { type: "string" },
+      "dry-run": { type: "boolean", default: false },
+      yes: { type: "boolean", default: false },
+      "no-rewrite-urls": { type: "boolean", default: false },
+    },
+    targetOptions: ctx.runtimeSync?.targetOptions,
+    invalid: (cause) => PlumixCliError.syncInvalidArguments({ cause }),
+  });
   const [direction, extra] = parsed.positionals;
   if (!isDirection(direction)) {
     throw PlumixCliError.unknownSubcommand({
@@ -85,6 +83,7 @@ function parseSyncArgs(argv: readonly string[]): SyncArgs {
     dryRun: parsed.values["dry-run"],
     yes: parsed.values.yes,
     rewriteUrls: !parsed.values["no-rewrite-urls"],
+    targetValues: parsed.targetValues,
   };
 }
 
@@ -273,7 +272,7 @@ export async function closeAll(ends: readonly SyncEnd[]): Promise<void> {
 export const syncCommand: CommandDefinition = {
   describe: "Replace the local or the deployed site's data with the other's",
   async run(ctx) {
-    const args = parseSyncArgs(ctx.argv);
+    const args = parseSyncArgs(ctx);
     if (
       args.direction === "push" &&
       !args.yes &&
@@ -295,6 +294,7 @@ export const syncCommand: CommandDefinition = {
         binding: args.binding,
         url: args.url,
         owners,
+        targetValues: args.targetValues,
       });
     const ends: SyncEnd[] = [];
     try {

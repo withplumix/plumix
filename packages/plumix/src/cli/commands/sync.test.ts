@@ -200,6 +200,22 @@ describe("plumix sync, before anything opens", () => {
     expect(ends.calls).toEqual([]);
   });
 
+  test("an option the runtime's sync does not declare fails naming the runtime", async () => {
+    const ends = recording((await memorySyncEnds()).sync);
+
+    await expect(
+      syncCommand.run(
+        syncCtx(["pull", "--url", REMOTE, "--production"], ends.sync),
+      ),
+    ).rejects.toMatchObject({
+      code: "unknown_option",
+      message: expect.stringContaining(
+        `${base.config.runtime.name} runtime`,
+      ) as unknown,
+    });
+    expect(ends.calls).toEqual([]);
+  });
+
   test("an unknown direction fails naming pull and push", async () => {
     await expect(
       syncCommand.run(syncCtx(["sideways"], undefined)),
@@ -207,6 +223,25 @@ describe("plumix sync, before anything opens", () => {
       code: "unknown_subcommand",
       hint: expect.stringContaining("plumix sync push") as unknown,
     });
+  });
+});
+
+describe("plumix sync, a runtime's target options", () => {
+  test("hands the target options the runtime declares to each end it opens", async () => {
+    const { sync } = await seededEnds();
+    const targetValues: unknown[] = [];
+
+    await syncCommand.run(
+      syncCtx(["pull", "--url", REMOTE, "--env", "qa"], {
+        targetOptions: { env: { type: "string", description: "An env" } },
+        open: (options) => {
+          targetValues.push(options.targetValues);
+          return sync.open(options);
+        },
+      }),
+    );
+
+    expect(targetValues).toEqual([{ env: "qa" }, { env: "qa" }]);
   });
 });
 

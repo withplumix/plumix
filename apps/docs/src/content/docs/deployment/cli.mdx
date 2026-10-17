@@ -9,13 +9,13 @@ sidebar:
 
 import { Aside } from "@astrojs/starlight/components";
 
-`plumix <command> [options]` is the whole surface. Seven commands ship with the package itself; a runtime adapter contributes the rest — which is why `deploy` and `types` exist on Cloudflare and not on Node, and why `plumix --help` groups them separately.
+`plumix <command> [options]` is the whole surface. Seven commands ship with the package itself; a runtime adapter contributes the rest — which is why `deploy`, `preview` and `types` exist on Cloudflare and not on Node, and why `plumix --help` groups them separately.
 
 ## Overview
 
-`plumix migrate`, `plumix sync`, `plumix import`, `plumix cron`, `plumix meta`, `plumix doctor` and `plumix i18n` are built in: they run the same way regardless of which `runtime` a site configures. `dev`, `build`, and on some runtimes `deploy` and `types` come from `RuntimeAdapter.commandsModule` instead, so their behaviour is the adapter's to define. The same module tells `migrate` how to open the runtime's database, and whether it can reach a remote one, and gives `sync` and `import` their transport. [Runtime Adapters](/deployment/runtimes/#the-adapter) covers `commandsModule` from the package-author side.
+`plumix migrate`, `plumix sync`, `plumix import`, `plumix cron`, `plumix meta`, `plumix doctor` and `plumix i18n` are built in: they run the same way regardless of which `runtime` a site configures. `dev`, `build`, and on some runtimes `deploy` and `types` come from `RuntimeAdapter.commandsModule` instead, so their behaviour is the adapter's to define. The same module tells `migrate` how to open the runtime's database and declares the target options that name its deployed databases, and gives `sync` and `import` their transport. [Runtime Adapters](/deployment/runtimes/#the-adapter) covers `commandsModule` from the package-author side.
 
-`plumix --help` prints every command it can currently resolve, grouped by where it came from: a project with no `plumix.config.ts` in reach sees only the built-ins, because loading the runtime's commands means loading the config first.
+`plumix --help` prints every command it can currently resolve, grouped by where it came from: a project with no `plumix.config.ts` in reach sees only the built-ins, because loading the runtime's commands means loading the config first. Under them it lists the runtime's target options and the commands that take them.
 
 <Aside type="note" title="i18n runs without a config">
   Every other command loads `plumix.config.ts` before it runs — `i18n` does not,
@@ -60,11 +60,21 @@ plumix build
 
 ### `deploy`
 
-Cloudflare only. Runs the [check](#migrate) that the site's own tables are not ahead of its history, applies every owner's pending migrations and then every pending data migration to the deployed D1 database, as `plumix migrate --remote` does, then runs `wrangler deploy` with every argument after `deploy` appended unchanged. A failed check or apply exits non-zero, and `wrangler deploy` never runs.
+Cloudflare only. Builds the Worker with `CLOUDFLARE_ENV` set from `--env`, runs the [check](#migrate) that the site's own tables are not ahead of its history, prints the plan, and applies every owner's pending migrations and then every pending data migration to that environment's production D1 database without asking, as `plumix migrate --production --yes` (or `--env <name> --yes`) does. Then it runs `wrangler deploy`, with `--env <name>` when one was given and every other argument appended unchanged. Without `--env` it takes `CLOUDFLARE_ENV` as wrangler does, and an `--env` that disagrees with an already-set `CLOUDFLARE_ENV` fails with `deploy_env_conflict` before anything builds. A failed build, check or apply exits non-zero, and `wrangler deploy` never runs.
 
 ```bash
 plumix deploy
+plumix deploy --env qa
 plumix deploy --dry-run
+```
+
+### `preview`
+
+Cloudflare only. Does what `deploy` does against the environment's [Worker Previews](/deployment/cloudflare/#worker-previews) database, the `previews.d1_databases` that `plumix migrate --preview` reaches, then runs `wrangler preview` with `--env <name>` when one was given and every other argument, such as `--name`, appended unchanged.
+
+```bash
+plumix preview
+plumix preview --env qa --name feature-x
 ```
 
 ### `types`
@@ -81,9 +91,11 @@ Applies every table owner's pending migrations. The owners run in order: core fi
 
 After every owner's migrations it runs the [data migrations](/plugins/overview/#data-migrations): core's, then each plugin's `dataMigrations` module in the order of `plugins`, then the site's, from the module a plugin inside the site's package names and the config's own `dataMigrations`, a path relative to `plumix.config.ts`. The CLI imports them in its own process. Each is recorded under its owner and name in `__plumix_data_migrations` once its `up` resolves, and is skipped from then on. Each owner that declares any prints `<owner>: applied 1 data migration`, with each name under it, or `<owner>: data migrations up to date`. A duplicate name within one owner fails with `migrate_data_duplicate_name` before any data migration runs. An `up` that throws stops the run with `migrate_data_failed`, naming the owner, the data migration and the cause; it is not recorded, nothing after it runs, and the next run retries it. A module that does not resolve fails with `migrate_data_module_unresolved` before the database opens.
 
-Without a flag it applies to the local database. `--remote` applies to the deployed one, and only Cloudflare accepts it: it reaches the D1 database `wrangler.jsonc` names through wrangler's remote bindings, so it needs `wrangler login` or an API token, as wrangler does. On Node and Bun `--remote` fails, naming the runtime. On Cloudflare the local database is the D1 copy `plumix dev` uses, under `.wrangler/state/v3`. When the wrangler config declares more than one D1 binding, `--binding <name>` picks one, and the error without it names the bindings it found.
+Every run first prints the database it opened, such as `→ local · DB · site`. Without a target option it applies to the local database. The options that name a deployed database are the runtime's: Cloudflare declares `--production`, `--preview` and `--env <name>`, which the [Cloudflare guide](/deployment/cloudflare/#targets) covers, and reaches the D1 database the wrangler config names through wrangler's remote bindings, so it needs `wrangler login` or an API token, as wrangler does. Node and Bun declare none, so a target option fails there with `unknown_option`, naming the runtime. On Cloudflare the local database is the D1 copy `plumix dev` uses, under `.wrangler/state/v3`. When the wrangler config declares more than one D1 binding, `--binding <name>` picks one, and the error without it names the bindings it found.
 
-`plumix migrate fresh` deletes the local database and applies every owner from nothing. It deletes the paths the runtime names as its local state: `.wrangler/state` on Cloudflare, and `data` on Node and Bun, which takes uploads stored under `data/` with it. It refuses `--remote`. `plumix migrate status` lists each owner in order with its applied and pending migrations, each with its date and a short hash, then each owner that declares data migrations with its applied and pending ones by name.
+Before it writes to a deployed database, `plumix migrate` prints a plan: the target line, any note about it, and each owner's pending migrations and pending data migrations. It then asks for confirmation. `--yes` skips the question, `--dry-run` prints the plan and stops, and without a terminal to ask in and no `--yes` it fails with `migrate_unconfirmed`, having written nothing. A local run never asks. A script that ran `plumix migrate --remote` runs `plumix migrate --production --yes`.
+
+`plumix migrate fresh` deletes the local database and applies every owner from nothing. It deletes the paths the runtime names as its local state: `.wrangler/state` on Cloudflare, and `data` on Node and Bun, which takes uploads stored under `data/` with it. It refuses a target option. `plumix migrate status` lists each owner in order with its applied and pending migrations, each with its date and a short hash, then each owner that declares data migrations with its applied and pending ones by name.
 
 `plumix migrate`, `plumix migrate fresh` and `plumix deploy` never write a migration. When the site owns tables, each first checks its history: it runs `drizzle-kit generate` into a temporary copy of the site's `migrations/`, and if that writes anything, the site's tables are ahead of their history. The command then fails with `migrate_site_drifted` before it deletes, opens or deploys anything, naming the files a generate would write; run `plumix migrate generate`, or `plumix dev`, and commit what it writes. A site that owns no tables never drifts.
 
@@ -91,7 +103,8 @@ Without a flag it applies to the local database. `--remote` applies to the deplo
 
 ```bash
 plumix migrate
-plumix migrate --remote
+plumix migrate --production --dry-run
+plumix migrate --env qa --preview --yes
 plumix migrate fresh
 plumix migrate status
 plumix migrate generate
@@ -103,7 +116,7 @@ The first `plumix migrate` against a database set up by an earlier release adopt
 
 Replaces the local or the deployed site's data with the other's. `plumix sync pull` copies the deployed site into the local database; `plumix sync push` copies the local database to the deployed site. Each named scope is replaced whole, never merged, with every row under its own id. [Moving data between environments](/deployment/sync/) covers the scopes, the dump, how references survive and what runs afterwards.
 
-`--url <origin>` names the deployed site and is required. `--scope` names a scope, once per scope: `content` (the default), `media`, `users` (only with `content`) or `plugin:<id>`. `--dry-run` prints, per table, what the sync would replace, add and remove, then stops. The source's URLs inside JSON content are rewritten to the target's origin and base path; `--no-rewrite-urls` turns that off. A push asks for confirmation unless `--yes` is passed, and fails with `sync_push_unconfirmed` when there is no terminal to ask in. Both ends must have applied the same migrations; otherwise the sync fails with `sync_migrations_differ` before it exports anything. On a runtime whose commands module exports no `sync`, it fails with `sync_runtime_unsupported`.
+`--url <origin>` names the deployed site and is required. `--scope` names a scope, once per scope: `content` (the default), `media`, `users` (only with `content`) or `plugin:<id>`. `--dry-run` prints, per table, what the sync would replace, add and remove, then stops. The source's URLs inside JSON content are rewritten to the target's origin and base path; `--no-rewrite-urls` turns that off. A push asks for confirmation unless `--yes` is passed, and fails with `sync_push_unconfirmed` when there is no terminal to ask in. Both ends must have applied the same migrations; otherwise the sync fails with `sync_migrations_differ` before it exports anything. On a runtime whose commands module exports no `sync`, it fails with `sync_runtime_unsupported`. A runtime's `sync` may declare target options that name which deployed database the remote end reaches; `sync` and `import` accept them as `migrate` does, and fail with `unknown_option` on any other.
 
 ```bash
 plumix sync pull --url https://example.com --dry-run
@@ -154,7 +167,7 @@ Prints a diagnostic snapshot: the resolved config path, the runtime and database
 plumix doctor
 ```
 
-Under `deploy:` it then prints what the runtime finds in the project's deploy config, one finding per line. `ok` means the setting is right as it stands. `warn` means a deploy would run without something, and the line under it gives the fix. On Cloudflare, doctor warns when `wrangler.jsonc` leaves Workers Logs off. On Node and Bun it reports where the server's logs go.
+Under `deploy:` it then prints what the runtime finds in the project's deploy config, one finding per line. `ok` means the setting is right as it stands. `warn` means a deploy would run without something, and the line under it gives the fix. On Cloudflare, doctor warns when `wrangler.jsonc` leaves Workers Logs off, then lists every D1 database a target can reach: the top level's, the top-level `previews`, and each environment's own and its previews, noting when they are inherited from the top level. It shows a `preview_database_id` labelled "wrangler dev only", since no Plumix command targets it, and warns about an environment or a `previews` block that binds no D1 database. On Node and Bun it reports where the server's logs go.
 
 ```text
   deploy:
