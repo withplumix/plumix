@@ -1415,7 +1415,7 @@ msgid "metaBox.repeater.done"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
+#: src/lib/entry-status-labels.ts
 msgctxt "entry status"
 msgid "entries.list.statusFilter.draft"
 msgstr "Чернетка"
@@ -2650,7 +2650,7 @@ msgid "editor.plainForm.publish"
 msgstr "Опублікувати"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
+#: src/lib/entry-status-labels.ts
 msgid "entries.list.statusFilter.published"
 msgstr "Опубліковано"
 
@@ -2903,7 +2903,7 @@ msgid "profile.passkeys.rename.pending"
 msgstr "Збереження…"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
+#: src/lib/entry-status-labels.ts
 msgid "entries.list.statusFilter.scheduled"
 msgstr "Заплановано"
 
@@ -3736,7 +3736,7 @@ msgid "entries.list.row.trash"
 msgstr "У кошик"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
+#: src/lib/entry-status-labels.ts
 msgctxt "entry status"
 msgid "entries.list.statusFilter.trash"
 msgstr "Кошик"

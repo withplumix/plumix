@@ -49,13 +49,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@plumix/admin-ui/select";
+import { USER_ROLES } from "@plumix/core/manifest";
 import { vMessage } from "@plumix/core/validation";
 
-import {
-  isUserRole,
-  USER_ROLES,
-  USERS_LIST_DEFAULT_SEARCH,
-} from "./-constants.js";
+import { isUserRole, USERS_LIST_DEFAULT_SEARCH } from "./-constants.js";
 import { describeInviteError } from "./-invite-errors.js";
 
 /** Descriptors used outside JSX — error setters, copy-button aria label. */

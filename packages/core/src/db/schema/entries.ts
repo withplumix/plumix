@@ -4,16 +4,11 @@ import { index, sqliteTable, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-valibot";
 
 import type { JsonObject } from "../../json.js";
+import { ENTRY_STATUSES } from "../../entries/contract/status.js";
 import { users } from "./users.js";
 
-export const ENTRY_STATUSES = [
-  "draft",
-  "published",
-  "scheduled",
-  "trash",
-] as const;
-
-export type EntryStatus = (typeof ENTRY_STATUSES)[number];
+export type { EntryStatus } from "../../entries/contract/status.js";
+export { ENTRY_STATUSES } from "../../entries/contract/status.js";
 
 /**
  * Not `JsonObject`, unlike `meta`: content goes from the request straight into

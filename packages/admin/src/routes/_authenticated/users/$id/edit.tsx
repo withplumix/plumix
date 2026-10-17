@@ -77,14 +77,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@plumix/admin-ui/select";
-import { seedFromMetaBoxes } from "@plumix/core/manifest";
+import { seedFromMetaBoxes, USER_ROLES } from "@plumix/core/manifest";
 import { idPathParam } from "@plumix/core/validation";
 
-import {
-  isUserRole,
-  USER_ROLES,
-  USERS_LIST_DEFAULT_SEARCH,
-} from "../-constants.js";
+import { isUserRole, USERS_LIST_DEFAULT_SEARCH } from "../-constants.js";
 
 type User = WithResolvedMeta<StoredUser>;
 

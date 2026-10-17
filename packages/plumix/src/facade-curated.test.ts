@@ -88,6 +88,7 @@ const CORE_WITHHELD: readonly Withholding[] = [
       "entryCreateInputSchema",
       "entryGetInputSchema",
       "entryListInputSchema",
+      "ENTRY_LIST_ORDER_COLUMNS",
       "entryTrashInputSchema",
       "entryUpdateInputSchema",
       "settingsGetInputSchema",

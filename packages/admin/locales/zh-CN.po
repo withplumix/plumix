@@ -1415,7 +1415,7 @@ msgid "metaBox.repeater.done"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
+#: src/lib/entry-status-labels.ts
 msgctxt "entry status"
 msgid "entries.list.statusFilter.draft"
 msgstr "草稿"
@@ -2650,7 +2650,7 @@ msgid "editor.plainForm.publish"
 msgstr "发布"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
+#: src/lib/entry-status-labels.ts
 msgid "entries.list.statusFilter.published"
 msgstr "已发布"
 
@@ -2903,7 +2903,7 @@ msgid "profile.passkeys.rename.pending"
 msgstr "保存中…"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
+#: src/lib/entry-status-labels.ts
 msgid "entries.list.statusFilter.scheduled"
 msgstr "已计划"
 
@@ -3736,7 +3736,7 @@ msgid "entries.list.row.trash"
 msgstr "移至回收站"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
+#: src/lib/entry-status-labels.ts
 msgctxt "entry status"
 msgid "entries.list.statusFilter.trash"
 msgstr "回收站"

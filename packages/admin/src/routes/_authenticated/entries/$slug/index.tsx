@@ -9,6 +9,7 @@ import { MultiSelect } from "@/components/form/multi-select.js";
 import { DebouncedSearchInput } from "@/components/form/search-input.js";
 import { hasCap } from "@/lib/caps.js";
 import { toDate } from "@/lib/dates.js";
+import { ENTRY_STATUS_LABEL } from "@/lib/entry-status-labels.js";
 import { findEntryTypeBySlug, findTermTaxonomyByName } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { buildFilterTermOptions } from "@/lib/terms.js";
@@ -60,9 +61,16 @@ import {
   SelectValue,
 } from "@plumix/admin-ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
-import { entryTypeCapability } from "@plumix/core/manifest";
+import { ENTRY_STATUSES, entryTypeCapability } from "@plumix/core/manifest";
 
+import type {
+  AuthorFilter,
+  Order,
+  OrderBy,
+  StatusFilter,
+} from "./-list-search.js";
 import { EntriesBulkBar } from "./-entries-bulk-bar.js";
+import { entriesListSearchSchema } from "./-list-search.js";
 
 type Entry = WithResolvedMeta<StoredEntry>;
 type Term = WithResolvedMeta<StoredTerm>;
@@ -77,76 +85,6 @@ const rowDestructiveClassName = cn(
   buttonVariants({ variant: "destructive-row", size: "xs" }),
   "h-auto p-0 font-normal hover:bg-transparent dark:hover:bg-transparent",
 );
-
-/**
- * Local: importing core's runtime symbol would pull drizzle into the admin
- * bundle.
- */
-const ENTRY_STATUSES: readonly EntryStatus[] = [
-  "draft",
-  "published",
-  "scheduled",
-  "trash",
-];
-const STATUS_FILTER_VALUES = [...ENTRY_STATUSES, "all"] as const;
-type StatusFilter = (typeof STATUS_FILTER_VALUES)[number];
-
-/**
- * Local copy of `ENTRY_LIST_ORDER_COLUMNS`; unlike above, drift fails only at
- * runtime, server-side.
- */
-const ORDER_BY_VALUES = [
-  "updated_at",
-  "published_at",
-  // SQL column name (orderBy picklist code, not a display label) —
-  // single-token English word that collides with real chrome
-  // elsewhere; narrow disable beats widening the workspace regex.
-  // eslint-disable-next-line lingui/no-unlocalized-strings
-  "title",
-  "sort_order",
-] as const;
-type OrderBy = (typeof ORDER_BY_VALUES)[number];
-
-const ORDER_VALUES = ["asc", "desc"] as const;
-type Order = (typeof ORDER_VALUES)[number];
-
-const AUTHOR_VALUES = ["all", "mine"] as const;
-type AuthorFilter = (typeof AUTHOR_VALUES)[number];
-
-/**
- * `looseObject` keeps unknown keys verbatim so per-taxonomy filters
- * land on the URL as `?category=foo&tag=bar` without requiring the
- * schema to enumerate every taxonomy a plugin might register.
- */
-const searchSchema = v.looseObject({
-  page: v.optional(
-    v.fallback(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
-    1,
-  ),
-  status: v.optional(
-    v.fallback(v.picklist(STATUS_FILTER_VALUES), "all"),
-    "all",
-  ),
-  // Free-text search. Empty string coerces to `undefined` so the URL stays
-  // clean (`?q=` doesn't linger after the user clears the input).
-  q: v.optional(
-    v.fallback(
-      v.pipe(
-        v.string(),
-        v.trim(),
-        v.maxLength(200),
-        v.transform((value) => (value.length === 0 ? undefined : value)),
-      ),
-      undefined,
-    ),
-  ),
-  author: v.optional(v.fallback(v.picklist(AUTHOR_VALUES), "all"), "all"),
-  orderBy: v.optional(
-    v.fallback(v.picklist(ORDER_BY_VALUES), "updated_at"),
-    "updated_at",
-  ),
-  order: v.optional(v.fallback(v.picklist(ORDER_VALUES), "desc"), "desc"),
-});
 
 const STATUS_VARIANT: Record<
   EntryStatus,
@@ -174,24 +112,6 @@ const M = {
   statusAll: defineMessage({
     id: "entries.list.statusFilter.all",
     message: "All",
-  }),
-  statusPublished: defineMessage({
-    id: "entries.list.statusFilter.published",
-    message: "Published",
-  }),
-  statusDraft: defineMessage({
-    id: "entries.list.statusFilter.draft",
-    message: "Draft",
-    context: "entry status",
-  }),
-  statusScheduled: defineMessage({
-    id: "entries.list.statusFilter.scheduled",
-    message: "Scheduled",
-  }),
-  statusTrash: defineMessage({
-    id: "entries.list.statusFilter.trash",
-    message: "Trash",
-    context: "entry status",
   }),
   authorAll: defineMessage({
     id: "entries.list.authorFilter.all",
@@ -328,10 +248,10 @@ const STATUS_FILTER_OPTIONS: {
   label: MessageDescriptor;
 }[] = [
   { value: "all", label: M.statusAll },
-  { value: "published", label: M.statusPublished },
-  { value: "draft", label: M.statusDraft },
-  { value: "scheduled", label: M.statusScheduled },
-  { value: "trash", label: M.statusTrash },
+  ...ENTRY_STATUSES.map((status) => ({
+    value: status,
+    label: ENTRY_STATUS_LABEL[status],
+  })),
 ];
 
 function buildColumns({
@@ -473,7 +393,7 @@ function buildColumns({
 }
 
 export const Route = createFileRoute("/_authenticated/entries/$slug/")({
-  validateSearch: (search) => v.parse(searchSchema, search),
+  validateSearch: (search) => v.parse(entriesListSearchSchema, search),
   beforeLoad: ({ params }): { entryType: EntryTypeManifestEntry } => {
     const entryType = findEntryTypeBySlug(params.slug);
     if (!entryType) {
@@ -490,7 +410,7 @@ export const Route = createFileRoute("/_authenticated/entries/$slug/")({
  * array the server expects for multi-term filtering.
  */
 function parseTermFilters(
-  search: Readonly<v.InferOutput<typeof searchSchema>>,
+  search: Readonly<v.InferOutput<typeof entriesListSearchSchema>>,
   taxonomyNames: readonly string[],
 ): Record<string, string[]> {
   const out: Record<string, string[]> = {};
