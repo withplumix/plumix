@@ -637,6 +637,24 @@ describe("magic-link verify route", () => {
     expect(verifyResp.headers.get("set-cookie")).toContain("plumix_session=");
   });
 
+  test("with magic links off, a token issued earlier signs nobody in", async () => {
+    const h = await createDispatcherHarness();
+    const user = await h.factory.user.create({ email: "alice@example.com" });
+    const { token } = await h.factory.authToken.create({
+      userId: user.id,
+      email: "alice@example.com",
+    });
+
+    const response = await h.dispatch(
+      getRequest(`/_plumix/auth/magic-link/verify?token=${token}`),
+    );
+
+    expect(response.headers.get("location")).toContain(
+      "magic_link_error=token_invalid",
+    );
+    expect(response.headers.get("set-cookie")).toBeNull();
+  });
+
   test("rejects an unknown token with token_invalid", async () => {
     const { mailer } = captureMailer();
     const h = await createDispatcherHarness({

@@ -358,6 +358,19 @@ describe("a sign-in method's redirectTo", () => {
     expect(response.headers.get("location")).toBe(expected);
   });
 
+  test("an empty ?redirectTo= lands on the admin, not the site root", async () => {
+    const h = await createDispatcherHarness({ config: fixtureSite() });
+    await h.factory.user.create({ email: "alice@example.com" });
+
+    const response = await h.dispatch(
+      fetchStart("alice@example.com", "?redirectTo="),
+    );
+
+    expect(await response.json()).toMatchObject({
+      redirectTo: "/_plumix/admin",
+    });
+  });
+
   test("with none, a sign-in under /blog lands on the admin", async () => {
     const h = await createDispatcherHarness({
       config: fixtureSite({ basePath: "/blog" }),
@@ -502,6 +515,21 @@ describe("a sign-in method's kernel", () => {
     expect(seen.spyCallsAtAfterSession).toBe(0);
     spy.assertCalledOnce();
     expect(spy.lastArgs?.[1]).toEqual({ method: "probe", firstSignIn: false });
+  });
+
+  test("an account proof signs in the user it names, not the first user", async () => {
+    const h = await createDispatcherHarness({ config: probeSite() });
+    await h.factory.user.create({ email: "alice@example.com" });
+    const bob = await h.factory.user.create({ email: "bob@example.com" });
+
+    const response = await h.dispatch(
+      probeRequest(`account/${bob.id}`, {
+        method: "POST",
+        headers: { "x-plumix-request": "1" },
+      }),
+    );
+
+    expect(await response.json()).toMatchObject({ userId: bob.id });
   });
 
   test("refuses an account proof whose user is gone as 403 link_broken", async () => {

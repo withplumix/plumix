@@ -302,6 +302,28 @@ describe("resolveExternalIdentity — provider account", () => {
     expect(result).toMatchObject({ created: false, user: { id: seeded.id } });
   });
 
+  test("a link signs in the user it belongs to, not the first user", async () => {
+    const db = await createTestDb();
+    await userFactory.transient({ db }).create({ email: "alice@example.com" });
+    const bob = await userFactory.transient({ db }).create({
+      email: "bob@example.com",
+    });
+    await oauthAccountFactory.transient({ db }).create({
+      provider: "github",
+      providerAccountId: "gh-123",
+      userId: bob.id,
+    });
+
+    const result = await resolveExternalIdentity(db, {
+      meta: {},
+      email: "bob@example.com",
+      emailVerified: true,
+      providerAccount: github,
+    });
+
+    expect(result.user.id).toBe(bob.id);
+  });
+
   test("a link to a disabled user is refused as account_disabled", async () => {
     const db = await createTestDb();
     const seeded = await userFactory.transient({ db }).create({
@@ -405,29 +427,58 @@ describe("resolveExternalIdentity — provider account", () => {
     expect(links).toHaveLength(2);
   });
 
-  test("two sign-ins for one provider account tolerate the link race", async () => {
+  test("a sign-up that loses the link race still reports the user it created", async () => {
     const db = await createTestDb();
-    const seeded = await userFactory.transient({ db }).create({
-      email: "alice@example.com",
-      role: "editor",
+    await userFactory.transient({ db }).create({ role: "admin" });
+    await allowedDomainFactory.transient({ db }).create({
+      domain: "example.com",
+      defaultRole: "subscriber",
+      isEnabled: true,
     });
-    const input = {
+    // A concurrent sign-in finds alice by email the moment her row exists and
+    // links the account before this sign-up's own link insert runs.
+    await db.run(sql`
+      CREATE TRIGGER concurrent_link AFTER INSERT ON users
+      WHEN NEW.email = 'alice@example.com'
+      BEGIN
+        INSERT INTO oauth_accounts (provider, provider_account_id, user_id)
+        VALUES ('github', 'gh-123', NEW.id);
+      END
+    `);
+
+    const result = await resolveExternalIdentity(db, {
       meta: {},
       email: "alice@example.com",
       emailVerified: true,
       providerAccount: github,
-    };
-
-    const [a, b] = await Promise.all([
-      resolveExternalIdentity(db, input),
-      resolveExternalIdentity(db, input),
-    ]);
-
-    expect([a.user.id, b.user.id]).toEqual([seeded.id, seeded.id]);
-    const links = await db.query.oauthAccounts.findMany({
-      where: eq(oauthAccounts.providerAccountId, "gh-123"),
     });
-    expect(links).toHaveLength(1);
+
+    expect(result).toMatchObject({
+      created: true,
+      user: { email: "alice@example.com" },
+    });
+  });
+
+  test("a link insert that fails for another reason fails the sign-in", async () => {
+    const db = await createTestDb();
+    await userFactory.transient({ db }).create({ email: "alice@example.com" });
+    await db.run(sql`
+      CREATE TRIGGER refuse_links BEFORE INSERT ON oauth_accounts
+      BEGIN SELECT RAISE(ABORT, 'link storage unavailable'); END
+    `);
+
+    const signIn = resolveExternalIdentity(db, {
+      meta: {},
+      email: "alice@example.com",
+      emailVerified: true,
+      providerAccount: github,
+    });
+
+    // Drizzle's own frame says only "Failed query"; the cause carries why.
+    await expect(signIn).rejects.toHaveProperty(
+      "cause.message",
+      expect.stringContaining("link storage unavailable"),
+    );
   });
 });
 

@@ -1135,6 +1135,19 @@ describe("passkey verify answers", () => {
     });
   });
 
+  test("register verify fires credential:created for the new passkey", async () => {
+    const h = await createDispatcherHarness();
+    const created = h.spyAction("credential:created");
+
+    await enrolledPasskey(h, "admin@cms.example");
+
+    const user = await h.db.query.users.findFirst({
+      where: eq(users.email, "admin@cms.example"),
+    });
+    created.assertCalledOnce();
+    expect(created.lastArgs?.[0]).toMatchObject({ userId: user?.id });
+  });
+
   test("login verify answers the user and the admin to go to", async () => {
     const h = await createDispatcherHarness();
     const enrolled = await enrolledPasskey(h, "admin@cms.example");
@@ -1194,6 +1207,37 @@ describe("passkey verify answers", () => {
 
     response.assertStatus(403);
     expect(await response.json()).toEqual({ error: "link_broken" });
+  });
+
+  test("invite verify fires user:registered and credential:created for the invitee", async () => {
+    const h = await createDispatcherHarness();
+    const { user: invitee, token } = await seedInvite(h);
+    const optionsRes = await h.fetch("/_plumix/auth/invite/register/options", {
+      json: { token },
+    });
+    const { options } = await optionsRes.json<{
+      options: { challenge: string };
+    }>();
+    const registered = h.spyAction("user:registered");
+    const created = h.spyAction("credential:created");
+
+    await h.fetch("/_plumix/auth/invite/register/verify", {
+      json: {
+        token,
+        response: buildRegisterVerifyEnvelope({
+          keyPair: generatePasskeyKeyPair(),
+          rpId: "cms.example",
+          origin: "https://cms.example",
+          challenge: options.challenge,
+          credentialId: randomCredentialId(),
+        }),
+      },
+    });
+
+    registered.assertCalledOnce();
+    expect(registered.lastArgs?.[0]).toMatchObject({ id: invitee.id });
+    created.assertCalledOnce();
+    expect(created.lastArgs?.[0]).toMatchObject({ userId: invitee.id });
   });
 
   test("invite verify answers the user and the admin to go to", async () => {
