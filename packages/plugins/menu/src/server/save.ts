@@ -1,3 +1,4 @@
+import type { TreeNode } from "./buildTree.js";
 import type { MenuTargetLookups } from "./resolveItemStates.js";
 import type {
   MenuItemEntryMeta,
@@ -5,6 +6,7 @@ import type {
   MenuItemTermMeta,
 } from "./types.js";
 import { MenuPluginError } from "../errors.js";
+import { buildTree } from "./buildTree.js";
 
 /**
  * `parentIndex` must be less than the item's own index, or `null` for a root,
@@ -121,6 +123,42 @@ export function flattenSaveItems(
     });
   }
   return { ok: true, items: out };
+}
+
+interface StoredItem {
+  readonly id: number;
+  readonly parentId: number | null;
+  readonly sortOrder: number;
+}
+
+/**
+ * True when an item sits at `maxDepth` levels or deeper and is either new or
+ * deeper than it was stored. Items already that deep may stay.
+ */
+export function hasNewNestingPastLimit(
+  items: readonly FlattenedItem[],
+  stored: readonly StoredItem[],
+  maxDepth: number,
+): boolean {
+  const storedDepths = depthsOf(stored);
+  return items.some((item) => {
+    if (item.depth < maxDepth) return false;
+    const storedDepth =
+      item.id === null ? undefined : storedDepths.get(item.id);
+    return storedDepth === undefined || item.depth > storedDepth;
+  });
+}
+
+function depthsOf(stored: readonly StoredItem[]): Map<number, number> {
+  const depths = new Map<number, number>();
+  const visit = (nodes: readonly TreeNode<StoredItem>[], depth: number) => {
+    for (const node of nodes) {
+      depths.set(node.id, depth);
+      visit(node.children, depth + 1);
+    }
+  };
+  visit(buildTree(stored).tree, 0);
+  return depths;
 }
 
 export function resolveParentIds(

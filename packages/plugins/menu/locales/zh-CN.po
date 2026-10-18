@@ -197,16 +197,6 @@ msgstr "保存菜单"
 
 #. js-lingui-explicit-id
 #: src/admin/MenuItemEditor.tsx
-msgid "plugin.menu.itemEditor.maxDepthLabel"
-msgstr "最大深度"
-
-#. js-lingui-explicit-id
-#: src/admin/MenuItemEditor.tsx
-msgid "plugin.menu.itemEditor.maxDepthRejected"
-msgstr "无法设置在当前最深项目以下。"
-
-#. js-lingui-explicit-id
-#: src/admin/MenuItemEditor.tsx
 msgid "plugin.menu.itemEditor.deleteButton"
 msgstr "删除菜单"
 

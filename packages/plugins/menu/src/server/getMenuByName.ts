@@ -13,6 +13,7 @@ import type { TreeNode } from "./buildTree.js";
 import type { MenuItemMeta, ResolvedMenu, ResolvedMenuItem } from "./types.js";
 import { buildTree } from "./buildTree.js";
 import { menuTag } from "./cache-tags.js";
+import { MENU_DEPTH_HARD_CAP } from "./depth.js";
 import { isMenuEligible } from "./eligibility.js";
 import { itemOwnLabel } from "./label.js";
 import { parseMenuItemMeta } from "./parseMeta.js";
@@ -42,7 +43,11 @@ export async function getMenuByName(
   options?: { readonly location?: string | null },
 ): Promise<ResolvedMenu | null> {
   const [resolved] = await resolveMenus(ctx, [
-    { slug: name, location: options?.location ?? null },
+    {
+      slug: name,
+      location: options?.location ?? null,
+      maxDepth: MENU_DEPTH_HARD_CAP,
+    },
   ]);
   return resolved ?? null;
 }
@@ -54,7 +59,11 @@ export async function getMenusByName(
   const unique = [...new Set(names)];
   const resolved = await resolveMenus(
     ctx,
-    unique.map((slug) => ({ slug, location: null })),
+    unique.map((slug) => ({
+      slug,
+      location: null,
+      maxDepth: MENU_DEPTH_HARD_CAP,
+    })),
   );
   return Object.fromEntries(
     unique.map((slug, i) => [slug, resolved[i] ?? null]),
@@ -64,6 +73,8 @@ export async function getMenusByName(
 interface MenuRequest {
   readonly slug: string;
   readonly location: string | null;
+  /** Levels to resolve; deeper items are skipped, not resolved and dropped. */
+  readonly maxDepth: number;
 }
 
 /**
@@ -85,13 +96,13 @@ export async function resolveMenus(
   );
 
   return Promise.all(
-    requests.map(async ({ location }, i) => {
+    requests.map(async ({ location, maxDepth }, i) => {
       const data = clusters[i];
       if (!data) return null;
       tagCdnEntry(ctx, [menuTag(data.term.id), ...linkedEntryTags(ctx, data)]);
       const { tree } = buildTree(data.rows);
       const resolved = await Promise.all(
-        tree.map((node) => toResolvedItem(ctx, node, data.refs)),
+        tree.map((node) => toResolvedItem(ctx, node, data.refs, maxDepth - 1)),
       );
       const items = resolved.filter(
         (item): item is ResolvedMenuItem => item !== null,
@@ -294,14 +305,18 @@ async function toResolvedItem(
   ctx: AppContext,
   node: TreeNode<MenuItemRow>,
   refs: ResolvedRefs,
+  levelsBelow: number,
 ): Promise<ResolvedMenuItem | null> {
   const meta = parseMenuItemMeta(node.meta);
   if (!meta) return null;
   const resolved = resolveByKind(ctx, node, meta, refs);
   if (!resolved) return null;
 
+  const childNodes = levelsBelow > 0 ? node.children : [];
   const childResults = await Promise.all(
-    node.children.map((child) => toResolvedItem(ctx, child, refs)),
+    childNodes.map((child) =>
+      toResolvedItem(ctx, child, refs, levelsBelow - 1),
+    ),
   );
   const children = childResults.filter(
     (child): child is ResolvedMenuItem => child !== null,

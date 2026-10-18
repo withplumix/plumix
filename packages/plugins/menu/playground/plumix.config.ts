@@ -1,8 +1,11 @@
+import type { ReactNode } from "react";
+import { createElement as h } from "react";
 import { plumix } from "plumix";
 import { auth } from "plumix/auth";
 import { definePlugin } from "plumix/plugin";
-import { defineTheme } from "plumix/theme";
+import { defineTemplate, defineTheme, fallback, frontPage } from "plumix/theme";
 
+import type { ResolvedMenuItem } from "@plumix/plugin-menu/server";
 import { menu } from "@plumix/plugin-menu";
 import {
   cloudflare,
@@ -28,6 +31,34 @@ const content = definePlugin("menu-playground-content", (setup) => {
   });
 });
 
+// The front page renders the "primary" location, so the e2e suite can see
+// where its `maxDepth` cuts the tree. Authored with `createElement` (no JSX)
+// so the config loads through jiti untransformed.
+function navList(items: readonly ResolvedMenuItem[], level: number): ReactNode {
+  return h(
+    "ul",
+    null,
+    items.map((item) =>
+      h(
+        "li",
+        { key: item.id, "data-testid": `nav-level-${String(level)}` },
+        item.label,
+        item.children.length > 0 ? navList(item.children, level + 1) : null,
+      ),
+    ),
+  );
+}
+
+const front = defineTemplate({
+  menus: ["primary"],
+  render: ({ menus }): ReactNode =>
+    h(
+      "nav",
+      { "data-testid": "primary-nav" },
+      menus?.primary ? navList(menus.primary.items, 0) : null,
+    ),
+});
+
 const deployOrigin = cloudflareDeployOrigin({
   workerName: "plumix-menu-playground",
   accountSubdomain: "local",
@@ -49,15 +80,17 @@ export default plumix({
     },
   }),
   // Locations are nav slots the theme renders; the e2e locations-tab
-  // canary assigns the Primary menu into "primary".
+  // canary assigns the Primary menu into "primary", which renders two levels.
   plugins: [
     content,
     menu({
       locations: {
-        primary: { label: "Primary Nav" },
+        primary: { label: "Primary Nav", maxDepth: 2 },
         footer: { label: "Footer" },
       },
     }),
   ],
-  theme: defineTheme({ templates: () => null }),
+  theme: defineTheme({
+    templates: [fallback(() => null), frontPage(front)],
+  }),
 });

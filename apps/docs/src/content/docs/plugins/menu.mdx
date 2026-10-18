@@ -74,7 +74,7 @@ Then:
    export const plugins: PlumixConfigInput["plugins"] = [
      menu({
        locations: {
-         primary: { label: "Primary" },
+         primary: { label: "Primary", maxDepth: 2 },
          footer: { label: "Footer", description: "Links under every page" },
        },
      }),
@@ -97,9 +97,25 @@ Then:
 
 ## Locations
 
-A location is a slot your theme renders, and the site declares its locations in `menu({ locations })`. The key is the location id, and the value carries a `label` and an optional `description` for the admin's Manage Locations tab.
+A location is a slot your theme renders, and the site declares its locations in `menu({ locations })`. The key is the location id, and the value carries a `label` and an optional `description` for the admin's Manage Locations tab, and an optional `maxDepth`.
 
-A location id starts with a lowercase letter and contains only lowercase letters, digits and hyphens, up to 64 characters. The label must not be empty. Either mistake throws at boot with an error that names the location.
+A location id starts with a lowercase letter and contains only lowercase letters, digits and hyphens, up to 64 characters. The label must not be empty. `maxDepth`, when set, is a whole number from 1 to 20. Any of these mistakes throws at boot with an error that names the location.
+
+`maxDepth` is how many levels the theme renders in that slot. A header that shows a single dropdown level declares `maxDepth: 2`:
+
+```ts no-typecheck
+import { menu } from "@plumix/plugin-menu";
+
+menu({
+  locations: {
+    header: { label: "Header", maxDepth: 2 },
+    footer: { label: "Footer", maxDepth: 1 },
+    sidebar: { label: "Sidebar" },
+  },
+});
+```
+
+The location owns the limit; a menu has none of its own. A menu's limit is the smallest `maxDepth` among the locations it is assigned to, or 5 when none of them declares one. The plugin works it out from the current config on every read and stores nothing, so changing a location's `maxDepth` or assigning a menu to another location takes effect at once.
 
 The admin can assign a menu only to a declared location. Each location holds at most one menu, and one menu can fill several locations. The plugin stores the binding in the site's settings, where it outlives the config. A location you remove and later declare again gets its menu back.
 
@@ -117,7 +133,7 @@ Each entry and term tab searches as you type. Entries match by title, and terms 
 
 A linked item's label follows the linked entry's title or term's name, so a rename shows up in the menu without editing it. Type a navigation label in the item's details to use your own instead, and clear it to go back to the linked title.
 
-Items nest into a tree up to the menu's max depth. The depth is 5 by default, and you can set it per menu anywhere from 1 to 20. The editor refuses to lower it below the depth the menu already uses. A single save holds at most 500 items.
+Items nest into a tree up to the menu's limit, which the editor shows under the location checkboxes, such as "Up to 2 levels, set by the Header location". Dragging an item past that level stops it at the deepest level allowed, and the server refuses a save that nests an item deeper than the limit. When a limit drops after the menu was built, because a location's `maxDepth` changed or the menu was assigned to a stricter location, the items already deeper stay. The editor marks each one "Hidden in" the locations that don't render it, and the menu still saves, so long as no item moves further down. No menu nests deeper than 20 levels. A single save holds at most 500 items.
 
 A custom URL is either relative (starting with `/`, `#`, `?`, `./` or `../`) or absolute with an `http`, `https`, `mailto`, `tel` or `sms` scheme, the same schemes every Plumix link accepts (`LINK_SCHEMES` from `plumix/blocks`). Saving the menu refuses anything else, including `javascript:`, protocol-relative `//host` URLs and a bare `mailto:`, `tel:` or `sms:`.
 
@@ -218,6 +234,8 @@ A `ResolvedMenu` carries the menu's `termId`, `name`, `slug` and `items`. Each i
 - `isAncestor`, which is true when any item below it in this menu is current.
 - `target`, `rel` and `cssClasses`, from the stored item. The admin does not edit these today, and a `menu:item` filter can set them.
 - `children`, the nested items, already resolved the same way.
+
+A location renders as many levels as its `maxDepth` says. The plugin doesn't resolve the items below that, so they cost nothing, and the template never receives them. A location with no `maxDepth`, and a menu looked up by name, render every level.
 
 The plugin resolves links to entries and terms when the page renders, not when you save the menu. An entry or term item shows its own label when the editor set one, and the linked entry's title or the term's name otherwise. A label of only spaces counts as unset. Renaming a page renames every menu item that follows its title, with no need to re-save the menu, and the item's address follows the page whichever label it shows. An entry item shows only while its entry is published, so a draft added to a menu appears once it is published. The rendered menu leaves out an item whose target is unpublished, deleted, or of a type that is no longer eligible. Every item nested under it goes too.
 

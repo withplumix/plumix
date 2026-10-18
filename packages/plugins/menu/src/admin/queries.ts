@@ -136,6 +136,8 @@ export function useAssignLocation(): UseMutationResult<
     mutationFn: (input) => rpc.assignLocation(input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: MENU_LOCATIONS_KEY });
+      // A menu's depth limit comes from the locations it fills.
+      void queryClient.invalidateQueries({ queryKey: ["menu", "get"] });
     },
   });
 }

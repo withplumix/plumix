@@ -225,6 +225,92 @@ describe("getMenuForLocation", () => {
     });
   });
 
+  describe("a location's maxDepth", () => {
+    async function seedItem(
+      termId: number,
+      title: string,
+      parentId: number | null,
+    ): Promise<number> {
+      const entry = await entryFactory.transient({ db }).create({
+        type: "menu_item",
+        title,
+        slug: `mi-${title.toLowerCase()}`,
+        status: "published",
+        authorId,
+        parentId,
+        meta: { kind: "custom", url: `/${title.toLowerCase()}` },
+      });
+      await entryTermFactory
+        .transient({ db })
+        .create({ entryId: entry.id, termId, sortOrder: 0 });
+      return entry.id;
+    }
+
+    async function seedThreeLevelMenu(slug: string): Promise<void> {
+      const term = await factories.term.create({
+        taxonomy: "menu",
+        slug,
+        name: slug,
+      });
+      const top = await seedItem(term.id, "Top", null);
+      const second = await seedItem(term.id, "Second", top);
+      await seedItem(term.id, "Third", second);
+    }
+
+    async function ctxWithLocations(): Promise<AppContext> {
+      const hooks = new HookRegistry();
+      const registry = createPluginRegistry();
+      registerCoreLookupAdapters(registry);
+      await installPlugins({
+        hooks,
+        plugins: [
+          menu({
+            locations: {
+              header: { label: "Header", maxDepth: 2 },
+              sidebar: { label: "Sidebar" },
+            },
+          }),
+        ],
+        registry,
+      });
+      return ctxFor(db, { registry, hooks });
+    }
+
+    test("rendering a location returns only the levels it declares", async () => {
+      await seedThreeLevelMenu("main");
+      await bind("header", "main");
+      const locationsCtx = await ctxWithLocations();
+
+      const resolved = await getMenuForLocation(locationsCtx, "header");
+
+      const second = resolved?.items[0]?.children[0];
+      expect(second?.label).toBe("Second");
+      expect(second?.children).toEqual([]);
+    });
+
+    test("rendering a location that declares none returns every level", async () => {
+      await seedThreeLevelMenu("main");
+      await bind("sidebar", "main");
+      const locationsCtx = await ctxWithLocations();
+
+      const resolved = await getMenuForLocation(locationsCtx, "sidebar");
+
+      const third = resolved?.items[0]?.children[0]?.children[0];
+      expect(third?.label).toBe("Third");
+    });
+
+    test("resolving the menu by name returns every level", async () => {
+      await seedThreeLevelMenu("main");
+      await bind("header", "main");
+      const locationsCtx = await ctxWithLocations();
+
+      const resolved = await getMenuByName(locationsCtx, "main");
+
+      const third = resolved?.items[0]?.children[0]?.children[0];
+      expect(third?.label).toBe("Third");
+    });
+  });
+
   test("a fresh ctx does not share the cache", async () => {
     await seedMenuWithItem("main", "Home", "/");
     await bind("primary", "main");

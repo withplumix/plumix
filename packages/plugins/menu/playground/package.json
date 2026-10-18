@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Plumix consumer that wires only @plumix/plugin-menu — for worker-driven e2e + manual dogfooding",
+  "description": "Plumix consumer that wires only @plumix/plugin-menu \u2014 for worker-driven e2e + manual dogfooding",
   "license": "MIT",
   "scripts": {
     "build": "plumix build",
@@ -14,12 +14,14 @@
   "dependencies": {
     "@plumix/plugin-menu": "workspace:*",
     "@plumix/runtime-cloudflare": "workspace:*",
-    "plumix": "workspace:*"
+    "plumix": "workspace:*",
+    "react": "catalog:react"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:cloudflare",
     "@plumix/typescript-config": "workspace:*",
     "@types/node": "catalog:",
+    "@types/react": "catalog:react",
     "typescript": "catalog:",
     "wrangler": "catalog:cloudflare"
   }

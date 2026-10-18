@@ -197,16 +197,6 @@ msgstr "Menü speichern"
 
 #. js-lingui-explicit-id
 #: src/admin/MenuItemEditor.tsx
-msgid "plugin.menu.itemEditor.maxDepthLabel"
-msgstr "Maximale Tiefe"
-
-#. js-lingui-explicit-id
-#: src/admin/MenuItemEditor.tsx
-msgid "plugin.menu.itemEditor.maxDepthRejected"
-msgstr "Kann nicht unter das aktuell tiefste Element gesetzt werden."
-
-#. js-lingui-explicit-id
-#: src/admin/MenuItemEditor.tsx
 msgid "plugin.menu.itemEditor.deleteButton"
 msgstr "Menü löschen"
 

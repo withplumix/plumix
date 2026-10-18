@@ -1,10 +1,34 @@
-import type { AppContext } from "plumix/plugin";
+import type { AppContext, PluginRegistry } from "plumix/plugin";
 import { loadSettingsGroups, memoBatch } from "plumix/plugin";
 
-import type { ResolvedMenu } from "./types.js";
+import type { RegisteredMenuLocation, ResolvedMenu } from "./types.js";
+import { MENU_DEPTH_HARD_CAP } from "./depth.js";
 import { resolveMenus } from "./getMenuByName.js";
 
 const MENU_LOCATIONS_GROUP = "menu_locations";
+
+/**
+ * Keyed by the app's registry, so a theme's `getMenuForLocation(ctx, …)` call
+ * reads the locations its own install declared.
+ */
+const declaredLocations = new WeakMap<
+  PluginRegistry,
+  ReadonlyMap<string, RegisteredMenuLocation>
+>();
+
+export function rememberDeclaredLocations(
+  plugins: PluginRegistry,
+  locations: ReadonlyMap<string, RegisteredMenuLocation>,
+): void {
+  declaredLocations.set(plugins, locations);
+}
+
+function renderDepthFor(ctx: AppContext, location: string): number {
+  return (
+    declaredLocations.get(ctx.plugins)?.get(location)?.maxDepth ??
+    MENU_DEPTH_HARD_CAP
+  );
+}
 
 /**
  * `null` when the location is unbound or its menu was deleted. Memoized per
@@ -46,10 +70,12 @@ async function resolveLocations(
   const groups = await loadSettingsGroups(ctx, [MENU_LOCATIONS_GROUP]);
   const bindings = groups[MENU_LOCATIONS_GROUP] ?? {};
 
-  const bound: { location: string; slug: string }[] = [];
+  const bound: { location: string; slug: string; maxDepth: number }[] = [];
   for (const location of locations) {
     const slug = parseTermSlug(bindings[location]);
-    if (slug !== null) bound.push({ location, slug });
+    if (slug !== null) {
+      bound.push({ location, slug, maxDepth: renderDepthFor(ctx, location) });
+    }
   }
 
   const menus = await resolveMenus(ctx, bound);

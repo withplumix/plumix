@@ -1,6 +1,7 @@
 type MenuPluginErrorCode =
   | "invalid_location_id"
   | "location_label_empty"
+  | "invalid_location_max_depth"
   | "resolve_parent_ids_length_mismatch"
   | "menu_create_no_row_returned";
 
@@ -56,6 +57,17 @@ export class MenuPluginError extends Error {
       "location_label_empty",
       `registerMenuLocation("${ctx.id}"): \`label\` is required and must be a non-empty, non-whitespace string.`,
       ctx,
+    );
+  }
+
+  static invalidLocationMaxDepth(ctx: {
+    id: string;
+    hardCap: number;
+  }): MenuPluginError {
+    return new MenuPluginError(
+      "invalid_location_max_depth",
+      `registerMenuLocation("${ctx.id}"): \`maxDepth\` must be an integer from 1 to ${String(ctx.hardCap)}.`,
+      { id: ctx.id },
     );
   }
 

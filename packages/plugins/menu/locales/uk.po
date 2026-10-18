@@ -197,16 +197,6 @@ msgstr "Зберегти меню"
 
 #. js-lingui-explicit-id
 #: src/admin/MenuItemEditor.tsx
-msgid "plugin.menu.itemEditor.maxDepthLabel"
-msgstr "Максимальна глибина"
-
-#. js-lingui-explicit-id
-#: src/admin/MenuItemEditor.tsx
-msgid "plugin.menu.itemEditor.maxDepthRejected"
-msgstr "Не можна встановити нижче поточного найглибшого пункту."
-
-#. js-lingui-explicit-id
-#: src/admin/MenuItemEditor.tsx
 msgid "plugin.menu.itemEditor.deleteButton"
 msgstr "Видалити меню"
 
