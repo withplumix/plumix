@@ -108,7 +108,6 @@ export async function applyDataMigrations(
   }
 }
 
-/** Each owner that declares data migrations, with what it applied and has pending. */
 /** Each owner that declares data migrations, with the ones it has pending. */
 export async function reportDataPending(
   db: MigrationDatabase,
@@ -124,6 +123,7 @@ export async function reportDataPending(
   }
 }
 
+/** Each owner that declares data migrations, with what it applied and has pending. */
 export async function reportDataStatus(
   db: MigrationDatabase,
   owners: readonly DataMigrationOwner[],
