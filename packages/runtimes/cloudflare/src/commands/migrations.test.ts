@@ -573,11 +573,9 @@ describe("cloudflare migrations — a run from the command line", () => {
       targetValues: target,
     });
 
-  describe("against real local D1", () => {
-    // Each case starts miniflare for the migration and again for every run.
-    // Vitest reads the timeout as a test registers, so it wraps registration.
-    vi.setConfig({ testTimeout: 60_000 });
-
+  // Each case starts miniflare for the migration and again for every run. The
+  // contract's cases register in a nested describe, so the timeout is the suite's.
+  describe("against real local D1", { timeout: 60_000 }, () => {
     describeRunContract({
       open: () => {
         writeWrangler([D1_ENTRY]);
@@ -588,7 +586,6 @@ describe("cloudflare migrations — a run from the command line", () => {
         });
       },
     });
-    vi.resetConfig();
   });
 
   test("a local run is announced by its binding and database", async () => {
