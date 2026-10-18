@@ -71,6 +71,7 @@
     "@tiptap/extension-paragraph": "catalog:tiptap",
     "@tiptap/extension-text": "catalog:tiptap",
     "@tiptap/extensions": "catalog:tiptap",
+    "@tiptap/pm": "catalog:tiptap",
     "@tiptap/react": "catalog:tiptap",
     "zustand": "^5.0.15"
   },

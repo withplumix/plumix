@@ -381,6 +381,9 @@ catalogs:
     '@tiptap/extensions':
       specifier: ^3.31.4
       version: 3.31.4
+    '@tiptap/pm':
+      specifier: ^3.31.4
+      version: 3.31.4
     '@tiptap/react':
       specifier: ^3.31.4
       version: 3.31.4
@@ -863,6 +866,9 @@ importers:
       '@tiptap/extensions':
         specifier: catalog:tiptap
         version: 3.31.4(@tiptap/core@3.31.4(@tiptap/pm@3.31.4))(@tiptap/pm@3.31.4)
+      '@tiptap/pm':
+        specifier: catalog:tiptap
+        version: 3.31.4
       '@tiptap/react':
         specifier: catalog:tiptap
         version: 3.31.4(@floating-ui/dom@1.8.0)(@tiptap/core@3.31.4(@tiptap/pm@3.31.4))(@tiptap/pm@3.31.4)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -1081,6 +1087,9 @@ importers:
       '@tiptap/core':
         specifier: catalog:tiptap
         version: 3.31.4(@tiptap/pm@3.31.4)
+      '@tiptap/pm':
+        specifier: catalog:tiptap
+        version: 3.31.4
       '@valibot/to-json-schema':
         specifier: ^1.8.0
         version: 1.8.0(valibot@1.5.0(typescript@6.0.3))
