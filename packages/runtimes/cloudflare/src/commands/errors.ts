@@ -6,7 +6,11 @@ type CloudflareCliErrorCode =
   | "migrate_ambiguous_binding"
   | "migrate_unknown_binding"
   | "migrate_target_conflict"
-  | "deploy_env_conflict";
+  | "deploy_env_conflict"
+  | "sync_remote_target_missing"
+  | "sync_no_storage"
+  | "sync_author_missing"
+  | "sync_site_cannot_run";
 
 /** What to add to a wrangler config block that binds no D1 database. */
 export function addD1Hint(ctx: {
@@ -86,6 +90,47 @@ export class CloudflareCliError extends CliError<CloudflareCliErrorCode> {
       "migrate_unknown_binding",
       `${ctx.filename} declares no D1 binding "${ctx.binding}"`,
       `The D1 bindings it declares: ${ctx.bindings.join(", ") || "none"}.`,
+      undefined,
+    );
+  }
+
+  static syncRemoteTargetMissing(): CloudflareCliError {
+    return new CloudflareCliError(
+      "sync_remote_target_missing",
+      "A sync's deployed end needs the database it reaches named",
+      "Nothing was changed. Pass `--production`, `--preview` or `--env <name>`, as `plumix migrate` takes them.",
+      undefined,
+    );
+  }
+
+  static syncNoStorage(): CloudflareCliError {
+    return new CloudflareCliError(
+      "sync_no_storage",
+      "The media scope moves the storage slot's objects, and the site configures no storage",
+      'Add `storage: r2({ binding: "MEDIA" })` to plumix.config.ts, or sync without `--scope media`.',
+      undefined,
+    );
+  }
+
+  /** A dump's row names a user its authors do not list. */
+  static syncAuthorMissing(ctx: {
+    table: string;
+    column: string;
+    user: string;
+  }): CloudflareCliError {
+    return new CloudflareCliError(
+      "sync_author_missing",
+      `${ctx.table}.${ctx.column} references user ${ctx.user}, who is not among the dump's authors`,
+      "Nothing was changed. Export the dump again; one written by `plumix sync` lists every user its rows reference.",
+      undefined,
+    );
+  }
+
+  static syncSiteCannotRun(): CloudflareCliError {
+    return new CloudflareCliError(
+      "sync_site_cannot_run",
+      "The data was replaced, but the site's handler can't run the settle outside a request",
+      "The site's runtime handler drops `run`; settle the deployed site with `plumix sync` against it, or restore `run` in its `handler.wrap`.",
       undefined,
     );
   }

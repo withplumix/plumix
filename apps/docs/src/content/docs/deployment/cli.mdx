@@ -121,12 +121,12 @@ The first `plumix migrate` against a database set up by an earlier release adopt
 
 Replaces the local or the deployed site's data with the other's. `plumix sync pull` copies the deployed site into the local database; `plumix sync push` copies the local database to the deployed site. Each named scope is replaced whole, never merged, with every row under its own id. [Moving data between environments](/deployment/sync/) covers the scopes, the dump, how references survive and what runs afterwards.
 
-`--url <origin>` names the deployed site and is required. `--scope` names a scope, once per scope: `content` (the default), `media`, `users` (only with `content`) or `plugin:<id>`. `--dry-run` prints, per table, what the sync would replace, add and remove, then stops. The source's URLs inside JSON content are rewritten to the target's origin and base path; `--no-rewrite-urls` turns that off. A push asks for confirmation unless `--yes` is passed, and fails with `sync_push_unconfirmed` when there is no terminal to ask in. Both ends must have applied the same migrations; otherwise the sync fails with `sync_migrations_differ` before it exports anything. On a runtime whose commands module exports no `sync`, it fails with `sync_runtime_unsupported`. A runtime's `sync` may declare target options that name which deployed database the remote end reaches; `sync` and `import` accept them as `migrate` does, and fail with `unknown_option` on any other.
+`--url <origin>` names the deployed site and is required. `--scope` names a scope, once per scope: `content` (the default), `media`, `users` (only with `content`) or `plugin:<id>`. `--dry-run` prints, per table, what the sync would replace, add and remove, then stops. The source's URLs inside JSON content are rewritten to the target's origin and base path; `--no-rewrite-urls` turns that off. A push asks for confirmation unless `--yes` is passed, and fails with `sync_push_unconfirmed` when there is no terminal to ask in. Both ends must have applied the same migrations; otherwise the sync fails with `sync_migrations_differ` before it exports anything. On a runtime whose commands module exports no `sync`, it fails with `sync_runtime_unsupported`. A runtime's `sync` may declare target options that name which deployed database the remote end reaches; `sync` and `import` accept them as `migrate` does, and fail with `unknown_option` on any other. On Cloudflare they are `--production`, `--preview` and `--env <name>`, and the remote end needs one. A pull that failed goes on from the dump it left, exporting only what it had not.
 
 ```bash
-plumix sync pull --url https://example.com --dry-run
-plumix sync pull --url https://example.com --scope content --scope media
-plumix sync push --url https://example.com --yes
+plumix sync pull --url https://example.com --production --dry-run
+plumix sync pull --url https://example.com --production --scope content --scope media
+plumix sync push --url https://example.com --production --yes
 ```
 
 ### `import`

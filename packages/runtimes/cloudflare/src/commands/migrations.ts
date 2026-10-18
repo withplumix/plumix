@@ -53,7 +53,7 @@ function localBlock(config: LoadedWranglerConfig): D1Block {
   };
 }
 
-interface ChosenD1 {
+export interface ChosenD1 {
   readonly block: D1Block;
   readonly entry: D1BindingEntry & { binding: string };
 }
@@ -116,7 +116,7 @@ const NO_SLOTS: SlotEntries = { r2Buckets: [], kvNamespaces: [] };
  * Those the site's `storage` and `kv` slots name, which core checks are bound
  * before a run reaches the database.
  */
-function slotEntries(
+export function slotEntries(
   config: OpenRunOptions["config"],
   block: D1Block,
 ): SlotEntries {
@@ -182,7 +182,7 @@ function proxyOptions(
   };
 }
 
-function targetOf(
+export function targetOf(
   { block, entry }: ChosenD1,
   location: Reach,
 ): MigrationDatabaseTarget {
@@ -281,7 +281,7 @@ async function chooseD1(
 }
 
 /** A platform proxy over the chosen binding, removed with its config. */
-async function openProxy(
+export async function openProxy(
   cwd: string,
   chosen: ChosenD1,
   reach: Reach,
@@ -310,7 +310,7 @@ async function openProxy(
 }
 
 /** The target options and `--binding` name a database as `migrate` does. */
-async function chooseTarget(
+export async function chooseTarget(
   cwd: string,
   config: OpenRunOptions["config"],
   binding: string | undefined,

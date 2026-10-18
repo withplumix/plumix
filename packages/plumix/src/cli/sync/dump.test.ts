@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import type { DumpReader, SyncRow } from "@plumix/core";
 
-import { readDump, writeDump } from "./dump.js";
+import { readDump, readDumpProgress, writeDump } from "./dump.js";
 
 let dir: string;
 
@@ -200,5 +200,58 @@ describe("a sync dump", () => {
     await expect(readDump(dir)).rejects.toMatchObject({
       code: "sync_dump_invalid",
     });
+  });
+});
+
+describe("a dump an interrupted export left", () => {
+  // Stopped after `users` and one object, as a dropped connection leaves it.
+  async function interrupted(): Promise<void> {
+    const writer = writeDump(dir, HEADER);
+    await writer.table("users", rowsOf([{ id: 1, email: "a@example.com" }]));
+    await writer.object("a.txt", bodyOf("a"), "text/plain");
+  }
+
+  test("records the header and each table written whole", async () => {
+    await interrupted();
+
+    expect(await readDumpProgress(dir)).toEqual({
+      header: HEADER,
+      tables: [{ name: "users", rows: 1 }],
+      finished: false,
+    });
+  });
+
+  test("resumed, keeps its tables and objects without reading them and adds the rest", async () => {
+    await interrupted();
+    const kept = await readDumpProgress(dir);
+    const read: string[] = [];
+    const reading = (name: string, rows: readonly SyncRow[]) =>
+      (async function* () {
+        read.push(name);
+        yield* rowsOf(rows);
+      })();
+    const writer = writeDump(dir, HEADER, kept ?? undefined);
+
+    await writer.table("users", reading("users", [{ id: 9 }]));
+    await writer.table("credentials", reading("credentials", [{ id: "c" }]));
+    await writer.authors(rowsOf([]));
+    await writer.object("a.txt", bodyOf("changed"), "text/plain");
+    await writer.object("b.txt", bodyOf("b"));
+    await writer.finish();
+    const dump = await readDump(dir);
+
+    expect(read).toEqual(["credentials"]);
+    expect(await collect(dump.rows("users"))).toEqual([
+      { id: 1, email: "a@example.com" },
+    ]);
+    const objects = await collect(dump.objects());
+    expect(
+      await Promise.all(
+        objects.map(async (o) => [o.key, await new Response(o.body).text()]),
+      ),
+    ).toEqual([
+      ["a.txt", "a"],
+      ["b.txt", "b"],
+    ]);
   });
 });

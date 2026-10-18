@@ -341,11 +341,11 @@ Signing out takes one more piece. Clearing the Plumix session cookie leaves the 
 
 `plumix dev` boots Vite with `@cloudflare/vite-plugin` and takes `--port` and `--inspector-port`. `plumix build` builds the client environment first and the worker second, because the worker bakes the client's asset manifest into its bundle. `plumix types` forwards to `wrangler types` with your arguments appended. `plumix deploy` and `plumix preview` build the Worker for the environment `--env` names, run the check that the site's own tables are not ahead of its `migrations/`, apply every owner's pending migrations to that environment's database, and only then run `wrangler deploy` or `wrangler preview`. When the build, the check or a migration fails they exit non-zero and wrangler never runs.
 
-`plumix dev` applies every table owner's pending migrations to the local D1 copy it uses, under `.wrangler/state/v3`, before the dev server opens it. `plumix migrate` applies to that local copy too. Every remote command reaches D1 through wrangler's `getPlatformProxy`, so it needs `wrangler login` or an API token, as wrangler does. They open the binding your `d1()` slot names; `--binding <name>` picks another.
+`plumix dev` applies every table owner's pending migrations to the local D1 copy it uses, under `.wrangler/state/v3`, before the dev server opens it. `plumix migrate` applies to that local copy too. Every remote command reaches D1 through wrangler's `getPlatformProxy`, and `plumix sync` also through `wrangler d1 export` and `wrangler d1 execute`, so it needs `wrangler login` or an API token, as wrangler does. They open the binding your `d1()` slot names; `--binding <name>` picks another.
 
 ### Targets
 
-The wrangler config is where a Cloudflare site's databases are named, so `plumix migrate`, `plumix deploy` and `plumix preview` read their target from it, through wrangler's own config reader:
+The wrangler config is where a Cloudflare site's databases are named, so `plumix migrate`, `plumix sync`, `plumix import`, `plumix deploy` and `plumix preview` read their target from it, through wrangler's own config reader:
 
 ```bash
 plumix migrate                       # the local dev database
@@ -353,6 +353,7 @@ plumix migrate --production          # the production database
 plumix migrate --preview             # the Worker Previews database
 plumix migrate --env qa [--preview]  # a named environment's database
 plumix deploy | plumix preview       # migrate, then wrangler deploy | wrangler preview
+plumix sync pull --url https://example.com --production  # the production database's data, locally
 ```
 
 - `--production` is `env.production`'s `d1_databases` when the config defines an `env.production`, and the top level's otherwise.
@@ -362,7 +363,7 @@ plumix deploy | plumix preview       # migrate, then wrangler deploy | wrangler 
 
 A command connects to exactly the `database_id` of the block it resolved. A `preview_database_id` is the database `wrangler dev` opens, and no Plumix command targets it. When the block binds no D1 database, the command fails with `migrate_no_d1` before it connects, naming the block and the binding and giving the JSON to add. It never falls back to another block.
 
-Each command prints its target first, such as `→ production (top level) · DB · site-prod` or `→ preview (env.qa, previews inherited from top level) · DB · site-preview`. A remote `plumix migrate` then prints its plan and asks before it writes; `--yes` skips the question and `--dry-run` stops after the plan. A CI script runs `plumix migrate --production --yes`. `plumix doctor` lists every D1 database a target can reach.
+A sync's deployed end needs one of these options and fails with `sync_remote_target_missing` without it; [Moving data between environments](/deployment/sync/#on-cloudflare) covers how it moves D1 and the storage slot. Each command prints its target first, such as `→ production (top level) · DB · site-prod` or `→ preview (env.qa, previews inherited from top level) · DB · site-preview`. A remote `plumix migrate` then prints its plan and asks before it writes; `--yes` skips the question and `--dry-run` stops after the plan. A CI script runs `plumix migrate --production --yes`. `plumix doctor` lists every D1 database a target can reach.
 
 A QA environment has its own database:
 

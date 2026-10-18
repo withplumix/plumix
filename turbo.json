@@ -170,6 +170,8 @@
       // a 10-core box, slowest single test: 6607ms at 10, 2287ms at 2, 1237ms
       // at 1.
       "dependsOn": ["^topo"],
+      // Runs `@plumix/runtime-cloudflare`'s sync scale test at that many rows.
+      "env": ["PLUMIX_SYNC_SCALE_ROWS"],
       "outputLogs": "new-only"
     },
     "@plumix/e2e-ports#test:unit": {

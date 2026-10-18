@@ -18,17 +18,17 @@ The runtime does the moving. A runtime adapter's commands module exports `sync`,
 
 ## Quickstart
 
-See what a pull would change, then pull:
+See what a pull would change, then pull. On Cloudflare, `--production` names the deployed database (see [On Cloudflare](#on-cloudflare)):
 
 ```bash
-plumix sync pull --url https://example.com --dry-run
-plumix sync pull --url https://example.com
+plumix sync pull --url https://example.com --production --dry-run
+plumix sync pull --url https://example.com --production
 ```
 
 Push your local content and media, confirming at the prompt:
 
 ```bash
-plumix sync push --scope content --scope media --url https://example.com
+plumix sync push --scope content --scope media --url https://example.com --production
 ```
 
 ## Commands
@@ -43,6 +43,7 @@ plumix sync pull|push [--scope <scope>...] [--url <origin>] [--binding <name>] [
 - `--dry-run` prints what the sync would change and changes nothing.
 - `--yes` skips a push's confirmation prompt.
 - `--no-rewrite-urls` leaves the source's URLs in content as they are. See [URLs](#urls).
+- A runtime may add the options that name its deployed database, as `plumix migrate` takes them: `--production`, `--preview` and `--env <name>` on Cloudflare.
 
 A sync runs these steps in order:
 
@@ -100,6 +101,8 @@ A sync writes its dump under `.plumix/sync/<direction>-<timestamp>/` in your pro
 
 A dump is checked whenever it is read. An unknown format, a malformed manifest, a missing table file or a count that disagrees with the manifest fails with `sync_dump_invalid`, naming the file.
 
+While the export runs, `progress.json` records the dump's source, scopes and heads and each table written whole. A pull goes on from the newest dump a failed pull left whose source, scopes and heads match its own. It prints `Resuming from the dump at <path>: <tables> already exported`, keeps those tables and the objects the index already lists without reading them again, and exports the rest. When that dump's export had finished, it imports the dump without exporting at all. Delete the directory to start a pull afresh. A push never resumes: a failed one is undone with the snapshot it took.
+
 ## After a sync
 
 The target settles once per sync, on a pull and a push alike. Core's `settleSync` runs every `sync:after` listener, then purges the whole CDN through `purgeAll`. Each step runs whatever the others did. `@plumix/plugin-search` starts a rebuild of its index, and `@plumix/plugin-og` deletes its stored cards, when `content` was among the scopes.
@@ -108,10 +111,31 @@ When a step fails, the command fails with `sync_settle_failed`, says the data wa
 
 On the deployed site, the settle runs inside the site through `POST /_plumix/api/v1/system/sync/settle`, with a body of `{ scopes, direction }`. It needs an API token whose user holds `settings:manage`, answers `401` without a token and `403` without the capability, and answers with the report: `{ cdn, failures }`, where `cdn` is `purged`, `cannot-purge`, `failed` or `none`.
 
+The CLI calls it with `PLUMIX_API_TOKEN`, or, on a terminal, with a token the site's device flow mints once you approve it in the browser. With neither, a push fails with `sync_remote_token_missing` after its import, and a refused call fails with `sync_settle_refused`. Both say the data was replaced; set the token and sync again to repeat the steps after it.
+
 <Aside type="caution" title="A push replaces the deployed site's data">
   Run it with `--dry-run` first and read the counts, especially the rows outside
   the sync it would remove. The restore hint a push prints is how you undo it.
 </Aside>
+
+## On Cloudflare
+
+`@plumix/runtime-cloudflare`'s commands module exports the transport. The local end is the D1 database and the storage slot `plumix dev` uses, under `.wrangler/state/v3`, opened through wrangler's `getPlatformProxy`. The remote end is the deployed database `--production`, `--preview` or `--env <name>` names, resolved from the wrangler config as `plumix migrate` resolves it (see [Targets](/deployment/cloudflare/#targets)), and the deployed bucket the storage slot binds. Without one of them the sync fails with `sync_remote_target_missing` before it changes anything. `--binding` picks the D1 binding as `migrate` does.
+
+```bash
+plumix sync pull --url https://example.com --production
+plumix sync push --url https://qa.example.com --env qa --yes
+plumix import content.jsonl --url https://example.com --production
+```
+
+- **Target line.** The remote end prints its target first, such as `→ production (top level) · DB · site-prod`, with the note a shared previews database carries.
+- **Export.** A pull exports each table through D1's export API, as `wrangler d1 export --remote --no-schema --table <table>` runs it, so it needs `wrangler login` or an API token, as wrangler does. D1 serves no queries while an export runs. The local end reads its tables directly.
+- **Import.** The import is one script, a statement per line: the deletes, the added authors, then every row. A push runs it through D1's import API, as `wrangler d1 execute --remote --file` does, which loads it all or leaves the database as it was. A pull runs it on the local database the same way, in one call. Nothing splits it into batches.
+- **Snapshot.** A push first takes a D1 Time Travel bookmark and prints `wrangler d1 time-travel restore <database> --bookmark=<bookmark>`, which restores the database as it was before the import. Time Travel restores the database only, not the bucket's objects.
+- **Media.** The `media` scope copies every object of the storage slot, then deletes the target's others. Without a storage slot it fails with `sync_no_storage`. KV holds no scope's data and never travels.
+- **Progress.** Each table prints its row count as it is exported and imported, and each object its key.
+
+D1 caps one SQL statement at 100 KB, so a row whose `INSERT` is larger fails the push's import, which then leaves the database as it was. D1's export writes a line break in a string as `replace('…\n…','\n',char(10))`, so a pulled value holding both a line break and the two characters `\n` comes back with that `\n` turned into a line break too.
 
 ## Importing content
 
