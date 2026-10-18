@@ -273,20 +273,6 @@ export async function buildApp(
     throw ThemeRegistrationError.missingTheme();
   }
 
-  const mails = declareMails({
-    plugins: config.plugins,
-    theme: config.theme.mail,
-    site: config.mail?.overrides,
-  });
-  const mailCatalogs = createMailCatalogs(runtime.pluginCatalogs);
-  if (process.env.PLUMIX_DEV && dev !== undefined) {
-    registerCoreDevRoutes(seededRegistry, {
-      dev,
-      mails,
-      catalogs: mailCatalogs,
-    });
-  }
-
   // Before core aggregates anything, so a subscriber's own registrations still
   // land in every registry assembled below.
   await hooks.doAction("theme:ready", config.theme);
@@ -442,6 +428,20 @@ export async function buildApp(
   const loadMcpHandler = loadOnce(() =>
     import("../mcp/dispatch.js").then((m) => m.handleMcpRequest),
   );
+
+  const mails = declareMails({
+    plugins: config.plugins,
+    theme: config.theme.mail,
+    site: config.mail?.overrides,
+  });
+  const mailCatalogs = createMailCatalogs(runtime.pluginCatalogs);
+  if (process.env.PLUMIX_DEV && dev !== undefined) {
+    registerCoreDevRoutes(seededRegistry, {
+      dev,
+      mails,
+      catalogs: mailCatalogs,
+    });
+  }
 
   return {
     config,

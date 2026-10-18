@@ -12,15 +12,15 @@ interface CoreDevRouteSources {
 }
 
 /**
- * The same `"development"` gate as a plugin's dev route. Call only under the
- * `PLUMIX_DEV` gate, so this module and the route modules leave production
- * builds.
+ * Call only under the `PLUMIX_DEV` gate, so this module and the route modules
+ * leave production builds. Ahead of plugin routes, so a plugin id'd `debug`
+ * cannot take these paths.
  */
 export function registerCoreDevRoutes(
   registry: MutablePluginRegistry,
   { dev, mails, catalogs }: CoreDevRouteSources,
 ): void {
-  registry.rawRoutes.push(
+  registry.rawRoutes.unshift(
     {
       pluginId: "debug",
       method: "*",

@@ -3555,6 +3555,25 @@ describe("dispatcher — dev surfaces are loopback-only (#2007)", () => {
     },
   );
 
+  test("a plugin id'd `debug` cannot take the history path from core", async () => {
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const plugin = definePlugin("debug", (ctx) => {
+      ctx.registerRoute({
+        method: "GET",
+        path: "/requests",
+        auth: "public",
+        handler: () => new Response("shadowed"),
+      });
+    });
+    const h = await createDispatcherHarness({ config: { plugins: [plugin] } });
+
+    const response = await h.dispatch(
+      plumixRequest(`${DEV_ORIGIN}/_plumix/debug/requests`),
+    );
+
+    expect(await response.text()).not.toBe("shadowed");
+  });
+
   test("PLUMIX_DEV_ALLOW_REMOTE re-opens the history off-loopback", async () => {
     vi.stubEnv("PLUMIX_DEV", "1");
     vi.stubEnv("PLUMIX_DEV_ALLOW_REMOTE", "1");

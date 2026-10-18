@@ -1,4 +1,3 @@
-/** Where `registerCoreDevRoutes` serves the mail gallery. */
 export const DEBUG_MAIL_PATH = "/_plumix/debug/mail";
 
 /**
