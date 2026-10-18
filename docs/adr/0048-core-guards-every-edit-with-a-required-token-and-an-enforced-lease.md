@@ -41,10 +41,15 @@ update; a lock stops the work being done twice. The mature answer is both.
 
 ## What this means
 
-- **The token is the resource's `updated_at`, in milliseconds.** No other
-  concurrency column is added: `terms` and `settings` gain the `updated_at`
-  they lack, and `entries` and `users` move theirs from seconds to
-  milliseconds. The menu's `terms.version` folds into it.
+- **The token is a change stamp each resource already stores, and no migration
+  touches a table to get it.** `entries` and `users` use `updated_at`, in
+  seconds as today. `terms` use the `version` column the menu already keeps.
+  A settings group uses its marker row (below). SQLite cannot change a column's
+  default or add one with a non-constant default in place, so drizzle rebuilds
+  the table, and on D1 the rebuild's `DROP TABLE` cascades: `PRAGMA
+foreign_keys=OFF` is ignored there, so rebuilding `entries` deletes every
+  `entry_term` row and comment, and rebuilding `users` deletes every session
+  and passkey (#3018 reproduced it with libSQL).
 - **Clients see an opaque `etag` and send it back as `ifMatch`.** Every editable
   resource returns an `etag` when read, and every write from a copy takes it
   back as `ifMatch`, on every surface. RPC and MCP take `ifMatch` as a required
@@ -54,22 +59,28 @@ Required` when it is missing and `412 Precondition Failed` when it is stale,
   change without breaking one.
 - **A guarded write is one plain conditional update, written with drizzle's
   typed builders.** `UPDATE … SET … WHERE id = ? AND updated_at = ? RETURNING
-updated_at`; no rows means a conflict. The update can only succeed while the
-  row still holds `ifMatch`, so the next token is computed in TypeScript as the
-  later of now and `ifMatch` plus one millisecond, which keeps tokens strictly
-  increasing at any write rate. JSON merges (meta, and RFC 7386 merge patches
-  where `null` removes a key) are computed in TypeScript from the row read in
+updated_at` (`version` for terms); no rows means a conflict. The update can
+  only succeed while the row still holds `ifMatch`, so the next token is
+  computed in TypeScript as the later of now and `ifMatch` plus one second
+  (`ifMatch` plus one for a `version`), which keeps tokens strictly increasing
+  at any write rate. JSON merges (meta, and RFC 7386 merge patches where `null`
+  removes a key) are computed in TypeScript from the row read in
   the same request. No SQL functions, no `sql` templates and no casts, which
   also keeps clear of D1's restricted function list and its 100-parameter cap.
 - **A settings group's token is its marker row.** Settings stay one row per key.
   The `__plumix_created` row every saved group already has carries the group's
-  `updated_at`. A save claims that row with the conditional update, then writes
-  the changed keys, in one batch where the driver has one (D1, libSQL). A first
-  save inserts the marker, and a second first save loses. An unsaved group's
-  `etag` is zero.
+  token as a counter in its `value`; a marker still holding `true` from before
+  this reads as token zero. A save claims that row with the conditional
+  update, then writes the changed keys, in one batch where the driver has one
+  (D1, libSQL). A first save inserts the marker, and a second first save loses.
+  An unsaved group's `etag` is zero.
 - **Every write moves the token.** drizzle's `$onUpdate` stamps `updated_at` on
-  any update that does not set it, so a write that skips the helpers still
-  moves the token and an open copy conflicts rather than overwriting it. Core's
+  any update that does not set it, as `max(unixepoch(), updated_at + 1)` rather
+  than `unixepoch()`, so a write that skips the helpers still moves the token
+  even within the same second, and an open copy conflicts rather than
+  overwriting it. A write that sets `updated_at` itself, such as the revision
+  upsert's `onConflictDoUpdate`, which `$onUpdate` does not reach, uses the
+  same rule; so does any write to `terms.version` or a settings marker. Core's
   meta settle pins `updated_at` on purpose, because a settle is not an edit.
   Plugin bookkeeping (a view counter, a cache) lives in the plugin's own tables,
   never in a guarded row, so editors never meet a conflict nobody caused.
@@ -85,7 +96,7 @@ updated_at`; no rows means a conflict. The update can only succeed while the
 - **The pieces are shared, typed helpers, not a gatekeeper.** Core's resources
   and any plugin with an editable table of its own use the same helpers to read
   an `etag`, parse `ifMatch`, claim, merge and raise a conflict, and the same
-  edit lease. A plugin table opts in by having `updated_at`.
+  edit lease. A plugin table opts in by having `updated_at` or `version`.
 - **An edit lease is held per user, renewed every 30 seconds while the editor is
   open, and lapses 120 seconds after the last renewal.** It records the user and
   the surface. The user's own tabs share it, and the token still catches a save
@@ -111,18 +122,26 @@ Locked` over REST, and names the holder. Taking over is always explicit
   runs a transaction only as a `batch()` with no JavaScript between statements,
   and write hooks run between the read and the write. No database lock can span
   the minutes between an editor loading an entry and saving it.
-- **A `version` column** (rejected). It has no same-instant blind spot, but
-  neither does a strictly increasing `updated_at`, and it is a column every
-  write must keep in step. The opaque `etag` lets core switch to one later.
+- **`updated_at` in milliseconds** (rejected; this ADR's first form). It
+  changes the column's default, which SQLite applies only by rebuilding the
+  table, and on D1 the rebuild cascades into every table that references it.
+  Seconds plus the strictly-increasing rule give the same guarantee without a
+  migration.
+- **A new `version` column on every resource** (rejected). `ALTER TABLE … ADD
+COLUMN` with a constant default avoids the rebuild, but it is a column every
+  write must keep in step, added only for this. `terms` keep the `version` they
+  already have. The opaque `etag` lets core switch to one later.
 - **A who-wrote-it column** (rejected). WordPress and Payload name the person
   through the lock, not the row, and the edit lease already records who holds
   it.
 - **Settings reshaped to one row per group, or a separate table of group
   tokens** (rejected). Both change storage that works; the marker row every
   saved group already has carries the token.
-- **The check and the merge in SQL** (rejected). `max()`, `json_set` and a
-  multi-row `INSERT … SELECT` need hand-written SQL and casts, call functions D1
-  restricts, and a long settings patch passes D1's 100-parameter cap.
+- **The check and the merge in SQL** (rejected). `json_set` and a multi-row
+  `INSERT … SELECT` need hand-written SQL and casts, and a long settings patch
+  passes D1's 100-parameter cap. The `$onUpdate` fallback is the one exception:
+  a single `max(unixepoch(), updated_at + 1)` with no parameters, built from
+  the scalar functions D1 already runs in today's `$onUpdate`.
 - **A field per resource such as `expectedLiveUpdatedAt`** (rejected). It names
   an implementation detail as the contract, and every resource grows its own
   spelling.
@@ -157,5 +176,12 @@ Locked` over REST, and names the holder. Taking over is always explicit
   groups, users and the media plugin follow in their own issues. Until then
   those resources are not protected, and this ADR, not their current code, is
   the rule.
-- `updated_at` can run up to a millisecond ahead of the clock per write in a
-  burst. Nothing reads it more precisely than that.
+- A row written more than once a second runs ahead of the clock by the excess:
+  1,000 back-to-back saves put `updated_at` 1,000 seconds ahead on node:sqlite,
+  bun:sqlite, libSQL and local D1 alike, and real time catches up once the
+  writes slow. Nothing writes a guarded row that often (autosave is debounced at
+  one second per group through one queue), so the visible cost is at most a
+  `lastmod` or "updated" time a little in the future after a burst.
+- No migration ships for any of this. The same benchmark shows the guarded
+  write losing no update with four processes racing on one row, against
+  thousands lost unguarded, for about 5 to 15% more time per write.
