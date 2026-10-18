@@ -4,11 +4,19 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type * as BunSqlite from "bun:sqlite";
 import type { HookRegistry, PlumixApp, PlumixConfig } from "plumix";
-import type { SyncRow, SyncValue } from "plumix/cli";
+import type {
+  DumpReader,
+  SyncEnd,
+  SyncRow,
+  SyncScope,
+  SyncValue,
+} from "plumix/cli";
 import type {
   SyncContractEnds,
   SyncContractSite,
 } from "plumix/test/conformance";
+import { blob, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { definePlugin } from "plumix/plugin";
 import { buildApp, createRuntimeHandler } from "plumix/runtime";
 import { createDispatcherHarness, factoriesFor } from "plumix/test";
 import { describeSyncContract } from "plumix/test/conformance";
@@ -51,9 +59,13 @@ afterEach(async () => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-function siteConfig(name: string): PlumixConfig {
+function siteConfig(
+  name: string,
+  plugins: PlumixConfig["plugins"] = base.config.plugins,
+): PlumixConfig {
   return {
     ...base.config,
+    plugins,
     database: bunSqlite({ path: join(dir, name, "site.sqlite") }),
     storage: diskStorage({ dir: join(dir, name, "media") }),
   };
@@ -161,10 +173,15 @@ async function nodeEnds(hooks: HookRegistry): Promise<SyncContractEnds> {
 
 describeSyncContract({ open: nodeEnds });
 
-function options(target: "local" | "remote", url: string, apiToken: string) {
+function options(
+  target: "local" | "remote",
+  url: string,
+  apiToken: string,
+  config = siteConfig("local"),
+) {
   return {
     cwd: dir,
-    config: siteConfig("local"),
+    config,
     target,
     binding: undefined,
     url,
@@ -250,6 +267,125 @@ describe("bun sync — the deployed site's snapshot", () => {
     expect(await site.execute(slugs)).toEqual([{ slug: "kept" }]);
     expect(await contractSite("remote", snapshot.id).execute(slugs)).toEqual([
       { slug: "kept" },
+    ]);
+  });
+});
+
+const notes = sqliteTable("notes", {
+  id: integer().primaryKey(),
+  body: text().notNull(),
+  data: blob(),
+  authorId: integer("author_id"),
+});
+
+const notesPlugin = definePlugin("notes", () => undefined, {
+  schema: { notes },
+  schemaModule: "notes/schema",
+});
+
+const NOTES_SCOPE: SyncScope = {
+  name: "plugin:notes",
+  tables: [{ table: "notes" }],
+};
+
+const NOTES_TABLE =
+  "CREATE TABLE notes (id integer PRIMARY KEY, body text NOT NULL, data blob, author_id integer REFERENCES users (id))";
+
+async function* iterate<T>(items: readonly T[]): AsyncIterable<T> {
+  for (const item of items) {
+    await Promise.resolve();
+    yield item;
+  }
+}
+
+/** Exports the scope from one end into memory and imports it into the other. */
+async function transfer(
+  from: SyncEnd,
+  to: SyncEnd,
+  scopes: readonly SyncScope[],
+): Promise<void> {
+  const tables = new Map<string, SyncRow[]>();
+  const authors: SyncRow[] = [];
+  async function collect(rows: AsyncIterable<SyncRow>, into: SyncRow[]) {
+    for await (const row of rows) into.push(row);
+  }
+  await from.exportData(scopes, {
+    async table(name, rows) {
+      const into: SyncRow[] = [];
+      tables.set(name, into);
+      await collect(rows, into);
+    },
+    authors: (rows) => collect(rows, authors),
+    object: (_key, body) => body.cancel(),
+  });
+  const dump: DumpReader = {
+    manifest: {
+      format: 1,
+      source: { origin: from.origin, basePath: "" },
+      scopes: scopes.map((scope) => scope.name),
+      tables: [...tables].map(([name, rows]) => ({ name, rows: rows.length })),
+      authors: authors.length,
+      objects: 0,
+      heads: await from.heads(),
+    },
+    rows: (table) => iterate(tables.get(table) ?? []),
+    authors: () => iterate(authors),
+    objects: () => iterate([]),
+  };
+  await to.importData(dump, scopes, { dryRun: false });
+}
+
+const NOTES =
+  "SELECT n.id, n.body, n.data, u.email FROM notes n LEFT JOIN users u ON u.id = n.author_id ORDER BY n.id";
+
+describe("bun sync — a plugin scope", () => {
+  test("pushes to the deployed site and pulls back through its routes, a BLOB and an author included", async () => {
+    const local = siteConfig("local", [...base.config.plugins, notesPlugin]);
+    const remote = siteConfig("remote", [...base.config.plugins, notesPlugin]);
+    await migrated(local);
+    await migrated(remote);
+    const localSite = contractSite("local");
+    const remoteSite = contractSite("remote");
+    await localSite.execute(NOTES_TABLE);
+    await remoteSite.execute(NOTES_TABLE);
+    await localSite.execute(
+      "INSERT INTO users (id, email, slug, role) VALUES (1, 'alice@example.test', 'alice', 'editor')",
+    );
+    await localSite.execute(
+      "INSERT INTO notes (id, body, data, author_id) VALUES (7, 'from local', ?, 1)",
+      [new Uint8Array([0, 1, 254, 255])],
+    );
+    const { url, apiToken } = await serve(remote, base.hooks);
+    const localEnd = await sync.open(options("local", url, apiToken, local));
+    const remoteEnd = await sync.open(options("remote", url, apiToken, local));
+
+    await transfer(localEnd, remoteEnd, [NOTES_SCOPE]);
+    const pushed = await remoteSite.execute(NOTES);
+    await remoteSite.execute(
+      "UPDATE notes SET body = 'edited remotely' WHERE id = 7",
+    );
+    await remoteSite.execute(
+      "INSERT INTO notes (id, body, author_id) VALUES (8, 'remote only', 1000)",
+    );
+    await transfer(remoteEnd, localEnd, [NOTES_SCOPE]);
+    await localEnd.close();
+
+    expect(pushed).toEqual([
+      {
+        id: 7,
+        body: "from local",
+        data: new Uint8Array([0, 1, 254, 255]),
+        email: "alice@example.test",
+      },
+    ]);
+    expect(await localSite.execute(NOTES)).toEqual([
+      {
+        id: 7,
+        body: "edited remotely",
+        data: new Uint8Array([0, 1, 254, 255]),
+        email: "alice@example.test",
+      },
+      { id: 8, body: "remote only", data: null, email: "operator@remote.test" },
     ]);
   });
 });
