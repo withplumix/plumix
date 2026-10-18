@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, describe, expect, test } from "vitest";
+import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import type { AppContext, Db } from "../context/app-context.js";
 import type { DebugSnapshot } from "./request-history/snapshot.js";
@@ -11,6 +11,12 @@ import { createTestDb } from "../test/harness.js";
 import { registerCoreDebugPanels } from "./debug-panels/core-panels.js";
 import { handleDebugRequests } from "./history-routes.js";
 import { DEBUG_REQUESTS_PATH } from "./request-history/path.js";
+
+// Hoisted above the imports: the dev loaders are fixed when their module
+// loads, as a dev build's constant fixes them. Unstubbed once loaded, so each
+// test sets its own.
+vi.hoisted(() => vi.stubEnv("PLUMIX_DEV", "1"));
+vi.unstubAllEnvs();
 
 function snapshotWith(overrides: Partial<DebugSnapshot["context"]> = {}) {
   return {

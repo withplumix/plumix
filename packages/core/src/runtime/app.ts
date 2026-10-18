@@ -58,6 +58,7 @@ import { debugBarChrome } from "../dev/debug-bar/component.js";
 import { registerCoreDebugPanels } from "../dev/debug-panels/core-panels.js";
 import { registerCoreErrorHints } from "../dev/server/hints/core-hints.js";
 import { HookRegistry } from "../hooks/registry.js";
+import { loadOnce } from "../load-once.js";
 import { createMailCatalogs } from "../mail/catalogs.js";
 import { declareMails } from "../mail/declared.js";
 import { resolveImageRoleIndex } from "../plugin/image-roles.js";
@@ -411,23 +412,21 @@ export async function buildApp(
 
   // Memoized so the heavy router module + handler construction happen once per
   // isolate, on the first RPC request — never on the public render cold path.
-  let rpcHandler: Promise<RPCHandler<AppContext>> | undefined;
-  const loadRpcHandler = (): Promise<RPCHandler<AppContext>> =>
-    (rpcHandler ??= import("../rpc/build-handler.js").then((m) =>
+  const loadRpcHandler = loadOnce(() =>
+    import("../rpc/build-handler.js").then((m) =>
       m.buildRpcHandler(registry.rpcRouters),
-    ));
+    ),
+  );
 
-  let restHandler: Promise<RestDispatch> | undefined;
-  const loadRestHandler = (): Promise<RestDispatch> =>
-    (restHandler ??= import("../rest/build-handler.js").then((m) =>
+  const loadRestHandler = loadOnce(() =>
+    import("../rest/build-handler.js").then((m) =>
       m.buildRestDispatcher(registry, config.api?.cors),
-    ));
+    ),
+  );
 
-  let mcpHandler: Promise<McpHandler> | undefined;
-  const loadMcpHandler = (): Promise<McpHandler> =>
-    (mcpHandler ??= import("../mcp/dispatch.js").then(
-      (m) => m.handleMcpRequest,
-    ));
+  const loadMcpHandler = loadOnce(() =>
+    import("../mcp/dispatch.js").then((m) => m.handleMcpRequest),
+  );
 
   return {
     config,

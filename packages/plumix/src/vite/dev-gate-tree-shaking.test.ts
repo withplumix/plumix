@@ -8,8 +8,8 @@ import { describe, expect, test } from "vitest";
 
 import { plumixSourceResolver } from "@plumix/vitest-config/source-resolver";
 
-// A helper or exported constant standing in for the `process.env.PLUMIX_DEV`
-// literal does not fold across modules, so the dev code would ship.
+// Vite promises only the inline `process.env.PLUMIX_DEV` replacement; a helper
+// or exported constant standing in for it folds only if Rolldown inlines it.
 
 /** The gated dev modules, as paths under core's `src/`. */
 const GATED_DEV_MODULES = [

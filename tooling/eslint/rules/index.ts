@@ -1,5 +1,6 @@
 import type { ESLint } from "eslint";
 
+import { dynamicImportInLoadOnce } from "./dynamic-import-in-load-once.js";
 import { maxCommentLength } from "./max-comment-length.js";
 import { noBareObjectInput } from "./no-bare-object-input.js";
 import { noChainedTypeAssertion } from "./no-chained-type-assertion.js";
@@ -25,6 +26,7 @@ import { testTier } from "./test-tier.js";
  */
 export const plumixPlugin: ESLint.Plugin = {
   rules: {
+    "dynamic-import-in-load-once": dynamicImportInLoadOnce,
     "max-comment-length": maxCommentLength,
     "no-bare-object-input": noBareObjectInput,
     "no-chained-type-assertion": noChainedTypeAssertion,

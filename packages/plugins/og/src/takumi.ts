@@ -1,5 +1,6 @@
 import type { Node, SyncInitInput } from "@takumi-rs/wasm";
 import { initSync, Renderer } from "@takumi-rs/wasm";
+import { loadOnce } from "plumix/support";
 
 import type {
   CardImage,
@@ -83,9 +84,10 @@ type WasmEntry = SyncInitInput | ((...args: never[]) => void);
  * A return type, so TypeScript can't narrow back to one condition; the await
  * also settles bundler entries that export a promise.
  */
-async function loadWasmEntry(): Promise<WasmEntry> {
-  return (await import("@takumi-rs/wasm/auto")).default;
-}
+const loadWasmEntry = loadOnce(
+  async (): Promise<WasmEntry> =>
+    (await import("@takumi-rs/wasm/auto")).default,
+);
 
 function renderer(): Promise<Renderer> {
   engine ??= (async () => {

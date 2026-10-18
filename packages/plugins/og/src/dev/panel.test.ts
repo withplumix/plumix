@@ -1,5 +1,5 @@
 import type { DebugPanelsInput } from "plumix";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { CardRenderer } from "../renderer.js";
 import { createFakeRenderer } from "../test/fake-renderer.js";
@@ -9,6 +9,12 @@ import {
   ogImageOf,
   seedEntry,
 } from "../test/harness.js";
+
+// Hoisted above the imports: the dev loaders are fixed when their module
+// loads, as a dev build's constant fixes them. Unstubbed once loaded, so each
+// test sets its own.
+vi.hoisted(() => vi.stubEnv("PLUMIX_DEV", "1"));
+vi.unstubAllEnvs();
 
 const PANEL = 'data-testid="plumix-debug-panel-og"';
 

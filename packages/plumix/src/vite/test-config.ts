@@ -1,5 +1,7 @@
 import type { ViteUserConfig } from "vitest/config";
 
+import { loadOnce } from "@plumix/core/support";
+
 // Mirrors `tooling/vitest/tiers.ts`.
 // Guarded by: packages/plumix/src/vite/test-config.test.ts
 
@@ -12,6 +14,8 @@ const NODE_TIER = {
   exclude: ["**/*.build.test.{ts,tsx}"],
 } as const;
 
+const loadVitestConfig = loadOnce(() => import("vitest/config"));
+
 /**
  * Needs `vitest` installed, but only when vitest reads the config, not when
  * `plumix/vite` is imported.
@@ -20,7 +24,7 @@ export function defineTestConfig(
   overrides: ViteUserConfig = {},
 ): () => Promise<ViteUserConfig> {
   return async () => {
-    const { configDefaults, mergeConfig } = await import("vitest/config");
+    const { configDefaults, mergeConfig } = await loadVitestConfig();
     const node: ViteUserConfig = {
       test: {
         include: [...NODE_TIER.include],

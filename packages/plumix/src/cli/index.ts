@@ -13,6 +13,7 @@ import type {
   RuntimeSync,
 } from "@plumix/core";
 import { isCliError } from "@plumix/core/cli";
+import { loadOnce } from "@plumix/core/support";
 
 import type { CommandGroup, TargetOptionGroup } from "./help.js";
 import type { LoadedConfig } from "./load-config.js";
@@ -27,6 +28,12 @@ import { PlumixCliError } from "./errors.js";
 import { formatHelp } from "./help.js";
 import { loadConfig } from "./load-config.js";
 import { badge, exitWithError, report } from "./report.js";
+
+/**
+ * Deferred: core's root barrel costs ~500ms to evaluate, and `dev`,
+ * `--version`, `--help` and `i18n` never need it.
+ */
+const loadCore = loadOnce(() => import("@plumix/core"));
 
 /**
  * A built-in may read the whole app — `meta` and `cron` build the site's
@@ -242,9 +249,7 @@ export async function resolveCommandApp(
       PlumixCliError.deferredCommandNoApp({ command: commandName }),
     );
   }
-  // Deferred: core's root barrel costs ~500ms to evaluate, and `dev`,
-  // `--version`, `--help` and `i18n` never need it.
-  const { buildApp } = await import("@plumix/core");
+  const { buildApp } = await loadCore();
   return buildApp(config);
 }
 
@@ -359,7 +364,9 @@ async function loadRuntimeCommands(
     });
   }
   try {
-    const mod = (await import(pathToFileURL(resolved).href)) as {
+    const href = pathToFileURL(resolved).href;
+    // A loader per call: the specifier varies, so there is no one module to keep.
+    const mod = (await loadOnce(() => import(href))()) as {
       default?: CommandRegistry;
       commands?: CommandRegistry;
       migrations?: RuntimeMigrations;

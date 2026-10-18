@@ -15,6 +15,7 @@ import type {
 } from "@plumix/core";
 import { CORE_SYNC_SCOPE_TABLES } from "@plumix/core/cli";
 import { settings } from "@plumix/core/schema";
+import { loadOnce } from "@plumix/core/support";
 
 import type { AuthoringRows } from "../import/records.js";
 import type { RewrittenDump } from "../sync/rewrite-urls.js";
@@ -99,6 +100,8 @@ type ImportInput =
   | { readonly kind: "dump"; readonly dump: DumpReader }
   | { readonly kind: "authoring"; readonly rows: AuthoringRows };
 
+const loadCore = loadOnce(() => import("@plumix/core"));
+
 async function readInput(
   path: string,
   shown: string,
@@ -107,7 +110,7 @@ async function readInput(
   if (statSync(path).isDirectory()) {
     return { kind: "dump", dump: await readDump(path) };
   }
-  const { checkImportedMeta, slugify } = await import("@plumix/core");
+  const { checkImportedMeta, slugify } = await loadCore();
   return {
     kind: "authoring",
     rows: await readAuthoringRecords(path, shown, {

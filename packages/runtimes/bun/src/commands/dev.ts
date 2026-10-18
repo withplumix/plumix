@@ -7,7 +7,7 @@ import { ASSETS_DIR_ENV, PROJECT_ROOT_ENV } from "../entry-constants.js";
 import { createAssetsLayer } from "../http/assets.js";
 import { createImageLayer } from "../http/images.js";
 import { createDevMiddleware } from "./node-bridge.js";
-import { bunServerEnvironment } from "./vite.js";
+import { bunServerEnvironment, loadPlumixVite } from "./vite.js";
 
 type BunDevEntry = DevEntry & Partial<Pick<BunSite, "dispose">>;
 
@@ -65,7 +65,7 @@ export const devCommand: CommandDefinition = {
   // before the server is up.
   deferApp: true,
   async run(ctx) {
-    const { runDevCommand } = await import("plumix/vite");
+    const { runDevCommand } = await loadPlumixVite();
     await runDevCommand(ctx, bunDevOptions(ctx.cwd));
   },
 };

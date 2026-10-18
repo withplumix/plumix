@@ -8,7 +8,7 @@ import { ASSETS_DIR_ENV } from "../entry-constants.js";
 import { createAssetsLayer } from "../http/assets.js";
 import { createRequestListener } from "../http/bridge.js";
 import { createImageLayer } from "../http/images.js";
-import { nodeServerEnvironment } from "./vite.js";
+import { loadPlumixVite, nodeServerEnvironment } from "./vite.js";
 
 type NodeDevEntry = DevEntry & Partial<Pick<NodeSite, "startCron" | "dispose">>;
 
@@ -60,7 +60,7 @@ export const devCommand: CommandDefinition = {
   // before the server is up.
   deferApp: true,
   async run(ctx) {
-    const { runDevCommand } = await import("plumix/vite");
+    const { runDevCommand } = await loadPlumixVite();
     await runDevCommand(ctx, nodeDevOptions);
   },
 };

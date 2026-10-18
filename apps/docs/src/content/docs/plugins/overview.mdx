@@ -242,6 +242,33 @@ export const badges = definePlugin("acme-badges", {
 
 State goes in `state`, never in the plugin factory's closure. A descriptor can be installed more than once (a build installs it alongside the running app), and each install needs its own. The state is private to the plugin's own hooks; share anything through `extendPluginContext` or `extendAppContext`.
 
+## Loading heavy code lazily
+
+A dependency that only a rarely hit route needs, such as a PDF renderer or a wasm engine, should not load with the plugin, or every isolate pays for it on its first request. Load it with `loadOnce` from `plumix/support`, declared at module scope:
+
+```ts
+import { definePlugin } from "plumix/plugin";
+import { loadOnce } from "plumix/support";
+
+const loadInvoicePdf = loadOnce(() => import("./invoice-pdf.js"));
+
+export const invoices = definePlugin("acme-invoices", (ctx) => {
+  ctx.registerRoute({
+    method: "GET",
+    path: "/invoice.pdf",
+    auth: "authenticated",
+    handler: async (request) => {
+      const { renderInvoicePdf } = await loadInvoicePdf();
+      return renderInvoicePdf(request);
+    },
+  });
+});
+```
+
+The first call runs the factory, and every later call in the isolate, a concurrent one included, awaits that same promise. Every caller then gets one module that has finished evaluating. An `import()` written in the handler runs again on each request instead, and under `plumix dev` Vite's module runner has handed a concurrent request a module whose body was still running. If the load rejects, `loadOnce` forgets it and the next call runs the factory again, so one failed load does not break the route until a restart.
+
+The factory can do more than import, and what it resolves to is what is kept: `loadOnce(() => import("./engine.js").then((m) => m.createEngine()))` builds the engine once per isolate.
+
 ## Adding an image role
 
 Some of what a plugin registers is a name other code then asks for, and an [image role](/fields/field-types/#image-roles) is the clearest small example. Core ships `featured` and `ogImage`; a listing thumbnail distinct from the share image is a role you add. A theme has no setup hook, so a site declares its own as a one-file plugin like this.

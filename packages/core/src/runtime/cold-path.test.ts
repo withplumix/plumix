@@ -19,10 +19,14 @@ const COLD_PATH_ENTRIES = ["runtime/app.ts", "runtime/dispatcher.ts"] as const;
  * output, so only the absence of a static import keeps them out.
  */
 const DEFERRED = [
+  { importer: "auth/flow-routes-loader.ts", specifier: "./flow-routes.js" },
   { importer: "runtime/app.ts", specifier: "../mcp/dispatch.js" },
   { importer: "runtime/app.ts", specifier: "../rest/build-handler.js" },
   { importer: "runtime/app.ts", specifier: "../rpc/build-handler.js" },
-  { importer: "runtime/dispatcher.ts", specifier: "../auth/flow-routes.js" },
+  { importer: "runtime/dispatcher.ts", specifier: "../auth/method-kernel.js" },
+  { importer: "runtime/dispatcher.ts", specifier: "../dev/history-routes.js" },
+  { importer: "runtime/dispatcher.ts", specifier: "../dev/mail/routes.js" },
+  { importer: "runtime/dispatcher.ts", specifier: "./sync-settle.js" },
 ] as const;
 
 const SRC = path.resolve(import.meta.dirname, "..");
@@ -32,12 +36,14 @@ const COLD_PATH = staticClosureOf(ENTRY_FILES);
 
 /**
  * Discovered rather than listed, so a loader added later is guarded the day
- * it lands.
+ * it lands. Read off the whole static closure, not only the entries.
  */
-const DEFERRED_FILES = ENTRY_FILES.flatMap((entry) =>
-  importsOf(entry).dynamic.flatMap((specifier) => {
-    const file = resolveWithinCore(entry, specifier);
-    return file === undefined ? [] : [{ specifier, file }];
+const DEFERRED_FILES = [...COLD_PATH.keys()].flatMap((importer) =>
+  importsOf(importer).dynamic.flatMap((specifier) => {
+    const file = resolveWithinCore(importer, specifier);
+    return file === undefined
+      ? []
+      : [{ importer: path.relative(SRC, importer), specifier, file }];
   }),
 );
 
@@ -70,7 +76,7 @@ describe("the cold-start path defers its heavy graphs", () => {
   );
 
   test.each(DEFERRED_FILES)(
-    "$specifier is absent from the static closure",
+    "$importer's $specifier is absent from the static closure",
     ({ file }) => {
       expect(staticImportChain(COLD_PATH, file)).toBeUndefined();
     },

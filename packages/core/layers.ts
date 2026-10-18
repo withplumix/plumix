@@ -47,6 +47,7 @@ export const FOLDERS: Readonly<Record<string, Placement>> = {
   "escape-html": client("foundation"),
   "css-tag": client("foundation"),
   "non-empty": client("foundation"),
+  "load-once": client("foundation"),
   "return-url": client("foundation"),
   "read-cookie": client("foundation"),
   "document-manifest": client("foundation"),

@@ -1,4 +1,5 @@
 import type { RuntimeTargetOptions, TargetOptionValues } from "plumix/cli";
+import { loadOnce } from "plumix/support";
 
 import type {
   D1BindingEntry,
@@ -94,10 +95,12 @@ interface WranglerConfigReader {
   ): ResolvedWranglerConfig;
 }
 
+const loadWrangler = loadOnce(() => import("wrangler"));
+
 async function wranglerConfigReader(): Promise<WranglerConfigReader> {
   // wrangler's declaration types its config from @cloudflare/workers-utils,
   // which it bundles without publishing the types, so it resolves to nothing.
-  return await import("wrangler");
+  return await loadWrangler();
 }
 
 /**

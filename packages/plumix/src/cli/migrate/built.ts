@@ -13,6 +13,7 @@ import type {
   PlumixConfig,
   RuntimeMigrations,
 } from "@plumix/core";
+import { loadOnce } from "@plumix/core/support";
 
 import type { DataMigrationOwner } from "./data.js";
 import { adoptLegacyDatabase, applyOwners } from "./apply.js";
@@ -76,7 +77,8 @@ async function builtDataMigrations(
   serverDir: string,
 ): Promise<readonly DataMigrationOwner[]> {
   const url = pathToFileURL(join(serverDir, MIGRATIONS_DIR, DATA_BUNDLE)).href;
-  const bundle = (await import(/* @vite-ignore */ url)) as {
+  // A loader per call: the specifier varies, so there is no one module to keep.
+  const bundle = (await loadOnce(() => import(/* @vite-ignore */ url))()) as {
     default: readonly DataMigrationOwner[];
   };
   return bundle.default;

@@ -5,9 +5,16 @@ import type {
   PlumixApp,
   PlumixHandler,
 } from "@plumix/core";
+import { loadOnce } from "@plumix/core/support";
 
 import { PlumixCliError } from "../errors.js";
 import { report } from "../report.js";
+
+/**
+ * Dynamic, like `cron run`'s: the static graph of `src/cli/index.ts` must not
+ * put core's root barrel on every `plumix` invocation.
+ */
+const loadCore = loadOnce(() => import("@plumix/core"));
 
 export const metaCommand: CommandDefinition<PlumixApp> = {
   describe:
@@ -34,10 +41,7 @@ async function sweep(
   ctx: CommandContext<PlumixApp>,
   write: boolean,
 ): Promise<Omit<MetaSweep, "next">> {
-  // Dynamic, like `cron run`'s: the static graph of `src/cli/index.ts` must
-  // not put core's root barrel on every `plumix` invocation.
-  const { createRuntimeHandler, sweepAllUnsettledMeta } =
-    await import("@plumix/core");
+  const { createRuntimeHandler, sweepAllUnsettledMeta } = await loadCore();
 
   // `nodeSqlite` resolves its path against the process cwd, so `--cwd` has to
   // land before anything opens a database.

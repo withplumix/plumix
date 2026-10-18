@@ -39,6 +39,12 @@ import { pooledEntryTypesPlugin } from "../test/pooled-entry-types.js";
 import { defineTheme } from "../theme.js";
 import { matchPluginRawRoute } from "./dispatcher.js";
 
+// Hoisted above the imports: the dev loaders are fixed when their module
+// loads, as a dev build's constant fixes them. Unstubbed once loaded, so each
+// test sets its own.
+vi.hoisted(() => vi.stubEnv("PLUMIX_DEV", "1"));
+vi.unstubAllEnvs();
+
 // Augment the registry so the typed `registerTemplateDep("probe-dep", ...)`
 // call in the render-interior telemetry test compiles.
 declare module "../blocks/deps.js" {

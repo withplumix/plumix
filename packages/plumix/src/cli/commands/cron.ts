@@ -14,6 +14,7 @@ import {
   parseCron,
   scheduledTasksFor,
 } from "@plumix/core/cli";
+import { loadOnce } from "@plumix/core/support";
 
 import { PlumixCliError } from "../errors.js";
 import { report } from "../report.js";
@@ -21,6 +22,12 @@ import { report } from "../report.js";
 const MINUTE_MS = 60_000;
 
 const EVERY_MINUTE = "* * * * *";
+
+/**
+ * Dynamic so `dev`, which builds no app, does not load core's root barrel
+ * (`cold-start.test.ts`).
+ */
+const loadCore = loadOnce(() => import("@plumix/core"));
 
 export const cronCommand: CommandDefinition<PlumixApp> = {
   describe: "List the site's scheduled tasks, or fire one schedule now",
@@ -112,14 +119,12 @@ async function runSchedule(ctx: CommandContext<PlumixApp>): Promise<void> {
     throw PlumixCliError.cronRunUnknownSchedule({ expression, declared });
   }
 
-  // Dynamic so `dev`, which builds no app, does not load core's root barrel
-  // (`cold-start.test.ts`).
   const {
     connectScheduledDb,
     createRuntimeHandler,
     createScheduledRunGuard,
     scheduledLeaseScope,
-  } = await import("@plumix/core");
+  } = await loadCore();
   const handler = createRuntimeHandler(ctx.app);
 
   // `nodeSqlite` resolves its path against the cwd; otherwise this opens an
