@@ -463,6 +463,35 @@ describe(
 );
 
 // Each case starts two miniflare instances.
+describe(
+  "cloudflare sync — a self-referencing table across exec calls",
+  { timeout: 30_000 },
+  () => {
+    test("a row whose parent comes later in the dump lands after that parent, whatever call it falls in", async () => {
+      const { source, target } = await twoProjects();
+      vi.spyOn(syncDeps, "localExecBytes").mockReturnValue(2_000);
+      const posts = Array.from({ length: 40 }, (_, i) =>
+        post(i + 1, `post-${String(i + 1)}`),
+      );
+      await run(
+        source,
+        [ANN, ...posts, "UPDATE entries SET parent_id = 40 WHERE id = 1;"].join(
+          "\n",
+        ),
+      );
+      await run(target, ANN);
+
+      await replace(source, target, [CONTENT]);
+
+      expect(
+        await contractSite(target.proxy).execute(
+          "SELECT count(*) AS n, (SELECT parent_id FROM entries WHERE id = 1) AS parent FROM entries",
+        ),
+      ).toEqual([{ n: 40, parent: 40 }]);
+    });
+  },
+);
+
 describe("cloudflare sync — the import's report", { timeout: 30_000 }, () => {
   test("counts rows replaced, added and removed by primary key, and by the whole row in a table without one", async () => {
     const { source, target } = await twoProjects();

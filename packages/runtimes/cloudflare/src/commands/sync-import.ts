@@ -332,6 +332,63 @@ interface TableInsert {
   readonly keyColumns: readonly string[];
   /** Columns rewritten to the target's users; none when `users` travels. */
   readonly userColumns: readonly string[];
+  /** Keys into the table itself, whose parent row must be written first. */
+  readonly selfKeys: readonly ForeignKey[];
+}
+
+function valueKey(column: string, value: SyncValue): string {
+  return rowKey({ [column]: value }, [column]);
+}
+
+/**
+ * Holds a row back until its parent in the same table is written: a local
+ * import commits in several calls, and a foreign key holds at each commit.
+ */
+class ParentsFirst {
+  private readonly written = new Set<string>();
+  private readonly waiting = new Map<string, SyncRow[]>();
+
+  constructor(private readonly keys: readonly ForeignKey[]) {}
+
+  private missingParent(row: SyncRow): string | undefined {
+    for (const key of this.keys) {
+      const value = row[key.column];
+      if (value === null || value === undefined) continue;
+      if (row[key.parentColumn] === value) continue;
+      const parent = valueKey(key.parentColumn, value);
+      if (!this.written.has(parent)) return parent;
+    }
+    return undefined;
+  }
+
+  /** The rows to write now, in order: this one and any it unblocks. */
+  arrive(row: SyncRow): SyncRow[] {
+    if (this.keys.length === 0) return [row];
+    const ready: SyncRow[] = [];
+    const queue = [row];
+    for (let next = queue.shift(); next !== undefined; next = queue.shift()) {
+      const parent = this.missingParent(next);
+      if (parent !== undefined) {
+        this.waiting.set(parent, [...(this.waiting.get(parent) ?? []), next]);
+        continue;
+      }
+      ready.push(next);
+      for (const key of this.keys) {
+        const value = next[key.parentColumn];
+        if (value === null || value === undefined) continue;
+        const written = valueKey(key.parentColumn, value);
+        this.written.add(written);
+        queue.push(...(this.waiting.get(written) ?? []));
+        this.waiting.delete(written);
+      }
+    }
+    return ready;
+  }
+
+  /** Rows whose parent never arrived, as the dump ordered them. */
+  rest(): SyncRow[] {
+    return [...this.waiting.values()].flat();
+  }
 }
 
 async function insertTable(
@@ -345,7 +402,7 @@ async function insertTable(
   const matched = new Set<string>();
   let replaced = 0;
   let added = 0;
-  for await (const dumped of from.rows(table.table)) {
+  const write = async (dumped: SyncRow): Promise<void> => {
     const literals = rowLiterals(dumped);
     const keyed: Record<string, SyncValue> = { ...dumped };
     for (const column of insert.userColumns) {
@@ -371,7 +428,12 @@ async function insertTable(
     } else {
       added += 1;
     }
+  };
+  const order = new ParentsFirst(insert.selfKeys);
+  for await (const dumped of from.rows(table.table)) {
+    for (const row of order.arrive(dumped)) await write(row);
   }
+  for (const row of order.rest()) await write(row);
   return {
     table: table.table,
     replaced,
@@ -449,6 +511,9 @@ export async function writeImportScript(
     inserts.push({
       table,
       keyColumns,
+      selfKeys: (await foreignKeys(db, table.table)).filter(
+        (key) => key.parent === table.table,
+      ),
       existing: await existingKeys(db, table, keyColumns),
       userColumns: travelsWithUsers ? [] : await userColumns(db, table.table),
     });
