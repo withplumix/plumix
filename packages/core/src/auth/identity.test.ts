@@ -321,7 +321,7 @@ describe("resolveExternalIdentity — provider account", () => {
       providerAccount: github,
     });
 
-    expect(result.user.email).toBe("bob@example.com");
+    expect(result.user.id).toBe(bob.id);
   });
 
   test("a link to a disabled user is refused as account_disabled", async () => {

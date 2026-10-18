@@ -1211,15 +1211,7 @@ describe("passkey verify answers", () => {
 
   test("invite verify fires user:registered and credential:created for the invitee", async () => {
     const h = await createDispatcherHarness();
-    const invitee = await h.seedUser("author");
-    const token = generateToken();
-    await h.factory.invite.create({
-      hash: await hashToken(token),
-      userId: invitee.id,
-      email: invitee.email,
-      role: "author",
-      expiresAt: new Date(Date.now() + 60_000),
-    });
+    const { user: invitee, token } = await seedInvite(h);
     const optionsRes = await h.fetch("/_plumix/auth/invite/register/options", {
       json: { token },
     });
