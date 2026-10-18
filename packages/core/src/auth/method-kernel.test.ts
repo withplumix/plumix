@@ -504,6 +504,21 @@ describe("a sign-in method's kernel", () => {
     expect(spy.lastArgs?.[1]).toEqual({ method: "probe", firstSignIn: false });
   });
 
+  test("an account proof signs in the user it names, not the first user", async () => {
+    const h = await createDispatcherHarness({ config: probeSite() });
+    await h.factory.user.create({ email: "alice@example.com" });
+    const bob = await h.factory.user.create({ email: "bob@example.com" });
+
+    const response = await h.dispatch(
+      probeRequest(`account/${bob.id}`, {
+        method: "POST",
+        headers: { "x-plumix-request": "1" },
+      }),
+    );
+
+    expect(await response.json()).toMatchObject({ userId: bob.id });
+  });
+
   test("refuses an account proof whose user is gone as 403 link_broken", async () => {
     const h = await createDispatcherHarness({ config: probeSite() });
 

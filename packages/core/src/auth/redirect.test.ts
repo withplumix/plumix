@@ -1,6 +1,10 @@
 import { describe, expect, test } from "vitest";
 
-import { isSafeRedirect, resolveRedirectTo } from "./redirect.js";
+import {
+  isSafeRedirect,
+  optionalRedirectTo,
+  resolveRedirectTo,
+} from "./redirect.js";
 
 describe("isSafeRedirect", () => {
   test.each([
@@ -90,6 +94,13 @@ describe("resolveRedirectTo", () => {
     );
   });
 
+  test.each(["/a/file.", "/.well-known/security.txt", "/a/...b"])(
+    "keeps %j, whose dotted segment is neither . nor ..",
+    (value) => {
+      expect(resolveRedirectTo(value, "")).toBe(value);
+    },
+  );
+
   test.each([
     ["/blog", "/blog"],
     ["/blog/account", "/blog/account"],
@@ -104,4 +115,10 @@ describe("resolveRedirectTo", () => {
       expect(resolveRedirectTo(value, "/blog")).toBe("/blog/");
     },
   );
+});
+
+describe("optionalRedirectTo", () => {
+  test("reads an empty value as absent, leaving the caller's default", () => {
+    expect(optionalRedirectTo("", "")).toBeUndefined();
+  });
 });

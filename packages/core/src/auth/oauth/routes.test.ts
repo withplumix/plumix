@@ -651,6 +651,43 @@ describe("oauth callback route", () => {
     expect(context?.firstSignIn).toBe(true);
   });
 
+  test("a sign-up stores the provider's name and avatar on the new user", async () => {
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+    });
+    await h.seedUser("admin");
+    await h.factory.allowedDomain.create({
+      domain: "example.com",
+      defaultRole: "author",
+      isEnabled: true,
+    });
+    const state = await seedState(h, "google", "v-profile");
+    answer({
+      "https://oauth2.googleapis.com/token": {
+        body: { access_token: "tk", id_token: "id", token_type: "bearer" },
+      },
+      "https://openidconnect.googleapis.com/v1/userinfo": {
+        body: {
+          sub: "google-42",
+          email: "newcomer@example.com",
+          email_verified: true,
+          name: "New Comer",
+          picture: "https://example.com/pic.png",
+        },
+      },
+    });
+
+    await get(h, `/_plumix/auth/oauth/google/callback?code=abc&state=${state}`);
+
+    const created = await h.db.query.users.findFirst({
+      where: eq(users.email, "newcomer@example.com"),
+    });
+    expect(created).toMatchObject({
+      name: "New Comer",
+      avatarUrl: "https://example.com/pic.png",
+    });
+  });
+
   test("self-signup provisions an unlisted email at the default role", async () => {
     const h = await createDispatcherHarness({
       config: {
