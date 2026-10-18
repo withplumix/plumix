@@ -242,6 +242,7 @@ export type {
   MailRenderContext,
   MailSender,
   MailSendOptions,
+  MailTestMailProps,
   MarkManifestEntry,
   MatchedEntry,
   MatchNarrowing,

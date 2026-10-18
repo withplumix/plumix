@@ -56,7 +56,15 @@ type PlumixCliErrorCode =
   | "sync_settle_failed"
   | "import_invalid_arguments"
   | "import_unconfirmed"
-  | "import_records_invalid";
+  | "import_records_invalid"
+  | "mail_invalid_arguments"
+  | "mail_not_configured"
+  | "mail_send_failed"
+  | "mail_site_unreachable"
+  | "mail_remote_url_required"
+  | "mail_remote_token_missing"
+  | "mail_remote_refused"
+  | "device_authorization_failed";
 
 /**
  * The errors only this package throws. Internal: a runtime adapter declares
@@ -679,6 +687,86 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
       "import_records_invalid",
       `${String(ctx.errors.length)} record(s) cannot be imported:\n${ctx.errors.map((e) => `  - ${e}`).join("\n")}`,
       "Nothing was opened or written. Fix the records, then import again.",
+      undefined,
+    );
+  }
+
+  static mailInvalidArguments(ctx: { cause: unknown }): PlumixCliError {
+    return new PlumixCliError(
+      "mail_invalid_arguments",
+      "plumix mail was given arguments it does not take",
+      "Usage: `plumix mail test <to> [--remote --url <origin> [--token <token>]]`.",
+      ctx.cause,
+    );
+  }
+
+  static mailNotConfigured(): PlumixCliError {
+    return new PlumixCliError(
+      "mail_not_configured",
+      "The site has no mailer to send the test mail through",
+      "Set one with `plumix({ mailer })` in plumix.config.ts. `consoleMailer()` prints each mail to the terminal.",
+      undefined,
+    );
+  }
+
+  /** The transport's own words, so the operator reads what it refused. */
+  static mailSendFailed(ctx: { message: string }): PlumixCliError {
+    return new PlumixCliError(
+      "mail_send_failed",
+      ctx.message,
+      "The site's mailer refused the test mail. Check the credentials and settings its transport reads.",
+      undefined,
+    );
+  }
+
+  static mailSiteUnreachable(ctx: {
+    detail: string;
+    cause: unknown;
+  }): PlumixCliError {
+    return new PlumixCliError(
+      "mail_site_unreachable",
+      `Could not reach the site's database from here: ${ctx.detail}`,
+      "Run `plumix migrate` first if the database is new.",
+      ctx.cause,
+    );
+  }
+
+  static mailRemoteUrlRequired(): PlumixCliError {
+    return new PlumixCliError(
+      "mail_remote_url_required",
+      "plumix mail test --remote needs the deployed site's origin",
+      "Pass `--url <origin>`, such as `--url https://example.com`. Nothing was sent.",
+      undefined,
+    );
+  }
+
+  static mailRemoteTokenMissing(): PlumixCliError {
+    return new PlumixCliError(
+      "mail_remote_token_missing",
+      "plumix mail test --remote needs an API token and has no terminal to authorize one in",
+      "Set `PLUMIX_API_TOKEN` to a token whose user may manage settings, or pass `--token <token>`. Nothing was sent.",
+      undefined,
+    );
+  }
+
+  /** Any answer but a send or a failed send: a token, capability or API problem. */
+  static mailRemoteRefused(ctx: {
+    status: number;
+    body: string;
+  }): PlumixCliError {
+    return new PlumixCliError(
+      "mail_remote_refused",
+      `The deployed site answered ${String(ctx.status)} and sent no mail`,
+      "The token's user needs `settings:manage`, a scoped token needs that scope, and the site must serve its REST API (`api: { enabled: true }`).",
+      ctx.body,
+    );
+  }
+
+  static deviceAuthorizationFailed(ctx: { detail: string }): PlumixCliError {
+    return new PlumixCliError(
+      "device_authorization_failed",
+      `The site did not authorize this command: ${ctx.detail}`,
+      "Run the command again for a new code, or set `PLUMIX_API_TOKEN` to an API token.",
       undefined,
     );
   }

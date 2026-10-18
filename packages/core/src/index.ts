@@ -49,6 +49,7 @@ export type {
 } from "./plugin/auth-method.js";
 export { defineMail } from "./mail/contract/define.js";
 export { MailerNotConfigured } from "./mail/contract/errors.js";
+export { sendMailTest } from "./mail/mail-test.js";
 export type {
   AnyMailDefinition,
   MailConfig,
@@ -67,6 +68,7 @@ export type {
 export type {
   EmailChangeMailProps,
   MagicLinkMailProps,
+  MailTestMailProps,
 } from "./mail/core-mails.js";
 export * from "./mcp/index.js";
 export * from "./plugin/index.js";

@@ -28,7 +28,6 @@ import type {
   EntryMetaBoxManifestEntry,
   EntryTypeManifestEntry,
   FieldTypeManifestEntry,
-  InfrastructureSlot,
   MarkManifestEntry,
   PatternManifestEntry,
   PluginI18nManifest,
@@ -199,13 +198,7 @@ export function buildManifest(
     .map(toSettingsPageEntry)
     .sort(byPriorityThen((p) => p.name));
   assertSettingsPageGroupsExist(settingsPages, registry.settingsGroups);
-  const adminNav = projectAdminNav(
-    registry,
-    entries,
-    termTaxonomies,
-    configuredSlots,
-    refusedAdminAreas,
-  );
+  const adminNav = projectAdminNav(registry, entries, termTaxonomies);
   const dashboardWidgets = Array.from(registry.dashboardWidgets.values())
     .map((widget) => toDashboardWidgetEntry(widget, registry))
     .sort(byPriorityThen((w) => w.id));
@@ -299,14 +292,11 @@ interface MutableAdminNavGroup {
 }
 
 /**
- * Capability gating happens in the admin. A `slot`, `area` or `settingsPages`
- * row is dropped when the deployment can't serve it: the user may, but the site
- * can't.
+ * Capability gating happens in the admin. A `settingsPages` row is dropped
+ * when the site registers no settings page: the user may, but the site can't.
  */
 const CORE_NAV_ITEMS: readonly {
   groupId: string;
-  slot?: InfrastructureSlot;
-  area?: AdminArea;
   settingsPages?: true;
   item: AdminNavItem;
 }[] = [
@@ -336,22 +326,6 @@ const CORE_NAV_ITEMS: readonly {
         { id: "core.adminNav.keyword.accounts", message: "accounts" },
         { id: "core.adminNav.keyword.team", message: "team" },
         { id: "core.adminNav.keyword.people", message: "people" },
-      ],
-    },
-  },
-  {
-    groupId: "management",
-    slot: "mailer",
-    area: "emailDelivery",
-    item: {
-      to: "/mailer",
-      label: { id: "core.adminNav.item.mailer", message: "Mailer" },
-      coreIcon: "mail",
-      order: 175,
-      capability: "settings:manage",
-      keywords: [
-        { id: "core.adminNav.keyword.email", message: "email" },
-        { id: "core.adminNav.keyword.smtp", message: "smtp" },
       ],
     },
   },
@@ -393,8 +367,6 @@ function humanizeGroupId(id: string): string {
 }
 
 function seedNavGroups(
-  configuredSlots: ConfiguredSlots,
-  refusedAdminAreas: readonly AdminArea[],
   hasSettingsPages: boolean,
 ): Map<string, MutableAdminNavGroup> {
   const groups = new Map<string, MutableAdminNavGroup>();
@@ -406,9 +378,7 @@ function seedNavGroups(
       items: [],
     });
   }
-  for (const { groupId, slot, area, settingsPages, item } of CORE_NAV_ITEMS) {
-    if (slot !== undefined && !configuredSlots[slot]) continue;
-    if (area !== undefined && refusedAdminAreas.includes(area)) continue;
+  for (const { groupId, settingsPages, item } of CORE_NAV_ITEMS) {
     if (settingsPages && !hasSettingsPages) continue;
     groups.get(groupId)?.items.push(item);
   }
@@ -511,14 +481,8 @@ function projectAdminNav(
   registry: PluginRegistry,
   entries: readonly EntryTypeManifestEntry[],
   termTaxonomies: readonly TermTaxonomyManifestEntry[],
-  configuredSlots: ConfiguredSlots,
-  refusedAdminAreas: readonly AdminArea[],
 ): readonly AdminNavGroup[] {
-  const groups = seedNavGroups(
-    configuredSlots,
-    refusedAdminAreas,
-    registry.settingsPages.size > 0,
-  );
+  const groups = seedNavGroups(registry.settingsPages.size > 0);
   addEntryNavItems(groups, entries);
   addTaxonomyNavItems(groups, termTaxonomies);
   addAdminPageNavItems(groups, registry);

@@ -1,5 +1,11 @@
 # The admin offers only what the deployment can do
 
+Amended by [ADR 0034](0034-an-operator-task-is-a-cli-command-or-config-not-an-admin-screen.md),
+which replaces the **Mailer** page with `plumix mail test` (#2842). No core nav
+item is backed by a slot or filed under an area since, so `buildManifest` drops
+none; the roster, `configuredSlots` and `isSlotConfigured` stay for plugin admin
+code.
+
 The admin nav listed **Mailer** on every site, and its page offered a test send
 that could only fail with `mailer_not_configured` when `plumix.config.ts` had no
 `mailer` slot. The media library offers an upload with no `storage` slot the same
@@ -56,7 +62,8 @@ rejected for the same reason **Model it as a capability** is below.
 
 `InfrastructureSlot` names the `plumix()` keys that hold an adapter the admin
 could offer an action for: `storage`, `imageDelivery`, `kv`, `cdn`, `mailer`.
-The roster covers all five although only `mailer` gates an admin surface today.
+The roster covers all five although none gates a core admin surface since the
+**Mailer** page was removed; `mailer` stays in it with the rest.
 A roster that listed only what is read now would have to be revisited by every
 ticket that reads a new one. A new key of that kind joins the union, and the
 roster fails typecheck until it names it.

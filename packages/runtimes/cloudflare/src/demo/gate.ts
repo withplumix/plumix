@@ -25,7 +25,7 @@ const REFUSED_PREFIXES = {
     "/_plumix/auth/magic-link/",
     "/_plumix/rpc/user/requestEmailChange",
     "/_plumix/auth/verify-email",
-    "/_plumix/rpc/auth/mailer/",
+    "/_plumix/api/v1/system/mail/",
   ],
 } as const satisfies Record<AdminArea, readonly string[]>;
 

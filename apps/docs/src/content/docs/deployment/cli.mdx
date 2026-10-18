@@ -9,11 +9,11 @@ sidebar:
 
 import { Aside } from "@astrojs/starlight/components";
 
-`plumix <command> [options]` is the whole surface. Seven commands ship with the package itself; a runtime adapter contributes the rest — which is why `deploy`, `preview` and `types` exist on Cloudflare and not on Node, and why `plumix --help` groups them separately.
+`plumix <command> [options]` is the whole surface. Eight commands ship with the package itself; a runtime adapter contributes the rest — which is why `deploy`, `preview` and `types` exist on Cloudflare and not on Node, and why `plumix --help` groups them separately.
 
 ## Overview
 
-`plumix migrate`, `plumix sync`, `plumix import`, `plumix cron`, `plumix meta`, `plumix doctor` and `plumix i18n` are built in: they run the same way regardless of which `runtime` a site configures. `dev`, `build`, and on some runtimes `deploy` and `types` come from `RuntimeAdapter.commandsModule` instead, so their behaviour is the adapter's to define. The same module tells `migrate` and `meta` how to open the runtime's database and declares the target options that name its deployed databases, and gives `sync` and `import` their transport. [Runtime Adapters](/deployment/runtimes/#the-adapter) covers `commandsModule` from the package-author side.
+`plumix migrate`, `plumix sync`, `plumix import`, `plumix cron`, `plumix meta`, `plumix mail`, `plumix doctor` and `plumix i18n` are built in: they run the same way regardless of which `runtime` a site configures. `dev`, `build`, and on some runtimes `deploy` and `types` come from `RuntimeAdapter.commandsModule` instead, so their behaviour is the adapter's to define. The same module tells `migrate`, `meta` and `mail` how to open the runtime's database and declares the target options that name its deployed databases, and gives `sync` and `import` their transport. [Runtime Adapters](/deployment/runtimes/#the-adapter) covers `commandsModule` from the package-author side.
 
 `plumix --help` prints every command it can currently resolve, grouped by where it came from: a project with no `plumix.config.ts` in reach sees only the built-ins, because loading the runtime's commands means loading the config first. Under them it lists the runtime's target options and the commands that take them.
 
@@ -174,6 +174,28 @@ plumix meta settle --production --dry-run
 ```
 
 A CDN purge reads its credentials from the environment the command runs in, so a deployed settle purges only when they are set there. On Cloudflare, Workers Caching (`cache.enabled`) is reachable only from inside the Worker, so pages it holds keep their copy until it expires.
+
+### `mail`
+
+`plumix mail test <to>` sends core's `mailTest` mail to `<to>` through the site's real transport, so you can check a `mailer` works before a sign-in link depends on it. Testing the mailer is an operator task, so it is a command and not an admin screen ([ADR 0034](https://github.com/withplumix/plumix/blob/main/docs/adr/0034-an-operator-task-is-a-cli-command-or-config-not-an-admin-screen.md)). `mailTest` is declared like any [mail](/going-further/mail/), so it shows in the preview gallery and a site can override it by name.
+
+```bash
+plumix mail test ann@example.com
+```
+
+Locally it runs through the site's own handler against the env the runtime opens, the same way `meta` does, so the mailer reads the secrets in `.env`, and on Cloudflare `.dev.vars` too. A send prints the recipient and exits 0. A transport that refuses the mail fails with `mail_send_failed` and prints the transport's own error, such as `SMTP 535 auth failed`, and exits 1. A site with no `mailer` fails with `mail_not_configured`. A `<to>` that is not an email address fails with `mail_invalid_arguments`.
+
+`--remote --url <origin>` sends the mail through the deployed site instead, with its production secrets, by calling `POST /_plumix/api/v1/system/mail/test` there. The route needs the site's [REST API](/apis/rest-api/) enabled and an API token whose user holds `settings:manage`. A scoped token also needs that scope. The output and exit codes are the same as a local run.
+
+The token comes from `--token`, else the `PLUMIX_API_TOKEN` environment variable. In CI, set the variable:
+
+```bash
+PLUMIX_API_TOKEN=pl_pat_… plumix mail test ann@example.com --remote --url https://example.com
+```
+
+With neither, on a terminal, the command runs the site's device flow: it prints a link and a code, you approve the code in the admin, and it carries on with the token the site mints. It never stores that token. Without a terminal and with no token, it fails with `mail_remote_token_missing`.
+
+Core ships no rate limiter for the route, as for the rest of the REST API. To throttle it, apply the same edge rule [Rate limiting](/apis/rest-api/#rate-limiting) describes.
 
 ### `doctor`
 

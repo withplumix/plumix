@@ -67,3 +67,33 @@ msgstr "The link expires in {hours} hours."
 #: src/mail/core-mails.ts
 msgid "core.mail.emailChange.ignore"
 msgstr "If you didn't request this, you can ignore this email — your account stays on {oldEmail}."
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.mailTest.subject"
+msgstr "Test mail from {siteName}"
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.mailTest.intro"
+msgstr "This is a test mail from {siteName}."
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.mailTest.local"
+msgstr "It was sent by `plumix mail test`, from the command line, through the mailer the site configures."
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.mailTest.remote"
+msgstr "It was sent by `plumix mail test --remote`, through the deployed site's mailer."
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.mailTest.sentAt"
+msgstr "Sent at {sentAt}."
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.mailTest.delivered"
+msgstr "If you can read this, the site's mailer delivers mail."

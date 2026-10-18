@@ -345,6 +345,92 @@ msgstr ""
 #~ msgstr "Використовуйте лише домен — без протоколу та шляху."
 
 #. js-lingui-explicit-id
+#: src/lib/mailer-errors.ts
+#~ msgid "mailer.test.error.fallback"
+#~ msgstr "Не вдалося надіслати тестове повідомлення. Спробуйте знову."
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+#~ msgid "core.adminNav.keyword.email"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
+#~ msgid "mailer.test.recipient.invalid"
+#~ msgstr "Введіть дійсну email-адресу."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
+#~ msgid "mailer.title"
+#~ msgstr "Пошта"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+#~ msgid "core.adminNav.item.mailer"
+#~ msgstr "Пошта"
+
+#. js-lingui-explicit-id
+#: src/lib/mailer-errors.ts
+#~ msgid "mailer.test.error.notConfigured"
+#~ msgstr "Не налаштовано адаптер пошти. Передайте `mailer:` в `plumix({...})` (наприклад consoleMailer() для розробки або вашу обгортку Resend/Postmark/SES)."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
+#~ msgid "mailer.test.recipient.placeholder"
+#~ msgstr "ops@example.com"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
+#~ msgid "mailer.test.recipient.label"
+#~ msgstr "Одержувач"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
+#~ msgid "mailer.test.title"
+#~ msgstr "Надіслати тестове повідомлення"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
+#~ msgid "mailer.test.submit.idle"
+#~ msgstr "Надіслати тест"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
+#~ msgid "mailer.test.submit.pending"
+#~ msgstr "Надсилання…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
+#~ msgid "mailer.test.description"
+#~ msgstr "Надсилає одноразове повідомлення через той самий транспорт, що й magic-link. Помилки виводяться тут дослівно — на відміну від процесу запиту magic-link, який навмисно поглинає помилки mailer, щоб форма відповіді не виявляла, чи зареєстровано email."
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+#~ msgid "core.adminNav.keyword.smtp"
+#~ msgstr ""
+
+#. to: the recipient email address the test was sent to
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
+#~ msgid "mailer.test.feedback.ok"
+#~ msgstr "Тестове повідомлення надіслано на {to}. Якщо воно не прийде протягом хвилини, перевірте журнали вашого транспортного адаптера."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
+#~ msgid "mailer.description"
+#~ msgstr "Перевірка того, що налаштований транспорт вихідної пошти справді доставляє. Використовується magic-link входом, листами запрошень та будь-яким плагіном, що використовує спільний mailer."
+
+#. js-lingui-explicit-id
+#: src/lib/mailer-errors.ts
+#~ msgid "mailer.test.error.sendFailed"
+#~ msgstr "Адаптер mailer викинув помилку під час надсилання. Перевірте журнали worker для базової помилки."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
+#~ msgid "mailer.notConfigured"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — нащадків не можна вибрати як батьківський елемент."
@@ -1282,11 +1368,6 @@ msgid "magicLinkRequest.error.network"
 msgstr "Не вдалося надіслати посилання. Спробуйте знову."
 
 #. js-lingui-explicit-id
-#: src/lib/mailer-errors.ts
-msgid "mailer.test.error.fallback"
-msgstr "Не вдалося надіслати тестове повідомлення. Спробуйте знову."
-
-#. js-lingui-explicit-id
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.fallback"
 msgstr "Не вдалося ввійти. Спробуйте знову."
@@ -1624,11 +1705,6 @@ msgid "userRole.long.editor"
 msgstr "Редактор — публікація та редагування будь-яких записів"
 
 #. js-lingui-explicit-id
-#: src/lib/core-nav-i18n.ts
-msgid "core.adminNav.keyword.email"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.email.label"
 msgstr "Email"
@@ -1687,11 +1763,6 @@ msgstr "Введіть дійсну email-адресу"
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.invalidInput"
 msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/-mailer-page.tsx
-msgid "mailer.test.recipient.invalid"
-msgstr "Введіть дійсну email-адресу."
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/-schemas.ts
@@ -2111,16 +2182,6 @@ msgid "magicLinkRequest.error.notConfigured"
 msgstr "Вхід за magic-link не налаштований на цьому сайті."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/-mailer-page.tsx
-msgid "mailer.title"
-msgstr "Пошта"
-
-#. js-lingui-explicit-id
-#: src/lib/core-nav-i18n.ts
-msgid "core.adminNav.item.mailer"
-msgstr "Пошта"
-
-#. js-lingui-explicit-id
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.management"
 msgstr "Керування"
@@ -2367,11 +2428,6 @@ msgid "settings.page.empty.title"
 msgstr "На цій сторінці немає груп"
 
 #. js-lingui-explicit-id
-#: src/lib/mailer-errors.ts
-msgid "mailer.test.error.notConfigured"
-msgstr "Не налаштовано адаптер пошти. Передайте `mailer:` в `plumix({...})` (наприклад consoleMailer() для розробки або вашу обгортку Resend/Postmark/SES)."
-
-#. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.noMatch"
 msgstr "Збігів немає"
@@ -2525,11 +2581,6 @@ msgstr ""
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.loading"
 msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/-mailer-page.tsx
-msgid "mailer.test.recipient.placeholder"
-msgstr "ops@example.com"
 
 #. js-lingui-explicit-id
 #: src/lib/core-nav-i18n.ts
@@ -2738,11 +2789,6 @@ msgstr ""
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.recent.title"
 msgstr "Нещодавня активність"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/-mailer-page.tsx
-msgid "mailer.test.recipient.label"
-msgstr "Одержувач"
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/reference-picker.tsx
@@ -3063,11 +3109,6 @@ msgid "magicLink.error.registrationClosed"
 msgstr "Самостійна реєстрація недоступна, доки адміністратор не завершив налаштування."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/-mailer-page.tsx
-msgid "mailer.test.title"
-msgstr "Надіслати тестове повідомлення"
-
-#. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.dialog.submit.idle"
 msgstr "Надіслати підтвердження"
@@ -3078,16 +3119,6 @@ msgid "userInvite.submit.idle"
 msgstr "Надіслати запрошення"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/-mailer-page.tsx
-msgid "mailer.test.submit.idle"
-msgstr "Надіслати тест"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/-mailer-page.tsx
-msgid "mailer.test.submit.pending"
-msgstr "Надсилання…"
-
-#. js-lingui-explicit-id
 #: src/routes/_auth/-login-screen.tsx
 msgid "login.magicLink.pending"
 msgstr "Надсилання…"
@@ -3096,11 +3127,6 @@ msgstr "Надсилання…"
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.dialog.submit.pending"
 msgstr "Надсилання…"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/-mailer-page.tsx
-msgid "mailer.test.description"
-msgstr "Надсилає одноразове повідомлення через той самий транспорт, що й magic-link. Помилки виводяться тут дослівно — на відміну від процесу запиту magic-link, який навмисно поглинає помилки mailer, щоб форма відповіді не виявляла, чи зареєстровано email."
 
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
@@ -3265,11 +3291,6 @@ msgid "admin.slug.format"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/lib/core-nav-i18n.ts
-msgid "core.adminNav.keyword.smtp"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/lib/email-change-errors.ts
 msgid "emailChange.error.emailTaken"
 msgstr "Хтось інший зайняв цей email між запитом і вашим натисканням. Запросіть нову зміну на іншу адресу."
@@ -3379,17 +3400,6 @@ msgstr "Терміни"
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.taxonomy.plural"
 msgstr "Терміни"
-
-#. to: the recipient email address the test was sent to
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/-mailer-page.tsx
-msgid "mailer.test.feedback.ok"
-msgstr "Тестове повідомлення надіслано на {to}. Якщо воно не прийде протягом хвилини, перевірте журнали вашого транспортного адаптера."
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/-mailer-page.tsx
-msgid "mailer.description"
-msgstr "Перевірка того, що налаштований транспорт вихідної пошти справді доставляє. Використовується magic-link входом, листами запрошень та будь-яким плагіном, що використовує спільний mailer."
 
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
@@ -3527,11 +3537,6 @@ msgstr "CLI показує 8-символьний код, розділений �
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.delete.description"
 msgstr "Пристрій, що зареєстрував \"{name}\", більше не зможе ввійти. Ви можете зареєструвати його знову пізніше."
-
-#. js-lingui-explicit-id
-#: src/lib/mailer-errors.ts
-msgid "mailer.test.error.sendFailed"
-msgstr "Адаптер mailer викинув помилку під час надсилання. Перевірте журнали worker для базової помилки."
 
 #. js-lingui-explicit-id
 #: src/routes/__root.tsx
@@ -3697,11 +3702,6 @@ msgstr "Цей сеанс більше не існує. Оновіть спис�
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.empty.description"
 msgstr "Ця сторінка налаштувань ще не посилається на жодні зареєстровані групи. Плагіни складають сторінки за допомогою хелпера registerSettingsPage:"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/-mailer-page.tsx
-msgid "mailer.notConfigured"
-msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx

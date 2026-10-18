@@ -67,3 +67,33 @@ msgstr "Посилання діє {hours} год."
 #: src/mail/core-mails.ts
 msgid "core.mail.emailChange.ignore"
 msgstr "Якщо ви цього не запитували, просто проігноруйте цей лист — ваш обліковий запис залишиться на {oldEmail}."
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.mailTest.subject"
+msgstr "Тестовий лист від {siteName}"
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.mailTest.intro"
+msgstr "Це тестовий лист від {siteName}."
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.mailTest.local"
+msgstr "Його надіслано командою `plumix mail test` з командного рядка через поштовий сервіс, налаштований для сайту."
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.mailTest.remote"
+msgstr "Його надіслано командою `plumix mail test --remote` через поштовий сервіс розгорнутого сайту."
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.mailTest.sentAt"
+msgstr "Надіслано {sentAt}."
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.mailTest.delivered"
+msgstr "Якщо ви це читаєте, поштовий сервіс сайту доставляє листи."

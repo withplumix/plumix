@@ -21,6 +21,7 @@ import { generateOpenApiDocument } from "./openapi.js";
 import { buildPluginRestRouter } from "./plugin-resources.js";
 import { resolveRestPrincipal } from "./principal.js";
 import { restRouter } from "./router.js";
+import { mailTestErrorBody } from "./system-mail.js";
 
 /**
  * Dispatches a request against the REST surface. The dispatcher branch hands
@@ -43,6 +44,7 @@ export function buildRestDispatcher(
     ...buildPluginRestRouter(registry.restResources),
   };
   const handler = new OpenAPIHandler(router, {
+    customErrorResponseBodyEncoder: mailTestErrorBody,
     // One span per matched procedure — plugin resources included, since they
     // share this handler. Errors thrown by the procedure stamp the span before
     // propagating into oRPC's error mapping.

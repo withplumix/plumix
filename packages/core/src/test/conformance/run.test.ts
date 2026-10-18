@@ -68,6 +68,18 @@ describe("run contract cases", () => {
       memorySite(() => createTestDb()),
     );
 
+    expect(failed).toEqual([
+      "a report counts every seeded unsettled value and writes nothing",
+      "a settle converts more rows than one sweep call reaches",
+    ]);
+  });
+
+  test("fail a runtime whose run reaches no database", async () => {
+    const failed = await failingCases(
+      runContractCases,
+      memorySite(() => Promise.reject(new Error("no database binding"))),
+    );
+
     expect(failed).toEqual(runContractCases.map(({ name }) => name));
   });
 });

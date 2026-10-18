@@ -21,6 +21,7 @@ import { cronCommand } from "./commands/cron.js";
 import { doctorCommand } from "./commands/doctor.js";
 import { i18nCommand } from "./commands/i18n.js";
 import { importCommand } from "./commands/import.js";
+import { mailCommand } from "./commands/mail.js";
 import { metaCommand } from "./commands/meta.js";
 import { migrateCommand, migrateForDev } from "./commands/migrate.js";
 import { syncCommand } from "./commands/sync.js";
@@ -36,7 +37,7 @@ import { badge, exitWithError, report } from "./report.js";
 const loadCore = loadOnce(() => import("@plumix/core"));
 
 /**
- * A built-in may read the whole app — `meta` and `cron` build the site's
+ * A built-in may read the whole app — `meta`, `mail` and `cron` build the site's
  * handler from it; a runtime's own commands see only its `CommandApp` part.
  */
 const BUILT_IN_COMMANDS: ReadonlyMap<
@@ -46,6 +47,7 @@ const BUILT_IN_COMMANDS: ReadonlyMap<
   ["migrate", migrateCommand],
   ["cron", cronCommand],
   ["meta", metaCommand],
+  ["mail", mailCommand],
   ["doctor", doctorCommand],
   ["i18n", i18nCommand],
   ["sync", syncCommand],

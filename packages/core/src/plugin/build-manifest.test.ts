@@ -195,23 +195,6 @@ describe("buildManifest", () => {
     expect(management?.items.map((i) => i.to)).toEqual(["/users", "/settings"]);
   });
 
-  test("lists Mailer under Management only when the mailer slot is configured", () => {
-    const manifest = buildManifest(createPluginRegistry(), {
-      configuredSlots: { ...configuredSlotsOf({}), mailer: true },
-    });
-    const management = manifest.adminNav.find((g) => g.id === "management");
-    expect(management?.items.map((i) => i.to)).toEqual(["/users", "/mailer"]);
-  });
-
-  test("drops Mailer when the deployment refuses email delivery, even with a mailer slot", () => {
-    const manifest = buildManifest(createPluginRegistry(), {
-      configuredSlots: { ...configuredSlotsOf({}), mailer: true },
-      refusedAdminAreas: ["emailDelivery"],
-    });
-    const management = manifest.adminNav.find((g) => g.id === "management");
-    expect(management?.items.map((i) => i.to)).toEqual(["/users"]);
-  });
-
   test("carries the admin areas the deployment refuses", () => {
     const manifest = buildManifest(createPluginRegistry(), {
       refusedAdminAreas: ["passkeys", "apiTokens"],

@@ -12,15 +12,18 @@ Plumix can serve your published content as JSON under `/_plumix/api/v1`, alongsi
 
 ## Overview
 
-The API is read-only for core content. Every endpoint core mounts answers `GET`. Each public entry type and each public taxonomy gets a collection, named by pluralising the type or taxonomy name, so `post` becomes `/posts` and `category` becomes `/categories`. A type or taxonomy registered with `isPublic: false` has no collection, and asking for one returns 404.
+The API is read-only for core content. Every content endpoint core mounts answers `GET`. Each public entry type and each public taxonomy gets a collection, named by pluralising the type or taxonomy name, so `post` becomes `/posts` and `category` becomes `/categories`. A type or taxonomy registered with `isPublic: false` has no collection, and asking for one returns 404.
 
-| Endpoint                                | What it returns                                                |
-| --------------------------------------- | -------------------------------------------------------------- |
-| `GET /_plumix/api/v1/{collection}`      | A page of entries or terms from one collection                 |
-| `GET /_plumix/api/v1/{collection}/{id}` | One entry or term, by numeric id                               |
-| `GET /_plumix/api/v1/openapi.json`      | The OpenAPI document for every endpoint, core and plugin alike |
+| Endpoint                                | What it returns                                                    |
+| --------------------------------------- | ------------------------------------------------------------------ |
+| `GET /_plumix/api/v1/{collection}`      | A page of entries or terms from one collection                     |
+| `GET /_plumix/api/v1/{collection}/{id}` | One entry or term, by numeric id                                   |
+| `GET /_plumix/api/v1/openapi.json`      | The OpenAPI document for every endpoint, core and plugin alike     |
+| `POST /_plumix/api/v1/system/mail/test` | Sends core's `mailTest` mail to `{ to }` through the site's mailer |
 
 A request without a token reads as an anonymous visitor and sees published content only. Content it may not see is a 404, never a 403, so a caller cannot probe for a draft's existence. A request carrying an API token reads as that token's user instead, as [Authenticating with an API token](#authenticating-with-an-api-token) describes.
+
+The mail test route is what [`plumix mail test --remote`](/deployment/cli/#mail) calls. It needs a token whose user holds `settings:manage`, answers 204 once the mailer accepts the mail, and answers 502 with `{ error: { code: "mail_send_failed", message } }`, the transport's own message, when it refuses.
 
 Plugins add their own endpoints to the same namespace, and those appear in `openapi.json` automatically. `@plumix/plugin-comments` is the one that ships, with `GET /_plumix/api/v1/{collection}/{entry}/comments`.
 
