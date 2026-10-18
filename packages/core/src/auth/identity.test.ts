@@ -467,16 +467,17 @@ describe("resolveExternalIdentity — provider account", () => {
       BEGIN SELECT RAISE(ABORT, 'link storage unavailable'); END
     `);
 
-    const failure = await resolveExternalIdentity(db, {
+    const signIn = resolveExternalIdentity(db, {
       meta: {},
       email: "alice@example.com",
       emailVerified: true,
       providerAccount: github,
-    }).catch((error: unknown) => error);
+    });
 
     // Drizzle's own frame says only "Failed query"; the cause carries why.
-    expect(String((failure as { cause?: unknown }).cause)).toMatch(
-      /link storage unavailable/,
+    await expect(signIn).rejects.toHaveProperty(
+      "cause.message",
+      expect.stringContaining("link storage unavailable"),
     );
   });
 });
