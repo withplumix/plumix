@@ -35,6 +35,7 @@ export function editorEntry(
     createdAt: T0,
     updatedAt: T0,
     meta: {},
+    etag: "e0",
   };
 }
 

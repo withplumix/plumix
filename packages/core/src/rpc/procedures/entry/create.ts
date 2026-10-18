@@ -5,6 +5,7 @@ import {
   entryCapabilityNamespace,
   namespacedEntryCapability,
 } from "../../../access/contract/entry-capabilities.js";
+import { etagOf } from "../../../db/concurrency.js";
 import { entries } from "../../../db/schema/entries.js";
 import { isAuthoredEntryType } from "../../../entries/authored.js";
 import {
@@ -13,12 +14,12 @@ import {
   buildTermsPatchGuards,
 } from "../../../entries/terms.js";
 import { loadReadableParent } from "../../../entries/visibility.js";
+import { isEmptyMetaPatch, patchedMetaBag } from "../../../meta/core.js";
 import {
+  announceEntryMetaChange,
   assertPromotedEntryMetaValid,
-  loadEntryMeta,
   resolveEntryMeta,
   sanitizeAndValidateEntryMeta,
-  writeEntryMeta,
 } from "../../../meta/entry.js";
 import { startingMeta } from "../../../plugin/fields/starting-meta.js";
 import { listEntryMetaFields } from "../../../plugin/manifest.js";
@@ -170,6 +171,9 @@ export const create = base
     );
     prepared.authorId = context.user.id;
     prepared.type = filtered.type;
+    // In the insert, not a second write after it, so the row answers with the
+    // token the caller's first save will send.
+    if (metaPatch) prepared.meta = patchedMetaBag(prepared.meta, metaPatch);
 
     const [created] = await context.db
       .insert(entries)
@@ -185,23 +189,23 @@ export const create = base
       await applyTermPatch(context, created.id, termsPatch);
     }
 
-    let meta: ResolvedMeta;
-    if (metaPatch) {
-      await writeEntryMeta(context, created, metaPatch);
-      meta = await loadEntryMeta(context, created);
-    } else {
-      // No write path — `created.meta` is the starting meta. Decode inline
-      // to save the round trip.
-      meta = await resolveEntryMeta(context, created, created.meta);
+    if (metaPatch && !isEmptyMetaPatch(metaPatch)) {
+      await announceEntryMetaChange(context, created, metaPatch);
     }
+    const meta: ResolvedMeta = await resolveEntryMeta(
+      context,
+      created,
+      created.meta,
+    );
 
     await fireEntryTransition(context, created, "draft");
     if (created.status === "published") {
       await fireEntryPublished(context, created);
     }
 
-    return context.hooks.applyFilter("rpc:entry.create:output", {
+    const output = await context.hooks.applyFilter("rpc:entry.create:output", {
       ...created,
       meta,
     });
+    return { ...output, etag: etagOf(created.updatedAt) };
   });

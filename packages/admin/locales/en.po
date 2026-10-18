@@ -881,6 +881,11 @@ msgid "palette.group.commands"
 msgstr "Commands"
 
 #. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.compare"
+msgstr "Compare"
+
+#. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.compare"
 msgstr "Compare"
@@ -1837,6 +1842,11 @@ msgid "editor.command.group"
 msgstr "Group the selection"
 
 #. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.hideComparison"
+msgstr "Hide comparison"
+
+#. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.hideComparison"
 msgstr "Hide comparison"
@@ -1922,6 +1932,11 @@ msgid "userInvite.submit.pending"
 msgstr "Inviting…"
 
 #. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.description"
+msgstr "It was saved elsewhere at {when}. Your changes are kept here and haven't been saved."
+
+#. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.singular"
 msgstr "Item"
@@ -1947,6 +1962,11 @@ msgstr "Items"
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.reassign.keepAsIs"
 msgstr "Keep entries as-is (none to reassign)"
+
+#. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.keepMine"
+msgstr "Keep mine"
 
 #. js-lingui-explicit-id
 #: src/components/locale-switcher.tsx
@@ -2003,6 +2023,11 @@ msgstr "Live now"
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.loadMore"
 msgstr "Load more"
+
+#. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.loadTheirs"
+msgstr "Load theirs"
 
 #. js-lingui-explicit-id
 #: src/components/data-table/data-table.tsx
@@ -2913,6 +2938,11 @@ msgid "editor.plainForm.status.saved"
 msgstr "Saved"
 
 #. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.savedNow"
+msgstr "Saved now"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/-settings-group-card.tsx
 msgid "settings.page.saved"
 msgstr "Saved."
@@ -3614,6 +3644,11 @@ msgid "profile.passkeys.enroll.noAuthenticator"
 msgstr "This device doesn't support passkeys."
 
 #. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.title"
+msgstr "This entry changed since you opened it"
+
+#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/-restore-error.ts
 msgid "editor.revision.conflict"
 msgstr "This entry changed since the preview loaded — reload and retry."
@@ -3957,6 +3992,11 @@ msgstr "You've reached the limit of passkeys for this account."
 #: src/components/profile/language-card.tsx
 msgid "profile.language.description"
 msgstr "Your admin chrome renders in this language. The page reloads after you switch so the new translations apply everywhere."
+
+#. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.yourChanges"
+msgstr "Your changes"
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts

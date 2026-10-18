@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { toRegisteredEntryType } from "../plugin/registry.js";
+import { currentEtag } from "../test/entry-etag.js";
 import { createRpcHarness } from "../test/rpc.js";
 
 function registryWithRevisions() {
@@ -28,8 +29,16 @@ describe("entry.revisions.list", () => {
       plugins: registryWithRevisions(),
     });
     const created = await h.client.entry.create({ title: "P", slug: "p" });
-    await h.client.entry.update({ id: created.id, title: "P2" });
-    await h.client.entry.update({ id: created.id, title: "P3" });
+    await h.client.entry.update({
+      id: created.id,
+      title: "P2",
+      ifMatch: await currentEtag(h.db, created.id),
+    });
+    await h.client.entry.update({
+      id: created.id,
+      title: "P3",
+      ifMatch: await currentEtag(h.db, created.id),
+    });
 
     const out = await h.client.entry.revisions.list({ entryId: created.id });
     expect(out.revisions).toHaveLength(2);
@@ -72,7 +81,11 @@ describe("entry.revisions.list", () => {
     });
     const created = await h.client.entry.create({ title: "P", slug: "p" });
     for (let i = 0; i < 5; i += 1) {
-      await h.client.entry.update({ id: created.id, title: `v${i}` });
+      await h.client.entry.update({
+        id: created.id,
+        title: `v${i}`,
+        ifMatch: await currentEtag(h.db, created.id),
+      });
     }
     const page1 = await h.client.entry.revisions.list({
       entryId: created.id,
@@ -99,7 +112,11 @@ describe("entry.revisions.get", () => {
       plugins: registryWithRevisions(),
     });
     const created = await h.client.entry.create({ title: "G", slug: "g" });
-    await h.client.entry.update({ id: created.id, title: "G2" });
+    await h.client.entry.update({
+      id: created.id,
+      title: "G2",
+      ifMatch: await currentEtag(h.db, created.id),
+    });
     const listed = await h.client.entry.revisions.list({
       entryId: created.id,
     });
@@ -122,7 +139,11 @@ describe("entry.revisions.get", () => {
       plugins: registryWithRevisions(),
     });
     const created = await h.client.entry.create({ title: "M", slug: "m" });
-    await h.client.entry.update({ id: created.id, title: "M2" });
+    await h.client.entry.update({
+      id: created.id,
+      title: "M2",
+      ifMatch: await currentEtag(h.db, created.id),
+    });
     const listed = await h.client.entry.revisions.list({
       entryId: created.id,
     });
@@ -141,7 +162,11 @@ describe("entry.revisions.get", () => {
       plugins: registryWithRevisions(),
     });
     const created = await h.client.entry.create({ title: "M", slug: "m" });
-    await h.client.entry.update({ id: created.id, title: "M2" });
+    await h.client.entry.update({
+      id: created.id,
+      title: "M2",
+      ifMatch: await currentEtag(h.db, created.id),
+    });
     const listed = await h.client.entry.revisions.list({
       entryId: created.id,
     });
@@ -168,7 +193,11 @@ describe("entry.revisions.get", () => {
       plugins: registryWithRevisions(),
     });
     const created = await h.client.entry.create({ title: "M", slug: "m" });
-    await h.client.entry.update({ id: created.id, title: "M2" });
+    await h.client.entry.update({
+      id: created.id,
+      title: "M2",
+      ifMatch: await currentEtag(h.db, created.id),
+    });
     const listed = await h.client.entry.revisions.list({
       entryId: created.id,
     });
@@ -191,7 +220,11 @@ describe("entry.revisions.get", () => {
       plugins: registryWithRevisions(),
     });
     const created = await h.client.entry.create({ title: "M", slug: "m" });
-    await h.client.entry.update({ id: created.id, title: "M2" });
+    await h.client.entry.update({
+      id: created.id,
+      title: "M2",
+      ifMatch: await currentEtag(h.db, created.id),
+    });
     const listed = await h.client.entry.revisions.list({
       entryId: created.id,
     });
@@ -214,7 +247,11 @@ describe("entry.revisions.get", () => {
       title: "M",
       slug: "m",
     });
-    await editor.client.entry.update({ id: created.id, title: "M2" });
+    await editor.client.entry.update({
+      id: created.id,
+      title: "M2",
+      ifMatch: await currentEtag(editor.db, created.id),
+    });
     const listed = await editor.client.entry.revisions.list({
       entryId: created.id,
     });
@@ -242,7 +279,11 @@ describe("entry.revisions.get", () => {
       plugins: registryWithRevisions(),
     });
     const created = await h.client.entry.create({ title: "G", slug: "g" });
-    await h.client.entry.update({ id: created.id, title: "G2" });
+    await h.client.entry.update({
+      id: created.id,
+      title: "G2",
+      ifMatch: await currentEtag(h.db, created.id),
+    });
     const listed = await h.client.entry.revisions.list({
       entryId: created.id,
     });

@@ -1,4 +1,4 @@
-import type { QueryClient } from "@tanstack/react-query";
+import type { EntryConflict } from "@/editor/autosave.js";
 import {
   AUTOSAVE_DEBOUNCE_MS,
   classifyAutosaveError,
@@ -14,7 +14,7 @@ type EntryRow = Awaited<ReturnType<AppRouterClient["entry"]["update"]>>;
 /** The `entry.update` call every group write goes through. */
 export type EntryUpdate = (input: EntryUpdateInput) => Promise<EntryRow>;
 
-type EntryUpdatePatch = Omit<EntryUpdateInput, "id" | "expectedLiveUpdatedAt">;
+type EntryUpdatePatch = Omit<EntryUpdateInput, "id" | "ifMatch">;
 
 /**
  * The hook owns the last-saved `S`; the group only reads, diffs and confirms.
@@ -32,13 +32,14 @@ export interface AutosaveGroup<S> {
 
 export interface EntryAutosaveOptions<G extends Record<string, unknown>> {
   readonly id: number;
-  /** The live row's type: a response of any other type is the per-user
-   *  autosave row, whose `updatedAt` is not the live token. */
-  readonly entryType: string;
-  readonly liveUpdatedAt: Date;
+  /** The `etag` the editor's copy came with. */
+  readonly etag: string;
   readonly groups: { readonly [K in keyof G]: AutosaveGroup<G[K]> };
   /** Called when autosave starts failing — not again until a write succeeds. */
   readonly onError: (err: unknown) => void;
+  /** Called when a write finds the copy stale; autosave pauses until the
+   *  author keeps theirs or loads the other. */
+  readonly onConflict: (conflict: EntryConflict) => void;
   /** Whether a group write is in flight, reported as it changes. */
   readonly onSavingChange?: (saving: boolean) => void;
   /** Whether an edit is waiting to be sent or in flight, reported as it
@@ -53,11 +54,14 @@ export interface EntryAutosave<G extends Record<string, unknown>> {
   readonly flush: () => Promise<void>;
   /** Drop every pending group without sending it. */
   readonly cancel: () => void;
-  /** Take `updatedAt` as the live token, e.g. after adopting the live row. */
-  readonly anchor: (updatedAt: Date) => void;
-  /** Flush, then run `task` in the save queue with the live token. */
-  readonly runExclusive: <T extends Pick<EntryRow, "type" | "updatedAt">>(
-    task: (expectedLiveUpdatedAt: Date) => Promise<T>,
+  /** Take `etag` as the copy's token, e.g. after adopting the live row. */
+  readonly anchor: (etag: string) => void;
+  /** After a conflict: resend every unsaved edit over the entry as it is now,
+   *  from its current `etag`, and resume. */
+  readonly keepMine: (etag: string) => Promise<void>;
+  /** Flush, then run `task` in the save queue with the copy's token. */
+  readonly runExclusive: <T extends Pick<EntryRow, "etag">>(
+    task: (ifMatch: string) => Promise<T>,
   ) => Promise<T>;
 }
 
@@ -66,6 +70,8 @@ interface GroupRunner {
   readonly flush: () => Promise<void>;
   readonly cancel: () => void;
   readonly pending: () => boolean;
+  /** Send the group's unsaved edit now, debounced or not. */
+  readonly save: () => Promise<void>;
 }
 
 /**
@@ -74,7 +80,6 @@ interface GroupRunner {
  */
 export function createEntryAutosave<G extends Record<string, unknown>>(
   initial: EntryAutosaveOptions<G>,
-  queryClient: QueryClient,
   update: EntryUpdate,
 ): {
   readonly autosave: EntryAutosave<G>;
@@ -83,7 +88,10 @@ export function createEntryAutosave<G extends Record<string, unknown>>(
 } {
   let latest = initial;
   const queue = createSaveQueue();
-  let liveUpdatedAt = initial.liveUpdatedAt;
+  let etag = initial.etag;
+  // Set by a conflict: nothing is sent until the author resolves it, so their
+  // edits stay unsaved here rather than overwrite the other write.
+  let paused = false;
   // Latches on a genuine failure so the author is told once, not on every
   // debounce tick; any write that lands re-arms it.
   let failed = false;
@@ -101,15 +109,21 @@ export function createEntryAutosave<G extends Record<string, unknown>>(
     if (wasSaving !== inFlight > 0) latest.onSavingChange?.(inFlight > 0);
     reportUnsaved();
   };
-  // Only the live row carries the live token; a write that landed on the
-  // per-user autosave row leaves it where it was.
-  const adopt = (response: Pick<EntryRow, "type" | "updatedAt">): void => {
-    if (response.type === latest.entryType) liveUpdatedAt = response.updatedAt;
+  // Every response carries the token the next write sends, a draft save's
+  // too, so the editor's own writes never conflict with each other.
+  const adopt = (response: Pick<EntryRow, "etag">): void => {
+    etag = response.etag;
+  };
+  const pause = (conflict: EntryConflict): void => {
+    paused = true;
+    latest.onConflict(conflict);
+    reportUnsaved();
   };
 
   function runner<K extends keyof G>(key: K, initialSaved: G[K]): GroupRunner {
     let saved = initialSaved;
-    const save = async (attempt = 0): Promise<void> => {
+    const save = async (): Promise<void> => {
+      if (paused) return;
       const group = latest.groups[key];
       const next = group.snapshot();
       const patch = group.diff(saved, next);
@@ -120,11 +134,7 @@ export function createEntryAutosave<G extends Record<string, unknown>>(
       track(1);
       try {
         const response = await queue.run(async () => {
-          const res = await update({
-            id: latest.id,
-            ...patch,
-            expectedLiveUpdatedAt: liveUpdatedAt,
-          });
+          const res = await update({ id: latest.id, ...patch, ifMatch: etag });
           adopt(res);
           return res;
         });
@@ -132,15 +142,9 @@ export function createEntryAutosave<G extends Record<string, unknown>>(
         saved = group.commit(saved, next, response);
         group.onSaved?.(patch, response);
       } catch (err) {
-        const outcome = await classifyAutosaveError(
-          err,
-          queryClient,
-          latest.id,
-        );
-        if (outcome.kind === "recovered") {
-          if (outcome.updatedAt) liveUpdatedAt = outcome.updatedAt;
-          // Retry once rather than leave it unsaved until the next keystroke.
-          if (attempt === 0) await save(1);
+        const outcome = classifyAutosaveError(err);
+        if (outcome.kind === "conflict") {
+          pause(outcome.conflict);
           return;
         }
         if (!failed) {
@@ -160,12 +164,16 @@ export function createEntryAutosave<G extends Record<string, unknown>>(
       flush: debouncer.flush,
       cancel: debouncer.cancel,
       pending: debouncer.pending,
+      save: () => {
+        debouncer.cancel();
+        return save();
+      },
     };
   }
 
   const runners: GroupRunner[] = [];
   const unsaved = (): boolean =>
-    inFlight > 0 || runners.some((r) => r.pending());
+    paused || inFlight > 0 || runners.some((r) => r.pending());
   // Filled for every key of `groups` by the loop below.
   const schedule = {} as { [K in keyof G]: () => void };
   for (const key in initial.groups) {
@@ -186,16 +194,28 @@ export function createEntryAutosave<G extends Record<string, unknown>>(
         for (const r of runners) r.cancel();
         reportUnsaved();
       },
-      anchor: (updatedAt) => {
-        liveUpdatedAt = updatedAt;
+      anchor: (next) => {
+        etag = next;
+      },
+      keepMine: async (current) => {
+        etag = current;
+        paused = false;
+        await Promise.all(runners.map((r) => r.save()));
+        reportUnsaved();
       },
       runExclusive: async (task) => {
         await flush();
         return queue.run(async () => {
-          const res = await task(liveUpdatedAt);
-          adopt(res);
-          failed = false;
-          return res;
+          try {
+            const res = await task(etag);
+            adopt(res);
+            failed = false;
+            return res;
+          } catch (err) {
+            const outcome = classifyAutosaveError(err);
+            if (outcome.kind === "conflict") pause(outcome.conflict);
+            throw err;
+          }
         });
       },
     },

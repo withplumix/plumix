@@ -1,12 +1,42 @@
+import type { Db } from "../../../context/app-context.js";
+import type { Entry, NewEntry } from "../../../db/schema/entries.js";
+import { claim, ConflictError } from "../../../db/concurrency.js";
+import { and, eq } from "../../../db/index.js";
+import { entries } from "../../../db/schema/entries.js";
+
+/** Where a write from a copy says it took the copy (ADR 0048). */
+export const ENTRY_IF_MATCH_MESSAGE =
+  "Send the entry's `etag` from `entry.get` as `ifMatch`";
+
+/** Refuses a write whose copy the row has moved past since. */
+export function assertCopyCurrent(ifMatch: Date, updatedAt: Date): void {
+  if (ifMatch.getTime() !== updatedAt.getTime()) {
+    throw new ConflictError(updatedAt);
+  }
+}
+
 /**
- * Point-in-time, not transactional: a write between this check and the
- * UPDATE can still slip through.
+ * One conditional update: it lands only while the row still holds `ifMatch`,
+ * and moves the token. Throws `ConflictError` when another write landed first;
+ * `undefined` when the entry is gone.
  */
-export function assertExpectedLiveUpdatedAt(
-  expected: Date | undefined,
-  current: Date,
-  guards: { readonly stale: () => never },
-): void {
-  if (expected === undefined) return;
-  if (expected.getTime() !== current.getTime()) guards.stale();
+export async function claimEntry(
+  db: Db,
+  id: number,
+  ifMatch: Date,
+  changes: Partial<NewEntry>,
+): Promise<Entry | undefined> {
+  const guard = claim(entries.updatedAt, ifMatch);
+  const [row] = await db
+    .update(entries)
+    .set({ ...changes, ...guard.set })
+    .where(and(eq(entries.id, id), guard.where))
+    .returning();
+  if (row) return row;
+  const [current] = await db
+    .select({ updatedAt: entries.updatedAt })
+    .from(entries)
+    .where(eq(entries.id, id));
+  if (current) throw new ConflictError(current.updatedAt);
+  return undefined;
 }

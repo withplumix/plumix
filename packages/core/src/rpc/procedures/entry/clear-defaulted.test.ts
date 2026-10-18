@@ -15,6 +15,7 @@ import {
 import { seedFromMetaBoxes } from "../../../plugin/manifest-types.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { resolveEntryList } from "../../../route/render/resolve-entry-list.js";
+import { currentEtag } from "../../../test/entry-etag.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
 /**
@@ -79,7 +80,11 @@ describe("clearing a defaulted field", () => {
       const created = await h.client.entry.create({ slug: "defaulted" });
       expect(Object.hasOwn(created.meta, "v")).toBe(true);
 
-      await h.client.entry.update({ id: created.id, meta: { v: cleared } });
+      await h.client.entry.update({
+        id: created.id,
+        meta: { v: cleared },
+        ifMatch: await currentEtag(h.db, created.id),
+      });
 
       // The read.
       const read = await h.client.entry.get({ id: created.id });
@@ -101,7 +106,11 @@ describe("clearing a defaulted field", () => {
       expect(row.meta).not.toHaveProperty("v");
 
       // Saving the form as seeded writes nothing back for it.
-      await h.client.entry.update({ id: created.id, meta: seed });
+      await h.client.entry.update({
+        id: created.id,
+        meta: seed,
+        ifMatch: await currentEtag(h.db, created.id),
+      });
       const after = await h.db.query.entries.findFirst({
         where: (t, { eq }) => eq(t.id, created.id),
       });

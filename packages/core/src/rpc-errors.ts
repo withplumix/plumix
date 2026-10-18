@@ -32,6 +32,10 @@ export const RPC_ERRORS = {
       // reasons that pinpoint a specific field/row (e.g. `meta_*` reasons
       // set this to the offending meta key); omitted otherwise.
       key: v.optional(v.string()),
+      // `etag_mismatch`: the resource's current token and when it moved, so
+      // the client can say when it changed and resend from there.
+      etag: v.optional(v.string()),
+      updatedAt: v.optional(v.date()),
       // `message` is a plain string or a catalog descriptor; `looseObject`
       // keeps the descriptor's `values` on the wire.
       errors: v.optional(

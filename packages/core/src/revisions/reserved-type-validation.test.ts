@@ -1,8 +1,10 @@
 import { describe, expect, test } from "vitest";
 
+import { etagOf } from "../db/concurrency.js";
 import { entries } from "../db/schema/entries.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { toRegisteredEntryType } from "../plugin/registry.js";
+import { currentEtag } from "../test/entry-etag.js";
 import { createRpcHarness } from "../test/rpc.js";
 import { buildRevisionSlug, REVISION_TYPE } from "./slug-codec.js";
 
@@ -94,9 +96,14 @@ describe("a revision row's id is not-found to every procedure loading a live ent
   }
 
   const calls = {
-    update: (h, id) => h.client.entry.update({ id, title: "x" }),
+    update: async (h, id) =>
+      h.client.entry.update({
+        id,
+        title: "x",
+        ifMatch: await currentEtag(h.db, id),
+      }),
     publish: (h, id) =>
-      h.client.entry.publish({ id, expectedLiveUpdatedAt: new Date() }),
+      h.client.entry.publish({ id, ifMatch: etagOf(new Date()) }),
     discardDraft: (h, id) => h.client.entry.discardDraft({ id }),
     duplicate: (h, id) => h.client.entry.duplicate({ id }),
     createPreviewLink: (h, id) => h.client.entry.createPreviewLink({ id }),

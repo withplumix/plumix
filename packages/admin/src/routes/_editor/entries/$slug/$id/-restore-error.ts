@@ -6,7 +6,7 @@ import { describeRpcError, rpcErrorCode } from "@plumix/core/admin";
 const M = {
   revisionConflict: defineMessage({
     id: "editor.revision.conflict",
-    message: "This entry changed since the preview loaded — reload and retry.",
+    message: "This entry changed since you opened it. Reload and try again.",
   }),
   restoreFailed: defineMessage({
     id: "editor.revision.restoreFailed",

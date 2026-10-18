@@ -1,11 +1,21 @@
 import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import { DocumentSettingsPanel } from "@/components/editor/document-settings.js";
 import { ErrorPlaceholder } from "@/components/error-placeholder.js";
+import { classifyAutosaveError } from "@/editor/autosave.js";
+import { conflictDialog } from "@/editor/conflict-dialog.js";
 import { createDebouncer } from "@/editor/debounce.js";
 import { detectStaleAutosave } from "@/editor/detect-stale-autosave.js";
+import { EntryConflictDialog } from "@/editor/EntryConflictDialog.js";
 import { diffMetaBag } from "@/editor/meta-diff.js";
 import {
   resolveEditorMode,
@@ -231,10 +241,12 @@ function EditorRoute(): ReactNode {
   if (!supportsEditor(entryType) && entryType) {
     return (
       <PlainFormRouteInner
+        key={reseedNonce}
         entryType={entryType}
         id={id}
         supportsRevisions={supportsRevisions(entryType)}
         capabilities={user.capabilities}
+        onReseed={reseed}
       />
     );
   }
@@ -412,10 +424,22 @@ function EntryEditor({
   );
   useEffect(() => () => refreshPreview.cancel(), [refreshPreview]);
 
+  const [conflict, dispatchConflict] = useReducer(conflictDialog, {
+    open: false,
+  });
+  const [conflictMine, setConflictMine] = useState<unknown>(null);
   const autosave = useEntryAutosave({
     id,
-    entryType: entry.type,
-    liveUpdatedAt: entry.updatedAt,
+    etag: entry.etag,
+    onConflict: (next) => {
+      // The author's copy as it stood when the save was refused.
+      setConflictMine({
+        title: titleRef.current,
+        content: contentRef.current,
+        excerpt: excerptRef.current,
+      });
+      dispatchConflict({ type: "conflict", conflict: next });
+    },
     onUnsavedChange: setHasUnsavedEdits,
     onError: (err) => {
       setMetaFieldErrors(extractMetaFieldErrors(err) ?? null);
@@ -817,7 +841,8 @@ function EntryEditor({
     : "none";
   const [staleResolved, setStaleResolved] = useState(false);
   const showStaleDialog = staleState === "stale" && !staleResolved;
-  const liveAnchorAfterResolve = entry._preview?.liveUpdatedAt;
+  // A preview read carries the live row's `etag`, the token a draft save sends.
+  const liveAnchorAfterResolve = entry.etag;
 
   const invalidateEntry = useCallback(
     () =>
@@ -847,8 +872,10 @@ function EntryEditor({
     [id, entryTypeName, queryClient],
   );
   // Publish is stricter than a draft save, rejecting values a draft tolerated.
+  // A stale copy opens the conflict dialog instead.
   const handlePublishError = useCallback(
     (err: unknown): void => {
+      if (classifyAutosaveError(err).kind === "conflict") return;
       setMetaFieldErrors(extractMetaFieldErrors(err) ?? null);
       toastError(renderLabel(M.publishFailed));
     },
@@ -859,12 +886,8 @@ function EntryEditor({
   // for the token.
   const publish = useMutation({
     mutationFn: () =>
-      autosave.runExclusive((expectedLiveUpdatedAt) =>
-        orpc.entry.update.call({
-          id,
-          status: "published",
-          expectedLiveUpdatedAt,
-        }),
+      autosave.runExclusive((ifMatch) =>
+        orpc.entry.update.call({ id, status: "published", ifMatch }),
       ),
     onSuccess: () => {
       // The promoted bag passed the strict gate, so clear any field pins a
@@ -877,8 +900,8 @@ function EntryEditor({
   });
   const publishDraft = useMutation({
     mutationFn: () =>
-      autosave.runExclusive((expectedLiveUpdatedAt) =>
-        orpc.entry.publish.call({ id, expectedLiveUpdatedAt }),
+      autosave.runExclusive((ifMatch) =>
+        orpc.entry.publish.call({ id, ifMatch }),
       ),
     onSuccess: async () => {
       // The promoted bag passed the strict gate, so clear any field pins a
@@ -915,9 +938,20 @@ function EntryEditor({
     [discardDraft],
   );
   const handleUseMine = useCallback(() => {
-    if (liveAnchorAfterResolve) autosave.anchor(liveAnchorAfterResolve);
+    autosave.anchor(liveAnchorAfterResolve);
     setStaleResolved(true);
   }, [autosave, liveAnchorAfterResolve]);
+  const handleKeepMine = useCallback(() => {
+    if (!conflict.open) return;
+    dispatchConflict({ type: "keepMine" });
+    void autosave.keepMine(conflict.conflict.etag);
+  }, [autosave, conflict]);
+  const handleLoadTheirs = useCallback(() => {
+    dispatchConflict({ type: "loadTheirs" });
+    // Drop the author's unsaved edits, then remount on the saved entry.
+    autosave.cancel();
+    void invalidateEntry().then(onReseed);
+  }, [autosave, invalidateEntry, onReseed]);
   const handleUseTheirs = useCallback(() => {
     discardDraft.mutate(undefined, {
       onSuccess: () => setStaleResolved(true),
@@ -968,27 +1002,42 @@ function EntryEditor({
     ...orpc.entry.get.queryOptions({ input: { id } }),
     enabled: showStaleDialog,
   });
+  // The entry as the conflicting write left it, fetched fresh per conflict.
+  const theirsQuery = useQuery({
+    queryKey: ["entry.conflict", id, conflict.open && conflict.conflict.etag],
+    queryFn: () => orpc.entry.get.call({ id }),
+    enabled: conflict.open,
+  });
+  const snapshotOf = (
+    row:
+      { title: string; content: unknown; excerpt: string | null } | undefined,
+  ) =>
+    row
+      ? { title: row.title, content: row.content, excerpt: row.excerpt }
+      : { title: renderLabel(M.staleLoading), content: null, excerpt: null };
   const overlay = (
-    <StaleDraftDialog
-      open={showStaleDialog}
-      autosaveSnapshot={{
-        title: entry.title,
-        content: entry.content,
-        excerpt: entry.excerpt,
-      }}
-      liveSnapshot={
-        liveSnapshotQuery.data
-          ? {
-              title: liveSnapshotQuery.data.title,
-              content: liveSnapshotQuery.data.content,
-              excerpt: liveSnapshotQuery.data.excerpt,
-            }
-          : { title: renderLabel(M.staleLoading), content: null, excerpt: null }
-      }
-      onUseMine={handleUseMine}
-      onUseTheirs={handleUseTheirs}
-      isResolving={discardDraft.isPending}
-    />
+    <>
+      <EntryConflictDialog
+        open={conflict.open}
+        changedAt={conflict.open ? conflict.conflict.updatedAt : null}
+        mineSnapshot={conflictMine}
+        theirsSnapshot={snapshotOf(theirsQuery.data)}
+        onKeepMine={handleKeepMine}
+        onLoadTheirs={handleLoadTheirs}
+      />
+      <StaleDraftDialog
+        open={showStaleDialog}
+        autosaveSnapshot={{
+          title: entry.title,
+          content: entry.content,
+          excerpt: entry.excerpt,
+        }}
+        liveSnapshot={snapshotOf(liveSnapshotQuery.data)}
+        onUseMine={handleUseMine}
+        onUseTheirs={handleUseTheirs}
+        isResolving={discardDraft.isPending}
+      />
+    </>
   );
 
   // The site-relative url resolves against the admin origin: the public site is
@@ -1062,15 +1111,11 @@ function RevisionPreview({
     [navigate],
   );
 
-  const liveUpdatedAt = liveQuery.data?.updatedAt;
   const restore = useMutation({
-    mutationFn: () =>
-      orpc.entry.revisions.restore.call({
-        revisionId,
-        // Honored only on the legacy live-write path; the autosave destination
-        // ignores it. Pass the live row's token to keep that contract.
-        expectedLiveUpdatedAt: liveUpdatedAt,
-      }),
+    // The live row's `etag`: restoring is an edit from the copy this preview
+    // loaded.
+    mutationFn: (ifMatch: string) =>
+      orpc.entry.revisions.restore.call({ revisionId, ifMatch }),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({
@@ -1087,8 +1132,9 @@ function RevisionPreview({
   });
 
   const revision = revisionQuery.data;
-  // An undefined `updatedAt` token would skip the legacy path's stale-check.
+  // The restore sends the live row's `etag`, so wait for it.
   if (!revision || !liveQuery.data) return <PendingScreen />;
+  const liveEtag = liveQuery.data.etag;
 
   const target = new URL(previewLink.url, window.location.origin);
   target.searchParams.set("plumix.edit", "");
@@ -1117,7 +1163,7 @@ function RevisionPreview({
           revisionAuthor={revisionAuthor}
           relativeTime={formatRelative}
           onBackToLive={handleBackToLive}
-          onRestore={() => restore.mutate()}
+          onRestore={() => restore.mutate(liveEtag)}
           isRestoring={restore.isPending}
           restoreError={restoreError}
         />

@@ -5,6 +5,7 @@ import type {
   MetaBoxField,
   MutablePluginRegistry,
 } from "../plugin/manifest.js";
+import { etagOf } from "../db/concurrency.js";
 import { eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import {
@@ -18,7 +19,7 @@ import {
   sanitizeMetaInput,
   writeSettledMeta,
 } from "./core.js";
-import { loadEntryMeta } from "./entry.js";
+import { loadEntryMeta, writeSettledEntryMeta } from "./entry.js";
 
 /**
  * Each test declares its meta fields via this helper — one 1-field box
@@ -466,7 +467,7 @@ describe("entry.get settles an unsettled row", () => {
       h.client.entry.update({
         id: row.id,
         excerpt: "edited",
-        expectedLiveUpdatedAt: got.updatedAt,
+        ifMatch: etagOf(got.updatedAt),
       }),
     ).resolves.toMatchObject({ excerpt: "edited" });
   });
@@ -523,5 +524,39 @@ describe("writeSettledMeta", () => {
       writeSettledMeta(h.context, entries, entries.id, row.id, snapshot, patch),
     ).resolves.toBe(true);
     expect(await stored()).toEqual({ count: 7, title: "new" });
+  });
+});
+
+// An entry's settle claims the row it read by its token, pinned rather than
+// moved: a settle is not an edit.
+describe("writeSettledEntryMeta", () => {
+  test("a write that landed after the read wins, whichever key it touched", async () => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      plugins: registryWithMeta({
+        count: { type: "number" },
+        title: { type: "string" },
+      }),
+    });
+    const row = await h.factory.published.create({
+      authorId: h.user.id,
+      type: "post",
+      meta: { count: "7" },
+    });
+    await h.db
+      .update(entries)
+      .set({ meta: { count: "7", title: "new" } })
+      .where(eq(entries.id, row.id));
+
+    await expect(
+      writeSettledEntryMeta(h.context, row, row.meta, {
+        upserts: new Map([["count", 7]]),
+        deletes: [],
+      }),
+    ).resolves.toBe(false);
+    expect(
+      (await h.db.query.entries.findFirst({ where: eq(entries.id, row.id) }))
+        ?.meta,
+    ).toEqual({ count: "7", title: "new" });
   });
 });

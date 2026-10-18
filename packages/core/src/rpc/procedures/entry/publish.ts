@@ -1,9 +1,6 @@
-import * as v from "valibot";
-
 import type { JsonObject } from "../../../json.js";
 import { entryCapabilityByName } from "../../../access/contract/entry-capabilities.js";
-import { eq } from "../../../db/index.js";
-import { entries } from "../../../db/schema/entries.js";
+import { etagOf, ifMatchObject } from "../../../db/concurrency.js";
 import { loadAuthoredEntry } from "../../../entries/authored.js";
 import { sanitizePromotedEntryMeta } from "../../../meta/entry.js";
 import {
@@ -18,7 +15,11 @@ import {
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { idParam } from "../../contract/validation.js";
-import { assertExpectedLiveUpdatedAt } from "./concurrency.js";
+import {
+  assertCopyCurrent,
+  claimEntry,
+  ENTRY_IF_MATCH_MESSAGE,
+} from "./concurrency.js";
 import {
   applyEntryBeforeSave,
   captureRevisionIfSupported,
@@ -26,12 +27,7 @@ import {
   fireEntryUpdated,
 } from "./lifecycle.js";
 
-const publishInput = v.object({
-  id: idParam,
-  // Required here, unlike `entry.update`: promoting a draft over live must fail
-  // loudly rather than clobber a parallel write.
-  expectedLiveUpdatedAt: v.date(),
-});
+const publishInput = ifMatchObject({ id: idParam }, ENTRY_IF_MATCH_MESSAGE);
 
 export const publish = base
   .use(authenticated)
@@ -49,13 +45,7 @@ export const publish = base
     if (!context.auth.can(publishCapability)) {
       throw errors.FORBIDDEN({ data: { capability: publishCapability } });
     }
-    assertExpectedLiveUpdatedAt(input.expectedLiveUpdatedAt, live.updatedAt, {
-      stale: () => {
-        throw errors.CONFLICT({
-          data: { reason: "stale_expected_updated_at" },
-        });
-      },
-    });
+    assertCopyCurrent(input.ifMatch, live.updatedAt);
     const autosave = await getAutosaveEdits(context.db, {
       entryId: live.id,
       authorId: context.user.id,
@@ -88,11 +78,12 @@ export const publish = base
       excerpt: prepared.excerpt,
       meta: prepared.meta,
     };
-    const [updatedRow] = await context.db
-      .update(entries)
-      .set(toWrite)
-      .where(eq(entries.id, live.id))
-      .returning();
+    const updatedRow = await claimEntry(
+      context.db,
+      live.id,
+      input.ifMatch,
+      toWrite,
+    );
     if (!updatedRow) {
       throw errors.CONFLICT({ data: { reason: "update_failed" } });
     }
@@ -108,7 +99,7 @@ export const publish = base
     await fireEntryUpdated(context, updatedRow, live);
     await fireEntryTransition(context, updatedRow, live.status);
     await captureRevisionIfSupported(context, updatedRow);
-    return updatedRow;
+    return { ...updatedRow, etag: etagOf(updatedRow.updatedAt) };
   });
 
 function stripSnapshotEnvelope(meta: JsonObject): JsonObject {

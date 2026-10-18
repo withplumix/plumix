@@ -1,12 +1,12 @@
 import type { AuthenticatedAppContext } from "../../../context/app-context.js";
 import type { Entry, NewEntry } from "../../../db/schema/entries.js";
 import type { EntryEditErrors } from "../../../entries/editability.js";
-import type { JsonValue } from "../../../json.js";
+import type { JsonObject, JsonValue } from "../../../json.js";
 import type { ResolvedMeta } from "../../../meta/contract/bags.js";
 import { entryCapabilityByName } from "../../../access/contract/entry-capabilities.js";
 import { ACCESS_POLICY_META_KEY } from "../../../access/contract/meta-key.js";
-import { and, eq, isUniqueConstraintError, ne } from "../../../db/index.js";
-import { entries } from "../../../db/schema/entries.js";
+import { etagOf } from "../../../db/concurrency.js";
+import { isUniqueConstraintError } from "../../../db/index.js";
 import { loadAuthoredEntry } from "../../../entries/authored.js";
 import { assertCanEditEntry } from "../../../entries/editability.js";
 import {
@@ -15,18 +15,17 @@ import {
   buildTermsPatchGuards,
 } from "../../../entries/terms.js";
 import { loadReadableParent } from "../../../entries/visibility.js";
-import { isEmptyMetaPatch } from "../../../meta/core.js";
+import { isEmptyMetaPatch, patchedMetaBag } from "../../../meta/core.js";
 import {
   assertAccessChoiceDeclared,
   withAccessChoice,
   withTemplateChoice,
 } from "../../../meta/entry-choices.js";
 import {
+  announceEntryMetaChange,
   assertPromotedEntryMetaValid,
-  loadEntryMeta,
   resolveEntryMeta,
   sanitizeAndValidateEntryMeta,
-  writeEntryMeta,
 } from "../../../meta/entry.js";
 import {
   getAutosaveEdits,
@@ -41,7 +40,7 @@ import {
 import { NAMED_TEMPLATE_META_KEY } from "../../../route/render/template-builders.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { assertExpectedLiveUpdatedAt } from "./concurrency.js";
+import { assertCopyCurrent, claimEntry } from "./concurrency.js";
 import {
   assertContentValidAgainstRegistries,
   assertContentWithinByteCap,
@@ -65,7 +64,7 @@ interface ParentGuards {
   readonly cycle: () => never;
 }
 
-interface ColumnWriteGuards {
+interface GuardedWriteGuards {
   readonly slugTaken: () => never;
   readonly updateFailed: () => never;
 }
@@ -101,48 +100,39 @@ async function assertParentReassignmentValid(
   if (cycle) guards.cycle();
 }
 
-async function writeEntryColumns(
+/**
+ * The whole save as one guarded update: the columns after `before_save`, the
+ * meta merged from the row the save read, and the token claimed from `ifMatch`.
+ */
+async function writeGuarded(
   context: AuthenticatedAppContext,
   existing: Entry,
+  ifMatch: Date,
   patch: Partial<NewEntry>,
-  isPublishTransition: boolean,
-  guards: ColumnWriteGuards,
-): Promise<{ readonly updated: Entry; readonly postColumnsWritten: boolean }> {
-  const preparedFull = await applyEntryBeforeSave(context, existing.type, {
-    ...existing,
-    ...patch,
-  });
+  meta: JsonObject | undefined,
+  guards: GuardedWriteGuards,
+): Promise<Entry> {
   const toWrite: Partial<NewEntry> = {};
-  for (const key of Object.keys(patch) as (keyof NewEntry)[]) {
-    (toWrite as Record<string, unknown>)[key] = preparedFull[key];
+  if (Object.keys(patch).length > 0) {
+    const preparedFull = await applyEntryBeforeSave(context, existing.type, {
+      ...existing,
+      ...patch,
+    });
+    for (const key of Object.keys(patch) as (keyof NewEntry)[]) {
+      (toWrite as Record<string, unknown>)[key] = preparedFull[key];
+    }
   }
-
-  // The ne(status, "published") guard on publish transitions can match
-  // zero rows if another request won the publish race.
-  const where = isPublishTransition
-    ? and(eq(entries.id, existing.id), ne(entries.status, "published"))
-    : eq(entries.id, existing.id);
+  if (meta !== undefined) toWrite.meta = meta;
 
   let row;
   try {
-    [row] = await context.db
-      .update(entries)
-      .set(toWrite)
-      .where(where)
-      .returning();
+    row = await claimEntry(context.db, existing.id, ifMatch, toWrite);
   } catch (error) {
     if (isUniqueConstraintError(error)) guards.slugTaken();
     throw error;
   }
-  if (row) return { updated: row, postColumnsWritten: true };
-  if (!isPublishTransition) guards.updateFailed();
-  // Race-lost: someone published between our read and write. Return the
-  // current state as observed, do not fire the updated/published hooks.
-  const current = await context.db.query.entries.findFirst({
-    where: eq(entries.id, existing.id),
-  });
-  if (!current) guards.updateFailed();
-  return { updated: current, postColumnsWritten: false };
+  if (!row) guards.updateFailed();
+  return row;
 }
 
 export const update = base
@@ -176,19 +166,9 @@ export const update = base
       errors,
     );
 
-    // Optimistic-concurrency check sits after auth so an unauthorised
-    // caller with a stale token still gets FORBIDDEN, not CONFLICT.
-    assertExpectedLiveUpdatedAt(
-      filtered.expectedLiveUpdatedAt,
-      existing.updatedAt,
-      {
-        stale: () => {
-          throw errors.CONFLICT({
-            data: { reason: "stale_expected_updated_at" },
-          });
-        },
-      },
-    );
+    // After auth, so an unauthorised caller with a stale copy still gets
+    // FORBIDDEN, not CONFLICT.
+    assertCopyCurrent(filtered.ifMatch, existing.updatedAt);
 
     // Writes stay on live unless the type supports autosave AND the row is
     // published.
@@ -293,10 +273,12 @@ export const update = base
       // Decode + resolve against the LIVE row's type — the autosave
       // row's own reserved type matches no registered meta fields.
       const decoded = await resolveEntryMeta(context, existing, draft.meta);
-      return context.hooks.applyFilter("rpc:entry.update:output", {
-        ...draft,
-        meta: decoded,
-      });
+      // A draft save leaves live alone, so the copy's token still stands.
+      const output = await context.hooks.applyFilter(
+        "rpc:entry.update:output",
+        { ...draft, meta: decoded },
+      );
+      return { ...output, etag: etagOf(existing.updatedAt) };
     }
 
     const isPublishTransition =
@@ -321,7 +303,7 @@ export const update = base
       );
     }
 
-    // `terms`, `meta`, and `expectedLiveUpdatedAt` aren't entries.* columns
+    // `terms`, `meta`, and `ifMatch` aren't entries.* columns
     // — split them out and validate up front so a bad taxonomy/cap/meta key
     // fails fast, before any write happens.
     const {
@@ -330,7 +312,7 @@ export const update = base
       meta: metaInput,
       template: templateChoice,
       access: accessChoice,
-      expectedLiveUpdatedAt: _expectedLiveUpdatedAt,
+      ifMatch,
       saveAs: _saveAs,
       publishedAt: publishedAtInput,
       ...changes
@@ -368,16 +350,10 @@ export const update = base
     const nowScheduled =
       filtered.status === "scheduled" && existing.status !== "scheduled";
     if (isPublishTransition || nowScheduled) {
-      const resultingMeta: Record<string, JsonValue> = { ...existing.meta };
-      if (metaPatch) {
-        for (const [key, value] of metaPatch.upserts)
-          resultingMeta[key] = value;
-        for (const key of metaPatch.deletes) delete resultingMeta[key];
-      }
       await assertPromotedEntryMetaValid(
         context,
         existing.type,
-        resultingMeta,
+        patchedMetaBag(existing.meta, metaPatch),
         errors,
       );
     }
@@ -413,48 +389,44 @@ export const update = base
       isEmptyMetaPatch(metaPatch)
     ) {
       const meta = await resolveEntryMeta(context, existing, existing.meta);
-      return context.hooks.applyFilter("rpc:entry.update:output", {
-        ...existing,
-        meta,
-      });
-    }
-
-    let updated: Entry = existing;
-    let postColumnsWritten = false;
-    if (Object.keys(patch).length > 0) {
-      const result = await writeEntryColumns(
-        context,
-        existing,
-        patch,
-        isPublishTransition,
-        {
-          slugTaken: () => {
-            throw errors.CONFLICT({ data: { reason: "slug_taken" } });
-          },
-          updateFailed: () => {
-            throw errors.CONFLICT({ data: { reason: "update_failed" } });
-          },
-        },
+      const output = await context.hooks.applyFilter(
+        "rpc:entry.update:output",
+        { ...existing, meta },
       );
-      updated = result.updated;
-      postColumnsWritten = result.postColumnsWritten;
+      return { ...output, etag: etagOf(existing.updatedAt) };
     }
 
+    const metaChanged = !isEmptyMetaPatch(metaPatch);
+    const updated = await writeGuarded(
+      context,
+      existing,
+      ifMatch,
+      patch,
+      metaChanged ? patchedMetaBag(existing.meta, metaPatch) : undefined,
+      {
+        slugTaken: () => {
+          throw errors.CONFLICT({ data: { reason: "slug_taken" } });
+        },
+        updateFailed: () => {
+          throw errors.CONFLICT({ data: { reason: "update_failed" } });
+        },
+      },
+    );
+
+    // Only once the claim holds, so a refused save touches nothing else.
     if (termsPatch !== undefined) {
       await applyTermPatch(context, updated.id, termsPatch);
     }
-
-    // `writeEntryMeta` is a no-op on an empty patch, so the null check
-    // here is the only gate we need.
-    let meta: ResolvedMeta;
-    if (metaPatch) {
-      await writeEntryMeta(context, updated, metaPatch);
-      meta = await loadEntryMeta(context, updated);
-    } else {
-      meta = await resolveEntryMeta(context, updated, updated.meta);
+    if (metaPatch && metaChanged) {
+      await announceEntryMetaChange(context, updated, metaPatch);
     }
+    const meta: ResolvedMeta = await resolveEntryMeta(
+      context,
+      updated,
+      updated.meta,
+    );
 
-    if (postColumnsWritten) {
+    if (Object.keys(patch).length > 0) {
       await fireEntryUpdated(context, updated, existing);
       await fireEntryTransition(context, updated, existing.status);
       if (isPublishTransition) {
@@ -466,8 +438,9 @@ export const update = base
       await captureRevisionIfSupported(context, updated);
     }
 
-    return context.hooks.applyFilter("rpc:entry.update:output", {
+    const output = await context.hooks.applyFilter("rpc:entry.update:output", {
       ...updated,
       meta,
     });
+    return { ...output, etag: etagOf(updated.updatedAt) };
   });

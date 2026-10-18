@@ -24,8 +24,8 @@ import {
   mockManifest,
   mockRpc,
   mockRpcWithCapture,
-  rpcConflictBody,
   rpcErrorBody,
+  rpcEtagConflictBody,
   rpcOkBody,
 } from "./support/rpc-mock.js";
 
@@ -1111,19 +1111,17 @@ test.describe("editor publishing & autosave", () => {
       readonly id: number;
       readonly status: string;
       readonly content?: unknown;
-      readonly expectedLiveUpdatedAt: string;
+      readonly ifMatch: string;
     };
     expect(lastInput.id).toBe(1);
     expect(lastInput.content).toBeUndefined();
-    expect(lastInput.expectedLiveUpdatedAt).toBe(T0.toISOString());
+    expect(lastInput.ifMatch).toBe("e0");
     await expect(page.getByTestId("toast-success")).toBeVisible();
   });
 
   test("Publish sends a pending edit first and publishes on the token it returned", async ({
     page,
   }) => {
-    const T1 = new Date("2026-05-20T00:00:01Z");
-    const T2 = new Date("2026-05-20T00:00:02Z");
     await mockRpc(page, {
       "/auth/session": AUTHED_ADMIN,
       "/entry/get": editorEntry(),
@@ -1138,8 +1136,8 @@ test.describe("editor publishing & autosave", () => {
       updates.push(input);
       const body =
         input.status === "published"
-          ? { ...editorEntry({ status: "published" }), updatedAt: T2 }
-          : { ...editorEntry(), slug: "custom-slug", updatedAt: T1 };
+          ? { ...editorEntry({ status: "published" }), etag: "e2" }
+          : { ...editorEntry(), slug: "custom-slug", etag: "e1" };
       return route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -1156,14 +1154,102 @@ test.describe("editor publishing & autosave", () => {
     await page.getByTestId("plumix-editor-publish-button").click();
 
     await expect.poll(() => updates.length).toBe(2);
-    expect(updates[0]).toMatchObject({
-      slug: "custom-slug",
-      expectedLiveUpdatedAt: T0.toISOString(),
+    expect(updates[0]).toMatchObject({ slug: "custom-slug", ifMatch: "e0" });
+    expect(updates[1]).toMatchObject({ status: "published", ifMatch: "e1" });
+  });
+
+  // One saved entry a second session can save, its `entry.update` checking
+  // `ifMatch` as the server does.
+  async function mockSavedEntry(page: Page): Promise<{
+    readonly updates: Record<string, unknown>[];
+    readonly saveElsewhere: (changes: Record<string, unknown>) => void;
+  }> {
+    let saved: Record<string, unknown> = editorEntry();
+    let version = 0;
+    const updates: Record<string, unknown>[] = [];
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/entry/list": [],
+      "/entry/createPreviewLink": PREVIEW_LINK,
     });
-    expect(updates[1]).toMatchObject({
-      status: "published",
-      expectedLiveUpdatedAt: T1.toISOString(),
+    await page.route("**/_plumix/rpc/entry/get", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody(saved),
+      }),
+    );
+    const save = (changes: Record<string, unknown>): void => {
+      version += 1;
+      saved = { ...saved, ...changes, etag: `e${String(version)}` };
+    };
+    await page.route("**/_plumix/rpc/entry/update", (route) => {
+      const {
+        ifMatch,
+        id: _id,
+        ...changes
+      } = (route.request().postDataJSON() as { json: Record<string, unknown> })
+        .json;
+      updates.push({ ifMatch, ...changes });
+      if (ifMatch !== saved.etag) {
+        return route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: rpcEtagConflictBody(
+            String(saved.etag),
+            new Date("2026-05-20T09:30:00Z"),
+          ),
+        });
+      }
+      save(changes);
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody(saved),
+      });
     });
+    return { updates, saveElsewhere: save };
+  }
+
+  test("an edit made after another session saved opens the conflict dialog, and Load theirs shows that save", async ({
+    page,
+  }) => {
+    const { saveElsewhere } = await mockSavedEntry(page);
+    await page.goto("entries/posts/1/edit");
+    await page.getByTestId("plumix-tab-page").click();
+    await expect(page.getByTestId("entry-slug-input")).toHaveValue("entry-1");
+    saveElsewhere({ slug: "saved-elsewhere" });
+
+    await page.getByTestId("entry-slug-input").fill("my-slug");
+
+    await expect(page.getByTestId("entry-conflict-dialog")).toBeVisible();
+    await page.getByTestId("entry-conflict-load-theirs").click();
+    await expect(page.getByTestId("entry-conflict-dialog")).toBeHidden();
+    await page.getByTestId("plumix-tab-page").click();
+    await expect(page.getByTestId("entry-slug-input")).toHaveValue(
+      "saved-elsewhere",
+    );
+  });
+
+  test("Keep mine in the conflict dialog saves the local edit over the other session's", async ({
+    page,
+  }) => {
+    const { updates, saveElsewhere } = await mockSavedEntry(page);
+    await page.goto("entries/posts/1/edit");
+    await page.getByTestId("plumix-tab-page").click();
+    await expect(page.getByTestId("entry-slug-input")).toHaveValue("entry-1");
+    saveElsewhere({ slug: "saved-elsewhere" });
+    await page.getByTestId("entry-slug-input").fill("my-slug");
+    await expect(page.getByTestId("entry-conflict-dialog")).toBeVisible();
+
+    await page.getByTestId("entry-conflict-keep-mine").click();
+
+    await expect(page.getByTestId("entry-conflict-dialog")).toBeHidden();
+    await expect
+      .poll(() => updates.at(-1))
+      .toMatchObject({ ifMatch: "e1", slug: "my-slug" });
+    // Only the refused save and the resend: a conflict is never retried.
+    expect(updates).toHaveLength(2);
   });
 
   test("navigating away with a pending edit sends it", async ({ page }) => {
@@ -1226,7 +1312,7 @@ test.describe("editor publishing & autosave", () => {
         contentType: "application/json",
         body: rpcErrorBody({
           code: "CONFLICT",
-          message: "stale_expected_updated_at",
+          message: "Resource conflict",
         }),
       }),
     );
@@ -1332,7 +1418,7 @@ test.describe("editor draft of a published entry", () => {
             contentType: "application/json",
             body: rpcErrorBody({
               code: "CONFLICT",
-              message: "stale_expected_updated_at",
+              message: "Resource conflict",
             }),
           });
         }
@@ -1553,6 +1639,7 @@ test.describe("editor revision preview", () => {
       createdAt: T_REV0,
       updatedAt: T_REV0,
       meta: {},
+      etag: "rev0",
     };
   }
 
@@ -1905,7 +1992,7 @@ test.describe("editor revision preview", () => {
         return route.fulfill({
           status: 409,
           contentType: "application/json",
-          body: rpcConflictBody("stale_expected_updated_at"),
+          body: rpcEtagConflictBody("rev1", T_REV),
         });
       },
     );
@@ -1923,8 +2010,8 @@ test.describe("editor revision preview", () => {
     await expect.poll(() => page.url()).not.toContain("revision=");
     await expect(page.getByTestId("revision-preview-banner")).toHaveCount(0);
     expect(restores).toEqual([
-      { revisionId: 42, expectedLiveUpdatedAt: T_REV0.toISOString() },
-      { revisionId: 42, expectedLiveUpdatedAt: T_REV0.toISOString() },
+      { revisionId: 42, ifMatch: "rev0" },
+      { revisionId: 42, ifMatch: "rev0" },
     ]);
   });
 });

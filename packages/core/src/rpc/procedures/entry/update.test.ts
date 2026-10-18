@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import { entryCapability } from "../../../access/contract/capability.js";
 import { ACCESS_POLICY_META_KEY } from "../../../access/contract/meta-key.js";
@@ -6,11 +6,16 @@ import {
   anonymousPolicy,
   authenticatedPolicy,
 } from "../../../access/policy.js";
+import { etagOf } from "../../../db/concurrency.js";
+import { eq } from "../../../db/index.js";
+import { entries } from "../../../db/schema/entries.js";
+import { entryChanges } from "../../../db/schema/entry_changes.js";
 import { definePlugin } from "../../../plugin/define.js";
 import { text } from "../../../plugin/fields/builder.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { toRegisteredEntryType } from "../../../plugin/registry.js";
 import { NAMED_TEMPLATE_META_KEY } from "../../../route/render/template-builders.js";
+import { currentEtag } from "../../../test/entry-etag.js";
 import { pooledEntryTypeRegistry } from "../../../test/pooled-entry-types.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
@@ -133,6 +138,7 @@ describe("entry.update", () => {
     const updated = await h.client.entry.update({
       id: row.id,
       title: "renamed",
+      ifMatch: await currentEtag(h.db, row.id),
     });
     expect(updated.title).toBe("renamed");
   });
@@ -153,7 +159,11 @@ describe("entry.update", () => {
         type: "news",
         slug: "news-desk",
       });
-      return h.client.entry.update({ id: row.id, meta: { desk: "city" } });
+      return h.client.entry.update({
+        id: row.id,
+        meta: { desk: "city" },
+        ifMatch: await currentEtag(h.db, row.id),
+      });
     };
 
     await expect(editDesk("contributor")).rejects.toMatchObject({
@@ -180,10 +190,18 @@ describe("entry.update", () => {
       slug: "news-theirs",
     });
 
-    const updated = await h.client.entry.update({ id: own.id, title: "mine" });
+    const updated = await h.client.entry.update({
+      id: own.id,
+      title: "mine",
+      ifMatch: await currentEtag(h.db, own.id),
+    });
     expect(updated.title).toBe("mine");
     await expect(
-      h.client.entry.update({ id: theirs.id, title: "hax" }),
+      h.client.entry.update({
+        id: theirs.id,
+        title: "hax",
+        ifMatch: await currentEtag(h.db, theirs.id),
+      }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
       data: { capability: "entry:post:edit_any" },
@@ -199,6 +217,7 @@ describe("entry.update", () => {
     const updated = await h.client.entry.update({
       id: own.id,
       title: "renamed",
+      ifMatch: await currentEtag(h.db, own.id),
     });
     expect(updated.title).toBe("renamed");
   });
@@ -210,7 +229,11 @@ describe("entry.update", () => {
       slug: "clears",
       title: "Has a title",
     });
-    const updated = await h.client.entry.update({ id: own.id, title: "" });
+    const updated = await h.client.entry.update({
+      id: own.id,
+      title: "",
+      ifMatch: await currentEtag(h.db, own.id),
+    });
     expect(updated.title).toBe("");
   });
 
@@ -222,7 +245,11 @@ describe("entry.update", () => {
       slug: "theirs",
     });
     await expect(
-      h.client.entry.update({ id: mine.id, title: "hax" }),
+      h.client.entry.update({
+        id: mine.id,
+        title: "hax",
+        ifMatch: await currentEtag(h.db, mine.id),
+      }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
       data: { capability: "entry:post:edit_any" },
@@ -236,7 +263,11 @@ describe("entry.update", () => {
       slug: "self",
     });
     await expect(
-      h.client.entry.update({ id: own.id, title: "x" }),
+      h.client.entry.update({
+        id: own.id,
+        title: "x",
+        ifMatch: await currentEtag(h.db, own.id),
+      }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
       data: { capability: "entry:post:edit_any" },
@@ -253,6 +284,7 @@ describe("entry.update", () => {
     const updated = await h.client.entry.update({
       id: theirs.id,
       title: "by-editor",
+      ifMatch: await currentEtag(h.db, theirs.id),
     });
     expect(updated.title).toBe("by-editor");
   });
@@ -270,6 +302,7 @@ describe("entry.update", () => {
     const updated = await h.client.entry.update({
       id: own.id,
       status: "published",
+      ifMatch: await currentEtag(h.db, own.id),
     });
     expect(updated.status).toBe("published");
     expect(updated.publishedAt).toBeInstanceOf(Date);
@@ -289,6 +322,7 @@ describe("entry.update", () => {
       id: own.id,
       status: "scheduled",
       publishedAt: when,
+      ifMatch: await currentEtag(h.db, own.id),
     });
 
     expect(updated.status).toBe("scheduled");
@@ -303,7 +337,11 @@ describe("entry.update", () => {
     });
 
     await expect(
-      h.client.entry.update({ id: own.id, status: "scheduled" }),
+      h.client.entry.update({
+        id: own.id,
+        status: "scheduled",
+        ifMatch: await currentEtag(h.db, own.id),
+      }),
     ).rejects.toMatchObject({
       code: "BAD_REQUEST",
       data: { reason: "scheduled_requires_future_date" },
@@ -324,6 +362,7 @@ describe("entry.update", () => {
     const updated = await h.client.entry.update({
       id: due.id,
       title: "fixed a typo",
+      ifMatch: await currentEtag(h.db, due.id),
     });
 
     expect(updated.title).toBe("fixed a typo");
@@ -343,6 +382,7 @@ describe("entry.update", () => {
     const updated = await h.client.entry.update({
       id: scheduled.id,
       status: "published",
+      ifMatch: await currentEtag(h.db, scheduled.id),
     });
 
     expect(updated.status).toBe("published");
@@ -357,7 +397,11 @@ describe("entry.update", () => {
       slug: "solo",
     });
     await expect(
-      h.client.entry.update({ id: own.id, status: "published" }),
+      h.client.entry.update({
+        id: own.id,
+        status: "published",
+        ifMatch: await currentEtag(h.db, own.id),
+      }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
       data: { capability: "entry:post:publish" },
@@ -372,7 +416,11 @@ describe("entry.update", () => {
       slug: "mine",
     });
     await expect(
-      h.client.entry.update({ id: mine.id, slug: "taken" }),
+      h.client.entry.update({
+        id: mine.id,
+        slug: "taken",
+        ifMatch: await currentEtag(h.db, mine.id),
+      }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
       data: { reason: "slug_taken" },
@@ -387,7 +435,10 @@ describe("entry.update", () => {
     });
     const onUpdate = h.spyAction("entry:updated");
 
-    const returned = await h.client.entry.update({ id: own.id });
+    const returned = await h.client.entry.update({
+      id: own.id,
+      ifMatch: await currentEtag(h.db, own.id),
+    });
     expect(returned.id).toBe(own.id);
     onUpdate.assertNotCalled();
   });
@@ -395,25 +446,34 @@ describe("entry.update", () => {
   test("404 for a missing row", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     await expect(
-      h.client.entry.update({ id: 9999, title: "x" }),
+      h.client.entry.update({
+        id: 9999,
+        title: "x",
+        ifMatch: etagOf(new Date("2026-10-18T12:00:00Z")),
+      }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
-  test("concurrent publish transitions: entry:published fires exactly once", async () => {
+  test("concurrent publish transitions from one copy: one publishes, entry:published fires once", async () => {
     const h = await createRpcHarness({ authAs: "author" });
     const own = await h.factory.draft.create({
       authorId: h.user.id,
       slug: "race-to-publish",
     });
-
+    const ifMatch = etagOf(own.updatedAt);
     const onPublish = h.spyAction("entry:published");
 
-    const outcomes = await Promise.all([
-      h.client.entry.update({ id: own.id, status: "published" }),
-      h.client.entry.update({ id: own.id, status: "published" }),
-      h.client.entry.update({ id: own.id, status: "published" }),
+    const outcomes = await Promise.allSettled([
+      h.client.entry.update({ id: own.id, status: "published", ifMatch }),
+      h.client.entry.update({ id: own.id, status: "published", ifMatch }),
+      h.client.entry.update({ id: own.id, status: "published", ifMatch }),
     ]);
-    for (const result of outcomes) expect(result.status).toBe("published");
+
+    expect(outcomes.map((o) => o.status).sort()).toEqual([
+      "fulfilled",
+      "rejected",
+      "rejected",
+    ]);
     onPublish.assertCalledOnce();
   });
 
@@ -436,6 +496,7 @@ describe("entry.update", () => {
     const updated = await h.client.entry.update({
       id: own.id,
       title: "renamed",
+      ifMatch: await currentEtag(h.db, own.id),
     });
     expect(updated.authorId).toBe(h.user.id);
     expect(updated.type).toBe("post");
@@ -460,7 +521,11 @@ describe("entry.update", () => {
     });
 
     await expect(
-      h.client.entry.update({ id: own.id, parentId: secret.id }),
+      h.client.entry.update({
+        id: own.id,
+        parentId: secret.id,
+        ifMatch: await currentEtag(h.db, own.id),
+      }),
     ).rejects.toMatchObject({
       code: "NOT_FOUND",
       data: { kind: "entry", id: secret.id },
@@ -475,7 +540,11 @@ describe("entry.update", () => {
       status: "published",
     });
     await expect(
-      h.client.entry.update({ id: p.id, parentId: p.id }),
+      h.client.entry.update({
+        id: p.id,
+        parentId: p.id,
+        ifMatch: await currentEtag(h.db, p.id),
+      }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
       data: { reason: "parent_cycle" },
@@ -497,7 +566,11 @@ describe("entry.update", () => {
     });
     // b→a already. Pointing a→b closes the cycle.
     await expect(
-      h.client.entry.update({ id: a.id, parentId: b.id }),
+      h.client.entry.update({
+        id: a.id,
+        parentId: b.id,
+        ifMatch: await currentEtag(h.db, a.id),
+      }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
       data: { reason: "parent_cycle" },
@@ -525,7 +598,11 @@ describe("entry.update", () => {
     });
     // c→b→a already. Pointing a→c closes the cycle a→c→b→a.
     await expect(
-      h.client.entry.update({ id: a.id, parentId: c.id }),
+      h.client.entry.update({
+        id: a.id,
+        parentId: c.id,
+        ifMatch: await currentEtag(h.db, a.id),
+      }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
       data: { reason: "parent_cycle" },
@@ -545,6 +622,7 @@ describe("entry.update", () => {
     const updated = await h.client.entry.update({
       id: post.id,
       meta: { is_featured: true },
+      ifMatch: await currentEtag(h.db, post.id),
     });
     expect(updated.meta).toEqual({
       meta_title: "seed title",
@@ -565,6 +643,7 @@ describe("entry.update", () => {
     const updated = await h.client.entry.update({
       id: post.id,
       meta: { is_featured: null },
+      ifMatch: await currentEtag(h.db, post.id),
     });
     expect(updated.meta).toEqual({ meta_title: "keep" });
   });
@@ -579,6 +658,7 @@ describe("entry.update", () => {
     const updated = await h.client.entry.update({
       id: draft.id,
       meta: { subtitle: "" },
+      ifMatch: await currentEtag(h.db, draft.id),
     });
     expect(updated.meta.subtitle).toBe("");
   });
@@ -588,12 +668,20 @@ describe("entry.update", () => {
     registerRequiredSubtitle(plugins);
     const h = await createRpcHarness({ authAs: "admin", plugins });
     const draft = await h.factory.draft.create({ authorId: h.user.id });
-    await h.client.entry.update({ id: draft.id, meta: { subtitle: "" } });
+    await h.client.entry.update({
+      id: draft.id,
+      meta: { subtitle: "" },
+      ifMatch: await currentEtag(h.db, draft.id),
+    });
     // The publish transition strict-validates the full stored bag, so the
     // required field the draft left empty blocks the transition even though
     // this patch carries no meta.
     await expect(
-      h.client.entry.update({ id: draft.id, status: "published" }),
+      h.client.entry.update({
+        id: draft.id,
+        status: "published",
+        ifMatch: await currentEtag(h.db, draft.id),
+      }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
       data: { reason: "meta_invalid_value" },
@@ -614,7 +702,11 @@ describe("entry.update", () => {
     });
 
     await expect(
-      h.client.entry.update({ id: post.id, meta: { layout: "video" } }),
+      h.client.entry.update({
+        id: post.id,
+        meta: { layout: "video" },
+        ifMatch: await currentEtag(h.db, post.id),
+      }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
       data: { reason: "meta_invalid_value", key: "video_url" },
@@ -633,7 +725,11 @@ describe("entry.update", () => {
     });
 
     await expect(
-      h.client.entry.update({ id: scheduled.id, meta: { layout: "video" } }),
+      h.client.entry.update({
+        id: scheduled.id,
+        meta: { layout: "video" },
+        ifMatch: await currentEtag(h.db, scheduled.id),
+      }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
       data: { reason: "meta_invalid_value", key: "video_url" },
@@ -653,6 +749,7 @@ describe("entry.update", () => {
     const updated = await h.client.entry.update({
       id: post.id,
       meta: { layout: "video", video_url: "https://example.com/v" },
+      ifMatch: await currentEtag(h.db, post.id),
     });
 
     expect(updated.meta.video_url).toBe("https://example.com/v");
@@ -673,6 +770,7 @@ describe("entry.update", () => {
     const updated = await h.client.entry.update({
       id: post.id,
       meta: { video_url: "" },
+      ifMatch: await currentEtag(h.db, post.id),
     });
 
     expect(updated.meta.video_url).toBe("https://example.com/old");
@@ -689,7 +787,11 @@ describe("entry.update", () => {
     });
 
     await expect(
-      h.client.entry.update({ id: post.id, meta: { video_url: "" } }),
+      h.client.entry.update({
+        id: post.id,
+        meta: { video_url: "" },
+        ifMatch: await currentEtag(h.db, post.id),
+      }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
       data: { reason: "meta_invalid_value", key: "video_url" },
@@ -713,6 +815,7 @@ describe("entry.update", () => {
       id: post.id,
       title: "fixed a typo",
       meta: { layout: "video" },
+      ifMatch: await currentEtag(h.db, post.id),
     });
 
     expect(updated.title).toBe("fixed a typo");
@@ -755,6 +858,7 @@ describe("entry.update", () => {
     const updated = await h.client.entry.update({
       id: post.id,
       meta: { video_url: "https://example.com/v" },
+      ifMatch: await currentEtag(h.db, post.id),
     });
 
     expect(updated.meta).toEqual({});
@@ -790,7 +894,11 @@ describe("entry.update", () => {
     });
 
     await expect(
-      h.client.entry.update({ id: post.id, meta: { layout: "video" } }),
+      h.client.entry.update({
+        id: post.id,
+        meta: { layout: "video" },
+        ifMatch: await currentEtag(h.db, post.id),
+      }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
       data: { reason: "meta_invalid_value", key: "video_url" },
@@ -837,6 +945,7 @@ describe("entry.update", () => {
         id: post.id,
         title: "fixed a typo",
         meta: { layout: "video" },
+        ifMatch: await currentEtag(h.db, post.id),
       }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
@@ -881,6 +990,7 @@ describe("entry.update", () => {
     const published = await h.client.entry.update({
       id: draft.id,
       status: "published",
+      ifMatch: await currentEtag(h.db, draft.id),
     });
 
     expect(published.status).toBe("published");
@@ -915,7 +1025,11 @@ describe("entry.update", () => {
     });
 
     await expect(
-      h.client.entry.update({ id: post.id, meta: { count: "10" } }),
+      h.client.entry.update({
+        id: post.id,
+        meta: { count: "10" },
+        ifMatch: await currentEtag(h.db, post.id),
+      }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
       data: { reason: "meta_invalid_value", key: "reason" },
@@ -965,6 +1079,7 @@ describe("entry.update", () => {
     const updated = await h.client.entry.update({
       id: post.id,
       meta: { layout: "video" },
+      ifMatch: await currentEtag(h.db, post.id),
     });
 
     expect(updated.meta.layout).toBe("standard");
@@ -1012,6 +1127,7 @@ describe("entry.update", () => {
     const updated = await h.client.entry.update({
       id: post.id,
       meta: { mode: "off", note: "hi" },
+      ifMatch: await currentEtag(h.db, post.id),
     });
 
     expect(updated.meta.mode).toBe("on");
@@ -1054,6 +1170,7 @@ describe("entry.update", () => {
     const updated = await h.client.entry.update({
       id: post.id,
       meta: { email: "a@example.com", phone: "555" },
+      ifMatch: await currentEtag(h.db, post.id),
     });
 
     expect(updated.meta.email).toBe("a@example.com");
@@ -1099,6 +1216,7 @@ describe("entry.update", () => {
       h.client.entry.update({
         id: post.id,
         meta: { layout: "standard", video_url: "" },
+        ifMatch: await currentEtag(h.db, post.id),
       }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
@@ -1138,6 +1256,7 @@ describe("entry.update", () => {
     const updated = await h.client.entry.update({
       id: post.id,
       meta: { layout: "video" },
+      ifMatch: await currentEtag(h.db, post.id),
     });
 
     expect(updated.meta.layout).toBe("video");
@@ -1155,6 +1274,7 @@ describe("entry.update", () => {
     const updated = await h.client.entry.update({
       id: draft.id,
       meta: { layout: "video" },
+      ifMatch: await currentEtag(h.db, draft.id),
     });
 
     expect(updated.meta.layout).toBe("video");
@@ -1168,6 +1288,7 @@ describe("entry.update", () => {
         id: post.id,
         title: "new-title",
         meta: { bogus: "x" },
+        ifMatch: await currentEtag(h.db, post.id),
       }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
@@ -1212,6 +1333,7 @@ describe("entry.update", () => {
     await h.client.entry.update({
       id: post.id,
       meta: { title: "SHOUTING" },
+      ifMatch: await currentEtag(h.db, post.id),
     });
 
     const reloaded = await h.client.entry.get({ id: post.id });
@@ -1262,86 +1384,284 @@ describe("entry.update", () => {
     });
   });
 
-  describe("optimistic concurrency (expectedLiveUpdatedAt)", () => {
-    test("matching token: update succeeds", async () => {
+  describe("concurrency token (ifMatch)", () => {
+    test("a save from the current copy lands and answers with the next etag", async () => {
       const h = await createRpcHarness({ authAs: "author" });
       const own = await h.factory.draft.create({
         authorId: h.user.id,
         slug: "oc-match",
+        updatedAt: new Date("2100-01-01T00:00:00Z"),
       });
       const loaded = await h.client.entry.get({ id: own.id });
+
       const updated = await h.client.entry.update({
         id: own.id,
         title: "renamed",
-        expectedLiveUpdatedAt: loaded.updatedAt,
+        ifMatch: loaded.etag,
       });
-      expect(updated.title).toBe("renamed");
+
+      expect(updated).toMatchObject({
+        title: "renamed",
+        etag: etagOf(new Date("2100-01-01T00:00:01Z")),
+      });
     });
 
-    test("stale token: rejects with CONFLICT { stale_expected_updated_at }", async () => {
+    test("a save from a stale copy is refused with the entry's current etag", async () => {
       const h = await createRpcHarness({ authAs: "author" });
       const own = await h.factory.draft.create({
         authorId: h.user.id,
         slug: "oc-stale",
+        updatedAt: new Date("2026-10-18T12:00:05Z"),
       });
+
       await expect(
         h.client.entry.update({
           id: own.id,
           title: "lost-race",
-          expectedLiveUpdatedAt: new Date("2020-01-01T00:00:00Z"),
+          ifMatch: etagOf(new Date("2026-10-18T12:00:00Z")),
         }),
       ).rejects.toMatchObject({
         code: "CONFLICT",
-        data: { reason: "stale_expected_updated_at" },
+        data: {
+          reason: "etag_mismatch",
+          etag: etagOf(new Date("2026-10-18T12:00:05Z")),
+          updatedAt: new Date("2026-10-18T12:00:05Z"),
+        },
       });
     });
 
-    test("absent token: preserves legacy last-write-wins behavior", async () => {
+    test("a save without ifMatch is refused with where to find the etag", async () => {
       const h = await createRpcHarness({ authAs: "author" });
       const own = await h.factory.draft.create({
         authorId: h.user.id,
-        slug: "oc-legacy",
+        slug: "oc-missing",
       });
-      const updated = await h.client.entry.update({
-        id: own.id,
-        title: "no-token",
+
+      await expect(
+        // @ts-expect-error -- the caller left out its copy's token
+        h.client.entry.update({ id: own.id, title: "no-token" }),
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+        data: {
+          issues: [
+            {
+              message: "Send the entry's `etag` from `entry.get` as `ifMatch`",
+            },
+          ],
+        },
       });
-      expect(updated.title).toBe("no-token");
     });
 
-    test("stale token + empty patch: still CONFLICT (no short-circuit bypass)", async () => {
+    test("a stale copy with an empty patch is still refused", async () => {
       const h = await createRpcHarness({ authAs: "author" });
       const own = await h.factory.draft.create({
         authorId: h.user.id,
         slug: "oc-empty",
       });
+
       await expect(
         h.client.entry.update({
           id: own.id,
-          expectedLiveUpdatedAt: new Date("2020-01-01T00:00:00Z"),
+          ifMatch: etagOf(new Date("2020-01-01T00:00:00Z")),
         }),
       ).rejects.toMatchObject({
         code: "CONFLICT",
-        data: { reason: "stale_expected_updated_at" },
+        data: { reason: "etag_mismatch" },
       });
     });
 
-    test("unauthorised caller with stale token still gets FORBIDDEN (no CONFLICT oracle)", async () => {
+    test("an unauthorised caller with a stale copy still gets FORBIDDEN (no CONFLICT oracle)", async () => {
       const h = await createRpcHarness({ authAs: "subscriber" });
       const own = await h.factory.draft.create({
         authorId: h.user.id,
         slug: "oc-no-oracle",
       });
+
       await expect(
         h.client.entry.update({
           id: own.id,
           title: "x",
-          expectedLiveUpdatedAt: new Date("2020-01-01T00:00:00Z"),
+          ifMatch: etagOf(new Date("2020-01-01T00:00:00Z")),
         }),
       ).rejects.toMatchObject({
         code: "FORBIDDEN",
         data: { capability: "entry:post:edit_any" },
       });
+    });
+
+    test("a write that lands mid-save, after the save read the entry, makes the save conflict", async () => {
+      const h = await createRpcHarness({ authAs: "author" });
+      const own = await h.factory.draft.create({
+        authorId: h.user.id,
+        slug: "oc-mid-save",
+      });
+      // A plugin's own write, landing after the save read the entry.
+      // @ts-expect-error -- `applyFilter` awaits a handler's promise; the
+      // registry types `entry:before_save` handlers as sync.
+      h.hooks.addFilter("entry:before_save", async (entry) => {
+        await h.db
+          .update(entries)
+          .set({ title: "theirs" })
+          .where(eq(entries.id, own.id));
+        return entry;
+      });
+
+      await expect(
+        h.client.entry.update({
+          id: own.id,
+          title: "mine",
+          ifMatch: etagOf(own.updatedAt),
+        }),
+      ).rejects.toMatchObject({
+        code: "CONFLICT",
+        data: { reason: "etag_mismatch" },
+      });
+      expect(await h.client.entry.get({ id: own.id })).toMatchObject({
+        title: "theirs",
+      });
+    });
+
+    test("two saves in the same second leave different etags, and the first one's is refused", async () => {
+      const h = await createRpcHarness({ authAs: "author" });
+      const own = await h.factory.draft.create({
+        authorId: h.user.id,
+        slug: "oc-same-second",
+        updatedAt: new Date("2100-01-01T00:00:00Z"),
+      });
+      const first = await h.client.entry.update({
+        id: own.id,
+        title: "first",
+        ifMatch: etagOf(own.updatedAt),
+      });
+      const second = await h.client.entry.update({
+        id: own.id,
+        title: "second",
+        ifMatch: first.etag,
+      });
+
+      await expect(
+        h.client.entry.update({
+          id: own.id,
+          title: "from the first copy",
+          ifMatch: first.etag,
+        }),
+      ).rejects.toMatchObject({
+        code: "CONFLICT",
+        data: { reason: "etag_mismatch", etag: second.etag },
+      });
+      expect([first.etag, second.etag]).toEqual([
+        etagOf(new Date("2100-01-01T00:00:01Z")),
+        etagOf(new Date("2100-01-01T00:00:02Z")),
+      ]);
+    });
+
+    test("saves chained under a frozen clock each get a later etag", async () => {
+      vi.useFakeTimers({
+        toFake: ["Date"],
+        now: new Date("2026-10-18T12:00:00Z"),
+      });
+      try {
+        const h = await createRpcHarness({ authAs: "author" });
+        const own = await h.factory.draft.create({
+          authorId: h.user.id,
+          slug: "oc-frozen",
+          updatedAt: new Date("2026-10-18T12:00:00Z"),
+        });
+        const etags: string[] = [];
+        let ifMatch = etagOf(own.updatedAt);
+        for (let save = 1; save <= 1000; save += 1) {
+          ({ etag: ifMatch } = await h.client.entry.update({
+            id: own.id,
+            sortOrder: save,
+            ifMatch,
+          }));
+          etags.push(ifMatch);
+        }
+
+        expect(etags[999]).toBe(etagOf(new Date("2026-10-18T12:16:40Z")));
+        expect(new Set(etags).size).toBe(1000);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    test("a system write moves the token, so a copy taken before it conflicts", async () => {
+      const h = await createRpcHarness({ authAs: "editor" });
+      const own = await h.factory.draft.create({
+        authorId: h.user.id,
+        slug: "oc-system-write",
+        updatedAt: new Date("2100-01-01T00:00:00Z"),
+      });
+      await h.client.entry.trash({ id: own.id });
+
+      await expect(
+        h.client.entry.update({
+          id: own.id,
+          title: "from before the trash",
+          ifMatch: etagOf(own.updatedAt),
+        }),
+      ).rejects.toMatchObject({
+        code: "CONFLICT",
+        data: {
+          reason: "etag_mismatch",
+          etag: etagOf(new Date("2100-01-01T00:00:01Z")),
+        },
+      });
+    });
+
+    test("a refused save leaves the entry's meta, terms and change feed as they were", async () => {
+      const plugins = createPluginRegistry();
+      registerSeoMetaBox(plugins);
+      const h = await createRpcHarness({ authAs: "editor", plugins });
+      const category = await h.factory.category.create({ slug: "news" });
+      const own = await h.factory.draft.create({
+        authorId: h.user.id,
+        slug: "oc-refused",
+        meta: { meta_title: "kept" },
+        updatedAt: new Date("2026-10-18T12:00:05Z"),
+      });
+      await h.db.delete(entryChanges);
+
+      await expect(
+        h.client.entry.update({
+          id: own.id,
+          meta: { meta_title: "lost" },
+          terms: { category: [category.id] },
+          ifMatch: etagOf(new Date("2026-10-18T12:00:00Z")),
+        }),
+      ).rejects.toMatchObject({ code: "CONFLICT" });
+      expect(await h.client.entry.get({ id: own.id })).toMatchObject({
+        meta: { meta_title: "kept" },
+        terms: {},
+      });
+      expect(await h.db.select().from(entryChanges)).toEqual([]);
+    });
+
+    test("of saves racing from one copy, exactly one lands", async () => {
+      const h = await createRpcHarness({ authAs: "author" });
+      const own = await h.factory.draft.create({
+        authorId: h.user.id,
+        slug: "oc-race",
+      });
+      const ifMatch = etagOf(own.updatedAt);
+
+      const outcomes = await Promise.allSettled(
+        ["a", "b", "c", "d", "e", "f", "g", "h"].map((title) =>
+          h.client.entry.update({ id: own.id, title, ifMatch }),
+        ),
+      );
+
+      expect(outcomes.filter((o) => o.status === "fulfilled")).toHaveLength(1);
+      expect(
+        outcomes
+          .filter((o) => o.status === "rejected")
+          .map((o): unknown => o.reason),
+      ).toMatchObject(
+        Array.from({ length: 7 }, () => ({
+          code: "CONFLICT",
+          data: { reason: "etag_mismatch" },
+        })),
+      );
     });
   });
 
@@ -1362,6 +1682,7 @@ describe("entry.update", () => {
     const updated = await h.client.entry.update({
       id: own.id,
       content: v2Content,
+      ifMatch: await currentEtag(h.db, own.id),
     });
     expect(updated.content).toEqual(v2Content);
   });
@@ -1392,6 +1713,7 @@ describe("entry.update", () => {
       h.client.entry.update({
         id: own.id,
         meta: { private_note: "leaked" },
+        ifMatch: await currentEtag(h.db, own.id),
       }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
@@ -1410,6 +1732,7 @@ describe("entry.update — named template choice", () => {
     const updated = await h.client.entry.update({
       id: own.id,
       template: "landing",
+      ifMatch: await currentEtag(h.db, own.id),
     });
     expect(updated.meta[NAMED_TEMPLATE_META_KEY]).toBe("landing");
   });
@@ -1420,8 +1743,16 @@ describe("entry.update — named template choice", () => {
       authorId: h.user.id,
       slug: "tpl-clear",
     });
-    await h.client.entry.update({ id: own.id, template: "landing" });
-    const cleared = await h.client.entry.update({ id: own.id, template: null });
+    await h.client.entry.update({
+      id: own.id,
+      template: "landing",
+      ifMatch: await currentEtag(h.db, own.id),
+    });
+    const cleared = await h.client.entry.update({
+      id: own.id,
+      template: null,
+      ifMatch: await currentEtag(h.db, own.id),
+    });
     expect(cleared.meta[NAMED_TEMPLATE_META_KEY]).toBeUndefined();
   });
 
@@ -1431,10 +1762,15 @@ describe("entry.update — named template choice", () => {
       authorId: h.user.id,
       slug: "tpl-keep",
     });
-    await h.client.entry.update({ id: own.id, template: "landing" });
+    await h.client.entry.update({
+      id: own.id,
+      template: "landing",
+      ifMatch: await currentEtag(h.db, own.id),
+    });
     const renamed = await h.client.entry.update({
       id: own.id,
       title: "renamed",
+      ifMatch: await currentEtag(h.db, own.id),
     });
     expect(renamed.meta[NAMED_TEMPLATE_META_KEY]).toBe("landing");
   });
@@ -1452,6 +1788,7 @@ describe("entry.update — named template choice", () => {
       h.client.entry.update({
         id: own.id,
         meta: { [NAMED_TEMPLATE_META_KEY]: "landing" },
+        ifMatch: await currentEtag(h.db, own.id),
       }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
@@ -1470,6 +1807,7 @@ describe("entry.update — per-entry access choice", () => {
     const updated = await h.client.entry.update({
       id: post.id,
       access: "members",
+      ifMatch: await currentEtag(h.db, post.id),
     });
     expect(updated.meta[ACCESS_POLICY_META_KEY]).toBe("members");
   });
@@ -1480,8 +1818,16 @@ describe("entry.update — per-entry access choice", () => {
     const h = await createRpcHarness({ authAs: "admin", plugins });
     const post = await h.client.entry.create({ title: "b", slug: "b" });
 
-    await h.client.entry.update({ id: post.id, access: "members" });
-    const cleared = await h.client.entry.update({ id: post.id, access: null });
+    await h.client.entry.update({
+      id: post.id,
+      access: "members",
+      ifMatch: await currentEtag(h.db, post.id),
+    });
+    const cleared = await h.client.entry.update({
+      id: post.id,
+      access: null,
+      ifMatch: await currentEtag(h.db, post.id),
+    });
     expect(cleared.meta[ACCESS_POLICY_META_KEY]).toBeUndefined();
   });
 
@@ -1491,10 +1837,15 @@ describe("entry.update — per-entry access choice", () => {
     const h = await createRpcHarness({ authAs: "admin", plugins });
     const post = await h.client.entry.create({ title: "c", slug: "c" });
 
-    await h.client.entry.update({ id: post.id, access: "members" });
+    await h.client.entry.update({
+      id: post.id,
+      access: "members",
+      ifMatch: await currentEtag(h.db, post.id),
+    });
     const renamed = await h.client.entry.update({
       id: post.id,
       title: "renamed",
+      ifMatch: await currentEtag(h.db, post.id),
     });
     expect(renamed.meta[ACCESS_POLICY_META_KEY]).toBe("members");
   });
@@ -1506,7 +1857,11 @@ describe("entry.update — per-entry access choice", () => {
     const post = await h.client.entry.create({ title: "d", slug: "d" });
 
     await expect(
-      h.client.entry.update({ id: post.id, access: "ghost" }),
+      h.client.entry.update({
+        id: post.id,
+        access: "ghost",
+        ifMatch: await currentEtag(h.db, post.id),
+      }),
     ).rejects.toMatchObject({
       code: "BAD_REQUEST",
       data: { reason: "access_policy_undeclared" },
@@ -1520,7 +1875,11 @@ describe("entry.update — per-entry access choice", () => {
     const post = await h.client.entry.create({ title: "e", slug: "e" });
 
     await expect(
-      h.client.entry.update({ id: post.id, access: "members" }),
+      h.client.entry.update({
+        id: post.id,
+        access: "members",
+        ifMatch: await currentEtag(h.db, post.id),
+      }),
     ).rejects.toMatchObject({
       code: "BAD_REQUEST",
       data: { reason: "access_policy_undeclared" },
@@ -1537,6 +1896,7 @@ describe("entry.update — per-entry access choice", () => {
       h.client.entry.update({
         id: post.id,
         meta: { [ACCESS_POLICY_META_KEY]: "members" },
+        ifMatch: await currentEtag(h.db, post.id),
       }),
     ).rejects.toMatchObject({
       code: "CONFLICT",

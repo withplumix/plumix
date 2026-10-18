@@ -881,6 +881,11 @@ msgid "palette.group.commands"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.compare"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.compare"
 msgstr "مقارنة"
@@ -1837,6 +1842,11 @@ msgid "editor.command.group"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.hideComparison"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.hideComparison"
 msgstr "إخفاء المقارنة"
@@ -1922,6 +1932,11 @@ msgid "userInvite.submit.pending"
 msgstr "جارٍ الدعوة…"
 
 #. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.description"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.singular"
 msgstr "عنصر"
@@ -1947,6 +1962,11 @@ msgstr "عناصر"
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.reassign.keepAsIs"
 msgstr "الإبقاء على المنشورات كما هي (لا شيء لإعادة تعيينه)"
+
+#. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.keepMine"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/locale-switcher.tsx
@@ -2003,6 +2023,11 @@ msgstr "النسخة الحالية"
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.loadMore"
 msgstr "تحميل المزيد"
+
+#. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.loadTheirs"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/data-table/data-table.tsx
@@ -2913,6 +2938,11 @@ msgid "editor.plainForm.status.saved"
 msgstr "تم الحفظ"
 
 #. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.savedNow"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/-settings-group-card.tsx
 msgid "settings.page.saved"
 msgstr "تم الحفظ."
@@ -3614,6 +3644,11 @@ msgid "profile.passkeys.enroll.noAuthenticator"
 msgstr "هذا الجهاز لا يدعم passkeys."
 
 #. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.title"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/-restore-error.ts
 msgid "editor.revision.conflict"
 msgstr ""
@@ -3957,6 +3992,11 @@ msgstr "وصلت إلى حد passkeys لهذا الحساب."
 #: src/components/profile/language-card.tsx
 msgid "profile.language.description"
 msgstr "لوحة الإدارة تُعرض بهذه اللغة. تُعاد الصفحة بعد التبديل لتطبيق الترجمات الجديدة في كل مكان."
+
+#. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.yourChanges"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts

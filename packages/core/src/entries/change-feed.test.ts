@@ -9,6 +9,7 @@ import {
   snapshotAsRevision,
   upsertAutosave,
 } from "../revisions/repository.js";
+import { currentEtag } from "../test/entry-etag.js";
 import { adminUser, entryFactory } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
 import { createRpcHarness } from "../test/rpc.js";
@@ -47,7 +48,11 @@ describe("entry change feed", () => {
       title: "Hello",
       slug: "hello",
     });
-    await h.client.entry.update({ id: created.id, title: "Hello again" });
+    await h.client.entry.update({
+      id: created.id,
+      title: "Hello again",
+      ifMatch: await currentEtag(h.db, created.id),
+    });
 
     const changes = await readEntryChanges(h.db, 10);
 

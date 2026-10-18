@@ -22,6 +22,17 @@ export type { SearchTerm } from "../search/contract/search-terms.js";
 // field pipeline that stores a value in its declared form (#2433).
 export { settleMeta } from "../meta/settle-meta.js";
 export type { MetaOwner } from "../meta/settle-meta.js";
+// A guarded write from a copy (ADR 0048): any table with `updated_at` opts in,
+// composing these into its own drizzle update.
+export {
+  claim,
+  ConflictError,
+  etagOf,
+  ifMatchObject,
+  mergePatch,
+  nextToken,
+  parseIfMatch,
+} from "./concurrency.js";
 export { readVisitorMeta } from "./visitor-meta.js";
 export { defineDataMigration } from "./data-migration.js";
 export type { DataMigration } from "./data-migration.js";

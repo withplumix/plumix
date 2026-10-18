@@ -4,12 +4,14 @@ import type { Entry } from "../db/schema/entries.js";
 import type { JsonObject } from "../json.js";
 import type { MetaBoxField } from "../plugin/manifest.js";
 import { ACCESS_POLICY_META_KEY } from "../access/contract/meta-key.js";
+import { etagOf } from "../db/concurrency.js";
 import { eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { toRegisteredEntryType } from "../plugin/registry.js";
 import { NAMED_TEMPLATE_META_KEY } from "../route/render/template-builders.js";
 import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
+import { currentEtag } from "../test/entry-etag.js";
 import { createRpcHarness } from "../test/rpc.js";
 import { getAutosave, upsertAutosave } from "./repository.js";
 
@@ -97,6 +99,7 @@ describe("entry.update saveAs", () => {
     const result = await h.client.entry.update({
       id: h.entryId,
       excerpt: "Draft excerpt",
+      ifMatch: await currentEtag(h.db, h.entryId),
     });
     // The declared type is `Entry` with a string `type`, so only the
     // persisted shape shows this is the autosave row.
@@ -112,6 +115,7 @@ describe("entry.update saveAs", () => {
     const result = await h.client.entry.update({
       id: h.entryId,
       template: "landing",
+      ifMatch: await currentEtag(h.db, h.entryId),
     });
     expect(result.type).toBe("autosave");
     expect(result.meta[NAMED_TEMPLATE_META_KEY]).toBe("landing");
@@ -133,6 +137,7 @@ describe("entry.update saveAs", () => {
     const drafted = await h.client.entry.update({
       id: h.entryId,
       template: null,
+      ifMatch: await currentEtag(h.db, h.entryId),
     });
     expect(drafted.meta[NAMED_TEMPLATE_META_KEY]).toBeUndefined();
 
@@ -144,7 +149,7 @@ describe("entry.update saveAs", () => {
 
     const promoted = await h.client.entry.publish({
       id: h.entryId,
-      expectedLiveUpdatedAt: live.updatedAt,
+      ifMatch: etagOf(live.updatedAt),
     });
     expect(promoted.meta[NAMED_TEMPLATE_META_KEY]).toBeUndefined();
   });
@@ -158,11 +163,15 @@ describe("entry.update saveAs", () => {
       .where(eq(entries.id, h.entryId));
     const live = await h.client.entry.get({ id: h.entryId });
 
-    await h.client.entry.update({ id: h.entryId, access: null });
+    await h.client.entry.update({
+      id: h.entryId,
+      access: null,
+      ifMatch: await currentEtag(h.db, h.entryId),
+    });
 
     const promoted = await h.client.entry.publish({
       id: h.entryId,
-      expectedLiveUpdatedAt: live.updatedAt,
+      ifMatch: etagOf(live.updatedAt),
     });
     expect(promoted.meta[ACCESS_POLICY_META_KEY]).toBeUndefined();
   });
@@ -173,6 +182,7 @@ describe("entry.update saveAs", () => {
       id: h.entryId,
       title: "Edited live",
       saveAs: "live",
+      ifMatch: await currentEtag(h.db, h.entryId),
     });
     expect(result.type).toBe("post");
     expect(result.title).toBe("Edited live");
@@ -193,6 +203,7 @@ describe("entry.update saveAs", () => {
         id: created.id,
         title: "Draft",
         saveAs: "draft",
+        ifMatch: await currentEtag(h.db, created.id),
       }),
     ).rejects.toMatchObject({
       code: "BAD_REQUEST",
@@ -216,6 +227,7 @@ describe("entry.update saveAs", () => {
         id: created.id,
         title: "Pending",
         saveAs: "draft",
+        ifMatch: await currentEtag(h.db, created.id),
       }),
     ).rejects.toMatchObject({
       code: "BAD_REQUEST",
@@ -236,12 +248,13 @@ describe("entry.update saveAs", () => {
     const autosave = await h.client.entry.update({
       id: h.entryId,
       meta: { accent_color: "#FFA500" },
+      ifMatch: await currentEtag(h.db, h.entryId),
     });
     expect(autosave.type).toBe("autosave");
     expect(autosave.meta.accent_color).toBe("#ffa500");
     const promoted = await h.client.entry.publish({
       id: h.entryId,
-      expectedLiveUpdatedAt: h.liveUpdatedAt,
+      ifMatch: etagOf(h.liveUpdatedAt),
     });
     expect(promoted.meta.accent_color).toBe("#ffa500");
   });
@@ -263,10 +276,15 @@ describe("entry.update saveAs", () => {
       .set({ meta: { sealed: 1 } })
       .where(eq(entries.id, h.entryId));
 
-    await h.client.entry.update({ id: h.entryId, excerpt: "unrelated edit" });
+    await h.client.entry.update({
+      id: h.entryId,
+      excerpt: "unrelated edit",
+      ifMatch: await currentEtag(h.db, h.entryId),
+    });
+    // The direct write moved the token past the fixture's.
     const promoted = await h.client.entry.publish({
       id: h.entryId,
-      expectedLiveUpdatedAt: h.liveUpdatedAt,
+      ifMatch: await currentEtag(h.db, h.entryId),
     });
 
     expect(promoted.meta.sealed).toBe(1);
@@ -283,6 +301,7 @@ describe("entry.update saveAs", () => {
     const autosave = await h.client.entry.update({
       id: h.entryId,
       meta: { rating: 99 },
+      ifMatch: await currentEtag(h.db, h.entryId),
     });
     expect(autosave.type).toBe("autosave");
     expect(autosave.meta.rating).toBe(99);
@@ -295,6 +314,7 @@ describe("entry.update saveAs", () => {
         id: h.entryId,
         meta: { rating: 99 },
         saveAs: "live",
+        ifMatch: await currentEtag(h.db, h.entryId),
       }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
@@ -315,18 +335,20 @@ describe("entry.update saveAs", () => {
       id: h.entryId,
       meta: { accent_color: "#abc" },
       saveAs: "live",
+      ifMatch: await currentEtag(h.db, h.entryId),
     });
     const live = await h.client.entry.get({ id: h.entryId });
     expect(live.meta.accent_color).toBe("#abc");
     const autosave = await h.client.entry.update({
       id: h.entryId,
       meta: { accent_color: null },
+      ifMatch: await currentEtag(h.db, h.entryId),
     });
     expect(autosave.type).toBe("autosave");
     expect("accent_color" in autosave.meta).toBe(false);
     const promoted = await h.client.entry.publish({
       id: h.entryId,
-      expectedLiveUpdatedAt: live.updatedAt,
+      ifMatch: etagOf(live.updatedAt),
     });
     expect("accent_color" in promoted.meta).toBe(false);
   });
@@ -345,6 +367,7 @@ describe("entry.update saveAs", () => {
       h.client.entry.update({
         id: h.entryId,
         meta: { private_note: "leaked" },
+        ifMatch: await currentEtag(h.db, h.entryId),
       }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
@@ -366,6 +389,7 @@ describe("entry.update saveAs", () => {
       h.client.entry.update({
         id: h.entryId,
         meta: { owner: "999999" },
+        ifMatch: await currentEtag(h.db, h.entryId),
       }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
@@ -386,6 +410,7 @@ describe("entry.update saveAs", () => {
     await h.client.entry.update({
       id: h.entryId,
       title: "Pending",
+      ifMatch: await currentEtag(h.db, h.entryId),
     });
     expect(autosaveFires).toHaveLength(1);
     expect(updatedFires).toHaveLength(0);
@@ -405,10 +430,15 @@ describe("entry.update saveAs", () => {
         { key: "accent", label: "Accent", type: "string", inputType: "text" },
       ]),
     );
-    await h.client.entry.update({ id: h.entryId, meta: { subtitle: "hi" } });
+    await h.client.entry.update({
+      id: h.entryId,
+      meta: { subtitle: "hi" },
+      ifMatch: await currentEtag(h.db, h.entryId),
+    });
     const draft = await h.client.entry.update({
       id: h.entryId,
       meta: { accent: "#abc" },
+      ifMatch: await currentEtag(h.db, h.entryId),
     });
     expect(draft.type).toBe("autosave");
     expect(draft.meta.subtitle).toBe("hi");
@@ -426,21 +456,27 @@ describe("entry.update saveAs", () => {
         inputType: "text",
       }),
     );
-    await h.client.entry.update({ id: h.entryId, meta: { subtitle: "a" } });
+    await h.client.entry.update({
+      id: h.entryId,
+      meta: { subtitle: "a" },
+      ifMatch: await currentEtag(h.db, h.entryId),
+    });
     const live = await h.client.entry.update({
       id: h.entryId,
       title: "New Title",
       saveAs: "live",
+      ifMatch: await currentEtag(h.db, h.entryId),
     });
     const draft = await h.client.entry.update({
       id: h.entryId,
       meta: { subtitle: "b" },
+      ifMatch: await currentEtag(h.db, h.entryId),
     });
     expect(draft.type).toBe("autosave");
     expect(draft.title).toBe("New Title");
     const promoted = await h.client.entry.publish({
       id: h.entryId,
-      expectedLiveUpdatedAt: live.updatedAt,
+      ifMatch: etagOf(live.updatedAt),
     });
     expect(promoted.title).toBe("New Title");
   });
@@ -454,10 +490,15 @@ describe("entry.update saveAs", () => {
         inputType: "text",
       }),
     );
-    await h.client.entry.update({ id: h.entryId, excerpt: "draft excerpt" });
+    await h.client.entry.update({
+      id: h.entryId,
+      excerpt: "draft excerpt",
+      ifMatch: await currentEtag(h.db, h.entryId),
+    });
     const draft = await h.client.entry.update({
       id: h.entryId,
       meta: { subtitle: "later" },
+      ifMatch: await currentEtag(h.db, h.entryId),
     });
     expect(draft.type).toBe("autosave");
     expect(draft.meta.subtitle).toBe("later");
@@ -468,7 +509,11 @@ describe("entry.update saveAs", () => {
 describe("entry.get preview", () => {
   test("preview=true with an existing autosave overlays the pending fields and tags _preview source=autosave", async () => {
     const h = await publishedPostFixture();
-    await h.client.entry.update({ id: h.entryId, excerpt: "Pending excerpt" });
+    await h.client.entry.update({
+      id: h.entryId,
+      excerpt: "Pending excerpt",
+      ifMatch: await currentEtag(h.db, h.entryId),
+    });
     const previewed = await h.client.entry.get({
       id: h.entryId,
       preview: true,
@@ -482,11 +527,16 @@ describe("entry.get preview", () => {
     // Title is live-only, so the overlay matches the public `?preview=`
     // render rather than the frozen snapshot.
     const h = await publishedPostFixture();
-    await h.client.entry.update({ id: h.entryId, excerpt: "draft excerpt" });
+    await h.client.entry.update({
+      id: h.entryId,
+      excerpt: "draft excerpt",
+      ifMatch: await currentEtag(h.db, h.entryId),
+    });
     await h.client.entry.update({
       id: h.entryId,
       title: "New Title",
       saveAs: "live",
+      ifMatch: await currentEtag(h.db, h.entryId),
     });
     const previewed = await h.client.entry.get({
       id: h.entryId,
@@ -510,7 +560,11 @@ describe("entry.get preview", () => {
 
   test("preview=false (default) returns the live row WITHOUT _preview metadata even when an autosave exists", async () => {
     const h = await publishedPostFixture();
-    await h.client.entry.update({ id: h.entryId, title: "Pending" });
+    await h.client.entry.update({
+      id: h.entryId,
+      title: "Pending",
+      ifMatch: await currentEtag(h.db, h.entryId),
+    });
     const live = await h.client.entry.get({ id: h.entryId });
     expect(live.title).toBe("Live");
     expect(live._preview).toBeUndefined();
@@ -534,10 +588,11 @@ describe("entry.publish", () => {
     await h.client.entry.update({
       id: h.entryId,
       excerpt: "Promoted excerpt",
+      ifMatch: await currentEtag(h.db, h.entryId),
     });
     const promoted = await h.client.entry.publish({
       id: h.entryId,
-      expectedLiveUpdatedAt: beforePublish.updatedAt,
+      ifMatch: etagOf(beforePublish.updatedAt),
     });
     expect(promoted.excerpt).toBe("Promoted excerpt");
     expect(promoted.type).toBe("post");
@@ -608,7 +663,7 @@ describe("entry.publish", () => {
 
     const promoted = await h.client.entry.publish({
       id: h.entryId,
-      expectedLiveUpdatedAt: live.updatedAt,
+      ifMatch: etagOf(live.updatedAt),
     });
     expect(promoted.meta.subtitle).toBe("from live");
     expect(promoted.meta.excerpt_note).toBe("an unregistered sibling");
@@ -627,7 +682,7 @@ describe("entry.publish", () => {
     const live = await stalePendingAutosave(h, { accent_color: "#FFA500" });
     const promoted = await h.client.entry.publish({
       id: h.entryId,
-      expectedLiveUpdatedAt: live.updatedAt,
+      ifMatch: etagOf(live.updatedAt),
     });
     expect(promoted.meta.accent_color).toBe("#ffa500");
   });
@@ -651,7 +706,7 @@ describe("entry.publish", () => {
     });
     const promoted = await h.client.entry.publish({
       id: h.entryId,
-      expectedLiveUpdatedAt: live.updatedAt,
+      ifMatch: etagOf(live.updatedAt),
     });
     expect(promoted.meta.accent_color).toBe("#ffa500");
     expect(promoted.meta.from_uninstalled_plugin).toEqual({ keep: 1 });
@@ -665,7 +720,7 @@ describe("entry.publish", () => {
     await expect(
       h.client.entry.publish({
         id: h.entryId,
-        expectedLiveUpdatedAt: live.updatedAt,
+        ifMatch: etagOf(live.updatedAt),
       }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
@@ -677,31 +732,71 @@ describe("entry.publish", () => {
     // Title is live-only, so publishing an older draft must not revert a
     // later live title edit with the stale snapshot.
     const h = await publishedPostFixture();
-    await h.client.entry.update({ id: h.entryId, excerpt: "draft excerpt" });
+    await h.client.entry.update({
+      id: h.entryId,
+      excerpt: "draft excerpt",
+      ifMatch: await currentEtag(h.db, h.entryId),
+    });
     const live = await h.client.entry.update({
       id: h.entryId,
       title: "New Title",
       saveAs: "live",
+      ifMatch: await currentEtag(h.db, h.entryId),
     });
     const promoted = await h.client.entry.publish({
       id: h.entryId,
-      expectedLiveUpdatedAt: live.updatedAt,
+      ifMatch: etagOf(live.updatedAt),
     });
     expect(promoted.title).toBe("New Title");
     expect(promoted.excerpt).toBe("draft excerpt");
   });
 
-  test("returns CONFLICT when expectedLiveUpdatedAt is stale", async () => {
+  test("refuses a publish from a stale copy with etag_mismatch", async () => {
     const h = await publishedPostFixture();
-    await h.client.entry.update({ id: h.entryId, title: "Pending" });
+    await h.client.entry.update({
+      id: h.entryId,
+      title: "Pending",
+      ifMatch: await currentEtag(h.db, h.entryId),
+    });
     await expect(
       h.client.entry.publish({
         id: h.entryId,
-        expectedLiveUpdatedAt: new Date("2020-01-01"),
+        ifMatch: etagOf(new Date("2020-01-01")),
       }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
-      data: { reason: "stale_expected_updated_at" },
+      data: { reason: "etag_mismatch" },
+    });
+  });
+
+  test("a write that lands mid-publish, after it read live, makes the publish conflict", async () => {
+    const h = await publishedPostFixture();
+    await h.client.entry.update({
+      id: h.entryId,
+      excerpt: "Pending",
+      ifMatch: await currentEtag(h.db, h.entryId),
+    });
+    const ifMatch = await currentEtag(h.db, h.entryId);
+    // A plugin's own write, landing after the publish read live.
+    // @ts-expect-error -- `applyFilter` awaits a handler's promise; the
+    // registry types `entry:before_save` handlers as sync.
+    h.hooks.addFilter("entry:before_save", async (entry) => {
+      await h.db
+        .update(entries)
+        .set({ title: "theirs" })
+        .where(eq(entries.id, h.entryId));
+      return entry;
+    });
+
+    await expect(
+      h.client.entry.publish({ id: h.entryId, ifMatch }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "etag_mismatch" },
+    });
+    expect(await h.client.entry.get({ id: h.entryId })).toMatchObject({
+      title: "theirs",
+      excerpt: null,
     });
   });
 
@@ -711,7 +806,7 @@ describe("entry.publish", () => {
     await expect(
       h.client.entry.publish({
         id: h.entryId,
-        expectedLiveUpdatedAt: live.updatedAt,
+        ifMatch: etagOf(live.updatedAt),
       }),
     ).rejects.toMatchObject({
       code: "BAD_REQUEST",
@@ -723,7 +818,11 @@ describe("entry.publish", () => {
 describe("entry.discardDraft", () => {
   test("deletes the caller's autosave and returns discarded=true", async () => {
     const h = await publishedPostFixture();
-    await h.client.entry.update({ id: h.entryId, title: "Pending" });
+    await h.client.entry.update({
+      id: h.entryId,
+      title: "Pending",
+      ifMatch: await currentEtag(h.db, h.entryId),
+    });
     const result = await h.client.entry.discardDraft({ id: h.entryId });
     expect(result.discarded).toBe(true);
     const previewed = await h.client.entry.get({
@@ -745,7 +844,11 @@ describe("entry.discardDraft", () => {
     h.hooks.addAction("entry:post:autosave_discarded", (live, authorId) => {
       discards.push(authorId);
     });
-    await h.client.entry.update({ id: h.entryId, title: "Pending" });
+    await h.client.entry.update({
+      id: h.entryId,
+      title: "Pending",
+      ifMatch: await currentEtag(h.db, h.entryId),
+    });
     await h.client.entry.discardDraft({ id: h.entryId });
     expect(discards).toHaveLength(1);
     // Second call — nothing to discard, no hook fire.
@@ -793,6 +896,7 @@ describe("entry.discardDraft", () => {
           avatarUrl: null,
         },
       },
+      ifMatch: await currentEtag(h.db, created.id),
     });
 
     const autosave = await getAutosave(h.context.db, {

@@ -881,6 +881,11 @@ msgid "palette.group.commands"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.compare"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.compare"
 msgstr "比较"
@@ -1837,6 +1842,11 @@ msgid "editor.command.group"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.hideComparison"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.hideComparison"
 msgstr "隐藏对比"
@@ -1922,6 +1932,11 @@ msgid "userInvite.submit.pending"
 msgstr "邀请中…"
 
 #. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.description"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.singular"
 msgstr "项目"
@@ -1947,6 +1962,11 @@ msgstr "项目"
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.reassign.keepAsIs"
 msgstr "保持文章原状（无需重新分配）"
+
+#. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.keepMine"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/locale-switcher.tsx
@@ -2003,6 +2023,11 @@ msgstr "当前版本"
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.loadMore"
 msgstr "加载更多"
+
+#. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.loadTheirs"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/data-table/data-table.tsx
@@ -2913,6 +2938,11 @@ msgid "editor.plainForm.status.saved"
 msgstr "已保存"
 
 #. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.savedNow"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/-settings-group-card.tsx
 msgid "settings.page.saved"
 msgstr "已保存。"
@@ -3614,6 +3644,11 @@ msgid "profile.passkeys.enroll.noAuthenticator"
 msgstr "此设备不支持 Passkey。"
 
 #. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.title"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/-restore-error.ts
 msgid "editor.revision.conflict"
 msgstr ""
@@ -3957,6 +3992,11 @@ msgstr "您已达到此账户的 Passkey 上限。"
 #: src/components/profile/language-card.tsx
 msgid "profile.language.description"
 msgstr "管理后台将以此语言显示。切换后页面将重新加载,以便新翻译应用到各处。"
+
+#. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.yourChanges"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts

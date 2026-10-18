@@ -156,7 +156,12 @@ const STORES: Readonly<Record<MetaStore, StoreWalk>> = {
       from,
       (after) =>
         walk.ctx.db
-          .select({ id: entries.id, type: entries.type, meta: entries.meta })
+          .select({
+            id: entries.id,
+            type: entries.type,
+            meta: entries.meta,
+            updatedAt: entries.updatedAt,
+          })
           .from(entries)
           .where(and(gt(entries.id, after), authoredEntryRows()))
           .orderBy(asc(entries.id))

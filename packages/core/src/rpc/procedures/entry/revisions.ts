@@ -8,8 +8,8 @@ import {
   entryCapabilityNamespace,
   namespacedEntryCapability,
 } from "../../../access/contract/entry-capabilities.js";
+import { etagOf, ifMatchObject } from "../../../db/concurrency.js";
 import { eq } from "../../../db/index.js";
-import { entries } from "../../../db/schema/entries.js";
 import { users } from "../../../db/schema/users.js";
 import { loadAuthoredEntry } from "../../../entries/authored.js";
 import { assertCanEditEntry } from "../../../entries/editability.js";
@@ -31,7 +31,11 @@ import {
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { idParam } from "../../contract/validation.js";
-import { assertExpectedLiveUpdatedAt } from "./concurrency.js";
+import {
+  assertCopyCurrent,
+  claimEntry,
+  ENTRY_IF_MATCH_MESSAGE,
+} from "./concurrency.js";
 import {
   assertContentValidAgainstRegistries,
   assertContentWithinByteCap,
@@ -58,10 +62,10 @@ const listInput = v.object({
 
 const getInput = v.object({ revisionId: idParam });
 
-const restoreInput = v.object({
-  revisionId: idParam,
-  expectedLiveUpdatedAt: v.optional(v.date()),
-});
+const restoreInput = ifMatchObject(
+  { revisionId: idParam },
+  ENTRY_IF_MATCH_MESSAGE,
+);
 
 export const list = base
   .use(authenticated)
@@ -189,6 +193,8 @@ export const restore = base
       throw errors.FORBIDDEN({ data: { capability: restoreCapability } });
     }
     assertCanEditEntry(context, live, errors);
+    // Either destination is a write from the caller's copy of the entry.
+    assertCopyCurrent(input.ifMatch, live.updatedAt);
 
     // Snapshots survive block deregistration, so a stale revision must pass the
     // same gate before landing on autosave or live.
@@ -205,7 +211,7 @@ export const restore = base
         ?.supports?.includes("autosave") ?? false;
 
     // Autosave-supporting types: the restore lands on the caller's
-    // per-user autosave row. No live concurrency token needed — the
+    // per-user autosave row, leaving live and its token alone — the
     // user can publish (or discard) later via #290's flow.
     if (typeSupportsAutosave) {
       // Strip the snapshot envelope from the revision's meta bag
@@ -240,18 +246,11 @@ export const restore = base
       const draft = asDraftRow(live, autosave);
       await fireEntryRevisionRestored(context, revision, draft, live.type);
       await fireEntryAutosaveSaved(context, draft, live);
-      return draft;
+      return { ...draft, etag: etagOf(live.updatedAt) };
     }
 
-    // Types without autosave support restore straight onto live.
-    assertExpectedLiveUpdatedAt(input.expectedLiveUpdatedAt, live.updatedAt, {
-      stale: () => {
-        throw errors.CONFLICT({
-          data: { reason: "stale_expected_updated_at" },
-        });
-      },
-    });
-
+    // Types without autosave support restore straight onto live, an edit
+    // that takes a fresh token rather than rewinding to the snapshot's.
     const snapshotMeta: Record<string, JsonValue> = { ...revision.meta };
     const decodedEnvelope = decodeSnapshotEnvelope(snapshotMeta);
     delete snapshotMeta[SNAPSHOT_META_KEY];
@@ -288,11 +287,12 @@ export const restore = base
       (toWrite as Record<string, unknown>)[key] = prepared[key];
     }
 
-    const [updatedRow] = await context.db
-      .update(entries)
-      .set(toWrite)
-      .where(eq(entries.id, live.id))
-      .returning();
+    const updatedRow = await claimEntry(
+      context.db,
+      live.id,
+      input.ifMatch,
+      toWrite,
+    );
     if (!updatedRow) {
       throw errors.CONFLICT({ data: { reason: "update_failed" } });
     }
@@ -304,7 +304,7 @@ export const restore = base
     if (isPublishTransition) {
       await fireEntryPublished(context, updated);
     }
-    return updated;
+    return { ...updated, etag: etagOf(updated.updatedAt) };
   });
 
 const setMessageInput = v.object({

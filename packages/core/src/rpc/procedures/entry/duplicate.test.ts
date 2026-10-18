@@ -6,6 +6,7 @@ import { entries } from "../../../db/schema/entries.js";
 import { text } from "../../../plugin/fields/index.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { toRegisteredTermTaxonomy } from "../../../plugin/registry.js";
+import { currentEtag } from "../../../test/entry-etag.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
 /** Minimal taxonomy registry so `entry.update` accepts a `category` term patch. */
@@ -93,6 +94,7 @@ describe("entry.duplicate", () => {
     await h.client.entry.update({
       id: source.id,
       terms: { category: [category.id] },
+      ifMatch: await currentEtag(h.db, source.id),
     });
 
     const copy = await h.client.entry.duplicate({ id: source.id });

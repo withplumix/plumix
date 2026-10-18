@@ -1,11 +1,13 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, test } from "vitest";
 
+import { etagOf } from "../db/concurrency.js";
 import { entries } from "../db/schema/entries.js";
 import { text } from "../plugin/fields/index.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { toRegisteredEntryType } from "../plugin/registry.js";
 import { NAMED_TEMPLATE_META_KEY } from "../route/render/template-builders.js";
+import { currentEtag } from "../test/entry-etag.js";
 import { createRpcHarness } from "../test/rpc.js";
 import { REVISION_TYPE } from "./slug-codec.js";
 
@@ -39,7 +41,11 @@ async function seedEntryWithRevision(): Promise<{
     title: "First",
     slug: "first",
   });
-  await h.client.entry.update({ id: created.id, title: "Second" });
+  await h.client.entry.update({
+    id: created.id,
+    title: "Second",
+    ifMatch: await currentEtag(h.db, created.id),
+  });
   const [revision] = await h.db.query.entries.findMany({
     where: eq(entries.type, REVISION_TYPE),
   });
@@ -50,9 +56,16 @@ async function seedEntryWithRevision(): Promise<{
 describe("entry.revisions.restore", () => {
   test("writes the revision's content/title into the live entry", async () => {
     const { h, entryId, revisionId } = await seedEntryWithRevision();
-    await h.client.entry.update({ id: entryId, title: "Third" });
+    await h.client.entry.update({
+      id: entryId,
+      title: "Third",
+      ifMatch: await currentEtag(h.db, entryId),
+    });
 
-    const restored = await h.client.entry.revisions.restore({ revisionId });
+    const restored = await h.client.entry.revisions.restore({
+      revisionId,
+      ifMatch: await currentEtag(h.db, entryId),
+    });
 
     expect(restored.id).toBe(entryId);
     expect(restored.title).toBe("Second");
@@ -72,7 +85,11 @@ describe("entry.revisions.restore", () => {
       slug: "post",
     });
     // Publish → captures a `published` revision.
-    await h.client.entry.update({ id: created.id, status: "published" });
+    await h.client.entry.update({
+      id: created.id,
+      status: "published",
+      ifMatch: await currentEtag(h.db, created.id),
+    });
     const [revision] = await h.db.query.entries.findMany({
       where: eq(entries.type, REVISION_TYPE),
     });
@@ -83,10 +100,12 @@ describe("entry.revisions.restore", () => {
       id: created.id,
       status: "scheduled",
       publishedAt: future,
+      ifMatch: await currentEtag(h.db, created.id),
     });
 
     const restored = await h.client.entry.revisions.restore({
       revisionId: revision.id,
+      ifMatch: await currentEtag(h.db, created.id),
     });
 
     expect(restored.status).toBe("published");
@@ -96,38 +115,94 @@ describe("entry.revisions.restore", () => {
 
   test("does NOT snapshot the post-restore state — restore is invisible to history", async () => {
     const { h, entryId, revisionId } = await seedEntryWithRevision();
-    await h.client.entry.update({ id: entryId, title: "Third" });
+    await h.client.entry.update({
+      id: entryId,
+      title: "Third",
+      ifMatch: await currentEtag(h.db, entryId),
+    });
 
     const before = await h.db.query.entries.findMany({
       where: eq(entries.type, REVISION_TYPE),
     });
-    await h.client.entry.revisions.restore({ revisionId });
+    await h.client.entry.revisions.restore({
+      revisionId,
+      ifMatch: await currentEtag(h.db, entryId),
+    });
     const after = await h.db.query.entries.findMany({
       where: eq(entries.type, REVISION_TYPE),
     });
     expect(after.length).toBe(before.length);
   });
 
-  test("stale expectedLiveUpdatedAt rejects with CONFLICT", async () => {
+  test("refuses a restore from a stale copy with etag_mismatch", async () => {
     const { h, entryId, revisionId } = await seedEntryWithRevision();
-    const stale = new Date(Date.now() - 60_000);
-    await h.client.entry.update({ id: entryId, title: "Third" });
+    const stale = await currentEtag(h.db, entryId);
+    await h.client.entry.update({
+      id: entryId,
+      title: "Third",
+      ifMatch: stale,
+    });
+
     await expect(
-      h.client.entry.revisions.restore({
-        revisionId,
-        expectedLiveUpdatedAt: stale,
-      }),
+      h.client.entry.revisions.restore({ revisionId, ifMatch: stale }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
-      data: { reason: "stale_expected_updated_at" },
+      data: { reason: "etag_mismatch" },
     });
+  });
+
+  test("a write that lands mid-restore, after it read live, makes the restore conflict", async () => {
+    const { h, entryId, revisionId } = await seedEntryWithRevision();
+    const ifMatch = await currentEtag(h.db, entryId);
+    // A plugin's own write, landing after the restore read live.
+    // @ts-expect-error -- `applyFilter` awaits a handler's promise; the
+    // registry types `entry:before_save` handlers as sync.
+    h.hooks.addFilter("entry:before_save", async (entry) => {
+      await h.db
+        .update(entries)
+        .set({ title: "theirs" })
+        .where(eq(entries.id, entryId));
+      return entry;
+    });
+
+    await expect(
+      h.client.entry.revisions.restore({ revisionId, ifMatch }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "etag_mismatch" },
+    });
+    expect(
+      await h.db.query.entries.findFirst({ where: eq(entries.id, entryId) }),
+    ).toMatchObject({ title: "theirs" });
+  });
+
+  test("a restore takes a fresh token rather than the snapshot's", async () => {
+    const { h, entryId, revisionId } = await seedEntryWithRevision();
+    await h.db
+      .update(entries)
+      .set({ updatedAt: new Date("2100-01-01T00:00:00Z") })
+      .where(eq(entries.id, entryId));
+
+    const restored = await h.client.entry.revisions.restore({
+      revisionId,
+      ifMatch: etagOf(new Date("2100-01-01T00:00:00Z")),
+    });
+
+    expect(restored.etag).toBe(etagOf(new Date("2100-01-01T00:00:01Z")));
   });
 
   test("restores the snapshotted slug from the envelope", async () => {
     const { h, entryId, revisionId } = await seedEntryWithRevision();
-    await h.client.entry.update({ id: entryId, slug: "third-slug" });
+    await h.client.entry.update({
+      id: entryId,
+      slug: "third-slug",
+      ifMatch: await currentEtag(h.db, entryId),
+    });
 
-    const restored = await h.client.entry.revisions.restore({ revisionId });
+    const restored = await h.client.entry.revisions.restore({
+      revisionId,
+      ifMatch: await currentEtag(h.db, entryId),
+    });
 
     expect(restored.slug).toBe("first");
   });
@@ -145,8 +220,13 @@ describe("entry.revisions.restore", () => {
     await h.client.entry.update({
       id: created.id,
       status: "published",
+      ifMatch: await currentEtag(h.db, created.id),
     });
-    await h.client.entry.update({ id: created.id, status: "draft" });
+    await h.client.entry.update({
+      id: created.id,
+      status: "draft",
+      ifMatch: await currentEtag(h.db, created.id),
+    });
     const allRevisions = await h.db.query.entries.findMany({
       where: eq(entries.type, REVISION_TYPE),
     });
@@ -157,15 +237,19 @@ describe("entry.revisions.restore", () => {
     const onPublished = h.spyAction("entry:published");
     await h.client.entry.revisions.restore({
       revisionId: publishedRevision.id,
+      ifMatch: await currentEtag(h.db, created.id),
     });
     onPublished.assertCalledOnce();
   });
 
   test("rejects with FORBIDDEN when the viewer lacks read_revisions", async () => {
-    const { h, revisionId } = await seedEntryWithRevision();
+    const { h, entryId, revisionId } = await seedEntryWithRevision();
     const subscriber = await h.actingAs("subscriber");
     await expect(
-      subscriber.client.entry.revisions.restore({ revisionId }),
+      subscriber.client.entry.revisions.restore({
+        revisionId,
+        ifMatch: await currentEtag(h.db, entryId),
+      }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
       data: { capability: "entry:post:read_revisions" },
@@ -178,7 +262,10 @@ describe("entry.revisions.restore", () => {
       plugins: registryWithRevisions(),
     });
     await expect(
-      h.client.entry.revisions.restore({ revisionId: 999_999 }),
+      h.client.entry.revisions.restore({
+        revisionId: 999_999,
+        ifMatch: etagOf(new Date("2026-10-18T12:00:00Z")),
+      }),
     ).rejects.toMatchObject({
       code: "NOT_FOUND",
       data: { kind: "revision" },
@@ -223,12 +310,14 @@ describe("entry.revisions.restore — autosave destination (#292)", () => {
       title: "X2",
       excerpt: "e2",
       saveAs: "live",
+      ifMatch: await currentEtag(h.db, created.id),
     });
     await h.client.entry.update({
       id: created.id,
       title: "X3",
       excerpt: "e3",
       saveAs: "live",
+      ifMatch: await currentEtag(h.db, created.id),
     });
     const revisions = await h.db.query.entries.findMany({
       where: eq(entries.type, REVISION_TYPE),
@@ -238,6 +327,7 @@ describe("entry.revisions.restore — autosave destination (#292)", () => {
 
     const restored = await h.client.entry.revisions.restore({
       revisionId: x2Revision.id,
+      ifMatch: await currentEtag(h.db, created.id),
     });
 
     // Restored row is the autosave (type='autosave'), not live.
@@ -273,6 +363,7 @@ describe("entry.revisions.restore — autosave destination (#292)", () => {
       id: created.id,
       excerpt: "e2",
       saveAs: "live",
+      ifMatch: await currentEtag(h.db, created.id),
     });
     const revisions = await h.db.query.entries.findMany({
       where: eq(entries.type, REVISION_TYPE),
@@ -286,7 +377,10 @@ describe("entry.revisions.restore — autosave destination (#292)", () => {
       .set({ meta: { added_after: "gone on restore" } })
       .where(eq(entries.id, created.id));
 
-    await h.client.entry.revisions.restore({ revisionId: snapshot.id });
+    await h.client.entry.revisions.restore({
+      revisionId: snapshot.id,
+      ifMatch: await currentEtag(h.db, created.id),
+    });
 
     const previewed = await h.client.entry.get({
       id: created.id,
@@ -312,6 +406,7 @@ describe("entry.revisions.restore — autosave destination (#292)", () => {
       id: created.id,
       excerpt: "e2",
       saveAs: "live",
+      ifMatch: await currentEtag(h.db, created.id),
     });
     const revisions = await h.db.query.entries.findMany({
       where: eq(entries.type, REVISION_TYPE),
@@ -323,7 +418,10 @@ describe("entry.revisions.restore — autosave destination (#292)", () => {
       .set({ meta: { [NAMED_TEMPLATE_META_KEY]: "landing" } })
       .where(eq(entries.id, created.id));
 
-    await h.client.entry.revisions.restore({ revisionId: snapshot.id });
+    await h.client.entry.revisions.restore({
+      revisionId: snapshot.id,
+      ifMatch: await currentEtag(h.db, created.id),
+    });
 
     const previewed = await h.client.entry.get({
       id: created.id,
@@ -346,6 +444,7 @@ describe("entry.revisions.restore — autosave destination (#292)", () => {
       id: created.id,
       title: "L2",
       saveAs: "live",
+      ifMatch: await currentEtag(h.db, created.id),
     });
     const [revision] = await h.db.query.entries.findMany({
       where: eq(entries.type, REVISION_TYPE),
@@ -355,7 +454,10 @@ describe("entry.revisions.restore — autosave destination (#292)", () => {
     const onRestored = h.spyAction("entry:post:revision_restored");
     const onAutosaveSaved = h.spyAction("entry:post:autosave_saved");
     const onUpdated = h.spyAction("entry:post:updated");
-    await h.client.entry.revisions.restore({ revisionId: revision.id });
+    await h.client.entry.revisions.restore({
+      revisionId: revision.id,
+      ifMatch: await currentEtag(h.db, created.id),
+    });
     onRestored.assertCalledOnce();
     onAutosaveSaved.assertCalledOnce();
     // Live didn't change — `entry:updated` would mis-signal cache
@@ -377,6 +479,7 @@ describe("entry.revisions.restore — autosave destination (#292)", () => {
       id: created.id,
       title: "L2",
       saveAs: "live",
+      ifMatch: await currentEtag(h.db, created.id),
     });
     const [revision] = await h.db.query.entries.findMany({
       where: eq(entries.type, REVISION_TYPE),
@@ -386,7 +489,10 @@ describe("entry.revisions.restore — autosave destination (#292)", () => {
     // read_revisions.
     const subscriber = await h.actingAs("subscriber");
     await expect(
-      subscriber.client.entry.revisions.restore({ revisionId: revision.id }),
+      subscriber.client.entry.revisions.restore({
+        revisionId: revision.id,
+        ifMatch: await currentEtag(h.db, created.id),
+      }),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
@@ -403,15 +509,26 @@ describe("entry.revisions.restore — autosave destination (#292)", () => {
     });
     const h = await createRpcHarness({ authAs: "editor", plugins });
     const created = await h.client.entry.create({ title: "First", slug: "a" });
-    await h.client.entry.update({ id: created.id, meta: { tone: null } });
-    await h.client.entry.update({ id: created.id, title: "Second" });
+    await h.client.entry.update({
+      id: created.id,
+      meta: { tone: null },
+      ifMatch: await currentEtag(h.db, created.id),
+    });
+    await h.client.entry.update({
+      id: created.id,
+      title: "Second",
+      ifMatch: await currentEtag(h.db, created.id),
+    });
     const revisions = await h.db.query.entries.findMany({
       where: eq(entries.type, REVISION_TYPE),
     });
     const revision = revisions.at(-1);
     if (!revision) throw new Error("expected a captured revision");
 
-    await h.client.entry.revisions.restore({ revisionId: revision.id });
+    await h.client.entry.revisions.restore({
+      revisionId: revision.id,
+      ifMatch: await currentEtag(h.db, created.id),
+    });
 
     const live = await h.db.query.entries.findFirst({
       where: eq(entries.id, created.id),
