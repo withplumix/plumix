@@ -105,6 +105,24 @@ export const readPullRequestTag = (stdout: string): PullRequestCopy | null => {
   return title && body ? { title, body } : null;
 };
 
+const PR_SKILL_SECTIONS = [
+  "## Summary",
+  "## Evidence",
+  "## Merge Danger",
+  "**Door:**",
+  "**Blast Radius:**",
+];
+
+export const readTemplatedPullRequest = (
+  stdout: string,
+): PullRequestCopy | null => {
+  const copy = readPullRequestTag(stdout);
+  return copy &&
+    PR_SKILL_SECTIONS.every((section) => copy.body.includes(section))
+    ? copy
+    : null;
+};
+
 const fallbackPullRequestCopy = (ticket: Ticket): PullRequestCopy => ({
   title: `fix: ${ticket.title}`,
   body: `**Fixes #${ticket.number}**\n\nThe implementer emitted no \`<pr>\` block, so this body is a fallback.`,
@@ -183,8 +201,7 @@ const asGateFailureBrief = ({ command, output }: GateFailure): string =>
 
 const EMIT_THE_REVIEW =
   "End with the <review> block the prompt describes: summary, specGaps and notes, as JSON.";
-const EMIT_THE_PULL_REQUEST =
-  "End with the <pr> block the prompt describes: a title: line, then body: and the PR description.";
+const EMIT_THE_PULL_REQUEST = `End with the <pr> block the prompt describes: a title: line, then body: and the PR description. Load the \`mattpocock-skills:pr\` skill and write the body in its template: ${PR_SKILL_SECTIONS.join(", ")}.`;
 
 export const reviewBranch = async (
   runAgentPhase: RunAgentPhase,
@@ -425,9 +442,11 @@ export const shipTicket = async (
         "implement",
         IMPLEMENTER,
         implemented,
-        readPullRequestTag,
+        readTemplatedPullRequest,
         EMIT_THE_PULL_REQUEST,
-      )) ?? fallbackPullRequestCopy(ticket);
+      )) ??
+      readPullRequestTag(implemented.stdout) ??
+      fallbackPullRequestCopy(ticket);
     const fixer = fixerFor(
       runAgentPhase,
       implemented.iterations.at(-1)?.sessionId,
