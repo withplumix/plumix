@@ -19,7 +19,7 @@ function executor(client: NodeSqliteClient): SyncSqlExecutor {
 }
 
 function stamp(now: Date): string {
-  return now.toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
+  return now.toISOString().replace(/[-:.]/g, "");
 }
 
 function quoted(path: string): string {

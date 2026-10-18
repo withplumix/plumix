@@ -20,7 +20,6 @@ export interface RemoteSyncEndOptions {
   readonly apiToken: () => Promise<string>;
   /** In application order, as `OpenSyncEndOptions` holds them. */
   readonly owners: readonly MigrationOwner[];
-  /** `globalThis.fetch` unless given. */
   readonly fetch?: (input: string, init: RequestInit) => Promise<Response>;
 }
 
@@ -114,7 +113,6 @@ export function remoteSyncEnd(options: RemoteSyncEndOptions): SyncEnd {
     );
   }
 
-  // The dump's heads as the site names them: by tracking table.
   function tableHeads(
     byOwner: Readonly<Record<string, string | null>>,
   ): Record<string, string | null> {

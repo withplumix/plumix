@@ -194,11 +194,23 @@ describe("node sync — the deployed site's snapshot", () => {
 
     const file = join(dir, "remote", "site.sqlite");
     expect(snapshot.id).toMatch(
-      new RegExp(`^${file}\\.snapshot-\\d{8}T\\d{6}Z$`),
+      new RegExp(`^${file}\\.snapshot-\\d{8}T\\d{9}Z$`),
     );
     expect(end.restoreHint(snapshot)).toBe(
       `Saved a snapshot of the database at ${snapshot.id}. To restore it, stop the site, then run: cp '${snapshot.id}' '${file}' && rm -f '${file}-wal' '${file}-shm'`,
     );
+  });
+
+  test("two snapshots in one second are two copies", async () => {
+    const remote = siteConfig("remote");
+    await migrated(remote);
+    const { url, apiToken } = await serve(remote, base.hooks);
+    const end = await sync.open(options("remote", url, apiToken));
+
+    const first = await end.snapshot();
+    const second = await end.snapshot();
+
+    expect(second.id).not.toBe(first.id);
   });
 
   test("an import cut short leaves the site as its snapshot holds it", async () => {
