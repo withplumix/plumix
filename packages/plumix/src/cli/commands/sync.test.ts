@@ -245,6 +245,42 @@ describe("plumix sync, a runtime's target options", () => {
   });
 });
 
+/** Target options naming a deployed database in a platform's own words. */
+const DEPLOY_TARGETS = {
+  production: { type: "boolean", description: "The production D1" },
+  preview: { type: "boolean", description: "The Worker Previews D1" },
+  env: { type: "string", description: "A wrangler environment's D1" },
+} as const;
+
+describe("plumix sync, a deployed database's target options", () => {
+  test.each([
+    ["pull", ["--production"], { production: true }],
+    ["pull", ["--preview"], { preview: true }],
+    ["pull", ["--env", "qa"], { env: "qa" }],
+    ["push", ["--production"], { production: true }],
+    ["push", ["--preview"], { preview: true }],
+    ["push", ["--env", "qa"], { env: "qa" }],
+  ] as const)(
+    "%s %j reaches both ends as %j",
+    async (direction, flags, values) => {
+      const { sync } = await seededEnds();
+      const targetValues: unknown[] = [];
+
+      await syncCommand.run(
+        syncCtx([direction, "--url", REMOTE, "--yes", ...flags], {
+          targetOptions: DEPLOY_TARGETS,
+          open: (options) => {
+            targetValues.push(options.targetValues);
+            return sync.open(options);
+          },
+        }),
+      );
+
+      expect(targetValues).toEqual([values, values]);
+    },
+  );
+});
+
 describe("plumix sync, closing", () => {
   test("a close that throws does not leave the other end open", async () => {
     const ends = recording((await memorySyncEnds()).sync);

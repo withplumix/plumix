@@ -400,6 +400,37 @@ describe("plumix import --url, into the deployed site", () => {
     );
   });
 
+  test.each([
+    [["--production"], { production: true }],
+    [["--preview"], { preview: true }],
+    [["--env", "qa"], { env: "qa" }],
+  ] as const)("%j reaches the deployed end as %j", async (flags, values) => {
+    const site = await blogSite();
+    writeRecords("content.jsonl", [TOPIC, POST]);
+    const targetValues: unknown[] = [];
+    const deployTargets: RuntimeSync = {
+      targetOptions: {
+        production: { type: "boolean", description: "The production D1" },
+        preview: { type: "boolean", description: "The Worker Previews D1" },
+        env: { type: "string", description: "A wrangler environment's D1" },
+      },
+      open: (options) => {
+        targetValues.push(options.targetValues);
+        return site.sync.open(options);
+      },
+    };
+
+    await importCommand.run(
+      importCtx(
+        ["content.jsonl", "--url", REMOTE, "--yes", ...flags],
+        deployTargets,
+        site.harness.app,
+      ),
+    );
+
+    expect(targetValues).toEqual([values]);
+  });
+
   test("with --yes snapshots the deployed site, prints the restore hint, and imports into it", async () => {
     const site = await blogSite();
     writeRecords("content.jsonl", [TOPIC, POST]);
