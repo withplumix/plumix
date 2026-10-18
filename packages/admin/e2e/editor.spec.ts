@@ -1,7 +1,7 @@
 // The mock harness can't serve the public route the canvas iframe loads, so
 // these assert the client contracts the route owns, not canvas rendering.
 
-import type { Page } from "@playwright/test";
+import type { BrowserContext, Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
 import type { PlumixManifest } from "@plumix/core/manifest";
@@ -20,13 +20,18 @@ import {
 import {
   AUTHED_ADMIN,
   MANIFEST_WITH_EDITOR_PATTERNS,
+  MANIFEST_WITH_PLAIN_FORM_TYPE,
   MANIFEST_WITH_POST,
   mockManifest,
   mockRpc,
   mockRpcWithCapture,
   rpcErrorBody,
   rpcEtagConflictBody,
+  rpcLeaseBody,
+  rpcLeaseLostBody,
+  rpcLockedBody,
   rpcOkBody,
+  withCapabilities,
 } from "./support/rpc-mock.js";
 
 /**
@@ -2257,5 +2262,151 @@ test.describe("editor starter modal", () => {
     await page.goto("entries/posts/1/edit");
     await expect(page.getByTestId("plumix-canvas-frame")).toBeVisible();
     await expect(page.getByTestId("plumix-starter-modal")).toHaveCount(0);
+  });
+});
+
+test.describe("editor edit lease", () => {
+  test.use({ timezoneId: "UTC" });
+
+  const ADA = { id: 1, name: "Ada" };
+  const BO = { id: 2, name: "Bo" };
+  const SINCE = new Date("2026-05-20T09:00:00Z");
+
+  interface LeaseServer {
+    holder: { readonly id: number; readonly name: string } | null;
+    since: Date;
+  }
+
+  const AUTHOR_EDITOR = withCapabilities(
+    AUTHED_ADMIN,
+    "entry:author:edit_any",
+    "entry:author:edit_own",
+    "entry:author:publish",
+    "entry:author:read",
+  );
+
+  const AUTHOR_ENTRY = {
+    ...editorEntry(),
+    type: "author",
+    title: "Jane Doe",
+    meta: {},
+  };
+
+  async function openAs(
+    page: Page,
+    me: typeof ADA,
+    server: LeaseServer,
+  ): Promise<readonly Record<string, unknown>[]> {
+    const updates: Record<string, unknown>[] = [];
+    await mockManifest(page, MANIFEST_WITH_PLAIN_FORM_TYPE);
+    await mockRpc(page, {
+      "/auth/session": AUTHOR_EDITOR,
+      "/entry/get": AUTHOR_ENTRY,
+      "/entry/lease/release": null,
+    });
+    const json = (body: string) => ({
+      status: 200,
+      contentType: "application/json",
+      body,
+    });
+    const locked = () => ({
+      status: 423,
+      contentType: "application/json",
+      body: rpcLockedBody(server.holder ?? me, server.since),
+    });
+    await page.route("**/_plumix/rpc/entry/lease/acquire", (route) => {
+      const { takeOver } = (
+        route.request().postDataJSON() as { json: { takeOver?: boolean } }
+      ).json;
+      const heldByOther = server.holder !== null && server.holder.id !== me.id;
+      if (heldByOther && takeOver !== true) return route.fulfill(locked());
+      if (server.holder?.id !== me.id) {
+        server.holder = me;
+        server.since = new Date("2026-05-20T09:05:00Z");
+      }
+      return route.fulfill(json(rpcLeaseBody(me, server.since)));
+    });
+    await page.route("**/_plumix/rpc/entry/update", (route) => {
+      updates.push(
+        (route.request().postDataJSON() as { json: Record<string, unknown> })
+          .json,
+      );
+      if (server.holder?.id !== me.id) return route.fulfill(locked());
+      return route.fulfill(json(rpcOkBody(AUTHOR_ENTRY)));
+    });
+    await page.goto("entries/authors/1/edit");
+    return updates;
+  }
+
+  test("a second editor sees who holds the entry and takes it over; the first turns read-only with their work kept", async ({
+    page,
+    browser,
+  }) => {
+    const server: LeaseServer = { holder: null, since: SINCE };
+    const adaUpdates = await openAs(page, ADA, server);
+    await expect(page.getByTestId("plain-form-title-input")).toBeEnabled();
+    const contextB: BrowserContext = await browser.newContext({
+      baseURL: test.info().project.use.baseURL,
+      timezoneId: "UTC",
+    });
+    const pageB = await contextB.newPage();
+    await openAs(pageB, BO, server);
+
+    await expect(pageB.getByTestId("edit-lease-held-by")).toHaveText(
+      "Ada is editing this entry (since May 20, 2026, 9:05 AM)",
+    );
+    await expect(pageB.getByTestId("plain-form-title-input")).toBeDisabled();
+    await pageB.getByTestId("edit-lease-take-over").click();
+    await expect(pageB.getByTestId("edit-lease-banner")).toBeHidden();
+    await expect(pageB.getByTestId("plain-form-title-input")).toBeEnabled();
+
+    await page
+      .getByTestId("plain-form-title-input")
+      .fill("Ada's unsaved title");
+
+    await expect(page.getByTestId("edit-lease-lost")).toContainText(
+      "Bo took over editing this entry at May 20, 2026, 9:05 AM.",
+    );
+    await expect(page.getByTestId("plain-form-title-input")).toHaveValue(
+      "Ada's unsaved title",
+    );
+    await expect(page.getByTestId("plain-form-title-input")).toBeDisabled();
+    expect(adaUpdates).toHaveLength(1);
+    await contextB.close();
+  });
+
+  test("a renewal that finds the lease taken over turns the block editor read-only and says who", async ({
+    page,
+  }) => {
+    await page.clock.install();
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/entry/get": editorEntry(),
+      "/entry/list": [],
+      "/entry/createPreviewLink": PREVIEW_LINK,
+    });
+    await page.route("**/_plumix/rpc/entry/lease/acquire", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcLeaseBody(ADA, SINCE),
+      }),
+    );
+    await page.route("**/_plumix/rpc/entry/lease/renew", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcLeaseLostBody(BO, new Date("2026-05-20T09:10:00Z")),
+      }),
+    );
+    await page.goto("entries/posts/1/edit");
+    await expect(page.getByTestId("plumix-editor-layout")).toBeVisible();
+
+    await page.clock.fastForward(30_000);
+
+    await expect(page.getByTestId("edit-lease-lost")).toContainText(
+      "Bo took over editing this entry at May 20, 2026, 9:10 AM.",
+    );
+    await expect(page.getByTestId("plumix-editor-preview")).toBeVisible();
   });
 });

@@ -33,6 +33,7 @@ import { base } from "../../base.js";
 import { idParam } from "../../contract/validation.js";
 import {
   assertCopyCurrent,
+  assertEntryWritable,
   claimEntry,
   ENTRY_IF_MATCH_MESSAGE,
 } from "./concurrency.js";
@@ -64,7 +65,7 @@ const listInput = v.object({
 const getInput = v.object({ revisionId: idParam });
 
 const restoreInput = ifMatchObject(
-  { revisionId: idParam },
+  { revisionId: idParam, takeOver: v.optional(v.boolean()) },
   ENTRY_IF_MATCH_MESSAGE,
 );
 
@@ -195,7 +196,8 @@ export const restore = base
     }
     assertCanEditEntry(context, live, errors);
     // Either destination is a write from the caller's copy of the entry.
-    assertCopyCurrent(input.ifMatch, live.updatedAt);
+    await assertEntryWritable(context, live.id, input.takeOver);
+    assertCopyCurrent(input.ifMatch, live);
 
     // Snapshots survive block deregistration, so a stale revision must pass the
     // same gate before landing on autosave or live.

@@ -498,6 +498,24 @@ msgstr "{label} failed to render."
 msgid "plugin.errorBoundary.pageBody"
 msgstr "{label} threw an error while rendering. The rest of the admin is unaffected."
 
+#. name: the editing user's display name or email
+#. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.holder"
+msgstr "{name} is editing it now."
+
+#. name: the editing user's display name or email; time: a formatted date and time
+#. js-lingui-explicit-id
+#: src/editor/EditLeaseBanner.tsx
+msgid "editor.lease.heldBy"
+msgstr "{name} is editing this entry (since {time})"
+
+#. name: the user who took over; time: a formatted date and time
+#. js-lingui-explicit-id
+#: src/editor/EditLeaseBanner.tsx
+msgid "editor.lease.lost"
+msgstr "{name} took over editing this entry at {time}. Your unsaved changes are shown here but weren't saved."
+
 #. revoked: number of OTHER sessions just signed out (excluding the current device)
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
@@ -745,6 +763,11 @@ msgstr "Author slug"
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.title"
 msgstr "Authorize CLI access"
+
+#. js-lingui-explicit-id
+#: src/editor/EditLeaseBanner.tsx
+msgid "editor.lease.back"
+msgstr "Back"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/-login-screen.tsx
@@ -3379,6 +3402,11 @@ msgstr "Synced"
 #: src/lib/core-settings-i18n.ts
 msgid "core.settings.site.tagline"
 msgstr "Tagline"
+
+#. js-lingui-explicit-id
+#: src/editor/EditLeaseBanner.tsx
+msgid "editor.lease.takeOver"
+msgstr "Take over"
 
 #. js-lingui-explicit-id
 #: src/lib/core-nav-i18n.ts

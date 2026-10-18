@@ -1,6 +1,7 @@
 import { authenticateTraced, tokenScopesOf } from "../auth/authenticator.js";
 import { withUser } from "../auth/with-user.js";
 import { ConflictError } from "../db/concurrency.js";
+import { LockedError, readEditLease } from "../db/edit-lease.js";
 import { base } from "./base.js";
 
 export const authenticated = base.middleware(
@@ -20,7 +21,15 @@ export const authenticated = base.middleware(
       // A guarded write below, core's or a plugin's, refuses a stale copy by
       // throwing `ConflictError`; the wire sees one `CONFLICT` for it.
       if (error instanceof ConflictError) {
-        throw errors.CONFLICT({ data: error.data });
+        const lease = error.resource
+          ? await readEditLease(context.db, error.resource)
+          : undefined;
+        throw errors.CONFLICT({
+          data: { ...error.data, holder: lease?.holder },
+        });
+      }
+      if (error instanceof LockedError) {
+        throw errors.LOCKED({ data: error.data });
       }
       throw error;
     }

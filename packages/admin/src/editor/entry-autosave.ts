@@ -1,4 +1,5 @@
-import type { EntryConflict } from "@/editor/autosave.js";
+import type { AutosaveErrorOutcome, EntryConflict } from "@/editor/autosave.js";
+import type { LeaseRefusal } from "@/editor/edit-lease.js";
 import {
   AUTOSAVE_DEBOUNCE_MS,
   classifyAutosaveError,
@@ -40,6 +41,9 @@ export interface EntryAutosaveOptions<G extends Record<string, unknown>> {
   /** Called when a write finds the copy stale; autosave pauses until the
    *  author keeps theirs or loads the other. */
   readonly onConflict: (conflict: EntryConflict) => void;
+  /** Called when a write is refused by another user's edit lease; autosave
+   *  pauses for good, keeping the edits unsaved. */
+  readonly onLocked: (refusal: LeaseRefusal) => void;
   /** Whether a group write is in flight, reported as it changes. */
   readonly onSavingChange?: (saving: boolean) => void;
   /** Whether an edit is waiting to be sent or in flight, reported as it
@@ -114,10 +118,14 @@ export function createEntryAutosave<G extends Record<string, unknown>>(
   const adopt = (response: Pick<EntryRow, "etag">): void => {
     etag = response.etag;
   };
-  const pause = (conflict: EntryConflict): void => {
+  // Whether the refusal paused autosave: a conflict or a lease.
+  const pauseOn = (outcome: AutosaveErrorOutcome): boolean => {
+    if (outcome.kind === "failed") return false;
     paused = true;
-    latest.onConflict(conflict);
+    if (outcome.kind === "conflict") latest.onConflict(outcome.conflict);
+    else latest.onLocked(outcome.locked);
     reportUnsaved();
+    return true;
   };
 
   function runner<K extends keyof G>(key: K, initialSaved: G[K]): GroupRunner {
@@ -142,11 +150,7 @@ export function createEntryAutosave<G extends Record<string, unknown>>(
         saved = group.commit(saved, next, response);
         group.onSaved?.(patch, response);
       } catch (err) {
-        const outcome = classifyAutosaveError(err);
-        if (outcome.kind === "conflict") {
-          pause(outcome.conflict);
-          return;
-        }
+        if (pauseOn(classifyAutosaveError(err))) return;
         if (!failed) {
           failed = true;
           latest.onError(err);
@@ -212,8 +216,7 @@ export function createEntryAutosave<G extends Record<string, unknown>>(
             failed = false;
             return res;
           } catch (err) {
-            const outcome = classifyAutosaveError(err);
-            if (outcome.kind === "conflict") pause(outcome.conflict);
+            pauseOn(classifyAutosaveError(err));
             throw err;
           }
         });

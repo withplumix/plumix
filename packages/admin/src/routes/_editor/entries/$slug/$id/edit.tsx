@@ -1,3 +1,5 @@
+import type { EditorLeaseMode } from "@/editor/edit-lease.js";
+import type { EditLease } from "@/editor/use-edit-lease.js";
 import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
@@ -12,9 +14,11 @@ import {
 import { DocumentSettingsPanel } from "@/components/editor/document-settings.js";
 import { ErrorPlaceholder } from "@/components/error-placeholder.js";
 import { classifyAutosaveError } from "@/editor/autosave.js";
-import { conflictDialog } from "@/editor/conflict-dialog.js";
+import { conflictDialog, editingElsewhere } from "@/editor/conflict-dialog.js";
 import { createDebouncer } from "@/editor/debounce.js";
 import { detectStaleAutosave } from "@/editor/detect-stale-autosave.js";
+import { editorLeaseMode } from "@/editor/edit-lease.js";
+import { EditLeaseBanner } from "@/editor/EditLeaseBanner.js";
 import { EntryConflictDialog } from "@/editor/EntryConflictDialog.js";
 import { diffMetaBag } from "@/editor/meta-diff.js";
 import {
@@ -26,6 +30,7 @@ import { resolvePluginFieldType } from "@/editor/resolve-plugin-field-type.js";
 import { PreviewBanner } from "@/editor/revisions/PreviewBanner.js";
 import { useRevisionsTrigger } from "@/editor/revisions/use-revisions-trigger.js";
 import { StaleDraftDialog } from "@/editor/StaleDraftDialog.js";
+import { useEditLease } from "@/editor/use-edit-lease.js";
 import { useEntryAutosave } from "@/editor/use-entry-autosave.js";
 import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
 import {
@@ -221,6 +226,9 @@ function EditorRoute(): ReactNode {
   // leaves the source at "live", so this nonce forces it.
   const [reseedNonce, setReseedNonce] = useState(0);
   const reseed = useCallback(() => setReseedNonce((n) => n + 1), []);
+  // Held across reseeds, so remounting the editor never gives the lease up.
+  const lease = useEditLease(id);
+  const leaseMode = editorLeaseMode(lease.state);
 
   // A `?revision=<id>` request opens that revision read-only with a restore
   // banner — keyed so leaving/entering preview re-seeds the canvas.
@@ -234,6 +242,7 @@ function EditorRoute(): ReactNode {
       />
     );
   }
+  if (leaseMode.mode === "loading") return <PendingScreen />;
   const entryType = findEntryTypeBySlug(slug);
   // Non-editor entry types (structured records like authors, products, events)
   // get the plain-form Cards layout instead of the visual canvas, driven by the
@@ -247,6 +256,9 @@ function EditorRoute(): ReactNode {
         supportsRevisions={supportsRevisions(entryType)}
         capabilities={user.capabilities}
         onReseed={reseed}
+        userId={user.id}
+        lease={lease}
+        leaseMode={leaseMode}
       />
     );
   }
@@ -261,6 +273,8 @@ function EditorRoute(): ReactNode {
       entryType={entryType}
       userId={user.id}
       onReseed={reseed}
+      lease={lease}
+      leaseMode={leaseMode}
     />
   );
 }
@@ -270,6 +284,8 @@ interface EntryEditorProps {
   readonly entryType: EntryTypeManifestEntry | undefined;
   readonly userId: number;
   readonly onReseed: () => void;
+  readonly lease: EditLease;
+  readonly leaseMode: EditorLeaseMode;
 }
 
 /** Content + excerpt + meta + template + access, as one autosave-row write. */
@@ -327,6 +343,8 @@ function EntryEditor({
   entryType,
   userId,
   onReseed,
+  lease,
+  leaseMode,
 }: EntryEditorProps): ReactNode {
   const { slug, id } = Route.useParams();
   // Route-scoped so the `?revision=<id>` search updater is typed against this
@@ -440,6 +458,7 @@ function EntryEditor({
       });
       dispatchConflict({ type: "conflict", conflict: next });
     },
+    onLocked: lease.lose,
     onUnsavedChange: setHasUnsavedEdits,
     onError: (err) => {
       setMetaFieldErrors(extractMetaFieldErrors(err) ?? null);
@@ -872,10 +891,11 @@ function EntryEditor({
     [id, entryTypeName, queryClient],
   );
   // Publish is stricter than a draft save, rejecting values a draft tolerated.
-  // A stale copy opens the conflict dialog instead.
+  // A stale copy opens the conflict dialog, and a lease turns the editor
+  // read-only, instead.
   const handlePublishError = useCallback(
     (err: unknown): void => {
-      if (classifyAutosaveError(err).kind === "conflict") return;
+      if (classifyAutosaveError(err).kind !== "failed") return;
       setMetaFieldErrors(extractMetaFieldErrors(err) ?? null);
       toastError(renderLabel(M.publishFailed));
     },
@@ -952,6 +972,12 @@ function EntryEditor({
     autosave.cancel();
     void invalidateEntry().then(onReseed);
   }, [autosave, invalidateEntry, onReseed]);
+  // Remount on the entry as the previous holder left it.
+  const takeOver = useMutation({
+    mutationFn: lease.takeOver,
+    onSuccess: () => invalidateEntry().then(onReseed),
+  });
+  const handleTakeOver = useCallback(() => takeOver.mutate(), [takeOver]);
   const handleUseTheirs = useCallback(() => {
     discardDraft.mutate(undefined, {
       onSuccess: () => setStaleResolved(true),
@@ -1020,6 +1046,11 @@ function EntryEditor({
       <EntryConflictDialog
         open={conflict.open}
         changedAt={conflict.open ? conflict.conflict.updatedAt : null}
+        editingElsewhere={
+          conflict.open
+            ? editingElsewhere(conflict.conflict, userId)
+            : undefined
+        }
         mineSnapshot={conflictMine}
         theirsSnapshot={snapshotOf(theirsQuery.data)}
         onKeepMine={handleKeepMine}
@@ -1053,6 +1084,24 @@ function EntryEditor({
   liveTarget.search = "";
   const liveUrl = isPublished ? liveTarget.toString() : undefined;
 
+  if (leaseMode.mode === "readOnly") {
+    return (
+      <LeaseReadOnlyEditor
+        previewUrl={target}
+        content={() => contentRef.current}
+        capabilities={capabilitySet}
+        banner={
+          <EditLeaseBanner
+            notice={leaseMode.notice}
+            onTakeOver={handleTakeOver}
+            isTakingOver={takeOver.isPending}
+            onBack={() => void handleBack()}
+          />
+        }
+      />
+    );
+  }
+
   return (
     <PlumixEditor
       previewUrl={target.toString()}
@@ -1081,6 +1130,36 @@ function EntryEditor({
       onResolveBlockDeps={handleResolveBlockDeps}
       previewRefreshToken={previewRefreshToken}
       resolvePluginFieldType={resolvePluginFieldType}
+    />
+  );
+}
+
+/**
+ * The author's work as it stood when the lease went to someone else, kept on
+ * the canvas read-only. `content` is read once, on mount.
+ */
+function LeaseReadOnlyEditor({
+  previewUrl,
+  content,
+  capabilities,
+  banner,
+}: {
+  readonly previewUrl: URL;
+  readonly content: () => EntryContent;
+  readonly capabilities: ReadonlySet<string>;
+  readonly banner: ReactNode;
+}): ReactNode {
+  const [seed] = useState(content);
+  return (
+    <PlumixEditor
+      previewUrl={previewUrl.toString()}
+      origin={previewUrl.origin}
+      defaultValue={seed}
+      registry={registry}
+      capabilities={capabilities}
+      breakpoints={breakpoints}
+      readOnly
+      previewBanner={banner}
     />
   );
 }

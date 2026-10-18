@@ -131,6 +131,8 @@ export const entryUpdateInputSchema = ifMatchObject(
      * BAD_REQUEST `autosave_unsupported`. Omitted means `'live'`.
      */
     saveAs: v.optional(v.picklist(["draft", "live"] as const)),
+    /** Write over another user's edit lease, taking it over, rather than be refused with LOCKED. */
+    takeOver: v.optional(v.boolean()),
   },
   // The live entry's `etag` the caller's copy came with; a newer write
   // rejects with CONFLICT `etag_mismatch`.

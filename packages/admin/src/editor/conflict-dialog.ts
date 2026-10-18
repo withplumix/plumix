@@ -1,4 +1,5 @@
 import type { EntryConflict } from "@/editor/autosave.js";
+import type { LeaseHolder } from "@/editor/edit-lease.js";
 
 /** Open while the author has a conflict to resolve. */
 export type ConflictDialogState =
@@ -17,4 +18,12 @@ export function conflictDialog(
   if (event.type === "conflict")
     return { open: true, conflict: event.conflict };
   return { open: false };
+}
+
+/** Another user holding the entry's lease; the author's own lease names no one. */
+export function editingElsewhere(
+  conflict: EntryConflict,
+  userId: number,
+): LeaseHolder | undefined {
+  return conflict.holder?.id === userId ? undefined : conflict.holder;
 }

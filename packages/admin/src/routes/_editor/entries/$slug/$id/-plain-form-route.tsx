@@ -1,15 +1,19 @@
 import type { PostEditorValues } from "@/components/editor/post-editor-form.js";
+import type { EditorLeaseMode } from "@/editor/edit-lease.js";
+import type { EditLease } from "@/editor/use-edit-lease.js";
 import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useCallback, useReducer, useRef, useState } from "react";
 import { PlainFormLayout } from "@/components/editor/plain-form-layout.js";
-import { conflictDialog } from "@/editor/conflict-dialog.js";
+import { conflictDialog, editingElsewhere } from "@/editor/conflict-dialog.js";
+import { EditLeaseBanner } from "@/editor/EditLeaseBanner.js";
 import { EntryConflictDialog } from "@/editor/EntryConflictDialog.js";
 import { diffMetaBag } from "@/editor/meta-diff.js";
 import { PreviewButton } from "@/editor/PreviewButton.js";
 import { useRevisionsTrigger } from "@/editor/revisions/use-revisions-trigger.js";
 import { useEntryAutosave } from "@/editor/use-entry-autosave.js";
+import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
 import { entryMetaBoxesForType } from "@/lib/manifest.js";
 import { extractMetaFieldErrors } from "@/lib/meta-field-errors.js";
 import { orpc } from "@/lib/orpc.js";
@@ -17,6 +21,7 @@ import { entryTypeLabel } from "@/lib/type-labels.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import {
+  useMutation,
   useQuery,
   useQueryClient,
   useSuspenseQuery,
@@ -50,6 +55,9 @@ interface PlainFormRouteInnerProps {
   readonly capabilities: readonly string[];
   /** Remount on the saved entry, after the author loads theirs. */
   readonly onReseed: () => void;
+  readonly userId: number;
+  readonly lease: EditLease;
+  readonly leaseMode: EditorLeaseMode;
 }
 
 export function PlainFormRouteInner({
@@ -58,6 +66,9 @@ export function PlainFormRouteInner({
   supportsRevisions,
   capabilities,
   onReseed,
+  userId,
+  lease,
+  leaseMode,
 }: PlainFormRouteInnerProps): ReactNode {
   const renderLabel = useLabel();
   const { data: entry } = useSuspenseQuery(
@@ -93,6 +104,7 @@ export function PlainFormRouteInner({
       setConflictMine(valuesRef.current);
       dispatchConflict({ type: "conflict", conflict: next });
     },
+    onLocked: lease.lose,
     onError: (err) => {
       setServerError(describeRpcError(err, {}, M.saveFailed));
       setServerFieldErrors(extractMetaFieldErrors(err) ?? null);
@@ -165,6 +177,20 @@ export function PlainFormRouteInner({
       .then(onReseed);
   };
 
+  // Remount on the entry as the previous holder left it.
+  const takeOver = useMutation({
+    mutationFn: lease.takeOver,
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: entryQueryKey }).then(onReseed),
+  });
+  const handleBack = (): void => {
+    void navigate({
+      to: "/entries/$slug",
+      params: { slug: entryType.adminSlug },
+      search: ENTRIES_LIST_DEFAULT_SEARCH,
+    });
+  };
+
   const { trigger: revisionsTrigger } = useRevisionsTrigger({
     entryId: id,
     enabled: supportsRevisions,
@@ -194,6 +220,11 @@ export function PlainFormRouteInner({
       <EntryConflictDialog
         open={conflict.open}
         changedAt={conflict.open ? conflict.conflict.updatedAt : null}
+        editingElsewhere={
+          conflict.open
+            ? editingElsewhere(conflict.conflict, userId)
+            : undefined
+        }
         mineSnapshot={conflictMine}
         theirsSnapshot={
           theirsQuery.data
@@ -207,28 +238,45 @@ export function PlainFormRouteInner({
         onKeepMine={handleKeepMine}
         onLoadTheirs={handleLoadTheirs}
       />
-      <PlainFormLayout
-        key={String(id)}
-        initialValues={initialValues}
-        metaBoxes={metaBoxes}
-        headline={headline}
-        isSubmitting={isSaving}
-        serverError={renderedError}
-        serverFieldErrors={serverFieldErrors}
-        onValuesChange={handleValuesChange}
-        revisionsTrigger={revisionsTrigger}
-        previewLinkAction={
-          entryType.isPublic ? (
-            <PreviewButton
-              mintPreviewLink={() => orpc.entry.createPreviewLink.call({ id })}
-            />
-          ) : undefined
-        }
-        onSubmit={(values) => {
-          handleValuesChange(values);
-          void autosave.flush();
-        }}
-      />
+      {leaseMode.mode === "readOnly" ? (
+        <EditLeaseBanner
+          notice={leaseMode.notice}
+          onTakeOver={() => takeOver.mutate()}
+          isTakingOver={takeOver.isPending}
+          onBack={handleBack}
+        />
+      ) : null}
+      {/* A disabled fieldset disables every control in the form at once. */}
+      <fieldset
+        disabled={leaseMode.mode === "readOnly"}
+        className="contents"
+        data-testid="plain-form-fieldset"
+      >
+        <PlainFormLayout
+          key={String(id)}
+          initialValues={initialValues}
+          metaBoxes={metaBoxes}
+          headline={headline}
+          isSubmitting={isSaving}
+          serverError={renderedError}
+          serverFieldErrors={serverFieldErrors}
+          onValuesChange={handleValuesChange}
+          revisionsTrigger={revisionsTrigger}
+          previewLinkAction={
+            entryType.isPublic ? (
+              <PreviewButton
+                mintPreviewLink={() =>
+                  orpc.entry.createPreviewLink.call({ id })
+                }
+              />
+            ) : undefined
+          }
+          onSubmit={(values) => {
+            handleValuesChange(values);
+            void autosave.flush();
+          }}
+        />
+      </fieldset>
     </>
   );
 }

@@ -20,6 +20,7 @@ export {
   SHARED_ADMIN_RUNTIME_SPECIFIERS,
   adminRuntimeShimSlug,
   describeRpcError,
+  EDIT_LEASE_RENEW_INTERVAL_MS,
   rpcErrorCode,
   rpcErrorReason,
 } from "@plumix/core/admin";

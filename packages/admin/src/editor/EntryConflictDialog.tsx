@@ -1,3 +1,4 @@
+import type { LeaseHolder } from "@/editor/edit-lease.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement } from "react";
 import { useState } from "react";
@@ -32,6 +33,8 @@ interface EntryConflictDialogProps {
   readonly open: boolean;
   /** When the other write landed. */
   readonly changedAt: Date | null;
+  /** Another user holding the entry's edit lease, named as editing it now. */
+  readonly editingElsewhere: LeaseHolder | undefined;
   /** The author's unsaved copy, and the entry as it is saved now. */
   readonly mineSnapshot: unknown;
   readonly theirsSnapshot: unknown;
@@ -46,6 +49,7 @@ interface EntryConflictDialogProps {
 export function EntryConflictDialog({
   open,
   changedAt,
+  editingElsewhere,
   mineSnapshot,
   theirsSnapshot,
   onKeepMine,
@@ -54,6 +58,9 @@ export function EntryConflictDialog({
   const [comparing, setComparing] = useState(false);
   const label = useLabel();
   const { formatDate } = useFormatters();
+  const holderName = editingElsewhere ? (
+    <bdi>{editingElsewhere.name}</bdi>
+  ) : null;
   const when = changedAt
     ? formatDate(changedAt, { dateStyle: "medium", timeStyle: "short" })
     : "";
@@ -78,6 +85,16 @@ export function EntryConflictDialog({
               values={{ when }}
             />
           </DialogDescription>
+          {editingElsewhere ? (
+            <DialogDescription data-testid="entry-conflict-holder">
+              <Trans
+                id="editor.conflict.holder"
+                message="{name} is editing it now."
+                values={{ name: holderName }}
+                comment="name: the editing user's display name or email"
+              />
+            </DialogDescription>
+          ) : null}
         </DialogHeader>
         {comparing ? (
           <div

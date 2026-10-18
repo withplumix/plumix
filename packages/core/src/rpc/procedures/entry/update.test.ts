@@ -7,6 +7,7 @@ import {
   authenticatedPolicy,
 } from "../../../access/policy.js";
 import { etagOf } from "../../../db/concurrency.js";
+import { acquireEditLease, readEditLease } from "../../../db/edit-lease.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { entryChanges } from "../../../db/schema/entry_changes.js";
@@ -16,6 +17,7 @@ import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { toRegisteredEntryType } from "../../../plugin/registry.js";
 import { NAMED_TEMPLATE_META_KEY } from "../../../route/render/template-builders.js";
 import { currentEtag } from "../../../test/entry-etag.js";
+import { editorUser } from "../../../test/factories.js";
 import { pooledEntryTypeRegistry } from "../../../test/pooled-entry-types.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
@@ -1959,6 +1961,107 @@ describe("entry.update — per-entry access choice", () => {
     ).rejects.toMatchObject({
       code: "CONFLICT",
       data: { reason: "meta_not_registered" },
+    });
+  });
+});
+
+describe("entry.update under an edit lease", () => {
+  test("another editor's save during a live lease is refused with who holds it", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const ada = await editorUser
+      .transient({ db: h.db })
+      .create({ name: "Ada" });
+    const entry = await h.factory.draft.create({ authorId: ada.id });
+    const since = new Date();
+    await acquireEditLease(
+      h.db,
+      { kind: "entry", id: entry.id },
+      { userId: ada.id, surface: "admin" },
+      since,
+    );
+
+    await expect(
+      h.client.entry.update({
+        id: entry.id,
+        title: "mine",
+        ifMatch: etagOf(entry.updatedAt),
+      }),
+    ).rejects.toMatchObject({
+      code: "LOCKED",
+      status: 423,
+      data: { holder: { id: ada.id, name: "Ada" }, since },
+    });
+  });
+
+  test("another editor's save after the lease lapsed lands", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const ada = await editorUser
+      .transient({ db: h.db })
+      .create({ name: "Ada" });
+    const entry = await h.factory.draft.create({ authorId: ada.id });
+    await acquireEditLease(
+      h.db,
+      { kind: "entry", id: entry.id },
+      { userId: ada.id, surface: "admin" },
+      new Date(Date.now() - 121_000),
+    );
+
+    const saved = await h.client.entry.update({
+      id: entry.id,
+      title: "mine",
+      ifMatch: etagOf(entry.updatedAt),
+    });
+
+    expect(saved.title).toBe("mine");
+  });
+
+  test("a save that passes takeOver lands and takes the lease over", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const ada = await editorUser
+      .transient({ db: h.db })
+      .create({ name: "Ada" });
+    const entry = await h.factory.draft.create({ authorId: ada.id });
+    await acquireEditLease(
+      h.db,
+      { kind: "entry", id: entry.id },
+      { userId: ada.id, surface: "admin" },
+    );
+
+    const saved = await h.client.entry.update({
+      id: entry.id,
+      title: "mine",
+      ifMatch: etagOf(entry.updatedAt),
+      takeOver: true,
+    });
+
+    expect(saved.title).toBe("mine");
+    expect(
+      await readEditLease(h.db, { kind: "entry", id: entry.id }),
+    ).toMatchObject({ holder: { id: h.user.id } });
+  });
+
+  test("a stale save names who holds the lease in its conflict", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const ada = await editorUser
+      .transient({ db: h.db })
+      .create({ name: "Ada" });
+    const asAda = await h.actingAs(ada);
+    const entry = await h.factory.draft.create({ authorId: ada.id });
+    await acquireEditLease(
+      h.db,
+      { kind: "entry", id: entry.id },
+      { userId: ada.id, surface: "admin" },
+    );
+
+    await expect(
+      asAda.client.entry.update({
+        id: entry.id,
+        title: "from a stale tab",
+        ifMatch: etagOf(new Date("2020-01-01T00:00:00Z")),
+      }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "etag_mismatch", holder: { id: ada.id, name: "Ada" } },
     });
   });
 });

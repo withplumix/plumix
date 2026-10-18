@@ -36,6 +36,8 @@ export const RPC_ERRORS = {
       // the client can say when it changed and resend from there.
       etag: v.optional(v.string()),
       updatedAt: v.optional(v.date()),
+      // Who holds the resource's edit lease, when anyone does.
+      holder: v.optional(v.object({ id: v.number(), name: v.string() })),
       // `message` is a plain string or a catalog descriptor; `looseObject`
       // keeps the descriptor's `values` on the wire.
       errors: v.optional(
@@ -52,6 +54,14 @@ export const RPC_ERRORS = {
           }),
         ),
       ),
+    }),
+  },
+  LOCKED: {
+    status: 423,
+    message: "Resource is being edited",
+    data: v.object({
+      holder: v.object({ id: v.number(), name: v.string() }),
+      since: v.date(),
     }),
   },
   PAYLOAD_TOO_LARGE: {

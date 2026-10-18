@@ -2,12 +2,14 @@ import { eq } from "drizzle-orm";
 import { describe, expect, test } from "vitest";
 
 import { etagOf } from "../db/concurrency.js";
+import { acquireEditLease } from "../db/edit-lease.js";
 import { entries } from "../db/schema/entries.js";
 import { text } from "../plugin/fields/index.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { toRegisteredEntryType } from "../plugin/registry.js";
 import { NAMED_TEMPLATE_META_KEY } from "../route/render/template-builders.js";
 import { currentEtag } from "../test/entry-etag.js";
+import { editorUser } from "../test/factories.js";
 import { createRpcHarness } from "../test/rpc.js";
 import { REVISION_TYPE } from "./slug-codec.js";
 
@@ -54,6 +56,30 @@ async function seedEntryWithRevision(): Promise<{
 }
 
 describe("entry.revisions.restore", () => {
+  test("another editor's restore during a live lease is refused with who holds it", async () => {
+    const { h, entryId, revisionId } = await seedEntryWithRevision();
+    const ada = await editorUser
+      .transient({ db: h.db })
+      .create({ name: "Ada" });
+    const since = new Date();
+    await acquireEditLease(
+      h.db,
+      { kind: "entry", id: entryId },
+      { userId: ada.id, surface: "admin" },
+      since,
+    );
+
+    await expect(
+      h.client.entry.revisions.restore({
+        revisionId,
+        ifMatch: await currentEtag(h.db, entryId),
+      }),
+    ).rejects.toMatchObject({
+      code: "LOCKED",
+      data: { holder: { id: ada.id, name: "Ada" }, since },
+    });
+  });
+
   test("writes the revision's content/title into the live entry", async () => {
     const { h, entryId, revisionId } = await seedEntryWithRevision();
     await h.client.entry.update({

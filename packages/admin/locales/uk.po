@@ -498,6 +498,24 @@ msgstr "{label} не вдалося відобразити."
 msgid "plugin.errorBoundary.pageBody"
 msgstr "{label} викинув помилку під час відображення. Решта адмінки не постраждала."
 
+#. name: the editing user's display name or email
+#. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.holder"
+msgstr ""
+
+#. name: the editing user's display name or email; time: a formatted date and time
+#. js-lingui-explicit-id
+#: src/editor/EditLeaseBanner.tsx
+msgid "editor.lease.heldBy"
+msgstr ""
+
+#. name: the user who took over; time: a formatted date and time
+#. js-lingui-explicit-id
+#: src/editor/EditLeaseBanner.tsx
+msgid "editor.lease.lost"
+msgstr ""
+
 #. revoked: number of OTHER sessions just signed out (excluding the current device)
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
@@ -745,6 +763,11 @@ msgstr ""
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.title"
 msgstr "Дозволити доступ CLI"
+
+#. js-lingui-explicit-id
+#: src/editor/EditLeaseBanner.tsx
+msgid "editor.lease.back"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/-login-screen.tsx
@@ -3379,6 +3402,11 @@ msgstr "Синхронізовано"
 #: src/lib/core-settings-i18n.ts
 msgid "core.settings.site.tagline"
 msgstr "Гасло"
+
+#. js-lingui-explicit-id
+#: src/editor/EditLeaseBanner.tsx
+msgid "editor.lease.takeOver"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/core-nav-i18n.ts

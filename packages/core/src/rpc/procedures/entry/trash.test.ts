@@ -2,9 +2,28 @@ import { describe, expect, test, vi } from "vitest";
 
 import type { AppContext } from "../../../context/app-context.js";
 import type { Entry } from "../../../db/schema/entries.js";
+import { acquireEditLease } from "../../../db/edit-lease.js";
+import { editorUser } from "../../../test/factories.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
 describe("entry.trash", () => {
+  test("a system write: trashing an entry another editor holds the lease on lands", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const ada = await editorUser
+      .transient({ db: h.db })
+      .create({ name: "Ada" });
+    const target = await h.factory.published.create({ authorId: ada.id });
+    await acquireEditLease(
+      h.db,
+      { kind: "entry", id: target.id },
+      { userId: ada.id, surface: "admin" },
+    );
+
+    const result = await h.client.entry.trash({ id: target.id });
+
+    expect(result.status).toBe("trash");
+  });
+
   test("editor can soft-delete: status transitions to trash and trashed action fires", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
     const target = await h.factory.published.create({

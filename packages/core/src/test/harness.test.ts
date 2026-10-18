@@ -50,6 +50,7 @@ describe("applyCoreTestSchema", () => {
       "auth_tokens",
       "credentials",
       "device_codes",
+      "edit_leases",
       "entries",
       "entry_changes",
       "entry_term",

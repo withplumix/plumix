@@ -1,16 +1,43 @@
-import type { Db } from "../../../context/app-context.js";
+import type {
+  AuthenticatedAppContext,
+  Db,
+} from "../../../context/app-context.js";
+import type { EditLeaseSurface } from "../../../db/schema/edit_leases.js";
 import type { Entry, NewEntry } from "../../../db/schema/entries.js";
 import { claim, ConflictError, nextToken } from "../../../db/concurrency.js";
+import { assertWritable } from "../../../db/edit-lease.js";
 import { and, eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 
 export const ENTRY_IF_MATCH_MESSAGE =
   "Send the entry's `etag` from `entry.get` as `ifMatch`";
 
+/** A session is the admin's; an API token is a client calling RPC itself. */
+export function rpcSurface(context: AuthenticatedAppContext): EditLeaseSurface {
+  return context.tokenScopes === null ? "admin" : "rpc";
+}
+
+/** Refuses a write from a copy while another user holds the entry's lease. */
+export function assertEntryWritable(
+  context: AuthenticatedAppContext,
+  id: number,
+  takeOver: boolean | undefined,
+): Promise<void> {
+  return assertWritable(
+    context.db,
+    { kind: "entry", id },
+    { userId: context.user.id, surface: rpcSurface(context) },
+    { takeOver },
+  );
+}
+
 /** Refuses a write whose copy the row has moved past since. */
-export function assertCopyCurrent(ifMatch: Date, updatedAt: Date): void {
-  if (ifMatch.getTime() !== updatedAt.getTime()) {
-    throw new ConflictError(updatedAt);
+export function assertCopyCurrent(
+  ifMatch: Date,
+  row: Pick<Entry, "id" | "updatedAt">,
+): void {
+  if (ifMatch.getTime() !== row.updatedAt.getTime()) {
+    throw new ConflictError(row.updatedAt, { kind: "entry", id: row.id });
   }
 }
 
@@ -36,7 +63,9 @@ export async function claimEntry(
     .select({ updatedAt: entries.updatedAt })
     .from(entries)
     .where(eq(entries.id, id));
-  if (current) throw new ConflictError(current.updatedAt);
+  if (current) {
+    throw new ConflictError(current.updatedAt, { kind: "entry", id });
+  }
   return undefined;
 }
 

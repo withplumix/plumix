@@ -1,3 +1,5 @@
+import * as v from "valibot";
+
 import type { JsonObject } from "../../../json.js";
 import { entryCapabilityByName } from "../../../access/contract/entry-capabilities.js";
 import { etagOf, ifMatchObject } from "../../../db/concurrency.js";
@@ -17,6 +19,7 @@ import { base } from "../../base.js";
 import { idParam } from "../../contract/validation.js";
 import {
   assertCopyCurrent,
+  assertEntryWritable,
   claimEntry,
   ENTRY_IF_MATCH_MESSAGE,
 } from "./concurrency.js";
@@ -27,7 +30,10 @@ import {
   fireEntryUpdated,
 } from "./lifecycle.js";
 
-const publishInput = ifMatchObject({ id: idParam }, ENTRY_IF_MATCH_MESSAGE);
+const publishInput = ifMatchObject(
+  { id: idParam, takeOver: v.optional(v.boolean()) },
+  ENTRY_IF_MATCH_MESSAGE,
+);
 
 export const publish = base
   .use(authenticated)
@@ -45,7 +51,8 @@ export const publish = base
     if (!context.auth.can(publishCapability)) {
       throw errors.FORBIDDEN({ data: { capability: publishCapability } });
     }
-    assertCopyCurrent(input.ifMatch, live.updatedAt);
+    await assertEntryWritable(context, live.id, input.takeOver);
+    assertCopyCurrent(input.ifMatch, live);
     const autosave = await getAutosaveEdits(context.db, {
       entryId: live.id,
       authorId: context.user.id,
