@@ -56,10 +56,12 @@ one or two paragraphs, or nothing at all if you are committing the work
 
 End with the PR copy the harness will use. Everything between `body:` and the
 closing tag becomes the PR description verbatim. Lead with
-`**Fixes #{{TICKET}}**`, then write the body with `mattpocock-skills:pr`: its
-Evidence is the test you watched fail and then pass. After it, give the
-acceptance criteria as a ticked checklist, and name anything you deferred,
-could not meet, or noticed as out of scope.
+`**Fixes #{{TICKET}}**`, then load the `mattpocock-skills:pr` skill and write
+the body in its template: Summary, Evidence and Merge Danger (Door and Blast
+Radius). The harness asks again for a body without them. Its Evidence is the
+test you watched fail and then pass. After it, give the acceptance criteria as
+a ticked checklist, and name anything you deferred, could not meet, or noticed
+as out of scope.
 
 <pr>
 title: <conventional-commit subject, lowercase after the colon>

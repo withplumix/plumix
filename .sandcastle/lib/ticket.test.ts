@@ -12,6 +12,7 @@ import {
   readFindingsTag,
   readPullRequestTag,
   readReviewTag,
+  readTemplatedPullRequest,
   reviewBranch,
 } from "./ticket.js";
 
@@ -70,6 +71,39 @@ describe("readPullRequestTag", () => {
 
   test("reads nothing when the implementer emits no block", () => {
     expect(readPullRequestTag("no tag here")).toBeNull();
+  });
+});
+
+const prBlock = (body: string) =>
+  `<pr>\ntitle: fix(core): clamp the thing\nbody:\n${body}\n</pr>`;
+const TEMPLATED_BODY = [
+  "**Fixes #42**",
+  "## Summary",
+  "clamp(value)",
+  "## Evidence",
+  "- **Before:** fails\n  **After:** passes",
+  "## Merge Danger",
+  "**Door:** two-way",
+  "**Blast Radius:** small",
+].join("\n\n");
+
+describe("readTemplatedPullRequest", () => {
+  test("takes a body written in the pr skill's template", () => {
+    expect(readTemplatedPullRequest(prBlock(TEMPLATED_BODY))?.body).toBe(
+      TEMPLATED_BODY,
+    );
+  });
+
+  test.each([
+    "## Summary",
+    "## Evidence",
+    "## Merge Danger",
+    "**Door:**",
+    "**Blast Radius:**",
+  ])("reads nothing when the body has no %s", (section) => {
+    expect(
+      readTemplatedPullRequest(prBlock(TEMPLATED_BODY.replace(section, ""))),
+    ).toBeNull();
   });
 });
 
