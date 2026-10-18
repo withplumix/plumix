@@ -168,6 +168,28 @@ describe("renewEditLease", () => {
     });
   });
 
+  test("the holder's renewal after their own lease lapsed takes it back, nobody having taken it", async () => {
+    const db = await createTestDb();
+    const { ada } = await editors(db);
+    await acquireEditLease(db, ENTRY, { userId: ada.id, surface: "admin" }, T0);
+
+    const renewal = await renewEditLease(
+      db,
+      ENTRY,
+      { userId: ada.id, surface: "admin" },
+      at(500),
+    );
+
+    expect(renewal).toEqual({
+      lease: {
+        holder: { id: ada.id, name: "Ada" },
+        surface: "admin",
+        since: T0,
+        expiresAt: at(620),
+      },
+    });
+  });
+
   test("after a take over, the previous holder's renewal reports who took it and when", async () => {
     const db = await createTestDb();
     const { ada, bo } = await editors(db);
