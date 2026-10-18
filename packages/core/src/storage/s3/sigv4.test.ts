@@ -88,20 +88,21 @@ describe("presignPutUrl", () => {
   });
 
   test.each([
-    ["the one-second floor", 1],
-    ["the seven-day ceiling", 604_800],
-  ])("expiresIn at %s is accepted", async (_, expiresIn) => {
+    ["the one-second floor", 1, "X-Amz-Expires=1&"],
+    ["the seven-day ceiling", 604_800, "X-Amz-Expires=604800&"],
+  ])("expiresIn at %s is accepted", async (_, expiresIn, signedExpiry) => {
     const result = await presignPutUrl({ ...BASE_PARAMS, key: "k", expiresIn });
-    expect(result.expiresAt).toBe(FIXED_NOW.getTime() / 1000 + expiresIn);
+    expect(result.url).toContain(signedExpiry);
   });
 
-  test("an empty body's contentLength of 0 is accepted", async () => {
-    const result = await presignPutUrl({
+  test("an empty body's contentLength of 0 is signed", async () => {
+    const empty = await presignPutUrl({
       ...BASE_PARAMS,
       key: "k",
       contentLength: 0,
     });
-    expect(result.url).toContain("/bucket-a/k?");
+    const tenBytes = await presignPutUrl({ ...BASE_PARAMS, key: "k" });
+    expect(empty.url).not.toBe(tenBytes.url);
   });
 
   test.each<[string, number]>([
