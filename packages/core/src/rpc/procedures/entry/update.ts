@@ -53,6 +53,7 @@ import {
   fireEntryPublished,
   fireEntryTransition,
   fireEntryUpdated,
+  preparedColumns,
   publishedAtForTransition,
   wouldCreateParentCycle,
 } from "./lifecycle.js";
@@ -112,15 +113,13 @@ async function writeGuarded(
   meta: JsonObject | undefined,
   guards: GuardedWriteGuards,
 ): Promise<Entry> {
-  const toWrite: Partial<NewEntry> = {};
+  let toWrite: Partial<NewEntry> = {};
   if (Object.keys(patch).length > 0) {
     const preparedFull = await applyEntryBeforeSave(context, existing.type, {
       ...existing,
       ...patch,
     });
-    for (const key of Object.keys(patch) as (keyof NewEntry)[]) {
-      (toWrite as Record<string, unknown>)[key] = preparedFull[key];
-    }
+    toWrite = preparedColumns(preparedFull, patch);
   }
   if (meta !== undefined) toWrite.meta = meta;
 

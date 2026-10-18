@@ -47,6 +47,7 @@ import {
   fireEntryRevisionRestored,
   fireEntryTransition,
   fireEntryUpdated,
+  preparedColumns,
   publishedAtForTransition,
 } from "./lifecycle.js";
 
@@ -281,10 +282,7 @@ export const restore = base
       ...live,
       ...patch,
     });
-    const toWrite: Partial<NewEntry> = {};
-    for (const key of Object.keys(patch) as (keyof NewEntry)[]) {
-      (toWrite as Record<string, unknown>)[key] = prepared[key];
-    }
+    const toWrite = preparedColumns(prepared, patch);
 
     const updatedRow = await claimEntry(
       context.db,
