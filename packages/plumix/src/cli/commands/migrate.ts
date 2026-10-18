@@ -31,18 +31,19 @@ import { PlumixCliError } from "../errors.js";
 import {
   adoptLegacyDatabase,
   applyOwners,
+  reportHistories,
   reportPending,
   reportStatus,
 } from "../migrate/apply.js";
 import { loadDataMigrations } from "../migrate/data-load.js";
 import {
   applyDataMigrations,
+  reportDataHistories,
   reportDataPending,
   reportDataStatus,
   withCoreDataMigrations,
 } from "../migrate/data.js";
 import {
-  nearestPackageRoot,
   resolveOwners,
   SITE_SCHEMA_OUT,
   sitePlugins,
@@ -77,22 +78,7 @@ export const migrateCommand: CommandDefinition = {
       return;
     }
     if (args.sub === "fresh") {
-      if (Object.keys(args.targetValues).length > 0) {
-        throw PlumixCliError.migrateFreshRemote();
-      }
-      await checkSiteDrift(target);
-      await withDatabase(
-        target,
-        database,
-        async (db, owners, data) => {
-          announce(db);
-          await applyOwners(db, owners);
-          await applyDataMigrations(db, data);
-        },
-        () => {
-          wipeLocalState(target);
-        },
-      );
+      await migrateFresh(target, args);
       return;
     }
     if (args.sub === "status") {
@@ -226,21 +212,19 @@ function runtimeMigrations(target: MigrationTarget): RuntimeMigrations {
 }
 
 /**
- * Owners resolve, and data migrations load, before anything is deleted or
+ * Owners resolve, and data migrations load, before anything is dropped or
  * opened, so a missing history or module fails with the database untouched.
  */
 async function withDatabase(
   target: MigrationTarget,
   database: DatabaseChoice,
   work: MigrationWork,
-  beforeOpen?: () => void,
 ): Promise<void> {
   const migrations = runtimeMigrations(target);
   const owners = resolveOwners(target.cwd, target.configPath, target.config);
   const data = withCoreDataMigrations(
     await loadDataMigrations(target.cwd, target.configPath, target.config),
   );
-  beforeOpen?.();
   const db = await migrations.open({
     cwd: target.cwd,
     config: target.config,
@@ -297,34 +281,85 @@ function siteTables(target: MigrationTarget): readonly string[] {
 }
 
 /**
- * The paths the runtime's `plumix.e2e.wipe` names, the local state an e2e run
- * starts from nothing, read off the runtime package that provides the commands
- * module.
+ * Every table dropped, then the normal migrate. Like it, the owners resolve
+ * and the site's history is checked before anything is dropped.
  */
-function wipeLocalState(target: MigrationTarget): void {
-  const runtime = target.config.runtime;
-  const wipe = runtime.commandsModule
-    ? readRuntimeWipe(target.cwd, runtime.commandsModule)
-    : undefined;
-  if (wipe === undefined) {
-    throw PlumixCliError.migrateFreshNoWipe({ runtime: runtime.name });
+async function migrateFresh(
+  target: MigrationTarget,
+  args: MigrateArgs,
+): Promise<void> {
+  if (namesProduction(args.targetValues)) {
+    throw PlumixCliError.migrateFreshProduction();
   }
-  for (const path of wipe) {
-    rmSync(resolve(target.cwd, path), { recursive: true, force: true });
-  }
+  await checkSiteDrift(target);
+  const database = { binding: args.binding, targetValues: args.targetValues };
+  await withDatabase(target, database, async (db, owners, data) => {
+    announce(db);
+    if (!(await confirmedWipe(db, owners, data, args))) return;
+    if (db.restorePoint !== undefined) report.info(await db.restorePoint());
+    await db.wipe();
+    await applyOwners(db, owners);
+    await applyDataMigrations(db, data);
+    report.info("Load data with `plumix import` or `plumix sync push`.");
+  });
 }
 
-function readRuntimeWipe(
-  cwd: string,
-  commandsModule: string,
-): readonly string[] | undefined {
-  const resolved = createRequire(join(cwd, "noop.js")).resolve(commandsModule);
-  const root = nearestPackageRoot(resolved);
-  if (root === null) return undefined;
-  const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as {
-    plumix?: { e2e?: { wipe?: readonly string[] } };
-  };
-  return pkg.plumix?.e2e?.wipe;
+/** `--production` or `--env production`: production, in ADR 0045's words. */
+function namesProduction(values: TargetOptionValues): boolean {
+  return values.production === true || values.env === "production";
+}
+
+/** Every table a wipe drops: all but the engine's own, SQLite's and D1's. */
+const TABLES_SQL =
+  "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT GLOB 'sqlite_*' AND name NOT GLOB '_cf_*' ORDER BY name";
+
+async function reportWipePlan(
+  db: MigrationDatabase,
+  owners: readonly MigrationOwner[],
+  data: readonly DataMigrationOwner[],
+): Promise<void> {
+  for (const note of db.target.notes) report.info(`  ${note}`);
+  const tables = (await db.all(TABLES_SQL)).map((row) => String(row.name));
+  if (tables.length === 0) {
+    report.info("Drops no tables: the database is empty.");
+  } else {
+    report.info(
+      `Drops ${String(tables.length)} table${tables.length === 1 ? "" : "s"}:`,
+    );
+    for (const table of tables) report.info(`  ${table}`);
+  }
+  report.info("Then applies:");
+  reportHistories(owners);
+  reportDataHistories(data);
+}
+
+async function confirmedWipe(
+  db: MigrationDatabase,
+  owners: readonly MigrationOwner[],
+  data: readonly DataMigrationOwner[],
+  args: Pick<MigrateArgs, "dryRun" | "yes">,
+): Promise<boolean> {
+  await reportWipePlan(db, owners, data);
+  if (args.dryRun) {
+    report.info("Dry run: nothing was dropped.");
+    return false;
+  }
+  if (args.yes) return true;
+  if (!syncDeps.isInteractive()) throw PlumixCliError.migrateFreshUnconfirmed();
+  if (db.target.remote) {
+    const typed = await syncDeps.ask(
+      `Type ${db.target.name} to drop every table in ${db.target.summary}:`,
+    );
+    if (typed.trim() !== db.target.name) {
+      throw PlumixCliError.migrateFreshNameMismatch({ name: db.target.name });
+    }
+    return true;
+  }
+  const accepted = await syncDeps.confirm(
+    `Drop every table in ${db.target.summary} and migrate it from nothing?`,
+  );
+  if (!accepted) report.info("Nothing was dropped.");
+  return accepted;
 }
 
 function siteSchemaModules(target: MigrationTarget): readonly string[] {

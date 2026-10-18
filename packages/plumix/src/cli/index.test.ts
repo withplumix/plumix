@@ -95,11 +95,12 @@ describe("runCommand", () => {
           },
           all: () => Promise.resolve([]),
           batch: () => Promise.resolve(),
+          wipe: () => Promise.resolve(),
           close: () => {
             events.push("close");
             return Promise.resolve();
           },
-          target: { remote: false, summary: "local", notes: [] },
+          target: { remote: false, summary: "local", notes: [], name: "local" },
         });
       },
     };

@@ -1,6 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { MigrationLocation, PlumixApp, TargetOptionValues } from "plumix";
 import type { GetPlatformProxyOptions, PlatformProxy } from "wrangler";
 import { createDispatcherHarness } from "plumix/test";
@@ -132,6 +133,49 @@ function stubWrangler(binding: object = {}): WranglerCall[] {
   });
   return calls;
 }
+
+describe("a wipe of the local D1, on workerd", () => {
+  // wrangler loads on first use, and a cold load alone can outlast a test.
+  beforeAll(async () => {
+    await import("wrangler");
+  });
+
+  test("drops every table, foreign keys and tracking tables included, and leaves D1's own", async () => {
+    writeWrangler([D1_ENTRY]);
+    const db = await open("site");
+    try {
+      await db.migrate({
+        migrationsFolder: fileURLToPath(
+          new URL("../../../../core/migrations", import.meta.url),
+        ),
+        migrationsTable: "__drizzle_migrations_core",
+      });
+      await db.batch(
+        [
+          "CREATE TABLE parent (id integer PRIMARY KEY AUTOINCREMENT)",
+          "CREATE TABLE child (parent_id integer REFERENCES parent (id) ON DELETE CASCADE)",
+          "CREATE TABLE child_log (parent_id integer)",
+          "CREATE TRIGGER child_deleted AFTER DELETE ON child BEGIN INSERT INTO child_log VALUES (old.parent_id); END",
+          "CREATE VIRTUAL TABLE notes USING fts5(body)",
+          "INSERT INTO parent DEFAULT VALUES",
+          "INSERT INTO child (parent_id) VALUES (1)",
+        ].map((sql) => ({ sql, params: [] })),
+      );
+
+      await db.wipe();
+
+      const left = await db.all(
+        "SELECT type, name FROM sqlite_master ORDER BY name",
+      );
+      expect(
+        left.filter(({ name }) => !String(name).startsWith("_cf_")),
+      ).toEqual([{ type: "table", name: "sqlite_sequence" }]);
+      expect(left.length).toBeGreaterThan(1);
+    } finally {
+      await db.close();
+    }
+  });
+});
 
 describe("cloudflare migrations", () => {
   test("opens the local D1 `plumix dev` reads, persisted under the project's .wrangler/state", async () => {
@@ -430,6 +474,37 @@ describe("cloudflare migrations — the database a target names", () => {
         "Every Worker Preview without a previews block of its own uses this database too.",
       ],
     });
+  });
+
+  test("a remote database's restore point is its Time Travel bookmark now, with the command that restores it", async () => {
+    writeConfig({
+      d1_databases: [PRODUCTION_D1],
+      previews: { d1_databases: [PREVIEW_D1] },
+    });
+    stubWrangler();
+    const bookmark = vi
+      .spyOn(migrationsDeps, "timeTravelBookmark")
+      .mockResolvedValue("00000085-0000024c");
+
+    const db = await openTarget({ preview: true });
+    const line = await db.restorePoint?.();
+    await db.close();
+
+    expect(db.target.name).toBe("site-preview");
+    expect(bookmark).toHaveBeenCalledWith(dir, "site-preview");
+    expect(line).toBe(
+      "Restore point: D1 Time Travel bookmark 00000085-0000024c. To undo the wipe, run `wrangler d1 time-travel restore site-preview --bookmark=00000085-0000024c`.",
+    );
+  });
+
+  test("the local D1 has no restore point", async () => {
+    writeWrangler([D1_ENTRY]);
+    stubWrangler();
+
+    const db = await open("site");
+    await db.close();
+
+    expect("restorePoint" in db).toBe(false);
   });
 
   test("--production together with --env fails before connecting", async () => {

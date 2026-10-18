@@ -1,6 +1,8 @@
+import { execFile } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { promisify } from "node:util";
 import type {
   MigrationDatabase,
   MigrationDatabaseTarget,
@@ -132,22 +134,37 @@ function targetOf(
   location: Reach,
 ): MigrationDatabaseTarget {
   if (location === "memory") {
-    return { remote: false, summary: "memory", notes: [] };
+    return { remote: false, summary: "memory", notes: [], name: "memory" };
   }
   const name = entry.database_name ?? entry.database_id ?? "";
   return {
     remote: location === "remote",
     summary: `${block.summary} · ${entry.binding} · ${name}`,
     notes: block.sharedPreviews ? [SHARED_PREVIEWS_NOTE] : [],
+    name,
   };
 }
 
 const SHARED_PREVIEWS_NOTE =
   "Every Worker Preview without a previews block of its own uses this database too.";
 
+/**
+ * Triggers first, so no drop fires one; a virtual table before its shadow
+ * tables. D1's own `_cf_` tables refuse a drop.
+ */
+const WIPED_SQL =
+  "SELECT type, name FROM sqlite_master WHERE type IN ('table', 'trigger') AND name NOT GLOB 'sqlite_*' AND name NOT GLOB '_cf_*' ORDER BY type = 'table', sql NOT LIKE 'CREATE VIRTUAL TABLE%'";
+
+/** wrangler finds a database it is not bound to by name, through the API. */
+async function restorePoint(cwd: string, database: string): Promise<string> {
+  const bookmark = await migrationsDeps.timeTravelBookmark(cwd, database);
+  return `Restore point: D1 Time Travel bookmark ${bookmark}. To undo the wipe, run \`wrangler d1 time-travel restore ${database} --bookmark=${bookmark}\`.`;
+}
+
 function migrationDatabase(
   d1: D1Database,
   target: MigrationDatabaseTarget,
+  restore: (() => Promise<string>) | undefined,
   dispose: () => Promise<void>,
 ): MigrationDatabase {
   // A query builder over a column needs the request database's snake_case.
@@ -164,6 +181,22 @@ function migrationDatabase(
         statements.map(({ sql, params }) => d1.prepare(sql).bind(...params)),
       );
     },
+    async wipe() {
+      const { results } = await d1
+        .prepare(WIPED_SQL)
+        .all<{ type: "table" | "trigger"; name: string }>();
+      if (results.length === 0) return;
+      // D1 ignores `PRAGMA foreign_keys`; the deferral lasts to the commit.
+      await d1.batch([
+        d1.prepare("PRAGMA defer_foreign_keys = ON"),
+        ...results.map(({ type, name }) =>
+          d1.prepare(
+            `DROP ${type.toUpperCase()} IF EXISTS "${name.replaceAll('"', '""')}"`,
+          ),
+        ),
+      ]);
+    },
+    ...(restore === undefined ? {} : { restorePoint: restore }),
     close: dispose,
     target,
   };
@@ -225,7 +258,10 @@ export const migrations: RuntimeMigrations = {
       throw error;
     }
     const d1 = proxy.env[chosen.entry.binding] as D1Database;
-    return migrationDatabase(d1, targetOf(chosen, reach), async () => {
+    const target = targetOf(chosen, reach);
+    const restore =
+      reach === "remote" ? () => restorePoint(cwd, target.name) : undefined;
+    return migrationDatabase(d1, target, restore, async () => {
       await proxy.dispose();
       rmSync(configDir, { recursive: true, force: true });
     });
@@ -238,6 +274,18 @@ export const migrations: RuntimeMigrations = {
  */
 export const migrationsDeps = {
   loadWranglerConfig,
+  /** The bookmark that names the database as it is now. */
+  timeTravelBookmark: async (
+    cwd: string,
+    database: string,
+  ): Promise<string> => {
+    const { stdout } = await promisify(execFile)(
+      "wrangler",
+      ["d1", "time-travel", "info", database, "--json"],
+      { cwd },
+    );
+    return (JSON.parse(stdout) as { bookmark: string }).bookmark;
+  },
   getPlatformProxy: async (
     options: GetPlatformProxyOptions,
   ): Promise<PlatformProxy> =>

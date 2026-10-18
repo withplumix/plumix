@@ -112,6 +112,8 @@ export function superviseWebServer(command: string): string {
 
 interface PlaygroundCommand {
   readonly playground: string;
+  /** The runtime's `plumix.e2e.wipe`, relative to the playground. */
+  readonly wipe: readonly string[];
   /** Runs each `plumix` step; the runtime's `cli`, else `pnpm exec plumix`. */
   readonly cli: string;
   readonly port: number;
@@ -122,10 +124,12 @@ interface PlaygroundCommand {
 function bakePlaygroundCommand(input: PlaygroundCommand): string {
   const steps = [
     `cd ${input.playground}`,
-    // Deletes only the local state the runtime's `plumix.e2e.wipe` names, then
-    // applies every owner's shipped history: nothing is generated, so a
-    // site's committed history is never touched (#2819).
-    `${input.cli} migrate fresh`,
+    // Deletes only the local state the runtime's `plumix.e2e.wipe` names, the
+    // baseline kept in it too, then applies every owner's shipped history:
+    // nothing is generated, so a site's committed history is never touched
+    // (#2819).
+    ...input.wipe.map((path) => `rm -rf -- ${shellQuote(path)}`),
+    `${input.cli} migrate fresh --yes`,
   ];
   if (input.extraSetup) steps.push(input.extraSetup);
   const devFlags = [`--port ${String(input.port)}`];
@@ -197,6 +201,7 @@ export function definePlumixE2EConfig(
     (options.playground !== undefined && runtime !== undefined
       ? bakePlaygroundCommand({
           playground: options.playground,
+          wipe: runtime.wipe,
           cli: runtime.cli ?? "pnpm exec plumix",
           port,
           inspectorPort:

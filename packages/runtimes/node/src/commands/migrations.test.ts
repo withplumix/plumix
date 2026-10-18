@@ -95,6 +95,37 @@ describe("node migrations", () => {
     }
   });
 
+  test("a wipe drops every table, foreign keys and tracking tables included, and leaves SQLite's own", async () => {
+    const db = await open(nodeSqlite({ path: "data/site.sqlite" }));
+    try {
+      await db.migrate(CORE);
+      await db.batch([
+        {
+          sql: "CREATE TABLE parent (id integer PRIMARY KEY AUTOINCREMENT)",
+          params: [],
+        },
+        {
+          sql: "CREATE TABLE child (parent_id integer REFERENCES parent (id) ON DELETE CASCADE)",
+          params: [],
+        },
+        { sql: "CREATE VIRTUAL TABLE notes USING fts5(body)", params: [] },
+        { sql: "INSERT INTO parent DEFAULT VALUES", params: [] },
+        { sql: "INSERT INTO child (parent_id) VALUES (1)", params: [] },
+      ]);
+
+      await db.wipe();
+
+      expect(
+        await db.all("SELECT type, name FROM sqlite_master ORDER BY name"),
+      ).toEqual([{ type: "table", name: "sqlite_sequence" }]);
+      expect(await db.all("PRAGMA foreign_keys")).toEqual([
+        { foreign_keys: 1 },
+      ]);
+    } finally {
+      await db.close();
+    }
+  });
+
   test("opens a scratch database in memory, leaving the file alone", async () => {
     const db = await open(nodeSqlite({ path: "data/site.sqlite" }), "memory");
     await db.migrate(CORE);

@@ -105,17 +105,19 @@ describe("definePlumixE2EConfig", () => {
     const cmd = webServerCommandOf(config);
     expect(cmd).toBe(
       superviseWebServer(
-        "cd .. && pnpm exec plumix migrate fresh && pnpm exec plumix dev --port 3040",
+        "cd .. && rm -rf -- '.wrangler/state' && pnpm exec plumix migrate fresh --yes && pnpm exec plumix dev --port 3040",
       ),
     );
   });
 
-  test("generates and deletes nothing, so a committed drizzle/ survives the run (#2819)", () => {
+  test("generates nothing and deletes only the runtime's local state, so a committed drizzle/ survives the run (#2819)", () => {
     const cmd = webServerCommandOf(
       definePlumixE2EConfig({ configDir, playground: ".." }),
     );
 
-    expect(cmd).not.toContain("rm -rf");
+    // The runtime's one wipe path, `.wrangler/state`, is all it deletes.
+    expect(cmd.match(/rm -rf -- /g)).toHaveLength(1);
+    expect(cmd).toContain(".wrangler/state");
     expect(cmd).not.toContain("drizzle");
     expect(cmd).not.toContain("migrate generate");
   });
@@ -137,7 +139,7 @@ describe("definePlumixE2EConfig", () => {
 
     expect(webServerCommandOf(config)).toBe(
       superviseWebServer(
-        "cd . && bun --bun node_modules/plumix/bin/plumix.mjs migrate fresh && bun --bun node_modules/plumix/bin/plumix.mjs dev --port 3130",
+        "cd . && rm -rf -- 'data' && bun --bun node_modules/plumix/bin/plumix.mjs migrate fresh --yes && bun --bun node_modules/plumix/bin/plumix.mjs dev --port 3130",
       ),
     );
   });
@@ -150,7 +152,7 @@ describe("definePlumixE2EConfig", () => {
     });
 
     expect(webServerCommandOf(config)).toMatch(
-      /plumix migrate fresh && pnpm exec plumix seed --file=e2e\/seed\.sql && pnpm exec plumix dev --port \d+/,
+      /plumix migrate fresh --yes && pnpm exec plumix seed --file=e2e\/seed\.sql && pnpm exec plumix dev --port \d+/,
     );
   });
 

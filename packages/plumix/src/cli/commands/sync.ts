@@ -87,17 +87,20 @@ function parseSyncArgs(ctx: CommandContext): SyncArgs {
   };
 }
 
-async function confirm(question: string): Promise<boolean> {
+async function ask(question: string): Promise<string> {
   const prompt = createInterface({
     input: process.stdin,
     output: process.stderr,
   });
   try {
-    const answer = await prompt.question(`${question} [y/N] `);
-    return /^y(es)?$/i.test(answer.trim());
+    return await prompt.question(`${question} `);
   } finally {
     prompt.close();
   }
+}
+
+async function confirm(question: string): Promise<boolean> {
+  return /^y(es)?$/i.test((await ask(`${question} [y/N]`)).trim());
 }
 
 /**
@@ -106,6 +109,7 @@ async function confirm(question: string): Promise<boolean> {
 export const syncDeps = {
   isInteractive: (): boolean => process.stdin.isTTY && process.stderr.isTTY,
   confirm,
+  ask,
   now: (): Date => new Date(),
 };
 

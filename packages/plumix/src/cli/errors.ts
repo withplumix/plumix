@@ -17,9 +17,10 @@ type PlumixCliErrorCode =
   | "migrate_generate_failed"
   | "migrate_invalid_arguments"
   | "migrate_runtime_unsupported"
-  | "migrate_fresh_remote"
+  | "migrate_fresh_production"
   | "migrate_unconfirmed"
-  | "migrate_fresh_no_wipe"
+  | "migrate_fresh_unconfirmed"
+  | "migrate_fresh_name_mismatch"
   | "migrate_schema_module_unresolved"
   | "migrate_owner_history_missing"
   | "migrate_adoption_mismatch"
@@ -258,11 +259,12 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
     );
   }
 
-  static migrateFreshRemote(): PlumixCliError {
+  /** Refused before anything connects, and no option overrides it. */
+  static migrateFreshProduction(): PlumixCliError {
     return new PlumixCliError(
-      "migrate_fresh_remote",
-      "plumix migrate fresh deletes the local database only and refuses a target option",
-      "Nothing was touched. Run `plumix migrate` with the target option to apply pending migrations to that database.",
+      "migrate_fresh_production",
+      "plumix migrate fresh never runs against production",
+      "Nothing was touched. To start a production database over, delete and recreate it on the platform.",
       undefined,
     );
   }
@@ -277,11 +279,21 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
     );
   }
 
-  static migrateFreshNoWipe(ctx: { runtime: string }): PlumixCliError {
+  /** Refused after the plan prints and before anything is dropped. */
+  static migrateFreshUnconfirmed(): PlumixCliError {
     return new PlumixCliError(
-      "migrate_fresh_no_wipe",
-      `The ${ctx.runtime} runtime declares no local state to delete`,
-      "Its package.json needs a `plumix.e2e.wipe` list naming the paths that hold the local database.",
+      "migrate_fresh_unconfirmed",
+      "plumix migrate fresh drops every table and has no terminal to confirm it in",
+      "Nothing was dropped. Pass `--dry-run` to see the plan, then `--yes` to drop every table and migrate.",
+      undefined,
+    );
+  }
+
+  static migrateFreshNameMismatch(ctx: { name: string }): PlumixCliError {
+    return new PlumixCliError(
+      "migrate_fresh_name_mismatch",
+      `What was typed is not ${ctx.name}, the database's name`,
+      "Nothing was dropped. Run `plumix migrate fresh` again and type the name exactly.",
       undefined,
     );
   }

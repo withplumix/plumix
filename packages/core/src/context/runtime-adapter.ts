@@ -192,6 +192,8 @@ export interface MigrationDatabaseTarget {
   readonly summary: string;
   /** Lines a plan shows under the summary. */
   readonly notes: readonly string[];
+  /** The database's own name, which `plumix migrate fresh` asks to be typed. */
+  readonly name: string;
 }
 
 /**
@@ -216,6 +218,16 @@ export interface MigrationDatabase {
   all(sql: string): Promise<readonly MigrationRow[]>;
   /** Runs every statement, or none of them. */
   batch(statements: readonly MigrationStatement[]): Promise<void>;
+  /**
+   * Drops every table but the engine's own, tracking tables included, with
+   * foreign-key checks suspended: `plumix migrate fresh`.
+   */
+  wipe(): Promise<void>;
+  /**
+   * One line naming where the database can be restored to as it is now, and
+   * the command that restores it, for a database its platform keeps one of.
+   */
+  restorePoint?(): Promise<string>;
   close(): Promise<void>;
   readonly target: MigrationDatabaseTarget;
 }
