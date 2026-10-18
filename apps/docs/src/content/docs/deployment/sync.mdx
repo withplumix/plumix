@@ -54,7 +54,7 @@ A sync runs these steps in order:
 5. The target runs the import as a dry run, and the command prints, per table, the rows replaced, added and removed, then the rows outside the sync it would remove or clear, then the emails of the authors it would add as disabled users, then how many values it rewrites in each table (see [URLs](#urls)).
 6. With `--dry-run` it prints `Dry run: nothing was changed.` and stops.
 7. A push without `--yes` asks for confirmation. Answering no changes nothing.
-8. A push takes a snapshot of the deployed site and prints how to restore it.
+8. A push takes a snapshot of the deployed site and prints how to restore it. When the import or a step after it fails, it prints that again.
 9. The target imports the dump.
 10. The target settles: every `sync:after` listener runs, then the whole CDN is purged. See [After a sync](#after-a-sync).
 

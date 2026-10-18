@@ -375,6 +375,31 @@ describe("plumix import --url, into the deployed site", () => {
     ).toEqual([{ n: 0 }]);
   });
 
+  test("an import into the deployed site that fails after its snapshot prints how to restore it again", async () => {
+    const site = await blogSite();
+    writeRecords("content.jsonl", [TOPIC, POST]);
+    const failingSettle: RuntimeSync = {
+      open: async (options) => ({
+        ...(await site.sync.open(options)),
+        settle: () => Promise.reject(new Error("settle lost")),
+      }),
+    };
+
+    await expect(
+      importCommand.run(
+        importCtx(
+          ["content.jsonl", "--url", REMOTE, "--yes"],
+          failingSettle,
+          site.harness.app,
+        ),
+      ),
+    ).rejects.toThrow("settle lost");
+
+    expect(lines).toContain(
+      "The import failed after its snapshot. This in-memory end takes no snapshot: its import is one transaction, so a failed one changes nothing.",
+    );
+  });
+
   test("with --yes snapshots the deployed site, prints the restore hint, and imports into it", async () => {
     const site = await blogSite();
     writeRecords("content.jsonl", [TOPIC, POST]);

@@ -376,6 +376,22 @@ describe("plumix sync", () => {
     );
   });
 
+  test("a push that fails after its snapshot prints how to restore it again", async () => {
+    const hooks = new HookRegistry();
+    hooks.addAction("sync:after", () => Promise.reject(new Error("boom")));
+    const ends = await seededEnds({ hooks });
+
+    await expect(
+      syncCommand.run(syncCtx(["push", "--url", REMOTE, "--yes"], ends.sync)),
+    ).rejects.toMatchObject({ code: "sync_settle_failed" });
+
+    expect(
+      lines.slice(lines.indexOf("Replaced the data on the remote site.")),
+    ).toContain(
+      "The push failed after its snapshot. This in-memory end takes no snapshot: its import is one transaction, so a failed one changes nothing.",
+    );
+  });
+
   test("fires sync:after once, with the scopes and the direction", async () => {
     const hooks = new HookRegistry();
     const events: unknown[] = [];

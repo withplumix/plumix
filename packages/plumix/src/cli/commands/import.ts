@@ -35,6 +35,7 @@ import {
   dumpName,
   runtimeSyncOf,
   syncDeps,
+  withSnapshot,
 } from "./sync.js";
 
 /** Under `.plumix`, which a scaffolded project ignores. */
@@ -193,19 +194,19 @@ async function load(run: ImportRun, dump: DumpReader): Promise<void> {
     rewritten(),
   );
   if (!(await confirmed(run))) return;
-  if (run.targetName === "remote") {
-    const snapshot = await run.target.snapshot();
-    report.info(run.target.restoreHint(snapshot));
-  }
-  await run.target.importData(rewrittenDump, run.scopes, { dryRun: false });
-  report.success(`Replaced the data on the ${run.targetName} site.`);
-  const directionIntoTarget = run.targetName === "local" ? "pull" : "push";
-  describeSettle(
-    await run.target.settle({
-      scopes: run.scopes.map((scope) => scope.name),
-      direction: directionIntoTarget,
-    }),
-  );
+  const write = async (): Promise<void> => {
+    await run.target.importData(rewrittenDump, run.scopes, { dryRun: false });
+    report.success(`Replaced the data on the ${run.targetName} site.`);
+    const directionIntoTarget = run.targetName === "local" ? "pull" : "push";
+    describeSettle(
+      await run.target.settle({
+        scopes: run.scopes.map((scope) => scope.name),
+        direction: directionIntoTarget,
+      }),
+    );
+  };
+  if (run.targetName === "local") return write();
+  return withSnapshot(run.target, "import", write);
 }
 
 /** A dump written from authoring records outlives a failed import. */

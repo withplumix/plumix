@@ -271,18 +271,37 @@ async function replaceTarget(run: SyncRun): Promise<void> {
   );
   describeRewrite(dump.manifest.source, targetSite(run), rewritten());
   if (!(await confirmed(run))) return;
-  if (run.args.direction === "push") {
-    const snapshot = await run.target.snapshot();
-    report.info(run.target.restoreHint(snapshot));
+  const write = async (): Promise<void> => {
+    await run.target.importData(dump, run.scopes, { dryRun: false });
+    report.success(`Replaced the data on the ${run.targetName} site.`);
+    describeSettle(
+      await run.target.settle({
+        scopes: run.scopes.map((scope) => scope.name),
+        direction: run.args.direction,
+      }),
+    );
+  };
+  if (run.args.direction === "pull") return write();
+  return withSnapshot(run.target, "push", write);
+}
+
+/**
+ * Prints how to restore the snapshot before the write, and again when the
+ * write or a step after it fails, where the operator is looking.
+ */
+export async function withSnapshot(
+  target: SyncEnd,
+  label: string,
+  write: () => Promise<void>,
+): Promise<void> {
+  const hint = target.restoreHint(await target.snapshot());
+  report.info(hint);
+  try {
+    await write();
+  } catch (error) {
+    report.info(`The ${label} failed after its snapshot. ${hint}`);
+    throw error;
   }
-  await run.target.importData(dump, run.scopes, { dryRun: false });
-  report.success(`Replaced the data on the ${run.targetName} site.`);
-  describeSettle(
-    await run.target.settle({
-      scopes: run.scopes.map((scope) => scope.name),
-      direction: run.args.direction,
-    }),
-  );
 }
 
 /** A dump outlives a failed sync, so its rows can be inspected or retried. */
