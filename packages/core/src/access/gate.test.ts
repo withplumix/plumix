@@ -365,6 +365,7 @@ describe("gateToResponse", () => {
     );
     // The per-visitor 302 must never be stored by an intermediary.
     expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(response.headers.get("vary")).toBe("cookie");
   });
 
   it("prefixes both the login path and the returnTo with the base path", () => {

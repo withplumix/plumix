@@ -409,6 +409,25 @@ describe("an entry type with an access policy", () => {
     ]);
   });
 
+  test("referenceableEntryRows offers an editor every published row whatever its policy", async () => {
+    const editor = await factoriesFor(policied).user.create({ role: "editor" });
+    const ctx = pageReader(["entry:page:edit_any"], editor);
+
+    const clause = await referenceableEntryRows(ctx, "page");
+    const found = await policied
+      .select({ slug: entries.slug })
+      .from(entries)
+      .where(clause)
+      .orderBy(asc(entries.id));
+
+    expect(found.map((row) => row.slug)).toEqual([
+      "public",
+      "members",
+      "stale",
+      "sealed",
+    ]);
+  });
+
   test("an author reads the rows they wrote whatever their policy", async () => {
     const ctx = pageReader(["entry:page:read", "entry:page:edit_own"], author);
 

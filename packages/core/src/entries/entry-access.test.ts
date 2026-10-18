@@ -161,3 +161,19 @@ describe("entryPolicyAdmits asked through anonymousContext", () => {
     await expect(admitsAnonymously(c, { type: "column" })).resolves.toBe(false);
   });
 });
+
+describe("entryPolicyAdmits within one request", () => {
+  it("refuses a type whose policy refuses the reader after a granting type was asked", async () => {
+    const c = await ctx({
+      entryTypes: {
+        open: { default: anonymousPolicy },
+        closed: { default: authenticatedPolicy },
+      },
+    });
+    await entryPolicyAdmits(c, { type: "open" }, "listing");
+
+    await expect(
+      entryPolicyAdmits(c, { type: "closed" }, "listing"),
+    ).resolves.toBe(false);
+  });
+});
