@@ -1,6 +1,7 @@
 import type { AppContext } from "../../../context/app-context.js";
 import { and, eq, isNotNull, lte } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
+import { writeAsSystem } from "./concurrency.js";
 import {
   fireEntryPublished,
   fireEntryTransition,
@@ -43,17 +44,19 @@ export async function publishDueScheduledEntries(
 
   let published = 0;
   for (const entry of due) {
-    // Re-assert `status='scheduled'` in the write so a manual publish that
-    // raced this run flips the row once and fires hooks once.
-    const flipped = await ctx.db
-      .update(entries)
-      .set({ status: "published" })
-      .where(and(eq(entries.id, entry.id), eq(entries.status, "scheduled")))
-      .returning({ id: entries.id });
-    if (flipped.length === 0) continue;
+    // Decided again from any write that lands first, so a manual publish or
+    // reschedule that raced this run is not overwritten.
+    const result = await writeAsSystem(ctx.db, entry, (row) =>
+      row.status === "scheduled" &&
+      row.publishedAt !== null &&
+      row.publishedAt <= now
+        ? { status: "published" }
+        : undefined,
+    );
+    if (!result?.written) continue;
 
     published += 1;
-    const updated = { ...entry, status: "published" as const };
+    const updated = result.row;
     await fireEntryUpdated(ctx, updated, entry);
     await fireEntryTransition(ctx, updated, entry.status);
     await fireEntryPublished(ctx, updated);

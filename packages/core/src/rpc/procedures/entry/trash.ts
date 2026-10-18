@@ -1,8 +1,7 @@
 import { etagOf } from "../../../db/concurrency.js";
-import { eq } from "../../../db/index.js";
-import { entries } from "../../../db/schema/entries.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { writeAsSystem } from "./concurrency.js";
 import {
   entryDeletableGuards,
   fireEntryTrashed,
@@ -25,27 +24,18 @@ export const trash = base
       entryDeletableGuards(errors),
     );
 
-    if (existing.status === "trash") {
-      const output = await context.hooks.applyFilter(
-        "rpc:entry.trash:output",
-        existing,
-      );
-      return { ...output, etag: etagOf(existing.updatedAt) };
-    }
-
-    const [trashed] = await context.db
-      .update(entries)
-      .set({ status: "trash" })
-      .where(eq(entries.id, existing.id))
-      .returning();
-    if (!trashed) {
+    // Trashing an entry already in the trash is a no-op.
+    const result = await writeAsSystem(context.db, existing, (row) =>
+      row.status === "trash" ? undefined : { status: "trash" },
+    );
+    if (!result) {
       throw errors.CONFLICT({ data: { reason: "trash_failed" } });
     }
 
-    await fireEntryTrashed(context, trashed);
+    if (result.written) await fireEntryTrashed(context, result.row);
     const output = await context.hooks.applyFilter(
       "rpc:entry.trash:output",
-      trashed,
+      result.row,
     );
-    return { ...output, etag: etagOf(trashed.updatedAt) };
+    return { ...output, etag: etagOf(result.row.updatedAt) };
   });
