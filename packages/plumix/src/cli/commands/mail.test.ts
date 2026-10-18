@@ -175,6 +175,34 @@ describe("plumix mail test", () => {
       expect(mailer.delivered).toEqual([]);
     },
   );
+
+  test.each([
+    [["send", "ann@example.com"], "unknown_subcommand"],
+    [["test", "ann@example.com", "bob@example.com"], "mail_invalid_arguments"],
+  ])("%j is a usage error and sends nothing", async (argv, code) => {
+    captureReport();
+    const mailer = recordingMailer();
+    const ctx = await site(argv, mailer);
+
+    const error = await failure(mailCommand.run(ctx));
+
+    expect(isCliError(error) && error.code).toBe(code);
+    expect(mailer.delivered).toEqual([]);
+  });
+
+  test("a runtime that cannot open its database from the command line is named", async () => {
+    captureReport();
+    const mailer = recordingMailer();
+    const ctx = {
+      ...(await site(["test", "ann@example.com"], mailer)),
+      runtimeMigrations: undefined,
+    };
+
+    const error = await failure(mailCommand.run(ctx));
+
+    expect(isCliError(error) && error.code).toBe("mail_site_unreachable");
+    expect(mailer.delivered).toEqual([]);
+  });
 });
 
 describe("plumix mail test --remote", () => {
@@ -304,6 +332,95 @@ describe("plumix mail test --remote", () => {
       "The site did not authorize this command: access_denied",
     ]);
     site.mail.assertNothingSent();
+  });
+
+  test("--token wins over PLUMIX_API_TOKEN", async () => {
+    captureReport();
+    const site = await deployed();
+    vi.stubEnv("PLUMIX_API_TOKEN", "pl_pat_not_a_token");
+    const ctx = await local([
+      "test",
+      "ann@example.com",
+      "--remote",
+      "--url",
+      "https://cms.example",
+      "--token",
+      await adminToken(site),
+    ]);
+
+    await mailCommand.run(ctx);
+
+    site.mail.assertSent("mailTest", { to: "ann@example.com", times: 1 });
+  });
+
+  test("a token whose user may not manage settings is refused with the status", async () => {
+    captureReport();
+    const site = await deployed();
+    const editor = await site.seedUser("editor");
+    const { secret } = await site.factory.apiToken.create({
+      userId: editor.id,
+      scopes: null,
+      expiresAt: null,
+    });
+    vi.stubEnv("PLUMIX_API_TOKEN", secret);
+    const ctx = await local([
+      "test",
+      "ann@example.com",
+      "--remote",
+      "--url",
+      "https://cms.example",
+    ]);
+
+    const error = await failure(mailCommand.run(ctx));
+
+    expect(isCliError(error) && [error.code, error.message]).toEqual([
+      "mail_remote_refused",
+      "The deployed site answered 403 and sent no mail",
+    ]);
+    site.mail.assertNothingSent();
+  });
+
+  test("a device code the site asks to be polled slower is polled five seconds slower", async () => {
+    captureReport();
+    const answers = [
+      Response.json({
+        device_code: "dc",
+        user_code: "ABCD-EFGH",
+        verification_uri_complete: "https://cms.example/device?user_code=ABCD",
+        interval: 5,
+      }),
+      Response.json({ error: "slow_down" }, { status: 400 }),
+      Response.json({ access_token: "pl_pat_minted" }),
+      new Response(null, { status: 204 }),
+    ];
+    const requests: Request[] = [];
+    vi.spyOn(remoteDeps, "fetch").mockImplementation((url, init) => {
+      requests.push(new Request(url, init));
+      return Promise.resolve(
+        answers.shift() ?? new Response(null, { status: 500 }),
+      );
+    });
+    const waits: number[] = [];
+    vi.spyOn(remoteDeps, "sleep").mockImplementation((seconds) => {
+      waits.push(seconds);
+      return Promise.resolve();
+    });
+    vi.stubEnv("PLUMIX_API_TOKEN", "");
+    vi.spyOn(syncDeps, "isInteractive").mockReturnValue(true);
+    const ctx = await local([
+      "test",
+      "ann@example.com",
+      "--remote",
+      "--url",
+      "https://cms.example",
+    ]);
+
+    await mailCommand.run(ctx);
+
+    expect(waits).toEqual([5, 10]);
+    expect(requests.at(-1)?.headers.get("authorization")).toBe(
+      "Bearer pl_pat_minted",
+    );
   });
 
   test("--remote without --url is refused before anything is sent", async () => {

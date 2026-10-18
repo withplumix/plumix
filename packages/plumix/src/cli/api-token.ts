@@ -23,9 +23,7 @@ export function siteUrl(origin: string, path: string): string {
 }
 
 interface ResolveApiTokenOptions {
-  /** The deployed site's origin. */
   readonly url: string;
-  /** The `--token` flag's value. */
   readonly token: string | undefined;
   /** The error for a run with no token and no terminal to authorize one in. */
   readonly missing: () => CliError;

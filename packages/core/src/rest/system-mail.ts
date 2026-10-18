@@ -12,7 +12,6 @@ const mailTestInputSchema = v.object({
   to: v.pipe(v.string(), v.trim(), v.email(), v.maxLength(255)),
 });
 
-/** POST /system/mail/test — sends core's `mailTest` through the site's mailer. */
 export const systemMailTest = base
   .route({
     method: "POST",

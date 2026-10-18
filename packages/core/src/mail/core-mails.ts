@@ -24,7 +24,6 @@ export interface EmailChangeMailProps {
   readonly ttlSeconds: number;
 }
 
-/** Props of `mailTest`, the mail `plumix mail test` sends. */
 export interface MailTestMailProps {
   readonly siteName: string;
   /** When the test was sent, as an ISO 8601 timestamp. */

@@ -187,8 +187,8 @@ export const runContractCases: readonly Case[] = [
 ];
 
 /**
- * What `plumix meta report|settle` and `plumix mail test` do on a runtime: core's sweep through
- * `handler.run`, in the env the runtime's `openRun` returns.
+ * What the CLI's runs do on a runtime: core's work through `handler.run`, in
+ * the env the runtime's `openRun` returns.
  */
 export function describeRunContract(options: RunContractOptions): void {
   describeContract("run contract", runContractCases, options);

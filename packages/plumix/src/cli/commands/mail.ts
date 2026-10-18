@@ -37,7 +37,6 @@ export const mailCommand: CommandDefinition<PlumixApp> = {
 
 interface MailArgs {
   readonly to: string;
-  /** Set by `--remote`: the deployed site to send through. */
   readonly remote: RemoteSite | undefined;
 }
 
@@ -91,7 +90,6 @@ const FailedSendBody = v.object({
   error: v.object({ code: v.literal("mail_send_failed"), message: v.string() }),
 });
 
-/** Through the deployed site's own mailer, by its REST route. */
 async function sendRemote(to: string, site: RemoteSite): Promise<void> {
   const token = await resolveApiToken({
     url: site.url,
@@ -123,7 +121,6 @@ async function refusal(response: Response): Promise<PlumixCliError> {
   });
 }
 
-/** The transport's message, when the site answered with a failed send. */
 function failedSendMessage(text: string): string | undefined {
   try {
     const parsed = v.safeParse(FailedSendBody, JSON.parse(text) as unknown);

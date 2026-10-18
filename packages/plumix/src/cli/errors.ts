@@ -749,7 +749,6 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
     );
   }
 
-  /** Any answer but a send or a failed send: a token, capability or API problem. */
   static mailRemoteRefused(ctx: {
     status: number;
     body: string;
