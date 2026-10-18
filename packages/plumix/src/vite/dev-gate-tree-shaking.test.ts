@@ -15,6 +15,7 @@ import { plumixSourceResolver } from "@plumix/vitest-config/source-resolver";
 const GATED_DEV_MODULES = [
   "dev/history-routes.tsx",
   "dev/request-history/writer.ts",
+  "dev/routes.ts",
   "dev/debug-bar/consumer.ts",
   "dev/debug-bar/component.tsx",
   "dev/debug-panels/core-panels.ts",

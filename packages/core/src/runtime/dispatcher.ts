@@ -77,26 +77,13 @@ const PLUMIX_PREFIX = "/_plumix/";
 const SIGNOUT_PATH = "/_plumix/auth/signout";
 const MCP_PATH = "/_plumix/mcp";
 const API_PREFIX = "/_plumix/api";
-/** Inlined like the debug prefixes below, so the eager graph skips the route. */
+/** Inlined, not imported, so the eager graph skips the route. */
 const SYNC_SETTLE_PATH = "/_plumix/api/v1/system/sync/settle";
-/**
- * Inlined, not imported, so the eager graph touches no dev debug module. Keep
- * in step with `DEBUG_REQUESTS_PATH`.
- */
-const DEBUG_REQUESTS_PREFIX = "/_plumix/debug/requests";
-/** Inlined for the same reason; keep in step with `DEBUG_MAIL_PATH`. */
-const DEBUG_MAIL_PREFIX = "/_plumix/debug/mail";
 /**
  * Core owns these ahead of plugin routes. The CSRF exemption must skip them
  * too, or a plugin id'd `rpc` could drop the header gate on RPC.
  */
-const CORE_PLUMIX_PREFIXES = [
-  RPC_PREFIX,
-  ADMIN_PREFIX,
-  AUTH_PREFIX,
-  DEBUG_REQUESTS_PREFIX,
-  DEBUG_MAIL_PREFIX,
-];
+const CORE_PLUMIX_PREFIXES = [RPC_PREFIX, ADMIN_PREFIX, AUTH_PREFIX];
 
 function coreAnswersPlumixPath(pathname: string): boolean {
   return CORE_PLUMIX_PREFIXES.some(
@@ -109,18 +96,6 @@ function coreAnswersPlumixPath(pathname: string): boolean {
 const loadSyncSettle = loadOnce(() => import("./sync-settle.js"));
 
 const loadAuthMethodKernel = loadOnce(() => import("../auth/method-kernel.js"));
-
-/**
- * Gated on the literal here and at each use, so a production build drops the
- * dev routes with their loaders.
- */
-const loadDebugRequests = process.env.PLUMIX_DEV
-  ? loadOnce(() => import("../dev/history-routes.js"))
-  : undefined;
-
-const loadDebugMail = process.env.PLUMIX_DEV
-  ? loadOnce(() => import("../dev/mail/routes.js"))
-  : undefined;
 
 /**
  * Filenames look like `index.html`, `chunk-abc.js`, `fonts/g.woff2` — paths
@@ -341,34 +316,6 @@ async function tryPlumixRoutes(
   if (pathname.startsWith(PLUMIX_PREFIX)) {
     const csrfFailure = enforcePlumixCsrf(app, ctx, pathname);
     if (csrfFailure) return csrfFailure;
-  }
-
-  // Bound so the dev object narrows for the handler.
-  const dev = ctx.dev;
-  if (
-    process.env.PLUMIX_DEV &&
-    dev !== undefined &&
-    loadDebugRequests !== undefined &&
-    isTrustedDevRequest(ctx.request) &&
-    (pathname === DEBUG_REQUESTS_PREFIX ||
-      pathname.startsWith(`${DEBUG_REQUESTS_PREFIX}/`))
-  ) {
-    const { handleDebugRequests } = await loadDebugRequests();
-    return handleDebugRequests(ctx, dev);
-  }
-  if (
-    process.env.PLUMIX_DEV &&
-    dev !== undefined &&
-    loadDebugMail !== undefined &&
-    isTrustedDevRequest(ctx.request) &&
-    (pathname === DEBUG_MAIL_PREFIX ||
-      pathname.startsWith(`${DEBUG_MAIL_PREFIX}/`))
-  ) {
-    const { handleDebugMail } = await loadDebugMail();
-    return handleDebugMail(ctx, dev, {
-      mails: app.mails,
-      catalogs: app.mailCatalogs,
-    });
   }
 
   if (pathname === RPC_PREFIX || pathname.startsWith(`${RPC_PREFIX}/`)) {

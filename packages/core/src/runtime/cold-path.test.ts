@@ -24,8 +24,6 @@ const DEFERRED = [
   { importer: "runtime/app.ts", specifier: "../rest/build-handler.js" },
   { importer: "runtime/app.ts", specifier: "../rpc/build-handler.js" },
   { importer: "runtime/dispatcher.ts", specifier: "../auth/method-kernel.js" },
-  { importer: "runtime/dispatcher.ts", specifier: "../dev/history-routes.js" },
-  { importer: "runtime/dispatcher.ts", specifier: "../dev/mail/routes.js" },
   { importer: "runtime/dispatcher.ts", specifier: "./sync-settle.js" },
 ] as const;
 

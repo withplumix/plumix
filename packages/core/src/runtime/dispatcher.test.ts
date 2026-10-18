@@ -28,6 +28,7 @@ import { defineAuthMethod } from "../plugin/auth-method.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback } from "../route/render/template-builders.js";
 import { defineTemplate } from "../template.js";
+import { testConfig } from "../test/config.js";
 import {
   createDispatcherHarness,
   DEV_ORIGIN,
@@ -37,13 +38,9 @@ import { userFactory } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
 import { pooledEntryTypesPlugin } from "../test/pooled-entry-types.js";
 import { defineTheme } from "../theme.js";
+import { buildApp } from "./app.js";
 import { matchPluginRawRoute } from "./dispatcher.js";
-
-// Hoisted above the imports: the dev loaders are fixed when their module
-// loads, as a dev build's constant fixes them. Unstubbed once loaded, so each
-// test sets its own.
-vi.hoisted(() => vi.stubEnv("PLUMIX_DEV", "1"));
-vi.unstubAllEnvs();
+import { createPlumixHandler } from "./handler.js";
 
 // Augment the registry so the typed `registerTemplateDep("probe-dep", ...)`
 // call in the render-interior telemetry test compiles.
@@ -3526,6 +3523,55 @@ describe("dispatcher — dev surfaces are loopback-only (#2007)", () => {
     );
 
     expect(response.status).toBe(404);
+  });
+
+  test("the mail gallery 404s when the dev server was reached off-box", async () => {
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const h = await createDispatcherHarness();
+
+    const response = await h.dispatch(
+      plumixRequest("https://cms.example/_plumix/debug/mail"),
+    );
+
+    expect(response.status).toBe(404);
+  });
+
+  test.each(["/_plumix/debug/requests", "/_plumix/debug/mail"])(
+    "%s is served by its registered route alone: unregistered, it is an unknown `/_plumix/` path",
+    async (path) => {
+      vi.stubEnv("PLUMIX_DEV", "1");
+      const app = await buildApp(testConfig());
+      const handler = createPlumixHandler({ ...app, rawRoutes: [] });
+
+      const response = await handler.fetch(
+        plumixRequest(`${DEV_ORIGIN}${path}`),
+        { env: {} },
+      );
+
+      expect(response.status).toBe(404);
+      expect(response.headers.get("x-plumix-hint")).toBe(
+        "unknown-plumix-route",
+      );
+    },
+  );
+
+  test("a plugin id'd `debug` cannot take the history path from core", async () => {
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const plugin = definePlugin("debug", (ctx) => {
+      ctx.registerRoute({
+        method: "GET",
+        path: "/requests",
+        auth: "public",
+        handler: () => new Response("shadowed"),
+      });
+    });
+    const h = await createDispatcherHarness({ config: { plugins: [plugin] } });
+
+    const response = await h.dispatch(
+      plumixRequest(`${DEV_ORIGIN}/_plumix/debug/requests`),
+    );
+
+    expect(await response.text()).not.toBe("shadowed");
   });
 
   test("PLUMIX_DEV_ALLOW_REMOTE re-opens the history off-loopback", async () => {
