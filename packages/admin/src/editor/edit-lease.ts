@@ -97,13 +97,11 @@ export interface EditLeaseApi {
 }
 
 export interface EditLeaseSession {
-  /** Acquire the lease and keep renewing it while it is held. */
   readonly start: () => void;
   /** Replace whoever holds the lease; rejects when the request fails. */
   readonly takeOver: () => Promise<void>;
   /** A save was refused because `holder` holds the lease now. */
   readonly lose: (refusal: LeaseRefusal) => void;
-  /** Stop renewing, and release the lease if this editor holds it. */
   readonly stop: () => void;
 }
 

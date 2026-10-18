@@ -185,6 +185,7 @@ COLUMN` with a constant default avoids the rebuild, but it is a column every
   writes slow. Nothing writes a guarded row that often (autosave is debounced at
   one second per group through one queue), so the visible cost is at most a
   `lastmod` or "updated" time a little in the future after a burst.
-- No migration ships for any of this. The same benchmark shows the guarded
+- No migration touches an existing table for the token, and the lease adds one new table
+  (`edit_leases`, `CREATE TABLE` only). The same benchmark shows the guarded
   write losing no update with four processes racing on one row, against
   thousands lost unguarded, for about 5 to 15% more time per write.

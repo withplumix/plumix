@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, test } from "vitest";
 
 import { etagOf } from "../db/concurrency.js";
-import { acquireEditLease } from "../db/edit-lease.js";
+import { acquireEditLease, readEditLease } from "../db/edit-lease.js";
 import { entries } from "../db/schema/entries.js";
 import { text } from "../plugin/fields/index.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
@@ -78,6 +78,28 @@ describe("entry.revisions.restore", () => {
       code: "LOCKED",
       data: { holder: { id: ada.id, name: "Ada" }, since },
     });
+  });
+
+  test("a restore that passes takeOver lands and takes the lease over", async () => {
+    const { h, entryId, revisionId } = await seedEntryWithRevision();
+    const ada = await editorUser
+      .transient({ db: h.db })
+      .create({ name: "Ada" });
+    await acquireEditLease(
+      h.db,
+      { kind: "entry", id: entryId },
+      { userId: ada.id, surface: "admin" },
+    );
+
+    await h.client.entry.revisions.restore({
+      revisionId,
+      ifMatch: await currentEtag(h.db, entryId),
+      takeOver: true,
+    });
+
+    expect(
+      await readEditLease(h.db, { kind: "entry", id: entryId }),
+    ).toMatchObject({ holder: { id: h.user?.id } });
   });
 
   test("writes the revision's content/title into the live entry", async () => {

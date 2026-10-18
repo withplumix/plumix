@@ -12,7 +12,7 @@ export type EditLeaseSurface = (typeof EDIT_LEASE_SURFACES)[number];
 export const editLeases = sqliteTable(
   "edit_leases",
   (t) => ({
-    /** `entry` today; any table's rows can be leased under a kind of their own. */
+    /** Any table's rows can be leased under a kind of their own. */
     resourceKind: t.text().notNull(),
     /** Text, so a table keyed by text leases the same way as one keyed by id. */
     resourceId: t.text().notNull(),

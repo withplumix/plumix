@@ -45,7 +45,6 @@ export const acquire = base
       : acquireEditLease(context.db, resource, claimant);
   });
 
-/** Every 30 seconds while the editor is open. */
 export const renew = base
   .use(authenticated)
   .input(v.object({ id: idParam }))

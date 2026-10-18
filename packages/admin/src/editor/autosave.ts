@@ -13,7 +13,6 @@ export const AUTOSAVE_DEBOUNCE_MS = 1000;
 export interface EntryConflict {
   readonly etag: string;
   readonly updatedAt: Date;
-  /** Who holds the entry's edit lease now, when anyone does. */
   readonly holder?: LeaseHolder;
 }
 
