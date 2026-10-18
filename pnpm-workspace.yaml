@@ -162,7 +162,7 @@ catalogs:
     # prosemirror/core copy is bundled. @tiptap/pm is an exact-version peer of
     # every package here, so each package that uses tiptap declares it as a
     # dependency: left to the site's package manager, the peer keeps whatever
-    # version an older lockfile holds (#3155). Never pin it in `overrides`,
+    # version an older lockfile holds. Never pin it in `overrides`,
     # which silently rewrites the peer range and forks it away from the
     # version tiptap expects.
     "@tiptap/extension-blockquote": ^3.31.4
