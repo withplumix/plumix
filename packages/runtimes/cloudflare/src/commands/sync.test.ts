@@ -418,6 +418,7 @@ function post(
   return `INSERT INTO entries (id, type, title, slug, author_id, status) VALUES (${String(id)}, 'post', '${slug}', '${slug}', ${String(author)}, '${status}');`;
 }
 
+// Each case starts two miniflare instances.
 describe(
   "cloudflare sync — a local import larger than one exec",
   { timeout: 30_000 },
@@ -461,6 +462,7 @@ describe(
   },
 );
 
+// Each case starts two miniflare instances.
 describe("cloudflare sync — the import's report", { timeout: 30_000 }, () => {
   test("counts rows replaced, added and removed by primary key, and by the whole row in a table without one", async () => {
     const { source, target } = await twoProjects();
@@ -635,6 +637,7 @@ describe("cloudflare sync — the import's report", { timeout: 30_000 }, () => {
   });
 });
 
+// Each case starts two miniflare instances.
 describe("cloudflare sync — a plugin's scope", { timeout: 30_000 }, () => {
   const NOTES =
     "CREATE TABLE plugin_notes (id integer PRIMARY KEY, entry_id integer NOT NULL REFERENCES entries (id) ON DELETE CASCADE, body text)";
@@ -670,6 +673,7 @@ describe("cloudflare sync — a plugin's scope", { timeout: 30_000 }, () => {
   });
 });
 
+// Each case starts two miniflare instances.
 describe("cloudflare sync — the deployed end", { timeout: 30_000 }, () => {
   test("a pull exports each table through D1's export API, as `wrangler d1 export --remote` runs it", async () => {
     captureReport();
@@ -795,6 +799,7 @@ describe("cloudflare sync — the deployed end", { timeout: 30_000 }, () => {
   });
 });
 
+// Each case starts two miniflare instances.
 describe(
   "cloudflare sync — the database a target names",
   { timeout: 30_000 },
@@ -966,6 +971,7 @@ function measureScripts(): { statements: number; longest: number }[] {
   return scripts;
 }
 
+// The 1.1M-row run takes minutes; the default size runs in seconds.
 describe("cloudflare sync — a catalogue at scale", { timeout: 900_000 }, () => {
   test(`${String(SCALE_ROWS)} entry_term rows push through one import call within D1's statement cap, and pull back`, async () => {
     captureReport();

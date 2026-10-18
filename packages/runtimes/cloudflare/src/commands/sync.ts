@@ -45,7 +45,10 @@ import { parseDumpLine } from "./sync-sql.js";
  */
 interface BulkD1 {
   exportTable(table: string): AsyncIterable<SyncRow>;
-  /** Runs a script of one statement per line, all of it or none. */
+  /**
+   * Runs a script of one statement per line. A local end may commit it in
+   * several transactions.
+   */
   execute(script: string): Promise<void>;
 }
 
@@ -131,7 +134,6 @@ function remoteBulk(cwd: string, database: string, scratch: string): BulkD1 {
   };
 }
 
-/** Counts a table's rows as they pass, and reports the total once read. */
 async function* counted(
   table: string,
   rows: AsyncIterable<SyncRow>,
@@ -163,7 +165,6 @@ async function storedKeys(storage: ConnectedObjectStorage): Promise<string[]> {
   return keys;
 }
 
-/** Puts every object of the dump, then deletes the target's others. */
 async function replaceObjects(
   storage: ConnectedObjectStorage,
   from: DumpReader,
