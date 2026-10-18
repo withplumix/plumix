@@ -48,4 +48,12 @@ describe("declareLocations", () => {
       ).toThrow(/header/);
     },
   );
+
+  test("accepts a maxDepth of 20", () => {
+    const locations = declareLocations({
+      header: { label: "Header", maxDepth: 20 },
+    });
+
+    expect(locations.get("header")?.maxDepth).toBe(20);
+  });
 });

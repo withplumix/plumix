@@ -423,6 +423,7 @@ describe("menu RPC", () => {
         header: { label: "Header", maxDepth: 2 },
         mobile: { label: "Mobile", maxDepth: 2 },
         footer: { label: "Footer", maxDepth: 4 },
+        topbar: { label: "Topbar", maxDepth: 3 },
         sidebar: { label: "Sidebar" },
       });
       const m = await seedMenu(h.db, h.factories, "main");
@@ -442,6 +443,10 @@ describe("menu RPC", () => {
         location: "sidebar",
         termSlug: "main",
       });
+      await h.client.menu.assignLocation({
+        location: "topbar",
+        termSlug: "main",
+      });
 
       const result = await h.client.menu.get({ termId: m.id });
 
@@ -449,6 +454,21 @@ describe("menu RPC", () => {
         maxDepth: 2,
         limitedBy: ["header", "mobile"],
       });
+    });
+
+    test("reports a location's maxDepth above the default of 5", async () => {
+      const h = await buildHarness("editor", {
+        sidebar: { label: "Sidebar", maxDepth: 8 },
+      });
+      const m = await seedMenu(h.db, h.factories, "main");
+      await h.client.menu.assignLocation({
+        location: "sidebar",
+        termSlug: "main",
+      });
+
+      const result = await h.client.menu.get({ termId: m.id });
+
+      expect(result).toMatchObject({ maxDepth: 8, limitedBy: ["sidebar"] });
     });
 
     test("reports the default maxDepth of 5 when no location of the menu declares one", async () => {
