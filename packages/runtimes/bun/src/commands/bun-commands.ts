@@ -1,16 +1,22 @@
 import type { CommandRegistry } from "plumix";
-import type { RuntimeDiagnose, RuntimeMigrations } from "plumix/cli";
+import type {
+  RuntimeDiagnose,
+  RuntimeMigrations,
+  RuntimeSync,
+} from "plumix/cli";
 
 import { buildCommand } from "./build.js";
 import { devCommand } from "./dev.js";
 import { diagnose } from "./diagnose.js";
 import { BunCliError } from "./errors.js";
 import { migrations } from "./migrations.js";
+import { sync } from "./sync.js";
 
 interface BunCommandsModule {
   readonly commands: CommandRegistry;
   readonly migrations: RuntimeMigrations;
   readonly diagnose: RuntimeDiagnose;
+  readonly sync: RuntimeSync;
 }
 
 /**
@@ -25,5 +31,6 @@ export function bunCommands(scope: {
     commands: { dev: devCommand, build: buildCommand },
     migrations,
     diagnose,
+    sync,
   };
 }

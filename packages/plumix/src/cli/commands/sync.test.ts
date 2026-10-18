@@ -54,6 +54,7 @@ beforeEach(() => {
 afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 
 function syncCtx(
@@ -279,6 +280,58 @@ describe("plumix sync, a deployed database's target options", () => {
       expect(targetValues).toEqual([values, values]);
     },
   );
+});
+
+describe("plumix sync, the remote end's API token", () => {
+  // Runs a dry pull, then resolves the token each end it opened was given.
+  async function tokensGiven(argv: readonly string[]): Promise<string[]> {
+    const { sync } = await seededEnds();
+    const given: (() => Promise<string>)[] = [];
+    await syncCommand.run(
+      syncCtx(["pull", "--dry-run", "--url", REMOTE, ...argv], {
+        open: (options) => {
+          given.push(options.apiToken);
+          return sync.open(options);
+        },
+      }),
+    );
+    return Promise.all(given.map((token) => token()));
+  }
+
+  test("is --token when it is given", async () => {
+    vi.stubEnv("PLUMIX_API_TOKEN", "from-env");
+
+    expect(await tokensGiven(["--token", "from-flag"])).toEqual([
+      "from-flag",
+      "from-flag",
+    ]);
+  });
+
+  test("is PLUMIX_API_TOKEN without --token", async () => {
+    vi.stubEnv("PLUMIX_API_TOKEN", "from-env");
+
+    expect(await tokensGiven([])).toEqual(["from-env", "from-env"]);
+  });
+
+  test("without either on a non-TTY, fails only once a transport asks for it", async () => {
+    vi.stubEnv("PLUMIX_API_TOKEN", "");
+    const { sync } = await seededEnds();
+    let asked: Promise<string> | undefined;
+
+    await syncCommand.run(
+      syncCtx(["pull", "--dry-run", "--url", REMOTE], {
+        open: (options) => {
+          asked ??= options.apiToken();
+          asked.catch(() => undefined);
+          return sync.open(options);
+        },
+      }),
+    );
+
+    await expect(asked).rejects.toMatchObject({
+      code: "sync_remote_token_missing",
+    });
+  });
 });
 
 describe("plumix sync, closing", () => {

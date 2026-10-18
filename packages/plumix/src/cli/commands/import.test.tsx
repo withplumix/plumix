@@ -470,6 +470,7 @@ async function prodDump(app: PlumixApp, meta: string): Promise<string> {
     target: "remote",
     binding: undefined,
     url: PROD,
+    apiToken: () => Promise.resolve("unused"),
     owners: resolveOwners(dir, join(dir, "plumix.config.ts"), app.config),
     targetValues: {},
   });

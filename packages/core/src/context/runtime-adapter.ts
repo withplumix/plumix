@@ -2,7 +2,7 @@ import type { PlumixConfig } from "../config.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import type { RegisteredScheduledTask } from "../plugin/registry.js";
 import type { PlumixEnv } from "../runtime/contract/bindings.js";
-import type { AssetsBinding } from "../runtime/contract/slots.js";
+import type { AssetsBinding, SyncRow } from "../runtime/contract/slots.js";
 import type { AppContext, DataMigrationDb } from "./app-context.js";
 
 export interface Invocation {
@@ -284,6 +284,12 @@ export interface OpenSyncEndOptions {
   readonly binding: string | undefined;
   /** `--url`: the remote site's origin. Set whenever `target` is `remote`. */
   readonly url: string | undefined;
+  /**
+   * The token a remote end calls `url` with: `--token`, `PLUMIX_API_TOKEN`,
+   * or the device flow's. Resolved on the first call, so a transport that
+   * never calls it never prompts.
+   */
+  readonly apiToken: () => Promise<string>;
   /** In application order; {@link SyncEnd.heads} reads each one's head. */
   readonly owners: readonly MigrationOwner[];
   readonly targetValues: TargetOptionValues;
@@ -305,12 +311,6 @@ export interface SyncScope {
   /** In load order: parents before the rows that reference them. */
   readonly tables: readonly SyncScopeTable[];
 }
-
-/** A SQLite value as a sync carries it; a BLOB is its bytes. */
-export type SyncValue = string | number | null | Uint8Array;
-
-/** One row, each column name to its value. */
-export type SyncRow = Readonly<Record<string, SyncValue>>;
 
 /** Where a sync end exports to. Each call completes before the next starts. */
 export interface DumpWriter {

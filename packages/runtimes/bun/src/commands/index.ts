@@ -1,3 +1,3 @@
 import { bunCommands } from "./bun-commands.js";
 
-export const { commands, migrations, diagnose } = bunCommands(globalThis);
+export const { commands, migrations, diagnose, sync } = bunCommands(globalThis);

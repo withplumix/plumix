@@ -61,6 +61,12 @@ const CORE_WITHHELD: readonly Withholding[] = [
     names: ["headDifferences"],
   },
   {
+    reason:
+      "how `--scope` names resolve to tables, which only `plumix`'s sync " +
+      "and import commands and core's sync routes read",
+    names: ["resolveScopes"],
+  },
+  {
     reason: "the check an import runs on each record's meta, a CLI-only need",
     names: ["checkImportedMeta"],
   },
@@ -331,6 +337,12 @@ const CURATED: Readonly<Record<string, Curated>> = {
           "the lines `sync_migrations_differ` lists; a transport calls " +
           "`assertSameHeads`, which throws with them",
         names: ["headDifferences"],
+      },
+      {
+        reason:
+          "how `--scope` names resolve to tables, which only this package's " +
+          "sync and import commands and core's sync routes read",
+        names: ["resolveScopes"],
       },
     ],
   },

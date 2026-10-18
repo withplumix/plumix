@@ -5,7 +5,18 @@ import type {
 } from "../context/runtime-adapter.js";
 import { CliError } from "./errors.js";
 
-type SyncErrorCode = "sync_migrations_differ";
+type SyncErrorCode =
+  | "sync_migrations_differ"
+  | "sync_author_missing"
+  | "sync_storage_missing"
+  | "sync_unknown_scope"
+  | "sync_scope_requires"
+  | "sync_dump_incomplete"
+  | "sync_dump_malformed"
+  | "sync_remote_refused"
+  | "sync_table_outside_scope"
+  | "sync_remote_url_missing"
+  | "sync_settle_unreachable";
 
 /** What a sync transport throws, so every runtime fails in the same words. */
 export class SyncError extends CliError<SyncErrorCode> {
@@ -21,6 +32,117 @@ export class SyncError extends CliError<SyncErrorCode> {
       undefined,
     );
   }
+
+  static authorMissing(ctx: {
+    table: string;
+    column: string;
+    userId: string;
+  }): SyncError {
+    return new SyncError(
+      "sync_author_missing",
+      `${ctx.table}.${ctx.column} references user ${ctx.userId}, who is not among the dump's authors`,
+      "Nothing was changed. Export the dump again: an export writes every user its rows reference.",
+      undefined,
+    );
+  }
+
+  static unknownScope(ctx: {
+    scope: string;
+    available: readonly string[];
+  }): SyncError {
+    return new SyncError(
+      "sync_unknown_scope",
+      `There is no sync scope "${ctx.scope}"`,
+      `This site's scopes: ${ctx.available.join(", ")}. A plugin is a scope only when it owns tables.`,
+      undefined,
+    );
+  }
+
+  static scopeRequires(ctx: {
+    scope: string;
+    requires: string;
+    reason: string;
+  }): SyncError {
+    return new SyncError(
+      "sync_scope_requires",
+      `The ${ctx.scope} scope travels only with ${ctx.requires}: ${ctx.reason}`,
+      `Nothing was opened. Add \`--scope ${ctx.requires}\`.`,
+      undefined,
+    );
+  }
+
+  static dumpIncomplete(): SyncError {
+    return new SyncError(
+      "sync_dump_incomplete",
+      "The dump stream ended before its last line",
+      "Nothing was changed. Sync again.",
+      undefined,
+    );
+  }
+
+  static dumpMalformed(): SyncError {
+    return new SyncError(
+      "sync_dump_malformed",
+      "A line of the dump stream is not one a sync writes",
+      "Nothing was changed. Check that both ends run the same Plumix version, then sync again.",
+      undefined,
+    );
+  }
+
+  static remoteRefused(ctx: {
+    url: string;
+    status: number;
+    body: string;
+  }): SyncError {
+    return new SyncError(
+      "sync_remote_refused",
+      `${ctx.url} answered ${String(ctx.status)}: ${ctx.body}`,
+      ctx.status === 401 || ctx.status === 403
+        ? "Use an API token whose user holds settings:manage, through `--token` or PLUMIX_API_TOKEN."
+        : undefined,
+      undefined,
+    );
+  }
+
+  static tableOutsideScope(ctx: { scope: string; table: string }): SyncError {
+    return new SyncError(
+      "sync_table_outside_scope",
+      `The table ${ctx.table} is not one the ${ctx.scope} scope holds on this site`,
+      "Nothing was changed.",
+      undefined,
+    );
+  }
+
+  static remoteUrlMissing(): SyncError {
+    return new SyncError(
+      "sync_remote_url_missing",
+      "A remote sync end needs the deployed site's origin",
+      "Pass `--url <origin>`.",
+      undefined,
+    );
+  }
+
+  static settleUnreachable(): SyncError {
+    return new SyncError(
+      "sync_settle_unreachable",
+      "The local site's handler can't run work outside a request, so it can't settle",
+      "The data was replaced. Run the `sync:after` work yourself, or restart `plumix dev`.",
+      undefined,
+    );
+  }
+
+  static storageMissing(): SyncError {
+    return new SyncError(
+      "sync_storage_missing",
+      "The media scope needs the site's storage, and this end has none",
+      "Configure the `storage` slot in plumix.config.ts, or sync without `--scope media`.",
+      undefined,
+    );
+  }
+}
+
+export function isSyncError(error: unknown): error is SyncError {
+  return error instanceof SyncError;
 }
 
 /** Each owner's head, as {@link readSyncHeads} reads it, on one named end. */

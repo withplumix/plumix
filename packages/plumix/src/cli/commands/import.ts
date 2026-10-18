@@ -13,7 +13,7 @@ import type {
   SyncTarget,
   TargetOptionValues,
 } from "@plumix/core";
-import { CORE_SYNC_SCOPE_TABLES } from "@plumix/core/cli";
+import { CORE_SYNC_SCOPE_TABLES, resolveScopes } from "@plumix/core/cli";
 import { settings } from "@plumix/core/schema";
 import { loadOnce } from "@plumix/core/support";
 
@@ -25,7 +25,6 @@ import { resolveOwners } from "../migrate/owners.js";
 import { report } from "../report.js";
 import { readDump, writeDump } from "../sync/dump.js";
 import { rewriteUrls } from "../sync/rewrite-urls.js";
-import { resolveScopes } from "../sync/scopes.js";
 import { parseCommandArgs } from "../target-options.js";
 import {
   closeAll,
@@ -33,6 +32,7 @@ import {
   describeRewrite,
   describeSettle,
   dumpName,
+  remoteApiToken,
   runtimeSyncOf,
   syncDeps,
   withSnapshot,
@@ -55,6 +55,7 @@ const AUTHORING_SCOPE: SyncScope = {
 interface ImportArgs {
   readonly input: string;
   readonly url: string | undefined;
+  readonly token: string | undefined;
   readonly binding: string | undefined;
   readonly dryRun: boolean;
   readonly yes: boolean;
@@ -68,6 +69,7 @@ function parseImportArgs(ctx: CommandContext<PlumixApp>): ImportArgs {
     runtime: ctx.app.config.runtime.name,
     options: {
       url: { type: "string" },
+      token: { type: "string" },
       binding: { type: "string" },
       "dry-run": { type: "boolean", default: false },
       yes: { type: "boolean", default: false },
@@ -88,6 +90,7 @@ function parseImportArgs(ctx: CommandContext<PlumixApp>): ImportArgs {
   return {
     input,
     url: parsed.values.url,
+    token: parsed.values.token,
     binding: parsed.values.binding,
     dryRun: parsed.values["dry-run"],
     yes: parsed.values.yes,
@@ -257,6 +260,7 @@ export const importCommand: CommandDefinition<PlumixApp> = {
       target: targetName,
       binding: args.binding,
       url: args.url,
+      apiToken: remoteApiToken(args.url, args.token),
       owners: resolveOwners(ctx.cwd, ctx.configPath, config),
       targetValues: args.targetValues,
     });

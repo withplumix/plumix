@@ -42,6 +42,40 @@ export interface ConnectedDb {
   readonly close?: () => void;
 }
 
+/** A SQLite value as a sync carries it; a BLOB is its bytes. */
+export type SyncValue = string | number | null | Uint8Array;
+
+/** One row, each column name to its value. */
+export type SyncRow = Readonly<Record<string, SyncValue>>;
+
+/** Runs one statement and returns the rows it produced, none for a write. */
+export interface SyncSqlExecutor {
+  execute(sql: string, args?: readonly SyncValue[]): Promise<SyncRow[]>;
+}
+
+/** One write transaction; the statements it ran take effect on `commit`. */
+export interface SyncSqlTransaction extends SyncSqlExecutor {
+  commit(): Promise<void>;
+  rollback(): Promise<void>;
+}
+
+/** A copy of the database as it was, on the machine that holds the file. */
+export interface SyncDatabaseSnapshot {
+  readonly id: string;
+  /** Where the copy is, and the command that puts it back. */
+  readonly restoreHint: string;
+}
+
+/**
+ * The site's database as `plumix sync` reads and replaces it: a connection of
+ * its own, so an import's transaction holds none of the requests' statements.
+ */
+export interface SyncDatabase extends SyncSqlExecutor {
+  begin(): Promise<SyncSqlTransaction>;
+  snapshot(): Promise<SyncDatabaseSnapshot>;
+  close(): Promise<void>;
+}
+
 export interface DatabaseAdapter<TSchema = Record<string, unknown>> {
   readonly kind: string;
   /**
@@ -61,6 +95,11 @@ export interface DatabaseAdapter<TSchema = Record<string, unknown>> {
    * none needed.
    */
   readonly requiredBindings?: readonly string[];
+  /**
+   * Opens the database for the sync routes. Without it they answer 501, as on
+   * D1, whose CLI uses Cloudflare's own APIs instead.
+   */
+  readonly openSync?: (env: PlumixEnv) => SyncDatabase;
 }
 
 export type ObjectBody =

@@ -3,9 +3,15 @@
 export { CliError, isCliError } from "@plumix/core/cli";
 export {
   assertSameHeads,
+  databaseSyncEnd,
   readSyncHeads,
+  remoteSyncEnd,
   settleSync,
   SyncError,
+} from "@plumix/core/cli";
+export type {
+  DatabaseSyncEndOptions,
+  RemoteSyncEndOptions,
 } from "@plumix/core/cli";
 export { spawnCapturingStderr, spawnInherit } from "@plumix/core/cli";
 export { migrateBeforeDeploy } from "./commands/migrate.js";

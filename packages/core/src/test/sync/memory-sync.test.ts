@@ -17,6 +17,7 @@ function openOptions(target: "local" | "remote"): OpenSyncEndOptions {
     target,
     binding: undefined,
     url: "https://remote.example",
+    apiToken: () => Promise.resolve("unused"),
     owners: [
       {
         name: "core",
@@ -57,6 +58,7 @@ describe("memorySync", () => {
       target: "remote",
       binding: undefined,
       url: "https://remote.example",
+      apiToken: () => Promise.resolve("unused"),
       owners: [
         {
           name: "core",

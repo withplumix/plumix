@@ -34,10 +34,11 @@ plumix sync push --scope content --scope media --url https://example.com --produ
 ## Commands
 
 ```bash
-plumix sync pull|push [--scope <scope>...] [--url <origin>] [--binding <name>] [--dry-run] [--yes] [--no-rewrite-urls]
+plumix sync pull|push [--scope <scope>...] [--url <origin>] [--token <token>] [--binding <name>] [--dry-run] [--yes] [--no-rewrite-urls]
 ```
 
 - `--url` is the deployed site's origin. One end of a sync is always the deployed site, so it is required; without it the command fails with `sync_remote_url_required`.
+- `--token` is the API token a runtime that calls the deployed site uses, as `plumix mail test --remote` does. Without it the token is `PLUMIX_API_TOKEN`, else, on a terminal, one the site's device flow mints: the command prints a link and a code to approve, and never stores the token. With neither and no terminal it fails with `sync_remote_token_missing`. The token's user must hold `settings:manage`. Cloudflare reaches D1 through wrangler instead and asks for one only for the settle after a sync (see [After a sync](#after-a-sync)), which reads `PLUMIX_API_TOKEN` or the device flow, not `--token`.
 - `--scope` names a scope, once per scope. Without one, the sync moves `content`.
 - `--binding` picks the database on a runtime that can have more than one, as `plumix migrate --binding` does.
 - `--dry-run` prints what the sync would change and changes nothing.
@@ -59,6 +60,19 @@ A sync runs these steps in order:
 10. The target settles: every `sync:after` listener runs, then the whole CDN is purged. See [After a sync](#after-a-sync).
 
 A pull takes no snapshot and asks for no confirmation: it only ever overwrites your local database.
+
+## On Node and Bun
+
+`@plumix/runtime-node` and `@plumix/runtime-bun` export `sync`. Their local end is the SQLite file `nodeSqlite()` or `bunSqlite()` names, resolved against the project root, and the site's `storage` slot. Its import is one transaction, so a failed one changes nothing.
+
+Their remote end calls the deployed site's sync routes with the API token. Every route answers `401` without a token and `403` when its user lacks `settings:manage`:
+
+- `GET /_plumix/api/v1/system/sync/heads` answers `{ heads }`, each tracking table's newest migration.
+- `GET /_plumix/api/v1/system/sync/export?scopes=content,media` streams the scopes' rows as NDJSON: each table, then the authors, then the objects, ending in `{"end":true}`.
+- `POST /_plumix/api/v1/system/sync/import?scopes=…&dryRun=true|false` takes the dump as NDJSON in the order an import reads it and answers with the import's report. It is all or nothing: a dump at other migration heads gets `409` before anything is written, and a body that ends before its last line rolls the import back.
+- `POST /_plumix/api/v1/system/sync/snapshot` copies the database file beside itself with `VACUUM INTO`, as `<file>.snapshot-<timestamp>`, and answers `{ id, restoreHint }`. A push prints the hint, which names the copy and the command that restores it with the site stopped.
+
+The routes exist on every runtime. A database slot that cannot open itself for a sync, such as D1, answers `501`.
 
 ## Scopes
 
@@ -149,10 +163,10 @@ plumix import content.jsonl --url https://example.com
 ```
 
 ```bash
-plumix import <dir|file.jsonl> [--url <origin>] [--binding <name>] [--dry-run] [--yes] [--no-rewrite-urls]
+plumix import <dir|file.jsonl> [--url <origin>] [--token <token>] [--binding <name>] [--dry-run] [--yes] [--no-rewrite-urls]
 ```
 
-Without `--url` the import loads your local database. `--url` names the deployed site instead, and then a push's rules hold: the import asks for confirmation unless `--yes` is passed, fails with `import_unconfirmed` when there is no terminal to ask in, and takes a snapshot and prints how to restore it before it writes. Either way it runs the same dry run first and prints its counts, `--dry-run` stops there, and after the import the target settles as after a sync.
+Without `--url` the import loads your local database. `--url` names the deployed site instead, `--token` the API token as for `plumix sync`, and then a push's rules hold: the import asks for confirmation unless `--yes` is passed, fails with `import_unconfirmed` when there is no terminal to ask in, and takes a snapshot and prints how to restore it before it writes. Either way it runs the same dry run first and prints its counts, `--dry-run` stops there, and after the import the target settles as after a sync.
 
 ### The authoring format
 

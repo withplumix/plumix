@@ -277,6 +277,7 @@ function openOptions(
     target,
     binding: undefined,
     url: "https://example.com",
+    apiToken: () => Promise.resolve("unused"),
     owners: [
       {
         name: "core",

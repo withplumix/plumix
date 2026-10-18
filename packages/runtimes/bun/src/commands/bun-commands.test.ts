@@ -5,6 +5,7 @@ import { bunCommands } from "./bun-commands.js";
 import { devCommand } from "./dev.js";
 import { diagnose } from "./diagnose.js";
 import { migrations } from "./migrations.js";
+import { sync } from "./sync.js";
 
 describe("bunCommands", () => {
   test("refuses a scope without Bun, naming `bun --bun` as the fix", () => {
@@ -16,13 +17,14 @@ describe("bunCommands", () => {
     );
   });
 
-  test("on Bun, hands the CLI its dev and build commands, migrations and diagnose", () => {
+  test("on Bun, hands the CLI its dev and build commands, migrations, diagnose and sync", () => {
     const module = bunCommands(globalThis);
 
     expect(module).toEqual({
       commands: { dev: devCommand, build: buildCommand },
       migrations,
       diagnose,
+      sync,
     });
   });
 });

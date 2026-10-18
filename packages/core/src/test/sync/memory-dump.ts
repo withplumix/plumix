@@ -3,8 +3,8 @@ import type {
   DumpReader,
   DumpWriter,
   SyncObject,
-  SyncRow,
 } from "../../context/runtime-adapter.js";
+import type { SyncRow } from "../../runtime/contract/slots.js";
 
 /** What the writer can't count itself: who exported, and in what state. */
 export type MemoryDumpHeader = Pick<

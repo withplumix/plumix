@@ -4,6 +4,7 @@ import type { DatabaseAdapter, PlumixEnv } from "plumix";
 import type { BunSqliteDatabase } from "./bun-sqlite-client.js";
 import { drizzleBunSqlite, openBunSqlite } from "./bun-sqlite-client.js";
 import { PROJECT_ROOT_ENV } from "./entry-constants.js";
+import { openBunSyncDatabase } from "./sync-database.js";
 
 export type { BunSqliteDatabase } from "./bun-sqlite-client.js";
 
@@ -55,6 +56,8 @@ export function bunSqlite(config: BunSqliteConfig): BunSqliteDatabaseAdapter {
         throw error;
       }
     },
+    openSync: (env) =>
+      openBunSyncDatabase(databaseFile(config, projectRoot(env))),
   };
 }
 

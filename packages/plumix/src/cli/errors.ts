@@ -48,13 +48,11 @@ type PlumixCliErrorCode =
   | "dev_environment_not_runnable"
   | "sync_invalid_arguments"
   | "sync_push_unconfirmed"
-  | "sync_unknown_scope"
-  | "sync_scope_requires"
   | "sync_runtime_unsupported"
   | "sync_remote_url_required"
+  | "sync_remote_token_missing"
   | "sync_dump_invalid"
   | "sync_settle_failed"
-  | "sync_remote_token_missing"
   | "sync_settle_refused"
   | "import_invalid_arguments"
   | "import_unconfirmed"
@@ -594,31 +592,6 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
     );
   }
 
-  static syncUnknownScope(ctx: {
-    scope: string;
-    available: readonly string[];
-  }): PlumixCliError {
-    return new PlumixCliError(
-      "sync_unknown_scope",
-      `There is no sync scope "${ctx.scope}"`,
-      `This site's scopes: ${ctx.available.join(", ")}. A plugin is a scope only when it owns tables.`,
-      undefined,
-    );
-  }
-
-  static syncScopeRequires(ctx: {
-    scope: string;
-    requires: string;
-    reason: string;
-  }): PlumixCliError {
-    return new PlumixCliError(
-      "sync_scope_requires",
-      `The ${ctx.scope} scope travels only with ${ctx.requires}: ${ctx.reason}`,
-      `Nothing was opened. Add \`--scope ${ctx.requires}\`.`,
-      undefined,
-    );
-  }
-
   static syncRuntimeUnsupported(ctx: { runtime: string }): PlumixCliError {
     return new PlumixCliError(
       "sync_runtime_unsupported",
@@ -633,6 +606,15 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
       "sync_remote_url_required",
       "plumix sync needs the deployed site's origin to reach its remote end",
       "Pass `--url <origin>`, such as `--url https://example.com`. Nothing was opened.",
+      undefined,
+    );
+  }
+
+  static syncRemoteTokenMissing(): PlumixCliError {
+    return new PlumixCliError(
+      "sync_remote_token_missing",
+      "plumix sync needs an API token to reach the deployed site and has no terminal to authorize one in",
+      "Set `PLUMIX_API_TOKEN` to a token whose user may manage settings, or pass `--token <token>`.",
       undefined,
     );
   }
@@ -663,7 +645,7 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
   }
 
   /** Asked for only once the import has run, so it says the data is replaced. */
-  static syncRemoteTokenMissing(): PlumixCliError {
+  static syncSettleTokenMissing(): PlumixCliError {
     return new PlumixCliError(
       "sync_remote_token_missing",
       "The deployed site's settle needs an API token, and there is no terminal to authorize one in",

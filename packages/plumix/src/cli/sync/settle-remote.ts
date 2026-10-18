@@ -16,7 +16,7 @@ export async function settleDeployedSite(
   const token = await resolveApiToken({
     url,
     token: undefined,
-    missing: () => PlumixCliError.syncRemoteTokenMissing(),
+    missing: () => PlumixCliError.syncSettleTokenMissing(),
   });
   const response = await remoteDeps.fetch(urlUnder(url, SETTLE_PATH), {
     method: "POST",
