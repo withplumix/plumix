@@ -4,7 +4,7 @@ import type {
   ConnectedCdn,
   ListingArchiveData,
 } from "plumix";
-import { authenticatedPolicy } from "plumix/auth";
+import { anonymousPolicy, authenticatedPolicy } from "plumix/auth";
 import { typeTag } from "plumix/db";
 import { definePlugin } from "plumix/plugin";
 import { memoryStorage } from "plumix/runtime";
@@ -32,6 +32,7 @@ declare module "plumix" {
   interface ArchiveTypeRegistry {
     location: { data: LocationData };
     members: { data: LocationData };
+    open: { data: LocationData };
     series: { data: ListingArchiveData };
   }
 }
@@ -66,7 +67,7 @@ const directory = definePlugin("test_directory", (ctx) => {
   });
 });
 
-function resolveLocation(name: "location" | "members") {
+function resolveLocation(name: "location" | "members" | "open") {
   return (_ctx: unknown, params: Record<string, string>) => {
     if (params.location === "atlantis") throw pageNotFound();
     const place = PLACES[params.location ?? ""];
@@ -202,6 +203,33 @@ describe("a plugin archive's card", () => {
         "/_plumix/og/card/archive-type/members/location/london.png",
       )
     ).assertStatus(404);
+  });
+
+  test("is advertised and served for an archive whose policy grants anonymous visitors", async () => {
+    const open = definePlugin("test_open", (ctx) => {
+      ctx.registerArchiveType("open", {
+        routes: ["/open/:location"],
+        access: anonymousPolicy,
+        resolve: resolveLocation("open"),
+      });
+    });
+    const openCard = card.forArchiveType("open").define({
+      key: ({ data }) => cardKey.of("open", data.place),
+      render: ({ data }) => ({ type: "text", text: `Open in ${data.place}` }),
+    });
+    const harness = await createHarness({
+      renderer: rasterRenderer(),
+      before: [open],
+      cards: [openCard],
+    });
+
+    const path = await advertisedCard(harness, "/open/london");
+
+    expect(path).toMatch(
+      /^\/_plumix\/og\/card\/archive-type\/open\/location\/london\/[0-9a-f]{16}\.png$/,
+    );
+    const body = await (await harness.fetch(path ?? "")).text();
+    expect(body).toContain("<text>Open in London</text>");
   });
 
   test("is shared by every page of a listing archive", async () => {

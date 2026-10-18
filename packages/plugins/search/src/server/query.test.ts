@@ -205,6 +205,28 @@ describe("runSearch", () => {
     expect(results.every((result) => result.score !== null)).toBe(true);
   });
 
+  test("a term sharing an entry's id keeps its own title and snippet", async () => {
+    teaserPosts();
+    const entry = await publish({
+      title: "Hydroponics ledger",
+      slug: "ledger",
+      excerpt: "Members read the ledger",
+    });
+    const term = await factoriesFor(db).term.create({
+      id: entry.id,
+      taxonomy: "category",
+      name: "Hydroponics",
+      slug: "hydroponics",
+    });
+    await indexTerms(ctx, [term.id]);
+
+    const { results } = await search("hydroponics");
+    const topic = results.find((result) => result.kind === "term");
+
+    expect(topic).toMatchObject({ id: entry.id, title: "Hydroponics" });
+    expect(topic?.snippet).toContain("<mark>");
+  });
+
   test("an entry of an excluded type is clamped out at read time", async () => {
     await publish({ title: "Hydroponics ledger", slug: "ledger" });
 

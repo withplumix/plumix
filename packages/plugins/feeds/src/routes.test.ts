@@ -1897,6 +1897,40 @@ describe("a feed at the edge", () => {
     });
   });
 
+  test("publishing an entry of a type that is not public keeps the cached feed", async () => {
+    const { cdn, put, purgeTags } = cdnStub();
+    const site = definePlugin("site", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerEntryType("secret", { label: "Secrets", isPublic: false });
+    });
+    const h = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [site, feeds()] },
+    });
+    (await h.fetch("/feed")).assertStatus(200);
+    await h.drainDeferred();
+
+    const published = await h.fetch("/_plumix/rpc/entry/create", {
+      as: await h.seedUser("admin"),
+      json: {
+        json: {
+          type: "secret",
+          title: "Hidden",
+          slug: "hidden",
+          status: "published",
+        },
+        meta: [],
+      },
+    });
+    published.assertStatus(200);
+    await h.drainDeferred();
+
+    const purged = new Set(purgeTags.mock.calls.flatMap(([tags]) => [...tags]));
+    const stored = tagsFor(put, "/feed");
+    expect(stored).not.toEqual([]);
+    expect(stored.some((tag) => purged.has(tag))).toBe(false);
+  });
+
   test("deleting a term in a taxonomy listing no entry types purges its cached feed", async () => {
     const { cdn, put, purgeTags } = cdnStub();
     const site = definePlugin("site", (ctx) => {
