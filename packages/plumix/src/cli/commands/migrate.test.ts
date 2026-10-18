@@ -1455,6 +1455,26 @@ export default [
       },
     );
 
+    // Node and Bun declare no target options, so the refusal comes before
+    // the parser that would reject the flag as unknown.
+    test.each([
+      [["--production"]],
+      [["--env", "production"]],
+      [["--env=production"]],
+    ])(
+      "refuses %j on a runtime with no target options, before it connects",
+      async (argv) => {
+        await expect(
+          migrateCommand.run(applyCtx(["fresh", ...argv])),
+        ).rejects.toMatchObject({
+          code: "migrate_fresh_production",
+          message: "plumix migrate fresh never runs against production",
+        });
+
+        expect(opened).toEqual([]);
+      },
+    );
+
     test("drops every table, then applies every owner's schema and data migrations", async () => {
       writeFileSync(join(dir, "data.mjs"), recording("a1"));
       const withData = (argv: readonly string[]): CommandContext => {

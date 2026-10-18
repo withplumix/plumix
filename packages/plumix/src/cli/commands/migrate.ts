@@ -63,6 +63,11 @@ export const migrateCommand: CommandDefinition = {
       await migrateGenerate(target);
       return;
     }
+    // Before parsing: a runtime that declares no `--production` would
+    // otherwise reject it as unknown, not as production.
+    if (ctx.argv[0] === "fresh" && namesProduction(ctx.argv)) {
+      throw PlumixCliError.migrateFreshProduction();
+    }
     const args = parseMigrateArgs(ctx.argv, target);
     const database = {
       binding: args.binding,
@@ -288,9 +293,6 @@ async function migrateFresh(
   target: MigrationTarget,
   args: MigrateArgs,
 ): Promise<void> {
-  if (namesProduction(args.targetValues)) {
-    throw PlumixCliError.migrateFreshProduction();
-  }
   await checkSiteDrift(target);
   const database = { binding: args.binding, targetValues: args.targetValues };
   await withDatabase(target, database, async (db, owners, data) => {
@@ -304,8 +306,15 @@ async function migrateFresh(
   });
 }
 
-function namesProduction(values: TargetOptionValues): boolean {
-  return values.production === true || values.env === "production";
+/** `--production` or `--env production`, the words ADR 0045 gives production. */
+function namesProduction(argv: readonly string[]): boolean {
+  return argv.some(
+    (arg, i) =>
+      arg === "--production" ||
+      arg.startsWith("--production=") ||
+      arg === "--env=production" ||
+      (arg === "--env" && argv[i + 1] === "production"),
+  );
 }
 
 /** The tables the plan lists: all but SQLite's own and D1's. */
