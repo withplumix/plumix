@@ -103,6 +103,7 @@ describe("runCommand", () => {
           target: { remote: false, summary: "local", notes: [], name: "local" },
         });
       },
+      openRun: () => Promise.reject(new Error("no command here runs the site")),
     };
   }
 

@@ -102,6 +102,132 @@ msgstr ""
 #~ msgid "metaBox.reference.dialogDescription"
 #~ msgstr "{kind} suchen und auswählen"
 
+#. Shown in the type column for users, whose fields have no type
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+#~ msgid "fieldValues.scope.none"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+#~ msgid "fieldValues.unconvertible"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+#~ msgid "fieldValues.settled"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+#~ msgid "fieldValues.settle.pending"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+#~ msgid "fieldValues.error"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+#~ msgid "fieldValues.loading"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+#~ msgid "fieldValues.settle.idle"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+#~ msgid "fieldValues.column.settleable"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+#~ msgid "fieldValues.store.entry"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+#~ msgid "fieldValues.clean"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+#~ msgid "fieldValues.column.key"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+#~ msgid "fieldValues.title"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+#~ msgid "core.adminNav.item.fieldValues"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+#~ msgid "fieldValues.description"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+#~ msgid "core.adminNav.keyword.import"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+#~ msgid "core.adminNav.keyword.meta"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+#~ msgid "fieldValues.column.unconvertible"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+#~ msgid "fieldValues.store.settings"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+#~ msgid "fieldValues.column.store"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+#~ msgid "fieldValues.store.term"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+#~ msgid "fieldValues.reportError"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+#~ msgid "fieldValues.column.scope"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+#~ msgid "fieldValues.report.title"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+#~ msgid "fieldValues.store.user"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+#~ msgid "fieldValues.report.description"
+#~ msgstr ""
+
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
@@ -124,12 +250,6 @@ msgstr " / min {min}"
 #: src/components/meta-box/repeater-field.tsx
 msgid "metaBox.repeater.countSuffixBoth"
 msgstr " / min {min} / max {max}"
-
-#. Shown in the type column for users, whose fields have no type
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/field-values/index.tsx
-msgid "fieldValues.scope.none"
-msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
@@ -202,21 +322,6 @@ msgid "dashboard.count.published"
 msgstr "{count, plural, one {# veröffentlicht} other {# veröffentlicht}}"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/field-values/index.tsx
-msgid "fieldValues.unconvertible"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/field-values/index.tsx
-msgid "fieldValues.settled"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/field-values/index.tsx
-msgid "fieldValues.settle.pending"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.deleteTitle"
 msgstr "{count, plural, one {# Eintrag endgültig löschen?} other {# Einträge endgültig löschen?}}"
@@ -240,11 +345,6 @@ msgstr "{count, plural, one {# Eintrag in den Papierkorb verschoben.} other {# E
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.bulk.toastRestored"
 msgstr "{count, plural, one {# Eintrag wiederhergestellt.} other {# Einträge wiederhergestellt.}}"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/field-values/index.tsx
-msgid "fieldValues.error"
-msgstr ""
 
 #. count: number of selected options in the multi-select
 #. js-lingui-explicit-id
@@ -731,11 +831,6 @@ msgid "login.magicLink.sent.title"
 msgstr "E-Mail prüfen"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/field-values/index.tsx
-msgid "fieldValues.loading"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.submit.pending"
 msgstr "Wird geprüft…"
@@ -854,16 +949,6 @@ msgstr "Mitwirkender"
 #: src/lib/user-role-labels.ts
 msgid "userRole.long.contributor"
 msgstr "Mitwirkender — Entwürfe, keine Veröffentlichung"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/field-values/index.tsx
-msgid "fieldValues.settle.idle"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/field-values/index.tsx
-msgid "fieldValues.column.settleable"
-msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -1624,11 +1709,6 @@ msgid "login.magicLink.emailRequired"
 msgstr "Zuerst Ihre E-Mail oben eingeben."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/field-values/index.tsx
-msgid "fieldValues.store.entry"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.entries"
 msgstr "Beiträge"
@@ -1659,11 +1739,6 @@ msgstr "entry:post:read\n"
 msgid "apiTokens.create.capabilities.placeholder"
 msgstr "entry:post:read\n"
 "entry:post:edit_own"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/field-values/index.tsx
-msgid "fieldValues.clean"
-msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
@@ -1701,21 +1776,6 @@ msgid "editor.plainForm.status.error"
 msgstr "Speichern fehlgeschlagen"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/field-values/index.tsx
-msgid "fieldValues.column.key"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/field-values/index.tsx
-msgid "fieldValues.title"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/lib/core-nav-i18n.ts
-msgid "core.adminNav.item.fieldValues"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.taxonomy.filterByItem"
 msgstr "Filter"
@@ -1734,11 +1794,6 @@ msgstr "Nach Rolle filtern"
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.filterStatusAria"
 msgstr "Nach Status filtern"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/field-values/index.tsx
-msgid "fieldValues.description"
-msgstr ""
 
 #. when: pre-formatted relative-time like '2 hours ago'; author: the user's display name or email
 #. js-lingui-explicit-id
@@ -1810,11 +1865,6 @@ msgstr "Wenn ein Konto für diese E-Mail existiert, haben wir einen Anmelde-Link
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.confirm.description"
 msgstr "Wenn dieser Benutzer Beiträge verfasst hat, weist der nächste Schritt sie neu zu. Lassen Sie «Beiträge unverändert lassen» stehen, wenn keine vorhanden sind."
-
-#. js-lingui-explicit-id
-#: src/lib/core-nav-i18n.ts
-msgid "core.adminNav.keyword.import"
-msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
@@ -2061,11 +2111,6 @@ msgid "core.settings.site.mastodon"
 msgstr "Mastodon-URL"
 
 #. js-lingui-explicit-id
-#: src/lib/core-nav-i18n.ts
-msgid "core.adminNav.keyword.meta"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.authorFilter.mine"
 msgstr "Meine"
@@ -2234,11 +2279,6 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/components/shell/command-palette.tsx
 msgid "palette.group.navigation"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/field-values/index.tsx
-msgid "fieldValues.column.unconvertible"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -3073,11 +3113,6 @@ msgid "settings.title"
 msgstr "Einstellungen"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/field-values/index.tsx
-msgid "fieldValues.store.settings"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.settings"
 msgstr "Einstellungen"
@@ -3271,11 +3306,6 @@ msgid "entries.list.column.status"
 msgstr "Status"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/field-values/index.tsx
-msgid "fieldValues.column.store"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/lib/user-role-labels.ts
 msgid "userRole.subscriber"
 msgstr "Abonnent"
@@ -3329,11 +3359,6 @@ msgstr ""
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.taxonomy.singular"
 msgstr "Begriff"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/field-values/index.tsx
-msgid "fieldValues.store.term"
-msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
@@ -3527,11 +3552,6 @@ msgstr "Der Anbieter hat Ihre E-Mail noch nicht bestätigt. Bestätigen Sie sie 
 #: src/routes/_authenticated/terms/$name/-errors.ts
 msgid "terms.error.parentMismatch"
 msgstr "Der ausgewählte übergeordnete gehört zu einer anderen Taxonomie."
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/field-values/index.tsx
-msgid "fieldValues.reportError"
-msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -3758,16 +3778,6 @@ msgid "editor.entry.create.retry"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/field-values/index.tsx
-msgid "fieldValues.column.scope"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/field-values/index.tsx
-msgid "fieldValues.report.title"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/lib/editor-command-i18n.ts
 msgid "editor.command.ungroup"
 msgstr ""
@@ -3868,11 +3878,6 @@ msgid "users.list.title"
 msgstr "Benutzer"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/field-values/index.tsx
-msgid "fieldValues.store.user"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.users"
 msgstr "Benutzer"
@@ -3881,11 +3886,6 @@ msgstr "Benutzer"
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.item.users"
 msgstr "Benutzer"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/field-values/index.tsx
-msgid "fieldValues.report.description"
-msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts

@@ -28,3 +28,6 @@ export type {
   SyncContractOptions,
   SyncContractSite,
 } from "./sync.js";
+
+export { describeRunContract } from "./run.js";
+export type { RunContractOptions, RunContractSite } from "./run.js";

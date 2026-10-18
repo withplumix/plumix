@@ -5,6 +5,7 @@ import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import type { BunSqliteClient } from "../bun-sqlite-client.js";
 import { drizzleBunSqlite, openBunSqlite } from "../bun-sqlite-client.js";
 import { databaseFile, isBunSqlite } from "../bun-sqlite.js";
+import { PROJECT_ROOT_ENV } from "../entry-constants.js";
 import { MigrationsError } from "../errors.js";
 
 /** The driver is synchronous; a failure still rejects, as on every runtime. */
@@ -115,5 +116,26 @@ export const migrations: RuntimeMigrations = {
         location === "memory" ? "memory" : relative(cwd, path),
       ),
     );
+  },
+  // The slot resolves its file against the project root the env names, as
+  // `plumix dev` sets it.
+  openRun({ cwd, config }) {
+    const database = config.database;
+    if (!isBunSqlite(database)) {
+      return Promise.reject(
+        MigrationsError.databaseNotBunSqlite({ kind: database.kind }),
+      );
+    }
+    const path = databaseFile(database.config, cwd);
+    return Promise.resolve({
+      env: { ...process.env, [PROJECT_ROOT_ENV]: cwd },
+      target: {
+        remote: false,
+        summary: `local · ${relative(cwd, path)}`,
+        notes: [],
+        name: relative(cwd, path),
+      },
+      close: () => Promise.resolve(),
+    });
   },
 };

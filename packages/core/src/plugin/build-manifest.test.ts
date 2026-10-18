@@ -184,7 +184,6 @@ describe("buildManifest", () => {
     expect(management?.items.map((i) => i.to)).toEqual([
       "/users",
       "/allowed-domains",
-      "/field-values",
     ]);
   });
 
@@ -199,7 +198,6 @@ describe("buildManifest", () => {
     expect(management?.items.map((i) => i.to)).toEqual([
       "/users",
       "/allowed-domains",
-      "/field-values",
       "/settings",
     ]);
   });
@@ -213,7 +211,6 @@ describe("buildManifest", () => {
       "/users",
       "/allowed-domains",
       "/mailer",
-      "/field-values",
     ]);
   });
 
@@ -226,7 +223,6 @@ describe("buildManifest", () => {
     expect(management?.items.map((i) => i.to)).toEqual([
       "/users",
       "/allowed-domains",
-      "/field-values",
     ]);
   });
 

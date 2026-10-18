@@ -7,6 +7,7 @@ import type {
   MigrationDatabase,
   MigrationDatabaseTarget,
   MigrationLocation,
+  OpenRunOptions,
   RuntimeMigrations,
 } from "plumix/cli";
 import type { GetPlatformProxyOptions, PlatformProxy } from "wrangler";
@@ -16,7 +17,9 @@ import { loadOnce } from "plumix/support";
 
 import type {
   D1BindingEntry,
+  KvBindingEntry,
   LoadedWranglerConfig,
+  R2BindingEntry,
 } from "../wrangler-config.js";
 import type { D1Block, DeployTarget } from "./d1-target.js";
 import { isD1 } from "../d1.js";
@@ -41,6 +44,8 @@ function localBlock(config: LoadedWranglerConfig): D1Block {
     summary: "local",
     sharedPreviews: false,
     d1Databases: config.d1Databases,
+    r2Buckets: config.r2Buckets,
+    kvNamespaces: config.kvNamespaces,
     ...(config.compatibilityDate === undefined
       ? {}
       : { compatibilityDate: config.compatibilityDate }),
@@ -99,16 +104,61 @@ function remoteEntry(entry: ChosenD1["entry"]): object {
   };
 }
 
+/** The R2 buckets and KV namespaces a run binds beside its D1. */
+interface SlotEntries {
+  readonly r2Buckets: readonly R2BindingEntry[];
+  readonly kvNamespaces: readonly KvBindingEntry[];
+}
+
+const NO_SLOTS: SlotEntries = { r2Buckets: [], kvNamespaces: [] };
+
 /**
- * Only the binding to migrate, so the proxy starts nothing else; `remote` is
- * how wrangler reaches the deployed database.
+ * Those the site's `storage` and `kv` slots name, which core checks are bound
+ * before a run reaches the database.
+ */
+function slotEntries(
+  config: OpenRunOptions["config"],
+  block: D1Block,
+): SlotEntries {
+  const named = new Set([
+    ...(config.storage?.requiredBindings ?? []),
+    ...(config.kv?.requiredBindings ?? []),
+  ]);
+  const isNamed = (entry: { readonly binding?: string }): boolean =>
+    entry.binding !== undefined && named.has(entry.binding);
+  return {
+    r2Buckets: block.r2Buckets.filter(isNamed),
+    kvNamespaces: block.kvNamespaces.filter(isNamed),
+  };
+}
+
+/** As `remoteEntry`: a preview name would redirect it. */
+function remoteSlots({ r2Buckets, kvNamespaces }: SlotEntries): SlotEntries {
+  return {
+    r2Buckets: r2Buckets.map(({ preview_bucket_name: _, ...entry }) => ({
+      ...entry,
+      remote: true,
+    })),
+    kvNamespaces: kvNamespaces.map(({ preview_id: _, ...entry }) => ({
+      ...entry,
+      remote: true,
+    })),
+  };
+}
+
+/**
+ * Only the bindings the command reads, so the proxy starts nothing else;
+ * `remote` is how wrangler reaches the deployed ones.
  */
 function proxyOptions(
   cwd: string,
   configDir: string,
   { block, entry }: ChosenD1,
   location: Reach,
+  slots: SlotEntries,
 ): GetPlatformProxyOptions {
+  const { r2Buckets, kvNamespaces } =
+    location === "remote" ? remoteSlots(slots) : slots;
   const configPath = join(configDir, "wrangler.json");
   writeFileSync(
     configPath,
@@ -119,12 +169,14 @@ function proxyOptions(
         : { compatibility_date: block.compatibilityDate }),
       ...(block.accountId === undefined ? {} : { account_id: block.accountId }),
       d1_databases: [location === "remote" ? remoteEntry(entry) : entry],
+      ...(r2Buckets.length === 0 ? {} : { r2_buckets: r2Buckets }),
+      ...(kvNamespaces.length === 0 ? {} : { kv_namespaces: kvNamespaces }),
     }),
   );
   return {
     configPath,
-    // Local D1 state is keyed by the database id alone, so this file is the
-    // one `plumix dev` opens.
+    // Local state is keyed by the database id, bucket name and namespace id
+    // alone, so these are the ones `plumix dev` opens.
     persist: location === "local" ? { path: join(cwd, LOCAL_STATE) } : false,
     remoteBindings: location === "remote",
   };
@@ -228,6 +280,55 @@ async function chooseD1(
   return chooseBinding(config.filename, block, binding);
 }
 
+/** A platform proxy over the chosen binding, removed with its config. */
+async function openProxy(
+  cwd: string,
+  chosen: ChosenD1,
+  reach: Reach,
+  slots: SlotEntries = NO_SLOTS,
+): Promise<{
+  readonly proxy: PlatformProxy;
+  readonly dispose: () => Promise<void>;
+}> {
+  const configDir = mkdtempSync(join(tmpdir(), "plumix-migrate-"));
+  let proxy: PlatformProxy;
+  try {
+    proxy = await migrationsDeps.getPlatformProxy(
+      proxyOptions(cwd, configDir, chosen, reach, slots),
+    );
+  } catch (error) {
+    rmSync(configDir, { recursive: true, force: true });
+    throw error;
+  }
+  return {
+    proxy,
+    dispose: async () => {
+      await proxy.dispose();
+      rmSync(configDir, { recursive: true, force: true });
+    },
+  };
+}
+
+/** The target options and `--binding` name a database as `migrate` does. */
+async function chooseTarget(
+  cwd: string,
+  config: OpenRunOptions["config"],
+  binding: string | undefined,
+  targetValues: OpenRunOptions["targetValues"],
+): Promise<{
+  readonly chosen: ChosenD1;
+  readonly deployTarget: DeployTarget | null;
+}> {
+  const deployTarget = deployTargetOf(targetValues, process.env.CLOUDFLARE_ENV);
+  const chosen = await chooseD1(
+    cwd,
+    binding ??
+      (isD1(config.database) ? config.database.config.binding : undefined),
+    deployTarget,
+  );
+  return { chosen, deployTarget };
+}
+
 /**
  * `plumix migrate` opens the site's D1 binding through wrangler's
  * `getPlatformProxy`: the local database `plumix dev` uses, or the deployed
@@ -237,35 +338,40 @@ export const migrations: RuntimeMigrations = {
   targetOptions: D1_TARGET_OPTIONS,
   legacyTable: "d1_migrations",
   async open({ cwd, config, location, binding, targetValues }) {
-    const deployTarget = deployTargetOf(
-      targetValues,
-      process.env.CLOUDFLARE_ENV,
-    );
-    const chosen = await chooseD1(
+    const { chosen, deployTarget } = await chooseTarget(
       cwd,
-      binding ??
-        (isD1(config.database) ? config.database.config.binding : undefined),
-      deployTarget,
+      config,
+      binding,
+      targetValues,
     );
     const reach = reachOf(location, deployTarget);
-    const configDir = mkdtempSync(join(tmpdir(), "plumix-migrate-"));
-    let proxy: PlatformProxy;
-    try {
-      proxy = await migrationsDeps.getPlatformProxy(
-        proxyOptions(cwd, configDir, chosen, reach),
-      );
-    } catch (error) {
-      rmSync(configDir, { recursive: true, force: true });
-      throw error;
-    }
+    const { proxy, dispose } = await openProxy(cwd, chosen, reach);
     const d1 = proxy.env[chosen.entry.binding] as D1Database;
     const target = targetOf(chosen, reach);
     const restore =
       reach === "remote" ? () => restorePoint(cwd, target.name) : undefined;
-    return migrationDatabase(d1, target, restore, async () => {
-      await proxy.dispose();
-      rmSync(configDir, { recursive: true, force: true });
-    });
+    return migrationDatabase(d1, target, restore, dispose);
+  },
+  // A D1 binding exists only inside workerd, so the run's env is the proxy's.
+  async openRun({ cwd, config, binding, targetValues }) {
+    const { chosen, deployTarget } = await chooseTarget(
+      cwd,
+      config,
+      binding,
+      targetValues,
+    );
+    const reach = reachOf("site", deployTarget);
+    const { proxy, dispose } = await openProxy(
+      cwd,
+      chosen,
+      reach,
+      slotEntries(config, chosen.block),
+    );
+    return {
+      env: { ...process.env, ...proxy.env },
+      target: targetOf(chosen, reach),
+      close: dispose,
+    };
   },
 };
 

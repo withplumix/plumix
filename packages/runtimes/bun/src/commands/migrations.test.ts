@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { MigrationLocation, PlumixApp } from "plumix";
 import { createDispatcherHarness } from "plumix/test";
+import { describeRunContract } from "plumix/test/conformance";
 import {
   afterEach,
   beforeAll,
@@ -152,5 +153,38 @@ describe("bun migrations", () => {
     await expect(
       open({ kind: "libsql", connect: () => ({ db: {} }) }),
     ).rejects.toThrow(/database slot is "libsql"/);
+  });
+});
+
+/** `plumix meta` hands `handler.run` the env `openRun` returns. */
+describe("bun migrations — a run from the command line", () => {
+  describeRunContract({
+    open: () =>
+      Promise.resolve({
+        migrations,
+        cwd: dir,
+        // Relative, as a site names it: the run resolves it against `cwd`.
+        database: bunSqlite({ path: "data/site.sqlite" }),
+      }),
+  });
+
+  test("is announced by the file it opens", async () => {
+    const opened = await migrations.openRun({
+      cwd: dir,
+      config: {
+        ...base.config,
+        database: bunSqlite({ path: "data/site.sqlite" }),
+      },
+      binding: undefined,
+      targetValues: {},
+    });
+    await opened.close();
+
+    expect(opened.target).toEqual({
+      remote: false,
+      summary: "local · data/site.sqlite",
+      notes: [],
+      name: "data/site.sqlite",
+    });
   });
 });

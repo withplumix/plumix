@@ -84,8 +84,8 @@ export interface PlumixHandler {
   ) => void | Promise<void | ScheduledRunReport>;
   /**
    * Runs work outside a request with a request's context, committing and
-   * flushing purges like one. Throws when the database is unreachable from
-   * here, like D1 from Node.
+   * flushing purges like one. Throws when the database is unreachable through
+   * the invocation's env, like D1 missing from `process.env`.
    */
   readonly run?: <T>(
     work: (ctx: AppContext) => Promise<T>,
@@ -245,6 +245,24 @@ export interface RuntimeMigrations {
    */
   readonly legacyTable: string;
   open(options: OpenMigrationDatabaseOptions): Promise<MigrationDatabase>;
+  /**
+   * The env a `handler.run` from the CLI reaches the same database through,
+   * for `plumix meta`.
+   */
+  openRun(options: OpenRunOptions): Promise<RunEnvironment>;
+}
+
+export type OpenRunOptions = Omit<OpenMigrationDatabaseOptions, "location">;
+
+/** The env one command run hands `handler.run`, until it closes. */
+export interface RunEnvironment {
+  /**
+   * The process env, with every binding the site's slots read over it, opened
+   * against the database the target options name.
+   */
+  readonly env: PlumixEnv;
+  readonly target: MigrationDatabaseTarget;
+  close(): Promise<void>;
 }
 
 /** A table owner whose history applies to a site (ADR 0027). */

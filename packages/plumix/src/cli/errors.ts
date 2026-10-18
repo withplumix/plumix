@@ -4,6 +4,8 @@ type PlumixCliErrorCode =
   | "unknown_command"
   | "cron_run_invalid_expression"
   | "meta_database_unreachable"
+  | "meta_invalid_arguments"
+  | "meta_settle_unconfirmed"
   | "cron_run_database_unavailable"
   | "cron_run_tasks_failed"
   | "cron_run_never_started"
@@ -109,7 +111,7 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
     return new PlumixCliError(
       "meta_database_unreachable",
       `Could not reach the site's database from here: ${ctx.detail}`,
-      "A database that only exists inside the platform, such as D1 on Cloudflare, can't be reached from the command line. Use the admin's Field values page, which runs the same settle inside the site.",
+      "Run `plumix migrate` with the same options if the database is new. `--binding <name>` picks one of several databases, and the target options `plumix --help` lists for the runtime, such as Cloudflare's `--production`, `--preview` and `--env <name>`, name a deployed one.",
       ctx.cause,
     );
   }
@@ -237,6 +239,24 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
       "migrate_generate_failed",
       "drizzle-kit generate failed — migrations were not updated",
       "Its output is above. A prompt that needs a TTY means drizzle-kit wants to know whether a column or table was renamed: run `plumix migrate generate` in an interactive terminal to answer it.",
+      undefined,
+    );
+  }
+
+  static metaInvalidArguments(ctx: { cause: unknown }): PlumixCliError {
+    return new PlumixCliError(
+      "meta_invalid_arguments",
+      "plumix meta was given an argument it does not take",
+      "Usage: `plumix meta [report | settle] [--binding <name>] [--dry-run] [--yes]`, plus the target options `plumix --help` lists for the runtime.",
+      ctx.cause,
+    );
+  }
+
+  static metaSettleUnconfirmed(): PlumixCliError {
+    return new PlumixCliError(
+      "meta_settle_unconfirmed",
+      "plumix meta settle writes to a deployed database and has no terminal to confirm it in",
+      "Nothing was changed. Pass `--dry-run` to see what it would settle, then `--yes` to settle it.",
       undefined,
     );
   }

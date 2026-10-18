@@ -3,7 +3,9 @@ import { loadOnce } from "plumix/support";
 
 import type {
   D1BindingEntry,
+  KvBindingEntry,
   LoadedWranglerConfig,
+  R2BindingEntry,
 } from "../wrangler-config.js";
 import { CloudflareCliError } from "./errors.js";
 
@@ -66,6 +68,9 @@ export interface D1Block {
   /** Whether it is the top-level `previews`, every branch's by default. */
   readonly sharedPreviews: boolean;
   readonly d1Databases: readonly D1BindingEntry[];
+  /** Bound beside the D1 for a run, whose slots read them too. */
+  readonly r2Buckets: readonly R2BindingEntry[];
+  readonly kvNamespaces: readonly KvBindingEntry[];
   readonly compatibilityDate?: string;
   readonly accountId?: string;
 }
@@ -80,10 +85,34 @@ function entriesOf(
   }));
 }
 
+function bindingsOf(
+  block: ResolvedBindings,
+): Pick<D1Block, "d1Databases" | "r2Buckets" | "kvNamespaces"> {
+  return {
+    d1Databases: entriesOf(block.d1_databases),
+    r2Buckets: (block.r2_buckets ?? []).map(
+      ({ binding, bucket_name, jurisdiction }) => ({
+        ...(binding === undefined ? {} : { binding }),
+        ...(bucket_name === undefined ? {} : { bucket_name }),
+        ...(jurisdiction === undefined ? {} : { jurisdiction }),
+      }),
+    ),
+    kvNamespaces: (block.kv_namespaces ?? []).map(({ binding, id }) => ({
+      ...(binding === undefined ? {} : { binding }),
+      ...(id === undefined ? {} : { id }),
+    })),
+  };
+}
+
 /** The part of wrangler's resolved config a target reads. */
-interface ResolvedWranglerConfig {
+interface ResolvedBindings {
   readonly d1_databases?: readonly D1BindingEntry[];
-  readonly previews?: { readonly d1_databases?: readonly D1BindingEntry[] };
+  readonly r2_buckets?: readonly R2BindingEntry[];
+  readonly kv_namespaces?: readonly KvBindingEntry[];
+}
+
+interface ResolvedWranglerConfig extends ResolvedBindings {
+  readonly previews?: ResolvedBindings;
   readonly compatibility_date?: string;
   readonly account_id?: string;
 }
@@ -126,6 +155,8 @@ export async function resolveD1Block(
       summary: `${label} (${path})`,
       sharedPreviews: false,
       d1Databases: [],
+      r2Buckets: [],
+      kvNamespaces: [],
     };
   }
   const reader = await wranglerConfigReader();
@@ -147,7 +178,7 @@ export async function resolveD1Block(
       path: named ? envPath : "the top level",
       summary: `${label} (${named ? envPath : "top level"})`,
       sharedPreviews: false,
-      d1Databases: entriesOf(resolved.d1_databases),
+      ...bindingsOf(resolved),
       ...settings,
     };
   }
@@ -156,7 +187,7 @@ export async function resolveD1Block(
     path: ownPreviews ? `${envPath}.previews` : "previews",
     summary: `${label} (${previewsProvenance(ownPreviews, named, envPath)})`,
     sharedPreviews: !ownPreviews,
-    d1Databases: entriesOf(resolved.previews?.d1_databases),
+    ...bindingsOf(resolved.previews ?? {}),
     ...settings,
   };
 }

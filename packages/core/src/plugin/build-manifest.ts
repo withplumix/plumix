@@ -375,20 +375,6 @@ const CORE_NAV_ITEMS: readonly {
   },
   {
     groupId: "management",
-    item: {
-      to: "/field-values",
-      label: { id: "core.adminNav.item.fieldValues", message: "Field values" },
-      coreIcon: "settings",
-      order: 190,
-      capability: "settings:manage",
-      keywords: [
-        { id: "core.adminNav.keyword.import", message: "import" },
-        { id: "core.adminNav.keyword.meta", message: "meta" },
-      ],
-    },
-  },
-  {
-    groupId: "management",
     settingsPages: true,
     item: {
       to: "/settings",

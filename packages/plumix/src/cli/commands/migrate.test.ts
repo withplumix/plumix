@@ -381,6 +381,7 @@ describe("applying owner histories", () => {
           ),
         );
       },
+      openRun: () => Promise.reject(new Error("migrate never runs the site")),
       ...overrides,
     };
   }

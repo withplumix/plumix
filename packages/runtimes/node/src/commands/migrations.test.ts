@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { MigrationLocation, PlumixApp } from "plumix";
 import { createDispatcherHarness } from "plumix/test";
+import { describeRunContract } from "plumix/test/conformance";
 import {
   afterEach,
   beforeAll,
@@ -152,5 +153,39 @@ describe("node migrations", () => {
     await expect(
       open({ kind: "libsql", connect: () => ({ db: {} }) }),
     ).rejects.toThrow(/database slot is "libsql"/);
+  });
+});
+
+/** `plumix meta` hands `handler.run` the env `openRun` returns. */
+describe("node migrations — a run from the command line", () => {
+  describeRunContract({
+    open: () =>
+      Promise.resolve({
+        migrations,
+        cwd: dir,
+        // Absolute: `nodeSqlite()` resolves against the process cwd, which
+        // `plumix meta` moves to the project root before anything opens.
+        database: nodeSqlite({ path: join(dir, "data/site.sqlite") }),
+      }),
+  });
+
+  test("is announced by the file it opens", async () => {
+    const opened = await migrations.openRun({
+      cwd: dir,
+      config: {
+        ...base.config,
+        database: nodeSqlite({ path: "data/site.sqlite" }),
+      },
+      binding: undefined,
+      targetValues: {},
+    });
+    await opened.close();
+
+    expect(opened.target).toEqual({
+      remote: false,
+      summary: "local · data/site.sqlite",
+      notes: [],
+      name: "data/site.sqlite",
+    });
   });
 });
