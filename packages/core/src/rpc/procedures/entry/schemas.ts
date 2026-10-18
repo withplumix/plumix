@@ -1,6 +1,7 @@
 import * as v from "valibot";
 
 import { entryInsertSchema } from "../../../db/schema/entries.js";
+import { ENTRY_LIST_ORDER_COLUMNS } from "../../../entries/contract/list-order.js";
 import { idParam, metaInputSchema } from "../../contract/validation.js";
 import { slugSchema } from "../../schemas.js";
 
@@ -151,17 +152,6 @@ const termSlugSchema = v.pipe(
   v.minLength(1),
   v.maxLength(200),
 );
-
-/**
- * Wire names, not drizzle field names, so the API stays stable if the TS
- * fields are renamed.
- */
-export const ENTRY_LIST_ORDER_COLUMNS = [
-  "updated_at",
-  "published_at",
-  "title",
-  "sort_order",
-] as const;
 
 export const entryListInputSchema = v.object({
   type: v.optional(trimmedText(100)),

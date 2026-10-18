@@ -1,7 +1,7 @@
 import type { MessageDescriptor } from "@lingui/core";
 import { defineMessage } from "@lingui/core/macro";
 
-import type { UserRole } from "@plumix/core/schema";
+import type { UserRole } from "@plumix/core/manifest";
 
 /**
  * The short form; `ROLE_LABEL_LONG` spells out each role's trade-offs for

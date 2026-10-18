@@ -41,17 +41,10 @@ import {
   SelectValue,
 } from "@plumix/admin-ui/select";
 import { Toggle } from "@plumix/admin-ui/toggle";
+import { USER_ROLES } from "@plumix/core/manifest";
 import { domainPattern, vMessage } from "@plumix/core/validation";
 
 import { describeAllowedDomainError } from "./-errors.js";
-
-const USER_ROLES = [
-  "subscriber",
-  "contributor",
-  "author",
-  "editor",
-  "admin",
-] as const satisfies readonly UserRole[];
 
 /**
  * Descriptors that need runtime indirection — used outside JSX (string

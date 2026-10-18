@@ -3,16 +3,10 @@ import { sqliteTable, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-valibot";
 
 import type { JsonObject } from "../../json.js";
+import { USER_ROLES } from "../../users/contract/roles.js";
 
-export const USER_ROLES = [
-  "subscriber",
-  "contributor",
-  "author",
-  "editor",
-  "admin",
-] as const;
-
-export type UserRole = (typeof USER_ROLES)[number];
+export type { UserRole } from "../../users/contract/roles.js";
+export { USER_ROLES } from "../../users/contract/roles.js";
 
 export const users = sqliteTable(
   "users",

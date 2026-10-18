@@ -20,3 +20,10 @@ export { isFieldVisible } from "./fields/condition.js";
 export type { NamedTemplateChoice } from "../route/contract/named-template.js";
 export { NAMED_TEMPLATE_META_KEY } from "../route/contract/named-template.js";
 export { ACCESS_POLICY_META_KEY } from "../access/contract/meta-key.js";
+
+// Not from `db/schema`: it imports drizzle, which the admin bundle must avoid.
+export { ENTRY_LIST_ORDER_COLUMNS } from "../entries/contract/list-order.js";
+export type { EntryStatus } from "../entries/contract/status.js";
+export { ENTRY_STATUSES } from "../entries/contract/status.js";
+export type { UserRole } from "../users/contract/roles.js";
+export { USER_ROLES } from "../users/contract/roles.js";

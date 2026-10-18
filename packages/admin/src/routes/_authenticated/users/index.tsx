@@ -38,8 +38,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@plumix/admin-ui/select";
-
-import { USER_ROLES } from "./-constants.js";
+import { USER_ROLES } from "@plumix/core/manifest";
 
 const PAGE_SIZE = 20;
 
