@@ -93,4 +93,27 @@ describe("anonymousContext", () => {
 
     expect(seen).toBe("anonymous");
   });
+
+  test("drops its memo entry when a write invalidates the entry's tag", async () => {
+    const anonymous = anonymousContext(await editorContext());
+    await anonymous.memo("test:title", () => Promise.resolve("before"), [
+      "entry:1",
+    ]);
+
+    anonymous.memo.invalidate(["entry:1"]);
+    const seen = await anonymous.memo("test:title", () =>
+      Promise.resolve("after"),
+    );
+
+    expect(seen).toBe("after");
+  });
+
+  test("keeps two keys memoed through it as two entries", async () => {
+    const anonymous = anonymousContext(await editorContext());
+    await anonymous.memo("test:one", () => Promise.resolve("one"));
+
+    const seen = await anonymous.memo("test:two", () => Promise.resolve("two"));
+
+    expect(seen).toBe("two");
+  });
 });
