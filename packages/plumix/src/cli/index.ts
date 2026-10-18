@@ -300,7 +300,7 @@ function targetOptionGroup(
   runtimeModule: RuntimeCommandsModule,
 ): TargetOptionGroup {
   const takers = [
-    ...(runtimeModule.migrations?.targetOptions ? ["migrate"] : []),
+    ...(runtimeModule.migrations?.targetOptions ? ["migrate", "meta"] : []),
     ...(runtimeModule.sync?.targetOptions ? ["sync", "import"] : []),
   ];
   return {

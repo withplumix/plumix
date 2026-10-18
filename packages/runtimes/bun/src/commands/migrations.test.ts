@@ -3,6 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { MigrationLocation, PlumixApp } from "plumix";
+import { sql } from "drizzle-orm";
+import { createRuntimeHandler } from "plumix/runtime";
 import { createDispatcherHarness } from "plumix/test";
 import {
   afterEach,
@@ -152,5 +154,47 @@ describe("bun migrations", () => {
     await expect(
       open({ kind: "libsql", connect: () => ({ db: {} }) }),
     ).rejects.toThrow(/database slot is "libsql"/);
+  });
+});
+
+/** `plumix meta` hands `handler.run` the env `openRun` returns. */
+describe("bun migrations — a run from the command line", () => {
+  test("writes through the file bunSqlite() names", async () => {
+    const config = {
+      ...base.config,
+      database: bunSqlite({ path: join(dir, "site.sqlite") }),
+    };
+    const opened = await migrations.openRun({
+      cwd: dir,
+      config,
+      binding: undefined,
+      targetValues: {},
+    });
+    const handler = createRuntimeHandler({ ...base, config });
+    try {
+      await handler.run?.(
+        async (ctx) => {
+          await ctx.db.run(sql`CREATE TABLE probe (id integer)`);
+        },
+        { env: opened.env },
+      );
+    } finally {
+      await handler.dispose?.();
+      await opened.close();
+    }
+
+    const db = await open(config.database);
+    try {
+      expect(
+        await db.all("SELECT name FROM sqlite_master WHERE name = 'probe'"),
+      ).toEqual([{ name: "probe" }]);
+    } finally {
+      await db.close();
+    }
+    expect(opened.target).toEqual({
+      remote: false,
+      summary: "local · site.sqlite",
+      notes: [],
+    });
   });
 });

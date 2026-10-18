@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { MigrationLocation, PlumixApp, TargetOptionValues } from "plumix";
 import type { GetPlatformProxyOptions, PlatformProxy } from "wrangler";
+import { sql } from "drizzle-orm";
+import { createRuntimeHandler } from "plumix/runtime";
 import { createDispatcherHarness } from "plumix/test";
 import {
   afterEach,
@@ -16,6 +18,8 @@ import {
 } from "vitest";
 
 import { d1 } from "../d1.js";
+import { kv } from "../kv.js";
+import { r2 } from "../r2.js";
 import { migrations, migrationsDeps } from "./migrations.js";
 
 const D1_ENTRY = {
@@ -555,5 +559,122 @@ describe("cloudflare migrations — the database a target names", () => {
     const { summary } = await reached({});
 
     expect(summary).toBe("local · DB · site-prod");
+  });
+});
+
+/** `plumix meta` hands `handler.run` the env `openRun` returns. */
+describe("cloudflare migrations — a run from the command line", () => {
+  const site = () => ({ ...app.config, database: d1({ binding: "DB" }) });
+
+  const openRun = (target: TargetOptionValues = {}, binding?: string) =>
+    migrations.openRun({
+      cwd: dir,
+      config: site(),
+      binding,
+      targetValues: target,
+    });
+
+  // Real miniflare: what proves the run lands where `plumix dev` reads.
+  test("writes through the local D1 `plumix dev` uses", async () => {
+    writeWrangler([D1_ENTRY]);
+    const opened = await openRun();
+    const handler = createRuntimeHandler({ ...app, config: site() });
+    try {
+      await handler.run?.(
+        async (ctx) => {
+          await ctx.db.run(sql`CREATE TABLE probe (id integer)`);
+        },
+        { env: opened.env },
+      );
+    } finally {
+      await handler.dispose?.();
+      await opened.close();
+    }
+
+    const db = await open("site");
+    try {
+      expect(
+        await db.all("SELECT name FROM sqlite_master WHERE name = 'probe'"),
+      ).toEqual([{ name: "probe" }]);
+    } finally {
+      await db.close();
+    }
+    expect(opened.target.summary).toBe("local · DB · site");
+  }, 30_000);
+
+  const MEDIA = { binding: "MEDIA", bucket_name: "site-media" };
+  const CACHE = { binding: "CACHE", id: "cache-id" };
+
+  const withSlots = () =>
+    migrations.openRun({
+      cwd: dir,
+      config: {
+        ...site(),
+        storage: r2({ binding: "MEDIA" }),
+        kv: kv({ binding: "CACHE" }),
+      },
+      binding: undefined,
+      targetValues: {},
+    });
+
+  // Core checks every slot's binding before a run reaches the database.
+  test("binds the R2 bucket and KV namespace the site's slots name, and nothing else", async () => {
+    writeConfig({
+      d1_databases: [D1_ENTRY],
+      r2_buckets: [MEDIA, { binding: "UNUSED", bucket_name: "other" }],
+      kv_namespaces: [CACHE],
+    });
+    const calls = stubWrangler();
+
+    const opened = await withSlots();
+    await opened.close();
+
+    expect(calls[0]?.config).toMatchObject({
+      d1_databases: [D1_ENTRY],
+      r2_buckets: [MEDIA],
+      kv_namespaces: [CACHE],
+    });
+  });
+
+  test("a deployed target reaches every binding remotely", async () => {
+    writeConfig({
+      d1_databases: [D1_ENTRY],
+      r2_buckets: [{ ...MEDIA, preview_bucket_name: "dev-media" }],
+      kv_namespaces: [{ ...CACHE, preview_id: "dev-cache" }],
+    });
+    const calls = stubWrangler();
+
+    const opened = await migrations.openRun({
+      cwd: dir,
+      config: {
+        ...site(),
+        storage: r2({ binding: "MEDIA" }),
+        kv: kv({ binding: "CACHE" }),
+      },
+      binding: undefined,
+      targetValues: { production: true },
+    });
+    await opened.close();
+
+    expect(calls[0]?.options.remoteBindings).toBe(true);
+    expect(calls[0]?.config).toMatchObject({
+      d1_databases: [{ ...D1_ENTRY, remote: true }],
+      r2_buckets: [{ ...MEDIA, remote: true }],
+      kv_namespaces: [{ ...CACHE, remote: true }],
+    });
+    expect(opened.target.remote).toBe(true);
+  });
+
+  test("with several D1 bindings, requires --binding as migrate does", async () => {
+    writeWrangler([D1_ENTRY, { ...D1_ENTRY, binding: "ARCHIVE" }]);
+
+    await expect(
+      migrations.openRun({
+        cwd: dir,
+        config: app.config,
+        binding: undefined,
+        targetValues: {},
+      }),
+    ).rejects.toMatchObject({ code: "migrate_ambiguous_binding" });
   });
 });

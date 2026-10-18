@@ -114,4 +114,23 @@ export const migrations: RuntimeMigrations = {
       ),
     );
   },
+  // The slot opens the same file from the process env, as on a request.
+  openRun({ cwd, config }) {
+    const database = config.database;
+    if (!isNodeSqlite(database)) {
+      return Promise.reject(
+        MigrationsError.databaseNotNodeSqlite({ kind: database.kind }),
+      );
+    }
+    const path = resolve(cwd, database.config.path);
+    return Promise.resolve({
+      env: process.env,
+      target: {
+        remote: false,
+        summary: `local · ${relative(cwd, path)}`,
+        notes: [],
+      },
+      close: () => Promise.resolve(),
+    });
+  },
 };

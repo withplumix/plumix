@@ -38,7 +38,6 @@ export type {
   EntryUpdateInput,
 } from "./procedures/entry/schemas.js";
 export { settingsRouter } from "./procedures/settings/index.js";
-export { metaRouter } from "./procedures/meta/index.js";
 export type {
   MetaStore,
   MetaSweep,

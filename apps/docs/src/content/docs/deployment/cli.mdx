@@ -13,7 +13,7 @@ import { Aside } from "@astrojs/starlight/components";
 
 ## Overview
 
-`plumix migrate`, `plumix sync`, `plumix import`, `plumix cron`, `plumix meta`, `plumix doctor` and `plumix i18n` are built in: they run the same way regardless of which `runtime` a site configures. `dev`, `build`, and on some runtimes `deploy` and `types` come from `RuntimeAdapter.commandsModule` instead, so their behaviour is the adapter's to define. The same module tells `migrate` how to open the runtime's database and declares the target options that name its deployed databases, and gives `sync` and `import` their transport. [Runtime Adapters](/deployment/runtimes/#the-adapter) covers `commandsModule` from the package-author side.
+`plumix migrate`, `plumix sync`, `plumix import`, `plumix cron`, `plumix meta`, `plumix doctor` and `plumix i18n` are built in: they run the same way regardless of which `runtime` a site configures. `dev`, `build`, and on some runtimes `deploy` and `types` come from `RuntimeAdapter.commandsModule` instead, so their behaviour is the adapter's to define. The same module tells `migrate` and `meta` how to open the runtime's database and declares the target options that name its deployed databases, and gives `sync` and `import` their transport. [Runtime Adapters](/deployment/runtimes/#the-adapter) covers `commandsModule` from the package-author side.
 
 `plumix --help` prints every command it can currently resolve, grouped by where it came from: a project with no `plumix.config.ts` in reach sees only the built-ins, because loading the runtime's commands means loading the config first. Under them it lists the runtime's target options and the commands that take them.
 
@@ -162,7 +162,18 @@ plumix meta
 plumix meta settle
 ```
 
-It runs the same conversion the admin's Field values page runs, through the site's own database, plugins and CDN purges. It needs a database the command line can reach, which means a Node deploy. On Cloudflare, D1 exists only inside the Worker, so the command fails and points to the admin page instead.
+It runs through the site's own handler, so the conversion uses the site's database, plugins and CDN purges, and a settle that changes values purges the pages that show them, as a request would. It walks every row in one run, however many there are.
+
+It reaches the database [`migrate`](#migrate) reaches, with the same options: the local one without a target option, and on Cloudflare the deployed D1 that `--production`, `--preview` or `--env <name>` names, with `--binding <name>` when the wrangler config declares several. On Cloudflare it also binds the R2 bucket and KV namespace the site's `storage` and `kv` slots name. Node and Bun declare no target options, so one fails there with `unknown_option`, naming the runtime. Every run first prints the database it opened.
+
+Before a settle writes to a deployed database, it prints what it would settle and asks for confirmation, as `migrate` does. `--yes` skips the question, `--dry-run` prints the plan and stops, and without a terminal to ask in and no `--yes` it fails with `meta_settle_unconfirmed`, having written nothing. A local settle never asks.
+
+```bash
+plumix meta --production
+plumix meta settle --production --dry-run
+```
+
+A CDN purge reads its credentials from the environment the command runs in, so a deployed settle purges only when they are set there. On Cloudflare, Workers Caching (`cache.enabled`) is reachable only from inside the Worker, so pages it holds keep their copy until it expires.
 
 ### `doctor`
 

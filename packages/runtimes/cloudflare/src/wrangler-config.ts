@@ -15,6 +15,23 @@ export interface D1BindingEntry {
   readonly preview_database_id?: string;
 }
 
+/** An `r2_buckets` entry; local R2 state is keyed by `bucket_name`. */
+export interface R2BindingEntry {
+  readonly binding?: string;
+  readonly bucket_name?: string;
+  readonly jurisdiction?: string;
+  /** The bucket `wrangler dev` opens in place of `bucket_name`. */
+  readonly preview_bucket_name?: string;
+}
+
+/** A `kv_namespaces` entry; local KV state is keyed by `id`. */
+export interface KvBindingEntry {
+  readonly binding?: string;
+  readonly id?: string;
+  /** The namespace `wrangler dev` opens in place of `id`. */
+  readonly preview_id?: string;
+}
+
 /** A block's `previews`: absent, a Worker Preview takes the top level's. */
 interface WranglerPreviews {
   readonly d1Databases: readonly D1BindingEntry[];
@@ -32,6 +49,10 @@ const WRANGLER_FILENAMES = ["wrangler.jsonc", "wrangler.json", "wrangler.toml"];
 export interface LoadedWranglerConfig {
   readonly filename: string;
   readonly d1Databases: readonly D1BindingEntry[];
+  /** The top level's, which `plumix dev` binds. */
+  readonly r2Buckets: readonly R2BindingEntry[];
+  /** The top level's, which `plumix dev` binds. */
+  readonly kvNamespaces: readonly KvBindingEntry[];
   readonly previews?: WranglerPreviews;
   readonly environments: readonly WranglerEnvironment[];
   readonly compatibilityDate?: string;
@@ -67,6 +88,8 @@ export function loadWranglerConfig(cwd: string): LoadedWranglerConfig | null {
     return {
       filename,
       d1Databases: d1DatabasesOf(parsed),
+      r2Buckets: entriesOf<R2BindingEntry>(parsed, "r2_buckets"),
+      kvNamespaces: entriesOf<KvBindingEntry>(parsed, "kv_namespaces"),
       ...(previews === undefined ? {} : { previews }),
       environments: environmentsOf(parsed),
       observabilityEnabled: isEnabled(observability),
@@ -83,9 +106,13 @@ function isObject(value: unknown): value is Record<string, unknown> {
 }
 
 function d1DatabasesOf(block: unknown): D1BindingEntry[] {
-  const raw = isObject(block) ? block.d1_databases : undefined;
+  return entriesOf<D1BindingEntry>(block, "d1_databases");
+}
+
+function entriesOf<Entry extends object>(block: unknown, key: string): Entry[] {
+  const raw = isObject(block) ? block[key] : undefined;
   return Array.isArray(raw)
-    ? raw.filter((entry): entry is D1BindingEntry => isObject(entry))
+    ? raw.filter((entry): entry is Entry => isObject(entry))
     : [];
 }
 

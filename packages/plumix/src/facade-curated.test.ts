@@ -80,7 +80,6 @@ const CORE_WITHHELD: readonly Withholding[] = [
       "appRouter",
       "authRouter",
       "entryRouter",
-      "metaRouter",
       "settingsRouter",
       "termRouter",
       "userRouter",
