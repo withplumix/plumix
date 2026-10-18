@@ -117,6 +117,7 @@ const LOCAL: MigrationDatabaseTarget = {
   remote: false,
   summary: "local · site.db",
   notes: [],
+  name: "site.db",
 };
 
 /** A runtime whose run env is `env`, recording how it was opened. */
@@ -142,6 +143,7 @@ const REMOTE: MigrationDatabaseTarget = {
   remote: true,
   summary: "production (top level) · DB · site",
   notes: [],
+  name: "site",
 };
 
 function captureReport(): string[] {

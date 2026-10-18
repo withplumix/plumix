@@ -184,6 +184,7 @@ describe("bun migrations — a run from the command line", () => {
       remote: false,
       summary: "local · data/site.sqlite",
       notes: [],
+      name: "data/site.sqlite",
     });
   });
 });

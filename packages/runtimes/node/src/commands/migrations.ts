@@ -129,6 +129,7 @@ export const migrations: RuntimeMigrations = {
         remote: false,
         summary: `local · ${relative(cwd, path)}`,
         notes: [],
+        name: relative(cwd, path),
       },
       close: () => Promise.resolve(),
     });

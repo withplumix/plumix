@@ -7,7 +7,12 @@ import { createTestDb } from "../harness.js";
 import { failingCases } from "./case.js";
 import { runContractCases } from "./run.js";
 
-const TARGET = { remote: false, summary: "local · memory", notes: [] };
+const TARGET = {
+  remote: false,
+  summary: "local · memory",
+  notes: [],
+  name: "memory",
+};
 
 /**
  * A site over the harness's in-memory database, whose schema is already
@@ -25,6 +30,7 @@ function memorySite(runDb: (site: Db) => Promise<Db>): RunContractOptions {
             migrate: () => Promise.resolve(),
             all: () => Promise.resolve([]),
             batch: () => Promise.resolve(),
+            wipe: () => Promise.resolve(),
             close: () => Promise.resolve(),
             target: TARGET,
           }),
