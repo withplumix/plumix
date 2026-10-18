@@ -912,6 +912,72 @@ describe("menu RPC", () => {
       });
     });
 
+    test("names every location that sets the limit a save nests past", async () => {
+      const h = await buildHarness("editor", {
+        header: { label: "Header", maxDepth: 2 },
+        mobile: { label: "Mobile", maxDepth: 2 },
+      });
+      const m = await seedMenu(h.db, h.factories, "main");
+      await h.client.menu.assignLocation({
+        location: "mobile",
+        termSlug: "main",
+      });
+      await h.client.menu.assignLocation({
+        location: "header",
+        termSlug: "main",
+      });
+
+      await expect(
+        h.client.menu.save({
+          termId: m.id,
+          version: 0,
+          items: [
+            {
+              parentIndex: null,
+              sortOrder: 0,
+              title: "Top",
+              meta: { kind: "custom", url: "/top" },
+            },
+            {
+              parentIndex: 0,
+              sortOrder: 0,
+              title: "Second",
+              meta: { kind: "custom", url: "/second" },
+            },
+            {
+              parentIndex: 1,
+              sortOrder: 0,
+              title: "Third",
+              meta: { kind: "custom", url: "/third" },
+            },
+          ],
+        }),
+      ).rejects.toMatchObject({
+        code: "CONFLICT",
+        data: { reason: "max_depth_exceeded", key: "header,mobile" },
+      });
+    });
+
+    test("names no location when a save nests past the default limit", async () => {
+      const h = await buildHarness();
+      const m = await seedMenu(h.db, h.factories, "main");
+      const items = [];
+      for (let i = 0; i < 6; i++) {
+        items.push({
+          parentIndex: i === 0 ? null : i - 1,
+          sortOrder: 0,
+          title: `level-${i}`,
+          meta: { kind: "custom", url: `/${i}` },
+        });
+      }
+
+      const error = await h.client.menu
+        .save({ termId: m.id, version: 0, items })
+        .catch((caught: unknown) => caught);
+
+      expect(error).toHaveProperty("data", { reason: "max_depth_exceeded" });
+    });
+
     test("refuses a save that moves a stored item deeper, past its location's maxDepth", async () => {
       const h = await buildHarness("editor", {
         header: { label: "Header", maxDepth: 2 },

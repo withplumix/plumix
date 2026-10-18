@@ -433,6 +433,39 @@ interface DepthLimitedLocation {
   readonly maxDepth?: number;
 }
 
+interface BindableLocation extends DepthLimitedLocation {
+  readonly id: string;
+  readonly boundTermId: number | null;
+}
+
+/** True when the server's limit differs from the one the editor shows. */
+export function depthLimitIsStale(
+  state: Pick<EditorState, "maxDepth" | "limitedBy">,
+  response: Pick<EditorState, "maxDepth" | "limitedBy">,
+): boolean {
+  return (
+    response.maxDepth !== state.maxDepth ||
+    response.limitedBy.join() !== state.limitedBy.join()
+  );
+}
+
+export function locationsBoundTo<T extends BindableLocation>(
+  locations: readonly T[],
+  termId: number,
+): T[] {
+  return locations.filter((location) => location.boundTermId === termId);
+}
+
+/** A location's label, or its id while the locations are still loading. */
+export function locationLabels(
+  ids: readonly string[],
+  locations: readonly BindableLocation[],
+): string[] {
+  return ids.map(
+    (id) => locations.find((location) => location.id === id)?.label ?? id,
+  );
+}
+
 /**
  * The labels of the locations that don't render each item, keyed by item.
  * Items every location renders are left out.

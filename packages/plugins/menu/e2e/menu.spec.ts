@@ -189,9 +189,8 @@ test.describe.serial("@plumix/plugin-menu — worker-driven happy path", () => {
   test("the Primary Nav location's maxDepth of 2 limits the editor and the rendered nav", async ({
     page,
   }) => {
-    // Docs holds Home from the drag-nest test. Deep sits a third level down,
-    // as a lowered limit leaves an item behind: stored straight into the
-    // database.
+    // Stored straight into the database: a lowered limit leaves such an item
+    // behind, and the editor can't create one.
     const db = await openPlaygroundDb({
       cwd: resolve(process.cwd(), "playground"),
     });

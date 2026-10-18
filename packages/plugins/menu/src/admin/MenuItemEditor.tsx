@@ -56,10 +56,13 @@ import type { LinkTarget, PickerTab } from "./queries.js";
 import {
   buildSavePayload,
   computeDepths,
+  depthLimitIsStale,
   editorReducer,
   hiddenInLocations,
   initialEditorState,
   itemDisplayLabel,
+  locationLabels,
+  locationsBoundTo,
 } from "./editor-state.js";
 import {
   useAssignLocation,
@@ -151,8 +154,10 @@ export function MenuItemEditor({
     }
     // Assigning a location changes the limit without a new menu version.
     if (
-      menu.data.maxDepth !== state.maxDepth ||
-      menu.data.limitedBy.join() !== state.limitedBy.join()
+      depthLimitIsStale(
+        { maxDepth: state.maxDepth, limitedBy: state.limitedBy },
+        menu.data,
+      )
     ) {
       dispatch({
         type: "applyDepthLimit",
@@ -323,9 +328,7 @@ function MenuSettingsPanel({
 function DepthLimitNote({ state }: { readonly state: EditorState }): ReactNode {
   const { i18n } = useLingui();
   const locations = useLocationsList();
-  const labels = state.limitedBy.map(
-    (id) => locations.data?.find((row) => row.id === id)?.label ?? id,
-  );
+  const labels = locationLabels(state.limitedBy, locations.data ?? []);
   const text =
     labels.length === 0
       ? i18n._(
@@ -776,7 +779,7 @@ function MenuTree({
   const locations = useLocationsList();
   const hidden = hiddenInLocations(
     state.items,
-    (locations.data ?? []).filter((row) => row.boundTermId === state.termId),
+    locationsBoundTo(locations.data ?? [], state.termId),
   );
 
   function reset(): void {

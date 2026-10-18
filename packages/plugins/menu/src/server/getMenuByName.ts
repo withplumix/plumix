@@ -73,7 +73,6 @@ export async function getMenusByName(
 interface MenuRequest {
   readonly slug: string;
   readonly location: string | null;
-  /** Levels to resolve; deeper items are skipped, not resolved and dropped. */
   readonly maxDepth: number;
 }
 

@@ -848,7 +848,6 @@ interface LocationRow {
   readonly boundTermId: number | null;
 }
 
-/** Read from the current declarations on every call, so nothing is stored. */
 async function depthLimitFor(
   context: AppContext,
   registered: ReadonlyMap<string, RegisteredMenuLocation>,

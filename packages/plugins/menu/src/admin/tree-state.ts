@@ -67,7 +67,7 @@ export function getProjection(
   const maxAllowedDepth = previousItem === undefined ? 0 : previousDepth + 1;
   const minAllowedDepth = nextDepth;
   // The moved item carries its subtree, so the cap keeps descendants within
-  // `maxDepth` levels; an item already deeper may keep its depth.
+  // `maxDepth` levels. An item already deeper may keep its depth.
   const subtreeExtra = subtreeDepthExtra(items, activeIndex, depths);
   const depthCap = Math.max(maxDepth - 1 - subtreeExtra, activeDepth);
   const depth = Math.min(

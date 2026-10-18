@@ -31,9 +31,7 @@ const content = definePlugin("menu-playground-content", (setup) => {
   });
 });
 
-// The front page renders the "primary" location, so the e2e suite can see
-// where its `maxDepth` cuts the tree. Authored with `createElement` (no JSX)
-// so the config loads through jiti untransformed.
+// `createElement`, not JSX, so the config loads through jiti untransformed.
 function navList(items: readonly ResolvedMenuItem[], level: number): ReactNode {
   return h(
     "ul",

@@ -2,10 +2,13 @@ import { describe, expect, test } from "vitest";
 
 import {
   buildSavePayload,
+  depthLimitIsStale,
   editorReducer,
   hiddenInLocations,
   initialEditorState,
   itemDisplayLabel,
+  locationLabels,
+  locationsBoundTo,
 } from "./editor-state.js";
 
 /** What the server's resolver attaches to every row it sends back. */
@@ -1551,6 +1554,59 @@ describe("hiddenInLocations", () => {
     expect([...hidden]).toEqual([
       ["id-20", ["Header"]],
       ["id-30", ["Header", "Mobile"]],
+    ]);
+  });
+});
+
+describe("depthLimitIsStale", () => {
+  const shown = { maxDepth: 2, limitedBy: ["header"] };
+
+  test("is false when the server reports the limit the editor shows", () => {
+    expect(
+      depthLimitIsStale(shown, { maxDepth: 2, limitedBy: ["header"] }),
+    ).toBe(false);
+  });
+
+  test("is true when only the number of levels differs", () => {
+    expect(
+      depthLimitIsStale(shown, { maxDepth: 3, limitedBy: ["header"] }),
+    ).toBe(true);
+  });
+
+  test("is true when only the limiting locations differ", () => {
+    expect(
+      depthLimitIsStale(shown, { maxDepth: 2, limitedBy: ["mobile"] }),
+    ).toBe(true);
+  });
+});
+
+describe("locationsBoundTo", () => {
+  test("keeps only the locations the menu fills", () => {
+    const header = { id: "header", label: "Header", boundTermId: 7 };
+    const footer = { id: "footer", label: "Footer", boundTermId: 8 };
+    const sidebar = { id: "sidebar", label: "Sidebar", boundTermId: null };
+
+    expect(locationsBoundTo([header, footer, sidebar], 7)).toEqual([header]);
+  });
+});
+
+describe("locationLabels", () => {
+  const locations = [
+    { id: "header", label: "Header", boundTermId: 7 },
+    { id: "footer", label: "Footer", boundTermId: 7 },
+  ];
+
+  test("names each id by its location's label", () => {
+    expect(locationLabels(["footer", "header"], locations)).toEqual([
+      "Footer",
+      "Header",
+    ]);
+  });
+
+  test("falls back to the id for a location not in the list", () => {
+    expect(locationLabels(["header", "gone"], locations)).toEqual([
+      "Header",
+      "gone",
     ]);
   });
 });
