@@ -67,3 +67,33 @@ msgstr "该链接将在 {hours} 小时后失效。"
 #: src/mail/core-mails.ts
 msgid "core.mail.emailChange.ignore"
 msgstr "如果这不是你发起的请求，请忽略此邮件，你的账户仍将使用 {oldEmail}。"
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.mailTest.subject"
+msgstr "来自 {siteName} 的测试邮件"
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.mailTest.intro"
+msgstr "这是一封来自 {siteName} 的测试邮件。"
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.mailTest.local"
+msgstr "它由 `plumix mail test` 从命令行发送，经由站点配置的邮件发送器。"
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.mailTest.remote"
+msgstr "它由 `plumix mail test --remote` 经由已部署站点的邮件发送器发送。"
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.mailTest.sentAt"
+msgstr "发送于 {sentAt}。"
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.mailTest.delivered"
+msgstr "如果你能读到这封邮件，说明站点的邮件发送器可以投递邮件。"

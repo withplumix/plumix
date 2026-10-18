@@ -1,7 +1,6 @@
 import { describe, expect, test } from "vitest";
 
 import type { RequestAuthenticator } from "../../../auth/authenticator.js";
-import type { Mailer } from "../../../auth/contract/mailer.js";
 import { API_TOKEN_PREFIX, createApiToken } from "../../../auth/api-tokens.js";
 import { auth } from "../../../auth/config.js";
 import { SESSION_COOKIE_NAME } from "../../../auth/cookies.js";
@@ -531,69 +530,6 @@ describe("auth.sessions.revoke", () => {
     await expect(
       h.client.auth.sessions.revoke({ id: otherSession.session.id }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
-  });
-});
-
-describe("auth.mailer.testSend", () => {
-  test("rejects a non-admin caller with FORBIDDEN", async () => {
-    const h = await createRpcHarness({ authAs: "editor" });
-    await expect(
-      h.client.auth.mailer.testSend({ to: "ops@example.com" }),
-    ).rejects.toMatchObject({ code: "FORBIDDEN" });
-  });
-
-  test("rejects when no mailer is configured (CONFLICT/mailer_not_configured)", async () => {
-    const h = await createRpcHarness({
-      authAs: "admin",
-      config: { mailer: undefined },
-    });
-    await expect(
-      h.client.auth.mailer.testSend({ to: "ops@example.com" }),
-    ).rejects.toMatchObject({
-      code: "CONFLICT",
-      data: { reason: "mailer_not_configured" },
-    });
-  });
-
-  test("delivers a fixed test message via the configured mailer", async () => {
-    const sent: { to: string; subject: string; text: string }[] = [];
-    const mailer: Mailer = {
-      send(message) {
-        sent.push({ ...message });
-        return Promise.resolve();
-      },
-    };
-    const h = await createRpcHarness({
-      authAs: "admin",
-      config: { mailer: mailer },
-    });
-
-    const result = await h.client.auth.mailer.testSend({
-      to: "ops@example.com",
-    });
-    expect(result).toEqual({ ok: true });
-    expect(sent).toHaveLength(1);
-    const [message] = sent;
-    expect(message?.to).toBe("ops@example.com");
-    expect(message?.subject).toBe("Plumix mailer test");
-    expect(message?.text).toMatch(/test message from Plumix/);
-  });
-
-  test("surfaces mailer adapter failures as CONFLICT/mailer_send_failed", async () => {
-    const mailer: Mailer = {
-      send: () => Promise.reject(new Error("smtp boom")),
-    };
-    const h = await createRpcHarness({
-      authAs: "admin",
-      config: { mailer: mailer },
-    });
-
-    await expect(
-      h.client.auth.mailer.testSend({ to: "ops@example.com" }),
-    ).rejects.toMatchObject({
-      code: "CONFLICT",
-      data: { reason: "mailer_send_failed" },
-    });
   });
 });
 

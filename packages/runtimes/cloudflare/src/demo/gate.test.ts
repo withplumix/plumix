@@ -35,7 +35,7 @@ describe("isBlockedInDemo", () => {
     "/_plumix/auth/magic-link/verify",
     "/_plumix/rpc/user/requestEmailChange",
     "/_plumix/auth/verify-email",
-    "/_plumix/rpc/auth/mailer/testSend",
+    "/_plumix/api/v1/system/mail/test",
   ])("refuses %s", (pathname) => {
     expect(isBlockedInDemo(pathname)).toBe(true);
   });

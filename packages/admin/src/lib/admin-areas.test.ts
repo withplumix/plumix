@@ -24,7 +24,6 @@ describe("the admin area roster", () => {
     ["otherUsersApiTokens", "apiTokens"],
     ["emailChange", "emailDelivery"],
     ["userInvite", "emailDelivery"],
-    ["mailerPage", "emailDelivery"],
     ["deviceAuthorizationPage", "deviceAuthorization"],
   ] as const)("refusing %s's area %s hides it", (surface, area) => {
     expect(isSurfaceOffered(surface, [area])).toBe(false);
@@ -36,7 +35,6 @@ describe("the admin area roster", () => {
     "otherUsersApiTokens",
     "emailChange",
     "userInvite",
-    "mailerPage",
     "deviceAuthorizationPage",
   ] as const)("refusing only OAuth linking keeps %s", (surface) => {
     expect(isSurfaceOffered(surface, ["oauthLinking"])).toBe(true);

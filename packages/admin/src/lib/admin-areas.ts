@@ -9,8 +9,7 @@ export type AdminAreaSurface =
   | "deviceAuthorizationPage"
   | "passkeysCard"
   | "userInvite"
-  | "emailChange"
-  | "mailerPage";
+  | "emailChange";
 
 /** A runtime that refuses an area hides all of its surfaces. */
 export const ADMIN_AREA_SURFACES = {
@@ -18,7 +17,7 @@ export const ADMIN_AREA_SURFACES = {
   deviceAuthorization: ["deviceAuthorizationPage"],
   passkeys: ["passkeysCard"],
   oauthLinking: [],
-  emailDelivery: ["userInvite", "emailChange", "mailerPage"],
+  emailDelivery: ["userInvite", "emailChange"],
 } as const satisfies Record<AdminArea, readonly AdminAreaSurface[]>;
 
 /** Whether the deployment offers `surface`: false when its area is refused. */

@@ -11,6 +11,7 @@ import {
   publicTermSchema,
   termsListEnvelopeSchema,
 } from "./schemas.js";
+import { systemMailTest } from "./system-mail.js";
 import { getTermItem, listTermsEnvelope } from "./terms-resource.js";
 
 // Entry types and taxonomies share the `{collection}` namespace, as in
@@ -52,4 +53,5 @@ const collectionGet = base
 export const restRouter = {
   collectionList,
   collectionGet,
+  systemMailTest,
 };

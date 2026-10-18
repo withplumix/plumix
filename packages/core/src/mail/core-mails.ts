@@ -24,10 +24,19 @@ export interface EmailChangeMailProps {
   readonly ttlSeconds: number;
 }
 
+export interface MailTestMailProps {
+  readonly siteName: string;
+  /** When the test was sent, as an ISO 8601 timestamp. */
+  readonly sentAt: string;
+  /** From the command line, or through the deployed site's API. */
+  readonly origin: "local" | "remote";
+}
+
 declare module "./contract/registry.js" {
   interface MailRegistry {
     magicLink: MagicLinkMailProps;
     emailChange: EmailChangeMailProps;
+    mailTest: MailTestMailProps;
   }
 }
 
@@ -82,6 +91,32 @@ const M = {
     id: "core.mail.emailChange.ignore",
     message:
       "If you didn't request this, you can ignore this email — your account stays on {oldEmail}.",
+  },
+  mailTestSubject: {
+    id: "core.mail.mailTest.subject",
+    message: "Test mail from {siteName}",
+  },
+  mailTestIntro: {
+    id: "core.mail.mailTest.intro",
+    message: "This is a test mail from {siteName}.",
+  },
+  mailTestLocal: {
+    id: "core.mail.mailTest.local",
+    message:
+      "It was sent by `plumix mail test`, from the command line, through the mailer the site configures.",
+  },
+  mailTestRemote: {
+    id: "core.mail.mailTest.remote",
+    message:
+      "It was sent by `plumix mail test --remote`, through the deployed site's mailer.",
+  },
+  mailTestSentAt: {
+    id: "core.mail.mailTest.sentAt",
+    message: "Sent at {sentAt}.",
+  },
+  mailTestDelivered: {
+    id: "core.mail.mailTest.delivered",
+    message: "If you can read this, the site's mailer delivers mail.",
   },
 } as const;
 
@@ -167,5 +202,34 @@ export const emailChangeMail = defineMail<EmailChangeMailProps>("emailChange", {
   },
 });
 
+function mailTestBody(
+  props: MailTestMailProps,
+  ctx: MailRenderContext,
+): readonly Block[] {
+  const origin = props.origin === "local" ? M.mailTestLocal : M.mailTestRemote;
+  return [
+    { text: ctx.t(M.mailTestIntro, { siteName: props.siteName }) },
+    { text: ctx.t(origin) },
+    { text: ctx.t(M.mailTestSentAt, { sentAt: props.sentAt }) },
+    { text: ctx.t(M.mailTestDelivered) },
+  ];
+}
+
+export const mailTestMail = defineMail<MailTestMailProps>("mailTest", {
+  subject: (props, ctx) =>
+    ctx.t(M.mailTestSubject, { siteName: props.siteName }),
+  text: (props, ctx) => textBody(mailTestBody(props, ctx)),
+  html: (props, ctx) => htmlBody(mailTestBody(props, ctx)),
+  preview: {
+    siteName: "Example",
+    sentAt: "2026-01-01T09:00:00.000Z",
+    origin: "local",
+  },
+});
+
 /** The mails core declares, under the owner name `core`. */
-export const CORE_MAILS = [magicLinkMail, emailChangeMail] as const;
+export const CORE_MAILS = [
+  magicLinkMail,
+  emailChangeMail,
+  mailTestMail,
+] as const;

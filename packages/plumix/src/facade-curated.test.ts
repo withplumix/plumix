@@ -66,6 +66,12 @@ const CORE_WITHHELD: readonly Withholding[] = [
   },
   {
     reason:
+      "the send `plumix mail test` and core's mail test route share, which " +
+      "only this package's `mail` command calls",
+    names: ["sendMailTest"],
+  },
+  {
+    reason:
       "the runtime-key half of the shim roster, which admin's runtime " +
       "object and `PlumixAdminRuntime` are typed against. A plugin " +
       "chunk reads those keys through `getRuntime`, not this map.",

@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { expect } from "vitest";
 
+import type { EmailMessage, Mailer } from "../../auth/contract/mailer.js";
 import type { AppContext } from "../../context/app-context.js";
 import type { RuntimeMigrations } from "../../context/runtime-adapter.js";
 import type { PlumixApp } from "../../runtime/app.js";
@@ -8,6 +9,7 @@ import type { DatabaseAdapter } from "../../runtime/contract/slots.js";
 import type { ContractCase } from "./case.js";
 import { CORE_MIGRATIONS_FOLDER } from "../../cli/migrations.js";
 import { entries } from "../../db/schema/entries.js";
+import { sendMailTest } from "../../mail/mail-test.js";
 import { definePlugin } from "../../plugin/define.js";
 import { toggle } from "../../plugin/fields/toggle.js";
 import { sweepAllUnsettledMeta } from "../../rpc/procedures/meta/sweep.js";
@@ -48,14 +50,21 @@ const plugin = definePlugin("run-contract", (ctx) => {
 
 interface Site {
   readonly app: PlumixApp;
-  /** One `plumix meta` run: `handler.run` in the env `openRun` returns. */
+  /** One CLI run: `handler.run` in the env `openRun` returns. */
   run<T>(work: (ctx: AppContext) => Promise<T>): Promise<T>;
 }
 
-async function migratedSite(options: RunContractOptions): Promise<Site> {
+async function migratedSite(
+  options: RunContractOptions,
+  mailer?: Mailer,
+): Promise<Site> {
   const site = await options.open();
   const app = await buildApp(
-    testConfig({ plugins: [plugin], database: site.database }),
+    testConfig({
+      plugins: [plugin],
+      database: site.database,
+      ...(mailer === undefined ? {} : { mailer }),
+    }),
   );
   const target = {
     cwd: site.cwd,
@@ -155,11 +164,31 @@ export const runContractCases: readonly Case[] = [
       );
     },
   },
+  {
+    name: "a mail test goes out through the site's mailer",
+    async run(options) {
+      const delivered: EmailMessage[] = [];
+      const site = await migratedSite(options, {
+        send: (message) => {
+          delivered.push(message);
+          return Promise.resolve();
+        },
+      });
+
+      await site.run((ctx) =>
+        sendMailTest(ctx, { to: "ann@example.com", origin: "local" }),
+      );
+
+      expect(delivered.map(({ to, subject }) => [to, subject])).toEqual([
+        ["ann@example.com", "Test mail from cms.example"],
+      ]);
+    },
+  },
 ];
 
 /**
- * What `plumix meta report|settle` does on a runtime: core's sweep through
- * `handler.run`, in the env the runtime's `openRun` returns.
+ * What the CLI's runs do on a runtime: core's work through `handler.run`, in
+ * the env the runtime's `openRun` returns.
  */
 export function describeRunContract(options: RunContractOptions): void {
   describeContract("run contract", runContractCases, options);

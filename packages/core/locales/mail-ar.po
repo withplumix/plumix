@@ -67,3 +67,33 @@ msgstr "تنتهي صلاحية الرابط خلال {hours} ساعة."
 #: src/mail/core-mails.ts
 msgid "core.mail.emailChange.ignore"
 msgstr "إذا لم تطلب ذلك، يمكنك تجاهل هذه الرسالة — سيبقى حسابك على {oldEmail}."
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.mailTest.subject"
+msgstr "رسالة اختبار من {siteName}"
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.mailTest.intro"
+msgstr "هذه رسالة اختبار من {siteName}."
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.mailTest.local"
+msgstr "أُرسلت بالأمر `plumix mail test` من سطر الأوامر، عبر خدمة البريد التي يضبطها الموقع."
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.mailTest.remote"
+msgstr "أُرسلت بالأمر `plumix mail test --remote` عبر خدمة البريد في الموقع المنشور."
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.mailTest.sentAt"
+msgstr "أُرسلت في {sentAt}."
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.mailTest.delivered"
+msgstr "إذا كنت تقرأ هذا، فإن خدمة البريد في الموقع تسلّم الرسائل."

@@ -34,4 +34,5 @@ export function routesOverlap(a: RestRoute, b: RestRoute): boolean {
 export const CORE_REST_ROUTES: readonly RestRoute[] = [
   { method: "GET", path: "/{collection}" },
   { method: "GET", path: "/{collection}/{id}" },
+  { method: "POST", path: "/system/mail/test" },
 ];

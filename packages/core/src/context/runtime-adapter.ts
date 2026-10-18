@@ -246,8 +246,7 @@ export interface RuntimeMigrations {
   readonly legacyTable: string;
   open(options: OpenMigrationDatabaseOptions): Promise<MigrationDatabase>;
   /**
-   * The env a `handler.run` from the CLI reaches the same database through,
-   * for `plumix meta`.
+   * The env a `handler.run` from the CLI reaches the same database through.
    */
   openRun(options: OpenRunOptions): Promise<RunEnvironment>;
 }

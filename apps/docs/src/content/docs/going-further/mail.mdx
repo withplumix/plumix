@@ -12,7 +12,7 @@ A mail in Plumix is declared once, by name, with the props it renders from. Code
 
 Three pieces make up the mail system, and each has one owner:
 
-- **The declaration.** `defineMail<Props>(name, { subject, text, html, preview })` says what a mail looks like, rendered from `Props`. Pass `Props` explicitly or let `preview` infer it. Core declares its own mails, `magicLink` and `emailChange`. A plugin lists its mails in its descriptor's `mails` field, so every mail is known when the site boots.
+- **The declaration.** `defineMail<Props>(name, { subject, text, html, preview })` says what a mail looks like, rendered from `Props`. Pass `Props` explicitly or let `preview` infer it. Core declares its own mails, `magicLink`, `emailChange` and `mailTest`. A plugin lists its mails in its descriptor's `mails` field, so every mail is known when the site boots.
 - **The registry.** `MailRegistry` maps each mail's name to its props, the same way `FilterRegistry` maps a hook to its handler. `ctx.mail.send` and every override are typed against it, so an unknown name or the wrong props fail to compile.
 - **The transport.** The `mailer` slot in `plumix.config.ts` delivers what a mail renders: an `EmailMessage` with `to`, `subject`, `text` and an optional `html`. A mailer never sees a mail's name or props, so any provider fits.
 
@@ -147,12 +147,13 @@ export const theme = defineTheme({
 });
 ```
 
-Core's mails take these props. Both URLs are the single-use links core generates, and `ttlSeconds` is how long each stays valid.
+Core's mails take these props. Both URLs are the single-use links core generates, and `ttlSeconds` is how long each stays valid. `mailTest` is what [`plumix mail test`](#testing-the-mailer) sends: `sentAt` is an ISO 8601 timestamp, and `origin` is `"local"` from the command line or `"remote"` through the deployed site.
 
 | Mail          | Props                                     |
 | ------------- | ----------------------------------------- |
 | `magicLink`   | `{ url, ttlSeconds }`                     |
 | `emailChange` | `{ url, oldEmail, newEmail, ttlSeconds }` |
+| `mailTest`    | `{ siteName, sentAt, origin }`            |
 
 ## Localizing a mail
 
@@ -188,6 +189,14 @@ Both arguments take an `EnvInput`, so the inbox and the transport's key can both
 An `EmailMessage` carries no headers, so the original recipient goes in the body. The text starts with `Originally to: <address>`, and an HTML body starts with the same line as a small banner. Subject and the rest of the body are unchanged.
 
 The address is checked when the mailer is resolved, which happens as a request's context is built. An empty or malformed one throws a `ConfigError` that names it, so a site with a missing `STAGING_INBOX` fails its requests instead of quietly mailing nobody.
+
+## Testing the mailer
+
+`plumix mail test <to>` sends `mailTest` through the site's mailer and prints the transport's own error when it fails. `--remote --url <origin>` sends it through the deployed site, with its production secrets, using an API token. The [CLI reference](/deployment/cli/#mail) covers both and where the token comes from. Core ships no rate limiter for the route `--remote` calls, as for the rest of the REST API; to throttle it, apply the edge rule [Rate limiting](/apis/rest-api/#rate-limiting) describes.
+
+```bash
+plumix mail test ann@example.com
+```
 
 ## Previewing mail in development
 

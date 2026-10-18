@@ -4,7 +4,6 @@ import type {
   CommandDefinition,
   MetaSweep,
   PlumixApp,
-  PlumixHandler,
   RunEnvironment,
   TargetOptionValues,
 } from "@plumix/core";
@@ -12,6 +11,7 @@ import { loadOnce } from "@plumix/core/support";
 
 import { PlumixCliError } from "../errors.js";
 import { report } from "../report.js";
+import { withSiteRun } from "../site-run.js";
 import { parseCommandArgs } from "../target-options.js";
 import { syncDeps } from "./sync.js";
 
@@ -26,17 +26,37 @@ export const metaCommand: CommandDefinition<PlumixApp> = {
     "Report stored field values not in their field's declared form, or settle them",
   async run(ctx) {
     const args = parseMetaArgs(ctx);
-    await withSiteRun(ctx, args, async (run, opened) => {
-      report.info(`→ ${opened.target.summary}`);
-      if (args.sub === "report") {
-        printSweep(await run(reportOnly), "report");
-        return;
-      }
-      if (!(await confirmedSettle(run, opened, args))) return;
-      printSweep(await run(settle), "settled");
-    });
+    await withSiteRun(
+      ctx,
+      {
+        binding: args.binding,
+        targetValues: args.targetValues,
+        unreachable: (unreachable) =>
+          PlumixCliError.metaDatabaseUnreachable(unreachable),
+      },
+      async (siteRun, opened) => {
+        const { sweepAllUnsettledMeta } = await loadCore();
+        const run: SweepRun = (work) =>
+          siteRun((appCtx) => work(appCtx, sweepAllUnsettledMeta));
+        await sweepUnder(run, opened, args);
+      },
+    );
   },
 };
+
+async function sweepUnder(
+  run: SweepRun,
+  opened: RunEnvironment,
+  args: MetaArgs,
+): Promise<void> {
+  report.info(`→ ${opened.target.summary}`);
+  if (args.sub === "report") {
+    printSweep(await run(reportOnly), "report");
+    return;
+  }
+  if (!(await confirmedSettle(run, opened, args))) return;
+  printSweep(await run(settle), "settled");
+}
 
 interface MetaArgs {
   readonly sub: "report" | "settle";
@@ -87,8 +107,8 @@ type Sweep = (
   options: { readonly write: boolean },
 ) => Promise<SweepResult>;
 
-/** One `handler.run` of the work, against the env the runtime opened. */
-type SiteRun = (
+/** One `handler.run` of a sweep, against the env the runtime opened. */
+type SweepRun = (
   work: (ctx: AppContext, sweep: Sweep) => Promise<SweepResult>,
 ) => Promise<SweepResult>;
 
@@ -109,7 +129,7 @@ async function settle(ctx: AppContext, sweep: Sweep): Promise<SweepResult> {
  * confirmed, the rule `plumix migrate` follows.
  */
 async function confirmedSettle(
-  run: SiteRun,
+  run: SweepRun,
   opened: RunEnvironment,
   args: MetaArgs,
 ): Promise<boolean> {
@@ -127,80 +147,6 @@ async function confirmedSettle(
   );
   if (!accepted) report.info("Nothing was changed.");
   return accepted;
-}
-
-/**
- * Runs through the site's own handler so the database, field declarations and
- * CDN purges are the site's, not a reimplementation.
- */
-async function withSiteRun(
-  ctx: CommandContext<PlumixApp>,
-  args: MetaArgs,
-  work: (run: SiteRun, opened: RunEnvironment) => Promise<void>,
-): Promise<void> {
-  const { createRuntimeHandler, sweepAllUnsettledMeta } = await loadCore();
-
-  // `nodeSqlite` resolves its path against the process cwd, so `--cwd` has to
-  // land before anything opens a database.
-  if (ctx.cwd !== process.cwd()) process.chdir(ctx.cwd);
-
-  const handler: PlumixHandler = createRuntimeHandler(ctx.app);
-  const { run } = handler;
-  if (run === undefined) {
-    throw PlumixCliError.metaDatabaseUnreachable({
-      detail: "this runtime's handler can't run work outside a request",
-      cause: undefined,
-    });
-  }
-  const runtime = ctx.runtimeMigrations;
-  if (runtime === undefined) {
-    throw PlumixCliError.metaDatabaseUnreachable({
-      detail: `the ${ctx.app.config.runtime.name} runtime does not say how to open its database from the command line`,
-      cause: undefined,
-    });
-  }
-  const opened = await runtime.openRun({
-    cwd: ctx.cwd,
-    config: ctx.app.config,
-    binding: args.binding,
-    targetValues: args.targetValues,
-  });
-  const siteRun: SiteRun = async (sweepWork) => {
-    // Only a failure before the sweep starts means the database was
-    // unreachable.
-    const phase = { started: false };
-    try {
-      return await run(
-        (appCtx) => {
-          phase.started = true;
-          return sweepWork(appCtx, sweepAllUnsettledMeta);
-        },
-        { env: opened.env },
-      );
-    } catch (cause) {
-      if (phase.started) throw cause;
-      throw PlumixCliError.metaDatabaseUnreachable({
-        detail: messageOf(cause),
-        cause,
-      });
-    }
-  };
-  try {
-    await work(siteRun, opened);
-  } finally {
-    // Deferred work — the CDN purges a settle enqueued — is still running
-    // until `dispose()` returns.
-    try {
-      await handler.dispose?.();
-    } catch (error) {
-      report.detail(`Could not drain the handler: ${messageOf(error)}`);
-    }
-    await opened.close();
-  }
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 /** A plan leaves out the hint to settle: the settle is what comes next. */
