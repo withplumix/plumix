@@ -14,7 +14,7 @@ import {
   taggedBlock,
 } from "./agent.js";
 import { rebaseOntoLatestMain } from "./freshen.js";
-import { CHANGESET_GATE, GATES, runGates } from "./gates.js";
+import { GATES, runGates } from "./gates.js";
 import {
   assignToSelf,
   openPullRequest,
@@ -496,7 +496,7 @@ export const shipTicket = async (
 
     const gates = await gatesUntilGreen(
       sandbox,
-      [...GATES, CHANGESET_GATE],
+      GATES,
       journal,
       fixer,
       "final",

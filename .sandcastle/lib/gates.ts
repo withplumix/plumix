@@ -39,23 +39,6 @@ const RENDER_AND_ADMIN_PATHS = [
   "apps/",
 ];
 
-/**
- * Every package builds `src` and ships `locales`; naming what ships is safer
- * than listing the scripts, fixtures and configs beside it that do not.
- */
-const WHAT_A_CONSUMER_INSTALLS =
-  /^packages\/(?:plugins\/|runtimes\/)?[^/]+\/(?:src\/.+|locales\/.+|package\.json)$/;
-const A_TEST_RATHER_THAN_THE_THING_TESTED = /\.(test|spec)\.[cm]?[jt]sx?$/;
-
-const changesSomethingConsumersInstall = (
-  changedPaths: readonly string[],
-): boolean =>
-  changedPaths.some(
-    (path) =>
-      WHAT_A_CONSUMER_INSTALLS.test(path) &&
-      !A_TEST_RATHER_THAN_THE_THING_TESTED.test(path),
-  );
-
 const TURBO_GATE_FLAGS = "--filter=...[origin/main] --output-logs=errors-only";
 
 export const GATES: readonly Gate[] = [
@@ -103,14 +86,6 @@ export const GATES_LEFT_TO_CI: readonly Gate[] = [
   },
 ];
 
-export const CHANGESET_GATE: Gate = {
-  name: "changeset",
-  command:
-    'test -n "$(git diff --name-only origin/main...HEAD -- .changeset/ | grep -v README)" ' +
-    '|| { echo "A published package changed but no changeset was added. See AGENTS.md > Releases."; exit 1; }',
-  appliesWhen: changesSomethingConsumersInstall,
-};
-
 export type Executor = Pick<sandcastle.Sandbox, "exec">;
 
 /**
@@ -142,7 +117,7 @@ const isAvailable = async (
 
 const GATE_BEHIND_EACH_CI_CHECK: Readonly<Record<string, string>> = {
   Commitlint: "commitlint",
-  Changesets: "changeset",
+  Changesets: "check-no-major",
   Lint: "lint",
   Format: "format",
   Typecheck: "typecheck",
@@ -156,9 +131,7 @@ const GATE_BEHIND_EACH_CI_CHECK: Readonly<Record<string, string>> = {
 
 export const gateBehindCheck = (checkName: string): Gate | undefined => {
   const gateName = GATE_BEHIND_EACH_CI_CHECK[checkName];
-  return [...GATES, CHANGESET_GATE, ...GATES_LEFT_TO_CI].find(
-    ({ name }) => name === gateName,
-  );
+  return [...GATES, ...GATES_LEFT_TO_CI].find(({ name }) => name === gateName);
 };
 
 export interface GateRunOutcome {

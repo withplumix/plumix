@@ -147,9 +147,7 @@ describe("gatesARepairRuns", () => {
   test("a failing test is repaired against the local gates without the CI-only checks CI already passed", () => {
     const names = namesOf(refused({ failingChecks: [{ name: "Test" }] }));
 
-    expect(names).toEqual(
-      expect.arrayContaining(["install", "lint", "test", "changeset"]),
-    );
+    expect(names).toEqual(expect.arrayContaining(["install", "lint", "test"]));
     expect(names).not.toContain("attw");
   });
 });
