@@ -112,7 +112,6 @@ export function superviseWebServer(command: string): string {
 
 interface PlaygroundCommand {
   readonly playground: string;
-  /** The runtime's `plumix.e2e.wipe`, relative to the playground. */
   readonly wipe: readonly string[];
   /** Runs each `plumix` step; the runtime's `cli`, else `pnpm exec plumix`. */
   readonly cli: string;
@@ -125,7 +124,6 @@ function bakePlaygroundCommand(input: PlaygroundCommand): string {
   const steps = [
     `cd ${input.playground}`,
     // The baseline lives in the wiped state, so a stale one goes with it.
-    // Nothing is generated, so a site's committed history is never touched.
     ...input.wipe.map((path) => `rm -rf -- ${shellQuote(path)}`),
     `${input.cli} migrate fresh --yes`,
   ];

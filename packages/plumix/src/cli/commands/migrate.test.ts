@@ -405,24 +405,6 @@ describe("applying owner histories", () => {
       schemaModule,
     }) as unknown as PlumixApp["config"]["plugins"][number];
 
-  // A runtime package whose `plumix.e2e.wipe` names the local state, as each
-  // shipped runtime's does.
-  const RUNTIME_PACKAGE = "@acme/runtime";
-
-  function installRuntime(wipe: readonly string[] | undefined): void {
-    const root = join(dir, "node_modules", RUNTIME_PACKAGE);
-    mkdirSync(root, { recursive: true });
-    writeFileSync(
-      join(root, "package.json"),
-      JSON.stringify({
-        name: RUNTIME_PACKAGE,
-        exports: { "./commands": "./commands.js" },
-        plumix: wipe === undefined ? {} : { e2e: { wipe } },
-      }),
-    );
-    writeFileSync(join(root, "commands.js"), "export {};\n");
-  }
-
   function applyCtx(
     argv: readonly string[],
     plugins: PlumixApp["config"]["plugins"] = [],
@@ -437,7 +419,6 @@ describe("applying owner histories", () => {
           runtime: {
             ...base.config.runtime,
             name: "acme",
-            commandsModule: `${RUNTIME_PACKAGE}/commands`,
           },
         },
       },
@@ -542,7 +523,6 @@ async up({ db }) {
   beforeEach(() => {
     dir = mkdtempSync(join(tmpdir(), "plumix-migrate-apply-"));
     writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "site" }));
-    installRuntime(["site.sqlite", "uploads"]);
     opened = [];
     drizzleKitWrites({});
     // What each owner applied is the command's own output; a test that reads
@@ -1454,6 +1434,18 @@ export default [
         expect(opened).toEqual([]);
       },
     );
+
+    test.each([
+      [["--production", "fresh"]],
+      [["--env", "production", "fresh"]],
+      [["--binding", "DB", "--production", "fresh"]],
+    ])("refuses %j wherever `fresh` sits, before it connects", async (argv) => {
+      await expect(
+        migrateCommand.run(applyCtx([...argv, "--yes"], [], deployed())),
+      ).rejects.toMatchObject({ code: "migrate_fresh_production" });
+
+      expect(opened).toEqual([]);
+    });
 
     // Node and Bun declare no target options, so the refusal comes before
     // the parser that would reject the flag as unknown.

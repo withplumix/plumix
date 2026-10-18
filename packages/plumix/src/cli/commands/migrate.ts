@@ -69,6 +69,9 @@ export const migrateCommand: CommandDefinition = {
       throw PlumixCliError.migrateFreshProduction();
     }
     const args = parseMigrateArgs(ctx.argv, target);
+    if (args.sub === "fresh" && namesProduction(ctx.argv)) {
+      throw PlumixCliError.migrateFreshProduction();
+    }
     const database = {
       binding: args.binding,
       targetValues: args.targetValues,
@@ -285,10 +288,6 @@ function siteTables(target: MigrationTarget): readonly string[] {
   );
 }
 
-/**
- * Every table dropped, then the normal migrate. Like it, the owners resolve
- * and the site's history is checked before anything is dropped.
- */
 async function migrateFresh(
   target: MigrationTarget,
   args: MigrateArgs,
@@ -306,7 +305,7 @@ async function migrateFresh(
   });
 }
 
-/** `--production` or `--env production`, the words ADR 0045 gives production. */
+/** `--production` or `--env production`. */
 function namesProduction(argv: readonly string[]): boolean {
   return argv.some(
     (arg, i) =>
@@ -317,7 +316,6 @@ function namesProduction(argv: readonly string[]): boolean {
   );
 }
 
-/** The tables the plan lists: all but SQLite's own and D1's. */
 const TABLES_SQL =
   "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT GLOB 'sqlite_*' AND name NOT GLOB '_cf_*' ORDER BY name";
 
