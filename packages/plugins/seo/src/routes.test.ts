@@ -1178,6 +1178,29 @@ describe("a contributed sitemap", () => {
         "<loc>https://cms.example/courses/intro</loc>",
       );
     });
+
+    test("is answered per sitemap, not once for every contributed one", async () => {
+      const plugin = definePlugin("courses", (ctx) => {
+        ctx.registerSitemap("courses", {
+          count: () => 1,
+          urls: () => [{ loc: "https://cms.example/courses/intro" }],
+          access: anonymousPolicy,
+        });
+        ctx.registerSitemap("lessons", {
+          count: () => 1,
+          urls: () => [{ loc: "https://cms.example/lessons/intro" }],
+          access: authenticatedPolicy,
+        });
+      });
+      const h = await createHarness([plugin]);
+
+      const index = await bodyOf(h, "/sitemap.xml");
+
+      expect(index).toContain(
+        "<loc>https://cms.example/sitemap-courses-1.xml</loc>",
+      );
+      expect(index).not.toContain("sitemap-lessons-1.xml");
+    });
   });
 });
 
@@ -2165,6 +2188,28 @@ describe("/llms.txt", () => {
 
       expect(body).not.toContain("## Posts");
       expect(body).toContain("## Pages");
+    });
+
+    test("a type with no listable entries gets no section", async () => {
+      const h = await createHarness([postsAndPages]);
+      await seedEntry(h, { type: "page", slug: "about", title: "About" });
+
+      const { body } = await llms(h);
+
+      expect(body).not.toContain("## Posts");
+      expect(body).toContain("## Pages");
+    });
+
+    test("a type anonymous visitors may not list adds nothing", async () => {
+      const h = await createHarness([membersOnlyPlugin]);
+      await setSettings(h, "site", { title: "Acme" });
+      await seedEntry(h, { type: "lesson", slug: "intro", title: "Intro" });
+
+      expect((await llms(h)).body).toBe(
+        "# Acme\n" +
+          "\n## Sitemap\n\n" +
+          "- [XML sitemap](https://cms.example/sitemap.xml): every URL this site offers to search engines.\n",
+      );
     });
 
     async function seedNumberedPosts(

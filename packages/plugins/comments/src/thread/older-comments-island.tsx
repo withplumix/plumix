@@ -8,6 +8,7 @@ import { labelSourceText } from "plumix/i18n";
 import { usePlumixCommentThread } from "../hooks.js";
 import { OLDER_COMMENTS } from "../messages.js";
 import { CommentItem } from "./comment-item.js";
+import { LoadMoreError } from "./load-more-error.js";
 
 interface OlderCommentsProps {
   readonly entryId: number;
@@ -40,11 +41,7 @@ export function OlderCommentsIsland({
           ))}
         </ol>
       ) : null}
-      {thread.error === null ? null : (
-        <p className="plumix-comment-error" role="alert">
-          {thread.error}
-        </p>
-      )}
+      <LoadMoreError error={thread.error} />
       {thread.hasMore ? (
         <a
           className="plumix-comment-older-link"
