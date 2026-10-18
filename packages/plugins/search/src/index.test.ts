@@ -1,6 +1,6 @@
 import type { User } from "plumix/schema";
 import type { DispatcherHarness } from "plumix/test";
-import { eq, sql } from "plumix/db";
+import { eq, etagOf, sql } from "plumix/db";
 import { text } from "plumix/fields";
 import { definePlugin } from "plumix/plugin";
 import { entries } from "plumix/schema";
@@ -182,7 +182,11 @@ describe("search()", () => {
     await runSchedule();
     const rewrites = await watchRewrites(h.db);
 
-    await rpc("entry/update", { id: entry.id, sortOrder: 7 });
+    await rpc("entry/update", {
+      id: entry.id,
+      ifMatch: etagOf(entry.updatedAt),
+      sortOrder: 7,
+    });
     await h.drainDeferred();
     await runSchedule();
 
@@ -198,7 +202,11 @@ describe("search()", () => {
     });
     await runSchedule();
 
-    await rpc("entry/update", { id: entry.id, title: "Aquaponics in winter" });
+    await rpc("entry/update", {
+      id: entry.id,
+      ifMatch: etagOf(entry.updatedAt),
+      title: "Aquaponics in winter",
+    });
     await h.drainDeferred();
 
     expect(await matches("hydroponics")).toEqual([]);
@@ -239,6 +247,7 @@ describe("search()", () => {
 
     await rpc("entry/update", {
       id: entry.id,
+      ifMatch: etagOf(entry.updatedAt),
       meta: { subtitle: "Hydroponics without a greenhouse" },
     });
     await h.drainDeferred();
@@ -282,6 +291,7 @@ describe("search()", () => {
 
     await rpc("entry/update", {
       id: entry.id,
+      ifMatch: etagOf(entry.updatedAt),
       meta: { internalRef: "hydroponics-42" },
     });
     await h.drainDeferred();
@@ -331,7 +341,11 @@ describe("search()", () => {
     });
     await runSchedule();
 
-    await rpc("entry/update", { id: entry.id, meta: { subtitle: null } });
+    await rpc("entry/update", {
+      id: entry.id,
+      ifMatch: etagOf(entry.updatedAt),
+      meta: { subtitle: null },
+    });
     await h.drainDeferred();
 
     expect(await matches("hydroponics")).toEqual([]);

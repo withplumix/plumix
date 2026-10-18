@@ -14,6 +14,7 @@ import { createFakeRenderer } from "./test/fake-renderer.js";
 import {
   cardPath,
   createHarness,
+  currentEtag,
   DEV_ORIGIN,
   fetchCard,
   headOf,
@@ -745,7 +746,14 @@ describe("a card and the page it shares", () => {
       });
       const saved = await harness.fetch("/_plumix/rpc/entry/update", {
         as: editor,
-        json: { json: { id, excerpt: "Drafted excerpt" }, meta: [] },
+        json: {
+          json: {
+            id,
+            ifMatch: await currentEtag(harness, id, editor),
+            excerpt: "Drafted excerpt",
+          },
+          meta: [],
+        },
       });
       saved.assertStatus(200);
       const token = await harness.mintPreviewToken({

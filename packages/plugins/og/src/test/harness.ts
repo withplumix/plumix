@@ -416,6 +416,22 @@ export async function seedEntry(
   return entry.id;
 }
 
+/** The `etag` `as` reads for entry `id`, to send back as `ifMatch`. */
+export async function currentEtag(
+  harness: DispatcherHarness,
+  id: number,
+  as: HarnessFetchOptions["as"],
+): Promise<string> {
+  const read = await harness.fetch("/_plumix/rpc/entry/get", {
+    as,
+    json: { json: { id }, meta: [] },
+  });
+  const { json } = await read
+    .assertStatus(200)
+    .json<{ json: { etag: string } }>();
+  return json.etag;
+}
+
 export interface SeedMediaOverrides {
   readonly status?: "published" | "draft";
   readonly mime?: string;

@@ -1,7 +1,9 @@
 import type { AnyPluginDescriptor, JsonValue } from "plumix";
 import type { User } from "plumix/schema";
 import type { DispatcherHarness } from "plumix/test";
+import { eq, etagOf } from "plumix/db";
 import { definePlugin } from "plumix/plugin";
+import { entries } from "plumix/schema";
 import { createDispatcherHarness } from "plumix/test";
 import { defineTheme, fallback } from "plumix/theme";
 import { describe, expect, test } from "vitest";
@@ -62,6 +64,16 @@ async function seedPost(
     publishedAt: new Date("2026-05-04T00:00:00.000Z"),
   });
   return entry.id;
+}
+
+/** The `etag` an editor reading entry `id` now would send back as `ifMatch`. */
+async function currentEtag(h: DispatcherHarness, id: number): Promise<string> {
+  const [row] = await h.db
+    .select({ updatedAt: entries.updatedAt })
+    .from(entries)
+    .where(eq(entries.id, id));
+  if (!row) throw new Error(`No entry ${String(id)} to read an etag from`);
+  return etagOf(row.updatedAt);
 }
 
 async function preview(
@@ -162,7 +174,10 @@ describe("the SERP preview procedure", () => {
     const admin = await h.seedUser("admin");
     const saved = await h.fetch("/_plumix/rpc/entry/update", {
       as: admin,
-      json: { json: { id, excerpt: "Pending" }, meta: [] },
+      json: {
+        json: { id, ifMatch: await currentEtag(h, id), excerpt: "Pending" },
+        meta: [],
+      },
     });
     saved.assertStatus(200);
 

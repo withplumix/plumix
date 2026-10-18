@@ -213,11 +213,15 @@ describe("core requests over nodeSqlite", () => {
       as: admin,
     });
     created.assertStatus(200);
-    const { json: entry } = await created.json<{ json: { id: number } }>();
+    const { json: entry } = await created.json<{
+      json: { id: number; etag: string };
+    }>();
 
     const updated = await h.fetch("/_plumix/rpc/entry/update", {
       method: "POST",
-      json: { json: { id: entry.id, title: "Hello again" } },
+      json: {
+        json: { id: entry.id, ifMatch: entry.etag, title: "Hello again" },
+      },
       as: admin,
     });
     updated.assertStatus(200);

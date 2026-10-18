@@ -14,7 +14,7 @@ import {
   definePolicy,
   grant,
 } from "plumix/auth";
-import { entryQuery, sql, typeTag } from "plumix/db";
+import { entryQuery, etagOf, sql, typeTag } from "plumix/db";
 import { definePlugin, FRAMEWORK_PAGINATION_SUFFIX } from "plumix/plugin";
 import { entries, entryTerm, terms } from "plumix/schema";
 import { createDispatcherHarness } from "plumix/test";
@@ -1858,7 +1858,14 @@ describe("a feed at the edge", () => {
 
       const updated = await h.fetch("/_plumix/rpc/entry/update", {
         as: admin,
-        json: { json: { id: post.id, access: "members" }, meta: [] },
+        json: {
+          json: {
+            id: post.id,
+            ifMatch: etagOf(post.updatedAt),
+            access: "members",
+          },
+          meta: [],
+        },
       });
       updated.assertStatus(200);
       await h.drainDeferred();
