@@ -4,10 +4,10 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { MigrationLocation, PlumixApp, TargetOptionValues } from "plumix";
 import type { GetPlatformProxyOptions, PlatformProxy } from "wrangler";
-import { sql } from "drizzle-orm";
-import { createRuntimeHandler } from "plumix/runtime";
 import { createDispatcherHarness } from "plumix/test";
+import { describeRunContract } from "plumix/test/conformance";
 import {
+  afterAll,
   afterEach,
   beforeAll,
   beforeEach,
@@ -574,33 +574,36 @@ describe("cloudflare migrations — a run from the command line", () => {
       targetValues: target,
     });
 
-  // Real miniflare: what proves the run lands where `plumix dev` reads.
-  test("writes through the local D1 `plumix dev` uses", async () => {
-    writeWrangler([D1_ENTRY]);
-    const opened = await openRun();
-    const handler = createRuntimeHandler({ ...app, config: site() });
-    try {
-      await handler.run?.(
-        async (ctx) => {
-          await ctx.db.run(sql`CREATE TABLE probe (id integer)`);
-        },
-        { env: opened.env },
-      );
-    } finally {
-      await handler.dispose?.();
-      await opened.close();
-    }
+  describe("against real local D1", () => {
+    // Each case starts miniflare for the migration and again for every run.
+    beforeAll(() => {
+      vi.setConfig({ testTimeout: 60_000 });
+    });
+    afterAll(() => {
+      vi.resetConfig();
+    });
 
-    const db = await open("site");
-    try {
-      expect(
-        await db.all("SELECT name FROM sqlite_master WHERE name = 'probe'"),
-      ).toEqual([{ name: "probe" }]);
-    } finally {
-      await db.close();
-    }
+    describeRunContract({
+      open: () => {
+        writeWrangler([D1_ENTRY]);
+        return Promise.resolve({
+          migrations,
+          cwd: dir,
+          database: d1({ binding: "DB" }),
+        });
+      },
+    });
+  });
+
+  test("a local run is announced by its binding and database", async () => {
+    writeWrangler([D1_ENTRY]);
+    stubWrangler();
+
+    const opened = await openRun();
+    await opened.close();
+
     expect(opened.target.summary).toBe("local · DB · site");
-  }, 30_000);
+  });
 
   const MEDIA = { binding: "MEDIA", bucket_name: "site-media" };
   const CACHE = { binding: "CACHE", id: "cache-id" };

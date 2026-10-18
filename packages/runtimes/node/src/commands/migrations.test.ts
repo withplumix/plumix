@@ -3,9 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { MigrationLocation, PlumixApp } from "plumix";
-import { sql } from "drizzle-orm";
-import { createRuntimeHandler } from "plumix/runtime";
 import { createDispatcherHarness } from "plumix/test";
+import { describeRunContract } from "plumix/test/conformance";
 import {
   afterEach,
   beforeAll,
@@ -159,41 +158,32 @@ describe("node migrations", () => {
 
 /** `plumix meta` hands `handler.run` the env `openRun` returns. */
 describe("node migrations — a run from the command line", () => {
-  test("writes through the file nodeSqlite() names", async () => {
-    const config = {
-      ...base.config,
-      database: nodeSqlite({ path: join(dir, "site.sqlite") }),
-    };
+  describeRunContract({
+    open: () =>
+      Promise.resolve({
+        migrations,
+        cwd: dir,
+        // Absolute: `nodeSqlite()` resolves against the process cwd, which
+        // `plumix meta` moves to the project root before anything opens.
+        database: nodeSqlite({ path: join(dir, "data/site.sqlite") }),
+      }),
+  });
+
+  test("is announced by the file it opens", async () => {
     const opened = await migrations.openRun({
       cwd: dir,
-      config,
+      config: {
+        ...base.config,
+        database: nodeSqlite({ path: "data/site.sqlite" }),
+      },
       binding: undefined,
       targetValues: {},
     });
-    const handler = createRuntimeHandler({ ...base, config });
-    try {
-      await handler.run?.(
-        async (ctx) => {
-          await ctx.db.run(sql`CREATE TABLE probe (id integer)`);
-        },
-        { env: opened.env },
-      );
-    } finally {
-      await handler.dispose?.();
-      await opened.close();
-    }
+    await opened.close();
 
-    const db = await open(config.database);
-    try {
-      expect(
-        await db.all("SELECT name FROM sqlite_master WHERE name = 'probe'"),
-      ).toEqual([{ name: "probe" }]);
-    } finally {
-      await db.close();
-    }
     expect(opened.target).toEqual({
       remote: false,
-      summary: "local · site.sqlite",
+      summary: "local · data/site.sqlite",
       notes: [],
     });
   });
