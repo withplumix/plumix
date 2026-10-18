@@ -152,6 +152,28 @@ A per-user pending draft of edits to a published entry — one per entry-and-aut
 **Snapshot**:
 The act of capturing an entry's current state into a revision. Not the row itself (that is the revision).
 
+## Concurrent editing
+
+**Copy**:
+What a writer loaded and is editing: an entry, term, settings group or user as it stood when read. A write made from a copy must say which state it was taken from.
+
+**Concurrency token**:
+The opaque value that names the state a copy was taken from, called `etag` in every API and sent back as `ifMatch`. Every write to the resource moves it forward; a write carrying one that is no longer current is a conflict.
+_Avoid_: version, revision (a revision is a stored snapshot), timestamp (what it is made of is not the contract).
+
+**Conflict**:
+A write refused because its copy is out of date or its token is missing. It reports when the resource changed; who is editing it comes from the edit lease. Never resolved on the user's behalf.
+
+**System write**:
+A write not made from a copy (scheduled publishing, bulk actions, trash and restore, import, sync). It moves the concurrency token without checking it, and ignores edit leases.
+
+**Edit lease**:
+One user's claim to edit a resource, renewed while they edit and lapsing when they stop. While it holds, anyone else's write is refused unless they take it over.
+_Avoid_: lock (reserved for database locks), presence (a lease prevents, it does not decorate).
+
+**Take over**:
+Claiming an edit lease another user holds. The previous holder turns read-only and keeps their unsaved work.
+
 ## Blocks & rich content
 
 **Block**:
