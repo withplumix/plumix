@@ -34,6 +34,21 @@ const plugin = definePlugin("test-meta", (ctx) => {
   });
 });
 
+/** A CDN that records each batch of tags it is asked to purge, sorted. */
+function recordingCdn(): { cdn: ConnectedCdn; tags: string[][] } {
+  const tags: string[][] = [];
+  return {
+    tags,
+    cdn: {
+      decorate: (response) => response,
+      purgeTags: (batch) => {
+        tags.push([...batch].sort());
+        return Promise.resolve();
+      },
+    },
+  };
+}
+
 /**
  * A real app, database and handler: the command is only as good as the settle
  * it drives, so nothing between the two is stubbed.
@@ -308,34 +323,21 @@ describe("plumix meta", () => {
   // on a site that was never handed to the command.
   test("a settle purges what the in-site sweep purges", async () => {
     captureReport();
-    const purged = (): { cdn: ConnectedCdn; tags: string[][] } => {
-      const tags: string[][] = [];
-      return {
-        tags,
-        cdn: {
-          decorate: (response) => response,
-          purgeTags: (batch) => {
-            tags.push([...batch].sort());
-            return Promise.resolve();
-          },
-        },
-      };
-    };
-    const viaCli = purged();
-    const { ctx } = await seeded(["settle"], { cdn: viaCli.cdn, posts: 2 });
-    const inSite = purged();
+    const inSite = recordingCdn();
     const { ctx: reference } = await seeded([], {
       cdn: inSite.cdn,
       posts: 2,
     });
-
-    await metaCommand.run(ctx);
     const handler = createRuntimeHandler(reference.app);
     await handler.run?.(
       (appCtx) => sweepAllUnsettledMeta(appCtx, { write: true }),
       { env: {} },
     );
     await handler.dispose?.();
+    const viaCli = recordingCdn();
+    const { ctx } = await seeded(["settle"], { cdn: viaCli.cdn, posts: 2 });
+
+    await metaCommand.run(ctx);
 
     expect(inSite.tags.flat()).not.toEqual([]);
     expect(viaCli.tags).toEqual(inSite.tags);
