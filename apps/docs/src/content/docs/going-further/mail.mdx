@@ -192,7 +192,7 @@ The address is checked when the mailer is resolved, which happens as a request's
 
 ## Testing the mailer
 
-`plumix mail test <to>` sends `mailTest` through the site's mailer and prints the transport's own error when it fails. `--remote --url <origin>` sends it through the deployed site, with its production secrets, using an API token. The [CLI reference](/deployment/cli/#mail) covers both, the token and rate limiting.
+`plumix mail test <to>` sends `mailTest` through the site's mailer and prints the transport's own error when it fails. `--remote --url <origin>` sends it through the deployed site, with its production secrets, using an API token. The [CLI reference](/deployment/cli/#mail) covers both and where the token comes from. Core ships no rate limiter for the route `--remote` calls, as for the rest of the REST API; to throttle it, apply the edge rule [Rate limiting](/apis/rest-api/#rate-limiting) describes.
 
 ```bash
 plumix mail test ann@example.com
