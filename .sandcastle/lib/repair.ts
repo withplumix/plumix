@@ -10,12 +10,7 @@ import type { Journal } from "./telemetry.js";
 import type { MergeOutcome, ReviewThread } from "./verdict.js";
 import { agentPhaseRunner, PROMPT_DIR } from "./agent.js";
 import { rebaseOntoLatestMain } from "./freshen.js";
-import {
-  CHANGESET_GATE,
-  gateBehindCheck,
-  GATES,
-  GATES_LEFT_TO_CI,
-} from "./gates.js";
+import { gateBehindCheck, GATES, GATES_LEFT_TO_CI } from "./gates.js";
 import {
   branchOfPullRequest,
   clearLeftoverWorktree,
@@ -122,7 +117,6 @@ export const gatesARepairRuns = (
     INSTALL_GATE,
     ...GATES_LEFT_TO_CI.filter((gate) => failedInCi.has(gate)),
     ...GATES,
-    CHANGESET_GATE,
   ];
 };
 

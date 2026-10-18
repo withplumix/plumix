@@ -16,10 +16,8 @@ that from what you write below.
 2. **Implement with `mattpocock-skills:tdd`.** The acceptance criteria are the
    behaviours, in order, one RED then GREEN per cycle. The interfaces the ticket
    names are the agreed seams; there is no one to confirm them with.
-3. **Changeset** if a consumer of a published package would notice. AGENTS.md says
-   which package and which bump. The harness's changeset gate also wants a file in
-   `.changeset/` whenever a published package's files change at all; when nothing
-   is released, add an empty one (frontmatter only).
+3. **Changeset** only if a consumer of a published package would notice. AGENTS.md
+   says which package and which bump, and when to skip it.
    **ADR**, if the work records one: use the number the ticket names. If it names
    none, use **{{NEXT_ADR}}**. Main, every open pull request and every open issue
    were checked for it, and no other lane of this run holds it, so do not pick a
@@ -28,7 +26,7 @@ that from what you write below.
    `Fixes #{{TICKET}}` when every criterion is met, otherwise `Refs #{{TICKET}}`.
 
 Do not run the full gate suite yourself. The harness runs format, test, e2e, i18n,
-knip and the changeset check after this phase and hands you any failure. Lint,
+knip and check-no-major after this phase and hands you any failure. Lint,
 typecheck, publint and attw run only in CI, after the pull request opens, so run
 single test files and a targeted typecheck and lint of the packages you touch as
 you work.

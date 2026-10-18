@@ -60,7 +60,7 @@ describe("gateBehindCheck", () => {
   test.each([
     ["Commitlint", "commitlint"],
     ["Are The Types Wrong", "attw"],
-    ["Changesets", "changeset"],
+    ["Changesets", "check-no-major"],
   ])("CI's %s reproduces locally as the %s gate", (checkName, gateName) => {
     expect(gateBehindCheck(checkName)?.name).toBe(gateName);
   });

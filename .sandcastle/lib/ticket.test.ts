@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { RunAgentPhase } from "./agent.js";
-import { CHANGESET_GATE, GATES, underAnOrphanReaper } from "./gates.js";
+import { GATES, underAnOrphanReaper } from "./gates.js";
 import { SETUP_STEPS, workersALaneOversubscribes } from "./sandbox.js";
 import {
   afterReview,
@@ -119,46 +119,6 @@ describe("gate applicability", () => {
   test("e2e does not apply to a docs-only change", () => {
     expect(
       e2e?.appliesWhen?.(["docs/adr/0008-archive-is-one-entry-query.md"]),
-    ).toBe(false);
-  });
-
-  test("the changeset gate applies when a published package changes", () => {
-    expect(
-      CHANGESET_GATE.appliesWhen?.(["packages/plugins/feeds/src/items.ts"]),
-    ).toBe(true);
-  });
-
-  test.each([
-    "packages/admin-ui/src/input-group.tsx",
-    "packages/core/locales/en.po",
-    "packages/plugins/media/package.json",
-  ])("a change consumers install needs a changeset: %s", (path) => {
-    expect(CHANGESET_GATE.appliesWhen?.([path])).toBe(true);
-  });
-
-  test.each([
-    "packages/admin-ui/scripts/roster.ts",
-    "packages/admin-editor/src/block-i18n.test.ts",
-    "packages/admin-editor/test/lingui-macro-stub.ts",
-    "packages/admin/e2e/editor.spec.ts",
-    "packages/admin-editor/vitest.config.ts",
-    "packages/admin-editor/tsconfig.json",
-  ])("a change nothing installs needs none: %s", (path) => {
-    expect(CHANGESET_GATE.appliesWhen?.([path])).toBe(false);
-  });
-
-  test("one shipped file among unshipped ones still needs a changeset", () => {
-    expect(
-      CHANGESET_GATE.appliesWhen?.([
-        "packages/admin-ui/scripts/roster.ts",
-        "packages/admin-ui/src/destructive.ts",
-      ]),
-    ).toBe(true);
-  });
-
-  test("the changeset gate does not apply to a tooling-only change", () => {
-    expect(
-      CHANGESET_GATE.appliesWhen?.(["tooling/eslint/src/rules/foo.ts"]),
     ).toBe(false);
   });
 

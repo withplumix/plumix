@@ -47,16 +47,13 @@ as the ticket pins it, and put your disagreement in `notes`.
   cannot be met as written. Anything a change to the branch can close is not a
   decision, however the brief words it: a bug, a missing criterion, an
   unrequested addition, or the branch departing from a pinned contract, where
-  the fix is to follow the brief. Nor is a conflict with a rule this prompt
-  already settles, such as the empty changeset below. The harness parks the
-  ticket with decision gaps listed instead of sending them to the implementer,
-  so `why` names the choice the person has to make.
+  the fix is to follow the brief. The harness parks the ticket with decision
+  gaps listed instead of sending them to the implementer, so `why` names the
+  choice the person has to make.
 
 `notes` hold only the smells you left and your disagreements with a pinned
 decision. A rule about how the work was done, such as test-first order, leaves
-nothing in a diff, so it is never a finding. Nor is an empty changeset: the
-harness requires one whenever a published package's files change, and empty
-means no release.
+nothing in a diff, so it is never a finding.
 
 Run the test files you touched and a targeted typecheck of their packages. The
 harness runs every gate after this phase. Commit your changes as one commit, by
