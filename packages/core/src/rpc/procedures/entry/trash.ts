@@ -1,3 +1,4 @@
+import { etagOf } from "../../../db/concurrency.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { authenticated } from "../../authenticated.js";
@@ -25,7 +26,11 @@ export const trash = base
     );
 
     if (existing.status === "trash") {
-      return context.hooks.applyFilter("rpc:entry.trash:output", existing);
+      const output = await context.hooks.applyFilter(
+        "rpc:entry.trash:output",
+        existing,
+      );
+      return { ...output, etag: etagOf(existing.updatedAt) };
     }
 
     const [trashed] = await context.db
@@ -38,5 +43,9 @@ export const trash = base
     }
 
     await fireEntryTrashed(context, trashed);
-    return context.hooks.applyFilter("rpc:entry.trash:output", trashed);
+    const output = await context.hooks.applyFilter(
+      "rpc:entry.trash:output",
+      trashed,
+    );
+    return { ...output, etag: etagOf(trashed.updatedAt) };
   });

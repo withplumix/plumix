@@ -1,5 +1,6 @@
 import type { NewEntry } from "../../../db/schema/entries.js";
 import { entryCapabilityByName } from "../../../access/contract/entry-capabilities.js";
+import { etagOf } from "../../../db/concurrency.js";
 import { entries } from "../../../db/schema/entries.js";
 import { loadAuthoredEntry } from "../../../entries/authored.js";
 import { applyTermPatch, loadEntryTerms } from "../../../entries/terms.js";
@@ -91,8 +92,9 @@ export const duplicate = base
 
     const meta = await resolveEntryMeta(context, created, created.meta);
 
-    return context.hooks.applyFilter("rpc:entry.duplicate:output", {
-      ...created,
-      meta,
-    });
+    const output = await context.hooks.applyFilter(
+      "rpc:entry.duplicate:output",
+      { ...created, meta },
+    );
+    return { ...output, etag: etagOf(created.updatedAt) };
   });

@@ -61,6 +61,23 @@ describe("entry.duplicate", () => {
     expect(persisted?.authorId).toBe(h.user.id);
   });
 
+  test("the copy answers with the etag a save from it sends", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const source = await h.factory.published.create({
+      authorId: h.user.id,
+      slug: "duplicated-then-saved",
+    });
+    const copy = await h.client.entry.duplicate({ id: source.id });
+
+    await expect(
+      h.client.entry.update({
+        id: copy.id,
+        title: "Edited copy",
+        ifMatch: copy.etag,
+      }),
+    ).resolves.toMatchObject({ title: "Edited copy" });
+  });
+
   test("duplicating the same source twice yields two distinct slugs", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
     const source = await h.factory.published.create({

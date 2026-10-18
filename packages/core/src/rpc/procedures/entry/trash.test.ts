@@ -24,6 +24,23 @@ describe("entry.trash", () => {
     expect(onTrash.mock.calls[0]?.[1].user?.id).toBe(h.user.id);
   });
 
+  test("answers with the etag a save from the trashed entry sends", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const target = await h.factory.published.create({
+      authorId: h.user.id,
+      slug: "trashed-then-saved",
+    });
+    const trashed = await h.client.entry.trash({ id: target.id });
+
+    await expect(
+      h.client.entry.update({
+        id: target.id,
+        title: "Edited in the trash",
+        ifMatch: trashed.etag,
+      }),
+    ).resolves.toMatchObject({ title: "Edited in the trash" });
+  });
+
   test("contributor cannot trash (no post:delete cap)", async () => {
     const h = await createRpcHarness({ authAs: "contributor" });
     const target = await h.factory.published.create({

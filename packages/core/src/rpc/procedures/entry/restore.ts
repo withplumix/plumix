@@ -1,3 +1,4 @@
+import { etagOf } from "../../../db/concurrency.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { authenticated } from "../../authenticated.js";
@@ -38,5 +39,9 @@ export const restore = base
     }
 
     await fireEntryRestored(context, restored);
-    return context.hooks.applyFilter("rpc:entry.restore:output", restored);
+    const output = await context.hooks.applyFilter(
+      "rpc:entry.restore:output",
+      restored,
+    );
+    return { ...output, etag: etagOf(restored.updatedAt) };
   });
