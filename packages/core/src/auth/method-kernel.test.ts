@@ -358,6 +358,19 @@ describe("a sign-in method's redirectTo", () => {
     expect(response.headers.get("location")).toBe(expected);
   });
 
+  test("an empty ?redirectTo= lands on the admin, not the site root", async () => {
+    const h = await createDispatcherHarness({ config: fixtureSite() });
+    await h.factory.user.create({ email: "alice@example.com" });
+
+    const response = await h.dispatch(
+      fetchStart("alice@example.com", "?redirectTo="),
+    );
+
+    expect(await response.json()).toMatchObject({
+      redirectTo: "/_plumix/admin",
+    });
+  });
+
   test("with none, a sign-in under /blog lands on the admin", async () => {
     const h = await createDispatcherHarness({
       config: fixtureSite({ basePath: "/blog" }),

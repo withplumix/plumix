@@ -1,10 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import {
-  isSafeRedirect,
-  optionalRedirectTo,
-  resolveRedirectTo,
-} from "./redirect.js";
+import { isSafeRedirect, resolveRedirectTo } from "./redirect.js";
 
 describe("isSafeRedirect", () => {
   test.each([
@@ -115,10 +111,4 @@ describe("resolveRedirectTo", () => {
       expect(resolveRedirectTo(value, "/blog")).toBe("/blog/");
     },
   );
-});
-
-describe("optionalRedirectTo", () => {
-  test("reads an empty value as absent, leaving the caller's default", () => {
-    expect(optionalRedirectTo("", "")).toBeUndefined();
-  });
 });
