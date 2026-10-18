@@ -83,7 +83,6 @@ describe("resolveCommandApp", () => {
 describe("runCommand", () => {
   function recordingRuntime(events: string[]): RuntimeMigrations {
     return {
-      remote: false,
       legacyTable: "__drizzle_migrations",
       open: ({ location }) => {
         events.push(`open ${location}`);
@@ -100,6 +99,7 @@ describe("runCommand", () => {
             events.push("close");
             return Promise.resolve();
           },
+          target: { remote: false, summary: "local", notes: [] },
         });
       },
     };
@@ -132,7 +132,7 @@ describe("runCommand", () => {
     await runNamed("dev", events);
 
     expect(events).toEqual([
-      "open local",
+      "open site",
       "migrate __drizzle_migrations_core",
       "close",
       "run dev",

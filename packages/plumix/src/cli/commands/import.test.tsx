@@ -415,6 +415,7 @@ async function prodDump(app: PlumixApp, meta: string): Promise<string> {
     binding: undefined,
     url: PROD,
     owners: resolveOwners(dir, join(dir, "plumix.config.ts"), app.config),
+    targetValues: {},
   });
   const path = join(dir, "dump");
   const writer = writeDump(path, {

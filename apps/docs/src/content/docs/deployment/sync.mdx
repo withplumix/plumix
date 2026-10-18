@@ -48,7 +48,7 @@ A sync runs these steps in order:
 
 1. A `push` without `--yes` or `--dry-run`, with no terminal to confirm in, fails with `sync_push_unconfirmed` before anything is opened.
 2. The scopes are resolved. An unknown one fails with `sync_unknown_scope`, and a scope named without the one it needs fails with `sync_scope_requires`.
-3. Both ends open, and their migrations are compared. When any owner's head differs, the sync fails with `sync_migrations_differ`, naming the owner and the end that is behind. Run `plumix migrate` on that end first, with `--remote` for the deployed site.
+3. Both ends open, and their migrations are compared. When any owner's head differs, the sync fails with `sync_migrations_differ`, naming the owner and the end that is behind. Run `plumix migrate` on that end first, with the target option that names the deployed database (`--production` on Cloudflare).
 4. The source is exported into a dump, which is then read back and checked.
 5. The target runs the import as a dry run, and the command prints, per table, the rows replaced, added and removed, then the rows outside the sync it would remove or clear, then the emails of the authors it would add as disabled users, then how many values it rewrites in each table (see [URLs](#urls)).
 6. With `--dry-run` it prints `Dry run: nothing was changed.` and stops.

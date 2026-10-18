@@ -455,7 +455,7 @@ test("renames the beta flag", async () => {
 
 ### When they run
 
-Data migrations run wherever schema migrations do, and always after every owner's schema migrations, so an `up` can read a column a schema migration of the same release added. They run in owner order: core's, then each plugin's in the order of `plugins`, then the site's, each list in its own order. `plumix dev` runs them on start, and `plumix migrate` and `plumix migrate --remote` run them by hand. On Node and Bun the built server runs them when it starts, before it listens. On Cloudflare, `plumix deploy` runs them against D1 before `wrangler deploy`, so the previous Worker serves the reshaped data until the new one is live.
+Data migrations run wherever schema migrations do, and always after every owner's schema migrations, so an `up` can read a column a schema migration of the same release added. They run in owner order: core's, then each plugin's in the order of `plugins`, then the site's, each list in its own order. `plumix dev` runs them on start, and `plumix migrate` runs them by hand, against the local database or, on Cloudflare, the one `--production`, `--preview` or `--env` names. On Node and Bun the built server runs them when it starts, before it listens. On Cloudflare, `plumix deploy` runs them against D1 before `wrangler deploy`, so the previous Worker serves the reshaped data until the new one is live.
 
 Each one is recorded in `__plumix_data_migrations` under its owner and name once its `up` resolves, and never runs again. `plumix migrate` prints `applied 1 data migration` or `data migrations up to date` for each owner that has any, and `plumix migrate status` lists each one as applied or pending.
 

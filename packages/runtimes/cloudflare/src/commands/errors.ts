@@ -4,7 +4,18 @@ type CloudflareCliErrorCode =
   | "migrate_no_wrangler_config"
   | "migrate_no_d1"
   | "migrate_ambiguous_binding"
-  | "migrate_unknown_binding";
+  | "migrate_unknown_binding"
+  | "migrate_target_conflict"
+  | "deploy_env_conflict";
+
+/** What to add to a wrangler config block that binds no D1 database. */
+export function addD1Hint(ctx: {
+  filename: string;
+  block: string;
+  binding: string;
+}): string {
+  return `Add to ${ctx.block} in ${ctx.filename}: "d1_databases": [{ "binding": "${ctx.binding}", "database_name": "<name>", "database_id": "<id>" }], with the id \`wrangler d1 create <name>\` prints.`;
+}
 
 /**
  * D1 and wrangler vocabulary, which core's runtime-agnostic `CliError` does
@@ -20,11 +31,36 @@ export class CloudflareCliError extends CliError<CloudflareCliErrorCode> {
     );
   }
 
-  static migrateNoD1(ctx: { filename: string }): CloudflareCliError {
+  static migrateNoD1(ctx: {
+    filename: string;
+    block: string;
+    binding: string;
+  }): CloudflareCliError {
     return new CloudflareCliError(
       "migrate_no_d1",
-      `No d1_databases entry with a binding in ${ctx.filename}`,
-      "Add the site's D1 database to `d1_databases`, with the `binding` the config's `d1()` names.",
+      `${ctx.block} in ${ctx.filename} binds no D1 database as "${ctx.binding}"`,
+      addD1Hint(ctx),
+      undefined,
+    );
+  }
+
+  static migrateTargetConflict(ctx: { env: string }): CloudflareCliError {
+    return new CloudflareCliError(
+      "migrate_target_conflict",
+      `--production and --env ${ctx.env} name two environments`,
+      "Pass one: `--production` for production, `--env <name>` for another environment.",
+      undefined,
+    );
+  }
+
+  static deployEnvConflict(ctx: {
+    flag: string;
+    ambient: string;
+  }): CloudflareCliError {
+    return new CloudflareCliError(
+      "deploy_env_conflict",
+      `--env ${ctx.flag} names another environment than CLOUDFLARE_ENV, ${ctx.ambient}`,
+      "Nothing was built. Unset CLOUDFLARE_ENV, or pass the --env it names.",
       undefined,
     );
   }

@@ -150,7 +150,7 @@ The process keeps nothing itself, so whatever runs it keeps the logs. Under [sys
 
 `bunSqlite({ path })` opens the file with WAL journaling, a five-second busy timeout, `synchronous = NORMAL` and foreign keys on. Bun's own defaults differ on all four, so the slot sets each one on connect and again in `plumix migrate`, which is what makes the file behave as it does on Node. Missing parent directories are created, and a relative `path` resolves against the project root in the server and in `plumix migrate` alike, so both open the same file whichever directory you run them from. The server applies the migrations its build shipped to that file when it starts.
 
-The file moves between Bun and Node: the server, `plumix dev` and `plumix migrate` record each owner's applied migrations in the same `__drizzle_migrations_<owner>` tables on both, so a site can switch between the two runtimes and keep its database. It does not move to Cloudflare: D1 is a database of its own, so a site moving there runs `plumix migrate --remote` against a new D1 database.
+The file moves between Bun and Node: the server, `plumix dev` and `plumix migrate` record each owner's applied migrations in the same `__drizzle_migrations_<owner>` tables on both, so a site can switch between the two runtimes and keep its database. It does not move to Cloudflare: D1 is a database of its own, so a site moving there runs `plumix migrate --production` against a new D1 database.
 
 For a remote or shared database, `plumix/db/libsql` stays selectable on Bun: point it at Turso or a libsql server and leave `bunSqlite` out. The server applies migrations to a `bunSqlite` file only, so a libsql database takes its migrations from its own tooling.
 
@@ -323,7 +323,7 @@ Public pages render on every request until the site sits behind a CDN with the `
 
 ## Commands the runtime adds
 
-`plumix dev` applies pending migrations, then runs the site in Vite on Bun, and accepts `--port` and `--host`. `plumix build` builds the client first and the server second, because the server bakes the client's asset manifest into its bundle, copies every table owner's history into `dist/server/migrations/`, and bundles the plugins' and the site's data migrations into `dist/server/migrations/data-migrations.js`, which the server runs after the histories. `plumix migrate` applies every owner's migrations, then its data migrations, to the file `bunSqlite` names, through `bun:sqlite`; it has no `--remote`. There is no `deploy` and no `types`: the deployment artefact is a directory and a command. Each runs as `bun --bun plumix <command>`.
+`plumix dev` applies pending migrations, then runs the site in Vite on Bun, and accepts `--port` and `--host`. `plumix build` builds the client first and the server second, because the server bakes the client's asset manifest into its bundle, copies every table owner's history into `dist/server/migrations/`, and bundles the plugins' and the site's data migrations into `dist/server/migrations/data-migrations.js`, which the server runs after the histories. `plumix migrate` applies every owner's migrations, then its data migrations, to the file `bunSqlite` names, through `bun:sqlite`; it takes no target option. There is no `deploy` and no `types`: the deployment artefact is a directory and a command. Each runs as `bun --bun plumix <command>`.
 
 ## Related
 

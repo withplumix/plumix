@@ -33,13 +33,14 @@ afterEach(() => {
 
 function open(
   database: PlumixApp["config"]["database"],
-  location: MigrationLocation = "local",
+  location: MigrationLocation = "site",
 ) {
   return migrations.open({
     cwd: dir,
     config: { ...base.config, database },
     location,
     binding: undefined,
+    targetValues: {},
   });
 }
 

@@ -149,11 +149,31 @@ export interface MigrationFolder {
 }
 
 /**
- * Which database `plumix migrate` opens: the one `plumix dev` uses, the
- * deployed one (`--remote`), or a scratch database in memory that adoption
- * builds every owner's history into to compare against.
+ * An option a runtime adds to `plumix migrate`, `sync` and `import` to name
+ * which of its databases a command reaches, parsed as `node:util`'s
+ * `parseArgs` parses it.
  */
-export type MigrationLocation = "local" | "remote" | "memory";
+export interface RuntimeTargetOption {
+  readonly type: "boolean" | "string";
+  /** One line for `plumix --help`. */
+  readonly description: string;
+}
+
+/** Each target option a runtime accepts, by its flag name without `--`. */
+export type RuntimeTargetOptions = Readonly<
+  Record<string, RuntimeTargetOption>
+>;
+
+/** The target options a command was given, each by its flag name. */
+export type TargetOptionValues = Readonly<
+  Record<string, string | boolean | undefined>
+>;
+
+/**
+ * The site's database, which the target options name (the local one without
+ * any), or a scratch database in memory that adoption compares against.
+ */
+export type MigrationLocation = "site" | "memory";
 
 export interface OpenMigrationDatabaseOptions {
   readonly cwd: string;
@@ -161,6 +181,17 @@ export interface OpenMigrationDatabaseOptions {
   readonly location: MigrationLocation;
   /** `--binding`, for a runtime that can have more than one database. */
   readonly binding: string | undefined;
+  readonly targetValues: TargetOptionValues;
+}
+
+/** Which database a command opened, as the CLI shows it before it writes. */
+export interface MigrationDatabaseTarget {
+  /** A deployed database, which the CLI confirms before writing to. */
+  readonly remote: boolean;
+  /** One line naming the database and how it was chosen. */
+  readonly summary: string;
+  /** Lines a plan shows under the summary. */
+  readonly notes: readonly string[];
 }
 
 /**
@@ -186,6 +217,7 @@ export interface MigrationDatabase {
   /** Runs every statement, or none of them. */
   batch(statements: readonly MigrationStatement[]): Promise<void>;
   close(): Promise<void>;
+  readonly target: MigrationDatabaseTarget;
 }
 
 /**
@@ -193,8 +225,8 @@ export interface MigrationDatabase {
  * adoption and reporting live in the CLI.
  */
 export interface RuntimeMigrations {
-  /** Whether `--remote` names a database this runtime can reach. */
-  readonly remote: boolean;
+  /** The options that name a database other than the local one. */
+  readonly targetOptions?: RuntimeTargetOptions;
   /**
    * The tracking table of a site's legacy single history (`drizzle/`), which
    * marks a database to adopt.
@@ -225,6 +257,7 @@ export interface OpenSyncEndOptions {
   readonly url: string | undefined;
   /** In application order; {@link SyncEnd.heads} reads each one's head. */
   readonly owners: readonly MigrationOwner[];
+  readonly targetValues: TargetOptionValues;
 }
 
 /** One table a scope selects: the whole table unless `where` narrows it. */
@@ -369,6 +402,8 @@ export interface SyncEnd {
  * bundle must not carry.
  */
 export interface RuntimeSync {
+  /** The options that name which deployed database the remote end reaches. */
+  readonly targetOptions?: RuntimeTargetOptions;
   open(options: OpenSyncEndOptions): Promise<SyncEnd>;
 }
 

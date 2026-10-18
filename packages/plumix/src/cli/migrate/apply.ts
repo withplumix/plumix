@@ -62,6 +62,36 @@ function describeMigration(
   return `  ${state} ${new Date(createdAt).toISOString()} ${hash.slice(0, 8)}`;
 }
 
+function pendingMigrations(
+  owner: MigrationOwner,
+  applied: readonly { createdAt: number }[],
+): ReturnType<typeof readMigrationFiles> {
+  // drizzle applies whatever is newer than the newest it recorded.
+  const newest = applied.at(-1)?.createdAt ?? -Infinity;
+  return readMigrationFiles(owner).filter(
+    (migration) => migration.folderMillis > newest,
+  );
+}
+
+/** Each owner in order, with the migrations it has pending. */
+export async function reportPending(
+  db: MigrationDatabase,
+  owners: readonly MigrationOwner[],
+): Promise<void> {
+  for (const owner of owners) {
+    const pending = pendingMigrations(
+      owner,
+      await appliedMigrations(db, owner),
+    );
+    report.info(`${owner.name}: ${String(pending.length)} pending`);
+    for (const migration of pending) {
+      report.info(
+        describeMigration("pending", migration.folderMillis, migration.hash),
+      );
+    }
+  }
+}
+
 /** Each owner in order, with the migrations it has applied and has pending. */
 export async function reportStatus(
   db: MigrationDatabase,
@@ -69,11 +99,7 @@ export async function reportStatus(
 ): Promise<void> {
   for (const owner of owners) {
     const applied = await appliedMigrations(db, owner);
-    // drizzle applies whatever is newer than the newest it recorded.
-    const newest = applied.at(-1)?.createdAt ?? -Infinity;
-    const pending = readMigrationFiles(owner).filter(
-      (migration) => migration.folderMillis > newest,
-    );
+    const pending = pendingMigrations(owner, applied);
     report.info(
       `${owner.name}: ${String(applied.length)} applied, ${String(pending.length)} pending`,
     );

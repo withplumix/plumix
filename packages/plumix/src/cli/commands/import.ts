@@ -1,9 +1,9 @@
 import { existsSync, rmSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
-import { parseArgs } from "node:util";
 import { getTableName } from "drizzle-orm";
 
 import type {
+  CommandContext,
   CommandDefinition,
   DumpReader,
   PlumixApp,
@@ -11,6 +11,7 @@ import type {
   SyncRow,
   SyncScope,
   SyncTarget,
+  TargetOptionValues,
 } from "@plumix/core";
 import { CORE_SYNC_SCOPE_TABLES } from "@plumix/core/cli";
 import { settings } from "@plumix/core/schema";
@@ -24,6 +25,7 @@ import { report } from "../report.js";
 import { readDump, writeDump } from "../sync/dump.js";
 import { rewriteUrls } from "../sync/rewrite-urls.js";
 import { resolveScopes } from "../sync/scopes.js";
+import { parseCommandArgs } from "../target-options.js";
 import {
   closeAll,
   describeImport,
@@ -55,26 +57,23 @@ interface ImportArgs {
   readonly dryRun: boolean;
   readonly yes: boolean;
   readonly rewriteUrls: boolean;
+  readonly targetValues: TargetOptionValues;
 }
 
-function parseImportArgs(argv: readonly string[]): ImportArgs {
-  let parsed;
-  try {
-    parsed = parseArgs({
-      args: [...argv],
-      options: {
-        url: { type: "string" },
-        binding: { type: "string" },
-        "dry-run": { type: "boolean", default: false },
-        yes: { type: "boolean", default: false },
-        "no-rewrite-urls": { type: "boolean", default: false },
-      },
-      allowPositionals: true,
-      strict: true,
-    });
-  } catch (cause) {
-    throw PlumixCliError.importInvalidArguments({ cause });
-  }
+function parseImportArgs(ctx: CommandContext<PlumixApp>): ImportArgs {
+  const parsed = parseCommandArgs(ctx.argv, {
+    command: "import",
+    runtime: ctx.app.config.runtime.name,
+    options: {
+      url: { type: "string" },
+      binding: { type: "string" },
+      "dry-run": { type: "boolean", default: false },
+      yes: { type: "boolean", default: false },
+      "no-rewrite-urls": { type: "boolean", default: false },
+    },
+    targetOptions: ctx.runtimeSync?.targetOptions,
+    invalid: (cause) => PlumixCliError.importInvalidArguments({ cause }),
+  });
   const [input, extra] = parsed.positionals;
   if (input === undefined || extra !== undefined) {
     throw PlumixCliError.importInvalidArguments({
@@ -91,6 +90,7 @@ function parseImportArgs(argv: readonly string[]): ImportArgs {
     dryRun: parsed.values["dry-run"],
     yes: parsed.values.yes,
     rewriteUrls: !parsed.values["no-rewrite-urls"],
+    targetValues: parsed.targetValues,
   };
 }
 
@@ -226,7 +226,7 @@ async function loadAuthoring(
 export const importCommand: CommandDefinition<PlumixApp> = {
   describe: "Replace the local or the deployed site's content with a file's",
   async run(ctx) {
-    const args = parseImportArgs(ctx.argv);
+    const args = parseImportArgs(ctx);
     const targetName: SyncTarget = args.url === undefined ? "local" : "remote";
     if (
       targetName === "remote" &&
@@ -254,6 +254,7 @@ export const importCommand: CommandDefinition<PlumixApp> = {
       binding: args.binding,
       url: args.url,
       owners: resolveOwners(ctx.cwd, ctx.configPath, config),
+      targetValues: args.targetValues,
     });
     try {
       const run: ImportRun = {

@@ -12,7 +12,6 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { parseArgs } from "node:util";
 import { getTableName, is } from "drizzle-orm";
 import { SQLiteTable } from "drizzle-orm/sqlite-core";
 
@@ -23,6 +22,7 @@ import type {
   MigrationOwner,
   PlumixConfig,
   RuntimeMigrations,
+  TargetOptionValues,
 } from "@plumix/core";
 import { spawnCapturingStderr } from "@plumix/core/cli";
 
@@ -31,11 +31,13 @@ import { PlumixCliError } from "../errors.js";
 import {
   adoptLegacyDatabase,
   applyOwners,
+  reportPending,
   reportStatus,
 } from "../migrate/apply.js";
 import { loadDataMigrations } from "../migrate/data-load.js";
 import {
   applyDataMigrations,
+  reportDataPending,
   reportDataStatus,
   withCoreDataMigrations,
 } from "../migrate/data.js";
@@ -47,6 +49,8 @@ import {
   siteRootOf,
 } from "../migrate/owners.js";
 import { report } from "../report.js";
+import { parseCommandArgs } from "../target-options.js";
+import { syncDeps } from "./sync.js";
 
 export const migrateCommand: CommandDefinition = {
   describe:
@@ -58,23 +62,30 @@ export const migrateCommand: CommandDefinition = {
       await migrateGenerate(target);
       return;
     }
-    const { sub, remote, binding } = parseMigrateArgs(ctx.argv);
-    if (sub === undefined) {
+    const args = parseMigrateArgs(ctx.argv, target);
+    const database = {
+      binding: args.binding,
+      targetValues: args.targetValues,
+    };
+    if (args.sub === undefined) {
       await checkSiteDrift(target);
-      await withDatabase(
-        target,
-        { remote, binding },
-        adoptAndApply(target, binding),
-      );
+      await withDatabase(target, database, async (db, owners, data, run) => {
+        announce(db);
+        if (!(await confirmedPlan(db, owners, data, args))) return;
+        await adoptAndApply(target, database)(db, owners, data, run);
+      });
       return;
     }
-    if (sub === "fresh") {
-      if (remote) throw PlumixCliError.migrateFreshRemote();
+    if (args.sub === "fresh") {
+      if (Object.keys(args.targetValues).length > 0) {
+        throw PlumixCliError.migrateFreshRemote();
+      }
       await checkSiteDrift(target);
       await withDatabase(
         target,
-        { remote, binding },
+        database,
         async (db, owners, data) => {
+          announce(db);
           await applyOwners(db, owners);
           await applyDataMigrations(db, data);
         },
@@ -84,20 +95,17 @@ export const migrateCommand: CommandDefinition = {
       );
       return;
     }
-    if (sub === "status") {
-      await withDatabase(
-        target,
-        { remote, binding },
-        async (db, owners, data) => {
-          await reportStatus(db, owners);
-          await reportDataStatus(db, data);
-        },
-      );
+    if (args.sub === "status") {
+      await withDatabase(target, database, async (db, owners, data) => {
+        announce(db);
+        await reportStatus(db, owners);
+        await reportDataStatus(db, data);
+      });
       return;
     }
     throw PlumixCliError.unknownSubcommand({
       command: "migrate",
-      subcommand: sub,
+      subcommand: args.sub,
       supported: ["fresh", "status", "generate"],
     });
   },
@@ -122,32 +130,90 @@ function migrationTarget(ctx: CommandContext): MigrationTarget {
 
 interface MigrateArgs {
   readonly sub: string | undefined;
-  readonly remote: boolean;
   readonly binding: string | undefined;
+  readonly targetValues: TargetOptionValues;
+  readonly dryRun: boolean;
+  readonly yes: boolean;
 }
 
-function parseMigrateArgs(argv: readonly string[]): MigrateArgs {
-  let parsed;
-  try {
-    parsed = parseArgs({
-      args: [...argv],
-      options: {
-        remote: { type: "boolean", default: false },
-        binding: { type: "string" },
-      },
-      allowPositionals: true,
-      strict: true,
-    });
-  } catch (cause) {
-    throw PlumixCliError.migrateInvalidArguments({ cause });
-  }
+function parseMigrateArgs(
+  argv: readonly string[],
+  target: MigrationTarget,
+): MigrateArgs {
+  const parsed = parseCommandArgs(argv, {
+    command: "migrate",
+    runtime: target.config.runtime.name,
+    options: {
+      binding: { type: "string" },
+      "dry-run": { type: "boolean", default: false },
+      yes: { type: "boolean", default: false },
+    },
+    targetOptions: target.runtimeMigrations?.targetOptions,
+    invalid: (cause) => PlumixCliError.migrateInvalidArguments({ cause }),
+  });
   const [sub, extra] = parsed.positionals;
   if (extra !== undefined) {
     throw PlumixCliError.migrateInvalidArguments({
       cause: `Unexpected argument '${extra}'`,
     });
   }
-  return { sub, remote: parsed.values.remote, binding: parsed.values.binding };
+  return {
+    sub,
+    binding: parsed.values.binding,
+    targetValues: parsed.targetValues,
+    dryRun: parsed.values["dry-run"],
+    yes: parsed.values.yes,
+  };
+}
+
+/** Which of the runtime's databases a migration opens. */
+interface DatabaseChoice {
+  readonly binding: string | undefined;
+  readonly targetValues: TargetOptionValues;
+}
+
+const LOCAL_DATABASE: DatabaseChoice = {
+  binding: undefined,
+  targetValues: {},
+};
+
+function announce(db: MigrationDatabase): void {
+  report.info(`→ ${db.target.summary}`);
+}
+
+async function reportPlan(
+  db: MigrationDatabase,
+  owners: readonly MigrationOwner[],
+  data: readonly DataMigrationOwner[],
+): Promise<void> {
+  for (const note of db.target.notes) report.info(`  ${note}`);
+  await reportPending(db, owners);
+  await reportDataPending(db, data);
+}
+
+/**
+ * A deployed database is written only once its plan has printed and been
+ * confirmed, the rule `plumix sync push` and `plumix import` follow.
+ */
+async function confirmedPlan(
+  db: MigrationDatabase,
+  owners: readonly MigrationOwner[],
+  data: readonly DataMigrationOwner[],
+  args: Pick<MigrateArgs, "dryRun" | "yes">,
+): Promise<boolean> {
+  if (!db.target.remote && !args.dryRun) return true;
+  await reportPlan(db, owners, data);
+  if (args.dryRun) {
+    report.info("Dry run: nothing was changed.");
+    return false;
+  }
+  if (args.yes) return true;
+  if (!syncDeps.isInteractive()) throw PlumixCliError.migrateUnconfirmed();
+  const accepted = await syncDeps.confirm(
+    `Apply these migrations to ${db.target.summary}?`,
+  );
+  if (!accepted) report.info("Nothing was changed.");
+  return accepted;
 }
 
 function runtimeMigrations(target: MigrationTarget): RuntimeMigrations {
@@ -165,16 +231,11 @@ function runtimeMigrations(target: MigrationTarget): RuntimeMigrations {
  */
 async function withDatabase(
   target: MigrationTarget,
-  database: Pick<MigrateArgs, "remote" | "binding">,
+  database: DatabaseChoice,
   work: MigrationWork,
   beforeOpen?: () => void,
 ): Promise<void> {
   const migrations = runtimeMigrations(target);
-  if (database.remote && !migrations.remote) {
-    throw PlumixCliError.migrateRemoteUnsupported({
-      runtime: target.config.runtime.name,
-    });
-  }
   const owners = resolveOwners(target.cwd, target.configPath, target.config);
   const data = withCoreDataMigrations(
     await loadDataMigrations(target.cwd, target.configPath, target.config),
@@ -183,8 +244,9 @@ async function withDatabase(
   const db = await migrations.open({
     cwd: target.cwd,
     config: target.config,
-    location: database.remote ? "remote" : "local",
+    location: "site",
     binding: database.binding,
+    targetValues: database.targetValues,
   });
   try {
     await work(db, owners, data, migrations);
@@ -203,7 +265,7 @@ type MigrationWork = (
 /** Adoption builds its scratch database through the same runtime, in memory. */
 function adoptAndApply(
   target: MigrationTarget,
-  binding: string | undefined,
+  database: DatabaseChoice,
 ): MigrationWork {
   return async (db, owners, data, migrations) => {
     await adoptLegacyDatabase(
@@ -216,7 +278,8 @@ function adoptAndApply(
           cwd: target.cwd,
           config: target.config,
           location: "memory",
-          binding,
+          binding: database.binding,
+          targetValues: database.targetValues,
         }),
     );
     await applyOwners(db, owners);
@@ -357,16 +420,21 @@ function snapshotSiteSchema(cwd: string): () => void {
 
 /**
  * What a runtime's `deploy` runs before it ships: the site's history checked,
- * then every owner applied to the remote database.
+ * then its plan printed and every owner applied, unprompted, to the database
+ * `targetValues` name.
  */
-export async function migrateBeforeDeploy(ctx: CommandContext): Promise<void> {
-  const target = migrationTarget(ctx);
-  await checkSiteDrift(target);
-  await withDatabase(
-    target,
-    { remote: true, binding: undefined },
-    adoptAndApply(target, undefined),
-  );
+export async function migrateBeforeDeploy(
+  ctx: CommandContext,
+  targetValues: TargetOptionValues,
+): Promise<void> {
+  const site = migrationTarget(ctx);
+  const database = { binding: undefined, targetValues };
+  await checkSiteDrift(site);
+  await withDatabase(site, database, async (db, owners, data, migrations) => {
+    announce(db);
+    await reportPlan(db, owners, data);
+    await adoptAndApply(site, database)(db, owners, data, migrations);
+  });
 }
 
 /**
@@ -390,8 +458,8 @@ export async function migrateForDev(target: MigrationTarget): Promise<void> {
   }
   await withDatabase(
     target,
-    { remote: false, binding: undefined },
-    adoptAndApply(target, undefined),
+    LOCAL_DATABASE,
+    adoptAndApply(target, LOCAL_DATABASE),
   );
 }
 

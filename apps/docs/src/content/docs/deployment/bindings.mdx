@@ -165,7 +165,7 @@ The four R2 credential keys are read as a set. A partial set leaves presigned up
 
 ## Local development
 
-`plumix dev` runs the Worker under `workerd` with a local stand-in for every binding, persisted under `.wrangler/` in your project. The placeholder `database_id` the scaffolder writes is enough for all of it. Nothing touches your Cloudflare account until you pass `--remote` to a migration or run `plumix deploy`.
+`plumix dev` runs the Worker under `workerd` with a local stand-in for every binding, persisted under `.wrangler/` in your project. The placeholder `database_id` the scaffolder writes is enough for all of it. Nothing touches your Cloudflare account until you pass a target such as `--production` to a migration or run `plumix deploy`.
 
 That is also why the first remote deploy needs `wrangler d1 create` and a real `database_id`. Local dev never asked for one, so the omission stays invisible until deploy time.
 

@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { CommandContext, PlumixApp } from "plumix";
@@ -14,7 +14,7 @@ import {
 } from "vitest";
 import { getPlatformProxy } from "wrangler";
 
-import { deployCommand, deployDeps } from "./deploy.js";
+import { deployCommand, deployDeps, previewCommand } from "./deploy.js";
 import { migrations, migrationsDeps } from "./migrations.js";
 
 let app: PlumixApp;
@@ -44,14 +44,26 @@ beforeEach(() => {
     }),
   );
   events = [];
-  vi.spyOn(deployDeps, "spawnInherit").mockImplementation((command, args) => {
-    events.push([command, ...args].join(" "));
+  vi.spyOn(deployDeps, "build").mockImplementation(() => {
+    events.push(`build CLOUDFLARE_ENV=${process.env.CLOUDFLARE_ENV ?? ""}`);
     return Promise.resolve();
   });
+  vi.spyOn(deployDeps, "spawnInherit").mockImplementation(
+    (command, args, options) => {
+      const env = options.env?.CLOUDFLARE_ENV;
+      events.push(
+        [env === undefined ? [] : [`CLOUDFLARE_ENV=${env}`], command, ...args]
+          .flat()
+          .join(" "),
+      );
+      return Promise.resolve();
+    },
+  );
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
   rmSync(dir, { recursive: true, force: true });
 });
 
@@ -97,6 +109,7 @@ describe("plumix deploy", () => {
     await deployCommand.run(deployCtx(["--minify"]));
 
     expect(events).toEqual([
+      "build CLOUDFLARE_ENV=",
       "proxy remoteBindings=true",
       "core applied 2",
       "wrangler deploy --minify",
@@ -112,7 +125,127 @@ describe("plumix deploy", () => {
       "Authentication error",
     );
 
+    expect(events).toEqual(["build CLOUDFLARE_ENV="]);
+  });
+});
+
+describe("plumix deploy and plumix preview — targets", () => {
+  function writeConfig(config: object): void {
+    writeFileSync(
+      join(dir, "wrangler.jsonc"),
+      JSON.stringify({
+        name: "site",
+        main: ".plumix/worker.ts",
+        compatibility_date: "2026-04-01",
+        d1_databases: [d1("site-prod", "prod-id")],
+        ...config,
+      }),
+    );
+  }
+
+  const d1 = (name: string, id: string) => ({
+    binding: "DB",
+    database_name: name,
+    database_id: id,
+  });
+
+  // Records the database each migration reached; applies nothing.
+  function stubReachedDatabases(): void {
+    vi.spyOn(migrationsDeps, "getPlatformProxy").mockImplementation(
+      (options) => {
+        const config = JSON.parse(
+          readFileSync(options.configPath ?? "", "utf8"),
+        ) as { d1_databases: { database_id: string }[] };
+        events.push(`migrate ${config.d1_databases[0]?.database_id ?? ""}`);
+        return Promise.reject(new Error("stop after reaching the database"));
+      },
+    );
+  }
+
+  test("deploy --env qa builds and ships qa after migrating qa's database", async () => {
+    writeConfig({ env: { qa: { d1_databases: [d1("site-qa", "qa-id")] } } });
+    vi.spyOn(migrationsDeps, "getPlatformProxy").mockImplementation(
+      async (options) => {
+        const config = JSON.parse(
+          readFileSync(options.configPath ?? "", "utf8"),
+        ) as { d1_databases: { database_id: string }[] };
+        events.push(`migrate ${config.d1_databases[0]?.database_id ?? ""}`);
+        return getPlatformProxy({
+          configPath: options.configPath,
+          persist: false,
+          remoteBindings: false,
+        });
+      },
+    );
+    vi.spyOn(process.stderr, "write").mockReturnValue(true);
+
+    await deployCommand.run(deployCtx(["--env", "qa", "--minify"]));
+
+    expect(events).toEqual([
+      "build CLOUDFLARE_ENV=qa",
+      "migrate qa-id",
+      "CLOUDFLARE_ENV=qa wrangler deploy --env qa --minify",
+    ]);
+  });
+
+  test("deploy --env fails before building when CLOUDFLARE_ENV names another environment", async () => {
+    vi.stubEnv("CLOUDFLARE_ENV", "staging");
+    writeConfig({ env: { qa: { d1_databases: [d1("site-qa", "qa-id")] } } });
+
+    await expect(
+      deployCommand.run(deployCtx(["--env=qa"])),
+    ).rejects.toMatchObject({ code: "deploy_env_conflict" });
+
     expect(events).toEqual([]);
+  });
+
+  test("preview migrates the Worker Previews database, then runs wrangler preview with its arguments", async () => {
+    writeConfig({
+      previews: { d1_databases: [d1("site-preview", "preview-id")] },
+    });
+    vi.spyOn(migrationsDeps, "getPlatformProxy").mockImplementation(
+      async (options) => {
+        const config = JSON.parse(
+          readFileSync(options.configPath ?? "", "utf8"),
+        ) as { d1_databases: { database_id: string }[] };
+        events.push(`migrate ${config.d1_databases[0]?.database_id ?? ""}`);
+        return getPlatformProxy({
+          configPath: options.configPath,
+          persist: false,
+          remoteBindings: false,
+        });
+      },
+    );
+    vi.spyOn(process.stderr, "write").mockReturnValue(true);
+
+    await previewCommand.run(deployCtx(["--name", "feat-x"]));
+
+    expect(events).toEqual([
+      "build CLOUDFLARE_ENV=",
+      "migrate preview-id",
+      "wrangler preview --name feat-x",
+    ]);
+  });
+
+  test("preview --env qa migrates the previews database qa resolves to", async () => {
+    writeConfig({
+      env: {
+        qa: {
+          d1_databases: [d1("site-qa", "qa-id")],
+          previews: { d1_databases: [d1("qa-preview", "qa-preview-id")] },
+        },
+      },
+    });
+    stubReachedDatabases();
+
+    await expect(
+      previewCommand.run(deployCtx(["--env", "qa"])),
+    ).rejects.toThrow("stop after reaching the database");
+
+    expect(events).toEqual([
+      "build CLOUDFLARE_ENV=qa",
+      "migrate qa-preview-id",
+    ]);
   });
 });
 
@@ -169,7 +302,7 @@ describe("plumix deploy — data migrations", () => {
     await deployCommand.run(siteDataMigration(SEED_BETA));
 
     expect(lines.join("")).toMatch(/site: applied 1 data migration\n/);
-    expect(events).toEqual(["wrangler deploy"]);
+    expect(events).toEqual(["build CLOUDFLARE_ENV=", "wrangler deploy"]);
     expect(await recorded()).toEqual([{ owner: "site", name: "seed-beta" }]);
   });
 
@@ -205,7 +338,7 @@ describe("plumix deploy — data migrations", () => {
       ) as unknown,
     });
 
-    expect(events).toEqual([]);
+    expect(events).toEqual(["build CLOUDFLARE_ENV="]);
     expect(await recorded()).toEqual([]);
   });
 });

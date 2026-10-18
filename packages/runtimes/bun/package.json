@@ -130,7 +130,7 @@
   },
   "peerDependencies": {
     "drizzle-orm": "catalog:drizzle",
-    "plumix": "workspace:>=0.24.0 <1.0.0"
+    "plumix": "workspace:>=0.26.0 <1.0.0"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",

@@ -43,6 +43,7 @@ import {
   migrateForDev,
   migrateGenerateDeps,
 } from "./migrate.js";
+import { syncDeps } from "./sync.js";
 
 let base: PlumixApp;
 beforeAll(async () => {
@@ -273,7 +274,10 @@ describe("applying owner histories", () => {
 
   // drizzle's own migrator over `node:sqlite`, through its `sqlite-proxy` driver
   // — the same shape every runtime hands the CLI.
-  function sqliteDatabase(path: string): MigrationDatabase {
+  function sqliteDatabase(
+    path: string,
+    { remote = false, summary = "local · site.sqlite" } = {},
+  ): MigrationDatabase {
     const raw = new DatabaseSync(path);
     const inTransaction = (work: () => void): void => {
       raw.exec("BEGIN");
@@ -326,23 +330,34 @@ describe("applying owner histories", () => {
         raw.close();
         return Promise.resolve();
       },
+      target: { remote, summary, notes: [] },
     };
   }
 
   let dir: string;
   let opened: MigrationLocation[];
 
+  const PRODUCTION = {
+    targetOptions: {
+      production: {
+        type: "boolean",
+        description: "Migrate the production database",
+      },
+    },
+  } as const;
+
   function runtime(
     overrides: Partial<RuntimeMigrations> = {},
   ): RuntimeMigrations {
     return {
-      remote: false,
       legacyTable: "__drizzle_migrations",
-      open: ({ location }) => {
+      open: ({ location, targetValues }) => {
         opened.push(location);
+        const remote = targetValues.production === true;
         return Promise.resolve(
           sqliteDatabase(
             location === "memory" ? ":memory:" : join(dir, "site.sqlite"),
+            remote ? { remote, summary: "production · site.sqlite" } : {},
           ),
         );
       },
@@ -563,7 +578,7 @@ async up({ db }) {
       );
 
       expect(lines.join("\n")).toMatch(
-        /^core: applied 2 migrations\n {2}applied \S+Z [0-9a-f]{8}\n {2}applied \S+Z [0-9a-f]{8}\n@acme\/plugin-widgets: applied 1 migration\n {2}applied 1970-01-01T00:00:01\.000Z [0-9a-f]{8}$/,
+        /^→ local · site\.sqlite\ncore: applied 2 migrations\n {2}applied \S+Z [0-9a-f]{8}\n {2}applied \S+Z [0-9a-f]{8}\n@acme\/plugin-widgets: applied 1 migration\n {2}applied 1970-01-01T00:00:01\.000Z [0-9a-f]{8}$/,
       );
     });
 
@@ -1055,10 +1070,14 @@ export default [
   });
 
   describe("migrating before a deploy", () => {
-    test("applies every owner to the remote database", async () => {
-      await migrateBeforeDeploy(applyCtx([], [], runtime({ remote: true })));
+    test("applies every owner to the database the target names, unprompted", async () => {
+      const confirm = vi.spyOn(syncDeps, "confirm");
 
-      expect(opened).toEqual(["remote"]);
+      await migrateBeforeDeploy(applyCtx([], [], runtime(PRODUCTION)), {
+        production: true,
+      });
+
+      expect(confirm).not.toHaveBeenCalled();
       expect(trackingRows("__drizzle_migrations_core")).toBe(2);
     });
 
@@ -1067,7 +1086,9 @@ export default [
       drizzleKitWrites({ "0001_nickname.sql": "" });
 
       await expect(
-        migrateBeforeDeploy(applyCtx([], [LOCAL], runtime({ remote: true }))),
+        migrateBeforeDeploy(applyCtx([], [LOCAL], runtime(PRODUCTION)), {
+          production: true,
+        }),
       ).rejects.toMatchObject({ code: "migrate_site_drifted" });
 
       expect(opened).toEqual([]);
@@ -1228,7 +1249,7 @@ export default [
       await migrateForDev(devTarget([]));
 
       expect(trackingRows("__drizzle_migrations_core")).toBe(2);
-      expect(opened).toEqual(["local", "memory"]);
+      expect(opened).toEqual(["site", "memory"]);
     });
 
     test("starts on a runtime that cannot open its database, migrating nothing", async () => {
@@ -1254,23 +1275,118 @@ export default [
     });
   });
 
-  describe("plumix migrate --remote", () => {
-    test("opens the runtime's remote database", async () => {
+  describe("a runtime's target options", () => {
+    test("migrate parses the options the runtime declares and hands them to open", async () => {
+      const targets: unknown[] = [];
+      const migrations = runtime(PRODUCTION);
+
       await migrateCommand.run(
-        applyCtx(["--remote"], [], runtime({ remote: true })),
+        applyCtx(["--production", "--yes"], [], {
+          ...migrations,
+          open: (options) => {
+            targets.push(options.targetValues);
+            return migrations.open(options);
+          },
+        }),
       );
 
-      expect(opened).toEqual(["remote"]);
+      expect(targets).toEqual([{ production: true }]);
     });
 
-    test("fails naming the runtime when it has no remote database", async () => {
+    test("an option the runtime does not declare fails naming the runtime", async () => {
       await expect(
-        migrateCommand.run(applyCtx(["--remote"])),
+        migrateCommand.run(applyCtx(["--production"])),
       ).rejects.toMatchObject({
-        code: "migrate_remote_unsupported",
+        code: "unknown_option",
         message: expect.stringContaining("acme runtime") as unknown,
       });
       expect(opened).toEqual([]);
+    });
+  });
+
+  describe("a migrate that writes to a deployed database", () => {
+    function production(argv: readonly string[]): CommandContext {
+      return applyCtx(["--production", ...argv], [], runtime(PRODUCTION));
+    }
+
+    function interactive(answer: boolean) {
+      vi.spyOn(syncDeps, "isInteractive").mockReturnValue(true);
+      return vi.spyOn(syncDeps, "confirm").mockResolvedValue(answer);
+    }
+
+    test("prints the target and each owner's pending migrations before it asks", async () => {
+      const lines: string[] = [];
+      vi.spyOn(report, "info").mockImplementation((line) => lines.push(line));
+      const confirm = interactive(false);
+
+      await migrateCommand.run(production([]));
+
+      expect(lines.slice(0, 4)).toEqual([
+        "→ production · site.sqlite",
+        "core: 2 pending",
+        expect.stringMatching(/^ {2}pending \S+Z [0-9a-f]{8}$/) as unknown,
+        expect.stringMatching(/^ {2}pending \S+Z [0-9a-f]{8}$/) as unknown,
+      ]);
+      expect(confirm).toHaveBeenCalledWith(
+        "Apply these migrations to production · site.sqlite?",
+      );
+    });
+
+    test("a declined prompt applies nothing", async () => {
+      interactive(false);
+
+      await migrateCommand.run(production([]));
+
+      expect(names("table")).not.toContain("__drizzle_migrations_core");
+    });
+
+    test("an accepted prompt applies every owner", async () => {
+      interactive(true);
+
+      await migrateCommand.run(production([]));
+
+      expect(trackingRows("__drizzle_migrations_core")).toBe(2);
+    });
+
+    test("--yes applies without asking", async () => {
+      const confirm = interactive(false);
+
+      await migrateCommand.run(production(["--yes"]));
+
+      expect(confirm).not.toHaveBeenCalled();
+      expect(trackingRows("__drizzle_migrations_core")).toBe(2);
+    });
+
+    test("--dry-run prints the plan and applies nothing", async () => {
+      const lines: string[] = [];
+      vi.spyOn(report, "info").mockImplementation((line) => lines.push(line));
+      const confirm = interactive(true);
+
+      await migrateCommand.run(production(["--dry-run"]));
+
+      expect(confirm).not.toHaveBeenCalled();
+      expect(lines.at(-1)).toBe("Dry run: nothing was changed.");
+      expect(names("table")).not.toContain("__drizzle_migrations_core");
+    });
+
+    test("without a terminal or --yes it refuses, applying nothing", async () => {
+      vi.spyOn(syncDeps, "isInteractive").mockReturnValue(false);
+
+      await expect(migrateCommand.run(production([]))).rejects.toMatchObject({
+        code: "migrate_unconfirmed",
+      });
+
+      expect(names("table")).not.toContain("__drizzle_migrations_core");
+    });
+
+    test("a local migrate never asks", async () => {
+      vi.spyOn(syncDeps, "isInteractive").mockReturnValue(false);
+      const confirm = vi.spyOn(syncDeps, "confirm");
+
+      await migrateCommand.run(applyCtx([], [], runtime(PRODUCTION)));
+
+      expect(confirm).not.toHaveBeenCalled();
+      expect(trackingRows("__drizzle_migrations_core")).toBe(2);
     });
   });
 
@@ -1294,13 +1410,13 @@ export default [
       expect(existsSync(join(dir, "drizzle/0000_site.sql"))).toBe(true);
     });
 
-    test("refuses --remote without touching anything", async () => {
+    test("refuses a target option without touching anything", async () => {
       await migrateCommand.run(applyCtx([]));
       opened = [];
 
       await expect(
         migrateCommand.run(
-          applyCtx(["fresh", "--remote"], [], runtime({ remote: true })),
+          applyCtx(["fresh", "--production"], [], runtime(PRODUCTION)),
         ),
       ).rejects.toMatchObject({ code: "migrate_fresh_remote" });
 
@@ -1342,7 +1458,7 @@ export default [
       await migrateCommand.run(applyCtx(["status"], plugins));
 
       expect(lines.join("\n")).toMatch(
-        /^core: 0 applied, 2 pending\n {2}pending .+\n {2}pending .+\n@acme\/plugin-widgets: 0 applied, 1 pending\n {2}pending 1970-01-01T00:00:01\.000Z [0-9a-f]{8}$/,
+        /^→ local · site\.sqlite\ncore: 0 applied, 2 pending\n {2}pending .+\n {2}pending .+\n@acme\/plugin-widgets: 0 applied, 1 pending\n {2}pending 1970-01-01T00:00:01\.000Z [0-9a-f]{8}$/,
       );
     });
     test("lists each owner's applied and pending data migrations after the schema status", async () => {
@@ -1370,7 +1486,10 @@ export default [
         "  applied a1",
         "  pending a2",
       ]);
-      expect(lines[0]).toBe("core: 2 applied, 0 pending");
+      expect(lines.slice(0, 2)).toEqual([
+        "→ local · site.sqlite",
+        "core: 2 applied, 0 pending",
+      ]);
     });
   });
 
@@ -1404,12 +1523,12 @@ export default [
 
       expect(schema()).toEqual(before);
       expect(trackingRows("__drizzle_migrations_core")).toBe(2);
-      expect(opened).toEqual(["local", "memory"]);
+      expect(opened).toEqual(["site", "memory"]);
       expect(lines.join("\n")).toContain("drizzle/");
 
       lines.length = 0;
       await migrateCommand.run(applyCtx([]));
-      expect(lines).toEqual(["core: up to date"]);
+      expect(lines).toEqual(["→ local · site.sqlite", "core: up to date"]);
     });
 
     test("ignores the data-migrations tracking table as bookkeeping", async () => {

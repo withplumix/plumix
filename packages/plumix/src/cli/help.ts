@@ -1,11 +1,35 @@
-import type { CommandDefinition } from "@plumix/core";
+import type { CommandDefinition, RuntimeTargetOptions } from "@plumix/core";
 
 export interface CommandGroup {
   readonly label: string;
   readonly commands: ReadonlyMap<string, CommandDefinition>;
 }
 
-export function formatHelp(groups: readonly CommandGroup[]): string {
+export interface TargetOptionGroup {
+  readonly label: string;
+  readonly options: RuntimeTargetOptions;
+}
+
+function targetOptionLines({ label, options }: TargetOptionGroup): string[] {
+  const flags = Object.entries(options).map(([name, option]) => [
+    option.type === "string" ? `--${name} <value>` : `--${name}`,
+    option.description,
+  ]);
+  if (flags.length === 0) return [];
+  const width = Math.max(...flags.map(([flag = ""]) => flag.length));
+  return [
+    `${label}:`,
+    ...flags.map(([flag = "", description = ""]) => {
+      return `  ${flag.padEnd(width)}    ${description}`;
+    }),
+    "",
+  ];
+}
+
+export function formatHelp(
+  groups: readonly CommandGroup[],
+  targetOptions?: TargetOptionGroup,
+): string {
   const lines = [
     "plumix — a CMS for the edge",
     "",
@@ -30,6 +54,7 @@ export function formatHelp(groups: readonly CommandGroup[]): string {
     }
     lines.push("");
   }
+  if (targetOptions) lines.push(...targetOptionLines(targetOptions));
 
   return lines.join("\n");
 }

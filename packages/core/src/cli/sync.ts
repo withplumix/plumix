@@ -17,7 +17,7 @@ export class SyncError extends CliError<SyncErrorCode> {
     return new SyncError(
       "sync_migrations_differ",
       `The two ends have not applied the same migrations:\n${ctx.differences.map((d) => `  - ${d}`).join("\n")}`,
-      "Nothing was changed. Run `plumix migrate` on the end that is behind (`plumix migrate --remote` for the deployed site), then sync again.",
+      "Nothing was changed. Run `plumix migrate` on the end that is behind (with the target option that names the deployed database, such as `--production` on Cloudflare), then sync again.",
       undefined,
     );
   }

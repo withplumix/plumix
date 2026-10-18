@@ -24,6 +24,7 @@ export type {
   DumpTableCount,
   DumpWriter,
   MigrationDatabase,
+  MigrationDatabaseTarget,
   MigrationFolder,
   MigrationLocation,
   MigrationOwner,
@@ -34,6 +35,8 @@ export type {
   RuntimeDiagnose,
   RuntimeMigrations,
   RuntimeSync,
+  RuntimeTargetOption,
+  RuntimeTargetOptions,
   SyncAfterEvent,
   SyncDependentReport,
   SyncDirection,
@@ -49,5 +52,6 @@ export type {
   SyncTableReport,
   SyncTarget,
   SyncValue,
+  TargetOptionValues,
 } from "@plumix/core";
 export type { SyncHeadsAt } from "@plumix/core/cli";
