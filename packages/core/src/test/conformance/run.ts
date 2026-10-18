@@ -33,8 +33,8 @@ export interface RunContractOptions {
 type Case = ContractCase<RunContractOptions>;
 
 /**
- * A settle writes one query per row, and one call of the admin's Field values
- * page stopped at 25, so this many rows took that page several batches.
+ * A settle writes one query per row, and one sweep call stops at the 25-query
+ * budget `sweep.ts` keeps, so this many rows take the loop several calls.
  */
 const ROWS = 60;
 
@@ -132,7 +132,7 @@ export const runContractCases: readonly Case[] = [
     },
   },
   {
-    name: "a settle converts more rows than one admin batch reached",
+    name: "a settle converts more rows than one sweep call reaches",
     async run(options) {
       const site = await seeded(options);
 

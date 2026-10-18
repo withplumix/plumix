@@ -307,9 +307,9 @@ describe("plumix meta", () => {
     });
   });
 
-  // One admin call stopped at 25 queries to stay under D1's per-request
-  // limit; the command keeps going until every row is walked.
-  test("settles more rows than one admin batch reached", async () => {
+  // One sweep call stops at 25 queries to stay under D1's per-request limit;
+  // the command keeps going until every row is walked.
+  test("settles more rows than one sweep call reaches", async () => {
     const lines = captureReport();
     const { ctx, unsettled } = await seeded(["settle"], { posts: 60 });
 
@@ -354,8 +354,8 @@ describe("plumix meta", () => {
     expect(isCliError(error) && error.code).toBe("unknown_subcommand");
   });
 
-  // Calling it an unreachable database would send a Node site to the admin
-  // page, where the same query fails the same way.
+  // Calling it an unreachable database would send the operator to the target
+  // options, where the same query fails the same way.
   test("a query that fails inside the settle surfaces as itself", async () => {
     captureReport();
     const { ctx } = await seeded([], {
