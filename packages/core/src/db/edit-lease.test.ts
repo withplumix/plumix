@@ -82,7 +82,6 @@ describe("acquireEditLease", () => {
 
     expect(lease).toMatchObject({
       holder: { id: ada.id, name: "Ada" },
-      since: T0,
       expiresAt: at(150),
     });
   });
@@ -193,15 +192,82 @@ describe("renewEditLease", () => {
   });
 });
 
+describe("renewEditLease after a take over", () => {
+  test("once the editor who took over released it, the previous holder's renewal still reports who took it", async () => {
+    const db = await createTestDb();
+    const { ada, bo } = await editors(db);
+    await acquireEditLease(db, ENTRY, { userId: ada.id, surface: "admin" }, T0);
+    await takeOverEditLease(
+      db,
+      ENTRY,
+      { userId: bo.id, surface: "admin" },
+      at(40),
+    );
+    await releaseEditLease(db, ENTRY, bo.id, at(50));
+
+    const renewal = await renewEditLease(
+      db,
+      ENTRY,
+      { userId: ada.id, surface: "admin" },
+      at(90),
+    );
+
+    expect(renewal).toEqual({
+      lost: { by: { id: bo.id, name: "Bo" }, at: at(40) },
+    });
+  });
+
+  test("once the take over lapsed, the previous holder's renewal still reports who took it", async () => {
+    const db = await createTestDb();
+    const { ada, bo } = await editors(db);
+    await acquireEditLease(db, ENTRY, { userId: ada.id, surface: "admin" }, T0);
+    await takeOverEditLease(
+      db,
+      ENTRY,
+      { userId: bo.id, surface: "admin" },
+      at(40),
+    );
+
+    const renewal = await renewEditLease(
+      db,
+      ENTRY,
+      { userId: ada.id, surface: "admin" },
+      at(200),
+    );
+
+    expect(renewal).toEqual({
+      lost: { by: { id: bo.id, name: "Bo" }, at: at(40) },
+    });
+  });
+});
+
 describe("releaseEditLease", () => {
-  test("the holder's release frees the resource", async () => {
+  test("a release from one of the holder's tabs keeps the lease their other tabs share", async () => {
+    const db = await createTestDb();
+    const { ada, bo } = await editors(db);
+    await acquireEditLease(db, ENTRY, { userId: ada.id, surface: "admin" }, T0);
+    await acquireEditLease(
+      db,
+      ENTRY,
+      { userId: ada.id, surface: "admin" },
+      at(5),
+    );
+
+    await releaseEditLease(db, ENTRY, ada.id, at(10));
+
+    await expect(
+      acquireEditLease(db, ENTRY, { userId: bo.id, surface: "admin" }, at(20)),
+    ).rejects.toMatchObject({ data: { holder: { id: ada.id } } });
+  });
+
+  test("a released lease is free once the holder's other tabs would have renewed it", async () => {
     const db = await createTestDb();
     const { ada } = await editors(db);
     await acquireEditLease(db, ENTRY, { userId: ada.id, surface: "admin" }, T0);
 
-    await releaseEditLease(db, ENTRY, ada.id);
+    await releaseEditLease(db, ENTRY, ada.id, at(10));
 
-    expect(await readEditLease(db, ENTRY, at(1))).toBeUndefined();
+    expect(await readEditLease(db, ENTRY, at(40))).toBeUndefined();
   });
 
   test("anyone else's release leaves the holder's lease alone", async () => {
@@ -209,7 +275,7 @@ describe("releaseEditLease", () => {
     const { ada, bo } = await editors(db);
     await acquireEditLease(db, ENTRY, { userId: ada.id, surface: "admin" }, T0);
 
-    await releaseEditLease(db, ENTRY, bo.id);
+    await releaseEditLease(db, ENTRY, bo.id, at(1));
 
     expect(await readEditLease(db, ENTRY, at(1))).toMatchObject({
       holder: { id: ada.id },

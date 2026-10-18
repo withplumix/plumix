@@ -96,7 +96,7 @@ describe("entry.lease.renew", () => {
 });
 
 describe("entry.lease.release", () => {
-  test("frees the caller's lease", async () => {
+  test("lets the caller's lease lapse within one renewal interval", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
     const entry = await h.factory.draft.create({ authorId: h.user.id });
     await h.client.entry.lease.acquire({ id: entry.id });
@@ -104,7 +104,11 @@ describe("entry.lease.release", () => {
     await h.client.entry.lease.release({ id: entry.id });
 
     expect(
-      await readEditLease(h.db, { kind: "entry", id: entry.id }),
+      await readEditLease(
+        h.db,
+        { kind: "entry", id: entry.id },
+        new Date(Date.now() + 30_000),
+      ),
     ).toBeUndefined();
   });
 });

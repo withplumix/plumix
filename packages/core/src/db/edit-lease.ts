@@ -2,12 +2,15 @@ import type { SQL } from "drizzle-orm";
 
 import type { Db } from "../context/app-context.js";
 import type { EditLeaseSurface } from "./schema/edit_leases.js";
+import {
+  EDIT_LEASE_DURATION_MS,
+  EDIT_LEASE_RENEW_INTERVAL_MS,
+} from "./contract/edit-lease.js";
 import { and, eq, gt, not, or } from "./index.js";
 import { editLeases } from "./schema/edit_leases.js";
 import { users } from "./schema/users.js";
 
-/** How long a lease lasts after its last renewal. */
-export const EDIT_LEASE_DURATION_MS = 120_000;
+export { EDIT_LEASE_DURATION_MS } from "./contract/edit-lease.js";
 
 /** What can be leased: a kind of resource (`entry`) and its id. */
 export interface LeaseResource {
@@ -83,7 +86,7 @@ export class LockedError extends Error {
   readonly holder: LeaseHolder;
   readonly since: Date;
 
-  constructor(lease: EditLease) {
+  constructor(lease: { readonly holder: LeaseHolder; readonly since: Date }) {
     super(`${lease.holder.name} is editing this resource.`);
     this.name = "LockedError";
     this.holder = lease.holder;
@@ -95,63 +98,83 @@ export class LockedError extends Error {
   }
 }
 
-/** Moves the claimant's own live lease on, keeping when they took it. */
-async function extendOwnLease(
+/** The row's holder, whether or not their lease is still live. */
+async function lastHolder(
   db: Db,
   resource: LeaseResource,
-  claimant: LeaseClaimant,
-  now: Date,
-): Promise<boolean> {
-  const rows = await db
-    .update(editLeases)
-    .set({ surface: claimant.surface, expiresAt: expiryFrom(now) })
-    .where(
-      and(
-        isResource(resource),
-        eq(editLeases.userId, claimant.userId),
-        isLive(now),
-      ),
-    )
-    .returning({ userId: editLeases.userId });
-  return rows.length > 0;
+): Promise<{ readonly holder: LeaseHolder; readonly since: Date } | undefined> {
+  const [row] = await db
+    .select({
+      userId: editLeases.userId,
+      name: users.name,
+      email: users.email,
+      since: editLeases.since,
+    })
+    .from(editLeases)
+    .innerJoin(users, eq(users.id, editLeases.userId))
+    .where(isResource(resource));
+  if (!row) return undefined;
+  return {
+    holder: { id: row.userId, name: row.name ?? row.email },
+    since: row.since,
+  };
 }
 
-/**
- * Starts the claimant's lease. Without `setWhere` it replaces whoever holds
- * it; with it, only a row `setWhere` matches.
- */
-async function startLease(
+async function holderNamed(db: Db, userId: number): Promise<LeaseHolder> {
+  const [user] = await db
+    .select({ name: users.name, email: users.email })
+    .from(users)
+    .where(eq(users.id, userId));
+  return { id: userId, name: user?.name ?? user?.email ?? String(userId) };
+}
+
+/** The upsert every claim is: no row back means `setWhere` refused it. */
+async function upsertLease(
   db: Db,
   resource: LeaseResource,
   claimant: LeaseClaimant,
   now: Date,
-  setWhere?: SQL,
-): Promise<boolean> {
-  const lease = {
+  conflict: {
+    readonly set: Partial<typeof editLeases.$inferInsert>;
+    readonly setWhere?: SQL;
+  },
+): Promise<EditLease | undefined> {
+  const [row] = await db
+    .insert(editLeases)
+    .values({
+      resourceKind: resource.kind,
+      resourceId: String(resource.id),
+      userId: claimant.userId,
+      surface: claimant.surface,
+      since: now,
+      expiresAt: expiryFrom(now),
+    })
+    .onConflictDoUpdate({
+      target: [editLeases.resourceKind, editLeases.resourceId],
+      ...conflict,
+    })
+    .returning({
+      surface: editLeases.surface,
+      since: editLeases.since,
+      expiresAt: editLeases.expiresAt,
+    });
+  if (!row) return undefined;
+  return { holder: await holderNamed(db, claimant.userId), ...row };
+}
+
+function startedBy(claimant: LeaseClaimant, now: Date) {
+  return {
     userId: claimant.userId,
     surface: claimant.surface,
     since: now,
     expiresAt: expiryFrom(now),
   };
-  const rows = await db
-    .insert(editLeases)
-    .values({
-      resourceKind: resource.kind,
-      resourceId: String(resource.id),
-      ...lease,
-    })
-    .onConflictDoUpdate({
-      target: [editLeases.resourceKind, editLeases.resourceId],
-      set: lease,
-      setWhere,
-    })
-    .returning({ userId: editLeases.userId });
-  return rows.length > 0;
 }
 
 /**
- * Leases `resource` to the claimant, or renews the lease they hold. Throws
- * `LockedError` while another user holds it.
+ * Leases `resource` to the claimant over no lease, a lapsed one or their own,
+ * which their other tabs share. Throws `LockedError` while another user holds
+ * it.
  */
 export async function acquireEditLease(
   db: Db,
@@ -159,22 +182,15 @@ export async function acquireEditLease(
   claimant: LeaseClaimant,
   now: Date = new Date(),
 ): Promise<EditLease> {
-  for (;;) {
-    const claimed =
-      (await extendOwnLease(db, resource, claimant, now)) ||
-      (await startLease(
-        db,
-        resource,
-        claimant,
-        now,
-        or(not(isLive(now)), eq(editLeases.userId, claimant.userId)),
-      ));
-    const lease = await readEditLease(db, resource, now);
-    // The holder released it between the claim and the read: claim again.
-    if (!lease) continue;
-    if (claimed) return lease;
-    throw new LockedError(lease);
-  }
+  const lease = await upsertLease(db, resource, claimant, now, {
+    set: startedBy(claimant, now),
+    setWhere: or(not(isLive(now)), eq(editLeases.userId, claimant.userId)),
+  });
+  if (lease) return lease;
+  const current = await lastHolder(db, resource);
+  // Deleting the holder's user cascades their lease away: the resource is free.
+  if (!current) return acquireEditLease(db, resource, claimant, now);
+  throw new LockedError(current);
 }
 
 /** Leases `resource` to the claimant, replacing any other holder. */
@@ -184,12 +200,11 @@ export async function takeOverEditLease(
   claimant: LeaseClaimant,
   now: Date = new Date(),
 ): Promise<EditLease> {
-  for (;;) {
-    await startLease(db, resource, claimant, now);
-    const lease = await readEditLease(db, resource, now);
-    // Released between the write and the read: write it again.
-    if (lease) return lease;
-  }
+  const lease = await upsertLease(db, resource, claimant, now, {
+    set: startedBy(claimant, now),
+  });
+  // An upsert with no `setWhere` always writes its row.
+  return lease ?? acquireEditLease(db, resource, claimant, now);
 }
 
 /** `lost` names whoever holds the lease now, and since when. */
@@ -198,8 +213,8 @@ export type EditLeaseRenewal =
   | { readonly lost: { readonly by: LeaseHolder; readonly at: Date } };
 
 /**
- * Extends the claimant's lease, or takes it again once it lapsed. Reports
- * `lost` while another user holds it, rather than throwing.
+ * Extends the claimant's lease, keeping its `since`. A row naming someone
+ * else, even lapsed or released, is `lost`: only a holder renews.
  */
 export async function renewEditLease(
   db: Db,
@@ -207,23 +222,37 @@ export async function renewEditLease(
   claimant: LeaseClaimant,
   now: Date = new Date(),
 ): Promise<EditLeaseRenewal> {
-  try {
-    return { lease: await acquireEditLease(db, resource, claimant, now) };
-  } catch (error) {
-    if (!(error instanceof LockedError)) throw error;
-    return { lost: { by: error.holder, at: error.since } };
-  }
+  const lease = await upsertLease(db, resource, claimant, now, {
+    set: { surface: claimant.surface, expiresAt: expiryFrom(now) },
+    setWhere: eq(editLeases.userId, claimant.userId),
+  });
+  if (lease) return { lease };
+  const current = await lastHolder(db, resource);
+  if (!current) return renewEditLease(db, resource, claimant, now);
+  return { lost: { by: current.holder, at: current.since } };
 }
 
-/** Ends the user's lease on `resource`; a lease someone else holds stays. */
+/**
+ * Lapses the user's lease one renewal interval from now, not at once: their
+ * other tabs share it, and an open one renews it before then.
+ */
 export async function releaseEditLease(
   db: Db,
   resource: LeaseResource,
   userId: number,
+  now: Date = new Date(),
 ): Promise<void> {
+  const lapsesAt = new Date(now.getTime() + EDIT_LEASE_RENEW_INTERVAL_MS);
   await db
-    .delete(editLeases)
-    .where(and(isResource(resource), eq(editLeases.userId, userId)));
+    .update(editLeases)
+    .set({ expiresAt: lapsesAt })
+    .where(
+      and(
+        isResource(resource),
+        eq(editLeases.userId, userId),
+        gt(editLeases.expiresAt, lapsesAt),
+      ),
+    );
 }
 
 /**
