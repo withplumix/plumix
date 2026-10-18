@@ -160,9 +160,11 @@ catalogs:
     # disabled marks we replace with the core block marks, or nodes that are
     # standalone blocks). All pinned in lockstep with @tiptap/core so a single
     # prosemirror/core copy is bundled. @tiptap/pm is an exact-version peer of
-    # every package here and rides along on that lockstep -- never pin it in
-    # `overrides`, which silently rewrites the peer range and forks it away
-    # from the version tiptap expects.
+    # every package here, so each package that uses tiptap declares it as a
+    # dependency: left to the site's package manager, the peer keeps whatever
+    # version an older lockfile holds (#3155). Never pin it in `overrides`,
+    # which silently rewrites the peer range and forks it away from the
+    # version tiptap expects.
     "@tiptap/extension-blockquote": ^3.31.4
     "@tiptap/extension-document": ^3.31.4
     "@tiptap/extension-hard-break": ^3.31.4
@@ -171,6 +173,7 @@ catalogs:
     "@tiptap/extension-paragraph": ^3.31.4
     "@tiptap/extension-text": ^3.31.4
     "@tiptap/extensions": ^3.31.4
+    "@tiptap/pm": ^3.31.4
     "@tiptap/react": ^3.31.4
   vite:
     "@vitejs/plugin-react": ^6.1.2
