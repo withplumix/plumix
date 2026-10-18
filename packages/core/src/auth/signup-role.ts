@@ -12,9 +12,11 @@ interface SignupRoleInput {
 export function signupRole(input: SignupRoleInput): UserRole | undefined {
   const domain = extractDomain(input.email);
   if (domain === null) return undefined;
-  return Object.hasOwn(input.allowedDomains ?? {}, domain)
-    ? input.allowedDomains?.[domain]
-    : input.defaultRole;
+  const { allowedDomains } = input;
+  if (allowedDomains !== undefined && Object.hasOwn(allowedDomains, domain)) {
+    return allowedDomains[domain];
+  }
+  return input.defaultRole;
 }
 
 /** Returns null, not a throw, for input not shaped like `local@domain`. */

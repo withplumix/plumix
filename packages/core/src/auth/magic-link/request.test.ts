@@ -181,6 +181,22 @@ describe("requestMagicLink", () => {
     expect(row?.email).toBe("newcomer@example.com");
   });
 
+  test("signup: a listed domain matches whatever its case", async () => {
+    const db = await createTestDb();
+    await userFactory.transient({ db }).create({ role: "admin" });
+    const { mailer, sent } = captureMailer();
+
+    await requestMagicLink(db, {
+      email: "Ann@Example.COM",
+      origin: "https://cms.example",
+      basePath: "",
+      mail: mailFor(db, mailer),
+      allowedDomains: { "example.com": "editor" },
+    });
+
+    expect(sent).toHaveLength(1);
+  });
+
   test("signup: an unlisted domain silently no-ops", async () => {
     const db = await createTestDb();
     await userFactory.transient({ db }).create({ role: "admin" });

@@ -11,7 +11,6 @@ declare module "../src/mail/contract/registry.js" {
 // Every test starts signed out; the default storage state is an admin's.
 test.use({ storageState: { cookies: [], origins: [] } });
 
-/** The playground's `auth({ allowedDomains })` lists it. */
 const ALLOWED_DOMAIN = "allowed.test";
 
 test.describe("the email-code method from a theme island", () => {

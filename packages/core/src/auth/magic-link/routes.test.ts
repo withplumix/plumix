@@ -1110,20 +1110,27 @@ describe("magic-link verify of a link issued to a new address", () => {
     expect(created?.role).toBe("editor");
   });
 
-  test("under selfSignup a listed domain keeps its role and the rest get the default", async () => {
+  test("under selfSignup a listed domain keeps its own role", async () => {
     const h = await signUpHarness({ selfSignup: true });
     await h.seedUser("admin");
 
     await verifyLinkFor(h, "ann@example.com");
-    await verifyLinkFor(h, "bob@other.com");
 
     const ann = await h.db.query.users.findFirst({
       where: eq(users.email, "ann@example.com"),
     });
+    expect(ann?.role).toBe("editor");
+  });
+
+  test("under selfSignup an unlisted domain gets the default role", async () => {
+    const h = await signUpHarness({ selfSignup: true });
+    await h.seedUser("admin");
+
+    await verifyLinkFor(h, "bob@other.com");
+
     const bob = await h.db.query.users.findFirst({
       where: eq(users.email, "bob@other.com"),
     });
-    expect(ann?.role).toBe("editor");
     expect(bob?.role).toBe("subscriber");
   });
 

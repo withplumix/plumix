@@ -603,7 +603,7 @@ describe("oauth callback route", () => {
     expect(response.headers.get("location")).toBe("/");
   });
 
-  test("domain-gated signup creates a user with the domain's default role", async () => {
+  test("a listed domain's signup creates a user with its role", async () => {
     const h = await createDispatcherHarness({
       config: {
         auth: {

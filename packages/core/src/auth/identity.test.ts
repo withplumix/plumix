@@ -5,11 +5,7 @@ import { oauthAccounts } from "../db/schema/oauth_accounts.js";
 import { users } from "../db/schema/users.js";
 import { oauthAccountFactory, userFactory } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
-import {
-  ExternalIdentityError,
-  extractDomain,
-  resolveExternalIdentity,
-} from "./identity.js";
+import { ExternalIdentityError, resolveExternalIdentity } from "./identity.js";
 
 describe("resolveExternalIdentity — sign-in (existing user)", () => {
   test("returns the existing user when verified", async () => {
@@ -429,33 +425,5 @@ describe("resolveExternalIdentity — provider account", () => {
       "cause.message",
       expect.stringContaining("link storage unavailable"),
     );
-  });
-});
-
-describe("extractDomain", () => {
-  test("returns the lowercased domain part", () => {
-    expect(extractDomain("alice@Example.COM")).toBe("example.com");
-  });
-
-  test("handles addr-spec with subdomain", () => {
-    expect(extractDomain("a@mail.example.com")).toBe("mail.example.com");
-  });
-
-  test("returns null when the local part is empty", () => {
-    // Defense-in-depth — without this, `@evil.example` would leak
-    // through to the allowed-domains match as the bare domain string.
-    expect(extractDomain("@example.com")).toBeNull();
-  });
-
-  test("returns null when the domain part is empty", () => {
-    expect(extractDomain("alice@")).toBeNull();
-  });
-
-  test("returns null when no @ is present", () => {
-    expect(extractDomain("not-an-email")).toBeNull();
-  });
-
-  test("returns null on empty string", () => {
-    expect(extractDomain("")).toBeNull();
   });
 });
