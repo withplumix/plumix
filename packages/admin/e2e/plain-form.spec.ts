@@ -311,8 +311,6 @@ test.describe("plain-form route for non-editor entry types", () => {
     expect(lastInput.meta ?? {}).not.toHaveProperty("followers");
   });
 
-  // One saved author a second session can save, its `entry.update` checking
-  // `ifMatch` as the server does.
   async function mockSavedAuthor(page: Page): Promise<{
     readonly updates: Record<string, unknown>[];
     readonly saveElsewhere: (changes: Record<string, unknown>) => void;

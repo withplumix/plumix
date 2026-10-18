@@ -48,8 +48,6 @@ export {
   rowsAffected,
 } from "@plumix/core/db";
 
-// The pieces of a guarded write from a copy: read an `etag`, parse `ifMatch`,
-// claim the row, merge, and refuse a stale copy.
 export {
   claim,
   ConflictError,

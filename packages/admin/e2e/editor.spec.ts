@@ -1158,8 +1158,6 @@ test.describe("editor publishing & autosave", () => {
     expect(updates[1]).toMatchObject({ status: "published", ifMatch: "e1" });
   });
 
-  // One saved entry a second session can save, its `entry.update` checking
-  // `ifMatch` as the server does.
   async function mockSavedEntry(page: Page): Promise<{
     readonly updates: Record<string, unknown>[];
     readonly saveElsewhere: (changes: Record<string, unknown>) => void;

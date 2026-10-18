@@ -24,7 +24,6 @@ export const trash = base
       entryDeletableGuards(errors),
     );
 
-    // Trashing an entry already in the trash is a no-op.
     const result = await writeAsSystem(context.db, existing, (row) =>
       row.status === "trash" ? undefined : { status: "trash" },
     );

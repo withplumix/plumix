@@ -8,6 +8,10 @@ import { writeAsSystem } from "./concurrency.js";
 describe("writeAsSystem", () => {
   test("a write that lands after the read sends it back to decide from the entry as it is now", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
+    await h.factory.trashed.create({
+      authorId: h.user.id,
+      slug: "system-write-bystander",
+    });
     const read = await h.factory.draft.create({
       authorId: h.user.id,
       slug: "system-write-retry",

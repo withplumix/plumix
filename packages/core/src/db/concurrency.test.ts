@@ -141,6 +141,14 @@ describe("ConflictError", () => {
       updatedAt: new Date("2026-10-18T12:00:07Z"),
     });
   });
+
+  test("names itself and says why it was thrown", () => {
+    const error = new ConflictError(new Date("2026-10-18T12:00:07Z"));
+
+    expect(String(error)).toBe(
+      "ConflictError: The resource changed since this copy was read.",
+    );
+  });
 });
 
 describe("ifMatchObject", () => {
