@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 
-/** Why the last load of older comments failed, if it did. */
 export function LoadMoreError({
   error,
 }: {
