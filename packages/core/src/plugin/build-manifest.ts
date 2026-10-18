@@ -341,24 +341,6 @@ const CORE_NAV_ITEMS: readonly {
   },
   {
     groupId: "management",
-    item: {
-      to: "/allowed-domains",
-      label: {
-        id: "core.adminNav.item.allowedDomains",
-        message: "Allowed domains",
-      },
-      coreIcon: "users",
-      order: 150,
-      capability: "settings:manage",
-      keywords: [
-        { id: "core.adminNav.keyword.domains", message: "domains" },
-        { id: "core.adminNav.keyword.email", message: "email" },
-        { id: "core.adminNav.keyword.signups", message: "signups" },
-      ],
-    },
-  },
-  {
-    groupId: "management",
     slot: "mailer",
     area: "emailDelivery",
     item: {

@@ -34,8 +34,7 @@ export type BootstrapVia = "passkey" | "first-method-wins";
 export interface PlumixSelfSignupConfig {
   /**
    * Never defaulted: it decides what "anyone with an email" gets, so prefer
-   * `"subscriber"`. Bypasses `allowed_domains` wholesale, even rules granting
-   * a higher role.
+   * `"subscriber"`. A domain in `allowedDomains` still gets its own role.
    */
   readonly defaultRole: UserRole;
 }
@@ -57,7 +56,12 @@ export interface PlumixAuthInput {
    * only behind an edge gate.
    */
   readonly bootstrapVia?: BootstrapVia;
-  /** Omit to keep signup gated to `allowed_domains`. */
+  /**
+   * Lowercase email domain → the role a new user on it signs up at, matched
+   * case-insensitively and exactly (no subdomains). Delete a line to close it.
+   */
+  readonly allowedDomains?: Readonly<Record<string, UserRole>>;
+  /** Omit to keep signup to the domains in `allowedDomains`. */
   readonly selfSignup?: PlumixSelfSignupConfig;
   /**
    * Root-relative; gets `?redirectTo=`, plus `magic_link_error`, `oauth_error`,

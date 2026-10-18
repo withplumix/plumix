@@ -3,7 +3,6 @@ export type * from "@plumix/core/test";
 // Factories for every core table, and the db-bound bundle.
 export {
   adminUser,
-  allowedDomainFactory,
   apiTokenFactory,
   authorUser,
   authTokenFactory,

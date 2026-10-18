@@ -301,13 +301,14 @@ describe("auth hooks — passkey signed_in / signed_out / credential:created", (
     // Pre-seed: at least one user exists (so signup isn't bootstrap-
     // gated) + the email's domain is on the allowlist.
     const h = await createDispatcherHarness({
-      config: { auth: { magicLink: { siteName: "Test" } } },
+      config: {
+        auth: {
+          magicLink: { siteName: "Test" },
+          allowedDomains: { "allowed.test": "subscriber" },
+        },
+      },
     });
     await h.factory.user.create({ email: "existing@allowed.test" });
-    await h.factory.allowedDomain.create({
-      domain: "allowed.test",
-      defaultRole: "subscriber",
-    });
 
     const spy = h.spyAction("user:signed_in");
     const { token } = await h.factory.authToken.create({

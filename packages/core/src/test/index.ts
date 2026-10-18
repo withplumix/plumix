@@ -22,7 +22,6 @@ export {
   sessionFactory,
   settingFactory,
   entryTermFactory,
-  allowedDomainFactory,
   apiTokenFactory,
   authTokenFactory,
   oauthAccountFactory,

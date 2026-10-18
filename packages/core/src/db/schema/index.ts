@@ -1,4 +1,3 @@
-export * from "./allowed_domains.js";
 export * from "./api_tokens.js";
 export * from "./auth_tokens.js";
 export * from "./credentials.js";

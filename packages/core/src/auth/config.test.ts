@@ -37,6 +37,7 @@ describe("auth()", () => {
       magicLink: { siteName: "Plumix" },
       authenticator: { authenticate: () => Promise.resolve(null) },
       bootstrapVia: "first-method-wins",
+      allowedDomains: { "example.com": "editor" },
       selfSignup: { defaultRole: "subscriber" },
       loginPath: "/login",
     };
@@ -443,6 +444,45 @@ describe("auth() — selfSignup", () => {
       selfSignup: {},
     });
     expect(error.issues[0]?.path).toBe("selfSignup.defaultRole");
+  });
+});
+
+describe("auth() — allowedDomains", () => {
+  test("accepts lowercase domains mapped to roles", () => {
+    const config = auth({
+      passkey: validPasskey,
+      allowedDomains: { "example.com": "editor", "staff.example": "admin" },
+    });
+    expect(config.allowedDomains).toEqual({
+      "example.com": "editor",
+      "staff.example": "admin",
+    });
+  });
+
+  test("rejects a domain that isn't lowercase, naming it", () => {
+    const error = rejected({
+      passkey: validPasskey,
+      allowedDomains: { "Example.com": "editor" },
+    });
+    expect(error.message).toContain('"Example.com"');
+  });
+
+  test("rejects an empty domain", () => {
+    const error = rejected({
+      passkey: validPasskey,
+      allowedDomains: { "": "editor" },
+    });
+    expect(error.message).toContain('allowedDomains key ""');
+  });
+
+  test("rejects an unknown role, naming the domain", () => {
+    const error = rejected({
+      passkey: validPasskey,
+      // @ts-expect-error — exercising runtime validation
+      allowedDomains: { "example.com": "superadmin" },
+    });
+    expect(error.message).toContain("example.com");
+    expect(error.issues[0]?.path).toBe("allowedDomains.example.com");
   });
 });
 

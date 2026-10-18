@@ -229,6 +229,122 @@ msgstr ""
 #~ msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.submit.idle"
+#~ msgstr "Hinzufügen"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.title"
+#~ msgstr "Domain hinzufügen"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.submit.pending"
+#~ msgstr "Wird hinzugefügt…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.title"
+#~ msgstr "Erlaubte Domains"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+#~ msgid "core.adminNav.item.allowedDomains"
+#~ msgstr "Erlaubte Domains"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.row.deleteCancel"
+#~ msgstr "Abbrechen"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.list.title"
+#~ msgstr "Konfigurierte Domains"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.row.deleteConfirm"
+#~ msgstr "Löschen bestätigen"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/-errors.ts
+#~ msgid "allowedDomains.error.fallback"
+#~ msgstr "Domain konnte nicht gespeichert werden. Bitte erneut versuchen."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.defaultRole.label"
+#~ msgstr "Standardrolle"
+
+#. domain: the hostname being removed from the allowlist
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.row.deleteAria"
+#~ msgstr "{domain} löschen"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.row.disabled"
+#~ msgstr "Deaktiviert"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.domain.label"
+#~ msgstr "Domain"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+#~ msgid "core.adminNav.keyword.domains"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.description"
+#~ msgstr "E-Mail-Domains, die für die OAuth-Registrierung erlaubt sind. Neue OAuth-Konten werden mit der hier festgelegten Rolle erstellt. Deaktivierte Zeilen lehnen die Registrierung ab, behalten aber ihre Rollenzuordnung."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.row.enabled"
+#~ msgstr "Aktiviert"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.domain.invalid"
+#~ msgstr "Gültigen Hostnamen eingeben (z. B. example.com)."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.placeholder"
+#~ msgstr "example.com"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.list.loading"
+#~ msgstr "Wird geladen…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.list.empty"
+#~ msgstr "Keine Domains konfiguriert. OAuth-Registrierung ist geschlossen, bis mindestens eine aktivierte Domain hinzugefügt wurde."
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+#~ msgid "core.adminNav.keyword.signups"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/-errors.ts
+#~ msgid "allowedDomains.error.domainExists"
+#~ msgstr "Diese Domain ist bereits konfiguriert."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.description"
+#~ msgstr "Verwenden Sie die nackte Domain — kein Protokoll, kein Pfad."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — Untergeordnete können nicht als übergeordnet ausgewählt werden."
@@ -485,11 +601,6 @@ msgid "profile.sessions.title"
 msgstr "Aktive Sitzungen"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.submit.idle"
-msgstr "Hinzufügen"
-
-#. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.addNewItem"
 msgstr "Hinzufügen"
@@ -513,11 +624,6 @@ msgstr "Weiteres hinzufügen"
 #: src/lib/meta-field-i18n.ts
 msgid "metaField.minRows"
 msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.title"
-msgstr "Domain hinzufügen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
@@ -554,11 +660,6 @@ msgstr "Zeile hinzufügen"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.added"
 msgstr "Hinzugefügt {date}"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.submit.pending"
-msgstr "Wird hinzugefügt…"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
@@ -604,16 +705,6 @@ msgstr "Alle Autoren"
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.roleFilter.all"
 msgstr "Alle Rollen"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.title"
-msgstr "Erlaubte Domains"
-
-#. js-lingui-explicit-id
-#: src/lib/core-nav-i18n.ts
-msgid "core.adminNav.item.allowedDomains"
-msgstr "Erlaubte Domains"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -738,11 +829,6 @@ msgstr "Abbrechen"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.cancel"
-msgstr "Abbrechen"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.row.deleteCancel"
 msgstr "Abbrechen"
 
 #. js-lingui-explicit-id
@@ -891,11 +977,6 @@ msgid "core.adminNav.keyword.configuration"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.list.title"
-msgstr "Konfigurierte Domains"
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.confirm"
 msgstr "Bestätigen"
@@ -905,11 +986,6 @@ msgstr "Bestätigen"
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.confirmTitle"
 msgstr "\"{userCode}\" bestätigen"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.row.deleteConfirm"
-msgstr "Löschen bestätigen"
 
 #. email: the user account being deleted
 #. js-lingui-explicit-id
@@ -1186,11 +1262,6 @@ msgid "terms.edit.error.saveFallback"
 msgstr "Änderungen konnten nicht gespeichert werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/-errors.ts
-msgid "allowedDomains.error.fallback"
-msgstr "Domain konnte nicht gespeichert werden. Bitte erneut versuchen."
-
-#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.toast.autosaveFailed"
 msgstr ""
@@ -1301,20 +1372,9 @@ msgid "core.adminNav.item.dashboard"
 msgstr "Dashboard"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.defaultRole.label"
-msgstr "Standardrolle"
-
-#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.delete.button"
 msgstr "Löschen"
-
-#. domain: the hostname being removed from the allowlist
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.row.deleteAria"
-msgstr "{domain} löschen"
 
 #. termName: the taxonomy term being deleted
 #. js-lingui-explicit-id
@@ -1455,11 +1515,6 @@ msgid "users.list.row.disabled"
 msgstr "Deaktiviert"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.row.disabled"
-msgstr "Deaktiviert"
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.status.description.disabled"
 msgstr "Deaktivierte Konten können sich nicht anmelden. Eine Reaktivierung stellt den Zugriff wieder her; der Passkey bleibt registriert."
@@ -1478,16 +1533,6 @@ msgstr "Wird deaktiviert…"
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.discarding"
 msgstr "Wird verworfen…"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.domain.label"
-msgstr "Domain"
-
-#. js-lingui-explicit-id
-#: src/lib/core-nav-i18n.ts
-msgid "core.adminNav.keyword.domains"
-msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -1614,11 +1659,6 @@ msgid "login.emailChange.success"
 msgstr "E-Mail bestätigt. Mit der neuen Adresse anmelden."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.description"
-msgstr "E-Mail-Domains, die für die OAuth-Registrierung erlaubt sind. Neue OAuth-Konten werden mit der hier festgelegten Rolle erstellt. Deaktivierte Zeilen lehnen die Registrierung ab, behalten aber ihre Rollenzuordnung."
-
-#. js-lingui-explicit-id
 #: src/lib/core-validation-i18n.ts
 msgid "validate.email.maxLength"
 msgstr "E-Mail ist zu lang."
@@ -1632,11 +1672,6 @@ msgstr "Link per E-Mail senden"
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.notConfigured"
 msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.row.enabled"
-msgstr "Aktiviert"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -1682,11 +1717,6 @@ msgstr ""
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.invalid"
 msgstr "Gültige E-Mail-Adresse eingeben."
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.domain.invalid"
-msgstr "Gültigen Hostnamen eingeben (z. B. example.com)."
 
 #. js-lingui-explicit-id
 #: src/lib/meta-field-i18n.ts
@@ -1739,11 +1769,6 @@ msgstr "entry:post:read\n"
 msgid "apiTokens.create.capabilities.placeholder"
 msgstr "entry:post:read\n"
 "entry:post:edit_own"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.placeholder"
-msgstr "example.com"
 
 #. js-lingui-explicit-id
 #: src/components/editor/document-settings.tsx
@@ -2056,11 +2081,6 @@ msgid "editor.stale.loading"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.list.loading"
-msgstr "Wird geladen…"
-
-#. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.loadingItems"
 msgstr "Wird geladen…"
@@ -2340,11 +2360,6 @@ msgstr "Keine Rechte"
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.empty.title"
 msgstr "Noch keine Inhaltstypen"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.list.empty"
-msgstr "Keine Domains konfiguriert. OAuth-Registrierung ist geschlossen, bis mindestens eine aktivierte Domain hinzugefügt wurde."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
@@ -3220,11 +3235,6 @@ msgid "profile.sessions.revoke.pending"
 msgstr "Abmeldung läuft…"
 
 #. js-lingui-explicit-id
-#: src/lib/core-nav-i18n.ts
-msgid "core.adminNav.keyword.signups"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/lib/core-settings-i18n.ts
 msgid "core.settings.site.label"
 msgstr "Website-Identität"
@@ -3430,11 +3440,6 @@ msgstr "Das hat nicht geklappt — bitte erneut versuchen."
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.bulk.toastFailed"
 msgstr "Das hat nicht geklappt — bitte erneut versuchen."
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/-errors.ts
-msgid "allowedDomains.error.domainExists"
-msgstr "Diese Domain ist bereits konfiguriert."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
@@ -3846,11 +3851,6 @@ msgstr ""
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.useMine"
 msgstr "Meine verwenden"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.description"
-msgstr "Verwenden Sie die nackte Domain — kein Protokoll, kein Pfad."
 
 #. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx

@@ -264,12 +264,25 @@ const selfSignupSchema = v.object({
   ),
 });
 
+const allowedDomainsSchema = v.record(
+  v.pipe(
+    v.string(),
+    v.check(
+      (domain) => domain !== "" && domain === domain.toLowerCase(),
+      (issue) =>
+        `allowedDomains key ${JSON.stringify(issue.input)} must be a non-empty lowercase domain`,
+    ),
+  ),
+  v.picklist(USER_ROLES, "allowedDomains role must be a valid user role"),
+);
+
 const authInputSchema = v.object({
   passkey: passkeySchema,
   sessions: v.optional(sessionPolicySchema),
   oauth: v.optional(oauthSchema),
   magicLink: v.optional(magicLinkSchema),
   bootstrapVia: v.optional(v.picklist(["passkey", "first-method-wins"])),
+  allowedDomains: v.optional(allowedDomainsSchema),
   selfSignup: v.optional(selfSignupSchema),
   loginPath: v.optional(
     // The same guard request `redirectTo` values pass, rather than a second,

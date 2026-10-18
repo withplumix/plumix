@@ -4,7 +4,6 @@ import { validateApiToken } from "../auth/api-tokens.js";
 import { hashToken } from "../auth/tokens.js";
 import { listRevisions, snapshotAsRevision } from "../revisions/repository.js";
 import {
-  allowedDomainFactory,
   apiTokenFactory,
   authTokenFactory,
   credentialFactory,
@@ -70,11 +69,6 @@ describe("defaults on unique columns", () => {
       name: "settingFactory",
       rewind: (f) => f.settingFactory.rewindSequence(),
       create: (f, db) => f.settingFactory.transient({ db }).create({}),
-    },
-    {
-      name: "allowedDomainFactory",
-      rewind: (f) => f.allowedDomainFactory.rewindSequence(),
-      create: (f, db) => f.allowedDomainFactory.transient({ db }).create({}),
     },
     {
       name: "credentialFactory",
@@ -162,14 +156,6 @@ describe("explicit values on unique columns", () => {
           .transient({ db })
           .create({ group: "site", key: "title" }),
       expected: { group: "site", key: "title" },
-    },
-    {
-      name: "allowedDomainFactory",
-      create: (db) =>
-        allowedDomainFactory
-          .transient({ db })
-          .create({ domain: "school.test" }),
-      expected: { domain: "school.test" },
     },
     {
       name: "credentialFactory",

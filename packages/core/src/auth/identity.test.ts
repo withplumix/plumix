@@ -3,11 +3,7 @@ import { describe, expect, test } from "vitest";
 import { eq, sql } from "../db/index.js";
 import { oauthAccounts } from "../db/schema/oauth_accounts.js";
 import { users } from "../db/schema/users.js";
-import {
-  allowedDomainFactory,
-  oauthAccountFactory,
-  userFactory,
-} from "../test/factories.js";
+import { oauthAccountFactory, userFactory } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
 import {
   ExternalIdentityError,
@@ -66,18 +62,14 @@ describe("resolveExternalIdentity — sign-in (existing user)", () => {
   });
 });
 
-describe("resolveExternalIdentity — signup (allowed-domains gate)", () => {
-  test("provisions a new user with the domain's defaultRole", async () => {
+describe("resolveExternalIdentity — signup (allowed domains)", () => {
+  test("provisions a new user with the domain's role", async () => {
     const db = await createTestDb();
     await userFactory.transient({ db }).create({ role: "admin" });
-    await allowedDomainFactory.transient({ db }).create({
-      domain: "example.com",
-      defaultRole: "author",
-      isEnabled: true,
-    });
 
     const result = await resolveExternalIdentity(db, {
       meta: {},
+      allowedDomains: { "example.com": "author" },
       email: "newcomer@example.com",
       emailVerified: true,
     });
@@ -87,31 +79,14 @@ describe("resolveExternalIdentity — signup (allowed-domains gate)", () => {
     expect(result.user.emailVerifiedAt).not.toBeNull();
   });
 
-  test("rejects when the domain is disabled", async () => {
-    const db = await createTestDb();
-    await userFactory.transient({ db }).create({ role: "admin" });
-    await allowedDomainFactory.transient({ db }).create({
-      domain: "example.com",
-      defaultRole: "author",
-      isEnabled: false,
-    });
-
-    await expect(
-      resolveExternalIdentity(db, {
-        meta: {},
-        email: "newcomer@example.com",
-        emailVerified: true,
-      }),
-    ).rejects.toMatchObject({ code: "domain_not_allowed" });
-  });
-
-  test("rejects when no allowed-domains row exists for the email's domain", async () => {
+  test("rejects an email whose domain isn't listed", async () => {
     const db = await createTestDb();
     await userFactory.transient({ db }).create({ role: "admin" });
 
     await expect(
       resolveExternalIdentity(db, {
         meta: {},
+        allowedDomains: { "example.com": "author" },
         email: "stranger@unknown.com",
         emailVerified: true,
       }),
@@ -121,15 +96,11 @@ describe("resolveExternalIdentity — signup (allowed-domains gate)", () => {
   test("rejects when emailVerified=false (no provisioning without inbox proof)", async () => {
     const db = await createTestDb();
     await userFactory.transient({ db }).create({ role: "admin" });
-    await allowedDomainFactory.transient({ db }).create({
-      domain: "example.com",
-      defaultRole: "author",
-      isEnabled: true,
-    });
 
     await expect(
       resolveExternalIdentity(db, {
         meta: {},
+        allowedDomains: { "example.com": "author" },
         email: "newcomer@example.com",
         emailVerified: false,
       }),
@@ -138,15 +109,11 @@ describe("resolveExternalIdentity — signup (allowed-domains gate)", () => {
 
   test("rejects with registration_closed when zero users (bootstrap rail)", async () => {
     const db = await createTestDb();
-    await allowedDomainFactory.transient({ db }).create({
-      domain: "example.com",
-      defaultRole: "admin",
-      isEnabled: true,
-    });
 
     await expect(
       resolveExternalIdentity(db, {
         meta: {},
+        allowedDomains: { "example.com": "admin" },
         email: "first@example.com",
         emailVerified: true,
       }),
@@ -154,12 +121,11 @@ describe("resolveExternalIdentity — signup (allowed-domains gate)", () => {
   });
 });
 
-describe("resolveExternalIdentity — enterprise SSO (bypass allowed-domains)", () => {
-  test("provisions with the explicit defaultRole, no allowed_domains lookup", async () => {
+describe("resolveExternalIdentity — default role", () => {
+  test("provisions an unlisted domain with the defaultRole", async () => {
     // Enterprise SSO scenario: the IdP (e.g. CF Access fronting Okta)
-    // already gates who can reach plumix. The allowed_domains
-    // allowlist is irrelevant — caller passes the role from group
-    // mapping directly.
+    // already gates who can reach plumix, so the caller passes no allowlist,
+    // only the role from group mapping.
     const db = await createTestDb();
     await userFactory.transient({ db }).create({ role: "admin" });
 
@@ -167,25 +133,24 @@ describe("resolveExternalIdentity — enterprise SSO (bypass allowed-domains)", 
       meta: {},
       email: "engineer@enterprise.example",
       emailVerified: true,
-      allowedDomainsGate: false,
       defaultRole: "editor",
     });
     expect(result.created).toBe(true);
     expect(result.user.role).toBe("editor");
   });
 
-  test("requires defaultRole when allowedDomainsGate is false", async () => {
+  test("a listed domain's role wins over the defaultRole", async () => {
     const db = await createTestDb();
     await userFactory.transient({ db }).create({ role: "admin" });
 
-    await expect(
-      resolveExternalIdentity(db, {
-        meta: {},
-        email: "x@y.example",
-        emailVerified: true,
-        allowedDomainsGate: false,
-      }),
-    ).rejects.toThrow(/defaultRole/);
+    const result = await resolveExternalIdentity(db, {
+      meta: {},
+      allowedDomains: { "example.com": "editor" },
+      defaultRole: "subscriber",
+      email: "ann@example.com",
+      emailVerified: true,
+    });
+    expect(result.user.role).toBe("editor");
   });
 
   test("bootstrapAllowed=true mints the first admin via this method", async () => {
@@ -197,7 +162,6 @@ describe("resolveExternalIdentity — enterprise SSO (bypass allowed-domains)", 
       meta: {},
       email: "first-admin@enterprise.example",
       emailVerified: true,
-      allowedDomainsGate: false,
       defaultRole: "subscriber",
       bootstrapAllowed: true,
     });
@@ -211,20 +175,17 @@ describe("resolveExternalIdentity — race retry", () => {
   test("two concurrent calls for the same new email both resolve to the same user", async () => {
     const db = await createTestDb();
     await userFactory.transient({ db }).create({ role: "admin" });
-    await allowedDomainFactory.transient({ db }).create({
-      domain: "example.com",
-      defaultRole: "subscriber",
-      isEnabled: true,
-    });
 
     const [a, b] = await Promise.all([
       resolveExternalIdentity(db, {
         meta: {},
+        allowedDomains: { "example.com": "subscriber" },
         email: "newcomer@example.com",
         emailVerified: true,
       }),
       resolveExternalIdentity(db, {
         meta: {},
+        allowedDomains: { "example.com": "subscriber" },
         email: "newcomer@example.com",
         emailVerified: true,
       }),
@@ -369,14 +330,10 @@ describe("resolveExternalIdentity — provider account", () => {
   test("a new user is linked and takes the profile", async () => {
     const db = await createTestDb();
     await userFactory.transient({ db }).create({ role: "admin" });
-    await allowedDomainFactory.transient({ db }).create({
-      domain: "example.com",
-      defaultRole: "contributor",
-      isEnabled: true,
-    });
 
     const result = await resolveExternalIdentity(db, {
       meta: {},
+      allowedDomains: { "example.com": "contributor" },
       email: "alice@example.com",
       emailVerified: true,
       name: "Alice",
@@ -399,21 +356,18 @@ describe("resolveExternalIdentity — provider account", () => {
   test("two sign-ins for one new email with different accounts share one user", async () => {
     const db = await createTestDb();
     await userFactory.transient({ db }).create({ role: "admin" });
-    await allowedDomainFactory.transient({ db }).create({
-      domain: "example.com",
-      defaultRole: "subscriber",
-      isEnabled: true,
-    });
 
     const [a, b] = await Promise.all([
       resolveExternalIdentity(db, {
         meta: {},
+        allowedDomains: { "example.com": "subscriber" },
         email: "alice@example.com",
         emailVerified: true,
         providerAccount: { provider: "github", accountId: "race-1" },
       }),
       resolveExternalIdentity(db, {
         meta: {},
+        allowedDomains: { "example.com": "subscriber" },
         email: "alice@example.com",
         emailVerified: true,
         providerAccount: { provider: "github", accountId: "race-2" },
@@ -430,11 +384,6 @@ describe("resolveExternalIdentity — provider account", () => {
   test("a sign-up that loses the link race still reports the user it created", async () => {
     const db = await createTestDb();
     await userFactory.transient({ db }).create({ role: "admin" });
-    await allowedDomainFactory.transient({ db }).create({
-      domain: "example.com",
-      defaultRole: "subscriber",
-      isEnabled: true,
-    });
     // A concurrent sign-in finds alice by email the moment her row exists and
     // links the account before this sign-up's own link insert runs.
     await db.run(sql`
@@ -448,6 +397,7 @@ describe("resolveExternalIdentity — provider account", () => {
 
     const result = await resolveExternalIdentity(db, {
       meta: {},
+      allowedDomains: { "example.com": "subscriber" },
       email: "alice@example.com",
       emailVerified: true,
       providerAccount: github,
@@ -493,7 +443,7 @@ describe("extractDomain", () => {
 
   test("returns null when the local part is empty", () => {
     // Defense-in-depth — without this, `@evil.example` would leak
-    // through to the allowed_domains lookup as the bare domain string.
+    // through to the allowed-domains match as the bare domain string.
     expect(extractDomain("@example.com")).toBeNull();
   });
 

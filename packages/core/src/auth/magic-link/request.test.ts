@@ -7,11 +7,7 @@ import { eq } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { createMailCatalogs } from "../../mail/catalogs.js";
 import { createTestContext } from "../../test/context.js";
-import {
-  allowedDomainFactory,
-  authTokenFactory,
-  userFactory,
-} from "../../test/factories.js";
+import { authTokenFactory, userFactory } from "../../test/factories.js";
 import { createTestDb } from "../../test/harness.js";
 import { poCatalogs } from "../../test/po-catalog.js";
 import { hashToken } from "../tokens.js";
@@ -158,15 +154,10 @@ describe("requestMagicLink", () => {
     expect(sent).toHaveLength(1);
   });
 
-  test("signup: allowed domain → token issued with userId=null + email sent", async () => {
+  test("signup: listed domain → token issued with userId=null + email sent", async () => {
     const db = await createTestDb();
     // Need at least one user so the bootstrap rail is satisfied.
     await userFactory.transient({ db }).create({ role: "admin" });
-    await allowedDomainFactory.transient({ db }).create({
-      domain: "example.com",
-      defaultRole: "subscriber",
-      isEnabled: true,
-    });
     const { mailer, sent } = captureMailer();
 
     await requestMagicLink(db, {
@@ -174,6 +165,7 @@ describe("requestMagicLink", () => {
       origin: "https://cms.example",
       basePath: "",
       mail: mailFor(db, mailer),
+      allowedDomains: { "example.com": "editor" },
     });
 
     expect(sent).toHaveLength(1);
@@ -189,38 +181,17 @@ describe("requestMagicLink", () => {
     expect(row?.email).toBe("newcomer@example.com");
   });
 
-  test("signup: disabled allowed-domains row silently no-ops", async () => {
-    const db = await createTestDb();
-    await userFactory.transient({ db }).create({ role: "admin" });
-    await allowedDomainFactory.transient({ db }).create({
-      domain: "example.com",
-      defaultRole: "subscriber",
-      isEnabled: false,
-    });
-    const { mailer, sent } = captureMailer();
-
-    await requestMagicLink(db, {
-      email: "newcomer@example.com",
-      origin: "https://cms.example",
-      basePath: "",
-      mail: mailFor(db, mailer),
-    });
-
-    expect(sent).toHaveLength(0);
-    const tokens = await db.select().from(authTokens);
-    expect(tokens).toHaveLength(0);
-  });
-
-  test("signup: missing allowed-domains row silently no-ops", async () => {
+  test("signup: an unlisted domain silently no-ops", async () => {
     const db = await createTestDb();
     await userFactory.transient({ db }).create({ role: "admin" });
     const { mailer, sent } = captureMailer();
 
     await requestMagicLink(db, {
-      email: "stranger@unknown.com",
+      email: "bob@other.com",
       origin: "https://cms.example",
       basePath: "",
       mail: mailFor(db, mailer),
+      allowedDomains: { "example.com": "editor" },
     });
 
     expect(sent).toHaveLength(0);
@@ -228,11 +199,6 @@ describe("requestMagicLink", () => {
 
   test("signup: zero-user system refuses signup (bootstrap is passkey-only)", async () => {
     const db = await createTestDb();
-    await allowedDomainFactory.transient({ db }).create({
-      domain: "example.com",
-      defaultRole: "admin",
-      isEnabled: true,
-    });
     const { mailer, sent } = captureMailer();
 
     await requestMagicLink(db, {
@@ -240,6 +206,7 @@ describe("requestMagicLink", () => {
       origin: "https://cms.example",
       basePath: "",
       mail: mailFor(db, mailer),
+      allowedDomains: { "example.com": "editor" },
     });
 
     expect(sent).toHaveLength(0);
@@ -249,11 +216,6 @@ describe("requestMagicLink", () => {
 
   test("signup: bootstrapAllowed=true issues a token even with zero users", async () => {
     const db = await createTestDb();
-    await allowedDomainFactory.transient({ db }).create({
-      domain: "example.com",
-      defaultRole: "subscriber",
-      isEnabled: true,
-    });
     const { mailer, sent } = captureMailer();
 
     await requestMagicLink(db, {
@@ -261,6 +223,7 @@ describe("requestMagicLink", () => {
       origin: "https://cms.example",
       basePath: "",
       mail: mailFor(db, mailer),
+      allowedDomains: { "example.com": "editor" },
       bootstrapAllowed: true,
     });
 
@@ -271,11 +234,10 @@ describe("requestMagicLink", () => {
     expect(tokens[0]?.userId).toBeNull();
   });
 
-  test("selfSignupOpen: unlisted domain → token issued for a new email", async () => {
+  test("selfSignup: unlisted domain → token issued for a new email", async () => {
     const db = await createTestDb();
-    // One existing user satisfies the bootstrap rail; no allowed_domains
-    // row for this domain — domain-gated signup would no-op, but open
-    // self-signup issues the token.
+    // One existing user satisfies the bootstrap rail; the domain is unlisted,
+    // but open self-signup issues the token.
     await userFactory.transient({ db }).create({ role: "admin" });
     const { mailer, sent } = captureMailer();
 
@@ -284,7 +246,7 @@ describe("requestMagicLink", () => {
       origin: "https://cms.example",
       basePath: "",
       mail: mailFor(db, mailer),
-      selfSignupOpen: true,
+      defaultRole: "subscriber",
     });
 
     expect(sent).toHaveLength(1);
@@ -294,7 +256,7 @@ describe("requestMagicLink", () => {
     expect(tokens[0]?.email).toBe("stranger@anywhere.test");
   });
 
-  test("selfSignupOpen: zero-user system still refuses (bootstrap rail holds)", async () => {
+  test("selfSignup: zero-user system still refuses (bootstrap rail holds)", async () => {
     const db = await createTestDb();
     const { mailer, sent } = captureMailer();
 
@@ -303,7 +265,7 @@ describe("requestMagicLink", () => {
       origin: "https://cms.example",
       basePath: "",
       mail: mailFor(db, mailer),
-      selfSignupOpen: true,
+      defaultRole: "subscriber",
     });
 
     expect(sent).toHaveLength(0);
@@ -311,7 +273,7 @@ describe("requestMagicLink", () => {
     expect(tokens).toHaveLength(0);
   });
 
-  test("selfSignupOpen: malformed email (no domain) silently no-ops", async () => {
+  test("selfSignup: malformed email (no domain) silently no-ops", async () => {
     const db = await createTestDb();
     await userFactory.transient({ db }).create({ role: "admin" });
     const { mailer, sent } = captureMailer();
@@ -321,7 +283,7 @@ describe("requestMagicLink", () => {
       origin: "https://cms.example",
       basePath: "",
       mail: mailFor(db, mailer),
-      selfSignupOpen: true,
+      defaultRole: "subscriber",
     });
 
     expect(sent).toHaveLength(0);

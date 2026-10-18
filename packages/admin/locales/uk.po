@@ -229,6 +229,122 @@ msgstr ""
 #~ msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.submit.idle"
+#~ msgstr "Додати"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.title"
+#~ msgstr "Додати домен"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.submit.pending"
+#~ msgstr "Додавання…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.title"
+#~ msgstr "Дозволені домени"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+#~ msgid "core.adminNav.item.allowedDomains"
+#~ msgstr "Дозволені домени"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.row.deleteCancel"
+#~ msgstr "Скасувати"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.list.title"
+#~ msgstr "Налаштовані домени"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.row.deleteConfirm"
+#~ msgstr "Підтвердити видалення"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/-errors.ts
+#~ msgid "allowedDomains.error.fallback"
+#~ msgstr "Не вдалося зберегти домен. Спробуйте знову."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.defaultRole.label"
+#~ msgstr "Роль за замовчуванням"
+
+#. domain: the hostname being removed from the allowlist
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.row.deleteAria"
+#~ msgstr "Видалити {domain}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.row.disabled"
+#~ msgstr "Вимкнено"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.domain.label"
+#~ msgstr "Домен"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+#~ msgid "core.adminNav.keyword.domains"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.description"
+#~ msgstr "Email-домени, дозволені для реєстрації через OAuth. Нові OAuth-акаунти створюються з роллю, заданою тут. Вимкнені рядки відхиляють реєстрацію, але зберігають своє відображення на роль."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.row.enabled"
+#~ msgstr "Увімкнено"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.domain.invalid"
+#~ msgstr "Введіть дійсне ім'я хоста (наприклад example.com)."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.placeholder"
+#~ msgstr "example.com"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.list.loading"
+#~ msgstr "Завантаження…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.list.empty"
+#~ msgstr "Жодного домену не налаштовано. Реєстрація через OAuth закрита, доки не додано хоча б один увімкнений домен."
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+#~ msgid "core.adminNav.keyword.signups"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/-errors.ts
+#~ msgid "allowedDomains.error.domainExists"
+#~ msgstr "Цей домен уже налаштовано."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.description"
+#~ msgstr "Використовуйте лише домен — без протоколу та шляху."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — нащадків не можна вибрати як батьківський елемент."
@@ -485,11 +601,6 @@ msgid "profile.sessions.title"
 msgstr "Активні сеанси"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.submit.idle"
-msgstr "Додати"
-
-#. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.addNewItem"
 msgstr "Додати"
@@ -513,11 +624,6 @@ msgstr "Додати ще"
 #: src/lib/meta-field-i18n.ts
 msgid "metaField.minRows"
 msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.title"
-msgstr "Додати домен"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
@@ -554,11 +660,6 @@ msgstr "Додати рядок"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.added"
 msgstr "Додано {date}"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.submit.pending"
-msgstr "Додавання…"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
@@ -604,16 +705,6 @@ msgstr "Усі автори"
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.roleFilter.all"
 msgstr "Усі ролі"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.title"
-msgstr "Дозволені домени"
-
-#. js-lingui-explicit-id
-#: src/lib/core-nav-i18n.ts
-msgid "core.adminNav.item.allowedDomains"
-msgstr "Дозволені домени"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -738,11 +829,6 @@ msgstr "Скасувати"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.cancel"
-msgstr "Скасувати"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.row.deleteCancel"
 msgstr "Скасувати"
 
 #. js-lingui-explicit-id
@@ -891,11 +977,6 @@ msgid "core.adminNav.keyword.configuration"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.list.title"
-msgstr "Налаштовані домени"
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.confirm"
 msgstr "Підтвердити"
@@ -905,11 +986,6 @@ msgstr "Підтвердити"
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.confirmTitle"
 msgstr "Підтвердити \"{userCode}\""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.row.deleteConfirm"
-msgstr "Підтвердити видалення"
 
 #. email: the user account being deleted
 #. js-lingui-explicit-id
@@ -1186,11 +1262,6 @@ msgid "terms.edit.error.saveFallback"
 msgstr "Не вдалося зберегти зміни. Спробуйте знову."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/-errors.ts
-msgid "allowedDomains.error.fallback"
-msgstr "Не вдалося зберегти домен. Спробуйте знову."
-
-#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.toast.autosaveFailed"
 msgstr ""
@@ -1301,20 +1372,9 @@ msgid "core.adminNav.item.dashboard"
 msgstr "Інформаційна панель"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.defaultRole.label"
-msgstr "Роль за замовчуванням"
-
-#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.delete.button"
 msgstr "Видалити"
-
-#. domain: the hostname being removed from the allowlist
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.row.deleteAria"
-msgstr "Видалити {domain}"
 
 #. termName: the taxonomy term being deleted
 #. js-lingui-explicit-id
@@ -1455,11 +1515,6 @@ msgid "users.list.row.disabled"
 msgstr "Вимкнено"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.row.disabled"
-msgstr "Вимкнено"
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.status.description.disabled"
 msgstr "Вимкнені облікові записи не можуть увійти. Повторне вмикання відновлює доступ; їхній passkey залишається зареєстрованим."
@@ -1478,16 +1533,6 @@ msgstr "Вимкнення…"
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.discarding"
 msgstr "Скасування…"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.domain.label"
-msgstr "Домен"
-
-#. js-lingui-explicit-id
-#: src/lib/core-nav-i18n.ts
-msgid "core.adminNav.keyword.domains"
-msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -1614,11 +1659,6 @@ msgid "login.emailChange.success"
 msgstr "Email підтверджено. Увійдіть з новою адресою."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.description"
-msgstr "Email-домени, дозволені для реєстрації через OAuth. Нові OAuth-акаунти створюються з роллю, заданою тут. Вимкнені рядки відхиляють реєстрацію, але зберігають своє відображення на роль."
-
-#. js-lingui-explicit-id
 #: src/lib/core-validation-i18n.ts
 msgid "validate.email.maxLength"
 msgstr "Email задовгий."
@@ -1632,11 +1672,6 @@ msgstr "Надіслати посилання поштою"
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.notConfigured"
 msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.row.enabled"
-msgstr "Увімкнено"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -1682,11 +1717,6 @@ msgstr ""
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.invalid"
 msgstr "Введіть дійсну email-адресу."
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.domain.invalid"
-msgstr "Введіть дійсне ім'я хоста (наприклад example.com)."
 
 #. js-lingui-explicit-id
 #: src/lib/meta-field-i18n.ts
@@ -1739,11 +1769,6 @@ msgstr "entry:post:read\n"
 msgid "apiTokens.create.capabilities.placeholder"
 msgstr "entry:post:read\n"
 "entry:post:edit_own"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.placeholder"
-msgstr "example.com"
 
 #. js-lingui-explicit-id
 #: src/components/editor/document-settings.tsx
@@ -2056,11 +2081,6 @@ msgid "editor.stale.loading"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.list.loading"
-msgstr "Завантаження…"
-
-#. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.loadingItems"
 msgstr "Завантаження…"
@@ -2340,11 +2360,6 @@ msgstr "Без дозволів"
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.empty.title"
 msgstr "Типів вмісту ще немає"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.list.empty"
-msgstr "Жодного домену не налаштовано. Реєстрація через OAuth закрита, доки не додано хоча б один увімкнений домен."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
@@ -3220,11 +3235,6 @@ msgid "profile.sessions.revoke.pending"
 msgstr "Вихід…"
 
 #. js-lingui-explicit-id
-#: src/lib/core-nav-i18n.ts
-msgid "core.adminNav.keyword.signups"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/lib/core-settings-i18n.ts
 msgid "core.settings.site.label"
 msgstr "Ідентичність сайту"
@@ -3430,11 +3440,6 @@ msgstr "Не вдалося — спробуйте ще раз."
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.bulk.toastFailed"
 msgstr "Не вдалося — спробуйте ще раз."
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/-errors.ts
-msgid "allowedDomains.error.domainExists"
-msgstr "Цей домен уже налаштовано."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
@@ -3846,11 +3851,6 @@ msgstr ""
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.useMine"
 msgstr "Використати мою"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.description"
-msgstr "Використовуйте лише домен — без протоколу та шляху."
 
 #. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx

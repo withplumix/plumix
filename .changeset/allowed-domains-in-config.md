@@ -1,0 +1,5 @@
+---
+"plumix": minor
+---
+
+Adds `auth({ allowedDomains: { "example.com": "editor" } })`, the email domains a new account may sign up from by OAuth or magic link and the role each gets, matched case-insensitively. With `selfSignup` set, a listed domain still gets its own role and every other address gets `selfSignup.defaultRole`. An uppercase or empty domain, or an unknown role, is an error when `auth()` builds. Removes the `allowed_domains` table (a core migration drops it), the admin's **Management → Allowed domains** page, the `auth.allowedDomains` RPC, the `allowedDomains`, `allowedDomainInsertSchema` and `allowedDomainSelectSchema` exports of `plumix/schema`, and `allowedDomainFactory` from `plumix/test`. Before upgrading, copy each enabled row of `allowed_domains` into `auth({ allowedDomains })`, since the migration deletes them (ADR 0034: policy is config). `resolveExternalIdentity` takes `allowedDomains` in place of `allowedDomainsGate`, and refuses an unlisted domain with no `defaultRole` as `domain_not_allowed`.

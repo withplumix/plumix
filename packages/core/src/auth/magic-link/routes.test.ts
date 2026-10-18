@@ -4,7 +4,6 @@ import type { Session } from "../../db/schema/sessions.js";
 import type { CreateDispatcherHarnessOptions } from "../../test/dispatcher.js";
 import type { Mailer } from "../contract/mailer.js";
 import { eq, sql } from "../../db/index.js";
-import { allowedDomains } from "../../db/schema/allowed_domains.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { sessions } from "../../db/schema/sessions.js";
 import { users } from "../../db/schema/users.js";
@@ -869,20 +868,18 @@ describe("magic-link verify route", () => {
     const h = await createDispatcherHarness({
       config: {
         mailer,
-        auth: { magicLink: { siteName: "Plumix Test" } },
+        auth: {
+          magicLink: { siteName: "Plumix Test" },
+          allowedDomains: { "example.com": "editor" },
+        },
       },
     });
     await h.factory.user.create({ role: "admin" });
-    await h.factory.allowedDomain.create({
-      domain: "example.com",
-      defaultRole: "contributor",
-      isEnabled: true,
-    });
 
     // Step 1: request the link.
     const requestResp = await h.dispatch(
       postRequest("/_plumix/auth/magic-link/request", {
-        email: "newcomer@example.com",
+        email: "ann@example.com",
       }),
     );
     expect(requestResp.status).toBe(200);
@@ -902,9 +899,9 @@ describe("magic-link verify route", () => {
 
     // The user was provisioned with the right role + email-verified mark.
     const created = await h.db.query.users.findFirst({
-      where: eq(users.email, "newcomer@example.com"),
+      where: eq(users.email, "ann@example.com"),
     });
-    expect(created?.role).toBe("contributor");
+    expect(created?.role).toBe("editor");
     expect(created?.emailVerifiedAt).not.toBeNull();
     // A session was minted for them.
     const sessionRows = await h.db
@@ -925,7 +922,7 @@ describe("magic-link verify route", () => {
         },
       },
     });
-    // One user exists (bootstrap satisfied); no allowed_domains row for
+    // One user exists (bootstrap satisfied); no allowed domain for
     // this address — only open self-signup lets it through.
     await h.factory.user.create({ role: "admin" });
 
@@ -1014,49 +1011,6 @@ describe("magic-link verify route", () => {
     expect(tokens).toHaveLength(0);
   });
 
-  test("signup verify rejects with domain_not_allowed if admin disables the domain mid-flight", async () => {
-    const { mailer, sent } = captureMailer();
-    const h = await createDispatcherHarness({
-      config: {
-        mailer,
-        auth: { magicLink: { siteName: "Plumix Test" } },
-      },
-    });
-    await h.factory.user.create({ role: "admin" });
-    const allowed = await h.factory.allowedDomain.create({
-      domain: "example.com",
-      defaultRole: "contributor",
-      isEnabled: true,
-    });
-
-    // Request issues a signup token while the domain is enabled.
-    await h.dispatch(
-      postRequest("/_plumix/auth/magic-link/request", {
-        email: "newcomer@example.com",
-      }),
-    );
-    const tokenMatch = /token=([A-Za-z0-9_-]+)/.exec(sent[0]?.text ?? "");
-    const token = tokenMatch?.[1];
-    if (!token) throw new Error("expected token in email");
-
-    // Admin disables the domain before the user clicks.
-    await h.db
-      .update(allowedDomains)
-      .set({ isEnabled: false })
-      .where(eq(allowedDomains.domain, allowed.domain));
-
-    const verifyResp = await h.dispatch(
-      getRequest(`/_plumix/auth/magic-link/verify?token=${token}`),
-    );
-    expect(verifyResp.headers.get("location")).toContain(
-      "magic_link_error=domain_not_allowed",
-    );
-    const created = await h.db.query.users.findFirst({
-      where: eq(users.email, "newcomer@example.com"),
-    });
-    expect(created).toBeUndefined();
-  });
-
   test("returns 405 on POST", async () => {
     const { mailer } = captureMailer();
     const h = await createDispatcherHarness({
@@ -1109,6 +1063,7 @@ describe("magic-link verify of a link issued to a new address", () => {
       config: {
         auth: {
           magicLink: { siteName: "Plumix Test" },
+          allowedDomains: { "example.com": "editor" },
           ...(options.selfSignup === true
             ? { selfSignup: { defaultRole: "subscriber" } }
             : {}),
@@ -1130,46 +1085,53 @@ describe("magic-link verify of a link issued to a new address", () => {
     );
   }
 
-  test("provisions a user with the domain's defaultRole, email verified", async () => {
+  test("provisions a user with the domain's role, email verified", async () => {
     const h = await signUpHarness();
     await h.seedUser("admin");
-    await h.factory.allowedDomain.create({
-      domain: "example.com",
-      defaultRole: "author",
-      isEnabled: true,
-    });
 
-    await verifyLinkFor(h, "newcomer@example.com");
+    await verifyLinkFor(h, "ann@example.com");
 
     const created = await h.db.query.users.findFirst({
-      where: eq(users.email, "newcomer@example.com"),
+      where: eq(users.email, "ann@example.com"),
     });
-    expect(created?.role).toBe("author");
+    expect(created?.role).toBe("editor");
     expect(created?.emailVerifiedAt).not.toBeNull();
   });
 
-  test("selfSignup's default role wins over a matching allowed-domains role", async () => {
-    const h = await signUpHarness({ selfSignup: true });
-    await h.seedUser("admin");
-    await h.factory.allowedDomain.create({
-      domain: "example.com",
-      defaultRole: "author",
-      isEnabled: true,
-    });
-
-    await verifyLinkFor(h, "newcomer@example.com");
-
-    const created = await h.db.query.users.findFirst({
-      where: eq(users.email, "newcomer@example.com"),
-    });
-    expect(created?.role).toBe("subscriber");
-  });
-
-  test("without selfSignup an address with no allowed-domains row is refused", async () => {
+  test("matches the domain whatever its case", async () => {
     const h = await signUpHarness();
     await h.seedUser("admin");
 
-    const response = await verifyLinkFor(h, "newcomer@anywhere.test");
+    await verifyLinkFor(h, "ANN@Example.COM");
+
+    const created = await h.db.query.users.findFirst({
+      where: eq(users.email, "ANN@Example.COM"),
+    });
+    expect(created?.role).toBe("editor");
+  });
+
+  test("under selfSignup a listed domain keeps its role and the rest get the default", async () => {
+    const h = await signUpHarness({ selfSignup: true });
+    await h.seedUser("admin");
+
+    await verifyLinkFor(h, "ann@example.com");
+    await verifyLinkFor(h, "bob@other.com");
+
+    const ann = await h.db.query.users.findFirst({
+      where: eq(users.email, "ann@example.com"),
+    });
+    const bob = await h.db.query.users.findFirst({
+      where: eq(users.email, "bob@other.com"),
+    });
+    expect(ann?.role).toBe("editor");
+    expect(bob?.role).toBe("subscriber");
+  });
+
+  test("without selfSignup an address on an unlisted domain is refused", async () => {
+    const h = await signUpHarness();
+    await h.seedUser("admin");
+
+    const response = await verifyLinkFor(h, "bob@other.com");
 
     expect(response.headers.get("location")).toBe(
       "/_plumix/admin/login?magic_link_error=domain_not_allowed",
@@ -1178,11 +1140,6 @@ describe("magic-link verify of a link issued to a new address", () => {
 
   test("is refused as registration_closed when the site has no users", async () => {
     const h = await signUpHarness();
-    await h.factory.allowedDomain.create({
-      domain: "example.com",
-      defaultRole: "admin",
-      isEnabled: true,
-    });
 
     const response = await verifyLinkFor(h, "newcomer@example.com");
 
@@ -1193,11 +1150,6 @@ describe("magic-link verify of a link issued to a new address", () => {
 
   test("mints the first admin under bootstrapVia first-method-wins", async () => {
     const h = await signUpHarness({ bootstrap: true });
-    await h.factory.allowedDomain.create({
-      domain: "example.com",
-      defaultRole: "subscriber",
-      isEnabled: true,
-    });
 
     await verifyLinkFor(h, "first@example.com");
 

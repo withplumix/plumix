@@ -30,10 +30,6 @@ export const CORE_NAV_DESCRIPTORS = {
     id: "core.adminNav.item.users",
     message: "Users",
   }),
-  itemAllowedDomains: defineMessage({
-    id: "core.adminNav.item.allowedDomains",
-    message: "Allowed domains",
-  }),
   itemMailer: defineMessage({
     id: "core.adminNav.item.mailer",
     message: "Mailer",
@@ -64,17 +60,9 @@ export const CORE_NAV_DESCRIPTORS = {
     id: "core.adminNav.keyword.people",
     message: "people",
   }),
-  keywordDomains: defineMessage({
-    id: "core.adminNav.keyword.domains",
-    message: "domains",
-  }),
   keywordEmail: defineMessage({
     id: "core.adminNav.keyword.email",
     message: "email",
-  }),
-  keywordSignups: defineMessage({
-    id: "core.adminNav.keyword.signups",
-    message: "signups",
   }),
   keywordSmtp: defineMessage({
     id: "core.adminNav.keyword.smtp",
