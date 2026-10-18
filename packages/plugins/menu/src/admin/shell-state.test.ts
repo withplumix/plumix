@@ -6,7 +6,6 @@ import {
   conflictShown,
   linkedTargetText,
   locationCheckbox,
-  maxDepthRejected,
   menusPageState,
   pickerChoice,
   pickerPanelFor,
@@ -118,20 +117,6 @@ describe("conflictShown", () => {
 
   test("a save with no error shows no banner", () => {
     expect(conflictShown(null, null, 1)).toBe(false);
-  });
-});
-
-describe("maxDepthRejected", () => {
-  test("a max depth below the deepest item shows an error", () => {
-    expect(maxDepthRejected("0", 1)).toBe(true);
-  });
-
-  test("a max depth the editor accepted shows no error", () => {
-    expect(maxDepthRejected("3", 3)).toBe(false);
-  });
-
-  test("a field cleared mid-edit shows no error", () => {
-    expect(maxDepthRejected("", 3)).toBe(false);
   });
 });
 

@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import type { Locator, Page } from "@playwright/test";
 import { eq } from "plumix/db";
-import { entries } from "plumix/schema";
+import { entries, terms } from "plumix/schema";
 import { factoriesFor } from "plumix/test";
 import { dragTo, expect, openPlaygroundDb, test } from "plumix/test/playwright";
 
@@ -186,42 +186,82 @@ test.describe.serial("@plumix/plugin-menu — worker-driven happy path", () => {
     await expect(reloadedHome).toHaveAttribute("data-depth", "1");
   });
 
-  test("max-depth ceiling: setting maxDepth=0 prevents subsequent nesting via drag", async ({
+  test("the Primary Nav location's maxDepth of 2 limits the editor and the rendered nav", async ({
     page,
   }) => {
-    // Tests the depthCap on the drag projection: the server doesn't
-    // auto-clamp existing rows on a maxDepth save.
+    // Stored straight into the database: a lowered limit leaves such an item
+    // behind, and the editor can't create one.
+    const db = await openPlaygroundDb({
+      cwd: resolve(process.cwd(), "playground"),
+    });
+    const factories = factoriesFor(db);
+    const [home] = await db
+      .select({ id: entries.id, authorId: entries.authorId })
+      .from(entries)
+      .where(eq(entries.title, "Home"));
+    const [menuTerm] = await db
+      .select({ id: terms.id })
+      .from(terms)
+      .where(eq(terms.slug, menuSlug));
+    if (!home || !menuTerm) throw new Error("Primary menu rows missing");
+    const deep = await factories.entry.create({
+      type: "menu_item",
+      title: "Deep",
+      slug: "mi-primary-deep",
+      status: "published",
+      authorId: home.authorId,
+      parentId: home.id,
+      meta: { kind: "custom", url: "/deep" },
+    });
+    await factories.entryTerm.create({
+      entryId: deep.id,
+      termId: menuTerm.id,
+    });
+
     await page.goto("pages/menus");
     await menuOption(page).click();
     await expect(page.getByTestId("menu-item-editor")).toBeVisible();
+    await expect(page.getByTestId("menu-settings-depth-limit")).toHaveText(
+      "Up to 2 levels, set by the Primary Nav location",
+    );
+    await expect(
+      page.getByTestId(`menu-item-hidden-${String(deep.id)}`),
+    ).toHaveText("Hidden in Primary Nav");
 
-    // Lower maxDepth to 0 (no nesting allowed for new drags).
-    await page.getByTestId("menu-settings-max-depth").fill("0");
-    await page.getByTestId("menu-settings-max-depth").blur();
+    // Blog goes in at the root, then a two-indent drag aims it at a third level.
+    await page.getByTestId("menu-picker-tab-custom").click();
+    await page.getByTestId("menu-picker-custom-url").fill("/blog");
+    await page.getByTestId("menu-picker-custom-label").fill("Blog");
+    await page.getByTestId("menu-picker-custom-add").click();
+    const rows = page
+      .getByTestId("menu-tree")
+      .locator("[data-testid^='menu-item-row-']");
+    await expect(rows).toHaveCount(4);
+    const blogRow = rows.filter({ hasText: "Blog" });
+    await expect(blogRow).toHaveAttribute("data-depth", "0");
+    const blogTestid = await blogRow.getAttribute("data-testid");
+    if (!blogTestid) throw new Error("blog row missing data-testid");
+    const blogId = blogTestid.replace("menu-item-row-", "");
+
+    await dragRowOnSelf(page, blogId, { nestPx: 2 * INDENTATION_WIDTH });
+
+    // Refused the third level: Blog stops at the second, beside Home.
+    await expect(page.getByTestId(`menu-item-row-${blogId}`)).toHaveAttribute(
+      "data-depth",
+      "1",
+    );
+    // Deep stays where it is and doesn't block the save.
     const saved = page.waitForResponse(
       (r) => r.url().endsWith("/menu/save") && r.status() === 200,
     );
     await page.getByTestId("menu-save-button").click();
     await saved;
 
-    const rows = page
-      .getByTestId("menu-tree")
-      .locator("[data-testid^='menu-item-row-']");
-    const docsTestid = await rows.first().getAttribute("data-testid");
-    if (!docsTestid) throw new Error("first row missing data-testid");
-    const docsId = docsTestid.replace("menu-item-row-", "");
-    await expect(page.getByTestId(`menu-item-row-${docsId}`)).toHaveAttribute(
-      "data-depth",
-      "0",
-    );
-
-    await dragRowOnSelf(page, docsId, { nestPx: INDENTATION_WIDTH });
-
-    // Depth still 0 — projection refused the nest.
-    await expect(page.getByTestId(`menu-item-row-${docsId}`)).toHaveAttribute(
-      "data-depth",
-      "0",
-    );
+    await page.goto("/");
+    const nav = page.getByTestId("primary-nav");
+    await expect(nav.getByTestId("nav-level-0")).toHaveText(/^Docs/);
+    await expect(nav.getByTestId("nav-level-1")).toHaveCount(2);
+    await expect(nav.getByTestId("nav-level-2")).toHaveCount(0);
   });
 });
 

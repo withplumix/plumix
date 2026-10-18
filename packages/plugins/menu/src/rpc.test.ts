@@ -73,6 +73,7 @@ interface LocationRow {
   readonly id: string;
   readonly label: string;
   readonly description?: string;
+  readonly maxDepth?: number;
   readonly boundTermId: number | null;
 }
 
@@ -400,6 +401,90 @@ describe("menu RPC", () => {
       expect(result.slug).toBe("main");
       expect(result.version).toBe(0);
       expect(result.items).toEqual([]);
+    });
+
+    test("reports the maxDepth of the location the menu is assigned to", async () => {
+      const h = await buildHarness("editor", {
+        header: { label: "Header", maxDepth: 2 },
+      });
+      const m = await seedMenu(h.db, h.factories, "main");
+      await h.client.menu.assignLocation({
+        location: "header",
+        termSlug: "main",
+      });
+
+      const result = await h.client.menu.get({ termId: m.id });
+
+      expect(result).toMatchObject({ maxDepth: 2, limitedBy: ["header"] });
+    });
+
+    test("reports the most restrictive maxDepth among its locations, naming each that sets it", async () => {
+      const h = await buildHarness("editor", {
+        header: { label: "Header", maxDepth: 2 },
+        mobile: { label: "Mobile", maxDepth: 2 },
+        footer: { label: "Footer", maxDepth: 4 },
+        topbar: { label: "Topbar", maxDepth: 3 },
+        sidebar: { label: "Sidebar" },
+      });
+      const m = await seedMenu(h.db, h.factories, "main");
+      await h.client.menu.assignLocation({
+        location: "footer",
+        termSlug: "main",
+      });
+      await h.client.menu.assignLocation({
+        location: "mobile",
+        termSlug: "main",
+      });
+      await h.client.menu.assignLocation({
+        location: "header",
+        termSlug: "main",
+      });
+      await h.client.menu.assignLocation({
+        location: "sidebar",
+        termSlug: "main",
+      });
+      await h.client.menu.assignLocation({
+        location: "topbar",
+        termSlug: "main",
+      });
+
+      const result = await h.client.menu.get({ termId: m.id });
+
+      expect(result).toMatchObject({
+        maxDepth: 2,
+        limitedBy: ["header", "mobile"],
+      });
+    });
+
+    test("reports a location's maxDepth above the default of 5", async () => {
+      const h = await buildHarness("editor", {
+        sidebar: { label: "Sidebar", maxDepth: 8 },
+      });
+      const m = await seedMenu(h.db, h.factories, "main");
+      await h.client.menu.assignLocation({
+        location: "sidebar",
+        termSlug: "main",
+      });
+
+      const result = await h.client.menu.get({ termId: m.id });
+
+      expect(result).toMatchObject({ maxDepth: 8, limitedBy: ["sidebar"] });
+    });
+
+    test("reports the default maxDepth of 5 when no location of the menu declares one", async () => {
+      const h = await buildHarness("editor", {
+        header: { label: "Header", maxDepth: 2 },
+        sidebar: { label: "Sidebar" },
+      });
+      const m = await seedMenu(h.db, h.factories, "main");
+      await h.client.menu.assignLocation({
+        location: "sidebar",
+        termSlug: "main",
+      });
+
+      const result = await h.client.menu.get({ termId: m.id });
+
+      expect(result).toMatchObject({ maxDepth: 5, limitedBy: [] });
     });
 
     test("rejects when termId is not a menu", async () => {
@@ -784,6 +869,281 @@ describe("menu RPC", () => {
       await expect(
         h.client.menu.save({ termId: m.id, version: 0, items }),
       ).rejects.toThrow();
+    });
+
+    test("refuses a save that nests a new item past its location's maxDepth, naming the location", async () => {
+      const h = await buildHarness("editor", {
+        header: { label: "Header", maxDepth: 2 },
+      });
+      const m = await seedMenu(h.db, h.factories, "main");
+      await h.client.menu.assignLocation({
+        location: "header",
+        termSlug: "main",
+      });
+
+      await expect(
+        h.client.menu.save({
+          termId: m.id,
+          version: 0,
+          items: [
+            {
+              parentIndex: null,
+              sortOrder: 0,
+              title: "Top",
+              meta: { kind: "custom", url: "/top" },
+            },
+            {
+              parentIndex: 0,
+              sortOrder: 0,
+              title: "Second",
+              meta: { kind: "custom", url: "/second" },
+            },
+            {
+              parentIndex: 1,
+              sortOrder: 0,
+              title: "Third",
+              meta: { kind: "custom", url: "/third" },
+            },
+          ],
+        }),
+      ).rejects.toMatchObject({
+        code: "CONFLICT",
+        data: { reason: "max_depth_exceeded", key: "header" },
+      });
+    });
+
+    test("names every location that sets the limit a save nests past", async () => {
+      const h = await buildHarness("editor", {
+        header: { label: "Header", maxDepth: 2 },
+        mobile: { label: "Mobile", maxDepth: 2 },
+      });
+      const m = await seedMenu(h.db, h.factories, "main");
+      await h.client.menu.assignLocation({
+        location: "mobile",
+        termSlug: "main",
+      });
+      await h.client.menu.assignLocation({
+        location: "header",
+        termSlug: "main",
+      });
+
+      await expect(
+        h.client.menu.save({
+          termId: m.id,
+          version: 0,
+          items: [
+            {
+              parentIndex: null,
+              sortOrder: 0,
+              title: "Top",
+              meta: { kind: "custom", url: "/top" },
+            },
+            {
+              parentIndex: 0,
+              sortOrder: 0,
+              title: "Second",
+              meta: { kind: "custom", url: "/second" },
+            },
+            {
+              parentIndex: 1,
+              sortOrder: 0,
+              title: "Third",
+              meta: { kind: "custom", url: "/third" },
+            },
+          ],
+        }),
+      ).rejects.toMatchObject({
+        code: "CONFLICT",
+        data: { reason: "max_depth_exceeded", key: "header,mobile" },
+      });
+    });
+
+    test("names no location when a save nests past the default limit", async () => {
+      const h = await buildHarness();
+      const m = await seedMenu(h.db, h.factories, "main");
+      const items = [];
+      for (let i = 0; i < 6; i++) {
+        items.push({
+          parentIndex: i === 0 ? null : i - 1,
+          sortOrder: 0,
+          title: `level-${i}`,
+          meta: { kind: "custom", url: `/${i}` },
+        });
+      }
+
+      const error = await h.client.menu
+        .save({ termId: m.id, version: 0, items })
+        .catch((caught: unknown) => caught);
+
+      expect(error).toHaveProperty("data", { reason: "max_depth_exceeded" });
+    });
+
+    test("refuses a save that moves a stored item deeper, past its location's maxDepth", async () => {
+      const h = await buildHarness("editor", {
+        header: { label: "Header", maxDepth: 2 },
+      });
+      const m = await seedMenu(h.db, h.factories, "main");
+      await h.client.menu.assignLocation({
+        location: "header",
+        termSlug: "main",
+      });
+      const first = (await h.client.menu.save({
+        termId: m.id,
+        version: 0,
+        items: [
+          {
+            parentIndex: null,
+            sortOrder: 0,
+            title: "Top",
+            meta: { kind: "custom", url: "/top" },
+          },
+          {
+            parentIndex: 0,
+            sortOrder: 0,
+            title: "Second",
+            meta: { kind: "custom", url: "/second" },
+          },
+          {
+            parentIndex: 0,
+            sortOrder: 1,
+            title: "Sibling",
+            meta: { kind: "custom", url: "/sibling" },
+          },
+        ],
+      })) as { itemIds: number[] };
+
+      await expect(
+        h.client.menu.save({
+          termId: m.id,
+          version: 1,
+          items: [
+            {
+              id: first.itemIds[0],
+              parentIndex: null,
+              sortOrder: 0,
+              title: "Top",
+              meta: { kind: "custom", url: "/top" },
+            },
+            {
+              id: first.itemIds[1],
+              parentIndex: 0,
+              sortOrder: 0,
+              title: "Second",
+              meta: { kind: "custom", url: "/second" },
+            },
+            {
+              id: first.itemIds[2],
+              parentIndex: 1,
+              sortOrder: 0,
+              title: "Sibling",
+              meta: { kind: "custom", url: "/sibling" },
+            },
+          ],
+        }),
+      ).rejects.toMatchObject({
+        code: "CONFLICT",
+        data: { reason: "max_depth_exceeded", key: "header" },
+      });
+    });
+
+    test("saves an edit to a menu whose stored items already sit past its location's maxDepth", async () => {
+      const h = await buildHarness("editor", {
+        header: { label: "Header", maxDepth: 2 },
+      });
+      const m = await seedMenu(h.db, h.factories, "main");
+      const first = (await h.client.menu.save({
+        termId: m.id,
+        version: 0,
+        items: [
+          {
+            parentIndex: null,
+            sortOrder: 0,
+            title: "Top",
+            meta: { kind: "custom", url: "/top" },
+          },
+          {
+            parentIndex: 0,
+            sortOrder: 0,
+            title: "Second",
+            meta: { kind: "custom", url: "/second" },
+          },
+          {
+            parentIndex: 1,
+            sortOrder: 0,
+            title: "Third",
+            meta: { kind: "custom", url: "/third" },
+          },
+        ],
+      })) as { itemIds: number[] };
+      await h.client.menu.assignLocation({
+        location: "header",
+        termSlug: "main",
+      });
+
+      const result = await h.client.menu.save({
+        termId: m.id,
+        version: 1,
+        items: [
+          {
+            id: first.itemIds[0],
+            parentIndex: null,
+            sortOrder: 0,
+            title: "Top, renamed",
+            meta: { kind: "custom", url: "/top" },
+          },
+          {
+            id: first.itemIds[1],
+            parentIndex: 0,
+            sortOrder: 0,
+            title: "Second",
+            meta: { kind: "custom", url: "/second" },
+          },
+          {
+            id: first.itemIds[2],
+            parentIndex: 1,
+            sortOrder: 0,
+            title: "Third",
+            meta: { kind: "custom", url: "/third" },
+          },
+        ],
+      });
+
+      expect(result).toMatchObject({ version: 2 });
+    });
+
+    test("keeps stored items past a location's maxDepth when the menu is assigned to it", async () => {
+      const h = await buildHarness("editor", {
+        header: { label: "Header", maxDepth: 1 },
+      });
+      const m = await seedMenu(h.db, h.factories, "main");
+      await h.client.menu.save({
+        termId: m.id,
+        version: 0,
+        items: [
+          {
+            parentIndex: null,
+            sortOrder: 0,
+            title: "Top",
+            meta: { kind: "custom", url: "/top" },
+          },
+          {
+            parentIndex: 0,
+            sortOrder: 0,
+            title: "Child",
+            meta: { kind: "custom", url: "/child" },
+          },
+        ],
+      });
+
+      await h.client.menu.assignLocation({
+        location: "header",
+        termSlug: "main",
+      });
+
+      const result = (await h.client.menu.get({ termId: m.id })) as {
+        items: { title: string }[];
+      };
+      expect(result.items.map((item) => item.title)).toEqual(["Top", "Child"]);
     });
 
     test("removes items omitted from the save (atomic diff)", async () => {
@@ -1504,6 +1864,18 @@ describe("menu RPC", () => {
           description: "Header",
           boundTermId: main.id,
         },
+      ]);
+    });
+
+    test("returns the maxDepth a location declares", async () => {
+      const h = await buildHarness("editor", {
+        header: { label: "Header", maxDepth: 2 },
+      });
+
+      const rows = await h.client.menu.locations.list();
+
+      expect(rows).toEqual([
+        { id: "header", label: "Header", maxDepth: 2, boundTermId: null },
       ]);
     });
 

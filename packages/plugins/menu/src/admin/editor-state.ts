@@ -39,7 +39,10 @@ export interface EditorState {
   readonly slug: string;
   readonly name: string;
   readonly version: number;
+  /** Levels the menu may nest to; set by its locations, never edited here. */
   readonly maxDepth: number;
+  /** The locations that set `maxDepth`; empty when it's the default. */
+  readonly limitedBy: readonly string[];
   readonly items: readonly EditorItem[];
   readonly selectedKey: ItemKey | null;
   /**
@@ -61,6 +64,7 @@ export const initialEditorState: EditorState = {
   name: "",
   version: 0,
   maxDepth: 5,
+  limitedBy: [],
   items: [],
   selectedKey: null,
   relinkTargetKey: null,
@@ -116,8 +120,9 @@ export type EditorAction =
       readonly newSortOrder: number;
     }
   | {
-      readonly type: "updateMaxDepth";
-      readonly value: number;
+      readonly type: "applyDepthLimit";
+      readonly maxDepth: number;
+      readonly limitedBy: readonly string[];
     }
   | {
       readonly type: "convertToCustom";
@@ -150,6 +155,7 @@ export function editorReducer(
         name: action.response.name,
         version: action.response.version,
         maxDepth: action.response.maxDepth,
+        limitedBy: action.response.limitedBy,
         items,
         selectedKey: null,
         relinkTargetKey: null,
@@ -265,18 +271,19 @@ export function editorReducer(
           : { ...item, sortOrder: nextOrder };
       });
       const rebuilt = rebuildDfsOrder(items);
-      if (deepestDepth(rebuilt) > state.maxDepth) return state;
+      if (nestsPastLimit(state.items, rebuilt, state.maxDepth)) return state;
       // No-op short-circuit: a drag that ends where it started would
       // otherwise renumber siblings into identical values and flip
       // `dirty`, fooling the editor into thinking the menu changed.
       if (itemsAreEquivalent(state.items, rebuilt)) return state;
       return { ...state, items: rebuilt, dirty: true };
     }
-    case "updateMaxDepth": {
-      if (action.value === state.maxDepth) return state;
-      if (action.value < deepestDepth(state.items)) return state;
-      return { ...state, maxDepth: action.value, dirty: true };
-    }
+    case "applyDepthLimit":
+      return {
+        ...state,
+        maxDepth: action.maxDepth,
+        limitedBy: action.limitedBy,
+      };
     case "convertToCustom": {
       const target = state.items.find((item) => item.key === action.key);
       if (!target) return state;
@@ -421,12 +428,81 @@ export function computeDepths(
   return out;
 }
 
-function deepestDepth(items: readonly EditorItem[]): number {
-  let max = 0;
-  for (const depth of computeDepths(items).values()) {
-    if (depth > max) max = depth;
+interface DepthLimitedLocation {
+  readonly label: string;
+  readonly maxDepth?: number;
+}
+
+interface BindableLocation extends DepthLimitedLocation {
+  readonly id: string;
+  readonly boundTermId: number | null;
+}
+
+/** True when the server's limit differs from the one the editor shows. */
+export function depthLimitIsStale(
+  state: Pick<EditorState, "maxDepth" | "limitedBy">,
+  response: Pick<EditorState, "maxDepth" | "limitedBy">,
+): boolean {
+  return (
+    response.maxDepth !== state.maxDepth ||
+    response.limitedBy.join() !== state.limitedBy.join()
+  );
+}
+
+export function locationsBoundTo<T extends BindableLocation>(
+  locations: readonly T[],
+  termId: number,
+): T[] {
+  return locations.filter((location) => location.boundTermId === termId);
+}
+
+/** A location's label, or its id while the locations are still loading. */
+export function locationLabels(
+  ids: readonly string[],
+  locations: readonly BindableLocation[],
+): string[] {
+  return ids.map(
+    (id) => locations.find((location) => location.id === id)?.label ?? id,
+  );
+}
+
+/**
+ * The labels of the locations that don't render each item, keyed by item.
+ * Items every location renders are left out.
+ */
+export function hiddenInLocations(
+  items: readonly EditorItem[],
+  locations: readonly DepthLimitedLocation[],
+): Map<ItemKey, readonly string[]> {
+  const hidden = new Map<ItemKey, readonly string[]>();
+  for (const [key, depth] of computeDepths(items)) {
+    const labels = locations
+      .filter(
+        (location) =>
+          location.maxDepth !== undefined && depth >= location.maxDepth,
+      )
+      .map((location) => location.label);
+    if (labels.length > 0) hidden.set(key, labels);
   }
-  return max;
+  return hidden;
+}
+
+/**
+ * Items already past the limit may stay where they are; only an item moved
+ * deeper than it was is held to it.
+ */
+function nestsPastLimit(
+  before: readonly EditorItem[],
+  after: readonly EditorItem[],
+  maxDepth: number,
+): boolean {
+  const depthsBefore = computeDepths(before);
+  for (const [key, depth] of computeDepths(after)) {
+    if (depth >= maxDepth && depth > (depthsBefore.get(key) ?? -1)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function rebuildDfsOrder(items: readonly EditorItem[]): EditorItem[] {

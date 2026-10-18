@@ -84,6 +84,27 @@ describe("getProjection", () => {
 
     expect(projection).toEqual({ parentKey: null, depth: 0, sortOrder: 1 });
   });
+
+  test("stops a drag at the last level maxDepth allows", () => {
+    // maxDepth 1 allows roots only, so dragging A right under B is refused.
+    const items = [row("b", null, 0), row("a", null, 1)];
+
+    const projection = getProjection(items, "a", "a", 24, 24, 1);
+
+    expect(projection).toEqual({ parentKey: null, depth: 0, sortOrder: 1 });
+  });
+
+  test("keeps an item already past maxDepth at its depth", () => {
+    const items = [
+      row("a", null, 0),
+      row("afirst", "a", 0),
+      row("asecond", "a", 1),
+    ];
+
+    const projection = getProjection(items, "asecond", "afirst", 0, 24, 1);
+
+    expect(projection).toEqual({ parentKey: "a", depth: 1, sortOrder: 0 });
+  });
 });
 
 describe("dragEndToAction", () => {

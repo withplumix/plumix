@@ -2,9 +2,13 @@ import { describe, expect, test } from "vitest";
 
 import {
   buildSavePayload,
+  depthLimitIsStale,
   editorReducer,
+  hiddenInLocations,
   initialEditorState,
   itemDisplayLabel,
+  locationLabels,
+  locationsBoundTo,
 } from "./editor-state.js";
 
 /** What the server's resolver attaches to every row it sends back. */
@@ -20,7 +24,7 @@ function okResolved(label: string) {
 
 describe("editorReducer", () => {
   describe("loadFromServer", () => {
-    test("populates termId / slug / name / version / maxDepth from the response", () => {
+    test("populates termId / slug / name / version / depth limit from the response", () => {
       const next = editorReducer(initialEditorState, {
         type: "loadFromServer",
         response: {
@@ -29,6 +33,7 @@ describe("editorReducer", () => {
           name: "Main",
           version: 3,
           maxDepth: 4,
+          limitedBy: ["header"],
           items: [],
         },
       });
@@ -38,6 +43,7 @@ describe("editorReducer", () => {
       expect(next.name).toBe("Main");
       expect(next.version).toBe(3);
       expect(next.maxDepth).toBe(4);
+      expect(next.limitedBy).toEqual(["header"]);
       expect(next.items).toEqual([]);
       expect(next.selectedKey).toBeNull();
       expect(next.dirty).toBe(false);
@@ -52,6 +58,7 @@ describe("editorReducer", () => {
           name: "Main",
           version: 1,
           maxDepth: 5,
+          limitedBy: [],
           items: [
             {
               id: 10,
@@ -95,6 +102,7 @@ describe("editorReducer", () => {
           name: "Main",
           version: 1,
           maxDepth: 5,
+          limitedBy: [],
           items: [
             {
               id: 10,
@@ -146,6 +154,7 @@ describe("editorReducer", () => {
           name: "Main",
           version: 1,
           maxDepth: 5,
+          limitedBy: [],
           items: [
             {
               id: 10,
@@ -176,6 +185,7 @@ describe("editorReducer", () => {
           name: "Main",
           version: 4,
           maxDepth: 5,
+          limitedBy: [],
           items: [
             {
               id: 10,
@@ -291,6 +301,7 @@ describe("editorReducer", () => {
           name: "Main",
           version: 1,
           maxDepth: 5,
+          limitedBy: [],
           items: [
             {
               id: 10,
@@ -349,6 +360,7 @@ describe("editorReducer", () => {
           name: "Main",
           version: 1,
           maxDepth: 5,
+          limitedBy: [],
           items: [
             {
               id: 10,
@@ -384,6 +396,7 @@ describe("editorReducer", () => {
           name: "Main",
           version: 1,
           maxDepth: 5,
+          limitedBy: [],
           items: [
             {
               id: 10,
@@ -423,6 +436,7 @@ describe("editorReducer", () => {
           name: "Main",
           version: 1,
           maxDepth: 5,
+          limitedBy: [],
           items: [
             {
               id: 10,
@@ -456,6 +470,7 @@ describe("editorReducer", () => {
           name: "Main",
           version: 1,
           maxDepth: 5,
+          limitedBy: [],
           items: [
             {
               id: 10,
@@ -495,6 +510,7 @@ describe("editorReducer", () => {
           name: "Main",
           version: 1,
           maxDepth: 5,
+          limitedBy: [],
           items: [
             {
               id: 10,
@@ -528,6 +544,7 @@ describe("editorReducer", () => {
           name: "Main",
           version: 1,
           maxDepth: 5,
+          limitedBy: [],
           items: [
             {
               id: 10,
@@ -559,6 +576,7 @@ describe("editorReducer", () => {
           name: "Main",
           version: 1,
           maxDepth: 5,
+          limitedBy: [],
           items: [
             {
               id: 10,
@@ -665,6 +683,7 @@ describe("editorReducer", () => {
           name: "Main",
           version: 1,
           maxDepth: 5,
+          limitedBy: [],
           items: [
             {
               id: 10,
@@ -700,6 +719,7 @@ describe("editorReducer", () => {
           name: "Main",
           version: 1,
           maxDepth: 5,
+          limitedBy: [],
           items: [
             {
               id: 10,
@@ -752,6 +772,7 @@ describe("editorReducer", () => {
           name: "Main",
           version: 1,
           maxDepth: 5,
+          limitedBy: [],
           items: [
             {
               id: 10,
@@ -807,6 +828,7 @@ describe("editorReducer", () => {
           name: "Main",
           version: 1,
           maxDepth: 5,
+          limitedBy: [],
           items: [
             {
               id: 10,
@@ -842,6 +864,7 @@ describe("editorReducer", () => {
           name: "Main",
           version: 1,
           maxDepth: 5,
+          limitedBy: [],
           items: [
             {
               id: 10,
@@ -885,6 +908,7 @@ describe("editorReducer", () => {
           name: "Main",
           version: 1,
           maxDepth: 5,
+          limitedBy: [],
           items: [
             {
               id: 10,
@@ -939,6 +963,7 @@ describe("editorReducer", () => {
           name: "Main",
           version: 1,
           maxDepth: 5,
+          limitedBy: [],
           items: [
             {
               id: 10,
@@ -970,6 +995,109 @@ describe("editorReducer", () => {
       expect(next).toBe(loaded);
     });
 
+    test("is a no-op when the move would nest an item at the level maxDepth counts past", () => {
+      // maxDepth 2 allows two levels; nesting B under A.child makes a third.
+      const loaded = editorReducer(initialEditorState, {
+        type: "loadFromServer",
+        response: {
+          id: 1,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 2,
+          limitedBy: ["header"],
+          items: [
+            {
+              id: 10,
+              parentId: null,
+              sortOrder: 0,
+              title: "A",
+              resolved: okResolved("A"),
+              meta: { kind: "custom", url: "/a" },
+            },
+            {
+              id: 20,
+              parentId: 10,
+              sortOrder: 0,
+              title: "A.child",
+              resolved: okResolved("A.child"),
+              meta: { kind: "custom", url: "/a/child" },
+            },
+            {
+              id: 11,
+              parentId: null,
+              sortOrder: 1,
+              title: "B",
+              resolved: okResolved("B"),
+              meta: { kind: "custom", url: "/b" },
+            },
+          ],
+        },
+      });
+
+      const next = editorReducer(loaded, {
+        type: "moveItem",
+        key: "id-11",
+        newParentKey: "id-20",
+        newSortOrder: 0,
+      });
+
+      expect(next).toBe(loaded);
+    });
+
+    test("reorders items that already sit past maxDepth without nesting them deeper", () => {
+      const loaded = editorReducer(initialEditorState, {
+        type: "loadFromServer",
+        response: {
+          id: 1,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 1,
+          limitedBy: ["header"],
+          items: [
+            {
+              id: 10,
+              parentId: null,
+              sortOrder: 0,
+              title: "A",
+              resolved: okResolved("A"),
+              meta: { kind: "custom", url: "/a" },
+            },
+            {
+              id: 20,
+              parentId: 10,
+              sortOrder: 0,
+              title: "A.first",
+              resolved: okResolved("A.first"),
+              meta: { kind: "custom", url: "/a/first" },
+            },
+            {
+              id: 21,
+              parentId: 10,
+              sortOrder: 1,
+              title: "A.second",
+              resolved: okResolved("A.second"),
+              meta: { kind: "custom", url: "/a/second" },
+            },
+          ],
+        },
+      });
+
+      const next = editorReducer(loaded, {
+        type: "moveItem",
+        key: "id-21",
+        newParentKey: "id-10",
+        newSortOrder: 0,
+      });
+
+      expect(next.items.map((item) => item.key)).toEqual([
+        "id-10",
+        "id-21",
+        "id-20",
+      ]);
+    });
+
     test("is a no-op when the move would push the target's subtree past maxDepth", () => {
       // Moving B under A pushes B.grandchild to depth 3, past maxDepth=2.
       const loaded = editorReducer(initialEditorState, {
@@ -980,6 +1108,7 @@ describe("editorReducer", () => {
           name: "Main",
           version: 1,
           maxDepth: 2,
+          limitedBy: [],
           items: [
             {
               id: 10,
@@ -1041,6 +1170,7 @@ describe("editorReducer", () => {
           name: "Main",
           version: 1,
           maxDepth: 5,
+          limitedBy: [],
           items: [
             {
               id: 10,
@@ -1077,6 +1207,7 @@ describe("editorReducer", () => {
           name: "Main",
           version: 1,
           maxDepth: 5,
+          limitedBy: [],
           items: [
             {
               id: 10,
@@ -1109,6 +1240,7 @@ describe("editorReducer", () => {
           name: "Main",
           version: 1,
           maxDepth: 5,
+          limitedBy: [],
           items: [
             {
               id: 10,
@@ -1144,6 +1276,7 @@ describe("editorReducer", () => {
           name: "Main",
           version: 1,
           maxDepth: 5,
+          limitedBy: [],
           items: [
             {
               id: 10,
@@ -1192,6 +1325,7 @@ describe("editorReducer", () => {
           name: "Main",
           version: 1,
           maxDepth: 5,
+          limitedBy: [],
           items: [
             {
               id: 10,
@@ -1224,85 +1358,41 @@ describe("editorReducer", () => {
       expect(relinked && itemDisplayLabel(relinked)).toBe("Guides");
     });
   });
+});
 
-  describe("updateMaxDepth", () => {
-    test("updates state.maxDepth and flips dirty", () => {
-      const loaded = editorReducer(initialEditorState, {
-        type: "loadFromServer",
-        response: {
-          id: 1,
-          slug: "main",
-          name: "Main",
-          version: 1,
-          maxDepth: 3,
-          items: [],
-        },
-      });
-
-      const next = editorReducer(loaded, { type: "updateMaxDepth", value: 7 });
-
-      expect(next.maxDepth).toBe(7);
-      expect(next.dirty).toBe(true);
+describe("applyDepthLimit", () => {
+  test("replaces the depth limit and keeps unsaved edits", () => {
+    const loaded = editorReducer(initialEditorState, {
+      type: "loadFromServer",
+      response: {
+        id: 1,
+        slug: "main",
+        name: "Main",
+        version: 1,
+        maxDepth: 5,
+        limitedBy: [],
+        items: [],
+      },
+    });
+    const edited = editorReducer(loaded, {
+      type: "addItem",
+      title: "Docs",
+      meta: { kind: "custom", url: "/docs" },
+      linkedLabel: null,
     });
 
-    test("preserves dirty=false when the new value equals the current maxDepth", () => {
-      // Symmetric with the no-op short-circuit on `moveItem`. Re-typing
-      // the same number into the field shouldn't flip `dirty` and arm
-      // the save button — there's no observable change.
-      const loaded = editorReducer(initialEditorState, {
-        type: "loadFromServer",
-        response: {
-          id: 1,
-          slug: "main",
-          name: "Main",
-          version: 1,
-          maxDepth: 5,
-          items: [],
-        },
-      });
-
-      const next = editorReducer(loaded, { type: "updateMaxDepth", value: 5 });
-
-      expect(next).toBe(loaded);
+    const next = editorReducer(edited, {
+      type: "applyDepthLimit",
+      maxDepth: 2,
+      limitedBy: ["header"],
     });
 
-    test("is a no-op when the new value is below the deepest existing item", () => {
-      // Items already nest 2 deep (B.child at depth 1). Lowering maxDepth
-      // to 0 would invalidate existing state, so the action is rejected
-      // — the user has to remove/move items before tightening the cap.
-      const loaded = editorReducer(initialEditorState, {
-        type: "loadFromServer",
-        response: {
-          id: 1,
-          slug: "main",
-          name: "Main",
-          version: 1,
-          maxDepth: 5,
-          items: [
-            {
-              id: 10,
-              parentId: null,
-              sortOrder: 0,
-              title: "A",
-              resolved: okResolved("A"),
-              meta: { kind: "custom", url: "/a" },
-            },
-            {
-              id: 20,
-              parentId: 10,
-              sortOrder: 0,
-              title: "A.child",
-              resolved: okResolved("A.child"),
-              meta: { kind: "custom", url: "/a/child" },
-            },
-          ],
-        },
-      });
-
-      const next = editorReducer(loaded, { type: "updateMaxDepth", value: 0 });
-
-      expect(next).toBe(loaded);
+    expect(next).toMatchObject({
+      maxDepth: 2,
+      limitedBy: ["header"],
+      dirty: true,
     });
+    expect(next.items.map((item) => item.title)).toEqual(["Docs"]);
   });
 });
 
@@ -1346,6 +1436,7 @@ describe("buildSavePayload", () => {
         name: "Main",
         version: 4,
         maxDepth: 5,
+        limitedBy: [],
         items: [
           {
             id: 42,
@@ -1385,6 +1476,7 @@ describe("buildSavePayload", () => {
         name: "Main",
         version: 1,
         maxDepth: 5,
+        limitedBy: [],
         items: [
           {
             id: 10,
@@ -1410,5 +1502,111 @@ describe("buildSavePayload", () => {
 
     expect(payload[0]?.parentIndex).toBeNull();
     expect(payload[1]?.parentIndex).toBe(0);
+  });
+});
+
+describe("hiddenInLocations", () => {
+  test("names each location whose maxDepth an item sits past", () => {
+    const loaded = editorReducer(initialEditorState, {
+      type: "loadFromServer",
+      response: {
+        id: 1,
+        slug: "main",
+        name: "Main",
+        version: 1,
+        maxDepth: 1,
+        limitedBy: ["header"],
+        items: [
+          {
+            id: 10,
+            parentId: null,
+            sortOrder: 0,
+            title: "A",
+            resolved: okResolved("A"),
+            meta: { kind: "custom", url: "/a" },
+          },
+          {
+            id: 20,
+            parentId: 10,
+            sortOrder: 0,
+            title: "A.child",
+            resolved: okResolved("A.child"),
+            meta: { kind: "custom", url: "/a/child" },
+          },
+          {
+            id: 30,
+            parentId: 20,
+            sortOrder: 0,
+            title: "A.grandchild",
+            resolved: okResolved("A.grandchild"),
+            meta: { kind: "custom", url: "/a/child/grand" },
+          },
+        ],
+      },
+    });
+
+    const hidden = hiddenInLocations(loaded.items, [
+      { label: "Header", maxDepth: 1 },
+      { label: "Mobile", maxDepth: 2 },
+      { label: "Footer" },
+    ]);
+
+    expect([...hidden]).toEqual([
+      ["id-20", ["Header"]],
+      ["id-30", ["Header", "Mobile"]],
+    ]);
+  });
+});
+
+describe("depthLimitIsStale", () => {
+  const shown = { maxDepth: 2, limitedBy: ["header"] };
+
+  test("is false when the server reports the limit the editor shows", () => {
+    expect(
+      depthLimitIsStale(shown, { maxDepth: 2, limitedBy: ["header"] }),
+    ).toBe(false);
+  });
+
+  test("is true when only the number of levels differs", () => {
+    expect(
+      depthLimitIsStale(shown, { maxDepth: 3, limitedBy: ["header"] }),
+    ).toBe(true);
+  });
+
+  test("is true when only the limiting locations differ", () => {
+    expect(
+      depthLimitIsStale(shown, { maxDepth: 2, limitedBy: ["mobile"] }),
+    ).toBe(true);
+  });
+});
+
+describe("locationsBoundTo", () => {
+  test("keeps only the locations the menu fills", () => {
+    const header = { id: "header", label: "Header", boundTermId: 7 };
+    const footer = { id: "footer", label: "Footer", boundTermId: 8 };
+    const sidebar = { id: "sidebar", label: "Sidebar", boundTermId: null };
+
+    expect(locationsBoundTo([header, footer, sidebar], 7)).toEqual([header]);
+  });
+});
+
+describe("locationLabels", () => {
+  const locations = [
+    { id: "header", label: "Header", boundTermId: 7 },
+    { id: "footer", label: "Footer", boundTermId: 7 },
+  ];
+
+  test("names each id by its location's label", () => {
+    expect(locationLabels(["footer", "header"], locations)).toEqual([
+      "Footer",
+      "Header",
+    ]);
+  });
+
+  test("falls back to the id for a location not in the list", () => {
+    expect(locationLabels(["header", "gone"], locations)).toEqual([
+      "Header",
+      "gone",
+    ]);
   });
 });

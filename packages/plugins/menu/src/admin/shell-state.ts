@@ -93,15 +93,6 @@ export function conflictShown(
   return isVersionMismatch && dismissedAt !== version;
 }
 
-/**
- * The reducer ignores a value below the deepest existing depth; this says so,
- * or the input displays a number the next save won't send.
- */
-export function maxDepthRejected(draft: string, maxDepth: number): boolean {
-  const parsed = Number.parseInt(draft, 10);
-  return Number.isFinite(parsed) && parsed !== maxDepth;
-}
-
 export type PickerPanel =
   | { readonly panel: "custom" }
   | {

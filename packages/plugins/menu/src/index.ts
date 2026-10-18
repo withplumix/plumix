@@ -15,7 +15,10 @@ import {
 import type { MenuLocationOptions, ResolvedMenuItem } from "./server/types.js";
 import { createMenuRouter, MENU_MANAGE_CAPABILITY } from "./rpc.js";
 import { menuTag } from "./server/cache-tags.js";
-import { getMenusForLocations } from "./server/getMenuForLocation.js";
+import {
+  getMenusForLocations,
+  rememberDeclaredLocations,
+} from "./server/getMenuForLocation.js";
 import { declareLocations } from "./server/locations.js";
 
 // Plain descriptor literals: plugin source runs server-side without the Babel
@@ -243,6 +246,14 @@ export function menu(options: MenuPluginOptions = {}): PluginDescriptor {
         },
         component: "MenusShell",
       });
+    },
+    afterSetup: (ctx) => {
+      // `setup` has no registry to key on; the declarations are already
+      // validated there, so this re-read cannot throw.
+      rememberDeclaredLocations(
+        ctx.plugins,
+        declareLocations(options.locations ?? {}),
+      );
     },
   });
 }

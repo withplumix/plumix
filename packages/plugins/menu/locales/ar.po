@@ -197,16 +197,6 @@ msgstr "حفظ القائمة"
 
 #. js-lingui-explicit-id
 #: src/admin/MenuItemEditor.tsx
-msgid "plugin.menu.itemEditor.maxDepthLabel"
-msgstr "الحد الأقصى للعمق"
-
-#. js-lingui-explicit-id
-#: src/admin/MenuItemEditor.tsx
-msgid "plugin.menu.itemEditor.maxDepthRejected"
-msgstr "لا يمكن التعيين أقل من العنصر الأعمق الحالي."
-
-#. js-lingui-explicit-id
-#: src/admin/MenuItemEditor.tsx
 msgid "plugin.menu.itemEditor.deleteButton"
 msgstr "حذف القائمة"
 

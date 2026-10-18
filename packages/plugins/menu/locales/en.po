@@ -232,16 +232,6 @@ msgstr "Save menu"
 
 #. js-lingui-explicit-id
 #: src/admin/MenuItemEditor.tsx
-msgid "plugin.menu.itemEditor.maxDepthLabel"
-msgstr "Max depth"
-
-#. js-lingui-explicit-id
-#: src/admin/MenuItemEditor.tsx
-msgid "plugin.menu.itemEditor.maxDepthRejected"
-msgstr "Cannot set below the current deepest item."
-
-#. js-lingui-explicit-id
-#: src/admin/MenuItemEditor.tsx
 msgid "plugin.menu.itemEditor.deleteButton"
 msgstr "Delete menu"
 
@@ -375,3 +365,20 @@ msgstr "Links to entry #{id}"
 #: src/admin/shell-state.ts
 msgid "plugin.menu.itemEditor.linkedTermById"
 msgstr "Links to term #{id}"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.depthLimit"
+msgstr "Up to {count, plural, one {# level} other {# levels}}"
+
+#. js-lingui-explicit-id
+#. locations: the names of the menu locations, joined as a list
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.depthLimitSetBy"
+msgstr "Up to {count, plural, one {# level} other {# levels}}, set by the {locations} {locationCount, plural, one {location} other {locations}}"
+
+#. js-lingui-explicit-id
+#. locations: the names of the menu locations that don't show this item, joined as a list
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.hiddenIn"
+msgstr "Hidden in {locations}"

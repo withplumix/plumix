@@ -1,5 +1,4 @@
-import type { LookupResult } from "plumix/plugin";
-import type { JsonObject } from "plumix/support";
+import type { AppContext, LookupResult } from "plumix/plugin";
 import { and, count, eq, inArray, sql } from "plumix/db";
 import {
   authenticated,
@@ -15,9 +14,11 @@ import { entries, entryTerm, settings, terms } from "plumix/schema";
 import { slugify } from "plumix/support";
 import * as v from "valibot";
 
+import type { MenuDepthLimit } from "./server/depth.js";
 import type { ResolvedRow } from "./server/resolveItemStates.js";
 import type { RegisteredMenuLocation } from "./server/types.js";
 import { MenuPluginError } from "./errors.js";
+import { MENU_DEPTH_HARD_CAP, menuDepthLimit } from "./server/depth.js";
 import { getEligibleMenuKinds, isMenuEligible } from "./server/eligibility.js";
 import { parseMenuItemMeta } from "./server/parseMeta.js";
 import {
@@ -26,6 +27,7 @@ import {
 } from "./server/resolveItemStates.js";
 import {
   flattenSaveItems,
+  hasNewNestingPastLimit,
   resolveParentIds,
   withTargetSnapshot,
 } from "./server/save.js";
@@ -34,8 +36,6 @@ import { sanitizeMenuHref } from "./server/url.js";
 const MENU_TAXONOMY = "menu";
 const MENU_ITEM_ENTRY_TYPE = "menu_item";
 const MENU_LOCATIONS_GROUP = "menu_locations";
-const DEFAULT_MAX_DEPTH = 5;
-const MAX_MAX_DEPTH = 20;
 const MAX_ITEMS_PER_SAVE = 500;
 const MAX_TITLE_LENGTH = 300;
 const MAX_LOCATION_ID_LENGTH = 64;
@@ -119,12 +119,11 @@ interface MenuListItem {
   readonly itemCount: number;
 }
 
-interface MenuGetResponse {
+interface MenuGetResponse extends MenuDepthLimit {
   readonly id: number;
   readonly slug: string;
   readonly name: string;
   readonly version: number;
-  readonly maxDepth: number;
   readonly items: readonly ResolvedRow[];
 }
 
@@ -204,12 +203,14 @@ export function createMenuRouter(
         )
         .orderBy(entries.parentId, entries.sortOrder, entries.id);
       const items = await resolveItemStates(context, rows);
+      const limit = await depthLimitFor(context, registered, term.slug);
       return {
         id: term.id,
         slug: term.slug,
         name: term.name,
         version: term.version,
-        maxDepth: readMaxDepth(term.meta),
+        maxDepth: limit.maxDepth,
+        limitedBy: limit.limitedBy,
         items,
       };
     });
@@ -221,14 +222,6 @@ export function createMenuRouter(
       v.object({
         termId: idParam,
         version: v.pipe(v.number(), v.integer(), v.minValue(0)),
-        maxDepth: v.optional(
-          v.pipe(
-            v.number(),
-            v.integer(),
-            v.minValue(1),
-            v.maxValue(MAX_MAX_DEPTH),
-          ),
-        ),
         items: v.pipe(v.array(saveItemSchema), v.maxLength(MAX_ITEMS_PER_SAVE)),
       }),
     )
@@ -244,13 +237,47 @@ export function createMenuRouter(
         throw errors.NOT_FOUND({ data: { kind: "menu", id: input.termId } });
       }
 
-      const maxDepth = input.maxDepth ?? readMaxDepth(term.meta);
-      const flat = flattenSaveItems(input.items, { maxDepth });
+      const flat = flattenSaveItems(input.items, {
+        maxDepth: MENU_DEPTH_HARD_CAP,
+      });
       if (!flat.ok) {
         throw errors.CONFLICT({
           data: {
             reason: flat.error.kind,
             key: String(flat.error.index),
+          },
+        });
+      }
+
+      const priorRows = await context.db
+        .select({
+          id: entries.id,
+          parentId: entries.parentId,
+          sortOrder: entries.sortOrder,
+        })
+        .from(entries)
+        .where(
+          and(
+            eq(entries.type, MENU_ITEM_ENTRY_TYPE),
+            inArray(
+              entries.id,
+              context.db
+                .select({ id: entryTerm.entryId })
+                .from(entryTerm)
+                .where(eq(entryTerm.termId, term.id)),
+            ),
+          ),
+        );
+      // A lowered limit never locks editors out: only nesting this save adds
+      // is held to it.
+      const limit = await depthLimitFor(context, registered, term.slug);
+      if (hasNewNestingPastLimit(flat.items, priorRows, limit.maxDepth)) {
+        throw errors.CONFLICT({
+          data: {
+            reason: "max_depth_exceeded",
+            ...(limit.limitedBy.length > 0
+              ? { key: limit.limitedBy.join(",") }
+              : {}),
           },
         });
       }
@@ -343,23 +370,6 @@ export function createMenuRouter(
         ),
       );
 
-      // Load the prior set so we can compute removed / modified ids
-      // without a second query after the writes.
-      const priorRows = await context.db
-        .select({ id: entries.id })
-        .from(entries)
-        .where(
-          and(
-            eq(entries.type, MENU_ITEM_ENTRY_TYPE),
-            inArray(
-              entries.id,
-              context.db
-                .select({ id: entryTerm.entryId })
-                .from(entryTerm)
-                .where(eq(entryTerm.termId, term.id)),
-            ),
-          ),
-        );
       const priorIds = new Set(priorRows.map((r) => r.id));
 
       // Reuse the editor's user as the items' author for new items.
@@ -797,14 +807,17 @@ export function createMenuRouter(
       return [...registered.values()]
         .sort((a, b) => a.id.localeCompare(b.id))
         .map((location) => {
-          const result: LocationRow = {
+          return {
             id: location.id,
             label: location.label,
+            ...(location.description === undefined
+              ? {}
+              : { description: location.description }),
+            ...(location.maxDepth === undefined
+              ? {}
+              : { maxDepth: location.maxDepth }),
             boundTermId: bindings.get(location.id) ?? null,
           };
-          return location.description === undefined
-            ? result
-            : { ...result, description: location.description };
         });
     });
 
@@ -831,15 +844,27 @@ interface LocationRow {
   readonly id: string;
   readonly label: string;
   readonly description?: string;
+  readonly maxDepth?: number;
   readonly boundTermId: number | null;
 }
 
-function readMaxDepth(meta: JsonObject): number {
-  const raw = meta.maxDepth;
-  if (typeof raw !== "number" || !Number.isInteger(raw))
-    return DEFAULT_MAX_DEPTH;
-  if (raw < 1 || raw > MAX_MAX_DEPTH) return DEFAULT_MAX_DEPTH;
-  return raw;
+async function depthLimitFor(
+  context: AppContext,
+  registered: ReadonlyMap<string, RegisteredMenuLocation>,
+  slug: string,
+): Promise<MenuDepthLimit> {
+  // The value is stored as JSON, so compare against the JSON-encoded slug.
+  const bindings = await context.db
+    .select({ key: settings.key })
+    .from(settings)
+    .where(
+      and(eq(settings.group, MENU_LOCATIONS_GROUP), eq(settings.value, slug)),
+    );
+  const assigned = bindings
+    .map((row) => registered.get(row.key))
+    .filter((location) => location !== undefined)
+    .sort((a, b) => a.id.localeCompare(b.id));
+  return menuDepthLimit(assigned);
 }
 
 function cryptoRandom(): string {

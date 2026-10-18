@@ -1,5 +1,6 @@
 import type { MenuLocationOptions, RegisteredMenuLocation } from "./types.js";
 import { MenuPluginError } from "../errors.js";
+import { MENU_DEPTH_HARD_CAP } from "./depth.js";
 
 const LOCATION_ID_RE = /^[a-z][a-z0-9-]*$/;
 const MAX_LOCATION_ID_LENGTH = 64;
@@ -27,10 +28,23 @@ export function declareLocations(
     ) {
       throw MenuPluginError.locationLabelEmpty({ id });
     }
+    const { maxDepth } = options;
+    if (
+      maxDepth !== undefined &&
+      (!Number.isInteger(maxDepth) ||
+        maxDepth < 1 ||
+        maxDepth > MENU_DEPTH_HARD_CAP)
+    ) {
+      throw MenuPluginError.invalidLocationMaxDepth({
+        id,
+        hardCap: MENU_DEPTH_HARD_CAP,
+      });
+    }
     locations.set(id, {
       id,
       label: options.label,
       description: options.description,
+      ...(maxDepth === undefined ? {} : { maxDepth }),
     });
   }
   return locations;

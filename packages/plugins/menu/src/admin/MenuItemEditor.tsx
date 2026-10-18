@@ -56,9 +56,13 @@ import type { LinkTarget, PickerTab } from "./queries.js";
 import {
   buildSavePayload,
   computeDepths,
+  depthLimitIsStale,
   editorReducer,
+  hiddenInLocations,
   initialEditorState,
   itemDisplayLabel,
+  locationLabels,
+  locationsBoundTo,
 } from "./editor-state.js";
 import {
   useAssignLocation,
@@ -73,7 +77,6 @@ import {
   conflictShown,
   linkedTargetText,
   locationCheckbox,
-  maxDepthRejected,
   pickerChoice,
   pickerPanelFor,
   searchResultsState,
@@ -113,6 +116,22 @@ const M = {
     id: "plugin.menu.itemEditor.untitledTarget",
     message: "(no title)",
   },
+  depthLimit: {
+    id: "plugin.menu.itemEditor.depthLimit",
+    message: "Up to {count, plural, one {# level} other {# levels}}",
+  },
+  depthLimitSetBy: {
+    id: "plugin.menu.itemEditor.depthLimitSetBy",
+    message:
+      "Up to {count, plural, one {# level} other {# levels}}, set by the {locations} {locationCount, plural, one {location} other {locations}}",
+    comment: "locations: the names of the menu locations, joined as a list",
+  },
+  hiddenIn: {
+    id: "plugin.menu.itemEditor.hiddenIn",
+    message: "Hidden in {locations}",
+    comment:
+      "locations: the names of the menu locations that don't show this item, joined as a list",
+  },
 } satisfies Record<string, MessageDescriptor>;
 
 export function MenuItemEditor({
@@ -131,8 +150,22 @@ export function MenuItemEditor({
     // no-op.
     if (menu.data.id !== state.termId || menu.data.version !== state.version) {
       dispatch({ type: "loadFromServer", response: menu.data });
+      return;
     }
-  }, [menu.data, state.termId, state.version]);
+    // Assigning a location changes the limit without a new menu version.
+    if (
+      depthLimitIsStale(
+        { maxDepth: state.maxDepth, limitedBy: state.limitedBy },
+        menu.data,
+      )
+    ) {
+      dispatch({
+        type: "applyDepthLimit",
+        maxDepth: menu.data.maxDepth,
+        limitedBy: menu.data.limitedBy,
+      });
+    }
+  }, [menu.data, state.termId, state.version, state.maxDepth, state.limitedBy]);
 
   if (menu.isLoading || state.termId !== menu.data?.id) {
     return <div data-testid="menu-item-editor-loading" />;
@@ -221,7 +254,7 @@ function MenuSettingsPanel({
       className="border-border bg-card flex flex-col gap-4 rounded-lg border p-4"
     >
       <LocationsBindings termId={state.termId} slug={state.slug} />
-      <MaxDepthField state={state} dispatch={dispatch} />
+      <DepthLimitNote state={state} />
       {conflict ? (
         <div
           data-testid="menu-conflict-banner"
@@ -267,7 +300,6 @@ function MenuSettingsPanel({
               {
                 termId: state.termId,
                 version: state.version,
-                maxDepth: state.maxDepth,
                 items: buildSavePayload(state),
               },
               {
@@ -293,55 +325,33 @@ function MenuSettingsPanel({
   );
 }
 
-function MaxDepthField({
-  state,
-  dispatch,
-}: {
-  readonly state: EditorState;
-  readonly dispatch: Dispatch<EditorAction>;
-}): ReactNode {
-  // A local draft allows a transient empty string; controlled input plus
-  // reject-on-NaN would otherwise trap the field on the last valid value.
-  const [draft, setDraft] = useState(String(state.maxDepth));
-  const [lastSeen, setLastSeen] = useState(state.maxDepth);
-  if (state.maxDepth !== lastSeen) {
-    setLastSeen(state.maxDepth);
-    setDraft(String(state.maxDepth));
-  }
-  const rejected = maxDepthRejected(draft, state.maxDepth);
+function DepthLimitNote({ state }: { readonly state: EditorState }): ReactNode {
+  const { i18n } = useLingui();
+  const locations = useLocationsList();
+  const labels = locationLabels(state.limitedBy, locations.data ?? []);
+  const text =
+    labels.length === 0
+      ? i18n._(
+          M.depthLimit.id,
+          { count: state.maxDepth },
+          { message: M.depthLimit.message },
+        )
+      : i18n._(
+          M.depthLimitSetBy.id,
+          {
+            count: state.maxDepth,
+            locations: new Intl.ListFormat(i18n.locale).format(labels),
+            locationCount: labels.length,
+          },
+          { message: M.depthLimitSetBy.message },
+        );
   return (
-    <label
-      data-testid="menu-settings-max-depth-row"
-      className="flex items-center gap-2 text-sm font-medium"
+    <p
+      data-testid="menu-settings-depth-limit"
+      className="text-muted-foreground text-sm"
     >
-      <Trans id="plugin.menu.itemEditor.maxDepthLabel" message="Max depth" />
-      <Input
-        type="number"
-        data-testid="menu-settings-max-depth"
-        min={0}
-        value={draft}
-        onChange={(event) => {
-          const next = event.target.value;
-          setDraft(next);
-          const nextParsed = Number.parseInt(next, 10);
-          if (Number.isFinite(nextParsed)) {
-            dispatch({ type: "updateMaxDepth", value: nextParsed });
-          }
-        }}
-        className="w-20"
-      />
-      {rejected ? (
-        <span
-          data-testid="menu-settings-max-depth-error"
-          className="text-destructive text-sm font-normal"
-        >
-          <Trans
-            id="plugin.menu.itemEditor.maxDepthRejected"
-            message="Cannot set below the current deepest item."
-          />
-        </span>
-      ) : null}
-    </label>
+      {text}
+    </p>
   );
 }
 
@@ -766,6 +776,11 @@ function MenuTree({
 
   const depths = computeDepths(state.items);
   const itemKeys = state.items.map((item) => item.key);
+  const locations = useLocationsList();
+  const hidden = hiddenInLocations(
+    state.items,
+    locationsBoundTo(locations.data ?? [], state.termId),
+  );
 
   function reset(): void {
     setActiveKey(null);
@@ -821,6 +836,7 @@ function MenuTree({
                   : (depths.get(item.key) ?? 0)
               }
               selected={state.selectedKey === item.key}
+              hiddenIn={hidden.get(item.key) ?? []}
               dispatch={dispatch}
             />
           ))}
@@ -834,11 +850,14 @@ function SortableTreeRow({
   item,
   depth,
   selected,
+  hiddenIn,
   dispatch,
 }: {
   readonly item: EditorItem;
   readonly depth: number;
   readonly selected: boolean;
+  /** Labels of the locations that don't render this item. */
+  readonly hiddenIn: readonly string[];
   readonly dispatch: Dispatch<EditorAction>;
 }): ReactNode {
   const { i18n } = useLingui();
@@ -904,6 +923,18 @@ function SortableTreeRow({
       <span className="flex-1 truncate text-sm font-medium">
         {displayLabel}
       </span>
+      {hiddenIn.length > 0 ? (
+        <span
+          data-testid={`menu-item-hidden-${String(id)}`}
+          className="text-muted-foreground text-xs"
+        >
+          {i18n._(
+            M.hiddenIn.id,
+            { locations: new Intl.ListFormat(i18n.locale).format(hiddenIn) },
+            { message: M.hiddenIn.message },
+          )}
+        </span>
+      ) : null}
       {isBroken ? (
         <>
           <Button

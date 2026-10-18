@@ -66,10 +66,10 @@ export function getProjection(
     activeDepth + Math.round(dragOffsetX / indentationWidth);
   const maxAllowedDepth = previousItem === undefined ? 0 : previousDepth + 1;
   const minAllowedDepth = nextDepth;
-  // The moved item carries its subtree, so cap its depth to keep descendants
-  // within `maxDepth` and stop the indicator short of a rejected drop.
+  // The moved item carries its subtree, so the cap keeps descendants within
+  // `maxDepth` levels. An item already deeper may keep its depth.
   const subtreeExtra = subtreeDepthExtra(items, activeIndex, depths);
-  const depthCap = Math.max(0, maxDepth - subtreeExtra);
+  const depthCap = Math.max(maxDepth - 1 - subtreeExtra, activeDepth);
   const depth = Math.min(
     clamp(projectedDepth, minAllowedDepth, maxAllowedDepth),
     depthCap,

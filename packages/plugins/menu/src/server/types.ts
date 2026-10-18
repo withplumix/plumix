@@ -97,6 +97,11 @@ declare module "plumix" {
 export interface MenuLocationOptions {
   readonly label: string;
   readonly description?: string;
+  /**
+   * Levels the theme renders here, 1 to 20. Deeper items stay stored but don't
+   * render; the editor nests no new item past a menu's smallest limit.
+   */
+  readonly maxDepth?: number;
 }
 
 export interface RegisteredMenuLocation extends MenuLocationOptions {

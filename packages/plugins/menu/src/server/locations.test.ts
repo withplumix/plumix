@@ -39,4 +39,21 @@ describe("declareLocations", () => {
       declareLocations({ primary: {} as unknown as { label: string } }),
     ).toThrow();
   });
+
+  test.each([0, 21, 2.5])(
+    "rejects a maxDepth of %s, naming the location",
+    (maxDepth) => {
+      expect(() =>
+        declareLocations({ header: { label: "Header", maxDepth } }),
+      ).toThrow(/header/);
+    },
+  );
+
+  test("accepts a maxDepth of 20", () => {
+    const locations = declareLocations({
+      header: { label: "Header", maxDepth: 20 },
+    });
+
+    expect(locations.get("header")?.maxDepth).toBe(20);
+  });
 });
