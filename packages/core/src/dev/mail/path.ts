@@ -1,7 +1,4 @@
-/**
- * The dispatcher inlines a copy of this literal to keep this cluster out of its
- * eager graph; keep the two in step.
- */
+/** Where `registerCoreDevRoutes` serves the mail gallery. */
 export const DEBUG_MAIL_PATH = "/_plumix/debug/mail";
 
 /**

@@ -1,7 +1,4 @@
-/**
- * The dispatcher inlines a copy of this literal to keep this cluster out of its
- * eager graph; keep the two in step.
- */
+/** Where `registerCoreDevRoutes` serves the request history. */
 export const DEBUG_REQUESTS_PATH = "/_plumix/debug/requests";
 
 /**

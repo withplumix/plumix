@@ -56,6 +56,7 @@ import { registerCorePurgeInvalidator } from "../cdn/purge.js";
 import * as coreSchema from "../db/schema/index.js";
 import { debugBarChrome } from "../dev/debug-bar/component.js";
 import { registerCoreDebugPanels } from "../dev/debug-panels/core-panels.js";
+import { registerCoreDevRoutes } from "../dev/routes.js";
 import { registerCoreErrorHints } from "../dev/server/hints/core-hints.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { loadOnce } from "../load-once.js";
@@ -272,6 +273,20 @@ export async function buildApp(
     throw ThemeRegistrationError.missingTheme();
   }
 
+  const mails = declareMails({
+    plugins: config.plugins,
+    theme: config.theme.mail,
+    site: config.mail?.overrides,
+  });
+  const mailCatalogs = createMailCatalogs(runtime.pluginCatalogs);
+  if (process.env.PLUMIX_DEV && dev !== undefined) {
+    registerCoreDevRoutes(seededRegistry, {
+      dev,
+      mails,
+      catalogs: mailCatalogs,
+    });
+  }
+
   // Before core aggregates anything, so a subscriber's own registrations still
   // land in every registry assembled below.
   await hooks.doAction("theme:ready", config.theme);
@@ -458,12 +473,8 @@ export async function buildApp(
     blocks,
     marks,
     shortcodes,
-    mails: declareMails({
-      plugins: config.plugins,
-      theme: config.theme.mail,
-      site: config.mail?.overrides,
-    }),
-    mailCatalogs: createMailCatalogs(runtime.pluginCatalogs),
+    mails,
+    mailCatalogs,
     htmlAllowlist,
     document,
     assetManifest,

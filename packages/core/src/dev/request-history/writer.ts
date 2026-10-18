@@ -7,7 +7,7 @@ import { projectDebugSnapshot } from "./snapshot.js";
 
 /**
  * Kept in step with the literal the dispatcher owns (`MCP_PATH`); duplicated
- * rather than imported for the same tree-shaking reason as DEBUG_REQUESTS_PATH.
+ * rather than imported, so this dev module pulls in none of the dispatcher.
  */
 const MCP_PATH = "/_plumix/mcp";
 
