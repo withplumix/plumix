@@ -15,6 +15,7 @@ interface PluginCatalogLoaderInput {
  */
 export function createPluginCatalogLoader({
   manifest,
+  // A loader per call: the URL varies, and the browser keeps one module per URL.
   importCatalog = (url) => loadOnce(() => import(/* @vite-ignore */ url))(),
 }: PluginCatalogLoaderInput): (
   pluginId: string,

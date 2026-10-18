@@ -60,7 +60,7 @@ export const dynamicImportInLoadOnce: Rule.RuleModule = {
     },
     messages: {
       outsideLoadOnce:
-        "Load this module through `loadOnce(() => import(…))` from `plumix/support`, so every caller in the isolate awaits one fully evaluated module and a failed load is retried (issue #3157).",
+        "Load this module through `loadOnce(() => import(…))` from `plumix/support`, so every caller in the isolate awaits one fully evaluated module and a failed load is retried.",
     },
     schema: [],
   },

@@ -365,6 +365,7 @@ async function loadRuntimeCommands(
   }
   try {
     const href = pathToFileURL(resolved).href;
+    // A loader per call: the specifier varies, so there is no one module to keep.
     const mod = (await loadOnce(() => import(href))()) as {
       default?: CommandRegistry;
       commands?: CommandRegistry;

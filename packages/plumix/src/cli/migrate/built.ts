@@ -77,6 +77,7 @@ async function builtDataMigrations(
   serverDir: string,
 ): Promise<readonly DataMigrationOwner[]> {
   const url = pathToFileURL(join(serverDir, MIGRATIONS_DIR, DATA_BUNDLE)).href;
+  // A loader per call: the specifier varies, so there is no one module to keep.
   const bundle = (await loadOnce(() => import(/* @vite-ignore */ url))()) as {
     default: readonly DataMigrationOwner[];
   };
