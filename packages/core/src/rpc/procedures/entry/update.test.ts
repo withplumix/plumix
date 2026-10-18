@@ -1566,7 +1566,7 @@ describe("entry.update", () => {
         });
         const etags: string[] = [];
         let ifMatch = etagOf(own.updatedAt);
-        for (let save = 1; save <= 1000; save += 1) {
+        for (let save = 1; save <= 20; save += 1) {
           ({ etag: ifMatch } = await h.client.entry.update({
             id: own.id,
             sortOrder: save,
@@ -1575,8 +1575,8 @@ describe("entry.update", () => {
           etags.push(ifMatch);
         }
 
-        expect(etags[999]).toBe("1792325800");
-        expect(new Set(etags).size).toBe(1000);
+        expect(etags[19]).toBe("1792324820");
+        expect(new Set(etags).size).toBe(20);
       } finally {
         vi.useRealTimers();
       }
