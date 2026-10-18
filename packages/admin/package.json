@@ -39,6 +39,7 @@
     "i18n:extract": "lingui extract",
     "lint": "eslint",
     "publint": "publint",
+    "test:mutation": "node ../../scripts/test-mutation-package.ts",
     "test:unit": "vitest run",
     "test:e2e": "playwright test --project chromium",
     "typecheck": "tsc --noEmit"

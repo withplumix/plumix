@@ -85,6 +85,8 @@ pnpm exec vitest run --coverage                # with coverage
 
 Tests come in three tiers. A unit test checks logic in Node beside the source, an end-to-end test (Playwright, under a package's `e2e/`, run by `pnpm test:e2e`) drives a running site in a browser, and the scaffold smoke checks that a project built from the packed packages starts, and that its editor loads under `plumix dev`. `CODING_STANDARDS.md` picks the tier for a test.
 
+Before asking for review, run `pnpm test:mutation`. It changes the lines your branch changed, one at a time, and lists each change no unit test noticed. Answer each line with a test or a reason, as [`CODING_STANDARDS.md`](CODING_STANDARDS.md#mutation-testing) describes.
+
 ### Running the e2e suites
 
 Every suite binds its own ports, so the suites can run in parallel. `@plumix/e2e-ports` reads the ports out of every `playwright.config.ts` and fails `pnpm test:unit` when two suites claim the same one, naming both. A suite never reuses a server that is already listening, because reuse would skip the state wipe, the migrations and the rebuild its `webServer` command does first. A busy port fails loudly instead.

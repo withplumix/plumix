@@ -215,6 +215,7 @@
     "lint": "eslint",
     "publint": "publint",
     "roster:sync": "tsx scripts/sync-roster.ts",
+    "test:mutation": "node ../../scripts/test-mutation-package.ts",
     "test:unit": "vitest run",
     "typecheck": "tsc",
     "ui:add": "pnpm dlx shadcn@latest add && prettier --write src --ignore-path ../../.gitignore && pnpm roster:sync"

@@ -26,6 +26,12 @@ as the ticket pins it, and put your disagreement in `notes`.
 - **Anything that looks breakable** — a tricky condition, an unchecked
   assumption, an edge the tests skip: write a test that tries to break it. If it
   breaks, fix it.
+- **Surviving lines.** The harness ran `pnpm test:mutation` on this branch. Each
+  line below took a change no unit test noticed. Answer each one as
+  CODING_STANDARDS.md#mutation-testing says: a unit test that fails on the
+  change, or a named reason in `notes` for leaving it. Never a spec gap.
+
+{{MUTATION}}
 - **Standards findings:** fix every breach of a documented rule, even one the
   PR description admits. A baseline smell is a judgement call: fix it, or leave
   it and say why in `notes`. Never change what the code does, only how it does

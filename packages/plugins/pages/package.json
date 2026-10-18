@@ -48,6 +48,7 @@
     "format": "prettier --check . --ignore-path ../../../.gitignore --ignore-path ../../../.prettierignore",
     "lint": "eslint",
     "publint": "publint",
+    "test:mutation": "node ../../../scripts/test-mutation-package.ts",
     "test:unit": "vitest run",
     "test:e2e": "playwright test --config=e2e/playwright.config.ts",
     "typecheck": "tsc"

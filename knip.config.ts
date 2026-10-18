@@ -51,6 +51,10 @@ const config: KnipConfig = {
     "tooling/typescript": {
       entry: ["*.json"],
     },
+    "tooling/stryker": {
+      // Knip's Stryker plugin reads `.js`, `.mjs`, `.cjs` and `.json` configs; this one is `.ts`.
+      stryker: { config: ["stryker.config.ts"] },
+    },
     // The covered packages are devDependencies so turbo's `^build` builds them
     // before `surface:check` reads their `.d.ts` by path; nothing imports them.
     "tooling/published-surface": {

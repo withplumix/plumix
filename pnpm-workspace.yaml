@@ -22,6 +22,7 @@ packages:
   - "packages/plugins/og/playground"
   - "packages/plugins/pages/playground"
   - "packages/plugins/seo/playground"
+  - "scripts"
   - "tooling/*"
 
 # Let a release age a week before resolving to it, matching the Dependabot
@@ -182,3 +183,7 @@ publicHoistPattern:
   - "@ianvs/prettier-plugin-sort-imports"
   - prettier-plugin-astro
   - prettier-plugin-tailwindcss
+patchedDependencies:
+  # Vitest 5 names a test `describe > test`; the runner filters by `describe test`, runs
+  # nothing and reports every mutant survived. Drop once stryker-js#6214 ships (#6210).
+  "@stryker-mutator/vitest-runner@10.0.0": patches/@stryker-mutator__vitest-runner@10.0.0.patch

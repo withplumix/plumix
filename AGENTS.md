@@ -34,6 +34,7 @@ Run everything from the root. Most root scripts run the turbo task of the same n
 | `test:unit`                       | Vitest in every package. It reads workspace packages from source and stubs the i18n catalogs, so it needs no build. |
 | `test`                            | `test:unit`.                                                                                                        |
 | `test:e2e`                        | Playwright, in the packages that have an `e2e/` suite.                                                              |
+| `test:mutation`                   | Mutates the lines a branch changed and lists each one no unit test notices. Not run by CI or `test`.                |
 | `docs:screenshots`                | Recapture the docs screenshots (needs Docker; see `CONTRIBUTING.md`).                                               |
 | `i18n:check`                      | Fails when `<Trans>`/`defineMessage` strings change without `lingui extract`.                                       |
 | `knip`                            | Unused files, exports and dependencies.                                                                             |
@@ -65,7 +66,7 @@ The same holds for every task with a `dependsOn`. `test:unit` has none, so `pnpm
 
 **Chromium.** Run `pnpm --filter @plumix/admin exec playwright install chromium` once before running the e2e tests.
 
-**Tests.** Before writing or reviewing a test, read [`CODING_STANDARDS.md`](CODING_STANDARDS.md#tests): which tier it belongs to, what that tier may touch, the test-double order and the TDD loop. [`docs/agents/testing.md`](docs/agents/testing.md) lists the test kits and how to diagnose a slow test.
+**Tests.** Before writing or reviewing a test, read [`CODING_STANDARDS.md`](CODING_STANDARDS.md#tests): which tier it belongs to, what that tier may touch, the test-double order and the TDD loop. Run `pnpm test:mutation` before asking for review and when reviewing a branch, and answer what it lists the way [`CODING_STANDARDS.md`](CODING_STANDARDS.md#mutation-testing) says. [`docs/agents/testing.md`](docs/agents/testing.md) lists the test kits and how to diagnose a slow test.
 
 **Before committing.** `pnpm typecheck && pnpm lint && pnpm format && pnpm knip && pnpm test` must be clean, and add a changeset if the change is consumer-visible (see [Releases](#releases-changesets)). CI reruns these plus e2e, i18n, publint, and attw.
 
@@ -79,6 +80,7 @@ The same holds for every task with a `dependsOn`. `test:unit` has none, so `pnpm
   one runtime adapter per folder under `runtimes/`.
 - `apps/` holds private sites built on Plumix.
 - `tooling/` holds private workspace packages that configure or guard the repo itself.
+- `scripts/` is one private workspace package of scripts the repo runs, such as `test:mutation`.
 
 Each package's `package.json` `description` says what it is.
 

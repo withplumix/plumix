@@ -52,3 +52,37 @@ override.
 
 Every package with tests has coverage wired in (`pnpm exec vitest run --coverage`). The repo tracks
 it but sets no thresholds.
+
+## Mutation testing
+
+`pnpm test:mutation` mutates the lines a branch changed against `origin/main` (`--base <ref>` picks
+another) and prints one summary, also written to `.cache/mutation/summary.md`.
+[`CODING_STANDARDS.md`](../../CODING_STANDARDS.md#mutation-testing) says what to do with each
+surviving line; this is how the run works.
+
+- **What runs.** Turbo runs each changed package's `test:mutation` task, one package at a time, after
+  its `typecheck`. The task runs Stryker with `tooling/stryker/stryker.config.ts` over the
+  package's own unit tests that import the changed file. An e2e spec, or a test in another package,
+  never runs, so a behaviour only those cover shows up as a survivor. Every package with unit
+  tests has the task, bar two runtime adapters. The Bun adapter's suite runs under `bun --bun`, and
+  the Stryker runner is Node only. The Node adapter's suite calls `process.chdir`, which the worker
+  threads the runner forces do not allow.
+- **Cost.** In the benchmark behind ADR 0049, a one-line plugin change took 20 seconds and a
+  thousand-line change to core took about 17 minutes. Turbo replays a package whose files and base
+  have not changed, in no time.
+- **What it skips.** The TypeScript checker drops a mutant that does not type-check.
+  `tooling/stryker/arid.ts` drops mutants in code whose changes no useful test asserts: log calls,
+  an error's message and details, an empty `?? ""` fallback, a `label` or `description`, a 404's
+  debug hint, the test of a spread that adds a key only when it is defined, and code that runs when
+  the module loads (the runner switches a mutant on too late for it, stryker-js#6144). Each rule
+  has a test in `arid.test.ts`.
+- **Exit codes.** `0` whether or not lines survived: it reports, it does not gate. `3` when Stryker
+  failed, or ran no test for a mutant it says survived; the package's `.cache/mutation/stryker.log`
+  says why. Results from a run that exits `3` say nothing.
+- **Files in place.** Stryker rewrites the changed files while it runs. The task saves their exact
+  bytes first and puts them back afterwards, and an interrupted run is undone by the next one, or
+  by `pnpm test:mutation --restore`. Don't edit a package while its run is going, since the restore
+  overwrites the edit.
+- **Patched runner.** `@stryker-mutator/vitest-runner` 10.0.0 can't match Vitest 5's test names
+  and reports every mutant survived, so `patches/` fixes the match (stryker-js#6210). The comment
+  in `pnpm-workspace.yaml` says when to drop the patch.
