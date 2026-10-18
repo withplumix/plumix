@@ -276,7 +276,11 @@ describe("applying owner histories", () => {
   // — the same shape every runtime hands the CLI.
   function sqliteDatabase(
     path: string,
-    { remote = false, summary = "local · site.sqlite" } = {},
+    {
+      remote = false,
+      summary = "local · site.sqlite",
+      name = "site.sqlite",
+    } = {},
   ): MigrationDatabase {
     const raw = new DatabaseSync(path);
     const inTransaction = (work: () => void): void => {
@@ -326,11 +330,27 @@ describe("applying owner histories", () => {
         });
         return Promise.resolve();
       },
+      // A test's stand-in for each runtime's own: every table but SQLite's.
+      wipe: () => {
+        raw.exec("PRAGMA foreign_keys = OFF");
+        inTransaction(() => {
+          const tables = raw
+            .prepare(
+              "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT GLOB 'sqlite_*'",
+            )
+            .all();
+          for (const { name } of tables) {
+            raw.exec(`DROP TABLE IF EXISTS "${String(name)}"`);
+          }
+        });
+        raw.exec("PRAGMA foreign_keys = ON");
+        return Promise.resolve();
+      },
       close: () => {
         raw.close();
         return Promise.resolve();
       },
-      target: { remote, summary, notes: [] },
+      target: { remote, summary, notes: [], name },
     };
   }
 
@@ -385,24 +405,6 @@ describe("applying owner histories", () => {
       schemaModule,
     }) as unknown as PlumixApp["config"]["plugins"][number];
 
-  // A runtime package whose `plumix.e2e.wipe` names the local state, as each
-  // shipped runtime's does.
-  const RUNTIME_PACKAGE = "@acme/runtime";
-
-  function installRuntime(wipe: readonly string[] | undefined): void {
-    const root = join(dir, "node_modules", RUNTIME_PACKAGE);
-    mkdirSync(root, { recursive: true });
-    writeFileSync(
-      join(root, "package.json"),
-      JSON.stringify({
-        name: RUNTIME_PACKAGE,
-        exports: { "./commands": "./commands.js" },
-        plumix: wipe === undefined ? {} : { e2e: { wipe } },
-      }),
-    );
-    writeFileSync(join(root, "commands.js"), "export {};\n");
-  }
-
   function applyCtx(
     argv: readonly string[],
     plugins: PlumixApp["config"]["plugins"] = [],
@@ -417,7 +419,6 @@ describe("applying owner histories", () => {
           runtime: {
             ...base.config.runtime,
             name: "acme",
-            commandsModule: `${RUNTIME_PACKAGE}/commands`,
           },
         },
       },
@@ -522,7 +523,6 @@ async up({ db }) {
   beforeEach(() => {
     dir = mkdtempSync(join(tmpdir(), "plumix-migrate-apply-"));
     writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "site" }));
-    installRuntime(["site.sqlite", "uploads"]);
     opened = [];
     drizzleKitWrites({});
     // What each owner applied is the command's own output; a test that reads
@@ -894,7 +894,7 @@ async up({ db }) {
       );
     });
 
-    test("plumix migrate fresh fails before it deletes the local state", async () => {
+    test("plumix migrate fresh fails before it drops anything", async () => {
       siteWithHistory();
       writeFileSync(join(dir, "site.sqlite"), "");
       drizzleKitWrites(NEXT);
@@ -1391,37 +1391,206 @@ export default [
   });
 
   describe("plumix migrate fresh", () => {
-    test("deletes the runtime's local state, then applies every owner", async () => {
-      await migrateCommand.run(applyCtx([]));
-      query("SELECT 1");
-      new DatabaseSync(join(dir, "site.sqlite")).exec(
-        "CREATE TABLE leftover (id integer)",
-      );
-      mkdirSync(join(dir, "uploads"));
-      writeFileSync(join(dir, "uploads/a.png"), "x");
-      mkdirSync(join(dir, "drizzle"));
-      writeFileSync(join(dir, "drizzle/0000_site.sql"), "SELECT 1;");
+    // A runtime whose target options each name a deployed database, as
+    // Cloudflare's do; `events` records the wipe and the restore point.
+    function deployed(events: string[] = []): RuntimeMigrations {
+      return runtime({
+        targetOptions: {
+          production: { type: "boolean", description: "Production" },
+          preview: { type: "boolean", description: "Previews" },
+          env: { type: "string", description: "An environment" },
+        },
+        open: ({ location }) => {
+          opened.push(location);
+          const db = sqliteDatabase(join(dir, "site.sqlite"), {
+            remote: true,
+            summary: "preview · DB · site-preview",
+            name: "site-preview",
+          });
+          return Promise.resolve({
+            ...db,
+            wipe: () => {
+              events.push("wipe");
+              return db.wipe();
+            },
+            restorePoint: () => {
+              events.push("restore point");
+              return Promise.resolve("Restore point: bookmark b-1");
+            },
+          });
+        },
+      });
+    }
 
-      await migrateCommand.run(applyCtx(["fresh"]));
+    test.each([[["--production"]], [["--env", "production"]]])(
+      "refuses %j before it connects",
+      async (argv) => {
+        await expect(
+          migrateCommand.run(
+            applyCtx(["fresh", ...argv, "--yes"], [], deployed()),
+          ),
+        ).rejects.toMatchObject({ code: "migrate_fresh_production" });
+
+        expect(opened).toEqual([]);
+      },
+    );
+
+    test.each([
+      [["--production", "fresh"]],
+      [["--env", "production", "fresh"]],
+      [["--binding", "DB", "--production", "fresh"]],
+    ])("refuses %j wherever `fresh` sits, before it connects", async (argv) => {
+      await expect(
+        migrateCommand.run(applyCtx([...argv, "--yes"], [], deployed())),
+      ).rejects.toMatchObject({ code: "migrate_fresh_production" });
+
+      expect(opened).toEqual([]);
+    });
+
+    // Node and Bun declare no target options, so the refusal comes before
+    // the parser that would reject the flag as unknown.
+    test.each([
+      [["--production"]],
+      [["--env", "production"]],
+      [["--env=production"]],
+    ])(
+      "refuses %j on a runtime with no target options, before it connects",
+      async (argv) => {
+        await expect(
+          migrateCommand.run(applyCtx(["fresh", ...argv])),
+        ).rejects.toMatchObject({
+          code: "migrate_fresh_production",
+          message: "plumix migrate fresh never runs against production",
+        });
+
+        expect(opened).toEqual([]);
+      },
+    );
+
+    test("drops every table, then applies every owner's schema and data migrations", async () => {
+      writeFileSync(join(dir, "data.mjs"), recording("a1"));
+      const withData = (argv: readonly string[]): CommandContext => {
+        const ctx = applyCtx(argv);
+        return {
+          ...ctx,
+          app: {
+            ...ctx.app,
+            config: { ...ctx.app.config, dataMigrations: "./data.mjs" },
+          },
+        };
+      };
+      await migrateCommand.run(withData([]));
+      const raw = new DatabaseSync(join(dir, "site.sqlite"));
+      raw.exec("CREATE TABLE leftover (id integer)");
+      raw.close();
+
+      await migrateCommand.run(withData(["fresh", "--yes"]));
 
       expect(names("table")).not.toContain("leftover");
       expect(trackingRows("__drizzle_migrations_core")).toBe(2);
-      expect(existsSync(join(dir, "uploads"))).toBe(false);
-      expect(existsSync(join(dir, "drizzle/0000_site.sql"))).toBe(true);
+      expect(query("SELECT name FROM runs")).toEqual([{ name: "a1" }]);
     });
 
-    test("refuses a target option without touching anything", async () => {
+    test("without a terminal or --yes it refuses, dropping nothing", async () => {
       await migrateCommand.run(applyCtx([]));
-      opened = [];
+      vi.spyOn(syncDeps, "isInteractive").mockReturnValue(false);
+
+      await expect(
+        migrateCommand.run(applyCtx(["fresh"])),
+      ).rejects.toMatchObject({ code: "migrate_fresh_unconfirmed" });
+
+      expect(trackingRows("__drizzle_migrations_core")).toBe(2);
+    });
+
+    test("lists every table it drops and asks before dropping any", async () => {
+      await migrateCommand.run(applyCtx([]));
+      const lines: string[] = [];
+      vi.spyOn(report, "info").mockImplementation((line) => lines.push(line));
+      vi.spyOn(syncDeps, "isInteractive").mockReturnValue(true);
+      const confirm = vi.spyOn(syncDeps, "confirm").mockResolvedValue(false);
+
+      await migrateCommand.run(applyCtx(["fresh"]));
+
+      expect(lines).toContainEqual(
+        expect.stringMatching(/^Drops \d+ tables:$/),
+      );
+      expect(lines).toContain("  __drizzle_migrations_core");
+      expect(lines).toContain("  users");
+      expect(confirm).toHaveBeenCalledWith(
+        "Drop every table in local · site.sqlite and migrate it from nothing?",
+      );
+      expect(lines.at(-1)).toBe("Nothing was dropped.");
+      expect(trackingRows("__drizzle_migrations_core")).toBe(2);
+    });
+
+    test("--dry-run prints the plan and drops nothing", async () => {
+      await migrateCommand.run(applyCtx([]));
+      const lines: string[] = [];
+      vi.spyOn(report, "info").mockImplementation((line) => lines.push(line));
+      const confirm = vi.spyOn(syncDeps, "confirm");
+
+      await migrateCommand.run(applyCtx(["fresh", "--dry-run"]));
+
+      expect(confirm).not.toHaveBeenCalled();
+      expect(lines).toContain("core: 2 to apply");
+      expect(lines.at(-1)).toBe("Dry run: nothing was dropped.");
+      expect(trackingRows("__drizzle_migrations_core")).toBe(2);
+    });
+
+    test("a remote wipe asks for the database's name, and a wrong one aborts", async () => {
+      await migrateCommand.run(applyCtx([]));
+      vi.spyOn(syncDeps, "isInteractive").mockReturnValue(true);
+      const confirm = vi.spyOn(syncDeps, "confirm");
+      const ask = vi.spyOn(syncDeps, "ask").mockResolvedValue("site-prod");
+      const events: string[] = [];
 
       await expect(
         migrateCommand.run(
-          applyCtx(["fresh", "--production"], [], runtime(PRODUCTION)),
+          applyCtx(["fresh", "--preview"], [], deployed(events)),
         ),
-      ).rejects.toMatchObject({ code: "migrate_fresh_remote" });
+      ).rejects.toMatchObject({ code: "migrate_fresh_name_mismatch" });
 
-      expect(opened).toEqual([]);
+      expect(ask).toHaveBeenCalledWith(
+        "Type site-preview to drop every table in preview · DB · site-preview:",
+      );
+      expect(confirm).not.toHaveBeenCalled();
+      expect(events).toEqual([]);
       expect(trackingRows("__drizzle_migrations_core")).toBe(2);
+    });
+
+    test("a remote wipe goes ahead once the database's name is typed", async () => {
+      await migrateCommand.run(applyCtx([]));
+      vi.spyOn(syncDeps, "isInteractive").mockReturnValue(true);
+      vi.spyOn(syncDeps, "ask").mockResolvedValue(" site-preview ");
+      const raw = new DatabaseSync(join(dir, "site.sqlite"));
+      raw.exec("CREATE TABLE leftover (id integer)");
+      raw.close();
+      const events: string[] = [];
+
+      await migrateCommand.run(
+        applyCtx(["fresh", "--preview"], [], deployed(events)),
+      );
+
+      expect(events).toContain("wipe");
+      expect(names("table")).not.toContain("leftover");
+      expect(trackingRows("__drizzle_migrations_core")).toBe(2);
+    });
+
+    test("prints the restore point before it drops anything, and the next step after", async () => {
+      await migrateCommand.run(applyCtx([]));
+      const events: string[] = [];
+      vi.spyOn(report, "info").mockImplementation((line) => events.push(line));
+
+      await migrateCommand.run(
+        applyCtx(["fresh", "--env", "qa", "--yes"], [], deployed(events)),
+      );
+
+      const restore = events.indexOf("Restore point: bookmark b-1");
+      expect(restore).toBeGreaterThan(-1);
+      expect(events.indexOf("wipe")).toBeGreaterThan(restore);
+      expect(events.at(-1)).toBe(
+        "Load data with `plumix import` or `plumix sync push`.",
+      );
     });
 
     test("deletes nothing when a plugin package ships no history", async () => {
@@ -1430,21 +1599,14 @@ export default [
 
       await expect(
         migrateCommand.run(
-          applyCtx(["fresh"], [plugin("bare", "@acme/plugin-bare/schema")]),
+          applyCtx(
+            ["fresh", "--yes"],
+            [plugin("bare", "@acme/plugin-bare/schema")],
+          ),
         ),
       ).rejects.toMatchObject({ code: "migrate_owner_history_missing" });
 
       expect(trackingRows("__drizzle_migrations_core")).toBe(2);
-    });
-
-    test("fails when the runtime declares no local state to delete", async () => {
-      installRuntime(undefined);
-
-      await expect(
-        migrateCommand.run(applyCtx(["fresh"])),
-      ).rejects.toMatchObject({
-        code: "migrate_fresh_no_wipe",
-      });
     });
   });
 

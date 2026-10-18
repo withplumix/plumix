@@ -14,9 +14,49 @@ function settle<T>(work: () => T): Promise<T> {
   });
 }
 
+function inTransaction(client: BunSqliteClient, work: () => void): void {
+  client.prepare("BEGIN").run();
+  try {
+    work();
+    client.prepare("COMMIT").run();
+  } catch (error) {
+    client.prepare("ROLLBACK").run();
+    throw error;
+  }
+}
+
+/** A virtual table first, so its shadow tables go with it. */
+const TABLES_SQL =
+  "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT GLOB 'sqlite_*' ORDER BY sql NOT LIKE 'CREATE VIRTUAL TABLE%'";
+
+/**
+ * SQLite ignores `PRAGMA foreign_keys` inside a transaction, so the drops'
+ * transaction runs with it turned off, then set back.
+ */
+function wipe(client: BunSqliteClient): void {
+  const [pragma] = client.prepare("PRAGMA foreign_keys").all() as {
+    foreign_keys: number;
+  }[];
+  client.prepare("PRAGMA foreign_keys = OFF").run();
+  try {
+    inTransaction(client, () => {
+      const tables = client.prepare(TABLES_SQL).all() as { name: string }[];
+      for (const { name } of tables) {
+        client
+          .prepare(`DROP TABLE IF EXISTS "${name.replaceAll('"', '""')}"`)
+          .run();
+      }
+    });
+  } finally {
+    client
+      .prepare(`PRAGMA foreign_keys = ${Number(pragma?.foreign_keys)}`)
+      .run();
+  }
+}
+
 function migrationDatabase(
   client: BunSqliteClient,
-  summary: string,
+  name: string,
 ): MigrationDatabase {
   const drizzle = drizzleBunSqlite(client, {});
   return {
@@ -31,22 +71,26 @@ function migrationDatabase(
       settle(() => client.prepare(sql).all() as Record<string, unknown>[]),
     batch: (statements) =>
       settle(() => {
-        client.prepare("BEGIN").run();
-        try {
+        inTransaction(client, () => {
           for (const { sql, params } of statements) {
             client.prepare(sql).run(...params);
           }
-          client.prepare("COMMIT").run();
-        } catch (error) {
-          client.prepare("ROLLBACK").run();
-          throw error;
-        }
+        });
+      }),
+    wipe: () =>
+      settle(() => {
+        wipe(client);
       }),
     close: () =>
       settle(() => {
         client.close();
       }),
-    target: { remote: false, summary, notes: [] },
+    target: {
+      remote: false,
+      summary: name === "memory" ? name : `local · ${name}`,
+      notes: [],
+      name,
+    },
   };
 }
 
@@ -68,7 +112,7 @@ export const migrations: RuntimeMigrations = {
     return Promise.resolve(
       migrationDatabase(
         openBunSqlite(path),
-        location === "memory" ? "memory" : `local · ${relative(cwd, path)}`,
+        location === "memory" ? "memory" : relative(cwd, path),
       ),
     );
   },

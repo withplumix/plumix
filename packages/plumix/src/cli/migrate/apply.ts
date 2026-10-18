@@ -92,6 +92,19 @@ export async function reportPending(
   }
 }
 
+/** Each owner in order, with every migration in its history. */
+export function reportHistories(owners: readonly MigrationOwner[]): void {
+  for (const owner of owners) {
+    const history = readMigrationFiles(owner);
+    report.info(`${owner.name}: ${String(history.length)} to apply`);
+    for (const migration of history) {
+      report.info(
+        describeMigration("pending", migration.folderMillis, migration.hash),
+      );
+    }
+  }
+}
+
 /** Each owner in order, with the migrations it has applied and has pending. */
 export async function reportStatus(
   db: MigrationDatabase,

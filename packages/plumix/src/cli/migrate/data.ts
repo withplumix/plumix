@@ -123,6 +123,17 @@ export async function reportDataPending(
   }
 }
 
+/** Each owner that declares data migrations, with every one of them. */
+export function reportDataHistories(
+  owners: readonly DataMigrationOwner[],
+): void {
+  for (const { owner, migrations } of owners) {
+    if (migrations.length === 0) continue;
+    report.info(`${owner}: ${String(migrations.length)} data to apply`);
+    for (const { name } of migrations) report.info(`  pending ${name}`);
+  }
+}
+
 /** Each owner that declares data migrations, with what it applied and has pending. */
 export async function reportDataStatus(
   db: MigrationDatabase,

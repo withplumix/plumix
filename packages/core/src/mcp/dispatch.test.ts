@@ -164,6 +164,32 @@ describe("MCP endpoint — tools/list", () => {
   });
 });
 
+describe("MCP endpoint — no database wipe", () => {
+  afterEach(() => void vi.unstubAllEnvs());
+
+  // `plumix migrate fresh` drops every table, so only a person at the CLI
+  // runs it: no tool reaches it, dev's included.
+  test("no tool drops tables or migrates", async () => {
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const h = await mcpHarness({ config: { plugins: [blog] } });
+
+    const res = await h.dispatch(
+      mcpRequest(
+        { jsonrpc: "2.0", id: 1, method: "tools/list" },
+        { url: "http://localhost/_plumix/mcp" },
+      ),
+    );
+
+    const json = (await res.json()) as JsonRpcEnvelope<{
+      tools: ToolDescriptor[];
+    }>;
+    expect(json.result.tools.length).toBeGreaterThan(0);
+    expect(
+      json.result.tools.filter((t) => /fresh|wipe|migrat|drop/i.test(t.name)),
+    ).toEqual([]);
+  });
+});
+
 describe("MCP endpoint — schema_describe", () => {
   test("with no argument it lists entry types and taxonomies", async () => {
     const h = await mcpHarness({ config: { plugins: [blog] } });

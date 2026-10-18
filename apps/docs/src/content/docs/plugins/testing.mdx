@@ -216,10 +216,10 @@ export default definePlumixE2EConfig({
 The server command it builds is:
 
 ```sh
-cd <playground> && plumix migrate fresh && <extraSetup> && plumix dev --port <port>
+cd <playground> && rm -rf -- <wipe> && plumix migrate fresh --yes && <extraSetup> && plumix dev --port <port>
 ```
 
-`plumix migrate fresh` deletes the playground's local database, at the paths its runtime declares, then applies core's and every plugin's shipped migrations. `<extraSetup>` runs only when you pass `extraSetup`, such as a seed command. Nothing is generated and nothing outside the runtime's local state is deleted, so a playground's committed `drizzle/` stays as it is. A runtime that runs its CLI some other way, as Bun does with `bun --bun`, supplies its own prefix in place of `plumix`.
+It deletes the playground's local state, at each path its runtime's `plumix.e2e.wipe` names, then `plumix migrate fresh --yes` applies core's and every plugin's shipped migrations to the empty database. `<extraSetup>` runs only when you pass `extraSetup`, such as a seed command. Nothing is generated and nothing outside the runtime's local state is deleted, so a playground's committed `drizzle/` stays as it is. A runtime that runs its CLI some other way, as Bun does with `bun --bun`, supplies its own prefix in place of `plumix`.
 
 Every spec shares the playground's one database. The suite runs on a single worker, and the `plumixDbBaseline` fixture restores the database after each attempt. It leaves each owner's `__drizzle_migrations_*` table alone. Pass `sharedDatabase: false` for a site that never serves from that database, such as one that creates a database per session. The suite then runs on parallel workers with no snapshot.
 
