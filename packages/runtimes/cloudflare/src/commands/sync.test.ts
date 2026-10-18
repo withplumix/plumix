@@ -16,7 +16,7 @@ import type {
   SyncValue,
   TargetOptionValues,
 } from "plumix";
-import type { HookRegistry } from "plumix/plugin";
+import type { AppContext, HookRegistry } from "plumix/plugin";
 import type {
   SyncContractEnds,
   SyncContractSite,
@@ -25,6 +25,7 @@ import type { GetPlatformProxyOptions, PlatformProxy } from "wrangler";
 import { drizzle } from "drizzle-orm/d1";
 import { migrate } from "drizzle-orm/d1/migrator";
 import { definePlugin } from "plumix/plugin";
+import { entries } from "plumix/schema";
 import { createDispatcherHarness } from "plumix/test";
 import { describeSyncContract } from "plumix/test/conformance";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
@@ -488,6 +489,66 @@ describe(
           "SELECT count(*) AS n, (SELECT parent_id FROM entries WHERE id = 1) AS parent FROM entries",
         ),
       ).toEqual([{ n: 40, parent: 40 }]);
+    });
+  },
+);
+
+describe(
+  "cloudflare sync — settling the local site",
+  { timeout: 30_000 },
+  () => {
+    // A site whose one `sync:after` listener is `listener`, on `binding`.
+    function settlingConfig(
+      listener: (ctx: AppContext) => Promise<void>,
+      binding = "DB",
+    ): PlumixConfig {
+      const probe = definePlugin("probe", (ctx) => {
+        ctx.addAction("sync:after", (_event, appCtx) => listener(appCtx));
+      });
+      return {
+        ...app.config,
+        database: d1({ binding }),
+        plugins: [probe],
+      };
+    }
+
+    test("runs inside the site on the platform proxy's env alone, reaching the local D1", async () => {
+      const { source } = await twoProjects();
+      await run(source, [ANN, post(1, "hello")].join("\n"));
+      vi.stubEnv("PLUMIX_SYNC_PROBE", "from the shell");
+      const seen: unknown[] = [];
+      const config = settlingConfig(async (ctx) => {
+        const rows = await ctx.db.select().from(entries);
+        seen.push(rows.length, ctx.env.PLUMIX_SYNC_PROBE);
+      });
+      const end = await sync.open({
+        ...openOptions(source.dir, "local", {}),
+        config,
+      });
+
+      const settled = await end.settle({
+        scopes: ["content"],
+        direction: "pull",
+      });
+      await end.close();
+
+      expect([settled.failures, seen]).toEqual([[], [1, undefined]]);
+    });
+
+    test("stops with sync_site_unreachable when the site cannot reach its D1", async () => {
+      const { source } = await twoProjects();
+      const end = await sync.open({
+        ...openOptions(source.dir, "local", {}),
+        binding: "DB",
+        config: settlingConfig(() => Promise.resolve(), "MISSING"),
+      });
+
+      const settling = end.settle({ scopes: ["content"], direction: "pull" });
+
+      await expect(settling).rejects.toMatchObject({
+        code: "sync_site_unreachable",
+      });
+      await end.close();
     });
   },
 );

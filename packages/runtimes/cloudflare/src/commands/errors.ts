@@ -10,7 +10,8 @@ type CloudflareCliErrorCode =
   | "sync_remote_target_missing"
   | "sync_no_storage"
   | "sync_author_missing"
-  | "sync_site_cannot_run";
+  | "sync_site_cannot_run"
+  | "sync_site_unreachable";
 
 /** What to add to a wrangler config block that binds no D1 database. */
 export function addD1Hint(ctx: {
@@ -132,6 +133,18 @@ export class CloudflareCliError extends CliError<CloudflareCliErrorCode> {
       "The data was replaced, but the site's handler can't run the settle outside a request",
       "The site's runtime handler drops `run`; settle the deployed site with `plumix sync` against it, or restore `run` in its `handler.wrap`.",
       undefined,
+    );
+  }
+
+  static syncSiteUnreachable(ctx: {
+    detail: string;
+    cause: unknown;
+  }): CloudflareCliError {
+    return new CloudflareCliError(
+      "sync_site_unreachable",
+      `The data was replaced, but the site could not reach its bindings from the command line to settle: ${ctx.detail}`,
+      "Check that the wrangler config binds every binding plumix.config.ts names, then sync again to repeat the steps after the import.",
+      ctx.cause,
     );
   }
 }

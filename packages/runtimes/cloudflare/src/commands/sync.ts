@@ -192,13 +192,23 @@ function hasMedia(scopes: readonly SyncScope[]): boolean {
 interface EndParts {
   readonly options: OpenSyncEndOptions;
   readonly d1: D1Database;
+  /** The process env under the proxy's bindings, which a storage slot reads. */
   readonly env: PlumixEnv;
+  readonly proxyEnv: PlumixEnv;
   readonly target: MigrationDatabaseTarget;
   readonly bulk: BulkD1;
   readonly scratch: string;
   readonly dispose: () => Promise<void>;
 }
 
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * The site's own handler on the platform proxy's bindings; a failure before
+ * the settle starts means the site could not reach them from Node.
+ */
 async function settleInSite(
   config: PlumixConfig,
   env: PlumixEnv,
@@ -208,7 +218,22 @@ async function settleInSite(
   try {
     const { run } = handler;
     if (run === undefined) throw CloudflareCliError.syncSiteCannotRun();
-    return await run((ctx) => settleSync(ctx, event), { env });
+    const phase = { started: false };
+    try {
+      return await run(
+        (ctx) => {
+          phase.started = true;
+          return settleSync(ctx, event);
+        },
+        { env },
+      );
+    } catch (cause) {
+      if (phase.started) throw cause;
+      throw CloudflareCliError.syncSiteUnreachable({
+        detail: messageOf(cause),
+        cause,
+      });
+    }
   } finally {
     await handler.dispose?.();
   }
@@ -298,7 +323,7 @@ function syncEnd(parts: EndParts): SyncEnd {
       if (remote) {
         return settleDeployedSite(options.url ?? "", event);
       }
-      return settleInSite(options.config, env, event);
+      return settleInSite(options.config, parts.proxyEnv, event);
     },
     async close() {
       rmSync(scratch, { recursive: true, force: true });
@@ -338,6 +363,7 @@ async function openEnd(options: OpenSyncEndOptions): Promise<SyncEnd> {
     options,
     d1,
     env: { ...process.env, ...proxy.env },
+    proxyEnv: proxy.env,
     target,
     bulk: remote
       ? remoteBulk(cwd, target.name, scratch)
