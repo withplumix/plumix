@@ -7,7 +7,6 @@ import type { GetPlatformProxyOptions, PlatformProxy } from "wrangler";
 import { createDispatcherHarness } from "plumix/test";
 import { describeRunContract } from "plumix/test/conformance";
 import {
-  afterAll,
   afterEach,
   beforeAll,
   beforeEach,
@@ -576,12 +575,8 @@ describe("cloudflare migrations — a run from the command line", () => {
 
   describe("against real local D1", () => {
     // Each case starts miniflare for the migration and again for every run.
-    beforeAll(() => {
-      vi.setConfig({ testTimeout: 60_000 });
-    });
-    afterAll(() => {
-      vi.resetConfig();
-    });
+    // Vitest reads the timeout as a test registers, so it wraps registration.
+    vi.setConfig({ testTimeout: 60_000 });
 
     describeRunContract({
       open: () => {
@@ -593,6 +588,7 @@ describe("cloudflare migrations — a run from the command line", () => {
         });
       },
     });
+    vi.resetConfig();
   });
 
   test("a local run is announced by its binding and database", async () => {
