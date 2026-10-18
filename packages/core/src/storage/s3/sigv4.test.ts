@@ -87,6 +87,24 @@ describe("presignPutUrl", () => {
     ).rejects.toThrow(/expiresIn must be in/);
   });
 
+  test.each([
+    ["the one-second floor", 1, "X-Amz-Expires=1&"],
+    ["the seven-day ceiling", 604_800, "X-Amz-Expires=604800&"],
+  ])("expiresIn at %s is accepted", async (_, expiresIn, signedExpiry) => {
+    const result = await presignPutUrl({ ...BASE_PARAMS, key: "k", expiresIn });
+    expect(result.url).toContain(signedExpiry);
+  });
+
+  test("an empty body's contentLength of 0 is signed", async () => {
+    const empty = await presignPutUrl({
+      ...BASE_PARAMS,
+      key: "k",
+      contentLength: 0,
+    });
+    const tenBytes = await presignPutUrl({ ...BASE_PARAMS, key: "k" });
+    expect(empty.url).not.toBe(tenBytes.url);
+  });
+
   test.each<[string, number]>([
     ["undefined", undefined as unknown as number],
     ["negative", -1],
@@ -322,11 +340,17 @@ describe("signRequest", () => {
     ).toEqual({ ok: true });
   });
 
-  test("a key with a dot segment is refused rather than signed for a normalised path", async () => {
-    await expect(
-      presignPutUrl({ ...BASE_PARAMS, key: "uploads/../other/cat.jpg" }),
-    ).rejects.toThrow(/"\." or "\.\." segment/);
-  });
+  test.each([
+    ["a `..`", "uploads/../other/cat.jpg"],
+    ["a lone `.`", "uploads/./cat.jpg"],
+  ])(
+    "a key with %s segment is refused rather than signed for a normalised path",
+    async (_, key) => {
+      await expect(presignPutUrl({ ...BASE_PARAMS, key })).rejects.toThrow(
+        /"\." or "\.\." segment/,
+      );
+    },
+  );
 
   test("an endpoint with a path prefix keeps it in the presigned URL and its signature", async () => {
     const presigned = await presignPutUrl({

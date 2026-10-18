@@ -41,6 +41,17 @@ describe("resolveReturnUrl", () => {
     ).toBe("https://other.example/posts/hello");
   });
 
+  // A site behind a proxy sees the request on an internal origin; the
+  // configured one is still where its visitors are.
+  test("accepts the configured origin when the request arrives on another", () => {
+    expect(
+      resolve(
+        "https://site.example/posts/hello",
+        post(`https://other.example${SUBMIT}`),
+      ),
+    ).toBe("https://site.example/posts/hello");
+  });
+
   test("refuses a candidate on a foreign origin", () => {
     expect(resolve("https://evil.example/phish")).toBe("/");
   });
