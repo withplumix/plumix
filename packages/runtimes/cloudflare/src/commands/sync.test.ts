@@ -418,6 +418,49 @@ function post(
   return `INSERT INTO entries (id, type, title, slug, author_id, status) VALUES (${String(id)}, 'post', '${slug}', '${slug}', ${String(author)}, '${status}');`;
 }
 
+describe(
+  "cloudflare sync — a local import larger than one exec",
+  { timeout: 30_000 },
+  () => {
+    test("runs the script in several exec calls, none over the cap, and lands every row", async () => {
+      const { source, target } = await twoProjects();
+      vi.spyOn(syncDeps, "localExecBytes").mockReturnValue(2_000);
+      const posts = Array.from({ length: 40 }, (_, i) =>
+        post(i + 1, `post-${String(i + 1)}`),
+      );
+      await run(source, [ANN, ...posts].join("\n"));
+      await run(target, ANN);
+      const db = target.proxy.env.DB as D1Database;
+      const executed: number[] = [];
+      const recording = {
+        prepare: (sql: string) => db.prepare(sql),
+        exec: (script: string) => {
+          executed.push(new TextEncoder().encode(script).length);
+          return db.exec(script);
+        },
+      };
+      const reused = vi.mocked(migrationsDeps.getPlatformProxy);
+      const open = reused.getMockImplementation();
+      reused.mockImplementation(async (options) => {
+        if (open === undefined) throw new Error("no proxy to reuse");
+        const proxy = await open(options);
+        const persist = options.persist;
+        const intoTarget =
+          typeof persist === "object" &&
+          persist.path === join(target.dir, ".wrangler/state/v3");
+        if (!intoTarget) return proxy;
+        return { ...proxy, env: { ...proxy.env, DB: recording } };
+      });
+
+      await replace(source, target, [CONTENT]);
+
+      expect(executed.length).toBeGreaterThan(1);
+      expect(executed.every((bytes) => bytes <= 2_000)).toBe(true);
+      expect((await entrySlugs(target)).length).toBe(40);
+    });
+  },
+);
+
 describe("cloudflare sync — the import's report", { timeout: 30_000 }, () => {
   test("counts rows replaced, added and removed by primary key, and by the whole row in a table without one", async () => {
     const { source, target } = await twoProjects();

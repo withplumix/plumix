@@ -1,6 +1,5 @@
 import { execFile } from "node:child_process";
 import { createReadStream, mkdtempSync, rmSync } from "node:fs";
-import { readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
@@ -36,7 +35,7 @@ import {
   slotEntries,
   targetOf,
 } from "./migrations.js";
-import { writeImportScript } from "./sync-import.js";
+import { DEFER_FOREIGN_KEYS, writeImportScript } from "./sync-import.js";
 import { authorsOf, d1Reader, selectedRows } from "./sync-reads.js";
 import { parseDumpLine } from "./sync-sql.js";
 
@@ -50,21 +49,46 @@ interface BulkD1 {
   execute(script: string): Promise<void>;
 }
 
-function localBulk(d1: D1Database, reader: SiteReader): BulkD1 {
-  return {
-    exportTable: (table) => selectedRows(reader, { table }),
-    async execute(script) {
-      await d1.exec(await readFile(script, "utf8"));
-    },
-  };
-}
-
 async function* scriptLines(path: string): AsyncIterable<string> {
   const lines = createInterface({
     input: createReadStream(path),
     crlfDelay: Infinity,
   });
   for await (const line of lines) yield line;
+}
+
+const encoder = new TextEncoder();
+
+/**
+ * Runs the script in `exec` calls of whole lines up to the cap, each one
+ * transaction with its own deferral, since no string holds a whole site.
+ */
+async function execInChunks(d1: D1Database, script: string): Promise<void> {
+  const cap = syncDeps.localExecBytes();
+  let chunk: string[] = [];
+  let bytes = 0;
+  const flush = async (): Promise<void> => {
+    if (chunk.length === 0) return;
+    await d1.exec([DEFER_FOREIGN_KEYS, ...chunk].join("\n"));
+    chunk = [];
+    bytes = 0;
+  };
+  const deferral = encoder.encode(DEFER_FOREIGN_KEYS).length + 1;
+  for await (const line of scriptLines(script)) {
+    if (line === DEFER_FOREIGN_KEYS) continue;
+    const size = encoder.encode(line).length + 1;
+    if (deferral + bytes + size > cap) await flush();
+    chunk.push(line);
+    bytes += size;
+  }
+  await flush();
+}
+
+function localBulk(d1: D1Database, reader: SiteReader): BulkD1 {
+  return {
+    exportTable: (table) => selectedRows(reader, { table }),
+    execute: (script) => execInChunks(d1, script),
+  };
 }
 
 /** wrangler finds a database it is not bound to by name, through the API. */
@@ -342,4 +366,6 @@ export const syncDeps = {
     process.stderr.write(`${line}\n`);
   },
   now: (): Date => new Date(),
+  /** Far below V8's string limit, which a whole site's script can pass. */
+  localExecBytes: (): number => 128 * 1024 * 1024,
 };

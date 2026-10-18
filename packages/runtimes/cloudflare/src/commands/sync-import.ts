@@ -25,6 +25,9 @@ import {
 } from "./sync-reads.js";
 import { ident, insertLine, rowLiterals, sqlLiteral } from "./sync-sql.js";
 
+/** A script's first line; D1 holds the deferral to the transaction's end. */
+export const DEFER_FOREIGN_KEYS = "PRAGMA defer_foreign_keys = ON;";
+
 /** The auth state a `users` replace re-points rather than removes. */
 const REPOINTED_AUTH_TABLES = ["sessions", "api_tokens"];
 
@@ -454,7 +457,7 @@ export async function writeImportScript(
 
   const lines = scriptLines(path);
   try {
-    await lines.write("PRAGMA defer_foreign_keys = ON;");
+    await lines.write(DEFER_FOREIGN_KEYS);
     await deleteStatements(lines, tables, replaced, dependents);
     const { authors, added } = travelsWithUsers
       ? { authors: new Map<number, AuthorRef>(), added: [] }
