@@ -274,7 +274,6 @@ export const migrations: RuntimeMigrations = {
  */
 export const migrationsDeps = {
   loadWranglerConfig,
-  /** The bookmark that names the database as it is now. */
   timeTravelBookmark: async (
     cwd: string,
     database: string,

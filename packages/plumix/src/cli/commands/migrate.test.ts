@@ -1442,8 +1442,9 @@ export default [
       });
     }
 
-    for (const argv of [["--production"], ["--env", "production"]]) {
-      test(`refuses ${argv.join(" ")} before it connects`, async () => {
+    test.each([[["--production"]], [["--env", "production"]]])(
+      "refuses %j before it connects",
+      async (argv) => {
         await expect(
           migrateCommand.run(
             applyCtx(["fresh", ...argv, "--yes"], [], deployed()),
@@ -1451,8 +1452,8 @@ export default [
         ).rejects.toMatchObject({ code: "migrate_fresh_production" });
 
         expect(opened).toEqual([]);
-      });
-    }
+      },
+    );
 
     test("drops every table, then applies every owner's schema and data migrations", async () => {
       writeFileSync(join(dir, "data.mjs"), recording("a1"));
@@ -1549,6 +1550,9 @@ export default [
       await migrateCommand.run(applyCtx([]));
       vi.spyOn(syncDeps, "isInteractive").mockReturnValue(true);
       vi.spyOn(syncDeps, "ask").mockResolvedValue(" site-preview ");
+      const raw = new DatabaseSync(join(dir, "site.sqlite"));
+      raw.exec("CREATE TABLE leftover (id integer)");
+      raw.close();
       const events: string[] = [];
 
       await migrateCommand.run(
@@ -1556,6 +1560,7 @@ export default [
       );
 
       expect(events).toContain("wipe");
+      expect(names("table")).not.toContain("leftover");
       expect(trackingRows("__drizzle_migrations_core")).toBe(2);
     });
 

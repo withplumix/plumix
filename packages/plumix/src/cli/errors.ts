@@ -259,7 +259,6 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
     );
   }
 
-  /** Refused before anything connects, and no option overrides it. */
   static migrateFreshProduction(): PlumixCliError {
     return new PlumixCliError(
       "migrate_fresh_production",
@@ -279,7 +278,6 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
     );
   }
 
-  /** Refused after the plan prints and before anything is dropped. */
   static migrateFreshUnconfirmed(): PlumixCliError {
     return new PlumixCliError(
       "migrate_fresh_unconfirmed",

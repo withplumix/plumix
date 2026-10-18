@@ -124,10 +124,8 @@ interface PlaygroundCommand {
 function bakePlaygroundCommand(input: PlaygroundCommand): string {
   const steps = [
     `cd ${input.playground}`,
-    // Deletes only the local state the runtime's `plumix.e2e.wipe` names, the
-    // baseline kept in it too, then applies every owner's shipped history:
-    // nothing is generated, so a site's committed history is never touched
-    // (#2819).
+    // The baseline lives in the wiped state, so a stale one goes with it.
+    // Nothing is generated, so a site's committed history is never touched.
     ...input.wipe.map((path) => `rm -rf -- ${shellQuote(path)}`),
     `${input.cli} migrate fresh --yes`,
   ];

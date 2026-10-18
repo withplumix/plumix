@@ -192,7 +192,7 @@ export interface MigrationDatabaseTarget {
   readonly summary: string;
   /** Lines a plan shows under the summary. */
   readonly notes: readonly string[];
-  /** The database's own name, which `plumix migrate fresh` asks to be typed. */
+  /** The database's own name, apart from the `summary` line that locates it. */
   readonly name: string;
 }
 
@@ -220,7 +220,7 @@ export interface MigrationDatabase {
   batch(statements: readonly MigrationStatement[]): Promise<void>;
   /**
    * Drops every table but the engine's own, tracking tables included, with
-   * foreign-key checks suspended: `plumix migrate fresh`.
+   * foreign-key checks suspended.
    */
   wipe(): Promise<void>;
   /**

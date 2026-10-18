@@ -304,12 +304,11 @@ async function migrateFresh(
   });
 }
 
-/** `--production` or `--env production`: production, in ADR 0045's words. */
 function namesProduction(values: TargetOptionValues): boolean {
   return values.production === true || values.env === "production";
 }
 
-/** Every table a wipe drops: all but the engine's own, SQLite's and D1's. */
+/** The tables the plan lists: all but SQLite's own and D1's. */
 const TABLES_SQL =
   "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT GLOB 'sqlite_*' AND name NOT GLOB '_cf_*' ORDER BY name";
 

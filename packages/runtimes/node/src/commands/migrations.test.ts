@@ -126,6 +126,21 @@ describe("node migrations", () => {
     }
   });
 
+  test("a wipe drops a table whose name holds a double quote", async () => {
+    const db = await open(nodeSqlite({ path: "data/site.sqlite" }));
+    try {
+      await db.batch([
+        { sql: 'CREATE TABLE "odd""name" (id integer)', params: [] },
+      ]);
+
+      await db.wipe();
+
+      expect(await db.all("SELECT name FROM sqlite_master")).toEqual([]);
+    } finally {
+      await db.close();
+    }
+  });
+
   test("opens a scratch database in memory, leaving the file alone", async () => {
     const db = await open(nodeSqlite({ path: "data/site.sqlite" }), "memory");
     await db.migrate(CORE);
