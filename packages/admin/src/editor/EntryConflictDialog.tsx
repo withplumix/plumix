@@ -35,9 +35,7 @@ interface EntryConflictDialogProps {
   /** The author's unsaved copy, and the entry as it is saved now. */
   readonly mineSnapshot: unknown;
   readonly theirsSnapshot: unknown;
-  /** Overwrite the other write with the author's changes. */
   readonly onKeepMine: () => void;
-  /** Discard the author's changes and reload the entry. */
   readonly onLoadTheirs: () => void;
 }
 
@@ -65,9 +63,6 @@ export function EntryConflictDialog({
         className="max-w-4xl"
         showCloseButton={false}
         data-testid="entry-conflict-dialog"
-        // Dismissing would leave autosave paused with no way to resume.
-        onEscapeKeyDown={(e) => e.preventDefault()}
-        onPointerDownOutside={(e) => e.preventDefault()}
       >
         <DialogHeader>
           <DialogTitle>

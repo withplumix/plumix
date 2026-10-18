@@ -4,7 +4,6 @@ import { claim, ConflictError } from "../../../db/concurrency.js";
 import { and, eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 
-/** Where a write from a copy says it took the copy (ADR 0048). */
 export const ENTRY_IF_MATCH_MESSAGE =
   "Send the entry's `etag` from `entry.get` as `ifMatch`";
 

@@ -769,6 +769,25 @@ describe("entry.publish", () => {
     });
   });
 
+  test("a publish from a stale copy runs no entry:before_save filter", async () => {
+    const h = await publishedPostFixture();
+    await h.client.entry.update({
+      id: h.entryId,
+      excerpt: "Pending",
+      ifMatch: await currentEtag(h.db, h.entryId),
+    });
+    const beforeSave = h.spyFilter("entry:before_save");
+
+    await expect(
+      h.client.entry.publish({
+        id: h.entryId,
+        ifMatch: etagOf(new Date("2020-01-01")),
+      }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+
+    beforeSave.assertNotCalled();
+  });
+
   test("a write that lands mid-publish, after it read live, makes the publish conflict", async () => {
     const h = await publishedPostFixture();
     await h.client.entry.update({

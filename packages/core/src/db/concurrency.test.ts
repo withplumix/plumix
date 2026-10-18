@@ -137,7 +137,7 @@ describe("ConflictError", () => {
 
     expect(error.data).toEqual({
       reason: "etag_mismatch",
-      etag: etagOf(new Date("2026-10-18T12:00:07Z")),
+      etag: "1792324807",
       updatedAt: new Date("2026-10-18T12:00:07Z"),
     });
   });
@@ -163,5 +163,13 @@ describe("ifMatchObject", () => {
     const result = v.safeParse(schema, { id: 1, ifMatch: "soon" });
 
     expect(result.issues?.map((issue) => issue.message)).toEqual(["Send it."]);
+  });
+
+  test("another missing field keeps its own message", () => {
+    const result = v.safeParse(schema, { ifMatch: etagOf(T0) });
+
+    expect(result.issues?.map((issue) => issue.message)).toEqual([
+      'Invalid key: Expected "id" but received undefined',
+    ]);
   });
 });

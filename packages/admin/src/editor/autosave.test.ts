@@ -38,6 +38,18 @@ describe("classifyAutosaveError", () => {
     expect(classifyAutosaveError(err)).toEqual({ kind: "failed" });
   });
 
+  test("a stale-copy payload under another error code is a hard failure", () => {
+    const err = new ORPCError("FORBIDDEN", {
+      data: {
+        reason: "etag_mismatch",
+        etag: "1792411205",
+        updatedAt: new Date("2026-10-18T12:00:05Z"),
+      },
+    });
+
+    expect(classifyAutosaveError(err)).toEqual({ kind: "failed" });
+  });
+
   test("any non-RPC error is a hard failure", () => {
     expect(classifyAutosaveError(new Error("network"))).toEqual({
       kind: "failed",

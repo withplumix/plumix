@@ -211,8 +211,7 @@ export const restore = base
         ?.supports?.includes("autosave") ?? false;
 
     // Autosave-supporting types: the restore lands on the caller's
-    // per-user autosave row, leaving live and its token alone — the
-    // user can publish (or discard) later via #290's flow.
+    // per-user autosave row, leaving live and its token alone.
     if (typeSupportsAutosave) {
       // Strip the snapshot envelope from the revision's meta bag
       // before the autosave write — `upsertAutosave` re-encodes its

@@ -1252,6 +1252,102 @@ test.describe("editor publishing & autosave", () => {
     expect(updates).toHaveLength(2);
   });
 
+  test.describe("conflict dialog", () => {
+    test.use({ timezoneId: "UTC" });
+
+    async function openConflictDialog(
+      page: Page,
+      elsewhere: Record<string, unknown> = { slug: "saved-elsewhere" },
+    ): Promise<void> {
+      const { saveElsewhere } = await mockSavedEntry(page);
+      await page.goto("entries/posts/1/edit");
+      await page.getByTestId("plumix-tab-page").click();
+      await expect(page.getByTestId("entry-slug-input")).toHaveValue("entry-1");
+      saveElsewhere(elsewhere);
+      await page.getByTestId("entry-slug-input").fill("my-slug");
+      await expect(page.getByTestId("entry-conflict-dialog")).toBeVisible();
+    }
+
+    test("says when the other save landed", async ({ page }) => {
+      await openConflictDialog(page);
+
+      await expect(page.getByTestId("entry-conflict-changed-at")).toContainText(
+        "May 20, 2026",
+      );
+      await expect(page.getByTestId("entry-conflict-changed-at")).toContainText(
+        "9:30",
+      );
+    });
+
+    test("Compare shows both copies and toggles off again", async ({
+      page,
+    }) => {
+      await openConflictDialog(page, { title: "Their title" });
+
+      await page.getByTestId("entry-conflict-compare").click();
+
+      await expect(
+        page.getByTestId("entry-conflict-compare-panes"),
+      ).toContainText("Your changes");
+      await expect(
+        page.getByTestId("entry-conflict-compare-panes"),
+      ).toContainText("Saved now");
+      await expect(
+        page.getByTestId("entry-conflict-compare-panes"),
+      ).toContainText("Their title");
+      await page.getByTestId("entry-conflict-compare").click();
+      await expect(
+        page.getByTestId("entry-conflict-compare-panes"),
+      ).toBeHidden();
+    });
+
+    test("a Publish that finds the entry changed opens the dialog and raises no error toast", async ({
+      page,
+    }) => {
+      const { saveElsewhere } = await mockSavedEntry(page);
+      await page.addInitScript(() => {
+        const seen = { errorToasts: 0 };
+        Object.assign(window, { seen });
+        new MutationObserver(() => {
+          if (document.querySelector('[data-testid="toast-error"]')) {
+            seen.errorToasts += 1;
+          }
+        }).observe(document, { childList: true, subtree: true });
+      });
+      await page.goto("entries/posts/1/edit");
+      await page.getByTestId("plumix-tab-page").click();
+      await expect(page.getByTestId("entry-slug-input")).toHaveValue("entry-1");
+      saveElsewhere({ slug: "saved-elsewhere" });
+
+      await page.getByTestId("plumix-editor-publish-button").click();
+
+      await expect(page.getByTestId("entry-conflict-dialog")).toBeVisible();
+      // Reloading is a round trip after the publish's error handler ran, so a
+      // toast it raised has come and gone by the time the other save shows.
+      await page.getByTestId("entry-conflict-load-theirs").click();
+      await page.getByTestId("plumix-tab-page").click();
+      await expect(page.getByTestId("entry-slug-input")).toHaveValue(
+        "saved-elsewhere",
+      );
+      expect(
+        await page.evaluate(
+          () =>
+            (window as unknown as { seen: { errorToasts: number } }).seen
+              .errorToasts,
+        ),
+      ).toBe(0);
+    });
+
+    test("stays open on Escape and on a click outside it", async ({ page }) => {
+      await openConflictDialog(page);
+
+      await page.keyboard.press("Escape");
+      await page.mouse.click(2, 2);
+
+      await expect(page.getByTestId("entry-conflict-dialog")).toBeVisible();
+    });
+  });
+
   test("navigating away with a pending edit sends it", async ({ page }) => {
     const captures = await installEditorMocks(page, {
       handlers: {

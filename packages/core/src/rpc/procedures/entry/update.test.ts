@@ -1402,7 +1402,7 @@ describe("entry.update", () => {
 
       expect(updated).toMatchObject({
         title: "renamed",
-        etag: etagOf(new Date("2100-01-01T00:00:01Z")),
+        etag: "4102444801",
       });
     });
 
@@ -1424,7 +1424,7 @@ describe("entry.update", () => {
         code: "CONFLICT",
         data: {
           reason: "etag_mismatch",
-          etag: etagOf(new Date("2026-10-18T12:00:05Z")),
+          etag: "1792324805",
           updatedAt: new Date("2026-10-18T12:00:05Z"),
         },
       });
@@ -1549,10 +1549,7 @@ describe("entry.update", () => {
         code: "CONFLICT",
         data: { reason: "etag_mismatch", etag: second.etag },
       });
-      expect([first.etag, second.etag]).toEqual([
-        etagOf(new Date("2100-01-01T00:00:01Z")),
-        etagOf(new Date("2100-01-01T00:00:02Z")),
-      ]);
+      expect([first.etag, second.etag]).toEqual(["4102444801", "4102444802"]);
     });
 
     test("saves chained under a frozen clock each get a later etag", async () => {
@@ -1578,7 +1575,7 @@ describe("entry.update", () => {
           etags.push(ifMatch);
         }
 
-        expect(etags[999]).toBe(etagOf(new Date("2026-10-18T12:16:40Z")));
+        expect(etags[999]).toBe("1792325800");
         expect(new Set(etags).size).toBe(1000);
       } finally {
         vi.useRealTimers();
@@ -1604,7 +1601,7 @@ describe("entry.update", () => {
         code: "CONFLICT",
         data: {
           reason: "etag_mismatch",
-          etag: etagOf(new Date("2100-01-01T00:00:01Z")),
+          etag: "4102444801",
         },
       });
     });
@@ -1635,6 +1632,67 @@ describe("entry.update", () => {
         terms: {},
       });
       expect(await h.db.select().from(entryChanges)).toEqual([]);
+    });
+
+    test("an entry deleted mid-save is reported as a failed update, not a conflict", async () => {
+      const h = await createRpcHarness({ authAs: "author" });
+      const own = await h.factory.draft.create({
+        authorId: h.user.id,
+        slug: "oc-deleted",
+      });
+      h.spyFilter("entry:before_save").override(async (entry) => {
+        await h.db.delete(entries).where(eq(entries.id, own.id));
+        return entry;
+      });
+
+      await expect(
+        h.client.entry.update({
+          id: own.id,
+          title: "mine",
+          ifMatch: etagOf(own.updatedAt),
+        }),
+      ).rejects.toMatchObject({
+        code: "CONFLICT",
+        data: { reason: "update_failed" },
+      });
+    });
+
+    test("a save that changes only meta runs no entry:before_save filter", async () => {
+      const plugins = createPluginRegistry();
+      registerSeoMetaBox(plugins);
+      const h = await createRpcHarness({ authAs: "editor", plugins });
+      const own = await h.factory.draft.create({
+        authorId: h.user.id,
+        slug: "oc-meta-only-filter",
+      });
+      const beforeSave = h.spyFilter("entry:before_save");
+
+      await h.client.entry.update({
+        id: own.id,
+        meta: { meta_title: "only meta" },
+        ifMatch: etagOf(own.updatedAt),
+      });
+
+      beforeSave.assertNotCalled();
+    });
+
+    test("a save that changes only meta fires no entry:updated", async () => {
+      const plugins = createPluginRegistry();
+      registerSeoMetaBox(plugins);
+      const h = await createRpcHarness({ authAs: "editor", plugins });
+      const own = await h.factory.draft.create({
+        authorId: h.user.id,
+        slug: "oc-meta-only-hook",
+      });
+      const onUpdated = h.spyAction("entry:updated");
+
+      await h.client.entry.update({
+        id: own.id,
+        meta: { meta_title: "only meta" },
+        ifMatch: etagOf(own.updatedAt),
+      });
+
+      onUpdated.assertNotCalled();
     });
 
     test("of saves racing from one copy, exactly one lands", async () => {

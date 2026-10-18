@@ -559,4 +559,23 @@ describe("writeSettledEntryMeta", () => {
         ?.meta,
     ).toEqual({ count: "7", title: "new" });
   });
+
+  test("an empty patch writes nothing and reports no write", async () => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      plugins: registryWithMeta({ count: { type: "number" } }),
+    });
+    const row = await h.factory.published.create({
+      authorId: h.user.id,
+      type: "post",
+      meta: { count: "7" },
+    });
+
+    await expect(
+      writeSettledEntryMeta(h.context, row, row.meta, {
+        upserts: new Map(),
+        deletes: [],
+      }),
+    ).resolves.toBe(false);
+  });
 });

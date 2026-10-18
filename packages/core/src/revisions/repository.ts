@@ -233,8 +233,8 @@ export async function upsertAutosave(
         content: patch.content,
         excerpt: patch.excerpt,
         meta,
-        // `$onUpdate` doesn't reach an upsert, so this moves the token by the
-        // same rule (ADR 0048).
+        // An upsert bypasses `$onUpdate`, so it moves the token itself, strictly
+        // past its own value.
         updatedAt: sql`max(unixepoch(), ${entries.updatedAt} + 1)`,
       },
     })

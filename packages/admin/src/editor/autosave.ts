@@ -14,8 +14,8 @@ export interface EntryConflict {
 }
 
 /**
- * `conflict` is a stale copy, never retried on the author's behalf (ADR 0048):
- * they choose. `failed` didn't persist, and the author must be told.
+ * `conflict` is a stale copy, never retried on the author's behalf: they
+ * choose. `failed` didn't persist, and the author must be told.
  */
 export type AutosaveErrorOutcome =
   | { readonly kind: "conflict"; readonly conflict: EntryConflict }

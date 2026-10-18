@@ -346,6 +346,38 @@ describe("entry.revisions.restore — autosave destination (#292)", () => {
     expect(liveAfter?.excerpt).toBe("e3");
   });
 
+  test("refuses a restore onto the autosave row from a stale copy with etag_mismatch", async () => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      plugins: registryWithAutosave(),
+    });
+    const created = await h.client.entry.create({
+      title: "X1",
+      slug: "x",
+      status: "published",
+    });
+    await h.client.entry.update({
+      id: created.id,
+      title: "X2",
+      saveAs: "live",
+      ifMatch: await currentEtag(h.db, created.id),
+    });
+    const [revision] = await h.db.query.entries.findMany({
+      where: eq(entries.type, REVISION_TYPE),
+    });
+    if (!revision) throw new Error("expected a captured revision");
+
+    await expect(
+      h.client.entry.revisions.restore({
+        revisionId: revision.id,
+        ifMatch: "1",
+      }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "etag_mismatch" },
+    });
+  });
+
   // An autosave reads absence as untouched, so a key live gained after the
   // snapshot must be named as cleared.
   test("clears a meta key the live row gained after the restored revision", async () => {

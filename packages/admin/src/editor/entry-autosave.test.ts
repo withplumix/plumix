@@ -293,4 +293,142 @@ describe("createEntryAutosave", () => {
 
     expect(unsaved()).toBe(true);
   });
+
+  test("a conflict found by a publish reports the edit as unsaved", async () => {
+    const { update } = fakeUpdate([]);
+    const unsavedStates: boolean[] = [];
+    const title = titleField();
+    const { autosave } = createEntryAutosave(
+      {
+        id: 1,
+        etag: "e0",
+        onError: () => undefined,
+        onConflict: () => undefined,
+        onUnsavedChange: (unsaved) => unsavedStates.push(unsaved),
+        groups: { title: title.group },
+      },
+      update,
+    );
+
+    await expect(
+      autosave.runExclusive(() => Promise.reject(staleCopy())),
+    ).rejects.toBeInstanceOf(ORPCError);
+
+    expect(unsavedStates).toEqual([true]);
+  });
+
+  test("a conflict found by a publish pauses autosave", async () => {
+    const { inputs, update } = fakeUpdate([]);
+    const title = titleField();
+    const { autosave } = autosaveOf(title, update);
+    await expect(
+      autosave.runExclusive(() => Promise.reject(staleCopy())),
+    ).rejects.toBeInstanceOf(ORPCError);
+    title.value = "Hello world";
+    autosave.schedule.title();
+
+    await autosave.flush();
+
+    expect(inputs).toEqual([]);
+  });
+
+  test("a write sends the etag a publish answered with", async () => {
+    const { inputs, update } = fakeUpdate([row({ etag: "e6" })]);
+    const title = titleField();
+    const { autosave } = autosaveOf(title, update);
+    await autosave.runExclusive(() => Promise.resolve(row({ etag: "e5" })));
+    title.value = "Hello world";
+    autosave.schedule.title();
+
+    await autosave.flush();
+
+    expect(inputs).toEqual([{ id: 1, title: "Hello world", ifMatch: "e5" }]);
+  });
+
+  test("a publish that lands re-arms the failure report", async () => {
+    const first = new Error("first");
+    const again = new Error("again");
+    const { update } = fakeUpdate([first, again]);
+    const title = titleField();
+    const errors: unknown[] = [];
+    const { autosave } = autosaveOf(title, update, (err) => errors.push(err));
+    title.value = "a";
+    autosave.schedule.title();
+    await autosave.flush();
+    await autosave.runExclusive(() => Promise.resolve(row({ etag: "e1" })));
+    title.value = "b";
+    autosave.schedule.title();
+
+    await autosave.flush();
+
+    expect(errors).toEqual([first, again]);
+  });
+
+  test("an anchored etag is the one the next write sends", async () => {
+    const { inputs, update } = fakeUpdate([row({ etag: "e8" })]);
+    const title = titleField();
+    const { autosave } = autosaveOf(title, update);
+    autosave.anchor("e7");
+    title.value = "Hello world";
+    autosave.schedule.title();
+
+    await autosave.flush();
+
+    expect(inputs).toEqual([{ id: 1, title: "Hello world", ifMatch: "e7" }]);
+  });
+
+  test("keeping mine leaves nothing unsaved, even with an edit still waiting out its debounce", async () => {
+    const { update } = fakeUpdate([
+      staleCopy(),
+      row({ title: "Hello world", etag: "e2" }),
+    ]);
+    const title = titleField();
+    const { autosave, unsaved } = autosaveOf(title, update);
+    title.value = "Hello world";
+    autosave.schedule.title();
+    await autosave.flush();
+    autosave.schedule.title();
+
+    await autosave.keepMine("theirs");
+
+    expect(unsaved()).toBe(false);
+  });
+
+  test("a write in flight is unsaved", async () => {
+    let land: (entry: EntryRow) => void = () => undefined;
+    const title = titleField();
+    const { autosave, unsaved } = autosaveOf(
+      title,
+      () => new Promise<EntryRow>((resolve) => (land = resolve)),
+    );
+    title.value = "Hello world";
+    autosave.schedule.title();
+    const flushing = autosave.flush();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(unsaved()).toBe(true);
+    land(row({ title: "Hello world", etag: "e1" }));
+    await flushing;
+  });
+
+  test("an edit waiting in any one group is unsaved", () => {
+    const { update } = fakeUpdate([]);
+    const title = titleField();
+    const excerpt = titleField();
+    const { autosave, unsaved } = createEntryAutosave(
+      {
+        id: 1,
+        etag: "e0",
+        onError: () => undefined,
+        onConflict: () => undefined,
+        groups: { title: title.group, excerpt: excerpt.group },
+      },
+      update,
+    );
+    title.value = "Hello world";
+
+    autosave.schedule.title();
+
+    expect(unsaved()).toBe(true);
+  });
 });

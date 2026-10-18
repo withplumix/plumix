@@ -6,10 +6,10 @@ import * as v from "valibot";
 import type { JsonValue } from "../json.js";
 import { isJsonObject } from "../json.js";
 
-// The pieces of a guarded write (ADR 0048): a table opts in by having an
-// `updated_at` stored in seconds, the token its `etag` names.
-
-/** Opaque to clients: they send it back as `ifMatch` and never parse it. */
+/**
+ * The token's `etag`: the table's `updated_at`, in seconds. Opaque to clients,
+ * which send it back as `ifMatch` and never parse it.
+ */
 export function etagOf(updatedAt: Date): string {
   return String(Math.floor(updatedAt.getTime() / 1000));
 }
@@ -72,7 +72,6 @@ export class ConflictError extends Error {
     this.updatedAt = updatedAt;
   }
 
-  /** The RPC `CONFLICT` payload. */
   get data(): {
     readonly reason: "etag_mismatch";
     readonly etag: string;
@@ -86,6 +85,11 @@ export class ConflictError extends Error {
   }
 }
 
+type IfMatchSchema = v.SchemaWithPipe<
+  readonly [v.StringSchema<string>, v.RawTransformAction<string, Date>]
+>;
+type ObjectMessage = v.ErrorMessage<v.ObjectIssue>;
+
 /**
  * `entries` plus a required `ifMatch`, parsed to the token. `message` tells a
  * caller who left it out, or malformed it, where the `etag` comes from.
@@ -93,7 +97,7 @@ export class ConflictError extends Error {
 export function ifMatchObject<const E extends v.ObjectEntries>(
   entries: E,
   message: string,
-) {
+): v.ObjectSchema<E & { readonly ifMatch: IfMatchSchema }, ObjectMessage> {
   return v.object(
     {
       ...entries,
