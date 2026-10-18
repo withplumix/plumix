@@ -273,6 +273,35 @@ describe("upsertAutosave", () => {
     expect(second.excerpt).toBe("summary");
   });
 
+  test("a second save moves the autosave's updatedAt past its value, even ahead of the clock", async () => {
+    const db = await createTestDb();
+    const { author, entry } = await seedLiveEntry(db);
+    const patch = {
+      title: "Draft",
+      content: null,
+      excerpt: null,
+      meta: {},
+      metaDeletes: [],
+    };
+    const first = await upsertAutosave(db, {
+      entry,
+      authorId: author.id,
+      patch,
+    });
+    await db
+      .update(entries)
+      .set({ updatedAt: new Date("2100-01-01T00:00:00Z") })
+      .where(eq(entries.id, first.id));
+
+    const second = await upsertAutosave(db, {
+      entry,
+      authorId: author.id,
+      patch,
+    });
+
+    expect(second.updatedAt).toEqual(new Date("2100-01-01T00:00:01Z"));
+  });
+
   test("two different authors editing the same entry get distinct rows (per-user isolation)", async () => {
     const db = await createTestDb();
     const ada = await userFactory.transient({ db }).create({ role: "author" });

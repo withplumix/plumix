@@ -1,4 +1,3 @@
-import type { QueryClient } from "@tanstack/react-query";
 import { ORPCError } from "@orpc/client";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -13,7 +12,6 @@ type EntryUpdateInput = Parameters<EntryUpdate>[0];
 
 const T0 = new Date("2026-05-20T00:00:00.000Z");
 const T1 = new Date("2026-05-20T00:00:01.000Z");
-const T2 = new Date("2026-05-20T00:00:02.000Z");
 
 function row(overrides: Partial<EntryRow> = {}): EntryRow {
   return {
@@ -31,13 +29,14 @@ function row(overrides: Partial<EntryRow> = {}): EntryRow {
     createdAt: T0,
     updatedAt: T0,
     meta: {},
+    etag: "e0",
     ...overrides,
   };
 }
 
-function staleConflict(): ORPCError<"CONFLICT", unknown> {
+function staleCopy(): ORPCError<"CONFLICT", unknown> {
   return new ORPCError("CONFLICT", {
-    data: { reason: "stale_expected_updated_at" },
+    data: { reason: "etag_mismatch", etag: "theirs", updatedAt: T1 },
   });
 }
 
@@ -62,11 +61,6 @@ function fakeUpdate(replies: readonly (EntryRow | Error)[]): {
         : Promise.resolve(reply);
     },
   };
-}
-
-/** Only `query` is read: the stale-conflict refetch of the live row. */
-function fakeQueryClient(live: EntryRow): QueryClient {
-  return { query: () => Promise.resolve(live) } as unknown as QueryClient;
 }
 
 /**
@@ -94,17 +88,16 @@ function autosaveOf(
   title: ReturnType<typeof titleField>,
   update: EntryUpdate,
   onError: (err: unknown) => void = () => undefined,
-  live: EntryRow = row({ updatedAt: T1 }),
+  onConflict: (conflict: unknown) => void = () => undefined,
 ) {
   return createEntryAutosave(
     {
       id: 1,
-      entryType: "post",
-      liveUpdatedAt: T0,
+      etag: "e0",
       onError,
+      onConflict,
       groups: { title: title.group },
     },
-    fakeQueryClient(live),
     update,
   );
 }
@@ -118,36 +111,72 @@ afterEach(() => {
 });
 
 describe("createEntryAutosave", () => {
-  test("a stale-token conflict re-anchors on the live row and retries once", async () => {
+  test("a stale copy is never retried; the conflict is reported, not a failure", async () => {
+    const { inputs, update } = fakeUpdate([staleCopy()]);
+    const title = titleField();
+    const errors: unknown[] = [];
+    const conflicts: unknown[] = [];
+    const { autosave } = autosaveOf(
+      title,
+      update,
+      (err) => errors.push(err),
+      (conflict) => conflicts.push(conflict),
+    );
+    title.value = "Hello world";
+    autosave.schedule.title();
+
+    await autosave.flush();
+
+    expect(inputs).toEqual([{ id: 1, title: "Hello world", ifMatch: "e0" }]);
+    expect(conflicts).toEqual([{ etag: "theirs", updatedAt: T1 }]);
+    expect(errors).toEqual([]);
+  });
+
+  test("after a conflict autosave pauses: a later edit is not sent", async () => {
+    const { inputs, update } = fakeUpdate([staleCopy()]);
+    const title = titleField();
+    const { autosave } = autosaveOf(title, update);
+    title.value = "a";
+    autosave.schedule.title();
+    await autosave.flush();
+    title.value = "ab";
+    autosave.schedule.title();
+
+    await autosave.flush();
+
+    expect(inputs).toHaveLength(1);
+  });
+
+  test("after a conflict the author's edit stays unsaved", async () => {
+    const { update } = fakeUpdate([staleCopy()]);
+    const title = titleField();
+    const { autosave, unsaved } = autosaveOf(title, update);
+    title.value = "Hello world";
+    autosave.schedule.title();
+
+    await autosave.flush();
+
+    expect(unsaved()).toBe(true);
+  });
+
+  test("keeping mine resends the unsaved edit from the entry's current etag", async () => {
     const { inputs, update } = fakeUpdate([
-      staleConflict(),
-      row({ updatedAt: T2 }),
+      staleCopy(),
+      row({ title: "Hello world", etag: "e2" }),
     ]);
     const title = titleField();
     const { autosave } = autosaveOf(title, update);
     title.value = "Hello world";
     autosave.schedule.title();
-
     await autosave.flush();
 
-    expect(inputs).toEqual([
-      { id: 1, title: "Hello world", expectedLiveUpdatedAt: T0 },
-      { id: 1, title: "Hello world", expectedLiveUpdatedAt: T1 },
-    ]);
-  });
+    await autosave.keepMine("theirs");
 
-  test("a conflict that survives the retry is not retried again, and the author isn't told", async () => {
-    const { inputs, update } = fakeUpdate([staleConflict(), staleConflict()]);
-    const title = titleField();
-    const errors: unknown[] = [];
-    const { autosave } = autosaveOf(title, update, (err) => errors.push(err));
-    title.value = "Hello world";
-    autosave.schedule.title();
-
-    await autosave.flush();
-
-    expect(inputs).toHaveLength(2);
-    expect(errors).toEqual([]);
+    expect(inputs.at(-1)).toEqual({
+      id: 1,
+      title: "Hello world",
+      ifMatch: "theirs",
+    });
   });
 
   test("a failure that repeats on the next write is reported once", async () => {
@@ -170,7 +199,7 @@ describe("createEntryAutosave", () => {
   test("a write that lands re-arms the failure report", async () => {
     const first = new Error("first");
     const again = new Error("again");
-    const { update } = fakeUpdate([first, row({ updatedAt: T1 }), again]);
+    const { update } = fakeUpdate([first, row({ etag: "e1" }), again]);
     const title = titleField();
     const errors: unknown[] = [];
     const { autosave } = autosaveOf(title, update, (err) => errors.push(err));
@@ -188,14 +217,14 @@ describe("createEntryAutosave", () => {
     expect(errors).toEqual([first, again]);
   });
 
-  test("a write that lands on the autosave row leaves the live token alone", async () => {
+  test("each write sends the etag the previous one answered with", async () => {
     const { inputs, update } = fakeUpdate([
-      row({ type: "autosave", updatedAt: T2 }),
-      row({ updatedAt: T1 }),
+      row({ etag: "e1" }),
+      row({ etag: "e2" }),
     ]);
     const title = titleField();
     const { autosave } = autosaveOf(title, update);
-    title.value = "draft edit";
+    title.value = "first edit";
     autosave.schedule.title();
     await autosave.flush();
     title.value = "second edit";
@@ -206,7 +235,7 @@ describe("createEntryAutosave", () => {
     expect(inputs.at(-1)).toEqual({
       id: 1,
       title: "second edit",
-      expectedLiveUpdatedAt: T0,
+      ifMatch: "e1",
     });
   });
 
@@ -224,7 +253,7 @@ describe("createEntryAutosave", () => {
   });
 
   test("an edit is not sent before the debounce window of quiet passes", async () => {
-    const { inputs, update } = fakeUpdate([row({ updatedAt: T1 })]);
+    const { inputs, update } = fakeUpdate([row({ etag: "e1" })]);
     const title = titleField();
     const { autosave } = autosaveOf(title, update);
     title.value = "Hello world";
@@ -236,7 +265,7 @@ describe("createEntryAutosave", () => {
   });
 
   test("an edit is sent once the debounce window of quiet passes", async () => {
-    const { inputs, update } = fakeUpdate([row({ updatedAt: T1 })]);
+    const { inputs, update } = fakeUpdate([row({ etag: "e1" })]);
     const title = titleField();
     const { autosave } = autosaveOf(title, update);
     title.value = "Hello world";
@@ -244,9 +273,7 @@ describe("createEntryAutosave", () => {
 
     await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS);
 
-    expect(inputs).toEqual([
-      { id: 1, title: "Hello world", expectedLiveUpdatedAt: T0 },
-    ]);
+    expect(inputs).toEqual([{ id: 1, title: "Hello world", ifMatch: "e0" }]);
   });
 
   test("nothing is unsaved before an edit", () => {
@@ -260,6 +287,144 @@ describe("createEntryAutosave", () => {
     const { update } = fakeUpdate([]);
     const title = titleField();
     const { autosave, unsaved } = autosaveOf(title, update);
+    title.value = "Hello world";
+
+    autosave.schedule.title();
+
+    expect(unsaved()).toBe(true);
+  });
+
+  test("a conflict found by a publish reports the edit as unsaved", async () => {
+    const { update } = fakeUpdate([]);
+    const unsavedStates: boolean[] = [];
+    const title = titleField();
+    const { autosave } = createEntryAutosave(
+      {
+        id: 1,
+        etag: "e0",
+        onError: () => undefined,
+        onConflict: () => undefined,
+        onUnsavedChange: (unsaved) => unsavedStates.push(unsaved),
+        groups: { title: title.group },
+      },
+      update,
+    );
+
+    await expect(
+      autosave.runExclusive(() => Promise.reject(staleCopy())),
+    ).rejects.toBeInstanceOf(ORPCError);
+
+    expect(unsavedStates).toEqual([true]);
+  });
+
+  test("a conflict found by a publish pauses autosave", async () => {
+    const { inputs, update } = fakeUpdate([]);
+    const title = titleField();
+    const { autosave } = autosaveOf(title, update);
+    await expect(
+      autosave.runExclusive(() => Promise.reject(staleCopy())),
+    ).rejects.toBeInstanceOf(ORPCError);
+    title.value = "Hello world";
+    autosave.schedule.title();
+
+    await autosave.flush();
+
+    expect(inputs).toEqual([]);
+  });
+
+  test("a write sends the etag a publish answered with", async () => {
+    const { inputs, update } = fakeUpdate([row({ etag: "e6" })]);
+    const title = titleField();
+    const { autosave } = autosaveOf(title, update);
+    await autosave.runExclusive(() => Promise.resolve(row({ etag: "e5" })));
+    title.value = "Hello world";
+    autosave.schedule.title();
+
+    await autosave.flush();
+
+    expect(inputs).toEqual([{ id: 1, title: "Hello world", ifMatch: "e5" }]);
+  });
+
+  test("a publish that lands re-arms the failure report", async () => {
+    const first = new Error("first");
+    const again = new Error("again");
+    const { update } = fakeUpdate([first, again]);
+    const title = titleField();
+    const errors: unknown[] = [];
+    const { autosave } = autosaveOf(title, update, (err) => errors.push(err));
+    title.value = "a";
+    autosave.schedule.title();
+    await autosave.flush();
+    await autosave.runExclusive(() => Promise.resolve(row({ etag: "e1" })));
+    title.value = "b";
+    autosave.schedule.title();
+
+    await autosave.flush();
+
+    expect(errors).toEqual([first, again]);
+  });
+
+  test("an anchored etag is the one the next write sends", async () => {
+    const { inputs, update } = fakeUpdate([row({ etag: "e8" })]);
+    const title = titleField();
+    const { autosave } = autosaveOf(title, update);
+    autosave.anchor("e7");
+    title.value = "Hello world";
+    autosave.schedule.title();
+
+    await autosave.flush();
+
+    expect(inputs).toEqual([{ id: 1, title: "Hello world", ifMatch: "e7" }]);
+  });
+
+  test("keeping mine leaves nothing unsaved, even with an edit still waiting out its debounce", async () => {
+    const { update } = fakeUpdate([
+      staleCopy(),
+      row({ title: "Hello world", etag: "e2" }),
+    ]);
+    const title = titleField();
+    const { autosave, unsaved } = autosaveOf(title, update);
+    title.value = "Hello world";
+    autosave.schedule.title();
+    await autosave.flush();
+    autosave.schedule.title();
+
+    await autosave.keepMine("theirs");
+
+    expect(unsaved()).toBe(false);
+  });
+
+  test("a write in flight is unsaved", async () => {
+    let land: (entry: EntryRow) => void = () => undefined;
+    const title = titleField();
+    const { autosave, unsaved } = autosaveOf(
+      title,
+      () => new Promise<EntryRow>((resolve) => (land = resolve)),
+    );
+    title.value = "Hello world";
+    autosave.schedule.title();
+    const flushing = autosave.flush();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(unsaved()).toBe(true);
+    land(row({ title: "Hello world", etag: "e1" }));
+    await flushing;
+  });
+
+  test("an edit waiting in any one group is unsaved", () => {
+    const { update } = fakeUpdate([]);
+    const title = titleField();
+    const excerpt = titleField();
+    const { autosave, unsaved } = createEntryAutosave(
+      {
+        id: 1,
+        etag: "e0",
+        onError: () => undefined,
+        onConflict: () => undefined,
+        groups: { title: title.group, excerpt: excerpt.group },
+      },
+      update,
+    );
     title.value = "Hello world";
 
     autosave.schedule.title();

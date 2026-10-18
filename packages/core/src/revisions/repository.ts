@@ -1,4 +1,15 @@
-import { and, desc, eq, gte, inArray, like, lt, ne, or } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  gte,
+  inArray,
+  like,
+  lt,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
 
 import type { Db } from "../context/app-context.js";
 import type { Entry, EntryContent, NewEntry } from "../db/schema/entries.js";
@@ -222,7 +233,9 @@ export async function upsertAutosave(
         content: patch.content,
         excerpt: patch.excerpt,
         meta,
-        updatedAt: new Date(),
+        // An upsert bypasses `$onUpdate`, so it moves the token itself, strictly
+        // past its own value.
+        updatedAt: sql`max(unixepoch(), ${entries.updatedAt} + 1)`,
       },
     })
     .returning();

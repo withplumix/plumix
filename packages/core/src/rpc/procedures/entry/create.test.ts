@@ -338,6 +338,70 @@ describe("entry.create", () => {
     });
   });
 
+  test("a create with meta answers with an etag the next save can use", async () => {
+    const plugins = createPluginRegistry();
+    plugins.entryMetaBoxes.set("test-seo", {
+      id: "test-seo",
+      label: "SEO",
+      entryTypes: ["post"],
+      fields: [
+        {
+          key: "meta_title",
+          label: "Meta title",
+          type: "string",
+          inputType: "text",
+        },
+      ],
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const created = await h.client.entry.create({
+      title: "with-meta",
+      slug: "with-meta-etag",
+      meta: { meta_title: "SEO title" },
+    });
+
+    const saved = await h.client.entry.update({
+      id: created.id,
+      title: "renamed",
+      ifMatch: created.etag,
+    });
+
+    expect(saved.title).toBe("renamed");
+  });
+
+  test("a create with meta announces entry:meta_changed once, with the keys it set", async () => {
+    const plugins = createPluginRegistry();
+    plugins.entryMetaBoxes.set("test-seo", {
+      id: "test-seo",
+      label: "SEO",
+      entryTypes: ["post"],
+      fields: [
+        {
+          key: "meta_title",
+          label: "Meta title",
+          type: "string",
+          inputType: "text",
+        },
+      ],
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const onMetaChanged = h.spyAction("entry:meta_changed");
+
+    await h.client.entry.create({
+      title: "announced",
+      slug: "announced-meta",
+      meta: { meta_title: "SEO title" },
+    });
+
+    onMetaChanged.assertCalledOnce();
+    expect(onMetaChanged.lastArgs?.[1]).toEqual({
+      set: { meta_title: "SEO title" },
+      removed: [],
+    });
+  });
+
   test("meta: unregistered key → CONFLICT with the offending key surfaced", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     await expect(

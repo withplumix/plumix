@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 import { entries } from "../db/schema/entries.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { toRegisteredEntryType } from "../plugin/registry.js";
+import { currentEtag } from "../test/entry-etag.js";
 import { createRpcHarness } from "../test/rpc.js";
 import { REVISION_TYPE } from "./slug-codec.js";
 
@@ -34,7 +35,11 @@ describe("entry.update revision capture", () => {
       title: "Plain",
       slug: "plain",
     });
-    await h.client.entry.update({ id: created.id, title: "Plain v2" });
+    await h.client.entry.update({
+      id: created.id,
+      title: "Plain v2",
+      ifMatch: await currentEtag(h.db, created.id),
+    });
     const revisions = await h.db.query.entries.findMany({
       where: eq(entries.type, REVISION_TYPE),
     });
@@ -51,7 +56,11 @@ describe("entry.update revision capture", () => {
       slug: "p",
     });
     for (let i = 0; i < 3; i += 1) {
-      await h.client.entry.update({ id: created.id, title: `P v${i + 1}` });
+      await h.client.entry.update({
+        id: created.id,
+        title: `P v${i + 1}`,
+        ifMatch: await currentEtag(h.db, created.id),
+      });
     }
     const revisions = await h.db.query.entries.findMany({
       where: eq(entries.type, REVISION_TYPE),
@@ -69,7 +78,11 @@ describe("entry.update revision capture", () => {
       title: "X",
       slug: "x",
     });
-    await h.client.entry.update({ id: created.id, title: "X v2" });
+    await h.client.entry.update({
+      id: created.id,
+      title: "X v2",
+      ifMatch: await currentEtag(h.db, created.id),
+    });
     onCreated.assertCalledOnce();
   });
 
@@ -90,6 +103,7 @@ describe("entry.update revision capture", () => {
     await h.client.entry.update({
       id: created.id,
       title: "Second",
+      ifMatch: await currentEtag(h.db, created.id),
     });
 
     const after = await h.db.query.entries.findMany({

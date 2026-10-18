@@ -8,12 +8,13 @@ afterEach(() => {
 });
 
 describe("restoreErrorDescriptor", () => {
-  test("a stale-token conflict asks the editor to reload", () => {
+  test("a stale copy says the entry changed since it was opened, as the editor's conflict does", () => {
     const err = new ORPCError("CONFLICT", {
-      data: { reason: "stale_expected_updated_at" },
+      data: { reason: "etag_mismatch" },
     });
     expect(restoreErrorDescriptor(err)).toMatchObject({
       id: "editor.revision.conflict",
+      message: "This entry changed since you opened it. Reload and try again.",
     });
   });
 

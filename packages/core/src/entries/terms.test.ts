@@ -6,6 +6,7 @@ import { entryTerm } from "../db/schema/entry_term.js";
 import { terms } from "../db/schema/terms.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { toRegisteredTermTaxonomy } from "../plugin/registry.js";
+import { currentEtag } from "../test/entry-etag.js";
 import { createRpcHarness } from "../test/rpc.js";
 
 function taxonomyRegistry(
@@ -104,6 +105,7 @@ describe("entry.update — terms", () => {
     await h.client.entry.update({
       id: post.id,
       terms: { category: [catA, catB] },
+      ifMatch: await currentEtag(h.db, post.id),
     });
 
     expect(await readTermIds(h, post.id, "category")).toEqual([catA, catB]);
@@ -112,8 +114,16 @@ describe("entry.update — terms", () => {
   test("replacement semantics — new list overwrites the old one entirely", async () => {
     const { h, post, a, b, c } = await setupEditorWithThreeCategoryTerms();
 
-    await h.client.entry.update({ id: post.id, terms: { category: [a, b] } });
-    await h.client.entry.update({ id: post.id, terms: { category: [c] } });
+    await h.client.entry.update({
+      id: post.id,
+      terms: { category: [a, b] },
+      ifMatch: await currentEtag(h.db, post.id),
+    });
+    await h.client.entry.update({
+      id: post.id,
+      terms: { category: [c] },
+      ifMatch: await currentEtag(h.db, post.id),
+    });
 
     expect(await readTermIds(h, post.id, "category")).toEqual([c]);
   });
@@ -130,8 +140,16 @@ describe("entry.update — terms", () => {
       })
     ).id;
 
-    await h.client.entry.update({ id: post.id, terms: { category: [a] } });
-    await h.client.entry.update({ id: post.id, terms: { category: [] } });
+    await h.client.entry.update({
+      id: post.id,
+      terms: { category: [a] },
+      ifMatch: await currentEtag(h.db, post.id),
+    });
+    await h.client.entry.update({
+      id: post.id,
+      terms: { category: [] },
+      ifMatch: await currentEtag(h.db, post.id),
+    });
 
     expect(await readTermIds(h, post.id, "category")).toEqual([]);
   });
@@ -158,11 +176,13 @@ describe("entry.update — terms", () => {
     await h.client.entry.update({
       id: post.id,
       terms: { category: [cat], post_tag: [tag] },
+      ifMatch: await currentEtag(h.db, post.id),
     });
     // Only update category — post_tag must stay put.
     await h.client.entry.update({
       id: post.id,
       terms: { category: [] },
+      ifMatch: await currentEtag(h.db, post.id),
     });
 
     expect(await readTermIds(h, post.id, "category")).toEqual([]);
@@ -184,6 +204,7 @@ describe("entry.update — terms", () => {
     await h.client.entry.update({
       id: post.id,
       terms: { category: [a, a, a] },
+      ifMatch: await currentEtag(h.db, post.id),
     });
     expect(await readTermIds(h, post.id, "category")).toEqual([a]);
   });
@@ -204,6 +225,7 @@ describe("entry.update — terms", () => {
       h.client.entry.update({
         id: post.id,
         terms: { category: [cat], unknown_tax: [1] },
+        ifMatch: await currentEtag(h.db, post.id),
       }),
     ).rejects.toMatchObject({
       code: "NOT_FOUND",
@@ -227,7 +249,11 @@ describe("entry.update — terms", () => {
     ).id;
 
     await expect(
-      h.client.entry.update({ id: post.id, terms: { category: [cat] } }),
+      h.client.entry.update({
+        id: post.id,
+        terms: { category: [cat] },
+        ifMatch: await currentEtag(h.db, post.id),
+      }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
       data: { capability: "term:category:assign" },
@@ -250,6 +276,7 @@ describe("entry.update — terms", () => {
       h.client.entry.update({
         id: post.id,
         terms: { category: [tag] },
+        ifMatch: await currentEtag(h.db, post.id),
       }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
@@ -266,6 +293,7 @@ describe("entry.update — terms", () => {
       h.client.entry.update({
         id: post.id,
         terms: { category: [99999] },
+        ifMatch: await currentEtag(h.db, post.id),
       }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
@@ -289,6 +317,7 @@ describe("entry.update — terms", () => {
     const updated = await h.client.entry.update({
       id: post.id,
       terms: { category: [cat] },
+      ifMatch: await currentEtag(h.db, post.id),
     });
     expect(updated.title).toBe(originalTitle);
     expect(await readTermIds(h, post.id, "category")).toEqual([cat]);
@@ -300,6 +329,7 @@ describe("entry.update — terms", () => {
     await h.client.entry.update({
       id: post.id,
       terms: { category: [c, a, b] },
+      ifMatch: await currentEtag(h.db, post.id),
     });
     expect(await readTermIds(h, post.id, "category")).toEqual([c, a, b]);
   });
@@ -309,7 +339,11 @@ describe("entry.update — terms", () => {
     const h = await createRpcHarness({ authAs: "editor", plugins });
     const post = await h.factory.draft.create({ authorId: h.user.id });
     await expect(
-      h.client.entry.update({ id: post.id, terms: {} }),
+      h.client.entry.update({
+        id: post.id,
+        terms: {},
+        ifMatch: await currentEtag(h.db, post.id),
+      }),
     ).resolves.toBeDefined();
   });
 
@@ -327,13 +361,18 @@ describe("entry.update — terms", () => {
       })
     ).id;
 
-    await h.client.entry.update({ id: post.id, terms: { category: [cat] } });
+    await h.client.entry.update({
+      id: post.id,
+      terms: { category: [cat] },
+      ifMatch: await currentEtag(h.db, post.id),
+    });
     // Second call with the same set — without onConflictDoNothing the
     // delete-then-insert pattern would still work, but a future migration
     // to batched writes could regress. This guards the invariant directly.
     const second = await h.client.entry.update({
       id: post.id,
       terms: { category: [cat] },
+      ifMatch: await currentEtag(h.db, post.id),
     });
     expect(second).toBeDefined();
     expect(await readTermIds(h, post.id, "category")).toEqual([cat]);

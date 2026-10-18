@@ -148,7 +148,7 @@ export function StaleDraftDialog({
   );
 }
 
-function ComparePane({
+export function ComparePane({
   label,
   snapshot,
 }: {

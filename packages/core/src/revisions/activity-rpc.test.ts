@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 import { entries } from "../db/schema/entries.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { toRegisteredEntryType } from "../plugin/registry.js";
+import { currentEtag } from "../test/entry-etag.js";
 import { createRpcHarness } from "../test/rpc.js";
 
 function registryWithAutosave(): ReturnType<typeof createPluginRegistry> {
@@ -54,6 +55,7 @@ describe("entry.activity.list", () => {
       id: created.id,
       title: "My pending",
       saveAs: "draft",
+      ifMatch: await currentEtag(h.db, created.id),
     });
     const result = await h.client.entry.activity.list({ entryId: created.id });
     expect(result.users).toEqual([]);
@@ -75,6 +77,7 @@ describe("entry.activity.list", () => {
       id: created.id,
       title: "Their pending",
       saveAs: "draft",
+      ifMatch: await currentEtag(second.db, created.id),
     });
 
     const result = await h.client.entry.activity.list({ entryId: created.id });
@@ -98,6 +101,7 @@ describe("entry.activity.list", () => {
       id: created.id,
       title: "Their pending",
       saveAs: "draft",
+      ifMatch: await currentEtag(second.db, created.id),
     });
     // Backdate the second user's autosave to 10 minutes ago.
     const SIX_MINUTES_MS = 6 * 60 * 1000;

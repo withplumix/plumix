@@ -24,6 +24,23 @@ describe("entry.restore", () => {
     expect(onRestore.mock.calls[0]?.[1].user?.id).toBe(h.user.id);
   });
 
+  test("answers with the etag a save from the restored entry sends", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const target = await h.factory.trashed.create({
+      authorId: h.user.id,
+      slug: "restored-then-saved",
+    });
+    const restored = await h.client.entry.restore({ id: target.id });
+
+    await expect(
+      h.client.entry.update({
+        id: target.id,
+        title: "Edited after restore",
+        ifMatch: restored.etag,
+      }),
+    ).resolves.toMatchObject({ title: "Edited after restore" });
+  });
+
   test("contributor cannot restore (no post:delete cap)", async () => {
     const h = await createRpcHarness({ authAs: "contributor" });
     const target = await h.factory.trashed.create({

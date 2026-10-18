@@ -5,17 +5,13 @@ import type {
 import { useEffect, useState } from "react";
 import { createEntryAutosave } from "@/editor/entry-autosave.js";
 import { orpc } from "@/lib/orpc.js";
-import { useQueryClient } from "@tanstack/react-query";
 
 /** Pending writes are also sent on document unload, which runs no unmount. */
 export function useEntryAutosave<G extends Record<string, unknown>>(
   options: EntryAutosaveOptions<G>,
 ): EntryAutosave<G> {
-  const queryClient = useQueryClient();
   const [{ autosave, sync, unsaved }] = useState(() =>
-    createEntryAutosave(options, queryClient, (input) =>
-      orpc.entry.update.call(input),
-    ),
+    createEntryAutosave(options, (input) => orpc.entry.update.call(input)),
   );
   useEffect(() => sync(options));
   useEffect(() => () => void autosave.flush(), [autosave]);

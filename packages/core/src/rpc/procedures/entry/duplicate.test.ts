@@ -6,6 +6,7 @@ import { entries } from "../../../db/schema/entries.js";
 import { text } from "../../../plugin/fields/index.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { toRegisteredTermTaxonomy } from "../../../plugin/registry.js";
+import { currentEtag } from "../../../test/entry-etag.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
 /** Minimal taxonomy registry so `entry.update` accepts a `category` term patch. */
@@ -60,6 +61,23 @@ describe("entry.duplicate", () => {
     expect(persisted?.authorId).toBe(h.user.id);
   });
 
+  test("the copy answers with the etag a save from it sends", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const source = await h.factory.published.create({
+      authorId: h.user.id,
+      slug: "duplicated-then-saved",
+    });
+    const copy = await h.client.entry.duplicate({ id: source.id });
+
+    await expect(
+      h.client.entry.update({
+        id: copy.id,
+        title: "Edited copy",
+        ifMatch: copy.etag,
+      }),
+    ).resolves.toMatchObject({ title: "Edited copy" });
+  });
+
   test("duplicating the same source twice yields two distinct slugs", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
     const source = await h.factory.published.create({
@@ -93,6 +111,7 @@ describe("entry.duplicate", () => {
     await h.client.entry.update({
       id: source.id,
       terms: { category: [category.id] },
+      ifMatch: await currentEtag(h.db, source.id),
     });
 
     const copy = await h.client.entry.duplicate({ id: source.id });

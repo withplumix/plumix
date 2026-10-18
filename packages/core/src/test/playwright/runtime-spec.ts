@@ -14,14 +14,15 @@ function entryUpdated(page: Page): Promise<unknown> {
 
 /**
  * The spec every runtime playground imports: bootstrap, publish, read publicly,
- * upload, sign out. Needs blog and media plugins, a `post-title` testid and
- * `seedAdminSession: false`.
+ * resolve a conflicting edit, upload, sign out. Needs blog and media plugins, a
+ * `post-title` testid and `seedAdminSession: false`.
  */
 export function runtimeSpec(): void {
-  test("bootstrap → publish an entry → read it → upload media → sign out", async ({
+  test("bootstrap → publish an entry → read it → resolve a conflicting edit → upload media → sign out", async ({
     page,
     passkey,
   }) => {
+    let editUrl = "";
     await test.step("bootstrap the first admin with a passkey", async () => {
       // The admin root sends a fresh site to the bootstrap form.
       await page.goto("./");
@@ -40,6 +41,7 @@ export function runtimeSpec(): void {
       const navigated = page.waitForURL(/\/entries\/posts\/\d+\/edit/);
       await page.getByTestId("content-list-new-button").click();
       await navigated;
+      editUrl = page.url();
 
       await page.getByTestId("plumix-tab-page").click();
       await expect(page.getByTestId("plumix-editor-title-input")).toBeVisible();
@@ -68,6 +70,52 @@ export function runtimeSpec(): void {
       // "/" is the site origin, not the admin base path.
       await page.goto(`/posts/${POST_SLUG}`);
       await expect(page.getByTestId("post-title")).toHaveText(POST_TITLE);
+    });
+
+    // Two tabs of one editor: each save is checked against the copy its tab
+    // opened, on the runtime's own database.
+    await test.step("an edit from a stale copy opens the conflict dialog", async () => {
+      const other = await page.context().newPage();
+      await other.goto(editUrl);
+      await other.getByTestId("plumix-tab-page").click();
+      await expect(other.getByTestId("entry-slug-input")).toHaveValue(
+        POST_SLUG,
+      );
+      await page.goto(editUrl);
+      await page.getByTestId("plumix-tab-page").click();
+      await expect(page.getByTestId("entry-slug-input")).toHaveValue(POST_SLUG);
+      const otherSaved = entryUpdated(other);
+      await other
+        .getByTestId("entry-slug-input")
+        .fill("saved-in-the-other-tab");
+      await otherSaved;
+
+      await page.getByTestId("entry-slug-input").fill("saved-in-this-tab");
+      await expect(page.getByTestId("entry-conflict-dialog")).toBeVisible();
+      await page.getByTestId("entry-conflict-load-theirs").click();
+      await expect(page.getByTestId("entry-conflict-dialog")).toBeHidden();
+      await page.getByTestId("plumix-tab-page").click();
+      await expect(page.getByTestId("entry-slug-input")).toHaveValue(
+        "saved-in-the-other-tab",
+      );
+
+      // This tab now holds the current copy, so its save leaves the other's
+      // stale.
+      const thisSaved = entryUpdated(page);
+      await page.getByTestId("entry-slug-input").fill("saved-in-this-tab");
+      await thisSaved;
+      await other.getByTestId("entry-slug-input").fill("kept-in-the-other-tab");
+      await expect(other.getByTestId("entry-conflict-dialog")).toBeVisible();
+      const kept = entryUpdated(other);
+      await other.getByTestId("entry-conflict-keep-mine").click();
+      await kept;
+      await other.close();
+
+      await page.reload();
+      await page.getByTestId("plumix-tab-page").click();
+      await expect(page.getByTestId("entry-slug-input")).toHaveValue(
+        "kept-in-the-other-tab",
+      );
     });
 
     await test.step("upload a media item", async () => {

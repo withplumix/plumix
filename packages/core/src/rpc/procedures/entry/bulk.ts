@@ -3,6 +3,7 @@ import { entries } from "../../../db/schema/entries.js";
 import { deleteEntriesHistory } from "../../../revisions/repository.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { writeAsSystem } from "./concurrency.js";
 import {
   entryDeletableGuards,
   fireEntryDeleted,
@@ -27,17 +28,14 @@ export const trashMany = base
     );
     // Skip rows already in the trash — bulk trash is idempotent, mirroring
     // the single-row no-op.
-    const toTrash = rows.filter((row) => row.status !== "trash");
-    if (toTrash.length === 0) return { ids: [] };
-
-    const ids = toTrash.map((row) => row.id);
-    await context.db
-      .update(entries)
-      .set({ status: "trash" })
-      .where(inArray(entries.id, ids));
-
-    for (const row of toTrash) {
-      await fireEntryTrashed(context, { ...row, status: "trash" });
+    const ids: number[] = [];
+    for (const read of rows) {
+      const result = await writeAsSystem(context.db, read, (row) =>
+        row.status === "trash" ? undefined : { status: "trash" },
+      );
+      if (!result?.written) continue;
+      ids.push(result.row.id);
+      await fireEntryTrashed(context, result.row);
     }
     return { ids };
   });
@@ -53,17 +51,14 @@ export const restoreMany = base
     );
     // Only trashed rows are restorable; others are skipped (the trash
     // view never mixes statuses, this is the defensive backstop).
-    const toRestore = rows.filter((row) => row.status === "trash");
-    if (toRestore.length === 0) return { ids: [] };
-
-    const ids = toRestore.map((row) => row.id);
-    await context.db
-      .update(entries)
-      .set({ status: "draft" })
-      .where(inArray(entries.id, ids));
-
-    for (const row of toRestore) {
-      await fireEntryRestored(context, { ...row, status: "draft" });
+    const ids: number[] = [];
+    for (const read of rows) {
+      const result = await writeAsSystem(context.db, read, (row) =>
+        row.status === "trash" ? { status: "draft" } : undefined,
+      );
+      if (!result?.written) continue;
+      ids.push(result.row.id);
+      await fireEntryRestored(context, result.row);
     }
     return { ids };
   });

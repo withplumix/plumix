@@ -49,7 +49,9 @@ export const entries = sqliteTable(
       .integer({ mode: "timestamp" })
       .notNull()
       .default(sql`(unixepoch())`)
-      .$onUpdate(() => sql`(unixepoch())`),
+      // The concurrency token: an update that doesn't set it still moves it,
+      // past its own value when two writes share a second.
+      .$onUpdate(() => sql`max(unixepoch(), updated_at + 1)`),
   }),
   (table) => [
     uniqueIndex("entries_type_slug_idx").on(table.type, table.slug),

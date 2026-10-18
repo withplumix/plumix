@@ -84,6 +84,9 @@ updated_at` (`version` for terms); no rows means a conflict. The update can
   meta settle pins `updated_at` on purpose, because a settle is not an edit.
   Plugin bookkeeping (a view counter, a cache) lives in the plugin's own tables,
   never in a guarded row, so editors never meet a conflict nobody caused.
+- **A draft save checks the token when read.** It writes only its author's own
+  autosave row, never the shared entry, so no one else's work can be lost; the
+  live write that publishes it claims the token.
 - **System writes move the token without checking it.** Scheduled publishing,
   bulk actions, trash and restore, import and sync are not made from a copy.
   Restoring a revision is an edit, not a rewind: it sets a fresh token.

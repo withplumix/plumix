@@ -1,9 +1,11 @@
 import * as v from "valibot";
 
+import { ifMatchObject } from "../../../db/concurrency.js";
 import { entryInsertSchema } from "../../../db/schema/entries.js";
 import { ENTRY_LIST_ORDER_COLUMNS } from "../../../entries/contract/list-order.js";
 import { idParam, metaInputSchema } from "../../contract/validation.js";
 import { slugSchema } from "../../schemas.js";
+import { ENTRY_IF_MATCH_MESSAGE } from "./concurrency.js";
 
 export const MAX_CONTENT_BYTES = 1_000_000;
 const MAX_EXCERPT_LENGTH = 600;
@@ -100,40 +102,40 @@ export const entryCreateInputSchema = v.object({
   publishedAt: v.optional(v.date()),
 });
 
-export const entryUpdateInputSchema = v.object({
-  id: idParam,
-  // Empty clears the title (untitled) — read surfaces render a fallback.
-  title: v.optional(titleText),
-  slug: v.optional(slugSchema),
-  content: v.optional(contentSchema),
-  excerpt: v.optional(excerptSchema),
-  status: v.optional(userSuppliableFields.entries.status),
-  parentId: v.optional(v.nullable(idParam)),
-  sortOrder: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
-  terms: v.optional(postTermsSchema),
-  meta: v.optional(metaInputSchema),
-  /** Named-template choice; `null` clears it. See `templateChoiceSchema`. */
-  template: v.optional(v.nullable(templateChoiceSchema)),
-  /**
-   * Per-entry access-policy choice; `null` clears it. See `accessChoiceSchema`.
-   */
-  access: v.optional(v.nullable(accessChoiceSchema)),
-  /**
-   * Target publish time; required (and must be future) when `status:
-   * "scheduled"`.
-   */
-  publishedAt: v.optional(v.date()),
-  /**
-   * The live `updatedAt` the caller loaded; a newer write rejects with CONFLICT
-   * `stale_expected_updated_at`. Omitted means last write wins.
-   */
-  expectedLiveUpdatedAt: v.optional(v.date()),
-  /**
-   * `'draft'` needs a published entry on a `supports: ['autosave']` type, else
-   * BAD_REQUEST `autosave_unsupported`. Omitted means `'live'`.
-   */
-  saveAs: v.optional(v.picklist(["draft", "live"] as const)),
-});
+export const entryUpdateInputSchema = ifMatchObject(
+  {
+    id: idParam,
+    // Empty clears the title (untitled) — read surfaces render a fallback.
+    title: v.optional(titleText),
+    slug: v.optional(slugSchema),
+    content: v.optional(contentSchema),
+    excerpt: v.optional(excerptSchema),
+    status: v.optional(userSuppliableFields.entries.status),
+    parentId: v.optional(v.nullable(idParam)),
+    sortOrder: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
+    terms: v.optional(postTermsSchema),
+    meta: v.optional(metaInputSchema),
+    /** Named-template choice; `null` clears it. See `templateChoiceSchema`. */
+    template: v.optional(v.nullable(templateChoiceSchema)),
+    /**
+     * Per-entry access-policy choice; `null` clears it. See `accessChoiceSchema`.
+     */
+    access: v.optional(v.nullable(accessChoiceSchema)),
+    /**
+     * Target publish time; required (and must be future) when `status:
+     * "scheduled"`.
+     */
+    publishedAt: v.optional(v.date()),
+    /**
+     * `'draft'` needs a published entry on a `supports: ['autosave']` type, else
+     * BAD_REQUEST `autosave_unsupported`. Omitted means `'live'`.
+     */
+    saveAs: v.optional(v.picklist(["draft", "live"] as const)),
+  },
+  // The live entry's `etag` the caller's copy came with; a newer write
+  // rejects with CONFLICT `etag_mismatch`.
+  ENTRY_IF_MATCH_MESSAGE,
+);
 
 /** Bounds the generated `IN (?, ?, …)` subquery against pathological input. */
 const MAX_TERM_SLUGS_PER_TAXONOMY = 50;

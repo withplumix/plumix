@@ -2,6 +2,7 @@
 // publish/save envelope contracts, and capability gating across both
 // metabox and field levels.
 
+import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
 import { expectNoAxeViolations } from "./support/axe.js";
@@ -12,6 +13,7 @@ import {
   mockManifest,
   mockRpc,
   mockRpcWithCapture,
+  rpcEtagConflictBody,
   rpcOkBody,
   withCapabilities,
 } from "./support/rpc-mock.js";
@@ -44,6 +46,7 @@ function authorEntry(id: number): Record<string, unknown> {
     createdAt: T0,
     updatedAt: T0,
     meta: { headline: "Staff writer", twitter: "@jane" },
+    etag: "e0",
   };
 }
 
@@ -306,6 +309,109 @@ test.describe("plain-form route for non-editor entry types", () => {
     await expect.poll(() => captures.length).toBeGreaterThan(0);
     const lastInput = captures.at(-1) as { readonly meta?: object };
     expect(lastInput.meta ?? {}).not.toHaveProperty("followers");
+  });
+
+  async function mockSavedAuthor(page: Page): Promise<{
+    readonly updates: Record<string, unknown>[];
+    readonly saveElsewhere: (changes: Record<string, unknown>) => void;
+  }> {
+    let saved: Record<string, unknown> = authorEntry(1);
+    let version = 0;
+    const updates: Record<string, unknown>[] = [];
+    await mockRpc(page, { "/auth/session": AUTHED_AUTHOR_EDITOR });
+    await page.route("**/_plumix/rpc/entry/get", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody(saved),
+      }),
+    );
+    const save = (changes: Record<string, unknown>): void => {
+      version += 1;
+      saved = { ...saved, ...changes, etag: `e${String(version)}` };
+    };
+    await page.route("**/_plumix/rpc/entry/update", (route) => {
+      const {
+        ifMatch,
+        id: _id,
+        ...changes
+      } = (route.request().postDataJSON() as { json: Record<string, unknown> })
+        .json;
+      updates.push({ ifMatch, ...changes });
+      if (ifMatch !== saved.etag) {
+        return route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: rpcEtagConflictBody(
+            String(saved.etag),
+            new Date("2026-05-20T09:30:00Z"),
+          ),
+        });
+      }
+      save(changes);
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody(saved),
+      });
+    });
+    return { updates, saveElsewhere: save };
+  }
+
+  async function openConflictDialog(page: Page): Promise<{
+    readonly updates: Record<string, unknown>[];
+  }> {
+    const { updates, saveElsewhere } = await mockSavedAuthor(page);
+    await page.goto("entries/authors/1/edit");
+    await expect(page.getByTestId("plain-form-title-input")).toHaveValue(
+      "Jane Doe",
+    );
+    saveElsewhere({ title: "Saved elsewhere" });
+    await page.getByTestId("plain-form-title-input").fill("My title");
+    await expect(page.getByTestId("entry-conflict-dialog")).toBeVisible();
+    return { updates };
+  }
+
+  test("an edit made after another session saved opens the conflict dialog, and Load theirs shows that save", async ({
+    page,
+  }) => {
+    await openConflictDialog(page);
+
+    await page.getByTestId("entry-conflict-load-theirs").click();
+
+    await expect(page.getByTestId("entry-conflict-dialog")).toBeHidden();
+    await expect(page.getByTestId("plain-form-title-input")).toHaveValue(
+      "Saved elsewhere",
+    );
+  });
+
+  test("Keep mine in the conflict dialog saves the local edit over the other session's", async ({
+    page,
+  }) => {
+    const { updates } = await openConflictDialog(page);
+
+    await page.getByTestId("entry-conflict-keep-mine").click();
+
+    await expect(page.getByTestId("entry-conflict-dialog")).toBeHidden();
+    await expect
+      .poll(() => updates.at(-1))
+      .toMatchObject({ ifMatch: "e1", title: "My title" });
+    expect(updates).toHaveLength(2);
+  });
+
+  test("Compare in the conflict dialog shows the local edit beside the other session's save", async ({
+    page,
+  }) => {
+    await openConflictDialog(page);
+
+    await page.getByTestId("entry-conflict-compare").click();
+
+    await expect(
+      page.getByTestId("entry-conflict-compare-panes"),
+    ).toContainText("My title");
+    await expect(
+      page.getByTestId("entry-conflict-compare-panes"),
+    ).toContainText("Saved elsewhere");
   });
 });
 

@@ -15,10 +15,10 @@ import type {
 } from "./core.js";
 import type { FieldPipelineMode } from "./field-pipeline.js";
 import { resolveCapability } from "../access/contract/capability.js";
+import { and, eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { findEntryMetaField, listEntryMetaFields } from "../plugin/manifest.js";
 import {
-  applyMetaPatch,
   decodeMetaBag as decodeMetaBagCore,
   isEmptyMetaPatch,
   loadMeta,
@@ -26,13 +26,13 @@ import {
   metaScopeCache,
   metaValidationConflict,
   MetaValidationError,
+  patchedMetaBag,
   resolveMetaBags as resolveMetaBagsCore,
   resolveMetaReferences as resolveMetaReferencesCore,
   sanitizeMetaForRpc as sanitizeMetaForRpcCore,
   settleStoredMeta,
   validateAndPromoteMetaBag,
   validateMetaReferencesForRpc,
-  writeSettledMeta,
 } from "./core.js";
 
 export type { MetaChanges as EntryMetaChanges } from "./core.js";
@@ -105,7 +105,7 @@ export function assertMetaCapabilities(
  * Async second pass on a sanitised entry-meta patch: validates each
  * reference field's upserted ID against its registered
  * `LookupAdapter`. RPC procedures call this between
- * `sanitizeMetaForRpc` and `writeEntryMeta`.
+ * `sanitizeMetaForRpc` and the write.
  */
 export async function validateEntryMetaReferences(
   ctx: AppContext,
@@ -235,7 +235,7 @@ export async function resolveEntriesMeta(
  */
 export async function settleEntryMeta(
   ctx: AppContext,
-  entry: { readonly id: number; readonly type: string },
+  entry: SettledEntry,
   stored: JsonObject | null | undefined,
 ): Promise<SettledRow> {
   const settled = settleStoredMeta(
@@ -248,23 +248,38 @@ export async function settleEntryMeta(
   };
 }
 
-/** Announces the settle only if it landed. */
+/** The entry as the settle read it: its token is the settle's claim. */
+interface SettledEntry {
+  readonly id: number;
+  readonly type: string;
+  readonly updatedAt: Date;
+}
+
+/**
+ * Lands only while the row holds the token it was read with, so a write in
+ * between wins, and pins it: a settle is not an edit.
+ */
 export async function writeSettledEntryMeta(
   ctx: AppContext,
-  entry: { readonly id: number; readonly type: string },
+  entry: SettledEntry,
   stored: JsonObject | null | undefined,
   patch: MetaPatch,
 ): Promise<boolean> {
-  const written = await writeSettledMeta(
-    ctx,
-    entries,
-    entries.id,
-    entry.id,
-    stored,
-    patch,
-  );
-  if (written) await announceEntryMetaChange(ctx, entry, patch);
-  return written;
+  if (isEmptyMetaPatch(patch)) return false;
+  const written = await ctx.db
+    .update(entries)
+    .set({
+      meta: patchedMetaBag(stored, patch),
+      // Set, so `$onUpdate` doesn't move it.
+      updatedAt: entry.updatedAt,
+    })
+    .where(
+      and(eq(entries.id, entry.id), eq(entries.updatedAt, entry.updatedAt)),
+    )
+    .returning({ id: entries.id });
+  if (written.length === 0) return false;
+  await announceEntryMetaChange(ctx, entry, patch);
+  return true;
 }
 
 export async function loadEntryMeta(
@@ -277,21 +292,11 @@ export async function loadEntryMeta(
 }
 
 /**
- * Apply a meta patch to `entries.meta` and fire `entry:meta_changed`.
- * Plugins that need to mutate the patch subscribe to
- * `rpc:entry.{create,update}:input` and mutate `input.meta` there.
+ * Fire `entry:meta_changed` once a write carrying `patch` has landed. Plugins
+ * that need to mutate the patch subscribe to `rpc:entry.{create,update}:input`
+ * and mutate `input.meta` there.
  */
-export async function writeEntryMeta(
-  ctx: AppContext,
-  entry: { readonly id: number; readonly type: string },
-  patch: Parameters<typeof applyMetaPatch>[4],
-): Promise<void> {
-  if (isEmptyMetaPatch(patch)) return;
-  await applyMetaPatch(ctx, entries, entries.id, entry.id, patch);
-  await announceEntryMetaChange(ctx, entry, patch);
-}
-
-function announceEntryMetaChange(
+export function announceEntryMetaChange(
   ctx: AppContext,
   entry: { readonly id: number; readonly type: string },
   patch: MetaPatch,

@@ -1,7 +1,7 @@
-import { eq } from "../../../db/index.js";
-import { entries } from "../../../db/schema/entries.js";
+import { etagOf } from "../../../db/concurrency.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { writeAsSystem } from "./concurrency.js";
 import {
   entryDeletableGuards,
   fireEntryTrashed,
@@ -24,19 +24,17 @@ export const trash = base
       entryDeletableGuards(errors),
     );
 
-    if (existing.status === "trash") {
-      return context.hooks.applyFilter("rpc:entry.trash:output", existing);
-    }
-
-    const [trashed] = await context.db
-      .update(entries)
-      .set({ status: "trash" })
-      .where(eq(entries.id, existing.id))
-      .returning();
-    if (!trashed) {
+    const result = await writeAsSystem(context.db, existing, (row) =>
+      row.status === "trash" ? undefined : { status: "trash" },
+    );
+    if (!result) {
       throw errors.CONFLICT({ data: { reason: "trash_failed" } });
     }
 
-    await fireEntryTrashed(context, trashed);
-    return context.hooks.applyFilter("rpc:entry.trash:output", trashed);
+    if (result.written) await fireEntryTrashed(context, result.row);
+    const output = await context.hooks.applyFilter(
+      "rpc:entry.trash:output",
+      result.row,
+    );
+    return { ...output, etag: etagOf(result.row.updatedAt) };
   });

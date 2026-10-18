@@ -967,6 +967,11 @@ msgid "palette.group.commands"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.compare"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.compare"
 msgstr "Порівняти"
@@ -1862,6 +1867,11 @@ msgid "editor.command.group"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.hideComparison"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.hideComparison"
 msgstr "Сховати порівняння"
@@ -1947,6 +1957,11 @@ msgid "userInvite.submit.pending"
 msgstr "Запрошення…"
 
 #. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.description"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.singular"
 msgstr "Елемент"
@@ -1972,6 +1987,11 @@ msgstr "Елементи"
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.reassign.keepAsIs"
 msgstr "Зберегти записи як є (не переназначати)"
+
+#. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.keepMine"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/locale-switcher.tsx
@@ -2028,6 +2048,11 @@ msgstr "Поточна версія"
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.loadMore"
 msgstr "Завантажити ще"
+
+#. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.loadTheirs"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/data-table/data-table.tsx
@@ -2928,6 +2953,11 @@ msgid "editor.plainForm.status.saved"
 msgstr "Збережено"
 
 #. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.savedNow"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/-settings-group-card.tsx
 msgid "settings.page.saved"
 msgstr "Збережено."
@@ -3619,6 +3649,11 @@ msgid "profile.passkeys.enroll.noAuthenticator"
 msgstr "Цей пристрій не підтримує passkeys."
 
 #. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.title"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/-restore-error.ts
 msgid "editor.revision.conflict"
 msgstr ""
@@ -3957,6 +3992,11 @@ msgstr "Ви досягли ліміту passkeys для цього обліко
 #: src/components/profile/language-card.tsx
 msgid "profile.language.description"
 msgstr "Адмінка відображається цією мовою. Сторінка перезавантажиться після перемикання, щоб нові переклади застосувалися всюди."
+
+#. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.yourChanges"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts

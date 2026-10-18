@@ -32,6 +32,16 @@ export async function applyEntryBeforeSave(
   return ctx.hooks.applyFilter("entry:before_save", afterSpecific);
 }
 
+/** The columns `patch` names, as `before_save` left them. */
+export function preparedColumns<T extends object>(
+  prepared: T,
+  patch: Partial<T>,
+): Partial<T> {
+  const columns: Partial<T> = {};
+  for (const key in patch) columns[key] = prepared[key];
+  return columns;
+}
+
 export async function fireEntryTransition(
   ctx: AppContext,
   entry: Entry,

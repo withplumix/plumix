@@ -1,3 +1,4 @@
+import { etagOf } from "../../../db/concurrency.js";
 import { assertCanEditEntry } from "../../../entries/editability.js";
 import {
   findReadableEntry,
@@ -25,8 +26,15 @@ export const get = base
       const row = await findReadableEntry(context, filtered);
       const { bag } = await settleEntryMeta(context, row, row.meta);
       const live = await resolveEntryRead(context, row, bag);
+      // The live row's token, on a preview too: a draft save is checked
+      // against live.
+      const etag = etagOf(row.updatedAt);
       if (!filtered.preview) {
-        return await context.hooks.applyFilter("rpc:entry.get:output", live);
+        const output = await context.hooks.applyFilter(
+          "rpc:entry.get:output",
+          live,
+        );
+        return { ...output, etag };
       }
 
       // Preview mode: overlay the caller's autosave (if any) onto the live
@@ -51,7 +59,7 @@ export const get = base
             meta: await resolveEntryMeta(context, live, autosave.meta),
           }
         : live;
-      return await context.hooks.applyFilter("rpc:entry.get:output", {
+      const output = await context.hooks.applyFilter("rpc:entry.get:output", {
         ...overlaid,
         _preview: {
           source: autosave ? ("autosave" as const) : ("live" as const),
@@ -59,6 +67,7 @@ export const get = base
           liveUpdatedAt: live.updatedAt,
         },
       });
+      return { ...output, etag };
     } catch (error) {
       throw toRpcEntryReadError(error, errors) ?? error;
     }

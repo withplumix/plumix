@@ -1371,6 +1371,21 @@ export function isEmptyMetaPatch(patch: MetaPatch | null): boolean {
 }
 
 /**
+ * The bag a write of `patch` over `stored` leaves, deletes first. A guarded
+ * write merges from the row it read; its claim refuses if the row moved.
+ */
+export function patchedMetaBag(
+  stored: JsonObject | null | undefined,
+  patch: MetaPatch | null,
+): JsonObject {
+  const next: Record<string, JsonValue> = { ...stored };
+  if (patch === null) return next;
+  for (const key of patch.deletes) delete next[key];
+  for (const [key, value] of patch.upserts) next[key] = value;
+  return next;
+}
+
+/**
  * Uses `json_set`/`json_remove` so concurrent updaters touching disjoint keys
  * don't clobber each other.
  */

@@ -18,7 +18,7 @@ import {
   definePolicy,
   grant,
 } from "plumix/auth";
-import { entryPurgeTags, eq, typeTag } from "plumix/db";
+import { entryPurgeTags, eq, etagOf, typeTag } from "plumix/db";
 import { definePlugin } from "plumix/plugin";
 import { entries } from "plumix/schema";
 import { createDispatcherHarness } from "plumix/test";
@@ -1464,7 +1464,14 @@ describe("a sitemap at the edge", () => {
 
     const updated = await h.fetch("/_plumix/rpc/entry/update", {
       as: admin,
-      json: { json: { id: page.id, access: "members" }, meta: [] },
+      json: {
+        json: {
+          id: page.id,
+          ifMatch: etagOf(page.updatedAt),
+          access: "members",
+        },
+        meta: [],
+      },
     });
     updated.assertStatus(200);
     await h.drainDeferred();
@@ -2401,7 +2408,14 @@ describe("IndexNow", () => {
 
     const saved = await h.fetch("/_plumix/rpc/entry/update", {
       as: await h.seedUser("editor"),
-      json: { json: { id: page.id, title: "Hello again" }, meta: [] },
+      json: {
+        json: {
+          id: page.id,
+          ifMatch: etagOf(page.updatedAt),
+          title: "Hello again",
+        },
+        meta: [],
+      },
     });
     saved.assertStatus(200);
     await h.drainDeferred();

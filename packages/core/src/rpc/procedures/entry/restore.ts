@@ -1,7 +1,7 @@
-import { eq } from "../../../db/index.js";
-import { entries } from "../../../db/schema/entries.js";
+import { etagOf } from "../../../db/concurrency.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { writeAsSystem } from "./concurrency.js";
 import {
   entryDeletableGuards,
   fireEntryRestored,
@@ -24,19 +24,21 @@ export const restore = base
       entryDeletableGuards(errors),
     );
 
-    if (existing.status !== "trash") {
-      throw errors.CONFLICT({ data: { reason: "not_trashed" } });
-    }
-
-    const [restored] = await context.db
-      .update(entries)
-      .set({ status: "draft" })
-      .where(eq(entries.id, existing.id))
-      .returning();
-    if (!restored) {
+    const result = await writeAsSystem(context.db, existing, (row) =>
+      row.status === "trash" ? { status: "draft" } : undefined,
+    );
+    if (!result) {
       throw errors.CONFLICT({ data: { reason: "restore_failed" } });
     }
+    if (!result.written) {
+      throw errors.CONFLICT({ data: { reason: "not_trashed" } });
+    }
+    const restored = result.row;
 
     await fireEntryRestored(context, restored);
-    return context.hooks.applyFilter("rpc:entry.restore:output", restored);
+    const output = await context.hooks.applyFilter(
+      "rpc:entry.restore:output",
+      restored,
+    );
+    return { ...output, etag: etagOf(restored.updatedAt) };
   });

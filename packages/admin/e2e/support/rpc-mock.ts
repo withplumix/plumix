@@ -16,6 +16,20 @@ export {
   withCapabilities,
 } from "@plumix/core/test/playwright";
 
+/** A stale-copy refusal, with the meta that revives `updatedAt` as a `Date`. */
+export function rpcEtagConflictBody(etag: string, updatedAt: Date): string {
+  return JSON.stringify({
+    json: {
+      defined: true,
+      code: "CONFLICT",
+      status: 409,
+      message: "Resource conflict",
+      data: { reason: "etag_mismatch", etag, updatedAt },
+    },
+    meta: [[1, "data", "updatedAt"]],
+  });
+}
+
 /**
  * Core's `rpcErrorBody` omits `defined`/`status`, which `isORPCErrorJson` needs
  * to decode a typed rejection.

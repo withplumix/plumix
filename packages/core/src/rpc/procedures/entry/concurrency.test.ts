@@ -1,50 +1,53 @@
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test } from "vitest";
 
-import { assertExpectedLiveUpdatedAt } from "./concurrency.js";
+import { eq } from "../../../db/index.js";
+import { entries } from "../../../db/schema/entries.js";
+import { createRpcHarness } from "../../../test/rpc.js";
+import { writeAsSystem } from "./concurrency.js";
 
-describe("assertExpectedLiveUpdatedAt", () => {
-  test("undefined expected token is a no-op (legacy callers)", () => {
-    const stale = vi.fn(() => {
-      throw new Error("should not be called");
+describe("writeAsSystem", () => {
+  test("a write that lands after the read sends it back to decide from the entry as it is now", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    await h.factory.trashed.create({
+      authorId: h.user.id,
+      slug: "system-write-bystander",
     });
-    expect(() =>
-      assertExpectedLiveUpdatedAt(undefined, new Date(), { stale }),
-    ).not.toThrow();
-    expect(stale).not.toHaveBeenCalled();
+    const read = await h.factory.draft.create({
+      authorId: h.user.id,
+      slug: "system-write-retry",
+      updatedAt: new Date("2100-01-01T00:00:00Z"),
+    });
+    await h.db
+      .update(entries)
+      .set({ status: "published" })
+      .where(eq(entries.id, read.id));
+    const decidedFrom: string[] = [];
+
+    const result = await writeAsSystem(h.db, read, (row) => {
+      decidedFrom.push(row.status);
+      return { status: "trash" };
+    });
+
+    expect(decidedFrom).toEqual(["draft", "published"]);
+    expect(result).toMatchObject({
+      written: true,
+      row: { status: "trash", updatedAt: new Date("2100-01-01T00:00:02Z") },
+    });
   });
 
-  test("matching timestamps are a no-op even when Date identity differs", () => {
-    const t = new Date("2026-01-01T12:00:00Z");
-    const stale = vi.fn(() => {
-      throw new Error("should not be called");
+  test("a decision to leave the entry alone writes nothing", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const read = await h.factory.trashed.create({
+      authorId: h.user.id,
+      slug: "system-write-noop",
+      updatedAt: new Date("2100-01-01T00:00:00Z"),
     });
-    expect(() =>
-      assertExpectedLiveUpdatedAt(t, new Date(t.getTime()), { stale }),
-    ).not.toThrow();
-    expect(stale).not.toHaveBeenCalled();
-  });
 
-  test("mismatched timestamps invoke the stale guard", () => {
-    const expected = new Date("2026-01-01T12:00:00Z");
-    const current = new Date("2026-01-01T12:00:01Z");
-    const stale = vi.fn(() => {
-      throw new Error("CONFLICT");
-    });
-    expect(() =>
-      assertExpectedLiveUpdatedAt(expected, current, { stale }),
-    ).toThrow("CONFLICT");
-    expect(stale).toHaveBeenCalledTimes(1);
-  });
+    const result = await writeAsSystem(h.db, read, () => undefined);
 
-  test("one-millisecond difference is a mismatch", () => {
-    const expected = new Date(1_700_000_000_000);
-    const current = new Date(1_700_000_000_001);
-    const stale = vi.fn(() => {
-      throw new Error("CONFLICT");
-    });
-    expect(() =>
-      assertExpectedLiveUpdatedAt(expected, current, { stale }),
-    ).toThrow("CONFLICT");
-    expect(stale).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({ written: false, row: { id: read.id } });
+    expect(
+      await h.db.query.entries.findFirst({ where: eq(entries.id, read.id) }),
+    ).toMatchObject({ updatedAt: new Date("2100-01-01T00:00:00Z") });
   });
 });

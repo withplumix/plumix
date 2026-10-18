@@ -1,3 +1,4 @@
+import { etagOf } from "../../../db/concurrency.js";
 import { listEntries } from "../../../entries/read-service.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
@@ -14,7 +15,11 @@ export const list = base
     );
     try {
       const rows = await listEntries(context, filtered);
-      return await context.hooks.applyFilter("rpc:entry.list:output", rows);
+      const output = await context.hooks.applyFilter(
+        "rpc:entry.list:output",
+        rows,
+      );
+      return output.map((row) => ({ ...row, etag: etagOf(row.updatedAt) }));
     } catch (error) {
       throw toRpcEntryReadError(error, errors) ?? error;
     }

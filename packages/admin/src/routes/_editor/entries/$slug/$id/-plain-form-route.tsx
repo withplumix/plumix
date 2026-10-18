@@ -2,8 +2,10 @@ import type { PostEditorValues } from "@/components/editor/post-editor-form.js";
 import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useReducer, useRef, useState } from "react";
 import { PlainFormLayout } from "@/components/editor/plain-form-layout.js";
+import { conflictDialog } from "@/editor/conflict-dialog.js";
+import { EntryConflictDialog } from "@/editor/EntryConflictDialog.js";
 import { diffMetaBag } from "@/editor/meta-diff.js";
 import { PreviewButton } from "@/editor/PreviewButton.js";
 import { useRevisionsTrigger } from "@/editor/revisions/use-revisions-trigger.js";
@@ -14,7 +16,11 @@ import { orpc } from "@/lib/orpc.js";
 import { entryTypeLabel } from "@/lib/type-labels.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import {
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 
 import type { ResolvedMeta } from "@plumix/core";
@@ -42,6 +48,8 @@ interface PlainFormRouteInnerProps {
   readonly id: number;
   readonly supportsRevisions: boolean;
   readonly capabilities: readonly string[];
+  /** Remount on the saved entry, after the author loads theirs. */
+  readonly onReseed: () => void;
 }
 
 export function PlainFormRouteInner({
@@ -49,6 +57,7 @@ export function PlainFormRouteInner({
   id,
   supportsRevisions,
   capabilities,
+  onReseed,
 }: PlainFormRouteInnerProps): ReactNode {
   const renderLabel = useLabel();
   const { data: entry } = useSuspenseQuery(
@@ -70,10 +79,20 @@ export function PlainFormRouteInner({
     readonly MetaFieldServerError[] | null
   >(null);
 
+  const [conflict, dispatchConflict] = useReducer(conflictDialog, {
+    open: false,
+  });
+  const [conflictMine, setConflictMine] = useState<PlainFormSnapshot | null>(
+    null,
+  );
   const autosave = useEntryAutosave({
     id,
-    entryType: entry.type,
-    liveUpdatedAt: entry.updatedAt,
+    etag: entry.etag,
+    onConflict: (next) => {
+      // The author's copy as it stood when the save was refused.
+      setConflictMine(valuesRef.current);
+      dispatchConflict({ type: "conflict", conflict: next });
+    },
     onError: (err) => {
       setServerError(describeRpcError(err, {}, M.saveFailed));
       setServerFieldErrors(extractMetaFieldErrors(err) ?? null);
@@ -125,6 +144,27 @@ export function PlainFormRouteInner({
     },
     [navigate],
   );
+  const entryQueryKey = orpc.entry.get.queryOptions({ input: { id } }).queryKey;
+  // The entry as the conflicting write left it, fetched fresh per conflict.
+  const theirsQuery = useQuery({
+    queryKey: ["entry.conflict", id, conflict.open && conflict.conflict.etag],
+    queryFn: () => orpc.entry.get.call({ id }),
+    enabled: conflict.open,
+  });
+  const handleKeepMine = (): void => {
+    if (!conflict.open) return;
+    dispatchConflict({ type: "keepMine" });
+    void autosave.keepMine(conflict.conflict.etag);
+  };
+  const handleLoadTheirs = (): void => {
+    dispatchConflict({ type: "loadTheirs" });
+    // Drop the author's unsaved edits, then remount on the saved entry.
+    autosave.cancel();
+    void queryClient
+      .invalidateQueries({ queryKey: entryQueryKey })
+      .then(onReseed);
+  };
+
   const { trigger: revisionsTrigger } = useRevisionsTrigger({
     entryId: id,
     enabled: supportsRevisions,
@@ -150,27 +190,45 @@ export function PlainFormRouteInner({
     isSaving || serverError === null ? null : renderLabel(serverError);
 
   return (
-    <PlainFormLayout
-      key={String(id)}
-      initialValues={initialValues}
-      metaBoxes={metaBoxes}
-      headline={headline}
-      isSubmitting={isSaving}
-      serverError={renderedError}
-      serverFieldErrors={serverFieldErrors}
-      onValuesChange={handleValuesChange}
-      revisionsTrigger={revisionsTrigger}
-      previewLinkAction={
-        entryType.isPublic ? (
-          <PreviewButton
-            mintPreviewLink={() => orpc.entry.createPreviewLink.call({ id })}
-          />
-        ) : undefined
-      }
-      onSubmit={(values) => {
-        handleValuesChange(values);
-        void autosave.flush();
-      }}
-    />
+    <>
+      <EntryConflictDialog
+        open={conflict.open}
+        changedAt={conflict.open ? conflict.conflict.updatedAt : null}
+        mineSnapshot={conflictMine}
+        theirsSnapshot={
+          theirsQuery.data
+            ? {
+                title: theirsQuery.data.title,
+                status: theirsQuery.data.status,
+                meta: theirsQuery.data.meta,
+              }
+            : null
+        }
+        onKeepMine={handleKeepMine}
+        onLoadTheirs={handleLoadTheirs}
+      />
+      <PlainFormLayout
+        key={String(id)}
+        initialValues={initialValues}
+        metaBoxes={metaBoxes}
+        headline={headline}
+        isSubmitting={isSaving}
+        serverError={renderedError}
+        serverFieldErrors={serverFieldErrors}
+        onValuesChange={handleValuesChange}
+        revisionsTrigger={revisionsTrigger}
+        previewLinkAction={
+          entryType.isPublic ? (
+            <PreviewButton
+              mintPreviewLink={() => orpc.entry.createPreviewLink.call({ id })}
+            />
+          ) : undefined
+        }
+        onSubmit={(values) => {
+          handleValuesChange(values);
+          void autosave.flush();
+        }}
+      />
+    </>
   );
 }
