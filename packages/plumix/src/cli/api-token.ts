@@ -17,7 +17,7 @@ export const remoteDeps = {
 };
 
 /** `path` under a site's origin, keeping any base path the origin carries. */
-export function siteUrl(origin: string, path: string): string {
+export function urlUnder(origin: string, path: string): string {
   const root = origin.endsWith("/") ? origin : `${origin}/`;
   return new URL(path, root).href;
 }
@@ -61,7 +61,6 @@ const TokenBody = v.union([
   v.object({ error: v.string() }),
 ]);
 
-/** RFC 8628 against the site's own device endpoints. */
 async function authorizeDevice(url: string): Promise<string> {
   const response = await postToSite(url, "_plumix/auth/device/code", {});
   const code = await readBody(response, DeviceCodeBody);
@@ -103,7 +102,7 @@ function postToSite(
   path: string,
   body: Readonly<Record<string, string>>,
 ): Promise<Response> {
-  return remoteDeps.fetch(siteUrl(url, path), {
+  return remoteDeps.fetch(urlUnder(url, path), {
     method: "POST",
     headers: {
       "content-type": "application/json",

@@ -1,22 +1,21 @@
 import * as v from "valibot";
 
 import type {
-  AppContext,
   CommandContext,
   CommandDefinition,
   PlumixApp,
-  PlumixHandler,
 } from "@plumix/core";
 import { loadOnce } from "@plumix/core/support";
 
-import { remoteDeps, resolveApiToken, siteUrl } from "../api-token.js";
+import { remoteDeps, resolveApiToken, urlUnder } from "../api-token.js";
 import { PlumixCliError } from "../errors.js";
 import { report } from "../report.js";
+import { messageOf, withSiteRun } from "../site-run.js";
 import { parseCommandArgs } from "../target-options.js";
 
 /**
- * Dynamic, like `meta`'s: the static graph of `src/cli/index.ts` must not put
- * core's root barrel on every `plumix` invocation.
+ * Dynamic: the static graph of `src/cli/index.ts` must not put core's root
+ * barrel on every `plumix` invocation.
  */
 const loadCore = loadOnce(() => import("@plumix/core"));
 
@@ -96,7 +95,7 @@ async function sendRemote(to: string, site: RemoteSite): Promise<void> {
     token: site.token,
     missing: () => PlumixCliError.mailRemoteTokenMissing(),
   });
-  const response = await remoteDeps.fetch(siteUrl(site.url, MAIL_TEST_PATH), {
+  const response = await remoteDeps.fetch(urlUnder(site.url, MAIL_TEST_PATH), {
     method: "POST",
     headers: {
       authorization: `Bearer ${token}`,
@@ -138,59 +137,27 @@ async function sendLocal(
   ctx: CommandContext<PlumixApp>,
   to: string,
 ): Promise<void> {
-  const { createRuntimeHandler, sendMailTest } = await loadCore();
-
-  // `nodeSqlite` resolves its path against the process cwd, so `--cwd` has to
-  // land before anything opens a database.
-  if (ctx.cwd !== process.cwd()) process.chdir(ctx.cwd);
-
-  const handler: PlumixHandler = createRuntimeHandler(ctx.app);
-  const { run } = handler;
-  if (run === undefined) {
-    throw PlumixCliError.mailSiteUnreachable({
-      detail: "this runtime's handler can't run work outside a request",
-      cause: undefined,
-    });
-  }
-  const runtime = ctx.runtimeMigrations;
-  if (runtime === undefined) {
-    throw PlumixCliError.mailSiteUnreachable({
-      detail: `the ${ctx.app.config.runtime.name} runtime does not say how to open its database from the command line`,
-      cause: undefined,
-    });
-  }
-  const opened = await runtime.openRun({
-    cwd: ctx.cwd,
-    config: ctx.app.config,
-    binding: undefined,
-    targetValues: {},
-  });
-  // Only a failure once the send starts is the mailer's.
-  const phase = { started: false };
-  try {
-    await run(
-      (appCtx: AppContext) => {
-        phase.started = true;
-        return sendMailTest(appCtx, { to, origin: "local" });
-      },
-      { env: opened.env },
-    );
-  } catch (cause) {
-    if (phase.started) throw await sendFailure(cause);
-    throw PlumixCliError.mailSiteUnreachable({
-      detail: messageOf(cause),
-      cause,
-    });
-  } finally {
-    try {
-      await handler.dispose?.();
-    } catch (error) {
-      report.detail(`Could not drain the handler: ${messageOf(error)}`);
-    }
-    await opened.close();
-  }
-  report.success(
-    `Sent mailTest to ${to} through the site's mailer (${opened.target.summary}).`,
+  const { sendMailTest } = await loadCore();
+  await withSiteRun(
+    ctx,
+    {
+      binding: undefined,
+      targetValues: {},
+      unreachable: (unreachable) =>
+        PlumixCliError.mailSiteUnreachable(unreachable),
+    },
+    async (run, opened) => {
+      await run(async (appCtx) => {
+        try {
+          await sendMailTest(appCtx, { to, origin: "local" });
+        } catch (cause) {
+          throw await sendFailure(cause);
+        }
+      });
+      report.success(
+        `Sent mailTest to ${to} through the site's mailer (${opened.target.summary}).`,
+      );
+    },
   );
 }
 
@@ -200,8 +167,4 @@ async function sendFailure(cause: unknown): Promise<PlumixCliError> {
     return PlumixCliError.mailNotConfigured();
   }
   return PlumixCliError.mailSendFailed({ message: messageOf(cause) });
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

@@ -37,7 +37,7 @@ import { badge, exitWithError, report } from "./report.js";
 const loadCore = loadOnce(() => import("@plumix/core"));
 
 /**
- * A built-in may read the whole app — `meta`, `mail` and `cron` build the site's
+ * A built-in may read the whole app — `meta` and `cron` build the site's
  * handler from it; a runtime's own commands see only its `CommandApp` part.
  */
 const BUILT_IN_COMMANDS: ReadonlyMap<
