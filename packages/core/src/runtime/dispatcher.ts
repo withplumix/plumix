@@ -24,6 +24,7 @@ import {
   isLoopbackOrigin,
 } from "../auth/csrf.js";
 import { matchAuthMethodRoute } from "../auth/declared-methods.js";
+import { loadAuthFlowRoutes } from "../auth/flow-routes-loader.js";
 import { withUser } from "../auth/with-user.js";
 import { stripBasePath, withBasePath } from "../base-path.js";
 import { declaredPageTags } from "../cdn/contract/page-tags.js";
@@ -39,6 +40,7 @@ import { requestStore } from "../context/stores.js";
 import { devErrorResponse } from "../dev/server/respond.js";
 import { isTrustedDevRequest } from "../dev/trust.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
+import { loadOnce } from "../load-once.js";
 import {
   listedEntryTypeNames,
   termPageEntryTypeNames,
@@ -104,14 +106,21 @@ function coreAnswersPlumixPath(pathname: string): boolean {
   );
 }
 
+const loadSyncSettle = loadOnce(() => import("./sync-settle.js"));
+
+const loadAuthMethodKernel = loadOnce(() => import("../auth/method-kernel.js"));
+
 /**
- * Lazy so the webauthn/oslo/arctic graph stays off the public render cold
- * start.
+ * Gated on the literal here and at each use, so a production build drops the
+ * dev routes with their loaders.
  */
-let authFlowRoutes: Promise<typeof AuthFlowRoutes> | undefined;
-function loadAuthFlowRoutes(): Promise<typeof AuthFlowRoutes> {
-  return (authFlowRoutes ??= import("../auth/flow-routes.js"));
-}
+const loadDebugRequests = process.env.PLUMIX_DEV
+  ? loadOnce(() => import("../dev/history-routes.js"))
+  : undefined;
+
+const loadDebugMail = process.env.PLUMIX_DEV
+  ? loadOnce(() => import("../dev/mail/routes.js"))
+  : undefined;
 
 /**
  * Filenames look like `index.html`, `chunk-abc.js`, `fonts/g.woff2` — paths
@@ -276,7 +285,7 @@ async function tryColdInterfaces(
 ): Promise<Response | null> {
   if (pathname === MCP_PATH) return withNoStore(await dispatchMcp(app, ctx));
   if (pathname === SYNC_SETTLE_PATH) {
-    const { handleSyncSettle } = await import("./sync-settle.js");
+    const { handleSyncSettle } = await loadSyncSettle();
     return withNoStore(await handleSyncSettle(ctx));
   }
   if (pathname === API_PREFIX || pathname.startsWith(`${API_PREFIX}/`)) {
@@ -339,21 +348,23 @@ async function tryPlumixRoutes(
   if (
     process.env.PLUMIX_DEV &&
     dev !== undefined &&
+    loadDebugRequests !== undefined &&
     isTrustedDevRequest(ctx.request) &&
     (pathname === DEBUG_REQUESTS_PREFIX ||
       pathname.startsWith(`${DEBUG_REQUESTS_PREFIX}/`))
   ) {
-    const { handleDebugRequests } = await import("../dev/history-routes.js");
+    const { handleDebugRequests } = await loadDebugRequests();
     return handleDebugRequests(ctx, dev);
   }
   if (
     process.env.PLUMIX_DEV &&
     dev !== undefined &&
+    loadDebugMail !== undefined &&
     isTrustedDevRequest(ctx.request) &&
     (pathname === DEBUG_MAIL_PREFIX ||
       pathname.startsWith(`${DEBUG_MAIL_PREFIX}/`))
   ) {
-    const { handleDebugMail } = await import("../dev/mail/routes.js");
+    const { handleDebugMail } = await loadDebugMail();
     return handleDebugMail(ctx, dev, {
       mails: app.mails,
       catalogs: app.mailCatalogs,
@@ -854,7 +865,7 @@ async function dispatchAuthMethodRoute(
   match: AuthMethodRouteMatch,
 ): Promise<Response> {
   if (match.kind === "method-not-allowed") return methodNotAllowed(match.allow);
-  const { createAuthMethodKernel } = await import("../auth/method-kernel.js");
+  const { createAuthMethodKernel } = await loadAuthMethodKernel();
   return servedWithoutAmbientSession(match.route, ctx, async (scoped) =>
     match.route.handler(
       createAuthMethodKernel({

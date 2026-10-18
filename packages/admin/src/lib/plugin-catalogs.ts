@@ -2,6 +2,7 @@ import type { Messages } from "@lingui/core";
 import { i18n } from "@lingui/core";
 
 import type { PluginI18nManifest } from "@plumix/core/manifest";
+import { loadOnce } from "@plumix/core/support";
 
 interface PluginCatalogLoaderInput {
   readonly manifest: PluginI18nManifest;
@@ -14,7 +15,7 @@ interface PluginCatalogLoaderInput {
  */
 export function createPluginCatalogLoader({
   manifest,
-  importCatalog = (url) => import(/* @vite-ignore */ url),
+  importCatalog = (url) => loadOnce(() => import(/* @vite-ignore */ url))(),
 }: PluginCatalogLoaderInput): (
   pluginId: string,
   locale: string,

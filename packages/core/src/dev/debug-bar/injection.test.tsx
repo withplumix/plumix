@@ -3,6 +3,12 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { createDispatcherHarness, DEV_ORIGIN } from "../../test/dispatcher.js";
 import { DEBUG_REQUESTS_PATH } from "../request-history/path.js";
 
+// Hoisted above the imports: the dev loaders are fixed when their module
+// loads, as a dev build's constant fixes them. Unstubbed once loaded, so each
+// test sets its own.
+vi.hoisted(() => vi.stubEnv("PLUMIX_DEV", "1"));
+vi.unstubAllEnvs();
+
 interface DebugRequestListShape {
   readonly id: string;
   readonly path: string;

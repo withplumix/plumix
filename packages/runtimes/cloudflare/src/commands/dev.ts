@@ -1,7 +1,7 @@
 import type { CommandDefinition } from "plumix";
 import { parsePortFlag } from "plumix/cli";
 
-import { createCloudflareVite } from "./vite.js";
+import { createCloudflareVite, loadVite } from "./vite.js";
 
 interface DevArgs {
   readonly port?: number;
@@ -45,7 +45,7 @@ export const devCommand: CommandDefinition = {
   deferApp: true,
   async run(ctx) {
     const { port, inspectorPort } = parseDevArgs(ctx.argv);
-    const vite = await import("vite");
+    const vite = await loadVite();
     const { plugins, root } = await createCloudflareVite(ctx, {
       inspectorPort,
     });

@@ -1,14 +1,9 @@
 import type { AuthMethodDefinition } from "../plugin/auth-method.js";
 import type { AuthFlowApp } from "./flow-app.js";
-import type * as AuthFlowRoutes from "./flow-routes.js";
 import { defineAuthMethod } from "../plugin/auth-method.js";
+import { loadAuthFlowRoutes as flows } from "./flow-routes-loader.js";
 import { MAGIC_LINK_ERROR_CODES } from "./magic-link/errors.js";
 import { OAUTH_ERROR_CODES } from "./oauth/errors.js";
-
-/** Lazy so declaring the methods loads none of the flow code. */
-function flows(): Promise<typeof AuthFlowRoutes> {
-  return import("./flow-routes.js");
-}
 
 /** Core's sign-in methods, their handlers closing over `app`. */
 export function coreAuthMethods(

@@ -9,6 +9,12 @@ import { createDispatcherHarness, DEV_ORIGIN } from "../../test/dispatcher.js";
 import { poCatalogs } from "../../test/po-catalog.js";
 import { DEBUG_REQUESTS_PATH } from "../request-history/path.js";
 
+// Hoisted above the imports: the dev loaders are fixed when their module
+// loads, as a dev build's constant fixes them. Unstubbed once loaded, so each
+// test sets its own.
+vi.hoisted(() => vi.stubEnv("PLUMIX_DEV", "1"));
+vi.unstubAllEnvs();
+
 /**
  * A Vite build empties the `PLUMIX_DEV` gate and tree-shakes all of this, so
  * these tests toggle it directly.

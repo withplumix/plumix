@@ -5,6 +5,7 @@ export {
   escapeLikePattern,
   isJsonArray,
   isJsonObject,
+  loadOnce,
   nonEmpty,
   normalizeBasePath,
   pageNotFound,

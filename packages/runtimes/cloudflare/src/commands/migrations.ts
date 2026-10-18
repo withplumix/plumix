@@ -10,6 +10,7 @@ import type {
 import type { GetPlatformProxyOptions, PlatformProxy } from "wrangler";
 import { drizzle } from "drizzle-orm/d1";
 import { migrate } from "drizzle-orm/d1/migrator";
+import { loadOnce } from "plumix/support";
 
 import type {
   D1BindingEntry,
@@ -232,6 +233,8 @@ export const migrations: RuntimeMigrations = {
   },
 };
 
+const loadWrangler = loadOnce(() => import("wrangler"));
+
 /**
  * Mutable seam for tests — substitute the collaborator, not the module path.
  * wrangler loads on first use: an optional peer, and a heavy one.
@@ -240,6 +243,5 @@ export const migrationsDeps = {
   loadWranglerConfig,
   getPlatformProxy: async (
     options: GetPlatformProxyOptions,
-  ): Promise<PlatformProxy> =>
-    (await import("wrangler")).getPlatformProxy(options),
+  ): Promise<PlatformProxy> => (await loadWrangler()).getPlatformProxy(options),
 };

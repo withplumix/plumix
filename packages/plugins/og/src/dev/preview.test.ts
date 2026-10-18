@@ -1,10 +1,16 @@
 import { memoryStorage } from "plumix/runtime";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { cardKey } from "../card-key.js";
 import { card } from "../card.js";
 import { createFakeRenderer } from "../test/fake-renderer.js";
 import { createHarness, DEV_ORIGIN } from "../test/harness.js";
+
+// Hoisted above the imports: the dev loaders are fixed when their module
+// loads, as a dev build's constant fixes them. Unstubbed once loaded, so each
+// test sets its own.
+vi.hoisted(() => vi.stubEnv("PLUMIX_DEV", "1"));
+vi.unstubAllEnvs();
 
 const PREVIEW = `${DEV_ORIGIN}/_plumix/og/preview`;
 

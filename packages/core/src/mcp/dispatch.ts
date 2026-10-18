@@ -1,5 +1,6 @@
 import type { AppContext } from "../context/app-context.js";
 import { authenticateBearer } from "../auth/bearer.js";
+import { loadOnce } from "../load-once.js";
 import {
   forbidden,
   methodNotAllowed,
@@ -7,6 +8,12 @@ import {
 } from "../runtime/contract/http.js";
 import { resolveMcpDevTrust } from "./dev-trust.js";
 import { buildMcpToolRegistry } from "./registry.js";
+
+const loadMcpServer = loadOnce(() => import("./server.js"));
+
+const loadMcpTransport = loadOnce(
+  () => import("@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js"),
+);
 
 /** The MCP entry point, as `PlumixApp.loadMcpHandler` resolves it. */
 export type McpHandler = (ctx: AppContext) => Promise<Response>;
@@ -32,9 +39,8 @@ export async function handleMcpRequest(ctx: AppContext): Promise<Response> {
 
   const tools = buildMcpToolRegistry(toolCtx.plugins);
 
-  const { buildMcpServer } = await import("./server.js");
-  const { WebStandardStreamableHTTPServerTransport } =
-    await import("@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js");
+  const { buildMcpServer } = await loadMcpServer();
+  const { WebStandardStreamableHTTPServerTransport } = await loadMcpTransport();
 
   const server = buildMcpServer(toolCtx, tools);
   const transport = new WebStandardStreamableHTTPServerTransport({

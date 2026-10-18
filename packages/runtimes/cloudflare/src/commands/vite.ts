@@ -1,7 +1,15 @@
 import type { CommandContext } from "plumix";
 import type { Plugin } from "vite";
+import { loadOnce } from "plumix/support";
 
 import { workersCaching } from "./workers-caching.js";
+
+/** Loaded on first use, so a command that never builds skips Vite. */
+export const loadVite = loadOnce(() => import("vite"));
+
+export const loadPlumixVite = loadOnce(() => import("plumix/vite"));
+
+const loadCloudflarePlugin = loadOnce(() => import("@cloudflare/vite-plugin"));
 
 export async function createCloudflareVite(
   ctx: CommandContext,
@@ -14,8 +22,8 @@ export async function createCloudflareVite(
     readonly inspectorPort?: number;
   } = {},
 ): Promise<{ plugins: Plugin[]; root: string }> {
-  const { emitPlumixSources, plumix } = await import("plumix/vite");
-  const { cloudflare } = await import("@cloudflare/vite-plugin");
+  const { emitPlumixSources, plumix } = await loadPlumixVite();
+  const { cloudflare } = await loadCloudflarePlugin();
 
   // Pre-emit .plumix/worker.ts so @cloudflare/vite-plugin's early
   // wrangler.jsonc validation finds the `main` file.

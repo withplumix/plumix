@@ -4,6 +4,7 @@ import {
   PLUGIN_I18N_SLOT,
   pluginAdminEntryPath,
 } from "plumix/plugin";
+import { loadOnce } from "plumix/support";
 
 // Side-effect imports keep these augmentations in the declaration graph; tsc
 // drops value-only edges.
@@ -34,6 +35,14 @@ import { compileThemeTokens } from "./tokens.js";
  * per-site admin bundle.
  */
 const ADMIN_ENTRY_PATH = pluginAdminEntryPath("@plumix/plugin-og");
+
+/**
+ * Gated on the literal here and at its use, so a production build drops the
+ * dev surfaces with their loader.
+ */
+const loadDevSurfaces = process.env.PLUMIX_DEV
+  ? loadOnce(() => import("./dev/index.js"))
+  : undefined;
 
 export type {
   CardArgs,
@@ -190,8 +199,8 @@ export function og(options: OgPluginOptions = {}): PluginDescriptor {
           inputs: inputs(),
         }),
       );
-      if (process.env.PLUMIX_DEV) {
-        const { registerDevSurfaces } = await import("./dev/index.js");
+      if (process.env.PLUMIX_DEV && loadDevSurfaces !== undefined) {
+        const { registerDevSurfaces } = await loadDevSurfaces();
         registerDevSurfaces(ctx, { renderer, cards, inputs });
       }
     },

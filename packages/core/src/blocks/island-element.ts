@@ -6,6 +6,7 @@ import type { JsonObject } from "../json.js";
 import type { IslandPageMode } from "./island-mode.js";
 import type { IslandRoot, MountOptions } from "./island-renderer.js";
 import type { SerializedProps } from "./serialize.js";
+import { loadOnce } from "../load-once.js";
 import { islandStrategy } from "./island-global.js";
 import { importWithRetry } from "./island-import.js";
 import {
@@ -290,9 +291,12 @@ export class PlumixIslandElement extends HTMLElement {
  */
 type ModuleNamespace = Readonly<Record<string, unknown>>;
 
-/** The URL comes off the page at runtime, so Vite has nothing to analyze. */
+/**
+ * The URL comes off the page at runtime, so Vite has nothing to analyze. A
+ * loader per call: the browser's module map already holds one module per URL.
+ */
 function dynamicImport(url: string): Promise<ModuleNamespace> {
-  return import(/* @vite-ignore */ url);
+  return loadOnce(() => import(/* @vite-ignore */ url))();
 }
 
 /**
