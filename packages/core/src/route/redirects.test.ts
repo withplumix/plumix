@@ -139,6 +139,22 @@ describe("matchRedirect", () => {
     });
   });
 
+  // A global or sticky RegExp advances `lastIndex` on every match, so reused
+  // as is it would miss every other request.
+  test.each([
+    ["global", /^\/products\/(\d+)$/g],
+    ["sticky", /^\/products\/(\d+)$/y],
+  ])("a %s RegExp `from` matches on every request", (_, from) => {
+    const compiled = compileRedirects([{ from, to: "/shop/$1" }]);
+    for (const id of ["1", "2", "3"]) {
+      expect(matchRedirect(at(`/products/${id}`), compiled)).toEqual({
+        kind: "redirect",
+        location: `/shop/${id}`,
+        status: 301,
+      });
+    }
+  });
+
   test("a lower `priority` rule wins even when listed later", () => {
     const compiled = compileRedirects([
       { from: "/x", to: "/loses", priority: 30 },
