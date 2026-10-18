@@ -176,7 +176,6 @@ export function parseDumpLine(
   }
   return {
     table,
-    // The lengths match, so every column has its value.
     row: Object.fromEntries(
       columns.map((column, i) => [column, values[i] as SyncValue]),
     ),

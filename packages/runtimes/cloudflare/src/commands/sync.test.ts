@@ -62,6 +62,8 @@ beforeAll(async () => {
 
 afterEach(async () => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
   for (const { dir, proxy } of opened.splice(0)) {
     await proxy.dispose();
     rmSync(dir, { recursive: true, force: true });
@@ -599,9 +601,8 @@ describe("cloudflare sync — a plugin's scope", { timeout: 30_000 }, () => {
     const local = await localState();
     const remote = await localState();
     reuseProxies([local, remote]);
-    for (const state of [local, remote]) {
-      await (state.proxy.env.DB as D1Database).exec(NOTES);
-    }
+    await (local.proxy.env.DB as D1Database).exec(NOTES);
+    await (remote.proxy.env.DB as D1Database).exec(NOTES);
     await seedPost(local, "noted");
     await (local.proxy.env.DB as D1Database).exec(
       "INSERT INTO plugin_notes (id, entry_id, body) VALUES (7, 1, 'a note');",
@@ -722,9 +723,11 @@ describe("cloudflare sync — the deployed end", { timeout: 30_000 }, () => {
   test("its settle runs inside the deployed site at --url", async () => {
     captureReport();
     const { project } = await deployedEnds();
-    const settle = vi
-      .spyOn(syncDeps, "settleDeployedSite")
-      .mockResolvedValue({ cdn: "purged", failures: [] });
+    vi.stubEnv("PLUMIX_API_TOKEN", "pat_site");
+    const fetched = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(Response.json({ cdn: "purged", failures: [] }));
+    vi.stubGlobal("fetch", fetched);
     const remote = await sync.open(
       openOptions(project.dir, "remote", { production: true }),
     );
@@ -736,10 +739,16 @@ describe("cloudflare sync — the deployed end", { timeout: 30_000 }, () => {
     await remote.close();
 
     expect(settled).toEqual({ cdn: "purged", failures: [] });
-    expect(settle).toHaveBeenCalledWith("https://example.com", {
-      scopes: ["content"],
-      direction: "push",
-    });
+    expect(fetched).toHaveBeenCalledWith(
+      "https://example.com/_plumix/api/v1/system/sync/settle",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          authorization: "Bearer pat_site",
+        }) as unknown,
+        body: JSON.stringify({ scopes: ["content"], direction: "push" }),
+      }),
+    );
   });
 });
 

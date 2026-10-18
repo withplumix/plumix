@@ -271,7 +271,7 @@ function syncEnd(parts: EndParts): SyncEnd {
     },
     settle(event) {
       if (remote) {
-        return syncDeps.settleDeployedSite(options.url ?? "", event);
+        return settleDeployedSite(options.url ?? "", event);
       }
       return settleInSite(options.config, env, event);
     },
@@ -338,7 +338,6 @@ export const syncDeps = {
   wrangler: async (cwd: string, args: readonly string[]): Promise<void> => {
     await promisify(execFile)("wrangler", [...args], { cwd });
   },
-  settleDeployedSite,
   report: (line: string): void => {
     process.stderr.write(`${line}\n`);
   },
