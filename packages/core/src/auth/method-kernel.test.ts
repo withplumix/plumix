@@ -101,13 +101,12 @@ function formPostStart(
 
 describe("a plugin's sign-in method", () => {
   test("signs a user in on an allowlisted domain", async () => {
-    const h = await createDispatcherHarness({ config: fixtureSite() });
-    await h.seedUser("admin");
-    await h.factory.allowedDomain.create({
-      domain: "example.com",
-      defaultRole: "author",
-      isEnabled: true,
+    const h = await createDispatcherHarness({
+      config: fixtureSite({
+        auth: { allowedDomains: { "example.com": "author" } },
+      }),
     });
+    await h.seedUser("admin");
 
     const response = await h.dispatch(fetchStart("alice@example.com"));
 

@@ -229,6 +229,122 @@ msgstr ""
 #~ msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.submit.idle"
+#~ msgstr "添加"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.title"
+#~ msgstr "添加域名"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.submit.pending"
+#~ msgstr "添加中…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.title"
+#~ msgstr "允许的域名"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+#~ msgid "core.adminNav.item.allowedDomains"
+#~ msgstr "允许的域名"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.row.deleteCancel"
+#~ msgstr "取消"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.list.title"
+#~ msgstr "已配置的域名"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.row.deleteConfirm"
+#~ msgstr "确认删除"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/-errors.ts
+#~ msgid "allowedDomains.error.fallback"
+#~ msgstr "无法保存域名。请重试。"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.defaultRole.label"
+#~ msgstr "默认角色"
+
+#. domain: the hostname being removed from the allowlist
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.row.deleteAria"
+#~ msgstr "删除 {domain}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.row.disabled"
+#~ msgstr "已停用"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.domain.label"
+#~ msgstr "域名"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+#~ msgid "core.adminNav.keyword.domains"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.description"
+#~ msgstr "OAuth 注册允许的电子邮箱域名。新 OAuth 账户将使用此处设置的角色创建。已停用的行会拒绝注册，但保留其角色映射。"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.row.enabled"
+#~ msgstr "已启用"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.domain.invalid"
+#~ msgstr "输入有效的主机名（例如 example.com）。"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.placeholder"
+#~ msgstr "example.com"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.list.loading"
+#~ msgstr "加载中…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.list.empty"
+#~ msgstr "未配置域名。OAuth 注册将关闭，直到至少添加一个已启用的域名。"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+#~ msgid "core.adminNav.keyword.signups"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/-errors.ts
+#~ msgid "allowedDomains.error.domainExists"
+#~ msgstr "此域名已配置。"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.description"
+#~ msgstr "仅使用裸域名 — 不含协议,不含路径。"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — 子项无法被选为父项。"
@@ -485,11 +601,6 @@ msgid "profile.sessions.title"
 msgstr "活跃会话"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.submit.idle"
-msgstr "添加"
-
-#. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.addNewItem"
 msgstr "添加"
@@ -513,11 +624,6 @@ msgstr "再添加一个"
 #: src/lib/meta-field-i18n.ts
 msgid "metaField.minRows"
 msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.title"
-msgstr "添加域名"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
@@ -554,11 +660,6 @@ msgstr "添加行"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.added"
 msgstr "添加于 {date}"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.submit.pending"
-msgstr "添加中…"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
@@ -604,16 +705,6 @@ msgstr "所有作者"
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.roleFilter.all"
 msgstr "所有角色"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.title"
-msgstr "允许的域名"
-
-#. js-lingui-explicit-id
-#: src/lib/core-nav-i18n.ts
-msgid "core.adminNav.item.allowedDomains"
-msgstr "允许的域名"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -738,11 +829,6 @@ msgstr "取消"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.cancel"
-msgstr "取消"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.row.deleteCancel"
 msgstr "取消"
 
 #. js-lingui-explicit-id
@@ -891,11 +977,6 @@ msgid "core.adminNav.keyword.configuration"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.list.title"
-msgstr "已配置的域名"
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.confirm"
 msgstr "确认"
@@ -905,11 +986,6 @@ msgstr "确认"
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.confirmTitle"
 msgstr "确认 \"{userCode}\""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.row.deleteConfirm"
-msgstr "确认删除"
 
 #. email: the user account being deleted
 #. js-lingui-explicit-id
@@ -1186,11 +1262,6 @@ msgid "terms.edit.error.saveFallback"
 msgstr "无法保存更改。请重试。"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/-errors.ts
-msgid "allowedDomains.error.fallback"
-msgstr "无法保存域名。请重试。"
-
-#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.toast.autosaveFailed"
 msgstr ""
@@ -1301,20 +1372,9 @@ msgid "core.adminNav.item.dashboard"
 msgstr "仪表板"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.defaultRole.label"
-msgstr "默认角色"
-
-#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.delete.button"
 msgstr "删除"
-
-#. domain: the hostname being removed from the allowlist
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.row.deleteAria"
-msgstr "删除 {domain}"
 
 #. termName: the taxonomy term being deleted
 #. js-lingui-explicit-id
@@ -1455,11 +1515,6 @@ msgid "users.list.row.disabled"
 msgstr "已停用"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.row.disabled"
-msgstr "已停用"
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.status.description.disabled"
 msgstr "停用的账户无法登录。重新激活会恢复访问权限；Passkey 仍保持已注册。"
@@ -1478,16 +1533,6 @@ msgstr "停用中…"
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.discarding"
 msgstr "丢弃中…"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.domain.label"
-msgstr "域名"
-
-#. js-lingui-explicit-id
-#: src/lib/core-nav-i18n.ts
-msgid "core.adminNav.keyword.domains"
-msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -1614,11 +1659,6 @@ msgid "login.emailChange.success"
 msgstr "电子邮箱已确认。使用新地址登录。"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.description"
-msgstr "OAuth 注册允许的电子邮箱域名。新 OAuth 账户将使用此处设置的角色创建。已停用的行会拒绝注册，但保留其角色映射。"
-
-#. js-lingui-explicit-id
 #: src/lib/core-validation-i18n.ts
 msgid "validate.email.maxLength"
 msgstr "电子邮箱过长。"
@@ -1632,11 +1672,6 @@ msgstr "通过电子邮件发送链接"
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.notConfigured"
 msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.row.enabled"
-msgstr "已启用"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -1682,11 +1717,6 @@ msgstr ""
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.invalid"
 msgstr "输入有效的电子邮箱地址。"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.domain.invalid"
-msgstr "输入有效的主机名（例如 example.com）。"
 
 #. js-lingui-explicit-id
 #: src/lib/meta-field-i18n.ts
@@ -1739,11 +1769,6 @@ msgstr "entry:post:read\n"
 msgid "apiTokens.create.capabilities.placeholder"
 msgstr "entry:post:read\n"
 "entry:post:edit_own"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.placeholder"
-msgstr "example.com"
 
 #. js-lingui-explicit-id
 #: src/components/editor/document-settings.tsx
@@ -2056,11 +2081,6 @@ msgid "editor.stale.loading"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.list.loading"
-msgstr "加载中…"
-
-#. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.loadingItems"
 msgstr "加载中…"
@@ -2340,11 +2360,6 @@ msgstr "无权限"
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.empty.title"
 msgstr "暂无内容类型"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.list.empty"
-msgstr "未配置域名。OAuth 注册将关闭，直到至少添加一个已启用的域名。"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
@@ -3220,11 +3235,6 @@ msgid "profile.sessions.revoke.pending"
 msgstr "登出中…"
 
 #. js-lingui-explicit-id
-#: src/lib/core-nav-i18n.ts
-msgid "core.adminNav.keyword.signups"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/lib/core-settings-i18n.ts
 msgid "core.settings.site.label"
 msgstr "站点标识"
@@ -3430,11 +3440,6 @@ msgstr "操作失败，请重试。"
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.bulk.toastFailed"
 msgstr "操作失败，请重试。"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/-errors.ts
-msgid "allowedDomains.error.domainExists"
-msgstr "此域名已配置。"
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
@@ -3846,11 +3851,6 @@ msgstr ""
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.useMine"
 msgstr "使用我的"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.description"
-msgstr "仅使用裸域名 — 不含协议,不含路径。"
 
 #. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx

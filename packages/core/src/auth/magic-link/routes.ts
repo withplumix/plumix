@@ -59,9 +59,8 @@ export async function handleMagicLinkRequest(
       ttlSeconds: app.config.auth.magicLink.ttlSeconds,
       logger: ctx.logger,
       bootstrapAllowed: ctx.bootstrapAllowed,
-      // Open self-signup lets any valid email register; the verify route
-      // grants `auth.selfSignup.defaultRole`. Absent = domain-gated.
-      selfSignupOpen: app.config.auth.selfSignup !== undefined,
+      allowedDomains: app.config.auth.allowedDomains,
+      defaultRole: app.config.auth.selfSignup?.defaultRole,
     });
   } catch (error) {
     // Respond identically: a distinct error code would let an attacker

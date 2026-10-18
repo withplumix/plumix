@@ -1,12 +1,11 @@
 import type { Db, Logger } from "../../context/app-context.js";
-import type { User } from "../../db/schema/users.js";
+import type { User, UserRole } from "../../db/schema/users.js";
 import type { MailSender } from "../../mail/contract/registry.js";
 import { withBasePath } from "../../base-path.js";
 import { and, eq, gte } from "../../db/index.js";
-import { allowedDomains } from "../../db/schema/allowed_domains.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { users } from "../../db/schema/users.js";
-import { extractDomain } from "../identity.js";
+import { signupRole } from "../signup-role.js";
 import { generateToken, hashToken } from "../tokens.js";
 
 /**
@@ -42,7 +41,10 @@ interface RequestMagicLinkInput {
    */
   readonly redirectTo?: string;
   readonly bootstrapAllowed?: boolean;
-  readonly selfSignupOpen?: boolean;
+  /** `auth.allowedDomains`: who may sign up, and at which role. */
+  readonly allowedDomains?: Readonly<Record<string, UserRole>>;
+  /** `auth.selfSignup.defaultRole`: opens signup to every other domain. */
+  readonly defaultRole?: UserRole;
 }
 
 /**
@@ -74,19 +76,9 @@ export async function requestMagicLink(
     return;
   }
 
-  const domain = extractDomain(email);
-  if (!domain) {
+  if (signupRole({ ...input, email }) === undefined) {
     await timingDelay();
     return;
-  }
-  if (!input.selfSignupOpen) {
-    const allowed = await db.query.allowedDomains.findFirst({
-      where: eq(allowedDomains.domain, domain),
-    });
-    if (!allowed?.isEnabled) {
-      await timingDelay();
-      return;
-    }
   }
   if (!input.bootstrapAllowed) {
     const userCount = await db.$count(users);

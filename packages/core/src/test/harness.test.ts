@@ -46,7 +46,6 @@ describe("applyCoreTestSchema", () => {
     await applyCoreTestSchema(db);
 
     expect(await objectNames(db, "table")).toEqual([
-      "allowed_domains",
       "api_tokens",
       "auth_tokens",
       "credentials",

@@ -54,11 +54,10 @@ describe("isBlockedInDemo", () => {
     "/_plumix/rpc/user/setLocale",
     "/_plumix/rpc/user/pendingEmailChange",
     "/_plumix/rpc/user/cancelEmailChange",
-    // Sessions and allowed domains are rows in the same sandbox.
+    // Sessions are rows in the same sandbox.
     "/_plumix/rpc/auth/sessions/list",
     "/_plumix/rpc/auth/sessions/revoke",
     "/_plumix/rpc/auth/sessions/revokeOthers",
-    "/_plumix/rpc/auth/allowedDomains/create",
     // Signing out clears a cookie; the demo session survives it.
     "/_plumix/auth/signout",
     // Content editing — the whole point of the demo.

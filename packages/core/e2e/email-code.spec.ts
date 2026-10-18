@@ -1,7 +1,4 @@
-import { resolve } from "node:path";
-
-import { factoriesFor } from "@plumix/core/test";
-import { expect, openPlaygroundDb, test } from "@plumix/core/test/playwright";
+import { expect, test } from "@plumix/core/test/playwright";
 
 // The playground's `email-code` method declares this mail through `plumix`,
 // which core's typecheck cannot read, so the e2e names its props here.
@@ -15,15 +12,6 @@ declare module "../src/mail/contract/registry.js" {
 test.use({ storageState: { cookies: [], origins: [] } });
 
 const ALLOWED_DOMAIN = "allowed.test";
-
-// The baseline is restored once per worker, so the domain is seeded once too.
-test.beforeAll(async () => {
-  const db = await openPlaygroundDb({
-    cwd: resolve(process.cwd(), "playground"),
-  });
-  await factoriesFor(db).allowedDomain.create({ domain: ALLOWED_DOMAIN });
-  db.$client.close();
-});
 
 test.describe("the email-code method from a theme island", () => {
   test("signs a new reader on an allowed domain in, and lands on /account", async ({

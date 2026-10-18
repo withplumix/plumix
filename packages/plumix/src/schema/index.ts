@@ -4,7 +4,6 @@ export type * from "@plumix/core/schema";
 
 // The tables, and the vocabularies their columns store.
 export {
-  allowedDomains,
   apiTokens,
   AUTH_TOKEN_TYPES,
   authTokens,
@@ -29,8 +28,6 @@ export {
 
 // The valibot row schemas generated from each table.
 export {
-  allowedDomainInsertSchema,
-  allowedDomainSelectSchema,
   apiTokenInsertSchema,
   apiTokenSelectSchema,
   authTokenInsertSchema,

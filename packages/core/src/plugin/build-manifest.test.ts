@@ -181,10 +181,7 @@ describe("buildManifest", () => {
     const overview = manifest.adminNav.find((g) => g.id === "overview");
     expect(overview?.items.map((i) => i.to)).toEqual(["/"]);
     const management = manifest.adminNav.find((g) => g.id === "management");
-    expect(management?.items.map((i) => i.to)).toEqual([
-      "/users",
-      "/allowed-domains",
-    ]);
+    expect(management?.items.map((i) => i.to)).toEqual(["/users"]);
   });
 
   test("lists Settings under Management only when a settings page is registered", async () => {
@@ -195,11 +192,7 @@ describe("buildManifest", () => {
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const manifest = buildManifest(registry);
     const management = manifest.adminNav.find((g) => g.id === "management");
-    expect(management?.items.map((i) => i.to)).toEqual([
-      "/users",
-      "/allowed-domains",
-      "/settings",
-    ]);
+    expect(management?.items.map((i) => i.to)).toEqual(["/users", "/settings"]);
   });
 
   test("lists Mailer under Management only when the mailer slot is configured", () => {
@@ -207,11 +200,7 @@ describe("buildManifest", () => {
       configuredSlots: { ...configuredSlotsOf({}), mailer: true },
     });
     const management = manifest.adminNav.find((g) => g.id === "management");
-    expect(management?.items.map((i) => i.to)).toEqual([
-      "/users",
-      "/allowed-domains",
-      "/mailer",
-    ]);
+    expect(management?.items.map((i) => i.to)).toEqual(["/users", "/mailer"]);
   });
 
   test("drops Mailer when the deployment refuses email delivery, even with a mailer slot", () => {
@@ -220,10 +209,7 @@ describe("buildManifest", () => {
       refusedAdminAreas: ["emailDelivery"],
     });
     const management = manifest.adminNav.find((g) => g.id === "management");
-    expect(management?.items.map((i) => i.to)).toEqual([
-      "/users",
-      "/allowed-domains",
-    ]);
+    expect(management?.items.map((i) => i.to)).toEqual(["/users"]);
   });
 
   test("carries the admin areas the deployment refuses", () => {

@@ -5,10 +5,6 @@ import type {
   MintedApiToken,
 } from "../auth/api-tokens.js";
 import type { Db } from "../context/app-context.js";
-import type {
-  AllowedDomain,
-  NewAllowedDomain,
-} from "../db/schema/allowed_domains.js";
 import type { AuthToken, NewAuthToken } from "../db/schema/auth_tokens.js";
 import type {
   Credential,
@@ -28,7 +24,6 @@ import type { NewTerm, Term } from "../db/schema/terms.js";
 import type { NewUser, User } from "../db/schema/users.js";
 import { createApiToken } from "../auth/api-tokens.js";
 import { generateToken, hashToken } from "../auth/tokens.js";
-import { allowedDomains } from "../db/schema/allowed_domains.js";
 import { authTokens } from "../db/schema/auth_tokens.js";
 import { credentials } from "../db/schema/credentials.js";
 import { deviceCodes } from "../db/schema/device_codes.js";
@@ -299,26 +294,6 @@ export const entryTermFactory = Factory.define<
   };
 });
 
-/** Allowed-domain entry for tests that exercise domain-gated self-signup. */
-export const allowedDomainFactory = Factory.define<
-  NewAllowedDomain,
-  DbTransient,
-  AllowedDomain
->(({ sequence, transientParams, onCreate, params }) => {
-  onCreate(async (attrs) => {
-    const db = requireDb(transientParams);
-    const [row] = await db.insert(allowedDomains).values(attrs).returning();
-    if (!row) throw new Error("allowedDomainFactory: insert returned no row");
-    return row;
-  });
-
-  return {
-    domain: params.domain ?? `example-${sequence}-${processToken}.test`,
-    defaultRole: params.defaultRole ?? "subscriber",
-    isEnabled: params.isEnabled ?? true,
-  };
-});
-
 /**
  * Pre-seeded credential for tests that exercise "already registered" flows.
  * Callers must supply userId and publicKey; everything else has a sensible
@@ -516,7 +491,6 @@ export interface Factories {
   readonly session: typeof sessionFactory;
   readonly setting: typeof settingFactory;
   readonly entryTerm: typeof entryTermFactory;
-  readonly allowedDomain: typeof allowedDomainFactory;
   readonly apiToken: typeof apiTokenFactory;
   readonly authToken: typeof authTokenFactory;
   readonly oauthAccount: typeof oauthAccountFactory;
@@ -544,7 +518,6 @@ export function factoriesFor(db: Db): Factories {
     session: sessionFactory.transient({ db }),
     setting: settingFactory.transient({ db }),
     entryTerm: entryTermFactory.transient({ db }),
-    allowedDomain: allowedDomainFactory.transient({ db }),
     apiToken: apiTokenFactory.transient({ db }),
     authToken: authTokenFactory.transient({ db }),
     oauthAccount: oauthAccountFactory.transient({ db }),

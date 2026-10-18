@@ -60,7 +60,7 @@ export interface CfAccessConfig {
 }
 
 /**
- * Bypasses `allowed_domains`: the Access policy is the gate. Returns `null`
+ * Bypasses `auth.allowedDomains`: the Access policy is the gate. Returns `null`
  * rather than 401 on any failed check. Throws at config time on a malformed
  * `teamDomain` or empty `audience`.
  */
@@ -106,9 +106,8 @@ export function cfAccess(config: CfAccessConfig): RequestAuthenticator {
           // CF Access forwards the JWT only after the IdP returned a verified
           // email.
           emailVerified: true,
-          // CF Access is the gate — the allowed_domains lookup is
-          // irrelevant. Operator-supplied defaultRole decides the role.
-          allowedDomainsGate: false,
+          // CF Access is the gate, so no allowlist: the operator-supplied
+          // defaultRole decides the role.
           defaultRole: config.defaultRole,
           bootstrapAllowed: config.bootstrapAllowed,
           meta: scope.startingUserMeta,

@@ -2,18 +2,19 @@ import type { Db } from "../context/app-context.js";
 import type { User, UserRole } from "../db/schema/users.js";
 import type { JsonObject } from "../json.js";
 import { and, eq, isUniqueConstraintError } from "../db/index.js";
-import { allowedDomains } from "../db/schema/allowed_domains.js";
 import { oauthAccounts } from "../db/schema/oauth_accounts.js";
 import { users } from "../db/schema/users.js";
 import { provisionUser } from "./bootstrap.js";
+import { signupRole } from "./signup-role.js";
+
+export { extractDomain } from "./signup-role.js";
 
 export type ExternalIdentityErrorCode =
   | "email_unverified"
   | "account_disabled"
   | "domain_not_allowed"
   | "registration_closed"
-  | "link_broken"
-  | "default_role_required";
+  | "link_broken";
 
 export class ExternalIdentityError extends Error {
   static {
@@ -52,13 +53,6 @@ export class ExternalIdentityError extends Error {
   static linkBroken(): ExternalIdentityError {
     return new ExternalIdentityError("link_broken", "link_broken");
   }
-
-  static defaultRoleRequired(): ExternalIdentityError {
-    return new ExternalIdentityError(
-      "default_role_required",
-      "resolveExternalIdentity: allowedDomainsGate=false requires an explicit defaultRole",
-    );
-  }
 }
 
 export interface ExternalIdentityInput {
@@ -71,13 +65,16 @@ export interface ExternalIdentityInput {
   readonly emailVerified: boolean;
   readonly name?: string | null;
   readonly avatarUrl?: string | null;
-  /** Required when `allowedDomainsGate` is `false`. */
-  readonly defaultRole?: UserRole;
   /**
-   * Defaults to `true`. Set `false` when an upstream IdP already gates who can
-   * sign in, and pass `defaultRole`.
+   * Lowercase email domain → the role a new user on it gets. Wins over
+   * `defaultRole`.
    */
-  readonly allowedDomainsGate?: boolean;
+  readonly allowedDomains?: Readonly<Record<string, UserRole>>;
+  /**
+   * The role a new user on an unlisted domain gets. Omit it and such a user is
+   * refused with `domain_not_allowed`.
+   */
+  readonly defaultRole?: UserRole;
   /**
    * Defaults to `false`, refusing the first user, because passkey is the
    * dedicated first-admin path.
@@ -175,7 +172,6 @@ async function resolveByEmail(
   db: Db,
   input: ExternalIdentityInput,
 ): Promise<ResolvedExternalUser> {
-  const allowedDomainsGate = input.allowedDomainsGate ?? true;
   const bootstrapAllowed = input.bootstrapAllowed ?? false;
 
   const existing = await db.query.users.findFirst({
@@ -206,16 +202,8 @@ async function resolveByEmail(
     }
   }
 
-  const role = allowedDomainsGate
-    ? await roleFromAllowedDomain(db, input.email)
-    : input.defaultRole;
-  if (role === undefined) {
-    // `allowedDomainsGate: false` requires an explicit defaultRole.
-    // Falling through with `undefined` would silently default the
-    // user to "subscriber" via the schema default — surfacing as a
-    // config bug instead.
-    throw ExternalIdentityError.defaultRoleRequired();
-  }
+  const role = signupRole(input);
+  if (role === undefined) throw ExternalIdentityError.domainNotAllowed();
 
   const { user } = await provisionUser(db, {
     email: input.email,
@@ -226,23 +214,4 @@ async function resolveByEmail(
     meta: input.meta,
   });
   return { user, created: true };
-}
-
-async function roleFromAllowedDomain(db: Db, email: string): Promise<UserRole> {
-  const domain = extractDomain(email);
-  if (!domain) throw ExternalIdentityError.domainNotAllowed();
-  const allowed = await db.query.allowedDomains.findFirst({
-    where: eq(allowedDomains.domain, domain),
-  });
-  if (!allowed?.isEnabled) {
-    throw ExternalIdentityError.domainNotAllowed();
-  }
-  return allowed.defaultRole;
-}
-
-/** Returns null, not a throw, for input not shaped like `local@domain`. */
-export function extractDomain(email: string): string | null {
-  const at = email.lastIndexOf("@");
-  if (at <= 0 || at === email.length - 1) return null;
-  return email.slice(at + 1).toLowerCase();
 }

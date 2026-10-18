@@ -167,7 +167,7 @@ async function proveEmail(
   app: AuthFlowApp,
   proof: EmailProof,
 ): Promise<ProvenAccount> {
-  const { selfSignup } = app.config.auth;
+  const { allowedDomains, selfSignup } = app.config.auth;
   const { user, created } = await resolveExternalIdentity(ctx.db, {
     email: proof.email,
     emailVerified: proof.emailVerified,
@@ -175,7 +175,7 @@ async function proveEmail(
     avatarUrl: proof.profile?.avatarUrl,
     providerAccount: proof.providerAccount,
     bootstrapAllowed: ctx.bootstrapAllowed,
-    allowedDomainsGate: selfSignup === undefined,
+    allowedDomains,
     defaultRole: selfSignup?.defaultRole,
     meta: startingMeta(listUserMetaFields(ctx.plugins)),
   });

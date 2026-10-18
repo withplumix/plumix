@@ -229,6 +229,122 @@ msgstr ""
 #~ msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.submit.idle"
+#~ msgstr "إضافة"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.title"
+#~ msgstr "إضافة نطاق"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.submit.pending"
+#~ msgstr "جارٍ الإضافة…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.title"
+#~ msgstr "النطاقات المسموح بها"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+#~ msgid "core.adminNav.item.allowedDomains"
+#~ msgstr "النطاقات المسموح بها"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.row.deleteCancel"
+#~ msgstr "إلغاء"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.list.title"
+#~ msgstr "النطاقات المُكوَّنة"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.row.deleteConfirm"
+#~ msgstr "تأكيد الحذف"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/-errors.ts
+#~ msgid "allowedDomains.error.fallback"
+#~ msgstr "تعذّر حفظ النطاق. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.defaultRole.label"
+#~ msgstr "الدور الافتراضي"
+
+#. domain: the hostname being removed from the allowlist
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.row.deleteAria"
+#~ msgstr "حذف {domain}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.row.disabled"
+#~ msgstr "معطّل"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.domain.label"
+#~ msgstr "النطاق"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+#~ msgid "core.adminNav.keyword.domains"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.description"
+#~ msgstr "نطاقات البريد المسموح بها للتسجيل عبر OAuth. تُنشأ حسابات OAuth الجديدة بالدور المعيّن هنا. الصفوف المعطّلة ترفض التسجيل لكنها تحتفظ بتعيين دورها."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.row.enabled"
+#~ msgstr "مُمكَّن"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.domain.invalid"
+#~ msgstr "أدخل اسم مضيف صالح (مثل example.com)."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.placeholder"
+#~ msgstr "example.com"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.list.loading"
+#~ msgstr "جارٍ التحميل…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.list.empty"
+#~ msgstr "لا توجد نطاقات مُكوَّنة. تسجيل OAuth مغلق حتى تُضاف نطاقات مفعّلة."
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+#~ msgid "core.adminNav.keyword.signups"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/-errors.ts
+#~ msgid "allowedDomains.error.domainExists"
+#~ msgstr "هذا النطاق مُكوَّن بالفعل."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+#~ msgid "allowedDomains.add.description"
+#~ msgstr "استخدم النطاق المجرد — بدون بروتوكول، بدون مسار."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — لا يمكن اختيار الأبناء كأب."
@@ -485,11 +601,6 @@ msgid "profile.sessions.title"
 msgstr "الجلسات النشطة"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.submit.idle"
-msgstr "إضافة"
-
-#. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.addNewItem"
 msgstr "إضافة"
@@ -513,11 +624,6 @@ msgstr "إضافة أخرى"
 #: src/lib/meta-field-i18n.ts
 msgid "metaField.minRows"
 msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.title"
-msgstr "إضافة نطاق"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
@@ -554,11 +660,6 @@ msgstr "إضافة صف"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.added"
 msgstr "أُضيف في {date}"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.submit.pending"
-msgstr "جارٍ الإضافة…"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
@@ -604,16 +705,6 @@ msgstr "كل المؤلفين"
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.roleFilter.all"
 msgstr "كل الأدوار"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.title"
-msgstr "النطاقات المسموح بها"
-
-#. js-lingui-explicit-id
-#: src/lib/core-nav-i18n.ts
-msgid "core.adminNav.item.allowedDomains"
-msgstr "النطاقات المسموح بها"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -738,11 +829,6 @@ msgstr "إلغاء"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.cancel"
-msgstr "إلغاء"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.row.deleteCancel"
 msgstr "إلغاء"
 
 #. js-lingui-explicit-id
@@ -891,11 +977,6 @@ msgid "core.adminNav.keyword.configuration"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.list.title"
-msgstr "النطاقات المُكوَّنة"
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.confirm"
 msgstr "تأكيد"
@@ -905,11 +986,6 @@ msgstr "تأكيد"
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.confirmTitle"
 msgstr "تأكيد \"{userCode}\""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.row.deleteConfirm"
-msgstr "تأكيد الحذف"
 
 #. email: the user account being deleted
 #. js-lingui-explicit-id
@@ -1186,11 +1262,6 @@ msgid "terms.edit.error.saveFallback"
 msgstr "تعذّر حفظ التغييرات. حاول مرة أخرى."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/-errors.ts
-msgid "allowedDomains.error.fallback"
-msgstr "تعذّر حفظ النطاق. حاول مرة أخرى."
-
-#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.toast.autosaveFailed"
 msgstr ""
@@ -1301,20 +1372,9 @@ msgid "core.adminNav.item.dashboard"
 msgstr "لوحة التحكم"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.defaultRole.label"
-msgstr "الدور الافتراضي"
-
-#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.delete.button"
 msgstr "حذف"
-
-#. domain: the hostname being removed from the allowlist
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.row.deleteAria"
-msgstr "حذف {domain}"
 
 #. termName: the taxonomy term being deleted
 #. js-lingui-explicit-id
@@ -1455,11 +1515,6 @@ msgid "users.list.row.disabled"
 msgstr "معطّل"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.row.disabled"
-msgstr "معطّل"
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.status.description.disabled"
 msgstr "الحسابات المعطّلة لا يمكنها تسجيل الدخول. إعادة التفعيل تستعيد الوصول؛ يبقى passkey الخاص بهم مسجلاً."
@@ -1478,16 +1533,6 @@ msgstr "جارٍ التعطيل…"
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.discarding"
 msgstr "جارٍ التجاهل…"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.domain.label"
-msgstr "النطاق"
-
-#. js-lingui-explicit-id
-#: src/lib/core-nav-i18n.ts
-msgid "core.adminNav.keyword.domains"
-msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -1614,11 +1659,6 @@ msgid "login.emailChange.success"
 msgstr "تم تأكيد البريد. سجّل الدخول بالعنوان الجديد."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.description"
-msgstr "نطاقات البريد المسموح بها للتسجيل عبر OAuth. تُنشأ حسابات OAuth الجديدة بالدور المعيّن هنا. الصفوف المعطّلة ترفض التسجيل لكنها تحتفظ بتعيين دورها."
-
-#. js-lingui-explicit-id
 #: src/lib/core-validation-i18n.ts
 msgid "validate.email.maxLength"
 msgstr "البريد الإلكتروني طويل جداً."
@@ -1632,11 +1672,6 @@ msgstr "أرسل لي رابطاً بالبريد"
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.notConfigured"
 msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.row.enabled"
-msgstr "مُمكَّن"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -1682,11 +1717,6 @@ msgstr ""
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.invalid"
 msgstr "أدخل بريداً إلكترونياً صالحاً."
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.domain.invalid"
-msgstr "أدخل اسم مضيف صالح (مثل example.com)."
 
 #. js-lingui-explicit-id
 #: src/lib/meta-field-i18n.ts
@@ -1739,11 +1769,6 @@ msgstr "entry:post:read\n"
 msgid "apiTokens.create.capabilities.placeholder"
 msgstr "entry:post:read\n"
 "entry:post:edit_own"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.placeholder"
-msgstr "example.com"
 
 #. js-lingui-explicit-id
 #: src/components/editor/document-settings.tsx
@@ -2056,11 +2081,6 @@ msgid "editor.stale.loading"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.list.loading"
-msgstr "جارٍ التحميل…"
-
-#. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.loadingItems"
 msgstr "جارٍ التحميل…"
@@ -2340,11 +2360,6 @@ msgstr "بدون قدرات"
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.empty.title"
 msgstr "لا أنواع محتوى بعد"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.list.empty"
-msgstr "لا توجد نطاقات مُكوَّنة. تسجيل OAuth مغلق حتى تُضاف نطاقات مفعّلة."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
@@ -3220,11 +3235,6 @@ msgid "profile.sessions.revoke.pending"
 msgstr "جارٍ تسجيل الخروج…"
 
 #. js-lingui-explicit-id
-#: src/lib/core-nav-i18n.ts
-msgid "core.adminNav.keyword.signups"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/lib/core-settings-i18n.ts
 msgid "core.settings.site.label"
 msgstr "هوية الموقع"
@@ -3430,11 +3440,6 @@ msgstr "لم ينجح ذلك — حاول مرة أخرى."
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.bulk.toastFailed"
 msgstr "لم ينجح ذلك — حاول مرة أخرى."
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/-errors.ts
-msgid "allowedDomains.error.domainExists"
-msgstr "هذا النطاق مُكوَّن بالفعل."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
@@ -3846,11 +3851,6 @@ msgstr ""
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.useMine"
 msgstr "استخدم مسودتي"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.add.description"
-msgstr "استخدم النطاق المجرد — بدون بروتوكول، بدون مسار."
 
 #. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx

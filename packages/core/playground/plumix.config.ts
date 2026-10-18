@@ -60,6 +60,8 @@ export default plumix({
   auth: auth({
     // The no-script sign-in page, where a form post's notice or error lands.
     loginPath: "/sign-in-no-script",
+    // The email-code e2e signs a new reader up on this domain.
+    allowedDomains: { "allowed.test": "subscriber" },
     passkey: {
       rpName: "Plumix — Core playground",
       ...deployOrigin,

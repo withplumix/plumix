@@ -409,14 +409,14 @@ describe("oauth callback route", () => {
 
   test("token exchange uses HTTP Basic Authorization for client credentials (RFC 6749 / Copenhagen Book)", async () => {
     const h = await createDispatcherHarness({
-      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+      config: {
+        auth: {
+          oauth: { providers: TEST_OAUTH },
+          allowedDomains: { "example.com": "subscriber" },
+        },
+      },
     });
     await h.seedUser("admin");
-    await h.factory.allowedDomain.create({
-      domain: "example.com",
-      defaultRole: "subscriber",
-      isEnabled: true,
-    });
     const state = await seedState(h, "github", "v-basic");
     const tokenCalls: { authorization: string | null; body: string | null }[] =
       [];
@@ -603,16 +603,16 @@ describe("oauth callback route", () => {
     expect(response.headers.get("location")).toBe("/");
   });
 
-  test("domain-gated signup creates a user with the domain's default role", async () => {
+  test("a listed domain's signup creates a user with its role", async () => {
     const h = await createDispatcherHarness({
-      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+      config: {
+        auth: {
+          oauth: { providers: TEST_OAUTH },
+          allowedDomains: { "example.com": "author" },
+        },
+      },
     });
     await h.seedUser("admin");
-    await h.factory.allowedDomain.create({
-      domain: "example.com",
-      defaultRole: "author",
-      isEnabled: true,
-    });
 
     const state = await seedState(h, "google", "v-2");
     const signedIn = h.spyAction("user:signed_in");
@@ -653,14 +653,14 @@ describe("oauth callback route", () => {
 
   test("a sign-up stores the provider's name and avatar on the new user", async () => {
     const h = await createDispatcherHarness({
-      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+      config: {
+        auth: {
+          oauth: { providers: TEST_OAUTH },
+          allowedDomains: { "example.com": "author" },
+        },
+      },
     });
     await h.seedUser("admin");
-    await h.factory.allowedDomain.create({
-      domain: "example.com",
-      defaultRole: "author",
-      isEnabled: true,
-    });
     const state = await seedState(h, "google", "v-profile");
     answer({
       "https://oauth2.googleapis.com/token": {
@@ -698,7 +698,7 @@ describe("oauth callback route", () => {
       },
     });
     await h.seedUser("admin");
-    // No allowed_domains row — domain-gated signup would reject, but open
+    // The domain isn't listed, so a closed allowlist would reject, but open
     // self-signup mints the user at "subscriber".
 
     const state = await seedState(h, "google", "v-self");
@@ -733,7 +733,12 @@ describe("oauth callback route", () => {
 
   test("unknown domain redirects to login with domain_not_allowed", async () => {
     const h = await createDispatcherHarness({
-      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+      config: {
+        auth: {
+          oauth: { providers: TEST_OAUTH },
+          allowedDomains: { "example.com": "editor" },
+        },
+      },
     });
     await h.seedUser("admin");
 
@@ -881,14 +886,14 @@ describe("oauth callback route", () => {
 
   test("github email fallback — provisions a user from /user/emails when /user.email is null", async () => {
     const h = await createDispatcherHarness({
-      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+      config: {
+        auth: {
+          oauth: { providers: TEST_OAUTH },
+          allowedDomains: { "example.com": "subscriber" },
+        },
+      },
     });
     await h.seedUser("admin");
-    await h.factory.allowedDomain.create({
-      domain: "example.com",
-      defaultRole: "subscriber",
-      isEnabled: true,
-    });
     const state = await seedState(h, "github", "v-fallback");
 
     answer({
@@ -927,14 +932,14 @@ describe("oauth callback route", () => {
 
   test("github email fallback rejects when the primary is unverified", async () => {
     const h = await createDispatcherHarness({
-      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+      config: {
+        auth: {
+          oauth: { providers: TEST_OAUTH },
+          allowedDomains: { "example.com": "subscriber" },
+        },
+      },
     });
     await h.seedUser("admin");
-    await h.factory.allowedDomain.create({
-      domain: "example.com",
-      defaultRole: "subscriber",
-      isEnabled: true,
-    });
     const state = await seedState(h, "github", "v-fallback-unverified");
 
     answer({

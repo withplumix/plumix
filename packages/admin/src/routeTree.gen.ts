@@ -17,7 +17,6 @@ import { Route as AuthLoginRouteImport } from "./routes/_auth/login";
 import { Route as AuthenticatedIndexRouteImport } from "./routes/_authenticated/index";
 import { Route as AuthenticatedProfileRouteImport } from "./routes/_authenticated/profile";
 import { Route as AuthAcceptInviteTokenRouteImport } from "./routes/_auth/accept-invite/$token";
-import { Route as AuthenticatedAllowedDomainsIndexRouteImport } from "./routes/_authenticated/allowed-domains/index";
 import { Route as AuthenticatedAuthDeviceRouteImport } from "./routes/_authenticated/auth/device";
 import { Route as AuthenticatedMailerIndexRouteImport } from "./routes/_authenticated/mailer/index";
 import { Route as AuthenticatedPagesSplatRouteImport } from "./routes/_authenticated/pages/$";
@@ -70,12 +69,6 @@ const AuthAcceptInviteTokenRoute = AuthAcceptInviteTokenRouteImport.update({
   path: "/accept-invite/$token",
   getParentRoute: () => AuthRoute,
 } as any);
-const AuthenticatedAllowedDomainsIndexRoute =
-  AuthenticatedAllowedDomainsIndexRouteImport.update({
-    id: "/allowed-domains/",
-    path: "/allowed-domains/",
-    getParentRoute: () => AuthenticatedRoute,
-  } as any);
 const AuthenticatedAuthDeviceRoute = AuthenticatedAuthDeviceRouteImport.update({
   id: "/auth/device",
   path: "/auth/device",
@@ -166,7 +159,6 @@ export interface FileRoutesByFullPath {
   "/pages/$": typeof AuthenticatedPagesSplatRoute;
   "/settings/$page": typeof AuthenticatedSettingsPageRoute;
   "/users/create": typeof AuthenticatedUsersCreateRoute;
-  "/allowed-domains/": typeof AuthenticatedAllowedDomainsIndexRoute;
   "/mailer/": typeof AuthenticatedMailerIndexRoute;
   "/settings/": typeof AuthenticatedSettingsIndexRoute;
   "/users/": typeof AuthenticatedUsersIndexRoute;
@@ -188,7 +180,6 @@ export interface FileRoutesByTo {
   "/pages/$": typeof AuthenticatedPagesSplatRoute;
   "/settings/$page": typeof AuthenticatedSettingsPageRoute;
   "/users/create": typeof AuthenticatedUsersCreateRoute;
-  "/allowed-domains": typeof AuthenticatedAllowedDomainsIndexRoute;
   "/mailer": typeof AuthenticatedMailerIndexRoute;
   "/settings": typeof AuthenticatedSettingsIndexRoute;
   "/users": typeof AuthenticatedUsersIndexRoute;
@@ -214,7 +205,6 @@ export interface FileRoutesById {
   "/_authenticated/pages/$": typeof AuthenticatedPagesSplatRoute;
   "/_authenticated/settings/$page": typeof AuthenticatedSettingsPageRoute;
   "/_authenticated/users/create": typeof AuthenticatedUsersCreateRoute;
-  "/_authenticated/allowed-domains/": typeof AuthenticatedAllowedDomainsIndexRoute;
   "/_authenticated/mailer/": typeof AuthenticatedMailerIndexRoute;
   "/_authenticated/settings/": typeof AuthenticatedSettingsIndexRoute;
   "/_authenticated/users/": typeof AuthenticatedUsersIndexRoute;
@@ -238,7 +228,6 @@ export interface FileRouteTypes {
     | "/pages/$"
     | "/settings/$page"
     | "/users/create"
-    | "/allowed-domains/"
     | "/mailer/"
     | "/settings/"
     | "/users/"
@@ -260,7 +249,6 @@ export interface FileRouteTypes {
     | "/pages/$"
     | "/settings/$page"
     | "/users/create"
-    | "/allowed-domains"
     | "/mailer"
     | "/settings"
     | "/users"
@@ -285,7 +273,6 @@ export interface FileRouteTypes {
     | "/_authenticated/pages/$"
     | "/_authenticated/settings/$page"
     | "/_authenticated/users/create"
-    | "/_authenticated/allowed-domains/"
     | "/_authenticated/mailer/"
     | "/_authenticated/settings/"
     | "/_authenticated/users/"
@@ -361,13 +348,6 @@ declare module "@tanstack/react-router" {
       fullPath: "/accept-invite/$token";
       preLoaderRoute: typeof AuthAcceptInviteTokenRouteImport;
       parentRoute: typeof AuthRoute;
-    };
-    "/_authenticated/allowed-domains/": {
-      id: "/_authenticated/allowed-domains/";
-      path: "/allowed-domains";
-      fullPath: "/allowed-domains/";
-      preLoaderRoute: typeof AuthenticatedAllowedDomainsIndexRouteImport;
-      parentRoute: typeof AuthenticatedRoute;
     };
     "/_authenticated/auth/device": {
       id: "/_authenticated/auth/device";
@@ -491,7 +471,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedPagesSplatRoute: typeof AuthenticatedPagesSplatRoute;
   AuthenticatedSettingsPageRoute: typeof AuthenticatedSettingsPageRoute;
   AuthenticatedUsersCreateRoute: typeof AuthenticatedUsersCreateRoute;
-  AuthenticatedAllowedDomainsIndexRoute: typeof AuthenticatedAllowedDomainsIndexRoute;
   AuthenticatedMailerIndexRoute: typeof AuthenticatedMailerIndexRoute;
   AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute;
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute;
@@ -509,7 +488,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedPagesSplatRoute: AuthenticatedPagesSplatRoute,
   AuthenticatedSettingsPageRoute: AuthenticatedSettingsPageRoute,
   AuthenticatedUsersCreateRoute: AuthenticatedUsersCreateRoute,
-  AuthenticatedAllowedDomainsIndexRoute: AuthenticatedAllowedDomainsIndexRoute,
   AuthenticatedMailerIndexRoute: AuthenticatedMailerIndexRoute,
   AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
