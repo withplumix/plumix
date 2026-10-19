@@ -54,6 +54,8 @@ type PlumixCliErrorCode =
   | "sync_remote_url_required"
   | "sync_dump_invalid"
   | "sync_settle_failed"
+  | "sync_remote_token_missing"
+  | "sync_settle_refused"
   | "import_invalid_arguments"
   | "import_unconfirmed"
   | "import_records_invalid"
@@ -657,6 +659,28 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
       `The data was replaced, but ${String(ctx.failures.length)} step(s) after it failed:\n${ctx.failures.map((f) => `  - ${f.step}: ${f.message}`).join("\n")}`,
       "The replaced data stays. Fix what failed, then run the sync again to repeat these steps.",
       undefined,
+    );
+  }
+
+  /** Asked for only once the import has run, so it says the data is replaced. */
+  static syncRemoteTokenMissing(): PlumixCliError {
+    return new PlumixCliError(
+      "sync_remote_token_missing",
+      "The deployed site's settle needs an API token, and there is no terminal to authorize one in",
+      "The data was replaced; on a push, the line above says how to restore it. Set `PLUMIX_API_TOKEN` to a token whose user may manage settings, then run the sync again to repeat the steps after it.",
+      undefined,
+    );
+  }
+
+  static syncSettleRefused(ctx: {
+    status: number;
+    body: string;
+  }): PlumixCliError {
+    return new PlumixCliError(
+      "sync_settle_refused",
+      `The deployed site answered ${String(ctx.status)} to the settle after the import`,
+      "The data was replaced; on a push, the line above says how to restore it. The token's user needs `settings:manage`, and a scoped token needs that scope; run the sync again to repeat the steps after it.",
+      ctx.body,
     );
   }
 

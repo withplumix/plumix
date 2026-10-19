@@ -245,6 +245,42 @@ describe("plumix sync, a runtime's target options", () => {
   });
 });
 
+/** Target options naming a deployed database in a platform's own words. */
+const DEPLOY_TARGETS = {
+  production: { type: "boolean", description: "The production D1" },
+  preview: { type: "boolean", description: "The Worker Previews D1" },
+  env: { type: "string", description: "A wrangler environment's D1" },
+} as const;
+
+describe("plumix sync, a deployed database's target options", () => {
+  test.each([
+    ["pull", ["--production"], { production: true }],
+    ["pull", ["--preview"], { preview: true }],
+    ["pull", ["--env", "qa"], { env: "qa" }],
+    ["push", ["--production"], { production: true }],
+    ["push", ["--preview"], { preview: true }],
+    ["push", ["--env", "qa"], { env: "qa" }],
+  ] as const)(
+    "%s %j reaches both ends as %j",
+    async (direction, flags, values) => {
+      const { sync } = await seededEnds();
+      const targetValues: unknown[] = [];
+
+      await syncCommand.run(
+        syncCtx([direction, "--url", REMOTE, "--yes", ...flags], {
+          targetOptions: DEPLOY_TARGETS,
+          open: (options) => {
+            targetValues.push(options.targetValues);
+            return sync.open(options);
+          },
+        }),
+      );
+
+      expect(targetValues).toEqual([values, values]);
+    },
+  );
+});
+
 describe("plumix sync, closing", () => {
   test("a close that throws does not leave the other end open", async () => {
     const ends = recording((await memorySyncEnds()).sync);
@@ -373,6 +409,22 @@ describe("plumix sync", () => {
     ]);
     expect(lines).toContain(
       "This in-memory end takes no snapshot: its import is one transaction, so a failed one changes nothing.",
+    );
+  });
+
+  test("a push that fails after its snapshot prints how to restore it again", async () => {
+    const hooks = new HookRegistry();
+    hooks.addAction("sync:after", () => Promise.reject(new Error("boom")));
+    const ends = await seededEnds({ hooks });
+
+    await expect(
+      syncCommand.run(syncCtx(["push", "--url", REMOTE, "--yes"], ends.sync)),
+    ).rejects.toMatchObject({ code: "sync_settle_failed" });
+
+    expect(
+      lines.slice(lines.indexOf("Replaced the data on the remote site.")),
+    ).toContain(
+      "The push failed after its snapshot. This in-memory end takes no snapshot: its import is one transaction, so a failed one changes nothing.",
     );
   });
 
@@ -510,6 +562,144 @@ describe("plumix sync", () => {
     expect(lines).toContain(
       "The CDN can't purge everything, so cached pages refresh as their ttl runs out.",
     );
+  });
+});
+
+/** The remote holds the content; the local site has only its author. */
+async function remoteContent(): Promise<MemorySyncEnds> {
+  const ends = await memorySyncEnds();
+  await seed(ends.remote, [
+    AUTHOR,
+    "INSERT INTO terms (id, taxonomy, name, slug) VALUES (1, 'category', 'News', 'news')",
+    "INSERT INTO entries (id, type, title, slug, author_id) VALUES (1, 'post', 'Hello', 'hello', 1)",
+    "INSERT INTO entry_term (entry_id, term_id) VALUES (1, 1)",
+  ]);
+  await seed(ends.local, [AUTHOR]);
+  return ends;
+}
+
+/**
+ * Records each table the remote's export is read for, and fails the first
+ * read of `table`, as a dropped connection would.
+ */
+function exportFailingAt(
+  sync: RuntimeSync,
+  table: string,
+): { sync: RuntimeSync; read: string[] } {
+  const read: string[] = [];
+  let failed = false;
+  return {
+    read,
+    sync: {
+      async open(options) {
+        const end = await sync.open(options);
+        if (options.target !== "remote") return end;
+        return {
+          ...end,
+          exportData: (scopes, into) =>
+            end.exportData(scopes, {
+              ...into,
+              table: (name, rows) =>
+                into.table(
+                  name,
+                  (async function* () {
+                    read.push(name);
+                    if (name === table && !failed) {
+                      failed = true;
+                      throw new Error("connection lost");
+                    }
+                    yield* rows;
+                  })(),
+                ),
+            }),
+        };
+      },
+    },
+  };
+}
+
+describe("plumix sync, after an interrupted pull", () => {
+  test("a pull resumes from the kept dump, exporting only the tables after the last complete one", async () => {
+    const ends = await remoteContent();
+    const remote = exportFailingAt(ends.sync, "entry_term");
+    await expect(
+      syncCommand.run(syncCtx(["pull", "--url", REMOTE], remote.sync)),
+    ).rejects.toThrow("connection lost");
+    remote.read.length = 0;
+
+    await syncCommand.run(syncCtx(["pull", "--url", REMOTE], remote.sync));
+
+    expect(remote.read).toEqual(["entry_term", "settings"]);
+    expect(await ends.local.execute("SELECT * FROM entry_term")).toEqual(
+      await ends.remote.execute("SELECT * FROM entry_term"),
+    );
+    expect(dumpsLeft()).toEqual([]);
+  });
+
+  test("names the dump it resumes from and the tables it keeps", async () => {
+    const ends = await remoteContent();
+    const remote = exportFailingAt(ends.sync, "entry_term");
+    await expect(
+      syncCommand.run(syncCtx(["pull", "--url", REMOTE], remote.sync)),
+    ).rejects.toThrow("connection lost");
+    vi.mocked(syncDeps.now).mockReturnValue(
+      new Date("2026-10-14T10:00:00.000Z"),
+    );
+
+    await syncCommand.run(syncCtx(["pull", "--url", REMOTE], remote.sync));
+
+    expect(lines).toContain(
+      "Resuming from the dump at .plumix/sync/pull-20261014T093000Z: terms, entries already exported",
+    );
+  });
+
+  test("a pull whose export completed before it failed imports the kept dump without exporting again", async () => {
+    const hooks = new HookRegistry();
+    let settled = 0;
+    hooks.addAction("sync:after", () => {
+      settled += 1;
+      if (settled === 1) throw new Error("boom");
+    });
+    const ends = await memorySyncEnds({ hooks });
+    await seed(ends.remote, [AUTHOR]);
+    await seed(ends.local, [AUTHOR]);
+    await expect(
+      syncCommand.run(syncCtx(["pull", "--url", REMOTE], ends.sync)),
+    ).rejects.toMatchObject({ code: "sync_settle_failed" });
+    const remote = exportFailingAt(ends.sync, "none");
+
+    await syncCommand.run(syncCtx(["pull", "--url", REMOTE], remote.sync));
+
+    expect(remote.read).toEqual([]);
+    expect(dumpsLeft()).toEqual([]);
+  });
+
+  test("a dump of other scopes is not resumed", async () => {
+    const ends = await remoteContent();
+    const remote = exportFailingAt(ends.sync, "entry_term");
+    await expect(
+      syncCommand.run(syncCtx(["pull", "--url", REMOTE], remote.sync)),
+    ).rejects.toThrow("connection lost");
+    remote.read.length = 0;
+    vi.mocked(syncDeps.now).mockReturnValue(
+      new Date("2026-10-14T10:00:00.000Z"),
+    );
+
+    await syncCommand.run(
+      syncCtx(
+        ["pull", "--url", REMOTE, "--scope", "content", "--scope", "users"],
+        remote.sync,
+      ),
+    );
+
+    expect(remote.read).toEqual([
+      "users",
+      "credentials",
+      "terms",
+      "entries",
+      "entry_term",
+      "settings",
+    ]);
   });
 });
 

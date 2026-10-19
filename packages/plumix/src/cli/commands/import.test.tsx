@@ -375,6 +375,62 @@ describe("plumix import --url, into the deployed site", () => {
     ).toEqual([{ n: 0 }]);
   });
 
+  test("an import into the deployed site that fails after its snapshot prints how to restore it again", async () => {
+    const site = await blogSite();
+    writeRecords("content.jsonl", [TOPIC, POST]);
+    const failingSettle: RuntimeSync = {
+      open: async (options) => ({
+        ...(await site.sync.open(options)),
+        settle: () => Promise.reject(new Error("settle lost")),
+      }),
+    };
+
+    await expect(
+      importCommand.run(
+        importCtx(
+          ["content.jsonl", "--url", REMOTE, "--yes"],
+          failingSettle,
+          site.harness.app,
+        ),
+      ),
+    ).rejects.toThrow("settle lost");
+
+    expect(lines).toContain(
+      "The import failed after its snapshot. This in-memory end takes no snapshot: its import is one transaction, so a failed one changes nothing.",
+    );
+  });
+
+  test.each([
+    [["--production"], { production: true }],
+    [["--preview"], { preview: true }],
+    [["--env", "qa"], { env: "qa" }],
+  ] as const)("%j reaches the deployed end as %j", async (flags, values) => {
+    const site = await blogSite();
+    writeRecords("content.jsonl", [TOPIC, POST]);
+    const targetValues: unknown[] = [];
+    const deployTargets: RuntimeSync = {
+      targetOptions: {
+        production: { type: "boolean", description: "The production D1" },
+        preview: { type: "boolean", description: "The Worker Previews D1" },
+        env: { type: "string", description: "A wrangler environment's D1" },
+      },
+      open: (options) => {
+        targetValues.push(options.targetValues);
+        return site.sync.open(options);
+      },
+    };
+
+    await importCommand.run(
+      importCtx(
+        ["content.jsonl", "--url", REMOTE, "--yes", ...flags],
+        deployTargets,
+        site.harness.app,
+      ),
+    );
+
+    expect(targetValues).toEqual([values]);
+  });
+
   test("with --yes snapshots the deployed site, prints the restore hint, and imports into it", async () => {
     const site = await blogSite();
     writeRecords("content.jsonl", [TOPIC, POST]);

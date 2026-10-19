@@ -657,9 +657,9 @@ export const ROSTER: Readonly<
       {
         reason:
           "the CLI commands `plumix` loads from the configured runtime, " +
-          "how `plumix migrate` opens its database, and what `plumix doctor` " +
-          "checks in its deploy config",
-        names: ["commands", "migrations", "diagnose"],
+          "how `plumix migrate` opens its database, what `plumix doctor` " +
+          "checks in its deploy config, and how `plumix sync` moves its data",
+        names: ["commands", "migrations", "diagnose", "sync"],
       },
     ],
     "./demo": [

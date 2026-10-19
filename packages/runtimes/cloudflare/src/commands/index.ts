@@ -15,3 +15,4 @@ export const commands: CommandRegistry = {
 
 export { migrations } from "./migrations.js";
 export { diagnose } from "./diagnose.js";
+export { sync } from "./sync.js";

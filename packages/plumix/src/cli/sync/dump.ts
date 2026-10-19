@@ -15,6 +15,7 @@ import * as v from "valibot";
 import type {
   DumpManifest,
   DumpReader,
+  DumpTableCount,
   DumpWriter,
   SyncObject,
   SyncRow,
@@ -24,6 +25,7 @@ import type {
 import { PlumixCliError } from "../errors.js";
 
 const MANIFEST_FILE = "manifest.json";
+const PROGRESS_FILE = "progress.json";
 const AUTHORS_FILE = "authors.ndjson";
 const OBJECTS_DIR = "objects";
 const OBJECT_INDEX_FILE = `${OBJECTS_DIR}/index.ndjson`;
@@ -37,6 +39,14 @@ export type DumpHeader = Pick<DumpManifest, "source" | "scopes" | "heads">;
 export interface DirectoryDumpWriter extends DumpWriter {
   /** Writes `manifest.json`; the dump is readable only after it. */
   finish(): Promise<DumpManifest>;
+}
+
+/** What an unfinished dump holds: its header and each table written whole. */
+export interface DumpProgress {
+  readonly header: DumpHeader;
+  readonly tables: readonly DumpTableCount[];
+  /** Whether `manifest.json` was written, so nothing is left to export. */
+  readonly finished: boolean;
 }
 
 const ManifestSchema = v.object({
@@ -113,27 +123,68 @@ async function writeLines(
   return count;
 }
 
+async function writeProgress(
+  dir: string,
+  header: DumpHeader,
+  tables: readonly DumpTableCount[],
+): Promise<void> {
+  await writeFile(
+    join(dir, PROGRESS_FILE),
+    `${JSON.stringify({ header, tables })}\n`,
+  );
+}
+
+/** The keys an unfinished dump's index already holds, which it keeps. */
+async function indexedKeys(dir: string): Promise<Set<string>> {
+  const keys = new Set<string>();
+  const path = join(dir, OBJECT_INDEX_FILE);
+  if (!existsSync(path)) return keys;
+  for await (const line of readLines(path)) {
+    keys.add(
+      parseLine(OBJECT_INDEX_FILE, line, ObjectEntrySchema, (issues) =>
+        v.summarize(issues),
+      ).key,
+    );
+  }
+  return keys;
+}
+
 /**
- * Writes a dump to `dir` as rows arrive, so a table never has to fit in
- * memory. Objects are numbered files; their keys live only in the index.
+ * Writes a dump to `dir` as rows arrive, so no table has to fit in memory.
+ * Objects are numbered files, keyed only in the index. What `kept` holds stays
+ * unread.
  */
 export function writeDump(
   dir: string,
   header: DumpHeader,
+  kept?: DumpProgress,
 ): DirectoryDumpWriter {
-  const tables: { name: string; rows: number }[] = [];
+  const tables: DumpTableCount[] = [];
+  const keptTables = new Map(
+    (kept?.tables ?? []).map((table) => [table.name, table.rows]),
+  );
   let authors = 0;
   let objects = 0;
-  const ready = mkdir(join(dir, OBJECTS_DIR), { recursive: true }).then(() =>
-    writeFile(join(dir, OBJECT_INDEX_FILE), ""),
-  );
+  let keptKeys = new Set<string>();
+  const ready = (async () => {
+    await mkdir(join(dir, OBJECTS_DIR), { recursive: true });
+    if (kept === undefined) {
+      await writeFile(join(dir, OBJECT_INDEX_FILE), "");
+    } else {
+      keptKeys = await indexedKeys(dir);
+      objects = keptKeys.size;
+    }
+    await writeProgress(dir, header, tables);
+  })();
   return {
     async table(name, rows) {
       await ready;
+      const keptRows = keptTables.get(name);
       tables.push({
         name,
-        rows: await writeLines(join(dir, tableFile(name)), rows),
+        rows: keptRows ?? (await writeLines(join(dir, tableFile(name)), rows)),
       });
+      await writeProgress(dir, header, tables);
     },
     async authors(rows) {
       await ready;
@@ -141,6 +192,10 @@ export function writeDump(
     },
     async object(key, body, contentType) {
       await ready;
+      if (keptKeys.has(key)) {
+        await body.cancel();
+        return;
+      }
       objects += 1;
       const file = String(objects);
       const path = join(dir, OBJECTS_DIR, file);
@@ -354,5 +409,35 @@ export async function readDump(dir: string): Promise<DumpReader> {
         };
       }
     },
+  };
+}
+
+const ProgressSchema = v.object({
+  header: v.object({
+    source: ManifestSchema.entries.source,
+    scopes: ManifestSchema.entries.scopes,
+    heads: ManifestSchema.entries.heads,
+  }),
+  tables: ManifestSchema.entries.tables,
+});
+
+/**
+ * How far the export into `dir` got, or `null` for a directory that is not a
+ * dump this release wrote.
+ */
+export async function readDumpProgress(
+  dir: string,
+): Promise<DumpProgress | null> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(await readFile(join(dir, PROGRESS_FILE), "utf8"));
+  } catch {
+    return null;
+  }
+  const result = v.safeParse(ProgressSchema, parsed);
+  if (!result.success) return null;
+  return {
+    ...result.output,
+    finished: existsSync(join(dir, MANIFEST_FILE)),
   };
 }

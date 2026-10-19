@@ -1,4 +1,4 @@
-import { existsSync, rmSync } from "node:fs";
+import { existsSync, readdirSync, rmSync } from "node:fs";
 import { join, relative } from "node:path";
 import { createInterface } from "node:readline/promises";
 
@@ -17,11 +17,12 @@ import type {
 } from "@plumix/core";
 import { assertSameHeads } from "@plumix/core/cli";
 
+import type { DumpHeader, DumpProgress } from "../sync/dump.js";
 import type { RewrittenDump, SiteLocation } from "../sync/rewrite-urls.js";
 import { PlumixCliError } from "../errors.js";
 import { resolveOwners } from "../migrate/owners.js";
 import { report } from "../report.js";
-import { readDump, writeDump } from "../sync/dump.js";
+import { readDump, readDumpProgress, writeDump } from "../sync/dump.js";
 import { exportLocalAdmins, keepLocalAdmins } from "../sync/local-admins.js";
 import { rewriteUrls, siteUrl } from "../sync/rewrite-urls.js";
 import { resolveScopes } from "../sync/scopes.js";
@@ -179,18 +180,62 @@ interface SyncRun {
   readonly target: SyncEnd;
   readonly targetName: SyncTarget;
   readonly dumpDir: string;
+  readonly header: DumpHeader;
+  /** A failed pull's dump, which this one goes on from. */
+  readonly kept: DumpProgress | undefined;
   readonly basePath: string;
 }
 
 async function exportDump(run: SyncRun): Promise<DumpReader> {
-  const writer = writeDump(run.dumpDir, {
-    source: { origin: run.source.origin, basePath: run.basePath },
-    scopes: run.scopes.map((scope) => scope.name),
-    heads: await run.source.heads(),
-  });
+  if (run.kept?.finished) return readDump(run.dumpDir);
+  const writer = writeDump(run.dumpDir, run.header, run.kept);
   await run.source.exportData(run.scopes, writer);
   await writer.finish();
   return readDump(run.dumpDir);
+}
+
+interface KeptDump {
+  readonly dir: string;
+  readonly progress: DumpProgress;
+}
+
+/**
+ * The newest dump a failed pull left whose source, scopes and heads are this
+ * pull's, so its export goes on where it stopped.
+ */
+async function keptPull(
+  root: string,
+  header: DumpHeader,
+): Promise<KeptDump | undefined> {
+  if (!existsSync(root)) return undefined;
+  const newestFirst = readdirSync(root)
+    .filter((name) => name.startsWith("pull-"))
+    .sort()
+    .reverse();
+  for (const name of newestFirst) {
+    const dir = join(root, name);
+    const progress = await readDumpProgress(dir);
+    if (
+      progress !== null &&
+      JSON.stringify(progress.header) === JSON.stringify(header)
+    ) {
+      return { dir, progress };
+    }
+  }
+  return undefined;
+}
+
+function describeResume(cwd: string, kept: KeptDump): void {
+  const where = relative(cwd, kept.dir);
+  if (kept.progress.finished) {
+    report.info(`Resuming from the dump at ${where}: its export is complete`);
+    return;
+  }
+  const tables = kept.progress.tables.map((table) => table.name);
+  if (tables.length === 0) return;
+  report.info(
+    `Resuming from the dump at ${where}: ${tables.join(", ")} already exported`,
+  );
 }
 
 async function preparedDump(run: SyncRun): Promise<RewrittenDump> {
@@ -226,18 +271,37 @@ async function replaceTarget(run: SyncRun): Promise<void> {
   );
   describeRewrite(dump.manifest.source, targetSite(run), rewritten());
   if (!(await confirmed(run))) return;
-  if (run.args.direction === "push") {
-    const snapshot = await run.target.snapshot();
-    report.info(run.target.restoreHint(snapshot));
+  const write = async (): Promise<void> => {
+    await run.target.importData(dump, run.scopes, { dryRun: false });
+    report.success(`Replaced the data on the ${run.targetName} site.`);
+    describeSettle(
+      await run.target.settle({
+        scopes: run.scopes.map((scope) => scope.name),
+        direction: run.args.direction,
+      }),
+    );
+  };
+  if (run.args.direction === "pull") return write();
+  return withSnapshot(run.target, "push", write);
+}
+
+/**
+ * Prints how to restore the snapshot before the write, and again when the
+ * write or a step after it fails, where the operator is looking.
+ */
+export async function withSnapshot(
+  target: SyncEnd,
+  label: string,
+  write: () => Promise<void>,
+): Promise<void> {
+  const hint = target.restoreHint(await target.snapshot());
+  report.info(hint);
+  try {
+    await write();
+  } catch (error) {
+    report.info(`The ${label} failed after its snapshot. ${hint}`);
+    throw error;
   }
-  await run.target.importData(dump, run.scopes, { dryRun: false });
-  report.success(`Replaced the data on the ${run.targetName} site.`);
-  describeSettle(
-    await run.target.settle({
-      scopes: run.scopes.map((scope) => scope.name),
-      direction: run.args.direction,
-    }),
-  );
 }
 
 /** A dump outlives a failed sync, so its rows can be inspected or retried. */
@@ -311,18 +375,25 @@ export const syncCommand: CommandDefinition = {
         { label: "remote", heads: await remote.heads() },
       );
       const pull = args.direction === "pull";
-      const dumpDir = join(
-        ctx.cwd,
-        DUMPS_DIR,
-        dumpName(args.direction, syncDeps.now()),
-      );
+      const source = pull ? remote : local;
+      const header: DumpHeader = {
+        source: { origin: source.origin, basePath: config.basePath },
+        scopes: scopes.map((scope) => scope.name),
+        heads: await source.heads(),
+      };
+      const root = join(ctx.cwd, DUMPS_DIR);
+      const kept = pull ? await keptPull(root, header) : undefined;
+      if (kept !== undefined) describeResume(ctx.cwd, kept);
       await replaceKeepingDumpOnFailure(ctx.cwd, {
         args,
         scopes,
-        source: pull ? remote : local,
+        source,
         target: pull ? local : remote,
         targetName: pull ? "local" : "remote",
-        dumpDir,
+        dumpDir:
+          kept?.dir ?? join(root, dumpName(args.direction, syncDeps.now())),
+        header,
+        kept: kept?.progress,
         basePath: config.basePath,
       });
     } finally {
