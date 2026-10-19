@@ -1,4 +1,5 @@
 import type { LeaseHolder } from "@/editor/edit-lease.js";
+import type { EditingCopy } from "@/editor/editing-copy.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement } from "react";
 import { useState } from "react";
@@ -29,10 +30,9 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-interface EntryConflictDialogProps {
+export interface EntryConflictDialogProps {
+  readonly copy: EditingCopy;
   readonly open: boolean;
-  /** What changed: an entry, or a settings group's card. Defaults to `entry`. */
-  readonly subject?: "entry" | "settings";
   /** When the other write landed; `null` when the resource doesn't record it. */
   readonly changedAt: Date | null;
   /** Another user holding the entry's edit lease, named as editing it now. */
@@ -45,12 +45,12 @@ interface EntryConflictDialogProps {
 }
 
 /**
- * A save found the entry changed since the author opened it. Autosave is
- * paused and their changes kept until they pick one.
+ * A save found the entry or user changed since the author opened it. Autosave
+ * is paused and their changes kept until they pick one.
  */
 export function EntryConflictDialog({
+  copy,
   open,
-  subject = "entry",
   changedAt,
   editingElsewhere,
   mineSnapshot,
@@ -72,19 +72,7 @@ export function EntryConflictDialog({
         data-testid="entry-conflict-dialog"
       >
         <DialogHeader>
-          <DialogTitle>
-            {subject === "entry" ? (
-              <Trans
-                id="editor.conflict.title"
-                message="This entry changed since you opened it"
-              />
-            ) : (
-              <Trans
-                id="settings.conflict.title"
-                message="These settings changed since you opened them"
-              />
-            )}
-          </DialogTitle>
+          <DialogTitle>{label(copy.conflictTitle)}</DialogTitle>
           <DialogDescription data-testid="entry-conflict-changed-at">
             {changedAt ? (
               <Trans

@@ -1,52 +1,38 @@
 import type { AuthenticatedAppContext } from "../../../context/app-context.js";
 import type { NewUser, User } from "../../../db/schema/users.js";
-import type { ResolvedMeta } from "../../../meta/contract/bags.js";
+import type { JsonObject } from "../../../json.js";
+import type { AccessGuards } from "./helpers.js";
 import { invalidateAllSessionsForUser } from "../../../auth/sessions.js";
+import { etagOf } from "../../../db/concurrency.js";
 import {
-  and,
   eq,
   isUniqueConstraintError,
   isUniqueConstraintErrorOn,
 } from "../../../db/index.js";
 import { users } from "../../../db/schema/users.js";
-import { isEmptyMetaPatch } from "../../../meta/core.js";
+import { isEmptyMetaPatch, patchedMetaBag } from "../../../meta/core.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { assertLeaseAllows } from "../../concurrency.js";
 import { stripUndefined } from "../entry/helpers.js";
-import { otherActiveAdminExists } from "./helpers.js";
+import { userRows } from "./concurrency.js";
+import { assertCanEditUser, otherActiveAdminExists } from "./helpers.js";
 import {
+  announceUserMetaChange,
   assertUserMetaCapabilities,
-  loadUserMeta,
   resolveUserMeta,
   sanitizeMetaForRpc,
   validateUserMetaReferences,
-  writeUserMeta,
 } from "./meta.js";
 import { userUpdateInputSchema } from "./schemas.js";
 
-const EDIT_OWN_CAPABILITY = "user:edit_own";
-const EDIT_CAPABILITY = "user:edit";
 const PROMOTE_CAPABILITY = "user:promote";
-
-interface AccessGuards {
-  readonly forbidden: (capability: string) => never;
-}
 
 interface UserWriteGuards {
   readonly slugTaken: () => never;
   readonly emailTaken: () => never;
   readonly lastAdmin: () => never;
   readonly updateFailed: () => never;
-}
-
-function assertCanEditUser(
-  context: AuthenticatedAppContext,
-  existing: User,
-  guards: AccessGuards,
-): void {
-  const isSelf = existing.id === context.user.id;
-  const capability = isSelf ? EDIT_OWN_CAPABILITY : EDIT_CAPABILITY;
-  if (!context.auth.can(capability)) guards.forbidden(capability);
 }
 
 function assertCanChangeRole(
@@ -57,29 +43,30 @@ function assertCanChangeRole(
     guards.forbidden(PROMOTE_CAPABILITY);
 }
 
-async function writeUserColumns(
+/**
+ * The whole save as one guarded update: the columns, the meta merged from the
+ * row the save read, and the token claimed from `ifMatch`.
+ */
+async function writeGuarded(
   context: AuthenticatedAppContext,
   existing: User,
-  patch: Partial<NewUser>,
+  ifMatch: Date,
+  changes: Partial<NewUser>,
   demotingAdmin: boolean,
   guards: UserWriteGuards,
 ): Promise<User> {
-  // The last-admin guard sits in the UPDATE's WHERE so two concurrent
-  // demotions can't both pass and lock everyone out.
-  const whereClause = demotingAdmin
-    ? and(
-        eq(users.id, existing.id),
-        otherActiveAdminExists(context.db, existing.id),
-      )
-    : eq(users.id, existing.id);
-
   let row;
   try {
-    [row] = await context.db
-      .update(users)
-      .set(patch)
-      .where(whereClause)
-      .returning();
+    row = await userRows(context.db).claimRow(
+      existing.id,
+      ifMatch,
+      changes,
+      // The last-admin guard sits in the UPDATE's WHERE so two concurrent
+      // demotions can't both pass and lock everyone out.
+      demotingAdmin
+        ? otherActiveAdminExists(context.db, existing.id)
+        : undefined,
+    );
   } catch (error) {
     // `users.email` isn't writable here, but a plugin filter could reintroduce
     // it.
@@ -87,11 +74,9 @@ async function writeUserColumns(
     if (isUniqueConstraintError(error)) guards.emailTaken();
     throw error;
   }
-  if (!row) {
-    if (demotingAdmin) guards.lastAdmin();
-    guards.updateFailed();
-  }
-  return row;
+  if (row) return row;
+  if (demotingAdmin) guards.lastAdmin();
+  return guards.updateFailed();
 }
 
 export const update = base
@@ -116,6 +101,14 @@ export const update = base
       },
     };
     assertCanEditUser(context, existing, accessGuards);
+    // After auth, so an unauthorised caller with a stale copy still gets
+    // FORBIDDEN, not CONFLICT or LOCKED.
+    await assertLeaseAllows(
+      context,
+      { kind: "user", id: existing.id },
+      filtered.takeOver,
+    );
+    userRows(context.db).assertCopyCurrent(filtered.ifMatch, existing);
 
     // Role changes are a separate privilege — even self-edits can't promote.
     const wantsRoleChange =
@@ -128,7 +121,13 @@ export const update = base
 
     // `meta` isn't a users.* column — split it out and validate up
     // front so a bad key fails before any write.
-    const { id: _id, meta: metaInput, ...changes } = filtered;
+    const {
+      id: _id,
+      meta: metaInput,
+      ifMatch,
+      takeOver: _takeOver,
+      ...changes
+    } = filtered;
     const metaPatch = await sanitizeMetaForRpc(
       context.plugins,
       metaInput,
@@ -148,50 +147,46 @@ export const update = base
 
     // Nothing to write anywhere? Return the existing row with its
     // decoded meta for a consistent response shape.
-    if (Object.keys(patch).length === 0 && isEmptyMetaPatch(metaPatch)) {
+    const metaChanged = !isEmptyMetaPatch(metaPatch);
+    if (Object.keys(patch).length === 0 && !metaChanged) {
       const meta = await resolveUserMeta(context, existing.meta);
-      return context.hooks.applyFilter("rpc:user.update:output", {
+      const output = await context.hooks.applyFilter("rpc:user.update:output", {
         ...existing,
         meta,
       });
+      return { ...output, etag: etagOf(existing.updatedAt) };
     }
 
-    let updated: User = existing;
-    let rowWritten = false;
-    if (Object.keys(patch).length > 0) {
-      updated = await writeUserColumns(
-        context,
-        existing,
-        patch,
-        demotingAdmin,
-        {
-          slugTaken: () => {
-            throw errors.CONFLICT({ data: { reason: "slug_taken" } });
-          },
-          emailTaken: () => {
-            throw errors.CONFLICT({ data: { reason: "email_taken" } });
-          },
-          lastAdmin: () => {
-            throw errors.CONFLICT({ data: { reason: "last_admin" } });
-          },
-          updateFailed: () => {
-            throw errors.CONFLICT({ data: { reason: "update_failed" } });
-          },
+    const merged: JsonObject | undefined = metaChanged
+      ? patchedMetaBag(existing.meta, metaPatch)
+      : undefined;
+    const updated = await writeGuarded(
+      context,
+      existing,
+      ifMatch,
+      merged === undefined ? patch : { ...patch, meta: merged },
+      demotingAdmin,
+      {
+        slugTaken: () => {
+          throw errors.CONFLICT({ data: { reason: "slug_taken" } });
         },
-      );
-      rowWritten = true;
-    }
+        emailTaken: () => {
+          throw errors.CONFLICT({ data: { reason: "email_taken" } });
+        },
+        lastAdmin: () => {
+          throw errors.CONFLICT({ data: { reason: "last_admin" } });
+        },
+        updateFailed: () => {
+          throw errors.CONFLICT({ data: { reason: "update_failed" } });
+        },
+      },
+    );
 
-    // Match the early-return's empty-patch gate — an explicit `meta: {}`
-    // from the client produces a non-null but empty `MetaPatch`, and a
-    // plain `loadUserMeta` re-read for that case is just a wasted SELECT.
-    let meta: ResolvedMeta;
-    if (metaPatch !== null && !isEmptyMetaPatch(metaPatch)) {
-      await writeUserMeta(context, updated, metaPatch);
-      meta = await loadUserMeta(context, updated);
-    } else {
-      meta = await resolveUserMeta(context, updated.meta);
+    // Only once the claim holds, so a refused save announces nothing.
+    if (metaPatch && metaChanged) {
+      await announceUserMetaChange(context, updated, metaPatch);
     }
+    const meta = await resolveUserMeta(context, updated.meta);
 
     // Sessions cache the role until they expire, so invalidate them to apply
     // any role change immediately.
@@ -202,12 +197,13 @@ export const update = base
     // WP's `profile_update` parity — plugins observe successful row writes
     // with the previous row for diffing. Skipped on meta-only saves —
     // subscribe to `user:meta_changed` for that surface.
-    if (rowWritten) {
+    if (Object.keys(patch).length > 0) {
       await context.hooks.doAction("user:updated", updated, existing, context);
     }
 
-    return context.hooks.applyFilter("rpc:user.update:output", {
+    const output = await context.hooks.applyFilter("rpc:user.update:output", {
       ...updated,
       meta,
     });
+    return { ...output, etag: etagOf(updated.updatedAt) };
   });

@@ -12,11 +12,11 @@ import type { PluginRegistry } from "../../../plugin/manifest.js";
 import type { CapabilityErrors } from "../../../rpc-errors.js";
 import { users } from "../../../db/schema/users.js";
 import {
-  applyMetaPatch,
   decodeMetaBag as decodeMetaBagCore,
   isEmptyMetaPatch,
   loadMeta,
   metaScope,
+  patchedMetaBag,
   resolveMetaReferences as resolveMetaReferencesCore,
   sanitizeMetaForRpc as sanitizeMetaForRpcCore,
   settleStoredMeta,
@@ -28,6 +28,7 @@ import {
   findUserMetaField,
   listUserMetaFields,
 } from "../../../plugin/manifest.js";
+import { userRows } from "./concurrency.js";
 
 export type { MetaChanges as UserMetaChanges } from "../../../meta/core.js";
 
@@ -139,22 +140,22 @@ export async function loadUserMeta(
   return resolveMetaReferencesCore(ctx, scope.findField, decoded);
 }
 
-/**
- * Apply a meta patch to `users.meta` and fire `user:meta_changed`.
- * Plugins that need to mutate the patch subscribe to
- * `rpc:user.update:input` and mutate `input.meta` there.
- */
+/** A system write of `patch` to `users.meta`, then `user:meta_changed`. */
 export async function writeUserMeta(
   ctx: AppContext,
   user: { readonly id: number },
   patch: MetaPatch,
 ): Promise<void> {
   if (isEmptyMetaPatch(patch)) return;
-  await applyMetaPatch(ctx, users, users.id, user.id, patch);
-  await announceUserMetaChange(ctx, user, patch);
+  const rows = userRows(ctx.db);
+  const result = await rows.writeAsSystem(await rows.read(user.id), (row) => ({
+    meta: patchedMetaBag(row.meta, patch),
+  }));
+  if (result?.written) await announceUserMetaChange(ctx, user, patch);
 }
 
-function announceUserMetaChange(
+/** Fire `user:meta_changed` once a write carrying `patch` has landed. */
+export function announceUserMetaChange(
   ctx: AppContext,
   user: { readonly id: number },
   patch: MetaPatch,

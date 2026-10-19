@@ -5,6 +5,7 @@ import { entries } from "../../../db/schema/entries.js";
 import { sessions } from "../../../db/schema/sessions.js";
 import { users } from "../../../db/schema/users.js";
 import { createRpcHarness } from "../../../test/rpc.js";
+import { currentUserEtag } from "../../../test/user-etag.js";
 
 describe("user.list", () => {
   test("editor+ can list users; others get FORBIDDEN", async () => {
@@ -145,6 +146,7 @@ describe("user.update", () => {
     const h = await createRpcHarness({ authAs: "subscriber" });
     const updated = await h.client.user.update({
       id: h.user.id,
+      ifMatch: await currentUserEtag(h.db, h.user.id),
       name: "Renamed",
     });
     expect(updated.name).toBe("Renamed");
@@ -153,7 +155,11 @@ describe("user.update", () => {
   test("subscriber cannot change own role", async () => {
     const h = await createRpcHarness({ authAs: "subscriber" });
     await expect(
-      h.client.user.update({ id: h.user.id, role: "admin" }),
+      h.client.user.update({
+        id: h.user.id,
+        ifMatch: await currentUserEtag(h.db, h.user.id),
+        role: "admin",
+      }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
       data: { capability: "user:promote" },
@@ -164,7 +170,11 @@ describe("user.update", () => {
     const h = await createRpcHarness({ authAs: "subscriber" });
     const other = await h.factory.user.create({ email: "o@example.test" });
     await expect(
-      h.client.user.update({ id: other.id, name: "hi" }),
+      h.client.user.update({
+        id: other.id,
+        ifMatch: await currentUserEtag(h.db, other.id),
+        name: "hi",
+      }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
       data: { capability: "user:edit" },
@@ -176,6 +186,7 @@ describe("user.update", () => {
     const target = await h.factory.editor.create();
     const updated = await h.client.user.update({
       id: target.id,
+      ifMatch: await currentUserEtag(h.db, target.id),
       role: "admin",
     });
     expect(updated.role).toBe("admin");
@@ -190,7 +201,11 @@ describe("user.update", () => {
       userId: target.id,
     });
 
-    await h.client.user.update({ id: target.id, role: "author" });
+    await h.client.user.update({
+      id: target.id,
+      ifMatch: await currentUserEtag(h.db, target.id),
+      role: "author",
+    });
 
     const remaining = await h.context.db
       .select()
@@ -202,7 +217,11 @@ describe("user.update", () => {
   test("cannot demote the last active admin", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     await expect(
-      h.client.user.update({ id: h.user.id, role: "editor" }),
+      h.client.user.update({
+        id: h.user.id,
+        ifMatch: await currentUserEtag(h.db, h.user.id),
+        role: "editor",
+      }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
       data: { reason: "last_admin" },
@@ -214,6 +233,7 @@ describe("user.update", () => {
     await h.factory.admin.create({ email: "other-admin@example.test" });
     const updated = await h.client.user.update({
       id: h.user.id,
+      ifMatch: await currentUserEtag(h.db, h.user.id),
       role: "editor",
     });
     expect(updated.role).toBe("editor");
@@ -223,6 +243,7 @@ describe("user.update", () => {
     const h = await createRpcHarness({ authAs: "subscriber" });
     const updated = await h.client.user.update({
       id: h.user.id,
+      ifMatch: await currentUserEtag(h.db, h.user.id),
       slug: "renamed-author",
     });
     expect(updated.slug).toBe("renamed-author");
@@ -233,6 +254,7 @@ describe("user.update", () => {
     const target = await h.factory.user.create({ email: "t@example.test" });
     const updated = await h.client.user.update({
       id: target.id,
+      ifMatch: await currentUserEtag(h.db, target.id),
       slug: "new-slug",
     });
     expect(updated.slug).toBe("new-slug");
@@ -242,7 +264,11 @@ describe("user.update", () => {
     const h = await createRpcHarness({ authAs: "admin" });
     await h.factory.user.create({ email: "other@example.test", slug: "taken" });
     await expect(
-      h.client.user.update({ id: h.user.id, slug: "taken" }),
+      h.client.user.update({
+        id: h.user.id,
+        ifMatch: await currentUserEtag(h.db, h.user.id),
+        slug: "taken",
+      }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
       data: { reason: "slug_taken" },
@@ -254,6 +280,7 @@ describe("user.update", () => {
     const current = await h.client.user.get({ id: h.user.id });
     const updated = await h.client.user.update({
       id: h.user.id,
+      ifMatch: await currentUserEtag(h.db, h.user.id),
       slug: current.slug,
     });
     expect(updated.slug).toBe(current.slug);
@@ -262,7 +289,11 @@ describe("user.update", () => {
   test("rejects a slug that isn't URL-safe kebab-case", async () => {
     const h = await createRpcHarness({ authAs: "subscriber" });
     await expect(
-      h.client.user.update({ id: h.user.id, slug: "Not A Slug" }),
+      h.client.user.update({
+        id: h.user.id,
+        ifMatch: await currentUserEtag(h.db, h.user.id),
+        slug: "Not A Slug",
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
@@ -402,7 +433,11 @@ describe("user lifecycle action hooks", () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const target = await h.factory.subscriber.create({ name: "Before" });
     const spy = h.spyAction("user:updated");
-    await h.client.user.update({ id: target.id, name: "After" });
+    await h.client.user.update({
+      id: target.id,
+      ifMatch: await currentUserEtag(h.db, target.id),
+      name: "After",
+    });
     spy.assertCalledOnce();
     const [post, previous] = spy.lastArgs ?? [];
     expect(post?.name).toBe("After");

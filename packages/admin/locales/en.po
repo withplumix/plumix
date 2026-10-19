@@ -592,27 +592,39 @@ msgstr "{name} is editing it now."
 
 #. name: the editing user's display name or email; time: a formatted date and time
 #. js-lingui-explicit-id
-#: src/editor/EditLeaseBanner.tsx
+#: src/routes/_authenticated/settings/-settings-group-card.tsx
 msgid "settings.lease.heldBy"
 msgstr "{name} is editing these settings (since {time})"
 
 #. name: the editing user's display name or email; time: a formatted date and time
 #. js-lingui-explicit-id
-#: src/editor/EditLeaseBanner.tsx
+#: src/editor/editing-copy.ts
 msgid "editor.lease.heldBy"
 msgstr "{name} is editing this entry (since {time})"
 
+#. name: the editing user's display name or email; time: a formatted date and time
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "editor.lease.heldBy.user"
+msgstr "{name} is editing this profile (since {time})"
+
 #. name: the user who took over; time: a formatted date and time
 #. js-lingui-explicit-id
-#: src/editor/EditLeaseBanner.tsx
+#: src/routes/_authenticated/settings/-settings-group-card.tsx
 msgid "settings.lease.lost"
 msgstr "{name} took over editing these settings at {time}. Your unsaved changes are shown here but weren't saved."
 
 #. name: the user who took over; time: a formatted date and time
 #. js-lingui-explicit-id
-#: src/editor/EditLeaseBanner.tsx
+#: src/editor/editing-copy.ts
 msgid "editor.lease.lost"
 msgstr "{name} took over editing this entry at {time}. Your unsaved changes are shown here but weren't saved."
+
+#. name: the user who took over; time: a formatted date and time
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "editor.lease.lost.user"
+msgstr "{name} took over editing this profile at {time}. Your unsaved changes are shown here but weren't saved."
 
 #. revoked: number of OTHER sessions just signed out (excluding the current device)
 #. js-lingui-explicit-id
@@ -3639,7 +3651,7 @@ msgid "apiTokens.revoke.description"
 msgstr "The token stops working immediately. Any client using it will start getting 401s on the next request."
 
 #. js-lingui-explicit-id
-#: src/editor/EntryConflictDialog.tsx
+#: src/routes/_authenticated/settings/-settings-group-card.tsx
 msgid "settings.conflict.title"
 msgstr "These settings changed since you opened them"
 
@@ -3704,7 +3716,7 @@ msgid "profile.passkeys.enroll.noAuthenticator"
 msgstr "This device doesn't support passkeys."
 
 #. js-lingui-explicit-id
-#: src/editor/EntryConflictDialog.tsx
+#: src/editor/editing-copy.ts
 msgid "editor.conflict.title"
 msgstr "This entry changed since you opened it"
 
@@ -3767,6 +3779,11 @@ msgstr "This permanently deletes the selected entries and their revisions. It ca
 #: src/lib/plugin-error-boundary.tsx
 msgid "plugin.errorBoundary.unknownPlugin"
 msgstr "this plugin"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "editor.conflict.title.user"
+msgstr "This profile changed since you opened it"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffDialog.tsx

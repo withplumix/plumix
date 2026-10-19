@@ -3,7 +3,7 @@ import { entries } from "../../../db/schema/entries.js";
 import { deleteEntriesHistory } from "../../../revisions/repository.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { writeAsSystem } from "./concurrency.js";
+import { entryRows } from "./concurrency.js";
 import {
   entryDeletableGuards,
   fireEntryDeleted,
@@ -30,7 +30,7 @@ export const trashMany = base
     // the single-row no-op.
     const ids: number[] = [];
     for (const read of rows) {
-      const result = await writeAsSystem(context.db, read, (row) =>
+      const result = await entryRows(context.db).writeAsSystem(read, (row) =>
         row.status === "trash" ? undefined : { status: "trash" },
       );
       if (!result?.written) continue;
@@ -53,7 +53,7 @@ export const restoreMany = base
     // view never mixes statuses, this is the defensive backstop).
     const ids: number[] = [];
     for (const read of rows) {
-      const result = await writeAsSystem(context.db, read, (row) =>
+      const result = await entryRows(context.db).writeAsSystem(read, (row) =>
         row.status === "trash" ? { status: "draft" } : undefined,
       );
       if (!result?.written) continue;

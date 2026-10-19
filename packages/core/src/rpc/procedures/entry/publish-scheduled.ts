@@ -1,7 +1,7 @@
 import type { AppContext } from "../../../context/app-context.js";
 import { and, eq, isNotNull, lte } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
-import { writeAsSystem } from "./concurrency.js";
+import { entryRows } from "./concurrency.js";
 import {
   fireEntryPublished,
   fireEntryTransition,
@@ -46,7 +46,7 @@ export async function publishDueScheduledEntries(
   for (const entry of due) {
     // Decided again from any write that lands first, so a manual publish or
     // reschedule that raced this run is not overwritten.
-    const result = await writeAsSystem(ctx.db, entry, (row) =>
+    const result = await entryRows(ctx.db).writeAsSystem(entry, (row) =>
       row.status === "scheduled" &&
       row.publishedAt !== null &&
       row.publishedAt <= now

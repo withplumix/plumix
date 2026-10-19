@@ -1,7 +1,7 @@
 import { etagOf } from "../../../db/concurrency.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { writeAsSystem } from "./concurrency.js";
+import { entryRows } from "./concurrency.js";
 import {
   entryDeletableGuards,
   fireEntryTrashed,
@@ -24,7 +24,7 @@ export const trash = base
       entryDeletableGuards(errors),
     );
 
-    const result = await writeAsSystem(context.db, existing, (row) =>
+    const result = await entryRows(context.db).writeAsSystem(existing, (row) =>
       row.status === "trash" ? undefined : { status: "trash" },
     );
     if (!result) {

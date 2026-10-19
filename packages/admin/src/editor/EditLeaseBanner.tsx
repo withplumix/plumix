@@ -1,14 +1,14 @@
 import type { EditLeaseNotice } from "@/editor/edit-lease.js";
+import type { EditingCopy } from "@/editor/editing-copy.js";
 import type { ReactElement } from "react";
 import { useFormatters } from "@/lib/use-formatters.js";
 import { Trans } from "@lingui/react";
 
 import { Button } from "@plumix/admin-ui/button";
 
-interface EditLeaseBannerProps {
+export interface EditLeaseBannerProps {
+  readonly copy: EditingCopy;
   readonly notice: EditLeaseNotice;
-  /** What is leased: an entry, or a settings group's card. Defaults to `entry`. */
-  readonly subject?: "entry" | "settings";
   /** Offered only while another user holds the lease. */
   readonly onTakeOver: () => void;
   readonly isTakingOver: boolean;
@@ -17,8 +17,8 @@ interface EditLeaseBannerProps {
 
 /** Why the editor is read-only: someone else is editing what it edits. */
 export function EditLeaseBanner({
+  copy,
   notice,
-  subject = "entry",
   onTakeOver,
   isTakingOver,
   onBack,
@@ -35,19 +35,23 @@ export function EditLeaseBanner({
       role="status"
       className="border-warning/30 bg-warning/10 text-warning-foreground flex shrink-0 flex-wrap items-center gap-3 border-b px-4 py-2 text-sm"
     >
-      <span
-        data-testid={
-          notice.kind === "heldByOther"
-            ? "edit-lease-held-by"
-            : "edit-lease-lost"
-        }
-      >
-        <LeaseNoticeText
-          notice={notice}
-          subject={subject}
-          values={{ name, time }}
-        />
-      </span>
+      {notice.kind === "heldByOther" ? (
+        <span data-testid="edit-lease-held-by">
+          <Trans
+            id={copy.heldBy.id}
+            message={copy.heldBy.message}
+            values={{ name, time }}
+          />
+        </span>
+      ) : (
+        <span data-testid="edit-lease-lost">
+          <Trans
+            id={copy.lost.id}
+            message={copy.lost.message}
+            values={{ name, time }}
+          />
+        </span>
+      )}
       <div className="ms-auto flex gap-2">
         <Button
           variant="outline"
@@ -70,48 +74,5 @@ export function EditLeaseBanner({
         ) : null}
       </div>
     </div>
-  );
-}
-
-function LeaseNoticeText({
-  notice,
-  subject,
-  values,
-}: {
-  readonly notice: EditLeaseNotice;
-  readonly subject: "entry" | "settings";
-  readonly values: { readonly name: ReactElement; readonly time: string };
-}): ReactElement {
-  if (subject === "settings") {
-    return notice.kind === "heldByOther" ? (
-      <Trans
-        id="settings.lease.heldBy"
-        message="{name} is editing these settings (since {time})"
-        values={values}
-        comment="name: the editing user's display name or email; time: a formatted date and time"
-      />
-    ) : (
-      <Trans
-        id="settings.lease.lost"
-        message="{name} took over editing these settings at {time}. Your unsaved changes are shown here but weren't saved."
-        values={values}
-        comment="name: the user who took over; time: a formatted date and time"
-      />
-    );
-  }
-  return notice.kind === "heldByOther" ? (
-    <Trans
-      id="editor.lease.heldBy"
-      message="{name} is editing this entry (since {time})"
-      values={values}
-      comment="name: the editing user's display name or email; time: a formatted date and time"
-    />
-  ) : (
-    <Trans
-      id="editor.lease.lost"
-      message="{name} took over editing this entry at {time}. Your unsaved changes are shown here but weren't saved."
-      values={values}
-      comment="name: the user who took over; time: a formatted date and time"
-    />
   );
 }

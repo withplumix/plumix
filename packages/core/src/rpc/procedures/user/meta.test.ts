@@ -9,6 +9,7 @@ import { users } from "../../../db/schema/users.js";
 import { text } from "../../../plugin/fields/index.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { createRpcHarness } from "../../../test/rpc.js";
+import { currentUserEtag } from "../../../test/user-etag.js";
 import { loadUserMeta } from "./meta.js";
 
 function registerUserFields(
@@ -41,10 +42,18 @@ describe("user meta: conditional fields", () => {
       },
     ]);
     const h = await createRpcHarness({ authAs: "admin", plugins });
-    await h.client.user.update({ id: h.user.id, meta: { layout: "standard" } });
+    await h.client.user.update({
+      id: h.user.id,
+      ifMatch: await currentUserEtag(h.db, h.user.id),
+      meta: { layout: "standard" },
+    });
 
     await expect(
-      h.client.user.update({ id: h.user.id, meta: { layout: "video" } }),
+      h.client.user.update({
+        id: h.user.id,
+        ifMatch: await currentUserEtag(h.db, h.user.id),
+        meta: { layout: "video" },
+      }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
       data: { reason: "meta_invalid_value", key: "video_url" },
@@ -68,6 +77,7 @@ describe("user meta: registration + round-trip via user.update", () => {
 
     const updated = await h.client.user.update({
       id: h.user.id,
+      ifMatch: await currentUserEtag(h.db, h.user.id),
       meta: { bio: "Hi there", newsletter: true },
     });
     expect(updated.meta).toEqual({ bio: "Hi there", newsletter: true });
@@ -83,6 +93,7 @@ describe("user meta: registration + round-trip via user.update", () => {
     await expect(
       h.client.user.update({
         id: h.user.id,
+        ifMatch: await currentUserEtag(h.db, h.user.id),
         meta: { mystery: "x" },
       }),
     ).rejects.toMatchObject({
@@ -106,12 +117,14 @@ describe("user meta: registration + round-trip via user.update", () => {
 
     await h.client.user.update({
       id: h.user.id,
+      ifMatch: await currentUserEtag(h.db, h.user.id),
       meta: { bio: "hello", newsletter: false },
     });
 
     // Partial patch: only `newsletter` is touched; `bio` survives.
     const afterFlip = await h.client.user.update({
       id: h.user.id,
+      ifMatch: await currentUserEtag(h.db, h.user.id),
       meta: { newsletter: true },
     });
     expect(afterFlip.meta).toEqual({ bio: "hello", newsletter: true });
@@ -119,6 +132,7 @@ describe("user meta: registration + round-trip via user.update", () => {
     // Null deletes the key.
     const afterClear = await h.client.user.update({
       id: h.user.id,
+      ifMatch: await currentUserEtag(h.db, h.user.id),
       meta: { bio: null },
     });
     expect(afterClear.meta).toEqual({ newsletter: true });
@@ -132,8 +146,16 @@ describe("user meta: registration + round-trip via user.update", () => {
     const h = await createRpcHarness({ authAs: "admin", plugins });
     const spy = h.spyAction("user:meta_changed");
 
-    await h.client.user.update({ id: h.user.id, meta: { bio: "hello" } });
-    await h.client.user.update({ id: h.user.id, meta: { bio: null } });
+    await h.client.user.update({
+      id: h.user.id,
+      ifMatch: await currentUserEtag(h.db, h.user.id),
+      meta: { bio: "hello" },
+    });
+    await h.client.user.update({
+      id: h.user.id,
+      ifMatch: await currentUserEtag(h.db, h.user.id),
+      meta: { bio: null },
+    });
 
     expect(spy.calls).toHaveLength(2);
     expect(spy.calls[0]?.args[1]).toEqual({
@@ -151,7 +173,11 @@ describe("user meta: registration + round-trip via user.update", () => {
     const h = await createRpcHarness({ authAs: "admin", plugins });
     const spy = h.spyAction("user:meta_changed");
 
-    await h.client.user.update({ id: h.user.id, meta: {} });
+    await h.client.user.update({
+      id: h.user.id,
+      ifMatch: await currentUserEtag(h.db, h.user.id),
+      meta: {},
+    });
 
     expect(spy.calls).toHaveLength(0);
   });

@@ -1,4 +1,5 @@
 import type { ConflictDialogState } from "@/editor/conflict-dialog.js";
+import type { EditingCopy } from "@/editor/editing-copy.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useReducer, useRef, useState } from "react";
@@ -52,6 +53,25 @@ const M = {
     message: "Couldn't save settings.",
   }),
 } satisfies Record<string, MessageDescriptor>;
+
+const SETTINGS_EDITING_COPY: EditingCopy = {
+  conflictTitle: defineMessage({
+    id: "settings.conflict.title",
+    message: "These settings changed since you opened them",
+  }),
+  heldBy: defineMessage({
+    id: "settings.lease.heldBy",
+    message: "{name} is editing these settings (since {time})",
+    comment:
+      "name: the editing user's display name or email; time: a formatted date and time",
+  }),
+  lost: defineMessage({
+    id: "settings.lease.lost",
+    message:
+      "{name} took over editing these settings at {time}. Your unsaved changes are shown here but weren't saved.",
+    comment: "name: the user who took over; time: a formatted date and time",
+  }),
+};
 
 /**
  * Split out of `$page.tsx` so a test can mount one group's card without the
@@ -188,9 +208,8 @@ export function SettingsGroupCard({
       data-testid={`settings-group-card-${group.name}`}
     >
       <EntryConflictDialog
+        copy={SETTINGS_EDITING_COPY}
         open={conflict.open}
-        // eslint-disable-next-line lingui/no-unlocalized-strings -- discriminant, not UI copy
-        subject="settings"
         changedAt={conflict.open ? (conflict.conflict.updatedAt ?? null) : null}
         editingElsewhere={
           conflict.open
@@ -204,9 +223,8 @@ export function SettingsGroupCard({
       />
       {notice ? (
         <EditLeaseBanner
+          copy={SETTINGS_EDITING_COPY}
           notice={notice}
-          // eslint-disable-next-line lingui/no-unlocalized-strings -- discriminant, not UI copy
-          subject="settings"
           onTakeOver={() => takeOver.mutate()}
           isTakingOver={takeOver.isPending}
           onBack={handleBack}

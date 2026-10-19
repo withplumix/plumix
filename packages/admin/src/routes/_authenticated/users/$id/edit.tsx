@@ -1,3 +1,7 @@
+import type { EntryConflict } from "@/editor/autosave.js";
+import type { EditorLeaseMode, LeaseRefusal } from "@/editor/edit-lease.js";
+import type { EditingCopy } from "@/editor/editing-copy.js";
+import type { EditLease } from "@/editor/use-edit-lease.js";
 import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { QueryClient } from "@tanstack/react-query";
@@ -14,6 +18,12 @@ import { LanguageCard } from "@/components/profile/language-card.js";
 import { PasskeysCard } from "@/components/profile/passkeys-card.js";
 import { SessionsCard } from "@/components/profile/sessions-card.js";
 import { UserEmailField } from "@/components/profile/user-email-field.js";
+import { classifyAutosaveError } from "@/editor/autosave.js";
+import { editorLeaseMode } from "@/editor/edit-lease.js";
+import { EditLeaseBanner } from "@/editor/EditLeaseBanner.js";
+import { EntryConflictDialog } from "@/editor/EntryConflictDialog.js";
+import { useEditGuards } from "@/editor/use-edit-guards.js";
+import { useEditLease } from "@/editor/use-edit-lease.js";
 import { isSurfaceOffered } from "@/lib/admin-areas.js";
 import { hasCap } from "@/lib/caps.js";
 import { hasAuthorRoutes, visibleUserMetaBoxes } from "@/lib/manifest.js";
@@ -84,6 +94,25 @@ import { isUserRole, USERS_LIST_DEFAULT_SEARCH } from "../-constants.js";
 
 type User = WithResolvedMeta<StoredUser>;
 
+const USER_EDITING_COPY: EditingCopy = {
+  conflictTitle: defineMessage({
+    id: "editor.conflict.title.user",
+    message: "This profile changed since you opened it",
+  }),
+  heldBy: defineMessage({
+    id: "editor.lease.heldBy.user",
+    message: "{name} is editing this profile (since {time})",
+    comment:
+      "name: the editing user's display name or email; time: a formatted date and time",
+  }),
+  lost: defineMessage({
+    id: "editor.lease.lost.user",
+    message:
+      "{name} took over editing this profile at {time}. Your unsaved changes are shown here but weren't saved.",
+    comment: "name: the user who took over; time: a formatted date and time",
+  }),
+};
+
 const M = {
   loadingAria: defineMessage({
     id: "userEdit.loading.aria",
@@ -151,6 +180,13 @@ const profileFormSchema = v.object({
   role: v.picklist(USER_ROLES),
   meta: v.record(v.string(), v.unknown()),
 });
+
+interface ProfileValues {
+  readonly name: string;
+  readonly slug: string;
+  readonly role: UserRole;
+  readonly meta: ResolvedMeta;
+}
 
 export const Route = createFileRoute("/_authenticated/users/$id/edit")({
   // Reject invalid ids as a router 404 before `beforeLoad` / `loader`
@@ -224,17 +260,18 @@ function UserEditRoute(): ReactNode {
   const { data: target } = useSuspenseQuery(
     orpc.user.get.queryOptions({ input: { id: userId } }),
   );
+  // Outside the keyed form, so a remount on save keeps the lease.
+  const lease = useEditLease("user", userId);
   const metaBoxes = visibleUserMetaBoxes(session.capabilities);
   return (
     <UserEditForm
       // Remount after each save so `useForm` re-reads `defaultValues`
       // from the refetched row. Same pattern as `/entries/$slug/$id`.
-      key={
-        target.updatedAt instanceof Date
-          ? target.updatedAt.toISOString()
-          : String(target.updatedAt)
-      }
+      key={target.etag}
       target={target}
+      sessionUserId={session.id}
+      lease={lease}
+      leaseMode={editorLeaseMode(lease.state)}
       isSelf={isSelf}
       canPromote={canPromote}
       canSave={canSave}
@@ -253,6 +290,8 @@ function useUserUpdateMutation({
   queryClient,
   setServerError,
   setServerFieldErrors,
+  onConflict,
+  onLocked,
 }: {
   target: User;
   canPromote: boolean;
@@ -262,16 +301,21 @@ function useUserUpdateMutation({
   setServerFieldErrors: (
     errors: readonly MetaFieldServerError[] | null,
   ) => void;
+  /** The copy was stale: `values` are kept, unsaved, for the author to pick. */
+  onConflict: (conflict: EntryConflict, values: ProfileValues) => void;
+  onLocked: (refusal: LeaseRefusal) => void;
 }) {
   return useMutation({
-    mutationFn: (values: {
-      name: string;
-      slug: string;
-      role: UserRole;
-      meta: ResolvedMeta;
+    mutationFn: ({
+      values,
+      ifMatch,
+    }: {
+      values: ProfileValues;
+      ifMatch: string;
     }) =>
       orpc.user.update.call({
         id: target.id,
+        ifMatch,
         name: values.name.length > 0 ? values.name : null,
         // Only send the slug when it actually changed — skips a needless
         // column write on name-only edits.
@@ -294,7 +338,17 @@ function useUserUpdateMutation({
       // from the fresh row automatically.
       await invalidateUserCaches(queryClient, target.id);
     },
-    onError: (err) => {
+    onError: (err, { values }) => {
+      // Never retried behind the author's back: they choose.
+      const outcome = classifyAutosaveError(err);
+      if (outcome.kind === "conflict") {
+        onConflict(outcome.conflict, values);
+        return;
+      }
+      if (outcome.kind === "locked") {
+        onLocked(outcome.locked);
+        return;
+      }
       // Path-addressed meta rejections render inline on the offending
       // inputs; everything else keeps the banner mapping.
       const fieldErrors = extractMetaFieldErrors(err);
@@ -311,6 +365,9 @@ function useUserUpdateMutation({
 
 function UserEditForm({
   target,
+  sessionUserId,
+  lease,
+  leaseMode,
   isSelf,
   canPromote,
   canSave,
@@ -319,7 +376,10 @@ function UserEditForm({
   canManageOtherTokens,
   metaBoxes,
 }: {
-  target: User;
+  target: User & { readonly etag: string };
+  sessionUserId: number;
+  lease: EditLease;
+  leaseMode: EditorLeaseMode;
   isSelf: boolean;
   canPromote: boolean;
   canSave: boolean;
@@ -345,6 +405,32 @@ function UserEditForm({
     queryClient,
     setServerError,
     setServerFieldErrors,
+    onConflict: (next, values) => guards.reportConflict(next, values),
+    onLocked: lease.lose,
+  });
+  const guards = useEditGuards({
+    copy: USER_EDITING_COPY,
+    userId: sessionUserId,
+    lease,
+    theirs: {
+      queryKey: ["user.conflict", target.id],
+      fetch: () => orpc.user.get.call({ id: target.id }),
+      snapshot: (saved) =>
+        saved
+          ? {
+              name: saved.name ?? "",
+              slug: saved.slug,
+              role: saved.role,
+              meta: saved.meta,
+            }
+          : null,
+    },
+    keepMine: (etag, values: ProfileValues) =>
+      updateUser.mutate({ values, ifMatch: etag }),
+    reload: () => invalidateUserCaches(queryClient, target.id),
+    onBack: () => {
+      void navigate({ to: "/users", search: USERS_LIST_DEFAULT_SEARCH });
+    },
   });
 
   const form = useForm({
@@ -358,8 +444,8 @@ function UserEditForm({
   });
   useApplyMetaFieldErrors(form, META_FORM_BASE_PATH, serverFieldErrors);
 
-  const onSubmit = form.handleSubmit((value) => {
-    updateUser.mutate(value);
+  const onSubmit = form.handleSubmit((values) => {
+    updateUser.mutate({ values, ifMatch: target.etag });
   });
 
   // Hoisted: lingui/no-expression-in-message rejects member exprs inline.
@@ -367,6 +453,10 @@ function UserEditForm({
 
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-4">
+      <EntryConflictDialog {...guards.conflictDialog} />
+      {leaseMode.mode === "readOnly" ? (
+        <EditLeaseBanner {...guards.leaseBanner(leaseMode.notice)} />
+      ) : null}
       <Link
         to="/users"
         search={USERS_LIST_DEFAULT_SEARCH}
@@ -409,166 +499,172 @@ function UserEditForm({
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form className="flex flex-col gap-4" onSubmit={onSubmit}>
-              <UserEmailField
-                userId={target.id}
-                email={target.email}
-                canEdit={canSave && isSurfaceOffered("emailChange")}
-              />
+            <fieldset
+              disabled={leaseMode.mode === "readOnly"}
+              className="contents"
+              data-testid="user-edit-fieldset"
+            >
+              <form className="flex flex-col gap-4" onSubmit={onSubmit}>
+                <UserEmailField
+                  userId={target.id}
+                  email={target.email}
+                  canEdit={canSave && isSurfaceOffered("emailChange")}
+                />
 
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      <Trans id="userEdit.name.label" message="Name" />
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        type="text"
-                        autoComplete="name"
-                        disabled={updateUser.isPending || !canSave}
-                        data-testid="user-edit-name-input"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="slug"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      <Trans id="userEdit.slug.label" message="Author slug" />
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        type="text"
-                        autoComplete="off"
-                        disabled={updateUser.isPending || !canSave}
-                        data-testid="user-edit-slug-input"
-                        {...field}
-                      />
-                    </FormControl>
-                    {hasAuthorRoutes() ? (
-                      <FormDescription data-testid="user-edit-slug-description">
-                        <Trans
-                          id="userEdit.slug.description"
-                          message="Used in this author's archive URL under /authors/. Changing it breaks existing links to the old address."
-                        />
-                      </FormDescription>
-                    ) : null}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {canPromote ? (
                 <FormField
                   control={form.control}
-                  name="role"
+                  name="name"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        <Trans id="userEdit.role.label" message="Role" />
+                        <Trans id="userEdit.name.label" message="Name" />
                       </FormLabel>
-                      <Select
-                        value={field.value}
-                        onValueChange={(next) => {
-                          if (isUserRole(next)) field.onChange(next);
-                        }}
-                        disabled={updateUser.isPending}
-                      >
-                        <FormControl>
-                          <SelectTrigger
-                            className="w-full"
-                            onBlur={field.onBlur}
-                            data-testid="user-edit-role-select"
-                          >
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {USER_ROLES.map((role) => (
-                            <SelectItem key={role} value={role}>
-                              {label(ROLE_LABEL_LONG[role])}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <Input
+                          type="text"
+                          autoComplete="name"
+                          disabled={updateUser.isPending || !canSave}
+                          data-testid="user-edit-name-input"
+                          {...field}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              ) : (
-                <div className="flex flex-col gap-2">
-                  <UILabel>
-                    <Trans id="userEdit.role.label" message="Role" />
-                  </UILabel>
-                  <Badge variant="secondary" className="w-fit">
-                    {label(ROLE_LABEL[target.role])}
-                  </Badge>
-                  {isSelf ? (
-                    <p className="text-muted-foreground text-xs">
-                      <Trans
-                        id="userEdit.role.selfReadonly"
-                        message="Only another administrator can change your role."
-                      />
-                    </p>
-                  ) : null}
-                </div>
-              )}
 
-              {metaBoxes.map((box) => (
-                <MetaBoxCard
-                  key={box.id}
-                  box={box}
-                  basePath="meta"
-                  disabled={updateUser.isPending || !canSave}
-                />
-              ))}
-
-              {serverError ? (
-                <Alert
-                  variant="destructive"
-                  data-testid="user-edit-server-error"
-                >
-                  <AlertDescription>{label(serverError)}</AlertDescription>
-                </Alert>
-              ) : null}
-
-              <div className="flex justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    void navigate({
-                      to: "/users",
-                      search: USERS_LIST_DEFAULT_SEARCH,
-                    });
-                  }}
-                  disabled={updateUser.isPending}
-                >
-                  <Trans id="userEdit.cancel" message="Cancel" />
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={updateUser.isPending || !canSave}
-                  data-testid="user-edit-submit"
-                >
-                  {updateUser.isPending ? (
-                    <Trans id="userEdit.submit.pending" message="Saving…" />
-                  ) : (
-                    <Trans id="userEdit.submit.idle" message="Save changes" />
+                <FormField
+                  control={form.control}
+                  name="slug"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        <Trans id="userEdit.slug.label" message="Author slug" />
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="text"
+                          autoComplete="off"
+                          disabled={updateUser.isPending || !canSave}
+                          data-testid="user-edit-slug-input"
+                          {...field}
+                        />
+                      </FormControl>
+                      {hasAuthorRoutes() ? (
+                        <FormDescription data-testid="user-edit-slug-description">
+                          <Trans
+                            id="userEdit.slug.description"
+                            message="Used in this author's archive URL under /authors/. Changing it breaks existing links to the old address."
+                          />
+                        </FormDescription>
+                      ) : null}
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </Button>
-              </div>
-            </form>
+                />
+
+                {canPromote ? (
+                  <FormField
+                    control={form.control}
+                    name="role"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          <Trans id="userEdit.role.label" message="Role" />
+                        </FormLabel>
+                        <Select
+                          value={field.value}
+                          onValueChange={(next) => {
+                            if (isUserRole(next)) field.onChange(next);
+                          }}
+                          disabled={updateUser.isPending}
+                        >
+                          <FormControl>
+                            <SelectTrigger
+                              className="w-full"
+                              onBlur={field.onBlur}
+                              data-testid="user-edit-role-select"
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {USER_ROLES.map((role) => (
+                              <SelectItem key={role} value={role}>
+                                {label(ROLE_LABEL_LONG[role])}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    <UILabel>
+                      <Trans id="userEdit.role.label" message="Role" />
+                    </UILabel>
+                    <Badge variant="secondary" className="w-fit">
+                      {label(ROLE_LABEL[target.role])}
+                    </Badge>
+                    {isSelf ? (
+                      <p className="text-muted-foreground text-xs">
+                        <Trans
+                          id="userEdit.role.selfReadonly"
+                          message="Only another administrator can change your role."
+                        />
+                      </p>
+                    ) : null}
+                  </div>
+                )}
+
+                {metaBoxes.map((box) => (
+                  <MetaBoxCard
+                    key={box.id}
+                    box={box}
+                    basePath="meta"
+                    disabled={updateUser.isPending || !canSave}
+                  />
+                ))}
+
+                {serverError ? (
+                  <Alert
+                    variant="destructive"
+                    data-testid="user-edit-server-error"
+                  >
+                    <AlertDescription>{label(serverError)}</AlertDescription>
+                  </Alert>
+                ) : null}
+
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      void navigate({
+                        to: "/users",
+                        search: USERS_LIST_DEFAULT_SEARCH,
+                      });
+                    }}
+                    disabled={updateUser.isPending}
+                  >
+                    <Trans id="userEdit.cancel" message="Cancel" />
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={updateUser.isPending || !canSave}
+                    data-testid="user-edit-submit"
+                  >
+                    {updateUser.isPending ? (
+                      <Trans id="userEdit.submit.pending" message="Saving…" />
+                    ) : (
+                      <Trans id="userEdit.submit.idle" message="Save changes" />
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </fieldset>
           </Form>
         </CardContent>
       </Card>

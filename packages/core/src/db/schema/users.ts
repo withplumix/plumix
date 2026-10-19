@@ -29,7 +29,9 @@ export const users = sqliteTable(
       .integer({ mode: "timestamp" })
       .notNull()
       .default(sql`(unixepoch())`)
-      .$onUpdate(() => sql`(unixepoch())`),
+      // The concurrency token: an update that doesn't set it still moves it,
+      // past its own value when two writes share a second.
+      .$onUpdate(() => sql`max(unixepoch(), updated_at + 1)`),
   }),
   // Named unique index, mirroring `terms_taxonomy_slug_idx` /
   // `entries_type_slug_idx` — single-column since the slug is global.

@@ -592,26 +592,38 @@ msgstr ""
 
 #. name: the editing user's display name or email; time: a formatted date and time
 #. js-lingui-explicit-id
-#: src/editor/EditLeaseBanner.tsx
+#: src/routes/_authenticated/settings/-settings-group-card.tsx
 msgid "settings.lease.heldBy"
 msgstr ""
 
 #. name: the editing user's display name or email; time: a formatted date and time
 #. js-lingui-explicit-id
-#: src/editor/EditLeaseBanner.tsx
+#: src/editor/editing-copy.ts
 msgid "editor.lease.heldBy"
+msgstr ""
+
+#. name: the editing user's display name or email; time: a formatted date and time
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "editor.lease.heldBy.user"
 msgstr ""
 
 #. name: the user who took over; time: a formatted date and time
 #. js-lingui-explicit-id
-#: src/editor/EditLeaseBanner.tsx
+#: src/routes/_authenticated/settings/-settings-group-card.tsx
 msgid "settings.lease.lost"
 msgstr ""
 
 #. name: the user who took over; time: a formatted date and time
 #. js-lingui-explicit-id
-#: src/editor/EditLeaseBanner.tsx
+#: src/editor/editing-copy.ts
 msgid "editor.lease.lost"
+msgstr ""
+
+#. name: the user who took over; time: a formatted date and time
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "editor.lease.lost.user"
 msgstr ""
 
 #. revoked: number of OTHER sessions just signed out (excluding the current device)
@@ -3639,7 +3651,7 @@ msgid "apiTokens.revoke.description"
 msgstr "Токен негайно припиняє роботу. Будь-який клієнт, що його використовує, почне отримувати 401 під час наступного запиту."
 
 #. js-lingui-explicit-id
-#: src/editor/EntryConflictDialog.tsx
+#: src/routes/_authenticated/settings/-settings-group-card.tsx
 msgid "settings.conflict.title"
 msgstr ""
 
@@ -3704,7 +3716,7 @@ msgid "profile.passkeys.enroll.noAuthenticator"
 msgstr "Цей пристрій не підтримує passkeys."
 
 #. js-lingui-explicit-id
-#: src/editor/EntryConflictDialog.tsx
+#: src/editor/editing-copy.ts
 msgid "editor.conflict.title"
 msgstr ""
 
@@ -3767,6 +3779,11 @@ msgstr "Це назавжди видалить вибрані записи та 
 #: src/lib/plugin-error-boundary.tsx
 msgid "plugin.errorBoundary.unknownPlugin"
 msgstr "цей плагін"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "editor.conflict.title.user"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffDialog.tsx

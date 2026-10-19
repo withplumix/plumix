@@ -3,21 +3,14 @@ import type { EditLease } from "@/editor/use-edit-lease.js";
 import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useReducer,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DocumentSettingsPanel } from "@/components/editor/document-settings.js";
 import { ErrorPlaceholder } from "@/components/error-placeholder.js";
 import { classifyAutosaveError } from "@/editor/autosave.js";
-import { conflictDialog, editingElsewhere } from "@/editor/conflict-dialog.js";
 import { createDebouncer } from "@/editor/debounce.js";
 import { detectStaleAutosave } from "@/editor/detect-stale-autosave.js";
 import { editorLeaseMode } from "@/editor/edit-lease.js";
+import { ENTRY_EDITING_COPY } from "@/editor/editing-copy.js";
 import { EditLeaseBanner } from "@/editor/EditLeaseBanner.js";
 import { EntryConflictDialog } from "@/editor/EntryConflictDialog.js";
 import { diffMetaBag } from "@/editor/meta-diff.js";
@@ -30,6 +23,7 @@ import { resolvePluginFieldType } from "@/editor/resolve-plugin-field-type.js";
 import { PreviewBanner } from "@/editor/revisions/PreviewBanner.js";
 import { useRevisionsTrigger } from "@/editor/revisions/use-revisions-trigger.js";
 import { StaleDraftDialog } from "@/editor/StaleDraftDialog.js";
+import { useEditGuards } from "@/editor/use-edit-guards.js";
 import { useEditLease } from "@/editor/use-edit-lease.js";
 import { useEntryAutosave } from "@/editor/use-entry-autosave.js";
 import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
@@ -227,7 +221,7 @@ function EditorRoute(): ReactNode {
   const [reseedNonce, setReseedNonce] = useState(0);
   const reseed = useCallback(() => setReseedNonce((n) => n + 1), []);
   // Held across reseeds, so remounting the editor never gives the lease up.
-  const lease = useEditLease(id);
+  const lease = useEditLease("entry", id);
   const leaseMode = editorLeaseMode(lease.state);
 
   // A `?revision=<id>` request opens that revision read-only with a restore
@@ -442,21 +436,16 @@ function EntryEditor({
   );
   useEffect(() => () => refreshPreview.cancel(), [refreshPreview]);
 
-  const [conflict, dispatchConflict] = useReducer(conflictDialog, {
-    open: false,
-  });
-  const [conflictMine, setConflictMine] = useState<unknown>(null);
   const autosave = useEntryAutosave({
     id,
     etag: entry.etag,
     onConflict: (next) => {
       // The author's copy as it stood when the save was refused.
-      setConflictMine({
+      guards.reportConflict(next, {
         title: titleRef.current,
         content: contentRef.current,
         excerpt: excerptRef.current,
       });
-      dispatchConflict({ type: "conflict", conflict: next });
     },
     onLocked: lease.lose,
     onUnsavedChange: setHasUnsavedEdits,
@@ -961,23 +950,6 @@ function EntryEditor({
     autosave.anchor(liveAnchorAfterResolve);
     setStaleResolved(true);
   }, [autosave, liveAnchorAfterResolve]);
-  const handleKeepMine = useCallback(() => {
-    if (!conflict.open) return;
-    dispatchConflict({ type: "keepMine" });
-    void autosave.keepMine(conflict.conflict.etag);
-  }, [autosave, conflict]);
-  const handleLoadTheirs = useCallback(() => {
-    dispatchConflict({ type: "loadTheirs" });
-    // Drop the author's unsaved edits, then remount on the saved entry.
-    autosave.cancel();
-    void invalidateEntry().then(onReseed);
-  }, [autosave, invalidateEntry, onReseed]);
-  // Remount on the entry as the previous holder left it.
-  const takeOver = useMutation({
-    mutationFn: lease.takeOver,
-    onSuccess: () => invalidateEntry().then(onReseed),
-  });
-  const handleTakeOver = useCallback(() => takeOver.mutate(), [takeOver]);
   const handleUseTheirs = useCallback(() => {
     discardDraft.mutate(undefined, {
       onSuccess: () => setStaleResolved(true),
@@ -1028,12 +1000,6 @@ function EntryEditor({
     ...orpc.entry.get.queryOptions({ input: { id } }),
     enabled: showStaleDialog,
   });
-  // The entry as the conflicting write left it, fetched fresh per conflict.
-  const theirsQuery = useQuery({
-    queryKey: ["entry.conflict", id, conflict.open && conflict.conflict.etag],
-    queryFn: () => orpc.entry.get.call({ id }),
-    enabled: conflict.open,
-  });
   const snapshotOf = (
     row:
       { title: string; content: unknown; excerpt: string | null } | undefined,
@@ -1041,21 +1007,23 @@ function EntryEditor({
     row
       ? { title: row.title, content: row.content, excerpt: row.excerpt }
       : { title: renderLabel(M.staleLoading), content: null, excerpt: null };
+  const guards = useEditGuards({
+    copy: ENTRY_EDITING_COPY,
+    userId,
+    lease,
+    theirs: {
+      queryKey: ["entry.conflict", id],
+      fetch: () => orpc.entry.get.call({ id }),
+      snapshot: snapshotOf,
+    },
+    keepMine: (etag) => void autosave.keepMine(etag),
+    discard: autosave.cancel,
+    reload: () => invalidateEntry().then(onReseed),
+    onBack: () => void handleBack(),
+  });
   const overlay = (
     <>
-      <EntryConflictDialog
-        open={conflict.open}
-        changedAt={conflict.open ? (conflict.conflict.updatedAt ?? null) : null}
-        editingElsewhere={
-          conflict.open
-            ? editingElsewhere(conflict.conflict, userId)
-            : undefined
-        }
-        mineSnapshot={conflictMine}
-        theirsSnapshot={snapshotOf(theirsQuery.data)}
-        onKeepMine={handleKeepMine}
-        onLoadTheirs={handleLoadTheirs}
-      />
+      <EntryConflictDialog {...guards.conflictDialog} />
       <StaleDraftDialog
         open={showStaleDialog}
         autosaveSnapshot={{
@@ -1090,14 +1058,7 @@ function EntryEditor({
         previewUrl={target}
         content={() => contentRef.current}
         capabilities={capabilitySet}
-        banner={
-          <EditLeaseBanner
-            notice={leaseMode.notice}
-            onTakeOver={handleTakeOver}
-            isTakingOver={takeOver.isPending}
-            onBack={() => void handleBack()}
-          />
-        }
+        banner={<EditLeaseBanner {...guards.leaseBanner(leaseMode.notice)} />}
       />
     );
   }

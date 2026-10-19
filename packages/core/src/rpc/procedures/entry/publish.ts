@@ -16,13 +16,9 @@ import {
 } from "../../../revisions/snapshot-envelope.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { assertLeaseAllows } from "../../concurrency.js";
 import { idParam } from "../../contract/validation.js";
-import {
-  assertCopyCurrent,
-  assertEntryWritable,
-  claimEntry,
-  ENTRY_IF_MATCH_MESSAGE,
-} from "./concurrency.js";
+import { ENTRY_IF_MATCH_MESSAGE, entryRows } from "./concurrency.js";
 import {
   applyEntryBeforeSave,
   captureRevisionIfSupported,
@@ -51,8 +47,12 @@ export const publish = base
     if (!context.auth.can(publishCapability)) {
       throw errors.FORBIDDEN({ data: { capability: publishCapability } });
     }
-    await assertEntryWritable(context, live.id, input.takeOver);
-    assertCopyCurrent(input.ifMatch, live);
+    await assertLeaseAllows(
+      context,
+      { kind: "entry", id: live.id },
+      input.takeOver,
+    );
+    entryRows(context.db).assertCopyCurrent(input.ifMatch, live);
     const autosave = await getAutosaveEdits(context.db, {
       entryId: live.id,
       authorId: context.user.id,
@@ -85,8 +85,7 @@ export const publish = base
       excerpt: prepared.excerpt,
       meta: prepared.meta,
     };
-    const updatedRow = await claimEntry(
-      context.db,
+    const updatedRow = await entryRows(context.db).claimRow(
       live.id,
       input.ifMatch,
       toWrite,

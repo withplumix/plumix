@@ -2000,7 +2000,10 @@ describe("a feed at the edge", () => {
 
     const renamed = await h.fetch("/_plumix/rpc/user/update", {
       as: admin,
-      json: { json: { id: jane.id, name: "Janet" }, meta: [] },
+      json: {
+        json: { id: jane.id, ifMatch: etagOf(jane.updatedAt), name: "Janet" },
+        meta: [],
+      },
     });
     renamed.assertStatus(200);
     await h.drainDeferred();

@@ -20,6 +20,12 @@ const ENTRY_LEASE_API: EditLeaseApi = {
   release: (input) => orpc.entry.lease.release.call(input),
 };
 
+const USER_LEASE_API: EditLeaseApi = {
+  acquire: (input) => orpc.user.lease.acquire.call(input),
+  renew: (input) => orpc.user.lease.renew.call(input),
+  release: (input) => orpc.user.lease.release.call(input),
+};
+
 const SETTINGS_GROUP_LEASE_API: EditLeaseApi<string> = {
   acquire: ({ id, takeOver }) =>
     orpc.settings.lease.acquire.call({ group: id, takeOver }),
@@ -60,9 +66,13 @@ function useLease<Id>(
   return { state, takeOver, lose };
 }
 
-/** Holds the entry's edit lease while the editor is open. */
-export function useEditLease(id: number): EditLease {
-  return useLease(id, ENTRY_LEASE_API, true);
+/** Holds the entry's or user's edit lease while its editor is open. */
+export function useEditLease(kind: "entry" | "user", id: number): EditLease {
+  return useLease(
+    id,
+    kind === "entry" ? ENTRY_LEASE_API : USER_LEASE_API,
+    true,
+  );
 }
 
 /** Holds a settings group's edit lease while its card is being edited. */
