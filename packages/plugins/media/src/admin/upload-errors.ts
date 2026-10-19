@@ -70,11 +70,6 @@ const ERROR_DESCRIPTORS = {
     id: "plugin.media.error.csrfTokenMissing",
     message: "Request blocked by CSRF check. Reload the page and try again.",
   },
-  changedElsewhere: {
-    id: "plugin.media.error.changedElsewhere",
-    message:
-      "This item was changed elsewhere since you opened it, so your edit wasn't saved. Its latest version is shown now.",
-  },
   generic: {
     id: "plugin.media.error.generic",
     message: "Something went wrong. Try again.",
@@ -94,7 +89,6 @@ const REASON_ERRORS: Readonly<Record<string, MessageDescriptor>> = {
   storage_put_failed: ERROR_DESCRIPTORS.serverCouldntProcess,
   content_length_required: ERROR_DESCRIPTORS.contentLengthRequired,
   csrf_token_missing: ERROR_DESCRIPTORS.csrfTokenMissing,
-  etag_mismatch: ERROR_DESCRIPTORS.changedElsewhere,
 };
 
 const PUT_STATUS_ERRORS: Readonly<Record<number, MessageDescriptor>> = {

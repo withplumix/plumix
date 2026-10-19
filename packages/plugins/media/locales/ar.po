@@ -294,11 +294,6 @@ msgstr "تم حظر الطلب بواسطة فحص CSRF. أعد تحميل ال�
 
 #. js-lingui-explicit-id
 #: src/admin/upload-errors.ts
-msgid "plugin.media.error.changedElsewhere"
-msgstr "تم تغيير هذا العنصر في مكان آخر منذ أن فتحته، لذلك لم يُحفظ تعديلك. يتم عرض أحدث نسخة منه الآن."
-
-#. js-lingui-explicit-id
-#: src/admin/upload-errors.ts
 msgid "plugin.media.error.generic"
 msgstr "حدث خطأ ما. حاول مجدداً."
 
@@ -530,4 +525,21 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/blocks/file/index.tsx
 msgid "plugin.media.block.file.downloadFallback"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.conflict.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#. name: the editing user's display name or email; time: a formatted date and time
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.lease.heldBy"
+msgstr ""
+
+#. js-lingui-explicit-id
+#. name: the user who took over; time: a formatted date and time
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.lease.lost"
 msgstr ""

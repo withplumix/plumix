@@ -294,11 +294,6 @@ msgstr "Anfrage durch CSRF-Prüfung blockiert. Seite neu laden und erneut versuc
 
 #. js-lingui-explicit-id
 #: src/admin/upload-errors.ts
-msgid "plugin.media.error.changedElsewhere"
-msgstr "Dieses Element wurde an anderer Stelle geändert, seit Sie es geöffnet haben, daher wurde Ihre Änderung nicht gespeichert. Jetzt wird die neueste Version angezeigt."
-
-#. js-lingui-explicit-id
-#: src/admin/upload-errors.ts
 msgid "plugin.media.error.generic"
 msgstr "Etwas ist schiefgelaufen. Bitte erneut versuchen."
 
@@ -530,4 +525,21 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/blocks/file/index.tsx
 msgid "plugin.media.block.file.downloadFallback"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.conflict.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#. name: the editing user's display name or email; time: a formatted date and time
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.lease.heldBy"
+msgstr ""
+
+#. js-lingui-explicit-id
+#. name: the user who took over; time: a formatted date and time
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.lease.lost"
 msgstr ""

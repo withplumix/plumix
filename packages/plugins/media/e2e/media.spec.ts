@@ -1,8 +1,17 @@
 // The playground configures no S3 credentials, so uploads PUT to the worker's
 // same-origin route and no storage mock is needed.
 
+import { resolve } from "node:path";
 import type { Page, Response } from "@playwright/test";
-import { expect, PNG_1X1, test } from "plumix/test/playwright";
+import {
+  actingAs,
+  expect,
+  openPlaygroundDb,
+  PNG_1X1,
+  test,
+} from "plumix/test/playwright";
+
+const PLAYGROUND = resolve(import.meta.dirname, "../playground");
 
 test.describe.serial("@plumix/plugin-media — worker-driven happy path", () => {
   test("empty state → upload → card visible → delete → empty again", async ({
@@ -143,7 +152,7 @@ test.describe.serial("@plumix/plugin-media — worker-driven happy path", () => 
   });
 });
 
-test("a save from a tab whose copy another tab saved over shows the conflict", async ({
+test("a save from a tab whose copy another tab saved over offers to keep mine", async ({
   page,
   context,
 }) => {
@@ -161,19 +170,8 @@ test("a save from a tab whose copy another tab saved over shows the conflict", a
   await confirmed;
   const other = await context.newPage();
   await other.goto("pages/media");
-  const altOf = async (tab: Page) => {
-    await tab.getByTestId("media-library-search").fill("contested");
-    await tab
-      .locator(
-        "[data-testid='media-library-grid'] > [data-testid^='media-card-']",
-      )
-      .first()
-      .click();
-    return tab.locator("[data-testid^='media-detail-'][data-testid$='-alt']");
-  };
-  const mine = await altOf(page);
-  const theirs = await altOf(other);
-
+  const mine = await openDetailAlt(page, "contested");
+  const theirs = await openDetailAlt(other, "contested");
   const theirsSaved = other.waitForResponse(
     (r) => r.url().endsWith("/media/update") && r.status() === 200,
   );
@@ -182,11 +180,59 @@ test("a save from a tab whose copy another tab saved over shows the conflict", a
   await theirsSaved;
   await mine.fill("saved from a stale copy");
   await mine.press("Enter");
+  await expect(page.getByTestId("entry-conflict-dialog")).toBeVisible();
+  await page.getByTestId("entry-conflict-compare").click();
+  const panes = page.getByTestId("entry-conflict-compare-panes");
+  await expect(panes).toContainText("saved from a stale copy");
+  await expect(panes).toContainText("saved in the other tab");
 
-  await expect(page.getByTestId("media-library-banner-error")).toContainText(
-    "changed elsewhere since you opened it",
+  const kept = page.waitForResponse(
+    (r) => r.url().endsWith("/media/update") && r.status() === 200,
   );
-  await expect(mine).toHaveValue("saved in the other tab");
+  await page.getByTestId("entry-conflict-keep-mine").click();
+  await kept;
+
+  await expect(page.getByTestId("entry-conflict-dialog")).toBeHidden();
+  await expect(mine).toHaveValue("saved from a stale copy");
+});
+
+test("a second editor opening an item another editor has open sees who is editing it", async ({
+  page,
+  browser,
+}) => {
+  await page.goto("pages/media");
+  const confirmed = page.waitForResponse(
+    (r) => r.url().endsWith("/media/confirm") && r.status() === 200,
+  );
+  await page
+    .locator('[data-testid="media-library-upload"] input[type="file"]')
+    .setInputFiles({
+      name: "leased.png",
+      mimeType: "image/png",
+      buffer: PNG_1X1,
+    });
+  await confirmed;
+  const db = await openPlaygroundDb({ cwd: PLAYGROUND });
+  const holder = await actingAs(db, "admin");
+  const holderContext = await browser.newContext({
+    baseURL: test.info().project.use.baseURL,
+  });
+  await holderContext.addCookies([...holder.storageState.cookies]);
+  const holderPage = await holderContext.newPage();
+  await holderPage.goto("pages/media");
+  const leased = holderPage.waitForResponse(
+    (r) => r.url().endsWith("/entry/lease/acquire") && r.status() === 200,
+  );
+  await openDetailAlt(holderPage, "leased");
+  await leased;
+
+  const alt = await openDetailAlt(page, "leased");
+
+  await expect(page.getByTestId("edit-lease-held-by")).toContainText(
+    `${holder.user.name ?? holder.user.email} is editing this media item`,
+  );
+  await expect(alt).toBeDisabled();
+  await holderContext.close();
 });
 
 test("a second save chains from the etag the first returned, before the list refetches", async ({
@@ -241,6 +287,17 @@ test("admin page ships styled controls", async ({ page }) => {
   expect(ui.total).toBeGreaterThan(0);
   expect(ui.styled).toBeGreaterThan(0);
 });
+
+/** Opens the detail drawer of the one item `search` finds, at its alt text. */
+async function openDetailAlt(tab: Page, search: string) {
+  await tab.getByTestId("media-library-search").fill(search);
+  const cards = tab.locator(
+    "[data-testid='media-library-grid'] > [data-testid^='media-card-']",
+  );
+  await expect(cards).toHaveCount(1);
+  await cards.first().click();
+  return tab.locator("[data-testid^='media-detail-'][data-testid$='-alt']");
+}
 
 /**
  * Counts the plugin shell's interactive controls and how many carry a

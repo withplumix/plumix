@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import {
   altNeedsSave,
   libraryUploadState,
+  savedAltSnapshot,
   withSavedMedia,
 } from "./library-state.js";
 
@@ -82,5 +83,25 @@ describe("altNeedsSave", () => {
 
   test("a draft just saved needs none, before the list shows it", () => {
     expect(altNeedsSave("new", "old", "new")).toBe(false);
+  });
+});
+
+describe("savedAltSnapshot", () => {
+  test("is the item's alt once the list holds the version the conflict names", () => {
+    expect(
+      savedAltSnapshot({ alt: "theirs", etag: "201" }, { etag: "201" }),
+    ).toEqual({ alt: "theirs" });
+  });
+
+  test("is unknown while the list still holds the copy the save was made from", () => {
+    expect(
+      savedAltSnapshot({ alt: "old", etag: "200" }, { etag: "201" }),
+    ).toBeNull();
+  });
+
+  test("an item with no alt has an empty one", () => {
+    expect(
+      savedAltSnapshot({ alt: null, etag: "201" }, { etag: "201" }),
+    ).toEqual({ alt: "" });
   });
 });

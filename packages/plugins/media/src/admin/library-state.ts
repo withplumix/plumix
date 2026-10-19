@@ -57,3 +57,20 @@ export function altNeedsSave(
 ): boolean {
   return draft !== shown && draft !== lastSaved;
 }
+
+/** An item's alt text as one side of a conflict's comparison. */
+export interface AltSnapshot {
+  readonly alt: string;
+}
+
+/**
+ * The saved side of a conflict's comparison: `null` until the list has
+ * refetched the version the conflict names.
+ */
+export function savedAltSnapshot(
+  item: { readonly alt: string | null; readonly etag: string },
+  conflict: { readonly etag: string },
+): AltSnapshot | null {
+  if (item.etag !== conflict.etag) return null;
+  return { alt: item.alt ?? "" };
+}

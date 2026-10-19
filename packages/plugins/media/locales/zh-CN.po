@@ -294,11 +294,6 @@ msgstr "请求被 CSRF 检查拦截。请重新加载页面并重试。"
 
 #. js-lingui-explicit-id
 #: src/admin/upload-errors.ts
-msgid "plugin.media.error.changedElsewhere"
-msgstr "自你打开此项后，它已在别处被更改，因此你的修改未保存。现在显示的是最新版本。"
-
-#. js-lingui-explicit-id
-#: src/admin/upload-errors.ts
 msgid "plugin.media.error.generic"
 msgstr "出了点问题。请重试。"
 
@@ -530,4 +525,21 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/blocks/file/index.tsx
 msgid "plugin.media.block.file.downloadFallback"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.conflict.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#. name: the editing user's display name or email; time: a formatted date and time
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.lease.heldBy"
+msgstr ""
+
+#. js-lingui-explicit-id
+#. name: the user who took over; time: a formatted date and time
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.lease.lost"
 msgstr ""

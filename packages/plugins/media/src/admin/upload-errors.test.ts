@@ -19,17 +19,6 @@ describe("uploadErrorLabel", () => {
     );
   });
 
-  test("a save from a stale copy says the item changed elsewhere", () => {
-    const error = new ORPCError("CONFLICT", {
-      status: 409,
-      data: { reason: "etag_mismatch", etag: "101" },
-    });
-
-    expect(uploadErrorLabel(error).message).toBe(
-      "This item was changed elsewhere since you opened it, so your edit wasn't saved. Its latest version is shown now.",
-    );
-  });
-
   test("a PUT refused as too large says the file exceeds the cap", () => {
     expect(uploadErrorLabel(UploadPutError.rejected(413)).message).toBe(
       "File exceeds the configured maxUploadSize.",

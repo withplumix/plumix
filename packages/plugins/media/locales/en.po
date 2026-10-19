@@ -299,11 +299,6 @@ msgstr "Request blocked by CSRF check. Reload the page and try again."
 
 #. js-lingui-explicit-id
 #: src/admin/upload-errors.ts
-msgid "plugin.media.error.changedElsewhere"
-msgstr "This item was changed elsewhere since you opened it, so your edit wasn't saved. Its latest version is shown now."
-
-#. js-lingui-explicit-id
-#: src/admin/upload-errors.ts
 msgid "plugin.media.error.generic"
 msgstr "Something went wrong. Try again."
 
@@ -536,3 +531,20 @@ msgstr "Pick or upload a file, or paste a download URL."
 #: src/blocks/file/index.tsx
 msgid "plugin.media.block.file.downloadFallback"
 msgstr "Download"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.conflict.title"
+msgstr "This media item changed since you opened it"
+
+#. js-lingui-explicit-id
+#. name: the editing user's display name or email; time: a formatted date and time
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.lease.heldBy"
+msgstr "{name} is editing this media item (since {time})"
+
+#. js-lingui-explicit-id
+#. name: the user who took over; time: a formatted date and time
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.lease.lost"
+msgstr "{name} took over editing this media item at {time}. Your unsaved changes are shown here but weren't saved."
