@@ -602,6 +602,12 @@ msgstr "{name} is editing these settings (since {time})"
 msgid "editor.lease.heldBy"
 msgstr "{name} is editing this entry (since {time})"
 
+#. name: the editing user's display name or email; time: a formatted date and time
+#. js-lingui-explicit-id
+#: src/editor/EditLeaseBanner.tsx
+msgid "editor.lease.heldBy.user"
+msgstr "{name} is editing this profile (since {time})"
+
 #. name: the user who took over; time: a formatted date and time
 #. js-lingui-explicit-id
 #: src/editor/EditLeaseBanner.tsx
@@ -613,6 +619,12 @@ msgstr "{name} took over editing these settings at {time}. Your unsaved changes 
 #: src/editor/EditLeaseBanner.tsx
 msgid "editor.lease.lost"
 msgstr "{name} took over editing this entry at {time}. Your unsaved changes are shown here but weren't saved."
+
+#. name: the user who took over; time: a formatted date and time
+#. js-lingui-explicit-id
+#: src/editor/EditLeaseBanner.tsx
+msgid "editor.lease.lost.user"
+msgstr "{name} took over editing this profile at {time}. Your unsaved changes are shown here but weren't saved."
 
 #. revoked: number of OTHER sessions just signed out (excluding the current device)
 #. js-lingui-explicit-id
@@ -3767,6 +3779,11 @@ msgstr "This permanently deletes the selected entries and their revisions. It ca
 #: src/lib/plugin-error-boundary.tsx
 msgid "plugin.errorBoundary.unknownPlugin"
 msgstr "this plugin"
+
+#. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.title.user"
+msgstr "This profile changed since you opened it"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffDialog.tsx

@@ -227,7 +227,7 @@ function EditorRoute(): ReactNode {
   const [reseedNonce, setReseedNonce] = useState(0);
   const reseed = useCallback(() => setReseedNonce((n) => n + 1), []);
   // Held across reseeds, so remounting the editor never gives the lease up.
-  const lease = useEditLease(id);
+  const lease = useEditLease("entry", id);
   const leaseMode = editorLeaseMode(lease.state);
 
   // A `?revision=<id>` request opens that revision read-only with a restore
@@ -1044,6 +1044,7 @@ function EntryEditor({
   const overlay = (
     <>
       <EntryConflictDialog
+        subject="entry"
         open={conflict.open}
         changedAt={conflict.open ? (conflict.conflict.updatedAt ?? null) : null}
         editingElsewhere={
@@ -1092,6 +1093,7 @@ function EntryEditor({
         capabilities={capabilitySet}
         banner={
           <EditLeaseBanner
+            subject="entry"
             notice={leaseMode.notice}
             onTakeOver={handleTakeOver}
             isTakingOver={takeOver.isPending}

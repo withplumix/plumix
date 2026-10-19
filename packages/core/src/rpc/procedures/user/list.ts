@@ -1,3 +1,4 @@
+import { etagOf } from "../../../db/concurrency.js";
 import { and, desc, eq, like, sql } from "../../../db/index.js";
 import { sessions } from "../../../db/schema/sessions.js";
 import { users } from "../../../db/schema/users.js";
@@ -69,5 +70,9 @@ export const list = base
         lastSignInEpoch === null ? null : new Date(lastSignInEpoch * 1000),
     }));
 
-    return context.hooks.applyFilter("rpc:user.list:output", rows);
+    const output = await context.hooks.applyFilter(
+      "rpc:user.list:output",
+      rows,
+    );
+    return output.map((row) => ({ ...row, etag: etagOf(row.updatedAt) }));
   });

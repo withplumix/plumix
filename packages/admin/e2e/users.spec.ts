@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
 import type { User } from "@plumix/core/schema";
@@ -10,6 +11,9 @@ import {
   mockRpcWithCapture,
   rpcConflictBody,
   rpcErrorBody,
+  rpcEtagConflictBody,
+  rpcLeaseBody,
+  rpcLockedBody,
   rpcOkBody,
 } from "./support/rpc-mock.js";
 
@@ -982,5 +986,143 @@ test.describe("/users/$id/edit — Language card (self)", () => {
     await page.getByTestId("locale-switcher-option-uk").click();
 
     await expect.poll(() => inputs).toEqual([{ code: "uk" }]);
+  });
+});
+
+test.describe("/users/$id/edit — edits from another session", () => {
+  // The user as the server holds it: each save moves its `etag`, and a save
+  // from an older one is refused like core refuses a stale copy.
+  async function mockSavedUser(page: Page): Promise<{
+    readonly updates: Record<string, unknown>[];
+    readonly saveElsewhere: (changes: Record<string, unknown>) => void;
+  }> {
+    let version = 0;
+    let saved: Record<string, unknown> = {
+      ...user({ id: 42, email: "eddie@example.test", name: "Eddie" }),
+      etag: "e0",
+    };
+    const updates: Record<string, unknown>[] = [];
+    await mockRpc(page, { "/auth/session": AUTHED_ADMIN });
+    await page.route("**/_plumix/rpc/user/get", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody(saved),
+      }),
+    );
+    const save = (changes: Record<string, unknown>): void => {
+      version += 1;
+      saved = { ...saved, ...changes, etag: `e${String(version)}` };
+    };
+    await page.route("**/_plumix/rpc/user/update", (route) => {
+      const {
+        ifMatch,
+        id: _id,
+        ...changes
+      } = (route.request().postDataJSON() as { json: Record<string, unknown> })
+        .json;
+      updates.push({ ifMatch, ...changes });
+      if (ifMatch !== saved.etag) {
+        return route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: rpcEtagConflictBody(
+            String(saved.etag),
+            new Date("2026-05-20T09:30:00Z"),
+          ),
+        });
+      }
+      save(changes);
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody(saved),
+      });
+    });
+    return { updates, saveElsewhere: save };
+  }
+
+  async function openConflictDialog(page: Page): Promise<{
+    readonly updates: Record<string, unknown>[];
+  }> {
+    const { updates, saveElsewhere } = await mockSavedUser(page);
+    await page.goto("users/42/edit");
+    await expect(page.getByTestId("user-edit-name-input")).toHaveValue("Eddie");
+    saveElsewhere({ name: "Saved elsewhere" });
+    await page.getByTestId("user-edit-name-input").fill("My name");
+    await page.getByTestId("user-edit-submit").click();
+    await expect(page.getByTestId("entry-conflict-dialog")).toBeVisible();
+    return { updates };
+  }
+
+  test("a save made after another session saved opens the conflict dialog, and Load theirs shows that save", async ({
+    page,
+  }) => {
+    const { updates } = await openConflictDialog(page);
+
+    await expect(page.getByTestId("entry-conflict-dialog")).toContainText(
+      "This profile changed since you opened it",
+    );
+    expect(updates).toMatchObject([{ ifMatch: "e0", name: "My name" }]);
+    await page.getByTestId("entry-conflict-load-theirs").click();
+
+    await expect(page.getByTestId("entry-conflict-dialog")).toBeHidden();
+    await expect(page.getByTestId("user-edit-name-input")).toHaveValue(
+      "Saved elsewhere",
+    );
+  });
+
+  test("Keep mine in the conflict dialog saves the local edit over the other session's", async ({
+    page,
+  }) => {
+    const { updates } = await openConflictDialog(page);
+
+    await page.getByTestId("entry-conflict-keep-mine").click();
+
+    await expect(page.getByTestId("entry-conflict-dialog")).toBeHidden();
+    await expect
+      .poll(() => updates.at(-1))
+      .toMatchObject({ ifMatch: "e1", name: "My name" });
+    expect(updates).toHaveLength(2);
+    await expect(page.getByTestId("user-edit-name-input")).toHaveValue(
+      "My name",
+    );
+  });
+
+  test("while another admin edits the user, the form is read-only until Take over", async ({
+    page,
+  }) => {
+    await mockSavedUser(page);
+    const ada = { id: 9, name: "Ada" };
+    const since = new Date("2026-05-20T09:00:00Z");
+    await page.route("**/_plumix/rpc/user/lease/acquire", (route) => {
+      const { takeOver } = (
+        route.request().postDataJSON() as { json: { takeOver?: boolean } }
+      ).json;
+      return route.fulfill(
+        takeOver === true
+          ? {
+              status: 200,
+              contentType: "application/json",
+              body: rpcLeaseBody({ id: 1, name: "Admin" }, new Date()),
+            }
+          : {
+              status: 423,
+              contentType: "application/json",
+              body: rpcLockedBody(ada, since),
+            },
+      );
+    });
+
+    await page.goto("users/42/edit");
+
+    await expect(page.getByTestId("edit-lease-held-by")).toContainText(
+      "Ada is editing this profile",
+    );
+    await expect(page.getByTestId("user-edit-name-input")).toBeDisabled();
+    await page.getByTestId("edit-lease-take-over").click();
+
+    await expect(page.getByTestId("edit-lease-banner")).toBeHidden();
+    await expect(page.getByTestId("user-edit-name-input")).toBeEnabled();
   });
 });

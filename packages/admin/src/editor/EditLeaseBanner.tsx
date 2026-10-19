@@ -7,8 +7,8 @@ import { Button } from "@plumix/admin-ui/button";
 
 interface EditLeaseBannerProps {
   readonly notice: EditLeaseNotice;
-  /** What is leased: an entry, or a settings group's card. Defaults to `entry`. */
-  readonly subject?: "entry" | "settings";
+  /** What is leased: an entry, a user, or a settings group's card. Defaults to `entry`. */
+  readonly subject?: "entry" | "user" | "settings";
   /** Offered only while another user holds the lease. */
   readonly onTakeOver: () => void;
   readonly isTakingOver: boolean;
@@ -79,7 +79,7 @@ function LeaseNoticeText({
   values,
 }: {
   readonly notice: EditLeaseNotice;
-  readonly subject: "entry" | "settings";
+  readonly subject: "entry" | "user" | "settings";
   readonly values: { readonly name: ReactElement; readonly time: string };
 }): ReactElement {
   if (subject === "settings") {
@@ -94,6 +94,23 @@ function LeaseNoticeText({
       <Trans
         id="settings.lease.lost"
         message="{name} took over editing these settings at {time}. Your unsaved changes are shown here but weren't saved."
+        values={values}
+        comment="name: the user who took over; time: a formatted date and time"
+      />
+    );
+  }
+  if (subject === "user") {
+    return notice.kind === "heldByOther" ? (
+      <Trans
+        id="editor.lease.heldBy.user"
+        message="{name} is editing this profile (since {time})"
+        values={values}
+        comment="name: the editing user's display name or email; time: a formatted date and time"
+      />
+    ) : (
+      <Trans
+        id="editor.lease.lost.user"
+        message="{name} took over editing this profile at {time}. Your unsaved changes are shown here but weren't saved."
         values={values}
         comment="name: the user who took over; time: a formatted date and time"
       />

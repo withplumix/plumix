@@ -602,6 +602,12 @@ msgstr ""
 msgid "editor.lease.heldBy"
 msgstr ""
 
+#. name: the editing user's display name or email; time: a formatted date and time
+#. js-lingui-explicit-id
+#: src/editor/EditLeaseBanner.tsx
+msgid "editor.lease.heldBy.user"
+msgstr ""
+
 #. name: the user who took over; time: a formatted date and time
 #. js-lingui-explicit-id
 #: src/editor/EditLeaseBanner.tsx
@@ -612,6 +618,12 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/editor/EditLeaseBanner.tsx
 msgid "editor.lease.lost"
+msgstr ""
+
+#. name: the user who took over; time: a formatted date and time
+#. js-lingui-explicit-id
+#: src/editor/EditLeaseBanner.tsx
+msgid "editor.lease.lost.user"
 msgstr ""
 
 #. revoked: number of OTHER sessions just signed out (excluding the current device)
@@ -3767,6 +3779,11 @@ msgstr "Це назавжди видалить вибрані записи та 
 #: src/lib/plugin-error-boundary.tsx
 msgid "plugin.errorBoundary.unknownPlugin"
 msgstr "цей плагін"
+
+#. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.title.user"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffDialog.tsx

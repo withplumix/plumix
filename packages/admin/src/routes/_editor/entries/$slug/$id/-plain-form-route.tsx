@@ -218,6 +218,7 @@ export function PlainFormRouteInner({
   return (
     <>
       <EntryConflictDialog
+        subject="entry"
         open={conflict.open}
         changedAt={conflict.open ? (conflict.conflict.updatedAt ?? null) : null}
         editingElsewhere={
@@ -240,6 +241,7 @@ export function PlainFormRouteInner({
       />
       {leaseMode.mode === "readOnly" ? (
         <EditLeaseBanner
+          subject="entry"
           notice={leaseMode.notice}
           onTakeOver={() => takeOver.mutate()}
           isTakingOver={takeOver.isPending}

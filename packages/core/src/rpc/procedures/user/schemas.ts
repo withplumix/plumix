@@ -1,5 +1,6 @@
 import * as v from "valibot";
 
+import { ifMatchObject } from "../../../db/concurrency.js";
 import { USER_ROLES } from "../../../db/schema/users.js";
 import {
   emailField,
@@ -42,17 +43,24 @@ export const userInviteInputSchema = v.object({
  * No `email`: changes go through `user.requestEmailChange` so an admin or
  * hijacked session can't redirect a user's recovery email without consent.
  */
-export const userUpdateInputSchema = v.object({
-  id: idParam,
-  name: v.optional(v.nullable(nameField)),
-  // Author-archive identifier (`/authors/{slug}`). Hand-editable unlike
-  // the auto-dedup at creation — a taken slug surfaces a `slug_taken`
-  // CONFLICT rather than silently appending a suffix.
-  slug: v.optional(slugSchema),
-  avatarUrl: v.optional(v.nullable(avatarUrlSchema)),
-  role: v.optional(roleSchema),
-  meta: v.optional(metaInputSchema),
-});
+export const userUpdateInputSchema = ifMatchObject(
+  {
+    id: idParam,
+    name: v.optional(v.nullable(nameField)),
+    // Author-archive identifier (`/authors/{slug}`). Hand-editable unlike
+    // the auto-dedup at creation — a taken slug surfaces a `slug_taken`
+    // CONFLICT rather than silently appending a suffix.
+    slug: v.optional(slugSchema),
+    avatarUrl: v.optional(v.nullable(avatarUrlSchema)),
+    role: v.optional(roleSchema),
+    meta: v.optional(metaInputSchema),
+    /** Write over another user's edit lease, taking it over, rather than be refused with LOCKED. */
+    takeOver: v.optional(v.boolean()),
+  },
+  // The user's `etag` the caller's copy came with; a newer write rejects with
+  // CONFLICT `etag_mismatch`.
+  "Send the user's `etag` from `user.get` as `ifMatch`",
+);
 
 export const userDisableInputSchema = v.object({ id: idParam });
 

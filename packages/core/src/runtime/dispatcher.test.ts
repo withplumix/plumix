@@ -24,6 +24,7 @@ import { defineBlock } from "../blocks/index.js";
 import { entryPurgeTags } from "../cdn/contract/tags.js";
 import { tagCdnEntry } from "../cdn/route-tags.js";
 import { getContext } from "../context/stores.js";
+import { etagOf } from "../db/concurrency.js";
 import { defineAuthMethod } from "../plugin/auth-method.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback } from "../route/render/template-builders.js";
@@ -2065,7 +2066,10 @@ describe("dispatcher — public read-through CDN", () => {
 
     const renamed = await h.fetch("/_plumix/rpc/user/update", {
       as: admin,
-      json: { json: { id: jane.id, name: "Janet" }, meta: [] },
+      json: {
+        json: { id: jane.id, ifMatch: etagOf(jane.updatedAt), name: "Janet" },
+        meta: [],
+      },
     });
     renamed.assertStatus(200);
     await h.drainDeferred();

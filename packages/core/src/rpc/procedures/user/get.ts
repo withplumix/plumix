@@ -1,3 +1,4 @@
+import { etagOf } from "../../../db/concurrency.js";
 import { eq } from "../../../db/index.js";
 import { users } from "../../../db/schema/users.js";
 import { authenticated } from "../../authenticated.js";
@@ -28,5 +29,10 @@ export const get = base
     }
     const { bag } = await settleUserMeta(context, row, row.meta);
     const meta = await resolveUserMeta(context, bag);
-    return context.hooks.applyFilter("rpc:user.get:output", { ...row, meta });
+    const output = await context.hooks.applyFilter("rpc:user.get:output", {
+      ...row,
+      meta,
+    });
+    // The settle pins `updatedAt`, so the row's token still stands.
+    return { ...output, etag: etagOf(row.updatedAt) };
   });

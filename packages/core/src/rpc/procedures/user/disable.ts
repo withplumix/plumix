@@ -1,4 +1,5 @@
 import { invalidateAllSessionsForUser } from "../../../auth/sessions.js";
+import { etagOf } from "../../../db/concurrency.js";
 import { and, eq } from "../../../db/index.js";
 import { users } from "../../../db/schema/users.js";
 import { authenticated } from "../../authenticated.js";
@@ -26,7 +27,11 @@ export const disable = base
       throw errors.NOT_FOUND({ data: { kind: "user", id: input.id } });
     }
     if (existing.disabledAt) {
-      return context.hooks.applyFilter("rpc:user.disable:output", existing);
+      const output = await context.hooks.applyFilter(
+        "rpc:user.disable:output",
+        existing,
+      );
+      return { ...output, etag: etagOf(existing.updatedAt) };
     }
 
     // Last-admin guard inlined into the WHERE clause — atomic with the write,
@@ -65,5 +70,10 @@ export const disable = base
       context,
     );
 
-    return context.hooks.applyFilter("rpc:user.disable:output", updated);
+    // A system write: the token moves without a copy to check.
+    const output = await context.hooks.applyFilter(
+      "rpc:user.disable:output",
+      updated,
+    );
+    return { ...output, etag: etagOf(updated.updatedAt) };
   });

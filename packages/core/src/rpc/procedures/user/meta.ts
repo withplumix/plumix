@@ -10,13 +10,15 @@ import type {
 } from "../../../meta/core.js";
 import type { PluginRegistry } from "../../../plugin/manifest.js";
 import type { CapabilityErrors } from "../../../rpc-errors.js";
+import { claim } from "../../../db/concurrency.js";
+import { and, eq } from "../../../db/index.js";
 import { users } from "../../../db/schema/users.js";
 import {
-  applyMetaPatch,
   decodeMetaBag as decodeMetaBagCore,
   isEmptyMetaPatch,
   loadMeta,
   metaScope,
+  patchedMetaBag,
   resolveMetaReferences as resolveMetaReferencesCore,
   sanitizeMetaForRpc as sanitizeMetaForRpcCore,
   settleStoredMeta,
@@ -140,9 +142,8 @@ export async function loadUserMeta(
 }
 
 /**
- * Apply a meta patch to `users.meta` and fire `user:meta_changed`.
- * Plugins that need to mutate the patch subscribe to
- * `rpc:user.update:input` and mutate `input.meta` there.
+ * A system write of `patch` to `users.meta`, then `user:meta_changed`. It
+ * lands only while the row holds the token it merged over, else merges again.
  */
 export async function writeUserMeta(
   ctx: AppContext,
@@ -150,11 +151,29 @@ export async function writeUserMeta(
   patch: MetaPatch,
 ): Promise<void> {
   if (isEmptyMetaPatch(patch)) return;
-  await applyMetaPatch(ctx, users, users.id, user.id, patch);
-  await announceUserMetaChange(ctx, user, patch);
+  const read = () =>
+    ctx.db.query.users.findFirst({
+      columns: { meta: true, updatedAt: true },
+      where: eq(users.id, user.id),
+    });
+  let row = await read();
+  while (row) {
+    const guard = claim(users.updatedAt, row.updatedAt);
+    const written = await ctx.db
+      .update(users)
+      .set({ meta: patchedMetaBag(row.meta, patch), ...guard.set })
+      .where(and(eq(users.id, user.id), guard.where))
+      .returning({ id: users.id });
+    if (written.length > 0) {
+      await announceUserMetaChange(ctx, user, patch);
+      return;
+    }
+    row = await read();
+  }
 }
 
-function announceUserMetaChange(
+/** Fire `user:meta_changed` once a write carrying `patch` has landed. */
+export function announceUserMetaChange(
   ctx: AppContext,
   user: { readonly id: number },
   patch: MetaPatch,

@@ -176,8 +176,8 @@ COLUMN` with a constant default avoids the rebuild, but it is a column every
   the condition runs on the primary, so a stale replica read can only turn into
   a conflict.
 - Entries adopt this first (#3018, then the lease in #3165), then settings
-  groups (#3167); terms, users and the media plugin follow in their own issues.
-  Until then those resources are not protected, and this ADR, not their current code, is
+  groups (#3167) and users (#3168); terms and the media plugin follow in their
+  own issues. Until then those resources are not protected, and this ADR, not their current code, is
   the rule.
 - A row written more than once a second runs ahead of the clock by the excess:
   1,000 back-to-back saves put `updated_at` 1,000 seconds ahead on node:sqlite,

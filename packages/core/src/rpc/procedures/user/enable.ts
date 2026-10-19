@@ -1,3 +1,4 @@
+import { etagOf } from "../../../db/concurrency.js";
 import { eq } from "../../../db/index.js";
 import { users } from "../../../db/schema/users.js";
 import { authenticated } from "../../authenticated.js";
@@ -25,7 +26,11 @@ export const enable = base
       throw errors.NOT_FOUND({ data: { kind: "user", id: input.id } });
     }
     if (!existing.disabledAt) {
-      return context.hooks.applyFilter("rpc:user.enable:output", existing);
+      const output = await context.hooks.applyFilter(
+        "rpc:user.enable:output",
+        existing,
+      );
+      return { ...output, etag: etagOf(existing.updatedAt) };
     }
 
     const [updated] = await context.db
@@ -48,5 +53,10 @@ export const enable = base
       context,
     );
 
-    return context.hooks.applyFilter("rpc:user.enable:output", updated);
+    // A system write: the token moves without a copy to check.
+    const output = await context.hooks.applyFilter(
+      "rpc:user.enable:output",
+      updated,
+    );
+    return { ...output, etag: etagOf(updated.updatedAt) };
   });

@@ -31,8 +31,8 @@ const M = {
 
 interface EntryConflictDialogProps {
   readonly open: boolean;
-  /** What changed: an entry, or a settings group's card. Defaults to `entry`. */
-  readonly subject?: "entry" | "settings";
+  /** What changed: an entry, a user, or a settings group's card. Defaults to `entry`. */
+  readonly subject?: "entry" | "user" | "settings";
   /** When the other write landed; `null` when the resource doesn't record it. */
   readonly changedAt: Date | null;
   /** Another user holding the entry's edit lease, named as editing it now. */
@@ -45,8 +45,8 @@ interface EntryConflictDialogProps {
 }
 
 /**
- * A save found the entry changed since the author opened it. Autosave is
- * paused and their changes kept until they pick one.
+ * A save found the entry or user changed since the author opened it. Autosave
+ * is paused and their changes kept until they pick one.
  */
 export function EntryConflictDialog({
   open,
@@ -77,6 +77,11 @@ export function EntryConflictDialog({
               <Trans
                 id="editor.conflict.title"
                 message="This entry changed since you opened it"
+              />
+            ) : subject === "user" ? (
+              <Trans
+                id="editor.conflict.title.user"
+                message="This profile changed since you opened it"
               />
             ) : (
               <Trans
