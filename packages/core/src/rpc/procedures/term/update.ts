@@ -1,8 +1,8 @@
 import type { NewTerm } from "../../../db/schema/terms.js";
 import { spellTermCapability } from "../../../access/contract/capability.js";
-import { ConflictError } from "../../../db/concurrency.js";
 import { and, eq, isUniqueConstraintError } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
+import { assertTermCopyCurrent, claimTerm } from "../../../db/term-claim.js";
 import { isEmptyMetaPatch, patchedMetaBag } from "../../../meta/core.js";
 import {
   announceTermMetaChange,
@@ -15,11 +15,7 @@ import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { assertLeaseAllows } from "../../concurrency.js";
 import { stripUndefined } from "../entry/helpers.js";
-import {
-  claimTerm,
-  parentWouldCreateCycle,
-  termWire,
-} from "./helpers.js";
+import { parentWouldCreateCycle, termWire } from "./helpers.js";
 import { termUpdateInputSchema } from "./schemas.js";
 
 export const update = base
@@ -47,12 +43,7 @@ export const update = base
       { kind: "term", id: existing.id },
       filtered.takeOver,
     );
-    if (filtered.ifMatch !== existing.version) {
-      throw new ConflictError(existing.version, {
-        kind: "term",
-        id: existing.id,
-      });
-    }
+    assertTermCopyCurrent(filtered.ifMatch, existing);
 
     if (
       filtered.parentId !== undefined &&

@@ -26,6 +26,7 @@ import { report } from "../report.js";
 import { readDump, readDumpProgress, writeDump } from "../sync/dump.js";
 import { exportLocalAdmins, keepLocalAdmins } from "../sync/local-admins.js";
 import { rewriteUrls, siteUrl } from "../sync/rewrite-urls.js";
+import { pastTargetTermTokens } from "../sync/term-tokens.js";
 import { parseCommandArgs } from "../target-options.js";
 
 const DIRECTIONS: readonly SyncDirection[] = ["pull", "push"];
@@ -266,6 +267,7 @@ async function preparedDump(run: SyncRun): Promise<RewrittenDump> {
   if (keepsAdmins) {
     dump = await keepLocalAdmins(dump, await exportLocalAdmins(run.target));
   }
+  dump = await pastTargetTermTokens(dump, run.target);
   if (!run.args.rewriteUrls) return { dump, rewritten: () => new Map() };
   return rewriteUrls(dump, targetSite(run));
 }

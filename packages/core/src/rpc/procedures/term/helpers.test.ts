@@ -1,34 +1,10 @@
 import { describe, expect, test } from "vitest";
 
-import { ConflictError } from "../../../db/concurrency.js";
 import { eq } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
 import { factoriesFor } from "../../../test/factories.js";
 import { createTestDb } from "../../../test/harness.js";
-import { claimTerm, writeTermAsSystem } from "./helpers.js";
-
-describe("claimTerm", () => {
-  test("a claim from a copy another write overtook writes nothing and names the current token", async () => {
-    const db = await createTestDb();
-    const read = await factoriesFor(db).term.create({ name: "Read" });
-    await db
-      .update(terms)
-      .set({ name: "Saved meanwhile" })
-      .where(eq(terms.id, read.id));
-
-    const claimed = claimTerm(db, read.id, read.version, { name: "Mine" });
-
-    await expect(claimed).rejects.toBeInstanceOf(ConflictError);
-    await expect(claimed).rejects.toMatchObject({
-      etag: String(read.version + 1),
-    });
-    const [row] = await db
-      .select({ name: terms.name })
-      .from(terms)
-      .where(eq(terms.id, read.id));
-    expect(row?.name).toBe("Saved meanwhile");
-  });
-});
+import { writeTermAsSystem } from "./helpers.js";
 
 describe("writeTermAsSystem", () => {
   test("a write that lost a race re-reads the term and decides again", async () => {

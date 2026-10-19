@@ -25,6 +25,7 @@ import { resolveOwners } from "../migrate/owners.js";
 import { report } from "../report.js";
 import { readDump, writeDump } from "../sync/dump.js";
 import { rewriteUrls } from "../sync/rewrite-urls.js";
+import { pastTargetTermTokens } from "../sync/term-tokens.js";
 import { parseCommandArgs } from "../target-options.js";
 import {
   closeAll,
@@ -186,7 +187,10 @@ async function confirmed(run: ImportRun): Promise<boolean> {
 }
 
 async function load(run: ImportRun, dump: DumpReader): Promise<void> {
-  const { dump: rewrittenDump, rewritten } = prepared(run, dump);
+  const { dump: rewrittenDump, rewritten } = prepared(
+    run,
+    await pastTargetTermTokens(dump, run.target),
+  );
   describeImport(
     run.targetName,
     await run.target.importData(rewrittenDump, run.scopes, { dryRun: true }),

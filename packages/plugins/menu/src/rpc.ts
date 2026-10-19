@@ -7,9 +7,9 @@ import type {
 import {
   acquireEditLease,
   and,
+  assertTermCopyCurrent,
   assertWritable,
-  claimVersion,
-  ConflictError,
+  claimTerm,
   count,
   eq,
   etagOf,
@@ -263,13 +263,13 @@ export function createMenuRouter(
       if (!term) {
         throw errors.NOT_FOUND({ data: { kind: "menu", id: input.termId } });
       }
-      const resource = { kind: "term", id: term.id };
-      await assertWritable(context.db, resource, claimantOf(context), {
-        takeOver: input.takeOver,
-      });
-      if (input.ifMatch !== term.version) {
-        throw new ConflictError(term.version, resource);
-      }
+      await assertWritable(
+        context.db,
+        { kind: "term", id: term.id },
+        claimantOf(context),
+        { takeOver: input.takeOver },
+      );
+      assertTermCopyCurrent(input.ifMatch, term);
 
       const flat = flattenSaveItems(input.items, {
         maxDepth: MENU_DEPTH_HARD_CAP,
@@ -378,21 +378,9 @@ export function createMenuRouter(
 
       // The item tree is the menu's content: claim the menu term first, so
       // of two saves from one copy only the first writes any item.
-      const guard = claimVersion(terms.version, input.ifMatch);
-      const claimed = await context.db
-        .update(terms)
-        .set(guard.set)
-        .where(and(eq(terms.id, term.id), guard.where))
-        .returning({ version: terms.version });
-      if (claimed.length === 0) {
-        const [current] = await context.db
-          .select({ version: terms.version })
-          .from(terms)
-          .where(eq(terms.id, term.id));
-        if (!current) {
-          throw errors.NOT_FOUND({ data: { kind: "menu", id: term.id } });
-        }
-        throw new ConflictError(current.version, resource);
+      const claimed = await claimTerm(context.db, term.id, input.ifMatch, {});
+      if (!claimed) {
+        throw errors.NOT_FOUND({ data: { kind: "menu", id: term.id } });
       }
 
       // The snapshot keeps the editor showing the item after its target is
@@ -522,7 +510,7 @@ export function createMenuRouter(
 
       return {
         termId: term.id,
-        etag: etagOf(guard.set.version),
+        etag: etagOf(claimed.version),
         itemIds,
         added,
         removed,

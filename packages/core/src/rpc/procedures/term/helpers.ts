@@ -1,10 +1,6 @@
 import type { Db } from "../../../context/app-context.js";
 import type { NewTerm, Term } from "../../../db/schema/terms.js";
-import {
-  claimVersion,
-  ConflictError,
-  etagOf,
-} from "../../../db/concurrency.js";
+import { etagOf } from "../../../db/concurrency.js";
 import { and, eq } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
 
@@ -14,32 +10,6 @@ export function termWire<T extends { readonly version: number }>({
   ...rest
 }: T): Omit<T, "version"> & { readonly etag: string } {
   return { ...rest, etag: etagOf(version) };
-}
-
-/**
- * One conditional update: it lands only while the row still holds `ifMatch`,
- * and moves the version. Throws `ConflictError` when another write landed
- * first; `undefined` when the term is gone.
- */
-export async function claimTerm(
-  db: Db,
-  id: number,
-  ifMatch: number,
-  changes: Partial<NewTerm>,
-): Promise<Term | undefined> {
-  const guard = claimVersion(terms.version, ifMatch);
-  const [row] = await db
-    .update(terms)
-    .set({ ...changes, ...guard.set })
-    .where(and(eq(terms.id, id), guard.where))
-    .returning();
-  if (row) return row;
-  const [current] = await db
-    .select({ version: terms.version })
-    .from(terms)
-    .where(eq(terms.id, id));
-  if (current) throw new ConflictError(current.version, { kind: "term", id });
-  return undefined;
 }
 
 /**

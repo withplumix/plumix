@@ -50,8 +50,10 @@ export {
 
 export {
   acquireEditLease,
+  assertTermCopyCurrent,
   assertWritable,
   claim,
+  claimTerm,
   claimVersion,
   ConflictError,
   EDIT_LEASE_DURATION_MS,
