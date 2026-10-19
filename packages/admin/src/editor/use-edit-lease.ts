@@ -68,7 +68,11 @@ function useLease<Id>(
 
 /** Holds the entry's or user's edit lease while its editor is open. */
 export function useEditLease(kind: "entry" | "user", id: number): EditLease {
-  return useLease(id, kind === "entry" ? ENTRY_LEASE_API : USER_LEASE_API, true);
+  return useLease(
+    id,
+    kind === "entry" ? ENTRY_LEASE_API : USER_LEASE_API,
+    true,
+  );
 }
 
 /** Holds a settings group's edit lease while its card is being edited. */
