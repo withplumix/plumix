@@ -1,5 +1,5 @@
 import { mkdirSync } from "node:fs";
-import { homedir } from "node:os";
+import { availableParallelism, homedir } from "node:os";
 import { join } from "node:path";
 import * as sandcastle from "@ai-hero/sandcastle";
 import { docker } from "@ai-hero/sandcastle/sandboxes/docker";
@@ -36,18 +36,25 @@ const INSTALL_THE_PINNED_BUN =
   'curl -fsSL https://bun.sh/install | bash -s "bun-v$v"; ' +
   "mkdir -p ~/.local/bin && ln -sf ~/.bun/bin/bun ~/.local/bin/bun; fi";
 
-const TASKS_A_LANE_RUNS_AT_ONCE = 2;
-const WORKERS_EACH_OF_THOSE_TASKS_GETS = 2;
+export const TASKS_A_LANE_RUNS_AT_ONCE = 2;
 
-export const workersALaneOversubscribes = (lanes: number): number =>
-  lanes * TASKS_A_LANE_RUNS_AT_ONCE * WORKERS_EACH_OF_THOSE_TASKS_GETS;
+export const testWorkersEachTaskGets = (lanes: number, cores: number): number =>
+  Math.max(1, Math.floor(cores / (lanes * TASKS_A_LANE_RUNS_AT_ONCE)));
 
-const ENV_THAT_KEEPS_TURBO_FROM_OVERSUBSCRIBING_THE_CORES = {
+let lanesSharingTheHost = 1;
+
+export const pinLaneCount = (lanes: number): void => {
+  lanesSharingTheHost = lanes;
+};
+
+const envThatKeepsTurboFromOversubscribingTheCores = () => ({
   TURBO_CACHE_DIR: "/home/agent/.turbo-cache",
   TURBO_CONCURRENCY: String(TASKS_A_LANE_RUNS_AT_ONCE),
-  VITEST_MAX_WORKERS: String(WORKERS_EACH_OF_THOSE_TASKS_GETS),
+  VITEST_MAX_WORKERS: String(
+    testWorkersEachTaskGets(lanesSharingTheHost, availableParallelism()),
+  ),
   PLAYWRIGHT_BROWSERS_PATH: "/home/agent/.cache/ms-playwright",
-};
+});
 
 export const SETUP_STEPS = [
   INSTALL_THE_PINNED_BUN,
@@ -71,7 +78,7 @@ const plumixContainer = () => {
     mkdirSync(hostPath, { recursive: true });
   return docker({
     mounts: CACHE_MOUNTS,
-    env: ENV_THAT_KEEPS_TURBO_FROM_OVERSUBSCRIBING_THE_CORES,
+    env: envThatKeepsTurboFromOversubscribingTheCores(),
     imageName: pinnedImage,
   });
 };
