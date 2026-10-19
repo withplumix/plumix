@@ -210,7 +210,7 @@ One user's claim to edit a resource, renewed while they edit and lapsing when th
 _Avoid_: lock (reserved for database locks), presence (a lease prevents, it does not decorate).
 
 **Take over**:
-Claiming an edit lease another user holds. The previous holder turns read-only and keeps their unsaved work. Only a person takes over; an agent waits.
+Claiming an edit lease another user holds. The previous holder turns read-only and keeps their unsaved work. Only a person takes over; an agent waits. A user saving their own account through the auth client always takes over (ADR 0050).
 
 **Keep mine**:
 Answering a conflict by saving the author's refused work over what is saved now, as an explicit overwrite from the concurrency token the conflict reported.
@@ -344,6 +344,9 @@ _Avoid_: carriesSession (not a real term — the predicate is `hasSession` / `re
 **Sign-in method**:
 A way a person proves who they are and gets a session, such as a passkey, a magic link or OAuth. Core and plugins declare one with `defineAuthMethod`; its routes answer under `/_plumix/auth/<name>/`, and core's kernel mints the session. Distinct from an authenticator, which only reads one.
 _Avoid_: auth provider, login method
+
+**Auth client**:
+The browser-side API a theme imports from `plumix/auth/client`: signing in and out, the session, and the signed-in user's own account (profile, email, locale, sessions, passkeys, linked OAuth accounts, a capability check). Every call acts on the session's user and resolves `{ data, error }`. See ADR 0050.
 
 **Authenticator**:
 A pluggable strategy that maps a request to who the user is. Read-only — it resolves credentials, it never mints sessions.
