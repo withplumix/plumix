@@ -1,4 +1,4 @@
-export interface Blocker {
+interface Blocker {
   readonly state: string;
   readonly openPullRequests: number;
 }

@@ -13,6 +13,7 @@ import {
   startClock,
   taggedBlock,
 } from "./agent.js";
+import { checkBrief } from "./brief-check.js";
 import { rebaseOntoLatestMain } from "./freshen.js";
 import { GATES, runGates } from "./gates.js";
 import {
@@ -420,6 +421,11 @@ export const shipTicket = async (
   const runAgentPhase = agentPhaseRunner(sandbox, journal);
 
   try {
+    say("\n--- check brief ---");
+    const brief = await checkBrief(runAgentPhase, ticket);
+    if (brief.next === "park")
+      return { status: "blocked", reason: brief.reason };
+
     say("\n--- implement ---");
     const implemented = await runAgentPhase("implement", IMPLEMENTER, {
       promptFile: join(PROMPT_DIR, "implement.md"),
