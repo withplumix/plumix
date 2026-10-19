@@ -1,4 +1,5 @@
-import type { PluginRpcOutputs } from "plumix/admin";
+import type { InfiniteData } from "@tanstack/react-query";
+import type { EditingCopy, EtagConflict, PluginRpcOutputs } from "plumix/admin";
 import type { MessageDescriptor } from "plumix/i18n";
 import type { CSSProperties, DragEvent, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -7,7 +8,17 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { basePath, isSlotConfigured } from "plumix/admin";
+import {
+  basePath,
+  EditConflictDialog,
+  editingElsewhere,
+  EditLeaseBanner,
+  editorLeaseMode,
+  etagConflict,
+  isSlotConfigured,
+  lockedBy,
+  useEditLease,
+} from "plumix/admin";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,11 +32,17 @@ import {
   Input,
   Skeleton,
 } from "plumix/admin/ui";
+import { authClient } from "plumix/auth/client";
 import { Trans, useLingui } from "plumix/i18n";
 
 import type { MediaRouter } from "../rpc.js";
 import { MAX_SEARCH_LENGTH } from "../search.js";
-import { libraryUploadState } from "./library-state.js";
+import {
+  altNeedsSave,
+  libraryUploadState,
+  savedAltSnapshot,
+  withSavedMedia,
+} from "./library-state.js";
 import { mediaRpc } from "./rpc.js";
 import { uploadErrorLabel, UploadPutError } from "./upload-errors.js";
 
@@ -81,6 +98,25 @@ const M = {
     message: "Search by filename…",
   },
 } satisfies Record<string, MessageDescriptor>;
+
+const MEDIA_EDITING_COPY: EditingCopy = {
+  conflictTitle: {
+    id: "plugin.media.conflict.title",
+    message: "This media item changed since you opened it",
+  },
+  heldBy: {
+    id: "plugin.media.lease.heldBy",
+    message: "{name} is editing this media item (since {time})",
+    comment:
+      "name: the editing user's display name or email; time: a formatted date and time",
+  },
+  lost: {
+    id: "plugin.media.lease.lost",
+    message:
+      "{name} took over editing this media item at {time}. Your unsaved changes are shown here but weren't saved.",
+    comment: "name: the user who took over; time: a formatted date and time",
+  },
+};
 
 const PAGE_SIZE = 24;
 const UPLOAD_CONCURRENCY = 4;
@@ -149,7 +185,9 @@ async function runWithConcurrency<T>(
   );
 }
 
-type MediaItem = PluginRpcOutputs<MediaRouter>["list"]["items"][number];
+type MediaPage = PluginRpcOutputs<MediaRouter>["list"];
+type MediaItem = MediaPage["items"][number];
+type SavedMediaItem = PluginRpcOutputs<MediaRouter>["update"];
 
 /**
  * Carries the resolved url/alt, not just the id, so a consumer can snapshot
@@ -396,11 +434,12 @@ export function MediaLibrary({
     onError: (failure) => setError(uploadErrorLabel(failure)),
   });
 
-  const update = useMutation({
-    mutationFn: (input: { id: number; alt: string }) => mediaRpc.update(input),
-    onSuccess: invalidateList,
-    onError: (failure) => setError(uploadErrorLabel(failure)),
-  });
+  const adoptSaved = (saved: SavedMediaItem): void => {
+    queryClient.setQueryData<InfiniteData<MediaPage>>(queryKey, (data) =>
+      data ? withSavedMedia(data, saved) : data,
+    );
+    invalidateList();
+  };
 
   // On the root, not the grid: the grid only renders when items exist, so the
   // empty state would reject drops.
@@ -657,9 +696,15 @@ export function MediaLibrary({
 
       {!isPicker && selectedItem && (
         <MediaDetailDrawer
+          key={selectedItem.id}
           item={selectedItem}
           onClose={() => setSelectedItem(null)}
-          onAltChange={(alt) => update.mutate({ id: selectedItem.id, alt })}
+          onSaved={adoptSaved}
+          onReload={invalidateList}
+          onSaveFailed={(failure) => {
+            setError(uploadErrorLabel(failure));
+            invalidateList();
+          }}
           onDelete={() => {
             // Confirmation handled inside the drawer's ConfirmDialog;
             // by the time we get here the user already confirmed.
@@ -1007,15 +1052,50 @@ function formatLongDate(locale: string, iso: string): string {
 function MediaDetailDrawer({
   item,
   onClose,
-  onAltChange,
+  onSaved,
+  onReload,
+  onSaveFailed,
   onDelete,
 }: {
   item: MediaItem;
   onClose: () => void;
-  onAltChange: (alt: string) => void;
+  onSaved: (saved: SavedMediaItem) => void;
+  onReload: () => void;
+  onSaveFailed: (failure: unknown) => void;
   onDelete: () => void;
 }): ReactNode {
   const { i18n } = useLingui();
+  const { user } = authClient.useSession();
+  const lease = useEditLease("entry", item.id);
+  const leaseMode = editorLeaseMode(lease.state);
+  const notice = leaseMode.mode === "readOnly" ? leaseMode.notice : undefined;
+  const [conflict, setConflict] = useState<{
+    readonly stale: EtagConflict;
+    readonly mine: string;
+  } | null>(null);
+  const save = useMutation({
+    mutationFn: (input: { ifMatch: string; alt: string }) =>
+      mediaRpc.update({ id: item.id, ...input }),
+    onSuccess: onSaved,
+    onError: (failure, input) => {
+      const stale = etagConflict(failure);
+      if (stale) {
+        setConflict({ stale, mine: input.alt });
+        onReload();
+        return;
+      }
+      const refusal = lockedBy(failure);
+      if (refusal) {
+        lease.lose(refusal);
+        return;
+      }
+      onSaveFailed(failure);
+    },
+  });
+  const takeOver = useMutation({
+    mutationFn: lease.takeOver,
+    onSuccess: onReload,
+  });
   const [copied, setCopied] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const isImage = item.mime.startsWith("image/");
@@ -1035,6 +1115,38 @@ function MediaDetailDrawer({
       data-testid="media-detail-drawer"
       className="border-border bg-card max-h-sticky-panel sticky top-8 flex w-80 flex-shrink-0 flex-col self-start overflow-y-auto rounded-lg border"
     >
+      <EditConflictDialog
+        copy={MEDIA_EDITING_COPY}
+        open={conflict !== null}
+        changedAt={conflict?.stale.updatedAt ?? null}
+        editingElsewhere={
+          conflict && user
+            ? editingElsewhere(conflict.stale, user.id)
+            : undefined
+        }
+        mineSnapshot={conflict ? { alt: conflict.mine } : null}
+        theirsSnapshot={
+          conflict ? savedAltSnapshot(item, conflict.stale) : null
+        }
+        onKeepMine={() => {
+          if (!conflict) return;
+          setConflict(null);
+          save.mutate({ ifMatch: conflict.stale.etag, alt: conflict.mine });
+        }}
+        onLoadTheirs={() => {
+          setConflict(null);
+          onReload();
+        }}
+      />
+      {notice ? (
+        <EditLeaseBanner
+          copy={MEDIA_EDITING_COPY}
+          notice={notice}
+          onTakeOver={() => takeOver.mutate()}
+          isTakingOver={takeOver.isPending}
+          onBack={onClose}
+        />
+      ) : null}
       <div className="border-border flex items-center justify-between border-b px-4 py-3">
         <span className="text-xs tracking-wider opacity-70">
           <Trans id="plugin.media.detail.heading" message="ASSET DETAILS" />
@@ -1108,7 +1220,8 @@ function MediaDetailDrawer({
             placeholder={
               isImage ? i18n._(M.describeImage) : i18n._(M.describeAsset)
             }
-            onSave={onAltChange}
+            disabled={notice !== undefined}
+            onSave={(alt) => save.mutate({ ifMatch: item.etag, alt })}
           />
         </div>
 
@@ -1271,28 +1384,27 @@ function AltEditor({
   testIdPrefix = "media-card",
   value,
   placeholder,
+  disabled,
   onSave,
 }: {
   cardId: number;
   testIdPrefix?: string;
   value: string;
   placeholder: string;
+  disabled: boolean;
   onSave: (alt: string) => void;
 }): ReactNode {
   const [draft, setDraft] = useState(value);
   const [savedFlash, setSavedFlash] = useState(false);
   const dirtyRef = useRef(false);
-  // Syncing whenever not dirty races: after commit clears dirty, a render
-  // before the refetch lands would restore the old value over the draft.
   const lastSavedRef = useRef(value);
   useEffect(() => {
-    if (value === lastSavedRef.current) return; // our own save came back
-    if (!dirtyRef.current) setDraft(value); // external update, not editing
+    if (!dirtyRef.current) setDraft(value);
   }, [value]);
 
   const commit = useCallback(() => {
     dirtyRef.current = false;
-    if (draft !== value) {
+    if (altNeedsSave(draft, value, lastSavedRef.current)) {
       lastSavedRef.current = draft;
       onSave(draft);
       setSavedFlash(true);
@@ -1307,6 +1419,7 @@ function AltEditor({
         type="text"
         value={draft}
         placeholder={placeholder}
+        disabled={disabled}
         onChange={(e) => {
           dirtyRef.current = true;
           setDraft(e.target.value);

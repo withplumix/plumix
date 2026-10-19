@@ -2,18 +2,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { orpc } from "@/lib/orpc.js";
 
 import type {
+  EditLease,
   EditLeaseApi,
   EditLeaseSession,
   EditLeaseState,
   LeaseRefusal,
 } from "@plumix/core/admin";
 import { createEditLeaseSession } from "@plumix/core/admin";
-
-export interface EditLease {
-  readonly state: EditLeaseState;
-  readonly takeOver: () => Promise<void>;
-  readonly lose: (refusal: LeaseRefusal) => void;
-}
 
 const ENTRY_LEASE_API: EditLeaseApi = {
   acquire: (input) => orpc.entry.lease.acquire.call(input),

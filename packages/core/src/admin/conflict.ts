@@ -33,3 +33,11 @@ export function etagConflict(err: unknown): EtagConflict | undefined {
     ...(holder === undefined ? {} : { holder }),
   };
 }
+
+/** Another user holding the lease; the author's own lease names no one. */
+export function editingElsewhere(
+  conflict: EtagConflict,
+  userId: number,
+): LeaseHolder | undefined {
+  return conflict.holder?.id === userId ? undefined : conflict.holder;
+}

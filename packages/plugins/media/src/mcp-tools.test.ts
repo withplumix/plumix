@@ -134,6 +134,26 @@ describe("@plumix/plugin-media — MCP tools", () => {
     expect(item.title).toBe("photo.png");
   });
 
+  test("media_list and media_get return the item's etag", async () => {
+    const h = await setup();
+    const { secret, userId } = await mintPat(h);
+    const id = await seedMedia(h, userId, "photo");
+
+    const listed = await callTool(h, secret, "media_list", {});
+    const got = await callTool(h, secret, "media_get", { id });
+
+    const items = (
+      JSON.parse(listed.result.content[0]?.text ?? "null") as {
+        items: { etag?: string }[];
+      }
+    ).items;
+    const item = JSON.parse(got.result.content[0]?.text ?? "null") as {
+      etag?: string;
+    };
+    expect(items[0]?.etag).toMatch(/./);
+    expect(item.etag).toBe(items[0]?.etag);
+  });
+
   test("media_get on a missing id is a not_found envelope", async () => {
     const h = await setup();
     const { secret } = await mintPat(h);

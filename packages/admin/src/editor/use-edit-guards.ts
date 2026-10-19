@@ -1,13 +1,16 @@
 import type { EntryConflict } from "@/editor/autosave.js";
-import type { EditingCopy } from "@/editor/editing-copy.js";
-import type { EditLeaseBannerProps } from "@/editor/EditLeaseBanner.js";
-import type { EntryConflictDialogProps } from "@/editor/EntryConflictDialog.js";
-import type { EditLease } from "@/editor/use-edit-lease.js";
 import { useReducer, useState } from "react";
-import { conflictDialog, editingElsewhere } from "@/editor/conflict-dialog.js";
+import { conflictDialog } from "@/editor/conflict-dialog.js";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
-import type { EditLeaseNotice } from "@plumix/core/admin";
+import type {
+  EditConflictDialogProps,
+  EditingCopy,
+  EditLease,
+  EditLeaseBannerProps,
+  EditLeaseNotice,
+} from "@plumix/core/admin";
+import { editingElsewhere } from "@plumix/core/admin";
 
 export interface EditGuardsOptions<Mine, Theirs> {
   readonly copy: EditingCopy;
@@ -33,7 +36,7 @@ export interface EditGuardsOptions<Mine, Theirs> {
 export interface EditGuards<Mine> {
   /** A save was refused as stale: `mine` is the work it would have saved. */
   readonly reportConflict: (conflict: EntryConflict, mine: Mine) => void;
-  readonly conflictDialog: EntryConflictDialogProps;
+  readonly conflictDialog: EditConflictDialogProps;
   readonly leaseBanner: (notice: EditLeaseNotice) => EditLeaseBannerProps;
 }
 

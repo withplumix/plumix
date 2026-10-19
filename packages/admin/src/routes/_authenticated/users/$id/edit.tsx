@@ -1,6 +1,4 @@
 import type { EntryConflict } from "@/editor/autosave.js";
-import type { EditingCopy } from "@/editor/editing-copy.js";
-import type { EditLease } from "@/editor/use-edit-lease.js";
 import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { QueryClient } from "@tanstack/react-query";
@@ -18,8 +16,8 @@ import { PasskeysCard } from "@/components/profile/passkeys-card.js";
 import { SessionsCard } from "@/components/profile/sessions-card.js";
 import { UserEmailField } from "@/components/profile/user-email-field.js";
 import { classifyAutosaveError } from "@/editor/autosave.js";
+import { EditConflictDialog } from "@/editor/EditConflictDialog.js";
 import { EditLeaseBanner } from "@/editor/EditLeaseBanner.js";
-import { EntryConflictDialog } from "@/editor/EntryConflictDialog.js";
 import { useEditGuards } from "@/editor/use-edit-guards.js";
 import { useEditLease } from "@/editor/use-edit-lease.js";
 import { isSurfaceOffered } from "@/lib/admin-areas.js";
@@ -54,7 +52,12 @@ import { useForm } from "react-hook-form";
 import * as v from "valibot";
 
 import type { ResolvedMeta, WithResolvedMeta } from "@plumix/core";
-import type { EditorLeaseMode, LeaseRefusal } from "@plumix/core/admin";
+import type {
+  EditingCopy,
+  EditLease,
+  EditorLeaseMode,
+  LeaseRefusal,
+} from "@plumix/core/admin";
 import type { UserMetaBoxManifestEntry } from "@plumix/core/manifest";
 import type { User as StoredUser, UserRole } from "@plumix/core/schema";
 import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
@@ -453,7 +456,7 @@ function UserEditForm({
 
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-4">
-      <EntryConflictDialog {...guards.conflictDialog} />
+      <EditConflictDialog {...guards.conflictDialog} />
       {leaseMode.mode === "readOnly" ? (
         <EditLeaseBanner {...guards.leaseBanner(leaseMode.notice)} />
       ) : null}

@@ -1,4 +1,3 @@
-import type { EditLease } from "@/editor/use-edit-lease.js";
 import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
@@ -8,9 +7,9 @@ import { ErrorPlaceholder } from "@/components/error-placeholder.js";
 import { classifyAutosaveError } from "@/editor/autosave.js";
 import { createDebouncer } from "@/editor/debounce.js";
 import { detectStaleAutosave } from "@/editor/detect-stale-autosave.js";
+import { EditConflictDialog } from "@/editor/EditConflictDialog.js";
 import { ENTRY_EDITING_COPY } from "@/editor/editing-copy.js";
 import { EditLeaseBanner } from "@/editor/EditLeaseBanner.js";
-import { EntryConflictDialog } from "@/editor/EntryConflictDialog.js";
 import { diffMetaBag } from "@/editor/meta-diff.js";
 import {
   resolveEditorMode,
@@ -56,7 +55,7 @@ import * as v from "valibot";
 
 import type { PublishActions } from "@plumix/admin-editor";
 import type { ResolvedMeta } from "@plumix/core";
-import type { EditorLeaseMode } from "@plumix/core/admin";
+import type { EditLease, EditorLeaseMode } from "@plumix/core/admin";
 import type { BlockNode, EntryContent } from "@plumix/core/blocks";
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import { PlumixEditor } from "@plumix/admin-editor";
@@ -1023,7 +1022,7 @@ function EntryEditor({
   });
   const overlay = (
     <>
-      <EntryConflictDialog {...guards.conflictDialog} />
+      <EditConflictDialog {...guards.conflictDialog} />
       <StaleDraftDialog
         open={showStaleDialog}
         autosaveSnapshot={{

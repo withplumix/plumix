@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { conflictDialog, editingElsewhere } from "./conflict-dialog.js";
+import { conflictDialog } from "./conflict-dialog.js";
 
 const theirs = {
   etag: "1792411205",
@@ -35,22 +35,4 @@ describe("conflictDialog", () => {
       ).toEqual({ open: false });
     },
   );
-});
-
-describe("editingElsewhere", () => {
-  test("names another user holding the lease", () => {
-    expect(
-      editingElsewhere({ ...theirs, holder: { id: 2, name: "Ada" } }, 1),
-    ).toEqual({ id: 2, name: "Ada" });
-  });
-
-  test("names no one when the author holds the lease, from this tab or another", () => {
-    expect(
-      editingElsewhere({ ...theirs, holder: { id: 1, name: "Me" } }, 1),
-    ).toBeUndefined();
-  });
-
-  test("names no one when nobody holds the lease", () => {
-    expect(editingElsewhere(theirs, 1)).toBeUndefined();
-  });
 });

@@ -1,5 +1,8 @@
 import * as ReactNs from "react";
 import * as ReactJsxRuntimeNs from "react/jsx-runtime";
+import { EditConflictDialog } from "@/editor/EditConflictDialog.js";
+import { EditLeaseBanner } from "@/editor/EditLeaseBanner.js";
+import { useEditLease } from "@/editor/use-edit-lease.js";
 import * as LinguiCoreNs from "@lingui/core";
 import * as LinguiReactNs from "@lingui/react";
 import * as OrpcClientNs from "@orpc/client";
@@ -13,7 +16,7 @@ import * as ReactDomClientNs from "react-dom/client";
 import * as SonnerNs from "sonner";
 import * as TailwindMergeNs from "tailwind-merge";
 
-import type { SharedAdminRuntimeKey } from "@plumix/core/admin";
+import type { AdminEditing, SharedAdminRuntimeKey } from "@plumix/core/admin";
 import type { ConfiguredSlots } from "@plumix/core/manifest";
 import * as AuthClientNs from "@plumix/core/auth/client";
 
@@ -56,6 +59,13 @@ const runtime = {
   authClient: AuthClientNs,
 } as const satisfies Record<SharedAdminRuntimeKey, unknown>;
 
+/** The shell's own instances, so a plugin's editor shares its lease and strings. */
+const editing = {
+  useEditLease,
+  EditLeaseBanner,
+  EditConflictDialog,
+} as const satisfies AdminEditing;
+
 interface PlumixI18nGlobal {
   readonly loadPluginCatalog: (
     pluginId: string,
@@ -83,6 +93,8 @@ declare global {
        *  manifest; plugin chunks ask through `plumix/admin`'s
        *  `isSlotConfigured`. */
       readonly configuredSlots: ConfiguredSlots;
+      /** What plugin chunks edit a resource with, through `plumix/admin`. */
+      readonly editing: typeof editing;
     };
   }
 }
@@ -102,6 +114,7 @@ export function bootPlumixGlobals(): void {
     runtime,
     basePath: adminBasePath(),
     configuredSlots: getConfiguredSlots(),
+    editing,
     // Through the ref so post-boot chunks reach the loader; a pre-boot call is
     // a silent miss.
     i18n: {

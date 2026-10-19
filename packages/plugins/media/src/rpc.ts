@@ -1,5 +1,13 @@
 import type { AuthenticatedAppContext } from "plumix/plugin";
-import { and, eq } from "plumix/db";
+import {
+  and,
+  assertWritable,
+  claim,
+  ConflictError,
+  eq,
+  etagOf,
+  ifMatchObject,
+} from "plumix/db";
 import {
   assertCanDeleteEntry,
   assertCanEditEntry,
@@ -65,7 +73,11 @@ export interface UpdateResponse {
   readonly id: number;
   readonly title: string;
   readonly alt: string | null;
+  readonly etag: string;
 }
+
+const MEDIA_IF_MATCH_MESSAGE =
+  "Send the media item's `etag` from `media.list` as `ifMatch`";
 
 /**
  * No whitespace or control characters: browsers send a bare `image/png` for an
@@ -337,17 +349,27 @@ export function createMediaRouter(options: MediaRpcOptions) {
   const update = base
     .use(authenticated)
     .input(
-      v.object({
-        id: v.pipe(v.number(), v.integer(), v.minValue(1)),
-        title: v.optional(v.pipe(v.string(), v.minLength(1), v.maxLength(255))),
-        alt: v.optional(v.pipe(v.string(), v.maxLength(1024))),
-      }),
+      ifMatchObject(
+        {
+          id: v.pipe(v.number(), v.integer(), v.minValue(1)),
+          title: v.optional(
+            v.pipe(v.string(), v.minLength(1), v.maxLength(255)),
+          ),
+          alt: v.optional(v.pipe(v.string(), v.maxLength(1024))),
+        },
+        MEDIA_IF_MATCH_MESSAGE,
+      ),
     )
     .handler(async ({ input, context, errors }): Promise<UpdateResponse> => {
       const notFound = (): Error =>
         errors.NOT_FOUND({ data: { kind: "media", id: input.id } });
       const row = await loadMediaRow(context, input.id, errors);
       assertCanEditEntry(context, row, errors);
+      const resource = { kind: "entry", id: row.id };
+      await assertWritable(context.db, resource, {
+        userId: context.user.id,
+        surface: context.tokenScopes === null ? "admin" : "rpc",
+      });
 
       const meta = parseMediaMeta(row.meta);
       if (!meta) {
@@ -358,20 +380,30 @@ export function createMediaRouter(options: MediaRpcOptions) {
         ...meta,
         alt: input.alt ?? meta.alt,
       };
+      const guard = claim(entries.updatedAt, input.ifMatch);
       const [updated] = await context.db
         .update(entries)
         .set({
           title: input.title ?? row.title,
           meta: nextMeta,
+          ...guard.set,
         })
-        .where(eq(entries.id, input.id))
+        .where(and(eq(entries.id, input.id), guard.where))
         .returning();
-      if (!updated) throw notFound();
+      if (!updated) {
+        const [current] = await context.db
+          .select({ updatedAt: entries.updatedAt })
+          .from(entries)
+          .where(eq(entries.id, input.id));
+        if (!current) throw notFound();
+        throw new ConflictError(current.updatedAt, resource);
+      }
 
       return {
         id: updated.id,
         title: updated.title,
         alt: nextMeta.alt,
+        etag: etagOf(updated.updatedAt),
       };
     });
 

@@ -1,13 +1,12 @@
 import type { PostEditorValues } from "@/components/editor/post-editor-form.js";
-import type { EditLease } from "@/editor/use-edit-lease.js";
 import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useCallback, useRef, useState } from "react";
 import { PlainFormLayout } from "@/components/editor/plain-form-layout.js";
+import { EditConflictDialog } from "@/editor/EditConflictDialog.js";
 import { ENTRY_EDITING_COPY } from "@/editor/editing-copy.js";
 import { EditLeaseBanner } from "@/editor/EditLeaseBanner.js";
-import { EntryConflictDialog } from "@/editor/EntryConflictDialog.js";
 import { diffMetaBag } from "@/editor/meta-diff.js";
 import { PreviewButton } from "@/editor/PreviewButton.js";
 import { useRevisionsTrigger } from "@/editor/revisions/use-revisions-trigger.js";
@@ -24,7 +23,7 @@ import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 
 import type { ResolvedMeta } from "@plumix/core";
-import type { EditorLeaseMode } from "@plumix/core/admin";
+import type { EditLease, EditorLeaseMode } from "@plumix/core/admin";
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import { describeRpcError } from "@plumix/core/admin";
 
@@ -197,7 +196,7 @@ export function PlainFormRouteInner({
 
   return (
     <>
-      <EntryConflictDialog {...guards.conflictDialog} />
+      <EditConflictDialog {...guards.conflictDialog} />
       {leaseMode.mode === "readOnly" ? (
         <EditLeaseBanner {...guards.leaseBanner(leaseMode.notice)} />
       ) : null}

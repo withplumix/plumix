@@ -526,3 +526,20 @@ msgstr ""
 #: src/blocks/file/index.tsx
 msgid "plugin.media.block.file.downloadFallback"
 msgstr ""
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.conflict.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#. name: the editing user's display name or email; time: a formatted date and time
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.lease.heldBy"
+msgstr ""
+
+#. js-lingui-explicit-id
+#. name: the user who took over; time: a formatted date and time
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.lease.lost"
+msgstr ""
