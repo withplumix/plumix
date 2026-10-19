@@ -519,7 +519,7 @@ describe(
       const seen: unknown[] = [];
       const config = settlingConfig(async (ctx) => {
         const rows = await ctx.db.select().from(entries);
-        seen.push(rows.length, ctx.env.PLUMIX_SYNC_PROBE);
+        seen.push(rows.length, "PLUMIX_SYNC_PROBE" in ctx.env);
       });
       const end = await sync.open({
         ...openOptions(source.dir, "local", {}),
@@ -532,7 +532,7 @@ describe(
       });
       await end.close();
 
-      expect([settled.failures, seen]).toEqual([[], [1, undefined]]);
+      expect([settled.failures, seen]).toEqual([[], [1, false]]);
     });
 
     test("stops with sync_site_unreachable when the site cannot reach its D1", async () => {
