@@ -592,37 +592,37 @@ msgstr ""
 
 #. name: the editing user's display name or email; time: a formatted date and time
 #. js-lingui-explicit-id
-#: src/editor/EditLeaseBanner.tsx
+#: src/routes/_authenticated/settings/-settings-group-card.tsx
 msgid "settings.lease.heldBy"
 msgstr ""
 
 #. name: the editing user's display name or email; time: a formatted date and time
 #. js-lingui-explicit-id
-#: src/editor/EditLeaseBanner.tsx
+#: src/editor/editing-copy.ts
 msgid "editor.lease.heldBy"
 msgstr ""
 
 #. name: the editing user's display name or email; time: a formatted date and time
 #. js-lingui-explicit-id
-#: src/editor/EditLeaseBanner.tsx
+#: src/routes/_authenticated/users/$id/edit.tsx
 msgid "editor.lease.heldBy.user"
 msgstr ""
 
 #. name: the user who took over; time: a formatted date and time
 #. js-lingui-explicit-id
-#: src/editor/EditLeaseBanner.tsx
+#: src/routes/_authenticated/settings/-settings-group-card.tsx
 msgid "settings.lease.lost"
 msgstr ""
 
 #. name: the user who took over; time: a formatted date and time
 #. js-lingui-explicit-id
-#: src/editor/EditLeaseBanner.tsx
+#: src/editor/editing-copy.ts
 msgid "editor.lease.lost"
 msgstr ""
 
 #. name: the user who took over; time: a formatted date and time
 #. js-lingui-explicit-id
-#: src/editor/EditLeaseBanner.tsx
+#: src/routes/_authenticated/users/$id/edit.tsx
 msgid "editor.lease.lost.user"
 msgstr ""
 
@@ -3651,7 +3651,7 @@ msgid "apiTokens.revoke.description"
 msgstr "令牌将立即停止工作。任何使用它的客户端下次请求时将获得 401。"
 
 #. js-lingui-explicit-id
-#: src/editor/EntryConflictDialog.tsx
+#: src/routes/_authenticated/settings/-settings-group-card.tsx
 msgid "settings.conflict.title"
 msgstr ""
 
@@ -3716,7 +3716,7 @@ msgid "profile.passkeys.enroll.noAuthenticator"
 msgstr "此设备不支持 Passkey。"
 
 #. js-lingui-explicit-id
-#: src/editor/EntryConflictDialog.tsx
+#: src/editor/editing-copy.ts
 msgid "editor.conflict.title"
 msgstr ""
 
@@ -3781,7 +3781,7 @@ msgid "plugin.errorBoundary.unknownPlugin"
 msgstr "此插件"
 
 #. js-lingui-explicit-id
-#: src/editor/EntryConflictDialog.tsx
+#: src/routes/_authenticated/users/$id/edit.tsx
 msgid "editor.conflict.title.user"
 msgstr ""
 

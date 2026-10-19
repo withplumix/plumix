@@ -1,5 +1,5 @@
 import { createClient } from "@libsql/client";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 import { sqliteTable } from "drizzle-orm/sqlite-core";
 import * as v from "valibot";
@@ -9,6 +9,7 @@ import {
   claim,
   ConflictError,
   etagOf,
+  guardedTable,
   ifMatchObject,
   mergePatch,
   nextToken,
@@ -34,6 +35,28 @@ async function notesDb(updatedAt: Date) {
 }
 
 const T0 = new Date("2026-10-18T12:00:00Z");
+
+type Note = typeof notes.$inferSelect;
+
+/** How the guarded writes reach `notes`, as a plugin would hand them over. */
+function notesTable(db: Awaited<ReturnType<typeof notesDb>>) {
+  return guardedTable<Note, { readonly body?: string }>({
+    kind: "note",
+    updatedAt: notes.updatedAt,
+    update: async (id, set, where) => {
+      const [row] = await db
+        .update(notes)
+        .set(set)
+        .where(and(eq(notes.id, id), where))
+        .returning();
+      return row;
+    },
+    read: async (id) => {
+      const [row] = await db.select().from(notes).where(eq(notes.id, id));
+      return row;
+    },
+  });
+}
 
 describe("etagOf and parseIfMatch", () => {
   test("an etag parses back to the token it was made from", () => {
@@ -185,5 +208,112 @@ describe("ifMatchObject", () => {
     expect(result.issues?.map((issue) => issue.message)).toEqual([
       'Invalid key: Expected "id" but received undefined',
     ]);
+  });
+});
+
+describe("assertCopyCurrent", () => {
+  const notes1 = guardedTable<Note, object>({
+    kind: "note",
+    updatedAt: notes.updatedAt,
+    update: () => Promise.resolve(undefined),
+    read: () => Promise.resolve(undefined),
+  });
+
+  test("a copy the row has moved past is refused, naming the resource", () => {
+    const moved = new Date("2026-10-18T12:00:05Z");
+
+    expect(() =>
+      notes1.assertCopyCurrent(T0, { id: 1, updatedAt: moved }),
+    ).toThrow(
+      expect.objectContaining({
+        etag: etagOf(moved),
+        resource: { kind: "note", id: 1 },
+      }),
+    );
+  });
+
+  test("a current copy passes", () => {
+    expect(() =>
+      notes1.assertCopyCurrent(T0, { id: 1, updatedAt: T0 }),
+    ).not.toThrow();
+  });
+});
+
+describe("claimRow", () => {
+  test("a current copy lands and moves the token", async () => {
+    const db = await notesDb(T0);
+
+    const row = await notesTable(db).claimRow(1, T0, { body: "second" });
+
+    expect(row).toMatchObject({ body: "second" });
+    expect(row?.updatedAt.getTime()).toBeGreaterThan(T0.getTime());
+  });
+
+  test("a stale copy is refused with the row's token and leaves it alone", async () => {
+    const moved = new Date("2026-10-18T12:00:05Z");
+    const db = await notesDb(moved);
+
+    await expect(
+      notesTable(db).claimRow(1, T0, { body: "stale" }),
+    ).rejects.toMatchObject({
+      etag: etagOf(moved),
+      resource: { kind: "note", id: 1 },
+    });
+    expect(await notesTable(db).read(1)).toMatchObject({ body: "first" });
+  });
+
+  test("a row another condition refuses comes back undefined, not a conflict", async () => {
+    const db = await notesDb(T0);
+
+    const row = await notesTable(db).claimRow(
+      1,
+      T0,
+      { body: "refused" },
+      eq(notes.body, "something else"),
+    );
+
+    expect(row).toBeUndefined();
+  });
+
+  test("a gone row comes back undefined", async () => {
+    const db = await notesDb(T0);
+
+    expect(await notesTable(db).claimRow(2, T0, {})).toBeUndefined();
+  });
+});
+
+describe("writeAsSystem", () => {
+  test("a write that lands after the read sends it back to decide from the row as it is now", async () => {
+    const db = await notesDb(T0);
+    const table = notesTable(db);
+    const read = await table.read(1);
+    await db
+      .update(notes)
+      .set({ body: "theirs", updatedAt: new Date("2026-10-18T12:00:01Z") })
+      .where(eq(notes.id, 1));
+    const decidedFrom: string[] = [];
+
+    const result = await table.writeAsSystem(read, (row) => {
+      decidedFrom.push(row.body);
+      return { body: `${row.body}, then mine` };
+    });
+
+    expect(decidedFrom).toEqual(["first", "theirs"]);
+    expect(result).toMatchObject({
+      written: true,
+      row: { body: "theirs, then mine" },
+    });
+  });
+
+  test("a decision to leave the row alone writes nothing", async () => {
+    const db = await notesDb(T0);
+    const table = notesTable(db);
+
+    const result = await table.writeAsSystem(
+      await table.read(1),
+      () => undefined,
+    );
+
+    expect(result).toMatchObject({ written: false, row: { updatedAt: T0 } });
   });
 });

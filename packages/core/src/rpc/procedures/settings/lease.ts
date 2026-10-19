@@ -8,8 +8,8 @@ import {
 } from "../../../db/edit-lease.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { rpcSurface } from "../../concurrency.js";
 import { requireCapability } from "../../require-capability.js";
-import { rpcSurface } from "../entry/concurrency.js";
 import { settingsGetInputSchema, settingsLeaseInputSchema } from "./schemas.js";
 import { settingsGroupResource } from "./token.js";
 

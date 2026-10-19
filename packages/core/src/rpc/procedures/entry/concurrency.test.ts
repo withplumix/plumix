@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { createRpcHarness } from "../../../test/rpc.js";
-import { writeAsSystem } from "./concurrency.js";
+import { entryRows } from "./concurrency.js";
 
 describe("writeAsSystem", () => {
   test("a write that lands after the read sends it back to decide from the entry as it is now", async () => {
@@ -23,7 +23,7 @@ describe("writeAsSystem", () => {
       .where(eq(entries.id, read.id));
     const decidedFrom: string[] = [];
 
-    const result = await writeAsSystem(h.db, read, (row) => {
+    const result = await entryRows(h.db).writeAsSystem(read, (row) => {
       decidedFrom.push(row.status);
       return { status: "trash" };
     });
@@ -43,7 +43,7 @@ describe("writeAsSystem", () => {
       updatedAt: new Date("2100-01-01T00:00:00Z"),
     });
 
-    const result = await writeAsSystem(h.db, read, () => undefined);
+    const result = await entryRows(h.db).writeAsSystem(read, () => undefined);
 
     expect(result).toMatchObject({ written: false, row: { id: read.id } });
     expect(

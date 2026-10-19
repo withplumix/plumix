@@ -1,6 +1,6 @@
 import type { SQL } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import type { JsonValue } from "../json.js";
@@ -51,6 +51,102 @@ export function claim(
   return {
     where: eq(updatedAt, ifMatch),
     set: { updatedAt: nextToken(ifMatch, now) },
+  };
+}
+
+/** How the guarded writes reach one resource's table, typed, with no casts. */
+export interface GuardedTableSpec<
+  Row extends { readonly id: number; readonly updatedAt: Date },
+  Changes,
+> {
+  /** The edit lease kind a conflict names. */
+  readonly kind: string;
+  readonly updatedAt: SQLiteColumn;
+  /** The row by `id` where `where` also holds; `undefined` when none did. */
+  readonly update: (
+    id: number,
+    set: Changes & { readonly updatedAt: Date },
+    where: SQL,
+  ) => Promise<Row | undefined>;
+  readonly read: (id: number) => Promise<Row | undefined>;
+}
+
+export interface GuardedTable<
+  Row extends { readonly id: number; readonly updatedAt: Date },
+  Changes,
+> {
+  readonly kind: string;
+  readonly read: (id: number) => Promise<Row | undefined>;
+  /** Refuses a write whose copy the row has moved past since. */
+  readonly assertCopyCurrent: (
+    ifMatch: Date,
+    row: { readonly id: number; readonly updatedAt: Date },
+  ) => void;
+  /**
+   * One update that lands only while the row holds `ifMatch` (and `where`),
+   * moving the token. `ConflictError` once another write landed; `undefined`
+   * when the row is gone or `where` refused it.
+   */
+  readonly claimRow: (
+    id: number,
+    ifMatch: Date,
+    changes: Changes,
+    where?: SQL,
+  ) => Promise<Row | undefined>;
+  /**
+   * A system write: lands only while the row holds the token `decide` read,
+   * else re-reads and decides again. `undefined` once the row is gone.
+   */
+  readonly writeAsSystem: (
+    read: Row | undefined,
+    decide: (row: Row) => Changes | undefined,
+  ) => Promise<{ readonly row: Row; readonly written: boolean } | undefined>;
+}
+
+export function guardedTable<
+  Row extends { readonly id: number; readonly updatedAt: Date },
+  Changes,
+>(spec: GuardedTableSpec<Row, Changes>): GuardedTable<Row, Changes> {
+  const assertCopyCurrent: GuardedTable<Row, Changes>["assertCopyCurrent"] = (
+    ifMatch,
+    row,
+  ) => {
+    if (ifMatch.getTime() !== row.updatedAt.getTime()) {
+      throw new ConflictError(row.updatedAt, { kind: spec.kind, id: row.id });
+    }
+  };
+  return {
+    kind: spec.kind,
+    read: spec.read,
+    assertCopyCurrent,
+    claimRow: async (id, ifMatch, changes, where) => {
+      const guard = claim(spec.updatedAt, ifMatch);
+      const row = await spec.update(
+        id,
+        { ...changes, ...guard.set },
+        (where && and(guard.where, where)) ?? guard.where,
+      );
+      if (row) return row;
+      const current = await spec.read(id);
+      if (current) assertCopyCurrent(ifMatch, current);
+      return undefined;
+    },
+    writeAsSystem: async (read, decide) => {
+      let row = read;
+      while (row) {
+        const changes = decide(row);
+        if (changes === undefined) return { row, written: false };
+        const guard = claim(spec.updatedAt, row.updatedAt);
+        const updated = await spec.update(
+          row.id,
+          { ...changes, ...guard.set },
+          guard.where,
+        );
+        if (updated) return { row: updated, written: true };
+        row = await spec.read(row.id);
+      }
+      return undefined;
+    },
   };
 }
 

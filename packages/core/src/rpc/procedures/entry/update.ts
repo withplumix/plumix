@@ -40,11 +40,8 @@ import {
 import { NAMED_TEMPLATE_META_KEY } from "../../../route/render/template-builders.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import {
-  assertCopyCurrent,
-  assertEntryWritable,
-  claimEntry,
-} from "./concurrency.js";
+import { assertLeaseAllows } from "../../concurrency.js";
+import { entryRows } from "./concurrency.js";
 import {
   assertContentValidAgainstRegistries,
   assertContentWithinByteCap,
@@ -129,7 +126,7 @@ async function writeGuarded(
 
   let row;
   try {
-    row = await claimEntry(context.db, existing.id, ifMatch, toWrite);
+    row = await entryRows(context.db).claimRow(existing.id, ifMatch, toWrite);
   } catch (error) {
     if (isUniqueConstraintError(error)) guards.slugTaken();
     throw error;
@@ -171,8 +168,12 @@ export const update = base
 
     // After auth, so an unauthorised caller with a stale copy still gets
     // FORBIDDEN, not CONFLICT or LOCKED.
-    await assertEntryWritable(context, existing.id, filtered.takeOver);
-    assertCopyCurrent(filtered.ifMatch, existing);
+    await assertLeaseAllows(
+      context,
+      { kind: "entry", id: existing.id },
+      filtered.takeOver,
+    );
+    entryRows(context.db).assertCopyCurrent(filtered.ifMatch, existing);
 
     // Writes stay on live unless the type supports autosave AND the row is
     // published.

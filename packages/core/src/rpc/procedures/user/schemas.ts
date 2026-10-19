@@ -9,6 +9,7 @@ import {
   nameField,
 } from "../../contract/validation.js";
 import { slugSchema } from "../../schemas.js";
+import { USER_IF_MATCH_MESSAGE } from "./concurrency.js";
 
 const avatarUrlSchema = v.pipe(
   v.string(),
@@ -57,7 +58,7 @@ export const userUpdateInputSchema = ifMatchObject(
     /** Write over another user's edit lease, taking it over, rather than be refused with LOCKED. */
     takeOver: v.optional(v.boolean()),
   },
-  "Send the user's `etag` from `user.get` as `ifMatch`",
+  USER_IF_MATCH_MESSAGE,
 );
 
 export const userDisableInputSchema = v.object({ id: idParam });

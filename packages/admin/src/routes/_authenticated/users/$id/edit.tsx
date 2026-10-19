@@ -1,11 +1,12 @@
 import type { EntryConflict } from "@/editor/autosave.js";
 import type { EditorLeaseMode, LeaseRefusal } from "@/editor/edit-lease.js";
+import type { EditingCopy } from "@/editor/editing-copy.js";
 import type { EditLease } from "@/editor/use-edit-lease.js";
 import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { useReducer, useState } from "react";
+import { useState } from "react";
 import { ErrorPlaceholder } from "@/components/error-placeholder.js";
 import { FormEditSkeleton } from "@/components/form/edit-skeleton.js";
 import { MetaBoxCard } from "@/components/meta-box/meta-box.js";
@@ -18,10 +19,10 @@ import { PasskeysCard } from "@/components/profile/passkeys-card.js";
 import { SessionsCard } from "@/components/profile/sessions-card.js";
 import { UserEmailField } from "@/components/profile/user-email-field.js";
 import { classifyAutosaveError } from "@/editor/autosave.js";
-import { conflictDialog, editingElsewhere } from "@/editor/conflict-dialog.js";
 import { editorLeaseMode } from "@/editor/edit-lease.js";
 import { EditLeaseBanner } from "@/editor/EditLeaseBanner.js";
 import { EntryConflictDialog } from "@/editor/EntryConflictDialog.js";
+import { useEditGuards } from "@/editor/use-edit-guards.js";
 import { useEditLease } from "@/editor/use-edit-lease.js";
 import { isSurfaceOffered } from "@/lib/admin-areas.js";
 import { hasCap } from "@/lib/caps.js";
@@ -92,6 +93,25 @@ import { idPathParam } from "@plumix/core/validation";
 import { isUserRole, USERS_LIST_DEFAULT_SEARCH } from "../-constants.js";
 
 type User = WithResolvedMeta<StoredUser>;
+
+const USER_EDITING_COPY: EditingCopy = {
+  conflictTitle: defineMessage({
+    id: "editor.conflict.title.user",
+    message: "This profile changed since you opened it",
+  }),
+  heldBy: defineMessage({
+    id: "editor.lease.heldBy.user",
+    message: "{name} is editing this profile (since {time})",
+    comment:
+      "name: the editing user's display name or email; time: a formatted date and time",
+  }),
+  lost: defineMessage({
+    id: "editor.lease.lost.user",
+    message:
+      "{name} took over editing this profile at {time}. Your unsaved changes are shown here but weren't saved.",
+    comment: "name: the user who took over; time: a formatted date and time",
+  }),
+};
 
 const M = {
   loadingAria: defineMessage({
@@ -378,10 +398,6 @@ function UserEditForm({
     readonly MetaFieldServerError[] | null
   >(null);
 
-  const [conflict, dispatchConflict] = useReducer(conflictDialog, {
-    open: false,
-  });
-  const [conflictMine, setConflictMine] = useState<ProfileValues | null>(null);
   const updateUser = useUserUpdateMutation({
     target,
     canPromote,
@@ -389,37 +405,33 @@ function UserEditForm({
     queryClient,
     setServerError,
     setServerFieldErrors,
-    onConflict: (next, values) => {
-      setConflictMine(values);
-      dispatchConflict({ type: "conflict", conflict: next });
-    },
+    onConflict: (next, values) => guards.reportConflict(next, values),
     onLocked: lease.lose,
   });
-  const theirsQuery = useQuery({
-    queryKey: [
-      "user.conflict",
-      target.id,
-      conflict.open && conflict.conflict.etag,
-    ],
-    queryFn: () => orpc.user.get.call({ id: target.id }),
-    enabled: conflict.open,
-  });
-  const handleKeepMine = (): void => {
-    if (!conflict.open || conflictMine === null) return;
-    dispatchConflict({ type: "keepMine" });
-    updateUser.mutate({
-      values: conflictMine,
-      ifMatch: conflict.conflict.etag,
-    });
-  };
-  // Remounts on the saved user, dropping the author's unsaved edits.
-  const handleLoadTheirs = (): void => {
-    dispatchConflict({ type: "loadTheirs" });
-    void invalidateUserCaches(queryClient, target.id);
-  };
-  const takeOver = useMutation({
-    mutationFn: lease.takeOver,
-    onSuccess: () => invalidateUserCaches(queryClient, target.id),
+  const guards = useEditGuards({
+    copy: USER_EDITING_COPY,
+    userId: sessionUserId,
+    lease,
+    theirs: {
+      queryKey: ["user.conflict", target.id],
+      fetch: () => orpc.user.get.call({ id: target.id }),
+      snapshot: (saved) =>
+        saved
+          ? {
+              name: saved.name ?? "",
+              slug: saved.slug,
+              role: saved.role,
+              meta: saved.meta,
+            }
+          : null,
+    },
+    keepMine: (etag, values: ProfileValues) =>
+      updateUser.mutate({ values, ifMatch: etag }),
+    // Remounts on the saved user, dropping the author's unsaved edits.
+    reload: () => invalidateUserCaches(queryClient, target.id),
+    onBack: () => {
+      void navigate({ to: "/users", search: USERS_LIST_DEFAULT_SEARCH });
+    },
   });
 
   const form = useForm({
@@ -442,39 +454,9 @@ function UserEditForm({
 
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-4">
-      <EntryConflictDialog
-        subject="user"
-        open={conflict.open}
-        changedAt={conflict.open ? (conflict.conflict.updatedAt ?? null) : null}
-        editingElsewhere={
-          conflict.open
-            ? editingElsewhere(conflict.conflict, sessionUserId)
-            : undefined
-        }
-        mineSnapshot={conflictMine}
-        theirsSnapshot={
-          theirsQuery.data
-            ? {
-                name: theirsQuery.data.name ?? "",
-                slug: theirsQuery.data.slug,
-                role: theirsQuery.data.role,
-                meta: theirsQuery.data.meta,
-              }
-            : null
-        }
-        onKeepMine={handleKeepMine}
-        onLoadTheirs={handleLoadTheirs}
-      />
+      <EntryConflictDialog {...guards.conflictDialog} />
       {leaseMode.mode === "readOnly" ? (
-        <EditLeaseBanner
-          subject="user"
-          notice={leaseMode.notice}
-          onTakeOver={() => takeOver.mutate()}
-          isTakingOver={takeOver.isPending}
-          onBack={() => {
-            void navigate({ to: "/users", search: USERS_LIST_DEFAULT_SEARCH });
-          }}
-        />
+        <EditLeaseBanner {...guards.leaseBanner(leaseMode.notice)} />
       ) : null}
       <Link
         to="/users"

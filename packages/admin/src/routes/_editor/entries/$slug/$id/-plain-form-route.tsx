@@ -4,14 +4,15 @@ import type { EditLease } from "@/editor/use-edit-lease.js";
 import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
-import { useCallback, useReducer, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { PlainFormLayout } from "@/components/editor/plain-form-layout.js";
-import { conflictDialog, editingElsewhere } from "@/editor/conflict-dialog.js";
+import { ENTRY_EDITING_COPY } from "@/editor/editing-copy.js";
 import { EditLeaseBanner } from "@/editor/EditLeaseBanner.js";
 import { EntryConflictDialog } from "@/editor/EntryConflictDialog.js";
 import { diffMetaBag } from "@/editor/meta-diff.js";
 import { PreviewButton } from "@/editor/PreviewButton.js";
 import { useRevisionsTrigger } from "@/editor/revisions/use-revisions-trigger.js";
+import { useEditGuards } from "@/editor/use-edit-guards.js";
 import { useEntryAutosave } from "@/editor/use-entry-autosave.js";
 import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
 import { entryMetaBoxesForType } from "@/lib/manifest.js";
@@ -20,12 +21,7 @@ import { orpc } from "@/lib/orpc.js";
 import { entryTypeLabel } from "@/lib/type-labels.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-  useSuspenseQuery,
-} from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 
 import type { ResolvedMeta } from "@plumix/core";
@@ -90,19 +86,12 @@ export function PlainFormRouteInner({
     readonly MetaFieldServerError[] | null
   >(null);
 
-  const [conflict, dispatchConflict] = useReducer(conflictDialog, {
-    open: false,
-  });
-  const [conflictMine, setConflictMine] = useState<PlainFormSnapshot | null>(
-    null,
-  );
   const autosave = useEntryAutosave({
     id,
     etag: entry.etag,
     onConflict: (next) => {
       // The author's copy as it stood when the save was refused.
-      setConflictMine(valuesRef.current);
-      dispatchConflict({ type: "conflict", conflict: next });
+      guards.reportConflict(next, valuesRef.current);
     },
     onLocked: lease.lose,
     onError: (err) => {
@@ -157,39 +146,31 @@ export function PlainFormRouteInner({
     [navigate],
   );
   const entryQueryKey = orpc.entry.get.queryOptions({ input: { id } }).queryKey;
-  // The entry as the conflicting write left it, fetched fresh per conflict.
-  const theirsQuery = useQuery({
-    queryKey: ["entry.conflict", id, conflict.open && conflict.conflict.etag],
-    queryFn: () => orpc.entry.get.call({ id }),
-    enabled: conflict.open,
-  });
-  const handleKeepMine = (): void => {
-    if (!conflict.open) return;
-    dispatchConflict({ type: "keepMine" });
-    void autosave.keepMine(conflict.conflict.etag);
-  };
-  const handleLoadTheirs = (): void => {
-    dispatchConflict({ type: "loadTheirs" });
-    // Drop the author's unsaved edits, then remount on the saved entry.
-    autosave.cancel();
-    void queryClient
-      .invalidateQueries({ queryKey: entryQueryKey })
-      .then(onReseed);
-  };
-
-  // Remount on the entry as the previous holder left it.
-  const takeOver = useMutation({
-    mutationFn: lease.takeOver,
-    onSuccess: () =>
+  const guards = useEditGuards({
+    copy: ENTRY_EDITING_COPY,
+    userId,
+    lease,
+    theirs: {
+      queryKey: ["entry.conflict", id],
+      fetch: () => orpc.entry.get.call({ id }),
+      snapshot: (saved) =>
+        saved
+          ? { title: saved.title, status: saved.status, meta: saved.meta }
+          : null,
+    },
+    keepMine: (etag) => void autosave.keepMine(etag),
+    // Drop the author's unsaved edits before remounting on the saved entry.
+    discard: autosave.cancel,
+    reload: () =>
       queryClient.invalidateQueries({ queryKey: entryQueryKey }).then(onReseed),
+    onBack: () => {
+      void navigate({
+        to: "/entries/$slug",
+        params: { slug: entryType.adminSlug },
+        search: ENTRIES_LIST_DEFAULT_SEARCH,
+      });
+    },
   });
-  const handleBack = (): void => {
-    void navigate({
-      to: "/entries/$slug",
-      params: { slug: entryType.adminSlug },
-      search: ENTRIES_LIST_DEFAULT_SEARCH,
-    });
-  };
 
   const { trigger: revisionsTrigger } = useRevisionsTrigger({
     entryId: id,
@@ -217,36 +198,9 @@ export function PlainFormRouteInner({
 
   return (
     <>
-      <EntryConflictDialog
-        subject="entry"
-        open={conflict.open}
-        changedAt={conflict.open ? (conflict.conflict.updatedAt ?? null) : null}
-        editingElsewhere={
-          conflict.open
-            ? editingElsewhere(conflict.conflict, userId)
-            : undefined
-        }
-        mineSnapshot={conflictMine}
-        theirsSnapshot={
-          theirsQuery.data
-            ? {
-                title: theirsQuery.data.title,
-                status: theirsQuery.data.status,
-                meta: theirsQuery.data.meta,
-              }
-            : null
-        }
-        onKeepMine={handleKeepMine}
-        onLoadTheirs={handleLoadTheirs}
-      />
+      <EntryConflictDialog {...guards.conflictDialog} />
       {leaseMode.mode === "readOnly" ? (
-        <EditLeaseBanner
-          subject="entry"
-          notice={leaseMode.notice}
-          onTakeOver={() => takeOver.mutate()}
-          isTakingOver={takeOver.isPending}
-          onBack={handleBack}
-        />
+        <EditLeaseBanner {...guards.leaseBanner(leaseMode.notice)} />
       ) : null}
       {/* A disabled fieldset disables every control in the form at once. */}
       <fieldset

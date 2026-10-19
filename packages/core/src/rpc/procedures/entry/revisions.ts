@@ -30,13 +30,9 @@ import {
 } from "../../../revisions/snapshot-envelope.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { assertLeaseAllows } from "../../concurrency.js";
 import { idParam } from "../../contract/validation.js";
-import {
-  assertCopyCurrent,
-  assertEntryWritable,
-  claimEntry,
-  ENTRY_IF_MATCH_MESSAGE,
-} from "./concurrency.js";
+import { ENTRY_IF_MATCH_MESSAGE, entryRows } from "./concurrency.js";
 import {
   assertContentValidAgainstRegistries,
   assertContentWithinByteCap,
@@ -196,8 +192,12 @@ export const restore = base
     }
     assertCanEditEntry(context, live, errors);
     // Either destination is a write from the caller's copy of the entry.
-    await assertEntryWritable(context, live.id, input.takeOver);
-    assertCopyCurrent(input.ifMatch, live);
+    await assertLeaseAllows(
+      context,
+      { kind: "entry", id: live.id },
+      input.takeOver,
+    );
+    entryRows(context.db).assertCopyCurrent(input.ifMatch, live);
 
     // Snapshots survive block deregistration, so a stale revision must pass the
     // same gate before landing on autosave or live.
@@ -286,8 +286,7 @@ export const restore = base
     });
     const toWrite = preparedColumns(prepared, patch);
 
-    const updatedRow = await claimEntry(
-      context.db,
+    const updatedRow = await entryRows(context.db).claimRow(
       live.id,
       input.ifMatch,
       toWrite,

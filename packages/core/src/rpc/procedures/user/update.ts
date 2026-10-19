@@ -3,10 +3,8 @@ import type { NewUser, User } from "../../../db/schema/users.js";
 import type { JsonObject } from "../../../json.js";
 import type { AccessGuards } from "./helpers.js";
 import { invalidateAllSessionsForUser } from "../../../auth/sessions.js";
-import { claim, ConflictError, etagOf } from "../../../db/concurrency.js";
-import { assertWritable } from "../../../db/edit-lease.js";
+import { etagOf } from "../../../db/concurrency.js";
 import {
-  and,
   eq,
   isUniqueConstraintError,
   isUniqueConstraintErrorOn,
@@ -15,8 +13,9 @@ import { users } from "../../../db/schema/users.js";
 import { isEmptyMetaPatch, patchedMetaBag } from "../../../meta/core.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { rpcSurface } from "../entry/concurrency.js";
+import { assertLeaseAllows } from "../../concurrency.js";
 import { stripUndefined } from "../entry/helpers.js";
+import { userRows } from "./concurrency.js";
 import { assertCanEditUser, otherActiveAdminExists } from "./helpers.js";
 import {
   announceUserMetaChange,
@@ -56,22 +55,18 @@ async function writeGuarded(
   demotingAdmin: boolean,
   guards: UserWriteGuards,
 ): Promise<User> {
-  const guard = claim(users.updatedAt, ifMatch);
-  // The last-admin guard sits in the UPDATE's WHERE so two concurrent
-  // demotions can't both pass and lock everyone out.
-  const whereClause = and(
-    eq(users.id, existing.id),
-    guard.where,
-    demotingAdmin ? otherActiveAdminExists(context.db, existing.id) : undefined,
-  );
-
   let row;
   try {
-    [row] = await context.db
-      .update(users)
-      .set({ ...changes, ...guard.set })
-      .where(whereClause)
-      .returning();
+    row = await userRows(context.db).claimRow(
+      existing.id,
+      ifMatch,
+      changes,
+      // The last-admin guard sits in the UPDATE's WHERE so two concurrent
+      // demotions can't both pass and lock everyone out.
+      demotingAdmin
+        ? otherActiveAdminExists(context.db, existing.id)
+        : undefined,
+    );
   } catch (error) {
     // `users.email` isn't writable here, but a plugin filter could reintroduce
     // it.
@@ -80,17 +75,7 @@ async function writeGuarded(
     throw error;
   }
   if (row) return row;
-  const [current] = await context.db
-    .select({ updatedAt: users.updatedAt })
-    .from(users)
-    .where(eq(users.id, existing.id));
-  if (current && current.updatedAt.getTime() !== ifMatch.getTime()) {
-    throw new ConflictError(current.updatedAt, {
-      kind: "user",
-      id: existing.id,
-    });
-  }
-  if (current && demotingAdmin) guards.lastAdmin();
+  if (demotingAdmin) guards.lastAdmin();
   return guards.updateFailed();
 }
 
@@ -118,18 +103,12 @@ export const update = base
     assertCanEditUser(context, existing, accessGuards);
     // After auth, so an unauthorised caller with a stale copy still gets
     // FORBIDDEN, not CONFLICT or LOCKED.
-    await assertWritable(
-      context.db,
+    await assertLeaseAllows(
+      context,
       { kind: "user", id: existing.id },
-      { userId: context.user.id, surface: rpcSurface(context) },
-      { takeOver: filtered.takeOver },
+      filtered.takeOver,
     );
-    if (filtered.ifMatch.getTime() !== existing.updatedAt.getTime()) {
-      throw new ConflictError(existing.updatedAt, {
-        kind: "user",
-        id: existing.id,
-      });
-    }
+    userRows(context.db).assertCopyCurrent(filtered.ifMatch, existing);
 
     // Role changes are a separate privilege — even self-edits can't promote.
     const wantsRoleChange =
