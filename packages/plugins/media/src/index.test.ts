@@ -1281,18 +1281,26 @@ describe("@plumix/plugin-media — media.delete", () => {
   });
 });
 
-async function mediaEtag(
+async function mediaItem(
   h: Awaited<ReturnType<typeof createDispatcherHarness>>,
   id: number,
   caller: Caller,
-): Promise<string | undefined> {
+): Promise<MediaListItemOutput | undefined> {
   const listed = await rpcDispatch<MediaListOutput>(
     h,
     "media/list",
     { limit: 100, offset: 0 },
     caller,
   );
-  return listed.output?.items.find((item) => item.id === id)?.etag;
+  return listed.output?.items.find((item) => item.id === id);
+}
+
+async function mediaEtag(
+  h: Awaited<ReturnType<typeof createDispatcherHarness>>,
+  id: number,
+  caller: Caller,
+): Promise<string | undefined> {
+  return (await mediaItem(h, id, caller))?.etag;
 }
 
 async function mediaAlt(
@@ -1300,13 +1308,7 @@ async function mediaAlt(
   id: number,
   caller: Caller,
 ): Promise<string | null | undefined> {
-  const listed = await rpcDispatch<MediaListOutput>(
-    h,
-    "media/list",
-    { limit: 100, offset: 0 },
-    caller,
-  );
-  return listed.output?.items.find((item) => item.id === id)?.alt;
+  return (await mediaItem(h, id, caller))?.alt;
 }
 
 describe("@plumix/plugin-media — media.update", () => {

@@ -26,7 +26,11 @@ import { Trans, useLingui } from "plumix/i18n";
 
 import type { MediaRouter } from "../rpc.js";
 import { MAX_SEARCH_LENGTH } from "../search.js";
-import { libraryUploadState } from "./library-state.js";
+import {
+  altNeedsSave,
+  libraryUploadState,
+  withSavedMedia,
+} from "./library-state.js";
 import { mediaRpc } from "./rpc.js";
 import { uploadErrorLabel, UploadPutError } from "./upload-errors.js";
 
@@ -407,23 +411,10 @@ export function MediaLibrary({
       }),
     onSuccess: (saved) => {
       queryClient.setQueryData<InfiniteData<MediaPage>>(queryKey, (data) =>
-        data
-          ? {
-              ...data,
-              pages: data.pages.map((page) => ({
-                ...page,
-                items: page.items.map((it) =>
-                  it.id === saved.id
-                    ? { ...it, alt: saved.alt, etag: saved.etag }
-                    : it,
-                ),
-              })),
-            }
-          : data,
+        data ? withSavedMedia(data, saved) : data,
       );
       invalidateList();
     },
-    // A conflict refetches too, so the drawer shows what was saved instead.
     onError: (failure) => {
       setError(uploadErrorLabel(failure));
       invalidateList();
@@ -1320,8 +1311,7 @@ function AltEditor({
 
   const commit = useCallback(() => {
     dirtyRef.current = false;
-    // Enter commits, then blurs, which commits again before a re-render.
-    if (draft !== value && draft !== lastSavedRef.current) {
+    if (altNeedsSave(draft, value, lastSavedRef.current)) {
       lastSavedRef.current = draft;
       onSave(draft);
       setSavedFlash(true);

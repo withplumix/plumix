@@ -1,7 +1,7 @@
 // The playground configures no S3 credentials, so uploads PUT to the worker's
 // same-origin route and no storage mock is needed.
 
-import type { Page } from "@playwright/test";
+import type { Page, Response } from "@playwright/test";
 import { expect, PNG_1X1, test } from "plumix/test/playwright";
 
 test.describe.serial("@plumix/plugin-media — worker-driven happy path", () => {
@@ -214,21 +214,21 @@ test("a second save chains from the etag the first returned, before the list ref
   const alt = page.locator(
     "[data-testid^='media-detail-'][data-testid$='-alt']",
   );
-  // Only the update's own answer can carry the new etag to the second save.
   await page.route("**/media/list", (route) => route.abort());
 
   const saves: number[] = [];
   page.on("response", (r) => {
     if (r.url().endsWith("/media/update")) saves.push(r.status());
   });
-  for (const text of ["first", "second"]) {
-    const saved = page.waitForResponse((r) =>
-      r.url().endsWith("/media/update"),
-    );
-    await alt.fill(text);
-    await alt.press("Enter");
-    await saved;
-  }
+  const isUpdate = (r: Response) => r.url().endsWith("/media/update");
+  const firstSaved = page.waitForResponse(isUpdate);
+  await alt.fill("first");
+  await alt.press("Enter");
+  await firstSaved;
+  const secondSaved = page.waitForResponse(isUpdate);
+  await alt.fill("second");
+  await alt.press("Enter");
+  await secondSaved;
 
   expect(saves).toEqual([200, 200]);
 });
