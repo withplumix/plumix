@@ -217,13 +217,46 @@ msgstr "No items yet."
 
 #. js-lingui-explicit-id
 #: src/admin/MenuItemEditor.tsx
-msgid "plugin.menu.itemEditor.conflictBanner"
-msgstr "Another editor saved changes since you loaded this menu."
+msgid "plugin.menu.itemEditor.conflict"
+msgstr "This menu changed since you opened it. Your changes are kept here and haven't been saved."
+
+#. name: the editing user's display name or email
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.conflictHolder"
+msgstr "{name} is editing it now."
 
 #. js-lingui-explicit-id
 #: src/admin/MenuItemEditor.tsx
-msgid "plugin.menu.itemEditor.conflictReload"
-msgstr "Reload to see latest"
+msgid "plugin.menu.itemEditor.conflictLoadTheirs"
+msgstr "Load theirs"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.conflictKeepMine"
+msgstr "Keep mine"
+
+#. name: the editing user's display name or email; time: a formatted date and time
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.leaseHeldBy"
+msgstr "{name} is editing this menu (since {time})"
+
+#. name: the user who took over; time: a formatted date and time
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.leaseLost"
+msgstr "{name} took over editing this menu at {time}. Your unsaved changes are shown here but weren't saved."
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.leaseBack"
+msgstr "Back"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.leaseTakeOver"
+msgstr "Take over"
 
 #. js-lingui-explicit-id
 #: src/admin/MenuItemEditor.tsx

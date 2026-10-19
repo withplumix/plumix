@@ -1,4 +1,5 @@
 import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
 import { index, sqliteTable, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-valibot";
 
@@ -16,9 +17,13 @@ export const terms = sqliteTable(
     parentId: t.integer().references((): AnySQLiteColumn => terms.id, {
       onDelete: "set null",
     }),
-    // Optimistic-concurrency counter for term-mutating RPCs such as
-    // `menu.save`; read-only callers ignore it.
-    version: t.integer().notNull().default(0),
+    // The concurrency token (ADR 0048): an update that doesn't set it still
+    // moves it by one.
+    version: t
+      .integer()
+      .notNull()
+      .default(0)
+      .$onUpdate(() => sql`version + 1`),
   }),
   (table) => [
     uniqueIndex("terms_taxonomy_slug_idx").on(table.taxonomy, table.slug),

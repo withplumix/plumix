@@ -1,9 +1,9 @@
-import type { EditLeaseNotice } from "@/editor/edit-lease.js";
 import type { EditingCopy } from "@/editor/editing-copy.js";
 import type { ReactElement } from "react";
 import { useFormatters } from "@/lib/use-formatters.js";
 import { Trans } from "@lingui/react";
 
+import type { EditLeaseNotice } from "@plumix/core/admin";
 import { Button } from "@plumix/admin-ui/button";
 
 export interface EditLeaseBannerProps {

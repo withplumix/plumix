@@ -24,14 +24,14 @@ function okResolved(label: string) {
 
 describe("editorReducer", () => {
   describe("loadFromServer", () => {
-    test("populates termId / slug / name / version / depth limit from the response", () => {
+    test("populates termId / slug / name / etag / depth limit from the response", () => {
       const next = editorReducer(initialEditorState, {
         type: "loadFromServer",
         response: {
           id: 7,
           slug: "main",
           name: "Main",
-          version: 3,
+          etag: "3",
           maxDepth: 4,
           limitedBy: ["header"],
           items: [],
@@ -41,7 +41,7 @@ describe("editorReducer", () => {
       expect(next.termId).toBe(7);
       expect(next.slug).toBe("main");
       expect(next.name).toBe("Main");
-      expect(next.version).toBe(3);
+      expect(next.etag).toBe("3");
       expect(next.maxDepth).toBe(4);
       expect(next.limitedBy).toEqual(["header"]);
       expect(next.items).toEqual([]);
@@ -56,7 +56,7 @@ describe("editorReducer", () => {
           id: 1,
           slug: "main",
           name: "Main",
-          version: 1,
+          etag: "1",
           maxDepth: 5,
           limitedBy: [],
           items: [
@@ -100,7 +100,7 @@ describe("editorReducer", () => {
           id: 1,
           slug: "main",
           name: "Main",
-          version: 1,
+          etag: "1",
           maxDepth: 5,
           limitedBy: [],
           items: [
@@ -152,7 +152,7 @@ describe("editorReducer", () => {
           id: 1,
           slug: "main",
           name: "Main",
-          version: 1,
+          etag: "1",
           maxDepth: 5,
           limitedBy: [],
           items: [
@@ -174,7 +174,7 @@ describe("editorReducer", () => {
   });
 
   describe("applySaveResult", () => {
-    test("assigns returned ids to new items in payload order and bumps the version", () => {
+    test("assigns returned ids to new items in payload order and adopts the save's etag", () => {
       // Rekeying `tmp-*` to `id-*` makes later saves update rather than
       // insert again.
       const loaded = editorReducer(initialEditorState, {
@@ -183,7 +183,7 @@ describe("editorReducer", () => {
           id: 1,
           slug: "main",
           name: "Main",
-          version: 4,
+          etag: "4",
           maxDepth: 5,
           limitedBy: [],
           items: [
@@ -206,10 +206,10 @@ describe("editorReducer", () => {
       });
       const next = editorReducer(added, {
         type: "applySaveResult",
-        result: { version: 5, itemIds: [10, 99] },
+        result: { etag: "5", itemIds: [10, 99] },
       });
 
-      expect(next.version).toBe(5);
+      expect(next.etag).toBe("5");
       expect(next.items.map((item) => item.id)).toEqual([10, 99]);
       expect(next.items[1]?.key).toBe("id-99");
       expect(next.dirty).toBe(false);
@@ -238,7 +238,7 @@ describe("editorReducer", () => {
       const next = editorReducer(removed, {
         type: "applySaveResult",
         result: {
-          version: 1,
+          etag: "1",
           itemIds: [10, 11],
           snapshotKeys: [aKey, bKey],
         },
@@ -279,7 +279,7 @@ describe("editorReducer", () => {
 
       const next = editorReducer(reparented, {
         type: "applySaveResult",
-        result: { version: 1, itemIds: [50, 51] },
+        result: { etag: "1", itemIds: [50, 51] },
       });
 
       expect(next.items[0]?.key).toBe("id-50");
@@ -299,7 +299,7 @@ describe("editorReducer", () => {
           id: 1,
           slug: "main",
           name: "Main",
-          version: 1,
+          etag: "1",
           maxDepth: 5,
           limitedBy: [],
           items: [
@@ -358,7 +358,7 @@ describe("editorReducer", () => {
           id: 1,
           slug: "main",
           name: "Main",
-          version: 1,
+          etag: "1",
           maxDepth: 5,
           limitedBy: [],
           items: [
@@ -394,7 +394,7 @@ describe("editorReducer", () => {
           id: 1,
           slug: "main",
           name: "Main",
-          version: 1,
+          etag: "1",
           maxDepth: 5,
           limitedBy: [],
           items: [
@@ -434,7 +434,7 @@ describe("editorReducer", () => {
           id: 1,
           slug: "main",
           name: "Main",
-          version: 1,
+          etag: "1",
           maxDepth: 5,
           limitedBy: [],
           items: [
@@ -468,7 +468,7 @@ describe("editorReducer", () => {
           id: 1,
           slug: "main",
           name: "Main",
-          version: 1,
+          etag: "1",
           maxDepth: 5,
           limitedBy: [],
           items: [
@@ -508,7 +508,7 @@ describe("editorReducer", () => {
           id: 1,
           slug: "main",
           name: "Main",
-          version: 1,
+          etag: "1",
           maxDepth: 5,
           limitedBy: [],
           items: [
@@ -542,7 +542,7 @@ describe("editorReducer", () => {
           id: 1,
           slug: "main",
           name: "Main",
-          version: 1,
+          etag: "1",
           maxDepth: 5,
           limitedBy: [],
           items: [
@@ -574,7 +574,7 @@ describe("editorReducer", () => {
           id: 1,
           slug: "main",
           name: "Main",
-          version: 1,
+          etag: "1",
           maxDepth: 5,
           limitedBy: [],
           items: [
@@ -681,7 +681,7 @@ describe("editorReducer", () => {
           id: 1,
           slug: "main",
           name: "Main",
-          version: 1,
+          etag: "1",
           maxDepth: 5,
           limitedBy: [],
           items: [
@@ -717,7 +717,7 @@ describe("editorReducer", () => {
           id: 1,
           slug: "main",
           name: "Main",
-          version: 1,
+          etag: "1",
           maxDepth: 5,
           limitedBy: [],
           items: [
@@ -770,7 +770,7 @@ describe("editorReducer", () => {
           id: 1,
           slug: "main",
           name: "Main",
-          version: 1,
+          etag: "1",
           maxDepth: 5,
           limitedBy: [],
           items: [
@@ -826,7 +826,7 @@ describe("editorReducer", () => {
           id: 1,
           slug: "main",
           name: "Main",
-          version: 1,
+          etag: "1",
           maxDepth: 5,
           limitedBy: [],
           items: [
@@ -862,7 +862,7 @@ describe("editorReducer", () => {
           id: 1,
           slug: "main",
           name: "Main",
-          version: 1,
+          etag: "1",
           maxDepth: 5,
           limitedBy: [],
           items: [
@@ -906,7 +906,7 @@ describe("editorReducer", () => {
           id: 1,
           slug: "main",
           name: "Main",
-          version: 1,
+          etag: "1",
           maxDepth: 5,
           limitedBy: [],
           items: [
@@ -961,7 +961,7 @@ describe("editorReducer", () => {
           id: 1,
           slug: "main",
           name: "Main",
-          version: 1,
+          etag: "1",
           maxDepth: 5,
           limitedBy: [],
           items: [
@@ -1003,7 +1003,7 @@ describe("editorReducer", () => {
           id: 1,
           slug: "main",
           name: "Main",
-          version: 1,
+          etag: "1",
           maxDepth: 2,
           limitedBy: ["header"],
           items: [
@@ -1052,7 +1052,7 @@ describe("editorReducer", () => {
           id: 1,
           slug: "main",
           name: "Main",
-          version: 1,
+          etag: "1",
           maxDepth: 1,
           limitedBy: ["header"],
           items: [
@@ -1106,7 +1106,7 @@ describe("editorReducer", () => {
           id: 1,
           slug: "main",
           name: "Main",
-          version: 1,
+          etag: "1",
           maxDepth: 2,
           limitedBy: [],
           items: [
@@ -1168,7 +1168,7 @@ describe("editorReducer", () => {
           id: 1,
           slug: "main",
           name: "Main",
-          version: 1,
+          etag: "1",
           maxDepth: 5,
           limitedBy: [],
           items: [
@@ -1205,7 +1205,7 @@ describe("editorReducer", () => {
           id: 1,
           slug: "main",
           name: "Main",
-          version: 1,
+          etag: "1",
           maxDepth: 5,
           limitedBy: [],
           items: [
@@ -1238,7 +1238,7 @@ describe("editorReducer", () => {
           id: 1,
           slug: "main",
           name: "Main",
-          version: 1,
+          etag: "1",
           maxDepth: 5,
           limitedBy: [],
           items: [
@@ -1274,7 +1274,7 @@ describe("editorReducer", () => {
           id: 1,
           slug: "main",
           name: "Main",
-          version: 1,
+          etag: "1",
           maxDepth: 5,
           limitedBy: [],
           items: [
@@ -1323,7 +1323,7 @@ describe("editorReducer", () => {
           id: 1,
           slug: "main",
           name: "Main",
-          version: 1,
+          etag: "1",
           maxDepth: 5,
           limitedBy: [],
           items: [
@@ -1368,7 +1368,7 @@ describe("applyDepthLimit", () => {
         id: 1,
         slug: "main",
         name: "Main",
-        version: 1,
+        etag: "1",
         maxDepth: 5,
         limitedBy: [],
         items: [],
@@ -1434,7 +1434,7 @@ describe("buildSavePayload", () => {
         id: 1,
         slug: "main",
         name: "Main",
-        version: 4,
+        etag: "4",
         maxDepth: 5,
         limitedBy: [],
         items: [
@@ -1474,7 +1474,7 @@ describe("buildSavePayload", () => {
         id: 1,
         slug: "main",
         name: "Main",
-        version: 1,
+        etag: "1",
         maxDepth: 5,
         limitedBy: [],
         items: [
@@ -1513,7 +1513,7 @@ describe("hiddenInLocations", () => {
         id: 1,
         slug: "main",
         name: "Main",
-        version: 1,
+        etag: "1",
         maxDepth: 1,
         limitedBy: ["header"],
         items: [

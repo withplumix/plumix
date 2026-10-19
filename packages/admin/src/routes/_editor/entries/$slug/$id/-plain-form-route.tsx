@@ -1,5 +1,4 @@
 import type { PostEditorValues } from "@/components/editor/post-editor-form.js";
-import type { EditorLeaseMode } from "@/editor/edit-lease.js";
 import type { EditLease } from "@/editor/use-edit-lease.js";
 import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
@@ -25,6 +24,7 @@ import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 
 import type { ResolvedMeta } from "@plumix/core";
+import type { EditorLeaseMode } from "@plumix/core/admin";
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import { describeRpcError } from "@plumix/core/admin";
 

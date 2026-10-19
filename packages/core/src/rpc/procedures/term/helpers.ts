@@ -1,7 +1,16 @@
 import type { Db } from "../../../context/app-context.js";
 import type { Term } from "../../../db/schema/terms.js";
+import { etagOf } from "../../../db/concurrency.js";
 import { eq } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
+
+/** A term on the wire: its `version` travels as the opaque `etag`. */
+export function termWire<T extends { readonly version: number }>({
+  version,
+  ...rest
+}: T): Omit<T, "version"> & { readonly etag: string } {
+  return { ...rest, etag: etagOf(version) };
+}
 
 /**
  * Returns true on hitting the depth cap, refusing rather than extending a

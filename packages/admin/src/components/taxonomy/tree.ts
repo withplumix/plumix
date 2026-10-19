@@ -1,7 +1,10 @@
 import type { WithResolvedMeta } from "@plumix/core";
 import type { Term as StoredTerm } from "@plumix/core/schema";
 
-type Term = WithResolvedMeta<StoredTerm>;
+/** A term as the RPC sends it: its `version` travels as the `etag`. */
+type Term = Omit<WithResolvedMeta<StoredTerm>, "version"> & {
+  readonly etag: string;
+};
 
 // The tree reflects only the rows passed in; orphans are promoted to roots
 // rather than vanishing.

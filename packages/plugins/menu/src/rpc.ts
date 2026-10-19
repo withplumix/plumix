@@ -1,5 +1,24 @@
-import type { AppContext, LookupResult } from "plumix/plugin";
-import { and, count, eq, inArray, sql } from "plumix/db";
+import type { LeaseClaimant, LeaseResource } from "plumix/db";
+import type {
+  AppContext,
+  AuthenticatedAppContext,
+  LookupResult,
+} from "plumix/plugin";
+import {
+  acquireEditLease,
+  and,
+  assertTermCopyCurrent,
+  assertWritable,
+  claimTerm,
+  count,
+  eq,
+  etagOf,
+  inArray,
+  releaseEditLease,
+  renewEditLease,
+  takeOverEditLease,
+  versionIfMatchObject,
+} from "plumix/db";
 import {
   authenticated,
   base,
@@ -41,6 +60,8 @@ const MAX_TITLE_LENGTH = 300;
 const MAX_LOCATION_ID_LENGTH = 64;
 const SEARCH_TARGETS_LIMIT = 20;
 const MENU_LOCATION_ID_RE = /^[a-z][a-z0-9-]*$/;
+const MENU_IF_MATCH_MESSAGE =
+  "Send the menu's `etag` from `menu.get` as `ifMatch`";
 
 // Valibot schemas for the wire-level inputs.
 
@@ -115,7 +136,7 @@ interface MenuListItem {
   readonly id: number;
   readonly slug: string;
   readonly name: string;
-  readonly version: number;
+  readonly etag: string;
   readonly itemCount: number;
 }
 
@@ -123,13 +144,13 @@ interface MenuGetResponse extends MenuDepthLimit {
   readonly id: number;
   readonly slug: string;
   readonly name: string;
-  readonly version: number;
+  readonly etag: string;
   readonly items: readonly ResolvedRow[];
 }
 
 interface SaveResponse {
   readonly termId: number;
-  readonly version: number;
+  readonly etag: string;
   readonly itemIds: readonly number[];
   readonly added: readonly number[];
   readonly removed: readonly number[];
@@ -160,7 +181,7 @@ export function createMenuRouter(
         id: row.id,
         slug: row.slug,
         name: row.name,
-        version: row.version,
+        etag: etagOf(row.version),
         itemCount: row.itemCount,
       }));
     });
@@ -208,7 +229,7 @@ export function createMenuRouter(
         id: term.id,
         slug: term.slug,
         name: term.name,
-        version: term.version,
+        etag: etagOf(term.version),
         maxDepth: limit.maxDepth,
         limitedBy: limit.limitedBy,
         items,
@@ -219,11 +240,17 @@ export function createMenuRouter(
     .use(authenticated)
     .use(requireCapability(MENU_MANAGE_CAPABILITY))
     .input(
-      v.object({
-        termId: idParam,
-        version: v.pipe(v.number(), v.integer(), v.minValue(0)),
-        items: v.pipe(v.array(saveItemSchema), v.maxLength(MAX_ITEMS_PER_SAVE)),
-      }),
+      versionIfMatchObject(
+        {
+          termId: idParam,
+          items: v.pipe(
+            v.array(saveItemSchema),
+            v.maxLength(MAX_ITEMS_PER_SAVE),
+          ),
+          takeOver: v.optional(v.boolean()),
+        },
+        MENU_IF_MATCH_MESSAGE,
+      ),
     )
     .handler(async ({ input, context, errors }): Promise<SaveResponse> => {
       const [term] = await context.db
@@ -236,6 +263,13 @@ export function createMenuRouter(
       if (!term) {
         throw errors.NOT_FOUND({ data: { kind: "menu", id: input.termId } });
       }
+      await assertWritable(
+        context.db,
+        { kind: "term", id: term.id },
+        claimantOf(context),
+        { takeOver: input.takeOver },
+      );
+      assertTermCopyCurrent(input.ifMatch, term);
 
       const flat = flattenSaveItems(input.items, {
         maxDepth: MENU_DEPTH_HARD_CAP,
@@ -298,53 +332,38 @@ export function createMenuRouter(
         }
       }
 
-      // Look the linked items' targets up before the CAS bump below: a
-      // lookup that throws then leaves the menu's version alone, so the
+      // Look the linked items' targets up, and check the claimed ids, before
+      // the claim below: a refusal then leaves the menu's token alone, so the
       // editor can retry the save.
       const targets = await lookupMenuTargets(
         context,
         flat.items.map((item) => item.meta),
       );
 
-      // CAS bump: two concurrent saves can both pass the earlier version check;
-      // only the first UPDATE matches, and the loser aborts before writing.
-      const versionBumped = await context.db
-        .update(terms)
-        .set({ version: term.version + 1 })
-        .where(and(eq(terms.id, term.id), eq(terms.version, input.version)))
-        .returning({ id: terms.id });
-      if (versionBumped.length === 0) {
-        throw errors.CONFLICT({
-          data: {
-            reason: "version_mismatch",
-            key: String(term.version),
-          },
-        });
-      }
-
       // Reject claimed ids not linked to this menu, or a save could re-parent
       // another menu's items.
       const claimedIds = flat.items
         .map((item) => item.id)
         .filter((id): id is number => id !== null);
-      const existingRows = await context.db
-        .select({ id: entries.id, meta: entries.meta })
-        .from(entries)
-        .where(
-          and(
-            eq(entries.type, MENU_ITEM_ENTRY_TYPE),
-            inArray(
-              entries.id,
-              context.db
-                .select({ id: entryTerm.entryId })
-                .from(entryTerm)
-                .where(eq(entryTerm.termId, term.id)),
-            ),
-            claimedIds.length === 0
-              ? sql`1 = 0`
-              : inArray(entries.id, claimedIds),
-          ),
-        );
+      const existingRows =
+        claimedIds.length === 0
+          ? []
+          : await context.db
+              .select({ id: entries.id, meta: entries.meta })
+              .from(entries)
+              .where(
+                and(
+                  eq(entries.type, MENU_ITEM_ENTRY_TYPE),
+                  inArray(
+                    entries.id,
+                    context.db
+                      .select({ id: entryTerm.entryId })
+                      .from(entryTerm)
+                      .where(eq(entryTerm.termId, term.id)),
+                  ),
+                  inArray(entries.id, claimedIds),
+                ),
+              );
       const validClaimedIds = new Set(existingRows.map((r) => r.id));
       for (const id of claimedIds) {
         if (!validClaimedIds.has(id)) {
@@ -355,6 +374,13 @@ export function createMenuRouter(
             },
           });
         }
+      }
+
+      // The item tree is the menu's content: claim the menu term first, so
+      // of two saves from one copy only the first writes any item.
+      const claimed = await claimTerm(context.db, term.id, input.ifMatch, {});
+      if (!claimed) {
+        throw errors.NOT_FOUND({ data: { kind: "menu", id: term.id } });
       }
 
       // The snapshot keeps the editor showing the item after its target is
@@ -392,8 +418,8 @@ export function createMenuRouter(
       const modified: number[] = [];
 
       // Serial, no transaction: D1 lacks BEGIN/COMMIT and libsql's opens a
-      // separate connection. The version bump comes last, so a failed write
-      // leaves a mismatch the next save sees.
+      // separate connection. The claim above already moved the token, so a
+      // copy from before a failed write conflicts.
       for (let i = 0; i < flat.items.length; i++) {
         const item = flat.items[i];
         if (!item) continue;
@@ -464,8 +490,6 @@ export function createMenuRouter(
         // entry_term cascade deletes via FK on entries.id.
       }
 
-      // Version was already bumped via CAS at the start of the save.
-
       // Reuse `removedIds` — `removed` in the response IS what we
       // deleted. Recomputing risks divergence after a refactor.
       const itemIdSet = new Set(itemIds);
@@ -486,7 +510,7 @@ export function createMenuRouter(
 
       return {
         termId: term.id,
-        version: term.version + 1,
+        etag: etagOf(claimed.version),
         itemIds,
         added,
         removed,
@@ -579,7 +603,7 @@ export function createMenuRouter(
       }): Promise<{
         readonly termId: number;
         readonly slug: string;
-        readonly version: number;
+        readonly etag: string;
       }> => {
         const baseSlug = slugify(input.name) || `menu-${cryptoRandom()}`;
         let slug = baseSlug;
@@ -619,7 +643,7 @@ export function createMenuRouter(
           // surface a driver regression rather than paper over it.
           throw MenuPluginError.menuCreateNoRowReturned();
         }
-        return { termId: row.id, slug, version: row.version };
+        return { termId: row.id, slug, etag: etagOf(row.version) };
       },
     );
 
@@ -697,6 +721,45 @@ export function createMenuRouter(
         context,
       );
       return { location: input.location, termSlug: input.termSlug };
+    });
+
+  const leaseAcquire = base
+    .use(authenticated)
+    .use(requireCapability(MENU_MANAGE_CAPABILITY))
+    .input(v.object({ id: idParam, takeOver: v.optional(v.boolean()) }))
+    .handler(async ({ input, context, errors }) => {
+      const resource = await menuResource(context, input.id);
+      if (!resource) {
+        throw errors.NOT_FOUND({ data: { kind: "menu", id: input.id } });
+      }
+      return input.takeOver === true
+        ? takeOverEditLease(context.db, resource, claimantOf(context))
+        : acquireEditLease(context.db, resource, claimantOf(context));
+    });
+
+  const leaseRenew = base
+    .use(authenticated)
+    .use(requireCapability(MENU_MANAGE_CAPABILITY))
+    .input(v.object({ id: idParam }))
+    .handler(async ({ input, context, errors }) => {
+      const resource = await menuResource(context, input.id);
+      if (!resource) {
+        throw errors.NOT_FOUND({ data: { kind: "menu", id: input.id } });
+      }
+      return renewEditLease(context.db, resource, claimantOf(context));
+    });
+
+  // Best-effort: a tab that closes without it lets the lease lapse.
+  const leaseRelease = base
+    .use(authenticated)
+    .use(requireCapability(MENU_MANAGE_CAPABILITY))
+    .input(v.object({ id: idParam }))
+    .handler(async ({ input, context }) => {
+      await releaseEditLease(
+        context.db,
+        { kind: "term", id: input.id },
+        context.user.id,
+      );
     });
 
   const pickerTabs = base
@@ -831,6 +894,31 @@ export function createMenuRouter(
     pickerTabs,
     searchTargets,
     locations: { list: locationsList },
+    lease: { acquire: leaseAcquire, renew: leaseRenew, release: leaseRelease },
+  };
+}
+
+/**
+ * A menu is a term, so its lease is the term's: the menu editor and the term
+ * editor never hold it apart.
+ */
+async function menuResource(
+  context: AppContext,
+  termId: number,
+): Promise<LeaseResource | undefined> {
+  const [term] = await context.db
+    .select({ id: terms.id })
+    .from(terms)
+    .where(and(eq(terms.id, termId), eq(terms.taxonomy, MENU_TAXONOMY)))
+    .limit(1);
+  return term ? { kind: "term", id: term.id } : undefined;
+}
+
+/** A session is the admin's; an API token is a client calling RPC itself. */
+function claimantOf(context: AuthenticatedAppContext): LeaseClaimant {
+  return {
+    userId: context.user.id,
+    surface: context.tokenScopes === null ? "admin" : "rpc",
   };
 }
 

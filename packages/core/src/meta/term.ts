@@ -10,21 +10,19 @@ import type {
   MetaPatchTarget,
   SettledRow,
 } from "./core.js";
+import { and, eq } from "../db/index.js";
 import { terms } from "../db/schema/terms.js";
 import { findTermMetaField, listTermMetaFields } from "../plugin/manifest.js";
 import {
-  applyMetaPatch,
   decodeMetaBag as decodeMetaBagCore,
   isEmptyMetaPatch,
-  loadMeta,
   metaScope,
   metaScopeCache,
+  patchedMetaBag,
   resolveMetaBags as resolveMetaBagsCore,
-  resolveMetaReferences as resolveMetaReferencesCore,
   sanitizeMetaForRpc as sanitizeMetaForRpcCore,
   settleStoredMeta,
   validateMetaReferencesForRpc,
-  writeSettledMeta,
 } from "./core.js";
 import { assertMetaCapabilities } from "./entry.js";
 
@@ -126,7 +124,7 @@ export async function resolveTermsMeta(
  */
 export async function settleTermMeta(
   ctx: AppContext,
-  term: { readonly id: number; readonly taxonomy: string },
+  term: SettledTerm,
   stored: JsonObject | null | undefined,
 ): Promise<SettledRow> {
   const settled = settleStoredMeta(
@@ -139,50 +137,40 @@ export async function settleTermMeta(
   };
 }
 
-/** Announces the settle only if it landed. */
-export async function writeSettledTermMeta(
-  ctx: AppContext,
-  term: { readonly id: number; readonly taxonomy: string },
-  stored: JsonObject | null | undefined,
-  patch: MetaPatch,
-): Promise<boolean> {
-  const written = await writeSettledMeta(
-    ctx,
-    terms,
-    terms.id,
-    term.id,
-    stored,
-    patch,
-  );
-  if (written) await announceTermMetaChange(ctx, term, patch);
-  return written;
-}
-
-export async function loadTermMeta(
-  ctx: AppContext,
-  term: { readonly id: number; readonly taxonomy: string },
-): Promise<ResolvedMeta> {
-  const scope = metaScope(listTermMetaFields(ctx.plugins, term.taxonomy));
-  const decoded = await loadMeta(ctx, terms, terms.id, term.id, scope);
-  return resolveMetaReferencesCore(ctx, scope.findField, decoded);
+/** The term as the settle read it: its version is the settle's claim. */
+interface SettledTerm {
+  readonly id: number;
+  readonly taxonomy: string;
+  readonly version: number;
 }
 
 /**
- * Apply a meta patch to `terms.meta` and fire `term:meta_changed`.
- * Plugins that need to mutate the patch should subscribe to
- * `rpc:term.{create,update}:input` and mutate `input.meta` there.
+ * Lands only while the row holds the version it was read with, so a write in
+ * between wins, and leaves it there: a settle is not an edit.
  */
-export async function writeTermMeta(
+export async function writeSettledTermMeta(
   ctx: AppContext,
-  term: { readonly id: number; readonly taxonomy: string },
-  patch: Parameters<typeof applyMetaPatch>[4],
-): Promise<void> {
-  if (isEmptyMetaPatch(patch)) return;
-  await applyMetaPatch(ctx, terms, terms.id, term.id, patch);
+  term: SettledTerm,
+  stored: JsonObject | null | undefined,
+  patch: MetaPatch,
+): Promise<boolean> {
+  if (isEmptyMetaPatch(patch)) return false;
+  const written = await ctx.db
+    .update(terms)
+    .set({
+      meta: patchedMetaBag(stored, patch),
+      // Set, so `$onUpdate` doesn't move it.
+      version: term.version,
+    })
+    .where(and(eq(terms.id, term.id), eq(terms.version, term.version)))
+    .returning({ id: terms.id });
+  if (written.length === 0) return false;
   await announceTermMetaChange(ctx, term, patch);
+  return true;
 }
 
-function announceTermMetaChange(
+/** Fire `term:meta_changed` once a write carrying `patch` has landed. */
+export function announceTermMetaChange(
   ctx: AppContext,
   term: { readonly id: number; readonly taxonomy: string },
   patch: MetaPatch,

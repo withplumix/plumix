@@ -189,7 +189,12 @@ export function MenusShell(): ReactNode {
       </Dialog>
       <Tabs activeTab={tab} onChange={handleTabChange} />
       {tab === "edit" ? (
-        <EditPanel selectedMenu={selectedMenu} />
+        <EditPanel
+          selectedMenu={selectedMenu}
+          onBack={() => {
+            setSlug(null);
+          }}
+        />
       ) : (
         <LocationsPanel menus={menuList} />
       )}
@@ -285,8 +290,10 @@ function Tabs({
 
 function EditPanel({
   selectedMenu,
+  onBack,
 }: {
   readonly selectedMenu: MenuListItem | null;
+  readonly onBack: () => void;
 }): ReactNode {
   return (
     <div data-testid="menus-tab-edit-panel">
@@ -301,7 +308,7 @@ function EditPanel({
           />
         </p>
       ) : (
-        <MenuItemEditor termId={selectedMenu.id} />
+        <MenuItemEditor termId={selectedMenu.id} onBack={onBack} />
       )}
     </div>
   );

@@ -7,12 +7,14 @@ import type {
   MutablePluginRegistry,
 } from "../plugin/manifest.js";
 import type { ActionSpy } from "../test/spies.js";
+import { etagOf } from "../db/concurrency.js";
 import { eq } from "../db/index.js";
 import { terms } from "../db/schema/terms.js";
 import { number, text } from "../plugin/fields/index.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { toRegisteredTermTaxonomy } from "../plugin/registry.js";
 import { createRpcHarness } from "../test/rpc.js";
+import { settleTermMeta } from "./term.js";
 
 function taxonomyRegistry(): MutablePluginRegistry {
   const registry = createPluginRegistry();
@@ -98,7 +100,11 @@ describe("term meta: conditional fields", () => {
     });
 
     await expect(
-      h.client.term.update({ id: created.id, meta: { layout: "video" } }),
+      h.client.term.update({
+        id: created.id,
+        meta: { layout: "video" },
+        ifMatch: created.etag,
+      }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
       data: { reason: "meta_invalid_value", key: "video_url" },
@@ -179,6 +185,7 @@ describe("term meta: registration + round-trip via term.update", () => {
     const afterFlip = await h.client.term.update({
       id: created.id,
       meta: { featured: true },
+      ifMatch: created.etag,
     });
     expect(afterFlip.meta).toEqual({
       icon_url: "https://example.test/tech.svg",
@@ -189,6 +196,7 @@ describe("term meta: registration + round-trip via term.update", () => {
     const afterClear = await h.client.term.update({
       id: created.id,
       meta: { icon_url: null },
+      ifMatch: afterFlip.etag,
     });
     expect(afterClear.meta).toEqual({ featured: true });
   });
@@ -227,7 +235,11 @@ describe("term meta: registration + round-trip via term.update", () => {
   test("term.update with an empty meta patch does not fire term:meta_changed", async () => {
     const { h, created, spy } = await setupTravelCategoryWithIconUrl();
 
-    await h.client.term.update({ id: created.id, meta: {} });
+    await h.client.term.update({
+      id: created.id,
+      meta: {},
+      ifMatch: created.etag,
+    });
 
     expect(spy.calls).toHaveLength(0);
   });
@@ -235,13 +247,15 @@ describe("term meta: registration + round-trip via term.update", () => {
   test("term:meta_changed fires with the upsert + delete diff", async () => {
     const { h, created, spy } = await setupTravelCategoryWithIconUrl();
 
-    await h.client.term.update({
+    const set = await h.client.term.update({
       id: created.id,
       meta: { icon_url: "https://example.test/travel.svg" },
+      ifMatch: created.etag,
     });
     await h.client.term.update({
       id: created.id,
       meta: { icon_url: null },
+      ifMatch: set.etag,
     });
 
     expect(spy.calls).toHaveLength(2);
@@ -285,6 +299,74 @@ describe("term.get settles an unsettled row", () => {
       where: eq(terms.id, term.id),
     });
     expect(stored?.meta).toEqual({ rank: 3, featured: true });
+  });
+
+  test("a settled term announces no meta change", async () => {
+    const plugins = taxonomyRegistry();
+    registerTermMetaFields(plugins, "category", [
+      { key: "rank", label: "Rank", type: "number", inputType: "number" },
+    ]);
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const term = await h.factory.term.create({
+      taxonomy: "category",
+      meta: { rank: 3 },
+    });
+    const spy = h.spyAction("term:meta_changed");
+
+    await h.client.term.get({ id: term.id });
+
+    expect(spy.calls).toHaveLength(0);
+  });
+
+  test("a settle a save overtook writes nothing and announces nothing", async () => {
+    const plugins = taxonomyRegistry();
+    registerTermMetaFields(plugins, "category", [
+      { key: "rank", label: "Rank", type: "number", inputType: "number" },
+    ]);
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const term = await h.factory.term.create({
+      taxonomy: "category",
+      meta: { rank: "3" },
+    });
+    await h.db
+      .update(terms)
+      .set({ name: "Saved meanwhile" })
+      .where(eq(terms.id, term.id));
+    const spy = h.spyAction("term:meta_changed");
+
+    const settled = await settleTermMeta(h.context, term, term.meta);
+
+    expect(settled.written).toBe(false);
+    expect(spy.calls).toHaveLength(0);
+    const [row] = await h.db
+      .select({ meta: terms.meta })
+      .from(terms)
+      .where(eq(terms.id, term.id));
+    expect(row?.meta).toEqual({ rank: "3" });
+  });
+
+  test("leaves the token where it was: a settle is not an edit", async () => {
+    const plugins = taxonomyRegistry();
+    registerTermMetaFields(plugins, "category", [
+      { key: "rank", label: "Rank", type: "number", inputType: "number" },
+    ]);
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const term = await h.factory.term.create({ taxonomy: "category" });
+    const [unsettled] = await h.db
+      .update(terms)
+      .set({ meta: { rank: "3" } })
+      .where(eq(terms.id, term.id))
+      .returning({ version: terms.version });
+    const version = unsettled?.version ?? Number.NaN;
+
+    const got = await h.client.term.get({ id: term.id });
+
+    expect(got.etag).toBe(etagOf(version));
+    const [stored] = await h.db
+      .select({ meta: terms.meta, version: terms.version })
+      .from(terms)
+      .where(eq(terms.id, term.id));
+    expect(stored).toEqual({ meta: { rank: 3 }, version });
   });
 });
 

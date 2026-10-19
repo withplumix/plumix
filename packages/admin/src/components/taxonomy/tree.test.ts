@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { Term } from "@plumix/core/schema";
+import type { Term as StoredTerm } from "@plumix/core/schema";
 
 import {
   buildTermTree,
@@ -9,6 +9,9 @@ import {
   parentPickerOptions,
 } from "./tree.js";
 
+/** A term as the RPC sends it: its `version` travels as the `etag`. */
+type Term = Omit<StoredTerm, "version"> & { readonly etag: string };
+
 function term(overrides: Partial<Term> & { id: number; name: string }): Term {
   return {
     taxonomy: "category",
@@ -16,7 +19,7 @@ function term(overrides: Partial<Term> & { id: number; name: string }): Term {
     description: null,
     parentId: null,
     meta: {},
-    version: 0,
+    etag: "0",
     ...overrides,
   };
 }

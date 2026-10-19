@@ -1,7 +1,8 @@
-import type { LeaseHolder, LeaseRefusal } from "@/editor/edit-lease.js";
-import { lockedBy } from "@/editor/edit-lease.js";
 import { ORPCError } from "@orpc/client";
 import * as v from "valibot";
+
+import type { LeaseHolder, LeaseRefusal } from "@plumix/core/admin";
+import { lockedBy } from "@plumix/core/admin";
 
 /**
  * Batches typing bursts; the dedup snapshot, not this delay, prevents identical

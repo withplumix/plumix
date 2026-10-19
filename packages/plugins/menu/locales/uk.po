@@ -182,16 +182,6 @@ msgstr "Пунктів ще немає."
 
 #. js-lingui-explicit-id
 #: src/admin/MenuItemEditor.tsx
-msgid "plugin.menu.itemEditor.conflictBanner"
-msgstr "Інший користувач зберіг зміни, відколи ви відкрили це меню."
-
-#. js-lingui-explicit-id
-#: src/admin/MenuItemEditor.tsx
-msgid "plugin.menu.itemEditor.conflictReload"
-msgstr "Перезавантажити, щоб побачити останнє"
-
-#. js-lingui-explicit-id
-#: src/admin/MenuItemEditor.tsx
 msgid "plugin.menu.itemEditor.saveButton"
 msgstr "Зберегти меню"
 

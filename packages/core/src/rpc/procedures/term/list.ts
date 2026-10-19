@@ -1,6 +1,7 @@
 import { listTerms } from "../../../terms/read-service.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { termWire } from "./helpers.js";
 import { toRpcTermReadError } from "./read-errors.js";
 import { termListInputSchema } from "./schemas.js";
 
@@ -14,7 +15,11 @@ export const list = base
     );
     try {
       const rows = await listTerms(context, filtered);
-      return await context.hooks.applyFilter("rpc:term.list:output", rows);
+      const output = await context.hooks.applyFilter(
+        "rpc:term.list:output",
+        rows,
+      );
+      return output.map(termWire);
     } catch (error) {
       throw toRpcTermReadError(error, errors) ?? error;
     }

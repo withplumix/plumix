@@ -1,12 +1,13 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { orpc } from "@/lib/orpc.js";
+
 import type {
   EditLeaseApi,
   EditLeaseSession,
   EditLeaseState,
   LeaseRefusal,
-} from "@/editor/edit-lease.js";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { createEditLeaseSession } from "@/editor/edit-lease.js";
-import { orpc } from "@/lib/orpc.js";
+} from "@plumix/core/admin";
+import { createEditLeaseSession } from "@plumix/core/admin";
 
 export interface EditLease {
   readonly state: EditLeaseState;
@@ -24,6 +25,12 @@ const USER_LEASE_API: EditLeaseApi = {
   acquire: (input) => orpc.user.lease.acquire.call(input),
   renew: (input) => orpc.user.lease.renew.call(input),
   release: (input) => orpc.user.lease.release.call(input),
+};
+
+const TERM_LEASE_API: EditLeaseApi = {
+  acquire: (input) => orpc.term.lease.acquire.call(input),
+  renew: (input) => orpc.term.lease.renew.call(input),
+  release: (input) => orpc.term.lease.release.call(input),
 };
 
 const SETTINGS_GROUP_LEASE_API: EditLeaseApi<string> = {
@@ -66,13 +73,18 @@ function useLease<Id>(
   return { state, takeOver, lose };
 }
 
-/** Holds the entry's or user's edit lease while its editor is open. */
-export function useEditLease(kind: "entry" | "user", id: number): EditLease {
-  return useLease(
-    id,
-    kind === "entry" ? ENTRY_LEASE_API : USER_LEASE_API,
-    true,
-  );
+const LEASE_APIS = {
+  entry: ENTRY_LEASE_API,
+  user: USER_LEASE_API,
+  term: TERM_LEASE_API,
+} as const;
+
+/** Holds the entry's, user's or term's edit lease while its editor is open. */
+export function useEditLease(
+  kind: "entry" | "user" | "term",
+  id: number,
+): EditLease {
+  return useLease(id, LEASE_APIS[kind], true);
 }
 
 /** Holds a settings group's edit lease while its card is being edited. */

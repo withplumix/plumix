@@ -1,14 +1,12 @@
 import { ORPCError } from "@orpc/client";
 import * as v from "valibot";
 
-import { EDIT_LEASE_RENEW_INTERVAL_MS } from "@plumix/core/admin";
+import type { LeaseHolder } from "../db/edit-lease.js";
+import { EDIT_LEASE_RENEW_INTERVAL_MS } from "../db/contract/edit-lease.js";
 
-export interface LeaseHolder {
-  readonly id: number;
-  readonly name: string;
-}
+export type { LeaseHolder } from "../db/edit-lease.js";
 
-/** Where this editor stands with the entry's edit lease. */
+/** Where this editor stands with the resource's edit lease. */
 export type EditLeaseState =
   | { readonly kind: "pending" }
   | { readonly kind: "held" }

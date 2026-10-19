@@ -319,6 +319,26 @@ describe("plumix import, writing", () => {
     expect({ ...result.rows[0] }).toEqual({ slugs: "hello", title: '"Kept"' });
   });
 
+  // An editor's copy of the replaced term holds the version the site had; the
+  // imported row must move past it, or that copy's save would overwrite the
+  // import (ADR 0048).
+  test("moves a replaced term's token past the version the site held", async () => {
+    const site = await blogSite();
+    await site.client.execute(
+      "INSERT INTO terms (id, taxonomy, name, slug, version) VALUES (1, 'topic', 'Old', 'old', 3)",
+    );
+    writeRecords("content.jsonl", [TOPIC, POST]);
+
+    await importCommand.run(
+      importCtx(["content.jsonl"], site.sync, site.harness.app),
+    );
+
+    const result = await site.client.execute("SELECT id, version FROM terms");
+    expect(result.rows.map((row) => ({ ...row }))).toEqual([
+      { id: 1, version: 4 },
+    ]);
+  });
+
   test("runs the site's sync:after listeners, with content as the scope", async () => {
     const site = await blogSite();
     const events: unknown[] = [];

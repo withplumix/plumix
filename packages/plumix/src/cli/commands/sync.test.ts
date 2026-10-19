@@ -444,6 +444,23 @@ describe("plumix sync", () => {
     );
   });
 
+  // An editor's copy from before the push holds the remote's version; the
+  // pushed row moves past it, or that copy's save overwrites the push.
+  test("a push moves each replaced term's token past the version the target held", async () => {
+    const ends = await seededEnds();
+    await seed(ends.remote, [
+      "INSERT INTO terms (id, taxonomy, name, slug, version) VALUES (1, 'category', 'News', 'news', 5)",
+    ]);
+
+    await syncCommand.run(
+      syncCtx(["push", "--url", REMOTE, "--yes"], ends.sync),
+    );
+
+    expect(
+      await ends.remote.execute("SELECT id, version FROM terms ORDER BY id"),
+    ).toEqual([{ id: 1, version: 6 }]);
+  });
+
   test("a push snapshots the remote before it imports, and prints the restore hint", async () => {
     const ends = await seededEnds();
     const recorded = recording(ends.sync);

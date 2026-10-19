@@ -3,7 +3,7 @@ import type { RequestAuthenticator } from "plumix/auth";
 import type { PluginRegistry } from "plumix/plugin";
 import type { User, UserRole } from "plumix/schema";
 import { createRouterClient } from "@orpc/server";
-import { and, eq } from "plumix/db";
+import { acquireEditLease, and, eq, readEditLease } from "plumix/db";
 import { text } from "plumix/fields";
 import {
   createPluginRegistry,
@@ -45,7 +45,7 @@ interface Harness {
       readonly create: (input: { name: string }) => Promise<{
         readonly termId: number;
         readonly slug: string;
-        readonly version: number;
+        readonly etag: string;
       }>;
       readonly assignLocation: (input: {
         location: string;
@@ -53,6 +53,14 @@ interface Harness {
       }) => Promise<unknown>;
       readonly locations: {
         readonly list: () => Promise<readonly LocationRow[]>;
+      };
+      readonly lease: {
+        readonly acquire: (input: {
+          id: number;
+          takeOver?: boolean;
+        }) => Promise<{ readonly holder: { readonly id: number } }>;
+        readonly renew: (input: { id: number }) => Promise<unknown>;
+        readonly release: (input: { id: number }) => Promise<unknown>;
       };
       readonly searchTargets: (input: {
         kind: "entry" | "term";
@@ -236,6 +244,8 @@ describe("menu RPC", () => {
       expect(result.map((m) => m.slug).sort()).toEqual(["footer", "primary"]);
       const primary = result.find((m) => m.slug === "primary");
       expect(primary?.itemCount).toBe(1);
+      expect(primary).toMatchObject({ etag: "0" });
+      expect(primary).not.toHaveProperty("version");
       const footer = result.find((m) => m.slug === "footer");
       expect(footer?.itemCount).toBe(0);
     });
@@ -395,11 +405,12 @@ describe("menu RPC", () => {
       const m = await seedMenu(h.db, h.factories, "main");
       const result = (await h.client.menu.get({ termId: m.id })) as {
         slug: string;
-        version: number;
+        etag: string;
         items: unknown[];
       };
       expect(result.slug).toBe("main");
-      expect(result.version).toBe(0);
+      expect(result.etag).toBe("0");
+      expect(result).not.toHaveProperty("version");
       expect(result.items).toEqual([]);
     });
 
@@ -743,7 +754,7 @@ describe("menu RPC", () => {
 
       const result = (await h.client.menu.save({
         termId: m.id,
-        version: 0,
+        ifMatch: "0",
         items: [
           {
             parentIndex: null,
@@ -758,9 +769,10 @@ describe("menu RPC", () => {
             meta: { kind: "custom", url: "/sub" },
           },
         ],
-      })) as { version: number; itemIds: number[]; added: number[] };
+      })) as { etag: string; itemIds: number[]; added: number[] };
 
-      expect(result.version).toBe(1);
+      expect(result.etag).toBe("1");
+      expect(result).not.toHaveProperty("version");
       expect(result.itemIds).toHaveLength(2);
       expect(result.added).toHaveLength(2);
 
@@ -789,7 +801,7 @@ describe("menu RPC", () => {
 
       const result = (await h.client.menu.save({
         termId: m.id,
-        version: 0,
+        ifMatch: "0",
         items: [
           {
             parentIndex: null,
@@ -807,23 +819,113 @@ describe("menu RPC", () => {
       expect(row?.meta).toEqual({ cssClass: "nav", kind: "custom", url: "/" });
     });
 
-    test("concurrency: stale version is rejected", async () => {
+    test("a save from a stale copy conflicts before any item write", async () => {
       const h = await buildHarness();
       const m = await seedMenu(h.db, h.factories, "main");
-
-      await h.client.menu.save({
-        termId: m.id,
-        version: 0,
-        items: [],
-      });
+      await h.client.menu.save({ termId: m.id, ifMatch: "0", items: [] });
 
       await expect(
         h.client.menu.save({
           termId: m.id,
-          version: 0,
-          items: [],
+          ifMatch: "0",
+          items: [
+            {
+              parentIndex: null,
+              sortOrder: 0,
+              title: "From a stale copy",
+              meta: { kind: "custom", url: "/stale" },
+            },
+          ],
         }),
-      ).rejects.toThrow();
+      ).rejects.toMatchObject({
+        code: "CONFLICT",
+        data: { reason: "etag_mismatch", etag: "1" },
+      });
+      expect(
+        await h.db
+          .select({ id: entries.id })
+          .from(entries)
+          .where(eq(entries.type, "menu_item")),
+      ).toEqual([]);
+    });
+
+    test("a save without ifMatch is refused with where to find the etag", async () => {
+      const h = await buildHarness();
+      const m = await seedMenu(h.db, h.factories, "main");
+
+      await expect(
+        h.client.menu.save({ termId: m.id, items: [] }),
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+        data: {
+          issues: [
+            { message: "Send the menu's `etag` from `menu.get` as `ifMatch`" },
+          ],
+        },
+      });
+    });
+
+    test("another editor's save during a live lease is refused before any item write", async () => {
+      const h = await buildHarness();
+      const m = await seedMenu(h.db, h.factories, "main");
+      const ada = await editorUser
+        .transient({ db: h.db })
+        .create({ name: "Ada" });
+      const since = new Date();
+      await acquireEditLease(
+        h.db,
+        { kind: "term", id: m.id },
+        { userId: ada.id, surface: "admin" },
+        since,
+      );
+
+      await expect(
+        h.client.menu.save({
+          termId: m.id,
+          ifMatch: "0",
+          items: [
+            {
+              parentIndex: null,
+              sortOrder: 0,
+              title: "Mine",
+              meta: { kind: "custom", url: "/mine" },
+            },
+          ],
+        }),
+      ).rejects.toMatchObject({
+        code: "LOCKED",
+        data: { holder: { id: ada.id, name: "Ada" }, since },
+      });
+      expect(
+        await h.db
+          .select({ id: entries.id })
+          .from(entries)
+          .where(eq(entries.type, "menu_item")),
+      ).toEqual([]);
+    });
+
+    test("a save that passes takeOver lands and takes the lease over", async () => {
+      const h = await buildHarness();
+      const m = await seedMenu(h.db, h.factories, "main");
+      const ada = await editorUser
+        .transient({ db: h.db })
+        .create({ name: "Ada" });
+      await acquireEditLease(
+        h.db,
+        { kind: "term", id: m.id },
+        { userId: ada.id, surface: "admin" },
+      );
+
+      await h.client.menu.save({
+        termId: m.id,
+        ifMatch: "0",
+        items: [],
+        takeOver: true,
+      });
+
+      expect(
+        await readEditLease(h.db, { kind: "term", id: m.id }),
+      ).toMatchObject({ holder: { id: h.user.id } });
     });
 
     test("forward parent reference is rejected", async () => {
@@ -833,7 +935,7 @@ describe("menu RPC", () => {
       await expect(
         h.client.menu.save({
           termId: m.id,
-          version: 0,
+          ifMatch: "0",
           items: [
             {
               parentIndex: 1,
@@ -867,7 +969,7 @@ describe("menu RPC", () => {
         });
       }
       await expect(
-        h.client.menu.save({ termId: m.id, version: 0, items }),
+        h.client.menu.save({ termId: m.id, ifMatch: "0", items }),
       ).rejects.toThrow();
     });
 
@@ -884,7 +986,7 @@ describe("menu RPC", () => {
       await expect(
         h.client.menu.save({
           termId: m.id,
-          version: 0,
+          ifMatch: "0",
           items: [
             {
               parentIndex: null,
@@ -930,7 +1032,7 @@ describe("menu RPC", () => {
       await expect(
         h.client.menu.save({
           termId: m.id,
-          version: 0,
+          ifMatch: "0",
           items: [
             {
               parentIndex: null,
@@ -972,7 +1074,7 @@ describe("menu RPC", () => {
       }
 
       const error = await h.client.menu
-        .save({ termId: m.id, version: 0, items })
+        .save({ termId: m.id, ifMatch: "0", items })
         .catch((caught: unknown) => caught);
 
       expect(error).toHaveProperty("data", { reason: "max_depth_exceeded" });
@@ -989,7 +1091,7 @@ describe("menu RPC", () => {
       });
       const first = (await h.client.menu.save({
         termId: m.id,
-        version: 0,
+        ifMatch: "0",
         items: [
           {
             parentIndex: null,
@@ -1015,7 +1117,7 @@ describe("menu RPC", () => {
       await expect(
         h.client.menu.save({
           termId: m.id,
-          version: 1,
+          ifMatch: "1",
           items: [
             {
               id: first.itemIds[0],
@@ -1053,7 +1155,7 @@ describe("menu RPC", () => {
       const m = await seedMenu(h.db, h.factories, "main");
       const first = (await h.client.menu.save({
         termId: m.id,
-        version: 0,
+        ifMatch: "0",
         items: [
           {
             parentIndex: null,
@@ -1082,7 +1184,7 @@ describe("menu RPC", () => {
 
       const result = await h.client.menu.save({
         termId: m.id,
-        version: 1,
+        ifMatch: "1",
         items: [
           {
             id: first.itemIds[0],
@@ -1108,7 +1210,7 @@ describe("menu RPC", () => {
         ],
       });
 
-      expect(result).toMatchObject({ version: 2 });
+      expect(result).toMatchObject({ etag: "2" });
     });
 
     test("keeps stored items past a location's maxDepth when the menu is assigned to it", async () => {
@@ -1118,7 +1220,7 @@ describe("menu RPC", () => {
       const m = await seedMenu(h.db, h.factories, "main");
       await h.client.menu.save({
         termId: m.id,
-        version: 0,
+        ifMatch: "0",
         items: [
           {
             parentIndex: null,
@@ -1152,7 +1254,7 @@ describe("menu RPC", () => {
 
       const first = (await h.client.menu.save({
         termId: m.id,
-        version: 0,
+        ifMatch: "0",
         items: [
           {
             parentIndex: null,
@@ -1177,7 +1279,7 @@ describe("menu RPC", () => {
 
       const second = (await h.client.menu.save({
         termId: m.id,
-        version: 1,
+        ifMatch: "1",
         items: [
           {
             id: keepId,
@@ -1207,7 +1309,7 @@ describe("menu RPC", () => {
 
       const result = (await h.client.menu.save({
         termId: m.id,
-        version: 0,
+        ifMatch: "0",
         items: [
           {
             parentIndex: null,
@@ -1237,7 +1339,7 @@ describe("menu RPC", () => {
 
       const result = (await h.client.menu.save({
         termId: m.id,
-        version: 0,
+        ifMatch: "0",
         items: [
           {
             parentIndex: null,
@@ -1268,7 +1370,7 @@ describe("menu RPC", () => {
       });
       const first = (await h.client.menu.save({
         termId: m.id,
-        version: 0,
+        ifMatch: "0",
         items: [
           {
             parentIndex: null,
@@ -1286,7 +1388,7 @@ describe("menu RPC", () => {
 
       await h.client.menu.save({
         termId: m.id,
-        version: 1,
+        ifMatch: "1",
         items: [
           {
             id: itemId,
@@ -1322,7 +1424,7 @@ describe("menu RPC", () => {
       });
       const first = (await h.client.menu.save({
         termId: m.id,
-        version: 0,
+        ifMatch: "0",
         items: [
           {
             parentIndex: null,
@@ -1339,7 +1441,7 @@ describe("menu RPC", () => {
 
       await h.client.menu.save({
         termId: m.id,
-        version: 1,
+        ifMatch: "1",
         items: [
           {
             id: itemId,
@@ -1376,7 +1478,7 @@ describe("menu RPC", () => {
       });
       const first = (await h.client.menu.save({
         termId: m.id,
-        version: 0,
+        ifMatch: "0",
         items: [
           {
             parentIndex: null,
@@ -1394,7 +1496,7 @@ describe("menu RPC", () => {
 
       const second = (await h.client.menu.save({
         termId: m.id,
-        version: 1,
+        ifMatch: "1",
         items: [
           {
             id: aboutItemId,
@@ -1441,7 +1543,7 @@ describe("menu RPC", () => {
 
       const result = (await h.client.menu.save({
         termId: m.id,
-        version: 0,
+        ifMatch: "0",
         items: [
           {
             parentIndex: null,
@@ -1494,7 +1596,7 @@ describe("menu RPC", () => {
 
       await h.client.menu.save({
         termId: m.id,
-        version: 0,
+        ifMatch: "0",
         items: items.map((meta, sortOrder) => ({
           parentIndex: null,
           sortOrder,
@@ -1525,7 +1627,7 @@ describe("menu RPC", () => {
       await expect(
         h.client.menu.save({
           termId: m.id,
-          version: 0,
+          ifMatch: "0",
           items: [
             {
               parentIndex: null,
@@ -1551,7 +1653,7 @@ describe("menu RPC", () => {
 
       const r = (await h.client.menu.save({
         termId: m1.id,
-        version: 0,
+        ifMatch: "0",
         items: [
           {
             parentIndex: null,
@@ -1568,7 +1670,7 @@ describe("menu RPC", () => {
       await expect(
         h.client.menu.save({
           termId: m2.id,
-          version: 0,
+          ifMatch: "0",
           items: [
             {
               id: m1ItemId,
@@ -1580,6 +1682,14 @@ describe("menu RPC", () => {
           ],
         }),
       ).rejects.toThrow();
+
+      // The refused save leaves the menu's token alone, so the editor's copy
+      // is still current and it can fix the save and retry.
+      const [term] = await h.db
+        .select({ version: terms.version })
+        .from(terms)
+        .where(eq(terms.id, m2.id));
+      expect(term?.version).toBe(0);
     });
   });
 
@@ -1589,7 +1699,7 @@ describe("menu RPC", () => {
       const m = await seedMenu(h.db, h.factories, "main");
       await h.client.menu.save({
         termId: m.id,
-        version: 0,
+        ifMatch: "0",
         items: [
           {
             parentIndex: null,
@@ -1809,7 +1919,8 @@ describe("menu RPC", () => {
       const result = await h.client.menu.create({ name: "Header Nav" });
 
       expect(result.slug).toBe("header-nav");
-      expect(result.version).toBe(0);
+      expect(result.etag).toBe("0");
+      expect(result).not.toHaveProperty("version");
       const [row] = await h.db
         .select()
         .from(terms)
@@ -1907,6 +2018,70 @@ describe("menu RPC", () => {
 
       const rows = await h.client.menu.locations.list();
       expect(rows.map((r) => r.id)).toEqual(["primary"]);
+    });
+  });
+
+  describe("menu.lease", () => {
+    test("acquire leases the menu's term, shared with the term editor's lease", async () => {
+      const h = await buildHarness();
+      const m = await seedMenu(h.db, h.factories, "main");
+
+      const lease = await h.client.menu.lease.acquire({ id: m.id });
+
+      expect(lease.holder.id).toBe(h.user.id);
+      expect(
+        await readEditLease(h.db, { kind: "term", id: m.id }),
+      ).toMatchObject({ holder: { id: h.user.id }, surface: "admin" });
+    });
+
+    test("acquire while another editor holds it is refused with who and since when", async () => {
+      const h = await buildHarness();
+      const m = await seedMenu(h.db, h.factories, "main");
+      const ada = await editorUser
+        .transient({ db: h.db })
+        .create({ name: "Ada" });
+      const since = new Date();
+      await acquireEditLease(
+        h.db,
+        { kind: "term", id: m.id },
+        { userId: ada.id, surface: "admin" },
+        since,
+      );
+
+      await expect(
+        h.client.menu.lease.acquire({ id: m.id }),
+      ).rejects.toMatchObject({
+        code: "LOCKED",
+        data: { holder: { id: ada.id, name: "Ada" }, since },
+      });
+    });
+
+    test("renew and release keep and then let go of the caller's lease", async () => {
+      const h = await buildHarness();
+      const m = await seedMenu(h.db, h.factories, "main");
+      await h.client.menu.lease.acquire({ id: m.id });
+
+      expect(await h.client.menu.lease.renew({ id: m.id })).toMatchObject({
+        lease: { holder: { id: h.user.id } },
+      });
+      await h.client.menu.lease.release({ id: m.id });
+
+      expect(
+        await readEditLease(
+          h.db,
+          { kind: "term", id: m.id },
+          new Date(Date.now() + 30_000),
+        ),
+      ).toBeUndefined();
+    });
+
+    test("a term outside the menu taxonomy can't be leased here", async () => {
+      const h = await buildHarness();
+      const tag = await h.factories.term.create({ taxonomy: "category" });
+
+      await expect(
+        h.client.menu.lease.acquire({ id: tag.id }),
+      ).rejects.toMatchObject({ code: "NOT_FOUND" });
     });
   });
 

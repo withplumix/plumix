@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import type { Locator, Page } from "@playwright/test";
-import { eq } from "plumix/db";
+import { acquireEditLease, eq } from "plumix/db";
 import { entries, terms } from "plumix/schema";
 import { factoriesFor } from "plumix/test";
 import { dragTo, expect, openPlaygroundDb, test } from "plumix/test/playwright";
@@ -419,6 +419,84 @@ test("deleting a menu asks first, and it is gone after a reload", async ({
   await page.reload();
   await expect(page.getByTestId("menus-shell")).toBeVisible();
   await expect(page.getByTestId("menus-selector-option-doomed")).toHaveCount(0);
+});
+
+test("a save after another session saved the menu shows the conflict, and Keep mine saves over it", async ({
+  page,
+}) => {
+  const db = await openPlaygroundDb({
+    cwd: resolve(process.cwd(), "playground"),
+  });
+  const menu = await factoriesFor(db).term.create({
+    taxonomy: "menu",
+    slug: "clash",
+    name: "Clash",
+  });
+
+  await page.goto("pages/menus");
+  await page.getByTestId("menus-selector-option-clash").click();
+  await expect(page.getByTestId("menu-item-editor")).toBeVisible();
+  // Another session saves the menu after this one loaded it.
+  await db
+    .update(terms)
+    .set({ version: menu.version + 1 })
+    .where(eq(terms.id, menu.id));
+  await page.getByTestId("menu-picker-tab-custom").click();
+  await page.getByTestId("menu-picker-custom-url").fill("/mine");
+  await page.getByTestId("menu-picker-custom-label").fill("Mine");
+  await page.getByTestId("menu-picker-custom-add").click();
+  await page.getByTestId("menu-save-button").click();
+
+  await expect(page.getByTestId("menu-conflict")).toContainText(
+    "This menu changed since you opened it",
+  );
+  const saved = page.waitForResponse(
+    (r) => r.url().endsWith("/menu/save") && r.status() === 200,
+  );
+  await page.getByTestId("menu-conflict-keep-mine").click();
+  await saved;
+  await expect(page.getByTestId("menu-conflict")).toBeHidden();
+
+  await page.reload();
+  await page.getByTestId("menus-selector-option-clash").click();
+  await expect(
+    page.getByTestId("menu-tree").locator("[data-testid^='menu-item-row-']"),
+  ).toHaveCount(1);
+});
+
+test("a menu another editor holds opens read-only, and Take over makes it editable", async ({
+  page,
+}) => {
+  const db = await openPlaygroundDb({
+    cwd: resolve(process.cwd(), "playground"),
+  });
+  const factories = factoriesFor(db);
+  const menu = await factories.term.create({
+    taxonomy: "menu",
+    slug: "held",
+    name: "Held",
+  });
+  const ada = await factories.admin.create({
+    email: "ada@example.test",
+    slug: "ada",
+    name: "Ada",
+  });
+  await acquireEditLease(
+    db,
+    { kind: "term", id: menu.id },
+    { userId: ada.id, surface: "admin" },
+  );
+
+  await page.goto("pages/menus");
+  await page.getByTestId("menus-selector-option-held").click();
+
+  await expect(page.getByTestId("menu-lease-held-by")).toContainText(
+    "Ada is editing this menu",
+  );
+  await expect(page.getByTestId("menu-save-button")).toBeDisabled();
+  await page.getByTestId("menu-lease-take-over").click();
+  await expect(page.getByTestId("menu-lease-banner")).toBeHidden();
+  await expect(page.getByTestId("menu-save-button")).toBeEnabled();
 });
 
 test("adding the same result twice announces each add", async ({ page }) => {

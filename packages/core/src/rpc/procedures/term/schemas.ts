@@ -1,5 +1,7 @@
 import * as v from "valibot";
 
+import { versionIfMatchObject } from "../../../db/concurrency.js";
+import { ifMatchMessage } from "../../concurrency.js";
 import { idParam, metaInputSchema } from "../../contract/validation.js";
 import { slugSchema } from "../../schemas.js";
 
@@ -41,14 +43,20 @@ export const termCreateInputSchema = v.object({
   meta: v.optional(metaInputSchema),
 });
 
-export const termUpdateInputSchema = v.object({
-  id: idParam,
-  name: v.optional(nameSchema),
-  slug: v.optional(slugSchema),
-  description: v.optional(descriptionSchema),
-  parentId: v.optional(v.nullable(idParam)),
-  meta: v.optional(metaInputSchema),
-});
+export const TERM_IF_MATCH_MESSAGE = ifMatchMessage("term");
+
+export const termUpdateInputSchema = versionIfMatchObject(
+  {
+    id: idParam,
+    name: v.optional(nameSchema),
+    slug: v.optional(slugSchema),
+    description: v.optional(descriptionSchema),
+    parentId: v.optional(v.nullable(idParam)),
+    meta: v.optional(metaInputSchema),
+    takeOver: v.optional(v.boolean()),
+  },
+  TERM_IF_MATCH_MESSAGE,
+);
 
 export const termDeleteInputSchema = v.object({ id: idParam });
 

@@ -7,7 +7,6 @@ import { MetaBoxField } from "@/components/meta-box/meta-box-field.js";
 import { useVisibleFields } from "@/components/meta-box/use-visible-fields.js";
 import { classifyAutosaveError } from "@/editor/autosave.js";
 import { conflictDialog, editingElsewhere } from "@/editor/conflict-dialog.js";
-import { editorLeaseMode } from "@/editor/edit-lease.js";
 import { EditLeaseBanner } from "@/editor/EditLeaseBanner.js";
 import { EntryConflictDialog } from "@/editor/EntryConflictDialog.js";
 import { useSettingsGroupLease } from "@/editor/use-edit-lease.js";
@@ -40,7 +39,7 @@ import {
   CardTitle,
 } from "@plumix/admin-ui/card";
 import { Form } from "@plumix/admin-ui/form";
-import { describeRpcError } from "@plumix/core/admin";
+import { describeRpcError, editorLeaseMode } from "@plumix/core/admin";
 import { seedFromMetaBoxes } from "@plumix/core/manifest";
 
 const M = {

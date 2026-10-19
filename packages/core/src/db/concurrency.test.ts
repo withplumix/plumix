@@ -7,6 +7,7 @@ import { describe, expect, test } from "vitest";
 
 import {
   claim,
+  claimVersion,
   ConflictError,
   etagOf,
   guardedTable,
@@ -14,6 +15,8 @@ import {
   mergePatch,
   nextToken,
   parseIfMatch,
+  parseVersionIfMatch,
+  versionIfMatchObject,
 } from "./concurrency.js";
 
 /** A plugin-shaped table: any table with `updated_at` opts in. */
@@ -58,6 +61,24 @@ function notesTable(db: Awaited<ReturnType<typeof notesDb>>) {
   });
 }
 
+/** A table whose token is a `version` counter, as `terms` keeps. */
+const labels = sqliteTable("labels", (t) => ({
+  id: t.integer().primaryKey(),
+  name: t.text().notNull(),
+  version: t.integer().notNull(),
+}));
+
+async function labelsDb(version: number) {
+  const db = drizzle(createClient({ url: ":memory:" }), {
+    casing: "snake_case",
+  });
+  await db.run(
+    sql`CREATE TABLE labels (id integer PRIMARY KEY, name text NOT NULL, version integer NOT NULL)`,
+  );
+  await db.insert(labels).values({ id: 1, name: "first", version });
+  return db;
+}
+
 describe("etagOf and parseIfMatch", () => {
   test("an etag parses back to the token it was made from", () => {
     expect(parseIfMatch(etagOf(T0))).toEqual(T0);
@@ -67,6 +88,22 @@ describe("etagOf and parseIfMatch", () => {
     "a malformed ifMatch %j parses to undefined",
     (value) => {
       expect(parseIfMatch(value)).toBeUndefined();
+    },
+  );
+});
+
+describe("etagOf and parseVersionIfMatch", () => {
+  test.each([7, 1234])(
+    "a version's etag parses back to the version %d",
+    (version) => {
+      expect(parseVersionIfMatch(etagOf(version))).toBe(version);
+    },
+  );
+
+  test.each(["", "abc", "12.5", "-3", "1e9", " 7"])(
+    "a malformed ifMatch %j parses to undefined",
+    (value) => {
+      expect(parseVersionIfMatch(value)).toBeUndefined();
     },
   );
 });
@@ -124,6 +161,40 @@ describe("claim", () => {
     expect(
       await db.select({ body: notes.body }).from(notes).where(eq(notes.id, 1)),
     ).toEqual([{ body: "first" }]);
+  });
+});
+
+describe("claimVersion", () => {
+  test("a write from the current copy lands and moves the version by one", async () => {
+    const db = await labelsDb(4);
+    const guard = claimVersion(labels.version, 4);
+
+    const rows = await db
+      .update(labels)
+      .set({ name: "second", ...guard.set })
+      .where(guard.where)
+      .returning({ version: labels.version });
+
+    expect(rows).toEqual([{ version: 5 }]);
+  });
+
+  test("a write from a stale copy changes nothing", async () => {
+    const db = await labelsDb(5);
+    const guard = claimVersion(labels.version, 4);
+
+    const rows = await db
+      .update(labels)
+      .set({ name: "stale", ...guard.set })
+      .where(guard.where)
+      .returning({ version: labels.version });
+
+    expect(rows).toEqual([]);
+    expect(
+      await db
+        .select({ name: labels.name })
+        .from(labels)
+        .where(eq(labels.id, 1)),
+    ).toEqual([{ name: "first" }]);
   });
 });
 
@@ -315,5 +386,28 @@ describe("writeAsSystem", () => {
     );
 
     expect(result).toMatchObject({ written: false, row: { updatedAt: T0 } });
+  });
+});
+
+describe("versionIfMatchObject", () => {
+  const schema = versionIfMatchObject({ id: v.number() }, "Send it.");
+
+  test("hands the handler the version an etag names", () => {
+    expect(v.parse(schema, { id: 1, ifMatch: etagOf(3) })).toEqual({
+      id: 1,
+      ifMatch: 3,
+    });
+  });
+
+  test("a missing ifMatch fails with the guidance message", () => {
+    const result = v.safeParse(schema, { id: 1 });
+
+    expect(result.issues?.map((issue) => issue.message)).toEqual(["Send it."]);
+  });
+
+  test("a malformed ifMatch fails with the guidance message", () => {
+    const result = v.safeParse(schema, { id: 1, ifMatch: "soon" });
+
+    expect(result.issues?.map((issue) => issue.message)).toEqual(["Send it."]);
   });
 });

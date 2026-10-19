@@ -1,5 +1,9 @@
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
-import type { PluginRpcInputs, PluginRpcOutputs } from "plumix/admin";
+import type {
+  EditLeaseApi,
+  PluginRpcInputs,
+  PluginRpcOutputs,
+} from "plumix/admin";
 import {
   skipToken,
   useMutation,
@@ -24,6 +28,13 @@ export type LinkTarget = MenuOutputs["searchTargets"]["items"][number];
 export type SaveMenuInput = MenuInputs["save"];
 
 const MENU_LIST_KEY = ["menu", "list"] as const;
+
+/** The menu's `lease` procedures, as the shared lease session calls them. */
+export const menuLeaseApi: EditLeaseApi = {
+  acquire: (input) => rpc.lease.acquire(input),
+  renew: (input) => rpc.lease.renew(input),
+  release: (input) => rpc.lease.release(input),
+};
 const MENU_LOCATIONS_KEY = ["menu", "locations", "list"] as const;
 
 export function useDeleteMenu(): UseMutationResult<

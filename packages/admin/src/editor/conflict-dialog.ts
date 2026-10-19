@@ -1,5 +1,6 @@
 import type { EntryConflict } from "@/editor/autosave.js";
-import type { LeaseHolder } from "@/editor/edit-lease.js";
+
+import type { EtagConflict, LeaseHolder } from "@plumix/core/admin";
 
 /** Open while the author has a conflict to resolve. */
 export type ConflictDialogState =
@@ -20,9 +21,9 @@ export function conflictDialog(
   return { open: false };
 }
 
-/** Another user holding the entry's lease; the author's own lease names no one. */
+/** Another user holding the lease; the author's own lease names no one. */
 export function editingElsewhere(
-  conflict: EntryConflict,
+  conflict: EtagConflict,
   userId: number,
 ): LeaseHolder | undefined {
   return conflict.holder?.id === userId ? undefined : conflict.holder;

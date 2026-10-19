@@ -1,8 +1,11 @@
 import { ORPCError } from "@orpc/client";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { EditLeaseApi, EditLeaseState } from "./edit-lease.js";
-import { createEditLeaseSession, editorLeaseMode } from "./edit-lease.js";
+import type { EditLeaseApi, EditLeaseState } from "./edit-lease-session.js";
+import {
+  createEditLeaseSession,
+  editorLeaseMode,
+} from "./edit-lease-session.js";
 
 const ada = { id: 2, name: "Ada" };
 const SINCE = new Date("2026-10-18T12:00:00Z");

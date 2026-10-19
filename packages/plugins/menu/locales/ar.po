@@ -182,16 +182,6 @@ msgstr "لا توجد عناصر بعد."
 
 #. js-lingui-explicit-id
 #: src/admin/MenuItemEditor.tsx
-msgid "plugin.menu.itemEditor.conflictBanner"
-msgstr "حفظ محرر آخر تغييرات منذ تحميلك لهذه القائمة."
-
-#. js-lingui-explicit-id
-#: src/admin/MenuItemEditor.tsx
-msgid "plugin.menu.itemEditor.conflictReload"
-msgstr "إعادة التحميل لعرض الأحدث"
-
-#. js-lingui-explicit-id
-#: src/admin/MenuItemEditor.tsx
 msgid "plugin.menu.itemEditor.saveButton"
 msgstr "حفظ القائمة"
 

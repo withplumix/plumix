@@ -1,5 +1,4 @@
 import type { EntryConflict } from "@/editor/autosave.js";
-import type { EditorLeaseMode, LeaseRefusal } from "@/editor/edit-lease.js";
 import type { EditingCopy } from "@/editor/editing-copy.js";
 import type { EditLease } from "@/editor/use-edit-lease.js";
 import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
@@ -19,7 +18,6 @@ import { PasskeysCard } from "@/components/profile/passkeys-card.js";
 import { SessionsCard } from "@/components/profile/sessions-card.js";
 import { UserEmailField } from "@/components/profile/user-email-field.js";
 import { classifyAutosaveError } from "@/editor/autosave.js";
-import { editorLeaseMode } from "@/editor/edit-lease.js";
 import { EditLeaseBanner } from "@/editor/EditLeaseBanner.js";
 import { EntryConflictDialog } from "@/editor/EntryConflictDialog.js";
 import { useEditGuards } from "@/editor/use-edit-guards.js";
@@ -56,6 +54,7 @@ import { useForm } from "react-hook-form";
 import * as v from "valibot";
 
 import type { ResolvedMeta, WithResolvedMeta } from "@plumix/core";
+import type { EditorLeaseMode, LeaseRefusal } from "@plumix/core/admin";
 import type { UserMetaBoxManifestEntry } from "@plumix/core/manifest";
 import type { User as StoredUser, UserRole } from "@plumix/core/schema";
 import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
@@ -87,6 +86,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@plumix/admin-ui/select";
+import { editorLeaseMode } from "@plumix/core/admin";
 import { seedFromMetaBoxes, USER_ROLES } from "@plumix/core/manifest";
 import { idPathParam } from "@plumix/core/validation";
 
