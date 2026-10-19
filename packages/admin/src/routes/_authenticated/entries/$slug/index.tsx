@@ -76,7 +76,10 @@ import {
 } from "./-list-search.js";
 
 type Entry = WithResolvedMeta<StoredEntry>;
-type Term = WithResolvedMeta<StoredTerm>;
+/** A term as the RPC sends it: its `version` travels as the `etag`. */
+type Term = Omit<WithResolvedMeta<StoredTerm>, "version"> & {
+  readonly etag: string;
+};
 
 const PAGE_SIZE = 20;
 

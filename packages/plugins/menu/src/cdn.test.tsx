@@ -159,7 +159,7 @@ describe("@plumix/plugin-menu — CDN tags", () => {
     const s = await site();
     const termId = await seedMenu(s, "main-nav", []);
 
-    await rpc(s, "save", { termId, version: 0, items: [] });
+    await rpc(s, "save", { termId, ifMatch: "0", items: [] });
 
     expect(purged(s)).toContain(`menu:${String(termId)}`);
   });

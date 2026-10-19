@@ -1,4 +1,3 @@
-import type { LeaseHolder } from "@/editor/edit-lease.js";
 import type { EditingCopy } from "@/editor/editing-copy.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement } from "react";
@@ -9,6 +8,7 @@ import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
 
+import type { LeaseHolder } from "@plumix/core/admin";
 import { Button } from "@plumix/admin-ui/button";
 import {
   Dialog,
@@ -85,6 +85,8 @@ export function EntryConflictDialog({
                   }),
                 }}
               />
+            ) : copy.conflictUntimed ? (
+              label(copy.conflictUntimed)
             ) : (
               <Trans
                 id="editor.conflict.descriptionUntimed"

@@ -32,7 +32,10 @@ import {
 import { Plus } from "@plumix/admin-ui/icons";
 import { termTaxonomyCapability } from "@plumix/core/manifest";
 
-type Term = WithResolvedMeta<StoredTerm>;
+/** A term as the RPC sends it: its `version` travels as the `etag`. */
+type Term = Omit<WithResolvedMeta<StoredTerm>, "version"> & {
+  readonly etag: string;
+};
 
 const M = {
   columnName: defineMessage({

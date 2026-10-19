@@ -183,7 +183,12 @@ const STORES: Readonly<Record<MetaStore, StoreWalk>> = {
       from,
       (after) =>
         walk.ctx.db
-          .select({ id: terms.id, taxonomy: terms.taxonomy, meta: terms.meta })
+          .select({
+            id: terms.id,
+            taxonomy: terms.taxonomy,
+            version: terms.version,
+            meta: terms.meta,
+          })
           .from(terms)
           .where(gt(terms.id, after))
           .orderBy(asc(terms.id))

@@ -1,5 +1,4 @@
 import type { AutosaveErrorOutcome, EntryConflict } from "@/editor/autosave.js";
-import type { LeaseRefusal } from "@/editor/edit-lease.js";
 import {
   AUTOSAVE_DEBOUNCE_MS,
   classifyAutosaveError,
@@ -8,6 +7,7 @@ import { createDebouncer } from "@/editor/debounce.js";
 import { createSaveQueue } from "@/editor/save-queue.js";
 
 import type { AppRouterClient } from "@plumix/core";
+import type { LeaseRefusal } from "@plumix/core/admin";
 
 type EntryUpdateInput = Parameters<AppRouterClient["entry"]["update"]>[0];
 type EntryRow = Awaited<ReturnType<AppRouterClient["entry"]["update"]>>;

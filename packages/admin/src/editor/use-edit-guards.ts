@@ -1,5 +1,4 @@
 import type { EntryConflict } from "@/editor/autosave.js";
-import type { EditLeaseNotice } from "@/editor/edit-lease.js";
 import type { EditingCopy } from "@/editor/editing-copy.js";
 import type { EditLeaseBannerProps } from "@/editor/EditLeaseBanner.js";
 import type { EntryConflictDialogProps } from "@/editor/EntryConflictDialog.js";
@@ -7,6 +6,8 @@ import type { EditLease } from "@/editor/use-edit-lease.js";
 import { useReducer, useState } from "react";
 import { conflictDialog, editingElsewhere } from "@/editor/conflict-dialog.js";
 import { useMutation, useQuery } from "@tanstack/react-query";
+
+import type { EditLeaseNotice } from "@plumix/core/admin";
 
 export interface EditGuardsOptions<Mine, Theirs> {
   readonly copy: EditingCopy;

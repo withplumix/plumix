@@ -38,7 +38,7 @@ interface LeaseHolder {
   readonly name: string;
 }
 
-/** A lease `entry.lease.acquire` hands `holder`, live for 120 seconds. */
+/** A lease `entry.lease.acquire` (or `term.lease`) hands `holder`, live for 120 seconds. */
 export function rpcLeaseBody(holder: LeaseHolder, since: Date): string {
   return JSON.stringify({
     json: {

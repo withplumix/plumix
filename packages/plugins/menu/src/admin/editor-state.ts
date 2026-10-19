@@ -38,7 +38,8 @@ export interface EditorState {
   readonly termId: number;
   readonly slug: string;
   readonly name: string;
-  readonly version: number;
+  /** The menu's token as this editor last read or saved it. */
+  readonly etag: string;
   /** Levels the menu may nest to; set by its locations, never edited here. */
   readonly maxDepth: number;
   /** The locations that set `maxDepth`; empty when it's the default. */
@@ -62,7 +63,7 @@ export const initialEditorState: EditorState = {
   termId: 0,
   slug: "",
   name: "",
-  version: 0,
+  etag: "",
   maxDepth: 5,
   limitedBy: [],
   items: [],
@@ -104,7 +105,7 @@ export type EditorAction =
   | {
       readonly type: "applySaveResult";
       readonly result: {
-        readonly version: number;
+        readonly etag: string;
         readonly itemIds: readonly number[];
         /**
          * Keys captured at save time, so ids aren't zipped against items edited
@@ -153,7 +154,7 @@ export function editorReducer(
         termId: action.response.id,
         slug: action.response.slug,
         name: action.response.name,
-        version: action.response.version,
+        etag: action.response.etag,
         maxDepth: action.response.maxDepth,
         limitedBy: action.response.limitedBy,
         items,
@@ -198,7 +199,7 @@ export function editorReducer(
     case "selectItem":
       return { ...state, selectedKey: action.key };
     case "applySaveResult": {
-      const { version, itemIds } = action.result;
+      const { etag, itemIds } = action.result;
       const snapshotKeys =
         action.result.snapshotKeys ?? state.items.map((item) => item.key);
       const idBySnapshotKey = new Map<ItemKey, number>();
@@ -225,7 +226,7 @@ export function editorReducer(
           : null;
       return {
         ...state,
-        version,
+        etag,
         items: remappedItems,
         selectedKey,
         dirty: false,

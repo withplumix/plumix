@@ -608,6 +608,12 @@ msgstr "{name} is editing this entry (since {time})"
 msgid "editor.lease.heldBy.user"
 msgstr "{name} is editing this profile (since {time})"
 
+#. name: the editing user's display name or email; time: a formatted date and time
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "editor.lease.heldBy.term"
+msgstr "{name} is editing this term (since {time})"
+
 #. name: the user who took over; time: a formatted date and time
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/-settings-group-card.tsx
@@ -625,6 +631,12 @@ msgstr "{name} took over editing this entry at {time}. Your unsaved changes are 
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "editor.lease.lost.user"
 msgstr "{name} took over editing this profile at {time}. Your unsaved changes are shown here but weren't saved."
+
+#. name: the user who took over; time: a formatted date and time
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "editor.lease.lost.term"
+msgstr "{name} took over editing this term at {time}. Your unsaved changes are shown here but weren't saved."
 
 #. revoked: number of OTHER sessions just signed out (excluding the current device)
 #. js-lingui-explicit-id
@@ -2078,6 +2090,11 @@ msgstr "Inviting…"
 #: src/editor/EntryConflictDialog.tsx
 msgid "editor.conflict.description"
 msgstr "It was saved elsewhere at {when}. Your changes are kept here and haven't been saved."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "editor.conflict.descriptionUntimed.term"
+msgstr "It was saved elsewhere. Your changes are kept here and haven't been saved."
 
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
@@ -3804,6 +3821,11 @@ msgstr "This session no longer exists. Refresh the list."
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.empty.description"
 msgstr "This settings page doesn't reference any registered groups yet. Plugins compose pages with the registerSettingsPage helper:"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "editor.conflict.title.term"
+msgstr "This term changed since you opened it"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx

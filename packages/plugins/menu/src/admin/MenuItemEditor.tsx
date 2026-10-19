@@ -1,4 +1,5 @@
 import type { DragEndEvent, DragMoveEvent } from "@dnd-kit/core";
+import type { EditLeaseNotice } from "plumix/admin";
 import type { MessageDescriptor } from "plumix/i18n";
 import type { CSSProperties, Dispatch, ReactNode } from "react";
 import { useEffect, useId, useReducer, useRef, useState } from "react";
@@ -17,7 +18,8 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { editorLeaseMode } from "plumix/admin";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,6 +55,7 @@ import type {
   ItemKey,
 } from "./editor-state.js";
 import type { LinkTarget, PickerTab } from "./queries.js";
+import type { MenuLease } from "./use-menu-lease.js";
 import {
   buildSavePayload,
   computeDepths,
@@ -74,9 +77,9 @@ import {
   useSearchTargets,
 } from "./queries.js";
 import {
-  conflictShown,
   linkedTargetText,
   locationCheckbox,
+  menuSaveRefusal,
   pickerChoice,
   pickerPanelFor,
   searchResultsState,
@@ -86,6 +89,7 @@ import {
   getProjection,
   INDENTATION_WIDTH,
 } from "./tree-state.js";
+import { useMenuLease } from "./use-menu-lease.js";
 
 /**
  * Descriptors that need runtime indirection — used outside JSX (aria
@@ -136,23 +140,35 @@ const M = {
 
 export function MenuItemEditor({
   termId,
+  onBack,
 }: {
   readonly termId: number;
+  /** Leaves the menu, from the banner of one another editor holds. */
+  readonly onBack: () => void;
 }): ReactNode {
   const menu = useMenuGet(termId);
   const pickerTabs = usePickerTabs();
   const [state, dispatch] = useReducer(editorReducer, initialEditorState);
+  const lease = useMenuLease(termId);
+  const leaseMode = editorLeaseMode(lease.state);
+  const queryClient = useQueryClient();
+  // Reload the menu as the previous holder left it.
+  const takeOver = useMutation({
+    mutationFn: lease.takeOver,
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["menu", "get", termId] }),
+  });
 
   useEffect(() => {
     if (!menu.data) return;
-    // A server version past the editor's is how a conflict reload reaches local
-    // state; applySaveResult bumps state.version, so a clean save stays a
+    // A server etag other than the editor's is how a reload reaches local
+    // state; applySaveResult adopts the save's etag, so a clean save stays a
     // no-op.
-    if (menu.data.id !== state.termId || menu.data.version !== state.version) {
+    if (menu.data.id !== state.termId || menu.data.etag !== state.etag) {
       dispatch({ type: "loadFromServer", response: menu.data });
       return;
     }
-    // Assigning a location changes the limit without a new menu version.
+    // Assigning a location changes the limit without moving the menu's etag.
     if (
       depthLimitIsStale(
         { maxDepth: state.maxDepth, limitedBy: state.limitedBy },
@@ -165,33 +181,124 @@ export function MenuItemEditor({
         limitedBy: menu.data.limitedBy,
       });
     }
-  }, [menu.data, state.termId, state.version, state.maxDepth, state.limitedBy]);
+  }, [menu.data, state.termId, state.etag, state.maxDepth, state.limitedBy]);
 
-  if (menu.isLoading || state.termId !== menu.data?.id) {
+  if (
+    menu.isLoading ||
+    state.termId !== menu.data?.id ||
+    leaseMode.mode === "loading"
+  ) {
     return <div data-testid="menu-item-editor-loading" />;
   }
   return (
     <div data-testid="menu-item-editor" className="flex flex-col gap-4">
-      <ItemsPicker
-        tabs={pickerTabs.data ?? []}
-        state={state}
-        dispatch={dispatch}
-      />
-      {state.items.length === 0 ? (
-        <div
-          data-testid="menu-item-list-empty"
-          className="text-muted-foreground text-sm"
-        >
+      {leaseMode.mode === "readOnly" ? (
+        <MenuLeaseBanner
+          notice={leaseMode.notice}
+          onTakeOver={() => takeOver.mutate()}
+          isTakingOver={takeOver.isPending}
+          onBack={onBack}
+        />
+      ) : null}
+      {/* A disabled fieldset disables every control in the editor at once. */}
+      <fieldset
+        disabled={leaseMode.mode === "readOnly"}
+        className="contents"
+        data-testid="menu-item-editor-fieldset"
+      >
+        <ItemsPicker
+          tabs={pickerTabs.data ?? []}
+          state={state}
+          dispatch={dispatch}
+        />
+        {state.items.length === 0 ? (
+          <div
+            data-testid="menu-item-list-empty"
+            className="text-muted-foreground text-sm"
+          >
+            <Trans
+              id="plugin.menu.itemEditor.emptyState"
+              message="No items yet."
+            />
+          </div>
+        ) : (
+          <MenuTree state={state} dispatch={dispatch} />
+        )}
+        <ItemDetailPanel state={state} dispatch={dispatch} />
+        <MenuSettingsPanel state={state} dispatch={dispatch} lease={lease} />
+      </fieldset>
+    </div>
+  );
+}
+
+/** Why the editor is read-only: someone else is editing the menu. */
+function MenuLeaseBanner({
+  notice,
+  onTakeOver,
+  isTakingOver,
+  onBack,
+}: {
+  readonly notice: EditLeaseNotice;
+  readonly onTakeOver: () => void;
+  readonly isTakingOver: boolean;
+  readonly onBack: () => void;
+}): ReactNode {
+  const { i18n } = useLingui();
+  const time = new Intl.DateTimeFormat(i18n.locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(notice.kind === "heldByOther" ? notice.since : notice.at);
+  const name = <bdi>{notice.name}</bdi>;
+  return (
+    <div
+      data-testid="menu-lease-banner"
+      role="status"
+      className="border-warning/30 bg-warning/10 text-warning-foreground flex flex-wrap items-center gap-3 rounded-lg border px-4 py-2 text-sm"
+    >
+      {notice.kind === "heldByOther" ? (
+        <span data-testid="menu-lease-held-by">
           <Trans
-            id="plugin.menu.itemEditor.emptyState"
-            message="No items yet."
+            id="plugin.menu.itemEditor.leaseHeldBy"
+            message="{name} is editing this menu (since {time})"
+            values={{ name, time }}
+            comment="name: the editing user's display name or email; time: a formatted date and time"
           />
-        </div>
+        </span>
       ) : (
-        <MenuTree state={state} dispatch={dispatch} />
+        <span data-testid="menu-lease-lost">
+          <Trans
+            id="plugin.menu.itemEditor.leaseLost"
+            message="{name} took over editing this menu at {time}. Your unsaved changes are shown here but weren't saved."
+            values={{ name, time }}
+            comment="name: the user who took over; time: a formatted date and time"
+          />
+        </span>
       )}
-      <ItemDetailPanel state={state} dispatch={dispatch} />
-      <MenuSettingsPanel state={state} dispatch={dispatch} />
+      <div className="ms-auto flex gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          data-testid="menu-lease-back"
+          onClick={onBack}
+        >
+          <Trans id="plugin.menu.itemEditor.leaseBack" message="Back" />
+        </Button>
+        {notice.kind === "heldByOther" ? (
+          <Button
+            type="button"
+            size="sm"
+            data-testid="menu-lease-take-over"
+            onClick={onTakeOver}
+            disabled={isTakingOver}
+          >
+            <Trans
+              id="plugin.menu.itemEditor.leaseTakeOver"
+              message="Take over"
+            />
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -240,14 +347,50 @@ function LocationsBindings({
 function MenuSettingsPanel({
   state,
   dispatch,
+  lease,
 }: {
   readonly state: EditorState;
   readonly dispatch: Dispatch<EditorAction>;
+  readonly lease: MenuLease;
 }): ReactNode {
   const save = useSaveMenu();
   const queryClient = useQueryClient();
-  const [dismissedAt, setDismissedAt] = useState<number | null>(null);
-  const conflict = conflictShown(save.error, dismissedAt, state.version);
+  const refusal = menuSaveRefusal(save.error);
+  const conflict = refusal?.kind === "conflict" ? refusal.conflict : null;
+  // Only another editor's lease names its holder; this editor's own doesn't.
+  const holder = lease.state.kind === "held" ? undefined : conflict?.holder;
+  const holderName = holder ? <bdi>{holder.name}</bdi> : null;
+
+  const saveFrom = (ifMatch: string): void => {
+    // Snapshot the keys at click time so onSuccess can reattach
+    // ids to the right items even if the user mutated state
+    // while the save was in flight.
+    const snapshotKeys = state.items.map((item) => item.key);
+    save.mutate(
+      {
+        termId: state.termId,
+        ifMatch,
+        items: buildSavePayload(state),
+      },
+      {
+        onSuccess: (result) => {
+          dispatch({
+            type: "applySaveResult",
+            result: {
+              etag: result.etag,
+              itemIds: result.itemIds,
+              snapshotKeys,
+            },
+          });
+        },
+        onError: (error) => {
+          const refused = menuSaveRefusal(error);
+          if (refused?.kind === "locked") lease.lose(refused.locked);
+        },
+      },
+    );
+  };
+
   return (
     <div
       data-testid="menu-settings-panel"
@@ -256,33 +399,63 @@ function MenuSettingsPanel({
       <LocationsBindings termId={state.termId} slug={state.slug} />
       <DepthLimitNote state={state} />
       {conflict ? (
+        // Never retried for the editor: they pick, and their items stay.
         <div
-          data-testid="menu-conflict-banner"
+          data-testid="menu-conflict"
           role="alert"
-          className="text-destructive flex items-center justify-between gap-3 text-sm"
+          className="text-destructive flex flex-col gap-2 text-sm"
         >
-          <Trans
-            id="plugin.menu.itemEditor.conflictBanner"
-            message="Another editor saved changes since you loaded this menu."
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            data-testid="menu-conflict-reload"
-            onClick={() => {
-              setDismissedAt(state.version);
-              save.reset();
-              void queryClient.invalidateQueries({
-                queryKey: ["menu", "get", state.termId] as const,
-              });
-            }}
-          >
+          <p>
             <Trans
-              id="plugin.menu.itemEditor.conflictReload"
-              message="Reload to see latest"
+              id="plugin.menu.itemEditor.conflict"
+              message="This menu changed since you opened it. Your changes are kept here and haven't been saved."
             />
-          </Button>
+          </p>
+          {holder ? (
+            <p data-testid="menu-conflict-holder">
+              <Trans
+                id="plugin.menu.itemEditor.conflictHolder"
+                message="{name} is editing it now."
+                values={{ name: holderName }}
+                comment="name: the editing user's display name or email"
+              />
+            </p>
+          ) : null}
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              data-testid="menu-conflict-load-theirs"
+              onClick={() => {
+                save.reset();
+                // A newer etag reloads the editor from the saved menu.
+                void queryClient.invalidateQueries({
+                  queryKey: ["menu", "get", state.termId] as const,
+                });
+              }}
+            >
+              <Trans
+                id="plugin.menu.itemEditor.conflictLoadTheirs"
+                message="Load theirs"
+              />
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              data-testid="menu-conflict-keep-mine"
+              disabled={save.isPending}
+              onClick={() => {
+                // An explicit overwrite, from where the menu is now.
+                saveFrom(conflict.etag);
+              }}
+            >
+              <Trans
+                id="plugin.menu.itemEditor.conflictKeepMine"
+                message="Keep mine"
+              />
+            </Button>
+          </div>
         </div>
       ) : null}
       <div className="flex items-center gap-2">
@@ -292,29 +465,7 @@ function MenuSettingsPanel({
           data-testid="menu-save-button"
           disabled={save.isPending}
           onClick={() => {
-            // Snapshot the keys at click time so onSuccess can reattach
-            // ids to the right items even if the user mutated state
-            // while the save was in flight.
-            const snapshotKeys = state.items.map((item) => item.key);
-            save.mutate(
-              {
-                termId: state.termId,
-                version: state.version,
-                items: buildSavePayload(state),
-              },
-              {
-                onSuccess: (result) => {
-                  dispatch({
-                    type: "applySaveResult",
-                    result: {
-                      version: result.version,
-                      itemIds: result.itemIds,
-                      snapshotKeys,
-                    },
-                  });
-                },
-              },
-            );
+            saveFrom(state.etag);
           }}
         >
           <Trans id="plugin.menu.itemEditor.saveButton" message="Save menu" />

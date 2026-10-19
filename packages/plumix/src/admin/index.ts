@@ -19,12 +19,24 @@ export type {
 export {
   SHARED_ADMIN_RUNTIME_SPECIFIERS,
   adminRuntimeShimSlug,
+  createEditLeaseSession,
   describeRpcError,
   EDIT_LEASE_RENEW_INTERVAL_MS,
+  editorLeaseMode,
+  etagConflict,
+  lockedBy,
   rpcErrorCode,
   rpcErrorReason,
 } from "@plumix/core/admin";
 export type {
+  EditLeaseApi,
+  EditLeaseNotice,
+  EditLeaseSession,
+  EditLeaseState,
+  EditorLeaseMode,
+  EtagConflict,
+  LeaseHolder,
+  LeaseRefusal,
   SharedAdminRuntimeKey,
   SharedAdminRuntimeSpecifier,
 } from "@plumix/core/admin";

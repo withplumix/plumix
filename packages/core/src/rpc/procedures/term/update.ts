@@ -1,21 +1,25 @@
 import type { NewTerm } from "../../../db/schema/terms.js";
-import type { ResolvedMeta } from "../../../meta/contract/bags.js";
 import { spellTermCapability } from "../../../access/contract/capability.js";
+import { ConflictError } from "../../../db/concurrency.js";
 import { and, eq, isUniqueConstraintError } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
-import { isEmptyMetaPatch } from "../../../meta/core.js";
+import { isEmptyMetaPatch, patchedMetaBag } from "../../../meta/core.js";
 import {
+  announceTermMetaChange,
   assertTermMetaCapabilities,
-  loadTermMeta,
   resolveTermMeta,
   sanitizeMetaForRpc,
   validateTermMetaReferences,
-  writeTermMeta,
 } from "../../../meta/term.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { assertLeaseAllows } from "../../concurrency.js";
 import { stripUndefined } from "../entry/helpers.js";
-import { parentWouldCreateCycle } from "./helpers.js";
+import {
+  claimTerm,
+  parentWouldCreateCycle,
+  termWire,
+} from "./helpers.js";
 import { termUpdateInputSchema } from "./schemas.js";
 
 export const update = base
@@ -37,6 +41,17 @@ export const update = base
     const editCap = spellTermCapability(existing.taxonomy, "edit");
     if (!context.auth.can(editCap)) {
       throw errors.FORBIDDEN({ data: { capability: editCap } });
+    }
+    await assertLeaseAllows(
+      context,
+      { kind: "term", id: existing.id },
+      filtered.takeOver,
+    );
+    if (filtered.ifMatch !== existing.version) {
+      throw new ConflictError(existing.version, {
+        kind: "term",
+        id: existing.id,
+      });
     }
 
     if (
@@ -63,7 +78,13 @@ export const update = base
       }
     }
 
-    const { id: _id, meta: metaInput, ...changes } = filtered;
+    const {
+      id: _id,
+      meta: metaInput,
+      ifMatch,
+      takeOver: _takeOver,
+      ...changes
+    } = filtered;
     const metaPatch = await sanitizeMetaForRpc(
       context.plugins,
       existing.taxonomy,
@@ -88,56 +109,54 @@ export const update = base
     }
 
     const patch: Partial<NewTerm> = stripUndefined(changes);
+    const metaChanged = !isEmptyMetaPatch(metaPatch);
 
     // Nothing to write anywhere? Return the existing row with its
     // decoded meta for a consistent response shape.
-    if (Object.keys(patch).length === 0 && isEmptyMetaPatch(metaPatch)) {
+    if (Object.keys(patch).length === 0 && !metaChanged) {
       const meta = await resolveTermMeta(
         context,
         existing.taxonomy,
         existing.meta,
       );
-      return context.hooks.applyFilter("rpc:term.update:output", {
-        ...existing,
-        meta,
+      return termWire(
+        await context.hooks.applyFilter("rpc:term.update:output", {
+          ...existing,
+          meta,
+        }),
+      );
+    }
+
+    let updated;
+    try {
+      updated = await claimTerm(context.db, existing.id, ifMatch, {
+        ...patch,
+        // Merged from the row read above; the claim refuses if it moved.
+        ...(metaChanged
+          ? { meta: patchedMetaBag(existing.meta, metaPatch) }
+          : {}),
       });
-    }
-
-    let updated = existing;
-    let rowWritten = false;
-    if (Object.keys(patch).length > 0) {
-      try {
-        const [row] = await context.db
-          .update(terms)
-          .set(patch)
-          .where(eq(terms.id, existing.id))
-          .returning();
-        if (!row) {
-          throw errors.CONFLICT({ data: { reason: "update_failed" } });
-        }
-        updated = row;
-        rowWritten = true;
-      } catch (error) {
-        if (isUniqueConstraintError(error)) {
-          throw errors.CONFLICT({ data: { reason: "slug_taken" } });
-        }
-        throw error;
+    } catch (error) {
+      if (isUniqueConstraintError(error)) {
+        throw errors.CONFLICT({ data: { reason: "slug_taken" } });
       }
+      throw error;
+    }
+    if (!updated) {
+      throw errors.NOT_FOUND({ data: { kind: "term", id: existing.id } });
     }
 
-    let meta: ResolvedMeta;
-    if (metaPatch) {
-      await writeTermMeta(context, updated, metaPatch);
-      meta = await loadTermMeta(context, updated);
-    } else {
-      meta = await resolveTermMeta(context, updated.taxonomy, updated.meta);
+    if (metaPatch && metaChanged) {
+      await announceTermMetaChange(context, updated, metaPatch);
     }
-
-    if (rowWritten) {
+    if (Object.keys(patch).length > 0) {
       await context.hooks.doAction("term:updated", updated, existing, context);
     }
-    return context.hooks.applyFilter("rpc:term.update:output", {
-      ...updated,
-      meta,
-    });
+    const meta = await resolveTermMeta(context, updated.taxonomy, updated.meta);
+    return termWire(
+      await context.hooks.applyFilter("rpc:term.update:output", {
+        ...updated,
+        meta,
+      }),
+    );
   });

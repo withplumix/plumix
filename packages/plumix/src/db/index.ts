@@ -52,6 +52,7 @@ export {
   acquireEditLease,
   assertWritable,
   claim,
+  claimVersion,
   ConflictError,
   EDIT_LEASE_DURATION_MS,
   etagOf,
@@ -60,10 +61,12 @@ export {
   mergePatch,
   nextToken,
   parseIfMatch,
+  parseVersionIfMatch,
   readEditLease,
   releaseEditLease,
   renewEditLease,
   takeOverEditLease,
+  versionIfMatchObject,
 } from "@plumix/core/db";
 
 // Purge vocabulary, meta settling, core's search conditions, visitor metadata,

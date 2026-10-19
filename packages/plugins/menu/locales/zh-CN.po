@@ -182,16 +182,6 @@ msgstr "暂无项目。"
 
 #. js-lingui-explicit-id
 #: src/admin/MenuItemEditor.tsx
-msgid "plugin.menu.itemEditor.conflictBanner"
-msgstr "您加载此菜单后，其他编辑者已保存了更改。"
-
-#. js-lingui-explicit-id
-#: src/admin/MenuItemEditor.tsx
-msgid "plugin.menu.itemEditor.conflictReload"
-msgstr "重新加载以查看最新"
-
-#. js-lingui-explicit-id
-#: src/admin/MenuItemEditor.tsx
 msgid "plugin.menu.itemEditor.saveButton"
 msgstr "保存菜单"
 

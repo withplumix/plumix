@@ -182,16 +182,6 @@ msgstr "Noch keine Elemente."
 
 #. js-lingui-explicit-id
 #: src/admin/MenuItemEditor.tsx
-msgid "plugin.menu.itemEditor.conflictBanner"
-msgstr "Ein anderer Bearbeiter hat Änderungen gespeichert, seit Sie dieses Menü geladen haben."
-
-#. js-lingui-explicit-id
-#: src/admin/MenuItemEditor.tsx
-msgid "plugin.menu.itemEditor.conflictReload"
-msgstr "Neu laden, um die neueste Version anzuzeigen"
-
-#. js-lingui-explicit-id
-#: src/admin/MenuItemEditor.tsx
 msgid "plugin.menu.itemEditor.saveButton"
 msgstr "Menü speichern"
 

@@ -606,6 +606,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "editor.lease.heldBy.user"
+
+#. name: the editing user's display name or email; time: a formatted date and time
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "editor.lease.heldBy.term"
 msgstr ""
 
 #. name: the user who took over; time: a formatted date and time
@@ -624,6 +629,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "editor.lease.lost.user"
+
+#. name: the user who took over; time: a formatted date and time
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "editor.lease.lost.term"
 msgstr ""
 
 #. revoked: number of OTHER sessions just signed out (excluding the current device)
@@ -2077,6 +2087,11 @@ msgstr "Wird eingeladen…"
 #. js-lingui-explicit-id
 #: src/editor/EntryConflictDialog.tsx
 msgid "editor.conflict.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "editor.conflict.descriptionUntimed.term"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -3804,6 +3819,11 @@ msgstr "Diese Sitzung existiert nicht mehr. Liste aktualisieren."
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.empty.description"
 msgstr "Diese Einstellungsseite verweist noch nicht auf registrierte Gruppen. Plugins erstellen Seiten mit dem registerSettingsPage-Helfer:"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "editor.conflict.title.term"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx

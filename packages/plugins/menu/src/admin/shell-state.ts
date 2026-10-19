@@ -1,5 +1,6 @@
+import type { EtagConflict, LeaseRefusal } from "plumix/admin";
 import type { MessageDescriptor } from "plumix/i18n";
-import { ORPCError } from "@orpc/client";
+import { etagConflict, lockedBy } from "plumix/admin";
 
 import type { EditorAction, EditorItem, ItemKey } from "./editor-state.js";
 import type { LinkTarget, MenuListItem, PickerTab } from "./queries.js";
@@ -70,27 +71,19 @@ export function termSlugFromSelect(value: string): string | null {
   return value === UNASSIGNED_VALUE ? null : value;
 }
 
-function isReason(data: unknown, reason: string): boolean {
-  return (
-    typeof data === "object" &&
-    data !== null &&
-    "reason" in data &&
-    data.reason === reason
-  );
-}
-
 /**
- * Dismissal is keyed to the version active at dismiss time, so a second
- * `version_mismatch` from another editor re-arms the banner.
+ * Why the server refused a save: a stale copy, never retried for the editor,
+ * or another editor's lease.
  */
-export function conflictShown(
-  error: unknown,
-  dismissedAt: number | null,
-  version: number,
-): boolean {
-  const isVersionMismatch =
-    error instanceof ORPCError && isReason(error.data, "version_mismatch");
-  return isVersionMismatch && dismissedAt !== version;
+export type MenuSaveRefusal =
+  | { readonly kind: "conflict"; readonly conflict: EtagConflict }
+  | { readonly kind: "locked"; readonly locked: LeaseRefusal };
+
+export function menuSaveRefusal(error: unknown): MenuSaveRefusal | undefined {
+  const locked = lockedBy(error);
+  if (locked) return { kind: "locked", locked };
+  const conflict = etagConflict(error);
+  return conflict ? { kind: "conflict", conflict } : undefined;
 }
 
 export type PickerPanel =

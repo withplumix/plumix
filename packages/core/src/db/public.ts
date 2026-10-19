@@ -22,16 +22,19 @@ export type { SearchTerm } from "../search/contract/search-terms.js";
 // field pipeline that stores a value in its declared form (#2433).
 export { settleMeta } from "../meta/settle-meta.js";
 export type { MetaOwner } from "../meta/settle-meta.js";
-// Any table with `updated_at` opts into guarded writes by composing these into
-// its own drizzle update.
+// Any table with `updated_at` or `version` opts into guarded writes by
+// composing these into its own drizzle update.
 export {
   claim,
+  claimVersion,
   ConflictError,
   etagOf,
   ifMatchObject,
   mergePatch,
   nextToken,
   parseIfMatch,
+  parseVersionIfMatch,
+  versionIfMatchObject,
 } from "./concurrency.js";
 // Any resource a client edits from a copy opts into edit leases by keying them
 // under its own kind and calling `assertWritable` before its claim.

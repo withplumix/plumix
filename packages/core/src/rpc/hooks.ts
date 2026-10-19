@@ -362,8 +362,8 @@ declare module "../hooks/types.js" {
     "term:created": (term: Term, ctx: AppContext) => void | Promise<void>;
 
     /**
-     * Fires only when row columns changed. `term.meta` may lag a meta write in
-     * the same RPC, so use `term:meta_changed` for meta.
+     * Fires only when row columns other than meta changed; use
+     * `term:meta_changed` for meta.
      */
     "term:updated": (
       term: Term,

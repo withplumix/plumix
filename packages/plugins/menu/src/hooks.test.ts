@@ -76,7 +76,7 @@ async function seedMenuTerm(b: Bundle, slug: string): Promise<number> {
 interface SaveClient {
   readonly save: (input: unknown) => Promise<{
     readonly itemIds: readonly number[];
-    readonly version: number;
+    readonly etag: string;
   }>;
 }
 
@@ -262,7 +262,7 @@ describe("menu hook surface", () => {
 
       const result = await saveClientFor(b).save({
         termId,
-        version: 0,
+        ifMatch: "0",
         items: [
           {
             parentIndex: null,
@@ -293,10 +293,10 @@ describe("menu hook surface", () => {
 
       const result = await saveClientFor(b).save({
         termId,
-        version: 0,
+        ifMatch: "0",
         items: [],
       });
-      expect(result.version).toBe(1);
+      expect(result.etag).toBe("1");
       expect(warn).toHaveBeenCalledWith(
         "[plumix] action failed hook=menu:saved plugin=core",
         expect.objectContaining({ message: "subscriber blew up" }),

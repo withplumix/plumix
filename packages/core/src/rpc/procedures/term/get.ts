@@ -2,6 +2,7 @@ import { resolveTermMeta, settleTermMeta } from "../../../meta/term.js";
 import { findReadableTerm } from "../../../terms/read-service.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { termWire } from "./helpers.js";
 import { toRpcTermReadError } from "./read-errors.js";
 import { termGetInputSchema } from "./schemas.js";
 
@@ -17,7 +18,9 @@ export const get = base
         ...row,
         meta: await resolveTermMeta(context, row.taxonomy, bag),
       };
-      return await context.hooks.applyFilter("rpc:term.get:output", term);
+      return termWire(
+        await context.hooks.applyFilter("rpc:term.get:output", term),
+      );
     } catch (error) {
       throw toRpcTermReadError(error, errors) ?? error;
     }

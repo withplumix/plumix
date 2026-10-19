@@ -1,4 +1,3 @@
-import type { EditorLeaseMode } from "@/editor/edit-lease.js";
 import type { EditLease } from "@/editor/use-edit-lease.js";
 import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
@@ -9,7 +8,6 @@ import { ErrorPlaceholder } from "@/components/error-placeholder.js";
 import { classifyAutosaveError } from "@/editor/autosave.js";
 import { createDebouncer } from "@/editor/debounce.js";
 import { detectStaleAutosave } from "@/editor/detect-stale-autosave.js";
-import { editorLeaseMode } from "@/editor/edit-lease.js";
 import { ENTRY_EDITING_COPY } from "@/editor/editing-copy.js";
 import { EditLeaseBanner } from "@/editor/EditLeaseBanner.js";
 import { EntryConflictDialog } from "@/editor/EntryConflictDialog.js";
@@ -58,9 +56,11 @@ import * as v from "valibot";
 
 import type { PublishActions } from "@plumix/admin-editor";
 import type { ResolvedMeta } from "@plumix/core";
+import type { EditorLeaseMode } from "@plumix/core/admin";
 import type { BlockNode, EntryContent } from "@plumix/core/blocks";
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import { PlumixEditor } from "@plumix/admin-editor";
+import { editorLeaseMode } from "@plumix/core/admin";
 import {
   coreBlocks,
   createBlockRegistry,

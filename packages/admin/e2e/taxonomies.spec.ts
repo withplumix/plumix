@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
 import type { Term } from "@plumix/core/schema";
@@ -8,17 +9,25 @@ import {
   mockManifest,
   mockRpc,
   rpcErrorBody,
+  rpcEtagConflictBody,
+  rpcLeaseBody,
+  rpcLockedBody,
   rpcOkBody,
 } from "./support/rpc-mock.js";
 
-function term(overrides: Partial<Term> & { id: number; name: string }): Term {
+/** A term as the RPC sends it: its `version` travels as the `etag`. */
+type TermWire = Omit<Term, "version"> & { readonly etag: string };
+
+function term(
+  overrides: Partial<TermWire> & { id: number; name: string },
+): TermWire {
   return {
     taxonomy: "category",
     slug: overrides.name.toLowerCase().replaceAll(" ", "-"),
     description: null,
     parentId: null,
     meta: {},
-    version: 0,
+    etag: "0",
     ...overrides,
   };
 }
@@ -324,6 +333,142 @@ test.describe("/terms/$name/$id/edit", () => {
       .poll(() => (deleteInputs.at(-1) as { id?: number } | undefined)?.id)
       .toBe(42);
     await expect(page).toHaveURL(/\/terms\/category\?/);
+  });
+});
+
+test.describe("/terms/$name/$id/edit concurrency", () => {
+  test.beforeEach(async ({ page }) => {
+    await mockManifest(page, MANIFEST_WITH_TAXONOMIES);
+  });
+
+  // A server holding one term whose token moves on every save.
+  async function mockSavedTerm(page: Page): Promise<{
+    readonly updates: Record<string, unknown>[];
+    readonly saveElsewhere: (changes: Partial<TermWire>) => void;
+  }> {
+    let saved = term({ id: 7, name: "Fruit" });
+    let version = 0;
+    const updates: Record<string, unknown>[] = [];
+    await mockRpc(page, { "/auth/session": AUTHED_ADMIN, "/term/list": [] });
+    await page.route("**/_plumix/rpc/term/get", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody(saved),
+      }),
+    );
+    const save = (changes: Partial<TermWire>): void => {
+      version += 1;
+      saved = { ...saved, ...changes, etag: String(version) };
+    };
+    await page.route("**/_plumix/rpc/term/update", (route) => {
+      const {
+        ifMatch,
+        id: _id,
+        ...changes
+      } = (route.request().postDataJSON() as { json: Record<string, unknown> })
+        .json;
+      updates.push({ ifMatch, ...changes });
+      if (ifMatch !== saved.etag) {
+        return route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: rpcEtagConflictBody(saved.etag),
+        });
+      }
+      save({ name: String(changes.name) });
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody(saved),
+      });
+    });
+    return { updates, saveElsewhere: save };
+  }
+
+  async function openConflictDialog(page: Page): Promise<{
+    readonly updates: Record<string, unknown>[];
+  }> {
+    const { updates, saveElsewhere } = await mockSavedTerm(page);
+    await page.goto("terms/category/7/edit");
+    await expect(page.getByTestId("term-form-name-input")).toHaveValue("Fruit");
+    saveElsewhere({ name: "Saved elsewhere" });
+    await page.getByTestId("term-form-name-input").fill("Mine");
+    await page.getByTestId("term-form-submit").click();
+    await expect(page.getByTestId("entry-conflict-dialog")).toBeVisible();
+    await expect(page.getByTestId("entry-conflict-dialog")).toContainText(
+      "This term changed since you opened it",
+    );
+    return { updates };
+  }
+
+  test("a save after another session saved opens the conflict dialog, and Keep mine saves over it", async ({
+    page,
+  }) => {
+    const { updates } = await openConflictDialog(page);
+
+    await page.getByTestId("entry-conflict-keep-mine").click();
+
+    await expect(page.getByTestId("entry-conflict-dialog")).toBeHidden();
+    await expect
+      .poll(() => updates.at(-1))
+      .toMatchObject({ ifMatch: "1", name: "Mine" });
+    expect(updates).toHaveLength(2);
+  });
+
+  test("Load theirs in the conflict dialog shows the other session's save", async ({
+    page,
+  }) => {
+    await openConflictDialog(page);
+
+    await page.getByTestId("entry-conflict-load-theirs").click();
+
+    await expect(page.getByTestId("entry-conflict-dialog")).toBeHidden();
+    await expect(page.getByTestId("term-form-name-input")).toHaveValue(
+      "Saved elsewhere",
+    );
+  });
+
+  test("a term another editor holds opens read-only, and Take over makes it editable", async ({
+    page,
+  }) => {
+    const ada = { id: 2, name: "Ada" };
+    const since = new Date("2026-05-20T09:05:00Z");
+    const takeOvers: unknown[] = [];
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/term/get": term({ id: 7, name: "Fruit" }),
+      "/term/list": [],
+    });
+    await page.route("**/_plumix/rpc/term/lease/acquire", (route) => {
+      const { takeOver } = (
+        route.request().postDataJSON() as { json: { takeOver?: boolean } }
+      ).json;
+      if (takeOver !== true) {
+        return route.fulfill({
+          status: 423,
+          contentType: "application/json",
+          body: rpcLockedBody(ada, since),
+        });
+      }
+      takeOvers.push(takeOver);
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcLeaseBody({ id: 1, name: "Admin" }, since),
+      });
+    });
+
+    await page.goto("terms/category/7/edit");
+
+    await expect(page.getByTestId("edit-lease-held-by")).toHaveText(
+      "Ada is editing this term (since May 20, 2026, 9:05 AM)",
+    );
+    await expect(page.getByTestId("term-form-name-input")).toBeDisabled();
+    await page.getByTestId("edit-lease-take-over").click();
+    await expect(page.getByTestId("edit-lease-banner")).toBeHidden();
+    await expect(page.getByTestId("term-form-name-input")).toBeEnabled();
+    expect(takeOvers).toEqual([true]);
   });
 });
 

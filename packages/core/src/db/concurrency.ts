@@ -8,11 +8,13 @@ import type { LeaseResource } from "./edit-lease.js";
 import { isJsonObject } from "../json.js";
 
 /**
- * The token's `etag`: the table's `updated_at`, in seconds. Opaque to clients,
- * which send it back as `ifMatch` and never parse it.
+ * The token's `etag`: the table's `updated_at` in seconds, or its `version`.
+ * Opaque to clients, which send it back as `ifMatch` and never parse it.
  */
-export function etagOf(updatedAt: Date): string {
-  return String(Math.floor(updatedAt.getTime() / 1000));
+export function etagOf(token: Date | number): string {
+  return typeof token === "number"
+    ? String(token)
+    : String(Math.floor(token.getTime() / 1000));
 }
 
 /** `undefined` for anything `etagOf` could not have produced. */
@@ -22,7 +24,7 @@ export function parseIfMatch(value: string): Date | undefined {
 }
 
 /** `undefined` for anything a version counter's `etag` could not be. */
-function parseVersionIfMatch(value: string): number | undefined {
+export function parseVersionIfMatch(value: string): number | undefined {
   if (!/^\d{1,12}$/.test(value)) return undefined;
   return Number(value);
 }
@@ -150,6 +152,14 @@ export function guardedTable<
   };
 }
 
+/** `claim` for a table whose token is its `version`: it moves by one. */
+export function claimVersion(
+  version: SQLiteColumn,
+  ifMatch: number,
+): { readonly where: SQL; readonly set: { readonly version: number } } {
+  return { where: eq(version, ifMatch), set: { version: ifMatch + 1 } };
+}
+
 /** RFC 7386: `null` removes a key, an object merges, anything else replaces. */
 export function mergePatch(target: JsonValue, patch: JsonValue): JsonValue {
   if (!isJsonObject(patch)) return patch;
@@ -176,7 +186,7 @@ export class ConflictError extends Error {
   constructor(token: Date | number, resource?: LeaseResource) {
     super("The resource changed since this copy was read.");
     this.name = "ConflictError";
-    this.etag = typeof token === "number" ? String(token) : etagOf(token);
+    this.etag = etagOf(token);
     this.updatedAt = typeof token === "number" ? undefined : token;
     this.resource = resource;
   }

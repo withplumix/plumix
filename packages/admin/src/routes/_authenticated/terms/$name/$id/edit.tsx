@@ -1,7 +1,9 @@
+import type { EditingCopy } from "@/editor/editing-copy.js";
+import type { EditLease } from "@/editor/use-edit-lease.js";
 import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { ErrorPlaceholder } from "@/components/error-placeholder.js";
 import { FormEditSkeleton } from "@/components/form/edit-skeleton.js";
 import { TermForm } from "@/components/taxonomy/term-form.js";
@@ -9,6 +11,10 @@ import {
   descendantIds,
   parentPickerOptions,
 } from "@/components/taxonomy/tree.js";
+import { editingElsewhere } from "@/editor/conflict-dialog.js";
+import { EditLeaseBanner } from "@/editor/EditLeaseBanner.js";
+import { EntryConflictDialog } from "@/editor/EntryConflictDialog.js";
+import { useEditLease } from "@/editor/use-edit-lease.js";
 import { hasCap } from "@/lib/caps.js";
 import {
   findTermTaxonomyByName,
@@ -35,6 +41,7 @@ import {
 import * as v from "valibot";
 
 import type { ResolvedMeta } from "@plumix/core";
+import type { EditorLeaseMode, EtagConflict } from "@plumix/core/admin";
 import type { TermTaxonomyManifestEntry } from "@plumix/core/manifest";
 import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
 import {
@@ -56,6 +63,7 @@ import {
   CardTitle,
 } from "@plumix/admin-ui/card";
 import { ArrowLeft } from "@plumix/admin-ui/icons";
+import { editorLeaseMode, etagConflict, lockedBy } from "@plumix/core/admin";
 import {
   seedFromMetaBoxes,
   termTaxonomyCapability,
@@ -64,6 +72,30 @@ import { idPathParam } from "@plumix/core/validation";
 
 import { TAXONOMY_LIST_DEFAULT_SEARCH } from "../-constants.js";
 import { describeTermError } from "../-errors.js";
+
+const TERM_EDITING_COPY: EditingCopy = {
+  conflictTitle: defineMessage({
+    id: "editor.conflict.title.term",
+    message: "This term changed since you opened it",
+  }),
+  conflictUntimed: defineMessage({
+    id: "editor.conflict.descriptionUntimed.term",
+    message:
+      "It was saved elsewhere. Your changes are kept here and haven't been saved.",
+  }),
+  heldBy: defineMessage({
+    id: "editor.lease.heldBy.term",
+    message: "{name} is editing this term (since {time})",
+    comment:
+      "name: the editing user's display name or email; time: a formatted date and time",
+  }),
+  lost: defineMessage({
+    id: "editor.lease.lost.term",
+    message:
+      "{name} took over editing this term at {time}. Your unsaved changes are shown here but weren't saved.",
+    comment: "name: the user who took over; time: a formatted date and time",
+  }),
+};
 
 const M = {
   saveFallback: defineMessage({
@@ -158,6 +190,10 @@ function ErrorComponent(): ReactNode {
 function EditTermRoute(): ReactNode {
   const { id: termId } = Route.useParams();
   const { user, taxonomy } = Route.useRouteContext();
+  const [reseedNonce, setReseedNonce] = useState(0);
+  const reseed = useCallback(() => setReseedNonce((n) => n + 1), []);
+  // Held across reseeds, so remounting the form never gives the lease up.
+  const lease = useEditLease("term", termId);
 
   const canEdit = hasCap(
     user.capabilities,
@@ -192,17 +228,28 @@ function EditTermRoute(): ReactNode {
 
   return (
     <EditTermContent
-      // No reseed after save: terms have no `updatedAt` to detect a save-driven
-      // refetch.
-      key={term.id}
+      // A save adopts its response's etag in place; only Load theirs and Take
+      // over remount the form on the saved term.
+      key={`${String(term.id)}:${String(reseedNonce)}`}
       taxonomy={taxonomy}
       term={term}
       isHierarchical={isHierarchical}
       parentOptions={parentOptions}
       canEdit={canEdit}
       canDelete={canDelete}
+      lease={lease}
+      leaseMode={editorLeaseMode(lease.state)}
+      onReseed={reseed}
     />
   );
+}
+
+interface TermFormValues {
+  name: string;
+  slug: string;
+  description: string;
+  parentId: number | null;
+  meta: ResolvedMeta;
 }
 
 function EditTermContent({
@@ -212,6 +259,9 @@ function EditTermContent({
   parentOptions,
   canEdit,
   canDelete,
+  lease,
+  leaseMode,
+  onReseed,
 }: {
   readonly taxonomy: TermTaxonomyManifestEntry;
   readonly term: {
@@ -221,6 +271,7 @@ function EditTermContent({
     readonly description: string | null;
     readonly parentId: number | null;
     readonly meta?: ResolvedMeta;
+    readonly etag: string;
   };
   readonly isHierarchical: boolean;
   readonly parentOptions: readonly {
@@ -229,6 +280,9 @@ function EditTermContent({
   }[];
   readonly canEdit: boolean;
   readonly canDelete: boolean;
+  readonly lease: EditLease;
+  readonly leaseMode: EditorLeaseMode;
+  readonly onReseed: () => void;
 }): ReactNode {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -236,6 +290,16 @@ function EditTermContent({
   const [serverError, setServerError] = useState<MessageDescriptor | null>(
     null,
   );
+  // Each save adopts its response's token, so the next one chains from it.
+  const etag = useRef(term.etag);
+  // The refused save's values ride with its conflict, for Keep mine.
+  const [refused, setRefused] = useState<{
+    readonly conflict: EtagConflict;
+    readonly mine: TermFormValues;
+  } | null>(null);
+  const termQueryKey = orpc.term.get.queryOptions({
+    input: { id: term.id },
+  }).queryKey;
   const [serverFieldErrors, setServerFieldErrors] = useState<
     readonly MetaFieldServerError[] | null
   >(null);
@@ -246,15 +310,16 @@ function EditTermContent({
   );
 
   const updateTerm = useMutation({
-    mutationFn: (values: {
-      name: string;
-      slug: string;
-      description: string;
-      parentId: number | null;
-      meta: ResolvedMeta;
+    mutationFn: ({
+      values,
+      ifMatch,
+    }: {
+      values: TermFormValues;
+      ifMatch: string;
     }) =>
       orpc.term.update.call({
         id: term.id,
+        ifMatch,
         name: values.name,
         slug: values.slug.length > 0 ? values.slug : undefined,
         description: values.description.length > 0 ? values.description : null,
@@ -268,7 +333,8 @@ function EditTermContent({
       setServerError(null);
       setServerFieldErrors(null);
     },
-    onSuccess: async () => {
+    onSuccess: async (saved) => {
+      etag.current = saved.etag;
       // List variants are scoped by `taxonomy` so sibling termTaxonomies
       // don't needlessly refetch. Parent route remounts via the
       // updatedAt key so the refetched row reseeds the form.
@@ -284,7 +350,18 @@ function EditTermContent({
         }),
       ]);
     },
-    onError: (err) => {
+    onError: (err, { values }) => {
+      // Never retried for the author: they pick in the dialog.
+      const stale = etagConflict(err);
+      if (stale) {
+        setRefused({ conflict: stale, mine: values });
+        return;
+      }
+      const locked = lockedBy(err);
+      if (locked) {
+        lease.lose(locked);
+        return;
+      }
       // Path-addressed meta rejections render inline on the offending
       // inputs; everything else keeps the banner mapping.
       const fieldErrors = extractMetaFieldErrors(err);
@@ -296,8 +373,70 @@ function EditTermContent({
     },
   });
 
+  const theirsQuery = useQuery({
+    queryKey: ["term.conflict", term.id, refused?.conflict.etag],
+    queryFn: () => orpc.term.get.call({ id: term.id }),
+    enabled: refused !== null,
+  });
+  const handleKeepMine = (): void => {
+    if (!refused) return;
+    setRefused(null);
+    // An explicit overwrite, from where the term is now.
+    updateTerm.mutate({ values: refused.mine, ifMatch: refused.conflict.etag });
+  };
+  // Drop the author's unsaved edits, then remount on the saved term.
+  const reloadSaved = (): Promise<void> =>
+    queryClient.invalidateQueries({ queryKey: termQueryKey }).then(onReseed);
+  const handleLoadTheirs = (): void => {
+    setRefused(null);
+    void reloadSaved();
+  };
+  // Remount on the term as the previous holder left it.
+  const takeOver = useMutation({
+    mutationFn: lease.takeOver,
+    onSuccess: reloadSaved,
+  });
+  const backToList = (): void => {
+    void navigate({
+      to: "/terms/$name",
+      params: { name: taxonomy.name },
+      search: TAXONOMY_LIST_DEFAULT_SEARCH,
+    });
+  };
+
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-4">
+      <EntryConflictDialog
+        open={refused !== null}
+        copy={TERM_EDITING_COPY}
+        changedAt={refused?.conflict.updatedAt ?? null}
+        editingElsewhere={
+          refused ? editingElsewhere(refused.conflict, user.id) : undefined
+        }
+        mineSnapshot={refused?.mine ?? null}
+        theirsSnapshot={
+          theirsQuery.data
+            ? {
+                name: theirsQuery.data.name,
+                slug: theirsQuery.data.slug,
+                description: theirsQuery.data.description,
+                parentId: theirsQuery.data.parentId,
+                meta: theirsQuery.data.meta,
+              }
+            : null
+        }
+        onKeepMine={handleKeepMine}
+        onLoadTheirs={handleLoadTheirs}
+      />
+      {leaseMode.mode === "readOnly" ? (
+        <EditLeaseBanner
+          copy={TERM_EDITING_COPY}
+          notice={leaseMode.notice}
+          onTakeOver={() => takeOver.mutate()}
+          isTakingOver={takeOver.isPending}
+          onBack={backToList}
+        />
+      ) : null}
       <Link
         to="/terms/$name"
         params={{ name: taxonomy.name }}
@@ -322,32 +461,33 @@ function EditTermContent({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <TermForm
-            initialValues={{
-              name: term.name,
-              slug: term.slug,
-              description: term.description ?? "",
-              parentId: term.parentId,
-              meta: seedFromMetaBoxes(metaBoxes, term.meta),
-            }}
-            isHierarchical={isHierarchical}
-            parentOptions={parentOptions}
-            isSubmitting={updateTerm.isPending || !canEdit}
-            serverError={serverError}
-            serverFieldErrors={serverFieldErrors}
-            submitLabel={renderLabel(M.submit)}
-            metaBoxes={metaBoxes}
-            onSubmit={(values) => {
-              updateTerm.mutate(values);
-            }}
-            onCancel={() => {
-              void navigate({
-                to: "/terms/$name",
-                params: { name: taxonomy.name },
-                search: TAXONOMY_LIST_DEFAULT_SEARCH,
-              });
-            }}
-          />
+          {/* A disabled fieldset disables every control in the form at once. */}
+          <fieldset
+            disabled={leaseMode.mode !== "editable"}
+            className="contents"
+            data-testid="term-edit-fieldset"
+          >
+            <TermForm
+              initialValues={{
+                name: term.name,
+                slug: term.slug,
+                description: term.description ?? "",
+                parentId: term.parentId,
+                meta: seedFromMetaBoxes(metaBoxes, term.meta),
+              }}
+              isHierarchical={isHierarchical}
+              parentOptions={parentOptions}
+              isSubmitting={updateTerm.isPending || !canEdit}
+              serverError={serverError}
+              serverFieldErrors={serverFieldErrors}
+              submitLabel={renderLabel(M.submit)}
+              metaBoxes={metaBoxes}
+              onSubmit={(values) => {
+                updateTerm.mutate({ values, ifMatch: etag.current });
+              }}
+              onCancel={backToList}
+            />
+          </fieldset>
         </CardContent>
       </Card>
 

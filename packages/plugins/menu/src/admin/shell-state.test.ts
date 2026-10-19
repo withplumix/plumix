@@ -3,9 +3,9 @@ import { describe, expect, test } from "vitest";
 
 import {
   boundMenuSlug,
-  conflictShown,
   linkedTargetText,
   locationCheckbox,
+  menuSaveRefusal,
   menusPageState,
   pickerChoice,
   pickerPanelFor,
@@ -14,22 +14,14 @@ import {
   UNASSIGNED_VALUE,
 } from "./shell-state.js";
 
-const MAIN = { id: 7, slug: "main", name: "Main", version: 1, itemCount: 0 };
+const MAIN = { id: 7, slug: "main", name: "Main", etag: "1", itemCount: 0 };
 const FOOTER = {
   id: 8,
   slug: "footer",
   name: "Footer",
-  version: 1,
+  etag: "1",
   itemCount: 0,
 };
-
-function versionMismatch(): ORPCError<"CONFLICT", unknown> {
-  return new ORPCError("CONFLICT", {
-    status: 409,
-    message: "concurrent edit",
-    data: { reason: "version_mismatch", key: "1" },
-  });
-}
 
 describe("menusPageState", () => {
   test("shows the loading state while the menus load", () => {
@@ -94,29 +86,36 @@ describe("termSlugFromSelect", () => {
   });
 });
 
-describe("conflictShown", () => {
-  test("a version_mismatch from a save shows the reload banner", () => {
-    expect(conflictShown(versionMismatch(), null, 1)).toBe(true);
+describe("menuSaveRefusal", () => {
+  const ada = { id: 2, name: "Ada" };
+
+  test("a save from a stale copy is a conflict with where the menu is now", () => {
+    const error = new ORPCError("CONFLICT", {
+      data: { reason: "etag_mismatch", etag: "4", holder: ada },
+    });
+
+    expect(menuSaveRefusal(error)).toEqual({
+      kind: "conflict",
+      conflict: { etag: "4", holder: ada },
+    });
   });
 
-  test("the banner stays dismissed for the version it was dismissed at", () => {
-    expect(conflictShown(versionMismatch(), 2, 2)).toBe(false);
+  test("a save refused by another editor's lease names them", () => {
+    const since = new Date("2026-10-18T12:00:00Z");
+    const error = new ORPCError("LOCKED", { data: { holder: ada, since } });
+
+    expect(menuSaveRefusal(error)).toEqual({
+      kind: "locked",
+      locked: { holder: ada, since },
+    });
   });
 
-  test("a new version_mismatch after a reload re-arms the banner", () => {
-    expect(conflictShown(versionMismatch(), 1, 2)).toBe(true);
-  });
-
-  test("a conflict for another reason shows no banner", () => {
+  test("a conflict for another reason is neither", () => {
     const error = new ORPCError("CONFLICT", {
       data: { reason: "slug_taken" },
     });
 
-    expect(conflictShown(error, null, 1)).toBe(false);
-  });
-
-  test("a save with no error shows no banner", () => {
-    expect(conflictShown(null, null, 1)).toBe(false);
+    expect(menuSaveRefusal(error)).toBeUndefined();
   });
 });
 

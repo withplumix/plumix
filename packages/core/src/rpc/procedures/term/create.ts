@@ -1,19 +1,19 @@
-import type { ResolvedMeta } from "../../../meta/contract/bags.js";
 import { spellTermCapability } from "../../../access/contract/capability.js";
 import { and, eq, isUniqueConstraintError } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
+import { isEmptyMetaPatch, patchedMetaBag } from "../../../meta/core.js";
 import {
+  announceTermMetaChange,
   assertTermMetaCapabilities,
-  loadTermMeta,
   resolveTermMeta,
   sanitizeMetaForRpc,
   validateTermMetaReferences,
-  writeTermMeta,
 } from "../../../meta/term.js";
 import { startingMeta } from "../../../plugin/fields/starting-meta.js";
 import { listTermMetaFields } from "../../../plugin/manifest.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { termWire } from "./helpers.js";
 import { termCreateInputSchema } from "./schemas.js";
 
 export const create = base
@@ -89,7 +89,7 @@ export const create = base
           slug: filtered.slug,
           description: filtered.description ?? null,
           parentId: filtered.parentId ?? null,
-          meta: starting,
+          meta: patchedMetaBag(starting, metaPatch),
         })
         .returning();
     } catch (error) {
@@ -102,17 +102,16 @@ export const create = base
       throw errors.CONFLICT({ data: { reason: "insert_failed" } });
     }
 
-    let meta: ResolvedMeta;
-    if (metaPatch) {
-      await writeTermMeta(context, created, metaPatch);
-      meta = await loadTermMeta(context, created);
-    } else {
-      meta = await resolveTermMeta(context, created.taxonomy, created.meta);
+    if (metaPatch && !isEmptyMetaPatch(metaPatch)) {
+      await announceTermMetaChange(context, created, metaPatch);
     }
+    const meta = await resolveTermMeta(context, created.taxonomy, created.meta);
 
     await context.hooks.doAction("term:created", created, context);
-    return context.hooks.applyFilter("rpc:term.create:output", {
-      ...created,
-      meta,
-    });
+    return termWire(
+      await context.hooks.applyFilter("rpc:term.create:output", {
+        ...created,
+        meta,
+      }),
+    );
   });

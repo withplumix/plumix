@@ -3,6 +3,7 @@ import { eq } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { termWire, writeTermAsSystem } from "./helpers.js";
 import { termDeleteInputSchema } from "./schemas.js";
 
 export const del = base
@@ -21,8 +22,17 @@ export const del = base
       throw errors.FORBIDDEN({ data: { capability: deleteCap } });
     }
 
-    // entry_term cascades via the FK; children terms get parentId = null via
-    // the terms.parentId self-reference `onDelete: set null`.
+    // Re-parented here rather than by the self-reference's `onDelete: set
+    // null`, which can't move each child's token. entry_term cascades via
+    // the FK.
+    const children = await context.db.query.terms.findMany({
+      where: eq(terms.parentId, existing.id),
+    });
+    for (const child of children) {
+      await writeTermAsSystem(context.db, child, (row) =>
+        row.parentId === existing.id ? { parentId: null } : undefined,
+      );
+    }
     const [deleted] = await context.db
       .delete(terms)
       .where(eq(terms.id, existing.id))
@@ -32,5 +42,7 @@ export const del = base
     }
 
     await context.hooks.doAction("term:deleted", deleted, context);
-    return context.hooks.applyFilter("rpc:term.delete:output", deleted);
+    return termWire(
+      await context.hooks.applyFilter("rpc:term.delete:output", deleted),
+    );
   });
