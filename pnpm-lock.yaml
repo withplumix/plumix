@@ -252,8 +252,8 @@ catalogs:
       specifier: ^0.31.11
       version: 0.31.11
     drizzle-orm:
-      specifier: ^0.45.3
-      version: 0.45.3
+      specifier: ^0.45.4
+      version: 0.45.4
     drizzle-valibot:
       specifier: ^0.4.2
       version: 0.4.2
@@ -1101,10 +1101,10 @@ importers:
         version: 0.31.11
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.3(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
+        version: 0.45.4(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
       drizzle-valibot:
         specifier: catalog:drizzle
-        version: 0.4.2(drizzle-orm@0.45.3(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2))(valibot@1.5.0(typescript@6.0.3))
+        version: 0.4.2(drizzle-orm@0.45.4(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2))(valibot@1.5.0(typescript@6.0.3))
       fishery:
         specifier: 'catalog:'
         version: 2.4.0
@@ -1207,7 +1207,7 @@ importers:
         version: link:../../runtimes/cloudflare
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.3(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
+        version: 0.45.4(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
       plumix:
         specifier: workspace:*
         version: link:../../plumix
@@ -1344,7 +1344,7 @@ importers:
         version: 1.1.0
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.3(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
+        version: 0.45.4(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
       valibot:
         specifier: 'catalog:'
         version: 1.5.0(typescript@6.0.3)
@@ -1463,7 +1463,7 @@ importers:
     dependencies:
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.3(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
+        version: 0.45.4(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
@@ -1555,7 +1555,7 @@ importers:
     dependencies:
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.3(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
+        version: 0.45.4(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
       markdown-it:
         specifier: ^15.0.2
         version: 15.0.2
@@ -1765,7 +1765,7 @@ importers:
         version: 6.9.0(@babel/core@7.29.7(supports-color@10.2.2))
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.3(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
+        version: 0.45.4(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
       valibot:
         specifier: 'catalog:'
         version: 1.5.0(typescript@6.0.3)
@@ -2329,7 +2329,7 @@ importers:
     dependencies:
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.3(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
+        version: 0.45.4(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
@@ -2533,7 +2533,7 @@ importers:
         version: 0.31.11
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.3(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
+        version: 0.45.4(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
       esbuild:
         specifier: 'catalog:'
         version: 0.28.2
@@ -2630,7 +2630,7 @@ importers:
     dependencies:
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.3(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
+        version: 0.45.4(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
       vite:
         specifier: catalog:vite
         version: 8.3.3(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
@@ -2716,7 +2716,7 @@ importers:
         version: 1.63.0(@types/node@24.19.1)(vite@8.3.3(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))(wrangler@4.148.0(@cloudflare/workers-types@5.20261007.1)(@types/node@24.19.1))
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.3(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
+        version: 0.45.4(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
       jose:
         specifier: ^6.2.12
         version: 6.2.12
@@ -2823,7 +2823,7 @@ importers:
     dependencies:
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.3(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
+        version: 0.45.4(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
       vite:
         specifier: catalog:vite
         version: 8.3.3(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
@@ -8550,8 +8550,8 @@ packages:
     resolution: {integrity: sha512-YCYqxTLIB2OCqf6w9/Vef13baBVbwQIPcbT4Y56AfO6B9ajZhDhD8Jkveg/hJvT/iuMloKD/IYYkyMMNhr7Kqg==}
     hasBin: true
 
-  drizzle-orm@0.45.3:
-    resolution: {integrity: sha512-CAloER21cDdcgZ1OmjrZX82EeRNsdP+y0onX/eyoYDaYzki/adrAa91lzM5jWh7zZPK4qUbw/6LGv9J+A+uizA==}
+  drizzle-orm@0.45.4:
+    resolution: {integrity: sha512-NiM1YZpJ2UxyeE67DpDDZ+Tsw4YLX3trSlkNT7Tm9eKoUNb1LvaAaQzXgYQsWs+AQ9TUmmwMmBOCXuqqxUWKKQ==}
     peerDependencies:
       '@aws-sdk/client-rds-data': '>=3'
       '@cloudflare/workers-types': '>=4'
@@ -17167,15 +17167,15 @@ snapshots:
       esbuild: 0.25.12
       tsx: 4.23.15
 
-  drizzle-orm@0.45.3(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2):
+  drizzle-orm@0.45.4(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2):
     optionalDependencies:
       '@cloudflare/workers-types': 5.20261007.1
       '@libsql/client': 0.18.0
       bun-types: 1.4.2
 
-  drizzle-valibot@0.4.2(drizzle-orm@0.45.3(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2))(valibot@1.5.0(typescript@6.0.3)):
+  drizzle-valibot@0.4.2(drizzle-orm@0.45.4(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2))(valibot@1.5.0(typescript@6.0.3)):
     dependencies:
-      drizzle-orm: 0.45.3(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
+      drizzle-orm: 0.45.4(@cloudflare/workers-types@5.20261007.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
       valibot: 1.5.0(typescript@6.0.3)
 
   dset@3.1.4: {}
