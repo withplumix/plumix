@@ -3,7 +3,7 @@ import type { SyncAfterEvent } from "../context/runtime-adapter.js";
 import type { ApiToken } from "../db/schema/api_tokens.js";
 import type { Credential } from "../db/schema/credentials.js";
 import type { Entry, EntryStatus, NewEntry } from "../db/schema/entries.js";
-import type { SettingsBag } from "../db/schema/settings.js";
+import type { SettingsBag, SettingsGroupCopy } from "../db/schema/settings.js";
 import type { Term } from "../db/schema/terms.js";
 import type { User } from "../db/schema/users.js";
 import type { WithResolvedMeta } from "../meta/contract/bags.js";
@@ -142,10 +142,10 @@ declare module "../hooks/types.js" {
      * carries the group so one filter can branch on scope.
      */
     "rpc:settings.get:output": (
-      output: SettingsBag,
+      output: SettingsGroupCopy,
       context: { readonly group: string },
       ctx: AppContext,
-    ) => SettingsBag | Promise<SettingsBag>;
+    ) => SettingsGroupCopy | Promise<SettingsGroupCopy>;
 
     "rpc:settings.upsert:input": (
       input: SettingsUpsertInput,
@@ -157,10 +157,10 @@ declare module "../hooks/types.js" {
      * paths.
      */
     "rpc:settings.upsert:output": (
-      output: SettingsBag,
+      output: SettingsGroupCopy,
       context: { readonly group: string },
       ctx: AppContext,
-    ) => SettingsBag | Promise<SettingsBag>;
+    ) => SettingsGroupCopy | Promise<SettingsGroupCopy>;
 
     /**
      * `entry:before_save` fires on every save; `entry:<type>:before_save`

@@ -170,6 +170,7 @@ describe("meta field keys — registration and the RPC write path agree", () => 
       v.safeParse(settingsUpsertInputSchema, {
         group: "seo",
         values: { [key]: "x" },
+        ifMatch: "0",
       }).success,
     ).toBe(valid);
   });

@@ -87,7 +87,7 @@ describe("sweepUnsettledMeta", () => {
     const { ctx, harness } = await seeded();
     await harness.db
       .insert(settings)
-      .values({ group: "reading", key: SETTINGS_CREATED_KEY, value: true });
+      .values({ group: "many", key: SETTINGS_CREATED_KEY, value: true });
 
     const sweep = await sweepUnsettledMeta(ctx, { write: true });
 
@@ -97,6 +97,36 @@ describe("sweepUnsettledMeta", () => {
       .from(settings)
       .where(eq(settings.key, SETTINGS_CREATED_KEY));
     expect(marker?.value).toBe(true);
+  });
+
+  test("settling a saved group's setting moves the group's token", async () => {
+    const { ctx, harness } = await seeded();
+    await harness.db
+      .insert(settings)
+      .values({ group: "reading", key: SETTINGS_CREATED_KEY, value: 3 });
+
+    await sweepUnsettledMeta(ctx, { write: true });
+
+    const [marker] = await harness.db
+      .select({ value: settings.value })
+      .from(settings)
+      .where(eq(settings.key, SETTINGS_CREATED_KEY));
+    expect(marker?.value).toBe(4);
+  });
+
+  test("settling a setting in a group saved before markers counted moves it off token zero", async () => {
+    const { ctx, harness } = await seeded();
+    await harness.db
+      .insert(settings)
+      .values({ group: "reading", key: SETTINGS_CREATED_KEY, value: true });
+
+    await sweepUnsettledMeta(ctx, { write: true });
+
+    const [marker] = await harness.db
+      .select({ value: settings.value })
+      .from(settings)
+      .where(eq(settings.key, SETTINGS_CREATED_KEY));
+    expect(marker?.value).toBe(1);
   });
 
   test("reports settleable and unconvertible values per store, scope and key", async () => {

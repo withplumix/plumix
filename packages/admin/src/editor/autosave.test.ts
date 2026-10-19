@@ -42,6 +42,17 @@ describe("classifyAutosaveError", () => {
     });
   });
 
+  test("a stale copy of a resource with a version counter is a conflict with no change time", () => {
+    const err = new ORPCError("CONFLICT", {
+      data: { reason: "etag_mismatch", etag: "4" },
+    });
+
+    expect(classifyAutosaveError(err)).toEqual({
+      kind: "conflict",
+      conflict: { etag: "4" },
+    });
+  });
+
   test("a save refused by another user's lease is locked, naming them", () => {
     const err = new ORPCError("LOCKED", {
       status: 423,

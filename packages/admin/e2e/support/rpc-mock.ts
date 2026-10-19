@@ -16,8 +16,11 @@ export {
   withCapabilities,
 } from "@plumix/core/test/playwright";
 
-/** A stale-copy refusal, with the meta that revives `updatedAt` as a `Date`. */
-export function rpcEtagConflictBody(etag: string, updatedAt: Date): string {
+/**
+ * A stale-copy refusal, with the meta that revives `updatedAt` as a `Date`. A
+ * resource whose token is a version counter has no `updatedAt`.
+ */
+export function rpcEtagConflictBody(etag: string, updatedAt?: Date): string {
   return JSON.stringify({
     json: {
       defined: true,
@@ -26,7 +29,7 @@ export function rpcEtagConflictBody(etag: string, updatedAt: Date): string {
       message: "Resource conflict",
       data: { reason: "etag_mismatch", etag, updatedAt },
     },
-    meta: [[1, "data", "updatedAt"]],
+    meta: updatedAt ? [[1, "data", "updatedAt"]] : [],
   });
 }
 

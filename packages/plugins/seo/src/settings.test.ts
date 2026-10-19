@@ -1,4 +1,4 @@
-import type { SettingsBag } from "plumix/schema";
+import type { SettingsBag, SettingsGroupCopy } from "plumix/schema";
 import type { DispatcherHarness } from "plumix/test";
 import { createDispatcherHarness } from "plumix/test";
 import { defineTheme, fallback } from "plumix/theme";
@@ -22,7 +22,7 @@ async function loadGroup(h: DispatcherHarness): Promise<SettingsBag> {
     json: { json: { group: "seo" }, meta: [] },
   });
   response.assertStatus(200);
-  return (await response.json<{ json: SettingsBag }>()).json;
+  return (await response.json<{ json: SettingsGroupCopy }>()).json.values;
 }
 
 describe("the settings the admin form loads", () => {
@@ -99,8 +99,8 @@ describe("the settings the admin form loads", () => {
     });
     response.assertStatus(200);
 
-    expect(await response.json<{ json: SettingsBag }>()).toEqual({
-      json: { public: false },
+    expect(await response.json<{ json: SettingsGroupCopy }>()).toEqual({
+      json: { etag: "0", values: { public: false } },
     });
   });
 });

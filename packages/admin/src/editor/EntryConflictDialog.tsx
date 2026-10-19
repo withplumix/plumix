@@ -31,7 +31,9 @@ const M = {
 
 interface EntryConflictDialogProps {
   readonly open: boolean;
-  /** When the other write landed. */
+  /** What changed: an entry, or a settings group's card. Defaults to `entry`. */
+  readonly subject?: "entry" | "settings";
+  /** When the other write landed; `null` when the resource doesn't record it. */
   readonly changedAt: Date | null;
   /** Another user holding the entry's edit lease, named as editing it now. */
   readonly editingElsewhere: LeaseHolder | undefined;
@@ -48,6 +50,7 @@ interface EntryConflictDialogProps {
  */
 export function EntryConflictDialog({
   open,
+  subject = "entry",
   changedAt,
   editingElsewhere,
   mineSnapshot,
@@ -61,9 +64,6 @@ export function EntryConflictDialog({
   const holderName = editingElsewhere ? (
     <bdi>{editingElsewhere.name}</bdi>
   ) : null;
-  const when = changedAt
-    ? formatDate(changedAt, { dateStyle: "medium", timeStyle: "short" })
-    : "";
   return (
     <Dialog open={open}>
       <DialogContent
@@ -73,17 +73,36 @@ export function EntryConflictDialog({
       >
         <DialogHeader>
           <DialogTitle>
-            <Trans
-              id="editor.conflict.title"
-              message="This entry changed since you opened it"
-            />
+            {subject === "entry" ? (
+              <Trans
+                id="editor.conflict.title"
+                message="This entry changed since you opened it"
+              />
+            ) : (
+              <Trans
+                id="settings.conflict.title"
+                message="These settings changed since you opened them"
+              />
+            )}
           </DialogTitle>
           <DialogDescription data-testid="entry-conflict-changed-at">
-            <Trans
-              id="editor.conflict.description"
-              message="It was saved elsewhere at {when}. Your changes are kept here and haven't been saved."
-              values={{ when }}
-            />
+            {changedAt ? (
+              <Trans
+                id="editor.conflict.description"
+                message="It was saved elsewhere at {when}. Your changes are kept here and haven't been saved."
+                values={{
+                  when: formatDate(changedAt, {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  }),
+                }}
+              />
+            ) : (
+              <Trans
+                id="editor.conflict.descriptionUntimed"
+                message="They were saved elsewhere. Your changes are kept here and haven't been saved."
+              />
+            )}
           </DialogDescription>
           {editingElsewhere ? (
             <DialogDescription data-testid="entry-conflict-holder">

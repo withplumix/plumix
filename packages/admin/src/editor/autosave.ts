@@ -9,10 +9,13 @@ import * as v from "valibot";
  */
 export const AUTOSAVE_DEBOUNCE_MS = 1000;
 
-/** Another write landed since this editor's copy: where the entry is now. */
+/**
+ * Another write landed since this editor's copy: where the resource is now.
+ * `updatedAt` is absent for a resource whose token is a version counter.
+ */
 export interface EntryConflict {
   readonly etag: string;
-  readonly updatedAt: Date;
+  readonly updatedAt?: Date;
   readonly holder?: LeaseHolder;
 }
 
@@ -29,7 +32,7 @@ export type AutosaveErrorOutcome =
 const staleCopy = v.object({
   reason: v.literal("etag_mismatch"),
   etag: v.string(),
-  updatedAt: v.date(),
+  updatedAt: v.optional(v.date()),
   holder: v.optional(v.object({ id: v.number(), name: v.string() })),
 });
 
@@ -44,6 +47,10 @@ export function classifyAutosaveError(err: unknown): AutosaveErrorOutcome {
   const { etag, updatedAt, holder } = parsed.output;
   return {
     kind: "conflict",
-    conflict: holder ? { etag, updatedAt, holder } : { etag, updatedAt },
+    conflict: {
+      etag,
+      ...(updatedAt ? { updatedAt } : {}),
+      ...(holder ? { holder } : {}),
+    },
   };
 }

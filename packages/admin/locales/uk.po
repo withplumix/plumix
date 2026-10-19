@@ -593,7 +593,19 @@ msgstr ""
 #. name: the editing user's display name or email; time: a formatted date and time
 #. js-lingui-explicit-id
 #: src/editor/EditLeaseBanner.tsx
+msgid "settings.lease.heldBy"
+msgstr ""
+
+#. name: the editing user's display name or email; time: a formatted date and time
+#. js-lingui-explicit-id
+#: src/editor/EditLeaseBanner.tsx
 msgid "editor.lease.heldBy"
+msgstr ""
+
+#. name: the user who took over; time: a formatted date and time
+#. js-lingui-explicit-id
+#: src/editor/EditLeaseBanner.tsx
+msgid "settings.lease.lost"
 msgstr ""
 
 #. name: the user who took over; time: a formatted date and time
@@ -851,14 +863,14 @@ msgid "auth.device.title"
 msgstr "Дозволити доступ CLI"
 
 #. js-lingui-explicit-id
-#: src/editor/EditLeaseBanner.tsx
-msgid "editor.lease.back"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_auth/-login-screen.tsx
 msgid "login.magicLink.back"
 msgstr "Назад"
+
+#. js-lingui-explicit-id
+#: src/editor/EditLeaseBanner.tsx
+msgid "editor.lease.back"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -3625,6 +3637,16 @@ msgstr "Вибраний батьківський належить до іншо
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.revoke.description"
 msgstr "Токен негайно припиняє роботу. Будь-який клієнт, що його використовує, почне отримувати 401 під час наступного запиту."
+
+#. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "settings.conflict.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.descriptionUntimed"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx

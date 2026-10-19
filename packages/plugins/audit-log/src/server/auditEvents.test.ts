@@ -49,7 +49,11 @@ describe("registerAuditEvents — through a procedure", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          json: { group: "general", values: { site_title: "Renamed" } },
+          json: {
+            group: "general",
+            values: { site_title: "Renamed" },
+            ifMatch: "0",
+          },
         }),
       }),
       admin.id,

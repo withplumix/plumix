@@ -81,19 +81,19 @@ interface LeaseView {
   readonly since: Date;
 }
 
-/** The `entry.lease` procedures the session calls. */
-export interface EditLeaseApi {
+/** A resource's `lease` procedures the session calls, keyed by its `Id`. */
+export interface EditLeaseApi<Id = number> {
   readonly acquire: (input: {
-    readonly id: number;
+    readonly id: Id;
     readonly takeOver?: boolean;
   }) => Promise<LeaseView>;
   readonly renew: (input: {
-    readonly id: number;
+    readonly id: Id;
   }) => Promise<
     | { readonly lease: LeaseView }
     | { readonly lost: { readonly by: LeaseHolder; readonly at: Date } }
   >;
-  readonly release: (input: { readonly id: number }) => Promise<void>;
+  readonly release: (input: { readonly id: Id }) => Promise<void>;
 }
 
 export interface EditLeaseSession {
@@ -105,9 +105,9 @@ export interface EditLeaseSession {
   readonly stop: () => void;
 }
 
-export function createEditLeaseSession(options: {
-  readonly id: number;
-  readonly api: EditLeaseApi;
+export function createEditLeaseSession<Id>(options: {
+  readonly id: Id;
+  readonly api: EditLeaseApi<Id>;
   readonly onChange: (state: EditLeaseState) => void;
 }): EditLeaseSession {
   const { id, api, onChange } = options;

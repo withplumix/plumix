@@ -593,8 +593,20 @@ msgstr "{name} is editing it now."
 #. name: the editing user's display name or email; time: a formatted date and time
 #. js-lingui-explicit-id
 #: src/editor/EditLeaseBanner.tsx
+msgid "settings.lease.heldBy"
+msgstr "{name} is editing these settings (since {time})"
+
+#. name: the editing user's display name or email; time: a formatted date and time
+#. js-lingui-explicit-id
+#: src/editor/EditLeaseBanner.tsx
 msgid "editor.lease.heldBy"
 msgstr "{name} is editing this entry (since {time})"
+
+#. name: the user who took over; time: a formatted date and time
+#. js-lingui-explicit-id
+#: src/editor/EditLeaseBanner.tsx
+msgid "settings.lease.lost"
+msgstr "{name} took over editing these settings at {time}. Your unsaved changes are shown here but weren't saved."
 
 #. name: the user who took over; time: a formatted date and time
 #. js-lingui-explicit-id
@@ -851,13 +863,13 @@ msgid "auth.device.title"
 msgstr "Authorize CLI access"
 
 #. js-lingui-explicit-id
-#: src/editor/EditLeaseBanner.tsx
-msgid "editor.lease.back"
+#: src/routes/_auth/-login-screen.tsx
+msgid "login.magicLink.back"
 msgstr "Back"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/-login-screen.tsx
-msgid "login.magicLink.back"
+#: src/editor/EditLeaseBanner.tsx
+msgid "editor.lease.back"
 msgstr "Back"
 
 #. js-lingui-explicit-id
@@ -3625,6 +3637,16 @@ msgstr "The selected parent belongs to a different taxonomy."
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.revoke.description"
 msgstr "The token stops working immediately. Any client using it will start getting 401s on the next request."
+
+#. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "settings.conflict.title"
+msgstr "These settings changed since you opened them"
+
+#. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.descriptionUntimed"
+msgstr "They were saved elsewhere. Your changes are kept here and haven't been saved."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
