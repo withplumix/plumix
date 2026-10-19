@@ -147,7 +147,7 @@ jobs:
       # Explicit paths, not `**/…`: that globber follows symlinks through `node_modules/.pnpm`.
       - name: Upload Playwright reports + traces on failure
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: smoke-playwright-reports
           path: |
@@ -180,7 +180,7 @@ jobs:
 
       - name: Upload the recaptured screenshots
         if: failure() && steps.screenshots.outcome == 'failure'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: docs-screenshots
           path: apps/docs/src/assets/screenshots
@@ -189,7 +189,7 @@ jobs:
       # Explicit paths, not `**/…`: that globber follows symlinks through `node_modules/.pnpm`.
       - name: Upload Playwright reports + traces on failure
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: playwright-reports
           path: |
@@ -233,7 +233,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: taiki-e/install-action@f7e5d7c961414b23f5b25b2da9294395d08513ad # v2.87.26
+      - uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
         with:
           tool: typos
       - name: Spellcheck markdown

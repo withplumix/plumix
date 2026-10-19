@@ -82,17 +82,17 @@ catalog:
   "@arethetypeswrong/cli": ^0.18.5
   "@axe-core/playwright": ^4.13.0
   "@libsql/client": ^0.18.0
-  "@playwright/test": ^1.63.0
+  "@playwright/test": ^1.64.0
   "@types/node": ^24.19.1
   cmdk: ^1.1.1
   esbuild: ^0.28.2
   eslint: ^10.12.0
   fishery: ^2.4.0
   jsonc-parser: ^3.3.1
-  prettier: ^3.9.9
+  prettier: ^3.9.10
   publint: ^0.3.25
   radix-ui: ^1.6.7
-  react-hook-form: ^7.89.0
+  react-hook-form: ^7.90.0
   sharp: ^0.35.5
   sonner: ^2.0.8
   tailwind-merge: ^3.7.0
@@ -105,9 +105,9 @@ catalog:
 # `catalog:<name>` from consumer package.json files.
 catalogs:
   cloudflare:
-    "@cloudflare/vite-plugin": ^1.63.0
-    "@cloudflare/workers-types": ^5.20261006.1
-    wrangler: ^4.148.0
+    "@cloudflare/vite-plugin": ^1.63.1
+    "@cloudflare/workers-types": ^5.20261012.1
+    wrangler: ^4.149.0
   dnd-kit:
     "@dnd-kit/core": ^6.3.1
     "@dnd-kit/modifiers": ^9.0.0
@@ -115,21 +115,21 @@ catalogs:
     "@dnd-kit/utilities": ^3.2.2
   drizzle:
     drizzle-kit: ^0.31.11
-    drizzle-orm: ^0.45.3
+    drizzle-orm: ^0.45.4
     drizzle-valibot: ^0.4.2
   lingui:
-    "@lingui/cli": ^6.9.0
-    "@lingui/core": ^6.9.0
-    "@lingui/format-po": ^6.9.0
-    "@lingui/react": ^6.9.0
-    "@lingui/vite-plugin": ^6.9.0
+    "@lingui/cli": ^6.9.1
+    "@lingui/core": ^6.9.1
+    "@lingui/format-po": ^6.9.1
+    "@lingui/react": ^6.9.1
+    "@lingui/vite-plugin": ^6.9.1
   orpc:
-    "@orpc/client": ^1.15.3
-    "@orpc/openapi": ^1.15.3
-    "@orpc/server": ^1.15.3
-    "@orpc/standard-server-fetch": ^1.15.3
-    "@orpc/tanstack-query": ^1.15.3
-    "@orpc/valibot": ^1.15.3
+    "@orpc/client": ^1.15.6
+    "@orpc/openapi": ^1.15.6
+    "@orpc/server": ^1.15.6
+    "@orpc/standard-server-fetch": ^1.15.6
+    "@orpc/tanstack-query": ^1.15.6
+    "@orpc/valibot": ^1.15.6
   oslojs:
     "@oslojs/crypto": ^1.0.1
     "@oslojs/encoding": ^1.1.0
@@ -147,12 +147,12 @@ catalogs:
     "@tailwindcss/vite": ^4.3.3
     tailwindcss: ^4.3.3
   tanstack:
-    "@tanstack/react-query": ^5.104.1
-    "@tanstack/react-query-devtools": ^5.104.1
-    "@tanstack/react-router": ^1.170.41
+    "@tanstack/react-query": ^5.104.2
+    "@tanstack/react-query-devtools": ^5.104.2
+    "@tanstack/react-router": ^1.170.42
     "@tanstack/react-router-devtools": ^1.167.2
-    "@tanstack/react-table": ^9.2.6
-    "@tanstack/router-plugin": ^1.168.42
+    "@tanstack/react-table": ^9.2.8
+    "@tanstack/router-plugin": ^1.168.43
   tiptap:
     "@tiptap/core": ^3.31.4
     # Explicit extension set for the rich-text rail instead of starter-kit,
@@ -177,10 +177,10 @@ catalogs:
     "@tiptap/react": ^3.31.4
   vite:
     "@vitejs/plugin-react": ^6.1.2
-    vite: ^8.3.3
+    vite: ^8.3.4
   vitest:
-    "@vitest/coverage-v8": ^5.0.3
-    vitest: ^5.0.3
+    "@vitest/coverage-v8": ^5.0.4
+    vitest: ^5.0.4
 
 publicHoistPattern:
   - "@ianvs/prettier-plugin-sort-imports"
