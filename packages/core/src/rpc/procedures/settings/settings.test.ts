@@ -444,8 +444,8 @@ describe("settings private groups", () => {
 });
 
 // A group counts as created on its first save: before it, reads use its fields'
-// starting values; after it, storage alone. The save leaves an unread marker
-// row.
+// starting values; after it, storage alone. The save leaves the marker row,
+// which holds the group's token.
 describe("settings groups: created on first save", () => {
   async function harnessWithDefaults(): Promise<
     Awaited<ReturnType<typeof createRpcHarness>>

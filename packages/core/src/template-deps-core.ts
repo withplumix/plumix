@@ -38,7 +38,8 @@ export function registerCoreTemplateDeps(
 
 /**
  * Until a group's first save writes this, `settings.get` serves the fields'
- * starting values under what is stored. No read hands it over.
+ * starting values under what is stored. Its value is the group's concurrency
+ * token, which `settings.get` hands over as `etag`.
  */
 export const SETTINGS_CREATED_KEY = "__plumix_created";
 

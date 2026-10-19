@@ -114,6 +114,21 @@ describe("sweepUnsettledMeta", () => {
     expect(marker?.value).toBe(4);
   });
 
+  test("settling a setting in a group saved before markers counted moves it off token zero", async () => {
+    const { ctx, harness } = await seeded();
+    await harness.db
+      .insert(settings)
+      .values({ group: "reading", key: SETTINGS_CREATED_KEY, value: true });
+
+    await sweepUnsettledMeta(ctx, { write: true });
+
+    const [marker] = await harness.db
+      .select({ value: settings.value })
+      .from(settings)
+      .where(eq(settings.key, SETTINGS_CREATED_KEY));
+    expect(marker?.value).toBe(1);
+  });
+
   test("reports settleable and unconvertible values per store, scope and key", async () => {
     const { ctx, post } = await seeded();
 
