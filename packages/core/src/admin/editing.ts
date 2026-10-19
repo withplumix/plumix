@@ -1,4 +1,5 @@
 import type { MessageDescriptor } from "@lingui/core";
+import type { ReactElement } from "react";
 
 import type { LeaseHolder } from "../db/edit-lease.js";
 import type {
@@ -43,4 +44,15 @@ export interface EditConflictDialogProps {
   readonly theirsSnapshot: unknown;
   readonly onKeepMine: () => void;
   readonly onLoadTheirs: () => void;
+}
+
+/** The resources whose edit lease `useEditLease` holds. */
+export type EditLeaseKind = "entry" | "user" | "term";
+
+/** What the admin shell publishes for a plugin chunk to edit a resource with. */
+export interface AdminEditing {
+  /** Holds the resource's edit lease while the calling component is mounted. */
+  readonly useEditLease: (kind: EditLeaseKind, id: number) => EditLease;
+  readonly EditLeaseBanner: (props: EditLeaseBannerProps) => ReactElement;
+  readonly EditConflictDialog: (props: EditConflictDialogProps) => ReactElement;
 }

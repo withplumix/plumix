@@ -9,6 +9,12 @@ export type {
   InfrastructureSlot,
 } from "@plumix/core/manifest";
 
+export {
+  EditConflictDialog,
+  EditLeaseBanner,
+  useEditLease,
+} from "./editing.js";
+
 export { createPluginRpcClient } from "./plugin-rpc.js";
 export type {
   PluginRpcClient,
@@ -22,6 +28,7 @@ export {
   createEditLeaseSession,
   describeRpcError,
   EDIT_LEASE_RENEW_INTERVAL_MS,
+  editingElsewhere,
   editorLeaseMode,
   etagConflict,
   lockedBy,
@@ -29,7 +36,13 @@ export {
   rpcErrorReason,
 } from "@plumix/core/admin";
 export type {
+  AdminEditing,
+  EditConflictDialogProps,
+  EditingCopy,
+  EditLease,
   EditLeaseApi,
+  EditLeaseBannerProps,
+  EditLeaseKind,
   EditLeaseNotice,
   EditLeaseSession,
   EditLeaseState,

@@ -273,6 +273,8 @@ The hand-imported half: `getRuntime`, which reads the shared runtime object off 
 
 Two plain functions answer what the deployment is. `basePath()` is the subdirectory the site is mounted under (`""` at the domain root), which any `/_plumix/...` URL your admin code builds must carry. `isSlotConfigured(slot)` says whether `plumix.config.ts` fills an infrastructure slot — `storage`, `imageDelivery`, `kv`, `cdn` or `mailer` — so a surface that needs one can hide itself on a site without it. The answer is fixed when the site is built, so it is not a hook, and it throws if called before the admin shell has booted.
 
+A plugin screen that edits an entry, a term or a user guards it the way the admin's own editors do. `useEditLease(kind, id)` holds the resource's edit lease through core's lease procedures while the component is mounted. Pass its `state` to `editorLeaseMode`, and while the mode is read-only render `EditLeaseBanner`, which names who is editing and offers to take over. When a save is refused because the copy is stale, `etagConflict` reads the error and `EditConflictDialog` offers compare, keep mine and load theirs. A refusal because someone else holds the lease goes to the lease's `lose`, after `lockedBy` reads it. These are the admin shell's own components, so their buttons and descriptions come from the admin's catalogs. You pass an `EditingCopy` with the three messages that name your resource.
+
 ```ts no-typecheck
 import type { PluginRpcOutputs } from "plumix/admin";
 import { createPluginRpcClient, getRuntime } from "plumix/admin";

@@ -16,7 +16,7 @@ import type * as ReactJsxRuntimeNs from "react/jsx-runtime";
 import type * as SonnerNs from "sonner";
 import type * as TailwindMergeNs from "tailwind-merge";
 
-import type { SharedAdminRuntimeKey } from "@plumix/core/admin";
+import type { AdminEditing, SharedAdminRuntimeKey } from "@plumix/core/admin";
 import type * as AuthClientNs from "@plumix/core/auth/client";
 import type {
   ConfiguredSlots,
@@ -55,9 +55,10 @@ export interface PlumixGlobal {
   readonly runtime?: PlumixAdminRuntime;
   readonly basePath?: string;
   readonly configuredSlots?: ConfiguredSlots;
+  readonly editing?: AdminEditing;
 }
 
-function plumixGlobal(): PlumixGlobal | undefined {
+export function plumixGlobal(): PlumixGlobal | undefined {
   return (globalThis as { plumix?: PlumixGlobal }).plumix;
 }
 
