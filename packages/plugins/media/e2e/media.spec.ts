@@ -189,6 +189,50 @@ test("a save from a tab whose copy another tab saved over shows the conflict", a
   await expect(mine).toHaveValue("saved in the other tab");
 });
 
+test("a second save chains from the etag the first returned, before the list refetches", async ({
+  page,
+}) => {
+  await page.goto("pages/media");
+  const confirmed = page.waitForResponse(
+    (r) => r.url().endsWith("/media/confirm") && r.status() === 200,
+  );
+  await page
+    .locator('[data-testid="media-library-upload"] input[type="file"]')
+    .setInputFiles({
+      name: "chained.png",
+      mimeType: "image/png",
+      buffer: PNG_1X1,
+    });
+  await confirmed;
+  await page.getByTestId("media-library-search").fill("chained");
+  const cards = page.locator(
+    "[data-testid='media-library-grid'] > [data-testid^='media-card-']",
+  );
+  await expect(cards).toHaveCount(1);
+  await expect(cards.first()).toContainText("chained.png");
+  await cards.first().click();
+  const alt = page.locator(
+    "[data-testid^='media-detail-'][data-testid$='-alt']",
+  );
+  // Only the update's own answer can carry the new etag to the second save.
+  await page.route("**/media/list", (route) => route.abort());
+
+  const saves: number[] = [];
+  page.on("response", (r) => {
+    if (r.url().endsWith("/media/update")) saves.push(r.status());
+  });
+  for (const text of ["first", "second"]) {
+    const saved = page.waitForResponse((r) =>
+      r.url().endsWith("/media/update"),
+    );
+    await alt.fill(text);
+    await alt.press("Enter");
+    await saved;
+  }
+
+  expect(saves).toEqual([200, 200]);
+});
+
 test("admin page ships styled controls", async ({ page }) => {
   await page.goto("pages/media");
   await expect(page.getByTestId("media-library")).toBeVisible();

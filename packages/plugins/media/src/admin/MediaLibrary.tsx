@@ -1,3 +1,4 @@
+import type { InfiniteData } from "@tanstack/react-query";
 import type { PluginRpcOutputs } from "plumix/admin";
 import type { MessageDescriptor } from "plumix/i18n";
 import type { CSSProperties, DragEvent, ReactNode } from "react";
@@ -24,9 +25,8 @@ import {
 import { Trans, useLingui } from "plumix/i18n";
 
 import type { MediaRouter } from "../rpc.js";
-import type { AdoptedEtag } from "./library-state.js";
 import { MAX_SEARCH_LENGTH } from "../search.js";
-import { libraryUploadState, saveFromCopy } from "./library-state.js";
+import { libraryUploadState } from "./library-state.js";
 import { mediaRpc } from "./rpc.js";
 import { uploadErrorLabel, UploadPutError } from "./upload-errors.js";
 
@@ -150,7 +150,8 @@ async function runWithConcurrency<T>(
   );
 }
 
-type MediaItem = PluginRpcOutputs<MediaRouter>["list"]["items"][number];
+type MediaPage = PluginRpcOutputs<MediaRouter>["list"];
+type MediaItem = MediaPage["items"][number];
 
 /**
  * Carries the resolved url/alt, not just the id, so a consumer can snapshot
@@ -397,15 +398,31 @@ export function MediaLibrary({
     onError: (failure) => setError(uploadErrorLabel(failure)),
   });
 
-  // A ref, so a queued save reads it when it runs, not when it was queued.
-  const adoptedEtags = useRef(new Map<number, AdoptedEtag>());
   const update = useMutation({
-    scope: { id: "plugin-media-update" },
     mutationFn: (input: { item: MediaItem; alt: string }) =>
-      saveFromCopy(adoptedEtags.current, input.item, (ifMatch) =>
-        mediaRpc.update({ id: input.item.id, ifMatch, alt: input.alt }),
-      ),
-    onSuccess: invalidateList,
+      mediaRpc.update({
+        id: input.item.id,
+        ifMatch: input.item.etag,
+        alt: input.alt,
+      }),
+    onSuccess: (saved) => {
+      queryClient.setQueryData<InfiniteData<MediaPage>>(queryKey, (data) =>
+        data
+          ? {
+              ...data,
+              pages: data.pages.map((page) => ({
+                ...page,
+                items: page.items.map((it) =>
+                  it.id === saved.id
+                    ? { ...it, alt: saved.alt, etag: saved.etag }
+                    : it,
+                ),
+              })),
+            }
+          : data,
+      );
+      invalidateList();
+    },
     // A conflict refetches too, so the drawer shows what was saved instead.
     onError: (failure) => {
       setError(uploadErrorLabel(failure));
@@ -1303,7 +1320,8 @@ function AltEditor({
 
   const commit = useCallback(() => {
     dirtyRef.current = false;
-    if (draft !== value) {
+    // Enter commits, then blurs, which commits again before a re-render.
+    if (draft !== value && draft !== lastSavedRef.current) {
       lastSavedRef.current = draft;
       onSave(draft);
       setSavedFlash(true);
