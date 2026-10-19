@@ -35,7 +35,6 @@ export type {
   EditLeaseState,
   EditorLeaseMode,
   EtagConflict,
-  LeaseHolder,
   LeaseRefusal,
   SharedAdminRuntimeKey,
   SharedAdminRuntimeSpecifier,
