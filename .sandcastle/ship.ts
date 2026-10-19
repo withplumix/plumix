@@ -15,6 +15,7 @@ import {
   textsThatClaimAdrNumbers,
   ticketByNumber,
   waitForMerge,
+  whyTheCheckoutIsBroken,
 } from "./lib/github.js";
 import { staleClaims } from "./lib/in-flight.js";
 import { say } from "./lib/log.js";
@@ -186,6 +187,7 @@ const report = await runShipLoop(
         onPoll: (status) => say(`  #${pullRequest.number} ${status}`),
       }),
     ticketClosed: ({ number }) => isTicketClosed(number),
+    brokenCheckout: () => whyTheCheckoutIsBroken(),
     say,
   },
   {

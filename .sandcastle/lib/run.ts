@@ -26,6 +26,7 @@ export interface ShipPorts {
   readonly requeue: (pullRequest: QueuedPullRequest) => void;
   readonly inFlightFromEarlierRuns: () => readonly Queued[];
   readonly ticketClosed: (ticket: Ticket) => boolean;
+  readonly brokenCheckout: () => string | undefined;
   readonly say: (line: string) => void;
 }
 
@@ -150,6 +151,20 @@ export const runShipLoop = async (
     return outcome;
   };
 
+  const leftAsItWasBecauseTheCheckoutBroke = (
+    ticket: Ticket,
+    pullRequestUrl?: string,
+  ): boolean => {
+    const broken = ports.brokenCheckout();
+    if (broken === undefined) return false;
+    outage ??= broken;
+    ports.releaseClaim(ticket);
+    ports.say(
+      `  #${ticket.number} left as it was${pullRequestUrl ? `, ${pullRequestUrl} still open` : ""} — ${broken}`,
+    );
+    return true;
+  };
+
   const confirming: {
     readonly ticket: Ticket;
     readonly pullRequest: QueuedPullRequest;
@@ -200,6 +215,7 @@ export const runShipLoop = async (
     stopDispatchingWhen: () =>
       outage !== undefined || stoppedBecause !== undefined || !withinBudget(),
     inLane: async (ticket) => {
+      if (leftAsItWasBecauseTheCheckoutBroke(ticket)) return;
       let outcome: ShipOutcome;
       try {
         const shipping = sandboxes.run(() => ports.ship(ticket));
@@ -217,6 +233,7 @@ export const runShipLoop = async (
       }
 
       if (outcome.status === "blocked") {
+        if (leftAsItWasBecauseTheCheckoutBroke(ticket)) return;
         ports.park(ticket, outcome.reason, outcome.pullRequestUrl);
         parked.push({ ticket, reason: outcome.reason });
         ports.say(`  #${ticket.number} parked: ${outcome.reason}`);
@@ -247,6 +264,7 @@ export const runShipLoop = async (
         );
         continue;
       }
+      if (leftAsItWasBecauseTheCheckoutBroke(ticket, pullRequest.url)) continue;
       const reason = `the run could not confirm ${pullRequest.url}: ${thrown}`;
       ports.park(ticket, reason, pullRequest.url);
       parked.push({ ticket, reason });
@@ -255,6 +273,7 @@ export const runShipLoop = async (
 
     const confirmed = settledConfirmation.value;
     if (confirmed.status !== "merged") {
+      if (leftAsItWasBecauseTheCheckoutBroke(ticket, pullRequest.url)) continue;
       ports.park(ticket, confirmed.reason, pullRequest.url);
       parked.push({ ticket, reason: confirmed.reason });
       continue;

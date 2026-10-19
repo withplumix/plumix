@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 
-import { pushBranch } from "./github.js";
+import { pushBranch, whyTheCheckoutIsBroken } from "./github.js";
 
 const git = (cwd: string, ...args: string[]): string =>
   execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
@@ -66,5 +66,25 @@ describe("pushBranch", () => {
       /stale info/,
     );
     expect(git(remote, "rev-parse", "feat/ticket")).toBe(theirs);
+  });
+});
+
+describe("whyTheCheckoutIsBroken", () => {
+  test("finds nothing wrong with a checkout git still knows", () => {
+    const checkout = mkdtempSync(join(tmpdir(), "checkout-"));
+    git(checkout, "init", "-q");
+
+    expect(whyTheCheckoutIsBroken(checkout)).toBeUndefined();
+  });
+
+  test("names the checkout when git no longer knows it as a repository", () => {
+    const checkout = mkdtempSync(join(tmpdir(), "checkout-"));
+    writeFileSync(join(checkout, ".git"), "gitdir: /gone/.git/worktrees/x\n");
+
+    expect(whyTheCheckoutIsBroken(checkout)).toMatch(
+      new RegExp(
+        `^the checkout the run ships from, ${checkout}, .*not a git repository`,
+      ),
+    );
   });
 });

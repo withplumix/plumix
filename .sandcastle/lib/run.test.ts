@@ -37,6 +37,7 @@ const ports = (over: Partial<ShipPorts> = {}) => {
     inFlightFromEarlierRuns: () => [],
     requeue: () => {},
     ticketClosed: () => true,
+    brokenCheckout: () => undefined,
     say: () => {},
   };
   return { ports: { ...base, ...over }, parked, released };
@@ -127,7 +128,7 @@ describe("runShipLoop", () => {
         attempts += 1;
         if (t.number === 1)
           throw new Error(
-            "Command failed (exit 128): git config --global --add safe.directory\nfatal: not a git repository: /x/.git/worktrees/feat-y",
+            "Error response from daemon: conflict: unable to delete container",
           );
         return {
           status: "queued",
@@ -747,6 +748,96 @@ describe("runShipLoop", () => {
 
     expect(repaired).toEqual([107]);
     expect(report.merged.map(({ ticket: t }) => t.number)).toEqual([7]);
+  });
+
+  test("a checkout that broke stops the run before the next ticket ships, releasing its claim", async () => {
+    const shipped: number[] = [];
+    const {
+      ports: p,
+      parked,
+      released,
+    } = ports({
+      ship: async (t) => {
+        shipped.push(t.number);
+        return {
+          status: "queued",
+          pullRequest: { number: 100 + t.number, url: `pr/${t.number}` },
+        };
+      },
+      brokenCheckout: () =>
+        shipped.length > 0
+          ? "the checkout at /w/plumix is not a git repository"
+          : undefined,
+    });
+
+    const report = await runShipLoop(p, { lanes: 1, withinBudget: () => true });
+
+    expect(shipped).toEqual([1]);
+    expect(released).toEqual([2]);
+    expect(parked).toEqual([]);
+    expect(report.outage).toBe(
+      "the checkout at /w/plumix is not a git repository",
+    );
+  });
+
+  test("a ticket blocked while the checkout broke is released, not parked", async () => {
+    let checkoutGone = false;
+    const {
+      ports: p,
+      parked,
+      released,
+    } = ports({
+      nextTicket: drainingFrom([ticket(1)]),
+      ship: async () => {
+        checkoutGone = true;
+        return {
+          status: "blocked",
+          reason: "the implementer produced no commits and gave no reason",
+        };
+      },
+      brokenCheckout: () =>
+        checkoutGone
+          ? "the checkout at /w/plumix is not a git repository"
+          : undefined,
+    });
+
+    const report = await runShipLoop(p, allLanes);
+
+    expect(parked).toEqual([]);
+    expect(report.parked).toEqual([]);
+    expect(released).toEqual([1]);
+    expect(report.outage).toBe(
+      "the checkout at /w/plumix is not a git repository",
+    );
+  });
+
+  test("a pull request refused while the checkout broke releases its ticket rather than parking it", async () => {
+    let checkoutGone = false;
+    const {
+      ports: p,
+      parked,
+      released,
+    } = ports({
+      nextTicket: drainingFrom([ticket(1)]),
+      confirm: async () => {
+        checkoutGone = true;
+        return ciRed;
+      },
+      rerunFailedChecks: async () => false,
+      repair: async () => ({ status: "declined", reason: "git log failed" }),
+      brokenCheckout: () =>
+        checkoutGone
+          ? "the checkout at /w/plumix is not a git repository"
+          : undefined,
+    });
+
+    const report = await runShipLoop(p, allLanes);
+
+    expect(parked).toEqual([]);
+    expect(released).toEqual([1]);
+    expect(report.outage).toBe(
+      "the checkout at /w/plumix is not a git repository",
+    );
   });
 
   test("a budget that has run out hands out no work at all", async () => {

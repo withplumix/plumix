@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 
 import type { Queued } from "./run.js";
 import type {
@@ -553,6 +553,17 @@ export const waitForMerge = async (
     reason: `still queued after ${Math.round(giveUpAfterMs / 60_000)} minutes`,
     failingChecks: [],
   };
+};
+
+export const whyTheCheckoutIsBroken = (
+  repoRoot: string = REPO_ROOT,
+): string | undefined => {
+  const probed = spawnSync("git", ["-C", repoRoot, "rev-parse", "--git-dir"], {
+    encoding: "utf8",
+  });
+  if (probed.status === 0) return undefined;
+  const said = probed.stderr?.trim().split("\n")[0] || String(probed.error);
+  return `the checkout the run ships from, ${repoRoot}, is broken: ${said}`;
 };
 
 export const syncRepoToMain = (): void => {
