@@ -24,8 +24,9 @@ import {
 import { Trans, useLingui } from "plumix/i18n";
 
 import type { MediaRouter } from "../rpc.js";
+import type { AdoptedEtag } from "./library-state.js";
 import { MAX_SEARCH_LENGTH } from "../search.js";
-import { libraryUploadState } from "./library-state.js";
+import { adoptEtag, copyEtag, libraryUploadState } from "./library-state.js";
 import { mediaRpc } from "./rpc.js";
 import { uploadErrorLabel, UploadPutError } from "./upload-errors.js";
 
@@ -396,10 +397,26 @@ export function MediaLibrary({
     onError: (failure) => setError(uploadErrorLabel(failure)),
   });
 
+  // The next save chains from the last one's etag before the list refetches.
+  // A ref, so a queued save reads it when it runs, not when it was queued.
+  const adoptedEtags = useRef(new Map<number, AdoptedEtag>());
   const update = useMutation({
-    mutationFn: (input: { id: number; alt: string }) => mediaRpc.update(input),
+    // One save at a time, so each chains from the last one's etag.
+    scope: { id: "plugin-media-update" },
+    mutationFn: async (input: { item: MediaItem; alt: string }) => {
+      const { id } = input.item;
+      const adopted = adoptedEtags.current.get(id);
+      const ifMatch = copyEtag(input.item.etag, adopted);
+      const saved = await mediaRpc.update({ id, ifMatch, alt: input.alt });
+      adoptedEtags.current.set(id, adoptEtag(adopted, ifMatch, saved.etag));
+      return saved;
+    },
     onSuccess: invalidateList,
-    onError: (failure) => setError(uploadErrorLabel(failure)),
+    // A conflict refetches too, so the drawer shows what was saved instead.
+    onError: (failure) => {
+      setError(uploadErrorLabel(failure));
+      invalidateList();
+    },
   });
 
   // On the root, not the grid: the grid only renders when items exist, so the
@@ -659,7 +676,7 @@ export function MediaLibrary({
         <MediaDetailDrawer
           item={selectedItem}
           onClose={() => setSelectedItem(null)}
-          onAltChange={(alt) => update.mutate({ id: selectedItem.id, alt })}
+          onAltChange={(alt) => update.mutate({ item: selectedItem, alt })}
           onDelete={() => {
             // Confirmation handled inside the drawer's ConfirmDialog;
             // by the time we get here the user already confirmed.

@@ -143,6 +143,52 @@ test.describe.serial("@plumix/plugin-media — worker-driven happy path", () => 
   });
 });
 
+test("a save from a tab whose copy another tab saved over shows the conflict", async ({
+  page,
+  context,
+}) => {
+  await page.goto("pages/media");
+  const confirmed = page.waitForResponse(
+    (r) => r.url().endsWith("/media/confirm") && r.status() === 200,
+  );
+  await page
+    .locator('[data-testid="media-library-upload"] input[type="file"]')
+    .setInputFiles({
+      name: "contested.png",
+      mimeType: "image/png",
+      buffer: PNG_1X1,
+    });
+  await confirmed;
+  const other = await context.newPage();
+  await other.goto("pages/media");
+  const altOf = async (tab: Page) => {
+    await tab.getByTestId("media-library-search").fill("contested");
+    await tab
+      .locator(
+        "[data-testid='media-library-grid'] > [data-testid^='media-card-']",
+      )
+      .first()
+      .click();
+    return tab.locator("[data-testid^='media-detail-'][data-testid$='-alt']");
+  };
+  const mine = await altOf(page);
+  const theirs = await altOf(other);
+
+  const theirsSaved = other.waitForResponse(
+    (r) => r.url().endsWith("/media/update") && r.status() === 200,
+  );
+  await theirs.fill("saved in the other tab");
+  await theirs.press("Enter");
+  await theirsSaved;
+  await mine.fill("saved from a stale copy");
+  await mine.press("Enter");
+
+  await expect(page.getByTestId("media-library-banner-error")).toContainText(
+    "changed elsewhere since you opened it",
+  );
+  await expect(mine).toHaveValue("saved in the other tab");
+});
+
 test("admin page ships styled controls", async ({ page }) => {
   await page.goto("pages/media");
   await expect(page.getByTestId("media-library")).toBeVisible();

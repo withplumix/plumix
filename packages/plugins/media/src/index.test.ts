@@ -1,4 +1,4 @@
-import { eq } from "plumix/db";
+import { eq, etagOf } from "plumix/db";
 import { text } from "plumix/fields";
 import {
   buildManifest,
@@ -154,6 +154,7 @@ interface OrpcErrorPayload {
   readonly data?: {
     readonly reason?: string;
     readonly capability?: string;
+    readonly issues?: readonly { readonly message: string }[];
   };
 }
 
@@ -575,6 +576,46 @@ describe("@plumix/plugin-media — media.confirm", () => {
     expect(second.error?.data?.reason).toBe("already_confirmed");
   });
 
+  test("of two concurrent confirms exactly one publishes, and it moves the token", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
+    const user = await h.seedUser("contributor");
+    const created = await rpcDispatch<CreateUploadUrlOutput>(
+      h,
+      "media/createUploadUrl",
+      {
+        filename: "tile.png",
+        contentType: "image/png",
+        size: PNG_1X1_BYTES.byteLength,
+      },
+      user.id,
+    );
+    if (!created.output) throw new Error("expected createUploadUrl output");
+    const { mediaId, storageKey } = created.output;
+    await storage.put(storageKey, PNG_1X1_BYTES, { contentType: "image/png" });
+    const draft = await rpcDispatch<{ etag: string }>(
+      h,
+      "entry/get",
+      { id: mediaId },
+      user.id,
+    );
+
+    const results = await Promise.all([
+      rpcDispatch(h, "media/confirm", { id: mediaId }, user.id),
+      rpcDispatch(h, "media/confirm", { id: mediaId }, user.id),
+    ]);
+
+    expect(results.map((r) => r.status).sort()).toEqual([200, 409]);
+    expect(results.map((r) => r.error?.data?.reason)).toContain(
+      "already_confirmed",
+    );
+    expect(draft.output?.etag).toMatch(/^\d+$/);
+    expect(await mediaEtag(h, mediaId, user.id)).not.toBe(draft.output?.etag);
+  });
+
   test("returns CONFLICT when the upload didn't actually land in storage", async () => {
     const storage = memoryStorage().connect({});
     const h = await createDispatcherHarness({
@@ -718,6 +759,7 @@ interface MediaListItemOutput {
   readonly uploadedById: number;
   readonly width: number | null;
   readonly height: number | null;
+  readonly etag: string;
 }
 
 interface MediaListOutput {
@@ -954,7 +996,11 @@ describe("@plumix/plugin-media — media.list", () => {
     await rpcDispatch(
       h,
       "media/update",
-      { id: seeded.id, alt: "golden retriever puppy" },
+      {
+        id: seeded.id,
+        ifMatch: await mediaEtag(h, seeded.id, user.id),
+        alt: "golden retriever puppy",
+      },
       user.id,
     );
 
@@ -1235,7 +1281,162 @@ describe("@plumix/plugin-media — media.delete", () => {
   });
 });
 
+/** The `etag` the media library's copy of `id` carries. */
+async function mediaEtag(
+  h: Awaited<ReturnType<typeof createDispatcherHarness>>,
+  id: number,
+  caller: Caller,
+): Promise<string | undefined> {
+  const listed = await rpcDispatch<MediaListOutput>(
+    h,
+    "media/list",
+    { limit: 100, offset: 0 },
+    caller,
+  );
+  return listed.output?.items.find((item) => item.id === id)?.etag;
+}
+
+async function mediaAlt(
+  h: Awaited<ReturnType<typeof createDispatcherHarness>>,
+  id: number,
+  caller: Caller,
+): Promise<string | null | undefined> {
+  const listed = await rpcDispatch<MediaListOutput>(
+    h,
+    "media/list",
+    { limit: 100, offset: 0 },
+    caller,
+  );
+  return listed.output?.items.find((item) => item.id === id)?.alt;
+}
+
 describe("@plumix/plugin-media — media.update", () => {
+  test("a save from a stale copy conflicts and leaves title and alt as the newer save left them", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
+    const owner = await h.seedUser("contributor");
+    const seeded = await seedPublishedMedia(h, storage, owner.id, "cat.png");
+    const copy = await rpcDispatch<MediaListOutput>(
+      h,
+      "media/list",
+      { limit: 10, offset: 0 },
+      owner.id,
+    );
+    const ifMatch = copy.output?.items[0]?.etag;
+
+    const newer = await rpcDispatch(
+      h,
+      "media/update",
+      { id: seeded.id, ifMatch, title: "newer.png", alt: "newer" },
+      owner.id,
+    );
+    expect(newer.status).toBe(200);
+    const stale = await rpcDispatch(
+      h,
+      "media/update",
+      { id: seeded.id, ifMatch, title: "stale.png", alt: "stale" },
+      owner.id,
+    );
+
+    expect(stale.status).toBe(409);
+    expect(stale.error?.data?.reason).toBe("etag_mismatch");
+    const listed = await rpcDispatch<MediaListOutput>(
+      h,
+      "media/list",
+      { limit: 10, offset: 0 },
+      owner.id,
+    );
+    expect(listed.output?.items[0]?.title).toBe("newer.png");
+    expect(listed.output?.items[0]?.alt).toBe("newer");
+  });
+
+  test("a save without ifMatch is refused with where to find the etag", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
+    const owner = await h.seedUser("contributor");
+    const seeded = await seedPublishedMedia(h, storage, owner.id, "cat.png");
+
+    const result = await rpcDispatch(
+      h,
+      "media/update",
+      { id: seeded.id, alt: "no token" },
+      owner.id,
+    );
+
+    expect(result.status).toBe(400);
+    expect(result.error?.data?.issues?.map((i) => i.message)).toEqual([
+      "Send the media item's `etag` from `media.list` as `ifMatch`",
+    ]);
+  });
+
+  test("a save is refused while another user holds the item's edit lease", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
+    const owner = await h.seedUser("contributor");
+    const editor = await h.seedUser("editor");
+    const seeded = await seedPublishedMedia(h, storage, owner.id, "cat.png");
+    const leased = await rpcDispatch(
+      h,
+      "entry/lease/acquire",
+      { id: seeded.id },
+      editor.id,
+    );
+    expect(leased.status).toBe(200);
+
+    const result = await rpcDispatch(
+      h,
+      "media/update",
+      {
+        id: seeded.id,
+        ifMatch: await mediaEtag(h, seeded.id, owner.id),
+        alt: "mine",
+      },
+      owner.id,
+    );
+
+    expect(result.status).toBe(423);
+    expect(await mediaAlt(h, seeded.id, owner.id)).toBeNull();
+  });
+
+  test("a second save chains from the etag the first returned", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
+    const owner = await h.seedUser("contributor");
+    const seeded = await seedPublishedMedia(h, storage, owner.id, "cat.png");
+
+    const first = await rpcDispatch<{ etag: string }>(
+      h,
+      "media/update",
+      {
+        id: seeded.id,
+        ifMatch: await mediaEtag(h, seeded.id, owner.id),
+        alt: "first",
+      },
+      owner.id,
+    );
+    const second = await rpcDispatch(
+      h,
+      "media/update",
+      { id: seeded.id, ifMatch: first.output?.etag, alt: "second" },
+      owner.id,
+    );
+
+    expect(second.status).toBe(200);
+    expect(await mediaAlt(h, seeded.id, owner.id)).toBe("second");
+  });
+
   test("editing alt preserves the captured dimensions", async () => {
     const storage = memoryStorage().connect({});
     const h = await createDispatcherHarness({
@@ -1268,7 +1469,11 @@ describe("@plumix/plugin-media — media.update", () => {
     await rpcDispatch(
       h,
       "media/update",
-      { id: created.output.mediaId, alt: "a tile" },
+      {
+        id: created.output.mediaId,
+        ifMatch: await mediaEtag(h, created.output.mediaId, owner.id),
+        alt: "a tile",
+      },
       owner.id,
     );
 
@@ -1299,7 +1504,11 @@ describe("@plumix/plugin-media — media.update", () => {
     }>(
       h,
       "media/update",
-      { id: seeded.id, alt: "A black cat looking at the camera" },
+      {
+        id: seeded.id,
+        ifMatch: await mediaEtag(h, seeded.id, owner.id),
+        alt: "A black cat looking at the camera",
+      },
       owner.id,
     );
     expect(result.status).toBe(200);
@@ -1336,7 +1545,7 @@ describe("@plumix/plugin-media — media.update", () => {
     const result = await rpcDispatch(
       h,
       "media/update",
-      { id: row.id, alt: "mine, surely" },
+      { id: row.id, ifMatch: etagOf(row.updatedAt), alt: "mine, surely" },
       owner.id,
     );
     expect(result.status).toBe(403);
@@ -1356,7 +1565,11 @@ describe("@plumix/plugin-media — media.update", () => {
     const result = await rpcDispatch<{ alt: string | null }>(
       h,
       "media/update",
-      { id: seeded.id, alt: "described by an editor" },
+      {
+        id: seeded.id,
+        ifMatch: await mediaEtag(h, seeded.id, editor.id),
+        alt: "described by an editor",
+      },
       editor.id,
     );
     expect(result.status).toBe(200);
@@ -1376,7 +1589,11 @@ describe("@plumix/plugin-media — media.update", () => {
     const result = await rpcDispatch(
       h,
       "media/update",
-      { id: seeded.id, alt: "snooped" },
+      {
+        id: seeded.id,
+        ifMatch: await mediaEtag(h, seeded.id, other.id),
+        alt: "snooped",
+      },
       other.id,
     );
     expect(result.status).toBe(403);

@@ -1,7 +1,7 @@
 import type { SQL } from "plumix/db";
 import type { AppContext } from "plumix/plugin";
 import type { Entry } from "plumix/schema";
-import { and, desc, eq, inArray, like, sql } from "plumix/db";
+import { and, desc, eq, etagOf, inArray, like, sql } from "plumix/db";
 import { entryCapability, resolveCapability } from "plumix/plugin";
 import { entries } from "plumix/schema";
 import { escapeLikePattern, withBasePath } from "plumix/support";
@@ -52,6 +52,7 @@ export interface MediaItem {
   readonly uploadedById: number;
   readonly width: number | null;
   readonly height: number | null;
+  readonly etag: string;
 }
 
 export interface MediaListResult {
@@ -216,6 +217,7 @@ async function buildMediaItem(
     uploadedById: row.authorId,
     width: meta.width,
     height: meta.height,
+    etag: etagOf(row.updatedAt),
   };
 }
 

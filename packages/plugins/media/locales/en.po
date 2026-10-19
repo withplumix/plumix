@@ -299,6 +299,11 @@ msgstr "Request blocked by CSRF check. Reload the page and try again."
 
 #. js-lingui-explicit-id
 #: src/admin/upload-errors.ts
+msgid "plugin.media.error.changedElsewhere"
+msgstr "This item was changed elsewhere since you opened it, so your edit wasn't saved. Its latest version is shown now."
+
+#. js-lingui-explicit-id
+#: src/admin/upload-errors.ts
 msgid "plugin.media.error.generic"
 msgstr "Something went wrong. Try again."
 
