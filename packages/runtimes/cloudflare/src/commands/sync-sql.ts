@@ -46,7 +46,6 @@ export function sqlLiteral(value: SyncValue): string {
   return `X'${hex(value)}'`;
 }
 
-/** Each column's SQL, a literal or an expression the caller wrote. */
 export function insertLine(
   table: string,
   values: Readonly<Record<string, string>>,
@@ -61,7 +60,6 @@ export function rowLiterals(row: SyncRow): Record<string, string> {
   );
 }
 
-/** A dump line is not one this reader understands. */
 export class DumpLineError extends Error {
   constructor(line: string, detail: string) {
     super(`${detail}: ${line.length > 120 ? `${line.slice(0, 120)}…` : line}`);
@@ -121,7 +119,6 @@ const ESCAPED_CHARACTERS: Readonly<Record<string, string>> = {
   "\\r": "\r",
 };
 
-/** `replace(<value>,'\n',char(10))`, as the dump spells a line break. */
 function replaced(cursor: Cursor): string {
   const inner = value(cursor);
   if (typeof inner !== "string") cursor.fail("replace() of a non-string");

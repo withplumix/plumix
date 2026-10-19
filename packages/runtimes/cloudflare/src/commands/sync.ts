@@ -39,10 +39,6 @@ import { DEFER_FOREIGN_KEYS, writeImportScript } from "./sync-import.js";
 import { authorsOf, d1Reader, selectedRows } from "./sync-reads.js";
 import { parseDumpLine } from "./sync-sql.js";
 
-/**
- * How an end moves a table in bulk: locally through the platform proxy's D1,
- * remotely through D1's export and import APIs, as wrangler calls them.
- */
 interface BulkD1 {
   exportTable(table: string): AsyncIterable<SyncRow>;
   /**
@@ -332,7 +328,6 @@ function syncEnd(parts: EndParts): SyncEnd {
   };
 }
 
-/** The remote end is a deployed database, so a target option must name it. */
 async function openEnd(options: OpenSyncEndOptions): Promise<SyncEnd> {
   const { cwd, config, binding } = options;
   const remote = options.target === "remote";
@@ -373,10 +368,6 @@ async function openEnd(options: OpenSyncEndOptions): Promise<SyncEnd> {
   });
 }
 
-/**
- * `plumix sync` on Cloudflare: the local end is the D1 and storage `plumix
- * dev` uses, and the remote end the deployed ones a target option names.
- */
 export const sync: RuntimeSync = {
   targetOptions: D1_TARGET_OPTIONS,
   open: openEnd,

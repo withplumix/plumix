@@ -89,7 +89,6 @@ export interface ForeignKey {
   readonly onDelete: string;
 }
 
-/** Every table but SQLite's and D1's own. */
 export async function siteTables(db: SiteReader): Promise<string[]> {
   const rows = await db.all(
     "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT GLOB 'sqlite_*' AND name NOT GLOB '_cf_*' ORDER BY name",
@@ -140,7 +139,6 @@ export async function userColumns(
 
 const AUTHOR_COLUMNS = "id, email, slug, name, avatar_url, role";
 
-/** The users the tables' rows reference, by id. */
 export async function authorsOf(
   db: SiteReader,
   tables: readonly SyncScopeTable[],

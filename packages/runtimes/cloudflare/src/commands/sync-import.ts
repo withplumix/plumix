@@ -31,7 +31,6 @@ export const DEFER_FOREIGN_KEYS = "PRAGMA defer_foreign_keys = ON;";
 /** The auth state a `users` replace re-points rather than removes. */
 const REPOINTED_AUTH_TABLES = ["sessions", "api_tokens"];
 
-/** A target row kept across a `users` replace, with its user's email. */
 interface AuthHolder {
   readonly table: string;
   readonly email: string;
@@ -152,7 +151,6 @@ class Deletions {
     return terms.length === 0 ? "0" : terms.map((t) => `(${t})`).join(" OR ");
   }
 
-  /** Rows a key clears, among those no other key deletes. */
   cleared(table: string, key: ForeignKey): string {
     const inner = new Set([table]);
     return `NOT COALESCE(${this.deleted(table)}, 0) AND ${ident(key.column)} IS NOT NULL AND ${this.within(key, inner)}`;
@@ -203,7 +201,6 @@ async function dependentCounts(
   return counts;
 }
 
-/** Statements that empty what the scopes select, children first. */
 async function deleteStatements(
   lines: ScriptLines,
   tables: readonly SyncScopeTable[],
@@ -248,7 +245,6 @@ interface AuthorRef {
   readonly key: SyncValue;
 }
 
-/** Each of the dump's authors, as the target will know them. */
 type Authors = ReadonlyMap<number, AuthorRef>;
 
 async function userIdsByEmail(
@@ -361,7 +357,6 @@ class ParentsFirst {
     return undefined;
   }
 
-  /** The rows to write now, in order: this one and any it unblocks. */
   arrive(row: SyncRow): SyncRow[] {
     if (this.keys.length === 0) return [row];
     const ready: SyncRow[] = [];
@@ -369,7 +364,9 @@ class ParentsFirst {
     for (let next = queue.shift(); next !== undefined; next = queue.shift()) {
       const parent = this.missingParent(next);
       if (parent !== undefined) {
-        this.waiting.set(parent, [...(this.waiting.get(parent) ?? []), next]);
+        const held = this.waiting.get(parent);
+        if (held === undefined) this.waiting.set(parent, [next]);
+        else held.push(next);
         continue;
       }
       ready.push(next);
@@ -385,7 +382,6 @@ class ParentsFirst {
     return ready;
   }
 
-  /** Rows whose parent never arrived, as the dump ordered them. */
   rest(): SyncRow[] {
     return [...this.waiting.values()].flat();
   }
@@ -481,14 +477,9 @@ export interface ImportScript {
 
 export interface ImportScriptOptions {
   readonly now: Date;
-  /** Called once per table, after its rows are written. */
   readonly onTable?: (table: SyncTableReport) => void;
 }
 
-/**
- * Writes the replace of what the scopes select as one statement per line to
- * `path`, and reports what it does, reading the target but never writing it.
- */
 export async function writeImportScript(
   db: SiteReader,
   from: DumpReader,
