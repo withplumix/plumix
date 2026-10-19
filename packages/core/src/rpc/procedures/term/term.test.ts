@@ -4,7 +4,7 @@ import type { UserRole } from "../../../db/schema/users.js";
 import type { MutablePluginRegistry } from "../../../plugin/manifest.js";
 import { etagOf } from "../../../db/concurrency.js";
 import { acquireEditLease, readEditLease } from "../../../db/edit-lease.js";
-import { eq } from "../../../db/index.js";
+import { eq, inArray } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
 import { text } from "../../../plugin/fields/builder.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
@@ -618,18 +618,15 @@ describe("term.delete", () => {
 
     await h.client.term.delete({ id: parent.id });
 
-    for (const child of [first, second]) {
-      await expect(
-        h.client.term.update({
-          id: child.id,
-          name: "from before the delete",
-          ifMatch: etagOf(child.version),
-        }),
-      ).rejects.toMatchObject({
-        code: "CONFLICT",
-        data: { reason: "etag_mismatch", etag: etagOf(child.version + 1) },
-      });
-    }
+    const versions = await h.context.db
+      .select({ id: terms.id, version: terms.version })
+      .from(terms)
+      .where(inArray(terms.id, [first.id, second.id]))
+      .orderBy(terms.id);
+    expect(versions).toEqual([
+      { id: first.id, version: first.version + 1 },
+      { id: second.id, version: second.version + 1 },
+    ]);
   });
 
   test("author cannot delete", async () => {

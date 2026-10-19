@@ -36,8 +36,7 @@ export {
   parseVersionIfMatch,
   versionIfMatchObject,
 } from "./concurrency.js";
-// A term's `version` is its token; a plugin editing a term (a menu) claims it
-// the way `term.update` does.
+// A term's `version` is its token; `claimTerm` claims it the way `term.update` does.
 export { assertTermCopyCurrent, claimTerm } from "./term-claim.js";
 // Any resource a client edits from a copy opts into edit leases by keying them
 // under its own kind and calling `assertWritable` before its claim.

@@ -3,7 +3,7 @@ import { eq } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { termWire, writeTermAsSystem } from "./helpers.js";
+import { termWire } from "./helpers.js";
 import { termDeleteInputSchema } from "./schemas.js";
 
 export const del = base
@@ -23,16 +23,12 @@ export const del = base
     }
 
     // Re-parented here rather than by the self-reference's `onDelete: set
-    // null`, which can't move each child's token. entry_term cascades via
-    // the FK.
-    const children = await context.db.query.terms.findMany({
-      where: eq(terms.parentId, existing.id),
-    });
-    for (const child of children) {
-      await writeTermAsSystem(context.db, child, (row) =>
-        row.parentId === existing.id ? { parentId: null } : undefined,
-      );
-    }
+    // null`, which can't move each child's token; the column's `$onUpdate`
+    // does. entry_term cascades via the FK.
+    await context.db
+      .update(terms)
+      .set({ parentId: null })
+      .where(eq(terms.parentId, existing.id));
     const [deleted] = await context.db
       .delete(terms)
       .where(eq(terms.id, existing.id))

@@ -152,7 +152,6 @@ export function MenuItemEditor({
   const lease = useMenuLease(termId);
   const leaseMode = editorLeaseMode(lease.state);
   const queryClient = useQueryClient();
-  // Reload the menu as the previous holder left it.
   const takeOver = useMutation({
     mutationFn: lease.takeOver,
     onSuccess: () =>
@@ -200,7 +199,6 @@ export function MenuItemEditor({
           onBack={onBack}
         />
       ) : null}
-      {/* A disabled fieldset disables every control in the editor at once. */}
       <fieldset
         disabled={leaseMode.mode === "readOnly"}
         className="contents"
@@ -429,7 +427,6 @@ function MenuSettingsPanel({
               data-testid="menu-conflict-load-theirs"
               onClick={() => {
                 save.reset();
-                // A newer etag reloads the editor from the saved menu.
                 void queryClient.invalidateQueries({
                   queryKey: ["menu", "get", state.termId] as const,
                 });

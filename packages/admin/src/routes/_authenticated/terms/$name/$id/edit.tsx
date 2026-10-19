@@ -383,14 +383,12 @@ function EditTermContent({
     // An explicit overwrite, from where the term is now.
     updateTerm.mutate({ values: refused.mine, ifMatch: refused.conflict.etag });
   };
-  // Drop the author's unsaved edits, then remount on the saved term.
   const reloadSaved = (): Promise<void> =>
     queryClient.invalidateQueries({ queryKey: termQueryKey }).then(onReseed);
   const handleLoadTheirs = (): void => {
     setRefused(null);
     void reloadSaved();
   };
-  // Remount on the term as the previous holder left it.
   const takeOver = useMutation({
     mutationFn: lease.takeOver,
     onSuccess: reloadSaved,
@@ -460,7 +458,6 @@ function EditTermContent({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* A disabled fieldset disables every control in the form at once. */}
           <fieldset
             disabled={leaseMode.mode !== "editable"}
             className="contents"

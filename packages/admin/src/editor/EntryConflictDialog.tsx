@@ -35,7 +35,7 @@ export interface EntryConflictDialogProps {
   readonly open: boolean;
   /** When the other write landed; `null` when the resource doesn't record it. */
   readonly changedAt: Date | null;
-  /** Another user holding the entry's edit lease, named as editing it now. */
+  /** Another user holding the edit lease, named as editing it now. */
   readonly editingElsewhere: LeaseHolder | undefined;
   /** The author's unsaved copy, and the entry as it is saved now. */
   readonly mineSnapshot: unknown;
