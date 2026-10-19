@@ -1,5 +1,3 @@
-import type { EditingCopy } from "@/editor/editing-copy.js";
-import type { EditLease } from "@/editor/use-edit-lease.js";
 import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
@@ -11,9 +9,8 @@ import {
   descendantIds,
   parentPickerOptions,
 } from "@/components/taxonomy/tree.js";
-import { editingElsewhere } from "@/editor/conflict-dialog.js";
+import { EditConflictDialog } from "@/editor/EditConflictDialog.js";
 import { EditLeaseBanner } from "@/editor/EditLeaseBanner.js";
-import { EntryConflictDialog } from "@/editor/EntryConflictDialog.js";
 import { useEditLease } from "@/editor/use-edit-lease.js";
 import { hasCap } from "@/lib/caps.js";
 import {
@@ -41,7 +38,12 @@ import {
 import * as v from "valibot";
 
 import type { ResolvedMeta } from "@plumix/core";
-import type { EditorLeaseMode, EtagConflict } from "@plumix/core/admin";
+import type {
+  EditingCopy,
+  EditLease,
+  EditorLeaseMode,
+  EtagConflict,
+} from "@plumix/core/admin";
 import type { TermTaxonomyManifestEntry } from "@plumix/core/manifest";
 import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
 import {
@@ -63,7 +65,12 @@ import {
   CardTitle,
 } from "@plumix/admin-ui/card";
 import { ArrowLeft } from "@plumix/admin-ui/icons";
-import { editorLeaseMode, etagConflict, lockedBy } from "@plumix/core/admin";
+import {
+  editingElsewhere,
+  editorLeaseMode,
+  etagConflict,
+  lockedBy,
+} from "@plumix/core/admin";
 import {
   seedFromMetaBoxes,
   termTaxonomyCapability,
@@ -403,7 +410,7 @@ function EditTermContent({
 
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-4">
-      <EntryConflictDialog
+      <EditConflictDialog
         open={refused !== null}
         copy={TERM_EDITING_COPY}
         changedAt={refused?.conflict.updatedAt ?? null}

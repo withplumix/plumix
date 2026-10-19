@@ -1,4 +1,3 @@
-import type { EditingCopy } from "@/editor/editing-copy.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement } from "react";
 import { useState } from "react";
@@ -8,7 +7,7 @@ import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
 
-import type { LeaseHolder } from "@plumix/core/admin";
+import type { EditConflictDialogProps } from "@plumix/core/admin";
 import { Button } from "@plumix/admin-ui/button";
 import {
   Dialog,
@@ -30,25 +29,11 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-export interface EntryConflictDialogProps {
-  readonly copy: EditingCopy;
-  readonly open: boolean;
-  /** When the other write landed; `null` when the resource doesn't record it. */
-  readonly changedAt: Date | null;
-  /** Another user holding the edit lease, named as editing it now. */
-  readonly editingElsewhere: LeaseHolder | undefined;
-  /** The author's unsaved copy, and the entry as it is saved now. */
-  readonly mineSnapshot: unknown;
-  readonly theirsSnapshot: unknown;
-  readonly onKeepMine: () => void;
-  readonly onLoadTheirs: () => void;
-}
-
 /**
  * A save found the entry or user changed since the author opened it. Autosave
  * is paused and their changes kept until they pick one.
  */
-export function EntryConflictDialog({
+export function EditConflictDialog({
   copy,
   open,
   changedAt,
@@ -57,7 +42,7 @@ export function EntryConflictDialog({
   theirsSnapshot,
   onKeepMine,
   onLoadTheirs,
-}: EntryConflictDialogProps): ReactElement {
+}: EditConflictDialogProps): ReactElement {
   const [comparing, setComparing] = useState(false);
   const label = useLabel();
   const { formatDate } = useFormatters();

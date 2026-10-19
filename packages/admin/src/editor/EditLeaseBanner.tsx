@@ -1,19 +1,9 @@
-import type { EditingCopy } from "@/editor/editing-copy.js";
 import type { ReactElement } from "react";
 import { useFormatters } from "@/lib/use-formatters.js";
 import { Trans } from "@lingui/react";
 
-import type { EditLeaseNotice } from "@plumix/core/admin";
+import type { EditLeaseBannerProps } from "@plumix/core/admin";
 import { Button } from "@plumix/admin-ui/button";
-
-export interface EditLeaseBannerProps {
-  readonly copy: EditingCopy;
-  readonly notice: EditLeaseNotice;
-  /** Offered only while another user holds the lease. */
-  readonly onTakeOver: () => void;
-  readonly isTakingOver: boolean;
-  readonly onBack: () => void;
-}
 
 /** Why the editor is read-only: someone else is editing what it edits. */
 export function EditLeaseBanner({

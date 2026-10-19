@@ -1,7 +1,7 @@
 import { ORPCError } from "@orpc/client";
 import { describe, expect, test } from "vitest";
 
-import { etagConflict } from "./conflict.js";
+import { editingElsewhere, etagConflict } from "./conflict.js";
 
 const ada = { id: 2, name: "Ada" };
 
@@ -38,5 +38,28 @@ describe("etagConflict", () => {
     new Error("offline"),
   ])("anything but a stale copy is no conflict", (error) => {
     expect(etagConflict(error)).toBeUndefined();
+  });
+});
+
+describe("editingElsewhere", () => {
+  const theirs = {
+    etag: "1792411205",
+    updatedAt: new Date("2026-10-18T12:00:05Z"),
+  };
+
+  test("names another user holding the lease", () => {
+    expect(
+      editingElsewhere({ ...theirs, holder: { id: 2, name: "Ada" } }, 1),
+    ).toEqual({ id: 2, name: "Ada" });
+  });
+
+  test("names no one when the author holds the lease, from this tab or another", () => {
+    expect(
+      editingElsewhere({ ...theirs, holder: { id: 1, name: "Me" } }, 1),
+    ).toBeUndefined();
+  });
+
+  test("names no one when nobody holds the lease", () => {
+    expect(editingElsewhere(theirs, 1)).toBeUndefined();
   });
 });

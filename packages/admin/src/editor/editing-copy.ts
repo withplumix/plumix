@@ -1,14 +1,6 @@
-import type { MessageDescriptor } from "@lingui/core";
 import { defineMessage } from "@lingui/core/macro";
 
-/** How a resource's conflict dialog and lease banner name what is edited. */
-export interface EditingCopy {
-  readonly conflictTitle: MessageDescriptor;
-  /** The conflict's description when it carries no time, if not the default. */
-  readonly conflictUntimed?: MessageDescriptor;
-  readonly heldBy: MessageDescriptor;
-  readonly lost: MessageDescriptor;
-}
+import type { EditingCopy } from "@plumix/core/admin";
 
 export const ENTRY_EDITING_COPY: EditingCopy = {
   conflictTitle: defineMessage({

@@ -586,7 +586,7 @@ msgstr "{label} threw an error while rendering. The rest of the admin is unaffec
 
 #. name: the editing user's display name or email
 #. js-lingui-explicit-id
-#: src/editor/EntryConflictDialog.tsx
+#: src/editor/EditConflictDialog.tsx
 msgid "editor.conflict.holder"
 msgstr "{name} is editing it now."
 
@@ -1112,7 +1112,7 @@ msgid "palette.group.commands"
 msgstr "Commands"
 
 #. js-lingui-explicit-id
-#: src/editor/EntryConflictDialog.tsx
+#: src/editor/EditConflictDialog.tsx
 msgid "editor.conflict.compare"
 msgstr "Compare"
 
@@ -1997,7 +1997,7 @@ msgid "editor.command.group"
 msgstr "Group the selection"
 
 #. js-lingui-explicit-id
-#: src/editor/EntryConflictDialog.tsx
+#: src/editor/EditConflictDialog.tsx
 msgid "editor.conflict.hideComparison"
 msgstr "Hide comparison"
 
@@ -2087,7 +2087,7 @@ msgid "userInvite.submit.pending"
 msgstr "Inviting…"
 
 #. js-lingui-explicit-id
-#: src/editor/EntryConflictDialog.tsx
+#: src/editor/EditConflictDialog.tsx
 msgid "editor.conflict.description"
 msgstr "It was saved elsewhere at {when}. Your changes are kept here and haven't been saved."
 
@@ -2124,7 +2124,7 @@ msgid "userEdit.delete.reassign.keepAsIs"
 msgstr "Keep entries as-is (none to reassign)"
 
 #. js-lingui-explicit-id
-#: src/editor/EntryConflictDialog.tsx
+#: src/editor/EditConflictDialog.tsx
 msgid "editor.conflict.keepMine"
 msgstr "Keep mine"
 
@@ -2185,7 +2185,7 @@ msgid "editor.revisions.sheet.loadMore"
 msgstr "Load more"
 
 #. js-lingui-explicit-id
-#: src/editor/EntryConflictDialog.tsx
+#: src/editor/EditConflictDialog.tsx
 msgid "editor.conflict.loadTheirs"
 msgstr "Load theirs"
 
@@ -3063,7 +3063,7 @@ msgid "editor.plainForm.status.saved"
 msgstr "Saved"
 
 #. js-lingui-explicit-id
-#: src/editor/EntryConflictDialog.tsx
+#: src/editor/EditConflictDialog.tsx
 msgid "editor.conflict.savedNow"
 msgstr "Saved now"
 
@@ -3673,7 +3673,7 @@ msgid "settings.conflict.title"
 msgstr "These settings changed since you opened them"
 
 #. js-lingui-explicit-id
-#: src/editor/EntryConflictDialog.tsx
+#: src/editor/EditConflictDialog.tsx
 msgid "editor.conflict.descriptionUntimed"
 msgstr "They were saved elsewhere. Your changes are kept here and haven't been saved."
 
@@ -4083,7 +4083,7 @@ msgid "profile.language.description"
 msgstr "Your admin chrome renders in this language. The page reloads after you switch so the new translations apply everywhere."
 
 #. js-lingui-explicit-id
-#: src/editor/EntryConflictDialog.tsx
+#: src/editor/EditConflictDialog.tsx
 msgid "editor.conflict.yourChanges"
 msgstr "Your changes"
 

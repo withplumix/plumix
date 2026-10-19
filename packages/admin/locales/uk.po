@@ -586,7 +586,7 @@ msgstr "{label} викинув помилку під час відображен
 
 #. name: the editing user's display name or email
 #. js-lingui-explicit-id
-#: src/editor/EntryConflictDialog.tsx
+#: src/editor/EditConflictDialog.tsx
 msgid "editor.conflict.holder"
 msgstr ""
 
@@ -606,6 +606,7 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "editor.lease.heldBy.user"
+msgstr ""
 
 #. name: the editing user's display name or email; time: a formatted date and time
 #. js-lingui-explicit-id
@@ -629,6 +630,7 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "editor.lease.lost.user"
+msgstr ""
 
 #. name: the user who took over; time: a formatted date and time
 #. js-lingui-explicit-id
@@ -1110,7 +1112,7 @@ msgid "palette.group.commands"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/editor/EntryConflictDialog.tsx
+#: src/editor/EditConflictDialog.tsx
 msgid "editor.conflict.compare"
 msgstr ""
 
@@ -1995,7 +1997,7 @@ msgid "editor.command.group"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/editor/EntryConflictDialog.tsx
+#: src/editor/EditConflictDialog.tsx
 msgid "editor.conflict.hideComparison"
 msgstr ""
 
@@ -2085,7 +2087,7 @@ msgid "userInvite.submit.pending"
 msgstr "Запрошення…"
 
 #. js-lingui-explicit-id
-#: src/editor/EntryConflictDialog.tsx
+#: src/editor/EditConflictDialog.tsx
 msgid "editor.conflict.description"
 msgstr ""
 
@@ -2122,7 +2124,7 @@ msgid "userEdit.delete.reassign.keepAsIs"
 msgstr "Зберегти записи як є (не переназначати)"
 
 #. js-lingui-explicit-id
-#: src/editor/EntryConflictDialog.tsx
+#: src/editor/EditConflictDialog.tsx
 msgid "editor.conflict.keepMine"
 msgstr ""
 
@@ -2183,7 +2185,7 @@ msgid "editor.revisions.sheet.loadMore"
 msgstr "Завантажити ще"
 
 #. js-lingui-explicit-id
-#: src/editor/EntryConflictDialog.tsx
+#: src/editor/EditConflictDialog.tsx
 msgid "editor.conflict.loadTheirs"
 msgstr ""
 
@@ -3061,7 +3063,7 @@ msgid "editor.plainForm.status.saved"
 msgstr "Збережено"
 
 #. js-lingui-explicit-id
-#: src/editor/EntryConflictDialog.tsx
+#: src/editor/EditConflictDialog.tsx
 msgid "editor.conflict.savedNow"
 msgstr ""
 
@@ -3671,7 +3673,7 @@ msgid "settings.conflict.title"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/editor/EntryConflictDialog.tsx
+#: src/editor/EditConflictDialog.tsx
 msgid "editor.conflict.descriptionUntimed"
 msgstr ""
 
@@ -4081,7 +4083,7 @@ msgid "profile.language.description"
 msgstr "Адмінка відображається цією мовою. Сторінка перезавантажиться після перемикання, щоб нові переклади застосувалися всюди."
 
 #. js-lingui-explicit-id
-#: src/editor/EntryConflictDialog.tsx
+#: src/editor/EditConflictDialog.tsx
 msgid "editor.conflict.yourChanges"
 msgstr ""
 

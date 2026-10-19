@@ -1,14 +1,13 @@
 import type { ConflictDialogState } from "@/editor/conflict-dialog.js";
-import type { EditingCopy } from "@/editor/editing-copy.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useReducer, useRef, useState } from "react";
 import { MetaBoxField } from "@/components/meta-box/meta-box-field.js";
 import { useVisibleFields } from "@/components/meta-box/use-visible-fields.js";
 import { classifyAutosaveError } from "@/editor/autosave.js";
-import { conflictDialog, editingElsewhere } from "@/editor/conflict-dialog.js";
+import { conflictDialog } from "@/editor/conflict-dialog.js";
+import { EditConflictDialog } from "@/editor/EditConflictDialog.js";
 import { EditLeaseBanner } from "@/editor/EditLeaseBanner.js";
-import { EntryConflictDialog } from "@/editor/EntryConflictDialog.js";
 import { useSettingsGroupLease } from "@/editor/use-edit-lease.js";
 import {
   applyMetaFieldErrors,
@@ -28,6 +27,7 @@ import {
 import { useForm } from "react-hook-form";
 
 import type { ResolvedMeta } from "@plumix/core";
+import type { EditingCopy } from "@plumix/core/admin";
 import type { SettingsGroupManifestEntry } from "@plumix/core/manifest";
 import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
 import { Button } from "@plumix/admin-ui/button";
@@ -39,7 +39,11 @@ import {
   CardTitle,
 } from "@plumix/admin-ui/card";
 import { Form } from "@plumix/admin-ui/form";
-import { describeRpcError, editorLeaseMode } from "@plumix/core/admin";
+import {
+  describeRpcError,
+  editingElsewhere,
+  editorLeaseMode,
+} from "@plumix/core/admin";
 import { seedFromMetaBoxes } from "@plumix/core/manifest";
 
 const M = {
@@ -206,7 +210,7 @@ export function SettingsGroupCard({
       className="@container"
       data-testid={`settings-group-card-${group.name}`}
     >
-      <EntryConflictDialog
+      <EditConflictDialog
         copy={SETTINGS_EDITING_COPY}
         open={conflict.open}
         changedAt={conflict.open ? (conflict.conflict.updatedAt ?? null) : null}
