@@ -1,5 +1,21 @@
 # @plumix/runtime-bun
 
+## 0.3.0
+
+### Minor Changes
+
+- [#3190](https://github.com/withplumix/plumix/pull/3190) [`e77d19d`](https://github.com/withplumix/plumix/commit/e77d19d6f9c5d6a49a79781e4de7d94f94180490) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `plumix meta report` and `plumix meta settle` on Cloudflare. They reach the local D1 that `plumix dev` uses, or the deployed one `--production`, `--preview` or `--env <name>` names, with `--binding` when there are several, the same as `plumix migrate`. A settle against a deployed database prints what it would settle and asks first; `--yes` skips the question and `--dry-run` stops after the plan. Removes the admin's **Management → Field values** page and the `meta.sweep` RPC it called: run `plumix meta settle` instead. Opening an entry, term or user still converts its own values. Adds `openRun` to a runtime adapter's `RuntimeMigrations`, which returns the env `plumix meta` runs the site's handler in, so upgrade `plumix` and the runtime adapter together. Adds `describeRunContract` to `plumix/test/conformance`, which holds an adapter's `openRun` to what `plumix meta` does.
+
+- [#3183](https://github.com/withplumix/plumix/pull/3183) [`309a3c8`](https://github.com/withplumix/plumix/commit/309a3c86abd4343dea0bbaa319886c5486de8b61) Thanks [@nasyrov](https://github.com/nasyrov)! - Requires `plumix` 0.26 and its `plumix migrate` contract: `plumix migrate` prints the database file it opens first, and a target option such as `--production` fails naming the Bun runtime.
+
+- [#3188](https://github.com/withplumix/plumix/pull/3188) [`8108139`](https://github.com/withplumix/plumix/commit/8108139c2ff526b1c83f9e1053fc885d4f59c56a) Thanks [@nasyrov](https://github.com/nasyrov)! - Makes `plumix migrate fresh` on Bun drop every table in the SQLite file `bunSqlite()` names, with foreign keys off, instead of deleting the `data` folder.
+
+- [#3202](https://github.com/withplumix/plumix/pull/3202) [`c592645`](https://github.com/withplumix/plumix/commit/c5926456087f569361ca090df37ed348053039b2) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `plumix sync` and `plumix import` on Bun: the local end reads and writes the `bunSqlite()` file and the storage slot, and the remote end reaches the deployed site's sync routes with an API token. A push snapshots the deployed database file with `VACUUM INTO` and prints the copy's path and the command that restores it.
+
+### Patch Changes
+
+- [#3186](https://github.com/withplumix/plumix/pull/3186) [`71061a0`](https://github.com/withplumix/plumix/commit/71061a07a7bbafdc2e00063a9701c1792486f0ab) Thanks [@nasyrov](https://github.com/nasyrov)! - Requires `plumix` 0.26.0 or later: the `dev` and `build` commands load their dependencies through `loadOnce` from `plumix/support`.
+
 ## 0.2.0
 
 ### Minor Changes

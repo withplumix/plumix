@@ -1,5 +1,15 @@
 # @plumix/plugin-media
 
+## 0.11.1
+
+### Patch Changes
+
+- [#3180](https://github.com/withplumix/plumix/pull/3180) [`2338eea`](https://github.com/withplumix/plumix/commit/2338eeaed5ec1ea58e46a96488dd9d1272bf0b59) Thanks [@nasyrov](https://github.com/nasyrov)! - Exports `MediaPluginOptions`, the options type of `media()`.
+
+- [#3179](https://github.com/withplumix/plumix/pull/3179) [`ebe309e`](https://github.com/withplumix/plumix/commit/ebe309eb128569242c8b3cd5ef809dadcf70998d) Thanks [@nasyrov](https://github.com/nasyrov)! - File links may point at `#` and `?` targets, and at `sms:` links.
+
+- [#3206](https://github.com/withplumix/plumix/pull/3206) [`6499183`](https://github.com/withplumix/plumix/commit/6499183d08add394396edddd1b8ce3c422c2dec7) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes an alt text or title save in the media library overwriting a newer change made elsewhere. `media.list`, the `media_list` and `media_get` MCP tools, and `media.update` now return each item's `etag`, and `media.update` requires it back as `ifMatch`: a save from an out-of-date copy is refused with `CONFLICT` reason `etag_mismatch`, and a save while another user holds the item's edit lease is refused with `LOCKED`. The library's detail panel holds the item's edit lease while it is open, turns read-only with a "{name} is editing this media item" notice and a Take over button while someone else has it, and on a stale save opens the admin's conflict dialog to compare, keep yours or load theirs.
+
 ## 0.11.0
 
 ### Minor Changes

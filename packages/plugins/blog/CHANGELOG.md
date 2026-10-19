@@ -1,5 +1,11 @@
 # @plumix/plugin-blog
 
+## 0.2.4
+
+### Patch Changes
+
+- [#3149](https://github.com/withplumix/plumix/pull/3149) [`27dfae2`](https://github.com/withplumix/plumix/commit/27dfae2e4ba8a34bb552972aeeb40b49a472330c) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes related posts listing entries the reader's access policy keeps from them, such as a members-only post under a public one. A soft-challenged post is still listed, without its body.
+
 ## 0.2.3
 
 ### Patch Changes

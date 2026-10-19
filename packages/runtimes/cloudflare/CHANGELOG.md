@@ -1,5 +1,25 @@
 # @plumix/runtime-cloudflare
 
+## 0.15.0
+
+### Minor Changes
+
+- [#3183](https://github.com/withplumix/plumix/pull/3183) [`309a3c8`](https://github.com/withplumix/plumix/commit/309a3c86abd4343dea0bbaa319886c5486de8b61) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `--production`, `--preview` and `--env <name>` to `plumix migrate` on Cloudflare, resolved from the wrangler config with wrangler's own reader, so a site can migrate a wrangler environment's database or its Worker Previews database. Adds `plumix preview`, which builds, migrates the Previews database and runs `wrangler preview`. `plumix deploy` now builds the Worker first and takes `--env <name>`. `plumix doctor` lists every D1 database a target can reach. Fixes remote migrations reaching a binding's `preview_database_id` instead of its `database_id`. Requires `plumix` 0.26.
+
+- [#3201](https://github.com/withplumix/plumix/pull/3201) [`c5628e0`](https://github.com/withplumix/plumix/commit/c5628e029bca4d77ee9ceb39833d59f951a4c3c7) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `plumix sync pull|push` and `plumix import --url` on Cloudflare. The local end is the D1 database and storage `plumix dev` uses; the deployed end is the database `--production`, `--preview` or `--env <name>` names, resolved as `plumix migrate` resolves it. A pull exports through D1's export API, a push imports one script through D1's import API after taking a Time Travel bookmark it prints the restore command for, and the `media` scope copies the storage slot's objects. Requires `plumix` 0.26.
+
+- [#3190](https://github.com/withplumix/plumix/pull/3190) [`e77d19d`](https://github.com/withplumix/plumix/commit/e77d19d6f9c5d6a49a79781e4de7d94f94180490) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `plumix meta report` and `plumix meta settle` on Cloudflare. They reach the local D1 that `plumix dev` uses, or the deployed one `--production`, `--preview` or `--env <name>` names, with `--binding` when there are several, the same as `plumix migrate`. A settle against a deployed database prints what it would settle and asks first; `--yes` skips the question and `--dry-run` stops after the plan. Removes the admin's **Management → Field values** page and the `meta.sweep` RPC it called: run `plumix meta settle` instead. Opening an entry, term or user still converts its own values. Adds `openRun` to a runtime adapter's `RuntimeMigrations`, which returns the env `plumix meta` runs the site's handler in, so upgrade `plumix` and the runtime adapter together. Adds `describeRunContract` to `plumix/test/conformance`, which holds an adapter's `openRun` to what `plumix meta` does.
+
+- [#3188](https://github.com/withplumix/plumix/pull/3188) [`8108139`](https://github.com/withplumix/plumix/commit/8108139c2ff526b1c83f9e1053fc885d4f59c56a) Thanks [@nasyrov](https://github.com/nasyrov)! - Makes `plumix migrate fresh` on Cloudflare drop every table in the local D1, or in the `--preview` or `--env <name>` database, and print that database's D1 Time Travel bookmark and the `wrangler d1 time-travel restore` command before dropping anything.
+
+### Patch Changes
+
+- [#3177](https://github.com/withplumix/plumix/pull/3177) [`f6d9378`](https://github.com/withplumix/plumix/commit/f6d937871bc84a04743faff67e1babd6b0fbd69a) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes a demo session database leaving foreign keys unenforced after its tables are dropped and rebuilt, so `ON DELETE` cascades, `set null` and `restrict` keep firing for the rest of the session.
+
+- [#3186](https://github.com/withplumix/plumix/pull/3186) [`71061a0`](https://github.com/withplumix/plumix/commit/71061a07a7bbafdc2e00063a9701c1792486f0ab) Thanks [@nasyrov](https://github.com/nasyrov)! - Requires `plumix` 0.26.0 or later: the `dev` and `build` commands load their dependencies through `loadOnce` from `plumix/support`.
+
+- [#3199](https://github.com/withplumix/plumix/pull/3199) [`f5c4c75`](https://github.com/withplumix/plumix/commit/f5c4c758e97538a5c07d003d15ffb0089f316aae) Thanks [@nasyrov](https://github.com/nasyrov)! - Replaces the admin's **Management → Mailer** page with `plumix mail test <to>`, which sends core's new `mailTest` mail through the site's mailer and prints the transport's error word for word when it fails. `--remote --url <origin>` sends it through the deployed site instead, with an API token from `--token`, `PLUMIX_API_TOKEN`, or, on a terminal, the site's device flow. Adds `POST /_plumix/api/v1/system/mail/test`, which needs a token whose user may manage settings, answers 204, and answers 502 with the transport's message when the send fails. Removes the `auth.mailer.testSend` RPC. The `mailTest` mail shows in the preview gallery, and a site overrides it by name like any mail. The demo runtime refuses the new route, as it refused the old RPC.
+
 ## 0.14.0
 
 ### Minor Changes

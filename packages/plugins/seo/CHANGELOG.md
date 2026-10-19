@@ -1,5 +1,11 @@
 # @plumix/plugin-seo
 
+## 0.4.1
+
+### Patch Changes
+
+- [#3203](https://github.com/withplumix/plumix/pull/3203) [`689c2af`](https://github.com/withplumix/plumix/commit/689c2af99094e8030dd51513633e306384432fa7) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the legacy defaults seeded into the Search & social settings card for the settings filter's new `{ etag, values }` shape.
+
 ## 0.4.0
 
 ### Minor Changes

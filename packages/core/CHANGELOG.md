@@ -1,5 +1,11 @@
 # @plumix/core
 
+## 0.26.0
+
+### Patch Changes
+
+- [#3184](https://github.com/withplumix/plumix/pull/3184) [`d9c806b`](https://github.com/withplumix/plumix/commit/d9c806bb8226d285df5cbe707d34e2c1c6ddb50d) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes an `unmet peer @tiptap/pm` warning after upgrading Plumix: `@plumix/core` and `@plumix/admin-editor` now depend on `@tiptap/pm` themselves, so the editor always gets ProseMirror bindings from the same tiptap release and sites no longer need to add `@tiptap/pm` to their own dependencies.
+
 ## 0.25.0
 
 ### Minor Changes
