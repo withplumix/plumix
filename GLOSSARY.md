@@ -367,7 +367,7 @@ _Avoid_: import, migration (a migration reshapes a database's schema or data in 
 A named set of whole tables a sync replaces: `content`, `users`, `plugin:<id>`, or `media`, which is the storage slot's objects. Auth state is in none.
 
 **Sync dump**:
-The directory a sync exports the source into and the target imports from: a versioned `manifest.json`, one NDJSON file per table, the authors its rows reference, and the media objects.
+What a sync moves from the source to the target: a versioned `manifest.json`, one NDJSON file per table, the authors its rows reference, and the media objects. It is a directory between two ends on disk, and one NDJSON stream with the same sections over a site's sync routes.
 
 **Config slot**:
 A named key of the `plumix()` call in `plumix.config.ts`. Slots are siblings rather than a bundle, though one may still require another's platform: a slot naming a Cloudflare binding needs the Cloudflare runtime beside it. See the disambiguation note — distinct from a descriptor slot, a slot input and a template slot. Read at runtime as `ctx.config.<slot>`. A slot that binds to the platform is also connected as a service on the context (`ctx.storage`).

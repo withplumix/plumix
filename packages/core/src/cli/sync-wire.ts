@@ -59,9 +59,6 @@ const WireLineSchema = v.union([
 
 type WireLine = v.InferOutput<typeof WireLineSchema>;
 
-/** What an import body opens with. */
-export type WireHeader = Extract<WireLine, { header: unknown }>["header"];
-
 function toBase64(bytes: Uint8Array): string {
   let binary = "";
   for (let start = 0; start < bytes.length; start += BASE64_SLICE) {
@@ -347,8 +344,8 @@ export interface WireDump {
 }
 
 /**
- * An import body read once, front to back: each section must be asked for in
- * the order {@link dumpWireStream} writes them.
+ * An import body read once, front to back: a section asked for after a later
+ * one has been read is never found.
  */
 export async function readWireDump(
   body: ReadableStream<Uint8Array>,

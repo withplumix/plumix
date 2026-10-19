@@ -40,24 +40,28 @@ async function tokenFor(
 }
 
 describe("the sync transfer endpoints", () => {
-  for (const endpoint of ENDPOINTS) {
-    test(`${endpoint.method} ${endpoint.path} answers 401 without a token`, async () => {
+  test.each(ENDPOINTS)(
+    "$method $path answers 401 without a token",
+    async (endpoint) => {
       const h = await createDispatcherHarness();
 
       const response = await h.dispatch(syncRequest(endpoint, undefined));
 
       expect(response.status).toBe(401);
-    });
+    },
+  );
 
-    test(`${endpoint.method} ${endpoint.path} answers 403 for a token whose user may not manage settings`, async () => {
+  test.each(ENDPOINTS)(
+    "$method $path answers 403 for a token whose user may not manage settings",
+    async (endpoint) => {
       const h = await createDispatcherHarness();
       const secret = await tokenFor(h, "editor");
 
       const response = await h.dispatch(syncRequest(endpoint, secret));
 
       expect(response.status).toBe(403);
-    });
-  }
+    },
+  );
 });
 
 /** A site whose database opens for a sync, and an operator's token. */

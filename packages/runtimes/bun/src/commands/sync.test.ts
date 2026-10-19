@@ -148,7 +148,7 @@ async function serve(
   }
 }
 
-async function nodeEnds(hooks: HookRegistry): Promise<SyncContractEnds> {
+async function bunEnds(hooks: HookRegistry): Promise<SyncContractEnds> {
   const local = siteConfig("local");
   const remote = siteConfig("remote");
   await migrated(local);
@@ -171,7 +171,7 @@ async function nodeEnds(hooks: HookRegistry): Promise<SyncContractEnds> {
   };
 }
 
-describeSyncContract({ open: nodeEnds });
+describeSyncContract({ open: bunEnds });
 
 function options(
   target: "local" | "remote",

@@ -16,7 +16,6 @@ export interface DatabaseSyncEndOptions {
   /** Where `media` reads and writes objects. */
   readonly storage: ConnectedObjectStorage | undefined;
   readonly origin: string;
-  /** In application order, as `OpenSyncEndOptions` holds them. */
   readonly owners: readonly MigrationOwner[];
   /** How `sync_migrations_differ` names this end: `local` or `remote`. */
   readonly label: string;

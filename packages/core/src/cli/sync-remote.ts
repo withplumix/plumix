@@ -18,7 +18,6 @@ export interface RemoteSyncEndOptions {
   readonly url: string | undefined;
   /** Called once, on the first request. */
   readonly apiToken: () => Promise<string>;
-  /** In application order, as `OpenSyncEndOptions` holds them. */
   readonly owners: readonly MigrationOwner[];
   readonly fetch?: (input: string, init: RequestInit) => Promise<Response>;
 }
