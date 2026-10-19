@@ -11,6 +11,7 @@ export interface ShipPorts {
     ticket: Ticket,
     reason: string,
     pullRequestUrl?: string,
+    briefFails?: boolean,
   ) => void;
   readonly releaseClaim: (ticket: Ticket) => void;
   readonly confirm: (pullRequest: QueuedPullRequest) => Promise<MergeOutcome>;
@@ -250,7 +251,12 @@ export const runShipLoop = async (
 
       if (outcome.status === "blocked") {
         if (leftAsItWasBecauseTheCheckoutBroke(ticket)) return;
-        ports.park(ticket, outcome.reason, outcome.pullRequestUrl);
+        ports.park(
+          ticket,
+          outcome.reason,
+          outcome.pullRequestUrl,
+          outcome.briefFails,
+        );
         parked.push({ ticket, reason: outcome.reason });
         ports.say(`  #${ticket.number} parked: ${outcome.reason}`);
         noteFailure(outcome.reason);

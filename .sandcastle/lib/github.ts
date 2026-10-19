@@ -287,10 +287,14 @@ export const parkTicket = (
   ticketNumber: number,
   reason: string,
   pullRequestUrl?: string,
+  briefFails?: boolean,
 ): void => {
   const openPullRequestNote = pullRequestUrl
     ? `\n\nThe branch is pushed and ${pullRequestUrl} is open, so the work is not lost.`
     : "";
+  const whoActs = briefFails
+    ? "The brief disagrees with the code, so it needs fixing before the loop takes this again."
+    : "The brief still stands, so this is not back to triage — it is waiting on a person.";
   gh([
     "issue",
     "comment",
@@ -298,7 +302,7 @@ export const parkTicket = (
     "-R",
     REPO_SLUG,
     "--body",
-    `The unattended ship loop could not land this.\n\n\`\`\`\n${reason}\n\`\`\`${openPullRequestNote}\n\nThe brief still stands, so this is not back to triage — it is waiting on a person.`,
+    `The unattended ship loop could not land this.\n\n\`\`\`\n${reason}\n\`\`\`${openPullRequestNote}\n\n${whoActs}`,
   ]);
   gh([
     "issue",
