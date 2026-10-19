@@ -163,6 +163,26 @@ describe("Journal.runId", () => {
   });
 });
 
+describe("Journal.finish", () => {
+  test("a failed run keeps why it failed in run.json and summary.md", () => {
+    const journal = new Journal(mkdtempSync(join(tmpdir(), "journal-")));
+
+    journal.finish(
+      "failed",
+      "2 spec gap(s) need a person's decision:\n\n1. a.ts — s",
+    );
+
+    const run = JSON.parse(readFileSync(join(journal.dir, "run.json"), "utf8"));
+    const summary = readFileSync(join(journal.dir, "summary.md"), "utf8");
+    expect(run.reason).toBe(
+      "2 spec gap(s) need a person's decision:\n\n1. a.ts — s",
+    );
+    expect(summary).toContain(
+      "**Outcome** failed\n\n```\n2 spec gap(s) need a person's decision:\n\n1. a.ts — s\n```",
+    );
+  });
+});
+
 describe("Journal.record with a gate run's output", () => {
   const gateRun = {
     phase: "gate:e2e#final.1",

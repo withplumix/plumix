@@ -19,6 +19,7 @@ import {
   idsInJobUrl,
   recaptureScreenshots,
   SCREENSHOT_DIFF_STEP,
+  whyTheRebaseIsUnfinished,
 } from "./repair.js";
 
 describe("idsInJobUrl", () => {
@@ -240,5 +241,36 @@ describe("afterCiFix", () => {
         { rebaseMovedTheBranch: true },
       ),
     ).toEqual({ next: "not-this-branch", reason: "flaky runner" });
+  });
+});
+
+describe("whyTheRebaseIsUnfinished", () => {
+  const sandbox = (fails: (command: string) => boolean) => ({
+    exec: async (command: string) => ({
+      exitCode: fails(command) ? 1 : 0,
+      stdout: "",
+      stderr: "",
+      durationMs: 0,
+    }),
+  });
+
+  test("a finished rebase on top of main has nothing to report", async () => {
+    expect(await whyTheRebaseIsUnfinished(sandbox(() => false))).toBeNull();
+  });
+
+  test("names a rebase still in progress", async () => {
+    expect(
+      await whyTheRebaseIsUnfinished(
+        sandbox((command) => command.includes("rebase-merge")),
+      ),
+    ).toBe("a rebase is still in progress in the sandbox");
+  });
+
+  test("names a branch that does not sit on main", async () => {
+    expect(
+      await whyTheRebaseIsUnfinished(
+        sandbox((command) => command.includes("is-ancestor")),
+      ),
+    ).toBe("HEAD does not contain origin/main");
   });
 });
