@@ -135,7 +135,8 @@ const report = await runShipLoop(
       );
       return shipTicket(ticket, journal, nextAdr).then(
         (outcome) => {
-          journal.finish(outcome.status === "queued" ? "shipped" : "failed");
+          if (outcome.status === "queued") journal.finish("shipped");
+          else journal.finish("failed", outcome.reason);
           return outcome;
         },
         (error: unknown) => {
@@ -151,7 +152,8 @@ const report = await runShipLoop(
       const journal = new Journal(import.meta.dirname);
       return repairPullRequest(ticket, pullRequest, refusal, journal).then(
         (outcome) => {
-          journal.finish(outcome.status === "repaired" ? "shipped" : "failed");
+          if (outcome.status === "repaired") journal.finish("shipped");
+          else journal.finish("failed", outcome.reason);
           return outcome;
         },
         (error: unknown) => {

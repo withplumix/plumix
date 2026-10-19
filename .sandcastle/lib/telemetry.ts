@@ -200,7 +200,7 @@ interface RunJournal {
   readonly ticket?: { readonly number: number; readonly title: string };
   readonly branch?: string;
   readonly outcome: string;
-  readonly error?: string;
+  readonly reason?: string;
   readonly totals: RunTotals;
   readonly phases: readonly PhaseRecord[];
 }
@@ -238,7 +238,7 @@ const asMarkdown = (journal: RunJournal): string => {
 
 **Ticket** ${journal.ticket ? `#${journal.ticket.number} ${journal.ticket.title}` : "—"}
 **Branch** ${journal.branch ?? "—"}
-**Outcome** ${journal.outcome}${journal.error ? ` — ${journal.error}` : ""}
+**Outcome** ${journal.outcome}${journal.reason ? `\n\n\`\`\`\n${journal.reason}\n\`\`\`` : ""}
 
 | phase | model | outcome | wall | tok in/out | cost | note |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -305,8 +305,8 @@ export class Journal {
     );
   }
 
-  finish(outcome: RunOutcome, error?: string): void {
-    const journal = this.#persist(outcome, error);
+  finish(outcome: RunOutcome, reason?: string): void {
+    const journal = this.#persist(outcome, reason);
     const { usage, ...t } = journal.totals;
     console.log(
       `\n${this.#saidBy}${outcome} in ${asSeconds(t.durationMs)} — ${t.agentCalls} agent calls, ` +
@@ -337,14 +337,14 @@ export class Journal {
     };
   }
 
-  #persist(outcome: string, error?: string): RunJournal {
+  #persist(outcome: string, reason?: string): RunJournal {
     const journal: RunJournal = {
       runId: this.runId,
       startedAt: new Date(this.#startedAtMs).toISOString(),
       ticket: this.#ticket,
       branch: this.#branch,
       outcome,
-      error,
+      reason,
       totals: this.#totals(),
       phases: this.#phases,
     };

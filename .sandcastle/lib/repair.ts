@@ -3,7 +3,7 @@ import { cpSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import type { Gate } from "./gates.js";
+import type { Executor, Gate } from "./gates.js";
 import type { QueuedPullRequest, Ticket } from "./github.js";
 import type { RepairOutcome } from "./run.js";
 import type { Journal } from "./telemetry.js";
@@ -221,6 +221,20 @@ export const afterCiFix = (
   return { next: "decline", reason: declined.reason };
 };
 
+export const whyTheRebaseIsUnfinished = async (
+  sandbox: Executor,
+): Promise<string | null> => {
+  const stopped = await sandbox.exec(
+    'test ! -d "$(git rev-parse --git-path rebase-merge)" && test ! -d "$(git rev-parse --git-path rebase-apply)"',
+  );
+  if (stopped.exitCode !== 0)
+    return "a rebase is still in progress in the sandbox";
+  const onMain = await sandbox.exec(
+    "git merge-base --is-ancestor origin/main HEAD",
+  );
+  return onMain.exitCode === 0 ? null : "HEAD does not contain origin/main";
+};
+
 export const repairPullRequest = async (
   ticket: Ticket,
   pullRequest: QueuedPullRequest,
@@ -273,13 +287,11 @@ export const repairPullRequest = async (
         maxIterations: 10,
         idleTimeoutSeconds: AN_HOUR_IN_SECONDS,
       });
-      const finished = await sandbox.exec(
-        'test ! -d "$(git rev-parse --git-path rebase-merge)" && test ! -d "$(git rev-parse --git-path rebase-apply)" && git merge-base --is-ancestor origin/main HEAD',
-      );
-      if (finished.exitCode !== 0) {
+      const unfinished = await whyTheRebaseIsUnfinished(sandbox);
+      if (unfinished) {
         return declined(
           readDeclinedTag(resolved.stdout) ??
-            `${pullRequest.url} conflicts with main and the resolver could not finish the rebase`,
+            `${pullRequest.url} conflicts with main and the resolver could not finish the rebase: ${unfinished}`,
         );
       }
     }
