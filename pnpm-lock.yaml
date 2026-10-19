@@ -205,8 +205,8 @@ catalogs:
       specifier: ^3.3.1
       version: 3.3.1
     prettier:
-      specifier: ^3.9.9
-      version: 3.9.9
+      specifier: ^3.9.10
+      version: 3.9.10
     publint:
       specifier: ^0.3.25
       version: 0.3.25
@@ -465,7 +465,7 @@ importers:
         version: 6.40.0
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       sherif:
         specifier: ^1.13.0
         version: 1.13.0
@@ -541,7 +541,7 @@ importers:
         version: 10.12.0(jiti@2.7.0)(supports-color@10.2.2)
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       tailwindcss:
         specifier: catalog:tailwind
         version: 4.3.3
@@ -572,7 +572,7 @@ importers:
     devDependencies:
       '@astrojs/check':
         specifier: ^0.9.10
-        version: 0.9.10(prettier-plugin-astro@1.1.0(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(prettier@3.9.9))(prettier@3.9.9)(typescript@6.0.3)
+        version: 0.9.10(prettier-plugin-astro@1.1.1(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(prettier@3.9.10))(prettier@3.9.10)(typescript@6.0.3)
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint
@@ -584,7 +584,7 @@ importers:
         version: 10.12.0(jiti@2.7.0)(supports-color@10.2.2)
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       sharp:
         specifier: 'catalog:'
         version: 0.35.5(@types/node@24.19.1)
@@ -648,7 +648,7 @@ importers:
         version: 10.12.0(jiti@2.7.0)(supports-color@10.2.2)
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       tailwindcss:
         specifier: catalog:tailwind
         version: 4.3.3
@@ -772,7 +772,7 @@ importers:
         version: 10.12.0(jiti@2.7.0)(supports-color@10.2.2)
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       publint:
         specifier: 'catalog:'
         version: 0.3.25
@@ -929,7 +929,7 @@ importers:
         version: 10.12.0(jiti@2.7.0)(supports-color@10.2.2)
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       publint:
         specifier: 'catalog:'
         version: 0.3.25
@@ -1026,7 +1026,7 @@ importers:
         version: 10.12.0(jiti@2.7.0)(supports-color@10.2.2)
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       publint:
         specifier: 'catalog:'
         version: 0.3.25
@@ -1177,7 +1177,7 @@ importers:
         version: 7.2.0(@typescript-eslint/parser@8.71.1(eslint@10.12.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3))(eslint-import-resolver-typescript@4.4.5(eslint-plugin-import-x@4.17.1(@typescript-eslint/utils@8.71.1(eslint@10.12.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3))(eslint-import-resolver-node@0.3.9(supports-color@10.2.2))(eslint@10.12.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2))(eslint@10.12.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2))(eslint@10.12.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       publint:
         specifier: 'catalog:'
         version: 0.3.25
@@ -1326,7 +1326,7 @@ importers:
         version: link:../plumix
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       publint:
         specifier: 'catalog:'
         version: 0.3.25
@@ -1414,7 +1414,7 @@ importers:
         version: link:../../plumix
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       publint:
         specifier: 'catalog:'
         version: 0.3.25
@@ -1506,7 +1506,7 @@ importers:
         version: link:../../plumix
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       publint:
         specifier: 'catalog:'
         version: 0.3.25
@@ -1631,7 +1631,7 @@ importers:
         version: link:../../plumix
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       publint:
         specifier: 'catalog:'
         version: 0.3.25
@@ -1716,7 +1716,7 @@ importers:
         version: link:../../plumix
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       publint:
         specifier: 'catalog:'
         version: 0.3.25
@@ -1841,7 +1841,7 @@ importers:
         version: link:../../plumix
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       publint:
         specifier: 'catalog:'
         version: 0.3.25
@@ -1954,7 +1954,7 @@ importers:
         version: link:../../plumix
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       publint:
         specifier: 'catalog:'
         version: 0.3.25
@@ -2070,7 +2070,7 @@ importers:
         version: link:../../plumix
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       publint:
         specifier: 'catalog:'
         version: 0.3.25
@@ -2192,7 +2192,7 @@ importers:
         version: link:../../plumix
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       publint:
         specifier: 'catalog:'
         version: 0.3.25
@@ -2286,7 +2286,7 @@ importers:
         version: link:../../plumix
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       publint:
         specifier: 'catalog:'
         version: 0.3.25
@@ -2369,7 +2369,7 @@ importers:
         version: link:../../plumix
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       publint:
         specifier: 'catalog:'
         version: 0.3.25
@@ -2451,7 +2451,7 @@ importers:
         version: link:../../plumix
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       publint:
         specifier: 'catalog:'
         version: 0.3.25
@@ -2597,7 +2597,7 @@ importers:
         version: 10.12.0(jiti@2.7.0)(supports-color@10.2.2)
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       publint:
         specifier: 'catalog:'
         version: 0.3.25
@@ -2667,7 +2667,7 @@ importers:
         version: link:../../plumix
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       publint:
         specifier: 'catalog:'
         version: 0.3.25
@@ -2768,7 +2768,7 @@ importers:
         version: link:../../plumix
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       publint:
         specifier: 'catalog:'
         version: 0.3.25
@@ -2866,7 +2866,7 @@ importers:
         version: link:../../plumix
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       publint:
         specifier: 'catalog:'
         version: 0.3.25
@@ -2939,7 +2939,7 @@ importers:
         version: 10.12.0(jiti@2.7.0)(supports-color@10.2.2)
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -2972,7 +2972,7 @@ importers:
         version: 10.12.0(jiti@2.7.0)(supports-color@10.2.2)
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -3030,7 +3030,7 @@ importers:
         version: 10.12.0(jiti@2.7.0)(supports-color@10.2.2)
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -3064,7 +3064,7 @@ importers:
         version: 10.12.0(jiti@2.7.0)(supports-color@10.2.2)
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -3073,17 +3073,17 @@ importers:
     dependencies:
       '@ianvs/prettier-plugin-sort-imports':
         specifier: ^4.7.1
-        version: 4.7.1(prettier@3.9.9)(supports-color@10.2.2)
+        version: 4.7.1(prettier@3.9.10)(supports-color@10.2.2)
       prettier-plugin-astro:
-        specifier: ^1.1.0
-        version: 1.1.0(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(prettier@3.9.9)
+        specifier: ^1.1.1
+        version: 1.1.1(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(prettier@3.9.10)
       prettier-plugin-tailwindcss:
         specifier: ^0.8.1
-        version: 0.8.1(@ianvs/prettier-plugin-sort-imports@4.7.1(prettier@3.9.9)(supports-color@10.2.2))(prettier-plugin-astro@1.1.0(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(prettier@3.9.9))(prettier@3.9.9)
+        version: 0.8.1(@ianvs/prettier-plugin-sort-imports@4.7.1(prettier@3.9.10)(supports-color@10.2.2))(prettier-plugin-astro@1.1.1(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(prettier@3.9.10))(prettier@3.9.10)
     devDependencies:
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
 
   tooling/published-surface:
     devDependencies:
@@ -3155,7 +3155,7 @@ importers:
         version: link:../../packages/plumix
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -3210,7 +3210,7 @@ importers:
         version: 10.12.0(jiti@2.7.0)(supports-color@10.2.2)
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -3234,7 +3234,7 @@ importers:
         version: 10.12.0(jiti@2.7.0)(supports-color@10.2.2)
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -3258,7 +3258,7 @@ importers:
         version: 10.12.0(jiti@2.7.0)(supports-color@10.2.2)
       prettier:
         specifier: 'catalog:'
-        version: 3.9.9
+        version: 3.9.10
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -10415,8 +10415,8 @@ packages:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
     engines: {node: '>= 0.8.0'}
 
-  prettier-plugin-astro@1.1.0:
-    resolution: {integrity: sha512-ujJ1VX+iin4eYJPHVCEbmXHzrEVsi1SaVehHtbAteTZv8VTrZyBiZPmYc6Ud6+fkr/UBMXuEu3N3+d49h7YfKw==}
+  prettier-plugin-astro@1.1.1:
+    resolution: {integrity: sha512-ykymNFOinCFXY4z4yF0978GgAvg6GRtrzCYg3+R1Nv/dndACwuEsSrUpHkJohER9FiwYMPKuYT38FbjCLmwu9A==}
     engines: {node: '>=22.12.0'}
     peerDependencies:
       prettier: ^3.5.3
@@ -10476,8 +10476,8 @@ packages:
       prettier-plugin-svelte:
         optional: true
 
-  prettier@3.9.9:
-    resolution: {integrity: sha512-Z/CJHIkdujO/OtN7nXUii0Rf3VT5SRuhjBA82Xvu2XhBUgX3nhP67T0LHceBdQLex7OOFGTox+Q5Yg8Jk2Qivg==}
+  prettier@3.9.10:
+    resolution: {integrity: sha512-skGHTH1Yb9QvaTC4hWnRTzEYtCpApF0UMBPz+t/0ZPzP8ihefo/btKd+QA7pUE0fEwA1SbS/NmhyEcstdXOIdA==}
     engines: {node: '>=14'}
     hasBin: true
 
@@ -12056,9 +12056,9 @@ snapshots:
       typescript: 5.6.1-rc
       validate-npm-package-name: 5.0.1
 
-  '@astrojs/check@0.9.10(prettier-plugin-astro@1.1.0(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(prettier@3.9.9))(prettier@3.9.9)(typescript@6.0.3)':
+  '@astrojs/check@0.9.10(prettier-plugin-astro@1.1.1(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(prettier@3.9.10))(prettier@3.9.10)(typescript@6.0.3)':
     dependencies:
-      '@astrojs/language-server': 2.16.14(prettier-plugin-astro@1.1.0(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(prettier@3.9.9))(prettier@3.9.9)(typescript@6.0.3)
+      '@astrojs/language-server': 2.16.14(prettier-plugin-astro@1.1.1(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(prettier@3.9.10))(prettier@3.9.10)(typescript@6.0.3)
       chokidar: 4.0.3
       kleur: 4.1.5
       typescript: 6.0.3
@@ -12196,7 +12196,7 @@ snapshots:
       unified: 11.0.5
       yaml: 2.9.1
 
-  '@astrojs/language-server@2.16.14(prettier-plugin-astro@1.1.0(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(prettier@3.9.9))(prettier@3.9.9)(typescript@6.0.3)':
+  '@astrojs/language-server@2.16.14(prettier-plugin-astro@1.1.1(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(prettier@3.9.10))(prettier@3.9.10)(typescript@6.0.3)':
     dependencies:
       '@astrojs/compiler': 2.13.1
       '@astrojs/yaml2ts': 0.2.4
@@ -12210,15 +12210,15 @@ snapshots:
       volar-service-css: 0.0.71(@volar/language-service@2.4.28(typescript@6.0.3))
       volar-service-emmet: 0.0.71(@volar/language-service@2.4.28(typescript@6.0.3))
       volar-service-html: 0.0.71(@volar/language-service@2.4.28(typescript@6.0.3))
-      volar-service-prettier: 0.0.71(@volar/language-service@2.4.28(typescript@6.0.3))(prettier@3.9.9)
+      volar-service-prettier: 0.0.71(@volar/language-service@2.4.28(typescript@6.0.3))(prettier@3.9.10)
       volar-service-typescript: 0.0.71(@volar/language-service@2.4.28(typescript@6.0.3))(typescript@6.0.3)
       volar-service-typescript-twoslash-queries: 0.0.71(@volar/language-service@2.4.28(typescript@6.0.3))(typescript@6.0.3)
       volar-service-yaml: 0.0.71(@volar/language-service@2.4.28(typescript@6.0.3))
       vscode-html-languageservice: 5.6.2
       vscode-uri: 3.1.0
     optionalDependencies:
-      prettier: 3.9.9
-      prettier-plugin-astro: 1.1.0(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(prettier@3.9.9)
+      prettier: 3.9.10
+      prettier-plugin-astro: 1.1.1(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(prettier@3.9.10)
     transitivePeerDependencies:
       - typescript
 
@@ -13553,13 +13553,13 @@ snapshots:
 
   '@humanwhocodes/retry@0.4.3': {}
 
-  '@ianvs/prettier-plugin-sort-imports@4.7.1(prettier@3.9.9)(supports-color@10.2.2)':
+  '@ianvs/prettier-plugin-sort-imports@4.7.1(prettier@3.9.10)(supports-color@10.2.2)':
     dependencies:
       '@babel/generator': 7.29.8
       '@babel/parser': 7.29.8
       '@babel/traverse': 7.29.8(supports-color@10.2.2)
       '@babel/types': 7.29.8
-      prettier: 3.9.9
+      prettier: 3.9.10
       semver: 7.8.5
     transitivePeerDependencies:
       - supports-color
@@ -15897,7 +15897,7 @@ snapshots:
       '@tanstack/virtual-file-routes': 1.162.0
       jiti: 2.7.0
       magic-string: 0.30.21
-      prettier: 3.9.9
+      prettier: 3.9.10
       zod: 4.6.2
     transitivePeerDependencies:
       - supports-color
@@ -19434,24 +19434,24 @@ snapshots:
 
   prelude-ls@1.2.1: {}
 
-  prettier-plugin-astro@1.1.0(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(prettier@3.9.9):
+  prettier-plugin-astro@1.1.1(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(prettier@3.9.10):
     dependencies:
       '@astrojs/compiler-rs': 0.4.0(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)
       '@prettier/parse-srcset': 3.1.0
-      prettier: 3.9.9
+      prettier: 3.9.10
       sass-formatter: 0.8.0
     transitivePeerDependencies:
       - '@emnapi/core'
       - '@emnapi/runtime'
 
-  prettier-plugin-tailwindcss@0.8.1(@ianvs/prettier-plugin-sort-imports@4.7.1(prettier@3.9.9)(supports-color@10.2.2))(prettier-plugin-astro@1.1.0(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(prettier@3.9.9))(prettier@3.9.9):
+  prettier-plugin-tailwindcss@0.8.1(@ianvs/prettier-plugin-sort-imports@4.7.1(prettier@3.9.10)(supports-color@10.2.2))(prettier-plugin-astro@1.1.1(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(prettier@3.9.10))(prettier@3.9.10):
     dependencies:
-      prettier: 3.9.9
+      prettier: 3.9.10
     optionalDependencies:
-      '@ianvs/prettier-plugin-sort-imports': 4.7.1(prettier@3.9.9)(supports-color@10.2.2)
-      prettier-plugin-astro: 1.1.0(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(prettier@3.9.9)
+      '@ianvs/prettier-plugin-sort-imports': 4.7.1(prettier@3.9.10)(supports-color@10.2.2)
+      prettier-plugin-astro: 1.1.1(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(prettier@3.9.10)
 
-  prettier@3.9.9: {}
+  prettier@3.9.10: {}
 
   pretty-format@29.7.0:
     dependencies:
@@ -20882,12 +20882,12 @@ snapshots:
     optionalDependencies:
       '@volar/language-service': 2.4.28(typescript@6.0.3)
 
-  volar-service-prettier@0.0.71(@volar/language-service@2.4.28(typescript@6.0.3))(prettier@3.9.9):
+  volar-service-prettier@0.0.71(@volar/language-service@2.4.28(typescript@6.0.3))(prettier@3.9.10):
     dependencies:
       vscode-uri: 3.1.0
     optionalDependencies:
       '@volar/language-service': 2.4.28(typescript@6.0.3)
-      prettier: 3.9.9
+      prettier: 3.9.10
 
   volar-service-typescript-twoslash-queries@0.0.71(@volar/language-service@2.4.28(typescript@6.0.3))(typescript@6.0.3):
     dependencies:
@@ -21092,7 +21092,7 @@ snapshots:
       ajv: 8.20.0
       ajv-draft-04: 1.0.0(ajv@8.20.0)
       ajv-i18n: 4.2.0(ajv@8.20.0)
-      prettier: 3.9.9
+      prettier: 3.9.10
       request-light: 0.5.8
       vscode-json-languageservice: 4.1.8
       vscode-languageserver: 9.0.1
