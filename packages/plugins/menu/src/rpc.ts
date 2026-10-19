@@ -332,32 +332,13 @@ export function createMenuRouter(
         }
       }
 
-      // Look the linked items' targets up before the claim below: a lookup
-      // that throws then leaves the menu's token alone, so the editor can
-      // retry the save.
+      // Look the linked items' targets up, and check the claimed ids, before
+      // the claim below: a refusal then leaves the menu's token alone, so the
+      // editor can retry the save.
       const targets = await lookupMenuTargets(
         context,
         flat.items.map((item) => item.meta),
       );
-
-      // The item tree is the menu's content: claim the menu term first, so
-      // of two saves from one copy only the first writes any item.
-      const guard = claimVersion(terms.version, input.ifMatch);
-      const claimed = await context.db
-        .update(terms)
-        .set(guard.set)
-        .where(and(eq(terms.id, term.id), guard.where))
-        .returning({ version: terms.version });
-      if (claimed.length === 0) {
-        const [current] = await context.db
-          .select({ version: terms.version })
-          .from(terms)
-          .where(eq(terms.id, term.id));
-        if (!current) {
-          throw errors.NOT_FOUND({ data: { kind: "menu", id: term.id } });
-        }
-        throw new ConflictError(current.version, resource);
-      }
 
       // Reject claimed ids not linked to this menu, or a save could re-parent
       // another menu's items.
@@ -393,6 +374,25 @@ export function createMenuRouter(
             },
           });
         }
+      }
+
+      // The item tree is the menu's content: claim the menu term first, so
+      // of two saves from one copy only the first writes any item.
+      const guard = claimVersion(terms.version, input.ifMatch);
+      const claimed = await context.db
+        .update(terms)
+        .set(guard.set)
+        .where(and(eq(terms.id, term.id), guard.where))
+        .returning({ version: terms.version });
+      if (claimed.length === 0) {
+        const [current] = await context.db
+          .select({ version: terms.version })
+          .from(terms)
+          .where(eq(terms.id, term.id));
+        if (!current) {
+          throw errors.NOT_FOUND({ data: { kind: "menu", id: term.id } });
+        }
+        throw new ConflictError(current.version, resource);
       }
 
       // The snapshot keeps the editor showing the item after its target is

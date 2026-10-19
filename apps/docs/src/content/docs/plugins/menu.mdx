@@ -137,7 +137,7 @@ Items nest into a tree up to the menu's limit, which the editor shows under the 
 
 A custom URL is either relative (starting with `/`, `#`, `?`, `./` or `../`) or absolute with an `http`, `https`, `mailto`, `tel` or `sms` scheme, the same schemes every Plumix link accepts (`LINK_SCHEMES` from `plumix/blocks`). Saving the menu refuses anything else, including `javascript:`, protocol-relative `//host` URLs and a bare `mailto:`, `tel:` or `sms:`.
 
-Two editors can have the same menu open. Each save carries the version it was loaded at, so the server refuses the second save and the editor prompts a reload. It never silently overwrites the first.
+Two editors can have the same menu open. Each save carries the `etag` the menu was loaded with as `ifMatch`, so the server refuses the second save and the editor offers to keep your version or load theirs. It never silently overwrites the first. An editor who opens a menu also takes a lease on it: while another user holds it, the menu opens read-only with a banner naming them, and Take over makes it editable.
 
 When an item's linked entry or term no longer resolves, the editor marks the item as a broken link and offers two fixes. Re-link points it at another entry or term. Convert to Custom URL turns it into a custom link, which needs an address before the menu can be saved. Each save stores the label and URL its linked entry or term had, so a broken item keeps its name and Convert to Custom URL fills in the last known address. A snapshot is only as fresh as the last save of the menu.
 

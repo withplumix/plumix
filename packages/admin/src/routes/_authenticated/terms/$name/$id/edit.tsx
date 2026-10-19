@@ -336,8 +336,7 @@ function EditTermContent({
     onSuccess: async (saved) => {
       etag.current = saved.etag;
       // List variants are scoped by `taxonomy` so sibling termTaxonomies
-      // don't needlessly refetch. Parent route remounts via the
-      // updatedAt key so the refetched row reseeds the form.
+      // don't needlessly refetch.
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: orpc.term.get.queryOptions({ input: { id: term.id } })

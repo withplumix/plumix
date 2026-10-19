@@ -1682,6 +1682,14 @@ describe("menu RPC", () => {
           ],
         }),
       ).rejects.toThrow();
+
+      // The refused save leaves the menu's token alone, so the editor's copy
+      // is still current and it can fix the save and retry.
+      const [term] = await h.db
+        .select({ version: terms.version })
+        .from(terms)
+        .where(eq(terms.id, m2.id));
+      expect(term?.version).toBe(0);
     });
   });
 
