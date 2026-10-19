@@ -1017,7 +1017,6 @@ function EntryEditor({
       snapshot: snapshotOf,
     },
     keepMine: (etag) => void autosave.keepMine(etag),
-    // Drop the author's unsaved edits before remounting on the saved entry.
     discard: autosave.cancel,
     reload: () => invalidateEntry().then(onReseed),
     onBack: () => void handleBack(),

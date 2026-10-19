@@ -427,7 +427,6 @@ function UserEditForm({
     },
     keepMine: (etag, values: ProfileValues) =>
       updateUser.mutate({ values, ifMatch: etag }),
-    // Remounts on the saved user, dropping the author's unsaved edits.
     reload: () => invalidateUserCaches(queryClient, target.id),
     onBack: () => {
       void navigate({ to: "/users", search: USERS_LIST_DEFAULT_SEARCH });

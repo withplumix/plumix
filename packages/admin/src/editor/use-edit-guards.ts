@@ -52,7 +52,6 @@ export function useEditGuards<Mine, Theirs>(
     queryFn: theirs.fetch,
     enabled: conflict.open,
   });
-  // Remount on the resource as the previous holder left it.
   const takeOver = useMutation({
     mutationFn: lease.takeOver,
     onSuccess: reload,

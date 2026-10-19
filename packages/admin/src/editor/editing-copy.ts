@@ -4,9 +4,7 @@ import { defineMessage } from "@lingui/core/macro";
 /** How a resource's conflict dialog and lease banner name what is edited. */
 export interface EditingCopy {
   readonly conflictTitle: MessageDescriptor;
-  /** `{name}` is editing it `{time}`. */
   readonly heldBy: MessageDescriptor;
-  /** `{name}` took it over at `{time}`. */
   readonly lost: MessageDescriptor;
 }
 

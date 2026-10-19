@@ -159,7 +159,6 @@ export function PlainFormRouteInner({
           : null,
     },
     keepMine: (etag) => void autosave.keepMine(etag),
-    // Drop the author's unsaved edits before remounting on the saved entry.
     discard: autosave.cancel,
     reload: () =>
       queryClient.invalidateQueries({ queryKey: entryQueryKey }).then(onReseed),
