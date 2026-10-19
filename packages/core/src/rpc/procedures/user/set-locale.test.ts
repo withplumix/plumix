@@ -1,7 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, test } from "vitest";
 
-import { etagOf } from "../../../db/concurrency.js";
 import { users } from "../../../db/schema/users.js";
 import {
   createDispatcherHarness,
@@ -50,7 +49,7 @@ describe("user.setLocale", () => {
     expect(
       await h.db.query.users.findFirst({ where: eq(users.id, h.user.id) }),
     ).toMatchObject({ meta: { pronouns: "they/them", locale: "en" } });
-    expect(opened.etag).toBe(etagOf(new Date("2100-01-01T00:00:00Z")));
+    expect(opened.etag).toBe("4102444800");
   });
 
   test("rejects a code that isn't in the site's enabled locales", async () => {

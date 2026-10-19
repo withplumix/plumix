@@ -17,7 +17,6 @@ import { idParam } from "../../contract/validation.js";
 import { rpcSurface } from "../entry/concurrency.js";
 import { assertCanEditUser } from "./helpers.js";
 
-/** Only someone who may edit the user may hold their lease. */
 async function editableUser(
   context: AuthenticatedAppContext,
   id: number,

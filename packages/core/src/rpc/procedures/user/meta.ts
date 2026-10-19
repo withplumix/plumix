@@ -172,7 +172,6 @@ export async function writeUserMeta(
   }
 }
 
-/** Fire `user:meta_changed` once a write carrying `patch` has landed. */
 export function announceUserMetaChange(
   ctx: AppContext,
   user: { readonly id: number },

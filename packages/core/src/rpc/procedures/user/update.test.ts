@@ -228,7 +228,7 @@ describe("the user's token outside a save from a copy", () => {
     expect(saved.name).toBe("Saved");
   });
 
-  test("disable and enable move the token, so a copy taken before each conflicts", async () => {
+  test("disable moves the token, so a copy taken before it conflicts", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const target = await h.factory.editor.create({
       updatedAt: new Date("2100-01-01T00:00:00Z"),
@@ -236,13 +236,36 @@ describe("the user's token outside a save from a copy", () => {
     const beforeDisable = await h.client.user.get({ id: target.id });
 
     const disabled = await h.client.user.disable({ id: target.id });
-    const beforeEnable = await h.client.user.get({ id: target.id });
-    const enabled = await h.client.user.enable({ id: target.id });
 
-    expect([beforeDisable.etag, disabled.etag, enabled.etag]).toEqual([
+    expect([beforeDisable.etag, disabled.etag]).toEqual([
       "4102444800",
       "4102444801",
-      "4102444802",
+    ]);
+    await expect(
+      h.client.user.update({
+        id: target.id,
+        name: "From before disable",
+        ifMatch: beforeDisable.etag,
+      }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "etag_mismatch", etag: "4102444801" },
+    });
+  });
+
+  test("enable moves the token, so a copy taken before it conflicts", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const target = await h.factory.editor.create({
+      disabledAt: new Date("2026-01-01T00:00:00Z"),
+      updatedAt: new Date("2100-01-01T00:00:00Z"),
+    });
+    const beforeEnable = await h.client.user.get({ id: target.id });
+
+    const enabled = await h.client.user.enable({ id: target.id });
+
+    expect([beforeEnable.etag, enabled.etag]).toEqual([
+      "4102444800",
+      "4102444801",
     ]);
     await expect(
       h.client.user.update({
@@ -252,7 +275,7 @@ describe("the user's token outside a save from a copy", () => {
       }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
-      data: { reason: "etag_mismatch", etag: "4102444802" },
+      data: { reason: "etag_mismatch", etag: "4102444801" },
     });
   });
 });

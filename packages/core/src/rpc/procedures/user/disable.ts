@@ -70,7 +70,6 @@ export const disable = base
       context,
     );
 
-    // A system write: the token moves without a copy to check.
     const output = await context.hooks.applyFilter(
       "rpc:user.disable:output",
       updated,

@@ -57,8 +57,6 @@ export const userUpdateInputSchema = ifMatchObject(
     /** Write over another user's edit lease, taking it over, rather than be refused with LOCKED. */
     takeOver: v.optional(v.boolean()),
   },
-  // The user's `etag` the caller's copy came with; a newer write rejects with
-  // CONFLICT `etag_mismatch`.
   "Send the user's `etag` from `user.get` as `ifMatch`",
 );
 

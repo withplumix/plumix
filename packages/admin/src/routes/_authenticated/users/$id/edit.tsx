@@ -395,7 +395,6 @@ function UserEditForm({
     },
     onLocked: lease.lose,
   });
-  // The user as the conflicting write left them, fetched fresh per conflict.
   const theirsQuery = useQuery({
     queryKey: [
       "user.conflict",
@@ -418,7 +417,6 @@ function UserEditForm({
     dispatchConflict({ type: "loadTheirs" });
     void invalidateUserCaches(queryClient, target.id);
   };
-  // Remount on the user as the previous holder left them.
   const takeOver = useMutation({
     mutationFn: lease.takeOver,
     onSuccess: () => invalidateUserCaches(queryClient, target.id),
@@ -520,7 +518,6 @@ function UserEditForm({
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            {/* A disabled fieldset disables every control in the form at once. */}
             <fieldset
               disabled={leaseMode.mode === "readOnly"}
               className="contents"
