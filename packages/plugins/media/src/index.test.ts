@@ -1281,7 +1281,6 @@ describe("@plumix/plugin-media — media.delete", () => {
   });
 });
 
-/** The `etag` the media library's copy of `id` carries. */
 async function mediaEtag(
   h: Awaited<ReturnType<typeof createDispatcherHarness>>,
   id: number,

@@ -21,14 +21,12 @@ export function libraryUploadState(
   };
 }
 
-/** A save's answer, kept until the list catches up with it. */
 export interface AdoptedEtag {
   readonly etag: string;
   /** Every etag this copy's saves were made from. */
   readonly superseded: readonly string[];
 }
 
-/** Records that a save sent `ifMatch` and was answered with `etag`. */
 export function adoptEtag(
   previous: AdoptedEtag | undefined,
   ifMatch: string,
@@ -46,4 +44,16 @@ export function copyEtag(
   adopted: AdoptedEtag | undefined,
 ): string {
   return adopted?.superseded.includes(listed) ? adopted.etag : listed;
+}
+
+export async function saveFromCopy<Saved extends { readonly etag: string }>(
+  adoptedEtags: Map<number, AdoptedEtag>,
+  item: { readonly id: number; readonly etag: string },
+  save: (ifMatch: string) => Promise<Saved>,
+): Promise<Saved> {
+  const adopted = adoptedEtags.get(item.id);
+  const ifMatch = copyEtag(item.etag, adopted);
+  const saved = await save(ifMatch);
+  adoptedEtags.set(item.id, adoptEtag(adopted, ifMatch, saved.etag));
+  return saved;
 }
