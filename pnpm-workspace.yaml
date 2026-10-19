@@ -118,11 +118,11 @@ catalogs:
     drizzle-orm: ^0.45.3
     drizzle-valibot: ^0.4.2
   lingui:
-    "@lingui/cli": ^6.9.0
-    "@lingui/core": ^6.9.0
-    "@lingui/format-po": ^6.9.0
-    "@lingui/react": ^6.9.0
-    "@lingui/vite-plugin": ^6.9.0
+    "@lingui/cli": ^6.9.1
+    "@lingui/core": ^6.9.1
+    "@lingui/format-po": ^6.9.1
+    "@lingui/react": ^6.9.1
+    "@lingui/vite-plugin": ^6.9.1
   orpc:
     "@orpc/client": ^1.15.3
     "@orpc/openapi": ^1.15.3
