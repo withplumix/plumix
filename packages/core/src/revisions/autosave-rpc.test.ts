@@ -5,6 +5,7 @@ import type { JsonObject } from "../json.js";
 import type { MetaBoxField } from "../plugin/manifest.js";
 import { ACCESS_POLICY_META_KEY } from "../access/contract/meta-key.js";
 import { etagOf } from "../db/concurrency.js";
+import { acquireEditLease, readEditLease } from "../db/edit-lease.js";
 import { eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
@@ -12,6 +13,7 @@ import { toRegisteredEntryType } from "../plugin/registry.js";
 import { NAMED_TEMPLATE_META_KEY } from "../route/render/template-builders.js";
 import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
 import { currentEtag } from "../test/entry-etag.js";
+import { editorUser } from "../test/factories.js";
 import { createRpcHarness } from "../test/rpc.js";
 import { getAutosave, upsertAutosave } from "./repository.js";
 
@@ -817,6 +819,57 @@ describe("entry.publish", () => {
       title: "theirs",
       excerpt: null,
     });
+  });
+
+  test("another editor's publish during a live lease is refused with who holds it", async () => {
+    const h = await publishedPostFixture();
+    const ada = await editorUser
+      .transient({ db: h.db })
+      .create({ name: "Ada" });
+    const since = new Date();
+    await acquireEditLease(
+      h.db,
+      { kind: "entry", id: h.entryId },
+      { userId: ada.id, surface: "admin" },
+      since,
+    );
+
+    await expect(
+      h.client.entry.publish({
+        id: h.entryId,
+        ifMatch: await currentEtag(h.db, h.entryId),
+      }),
+    ).rejects.toMatchObject({
+      code: "LOCKED",
+      data: { holder: { id: ada.id, name: "Ada" }, since },
+    });
+  });
+
+  test("a publish that passes takeOver lands and takes the lease over", async () => {
+    const h = await publishedPostFixture();
+    await h.client.entry.update({
+      id: h.entryId,
+      excerpt: "Pending excerpt",
+      ifMatch: await currentEtag(h.db, h.entryId),
+    });
+    const ada = await editorUser
+      .transient({ db: h.db })
+      .create({ name: "Ada" });
+    await acquireEditLease(
+      h.db,
+      { kind: "entry", id: h.entryId },
+      { userId: ada.id, surface: "admin" },
+    );
+
+    await h.client.entry.publish({
+      id: h.entryId,
+      ifMatch: await currentEtag(h.db, h.entryId),
+      takeOver: true,
+    });
+
+    expect(
+      await readEditLease(h.db, { kind: "entry", id: h.entryId }),
+    ).toMatchObject({ holder: { id: h.user?.id } });
   });
 
   test("returns BAD_REQUEST { reason: no_pending_draft } when the caller has no autosave", async () => {

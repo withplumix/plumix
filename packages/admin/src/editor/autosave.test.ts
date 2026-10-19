@@ -22,6 +22,44 @@ describe("classifyAutosaveError", () => {
     });
   });
 
+  test("a stale copy names who holds the entry's lease, when anyone does", () => {
+    const err = new ORPCError("CONFLICT", {
+      data: {
+        reason: "etag_mismatch",
+        etag: "1792411205",
+        updatedAt: new Date("2026-10-18T12:00:05Z"),
+        holder: { id: 2, name: "Ada" },
+      },
+    });
+
+    expect(classifyAutosaveError(err)).toEqual({
+      kind: "conflict",
+      conflict: {
+        etag: "1792411205",
+        updatedAt: new Date("2026-10-18T12:00:05Z"),
+        holder: { id: 2, name: "Ada" },
+      },
+    });
+  });
+
+  test("a save refused by another user's lease is locked, naming them", () => {
+    const err = new ORPCError("LOCKED", {
+      status: 423,
+      data: {
+        holder: { id: 2, name: "Ada" },
+        since: new Date("2026-10-18T12:00:00Z"),
+      },
+    });
+
+    expect(classifyAutosaveError(err)).toEqual({
+      kind: "locked",
+      locked: {
+        holder: { id: 2, name: "Ada" },
+        since: new Date("2026-10-18T12:00:00Z"),
+      },
+    });
+  });
+
   test("an invalid-block-content rejection is a hard failure the author must see", () => {
     const err = new ORPCError("INVALID_BLOCK_CONTENT", {
       data: { issues: ["unknown_block_type"] },

@@ -40,7 +40,11 @@ import {
 import { NAMED_TEMPLATE_META_KEY } from "../../../route/render/template-builders.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { assertCopyCurrent, claimEntry } from "./concurrency.js";
+import {
+  assertCopyCurrent,
+  assertEntryWritable,
+  claimEntry,
+} from "./concurrency.js";
 import {
   assertContentValidAgainstRegistries,
   assertContentWithinByteCap,
@@ -166,8 +170,9 @@ export const update = base
     );
 
     // After auth, so an unauthorised caller with a stale copy still gets
-    // FORBIDDEN, not CONFLICT.
-    assertCopyCurrent(filtered.ifMatch, existing.updatedAt);
+    // FORBIDDEN, not CONFLICT or LOCKED.
+    await assertEntryWritable(context, existing.id, filtered.takeOver);
+    assertCopyCurrent(filtered.ifMatch, existing);
 
     // Writes stay on live unless the type supports autosave AND the row is
     // published.
@@ -313,6 +318,7 @@ export const update = base
       access: accessChoice,
       ifMatch,
       saveAs: _saveAs,
+      takeOver: _takeOver,
       publishedAt: publishedAtInput,
       ...changes
     } = filtered;

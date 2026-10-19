@@ -2,3 +2,4 @@
 // barrel's `node:async_hooks` into a browser graph.
 export * from "./runtime.js";
 export * from "./rpc-errors.js";
+export * from "./edit-lease.js";

@@ -89,6 +89,7 @@ function autosaveOf(
   update: EntryUpdate,
   onError: (err: unknown) => void = () => undefined,
   onConflict: (conflict: unknown) => void = () => undefined,
+  onLocked: (locked: unknown) => void = () => undefined,
 ) {
   return createEntryAutosave(
     {
@@ -96,6 +97,7 @@ function autosaveOf(
       etag: "e0",
       onError,
       onConflict,
+      onLocked,
       groups: { title: title.group },
     },
     update,
@@ -130,6 +132,36 @@ describe("createEntryAutosave", () => {
     expect(inputs).toEqual([{ id: 1, title: "Hello world", ifMatch: "e0" }]);
     expect(conflicts).toEqual([{ etag: "theirs", updatedAt: T1 }]);
     expect(errors).toEqual([]);
+  });
+
+  test("a save refused by another user's lease reports who holds it, not a failure, and pauses", async () => {
+    const locked = new ORPCError("LOCKED", {
+      status: 423,
+      data: { holder: { id: 2, name: "Ada" }, since: T1 },
+    });
+    const { inputs, update } = fakeUpdate([locked]);
+    const title = titleField();
+    const errors: unknown[] = [];
+    const refusals: unknown[] = [];
+    const { autosave, unsaved } = autosaveOf(
+      title,
+      update,
+      (err) => errors.push(err),
+      undefined,
+      (refusal) => refusals.push(refusal),
+    );
+    title.value = "a";
+    autosave.schedule.title();
+    await autosave.flush();
+    title.value = "ab";
+    autosave.schedule.title();
+
+    await autosave.flush();
+
+    expect(inputs).toHaveLength(1);
+    expect(refusals).toEqual([{ holder: { id: 2, name: "Ada" }, since: T1 }]);
+    expect(errors).toEqual([]);
+    expect(unsaved()).toBe(true);
   });
 
   test("after a conflict autosave pauses: a later edit is not sent", async () => {
@@ -304,6 +336,7 @@ describe("createEntryAutosave", () => {
         etag: "e0",
         onError: () => undefined,
         onConflict: () => undefined,
+        onLocked: () => undefined,
         onUnsavedChange: (unsaved) => unsavedStates.push(unsaved),
         groups: { title: title.group },
       },
@@ -421,6 +454,7 @@ describe("createEntryAutosave", () => {
         etag: "e0",
         onError: () => undefined,
         onConflict: () => undefined,
+        onLocked: () => undefined,
         groups: { title: title.group, excerpt: excerpt.group },
       },
       update,

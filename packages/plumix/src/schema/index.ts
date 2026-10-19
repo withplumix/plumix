@@ -11,6 +11,8 @@ export {
   credentials,
   DEVICE_CODE_STATUSES,
   deviceCodes,
+  EDIT_LEASE_SURFACES,
+  editLeases,
   entries,
   ENTRY_CHANGE_KINDS,
   ENTRY_STATUSES,

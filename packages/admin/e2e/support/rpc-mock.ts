@@ -30,6 +30,49 @@ export function rpcEtagConflictBody(etag: string, updatedAt: Date): string {
   });
 }
 
+interface LeaseHolder {
+  readonly id: number;
+  readonly name: string;
+}
+
+/** A lease `entry.lease.acquire` hands `holder`, live for 120 seconds. */
+export function rpcLeaseBody(holder: LeaseHolder, since: Date): string {
+  return JSON.stringify({
+    json: {
+      holder,
+      surface: "admin",
+      since,
+      expiresAt: new Date(since.getTime() + 120_000),
+    },
+    meta: [
+      [1, "since"],
+      [1, "expiresAt"],
+    ],
+  });
+}
+
+/** A renewal that finds `by` took the lease over at `at`. */
+export function rpcLeaseLostBody(by: LeaseHolder, at: Date): string {
+  return JSON.stringify({
+    json: { lost: { by, at } },
+    meta: [[1, "lost", "at"]],
+  });
+}
+
+/** A refusal because `holder` has held the entry's lease since `since`. */
+export function rpcLockedBody(holder: LeaseHolder, since: Date): string {
+  return JSON.stringify({
+    json: {
+      defined: true,
+      code: "LOCKED",
+      status: 423,
+      message: "Resource is being edited",
+      data: { holder, since },
+    },
+    meta: [[1, "data", "since"]],
+  });
+}
+
 /**
  * Core's `rpcErrorBody` omits `defined`/`status`, which `isORPCErrorJson` needs
  * to decode a typed rejection.

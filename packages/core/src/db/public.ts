@@ -33,6 +33,25 @@ export {
   nextToken,
   parseIfMatch,
 } from "./concurrency.js";
+// Any resource a client edits from a copy opts into edit leases by keying them
+// under its own kind and calling `assertWritable` before its claim.
+export {
+  acquireEditLease,
+  assertWritable,
+  EDIT_LEASE_DURATION_MS,
+  LockedError,
+  readEditLease,
+  releaseEditLease,
+  renewEditLease,
+  takeOverEditLease,
+} from "./edit-lease.js";
+export type {
+  EditLease,
+  EditLeaseRenewal,
+  LeaseClaimant,
+  LeaseHolder,
+  LeaseResource,
+} from "./edit-lease.js";
 export { readVisitorMeta } from "./visitor-meta.js";
 export { defineDataMigration } from "./data-migration.js";
 export type { DataMigration } from "./data-migration.js";

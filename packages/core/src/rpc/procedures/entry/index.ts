@@ -7,6 +7,11 @@ import { deletePermanent } from "./delete-permanent.js";
 import { discardDraft } from "./discard-draft.js";
 import { duplicate } from "./duplicate.js";
 import { get } from "./get.js";
+import {
+  acquire as leaseAcquire,
+  release as leaseRelease,
+  renew as leaseRenew,
+} from "./lease.js";
 import { list } from "./list.js";
 import { publish } from "./publish.js";
 import { refreshBlockLoader } from "./refresh-block-loader.js";
@@ -37,6 +42,7 @@ export const entryRouter = {
   recentActivity,
   revisions: revisionsRouter,
   activity: { list: activityList },
+  lease: { acquire: leaseAcquire, renew: leaseRenew, release: leaseRelease },
 } as const;
 
 export type EntryRouter = typeof entryRouter;

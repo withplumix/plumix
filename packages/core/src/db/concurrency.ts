@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import type { JsonValue } from "../json.js";
+import type { LeaseResource } from "./edit-lease.js";
 import { isJsonObject } from "../json.js";
 
 /**
@@ -60,16 +61,21 @@ export function mergePatch(target: JsonValue, patch: JsonValue): JsonValue {
   return merged;
 }
 
-/** A guarded write refused because its copy is out of date. */
+/**
+ * A guarded write refused because its copy is out of date. Given the
+ * `resource`, the RPC conflict also names who holds its edit lease.
+ */
 export class ConflictError extends Error {
   readonly etag: string;
   readonly updatedAt: Date;
+  readonly resource: LeaseResource | undefined;
 
-  constructor(updatedAt: Date) {
+  constructor(updatedAt: Date, resource?: LeaseResource) {
     super("The resource changed since this copy was read.");
     this.name = "ConflictError";
     this.etag = etagOf(updatedAt);
     this.updatedAt = updatedAt;
+    this.resource = resource;
   }
 
   get data(): {

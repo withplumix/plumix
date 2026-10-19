@@ -49,13 +49,21 @@ export {
 } from "@plumix/core/db";
 
 export {
+  acquireEditLease,
+  assertWritable,
   claim,
   ConflictError,
+  EDIT_LEASE_DURATION_MS,
   etagOf,
   ifMatchObject,
+  LockedError,
   mergePatch,
   nextToken,
   parseIfMatch,
+  readEditLease,
+  releaseEditLease,
+  renewEditLease,
+  takeOverEditLease,
 } from "@plumix/core/db";
 
 // Purge vocabulary, meta settling, core's search conditions, visitor metadata,
