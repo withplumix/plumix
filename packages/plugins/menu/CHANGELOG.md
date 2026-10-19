@@ -1,5 +1,17 @@
 # @plumix/plugin-menu
 
+## 0.6.0
+
+### Minor Changes
+
+- [#3205](https://github.com/withplumix/plumix/pull/3205) [`fae2a50`](https://github.com/withplumix/plumix/commit/fae2a50e6e25ba9a38499db42845d4e8d12eea7a) Thanks [@nasyrov](https://github.com/nasyrov)! - Replaces the menu's `version` with the opaque `etag` and leases a menu to the editor who has it open. `menu.list`, `menu.get`, `menu.create` and `menu.save` return `etag` instead of `version`, and `menu.save` takes it back as a required `ifMatch`. A save from a stale copy is refused with a `CONFLICT` of reason `etag_mismatch` before it writes any item; `version_mismatch` is gone. The new `menu.lease.acquire`, `menu.lease.renew` and `menu.lease.release` procedures share the lease with the term editor, and `menu.save` refuses a write while another user holds it, unless it passes `takeOver: true`. In the admin, the menu editor opens read-only with a banner naming who is editing and offering **Take over** and **Back**. A stale save shows the conflict with **Keep mine** and **Load theirs** in place of the old "Reload to see latest" banner.
+
+- [#3187](https://github.com/withplumix/plumix/pull/3187) [`4d6d5a9`](https://github.com/withplumix/plumix/commit/4d6d5a9d0c07b3cf478104c62074c2a00cd1e679) Thanks [@nasyrov](https://github.com/nasyrov)! - Menu locations declare `maxDepth`; the editor enforces the most restrictive limit of a menu's locations, rendering stops at each location's depth, and the per-menu Max depth field is removed.
+
+### Patch Changes
+
+- [#3179](https://github.com/withplumix/plumix/pull/3179) [`ebe309e`](https://github.com/withplumix/plumix/commit/ebe309eb128569242c8b3cd5ef809dadcf70998d) Thanks [@nasyrov](https://github.com/nasyrov)! - Reads the shared link schemes from `plumix/blocks` for custom menu URLs, so `sms:` links are allowed. A bare `sms:` is refused, like a bare `mailto:` or `tel:`.
+
 ## 0.5.0
 
 ### Minor Changes
