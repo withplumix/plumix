@@ -27,6 +27,8 @@ export interface ShipPorts {
   readonly inFlightFromEarlierRuns: () => readonly Queued[];
   readonly ticketClosed: (ticket: Ticket) => boolean;
   readonly brokenCheckout: () => string | undefined;
+  readonly aBlockerIsMoving: () => boolean;
+  readonly pause: (ms: number, signal: AbortSignal) => Promise<void>;
   readonly say: (line: string) => void;
 }
 
@@ -65,6 +67,7 @@ export interface ShipReport {
 }
 
 const FAILURES_IN_A_ROW_THAT_MEAN_THE_RUN_AND_NOT_THE_TICKETS = 3;
+export const LOOK_AGAIN_FOR_AN_UNBLOCKED_TICKET_EVERY_MS = 10 * 60_000;
 
 const asReason = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
@@ -180,9 +183,22 @@ export const runShipLoop = async (
     unsettled.add(settled);
     void settled.then(() => unsettled.delete(settled));
   };
-  const untilShippingOrConfirmingSettles = async (): Promise<boolean> => {
-    if (unsettled.size === 0) return false;
-    await Promise.race(unsettled);
+  const untilThereMayBeMoreWork = async (): Promise<boolean> => {
+    const moving = ports.aBlockerIsMoving();
+    if (unsettled.size === 0 && !moving) return false;
+    const lookAgain = new AbortController();
+    await Promise.race([
+      ...unsettled,
+      ...(moving
+        ? [
+            ports.pause(
+              LOOK_AGAIN_FOR_AN_UNBLOCKED_TICKET_EVERY_MS,
+              lookAgain.signal,
+            ),
+          ]
+        : []),
+    ]);
+    lookAgain.abort();
     return true;
   };
 
@@ -211,7 +227,7 @@ export const runShipLoop = async (
   await drainAcrossLanes<Ticket, void>({
     lanes,
     nextItem: ports.nextTicket,
-    waitForMoreWork: untilShippingOrConfirmingSettles,
+    waitForMoreWork: untilThereMayBeMoreWork,
     stopDispatchingWhen: () =>
       outage !== undefined || stoppedBecause !== undefined || !withinBudget(),
     inLane: async (ticket) => {

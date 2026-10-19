@@ -1,5 +1,6 @@
 import { execFileSync, spawnSync } from "node:child_process";
 
+import type { BlockedTicket } from "./moving-blockers.js";
 import type { Queued } from "./run.js";
 import type {
   FailingCheck,
@@ -7,6 +8,7 @@ import type {
   PullRequestSnapshot,
 } from "./verdict.js";
 import { stillInTheLoopsHands, ticketOfLoopBranch } from "./in-flight.js";
+import { someTicketWaitsOnAMovingBlocker } from "./moving-blockers.js";
 import { blockersNamedIn } from "./named-blockers.js";
 import { retryWhatGitHubDropped, retryWhatGitHubDroppedNow } from "./outage.js";
 import {
@@ -171,6 +173,73 @@ export const firstUnblockedUnassignedTicket = (
       return { number, title };
   }
   return undefined;
+};
+
+const READY_TICKETS_AND_THEIR_BLOCKERS_QUERY = `query($owner: String!, $name: String!, $label: String!) {
+  repository(owner: $owner, name: $name) {
+    issues(first: 100, states: OPEN, labels: [$label]) {
+      nodes {
+        number
+        assignees { totalCount }
+        blockedBy(first: 50) {
+          nodes {
+            state
+            closedByPullRequestsReferences(first: 20, includeClosedPrs: false) {
+              nodes { state }
+            }
+          }
+        }
+      }
+    }
+  }
+}`;
+
+interface ReadyTicketAndItsBlockers {
+  readonly number: number;
+  readonly assignees: { readonly totalCount: number };
+  readonly blockedBy: {
+    readonly nodes: readonly {
+      readonly state: string;
+      readonly closedByPullRequestsReferences: {
+        readonly nodes: readonly { readonly state: string }[];
+      };
+    }[];
+  };
+}
+
+export const aReadyTicketWaitsOnAMovingBlocker = (
+  alreadyTaken: ReadonlySet<number>,
+): boolean => {
+  const [owner, name] = REPO_SLUG.split("/");
+  const tickets = ghJson<readonly ReadyTicketAndItsBlockers[]>([
+    "api",
+    "graphql",
+    "-f",
+    `query=${READY_TICKETS_AND_THEIR_BLOCKERS_QUERY}`,
+    "-F",
+    `owner=${owner}`,
+    "-F",
+    `name=${name}`,
+    "-F",
+    `label=${READY_LABEL}`,
+    "--jq",
+    ".data.repository.issues.nodes",
+  ]);
+  return someTicketWaitsOnAMovingBlocker(
+    tickets.map(({ number, assignees, blockedBy }): BlockedTicket => ({
+      number,
+      assigned: assignees.totalCount > 0,
+      blockedBy: blockedBy.nodes.map(
+        ({ state, closedByPullRequestsReferences }) => ({
+          state,
+          openPullRequests: closedByPullRequestsReferences.nodes.filter(
+            (pullRequest) => pullRequest.state === "OPEN",
+          ).length,
+        }),
+      ),
+    })),
+    alreadyTaken,
+  );
 };
 
 export const ticketByNumber = (wanted: number): Ticket | undefined => {

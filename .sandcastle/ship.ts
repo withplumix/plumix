@@ -1,5 +1,8 @@
+import { setTimeout as sleep } from "node:timers/promises";
+
 import { adrNumbersIn, nextFreeAdr } from "./lib/adr.js";
 import {
+  aReadyTicketWaitsOnAMovingBlocker,
   closeCompletedParent,
   firstUnblockedUnassignedTicket,
   isTicketClosed,
@@ -28,7 +31,10 @@ import {
 } from "./lib/repair.js";
 import { REPO_ROOT } from "./lib/repo.js";
 import { rerunOnceTheRunsFinish } from "./lib/run-completion.js";
-import { runShipLoop } from "./lib/run.js";
+import {
+  LOOK_AGAIN_FOR_AN_UNBLOCKED_TICKET_EVERY_MS,
+  runShipLoop,
+} from "./lib/run.js";
 import { pinSandboxImage } from "./lib/sandbox.js";
 import { Journal } from "./lib/telemetry.js";
 import { shipTicket } from "./lib/ticket.js";
@@ -80,6 +86,11 @@ const laneCount = Math.max(
 say(
   `Ship run — budget ${asDuration(budgetMs)}, ${laneCount} lane(s), ends ${new Date(endOfBudget).toLocaleTimeString()}`,
 );
+
+if (!onlyTickets.length)
+  say(
+    `Idle lanes look again every ${asDuration(LOOK_AGAIN_FOR_AN_UNBLOCKED_TICKET_EVERY_MS)} while a blocker has an open pull request`,
+  );
 
 const sandboxImage = sandboxImageOrRefuse(REPO_ROOT, say);
 if (!sandboxImage) process.exit(1);
@@ -188,6 +199,10 @@ const report = await runShipLoop(
       }),
     ticketClosed: ({ number }) => isTicketClosed(number),
     brokenCheckout: () => whyTheCheckoutIsBroken(),
+    aBlockerIsMoving: () =>
+      !onlyTickets.length && aReadyTicketWaitsOnAMovingBlocker(claimed),
+    pause: (ms, signal) =>
+      sleep(ms, undefined, { signal }).catch(() => undefined),
     say,
   },
   {
