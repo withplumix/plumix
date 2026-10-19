@@ -593,7 +593,19 @@ msgstr ""
 #. name: the editing user's display name or email; time: a formatted date and time
 #. js-lingui-explicit-id
 #: src/editor/EditLeaseBanner.tsx
+msgid "settings.lease.heldBy"
+msgstr ""
+
+#. name: the editing user's display name or email; time: a formatted date and time
+#. js-lingui-explicit-id
+#: src/editor/EditLeaseBanner.tsx
 msgid "editor.lease.heldBy"
+msgstr ""
+
+#. name: the user who took over; time: a formatted date and time
+#. js-lingui-explicit-id
+#: src/editor/EditLeaseBanner.tsx
+msgid "settings.lease.lost"
 msgstr ""
 
 #. name: the user who took over; time: a formatted date and time
@@ -851,14 +863,14 @@ msgid "auth.device.title"
 msgstr "授权 CLI 访问"
 
 #. js-lingui-explicit-id
-#: src/editor/EditLeaseBanner.tsx
-msgid "editor.lease.back"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_auth/-login-screen.tsx
 msgid "login.magicLink.back"
 msgstr "返回"
+
+#. js-lingui-explicit-id
+#: src/editor/EditLeaseBanner.tsx
+msgid "editor.lease.back"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -3625,6 +3637,16 @@ msgstr "所选父项属于其他分类法。"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.revoke.description"
 msgstr "令牌将立即停止工作。任何使用它的客户端下次请求时将获得 401。"
+
+#. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "settings.conflict.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.descriptionUntimed"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx

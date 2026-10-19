@@ -6,6 +6,7 @@ import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { requireCapability } from "../../require-capability.js";
 import { settingsGetInputSchema } from "./schemas.js";
+import { settingsGroupEtag } from "./token.js";
 
 const CAPABILITY = "settings:manage";
 /**
@@ -37,14 +38,17 @@ export const get = base
       .where(eq(settings.group, filtered.group))
       .limit(MAX_GROUP_ROWS_PER_READ);
 
-    const bag = settingsGroupBag(
-      rows,
-      context.plugins.settingsGroups.get(filtered.group)?.fields ?? [],
-    );
+    const copy = {
+      etag: settingsGroupEtag(rows),
+      values: settingsGroupBag(
+        rows,
+        context.plugins.settingsGroups.get(filtered.group)?.fields ?? [],
+      ),
+    };
 
     return context.hooks.applyFilter(
       "rpc:settings.get:output",
-      bag,
+      copy,
       {
         group: filtered.group,
       },

@@ -1,9 +1,8 @@
-import { sql } from "drizzle-orm";
-
 import type { JsonValue } from "../../../json.js";
 import type { MetaFieldError } from "../../../meta/field-pipeline.js";
 import type { ConflictErrors } from "../../../rpc-errors.js";
-import { and, eq, inArray } from "../../../db/index.js";
+import { assertWritable } from "../../../db/edit-lease.js";
+import { eq } from "../../../db/index.js";
 import { settings } from "../../../db/schema/settings.js";
 import { isPrivateSettingsGroup } from "../../../db/settings-groups.js";
 import { decodeJsonValue } from "../../../meta/coerce.js";
@@ -17,10 +16,17 @@ import {
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { requireCapability } from "../../require-capability.js";
+import { rpcSurface } from "../entry/concurrency.js";
 import {
   MAX_SETTINGS_VALUE_BYTES,
   settingsUpsertInputSchema,
 } from "./schemas.js";
+import {
+  claimSettingsGroup,
+  settingsGroupEtag,
+  settingsGroupResource,
+  writeSettingsKeys,
+} from "./token.js";
 
 const CAPABILITY = "settings:manage";
 
@@ -50,7 +56,6 @@ export const upsert = base
     // A group counts as created on its first save, which writes every field and
     // a marker row, so from then on a cleared setting stays absent.
     let values = filtered.values;
-    let creating = false;
     if (group) {
       const storedKeys = new Set(
         (
@@ -61,7 +66,6 @@ export const upsert = base
         ).map((row) => row.key),
       );
       if (!storedKeys.has(SETTINGS_CREATED_KEY)) {
-        creating = true;
         const starting = Object.entries(startingMeta(group.fields)).filter(
           ([key]) => !storedKeys.has(key),
         );
@@ -76,7 +80,7 @@ export const upsert = base
     const upsertRows: { group: string; key: string; value: JsonValue }[] = [];
     const fieldErrors: MetaFieldError[] = [];
     for (const [key, value] of Object.entries(values)) {
-      // Reserved: only the first save writes it.
+      // Reserved: only the claim writes it.
       if (key === SETTINGS_CREATED_KEY) continue;
       const field = groupFields.get(key);
       if (field && isConditionHidden(field, values)) continue;
@@ -130,31 +134,14 @@ export const upsert = base
       assertEncodedSize(row.group, row.key, row.value, errors);
     }
 
-    if (deletes.length > 0) {
-      await context.db
-        .delete(settings)
-        .where(
-          and(
-            eq(settings.group, filtered.group),
-            inArray(settings.key, deletes),
-          ),
-        );
-    }
-    const writtenRows = creating
-      ? [
-          ...upsertRows,
-          { group: filtered.group, key: SETTINGS_CREATED_KEY, value: true },
-        ]
-      : upsertRows;
-    if (writtenRows.length > 0) {
-      await context.db
-        .insert(settings)
-        .values(writtenRows)
-        .onConflictDoUpdate({
-          target: [settings.group, settings.key],
-          set: { value: sql`excluded.value` },
-        });
-    }
+    await assertWritable(
+      context.db,
+      settingsGroupResource(filtered.group),
+      { userId: context.user.id, surface: rpcSurface(context) },
+      { takeOver: filtered.takeOver },
+    );
+    await claimSettingsGroup(context.db, filtered.group, filtered.ifMatch);
+    await writeSettingsKeys(context.db, filtered.group, upsertRows, deletes);
 
     // Re-read the authoritative bag and ship it back + to the output
     // filter so plugins can observe the final shape in one place.
@@ -163,7 +150,10 @@ export const upsert = base
       .from(settings)
       .where(eq(settings.group, filtered.group));
     // `null` is a value the column can hold, so it stays in the bag.
-    const bag = settingsGroupBag(fresh, group?.fields ?? []);
+    const copy = {
+      etag: settingsGroupEtag(fresh),
+      values: settingsGroupBag(fresh, group?.fields ?? []),
+    };
 
     // Fire only when the call actually changed state — an empty
     // `values: {}` payload is a no-op and shouldn't wake up
@@ -182,7 +172,7 @@ export const upsert = base
 
     return context.hooks.applyFilter(
       "rpc:settings.upsert:output",
-      bag,
+      copy,
       {
         group: filtered.group,
       },

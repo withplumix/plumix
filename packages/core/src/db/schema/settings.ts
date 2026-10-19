@@ -25,6 +25,12 @@ export const settings = sqliteTable(
  */
 export type SettingsBag = JsonObject;
 
+/** A settings group as a client edits it: its bag and the token to save it from. */
+export interface SettingsGroupCopy {
+  readonly etag: string;
+  readonly values: SettingsBag;
+}
+
 export type Setting = typeof settings.$inferSelect;
 export type NewSetting = typeof settings.$inferInsert;
 

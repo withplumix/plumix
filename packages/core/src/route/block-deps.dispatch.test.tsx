@@ -200,7 +200,9 @@ describe("a block that declares its deps", () => {
     const admin = await h.seedUser("admin");
     const saved = await h.fetch("/_plumix/rpc/settings/upsert", {
       as: admin,
-      json: { json: { group: "school_ks2", values: { title: "KS2" } } },
+      json: {
+        json: { group: "school_ks2", values: { title: "KS2" }, ifMatch: "0" },
+      },
     });
     saved.assertStatus(200);
     await h.drainDeferred();

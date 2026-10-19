@@ -1045,7 +1045,7 @@ function EntryEditor({
     <>
       <EntryConflictDialog
         open={conflict.open}
-        changedAt={conflict.open ? conflict.conflict.updatedAt : null}
+        changedAt={conflict.open ? (conflict.conflict.updatedAt ?? null) : null}
         editingElsewhere={
           conflict.open
             ? editingElsewhere(conflict.conflict, userId)

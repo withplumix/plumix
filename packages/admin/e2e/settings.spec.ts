@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
 import { expectNoAxeViolations } from "./support/axe.js";
@@ -7,6 +8,9 @@ import {
   mockManifest,
   mockRpc,
   mockSession,
+  rpcEtagConflictBody,
+  rpcLeaseBody,
+  rpcLockedBody,
   rpcOkBody,
 } from "./support/rpc-mock.js";
 
@@ -58,7 +62,7 @@ test.describe("/settings/$page", () => {
     await mockManifest(page, MANIFEST_WITH_SETTINGS);
     await mockRpc(page, {
       "/auth/session": AUTHED_ADMIN,
-      "/settings/get": {},
+      "/settings/get": { etag: "0", values: {} },
     });
     await page.goto("settings/general");
     await expect(page.getByTestId("settings-page-heading")).toBeVisible();
@@ -83,7 +87,7 @@ test.describe("/settings/$page", () => {
     await mockManifest(page, MANIFEST_WITH_SETTINGS);
     await mockRpc(page, {
       "/auth/session": AUTHED_ADMIN,
-      "/settings/get": {},
+      "/settings/get": { etag: "0", values: {} },
     });
     await page.goto("settings/general");
     await expect(
@@ -104,8 +108,8 @@ test.describe("/settings/$page", () => {
     await mockRpc(page, {
       "/auth/session": AUTHED_ADMIN,
       "/settings/get": {
-        site_title: "Plumix",
-        admin_email: "root@plumix.dev",
+        etag: "3",
+        values: { site_title: "Plumix", admin_email: "root@plumix.dev" },
       },
     });
     await page.goto("settings/general");
@@ -123,8 +127,8 @@ test.describe("/settings/$page", () => {
     await mockManifest(page, MANIFEST_WITH_SETTINGS);
     await mockRpc(page, {
       "/auth/session": AUTHED_ADMIN,
-      "/settings/get": {},
-      "/settings/upsert": { site_title: "Plumix" },
+      "/settings/get": { etag: "0", values: {} },
+      "/settings/upsert": { etag: "1", values: { site_title: "Plumix" } },
     });
     await page.goto("settings/general");
     await page.getByTestId("meta-box-field-site_title-input").fill("Plumix");
@@ -151,7 +155,7 @@ test.describe("/settings/$page", () => {
         return route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: rpcOkBody({}),
+          body: rpcOkBody({ etag: "0", values: {} }),
         });
       }
       if (url.endsWith("/settings/upsert")) {
@@ -200,7 +204,7 @@ test.describe("/settings/$page", () => {
         return route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: rpcOkBody({}),
+          body: rpcOkBody({ etag: "0", values: {} }),
         });
       }
       if (url.endsWith("/settings/upsert")) {
@@ -246,4 +250,133 @@ test.describe("/settings/$page", () => {
     await page.goto("settings/nonexistent");
     await expect(page.getByTestId("not-found-page")).toBeVisible();
   });
+
+  async function mockSavedGroup(page: Page): Promise<{
+    readonly upserts: Record<string, unknown>[];
+    readonly saveElsewhere: (values: Record<string, unknown>) => void;
+  }> {
+    let saved = { etag: "0", values: { site_title: "Plumix" } };
+    const upserts: Record<string, unknown>[] = [];
+    await mockManifest(page, MANIFEST_WITH_SETTINGS);
+    await mockRpc(page, { "/auth/session": AUTHED_ADMIN });
+    await page.route("**/_plumix/rpc/settings/get", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody(saved),
+      }),
+    );
+    const save = (values: Record<string, unknown>): void => {
+      saved = {
+        etag: String(Number(saved.etag) + 1),
+        values: { ...saved.values, ...values },
+      };
+    };
+    await page.route("**/_plumix/rpc/settings/upsert", (route) => {
+      const { ifMatch, values } = (
+        route.request().postDataJSON() as {
+          json: { ifMatch: string; values: Record<string, unknown> };
+        }
+      ).json;
+      upserts.push({ ifMatch, ...values });
+      if (ifMatch !== saved.etag) {
+        // A settings group's token is a counter, so the conflict carries no
+        // change time.
+        return route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: rpcEtagConflictBody(saved.etag),
+        });
+      }
+      save(values);
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody(saved),
+      });
+    });
+    return { upserts, saveElsewhere: save };
+  }
+
+  test("a save after another session saved the card opens the conflict dialog, and Load theirs shows that save", async ({
+    page,
+  }) => {
+    const { saveElsewhere } = await mockSavedGroup(page);
+    await page.goto("settings/general");
+    const title = page.getByTestId("meta-box-field-site_title-input");
+    await expect(title).toHaveValue("Plumix");
+    saveElsewhere({ site_title: "Saved elsewhere" });
+
+    await title.fill("Mine");
+    await page.getByTestId("settings-submit-identity").click();
+
+    await expect(page.getByTestId("entry-conflict-dialog")).toBeVisible();
+    await page.getByTestId("entry-conflict-load-theirs").click();
+    await expect(page.getByTestId("entry-conflict-dialog")).toBeHidden();
+    await expect(title).toHaveValue("Saved elsewhere");
+  });
+
+  test("Keep mine in the card's conflict dialog saves the card over the other session's save", async ({
+    page,
+  }) => {
+    const { upserts, saveElsewhere } = await mockSavedGroup(page);
+    await page.goto("settings/general");
+    const title = page.getByTestId("meta-box-field-site_title-input");
+    await expect(title).toHaveValue("Plumix");
+    saveElsewhere({ site_title: "Saved elsewhere" });
+    await title.fill("Mine");
+    await page.getByTestId("settings-submit-identity").click();
+    await expect(page.getByTestId("entry-conflict-dialog")).toBeVisible();
+
+    await page.getByTestId("entry-conflict-keep-mine").click();
+
+    await expect(
+      page.getByTestId("settings-save-notice-identity"),
+    ).toBeVisible();
+    expect(upserts).toEqual([
+      expect.objectContaining({ ifMatch: "0", site_title: "Mine" }),
+      expect.objectContaining({ ifMatch: "1", site_title: "Mine" }),
+    ]);
+  });
+
+  test("while another admin edits a card, working in it shows who, and Take over makes it editable", async ({
+    page,
+  }) => {
+    await mockSavedGroup(page);
+    const ada = { id: 2, name: "Ada" };
+    const since = new Date("2026-10-19T09:00:00Z");
+    await page.route("**/_plumix/rpc/settings/lease/acquire", (route) => {
+      const { takeOver } = (
+        route.request().postDataJSON() as { json: { takeOver?: boolean } }
+      ).json;
+      return route.fulfill({
+        status: takeOver === true ? 200 : 423,
+        contentType: "application/json",
+        body:
+          takeOver === true
+            ? rpcLeaseBody(AUTHED_ADMIN_HOLDER, since)
+            : rpcLockedBody(ada, since),
+      });
+    });
+    await page.goto("settings/general");
+    const card = page.getByTestId("settings-group-card-identity");
+    const title = page.getByTestId("meta-box-field-site_title-input");
+
+    await title.focus();
+
+    await expect(card.getByTestId("edit-lease-held-by")).toContainText(
+      "Ada is editing these settings",
+    );
+    await expect(title).toBeDisabled();
+    await expect(
+      page
+        .getByTestId("settings-group-card-contact")
+        .getByTestId("edit-lease-banner"),
+    ).toHaveCount(0);
+    await card.getByTestId("edit-lease-take-over").click();
+    await expect(card.getByTestId("edit-lease-banner")).toHaveCount(0);
+    await expect(title).toBeEnabled();
+  });
 });
+
+const AUTHED_ADMIN_HOLDER = { id: 1, name: "Admin" };

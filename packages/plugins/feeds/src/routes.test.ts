@@ -2092,7 +2092,10 @@ describe("a feed at the edge", () => {
 
     const saved = await h.fetch("/_plumix/rpc/settings/upsert", {
       as: admin,
-      json: { json: { group: "site", values: { public: false } }, meta: [] },
+      json: {
+        json: { group: "site", values: { public: false }, ifMatch: "0" },
+        meta: [],
+      },
     });
     saved.assertStatus(200);
     await h.drainDeferred();

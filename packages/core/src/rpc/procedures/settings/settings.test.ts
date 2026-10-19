@@ -1,5 +1,6 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
+import { acquireEditLease, readEditLease } from "../../../db/edit-lease.js";
 import { and, eq } from "../../../db/index.js";
 import { settings } from "../../../db/schema/settings.js";
 import { HookRegistry } from "../../../hooks/registry.js";
@@ -7,12 +8,25 @@ import { definePlugin } from "../../../plugin/define.js";
 import { number, select, text, url } from "../../../plugin/fields/index.js";
 import { installPlugins } from "../../../runtime/install-plugins.js";
 import { loadSettingsGroups } from "../../../seo/site-settings.js";
+import { adminUser } from "../../../test/factories.js";
 import { createRpcHarness } from "../../../test/rpc.js";
+
+type Harness = Awaited<ReturnType<typeof createRpcHarness>>;
+
+/** Saves from the group as it stands, the way a settings card does. */
+async function saveCurrent(
+  h: Harness,
+  input: { readonly group: string; readonly values: Record<string, unknown> },
+) {
+  const { etag } = await h.client.settings.get({ group: input.group });
+  const saved = await h.client.settings.upsert({ ...input, ifMatch: etag });
+  return saved.values;
+}
 
 describe("settings.get", () => {
   test("admin reads an empty group as an empty bag", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
-    const bag = await h.client.settings.get({ group: "general" });
+    const { values: bag } = await h.client.settings.get({ group: "general" });
     expect(bag).toEqual({});
   });
 
@@ -28,7 +42,7 @@ describe("settings.get", () => {
       key: "tagline",
       value: "A site",
     });
-    const bag = await h.client.settings.get({ group: "general" });
+    const { values: bag } = await h.client.settings.get({ group: "general" });
     expect(bag).toEqual({ site_title: "Example", tagline: "A site" });
   });
 
@@ -44,10 +58,10 @@ describe("settings.get", () => {
       key: "per_page",
       value: "10",
     });
-    expect(await h.client.settings.get({ group: "general" })).toEqual({
+    expect((await h.client.settings.get({ group: "general" })).values).toEqual({
       site_title: "G",
     });
-    expect(await h.client.settings.get({ group: "reading" })).toEqual({
+    expect((await h.client.settings.get({ group: "reading" })).values).toEqual({
       per_page: "10",
     });
   });
@@ -66,7 +80,7 @@ describe("settings.get", () => {
 describe("settings.upsert", () => {
   test("writes new rows then reads them back", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
-    const result = await h.client.settings.upsert({
+    const result = await saveCurrent(h, {
       group: "general",
       values: { site_title: "Example", tagline: "A site" },
     });
@@ -75,11 +89,11 @@ describe("settings.upsert", () => {
 
   test("partial patch: unmentioned keys survive", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
-    await h.client.settings.upsert({
+    await saveCurrent(h, {
       group: "general",
       values: { site_title: "v1", tagline: "t1" },
     });
-    const after = await h.client.settings.upsert({
+    const after = await saveCurrent(h, {
       group: "general",
       values: { site_title: "v2" },
     });
@@ -88,11 +102,11 @@ describe("settings.upsert", () => {
 
   test("null value deletes the key", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
-    await h.client.settings.upsert({
+    await saveCurrent(h, {
       group: "general",
       values: { site_title: "v1", tagline: "t1" },
     });
-    const after = await h.client.settings.upsert({
+    const after = await saveCurrent(h, {
       group: "general",
       values: { tagline: null },
     });
@@ -101,11 +115,11 @@ describe("settings.upsert", () => {
 
   test("group isolation: upsert on one group doesn't touch another", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
-    await h.client.settings.upsert({
+    await saveCurrent(h, {
       group: "general",
       values: { site_title: "G" },
     });
-    await h.client.settings.upsert({
+    await saveCurrent(h, {
       group: "reading",
       values: { per_page: 10 },
     });
@@ -117,18 +131,24 @@ describe("settings.upsert", () => {
       .select({ key: settings.key, value: settings.value })
       .from(settings)
       .where(eq(settings.group, "reading"));
-    expect(general.map((r) => r.key)).toEqual(["site_title"]);
-    expect(reading.map((r) => r.key)).toEqual(["per_page"]);
+    expect(general.map((r) => r.key).sort()).toEqual([
+      "__plumix_created",
+      "site_title",
+    ]);
+    expect(reading.map((r) => r.key).sort()).toEqual([
+      "__plumix_created",
+      "per_page",
+    ]);
   });
 
   test("fires `settings:group_changed` with the upserts + removed keys", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
-    await h.client.settings.upsert({
+    await saveCurrent(h, {
       group: "general",
       values: { site_title: "v1", tagline: "t1" },
     });
     const spy = h.spyAction("settings:group_changed");
-    await h.client.settings.upsert({
+    await saveCurrent(h, {
       group: "general",
       values: { site_title: "v2", tagline: null },
     });
@@ -144,7 +164,7 @@ describe("settings.upsert", () => {
   test("non-admin is rejected with FORBIDDEN", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
     await expect(
-      h.client.settings.upsert({
+      saveCurrent(h, {
         group: "general",
         values: { site_title: "x" },
       }),
@@ -158,7 +178,7 @@ describe("settings.upsert", () => {
     // `value` is stored as JSON, not TEXT; stringifying anywhere would bring
     // booleans, numbers and objects back as strings.
     const h = await createRpcHarness({ authAs: "admin" });
-    await h.client.settings.upsert({
+    await saveCurrent(h, {
       group: "general",
       values: {
         count: 42,
@@ -166,7 +186,7 @@ describe("settings.upsert", () => {
         config: { nested: { arr: [1, 2] } },
       },
     });
-    const bag = await h.client.settings.get({ group: "general" });
+    const { values: bag } = await h.client.settings.get({ group: "general" });
     expect(bag).toEqual({
       count: 42,
       enabled: true,
@@ -178,7 +198,7 @@ describe("settings.upsert", () => {
   // key like `og:title` registers but can never be saved.
   test("accepts the same field keys that plugins can register", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
-    const bag = await h.client.settings.upsert({
+    const bag = await saveCurrent(h, {
       group: "seo",
       values: {
         "og:title": "Hello",
@@ -201,7 +221,7 @@ describe("settings.upsert", () => {
       value: "Example",
     });
     const spy = h.spyAction("settings:group_changed");
-    const bag = await h.client.settings.upsert({
+    const bag = await saveCurrent(h, {
       group: "general",
       values: {},
     });
@@ -212,11 +232,11 @@ describe("settings.upsert", () => {
 
   test("row-level isolation: upsert overwrites without duplicating the PK row", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
-    await h.client.settings.upsert({
+    await saveCurrent(h, {
       group: "general",
       values: { site_title: "v1" },
     });
-    await h.client.settings.upsert({
+    await saveCurrent(h, {
       group: "general",
       values: { site_title: "v2" },
     });
@@ -252,7 +272,7 @@ describe("settings.upsert (condition-hidden fields)", () => {
 
   test("a hidden field's value is dropped from the write", async () => {
     const h = await harnessWithConditionalGroup();
-    const bag = await h.client.settings.upsert({
+    const bag = await saveCurrent(h, {
       group: "video",
       values: { layout: "standard", videoUrl: "https://example.com/v.mp4" },
     });
@@ -261,7 +281,7 @@ describe("settings.upsert (condition-hidden fields)", () => {
 
   test("a visible field's value persists", async () => {
     const h = await harnessWithConditionalGroup();
-    const bag = await h.client.settings.upsert({
+    const bag = await saveCurrent(h, {
       group: "video",
       values: { layout: "video", videoUrl: "https://example.com/v.mp4" },
     });
@@ -273,7 +293,7 @@ describe("settings.upsert (condition-hidden fields)", () => {
 
   test("unregistered groups keep the laissez-faire write path", async () => {
     const h = await harnessWithConditionalGroup();
-    const bag = await h.client.settings.upsert({
+    const bag = await saveCurrent(h, {
       group: "general",
       values: { anything: "goes" },
     });
@@ -304,7 +324,7 @@ describe("settings.upsert (field pipeline)", () => {
 
   test("a registered field stores the value in its declared shape", async () => {
     const h = await harnessWithTypedGroup();
-    const bag = await h.client.settings.upsert({
+    const bag = await saveCurrent(h, {
       group: "reading",
       values: { per_page: "10" },
     });
@@ -319,7 +339,7 @@ describe("settings.upsert (field pipeline)", () => {
   test("a value the field cannot hold rejects the whole write", async () => {
     const h = await harnessWithTypedGroup();
     await expect(
-      h.client.settings.upsert({
+      saveCurrent(h, {
         group: "reading",
         values: { per_page: "not a number", blurb: "ok" },
       }),
@@ -331,13 +351,15 @@ describe("settings.upsert (field pipeline)", () => {
       },
     });
     // Nothing partial lands — the sibling key is untouched too.
-    expect(await h.client.settings.get({ group: "reading" })).toEqual({});
+    expect((await h.client.settings.get({ group: "reading" })).values).toEqual(
+      {},
+    );
   });
 
   test("a declared constraint is enforced, not just the shape", async () => {
     const h = await harnessWithTypedGroup();
     await expect(
-      h.client.settings.upsert({
+      saveCurrent(h, {
         group: "reading",
         values: { blurb: "far too long" },
       }),
@@ -350,7 +372,7 @@ describe("settings.upsert (field pipeline)", () => {
   test("clearing a required field is rejected, as it is for meta", async () => {
     const h = await harnessWithTypedGroup();
     await expect(
-      h.client.settings.upsert({ group: "reading", values: { motto: null } }),
+      saveCurrent(h, { group: "reading", values: { motto: null } }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
       data: { reason: "settings_invalid_value", errors: [{ path: "motto" }] },
@@ -359,7 +381,7 @@ describe("settings.upsert (field pipeline)", () => {
 
   test("an unregistered key still stores whatever JSON it was sent", async () => {
     const h = await harnessWithTypedGroup();
-    const bag = await h.client.settings.upsert({
+    const bag = await saveCurrent(h, {
       group: "reading",
       values: { orphan: { nested: [1, true, null] } },
     });
@@ -369,7 +391,7 @@ describe("settings.upsert (field pipeline)", () => {
   test("a value with no JSON serialization is rejected", async () => {
     const h = await harnessWithTypedGroup();
     await expect(
-      h.client.settings.upsert({
+      saveCurrent(h, {
         group: "reading",
         values: { orphan: () => "nope" },
       }),
@@ -406,6 +428,7 @@ describe("settings private groups", () => {
       h.client.settings.upsert({
         group: "comments_internal",
         values: { ip_salt: "0" },
+        ifMatch: "0",
       }),
     ).rejects.toMatchObject({
       code: "BAD_REQUEST",
@@ -452,7 +475,7 @@ describe("settings groups: created on first save", () => {
 
   test("a group never saved reads its fields' starting values", async () => {
     const h = await harnessWithDefaults();
-    expect(await h.client.settings.get({ group: "blog" })).toEqual({
+    expect((await h.client.settings.get({ group: "blog" })).values).toEqual({
       tagline: "Hello",
       perPage: 10,
     });
@@ -460,7 +483,7 @@ describe("settings groups: created on first save", () => {
 
   test("the first save writes every field, filling unsent keys with their starting values", async () => {
     const h = await harnessWithDefaults();
-    const bag = await h.client.settings.upsert({
+    const bag = await saveCurrent(h, {
       group: "blog",
       values: { tagline: "Mine" },
     });
@@ -469,53 +492,53 @@ describe("settings groups: created on first save", () => {
     expect(await storedRows(h)).toEqual({
       tagline: "Mine",
       perPage: 10,
-      __plumix_created: true,
+      __plumix_created: 1,
     });
   });
 
   test("a setting cleared in the first save stays cleared", async () => {
     const h = await harnessWithDefaults();
-    await h.client.settings.upsert({
+    await saveCurrent(h, {
       group: "blog",
       values: { perPage: null },
     });
 
     expect(await storedRows(h)).toEqual({
       tagline: "Hello",
-      __plumix_created: true,
+      __plumix_created: 1,
     });
-    expect(await h.client.settings.get({ group: "blog" })).toEqual({
+    expect((await h.client.settings.get({ group: "blog" })).values).toEqual({
       tagline: "Hello",
     });
   });
 
   test("after the first save a cleared setting stays cleared", async () => {
     const h = await harnessWithDefaults();
-    await h.client.settings.upsert({ group: "blog", values: {} });
-    await h.client.settings.upsert({
+    await saveCurrent(h, { group: "blog", values: {} });
+    await saveCurrent(h, {
       group: "blog",
       values: { perPage: null },
     });
 
-    expect(await h.client.settings.get({ group: "blog" })).toEqual({
+    expect((await h.client.settings.get({ group: "blog" })).values).toEqual({
       tagline: "Hello",
     });
   });
 
   test("the marker never reaches settings.get or its output filter", async () => {
     const h = await harnessWithDefaults();
-    await h.client.settings.upsert({ group: "blog", values: {} });
+    await saveCurrent(h, { group: "blog", values: {} });
     const spy = h.spyFilter("rpc:settings.get:output");
 
-    const bag = await h.client.settings.get({ group: "blog" });
+    const { values: bag } = await h.client.settings.get({ group: "blog" });
 
     expect(bag).not.toHaveProperty("__plumix_created");
-    expect(spy.lastInput).not.toHaveProperty("__plumix_created");
+    expect(spy.lastInput?.values).not.toHaveProperty("__plumix_created");
   });
 
   test("the marker never reaches the server-side settings read", async () => {
     const h = await harnessWithDefaults();
-    await h.client.settings.upsert({ group: "blog", values: {} });
+    await saveCurrent(h, { group: "blog", values: {} });
 
     const groups = await loadSettingsGroups(h.context, ["blog"]);
 
@@ -534,8 +557,8 @@ describe("settings groups: created on first save", () => {
 
   test("the server-side read of a created group answers storage alone", async () => {
     const h = await harnessWithDefaults();
-    await h.client.settings.upsert({ group: "blog", values: {} });
-    await h.client.settings.upsert({
+    await saveCurrent(h, { group: "blog", values: {} });
+    await saveCurrent(h, {
       group: "blog",
       values: { tagline: null, perPage: null },
     });
@@ -555,11 +578,11 @@ describe("settings groups: created on first save", () => {
       value: "Legacy",
     });
 
-    expect(await h.client.settings.get({ group: "blog" })).toEqual({
+    expect((await h.client.settings.get({ group: "blog" })).values).toEqual({
       tagline: "Legacy",
       perPage: 10,
     });
-    await h.client.settings.upsert({
+    await saveCurrent(h, {
       group: "blog",
       values: { footer: "(c)" },
     });
@@ -567,36 +590,245 @@ describe("settings groups: created on first save", () => {
       tagline: "Legacy",
       perPage: 10,
       footer: "(c)",
-      __plumix_created: true,
+      __plumix_created: 1,
     });
   });
 
   test("a save cannot clear or overwrite the marker", async () => {
     const h = await harnessWithDefaults();
-    await h.client.settings.upsert({ group: "blog", values: {} });
-    await h.client.settings.upsert({
+    await saveCurrent(h, { group: "blog", values: {} });
+    await saveCurrent(h, {
       group: "blog",
       values: { __plumix_created: null, perPage: null },
     });
-    expect((await storedRows(h)).__plumix_created).toBe(true);
+    expect((await storedRows(h)).__plumix_created).toBe(2);
 
-    await h.client.settings.upsert({
+    await saveCurrent(h, {
       group: "blog",
       values: { __plumix_created: "x" },
     });
-    expect((await storedRows(h)).__plumix_created).toBe(true);
+    expect((await storedRows(h)).__plumix_created).toBe(3);
   });
 
   // The marker is what keeps a group created once every setting in it has
   // been cleared.
   test("a group whose every setting was cleared stays created", async () => {
     const h = await harnessWithDefaults();
-    await h.client.settings.upsert({ group: "blog", values: {} });
-    await h.client.settings.upsert({
+    await saveCurrent(h, { group: "blog", values: {} });
+    await saveCurrent(h, {
       group: "blog",
       values: { tagline: null, perPage: null },
     });
 
-    expect(await h.client.settings.get({ group: "blog" })).toEqual({});
+    expect((await h.client.settings.get({ group: "blog" })).values).toEqual({});
+  });
+});
+describe("settings group concurrency", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test("a group never saved reads with etag 0", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+
+    const copy = await h.client.settings.get({ group: "general" });
+
+    expect(copy).toEqual({ etag: "0", values: {} });
+  });
+
+  test("a save without ifMatch is refused with where to find the etag", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+
+    await expect(
+      // @ts-expect-error -- the caller left out its copy's token
+      h.client.settings.upsert({ group: "general", values: { tagline: "x" } }),
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      data: {
+        issues: [
+          {
+            message:
+              "Send the settings group's `etag` from `settings.get` as `ifMatch`",
+          },
+        ],
+      },
+    });
+  });
+
+  test("each save answers a later etag, chained from the last one's", async () => {
+    vi.useFakeTimers({ now: new Date("2026-10-19T12:00:00Z") });
+    const h = await createRpcHarness({ authAs: "admin" });
+
+    const first = await h.client.settings.upsert({
+      group: "general",
+      values: { tagline: "a" },
+      ifMatch: "0",
+    });
+    const second = await h.client.settings.upsert({
+      group: "general",
+      values: { tagline: "b" },
+      ifMatch: first.etag,
+    });
+    const third = await h.client.settings.upsert({
+      group: "general",
+      values: {},
+      ifMatch: second.etag,
+    });
+
+    expect([first.etag, second.etag, third.etag]).toEqual(["1", "2", "3"]);
+  });
+
+  test("a save from a stale copy is refused and writes no key", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    await h.client.settings.upsert({
+      group: "general",
+      values: { tagline: "theirs" },
+      ifMatch: "0",
+    });
+
+    await expect(
+      h.client.settings.upsert({
+        group: "general",
+        values: { tagline: "mine", site_title: "Mine" },
+        ifMatch: "0",
+      }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "etag_mismatch", etag: "1" },
+    });
+    expect(await h.client.settings.get({ group: "general" })).toEqual({
+      etag: "1",
+      values: { tagline: "theirs" },
+    });
+  });
+
+  test("of two first saves racing, one lands and the other conflicts", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+
+    const results = await Promise.allSettled([
+      h.client.settings.upsert({
+        group: "general",
+        values: { tagline: "a" },
+        ifMatch: "0",
+      }),
+      h.client.settings.upsert({
+        group: "general",
+        values: { tagline: "b" },
+        ifMatch: "0",
+      }),
+    ]);
+
+    expect(results.map((result) => result.status).sort()).toEqual([
+      "fulfilled",
+      "rejected",
+    ]);
+    expect(
+      results.find((result) => result.status === "rejected"),
+    ).toMatchObject({
+      reason: {
+        code: "CONFLICT",
+        data: { reason: "etag_mismatch", etag: "1" },
+      },
+    });
+  });
+
+  test("a group saved before its marker counted reads as etag 0 and saves from it", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    await h.factory.setting.create({
+      group: "general",
+      key: "__plumix_created",
+      value: true,
+    });
+    await h.factory.setting.create({
+      group: "general",
+      key: "tagline",
+      value: "old",
+    });
+    const copy = await h.client.settings.get({ group: "general" });
+
+    const saved = await h.client.settings.upsert({
+      group: "general",
+      values: { tagline: "new" },
+      ifMatch: copy.etag,
+    });
+
+    expect([copy.etag, saved.etag]).toEqual(["0", "1"]);
+    expect(saved.values).toEqual({ tagline: "new" });
+  });
+
+  test("another admin's save while one holds the group's lease is refused with who holds it", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const ada = await adminUser.transient({ db: h.db }).create({ name: "Ada" });
+    const since = new Date();
+    await acquireEditLease(
+      h.db,
+      { kind: "settings_group", id: "general" },
+      { userId: ada.id, surface: "admin" },
+      since,
+    );
+
+    await expect(
+      h.client.settings.upsert({
+        group: "general",
+        values: { tagline: "mine" },
+        ifMatch: "0",
+      }),
+    ).rejects.toMatchObject({
+      code: "LOCKED",
+      data: { holder: { id: ada.id, name: "Ada" }, since },
+    });
+    expect((await h.client.settings.get({ group: "general" })).values).toEqual(
+      {},
+    );
+  });
+
+  test("a save that takes over the group's lease lands and holds it", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const ada = await adminUser.transient({ db: h.db }).create({ name: "Ada" });
+    await acquireEditLease(
+      h.db,
+      { kind: "settings_group", id: "general" },
+      { userId: ada.id, surface: "admin" },
+    );
+
+    const saved = await h.client.settings.upsert({
+      group: "general",
+      values: { tagline: "mine" },
+      ifMatch: "0",
+      takeOver: true,
+    });
+
+    expect(saved.values).toEqual({ tagline: "mine" });
+    expect(
+      (await readEditLease(h.db, { kind: "settings_group", id: "general" }))
+        ?.holder.id,
+    ).toBe(h.user.id);
+  });
+
+  test("a stale save names who holds the group's lease in its conflict", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const ada = await adminUser.transient({ db: h.db }).create({ name: "Ada" });
+    await h.client.settings.upsert({
+      group: "general",
+      values: { tagline: "first" },
+      ifMatch: "0",
+    });
+    await acquireEditLease(
+      h.db,
+      { kind: "settings_group", id: "general" },
+      { userId: ada.id, surface: "admin" },
+    );
+
+    await expect(
+      h.client.settings.upsert({
+        group: "general",
+        values: { tagline: "mine" },
+        ifMatch: "0",
+        takeOver: true,
+      }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "etag_mismatch", holder: { id: h.user.id } },
+    });
   });
 });

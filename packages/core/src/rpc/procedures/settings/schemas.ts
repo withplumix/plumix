@@ -1,5 +1,6 @@
 import * as v from "valibot";
 
+import { versionIfMatchObject } from "../../../db/concurrency.js";
 import {
   META_FIELD_KEY_MAX_LENGTH,
   META_FIELD_KEY_RE,
@@ -37,6 +38,11 @@ export const settingsGetInputSchema = v.object({
   group: settingsNameSchema,
 });
 
+export const settingsLeaseInputSchema = v.object({
+  group: settingsNameSchema,
+  takeOver: v.optional(v.boolean()),
+});
+
 /**
  * Caps keys per request against fan-out from callers iterating untrusted
  * input. 64 KiB per value matches the WP `wp_options` convention.
@@ -44,16 +50,23 @@ export const settingsGetInputSchema = v.object({
 const MAX_SETTINGS_VALUE_BYTES = 64 * 1024;
 const MAX_SETTINGS_KEYS_PER_UPSERT = 200;
 
-export const settingsUpsertInputSchema = v.object({
-  group: settingsNameSchema,
-  values: v.pipe(
-    v.record(settingsValueKeySchema, v.unknown()),
-    v.check(
-      (val) => Object.keys(val).length <= MAX_SETTINGS_KEYS_PER_UPSERT,
-      `upsert accepts at most ${MAX_SETTINGS_KEYS_PER_UPSERT} keys per request`,
+const SETTINGS_IF_MATCH_MESSAGE =
+  "Send the settings group's `etag` from `settings.get` as `ifMatch`";
+
+export const settingsUpsertInputSchema = versionIfMatchObject(
+  {
+    group: settingsNameSchema,
+    values: v.pipe(
+      v.record(settingsValueKeySchema, v.unknown()),
+      v.check(
+        (val) => Object.keys(val).length <= MAX_SETTINGS_KEYS_PER_UPSERT,
+        `upsert accepts at most ${MAX_SETTINGS_KEYS_PER_UPSERT} keys per request`,
+      ),
     ),
-  ),
-});
+    takeOver: v.optional(v.boolean()),
+  },
+  SETTINGS_IF_MATCH_MESSAGE,
+);
 
 export type SettingsGetInput = v.InferOutput<typeof settingsGetInputSchema>;
 export type SettingsUpsertInput = v.InferOutput<

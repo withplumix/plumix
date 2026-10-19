@@ -593,7 +593,19 @@ msgstr ""
 #. name: the editing user's display name or email; time: a formatted date and time
 #. js-lingui-explicit-id
 #: src/editor/EditLeaseBanner.tsx
+msgid "settings.lease.heldBy"
+msgstr ""
+
+#. name: the editing user's display name or email; time: a formatted date and time
+#. js-lingui-explicit-id
+#: src/editor/EditLeaseBanner.tsx
 msgid "editor.lease.heldBy"
+msgstr ""
+
+#. name: the user who took over; time: a formatted date and time
+#. js-lingui-explicit-id
+#: src/editor/EditLeaseBanner.tsx
+msgid "settings.lease.lost"
 msgstr ""
 
 #. name: the user who took over; time: a formatted date and time
@@ -851,14 +863,14 @@ msgid "auth.device.title"
 msgstr "السماح بوصول CLI"
 
 #. js-lingui-explicit-id
-#: src/editor/EditLeaseBanner.tsx
-msgid "editor.lease.back"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_auth/-login-screen.tsx
 msgid "login.magicLink.back"
 msgstr "رجوع"
+
+#. js-lingui-explicit-id
+#: src/editor/EditLeaseBanner.tsx
+msgid "editor.lease.back"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -3625,6 +3637,16 @@ msgstr "الأب المختار ينتمي إلى تصنيف مختلف."
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.revoke.description"
 msgstr "يتوقف الرمز عن العمل فوراً. أي عميل يستخدمه سيبدأ بتلقي 401 في الطلب التالي."
+
+#. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "settings.conflict.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/EntryConflictDialog.tsx
+msgid "editor.conflict.descriptionUntimed"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx

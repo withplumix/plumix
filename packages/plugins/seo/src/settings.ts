@@ -464,9 +464,9 @@ export function registerSeoSettings(ctx: PluginAfterSetupContext): void {
  * would turn indexing back on.
  */
 export function registerSeoSettingsDefaults(ctx: PluginSetupContext): void {
-  ctx.addFilter("rpc:settings.get:output", async (bag, context, appCtx) => {
-    if (context.group !== SEO_SETTINGS_GROUP) return bag;
-    return withLegacyDefaults(bag, appCtx);
+  ctx.addFilter("rpc:settings.get:output", async (copy, context, appCtx) => {
+    if (context.group !== SEO_SETTINGS_GROUP) return copy;
+    return { ...copy, values: await withLegacyDefaults(copy.values, appCtx) };
   });
 }
 

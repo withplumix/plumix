@@ -98,7 +98,7 @@ function SettingsPageLoadError(): ReactNode {
 }
 
 function SettingsPageRoute(): ReactNode {
-  const { page } = Route.useRouteContext();
+  const { page, user } = Route.useRouteContext();
   const groups = groupsForSettingsPage(page);
   const renderLabel = useLabel();
 
@@ -122,7 +122,7 @@ function SettingsPageRoute(): ReactNode {
         <EmptyPagePlaceholder />
       ) : (
         groups.map((group) => (
-          <SettingsGroupCard key={group.name} group={group} />
+          <SettingsGroupCard key={group.name} group={group} userId={user.id} />
         ))
       )}
     </div>

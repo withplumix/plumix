@@ -142,6 +142,12 @@ describe("ConflictError", () => {
     });
   });
 
+  test("a version counter's conflict carries its etag and no change time", () => {
+    const error = new ConflictError(4);
+
+    expect(error.data).toEqual({ reason: "etag_mismatch", etag: "4" });
+  });
+
   test("names itself and says why it was thrown", () => {
     const error = new ConflictError(new Date("2026-10-18T12:00:07Z"));
 

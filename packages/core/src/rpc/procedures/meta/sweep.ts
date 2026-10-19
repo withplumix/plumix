@@ -19,6 +19,7 @@ import {
   listTermMetaFields,
   listUserMetaFields,
 } from "../../../plugin/manifest.js";
+import { bumpSettingsGroup } from "../settings/token.js";
 import { writeSettledUserMeta } from "../user/meta.js";
 
 /** Where a meta value is stored, in the order a sweep walks them. */
@@ -272,6 +273,7 @@ async function sweepSettings(
     walked = { group: row.group, key: row.key };
   }
   for (const [group, set] of changedByGroup) {
+    await bumpSettingsGroup(walk.ctx.db, group);
     await walk.ctx.hooks.doAction(
       "settings:group_changed",
       { group, set, removed: [] },
