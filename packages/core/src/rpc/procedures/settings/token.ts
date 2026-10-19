@@ -66,9 +66,9 @@ async function readMarker(
 }
 
 /**
- * Claims the group for a save made from the copy `ifMatch` names, moving its
- * token, and answers the new one. Throws `ConflictError` when the group has
- * moved past that copy; a second first save of a group loses.
+ * Moves the group's token past `ifMatch` and answers the new one. Throws
+ * `ConflictError` when the group moved past that copy; a second first save
+ * loses.
  */
 export async function claimSettingsGroup(
   db: Db,
@@ -111,7 +111,7 @@ export async function bumpSettingsGroup(db: Db, group: string): Promise<void> {
 type Batchable = Db & {
   batch(
     items: readonly [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]],
-  ): Promise<unknown>;
+  ): Promise<readonly object[]>;
 };
 
 /** D1 and libSQL send a batch in one round trip; the sync drivers have none. */

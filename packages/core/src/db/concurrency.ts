@@ -68,9 +68,9 @@ export function mergePatch(target: JsonValue, patch: JsonValue): JsonValue {
 }
 
 /**
- * A guarded write refused because its copy is out of date: the resource's
- * current `updated_at`, or its version counter, which records no change time.
- * Given the `resource`, the RPC conflict also names who holds its edit lease.
+ * A guarded write refused because its copy is out of date. A version counter
+ * records no change time. Given the `resource`, the conflict names the lease
+ * holder.
  */
 export class ConflictError extends Error {
   readonly etag: string;
