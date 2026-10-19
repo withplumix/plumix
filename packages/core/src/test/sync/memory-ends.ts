@@ -3,12 +3,12 @@ import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 
 import type { AppContext } from "../../context/app-context.js";
+import type { RuntimeSync } from "../../context/runtime-adapter.js";
 import type {
-  RuntimeSync,
+  ConnectedCdn,
   SyncRow,
   SyncValue,
-} from "../../context/runtime-adapter.js";
-import type { ConnectedCdn } from "../../runtime/contract/slots.js";
+} from "../../runtime/contract/slots.js";
 import type { SyncContractSite } from "../conformance/sync.js";
 import { HookRegistry } from "../../hooks/registry.js";
 import { memoryStorage } from "../../runtime/memory-storage.js";

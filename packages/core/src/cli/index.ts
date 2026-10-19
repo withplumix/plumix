@@ -8,6 +8,11 @@ export {
   SyncError,
 } from "./sync.js";
 export type { SyncHeadsAt } from "./sync.js";
+export { resolveScopes } from "./sync-scopes.js";
+export { databaseSyncEnd } from "./sync-end.js";
+export type { DatabaseSyncEndOptions } from "./sync-end.js";
+export { remoteSyncEnd } from "./sync-remote.js";
+export type { RemoteSyncEndOptions } from "./sync-remote.js";
 export { settleSync } from "../context/settle-sync.js";
 // Re-exported here so a CLI command can validate a schedule without reaching
 // through core's root barrel, which the cold-start guard keeps off this path.

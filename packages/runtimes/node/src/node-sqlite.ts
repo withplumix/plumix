@@ -2,6 +2,7 @@ import type { DatabaseAdapter, PlumixEnv } from "plumix";
 
 import type { NodeSqliteDatabase } from "./node-sqlite-client.js";
 import { drizzleNodeSqlite, openNodeSqlite } from "./node-sqlite-client.js";
+import { openNodeSyncDatabase } from "./sync-database.js";
 
 export type { NodeSqliteDatabase } from "./node-sqlite-client.js";
 
@@ -43,6 +44,7 @@ export function nodeSqlite(
         throw error;
       }
     },
+    openSync: () => openNodeSyncDatabase(config.path),
   };
 }
 

@@ -7,12 +7,14 @@ import type {
   RuntimeSync,
   SyncEnd,
   SyncImportReport,
-  SyncRow,
   SyncScope,
   SyncTarget,
-  SyncValue,
 } from "../../context/runtime-adapter.js";
-import type { ConnectedObjectStorage } from "../../runtime/contract/slots.js";
+import type {
+  ConnectedObjectStorage,
+  SyncRow,
+  SyncValue,
+} from "../../runtime/contract/slots.js";
 import type { ContractCase } from "./case.js";
 import { CORE_MIGRATIONS_FOLDER } from "../../cli/migrations.js";
 import { CORE_SYNC_SCOPE_TABLES, SYNC_AUTH_TABLES } from "../../cli/sync.js";
@@ -35,14 +37,19 @@ export interface SyncContractSite {
 
 export interface SyncContractEnds {
   readonly sync: RuntimeSync;
+  /** The remote site's origin, which `url` names; a placeholder without it. */
+  readonly remoteUrl?: string;
+  /** What `apiToken` resolves to, for a remote end that calls its site. */
+  readonly apiToken?: string;
   readonly local: SyncContractSite;
   readonly remote: SyncContractSite;
 }
 
 export interface SyncContractOptions {
   /**
-   * Fresh ends for one case: core's migrations applied, no rows, no objects.
-   * Each end's `settle` runs the `sync:after` listeners on `hooks`.
+   * Fresh ends for one case: core's migrations applied, no rows bar the
+   * `apiToken` user's (id above 100), no objects. Each `settle` runs the
+   * `sync:after` listeners on `hooks`.
    */
   readonly open: (hooks: HookRegistry) => Promise<SyncContractEnds>;
 }
@@ -55,13 +62,22 @@ const SCOPES = {
   media: { name: "media", tables: CORE_SYNC_SCOPE_TABLES.media },
 } satisfies Record<string, SyncScope>;
 
-function openOptions(target: SyncTarget): OpenSyncEndOptions {
+function openOptions(
+  ends: SyncContractEnds,
+  target: SyncTarget,
+): OpenSyncEndOptions {
   return {
     cwd: process.cwd(),
     config: testConfig(),
     target,
     binding: undefined,
-    url: REMOTE_URL,
+    url: ends.remoteUrl ?? REMOTE_URL,
+    apiToken: () => {
+      if (ends.apiToken === undefined) {
+        return Promise.reject(new Error("the ends were given no API token"));
+      }
+      return Promise.resolve(ends.apiToken);
+    },
     owners: [
       {
         name: "core",
@@ -74,11 +90,11 @@ function openOptions(target: SyncTarget): OpenSyncEndOptions {
 }
 
 async function withEnd<T>(
-  sync: RuntimeSync,
+  ends: SyncContractEnds,
   target: SyncTarget,
   work: (end: SyncEnd) => Promise<T>,
 ): Promise<T> {
-  const end = await sync.open(openOptions(target));
+  const end = await ends.sync.open(openOptions(ends, target));
   try {
     return await work(end);
   } finally {
@@ -87,11 +103,11 @@ async function withEnd<T>(
 }
 
 async function exportFrom(
-  sync: RuntimeSync,
+  ends: SyncContractEnds,
   target: SyncTarget,
   scopes: readonly SyncScope[],
 ): Promise<DumpReader> {
-  return withEnd(sync, target, async (end) => {
+  return withEnd(ends, target, async (end) => {
     const dump = memoryDump({
       source: { origin: end.origin, basePath: "" },
       scopes: scopes.map((scope) => scope.name),
@@ -103,13 +119,13 @@ async function exportFrom(
 }
 
 async function importInto(
-  sync: RuntimeSync,
+  ends: SyncContractEnds,
   target: SyncTarget,
   dump: DumpReader,
   scopes: readonly SyncScope[],
   dryRun = false,
 ): Promise<SyncImportReport> {
-  return withEnd(sync, target, (end) =>
+  return withEnd(ends, target, (end) =>
     end.importData(dump, scopes, { dryRun }),
   );
 }
@@ -119,9 +135,9 @@ async function transfer(
   from: SyncTarget,
   scopes: readonly SyncScope[],
 ): Promise<SyncImportReport> {
-  const dump = await exportFrom(ends.sync, from, scopes);
+  const dump = await exportFrom(ends, from, scopes);
   const to = from === "local" ? "remote" : "local";
-  return importInto(ends.sync, to, dump, scopes);
+  return importInto(ends, to, dump, scopes);
 }
 
 async function seed(
@@ -302,7 +318,7 @@ export const syncContractCases: readonly Case[] = [
       ]);
       const recording = recordingWriter();
 
-      await withEnd(ends.sync, "local", (end) =>
+      await withEnd(ends, "local", (end) =>
         end.exportData([SCOPES.users, SCOPES.content], recording.writer),
       );
 
@@ -324,10 +340,10 @@ export const syncContractCases: readonly Case[] = [
         term(5, "remote-term"),
       ]);
       const before = await everyTable(ends.remote, CONTENT_AND_USERS_TABLES);
-      const dump = await exportFrom(ends.sync, "local", [SCOPES.content]);
+      const dump = await exportFrom(ends, "local", [SCOPES.content]);
 
       const dryRun = await importInto(
-        ends.sync,
+        ends,
         "remote",
         dump,
         [SCOPES.content],
@@ -337,9 +353,9 @@ export const syncContractCases: readonly Case[] = [
       expect(await everyTable(ends.remote, CONTENT_AND_USERS_TABLES)).toEqual(
         before,
       );
-      expect(
-        await importInto(ends.sync, "remote", dump, [SCOPES.content]),
-      ).toEqual(dryRun);
+      expect(await importInto(ends, "remote", dump, [SCOPES.content])).toEqual(
+        dryRun,
+      );
     },
   },
   {
@@ -352,7 +368,7 @@ export const syncContractCases: readonly Case[] = [
         entry(1, "remote-hello", 1),
       ]);
       const before = await everyTable(ends.remote, CONTENT_AND_USERS_TABLES);
-      const dump = await exportFrom(ends.sync, "local", [SCOPES.content]);
+      const dump = await exportFrom(ends, "local", [SCOPES.content]);
       const behind: DumpReader = {
         ...dump,
         rows: (table) => dump.rows(table),
@@ -362,7 +378,7 @@ export const syncContractCases: readonly Case[] = [
       };
 
       await expect(
-        importInto(ends.sync, "remote", behind, [SCOPES.content]),
+        importInto(ends, "remote", behind, [SCOPES.content]),
       ).rejects.toMatchObject({ code: "sync_migrations_differ" });
       expect(await everyTable(ends.remote, CONTENT_AND_USERS_TABLES)).toEqual(
         before,
@@ -383,11 +399,9 @@ export const syncContractCases: readonly Case[] = [
         user(1, "zed@example.test"),
         user(2, "alice@example.test"),
       ]);
-      const dump = await exportFrom(ends.sync, "remote", [SCOPES.content]);
+      const dump = await exportFrom(ends, "remote", [SCOPES.content]);
 
-      const report = await importInto(ends.sync, "local", dump, [
-        SCOPES.content,
-      ]);
+      const report = await importInto(ends, "local", dump, [SCOPES.content]);
 
       expect(report.authorsAdded).toEqual(["bob@example.test"]);
       const authors = await ends.local.execute(
@@ -429,9 +443,9 @@ export const syncContractCases: readonly Case[] = [
           [],
         ],
       ]);
-      const dump = await exportFrom(ends.sync, "remote", [SCOPES.content]);
+      const dump = await exportFrom(ends, "remote", [SCOPES.content]);
 
-      await importInto(ends.sync, "local", dump, [SCOPES.content]);
+      await importInto(ends, "local", dump, [SCOPES.content]);
 
       expect(
         await ends.local.execute(
@@ -459,7 +473,13 @@ export const syncContractCases: readonly Case[] = [
         SCOPES.content,
       ]);
 
-      expect(report.dependents).toEqual([
+      // A remote end's own operator token goes too when its user's email is
+      // not in the dump, so `api_tokens` is the transport's to report.
+      expect(
+        report.dependents.filter(
+          (dependent) => dependent.table !== "api_tokens",
+        ),
+      ).toEqual([
         { table: "auth_tokens", removed: 0, cleared: 1 },
         { table: "sessions", removed: 1, cleared: 0 },
       ]);
@@ -524,7 +544,7 @@ export const syncContractCases: readonly Case[] = [
       );
       const ends = await options.open(hooks);
 
-      const report = await withEnd(ends.sync, "remote", (end) =>
+      const report = await withEnd(ends, "remote", (end) =>
         end.settle({ scopes: ["content"], direction: "push" }),
       );
 

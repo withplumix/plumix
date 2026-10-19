@@ -598,6 +598,12 @@ export const ROSTER: Readonly<
           "checks in its deploy config",
         names: ["commands", "migrations", "diagnose"],
       },
+      {
+        reason:
+          "how `plumix sync` and `plumix import` move data between the local " +
+          "SQLite file and the deployed site's sync routes",
+        names: ["sync"],
+      },
     ],
   },
   "@plumix/runtime-cloudflare": {
@@ -757,6 +763,12 @@ export const ROSTER: Readonly<
           "how `plumix migrate` opens its database, and what `plumix doctor` " +
           "checks in its deploy config",
         names: ["commands", "migrations", "diagnose"],
+      },
+      {
+        reason:
+          "how `plumix sync` and `plumix import` move data between the local " +
+          "SQLite file and the deployed site's sync routes",
+        names: ["sync"],
       },
     ],
   },

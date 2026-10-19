@@ -1,10 +1,10 @@
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { describe, expect, test } from "vitest";
 
-import type { PlumixConfig } from "@plumix/core";
-import { entries, users } from "@plumix/core/schema";
-
-import { resolveScopes } from "./scopes.js";
+import type { PlumixConfig } from "../config.js";
+import { entries } from "../db/schema/entries.js";
+import { users } from "../db/schema/users.js";
+import { resolveScopes } from "./sync-scopes.js";
 
 const comments = sqliteTable("comments", {
   id: integer().primaryKey(),

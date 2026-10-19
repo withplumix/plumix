@@ -15,17 +15,17 @@ import type {
   SyncTarget,
   TargetOptionValues,
 } from "@plumix/core";
-import { assertSameHeads } from "@plumix/core/cli";
+import { assertSameHeads, resolveScopes } from "@plumix/core/cli";
 
 import type { DumpHeader, DumpProgress } from "../sync/dump.js";
 import type { RewrittenDump, SiteLocation } from "../sync/rewrite-urls.js";
+import { resolveApiToken } from "../api-token.js";
 import { PlumixCliError } from "../errors.js";
 import { resolveOwners } from "../migrate/owners.js";
 import { report } from "../report.js";
 import { readDump, readDumpProgress, writeDump } from "../sync/dump.js";
 import { exportLocalAdmins, keepLocalAdmins } from "../sync/local-admins.js";
 import { rewriteUrls, siteUrl } from "../sync/rewrite-urls.js";
-import { resolveScopes } from "../sync/scopes.js";
 import { parseCommandArgs } from "../target-options.js";
 
 const DIRECTIONS: readonly SyncDirection[] = ["pull", "push"];
@@ -37,11 +37,29 @@ interface SyncArgs {
   readonly direction: SyncDirection;
   readonly scopes: readonly string[];
   readonly url: string | undefined;
+  readonly token: string | undefined;
   readonly binding: string | undefined;
   readonly dryRun: boolean;
   readonly yes: boolean;
   readonly rewriteUrls: boolean;
   readonly targetValues: TargetOptionValues;
+}
+
+/**
+ * The token a remote end calls `url` with, resolved on its first call, so a
+ * transport that never calls it never prompts.
+ */
+export function remoteApiToken(
+  url: string | undefined,
+  token: string | undefined,
+): () => Promise<string> {
+  let resolved: Promise<string> | undefined;
+  return () =>
+    (resolved ??= resolveApiToken({
+      url: url ?? "",
+      token,
+      missing: () => PlumixCliError.syncRemoteTokenMissing(),
+    }));
 }
 
 function isDirection(value: string | undefined): value is SyncDirection {
@@ -55,6 +73,7 @@ function parseSyncArgs(ctx: CommandContext): SyncArgs {
     options: {
       scope: { type: "string", multiple: true },
       url: { type: "string" },
+      token: { type: "string" },
       binding: { type: "string" },
       "dry-run": { type: "boolean", default: false },
       yes: { type: "boolean", default: false },
@@ -80,6 +99,7 @@ function parseSyncArgs(ctx: CommandContext): SyncArgs {
     direction,
     scopes: parsed.values.scope ?? [],
     url: parsed.values.url,
+    token: parsed.values.token,
     binding: parsed.values.binding,
     dryRun: parsed.values["dry-run"],
     yes: parsed.values.yes,
@@ -354,6 +374,7 @@ export const syncCommand: CommandDefinition = {
     const sync = runtimeSyncOf(ctx);
     if (args.url === undefined) throw PlumixCliError.syncRemoteUrlRequired();
     const owners = resolveOwners(ctx.cwd, ctx.configPath, config);
+    const apiToken = remoteApiToken(args.url, args.token);
     const open = (target: SyncTarget): Promise<SyncEnd> =>
       sync.open({
         cwd: ctx.cwd,
@@ -361,6 +382,7 @@ export const syncCommand: CommandDefinition = {
         target,
         binding: args.binding,
         url: args.url,
+        apiToken,
         owners,
         targetValues: args.targetValues,
       });

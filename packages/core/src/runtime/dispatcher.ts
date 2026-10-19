@@ -77,8 +77,9 @@ const PLUMIX_PREFIX = "/_plumix/";
 const SIGNOUT_PATH = "/_plumix/auth/signout";
 const MCP_PATH = "/_plumix/mcp";
 const API_PREFIX = "/_plumix/api";
-/** Inlined, not imported, so the eager graph skips the route. */
-const SYNC_SETTLE_PATH = "/_plumix/api/v1/system/sync/settle";
+/** Inlined, not imported, so the eager graph skips the routes. */
+const SYNC_PREFIX = "/_plumix/api/v1/system/sync/";
+const SYNC_SETTLE_PATH = `${SYNC_PREFIX}settle`;
 /**
  * Core owns these ahead of plugin routes. The CSRF exemption must skip them
  * too, or a plugin id'd `rpc` could drop the header gate on RPC.
@@ -94,6 +95,7 @@ function coreAnswersPlumixPath(pathname: string): boolean {
 }
 
 const loadSyncSettle = loadOnce(() => import("./sync-settle.js"));
+const loadSyncTransfer = loadOnce(() => import("./sync-transfer.js"));
 
 const loadAuthMethodKernel = loadOnce(() => import("../auth/method-kernel.js"));
 
@@ -262,6 +264,14 @@ async function tryColdInterfaces(
   if (pathname === SYNC_SETTLE_PATH) {
     const { handleSyncSettle } = await loadSyncSettle();
     return withNoStore(await handleSyncSettle(ctx));
+  }
+  if (pathname.startsWith(SYNC_PREFIX)) {
+    const { handleSyncTransfer, isSyncTransferAction } =
+      await loadSyncTransfer();
+    const action = pathname.slice(SYNC_PREFIX.length);
+    if (isSyncTransferAction(action)) {
+      return withNoStore(await handleSyncTransfer(ctx, action));
+    }
   }
   if (pathname === API_PREFIX || pathname.startsWith(`${API_PREFIX}/`)) {
     return withNoStore(await dispatchRest(app, ctx));

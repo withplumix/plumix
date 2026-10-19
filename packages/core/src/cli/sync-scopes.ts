@@ -2,10 +2,9 @@ import type { SQLiteTable as SQLiteTableType } from "drizzle-orm/sqlite-core";
 import { getTableName, is } from "drizzle-orm";
 import { getTableConfig, SQLiteTable } from "drizzle-orm/sqlite-core";
 
-import type { PlumixConfig, SyncScope } from "@plumix/core";
-import { CORE_SYNC_SCOPE_TABLES } from "@plumix/core/cli";
-
-import { PlumixCliError } from "../errors.js";
+import type { PlumixConfig } from "../config.js";
+import type { SyncScope } from "../context/runtime-adapter.js";
+import { CORE_SYNC_SCOPE_TABLES, SyncError } from "./sync.js";
 
 const CONTENT = "content";
 const USERS = "users";
@@ -90,12 +89,12 @@ export function resolveScopes(
   ];
   for (const name of requested) {
     if (!available.includes(name)) {
-      throw PlumixCliError.syncUnknownScope({ scope: name, available });
+      throw SyncError.unknownScope({ scope: name, available });
     }
   }
   const withContent = requested.has(CONTENT);
   if (requested.has(USERS) && !withContent) {
-    throw PlumixCliError.syncScopeRequires({
+    throw SyncError.scopeRequires({
       scope: USERS,
       requires: CONTENT,
       reason: "entries refuse the deletion of their authors",
@@ -107,7 +106,7 @@ export function resolveScopes(
       !withContent &&
       referencesContent(plugin)
     ) {
-      throw PlumixCliError.syncScopeRequires({
+      throw SyncError.scopeRequires({
         scope: plugin.name,
         requires: CONTENT,
         reason: "its tables reference content's",
