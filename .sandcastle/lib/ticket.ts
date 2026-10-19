@@ -76,6 +76,7 @@ export type ShipOutcome =
       readonly status: "blocked";
       readonly reason: string;
       readonly pullRequestUrl?: string;
+      readonly briefFails?: boolean;
     };
 
 export const readFindingsTag = (stdout: string): Findings => {
@@ -424,7 +425,7 @@ export const shipTicket = async (
     say("\n--- check brief ---");
     const brief = await checkBrief(runAgentPhase, ticket);
     if (brief.next === "park")
-      return { status: "blocked", reason: brief.reason };
+      return { status: "blocked", reason: brief.reason, briefFails: true };
 
     say("\n--- implement ---");
     const implemented = await runAgentPhase("implement", IMPLEMENTER, {

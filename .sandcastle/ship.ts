@@ -146,8 +146,8 @@ const report = await runShipLoop(
         },
       );
     },
-    park: ({ number }, reason, pullRequestUrl) =>
-      parkTicket(number, reason, pullRequestUrl),
+    park: ({ number }, reason, pullRequestUrl, briefFails) =>
+      parkTicket(number, reason, pullRequestUrl, briefFails),
     releaseClaim: ({ number }) => releaseClaim(number),
     repair: (ticket, pullRequest, refusal) => {
       const journal = new Journal(import.meta.dirname);

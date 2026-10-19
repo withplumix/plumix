@@ -20,7 +20,7 @@ const ciRed: MergeOutcome = {
 
 const ports = (over: Partial<ShipPorts> = {}) => {
   const waiting = [ticket(1), ticket(2), ticket(3)];
-  const parked: { number: number; reason: string }[] = [];
+  const parked: { number: number; reason: string; briefFails?: boolean }[] = [];
   const released: number[] = [];
   const base: ShipPorts = {
     nextTicket: () => waiting.shift(),
@@ -29,7 +29,12 @@ const ports = (over: Partial<ShipPorts> = {}) => {
       pullRequest: { number: 100 + t.number, url: `pr/${t.number}` },
       advisory: [],
     }),
-    park: (t, reason) => void parked.push({ number: t.number, reason }),
+    park: (t, reason, _pullRequestUrl, briefFails) =>
+      void parked.push({
+        number: t.number,
+        reason,
+        ...(briefFails ? { briefFails } : {}),
+      }),
     releaseClaim: (t) => void released.push(t.number),
     confirm: async () => merged,
     repair: async () => ({ status: "repaired" }) as const,
@@ -80,6 +85,24 @@ describe("runShipLoop", () => {
     expect(report.merged).toEqual([]);
     expect(parked).toHaveLength(3);
     expect(parked[0]?.reason).toContain("failing checks: Test");
+  });
+
+  test("a ticket whose brief fails its check is parked as the brief's fault", async () => {
+    const { ports: p, parked } = ports({
+      ship: async () => ({
+        status: "blocked",
+        reason: "1 premise(s) in the brief are false",
+        briefFails: true,
+      }),
+    });
+
+    await runShipLoop(p, allLanes);
+
+    expect(parked.map(({ briefFails }) => briefFails)).toEqual([
+      true,
+      true,
+      true,
+    ]);
   });
 
   test("a ticket blocked inside its lane is parked and never queued", async () => {
