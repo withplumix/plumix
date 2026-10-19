@@ -26,6 +26,9 @@ export interface ShipPorts {
   readonly requeue: (pullRequest: QueuedPullRequest) => void;
   readonly inFlightFromEarlierRuns: () => readonly Queued[];
   readonly ticketClosed: (ticket: Ticket) => boolean;
+  readonly brokenCheckout: () => string | undefined;
+  readonly aBlockerIsMoving: () => boolean;
+  readonly pause: (ms: number, signal: AbortSignal) => Promise<void>;
   readonly say: (line: string) => void;
 }
 
@@ -64,6 +67,7 @@ export interface ShipReport {
 }
 
 const FAILURES_IN_A_ROW_THAT_MEAN_THE_RUN_AND_NOT_THE_TICKETS = 3;
+export const LOOK_AGAIN_FOR_AN_UNBLOCKED_TICKET_EVERY_MS = 10 * 60_000;
 
 const asReason = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
@@ -150,6 +154,20 @@ export const runShipLoop = async (
     return outcome;
   };
 
+  const leftAsItWasBecauseTheCheckoutBroke = (
+    ticket: Ticket,
+    pullRequestUrl?: string,
+  ): boolean => {
+    const broken = ports.brokenCheckout();
+    if (broken === undefined) return false;
+    outage ??= broken;
+    ports.releaseClaim(ticket);
+    ports.say(
+      `  #${ticket.number} left as it was${pullRequestUrl ? `, ${pullRequestUrl} still open` : ""} — ${broken}`,
+    );
+    return true;
+  };
+
   const confirming: {
     readonly ticket: Ticket;
     readonly pullRequest: QueuedPullRequest;
@@ -165,9 +183,22 @@ export const runShipLoop = async (
     unsettled.add(settled);
     void settled.then(() => unsettled.delete(settled));
   };
-  const untilShippingOrConfirmingSettles = async (): Promise<boolean> => {
-    if (unsettled.size === 0) return false;
-    await Promise.race(unsettled);
+  const untilThereMayBeMoreWork = async (): Promise<boolean> => {
+    const moving = ports.aBlockerIsMoving();
+    if (unsettled.size === 0 && !moving) return false;
+    const lookAgain = new AbortController();
+    await Promise.race([
+      ...unsettled,
+      ...(moving
+        ? [
+            ports.pause(
+              LOOK_AGAIN_FOR_AN_UNBLOCKED_TICKET_EVERY_MS,
+              lookAgain.signal,
+            ),
+          ]
+        : []),
+    ]);
+    lookAgain.abort();
     return true;
   };
 
@@ -196,10 +227,11 @@ export const runShipLoop = async (
   await drainAcrossLanes<Ticket, void>({
     lanes,
     nextItem: ports.nextTicket,
-    waitForMoreWork: untilShippingOrConfirmingSettles,
+    waitForMoreWork: untilThereMayBeMoreWork,
     stopDispatchingWhen: () =>
       outage !== undefined || stoppedBecause !== undefined || !withinBudget(),
     inLane: async (ticket) => {
+      if (leftAsItWasBecauseTheCheckoutBroke(ticket)) return;
       let outcome: ShipOutcome;
       try {
         const shipping = sandboxes.run(() => ports.ship(ticket));
@@ -217,6 +249,7 @@ export const runShipLoop = async (
       }
 
       if (outcome.status === "blocked") {
+        if (leftAsItWasBecauseTheCheckoutBroke(ticket)) return;
         ports.park(ticket, outcome.reason, outcome.pullRequestUrl);
         parked.push({ ticket, reason: outcome.reason });
         ports.say(`  #${ticket.number} parked: ${outcome.reason}`);
@@ -247,6 +280,7 @@ export const runShipLoop = async (
         );
         continue;
       }
+      if (leftAsItWasBecauseTheCheckoutBroke(ticket, pullRequest.url)) continue;
       const reason = `the run could not confirm ${pullRequest.url}: ${thrown}`;
       ports.park(ticket, reason, pullRequest.url);
       parked.push({ ticket, reason });
@@ -255,6 +289,7 @@ export const runShipLoop = async (
 
     const confirmed = settledConfirmation.value;
     if (confirmed.status !== "merged") {
+      if (leftAsItWasBecauseTheCheckoutBroke(ticket, pullRequest.url)) continue;
       ports.park(ticket, confirmed.reason, pullRequest.url);
       parked.push({ ticket, reason: confirmed.reason });
       continue;

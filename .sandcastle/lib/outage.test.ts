@@ -27,12 +27,12 @@ describe("looksLikeTheRunBeingOver", () => {
     "401 Unauthorized",
     "OAuth token has expired",
     "Command `gh issue view 2609` exited with code 4: To get started with GitHub CLI, please run:  gh auth login",
+    "Command failed (exit 128): git config --global --add safe.directory\nfatal: not a git repository",
   ])("stops the run on %s", (reason) => {
     expect(looksLikeTheRunBeingOver(reason)).toBe(true);
   });
 
   test.each([
-    "Command failed (exit 128): git config --global --add safe.directory\nfatal: not a git repository",
     "docker: Cannot connect to the Docker daemon",
     "Error response from daemon: conflict: unable to delete container",
   ])("lets the run carry on after %s", (reason) => {
