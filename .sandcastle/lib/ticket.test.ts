@@ -2,7 +2,11 @@ import { describe, expect, test } from "vitest";
 
 import type { RunAgentPhase } from "./agent.js";
 import { GATES, underAnOrphanReaper } from "./gates.js";
-import { SETUP_STEPS, workersALaneOversubscribes } from "./sandbox.js";
+import {
+  SETUP_STEPS,
+  TASKS_A_LANE_RUNS_AT_ONCE,
+  testWorkersEachTaskGets,
+} from "./sandbox.js";
 import {
   afterReview,
   asReviewNote,
@@ -160,15 +164,18 @@ describe("readDeclinedTag", () => {
   });
 });
 
-describe("workersALaneOversubscribes", () => {
-  test("two lanes stay inside a ten-core host", () => {
-    expect(workersALaneOversubscribes(2)).toBeLessThanOrEqual(10);
-  });
+describe("testWorkersEachTaskGets", () => {
+  test.each([1, 2, 3, 4])(
+    "%i lane(s) of test workers stay inside a ten-core host",
+    (lanes) => {
+      expect(
+        lanes * TASKS_A_LANE_RUNS_AT_ONCE * testWorkersEachTaskGets(lanes, 10),
+      ).toBeLessThanOrEqual(10);
+    },
+  );
 
-  test("the count grows with lanes, because every lane runs its own turbo", () => {
-    expect(workersALaneOversubscribes(4)).toBe(
-      workersALaneOversubscribes(2) * 2,
-    );
+  test("a task keeps one worker however many lanes share the host", () => {
+    expect(testWorkersEachTaskGets(16, 10)).toBe(1);
   });
 });
 

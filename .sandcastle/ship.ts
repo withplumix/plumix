@@ -35,7 +35,7 @@ import {
   LOOK_AGAIN_FOR_AN_UNBLOCKED_TICKET_EVERY_MS,
   runShipLoop,
 } from "./lib/run.js";
-import { pinSandboxImage } from "./lib/sandbox.js";
+import { pinLaneCount, pinSandboxImage } from "./lib/sandbox.js";
 import { Journal } from "./lib/telemetry.js";
 import { shipTicket } from "./lib/ticket.js";
 
@@ -95,6 +95,7 @@ if (!onlyTickets.length)
 const sandboxImage = sandboxImageOrRefuse(REPO_ROOT, say);
 if (!sandboxImage) process.exit(1);
 pinSandboxImage(sandboxImage);
+pinLaneCount(laneCount);
 
 syncRepoToMain();
 
