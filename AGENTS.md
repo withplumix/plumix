@@ -72,6 +72,10 @@ The same holds for every task with a `dependsOn`. `test:unit` has none, so `pnpm
 
 ## Architecture
 
+[`ARCHITECTURE.md`](./ARCHITECTURE.md) maps the system and links one page per subsystem in
+`docs/architecture/`. Read the page for a subsystem before changing it, and update it in the same
+PR when the change moves what it describes.
+
 ### Workspaces
 
 - `packages/` holds everything published. The framework is `plumix` (the public umbrella) plus the
