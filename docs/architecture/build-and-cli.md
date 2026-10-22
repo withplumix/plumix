@@ -1,6 +1,6 @@
 # Build and CLI
 
-The `plumix` bin is how a site developer or operator runs, builds, migrates and operates a site. It loads `plumix.config.ts`, adds the commands of the runtime the config names, and runs one. `dev` and `build` hand off to Vite with the `plumix` Vite plugin, which generates the site's entry files under `.plumix/`, serves virtual modules, wires islands, and stages the admin SPA with each plugin's admin code. `create-plumix-app` scaffolds a new site. The code lives in `packages/plumix/src/cli/`, `packages/plumix/src/vite/`, each runtime's `src/commands/` under `packages/runtimes/`, and `packages/create-plumix-app/`.
+The `plumix` bin is how a developer runs, builds, migrates and operates a site. It is the "plumix CLI" container in [`ARCHITECTURE.md`](../../ARCHITECTURE.md), with the build behind the "plumix CLI and build" row of its component table. It loads `plumix.config.ts`, adds the commands of the runtime the config names, and runs one. `dev` and `build` hand off to Vite with the `plumix` Vite plugin, which generates the site's entry files under `.plumix/`, serves virtual modules, wires islands, and stages the admin SPA with each plugin's admin code. `create-plumix-app` scaffolds a new site. The code lives in `packages/plumix/src/cli/`, `packages/plumix/src/vite/`, each runtime's `src/commands/` under `packages/runtimes/`, and `packages/create-plumix-app/`.
 
 ## At a glance
 
@@ -32,15 +32,16 @@ CLI commands. Global flags parsed before the command name: `--cwd`, `--config`, 
 | `i18n`              | built-in              | Extract and compile catalogs. Runs with no config. See [i18n.md](./i18n.md).                                     |
 | `dev`               | node, bun, cloudflare | Migrates the local database, then starts the dev server. `deferApp: true`.                                       |
 | `build`             | node, bun, cloudflare | Node/Bun: `dist/client` and `dist/server`. Cloudflare: the Worker bundle.                                        |
-| `deploy`, `preview` | cloudflare            | Build, migrate the target D1, then `wrangler deploy` / `wrangler preview`.                                       |
-| `types`             | cloudflare            | Generates Worker binding types through wrangler.                                                                 |
+| `deploy`, `preview` | cloudflare            | Build, migrate the target database, then hand off to the platform's deploy or preview. Takes `--env`.            |
+| `types`             | cloudflare            | Generates the platform's binding types.                                                                          |
 
 Vite plugin and helpers (`plumix/vite`, public):
 
 | Export                             | Use                                                                          |
 | ---------------------------------- | ---------------------------------------------------------------------------- |
 | `plumix(options)` (default)        | The Vite plugin. `configFile` names the config; `adminDir` is a test seam.   |
-| `runBuildCommand`, `runDevCommand` | Shared build and dev for self-hosted runtimes (Node, Bun).                   |
+| `runBuildCommand`, `runDevCommand` | Shared build and dev for server runtimes (Node, Bun).                        |
+| `emitPlumixSources`                | Writes the `.plumix/` entry files before Vite starts.                        |
 | `buildAppClientFirst`              | Builder order: client first, so the server bakes the client's Vite manifest. |
 | `serverEnvironment`                | Server environment options for a runtime's bundle.                           |
 | `defineTestConfig`                 | Vitest config that mirrors the repo's test tiers.                            |
@@ -56,11 +57,13 @@ Generated files and virtual modules:
 | `.plumix/islands-renderer-entry.ts` | `generateIslandsRendererEntrySource` | React renderer plus each sign-in method's client half.                                              |
 | `.plumix/editor-entry.ts`           | `generateEditorEntrySource`          | Block and shortcode modules for the editor canvas.                                                  |
 | `.plumix/admin-plugins-entry.mjs`   | `assemblePluginAdminBundle`          | Synthesised entry for the per-site admin bundle.                                                    |
+| `.plumix/admin-staging/`            | `stageAdminAssets`                   | The admin built in full before it is swapped into `publicDir`.                                      |
 | `.plumix/public/`                   | default `publicDir`                  | Staged user `public/` plus `_plumix/admin`.                                                         |
 | `virtual:plumix/asset-manifest`     | `loadAssetManifest`                  | Client `.vite/manifest.json`, `{}` in dev.                                                          |
 | `virtual:plumix/worker-exports`     | `generateWorkerExportsSource`        | `export *` per `runtime.workerExports` entry.                                                       |
 | `virtual:plumix/plugin-catalogs`    | `generatePluginCatalogsSource`       | Plugin catalogs by locale, for SSR.                                                                 |
 | `virtual:plumix/island-serialize`   | inline                               | Re-exports `IslandShim` from `plumix/blocks`.                                                       |
+| `virtual:plumix/data-migrations`    | `buildDataMigrations`                | Entry of the data-migration bundle written beside a Node or Bun server.                             |
 
 `define`d constants (all `""` when `command === "build"`): `process.env.PLUMIX_DEV` (`"1"` in dev), `PLUMIX_DEV_ALLOW_REMOTE`, `PLUMIX_EDITOR`, `PLUMIX_EDITOR_PATH_MAP`, `PLUMIX_FORWARD_ERRORS`. `WORKERS_CI` and `WORKERS_CI_BRANCH` pass through from the build environment.
 
@@ -74,9 +77,11 @@ Generated files and virtual modules:
 
 **Admin staging.** `stageAdminAssets` copies `@plumix/admin`'s `dist` into `.plumix/admin-staging`, adds each plugin's `adminChunk`/`adminCss` under `plugins/`, compiled plugin catalogs, and a `site-bundle.js`/`.css` built with esbuild and Tailwind from every `adminEntry`, theme and plugin block modules, and method clients. Bare `react` and similar imports are aliased to `plumix/admin/*` shims, so the plugins share the admin's single React. It injects the plugin manifest and chunk tags into `index.html`, and `stageIntoPlace` swaps the result into `<publicDir>/_plumix/admin` only when it differs. See [admin-and-editor.md](./admin-and-editor.md).
 
-**Build.** Node and Bun call `runBuildCommand`: emit sources, build `dist/client` then the server environment, copy each owner's migration history beside the server, and bundle data migrations (`buildDataMigrations`). Cloudflare's `build` runs `createCloudflareVite` (plumix, `workersCaching`, `@cloudflare/vite-plugin`) with `buildAppClientFirst`. `deploy` and `preview` build with `CLOUDFLARE_ENV` set, call `migrateBeforeDeploy`, then spawn wrangler with the remaining args.
+**Build.** Node and Bun call `runBuildCommand`: emit sources, build `dist/client` then the server environment, copy each owner's migration history beside the server, and bundle data migrations (`buildDataMigrations`). The Cloudflare adapter's `build` runs `createCloudflareVite` (the `plumix` plugin, `workersCaching`, which binds the platform's cache when its config turns caching on, and the platform's Vite plugin) with `buildAppClientFirst`. Its `deploy` and `preview` take `--env` (else the ambient environment variable), build for that environment, call `migrateBeforeDeploy`, then hand the remaining args to the platform's CLI.
 
-**Scaffold.** `create-plumix-app` reads runtime and plugin metadata from each package's `package.json` `plumix.scaffold` block (`src/registry.ts`). `prepack` bakes it into `registry.json` (`scripts/build-snapshot.mjs`) so the published CLI works outside the monorepo. `src/compose/` writes `plumix.config.ts`, `package.json` and `wrangler.jsonc` over the `base/` skeleton. `runPostScaffold` installs, runs `plumix migrate`, and inits git. Recommended plugins: `seo`, `feeds`.
+**Plugin manifest.** `computeManifestAndRegistry` (`packages/plumix/src/vite/manifest.ts`) installs the plugins, fires `theme:ready`, and calls `buildManifest` with the theme's tokens, breakpoints and blocks, the configured slots and the refused admin areas. The result is the plugin manifest the admin reads; see [admin and editor](./admin-and-editor.md). In the 1.0 design it also carries the theme's block list and style policy to the editor (not yet).
+
+**Scaffold.** `create-plumix-app` reads runtime and plugin metadata from each package's `package.json` `plumix.scaffold` block (`src/registry.ts`). `prepack` bakes it into `registry.json` (`scripts/build-snapshot.mjs`) so the published CLI works outside the monorepo. `src/compose/` writes `plumix.config.ts`, `package.json` and, for Cloudflare, the platform config over the `base/` skeleton. `runPostScaffold` installs, runs `plumix migrate`, and inits git. A plugin is recommended when its `plumix.scaffold` block says so (`seo` and `feeds` today).
 
 Key files: `packages/plumix/bin/plumix.mjs`, `packages/plumix/src/cli/index.ts`, `packages/plumix/src/cli/load-config.ts`, `packages/plumix/src/cli/site-run.ts`, `packages/plumix/src/vite/index.ts`, `packages/plumix/src/vite/admin-plugin-bundle.ts`, `packages/plumix/src/vite/build-command.ts`, `packages/plumix/src/vite/dev-command.ts`, `packages/runtimes/*/src/commands/index.ts`, `packages/create-plumix-app/src/cli.ts`.
 
@@ -90,20 +95,8 @@ Key files: `packages/plumix/bin/plumix.mjs`, `packages/plumix/src/cli/index.ts`,
 - Each runtime's `all-plugins` scaffold boots `plumix dev` and drives the editor from the packed tarballs ([ADR 0046](../adr/0046-the-scaffold-smoke-drives-the-editor-under-plumix-dev.md)). Guarded by `packages/create-plumix-app/smoke/dev-editor/editor.spec.ts` via `pnpm smoke:scaffold`.
 - `adminEntry` and `adminChunk` on one plugin is an error (`adminEntryAndChunkBothSet`).
 
-## Status
+## Not there yet
 
-- Shipped: CLI with eight built-ins, per-runtime `dev`/`build`, Cloudflare `deploy`/`preview`/`types`. Unit tests in `packages/plumix/src/cli/**/*.test.ts` (13 files) and `packages/runtimes/*/src/commands/*.test.ts`.
-- Shipped: Vite plugin, codegen, admin staging. Unit tests beside each module in `packages/plumix/src/vite/`, plus `packages/plumix/test/vite-plugin-chunks.test.ts`.
-- Shipped: `create-plumix-app` with node, bun and cloudflare, tests in `packages/create-plumix-app/src/*.test.ts`, smoke in `scripts/smoke.mjs`.
-- Open: #3223 (`plumix deploy --help` builds and migrates production).
-
-## Gaps
-
-- Global `--help` is only seen before the command name. `plumix deploy --help` passes `--help` to `shipCommand`, which builds and runs `migrateBeforeDeploy` against the target D1 before wrangler sees the flag (#3223). `migrateBeforeDeploy` doesn't print a plan or ask, unlike the remote-write rule in ADR 0045.
-- Node and Bun have no `deploy`, `preview` or `start` command. The built server is run directly (`dist/server/worker.js`, from `serverEnvironment`).
-- `build` doesn't set `deferApp`, so the CLI boots the full app before Vite, and the Vite plugin installs plugins again in `computeManifestAndRegistry`. Every `setup` runs at least twice per build.
-- The admin bundle is built with esbuild and `@tailwindcss/node` inside the Vite plugin, a second bundler beside Vite.
-- `adminChunk` staging is kept for a "legacy" path no first-party plugin uses.
-- The `virtual:plumix/asset-manifest` loader's comment says a cold Cloudflare build builds the worker before the client, but Cloudflare's `build` now passes `buildAppClientFirst`.
-- The doc comment on `resolvePluginAsset` in `packages/plumix/src/vite/index.ts` is a truncated sentence about catalogs and doesn't describe the function.
-- `@plumix/plugin-search` has no `plumix.scaffold` block, so `create-plumix-app` doesn't offer it.
+| Part of the design                                 | Seam to build on                                                                                                                                                                                                                        | Done when                                                                                                                                |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Block list and style policy in the plugin manifest | The theme declares them; `computeManifestAndRegistry` passes them to `buildManifest`, beside the theme `blocks` and `tokens` it already passes, so the editor reads them next to `coreBlocks` in `packages/admin-editor/src/runtime.ts` | A site build ships a plugin manifest whose block list and style policy match the theme, and a config change restages the admin with them |

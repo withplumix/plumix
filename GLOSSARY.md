@@ -4,12 +4,51 @@ Plumix is a WordPress- and Astro-lineage CMS platform: authored content is
 classified by taxonomies, composed from blocks, gated by access policy, and
 rendered by a theme's templates into mostly-static pages with selective client
 islands. The whole platform is **one bounded context** — the vocabulary below
-has one meaning across every package (`core`, `blocks`, `plumix`, `admin*`).
+has one meaning across every package (`core`, `plumix`, `admin*`, the plugins and the runtimes).
 Project scaffolding (`create-plumix-app`) is a separate, not-yet-modelled
 context where a few words (notably _template_) mean something different.
 
 This file is a glossary and nothing else — no implementation details, no
-decisions. Architectural decisions live in `docs/adr/`.
+decisions. Architectural decisions live in `docs/adr/`. It holds the vocabulary of
+Plumix as designed for 1.0, the same design `ARCHITECTURE.md` draws. Where the code
+still differs, an entry says so in a _Code today_ line.
+
+## People
+
+**Developer**:
+Builds the site in code, deploys it and runs the CLI. A kind of user, not a role.
+
+**Member**:
+A signed-in user who holds the `member` role, the default role with the fewest capabilities.
+_Code today_: the role is `subscriber`.
+_Avoid_: subscriber
+
+**Editor**:
+A person who writes, edits and publishes content in the admin. Usually holds the `author` or `editor` role; the role and the person share the word, and the visual editor is the tool.
+
+**Staff**:
+Anyone who may open the admin, which in 1.0 means holding the `admin:access` capability.
+_Code today_: staff are the roles from `contributor` up.
+
+**In-editor agent**:
+An agent the admin runs for the editor who asks, drafting pages through the same procedures as the editor and reaching a model through the `llm` config slot.
+_Code today_: none.
+
+**Site admin**:
+A person who manages users and settings, usually holding the `admin` role.
+
+**Designer**:
+A person who composes pages in the visual editor from blocks and design tokens. A kind of user, not a role.
+
+**Visitor**:
+An anonymous reader of the public site. A kind of person; where access is decided, say principal.
+
+**Agent**:
+An AI client that works in a running site over MCP with an API token, held to that token's capabilities, edit leases, revisions, the block list and the style policy.
+_Code today_: read-only.
+
+**API client**:
+Software that reads published content over REST with an API token.
 
 ## Content
 
@@ -129,7 +168,7 @@ _Avoid_: fallback value
 
 **Image role**:
 A named purpose an entry, term or user scope assigns to one of its media reference fields, so a reader asks for "the entry's featured image" rather than for a meta key. Core ships `featured` and `ogImage`; a plugin or theme declares any other. Each role declares whether a scope may carry more than one field in it. A role field may sit inside a group, never inside a repeater: a role names the entry's image, not a row's.
-_Avoid_: role (bare — that is the user tier), featured field (a featured field is one image role, not the concept)
+_Avoid_: role (bare — that is the user's role), featured field (a featured field is one image role, not the concept)
 
 **Setting**:
 One stored key/value pair within a settings group.
@@ -159,7 +198,7 @@ What a writer loaded and is editing: an entry, term, settings group or user as i
 
 **Concurrency token**:
 The opaque value that names the state a copy was taken from, called `etag` in every API and sent back as `ifMatch`. Every write to the resource moves it forward; a write carrying one that is no longer current is a conflict.
-_Avoid_: version, revision (a revision is a stored snapshot), timestamp (what it is made of is not the contract).
+_Avoid_: version, edit token, revision (a revision is a stored snapshot), timestamp (what it is made of is not the contract).
 
 **Conflict**:
 A write refused because its copy is out of date or its token is missing. It reports when the resource changed; who is editing it comes from the edit lease. Never resolved on the user's behalf.
@@ -168,7 +207,7 @@ A write refused because its copy is out of date or its token is missing. It repo
 A write not made from a copy (scheduled publishing, bulk actions, trash and restore, import, sync). It moves the concurrency token without checking it, and ignores edit leases.
 
 **Edit lease**:
-One user's claim to edit a resource, renewed while they edit and lapsing when they stop. While it holds, anyone else's write is refused unless they take it over.
+One user's claim to edit a resource, renewed while they edit and lapsing when they stop. While it holds, anyone else's write is refused with `LOCKED` unless they take it over.
 _Avoid_: lock (reserved for database locks), presence (a lease prevents, it does not decorate).
 
 **Take over**:
@@ -213,6 +252,14 @@ plus the extraction algorithm. It changes when any declaration does, so a
 document stamped by an older roster is distinguishable from a current one — no
 version integer for a block author to keep true. Telling them apart is not yet
 acting on them: sweeping the stale ones lands with the index rebuild.
+
+**Block list**:
+The blocks a theme lets the editor offer and any writer save. An entry that already holds a removed block keeps and renders it; a save cannot add a new one.
+_Code today_: every core block is always offered.
+
+**Style policy**:
+A theme's rule for style values: custom values allowed, or design tokens only. The editor and the server both enforce it.
+_Code today_: every style control offers both.
 
 ## Themes & templates
 
@@ -259,8 +306,9 @@ handed to the theme as resolved entries with their pagination.
 **Template dep**:
 A named per-request data dependency a template or a block declares and the framework loads once for the page (e.g. `menu`, `settings`).
 
-**Token**:
+**Design token**:
 A named design value a theme declares, emitted as a CSS custom property.
+_Avoid_: bare token (an API token, a concurrency token)
 
 **Transition type**:
 A name core adds to a navigation's view transition (`nav-forward`, `nav-back`, `nav-replace`)
@@ -276,10 +324,13 @@ _Avoid_: visitor, actor, audience
 A person with a persisted account row (email, slug, role, meta). The request-time projection carried on context is the authenticated user; the full row is the user.
 
 **Role**:
-A user's fixed tier on the ordered ladder `subscriber < contributor < author < editor < admin`, where higher tiers inherit lower capabilities.
+A named set of capabilities, stored in the database and declarable in config. The defaults are `member`, `author`, `editor` and `admin`; a site defines more. Roles are never ranked or compared.
+_Code today_: a fixed ladder `subscriber < contributor < author < editor < admin`, where higher tiers inherit lower capabilities.
+_Avoid_: tier, level
 
 **Capability**:
-A named permission string (`<entity>:<type>:<action>`) mapped to a minimum role. A plugin names an entry or term capability by resource type and action, and the registry spells the string. See the disambiguation note — distinct from an entitlement label.
+A named permission string a role grants: `<entity>:<type>:<action>` for an entry or term type, `<area>:<action>` otherwise (`user:list`, `admin:access`). Opening the admin and reading gated content each require one. A plugin names an entry or term capability by resource type and action, and the registry spells the string. See the disambiguation note — distinct from an entitlement label.
+_Code today_: each capability maps to a minimum role, and opening the admin needs the `contributor` rank.
 _Avoid_: permission, cap
 
 **Session**:
@@ -298,14 +349,15 @@ A pluggable strategy that maps a request to who the user is. Read-only — it re
 _Avoid_: guard
 
 **API token**:
-A bearer credential for non-browser clients, carrying its own scopes.
+A credential for non-browser clients, whose scopes are capabilities, intersected with its owner's.
 _Avoid_: PAT, personal access token, bearer token
 
 **Access policy**:
 A developer-supplied rule pairing an arbitrary resolve step with a closed, declarable set of audience segments.
 
 **Segment**:
-The audience label a resolved access is tagged with — built-in (`anonymous`, `authenticated`, `private`, `role:<role>`), an `entitlement:<label>`, or a custom label. Doubles as the shared-CDN variant key.
+The audience label a resolved access is tagged with — built-in (`anonymous`, `authenticated`, `private`, `capability:<name>`), an `entitlement:<label>`, or a custom label. Doubles as the shared-CDN key.
+_Code today_: the built-in gate segment is `role:<role>`.
 _Avoid_: audience, variant, cache key
 
 **Gate**:
@@ -316,7 +368,7 @@ A developer-defined membership, plan, or tier a principal is granted via an exte
 _Avoid_: membership, plan, tier — and never "capability" (that is the RBAC sense)
 
 **Challenge**:
-An unmet-requirement outcome — _hard_ (terminal 402/403, no content) or _soft_ (a 200 teaser variant).
+An unmet-requirement outcome — _hard_ (terminal 402/403, no content) or _soft_ (a 200 teaser render).
 
 **Teaser**:
 The public preview a soft challenge serves in place of the gated body. Shared per segment like any other render, so one that reads the principal is a personal render.
@@ -398,10 +450,39 @@ The zero-JS, server-rendered admin chrome overlaid on public pages for logged-in
 The browser-side counterpart of a public JSON route: it owns the route's path, the deployment's base path and the decoding of the answer, so a theme never builds the URL or trusts the payload. Internal to its package; the published surface is a hook.
 _Avoid_: browser adapter, client adapter (_adapter_ means **runtime adapter**)
 
+**Scheduled task**:
+Work core or a plugin registers on a cron, fired by the scheduler: the platform's cron, an in-process timer or `plumix cron run`.
+
+**Run guard**:
+The claim that lets one replica run a scheduled firing when several fire it.
+
+**Telemetry consumer**:
+What the `telemetry` config slot sends request traces to; core's OTLP consumer exports them to any OpenTelemetry endpoint.
+_Code today_: the OTLP consumer exists in core but a site cannot import it.
+
+**Job queue**:
+The runtime's own queue behind the `queue` config slot, for work that outlives a request, such as webhook deliveries.
+_Code today_: none; `ctx.defer` only extends a request.
+
+**Webhook**:
+A URL, headers, events and payload an entry type declares in code. When one of its events fires, core POSTs the payload with those headers through the job queue.
+_Code today_: none.
+
+**Settle**:
+What a sync target runs after a sync lands: the `sync:after` listeners and a whole-CDN purge.
+
+**Origin cache**:
+A runtime's own response cache that the CDN read-through stores shared renders in. A server runtime has none.
+
+**Published surface**:
+Every export a consumer can import: `plumix` and its subpaths (the umbrella), plus each plugin's and runtime adapter's exports.
+_Avoid_: façade (for the whole surface)
+
 ## Extensibility
 
 **Plugin**:
 A unit of extension defined by a plugin descriptor, which registers its contributions during setup. A plugin may be local to a single site or published for others to install; distribution is a mode, not a kind.
+_Code today_: `definePlugin` also takes a setup function, which the media plugin uses.
 
 **Plugin state**:
 What one install of a plugin keeps in memory for its own hooks. Rebuilt from code on every boot, never stored, never seen by other plugins. See ADR 0043.
@@ -439,7 +520,7 @@ _Avoid_: email template, notification
 The shared-document cache for anonymous public renders, served read-through: a hit returns the stored response; a miss renders live and stores without blocking the response.
 
 **Personal render**:
-A public render that read the principal during the render phase (`ctx.user`, `ctx.tokenScopes`, `ctx.auth.can()`, `useUser()`), or that carries the admin bar or the principal's own locale. It is never stored in a shared segment's entry and leaves as `private, no-store`; a stored copy of the segment still serves the next member. See ADR 0030.
+A public render that read the principal during the render phase (`ctx.user`, `ctx.tokenScopes`, `ctx.auth.can()`, `useUser()`), or that carries the admin bar or the principal's own locale. It is never stored in a shared segment's entry and leaves as `private, no-store`; a stored copy of the segment still serves the next principal in it. See ADR 0030.
 _Avoid_: personalized render, per-user render
 
 **Cache tag**:
@@ -453,7 +534,7 @@ _Avoid_: bust, invalidate
 Bytes a route produces once and then serves from object storage — a generated social card, a derived image. Read-through like the CDN, but keyed by a content-addressed storage key rather than by the request, so a changed input lands on a new key and there is nothing to purge.
 
 **Variant**:
-One transform of an image source — a width, a crop, a format — that the Node runtime's image route renders once and keeps on disk under a hash of the request, bounded in size and purged by source when the media item behind it is trashed or deleted, since a variant carries its source's gating.
+One transform of an image source — a width, a crop, a format — that a server runtime's (Node, Bun) image route renders once and keeps on disk under a hash of the request, bounded in size and purged by source when the media item behind it is trashed or deleted, since a variant carries its source's gating.
 
 ## SEO
 

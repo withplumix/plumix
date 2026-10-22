@@ -1,6 +1,6 @@
 # Media and storage
 
-Object storage and image delivery are two config slots, `storage` and `imageDelivery`, that a site developer fills with a runtime's adapter. Core defines their contracts and ships a portable `s3()` adapter; each runtime package ships its own backends. `@plumix/plugin-media` builds the media library on top: uploads, the admin Media Library page, the `media` field builders, and the serve route. Image roles let a theme or plugin ask for "the entry's featured image" instead of a meta key. Contracts live in `packages/core/src/runtime/contract/slots.ts`, the media plugin in `packages/plugins/media`, backends in `packages/runtimes/*`.
+Object storage and image delivery are two infrastructure slots, `storage` and `imageDelivery`, that a site developer fills with a runtime's adapter. Core defines their contracts and ships a portable `s3()` adapter for any S3-compatible storage; each runtime package ships its own backends. `@plumix/plugin-media` builds the media library on top: uploads, the admin Media Library page, the `media` field builders and the serve route. Image roles let a theme or plugin ask for "the entry's featured image" instead of a meta key. In ARCHITECTURE.md's component diagram the slots are part of Config slots, which talk to the Object storage container, and the media library is one of the Plugins. Contracts live in `packages/core/src/runtime/contract/slots.ts`, the media plugin in `packages/plugins/media`, backends in `packages/runtimes/`.
 
 ## At a glance
 
@@ -13,10 +13,10 @@ sequenceDiagram
   R->>R: check type, size, insert draft entry
   alt adapter has presignPut
     R-->>A: presigned PUT URL (60 s, signed Content-Length)
-    A->>S: PUT bytes to bucket
+    A->>S: PUT bytes to the bucket
   else no presignPut
     R-->>A: /_plumix/media/upload/:id
-    A->>R: PUT bytes via worker route
+    A->>R: PUT bytes to the upload route
     R->>S: put()
   end
   A->>R: confirm(id)
@@ -30,7 +30,7 @@ flowchart LR
   I --> P["images.featured on entity"]
   P --> T["theme / seo / og"]
   T --> D["imageDelivery.url()"]
-  D --> V["CF transformations or /_plumix/image"]
+  D --> V["platform image transforms or /_plumix/image"]
 ```
 
 ## Surface
@@ -60,7 +60,7 @@ Media plugin (`media({ acceptedTypes?, maxUploadSize? })`, default 25 MiB, SVG o
 
 | Kind            | Name                                                                                                 |
 | --------------- | ---------------------------------------------------------------------------------------------------- |
-| Entry type      | `media` (not public, no archive; `delete` at contributor)                                            |
+| Entry type      | `media` (not public, no archive; `delete` granted at `contributor`, code today)                      |
 | RPC             | `media.createUploadUrl`, `confirm`, `list`, `update`, `delete`                                       |
 | Routes          | `PUT /_plumix/media/upload/*` (authenticated), `GET /_plumix/media/serve/*` (public, published only) |
 | Admin page      | `/media`, "Library" nav group                                                                        |
@@ -70,9 +70,9 @@ Media plugin (`media({ acceptedTypes?, maxUploadSize? })`, default 25 MiB, SVG o
 
 ## How it works
 
-The handler connects each slot once per request and puts it on the context. Absent slots stay `undefined`, and `configuredSlotsOf` tells the admin which slots are filled, so it hides upload UI when there is no storage (ADR 0014).
+The runtime handler connects each slot once per request and puts it on the context. Absent slots stay `undefined`, and `configuredSlotsOf` tells the admin which slots are filled, so it hides upload UI when there is no storage (ADR 0014).
 
-Uploads are two RPC calls. `createUploadUrl` validates the declared MIME and size, writes a `draft` media entry with a `YYYY/MM/<uuid>.<ext>` storage key, and returns either a presigned URL or the worker route. A presigned PUT signs `content-length`, so the bucket refuses any other body length (#2766, closed). The worker route refuses a missing `Content-Length` or one above the declared size. `confirm` re-reads the object: a larger object, or bytes whose magic number contradicts the MIME, are deleted. It reads dimensions from the same ranged sample and flips `draft` to `published` with a compare-and-set on status.
+Uploads are two RPC calls. `createUploadUrl` validates the declared MIME and size, writes a `draft` media entry with a `YYYY/MM/<uuid>.<ext>` storage key, and returns either a presigned URL or the upload route. A presigned PUT signs `content-length`, so the bucket refuses any other body length. The upload route refuses a missing `Content-Length` or one above the declared size. `confirm` re-reads the object: a larger object, or bytes whose magic number contradicts the MIME, are deleted. It reads dimensions from the same ranged sample and flips `draft` to `published` with a compare-and-set on status.
 
 A file's URL is the bucket's public URL when the adapter has one, otherwise `/_plumix/media/serve/<id>`. That route serves only published media, sends `nosniff`, and forces a download for any MIME outside an inline-safe allowlist. On trash or delete, `purgeVariants` calls `imageDelivery.purge` when the adapter has one.
 
@@ -104,22 +104,9 @@ See [plugin-system.md](plugin-system.md), [runtimes.md](runtimes.md), [cdn-cache
 - The serve route never serves a draft or trashed item and never renders a non-allowlisted MIME inline. `packages/plugins/media/src/index.test.ts`.
 - A rendered asset key is content-addressed, so nothing purges it. `packages/core/src/storage/rendered-asset.test.ts`.
 
-## Status
+## Not there yet
 
-- Storage contract, `s3()`, R2, disk (Node, Bun) and `bunS3()`: shipped, conformance-tested.
-- Presigned uploads with exact length: shipped (#2766 closed).
-- Image delivery: shipped on all three runtimes (`packages/runtimes/node/src/images.test.ts`, `images.media.test.ts`, `packages/runtimes/cloudflare/src/images.test.ts`, `packages/runtimes/bun/src/http/images.test.ts`).
-- Media plugin: shipped; e2e in `packages/plugins/media/e2e/media.spec.ts` against a Cloudflare playground with an R2 binding (worker-routed path).
-- Image roles: shipped.
-- Planned: media writes onto a shared `ctx.entries` write path with page purges (#3256, parent #3249); media onto the editing-copy hook (#3246, parent #3241); image-rule remote fetches onto `ctx.fetch` timeouts (#3268).
-
-## Gaps
-
-- No conformance contract for `ImageDelivery`. `packages/core/src/test/conformance/index.ts` exports storage, KV, CDN, assets, database, run and sync contracts only, so the three `images()` adapters are checked by separate per-runtime tests.
-- Variant cache parity: Node caps it (`cacheSize`), Bun has no cap, and Cloudflare `images()` has no `purge`, so trashed media keeps its transformed variants at the edge. The Bun cap and the `cover` no-crop behaviour are documented in `apps/docs/src/content/docs/deployment/bun.mdx`.
-- Abandoned uploads leave `draft` media entries, and a failed storage delete leaves an object. The `delete` procedure calls it "a sweepable orphan", but no sweep exists in `packages/plugins/media/src` or core.
-- `createUploadUrl` has no per-user quota; the code comment in `rpc.ts` says so.
-- `confirm` rejects only an object larger than declared. On the worker route a shorter body passes with the declared `size` kept in meta.
-- Media's create, confirm, update and delete write `entries` directly, beside core's entry write path, so editing a media item purges no pages yet (#3256).
-- The presigned path is covered by unit tests against `fakeS3` only. The media e2e playground runs without S3 credentials, so no e2e drives a browser PUT to a bucket.
-- `r2()` is tested against a hand-written fake binding in Node (`packages/runtimes/cloudflare/src/r2.test.ts`, base Vitest config), not under workerd.
+| Part of the design                                                      | Seam to build on                                                                                                                | Done when                                                                                           | The code today                                                                                                    |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| One way to define a plugin (remove the function form of `definePlugin`) | `media()` in `packages/plugins/media/src/index.ts`, which calls `definePlugin("media", (ctx) => { ... }, { adminEntry, i18n })` | The media plugin returns a descriptor, its registrations under `setup`                              | The media plugin is the first-party plugin still on the function form                                             |
+| Site-defined roles                                                      | The media entry type's `capabilities: { delete: "contributor" }` in `packages/plugins/media/src/index.ts`                       | Deleting one's own upload is a capability the default roles are granted, with no role named by rank | The grant names `contributor`, a role the design drops; any role ranked at or above it may delete its own uploads |
