@@ -37,7 +37,7 @@ Without the plugin, `/search/:query` resolves in `resolveSearch` (core). With it
 | `search({ ranking, commonTermThreshold })`              | plugin factory; `ranking: "bm25-v1"` only                       | plugin                                      | yes                                                  |
 | `SearchArchiveData`, `SearchResult`, `RankingAlgorithm` | types; archive type `search`                                    | plugin                                      | yes                                                  |
 | `@plumix/plugin-search/schema`                          | `searchDocuments`, `searchReindexRuns`                          | plugin                                      | yes (`schemaModule`)                                 |
-| `search:reindex`                                        | capability, granted to `admin` by default                       | plugin `contract.ts`                        | yes                                                  |
+| `search:reindex`                                        | capability; the plugin grants it to the `admin` default role    | plugin `contract.ts`                        | yes                                                  |
 | `POST` / `GET /_plumix/search/reindex`                  | start a rebuild (idempotent) / read the latest run              | plugin                                      | yes                                                  |
 | `index-drain`                                           | scheduled task, no `cron` of its own                            | plugin                                      | internal                                             |
 
@@ -74,12 +74,7 @@ Key files:
 - The plugin's tables ship their own migration history ([ADR 0027](../adr/0027-each-table-owner-ships-its-own-migration-history.md)). Guarded by `src/db/migrations.test.ts`.
 - Access is applied per entry when a search runs, never copied into the projection ([ADR 0037](../adr/0037-a-public-surface-asks-per-entry-not-per-type.md)). Guarded by `src/server/query.test.ts` and `src/index.test.ts`.
 - A site that turns search off never compiles core's search rules, and the plugin still serves `/search/:query` ([ADR 0029](../adr/0029-a-framework-route-a-site-turns-off-is-never-compiled.md)). Guarded by `packages/core/src/route/compile.test.ts` and `packages/core/src/route/resolve.test.ts`.
+- A site can grant `search:reindex` to any role it defines; the plugin names only the default roles that get it (`registerCapability` in `src/index.ts`).
 - A content sync starts a full rebuild (`registerSyncReindex`, [ADR 0039](../adr/0039-a-sync-replaces-a-scope-and-never-merges.md)).
 - `term:meta_changed` is not hooked, because term meta is never indexed. The backfill comparison mirrors what `indexTerms` writes. Guarded by `src/server/drain.test.ts`.
 - Core's `LIKE` conditions never read `entries.content`. Guarded by `packages/core/src/entries/read-service.test.ts`.
-
-## Not there yet
-
-| Part of the design | Seam to build on                                                                                                                                                             | Done when                                                                                             | The code today                                                                         |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| Site-defined roles | `registerCapability(REINDEX_CAPABILITY, "admin")` in `packages/plugins/search/src/index.ts`, whose minimum role becomes the default roles the plugin grants `search:reindex` | `search:reindex` is a default grant of the `admin` role, and a site can grant it to a role it defines | `registerCapability` takes a minimum role, so `search:reindex` goes to `admin` by rank |

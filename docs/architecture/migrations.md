@@ -22,10 +22,7 @@ flowchart LR
   owners["resolveOwners<br/>core, then plugins in config order, then the site"] --> schema["Each migration history,<br/>one tracking table per owner"]
   schema --> data["Every data migration,<br/>in the same owner order"]
   data --> track[("__plumix_data_migrations")]
-  roles["Core's roles data migration<br/>(not yet)"] -.-> data
-
-  classDef goal fill:#2da44e,stroke:#1a7f37,color:#fff
-  class roles goal
+  roles["Core's roles data migration"] --> data
 ```
 
 ## Surface
@@ -72,8 +69,11 @@ the runtime's `legacyTable`. Hand-written DDL is an ordinary custom migration in
 history, such as the search plugin's FTS5 table in
 `packages/plugins/search/migrations/0001_search_index.sql`.
 
-Core and the audit-log, comments, forms and search plugins ship histories. No data migration ships
-yet: `CORE_DATA_MIGRATIONS` is empty, and no first-party plugin sets `dataMigrations`.
+Core and the audit-log, comments, forms and search plugins ship histories. Site-defined roles are
+stored in the database: core's history builds a `roles` table (name, capabilities), declared in
+`packages/core/src/db/schema/`. Core's first data migration in `CORE_DATA_MIGRATIONS` is the roles
+data migration: it runs after core's history wherever migrations run and moves every user onto a
+stored role with the same capabilities, so nobody gains or loses rights.
 
 - `packages/plumix/src/cli/migrate/owners.ts`: `resolveOwners`, `TRACKING_TABLE_PREFIX`, `sitePlugins`.
 - `packages/plumix/src/cli/migrate/apply.ts`: `applyOwners`, `adoptLegacyDatabase`, `reportStatus`.
@@ -94,10 +94,3 @@ yet: `CORE_DATA_MIGRATIONS` is empty, and no first-party plugin sets `dataMigrat
 - A platform runtime's app process applies nothing; `plumix deploy` migrates from the CLI first (`migrateBeforeDeploy`, called from `packages/runtimes/cloudflare/src/commands/deploy.ts`).
 - Test databases get core's DDL from the same history production replays (`packages/core/src/test/harness.test.ts`).
 - Every runtime's `openRun` reaches the same database `migrate` wrote: `describeRunContract` in each `packages/runtimes/*/src/commands/migrations.test.ts`.
-
-## Not there yet
-
-| Part of the design       | Seam to build on                                                                                                                                                                              | Done when                                                                                                                                                                                            |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Stored roles             | Site-defined roles are stored in the database: a `roles` table (name, capabilities) in core's migration history under `packages/core/migrations/`, declared in `packages/core/src/db/schema/` | Core's history builds the `roles` table, no column default names `subscriber`, and `migrations:check` is clean                                                                                       |
-| The roles data migration | Core's first data migration in `CORE_DATA_MIGRATIONS` (`packages/core/src/cli/data-migrations.ts`), run after core's history under ADR 0044, wherever migrations run                          | Every `subscriber` becomes `member`; a stored `contributor` role with the same capabilities exists and every contributor holds it, so nobody gains or loses rights; no stored row names `subscriber` |

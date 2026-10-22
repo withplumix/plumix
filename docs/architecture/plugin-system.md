@@ -83,7 +83,7 @@ Other public exports from `plumix/plugin`: `applyOverride` / `Overridable` (opti
 
 `buildApp` seeds the registry before plugins run: `createPluginRegistry` adds the `featured` and `ogImage` image roles, then core adds its lookup adapters, template deps, settings and scheduled tasks. After install it fires `theme:ready`, indexes image roles, and merges plugin `schema` exports, rejecting a key two owners export.
 
-`registerCapability(name, minRole)` (or `{ minRole, defaultGrants }`) records which roles hold a plugin's capability; `auth/rbac.ts` reads it when it resolves what a role can do. In the 1.0 design a plugin instead names the default roles that get the capability, and a site can grant it to any role, its own included (not yet; see below).
+`registerCapability` records a plugin's capability and the default roles (`member`, `author`, `editor`, `admin`) that get it. `auth/rbac.ts` merges those grants with the site's roles, stored and declared, so a site can grant the capability to any role, its own included.
 
 - `packages/core/src/plugin/define.ts`: `definePlugin`, `PluginDescriptor`, `assertValidPluginId`, `PLUGIN_I18N_SLOT`, `pluginAdminEntryPath`.
 - `packages/core/src/plugin/setup-context-types.ts`: `PluginSetupContextBase`, `PluginAfterSetupContext`.
@@ -105,18 +105,3 @@ The plugin authoring guide is `apps/docs/src/content/docs/plugins/overview.mdx`.
 - `setup`, `afterSetup` and `theme:ready` handlers do no IO and are safe to repeat, because the Vite manifest pass reruns them on every config change (comment on `computeManifestAndRegistry` in `packages/plumix/src/vite/manifest.ts`).
 - Plugins are installed in code. No screen enables or disables one.
 - Imports go through `plumix`, never `@plumix/*` (the umbrella rule in `AGENTS.md`).
-
-## Not there yet
-
-To build:
-
-| Part of the design                     | Seam to build on                                                                                                                                                                                                                                                                | Done when                                                                                                                                                                           |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A plugin grants its capability by role | `registerCapability` in `plugin/setup-context-types.ts` and `RegisteredCapability` in `plugin/registry.ts`: `minRole` and `defaultGrants` become the default roles that hold the capability. `auth/rbac.ts` reads the grants with the site's roles, stored and declared, merged | A plugin names the default roles (`member`, `author`, `editor`, `admin`) that get its capability, a site grants it to any role it defines, and no registration names a minimum role |
-
-To remove:
-
-| In the code                         | Why it goes                                                                                                                                                         | Done when                                                                                                        |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| The function form of `definePlugin` | One way to define a plugin: the descriptor. The `(id, setup, options)` form can't declare `state`, `provides`, `afterSetup`, `shortcodes`, `mails` or `authMethods` | Every plugin, `packages/plugins/media/src/index.ts` included, uses the descriptor form, and the overload is gone |
-| The `plugin:manage` capability      | Plugins are installed in code; no screen enables or disables them                                                                                                   | The capability is gone from `access/contract/capability.ts`                                                      |

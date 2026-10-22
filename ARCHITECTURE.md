@@ -11,38 +11,31 @@ A site describes its content model, plugins and theme in TypeScript. Plumix buil
 public URLs, the APIs and the capability checks from that description, and serves all of it from
 one process on the runtime the site picks.
 
-This is Plumix as it is designed to be at 1.0, following the vision (`VISION.md`, landing alongside this file). The code is a
-snapshot on the way there. Every part of the design is drawn; a part the code does not have yet is drawn
-green, and a relationship it does not have yet is a dashed arrow. [Not there yet](#not-there-yet) lists
-each one with the seam to build on and when it is done, along with what the code has that the design
-drops. Plumix is ready to tag 1.0 when that list is empty and the code matches every diagram here. Words used here mean what [`GLOSSARY.md`](GLOSSARY.md) says they mean.
+This is Plumix as designed, following [`VISION.md`](VISION.md). Words used here mean what
+[`GLOSSARY.md`](GLOSSARY.md) says they mean.
 
 The diagrams below follow the [C4 model](https://c4model.com). Context, containers and components
 each zoom one level further in; the deployment diagram shows where the containers run;
-the dynamic diagrams show the four flows most changes touch and two flows of the 1.0 design; a data model and a state diagram
+the dynamic diagrams show the flows most changes touch; a data model and a state diagram
 follow. They are Mermaid, so GitHub draws them
 and an agent reads every element and relationship from the text. Each box names its C4 type in
 brackets. One key covers them all:
 
-| Notation                              | Meaning                                                                                                                                       |
-| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Dark blue box                         | Person                                                                                                                                        |
-| Bright blue box                       | The software system in scope                                                                                                                  |
-| Medium blue box or cylinder           | Container: something that runs, or a data store                                                                                               |
-| Light blue box                        | Component inside a container                                                                                                                  |
-| Grey box                              | Software system outside Plumix                                                                                                                |
-| White box, blue border                | Infrastructure a deployment provides, such as a cache or cron                                                                                 |
-| Green box                             | In the 1.0 design, not in the code yet                                                                                                        |
-| Solid arrow                           | In the code; the label gives intent, then technology in brackets where it crosses a process. Arrows inside one container are in-process calls |
-| Dashed arrow                          | In the 1.0 design, not in the code yet                                                                                                        |
-| Dashed grey outline                   | Grouping or system boundary                                                                                                                   |
-| Dashed green outline                  | Group of parts in the 1.0 design, not in the code yet                                                                                         |
-| "(not yet)" or "not yet" inside a box | That part of an existing element is in the 1.0 design but not in the code yet                                                                 |
-| Dashed blue outline                   | Container boundary, with its components inside                                                                                                |
-| Solid outline                         | Deployment node, such as a browser, a server or a platform environment                                                                        |
-| Data model lines                      | A line joins two tables; the end with a fork means many, a bar means exactly one, a circle means the link is optional                         |
-| Rounded box, arrow (state diagram)    | A status, and the action that moves an entry to the next one                                                                                  |
-| Sequence arrows (dynamic diagrams)    | A solid arrow is a call, a dashed arrow its reply, numbered in order; an `alt` box shows alternative paths                                    |
+| Notation                           | Meaning                                                                                                                          |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Dark blue box                      | Person                                                                                                                           |
+| Bright blue box                    | The software system in scope                                                                                                     |
+| Medium blue box or cylinder        | Container: something that runs, or a data store                                                                                  |
+| Light blue box                     | Component inside a container                                                                                                     |
+| Grey box                           | Software system outside Plumix                                                                                                   |
+| White box, blue border             | Infrastructure a deployment provides, such as a cache or cron                                                                    |
+| Solid arrow                        | The label gives intent, then technology in brackets where it crosses a process. Arrows inside one container are in-process calls |
+| Dashed grey outline                | Grouping or system boundary                                                                                                      |
+| Dashed blue outline                | Container boundary, with its components inside                                                                                   |
+| Solid outline                      | Deployment node, such as a browser, a server or a platform environment                                                           |
+| Data model lines                   | A line joins two tables; the end with a fork means many, a bar means exactly one, a circle means the link is optional            |
+| Rounded box, arrow (state diagram) | A status, and the action that moves an entry to the next one                                                                     |
+| Sequence arrows (dynamic diagrams) | A solid arrow is a call, a dashed arrow its reply, numbered in order; an `alt` box shows alternative paths                       |
 
 Acronyms: MCP is the Model Context Protocol, RPC a remote procedure call, REST an HTTP JSON API,
 OTLP the OpenTelemetry protocol, LLM a large language model, SSO single sign-on, PKCE the OAuth proof
@@ -53,7 +46,7 @@ it on.
 
 Who and what surrounds one Plumix site. It shows only what core offers: a plugin's own outside
 systems, such as the crawlers that read the SEO plugin's sitemaps, belong on that plugin's page. The
-people are kinds of user, not roles. In the 1.0 design a role is a set of capabilities: a member holds
+people are kinds of user, not roles. A role is a set of capabilities: a member holds
 the `member` role, editors and designers hold `author`, `editor`, `admin` or a role the site defines.
 
 Some things are left off on purpose. The runtime the site runs on is a deployment choice, so it is on
@@ -87,12 +80,9 @@ flowchart TB
     idp["<b>Identity providers</b><br/><i>[Software System]</i><br/>OAuth (GitHub and Google built in),<br/>or a single sign-on proxy"]
     mail["<b>Mail provider</b><br/><i>[Software System]</i><br/>Whatever the mailer slot points at"]
     cdnapi["<b>CDN provider</b><br/><i>[Software System]</i><br/>Optional; caches pages,<br/>purged by tag"]
-  end
-
-  subgraph ahead["In the design, not built yet"]
-    llm["<b>LLM provider</b><br/><i>[Software System, not yet]</i><br/>Large language model behind<br/>the in-editor agent"]
-    otel["<b>Telemetry sink</b><br/><i>[Software System, not yet]</i><br/>Any OpenTelemetry endpoint,<br/>behind the telemetry slot"]
-    hooks["<b>Webhook receivers</b><br/><i>[Software System, not yet]</i><br/>Notified when content changes"]
+    llm["<b>LLM provider</b><br/><i>[Software System]</i><br/>Large language model behind<br/>the in-editor agent"]
+    otel["<b>Telemetry sink</b><br/><i>[Software System]</i><br/>Any OpenTelemetry endpoint,<br/>behind the telemetry slot"]
+    hooks["<b>Webhook receivers</b><br/><i>[Software System]</i><br/>Notified when content changes"]
   end
 
   dev -- "Builds, configures and deploys<br/>[code, plumix CLI]" --> site
@@ -102,30 +92,27 @@ flowchart TB
   member -- "Signs in, reads members-only<br/>content [web]" --> site
   visitor -- "Reads public pages [web]" --> site
   agent -- "Reads content and the schema<br/>[MCP over HTTPS, opt-in]" --> site
-  agent -. "Writes and publishes content, composes pages,<br/>within its token's capabilities [MCP]" .-> site
+  agent -- "Writes and publishes content, composes pages,<br/>within its token's capabilities [MCP]" --> site
   api -- "Reads published content<br/>[REST, JSON over HTTPS, opt-in]" --> site
   site -- "Signs people in with<br/>[OAuth 2.0, or an SSO JWT checked against JWKS]" --> idp
   site -- "Sends sign-in links and<br/>notifications [provider API or SMTP]" --> mail
   site -- "Purges cached pages by tag<br/>[HTTPS API, token]" --> cdnapi
-  site -. "Asks for page drafts [provider API]" .-> llm
-  site -. "Exports traces [OTLP over HTTP]" .-> otel
-  site -. "Notifies of content changes<br/>[HTTPS POST with its headers]" .-> hooks
+  site -- "Asks for page drafts [provider API]" --> llm
+  site -- "Exports traces [OTLP over HTTP]" --> otel
+  site -- "Notifies of content changes<br/>[HTTPS POST with its headers]" --> hooks
 
   classDef person fill:#08427b,stroke:#052e56,color:#fff
   classDef system fill:#1168bd,stroke:#0b4884,color:#fff
   classDef cont fill:#438dd5,stroke:#2e6295,color:#fff
   classDef comp fill:#85bbf0,stroke:#5d82a8,color:#000
   classDef ext fill:#999999,stroke:#6b6b6b,color:#fff
-  classDef goal fill:#2da44e,stroke:#1a7f37,color:#fff
   classDef infra fill:#ffffff,stroke:#438dd5,color:#1a1a1a
   class dev,editor,designer,admin,member,visitor person
   class site system
-  class agent,api,idp,mail,cdnapi ext
-  class llm,otel,hooks goal
+  class agent,api,idp,mail,cdnapi,llm,otel,hooks ext
   style people fill:none,stroke:#888,stroke-dasharray:4 4
   style callers fill:none,stroke:#888,stroke-dasharray:4 4
   style used fill:none,stroke:#888,stroke-dasharray:4 4
-  style ahead fill:none,stroke:#1a7f37,stroke-dasharray:4 4
 ```
 
 ### Containers
@@ -150,22 +137,22 @@ flowchart LR
 
   subgraph sb["Plumix site [Software System]"]
     cli["<b>plumix CLI</b><br/><i>[Container: Node or Bun command-line app]</i><br/>migrate, sync, import, cron, mail, doctor, meta,<br/>i18n, dev, build; deploy, preview, types where the runtime has them<br/><code>packages/plumix/src/cli</code>"]
-    adminapp["<b>Admin and visual editor</b><br/><i>[Container: React single-page app, in the browser]</i><br/>Edits content, composes pages, manages roles (not yet)<br/><code>packages/admin</code>, <code>packages/admin-editor</code>"]
+    adminapp["<b>Admin and visual editor</b><br/><i>[Container: React single-page app, in the browser]</i><br/>Edits content, composes pages, manages roles<br/><code>packages/admin</code>, <code>packages/admin-editor</code>"]
     public["<b>Public site</b><br/><i>[Container: HTML and island scripts, in the browser]</i><br/>What visitors and members read<br/>the site's theme and <code>packages/core/src/blocks</code>"]
     app["<b>App process</b><br/><i>[Container: TypeScript server, on the runtime the site picks]</i><br/>Routes requests, renders pages, serves RPC, REST and MCP,<br/>runs the theme, plugins and scheduled tasks<br/><code>packages/core</code>, <code>packages/runtimes/*</code>"]
     db[("<b>Database</b><br/><i>[Container: SQLite: a file, the platform's service,<br/>or a libsql server]</i><br/>Content, users, sessions, leases")]
     files[("<b>Object storage</b><br/><i>[Container: S3-compatible, or local disk]</i><br/>Uploaded files; optional storage slot")]
-    kv[("<b>Key-value store</b><br/><i>[Container: the platform's store, or in memory]</i><br/>Optional slot; no first-party user yet")]
-    queue[("<b>Job queue</b><br/><i>[Container, not yet: the queue slot,<br/>filled by the runtime's own queue]</i><br/>Work that outlives a request,<br/>such as webhook deliveries")]
+    kv[("<b>Key-value store</b><br/><i>[Container: the platform's store, or in memory]</i><br/>Optional slot")]
+    queue[("<b>Job queue</b><br/><i>[Container: the queue slot,<br/>filled by the runtime's own queue]</i><br/>Work that outlives a request,<br/>such as webhook deliveries")]
   end
 
   subgraph used["Systems the site depends on"]
     idp["<b>Identity providers</b><br/><i>[Software System]</i>"]
     mail["<b>Mail provider</b><br/><i>[Software System]</i>"]
     cdnapi["<b>CDN provider</b><br/><i>[Software System]</i>"]
-    llm["<b>LLM provider</b><br/><i>[Software System, not yet]</i>"]
-    otel["<b>Telemetry sink</b><br/><i>[Software System, not yet]</i>"]
-    hooks["<b>Webhook receivers</b><br/><i>[Software System, not yet]</i>"]
+    llm["<b>LLM provider</b><br/><i>[Software System]</i>"]
+    otel["<b>Telemetry sink</b><br/><i>[Software System]</i>"]
+    hooks["<b>Webhook receivers</b><br/><i>[Software System]</i>"]
   end
 
   dev -- "Runs [terminal or CI]" --> cli
@@ -178,7 +165,7 @@ flowchart LR
   public -- "Requests pages, media and form posts<br/>[HTTPS]" --> app
   agent -- "Reads content and the schema<br/>[MCP over HTTPS, opt-in]" --> app
   cron -- "Fires scheduled tasks<br/>[scheduled handler, or timer]" --> app
-  agent -. "Writes and publishes content, composes pages [MCP]" .-> app
+  agent -- "Writes and publishes content, composes pages [MCP]" --> app
   api -- "Reads published content<br/>[REST, JSON over HTTPS, opt-in]" --> app
   app -- "Reads and writes<br/>[SQL via drizzle]" --> db
   app -- "Stores and reads files<br/>[S3 API or the platform's handle]" --> files
@@ -187,24 +174,22 @@ flowchart LR
   adminapp -- "Sends the person to sign in [HTTPS redirect]" --> idp
   app -- "Sends mail [provider API or SMTP]" --> mail
   app -- "Purges by tag [HTTPS API]" --> cdnapi
-  app -. "Asks for page drafts [provider API]" .-> llm
-  app -. "Exports traces [OTLP over HTTP]" .-> otel
-  app -. "Notifies of content changes<br/>[HTTPS POST with its headers]" .-> hooks
-  app -. "Enqueues background work" .-> queue
-  queue -. "Delivers queued jobs to [the runtime's queue consumer]" .-> app
+  app -- "Asks for page drafts [provider API]" --> llm
+  app -- "Exports traces [OTLP over HTTP]" --> otel
+  app -- "Notifies of content changes<br/>[HTTPS POST with its headers]" --> hooks
+  app -- "Enqueues background work" --> queue
+  queue -- "Delivers queued jobs to [the runtime's queue consumer]" --> app
 
   classDef person fill:#08427b,stroke:#052e56,color:#fff
   classDef system fill:#1168bd,stroke:#0b4884,color:#fff
   classDef cont fill:#438dd5,stroke:#2e6295,color:#fff
   classDef comp fill:#85bbf0,stroke:#5d82a8,color:#000
   classDef ext fill:#999999,stroke:#6b6b6b,color:#fff
-  classDef goal fill:#2da44e,stroke:#1a7f37,color:#fff
   classDef infra fill:#ffffff,stroke:#438dd5,color:#1a1a1a
   class dev,staff,reader person
-  class agent,api,idp,mail,cdnapi ext
+  class agent,api,idp,mail,cdnapi,llm,otel,hooks ext
   class cron infra
-  class cli,adminapp,public,app,db,files,kv cont
-  class llm,queue,otel,hooks goal
+  class cli,adminapp,public,app,db,files,kv,queue cont
   style who fill:none,stroke:#888,stroke-dasharray:4 4
   style sb fill:none,stroke:#888,stroke-dasharray:4 4
   style used fill:none,stroke:#888,stroke-dasharray:4 4
@@ -236,7 +221,7 @@ flowchart LR
     builder["<b>App builder</b><br/><i>[Component: core runtime/app.ts]</i><br/>Builds the app once: installs plugins,<br/>merges schemas, validates the config"]
     entry["<b>Runtime handler</b><br/><i>[Component: runtimes/*/entry-codegen,<br/>core runtime/handler.ts]</i><br/>Builds the request context, hands off<br/>fetch and scheduled calls; the entry module<br/>is generated into .plumix/worker.ts at build"]
     dispatcher["<b>Dispatcher</b><br/><i>[Component: core runtime/dispatcher.ts]</i><br/>Checks CSRF and origin; routes to pages, admin shell,<br/>RPC, REST, MCP, sign-in, sync and plugin routes;<br/>runs sync transfer and settle (runtime/sync-*.ts);<br/>flushes CDN purges"]
-    sched["<b>Scheduled tasks</b><br/><i>[Component: core runtime/scheduled.ts]</i><br/>Runs core's and plugins' tasks,<br/>and queued jobs (not yet)"]
+    sched["<b>Scheduled tasks</b><br/><i>[Component: core runtime/scheduled.ts]</i><br/>Runs core's and plugins' tasks,<br/>and queued jobs"]
     authc["<b>Auth and access</b><br/><i>[Component: core auth, access]</i><br/>Sign-in methods, sessions, tokens,<br/>capabilities, per-entry access policy"]
     surfaces["<b>RPC, REST and MCP</b><br/><i>[Component: core rpc, rest, mcp]</i><br/>Admin procedures with the write lifecycle,<br/>read API, agent tools"]
     cdn["<b>CDN read-through</b><br/><i>[Component: core cdn]</i><br/>Serves stored pages, stores shared ones,<br/>keys by segment, purges by tag"]
@@ -244,12 +229,12 @@ flowchart LR
     content["<b>Content services</b><br/><i>[Component: core entries, terms,<br/>users, revisions]</i><br/>Reads entries, terms and users<br/>with access applied"]
     pluginsys["<b>Plugin system and hooks</b><br/><i>[Component: core plugin, hooks]</i><br/>Holds what plugins registered,<br/>runs filters and actions"]
     mailc["<b>Mail</b><br/><i>[Component: core mail]</i><br/>Mails declared by name"]
-    slots["<b>Config slots</b><br/><i>[Component: core contracts,<br/>runtime packages]</i><br/>Database, storage, key-value, CDN, mailer,<br/>image delivery, telemetry; queue and LLM, not yet"]
+    slots["<b>Config slots</b><br/><i>[Component: core contracts,<br/>runtime packages]</i><br/>Database, storage, key-value, CDN, mailer,<br/>image delivery, telemetry, queue, LLM"]
     theme["<b>Theme</b><br/><i>[Component: site code, React]</i><br/>Templates, blocks, design tokens"]
-    policy["<b>Block list and style policy</b><br/><i>[Component, not yet]</i><br/>Which blocks the editor offers;<br/>custom values or design tokens only"]
-    roles["<b>Site-defined roles</b><br/><i>[Component, not yet]</i><br/>Default roles plus roles a site<br/>declares from capabilities"]
-    webhooks["<b>Webhooks</b><br/><i>[Component, not yet]</i><br/>POSTs a declared payload<br/>on content actions"]
-    assistant["<b>In-editor agent</b><br/><i>[Component, not yet]</i><br/>Drafts and composes pages<br/>for the editor who asks"]
+    policy["<b>Block list and style policy</b><br/><i>[Component: theme config, core rpc]</i><br/>Which blocks the editor offers;<br/>custom values or design tokens only"]
+    roles["<b>Site-defined roles</b><br/><i>[Component: core access, users]</i><br/>Default roles plus roles a site<br/>declares from capabilities"]
+    webhooks["<b>Webhooks</b><br/><i>[Component: core]</i><br/>POSTs a declared payload<br/>on content actions"]
+    assistant["<b>In-editor agent</b><br/><i>[Component: core rpc, the llm slot]</i><br/>Drafts and composes pages<br/>for the editor who asks"]
     plugins["<b>Plugins</b><br/><i>[Component: site code, definePlugin]</i><br/>Blocks, fields, routes, procedures, tools"]
   end
 
@@ -260,16 +245,16 @@ flowchart LR
     idp["<b>Identity providers</b><br/><i>[Software System]</i>"]
     mail["<b>Mail provider</b><br/><i>[Software System]</i>"]
     cdnapi["<b>CDN provider</b><br/><i>[Software System]</i>"]
-    receivers["<b>Webhook receivers</b><br/><i>[Software System, not yet]</i>"]
-    otelsink["<b>Telemetry sink</b><br/><i>[Software System, not yet]</i>"]
-    llmsys["<b>LLM provider</b><br/><i>[Software System, not yet]</i>"]
-    queuec[("<b>Job queue</b><br/><i>[Container, not yet]</i>")]
+    receivers["<b>Webhook receivers</b><br/><i>[Software System]</i>"]
+    otelsink["<b>Telemetry sink</b><br/><i>[Software System]</i>"]
+    llmsys["<b>LLM provider</b><br/><i>[Software System]</i>"]
+    queuec[("<b>Job queue</b><br/><i>[Container]</i>")]
   end
 
   adminapp -- "Calls procedures [oRPC over HTTPS]" --> entry
   public -- "Requests pages [HTTPS]" --> entry
   agent -- "Reads content and the schema [MCP over HTTPS]" --> entry
-  agent -. "Writes and publishes content, composes pages [MCP over HTTPS]" .-> entry
+  agent -- "Writes and publishes content, composes pages [MCP over HTTPS]" --> entry
   api -- "Reads content [REST over HTTPS]" --> entry
   cli -- "Syncs with server runtimes, settles any sync, tests mail [HTTPS, API token]" --> entry
   cron -- "Fires scheduled tasks [scheduled handler or timer]" --> entry
@@ -310,36 +295,34 @@ flowchart LR
   slots -- "Sends mail [provider API or SMTP]" --> mail
   slots -- "Purges by tag [HTTPS API]" --> cdnapi
 
-  pluginsys -. "Hands content actions to" .-> webhooks
-  webhooks -. "Enqueues each delivery through" .-> slots
-  slots -. "Enqueues [the queue slot]" .-> queuec
-  queuec -. "Delivers queued jobs [the runtime's queue consumer]" .-> entry
-  entry -. "Hands queued jobs to" .-> sched
-  sched -. "Runs webhook deliveries through" .-> webhooks
-  webhooks -. "Delivers [HTTPS POST with its headers]" .-> receivers
-  slots -. "Exports traces [the published OTLP consumer]" .-> otelsink
-  assistant -. "Asks for drafts [the llm slot]" .-> slots
-  slots -. "Calls the model [provider API]" .-> llmsys
-  theme -. "Declare the block list<br/>and style policy" .-> policy
-  policy -. "Reaches the editor in the plugin manifest,<br/>built by the Vite plugin" .-> adminapp
-  surfaces -. "Hold agents' writes to the same<br/>policy, leases and capabilities" .-> policy
-  authc -. "Resolves roles from the database and config" .-> roles
-  roles -. "Stored through [SQL via drizzle]" .-> slots
-  surfaces -. "Hand page-draft requests to" .-> assistant
-  assistant -. "Draft through the same<br/>procedures as an editor" .-> surfaces
+  pluginsys -- "Hands content actions to" --> webhooks
+  webhooks -- "Enqueues each delivery through" --> slots
+  slots -- "Enqueues [the queue slot]" --> queuec
+  queuec -- "Delivers queued jobs [the runtime's queue consumer]" --> entry
+  entry -- "Hands queued jobs to" --> sched
+  sched -- "Runs webhook deliveries through" --> webhooks
+  webhooks -- "Delivers [HTTPS POST with its headers]" --> receivers
+  slots -- "Exports traces [the published OTLP consumer]" --> otelsink
+  assistant -- "Asks for drafts [the llm slot]" --> slots
+  slots -- "Calls the model [provider API]" --> llmsys
+  theme -- "Declares the block list<br/>and style policy" --> policy
+  policy -- "Reaches the editor in the plugin manifest,<br/>built by the Vite plugin" --> adminapp
+  surfaces -- "Hold agents' writes to the same<br/>policy, leases and capabilities" --> policy
+  authc -- "Resolves roles from the database and config" --> roles
+  roles -- "Stored through [SQL via drizzle]" --> slots
+  surfaces -- "Hand page-draft requests to" --> assistant
+  assistant -- "Draft through the same<br/>procedures as an editor" --> surfaces
 
   classDef person fill:#08427b,stroke:#052e56,color:#fff
   classDef system fill:#1168bd,stroke:#0b4884,color:#fff
   classDef cont fill:#438dd5,stroke:#2e6295,color:#fff
   classDef comp fill:#85bbf0,stroke:#5d82a8,color:#000
   classDef ext fill:#999999,stroke:#6b6b6b,color:#fff
-  classDef goal fill:#2da44e,stroke:#1a7f37,color:#fff
   classDef infra fill:#ffffff,stroke:#438dd5,color:#1a1a1a
-  class adminapp,public,cli,db,files,kv cont
-  class agent,api,idp,mail,cdnapi ext
+  class adminapp,public,cli,db,files,kv,queuec cont
+  class agent,api,idp,mail,cdnapi,receivers,otelsink,llmsys ext
   class cron infra
-  class builder,entry,dispatcher,sched,authc,surfaces,cdn,render,content,pluginsys,mailc,slots,theme,plugins comp
-  class policy,roles,assistant,webhooks,receivers,otelsink,queuec,llmsys goal
+  class builder,entry,dispatcher,sched,authc,surfaces,cdn,render,content,pluginsys,mailc,slots,theme,plugins,policy,roles,webhooks,assistant comp
   style callers fill:none,stroke:#888,stroke-dasharray:4 4
   style app fill:none,stroke:#438dd5,stroke-dasharray:4 4
   style stores fill:none,stroke:#888,stroke-dasharray:4 4
@@ -372,7 +355,7 @@ box names the kind of thing it is, and the table below names what fills it on ea
 
 Runtimes come in two shapes. A managed platform provides TLS, static assets, image
 resizing, cron and an origin cache in front of the app, and runs one copy of this diagram per
-environment. A server runtime (Node and Bun today) runs behind a reverse proxy that terminates TLS, and
+environment. A server runtime (Node and Bun) runs behind a reverse proxy that terminates TLS, and
 serves static assets, resizes images and fires scheduled tasks inside its own process. Either can sit
 behind a CDN, which caches pages by its own rules; the app decorates each shareable page with cache
 headers and tags and purges by tag. The CDN provider on the context diagram is that CDN here.
@@ -401,13 +384,13 @@ flowchart TB
     db[("<b>Database</b><br/><i>[Container: SQLite, a file<br/>or the platform's service]</i>")]
     files[("<b>Object storage</b><br/><i>[Container: S3-compatible, or local disk]</i>")]
     kv[("<b>Key-value store</b><br/><i>[Container: the platform's store, or memory<br/>inside the app process]</i>")]
-    queued[("<b>Job queue</b><br/><i>[Container, not yet: the runtime's own queue]</i>")]
+    queued[("<b>Job queue</b><br/><i>[Container: the runtime's own queue]</i>")]
   end
 
   subgraph outside["Outside the runtime environment"]
     remotedb[("<b>Database, on a remote libsql host</b><br/><i>[Container: libsql, instead of a local file]</i>")]
     providers["<b>Identity and mail providers</b><br/><i>[Software Systems]</i>"]
-    futureext["<b>Telemetry sink, webhook receivers,<br/>LLM provider</b><br/><i>[Software Systems, not yet]</i>"]
+    outsvc["<b>Telemetry sink, webhook receivers,<br/>LLM provider</b><br/><i>[Software Systems]</i>"]
   end
 
   public -- "Requests pages, assets, images [HTTPS]" --> front
@@ -421,13 +404,13 @@ flowchart TB
   sched -- "Fires scheduled tasks<br/>[scheduled handler, or timer]" --> app
   app -- "Reads through, stores pages [cache API]" --> cache
   app -- "Reads and writes [the platform's handle, or SQL]" --> db
-  app -. "Enqueues and runs work" .-> queued
+  app -- "Enqueues and runs work" --> queued
   app -- "Reads and writes when configured<br/>[libsql over HTTPS]" --> remotedb
   app -- "Stores files [the platform's handle, S3 API or file system]" --> files
   app -- "Reads and writes [the platform's handle, or memory]" --> kv
   app -- "Purges cached pages by tag [the CDN's purge API]" --> front
   app -- "Signs people in, sends mail<br/>[OAuth 2.0, provider API or SMTP]" --> providers
-  app -. "Exports traces, notifies webhook receivers,<br/>asks the LLM [OTLP, HTTPS, provider API]" .-> futureext
+  app -- "Exports traces, notifies webhook receivers,<br/>asks the LLM [OTLP, HTTPS, provider API]" --> outsvc
   cli -- "Deploys<br/>[the platform's deploy, or the operator copies the build]" --> env
   cli -- "Migrates, exports and imports<br/>[the platform's database CLI, or the SQLite file]" --> db
   cli -- "Exports and imports media<br/>[the platform's storage, or local disk]" --> files
@@ -438,12 +421,10 @@ flowchart TB
   classDef cont fill:#438dd5,stroke:#2e6295,color:#fff
   classDef comp fill:#85bbf0,stroke:#5d82a8,color:#000
   classDef ext fill:#999999,stroke:#6b6b6b,color:#fff
-  classDef goal fill:#2da44e,stroke:#1a7f37,color:#fff
   classDef infra fill:#ffffff,stroke:#438dd5,color:#1a1a1a
-  class cli,public,adminapp,app,db,files,kv,remotedb cont
+  class cli,public,adminapp,app,db,files,kv,remotedb,queued cont
   class front,assets,images,sched,cache infra
-  class providers ext
-  class queued,futureext goal
+  class providers,outsvc ext
   style browser fill:none,stroke:#666
   style devbox fill:none,stroke:#666
   style env fill:none,stroke:#666
@@ -468,7 +449,7 @@ Every runtime can also use the portable providers: `plumix/db/libsql` for the da
 
 ### Behaviour
 
-Four flows that most changes touch, then two of the 1.0 design. Each step names the component that owns it. In the sign-in
+The flows most changes touch. Each step names the component that owns it. In the sign-in
 flow, the very first user of a site is created by a passkey by default; OAuth creates the first admin
 only with `bootstrapVia: "first-method-wins"`.
 
@@ -551,7 +532,7 @@ sequenceDiagram
     P-->>D: Saved as a draft, with the etag unchanged
     D-->>E: Saved
   else allowed and current
-    P->>P: Checks every new block and style value against the block list and style policy (not yet)
+    P->>P: Checks every new block and style value against the block list and style policy
     P->>H: Runs the before_save filters
     P->>SL: UPDATE where updated_at matches the etag
     alt zero rows, another save won the race
@@ -629,11 +610,11 @@ sequenceDiagram
   Note over E,B: The entry awaits the app on each request, so a boot error<br/>fails every request until it is fixed
 ```
 
-Two flows of the 1.0 design that the code does not run yet:
+How agents write, and how content changes reach other systems.
 
 ```mermaid
 ---
-title: Dynamic diagram (1.0 design, not yet) - an agent publishes a page
+title: Dynamic diagram - an agent publishes a page
 ---
 sequenceDiagram
   autonumber
@@ -651,8 +632,8 @@ sequenceDiagram
   D->>P: Hands the call to the MCP surface
   P->>A: Authenticates the token, checks its capabilities
   P->>S: Checks the agent may edit this entry
-  P->>P: Checks no one else holds a live lease, unless the agent takes it over, then that its etag is current
-  alt someone else holds a live lease, and the agent does not take over
+  P->>P: Checks no one else holds a live lease, then that its etag is current
+  alt someone else holds a live lease, which an agent never takes over
     P-->>G: LOCKED
   else the etag is stale
     P-->>G: CONFLICT, with the current concurrency token
@@ -671,7 +652,7 @@ sequenceDiagram
 
 ```mermaid
 ---
-title: Dynamic diagram (1.0 design, not yet) - publishing an entry fires its webhooks
+title: Dynamic diagram - publishing an entry fires its webhooks
 ---
 sequenceDiagram
   autonumber
@@ -701,8 +682,7 @@ sequenceDiagram
 
 What core stores. Revisions and autosaves are rows of `entries` with reserved types (`revision`,
 `autosave`). Fields and meta live in a JSON `meta` column on entries, terms and users. An edit lease points at an entry, term, user or settings group by kind and id, so it has no foreign
-key to them. A table whose name ends in `_not_yet` is in the 1.0 design but not in the code yet, and a
-dashed line is a relationship the code does not have yet. Each plugin
+key to them. Each plugin
 that owns tables ships them with its own migration history
 ([ADR 0027](docs/adr/0027-each-table-owner-ships-its-own-migration-history.md)), so they are not
 drawn here.
@@ -772,11 +752,11 @@ erDiagram
     text schedule
     int last_minute "one run per minute"
   }
-  roles_not_yet {
-    text name "site-defined roles"
+  roles {
+    text name "default and site-defined roles"
     json capabilities
   }
-  roles_not_yet |o..o{ users : "granted to"
+  roles |o--o{ users : "granted to"
   scheduled_task_leases {
     text key
     text token
@@ -819,38 +799,10 @@ stateDiagram-v2
   trash --> [*]: delete permanently
 ```
 
-## Not there yet
-
-The difference between this design and the code. Each row is drawn green or dashed, or marked "(not yet)", above until it is
-done. Plumix is ready for 1.0 when this list is empty.
-
-To build:
-
-| Part of the design              | Seam to build on                                                                                                                                                                                                                                                                                                                                                                                                    | Done when                                                                                                                                                                                                                                                                                                                                                                                                                               | The code today                                                                                        |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Agents author like editors      | MCP write tools in `packages/core/src/mcp` that call the same procedures as the admin; `EDIT_LEASE_SURFACES` already includes `mcp`                                                                                                                                                                                                                                                                                 | An agent writes, composes and publishes under its token's capabilities, leases, revisions and the block and style policy, through the same procedures as the admin                                                                                                                                                                                                                                                                      | Read-only MCP tools                                                                                   |
-| In-editor agent                 | An RPC procedure the admin calls, gated by the asking editor's own capabilities for the entry, that drafts through the same procedures as an editor; an `llm` config slot in `runtime/contract/slots.ts` keeps model keys on the server                                                                                                                                                                             | An editor asks the visual editor for a page draft and gets one built only from the site's blocks and design tokens, held to the same block list, style policy, leases and capabilities as the editor                                                                                                                                                                                                                                    | None                                                                                                  |
-| Block list                      | The theme declares the blocks the editor offers; the admin reads it from the plugin manifest that `packages/plumix/src/vite/manifest.ts` builds, next to `coreBlocks` in `packages/admin-editor/src/runtime.ts`; the server enforces it in `assertContentValidAgainstRegistries` (`rpc/procedures/entry/content.ts`), which create, update and revision restore all call                                            | A site can remove any core block; neither the editor nor an agent can add a new instance of it, and an entry that already holds one keeps it, renders it and can still be saved                                                                                                                                                                                                                                                         | Every core block is always offered                                                                    |
-| Style policy                    | The theme sets custom values or design tokens only; the editor's style controls read it from the plugin manifest, and the server enforces it in `assertContentValidAgainstRegistries` (`rpc/procedures/entry/content.ts`)                                                                                                                                                                                           | With tokens only, neither the editor nor an agent can store a new literal style value                                                                                                                                                                                                                                                                                                                                                   | Every style control offers Token and Custom                                                           |
-| Site-defined roles              | Roles become sets of capabilities, stored in the database and declarable in config, the two merged. Seams: `USER_ROLES` (`users/contract/roles.ts`), the default grants in `access/contract/capability.ts`, `registerCapability`, whose `minRole` becomes the default roles a plugin grants, `ROLE_LEVEL` and `STAFF_MIN_ROLE` in `access/contract/rbac.ts`, and `rolePolicy` in `access/policy.ts`                 | Defaults member, author, editor and admin, each with default grants; a site adds roles in the admin or config; opening the admin is the `admin:access` capability; gated content requires a capability, not a minimum role; nothing compares roles by rank; gated content is segmented by capability (`capability:<name>`, replacing `role:<role>`); the _Code today_ lines are gone from Role, Capability and Segment in `GLOSSARY.md` | A ranked ladder: subscriber, contributor, author, editor, admin; staff and `rolePolicy` compare ranks |
-| Every credential from a session | `authenticateSession` in `auth/authenticator.ts`, adopted by each surface ADR 0024 lists under "Still to adopt"                                                                                                                                                                                                                                                                                                     | Every surface that creates a credential resolves its caller through `authenticateSession`                                                                                                                                                                                                                                                                                                                                               | Passkey add-device only                                                                               |
-| Outbound webhooks               | Declared in code per entry type, as Builder does per model: several per type, each a URL, custom headers (secrets through `EnvInput`), the events it wants (publish, unpublish, trash, delete, scheduled publish) and a payload (the full entry, none, or chosen fields). A core module subscribes to the entry actions, like the purge subscriber in `cdn/purge.ts`, and sends each delivery through the job queue | Publishing an entry sends a POST to each webhook its entry type declares for publish, with its headers and payload                                                                                                                                                                                                                                                                                                                      | None                                                                                                  |
-| OTLP consumer                   | The exporter `otelConsumer` in `packages/core/src/telemetry-otel.ts`, for the existing `telemetry` config slot (`config.ts`)                                                                                                                                                                                                                                                                                        | A site imports the consumer from a `plumix` subpath and its traces reach any OpenTelemetry endpoint in production                                                                                                                                                                                                                                                                                                                       | The slot exists, but the OTLP consumer cannot be imported by a site                                   |
-| Job queue slot                  | A `queue` slot in `runtime/contract/slots.ts`, filled by each runtime's own queue with that runtime's guarantees, and delivered back through the runtime handler to scheduled tasks                                                                                                                                                                                                                                 | Core and plugins enqueue work that outlives the request, and each runtime that provides a queue runs it                                                                                                                                                                                                                                                                                                                                 | None; `ctx.defer` only extends a request                                                              |
-
-To remove, because the design drops them:
-
-| In the code                                        | Why it goes                                                       | Done when                                                                                                                                                                          |
-| -------------------------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The `contributor` role, and `subscriber` as a name | The design has four default roles and site-defined ones           | A data migration renames subscribers to `member`, and creates a stored `contributor` role with the same capabilities and moves contributors to it, so nobody gains or loses rights |
-| The `plugin:manage` capability                     | Plugins are installed in code; no screen enables or disables them | The capability is gone from `access/contract/capability.ts`                                                                                                                        |
-| The function form of `definePlugin`                | One way to define a plugin: the descriptor                        | Every plugin, the media plugin included, uses the descriptor form                                                                                                                  |
-| The `password_reset` token type in `auth_tokens`   | There is no password sign-in, and nothing uses it                 | The value is gone from `AUTH_TOKEN_TYPES` in `db/schema/auth_tokens.ts`                                                                                                            |
-
 ## Quality goals
 
-What Plumix optimizes for, in order. When two pull apart, the higher one wins. Each is held by a
-decision and a test, so a change that weakens one fails a check.
+What Plumix optimizes for. When two pull apart, [`VISION.md`](VISION.md#how-plumix-decides) ranks
+them. Each is held by a decision and a test, so a change that weakens one fails a check.
 
 | Goal                                                               | Held by                                                                                                                                                                    | Checked by                                                                                                     |
 | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
@@ -873,7 +825,7 @@ What Plumix trusts and where each untrusted input is checked. The full threat mo
 | What a token may do                                            | Its scopes, intersected with its owner's capabilities                                          | `tokenScopesOf`, `makeAuthCan`                                                                  |
 | An admin action                                                | The capability, then whether the user may edit the entry, then the lease and concurrency token | `requireCapability`, `assertCanEditEntry`, `assertLeaseAllows`                                  |
 | A public page                                                  | The entry's access policy, and a personal render never cached shared                           | `policyForMatch`, `resolveAccess`, `trackPrincipalReads`                                        |
-| A credential being created                                     | Only a signed-in session may create one, never a token (not yet on every surface)              | `authenticateSession`, [ADR 0024](docs/adr/0024-a-credential-is-created-only-from-a-session.md) |
+| A credential being created                                     | Only a signed-in session may create one, never a token                                         | `authenticateSession`, [ADR 0024](docs/adr/0024-a-credential-is-created-only-from-a-session.md) |
 | Stored content rendered later                                  | Escaped on output; style values sanitized                                                      | the renderer, `blocks/styles/sanitize-css.ts`                                                   |
 
 Trusted, and so not checked: the site owner, `plumix.config.ts` and its secrets, the installed
@@ -907,9 +859,10 @@ Agents are users of Plumix twice over: they build sites, and they work inside ru
 - **Inside a running site.** An agent connects to `/_plumix/mcp` with an API token. It reads content
   and the content model through core's tools and any tools plugins register with `ctx.registerMcpTool`.
   The token's scopes limit what it can do, and in production MCP is off until the config turns it on.
-- **In the 1.0 design.** An agent writes, composes and publishes through the same procedures as the
-  admin, held to the same rules: its token's capabilities, leases, revisions, the block list and the
-  style policy. What it may do is what its token may do; a person steers it by choosing that token.
+  It writes, composes and publishes through the same procedures as the admin, held to the same
+  rules: its token's capabilities, leases, revisions, the block list and the style policy. What it
+  may do is what its token may do; a person steers it by choosing that token. Every change it makes
+  is a revision naming the agent and the person whose token it used.
 
 ## How do I
 
@@ -940,7 +893,7 @@ Where to start for common changes. Each row names the entry point and the page t
 | Editing    | [RPC and editing](docs/architecture/rpc-and-editing.md)       | Every admin write is an RPC procedure, guarded by token and lease.      |
 |            | [Admin and editor](docs/architecture/admin-and-editor.md)     | A prebuilt SPA, extended only through registrations.                    |
 | Interfaces | [REST API](docs/architecture/rest-api.md)                     | Opt-in, read-only core resources, plus plugin resources.                |
-|            | [MCP](docs/architecture/mcp.md)                               | Agent tools; writes are not yet. On in dev, opt-in in production.       |
+|            | [MCP](docs/architecture/mcp.md)                               | Agent tools that read and write. On in dev, opt-in in production.       |
 | People     | [Auth and access](docs/architecture/auth-and-access.md)       | Sign-in methods, sessions, roles, capabilities, per-entry access.       |
 |            | [Mail](docs/architecture/mail.md)                             | Mails declared by name and sent through a mailer slot.                  |
 | Platform   | [Runtimes](docs/architecture/runtimes.md)                     | One adapter per runtime, held to a shared conformance suite.            |
@@ -987,9 +940,9 @@ Where to start for common changes. Each row names the entry point and the page t
   proves it with the conformance suites in `plumix/test/conformance`.
 - **The wire** between the admin and the app process is oRPC, which is internal and may change in any
   minor. REST (`/_plumix/api/v1`) and MCP (`/_plumix/mcp`) are the external APIs.
-- **Stability.** Before 1.0, any minor may break the published surface, hook names, REST v1 or the
-  config shape, and its changeset says how to move. From 1.0, as the vision commits, those hold for every `1.x`; internal
-  `@plumix/*` packages, the oRPC wire and the admin's markup never do.
+- **Stability.** The published surface, hook names, REST v1 and the config shape follow the
+  versioning [`VISION.md`](VISION.md#what-10-means) commits to; internal `@plumix/*` packages, the
+  oRPC wire and the admin's markup carry no such promise.
 
 ## Cross-cutting concerns
 
@@ -1004,9 +957,16 @@ Where to start for common changes. Each row names the entry point and the page t
 - **Caching.** Pages are cached by segment and purged by tag; see
   [CDN cache](docs/architecture/cdn-cache.md).
 - **Internationalization.** Every user-facing string is a Lingui descriptor; see
-  [i18n](docs/architecture/i18n.md).
+  [i18n](docs/architecture/i18n.md). Entries are translated: an entry has a version per enabled
+  locale, and the public site, the admin and the APIs serve each one.
+- **Accessibility.** The admin and the visual editor meet WCAG 2.2 AA, and so does the HTML core's
+  primitives render.
+- **Portability.** A site's content exports in full with one CLI command, in a documented format.
+- **Personal data.** A site admin exports or erases everything the site stores about one person
+  from that user's screen in the admin; core and every plugin that stores personal data contribute
+  their share; see [auth and access](docs/architecture/auth-and-access.md).
 - **Observability.** In development, request history, error pages and the debug bar; see
-  [dev tooling](docs/architecture/dev-tooling.md). Production export goes through the OTLP consumer (not yet).
+  [dev tooling](docs/architecture/dev-tooling.md). Production export goes through the OTLP consumer on the `telemetry` slot.
 
 ## Invariants
 
@@ -1020,6 +980,8 @@ Each is stated as something that never happens, with what guards it.
   ([ADR 0019](docs/adr/0019-a-runtime-adapter-uses-its-runtimes-primitives-and-is-tested-on-that-runtime.md)).
 - Core never takes on what would merely be absent without it; that belongs to a plugin
   ([ADR 0002](docs/adr/0002-core-owns-what-would-be-wrong.md)).
+- Plumix never sends anything to a destination the site did not configure, and core never sets a
+  cookie for an anonymous public visitor ([`VISION.md`](VISION.md#the-floor)).
 - A render that reads the principal never reaches a shared cache
   ([ADR 0030](docs/adr/0030-a-render-that-reads-the-principal-is-never-shared.md)).
 - No write lands from a stale copy or over someone else's live lease
@@ -1050,5 +1012,4 @@ The ADRs behind each part of the system, in [`docs/adr/`](docs/adr/).
 ## Keeping this true
 
 A change that moves a box, adds a surface or breaks an invariant updates this file and the page
-for that subsystem in the same PR. Pages name files and symbols, never line numbers. Each page's
-Not there yet rows are that subsystem's share of the rows above, so a row closes on both at once.
+for that subsystem in the same PR. Pages name files and symbols, never line numbers.

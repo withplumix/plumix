@@ -4,8 +4,8 @@ Scheduled tasks are work a site runs on a schedule rather than on a request: cor
 and scheduled publishing, and whatever plugins register (audit-log and forms retention purges, the
 search index drain). A plugin author registers a task; core matches each firing against the tasks'
 declared crons and runs them with a request-shaped `AppContext`; each runtime decides what fires a
-schedule. In the 1.0 design the same component also runs queued jobs, such as webhook deliveries,
-that the runtime's queue hands back through the runtime handler (not yet). An operator meets it as
+schedule. The same component also runs queued jobs, such as webhook deliveries, that the
+runtime's queue hands back through the runtime handler. An operator meets it as
 the platform's cron triggers, the in-process scheduler on a server runtime, or `plumix cron list|run`.
 This page is the **Scheduled tasks** component of the app process in
 [`ARCHITECTURE.md`](../../ARCHITECTURE.md#components-of-the-app-process). The core lives in
@@ -21,15 +21,12 @@ flowchart LR
   platform["The platform's cron triggers"] --> handler["Runtime handler<br/>handler.scheduled"]
   inproc["In-process scheduler<br/>with the run guard"] --> handler
   cli["plumix cron run<br/>with the run guard"] --> handler
-  queue["Job queue (not yet)"] -. "delivers a queued job" .-> handler
+  queue["Job queue"] -- "delivers a queued job" --> handler
   handler --> run["runScheduledTasks"]
-  handler -. "hands the job to (not yet)" .-> jobs["Queued jobs, such as<br/>webhook deliveries"]
+  handler -- "hands the job to" --> jobs["Queued jobs, such as<br/>webhook deliveries"]
   app --> run
   run --> report["ScheduledRunReport"]
   run --> purge["CDN purge flush,<br/>telemetry snapshot"]
-
-  classDef goal fill:#2da44e,stroke:#1a7f37,color:#fff
-  class queue,jobs goal
 ```
 
 ## Surface
@@ -55,7 +52,7 @@ Per runtime:
 | Run guard       | none (the platform fires once)          | claim + lease in the database           | claim + lease in the database          |
 | Off switch      | omit the trigger                        | `cron: false`                           | none                                   |
 | In `plumix dev` | not wired by Plumix                     | yes, `lease: false`                     | no                                     |
-| Queued jobs     | the platform's queue (not yet)          | the runtime's queue (not yet)           | the runtime's queue (not yet)          |
+| Queued jobs     | the platform's queue                    | the runtime's queue                     | the runtime's queue                    |
 
 ## How it works
 
@@ -76,10 +73,13 @@ replicas that share a database. `plumix cron run` takes the same claim and lease
 `cli:<host>:<pid>` holder, fires the declared spelling of the expression, and exits non-zero on a
 failed or aborted run. A skipped run exits zero with a message.
 
-In the 1.0 design, work that outlives a request goes to the `queue` slot. The runtime's own queue
-delivers each job back through the runtime handler, which hands it to scheduled tasks to run, and
-acknowledges it or leaves it to the runtime's retry (not yet). Retry, ordering and delivery
-guarantees are the runtime queue's, not core's.
+Work that outlives a request goes to the `queue` slot (see [runtimes](runtimes.md)). The runtime's
+own queue delivers each job back through the runtime handler, which hands it to scheduled tasks to
+run and report, as `scheduled` hands a firing to `runScheduledTasks`, and acknowledges it or leaves
+it to the runtime's retry. Retry, ordering and delivery guarantees are the runtime queue's, not
+core's. Webhook deliveries are queued jobs: when an entry is published, the webhooks module enqueues
+one delivery per webhook its entry type declares for publish, and scheduled tasks send each POST,
+with its headers and payload, when the queue delivers it.
 
 - `packages/core/src/runtime/register-core-scheduled-tasks.ts`: `registerCoreScheduledTasks`.
 - `packages/core/src/runtime/scheduled.ts`: `runScheduledTasks`. `handler.ts`: `scheduled`.
@@ -100,10 +100,3 @@ guarantees are the runtime queue's, not core's.
 - A scheduled publish purges the CDN like a request does. `packages/core/src/runtime/scheduled-publish-purge.test.ts`.
 - `plumix cron run` never exits green having done nothing. `packages/plumix/src/cli/commands/cron.test.ts`.
 - On Cloudflare a firing that did some work is not replayed. `packages/runtimes/cloudflare/src/scheduled.test.ts`.
-
-## Not there yet
-
-| Part of the design | Seam to build on                                                                                                                                                                                                             | Done when                                                                                                                                               |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Queued jobs        | The `queue` slot in `runtime/contract/slots.ts` (see [runtimes](runtimes.md)); the runtime handler in `runtime/handler.ts` hands each delivered job to scheduled tasks, as `scheduled` hands a firing to `runScheduledTasks` | Core and plugins enqueue work that outlives the request, and each runtime that provides a queue delivers it to scheduled tasks, which run it and report |
-| Webhook deliveries | The webhooks module, which enqueues one delivery per matching webhook; scheduled tasks run each delivery when the queue delivers it                                                                                          | Publishing an entry sends a POST to each webhook its entry type declares for publish, from a queued job, with its headers and payload                   |

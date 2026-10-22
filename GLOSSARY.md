@@ -5,13 +5,12 @@ classified by taxonomies, composed from blocks, gated by access policy, and
 rendered by a theme's templates into mostly-static pages with selective client
 islands. The whole platform is **one bounded context** — the vocabulary below
 has one meaning across every package (`core`, `plumix`, `admin*`, the plugins and the runtimes).
-Project scaffolding (`create-plumix-app`) is a separate, not-yet-modelled
-context where a few words (notably _template_) mean something different.
+Project scaffolding (`create-plumix-app`) is a separate context, not modelled
+here, where a few words (notably _template_) mean something different.
 
 This file is a glossary and nothing else — no implementation details, no
 decisions. Architectural decisions live in `docs/adr/`. It holds the vocabulary of
-Plumix as designed for 1.0, the same design `ARCHITECTURE.md` draws. Where the code
-still differs, an entry says so in a _Code today_ line.
+Plumix as designed, the same design `ARCHITECTURE.md` draws.
 
 ## People
 
@@ -20,19 +19,16 @@ Builds the site in code, deploys it and runs the CLI. A kind of user, not a role
 
 **Member**:
 A signed-in user who holds the `member` role, the default role with the fewest capabilities.
-_Code today_: the role is `subscriber`.
 _Avoid_: subscriber
 
 **Editor**:
 A person who writes, edits and publishes content in the admin. Usually holds the `author` or `editor` role; the role and the person share the word, and the visual editor is the tool.
 
 **Staff**:
-Anyone who may open the admin, which in 1.0 means holding the `admin:access` capability.
-_Code today_: staff are the roles from `contributor` up.
+Anyone who may open the admin, which means holding the `admin:access` capability.
 
 **In-editor agent**:
 An agent the admin runs for the editor who asks, drafting pages through the same procedures as the editor and reaching a model through the `llm` config slot.
-_Code today_: none.
 
 **Site admin**:
 A person who manages users and settings, usually holding the `admin` role.
@@ -45,7 +41,6 @@ An anonymous reader of the public site. A kind of person; where access is decide
 
 **Agent**:
 An AI client that works in a running site over MCP with an API token, held to that token's capabilities, edit leases, revisions, the block list and the style policy.
-_Code today_: read-only.
 
 **API client**:
 Software that reads published content over REST with an API token.
@@ -65,6 +60,10 @@ The standard non-hierarchical blog entry type. A specific entry type, not a base
 
 **Page**:
 The hierarchical static entry type rooted at `/`, with no archive.
+
+**Translation**:
+An entry's version in one enabled locale. The public site, the admin and the APIs serve each one.
+_Avoid_: localization, i18n (those name translating the UI strings, not entry content)
 
 **Term**:
 A single classification value inside a taxonomy (one category, one tag).
@@ -211,7 +210,7 @@ One user's claim to edit a resource, renewed while they edit and lapsing when th
 _Avoid_: lock (reserved for database locks), presence (a lease prevents, it does not decorate).
 
 **Take over**:
-Claiming an edit lease another user holds. The previous holder turns read-only and keeps their unsaved work.
+Claiming an edit lease another user holds. The previous holder turns read-only and keeps their unsaved work. Only a person takes over; an agent waits.
 
 ## Blocks & rich content
 
@@ -250,16 +249,14 @@ When an island hydrates: `load`, `idle`, `visible`, `interaction`, or `only`.
 A tag derived by hashing the merged roster of every block's text declaration,
 plus the extraction algorithm. It changes when any declaration does, so a
 document stamped by an older roster is distinguishable from a current one — no
-version integer for a block author to keep true. Telling them apart is not yet
-acting on them: sweeping the stale ones lands with the index rebuild.
+version integer for a block author to keep true. The index rebuild sweeps the stale
+ones.
 
 **Block list**:
 The blocks a theme lets the editor offer and any writer save. An entry that already holds a removed block keeps and renders it; a save cannot add a new one.
-_Code today_: every core block is always offered.
 
 **Style policy**:
 A theme's rule for style values: custom values allowed, or design tokens only. The editor and the server both enforce it.
-_Code today_: every style control offers both.
 
 ## Themes & templates
 
@@ -325,12 +322,10 @@ A person with a persisted account row (email, slug, role, meta). The request-tim
 
 **Role**:
 A named set of capabilities, stored in the database and declarable in config. The defaults are `member`, `author`, `editor` and `admin`; a site defines more. Roles are never ranked or compared.
-_Code today_: a fixed ladder `subscriber < contributor < author < editor < admin`, where higher tiers inherit lower capabilities.
 _Avoid_: tier, level
 
 **Capability**:
 A named permission string a role grants: `<entity>:<type>:<action>` for an entry or term type, `<area>:<action>` otherwise (`user:list`, `admin:access`). Opening the admin and reading gated content each require one. A plugin names an entry or term capability by resource type and action, and the registry spells the string. See the disambiguation note — distinct from an entitlement label.
-_Code today_: each capability maps to a minimum role, and opening the admin needs the `contributor` rank.
 _Avoid_: permission, cap
 
 **Session**:
@@ -357,7 +352,6 @@ A developer-supplied rule pairing an arbitrary resolve step with a closed, decla
 
 **Segment**:
 The audience label a resolved access is tagged with — built-in (`anonymous`, `authenticated`, `private`, `capability:<name>`), an `entitlement:<label>`, or a custom label. Doubles as the shared-CDN key.
-_Code today_: the built-in gate segment is `role:<role>`.
 _Avoid_: audience, variant, cache key
 
 **Gate**:
@@ -458,15 +452,12 @@ The claim that lets one replica run a scheduled firing when several fire it.
 
 **Telemetry consumer**:
 What the `telemetry` config slot sends request traces to; core's OTLP consumer exports them to any OpenTelemetry endpoint.
-_Code today_: the OTLP consumer exists in core but a site cannot import it.
 
 **Job queue**:
 The runtime's own queue behind the `queue` config slot, for work that outlives a request, such as webhook deliveries.
-_Code today_: none; `ctx.defer` only extends a request.
 
 **Webhook**:
 A URL, headers, events and payload an entry type declares in code. When one of its events fires, core POSTs the payload with those headers through the job queue.
-_Code today_: none.
 
 **Settle**:
 What a sync target runs after a sync lands: the `sync:after` listeners and a whole-CDN purge.
@@ -482,7 +473,6 @@ _Avoid_: façade (for the whole surface)
 
 **Plugin**:
 A unit of extension defined by a plugin descriptor, which registers its contributions during setup. A plugin may be local to a single site or published for others to install; distribution is a mode, not a kind.
-_Code today_: `definePlugin` also takes a setup function, which the media plugin uses.
 
 **Plugin state**:
 What one install of a plugin keeps in memory for its own hooks. Rebuilt from code on every boot, never stored, never seen by other plugins. See ADR 0043.
@@ -569,8 +559,8 @@ can have one.
 
 **Search document**:
 One searchable thing as the index sees it — a title, the plain text beside it,
-and what it is a projection of. An entry today; a term later, in the same table
-so one ranked list can span both.
+and what it is a projection of. An entry or a term, in the same table, so one
+ranked list can span both.
 
 **Search projection**:
 The materialized table of search documents, from which the FTS5 index is built.
@@ -620,5 +610,4 @@ them distinct by **always qualifying** them; bare use is a smell.
   in the form its field's declared type implies, say **settled**, never
   "canonical".
 - **entry vs post** — the canonical noun is **entry**. "post" is a specific
-  entry type only; storage defaults and permalink helpers still say "post" but
-  that is drift, not the domain word.
+  entry type only.
