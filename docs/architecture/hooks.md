@@ -1,6 +1,6 @@
 # Hooks
 
-Hooks are core's named extension points. A **filter** is a pipeline: each handler gets the previous handler's value and returns the next. An **action** is a notification: handlers run, their results are ignored, and a failure is logged. Plugin authors subscribe in `setup` through `ctx.addFilter` / `ctx.addAction`. Core and plugins fire them through `ctx.hooks`. Hook names are types: core and each plugin declare their names by augmenting `FilterRegistry` and `ActionRegistry`. The registry lives in `packages/core/src/hooks/`.
+Hooks are core's named extension points, the "hooks" half of the "Plugin system and hooks" component in the component diagram of [`ARCHITECTURE.md`](../../ARCHITECTURE.md). A **filter** is a pipeline: each handler gets the previous handler's value and returns the next. An **action** announces that something happened: handlers run, their results are ignored, and a failure is logged. Plugin authors subscribe in `setup` through `ctx.addFilter` / `ctx.addAction`. Core and plugins fire them through `ctx.hooks`. Hook names are types: core and each plugin declare their names by augmenting `FilterRegistry` and `ActionRegistry`. The registry lives in `packages/core/src/hooks/`.
 
 ## At a glance
 
@@ -17,6 +17,16 @@ sequenceDiagram
   H-->>C: resolves once all handlers settle
 ```
 
+In the 1.0 design, entry actions also feed webhooks (not yet):
+
+```mermaid
+flowchart LR
+  proc["entry procedures<br/>(admin, MCP, scheduled publish)"] -->|"doAction entry:published, …"| H["HookRegistry"]
+  H --> purge["registerCorePurgeInvalidator<br/>(cdn/purge.ts)"]
+  H -.-> wh["webhooks module (not yet)"]
+  wh -.->|"one job per matching webhook"| q["queue slot (not yet)"]
+```
+
 ## Surface
 
 Registration (on the plugin setup context, public through `plumix/plugin`):
@@ -24,7 +34,7 @@ Registration (on the plugin setup context, public through `plumix/plugin`):
 | API                                                | Behaviour                                                                                                                      |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | `addFilter(name, fn, { priority })`                | Subscribes to a declared filter. Lower priority runs first, default `DEFAULT_HOOK_PRIORITY` (100), ties by registration order. |
-| `addAction(name, fn, { priority })`                | Same for actions.                                                                                                              |
+| `addAction(name, fn, { priority })`                | Same for actions. Priority orders when handlers start; they then run concurrently.                                             |
 | `registerFilter(shortName, fn)` / `registerAction` | Adds a handler under `<pluginId>:<shortName>`.                                                                                 |
 
 Execution (`HookExecutor`, on `ctx.hooks`; public type):
@@ -58,9 +68,11 @@ First-party plugins declare their own the same way: `comment:*` (`plugins/commen
 
 ## How it works
 
-`HookRegistry` holds one sorted-on-read list per name. Entries carry the plugin id from the setup context (`null` for core), which feeds telemetry and failure logs. `applyFilter` and `doAction` wrap each handler in a telemetry span and a `hookStore` frame. `applyFilterSync` and `applyFilterIsolated` run untraced. `buildApp` creates the registry before plugins install and registers core's own handlers first (admin bar contributors, search handlers, the purge invalidator, and dev panels and hints when `process.env.PLUMIX_DEV` is set).
+`HookRegistry` holds one sorted-on-read list per name. Entries carry the plugin id from the setup context (`null` for core), which feeds telemetry and failure logs. `applyFilter` and `doAction` wrap each handler in a telemetry span and a `hookStore` frame. `applyFilterSync` and `applyFilterIsolated` run untraced. `buildApp` creates the registry before plugins install and registers core's own handlers first: admin bar contributors, search handlers, `registerCorePurgeInvalidator` (which queues cache tags from entry, term and user actions), and dev panels and hints when `process.env.PLUMIX_DEV` is set.
 
 Handlers take their context as an argument; most payloads end in `ctx: AppContext`. A handler can also read `requestStore`.
+
+Every path that changes an entry fires the same actions. The scheduled publish (`publishDueScheduledEntries` in `rpc/procedures/entry/publish-scheduled.ts`) fires `updated`, `transition` and `published` through `lifecycle.ts`, as an editor's publish does. In the 1.0 design an agent's MCP write goes through the same procedures, so it runs the same filters and fires the same actions (not yet; see [MCP](./mcp.md)).
 
 - `packages/core/src/hooks/registry.ts`: `HookRegistry`, `HookExecutor`, `isolate`, `sortEntries`.
 - `packages/core/src/hooks/types.ts`: `FilterRegistry`, `ActionRegistry`, `FilterName`, `ActionName`, `FilterFn`, `ActionFn`, `DEFAULT_HOOK_PRIORITY`.
@@ -68,27 +80,20 @@ Handlers take their context as an argument; most payloads end in `ctx: AppContex
 - `packages/core/src/hooks/errors.ts`: `HookExecutionError`.
 - `packages/core/src/plugin/setup-context.ts`: `addFilter`, `addAction`, `registerFilter`, `registerAction` attach the plugin id.
 
-Related but separate: a field's `.validate()` and `.sanitize()` are per-field callbacks in the meta write pipeline, not registry hooks ([ADR 0005](../adr/0005-composite-field-hooks-run-terminally.md)).
+Related but separate: a field's `.validate()` and `.sanitize()` are per-field callbacks in the meta write pipeline, not registry hooks ([ADR 0005](../adr/0005-composite-field-hooks-run-terminally.md)). Plugin hook docs are in `apps/docs/src/content/docs/going-further/type-augmentation.mdx` and the per-plugin pages.
 
 ## Invariants
 
-- A hook name is a TypeScript contract. A rename breaks at compile time. Core has no runtime name check and keeps no aliases ([ADR 0009](../adr/0009-a-renamed-hook-breaks-at-compile-time.md)). Guarded for one action by `packages/plumix/src/facade-action-hooks.test.ts`, which checks `entry:published` reaches `PluginSetupContext["addAction"]` from the built `dist/`.
+- A hook name is a TypeScript contract. A rename breaks at compile time. Core has no runtime name check and keeps no aliases ([ADR 0009](../adr/0009-a-renamed-hook-breaks-at-compile-time.md)). `packages/plumix/src/facade-action-hooks.test.ts` checks that `entry:published` reaches `PluginSetupContext["addAction"]` from the built `dist/`.
 - An extension point hands out a narrowing query, not a raw filter. `archive:entries` takes and returns an `EntryQuery`, and the public-entries rule is reapplied after it, so a handler can hide an entry but never reveal one ([ADR 0007](../adr/0007-an-extension-point-hands-out-a-query-not-a-filter.md), [ADR 0008](../adr/0008-an-archive-is-one-entry-query.md)).
 - Each async filter step works on its own copy, so one handler's mutation can't leak into the next. Sync filters are not copied and must treat the value as read-only.
 - One failing action handler never stops the others or the caller.
-- `sync:after` failures are collected per owner and reported, not thrown (`context/settle-sync.ts`); see [sync-and-import.md](./sync-and-import.md).
+- `sync:after` failures are collected per owner and reported, not thrown (`context/settle-sync.ts`); see [sync and import](./sync-and-import.md).
 - Behaviour guarded by `packages/core/src/hooks/registry.test.ts` (ordering, priority, cloning, sync-async error, isolation, action failure).
 
-## Status
+## Not there yet
 
-- Shipped: registry, the four execution modes, typed names, every core name in the table above. Each declared core name has a firing site in `packages/core/src/` (checked with `grep` for each name).
-- Shipped: plugin hook docs in `apps/docs/src/content/docs/going-further/type-augmentation.mdx` and per-plugin pages.
-- Open: #3246 (publish the editing-copy hook to plugins).
-
-## Gaps
-
-- `public-hooks.ts` lists `route/resolve.js` for all `resolve:*:data` names, but six of the seven are declared in `route/render/page-data.ts`. `archive:entries` (`route/archive-entries.ts`) and `admin:search:results` (`search/admin-search.ts`) are not listed. Whether they reach the published declarations is unguarded: the only type test covers `entry:published`.
-- The comment on `FilterName` in `hooks/types.ts` says names come from augmentation "by the Vite plugin". Nothing in `packages/plumix/src/` augments `FilterRegistry` or `ActionRegistry`.
-- `hookStore` is written for every traced handler, but nothing in the repo reads it. Its only other mention is the export roster in `packages/plumix/src/facade-curated.test.ts`.
-- `registerFilter` / `registerAction` are documented as declaring a plugin-owned hook, but they only subscribe under a prefixed name. The `fn` type is checked against `FilterName`, not against `<id>:<shortName>`. No first-party plugin calls them.
-- `doAction` priority orders only when handlers start; they run concurrently. The `HookOptions.priority` comment ("Lower runs first") doesn't say so.
+| Part of the design         | Seam to build on                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Done when                                                                                                                                             |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Outbound webhooks          | Declared in code per entry type: several per type, each a URL, custom headers (secrets through `EnvInput`), the events it wants (publish, unpublish, trash, delete, scheduled publish) and a payload (the full entry, none, or chosen fields). A core module registered in `buildApp` beside `registerCorePurgeInvalidator` subscribes to `entry:published`, `entry:transition`, `entry:trashed` and `entry:deleted`, and enqueues one delivery per matching webhook through the job queue slot | Publishing an entry, by hand or by the scheduled task, sends a POST to each webhook its entry type declares for publish, with its headers and payload |
+| Agents fire the same hooks | MCP write tools in `packages/core/src/mcp` that call the same procedures as the admin                                                                                                                                                                                                                                                                                                                                                                                                           | An agent's write runs the `rpc:*:input` and `before_save` filters and fires the same entry actions as an editor's                                     |

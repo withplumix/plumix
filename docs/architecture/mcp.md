@@ -1,25 +1,27 @@
 # MCP
 
-Plumix serves a Model Context Protocol endpoint at `/_plumix/mcp`. An MCP client, usually a coding agent, uses it to call tools that read the site. Core contributes content and schema tools, plus dev-only telemetry and error tools. Plugins add tools with `ctx.registerMcpTool`. Site developers turn the endpoint on with the `mcp` config slot. `plumix dev` turns it on automatically for a loopback agent. Plugin authors write `McpTool` values. The code lives in `packages/core/src/mcp/`, with the tool contract in `packages/core/src/context/mcp-tool.ts` and the mount in `packages/core/src/runtime/dispatcher.ts`.
+Plumix serves a Model Context Protocol endpoint at `/_plumix/mcp`. An agent, such as a coding agent, connects with an API token and calls tools. Core contributes content and schema tools, plus dev-only telemetry and error tools, and plugins add tools with `ctx.registerMcpTool`. In the 1.0 design an agent also writes, composes and publishes through MCP, held to the same rules as an editor in the admin (not yet). Site developers turn the endpoint on with the `mcp` config slot, and `plumix dev` turns it on for an agent on the same machine. Plugin authors write `McpTool` values. MCP is part of the **RPC, REST and MCP** component in [ARCHITECTURE.md](../../ARCHITECTURE.md#components-of-the-app-process). The code lives in `packages/core/src/mcp/`, with the tool contract in `packages/core/src/context/mcp-tool.ts` and the mount in `packages/core/src/runtime/dispatcher.ts`.
 
 ## At a glance
 
 ```mermaid
 sequenceDiagram
-  participant A as MCP client
-  participant D as dispatcher
+  participant A as Agent
+  participant D as Dispatcher
   participant H as handleMcpRequest
   participant S as SDK Server
   participant T as tool.run
   A->>D: POST /_plumix/mcp
-  D->>D: mcp.enabled or dev, else 404
-  D->>H: loadMcpHandler()
-  H->>H: dev trust or bearer API token
+  D->>D: mcp.enabled, or plumix dev, else 404
+  D->>H: app.loadMcpHandler()
+  H->>H: Dev trust, or the API token
   H->>S: buildMcpServer(ctx, tools)
-  S->>T: tools/call (valibot-checked input)
-  T-->>S: result or McpToolError
+  S->>T: tools/call, input checked by valibot
+  T-->>S: Result, or McpToolError
   S-->>A: JSON response, no-store
 ```
+
+In the 1.0 design a write tool goes further: it checks the token's capabilities, the edit lease and the concurrency token, then writes through the admin's own procedure. [ARCHITECTURE.md](../../ARCHITECTURE.md#behaviour) draws that flow as "an agent publishes a page".
 
 ## Surface
 
@@ -32,7 +34,7 @@ sequenceDiagram
 | `McpToolError` (`not_found`, `forbidden`, `bad_input`)         | error a tool throws                                          | `mcp/errors.ts`                                         | `plumix/plugin` |
 | `RegisteredMcpTool`                                            | registry entry type                                          | `plugin/registry.ts`                                    | `plumix/plugin` |
 
-Tools served today, all read-only:
+Tools served today, all reads:
 
 | Tool                                                                                       | Owner                                            | When                                                          |
 | ------------------------------------------------------------------------------------------ | ------------------------------------------------ | ------------------------------------------------------------- |
@@ -41,23 +43,26 @@ Tools served today, all read-only:
 | `error_list`                                                                               | core `mcp/error-tools.ts`                        | `PLUMIX_DEV` only                                             |
 | `media_list`, `media_get`                                                                  | `packages/plugins/media/src/mcp-tools.ts`        | plugin installed                                              |
 | `form_list`, `form_describe`, `form_submission_list`                                       | `packages/plugins/forms/src/server/mcp-tools.ts` | plugin installed; submissions need `form_submission:moderate` |
+| Write tools: create, update and publish entries, compose pages (not yet)                   | core                                             | the token holds the capability                                |
 
 The endpoint has no stdio transport, no resources, no prompts and no SSE (`GET` answers 405).
 
 ## How it works
 
-The dispatcher checks `/_plumix/mcp` in `tryColdInterfaces`, before the CSRF gate. A bearer token cannot be forged cross-site, so the CSRF check does not apply. `dispatchMcp` returns 404 `mcp-disabled` unless `mcp.enabled` is true or the app runs under `plumix dev`. That check runs before `loadMcpHandler` imports anything, so the SDK stays off the cold start of public renders.
+The dispatcher checks `/_plumix/mcp` in `tryColdInterfaces`, before the CSRF gate: an API token cannot be forged cross-site, so the CSRF check does not apply. `dispatchMcp` returns 404 `mcp-disabled` unless `mcp.enabled` is true or the app runs under `plumix dev`. That check runs before `app.loadMcpHandler` imports anything, so the SDK stays off the cold start of public renders. `withNoStore` marks every answer `no-store`.
 
 `handleMcpRequest` then resolves trust with `resolveMcpDevTrust`:
 
 - In a production build it is always `"token"`, because `process.env.PLUMIX_DEV` folds to `""`.
 - Under dev, a cross-site `Origin` is `"rejected"` (403 `mcp_cross_origin`). A loopback host is `"trusted"`. Any other host is `"token"`.
-- `"trusted"` passes the dispatcher's context through as it is. No authenticator has run on it, so the context is anonymous (the `McpDevTrust` docstring).
+- `"trusted"` passes the dispatcher's context through as it is. No authenticator has run on it, so the principal is anonymous and tools see only what an anonymous visitor may read.
 - `"token"` runs `authenticateBearer`, which accepts only an API token (`apiTokenAuthenticator`). A session cookie gets 401.
 
-Each request builds a fresh registry with `buildMcpToolRegistry` and a fresh SDK `Server` with `buildMcpServer`. It then connects a `WebStandardStreamableHTTPServerTransport` with `sessionIdGenerator: undefined` and `enableJsonResponse: true`. `tools/list` projects each tool's valibot schema to JSON Schema (`toToolInputJsonSchema`). `tool.jsonSchema` replaces that projection when it is set. `tools/call` runs inside one `mcp: <name>` telemetry span. An unknown tool or a bad input becomes a JSON-RPC error. An `McpToolError` becomes an `isError` tool result. Anything else propagates.
+Each request builds a fresh tool map with `buildMcpToolRegistry` and a fresh SDK `Server` with `buildMcpServer`. It connects a `WebStandardStreamableHTTPServerTransport` with `sessionIdGenerator: undefined` and `enableJsonResponse: true`. `tools/list` projects each tool's valibot schema to JSON Schema (`toToolInputJsonSchema`); `tool.jsonSchema` replaces that projection when set. Every tool is listed with `annotations: { readOnlyHint: true }`. `tools/call` runs inside one `mcp: <name>` telemetry span. An unknown tool or a bad input becomes a JSON-RPC error, an `McpToolError` becomes an `isError` tool result, and anything else propagates.
 
-Tools read through the same read services as RPC and REST (`entries/read-service.ts` for `content_*`). `ctx.auth.can` intersects the token's scopes with the user's role, so a tool sees only what that principal may read. See [auth-and-access.md](auth-and-access.md).
+Tools read through the same read services as RPC and REST (`getEntry` and `listEntries` in `entries/read-service.ts` for `content_*`). `ctx.auth.can` intersects the token's scopes with its owner's capabilities, so a tool sees only what that principal may read. See [auth and access](auth-and-access.md).
+
+**Writes, in the 1.0 design (not yet).** A write tool is a thin adapter over the procedure the admin calls, such as `entry.update` (`rpc/procedures/entry/update.ts`), so it inherits the whole write lifecycle described in [RPC and editing](rpc-and-editing.md). The agent's token must hold the capability. The tool takes `ifMatch` as a required field and holds an edit lease with surface `mcp` (`EDIT_LEASE_SURFACES` in `db/schema/edit_leases.ts`), so a write over someone else's live lease is `LOCKED` unless the agent takes it over, and a write from a stale copy is `CONFLICT` ([ADR 0048](../adr/0048-core-guards-every-edit-with-a-required-token-and-an-enforced-lease.md)). Content passes the block list and style policy in `assertContentValidAgainstRegistries` (`rpc/procedures/entry/content.ts`), a revision is captured, and the hooks and purges fire as for an editor's save. What an agent may do is what its token may do; a person steers it by choosing that token.
 
 - `packages/core/src/mcp/dispatch.ts`: `handleMcpRequest`.
 - `packages/core/src/mcp/dev-trust.ts`: `resolveMcpDevTrust`.
@@ -69,8 +74,8 @@ Tools read through the same read services as RPC and REST (`entries/read-service
 ## Invariants
 
 - Production MCP needs an API token. Dev trust is statically off in a build. `packages/core/src/mcp/dispatch.test.ts` ("production (dev trust off) still requires a token over loopback"); `packages/plumix/src/vite/dev-gate-tree-shaking.test.ts`.
-- MCP authenticates by bearer token only, never by session cookie. `dispatch.test.ts` ("a session-cookie request is rejected").
-- The endpoint is off unless configured, and the handler graph is not imported when it is off. `runtime/dispatcher.ts` `dispatchMcp`; `dispatch.test.ts` ("dev auto-enables the endpoint with no config flag").
+- MCP authenticates by API token only, never by session cookie. `dispatch.test.ts` ("a session-cookie request is rejected").
+- The endpoint is off unless configured, and the handler graph is not imported when it is off. `dispatchMcp` in `runtime/dispatcher.ts`; `dispatch.test.ts` ("dev auto-enables the endpoint with no config flag").
 - No tool drops tables or runs migrations. `dispatch.test.ts` ("no tool drops tables or migrates").
 - Telemetry and error tools are absent outside dev. `dispatch.test.ts` ("without the dev gate the tracing and error tools are not registered").
 - A tool name has one owner, and a plugin cannot take a core name. `registerMcpTool` in `plugin/setup-context.ts`.
@@ -78,25 +83,13 @@ Tools read through the same read services as RPC and REST (`entries/read-service
 - `mcp/` sits in core's `surfaces` layer. [ADR 0010](../adr/0010-core-is-one-package-of-enforced-layers.md); `packages/core/src/layers.test.ts`.
 - Dev trust follows the dev layers, not a config flag. [ADR 0003](../adr/0003-dev-config-mirrors-the-dev-layers.md).
 
-## Status
+## Not there yet
 
-| Piece                               | State     | Evidence                                                                                              |
-| ----------------------------------- | --------- | ----------------------------------------------------------------------------------------------------- |
-| Endpoint, token auth, dev trust     | shipped   | `packages/core/src/mcp/dispatch.test.ts`                                                              |
-| Core content, term and schema tools | shipped   | `dispatch.test.ts`; `mcp/schema-projection.test.ts`                                                   |
-| Dev telemetry and error tools       | shipped   | `dispatch.test.ts` (telemetry and `error_list` blocks)                                                |
-| Plugin tools (media, forms)         | shipped   | `packages/plugins/media/src/mcp-tools.test.ts`, `packages/plugins/forms/src/server/mcp-tools.test.ts` |
-| Write tools                         | not built | every tool is a read; none exists to write                                                            |
-| End-to-end coverage                 | none      | no `*.spec.ts` in the repo mentions MCP                                                               |
+| Part of the design         | Seam to build on                                                                                                                                                                                                                                                                                       | Done when                                                                                                                                                                                                                                                               |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Agents author like editors | Core write tools in `packages/core/src/mcp` that call the admin's procedures (`entry.create`, `entry.update`, `entry.publish`, `entry.lease.*`); `EDIT_LEASE_SURFACES` already includes `mcp`; `McpTool` gains a way to say a tool writes, so `buildMcpServer` stops marking every tool `readOnlyHint` | An agent writes, composes and publishes under its token's capabilities, edit leases, the required concurrency token, revisions and the block list and style policy, through the same procedures as the admin; the _Code today_ line is gone from Agent in `GLOSSARY.md` |
+| Block list                 | `assertContentValidAgainstRegistries` in `rpc/procedures/entry/content.ts`, which a write tool reaches through the procedure                                                                                                                                                                           | An agent cannot add a new instance of a block the theme removed                                                                                                                                                                                                         |
+| Style policy               | The same check                                                                                                                                                                                                                                                                                         | With design tokens only, an agent cannot store a new literal style value                                                                                                                                                                                                |
+| Capabilities from roles    | `ctx.auth.can`, which tools already call; see [auth and access](auth-and-access.md)                                                                                                                                                                                                                    | A tool's check reads the site's stored and declared roles, not the ranked ladder                                                                                                                                                                                        |
 
-`gh issue list -R withplumix/plumix --search mcp --state open` returns no MCP issue.
-
-## Gaps
-
-- [ADR 0048](../adr/0048-core-guards-every-edit-with-a-required-token-and-an-enforced-lease.md) plans for "MCP agents" as writers and says "RPC and MCP take `ifMatch` as a required field". No MCP tool writes, so that part of the ADR describes nothing that exists.
-- `buildMcpServer` sets `annotations: { readOnlyHint: true }` on every tool, plugin tools included. `McpTool` has no field to declare a write, so a plugin write tool would be advertised as read-only.
-- `SERVER_INFO` hard-codes `version: "0.1.0"`. It does not follow the package version.
-- `buildMcpServer` uses the SDK's deprecated `Server` class behind two `@typescript-eslint/no-deprecated` disables.
-- Tokenless dev calls run anonymous. So `content_list` under `plumix dev` returns only what an anonymous visitor may read, while its description says results are "clamped to what your token may read". The dev-trust tests in `dispatch.test.ts` call only `tools/list`.
-- The user docs have no MCP page. `apps/docs/src/content/docs/getting-started/configuration.mdx` (`### mcp`) and `going-further/dev-server.mdx` cover enabling it. No page shows how to connect a client, which tools exist, or how to write one with `registerMcpTool`.
-- No e2e suite drives `/_plumix/mcp` through a real runtime. Coverage is unit-tier only.
+The in-editor agent is not served over MCP. It is an RPC procedure behind an `llm` config slot; see [RPC and editing](rpc-and-editing.md).
