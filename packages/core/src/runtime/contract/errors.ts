@@ -182,6 +182,19 @@ export class AppBootError extends Error {
     );
   }
 
+  static authMethodNameKernelKey(ctx: {
+    pluginId: string;
+    name: string;
+    key: string;
+  }): AppBootError {
+    return new AppBootError(
+      "auth_method_name_reserved",
+      `Plugin "${ctx.pluginId}" declares sign-in method "${ctx.name}", but ` +
+        `the auth client's own "${ctx.key}" answers at authClient.${ctx.key}.`,
+      { pluginId: ctx.pluginId, previousOwner: "core" },
+    );
+  }
+
   static authMethodNameConflict(ctx: {
     pluginId: string;
     name: string;

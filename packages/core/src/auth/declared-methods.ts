@@ -4,6 +4,7 @@ import type {
   AuthMethodRoute,
 } from "../plugin/auth-method.js";
 import { AppBootError } from "../runtime/contract/errors.js";
+import { AUTH_CLIENT_KERNEL_KEYS, camelCase } from "./client/kernel-keys.js";
 
 const AUTH_PREFIX = "/_plumix/auth/";
 
@@ -15,6 +16,8 @@ const CORE_AUTH_ROUTE_PREFIXES: ReadonlySet<string> = new Set([
   "signout",
   "verify-email",
 ]);
+
+const KERNEL_KEYS: ReadonlySet<string> = new Set(AUTH_CLIENT_KERNEL_KEYS);
 
 interface CompiledRoute {
   readonly segments: readonly string[];
@@ -39,7 +42,7 @@ interface DeclareAuthMethodsInput {
 
 /**
  * Throws `AppBootError` for a name that isn't a kebab-case slug, one of core's
- * own auth routes, or declared by two owners.
+ * own auth routes, one taking an auth client kernel key, or declared twice.
  */
 export function declareAuthMethods(
   input: DeclareAuthMethodsInput,
@@ -81,6 +84,10 @@ function assertDeclarable(
   }
   if (CORE_AUTH_ROUTE_PREFIXES.has(name)) {
     throw AppBootError.authMethodNameReserved({ pluginId: owner, name });
+  }
+  const key = camelCase(name);
+  if (KERNEL_KEYS.has(key)) {
+    throw AppBootError.authMethodNameKernelKey({ pluginId: owner, name, key });
   }
   const previous = declared.get(name);
   if (previous !== undefined) {

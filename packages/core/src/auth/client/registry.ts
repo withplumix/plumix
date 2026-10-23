@@ -1,3 +1,4 @@
+import type { Account, AccountPatch, AccountState } from "./account.js";
 import type {
   inviteClient,
   magicLinkClient,
@@ -89,7 +90,19 @@ export interface SignedOut {
   readonly redirectTo: string | null;
 }
 
+/** The signed-in user's own account; every call acts on the session's user. */
+export interface AuthClientAccount {
+  /**
+   * Saves over another user's edit lease. A stale copy reloads the account
+   * and resolves `etag_mismatch`; a success refreshes the session.
+   */
+  update(patch: AccountPatch): Promise<AuthResult<Account>>;
+}
+
 export type AuthClient = {
+  readonly account: AuthClientAccount;
+  /** Loaded on first use, never from the server render. */
+  useAccount(): AccountState;
   readonly signIn: AuthClientSignIn;
   /** Navigates only when called with `redirectTo`. */
   signOut(options?: RedirectOptions): Promise<AuthResult<SignedOut>>;
