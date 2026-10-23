@@ -41,6 +41,7 @@ export const FOLDERS: Readonly<Record<string, Placement>> = {
   "blocks/": client("foundation"),
   "i18n/": client("foundation"),
   json: client("foundation"),
+  encoding: client("foundation"),
   "csrf-header": client("foundation"),
   "base-path": client("foundation"),
   slugify: client("foundation"),

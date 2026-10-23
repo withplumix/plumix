@@ -1,17 +1,3 @@
-import {
-  decodeBase64urlIgnorePadding,
-  encodeBase64urlNoPadding,
-} from "@oslojs/encoding";
-import {
-  AttestationStatementFormat,
-  ClientDataType,
-  coseAlgorithmES256,
-  coseAlgorithmRS256,
-  coseEllipticCurveP256,
-  COSEKeyType,
-  parseAttestationObject,
-  parseClientDataJSON,
-} from "@oslojs/webauthn";
 import { eq } from "drizzle-orm";
 
 import type { Db } from "../../context/app-context.js";
@@ -23,9 +9,19 @@ import type { RegistrationCeremony } from "./challenges.js";
 import type { ResolvedPasskeyConfig } from "./config.js";
 import type { RegistrationOptions, RegistrationResponse } from "./types.js";
 import { credentials } from "../../db/schema/credentials.js";
+import { decodeBase64url, encodeBase64url } from "../../encoding.js";
 import { consumeChallenge, issueChallenge } from "./challenges.js";
 import { PasskeyError } from "./errors.js";
 import { originAllowed } from "./origin-policy.js";
+import {
+  COSE_ALG_ES256,
+  parseAttestationObject,
+  parseClientData,
+  parseEs256PublicKey,
+  rpIdHashMatches,
+} from "./parse.js";
+
+const COSE_ALG_RS256 = -257;
 
 interface BeginRegistrationInput {
   readonly userId: number;
@@ -51,16 +47,16 @@ export async function beginRegistration(
     challenge,
     rp: { name: config.rpName, id: config.rpId },
     user: {
-      id: encodeBase64urlNoPadding(userIdBytes),
+      id: encodeBase64url(userIdBytes),
       name: input.userEmail,
       displayName: input.userDisplayName ?? input.userEmail,
     },
     pubKeyCredParams: [
       // ES256 first — covers Apple, Android, Windows Hello, YubiKey.
-      { type: "public-key", alg: coseAlgorithmES256 },
+      { type: "public-key", alg: COSE_ALG_ES256 },
       // Advertise RS256 for older Windows Hello, but reject in verify (v1 =
       // ES256 only).
-      { type: "public-key", alg: coseAlgorithmRS256 },
+      { type: "public-key", alg: COSE_ALG_RS256 },
     ],
     timeout: 60_000,
     attestation: "none",
@@ -99,20 +95,16 @@ export async function finishRegistration(
   let clientDataBytes: Uint8Array;
   let attestationBytes: Uint8Array;
   try {
-    clientDataBytes = decodeBase64urlIgnorePadding(
-      response.response.clientDataJSON,
-    );
-    attestationBytes = decodeBase64urlIgnorePadding(
-      response.response.attestationObject,
-    );
+    clientDataBytes = decodeBase64url(response.response.clientDataJSON);
+    attestationBytes = decodeBase64url(response.response.attestationObject);
   } catch {
     throw PasskeyError.invalidResponse({
       reason: "Malformed base64url in registration response",
     });
   }
 
-  const clientData = parseClientDataJSON(clientDataBytes);
-  if (clientData.type !== ClientDataType.Create) {
+  const clientData = parseClientData(clientDataBytes);
+  if (clientData.type !== "webauthn.create") {
     throw PasskeyError.invalidClientData({ expectedType: "create" });
   }
 
@@ -124,54 +116,33 @@ export async function finishRegistration(
   }
 
   const attestation = parseAttestationObject(attestationBytes);
-  if (
-    attestation.attestationStatement.format !== AttestationStatementFormat.None
-  ) {
+  if (attestation.format !== "none") {
     throw PasskeyError.unsupportedAttestationFormat({
-      format: String(attestation.attestationStatement.format),
+      format: attestation.format,
     });
   }
 
   const { authenticatorData } = attestation;
-  if (!authenticatorData.verifyRelyingPartyIdHash(config.rpId)) {
+  if (!(await rpIdHashMatches(authenticatorData, config.rpId))) {
     throw PasskeyError.invalidRpId();
   }
 
-  const challengeString = encodeBase64urlNoPadding(clientData.challenge);
-  const challenge = await consumeChallenge(db, challengeString);
+  const challenge = await consumeChallenge(db, clientData.challenge);
   if (!challenge) throw PasskeyError.challengeNotFound();
   if (!authenticatorData.userPresent) throw PasskeyError.userPresenceMissing();
 
-  if (!authenticatorData.credential) {
+  const credential = authenticatorData.attestedCredential;
+  if (!credential) {
     throw PasskeyError.invalidResponse({
       reason: "No credential data in attestation",
     });
   }
-  const { credential } = authenticatorData;
-
-  const algorithm = credential.publicKey.algorithm();
-  if (algorithm !== coseAlgorithmES256) {
-    // RS256 was advertised for compatibility but we deliberately don't
-    // implement RSA verify in v1 — ES256 covers ~all real-world authenticators.
-    throw PasskeyError.unsupportedAlgorithm({
-      reason: `algorithm ${algorithm}`,
-    });
-  }
-  if (credential.publicKey.type() !== COSEKeyType.EC2) {
-    throw PasskeyError.unsupportedAlgorithm({
-      reason: "Expected EC2 key for ES256",
-    });
-  }
-  const cose = credential.publicKey.ec2();
-  if (cose.curve !== coseEllipticCurveP256) {
-    throw PasskeyError.unsupportedAlgorithm({
-      reason: "Expected P-256 curve",
-    });
-  }
-  const publicKey = encodeSec1Uncompressed(cose.x, cose.y);
+  // RS256 is advertised for compatibility but refused here: ES256 covers
+  // ~all real-world authenticators.
+  const publicKey = parseEs256PublicKey(credential.publicKey);
 
   return {
-    credentialId: encodeBase64urlNoPadding(credential.id),
+    credentialId: encodeBase64url(credential.id),
     publicKey,
     signatureCounter: authenticatorData.signatureCounter,
     transports: response.response.transports ?? [],
@@ -219,8 +190,8 @@ export async function persistCredential(
       // Uint8Array at runtime.
       publicKey: input.verified.publicKey as Buffer,
       counter: input.verified.signatureCounter,
-      // Backup-eligible flag parsing isn't exposed by @oslojs/webauthn yet;
-      // conservative default until it is.
+      // Backup-eligible flags aren't parsed yet; conservative default until
+      // they are.
       deviceType: "single_device",
       isBackedUp: false,
       transports: [...input.verified.transports],
@@ -231,29 +202,4 @@ export async function persistCredential(
   // eslint-disable-next-line no-restricted-syntax -- unreachable unless the driver returns no row from INSERT … RETURNING
   if (!row) throw new Error("persistCredential: insert returned no row");
   return row;
-}
-
-/**
- * Works around oslojs `encodeSEC1Uncompressed`, which left-shifts a Y with a
- * leading zero byte (~1/256 of keys) and corrupts the stored key. RFC 5480
- * §2.2.
- */
-function encodeSec1Uncompressed(x: bigint, y: bigint): Uint8Array {
-  const out = new Uint8Array(65);
-  out[0] = 0x04;
-  writeFixedWidthBE(out, x, 1);
-  writeFixedWidthBE(out, y, 33);
-  return out;
-}
-
-function writeFixedWidthBE(
-  out: Uint8Array,
-  value: bigint,
-  offset: number,
-): void {
-  let v = value;
-  for (let i = 31; i >= 0; i--) {
-    out[offset + i] = Number(v & 0xffn);
-    v >>= 8n;
-  }
 }

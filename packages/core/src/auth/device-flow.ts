@@ -1,9 +1,8 @@
-import { encodeBase64urlNoPadding } from "@oslojs/encoding";
-
 import type { Db } from "../context/app-context.js";
 import type { DeviceCode } from "../db/schema/device_codes.js";
 import { and, eq } from "../db/index.js";
 import { deviceCodes } from "../db/schema/device_codes.js";
+import { encodeBase64url } from "../encoding.js";
 import { createApiToken } from "./api-tokens.js";
 import { hashToken } from "./tokens.js";
 
@@ -187,7 +186,7 @@ export async function exchangeDeviceCode(
 function generateDeviceCode(): string {
   const bytes = new Uint8Array(DEVICE_CODE_BYTES);
   crypto.getRandomValues(bytes);
-  return encodeBase64urlNoPadding(bytes);
+  return encodeBase64url(bytes);
 }
 
 function generateUserCode(): string {

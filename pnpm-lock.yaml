@@ -293,15 +293,9 @@ catalogs:
       specifier: ^1.15.6
       version: 1.15.6
   oslojs:
-    '@oslojs/crypto':
-      specifier: ^1.0.1
-      version: 1.0.1
     '@oslojs/encoding':
       specifier: ^1.1.0
       version: 1.1.0
-    '@oslojs/webauthn':
-      specifier: ^1.0.0
-      version: 1.0.0
   react:
     '@types/react':
       specifier: ^19.3.0
@@ -1072,15 +1066,6 @@ importers:
       '@orpc/valibot':
         specifier: catalog:orpc
         version: 1.15.6(@orpc/contract@1.15.6)(@orpc/server@1.15.6(crossws@0.3.5)(ws@8.22.0))(crossws@0.3.5)(valibot@1.5.0(typescript@6.0.3))(ws@8.22.0)
-      '@oslojs/crypto':
-        specifier: catalog:oslojs
-        version: 1.0.1
-      '@oslojs/encoding':
-        specifier: catalog:oslojs
-        version: 1.1.0
-      '@oslojs/webauthn':
-        specifier: catalog:oslojs
-        version: 1.0.0
       '@sindresorhus/slugify':
         specifier: ^3.0.1
         version: 3.0.1
@@ -5378,35 +5363,8 @@ packages:
       '@orpc/server': 1.15.6
       valibot: '>=1.0.0'
 
-  '@oslojs/asn1@1.0.0':
-    resolution: {integrity: sha512-zw/wn0sj0j0QKbIXfIlnEcTviaCzYOY3V5rAyjR6YtOByFtJiT574+8p9Wlach0lZH9fddD4yb9laEAIl4vXQA==}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-
-  '@oslojs/binary@1.0.0':
-    resolution: {integrity: sha512-9RCU6OwXU6p67H4NODbuxv2S3eenuQ4/WFLrsq+K/k682xrznH5EVWA7N4VFk9VYVcbFtKqur5YQQZc0ySGhsQ==}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-
-  '@oslojs/cbor@1.0.0':
-    resolution: {integrity: sha512-AY6Lknexs7n2xp8Cgey95c+975VG7XOk4UEdRdNFxHmDDbuf47OC/LAVRsl14DeTLwo8W6xr3HLFwUFmKcndTQ==}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-
-  '@oslojs/crypto@1.0.0':
-    resolution: {integrity: sha512-dVz8TkkgYdr3tlwxHd7SCYGxoN7ynwHLA0nei/Aq9C+ERU0BK+U8+/3soEzBUxUNKYBf42351DyJUZ2REla50w==}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-
-  '@oslojs/crypto@1.0.1':
-    resolution: {integrity: sha512-7n08G8nWjAr/Yu3vu9zzrd0L9XnrJfpMioQcvCMxBIiF5orECHe5/3J0jmXRVvgfqMm/+4oxlQ+Sq39COYLcNQ==}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-
-  '@oslojs/encoding@1.0.0':
-    resolution: {integrity: sha512-dyIB0SdZgMm5BhGwdSp8rMxEFIopLKxDG1vxIBaiogyom6ZqH2aXPb6DEC2WzOOWKdPSq1cxdNeRx2wAn1Z+ZQ==}
-
   '@oslojs/encoding@1.1.0':
     resolution: {integrity: sha512-70wQhgYmndg4GCPxPPxPGevRKqTIJ2Nh4OkiMWmDAVYsTQ+Ta7Sq+rPevXyXGdzr30/qZBnyOalCszoMxlyldQ==}
-
-  '@oslojs/webauthn@1.0.0':
-    resolution: {integrity: sha512-2ZRpbt3msNURwvjmavzq9vrNlxUnWFBGMYqbC1kO3fYBLskL7r4DiLJT1wbtLoI+hclFwjhl48YhRFBl6RWg1A==}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
 
   '@oxc-parser/binding-android-arm-eabi@0.148.0':
     resolution: {integrity: sha512-pHASv9g5pASxb7akHERZNSkrEqPhFaUix98o7d9hbTpolnnFWl7UiRrcMhCsV1+iVO4/cJwKsbKRJTFNs2tdBQ==}
@@ -14048,37 +14006,7 @@ snapshots:
       - fastify
       - ws
 
-  '@oslojs/asn1@1.0.0':
-    dependencies:
-      '@oslojs/binary': 1.0.0
-
-  '@oslojs/binary@1.0.0': {}
-
-  '@oslojs/cbor@1.0.0':
-    dependencies:
-      '@oslojs/binary': 1.0.0
-
-  '@oslojs/crypto@1.0.0':
-    dependencies:
-      '@oslojs/asn1': 1.0.0
-      '@oslojs/binary': 1.0.0
-
-  '@oslojs/crypto@1.0.1':
-    dependencies:
-      '@oslojs/asn1': 1.0.0
-      '@oslojs/binary': 1.0.0
-
-  '@oslojs/encoding@1.0.0': {}
-
   '@oslojs/encoding@1.1.0': {}
-
-  '@oslojs/webauthn@1.0.0':
-    dependencies:
-      '@oslojs/asn1': 1.0.0
-      '@oslojs/binary': 1.0.0
-      '@oslojs/cbor': 1.0.0
-      '@oslojs/crypto': 1.0.0
-      '@oslojs/encoding': 1.0.0
 
   '@oxc-parser/binding-android-arm-eabi@0.148.0':
     optional: true

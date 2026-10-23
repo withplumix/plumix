@@ -5,10 +5,16 @@ import type { PasskeyKeyPair } from "../../test/fixtures/webauthn.js";
 import { credentials } from "../../db/schema/credentials.js";
 import { credentialFactory, userFactory } from "../../test/factories.js";
 import {
+  ASSERTION,
+  ASSERTION_FIRST_USE,
+  VECTOR_RP,
+} from "../../test/fixtures/simplewebauthn.js";
+import {
   buildAssertion,
   buildAttestation,
   generatePasskeyKeyPair,
   randomCredentialId,
+  seedChallenge,
 } from "../../test/fixtures/webauthn.js";
 import { createTestDb } from "../../test/harness.js";
 import { ensureUint8Array, finishAuthentication } from "./authenticate.js";
@@ -146,6 +152,48 @@ describe("finishAuthentication (origin policy)", () => {
     });
 
     expect(result.newSignatureCounter).toBe(1);
+  });
+});
+
+// Recorded responses from SimpleWebAuthn's server test suite (MIT); see the
+// fixture for the source.
+describe("finishAuthentication (published SimpleWebAuthn vectors)", () => {
+  const vectorConfig = resolved(VECTOR_RP);
+
+  test.each([
+    ["a counting authenticator", ASSERTION],
+    ["an authenticator that keeps no counter", ASSERTION_FIRST_USE],
+  ])("verifies a real ES256 assertion from %s", async (_, vector) => {
+    const db = await createTestDb();
+    const user = await userFactory.transient({ db }).create({ role: "admin" });
+    await credentialFactory.transient({ db }).create({
+      id: vector.response.id,
+      userId: user.id,
+      publicKey: Buffer.from(vector.publicKeySec1Hex, "hex"),
+      counter: vector.storedCounter,
+    });
+    await seedChallenge(db, vector.challenge);
+
+    const result = await finishAuthentication(
+      db,
+      vectorConfig,
+      vector.response,
+    );
+
+    expect(result.newSignatureCounter).toBe(vector.newCounter);
+  });
+
+  test("refuses truncated authenticator data as a malformed response", async () => {
+    const db = await createTestDb();
+    await seedChallenge(db, ASSERTION.challenge);
+    const { response } = ASSERTION;
+
+    await expect(
+      finishAuthentication(db, vectorConfig, {
+        ...response,
+        response: { ...response.response, authenticatorData: "PdxHEOnA" },
+      }),
+    ).rejects.toMatchObject({ code: "invalid_response" });
   });
 });
 

@@ -1,4 +1,4 @@
-import { encodeBase64urlNoPadding } from "@oslojs/encoding";
+import { encodeBase64url } from "../../encoding.js";
 
 const VERIFIER_BYTES = 32;
 const ENCODER = new TextEncoder();
@@ -6,7 +6,7 @@ const ENCODER = new TextEncoder();
 export function generateCodeVerifier(): string {
   const bytes = new Uint8Array(VERIFIER_BYTES);
   crypto.getRandomValues(bytes);
-  return encodeBase64urlNoPadding(bytes);
+  return encodeBase64url(bytes);
 }
 
 export async function computeS256Challenge(verifier: string): Promise<string> {
@@ -14,5 +14,5 @@ export async function computeS256Challenge(verifier: string): Promise<string> {
     "SHA-256",
     ENCODER.encode(verifier),
   );
-  return encodeBase64urlNoPadding(new Uint8Array(digest));
+  return encodeBase64url(new Uint8Array(digest));
 }

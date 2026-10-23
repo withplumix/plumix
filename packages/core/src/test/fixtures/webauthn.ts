@@ -7,7 +7,11 @@ import {
   generateKeyPairSync,
   sign,
 } from "node:crypto";
-import { encodeBase64urlNoPadding } from "@oslojs/encoding";
+
+import type { Db } from "../../context/app-context.js";
+import { hashToken } from "../../auth/tokens.js";
+import { authTokens } from "../../db/schema/auth_tokens.js";
+import { encodeBase64url } from "../../encoding.js";
 
 const ATTESTED_FLAG = 0x40;
 const USER_PRESENT_FLAG = 0x01;
@@ -257,9 +261,9 @@ export function buildAssertion(input: BuildAssertionInput): BuiltAssertion {
   // Node's sign('sha256', ..., privateKey) emits DER-encoded ECDSA by default.
   const sigDer = sign("sha256", message, input.keyPair.privateKey);
   return {
-    clientDataJSON: encodeBase64urlNoPadding(clientDataBytes),
-    authenticatorData: encodeBase64urlNoPadding(authData),
-    signature: encodeBase64urlNoPadding(new Uint8Array(sigDer)),
+    clientDataJSON: encodeBase64url(clientDataBytes),
+    authenticatorData: encodeBase64url(authData),
+    signature: encodeBase64url(new Uint8Array(sigDer)),
   };
 }
 
@@ -297,9 +301,9 @@ export function buildAttestation(
     input.origin,
   );
   return {
-    clientDataJSON: encodeBase64urlNoPadding(clientDataBytes),
-    attestationObject: encodeBase64urlNoPadding(attObject),
-    credentialIdBase64Url: encodeBase64urlNoPadding(input.credentialId),
+    clientDataJSON: encodeBase64url(clientDataBytes),
+    attestationObject: encodeBase64url(attObject),
+    credentialIdBase64Url: encodeBase64url(input.credentialId),
   };
 }
 
@@ -335,4 +339,21 @@ export function buildRegisterVerifyEnvelope(
       attestationObject: attestation.attestationObject,
     },
   };
+}
+
+/**
+ * Stores `challenge` as if the options route had issued it, for a recorded
+ * response whose challenge is fixed.
+ */
+export async function seedChallenge(
+  db: Db,
+  challenge: string,
+  userId: number | null = null,
+): Promise<void> {
+  await db.insert(authTokens).values({
+    hash: await hashToken(challenge),
+    type: "webauthn_challenge",
+    userId,
+    expiresAt: new Date(Date.now() + 60_000),
+  });
 }

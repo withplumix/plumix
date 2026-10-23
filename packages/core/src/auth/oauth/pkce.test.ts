@@ -1,6 +1,6 @@
-import { encodeBase64urlNoPadding } from "@oslojs/encoding";
 import { describe, expect, test } from "vitest";
 
+import { encodeBase64url } from "../../encoding.js";
 import { computeS256Challenge, generateCodeVerifier } from "./pkce.js";
 
 describe("PKCE helpers", () => {
@@ -19,7 +19,7 @@ describe("PKCE helpers", () => {
 
   test("S256 challenge equals base64url(SHA-256(verifier))", async () => {
     const verifier = "test-verifier-12345";
-    const expected = encodeBase64urlNoPadding(
+    const expected = encodeBase64url(
       new Uint8Array(
         await crypto.subtle.digest(
           "SHA-256",

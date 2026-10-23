@@ -1,20 +1,3 @@
-import {
-  decodePKIXECDSASignature,
-  decodeSEC1PublicKey,
-  p256,
-  verifyECDSASignature,
-} from "@oslojs/crypto/ecdsa";
-import { sha256 } from "@oslojs/crypto/sha2";
-import {
-  decodeBase64urlIgnorePadding,
-  encodeBase64urlNoPadding,
-} from "@oslojs/encoding";
-import {
-  ClientDataType,
-  createAssertionSignatureMessage,
-  parseAuthenticatorData,
-  parseClientDataJSON,
-} from "@oslojs/webauthn";
 import { eq } from "drizzle-orm";
 
 import type { Db } from "../../context/app-context.js";
@@ -22,9 +5,16 @@ import type { Credential } from "../../db/schema/credentials.js";
 import type { ResolvedPasskeyConfig } from "./config.js";
 import type { AuthenticationOptions, AuthenticationResponse } from "./types.js";
 import { credentials } from "../../db/schema/credentials.js";
+import { decodeBase64url } from "../../encoding.js";
 import { consumeChallenge, issueChallenge } from "./challenges.js";
 import { PasskeyError } from "./errors.js";
+import { verifyEs256 } from "./es256.js";
 import { originAllowed } from "./origin-policy.js";
+import {
+  parseAuthenticatorData,
+  parseClientData,
+  rpIdHashMatches,
+} from "./parse.js";
 
 interface BeginAuthenticationInput {
   readonly allowCredentials?: readonly Credential[];
@@ -63,25 +53,23 @@ export async function finishAuthentication(
   config: ResolvedPasskeyConfig,
   response: AuthenticationResponse,
 ): Promise<VerifiedAuthentication> {
-  let clientDataBytes: Uint8Array;
+  let clientDataBytes: Uint8Array<ArrayBuffer>;
   let authenticatorDataBytes: Uint8Array;
   let signatureBytes: Uint8Array;
   try {
-    clientDataBytes = decodeBase64urlIgnorePadding(
-      response.response.clientDataJSON,
-    );
-    authenticatorDataBytes = decodeBase64urlIgnorePadding(
+    clientDataBytes = decodeBase64url(response.response.clientDataJSON);
+    authenticatorDataBytes = decodeBase64url(
       response.response.authenticatorData,
     );
-    signatureBytes = decodeBase64urlIgnorePadding(response.response.signature);
+    signatureBytes = decodeBase64url(response.response.signature);
   } catch {
     throw PasskeyError.invalidResponse({
       reason: "Malformed base64url in authentication response",
     });
   }
 
-  const clientData = parseClientDataJSON(clientDataBytes);
-  if (clientData.type !== ClientDataType.Get) {
+  const clientData = parseClientData(clientDataBytes);
+  if (clientData.type !== "webauthn.get") {
     throw PasskeyError.invalidClientData({ expectedType: "get" });
   }
 
@@ -93,12 +81,11 @@ export async function finishAuthentication(
   }
 
   const authenticatorData = parseAuthenticatorData(authenticatorDataBytes);
-  if (!authenticatorData.verifyRelyingPartyIdHash(config.rpId)) {
+  if (!(await rpIdHashMatches(authenticatorData, config.rpId))) {
     throw PasskeyError.invalidRpId();
   }
 
-  const challengeString = encodeBase64urlNoPadding(clientData.challenge);
-  const challenge = await consumeChallenge(db, challengeString);
+  const challenge = await consumeChallenge(db, clientData.challenge);
   if (!challenge) throw PasskeyError.challengeNotFound();
   void challenge;
 
@@ -119,18 +106,12 @@ export async function finishAuthentication(
     throw PasskeyError.counterReplay();
   }
 
-  const signedMessage = createAssertionSignatureMessage(
+  const signedMessage = await assertionSignatureMessage(
     authenticatorDataBytes,
     clientDataBytes,
   );
-  const messageHash = sha256(signedMessage);
-  const publicKey = decodeSEC1PublicKey(
-    p256,
-    ensureUint8Array(credential.publicKey),
-  );
-  const signature = decodePKIXECDSASignature(signatureBytes);
-
-  if (!verifyECDSASignature(publicKey, messageHash, signature)) {
+  const publicKey = ensureUint8Array(credential.publicKey);
+  if (!(await verifyEs256(publicKey, signatureBytes, signedMessage))) {
     throw PasskeyError.invalidSignature();
   }
 
@@ -146,6 +127,20 @@ export async function finishAuthentication(
     credential,
     newSignatureCounter: authenticatorData.signatureCounter,
   };
+}
+
+/** WebAuthn §7.2 step 20: `authenticatorData ‖ SHA-256(clientDataJSON)`. */
+async function assertionSignatureMessage(
+  authenticatorData: Uint8Array,
+  clientDataJSON: Uint8Array<ArrayBuffer>,
+): Promise<Uint8Array<ArrayBuffer>> {
+  const clientDataHash = await crypto.subtle.digest("SHA-256", clientDataJSON);
+  const message = new Uint8Array(
+    authenticatorData.length + clientDataHash.byteLength,
+  );
+  message.set(authenticatorData);
+  message.set(new Uint8Array(clientDataHash), authenticatorData.length);
+  return message;
 }
 
 /**

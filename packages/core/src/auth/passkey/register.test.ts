@@ -1,11 +1,18 @@
 import { describe, expect, test } from "vitest";
 
+import { encodeHex } from "../../encoding.js";
 import { userFactory } from "../../test/factories.js";
+import {
+  NONE_ATTESTATION,
+  NONE_ATTESTATION_RS256,
+  VECTOR_RP,
+} from "../../test/fixtures/simplewebauthn.js";
 import {
   buildAttestation,
   generatePasskeyKeyPair,
   leadingZeroYKeyPair,
   randomCredentialId,
+  seedChallenge,
 } from "../../test/fixtures/webauthn.js";
 import { createTestDb } from "../../test/harness.js";
 import { issueChallenge } from "./challenges.js";
@@ -94,6 +101,51 @@ describe("finishRegistration (positive ceremony with ES256)", () => {
 
     expect(verified.publicKey).toEqual(keyPair.publicKeySec1);
     expect(verified.publicKey[33]).toBe(0);
+  });
+});
+
+// Recorded responses from SimpleWebAuthn's server test suite (MIT); see the
+// fixture for the source.
+describe("finishRegistration (published SimpleWebAuthn vectors)", () => {
+  const vectorConfig = resolved(VECTOR_RP);
+
+  test("verifies a real ES256 attestation=none response", async () => {
+    const db = await createTestDb();
+    await seedChallenge(db, NONE_ATTESTATION.challenge);
+
+    const verified = await finishRegistration(
+      db,
+      vectorConfig,
+      NONE_ATTESTATION.response,
+    );
+
+    expect(verified.credentialId).toBe(NONE_ATTESTATION.response.id);
+    expect(encodeHex(verified.publicKey)).toBe(
+      NONE_ATTESTATION.publicKeySec1Hex,
+    );
+    expect(verified.signatureCounter).toBe(0);
+  });
+
+  test("refuses an attestation object that is not CBOR as a malformed response", async () => {
+    const db = await createTestDb();
+    await seedChallenge(db, NONE_ATTESTATION.challenge);
+    const { response } = NONE_ATTESTATION;
+
+    await expect(
+      finishRegistration(db, vectorConfig, {
+        ...response,
+        response: { ...response.response, attestationObject: "_w" },
+      }),
+    ).rejects.toMatchObject({ code: "invalid_response" });
+  });
+
+  test("refuses a real RS256 credential as an unsupported algorithm", async () => {
+    const db = await createTestDb();
+    await seedChallenge(db, NONE_ATTESTATION_RS256.challenge);
+
+    await expect(
+      finishRegistration(db, vectorConfig, NONE_ATTESTATION_RS256.response),
+    ).rejects.toMatchObject({ code: "unsupported_algorithm" });
   });
 });
 
