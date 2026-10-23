@@ -10,6 +10,7 @@ import {
 import {
   afterReview,
   asReviewNote,
+  commitsTheBranchCarries,
   fixerFor,
   gatesUntilGreen,
   readDeclinedTag,
@@ -515,5 +516,29 @@ describe("fixerFor", () => {
     expect(result.declined?.reason).toBe(
       "the fixer changed nothing and gave no reason",
     );
+  });
+});
+
+describe("commitsTheBranchCarries", () => {
+  const sandboxWhereGitSays = (stdout: string, exitCode = 0) => ({
+    exec: async (command: string) => ({
+      exitCode:
+        command === "git rev-list --count origin/main..HEAD" ? exitCode : 1,
+      stdout,
+      stderr: "",
+      durationMs: 0,
+    }),
+  });
+
+  test("counts the commits ahead of main, so a commit the agent made before it lost track of its session still ships", async () => {
+    expect(await commitsTheBranchCarries(sandboxWhereGitSays("1\n"))).toBe(1);
+  });
+
+  test("a branch level with main carries none", async () => {
+    expect(await commitsTheBranchCarries(sandboxWhereGitSays("0\n"))).toBe(0);
+  });
+
+  test("a git that cannot answer counts as none, so the ticket parks instead of shipping nothing", async () => {
+    expect(await commitsTheBranchCarries(sandboxWhereGitSays("", 128))).toBe(0);
   });
 });

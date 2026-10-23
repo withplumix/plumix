@@ -316,6 +316,16 @@ export interface GateOutcome {
   readonly waived: readonly WaivedGate[];
 }
 
+/** The branch starts at main, so what it carries past main is the implementer's, whether or not sandcastle saw it land. */
+export const commitsTheBranchCarries = async (
+  sandbox: Executor,
+): Promise<number> => {
+  const { exitCode, stdout } = await sandbox.exec(
+    "git rev-list --count origin/main..HEAD",
+  );
+  return exitCode === 0 ? Number(stdout.trim()) || 0 : 0;
+};
+
 export const gatesUntilGreen = async (
   sandbox: Executor,
   gates: readonly Gate[],
@@ -434,7 +444,10 @@ export const shipTicket = async (
       maxIterations: 40,
       idleTimeoutSeconds: AN_HOUR_IN_SECONDS,
     });
-    if (!implemented.commits.length) {
+    if (
+      !implemented.commits.length &&
+      (await commitsTheBranchCarries(sandbox)) === 0
+    ) {
       return {
         status: "blocked",
         reason:
