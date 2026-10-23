@@ -29,7 +29,7 @@ Descriptor fields (`PluginDescriptor` in `packages/core/src/plugin/define.ts`). 
 | Field                    | What it declares                                                       | Read by                                                                                                 |
 | ------------------------ | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `id`                     | `^[a-z][a-z0-9_-]*$`, max 64 chars; becomes path segments and RPC keys | `assertValidPluginId`; `installPlugins` rejects duplicates                                              |
-| `state`                  | Per-install factory, awaited before any `provides` (ADR 0043)          | `installPlugins`                                                                                        |
+| `state`                  | Per-install factory, awaited before any `provides` (ADR 0058)          | `installPlugins`                                                                                        |
 | `provides`               | `extendPluginContext`, `extendAppContext`                              | `createPluginProvidesContext`                                                                           |
 | `setup`                  | Required. All registrations below                                      | `createPluginSetupContext`                                                                              |
 | `afterSetup`             | Registrations derived from other plugins; gets `ctx.plugins`           | `createPluginAfterSetupContext`                                                                         |
@@ -98,7 +98,7 @@ The plugin authoring guide is `apps/docs/src/content/docs/plugins/overview.mdx`.
 ## Invariants
 
 - Core owns what would be wrong without a plugin; a plugin owns what would only be missing ([ADR 0002](../adr/0002-core-owns-what-would-be-wrong.md)). `registerPublicRoute` exists so a plugin can answer at the site root.
-- Plugin state comes from `state`, once per install, private to the plugin ([ADR 0043](../adr/0043-a-plugins-per-install-state-comes-from-its-state-factory.md)). Guarded by the state tests in `packages/core/src/runtime/install-plugins.test.ts` and the type tests in `packages/core/src/plugin/define.test.ts`.
+- Plugin state comes from `state`, once per install, private to the plugin ([ADR 0058](../adr/0058-a-plugins-per-install-state-comes-from-its-state-factory.md)). Guarded by the state tests in `packages/core/src/runtime/install-plugins.test.ts` and the type tests in `packages/core/src/plugin/define.test.ts`.
 - Sign-in methods are declared on the descriptor; a duplicate or reserved name fails boot ([ADR 0041](../adr/0041-a-sign-in-method-is-a-registered-extension.md)).
 - `provides` finishes before any `setup`, and an `extendAppContext` key can't shadow a base `AppContext` field or `__proto__`. Guarded by `packages/core/src/plugin/provides.test.ts`.
 - Two plugins with the same id, or two owners of one registered name, fail boot (`duplicatePluginIdInConfig`, `DuplicateRegistrationError`). Guarded by `packages/core/src/runtime/install-plugins.test.ts`.
