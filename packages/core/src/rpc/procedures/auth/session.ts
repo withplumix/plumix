@@ -1,6 +1,6 @@
 import type { AuthSessionOutput } from "./schemas.js";
 import { authenticateTraced } from "../../../auth/authenticator.js";
-import { capabilitiesForRole } from "../../../auth/rbac.js";
+import { sessionUserOf } from "../../../auth/session-user.js";
 import { users } from "../../../db/schema/users.js";
 import { base } from "../../base.js";
 
@@ -12,16 +12,8 @@ export const session = base.handler(
   async ({ context }): Promise<AuthSessionOutput> => {
     const result = await authenticateTraced(context, context.authenticator);
     if (result) {
-      const { id, email, name, avatarUrl, role } = result.user;
       return {
-        user: {
-          id,
-          email,
-          name,
-          avatarUrl,
-          role,
-          capabilities: [...capabilitiesForRole(role, context.plugins)],
-        },
+        user: sessionUserOf(result.user, context.plugins),
         needsBootstrap: false,
       };
     }

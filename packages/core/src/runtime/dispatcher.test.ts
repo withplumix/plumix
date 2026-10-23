@@ -987,7 +987,7 @@ describe("dispatcher — theme reads the auth client's render context", () => {
     );
   });
 
-  test("useCan answers from the signed-in visitor's role during a public render", async () => {
+  test("a public render shows a signed-in editor the controls their role grants", async () => {
     const blog = definePlugin("test-blog", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
     });

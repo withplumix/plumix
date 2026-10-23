@@ -61,7 +61,6 @@ describe("authClient.can", () => {
 
   test("is false when signed out", async () => {
     const h = await createDispatcherHarness();
-    await h.seedUser("admin");
     const { authClient, session } = clientOf(h, null);
 
     await session.refresh();
