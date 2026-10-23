@@ -74,15 +74,6 @@ const D = {
     message:
       "Tells the assistants and model trainers that honour robots.txt to stay out.",
   },
-  indexNowKey: {
-    id: "plugin.seo.settings.indexnow_key",
-    message: "IndexNow key",
-  },
-  indexNowKeyDescription: {
-    id: "plugin.seo.settings.indexnow_key.description",
-    message:
-      "Set one to tell search engines within minutes of a publish. Empty means no notification.",
-  },
   pageLabel: { id: "plugin.seo.settings.page.label", message: "SEO" },
   pageDescription: {
     id: "plugin.seo.settings.page.description",
@@ -203,8 +194,6 @@ export interface SeoSettings {
   readonly indexNotFound: boolean;
   /** True disallows the named AI crawlers in `robots.txt`. */
   readonly blockAiCrawlers: boolean;
-  /** The IndexNow key, or null — which is what holds notification off. */
-  readonly indexNowKey: string | null;
 }
 
 const DEFAULT_SEPARATOR = "\u00b7";
@@ -283,7 +272,6 @@ export function readSeoSettings(
     indexPaginated: boolish(own.index_paginated) ?? false,
     indexNotFound: boolish(own.index_not_found) ?? false,
     blockAiCrawlers: boolish(own.block_ai_crawlers) ?? false,
-    indexNowKey: nonEmpty(own.indexnow_key),
   };
 }
 
@@ -361,14 +349,6 @@ const SITE_WIDE_FIELDS: readonly MetaBoxFieldInput[] = [
     label: D.blockAiCrawlers,
     description: D.blockAiCrawlersDescription,
     default: false,
-  },
-  {
-    key: "indexnow_key",
-    type: "string",
-    inputType: "text",
-    label: D.indexNowKey,
-    description: D.indexNowKeyDescription,
-    maxLength: 128,
   },
 ];
 

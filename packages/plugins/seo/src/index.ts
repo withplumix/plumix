@@ -13,7 +13,6 @@ import type { SeoSitemapsOptions } from "./sitemap.js";
 import { createRegisterSitemap } from "./contributed.js";
 import { applySeoHead } from "./head.js";
 import { assertIndexViewsNameViews } from "./indexable.js";
-import { registerIndexNow } from "./indexnow.js";
 import { registerSeoEditorSurfaces } from "./meta-box.js";
 import { SERP_PREVIEW_INPUT_TYPE } from "./preview-box.js";
 import { registerSeoRoutes, registerSitemapRoutes } from "./routes.js";
@@ -142,7 +141,6 @@ export function seo(
     setup: (ctx) => {
       registerSeoSettingsDefaults(ctx);
       registerSeoRoutes(ctx, { llmsTxt: options.llmsTxt ?? true });
-      registerIndexNow(ctx);
       // Declared here so the bundler synthesises the admin-chunk registration.
       ctx.registerFieldType({
         type: SERP_PREVIEW_INPUT_TYPE,

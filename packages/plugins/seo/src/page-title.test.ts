@@ -215,7 +215,6 @@ describe("patternTitle", () => {
     indexPaginated: false,
     indexNotFound: false,
     blockAiCrawlers: false,
-    indexNowKey: null,
     ...overrides,
   });
 

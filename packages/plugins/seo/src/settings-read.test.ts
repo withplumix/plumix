@@ -23,7 +23,6 @@ describe("readSeoSettings", () => {
       indexPaginated: false,
       indexNotFound: false,
       blockAiCrawlers: false,
-      indexNowKey: null,
     });
   });
 

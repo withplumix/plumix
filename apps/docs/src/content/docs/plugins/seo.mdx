@@ -497,24 +497,6 @@ ctx.addFilter(
 );
 ```
 
-## Instant indexing
-
-Setting an **IndexNow key** turns on notification. Publishing or updating an entry submits its URL to the shared IndexNow endpoint, which fans out to every participating engine, so a change is picked up in minutes rather than at the next crawl. The key is served at `/indexnow-key.txt`, which the submission names as its `keyLocation` — the ownership proof an engine fetches back.
-
-Every gate the head and the sitemap apply is applied here too. A draft, an entry an editor marked **Hide from search engines**, an entry of a non-public type and a site held out of the index are never submitted — a page nobody may index is a page nobody is told about. An entry's access policy is asked for anonymous visitors, not for the editor saving it, so a members-only entry is never submitted, and a public or soft-challenged one is.
-
-One publish is one submission: `entry.update` fires `entry:updated` and `entry:published` for a publish transition, and both reach this, so the submission is memoized per entry for the request — a duplicate is what an endpoint's abuse handling watches for.
-
-The submission is deferred, so it never joins the request the editor is waiting on, and every failure — an unreachable endpoint, a timeout, a refused key — becomes a log line. A missed notification is not a failed publish.
-
-Removals are not notified. Trashing or unpublishing an entry drops it from the sitemap and leaves the URL to the engine's own recrawl, which is what tells it the page is gone.
-
-<Aside type="note" title="Off until configured">
-  With no key set, nothing is submitted and `/indexnow-key.txt` is a 404. The
-  engines expect a hexadecimal string of 8 to 128 characters — generate one and
-  paste it into the settings screen.
-</Aside>
-
 ## Settings
 
 The plugin owns one settings page, **SEO**, composed of three groups. Each is its own card with its own Save, and each is gated by `settings:manage` — a contributor never sees the page.
@@ -527,7 +509,6 @@ The plugin owns one settings page, **SEO**, composed of three groups. Each is it
 - **Title separator** and **Default title pattern** — the two title-pattern settings above.
 - **Index search-results pages**, **Index page 2 and beyond of an archive**, **Index pages that were not found** — the three arms of the chain that are off by default.
 - **Block AI crawlers** — adds the AI-crawler group to `robots.txt` and withholds the `llms.txt` map.
-- **IndexNow key** — turns on publish-time notification. Empty means none.
 - One **title pattern** and one **indexing toggle** per public entry type, and one **indexing toggle** per public taxonomy. Those fields are enumerated from what the site registered, so a type a plugin registers during its own `setup` gets its own. A type registered later — from the `afterSetup` of a plugin listed after this one — is too late to be enumerated, and a name that is not `[a-zA-Z0-9_-]+` cannot be a settings key, so it gets no per-type fields either.
 
 **Site verification** holds the token each engine hands you to prove you own the site. Every one set reaches the head of every page except one that was not found, under the name that engine reads:
