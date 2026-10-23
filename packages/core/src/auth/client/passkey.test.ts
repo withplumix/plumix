@@ -1,5 +1,7 @@
+import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import { credentials as credentialsTable } from "../../db/schema/credentials.js";
 import { decodeBase64url, encodeBase64url } from "../../encoding.js";
 import {
   createDispatcherHarness,
@@ -315,7 +317,7 @@ describe("authClient.passkey.list", () => {
 });
 
 describe("authClient.passkey.rename", () => {
-  test("renames one of the user's passkeys, as the list then shows", async () => {
+  test("renames one of the user's passkeys", async () => {
     const { h, user, authClient } = await signedInClient();
     const passkey = await h.factory.credential.create({
       userId: user.id,
@@ -328,8 +330,11 @@ describe("authClient.passkey.rename", () => {
       data: { id: passkey.id, name: "Work laptop" },
       error: null,
     });
-    const listed = await authClient.passkey.list();
-    expect(listed.data?.map(({ name }) => name)).toEqual(["Work laptop"]);
+    const stored = await h.db
+      .select()
+      .from(credentialsTable)
+      .where(eq(credentialsTable.userId, user.id));
+    expect(stored.map(({ name }) => name)).toEqual(["Work laptop"]);
   });
 });
 
@@ -348,8 +353,11 @@ describe("authClient.passkey.remove", () => {
     const result = await authClient.passkey.remove(removed.id);
 
     expect(result).toEqual({ data: { id: removed.id }, error: null });
-    const listed = await authClient.passkey.list();
-    expect(listed.data?.map(({ id }) => id)).toEqual([kept.id]);
+    const stored = await h.db
+      .select()
+      .from(credentialsTable)
+      .where(eq(credentialsTable.userId, user.id));
+    expect(stored.map(({ id }) => id)).toEqual([kept.id]);
   });
 
   test("refuses to remove the user's only passkey with last_credential, keeping it", async () => {
@@ -363,8 +371,11 @@ describe("authClient.passkey.remove", () => {
 
     expect(result.error?.code).toBe("last_credential");
     expect(result.error?.message.id).toBe("authClient.error.lastCredential");
-    const listed = await authClient.passkey.list();
-    expect(listed.data?.map(({ id }) => id)).toEqual([only.id]);
+    const stored = await h.db
+      .select()
+      .from(credentialsTable)
+      .where(eq(credentialsTable.userId, user.id));
+    expect(stored.map(({ id }) => id)).toEqual([only.id]);
   });
 });
 
@@ -424,5 +435,13 @@ describe("a refusal that reaches passkey.list before core does", () => {
     const result = await clientFor(server).passkey.list();
 
     expect(result.error?.code).toBe("unknown");
+  });
+
+  test("answered 200 without an RPC envelope resolves unknown", async () => {
+    const server = serverAnswering(() => Response.json({}));
+
+    const result = await clientFor(server).passkey.list();
+
+    expect(result).toMatchObject({ data: null, error: { code: "unknown" } });
   });
 });
