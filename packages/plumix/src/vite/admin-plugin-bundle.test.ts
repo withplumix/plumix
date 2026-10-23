@@ -327,6 +327,110 @@ describe("assemblePluginAdminBundle", () => {
     expect(bundle).toContain("registerPluginMarkSchema");
     expect(bundle).toContain('"acme/highlight-warning"');
   });
+
+  test("auto-emits a register call for a plugin's declared dashboard widget", async () => {
+    await writeFile(
+      resolve(workspace, "src/admin.ts"),
+      "export const Widget = () => null;",
+    );
+    const descriptor = definePlugin(
+      "acme",
+      (ctx) => {
+        ctx.registerDashboardWidget({
+          id: "acme:stats",
+          title: "Stats",
+          component: "Widget",
+        });
+      },
+      { adminEntry: "./src/admin.ts" },
+    );
+
+    const { registry } = await installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [descriptor],
+    });
+
+    const adminDest = resolve(workspace, "dist");
+    await mkdir(adminDest, { recursive: true });
+
+    await assemblePluginAdminBundle({
+      plugins: [descriptor as AssemblerPlugin],
+      registry,
+      adminDest,
+      projectRoot: workspace,
+    });
+
+    const bundle = await readFile(
+      resolve(adminDest, "plugins/site-bundle.js"),
+      "utf8",
+    );
+    expect(bundle).toContain("registerPluginDashboardWidget");
+    expect(bundle).toContain('"acme:stats"');
+    // Inside the `window.plumix` guard, bound to the plugin's `Widget` export.
+    expect(bundle).toMatch(
+      /var (\w+)=\w+\(\(\)=>null,"Widget"\);var (\w+)=window\.plumix;\2&&\2\.registerPluginDashboardWidget\("acme:stats",\1\);/,
+    );
+  });
+
+  test("emits a dashboard widget only against the plugin that registered it", async () => {
+    await writeFile(
+      resolve(workspace, "src/admin.ts"),
+      "export const Widget = () => null;",
+    );
+    await writeFile(
+      resolve(workspace, "src/other-admin.ts"),
+      "export const OtherWidget = () => 0;",
+    );
+    const acme = definePlugin(
+      "acme",
+      (ctx) => {
+        ctx.registerDashboardWidget({
+          id: "acme:stats",
+          title: "Stats",
+          component: "Widget",
+        });
+      },
+      { adminEntry: "./src/admin.ts" },
+    );
+    const other = definePlugin(
+      "other",
+      (ctx) => {
+        ctx.registerDashboardWidget({
+          id: "other:stats",
+          title: "Other stats",
+          component: "OtherWidget",
+        });
+      },
+      { adminEntry: "./src/other-admin.ts" },
+    );
+
+    const { registry } = await installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [acme, other],
+    });
+
+    const adminDest = resolve(workspace, "dist");
+    await mkdir(adminDest, { recursive: true });
+
+    await assemblePluginAdminBundle({
+      plugins: [acme, other] as AssemblerPlugin[],
+      registry,
+      adminDest,
+      projectRoot: workspace,
+    });
+
+    const bundle = await readFile(
+      resolve(adminDest, "plugins/site-bundle.js"),
+      "utf8",
+    );
+    expect(bundle.match(/registerPluginDashboardWidget\(/g)).toHaveLength(2);
+    expect(bundle).toMatch(
+      /var (\w+)=\w+\(\(\)=>null,"Widget"\);.*registerPluginDashboardWidget\("acme:stats",\1\)/,
+    );
+    expect(bundle).toMatch(
+      /var (\w+)=\w+\(\(\)=>0,"OtherWidget"\);.*registerPluginDashboardWidget\("other:stats",\1\)/,
+    );
+  });
 });
 
 /** The stylesheet `@plumix/admin`'s build copies to `dist/theme.css`. */
