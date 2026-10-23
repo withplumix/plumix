@@ -5,8 +5,6 @@ export interface Gate {
   readonly command: string;
   readonly appliesWhen?: (changedPaths: readonly string[]) => boolean;
   readonly requires?: string;
-  /** Minutes, not seconds: a repair runs it only when CI failed it. */
-  readonly slow?: boolean;
 }
 
 export interface GateFailure {
@@ -57,34 +55,32 @@ export const GATES: readonly Gate[] = [
     command: `pnpm exec turbo run publint surface:check ${TURBO_GATE_FLAGS}`,
   },
   {
-    name: "lint",
-    slow: true,
-    command: `pnpm exec turbo run lint --continue ${TURBO_GATE_FLAGS} -- --cache --cache-location .cache/.eslintcache`,
-  },
-  {
     name: "typecheck",
     command: `pnpm exec turbo run typecheck ${TURBO_GATE_FLAGS}`,
   },
+];
+
+/**
+ * CI runs these in parallel; locally they ran one after another and took 18 of
+ * the 27 gate minutes per ticket on 2026-10-23. The implementer runs the tests it
+ * touched, and a repair runs whichever of these CI failed.
+ */
+export const GATES_LEFT_TO_CI: readonly Gate[] = [
+  {
+    name: "lint",
+    command: `pnpm exec turbo run lint --continue ${TURBO_GATE_FLAGS} -- --cache --cache-location .cache/.eslintcache`,
+  },
   {
     name: "test",
-    slow: true,
     command: `pnpm exec turbo run test:unit --continue --concurrency=2 ${TURBO_GATE_FLAGS}`,
   },
   {
     name: "e2e",
-    slow: true,
     command: `pnpm exec turbo run test:e2e ${TURBO_GATE_FLAGS}`,
     appliesWhen: touches(RENDER_AND_ADMIN_PATHS),
     requires:
       "pnpm --filter @plumix/admin exec node -e \"require('@playwright/test').chromium.launch().then((b) => b.close())\"",
   },
-];
-
-/**
- * It never failed in 67 local runs and CI runs it in parallel, so locally it
- * only delayed the PR. A repair still runs it once CI has failed it.
- */
-export const GATES_LEFT_TO_CI: readonly Gate[] = [
   {
     name: "attw",
     command: `pnpm exec turbo run attw ${TURBO_GATE_FLAGS}`,

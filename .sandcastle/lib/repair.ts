@@ -116,7 +116,7 @@ export const gatesARepairRuns = (
   return [
     INSTALL_GATE,
     ...GATES_LEFT_TO_CI.filter((gate) => failedInCi.has(gate)),
-    ...GATES.filter((gate) => !gate.slow || failedInCi.has(gate)),
+    ...GATES,
   ];
 };
 
