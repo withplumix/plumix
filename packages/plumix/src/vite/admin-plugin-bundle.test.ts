@@ -327,6 +327,93 @@ describe("assemblePluginAdminBundle", () => {
     expect(bundle).toContain("registerPluginMarkSchema");
     expect(bundle).toContain('"acme/highlight-warning"');
   });
+
+  test("auto-emits a register call for a plugin's declared dashboard widget", async () => {
+    await writeFile(
+      resolve(workspace, "src/admin.ts"),
+      "export const Widget = () => null;",
+    );
+    const descriptor = definePlugin(
+      "acme",
+      (ctx) => {
+        ctx.registerDashboardWidget({
+          id: "acme:stats",
+          title: "Stats",
+          component: "Widget",
+        });
+      },
+      { adminEntry: "./src/admin.ts" },
+    );
+
+    const { registry } = await installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [descriptor],
+    });
+
+    const adminDest = resolve(workspace, "dist");
+    await mkdir(adminDest, { recursive: true });
+
+    await assemblePluginAdminBundle({
+      plugins: [descriptor as AssemblerPlugin],
+      registry,
+      adminDest,
+      projectRoot: workspace,
+    });
+
+    const bundle = await readFile(
+      resolve(adminDest, "plugins/site-bundle.js"),
+      "utf8",
+    );
+    expect(bundle).toContain("registerPluginDashboardWidget");
+    expect(bundle).toContain('"acme:stats"');
+  });
+
+  test("emits a dashboard widget only against the plugin that registered it", async () => {
+    await writeFile(
+      resolve(workspace, "src/admin.ts"),
+      "export const Widget = () => null;",
+    );
+    const withEntry = definePlugin(
+      "acme",
+      (ctx) => {
+        ctx.registerDashboardWidget({
+          id: "acme:stats",
+          title: "Stats",
+          component: "Widget",
+        });
+      },
+      { adminEntry: "./src/admin.ts" },
+    );
+    const withoutEntry = definePlugin("other", (ctx) => {
+      ctx.registerDashboardWidget({
+        id: "other:stats",
+        title: "Other stats",
+        component: "Widget",
+      });
+    });
+
+    const { registry } = await installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [withEntry, withoutEntry],
+    });
+
+    const adminDest = resolve(workspace, "dist");
+    await mkdir(adminDest, { recursive: true });
+
+    await assemblePluginAdminBundle({
+      plugins: [withEntry, withoutEntry] as AssemblerPlugin[],
+      registry,
+      adminDest,
+      projectRoot: workspace,
+    });
+
+    const bundle = await readFile(
+      resolve(adminDest, "plugins/site-bundle.js"),
+      "utf8",
+    );
+    expect(bundle).toContain('"acme:stats"');
+    expect(bundle).not.toContain('"other:stats"');
+  });
 });
 
 /** The stylesheet `@plumix/admin`'s build copies to `dist/theme.css`. */

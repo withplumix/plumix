@@ -207,6 +207,13 @@ function buildSynthesisedEntry({
           `${ns}[${JSON.stringify(page.component)}]);`,
       );
     }
+    for (const widget of registry.dashboardWidgets.values()) {
+      if (widget.registeredBy !== plugin.id) continue;
+      registerLines.push(
+        `  __plumix.registerPluginDashboardWidget(${JSON.stringify(widget.id)}, ` +
+          `${ns}[${JSON.stringify(widget.component)}]);`,
+      );
+    }
     for (const fieldType of registry.fieldTypes.values()) {
       if (fieldType.registeredBy !== plugin.id) continue;
       registerLines.push(
