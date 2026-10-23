@@ -834,3 +834,21 @@ describe("lingui/no-unlocalized-strings under the strict config", () => {
     ).resolves.toEqual([21]);
   });
 });
+
+describe("the react config's automatic JSX runtime", () => {
+  it("reports a React import that only JSX would have used", async () => {
+    const withReact = new ESLint({
+      cwd: fixturesDir,
+      overrideConfigFile: true,
+      overrideConfig: [...baseConfig, ...reactConfig],
+    });
+    const [result] = await withReact.lintFiles(["src/unused-react-import.tsx"]);
+    expect(
+      (result?.messages ?? [])
+        .filter(
+          (message) => message.ruleId === "@typescript-eslint/no-unused-vars",
+        )
+        .map((message) => message.line),
+    ).toEqual([1]);
+  });
+});
