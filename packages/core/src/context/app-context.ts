@@ -85,6 +85,15 @@ export interface AuthNamespace {
 export type DeferFn = (promise: Promise<unknown>) => void;
 
 /**
+ * `fetch` bounded by default: a call rejects with a `TimeoutError` after 10s.
+ * `timeout` tightens that per call, or `false` lifts it for a long download.
+ */
+export type PlumixFetch = (
+  input: RequestInfo | URL,
+  init?: RequestInit & { readonly timeout?: number | false },
+) => Promise<Response>;
+
+/**
  * Declaration-merge target for helpers a plugin registers with
  * `extendAppContext(key, value)`; augment it so `ctx.<key>` is typed.
  */
@@ -127,7 +136,7 @@ export interface AppContextBase<
    */
   readonly telemetry: TelemetryCollector;
   /** Traced `fetch`, one span per call; global `fetch` is not patched. */
-  readonly fetch: typeof globalThis.fetch;
+  readonly fetch: PlumixFetch;
   /**
    * Consumers whose head-sampling vote said yes for this request — the
    * targets of post-response snapshot delivery. Absent when nothing sampled

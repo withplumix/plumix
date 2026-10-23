@@ -1,6 +1,7 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, expectTypeOf, test, vi } from "vitest";
 
 import type { Mailer } from "../auth/contract/mailer.js";
+import type { AppContext } from "./app-context.js";
 import { testConfig } from "../test/config.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 import { createAppContext } from "./app.js";
@@ -155,5 +156,190 @@ describe("createAppContext platform I/O tracing", () => {
       "cdn: match",
       "mailer: send",
     ]);
+  });
+});
+
+describe("createAppContext ctx.fetch timeout", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  // Both upstreams reject with their signal's reason once it aborts, the way
+  // the platform `fetch` does.
+  function silentUpstream(): typeof globalThis.fetch {
+    return async (_input, init) => {
+      await new Promise((resolve) => {
+        init?.signal?.addEventListener("abort", resolve, { once: true });
+      });
+      init?.signal?.throwIfAborted();
+      return new Response("unreachable");
+    };
+  }
+
+  function upstreamAnsweringAfter(ms: number): typeof globalThis.fetch {
+    return async (_input, init) => {
+      await new Promise((resolve) => {
+        setTimeout(resolve, ms);
+        init?.signal?.addEventListener("abort", resolve, { once: true });
+      });
+      init?.signal?.throwIfAborted();
+      return new Response("done");
+    };
+  }
+
+  // Node's `AbortSignal.timeout` runs on an internal timer the fake clock
+  // can't reach, so the clock stub rebuilds it on the faked `setTimeout`.
+  function useFakeClock(): void {
+    vi.useFakeTimers();
+    vi.spyOn(AbortSignal, "timeout").mockImplementation((ms) => {
+      const controller = new AbortController();
+      setTimeout(() => {
+        controller.abort(
+          new DOMException("The operation timed out.", "TimeoutError"),
+        );
+      }, ms);
+      return controller.signal;
+    });
+  }
+
+  async function fetchContext(): Promise<ReturnType<typeof createAppContext>> {
+    const harness = await createDispatcherHarness();
+    return createAppContext({
+      db: harness.db,
+      env: harness.env,
+      request: new Request("https://cms.example/"),
+      hooks: harness.app.hooks,
+      plugins: harness.app.plugins,
+      // A consumer without `sample` activates the real collector.
+      config: testConfig({ telemetry: { consumers: [{ id: "in-test" }] } }),
+    });
+  }
+
+  test("a call to an upstream that never answers rejects with TimeoutError after 10s", async () => {
+    const ctx = await fetchContext();
+    vi.stubGlobal("fetch", silentUpstream());
+    useFakeClock();
+    let failure: unknown;
+
+    void ctx.fetch("https://slow.example/").catch((error: unknown) => {
+      failure = error;
+    });
+    await vi.advanceTimersByTimeAsync(9_999);
+    expect(failure).toBeUndefined();
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(failure).toBeInstanceOf(DOMException);
+    expect(failure).toMatchObject({ name: "TimeoutError" });
+  });
+
+  test("a call passing { timeout: 2000 } rejects with TimeoutError after 2s", async () => {
+    const ctx = await fetchContext();
+    vi.stubGlobal("fetch", silentUpstream());
+    useFakeClock();
+    let failure: unknown;
+
+    void ctx
+      .fetch("https://slow.example/", { timeout: 2000 })
+      .catch((error: unknown) => {
+        failure = error;
+      });
+    await vi.advanceTimersByTimeAsync(1_999);
+    expect(failure).toBeUndefined();
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(failure).toMatchObject({ name: "TimeoutError" });
+  });
+
+  test("a call passing { timeout: false } waits for an upstream that answers after a minute", async () => {
+    const ctx = await fetchContext();
+    vi.stubGlobal("fetch", upstreamAnsweringAfter(60_000));
+    useFakeClock();
+
+    const call = ctx.fetch("https://download.example/", { timeout: false });
+    await vi.advanceTimersByTimeAsync(60_000);
+
+    expect(await (await call).text()).toBe("done");
+  });
+
+  test("a caller's signal that aborts first rejects with that signal's reason", async () => {
+    const ctx = await fetchContext();
+    vi.stubGlobal("fetch", silentUpstream());
+    useFakeClock();
+    const caller = new AbortController();
+    const reason = new Error("the visitor left");
+    let failure: unknown;
+
+    void ctx
+      .fetch("https://slow.example/", { signal: caller.signal })
+      .catch((error: unknown) => {
+        failure = error;
+      });
+    setTimeout(() => caller.abort(reason), 500);
+    await vi.advanceTimersByTimeAsync(500);
+
+    expect(failure).toBe(reason);
+  });
+
+  test("a Request input's own signal still aborts the call", async () => {
+    const ctx = await fetchContext();
+    vi.stubGlobal("fetch", silentUpstream());
+    useFakeClock();
+    const caller = new AbortController();
+    let failure: unknown;
+
+    void ctx
+      .fetch(new Request("https://slow.example/", { signal: caller.signal }))
+      .catch((error: unknown) => {
+        failure = error;
+      });
+    setTimeout(() => caller.abort(new Error("the visitor left")), 500);
+    await vi.advanceTimersByTimeAsync(500);
+
+    expect(failure).toMatchObject({ message: "the visitor left" });
+  });
+
+  test("the platform fetch never receives the timeout key", async () => {
+    const ctx = await fetchContext();
+    const seen: RequestInit[] = [];
+    vi.stubGlobal("fetch", (_input: RequestInfo | URL, init: RequestInit) => {
+      seen.push(init);
+      return Promise.resolve(new Response("ok"));
+    });
+
+    await ctx.fetch("https://api.example/", { method: "POST", timeout: 2000 });
+
+    expect(seen.map((init) => Object.keys(init).sort())).toEqual([
+      ["method", "signal"],
+    ]);
+  });
+
+  test("a timed-out call's span says it timed out and after how long", async () => {
+    const ctx = await fetchContext();
+    vi.stubGlobal("fetch", silentUpstream());
+    useFakeClock();
+
+    void ctx
+      .fetch("https://slow.example/", { timeout: 2000 })
+      .catch(() => undefined);
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(ctx.telemetry.getSpans()).toMatchObject([
+      {
+        name: "fetch: GET slow.example",
+        status: "error",
+        durationMs: 2000,
+        error: { name: "TimeoutError", message: "timed out after 2s" },
+      },
+    ]);
+  });
+
+  test("ctx.fetch's init takes a timeout in milliseconds, or false", () => {
+    type FetchInit = NonNullable<Parameters<AppContext["fetch"]>[1]>;
+
+    expectTypeOf<FetchInit["timeout"]>().toEqualTypeOf<
+      number | false | undefined
+    >();
   });
 });

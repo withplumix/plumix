@@ -1,4 +1,7 @@
+import type { PlumixFetch } from "./app-context.js";
 import type { TelemetryCollector } from "./telemetry.js";
+
+const DEFAULT_TIMEOUT_MS = 10_000;
 
 /**
  * The span label carries the host (not the full URL) so a timeline groups
@@ -15,7 +18,7 @@ function spanName(method: string, url: string): string {
  */
 export function createTracedFetch(
   getTelemetry: () => TelemetryCollector,
-): typeof globalThis.fetch {
+): PlumixFetch {
   return (input, init) => {
     // `init.method` wins over a Request input's method — the same precedence
     // `new Request(input, init)` applies inside fetch itself.
@@ -23,12 +26,41 @@ export function createTracedFetch(
       init?.method ?? (input instanceof Request ? input.method : "GET")
     ).toUpperCase();
     const url = input instanceof Request ? input.url : String(input);
+    const { timeout = DEFAULT_TIMEOUT_MS, ...platformInit } = init ?? {};
+    // `init.signal` replaces a Request input's own, so both are kept.
+    const callerSignal =
+      platformInit.signal ??
+      (input instanceof Request ? input.signal : undefined);
+    const timeoutSignal =
+      timeout === false ? undefined : AbortSignal.timeout(timeout);
+    const signals = [callerSignal, timeoutSignal].filter(
+      (signal) => signal !== undefined,
+    );
     return getTelemetry().span(spanName(method, url), async (s) => {
       s.set("http.request.method", method);
       s.set("url.full", url);
-      const response = await globalThis.fetch(input, init);
-      s.set("http.response.status_code", response.status);
-      return response;
+      try {
+        const response = await globalThis.fetch(input, {
+          ...platformInit,
+          ...(timeoutSignal && { signal: AbortSignal.any(signals) }),
+        });
+        s.set("http.response.status_code", response.status);
+        return response;
+      } catch (error) {
+        // Still the standard `TimeoutError`, its message naming the duration
+        // so the span says how long the call was given.
+        if (
+          timeout !== false &&
+          timeoutSignal?.aborted &&
+          error === timeoutSignal.reason
+        ) {
+          throw new DOMException(
+            `timed out after ${timeout / 1000}s`,
+            "TimeoutError",
+          );
+        }
+        throw error;
+      }
     });
   };
 }
