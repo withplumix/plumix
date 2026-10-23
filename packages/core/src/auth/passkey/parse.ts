@@ -43,7 +43,7 @@ interface AttestationObject {
 
 const UTF8 = new TextDecoder("utf-8", { fatal: true });
 
-/** WebAuthn §5.8.1. Throws `invalid_response` when it isn't client data. */
+/** Throws `invalid_response` when it isn't client data. */
 export function parseClientData(bytes: Uint8Array): ClientData {
   const parsed = v.safeParse(clientDataSchema, decodeJson(bytes));
   if (!parsed.success) throw malformed("client data");
@@ -73,7 +73,7 @@ function normalizeChallenge(challenge: string): string {
   }
 }
 
-/** WebAuthn §6.1. Throws `invalid_response` on truncated input. */
+/** Throws `invalid_response` on truncated input. */
 export function parseAuthenticatorData(bytes: Uint8Array): AuthenticatorData {
   if (bytes.length < HEADER_LENGTH) {
     throw malformed("authenticator data is truncated");
@@ -116,7 +116,7 @@ export async function rpIdHashMatches(
   return expected.every((byte, i) => byte === data.rpIdHash[i]);
 }
 
-/** WebAuthn §6.5. Throws `invalid_response` when it isn't one. */
+/** Throws `invalid_response` when it isn't one. */
 export function parseAttestationObject(bytes: Uint8Array): AttestationObject {
   const object = decodeCbor(bytes);
   if (!(object instanceof Map)) throw malformed("attestation object");
@@ -128,7 +128,6 @@ export function parseAttestationObject(bytes: Uint8Array): AttestationObject {
   return { format, authenticatorData: parseAuthenticatorData(authData) };
 }
 
-/** RFC 9053 §7.1 and the IANA COSE registries. */
 const COSE_KTY = 1;
 const COSE_ALG = 3;
 const COSE_EC2_CRV = -1;

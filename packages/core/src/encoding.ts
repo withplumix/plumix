@@ -1,9 +1,9 @@
-// Base64url (RFC 4648 §5) and hex over `btoa`/`atob`: `Uint8Array.fromBase64`
-// and `toHex` are missing from Node 24 and older browsers.
-
 const BASE64URL = /^[A-Za-z0-9_-]*$/;
 
-/** Unpadded. */
+/**
+ * Unpadded base64url over `btoa`: `Uint8Array.prototype.toBase64` is missing
+ * from Node 24 and older browsers.
+ */
 export function encodeBase64url(bytes: Uint8Array): string {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
