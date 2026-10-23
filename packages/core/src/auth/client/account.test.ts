@@ -242,6 +242,29 @@ describe("authClient.account.setLocale", () => {
     expect(result.error).toBeNull();
     expect(result.data?.name).toBe("After");
   });
+
+  test("an account nobody loaded stays unloaded", async () => {
+    const { authClient, procedures } = await signedInClient(
+      "subscriber",
+      bilingual,
+    );
+
+    await authClient.account.setLocale("ar");
+
+    expect(procedures).not.toContain("user/get");
+  });
+
+  test("an answer without a locale resolves unknown", async () => {
+    const { session } = await signedInClient("subscriber", bilingual);
+    const store = createAccountStore(
+      () => Promise.resolve(success({ json: {} })),
+      session,
+    );
+
+    const result = await store.setLocale("ar");
+
+    expect(result.error?.code).toBe("unknown");
+  });
 });
 
 function nextChange(store: { subscribe: (listener: () => void) => unknown }) {
