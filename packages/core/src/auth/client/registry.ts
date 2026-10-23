@@ -6,6 +6,7 @@ import type {
   passkeyClient,
 } from "./core-methods.js";
 import type { AuthMethodClient, RedirectOptions } from "./define.js";
+import type { AuthClientKernelKey } from "./kernel-keys.js";
 import type { AuthMethods } from "./render-context.js";
 import type { AuthResult } from "./result.js";
 import type { Session } from "./session.js";
@@ -99,7 +100,13 @@ export interface AuthClientAccount {
   update(patch: AccountPatch): Promise<AuthResult<Account>>;
 }
 
-export type AuthClient = {
+/** Refuses a member whose key `AUTH_CLIENT_KERNEL_KEYS` doesn't reserve. */
+type ReservedKernel<
+  T extends { [K in keyof T]: K extends AuthClientKernelKey ? unknown : never },
+> = T;
+
+/** The members the auth client answers itself, never a sign-in method. */
+export type AuthClientKernel = ReservedKernel<{
   readonly account: AuthClientAccount;
   /** Loaded on first use, never from the server render. */
   useAccount(): AccountState;
@@ -115,4 +122,6 @@ export type AuthClient = {
   useAuthMethods(): AuthMethods;
   /** For a plain `<form action>` or `<a href>`, which works with no script. */
   url(target: AuthUrlTarget, options?: RedirectOptions): string;
-} & AuthClientExtras;
+}>;
+
+export type AuthClient = AuthClientKernel & AuthClientExtras;

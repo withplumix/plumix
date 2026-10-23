@@ -9,8 +9,13 @@ import type {
   AuthMethodClientKernel,
   RedirectOptions,
 } from "./define.js";
-import type { AuthClientKernelKey } from "./kernel-keys.js";
-import type { AuthClient, AuthUrlTarget, SignedOut } from "./registry.js";
+import type {
+  AuthClient,
+  AuthClientKernel,
+  AuthClientSignIn,
+  AuthUrlTarget,
+  SignedOut,
+} from "./registry.js";
 import type { AuthMethods } from "./render-context.js";
 import type { AuthResult } from "./result.js";
 import type { Session, SessionStore } from "./session.js";
@@ -262,14 +267,16 @@ export function createAuthClient(env: AuthClientEnv): CreatedAuthClient {
       target === "signOut"
         ? authUrl("signout", options)
         : authUrl(`${target.method}/${target.route ?? ""}`, options),
+    // Safety: the proxy answers each mounted half's `signIn`, looked up when
+    // called, as `AuthClientSignIn` types them.
     signIn: new Proxy(
       {},
       {
         get: (_, method) =>
           typeof method === "string" ? action(method, "signIn") : undefined,
       },
-    ),
-  } satisfies Partial<Record<AuthClientKernelKey, unknown>>;
+    ) as AuthClientSignIn,
+  } satisfies AuthClientKernel;
 
   // Safety: the proxy answers every member `AuthClient` types: the kernel's
   // own, and each mounted half's actions, looked up when called.

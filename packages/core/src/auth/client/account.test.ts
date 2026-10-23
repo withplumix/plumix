@@ -18,12 +18,18 @@ import { createSession } from "../sessions.js";
 import { createAuthClient } from "./auth-client.js";
 
 /** An auth client whose every request reaches core's real handlers. */
-function clientOf(h: DispatcherHarness, token: string) {
+function clientOf(
+  h: DispatcherHarness,
+  token: string,
+  dropsNext = new Set<string>(),
+) {
   const procedures: string[] = [];
   const created = createAuthClient({
     basePath: () => "",
-    fetch: (url, init) => {
-      procedures.push(url.replace("/_plumix/rpc/", ""));
+    fetch: async (url, init) => {
+      const procedure = url.replace("/_plumix/rpc/", "");
+      procedures.push(procedure);
+      if (dropsNext.delete(procedure)) throw new TypeError("Failed to fetch");
       const headers = new Headers(init.headers);
       headers.append("cookie", `${SESSION_COOKIE_NAME}=${token}`);
       return h.dispatch(plumixRequest(url, { ...init, headers }));
@@ -170,6 +176,28 @@ describe("the account useAccount reads", () => {
       account: { id: user.id, name: user.name, avatarUrl: null, meta: {} },
       isPending: false,
     });
+  });
+
+  test("a load the network dropped stays pending, and the next update loads again and saves", async () => {
+    const h = await createDispatcherHarness();
+    const user = await h.seedUser("subscriber");
+    const { token } = await createSession(h.db, { userId: user.id });
+    const { authClient, account, procedures } = clientOf(
+      h,
+      token,
+      new Set(["user/get"]),
+    );
+    const unsubscribe = account.subscribe(() => undefined);
+    await expect.poll(() => procedures).toContain("user/get");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(account.read()).toEqual({ account: null, isPending: true });
+    const result = await authClient.account.update({ name: "Back online" });
+
+    expect(result.error).toBeNull();
+    expect(result.data?.name).toBe("Back online");
+    expect(procedures.filter((p) => p === "user/get")).toHaveLength(2);
+    unsubscribe();
   });
 
   test("signing out clears it", async () => {

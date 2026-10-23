@@ -107,12 +107,15 @@ export function createAccountStore(
     }
     const result = await rpc("user/get", { id: user.id });
     if (generation !== started) return success(null);
-    if (result.error) {
+    const account = result.error ? null : holdAnswer(result.data);
+    if (account !== null) return success(account);
+    if (result.error?.code === "unauthorized") {
       hold(SIGNED_OUT, null);
-      return result;
+    } else {
+      // Still unknown, so the next subscribe or update loads again.
+      loaded = false;
     }
-    const account = holdAnswer(result.data);
-    return account === null ? failure("unknown") : success(account);
+    return failure(result.error?.code ?? "unknown");
   }
 
   function load(): Promise<AuthResult<Account | null>> {
