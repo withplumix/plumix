@@ -1,3 +1,5 @@
+import { decodeBase64url, encodeBase64url } from "../../encoding.js";
+
 /**
  * Non-readonly: DOM `PublicKeyCredentialCreationOptions` declares mutable
  * arrays, and this goes straight to `navigator.credentials.create`.
@@ -93,11 +95,11 @@ export async function createCredential(
     navigator.credentials.create({
       publicKey: {
         ...options,
-        challenge: base64urlToBuffer(options.challenge),
-        user: { ...options.user, id: base64urlToBuffer(options.user.id) },
+        challenge: decodeBase64url(options.challenge),
+        user: { ...options.user, id: decodeBase64url(options.user.id) },
         excludeCredentials: options.excludeCredentials?.map((c) => ({
           ...c,
-          id: base64urlToBuffer(c.id),
+          id: decodeBase64url(c.id),
         })),
       },
     }),
@@ -108,11 +110,15 @@ export async function createCredential(
   return {
     credential: {
       id: credential.id,
-      rawId: bufferToBase64url(credential.rawId),
+      rawId: encodeBase64url(new Uint8Array(credential.rawId)),
       type: credential.type,
       response: {
-        clientDataJSON: bufferToBase64url(response.clientDataJSON),
-        attestationObject: bufferToBase64url(response.attestationObject),
+        clientDataJSON: encodeBase64url(
+          new Uint8Array(response.clientDataJSON),
+        ),
+        attestationObject: encodeBase64url(
+          new Uint8Array(response.attestationObject),
+        ),
         transports: response.getTransports(),
       },
     },
@@ -126,10 +132,10 @@ export async function getCredential(
     navigator.credentials.get({
       publicKey: {
         ...options,
-        challenge: base64urlToBuffer(options.challenge),
+        challenge: decodeBase64url(options.challenge),
         allowCredentials: options.allowCredentials?.map((c) => ({
           ...c,
-          id: base64urlToBuffer(c.id),
+          id: decodeBase64url(c.id),
         })),
       },
     }),
@@ -140,39 +146,20 @@ export async function getCredential(
   return {
     credential: {
       id: credential.id,
-      rawId: bufferToBase64url(credential.rawId),
+      rawId: encodeBase64url(new Uint8Array(credential.rawId)),
       type: credential.type,
       response: {
-        clientDataJSON: bufferToBase64url(response.clientDataJSON),
-        authenticatorData: bufferToBase64url(response.authenticatorData),
-        signature: bufferToBase64url(response.signature),
+        clientDataJSON: encodeBase64url(
+          new Uint8Array(response.clientDataJSON),
+        ),
+        authenticatorData: encodeBase64url(
+          new Uint8Array(response.authenticatorData),
+        ),
+        signature: encodeBase64url(new Uint8Array(response.signature)),
         userHandle: response.userHandle?.byteLength
-          ? bufferToBase64url(response.userHandle)
+          ? encodeBase64url(new Uint8Array(response.userHandle))
           : null,
       },
     },
   };
-}
-
-// Base64url (RFC 4648, unpadded), hand-rolled: `Uint8Array.prototype.toBase64`
-// is still rolling out across browsers.
-
-export function bufferToBase64url(buf: ArrayBuffer): string {
-  const bytes = new Uint8Array(buf);
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary)
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-}
-
-export function base64urlToBuffer(value: string): ArrayBuffer {
-  const padded = value.replace(/-/g, "+").replace(/_/g, "/");
-  const padding =
-    padded.length % 4 === 0 ? "" : "=".repeat(4 - (padded.length % 4));
-  const binary = atob(padded + padding);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes.buffer;
 }

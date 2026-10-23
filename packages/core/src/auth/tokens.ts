@@ -1,5 +1,4 @@
-import { constantTimeEqual } from "@oslojs/crypto/subtle";
-import { encodeBase64urlNoPadding, encodeHexLowerCase } from "@oslojs/encoding";
+import { encodeBase64url, encodeHex } from "../encoding.js";
 
 /** 192 bits — comfortably inside the Copenhagen Book's 120–256 band. */
 const TOKEN_BYTES = 24;
@@ -9,7 +8,7 @@ const ENCODER = new TextEncoder();
 export function generateToken(): string {
   const bytes = new Uint8Array(TOKEN_BYTES);
   crypto.getRandomValues(bytes);
-  return encodeBase64urlNoPadding(bytes);
+  return encodeBase64url(bytes);
 }
 
 /**
@@ -18,13 +17,20 @@ export function generateToken(): string {
  */
 export async function hashToken(token: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", ENCODER.encode(token));
-  return encodeHexLowerCase(new Uint8Array(digest));
+  return encodeHex(new Uint8Array(digest));
 }
 
 /**
- * Constant-time string equality — `constantTimeEqual` short-circuits on length
- * mismatch.
+ * Constant-time string equality. A length mismatch returns early, which leaks
+ * the length but never where the inputs diverge.
  */
 export function safeEqual(a: string, b: string): boolean {
   return constantTimeEqual(ENCODER.encode(a), ENCODER.encode(b));
+}
+
+function constantTimeEqual(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) return false;
+  let difference = 0;
+  for (const [i, byte] of a.entries()) difference |= byte ^ (b[i] ?? 0);
+  return difference === 0;
 }

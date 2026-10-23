@@ -66,7 +66,7 @@ const inviteTokenSchema = v.pipe(v.string(), v.minLength(16), v.maxLength(256));
 const MAX_CREDENTIAL_ID_LENGTH = 1024;
 /**
  * Generous for interoperability, but stops oversized binary fields reaching the
- * oslo parsers.
+ * WebAuthn parsers.
  */
 const MAX_WEBAUTHN_FIELD_LENGTH = 65_536;
 

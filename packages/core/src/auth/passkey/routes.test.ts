@@ -338,7 +338,7 @@ describe("passkey verify — input validation", () => {
     expect(body.error).toBe("invalid_input");
   });
 
-  test("login/verify with wildly oversized payload fails schema, not oslo", async () => {
+  test("login/verify with wildly oversized payload fails schema, not the WebAuthn parsers", async () => {
     const h = await createDispatcherHarness();
     const response = await h.dispatch(
       plumixRequest("/_plumix/auth/passkey/login/verify", {

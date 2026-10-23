@@ -76,7 +76,7 @@ overrides:
 
 # Default catalog: version-coordinated deps that aren't part of a multi-package
 # family. Multi-package families live in the named catalogs below. Single-consumer
-# deps (incl. the @oslojs/* auth stack, @hookform/resolvers, the prettier plugins)
+# deps (incl. @hookform/resolvers, the prettier plugins)
 # are not cataloged at all — they stay inline in their own package.json.
 catalog:
   "@arethetypeswrong/cli": ^0.18.5
@@ -131,9 +131,7 @@ catalogs:
     "@orpc/tanstack-query": ^1.15.6
     "@orpc/valibot": ^1.15.6
   oslojs:
-    "@oslojs/crypto": ^1.0.1
     "@oslojs/encoding": ^1.1.0
-    "@oslojs/webauthn": ^1.0.0
   react:
     "@types/react": ^19.3.0
     "@types/react-dom": ^19.3.0

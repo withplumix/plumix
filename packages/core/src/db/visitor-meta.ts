@@ -1,6 +1,5 @@
-import { encodeHexLowerCase } from "@oslojs/encoding";
-
 import type { AppContext } from "../context/app-context.js";
+import { encodeHex } from "../encoding.js";
 import { DbError } from "./errors.js";
 import { and, eq } from "./index.js";
 import { settings } from "./schema/settings.js";
@@ -53,7 +52,7 @@ function getOrCreateIpSalt(ctx: AppContext, group: string): Promise<string> {
 
     const bytes = new Uint8Array(SALT_BYTES);
     crypto.getRandomValues(bytes);
-    const salt = encodeHexLowerCase(bytes);
+    const salt = encodeHex(bytes);
     await ctx.db
       .insert(settings)
       .values({ group, key: SALT_KEY, value: salt })
@@ -67,7 +66,7 @@ async function hashIp(ip: string, salt: string): Promise<string> {
     "SHA-256",
     ENCODER.encode(`${salt}:${ip}`),
   );
-  return encodeHexLowerCase(new Uint8Array(digest));
+  return encodeHex(new Uint8Array(digest));
 }
 
 /**
