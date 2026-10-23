@@ -38,7 +38,6 @@ const settings = (overrides: Partial<SeoSettings> = {}): SeoSettings => ({
   indexPaginated: false,
   indexNotFound: false,
   blockAiCrawlers: false,
-  indexNowKey: null,
   ...overrides,
 });
 

@@ -58,7 +58,7 @@ reader.
 ## Asking for someone else
 
 A public artefact built from a signed-in request, such as a shared card, an
-IndexNow ping after an editor saves, or a cron's output, must say what
+search-engine ping after an editor saves, or a cron's output, must say what
 anonymous visitors may see, not what its requester may. `anonymousContext(ctx)`
 derives a context with no user, no token scopes and an anonymous `auth.can`,
 over the same `db` and `plugins`, with its memo entries kept apart from the

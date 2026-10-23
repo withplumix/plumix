@@ -45,16 +45,6 @@ msgstr "Weist Assistenten und Trainings-Crawler, die robots.txt beachten, an, dr
 
 #. js-lingui-explicit-id
 #: src/settings.ts
-msgid "plugin.seo.settings.indexnow_key"
-msgstr "IndexNow-Schlüssel"
-
-#. js-lingui-explicit-id
-#: src/settings.ts
-msgid "plugin.seo.settings.indexnow_key.description"
-msgstr "Mit einem Schlüssel erfahren Suchmaschinen innerhalb von Minuten von einer Veröffentlichung. Leer bedeutet keine Benachrichtigung."
-
-#. js-lingui-explicit-id
-#: src/settings.ts
 msgid "plugin.seo.settings.page.label"
 msgstr "SEO"
 

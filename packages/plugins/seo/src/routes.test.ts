@@ -2313,13 +2313,11 @@ describe("/llms.txt", () => {
 });
 
 /**
- * The publish RPC fires its lifecycle action mid-request; this stands in for
+ * The publish RPC fires its lifecycle actions mid-request; this stands in for
  * it, so a subscriber runs where it really would — inside a request, with a
  * context to defer through.
  */
-type LifecycleAction = "entry:published" | "entry:updated" | "both";
-
-function lifecycleFirer(action: LifecycleAction) {
+function lifecycleFirer() {
   return definePlugin("lifecycle-firer", (ctx) => {
     ctx.registerPublicRoute({
       path: "/fire-lifecycle/:slug",
@@ -2331,21 +2329,13 @@ function lifecycleFirer(action: LifecycleAction) {
         if (entry === undefined) {
           return new Response("no entry", { status: 404 });
         }
-        // Fired one name at a time: their argument lists differ, so a union
-        // narrows to nothing.
-        if (action !== "entry:published") {
-          await appCtx.hooks.doAction("entry:updated", entry, entry, appCtx);
-        }
-        if (action !== "entry:updated") {
-          await appCtx.hooks.doAction("entry:published", entry, appCtx);
-        }
+        await appCtx.hooks.doAction("entry:updated", entry, entry, appCtx);
+        await appCtx.hooks.doAction("entry:published", entry, appCtx);
         return new Response("ok");
       },
     });
   });
 }
-
-const KEY = "0123456789abcdef0123456789abcdef";
 
 function stubbedFetch(): ReturnType<typeof vi.fn> {
   const fetch = vi.fn(() => Promise.resolve(new Response("", { status: 200 })));
@@ -2361,231 +2351,33 @@ async function publish(h: DispatcherHarness): Promise<Response> {
   return res;
 }
 
-describe("IndexNow", () => {
+// Sites that set a key keep its `indexnow_key` row; nothing reads it any more.
+describe("a stored IndexNow key", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  function submitted(fetch: ReturnType<typeof vi.fn>): {
-    readonly url: string;
-    readonly body: unknown;
-  } {
-    const [url, init] = fetch.mock.calls[0] as [string, { body: string }];
-    return { url, body: JSON.parse(init.body) as unknown };
-  }
-
-  async function harnessWithKey(
-    action: LifecycleAction = "entry:published",
-  ): Promise<DispatcherHarness> {
-    const h = await createHarness([blogPlugin, lifecycleFirer(action)]);
-    await setSettings(h, "seo", { indexnow_key: KEY });
+  async function harnessWithStoredKey(): Promise<DispatcherHarness> {
+    const h = await createHarness([blogPlugin, lifecycleFirer()]);
+    await setSettings(h, "seo", {
+      indexnow_key: "0123456789abcdef0123456789abcdef",
+    });
     return h;
   }
 
-  // The editor saving it is signed in, so their own request would admit
-  // every choice; the ping is public, so it asks for anonymous visitors.
-  test.each([
-    ["a members-only entry is never submitted", "members", 0],
-    ["a public entry is submitted", undefined, 1],
-    ["a soft-challenged entry is submitted", "teaser", 1],
-  ] as const)("%s, whoever saves it", async (_name, choice, submissions) => {
+  test("sends nothing when an entry is published", async () => {
     const fetch = stubbedFetch();
-    const h = await createHarness([eduscopePlugin]);
-    await setSettings(h, "seo", { indexnow_key: KEY });
-    const author = await h.seedUser("admin");
-    const page = await h.factory.entry.create({
-      type: "page",
-      slug: "hello",
-      title: "Hello",
-      content: null,
-      status: "published",
-      authorId: author.id,
-      publishedAt: new Date(),
-      ...(choice === undefined
-        ? {}
-        : { meta: { [ACCESS_POLICY_META_KEY]: choice } }),
-    });
-
-    const saved = await h.fetch("/_plumix/rpc/entry/update", {
-      as: await h.seedUser("editor"),
-      json: {
-        json: {
-          id: page.id,
-          ifMatch: etagOf(page.updatedAt),
-          title: "Hello again",
-        },
-        meta: [],
-      },
-    });
-    saved.assertStatus(200);
-    await h.drainDeferred();
-
-    expect(
-      fetch.mock.calls.filter(
-        ([url]) => url === "https://api.indexnow.org/indexnow",
-      ),
-    ).toHaveLength(submissions);
-  });
-
-  test("is off until a key is configured", async () => {
-    const fetch = stubbedFetch();
-    const h = await createHarness([
-      blogPlugin,
-      lifecycleFirer("entry:published"),
-    ]);
-    await seedPost(h);
-
-    await publish(h);
-
-    expect(fetch).not.toHaveBeenCalled();
-  });
-
-  test("submits a published entry's URL, its key and where the key is served", async () => {
-    const fetch = stubbedFetch();
-    const h = await harnessWithKey();
-    await seedPost(h);
-
-    await publish(h);
-
-    const { url, body } = submitted(fetch);
-    expect(fetch).toHaveBeenCalledOnce();
-    expect(url).toBe("https://api.indexnow.org/indexnow");
-    expect(body).toEqual({
-      host: "cms.example",
-      key: KEY,
-      keyLocation: "https://cms.example/indexnow-key.txt",
-      urlList: ["https://cms.example/post/hello"],
-    });
-  });
-
-  test("submits an updated entry too", async () => {
-    const fetch = stubbedFetch();
-    const h = await harnessWithKey("entry:updated");
-    await seedPost(h);
-
-    await publish(h);
-
-    expect(fetch).toHaveBeenCalledOnce();
-  });
-
-  test("submits once for a publish that fires both update and publish", async () => {
-    const fetch = stubbedFetch();
-    const h = await harnessWithKey("both");
-    await seedPost(h);
-
-    await publish(h);
-
-    expect(fetch).toHaveBeenCalledOnce();
-  });
-
-  test("reports an endpoint that refuses the key", async () => {
-    const warn = vi.fn();
-    const logger = {
-      debug: vi.fn(),
-      info: vi.fn(),
-      warn,
-      error: vi.fn(),
-    };
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(() => Promise.resolve(new Response("", { status: 403 }))),
-    );
-    const h = await createHarness(
-      [blogPlugin, lifecycleFirer("entry:published")],
-      { logger },
-    );
-    await setSettings(h, "seo", { indexnow_key: KEY });
-    await seedPost(h);
-
-    await publish(h);
-
-    expect(warn).toHaveBeenCalledOnce();
-    expect(warn.mock.calls[0]?.[1]).toEqual({ status: 403 });
-  });
-
-  test("says nothing about an entry an editor hid", async () => {
-    const fetch = stubbedFetch();
-    const h = await harnessWithKey();
-    await seedPost(h, { meta: { seo_noindex: true } });
-
-    await publish(h);
-
-    expect(fetch).not.toHaveBeenCalled();
-  });
-
-  test("says nothing about a draft", async () => {
-    const fetch = stubbedFetch();
-    const h = await harnessWithKey("entry:updated");
-    await seedPost(h, { status: "draft" });
-
-    await publish(h);
-
-    expect(fetch).not.toHaveBeenCalled();
-  });
-
-  test("says nothing about a type the site defaulted out of the index", async () => {
-    const fetch = stubbedFetch();
-    const h = await harnessWithKey();
-    await setSettings(h, "seo", { "type:post:indexable": false });
-    await seedPost(h);
-
-    await publish(h);
-
-    expect(fetch).not.toHaveBeenCalled();
-  });
-
-  test("says nothing at all while the site is held out of the index", async () => {
-    const fetch = stubbedFetch();
-    const h = await harnessWithKey();
-    await setSettings(h, "seo", { indexable: false });
-    await seedPost(h);
-
-    await publish(h);
-
-    expect(fetch).not.toHaveBeenCalled();
-  });
-
-  test("runs after the response, never during it", async () => {
-    const fetch = stubbedFetch();
-    const h = await harnessWithKey();
-    await seedPost(h);
-
-    const res = await h.dispatch(
-      new Request("https://cms.example/fire-lifecycle/hello"),
-    );
-
-    expect(res.status).toBe(200);
-    expect(fetch).not.toHaveBeenCalled();
-    await h.drainDeferred();
-    expect(fetch).toHaveBeenCalledOnce();
-  });
-
-  test("an endpoint that errors does not fail the publish", async () => {
-    const fetch = vi.fn(() => Promise.reject(new Error("upstream is down")));
-    vi.stubGlobal("fetch", fetch);
-    const h = await harnessWithKey();
+    const h = await harnessWithStoredKey();
     await seedPost(h);
 
     const res = await publish(h);
 
     expect(res.status).toBe(200);
-    expect(await res.text()).toBe("ok");
+    expect(fetch).not.toHaveBeenCalled();
   });
 
-  test("serves the key file the submission points at", async () => {
-    const h = await harnessWithKey();
-
-    const res = await h.dispatch(
-      new Request("https://cms.example/indexnow-key.txt"),
-    );
-
-    expect(res.status).toBe(200);
-    expect(res.headers.get("content-type")).toContain("text/plain");
-    expect(await res.text()).toBe(KEY);
-  });
-
-  test("has no key file to serve until a key is configured", async () => {
-    const h = await createHarness();
+  test("serves no key file", async () => {
+    const h = await harnessWithStoredKey();
 
     const res = await h.dispatch(
       new Request("https://cms.example/indexnow-key.txt"),
@@ -2595,14 +2387,10 @@ describe("IndexNow", () => {
   });
 });
 
-// Head, sitemap and IndexNow each implement the indexability arms; an arm
-// added to `indexable` needs a row here.
-describe("the head, the sitemap and IndexNow agree on indexability", () => {
+// Head and sitemap each implement the indexability arms; an arm added to
+// `indexable` needs a row here.
+describe("the head and the sitemap agree on indexability", () => {
   const theme = defineTheme({ templates: [fallback(() => null)] });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
 
   const cases: readonly {
     readonly arm: string;
@@ -2668,20 +2456,8 @@ describe("the head, the sitemap and IndexNow agree on indexability", () => {
   test.each(cases)(
     "$arm on a $subject",
     async ({ subject, settings = {}, meta, indexable }) => {
-      const fetch = stubbedFetch();
-      // A submission that throws is swallowed into a warning, which would
-      // otherwise read here as an entry nobody announced.
-      const logger = {
-        debug: vi.fn(),
-        info: vi.fn(),
-        warn: vi.fn(),
-        error: vi.fn(),
-      };
-      const h = await createHarness(
-        [taxonomyPlugin, lifecycleFirer("entry:published")],
-        { theme, logger },
-      );
-      await setSettings(h, "seo", { indexnow_key: KEY, ...settings });
+      const h = await createHarness([taxonomyPlugin], { theme });
+      await setSettings(h, "seo", settings);
       await seedPost(h, subject === "entry" && meta ? { meta } : {});
       await h.factory.term.create({
         taxonomy: "category",
@@ -2694,8 +2470,8 @@ describe("the head, the sitemap and IndexNow agree on indexability", () => {
         subject === "entry"
           ? ["/post/hello", "/sitemap-entries-post-1.xml"]
           : ["/category/news", "/sitemap-terms-category-1.xml"];
-      // Every request has to land: a 404 is `noindex`, lists nothing and
-      // announces nothing, so a broken route would pass each `false` row.
+      // Every request has to land: a 404 is `noindex` and lists nothing, so a
+      // broken route would pass each `false` row.
       const page = await h.dispatch(new Request(`https://cms.example${path}`));
       const listing = await h.dispatch(
         new Request(`https://cms.example${sitemap}`),
@@ -2708,27 +2484,13 @@ describe("the head, the sitemap and IndexNow agree on indexability", () => {
         `<loc>https://cms.example${path}</loc>`,
       );
 
-      // IndexNow announces entries only; a term archive has no submission to
-      // agree or disagree with.
-      let announced: boolean | null = null;
-      if (subject === "entry") {
-        statuses.push((await publish(h)).status);
-        announced = fetch.mock.calls.some(
-          (call) => call[0] === "https://api.indexnow.org/indexnow",
-        );
-      }
-
       expect(statuses.filter((status) => status !== 200)).toEqual([]);
       expect({
         head: robots === undefined ? undefined : !robots.includes("noindex"),
         sitemap: listed,
-        indexNow: announced,
-        warnings: logger.warn.mock.calls,
       }).toEqual({
         head: indexable,
         sitemap: indexable,
-        indexNow: subject === "entry" ? indexable : null,
-        warnings: [],
       });
     },
   );

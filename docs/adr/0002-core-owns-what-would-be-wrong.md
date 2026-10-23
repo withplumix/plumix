@@ -16,8 +16,8 @@ core keeps the canonical URL, its tag and the normalizer, and hands away head
 meta, `robots.txt`, the sitemap and the feeds.
 
 The rule cuts the same way outside SEO. Core keeps the CDN, because a
-response stored under the wrong key is wrong; it does not keep IndexNow, because
-a site that notifies nobody is merely quiet.
+response stored under the wrong key is wrong; it would not keep a publish-time
+search-engine ping, because a site that notifies nobody is merely quiet.
 
 Applying it needs a seam, which is what `registerPublicRoute` is: without a way
 for a plugin to answer at the site root, "core owns robots.txt" is a fact about
