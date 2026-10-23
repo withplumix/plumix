@@ -193,8 +193,12 @@ describe("the test gate", () => {
 });
 
 describe("the publint gate", () => {
+  test("runs before the push, because CI's Publint failed 2 of 3 loop pull requests on 2026-10-23", () => {
+    expect(GATES.map(({ name }) => name)).toContain("publint");
+  });
+
   test("also runs surface:check, the second step of CI's Publint job", () => {
-    const gate = GATES_LEFT_TO_CI.find(({ name }) => name === "publint");
+    const gate = GATES.find(({ name }) => name === "publint");
 
     expect(gate?.command).toMatch(/turbo run publint surface:check /);
   });

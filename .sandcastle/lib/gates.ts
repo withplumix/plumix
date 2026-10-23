@@ -5,6 +5,8 @@ export interface Gate {
   readonly command: string;
   readonly appliesWhen?: (changedPaths: readonly string[]) => boolean;
   readonly requires?: string;
+  /** Minutes, not seconds: a repair runs it only when CI failed it. */
+  readonly slow?: boolean;
 }
 
 export interface GateFailure {
@@ -51,7 +53,12 @@ export const GATES: readonly Gate[] = [
   { name: "i18n", command: "pnpm i18n:check" },
   { name: "knip", command: "pnpm knip" },
   {
+    name: "publint",
+    command: `pnpm exec turbo run publint surface:check ${TURBO_GATE_FLAGS}`,
+  },
+  {
     name: "lint",
+    slow: true,
     command: `pnpm exec turbo run lint --continue ${TURBO_GATE_FLAGS} -- --cache --cache-location .cache/.eslintcache`,
   },
   {
@@ -60,10 +67,12 @@ export const GATES: readonly Gate[] = [
   },
   {
     name: "test",
+    slow: true,
     command: `pnpm exec turbo run test:unit --continue --concurrency=2 ${TURBO_GATE_FLAGS}`,
   },
   {
     name: "e2e",
+    slow: true,
     command: `pnpm exec turbo run test:e2e ${TURBO_GATE_FLAGS}`,
     appliesWhen: touches(RENDER_AND_ADMIN_PATHS),
     requires:
@@ -72,14 +81,10 @@ export const GATES: readonly Gate[] = [
 ];
 
 /**
- * None failed in 67 local runs and CI runs them in parallel, so locally they
- * only delayed the PR. A repair still runs the ones CI failed.
+ * It never failed in 67 local runs and CI runs it in parallel, so locally it
+ * only delayed the PR. A repair still runs it once CI has failed it.
  */
 export const GATES_LEFT_TO_CI: readonly Gate[] = [
-  {
-    name: "publint",
-    command: `pnpm exec turbo run publint surface:check ${TURBO_GATE_FLAGS}`,
-  },
   {
     name: "attw",
     command: `pnpm exec turbo run attw ${TURBO_GATE_FLAGS}`,

@@ -25,11 +25,10 @@ that from what you write below.
 4. **Commit** by the rules in AGENTS.md's "Commits, branches, PRs". Use
    `Fixes #{{TICKET}}` when every criterion is met, otherwise `Refs #{{TICKET}}`.
 
-Do not run the full gate suite yourself. The harness runs format, test, e2e, i18n,
-knip and check-no-major after this phase and hands you any failure. Lint,
-typecheck, publint and attw run only in CI, after the pull request opens, so run
-single test files and a targeted typecheck and lint of the packages you touch as
-you work.
+Do not run the full gate suite yourself. The harness runs check-no-major, commitlint,
+format, i18n, knip, publint, lint, typecheck, test and e2e after this phase and hands you
+any failure. Only attw runs in CI alone, after the pull request opens. As you work, run
+single test files and a targeted typecheck and lint of the packages you touch.
 
 Commit on the branch you are on. Never create, switch or rename a branch, even when the
 ticket names one: the harness owns this branch, and a commit anywhere else never reaches the

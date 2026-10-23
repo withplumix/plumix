@@ -77,4 +77,36 @@ describe("slotsFor", () => {
 
     expect(started).toBe(true);
   });
+
+  test("a slot held for work run first starts a repair at once while every lane runs a ticket", async () => {
+    const slots = slotsFor(1, { heldForFirst: 1 });
+    const ticket = heldUntilReleased();
+
+    const running = slots.run(() => ticket.held);
+    let repaired = false;
+    await slots.runFirst(async () => {
+      repaired = true;
+    });
+    ticket.release();
+    await running;
+
+    expect(repaired).toBe(true);
+  });
+
+  test("a ticket never takes the slot held for work run first", async () => {
+    const slots = slotsFor(1, { heldForFirst: 1 });
+    const first = heldUntilReleased();
+    let secondStarted = false;
+
+    const running = slots.run(() => first.held);
+    const second = slots.run(async () => {
+      secondStarted = true;
+    });
+    await Promise.resolve();
+    const startedBeforeTheFirstEnded = secondStarted;
+    first.release();
+    await Promise.all([running, second]);
+
+    expect(startedBeforeTheFirstEnded).toBe(false);
+  });
 });

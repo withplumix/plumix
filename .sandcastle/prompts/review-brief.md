@@ -25,7 +25,7 @@ Then report only where the brief itself failed you:
   **medium**
 - wording — **low**
 
-A brief you could work from is an empty array. Do not review the *design* it
+A brief you could work from is an empty array. Do not review the _design_ it
 describes, and do not report what is merely absent from a brief that is already
 sufficient; only report what blocks you.
 

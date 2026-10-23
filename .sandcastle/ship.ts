@@ -4,6 +4,7 @@ import { adrNumbersIn, nextFreeAdr } from "./lib/adr.js";
 import {
   aReadyTicketWaitsOnAMovingBlocker,
   closeCompletedParent,
+  commentOnPullRequest,
   firstUnblockedUnassignedTicket,
   hasMerged,
   isTicketClosed,
@@ -26,6 +27,7 @@ import { say } from "./lib/log.js";
 import { sandboxImageOrRefuse } from "./lib/preflight.js";
 import {
   aRerunCannotTurnItGreen,
+  aRerunCouldTurnThemGreen,
   failedStepsOf,
   idsInJobUrl,
   repairPullRequest,
@@ -166,6 +168,7 @@ const report = await runShipLoop(
     },
     rerunFailedChecks: async (_pullRequest, refusal) => {
       if (refusal.status !== "failed") return false;
+      if (!aRerunCouldTurnThemGreen(refusal.failingChecks)) return false;
       const jobs = refusal.failingChecks.flatMap(
         ({ url }) => idsInJobUrl(url) ?? [],
       );
@@ -184,6 +187,13 @@ const report = await runShipLoop(
       );
     },
     hasMerged: ({ number }) => hasMerged(number),
+    noteOnPullRequest: ({ number }, note) => {
+      try {
+        commentOnPullRequest(number, note);
+      } catch (error) {
+        say(`  #${number} note: ${String(error).split("\n")[0]}`);
+      }
+    },
     inFlightFromEarlierRuns: () => {
       const inFlight = onlyTickets.length ? [] : loopPullRequestsInFlight();
       for (const { ticket } of inFlight) claimed.add(ticket.number);

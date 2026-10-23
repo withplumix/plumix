@@ -40,6 +40,7 @@ const ports = (over: Partial<ShipPorts> = {}) => {
     repair: async () => ({ status: "repaired" }) as const,
     rerunFailedChecks: async () => true,
     hasMerged: () => false,
+    noteOnPullRequest: () => {},
     inFlightFromEarlierRuns: () => [],
     requeue: () => {},
     ticketClosed: () => true,
@@ -294,6 +295,27 @@ describe("runShipLoop", () => {
     expect(seen.filter((s) => s === "requeued")).toHaveLength(3);
     expect(report.merged).toHaveLength(3);
     expect(parked).toEqual([]);
+  });
+
+  test("a repair says on the pull request what CI refused and which attempt it is, so the PR shows it is being handled", async () => {
+    const notes: { number: number; note: string }[] = [];
+    let attempts = 0;
+    const { ports: p } = ports({
+      nextTicket: drainingFrom([ticket(1)]),
+      rerunFailedChecks: async () => false,
+      confirm: async () => (++attempts === 1 ? ciRed : merged),
+      noteOnPullRequest: (pr, note) =>
+        void notes.push({ number: pr.number, note }),
+    });
+
+    await runShipLoop(p, allLanes);
+
+    expect(notes).toEqual([
+      {
+        number: 101,
+        note: expect.stringMatching(/failing checks: Test.*repair 1\/2/s),
+      },
+    ]);
   });
 
   test("a pull request that merges while its repair waits for a sandbox is merged, not repaired", async () => {
@@ -706,7 +728,7 @@ describe("runShipLoop", () => {
     expect(report.outage).toContain("session limit");
   });
 
-  test("a repair takes one of the lanes' slots, so ships and repairs never exceed the lanes", async () => {
+  test("ships and repairs never exceed the lanes plus the one sandbox held for repairs", async () => {
     let busy = 0;
     let busiest = 0;
     const occupy = async () => {
@@ -736,43 +758,41 @@ describe("runShipLoop", () => {
 
     await runShipLoop(p, allLanes);
 
-    expect(busiest).toBeLessThanOrEqual(2);
+    expect(busiest).toBeLessThanOrEqual(3);
   });
 
-  test("a repair waiting for a slot takes it ahead of a ticket that asked first", async () => {
+  test("a repair starts while every lane is busy shipping a ticket, instead of waiting for one to finish", async () => {
     const pause = (ms: number) =>
       new Promise((resolve) => setTimeout(resolve, ms));
-    const started: string[] = [];
-    const refusedOnce = new Set<number>();
+    const events: string[] = [];
+    let refused = false;
     const { ports: p } = ports({
-      nextTicket: drainingFrom([ticket(1), ticket(2), ticket(3)]),
+      nextTicket: drainingFrom([ticket(1), ticket(2)]),
       ship: async (t) => {
-        started.push(`ship ${t.number}`);
-        if (t.number > 1) await pause(20);
+        if (t.number === 2) {
+          await pause(50);
+          events.push("ship 2 done");
+        }
         return {
           status: "queued",
           pullRequest: { number: 100 + t.number, url: `pr/${t.number}` },
         };
       },
       confirm: async (pr) => {
-        await pause(5);
-        if (pr.number === 103 || refusedOnce.has(pr.number)) return merged;
-        refusedOnce.add(pr.number);
+        if (pr.number !== 101 || refused) return merged;
+        refused = true;
         return ciRed;
       },
       rerunFailedChecks: async () => false,
       repair: async (_t, pr) => {
-        started.push(`repair ${pr.number}`);
-        await pause(20);
+        events.push(`repair ${pr.number}`);
         return { status: "repaired" } as const;
       },
     });
 
     await runShipLoop(p, { lanes: 1, withinBudget: () => true });
 
-    expect(started.indexOf("repair 102")).toBeLessThan(
-      started.indexOf("ship 3"),
-    );
+    expect(events).toEqual(["repair 101", "ship 2 done"]);
   });
 
   test("a pull request an earlier run left in flight is confirmed, and repaired, by this run", async () => {

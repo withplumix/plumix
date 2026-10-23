@@ -3,32 +3,47 @@ export interface Slots {
   readonly runFirst: <T>(work: () => Promise<T>) => Promise<T>;
 }
 
-export const slotsFor = (capacity: number): Slots => {
-  let free = Math.max(1, capacity);
-  const waitingFirst: (() => void)[] = [];
-  const waiting: (() => void)[] = [];
-  const acquire = (ahead: boolean): Promise<void> => {
-    if (free > 0) {
-      free -= 1;
-      return Promise.resolve();
+type Pool = "shared" | "held";
+
+export const slotsFor = (
+  capacity: number,
+  { heldForFirst = 0 }: { readonly heldForFirst?: number } = {},
+): Slots => {
+  const free: Record<Pool, number> = {
+    shared: Math.max(1, capacity),
+    held: Math.max(0, heldForFirst),
+  };
+  const waitingFirst: ((pool: Pool) => void)[] = [];
+  const waiting: ((pool: Pool) => void)[] = [];
+  const acquire = (ahead: boolean): Promise<Pool> => {
+    if (free.shared > 0) {
+      free.shared -= 1;
+      return Promise.resolve("shared");
+    }
+    if (ahead && free.held > 0) {
+      free.held -= 1;
+      return Promise.resolve("held");
     }
     return new Promise((resolve) =>
       (ahead ? waitingFirst : waiting).push(resolve),
     );
   };
-  const release = (): void => {
-    const next = waitingFirst.shift() ?? waiting.shift();
-    if (next) next();
-    else free += 1;
+  const release = (pool: Pool): void => {
+    const next =
+      pool === "held"
+        ? waitingFirst.shift()
+        : (waitingFirst.shift() ?? waiting.shift());
+    if (next) next(pool);
+    else free[pool] += 1;
   };
   const inASlot =
     (ahead: boolean) =>
     async <T>(work: () => Promise<T>): Promise<T> => {
-      await acquire(ahead);
+      const pool = await acquire(ahead);
       try {
         return await work();
       } finally {
-        release();
+        release(pool);
       }
     };
   return { run: inASlot(false), runFirst: inASlot(true) };
