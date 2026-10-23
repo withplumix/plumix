@@ -87,12 +87,12 @@ function shipCommand(
 
 export const deployCommand: CommandDefinition = shipCommand(
   "deploy",
-  "Build, apply pending migrations to the environment's D1, then deploy it (via wrangler)",
+  "Build, apply pending migrations to the environment's D1, then deploy it (via wrangler); any other options go to wrangler deploy",
 );
 
 export const previewCommand: CommandDefinition = shipCommand(
   "preview",
-  "Build, apply pending migrations to the Worker Previews D1, then create a Preview (via wrangler)",
+  "Build, apply pending migrations to the Worker Previews D1, then create a Preview (via wrangler); any other options go to wrangler preview",
 );
 
 /**

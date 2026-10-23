@@ -259,3 +259,116 @@ export const commands = {
     ).toBe(true);
   });
 });
+
+/**
+ * A stand-in for the Cloudflare commands module: `deploy`, `preview`, `dev`
+ * and migrations with a target option, each recording that it ran.
+ */
+const SHIP_COMMANDS = `
+const ran = ((globalThis as unknown as Record<string, unknown>).__plumixRan ??= []) as string[];
+const ship = (name: string) => ({
+  describe: \`Build, migrate, then \${name} (any other options go to wrangler \${name})\`,
+  deferApp: true,
+  run: () => { ran.push(\`run \${name}\`); },
+});
+export const migrations = {
+  legacyTable: "__drizzle_migrations",
+  targetOptions: { production: { type: "boolean", description: "The production D1" } },
+  open: () => { ran.push("migrate"); return Promise.reject(new Error("migrated")); },
+  openRun: () => Promise.reject(new Error("unused")),
+};
+export const commands = { deploy: ship("deploy"), preview: ship("preview"), dev: ship("dev") };
+`;
+
+describe("run — a command's --help", () => {
+  const dirs: string[] = [];
+  const ran = globalThis as unknown as { __plumixRan?: string[] };
+  const originalDev = process.env.PLUMIX_DEV;
+  afterEach(() => {
+    for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true });
+    delete ran.__plumixRan;
+    if (originalDev === undefined) delete process.env.PLUMIX_DEV;
+    else process.env.PLUMIX_DEV = originalDev;
+    vi.restoreAllMocks();
+  });
+
+  function shipSite(): string {
+    const dir = mkdtempSync(join(tmpdir(), "plumix-help-"));
+    dirs.push(dir);
+    const commandsModule = join(dir, "commands.ts");
+    writeFileSync(commandsModule, SHIP_COMMANDS);
+    writeFileSync(
+      join(dir, "plumix.config.ts"),
+      `export default {
+  runtime: { name: "cloudflare", handler: {}, generateEntry: () => "", commandsModule: ${JSON.stringify(commandsModule)} },
+  database: { kind: "d1" },
+  auth: { passkey: {} },
+};
+`,
+    );
+    return dir;
+  }
+
+  test.each([
+    ["deploy", "--help"],
+    ["deploy", "-h"],
+    ["preview", "--help"],
+    ["preview", "-h"],
+  ])(
+    "`plumix %s %s` prints the command's help and runs nothing",
+    async (name, flag) => {
+      const info = vi.spyOn(report, "info").mockImplementation(() => undefined);
+
+      await run(["--cwd", shipSite(), name, flag]);
+
+      expect(ran.__plumixRan ?? []).toEqual([]);
+      expect(info).toHaveBeenCalledOnce();
+      expect(info.mock.calls[0]?.[0]).toContain(
+        [
+          "Usage:",
+          `  plumix ${name} [options]`,
+          "",
+          `Build, migrate, then ${name} (any other options go to wrangler ${name})`,
+          "",
+          "cloudflare runtime target options (migrate, meta):",
+          "  --production    The production D1",
+        ].join("\n"),
+      );
+    },
+  );
+
+  test("`plumix dev --help` neither migrates the local database nor starts dev", async () => {
+    const info = vi.spyOn(report, "info").mockImplementation(() => undefined);
+
+    await run(["--cwd", shipSite(), "dev", "--help"]);
+
+    expect(ran.__plumixRan ?? []).toEqual([]);
+    expect(info.mock.calls[0]?.[0]).toContain("  plumix dev [options]");
+  });
+
+  test("--help counts anywhere among the command's arguments", async () => {
+    const info = vi.spyOn(report, "info").mockImplementation(() => undefined);
+
+    await run(["--cwd", shipSite(), "deploy", "--env", "staging", "--help"]);
+
+    expect(ran.__plumixRan ?? []).toEqual([]);
+    expect(info.mock.calls[0]?.[0]).toContain("  plumix deploy [options]");
+  });
+
+  test("an unknown command's --help still fails as an unknown command", async () => {
+    await expect(
+      run(["--cwd", shipSite(), "launch", "--help"]),
+    ).rejects.toMatchObject({ code: "unknown_command" });
+  });
+
+  test("a built-in's help prints without the target options when the config can't load", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "plumix-help-"));
+    dirs.push(dir);
+    const info = vi.spyOn(report, "info").mockImplementation(() => undefined);
+
+    await run(["--cwd", dir, "migrate", "--help"]);
+
+    expect(info.mock.calls[0]?.[0]).toContain("  plumix migrate [options]");
+    expect(info.mock.calls[0]?.[0]).not.toContain("target options");
+  });
+});
