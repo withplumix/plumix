@@ -29,9 +29,10 @@ exchange, author code) relied on the upstream answering (#3266).
   `error` status, and its error is that `TimeoutError` and message, so the
   debug bar, the request history and the MCP tools show it as they show any
   failed span.
-- **The bound covers the body.** The signal stays attached to the response, so
-  reading a body past the deadline aborts too. That is why a long download
-  turns the timeout off rather than raising it.
+- **The span and its message cover the call until the response arrives.**
+  Core hands the combined signal to the platform `fetch` and does not trace or
+  reword the body read that follows. Whether that read honours the deadline is
+  the platform's behaviour, not one core tests or promises.
 - **Global `fetch` stays the platform's.** The bound applies to `ctx.fetch`
   only; code that calls `fetch` directly gets no timeout.
 
