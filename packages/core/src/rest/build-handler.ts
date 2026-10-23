@@ -12,6 +12,7 @@ import {
   unauthorized,
 } from "../runtime/contract/http.js";
 import {
+  buildPreflightMethods,
   isOriginDependent,
   preflightResponse,
   resolveAllowedOrigin,
@@ -59,6 +60,10 @@ export function buildRestDispatcher(
     ],
   });
   const varyByOrigin = isOriginDependent(cors);
+  const preflightMethods = buildPreflightMethods(
+    registry.restResources,
+    API_V1_PREFIX,
+  );
   // Generated once per isolate, on first request for the spec.
   let spec: Promise<OpenAPI.Document> | undefined;
   return async (ctx) => {
@@ -68,7 +73,11 @@ export function buildRestDispatcher(
       ctx.request.headers.get("origin"),
     );
     if (ctx.request.method === "OPTIONS") {
-      return preflightResponse(ctx.request, allowOrigin);
+      return preflightResponse(
+        ctx.request,
+        allowOrigin,
+        preflightMethods(url.pathname),
+      );
     }
 
     if (url.pathname === SPEC_PATH) {

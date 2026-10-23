@@ -1035,6 +1035,119 @@ describe("REST API — CORS by auth mode", () => {
     );
     expect(refused.status).toBe(403);
   });
+
+  const writePlugin = definePlugin("test-write", (ctx) => {
+    ctx.registerRestResource({
+      method: "POST",
+      path: "/system/forms/contact",
+      auth: "public",
+      output: OK_OUTPUT,
+      handler: () => ({ ok: true }),
+    });
+  });
+
+  function preflight(path: string): Request {
+    return new Request(`https://cms.example${path}`, {
+      method: "OPTIONS",
+      headers: {
+        origin: "https://app.example",
+        "access-control-request-method": "POST",
+      },
+    });
+  }
+
+  function corsHarness(
+    plugins: NonNullable<
+      NonNullable<CreateDispatcherHarnessOptions["config"]>["plugins"]
+    >,
+  ): Promise<DispatcherHarness> {
+    return restHarness({
+      config: {
+        api: { enabled: true, cors: { origins: ["https://app.example"] } },
+        plugins: [blog, ...plugins],
+      },
+    });
+  }
+
+  test("a public write resource's path preflights with its method", async () => {
+    const h = await corsHarness([writePlugin]);
+
+    const res = await h.dispatch(
+      preflight("/_plumix/api/v1/system/forms/contact"),
+    );
+
+    expect(res.status).toBe(204);
+    expect(res.headers.get("access-control-allow-methods")).toBe(
+      "GET, OPTIONS, POST",
+    );
+  });
+
+  test("a token-authed write resource's method is never listed", async () => {
+    const gatedPlugin = definePlugin("test-gated-write", (ctx) => {
+      ctx.registerRestResource({
+        method: "PUT",
+        path: "/system/forms/contact",
+        auth: { capability: "entry:post:edit_any" },
+        output: OK_OUTPUT,
+        handler: () => ({ ok: true }),
+      });
+      ctx.registerRestResource({
+        method: "DELETE",
+        path: "/system/forms/contact",
+        auth: "authenticated",
+        output: OK_OUTPUT,
+        handler: () => ({ ok: true }),
+      });
+    });
+    const h = await corsHarness([gatedPlugin]);
+
+    const res = await h.dispatch(
+      preflight("/_plumix/api/v1/system/forms/contact"),
+    );
+
+    expect(res.headers.get("access-control-allow-methods")).toBe(
+      "GET, OPTIONS",
+    );
+  });
+
+  test("a templated public write resource matches a concrete path", async () => {
+    const commentsPlugin = definePlugin("test-comments", (ctx) => {
+      ctx.registerRestResource({
+        method: "POST",
+        path: "/{collection}/{entry}/comments",
+        auth: "public",
+        output: OK_OUTPUT,
+        handler: () => ({ ok: true }),
+      });
+    });
+    const h = await corsHarness([commentsPlugin]);
+
+    const res = await h.dispatch(
+      preflight("/_plumix/api/v1/posts/42/comments"),
+    );
+
+    expect(res.headers.get("access-control-allow-methods")).toBe(
+      "GET, OPTIONS, POST",
+    );
+  });
+
+  test.each([
+    ["a core collection", "/_plumix/api/v1/posts"],
+    ["a public read-only resource", "/_plumix/api/v1/system/diag/ping"],
+    [
+      "a path below a public write resource",
+      "/_plumix/api/v1/system/forms/contact/extra",
+    ],
+  ])("%s path answers GET and OPTIONS only", async (_, path) => {
+    const h = await corsHarness([writePlugin, apiPlugin]);
+
+    const res = await h.dispatch(preflight(path));
+
+    expect(res.status).toBe(204);
+    expect(res.headers.get("access-control-allow-methods")).toBe(
+      "GET, OPTIONS",
+    );
+  });
 });
 
 describe("REST API — OpenAPI spec", () => {

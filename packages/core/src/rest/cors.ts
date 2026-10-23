@@ -1,5 +1,7 @@
 import type { ApiCorsConfig } from "../config.js";
+import type { RegisteredRestResource } from "../plugin/manifest.js";
 import { withHeaders } from "../runtime/contract/http.js";
+import { isParam } from "./rest-routes.js";
 
 /**
  * Default-closed: null without config. An array echoes the request's origin
@@ -26,7 +28,7 @@ export function isOriginDependent(cors: ApiCorsConfig | undefined): boolean {
 }
 
 /**
- * CORS for anonymous reads only. No `Access-Control-Allow-Credentials` is ever
+ * CORS for anonymous requests only. No `Access-Control-Allow-Credentials` is ever
  * set — the surface is bearer/anonymous, never cookie-authed, so credentialed
  * CORS would only invite a PAT-in-browser-JS footgun.
  */
@@ -50,6 +52,43 @@ export function withCors(
   });
 }
 
+/** The `Access-Control-Allow-Methods` a preflight answers for a request path. */
+type PreflightMethods = (path: string) => string;
+
+const BASE_METHODS = "GET, OPTIONS";
+
+function matchesTemplate(template: readonly string[], path: string): boolean {
+  const segments = path.split("/");
+  return (
+    segments.length === template.length &&
+    template.every((segment, i) => isParam(segment) || segment === segments[i])
+  );
+}
+
+/**
+ * Lists only `auth: "public"` methods: the preflight allows `authorization`,
+ * so listing a token-authed one would invite a token into browser JS.
+ */
+export function buildPreflightMethods(
+  resources: readonly RegisteredRestResource[],
+  prefix: string,
+): PreflightMethods {
+  const publicResources = resources
+    .filter(
+      (resource) => resource.auth === "public" && resource.method !== "GET",
+    )
+    .map((resource) => ({
+      method: resource.method,
+      template: `${prefix}${resource.path}`.split("/"),
+    }));
+  return (path) => {
+    const methods = publicResources
+      .filter((resource) => matchesTemplate(resource.template, path))
+      .map((resource) => resource.method);
+    return [BASE_METHODS, ...methods].join(", ");
+  };
+}
+
 /**
  * Preflight carries no credentials, so it gates on origins alone; the
  * token-authed response stays CORS-free, keeping tokens server-to-server.
@@ -57,10 +96,11 @@ export function withCors(
 export function preflightResponse(
   request: Request,
   allowOrigin: string | null,
+  methods: string,
 ): Response {
   if (allowOrigin === null) return new Response(null, { status: 403 });
   const headers = corsHeaders(allowOrigin);
-  headers.set("access-control-allow-methods", "GET, OPTIONS");
+  headers.set("access-control-allow-methods", methods);
   headers.set(
     "access-control-allow-headers",
     request.headers.get("access-control-request-headers") ??
