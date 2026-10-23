@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { encodeHex } from "../../encoding.js";
+import { decodeBase64url, encodeBase64url, encodeHex } from "../../encoding.js";
 import { userFactory } from "../../test/factories.js";
 import {
   NONE_ATTESTATION,
@@ -9,6 +9,7 @@ import {
 } from "../../test/fixtures/simplewebauthn.js";
 import {
   buildAttestation,
+  buildRegisterVerifyEnvelope,
   generatePasskeyKeyPair,
   leadingZeroYKeyPair,
   randomCredentialId,
@@ -277,6 +278,79 @@ describe("finishRegistration (security checks)", () => {
         },
       }),
     ).rejects.toBeInstanceOf(PasskeyError);
+  });
+});
+
+describe("finishRegistration refuses", () => {
+  async function envelope(
+    overrides: Partial<Parameters<typeof buildRegisterVerifyEnvelope>[0]> = {},
+  ) {
+    const db = await createTestDb();
+    const userId = (
+      await userFactory.transient({ db }).create({ role: "admin" })
+    ).id;
+    const { challenge } = await issueChallenge(db, 60_000, userId);
+    return {
+      db,
+      response: buildRegisterVerifyEnvelope({
+        keyPair: generatePasskeyKeyPair(),
+        rpId: config.rpId,
+        origin: config.origin,
+        challenge,
+        credentialId: randomCredentialId(),
+        ...overrides,
+      }),
+    };
+  }
+
+  test("client data from a sign-in ceremony", async () => {
+    const { db, response } = await envelope();
+    const clientData = JSON.parse(
+      new TextDecoder().decode(
+        decodeBase64url(response.response.clientDataJSON),
+      ),
+    ) as Record<string, unknown>;
+    const clientDataJSON = encodeBase64url(
+      new TextEncoder().encode(
+        JSON.stringify({ ...clientData, type: "webauthn.get" }),
+      ),
+    );
+
+    await expect(
+      finishRegistration(db, config, {
+        ...response,
+        response: { ...response.response, clientDataJSON },
+      }),
+    ).rejects.toMatchObject({ code: "invalid_client_data" });
+  });
+
+  test("an attestation format other than none", async () => {
+    const { db, response } = await envelope({ format: "packed" });
+
+    await expect(
+      finishRegistration(db, config, response),
+    ).rejects.toMatchObject({ code: "unsupported_attestation_format" });
+  });
+
+  test("authenticator data scoped to another RP ID", async () => {
+    const { db, response } = await envelope({ rpId: "attacker.example" });
+
+    await expect(
+      finishRegistration(db, config, response),
+    ).rejects.toMatchObject({ code: "invalid_rp_id" });
+  });
+
+  test("a public key that is not a point on P-256", async () => {
+    const keyPair = generatePasskeyKeyPair();
+    const publicKeyY = keyPair.publicKeyY.slice();
+    publicKeyY[31] = (publicKeyY[31] ?? 0) ^ 0x01;
+    const { db, response } = await envelope({
+      keyPair: { ...keyPair, publicKeyY },
+    });
+
+    await expect(
+      finishRegistration(db, config, response),
+    ).rejects.toMatchObject({ code: "invalid_response" });
   });
 });
 

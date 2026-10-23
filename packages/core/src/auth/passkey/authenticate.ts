@@ -97,10 +97,11 @@ export async function finishAuthentication(
   if (!credential) throw PasskeyError.credentialNotFound();
   if (!authenticatorData.userPresent) throw PasskeyError.userPresenceMissing();
 
-  // Counter == 0 is "authenticator doesn't track" — accept; otherwise it must
-  // strictly increase. A non-increasing counter signals a cloned authenticator.
+  // A stored 0 is an authenticator that hasn't counted. Once it has, the
+  // counter must strictly increase (WebAuthn §7.2 step 22): a non-increasing
+  // one, a drop back to 0 included, signals a cloned authenticator.
   if (
-    authenticatorData.signatureCounter !== 0 &&
+    credential.counter !== 0 &&
     authenticatorData.signatureCounter <= credential.counter
   ) {
     throw PasskeyError.counterReplay();

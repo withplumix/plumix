@@ -12,6 +12,7 @@ import { credentials } from "../../db/schema/credentials.js";
 import { decodeBase64url, encodeBase64url } from "../../encoding.js";
 import { consumeChallenge, issueChallenge } from "./challenges.js";
 import { PasskeyError } from "./errors.js";
+import { assertEs256PublicKey } from "./es256.js";
 import { originAllowed } from "./origin-policy.js";
 import {
   COSE_ALG_ES256,
@@ -140,6 +141,7 @@ export async function finishRegistration(
   // RS256 is advertised for compatibility but refused here: ES256 covers
   // ~all real-world authenticators.
   const publicKey = parseEs256PublicKey(credential.publicKey);
+  await assertEs256PublicKey(publicKey);
 
   return {
     credentialId: encodeBase64url(credential.id),
