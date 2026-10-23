@@ -1,0 +1,13 @@
+# Its own pnpm root, not a member of the repo's workspace, so the ship loop's
+# dependencies never reach the root lockfile. The two settings below mirror the
+# root pnpm-workspace.yaml.
+
+# Let a release age a week before resolving to it, matching the Dependabot
+# cooldown in .github/dependabot.yml.
+minimumReleaseAge: 10080
+
+# These only fetch or check a platform binary, which already arrives as an
+# optional dependency.
+allowBuilds:
+  esbuild: false
+  fsevents: false

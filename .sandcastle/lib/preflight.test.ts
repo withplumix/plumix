@@ -75,7 +75,7 @@ describe("problemsBeforeARun", () => {
     );
 
     expect(problems.join("\n")).toMatch(
-      /`npx sandcastle docker build-image` from the repo root/,
+      /`.sandcastle\/node_modules\/.bin\/sandcastle docker build-image` from the repo root/,
     );
   });
 
