@@ -33,7 +33,7 @@ The plugin declares the method, its mail and its tables:
 
 <Code code={method} lang="ts" title="auth/email-code/index.ts" />
 
-- **`name`** is a kebab-case slug, and the method's routes mount under `/_plumix/auth/email-code/`. Core's own `device`, `signout` and `verify-email` routes are names no method may take, and two plugins declaring one name fail the boot, naming both.
+- **`name`** is a kebab-case slug, and the method's routes mount under `/_plumix/auth/email-code/`. Core's own `device`, `signout` and `verify-email` routes are names no method may take, and so is any name whose camelCase form is one of `authClient`'s own keys: `account`, `sessions`, `can`, `useAccount`, `useCan`, `signIn`, `signOut`, `useSession`, `useAuthMethods` and `url`. Either fails the boot, naming the clash, and so do two plugins declaring one name, naming both.
 - **`label`** is what `authClient.useAuthMethods()` lists. **`listed: false`** keeps the method out of that list. This one is unlisted because the admin's login screen offers every listed plugin method as a "Continue with" button that calls `signIn()` with no arguments, and this method needs an address and a code.
 - **`errorCodes`** are the codes the handlers pass to `fail`, besides the identity refusals core adds. Passing any other code is a type error.
 - **`routes`** are keyed by path under the mount. A `:param` segment matches any one segment, and the handler reads it from `params`.

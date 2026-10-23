@@ -225,6 +225,11 @@ export type UserMetaOf = FoldRecords<
   AllRecords<UserMetaContributions, "_value">
 >;
 
+/** The folded stored-shape user meta record, which a meta patch writes. */
+export type StoredUserMetaOf = FoldRecords<
+  AllRecords<UserMetaContributions, "_stored">
+>;
+
 /** The read-shape record of one settings group, by declared group name. */
 export type SettingsOf<Name extends keyof SettingsContributions> = FoldRecords<
   AllRecords<Pick<SettingsContributions, Name>, "_value">

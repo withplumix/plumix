@@ -1,6 +1,12 @@
 import { describe, expectTypeOf, test } from "vitest";
 
-import type { OAuthProviderOf, OAuthProvidersOf } from "./registry.js";
+import type { AuthClientKernelKey } from "./kernel-keys.js";
+import type {
+  AuthClient,
+  AuthClientKernel,
+  OAuthProviderOf,
+  OAuthProvidersOf,
+} from "./registry.js";
 import { auth } from "../config.js";
 import { github } from "../oauth/providers/github.js";
 import { google } from "../oauth/providers/google.js";
@@ -45,5 +51,15 @@ describe("an OAuth provider's type", () => {
     expectTypeOf<
       OAuthProviderOf<UnconfiguredProviders>
     >().toEqualTypeOf<string>();
+  });
+});
+
+describe("the auth client's kernel", () => {
+  test("has only members whose keys no sign-in method may take", () => {
+    expectTypeOf<keyof AuthClientKernel>().toExtend<AuthClientKernelKey>();
+  });
+
+  test("is every member the auth client answers itself", () => {
+    expectTypeOf<AuthClient>().toExtend<AuthClientKernel>();
   });
 });

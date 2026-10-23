@@ -60,4 +60,26 @@ describe("buildApp — sign-in method declarations", () => {
       `Plugin "fixture-plugin" declares sign-in method "device", but core's /_plumix/auth/device routes answer there.`,
     );
   });
+
+  test.each([
+    ["account", "account"],
+    ["url", "url"],
+    ["use-account", "useAccount"],
+    ["sign-in", "signIn"],
+    ["sign-out", "signOut"],
+    ["use-session", "useSession"],
+    ["use-auth-methods", "useAuthMethods"],
+    ["use-can", "useCan"],
+    ["sessions", "sessions"],
+    ["can", "can"],
+  ])(
+    "rejects %j, whose client half would take the auth client's %j",
+    async (name, key) => {
+      await expect(
+        buildApp(testConfig({ plugins: [declaring("fixture-plugin", name)] })),
+      ).rejects.toThrow(
+        `Plugin "fixture-plugin" declares sign-in method "${name}", but the auth client's own "${key}" answers at authClient.${key}.`,
+      );
+    },
+  );
 });

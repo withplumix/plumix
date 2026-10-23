@@ -32,6 +32,18 @@ const MESSAGES: Readonly<Record<string, MessageDescriptor>> = {
     id: "authClient.error.noAuthenticator",
     message: "This device has no passkey for this site.",
   },
+  unauthorized: {
+    id: "authClient.error.unauthorized",
+    message: "You're signed out. Sign in and try again.",
+  },
+  forbidden: {
+    id: "authClient.error.forbidden",
+    message: "You can't change that.",
+  },
+  etag_mismatch: {
+    id: "authClient.error.etagMismatch",
+    message: "Your account changed elsewhere. Check it and save again.",
+  },
   method_not_registered: {
     id: "authClient.error.methodNotRegistered",
     message: "This sign-in method isn't available here.",

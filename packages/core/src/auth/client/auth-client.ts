@@ -2,19 +2,28 @@ import { useSyncExternalStore } from "react";
 import * as v from "valibot";
 
 import type { JsonValue } from "../../json.js";
+import type { AccountState, AccountStore, RpcCall } from "./account.js";
 import type {
   AuthMethodActions,
   AuthMethodClient,
   AuthMethodClientKernel,
   RedirectOptions,
 } from "./define.js";
-import type { AuthClient, AuthUrlTarget, SignedOut } from "./registry.js";
+import type {
+  AuthClient,
+  AuthClientKernel,
+  AuthClientSignIn,
+  AuthUrlTarget,
+  SignedOut,
+} from "./registry.js";
 import type { AuthMethods } from "./render-context.js";
 import type { AuthResult } from "./result.js";
 import type { Session, SessionStore } from "./session.js";
 import { withBasePath } from "../../base-path.js";
 import { CSRF_HEADER_NAME, CSRF_HEADER_VALUE } from "../../csrf-header.js";
+import { createAccountStore, PENDING_ACCOUNT } from "./account.js";
 import { CORE_METHOD_CLIENTS } from "./core-methods.js";
+import { camelCase } from "./kernel-keys.js";
 import { failure, success } from "./result.js";
 import {
   createSessionStore,
@@ -25,10 +34,10 @@ import {
 const AUTH_PREFIX = "/_plumix/auth";
 
 /**
- * Raw envelope, not `@orpc/client`, which would put the RPC client in every
- * island. Safe while the output stays JSON-native.
+ * Raw envelopes, not `@orpc/client`, which would put the RPC client in every
+ * island. Safe while the fields read stay JSON-native.
  */
-const SESSION_PATH = "/_plumix/rpc/auth/session";
+const RPC_PREFIX = "/_plumix/rpc";
 
 /** The kernel's answer to a fetch that signed someone in. */
 const signedInSchema = v.object({
@@ -39,6 +48,39 @@ const signedInSchema = v.object({
 const signedOutSchema = v.object({ redirectTo: v.nullish(v.string()) });
 
 const errorSchema = v.object({ error: v.string() });
+
+/** The `{ error }` code a kernel or method route refuses with. */
+function routeRefusal(payload: JsonValue): string {
+  const refusal = v.safeParse(errorSchema, payload);
+  return refusal.success ? refusal.output.error : "unknown";
+}
+
+const rpcErrorSchema = v.object({
+  json: v.object({
+    code: v.string(),
+    data: v.optional(v.looseObject({ reason: v.optional(v.string()) })),
+  }),
+});
+
+const RPC_REFUSALS: Readonly<Record<string, string>> = {
+  UNAUTHORIZED: "unauthorized",
+  FORBIDDEN: "forbidden",
+  BAD_REQUEST: "invalid_input",
+};
+
+/** An RPC refusal as the auth client's own code. */
+function rpcRefusal(payload: JsonValue): string {
+  const refusal = v.safeParse(rpcErrorSchema, payload);
+  if (!refusal.success) return "unknown";
+  const { code, data } = refusal.output.json;
+  if (code === "CONFLICT") {
+    const reason = data?.reason ?? "";
+    if (reason === "etag_mismatch") return "etag_mismatch";
+    // A meta value its field refuses (`meta_invalid_value` and the rest).
+    if (reason.startsWith("meta_")) return "invalid_input";
+  }
+  return RPC_REFUSALS[code] ?? "unknown";
+}
 
 type Action = (...args: readonly unknown[]) => Promise<AuthResult<unknown>>;
 
@@ -62,6 +104,7 @@ interface CreatedAuthClient {
     clients: readonly AuthMethodClient[],
   ) => void;
   readonly session: SessionStore;
+  readonly account: AccountStore;
 }
 
 export function createAuthClient(env: AuthClientEnv): CreatedAuthClient {
@@ -88,6 +131,7 @@ export function createAuthClient(env: AuthClientEnv): CreatedAuthClient {
   async function send(
     url: string,
     body: unknown,
+    refusal: (payload: JsonValue) => string = routeRefusal,
   ): Promise<AuthResult<JsonValue>> {
     let response: Response;
     try {
@@ -109,21 +153,24 @@ export function createAuthClient(env: AuthClientEnv): CreatedAuthClient {
     } catch {
       return failure("unknown");
     }
-    if (!response.ok) {
-      const refusal = v.safeParse(errorSchema, payload);
-      return failure(refusal.success ? refusal.output.error : "unknown");
-    }
+    if (!response.ok) return failure(refusal(payload));
     return success(payload);
   }
 
+  const rpc: RpcCall = (procedure, input) =>
+    send(
+      `${env.basePath()}${RPC_PREFIX}/${procedure}`,
+      { json: input },
+      rpcRefusal,
+    );
+
   const seed = env.session ?? (() => PENDING);
   const session = createSessionStore(async () => {
-    const result = await send(`${env.basePath()}${SESSION_PATH}`, {
-      json: {},
-    });
+    const result = await rpc("auth/session", {});
     const envelope = v.safeParse(sessionEnvelopeSchema, result.data);
     return envelope.success ? envelope.output.json.user : null;
   }, seed);
+  const account = createAccountStore(rpc, session);
 
   async function post<T>(
     path: string,
@@ -134,6 +181,7 @@ export function createAuthClient(env: AuthClientEnv): CreatedAuthClient {
     const signedIn = v.safeParse(signedInSchema, result.data);
     if (signedIn.success) {
       await session.refresh();
+      account.reload();
       // Only on request: without one, the page stays and `useSession` updates.
       const { redirectTo } = signedIn.output;
       if (options.redirectTo !== undefined && redirectTo !== undefined) {
@@ -187,6 +235,7 @@ export function createAuthClient(env: AuthClientEnv): CreatedAuthClient {
   ): Promise<AuthResult<SignedOut>> {
     const result = await send(authUrl("signout", options), undefined);
     if (result.error) return result;
+    account.clear();
     await session.refresh();
     const answer = v.safeParse(signedOutSchema, result.data);
     const redirectTo = answer.success
@@ -199,6 +248,13 @@ export function createAuthClient(env: AuthClientEnv): CreatedAuthClient {
   }
 
   const kernelApi = {
+    account: { update: account.update },
+    useAccount: (): AccountState =>
+      useSyncExternalStore(
+        account.subscribe,
+        account.read,
+        () => PENDING_ACCOUNT,
+      ),
     signOut,
     useSession: (): Session =>
       useSyncExternalStore(
@@ -212,14 +268,16 @@ export function createAuthClient(env: AuthClientEnv): CreatedAuthClient {
       target === "signOut"
         ? authUrl("signout", options)
         : authUrl(`${target.method}/${target.route ?? ""}`, options),
+    // Safety: the proxy answers each mounted half's `signIn`, looked up when
+    // called, as `AuthClientSignIn` types them.
     signIn: new Proxy(
       {},
       {
         get: (_, method) =>
           typeof method === "string" ? action(method, "signIn") : undefined,
       },
-    ),
-  };
+    ) as AuthClientSignIn,
+  } satisfies AuthClientKernel;
 
   // Safety: the proxy answers every member `AuthClient` types: the kernel's
   // own, and each mounted half's actions, looked up when called.
@@ -232,10 +290,5 @@ export function createAuthClient(env: AuthClientEnv): CreatedAuthClient {
   }) as unknown as AuthClient;
 
   registerAuthMethodClients(CORE_METHOD_CLIENTS);
-  return { authClient, registerAuthMethodClients, session };
-}
-
-/** `magic-link` → `magicLink`. */
-export function camelCase(name: string): string {
-  return name.replace(/-([a-z0-9])/g, (_, next: string) => next.toUpperCase());
+  return { authClient, registerAuthMethodClients, session, account };
 }

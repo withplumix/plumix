@@ -8,7 +8,7 @@ const FIXTURE_EMAIL = "fixture@example.test";
 // On a cold `plumix dev`, the session RPC right after the server's first
 // sign-in fails in miniflare ("fetch failed"), with or without `authClient`.
 // Sign in here until the RPC answers.
-test.beforeAll(async ({ playwright, baseURL }) => {
+test.beforeAll(async ({ playwright, baseURL, browser }) => {
   const request = await playwright.request.newContext({ baseURL });
   const headers = { "x-plumix-request": "1" };
   await request.post("/_plumix/auth/fixture/sign-in", { headers, data: {} });
@@ -21,6 +21,14 @@ test.beforeAll(async ({ playwright, baseURL }) => {
     })
     .toBe(true);
   await request.dispose();
+  // Vite replays that failure to the next page to connect, as an overlay.
+  const page = await browser.newPage({ baseURL });
+  const connected = page.waitForEvent("console", (message) =>
+    message.text().includes("[vite] connected"),
+  );
+  await page.goto("/auth");
+  await connected;
+  await page.close();
 });
 
 test.describe("authClient from a theme island", () => {

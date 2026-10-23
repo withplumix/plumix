@@ -25,9 +25,11 @@ export type {
   AuthMethodClientKernel,
   RedirectOptions,
 } from "./define.js";
+export type { Account, AccountPatch, AccountState } from "./account.js";
 export type { AuthClientError, AuthResult } from "./result.js";
 export type {
   AuthClient,
+  AuthClientAccount,
   AuthClientSignIn,
   AuthMethodRegistry,
   AuthUrlTarget,

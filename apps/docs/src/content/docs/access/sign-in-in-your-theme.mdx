@@ -25,6 +25,8 @@ The admin has a login screen of its own, and a theme can have one too. `authClie
 - **`authClient.signOut({ redirectTo })`**, which ends the session.
 - **`authClient.useSession()`**, which returns `{ user, isPending }`. It starts from the session the page was rendered with, and it updates after any call that signs someone in or out, with no reload.
 - **`authClient.useAuthMethods()`**, which returns the sign-in methods the site lists, each with its `name` and `label`, and the configured OAuth providers.
+- **`authClient.useAccount()`**, which returns `{ account, isPending }`: the signed-in user's own `id`, `name`, `avatarUrl` and `meta`, or `null` when signed out. It loads on first use, not in the server render.
+- **`authClient.account.update({ name, avatarUrl, meta })`**, which saves the signed-in user's own profile.
 - **`authClient.url(target, { redirectTo })`**, the base-pathed URL of a method's route or of sign-out, for a plain `<form action>` or `<a href>`.
 
 Every call resolves `{ data, error }` and never throws for an expected failure. `error` is `{ code, message }`. `code` is the server's code, such as `wrong_code`, or one the browser hit itself, such as `network_error` or `user_cancelled`. `message` is a Lingui message descriptor: `message.id` is the key in your own catalog, and `message.message` is the English text.
@@ -62,6 +64,8 @@ A method's call runs only once its browser half is mounted. Plumix's Vite plugin
 <Code code={accountMenu} lang="tsx" title="sign-in/account-menu.tsx" />
 
 `isPending` is `true` only while the session is still unknown, such as on a page no server render produced. `signOut()` with no `redirectTo` leaves the visitor on the page, and the menu turns to its signed-out branch.
+
+The menu's form renames the visitor with `account.update`. It always acts on the session's user, so it takes no `id`, and it carries the concurrency token the account was loaded with, so the theme never handles one. A save that worked refreshes the session, so the name `useSession()` shows changes with no reload. When the account was saved somewhere else first, such as in another tab, the call resolves `error.code` `etag_mismatch` after reloading the account, and the next save goes through. A save also wins over an admin who has the user open in the admin. Other refusals resolve `unauthorized` when signed out, `forbidden` for a `meta` key the user may not edit, and `invalid_input` for a value the server refuses. `signOut()` clears the account.
 
 `signOut({ redirectTo: "/" })` navigates instead. Either way it resolves `data.redirectTo`: the identity provider's logout URL when the site's authenticator has one, else the `redirectTo` you passed, else `null`. A provider's logout URL wins over yours, and it must be followed or the visitor is signed straight back in, so call `signOut` with a `redirectTo` on such a site.
 

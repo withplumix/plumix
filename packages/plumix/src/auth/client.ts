@@ -4,7 +4,11 @@ export {
   registerAuthMethodClients,
 } from "@plumix/core/auth/client";
 export type {
+  Account,
+  AccountPatch,
+  AccountState,
   AuthClient,
+  AuthClientAccount,
   AuthClientError,
   AuthClientSignIn,
   AuthMethodClient,
