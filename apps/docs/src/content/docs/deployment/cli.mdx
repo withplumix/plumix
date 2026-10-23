@@ -32,9 +32,15 @@ import { Aside } from "@astrojs/starlight/components";
 plumix --help
 ```
 
+`plumix <command> --help` (or `-h`, anywhere after the command name) prints that command's usage, its one-line description and the runtime's target options, then exits without building, migrating or running the command.
+
+```bash
+plumix deploy --help
+```
+
 <Aside type="tip">
-  `plumix <command> --help` is not wired up per command today. This page, and
-  the one-line descriptions `--help` prints, are the reference.
+  A command lists no options beyond those. This page is the reference for the
+  rest.
 </Aside>
 
 ## Commands
@@ -257,7 +263,7 @@ plumix build --verbose
 
 ### `--help`
 
-Prints command groups and their one-line descriptions: the built-ins always, and a runtime's own commands once its config loads. Also `-h`, and the default when `plumix` runs with no command at all.
+Prints command groups and their one-line descriptions: the built-ins always, and a runtime's own commands once its config loads. Also `-h`, and the default when `plumix` runs with no command at all. After a command name, it prints that command's help instead, as in the [quickstart](#quickstart).
 
 ```bash
 plumix --help

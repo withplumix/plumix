@@ -58,3 +58,19 @@ export function formatHelp(
 
   return lines.join("\n");
 }
+
+export function formatCommandHelp(
+  name: string,
+  command: CommandDefinition,
+  targetOptions?: TargetOptionGroup,
+): string {
+  const lines = [
+    "Usage:",
+    `  plumix ${name} [options]`,
+    "",
+    command.describe,
+    "",
+  ];
+  if (targetOptions) lines.push(...targetOptionLines(targetOptions));
+  return lines.join("\n");
+}

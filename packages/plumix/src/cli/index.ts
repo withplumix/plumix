@@ -26,7 +26,7 @@ import { metaCommand } from "./commands/meta.js";
 import { migrateCommand, migrateForDev } from "./commands/migrate.js";
 import { syncCommand } from "./commands/sync.js";
 import { PlumixCliError } from "./errors.js";
-import { formatHelp } from "./help.js";
+import { formatCommandHelp, formatHelp } from "./help.js";
 import { loadConfig } from "./load-config.js";
 import { badge, exitWithError, report } from "./report.js";
 
@@ -143,6 +143,13 @@ export async function run(argv: readonly string[]): Promise<void> {
 
   if (args.command === undefined || args.command === "help" || args.help) {
     await printHelp(args);
+    return;
+  }
+
+  // Anywhere after the command name, so `plumix deploy --env qa --help` prints
+  // help rather than building and migrating.
+  if (args.rest.some((token) => token === "--help" || token === "-h")) {
+    await printCommandHelp(args, args.command);
     return;
   }
 
@@ -271,7 +278,12 @@ function appSentinel(makeError: () => PlumixCliError): PlumixApp {
   ) as never;
 }
 
-async function printHelp(args: CliArgs): Promise<void> {
+interface HelpContext {
+  readonly loaded: LoadedConfig | undefined;
+  readonly runtimeModule: RuntimeCommandsModule;
+}
+
+async function loadHelpContext(args: CliArgs): Promise<HelpContext> {
   let loaded: LoadedConfig | undefined;
   let runtimeModule: RuntimeCommandsModule = {
     commands: {},
@@ -289,6 +301,24 @@ async function printHelp(args: CliArgs): Promise<void> {
       `help: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
+  return { loaded, runtimeModule };
+}
+
+async function printCommandHelp(args: CliArgs, name: string): Promise<void> {
+  const { loaded, runtimeModule } = await loadHelpContext(args);
+  const command = resolveCommand(runtimeModule.commands, name);
+  if (!command) throw PlumixCliError.unknownCommand({ command: name });
+  report.info(
+    formatCommandHelp(
+      name,
+      command,
+      loaded && targetOptionGroup(loaded, runtimeModule),
+    ),
+  );
+}
+
+async function printHelp(args: CliArgs): Promise<void> {
+  const { loaded, runtimeModule } = await loadHelpContext(args);
   report.info(
     formatHelp(
       buildGroups(loaded, runtimeModule.commands),
