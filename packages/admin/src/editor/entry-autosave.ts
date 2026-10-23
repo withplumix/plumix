@@ -4,10 +4,10 @@ import {
   classifyAutosaveError,
 } from "@/editor/autosave.js";
 import { createDebouncer } from "@/editor/debounce.js";
-import { createSaveQueue } from "@/editor/save-queue.js";
 
 import type { AppRouterClient } from "@plumix/core";
 import type { LeaseRefusal } from "@plumix/core/admin";
+import { createSaveQueue } from "@plumix/core/admin";
 
 type EntryUpdateInput = Parameters<AppRouterClient["entry"]["update"]>[0];
 type EntryRow = Awaited<ReturnType<AppRouterClient["entry"]["update"]>>;

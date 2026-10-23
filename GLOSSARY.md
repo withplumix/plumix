@@ -212,6 +212,12 @@ _Avoid_: lock (reserved for database locks), presence (a lease prevents, it does
 **Take over**:
 Claiming an edit lease another user holds. The previous holder turns read-only and keeps their unsaved work. Only a person takes over; an agent waits.
 
+**Keep mine**:
+Answering a conflict by saving the author's refused work over what is saved now, as an explicit overwrite from the concurrency token the conflict reported.
+
+**Load theirs**:
+Answering a conflict by discarding the author's refused work and reloading what is saved now.
+
 ## Blocks & rich content
 
 **Block**:

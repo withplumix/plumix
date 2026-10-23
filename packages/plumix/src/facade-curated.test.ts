@@ -39,6 +39,13 @@ type Curated =
 const CORE_WITHHELD: readonly Withholding[] = [
   {
     reason:
+      "the editing-copy controller and the save queue it writes through, " +
+      "which only the admin's own editors use until a plugin editor moves " +
+      "onto them (#3241)",
+    names: ["createEditingCopy", "createSaveQueue", "LOADING_EDITING_COPY"],
+  },
+  {
+    reason:
       "where core's shipped migration history sits, which only this " +
       "package's own `migrate` command reads",
     names: ["CORE_MIGRATIONS_FOLDER"],
@@ -355,6 +362,13 @@ const CURATED: Readonly<Record<string, Curated>> = {
           "object and `PlumixAdminRuntime` are typed against. A plugin " +
           "chunk reads those keys through `getRuntime`, not this map.",
         names: ["SHARED_ADMIN_RUNTIME_KEYS"],
+      },
+      {
+        reason:
+          "the editing-copy controller and the save queue it writes through, " +
+          "which only the admin's own editors use until a plugin editor moves " +
+          "onto them (#3241)",
+        names: ["createEditingCopy", "createSaveQueue", "LOADING_EDITING_COPY"],
       },
     ],
   },

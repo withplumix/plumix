@@ -175,6 +175,19 @@ const ROOT_ONLY_TYPES: readonly RootOnly[] = [
       "withheld with `checkImportedMeta`",
     names: ["ImportedMeta", "ImportedMetaOwner"],
   },
+  {
+    reason:
+      "the editing-copy controller's and the save queue's shapes, withheld " +
+      "with `createEditingCopy` and `createSaveQueue` until a plugin editor " +
+      "moves onto them (#3241)",
+    names: [
+      "EditingConflict",
+      "EditingCopyController",
+      "EditingCopyOptions",
+      "EditingCopySnapshot",
+      "SaveQueue",
+    ],
+  },
 ];
 
 function parseTsconfig(): ts.ParsedCommandLine {

@@ -112,7 +112,8 @@ Locked` over REST, and names the holder. Taking over is always explicit
   another user holds it, offering to take over. On a conflict it pauses
   autosave, keeps the author's work and offers compare, keep mine (an explicit
   overwrite) or load theirs. The editor's own writes go through one queue that
-  adopts each response's `etag`, so they never conflict with each other.
+  adopts each response's `etag`, so they never conflict with each other. The
+  admin rule lives in one module that core editors and plugins share.
 - **Collaboration extends this; it doesn't replace it.** When real-time editing
   arrives, the lease holder becomes the collaboration session: a second editor
   joins it rather than taking over, and the session persists through the same

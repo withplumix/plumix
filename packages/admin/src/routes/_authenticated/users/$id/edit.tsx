@@ -1,4 +1,3 @@
-import type { EntryConflict } from "@/editor/autosave.js";
 import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { QueryClient } from "@tanstack/react-query";
@@ -15,11 +14,7 @@ import { LanguageCard } from "@/components/profile/language-card.js";
 import { PasskeysCard } from "@/components/profile/passkeys-card.js";
 import { SessionsCard } from "@/components/profile/sessions-card.js";
 import { UserEmailField } from "@/components/profile/user-email-field.js";
-import { classifyAutosaveError } from "@/editor/autosave.js";
-import { EditConflictDialog } from "@/editor/EditConflictDialog.js";
-import { EditLeaseBanner } from "@/editor/EditLeaseBanner.js";
-import { useEditGuards } from "@/editor/use-edit-guards.js";
-import { useEditLease } from "@/editor/use-edit-lease.js";
+import { useEditingCopy } from "@/editor/use-editing-copy.js";
 import { isSurfaceOffered } from "@/lib/admin-areas.js";
 import { hasCap } from "@/lib/caps.js";
 import { hasAuthorRoutes, visibleUserMetaBoxes } from "@/lib/manifest.js";
@@ -52,12 +47,7 @@ import { useForm } from "react-hook-form";
 import * as v from "valibot";
 
 import type { ResolvedMeta, WithResolvedMeta } from "@plumix/core";
-import type {
-  EditingCopy,
-  EditLease,
-  EditorLeaseMode,
-  LeaseRefusal,
-} from "@plumix/core/admin";
+import type { EditingCopy } from "@plumix/core/admin";
 import type { UserMetaBoxManifestEntry } from "@plumix/core/manifest";
 import type { User as StoredUser, UserRole } from "@plumix/core/schema";
 import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
@@ -89,7 +79,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@plumix/admin-ui/select";
-import { editorLeaseMode } from "@plumix/core/admin";
 import { seedFromMetaBoxes, USER_ROLES } from "@plumix/core/manifest";
 import { idPathParam } from "@plumix/core/validation";
 
@@ -263,18 +252,13 @@ function UserEditRoute(): ReactNode {
   const { data: target } = useSuspenseQuery(
     orpc.user.get.queryOptions({ input: { id: userId } }),
   );
-  // Outside the keyed form, so a remount on save keeps the lease.
-  const lease = useEditLease("user", userId);
   const metaBoxes = visibleUserMetaBoxes(session.capabilities);
   return (
     <UserEditForm
-      // Remount after each save so `useForm` re-reads `defaultValues`
-      // from the refetched row. Same pattern as `/entries/$slug/$id`.
-      key={target.etag}
+      // Another user is another form: `useForm` reads `defaultValues` once.
+      key={target.id}
       target={target}
       sessionUserId={session.id}
-      lease={lease}
-      leaseMode={editorLeaseMode(lease.state)}
       isSelf={isSelf}
       canPromote={canPromote}
       canSave={canSave}
@@ -286,91 +270,22 @@ function UserEditRoute(): ReactNode {
   );
 }
 
-function useUserUpdateMutation({
-  target,
-  canPromote,
-  metaBoxes,
-  queryClient,
-  setServerError,
-  setServerFieldErrors,
-  onConflict,
-  onLocked,
-}: {
-  target: User;
-  canPromote: boolean;
-  metaBoxes: readonly UserMetaBoxManifestEntry[];
-  queryClient: QueryClient;
-  setServerError: (message: MessageDescriptor | null) => void;
-  setServerFieldErrors: (
-    errors: readonly MetaFieldServerError[] | null,
-  ) => void;
-  /** The copy was stale: `values` are kept, unsaved, for the author to pick. */
-  onConflict: (conflict: EntryConflict, values: ProfileValues) => void;
-  onLocked: (refusal: LeaseRefusal) => void;
-}) {
-  return useMutation({
-    mutationFn: ({
-      values,
-      ifMatch,
-    }: {
-      values: ProfileValues;
-      ifMatch: string;
-    }) =>
-      orpc.user.update.call({
-        id: target.id,
-        ifMatch,
-        name: values.name.length > 0 ? values.name : null,
-        // Only send the slug when it actually changed — skips a needless
-        // column write on name-only edits.
-        ...(values.slug !== target.slug ? { slug: values.slug } : {}),
-        // Only send role if the caller can change it AND it actually
-        // differs — avoids a needless `user:promote` cap check on the
-        // server for name-only edits.
-        ...(canPromote && values.role !== target.role
-          ? { role: values.role }
-          : {}),
-        meta: metaBoxes.length > 0 ? values.meta : undefined,
-      }),
-    onMutate: () => {
-      setServerError(null);
-      setServerFieldErrors(null);
-    },
-    onSuccess: async () => {
-      // Parent route remounts via the target.updatedAt key on refetch,
-      // so the form re-reads defaultValues (including sanitized meta)
-      // from the fresh row automatically.
-      await invalidateUserCaches(queryClient, target.id);
-    },
-    onError: (err, { values }) => {
-      // Never retried behind the author's back: they choose.
-      const outcome = classifyAutosaveError(err);
-      if (outcome.kind === "conflict") {
-        onConflict(outcome.conflict, values);
-        return;
-      }
-      if (outcome.kind === "locked") {
-        onLocked(outcome.locked);
-        return;
-      }
-      // Path-addressed meta rejections render inline on the offending
-      // inputs; everything else keeps the banner mapping.
-      const fieldErrors = extractMetaFieldErrors(err);
-      if (fieldErrors) {
-        setServerFieldErrors(fieldErrors);
-        return;
-      }
-      setServerError(
-        mapUserError(err, UPDATE_ERROR_MESSAGES, M.errUpdateFallback),
-      );
-    },
-  });
+/** The form's fields as `row` holds them. */
+function profileValues(
+  row: User,
+  metaBoxes: readonly UserMetaBoxManifestEntry[],
+): ProfileValues {
+  return {
+    name: row.name ?? "",
+    slug: row.slug,
+    role: row.role,
+    meta: seedFromMetaBoxes(metaBoxes, row.meta),
+  };
 }
 
 function UserEditForm({
   target,
   sessionUserId,
-  lease,
-  leaseMode,
   isSelf,
   canPromote,
   canSave,
@@ -381,8 +296,6 @@ function UserEditForm({
 }: {
   target: User & { readonly etag: string };
   sessionUserId: number;
-  lease: EditLease;
-  leaseMode: EditorLeaseMode;
   isSelf: boolean;
   canPromote: boolean;
   canSave: boolean;
@@ -401,54 +314,79 @@ function UserEditForm({
     readonly MetaFieldServerError[] | null
   >(null);
 
-  const updateUser = useUserUpdateMutation({
-    target,
-    canPromote,
-    metaBoxes,
-    queryClient,
-    setServerError,
-    setServerFieldErrors,
-    onConflict: (next, values) => guards.reportConflict(next, values),
-    onLocked: lease.lose,
+  const form = useForm({
+    resolver: valibotResolver(profileFormSchema),
+    defaultValues: profileValues(target, metaBoxes),
   });
-  const guards = useEditGuards({
-    copy: USER_EDITING_COPY,
+  useApplyMetaFieldErrors(form, META_FORM_BASE_PATH, serverFieldErrors);
+
+  const editing = useEditingCopy({
+    kind: "user",
+    id: target.id,
+    etag: target.etag,
     userId: sessionUserId,
-    lease,
-    theirs: {
-      queryKey: ["user.conflict", target.id],
-      fetch: () => orpc.user.get.call({ id: target.id }),
-      snapshot: (saved) =>
-        saved
-          ? {
-              name: saved.name ?? "",
-              slug: saved.slug,
-              role: saved.role,
-              meta: saved.meta,
-            }
-          : null,
+    copy: USER_EDITING_COPY,
+    save: async (ifMatch, values: ProfileValues) => {
+      const updated = await orpc.user.update.call({
+        id: target.id,
+        ifMatch,
+        name: values.name.length > 0 ? values.name : null,
+        // Only send the slug when it actually changed — skips a needless
+        // column write on name-only edits.
+        ...(values.slug !== target.slug ? { slug: values.slug } : {}),
+        // Only send role if the caller can change it AND it actually
+        // differs — avoids a needless `user:promote` cap check on the
+        // server for name-only edits.
+        ...(canPromote && values.role !== target.role
+          ? { role: values.role }
+          : {}),
+        meta: metaBoxes.length > 0 ? values.meta : undefined,
+      });
+      // In place, so the author keeps their focus: the fields re-read the
+      // saved row, sanitized meta included, except what was typed meanwhile.
+      form.reset(profileValues(updated, metaBoxes), { keepDirtyValues: true });
+      void invalidateUserCaches(queryClient, target.id);
+      return updated;
     },
-    keepMine: (etag, values: ProfileValues) =>
-      updateUser.mutate({ values, ifMatch: etag }),
-    reload: () => invalidateUserCaches(queryClient, target.id),
+    readSaved: async () =>
+      profileValues(await orpc.user.get.call({ id: target.id }), metaBoxes),
+    reload: async () => {
+      const saved = await queryClient.query({
+        ...orpc.user.get.queryOptions({ input: { id: target.id } }),
+        staleTime: 0,
+      });
+      form.reset(profileValues(saved, metaBoxes));
+      void queryClient.invalidateQueries({ queryKey: orpc.user.list.key() });
+      return saved.etag;
+    },
+    onFailed: (err) => {
+      // Path-addressed meta rejections render inline on the offending
+      // inputs; everything else keeps the banner mapping.
+      const fieldErrors = extractMetaFieldErrors(err);
+      if (fieldErrors) {
+        setServerFieldErrors(fieldErrors);
+        return;
+      }
+      setServerError(
+        mapUserError(err, UPDATE_ERROR_MESSAGES, M.errUpdateFallback),
+      );
+    },
     onBack: () => {
       void navigate({ to: "/users", search: USERS_LIST_DEFAULT_SEARCH });
     },
   });
-
-  const form = useForm({
-    resolver: valibotResolver(profileFormSchema),
-    defaultValues: {
-      name: target.name ?? "",
-      slug: target.slug,
-      role: target.role,
-      meta: seedFromMetaBoxes(metaBoxes, target.meta),
+  const updateUser = useMutation({
+    mutationFn: (values: ProfileValues) => editing.save(values),
+    onMutate: () => {
+      setServerError(null);
+      setServerFieldErrors(null);
     },
   });
-  useApplyMetaFieldErrors(form, META_FORM_BASE_PATH, serverFieldErrors);
 
   const onSubmit = form.handleSubmit((values) => {
-    updateUser.mutate({ values, ifMatch: target.etag });
+    // What is sent is no longer dirty: only what is typed while it saves is.
+    form.reset(values);
+    updateUser.mutate(values);
   });
 
   // Hoisted: lingui/no-expression-in-message rejects member exprs inline.
@@ -456,10 +394,8 @@ function UserEditForm({
 
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-4">
-      <EditConflictDialog {...guards.conflictDialog} />
-      {leaseMode.mode === "readOnly" ? (
-        <EditLeaseBanner {...guards.leaseBanner(leaseMode.notice)} />
-      ) : null}
+      {editing.dialog}
+      {editing.banner}
       <Link
         to="/users"
         search={USERS_LIST_DEFAULT_SEARCH}
@@ -503,7 +439,7 @@ function UserEditForm({
         <CardContent>
           <Form {...form}>
             <fieldset
-              disabled={leaseMode.mode === "readOnly"}
+              disabled={editing.readOnly}
               className="contents"
               data-testid="user-edit-fieldset"
             >
@@ -526,7 +462,7 @@ function UserEditForm({
                         <Input
                           type="text"
                           autoComplete="name"
-                          disabled={updateUser.isPending || !canSave}
+                          disabled={!canSave}
                           data-testid="user-edit-name-input"
                           {...field}
                         />
@@ -548,7 +484,7 @@ function UserEditForm({
                         <Input
                           type="text"
                           autoComplete="off"
-                          disabled={updateUser.isPending || !canSave}
+                          disabled={!canSave}
                           data-testid="user-edit-slug-input"
                           {...field}
                         />
@@ -580,7 +516,6 @@ function UserEditForm({
                           onValueChange={(next) => {
                             if (isUserRole(next)) field.onChange(next);
                           }}
-                          disabled={updateUser.isPending}
                         >
                           <FormControl>
                             <SelectTrigger
@@ -627,7 +562,7 @@ function UserEditForm({
                     key={box.id}
                     box={box}
                     basePath="meta"
-                    disabled={updateUser.isPending || !canSave}
+                    disabled={!canSave}
                   />
                 ))}
 

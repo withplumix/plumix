@@ -42,7 +42,11 @@ export function EditConflictDialog({
   theirsSnapshot,
   onKeepMine,
   onLoadTheirs,
-}: EditConflictDialogProps): ReactElement {
+  keepMineDisabled = false,
+}: EditConflictDialogProps & {
+  /** Keep mine can't save now: the lease was taken. */
+  readonly keepMineDisabled?: boolean;
+}): ReactElement {
   const [comparing, setComparing] = useState(false);
   const label = useLabel();
   const { formatDate } = useFormatters();
@@ -130,6 +134,7 @@ export function EditConflictDialog({
               size="sm"
               data-testid="entry-conflict-keep-mine"
               onClick={onKeepMine}
+              disabled={keepMineDisabled}
             >
               <Trans id="editor.conflict.keepMine" message="Keep mine" />
             </Button>

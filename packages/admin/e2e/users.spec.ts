@@ -1055,28 +1055,15 @@ test.describe("/users/$id/edit — edits from another session", () => {
     return { updates };
   }
 
-  test("a save made after another session saved opens the conflict dialog, and Load theirs shows that save", async ({
+  test("a save after the user changed elsewhere opens the conflict; Compare shows both, and Keep mine saves the local edit over it", async ({
     page,
   }) => {
     const { updates } = await openConflictDialog(page);
 
-    await expect(page.getByTestId("entry-conflict-dialog")).toContainText(
-      "This profile changed since you opened it",
-    );
-    expect(updates).toMatchObject([{ ifMatch: "e0", name: "My name" }]);
-    await page.getByTestId("entry-conflict-load-theirs").click();
-
-    await expect(page.getByTestId("entry-conflict-dialog")).toBeHidden();
-    await expect(page.getByTestId("user-edit-name-input")).toHaveValue(
-      "Saved elsewhere",
-    );
-  });
-
-  test("Keep mine in the conflict dialog saves the local edit over the other session's", async ({
-    page,
-  }) => {
-    const { updates } = await openConflictDialog(page);
-
+    await page.getByTestId("entry-conflict-compare").click();
+    const panes = page.getByTestId("entry-conflict-compare-panes");
+    await expect(panes).toContainText("My name");
+    await expect(panes).toContainText("Saved elsewhere");
     await page.getByTestId("entry-conflict-keep-mine").click();
 
     await expect(page.getByTestId("entry-conflict-dialog")).toBeHidden();
@@ -1087,6 +1074,26 @@ test.describe("/users/$id/edit — edits from another session", () => {
     await expect(page.getByTestId("user-edit-name-input")).toHaveValue(
       "My name",
     );
+  });
+
+  test("a save keeps the author's focus in the field they saved from", async ({
+    page,
+  }) => {
+    const { updates } = await mockSavedUser(page);
+    await page.goto("users/42/edit");
+    const name = page.getByTestId("user-edit-name-input");
+    await expect(name).toHaveValue("Eddie");
+
+    await name.fill("Edwina");
+    // The saved row refetched, carrying the new token.
+    const refetched = page.waitForResponse("**/_plumix/rpc/user/get");
+    await name.press("Enter");
+
+    await expect.poll(() => updates).toMatchObject([{ name: "Edwina" }]);
+    await refetched;
+    await expect(page.getByTestId("user-edit-submit")).toBeEnabled();
+    await expect(name).toBeFocused();
+    await expect(name).toHaveValue("Edwina");
   });
 
   test("while another admin edits the user, the form is read-only until Take over", async ({
