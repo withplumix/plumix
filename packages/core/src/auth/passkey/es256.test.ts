@@ -73,6 +73,14 @@ describe("derSignatureToRaw refuses as a malformed response", () => {
     ["a non-SEQUENCE", hex("31" + encodeHex(der(R, S)).slice(2))],
     ["a SEQUENCE length past the end", der(R, S).subarray(0, 60)],
     ["trailing bytes", hex(encodeHex(der(R, S)) + "00")],
+    [
+      "a third element inside the SEQUENCE",
+      hex("3047" + encodeHex(der(R, S)).slice(4) + "020100"),
+    ],
+    [
+      "a SEQUENCE length byte with the long-form bit set",
+      hex("3081" + ("025d" + "00".repeat(61) + R) + ("0220" + S)),
+    ],
     ["a non-INTEGER r", hex(encodeHex(der(R, S)).replace(/^304402/, "304403"))],
     ["an empty r", der("", S)],
     ["a negative r", der("80" + "11".repeat(31), S)],

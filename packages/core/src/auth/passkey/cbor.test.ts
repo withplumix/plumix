@@ -53,6 +53,13 @@ describe("decodeCbor", () => {
 
 test("decodes four levels of nesting", () => {
   expect(decodeCbor(hex("8181818100"))).toEqual([[[[0]]]]);
+  expect(decodeCbor(hex("a100a100a100a10000"))).toEqual(
+    new Map([[0, new Map([[0, new Map([[0, new Map([[0, 0]])]])]])]]),
+  );
+});
+
+test("decodes Number.MAX_SAFE_INTEGER", () => {
+  expect(decodeCbor(hex("1b001fffffffffffff"))).toBe(Number.MAX_SAFE_INTEGER);
 });
 
 describe("decodeCbor refuses as a malformed response", () => {

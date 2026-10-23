@@ -29,7 +29,7 @@ interface AttestedCredential {
   readonly publicKey: CborValue;
 }
 
-export interface AuthenticatorData {
+interface AuthenticatorData {
   readonly rpIdHash: Uint8Array;
   readonly userPresent: boolean;
   readonly signatureCounter: number;
@@ -113,10 +113,7 @@ export async function rpIdHashMatches(
   const expected = new Uint8Array(
     await crypto.subtle.digest("SHA-256", new TextEncoder().encode(rpId)),
   );
-  return (
-    expected.length === data.rpIdHash.length &&
-    expected.every((byte, i) => byte === data.rpIdHash[i])
-  );
+  return expected.every((byte, i) => byte === data.rpIdHash[i]);
 }
 
 /** WebAuthn §6.5. Throws `invalid_response` when it isn't one. */

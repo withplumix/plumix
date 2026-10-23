@@ -19,7 +19,7 @@ export function encodeBase64url(bytes: Uint8Array): string {
  */
 export function decodeBase64url(value: string): Uint8Array<ArrayBuffer> {
   const unpadded = value.replace(/={1,2}$/, "");
-  if (!BASE64URL.test(unpadded) || unpadded.length % 4 === 1) {
+  if (!BASE64URL.test(unpadded)) {
     throw new DOMException("Invalid base64url", "InvalidCharacterError");
   }
   const binary = atob(unpadded.replace(/-/g, "+").replace(/_/g, "/"));

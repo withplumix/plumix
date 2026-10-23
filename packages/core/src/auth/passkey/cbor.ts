@@ -73,7 +73,6 @@ class Reader {
 
   private array(size: number, depth: number): readonly CborValue[] {
     if (depth > MAX_DEPTH) throw malformed("nested too deep");
-    this.assertItemsFit(size);
     const items: CborValue[] = [];
     for (let i = 0; i < size; i++) items.push(this.value(depth));
     return items;
@@ -81,7 +80,6 @@ class Reader {
 
   private map(size: number, depth: number): ReadonlyMap<CborKey, CborValue> {
     if (depth > MAX_DEPTH) throw malformed("nested too deep");
-    this.assertItemsFit(size * 2);
     const map = new Map<CborKey, CborValue>();
     for (let i = 0; i < size; i++) {
       const key = this.value(depth);
@@ -128,13 +126,6 @@ class Reader {
       throw malformed("integer past Number.MAX_SAFE_INTEGER");
     }
     return Number(value);
-  }
-
-  /** Every item spans at least one byte, so a larger count can't fit. */
-  private assertItemsFit(count: number): void {
-    if (count > this.bytes.length - this.offset) {
-      throw malformed("more items than bytes left");
-    }
   }
 
   private take(length: number): Uint8Array {

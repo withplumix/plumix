@@ -12,6 +12,7 @@ import {
   parseAuthenticatorData,
   parseClientData,
   parseEs256PublicKey,
+  rpIdHashMatches,
 } from "./parse.js";
 
 function refusalOf(parse: () => unknown): unknown {
@@ -79,6 +80,23 @@ describe("parseAuthenticatorData refuses truncated attested credential data", ()
     expect(
       refusalOf(() => parseAuthenticatorData(attested.subarray(0, length))),
     ).toBe("invalid_response");
+  });
+});
+
+describe("rpIdHashMatches", () => {
+  const data = parseAuthenticatorData(ASSERTION_AUTH_DATA);
+
+  test("holds for the RP ID a recorded assertion was made for", async () => {
+    expect(await rpIdHashMatches(data, "dev.dontneeda.pw")).toBe(true);
+  });
+
+  test("fails when the hash differs in one byte", async () => {
+    const rpIdHash = data.rpIdHash.slice();
+    rpIdHash[31] = (rpIdHash[31] ?? 0) ^ 0x01;
+
+    expect(
+      await rpIdHashMatches({ ...data, rpIdHash }, "dev.dontneeda.pw"),
+    ).toBe(false);
   });
 });
 
