@@ -20,7 +20,6 @@ export interface Account {
 export interface AccountState {
   /** `null` when signed out, or while pending. */
   readonly account: Account | null;
-  /** True until the account is known. */
   readonly isPending: boolean;
 }
 
@@ -48,7 +47,6 @@ export const PENDING_ACCOUNT: AccountState = { account: null, isPending: true };
 
 const SIGNED_OUT: AccountState = { account: null, isPending: false };
 
-/** Calls an RPC procedure with the raw envelope, resolving its answer. */
 export type RpcCall = (
   procedure: string,
   input: unknown,
@@ -61,6 +59,8 @@ export interface AccountStore {
   readonly update: (patch: AccountPatch) => Promise<AuthResult<Account>>;
   /** Forgets the account and its token, as signing out does. */
   readonly clear: () => void;
+  /** Loads again for whoever the session now names, as signing in does. */
+  readonly reload: () => void;
 }
 
 /**
@@ -85,7 +85,6 @@ export function createAccountStore(
     for (const listener of listeners) listener();
   }
 
-  // `null` when the answer doesn't decode.
   function holdAnswer(data: JsonValue): Account | null {
     const answer = v.safeParse(accountEnvelopeSchema, data);
     if (!answer.success) return null;
@@ -128,6 +127,12 @@ export function createAccountStore(
     return run;
   }
 
+  function forget(): void {
+    generation += 1;
+    loaded = false;
+    loading = null;
+  }
+
   async function update(patch: AccountPatch): Promise<AuthResult<Account>> {
     if (!loaded || loading !== null) {
       const result = await load();
@@ -139,7 +144,7 @@ export function createAccountStore(
       ...patch,
       id: account.id,
       ifMatch: etag,
-      // The owner always wins over their own profile (ADR 0050).
+      // The owner's save wins over another user's edit lease.
       takeOver: true,
     });
     if (result.error) {
@@ -163,10 +168,13 @@ export function createAccountStore(
     },
     update,
     clear() {
-      generation += 1;
-      loaded = false;
-      loading = null;
+      forget();
       hold(SIGNED_OUT, null);
+    },
+    reload() {
+      forget();
+      hold(PENDING_ACCOUNT, null);
+      if (listeners.size > 0) void load();
     },
   };
 }

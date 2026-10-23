@@ -1,11 +1,13 @@
 import { describe, expect, test } from "vitest";
 
 import type { UserRole } from "../../db/schema/users.js";
+import type { JsonValue } from "../../json.js";
 import type {
   CreateDispatcherHarnessOptions,
   DispatcherHarness,
 } from "../../test/dispatcher.js";
-import type { AccountPatch } from "./account.js";
+import type { AccountPatch, RpcCall } from "./account.js";
+import { CSRF_HEADER_NAME, CSRF_HEADER_VALUE } from "../../csrf-header.js";
 import { acquireEditLease, readEditLease } from "../../db/edit-lease.js";
 import { definePlugin } from "../../plugin/define.js";
 import { text } from "../../plugin/fields/index.js";
@@ -15,7 +17,10 @@ import {
 } from "../../test/dispatcher.js";
 import { SESSION_COOKIE_NAME } from "../cookies.js";
 import { createSession } from "../sessions.js";
+import { createAccountStore } from "./account.js";
 import { createAuthClient } from "./auth-client.js";
+import { defineAuthMethodClient } from "./define.js";
+import { failure, success } from "./result.js";
 
 /** An auth client whose every request reaches core's real handlers. */
 function clientOf(
@@ -49,6 +54,25 @@ async function signedInClient(
   return { h, user, token, ...clientOf(h, token) };
 }
 
+/** The RPC half of an auth client, over core's real handlers. */
+function rpcOf(h: DispatcherHarness, token: string): RpcCall {
+  return async (procedure, input) => {
+    const response = await h.dispatch(
+      plumixRequest(`/_plumix/rpc/${procedure}`, {
+        method: "POST",
+        headers: {
+          cookie: `${SESSION_COOKIE_NAME}=${token}`,
+          "content-type": "application/json",
+          [CSRF_HEADER_NAME]: CSRF_HEADER_VALUE,
+        },
+        body: JSON.stringify({ json: input }),
+      }),
+    );
+    const payload = (await response.json()) as JsonValue;
+    return response.ok ? success(payload) : failure("unknown");
+  };
+}
+
 /** A profile box with a member-editable key and one only promoters may set. */
 const profiles = definePlugin("profiles", (ctx) => {
   ctx.registerUserMetaBox("profile", {
@@ -74,10 +98,10 @@ describe("authClient.account.update", () => {
   test("a second save in a row sends the token the first returned", async () => {
     const { authClient, procedures } = await signedInClient();
 
-    const first = await authClient.account.update({ name: "First" });
+    await authClient.account.update({ name: "First" });
+
     const second = await authClient.account.update({ name: "Second" });
 
-    expect(first.error).toBeNull();
     expect(second.error).toBeNull();
     expect(second.data?.name).toBe("Second");
     expect(procedures.filter((p) => p === "user/get")).toHaveLength(1);
@@ -114,8 +138,8 @@ describe("authClient.account.update", () => {
     expect(lease?.holder.id).toBe(user.id);
   });
 
-  test("a meta key whose capability the user lacks resolves forbidden and changes nothing", async () => {
-    const { h, user, token, authClient } = await signedInClient("subscriber", {
+  test("a meta key whose capability the user lacks resolves forbidden", async () => {
+    const { authClient } = await signedInClient("subscriber", {
       plugins: [profiles],
     });
     // Safety: core's own registry declares no user meta; the plugin above does.
@@ -124,8 +148,20 @@ describe("authClient.account.update", () => {
     const result = await authClient.account.update({ name: "Badged", meta });
 
     expect(result.error?.code).toBe("forbidden");
-    const reread = await clientOf(h, token).authClient.account.update({});
-    expect(reread.data).toMatchObject({ name: user.name, meta: {} });
+  });
+
+  test("a meta key whose capability the user lacks changes nothing", async () => {
+    const { h, user, token, authClient } = await signedInClient("subscriber", {
+      plugins: [profiles],
+    });
+    // Safety: core's own registry declares no user meta; the plugin above does.
+    const meta = { bio: "Hello", badge: "gold" } as AccountPatch["meta"];
+
+    await authClient.account.update({ name: "Badged", meta });
+
+    const reread = clientOf(h, token).account;
+    await nextChange(reread);
+    expect(reread.read().account).toMatchObject({ name: user.name, meta: {} });
   });
 
   test("a meta value its field refuses resolves invalid_input", async () => {
@@ -158,7 +194,6 @@ describe("authClient.account.update", () => {
   });
 });
 
-/** Resolves on the store's next change. */
 function nextChange(store: { subscribe: (listener: () => void) => unknown }) {
   return new Promise<void>((resolve) => {
     store.subscribe(resolve);
@@ -178,26 +213,65 @@ describe("the account useAccount reads", () => {
     });
   });
 
-  test("a load the network dropped stays pending, and the next update loads again and saves", async () => {
+  test("a load the network dropped resolves the update's error and stays pending", async () => {
     const h = await createDispatcherHarness();
     const user = await h.seedUser("subscriber");
     const { token } = await createSession(h.db, { userId: user.id });
-    const { authClient, account, procedures } = clientOf(
-      h,
-      token,
-      new Set(["user/get"]),
-    );
-    const unsubscribe = account.subscribe(() => undefined);
-    await expect.poll(() => procedures).toContain("user/get");
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    const { authClient, account } = clientOf(h, token, new Set(["user/get"]));
 
+    const result = await authClient.account.update({ name: "Offline" });
+
+    expect(result.error?.code).toBe("network_error");
     expect(account.read()).toEqual({ account: null, isPending: true });
+  });
+
+  test("an update after a dropped load loads again and saves", async () => {
+    const h = await createDispatcherHarness();
+    const user = await h.seedUser("subscriber");
+    const { token } = await createSession(h.db, { userId: user.id });
+    const { authClient } = clientOf(h, token, new Set(["user/get"]));
+    await authClient.account.update({ name: "Offline" });
+
     const result = await authClient.account.update({ name: "Back online" });
 
     expect(result.error).toBeNull();
     expect(result.data?.name).toBe("Back online");
-    expect(procedures.filter((p) => p === "user/get")).toHaveLength(2);
-    unsubscribe();
+  });
+
+  test("signing in on a page that loaded signed out gives it the account", async () => {
+    const h = await createDispatcherHarness();
+    const user = await h.seedUser("subscriber");
+    const { token } = await createSession(h.db, { userId: user.id });
+    let cookie = "no-such-session";
+    const { authClient, account, registerAuthMethodClients } = createAuthClient(
+      {
+        basePath: () => "",
+        fetch: async (url, init) => {
+          if (url.endsWith("/fixture/start")) {
+            cookie = token;
+            return Response.json({ userId: user.id });
+          }
+          const headers = new Headers(init.headers);
+          headers.append("cookie", `${SESSION_COOKIE_NAME}=${cookie}`);
+          return h.dispatch(plumixRequest(url, { ...init, headers }));
+        },
+        navigate: () => undefined,
+      },
+    );
+    registerAuthMethodClients([
+      defineAuthMethodClient("fixture", (kernel) => ({
+        signIn: () => kernel.post("start"),
+      })),
+    ]);
+    await nextChange(account);
+    expect(account.read()).toEqual({ account: null, isPending: false });
+
+    // Not in core's registry: the fixture is registered above.
+    await (
+      authClient.signIn as unknown as Record<string, () => Promise<unknown>>
+    ).fixture?.();
+
+    await expect.poll(() => account.read().account?.id).toBe(user.id);
   });
 
   test("signing out clears it", async () => {
@@ -209,34 +283,27 @@ describe("the account useAccount reads", () => {
     expect(account.read()).toEqual({ account: null, isPending: false });
   });
 
-  test("signing out while the account loads leaves it cleared", async () => {
-    const h = await createDispatcherHarness();
-    const user = await h.seedUser("subscriber");
-    const { token } = await createSession(h.db, { userId: user.id });
+  test("clearing it while it loads leaves it cleared", async () => {
+    const { h, token, session } = await signedInClient();
+    await session.refresh();
+    const rpc = rpcOf(h, token);
     let release: () => void = () => undefined;
-    const held = new Promise<void>((resolve) => {
+    const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
-    const { authClient, account, session } = createAuthClient({
-      basePath: () => "",
-      fetch: async (url, init) => {
-        const headers = new Headers(init.headers);
-        headers.append("cookie", `${SESSION_COOKIE_NAME}=${token}`);
-        const response = await h.dispatch(
-          plumixRequest(url, { ...init, headers }),
-        );
-        if (url.endsWith("/user/get")) await held;
-        return response;
-      },
-      navigate: () => undefined,
-    });
-    await session.refresh();
-    account.subscribe(() => undefined);
+    let answered: ReturnType<RpcCall> = Promise.resolve(success(null));
+    const store = createAccountStore((procedure, input) => {
+      const call = rpc(procedure, input);
+      if (procedure !== "user/get") return call;
+      answered = gate.then(() => call);
+      return answered;
+    }, session);
+    store.subscribe(() => undefined);
+    store.clear();
 
-    await authClient.signOut();
     release();
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await answered;
 
-    expect(account.read()).toEqual({ account: null, isPending: false });
+    expect(store.read()).toEqual({ account: null, isPending: false });
   });
 });

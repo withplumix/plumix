@@ -181,6 +181,7 @@ export function createAuthClient(env: AuthClientEnv): CreatedAuthClient {
     const signedIn = v.safeParse(signedInSchema, result.data);
     if (signedIn.success) {
       await session.refresh();
+      account.reload();
       // Only on request: without one, the page stays and `useSession` updates.
       const { redirectTo } = signedIn.output;
       if (options.redirectTo !== undefined && redirectTo !== undefined) {

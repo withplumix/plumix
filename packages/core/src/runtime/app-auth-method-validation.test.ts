@@ -66,6 +66,12 @@ describe("buildApp — sign-in method declarations", () => {
     ["url", "url"],
     ["use-account", "useAccount"],
     ["sign-in", "signIn"],
+    ["sign-out", "signOut"],
+    ["use-session", "useSession"],
+    ["use-auth-methods", "useAuthMethods"],
+    ["use-can", "useCan"],
+    ["sessions", "sessions"],
+    ["can", "can"],
   ])(
     "rejects %j, whose client half would take the auth client's %j",
     async (name, key) => {

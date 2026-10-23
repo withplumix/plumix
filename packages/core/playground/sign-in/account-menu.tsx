@@ -27,7 +27,6 @@ export function AccountMenu(_props: IslandProps<object>): ReactNode {
   );
 }
 
-/** Renames the signed-in member through `authClient.account.update`. */
 function ProfileForm(): ReactNode {
   const { account } = authClient.useAccount();
   const input = useRef<HTMLInputElement>(null);

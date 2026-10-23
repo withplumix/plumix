@@ -1,5 +1,5 @@
 /**
- * The auth client's own keys (ADR 0050). No sign-in method may declare a name
+ * The auth client's own keys. No sign-in method may declare a name
  * whose client half would register under one, or the kernel would shadow it.
  */
 export const AUTH_CLIENT_KERNEL_KEYS = [
