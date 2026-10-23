@@ -106,8 +106,10 @@ updated_at` (`version` for terms); no rows means a conflict. The update can
   from a stale one. A lease refusal is `LOCKED` over RPC and MCP, and `423
 Locked` over REST, and names the holder. Taking over is always explicit
   (`takeOver: true`); the previous holder learns on their next renewal and turns
-  read-only, keeping their unsaved work. An agent or API client that meets a
-  lease stops and reports who holds it. System writes ignore leases.
+  read-only, keeping their unsaved work. The one take-over made for the
+  caller is a user saving their own account through the auth client (ADR 0050).
+  An agent or API client that meets a lease stops and reports who holds it.
+  System writes ignore leases.
 - **The admin never hides a conflict.** It opens a resource read-only when
   another user holds it, offering to take over. On a conflict it pauses
   autosave, keeps the author's work and offers compare, keep mine (an explicit
