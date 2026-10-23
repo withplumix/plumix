@@ -17,14 +17,14 @@ sequenceDiagram
   H-->>C: resolves once all handlers settle
 ```
 
-In the 1.0 design, entry actions also feed webhooks (not yet):
+Entry actions also feed webhooks:
 
 ```mermaid
 flowchart LR
   proc["entry procedures<br/>(admin, MCP, scheduled publish)"] -->|"doAction entry:published, …"| H["HookRegistry"]
   H --> purge["registerCorePurgeInvalidator<br/>(cdn/purge.ts)"]
-  H -.-> wh["webhooks module (not yet)"]
-  wh -.->|"one job per matching webhook"| q["queue slot (not yet)"]
+  H --> wh["webhooks module"]
+  wh -->|"one job per matching webhook"| q["queue slot"]
 ```
 
 ## Surface
@@ -72,7 +72,9 @@ First-party plugins declare their own the same way: `comment:*` (`plugins/commen
 
 Handlers take their context as an argument; most payloads end in `ctx: AppContext`. A handler can also read `requestStore`.
 
-Every path that changes an entry fires the same actions. The scheduled publish (`publishDueScheduledEntries` in `rpc/procedures/entry/publish-scheduled.ts`) fires `updated`, `transition` and `published` through `lifecycle.ts`, as an editor's publish does. In the 1.0 design an agent's MCP write goes through the same procedures, so it runs the same filters and fires the same actions (not yet; see [MCP](./mcp.md)).
+Every path that changes an entry fires the same actions. The scheduled publish (`publishDueScheduledEntries` in `rpc/procedures/entry/publish-scheduled.ts`) fires `updated`, `transition` and `published` through `lifecycle.ts`, as an editor's publish does. An agent's MCP write goes through the same procedures, so it runs the `rpc:*:input` and `before_save` filters and fires the same entry actions (see [MCP](./mcp.md)).
+
+Webhooks are declared in code per entry type: several per type, each a URL, custom headers (secrets through `EnvInput`), the events it wants (publish, unpublish, trash, delete, scheduled publish) and a payload (the full entry, none, or chosen fields). A core module registered in `buildApp` beside `registerCorePurgeInvalidator` subscribes to `entry:published`, `entry:transition`, `entry:trashed` and `entry:deleted`, and enqueues one delivery per matching webhook through the job queue behind the `queue` slot. Publishing an entry, by hand or by the scheduled task, sends a POST to each webhook its entry type declares for publish.
 
 - `packages/core/src/hooks/registry.ts`: `HookRegistry`, `HookExecutor`, `isolate`, `sortEntries`.
 - `packages/core/src/hooks/types.ts`: `FilterRegistry`, `ActionRegistry`, `FilterName`, `ActionName`, `FilterFn`, `ActionFn`, `DEFAULT_HOOK_PRIORITY`.
@@ -90,10 +92,3 @@ Related but separate: a field's `.validate()` and `.sanitize()` are per-field ca
 - One failing action handler never stops the others or the caller.
 - `sync:after` failures are collected per owner and reported, not thrown (`context/settle-sync.ts`); see [sync and import](./sync-and-import.md).
 - Behaviour guarded by `packages/core/src/hooks/registry.test.ts` (ordering, priority, cloning, sync-async error, isolation, action failure).
-
-## Not there yet
-
-| Part of the design         | Seam to build on                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Done when                                                                                                                                             |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Outbound webhooks          | Declared in code per entry type: several per type, each a URL, custom headers (secrets through `EnvInput`), the events it wants (publish, unpublish, trash, delete, scheduled publish) and a payload (the full entry, none, or chosen fields). A core module registered in `buildApp` beside `registerCorePurgeInvalidator` subscribes to `entry:published`, `entry:transition`, `entry:trashed` and `entry:deleted`, and enqueues one delivery per matching webhook through the job queue slot | Publishing an entry, by hand or by the scheduled task, sends a POST to each webhook its entry type declares for publish, with its headers and payload |
-| Agents fire the same hooks | MCP write tools in `packages/core/src/mcp` that call the same procedures as the admin                                                                                                                                                                                                                                                                                                                                                                                                           | An agent's write runs the `rpc:*:input` and `before_save` filters and fires the same entry actions as an editor's                                     |

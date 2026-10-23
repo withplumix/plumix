@@ -2,6 +2,10 @@
 
 Plumix is a CMS with pluggable runtime adapters. It is pre-1.0, so every `0.x` minor may break.
 
+[`VISION.md`](./VISION.md) says who Plumix is for, the guarantees it never trades, the ranked
+principles that settle a trade-off, and what it refuses to become. Check a proposal against it
+before designing.
+
 ## Working rules
 
 - **TDD.** A bug isn't fixed until a failing test reproduces it first. New behavior starts red, one RED→GREEN cycle at a time, never all the tests first and then all the code. Each test goes in the tier [`CODING_STANDARDS.md`](./CODING_STANDARDS.md#tests) picks: unit, e2e or smoke.

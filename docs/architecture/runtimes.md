@@ -1,7 +1,7 @@
 # Runtimes
 
 A runtime adapter is how one Plumix site runs on a managed platform or a server runtime: Cloudflare
-Workers, a Node process or a Bun process today. Core builds one platform-neutral runtime handler;
+Workers, a Node process or a Bun process. Core builds one platform-neutral runtime handler;
 the adapter generates the entry module the platform runs and supplies only what the platform knows
 (static assets, the client address). Infrastructure the site uses comes through config slots, and
 each runtime package ships slot implementations built on its own primitives. A site developer picks
@@ -20,7 +20,7 @@ flowchart LR
   build -- "generateEntry" --> entry["Entry module<br/>.plumix/worker.ts"]
   platform["The platform or the server process"] -- "fetch" --> entry
   platform -- "scheduled firing" --> entry
-  platform -. "queued job (not yet)" .-> entry
+  platform -- "queued job" --> entry
   entry --> handler["Runtime handler<br/>createRuntimeHandler"]
   handler --> dispatcher["Dispatcher"]
   handler --> sched["Scheduled tasks"]
@@ -28,11 +28,8 @@ flowchart LR
   slots --> db[("Database: SQLite")]
   slots --> files[("Object storage:<br/>S3-compatible or disk")]
   slots --> other["Key-value, CDN, image delivery,<br/>mailer, telemetry"]
-  slots -. "not yet" .-> later["queue: the runtime's own queue<br/>llm: a model provider"]
+  slots --> qllm["queue: the runtime's own queue<br/>llm: a model provider"]
   cli["plumix CLI"] -- "commandsModule" --> cmds["Runtime commands module:<br/>commands, migrations, sync, diagnose"]
-
-  classDef goal fill:#2da44e,stroke:#1a7f37,color:#fff
-  class later goal
 ```
 
 ## Surface
@@ -43,7 +40,7 @@ flowchart LR
 | `RuntimeHandlerSpec` | `assets`, `disposeTimeoutMs`, `clientAddress`, `prepare`, `wrap`                                                                                                                            | same file                                                                     | yes                            |
 | `PlumixHandler`      | The runtime handler: `fetch`, `scheduled?`, `run?`, `dispose?`                                                                                                                              | same file                                                                     | yes                            |
 | `Invocation`         | `env`, `waitUntil?`, `clientAddress?`                                                                                                                                                       | same file                                                                     | yes                            |
-| Slot contracts       | `DatabaseAdapter`, `ObjectStorage`, `KV`, `CdnProvider`, `ImageDelivery`, `AssetsBinding`; `queue` and `llm` (not yet)                                                                      | `packages/core/src/runtime/contract/slots.ts`                                 | yes                            |
+| Slot contracts       | `DatabaseAdapter`, `ObjectStorage`, `KV`, `CdnProvider`, `ImageDelivery`, `AssetsBinding`, `queue`, `llm`                                                                                   | `packages/core/src/runtime/contract/slots.ts`                                 | yes                            |
 | Other slots          | `mailer` (`packages/core/src/auth/contract/mailer.ts`), `telemetry` (`packages/core/src/context/telemetry.ts`)                                                                              | `PlumixConfig` in `packages/core/src/config.ts`                               | yes                            |
 | Commands module      | `commands`, `migrations: RuntimeMigrations`, `diagnose: RuntimeDiagnose`, `sync: RuntimeSync`                                                                                               | `packages/runtimes/*/src/commands/index.ts`                                   | yes, `<pkg>/commands`          |
 | Conformance suites   | `describeDatabaseContract`, `describeObjectStorageContract`, `describeKvContract`, `describeCdnContract`, `describeAssetsContract`, `describeSyncContract`, `describeRunContract`, `fakeS3` | `packages/core/src/test/conformance/`                                         | yes, `plumix/test/conformance` |
@@ -62,7 +59,7 @@ What each runtime package ships. Core's portable slots, `plumix/db/libsql` for t
 | CDN                         | `@plumix/runtime-cloudflare/cdn` (Workers Caching), `plumix/cdn/cloudflare` | `plumix/cdn/cloudflare`                                    | `plumix/cdn/cloudflare`                                |
 | Image delivery              | `images()` (Image Transformations)                                          | `images()` (`sharp`, optional peer)                        | `images()` (`Bun.Image`)                               |
 | Static assets               | `ASSETS` binding                                                            | `createAssetsLayer` on disk                                | `createAssetsLayer` on disk                            |
-| Job queue                   | the platform's queue (not yet)                                              | the runtime's queue (not yet)                              | the runtime's queue (not yet)                          |
+| Job queue                   | the platform's queue                                                        | the runtime's queue                                        | the runtime's queue                                    |
 | Scheduler                   | `triggers.crons` in the wrangler config                                     | in-process scheduler, or `cron: false` + `plumix cron run` | in-process scheduler, no off switch                    |
 | Scheduler in `plumix dev`   | not wired by Plumix                                                         | yes, `lease: false`                                        | no                                                     |
 | Sync routes (`openSync`)    | no, answers 501                                                             | yes, with `nodeSqlite`                                     | yes, with `bunSqlite`                                  |
@@ -82,12 +79,13 @@ plugin writes it to `.plumix/worker.ts`. CLI tooling stays out of the bundle bec
 paths, the drain deadline `DRAIN_DEADLINE_MS`) are published once on `plumix/runtime`.
 
 A slot is a sibling key of `plumix()`, filled by a runtime package or by core's portable providers.
-In the 1.0 design two more slots join them in `runtime/contract/slots.ts`. The `queue` slot holds
-work that outlives a request, such as webhook deliveries; each runtime fills it with its own queue
-and that queue's guarantees, and delivers each job back through the runtime handler to scheduled
-tasks (not yet). The `llm` slot holds the model provider behind the in-editor agent, so model keys
-stay on the server (not yet). Core names the contracts; how a runtime stores, retries and acks a job
-is the runtime's.
+The `queue` slot holds work that outlives a request, such as webhook deliveries; each runtime fills
+it with its own queue and that queue's guarantees, and delivers each job back through the runtime
+handler to scheduled tasks. Core and plugins enqueue to it, and a conformance suite in
+`plumix/test/conformance` holds every queue. The `llm` slot holds the model provider behind the
+in-editor agent; the agent's procedure reads it on the server, so model keys never reach the
+browser. Core names the contracts in `runtime/contract/slots.ts`; how a runtime stores, retries and
+acks a job is the runtime's.
 
 - `packages/core/src/runtime/handler.ts`: `createRuntimeHandler`, with `fetch`, `scheduled`, `run`, `dispose`.
 - `packages/core/src/runtime/request-trust.ts`, `asset-path.ts`, `drain.ts`: shared trust, assets, drain.
@@ -120,11 +118,3 @@ Where each slot contract's conformance suite runs:
 - Each runtime's suites run on that runtime: Bun's `test:unit` is `bun --bun ./node_modules/vitest/vitest.mjs run` (`packages/runtimes/bun/package.json`).
 - Dev-only code gates on `process.env.PLUMIX_DEV` inline (`registerCloudflareErrorHints` in `adapter.ts`); `packages/plumix/src/vite/dev-gate-tree-shaking.test.ts`.
 - A change to the contract lands in every adapter in the same change, or says why one is left out (`AGENTS.md`, Runtimes).
-
-## Not there yet
-
-| Part of the design | Seam to build on                                                                                                                                                                                                                                                          | Done when                                                                                                                                         |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Job queue slot     | A `queue` contract in `runtime/contract/slots.ts` and a `queue` key on `PlumixConfig`; each runtime package fills it with its own queue; the runtime handler hands a delivered job to scheduled tasks; a conformance suite in `plumix/test/conformance` holds every queue | Core and plugins enqueue work that outlives the request, and each runtime that provides a queue runs it. Today `ctx.defer` only extends a request |
-| `llm` slot         | An `llm` contract in `runtime/contract/slots.ts`, read by the in-editor agent's procedure on the server                                                                                                                                                                   | The in-editor agent reaches a model through the slot, and no model key reaches the browser                                                        |
-| OTLP consumer      | The existing `telemetry` slot, and the exporter `otelConsumer` in `packages/core/src/telemetry-otel.ts`                                                                                                                                                                   | A site imports the consumer from a `plumix` subpath and its traces reach any OpenTelemetry endpoint in production, on every runtime               |

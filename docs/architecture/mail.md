@@ -70,7 +70,3 @@ Under `plumix dev`, `devMail` either supplies `consoleMailer` when the site has 
 - Outside dev, `auth.magicLink` without a `mailer` fails config build with `magic_link_requires_mailer`. `packages/core/src/runtime/define-config.ts`; `packages/core/src/config.test.ts`.
 - Dev catching and the gallery exist only under the `PLUMIX_DEV` gate. AGENTS.md "Env & secrets"; `packages/plumix/src/vite/dev-gate-tree-shaking.test.ts`; `packages/core/src/dev/mail/dev-mail.test.ts`.
 - `alwaysTo` rejects a malformed address when the mailer resolves, with `always_to_invalid_address`. `packages/core/src/auth/mailer/always-to.test.ts`.
-
-## Not there yet
-
-Nothing. This subsystem matches the 1.0 design.

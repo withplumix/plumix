@@ -14,14 +14,12 @@ flowchart TD
   T -->|dev| H["debug-history consumer: ring"]
   T -->|dev| Bar["debug bar in rendered page"]
   T -->|"telemetry slot"| O["OTLP consumer: otelConsumer"]
-  O -. "published subpath (not yet)" .-> Sink["any OpenTelemetry endpoint"]
+  O -- "published subpath" --> Sink["any OpenTelemetry endpoint"]
   Q -->|throws| E{"loopback request?"}
   E -->|yes| EP["dev error page: hints, panels, context"]
   E -->|no| TE["theme error template"]
   H --> R
   H --> M["MCP: telemetry_requests_list, telemetry_request_get"]
-  class Sink goal
-  classDef goal fill:#2da44e,stroke:#1a7f37,color:#fff
 ```
 
 ## Surface
@@ -31,7 +29,7 @@ flowchart TD
 | `process.env.PLUMIX_DEV`                                                                                      | `define` in `packages/plumix/src/vite/index.ts`; the CLI also sets it for `plumix dev` in `packages/plumix/src/cli/index.ts` | Public convention (`apps/docs/src/content/docs/going-further/dev-server.mdx`) |
 | `PLUMIX_DEV_ALLOW_REMOTE`, `PLUMIX_EDITOR`, `PLUMIX_EDITOR_PATH_MAP`, `PLUMIX_FORWARD_ERRORS`                 | Vite `define` / dev client                                                                                                   | Public env vars                                                               |
 | `telemetry: { consumers }` (`TelemetryConfig`)                                                                | `packages/core/src/config.ts`, `packages/core/src/context/telemetry.ts`                                                      | Public config slot                                                            |
-| `otelConsumer`, `OtelConsumerOptions` (`endpoint`, `headers`, `serviceName`, `sample`, `tailSample`, `fetch`) | `@plumix/core/telemetry-otel` (`packages/core/src/telemetry-otel.ts`)                                                        | Internal today; a `plumix` subpath in the design (not yet)                    |
+| `otelConsumer`, `OtelConsumerOptions` (`endpoint`, `headers`, `serviceName`, `sample`, `tailSample`, `fetch`) | `@plumix/core/telemetry-otel` (`packages/core/src/telemetry-otel.ts`)                                                        | Public, re-exported from a `plumix` subpath                                   |
 | `dev.bar` (`DebugBarInput`: `false` or `{ position, defaultOpen }`)                                           | `DevInput` in `packages/core/src/config.ts`                                                                                  | Public config                                                                 |
 | `dev.panels` (`DebugPanelsInput`, keyed by `DebugPanelRegistry`)                                              | same                                                                                                                         | Public config                                                                 |
 | `dev.history` (`DebugHistoryStoreOptions`: `maxEntries`, `maxTotalBytes`, `maxStringLength`)                  | same; also bounds caught mail                                                                                                | Public config                                                                 |
@@ -58,7 +56,7 @@ Core panel ids (`CORE_DEBUG_PANEL_IDS`): `app`, `request`, `database`, `template
 
 **Telemetry.** Each request gets a telemetry collector (`packages/core/src/context/telemetry.ts`) only when some consumer samples it; otherwise it gets `NOOP_TELEMETRY`, whose `span` still calls through. `sampleTelemetryConsumers` in `packages/core/src/context/app.ts` collects the consumers: in dev, the bar consumer (it only marks the request sampled) and the `debug-history` consumer, which always registers; then every consumer in `config.telemetry.consumers`. Each consumer's `sample` votes. When the dispatcher or a scheduled run finishes, `deliverTelemetrySnapshot` (`packages/core/src/runtime/telemetry-delivery.ts`) builds one `TelemetrySnapshot` and hands it to each consumer's `onRequestEnd` through `ctx.defer`, so export never blocks the response and one rejecting consumer does not starve the rest.
 
-**OTLP export.** `otelConsumer` turns a snapshot into OTLP/JSON spans and POSTs them to an OTLP/HTTP traces endpoint. It joins an inbound `traceparent`, drops the query string from the URL, supports head sampling (`sample`) and a tail vote (`tailSample`), and logs a failed export rather than failing the request. A site fills the `telemetry` slot with it, and its traces reach any OpenTelemetry endpoint. Today the consumer exists only as `@plumix/core/telemetry-otel`; no `plumix` subpath re-exports it (see Not there yet).
+**OTLP export.** `otelConsumer` turns a snapshot into OTLP/JSON spans and POSTs them to an OTLP/HTTP traces endpoint. It joins an inbound `traceparent`, drops the query string from the URL, supports head sampling (`sample`) and a tail vote (`tailSample`), and logs a failed export rather than failing the request. A site imports it from a `plumix` subpath and fills the `telemetry` slot with it, and its traces reach any OpenTelemetry endpoint in production, on every runtime.
 
 **Request history.** At request end the `debug-history` consumer projects a JSON `DebugSnapshot` (context, spans, records) into a bounded ring. Requests to the ring's own readers (`/_plumix/debug/requests`, `/_plumix/debug/mail`, `/_plumix/mcp`) are not recorded, so polling never evicts what it reads. The query string is never captured.
 
@@ -93,9 +91,3 @@ Key files and symbols:
 - A throwing hint or panel contributor never takes down the error page (`applyFilterIsolated`, a fallback per panel). Guard: `packages/core/src/dev/server/hints/collect.test.ts`, `panels/collect.test.tsx`.
 - Dev surfaces answer loopback requests only. Guard: `packages/core/src/dev/trust.test.ts`.
 - A telemetry export never blocks a response or fails a request: delivery is deferred and `otelConsumer` swallows and logs its own failures. Guard: `packages/core/src/telemetry-otel.test.ts`.
-
-## Not there yet
-
-| Part of the design | Seam to build on                                                                                                                                    | Done when                                                                                                         | The code today                                                                                                       |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| OTLP consumer      | `otelConsumer` in `packages/core/src/telemetry-otel.ts` (already the `@plumix/core/telemetry-otel` export), for the `telemetry` slot in `config.ts` | A site imports the consumer from a `plumix` subpath and its traces reach any OpenTelemetry endpoint in production | The slot exists, but the OTLP consumer cannot be imported by a site; `packages/plumix` re-exports no telemetry types |

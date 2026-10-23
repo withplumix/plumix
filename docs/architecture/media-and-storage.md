@@ -60,7 +60,7 @@ Media plugin (`media({ acceptedTypes?, maxUploadSize? })`, default 25 MiB, SVG o
 
 | Kind            | Name                                                                                                 |
 | --------------- | ---------------------------------------------------------------------------------------------------- |
-| Entry type      | `media` (not public, no archive; `delete` granted at `contributor`, code today)                      |
+| Entry type      | `media` (not public, no archive; deleting one's own upload is a capability granted to default roles) |
 | RPC             | `media.createUploadUrl`, `confirm`, `list`, `update`, `delete`                                       |
 | Routes          | `PUT /_plumix/media/upload/*` (authenticated), `GET /_plumix/media/serve/*` (public, published only) |
 | Admin page      | `/media`, "Library" nav group                                                                        |
@@ -103,10 +103,3 @@ See [plugin-system.md](plugin-system.md), [runtimes.md](runtimes.md), [cdn-cache
 - A presigned PUT is signed for an exact `Content-Length`. `packages/core/src/storage/s3/sigv4.test.ts`, conformance presign cases.
 - The serve route never serves a draft or trashed item and never renders a non-allowlisted MIME inline. `packages/plugins/media/src/index.test.ts`.
 - A rendered asset key is content-addressed, so nothing purges it. `packages/core/src/storage/rendered-asset.test.ts`.
-
-## Not there yet
-
-| Part of the design                                                      | Seam to build on                                                                                                                | Done when                                                                                           | The code today                                                                                                    |
-| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| One way to define a plugin (remove the function form of `definePlugin`) | `media()` in `packages/plugins/media/src/index.ts`, which calls `definePlugin("media", (ctx) => { ... }, { adminEntry, i18n })` | The media plugin returns a descriptor, its registrations under `setup`                              | The media plugin is the first-party plugin still on the function form                                             |
-| Site-defined roles                                                      | The media entry type's `capabilities: { delete: "contributor" }` in `packages/plugins/media/src/index.ts`                       | Deleting one's own upload is a capability the default roles are granted, with no role named by rank | The grant names `contributor`, a role the design drops; any role ranked at or above it may delete its own uploads |
