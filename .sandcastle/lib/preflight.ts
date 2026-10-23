@@ -53,7 +53,7 @@ const resolveImage = (
   return id
     ? { id }
     : {
-        problem: `no sandbox image ${image} — run \`npx sandcastle docker build-image\` from the repo root`,
+        problem: `no sandbox image ${image} — run \`.sandcastle/node_modules/.bin/sandcastle docker build-image\` from the repo root`,
       };
 };
 

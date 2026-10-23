@@ -61,8 +61,10 @@ jobs:
           node-version-file: ".nvmrc"
 
       - name: Install Sandcastle
-        working-directory: .sandcastle
-        run: npm ci
+        uses: pnpm/setup@a0881977cd8ea73b1ed212236c99ca10dcc80cf4 # v3.1.1
+        with:
+          working-directory: .sandcastle
+          node-version-file: false
 
       - name: Install Claude Code and the pinned skills
         run: |
@@ -83,7 +85,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
           OUTPUT_DIR: ${{ runner.temp }}
         run: |
-          npm run architecture-review
+          pnpm architecture-review
           # The report is agent-written text: a random delimiter keeps it from
           # closing the output early. `jq -c` ends the value with a newline, so
           # the delimiter lands on its own line; `cat` left it glued to the `}`.
