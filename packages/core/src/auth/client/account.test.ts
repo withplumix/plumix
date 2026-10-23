@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, test } from "vitest";
 
 import type { UserRole } from "../../db/schema/users.js";
@@ -9,6 +10,7 @@ import type {
 import type { AccountPatch, RpcCall } from "./account.js";
 import { CSRF_HEADER_NAME, CSRF_HEADER_VALUE } from "../../csrf-header.js";
 import { acquireEditLease, readEditLease } from "../../db/edit-lease.js";
+import { users } from "../../db/schema/users.js";
 import { definePlugin } from "../../plugin/define.js";
 import { text } from "../../plugin/fields/index.js";
 import {
@@ -191,6 +193,77 @@ describe("authClient.account.update", () => {
     const result = await authClient.account.update({ name: "Nobody" });
 
     expect(result.error?.code).toBe("unauthorized");
+  });
+});
+
+describe("authClient.account.setLocale", () => {
+  const bilingual = { i18n: { defaultLocale: "en", locales: ["en", "ar"] } };
+
+  test("stores an enabled locale on the session's user", async () => {
+    const { h, user, authClient } = await signedInClient(
+      "subscriber",
+      bilingual,
+    );
+
+    const result = await authClient.account.setLocale("ar");
+
+    expect(result).toEqual({ data: { locale: "ar" }, error: null });
+    const row = await h.db.query.users.findFirst({
+      where: eq(users.id, user.id),
+    });
+    expect(row?.meta).toMatchObject({ locale: "ar" });
+  });
+
+  test("a code the site hasn't enabled resolves locale_not_supported and stores nothing", async () => {
+    const { h, user, authClient } = await signedInClient(
+      "subscriber",
+      bilingual,
+    );
+
+    const result = await authClient.account.setLocale("de");
+
+    expect(result.error?.code).toBe("locale_not_supported");
+    expect(result.error?.message.id).toBe(
+      "authClient.error.localeNotSupported",
+    );
+    const row = await h.db.query.users.findFirst({
+      where: eq(users.id, user.id),
+    });
+    expect(row?.meta).not.toHaveProperty("locale");
+  });
+
+  test("a profile save after it still lands, though the locale moved the token", async () => {
+    const { authClient } = await signedInClient("subscriber", bilingual);
+    await authClient.account.update({ name: "Before" });
+    await authClient.account.setLocale("ar");
+
+    const result = await authClient.account.update({ name: "After" });
+
+    expect(result.error).toBeNull();
+    expect(result.data?.name).toBe("After");
+  });
+
+  test("an account nobody loaded stays unloaded", async () => {
+    const { authClient, procedures } = await signedInClient(
+      "subscriber",
+      bilingual,
+    );
+
+    await authClient.account.setLocale("ar");
+
+    expect(procedures).not.toContain("user/get");
+  });
+
+  test("an answer without a locale resolves unknown", async () => {
+    const { session } = await signedInClient("subscriber", bilingual);
+    const store = createAccountStore(
+      () => Promise.resolve(success({ json: {} })),
+      session,
+    );
+
+    const result = await store.setLocale("ar");
+
+    expect(result.error?.code).toBe("unknown");
   });
 });
 

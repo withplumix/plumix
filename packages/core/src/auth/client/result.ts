@@ -44,6 +44,10 @@ const MESSAGES: Readonly<Record<string, MessageDescriptor>> = {
     id: "authClient.error.etagMismatch",
     message: "Your account changed elsewhere. Check it and save again.",
   },
+  locale_not_supported: {
+    id: "authClient.error.localeNotSupported",
+    message: "This site isn't available in that language.",
+  },
   method_not_registered: {
     id: "authClient.error.methodNotRegistered",
     message: "This sign-in method isn't available here.",

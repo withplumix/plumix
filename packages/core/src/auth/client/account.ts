@@ -43,6 +43,15 @@ const accountEnvelopeSchema = v.object({
   }),
 });
 
+/** The `user.setLocale` answer: the enabled locale's canonical code. */
+const localeEnvelopeSchema = v.object({
+  json: v.object({ locale: v.string() }),
+});
+
+export interface LocaleSet {
+  readonly locale: string;
+}
+
 export const PENDING_ACCOUNT: AccountState = { account: null, isPending: true };
 
 const SIGNED_OUT: AccountState = { account: null, isPending: false };
@@ -57,6 +66,7 @@ export interface AccountStore {
   /** Loads the account on the first subscribe, or after a clear. */
   readonly subscribe: (listener: () => void) => () => void;
   readonly update: (patch: AccountPatch) => Promise<AuthResult<Account>>;
+  readonly setLocale: (code: string) => Promise<AuthResult<LocaleSet>>;
   /** Forgets the account and its token, as signing out does. */
   readonly clear: () => void;
   /** Loads again for whoever the session now names, as signing in does. */
@@ -157,6 +167,16 @@ export function createAccountStore(
     return success(saved);
   }
 
+  async function setLocale(code: string): Promise<AuthResult<LocaleSet>> {
+    const result = await rpc("user/setLocale", { code });
+    if (result.error) return result;
+    const answer = v.safeParse(localeEnvelopeSchema, result.data);
+    if (!answer.success) return failure("unknown");
+    // The write moved the user's token, so the held one would go stale.
+    if (loaded) await load();
+    return success(answer.output.json);
+  }
+
   return {
     read: () => state,
     subscribe(listener) {
@@ -167,6 +187,7 @@ export function createAccountStore(
       };
     },
     update,
+    setLocale,
     clear() {
       forget();
       hold(SIGNED_OUT, null);
