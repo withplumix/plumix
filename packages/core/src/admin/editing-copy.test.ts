@@ -72,7 +72,10 @@ function fakeLease(
       Promise.resolve(
         takenBy ? { lost: { by: takenBy, at: SINCE } } : { lease: leaseOf(ME) },
       ),
-    release: () => Promise.resolve(),
+    release: () => {
+      events.push("release");
+      return Promise.resolve();
+    },
   };
   return {
     api,
@@ -177,6 +180,7 @@ describe("createEditingCopy", () => {
       mode: "readOnly",
       readOnly: true,
       banner: { kind: "heldByOther", name: "Ada", since: SINCE },
+      takingOver: false,
     });
   });
 
@@ -544,6 +548,21 @@ describe("createEditingCopy", () => {
       compare: undefined,
       takingOver: false,
     });
+  });
+
+  test("disposing tells its subscribers, and gives up the lease it held", async () => {
+    const events: string[] = [];
+    const lease = fakeLease(events);
+    const copy = openCopy({ lease: lease.api });
+    lease.grant();
+    await settle();
+    let changes = 0;
+    copy.subscribe(() => (changes += 1));
+
+    copy.dispose();
+
+    expect(changes).toBe(1);
+    expect(events).toEqual(["release"]);
   });
 
   test("a refusal that arrives after dispose opens no conflict for the resource it was about", async () => {
