@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { formatHelp } from "./help.js";
+import { formatCommandHelp, formatHelp } from "./help.js";
 
 describe("plumix --help", () => {
   test("lists the target options the runtime adds, under the commands that take them", () => {
@@ -18,6 +18,21 @@ describe("plumix --help", () => {
         "  --production     The production D1",
         "  --env <value>    A wrangler environment's D1",
       ].join("\n"),
+    );
+  });
+});
+
+describe("plumix <command> --help", () => {
+  test("shows the usage line and description, and no option group when the runtime declares none", () => {
+    const help = formatCommandHelp("sync", {
+      describe: "Sync the schema",
+      run: () => undefined,
+    });
+
+    expect(help).toBe(
+      ["Usage:", "  plumix sync [options]", "", "Sync the schema", ""].join(
+        "\n",
+      ),
     );
   });
 });

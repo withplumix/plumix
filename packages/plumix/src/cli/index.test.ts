@@ -283,9 +283,12 @@ export const commands = { deploy: ship("deploy"), preview: ship("preview"), dev:
 describe("run — a command's --help", () => {
   const dirs: string[] = [];
   const ran = globalThis as unknown as { __plumixRan?: string[] };
+  const originalDev = process.env.PLUMIX_DEV;
   afterEach(() => {
     for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true });
     delete ran.__plumixRan;
+    if (originalDev === undefined) delete process.env.PLUMIX_DEV;
+    else process.env.PLUMIX_DEV = originalDev;
     vi.restoreAllMocks();
   });
 
@@ -335,11 +338,12 @@ describe("run — a command's --help", () => {
   );
 
   test("`plumix dev --help` neither migrates the local database nor starts dev", async () => {
-    vi.spyOn(report, "info").mockImplementation(() => undefined);
+    const info = vi.spyOn(report, "info").mockImplementation(() => undefined);
 
     await run(["--cwd", shipSite(), "dev", "--help"]);
 
     expect(ran.__plumixRan ?? []).toEqual([]);
+    expect(info.mock.calls[0]?.[0]).toContain("  plumix dev [options]");
   });
 
   test("--help counts anywhere among the command's arguments", async () => {
