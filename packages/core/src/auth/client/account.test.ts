@@ -180,4 +180,35 @@ describe("the account useAccount reads", () => {
 
     expect(account.read()).toEqual({ account: null, isPending: false });
   });
+
+  test("signing out while the account loads leaves it cleared", async () => {
+    const h = await createDispatcherHarness();
+    const user = await h.seedUser("subscriber");
+    const { token } = await createSession(h.db, { userId: user.id });
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const { authClient, account, session } = createAuthClient({
+      basePath: () => "",
+      fetch: async (url, init) => {
+        const headers = new Headers(init.headers);
+        headers.append("cookie", `${SESSION_COOKIE_NAME}=${token}`);
+        const response = await h.dispatch(
+          plumixRequest(url, { ...init, headers }),
+        );
+        if (url.endsWith("/user/get")) await held;
+        return response;
+      },
+      navigate: () => undefined,
+    });
+    await session.refresh();
+    account.subscribe(() => undefined);
+
+    await authClient.signOut();
+    release();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(account.read()).toEqual({ account: null, isPending: false });
+  });
 });

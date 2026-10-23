@@ -75,6 +75,8 @@ export function createAccountStore(
   let etag: string | null = null;
   let loaded = false;
   let loading: Promise<AuthResult<Account | null>> | null = null;
+  // Bumped by `clear`, so a read that was in flight then is dropped.
+  let generation = 0;
   const listeners = new Set<() => void>();
 
   function hold(next: AccountState, token: string | null): void {
@@ -96,6 +98,7 @@ export function createAccountStore(
   }
 
   async function fetchAccount(): Promise<AuthResult<Account | null>> {
+    const started = generation;
     if (session.read().isPending) await session.refresh();
     const user = session.read().user;
     if (user === null) {
@@ -103,6 +106,7 @@ export function createAccountStore(
       return success(null);
     }
     const result = await rpc("user/get", { id: user.id });
+    if (generation !== started) return success(null);
     if (result.error) {
       hold(SIGNED_OUT, null);
       return result;
@@ -113,10 +117,12 @@ export function createAccountStore(
 
   function load(): Promise<AuthResult<Account | null>> {
     loaded = true;
-    loading ??= fetchAccount().finally(() => {
-      loading = null;
+    if (loading !== null) return loading;
+    const run = fetchAccount().finally(() => {
+      if (loading === run) loading = null;
     });
-    return loading;
+    loading = run;
+    return run;
   }
 
   async function update(patch: AccountPatch): Promise<AuthResult<Account>> {
@@ -154,7 +160,9 @@ export function createAccountStore(
     },
     update,
     clear() {
+      generation += 1;
       loaded = false;
+      loading = null;
       hold(SIGNED_OUT, null);
     },
   };
