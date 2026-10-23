@@ -51,6 +51,8 @@ export type QueueVerdict =
       readonly checks: readonly string[];
     };
 
+const CHECK_ENDED_RED = new Set(["FAILURE", "CANCELLED", "TIMED_OUT"]);
+
 export const judgeQueuedPullRequest = (
   pullRequest: PullRequestSnapshot,
 ): QueueVerdict => {
@@ -72,7 +74,10 @@ export const judgeQueuedPullRequest = (
   }
 
   const failingChecks = pullRequest.statusCheckRollup
-    .filter(({ conclusion }) => conclusion === "FAILURE")
+    .filter(
+      ({ conclusion }) =>
+        conclusion !== undefined && CHECK_ENDED_RED.has(conclusion),
+    )
     .map(({ name, detailsUrl }) => ({
       name: name ?? "unnamed",
       url: detailsUrl,

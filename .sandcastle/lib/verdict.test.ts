@@ -99,6 +99,29 @@ describe("judgeQueuedPullRequest", () => {
     });
   });
 
+  test.each(["CANCELLED", "TIMED_OUT"])(
+    "a check that ended %s is refused like a failure, so it is re-run instead of waited on",
+    (conclusion) => {
+      const verdict = judgeQueuedPullRequest(
+        snapshot({
+          isInMergeQueue: false,
+          autoMergeEnabled: true,
+          statusCheckRollup: [
+            run("Test (e2e)", conclusion),
+            run("Lint", "SUCCESS"),
+          ],
+        }),
+      );
+
+      expect(verdict).toMatchObject({
+        status: "failed",
+        failingChecks: [
+          { name: "Test (e2e)", url: expect.stringContaining("/job/") },
+        ],
+      });
+    },
+  );
+
   test("a pull request blocked only by code scanning is refused with the alerts, not left to time out", () => {
     const verdict = judgeQueuedPullRequest(
       snapshot({

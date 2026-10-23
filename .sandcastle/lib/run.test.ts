@@ -39,6 +39,7 @@ const ports = (over: Partial<ShipPorts> = {}) => {
     confirm: async () => merged,
     repair: async () => ({ status: "repaired" }) as const,
     rerunFailedChecks: async () => true,
+    hasMerged: () => false,
     inFlightFromEarlierRuns: () => [],
     requeue: () => {},
     ticketClosed: () => true,
@@ -292,6 +293,30 @@ describe("runShipLoop", () => {
     expect(seen.filter((s) => s === "repaired")).toHaveLength(3);
     expect(seen.filter((s) => s === "requeued")).toHaveLength(3);
     expect(report.merged).toHaveLength(3);
+    expect(parked).toEqual([]);
+  });
+
+  test("a pull request that merges while its repair waits for a sandbox is merged, not repaired", async () => {
+    let repairs = 0;
+    const { ports: p, parked } = ports({
+      nextTicket: drainingFrom([ticket(1)]),
+      rerunFailedChecks: async () => false,
+      confirm: async () => ({
+        status: "failed",
+        reason: "still queued after 45 minutes",
+        failingChecks: [],
+      }),
+      hasMerged: () => true,
+      repair: async () => {
+        repairs += 1;
+        return { status: "repaired" } as const;
+      },
+    });
+
+    const report = await runShipLoop(p, allLanes);
+
+    expect(repairs).toBe(0);
+    expect(report.merged).toHaveLength(1);
     expect(parked).toEqual([]);
   });
 

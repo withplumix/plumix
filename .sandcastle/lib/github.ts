@@ -562,6 +562,17 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const SIGHTINGS_THAT_MEAN_THE_QUEUE_DROPPED_IT = 2;
 const SIGHTINGS_THAT_MEAN_A_REQUIRED_CHECK_NEVER_RUNS = 3;
 
+export const hasMerged = (pullRequest: number): boolean =>
+  ghJson<{ state: string }>([
+    "pr",
+    "view",
+    String(pullRequest),
+    "-R",
+    REPO_SLUG,
+    "--json",
+    "state",
+  ]).state === "MERGED";
+
 export const waitForMerge = async (
   pullRequest: number,
   {

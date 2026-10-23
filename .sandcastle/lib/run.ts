@@ -24,6 +24,7 @@ export interface ShipPorts {
     pullRequest: QueuedPullRequest,
     refusal: MergeOutcome,
   ) => Promise<boolean>;
+  readonly hasMerged: (pullRequest: QueuedPullRequest) => boolean;
   readonly requeue: (pullRequest: QueuedPullRequest) => void;
   readonly inFlightFromEarlierRuns: () => readonly Queued[];
   readonly ticketClosed: (ticket: Ticket) => boolean;
@@ -125,9 +126,13 @@ export const runShipLoop = async (
           `  #${pullRequest.number} refused (${outcome.reason}), repairing (${repairs}/${REPAIRS_A_PULL_REQUEST_GETS})`,
         );
       }
-      const repaired = await sandboxes.runFirst(() =>
-        ports.repair(ticket, pullRequest, outcome),
+      const refusal = outcome;
+      const repaired = await sandboxes.runFirst(async () =>
+        ports.hasMerged(pullRequest)
+          ? undefined
+          : ports.repair(ticket, pullRequest, refusal),
       );
+      if (repaired === undefined) return { status: "merged" };
       if (repaired.status === "declined") {
         return { status: "failed", reason: repaired.reason, failingChecks: [] };
       }
