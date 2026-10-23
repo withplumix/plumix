@@ -366,6 +366,10 @@ describe("assemblePluginAdminBundle", () => {
     );
     expect(bundle).toContain("registerPluginDashboardWidget");
     expect(bundle).toContain('"acme:stats"');
+    // Inside the `window.plumix` guard, bound to the plugin's `Widget` export.
+    expect(bundle).toMatch(
+      /var (\w+)=\w+\(\(\)=>null,"Widget"\);var (\w+)=window\.plumix;\2&&\2\.registerPluginDashboardWidget\("acme:stats",\1\);/,
+    );
   });
 
   test("emits a dashboard widget only against the plugin that registered it", async () => {
@@ -373,7 +377,11 @@ describe("assemblePluginAdminBundle", () => {
       resolve(workspace, "src/admin.ts"),
       "export const Widget = () => null;",
     );
-    const withEntry = definePlugin(
+    await writeFile(
+      resolve(workspace, "src/other-admin.ts"),
+      "export const OtherWidget = () => 0;",
+    );
+    const acme = definePlugin(
       "acme",
       (ctx) => {
         ctx.registerDashboardWidget({
@@ -384,24 +392,28 @@ describe("assemblePluginAdminBundle", () => {
       },
       { adminEntry: "./src/admin.ts" },
     );
-    const withoutEntry = definePlugin("other", (ctx) => {
-      ctx.registerDashboardWidget({
-        id: "other:stats",
-        title: "Other stats",
-        component: "Widget",
-      });
-    });
+    const other = definePlugin(
+      "other",
+      (ctx) => {
+        ctx.registerDashboardWidget({
+          id: "other:stats",
+          title: "Other stats",
+          component: "OtherWidget",
+        });
+      },
+      { adminEntry: "./src/other-admin.ts" },
+    );
 
     const { registry } = await installPlugins({
       hooks: new HookRegistry(),
-      plugins: [withEntry, withoutEntry],
+      plugins: [acme, other],
     });
 
     const adminDest = resolve(workspace, "dist");
     await mkdir(adminDest, { recursive: true });
 
     await assemblePluginAdminBundle({
-      plugins: [withEntry, withoutEntry] as AssemblerPlugin[],
+      plugins: [acme, other] as AssemblerPlugin[],
       registry,
       adminDest,
       projectRoot: workspace,
@@ -411,8 +423,13 @@ describe("assemblePluginAdminBundle", () => {
       resolve(adminDest, "plugins/site-bundle.js"),
       "utf8",
     );
-    expect(bundle).toContain('"acme:stats"');
-    expect(bundle).not.toContain('"other:stats"');
+    expect(bundle.match(/registerPluginDashboardWidget\(/g)).toHaveLength(2);
+    expect(bundle).toMatch(
+      /var (\w+)=\w+\(\(\)=>null,"Widget"\);.*registerPluginDashboardWidget\("acme:stats",\1\)/,
+    );
+    expect(bundle).toMatch(
+      /var (\w+)=\w+\(\(\)=>0,"OtherWidget"\);.*registerPluginDashboardWidget\("other:stats",\1\)/,
+    );
   });
 });
 
