@@ -5,6 +5,7 @@ import {
   aReadyTicketWaitsOnAMovingBlocker,
   closeCompletedParent,
   firstUnblockedUnassignedTicket,
+  hasMerged,
   isTicketClosed,
   listReadyTickets,
   loopPullRequestsInFlight,
@@ -182,6 +183,7 @@ const report = await runShipLoop(
         },
       );
     },
+    hasMerged: ({ number }) => hasMerged(number),
     inFlightFromEarlierRuns: () => {
       const inFlight = onlyTickets.length ? [] : loopPullRequestsInFlight();
       for (const { ticket } of inFlight) claimed.add(ticket.number);
