@@ -274,6 +274,7 @@ export type {
   PluginSetup,
   PluginSetupContext,
   PluginSetupContextBase,
+  PlumixFetch,
   PlumixManifest,
   ProjectImageRolesOptions,
   PublicRouteMatch,
