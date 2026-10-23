@@ -6,10 +6,12 @@ export {
 export type {
   Account,
   AccountPatch,
+  AccountSession,
   AccountState,
   AuthClient,
   AuthClientAccount,
   AuthClientError,
+  AuthClientSessions,
   AuthClientSignIn,
   AuthMethodClient,
   AuthMethodClientKernel,

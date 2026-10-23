@@ -48,6 +48,10 @@ const MESSAGES: Readonly<Record<string, MessageDescriptor>> = {
     id: "authClient.error.localeNotSupported",
     message: "This site isn't available in that language.",
   },
+  current_session: {
+    id: "authClient.error.currentSession",
+    message: "This is the session you're using. Sign out to end it.",
+  },
   method_not_registered: {
     id: "authClient.error.methodNotRegistered",
     message: "This sign-in method isn't available here.",
