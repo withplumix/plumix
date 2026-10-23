@@ -184,7 +184,7 @@ interface UpsertAutosaveInput {
     readonly excerpt: string | null;
     /**
      * The keys the author touched, and the keys they cleared. Not the whole
-     * bag — see ADR 0003.
+     * bag — see ADR 0057.
      */
     readonly meta: JsonObject;
     readonly metaDeletes: readonly string[];

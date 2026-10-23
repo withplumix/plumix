@@ -30,7 +30,7 @@ type SnapshotEnvelope = Readonly<{
   parentId: number | null;
   /**
    * Keys the author cleared. An autosave's meta holds the keys the author
-   * touched (ADR 0003), where absence means untouched — so a cleared field has
+   * touched (ADR 0057), where absence means untouched — so a cleared field has
    * nowhere to live but here.
    */
   deletes: readonly string[];

@@ -484,7 +484,7 @@ _Avoid_: façade (for the whole surface)
 A unit of extension defined by a plugin descriptor, which registers its contributions during setup. A plugin may be local to a single site or published for others to install; distribution is a mode, not a kind.
 
 **Plugin state**:
-What one install of a plugin keeps in memory for its own code. Rebuilt from code on every boot, never stored, never seen by other plugins. See ADR 0043.
+What one install of a plugin keeps in memory for its own code. Rebuilt from code on every boot, never stored, never seen by other plugins. See ADR 0058.
 _Avoid_: registry, store
 
 **Lifecycle step**:
