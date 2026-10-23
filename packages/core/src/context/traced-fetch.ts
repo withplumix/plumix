@@ -13,8 +13,9 @@ function spanName(method: string, url: string): string {
 }
 
 /**
- * The collector is read per call so its post-vote activation is observed. No
- * `traceparent` injection: trace ids don't exist during the request.
+ * Each call gets a span and a 10s deadline. The collector is read per call so
+ * its post-vote activation is observed. No `traceparent` injection: no trace
+ * ids exist yet.
  */
 export function createTracedFetch(
   getTelemetry: () => TelemetryCollector,

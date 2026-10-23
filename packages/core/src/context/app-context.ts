@@ -135,7 +135,7 @@ export interface AppContextBase<
    * request.
    */
   readonly telemetry: TelemetryCollector;
-  /** Traced `fetch`, one span per call; global `fetch` is not patched. */
+  /** Traced, time-bounded `fetch`, one span per call; global `fetch` is not patched. */
   readonly fetch: PlumixFetch;
   /**
    * Consumers whose head-sampling vote said yes for this request — the
