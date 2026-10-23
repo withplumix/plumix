@@ -354,6 +354,33 @@ describe("createEditingCopy", () => {
     });
   });
 
+  test("Keep mine sends nothing once another user has taken the lease, and the held work stays", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const lease = fakeLease();
+    const sent: string[] = [];
+    const copy = openCopy({
+      lease: lease.api,
+      save: (etag) => {
+        sent.push(etag);
+        return Promise.reject(conflictError("e5"));
+      },
+    });
+    lease.grant();
+    await settle();
+    await copy.save({ name: "mine" });
+    lease.takeOver(ADA);
+    vi.advanceTimersByTime(EDIT_LEASE_RENEW_INTERVAL_MS);
+    await settle();
+
+    await copy.keepMine();
+
+    expect(sent).toEqual(["e0"]);
+    expect(copy.getSnapshot().conflict).toMatchObject({
+      etag: "e5",
+      mine: { name: "mine" },
+    });
+  });
+
   test("Compare shows what is saved at the token the conflict reported", async () => {
     const reads: string[] = [];
     const copy = await openEditable({

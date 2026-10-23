@@ -3,6 +3,7 @@ import type {
   EditLeaseApi,
   EditLeaseNotice,
   EditLeaseState,
+  EditorLeaseMode,
 } from "./edit-lease-session.js";
 import { editingElsewhere, etagConflict } from "./conflict.js";
 import {
@@ -49,8 +50,8 @@ export interface EditingConflict<Work> {
 }
 
 export interface EditingCopySnapshot<Work, Saved> {
-  readonly mode: "loading" | "editable" | "readOnly";
-  /** Whether the editor's fields take input. */
+  readonly mode: EditorLeaseMode["mode"];
+  /** Whether the editor's fields refuse input. */
   readonly readOnly: boolean;
   /** Why the editor is read-only: another user holds the lease, or took it. */
   readonly banner: EditLeaseNotice | undefined;
@@ -209,7 +210,7 @@ export function createEditingCopy<
       ),
     keepMine: () => {
       const held = conflict;
-      if (!held) return Promise.resolve(undefined);
+      if (!held || !snapshot.canKeepMine) return Promise.resolve(undefined);
       conflict = undefined;
       publish();
       return queue.run(() => write(held.etag, held.mine));

@@ -255,6 +255,8 @@ function UserEditRoute(): ReactNode {
   const metaBoxes = visibleUserMetaBoxes(session.capabilities);
   return (
     <UserEditForm
+      // Another user is another form: `useForm` reads `defaultValues` once.
+      key={target.id}
       target={target}
       sessionUserId={session.id}
       isSelf={isSelf}
