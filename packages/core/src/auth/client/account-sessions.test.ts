@@ -41,6 +41,30 @@ describe("authClient.sessions.list", () => {
     expect(result.data).toHaveLength(2);
     expect(result.data?.filter((s) => s.current)).toHaveLength(1);
   });
+
+  test("resolves each session with its address, agent and dates as Dates", async () => {
+    const h = await createDispatcherHarness();
+    const user = await h.seedUser("subscriber");
+    const here = await createSession(h.db, {
+      userId: user.id,
+      ipAddress: "203.0.113.7",
+      userAgent: "Firefox",
+    });
+    const { authClient } = clientOf(h, here.token);
+
+    const result = await authClient.sessions.list();
+
+    expect(result.data).toEqual([
+      {
+        id: here.session.id,
+        ipAddress: "203.0.113.7",
+        userAgent: "Firefox",
+        createdAt: new Date(here.session.createdAt),
+        expiresAt: new Date(here.session.expiresAt),
+        current: true,
+      },
+    ]);
+  });
 });
 
 describe("authClient.sessions.revoke", () => {
@@ -49,7 +73,7 @@ describe("authClient.sessions.revoke", () => {
 
     const result = await authClient.sessions.revoke(other.session.id);
 
-    expect(result.error).toBeNull();
+    expect(result.data).toEqual({ id: other.session.id });
     const listed = await authClient.sessions.list();
     expect(listed.data?.map((s) => [s.id, s.current])).toEqual([
       [here.session.id, true],
@@ -81,4 +105,31 @@ describe("authClient.sessions.revokeOthers", () => {
       [here.session.id, true],
     ]);
   });
+});
+
+describe("a sessions answer the client can't read", () => {
+  const calls = {
+    list: (c: ReturnType<typeof createAuthClient>["authClient"]) =>
+      c.sessions.list(),
+    revoke: (c: ReturnType<typeof createAuthClient>["authClient"]) =>
+      c.sessions.revoke("s1"),
+    revokeOthers: (c: ReturnType<typeof createAuthClient>["authClient"]) =>
+      c.sessions.revokeOthers(),
+  };
+
+  test.each(Object.keys(calls) as (keyof typeof calls)[])(
+    "%s resolves unknown",
+    async (name) => {
+      const { authClient } = createAuthClient({
+        basePath: () => "",
+        fetch: () => Promise.resolve(Response.json({ json: { nope: 1 } })),
+        navigate: () => undefined,
+      });
+
+      const result = await calls[name](authClient);
+
+      expect(result.data).toBeNull();
+      expect(result.error?.code).toBe("unknown");
+    },
+  );
 });

@@ -40,7 +40,6 @@ const revokedOthersEnvelopeSchema = v.object({
   json: v.object({ revoked: v.number() }),
 });
 
-/** Plain calls with no cache: none of them ends the current session. */
 export function createAccountSessions(rpc: RpcCall): AuthClientSessions {
   return {
     async list() {
