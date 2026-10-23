@@ -1,5 +1,4 @@
 import { plugin as shadcn } from "@shadcn/lint";
-import reactPlugin from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
 import { defineConfig } from "eslint/config";
 
@@ -38,14 +37,11 @@ const NO_PHYSICAL_CLASSES_SELECTOR = {
 } as const;
 
 export const reactConfig = defineConfig(
+  // Under the automatic runtime JSX doesn't reference `React`, so an import of
+  // it that nothing else reads is unused.
   {
     files: ["**/*.ts", "**/*.tsx"],
-    ...reactPlugin.configs.flat.recommended,
-    ...reactPlugin.configs.flat["jsx-runtime"],
-    languageOptions: {
-      ...reactPlugin.configs.flat.recommended?.languageOptions,
-      ...reactPlugin.configs.flat["jsx-runtime"]?.languageOptions,
-    },
+    languageOptions: { parserOptions: { jsxPragma: null } },
   },
   reactHooks.configs.flat["recommended-latest"],
   // The preset ships these three as `warn`; a warning blocks nothing, so they
