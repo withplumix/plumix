@@ -31,9 +31,11 @@ export function createTracedFetch(
     const callerSignal =
       platformInit.signal ??
       (input instanceof Request ? input.signal : undefined);
-    const timeoutSignal =
-      timeout === false ? undefined : AbortSignal.timeout(timeout);
-    const signals = [callerSignal, timeoutSignal].filter(
+    const deadline =
+      timeout === false
+        ? undefined
+        : { ms: timeout, signal: AbortSignal.timeout(timeout) };
+    const signals = [callerSignal, deadline?.signal].filter(
       (signal) => signal !== undefined,
     );
     return getTelemetry().span(spanName(method, url), async (s) => {
@@ -42,20 +44,16 @@ export function createTracedFetch(
       try {
         const response = await globalThis.fetch(input, {
           ...platformInit,
-          ...(timeoutSignal && { signal: AbortSignal.any(signals) }),
+          ...(deadline && { signal: AbortSignal.any(signals) }),
         });
         s.set("http.response.status_code", response.status);
         return response;
       } catch (error) {
-        // Still the standard `TimeoutError`, its message naming the duration
-        // so the span says how long the call was given.
-        if (
-          timeout !== false &&
-          timeoutSignal?.aborted &&
-          error === timeoutSignal.reason
-        ) {
+        // The message names the duration so the span says how long the call
+        // was given.
+        if (deadline?.signal.aborted && error === deadline.signal.reason) {
           throw new DOMException(
-            `timed out after ${timeout / 1000}s`,
+            `timed out after ${deadline.ms / 1000}s`,
             "TimeoutError",
           );
         }
