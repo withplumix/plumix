@@ -261,7 +261,7 @@ A theme's rule for style values: custom values allowed, or design tokens only. T
 ## Themes & templates
 
 **Theme**:
-The site-specific presentation layer, defined statically (no setup hook): templates, owned blocks and shortcodes, design tokens, and a document manifest.
+The site-specific presentation layer, defined statically (no lifecycle step): templates, owned blocks and shortcodes, design tokens, and a document manifest.
 
 **Template**:
 A theme render unit bound to a route or data kind. See the disambiguation note — distinct from a stored page-template choice.
@@ -392,7 +392,7 @@ The code that adapts one platform's serve API to core, by building the runtime h
 _Avoid_: platform adapter, driver
 
 **Runtime handler**:
-The platform-neutral object a runtime adapter produces — a `fetch`, optionally a `scheduled` and a `dispose`. See the disambiguation note — distinct from a route handler and a hook handler.
+The platform-neutral object a runtime adapter produces — a `fetch`, optionally a `scheduled` and a `dispose`. See the disambiguation note — distinct from a route handler and an event or filter handler.
 
 **Invocation**:
 What a runtime adapter hands core for one call into the runtime handler: the `env`, an optional `waitUntil`, an optional client address.
@@ -441,7 +441,7 @@ A valid preview token granting draft visibility for one entry, forcing a CDN byp
 The zero-JS, server-rendered admin chrome overlaid on public pages for logged-in users.
 
 **Wire module**:
-The browser-side counterpart of a public JSON route: it owns the route's path, the deployment's base path and the decoding of the answer, so a theme never builds the URL or trusts the payload. Internal to its package; the published surface is a hook.
+The browser-side counterpart of a public JSON route: it owns the route's path, the deployment's base path and the decoding of the answer, so a theme never builds the URL or trusts the payload. Internal to its package; the published surface is a React hook.
 _Avoid_: browser adapter, client adapter (_adapter_ means **runtime adapter**)
 
 **Scheduled task**:
@@ -475,17 +475,20 @@ _Avoid_: façade (for the whole surface)
 A unit of extension defined by a plugin descriptor, which registers its contributions during setup. A plugin may be local to a single site or published for others to install; distribution is a mode, not a kind.
 
 **Plugin state**:
-What one install of a plugin keeps in memory for its own hooks. Rebuilt from code on every boot, never stored, never seen by other plugins. See ADR 0043.
+What one install of a plugin keeps in memory for its own code. Rebuilt from code on every boot, never stored, never seen by other plugins. See ADR 0043.
 _Avoid_: registry, store
 
-**Hook**:
-The umbrella term for the two extension primitives, filter and action.
+**Lifecycle step**:
+One of the functions a plugin descriptor gives core to run, in a fixed order, when the plugin is installed: `state`, `provides`, `setup`, `afterSetup`.
+_Avoid_: hook, descriptor callback
+
+**Event**:
+A named extension point announcing something that already happened. Its handlers react to it and cannot change the outcome.
+_Avoid_: action, hook
 
 **Filter**:
-A hook whose handlers form a pipeline — each receives the previous handler's return value and returns a possibly-transformed value. (WordPress lineage.)
-
-**Action**:
-A hook whose handlers fire for side effects and return nothing.
+A named extension point whose handlers form a pipeline — each receives the previous handler's return value and returns a possibly-transformed value. (WordPress lineage.)
+_Avoid_: hook
 
 **Narrowing composition**:
 The rule that makes an extension point safe to hand a query to: a contribution
@@ -514,7 +517,7 @@ A public render that read the principal during the render phase (`ctx.user`, `ct
 _Avoid_: personalized render, per-user render
 
 **Cache tag**:
-A coarse label a stored response carries for invalidation — a type tag (`t:<type>`), an entry tag (`e:<id>`), or a settings tag (`s:<group>`). A page is stored under its resolved intent's tags plus the tags its render declared: the entities it embedded (`embeddedCacheTags`), the settings groups it read (`s:<group>`), and whatever a plugin named with `tagCdnEntry` from a loader, a component or a hook. A plugin route that opted into the CDN is stored under the tags declared while its handler ran, with no intent tags: what it named with `tagCdnEntry`, plus whatever core declared for what it read. A plugin tags in the same vocabulary or in a namespace of its own that nothing purges.
+A coarse label a stored response carries for invalidation — a type tag (`t:<type>`), an entry tag (`e:<id>`), or a settings tag (`s:<group>`). A page is stored under its resolved intent's tags plus the tags its render declared: the entities it embedded (`embeddedCacheTags`), the settings groups it read (`s:<group>`), and whatever a plugin named with `tagCdnEntry` from a loader, a component or an event or filter handler. A plugin route that opted into the CDN is stored under the tags declared while its handler ran, with no intent tags: what it named with `tagCdnEntry`, plus whatever core declared for what it read. A plugin tags in the same vocabulary or in a namespace of its own that nothing purges.
 
 **Purge**:
 Invalidation of stored responses by tag, or of a source's variants by its URL.
@@ -604,8 +607,7 @@ them distinct by **always qualifying** them; bare use is a smell.
   named `runtime`, which holds a runtime adapter vs the `@plumix/runtime-*`
   **package** shipping one. Qualify when more than one is in play.
 - **handler** — the **runtime handler** (this glossary) vs a **route handler**
-  (what answers one registered path) vs a **hook handler** (a filter or action
-  listener). Qualify when more than one is in play.
+  (what answers one registered path) vs an **event or filter handler**. Qualify when more than one is in play.
 - **canonical** — reserved for the **canonical URL**. For a stored value already
   in the form its field's declared type implies, say **settled**, never
   "canonical".

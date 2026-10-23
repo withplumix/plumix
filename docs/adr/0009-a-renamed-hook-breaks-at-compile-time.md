@@ -1,5 +1,8 @@
 # A renamed hook breaks at compile time, not at runtime
 
+Superseded by [ADR 0052](0052-a-plugin-extends-core-through-declared-events-filters-and-registrations.md):
+events and filters are exported values, so a renamed one breaks as a missing export.
+
 #2445 renamed the filter plugins contribute debug panels through, from
 `debug_bar:panels` to `debug:panels`, with no alias. A plugin still registering
 on the old name registers on a name nothing fires: its panel disappears and
