@@ -17,6 +17,11 @@ export async function verifyEs256(
 ): Promise<boolean> {
   const raw = derSignatureToRaw(signature);
   const key = await importPublicKey(publicKey);
+  if (!key) {
+    throw PasskeyError.credentialStorageCorrupt({
+      reason: "Stored public key is not a P-256 point",
+    });
+  }
   return crypto.subtle.verify(
     { name: "ECDSA", hash: "SHA-256" },
     key,
@@ -25,7 +30,20 @@ export async function verifyEs256(
   );
 }
 
-async function importPublicKey(publicKey: Uint8Array): Promise<CryptoKey> {
+/** Throws `invalid_response` when a registering key isn't a P-256 point. */
+export async function assertEs256PublicKey(
+  publicKey: Uint8Array,
+): Promise<void> {
+  if (!(await importPublicKey(publicKey))) {
+    throw PasskeyError.invalidResponse({
+      reason: "Credential public key is not a P-256 point",
+    });
+  }
+}
+
+async function importPublicKey(
+  publicKey: Uint8Array,
+): Promise<CryptoKey | null> {
   // Copied: a driver's `Buffer` may sit on a pooled or shared buffer.
   const bytes = new Uint8Array(publicKey);
   try {
@@ -33,9 +51,7 @@ async function importPublicKey(publicKey: Uint8Array): Promise<CryptoKey> {
       "verify",
     ]);
   } catch {
-    throw PasskeyError.credentialStorageCorrupt({
-      reason: "Stored public key is not a P-256 point",
-    });
+    return null;
   }
 }
 

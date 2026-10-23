@@ -223,9 +223,12 @@ function buildClientDataJSON(
   );
 }
 
-function buildAttestationObjectNone(authData: Uint8Array): Uint8Array {
+function buildAttestationObject(
+  authData: Uint8Array,
+  format: string,
+): Uint8Array {
   return cborMap([
-    [cborText("fmt"), cborText("none")],
+    [cborText("fmt"), cborText(format)],
     [cborText("attStmt"), cborMap([])],
     [cborText("authData"), cborBytes(authData)],
   ]);
@@ -274,6 +277,8 @@ interface BuildAttestationInput {
   readonly challenge: string;
   readonly credentialId: Uint8Array;
   readonly counter?: number;
+  /** The attestation statement format; `none` unless a test needs another. */
+  readonly format?: string;
 }
 
 interface BuiltAttestation {
@@ -294,7 +299,7 @@ export function buildAttestation(
     counter: input.counter ?? 0,
     attested: { credentialId: input.credentialId, cosePublicKey: cose },
   });
-  const attObject = buildAttestationObjectNone(authData);
+  const attObject = buildAttestationObject(authData, input.format ?? "none");
   const clientDataBytes = buildClientDataJSON(
     "webauthn.create",
     input.challenge,

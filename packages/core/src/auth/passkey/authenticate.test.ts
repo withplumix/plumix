@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 
 import type { PasskeyKeyPair } from "../../test/fixtures/webauthn.js";
 import { credentials } from "../../db/schema/credentials.js";
+import { decodeBase64url, encodeBase64url } from "../../encoding.js";
 import { credentialFactory, userFactory } from "../../test/factories.js";
 import {
   ASSERTION,
@@ -253,6 +254,31 @@ describe("finishAuthentication", () => {
     ).rejects.toMatchObject({ code: "counter_replay" });
   });
 
+  test("rejects a counter that fell back to 0 after the authenticator counted", async () => {
+    const fx = await registerFixtureCredential();
+    await fx.db
+      .update(credentials)
+      .set({ counter: 5 })
+      .where(eq(credentials.id, fx.credentialIdBase64Url));
+
+    const { challenge } = await issueChallenge(fx.db, 60_000);
+    const assertion = buildAssertion({
+      keyPair: fx.keyPair,
+      rpId: config.rpId,
+      origin: config.origin,
+      challenge,
+      counter: 0,
+    });
+    await expect(
+      finishAuthentication(fx.db, config, {
+        id: fx.credentialIdBase64Url,
+        rawId: fx.credentialIdBase64Url,
+        type: "public-key",
+        response: assertion,
+      }),
+    ).rejects.toMatchObject({ code: "counter_replay" });
+  });
+
   test("rejects an assertion whose origin does not match", async () => {
     const fx = await registerFixtureCredential();
     const { challenge } = await issueChallenge(fx.db, 60_000);
@@ -306,6 +332,58 @@ describe("finishAuthentication", () => {
         },
       }),
     ).rejects.toMatchObject({ code: "invalid_signature" });
+  });
+});
+
+describe("finishAuthentication refuses", () => {
+  async function assertionFor(rpId: string) {
+    const fx = await registerFixtureCredential();
+    const { challenge } = await issueChallenge(fx.db, 60_000);
+    const assertion = buildAssertion({
+      keyPair: fx.keyPair,
+      rpId,
+      origin: config.origin,
+      challenge,
+      counter: 1,
+    });
+    return {
+      db: fx.db,
+      response: {
+        id: fx.credentialIdBase64Url,
+        rawId: fx.credentialIdBase64Url,
+        type: "public-key" as const,
+        response: assertion,
+      },
+    };
+  }
+
+  test("client data from a registration ceremony", async () => {
+    const { db, response } = await assertionFor(config.rpId);
+    const clientData = JSON.parse(
+      new TextDecoder().decode(
+        decodeBase64url(response.response.clientDataJSON),
+      ),
+    ) as Record<string, unknown>;
+    const clientDataJSON = encodeBase64url(
+      new TextEncoder().encode(
+        JSON.stringify({ ...clientData, type: "webauthn.create" }),
+      ),
+    );
+
+    await expect(
+      finishAuthentication(db, config, {
+        ...response,
+        response: { ...response.response, clientDataJSON },
+      }),
+    ).rejects.toMatchObject({ code: "invalid_client_data" });
+  });
+
+  test("authenticator data scoped to another RP ID", async () => {
+    const { db, response } = await assertionFor("attacker.example");
+
+    await expect(
+      finishAuthentication(db, config, response),
+    ).rejects.toMatchObject({ code: "invalid_rp_id" });
   });
 });
 
