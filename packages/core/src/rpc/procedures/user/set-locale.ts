@@ -41,4 +41,5 @@ export const setLocale = base
         context.config.basePath,
       ),
     );
+    return { locale: match.code };
   });

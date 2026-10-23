@@ -1,4 +1,9 @@
-import type { Account, AccountPatch, AccountState } from "./account.js";
+import type {
+  Account,
+  AccountPatch,
+  AccountState,
+  LocaleSet,
+} from "./account.js";
 import type {
   inviteClient,
   magicLinkClient,
@@ -98,6 +103,11 @@ export interface AuthClientAccount {
    * and resolves `etag_mismatch`; a success refreshes the session.
    */
   update(patch: AccountPatch): Promise<AuthResult<Account>>;
+  /**
+   * Sets the user's locale to one of the site's enabled ones. The page keeps
+   * the language it rendered in; what follows is the theme's call.
+   */
+  setLocale(code: string): Promise<AuthResult<LocaleSet>>;
 }
 
 /** Refuses a member whose key `AUTH_CLIENT_KERNEL_KEYS` doesn't reserve. */

@@ -75,7 +75,9 @@ function rpcRefusal(payload: JsonValue): string {
   const { code, data } = refusal.output.json;
   if (code === "CONFLICT") {
     const reason = data?.reason ?? "";
-    if (reason === "etag_mismatch") return "etag_mismatch";
+    if (reason === "etag_mismatch" || reason === "locale_not_supported") {
+      return reason;
+    }
     // A meta value its field refuses (`meta_invalid_value` and the rest).
     if (reason.startsWith("meta_")) return "invalid_input";
   }
@@ -248,7 +250,7 @@ export function createAuthClient(env: AuthClientEnv): CreatedAuthClient {
   }
 
   const kernelApi = {
-    account: { update: account.update },
+    account: { update: account.update, setLocale: account.setLocale },
     useAccount: (): AccountState =>
       useSyncExternalStore(
         account.subscribe,
