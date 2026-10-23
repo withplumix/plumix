@@ -68,7 +68,8 @@ function useLease<Id>(
   return { state, takeOver, lose };
 }
 
-const LEASE_APIS = {
+/** Core's lease procedures for each resource an editor holds a lease on. */
+export const EDIT_LEASE_APIS = {
   entry: ENTRY_LEASE_API,
   user: USER_LEASE_API,
   term: TERM_LEASE_API,
@@ -79,7 +80,7 @@ export function useEditLease(
   kind: "entry" | "user" | "term",
   id: number,
 ): EditLease {
-  return useLease(id, LEASE_APIS[kind], true);
+  return useLease(id, EDIT_LEASE_APIS[kind], true);
 }
 
 /** Holds a settings group's edit lease while its card is being edited. */
