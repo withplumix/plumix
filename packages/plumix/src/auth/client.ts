@@ -20,6 +20,7 @@ export type {
   AuthUrlTarget,
   Invitee,
   OAuthProvider,
+  Passkey,
   RedirectOptions,
   Session,
   SessionUser,

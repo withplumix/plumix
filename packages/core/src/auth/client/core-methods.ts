@@ -45,6 +45,19 @@ export const oauthClient = defineAuthMethodClient("oauth", (kernel) => ({
   },
 }));
 
+/** One of the signed-in user's passkeys. */
+export interface Passkey {
+  readonly id: string;
+  /** `null` until the user names it. */
+  readonly name: string | null;
+  readonly isBackedUp: boolean;
+  readonly transports: readonly string[] | null;
+  /** ISO 8601. */
+  readonly createdAt: string;
+  /** ISO 8601. */
+  readonly lastUsedAt: string;
+}
+
 export const passkeyClient = defineAuthMethodClient("passkey", (kernel) => ({
   /** Without `email`, the browser offers every passkey it holds for the site. */
   signIn: async ({
@@ -82,6 +95,15 @@ export const passkeyClient = defineAuthMethodClient("passkey", (kernel) => ({
       redirectTo,
     });
   },
+  /** The session user's passkeys, oldest first. */
+  list: () => kernel.rpc<readonly Passkey[]>("auth/credentials/list"),
+  rename: (id: string, name: string) =>
+    kernel.rpc<Pick<Passkey, "id" | "name">>("auth/credentials/rename", {
+      id,
+      name,
+    }),
+  remove: (id: string) =>
+    kernel.rpc<Pick<Passkey, "id">>("auth/credentials/delete", { id }),
 }));
 
 /** Who an invite is for, shown before the visitor taps their passkey. */

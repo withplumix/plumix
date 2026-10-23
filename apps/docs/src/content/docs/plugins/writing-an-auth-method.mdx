@@ -106,12 +106,13 @@ The browser half gets a kernel bound to the method's mount, and returns its acti
 
 <Code code={client} lang="ts" title="auth/email-code/client.ts" />
 
-| Kernel member                    | What it does                                                                                                                                                 |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `post<T>(route, body?, options)` | POSTs `body` as JSON with the CSRF header. A sign-in answer refreshes the session, and navigates to the server's `redirectTo` only when the call passed one. |
-| `url(route?, options)`           | The URL of `route` under the mount, with `redirectTo` on its query.                                                                                          |
-| `navigate(url)`                  | A full-page navigation, for a flow that leaves the site, such as an OAuth consent screen.                                                                    |
-| `fail(code)`                     | A failure the browser hit itself, such as a cancelled prompt.                                                                                                |
+| Kernel member                    | What it does                                                                                                                                                     |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `post<T>(route, body?, options)` | POSTs `body` as JSON with the CSRF header. A sign-in answer refreshes the session, and navigates to the server's `redirectTo` only when the call passed one.     |
+| `rpc<T>(procedure, input?)`      | Calls an RPC procedure, such as `auth/credentials/list`, as the session's user, and resolves its answer. A refusal resolves the code the auth client maps it to. |
+| `url(route?, options)`           | The URL of `route` under the mount, with `redirectTo` on its query.                                                                                              |
+| `navigate(url)`                  | A full-page navigation, for a flow that leaves the site, such as an OAuth consent screen.                                                                        |
+| `fail(code)`                     | A failure the browser hit itself, such as a cancelled prompt.                                                                                                    |
 
 `signIn` appears as `authClient.signIn.emailCode`, and every other action under `authClient.emailCode`, so `sendCode` is `authClient.emailCode.sendCode`. Every action resolves `{ data, error }`. Keep it so: a theme handles your method's failures the way it handles core's.
 

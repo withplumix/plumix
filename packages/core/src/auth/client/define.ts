@@ -22,6 +22,14 @@ export interface AuthMethodClientKernel {
     body?: unknown,
     options?: RedirectOptions,
   ) => Promise<AuthResult<T>>;
+  /**
+   * Calls the RPC `procedure` as the session's user, resolving the answer
+   * out of its envelope.
+   */
+  readonly rpc: <T>(
+    procedure: string,
+    input?: unknown,
+  ) => Promise<AuthResult<T>>;
   /** A full-page navigation, for a flow that leaves the site. */
   readonly navigate: (url: string) => void;
   /** A failure the browser hit itself, such as a cancelled prompt. */

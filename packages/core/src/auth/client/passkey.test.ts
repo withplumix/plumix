@@ -1,5 +1,17 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import { decodeBase64url, encodeBase64url } from "../../encoding.js";
+import {
+  createDispatcherHarness,
+  plumixRequest,
+} from "../../test/dispatcher.js";
+import {
+  buildAttestation,
+  generatePasskeyKeyPair,
+  randomCredentialId,
+} from "../../test/fixtures/webauthn.js";
+import { SESSION_COOKIE_NAME } from "../cookies.js";
+import { createSession } from "../sessions.js";
 import { createAuthClient } from "./auth-client.js";
 
 interface SentRequest {
@@ -74,7 +86,7 @@ const session = (): Response =>
   });
 
 const credentials = {
-  create: vi.fn<() => Promise<unknown>>(),
+  create: vi.fn<(options: CredentialCreationOptions) => Promise<unknown>>(),
   get: vi.fn<() => Promise<unknown>>(),
 };
 
@@ -236,5 +248,181 @@ describe("authClient.invite.register", () => {
     const result = await clientFor(server).invite.register({ token: "nope" });
 
     expect(result.error?.code).toBe("invalid_token");
+  });
+});
+
+/** An authenticator that signs a real attestation for the options it gets. */
+function enrolsPasskey(): void {
+  credentials.create.mockImplementation(
+    ({ publicKey }: CredentialCreationOptions) => {
+      const credentialId = randomCredentialId();
+      const challenge = publicKey?.challenge as Uint8Array<ArrayBuffer>;
+      const built = buildAttestation({
+        keyPair: generatePasskeyKeyPair(),
+        rpId: "cms.example",
+        origin: "https://cms.example",
+        challenge: encodeBase64url(new Uint8Array(challenge)),
+        credentialId,
+      });
+      return Promise.resolve({
+        id: built.credentialIdBase64Url,
+        rawId: credentialId.buffer,
+        type: "public-key",
+        response: {
+          clientDataJSON: decodeBase64url(built.clientDataJSON).buffer,
+          attestationObject: decodeBase64url(built.attestationObject).buffer,
+          getTransports: () => ["internal"],
+        },
+      });
+    },
+  );
+}
+
+/** A signed-in auth client whose every request reaches core's real handlers. */
+async function signedInClient() {
+  const h = await createDispatcherHarness();
+  const user = await h.seedUser("subscriber");
+  const { token } = await createSession(h.db, { userId: user.id });
+  const { authClient } = createAuthClient({
+    basePath: () => "",
+    fetch: (url, init) => {
+      const headers = new Headers(init.headers);
+      headers.append("cookie", `${SESSION_COOKIE_NAME}=${token}`);
+      return h.dispatch(plumixRequest(url, { ...init, headers }));
+    },
+    navigate: () => undefined,
+  });
+  return { h, user, authClient };
+}
+
+describe("authClient.passkey.list", () => {
+  test("shows a passkey the signed-in user just registered", async () => {
+    const { user, authClient } = await signedInClient();
+    enrolsPasskey();
+    const registered = await authClient.passkey.register({
+      email: user.email,
+    });
+    expect(registered.error).toBeNull();
+
+    const result = await authClient.passkey.list();
+
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual([
+      expect.objectContaining({ name: null, transports: ["internal"] }),
+    ]);
+    expect(result.data?.[0]?.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+});
+
+describe("authClient.passkey.rename", () => {
+  test("renames one of the user's passkeys, as the list then shows", async () => {
+    const { h, user, authClient } = await signedInClient();
+    const passkey = await h.factory.credential.create({
+      userId: user.id,
+      publicKey: Buffer.from([1, 2, 3]),
+    });
+
+    const result = await authClient.passkey.rename(passkey.id, "Work laptop");
+
+    expect(result).toEqual({
+      data: { id: passkey.id, name: "Work laptop" },
+      error: null,
+    });
+    const listed = await authClient.passkey.list();
+    expect(listed.data?.map(({ name }) => name)).toEqual(["Work laptop"]);
+  });
+});
+
+describe("authClient.passkey.remove", () => {
+  test("removes a passkey while the user has another", async () => {
+    const { h, user, authClient } = await signedInClient();
+    const kept = await h.factory.credential.create({
+      userId: user.id,
+      publicKey: Buffer.from([1, 2, 3]),
+    });
+    const removed = await h.factory.credential.create({
+      userId: user.id,
+      publicKey: Buffer.from([4, 5, 6]),
+    });
+
+    const result = await authClient.passkey.remove(removed.id);
+
+    expect(result).toEqual({ data: { id: removed.id }, error: null });
+    const listed = await authClient.passkey.list();
+    expect(listed.data?.map(({ id }) => id)).toEqual([kept.id]);
+  });
+
+  test("refuses to remove the user's only passkey with last_credential, keeping it", async () => {
+    const { h, user, authClient } = await signedInClient();
+    const only = await h.factory.credential.create({
+      userId: user.id,
+      publicKey: Buffer.from([1, 2, 3]),
+    });
+
+    const result = await authClient.passkey.remove(only.id);
+
+    expect(result.error?.code).toBe("last_credential");
+    expect(result.error?.message.id).toBe("authClient.error.lastCredential");
+    const listed = await authClient.passkey.list();
+    expect(listed.data?.map(({ id }) => id)).toEqual([only.id]);
+  });
+});
+
+describe("another user's passkey", () => {
+  test("resolves not_found to rename", async () => {
+    const { h, authClient } = await signedInClient();
+    const other = await h.seedUser("subscriber");
+    const theirs = await h.factory.credential.create({
+      userId: other.id,
+      publicKey: Buffer.from([1, 2, 3]),
+      name: "Theirs",
+    });
+
+    const result = await authClient.passkey.rename(theirs.id, "Mine now");
+
+    expect(result.error?.code).toBe("not_found");
+    expect(result.error?.message.id).toBe("authClient.error.notFound");
+  });
+
+  test("resolves not_found to remove", async () => {
+    const { h, authClient } = await signedInClient();
+    const other = await h.seedUser("subscriber");
+    const theirs = await h.factory.credential.create({
+      userId: other.id,
+      publicKey: Buffer.from([1, 2, 3]),
+    });
+    await h.factory.credential.create({
+      userId: other.id,
+      publicKey: Buffer.from([4, 5, 6]),
+    });
+
+    const result = await authClient.passkey.remove(theirs.id);
+
+    expect(result.error?.code).toBe("not_found");
+  });
+});
+
+describe("a refusal that reaches passkey.list before core does", () => {
+  // As the Cloudflare demo runtime's gate answers `/_plumix/rpc/auth/credentials/`.
+  const refused = () =>
+    Response.json({ error: "Not available in the demo" }, { status: 403 });
+
+  test("from a runtime that refuses the passkeys area resolves forbidden", async () => {
+    const server = serverAnswering(refused);
+
+    const result = await clientFor(server).passkey.list();
+
+    expect(result.error?.code).toBe("forbidden");
+    expect(server.sent[0]?.url).toBe("/blog/_plumix/rpc/auth/credentials/list");
+  });
+
+  test("from a proxy in front of the site resolves unknown", async () => {
+    const server = serverAnswering(() =>
+      Response.json({ error: "Bad gateway" }, { status: 502 }),
+    );
+
+    const result = await clientFor(server).passkey.list();
+
+    expect(result.error?.code).toBe("unknown");
   });
 });
