@@ -7,7 +7,7 @@ import type { Executor, Gate } from "./gates.js";
 import type { QueuedPullRequest, Ticket } from "./github.js";
 import type { RepairOutcome } from "./run.js";
 import type { Journal } from "./telemetry.js";
-import type { MergeOutcome, ReviewThread } from "./verdict.js";
+import type { FailingCheck, MergeOutcome, ReviewThread } from "./verdict.js";
 import { agentPhaseRunner, PROMPT_DIR } from "./agent.js";
 import { rebaseOntoLatestMain } from "./freshen.js";
 import { gateBehindCheck, GATES, GATES_LEFT_TO_CI } from "./gates.js";
@@ -116,7 +116,7 @@ export const gatesARepairRuns = (
   return [
     INSTALL_GATE,
     ...GATES_LEFT_TO_CI.filter((gate) => failedInCi.has(gate)),
-    ...GATES,
+    ...GATES.filter((gate) => !gate.slow || failedInCi.has(gate)),
   ];
 };
 
@@ -140,21 +140,47 @@ export const failedStepsOf = (jobId: string): readonly string[] =>
     ]),
   ) as readonly string[];
 
+export const failureTailOf = (log: string, characters: number): string => {
+  const lastError = log.lastIndexOf("##[error]");
+  const endOfThatLine =
+    lastError === -1 ? log.length : log.indexOf("\n", lastError);
+  return log
+    .slice(0, endOfThatLine === -1 ? log.length : endOfThatLine)
+    .slice(-characters);
+};
+
+/** `gh run view --job` refuses until the whole run ends; the jobs API answers once the job does. */
 const failedLogTail = (jobId: string): string => {
   try {
-    return gh([
-      "run",
-      "view",
-      "-R",
-      REPO_SLUG,
-      "--job",
-      jobId,
-      "--log-failed",
-    ]).slice(-LOG_TAIL_CHARACTERS);
+    return failureTailOf(
+      gh([
+        "api",
+        "--allow-escape-sequences",
+        `repos/${REPO_SLUG}/actions/jobs/${jobId}/logs`,
+      ]),
+      LOG_TAIL_CHARACTERS,
+    );
   } catch (error) {
     return `(the log could not be fetched: ${String(error)})`;
   }
 };
+
+const CHECKS_A_FLAKE_CAN_FAIL = new Set([
+  "Test",
+  "Test (e2e)",
+  "Smoke (scaffold)",
+]);
+const CONCLUSIONS_THAT_NEVER_JUDGED = new Set(["CANCELLED", "TIMED_OUT"]);
+
+export const aRerunCouldTurnThemGreen = (
+  failingChecks: readonly FailingCheck[],
+): boolean =>
+  failingChecks.every(
+    ({ name, conclusion }) =>
+      CHECKS_A_FLAKE_CAN_FAIL.has(name) ||
+      (conclusion !== undefined &&
+        CONCLUSIONS_THAT_NEVER_JUDGED.has(conclusion)),
+  );
 
 export const aRerunCannotTurnItGreen = (
   failedStepsOfEachJob: readonly (readonly string[])[],
@@ -249,21 +275,6 @@ export const repairPullRequest = async (
   clearLeftoverWorktree(branch);
   git(["branch", "-f", branch, `origin/${branch}`]);
 
-  const runsStillGoing = [
-    ...new Set(
-      refusal.failingChecks.flatMap(({ url }) => idsInJobUrl(url)?.runId ?? []),
-    ),
-  ];
-  for (const runId of runsStillGoing) {
-    const completed = await untilTheRunCompletes(
-      () => runStatus(runId),
-      () => new Promise((resolve) => setTimeout(resolve, 30_000)),
-      { attempts: 60 },
-    );
-    if (!completed)
-      say(`  CI run ${runId} is still going; reading what it has`);
-  }
-
   const sandbox = await (
     refusal.conflicted ? createUnbuiltSandbox : createPlumixSandbox
   )(branch);
@@ -308,6 +319,11 @@ export const repairPullRequest = async (
       }
       if (
         failedOnlyOnTheScreenshotDiff(failedStepsOf(ids.jobId)) &&
+        (await untilTheRunCompletes(
+          () => runStatus(ids.runId),
+          () => new Promise((resolve) => setTimeout(resolve, 30_000)),
+          { attempts: 60 },
+        )) &&
         recapturedScreenshotsInto(ids.runId, sandbox.worktreePath)
       ) {
         const committed = await sandbox.exec(

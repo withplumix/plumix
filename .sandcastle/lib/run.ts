@@ -25,6 +25,10 @@ export interface ShipPorts {
     refusal: MergeOutcome,
   ) => Promise<boolean>;
   readonly hasMerged: (pullRequest: QueuedPullRequest) => boolean;
+  readonly noteOnPullRequest: (
+    pullRequest: QueuedPullRequest,
+    note: string,
+  ) => void;
   readonly requeue: (pullRequest: QueuedPullRequest) => void;
   readonly inFlightFromEarlierRuns: () => readonly Queued[];
   readonly ticketClosed: (ticket: Ticket) => boolean;
@@ -46,6 +50,7 @@ export type RepairOutcome =
 
 export const REPAIRS_A_PULL_REQUEST_GETS = 2;
 export const REBASES_A_PULL_REQUEST_GETS = 5;
+const SANDBOXES_HELD_FOR_REPAIRS = 1;
 
 const failedOnItsOwnChecks = (refusal: MergeOutcome): boolean =>
   refusal.status === "failed" &&
@@ -81,7 +86,9 @@ export const runShipLoop = async (
   const parked: { ticket: Ticket; reason: string }[] = [];
   let outage: string | undefined;
   let failuresInARow = 0;
-  const sandboxes = slotsFor(lanes);
+  const sandboxes = slotsFor(lanes, {
+    heldForFirst: SANDBOXES_HELD_FOR_REPAIRS,
+  });
   let stoppedBecause: string | undefined;
 
   const noteFailure = (reason: string): void => {
@@ -119,11 +126,19 @@ export const runShipLoop = async (
         ports.say(
           `  #${pullRequest.number} refused (${outcome.reason}), rebasing (${rebases}/${REBASES_A_PULL_REQUEST_GETS})`,
         );
+        ports.noteOnPullRequest(
+          pullRequest,
+          `The ship loop is rebasing this branch (${rebases}/${REBASES_A_PULL_REQUEST_GETS}): ${outcome.reason}`,
+        );
       } else {
         if (repairs === REPAIRS_A_PULL_REQUEST_GETS) break;
         repairs += 1;
         ports.say(
           `  #${pullRequest.number} refused (${outcome.reason}), repairing (${repairs}/${REPAIRS_A_PULL_REQUEST_GETS})`,
+        );
+        ports.noteOnPullRequest(
+          pullRequest,
+          `The ship loop is repairing this pull request: ${outcome.reason} (repair ${repairs}/${REPAIRS_A_PULL_REQUEST_GETS})`,
         );
       }
       const refusal = outcome;

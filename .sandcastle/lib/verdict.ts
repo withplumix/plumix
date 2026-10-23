@@ -1,6 +1,7 @@
 export interface FailingCheck {
   readonly name: string;
   readonly url?: string;
+  readonly conclusion?: string;
 }
 
 export type MergeOutcome =
@@ -78,9 +79,10 @@ export const judgeQueuedPullRequest = (
       ({ conclusion }) =>
         conclusion !== undefined && CHECK_ENDED_RED.has(conclusion),
     )
-    .map(({ name, detailsUrl }) => ({
+    .map(({ name, detailsUrl, conclusion }) => ({
       name: name ?? "unnamed",
       url: detailsUrl,
+      conclusion,
     }));
   if (failingChecks.length > 0) {
     return {

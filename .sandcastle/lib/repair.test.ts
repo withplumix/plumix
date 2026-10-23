@@ -13,8 +13,10 @@ import type { MergeOutcome } from "./verdict.js";
 import {
   afterCiFix,
   aRerunCannotTurnItGreen,
+  aRerunCouldTurnThemGreen,
   asCiEvidenceBrief,
   failedOnlyOnTheScreenshotDiff,
+  failureTailOf,
   gatesARepairRuns,
   idsInJobUrl,
   recaptureScreenshots,
@@ -135,21 +137,30 @@ describe("gatesARepairRuns", () => {
   });
 
   test("a check CI alone runs is run locally once CI has failed it, so the fix is proven before the push", () => {
-    const names = namesOf(
-      refused({ failingChecks: [{ name: "Lint" }, { name: "Typecheck" }] }),
-    );
+    expect(
+      namesOf(refused({ failingChecks: [{ name: "Are The Types Wrong" }] })),
+    ).toContain("attw");
+  });
+
+  test("a Publint repair skips the slow gates CI already passed, and leaves them to CI", () => {
+    const names = namesOf(refused({ failingChecks: [{ name: "Publint" }] }));
 
     expect(names).toEqual(
-      expect.arrayContaining(["lint", "typecheck", "test"]),
+      expect.arrayContaining(["install", "publint", "format", "typecheck"]),
     );
+    expect(names).not.toContain("lint");
+    expect(names).not.toContain("test");
+    expect(names).not.toContain("e2e");
     expect(names).not.toContain("attw");
   });
 
-  test("a failing test is repaired against the local gates without the CI-only checks CI already passed", () => {
-    const names = namesOf(refused({ failingChecks: [{ name: "Test" }] }));
+  test("a slow gate CI failed is run locally, so the fix is proven before the push", () => {
+    const names = namesOf(
+      refused({ failingChecks: [{ name: "Lint" }, { name: "Test" }] }),
+    );
 
     expect(names).toEqual(expect.arrayContaining(["install", "lint", "test"]));
-    expect(names).not.toContain("attw");
+    expect(names).not.toContain("e2e");
   });
 });
 
@@ -162,6 +173,71 @@ describe("aRerunCannotTurnItGreen", () => {
 
   test("a job that failed only a test may pass on a re-run", () => {
     expect(aRerunCannotTurnItGreen([["Run pnpm test:e2e"]])).toBe(false);
+  });
+});
+
+describe("aRerunCouldTurnThemGreen", () => {
+  test.each(["Publint", "Lint", "Typecheck", "Format", "Knip", "i18n"])(
+    "a %s failure fails the same on a re-run, so the refusal goes straight to a repair",
+    (name) => {
+      expect(aRerunCouldTurnThemGreen([{ name, conclusion: "FAILURE" }])).toBe(
+        false,
+      );
+    },
+  );
+
+  test.each(["Test", "Test (e2e)", "Smoke (scaffold)"])(
+    "a %s failure can be a flake, so it is re-run once",
+    (name) => {
+      expect(aRerunCouldTurnThemGreen([{ name, conclusion: "FAILURE" }])).toBe(
+        true,
+      );
+    },
+  );
+
+  test.each(["CANCELLED", "TIMED_OUT"])(
+    "any check that ended %s never finished judging the branch, so it is re-run",
+    (conclusion) => {
+      expect(aRerunCouldTurnThemGreen([{ name: "Lint", conclusion }])).toBe(
+        true,
+      );
+    },
+  );
+
+  test("a flaky failure beside a deterministic one still needs the repair", () => {
+    expect(
+      aRerunCouldTurnThemGreen([
+        { name: "Test", conclusion: "FAILURE" },
+        { name: "Publint", conclusion: "FAILURE" },
+      ]),
+    ).toBe(false);
+  });
+});
+
+describe("failureTailOf", () => {
+  const log = [
+    "2026-10-23T20:22:08Z ##[group]Run pnpm surface:check",
+    "2026-10-23T20:22:14Z plumix (no subpath) PlumixFetch: every other type has exactly one role subpath",
+    "2026-10-23T20:22:14Z ##[error]Process completed with exit code 1.",
+    "2026-10-23T20:22:15Z Post job cleanup.",
+    "2026-10-23T20:22:15Z [command]/usr/bin/git version",
+  ].join("\n");
+
+  test("ends at the job's last error, not in the post-job cleanup after it", () => {
+    const tail = failureTailOf(log, 1_000);
+
+    expect(tail).toContain("PlumixFetch: every other type");
+    expect(tail).not.toContain("Post job cleanup");
+  });
+
+  test("keeps only the characters closest to the error", () => {
+    expect(failureTailOf(log, 40)).toBe(
+      "##[error]Process completed with exit code 1.".slice(-40),
+    );
+  });
+
+  test("a log with no error line is tailed whole", () => {
+    expect(failureTailOf("one\ntwo", 3)).toBe("two");
   });
 });
 

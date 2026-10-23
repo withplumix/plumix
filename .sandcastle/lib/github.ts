@@ -319,6 +319,13 @@ export const parkTicket = (
   ]);
 };
 
+export const commentOnPullRequest = (
+  pullRequest: number,
+  body: string,
+): void => {
+  gh(["pr", "comment", String(pullRequest), "-R", REPO_SLUG, "--body", body]);
+};
+
 export const isTicketClosed = (ticketNumber: number): boolean =>
   ghJson<{ state: string }>([
     "issue",

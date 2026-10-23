@@ -13,14 +13,14 @@ commit — the harness does all of that from the block you emit below.
    at some past moment and cites what it saw then; the repo has moved since.
    Read the code the claim is about. Reading is usually enough and is free.
    Dependencies are **not** installed: running a test means `pnpm install
-   --frozen-lockfile` first, which costs minutes. Pay that only when running the
+--frozen-lockfile` first, which costs minutes. Pay that only when running the
    test is what settles the claim and reading cannot — then
    `pnpm exec vitest run <path>` in the package (test:unit resolves to source,
    so nothing needs building).
 2. **Read `GLOSSARY.md`, `AGENTS.md` and any ADR in the area** before judging what
    the fix should look like.
 3. **Honour a decision already made.** Where an earlier round posted `## Triage
-   Notes` and the maintainer has replied since, that reply is the answer. Treat
+Notes` and the maintainer has replied since, that reply is the answer. Treat
    it as settled, never re-ask it, and build the brief on it even where you would
    have chosen otherwise. Ask again only what the reply genuinely leaves open.
 4. **Decide the standing:**
@@ -56,13 +56,16 @@ What happens now.
 What should happen, including edge cases.
 
 **Key interfaces:**
+
 - `TypeName`: what changes and why
 
 **Acceptance criteria:**
+
 - [ ] specific, testable
 - [ ] specific, testable
 
 **Out of scope:**
+
 - what must not be touched
 ```
 
