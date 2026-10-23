@@ -986,6 +986,35 @@ describe("dispatcher — theme reads the auth client's render context", () => {
       'action="/blog/_plumix/auth/signout?redirectTo=%2Fblog"',
     );
   });
+
+  test("useCan answers from the signed-in visitor's role during a public render", async () => {
+    const blog = definePlugin("test-blog", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    });
+    const EditLink = (): ReturnType<typeof createElement> =>
+      createElement(
+        "p",
+        null,
+        `edit_any:${String(authClient.useCan("entry:post:edit_any"))}`,
+      );
+    const theme = defineTheme({
+      templates: [fallback(() => createElement(EditLink))],
+    });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blog], theme },
+    });
+    await seedHelloWorldPost(h);
+    const editor = await h.seedUser("editor");
+
+    const response = await h.dispatch(
+      await h.authenticateRequest(
+        new Request("https://cms.example/post/hello-world"),
+        editor.id,
+      ),
+    );
+
+    expect(await response.text()).toContain("edit_any:true");
+  });
 });
 
 describe("dispatcher — asset-shaped 404 short-circuit", () => {

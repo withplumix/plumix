@@ -7,20 +7,32 @@ import { authClient } from "plumix/auth/client";
 
 export function AccountMenu(_props: IslandProps<object>): ReactNode {
   const { user, isPending } = authClient.useSession();
+  const canEditOwn = authClient.useCan("user:edit_own");
   if (isPending) return null;
+  const permission = (
+    <span data-testid="account-can-edit-own">{String(canEditOwn)}</span>
+  );
   if (user === null) {
     return (
-      <a href="/sign-in" data-testid="account-signed-out">
-        Sign in
-      </a>
+      <div>
+        {permission}
+        <a href="/sign-in" data-testid="account-signed-out">
+          Sign in
+        </a>
+      </div>
     );
   }
   return (
     <div>
+      {permission}
       <span data-testid="account-email">{user.email}</span>
       <span data-testid="account-name">{user.name}</span>
       <ProfileForm />
-      <button type="button" onClick={() => void authClient.signOut()}>
+      <button
+        type="button"
+        onClick={() => void authClient.signOut()}
+        data-testid="account-sign-out"
+      >
         Sign out
       </button>
     </div>

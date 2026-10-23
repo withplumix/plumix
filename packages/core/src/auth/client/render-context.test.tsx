@@ -35,7 +35,9 @@ describe("during a server render", () => {
           id: 7,
           email: "jane@example.test",
           name: null,
+          avatarUrl: null,
           role: "admin",
+          capabilities: ["user:edit_own"],
         }),
       },
       () => renderToString(<AccountMenu />),
@@ -53,7 +55,9 @@ describe("during a server render", () => {
       id: 7,
       email: "jane@example.test",
       name: null,
+      avatarUrl: null,
       role: "admin",
+      capabilities: ["user:edit_own"],
     };
     const context = { basePath: "", methods, user: () => user };
 

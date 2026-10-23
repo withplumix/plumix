@@ -5,7 +5,10 @@ const sessionUserSchema = v.object({
   id: v.number(),
   email: v.string(),
   name: v.nullable(v.string()),
+  avatarUrl: v.nullable(v.string()),
   role: v.string(),
+  /** What the role grants, for showing or hiding UI; the server decides every write. */
+  capabilities: v.pipe(v.array(v.string()), v.readonly()),
 });
 
 export type SessionUser = Readonly<v.InferOutput<typeof sessionUserSchema>>;
@@ -23,6 +26,11 @@ export interface Session {
 }
 
 export const PENDING: Session = { user: null, isPending: true };
+
+/** False while pending or signed out. */
+export function sessionCan(session: Session, capability: string): boolean {
+  return session.user?.capabilities.includes(capability) ?? false;
+}
 
 export interface SessionStore {
   readonly read: () => Session;

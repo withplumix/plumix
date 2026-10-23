@@ -34,6 +34,7 @@ import type { RenderChrome, RenderEnv } from "./render-env.js";
 import type { ResolvedNode } from "./rule-resolver.js";
 import type { TemplateResolution } from "./template-hierarchy.js";
 import { renderWithAuthContext } from "../../auth/client/render-context.js";
+import { capabilitiesForRole } from "../../auth/rbac.js";
 import {
   BlockLoaderError,
   collectBlockDepKeys,
@@ -594,7 +595,10 @@ function renderTree({
             id: user.id,
             email: user.email,
             name: user.name ?? null,
+            avatarUrl: user.avatarUrl ?? null,
             role: user.role,
+            // What `auth.session` reports, so hydration reads the same.
+            capabilities: capabilitiesForRole(user.role, ctx.plugins),
           };
     },
   };
