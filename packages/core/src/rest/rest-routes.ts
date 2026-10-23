@@ -7,7 +7,7 @@ export interface RestRoute {
   readonly path: string;
 }
 
-function isParam(segment: string): boolean {
+export function isParam(segment: string): boolean {
   return segment.startsWith("{") && segment.endsWith("}");
 }
 

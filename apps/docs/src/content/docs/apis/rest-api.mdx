@@ -121,7 +121,7 @@ API tokens are for server-to-server use. A token-authenticated response never ca
 
 ## CORS
 
-Cross-origin access is closed by default, even with the API enabled. With no `cors` block, the API never sends an `Access-Control-Allow-Origin` header and refuses a preflight with 403. List the origins allowed to make anonymous reads, or pass `"*"` for any origin:
+Cross-origin access is closed by default, even with the API enabled. With no `cors` block, the API never sends an `Access-Control-Allow-Origin` header and refuses a preflight with 403. List the origins allowed to make anonymous requests, or pass `"*"` for any origin:
 
 ```ts
 import type { PlumixConfigInput } from "plumix";
@@ -133,6 +133,8 @@ export const api: PlumixConfigInput["api"] = {
 ```
 
 With a list, the API echoes the allowed origin back and every response carries `Vary: origin`, so a shared cache never serves one origin's answer to another. The API never sets `Access-Control-Allow-Credentials`.
+
+A preflight allows `GET` and `OPTIONS`, plus the method of every `auth: "public"` plugin resource whose path matches the requested one, so an allowed origin can call a public `POST` resource with a JSON body. The method of an `"authenticated"` or capability resource is never listed, because those take an API token and tokens stay server-to-server.
 
 ## Rate limiting
 
