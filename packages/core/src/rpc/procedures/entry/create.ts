@@ -49,29 +49,26 @@ export const create = base
       input,
     );
 
-    // Reserved internal types (revision, autosave) are written only by
-    // the framework's snapshot / draft paths — reject here so a hostile
-    // input.type can't smuggle reserved rows into the table.
-    if (!isAuthoredEntryType(filtered.type)) {
-      throw errors.BAD_REQUEST({ data: { reason: "reserved_type" } });
-    }
-
-    const namespace = entryCapabilityNamespace(context.plugins, filtered.type);
-    const createCapability = namespacedEntryCapability(namespace, "create");
-    if (!context.auth.can(createCapability)) {
-      throw errors.FORBIDDEN({ data: { capability: createCapability } });
-    }
-
-    const requiresPublishCap =
-      filtered.status === "published" || filtered.status === "scheduled";
-    if (requiresPublishCap) {
-      const publishCapability = namespacedEntryCapability(namespace, "publish");
-      if (!context.auth.can(publishCapability)) {
-        throw errors.FORBIDDEN({ data: { capability: publishCapability } });
+    const written = await createEntry(context, filtered, () => {
+      const namespace = entryCapabilityNamespace(
+        context.plugins,
+        filtered.type,
+      );
+      const createCapability = namespacedEntryCapability(namespace, "create");
+      if (!context.auth.can(createCapability)) {
+        throw errors.FORBIDDEN({ data: { capability: createCapability } });
       }
-    }
 
-    const written = await createEntry(context, filtered);
+      if (createGoesLive(filtered.status)) {
+        const publishCapability = namespacedEntryCapability(
+          namespace,
+          "publish",
+        );
+        if (!context.auth.can(publishCapability)) {
+          throw errors.FORBIDDEN({ data: { capability: publishCapability } });
+        }
+      }
+    });
     const output = await context.hooks.applyFilter("rpc:entry.create:output", {
       ...written.entry,
       meta: written.meta,
@@ -79,13 +76,28 @@ export const create = base
     return { ...output, etag: written.etag };
   });
 
-/** `entry.create` past its capability checks, and `ctx.entries.create`. */
+function createGoesLive(status: EntryCreate["status"]): boolean {
+  return status === "published" || status === "scheduled";
+}
+
+/**
+ * `entry.create` and `ctx.entries.create`; `gate` is the procedure's capability
+ * check, run once the type is known to be an authored one.
+ */
 export async function createEntry(
   context: AuthenticatedAppContext,
   filtered: EntryCreate,
+  gate?: () => void,
 ): Promise<EntryWritten> {
-  const goesLive =
-    filtered.status === "published" || filtered.status === "scheduled";
+  // Reserved internal types (revision, autosave) are written only by
+  // the framework's snapshot / draft paths — reject here so a hostile
+  // input.type can't smuggle reserved rows into the table.
+  if (!isAuthoredEntryType(filtered.type)) {
+    throw errors.BAD_REQUEST({ data: { reason: "reserved_type" } });
+  }
+  gate?.();
+
+  const goesLive = createGoesLive(filtered.status);
   if (scheduledDateInvalid(filtered.status, filtered.publishedAt)) {
     throw errors.BAD_REQUEST({
       data: { reason: "scheduled_requires_future_date" },

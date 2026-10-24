@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import { withUser } from "../../../auth/with-user.js";
 import { ConflictError } from "../../../db/concurrency.js";
 import { acquireEditLease, LockedError } from "../../../db/edit-lease.js";
+import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { editorUser } from "../../../test/factories.js";
 import { authedCtx, createRpcHarness } from "../../../test/rpc.js";
 
@@ -64,6 +65,38 @@ describe("ctx.entries.update", () => {
 
     expect(written.entry.meta).toMatchObject({ checksum: "abc" });
   });
+
+  test("stored meta alongside a cleared field still clears it", async () => {
+    const plugins = createPluginRegistry();
+    plugins.entryMetaBoxes.set("test-seo", {
+      id: "test-seo",
+      label: "SEO",
+      entryTypes: ["post"],
+      fields: [
+        {
+          key: "meta_title",
+          label: "Meta title",
+          type: "string",
+          inputType: "text",
+        },
+      ],
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ authAs: "editor", plugins });
+    const entry = await h.factory.draft.create({
+      authorId: h.user.id,
+      meta: { meta_title: "old" },
+    });
+
+    const written = await authedCtx(h).entries.update({
+      id: entry.id,
+      ifMatch: entry.updatedAt,
+      meta: { meta_title: null },
+      storedMeta: { checksum: "abc" },
+    });
+
+    expect(written.entry.meta).toEqual({ checksum: "abc" });
+  });
 });
 
 describe("ctx.entries.create", () => {
@@ -84,6 +117,19 @@ describe("ctx.entries.create", () => {
     });
 
     expect(written.entry.authorId).toBe(ada.id);
+  });
+
+  test("a reserved internal type is refused", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+
+    await expect(
+      authedCtx(h).entries.create({
+        type: "revision",
+        slug: "smuggled",
+        status: "draft",
+        sortOrder: 0,
+      }),
+    ).rejects.toMatchObject({ data: { reason: "reserved_type" } });
   });
 
   test("a context with no principal is refused", async () => {

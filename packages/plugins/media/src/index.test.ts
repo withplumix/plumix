@@ -660,6 +660,46 @@ describe("@plumix/plugin-media — media.confirm", () => {
     expect(confirmed.error?.data?.reason).toBe("already_confirmed");
   });
 
+  test("a confirm is refused while another user holds the draft's edit lease", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
+    const owner = await h.seedUser("contributor");
+    const editor = await h.seedUser("editor");
+    const created = await rpcDispatch<CreateUploadUrlOutput>(
+      h,
+      "media/createUploadUrl",
+      {
+        filename: "tile.png",
+        contentType: "image/png",
+        size: PNG_1X1_BYTES.byteLength,
+      },
+      owner.id,
+    );
+    if (!created.output) throw new Error("expected createUploadUrl output");
+    await storage.put(created.output.storageKey, PNG_1X1_BYTES, {
+      contentType: "image/png",
+    });
+    const leased = await rpcDispatch(
+      h,
+      "entry/lease/acquire",
+      { id: created.output.mediaId },
+      editor.id,
+    );
+    expect(leased.status).toBe(200);
+
+    const confirmed = await rpcDispatch(
+      h,
+      "media/confirm",
+      { id: created.output.mediaId },
+      owner.id,
+    );
+
+    expect(confirmed.status).toBe(423);
+  });
+
   test("returns CONFLICT when the upload didn't actually land in storage", async () => {
     const storage = memoryStorage().connect({});
     const h = await createDispatcherHarness({
@@ -1418,6 +1458,28 @@ describe("@plumix/plugin-media — media.update", () => {
     expect(result.error?.data?.issues?.map((i) => i.message)).toEqual([
       "Send the media item's `etag` from `media.list` as `ifMatch`",
     ]);
+  });
+
+  test("a save on an item whose stored meta is unreadable is a media_meta_invalid conflict", async () => {
+    const h = await createDispatcherHarness({ config: { plugins: [media()] } });
+    const owner = await h.seedUser("editor");
+    const broken = await h.factory.entry.create({
+      type: "media",
+      status: "published",
+      title: "broken.png",
+      authorId: owner.id,
+      meta: {},
+    });
+
+    const result = await rpcDispatch(
+      h,
+      "media/update",
+      { id: broken.id, ifMatch: etagOf(broken.updatedAt), alt: "mine" },
+      owner.id,
+    );
+
+    expect(result.status).toBe(409);
+    expect(result.error?.data?.reason).toBe("media_meta_invalid");
   });
 
   test("a save is refused while another user holds the item's edit lease", async () => {
