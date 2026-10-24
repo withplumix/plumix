@@ -100,6 +100,7 @@ ${FOOTER}`;
 export function outsideSystems(readme: string): string | undefined {
   const start = readme.indexOf(OUTSIDE_SYSTEMS);
   if (start === -1) return undefined;
-  const body = readme.slice(start + OUTSIDE_SYSTEMS.length);
-  return body.slice(0, body.indexOf("\n## "));
+  const rest = readme.slice(start + OUTSIDE_SYSTEMS.length);
+  const end = rest.indexOf("\n## ");
+  return end === -1 ? rest : rest.slice(0, end);
 }

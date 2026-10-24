@@ -25,6 +25,22 @@ describe("package READMEs", () => {
     expect(publishedCards().length).toBeGreaterThan(0);
   });
 
+  test("outsideSystems returns the whole section when it is the last one", () => {
+    expect(outsideSystems("# x\n\n## Outside systems\n\nNothing.\n")).toBe(
+      "Nothing.\n",
+    );
+  });
+
+  test("outsideSystems stops at the next heading", () => {
+    expect(
+      outsideSystems("## Outside systems\n\nNothing.\n\n## Support\n"),
+    ).toBe("Nothing.\n");
+  });
+
+  test("outsideSystems is undefined without the section", () => {
+    expect(outsideSystems("# x\n\n## Support\n")).toBeUndefined();
+  });
+
   test.each(plugins.map((card) => [card.name, card] as const))(
     "%s lists the outside systems it talks to",
     (_name, card) => {
