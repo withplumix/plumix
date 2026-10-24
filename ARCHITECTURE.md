@@ -840,7 +840,7 @@ What happens when things go wrong, and who handles it.
 | Two people edit the same entry       | The second gets `LOCKED` while the first holds a live lease, unless they choose to take it over   |
 | A save is made from a stale copy     | `CONFLICT`, carrying the current concurrency token                                                |
 | Two saves race                       | The guarded `UPDATE` matches no row for the loser, which gets `CONFLICT`                          |
-| An action handler throws             | The others still run; the failure is reported, not raised (`doAction` uses `Promise.allSettled`)  |
+| An action handler throws             | The others still run; it is logged to `ctx.logger` and fails its own `hook:` span, never raised   |
 | A filter handler throws              | The request fails, except for isolated array filters, which skip that handler                     |
 | A CDN purge fails                    | It is logged; the write it followed still succeeds                                                |
 | A scheduled task fails               | Its siblings still run; the run reports `failed`                                                  |

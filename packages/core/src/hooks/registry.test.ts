@@ -1,6 +1,13 @@
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, onTestFinished, test, vi } from "vitest";
 
+import type { TelemetrySnapshot, TelemetrySpan } from "../context/telemetry.js";
+import type { PluginSetupContext } from "../plugin/setup-context-types.js";
 import type { FilterFn } from "./types.js";
+import { requestStore } from "../context/stores.js";
+import { definePlugin } from "../plugin/define.js";
+import { createTestContext, silentLogger } from "../test/context.js";
+import { createDispatcherHarness } from "../test/dispatcher.js";
+import { createTestDb } from "../test/harness.js";
 import { HookExecutionError } from "./errors.js";
 import { HookRegistry } from "./registry.js";
 
@@ -354,3 +361,143 @@ describe("getActionHandlers", () => {
     expect(seen).toEqual(["b:7:x"]);
   });
 });
+
+describe("a failing action handler in a booted app", () => {
+  const note = (ctx: PluginSetupContext): void => {
+    ctx.registerRoute({
+      method: "POST",
+      path: "/note",
+      auth: "public",
+      handler: async (_request, appCtx) => {
+        await appCtx.settings.write("notes", { body: "A" });
+        return new Response(null, { status: 204 });
+      },
+    });
+  };
+  const faulty = definePlugin("faulty", (ctx) => {
+    ctx.addAction("settings:group_changed", () => {
+      throw new Error("subscriber blew up");
+    });
+    note(ctx);
+  });
+  const listener = definePlugin("listener", (ctx) => {
+    ctx.addAction("settings:group_changed", () => undefined);
+  });
+
+  test("stops neither the other handlers nor the write that fired it", async () => {
+    const heard: string[] = [];
+    const recorder = definePlugin("recorder", (ctx) => {
+      ctx.addAction("settings:group_changed", (changes) => {
+        heard.push(changes.group);
+      });
+    });
+    const h = await createDispatcherHarness({
+      config: { plugins: [faulty, recorder] },
+    });
+
+    const response = await h.fetch("/_plumix/faulty/note", {
+      method: "POST",
+      withCsrfHeader: true,
+    });
+
+    response.assertStatus(204);
+    expect(heard).toEqual(["notes"]);
+  });
+
+  test("is logged once through the app logger, naming the action and the plugin", async () => {
+    const error = vi.fn();
+    const consoleWarn = vi
+      .spyOn(console, "warn")
+      .mockImplementation(() => undefined);
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    onTestFinished(() => {
+      consoleWarn.mockRestore();
+      consoleError.mockRestore();
+    });
+    const h = await createDispatcherHarness({
+      config: { plugins: [faulty] },
+      logger: { ...silentLogger, error },
+    });
+
+    await h.fetch("/_plumix/faulty/note", {
+      method: "POST",
+      withCsrfHeader: true,
+    });
+
+    expect(error.mock.calls).toEqual([
+      [
+        "[plumix] action failed hook=settings:group_changed plugin=faulty: subscriber blew up",
+        {
+          hook: "settings:group_changed",
+          plugin: "faulty",
+          error: new Error("subscriber blew up"),
+        },
+      ],
+    ]);
+    expect(consoleWarn).not.toHaveBeenCalled();
+    expect(consoleError).not.toHaveBeenCalled();
+  });
+
+  test("is logged as core's own when no plugin registered it", async () => {
+    const error = vi.fn();
+    const hooks = new HookRegistry();
+    hooks.addAction("test:throws", () => {
+      throw new Error("boom");
+    });
+    const ctx = createTestContext({
+      db: await createTestDb(),
+      hooks,
+      logger: { ...silentLogger, error },
+    });
+
+    await requestStore.run(ctx, () => hooks.doAction("test:throws"));
+
+    expect(error.mock.calls).toEqual([
+      [
+        "[plumix] action failed hook=test:throws plugin=core: boom",
+        { hook: "test:throws", plugin: null, error: new Error("boom") },
+      ],
+    ]);
+  });
+
+  test("marks only its own span failed", async () => {
+    const snapshots: TelemetrySnapshot[] = [];
+    const h = await createDispatcherHarness({
+      config: {
+        plugins: [faulty, listener],
+        telemetry: {
+          consumers: [
+            { id: "probe", onRequestEnd: (s) => void snapshots.push(s) },
+          ],
+        },
+      },
+    });
+
+    await h.fetch("/_plumix/faulty/note", {
+      method: "POST",
+      withCsrfHeader: true,
+    });
+    await h.drainDeferred();
+
+    const spans = snapshots
+      .flatMap((s) => flatten(s.spans))
+      .filter((span) => span.name === "hook: settings:group_changed")
+      .map((span) => ({
+        plugin: span.attributes["hook.plugin"],
+        status: span.status,
+        error: span.error?.message,
+      }));
+    // Core's own purge subscriber runs first, unscoped to any plugin.
+    expect(spans).toEqual([
+      { plugin: null, status: "ok", error: undefined },
+      { plugin: "faulty", status: "error", error: "subscriber blew up" },
+      { plugin: "listener", status: "ok", error: undefined },
+    ]);
+  });
+});
+
+function flatten(spans: readonly TelemetrySpan[]): TelemetrySpan[] {
+  return spans.flatMap((span) => [span, ...flatten(span.children)]);
+}

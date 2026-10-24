@@ -9,6 +9,7 @@ import type {
   FilterRest,
   HookOptions,
 } from "./types.js";
+import { logErrorSafely } from "../context/log.js";
 import { hookStore, pluginStore, tryGetContext } from "../context/stores.js";
 import { NOOP_TELEMETRY } from "../context/telemetry.js";
 import { HookExecutionError } from "./errors.js";
@@ -106,10 +107,14 @@ export class HookRegistry implements HookExecutor {
     this.#onActionFailure =
       options.onActionFailure ??
       (({ hook, plugin, error }) => {
-        console.warn(
-          `[plumix] action failed hook=${hook} plugin=${plugin ?? "core"}`,
-          error,
-        );
+        const message = `[plumix] action failed hook=${hook} plugin=${plugin ?? "core"}`;
+        // Outside a request (boot) no app logger is reachable yet.
+        const ctx = tryGetContext();
+        if (ctx === null) {
+          console.error(message, error);
+          return;
+        }
+        logErrorSafely(ctx.logger, message, error, { hook, plugin });
       });
   }
 
