@@ -775,3 +775,68 @@ describe("entry.create — the blocks the theme allows", () => {
     });
   });
 });
+
+describe("entry.create — the theme's style policy", () => {
+  const theme = { ...defaultTestTheme, allowCustomStyles: false };
+
+  test("refuses a literal style value", async () => {
+    const h = await createRpcHarness({
+      authAs: "contributor",
+      config: { theme },
+    });
+
+    await expect(
+      h.client.entry.create({
+        title: "Hello",
+        slug: "hello",
+        content: {
+          version: "plumix.v2",
+          blocks: [
+            {
+              id: "p1",
+              name: "core/rich-text",
+              attrs: {},
+              style: { large: { color: "#e11" } },
+            },
+          ],
+        },
+      }),
+    ).rejects.toMatchObject({
+      code: "INVALID_BLOCK_CONTENT",
+      data: {
+        issues: [
+          expect.objectContaining({
+            code: "style_not_allowed",
+            property: "color",
+          }),
+        ],
+      },
+    });
+  });
+
+  test("creates a block holding its own defaultStyles", async () => {
+    const h = await createRpcHarness({
+      authAs: "contributor",
+      config: { theme },
+    });
+    const content = {
+      version: "plumix.v2" as const,
+      blocks: [
+        {
+          id: "s1",
+          name: "core/section",
+          attrs: { content: [] },
+          style: { large: { paddingLeft: "1.25rem" } },
+        },
+      ],
+    };
+
+    const created = await h.client.entry.create({
+      title: "Hello",
+      slug: "hello",
+      content,
+    });
+
+    expect(created.content).toEqual(content);
+  });
+});

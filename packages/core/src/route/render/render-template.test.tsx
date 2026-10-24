@@ -2236,6 +2236,49 @@ describe("resolvePublicRoute — single entry through theme", () => {
     expect(await response.text()).toContain("var(--plumix-color-brand, #abc)");
   });
 
+  test("a stored literal a tokens-only theme forbids still renders", async () => {
+    const theme = defineTheme({
+      allowCustomStyles: false,
+      templates: [
+        fallback(() => null),
+        entry(({ data }) =>
+          data.entry.contentBlocks ? (
+            <BlockRenderer content={data.entry.contentBlocks} />
+          ) : null,
+        ),
+      ],
+    });
+
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "legacy",
+      title: "Legacy",
+      content: {
+        version: "plumix.v2",
+        blocks: [
+          {
+            id: "s",
+            name: "core/rich-text",
+            attrs: { body: "<h2>Hi</h2>" },
+            style: { large: { color: "#e11" } },
+          },
+        ],
+      },
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/legacy"),
+    );
+    expect(await response.text()).toContain("color: #e11;");
+  });
+
   test("dispatcher pre-resolves block loaders before render — render() sees the resolved data", async () => {
     const probePlugin = definePlugin("acme-probe", (ctx) => {
       ctx.registerBlock(

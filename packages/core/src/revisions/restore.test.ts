@@ -150,6 +150,39 @@ describe("entry.revisions.restore", () => {
     expect(restored.content).toEqual(content);
   });
 
+  test("restores a revision holding a style literal the theme no longer allows", async () => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      plugins: registryWithRevisions(),
+      config: { theme: { ...defaultTestTheme, allowCustomStyles: false } },
+    });
+    const live = await h.factory.draft.create({
+      authorId: h.user.id,
+      content: { version: "plumix.v2", blocks: [] },
+    });
+    const content = {
+      version: "plumix.v2" as const,
+      blocks: [
+        {
+          id: "p1",
+          name: "core/rich-text",
+          attrs: {},
+          style: { medium: { fontSize: "13px" } },
+        },
+      ],
+    };
+    const revision = await h.factory.revision
+      .transient({ of: live })
+      .create({ content });
+
+    const restored = await h.client.entry.revisions.restore({
+      revisionId: revision.id,
+      ifMatch: await currentEtag(h.db, live.id),
+    });
+
+    expect(restored.content).toEqual(content);
+  });
+
   test("restores a revision holding a block the theme no longer allows", async () => {
     const h = await createRpcHarness({
       authAs: "editor",

@@ -2,9 +2,12 @@ import type {
   BlockNode,
   BlockSpecLookup,
   JsonValue,
+  StylePolicy,
 } from "@plumix/core/blocks";
 import {
+  allowsCustomStyles,
   blockSlotKeys,
+  forbiddenStyles,
   freshBlockId,
   isBlockNodeArray,
   rewriteBlockNodeIds,
@@ -314,17 +317,24 @@ export function removeBlocks(
 }
 
 /**
- * Ids are rewritten through the whole subtree. Returns the same tree and a null
- * id when the source is absent.
+ * Ids are rewritten through the whole subtree; the source absent, the tree is
+ * unchanged. The copy drops what `stylePolicy` refuses: only the storing node
+ * keeps it.
  */
 export function duplicateBlock(
   tree: readonly BlockNode[],
   id: string,
   blocks: BlockSpecLookup,
+  stylePolicy?: StylePolicy,
 ): { readonly tree: readonly BlockNode[]; readonly newId: string | null } {
   const source = findBlock(tree, id, blocks);
   if (!source) return { tree, newId: null };
-  const [clone] = rewriteBlockNodeIds([source], blocks);
+  const [clone] = rewriteBlockNodeIds(
+    stylePolicy
+      ? [withoutForbiddenStyles(source, blocks, stylePolicy)]
+      : [source],
+    blocks,
+  );
   if (!clone) return { tree, newId: null };
   const slot = siblingsOf(tree, id, blocks);
   const index = slot.siblings.findIndex((n) => n.id === id) + 1;
@@ -464,6 +474,57 @@ export function holdsBlockOutside(
         holdsBlockOutside(children, blocks, allowed),
       ),
   );
+}
+
+/** Whether any node, at any depth, holds a value the style policy refuses. */
+export function holdsForbiddenStyle(
+  nodes: readonly BlockNode[],
+  blocks: BlockSpecLookup,
+  policy: StylePolicy | undefined,
+): boolean {
+  if (!policy) return false;
+  return nodes.some(
+    (node) =>
+      forbiddenStyles(node, policy, blocks.get(node.name)).length > 0 ||
+      slotChildren(node, blocks).some((children) =>
+        holdsForbiddenStyle(children, blocks, policy),
+      ),
+  );
+}
+
+function withoutForbiddenStyles(
+  node: BlockNode,
+  blocks: BlockSpecLookup,
+  policy: StylePolicy,
+): BlockNode {
+  const { className, style, ...rest } = node;
+  const stripped: { -readonly [K in keyof BlockNode]: BlockNode[K] } = rest;
+  const buckets = { ...style };
+  for (const found of forbiddenStyles(node, policy, blocks.get(node.name))) {
+    if (found.kind === "className") continue;
+    const { [found.property]: _, ...left } = buckets[found.bucket] ?? {};
+    buckets[found.bucket] = left;
+  }
+  const kept = Object.fromEntries(
+    Object.entries(buckets).filter(
+      ([, bucket]) => Object.keys(bucket).length > 0,
+    ),
+  );
+  if (Object.keys(kept).length > 0) stripped.style = kept;
+  if (className !== undefined && allowsCustomStyles(policy)) {
+    stripped.className = className;
+  }
+  const attrs = { ...node.attrs };
+  for (const key of slotKeys(node, blocks)) {
+    const value = attrs[key];
+    if (isBlockNodeArray(value)) {
+      attrs[key] = value.map((child) =>
+        withoutForbiddenStyles(child, blocks, policy),
+      );
+    }
+  }
+  if (node.attrs) stripped.attrs = attrs;
+  return stripped;
 }
 
 /**

@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import type { BlockSpec } from "./block-registry.js";
 import type { EntryContent } from "./entry-content.js";
 import type { BlockNode } from "./render-block-tree.js";
+import type { StylePolicy } from "./styles/style-policy.js";
 import { createBlockRegistry } from "./block-registry.js";
 import { richTextBlock } from "./rich-text/index.js";
 import {
@@ -419,6 +420,166 @@ describe("validateEntryContent — the blocks the theme allows", () => {
     ).toMatchObject({
       ok: false,
       errors: [{ code: "block_not_allowed", path: "blocks[1]" }],
+    });
+  });
+});
+
+describe("validateEntryContent — the theme's style policy", () => {
+  const v2 = (blocks: readonly BlockNode[]): EntryContent => ({
+    version: "plumix.v2",
+    blocks,
+  });
+  const tokensOnly: StylePolicy = {
+    allowCustomStyles: false,
+    tokens: { color: { primary: { value: "#06f" } } },
+  };
+  const text = (id: string, style?: BlockNode["style"]): BlockNode => ({
+    id,
+    name: "core/rich-text",
+    attrs: {},
+    ...(style ? { style } : {}),
+  });
+
+  test("refuses a new literal, naming the property and breakpoint", () => {
+    const content = v2([text("p1", { small: { color: "#e11" } })]);
+
+    expect(
+      validateEntryContent(content, registry, [], undefined, tokensOnly),
+    ).toMatchObject({
+      ok: false,
+      errors: [
+        {
+          code: "style_not_allowed",
+          path: "blocks[0]",
+          nodeName: "core/rich-text",
+          property: "color",
+          breakpoint: "small",
+        },
+      ],
+    });
+  });
+
+  test("passes a declared token and a keyword", () => {
+    const content = v2([
+      text("p1", {
+        large: {
+          color: "var(--plumix-color-primary, #06f)",
+          textAlign: "center",
+        },
+      }),
+    ]);
+
+    expect(
+      validateEntryContent(content, registry, [], undefined, tokensOnly),
+    ).toEqual({ ok: true });
+  });
+
+  test("refuses a token the theme does not declare", () => {
+    const content = v2([
+      text("p1", { large: { color: "var(--plumix-color-gone, #e11)" } }),
+    ]);
+
+    expect(
+      validateEntryContent(content, registry, [], undefined, tokensOnly),
+    ).toMatchObject({
+      ok: false,
+      errors: [{ code: "style_not_allowed", property: "color" }],
+    });
+  });
+
+  test("passes a stored literal moved with its block into a parent", () => {
+    const stored = text("p1", { large: { color: "#e11" } });
+    const moved = v2([
+      { id: "g1", name: "core/group", attrs: { content: [stored] } },
+    ]);
+
+    expect(
+      validateEntryContent(
+        moved,
+        registry,
+        [v2([stored])],
+        undefined,
+        tokensOnly,
+      ),
+    ).toEqual({ ok: true });
+  });
+
+  test("refuses a stored literal changed to another literal", () => {
+    const content = v2([text("p1", { large: { color: "#f00" } })]);
+    const starting = [v2([text("p1", { large: { color: "#e11" } })])];
+
+    expect(
+      validateEntryContent(content, registry, starting, undefined, tokensOnly),
+    ).toMatchObject({
+      ok: false,
+      errors: [{ code: "style_not_allowed", property: "color" }],
+    });
+  });
+
+  test("refuses a stored literal copied onto another block", () => {
+    const content = v2([
+      text("p1", { large: { color: "#e11" } }),
+      text("p2", { large: { color: "#e11" } }),
+    ]);
+    const starting = [v2([text("p1", { large: { color: "#e11" } })])];
+
+    expect(
+      validateEntryContent(content, registry, starting, undefined, tokensOnly),
+    ).toMatchObject({
+      ok: false,
+      errors: [{ code: "style_not_allowed", path: "blocks[1]" }],
+    });
+  });
+
+  test("refuses a stored literal moved to another breakpoint", () => {
+    const content = v2([text("p1", { small: { color: "#e11" } })]);
+    const starting = [v2([text("p1", { large: { color: "#e11" } })])];
+
+    expect(
+      validateEntryContent(content, registry, starting, undefined, tokensOnly),
+    ).toMatchObject({
+      ok: false,
+      errors: [{ code: "style_not_allowed", breakpoint: "small" }],
+    });
+  });
+
+  test("passes a literal equal to the block's defaultStyles", () => {
+    const withDefaults = {
+      get: (name: string): BlockSpec | undefined =>
+        name === "acme/card"
+          ? {
+              name,
+              render: () => null,
+              defaultStyles: { large: { padding: "24px" } },
+            }
+          : undefined,
+    };
+    const content = v2([
+      { id: "c1", name: "acme/card", style: { large: { padding: "24px" } } },
+    ]);
+
+    expect(
+      validateEntryContent(content, withDefaults, [], undefined, tokensOnly),
+    ).toEqual({ ok: true });
+  });
+
+  test("refuses a new class name and passes a stored one", () => {
+    const named: BlockNode = { ...text("p1"), className: "brand" };
+    const fresh: BlockNode = { ...text("p2"), className: "brand" };
+
+    expect(
+      validateEntryContent(
+        v2([named, fresh]),
+        registry,
+        [v2([named])],
+        undefined,
+        tokensOnly,
+      ),
+    ).toMatchObject({
+      ok: false,
+      errors: [
+        { code: "style_not_allowed", path: "blocks[1]", property: "className" },
+      ],
     });
   });
 });

@@ -131,4 +131,16 @@ describe("computeManifestAndRegistry", () => {
 
     expect(manifest.allowedBlocks).toEqual(["core/rich-text"]);
   });
+
+  test("the manifest carries the theme's allowCustomStyles", async () => {
+    const { manifest } = await computeManifestAndRegistry([], {
+      ...OPTIONS,
+      theme: defineTheme({
+        templates: () => null,
+        allowCustomStyles: false,
+      }),
+    });
+
+    expect(manifest.allowCustomStyles).toBe(false);
+  });
 });

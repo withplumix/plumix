@@ -1,7 +1,11 @@
 import type { ReactElement, ReactNode } from "react";
 import { createContext, useContext, useMemo } from "react";
 
-import type { BlockRegistry, ThemeTokens } from "@plumix/core/blocks";
+import type {
+  BlockRegistry,
+  StylePolicy,
+  ThemeTokens,
+} from "@plumix/core/blocks";
 
 import type { ResolvePluginFieldType } from "./block-input-control.js";
 import { EditorError } from "./errors.js";
@@ -21,6 +25,11 @@ export interface EditorConfig {
    * The inserter offers only these, and a block outside it can't be copied.
    */
   readonly allowedBlocks?: ReadonlySet<string>;
+  /**
+   * The theme's style policy, from the manifest; absent allows custom values
+   * everywhere. Every style control asks it through the Styles tab.
+   */
+  readonly stylePolicy?: StylePolicy;
   /** Absent in a deployment with no plugin field registry. */
   readonly resolvePluginFieldType?: ResolvePluginFieldType;
 }
@@ -34,6 +43,7 @@ export function EditorConfigProvider({
   tokens,
   capabilities,
   allowedBlocks,
+  stylePolicy,
   resolvePluginFieldType,
   children,
 }: EditorConfig & { readonly children: ReactNode }): ReactElement {
@@ -43,9 +53,17 @@ export function EditorConfigProvider({
       tokens,
       capabilities,
       allowedBlocks,
+      stylePolicy,
       resolvePluginFieldType,
     }),
-    [registry, tokens, capabilities, allowedBlocks, resolvePluginFieldType],
+    [
+      registry,
+      tokens,
+      capabilities,
+      allowedBlocks,
+      stylePolicy,
+      resolvePluginFieldType,
+    ],
   );
   return (
     <EditorConfigContext.Provider value={config}>

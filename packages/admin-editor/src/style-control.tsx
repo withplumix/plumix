@@ -3,6 +3,7 @@ import { useId } from "react";
 import { Trans } from "@lingui/react";
 
 import type { TokenCategory } from "@plumix/core/blocks";
+import { Button } from "@plumix/admin-ui/button";
 import { Field, FieldLabel } from "@plumix/admin-ui/field";
 import { Input } from "@plumix/admin-ui/input";
 import {
@@ -13,7 +14,9 @@ import {
   SelectValue,
 } from "@plumix/admin-ui/select";
 import { cn } from "@plumix/admin-ui/utils";
+import { styleCategoryForProperty } from "@plumix/core/blocks";
 
+import { useStylePolicyView } from "./style-policy-context.js";
 import { useStyleField } from "./use-style-field.js";
 
 /**
@@ -46,19 +49,30 @@ export function StyleControl({
   value,
   inherited,
   onChange,
-}: StyleControlProps): ReactElement {
+}: StyleControlProps): ReactElement | null {
   const testId = `style-control-${property}`;
   const controlId = useId();
-  // A control with no `category` is custom-only — it never offers tokens, even
-  // for a property the field could derive a scale for (e.g. max-width).
-  const showModes = category !== undefined;
+  const policy = useStylePolicyView();
+  const customAllowed = policy.allowsCustom(property);
+  // A control with no `category` is custom-only: it never offers tokens, even
+  // where the field could derive a scale (max-width). Under tokens only it
+  // offers that scale instead.
+  const scale = customAllowed
+    ? category
+    : (category ?? styleCategoryForProperty(property));
+  const showModes = customAllowed && category !== undefined;
   const field = useStyleField(property, value, {
     onChange,
-    category,
-    literalOnly: !showModes,
+    category: scale,
+    literalOnly: scale === undefined,
     inherited,
+    customAllowed,
+    refused: policy.refused.some((r) => r.property === property),
   });
+  if (field.hidden) return null;
   const isCustom = field.mode === "custom";
+  // A refused value with no tokens to replace it offers only the clear.
+  const showsInput = field.forbiddenText === null || field.hasTokens;
 
   return (
     <Field size="sm" data-testid={testId}>
@@ -86,59 +100,106 @@ export function StyleControl({
           </div>
         ) : null}
       </div>
-      {isCustom ? (
-        <div className="flex gap-1">
-          {field.isColor ? (
-            <input
-              type="color"
-              data-testid={`${testId}-swatch`}
-              aria-label={`${label} color`}
-              value={
-                HEX6.test(field.literalText) ? field.literalText : "#000000"
-              }
+      {field.forbiddenText !== null ? (
+        <ForbiddenValue
+          value={field.forbiddenText}
+          testId={`${testId}-forbidden`}
+          onClear={() => field.clear()}
+        />
+      ) : null}
+      {showsInput &&
+        (isCustom ? (
+          <div className="flex gap-1">
+            {field.isColor ? (
+              <input
+                type="color"
+                data-testid={`${testId}-swatch`}
+                aria-label={`${label} color`}
+                value={
+                  HEX6.test(field.literalText) ? field.literalText : "#000000"
+                }
+                onChange={(e) => field.setLiteral(e.target.value)}
+                className="border-input size-9 shrink-0 cursor-pointer rounded-md border bg-transparent p-1"
+              />
+            ) : null}
+            <Input
+              id={controlId}
+              data-testid={`${testId}-custom`}
+              value={field.literalText}
+              placeholder={field.inheritedText}
               onChange={(e) => field.setLiteral(e.target.value)}
-              className="border-input size-9 shrink-0 cursor-pointer rounded-md border bg-transparent p-1"
             />
-          ) : null}
-          <Input
-            id={controlId}
-            data-testid={`${testId}-custom`}
-            value={field.literalText}
-            placeholder={field.inheritedText}
-            onChange={(e) => field.setLiteral(e.target.value)}
-          />
-        </div>
-      ) : (
-        <Select
-          value={field.tokenId ?? NONE_VALUE}
-          onValueChange={(next) =>
-            next === NONE_VALUE ? field.clear() : field.setToken(next)
-          }
-        >
-          <SelectTrigger
-            id={controlId}
-            className="w-full"
-            data-testid={`${testId}-token`}
+          </div>
+        ) : (
+          <Select
+            value={field.tokenId ?? NONE_VALUE}
+            onValueChange={(next) =>
+              next === NONE_VALUE ? field.clear() : field.setToken(next)
+            }
           >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={NONE_VALUE} data-testid={`${testId}-token-none`}>
-              {field.inheritedText || "—"}
-            </SelectItem>
-            {field.options.map((option) => (
+            <SelectTrigger
+              id={controlId}
+              className="w-full"
+              data-testid={`${testId}-token`}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
               <SelectItem
-                key={option.id}
-                value={option.id}
-                data-testid={`${testId}-token-${option.id}`}
+                value={NONE_VALUE}
+                data-testid={`${testId}-token-none`}
               >
-                {option.label}
+                {field.inheritedText || "—"}
               </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      )}
+              {field.options.map((option) => (
+                <SelectItem
+                  key={option.id}
+                  value={option.id}
+                  data-testid={`${testId}-token-${option.id}`}
+                >
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ))}
     </Field>
+  );
+}
+
+/** A stored value the policy refuses: it can be cleared, never edited. */
+export function ForbiddenValue({
+  value,
+  testId,
+  onClear,
+}: {
+  readonly value: string;
+  readonly testId: string;
+  readonly onClear: () => void;
+}): ReactElement {
+  return (
+    <div
+      className="bg-muted flex items-center gap-1 rounded-md px-2 py-1 text-xs"
+      data-testid={testId}
+    >
+      <span className="min-w-0 flex-1 break-all">
+        <Trans
+          id="editor.styles.forbiddenValue"
+          message="Custom value <0>{value}</0> — not allowed by this theme"
+          values={{ value }}
+          components={{ 0: <code className="font-mono" /> }}
+        />
+      </span>
+      <Button
+        type="button"
+        variant="ghost"
+        size="xs"
+        onClick={onClear}
+        data-testid={`${testId}-clear`}
+      >
+        <Trans id="editor.styles.forbiddenValue.clear" message="Clear" />
+      </Button>
+    </div>
   );
 }
 

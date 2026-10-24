@@ -3,6 +3,7 @@ import type {
   CapabilityNamespaces,
 } from "../access/contract/capability.js";
 import type {
+  AllowCustomStyles,
   BlockRegistry,
   BlockSpec,
   ThemeBreakpoints,
@@ -134,6 +135,7 @@ export function buildManifest(
     readonly blocks?: readonly BlockSpec[];
     /** The theme's `allowedBlocks`; resolved against every registered block. */
     readonly allowedBlocks?: readonly string[];
+    readonly allowCustomStyles?: AllowCustomStyles;
     readonly i18n?: ResolvedI18n;
     readonly plugins?: readonly {
       readonly id: string;
@@ -252,6 +254,7 @@ export function buildManifest(
       themeBlocks: options?.blocks ?? [],
       allowedBlocks: options?.allowedBlocks,
     }),
+    allowCustomStyles: options?.allowCustomStyles ?? true,
     tokens: options?.tokens ?? {},
     breakpoints: options?.breakpoints ?? DEFAULT_BREAKPOINTS,
     i18n: {

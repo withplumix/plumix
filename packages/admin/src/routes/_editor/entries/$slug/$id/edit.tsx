@@ -28,6 +28,7 @@ import {
   accessPoliciesForType,
   entryMetaBoxesForType,
   findEntryTypeBySlug,
+  getAllowCustomStyles,
   getAllowedBlocks,
   getPatterns,
   getThemeBreakpoints,
@@ -115,6 +116,9 @@ const patterns = getPatterns();
 
 /** The blocks the theme allows; the inserter offers only these. */
 const allowedBlocks = getAllowedBlocks();
+
+/** The theme's style policy; the style controls and inserter follow it. */
+const allowCustomStyles = getAllowCustomStyles();
 
 /** Theme breakpoints sizing the editor's device-switch canvas widths. */
 const breakpoints = getThemeBreakpoints();
@@ -1075,6 +1079,7 @@ function EntryEditor({
       capabilities={capabilitySet}
       patterns={patterns}
       allowedBlocks={allowedBlocks}
+      allowCustomStyles={allowCustomStyles}
       entryType={entryTypeName}
       breakpoints={breakpoints}
       tokens={themeTokens}

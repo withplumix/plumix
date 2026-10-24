@@ -1428,3 +1428,105 @@ test.describe("editor playground", () => {
     ).toHaveText("Left column. Typed on");
   });
 });
+
+test.describe("the theme's style policy", () => {
+  test("under tokens only, controls offer tokens alone and the Custom CSS panel is gone", async ({
+    page,
+  }) => {
+    await page.goto("/?styles=false");
+    await page
+      .frameLocator(CANVAS_FRAME)
+      .locator('[data-plumix-id="intro"]')
+      .click();
+
+    await page.getByTestId("plumix-tab-styles").click();
+
+    await expect(page.getByTestId("style-control-color-token")).toBeVisible();
+    await expect(
+      page.getByTestId("style-control-color-mode-custom"),
+    ).toHaveCount(0);
+    await expect(page.getByTestId("style-control-width")).toHaveCount(0);
+    await expect(page.getByTestId("style-control-opacity")).toHaveCount(0);
+    await expect(
+      page.getByTestId("style-control-borderStyle-select"),
+    ).toBeVisible();
+    await expect(page.getByTestId("style-display-flex")).toBeVisible();
+    await expect(page.getByTestId("styles-section-declarations")).toHaveCount(
+      0,
+    );
+    await expect(page.getByTestId("style-css-classes")).toHaveCount(0);
+  });
+
+  test("with width and height left custom, only those take a custom value", async ({
+    page,
+  }) => {
+    await page.goto("/?styles=width,height");
+    await page
+      .frameLocator(CANVAS_FRAME)
+      .locator('[data-plumix-id="intro"]')
+      .click();
+
+    await page.getByTestId("plumix-tab-styles").click();
+
+    await expect(page.getByTestId("style-control-width-custom")).toBeVisible();
+    await expect(page.getByTestId("style-control-height-custom")).toBeVisible();
+    await expect(page.getByTestId("style-control-minWidth")).toHaveCount(0);
+    await expect(
+      page.getByTestId("style-control-color-mode-custom"),
+    ).toHaveCount(0);
+  });
+
+  test("a stored forbidden literal shows read-only and gives way to a token", async ({
+    page,
+  }) => {
+    await page.goto("/?styles=false");
+    await page
+      .frameLocator(CANVAS_FRAME)
+      .locator('[data-plumix-id="legacy-styled"]')
+      .click();
+    await page.getByTestId("plumix-tab-styles").click();
+    const chip = page.getByTestId("style-control-color-forbidden");
+    await expect(chip).toHaveText(
+      "Custom value #e11d48 — not allowed by this themeClear",
+    );
+
+    await page.getByTestId("style-control-color-token").click();
+    await page.getByTestId("style-control-color-token-primary").click();
+
+    await expect(chip).toHaveCount(0);
+  });
+
+  test("a property with no tokens shows only while a forbidden literal is stored", async ({
+    page,
+  }) => {
+    await page.goto("/?styles=false");
+    await page
+      .frameLocator(CANVAS_FRAME)
+      .locator('[data-plumix-id="legacy-styled"]')
+      .click();
+    await page.getByTestId("plumix-tab-styles").click();
+    await expect(
+      page.getByTestId("style-control-width-forbidden"),
+    ).toBeVisible();
+
+    await page.getByTestId("style-control-width-forbidden-clear").click();
+
+    await expect(page.getByTestId("style-control-width")).toHaveCount(0);
+  });
+
+  test("a stored class name shows read-only in place of the Custom CSS panel", async ({
+    page,
+  }) => {
+    await page.goto("/?styles=false");
+    await page
+      .frameLocator(CANVAS_FRAME)
+      .locator('[data-plumix-id="legacy-styled"]')
+      .click();
+    await page.getByTestId("plumix-tab-styles").click();
+
+    await page.getByTestId("styles-section-declarations").click();
+
+    await expect(page.getByTestId("style-css-classes-forbidden")).toBeVisible();
+    await expect(page.getByTestId("style-css-classes")).toHaveCount(0);
+  });
+});

@@ -47,7 +47,8 @@ export function BlockCatalog({
   parentName,
   entryType,
 }: BlockCatalogProps): ReactElement {
-  const { registry, capabilities, allowedBlocks } = useEditorConfig();
+  const { registry, capabilities, allowedBlocks, stylePolicy } =
+    useEditorConfig();
   const { i18n } = useLingui();
   const [query, setQuery] = useState("");
   const insertBlock = useEditorStore((s) => s.insertBlock);
@@ -65,6 +66,7 @@ export function BlockCatalog({
         query,
         allowed,
         themeAllowed: allowedBlocks,
+        stylePolicy,
         parentName,
         entryType,
       }),
@@ -74,6 +76,7 @@ export function BlockCatalog({
       query,
       allowed,
       allowedBlocks,
+      stylePolicy,
       parentName,
       entryType,
     ],

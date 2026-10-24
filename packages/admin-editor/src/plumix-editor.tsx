@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { Trans, useLingui } from "@lingui/react";
 
 import type {
+  AllowCustomStyles,
   BlockNode,
   BlockRegistry,
   EntryContent,
@@ -24,7 +25,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@plumix/admin-ui/tabs";
-import { defineEntryContent } from "@plumix/core/blocks";
+import { defineEntryContent, resolveStylePolicy } from "@plumix/core/blocks";
 
 import type { InserterPattern } from "./block-catalog.js";
 import type { ResolvePluginFieldType } from "./block-input-control.js";
@@ -82,6 +83,11 @@ export interface PlumixEditorProps {
    * any other.
    */
   readonly allowedBlocks?: readonly string[];
+  /**
+   * The theme's `allowCustomStyles` (the manifest's); `true` when absent. The
+   * style controls, the inserter and a duplicate follow it.
+   */
+  readonly allowCustomStyles?: AllowCustomStyles;
   /** The entry type being authored (e.g. `"post"`). Selects which `patterns`
    *  qualify as starters for the blank-entry picker; without it, only
    *  type-agnostic starters are offered. */
@@ -158,6 +164,7 @@ export function PlumixEditor({
   capabilities = NO_CAPABILITIES,
   patterns,
   allowedBlocks,
+  allowCustomStyles,
   entryType,
   breakpoints,
   tokens,
@@ -184,9 +191,16 @@ export function PlumixEditor({
     () => (allowedBlocks ? new Set(allowedBlocks) : undefined),
     [allowedBlocks],
   );
+  const stylePolicy = useMemo(
+    () =>
+      allowCustomStyles === undefined
+        ? undefined
+        : resolveStylePolicy({ allowCustomStyles, tokens }),
+    [allowCustomStyles, tokens],
+  );
   const offeredPatterns = useMemo(
-    () => patternsWithin(patterns ?? [], registry, allowedSet),
-    [patterns, registry, allowedSet],
+    () => patternsWithin(patterns ?? [], registry, allowedSet, stylePolicy),
+    [patterns, registry, allowedSet, stylePolicy],
   );
   // Starter patterns eligible for this entry type, offered to a blank entry.
   const starterCandidates = useMemo(
@@ -201,12 +215,14 @@ export function PlumixEditor({
         registry={registry}
         initialTree={defaultValue?.blocks}
         breakpoints={breakpoints}
+        stylePolicy={stylePolicy}
       >
         <EditorConfigProvider
           registry={registry}
           tokens={tokens ?? NO_TOKENS}
           capabilities={capabilities}
           allowedBlocks={allowedSet}
+          stylePolicy={stylePolicy}
           resolvePluginFieldType={resolvePluginFieldType}
         >
           <div
@@ -227,12 +243,14 @@ export function PlumixEditor({
       initialTree={defaultValue?.blocks}
       breakpoints={breakpoints}
       starterOpen={seedStarterOpen}
+      stylePolicy={stylePolicy}
     >
       <EditorConfigProvider
         registry={registry}
         tokens={tokens ?? NO_TOKENS}
         capabilities={capabilities}
         allowedBlocks={allowedSet}
+        stylePolicy={stylePolicy}
         resolvePluginFieldType={resolvePluginFieldType}
       >
         {/* shadcn sidebar-16 pattern: a flex-col provider with a full-width

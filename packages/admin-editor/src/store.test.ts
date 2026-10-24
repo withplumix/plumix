@@ -551,6 +551,52 @@ describe("duplicateSelected", () => {
   });
 });
 
+describe("duplicateSelected — under a tokens-only style policy", () => {
+  test("drops the copy's forbidden literals at every depth and keeps the rest", () => {
+    const store = createEditorStore(treeBlocks, {
+      tree: [
+        {
+          id: "g",
+          name: "core/group",
+          className: "brand",
+          style: { large: { color: "#e11", textAlign: "center" } },
+          attrs: {
+            content: [
+              {
+                id: "child",
+                name: "core/x",
+                style: {
+                  small: {
+                    width: "9px",
+                    color: "var(--plumix-color-primary, #06f)",
+                  },
+                },
+              },
+            ],
+          },
+        },
+      ],
+      stylePolicy: {
+        allowCustomStyles: false,
+        tokens: { color: { primary: { value: "#06f" } } },
+      },
+      selection: ["g"],
+    });
+
+    store.getState().duplicateSelected();
+
+    const [original, copy] = store.getState().tree;
+    expect(original?.style).toEqual({
+      large: { color: "#e11", textAlign: "center" },
+    });
+    expect(copy?.className).toBeUndefined();
+    expect(copy?.style).toEqual({ large: { textAlign: "center" } });
+    expect((copy?.attrs?.content as readonly BlockNode[])[0]?.style).toEqual({
+      small: { color: "var(--plumix-color-primary, #06f)" },
+    });
+  });
+});
+
 describe("selectParent", () => {
   test("selects the active block's container", () => {
     const store = createEditorStore(treeBlocks, {

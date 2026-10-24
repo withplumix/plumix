@@ -9,6 +9,7 @@ import type {
   JsonValue,
   ResponsiveStyleBucket,
   ResponsiveStyleSlot,
+  StylePolicy,
   ThemeBreakpoints,
   VisibilityFlags,
 } from "@plumix/core/blocks";
@@ -438,6 +439,8 @@ export function createEditorStore(
   > & {
     /** Seeds the selection; the last id is the active block. */
     readonly selection?: readonly string[];
+    /** A duplicate drops the values it refuses; undefined refuses none. */
+    readonly stylePolicy?: StylePolicy;
   },
 ): EditorStoreApi {
   return createStore<InternalStore>((set) => ({
@@ -652,7 +655,7 @@ export function createEditorStore(
         // Only clone selection roots; a nested block whose container is also
         // selected is already copied inside that container's clone.
         for (const id of selectionRoots(tree, state.selectedIds, blocks)) {
-          const result = duplicateBlock(tree, id, blocks);
+          const result = duplicateBlock(tree, id, blocks, initial?.stylePolicy);
           tree = result.tree;
           if (result.newId) newIds.push(result.newId);
         }

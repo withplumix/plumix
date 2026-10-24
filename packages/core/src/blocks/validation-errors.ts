@@ -1,3 +1,4 @@
+import type { StyleBucketName } from "./styles/style-policy.js";
 import type { BlockContentValidationResult } from "./validate-content.js";
 
 /**
@@ -9,7 +10,8 @@ export type BlockContentValidationCode =
   | "unknown_block_type"
   | "block_not_allowed"
   | "disallowed_child"
-  | "requires_parent";
+  | "requires_parent"
+  | "style_not_allowed";
 
 export interface BlockContentValidationIssue {
   readonly code: BlockContentValidationCode;
@@ -19,6 +21,10 @@ export interface BlockContentValidationIssue {
   readonly attributeName?: string;
   /** For `disallowed_child`: the slot key the offending child landed in. */
   readonly slotName?: string;
+  /** For `style_not_allowed`: the CSS property, or `className`. */
+  readonly property?: string;
+  /** For `style_not_allowed` on a CSS property: the bucket holding it. */
+  readonly breakpoint?: StyleBucketName;
 }
 
 export class BlockContentValidationError extends Error {

@@ -589,6 +589,11 @@ msgid "editor.shortcuts.group.canvas"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/style-control.tsx
+msgid "editor.styles.forbiddenValue.clear"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/shortcuts-dialog.tsx
 msgid "editor.shortcuts.gesture.click"
 msgstr ""
@@ -638,6 +643,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.customCss"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/style-control.tsx
+msgid "editor.styles.forbiddenValue"
 msgstr ""
 
 #. js-lingui-explicit-id

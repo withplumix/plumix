@@ -13,6 +13,7 @@ import type {
   MarkSpec,
   ShortcodeRegistry,
 } from "../blocks/index.js";
+import type { StylePolicy } from "../blocks/styles/style-policy.js";
 import type { PlumixConfig } from "../config.js";
 import type { AppContext } from "../context/app-context.js";
 import type { DocumentManifest } from "../document-manifest.js";
@@ -53,6 +54,7 @@ import {
   coreShortcodes,
   createBlockRegistry,
 } from "../blocks/index.js";
+import { resolveStylePolicy } from "../blocks/styles/style-policy.js";
 import { registerCorePurgeInvalidator } from "../cdn/purge.js";
 import * as coreSchema from "../db/schema/index.js";
 import { debugBarChrome } from "../dev/debug-bar/component.js";
@@ -199,6 +201,8 @@ export interface PlumixApp {
    * `allowedBlocks`. The plugin manifest carries the same set to the editor.
    */
   readonly allowedBlocks: ReadonlySet<string>;
+  /** The theme's `allowCustomStyles` and tokens; the manifest carries the same. */
+  readonly stylePolicy: StylePolicy;
   /**
    * Manifest only: rendering uses the hardcoded `renderInline` walker, not a
    * per-spec dispatch.
@@ -484,6 +488,7 @@ export async function buildApp(
     scheduledTasks: registry.scheduledTasks,
     blocks,
     allowedBlocks,
+    stylePolicy: resolveStylePolicy(config.theme),
     marks,
     shortcodes,
     mails,

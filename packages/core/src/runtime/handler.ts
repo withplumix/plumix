@@ -382,6 +382,7 @@ export function requestContextArgs({
     plugins: app.plugins,
     blocks: app.blocks,
     allowedBlocks: app.allowedBlocks,
+    stylePolicy: app.stylePolicy,
     marks: app.marks,
     shortcodes: app.shortcodes,
     logger,

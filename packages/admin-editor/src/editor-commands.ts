@@ -1,6 +1,10 @@
 import type { MessageDescriptor } from "@lingui/core";
 
-import type { BlockNode, BlockRegistry } from "@plumix/core/blocks";
+import type {
+  BlockNode,
+  BlockRegistry,
+  StylePolicy,
+} from "@plumix/core/blocks";
 import type { Label } from "@plumix/core/i18n";
 
 import type { EditorDevice, EditorStoreApi } from "./store.js";
@@ -48,6 +52,8 @@ export interface EditorCommandContext {
   readonly capabilities: ReadonlySet<string>;
   /** The theme's allowed blocks; undefined allows every block. */
   readonly allowedBlocks?: ReadonlySet<string>;
+  /** Hides an insert command whose variation holds a value it refuses. */
+  readonly stylePolicy?: StylePolicy;
   /** The current tree, so the go-to commands name the blocks that exist now. */
   readonly tree: readonly BlockNode[];
   /** The entry type being authored, scoping entry-type-bound blocks. */
@@ -108,6 +114,7 @@ export function buildEditorCommands(
     registry,
     capabilities,
     allowedBlocks,
+    stylePolicy,
     tree,
     entryType,
     openRevisions,
@@ -157,6 +164,7 @@ export function buildEditorCommands(
   for (const { entries } of groupInsertables(registry, {
     capabilities,
     themeAllowed: allowedBlocks,
+    stylePolicy,
     entryType,
   })) {
     for (const entry of entries) {

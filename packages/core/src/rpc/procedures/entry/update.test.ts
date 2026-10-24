@@ -2280,3 +2280,152 @@ describe("entry.update — the blocks the theme allows", () => {
     expect(updated.content).toEqual(content);
   });
 });
+
+describe("entry.update — the theme's style policy", () => {
+  const theme = {
+    ...defaultTestTheme,
+    allowCustomStyles: false,
+    tokens: { color: { primary: { value: "#06f" } } },
+  };
+  const text = (id: string, extra: Record<string, unknown> = {}) => ({
+    id,
+    name: "core/rich-text",
+    attrs: { body: "<p>Hello</p>" },
+    ...extra,
+  });
+  const v2 = (blocks: readonly unknown[]) => ({
+    version: "plumix.v2" as const,
+    blocks,
+  });
+
+  async function holdingLiteral() {
+    const h = await createRpcHarness({ authAs: "author", config: { theme } });
+    const own = await h.factory.draft.create({
+      authorId: h.user.id,
+      slug: "holds-literal",
+      content: v2([text("p1", { style: { large: { color: "#e11" } } })]),
+    });
+    return { h, own };
+  }
+
+  test.each([
+    [
+      "a new literal",
+      text("p2", { style: { large: { color: "#f00" } } }),
+      "color",
+    ],
+    [
+      "an undeclared token",
+      text("p2", {
+        style: { large: { color: "var(--plumix-color-gone, #f00)" } },
+      }),
+      "color",
+    ],
+    [
+      "a new Custom CSS declaration",
+      text("p2", { style: { large: { transform: "rotate(3deg)" } } }),
+      "transform",
+    ],
+    ["a new class name", text("p2", { className: "brand-red" }), "className"],
+  ])("refuses %s", async (_, added, property) => {
+    const { h, own } = await holdingLiteral();
+
+    await expect(
+      h.client.entry.update({
+        id: own.id,
+        content: v2([
+          text("p1", { style: { large: { color: "#e11" } } }),
+          added,
+        ]),
+        ifMatch: await currentEtag(h.db, own.id),
+      }),
+    ).rejects.toMatchObject({
+      code: "INVALID_BLOCK_CONTENT",
+      data: {
+        issues: [
+          expect.objectContaining({
+            code: "style_not_allowed",
+            path: "blocks[1]",
+            property,
+          }),
+        ],
+      },
+    });
+  });
+
+  test("refuses a stored forbidden literal changed to another", async () => {
+    const { h, own } = await holdingLiteral();
+
+    await expect(
+      h.client.entry.update({
+        id: own.id,
+        content: v2([text("p1", { style: { large: { color: "#f00" } } })]),
+        ifMatch: await currentEtag(h.db, own.id),
+      }),
+    ).rejects.toMatchObject({
+      code: "INVALID_BLOCK_CONTENT",
+      data: {
+        issues: [
+          expect.objectContaining({
+            code: "style_not_allowed",
+            path: "blocks[0]",
+          }),
+        ],
+      },
+    });
+  });
+
+  test("keeps a stored literal moved with its block", async () => {
+    const { h, own } = await holdingLiteral();
+    const content = v2([
+      {
+        id: "g1",
+        name: "core/group",
+        attrs: {
+          content: [text("p1", { style: { large: { color: "#e11" } } })],
+        },
+      },
+    ]);
+
+    const updated = await h.client.entry.update({
+      id: own.id,
+      content,
+      ifMatch: await currentEtag(h.db, own.id),
+    });
+
+    expect(updated.content).toEqual(content);
+  });
+
+  test("saves a cleared literal", async () => {
+    const { h, own } = await holdingLiteral();
+    const content = v2([text("p1")]);
+
+    const updated = await h.client.entry.update({
+      id: own.id,
+      content,
+      ifMatch: await currentEtag(h.db, own.id),
+    });
+
+    expect(updated.content).toEqual(content);
+  });
+
+  test("saves a block's defaultStyles values", async () => {
+    const { h, own } = await holdingLiteral();
+    const content = v2([
+      {
+        id: "s1",
+        name: "core/section",
+        attrs: { content: [] },
+        style: { large: { paddingTop: "3rem", paddingBottom: "3rem" } },
+      },
+    ]);
+
+    const updated = await h.client.entry.update({
+      id: own.id,
+      content,
+      ifMatch: await currentEtag(h.db, own.id),
+    });
+
+    expect(updated.content).toEqual(content);
+  });
+});

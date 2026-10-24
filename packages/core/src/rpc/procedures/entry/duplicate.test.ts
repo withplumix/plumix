@@ -97,6 +97,33 @@ describe("entry.duplicate", () => {
     expect(copy.content).toEqual(content);
   });
 
+  test("copies an entry holding a style literal the theme no longer allows", async () => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      config: { theme: { ...defaultTestTheme, allowCustomStyles: false } },
+    });
+    const content = {
+      version: "plumix.v2" as const,
+      blocks: [
+        {
+          id: "p1",
+          name: "core/rich-text",
+          attrs: {},
+          className: "brand",
+          style: { large: { color: "#e11" } },
+        },
+      ],
+    };
+    const source = await h.factory.published.create({
+      authorId: h.user.id,
+      content,
+    });
+
+    const copy = await h.client.entry.duplicate({ id: source.id });
+
+    expect(copy.content).toEqual(content);
+  });
+
   test("refuses a source that fails the block checks in another way", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
     // `core/column` may only sit under `core/columns`.

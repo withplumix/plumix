@@ -5,6 +5,7 @@ import { useStore } from "zustand";
 import type {
   BlockNode,
   BlockRegistry,
+  StylePolicy,
   ThemeBreakpoints,
 } from "@plumix/core/blocks";
 import type { SerializedLoaderData } from "@plumix/core/blocks/renderer";
@@ -36,6 +37,7 @@ export function EditorProvider({
   breakpoints,
   starterOpen,
   selection,
+  stylePolicy,
   children,
 }: {
   /** The block specs, which decide each node's slots for every tree edit. */
@@ -49,6 +51,8 @@ export function EditorProvider({
   readonly starterOpen?: boolean;
   /** Seeds the selection (once); the last id is the active block. */
   readonly selection?: readonly string[];
+  /** A duplicate drops the values it refuses. */
+  readonly stylePolicy?: StylePolicy;
   readonly children: ReactNode;
 }): ReactElement {
   const [store] = useState<EditorStoreApi>(() =>
@@ -58,6 +62,7 @@ export function EditorProvider({
       breakpoints,
       starterOpen,
       selection,
+      stylePolicy,
     }),
   );
   const [camera] = useState<CameraStoreApi>(() => createCameraStore({ zoom }));

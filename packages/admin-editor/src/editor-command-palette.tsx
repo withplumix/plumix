@@ -102,7 +102,8 @@ function PaletteBody({
   onOpenRevisions,
 }: EditorCommandPaletteProps): ReactElement {
   const { i18n } = useLingui();
-  const { registry, capabilities, allowedBlocks } = useEditorConfig();
+  const { registry, capabilities, allowedBlocks, stylePolicy } =
+    useEditorConfig();
   const store = useEditorStoreApi();
   const setPaletteOpen = useEditorStore((s) => s.setPaletteOpen);
   const tree = useEditorStore((s) => s.tree);
@@ -115,6 +116,7 @@ function PaletteBody({
         registry,
         capabilities,
         allowedBlocks,
+        stylePolicy,
         tree,
         entryType,
         openRevisions: onOpenRevisions,
@@ -124,6 +126,7 @@ function PaletteBody({
       registry,
       capabilities,
       allowedBlocks,
+      stylePolicy,
       tree,
       entryType,
       onOpenRevisions,
