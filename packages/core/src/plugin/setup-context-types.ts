@@ -245,8 +245,8 @@ export interface PluginSetupContextBase {
   registerBlocks(specs: readonly BlockSpec[]): void;
 
   /**
-   * Names colliding with core marks throw; name plugin marks
-   * `pluginId/markName`.
+   * A name equal to a core mark's (`coreMarks`) throws, as does one
+   * another plugin registered; name plugin marks `pluginId/markName`.
    */
   registerMark(spec: MarkSpec): void;
   /**

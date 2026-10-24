@@ -2,10 +2,13 @@ import { createRouterClient } from "@orpc/server";
 import { object } from "valibot";
 import { describe, expect, expectTypeOf, test } from "vitest";
 
-import { defineBlock } from "../blocks/index.js";
+import { coreMarks, defineBlock } from "../blocks/index.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "../plugin/define.js";
-import { DuplicateRegistrationError } from "../plugin/errors.js";
+import {
+  DuplicateRegistrationError,
+  PluginContextError,
+} from "../plugin/errors.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { base } from "../rpc/base.js";
 import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
@@ -1419,6 +1422,50 @@ describe("registerShortcode", () => {
   });
 });
 
+describe("registerMark", () => {
+  test("rejects a plugin mark that reuses a core mark name", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("acme", (ctx) => {
+      ctx.registerMark({ name: "bold", title: "Bold" });
+    });
+
+    const install = installPlugins({ hooks, plugins: [plugin] });
+
+    await expect(install).rejects.toThrow(PluginContextError);
+    await expect(install).rejects.toMatchObject({
+      code: "mark_name_reserved",
+    });
+  });
+
+  test.each(coreMarks.map((mark) => mark.name))(
+    "rejects the core mark name %s",
+    async (name) => {
+      const hooks = new HookRegistry();
+      const plugin = definePlugin("acme", (ctx) => {
+        ctx.registerMark({ name, title: name });
+      });
+
+      await expect(
+        installPlugins({ hooks, plugins: [plugin] }),
+      ).rejects.toMatchObject({ code: "mark_name_reserved" });
+    },
+  );
+
+  test.each(["acme/highlight", "highlight-warning"])(
+    "registers %s, which only contains a core mark name",
+    async (name) => {
+      const hooks = new HookRegistry();
+      const plugin = definePlugin("acme", (ctx) => {
+        ctx.registerMark({ name, title: "Warning" });
+      });
+
+      const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+
+      expect(registry.markSpecs.get(name)?.registeredBy).toBe("acme");
+    },
+  );
+});
+
 describe("afterSetup", () => {
   const blog = definePlugin("blog", (ctx) => {
     ctx.registerEntryType("post", { label: "Posts", isPublic: true });
@@ -1799,12 +1846,12 @@ const duplicateCases: readonly DuplicateCase[] = [
   },
   {
     kind: "mark",
-    identifier: "highlight",
+    identifier: "acme/highlight",
     scope: "global",
     register: (ctx, variant) => {
-      ctx.registerMark({ name: "highlight", title: variant });
+      ctx.registerMark({ name: "acme/highlight", title: variant });
     },
-    read: (registry) => registry.markSpecs.get("highlight")?.spec.title,
+    read: (registry) => registry.markSpecs.get("acme/highlight")?.spec.title,
   },
   {
     kind: "shortcode",

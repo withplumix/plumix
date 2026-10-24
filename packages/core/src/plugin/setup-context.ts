@@ -25,7 +25,7 @@ import {
   deriveEntryTypeCapabilities,
   deriveTermTaxonomyCapabilities,
 } from "../access/contract/rbac.js";
-import { isReservedBlockName } from "../blocks/index.js";
+import { coreMarks, isReservedBlockName } from "../blocks/index.js";
 import { pluginStore } from "../context/stores.js";
 import { isPrivateSettingsGroup } from "../db/settings-groups.js";
 import { CORE_MCP_TOOL_NAMES } from "../mcp/registry.js";
@@ -420,6 +420,12 @@ function createContextBase({
     },
 
     registerMark: (spec) => {
+      if (coreMarks.some((mark) => mark.name === spec.name)) {
+        throw PluginContextError.markNameReserved({
+          pluginId,
+          name: spec.name,
+        });
+      }
       claimKey(registry.markSpecs, "mark", spec.name, pluginId, () => ({
         spec,
         registeredBy: pluginId,
