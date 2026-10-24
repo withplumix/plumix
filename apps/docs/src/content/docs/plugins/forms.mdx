@@ -23,7 +23,7 @@ What it registers:
 - A submissions inbox in the admin under Content, gated on the `form_submission:moderate` capability the plugin mints for the editor role, and `GET /_plumix/forms/export` behind the same capability.
 - A `tel` field type, which works in a form and in any meta box on the site.
 - A nightly scheduled task that deletes submissions older than a form's retention period.
-- A `form:validate` filter and a `form:submitted` action, which is where a spam or notification plugin attaches.
+- `ctx.registerFormValidator` and a `form:submitted` action, which is where a spam or notification plugin attaches.
 
 This page covers declaring a form, what happens to a submission, and the options that change it. Three more pages cover the rest: [Form Fields](/plugins/forms-fields/) for the questions a form asks, [Rendering Forms](/plugins/forms-rendering/) for putting a form on screen yourself and styling it, and [Form Submissions](/plugins/forms-submissions/) for the inbox, exports and retention.
 
@@ -167,7 +167,7 @@ export const enquiry = defineForm("enquiry", {
 
 A meta box field's own `.validate()` and `.sanitize()` do not run on a form submission. Put that check in the form's `validate`.
 
-`validate` runs before the spam floor, so the plugin answers a trapped bot exactly as it answers a person who filled the form in badly. That means your `validate` runs for spam traffic too, on a route with no rate limit, so keep its work proportionate. Put anything expensive behind the [`form:validate` filter](#hooking-every-form), which runs after the floor has given its verdict.
+`validate` runs before the spam floor, so the plugin answers a trapped bot exactly as it answers a person who filled the form in badly. That means your `validate` runs for spam traffic too, on a route with no rate limit, so keep its work proportionate. Put anything expensive in a [registered validator](#hooking-every-form), which runs after the floor has given its verdict.
 
 `answers` is the object the plugin goes on to store, not a copy. `readonly` is only a compile-time promise, so a `validate` that mutates it changes what is stored.
 
@@ -239,7 +239,7 @@ It reads the submission's own label snapshot rather than the live form, so its o
 
 ## Hooking every form
 
-Two hooks cover what belongs across all forms rather than in one, so a plugin needs no per-form wiring:
+A registered validator and a hook cover what belongs across all forms rather than in one, so a plugin needs no per-form wiring:
 
 ```ts no-typecheck
 import { definePlugin } from "plumix/plugin";
@@ -247,11 +247,11 @@ import { definePlugin } from "plumix/plugin";
 import { index, isSpam } from "./moderation";
 
 export const moderation = definePlugin("moderation", (ctx) => {
-  ctx.addFilter("form:validate", (errors, candidate) =>
-    isSpam(candidate.answers)
-      ? [...errors, { field: "", message: "No." }]
-      : errors,
-  );
+  ctx.registerFormValidator({
+    id: "moderation:spam",
+    validate: (candidate) =>
+      isSpam(candidate.answers) ? [{ field: "", message: "No." }] : [],
+  });
 
   ctx.addAction("form:submitted", (submission, candidate) => {
     if (submission) index(submission);
@@ -259,7 +259,9 @@ export const moderation = definePlugin("moderation", (ctx) => {
 });
 ```
 
-`form:validate` is the last word before the plugin writes anything. It sees a submission only after every field rule, the form's own `validate`, the captcha and the spam floor have accepted it. The submission it sees carries its `status`, which is `spam` when the floor caught it. The errors it returns reject the submission exactly as a field rule's errors do. The pipeline starts empty, so a filter with nothing to say returns what it was given. An error whose `field` is `""` names no field and shows in the form's error summary.
+`ctx.registerFormValidator` is there for every plugin installed alongside the forms plugin. A validator is the last word before the plugin writes anything. It sees a submission only after every field rule, the form's own `validate`, the captcha and the spam floor have accepted it. The submission it sees carries its `status`, which is `spam` when the floor caught it. It returns the errors it finds, or an empty array, and it can be `async`. The plugin collects every validator's errors, so no validator can drop another's, and any error rejects the submission exactly as a field rule's errors do. An error whose `field` is `""` names no field and shows in the form's error summary.
+
+`forms` limits a validator to the forms with those slugs; leave it out to validate every form. A slug no form declares fails boot, naming it, and so does a second validator with an `id` already taken. A validator that throws is logged and counts as returning no errors, so the others decide whether the submission is accepted.
 
 `form:submitted` fires once the plugin has stored the row and the form's own handler has run, for spam and genuine submissions alike. The row it carries is `null` only for a form that opted out of storage. A row carrying `handlerError` belongs to a submission whose handler threw.
 

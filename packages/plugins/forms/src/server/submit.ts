@@ -12,6 +12,7 @@ import type {
   FormSubmitResponse,
   SubmissionStatus,
 } from "../types.js";
+import type { FormValidatorRegistry } from "../validators.js";
 import {
   pickStoredAnswers,
   readSubmittedValues,
@@ -161,7 +162,10 @@ async function runHandler(
  * Must read no session: as a `formPost` route only the Origin check
  * guards it. Spam is answered like a real submission.
  */
-export function createSubmitHandler(registry: FormRegistry) {
+export function createSubmitHandler(
+  registry: FormRegistry,
+  validators: FormValidatorRegistry,
+) {
   return async (request: Request, ctx: AppContext): Promise<Response> => {
     const body = await readBoundedBody(request);
     if (body === null) return refusal("Payload Too Large", 413);
@@ -239,8 +243,8 @@ export function createSubmitHandler(registry: FormRegistry) {
       userAgent,
     };
 
-    const vetoed = await ctx.hooks.applyFilter("form:validate", [], candidate);
-    if (vetoed.length > 0) return reject(vetoed);
+    const validatorErrors = await validators.validate(candidate, ctx);
+    if (validatorErrors.length > 0) return reject(validatorErrors);
 
     const stored = form.store ? await insertSubmission(ctx, candidate) : null;
     // Spam skips the handler, so no notification goes out; it is still

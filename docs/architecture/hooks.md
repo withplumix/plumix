@@ -62,7 +62,7 @@ Core's hook names, by the module that declares them (paths under `packages/core/
 | `hooks/block-render.ts`                         | `block:before_render`, `block:after_render` (sync), `blocks:loader:error`                                                                                           | `route/render/render-template.tsx`                                                 |
 | `dev/**/types.ts`                               | `debug:panels`, `error_page:panels`, `error_page:hints` (dev only)                                                                                                  | `dev/**/collect.ts(x)`                                                             |
 
-First-party plugins declare their own the same way: `comment:*` (`plugins/comments/src/server/hooks.ts`), `form:validate`, `form:submitted` (`plugins/forms`), `feed:items` (`plugins/feeds`), `menu:tree`, `menu:item`, `menu:saved`, `menu:deleted` (`plugins/menu`), `seo:*` (`plugins/seo/src/`).
+First-party plugins declare their own the same way: `comment:*` (`plugins/comments/src/server/hooks.ts`), `form:submitted` (`plugins/forms`), `feed:items` (`plugins/feeds`), `menu:tree`, `menu:item`, `menu:saved`, `menu:deleted` (`plugins/menu`), `seo:*` (`plugins/seo/src/`).
 
 ## How it works
 

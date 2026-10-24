@@ -1,4 +1,4 @@
-import type { AnyPluginDescriptor, PlumixEnv } from "plumix";
+import type { AnyPluginDescriptor, Logger, PlumixEnv } from "plumix";
 import type { BlockSpec } from "plumix/blocks";
 import type { CdnFake } from "plumix/test";
 import type { EntryData } from "plumix/theme";
@@ -63,6 +63,8 @@ export interface FormsHarnessOptions {
   readonly basePath?: string;
   /** The CDN that stores the site's cacheable public pages. */
   readonly cdn?: CdnFake;
+  /** Keeps what a handler reported, for asserting on a failure. */
+  readonly logger?: Logger;
 }
 
 export async function createFormsHarness(
@@ -73,6 +75,7 @@ export async function createFormsHarness(
     env: options.env,
     clientAddress: options.clientAddress,
     cdn: options.cdn,
+    logger: options.logger,
     config: {
       plugins: [blog, ...plugins],
       theme: themeWith(options.themeBlocks ?? [], options.entryTemplate),
