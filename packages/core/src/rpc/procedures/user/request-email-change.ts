@@ -4,7 +4,7 @@ import {
 } from "../../../auth/email-change/index.js";
 import { eq } from "../../../db/index.js";
 import { users } from "../../../db/schema/users.js";
-import { authenticated } from "../../authenticated.js";
+import { sessionAuthenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { userRequestEmailChangeInputSchema } from "./schemas.js";
 
@@ -17,7 +17,7 @@ const EDIT_CAPABILITY = "user:edit";
  * layer.
  */
 export const requestEmailChangeProc = base
-  .use(authenticated)
+  .use(sessionAuthenticated)
   .input(userRequestEmailChangeInputSchema)
   .handler(async ({ input, context, errors }) => {
     const isSelf = input.id === context.user.id;

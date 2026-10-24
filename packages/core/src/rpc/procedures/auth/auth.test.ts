@@ -21,6 +21,26 @@ import { userFactory } from "../../../test/factories.js";
 import { createTestDb } from "../../../test/harness.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
+/**
+ * A harness whose caller is a real API token of `scopes`, resolved by the
+ * default authenticator. The header is set after the harness's db exists.
+ */
+async function apiTokenCaller(scopes: readonly string[]) {
+  const request = new Request("https://cms.example/_plumix/rpc", {
+    method: "POST",
+  });
+  const h = await createRpcHarness({ request });
+  const user = await h.factory.user.create({ role: "editor" });
+  const { secret } = await createApiToken(h.db, {
+    userId: user.id,
+    name: "scoped",
+    expiresAt: null,
+    scopes: [...scopes],
+  });
+  request.headers.set("authorization", `Bearer ${secret}`);
+  return h;
+}
+
 describe("auth.session", () => {
   test("empty instance → user: null, needsBootstrap: true", async () => {
     const h = await createRpcHarness();
@@ -741,6 +761,17 @@ describe("auth.apiTokens", () => {
     ).rejects.toBeDefined();
   });
 
+  test("create refuses an API-token caller, so a scoped token can't mint a wider one", async () => {
+    const h = await apiTokenCaller(["entry:post:read"]);
+    // The token itself authenticates; only minting is closed to it.
+    await expect(h.client.auth.apiTokens.list({})).resolves.toHaveLength(1);
+
+    await expect(
+      h.client.auth.apiTokens.create({ name: "wider", scopes: null }),
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    expect(await h.db.select().from(apiTokens)).toHaveLength(1);
+  });
+
   test("create with scopes: null is unrestricted (inherit role caps)", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
     const created = await h.client.auth.apiTokens.create({
@@ -1016,6 +1047,17 @@ describe("auth.deviceFlow", () => {
       code: "CONFLICT",
       data: { reason: "already_approved" },
     });
+  });
+
+  test("approve refuses an API-token caller", async () => {
+    const h = await apiTokenCaller(["entry:post:read"]);
+    const { userCode } = await requestDeviceCode(h.db);
+
+    await expect(
+      h.client.auth.deviceFlow.approve({ userCode, tokenName: "cli" }),
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    const lookup = await lookupDeviceCodeByUserCode(h.db, userCode);
+    expect(lookup.outcome).toBe("ok");
   });
 
   test("approve surfaces NOT_FOUND for an unknown user_code", async () => {

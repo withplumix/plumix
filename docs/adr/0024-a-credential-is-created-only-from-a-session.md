@@ -33,8 +33,12 @@ the authenticator knows that.
   through.
 - **One helper names the rule.** `authenticateSession(ctx)` in
   `auth/authenticator.ts` runs the configured authenticator and returns the
-  result only when `credential === "session"`. Passkey add-device is its
-  first caller. It stays internal to core until a plugin needs it.
+  result only when `credential === "session"`. Passkey add-device calls it
+  directly. An RPC procedure that creates or redirects a credential uses the
+  `sessionAuthenticated` middleware in `rpc/authenticated.ts`, which resolves
+  the caller through it: `auth.apiTokens.create`, `auth.deviceFlow.approve`
+  and `user.requestEmailChange`. It stays internal to core until a plugin
+  needs it.
 - **Scopes are read through one helper.** `tokenScopesOf(result)` returns an
   API token's scopes and `null` for a session. Capability checks are
   unchanged.
@@ -52,12 +56,3 @@ the authenticator knows that.
 - **Key on `hasSession`** (rejected). The default chain's `hasSession` is a
   `some(...)`, so a junk `plumix_session` cookie satisfies it, and then the
   chain resolves the API token that came with it.
-
-## Still to adopt
-
-These surfaces create a credential for the caller and do not resolve it
-through `authenticateSession` yet. Each is its own follow-up.
-
-- `auth.apiTokens.create`. A scoped token may be able to mint a wider one.
-  This is unverified.
-- Email change.
