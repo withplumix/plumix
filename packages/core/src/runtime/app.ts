@@ -274,12 +274,6 @@ export async function buildApp(
   registerCoreSettings(seededRegistry);
   registerCoreScheduledTasks(seededRegistry);
   registerCoreSearchProvider(seededRegistry);
-  const { registry, appContextExtensions } = await installPlugins({
-    hooks,
-    plugins: config.plugins,
-    registry: seededRegistry,
-  });
-
   // Defense-in-depth for JS callers — the type already requires `theme`,
   // but a hand-rolled config can still drop it.
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard for JS callers
@@ -287,9 +281,12 @@ export async function buildApp(
     throw ThemeRegistrationError.missingTheme();
   }
 
-  // Before core aggregates anything, so a subscriber's own registrations still
-  // land in every registry assembled below.
-  await hooks.doAction("theme:ready", config.theme);
+  const { registry, appContextExtensions } = await installPlugins({
+    hooks,
+    plugins: config.plugins,
+    registry: seededRegistry,
+    theme: config.theme,
+  });
   // Every role is registered by now, so the index built here is the complete
   // one the request path reads, and a misdeclared role fails this boot.
   resolveImageRoleIndex(registry);

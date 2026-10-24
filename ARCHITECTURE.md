@@ -260,7 +260,7 @@ flowchart LR
   cron -- "Fires scheduled tasks [scheduled handler or timer]" --> entry
   entry -- "Builds the app once, then reuses it" --> builder
   builder -- "Installs plugins through" --> pluginsys
-  builder -- "Fires theme:ready for" --> theme
+  builder -- "Hands plugins the theme from" --> theme
   entry -- "Hands requests to" --> dispatcher
   entry -- "Hands scheduled calls to" --> sched
   dispatcher -- "Routes sign-in, loads the user, gates by<br/>access policy, picks the cache segment" --> authc
@@ -598,12 +598,12 @@ sequenceDiagram
   E->>B: Builds the app from plumix.config.ts, once per process or instance
   B->>PS: Creates the hook registry and registers core's own handlers
   B->>PS: Seeds core's lookups, template deps, settings and scheduled tasks
-  B->>PS: installPlugins, checking every plugin id
+  B->>T: Reads the theme
+  B->>PS: installPlugins with the theme, checking every plugin id
   PS->>P: Runs every state factory
   PS->>P: Runs every provides, so helpers reach every plugin
-  PS->>P: Runs every setup
+  PS->>P: Runs every setup, which reads the theme as ctx.theme
   PS->>P: Runs every afterSetup, which sees the registry read-only
-  B->>T: Fires theme:ready
   B->>B: Indexes image roles and merges plugin schemas
   B->>B: Validates the theme, RPC namespaces, REST routes, block variations,<br/>auth methods, mails and every scheduled task's cron
   B-->>E: The app, or the boot error

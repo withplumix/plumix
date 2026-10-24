@@ -132,13 +132,10 @@ export function og(options: OgPluginOptions = {}): PluginDescriptor {
     // Async because of the dev import below; core awaits `setup` before it
     // reads any registry, so registration order is unaffected.
     setup: async (ctx) => {
-      // The theme is validated after plugins install, so its cards arrive on
-      // the boot-time handover rather than here. One snapshot serves every
-      // request — nothing about a rule set is request-scoped.
-      ctx.addAction("theme:ready", (theme) => {
-        cards.load(theme.ogCards ?? []);
-        tokens = compileThemeTokens(theme.tokens, palette);
-      });
+      // One snapshot serves every request — nothing about a rule set is
+      // request-scoped.
+      cards.load(ctx.theme.ogCards ?? []);
+      tokens = compileThemeTokens(ctx.theme.tokens, palette);
       registerSyncCardReset(ctx);
       ctx.registerRoute({
         method: "GET",

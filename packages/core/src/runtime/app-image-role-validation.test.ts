@@ -62,16 +62,14 @@ describe("buildApp — image role validation", () => {
     );
   });
 
-  test("sees a role a plugin registers once the theme is ready", async () => {
+  test("sees a role a plugin registers after the field using it", async () => {
     await expect(
       appWith((ctx) => {
-        ctx.addAction("theme:ready", () => {
-          ctx.registerImageRole("backdrop", { single: true });
-          ctx.registerUserMetaBox("profile", {
-            label: "Profile",
-            fields: [backdrop],
-          });
+        ctx.registerUserMetaBox("profile", {
+          label: "Profile",
+          fields: [backdrop],
         });
+        ctx.registerImageRole("backdrop", { single: true });
       }),
     ).resolves.toBeDefined();
   });
