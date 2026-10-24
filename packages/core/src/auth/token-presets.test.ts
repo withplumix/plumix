@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 
+import type { UserRole } from "../db/schema/users.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { resolveApiTokenPreset } from "./token-presets.js";
 
@@ -59,7 +60,14 @@ describe("resolveApiTokenPreset", () => {
   });
 
   test("a role with no capabilities resolves to an empty list, not to everything", () => {
-    expect(resolveApiTokenPreset("read_only", "nobody", plugins)).toEqual([]);
-    expect(resolveApiTokenPreset("draft_only", "nobody", plugins)).toEqual([]);
+    // Safety: a stored role the capability table doesn't know reaches the
+    // resolver only at runtime; the type admits none.
+    const unknownRole = "nobody" as UserRole;
+    expect(resolveApiTokenPreset("read_only", unknownRole, plugins)).toEqual(
+      [],
+    );
+    expect(resolveApiTokenPreset("draft_only", unknownRole, plugins)).toEqual(
+      [],
+    );
   });
 });
