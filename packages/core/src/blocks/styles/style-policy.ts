@@ -42,9 +42,9 @@ export function resolveStylePolicy(theme: {
 }
 
 /**
- * The one gate every style control, the server and agents ask. With no
- * category, whether every category accepts custom values, which raw CSS
- * declarations and class names need.
+ * The one gate for whether a category accepts custom values. With no
+ * category, whether every category does, which raw CSS declarations and class
+ * names need.
  */
 export function allowsCustomStyles(
   policy: StylePolicy,

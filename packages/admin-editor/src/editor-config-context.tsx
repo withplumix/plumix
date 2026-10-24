@@ -27,7 +27,7 @@ export interface EditorConfig {
   readonly allowedBlocks?: ReadonlySet<string>;
   /**
    * The theme's style policy, from the manifest; absent allows custom values
-   * everywhere. Every style control asks it through the Styles tab.
+   * everywhere.
    */
   readonly stylePolicy?: StylePolicy;
   /** Absent in a deployment with no plugin field registry. */
