@@ -475,12 +475,8 @@ describe("assemblePluginAdminBundle — Tailwind sidecar", () => {
       themeCssPath: ADMIN_SOURCE_THEME_CSS,
     });
 
-    // Both URLs must be absolute — relative `./plugins/...` would 404
-    // when the SPA serves index.html for a deep-link like
-    // `/_plumix/admin/pages/<plugin>` and the browser resolves the
-    // src against the current URL.
-    expect(result?.chunkUrl).toBe("/_plumix/admin/plugins/site-bundle.js");
-    expect(result?.cssUrl).toBe("/_plumix/admin/plugins/site-bundle.css");
+    expect(result?.chunkFile).toBe("site-bundle.js");
+    expect(result?.cssFile).toBe("site-bundle.css");
     const css = await readFile(
       resolve(adminDest, "plugins/site-bundle.css"),
       "utf8",

@@ -4,8 +4,12 @@ import { i18n } from "@lingui/core";
 import type { PluginI18nManifest } from "@plumix/core/manifest";
 import { loadOnce } from "@plumix/core/support";
 
+import { adminBasePath } from "./admin-base.js";
+
 interface PluginCatalogLoaderInput {
   readonly manifest: PluginI18nManifest;
+  /** The site's mount; the manifest's URLs are root-absolute without it. */
+  readonly basePath?: string;
   readonly importCatalog?: (url: string) => Promise<{ messages: Messages }>;
 }
 
@@ -15,6 +19,7 @@ interface PluginCatalogLoaderInput {
  */
 export function createPluginCatalogLoader({
   manifest,
+  basePath = adminBasePath(),
   // A loader per call: the URL varies, and the browser keeps one module per URL.
   importCatalog = (url) => loadOnce(() => import(/* @vite-ignore */ url))(),
 }: PluginCatalogLoaderInput): (
@@ -27,8 +32,10 @@ export function createPluginCatalogLoader({
   const inflight = new Map<string, Promise<void>>();
   return function loadPluginCatalog(pluginId, locale) {
     const entry = manifest[pluginId];
-    const url = entry?.catalogs[locale] ?? entry?.catalogs[entry.sourceLocale];
-    if (!url) return Promise.resolve();
+    const path = entry?.catalogs[locale] ?? entry?.catalogs[entry.sourceLocale];
+    if (!path) return Promise.resolve();
+    // `import()` ignores `<base href>` for both root-absolute and relative specifiers.
+    const url = `${basePath}${path}`;
     const key = `${pluginId}|${locale}`;
     const cached = inflight.get(key);
     if (cached) return cached;

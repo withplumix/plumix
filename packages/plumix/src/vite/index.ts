@@ -1,14 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import {
-  copyFile,
-  cp,
-  mkdir,
-  readFile,
-  stat,
-  writeFile,
-} from "node:fs/promises";
+import { cp, readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
-import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { dirname, relative, resolve, sep } from "node:path";
 import type { SourceMapInput } from "@jridgewell/trace-mapping";
 import type { IncomingMessage } from "node:http";
 import type { Plugin, UserConfig } from "vite";
@@ -39,11 +32,9 @@ import type { LoadConfigOptions } from "../cli/load-config.js";
 import type { BlockModuleRef } from "./block-module-resolver.js";
 import type { DiscoveredIsland } from "./island-transform.js";
 import type { PluginCatalogFile } from "./plugin-catalogs-codegen.js";
+import type { PluginChunkRef } from "./plugin-chunk-scripts.js";
 import { loadConfig } from "../cli/load-config.js";
-import {
-  ADMIN_URL_PREFIX,
-  assemblePluginAdminBundle,
-} from "./admin-plugin-bundle.js";
+import { assemblePluginAdminBundle } from "./admin-plugin-bundle.js";
 import { generateIslandsRendererEntrySource } from "./auth-method-clients-codegen.js";
 import { generateClientEntrySource } from "./client-entry-codegen.js";
 import { handleDevErrorSourceRequest } from "./dev-error-source.js";
@@ -57,7 +48,6 @@ import {
   collectEditorShortcodeModules,
 } from "./editor-block-modules.js";
 import { generateEditorEntrySource } from "./editor-entry-codegen.js";
-import { VitePluginError } from "./errors.js";
 import {
   loadAssetManifest,
   resolveIslandChunkUrl,
@@ -75,6 +65,8 @@ import {
   stagePluginCatalogs,
 } from "./plugin-catalog-resolve.js";
 import { generatePluginCatalogsSource } from "./plugin-catalogs-codegen.js";
+import { injectPluginChunkScripts } from "./plugin-chunk-scripts.js";
+import { stagePluginChunks } from "./plugin-chunk-staging.js";
 import { stageUserPublic } from "./public-staging.js";
 import { stageIntoPlace } from "./stage-into-place.js";
 import { withoutUseClientWarning } from "./use-client-warning.js";
@@ -650,92 +642,11 @@ async function stageAdminInto(
   if (assembled) {
     allChunks.push({
       pluginId: "site-bundle",
-      chunkUrl: assembled.chunkUrl,
-      cssUrl: assembled.cssUrl,
+      chunkFile: assembled.chunkFile,
+      cssFile: assembled.cssFile,
     });
   }
   await injectIndexHtml(resolve(dest, "index.html"), manifest, allChunks);
-}
-
-interface PluginChunkRef {
-  readonly pluginId: string;
-  readonly chunkUrl: string;
-  readonly cssUrl?: string;
-}
-
-async function stagePluginChunks(
-  adminDest: string,
-  plugins: readonly AnyPluginDescriptor[],
-  projectRoot: string,
-): Promise<readonly PluginChunkRef[]> {
-  const chunks: PluginChunkRef[] = [];
-  const withChunks = plugins.filter(
-    (p): p is AnyPluginDescriptor & { adminChunk: string } =>
-      typeof p.adminChunk === "string" && p.adminChunk.length > 0,
-  );
-  if (withChunks.length === 0) return chunks;
-
-  const pluginsDir = resolve(adminDest, "plugins");
-  await mkdir(pluginsDir, { recursive: true });
-  const staged = await Promise.all(
-    withChunks.map(async (plugin): Promise<PluginChunkRef> => {
-      const chunkSource = await resolvePluginAsset(
-        plugin.id,
-        "adminChunk",
-        plugin.adminChunk,
-        projectRoot,
-      );
-      const chunkCopy = copyFile(
-        chunkSource,
-        resolve(pluginsDir, `${plugin.id}.js`),
-      );
-      let cssUrl: string | undefined;
-      let cssCopy: Promise<void> | undefined;
-      if (plugin.adminCss) {
-        const cssSource = await resolvePluginAsset(
-          plugin.id,
-          "adminCss",
-          plugin.adminCss,
-          projectRoot,
-        );
-        cssCopy = copyFile(cssSource, resolve(pluginsDir, `${plugin.id}.css`));
-        cssUrl = `${ADMIN_URL_PREFIX}/plugins/${plugin.id}.css`;
-      }
-      const pending: Promise<void>[] = [chunkCopy];
-      if (cssCopy) pending.push(cssCopy);
-      await Promise.all(pending);
-      return {
-        pluginId: plugin.id,
-        chunkUrl: `${ADMIN_URL_PREFIX}/plugins/${plugin.id}.js`,
-        cssUrl,
-      };
-    }),
-  );
-  chunks.push(...staged);
-  return chunks;
-}
-
-/** Copies each plugin's compiled `<catalogPath>/<locale>.mjs` to the */
-async function resolvePluginAsset(
-  pluginId: string,
-  field: string,
-  relOrAbs: string,
-  projectRoot: string,
-): Promise<string> {
-  const source = isAbsolute(relOrAbs)
-    ? relOrAbs
-    : resolve(projectRoot, relOrAbs);
-  try {
-    await stat(source);
-  } catch {
-    throw VitePluginError.adminAssetNotFound({
-      pluginId,
-      field,
-      declared: relOrAbs,
-      resolved: source,
-    });
-  }
-  return source;
 }
 
 async function injectIndexHtml(
@@ -748,51 +659,6 @@ async function injectIndexHtml(
   const next = injectPluginChunkScripts(withManifest, chunks);
   if (next === html) return;
   await writeFile(indexHtmlPath, next, "utf8");
-}
-
-/**
- * Plugin chunks load AFTER the main admin bundle so window.plumix is
- * populated before they execute. Block is replaced (not appended) on
- * rebuild so the HTML stays stable.
- */
-const PLUGIN_CHUNKS_MARKER = "<!-- plumix:plugin-chunks -->";
-const PLUGIN_CHUNKS_RE =
-  /<!-- plumix:plugin-chunks -->[\s\S]*?<!-- \/plumix:plugin-chunks -->/;
-
-function injectPluginChunkScripts(
-  html: string,
-  chunks: readonly PluginChunkRef[],
-): string {
-  const block = buildPluginChunkBlock(chunks);
-  if (PLUGIN_CHUNKS_RE.test(html)) {
-    return html.replace(PLUGIN_CHUNKS_RE, block);
-  }
-  if (html.includes("</body>")) {
-    return html.replace("</body>", `${block}\n</body>`);
-  }
-  return `${html}\n${block}`;
-}
-
-function buildPluginChunkBlock(chunks: readonly PluginChunkRef[]): string {
-  const tags: string[] = [];
-  for (const c of chunks) {
-    if (c.cssUrl) {
-      tags.push(
-        `<link rel="stylesheet" data-plumix-plugin="${escapeAttribute(c.pluginId)}" href="${escapeAttribute(c.cssUrl)}">`,
-      );
-    }
-    tags.push(
-      `<script type="module" data-plumix-plugin="${escapeAttribute(c.pluginId)}" src="${escapeAttribute(c.chunkUrl)}"></script>`,
-    );
-  }
-  return `${PLUGIN_CHUNKS_MARKER}\n${tags.join("\n")}\n<!-- /plumix:plugin-chunks -->`;
-}
-
-function escapeAttribute(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/"/g, "&quot;")
-    .replace(/</g, "&lt;");
 }
 
 /**

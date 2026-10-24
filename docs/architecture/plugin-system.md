@@ -40,7 +40,7 @@ Descriptor fields (`PluginDescriptor` in `packages/core/src/plugin/define.ts`). 
 | `dataMigrations`         | Module of ordered data migrations                                      | `packages/plumix/src/cli/migrate/data-modules.ts`                                                       |
 | `i18n`                   | Catalog slot (`PLUGIN_I18N_SLOT` for first-party)                      | `buildManifest`; `packages/plumix/src/vite/plugin-catalog-resolve.ts`                                   |
 | `adminEntry`             | Admin source, bundled per site                                         | `packages/plumix/src/vite/admin-plugin-bundle.ts`                                                       |
-| `adminChunk`, `adminCss` | Pre-built admin JS and CSS                                             | `stagePluginChunks` in `packages/plumix/src/vite/index.ts`                                              |
+| `adminChunk`, `adminCss` | Pre-built admin JS and CSS                                             | `stagePluginChunks` in `packages/plumix/src/vite/plugin-chunk-staging.ts`                               |
 | `adminPeerVersion`       | Admin range the plugin expects                                         | `warnOnPluginAdminMismatch` in `packages/plumix/src/vite/index.ts`                                      |
 
 Contribution kinds. Each `setup` call writes one `PluginRegistry` field (`packages/core/src/plugin/registry.ts`); the consumer is the code that reads that field. Paths in the last column are under `packages/core/src/`.

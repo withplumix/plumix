@@ -13,6 +13,8 @@ import {
   installPlugins,
 } from "@plumix/core";
 
+import { injectPluginChunkScripts } from "../src/vite/plugin-chunk-scripts.js";
+
 // Drives `stageAdminAssets`'s exported pieces directly, avoiding a real Vite
 // build.
 
@@ -200,25 +202,23 @@ describe("plugin-host acceptance — end-to-end primitive coverage", () => {
     const manifest = buildManifest(createPluginRegistry());
     html = injectManifestIntoHtml(html, manifest);
 
-    // A hand-written stand-in for the Vite plugin's `buildPluginChunkBlock`
-    // output; nothing here runs the plugin.
-    const expectedBlock = [
-      "<!-- plumix:plugin-chunks -->",
-      '<link rel="stylesheet" data-plumix-plugin="hello-world" href="/_plumix/admin/plugins/hello-world.css">',
-      '<script type="module" data-plumix-plugin="hello-world" src="/_plumix/admin/plugins/hello-world.js"></script>',
-      "<!-- /plumix:plugin-chunks -->",
-    ].join("\n");
-    html = html.replace("</body>", `${expectedBlock}\n</body>`);
+    html = injectPluginChunkScripts(html, [
+      {
+        pluginId: "hello-world",
+        chunkFile: "hello-world.js",
+        cssFile: "hello-world.css",
+      },
+    ]);
 
     const destHtml = resolve(fixtureRoot, "index.html");
     await writeFile(destHtml, html, "utf8");
     const roundTrip = await readFile(destHtml, "utf8");
 
     expect(roundTrip).toContain(
-      '<link rel="stylesheet" data-plumix-plugin="hello-world" href="/_plumix/admin/plugins/hello-world.css">',
+      '<link rel="stylesheet" data-plumix-plugin="hello-world" href="plugins/hello-world.css">',
     );
     expect(roundTrip).toContain(
-      '<script type="module" data-plumix-plugin="hello-world" src="/_plumix/admin/plugins/hello-world.js"></script>',
+      '<script type="module" data-plumix-plugin="hello-world" src="plugins/hello-world.js"></script>',
     );
     // Manifest still present alongside the plugin chunk tags.
     expect(roundTrip).toContain('<script id="plumix-manifest"');
