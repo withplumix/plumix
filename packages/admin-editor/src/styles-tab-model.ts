@@ -2,6 +2,7 @@ import type { BlockNode } from "@plumix/core/blocks";
 import { resolveRootTag } from "@plumix/core/blocks";
 
 import type { StyleBucket } from "./store.js";
+import type { RefusedStyle } from "./style-policy-view.js";
 
 /**
  * The buckets whose values cascade into each one, nearest first: the large
@@ -157,4 +158,20 @@ export const TAG_DEFAULT = "__default__";
 /** A stale value shows as "Default", matching what the renderer emits. */
 export function tagNameChoice(value: string | undefined): string {
   return resolveRootTag(value) ?? TAG_DEFAULT;
+}
+
+/**
+ * The refused values no control's read-only chip shows, so they show in place
+ * of the Custom CSS panel. Gap's control appears only for a flex or grid box.
+ */
+export function refusedWithoutChip(
+  refused: readonly RefusedStyle[],
+  chipProperties: ReadonlySet<string>,
+  display: string | undefined,
+): readonly RefusedStyle[] {
+  const gapShown = display === "flex" || display === "grid";
+  return refused.filter(
+    ({ property }) =>
+      !chipProperties.has(property) || (property === "gap" && !gapShown),
+  );
 }

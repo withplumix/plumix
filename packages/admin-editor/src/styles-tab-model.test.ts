@@ -8,6 +8,7 @@ import {
   inheritedStyleValue,
   parseBackgroundImageUrl,
   parseTextShadow,
+  refusedWithoutChip,
   tagNameChoice,
   toggleTextMark,
 } from "./styles-tab-model.js";
@@ -136,4 +137,39 @@ describe("tagNameChoice", () => {
   test("a tag name outside the allowlist presents as Default, matching render", () => {
     expect(tagNameChoice("script")).toBe(tagNameChoice(undefined));
   });
+});
+
+describe("refusedWithoutChip", () => {
+  const chips: ReadonlySet<string> = new Set(["color", "gap"]);
+
+  test("keeps the refused values no chip shows, keywords' properties included", () => {
+    const refused = [
+      { property: "color", value: "#e11" },
+      { property: "textAlign", value: "justify" },
+      { property: "display", value: "inline-block" },
+    ];
+
+    expect(refusedWithoutChip(refused, chips, undefined)).toEqual([
+      { property: "textAlign", value: "justify" },
+      { property: "display", value: "inline-block" },
+    ]);
+  });
+
+  test.each([
+    [undefined, [{ property: "gap", value: "13px" }]],
+    ["block", [{ property: "gap", value: "13px" }]],
+    ["flex", []],
+    ["grid", []],
+  ])(
+    "with display %s, gap's chip shows only where its control does",
+    (display, kept) => {
+      expect(
+        refusedWithoutChip(
+          [{ property: "gap", value: "13px" }],
+          chips,
+          display,
+        ),
+      ).toEqual(kept);
+    },
+  );
 });

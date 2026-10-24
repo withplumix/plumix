@@ -1529,4 +1529,27 @@ test.describe("the theme's style policy", () => {
     await expect(page.getByTestId("style-css-classes-forbidden")).toBeVisible();
     await expect(page.getByTestId("style-css-classes")).toHaveCount(0);
   });
+
+  test("a refused value no control can show, a keyword's or a hidden gap's, shows read-only and clears", async ({
+    page,
+  }) => {
+    await page.goto("/?styles=false");
+    await page
+      .frameLocator(CANVAS_FRAME)
+      .locator('[data-plumix-id="legacy-styled"]')
+      .click();
+    await page.getByTestId("plumix-tab-styles").click();
+    await page.getByTestId("styles-section-declarations").click();
+    await expect(
+      page.getByTestId("style-declaration-gap-forbidden"),
+    ).toBeVisible();
+    const justify = page.getByTestId("style-declaration-textAlign-forbidden");
+    await expect(justify).toBeVisible();
+
+    await page
+      .getByTestId("style-declaration-textAlign-forbidden-clear")
+      .click();
+
+    await expect(justify).toHaveCount(0);
+  });
 });

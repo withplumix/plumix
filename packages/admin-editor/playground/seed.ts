@@ -106,7 +106,14 @@ export const SEED_BLOCKS: readonly BlockNode[] = [
     name: "core/rich-text",
     attrs: { body: "<p>Styled before the theme kept to its tokens.</p>" },
     className: "legacy",
-    style: { large: { color: "#e11d48", width: "320px" } },
+    style: {
+      large: {
+        color: "#e11d48",
+        width: "320px",
+        textAlign: "justify",
+        gap: "13px",
+      },
+    },
   },
   // No spec registers it, as after its plugin is uninstalled.
   {

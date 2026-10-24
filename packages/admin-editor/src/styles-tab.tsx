@@ -70,6 +70,7 @@ import {
   parseBackgroundImageUrl,
   parseTextShadow,
   pressedTextMarks,
+  refusedWithoutChip,
   TAG_DEFAULT,
   tagNameChoice,
   TEXT_MARKS,
@@ -174,16 +175,16 @@ const BORDER_SECTION: SectionDef = {
 };
 
 /**
- * Every property a control in this tab edits. Under tokens only, a refused
- * value on any other shows in place of the Custom CSS panel.
+ * The properties whose control shows a refused value as a read-only chip.
+ * Keyword controls show none, so their refused values join the Custom CSS
+ * fallback.
  */
-const CONTROLLED_PROPERTIES: ReadonlySet<string> = new Set([
+const CHIP_PROPERTIES: ReadonlySet<string> = new Set([
   ...[SIZE_SECTION, BACKGROUND_SECTION, TYPOGRAPHY_SECTION, BORDER_SECTION]
     .flatMap((section) => section.controls)
+    .filter((control) => !control.options)
     .map((control) => control.property),
-  ...["display", "flexDirection", "gap", "justifyContent", "alignItems"],
-  ...["alignSelf", "opacity", "boxShadow", "textShadow", "backgroundImage"],
-  ...["textAlign", ...TEXT_MARKS.map((mark) => mark.property)],
+  ...["gap", "opacity", "boxShadow", "textShadow", "backgroundImage"],
   ...["margin", "padding"].flatMap((prefix) =>
     ["Top", "Right", "Bottom", "Left"].map((side) => `${prefix}${side}`),
   ),
@@ -374,8 +375,10 @@ export function StylesTab(): ReactElement {
             ) : (
               <ForbiddenCustomCss
                 className={policy.forbiddenClassName}
-                declarations={policy.refused.filter(
-                  (r) => !CONTROLLED_PROPERTIES.has(r.property),
+                declarations={refusedWithoutChip(
+                  policy.refused,
+                  CHIP_PROPERTIES,
+                  valueOf("display"),
                 )}
                 onClearClassName={() => setBlockClassName(activeId, "")}
                 onClearDeclaration={(property) => setter(property)(null)}
