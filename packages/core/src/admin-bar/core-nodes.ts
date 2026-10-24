@@ -55,7 +55,7 @@ export function registerCoreAdminBarNodes(
     },
     {
       id: "account",
-      // WP-style "Howdy, {display name}". Also seeds the mobile avatar initial.
+      // Also seeds the mobile avatar initial.
       title: (bar) => userDisplayName(bar.user),
       group: "account",
       position: ACCOUNT_POSITION,
@@ -92,8 +92,7 @@ export function registerNewEntryAdminBarNodes(
   let position = 10;
   for (const [name, type] of registry.entryTypes) {
     // Private types (e.g. `menu_item`) are managed through their own admin
-    // surface, never quick-created from the bar — mirror their `showUI`
-    // visibility so they don't leak into the +New menu.
+    // surface, never quick-created from the bar.
     if (!type.showUI) continue;
     const id = `+new:${name}`;
     // Only a plugin can hold the id by now, and core owns `+new:<type>`, so
@@ -109,11 +108,9 @@ export function registerNewEntryAdminBarNodes(
     }
     registry.adminBarNodes.set(id, {
       id,
-      // The type's human singular label, not the raw slug. Source-locale
-      // text only (like other SSR label sites — see `route/resolve.ts`):
-      // the bar has no per-plugin i18n catalog to resolve descriptors.
+      // Source-locale text only: the bar has no per-plugin i18n catalog to
+      // resolve a label descriptor.
       title: labelSourceText(type.labels?.singular ?? type.label),
-      // Route slug is the derived `adminSlug`, never the type name.
       href: () =>
         `/_plumix/admin/entries/${adminSlugForType(name, type)}/create`,
       visible: (bar) => mayCreate(bar, name, type),

@@ -449,6 +449,9 @@ A valid preview token granting draft visibility for one entry, forcing a CDN byp
 **Admin bar**:
 The zero-JS, server-rendered admin chrome overlaid on public pages for logged-in users.
 
+**Admin bar node**:
+One item of the admin bar, registered by core or a plugin in `setup` with `registerAdminBarNode`. A node left out for a request takes its children with it.
+
 **Wire module**:
 The browser-side counterpart of a public JSON route: it owns the route's path, the deployment's base path and the decoding of the answer, so a theme never builds the URL or trusts the payload. Internal to its package; the published surface is a React hook.
 _Avoid_: browser adapter, client adapter (_adapter_ means **runtime adapter**)

@@ -65,7 +65,8 @@ export function PlumixAdminBar({
       logger,
     ),
   );
-  // A bar whose every node is hidden leaves no offset or script behind.
+  // The page offset and sign-out script belong to a bar that renders, so an
+  // empty one emits neither.
   if (tree.length === 0) return null;
   return (
     <>
