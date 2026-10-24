@@ -1,9 +1,8 @@
 import type { PluginDescriptor } from "plumix/plugin";
-import { enqueuePurgeTags } from "plumix/db";
 import { definePlugin, loadSiteSettings } from "plumix/plugin";
 
 import { applyFeedDiscovery } from "./discovery.js";
-import { FEED_TAG, handleFeed } from "./respond.js";
+import { handleFeed } from "./respond.js";
 import { feedRoutes } from "./routes.js";
 // A `declare module "plumix"` block reaches a consumer only if its module is in
 // this package's declaration graph, so the augmenting modules are imported
@@ -31,9 +30,6 @@ export function feeds(): PluginDescriptor {
           appCtx,
           site.public === false,
         );
-      });
-      ctx.addAction("settings:group_changed", (changes, appCtx) => {
-        if (changes.group === "site") enqueuePurgeTags(appCtx, [FEED_TAG]);
       });
     },
     afterSetup: (ctx) => {

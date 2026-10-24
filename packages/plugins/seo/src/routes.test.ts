@@ -313,6 +313,21 @@ async function setSettings(
   }
 }
 
+/** A settings save the way the admin form makes it, through the RPC. */
+async function saveSettings(
+  h: DispatcherHarness,
+  group: string,
+  values: Readonly<Record<string, JsonValue>>,
+): Promise<void> {
+  const admin = await h.seedUser("admin");
+  const saved = await h.fetch("/_plumix/rpc/settings/upsert", {
+    as: admin,
+    json: { json: { group, values, ifMatch: "0" }, meta: [] },
+  });
+  saved.assertStatus(200);
+  await h.drainDeferred();
+}
+
 async function seedPost(
   h: DispatcherHarness,
   overrides: {
@@ -1531,25 +1546,53 @@ describe("a sitemap at the edge", () => {
     expect(await second.text()).toBe(firstBody);
   });
 
-  // Every SEO group changes cached output; content pages purge by type tag
-  // since the cdn has no site-wide one.
+  // Each response is stored under the settings groups it read, so a save
+  // retires exactly the readers of the group it wrote.
   test.each([
-    ["the plugin's own group", "seo"],
-    ["the verification group", "seo_verification"],
-    ["the robots.txt group", "seo_robots"],
-    ["the legacy site group", "site"],
-  ])("a settings save on %s retires the cached set", async (_label, group) => {
+    ["a page head", "seo", "/post/hello", { title_separator: "|" }],
+    ["a page head", "seo_verification", "/post/hello", { google: "token" }],
+    ["a page head", "site", "/post/hello", { title: "Renamed" }],
+    ["a sitemap", "seo", "/sitemap-entries-post-1.xml", { indexable: false }],
+    ["a sitemap", "site", "/sitemap-entries-post-1.xml", { indexable: false }],
+    ["llms.txt", "seo", "/llms.txt", { indexable: false }],
+  ])(
+    "%s is not stored after a save to the %s group it read",
+    async (_label, group, path, values) => {
+      const cdn = fakeCdn();
+      const h = await createHarness([blogPlugin], { cdn });
+      await seedPost(h);
+      await render(h, cdn, path);
+
+      await saveSettings(h, group, values);
+
+      cdn.assertNotStored(path);
+    },
+  );
+
+  // Never stored, so no save can leave a stale copy at the edge.
+  test("robots.txt serves a seo_robots save on the next request, from no stored copy", async () => {
     const cdn = fakeCdn();
-    const h = await createHarness([blogPlugin, settingsSaver(group)], { cdn });
+    const h = await createHarness([blogPlugin], { cdn });
+    (await h.fetch("/robots.txt")).assertStatus(200);
+    await h.drainDeferred();
+
+    await saveSettings(h, "seo_robots", { robots_txt: "User-agent: Saved\n" });
+
+    expect(await bodyOf(h, "/robots.txt")).toContain("User-agent: Saved");
+    cdn.assertNotStored("/robots.txt");
+  });
+
+  test("saving an SEO group a page never read keeps that page stored", async () => {
+    const cdn = fakeCdn();
+    const h = await createHarness([blogPlugin], { cdn });
     await seedPost(h);
     await render(h, cdn, "/sitemap-entries-post-1.xml");
     await render(h, cdn, "/post/hello");
 
-    await h.dispatch(new Request("https://cms.example/fire-settings-change"));
-    await h.drainDeferred();
+    await saveSettings(h, "seo_robots", { robots_txt: "User-agent: *\n" });
 
-    cdn.assertNotStored("/sitemap-entries-post-1.xml");
-    cdn.assertNotStored("/post/hello");
+    cdn.assertStored("/sitemap-entries-post-1.xml");
+    cdn.assertStored("/post/hello");
   });
 
   test("a settings save on an unrelated group keeps the cached set", async () => {

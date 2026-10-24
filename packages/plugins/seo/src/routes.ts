@@ -4,7 +4,7 @@ import type {
   PluginSetupContext,
 } from "plumix/plugin";
 import { anonymousContext } from "plumix/auth";
-import { enqueuePurgeTags, typeTag } from "plumix/db";
+import { typeTag } from "plumix/db";
 import { tagCdnEntry } from "plumix/plugin";
 import { withBasePath } from "plumix/support";
 
@@ -13,12 +13,7 @@ import type { SeoSitemapsOptions, SitemapScope } from "./sitemap.js";
 import { LLMS_PATH, llmsTxtBody } from "./llms.js";
 import { handleRobotsTxt } from "./robots.js";
 import { publicTargets } from "./scope.js";
-import {
-  loadSeoSettings,
-  SEO_ROBOTS_GROUP,
-  SEO_SETTINGS_GROUP,
-  SEO_VERIFICATION_GROUP,
-} from "./settings.js";
+import { loadSeoSettings } from "./settings.js";
 import {
   assertSitemapPolicyNamesScopes,
   collectSitemapUrls,
@@ -42,21 +37,10 @@ const ROBOTS_PATH = "/robots.txt";
 const SITEMAP_CACHE_CONTROL = "public, max-age=0, s-maxage=3600";
 
 /**
- * On every sitemap response and on `llms.txt`: flipping the indexing toggle
- * must retire the whole set, the one legitimately global invalidation.
+ * On every sitemap response and on `llms.txt`, so a `seo:sitemap:urls`
+ * subscriber can retire the whole set.
  */
 export const SITEMAP_TAG = "seo:sitemap";
-
-/**
- * Groups that change cached responses. `site` is here because the indexing
- * toggle falls back to its legacy key there.
- */
-const SEO_SETTINGS_GROUPS: ReadonlySet<string> = new Set([
-  SEO_SETTINGS_GROUP,
-  SEO_ROBOTS_GROUP,
-  SEO_VERIFICATION_GROUP,
-  "site",
-]);
 
 /**
  * Anything but a 1-based page number goes unclaimed and 404s through the
@@ -170,15 +154,6 @@ export function registerSeoRoutes(
           "cache-control": SITEMAP_CACHE_CONTROL,
         },
       }),
-  });
-
-  // The indexing toggle decides whether the sitemap has any URLs at all.
-  ctx.addAction("settings:group_changed", (changes, appCtx) => {
-    if (!SEO_SETTINGS_GROUPS.has(changes.group)) return;
-    enqueuePurgeTags(appCtx, [
-      SITEMAP_TAG,
-      ...[...appCtx.plugins.entryTypes.keys()].map(typeTag),
-    ]);
   });
 }
 
