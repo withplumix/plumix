@@ -9,7 +9,10 @@ import { ACCESS_POLICY_META_KEY } from "../../../access/contract/meta-key.js";
 import { etagOf } from "../../../db/concurrency.js";
 import { isUniqueConstraintError } from "../../../db/index.js";
 import { loadAuthoredEntry } from "../../../entries/authored.js";
-import { assertCanEditEntry } from "../../../entries/editability.js";
+import {
+  assertCanDeleteEntry,
+  assertCanEditEntry,
+} from "../../../entries/editability.js";
 import {
   applyTermPatch,
   assertTermsPatchValid,
@@ -139,11 +142,12 @@ async function writeGuarded(
 
 /**
  * Where a procedure checks capabilities inside the save: `edit` once the row is
- * loaded, `publish` once the save is known to publish it.
+ * loaded, the others once the save is known to publish, schedule or trash it.
  */
 interface EntryUpdateGates {
   readonly edit?: (existing: Entry) => void;
   readonly publish?: (existing: Entry) => void;
+  readonly trash?: (existing: Entry) => void;
 }
 
 /** `entry.update` and `ctx.entries.update`, each with its own gates. */
@@ -300,8 +304,13 @@ export async function updateEntry(
 
   const isPublishTransition =
     filtered.status === "published" && existing.status !== "published";
-  if (isPublishTransition) {
+  const nowScheduled =
+    filtered.status === "scheduled" && existing.status !== "scheduled";
+  if (isPublishTransition || nowScheduled) {
     gates.publish?.(existing);
+  }
+  if (filtered.status === "trash" && existing.status !== "trash") {
+    gates.trash?.(existing);
   }
 
   if (filtered.parentId != null && filtered.parentId !== existing.parentId) {
@@ -362,8 +371,6 @@ export async function updateEntry(
   // Publishing or scheduling checks the whole bag, catching required fields a
   // lenient draft left empty. Editing a live entry checks only its patch, so
   // a co-author's drift can't block it.
-  const nowScheduled =
-    filtered.status === "scheduled" && existing.status !== "scheduled";
   if (isPublishTransition || nowScheduled) {
     await assertPromotedEntryMetaValid(
       context,
@@ -466,6 +473,9 @@ export const update = base
       },
       publish: (existing) => {
         assertCanPublishTransition(context, existing, errors);
+      },
+      trash: (existing) => {
+        assertCanDeleteEntry(context, existing, errors);
       },
     });
     const output = await context.hooks.applyFilter("rpc:entry.update:output", {

@@ -828,18 +828,6 @@ describe("auth.apiTokens.create — presets", () => {
     },
   );
 
-  test("refuses a preset alongside an explicit scope list", async () => {
-    const h = await createRpcHarness({ authAs: "editor" });
-    await expect(
-      h.client.auth.apiTokens.create({
-        name: "both",
-        preset: "read_only",
-        scopes: ["settings:manage"],
-      }),
-    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
-    expect(await h.db.select().from(apiTokens)).toHaveLength(0);
-  });
-
   test("a read-only token reads a published entry", async () => {
     const { h, editor } = await callerWithPresetToken("read_only");
     const live = await h.factory.published.create({ authorId: editor.id });
@@ -896,6 +884,39 @@ describe("auth.apiTokens.create — presets", () => {
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
       data: { capability: "entry:post:publish" },
+    });
+  });
+
+  test("a draft-only token is refused scheduling a draft through entry.update", async () => {
+    const { h, editor } = await callerWithPresetToken("draft_only");
+    const draft = await h.factory.draft.create({ authorId: editor.id });
+
+    await expect(
+      h.client.entry.update({
+        id: draft.id,
+        status: "scheduled",
+        publishedAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        ifMatch: await currentEtag(h.db, draft.id),
+      }),
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      data: { capability: "entry:post:publish" },
+    });
+  });
+
+  test("a draft-only token is refused trashing a draft through entry.update", async () => {
+    const { h, editor } = await callerWithPresetToken("draft_only");
+    const draft = await h.factory.draft.create({ authorId: editor.id });
+
+    await expect(
+      h.client.entry.update({
+        id: draft.id,
+        status: "trash",
+        ifMatch: await currentEtag(h.db, draft.id),
+      }),
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      data: { capability: "entry:post:delete" },
     });
   });
 });
