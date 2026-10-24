@@ -236,4 +236,25 @@ describe("inspectorView", () => {
       nothingToSet: false,
     });
   });
+
+  test("marks a block the theme no longer allows, keeping its controls", () => {
+    const tree = [{ id: "o", name: "core/group", attrs: {} }];
+
+    expect(
+      inspectorView(registry, tree, "o", "large", true, new Set(["x/other"])),
+    ).toMatchObject({ unregistered: false, notAllowed: true });
+    expect(
+      inspectorView(
+        registry,
+        tree,
+        "o",
+        "large",
+        true,
+        new Set(["core/group"]),
+      ),
+    ).toMatchObject({ notAllowed: false });
+    expect(inspectorView(registry, tree, "o", "large", true)).toMatchObject({
+      notAllowed: false,
+    });
+  });
 });

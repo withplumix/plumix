@@ -165,7 +165,7 @@ export const update = base
     assertContentValidAgainstRegistries(
       filtered.content,
       [existing.content, currentEdits?.content],
-      { blocks: context.blocks },
+      context,
       errors,
     );
 

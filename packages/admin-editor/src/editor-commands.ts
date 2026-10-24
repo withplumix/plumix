@@ -46,6 +46,8 @@ export interface EditorCommandContext {
   readonly registry: BlockRegistry;
   /** Viewer capabilities, gating which blocks the insert commands offer. */
   readonly capabilities: ReadonlySet<string>;
+  /** The theme's allowed blocks; undefined allows every block. */
+  readonly allowedBlocks?: ReadonlySet<string>;
   /** The current tree, so the go-to commands name the blocks that exist now. */
   readonly tree: readonly BlockNode[];
   /** The entry type being authored, scoping entry-type-bound blocks. */
@@ -101,7 +103,15 @@ const DEVICES = [
 export function buildEditorCommands(
   ctx: EditorCommandContext,
 ): readonly EditorCommand[] {
-  const { store, registry, capabilities, tree, entryType, openRevisions } = ctx;
+  const {
+    store,
+    registry,
+    capabilities,
+    allowedBlocks,
+    tree,
+    entryType,
+    openRevisions,
+  } = ctx;
   const { selectedIds, activeId } = store.getState();
   const commands: EditorCommand[] = [
     {
@@ -146,6 +156,7 @@ export function buildEditorCommands(
   }
   for (const { entries } of groupInsertables(registry, {
     capabilities,
+    themeAllowed: allowedBlocks,
     entryType,
   })) {
     for (const entry of entries) {

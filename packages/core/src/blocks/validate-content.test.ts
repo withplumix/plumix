@@ -370,3 +370,55 @@ describe("validateEntryContent — the content a save starts from", () => {
     });
   });
 });
+
+describe("validateEntryContent — the blocks the theme allows", () => {
+  const v2 = (blocks: readonly BlockNode[]): EntryContent => ({
+    version: "plumix.v2",
+    blocks,
+  });
+  const allowed: ReadonlySet<string> = new Set(["core/group"]);
+  const text = (id: string): BlockNode => ({
+    id,
+    name: "core/rich-text",
+    attrs: {},
+  });
+
+  test("refuses a new node of a block outside the set", () => {
+    expect(
+      validateEntryContent(v2([text("p1")]), registry, [], allowed),
+    ).toMatchObject({
+      ok: false,
+      errors: [
+        {
+          code: "block_not_allowed",
+          path: "blocks[0]",
+          nodeName: "core/rich-text",
+        },
+      ],
+    });
+  });
+
+  test("passes a stored node of a block outside the set, moved into a parent", () => {
+    const moved = v2([
+      { id: "g1", name: "core/group", attrs: { content: [text("p1")] } },
+    ]);
+
+    expect(
+      validateEntryContent(moved, registry, [v2([text("p1")])], allowed),
+    ).toEqual({ ok: true });
+  });
+
+  test("refuses a stored node of a block outside the set used twice", () => {
+    expect(
+      validateEntryContent(
+        v2([text("p1"), text("p1")]),
+        registry,
+        [v2([text("p1")])],
+        allowed,
+      ),
+    ).toMatchObject({
+      ok: false,
+      errors: [{ code: "block_not_allowed", path: "blocks[1]" }],
+    });
+  });
+});

@@ -119,4 +119,16 @@ describe("computeManifestAndRegistry", () => {
       },
     });
   });
+
+  test("the manifest allows only the blocks the theme lists", async () => {
+    const { manifest } = await computeManifestAndRegistry([], {
+      ...OPTIONS,
+      theme: defineTheme({
+        templates: () => null,
+        allowedBlocks: ["core/rich-text"],
+      }),
+    });
+
+    expect(manifest.allowedBlocks).toEqual(["core/rich-text"]);
+  });
 });

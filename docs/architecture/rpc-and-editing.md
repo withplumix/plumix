@@ -33,7 +33,7 @@ flowchart LR
   token["API-token client"] --> procs
   mcp["MCP write tools"] --> procs
   assistant["In-editor agent"] --> procs
-  procs --> checks["Capability, lease, concurrency token,<br/>block list and style policy"]
+  procs --> checks["Capability, lease, concurrency token,<br/>allowed blocks and style policy"]
   checks --> actions["entry actions"]
   actions --> purge["CDN purge subscriber"]
   actions --> hooks["Webhooks"]

@@ -44,6 +44,7 @@ import { declareAuthMethods } from "../auth/declared-methods.js";
 import { resolvePasskeyConfig } from "../auth/passkey/config.js";
 import { getCapabilityResolver } from "../auth/rbac.js";
 import { DEFAULT_SESSION_POLICY } from "../auth/sessions.js";
+import { resolveAllowedBlocks } from "../blocks/allowed-blocks.js";
 import {
   buildHtmlAllowlist,
   commitBlockVariations,
@@ -193,6 +194,11 @@ export interface PlumixApp {
    * `defineTheme` `blocks` field), aggregated by `collectContributedBlocks`.
    */
   readonly blocks: BlockRegistry;
+  /**
+   * The blocks the theme allows, resolved once from `blocks` and the theme's
+   * `allowedBlocks`. The plugin manifest carries the same set to the editor.
+   */
+  readonly allowedBlocks: ReadonlySet<string>;
   /**
    * Manifest only: rendering uses the hardcoded `renderInline` walker, not a
    * per-spec dispatch.
@@ -375,6 +381,12 @@ export async function buildApp(
   // the committed registry. Unknown block names and undeclared attrs
   // throw structured errors here rather than producing render junk later.
   commitBlockVariations(blocks);
+  const allowedBlocks: ReadonlySet<string> = new Set(
+    resolveAllowedBlocks(blocks, {
+      themeBlocks: config.theme.blocks ?? [],
+      allowedBlocks: config.theme.allowedBlocks,
+    }),
+  );
 
   const pluginMarkSpecs = Array.from(registry.markSpecs.values()).map(
     ({ spec }) => spec,
@@ -471,6 +483,7 @@ export async function buildApp(
     appContextExtensions,
     scheduledTasks: registry.scheduledTasks,
     blocks,
+    allowedBlocks,
     marks,
     shortcodes,
     mails,

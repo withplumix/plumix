@@ -24,10 +24,13 @@ export function validateEntryContent(
   content: EntryContent,
   registry: SpecLookup,
   starting: readonly EntryContent[] = [],
+  allowed?: ReadonlySet<string>,
 ): BlockContentValidationResult {
-  const kept = keptUnregistered(content.blocks, starting, registry);
+  const offered = (name: string): boolean =>
+    Boolean(registry.get(name)) && (!allowed || allowed.has(name));
+  const kept = keptAsStored(content.blocks, starting, registry, offered);
   const errors: BlockContentValidationIssue[] = [];
-  walk(content.blocks, "blocks", null, errors, registry, kept);
+  walk(content.blocks, "blocks", null, errors, registry, offered, kept);
   if (errors.length === 0) return { ok: true };
   return { ok: false, errors };
 }
@@ -54,13 +57,15 @@ function eachNode(
 }
 
 /**
- * The unregistered nodes `starting` already holds, by `id` and `name`, so an
- * entry keeps a block whose plugin is gone. Each stored node matches once.
+ * The not-offered nodes `starting` already holds, by `id` and `name`, so an
+ * entry keeps a block its plugin or theme dropped. Each stored node matches
+ * once.
  */
-function keptUnregistered(
+function keptAsStored(
   nodes: readonly BlockNode[],
   starting: readonly EntryContent[],
   registry: SpecLookup,
+  offered: (name: string) => boolean,
 ): ReadonlySet<string> {
   // The most any one starting content holds of an identity, not the sum: live
   // and its autosave share their nodes, and that must not allow a second copy.
@@ -78,7 +83,7 @@ function keptUnregistered(
   // By path, not by object: one object can sit in a tree twice.
   const kept = new Set<string>();
   eachNode(nodes, "blocks", registry, (node, path) => {
-    if (registry.get(node.name)) return;
+    if (offered(node.name)) return;
     const identity = identityOf(node);
     const left = available.get(identity) ?? 0;
     if (left === 0) return;
@@ -94,6 +99,7 @@ function walk(
   parentName: string | null,
   out: BlockContentValidationIssue[],
   registry: SpecLookup,
+  offered: (name: string) => boolean,
   kept: ReadonlySet<string>,
 ): void {
   nodes.forEach((node, i) => {
@@ -108,6 +114,14 @@ function walk(
         nodeName: node.name,
       });
       return;
+    }
+    if (!offered(node.name) && !kept.has(path)) {
+      out.push({
+        code: "block_not_allowed",
+        message: `Block "${node.name}" is not allowed by the theme at ${path}.`,
+        path,
+        nodeName: node.name,
+      });
     }
     // The inverse of a slot's `allowedBlocks`: a parent-bound block may only
     // sit under a listed parent (and never at the top level, where parentName
@@ -145,7 +159,7 @@ function walk(
           });
         });
       }
-      walk(value, `${path}.${key}`, node.name, out, registry, kept);
+      walk(value, `${path}.${key}`, node.name, out, registry, offered, kept);
     }
   });
 }

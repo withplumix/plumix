@@ -100,7 +100,7 @@ higher one wins, and it wins on a shown call site or failure, not on a claim.
   or design tokens only. A layout the blocks cannot express is new code from the developer, not a
   setting.
 - **Agents author like editors.** An agent drafts, edits and publishes content and composes pages,
-  held to an editor's rules: the block list, the style policy, edit leases and capabilities. It
+  held to an editor's rules: the allowed blocks, the style policy, edit leases and capabilities. It
   acts for the person whose token it holds, never with more capabilities than that person has now,
   and revoking the token stops it. It never takes over a lease someone else holds; it waits. A
   refused write names its cause. Every change it makes is a

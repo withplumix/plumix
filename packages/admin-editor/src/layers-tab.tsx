@@ -40,6 +40,7 @@ import { BlockIcon } from "./block-icon.js";
 import {
   findBlock,
   flattenTree,
+  holdsBlockOutside,
   holdsUnregisteredBlock,
   projectMove,
   rowAfterRemoving,
@@ -54,7 +55,7 @@ const INDENT_WIDTH = 16;
 type RowAction = "copy" | "paste" | "duplicate" | "delete";
 
 export function LayersTab(): ReactElement {
-  const { registry } = useEditorConfig();
+  const { registry, allowedBlocks } = useEditorConfig();
   const { i18n } = useLingui();
   const storeApi = useEditorStoreApi();
   const tree = useEditorStore((s) => s.tree);
@@ -73,9 +74,10 @@ export function LayersTab(): ReactElement {
         storeApi,
         registry,
         navigator.clipboard,
-        pasteableAtRoot(registry),
+        pasteableAtRoot(registry, allowedBlocks),
+        allowedBlocks,
       ),
-    [storeApi, registry],
+    [storeApi, registry, allowedBlocks],
   );
 
   // After a delete, the row that takes the deleted one's place gets focus, so
@@ -127,6 +129,13 @@ export function LayersTab(): ReactElement {
   const keptAsSaved = (id: string): boolean => {
     const node = findBlock(tree, id, registry);
     return node ? holdsUnregisteredBlock([node], registry) : false;
+  };
+
+  // A copy would be a new instance, which a block the site no longer offers
+  // can't have; the block itself stays editable.
+  const copyable = (id: string): boolean => {
+    const node = findBlock(tree, id, registry);
+    return node ? !holdsBlockOutside([node], registry, allowedBlocks) : true;
   };
 
   const excerptOf = (id: string): string | null => {
@@ -183,6 +192,7 @@ export function LayersTab(): ReactElement {
               detail={item.label ? null : excerptOf(item.id)}
               active={item.id === activeId}
               keptAsSaved={keptAsSaved(item.id)}
+              copyable={copyable(item.id)}
               onSelect={() => select(item.id)}
               onRename={(value) => setBlockLabel(item.id, value)}
               onAction={(action) => runRowAction(item.id, action)}
@@ -202,6 +212,9 @@ interface LayerRowProps {
   readonly active: boolean;
   /** Holds a block this site doesn't register: only move and delete apply. */
   readonly keptAsSaved: boolean;
+  /** False when it holds a block the site doesn't offer: no copy, paste or
+   *  duplicate. */
+  readonly copyable: boolean;
   readonly onSelect: () => void;
   readonly onRename: (label: string) => void;
   readonly onAction: (action: RowAction) => void;
@@ -214,6 +227,7 @@ function LayerRow({
   detail,
   active,
   keptAsSaved,
+  copyable,
   onSelect,
   onRename,
   onAction,
@@ -337,17 +351,19 @@ function LayerRow({
               }}
             >
               {keptAsSaved ? null : (
+                <DropdownMenuItem
+                  data-testid={`layer-rename-action-${item.id}`}
+                  onSelect={() => {
+                    renamingFromMenu.current = true;
+                    startEditing();
+                  }}
+                >
+                  <Pencil />
+                  <Trans id="editor.layers.rename" message="Rename" />
+                </DropdownMenuItem>
+              )}
+              {copyable ? (
                 <>
-                  <DropdownMenuItem
-                    data-testid={`layer-rename-action-${item.id}`}
-                    onSelect={() => {
-                      renamingFromMenu.current = true;
-                      startEditing();
-                    }}
-                  >
-                    <Pencil />
-                    <Trans id="editor.layers.rename" message="Rename" />
-                  </DropdownMenuItem>
                   <DropdownMenuItem
                     data-testid={`layer-copy-${item.id}`}
                     onSelect={() => onAction("copy")}
@@ -369,9 +385,9 @@ function LayerRow({
                     <CopyPlus />
                     <Trans id="editor.layers.duplicate" message="Duplicate" />
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
                 </>
-              )}
+              ) : null}
+              {keptAsSaved ? null : <DropdownMenuSeparator />}
               <DropdownMenuItem
                 data-testid={`layer-delete-${item.id}`}
                 onSelect={() => onAction("delete")}

@@ -906,6 +906,37 @@ test.describe("editor playground", () => {
     await expect(retired).toHaveCount(0);
   });
 
+  test("a block the theme no longer allows stays editable, with no duplicate, copy or paste", async ({
+    page,
+  }) => {
+    await page.goto("/?allowed=core/group,core/columns,core/column");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+
+    await expect(
+      page.getByTestId("block-catalog-item-core/columns"),
+    ).toBeVisible();
+    await expect(
+      page.getByTestId("block-catalog-item-core/rich-text"),
+    ).toHaveCount(0);
+
+    await canvas.locator('[data-plumix-id="intro"]').click();
+    await expect(page.getByTestId("plumix-selection-toolbar")).toBeVisible();
+    await expect(page.getByTestId("selection-toolbar-duplicate")).toHaveCount(
+      0,
+    );
+    await expect(page.getByTestId("block-inspector-not-allowed")).toHaveText(
+      "This site no longer offers this block. You can edit, move or remove it.",
+    );
+    await expect(page.getByTestId("block-inspector")).toBeVisible();
+
+    await page.getByTestId("plumix-tab-layers").click();
+    await page.getByTestId("layer-menu-intro").click();
+    await expect(page.getByTestId("layer-rename-action-intro")).toBeVisible();
+    for (const action of ["copy", "paste", "duplicate"]) {
+      await expect(page.getByTestId(`layer-${action}-intro`)).toHaveCount(0);
+    }
+  });
+
   test("the Layers tab outlines the nested structure", async ({ page }) => {
     await page.goto("/");
 

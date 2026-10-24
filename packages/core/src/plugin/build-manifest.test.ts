@@ -17,7 +17,7 @@ import {
   grant,
   redirectToLogin,
 } from "../access/policy.js";
-import { defineBlock } from "../blocks/index.js";
+import { coreBlocks, defineBlock } from "../blocks/index.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { resolveLocales } from "../i18n/locale-registry.js";
 import { installPlugins } from "../runtime/install-plugins.js";
@@ -1174,6 +1174,35 @@ describe("buildManifest", () => {
       name: "eduscope/chart",
       title: "Chart",
     });
+  });
+
+  test("carries the allowed blocks resolved from the theme's list", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("forms", (ctx) => {
+      ctx.registerBlock(
+        defineBlock({ name: "forms/form", title: "Form", render: () => null }),
+      );
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+
+    const manifest = buildManifest(registry, {
+      blocks: [
+        defineBlock({ name: "acme/hero", title: "Hero", render: () => null }),
+      ],
+      allowedBlocks: ["core/columns", "acme/missing"],
+    });
+
+    expect([...manifest.allowedBlocks].sort()).toEqual([
+      "acme/hero",
+      "core/column",
+      "core/columns",
+    ]);
+  });
+
+  test("allows every registered block when the theme lists none", () => {
+    const manifest = buildManifest(createPluginRegistry());
+
+    expect(manifest.allowedBlocks).toEqual(coreBlocks.map((b) => b.name));
   });
 
   test("dedups a plugin/theme block name clash, the theme winning", async () => {

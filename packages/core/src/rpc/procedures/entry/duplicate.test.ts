@@ -6,6 +6,7 @@ import { entries } from "../../../db/schema/entries.js";
 import { text } from "../../../plugin/fields/index.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { toRegisteredTermTaxonomy } from "../../../plugin/registry.js";
+import { defaultTestTheme } from "../../../test/default-theme.js";
 import { currentEtag } from "../../../test/entry-etag.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
@@ -66,6 +67,25 @@ describe("entry.duplicate", () => {
     const content = {
       version: "plumix.v2" as const,
       blocks: [{ id: "hero1", name: "acme/hero", attrs: { title: "Hi" } }],
+    };
+    const source = await h.factory.published.create({
+      authorId: h.user.id,
+      content,
+    });
+
+    const copy = await h.client.entry.duplicate({ id: source.id });
+
+    expect(copy.content).toEqual(content);
+  });
+
+  test("copies an entry holding a block the theme no longer allows", async () => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      config: { theme: { ...defaultTestTheme, allowedBlocks: ["core/group"] } },
+    });
+    const content = {
+      version: "plumix.v2" as const,
+      blocks: [{ id: "p1", name: "core/rich-text", attrs: {} }],
     };
     const source = await h.factory.published.create({
       authorId: h.user.id,

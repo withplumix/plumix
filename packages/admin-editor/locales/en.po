@@ -1211,6 +1211,11 @@ msgid "editor.inspector.noSettings"
 msgstr "This block has no settings."
 
 #. js-lingui-explicit-id
+#: src/block-inspector.tsx
+msgid "editor.inspector.notAllowed"
+msgstr "This site no longer offers this block. You can edit, move or remove it."
+
+#. js-lingui-explicit-id
 #: src/editor-header.tsx
 msgid "editor.header.title"
 msgstr "Title"

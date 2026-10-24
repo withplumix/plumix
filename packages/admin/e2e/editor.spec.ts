@@ -2166,6 +2166,63 @@ test.describe("editor create failure", () => {
   });
 });
 
+test.describe("editor — the blocks the theme allows", () => {
+  test("the inserter offers only the manifest's allowed blocks and patterns", async ({
+    page,
+  }) => {
+    await mockManifest(page, {
+      ...MANIFEST_WITH_EDITOR_PATTERNS,
+      patterns: [
+        ...(MANIFEST_WITH_EDITOR_PATTERNS.patterns ?? []),
+        {
+          name: "e2e/frame",
+          title: "E2E Frame",
+          content: [{ id: "f1", name: "core/group", attrs: { content: [] } }],
+        },
+      ],
+      allowedBlocks: ["core/group", "core/columns", "core/column"],
+    });
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/entry/get": editorEntry({
+        content: {
+          version: "plumix.v2",
+          blocks: [
+            { id: "t1", name: "core/rich-text", attrs: { body: "<p>Hi</p>" } },
+            { id: "g1", name: "core/group", attrs: { content: [] } },
+          ],
+        },
+      }),
+      "/entry/createPreviewLink": PREVIEW_LINK,
+    });
+
+    await page.goto("entries/posts/1/edit");
+
+    await expect(
+      page.getByTestId("block-catalog-item-core/columns"),
+    ).toBeVisible();
+    await expect(
+      page.getByTestId("block-catalog-item-core/rich-text"),
+    ).toHaveCount(0);
+    await expect(
+      page.getByTestId("block-catalog-pattern-e2e/frame"),
+    ).toBeVisible();
+    await expect(
+      page.getByTestId("block-catalog-pattern-e2e/promo"),
+    ).toHaveCount(0);
+
+    // A stored block the theme dropped stays editable, but can't be copied.
+    await page.getByTestId("plumix-tab-layers").click();
+    await page.getByTestId("layer-t1").click();
+    await expect(page.getByTestId("block-inspector-not-allowed")).toBeVisible();
+    await page.getByTestId("layer-menu-t1").click();
+    await expect(page.getByTestId("layer-rename-action-t1")).toBeVisible();
+    for (const action of ["copy", "paste", "duplicate"]) {
+      await expect(page.getByTestId(`layer-${action}-t1`)).toHaveCount(0);
+    }
+  });
+});
+
 test.describe("editor starter modal", () => {
   test("creating an entry of a type with starter patterns opens the modal", async ({
     page,

@@ -122,6 +122,11 @@ export interface AppContextBase<
   readonly hooks: HookExecutor;
   readonly plugins: PluginRegistry;
   readonly blocks: BlockRegistry;
+  /**
+   * The names of the blocks the theme allows, resolved at boot by
+   * `resolveAllowedBlocks`. Absent allows every block in `blocks`.
+   */
+  readonly allowedBlocks?: ReadonlySet<string>;
   readonly marks: readonly MarkSpec[];
   readonly shortcodes: ShortcodeRegistry;
   readonly logger: Logger;

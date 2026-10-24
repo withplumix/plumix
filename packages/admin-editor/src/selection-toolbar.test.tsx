@@ -21,13 +21,17 @@ const TREE: readonly BlockNode[] = [
   { id: "o", name: "acme/gone" },
 ];
 
-function markup(selection: readonly string[]): string {
+function markup(
+  selection: readonly string[],
+  allowedBlocks?: ReadonlySet<string>,
+): string {
   return renderToStaticMarkup(
     <I18nProvider i18n={i18n}>
       <EditorConfigProvider
         registry={treeBlocks}
         tokens={{}}
         capabilities={new Set()}
+        allowedBlocks={allowedBlocks}
       >
         <EditorProvider
           registry={treeBlocks}
@@ -92,5 +96,12 @@ describe("SelectionToolbar", () => {
     expect(markup(["a", "o"])).not.toContain(
       'data-testid="selection-toolbar-duplicate"',
     );
+  });
+
+  test("offers no duplicate for a block outside the theme's set", () => {
+    const html = markup(["g"], new Set(["core/group"]));
+
+    expect(html).not.toContain('data-testid="selection-toolbar-duplicate"');
+    expect(html).toContain('data-testid="selection-toolbar-delete"');
   });
 });

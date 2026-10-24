@@ -1,20 +1,21 @@
 import type { BlockNode, BlockRegistry } from "@plumix/core/blocks";
 
 import type { EditorStoreApi } from "./store.js";
-import { collectBlocks, holdsUnregisteredBlock } from "./block-tree-ops.js";
+import { collectBlocks, holdsBlockOutside } from "./block-tree-ops.js";
 import { parseClipboardBlocks, serializeBlocks } from "./clipboard.js";
 import { isTypingTarget, matchesShortcut } from "./shortcuts.js";
 
 /**
  * Paste lands at the top level, where a `requiresParent` block can't live, and
- * makes new instances, which a block this site doesn't register can't have.
+ * makes new instances, which a block the site doesn't offer can't have.
  */
 export function pasteableAtRoot(
   registry: BlockRegistry,
+  allowed?: ReadonlySet<string>,
 ): (node: BlockNode) => boolean {
   return (node) =>
     !registry.get(node.name)?.requiresParent &&
-    !holdsUnregisteredBlock([node], registry);
+    !holdsBlockOutside([node], registry, allowed);
 }
 
 /** The subset of the Clipboard API the ops need — injectable for testing. */
@@ -60,11 +61,13 @@ export function createClipboardOps(
   registry: BlockRegistry,
   clipboard: ClipboardLike = navigator.clipboard,
   canPaste?: (node: BlockNode) => boolean,
+  /** The theme's allowed blocks; a copy holding one outside is refused. */
+  allowed?: ReadonlySet<string>,
 ): ClipboardOps {
   const copy = async (): Promise<boolean> => {
     const { tree, selectedIds } = store.getState();
     const blocks = collectBlocks(tree, selectedIds, registry);
-    if (blocks.length === 0 || holdsUnregisteredBlock(blocks, registry)) {
+    if (blocks.length === 0 || holdsBlockOutside(blocks, registry, allowed)) {
       return false;
     }
     await clipboard.writeText(serializeBlocks(blocks));

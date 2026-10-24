@@ -74,7 +74,7 @@ export function CanvasFrame({
   previewRefreshToken,
   onResolveBlockDeps,
 }: CanvasFrameProps): ReactElement {
-  const { registry } = useEditorConfig();
+  const { registry, allowedBlocks } = useEditorConfig();
   const { i18n } = useLingui();
   const locale = i18n.locale;
   const store = useEditorStoreApi();
@@ -85,9 +85,10 @@ export function CanvasFrame({
         store,
         registry,
         navigator.clipboard,
-        pasteableAtRoot(registry),
+        pasteableAtRoot(registry, allowedBlocks),
+        allowedBlocks,
       ),
-    [store, registry],
+    [store, registry, allowedBlocks],
   );
   const loaderPushRef = useLoaderPushRef();
   const frameRequest = useEditorStore((s) => s.frameRequest);

@@ -23,12 +23,16 @@ export function assertContentWithinByteCap(
 
 /**
  * `starting` is the stored content the save starts from; a node it already
- * holds (same `id` and `name`) is kept even when its block is unregistered.
+ * holds (same `id` and `name`) is kept even when its block is unregistered or
+ * outside `allowedBlocks`.
  */
 export function assertContentValidAgainstRegistries(
   content: EntryContent | null | undefined,
   starting: readonly (EntryContent | null | undefined)[],
-  registries: { readonly blocks: BlockRegistry },
+  registries: {
+    readonly blocks: BlockRegistry;
+    readonly allowedBlocks?: ReadonlySet<string>;
+  },
   errors: BlockContentErrors,
 ): void {
   if (content == null) return;
@@ -40,6 +44,7 @@ export function assertContentValidAgainstRegistries(
     content,
     registries.blocks,
     starting.filter((stored) => isEntryContent(stored)),
+    registries.allowedBlocks,
   );
   if (!result.ok) {
     throw errors.INVALID_BLOCK_CONTENT({

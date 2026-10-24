@@ -83,6 +83,7 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly hooks: HookExecutor;
   readonly plugins: PluginRegistry;
   readonly blocks?: BlockRegistry;
+  readonly allowedBlocks?: ReadonlySet<string>;
   readonly marks?: readonly MarkSpec[];
   readonly shortcodes?: ShortcodeRegistry;
   readonly user?: AuthenticatedUser | null;
@@ -182,6 +183,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     hooks: args.hooks,
     plugins: args.plugins,
     blocks: args.blocks ?? EMPTY_BLOCK_REGISTRY,
+    allowedBlocks: args.allowedBlocks,
     marks: args.marks ?? EMPTY_MARK_LIST,
     shortcodes: args.shortcodes ?? EMPTY_SHORTCODE_REGISTRY,
     logger,

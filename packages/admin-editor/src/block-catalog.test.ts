@@ -19,6 +19,7 @@ import {
   expandPattern,
   filterPatterns,
   groupInsertables,
+  patternsWithin,
   slotAllowedBlocks,
 } from "./block-catalog.js";
 
@@ -192,6 +193,88 @@ describe("groupInsertables", () => {
     }).flatMap((g) => g.entries.map((e) => e.name));
 
     expect(slugs).toEqual(["core/heading", "core/quote"]);
+  });
+});
+
+describe("groupInsertables — the blocks the theme allows", () => {
+  const registry = createBlockRegistry([
+    spec({ name: "core/heading", title: "Heading" }),
+    spec({ name: "core/quote", title: "Quote" }),
+    spec({
+      name: "core/group",
+      title: "Group",
+      inputs: [{ name: "content", type: "slot" }],
+      variations: [
+        {
+          slug: "group/headed",
+          title: "Headed",
+          innerBlocks: [{ id: "h", name: "core/heading", attrs: {} }],
+        },
+        {
+          slug: "group/quoted",
+          title: "Quoted",
+          innerBlocks: [{ id: "q", name: "core/quote", attrs: {} }],
+        },
+      ],
+    }),
+  ]);
+
+  test("offers only the blocks in the set", () => {
+    const names = groupInsertables(registry, {
+      capabilities: NO_CAPS,
+      themeAllowed: new Set(["core/heading"]),
+    }).flatMap((g) => g.entries.map((e) => e.name));
+
+    expect(names).toEqual(["core/heading"]);
+  });
+
+  test("hides a variation whose inner blocks hold one outside the set", () => {
+    const slugs = groupInsertables(registry, {
+      capabilities: NO_CAPS,
+      themeAllowed: new Set(["core/heading", "core/group"]),
+    }).flatMap((g) => g.entries.map((e) => e.slug));
+
+    expect(slugs).toEqual(["core/heading", "group/headed"]);
+  });
+});
+
+describe("patternsWithin", () => {
+  const registry = createBlockRegistry([
+    spec({ name: "core/heading" }),
+    spec({ name: "core/quote" }),
+    spec({ name: "core/group", inputs: [{ name: "content", type: "slot" }] }),
+  ]);
+  const patterns: readonly BlockPattern[] = [
+    {
+      name: "headed",
+      title: "Headed",
+      content: [{ id: "h", name: "core/heading", attrs: {} }],
+    },
+    {
+      name: "quoted",
+      title: "Quoted",
+      content: [
+        {
+          id: "g",
+          name: "core/group",
+          attrs: { content: [{ id: "q", name: "core/quote", attrs: {} }] },
+        },
+      ],
+    },
+  ];
+
+  test("hides a pattern holding a block outside the set, at any depth", () => {
+    expect(
+      patternsWithin(
+        patterns,
+        registry,
+        new Set(["core/heading", "core/group"]),
+      ).map((p) => p.name),
+    ).toEqual(["headed"]);
+  });
+
+  test("keeps every pattern when there is no set", () => {
+    expect(patternsWithin(patterns, registry, undefined)).toEqual(patterns);
   });
 });
 

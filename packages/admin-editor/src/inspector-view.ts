@@ -19,6 +19,8 @@ export interface InspectorView {
   readonly block: BlockNode;
   /** The site registers no such block, so the panel offers nothing to edit. */
   readonly unregistered: boolean;
+  /** Registered, but outside the theme's allowed blocks: still editable. */
+  readonly notAllowed: boolean;
   readonly inputs: readonly InspectorInput[];
   readonly showAddColumn: boolean;
   /** The table whose rows and columns the table controls edit. */
@@ -39,6 +41,7 @@ export function inspectorView(
   activeId: string | null,
   bucket: StyleBucket,
   canRefresh: boolean,
+  allowed?: ReadonlySet<string>,
 ): InspectorView | null {
   const block = activeId ? findBlock(tree, activeId, registry) : undefined;
   if (!block) return null;
@@ -65,6 +68,8 @@ export function inspectorView(
   return {
     block,
     unregistered: !spec,
+    notAllowed:
+      Boolean(spec) && allowed !== undefined && !allowed.has(block.name),
     inputs,
     showAddColumn,
     tableId,

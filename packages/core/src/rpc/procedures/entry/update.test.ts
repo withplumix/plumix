@@ -17,6 +17,7 @@ import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { toRegisteredEntryType } from "../../../plugin/registry.js";
 import { upsertAutosave } from "../../../revisions/repository.js";
 import { NAMED_TEMPLATE_META_KEY } from "../../../route/render/template-builders.js";
+import { defaultTestTheme } from "../../../test/default-theme.js";
 import { currentEtag } from "../../../test/entry-etag.js";
 import { editorUser } from "../../../test/factories.js";
 import { pooledEntryTypeRegistry } from "../../../test/pooled-entry-types.js";
@@ -2211,5 +2212,71 @@ describe("entry.update — blocks the entry already holds", () => {
     });
 
     expect(draft.content).toEqual(content);
+  });
+});
+
+describe("entry.update — the blocks the theme allows", () => {
+  // `core/rich-text` is registered but outside the theme's list.
+  const theme = { ...defaultTestTheme, allowedBlocks: ["core/group"] };
+  const text = (id: string, body = "<p>Hello</p>") => ({
+    id,
+    name: "core/rich-text",
+    attrs: { body },
+  });
+  const v2 = (blocks: readonly unknown[]) => ({
+    version: "plumix.v2" as const,
+    blocks,
+  });
+
+  async function holdingText() {
+    const h = await createRpcHarness({ authAs: "author", config: { theme } });
+    const own = await h.factory.draft.create({
+      authorId: h.user.id,
+      slug: "holds-text",
+      content: v2([text("p1")]),
+    });
+    return { h, own };
+  }
+
+  test("refuses a new node of a block outside the set", async () => {
+    const { h, own } = await holdingText();
+
+    await expect(
+      h.client.entry.update({
+        id: own.id,
+        content: v2([text("p1"), text("p2")]),
+        ifMatch: await currentEtag(h.db, own.id),
+      }),
+    ).rejects.toMatchObject({
+      code: "INVALID_BLOCK_CONTENT",
+      data: {
+        issues: [
+          expect.objectContaining({
+            code: "block_not_allowed",
+            path: "blocks[1]",
+            nodeName: "core/rich-text",
+          }),
+        ],
+      },
+    });
+  });
+
+  test("keeps a stored node of a block outside the set, moved and edited", async () => {
+    const { h, own } = await holdingText();
+    const content = v2([
+      {
+        id: "g1",
+        name: "core/group",
+        attrs: { content: [text("p1", "<p>Edited</p>")] },
+      },
+    ]);
+
+    const updated = await h.client.entry.update({
+      id: own.id,
+      content,
+      ifMatch: await currentEtag(h.db, own.id),
+    });
+
+    expect(updated.content).toEqual(content);
   });
 });

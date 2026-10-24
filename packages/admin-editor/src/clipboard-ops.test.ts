@@ -136,4 +136,27 @@ describe("clipboard ops", () => {
     ).toBe(false);
     expect(pasteable({ id: "t", name: "acme/team" })).toBe(true);
   });
+
+  test("copy leaves the clipboard untouched for a block outside the theme's set", async () => {
+    const store = createEditorStore(treeBlocks, { tree: seeded() });
+    store.getState().select("a");
+    const clip = fakeClipboard("prior");
+
+    await createClipboardOps(
+      store,
+      treeBlocks,
+      clip,
+      undefined,
+      new Set(["core/group"]),
+    ).copy();
+
+    expect(clip.text()).toBe("prior");
+  });
+
+  test("pasteableAtRoot refuses a block outside the theme's set", () => {
+    const pasteable = pasteableAtRoot(treeBlocks, new Set(["core/group"]));
+
+    expect(pasteable({ id: "t", name: "acme/team" })).toBe(false);
+    expect(pasteable({ id: "g", name: "core/group" })).toBe(true);
+  });
 });

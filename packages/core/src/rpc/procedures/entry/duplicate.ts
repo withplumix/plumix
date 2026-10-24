@@ -55,7 +55,7 @@ export const duplicate = base
     assertContentValidAgainstRegistries(
       source.content,
       [source.content],
-      { blocks: context.blocks },
+      context,
       errors,
     );
 

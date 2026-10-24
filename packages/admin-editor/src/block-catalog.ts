@@ -13,6 +13,8 @@ import {
 } from "@plumix/core/blocks";
 import { labelSourceText } from "@plumix/core/i18n";
 
+import { holdsBlockOutside } from "./block-tree-ops.js";
+
 const CONTENT_SLOT = "content";
 
 /** A plain-string `category` so the manifest's wire form flows in too. */
@@ -39,6 +41,8 @@ interface GroupOptions {
   /** Case-insensitive over name, title and keywords. */
   readonly query?: string;
   readonly allowed?: readonly string[];
+  /** The theme's allowed blocks, from the manifest; undefined allows all. */
+  readonly themeAllowed?: ReadonlySet<string>;
   /** Undefined is the top level, which hides parent-bound blocks. */
   readonly parentName?: string;
   /** Undefined hides entry-type-scoped blocks. */
@@ -53,7 +57,14 @@ interface InsertableGroup {
 /** A block with inserter variations surfaces those instead of its bare self. */
 export function groupInsertables(
   registry: BlockRegistry,
-  { capabilities, query, allowed, parentName, entryType }: GroupOptions,
+  {
+    capabilities,
+    query,
+    allowed,
+    themeAllowed,
+    parentName,
+    entryType,
+  }: GroupOptions,
 ): readonly InsertableGroup[] {
   const needle = query?.trim().toLowerCase() ?? "";
   const eligible = [...registry].filter(
@@ -61,6 +72,7 @@ export function groupInsertables(
       spec.inserter !== false &&
       (!spec.capability || capabilities.has(spec.capability)) &&
       (!allowed || allowed.includes(spec.name)) &&
+      (!themeAllowed || themeAllowed.has(spec.name)) &&
       (!spec.requiresParent ||
         (parentName !== undefined &&
           spec.requiresParent.includes(parentName))) &&
@@ -71,6 +83,12 @@ export function groupInsertables(
   const buckets = new Map<string, InsertableBlockEntry[]>();
   for (const entry of expandBlockVariations(eligible)) {
     if (needle && !matchesEntry(entry, needle)) continue;
+    if (
+      entry.innerBlocks &&
+      holdsBlockOutside(entry.innerBlocks, registry, themeAllowed)
+    ) {
+      continue;
+    }
     const category = entry.category ?? UNCATEGORIZED;
     let bucket = buckets.get(category);
     if (!bucket) buckets.set(category, (bucket = []));
@@ -93,6 +111,18 @@ export function catalogIsEmpty(
  */
 export function entryKey(entry: InsertableBlockEntry): string {
   return entry.slug === entry.name ? entry.slug : `${entry.name}/${entry.slug}`;
+}
+
+/** The patterns whose every block the theme allows; all without a set. */
+export function patternsWithin(
+  patterns: readonly InserterPattern[],
+  registry: BlockRegistry,
+  themeAllowed: ReadonlySet<string> | undefined,
+): readonly InserterPattern[] {
+  if (!themeAllowed) return patterns;
+  return patterns.filter(
+    (pattern) => !holdsBlockOutside(pattern.content, registry, themeAllowed),
+  );
 }
 
 /** Patterns matching the query (name / title / keywords); all when blank. */

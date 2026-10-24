@@ -16,6 +16,7 @@ import {
   findSettingsGroupByName,
   findSettingsPageByName,
   findTermTaxonomyByName,
+  getAllowedBlocks,
   getConfiguredSlots,
   getPatterns,
   getThemeBreakpoints,
@@ -784,6 +785,20 @@ describe("getPatterns", () => {
       content: [],
     };
     expect(getPatterns({ patterns: [heroEntry] })).toEqual([heroEntry]);
+  });
+});
+
+describe("getAllowedBlocks", () => {
+  test("reads the blocks the theme allows from the manifest payload", () => {
+    const manifest = parseManifest(
+      JSON.stringify({ allowedBlocks: ["core/rich-text"] }),
+    );
+
+    expect(getAllowedBlocks(manifest)).toEqual(["core/rich-text"]);
+  });
+
+  test("allows every block when the manifest is silent", () => {
+    expect(getAllowedBlocks({})).toBeUndefined();
   });
 });
 

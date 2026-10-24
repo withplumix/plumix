@@ -69,6 +69,7 @@ export async function computeManifestAndRegistry(
   return {
     manifest: buildManifest(registry, {
       ...options,
+      allowedBlocks: options.theme.allowedBlocks,
       plugins,
     }),
     registry,

@@ -377,6 +377,7 @@ export function requestContextArgs({
     hooks: app.hooks,
     plugins: app.plugins,
     blocks: app.blocks,
+    allowedBlocks: app.allowedBlocks,
     marks: app.marks,
     shortcodes: app.shortcodes,
     logger,

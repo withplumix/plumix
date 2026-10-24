@@ -205,7 +205,7 @@ export const restore = base
     assertContentValidAgainstRegistries(
       revision.content,
       [revision.content, live.content],
-      { blocks: context.blocks },
+      context,
       errors,
     );
 

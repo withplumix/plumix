@@ -25,7 +25,7 @@ import {
   canUngroupBlock,
   collectBlocks,
   findParentId,
-  holdsUnregisteredBlock,
+  holdsBlockOutside,
 } from "./block-tree-ops.js";
 import { useEditorConfig } from "./editor-config-context.js";
 import { px } from "./overlay.js";
@@ -45,7 +45,7 @@ export function SelectionToolbar({
   readonly box: OverlayBox;
 }): ReactElement | null {
   const { i18n } = useLingui();
-  const { registry } = useEditorConfig();
+  const { registry, allowedBlocks } = useEditorConfig();
   const store = useEditorStoreApi();
   const activeId = useEditorStore((s) => s.activeId);
   const selectedCount = useEditorStore((s) => s.selectedIds.size);
@@ -60,9 +60,10 @@ export function SelectionToolbar({
   );
   const canDuplicate = useEditorStore(
     (s) =>
-      !holdsUnregisteredBlock(
+      !holdsBlockOutside(
         collectBlocks(s.tree, s.selectedIds, registry),
         registry,
+        allowedBlocks,
       ),
   );
   if (!activeId) return null;
