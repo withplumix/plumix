@@ -619,6 +619,47 @@ describe("@plumix/plugin-media — media.confirm", () => {
     expect(await mediaEtag(h, mediaId, user.id)).not.toBe(draft.output?.etag);
   });
 
+  test("a confirm that loses the race to another confirm after its sniff sees already_confirmed", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
+    const user = await h.seedUser("contributor");
+    const created = await rpcDispatch<CreateUploadUrlOutput>(
+      h,
+      "media/createUploadUrl",
+      {
+        filename: "tile.png",
+        contentType: "image/png",
+        size: PNG_1X1_BYTES.byteLength,
+      },
+      user.id,
+    );
+    if (!created.output) throw new Error("expected createUploadUrl output");
+    const { mediaId, storageKey } = created.output;
+    await storage.put(storageKey, PNG_1X1_BYTES, { contentType: "image/png" });
+    const get = storage.get.bind(storage);
+    // The other confirm lands while this one reads the sample.
+    storage.get = async (key, options) => {
+      await h.db
+        .update(entries)
+        .set({ status: "published", updatedAt: new Date(Date.now() + 5000) })
+        .where(eq(entries.id, mediaId));
+      return get(key, options);
+    };
+
+    const confirmed = await rpcDispatch(
+      h,
+      "media/confirm",
+      { id: mediaId },
+      user.id,
+    );
+
+    expect(confirmed.status).toBe(409);
+    expect(confirmed.error?.data?.reason).toBe("already_confirmed");
+  });
+
   test("returns CONFLICT when the upload didn't actually land in storage", async () => {
     const storage = memoryStorage().connect({});
     const h = await createDispatcherHarness({

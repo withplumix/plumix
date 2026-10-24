@@ -84,7 +84,6 @@ export function hydratedEntityTags(
   kind: HydratedEntityKind,
   id: string,
 ): readonly string[] {
-  if (!/^[1-9]\d*$/.test(id)) return [];
   switch (kind) {
     case "entry":
       return [entryTag(Number(id))];
