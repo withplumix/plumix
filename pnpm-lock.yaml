@@ -1148,6 +1148,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: catalog:vitest
         version: 5.0.4(vitest@5.0.4)
+      cldr-core:
+        specifier: ^48.2.0
+        version: 48.2.0
       esbuild:
         specifier: 'catalog:'
         version: 0.28.2
@@ -7955,6 +7958,9 @@ packages:
 
   class-variance-authority@0.7.1:
     resolution: {integrity: sha512-Ka+9Trutv7G8M6WT6SeiRWz792K5qEqIGEGzXKhAE6xOWAY6pPH8U+9IY3oCMv6kqTmLsv7Xh/2w2RigkePMsg==}
+
+  cldr-core@48.2.0:
+    resolution: {integrity: sha512-zfmLothncSwfv2jlevoSrgI2VGgH8SDGHXst6jUEotHA8nq9Igeg9jzdJDFtBso9pgJuG89DK16TzrmZDdo2Bg==}
 
   cli-cursor@5.0.0:
     resolution: {integrity: sha512-aCj4O5wKyszjMmDT4tZj93kxyydN/K5zPWSCe6/0AV/AA1pqe5ZBIw0a2ZfPQV7lL5/yb5HsUreJ6UFAF1tEQw==}
@@ -16060,6 +16066,8 @@ snapshots:
   class-variance-authority@0.7.1:
     dependencies:
       clsx: 2.1.1
+
+  cldr-core@48.2.0: {}
 
   cli-cursor@5.0.0:
     dependencies:

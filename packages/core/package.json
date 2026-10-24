@@ -164,6 +164,7 @@
   "scripts": {
     "attw": "attw --pack . --profile esm-only",
     "build": "tsc -p tsconfig.build.json && plumix-check-declarations",
+    "cldr:generate": "node scripts/cldr-parent-locales.ts",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "db:generate": "drizzle-kit generate",
     "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path ../../.prettierignore",
@@ -232,6 +233,7 @@
     "@types/react-dom": "catalog:react",
     "@types/sanitize-html": "^2.16.2",
     "@vitest/coverage-v8": "catalog:vitest",
+    "cldr-core": "^48.2.0",
     "esbuild": "catalog:",
     "eslint": "catalog:",
     "eslint-import-resolver-typescript": "^4.4.5",
