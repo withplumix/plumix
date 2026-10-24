@@ -451,6 +451,27 @@ describe("i18nCommand", () => {
       COMPILE_TIMEOUT,
     );
 
+    test(
+      "reads a .po that no surface's {locale} matches as no locale",
+      async () => {
+        seedSurfaces({ blocks: ["en", "de"] });
+        writeFileSync(
+          join(dir, "locales", "blocks-.po"),
+          'msgid ""\nmsgstr ""\n',
+        );
+        writeFileSync(
+          join(dir, "locales", "notes.po"),
+          'msgid ""\nmsgstr ""\n',
+        );
+        await i18nCommand.run(ctx({ cwd: dir, argv: ["compile"] }));
+
+        expect(
+          Object.keys((await importIndex("blocks")).catalogs).sort(),
+        ).toEqual(["de", "en"]);
+      },
+      COMPILE_TIMEOUT,
+    );
+
     test.each([
       ["zh_CN", "zh-CN"],
       ["zh-cn", "zh-CN"],
