@@ -81,9 +81,9 @@ Other public exports from `plumix/plugin`: `applyOverride` / `Overridable` (opti
 
 ## How it works
 
-`installPlugins` checks every id, then runs four passes over the array: all `state` factories, all `provides`, all `setup`, all `afterSetup`. Each hook gets the descriptor's own state as its second argument. `provides` runs fully before any `setup`, so a helper from `extendPluginContext` reaches every plugin whatever the order. `afterSetup` sees `ctx.plugins`, live and read-only, holding every `setup` registration and the `afterSetup` registrations of earlier plugins only.
+`installPlugins` checks every id, then runs four passes over the array: all `state` factories, all `provides`, all `setup`, all `afterSetup`. Each hook gets the descriptor's own state as its second argument. `setup` and `afterSetup` read the site's theme as `ctx.theme`, so a plugin registers from what the theme declares. `provides` runs fully before any `setup`, so a helper from `extendPluginContext` reaches every plugin whatever the order. `afterSetup` sees `ctx.plugins`, live and read-only, holding every `setup` registration and the `afterSetup` registrations of earlier plugins only.
 
-`buildApp` seeds the registry before plugins run: `createPluginRegistry` adds the `featured` and `ogImage` image roles, then core adds its lookup adapters, template deps, settings and scheduled tasks. After install it fires `theme:ready`, indexes image roles, and merges plugin `schema` exports, rejecting a key two owners export.
+`buildApp` seeds the registry before plugins run: `createPluginRegistry` adds the `featured` and `ogImage` image roles, then core adds its lookup adapters, template deps, settings and scheduled tasks. It hands `installPlugins` the configured theme. After install it indexes image roles and merges plugin `schema` exports, rejecting a key two owners export.
 
 `registerCapability` records a plugin's capability and the default roles (`member`, `author`, `editor`, `admin`) that get it. `auth/rbac.ts` merges those grants with the site's roles, stored and declared, so a site can grant the capability to any role, its own included.
 
@@ -104,6 +104,6 @@ The plugin authoring guide is `apps/docs/src/content/docs/plugins/overview.mdx`.
 - Sign-in methods are declared on the descriptor; a duplicate or reserved name fails boot ([ADR 0041](../adr/0041-a-sign-in-method-is-a-registered-extension.md)).
 - `provides` finishes before any `setup`, and an `extendAppContext` key can't shadow a base `AppContext` field or `__proto__`. Guarded by `packages/core/src/plugin/provides.test.ts`.
 - Two plugins with the same id, or two owners of one registered name, fail boot (`duplicatePluginIdInConfig`, `DuplicateRegistrationError`). Guarded by `packages/core/src/runtime/install-plugins.test.ts`.
-- `setup`, `afterSetup` and `theme:ready` handlers do no IO and are safe to repeat, because the Vite manifest pass reruns them on every config change (comment on `computeManifestAndRegistry` in `packages/plumix/src/vite/manifest.ts`).
+- `setup` and `afterSetup` do no IO and are safe to repeat, because the Vite manifest pass reruns them, with the same `ctx.theme`, on every config change (comment on `computeManifestAndRegistry` in `packages/plumix/src/vite/manifest.ts`).
 - Plugins are installed in code. No screen enables or disables one.
 - Imports go through `plumix`, never `@plumix/*` (the umbrella rule in `AGENTS.md`).

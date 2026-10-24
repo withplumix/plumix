@@ -5,6 +5,7 @@ import type {
   PluginRegistry,
 } from "../plugin/manifest.js";
 import type { ContextExtensionEntry } from "../plugin/provides-context.js";
+import type { ThemeDescriptor } from "../theme.js";
 import { assertValidPluginId } from "../plugin/define.js";
 import { PluginDefinitionError } from "../plugin/errors.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
@@ -31,12 +32,18 @@ interface InstallPluginsArgs {
   readonly hooks: HookRegistry;
   readonly plugins: readonly AnyPluginDescriptor[];
   readonly registry?: MutablePluginRegistry;
+  /**
+   * Handed to every plugin as `ctx.theme`. Defaults to a theme declaring
+   * nothing, for a caller installing plugins without a site.
+   */
+  readonly theme?: ThemeDescriptor;
 }
 
 export async function installPlugins({
   hooks,
   plugins,
   registry = createPluginRegistry(),
+  theme = { templates: [] },
 }: InstallPluginsArgs): Promise<PluginInstallResult> {
   const seenIds = new Set<string>();
   for (const descriptor of plugins) {
@@ -80,6 +87,7 @@ export async function installPlugins({
       pluginId: descriptor.id,
       hooks,
       registry,
+      theme,
       extensions: mergedPluginExtensions,
     });
     for (const spec of descriptor.shortcodes ?? []) {
@@ -94,6 +102,7 @@ export async function installPlugins({
       pluginId: descriptor.id,
       hooks,
       registry,
+      theme,
       extensions: mergedPluginExtensions,
     });
     await descriptor.afterSetup(ctx, states[index]);

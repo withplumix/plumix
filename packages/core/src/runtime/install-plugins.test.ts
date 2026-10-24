@@ -117,6 +117,17 @@ describe("installPlugins", () => {
     expect(out.title).toBe("[stamped] hi");
   });
 
+  test("a plugin installed without a theme sees one declaring nothing", async () => {
+    let seen: unknown;
+    const reader = definePlugin("reader", (ctx) => {
+      seen = ctx.theme;
+    });
+
+    await installPlugins({ hooks: new HookRegistry(), plugins: [reader] });
+
+    expect(seen).toEqual({ templates: [] });
+  });
+
   test("registers post types into the manifest with plugin attribution", async () => {
     const hooks = new HookRegistry();
     const blog = definePlugin("blog", (ctx) => {

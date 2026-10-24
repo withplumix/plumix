@@ -5,7 +5,7 @@ import { resolveRule } from "plumix/plugin";
 import type { CardRule } from "./card.js";
 
 export interface CardRegistry {
-  /** Called once, from `theme:ready`, with whatever the theme declared. */
+  /** Called once, from `setup`, with whatever the theme declared. */
   load(themeCards: readonly CardRule[]): void;
   resolve(node: ResolvedNode, data: TemplateData): CardRule | undefined;
   /** Every rule, in declaration order — the theme's, then the plugin's own. */

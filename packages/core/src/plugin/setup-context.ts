@@ -9,6 +9,7 @@ import type {
   RegisteredTemplateDep,
   TemplateDepKeys,
 } from "../template-deps.js";
+import type { ThemeDescriptor } from "../theme.js";
 import type {
   MetaBoxFieldInput,
   MutablePluginRegistry,
@@ -55,6 +56,7 @@ interface CreatePluginContextArgs {
   readonly pluginId: string;
   readonly hooks: HookRegistry;
   readonly registry: MutablePluginRegistry;
+  readonly theme: ThemeDescriptor;
   readonly extensions?: ReadonlyMap<string, unknown>;
 }
 
@@ -77,6 +79,7 @@ function createContextBase({
   pluginId,
   hooks,
   registry,
+  theme,
 }: CreatePluginContextArgs): PluginSetupContextBase {
   // Pooling caps by capabilityType is safe when minRoles agree; if one
   // type applies a `capabilities` override and another doesn't, silent
@@ -102,6 +105,7 @@ function createContextBase({
 
   const ctx: PluginSetupContextBase = {
     id: pluginId,
+    theme,
 
     addFilter: (name, fn, options) => {
       hooks.addFilter(name, fn, { ...options, plugin: pluginId });

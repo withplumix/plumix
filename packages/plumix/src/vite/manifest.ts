@@ -34,8 +34,8 @@ export interface ManifestBuildOptions {
    */
   readonly refusedAdminAreas?: readonly AdminArea[];
   /**
-   * Required: registrations a plugin makes from `theme:ready` are missing from
-   * the manifest without it.
+   * Required: plugins read it as `ctx.theme`, so registrations a plugin makes
+   * from the theme are missing from the manifest without it.
    */
   readonly theme: ThemeDescriptor;
   /**
@@ -47,8 +47,8 @@ export interface ManifestBuildOptions {
 
 /**
  * A plugin that throws on setup fails the build. Runs on every dev config
- * change, so `setup()`, `afterSetup()` and `theme:ready` handlers must stay
- * free of IO and safe to repeat.
+ * change, so `setup()` and `afterSetup()` must stay free of IO and safe to
+ * repeat.
  */
 export async function computeManifestAndRegistry(
   plugins: PluginDescriptors,
@@ -59,10 +59,8 @@ export async function computeManifestAndRegistry(
     hooks,
     plugins,
     registry: createPluginRegistry(options.routes),
+    theme: options.theme,
   });
-  // Plugins can still register from the theme they're handed; skipping this
-  // would ship the admin a shorter list than the running worker has.
-  await hooks.doAction("theme:ready", options.theme);
   // Forward plugin descriptors so `buildManifest` can emit
   // `pluginI18n` URL maps for plugins declaring an `i18n` slot
   // (slice 17 #697 runtime catalog registry).

@@ -22,7 +22,7 @@ Four pieces make a rule kind:
 - **A rule type** extending `TierMatchRule`.
 - **A bind function** — a `BindRule<S>` — turning a selected match into your selector. The [contract it has to keep](#what-a-bind-function-has-to-return) is the one thing on this page that fails at runtime rather than at compile time.
 - **A slot on `ThemeDescriptor`**, declared through `declare module "plumix"`, so swapping the theme swaps its rules with it.
-- **A snapshot at `theme:ready`**, because a rule set is boot-time state rather than request state.
+- **A snapshot in `setup`**, read from `ctx.theme`, because a rule set is boot-time state rather than request state.
 
 The selectors themselves you do not write. `entryTypeTargets` and its four siblings mint every matcher the framework knows how to compare, and they take your bind function so the chain ends in _your_ terminal — `.template(...)`, `.define(...)`, whatever you named it. A narrowing none of them publishes is [yours to mint](#the-match-constructors), out of the same pieces `named` is made of.
 
@@ -121,7 +121,7 @@ A `feeds` rule kind: which syndication feed each page advertises. It is small en
 
    `feeds` is not an API name. It is what a theme hands `defineTheme` as the slot you just declared, next to its `templates`.
 
-2. **Snapshot what the theme declared, then resolve against it.** The theme is validated after plugins install, so its rules arrive on the `theme:ready` handover rather than in `setup`. One snapshot serves every request.
+2. **Snapshot what the theme declared, then resolve against it.** `setup` reads the site's theme as `ctx.theme`. One snapshot serves every request.
 
    ```ts
    import type { TemplateData, ThemeDescriptor } from "plumix";
@@ -132,9 +132,7 @@ A `feeds` rule kind: which syndication feed each page advertises. It is small en
 
    export const feedsPlugin = definePlugin("feeds", {
      setup: (ctx) => {
-       ctx.addAction("theme:ready", (theme) => {
-         rules = theme.feeds ?? [];
-       });
+       rules = ctx.theme.feeds ?? [];
      },
    });
 
@@ -150,7 +148,7 @@ A `feeds` rule kind: which syndication feed each page advertises. It is small en
    }
    ```
 
-   `theme.feeds` is typed because step 1 declared that slot; the augmentation is what carries it here, not an import. `resolveRule` needs the resolved data as well as the node, because a rule narrowed by `.where(...)` carries a predicate that reads it. Pass it and predicate rules can match; leave it out and they never do.
+   `ctx.theme.feeds` is typed because step 1 declared that slot; the augmentation is what carries it here, not an import. `resolveRule` needs the resolved data as well as the node, because a rule narrowed by `.where(...)` carries a predicate that reads it. Pass it and predicate rules can match; leave it out and they never do.
 
 </Steps>
 
@@ -462,7 +460,7 @@ If what you want is an author-selectable choice, the mechanism underneath `named
 
 ## The worked example
 
-`@plumix/plugin-og` is this page in production. Its `ogCards` slot on `ThemeDescriptor` holds `CardRule`, which is `TierMatchRule` plus a `card`; its `card.forEntryType("recipe").define({ ... })` builders come from the same constructors; it snapshots the theme's rules at `theme:ready` into a registry whose own defaults sit behind them in declaration order, so a card the theme declared outranks the plugin's; and it resolves through `resolveRule` rather than a second walk. A theme therefore places a social card exactly the way it places a template.
+`@plumix/plugin-og` is this page in production. Its `ogCards` slot on `ThemeDescriptor` holds `CardRule`, which is `TierMatchRule` plus a `card`; its `card.forEntryType("recipe").define({ ... })` builders come from the same constructors; it snapshots the theme's rules from `ctx.theme` in `setup` into a registry whose own defaults sit behind them in declaration order, so a card the theme declared outranks the plugin's; and it resolves through `resolveRule` rather than a second walk. A theme therefore places a social card exactly the way it places a template.
 
 Two decisions in it are worth copying. Its selectors erase the per-tier data type on the way into the rule, which keeps `ogCards` a homogeneous array rather than a tuple of one shape per tier. And its defaults are appended rather than merged, which makes "the theme wins" a property of array order instead of a precedence rule someone has to maintain.
 
@@ -478,4 +476,4 @@ Two decisions in it are worth copying. Its selectors erase the per-tier data typ
 
 Read [Template Hierarchy](/themes/hierarchy/) if you have not, because ordering decides your rules exactly as it decides templates: targeted before generic, narrow before broad, first match wins.
 
-Then [OG Cards](/plugins/og/) to see the finished surface from a theme author's seat, and [Plugins](/plugins/overview/) for the descriptor your `theme:ready` snapshot hangs off. Two unwritten pages in this section pick up from here — Document Manifest covers the head fragment a resolved rule would contribute to, and Tokens and Breakpoints covers the other theme-declared values a plugin reads at boot.
+Then [OG Cards](/plugins/og/) to see the finished surface from a theme author's seat, and [Plugins](/plugins/overview/) for the descriptor your `setup` snapshot hangs off. Two unwritten pages in this section pick up from here — Document Manifest covers the head fragment a resolved rule would contribute to, and Tokens and Breakpoints covers the other theme-declared values a plugin reads at boot.

@@ -26,6 +26,7 @@ import type { RouteIntent } from "../route/contract/intent.js";
 import type { RedirectRule } from "../route/contract/redirects.js";
 import type { TemplateDepLoader } from "../template-deps.js";
 import type { ViewResolvedDataOf } from "../template-registry.js";
+import type { ThemeDescriptor } from "../theme.js";
 import type { AdminBarNodeOptions } from "./admin-bar-node.js";
 import type {
   EntryMetaBoxDrift,
@@ -62,6 +63,8 @@ import type { SearchProvider } from "./search-provider.js";
 
 export interface PluginSetupContextBase {
   readonly id: string;
+  /** The site's theme, so a plugin registers from what it declares. */
+  readonly theme: ThemeDescriptor;
 
   /** Subscribe to an existing (core or other-plugin) filter. */
   addFilter<TName extends FilterName>(

@@ -56,16 +56,39 @@ describe("computeManifestAndRegistry", () => {
     expect(box?.entryTypes).toEqual(["post"]);
   });
 
-  test("a box registered on theme:ready reaches the built manifest", async () => {
-    const handover = definePlugin("handover", (ctx) => {
-      ctx.addAction("theme:ready", () => {
+  test("setup and afterSetup see the configured theme", async () => {
+    const seen: unknown[] = [];
+    const reader = definePlugin("reader", {
+      setup: (ctx) => {
+        seen.push(ctx.theme);
+      },
+      afterSetup: (ctx) => {
+        seen.push(ctx.theme);
+      },
+    });
+
+    await computeManifestAndRegistry([reader], OPTIONS);
+
+    expect(seen).toEqual([theme, theme]);
+  });
+
+  test("a box registered from the theme in setup reaches the built manifest", async () => {
+    const themed = defineTheme({
+      templates: () => null,
+      allowCustomStyles: false,
+    });
+    const themedBox = definePlugin("themed-box", (ctx) => {
+      if (ctx.theme.allowCustomStyles === false) {
         ctx.registerEntryMetaBox("handover", metaBox("handover", ["post"]));
-      });
+      }
     });
 
     const { manifest } = await computeManifestAndRegistry(
-      [handover, content],
-      OPTIONS,
+      [themedBox, content],
+      {
+        ...OPTIONS,
+        theme: themed,
+      },
     );
 
     expect((manifest.entryMetaBoxes ?? []).map((entry) => entry.id)).toContain(

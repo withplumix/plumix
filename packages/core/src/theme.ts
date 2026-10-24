@@ -42,15 +42,6 @@ declare module "./hooks/types.js" {
       manifest: DocumentManifest,
     ) => DocumentManifest | Promise<DocumentManifest>;
   }
-
-  interface ActionRegistry {
-    /**
-     * Fires before core aggregates anything, so a subscriber registering off
-     * it is in time. An action, not a filter: `applyFilter` structured-clones,
-     * which template components can't survive.
-     */
-    "theme:ready": (theme: ThemeDescriptor) => void | Promise<void>;
-  }
 }
 
 /**
