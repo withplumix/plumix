@@ -104,6 +104,6 @@ The plugin authoring guide is `apps/docs/src/content/docs/plugins/overview.mdx`.
 - Sign-in methods are declared on the descriptor; a duplicate or reserved name fails boot ([ADR 0041](../adr/0041-a-sign-in-method-is-a-registered-extension.md)).
 - `provides` finishes before any `setup`, and an `extendAppContext` key can't shadow a base `AppContext` field or `__proto__`. Guarded by `packages/core/src/plugin/provides.test.ts`.
 - Two plugins with the same id, or two owners of one registered name, fail boot (`duplicatePluginIdInConfig`, `DuplicateRegistrationError`). Guarded by `packages/core/src/runtime/install-plugins.test.ts`.
-- `setup` and `afterSetup` do no IO and are safe to repeat, because the Vite manifest pass reruns them, with the same `ctx.theme`, on every config change (comment on `computeManifestAndRegistry` in `packages/plumix/src/vite/manifest.ts`). Guarded by `packages/plumix/src/vite/manifest.test.ts`.
+- `setup` and `afterSetup` do no IO and are safe to repeat, because the Vite manifest pass reruns them, with the same `ctx.theme`, on every config change (comment on `computeManifestAndRegistry` in `packages/plumix/src/vite/manifest.ts`).
 - Plugins are installed in code. No screen enables or disables one.
 - Imports go through `plumix`, never `@plumix/*` (the umbrella rule in `AGENTS.md`).

@@ -304,9 +304,8 @@ describe("buildApp — ctx.theme", () => {
     ]);
   });
 
-  // The two assertions catch different misplacements: assembling the
-  // shortcodes before plugins install drops the shortcode, resolving the
-  // document chain before drops the meta tag.
+  // A shortcode and a document filter are read by different registries, so
+  // the two assertions cover both.
   test("registrations made from the theme reach every registry", async () => {
     const contributor = definePlugin("contributor", (ctx) => {
       for (const card of ctx.theme.testCards ?? []) {

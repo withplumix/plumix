@@ -77,16 +77,19 @@ describe("computeManifestAndRegistry", () => {
       templates: () => null,
       allowCustomStyles: false,
     });
-    const handover = definePlugin("handover", (ctx) => {
+    const themedBox = definePlugin("themed-box", (ctx) => {
       if (ctx.theme.allowCustomStyles === false) {
         ctx.registerEntryMetaBox("handover", metaBox("handover", ["post"]));
       }
     });
 
-    const { manifest } = await computeManifestAndRegistry([handover, content], {
-      ...OPTIONS,
-      theme: themed,
-    });
+    const { manifest } = await computeManifestAndRegistry(
+      [themedBox, content],
+      {
+        ...OPTIONS,
+        theme: themed,
+      },
+    );
 
     expect((manifest.entryMetaBoxes ?? []).map((entry) => entry.id)).toContain(
       "handover",
