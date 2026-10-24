@@ -7,12 +7,12 @@ import {
   toRegisteredEntryType,
   toRegisteredTermTaxonomy,
 } from "../../../plugin/registry.js";
-import { registerCoreSearchHandlers } from "../../../search/register-core-handlers.js";
+import { registerCoreSearchProvider } from "../../../search/register-core-provider.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
 /**
- * A harness with a `post` type, a `category` taxonomy and the core search
- * handlers, which the harness doesn't boot; taxonomy caps are populated as
+ * A harness with a `post` type, a `category` taxonomy and core's search
+ * provider, which the harness doesn't boot; taxonomy caps are populated as
  * registration would.
  */
 async function searchHarness(
@@ -42,9 +42,8 @@ async function searchHarness(
   for (const cap of deriveTermTaxonomyCapabilities("category", categorySpec)) {
     plugins.capabilities.set(cap.name, { ...cap, registeredBy: null });
   }
-  const h = await createRpcHarness({ authAs, plugins });
-  registerCoreSearchHandlers(h.hooks);
-  return h;
+  registerCoreSearchProvider(plugins);
+  return createRpcHarness({ authAs, plugins });
 }
 
 describe("search.query", () => {

@@ -20,7 +20,6 @@ const query = base
   .handler(async ({ input, context }) => {
     if (input.query.length === 0) return [];
     return runAdminSearch(
-      context.hooks,
       { query: input.query, limit: input.limit ?? DEFAULT_LIMIT },
       context,
     );

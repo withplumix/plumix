@@ -365,8 +365,9 @@ export type {
 export type {
   AdminSearchInput,
   SearchGroup,
+  SearchProvider,
   SearchResultItem,
-} from "./search/admin-search.js";
+} from "./plugin/search-provider.js";
 // Reading the live row alone shows a published entry's pre-edit state.
 export { getAutosave } from "./revisions/repository.js";
 export type { AutosavePairInput } from "./revisions/repository.js";

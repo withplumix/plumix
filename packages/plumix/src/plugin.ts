@@ -330,6 +330,7 @@ export type {
   ScheduledTask,
   SchemaSource,
   SearchGroup,
+  SearchProvider,
   SearchResultItem,
   SelectableAccessPolicy,
   SettingsGroupCopy,

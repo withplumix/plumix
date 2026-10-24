@@ -15,12 +15,6 @@ import { DEFAULT_RANKING_ALGORITHM, rankingWeights } from "../ranking.js";
 import { toMatchExpression } from "./query-text.js";
 
 /**
- * Core's entries handler runs at 10, and the lower number goes first — so
- * this claims the entry groups it can rank before core produces them.
- */
-const HANDLER_PRIORITY = 5;
-
-/**
  * Matches core's own scan cap across all types, so palette coverage is
  * unchanged.
  */
@@ -28,18 +22,19 @@ const SCAN_LIMIT = 50;
 
 /**
  * Ranks on **edit** reach, stricter than core: `read` reaches subscribers, who
- * could probe hidden bodies word by word. Anything unanswered falls to core's
- * handler.
+ * could probe hidden bodies word by word. Answers `early`, so core's provider
+ * fills behind it.
  */
 export function registerAdminSearch(
   ctx: PluginSetupContext,
   options: Pick<SearchOptions, "ranking">,
 ): void {
-  ctx.addFilter(
-    "admin:search:results",
-    (input, appCtx) => rankedEntryGroups(appCtx, input, options.ranking),
-    { priority: HANDLER_PRIORITY },
-  );
+  ctx.registerSearchProvider({
+    id: "search",
+    order: "early",
+    search: (input, appCtx) =>
+      rankedEntryGroups(appCtx, input, options.ranking),
+  });
 }
 
 async function rankedEntryGroups(

@@ -58,6 +58,7 @@ import type {
   ViewOptions,
 } from "./manifest.js";
 import type { PluginContextExtensions } from "./provides-context.js";
+import type { SearchProvider } from "./search-provider.js";
 
 export interface PluginSetupContextBase {
   readonly id: string;
@@ -277,6 +278,13 @@ export interface PluginSetupContextBase {
    * name type-checks here and in `.role()`.
    */
   registerImageRole(name: ImageRoleName, options: ImageRoleOptions): void;
+
+  /**
+   * Answers the admin command palette beside core's provider (id `core`);
+   * `order: "early"` leads core's groups of the same key. Throws
+   * `DuplicateRegistrationError` on an id clash.
+   */
+  registerSearchProvider(provider: SearchProvider): void;
 
   /**
    * Only adds the login-screen button; the plugin registers the flow's routes
