@@ -53,8 +53,8 @@ interface BootI18nInput {
 
 /**
  * Activates the enabled locale, for `Intl` formatting, with each set's
- * catalog locale's messages. An unprojected locale, as under the admin's dev
- * server, reads its own catalog. Never throws.
+ * catalog locale's messages. An unprojected locale reads its own catalog.
+ * Never throws.
  */
 export async function bootI18n({
   lang,

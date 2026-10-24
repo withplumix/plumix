@@ -17,6 +17,7 @@ import { ADMIN_SHIPPED_CATALOGS_FILE } from "@plumix/core/manifest";
 
 import { CATALOG_SET_PREFIXES } from "./src/lib/catalog-sets.js";
 import { ADMIN_BASE_PATH, SOURCE_LOCALE } from "./src/lib/constants.js";
+import { shippedLocales } from "./src/lib/shipped-catalogs.js";
 
 // `plumix dev` runs on Vite's default port 5173, so the admin moves to 5174
 // to avoid a conflict. Admin proxies /_plumix/{rpc,auth} back to the plumix
@@ -49,8 +50,7 @@ function shipThemeTokens(): Plugin {
   };
 }
 
-// The admin ships prebuilt, before any site enables a locale. Staging reads
-// this to project a site's enabled locales onto the catalogs in the bundle.
+// The admin ships prebuilt, before any site enables a locale.
 function shipCatalogLocales(): Plugin {
   return {
     name: "plumix:ship-catalog-locales",
@@ -62,11 +62,7 @@ function shipCatalogLocales(): Plugin {
       const shipped = (set: AdminCatalogSet): string[] => {
         // Module ids are POSIX paths, on Windows too.
         const prefix = normalizePath(join(LIB_DIR, CATALOG_SET_PREFIXES[set]));
-        return bundled
-          .filter((id) => id.startsWith(prefix) && id.endsWith(".mjs"))
-          .map((id) => id.slice(prefix.length, -".mjs".length))
-          .filter((locale) => !locale.includes("/"))
-          .sort();
+        return shippedLocales(bundled, prefix);
       };
       const source: AdminShippedCatalogs = {
         sourceLocale: SOURCE_LOCALE,
