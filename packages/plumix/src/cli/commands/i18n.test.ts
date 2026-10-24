@@ -780,7 +780,7 @@ describe("i18nCommand", () => {
         prepack: "plumix i18n compile",
       });
       // Pinning to the constant — a version bump must be a deliberate
-      // test change. The PO format comes with `plumix/lingui`.
+      // test change.
       expect(pkg.devDependencies).toEqual({ "@lingui/cli": LINGUI_DEP_RANGE });
     });
 

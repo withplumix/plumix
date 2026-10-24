@@ -1,5 +1,3 @@
-// Build-time only: Lingui's CLI loads it through a package's
-// `lingui.config.ts`. No runtime entry imports it.
 import type { LinguiConfig } from "@lingui/conf";
 import { defineConfig } from "@lingui/conf";
 import { formatter } from "@lingui/format-po";
@@ -62,8 +60,8 @@ export function defineLinguiConfig(options: LinguiConfigOptions): LinguiConfig {
       path: catalogPath,
       include: [...include],
     })),
-    // An entry for every locale, so Lingui never applies its own parent table,
-    // which is not CLDR's (`zh-Hant` → `zh`).
+    // An entry for every locale keeps Lingui off its own parent table, which
+    // is not CLDR's (`zh-Hant` → `zh`).
     fallbackLocales: Object.fromEntries(
       locales.map((locale) => [
         locale,

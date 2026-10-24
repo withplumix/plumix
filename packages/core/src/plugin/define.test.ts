@@ -140,7 +140,6 @@ describe("definePlugin — dataMigrations", () => {
 });
 
 describe("PLUGIN_I18N_SLOT", () => {
-  // Until #3353 drops the slot's locales for the ones a plugin's files name.
   test("declares the source locale and the locales core's catalog files ship", () => {
     expect(PLUGIN_I18N_SLOT.sourceLocale).toBe(coreLingui.sourceLocale);
     expect([...PLUGIN_I18N_SLOT.locales].sort()).toEqual(
