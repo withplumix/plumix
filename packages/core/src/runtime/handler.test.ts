@@ -429,6 +429,25 @@ describe("createPlumixHandler — run", () => {
     expect(result).toBe(true);
   });
 
+  test("the work's ctx.signal never aborts, even past a scheduled task's budget", async () => {
+    vi.useFakeTimers();
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+    const handler = await handlerFor({});
+
+    const signal = await handler.run?.(
+      async (ctx) => {
+        await vi.advanceTimersByTimeAsync(60 * 60_000);
+        return ctx.signal;
+      },
+      { env: {} },
+    );
+
+    expect(signal).toBeInstanceOf(AbortSignal);
+    expect(signal?.aborted).toBe(false);
+  });
+
   test("commits the scoped write the work makes", async () => {
     let committed = 0;
     const handler = await handlerFor({

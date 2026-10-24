@@ -309,6 +309,36 @@ describe("createScheduler — surfacing what a firing did", () => {
     );
   });
 
+  test("names the failed and the timed-out tasks in the one firing line", async () => {
+    const clock = virtualClock("2026-09-07T02:58:00Z");
+    const warn = vi.fn();
+    const error = vi.fn();
+    const scheduler = createScheduler({
+      app: appWith([
+        { id: "publish", cron: "*/5 * * * *", registeredBy: "core" },
+      ]),
+      clock,
+      logger: { info: vi.fn(), warn, error },
+      fire: () =>
+        Promise.resolve({
+          ran: 0,
+          failed: ["forms:retention"],
+          timedOut: ["search:drain"],
+        }),
+    });
+
+    void scheduler.start();
+    await clock.advanceTo("2026-09-07T03:00:30Z");
+    await scheduler.stop();
+
+    expect(error.mock.calls).toEqual([
+      [
+        `[plumix] cron "*/5 * * * *": 1 task(s) failed: forms:retention; 1 task(s) timed out: search:drain`,
+      ],
+    ]);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
   test("says so when a firing never reached its tasks", async () => {
     const clock = virtualClock("2026-09-07T02:58:00Z");
     const error = vi.fn();

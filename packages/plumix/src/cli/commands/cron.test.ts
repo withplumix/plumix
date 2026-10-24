@@ -385,7 +385,7 @@ describe("plumix cron run — reporting tasks that timed out", () => {
 
     expect(lines).toContain("✗ audit-log:retention-purge timed out after 5m");
     expect(lines).toContain("✗ og:warm timed out after 90s");
-    expect(lines).toContain("3 tasks · 1 ran · 0 failed · 2 timed out");
+    expect(lines).toContain("1 ran · 0 failed · 2 timed out");
     expect(isCliError(error)).toBe(true);
     expect(isCliError(error) ? error.code : "").toBe(
       "cron_run_tasks_timed_out",
@@ -404,7 +404,7 @@ describe("plumix cron run — reporting tasks that timed out", () => {
       restore();
     }
 
-    expect(lines).toContain("2 tasks · 2 ran · 0 failed · 0 timed out");
+    expect(lines).toContain("2 ran · 0 failed · 0 timed out");
   });
 });
 

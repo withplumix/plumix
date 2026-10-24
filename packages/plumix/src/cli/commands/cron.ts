@@ -229,9 +229,8 @@ function printRunSummary(
         : ` after ${formatTimeout(scheduledTaskTimeoutMs(task))}`;
     report.info(`✗ ${label} timed out${budget}`);
   }
-  const total = ran + failed.length + timedOut.length;
   report.info(
-    `${String(total)} task${total === 1 ? "" : "s"} · ${String(ran)} ran · ${String(failed.length)} failed · ${String(timedOut.length)} timed out`,
+    `${String(ran)} ran · ${String(failed.length)} failed · ${String(timedOut.length)} timed out`,
   );
 }
 
