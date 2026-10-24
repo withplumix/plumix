@@ -31,19 +31,6 @@ import { isReservedBlockName } from "./blocks/index.js";
 import { RESERVED_DEP_KIND_NAMES } from "./template-deps.js";
 import { ThemeError, ThemeRegistrationError } from "./theme-errors.js";
 
-declare module "./hooks/types.js" {
-  interface FilterRegistry {
-    /**
-     * Threads the theme's own `document` manifest (or `{}` if absent) through
-     * every registered filter. The merged result is frozen on
-     * `PlumixApp.document` so per-request renders pay zero merge cost.
-     */
-    "theme:document": (
-      manifest: DocumentManifest,
-    ) => DocumentManifest | Promise<DocumentManifest>;
-  }
-}
-
 /**
  * A template receiving the whole union discriminates on `kind`, or uses the
  * `isEntry`/`isTerm`/… guards for single-branch checks.

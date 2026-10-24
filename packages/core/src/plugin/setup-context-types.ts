@@ -16,6 +16,7 @@ import type {
 } from "../context/dev-runtime.js";
 import type { McpTool } from "../context/mcp-tool.js";
 import type { UserRole } from "../db/schema/users.js";
+import type { DocumentManifest } from "../document-manifest.js";
 import type {
   ActionArgs,
   ActionFn,
@@ -293,6 +294,12 @@ export interface PluginSetupContextBase {
    * `DuplicateRegistrationError` on an id clash.
    */
   registerSearchProvider(provider: SearchProvider): void;
+
+  /**
+   * Merged once at boot after the theme's own `document`, in plugin config
+   * order: arrays append and the rest is last-wins.
+   */
+  registerDocumentManifest(manifest: DocumentManifest): void;
 
   /**
    * Only adds the login-screen button; the plugin registers the flow's routes

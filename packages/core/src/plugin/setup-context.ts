@@ -507,6 +507,10 @@ function createContextBase({
       );
     },
 
+    registerDocumentManifest: (manifest) => {
+      registry.documentManifests.push(manifest);
+    },
+
     registerLoginLink: (options) => {
       assertValidLoginLink(pluginId, options);
       assertUnclaimed(

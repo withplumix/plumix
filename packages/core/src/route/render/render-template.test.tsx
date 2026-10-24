@@ -1284,7 +1284,7 @@ describe("resolvePublicRoute — single entry through theme", () => {
     expect(body).toContain("Ctx Aware");
   });
 
-  test("`theme:document` filter contributions surface in SSR'd <head>", async () => {
+  test("a registered document manifest's tags render in <head> after the theme's", async () => {
     const seoPlugin = definePlugin("seo", {
       setup: (ctx) => {
         ctx.registerEntryType("post", {
@@ -1292,13 +1292,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
           isPublic: true,
           hasArchive: true,
         });
-        ctx.addFilter("theme:document", (manifest) => ({
-          ...manifest,
-          meta: [
-            ...(manifest.meta ?? []),
-            { property: "og:site_name", content: "Demo" },
-          ],
-        }));
+        ctx.registerDocumentManifest({
+          meta: [{ property: "og:site_name", content: "Demo" }],
+        });
       },
     });
     const theme = defineTheme({
@@ -1306,6 +1302,7 @@ describe("resolvePublicRoute — single entry through theme", () => {
         fallback(() => null),
         entry(({ data }) => <article>{data.entry.title}</article>),
       ],
+      document: { meta: [{ name: "theme-color", content: "#fff" }] },
     });
 
     const h = await createDispatcherHarness({
@@ -1314,8 +1311,8 @@ describe("resolvePublicRoute — single entry through theme", () => {
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
-      slug: "filtered",
-      title: "Filtered",
+      slug: "registered",
+      title: "Registered",
       content: null,
       status: "published",
       authorId: author.id,
@@ -1323,16 +1320,19 @@ describe("resolvePublicRoute — single entry through theme", () => {
     });
 
     const response = await h.dispatch(
-      new Request("https://cms.example/post/filtered"),
+      new Request("https://cms.example/post/registered"),
     );
     const body = await response.text();
     const headSection = body.slice(
       body.indexOf("<head>"),
       body.indexOf("</head>"),
     );
-    expect(headSection).toContain(
+    const themeTag = headSection.indexOf('<meta name="theme-color"');
+    const pluginTag = headSection.indexOf(
       '<meta property="og:site_name" content="Demo"',
     );
+    expect(themeTag).toBeGreaterThan(-1);
+    expect(pluginTag).toBeGreaterThan(themeTag);
   });
 
   test("manifest `link[]` entries land in <head> in declared order", async () => {
