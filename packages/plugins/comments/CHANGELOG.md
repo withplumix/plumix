@@ -1,5 +1,15 @@
 # @plumix/plugin-comments
 
+## 0.7.0
+
+### Minor Changes
+
+- [#3405](https://github.com/withplumix/plumix/pull/3405) [`dd0a359`](https://github.com/withplumix/plumix/commit/dd0a3596705427b670e793a7e30a9023bd935877) Thanks [@nasyrov](https://github.com/nasyrov)! - Purges a comment's entry page only when visitors would see the change: a comment is approved or restored to approved, an approved comment is spammed, trashed or deleted, or a new comment arrives approved. Moving a comment between held, spam and trash now leaves the page cached, and an approval no longer purges other pages stored under the entry. Requires `plumix` 0.27.0 or later.
+
+### Patch Changes
+
+- [#3228](https://github.com/withplumix/plumix/pull/3228) [`4bc3649`](https://github.com/withplumix/plumix/commit/4bc36492cda3c6f3d331eece0735de1ad9fc3eee) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `drizzle-orm` to 0.45.4 and `@tanstack/react-query` to 5.104.2 / `@tanstack/react-router` to 1.170.42 in the framework, the runtimes and the first-party plugins, `@lingui/core` and `@lingui/react` to 6.9.1, the `@orpc/*` packages to 1.15.6, `react-hook-form` to 7.90.0, `vitest` to 5.0.4 and `@playwright/test` to 1.64.0 in the framework, `vite` to 8.3.4 in the framework and the runtimes, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.63.1, `wrangler` 4.149) in `@plumix/runtime-cloudflare`.
+
 ## 0.6.0
 
 ### Minor Changes

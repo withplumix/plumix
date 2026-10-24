@@ -1,5 +1,26 @@
 # @plumix/plugin-og
 
+## 0.5.2
+
+### Patch Changes
+
+- [#3228](https://github.com/withplumix/plumix/pull/3228) [`4bc3649`](https://github.com/withplumix/plumix/commit/4bc36492cda3c6f3d331eece0735de1ad9fc3eee) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `drizzle-orm` to 0.45.4 and `@tanstack/react-query` to 5.104.2 / `@tanstack/react-router` to 1.170.42 in the framework, the runtimes and the first-party plugins, `@lingui/core` and `@lingui/react` to 6.9.1, the `@orpc/*` packages to 1.15.6, `react-hook-form` to 7.90.0, `vitest` to 5.0.4 and `@playwright/test` to 1.64.0 in the framework, `vite` to 8.3.4 in the framework and the runtimes, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.63.1, `wrangler` 4.149) in `@plumix/runtime-cloudflare`.
+
+- [#3423](https://github.com/withplumix/plumix/pull/3423) [`f8b937b`](https://github.com/withplumix/plumix/commit/f8b937baead5a683f827242f2320baad10374ae3) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `ctx.registerDebugPanel`, `ctx.registerErrorPanel` and `ctx.registerErrorHint`, and removes the `debug:panels`, `error_page:panels` and `error_page:hints` filters they replace.
+
+  - An error panel shows only for the errors its `visible(error)` accepts, and every error when `visible` is unset. A hint takes a `matches(error)` and shows after core's hints.
+  - An id that core or another plugin already registered fails boot. Before, the last panel with an id won.
+  - A `render`, `visible` or `matches` that throws hides only its own item and is logged through the site's logger. Before, a panel that failed to render showed a "failed to render" notice.
+  - A plugin can no longer remove or reorder another plugin's panels or hints.
+  - A runtime adapter adds hints for its platform's errors with the new `RuntimeAdapter.errorHints`. They show after core's and before any plugin's.
+  - The three registrations do nothing outside `plumix dev`.
+
+  Breaking: replace `ctx.addFilter("debug:panels", (panels) => [...panels, panel])` with `ctx.registerDebugPanel(panel)`, and do the same for the error page's panels and hints. A hint registration needs an `id` and a `matches(error)`.
+
+  The og plugin registers its debug panel this way, and the Cloudflare runtime offers its missing-binding hint through `errorHints`. Both need this release of `plumix`.
+
+- [#3422](https://github.com/withplumix/plumix/pull/3422) [`569ca9a`](https://github.com/withplumix/plumix/commit/569ca9a2abb42368a7bd790ce15fba5a902ed542) Thanks [@nasyrov](https://github.com/nasyrov)! - Reads the theme's cards and tokens from `ctx.theme` in `setup`, now that `theme:ready` is gone. Requires `plumix` 0.27.0 or later.
+
 ## 0.5.1
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @plumix/plugin-feeds
 
+## 0.4.1
+
+### Patch Changes
+
+- [#3403](https://github.com/withplumix/plumix/pull/3403) [`069e7f4`](https://github.com/withplumix/plumix/commit/069e7f43dc66c8167d47159fb9892732ed315d69) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes an SEO settings save emptying every cached page and sitemap: a save now purges only the responses that read the group it wrote, so saving a hand-written `robots.txt` keeps pages and sitemaps stored at the edge. Feeds still refresh on a `site` settings save.
+
 ## 0.4.0
 
 ### Minor Changes
