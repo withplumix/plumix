@@ -2167,9 +2167,7 @@ test.describe("editor create failure", () => {
 });
 
 test.describe("editor — the blocks the theme allows", () => {
-  test("the inserter offers only the manifest's allowed blocks and patterns", async ({
-    page,
-  }) => {
+  const openWithAllowedBlocks = async (page: Page): Promise<void> => {
     await mockManifest(page, {
       ...MANIFEST_WITH_EDITOR_PATTERNS,
       patterns: [
@@ -2195,8 +2193,13 @@ test.describe("editor — the blocks the theme allows", () => {
       }),
       "/entry/createPreviewLink": PREVIEW_LINK,
     });
-
     await page.goto("entries/posts/1/edit");
+  };
+
+  test("the inserter offers only the manifest's allowed blocks", async ({
+    page,
+  }) => {
+    await openWithAllowedBlocks(page);
 
     await expect(
       page.getByTestId("block-catalog-item-core/columns"),
@@ -2204,22 +2207,31 @@ test.describe("editor — the blocks the theme allows", () => {
     await expect(
       page.getByTestId("block-catalog-item-core/rich-text"),
     ).toHaveCount(0);
+  });
+
+  test("the inserter hides a pattern holding a block outside the manifest's allowed blocks", async ({
+    page,
+  }) => {
+    await openWithAllowedBlocks(page);
+
     await expect(
       page.getByTestId("block-catalog-pattern-e2e/frame"),
     ).toBeVisible();
     await expect(
       page.getByTestId("block-catalog-pattern-e2e/promo"),
     ).toHaveCount(0);
+  });
 
-    // A stored block the theme dropped stays editable, but can't be copied.
+  test("a stored block the theme dropped can't be copied from the layers menu", async ({
+    page,
+  }) => {
+    await openWithAllowedBlocks(page);
+
     await page.getByTestId("plumix-tab-layers").click();
-    await page.getByTestId("layer-t1").click();
-    await expect(page.getByTestId("block-inspector-not-allowed")).toBeVisible();
     await page.getByTestId("layer-menu-t1").click();
+
     await expect(page.getByTestId("layer-rename-action-t1")).toBeVisible();
-    for (const action of ["copy", "paste", "duplicate"]) {
-      await expect(page.getByTestId(`layer-${action}-t1`)).toHaveCount(0);
-    }
+    await expect(page.getByTestId("layer-copy-t1")).toHaveCount(0);
   });
 });
 

@@ -88,7 +88,6 @@ export const create = base
     }
 
     assertContentWithinByteCap(filtered.content, errors);
-    // A new entry starts from no content, so every node is checked.
     assertContentValidAgainstRegistries(filtered.content, [], context, errors);
 
     // A new entry starts from its fields' defaults (ADR 0026); the meta the

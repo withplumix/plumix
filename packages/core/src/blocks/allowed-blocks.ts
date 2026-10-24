@@ -8,9 +8,9 @@ interface AllowedBlocksInput {
 }
 
 /**
- * Resolved once per site, for both the server's content check and the
- * manifest, so no reader recomputes it. A slot-bound block follows its parent;
- * listing it alone has no effect.
+ * The one rule behind the server's content check and the manifest's
+ * `allowedBlocks`. A slot-bound block follows its parent; listing it alone has
+ * no effect.
  */
 export function resolveAllowedBlocks(
   registry: BlockRegistry,

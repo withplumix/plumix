@@ -41,7 +41,6 @@ import {
   findBlock,
   flattenTree,
   holdsBlockOutside,
-  holdsUnregisteredBlock,
   projectMove,
   rowAfterRemoving,
 } from "./block-tree-ops.js";
@@ -128,7 +127,7 @@ export function LayersTab(): ReactElement {
   // Such a block is kept as saved: it can be moved or deleted, nothing else.
   const keptAsSaved = (id: string): boolean => {
     const node = findBlock(tree, id, registry);
-    return node ? holdsUnregisteredBlock([node], registry) : false;
+    return node ? holdsBlockOutside([node], registry, undefined) : false;
   };
 
   // A copy would be a new instance, which a block the site no longer offers

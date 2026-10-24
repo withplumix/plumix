@@ -448,23 +448,6 @@ export function collectBlocks(
 }
 
 /**
- * Never copied, duplicated or pasted: a copy is a new instance of an
- * unregistered block, which a save refuses.
- */
-export function holdsUnregisteredBlock(
-  nodes: readonly BlockNode[],
-  blocks: BlockSpecLookup,
-): boolean {
-  return nodes.some(
-    (node) =>
-      !blocks.get(node.name) ||
-      slotChildren(node, blocks).some((children) =>
-        holdsUnregisteredBlock(children, blocks),
-      ),
-  );
-}
-
-/**
  * Unregistered, or outside `allowed` (none allows all), at any depth. A copy
  * would be a new instance of it, which a save refuses.
  */

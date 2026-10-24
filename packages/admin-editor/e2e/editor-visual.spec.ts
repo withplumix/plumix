@@ -862,79 +862,159 @@ test.describe("editor playground", () => {
     await expect(blocks).toHaveCount(before);
   });
 
-  test("an unregistered block shows a placeholder that can be moved and deleted, nothing else", async ({
+  test("an unregistered block shows a placeholder naming it, without its attributes", async ({
     page,
   }) => {
     await page.goto("/");
-    const canvas = page.frameLocator(CANVAS_FRAME);
-    const retired = canvas.locator('[data-plumix-id="retired-hero"]');
+    const retired = page
+      .frameLocator(CANVAS_FRAME)
+      .locator('[data-plumix-id="retired-hero"]');
 
     await expect(retired).toHaveText(
       "acme/retired-hero isn't registered on this site. It's kept as-is and not shown on the live site.",
     );
-    await expect(retired).not.toContainText("From a removed plugin");
+  });
 
-    await retired.click();
+  test("an unregistered block can be moved", async ({ page }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+    const blocks = canvas.locator("[data-plumix-id]");
+    await expect(blocks.last()).toHaveAttribute(
+      "data-plumix-id",
+      "retired-hero",
+    );
+
+    await canvas.locator('[data-plumix-id="retired-hero"]').click();
+    await page.getByTestId("selection-toolbar-move-up").click();
+
+    await expect(blocks.last()).not.toHaveAttribute(
+      "data-plumix-id",
+      "retired-hero",
+    );
+  });
+
+  test("an unregistered block can't be duplicated from the selection toolbar", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    await page
+      .frameLocator(CANVAS_FRAME)
+      .locator('[data-plumix-id="retired-hero"]')
+      .click();
+
     await expect(page.getByTestId("plumix-selection-toolbar")).toBeVisible();
     await expect(page.getByTestId("selection-toolbar-duplicate")).toHaveCount(
       0,
     );
+  });
+
+  test("an unregistered block's inspector and styles show a notice instead of controls", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await page
+      .frameLocator(CANVAS_FRAME)
+      .locator('[data-plumix-id="retired-hero"]')
+      .click();
+
     await expect(
       page.getByTestId("block-inspector-unregistered"),
     ).toBeVisible();
     await page.getByTestId("plumix-tab-styles").click();
     await expect(page.getByTestId("styles-tab-unregistered")).toBeVisible();
+  });
 
-    const blocks = canvas.locator("[data-plumix-id]");
-    const lastId = async (): Promise<string | null> =>
-      blocks.last().getAttribute("data-plumix-id");
-    await expect.poll(lastId).toBe("retired-hero");
-    await page.getByTestId("selection-toolbar-move-up").click();
-    await expect.poll(lastId).not.toBe("retired-hero");
-
+  test("an unregistered block can't be renamed from the layers tab", async ({
+    page,
+  }) => {
+    await page.goto("/");
     await page.getByTestId("plumix-tab-layers").click();
+
     await page.getByTestId("layer-retired-hero").focus();
     await page.keyboard.press("F2");
+
     await expect(page.getByTestId("layer-rename-retired-hero")).toHaveCount(0);
+  });
+
+  test("an unregistered block's layers menu offers only delete", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await page.getByTestId("plumix-tab-layers").click();
+
     await page.getByTestId("layer-menu-retired-hero").click();
-    for (const action of ["rename-action", "copy", "paste", "duplicate"]) {
-      await expect(
-        page.getByTestId(`layer-${action}-retired-hero`),
-      ).toHaveCount(0);
-    }
+
+    await expect(page.getByTestId("layer-delete-retired-hero")).toBeVisible();
+    await expect(
+      page.getByTestId("layer-rename-action-retired-hero"),
+    ).toHaveCount(0);
+    await expect(page.getByTestId("layer-copy-retired-hero")).toHaveCount(0);
+    await expect(page.getByTestId("layer-paste-retired-hero")).toHaveCount(0);
+    await expect(page.getByTestId("layer-duplicate-retired-hero")).toHaveCount(
+      0,
+    );
+  });
+
+  test("an unregistered block can be deleted from the layers menu", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const retired = page
+      .frameLocator(CANVAS_FRAME)
+      .locator('[data-plumix-id="retired-hero"]');
+    await page.getByTestId("plumix-tab-layers").click();
+
+    await page.getByTestId("layer-menu-retired-hero").click();
     await page.getByTestId("layer-delete-retired-hero").click();
+
     await expect(retired).toHaveCount(0);
   });
 
-  test("a block the theme no longer allows stays editable, with no duplicate, copy or paste", async ({
+  test("a block the theme no longer allows keeps its inspector with a notice", async ({
     page,
   }) => {
     await page.goto("/?allowed=core/group,core/columns,core/column");
-    const canvas = page.frameLocator(CANVAS_FRAME);
 
-    await expect(
-      page.getByTestId("block-catalog-item-core/columns"),
-    ).toBeVisible();
-    await expect(
-      page.getByTestId("block-catalog-item-core/rich-text"),
-    ).toHaveCount(0);
+    await page
+      .frameLocator(CANVAS_FRAME)
+      .locator('[data-plumix-id="intro"]')
+      .click();
 
-    await canvas.locator('[data-plumix-id="intro"]').click();
-    await expect(page.getByTestId("plumix-selection-toolbar")).toBeVisible();
-    await expect(page.getByTestId("selection-toolbar-duplicate")).toHaveCount(
-      0,
-    );
     await expect(page.getByTestId("block-inspector-not-allowed")).toHaveText(
       "This site no longer offers this block. You can edit, move or remove it.",
     );
     await expect(page.getByTestId("block-inspector")).toBeVisible();
+  });
 
+  test("a block the theme no longer allows can't be duplicated from the selection toolbar", async ({
+    page,
+  }) => {
+    await page.goto("/?allowed=core/group,core/columns,core/column");
+
+    await page
+      .frameLocator(CANVAS_FRAME)
+      .locator('[data-plumix-id="intro"]')
+      .click();
+
+    await expect(page.getByTestId("plumix-selection-toolbar")).toBeVisible();
+    await expect(page.getByTestId("selection-toolbar-duplicate")).toHaveCount(
+      0,
+    );
+  });
+
+  test("a block the theme no longer allows offers rename but not copy, paste or duplicate in the layers menu", async ({
+    page,
+  }) => {
+    await page.goto("/?allowed=core/group,core/columns,core/column");
     await page.getByTestId("plumix-tab-layers").click();
+
     await page.getByTestId("layer-menu-intro").click();
+
     await expect(page.getByTestId("layer-rename-action-intro")).toBeVisible();
-    for (const action of ["copy", "paste", "duplicate"]) {
-      await expect(page.getByTestId(`layer-${action}-intro`)).toHaveCount(0);
-    }
+    await expect(page.getByTestId("layer-copy-intro")).toHaveCount(0);
+    await expect(page.getByTestId("layer-paste-intro")).toHaveCount(0);
+    await expect(page.getByTestId("layer-duplicate-intro")).toHaveCount(0);
   });
 
   test("the Layers tab outlines the nested structure", async ({ page }) => {
