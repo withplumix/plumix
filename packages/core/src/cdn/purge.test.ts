@@ -741,16 +741,21 @@ describe("a write to a term", () => {
   });
 
   it("a create purges a response that listed the taxonomy's terms", async () => {
-    const { h, cdn, render, rpc } = await site();
-    await h.factory.term.create({ taxonomy: "tag", name: "Elsewhere" });
+    const { cdn, render, rpc } = await site();
     await render("/term-names/category");
 
     await rpc("create", { taxonomy: "category", name: "Sport", slug: "sport" });
 
     cdn.assertNotStored("/term-names/category");
-    expect(await (await h.fetch("/term-names/category")).text()).toBe(
-      "News,Sport",
-    );
+  });
+
+  it("a response that lists a taxonomy's terms lists only that taxonomy's", async () => {
+    const { h } = await site();
+    await h.factory.term.create({ taxonomy: "tag", name: "Elsewhere" });
+
+    const response = await h.fetch("/term-names/category");
+
+    expect(await response.text()).toBe("News");
   });
 
   it("a create keeps the taxonomy's posts and archives stored", async () => {

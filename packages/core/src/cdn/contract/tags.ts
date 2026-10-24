@@ -24,7 +24,7 @@ export function entryPurgeTags(entryType: string, entryId: number): string[] {
   return [typeTag(entryType), entryTag(entryId)];
 }
 
-/** Created and deleted terms purge the `t:<type>` tags of their taxonomy's entry types. */
+/** The `t:<type>` tags of the entry types a taxonomy lists. */
 export function termPurgeTags(taxonomyEntryTypes: readonly string[]): string[] {
   return taxonomyEntryTypes.map(typeTag);
 }
