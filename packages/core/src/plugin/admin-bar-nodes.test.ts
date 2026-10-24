@@ -1,5 +1,6 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 
+import type { AdminBarNodeOptions } from "./admin-bar-node.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { installPlugins } from "../runtime/install-plugins.js";
 import { definePlugin } from "./define.js";
@@ -27,5 +28,9 @@ describe("registerAdminBarNode", () => {
           'Plugin "cart" registers admin bar node "orders" already registered by "shop".',
       }),
     );
+  });
+
+  test("a plugin's node has no action, which only core's sign-out uses", () => {
+    expectTypeOf<AdminBarNodeOptions>().not.toHaveProperty("action");
   });
 });

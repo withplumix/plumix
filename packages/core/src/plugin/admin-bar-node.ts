@@ -57,13 +57,17 @@ export interface AdminBarNodeOptions {
   readonly href?: (bar: BarRenderContext) => string | undefined;
   /** Without one, the node shows on every bar. */
   readonly visible?: (bar: BarRenderContext) => boolean;
+}
+
+/** Core's own nodes, which alone may carry an `action`. */
+export interface CoreAdminBarNodeOptions extends AdminBarNodeOptions {
   /**
    * Rendered as a `<button>` wired to the sign-out island, the bar's only JS.
    */
   readonly action?: "signout";
 }
 
-export interface RegisteredAdminBarNode extends AdminBarNodeOptions {
+export interface RegisteredAdminBarNode extends CoreAdminBarNodeOptions {
   /** `null` for core's own nodes. */
   readonly registeredBy: string | null;
 }

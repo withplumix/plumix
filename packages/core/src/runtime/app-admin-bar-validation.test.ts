@@ -56,7 +56,7 @@ describe("buildApp — admin bar nodes", () => {
     );
   });
 
-  test("rejects a node that claims a + New child's id, naming both owners", async () => {
+  test("rejects a node that claims a + New child's id, naming the plugin and core", async () => {
     await expect(
       appWith((ctx) => {
         ctx.registerEntryType("product", { label: "Product" });
@@ -67,7 +67,7 @@ describe("buildApp — admin bar nodes", () => {
         });
       }),
     ).rejects.toThrow(
-      'Plugin "core" registers admin bar node "+new:product" already registered by "shop".',
+      'Plugin "shop" registers admin bar node "+new:product" already registered by core.',
     );
   });
 });

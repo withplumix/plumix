@@ -1,6 +1,6 @@
 import type {
-  AdminBarNodeOptions,
   BarRenderContext,
+  CoreAdminBarNodeOptions,
 } from "../plugin/admin-bar-node.js";
 import type {
   MutablePluginRegistry,
@@ -29,7 +29,7 @@ const ACCOUNT_POSITION = 100;
 export function registerCoreAdminBarNodes(
   registry: MutablePluginRegistry,
 ): void {
-  const nodes: readonly AdminBarNodeOptions[] = [
+  const nodes: readonly CoreAdminBarNodeOptions[] = [
     {
       id: "site",
       title: (bar) => bar.siteName || barMessages(bar.locale).siteFallback,
@@ -96,13 +96,15 @@ export function registerNewEntryAdminBarNodes(
     // visibility so they don't leak into the +New menu.
     if (!type.showUI) continue;
     const id = `+new:${name}`;
-    const existing = registry.adminBarNodes.get(id);
-    if (existing) {
+    // Only a plugin can hold the id by now, and core owns `+new:<type>`, so
+    // the plugin is the one told it took core's node.
+    const holder = registry.adminBarNodes.get(id)?.registeredBy;
+    if (holder) {
       throw DuplicateRegistrationError.alreadyRegistered({
         kind: "admin bar node",
         identifier: id,
-        pluginId: "core",
-        previousOwner: existing.registeredBy,
+        pluginId: holder,
+        previousOwner: null,
       });
     }
     registry.adminBarNodes.set(id, {
