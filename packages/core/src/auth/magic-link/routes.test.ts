@@ -765,7 +765,11 @@ describe("magic-link verify route", () => {
     expect(warned).toEqual([
       {
         msg: "sign_in_refused",
-        meta: { method: "magic_link", code: "account_disabled" },
+        meta: {
+          method: "magic_link",
+          code: "account_disabled",
+          requestId: expect.any(String) as unknown,
+        },
       },
     ]);
   });

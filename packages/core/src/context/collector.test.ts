@@ -121,7 +121,7 @@ describe("createTelemetryCollector", () => {
   test("dropped counters start at zero", () => {
     const telemetry = createTelemetryCollector();
 
-    expect(telemetry.getDropped()).toEqual({ spans: 0, records: {} });
+    expect(telemetry.getDropped()).toEqual({ spans: 0, records: {}, logs: 0 });
   });
 
   test("span returns the function result and records a named span", () => {

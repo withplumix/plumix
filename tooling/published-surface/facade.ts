@@ -126,6 +126,7 @@ const ROOT_ONLY_TYPES: readonly RootOnly[] = [
       "TelemetrySnapshot",
       "TelemetrySpan",
       "TelemetrySpanError",
+      "TelemetrySpanLog",
       "TelemetrySpanHandle",
       "Theme",
       "ViteUserConfig",

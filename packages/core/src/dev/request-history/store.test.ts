@@ -65,6 +65,7 @@ describe("createDebugHistoryStore — detachment", () => {
       durationMs: 1,
       status: "ok",
       attributes: { note: "before" },
+      logs: [],
       children: [],
     };
     const source = makeSnapshot({ spans: [span] });
@@ -141,6 +142,7 @@ describe("createDebugHistoryStore — payload bounding", () => {
       durationMs: 1,
       status: "ok",
       attributes: { sql: "x".repeat(1_000) },
+      logs: [],
       children: [],
     };
 
@@ -176,6 +178,7 @@ function bigSnapshot(text: string) {
     durationMs: 1,
     status: "ok",
     attributes: { sql: text },
+    logs: [],
     children: [],
   };
   return makeSnapshot({ spans: [span] });

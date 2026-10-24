@@ -2769,7 +2769,7 @@ describe("dispatcher — telemetry consumers", () => {
         (r) => typeof r.at === "number",
       ),
     ).toBe(true);
-    expect(snapshot?.dropped).toEqual({ spans: 0, records: {} });
+    expect(snapshot?.dropped).toEqual({ spans: 0, records: {}, logs: 0 });
   });
 
   test("db query spans reach the snapshot with sql/params/rows — repeats (N+1) visible", async () => {

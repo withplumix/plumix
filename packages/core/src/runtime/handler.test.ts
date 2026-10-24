@@ -14,7 +14,7 @@ import type {
   RuntimeHandlerSpec,
   ScheduledRunReport,
 } from "../context/runtime-adapter.js";
-import type { TelemetrySnapshot } from "../context/telemetry.js";
+import type { TelemetrySnapshot, TelemetrySpan } from "../context/telemetry.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import type { DatabaseAdapter } from "./contract/slots.js";
 import type { PlumixHandlerOptions } from "./handler.js";
@@ -346,7 +346,10 @@ describe("createPlumixHandler — fetch", () => {
 
     await handler.fetch(new Request("https://cms.example/log"), { env: {} });
 
-    expect(logger.info).toHaveBeenCalledWith("route_hit", { path: "/log" });
+    expect(logger.info).toHaveBeenCalledWith("route_hit", {
+      path: "/log",
+      requestId: expect.any(String) as unknown,
+    });
   });
 
   test("deferred work rides waitUntil when the invocation supplies one", async () => {
@@ -1216,6 +1219,278 @@ describe("createRuntimeHandler", () => {
 
     await handler.fetch(new Request("https://cms.example/log"), { env: {} });
 
-    expect(logger.info).toHaveBeenCalledWith("route_hit", { path: "/log" });
+    expect(logger.info).toHaveBeenCalledWith("route_hit", {
+      path: "/log",
+      requestId: expect.any(String) as unknown,
+    });
+  });
+});
+
+/** A route that runs whatever the test hands it with the request's context. */
+const working = (work: (appCtx: AppContext) => unknown) =>
+  definePlugin("working", {
+    setup: (ctx) => {
+      ctx.registerPublicRoute({
+        path: "/work",
+        handler: async (_request, appCtx) => {
+          await work(appCtx);
+          return new Response("worked");
+        },
+      });
+    },
+  });
+
+/** The snapshot a test consumer receives for one request to `working(work)`. */
+async function snapshotOfWork(
+  work: (appCtx: AppContext) => unknown,
+  logger = spyLogger(),
+  sample?: () => boolean,
+): Promise<TelemetrySnapshot | undefined> {
+  const snapshots: TelemetrySnapshot[] = [];
+  const handler = await handlerFor(
+    {
+      plugins: [working(work)],
+      telemetry: {
+        consumers: [
+          {
+            id: "in-test",
+            sample,
+            onRequestEnd: (s) => void snapshots.push(s),
+          },
+        ],
+      },
+    },
+    { logger },
+  );
+  const waited: Promise<unknown>[] = [];
+  await handler.fetch(new Request("https://cms.example/work"), {
+    env: {},
+    waitUntil: (promise) => void waited.push(promise),
+  });
+  await Promise.all(waited);
+  return snapshots[0];
+}
+
+function findSpan(
+  spans: readonly TelemetrySpan[],
+  name: string,
+): TelemetrySpan | undefined {
+  for (const span of spans) {
+    if (span.name === name) return span;
+    const nested = findSpan(span.children, name);
+    if (nested) return nested;
+  }
+  return undefined;
+}
+
+describe("createPlumixHandler — span logs", () => {
+  test("a log written inside a span is kept on that span with its level, message, time and meta", async () => {
+    const before = Date.now();
+    const snapshot = await snapshotOfWork((appCtx) =>
+      appCtx.telemetry.span("x", () => {
+        appCtx.logger.warn("skipped item without a slug", { guid: "g-1" });
+      }),
+    );
+
+    const logs = findSpan(snapshot?.spans ?? [], "x")?.logs ?? [];
+    expect(logs).toEqual([
+      {
+        at: expect.any(Number) as unknown,
+        level: "warn",
+        message: "skipped item without a slug",
+        attributes: expect.objectContaining({ guid: "g-1" }) as unknown,
+      },
+    ]);
+    expect(logs[0]?.at).toBeGreaterThanOrEqual(before);
+    expect(logs[0]?.at).toBeLessThanOrEqual(Date.now());
+  });
+
+  test("an Error in a log's meta is kept in a span error's shape", async () => {
+    const error = new TypeError("bad feed");
+    const snapshot = await snapshotOfWork((appCtx) =>
+      appCtx.telemetry.span("x", () => {
+        appCtx.logger.error("import failed", { error });
+      }),
+    );
+
+    expect(findSpan(snapshot?.spans ?? [], "x")?.logs[0]?.attributes).toEqual(
+      expect.objectContaining({
+        error: { name: "TypeError", message: "bad feed", stack: error.stack },
+      }),
+    );
+  });
+
+  test("logs at every level are kept", async () => {
+    const snapshot = await snapshotOfWork((appCtx) =>
+      appCtx.telemetry.span("x", () => {
+        appCtx.logger.debug("d");
+        appCtx.logger.info("i");
+        appCtx.logger.warn("w");
+        appCtx.logger.error("e");
+      }),
+    );
+
+    const logs = findSpan(snapshot?.spans ?? [], "x")?.logs ?? [];
+    expect(logs.map(({ level, message }) => [level, message])).toEqual([
+      ["debug", "d"],
+      ["info", "i"],
+      ["warn", "w"],
+      ["error", "e"],
+    ]);
+  });
+
+  test("an unsampled request keeps no log, and the logger still gets every call", async () => {
+    const logger = spyLogger();
+    let spans: readonly TelemetrySpan[] | undefined;
+    const snapshot = await snapshotOfWork(
+      (appCtx) =>
+        appCtx.telemetry.span("x", () => {
+          appCtx.logger.debug("d");
+          appCtx.logger.info("i");
+          appCtx.logger.warn("w");
+          appCtx.logger.error("e");
+          spans = appCtx.telemetry.getSpans();
+        }),
+      logger,
+      () => false,
+    );
+
+    expect(snapshot).toBeUndefined();
+    expect(spans).toEqual([]);
+    for (const [level, message] of [
+      ["debug", "d"],
+      ["info", "i"],
+      ["warn", "w"],
+      ["error", "e"],
+    ] as const) {
+      expect(logger[level]).toHaveBeenCalledExactlyOnceWith(
+        message,
+        expect.anything(),
+      );
+    }
+  });
+
+  test("a log written with no span current reaches the logger and is kept on no span", async () => {
+    // A failed task is logged after its span has ended, with none current.
+    const logger = spyLogger();
+    const snapshots: TelemetrySnapshot[] = [];
+    const failing = definePlugin("reports", {
+      setup: (ctx) => {
+        ctx.registerScheduledTask({
+          id: "boom",
+          handler: () => {
+            throw new Error("nope");
+          },
+        });
+      },
+    });
+    const handler = await handlerFor(
+      {
+        plugins: [failing],
+        telemetry: {
+          consumers: [
+            { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+          ],
+        },
+      },
+      { logger },
+    );
+    const waited: Promise<unknown>[] = [];
+    await handler.scheduled?.(
+      { scheduledTime: 0, cron: UNCLAIMED_CRON },
+      { env: {}, waitUntil: (promise) => void waited.push(promise) },
+    );
+    await Promise.all(waited);
+
+    expect(logger.error).toHaveBeenCalledWith(
+      `[plumix] scheduled task "reports:boom" failed: nope`,
+      expect.anything(),
+    );
+    const logs: unknown[] = [];
+    const collect = (spans: readonly TelemetrySpan[]): void => {
+      for (const span of spans) {
+        logs.push(...span.logs);
+        collect(span.children);
+      }
+    };
+    collect(snapshots[0]?.spans ?? []);
+    expect(findSpan(snapshots[0]?.spans ?? [], "cron: boom")).toBeDefined();
+    expect(logs).toEqual([]);
+  });
+
+  test("core's own log lines are kept on the current span", async () => {
+    const snapshot = await snapshotOfWork((appCtx) =>
+      appCtx.telemetry.span("x", async () => {
+        appCtx.defer(Promise.reject(new Error("purge failed")));
+        // The rejection is logged a microtask later, still inside `x`.
+        await Promise.resolve();
+      }),
+    );
+
+    expect(findSpan(snapshot?.spans ?? [], "x")?.logs).toEqual([
+      expect.objectContaining({
+        level: "error",
+        message: "[plumix] deferred promise rejected: purge failed",
+      }),
+    ]);
+  });
+
+  test("every call the logger gets carries the request's requestId", async () => {
+    const logger = spyLogger();
+    const snapshot = await snapshotOfWork((appCtx) => {
+      appCtx.logger.info("no meta");
+      appCtx.logger.warn("with meta", { guid: "g-1" });
+    }, logger);
+
+    const requestId = snapshot?.request.requestId;
+    expect(requestId).toEqual(expect.any(String));
+    expect(logger.info).toHaveBeenCalledWith("no meta", { requestId });
+    expect(logger.warn).toHaveBeenCalledWith("with meta", {
+      guid: "g-1",
+      requestId,
+    });
+  });
+
+  test("a requestId the caller passes is kept", async () => {
+    const logger = spyLogger();
+    await snapshotOfWork((appCtx) => {
+      appCtx.logger.info("relayed", { requestId: "upstream-1" });
+    }, logger);
+
+    expect(logger.info).toHaveBeenCalledWith("relayed", {
+      requestId: "upstream-1",
+    });
+  });
+
+  test("a request keeps its first 1000 logs and counts the rest as dropped", async () => {
+    const snapshot = await snapshotOfWork((appCtx) =>
+      appCtx.telemetry.span("x", () => {
+        for (let i = 1; i <= 1001; i++) appCtx.logger.debug(`line ${i}`);
+      }),
+    );
+
+    const logs = findSpan(snapshot?.spans ?? [], "x")?.logs ?? [];
+    expect(logs).toHaveLength(1000);
+    expect(logs.at(-1)?.message).toBe("line 1000");
+    expect(snapshot?.dropped.logs).toBe(1);
+  });
+
+  test("a log whose meta JSON cannot hold is kept with why, and the call does not throw", async () => {
+    const logger = spyLogger();
+    const snapshot = await snapshotOfWork(
+      (appCtx) =>
+        appCtx.telemetry.span("x", () => {
+          appCtx.logger.info("counted", { total: 1n });
+        }),
+      logger,
+    );
+
+    expect(logger.info).toHaveBeenCalledWith(
+      "counted",
+      expect.objectContaining({ total: 1n }),
+    );
+    expect(findSpan(snapshot?.spans ?? [], "x")?.logs[0]?.attributes).toEqual({
+      unserializable: expect.stringContaining("BigInt") as unknown,
+    });
   });
 });

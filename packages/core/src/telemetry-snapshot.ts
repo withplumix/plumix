@@ -11,6 +11,19 @@ export interface TelemetrySpanError {
 }
 
 /**
+ * A `ctx.logger` call made while its span was current. `attributes` is the
+ * call's meta made JSON-safe, an `Error` in {@link TelemetrySpanError}'s shape.
+ * @public consumer-facing (imported by exporters, not core)
+ */
+export interface TelemetrySpanLog {
+  /** Epoch ms. */
+  readonly at: number;
+  readonly level: "debug" | "info" | "warn" | "error";
+  readonly message: string;
+  readonly attributes: Readonly<Record<string, JsonValue>>;
+}
+
+/**
  * One node in the request's span tree. Minimal and OTel-mappable: an exporter
  * can project name/timing/attributes onto an OTel span ~1:1, minting ids at
  * export time.
@@ -28,6 +41,8 @@ export interface TelemetrySpan {
   /** Why a cancelled span ended early, such as `timed out after 5m`. */
   message?: string;
   readonly attributes: Record<string, JsonValue>;
+  /** The span logs written while this span was current, in call order. */
+  readonly logs: TelemetrySpanLog[];
   readonly children: TelemetrySpan[];
 }
 
@@ -48,6 +63,8 @@ export interface TelemetryRecord {
 export interface TelemetryDropped {
   readonly spans: number;
   readonly records: Readonly<Record<string, number>>;
+  /** Span logs past the per-request cap. */
+  readonly logs: number;
 }
 
 /**

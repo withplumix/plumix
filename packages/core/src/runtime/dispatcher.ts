@@ -611,7 +611,6 @@ async function renderPublicError(
 ): Promise<Response> {
   const renderEnv = app.renderEnv;
   ctx.logger.error("dispatch_failed", {
-    requestId: ctx.requestId,
     url: url.href,
     err: err instanceof Error ? err.message : String(err),
   });

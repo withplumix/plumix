@@ -41,7 +41,7 @@ function envelope(
     },
     spans: [],
     records: {},
-    dropped: { spans: 0, records: {} },
+    dropped: { spans: 0, records: {}, logs: 0 },
   };
 }
 

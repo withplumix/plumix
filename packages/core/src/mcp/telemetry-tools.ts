@@ -45,7 +45,7 @@ const requestGetInput = v.object({
 export const telemetryRequestGetTool: McpTool<typeof requestGetInput> = {
   name: "telemetry_request_get",
   description:
-    "Read one recent request's trace by id: the context projection and the span tree (name, timing, status, captured error, attributes, nested children). Records are opt-in via `include` so a large snapshot doesn't flood context.",
+    "Read one recent request's trace by id: the context projection and the span tree (name, timing, status, captured error, attributes, the logs written in each span, nested children). Records are opt-in via `include` so a large snapshot doesn't flood context.",
   inputSchema: requestGetInput,
   run(ctx, input) {
     const entry = ctx.dev?.history.find(input.id);

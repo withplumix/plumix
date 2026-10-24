@@ -10,6 +10,7 @@ function span(
   startedAt: number,
   durationMs: number,
   children: TelemetrySpan[] = [],
+  logs: TelemetrySpan["logs"] = [],
 ): TelemetrySpan {
   return {
     name,
@@ -18,6 +19,7 @@ function span(
     children,
     status: "ok",
     attributes: {},
+    logs,
   };
 }
 
@@ -44,5 +46,20 @@ describe("timelinePanel", () => {
 
     expect(html).not.toContain("<svg");
     expect(html).toContain("No spans");
+  });
+
+  test("lists each span's logs under that span, marked with their level", () => {
+    const html = render([
+      span(
+        "import feed",
+        1000,
+        40,
+        [],
+        [{ at: 1012, level: "warn", message: "no slug", attributes: {} }],
+      ),
+    ]);
+
+    expect(html).toContain("plumix-debug-bar__span-log--warn");
+    expect(html).toMatch(/import feed[\s\S]*\+12ms[\s\S]*warn[\s\S]*no slug/);
   });
 });
