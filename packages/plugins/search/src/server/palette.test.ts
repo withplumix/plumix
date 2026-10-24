@@ -69,6 +69,24 @@ describe("the admin command palette", () => {
     ]);
   });
 
+  test("leads core's matches in a group core also answers", async () => {
+    // Both titles match, so core finds both too, most recently edited first.
+    await seed({
+      title: "Hydroponics",
+      slug: "exact",
+      updatedAt: new Date("2020-01-01T00:00:00Z"),
+    });
+    await seed({
+      title: "A long winter diary of hydroponics, lettuce and greenhouse notes",
+      slug: "diary",
+    });
+
+    expect(titles(await palette("hydroponics"), "entry:post")).toEqual([
+      "Hydroponics",
+      "A long winter diary of hydroponics, lettuce and greenhouse notes",
+    ]);
+  });
+
   test("groups the ranked results per entry type", async () => {
     await withBody("hydroponics", { slug: "p" });
     await withBody("hydroponics", { type: "ledger", slug: "l" });

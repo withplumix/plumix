@@ -37,6 +37,7 @@ import type {
 } from "./fields/meta-box-field.js";
 import type { RegisteredImageRole } from "./image-roles.js";
 import type { RegisteredLookupAdapter } from "./lookup.js";
+import type { RegisteredSearchProvider } from "./search-provider.js";
 import { resolveFrameworkRoutes } from "../route/contract/framework-routes.js";
 
 /**
@@ -897,6 +898,8 @@ export interface PluginRegistry {
   readonly scheduledTasks: readonly RegisteredScheduledTask[];
   readonly templateDeps: ReadonlyMap<string, RegisteredTemplateDep>;
   readonly imageRoles: ReadonlyMap<string, RegisteredImageRole>;
+  /** In registration order: core's first, then each plugin's. */
+  readonly searchProviders: ReadonlyMap<string, RegisteredSearchProvider>;
   /**
    * Fixed before any plugin runs, so every compile of the route map reads the
    * same answer.
@@ -936,6 +939,7 @@ export interface MutablePluginRegistry extends PluginRegistry {
   readonly scheduledTasks: RegisteredScheduledTask[];
   readonly templateDeps: Map<string, RegisteredTemplateDep>;
   readonly imageRoles: Map<string, RegisteredImageRole>;
+  readonly searchProviders: Map<string, RegisteredSearchProvider>;
 }
 
 export function createPluginRegistry(
@@ -977,6 +981,7 @@ export function createPluginRegistry(
       ["featured", { name: "featured", single: true, registeredBy: null }],
       ["ogImage", { name: "ogImage", single: false, registeredBy: null }],
     ]),
+    searchProviders: new Map(),
     frameworkRoutes,
   };
 }

@@ -1,5 +1,8 @@
 import type { AppContext } from "../context/app-context.js";
-import type { AdminSearchInput, SearchGroup } from "./admin-search.js";
+import type {
+  AdminSearchInput,
+  SearchGroup,
+} from "../plugin/search-provider.js";
 import { and, asc } from "../db/index.js";
 import { users } from "../db/schema/users.js";
 import { userSearchCondition } from "../db/search-conditions.js";
@@ -15,9 +18,9 @@ const PRIORITY_BASE = 200;
 const USERS_LABEL = { id: "core.adminNav.item.users", message: "Users" };
 
 /**
- * `admin:search:results` handler for the `users` domain. Gated by the
- * single `user:list` capability; matches name+email (LIKE) and returns one
- * "Users" group. Names are optional, so the email is the fallback title.
+ * Core's search over the `users` domain. Gated by the single `user:list`
+ * capability; matches name+email (LIKE) and returns one "Users" group. Names
+ * are optional, so the email is the fallback title.
  */
 export async function usersSearchHandler(
   input: AdminSearchInput,

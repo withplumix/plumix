@@ -488,6 +488,16 @@ function createContextBase({
       );
     },
 
+    registerSearchProvider: (provider) => {
+      claimKey(
+        registry.searchProviders,
+        "search provider",
+        provider.id,
+        pluginId,
+        () => ({ ...provider, registeredBy: pluginId }),
+      );
+    },
+
     registerLoginLink: (options) => {
       assertValidLoginLink(pluginId, options);
       assertUnclaimed(

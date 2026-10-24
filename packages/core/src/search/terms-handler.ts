@@ -3,7 +3,7 @@ import type {
   AdminSearchInput,
   SearchGroup,
   SearchResultItem,
-} from "./admin-search.js";
+} from "../plugin/search-provider.js";
 import { spellTermCapability } from "../access/contract/capability.js";
 import { and, asc, inArray } from "../db/index.js";
 import { terms } from "../db/schema/terms.js";
@@ -23,9 +23,9 @@ const SCAN_LIMIT = 50;
 const PRIORITY_BASE = 100;
 
 /**
- * `admin:search:results` handler for the `terms` domain. Matches
- * name+slug (LIKE) across every taxonomy the caller can read, in a single
- * query, and returns one group per taxonomy.
+ * Core's search over the `terms` domain. Matches name+slug (LIKE) across every
+ * taxonomy the caller can read, in a single query, and returns one group per
+ * taxonomy.
  */
 export async function termsSearchHandler(
   input: AdminSearchInput,

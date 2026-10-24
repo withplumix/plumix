@@ -1,6 +1,9 @@
 import type { AppContext } from "../context/app-context.js";
 import type { SQL } from "../db/index.js";
-import type { SearchGroup, SearchResultItem } from "./admin-search.js";
+import type {
+  SearchGroup,
+  SearchResultItem,
+} from "../plugin/search-provider.js";
 import { namespacedEntryCapability } from "../access/contract/entry-capabilities.js";
 import { and, eq, not, or, sql } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";

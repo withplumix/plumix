@@ -81,7 +81,7 @@ import { assembleRedirects } from "../route/redirects.js";
 import { createBlockCatalogs } from "../route/render/block-catalog.js";
 import { CORE_RPC_NAMESPACES } from "../rpc/namespaces.js";
 import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
-import { registerCoreSearchHandlers } from "../search/register-core-handlers.js";
+import { registerCoreSearchProvider } from "../search/register-core-provider.js";
 import { registerCoreSettings } from "../settings-core.js";
 import { registerCoreTemplateDeps } from "../template-deps-core.js";
 import { ThemeRegistrationError } from "../theme-errors.js";
@@ -263,7 +263,6 @@ export async function buildApp(
   // `PLUMIX_DEV` must be set before `buildApp`; without a dev object, capture
   // no-ops.
   const dev = process.env.PLUMIX_DEV ? createDevRuntime(config.dev) : undefined;
-  registerCoreSearchHandlers(hooks);
   // Unconditional: the request memo drops what a write announced whether or
   // not a cdn is configured, and without one the purge half accumulates
   // nothing.
@@ -274,6 +273,7 @@ export async function buildApp(
   registerCoreTemplateDeps(seededRegistry);
   registerCoreSettings(seededRegistry);
   registerCoreScheduledTasks(seededRegistry);
+  registerCoreSearchProvider(seededRegistry);
   const { registry, appContextExtensions } = await installPlugins({
     hooks,
     plugins: config.plugins,
