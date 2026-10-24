@@ -14,6 +14,7 @@ import "./server/hooks.js";
 
 import type { FormDefinition } from "./define-form.js";
 import type { FormRegistry } from "./registry.js";
+import type { FormValidatorRegistration } from "./validators.js";
 import { createFormBlock } from "./block/form-block.js";
 import {
   EXPORT_ROUTE_PATH,
@@ -34,6 +35,7 @@ import { createExportHandler } from "./server/export.js";
 import { createFormMcpTools } from "./server/mcp-tools.js";
 import { purgeExpiredSubmissions, RETENTION_CRON } from "./server/retention.js";
 import { createSubmitHandler, tokenHandler } from "./server/submit.js";
+import { createFormValidatorRegistry } from "./validators.js";
 
 export type {
   FormAnswersOf,
@@ -75,6 +77,7 @@ export type {
   SubmissionStatus,
 } from "./types.js";
 export { BOUND_TYPES, SUBMISSION_STATUSES } from "./types.js";
+export type { FormValidatorRegistration } from "./validators.js";
 
 /**
  * Checked here rather than in the registry: the message has to name the
@@ -114,6 +117,14 @@ declare module "plumix" {
      * error, which throws at boot.
      */
     registerForm(this: { readonly id: string }, form: FormDefinition): void;
+    /**
+     * Validates submissions across forms, after the plugin's own checks.
+     * Two validators with one `id` fail boot.
+     */
+    registerFormValidator(
+      this: { readonly id: string },
+      validator: FormValidatorRegistration,
+    ): void;
   }
 
   interface AppContextExtensions {
@@ -127,6 +138,7 @@ declare module "plumix" {
 }
 
 type RegisterForm = PluginContextExtensions["registerForm"];
+type RegisterFormValidator = PluginContextExtensions["registerFormValidator"];
 
 export function forms(options: FormsConfig = {}) {
   const defaultRetentionDays = retentionDefault(options.retentionDays);
@@ -141,15 +153,23 @@ export function forms(options: FormsConfig = {}) {
     i18n: PLUGIN_I18N_SLOT,
     // Per install, not per `forms()` call: a descriptor may be installed
     // into more than one app.
-    state: () => ({ registry: createFormRegistry(defaultRetentionDays) }),
-    provides: (ctx, { registry }) => {
+    state: () => ({
+      registry: createFormRegistry(defaultRetentionDays),
+      validators: createFormValidatorRegistry(),
+    }),
+    provides: (ctx, { registry, validators }) => {
       const registerForm: RegisterForm = function registerForm(form) {
         registry.register(form, this.id);
       };
       ctx.extendAppContext("forms", { get: (slug) => registry.get(slug) });
       ctx.extendPluginContext("registerForm", registerForm);
+      const registerFormValidator: RegisterFormValidator =
+        function registerFormValidator(validator) {
+          validators.register(validator, this.id);
+        };
+      ctx.extendPluginContext("registerFormValidator", registerFormValidator);
     },
-    setup: (ctx, { registry }) => {
+    setup: (ctx, { registry, validators }) => {
       for (const form of options.forms ?? []) registry.register(form, "config");
       // Site-wide: any meta box can use `tel` too.
       ctx.registerFieldType({
@@ -186,7 +206,7 @@ export function forms(options: FormsConfig = {}) {
         // A plain form submit can't set `X-Plumix-Request`. Safe because
         // the handler reads no session.
         formPost: true,
-        handler: createSubmitHandler(registry),
+        handler: createSubmitHandler(registry, validators),
       });
       ctx.registerRoute({
         method: "GET",
@@ -214,6 +234,9 @@ export function forms(options: FormsConfig = {}) {
           }
         },
       });
+    },
+    afterSetup: (_ctx, { registry, validators }) => {
+      validators.assertFormsExist(registry);
     },
   });
 }

@@ -879,12 +879,18 @@ describe("the cross-cutting hooks", () => {
     setup: (ctx: PluginSetupContext) => void,
   ) => createFormsHarness([forms({ forms: [form] }), listener(setup)]);
 
-  test("form:validate rejects a submission with the errors it returns", async () => {
+  test("a registered validator refuses a submission with its errors alongside another's", async () => {
     const harness = await withListener(signup, (ctx) => {
-      ctx.addFilter("form:validate", (errors) => [
-        ...errors,
-        { field: "email", message: "That address is blocked." },
-      ]);
+      ctx.registerFormValidator({
+        id: "blocklist",
+        validate: () => [
+          { field: "email", message: "That address is blocked." },
+        ],
+      });
+      ctx.registerFormValidator({
+        id: "names",
+        validate: () => [{ field: "name", message: "Use your full name." }],
+      });
     });
 
     const response = await submitAsIsland(harness);
@@ -892,17 +898,23 @@ describe("the cross-cutting hooks", () => {
     response.assertStatus(422);
     expect(await response.json()).toEqual({
       ok: false,
-      errors: [{ field: "email", message: "That address is blocked." }],
+      errors: [
+        { field: "email", message: "That address is blocked." },
+        { field: "name", message: "Use your full name." },
+      ],
     });
     expect(await rows(harness)).toHaveLength(0);
   });
 
-  test("form:validate sees a submission every other check accepted", async () => {
+  test("a registered validator sees a submission every other check accepted", async () => {
     const seen: FormSubmissionCandidate[] = [];
     const harness = await withListener(signup, (ctx) => {
-      ctx.addFilter("form:validate", (errors, candidate) => {
-        seen.push(candidate);
-        return errors;
+      ctx.registerFormValidator({
+        id: "recorder",
+        validate: (candidate) => {
+          seen.push(candidate);
+          return [];
+        },
       });
     });
 
@@ -924,6 +936,84 @@ describe("the cross-cutting hooks", () => {
         userAgent: null,
       },
     ]);
+  });
+
+  test("a validator listing forms runs only for those", async () => {
+    const seen: string[] = [];
+    const harness = await createFormsHarness([
+      forms({ forms: [signup, contact] }),
+      listener((ctx) => {
+        ctx.registerFormValidator({
+          id: "contact-only",
+          forms: ["contact"],
+          validate: (candidate) => {
+            seen.push(candidate.form);
+            return [{ field: "", message: "Closed for now." }];
+          },
+        });
+      }),
+    ]);
+
+    (await submitAsIsland(harness)).assertStatus(200);
+    (await submit(harness, {}, { accept: "application/json" })).assertStatus(
+      422,
+    );
+
+    expect(seen).toEqual(["contact"]);
+  });
+
+  test("a validator that throws is logged and leaves the verdict to the others", async () => {
+    const logged: { message: string; meta?: unknown }[] = [];
+    const harness = await createFormsHarness(
+      [
+        forms({ forms: [signup] }),
+        listener((ctx) => {
+          ctx.registerFormValidator({
+            id: "broken",
+            validate: () => Promise.reject(new Error("blocklist unreachable")),
+          });
+          ctx.registerFormValidator({
+            id: "names",
+            validate: () => [{ field: "name", message: "Use your full name." }],
+          });
+        }),
+      ],
+      {
+        logger: {
+          debug: () => undefined,
+          info: () => undefined,
+          warn: () => undefined,
+          error: (message, meta) => logged.push({ message, meta }),
+        },
+      },
+    );
+
+    const response = await submitAsIsland(harness);
+
+    response.assertStatus(422);
+    expect(await response.json()).toEqual({
+      ok: false,
+      errors: [{ field: "name", message: "Use your full name." }],
+    });
+    expect(logged).toMatchObject([
+      { meta: { form: "signup", validator: "broken" } },
+    ]);
+  });
+
+  test("a validator that throws refuses nothing on its own", async () => {
+    const harness = await withListener(signup, (ctx) => {
+      ctx.registerFormValidator({
+        id: "broken",
+        validate: () => {
+          throw new Error("blocklist unreachable");
+        },
+      });
+    });
+
+    const response = await submitAsIsland(harness);
+
+    response.assertStatus(200);
+    expect(await rows(harness)).toHaveLength(1);
   });
 
   test("form:submitted fires with the stored row", async () => {

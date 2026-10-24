@@ -117,6 +117,56 @@ describe("forms registration", () => {
       }),
     ).rejects.toThrow(/"contact".*config.*newsletter/s);
   });
+
+  test("a validator listing a slug no form declares is rejected at boot, naming it", async () => {
+    const validating = definePlugin("blocklist", (ctx) => {
+      ctx.registerFormValidator({
+        id: "blocklist",
+        forms: ["contact", "newsleter"],
+        validate: () => [],
+      });
+    });
+
+    await expect(
+      createDispatcherHarness({
+        config: {
+          plugins: [forms({ forms: [contact] }), validating, newsletterPlugin],
+        },
+      }),
+    ).rejects.toThrow(/"newsleter"/);
+  });
+
+  test("two validators sharing an id are rejected at boot, naming both", async () => {
+    const validator = { id: "blocklist", validate: () => [] };
+    const first = definePlugin("spam_guard", (ctx) => {
+      ctx.registerFormValidator(validator);
+    });
+    const second = definePlugin("blocklist", (ctx) => {
+      ctx.registerFormValidator(validator);
+    });
+
+    await expect(
+      createDispatcherHarness({
+        config: { plugins: [forms({ forms: [contact] }), first, second] },
+      }),
+    ).rejects.toThrow(/"blocklist".*spam_guard.*blocklist/s);
+  });
+
+  test("a validator may list a form a later plugin registers", async () => {
+    const validating = definePlugin("blocklist", (ctx) => {
+      ctx.registerFormValidator({
+        id: "blocklist",
+        forms: ["newsletter"],
+        validate: () => [],
+      });
+    });
+
+    await expect(
+      createDispatcherHarness({
+        config: { plugins: [forms(), validating, newsletterPlugin] },
+      }),
+    ).resolves.toBeDefined();
+  });
 });
 
 describe("the form block on a public page", () => {

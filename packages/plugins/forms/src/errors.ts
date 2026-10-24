@@ -1,9 +1,11 @@
 type FormsErrorCode =
   | "duplicate_form_slug"
+  | "duplicate_validator_id"
   | "insert_returned_no_row"
   | "invalid_default_retention"
   | "invalid_retention"
   | "stores_nothing"
+  | "unknown_validator_form"
   | "unsupported_field_type";
 
 interface FormsErrorFields {
@@ -61,6 +63,20 @@ export class FormsError extends Error {
     );
   }
 
+  static duplicateValidatorId(ctx: {
+    key: string;
+    contributor: string;
+    existingContributor: string;
+  }): FormsError {
+    return new FormsError(
+      "duplicate_validator_id",
+      `forms: two form validators claim the id "${ctx.key}" — one from ` +
+        `${ctx.existingContributor}, one from ${ctx.contributor}. Rename the ` +
+        `later validator.`,
+      ctx,
+    );
+  }
+
   static insertReturnedNoRow(ctx: { slug: string }): FormsError {
     return new FormsError(
       "insert_returned_no_row",
@@ -102,6 +118,20 @@ export class FormsError extends Error {
       `forms: form "${ctx.slug}" declares store: false and no onSubmit, so ` +
         `every submission it accepts would be discarded. Give it an ` +
         `onSubmit to receive them, or let it store them.`,
+      ctx,
+    );
+  }
+
+  static unknownValidatorForm(ctx: {
+    slug: string;
+    key: string;
+    contributor: string;
+  }): FormsError {
+    return new FormsError(
+      "unknown_validator_form",
+      `forms: validator "${ctx.key}" from ${ctx.contributor} lists the form ` +
+        `"${ctx.slug}", which no form declares, so it would never run there. ` +
+        `Fix the slug, or drop it from the validator's forms.`,
       ctx,
     );
   }

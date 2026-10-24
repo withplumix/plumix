@@ -232,10 +232,11 @@ export const ROSTER: Readonly<
       },
       {
         reason:
-          "a submission as the `form:validate` / `form:submitted` hooks hand " +
-          "it to a subscriber, and the README's `formatSubmission` that " +
-          "renders one for a notification",
+          "a submission as a registered validator and the `form:submitted` " +
+          "hook receive it, the validator a plugin registers, and the " +
+          "README's `formatSubmission` that renders one for a notification",
         names: [
+          "FormValidatorRegistration",
           "formatSubmission",
           "FormSubmissionCandidate",
           "SubmissionStatus",
