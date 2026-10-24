@@ -2,10 +2,8 @@ import * as v from "valibot";
 import { describe, expect, test } from "vitest";
 
 import type { AppContext } from "../context/app-context.js";
-import type { Term } from "../db/schema/terms.js";
 import type { CdnFake } from "../test/cdn-fake.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
-import { pluginStore } from "../context/stores.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "../plugin/define.js";
 import { entry } from "../route/render/template-builders.js";
@@ -16,13 +14,12 @@ import { createTestContext } from "../test/context.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 import { createTestDb } from "../test/harness.js";
 import { defineTheme } from "../theme.js";
-import { pluginReadTags } from "./contract/tags.js";
 
 /**
  * A plugin with a cacheable page per key that reads its data under that key
  * (or the whole namespace at `/all`), and a POST that reports a change.
  */
-function keyedPlugin(id: string) {
+function keyedPlugin(id: string, listensForFired = false) {
   return definePlugin(id, (ctx) => {
     ctx.registerRoute({
       method: "GET",
@@ -49,13 +46,46 @@ function keyedPlugin(id: string) {
       method: "POST",
       path: "/change",
       auth: "public",
-      handler: async (request, appCtx: AppContext) => {
-        const { key } = (await request.json()) as { key?: string };
+      handler: (request, appCtx) => {
+        const key = new URL(request.url).searchParams.get("key") ?? undefined;
         appCtx.cache.changed(key);
         return new Response(null, { status: 204 });
       },
     });
+    if (listensForFired) {
+      ctx.addAction("cache-probe:fired", (_value, appCtx) => {
+        appCtx.cache.changed("x");
+      });
+    }
+    ctx.registerRoute({
+      method: "POST",
+      path: "/fire",
+      auth: "public",
+      handler: async (_request, appCtx) => {
+        await appCtx.hooks.doAction("cache-probe:fired", 1, appCtx);
+        return new Response(null, { status: 204 });
+      },
+    });
+    ctx.registerRoute({
+      method: "GET",
+      path: "/memo",
+      auth: "public",
+      handler: async (_request, appCtx) => {
+        let loads = 0;
+        const read = () =>
+          appCtx.memo("alpha:x", () => Promise.resolve(++loads), ["p:alpha:x"]);
+        await read();
+        appCtx.cache.changed("x");
+        return new Response(String(await read()));
+      },
+    });
   });
+}
+
+declare module "../hooks/types.js" {
+  interface ActionRegistry {
+    "cache-probe:fired": (value: number, ctx: AppContext) => void;
+  }
 }
 
 declare module "../blocks/deps.js" {
@@ -74,6 +104,15 @@ const probe = definePlugin("probe", (ctx) => {
         appCtx.cache.reads(slug);
       });
       return Promise.resolve({});
+    },
+  });
+  ctx.registerRoute({
+    method: "POST",
+    path: "/change",
+    auth: "public",
+    handler: (_request, appCtx) => {
+      appCtx.cache.changed("x");
+      return new Response(null, { status: 204 });
     },
   });
   ctx.registerRpcRouter({
@@ -101,9 +140,32 @@ async function site(): Promise<Site> {
   const cdn = fakeCdn();
   const h = await createDispatcherHarness({
     cdn,
-    config: { plugins: [keyedPlugin("alpha"), keyedPlugin("beta")] },
+    config: {
+      plugins: [
+        keyedPlugin("alpha"),
+        keyedPlugin("beta"),
+        keyedPlugin("gamma", true),
+      ],
+    },
   });
   return { h, cdn };
+}
+
+async function probeSite() {
+  const cdn = fakeCdn();
+  const h = await createDispatcherHarness({
+    cdn,
+    config: { plugins: [probe, keyedPlugin("beta")], theme: probeTheme },
+  });
+  const author = await h.seedUser("admin");
+  await h.factory.entry.create({
+    type: "post",
+    slug: "hello",
+    status: "published",
+    authorId: author.id,
+    publishedAt: new Date(),
+  });
+  return { h, cdn, author };
 }
 
 async function render(s: Site, path: string): Promise<void> {
@@ -113,9 +175,9 @@ async function render(s: Site, path: string): Promise<void> {
 }
 
 async function change(s: Site, plugin: string, key?: string): Promise<void> {
-  const response = await s.h.fetch(`/_plumix/${plugin}/change`, {
+  const query = key === undefined ? "" : `?key=${key}`;
+  const response = await s.h.fetch(`/_plumix/${plugin}/change${query}`, {
     method: "POST",
-    json: key === undefined ? {} : { key },
   });
   response.assertStatus(204);
   await s.h.drainDeferred();
@@ -162,21 +224,11 @@ describe("ctx.cache", () => {
   });
 
   test("a change drops what the request memo holds under that key at once", async () => {
-    const ctx = createTestContext({ db: await createTestDb() });
-    let loads = 0;
-    const read = () =>
-      ctx.memo(
-        "alpha:x",
-        () => Promise.resolve(++loads),
-        pluginReadTags("alpha", "x"),
-      );
-    await read();
+    const s = await site();
 
-    pluginStore.run("alpha", () => {
-      ctx.cache.changed("x");
-    });
+    const response = await s.h.fetch("/_plumix/alpha/memo");
 
-    expect(await read()).toBe(2);
+    expect(await response.text()).toBe("2");
   });
 
   test("throws outside a plugin's code, where there is no namespace", async () => {
@@ -187,23 +239,23 @@ describe("ctx.cache", () => {
     }).toThrow(/outside a plugin's code/);
   });
 
-  test("a template dep and a plugin RPC procedure name the plugin's own namespace", async () => {
-    const cdn = fakeCdn();
-    const h = await createDispatcherHarness({
-      cdn,
-      config: { plugins: [probe, keyedPlugin("beta")], theme: probeTheme },
-    });
-    const author = await h.seedUser("admin");
-    await h.factory.entry.create({
-      type: "post",
-      slug: "hello",
-      status: "published",
-      authorId: author.id,
-      publishedAt: new Date(),
-    });
-    const s = { h, cdn };
-    await render(s, "/post/hello");
-    await render(s, "/_plumix/beta/page/x");
+  test("a template dep names the plugin's own namespace", async () => {
+    const { h, cdn } = await probeSite();
+    await render({ h, cdn }, "/post/hello");
+    await render({ h, cdn }, "/_plumix/beta/page/x");
+
+    const response = await h.fetch("/_plumix/probe/change", { method: "POST" });
+    response.assertStatus(204);
+    await h.drainDeferred();
+
+    cdn.assertNotStored("/post/hello");
+    cdn.assertStored("/_plumix/beta/page/x");
+  });
+
+  test("a plugin RPC procedure names the plugin's own namespace", async () => {
+    const { h, cdn, author } = await probeSite();
+    await render({ h, cdn }, "/post/hello");
+    await render({ h, cdn }, "/_plumix/beta/page/x");
 
     const response = await h.fetch("/_plumix/rpc/probe/change", {
       method: "POST",
@@ -217,27 +269,17 @@ describe("ctx.cache", () => {
     cdn.assertStored("/_plumix/beta/page/x");
   });
 
-  test("a plugin's action handler names the plugin's own namespace", async () => {
-    const hooks = new HookRegistry();
-    const ctx = createTestContext({ db: await createTestDb(), hooks });
-    hooks.addAction(
-      "term:created",
-      (_term, appCtx) => {
-        appCtx.cache.changed("x");
-      },
-      { plugin: "alpha" },
+  test("a plugin's action handler names that plugin's namespace, not the caller's", async () => {
+    const s = await site();
+    await render(s, "/_plumix/alpha/page/x");
+    await render(s, "/_plumix/gamma/page/x");
+
+    (await s.h.fetch("/_plumix/alpha/fire", { method: "POST" })).assertStatus(
+      204,
     );
-    let loads = 0;
-    const read = () =>
-      ctx.memo(
-        "alpha:x",
-        () => Promise.resolve(++loads),
-        pluginReadTags("alpha", "x"),
-      );
-    await read();
+    await s.h.drainDeferred();
 
-    await hooks.doAction("term:created", {} as Term, ctx);
-
-    expect(await read()).toBe(2);
+    s.cdn.assertNotStored("/_plumix/gamma/page/x");
+    s.cdn.assertStored("/_plumix/alpha/page/x");
   });
 });

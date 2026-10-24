@@ -50,8 +50,7 @@ export function settingsTag(group: string): string {
 
 /**
  * A plugin id holds no `:` or `*` (`PLUGIN_ID_RE`), so no key reaches another
- * plugin's namespace. `p:<id>*` marks a read of the whole namespace, which a
- * change to any key purges.
+ * plugin's namespace.
  */
 export function pluginReadTags(
   pluginId: string,
