@@ -20,8 +20,9 @@ overrunning task could not be told apart from a broken one (#3266).
   `ctx.fetch` follows it, so an in-flight call aborts with the task. On a
   request or `handler.run` context it never fires.
 - **The reason is a standard `DOMException`.** It is named `TimeoutError`, its
-  `cause` is `"timeout"`, and its message names the budget (`timed out after
-5m`). There is no Plumix error class, as for `ctx.fetch` (ADR 0056).
+  `cause` is `"timeout"`, and its message names
+  the budget, such as `timed out after 5m`. There is no Plumix error class, as
+  for `ctx.fetch` (ADR 0056).
 - **Core stops waiting; it does not kill.** A task that ignores its signal
   keeps running in the background. Only its own work leaks, and the report
   names it.
@@ -29,9 +30,9 @@ overrunning task could not be told apart from a broken one (#3266).
   budget ran out, whether or not it then rejected with the signal's reason. A
   task that throws anything else, an `AbortError` of its own included, failed.
 - **A timeout is not an error.** It is a warn log with the task, plugin, cron
-  and budget, and the task's span ends with status `cancelled` and a `timed out
-after …` message, so error tools and alerting on error logs do not page on a
-  known-slow task.
+  and budget, and the task's span ends with status `cancelled` and a message
+  that begins `timed out after`, so error tools and alerting on error logs do
+  not page on a known-slow task.
 - **`ran` counts only tasks that completed.** `plumix cron run` names each
   timed-out task with its budget, prints `N ran · N failed · N timed out`, and
   exits non-zero, as it does on a failure: the run did not do its job.

@@ -76,7 +76,8 @@ guard. The claim (`scheduled_task_claims`) lets one replica run a schedule-minut
 The lease is shared when any task has no cron and per schedule otherwise. The run guard dedupes only
 replicas that share a database. `plumix cron run` takes the same claim and lease under a
 `cli:<host>:<pid>` holder, fires the declared spelling of the expression, prints `N ran · N failed · N timed out` with each
-timed-out task and its budget, and exits non-zero on a failed, timed-out or aborted run. A skipped run exits zero with a message.
+timed-out task and its budget, and exits non-zero on a failed, timed-out or aborted run. A skipped
+run exits zero with a message.
 
 Work that outlives a request goes to the `queue` slot (see [runtimes](runtimes.md)). The runtime's
 own queue delivers each job back through the runtime handler, which hands it to scheduled tasks to
