@@ -1,5 +1,6 @@
 import type { UserRole } from "../../db/schema/users.js";
 import type {
+  ActionGrant,
   EntryTypeCapabilityOverrides,
   TermTaxonomyCapabilityOverrides,
 } from "./capability.js";
@@ -39,19 +40,38 @@ export function canAccessAdmin(role: UserRole): boolean {
   return roleLevel(role) >= roleLevel(STAFF_MIN_ROLE);
 }
 
+/**
+ * The default roles a capability goes to, in ladder order. `admin` holds
+ * every capability, so it is always one of them.
+ */
+export function grantedRoles(roles: readonly UserRole[]): readonly UserRole[] {
+  return USER_ROLES.filter((role) => role === "admin" || roles.includes(role));
+}
+
+/** The ladder form: a minimum rung grants that rung and every one above it. */
+export function rolesFromRank(minRole: UserRole): readonly UserRole[] {
+  return USER_ROLES.slice(roleLevel(minRole));
+}
+
+/** A list names the receiving roles; a single role is the ladder's minimum. */
+function grantedRolesOf(grant: ActionGrant): readonly UserRole[] {
+  return grantedRoles(typeof grant === "string" ? rolesFromRank(grant) : grant);
+}
+
 export interface DerivedCapability {
   readonly name: string;
-  readonly minRole: UserRole;
+  /** The default roles that receive it, `admin` included. */
+  readonly grantTo: readonly UserRole[];
 }
 
 function deriveCapabilities(
   base: string,
   actions: Record<string, UserRole>,
-  overrides: Partial<Record<string, UserRole>> | undefined,
+  overrides: Partial<Record<string, ActionGrant>> | undefined,
 ): readonly DerivedCapability[] {
   return Object.entries(actions).map(([action, minRole]) => ({
     name: `${base}:${action}`,
-    minRole: overrides?.[action] ?? minRole,
+    grantTo: grantedRolesOf(overrides?.[action] ?? minRole),
   }));
 }
 

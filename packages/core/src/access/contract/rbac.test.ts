@@ -30,21 +30,30 @@ describe("canAccessAdmin", () => {
   });
 });
 
+/** The roles the ladder form grants from each rung up. */
+const LADDER_FROM = {
+  subscriber: ["subscriber", "contributor", "author", "editor", "admin"],
+  contributor: ["contributor", "author", "editor", "admin"],
+  author: ["author", "editor", "admin"],
+  editor: ["editor", "admin"],
+  admin: ["admin"],
+} as const;
+
 describe("deriveEntryTypeCapabilities", () => {
   test("defaults match POST_TYPE_CAPABILITY_ACTIONS when no override is set", () => {
     const caps = deriveEntryTypeCapabilities(
       toRegisteredEntryType("post", { label: "Posts" }, null),
     );
-    const byName = Object.fromEntries(caps.map((c) => [c.name, c.minRole]));
-    expect(byName["entry:post:read"]).toBe("subscriber");
-    expect(byName["entry:post:edit_own"]).toBe("contributor");
-    expect(byName["entry:post:publish"]).toBe("author");
-    expect(byName["entry:post:edit_any"]).toBe("editor");
-    expect(byName["entry:post:delete"]).toBe("editor");
-    expect(byName["entry:post:create"]).toBe("contributor");
+    const byName = Object.fromEntries(caps.map((c) => [c.name, c.grantTo]));
+    expect(byName["entry:post:read"]).toEqual(LADDER_FROM.subscriber);
+    expect(byName["entry:post:edit_own"]).toEqual(LADDER_FROM.contributor);
+    expect(byName["entry:post:publish"]).toEqual(LADDER_FROM.author);
+    expect(byName["entry:post:edit_any"]).toEqual(LADDER_FROM.editor);
+    expect(byName["entry:post:delete"]).toEqual(LADDER_FROM.editor);
+    expect(byName["entry:post:create"]).toEqual(LADDER_FROM.contributor);
   });
 
-  test("`capabilities` override raises minRole on specified actions only", () => {
+  test("`capabilities` override raises the minimum rung on specified actions only", () => {
     // Menu-item-shape: every action requires admin — editors lose access.
     const caps = deriveEntryTypeCapabilities(
       toRegisteredEntryType(
@@ -66,11 +75,11 @@ describe("deriveEntryTypeCapabilities", () => {
       ),
     );
     for (const cap of caps) {
-      expect(cap.minRole).toBe("admin");
+      expect(cap.grantTo).toEqual(["admin"]);
     }
   });
 
-  test("partial override leaves non-overridden actions at their default minRole", () => {
+  test("partial override leaves non-overridden actions at their default rung", () => {
     // Media-shape: only `create` is remapped (author+ can upload).
     const caps = deriveEntryTypeCapabilities(
       toRegisteredEntryType(
@@ -82,12 +91,14 @@ describe("deriveEntryTypeCapabilities", () => {
         null,
       ),
     );
-    const byName = Object.fromEntries(caps.map((c) => [c.name, c.minRole]));
-    expect(byName["entry:attachment:create"]).toBe("author");
+    const byName = Object.fromEntries(caps.map((c) => [c.name, c.grantTo]));
+    expect(byName["entry:attachment:create"]).toEqual(LADDER_FROM.author);
     // Other actions remain at defaults.
-    expect(byName["entry:attachment:read"]).toBe("subscriber");
-    expect(byName["entry:attachment:edit_own"]).toBe("contributor");
-    expect(byName["entry:attachment:publish"]).toBe("author");
+    expect(byName["entry:attachment:read"]).toEqual(LADDER_FROM.subscriber);
+    expect(byName["entry:attachment:edit_own"]).toEqual(
+      LADDER_FROM.contributor,
+    );
+    expect(byName["entry:attachment:publish"]).toEqual(LADDER_FROM.author);
   });
 
   test("overrides compose with capabilityType pooling", () => {
@@ -104,20 +115,20 @@ describe("deriveEntryTypeCapabilities", () => {
         null,
       ),
     );
-    const byName = Object.fromEntries(caps.map((c) => [c.name, c.minRole]));
-    expect(byName["entry:post:delete"]).toBe("admin");
-    expect(byName["entry:post:publish"]).toBe("author");
+    const byName = Object.fromEntries(caps.map((c) => [c.name, c.grantTo]));
+    expect(byName["entry:post:delete"]).toEqual(LADDER_FROM.admin);
+    expect(byName["entry:post:publish"]).toEqual(LADDER_FROM.author);
   });
 });
 
 describe("deriveTermTaxonomyCapabilities", () => {
   test("defaults match TAXONOMY_CAPABILITY_ACTIONS when no override is set", () => {
     const caps = deriveTermTaxonomyCapabilities("category", {});
-    const byName = Object.fromEntries(caps.map((c) => [c.name, c.minRole]));
-    expect(byName["term:category:assign"]).toBe("contributor");
-    expect(byName["term:category:manage"]).toBe("editor");
-    expect(byName["term:category:edit"]).toBe("editor");
-    expect(byName["term:category:delete"]).toBe("editor");
+    const byName = Object.fromEntries(caps.map((c) => [c.name, c.grantTo]));
+    expect(byName["term:category:assign"]).toEqual(LADDER_FROM.contributor);
+    expect(byName["term:category:manage"]).toEqual(LADDER_FROM.editor);
+    expect(byName["term:category:edit"]).toEqual(LADDER_FROM.editor);
+    expect(byName["term:category:delete"]).toEqual(LADDER_FROM.editor);
   });
 
   test("nav_menu-shape override raises every action to admin", () => {
@@ -131,7 +142,7 @@ describe("deriveTermTaxonomyCapabilities", () => {
       },
     });
     for (const cap of caps) {
-      expect(cap.minRole).toBe("admin");
+      expect(cap.grantTo).toEqual(["admin"]);
     }
   });
 });

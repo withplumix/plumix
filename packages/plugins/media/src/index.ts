@@ -156,9 +156,9 @@ export function media(options: MediaPluginOptions = {}): PluginDescriptor {
         isPublic: false,
         hasArchive: false,
         menuIcon: "image",
-        // An owner deletes their own upload on `delete`, which a contributor
-        // holds here; someone else's still takes `edit_any` on top.
-        capabilities: { delete: "contributor" },
+        // An owner deletes their own upload on `delete`, which every role
+        // that uploads holds here; someone else's still takes `edit_any` on top.
+        capabilities: { delete: ["contributor", "author", "editor"] },
       });
 
       ctx.registerRpcRouter(

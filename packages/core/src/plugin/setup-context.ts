@@ -26,6 +26,8 @@ import type {
 import {
   deriveEntryTypeCapabilities,
   deriveTermTaxonomyCapabilities,
+  grantedRoles,
+  rolesFromRank,
 } from "../access/contract/rbac.js";
 import { coreMarks, isReservedBlockName } from "../blocks/index.js";
 import { pluginStore } from "../context/stores.js";
@@ -79,6 +81,22 @@ export function createPluginAfterSetupContext(
   );
 }
 
+/** The ladder forms still name a minimum rung until the ladder goes (#3366). */
+function rolesOfRegistration(
+  grant:
+    | UserRole
+    | { minRole: UserRole; defaultGrants?: readonly UserRole[] }
+    | { grantTo?: readonly UserRole[] }
+    | undefined,
+): readonly UserRole[] {
+  if (grant === undefined) return [];
+  if (typeof grant === "string") return rolesFromRank(grant);
+  if ("minRole" in grant) {
+    return [...rolesFromRank(grant.minRole), ...(grant.defaultGrants ?? [])];
+  }
+  return grant.grantTo ?? [];
+}
+
 function createContextBase({
   pluginId,
   hooks,
@@ -86,25 +104,16 @@ function createContextBase({
   theme,
   dev,
 }: CreatePluginContextArgs): PluginSetupContextBase {
-  // Pooling caps by capabilityType is safe when minRoles agree; if one
-  // type applies a `capabilities` override and another doesn't, silent
-  // first-writer-wins would tie the resolved cap to registration order.
+  // Types pooling one capabilityType share each capability, so it goes to
+  // every role any of them names, whatever order the plugins register in.
   const addDerivedCaps = (caps: readonly DerivedCapability[]): void => {
     for (const cap of caps) {
       const existing = registry.capabilities.get(cap.name);
-      if (existing) {
-        if (existing.minRole !== cap.minRole) {
-          throw PluginContextError.derivedCapabilityMinRoleMismatch({
-            pluginId,
-            capName: cap.name,
-            minRole: cap.minRole,
-            existingMinRole: existing.minRole,
-            existingOwner: existing.registeredBy ?? "<unknown>",
-          });
-        }
-        continue;
-      }
-      registry.capabilities.set(cap.name, { ...cap, registeredBy: pluginId });
+      registry.capabilities.set(cap.name, {
+        ...cap,
+        grantTo: grantedRoles([...(existing?.grantTo ?? []), ...cap.grantTo]),
+        registeredBy: existing === undefined ? pluginId : existing.registeredBy,
+      });
     }
   };
 
@@ -172,26 +181,16 @@ function createContextBase({
 
     registerCapability: (
       name: string,
-      minRoleOrOptions:
-        UserRole | { minRole: UserRole; defaultGrants?: readonly UserRole[] },
+      grant?:
+        | UserRole
+        | { minRole: UserRole; defaultGrants?: readonly UserRole[] }
+        | { grantTo?: readonly UserRole[] },
     ) => {
-      claimKey(registry.capabilities, "capability", name, pluginId, () => {
-        const resolved =
-          typeof minRoleOrOptions === "string"
-            ? { minRole: minRoleOrOptions, defaultGrants: undefined }
-            : {
-                minRole: minRoleOrOptions.minRole,
-                defaultGrants: minRoleOrOptions.defaultGrants,
-              };
-        return {
-          name,
-          minRole: resolved.minRole,
-          defaultGrants: resolved.defaultGrants
-            ? [...new Set(resolved.defaultGrants)].sort()
-            : undefined,
-          registeredBy: pluginId,
-        };
-      });
+      claimKey(registry.capabilities, "capability", name, pluginId, () => ({
+        name,
+        grantTo: grantedRoles(rolesOfRegistration(grant)),
+        registeredBy: pluginId,
+      }));
     },
 
     registerSettingsGroup: (name, options) => {

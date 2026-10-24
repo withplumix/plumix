@@ -2,10 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import type { UserRole } from "../db/schema/users.js";
 import type { BarRenderContext } from "./types.js";
-import {
-  deriveEntryTypeCapabilities,
-  roleLevel,
-} from "../access/contract/rbac.js";
+import { deriveEntryTypeCapabilities } from "../access/contract/rbac.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { toRegisteredEntryType } from "../plugin/registry.js";
 import { silentLogger } from "../test/context.js";
@@ -44,15 +41,12 @@ function roleCan(
   role: UserRole,
   types: BarRenderContext["entryTypes"],
 ): (capability: string) => boolean {
-  const minRoles = new Map(
+  const receivers = new Map(
     [...types.values()]
       .flatMap((type) => deriveEntryTypeCapabilities(type))
-      .map((cap) => [cap.name, cap.minRole]),
+      .map((cap) => [cap.name, cap.grantTo]),
   );
-  return (capability) => {
-    const minRole = minRoles.get(capability);
-    return minRole !== undefined && roleLevel(role) >= roleLevel(minRole);
-  };
+  return (capability) => receivers.get(capability)?.includes(role) ?? false;
 }
 
 /** Core's nodes as the bar for `overrides` shows them. */

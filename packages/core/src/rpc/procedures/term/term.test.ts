@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import type { UserRole } from "../../../db/schema/users.js";
 import type { MutablePluginRegistry } from "../../../plugin/manifest.js";
+import { rolesFromRank } from "../../../access/contract/rbac.js";
 import { etagOf } from "../../../db/concurrency.js";
 import { acquireEditLease, readEditLease } from "../../../db/edit-lease.js";
 import { eq, inArray } from "../../../db/index.js";
@@ -33,7 +34,11 @@ function taxonomyRegistry() {
     "term:category:delete": "editor",
   };
   for (const [name, minRole] of Object.entries(caps)) {
-    registry.capabilities.set(name, { name, minRole, registeredBy: "test" });
+    registry.capabilities.set(name, {
+      name,
+      grantTo: rolesFromRank(minRole),
+      registeredBy: "test",
+    });
   }
   return registry;
 }
@@ -204,7 +209,7 @@ describe("term.create", () => {
     );
     plugins.capabilities.set("term:post_tag:edit", {
       name: "term:post_tag:edit",
-      minRole: "editor",
+      grantTo: rolesFromRank("editor"),
       registeredBy: "test",
     });
     const h = await createRpcHarness({ authAs: "editor", plugins });

@@ -44,7 +44,7 @@ export function search(options: SearchConfig = {}): PluginDescriptor {
     setup: (ctx) => {
       registerIndexInvalidator(ctx);
       registerSyncReindex(ctx);
-      ctx.registerCapability(REINDEX_CAPABILITY, "admin");
+      ctx.registerCapability(REINDEX_CAPABILITY);
       // Routes rather than an RPC router: the plugin's own id is one of core's
       // reserved RPC namespaces, so `registerRpcRouter` is closed to it.
       ctx.registerRoute({

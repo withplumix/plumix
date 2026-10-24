@@ -54,7 +54,7 @@ The first-party plugins register `audit_log:read` and `search:reindex` (granted 
 
 **Roles and capabilities.** A role is a named set of capability grants. Core ships four default roles, `member`, `author`, `editor` and `admin`, each with default grants (`access/contract/capability.ts`). A site declares more in config or adds them in the admin, where they are stored in a `roles` table, and the two sources merge at boot. A plugin that registers a capability names which default roles get it, and a site grants it to any role. At boot core resolves one table from each role to its capabilities (`auth/rbac.ts`), and every "may this role do X" reads it: `hasCapability`, the capability list sent with the session, `ctx.auth.can` (`makeAuthCan` in `auth/with-user.ts`) and the token scope intersection. For an API token it also requires the capability to be in the token's scopes. Opening the admin is the `admin:access` capability. Nothing compares roles by rank.
 
-Entry and term capabilities derive from `POST_TYPE_CAPABILITY_ACTIONS` and `TERM_TAXONOMY_CAPABILITY_ACTIONS` per `capabilityType`. Types that share a `capabilityType` pool one namespace ([ADR 0022](../adr/0022-a-capability-is-named-by-what-it-guards.md)).
+Entry and term capabilities derive from `POST_TYPE_CAPABILITY_ACTIONS` and `TERM_TAXONOMY_CAPABILITY_ACTIONS` per `capabilityType`. Types that share a `capabilityType` pool one namespace ([ADR 0022](../adr/0022-a-capability-is-named-by-what-it-guards.md)). A type's `capabilities` override names, per action, the default roles that receive it, and pooled types combine what they name by union, so registration order never changes a grant.
 
 **Surfaces.**
 
@@ -73,6 +73,7 @@ Entry and term capabilities derive from `POST_TYPE_CAPABILITY_ACTIONS` and `TERM
 - `AuthResult.credential` is required, so a custom authenticator that omits it fails to compile. ADR 0024.
 - A token can only narrow its owner's capabilities, never widen them. `auth/auth-can-scopes.test.ts`.
 - The session's capability list and `hasCapability` read one role table and never disagree. `auth/role-capabilities.test.ts`.
+- A plugin capability goes to the default roles its `grantTo` names plus `admin`, and to `admin` alone without it. `auth/role-capabilities.test.ts`.
 - The first user is admin, even under concurrency. `auth/bootstrap.test.ts`.
 - A sign-in method cannot mount over core's auth routes, and two owners cannot share a name. `auth/declared-methods.test.ts`.
 - A sign-in method cannot take one of the auth client's own keys, by its name or its camelCase form. [ADR 0050](../adr/0050-the-auth-client-manages-the-signed-in-users-own-account.md); `runtime/app-auth-method-validation.test.ts`.
