@@ -65,6 +65,8 @@ export async function resolveAuthorRow(
       new Map((await resolveAuthors(ctx, [row])).map((a) => [a.id, a])),
     authorTags,
   );
+  // After the memo, so a header answered from it is tagged too.
+  declarePageTags(ctx, authorTags(row.id));
   // memoBatch answers one entry per id, and the loader has the row in hand.
   return author ?? publicAuthor(row, {});
 }

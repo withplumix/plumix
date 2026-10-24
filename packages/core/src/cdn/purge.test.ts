@@ -15,6 +15,7 @@ import {
   toRegisteredTermTaxonomy,
 } from "../plugin/registry.js";
 import { resolveListingPage } from "../route/render/page-data.js";
+import { resolveAuthorRow } from "../route/render/resolve-entry-list.js";
 import { sweepUnsettledMeta } from "../rpc/procedures/meta/sweep.js";
 import { fakeCdn } from "../test/cdn-fake.js";
 import { createTestContext } from "../test/context.js";
@@ -360,6 +361,20 @@ describe("a write to a user", () => {
         return new Response(page.data.author.name);
       },
     });
+    // An author header resolved on its own, with no slug lookup or listing.
+    ctx.registerPublicRoute({
+      path: "/header/:id",
+      cacheable: true,
+      handler: async (request, appCtx) => {
+        const id = Number(new URL(request.url).pathname.split("/").pop());
+        const row = await appCtx.db.query.users.findFirst({
+          where: eq(users.id, id),
+        });
+        if (row === undefined) return new Response(null, { status: 404 });
+        const author = await resolveAuthorRow(appCtx, row);
+        return new Response(author.images.featured?.url ?? "");
+      },
+    });
     // Stands in for `plumix meta settle`, which runs the same sweep.
     ctx.registerRoute({
       method: "POST",
@@ -511,5 +526,18 @@ describe("a write to a user", () => {
     });
 
     cdn.assertNotStored(`/byline/${String(jane.id)}`);
+  });
+
+  it("a meta-only save of an author purges a page that resolved only their header", async () => {
+    const { h, cdn, jane, photo, render, rpc } = await site();
+    await render(`/header/${String(jane.id)}`);
+
+    await rpc("user/update", {
+      id: jane.id,
+      ifMatch: await currentUserEtag(h.db, jane.id),
+      meta: { portrait: String(photo.id) },
+    });
+
+    cdn.assertNotStored(`/header/${String(jane.id)}`);
   });
 });
