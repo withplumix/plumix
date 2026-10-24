@@ -1,13 +1,13 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { beforeAll, describe, expect, onTestFinished, test, vi } from "vitest";
+import { beforeAll, describe, expect, test, vi } from "vitest";
 
 import type { DevInput } from "../../config.js";
 import type { AppContext, Db } from "../../context/app-context.js";
-import { HookRegistry } from "../../hooks/registry.js";
 import { createDevRuntime } from "../../runtime/dev.js";
-import { createTestContext } from "../../test/context.js";
+import { createTestContext, silentLogger } from "../../test/context.js";
 import { createTestDb } from "../../test/harness.js";
 import { registerCoreDebugPanels } from "../debug-panels/core-panels.js";
+import { registerDevItem } from "../registrations.js";
 import { projectDebugSnapshot } from "../request-history/snapshot.js";
 import { PlumixDebugBar } from "./component.js";
 
@@ -20,26 +20,23 @@ function ctxWith(
   dev: DevInput | undefined,
   url = "https://cms.example/blog/hello",
 ): AppContext {
-  const hooks = new HookRegistry();
-  registerCoreDebugPanels(hooks);
+  const runtime = dev && createDevRuntime(dev);
+  if (runtime) registerCoreDebugPanels(runtime);
   return createTestContext({
     db,
-    hooks,
     request: new Request(url),
-    dev: dev && createDevRuntime(dev),
+    dev: runtime,
   });
 }
 
 describe("PlumixDebugBar", () => {
-  test("isolates a panel that throws in render — bar and other panels survive", () => {
-    const error = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => undefined);
-    onTestFinished(() => error.mockRestore());
-    const hooks = new HookRegistry();
-    registerCoreDebugPanels(hooks);
-    hooks.addFilter("debug:panels", (panels) => [
-      ...panels,
+  test("hides a panel whose render throws, logging it, and keeps the rest", () => {
+    const error = vi.fn();
+    const dev = createDevRuntime({ bar: true });
+    registerCoreDebugPanels(dev);
+    registerDevItem(
+      dev.debugPanels,
+      "debug panel",
       {
         id: "boom",
         title: "Boom",
@@ -48,25 +45,22 @@ describe("PlumixDebugBar", () => {
           throw new Error("kaboom");
         },
       },
-    ]);
+      "boom-plugin",
+    );
     const ctx = createTestContext({
       db,
-      hooks,
       request: new Request("https://cms.example/x"),
-      dev: createDevRuntime({ bar: true }),
+      dev,
+      logger: { ...silentLogger, error },
     });
 
     const html = renderToStaticMarkup(<PlumixDebugBar ctx={ctx} />);
 
-    expect(html).toContain('data-testid="plumix-debug-bar"');
-    // The throwing panel shows a fallback instead of crashing the render.
-    expect(html).toContain('data-testid="plumix-debug-panel-boom"');
-    expect(html).toContain("failed to render");
-    // A healthy sibling panel still renders.
+    expect(html).not.toContain('data-testid="plumix-debug-panel-boom"');
     expect(html).toContain('data-testid="plumix-debug-panel-request"');
-    expect(error).toHaveBeenCalledWith(
-      `[plumix] debug panel "boom" failed to render`,
-      expect.objectContaining({ message: "kaboom" }),
+    expect(error).toHaveBeenCalledExactlyOnceWith(
+      '[plumix] debug panel "boom" failed to render plugin=boom-plugin: kaboom',
+      expect.objectContaining({ id: "boom", plugin: "boom-plugin" }),
     );
   });
 
@@ -105,11 +99,9 @@ describe("PlumixDebugBar", () => {
       durationMs: 3,
       snapshot: projectDebugSnapshot({ spans: [], records: {} }, past),
     });
-    const hooks = new HookRegistry();
-    registerCoreDebugPanels(hooks);
+    registerCoreDebugPanels(dev);
     const ctx = createTestContext({
       db,
-      hooks,
       request: new Request("https://cms.example/now"),
       dev,
     });

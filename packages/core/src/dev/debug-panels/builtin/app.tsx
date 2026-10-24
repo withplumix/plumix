@@ -1,5 +1,5 @@
+import type { DebugPanel } from "../../../context/dev-runtime.js";
 import type { DebugSnapshot } from "../../request-history/snapshot.js";
-import type { DebugPanel } from "../types.js";
 import { DebugKV, DebugSection } from "../primitives.js";
 
 const wired = (on: boolean): string => (on ? "✓" : "—");

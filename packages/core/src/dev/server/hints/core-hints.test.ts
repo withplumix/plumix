@@ -1,35 +1,15 @@
-import { beforeAll, describe, expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 
-import type { AppContext } from "../../../context/app-context.js";
-import { HookRegistry } from "../../../hooks/registry.js";
-import { createTestContext } from "../../../test/context.js";
-import { createTestDb } from "../../../test/harness.js";
 import { ThemeRegistrationError } from "../../../theme-errors.js";
-import { collectDevErrorHints } from "./collect.js";
-import { registerCoreErrorHints } from "./core-hints.js";
-
-/** Handlers receive the request context; these tests never read it. */
-let ctx: AppContext;
-beforeAll(async () => {
-  ctx = createTestContext({ db: await createTestDb() });
-});
+import { matchCoreErrorHints } from "./core-hints.js";
 
 function hintsFor(error: unknown): readonly string[] {
-  const hooks = new HookRegistry();
-  registerCoreErrorHints(hooks);
-  return collectDevErrorHints(hooks, error, ctx).map((h) => h.title);
+  return matchCoreErrorHints(error).map((h) => h.title);
 }
 
-describe("registerCoreErrorHints", () => {
+describe("matchCoreErrorHints", () => {
   test("surfaces a hint for a typed ThemeRegistrationError", () => {
-    const hooks = new HookRegistry();
-    registerCoreErrorHints(hooks);
-
-    const hints = collectDevErrorHints(
-      hooks,
-      ThemeRegistrationError.missingTheme(),
-      ctx,
-    );
+    const hints = matchCoreErrorHints(ThemeRegistrationError.missingTheme());
     expect(hints.length).toBeGreaterThan(0);
     const [card] = hints;
     expect(card?.title).toMatch(/theme/i);
@@ -52,24 +32,14 @@ describe("registerCoreErrorHints", () => {
   });
 
   test("the env-file hint mentions .env so the fix is concrete", () => {
-    const hooks = new HookRegistry();
-    registerCoreErrorHints(hooks);
-    const [card] = collectDevErrorHints(
-      hooks,
+    const [card] = matchCoreErrorHints(
       new Error("Missing required secret: SESSION_SECRET"),
-      ctx,
     );
     expect(card?.body).toContain("`.env`");
   });
 
   test("the migrations hint names the plumix migrate command", () => {
-    const hooks = new HookRegistry();
-    registerCoreErrorHints(hooks);
-    const [card] = collectDevErrorHints(
-      hooks,
-      new Error("no such table: posts"),
-      ctx,
-    );
+    const [card] = matchCoreErrorHints(new Error("no such table: posts"));
     expect(card?.body).toContain("plumix migrate");
   });
 
@@ -82,47 +52,5 @@ describe("registerCoreErrorHints", () => {
   test("tolerates a non-Error throw without matching", () => {
     expect(hintsFor("just a string")).toEqual([]);
     expect(hintsFor(undefined)).toEqual([]);
-  });
-
-  test("a plugin can override a core hint by rewriting the list", () => {
-    const hooks = new HookRegistry();
-    registerCoreErrorHints(hooks);
-    // A plugin runs after core and replaces the migrations hint with its own.
-    hooks.addFilter(
-      "error_page:hints",
-      (hints) =>
-        hints.map((h) =>
-          h.title === "Run your migrations"
-            ? { title: "Run our custom migrate task" }
-            : h,
-        ),
-      { plugin: "demo" },
-    );
-
-    const titles = collectDevErrorHints(
-      hooks,
-      new Error("no such table: posts"),
-      ctx,
-    ).map((h) => h.title);
-    expect(titles).toEqual(["Run our custom migrate task"]);
-  });
-
-  test("registers at low priority so plugin hints can rank above core", () => {
-    const hooks = new HookRegistry();
-    registerCoreErrorHints(hooks);
-    // A plugin subscribes at the default priority (100) — higher number sorts
-    // after core (10), but it can prepend to place its hint first.
-    hooks.addFilter(
-      "error_page:hints",
-      (hints) => [{ title: "plugin override" }, ...hints],
-      { plugin: "demo" },
-    );
-
-    const titles = collectDevErrorHints(
-      hooks,
-      new Error("no such table: posts"),
-      ctx,
-    ).map((h) => h.title);
-    expect(titles[0]).toBe("plugin override");
   });
 });

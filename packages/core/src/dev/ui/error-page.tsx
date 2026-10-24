@@ -44,8 +44,8 @@ export function DevErrorPage({
    */
   readonly context?: DevErrorContext;
   /**
-   * Already rendered to isolated HTML. Absent where no live app runs the
-   * `error_page:panels` filter: the client overlay and the boot fallback.
+   * Already rendered to isolated HTML. Absent where no live app holds
+   * registered panels: the client overlay and the boot fallback.
    */
   readonly panels?: readonly RenderedDevErrorPanel[];
   /** Without it, frames render no "Open in editor" link. */

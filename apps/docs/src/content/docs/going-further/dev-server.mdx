@@ -83,6 +83,33 @@ The `process.env.PLUMIX_DEV` branch is what keeps the handler and its imports ou
   variable as the only boundary.
 </Aside>
 
+## Adding to the debug bar and the error page
+
+A plugin adds its own dev tooling with three registrations in `setup`. Each takes an `id`, and an id that core or another plugin already registered fails boot:
+
+- `ctx.registerDebugPanel` adds a panel to the debug bar. Its `render(snapshot)` reads the request's recorded data, so a past request in the switcher replays like the current one.
+- `ctx.registerErrorPanel` adds a section to the dev error page. Its `visible(error)` decides which errors get the section, and every error does when it is unset.
+- `ctx.registerErrorHint` adds a how-to-fix hint to the dev error page, shown for each error its `matches(error)` accepts, after core's own hints.
+
+```ts
+import { definePlugin } from "plumix/plugin";
+
+export const queue = definePlugin("queue", {
+  setup: (ctx) => {
+    if (!process.env.PLUMIX_DEV) return;
+    ctx.registerErrorHint({
+      id: "queue-full",
+      matches: (error) =>
+        error instanceof Error && error.message.includes("queue full"),
+      title: "Drain the queue",
+      body: "Start the worker with `pnpm queue:work`, then reload.",
+    });
+  },
+});
+```
+
+Outside `plumix dev` the three registrations do nothing, and the `process.env.PLUMIX_DEV` branch keeps the item and its imports out of a production bundle. A `render`, `visible` or `matches` that throws hides only its own item, and the failure goes to the site's logger.
+
 ## Opening a frame in your editor
 
 Each frame on the dev error page carries an **Open in editor** link. It is a plain anchor to your editor's URL scheme, such as `vscode://file/…`, so the operating system hands the file and line to the editor with no round-trip to the server.

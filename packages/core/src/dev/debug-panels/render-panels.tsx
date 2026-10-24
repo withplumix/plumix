@@ -1,8 +1,10 @@
 import { renderToStaticMarkup } from "react-dom/server";
 
+import type { Logger } from "../../context/app-context.js";
+import type { DebugPanel, DevRegistered } from "../../context/dev-runtime.js";
 import type { Label } from "../../i18n/label.js";
 import type { DebugSnapshot } from "../request-history/snapshot.js";
-import type { DebugPanel } from "./types.js";
+import { logErrorSafely } from "../../context/log.js";
 
 /**
  * One panel rendered to inert HTML — the unit the bar and the read route swap
@@ -15,33 +17,28 @@ export interface RenderedDebugPanel {
 }
 
 /**
- * A panel that throws yields a fallback rather than crashing the host page
- * the bar is meant to help debug.
- */
-function renderPaneHtml(panel: DebugPanel, snapshot: DebugSnapshot): string {
-  try {
-    return renderToStaticMarkup(<>{panel.render(snapshot)}</>);
-  } catch (error) {
-    console.error(`[plumix] debug panel "${panel.id}" failed to render`, error);
-    return renderToStaticMarkup(
-      <p className="plumix-debug-bar__error">
-        Panel “{panel.id}” failed to render.
-      </p>,
-    );
-  }
-}
-
-/**
- * Panel collection stays the caller's job: the `debug:panels` filter is keyed
- * on live app hooks, not the snapshot.
+ * A panel whose render throws is left out and logged, so it can't crash the
+ * host page the bar is meant to help debug.
  */
 export function renderDebugPanels(
-  panels: readonly DebugPanel[],
+  panels: readonly DevRegistered<DebugPanel>[],
   snapshot: DebugSnapshot,
+  logger: Logger,
 ): readonly RenderedDebugPanel[] {
-  return panels.map((panel) => ({
-    id: panel.id,
-    title: panel.title,
-    html: renderPaneHtml(panel, snapshot),
-  }));
+  const rendered: RenderedDebugPanel[] = [];
+  for (const panel of panels) {
+    try {
+      const html = renderToStaticMarkup(<>{panel.render(snapshot)}</>);
+      rendered.push({ id: panel.id, title: panel.title, html });
+    } catch (error) {
+      const plugin = panel.registeredBy ?? "core";
+      logErrorSafely(
+        logger,
+        `[plumix] debug panel "${panel.id}" failed to render plugin=${plugin}`,
+        error,
+        { id: panel.id, plugin: panel.registeredBy },
+      );
+    }
+  }
+  return rendered;
 }

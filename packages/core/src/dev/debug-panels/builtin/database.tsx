@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 
+import type { DebugPanel } from "../../../context/dev-runtime.js";
 import type { TelemetrySpan } from "../../../context/telemetry.js";
 import type { DebugSnapshot } from "../../request-history/snapshot.js";
-import type { DebugPanel } from "../types.js";
 import { queryKind } from "../../../db/query-kind.js";
 import { isJsonArray } from "../../../json.js";
 import { describeSqlParam } from "../format-param.js";

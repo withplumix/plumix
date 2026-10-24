@@ -1,9 +1,9 @@
 import { afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import type { AppContext, Db } from "../context/app-context.js";
+import type { MutableDevRuntime } from "../context/dev-runtime.js";
 import type { DebugSnapshot } from "./request-history/snapshot.js";
 import type { DebugHistoryEntry } from "./request-history/store.js";
-import { HookRegistry } from "../hooks/registry.js";
 import { createDevRuntime } from "../runtime/dev.js";
 import { createTestContext } from "../test/context.js";
 import { createDispatcherHarness, DEV_ORIGIN } from "../test/dispatcher.js";
@@ -49,12 +49,10 @@ beforeAll(async () => {
   db = await createTestDb();
 });
 
-function ctxFor(path: string, dev: NonNullable<AppContext["dev"]>): AppContext {
-  const hooks = new HookRegistry();
-  registerCoreDebugPanels(hooks);
+function ctxFor(path: string, dev: MutableDevRuntime): AppContext {
+  registerCoreDebugPanels(dev);
   return createTestContext({
     db,
-    hooks,
     request: new Request(`https://cms.example${path}`),
     dev,
   });

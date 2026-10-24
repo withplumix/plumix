@@ -1,8 +1,10 @@
 import { beforeAll, describe, expect, test, vi } from "vitest";
 
-import { HookRegistry } from "../../hooks/registry.js";
+import type { DevRuntime } from "../../context/dev-runtime.js";
+import { createDevRuntime } from "../../runtime/dev.js";
 import { createTestContext, silentLogger } from "../../test/context.js";
 import { createTestDb } from "../../test/harness.js";
+import { registerDevItem } from "../registrations.js";
 import { devErrorResponse } from "./respond.js";
 
 let db: Awaited<ReturnType<typeof createTestDb>>;
@@ -10,17 +12,21 @@ beforeAll(async () => {
   db = await createTestDb();
 });
 
-function contributingHooks(): HookRegistry {
-  const hooks = new HookRegistry();
-  hooks.addFilter("error_page:hints", (hints) => [
-    ...hints,
-    { title: "Try turning it off" },
-  ]);
-  hooks.addFilter("error_page:panels", (panels) => [
-    ...panels,
+function contributingDev(): DevRuntime {
+  const dev = createDevRuntime(undefined);
+  registerDevItem(
+    dev.errorHints,
+    "error hint",
+    { id: "restart", matches: () => true, title: "Try turning it off" },
+    "demo",
+  );
+  registerDevItem(
+    dev.errorPanels,
+    "error panel",
     { id: "cache", title: "Cache state", render: () => "cold" },
-  ]);
-  return hooks;
+    "demo",
+  );
+  return dev;
 }
 
 /**
@@ -39,9 +45,14 @@ function unreadableError(): Error {
 
 describe("devErrorResponse", () => {
   test("an HTML caller gets the page, with its hints, context and panels", async () => {
-    const ctx = createTestContext({ db, hooks: contributingHooks() });
+    const ctx = createTestContext({ db });
 
-    const response = devErrorResponse(ctx, new Error("kaboom"), true);
+    const response = devErrorResponse(
+      ctx,
+      contributingDev(),
+      new Error("kaboom"),
+      true,
+    );
 
     expect(response?.status).toBe(500);
     expect(response?.headers.get("content-type")).toBe(
@@ -55,9 +66,14 @@ describe("devErrorResponse", () => {
   });
 
   test("any other caller gets the exception and its hints as JSON", async () => {
-    const ctx = createTestContext({ db, hooks: contributingHooks() });
+    const ctx = createTestContext({ db });
 
-    const response = devErrorResponse(ctx, new Error("kaboom"), false);
+    const response = devErrorResponse(
+      ctx,
+      contributingDev(),
+      new Error("kaboom"),
+      false,
+    );
 
     expect(response?.status).toBe(500);
     expect(await response?.json()).toMatchObject({
@@ -75,7 +91,14 @@ describe("devErrorResponse", () => {
         logger: { ...silentLogger, error },
       });
 
-      expect(devErrorResponse(ctx, unreadableError(), wantsHtml)).toBeNull();
+      expect(
+        devErrorResponse(
+          ctx,
+          createDevRuntime(undefined),
+          unreadableError(),
+          wantsHtml,
+        ),
+      ).toBeNull();
       expect(error).toHaveBeenCalledWith("dev_error_page_failed", {
         url: ctx.request.url,
         err: "stack unavailable",

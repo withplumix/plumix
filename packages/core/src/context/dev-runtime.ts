@@ -1,5 +1,9 @@
+import type { ReactNode } from "react";
+
+import type { Label } from "../i18n/label.js";
 import type { JsonValue } from "../json.js";
 import type { ResolvedEntity } from "../route/contract/resolved-entity.js";
+import type { AppContext } from "./app-context.js";
 import type { TelemetryRecord, TelemetrySpan } from "./telemetry.js";
 
 // Declared here, not under `dev/`, so the context and config types can name
@@ -168,6 +172,64 @@ type DebugPanelId = keyof DebugPanelRegistry;
 /** An absent key shows the panel. */
 export type DebugPanelsInput = Partial<Readonly<Record<DebugPanelId, boolean>>>;
 
+/**
+ * A debug-bar panel, added with `registerDebugPanel`. `render` runs
+ * server-side over a serializable {@link DebugSnapshot}, never live request
+ * context.
+ */
+export interface DebugPanel {
+  readonly id: string;
+  readonly title: Label;
+  /** Ascending; unset sorts after ordered panels (see DEFAULT_PANEL_ORDER). */
+  readonly order?: number;
+  /**
+   * Rendered in its own SSR pass, so outer React context providers are not
+   * visible; read request data off the snapshot, not `useContext`.
+   */
+  readonly render: (snapshot: DebugSnapshot) => ReactNode;
+}
+
+/** A section of the dev error page, added with `registerErrorPanel`. */
+export interface DevErrorPanel {
+  readonly id: string;
+  /** Section heading; a dev-only English string, like a hint's title. */
+  readonly title: string;
+  /**
+   * Ascending; unset sorts after ordered panels (see collectDevErrorPanels).
+   */
+  readonly order?: number;
+  /** Whether this error gets the section; unset shows it for every error. */
+  readonly visible?: (error: unknown) => boolean;
+  /** Rendered in isolation to inert HTML. */
+  readonly render: (error: unknown, ctx: AppContext) => ReactNode;
+}
+
+/**
+ * Plain strings, not i18n `Label`s: the surface is dev-only and English, like
+ * the framework's error messages.
+ */
+export interface DevErrorHint {
+  readonly title: string;
+  readonly body?: string;
+  readonly docs?: readonly DevErrorHintDoc[];
+}
+
+/** A "read more" link on a {@link DevErrorHint}. */
+export interface DevErrorHintDoc {
+  readonly label: string;
+  readonly href: string;
+}
+
+/** A dev error-page hint, added with `registerErrorHint`. */
+export interface DevErrorHintRegistration extends DevErrorHint {
+  readonly id: string;
+  /** Whether the hint applies to this error. */
+  readonly matches: (error: unknown) => boolean;
+}
+
+/** `null` is core's own. */
+export type DevRegistered<T> = T & { readonly registeredBy: string | null };
+
 /** `config.dev`, resolved once per app and shared by every request. */
 export interface DevRuntime {
   /** `config.dev.bar`, normalized. */
@@ -178,4 +240,20 @@ export interface DevRuntime {
   readonly history: DebugHistoryStore;
   /** Mail caught on a site with no `mailer`, built from `config.dev.history`. */
   readonly mail: CaughtMailStore;
+  /** Every registered debug panel by id, in registration order. */
+  readonly debugPanels: ReadonlyMap<string, DevRegistered<DebugPanel>>;
+  /** Every registered dev error-page panel by id, in registration order. */
+  readonly errorPanels: ReadonlyMap<string, DevRegistered<DevErrorPanel>>;
+  /** Every registered dev error-page hint by id, in registration order. */
+  readonly errorHints: ReadonlyMap<
+    string,
+    DevRegistered<DevErrorHintRegistration>
+  >;
+}
+
+/** What boot writes registrations into. */
+export interface MutableDevRuntime extends DevRuntime {
+  readonly debugPanels: Map<string, DevRegistered<DebugPanel>>;
+  readonly errorPanels: Map<string, DevRegistered<DevErrorPanel>>;
+  readonly errorHints: Map<string, DevRegistered<DevErrorHintRegistration>>;
 }

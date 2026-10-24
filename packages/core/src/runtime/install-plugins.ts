@@ -1,4 +1,5 @@
 import type { AnyPluginDescriptor } from "../config.js";
+import type { MutableDevRuntime } from "../context/dev-runtime.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import type {
   MutablePluginRegistry,
@@ -37,6 +38,8 @@ interface InstallPluginsArgs {
    * nothing, for a caller installing plugins without a site.
    */
   readonly theme?: ThemeDescriptor;
+  /** Where dev registrations land; `undefined` outside the dev gate. */
+  readonly dev?: MutableDevRuntime;
 }
 
 export async function installPlugins({
@@ -44,6 +47,7 @@ export async function installPlugins({
   plugins,
   registry = createPluginRegistry(),
   theme = { templates: [] },
+  dev,
 }: InstallPluginsArgs): Promise<PluginInstallResult> {
   const seenIds = new Set<string>();
   for (const descriptor of plugins) {
@@ -88,6 +92,7 @@ export async function installPlugins({
       hooks,
       registry,
       theme,
+      dev,
       extensions: mergedPluginExtensions,
     });
     for (const spec of descriptor.shortcodes ?? []) {
@@ -103,6 +108,7 @@ export async function installPlugins({
       hooks,
       registry,
       theme,
+      dev,
       extensions: mergedPluginExtensions,
     });
     await descriptor.afterSetup(ctx, states[index]);

@@ -2,6 +2,7 @@ import { os } from "@orpc/server";
 
 import type { DerivedCapability } from "../access/contract/rbac.js";
 import type { AppContext } from "../context/app-context.js";
+import type { MutableDevRuntime } from "../context/dev-runtime.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import type { ActionName, FilterFn, FilterName } from "../hooks/types.js";
@@ -29,6 +30,7 @@ import {
 import { coreMarks, isReservedBlockName } from "../blocks/index.js";
 import { pluginStore } from "../context/stores.js";
 import { isPrivateSettingsGroup } from "../db/settings-groups.js";
+import { registerDevItem } from "../dev/registrations.js";
 import { CORE_MCP_TOOL_NAMES } from "../mcp/registry.js";
 import { DEFAULT_REWRITE_RULE_PRIORITY } from "../route/compile.js";
 import { CORE_RPC_NAMESPACES } from "../rpc/namespaces.js";
@@ -57,6 +59,8 @@ interface CreatePluginContextArgs {
   readonly hooks: HookRegistry;
   readonly registry: MutablePluginRegistry;
   readonly theme: ThemeDescriptor;
+  /** `undefined` outside the dev gate, where dev registrations are dropped. */
+  readonly dev?: MutableDevRuntime;
   readonly extensions?: ReadonlyMap<string, unknown>;
 }
 
@@ -80,6 +84,7 @@ function createContextBase({
   hooks,
   registry,
   theme,
+  dev,
 }: CreatePluginContextArgs): PluginSetupContextBase {
   // Pooling caps by capabilityType is safe when minRoles agree; if one
   // type applies a `capabilities` override and another doesn't, silent
@@ -533,6 +538,24 @@ function createContextBase({
         ...task,
         registeredBy: pluginId,
       });
+    },
+
+    registerDebugPanel: (panel) => {
+      if (process.env.PLUMIX_DEV && dev !== undefined) {
+        registerDevItem(dev.debugPanels, "debug panel", panel, pluginId);
+      }
+    },
+
+    registerErrorPanel: (panel) => {
+      if (process.env.PLUMIX_DEV && dev !== undefined) {
+        registerDevItem(dev.errorPanels, "error panel", panel, pluginId);
+      }
+    },
+
+    registerErrorHint: (hint) => {
+      if (process.env.PLUMIX_DEV && dev !== undefined) {
+        registerDevItem(dev.errorHints, "error hint", hint, pluginId);
+      }
     },
 
     registerTemplateDep: (kind, { keyedBy, load }) => {

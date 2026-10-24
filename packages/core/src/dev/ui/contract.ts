@@ -1,3 +1,7 @@
+import type { DevErrorHint } from "../../context/dev-runtime.js";
+
+export type { DevErrorHint } from "../../context/dev-runtime.js";
+
 export interface DevErrorInfo {
   readonly name: string;
   readonly message: string;
@@ -109,28 +113,11 @@ export interface DevErrorFact {
 }
 
 /**
- * Plain strings, not i18n `Label`s: the surface is dev-only and English, like
- * the framework's error messages.
- */
-export interface DevErrorHint {
-  readonly title: string;
-  readonly body?: string;
-  readonly docs?: readonly DevErrorHintDoc[];
-}
-
-/** A "read more" link on a {@link DevErrorHint}. */
-export interface DevErrorHintDoc {
-  readonly label: string;
-  readonly href: string;
-}
-
-/**
- * One plugin-contributed panel (#1626), already rendered to inert HTML — the
- * section the dev error page shows below its built-in context. Collected and
- * rendered by core's dev-only `error_page:panels` filter.
+ * One registered panel, already rendered to inert HTML — the section the dev
+ * error page shows below its built-in context.
  */
 export interface RenderedDevErrorPanel {
-  /** Stable id — the React key and the label in a failed-render notice. */
+  /** Stable id — the React key. */
   readonly id: string;
   /**
    * Section heading; a dev-only English string, like a {@link DevErrorHint}.

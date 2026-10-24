@@ -9,6 +9,11 @@ import type {
   ShortcodeSpec,
 } from "../blocks/index.js";
 import type { AppContext } from "../context/app-context.js";
+import type {
+  DebugPanel,
+  DevErrorHintRegistration,
+  DevErrorPanel,
+} from "../context/dev-runtime.js";
 import type { McpTool } from "../context/mcp-tool.js";
 import type { UserRole } from "../db/schema/users.js";
 import type {
@@ -301,6 +306,22 @@ export interface PluginSetupContextBase {
    * firing; without, on every firing.
    */
   registerScheduledTask(task: ScheduledTask): void;
+  /**
+   * Shown in the debug bar under `plumix dev`, and dropped outside it. A
+   * duplicate id, a core panel's included, throws.
+   */
+  registerDebugPanel(panel: DebugPanel): void;
+  /**
+   * A section of the dev error page, shown for each error its `visible`
+   * accepts; dropped outside `plumix dev`. A duplicate id throws.
+   */
+  registerErrorPanel(panel: DevErrorPanel): void;
+  /**
+   * A how-to-fix hint on the dev error page, shown for each error it
+   * `matches`, after core's; dropped outside `plumix dev`. A duplicate id
+   * throws.
+   */
+  registerErrorHint(hint: DevErrorHintRegistration): void;
   /**
    * Two plugins registering one `kind` is a boot error. Augment
    * `TemplateDepRegistry` in a file the theme's program imports, e.g. beside

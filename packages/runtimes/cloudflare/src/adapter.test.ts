@@ -674,3 +674,27 @@ describe("cloudflare adapter — assets slot", () => {
     notFound: "spa",
   });
 });
+
+describe("cloudflare adapter — dev error hints", () => {
+  const original = process.env.PLUMIX_DEV;
+  function restore(): void {
+    if (original === undefined) delete process.env.PLUMIX_DEV;
+    else process.env.PLUMIX_DEV = original;
+  }
+
+  test("offers its missing-binding hint under plumix dev", () => {
+    process.env.PLUMIX_DEV = "1";
+    onTestFinished(restore);
+
+    expect(cloudflare().errorHints?.map((hint) => hint.id)).toEqual([
+      "cloudflare-binding",
+    ]);
+  });
+
+  test("offers no hint outside plumix dev", () => {
+    process.env.PLUMIX_DEV = "";
+    onTestFinished(restore);
+
+    expect(cloudflare().errorHints).toBeUndefined();
+  });
+});

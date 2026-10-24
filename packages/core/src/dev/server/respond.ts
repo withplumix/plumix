@@ -1,4 +1,5 @@
 import type { AppContext } from "../../context/app-context.js";
+import type { DevRuntime } from "../../context/dev-runtime.js";
 import { jsonResponse } from "../../runtime/contract/http.js";
 import { collectDevErrorContext } from "./context.js";
 import { collectDevErrorHints } from "./hints/collect.js";
@@ -11,11 +12,12 @@ import { devErrorJson, renderDevErrorPage } from "./render.js";
  */
 export function devErrorResponse(
   ctx: AppContext,
+  dev: DevRuntime,
   err: unknown,
   wantsHtml: boolean,
 ): Response | null {
   try {
-    const hints = collectDevErrorHints(ctx.hooks, err, ctx);
+    const hints = collectDevErrorHints(dev, err, ctx.logger);
     if (!wantsHtml) {
       return jsonResponse(devErrorJson(err, hints), { status: 500 });
     }
@@ -23,7 +25,7 @@ export function devErrorResponse(
     // uses (#1598); dev sampling is ensured without the bar, so it is populated
     // either way.
     const context = collectDevErrorContext(ctx);
-    const panels = collectDevErrorPanels(ctx.hooks, err, ctx);
+    const panels = collectDevErrorPanels(dev, err, ctx);
     return new Response(renderDevErrorPage(err, hints, context, panels), {
       status: 500,
       headers: { "content-type": "text/html; charset=utf-8" },
