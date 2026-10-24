@@ -96,6 +96,7 @@ export * from "./rpc/index.js";
 export type * from "./context/runtime-adapter.js";
 export { listAdminAreas } from "./admin-area/i18n.js";
 export { buildApp } from "./runtime/app.js";
+export { projectCoreCatalogLocales } from "./runtime/catalog-locales.js";
 export type { PlumixApp } from "./runtime/app.js";
 // Dev-only: the generated worker entry references this under its
 // `process.env.PLUMIX_DEV` gate to serve the dev error page when app

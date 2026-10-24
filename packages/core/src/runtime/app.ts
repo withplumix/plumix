@@ -34,14 +34,16 @@ import type { CompiledRedirects } from "../route/redirects.js";
 import type { AssetManifest } from "../route/render/asset-manifest.js";
 import type { PluginCatalogs } from "../route/render/block-catalog.js";
 import type { RenderEnv } from "../route/render/render-env.js";
+import type { CoreCatalogLocales } from "./catalog-locales.js";
 import type { EnvInput } from "./contract/env-input.js";
 import type { SchemaModule } from "./contract/slots.js";
 import type { DevRuntime } from "./dev.js";
-import { adminBarChrome } from "../admin-bar/component.js";
+import { createAdminBarChrome } from "../admin-bar/component.js";
 import {
   registerCoreAdminBarNodes,
   registerNewEntryAdminBarNodes,
 } from "../admin-bar/core-nodes.js";
+import { barCatalogs } from "../admin-bar/i18n.js";
 import { assertAdminBarParentsRegistered } from "../admin-bar/validate.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
 import { coreAuthMethods } from "../auth/core-methods.js";
@@ -88,6 +90,8 @@ import { registerCoreSettings } from "../settings-core.js";
 import { registerCoreTemplateDeps } from "../template-deps-core.js";
 import { ThemeRegistrationError } from "../theme-errors.js";
 import { validateDocumentManifest } from "../theme.js";
+import { createWelcomeTheme, welcomeTheme } from "../welcome-theme.js";
+import { welcomeCatalogs } from "../welcome/i18n.js";
 import { parseCron } from "./contract/cron.js";
 import { AppBootError } from "./contract/errors.js";
 import { createDevRuntime } from "./dev.js";
@@ -251,6 +255,11 @@ export interface PlumixApp {
 interface RuntimeContext {
   readonly assetManifest?: AssetManifest;
   readonly pluginCatalogs?: PluginCatalogs;
+  /**
+   * Without it, each surface reads a locale's catalog only where it ships one
+   * by that exact code.
+   */
+  readonly catalogLocales?: CoreCatalogLocales;
 }
 
 export async function buildApp(
@@ -273,7 +282,8 @@ export async function buildApp(
   // nothing.
   registerCorePurgeInvalidator(hooks);
   const seededRegistry = createPluginRegistry(config.routes);
-  registerCoreAdminBarNodes(seededRegistry);
+  const bar = barCatalogs(runtime.catalogLocales?.["admin-bar"]);
+  registerCoreAdminBarNodes(seededRegistry, bar);
   registerCoreLookupAdapters(seededRegistry);
   registerCoreTemplateDeps(seededRegistry);
   registerCoreSettings(seededRegistry);
@@ -427,14 +437,22 @@ export async function buildApp(
 
   const assetManifest = runtime.assetManifest ?? {};
   const renderEnv: RenderEnv = {
-    theme: config.theme,
+    // The welcome screen reads its strings by the projection, which arrives
+    // after `plumix()` substituted it.
+    theme:
+      config.theme === welcomeTheme
+        ? createWelcomeTheme(welcomeCatalogs(runtime.catalogLocales?.welcome))
+        : config.theme,
     document,
     templateDeps: registry.templateDeps,
     assetManifest,
     htmlAllowlist,
-    blockCatalogs: createBlockCatalogs(runtime.pluginCatalogs),
+    blockCatalogs: createBlockCatalogs(
+      runtime.pluginCatalogs,
+      runtime.catalogLocales?.blocks,
+    ),
     chrome: {
-      adminBar: adminBarChrome,
+      adminBar: createAdminBarChrome(bar),
       debugBar: process.env.PLUMIX_DEV ? debugBarChrome : undefined,
     },
   };
@@ -462,7 +480,10 @@ export async function buildApp(
     theme: config.theme.mail,
     site: config.mail?.overrides,
   });
-  const mailCatalogs = createMailCatalogs(runtime.pluginCatalogs);
+  const mailCatalogs = createMailCatalogs(
+    runtime.pluginCatalogs,
+    runtime.catalogLocales?.mail,
+  );
   if (process.env.PLUMIX_DEV && dev !== undefined) {
     registerCoreDevRoutes(seededRegistry, {
       dev,

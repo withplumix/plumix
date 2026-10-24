@@ -79,6 +79,12 @@ const CORE_WITHHELD: readonly Withholding[] = [
   },
   {
     reason:
+      "core's catalogs projected onto a site's enabled locales, which only " +
+      "`plumix`'s Vite plugin reads, to serve `virtual:plumix/catalog-locales`",
+    names: ["projectCoreCatalogLocales"],
+  },
+  {
+    reason:
       "a scheduled task's budget and how a report names it, which only " +
       "this package's `cron` command reads",
     names: ["formatTimeout", "scheduledTaskTimeoutMs"],

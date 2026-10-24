@@ -12,4 +12,13 @@ describe("bun generateEntry", () => {
       "export default import.meta.main ? await serveProcess(site) : site.handler;",
     );
   });
+
+  test("threads the core catalog locales virtual module into the site", () => {
+    const source = bun().generateEntry({ configModule: "./config.ts" });
+
+    expect(source).toContain(
+      'import catalogLocales from "virtual:plumix/catalog-locales";',
+    );
+    expect(source).toContain("  catalogLocales,");
+  });
 });

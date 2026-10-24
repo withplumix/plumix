@@ -4,6 +4,10 @@
 import { catalogs } from "@plumix/core/locales/index/blocks";
 
 import type { CompiledCatalog } from "../../blocks/index.js";
+import type {
+  CatalogIndex,
+  CatalogLocales,
+} from "../../blocks/lazy-catalogs.js";
 import { lazyCatalogs } from "../../blocks/lazy-catalogs.js";
 
 /** As `lingui compile --namespace es` emits it. */
@@ -19,10 +23,16 @@ export type PluginCatalogs = Readonly<
 /** The merged block-render catalog for a request locale. */
 export type BlockCatalogs = (locale: string) => Promise<CompiledCatalog>;
 
+/**
+ * `catalogLocales` is core's blocks catalogs projected onto the site's enabled
+ * locales, from `virtual:plumix/catalog-locales`.
+ */
 export function createBlockCatalogs(
   pluginCatalogs: PluginCatalogs = {},
+  catalogLocales?: CatalogLocales,
+  index: CatalogIndex = catalogs,
 ): BlockCatalogs {
-  const core = lazyCatalogs(catalogs);
+  const core = lazyCatalogs(index, catalogLocales);
   // Once per locale per isolate: the catalogs are static build output.
   const merged = new Map<string, Promise<CompiledCatalog>>();
   return (locale) => {

@@ -16,6 +16,9 @@ export function generateEntry({ configModule }: EntrySourceOptions): string {
     // Each plugin's compiled catalogs by locale, lazy-imported, so SSR block
     // renders resolve plugin strings for the request locale.
     'import pluginCatalogs from "virtual:plumix/plugin-catalogs";',
+    // Core's catalogs by each enabled locale, for block, mail, welcome and
+    // admin bar strings.
+    'import catalogLocales from "virtual:plumix/catalog-locales";',
     `import config from ${JSON.stringify(configModule)};`,
     // Empty unless wrangler config enables Workers Caching. It must evaluate
     // before the app connects its slots.
@@ -31,6 +34,7 @@ export function generateEntry({ configModule }: EntrySourceOptions): string {
     "const appPromise = buildApp(config, {",
     "  assetManifest,",
     "  pluginCatalogs,",
+    "  catalogLocales,",
     "});",
     "let handler;",
     "",

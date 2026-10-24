@@ -81,7 +81,15 @@ describe("cloudflare generateEntry", () => {
     expect(source).toContain(
       'import pluginCatalogs from "virtual:plumix/plugin-catalogs";',
     );
-    expect(source).toContain("  pluginCatalogs,\n});");
+    expect(source).toContain("  pluginCatalogs,\n");
+  });
+
+  test("imports the core catalog locales virtual module and threads it into buildApp", () => {
+    const source = entry("./config.ts");
+    expect(source).toContain(
+      'import catalogLocales from "virtual:plumix/catalog-locales";',
+    );
+    expect(source).toContain("  catalogLocales,\n});");
   });
 
   test("re-exports the worker-exports virtual module so config can surface named exports (e.g. Durable Objects)", () => {

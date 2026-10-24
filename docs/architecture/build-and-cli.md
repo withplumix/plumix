@@ -62,6 +62,7 @@ Generated files and virtual modules:
 | `virtual:plumix/asset-manifest`     | `loadAssetManifest`                  | Client `.vite/manifest.json`, `{}` in dev.                                                          |
 | `virtual:plumix/worker-exports`     | `generateWorkerExportsSource`        | `export *` per `runtime.workerExports` entry.                                                       |
 | `virtual:plumix/plugin-catalogs`    | `generatePluginCatalogsSource`       | Plugin catalogs by locale, for SSR.                                                                 |
+| `virtual:plumix/catalog-locales`    | `projectCoreCatalogLocales`          | Each enabled locale's catalog locale, per core surface, for SSR.                                    |
 | `virtual:plumix/island-serialize`   | inline                               | Re-exports `IslandShim` from `plumix/blocks`.                                                       |
 | `virtual:plumix/data-migrations`    | `buildDataMigrations`                | Entry of the data-migration bundle written beside a Node or Bun server.                             |
 

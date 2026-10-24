@@ -51,6 +51,13 @@ export interface BunSiteOptions {
     Parameters<typeof buildApp>[1]
   >["pluginCatalogs"];
   /**
+   * Core's catalogs projected onto the enabled locales, which the entry reads
+   * from `virtual:plumix/catalog-locales`.
+   */
+  readonly catalogLocales?: NonNullable<
+    Parameters<typeof buildApp>[1]
+  >["catalogLocales"];
+  /**
    * The entry's own `import.meta.url`. `dist/client` sits beside the module
    * and the project root two levels up, so this names both.
    */
@@ -143,6 +150,7 @@ export function createBunSite({
   config,
   assetManifest,
   pluginCatalogs,
+  catalogLocales,
   entryUrl,
 }: BunSiteOptions): BunSite {
   const serverDir = dirname(fileURLToPath(entryUrl));
@@ -160,7 +168,11 @@ export function createBunSite({
     ? undefined
     : createJsonLogger((line) => process.stdout.write(line));
 
-  const appPromise = buildApp(config, { assetManifest, pluginCatalogs });
+  const appPromise = buildApp(config, {
+    assetManifest,
+    pluginCatalogs,
+    catalogLocales,
+  });
   let built: PlumixHandler | undefined;
   const handlerFor = (app: PlumixApp): PlumixHandler =>
     (built ??= createRuntimeHandler(app, { logger }));

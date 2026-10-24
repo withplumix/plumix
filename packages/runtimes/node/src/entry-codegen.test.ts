@@ -28,11 +28,15 @@ describe("node generateEntry", () => {
     expect(source).toContain(
       'import pluginCatalogs from "virtual:plumix/plugin-catalogs";',
     );
+    expect(source).toContain(
+      'import catalogLocales from "virtual:plumix/catalog-locales";',
+    );
     expect(source).toContain('export * from "virtual:plumix/worker-exports";');
     expect(source).toContain("const site = createNodeSite({");
     expect(source).toContain("  config,");
     expect(source).toContain("  assetManifest,");
     expect(source).toContain("  pluginCatalogs,");
+    expect(source).toContain("  catalogLocales,");
     // `dist/client` sits beside the entry, so only the entry can say where.
     expect(source).toContain("  entryUrl: import.meta.url,");
     expect(source).not.toContain("import.meta.env");

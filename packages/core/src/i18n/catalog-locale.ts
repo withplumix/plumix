@@ -59,3 +59,21 @@ export function catalogLocale(
   }
   return sourceLocale;
 }
+
+/**
+ * A catalog set projected onto a site's enabled locales: each enabled
+ * locale's catalog locale, so a runtime lookup reads it by the enabled
+ * locale's code.
+ */
+export function projectCatalogLocales(
+  enabled: readonly string[],
+  shipped: readonly string[],
+  sourceLocale: string,
+): Readonly<Record<string, string>> {
+  return Object.fromEntries(
+    enabled.map((locale) => [
+      locale,
+      catalogLocale(locale, shipped, sourceLocale),
+    ]),
+  );
+}

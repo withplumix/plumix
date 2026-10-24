@@ -3,10 +3,9 @@
 
 import { catalogs } from "@plumix/core/locales/index/welcome";
 
+import type { CatalogIndex, CatalogLocales } from "../blocks/lazy-catalogs.js";
 import { resolveMessage } from "../blocks/index.js";
 import { lazyCatalogs } from "../blocks/lazy-catalogs.js";
-
-const CATALOGS = lazyCatalogs(catalogs);
 
 /**
  * Source descriptors — `plumix i18n verify` matches these against the po
@@ -31,23 +30,39 @@ export interface WelcomeStrings {
   readonly openAdmin: string;
 }
 
-/** Imports `locale`'s catalog for {@link welcomeMessages} to read. */
-export async function loadWelcomeCatalog(locale: string): Promise<void> {
-  await CATALOGS.load(locale);
+export interface WelcomeCatalogs {
+  /** Imports `locale`'s catalog for {@link WelcomeCatalogs.strings} to read. */
+  load(locale: string): Promise<void>;
+  /**
+   * Read in a render, which cannot await, so `load` runs first. `locale` is
+   * the resolved `ctx.locale.code`, so a locale with no catalog reads the
+   * descriptors' English.
+   */
+  strings(locale: string): WelcomeStrings;
 }
 
 /**
- * Read in a render, which cannot await, so `loadWelcomeCatalog` runs first.
- * `locale` is the resolved `ctx.locale.code` (an arbitrary string), so an
- * unshipped locale reads the descriptors' English.
+ * `catalogLocales` is the welcome catalogs projected onto the site's enabled
+ * locales, from `virtual:plumix/catalog-locales`.
  */
-export function welcomeMessages(locale: string): WelcomeStrings {
-  const catalog = CATALOGS.loaded(locale);
+export function welcomeCatalogs(
+  catalogLocales?: CatalogLocales,
+  index: CatalogIndex = catalogs,
+): WelcomeCatalogs {
+  const core = lazyCatalogs(index, catalogLocales);
   return {
-    running: resolveMessage(catalog, M.running),
-    heading: resolveMessage(catalog, M.heading),
-    body: resolveMessage(catalog, M.body),
-    or: resolveMessage(catalog, M.or),
-    openAdmin: resolveMessage(catalog, M.openAdmin),
+    async load(locale) {
+      await core.load(locale);
+    },
+    strings(locale) {
+      const catalog = core.loaded(locale);
+      return {
+        running: resolveMessage(catalog, M.running),
+        heading: resolveMessage(catalog, M.heading),
+        body: resolveMessage(catalog, M.body),
+        or: resolveMessage(catalog, M.or),
+        openAdmin: resolveMessage(catalog, M.openAdmin),
+      };
+    },
   };
 }

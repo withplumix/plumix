@@ -4,16 +4,23 @@
 import { catalogs } from "@plumix/core/locales/index/mail";
 
 import type { CompiledCatalog } from "../blocks/index.js";
+import type { CatalogIndex, CatalogLocales } from "../blocks/lazy-catalogs.js";
 import type { PluginCatalogs } from "../route/render/block-catalog.js";
 import { lazyCatalogs } from "../blocks/lazy-catalogs.js";
 
 /** The merged catalog a mail renders against, for one locale. */
 export type MailCatalogs = (locale: string) => Promise<CompiledCatalog>;
 
+/**
+ * `catalogLocales` is core's mail catalogs projected onto the site's enabled
+ * locales, from `virtual:plumix/catalog-locales`.
+ */
 export function createMailCatalogs(
   pluginCatalogs: PluginCatalogs = {},
+  catalogLocales?: CatalogLocales,
+  index: CatalogIndex = catalogs,
 ): MailCatalogs {
-  const core = lazyCatalogs(catalogs);
+  const core = lazyCatalogs(index, catalogLocales);
   // Once per locale per isolate: the catalogs are static build output.
   const merged = new Map<string, Promise<CompiledCatalog>>();
   return (locale) => {

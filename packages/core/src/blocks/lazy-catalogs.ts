@@ -8,10 +8,19 @@ export type CatalogIndex = Readonly<
   Record<string, () => Promise<{ readonly messages: CompiledCatalog }>>
 >;
 
+/**
+ * A catalog set projected onto a site's enabled locales: each enabled
+ * locale's catalog locale.
+ */
+export type CatalogLocales = Readonly<Record<string, string>>;
+
 export interface LazyCatalogs {
   /** The locales the surface ships, known without importing a catalog. */
   readonly locales: readonly string[];
-  /** Imports `locale`'s catalog on its first call; a locale with none is empty. */
+  /**
+   * Imports the catalog `locale` reads on its first call; a locale with none
+   * is empty.
+   */
   load(locale: string): Promise<CompiledCatalog>;
   /**
    * For a render that cannot await: what `load` has imported for `locale`,
@@ -20,28 +29,45 @@ export interface LazyCatalogs {
   loaded(locale: string): CompiledCatalog;
 }
 
-/** Once per locale per isolate: the catalogs are static build output. */
-export function lazyCatalogs(index: CatalogIndex): LazyCatalogs {
+/**
+ * Once per catalog per isolate: the catalogs are static build output. A
+ * locale reads the catalog its `catalogLocales` entry names, exactly; without
+ * a projection, each shipped locale reads its own.
+ */
+export function lazyCatalogs(
+  index: CatalogIndex,
+  catalogLocales: CatalogLocales = Object.fromEntries(
+    Object.keys(index).map((locale) => [locale, locale]),
+  ),
+): LazyCatalogs {
   const pending = new Map<string, Promise<CompiledCatalog>>();
   const imported = new Map<string, CompiledCatalog>();
   return {
     locales: Object.keys(index),
     load(locale) {
-      let catalog = pending.get(locale);
+      const catalogLocale = catalogLocales[locale];
+      const importCatalog =
+        catalogLocale === undefined ? undefined : index[catalogLocale];
+      if (catalogLocale === undefined || importCatalog === undefined) {
+        return Promise.resolve({});
+      }
+      let catalog = pending.get(catalogLocale);
       if (catalog === undefined) {
-        const importCatalog = index[locale];
-        catalog = (
-          importCatalog === undefined
-            ? Promise.resolve({})
-            : importCatalog().then((module) => module.messages)
-        ).then((messages) => {
-          imported.set(locale, messages);
-          return messages;
-        });
-        pending.set(locale, catalog);
+        catalog = importCatalog()
+          .then((module) => module.messages)
+          .then((messages) => {
+            imported.set(catalogLocale, messages);
+            return messages;
+          });
+        pending.set(catalogLocale, catalog);
       }
       return catalog;
     },
-    loaded: (locale) => imported.get(locale) ?? {},
+    loaded(locale) {
+      const catalogLocale = catalogLocales[locale];
+      return catalogLocale === undefined
+        ? {}
+        : (imported.get(catalogLocale) ?? {});
+    },
   };
 }
