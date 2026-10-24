@@ -1,8 +1,7 @@
 import type { MetaFieldError } from "../meta/field-pipeline.js";
 
 /**
- * A value `ctx.settings.write` refuses to store. `key` is `<group>.<key>`;
- * `settings.upsert` maps `data` onto its `CONFLICT`.
+ * A value `ctx.settings.write` refuses to store. `key` is `<group>.<key>`.
  */
 export class SettingsWriteError extends Error {
   static {

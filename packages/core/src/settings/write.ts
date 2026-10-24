@@ -30,8 +30,8 @@ import {
 const MAX_SETTINGS_VALUE_BYTES = 64 * 1024;
 
 /**
- * `ctx.settings.write`, and what `settings.upsert` writes through. Keys mapped
- * to `null` or `undefined` are deletions; anything else is an upsert.
+ * Keys mapped to `null` or `undefined` are deletions; anything else is an
+ * upsert.
  * Unmentioned keys are left alone — same partial-patch semantic as
  * `entry.meta`.
  */

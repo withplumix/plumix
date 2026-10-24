@@ -35,8 +35,8 @@ export async function getSecret(
 }
 
 /**
- * Answers what is stored after the write, so two first writes racing each
- * other diverge only if one re-reads before the other writes.
+ * The last write wins, so a racing first write can sign with a secret the
+ * other then replaces.
  */
 export function getOrCreateSecret(
   ctx: AppContext,
