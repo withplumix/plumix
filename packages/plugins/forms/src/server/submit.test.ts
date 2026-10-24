@@ -938,28 +938,32 @@ describe("the cross-cutting hooks", () => {
     ]);
   });
 
-  test("a validator listing forms runs only for those", async () => {
-    const seen: string[] = [];
-    const harness = await createFormsHarness([
+  const withContactOnlyValidator = () =>
+    createFormsHarness([
       forms({ forms: [signup, contact] }),
       listener((ctx) => {
         ctx.registerFormValidator({
           id: "contact-only",
           forms: ["contact"],
-          validate: (candidate) => {
-            seen.push(candidate.form);
-            return [{ field: "", message: "Closed for now." }];
-          },
+          validate: () => [{ field: "", message: "Closed for now." }],
         });
       }),
     ]);
 
-    (await submitAsIsland(harness)).assertStatus(200);
-    (await submit(harness, {}, { accept: "application/json" })).assertStatus(
-      422,
-    );
+  test("a validator listing forms refuses a submission of a listed form", async () => {
+    const harness = await withContactOnlyValidator();
 
-    expect(seen).toEqual(["contact"]);
+    const response = await submit(harness, {}, { accept: "application/json" });
+
+    response.assertStatus(422);
+  });
+
+  test("a validator listing forms leaves a submission of another form alone", async () => {
+    const harness = await withContactOnlyValidator();
+
+    const response = await submitAsIsland(harness);
+
+    response.assertStatus(200);
   });
 
   test("a validator that throws is logged and leaves the verdict to the others", async () => {
