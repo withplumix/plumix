@@ -24,7 +24,7 @@ export function entryPurgeTags(entryType: string, entryId: number): string[] {
   return [typeTag(entryType), entryTag(entryId)];
 }
 
-/** A term archive carries the `t:<type>` tags of its taxonomy's entry types. */
+/** Created and deleted terms purge the `t:<type>` tags of their taxonomy's entry types. */
 export function termPurgeTags(taxonomyEntryTypes: readonly string[]): string[] {
   return taxonomyEntryTypes.map(typeTag);
 }

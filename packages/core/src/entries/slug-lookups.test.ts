@@ -95,4 +95,21 @@ describe("slug lookups after a write in the same request", () => {
     expect(before).toBeNull();
     expect(after?.slug).toBe("news");
   });
+
+  test("a term deleted after a lookup found it is no longer found", async () => {
+    const { harness, ctx, run } = await createTracedContext({
+      config: { plugins: [blog] },
+    });
+    const term = await harness.factory.category.create({ slug: "news" });
+
+    const [before, after] = await run(async () => {
+      const found = await findTermBySlug(ctx, "category", "news");
+      await ctx.db.delete(terms).where(eq(terms.id, term.id));
+      await ctx.hooks.doAction("term:deleted", term, ctx);
+      return [found, await findTermBySlug(ctx, "category", "news")];
+    });
+
+    expect(before?.id).toBe(term.id);
+    expect(after).toBeNull();
+  });
 });

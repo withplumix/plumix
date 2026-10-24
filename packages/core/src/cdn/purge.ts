@@ -94,8 +94,8 @@ export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
     if (reassignedTo !== null) onUser({ id: reassignedTo }, ctx);
   });
 
-  // A term archive is stored under its taxonomy's entry types' `t:<type>` tags.
-  // The slug lookup has no id to be tagged by, so any term write drops it.
+  // A new or deleted term has no `tm:<id>` page yet or any more, so the pages
+  // listing its taxonomy are stored under its entry types' `t:<type>` tags.
   const onTerm = (
     term: { readonly taxonomy: string },
     ctx: AppContext,
@@ -108,8 +108,6 @@ export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
   };
   hooks.addAction("term:created", onTerm);
   hooks.addAction("term:deleted", onTerm);
-  // An edit, a meta-only save included, reaches only the pages that rendered
-  // the term.
   const onTermEdit = (term: { readonly id: number }, ctx: AppContext): void => {
     enqueuePurgeTags(ctx, [termTag(term.id)]);
     ctx.memo.invalidate([termSlugsTag()]);

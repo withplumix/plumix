@@ -21,7 +21,7 @@ import { authClient } from "../auth/client/index.js";
 import { readSessionCookie } from "../auth/cookies.js";
 import { withUser } from "../auth/with-user.js";
 import { defineBlock } from "../blocks/index.js";
-import { entryPurgeTags } from "../cdn/contract/tags.js";
+import { entryPurgeTags, termTag } from "../cdn/contract/tags.js";
 import { tagCdnEntry } from "../cdn/route-tags.js";
 import { getContext } from "../context/stores.js";
 import { etagOf } from "../db/concurrency.js";
@@ -2057,7 +2057,7 @@ describe("dispatcher — public read-through CDN", () => {
     expect(put).toHaveBeenCalledWith(expect.anything(), expect.anything(), [
       "t:post",
       "t:page",
-      `tm:${String(news.id)}`,
+      termTag(news.id),
       "s:site",
     ]);
   });
