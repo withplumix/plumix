@@ -4,7 +4,6 @@ import { describe, expect, test } from "vitest";
 import type { AppContext } from "../context/app-context.js";
 import type { CdnFake } from "../test/cdn-fake.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
-import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "../plugin/define.js";
 import { entry } from "../route/render/template-builders.js";
 import { base } from "../rpc/base.js";
