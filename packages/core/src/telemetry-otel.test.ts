@@ -4,6 +4,7 @@ import type { AnyPluginDescriptor } from "./config.js";
 import type { TelemetrySnapshot } from "./context/telemetry.js";
 import type { JsonValue } from "./json.js";
 import type { OtelConsumerOptions } from "./telemetry-otel.js";
+import type { TelemetrySpan } from "./telemetry-snapshot.js";
 import type { ThemeDescriptor } from "./theme.js";
 import { definePlugin } from "./plugin/define.js";
 import { fallback } from "./route/render/template-builders.js";
@@ -60,6 +61,24 @@ interface ExportCall {
 }
 
 const ENDPOINT = "https://otlp.example/v1/traces";
+const LOGS_ENDPOINT = "https://otlp.example/v1/logs";
+
+interface OtlpLogRecord {
+  timeUnixNano: string;
+  severityNumber: number;
+  severityText: string;
+  body: OtlpValue;
+  attributes: OtlpKeyValue[];
+  traceId: string;
+  spanId: string;
+}
+
+interface OtlpLogsRequest {
+  resourceLogs: {
+    resource: { attributes: OtlpKeyValue[] };
+    scopeLogs: { scope: { name: string }; logRecords: OtlpLogRecord[] }[];
+  }[];
+}
 
 function must<T>(value: T | null | undefined, label: string): T {
   if (value == null) throw new Error(`missing ${label}`);
@@ -124,6 +143,78 @@ function exportedRequest(call: ExportCall | undefined): OtlpExportRequest {
 function exportedSpans(call: ExportCall | undefined): OtlpSpan[] {
   const scope = exportedRequest(call).resourceSpans[0]?.scopeSpans[0];
   return must(scope, "scope spans").spans;
+}
+
+function exportedLogsRequest(call: ExportCall | undefined): OtlpLogsRequest {
+  const body = must(call, "logs call").init.body;
+  if (typeof body !== "string") throw new Error("expected a string body");
+  return JSON.parse(body) as OtlpLogsRequest;
+}
+
+function exportedLogRecords(call: ExportCall | undefined): OtlpLogRecord[] {
+  const scope = exportedLogsRequest(call).resourceLogs[0]?.scopeLogs[0];
+  return must(scope, "scope logs").logRecords;
+}
+
+const AT = 1_700_000_000_000;
+
+function snapshotWith(
+  overrides: Partial<TelemetrySnapshot> = {},
+): TelemetrySnapshot {
+  return {
+    request: {
+      requestId: "req-1",
+      method: "GET",
+      url: "https://cms.example/",
+      status: 200,
+      startedAt: AT,
+      durationMs: 12,
+    },
+    spans: [],
+    records: {},
+    dropped: { spans: 0, records: {}, logs: 0 },
+    ...overrides,
+  };
+}
+
+function spanWith(
+  name: string,
+  logs: TelemetrySpan["logs"],
+  children: TelemetrySpan[] = [],
+): TelemetrySpan {
+  return {
+    name,
+    startedAt: AT,
+    durationMs: 5,
+    status: "ok",
+    attributes: {},
+    logs,
+    children,
+  };
+}
+
+/** Feeds a hand-built snapshot straight to `otelConsumer`. */
+async function exportSnapshot(
+  snapshot: TelemetrySnapshot,
+  consumer: Partial<OtelConsumerOptions> = {},
+): Promise<{ calls: ExportCall[]; errors: string[] }> {
+  const { calls, fetchStub } = capturingFetch();
+  const errors: string[] = [];
+  const ctx = createTestContext({
+    db: await createTestDb(),
+    request: new Request("https://cms.example/"),
+    logger: {
+      ...silentLogger,
+      error: (message) => void errors.push(message),
+    },
+  });
+  const otel = otelConsumer({
+    endpoint: ENDPOINT,
+    fetch: fetchStub,
+    ...consumer,
+  });
+  await must(otel.onRequestEnd, "onRequestEnd")(snapshot, ctx);
+  return { calls, errors };
 }
 
 function attr(span: OtlpSpan | undefined, key: string): OtlpValue | undefined {
@@ -490,5 +581,217 @@ describe("otelConsumer — OTLP/HTTP trace export", () => {
     ).resolves.toBeUndefined();
     expect(calls).toHaveLength(0);
     expect(errors.some((m) => m.includes("otel export failed"))).toBe(true);
+  });
+});
+
+describe("otelConsumer — OTLP/HTTP log export", () => {
+  test("with logsEndpoint, a span log becomes one log record carrying its span's trace id and span id", async () => {
+    const snapshot = snapshotWith({
+      spans: [
+        spanWith("import feed", [
+          {
+            at: AT + 3,
+            level: "warn",
+            message: "skipped item without a slug",
+            attributes: { guid: "item-7", requestId: "req-1" },
+          },
+        ]),
+      ],
+    });
+
+    const { calls } = await exportSnapshot(snapshot, {
+      logsEndpoint: LOGS_ENDPOINT,
+      headers: { Authorization: "Basic dGVzdA==" },
+    });
+
+    const traces = calls.filter((c) => c.url === ENDPOINT);
+    const logs = calls.filter((c) => c.url === LOGS_ENDPOINT);
+    expect(traces).toHaveLength(1);
+    expect(logs).toHaveLength(1);
+    const [call] = logs;
+    expect(call?.init.method).toBe("POST");
+    const headers = new Headers(call?.init.headers);
+    expect(headers.get("content-type")).toBe("application/json");
+    expect(headers.get("authorization")).toBe("Basic dGVzdA==");
+
+    const resourceLogs = exportedLogsRequest(call).resourceLogs[0];
+    expect(resourceLogs?.resource.attributes).toEqual([
+      { key: "service.name", value: { stringValue: "plumix" } },
+    ]);
+    expect(resourceLogs?.scopeLogs[0]?.scope).toEqual({ name: "plumix" });
+
+    const tracedSpans = exportedSpans(traces[0]);
+    // Nothing was dropped, so the root carries no dropped-logs count.
+    const root = tracedSpans.find((s) => !s.parentSpanId);
+    expect(attr(root, "plumix.dropped_logs")).toBeUndefined();
+    const span = tracedSpans.find((s) => s.name === "import feed");
+    expect(span).toBeDefined();
+    expect(exportedLogRecords(call)).toEqual([
+      {
+        timeUnixNano: "1700000000003000000",
+        severityNumber: 13, // SEVERITY_NUMBER_WARN
+        severityText: "WARN",
+        body: { stringValue: "skipped item without a slug" },
+        attributes: [
+          { key: "guid", value: { stringValue: "item-7" } },
+          { key: "requestId", value: { stringValue: "req-1" } },
+        ],
+        traceId: span?.traceId,
+        spanId: span?.spanId,
+      },
+    ]);
+  });
+
+  test("a snapshot with no span logs sends no logs request", async () => {
+    const snapshot = snapshotWith({ spans: [spanWith("quiet", [])] });
+
+    const { calls } = await exportSnapshot(snapshot, {
+      logsEndpoint: LOGS_ENDPOINT,
+    });
+
+    expect(calls.map((c) => c.url)).toEqual([ENDPOINT]);
+  });
+
+  test("cap-dropped span logs surface as plumix.dropped_logs on the root span", async () => {
+    const snapshot = snapshotWith({
+      spans: [
+        spanWith("busy", [
+          { at: AT, level: "debug", message: "tick", attributes: {} },
+        ]),
+      ],
+      dropped: { spans: 0, records: {}, logs: 3 },
+    });
+
+    const { calls } = await exportSnapshot(snapshot, {
+      logsEndpoint: LOGS_ENDPOINT,
+    });
+
+    const root = exportedSpans(calls.find((c) => c.url === ENDPOINT)).find(
+      (s) => !s.parentSpanId,
+    );
+    expect(attr(root, "plumix.dropped_logs")).toEqual({ intValue: "3" });
+  });
+
+  test("without logsEndpoint, no logs request goes out and the traces payload is what it was before span logs", async () => {
+    const logged = snapshotWith({
+      spans: [
+        spanWith("import feed", [
+          { at: AT, level: "error", message: "feed down", attributes: {} },
+        ]),
+      ],
+      dropped: { spans: 0, records: {}, logs: 3 },
+    });
+
+    const { calls } = await exportSnapshot(logged);
+
+    expect(calls.map((c) => c.url)).toEqual([ENDPOINT]);
+    const spans = exportedSpans(calls[0]);
+    const root = spans.find((s) => !s.parentSpanId);
+    expect(root?.attributes.map((kv) => kv.key)).toEqual([
+      "http.request.method",
+      "url.full",
+      "http.response.status_code",
+      "plumix.request_id",
+    ]);
+    expect(root?.events).toEqual([]);
+    const feed = spans.find((s) => s.name === "import feed");
+    expect(Object.keys(must(feed, "import feed span")).sort()).toEqual([
+      "attributes",
+      "endTimeUnixNano",
+      "kind",
+      "name",
+      "parentSpanId",
+      "spanId",
+      "startTimeUnixNano",
+      "status",
+      "traceId",
+    ]);
+  });
+
+  test("a tail-sampled-out snapshot sends neither traces nor logs", async () => {
+    const snapshot = snapshotWith({
+      spans: [
+        spanWith("import feed", [
+          { at: AT, level: "info", message: "imported", attributes: {} },
+        ]),
+      ],
+    });
+
+    const { calls } = await exportSnapshot(snapshot, {
+      logsEndpoint: LOGS_ENDPOINT,
+      tailSample: () => false,
+    });
+
+    expect(calls).toHaveLength(0);
+  });
+
+  test("a failing logs endpoint is logged, never rejected, and traces still export", async () => {
+    const snapshot = snapshotWith({
+      spans: [
+        spanWith("import feed", [
+          { at: AT, level: "info", message: "imported", attributes: {} },
+        ]),
+      ],
+    });
+    const { calls, fetchStub } = capturingFetch();
+    const errors: string[] = [];
+    const ctx = createTestContext({
+      db: await createTestDb(),
+      request: new Request("https://cms.example/"),
+      logger: {
+        ...silentLogger,
+        error: (message) => void errors.push(message),
+      },
+    });
+    const otel = otelConsumer({
+      endpoint: ENDPOINT,
+      logsEndpoint: LOGS_ENDPOINT,
+      fetch: (input, init) =>
+        input === LOGS_ENDPOINT
+          ? Promise.reject(new Error("logs backend down"))
+          : fetchStub(input, init),
+    });
+
+    await expect(
+      must(otel.onRequestEnd, "onRequestEnd")(snapshot, ctx),
+    ).resolves.toBeUndefined();
+    expect(calls.map((c) => c.url)).toEqual([ENDPOINT]);
+    expect(errors).toEqual(["[plumix] otel export failed: logs backend down"]);
+  });
+
+  test("each level maps to its OTLP severity, and a nested span's log links to that span", async () => {
+    const log = (level: TelemetrySpan["logs"][number]["level"]) => ({
+      at: AT,
+      level,
+      message: level,
+      attributes: {},
+    });
+    const snapshot = snapshotWith({
+      spans: [
+        spanWith(
+          "outer",
+          [log("debug"), log("info")],
+          [spanWith("inner", [log("warn"), log("error")])],
+        ),
+      ],
+    });
+
+    const { calls } = await exportSnapshot(snapshot, {
+      logsEndpoint: LOGS_ENDPOINT,
+    });
+
+    const spans = exportedSpans(calls.find((c) => c.url === ENDPOINT));
+    const idOf = (name: string) => spans.find((s) => s.name === name)?.spanId;
+    const records = exportedLogRecords(
+      calls.find((c) => c.url === LOGS_ENDPOINT),
+    );
+    expect(
+      records.map((r) => [r.severityNumber, r.severityText, r.spanId]),
+    ).toEqual([
+      [5, "DEBUG", idOf("outer")],
+      [9, "INFO", idOf("outer")],
+      [13, "WARN", idOf("inner")],
+      [17, "ERROR", idOf("inner")],
+    ]);
   });
 });

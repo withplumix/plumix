@@ -3,6 +3,7 @@ import type {
   TelemetryConsumerFor,
   TelemetrySnapshot,
   TelemetrySpan,
+  TelemetrySpanLog,
 } from "./telemetry-snapshot.js";
 import { isJsonObject } from "./json.js";
 
@@ -40,6 +41,26 @@ interface OtlpSpan {
   status: { code?: number; message?: string };
 }
 
+interface OtlpLogRecord {
+  timeUnixNano: string;
+  severityNumber: number;
+  severityText: string;
+  body: OtlpValue;
+  attributes: OtlpKeyValue[];
+  traceId: string;
+  spanId: string;
+}
+
+/** The OTLP `SeverityNumber` and text for each span log level. */
+const SEVERITY: Readonly<
+  Record<TelemetrySpanLog["level"], { number: number; text: string }>
+> = {
+  debug: { number: 5, text: "DEBUG" },
+  info: { number: 9, text: "INFO" },
+  warn: { number: 13, text: "WARN" },
+  error: { number: 17, text: "ERROR" },
+};
+
 const SPAN_KIND_INTERNAL = 1;
 const SPAN_KIND_SERVER = 2;
 const STATUS_CODE_ERROR = 2;
@@ -51,6 +72,12 @@ export interface OtelConsumerOptions {
    * Extra request headers (auth). Merged over `content-type: application/json`.
    */
   readonly headers?: Readonly<Record<string, string>>;
+  /**
+   * OTLP/HTTP logs endpoint, e.g. `https://…/otlp/v1/logs`. Set, each span
+   * log exports as a log record linked to its span, sent with `headers`.
+   * Omitted = no logs are exported.
+   */
+  readonly logsEndpoint?: string;
   /** `service.name` resource attribute. */
   readonly serviceName?: string;
   /**
@@ -109,6 +136,7 @@ function addTreeSpans(
   traceId: string,
   parentSpanId: string,
   out: OtlpSpan[],
+  logs: OtlpLogRecord[],
 ): void {
   for (const span of spans) {
     const spanId = randomHex(8);
@@ -142,7 +170,19 @@ function addTreeSpans(
           ? { code: STATUS_CODE_ERROR, message: span.error?.message }
           : {},
     });
-    addTreeSpans(span.children, traceId, spanId, out);
+    for (const log of span.logs) {
+      const severity = SEVERITY[log.level];
+      logs.push({
+        timeUnixNano: unixNano(log.at),
+        severityNumber: severity.number,
+        severityText: severity.text,
+        body: { stringValue: log.message },
+        attributes: toAttributes(log.attributes),
+        traceId,
+        spanId,
+      });
+    }
+    addTreeSpans(span.children, traceId, spanId, out, logs);
   }
 }
 
@@ -215,6 +255,35 @@ interface ExportContext {
   readonly logger: { error(message: string): void };
 }
 
+/** Logs a failed POST instead of rejecting. */
+async function postExport(
+  fetchFn: typeof globalThis.fetch,
+  url: string,
+  headers: Headers,
+  body: unknown,
+  logger: ExportContext["logger"],
+): Promise<void> {
+  try {
+    const response = await fetchFn(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    });
+    if (response.ok) {
+      // An unread body holds the connection open on Workers.
+      void response.body?.cancel();
+    } else {
+      logger.error(
+        `[plumix] otel export failed: ${String(response.status)} ${response.statusText} ${await response.text()}`,
+      );
+    }
+  } catch (error) {
+    logger.error(
+      `[plumix] otel export failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
 /**
  * POSTs from `waitUntil`, so export latency never blocks a response.
  * Trace and span ids are minted here, at export time.
@@ -261,6 +330,12 @@ export function otelConsumer(
               ...(dropped.spans > 0 && {
                 "plumix.dropped_spans": dropped.spans,
               }),
+              // Only when logs export: without `logsEndpoint` the traces
+              // payload stays what it was before span logs.
+              ...(options.logsEndpoint !== undefined &&
+                dropped.logs > 0 && {
+                  "plumix.dropped_logs": dropped.logs,
+                }),
             }),
             events: recordEvents(records),
             ...(droppedRecords > 0 && { droppedEventsCount: droppedRecords }),
@@ -268,34 +343,28 @@ export function otelConsumer(
             status: request.status >= 500 ? { code: STATUS_CODE_ERROR } : {},
           },
         ];
-        addTreeSpans(tree, traceId, rootSpanId, spans);
-        const body = {
-          resourceSpans: [
-            {
-              resource: {
-                attributes: toAttributes({
-                  "service.name": options.serviceName ?? "plumix",
-                }),
-              },
-              scopeSpans: [{ scope: { name: "plumix" }, spans }],
-            },
-          ],
+        const logRecords: OtlpLogRecord[] = [];
+        addTreeSpans(tree, traceId, rootSpanId, spans, logRecords);
+        const resource = {
+          attributes: toAttributes({
+            "service.name": options.serviceName ?? "plumix",
+          }),
         };
+        const scope = { name: "plumix" };
         const headers = new Headers(options.headers);
         headers.set("content-type", "application/json");
-        const response = await (options.fetch ?? fetch)(options.endpoint, {
-          method: "POST",
-          headers,
-          body: JSON.stringify(body),
-        });
-        if (response.ok) {
-          // An unread body holds the connection open on Workers.
-          void response.body?.cancel();
-        } else {
-          ctx.logger.error(
-            `[plumix] otel export failed: ${String(response.status)} ${response.statusText} ${await response.text()}`,
-          );
-        }
+        const post = (url: string, body: unknown): Promise<void> =>
+          postExport(options.fetch ?? fetch, url, headers, body, ctx.logger);
+        await Promise.all([
+          post(options.endpoint, {
+            resourceSpans: [{ resource, scopeSpans: [{ scope, spans }] }],
+          }),
+          options.logsEndpoint !== undefined &&
+            logRecords.length > 0 &&
+            post(options.logsEndpoint, {
+              resourceLogs: [{ resource, scopeLogs: [{ scope, logRecords }] }],
+            }),
+        ]);
       } catch (error) {
         ctx.logger.error(
           `[plumix] otel export failed: ${error instanceof Error ? error.message : String(error)}`,
