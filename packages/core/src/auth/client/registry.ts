@@ -1,3 +1,4 @@
+import type { AccountSession } from "./account-sessions.js";
 import type {
   Account,
   AccountPatch,
@@ -110,6 +111,15 @@ export interface AuthClientAccount {
   setLocale(code: string): Promise<AuthResult<LocaleSet>>;
 }
 
+/** The signed-in user's sessions; promises only, so list again after a change. */
+export interface AuthClientSessions {
+  list(): Promise<AuthResult<readonly AccountSession[]>>;
+  /** Another session only; this one ends through `signOut()`. */
+  revoke(id: string): Promise<AuthResult<{ id: string }>>;
+  /** Every session but this one. */
+  revokeOthers(): Promise<AuthResult<{ revoked: number }>>;
+}
+
 /** Refuses a member whose key `AUTH_CLIENT_KERNEL_KEYS` doesn't reserve. */
 type ReservedKernel<
   T extends { [K in keyof T]: K extends AuthClientKernelKey ? unknown : never },
@@ -118,6 +128,7 @@ type ReservedKernel<
 /** The members the auth client answers itself, never a sign-in method. */
 export type AuthClientKernel = ReservedKernel<{
   readonly account: AuthClientAccount;
+  readonly sessions: AuthClientSessions;
   /** Loaded on first use, never from the server render. */
   useAccount(): AccountState;
   readonly signIn: AuthClientSignIn;

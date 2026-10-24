@@ -21,6 +21,7 @@ import type { AuthResult } from "./result.js";
 import type { Session, SessionStore } from "./session.js";
 import { withBasePath } from "../../base-path.js";
 import { CSRF_HEADER_NAME, CSRF_HEADER_VALUE } from "../../csrf-header.js";
+import { createAccountSessions } from "./account-sessions.js";
 import { createAccountStore, PENDING_ACCOUNT } from "./account.js";
 import { CORE_METHOD_CLIENTS } from "./core-methods.js";
 import { camelCase } from "./kernel-keys.js";
@@ -75,7 +76,11 @@ function rpcRefusal(payload: JsonValue): string {
   const { code, data } = refusal.output.json;
   if (code === "CONFLICT") {
     const reason = data?.reason ?? "";
-    if (reason === "etag_mismatch" || reason === "locale_not_supported") {
+    if (
+      reason === "etag_mismatch" ||
+      reason === "locale_not_supported" ||
+      reason === "current_session"
+    ) {
       return reason;
     }
     // A meta value its field refuses (`meta_invalid_value` and the rest).
@@ -251,6 +256,7 @@ export function createAuthClient(env: AuthClientEnv): CreatedAuthClient {
 
   const kernelApi = {
     account: { update: account.update, setLocale: account.setLocale },
+    sessions: createAccountSessions(rpc),
     useAccount: (): AccountState =>
       useSyncExternalStore(
         account.subscribe,

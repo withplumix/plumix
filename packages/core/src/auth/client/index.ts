@@ -26,10 +26,12 @@ export type {
   RedirectOptions,
 } from "./define.js";
 export type { Account, AccountPatch, AccountState } from "./account.js";
+export type { AccountSession } from "./account-sessions.js";
 export type { AuthClientError, AuthResult } from "./result.js";
 export type {
   AuthClient,
   AuthClientAccount,
+  AuthClientSessions,
   AuthClientSignIn,
   AuthMethodRegistry,
   AuthUrlTarget,
