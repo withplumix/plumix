@@ -19,6 +19,7 @@ export type {
   AuthResult,
   AuthUrlTarget,
   Invitee,
+  LinkedOAuthAccount,
   OAuthProvider,
   Passkey,
   RedirectOptions,

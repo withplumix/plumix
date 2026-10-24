@@ -360,6 +360,26 @@ describe("auth.credentials", () => {
   });
 });
 
+describe("auth.oauthAccounts.unlink", () => {
+  test("refuses a provider the caller has no link to with NOT_FOUND naming it", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const otherUser = await h.factory.user.create({
+      email: "other@cms.example",
+    });
+    await h.factory.oauthAccount.create({
+      userId: otherUser.id,
+      provider: "github",
+    });
+
+    await expect(
+      h.client.auth.oauthAccounts.unlink({ provider: "github" }),
+    ).rejects.toMatchObject({
+      code: "NOT_FOUND",
+      data: { kind: "oauth_account", id: "github" },
+    });
+  });
+});
+
 describe("auth.sessions.revokeOthers", () => {
   test("rejects an unauthenticated caller", async () => {
     const h = await createRpcHarness();

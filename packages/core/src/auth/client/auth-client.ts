@@ -85,7 +85,8 @@ function rpcRefusal(payload: JsonValue, status: number): string {
       reason === "etag_mismatch" ||
       reason === "locale_not_supported" ||
       reason === "current_session" ||
-      reason === "last_credential"
+      reason === "last_credential" ||
+      reason === "last_sign_in_method"
     ) {
       return reason;
     }

@@ -1,3 +1,5 @@
+import * as v from "valibot";
+
 import type { RedirectOptions } from "./define.js";
 import type { OAuthProvider } from "./registry.js";
 import type {
@@ -5,7 +7,7 @@ import type {
   ServerRegistrationOptions,
 } from "./webauthn.js";
 import { defineAuthMethodClient } from "./define.js";
-import { success } from "./result.js";
+import { failure, success } from "./result.js";
 import { createCredential, getCredential } from "./webauthn.js";
 
 /** What a fetch that signed someone in answers. */
@@ -35,6 +37,27 @@ interface OAuthStarted {
   readonly url: string;
 }
 
+/** A provider account linked to the signed-in user. */
+export interface LinkedOAuthAccount {
+  /** The provider's id for the account. */
+  readonly id: string;
+  readonly provider: OAuthProvider;
+  readonly linkedAt: Date;
+}
+
+const linkedAccountsSchema = v.array(
+  v.object({
+    id: v.string(),
+    provider: v.string(),
+    linkedAt: v.pipe(
+      v.string(),
+      v.transform((iso) => new Date(iso)),
+    ),
+  }),
+);
+
+const unlinkedSchema = v.object({ provider: v.string() });
+
 export const oauthClient = defineAuthMethodClient("oauth", (kernel) => ({
   // A navigation, not a fetch: the provider's consent screen is another
   // origin, and the callback lands the session.
@@ -42,6 +65,27 @@ export const oauthClient = defineAuthMethodClient("oauth", (kernel) => ({
     const url = kernel.url(`${encodeURIComponent(provider)}/start`, options);
     kernel.navigate(url);
     return Promise.resolve(success<OAuthStarted>({ url }));
+  },
+  /** The session's user's linked accounts, oldest first. No cache. */
+  accounts: async () => {
+    const result = await kernel.rpc("auth/oauthAccounts/list");
+    if (result.error) return result;
+    const answer = v.safeParse(linkedAccountsSchema, result.data);
+    if (!answer.success) return failure("unknown");
+    // Safety: the column holds the provider key the account was linked through.
+    return success(answer.output as readonly LinkedOAuthAccount[]);
+  },
+  /**
+   * Removes every link to `provider`. Resolves `last_sign_in_method` when it
+   * would leave the user no way to sign in.
+   */
+  unlink: async (provider: OAuthProvider) => {
+    const result = await kernel.rpc("auth/oauthAccounts/unlink", { provider });
+    if (result.error) return result;
+    const answer = v.safeParse(unlinkedSchema, result.data);
+    if (!answer.success) return failure("unknown");
+    // Safety: the server echoes the provider the call named.
+    return success(answer.output as { readonly provider: OAuthProvider });
   },
 }));
 

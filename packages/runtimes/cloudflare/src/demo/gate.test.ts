@@ -27,6 +27,8 @@ describe("isBlockedInDemo", () => {
     // oauthLinking: the callback links a provider account and mints a session.
     "/_plumix/auth/oauth/github/start",
     "/_plumix/auth/oauth/github/callback",
+    "/_plumix/rpc/auth/oauthAccounts/list",
+    "/_plumix/rpc/auth/oauthAccounts/unlink",
     // emailDelivery: each of these sends, or redeems, a real email.
     "/_plumix/rpc/user/invite",
     "/_plumix/auth/invite/register/options",

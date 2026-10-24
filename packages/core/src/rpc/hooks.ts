@@ -489,6 +489,17 @@ declare module "../hooks/types.js" {
     ) => void | Promise<void>;
 
     /**
+     * The user's links to `provider` were removed via
+     * `auth.oauthAccounts.unlink`. Self-only, as `credential:revoked` is, so
+     * `actor.id === account.userId` always.
+     */
+    "oauth_account:unlinked": (
+      account: { readonly provider: string; readonly userId: number },
+      context: { readonly actor: AuthenticatedUser },
+      ctx: AppContext,
+    ) => void | Promise<void>;
+
+    /**
      * Only the caller's own sessions can be revoked. `mode` tells a single
      * revoke from "everywhere except this browser".
      */
