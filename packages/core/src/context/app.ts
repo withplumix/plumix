@@ -42,6 +42,7 @@ import { resolveLocale } from "../i18n/resolve-locale.js";
 import { createMailCatalogs } from "../mail/catalogs.js";
 import { declareMails } from "../mail/declared.js";
 import { createMailSender, mailSite } from "../mail/sender.js";
+import { bindEntryWrites } from "../rpc/procedures/entry/writes.js";
 import { resolveEnvInput } from "../runtime/contract/env-input.js";
 import { createTelemetryCollector } from "./collector.js";
 import { ContextError } from "./errors.js";
@@ -247,6 +248,11 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     // is observed without rebinding.
     fetch: createTracedFetch(() => base.telemetry, neverAborted),
   };
+  // Safety: `TSchema` reaches only `db`, and an entry write reads core's
+  // tables, which every site's schema carries.
+  const writer = base as unknown as AppContext;
+  // Before the extensions, so a plugin's `entries` is refused as a shadow.
+  Object.assign(base, { entries: bindEntryWrites(writer) });
   if (args.appContextExtensions !== undefined) {
     // Safety: every key that already exists is rejected below, so no declared
     // context field is reachable through this view.

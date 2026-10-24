@@ -1,10 +1,11 @@
-import { eq, etagOf } from "plumix/db";
+import { eq, etagOf, typeTag } from "plumix/db";
 import { text } from "plumix/fields";
 import {
   buildManifest,
   definePlugin,
   HookRegistry,
   installPlugins,
+  tagCdnEntry,
 } from "plumix/plugin";
 import { memoryStorage } from "plumix/runtime";
 import { entries } from "plumix/schema";
@@ -13,11 +14,13 @@ import {
   createTestContext,
   createTestDb,
   entryFactory,
+  fakeCdn,
   plumixRequest,
   userFactory,
 } from "plumix/test";
 import { describe, expect, test, vi } from "vitest";
 
+import { media as mediaField } from "./builder.js";
 import { DEFAULT_ACCEPTED_TYPES, media } from "./index.js";
 
 async function install() {
@@ -614,6 +617,87 @@ describe("@plumix/plugin-media — media.confirm", () => {
     );
     expect(draft.output?.etag).toMatch(/^\d+$/);
     expect(await mediaEtag(h, mediaId, user.id)).not.toBe(draft.output?.etag);
+  });
+
+  test("a confirm that loses the race to another confirm after its sniff sees already_confirmed", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
+    const user = await h.seedUser("contributor");
+    const created = await rpcDispatch<CreateUploadUrlOutput>(
+      h,
+      "media/createUploadUrl",
+      {
+        filename: "tile.png",
+        contentType: "image/png",
+        size: PNG_1X1_BYTES.byteLength,
+      },
+      user.id,
+    );
+    if (!created.output) throw new Error("expected createUploadUrl output");
+    const { mediaId, storageKey } = created.output;
+    await storage.put(storageKey, PNG_1X1_BYTES, { contentType: "image/png" });
+    const get = storage.get.bind(storage);
+    // The other confirm lands while this one reads the sample.
+    storage.get = async (key, options) => {
+      await h.db
+        .update(entries)
+        .set({ status: "published", updatedAt: new Date(Date.now() + 5000) })
+        .where(eq(entries.id, mediaId));
+      return get(key, options);
+    };
+
+    const confirmed = await rpcDispatch(
+      h,
+      "media/confirm",
+      { id: mediaId },
+      user.id,
+    );
+
+    expect(confirmed.status).toBe(409);
+    expect(confirmed.error?.data?.reason).toBe("already_confirmed");
+  });
+
+  test("a confirm is refused while another user holds the draft's edit lease", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
+    const owner = await h.seedUser("contributor");
+    const editor = await h.seedUser("editor");
+    const created = await rpcDispatch<CreateUploadUrlOutput>(
+      h,
+      "media/createUploadUrl",
+      {
+        filename: "tile.png",
+        contentType: "image/png",
+        size: PNG_1X1_BYTES.byteLength,
+      },
+      owner.id,
+    );
+    if (!created.output) throw new Error("expected createUploadUrl output");
+    await storage.put(created.output.storageKey, PNG_1X1_BYTES, {
+      contentType: "image/png",
+    });
+    const leased = await rpcDispatch(
+      h,
+      "entry/lease/acquire",
+      { id: created.output.mediaId },
+      editor.id,
+    );
+    expect(leased.status).toBe(200);
+
+    const confirmed = await rpcDispatch(
+      h,
+      "media/confirm",
+      { id: created.output.mediaId },
+      owner.id,
+    );
+
+    expect(confirmed.status).toBe(423);
   });
 
   test("returns CONFLICT when the upload didn't actually land in storage", async () => {
@@ -1374,6 +1458,28 @@ describe("@plumix/plugin-media — media.update", () => {
     expect(result.error?.data?.issues?.map((i) => i.message)).toEqual([
       "Send the media item's `etag` from `media.list` as `ifMatch`",
     ]);
+  });
+
+  test("a save on an item whose stored meta is unreadable is a media_meta_invalid conflict", async () => {
+    const h = await createDispatcherHarness({ config: { plugins: [media()] } });
+    const owner = await h.seedUser("editor");
+    const broken = await h.factory.entry.create({
+      type: "media",
+      status: "published",
+      title: "broken.png",
+      authorId: owner.id,
+      meta: {},
+    });
+
+    const result = await rpcDispatch(
+      h,
+      "media/update",
+      { id: broken.id, ifMatch: etagOf(broken.updatedAt), alt: "mine" },
+      owner.id,
+    );
+
+    expect(result.status).toBe(409);
+    expect(result.error?.data?.reason).toBe("media_meta_invalid");
   });
 
   test("a save is refused while another user holds the item's edit lease", async () => {
@@ -2163,5 +2269,128 @@ describe("@plumix/plugin-media — worker-proxied serve route", () => {
       plumixRequest(`/_plumix/media/serve/${String(seeded.id)}`),
     );
     expect(response.status).toBe(200);
+  });
+});
+
+/** A public post type whose featured image is a media field. */
+const featuredPosts = definePlugin("featured-posts", (ctx) => {
+  ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+  ctx.registerEntryMetaBox("appearance", {
+    label: "Appearance",
+    entryTypes: ["post"],
+    fields: [mediaField("cover").featured()],
+  });
+});
+
+/** A stored post page showing a media item as its featured image. */
+async function storedPageShowingMedia() {
+  const storage = memoryStorage().connect({});
+  const cdn = fakeCdn();
+  const h = await createDispatcherHarness({
+    storage,
+    cdn,
+    config: { plugins: [media(), featuredPosts] },
+  });
+  const owner = await h.seedUser("editor");
+  const item = await seedPublishedMedia(h, storage, owner.id, "cover.png");
+  await h.factory.entry.create({
+    type: "post",
+    slug: "hello",
+    title: "Hello",
+    status: "published",
+    authorId: owner.id,
+    publishedAt: new Date(),
+    meta: { cover: String(item.id) },
+  });
+  (await h.fetch("/post/hello")).assertStatus(200);
+  await h.drainDeferred();
+  cdn.assertStored("/post/hello");
+  return { h, cdn, owner, item };
+}
+
+/** A public read of the media library, stored under the media list's tag. */
+const publicLibrary = definePlugin("public-library", (ctx) => {
+  ctx.registerPublicRoute({
+    path: "/library",
+    cacheable: true,
+    handler: (_request, appCtx) => {
+      tagCdnEntry(appCtx, [typeTag("media")]);
+      return new Response("library", { status: 200 });
+    },
+  });
+});
+
+describe("@plumix/plugin-media — purging the pages that show an item", () => {
+  test("a public read of the media library is not stored after an upload is confirmed", async () => {
+    const storage = memoryStorage().connect({});
+    const cdn = fakeCdn();
+    const h = await createDispatcherHarness({
+      storage,
+      cdn,
+      config: { plugins: [media(), publicLibrary] },
+    });
+    const owner = await h.seedUser("contributor");
+    const created = await rpcDispatch<CreateUploadUrlOutput>(
+      h,
+      "media/createUploadUrl",
+      {
+        filename: "tile.png",
+        contentType: "image/png",
+        size: PNG_1X1_BYTES.byteLength,
+      },
+      owner.id,
+    );
+    if (!created.output) throw new Error("expected createUploadUrl output");
+    await storage.put(created.output.storageKey, PNG_1X1_BYTES, {
+      contentType: "image/png",
+    });
+    (await h.fetch("/library")).assertStatus(200);
+    await h.drainDeferred();
+    cdn.assertStored("/library");
+
+    const confirmed = await rpcDispatch(
+      h,
+      "media/confirm",
+      { id: created.output.mediaId },
+      owner.id,
+    );
+    expect(confirmed.status).toBe(200);
+    await h.drainDeferred();
+
+    cdn.assertNotStored("/library");
+  });
+
+  test("a page whose featured image is the item is not stored after its alt text is updated", async () => {
+    const { h, cdn, owner, item } = await storedPageShowingMedia();
+
+    const updated = await rpcDispatch(
+      h,
+      "media/update",
+      {
+        id: item.id,
+        ifMatch: await mediaEtag(h, item.id, owner.id),
+        alt: "A cover",
+      },
+      owner.id,
+    );
+    expect(updated.status).toBe(200);
+    await h.drainDeferred();
+
+    cdn.assertNotStored("/post/hello");
+  });
+
+  test("a page whose featured image is the item is not stored after the item is deleted", async () => {
+    const { h, cdn, owner, item } = await storedPageShowingMedia();
+
+    const deleted = await rpcDispatch(
+      h,
+      "media/delete",
+      { id: item.id },
+      owner.id,
+    );
+    expect(deleted.status).toBe(200);
+    await h.drainDeferred();
+
+    cdn.assertNotStored("/post/hello");
   });
 });

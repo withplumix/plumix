@@ -3,6 +3,8 @@ import "./template-deps-core.js";
 // Side-effect: anchors public core hook augmentations (seo:*, render:document,
 // resolve:*, admin_bar:nodes, …) into the published declaration graph (#1698).
 import "./hooks/public-hooks.js";
+// Side-effect: anchors core's `ctx.entries` augmentation the same way.
+import "./rpc/procedures/entry/writes-shared.js";
 // Side-effect: anchors core's `MailRegistry` entries (`magicLink`,
 // `emailChange`) into the published declaration graph, the same way.
 import "./mail/core-mails.js";

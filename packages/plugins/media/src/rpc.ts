@@ -1,22 +1,12 @@
 import type { AuthenticatedAppContext } from "plumix/plugin";
-import {
-  and,
-  assertWritable,
-  claim,
-  ConflictError,
-  eq,
-  etagOf,
-  ifMatchObject,
-} from "plumix/db";
+import { ConflictError, eq, ifMatchObject } from "plumix/db";
 import {
   assertCanDeleteEntry,
   assertCanEditEntry,
   authenticated,
   base,
-  listEntryMetaFields,
   requireCapability,
   resolveCapability,
-  startingMeta,
 } from "plumix/plugin";
 import { entries } from "plumix/schema";
 import { withBasePath } from "plumix/support";
@@ -34,7 +24,6 @@ import {
   MEDIA_ENTRY_TYPE,
   mediaListInputSchema,
   MediaReadError,
-  purgeVariants,
   resolveMediaUrl,
   thumbnailFor,
 } from "./read-service.js";
@@ -162,30 +151,19 @@ export function createMediaRouter(options: MediaRpcOptions) {
             ? `${datePrefix}/${id}`
             : `${datePrefix}/${id}.${ext}`;
 
-        const [created] = await context.db
-          .insert(entries)
-          .values({
-            type: MEDIA_ENTRY_TYPE,
-            title: input.filename,
-            slug: id,
-            status: "draft",
-            authorId: context.user.id,
-            // A new media entry starts from the fields registered on
-            // `media` (ADR 0026); the file's own meta lands on top.
-            meta: {
-              ...startingMeta(
-                listEntryMetaFields(context.plugins, MEDIA_ENTRY_TYPE),
-              ),
-              mime: normalizedMime,
-              size: input.size,
-              originalName: input.filename,
-              storageKey,
-            },
-          })
-          .returning();
-        if (!created) {
-          throw errors.CONFLICT({ data: { reason: "db_insert_failed" } });
-        }
+        const { entry: created } = await context.entries.create({
+          type: MEDIA_ENTRY_TYPE,
+          title: input.filename,
+          slug: id,
+          status: "draft",
+          sortOrder: 0,
+          storedMeta: {
+            mime: normalizedMime,
+            size: input.size,
+            originalName: input.filename,
+            storageKey,
+          },
+        });
 
         if (storage.presignPut) {
           let presigned;
@@ -198,7 +176,7 @@ export function createMediaRouter(options: MediaRpcOptions) {
               expiresIn: 60,
             });
           } catch (error) {
-            await context.db.delete(entries).where(eq(entries.id, created.id));
+            await context.entries.delete(created.id);
             throw error;
           }
           return {
@@ -242,6 +220,8 @@ export function createMediaRouter(options: MediaRpcOptions) {
         .where(eq(entries.id, input.id))
         .limit(1);
       if (row?.type !== MEDIA_ENTRY_TYPE) throw notFound();
+      const alreadyConfirmed = (): Error =>
+        errors.CONFLICT({ data: { reason: "already_confirmed" } });
 
       if (!canFinishUpload(context, row)) {
         throw errors.FORBIDDEN({
@@ -253,6 +233,8 @@ export function createMediaRouter(options: MediaRpcOptions) {
           },
         });
       }
+
+      if (row.status !== "draft") throw alreadyConfirmed();
 
       const meta = parseMediaMeta(row.meta);
       if (!meta) {
@@ -303,19 +285,19 @@ export function createMediaRouter(options: MediaRpcOptions) {
         height: dimensions?.height ?? null,
       };
 
-      // CAS on `status = 'draft'`: of two concurrent confirms exactly one flips
-      // the row; the loser sees `already_confirmed`.
-      const [published] = await context.db
-        .update(entries)
-        .set({
+      // Claimed from the draft read above: of two concurrent confirms exactly
+      // one moves the token, and the loser sees `already_confirmed`.
+      let published;
+      try {
+        ({ entry: published } = await context.entries.update({
+          id: row.id,
+          ifMatch: row.updatedAt,
           status: "published",
-          publishedAt: new Date(),
-          meta: { ...meta, ...dims },
-        })
-        .where(and(eq(entries.id, input.id), eq(entries.status, "draft")))
-        .returning();
-      if (!published) {
-        throw errors.CONFLICT({ data: { reason: "already_confirmed" } });
+          storedMeta: dims,
+        }));
+      } catch (error) {
+        if (error instanceof ConflictError) throw alreadyConfirmed();
+        throw error;
       }
 
       const url = await resolveMediaUrl(
@@ -361,49 +343,24 @@ export function createMediaRouter(options: MediaRpcOptions) {
       ),
     )
     .handler(async ({ input, context, errors }): Promise<UpdateResponse> => {
-      const notFound = (): Error =>
-        errors.NOT_FOUND({ data: { kind: "media", id: input.id } });
       const row = await loadMediaRow(context, input.id, errors);
       assertCanEditEntry(context, row, errors);
-      const resource = { kind: "entry", id: row.id };
-      await assertWritable(context.db, resource, {
-        userId: context.user.id,
-        surface: context.tokenScopes === null ? "admin" : "rpc",
-      });
-
-      const meta = parseMediaMeta(row.meta);
-      if (!meta) {
+      if (!parseMediaMeta(row.meta)) {
         throw errors.CONFLICT({ data: { reason: "media_meta_invalid" } });
       }
 
-      const nextMeta = {
-        ...meta,
-        alt: input.alt ?? meta.alt,
-      };
-      const guard = claim(entries.updatedAt, input.ifMatch);
-      const [updated] = await context.db
-        .update(entries)
-        .set({
-          title: input.title ?? row.title,
-          meta: nextMeta,
-          ...guard.set,
-        })
-        .where(and(eq(entries.id, input.id), guard.where))
-        .returning();
-      if (!updated) {
-        const [current] = await context.db
-          .select({ updatedAt: entries.updatedAt })
-          .from(entries)
-          .where(eq(entries.id, input.id));
-        if (!current) throw notFound();
-        throw new ConflictError(current.updatedAt, resource);
-      }
+      const { entry: updated, etag } = await context.entries.update({
+        id: row.id,
+        ifMatch: input.ifMatch,
+        title: input.title,
+        storedMeta: input.alt === undefined ? undefined : { alt: input.alt },
+      });
 
       return {
         id: updated.id,
         title: updated.title,
-        alt: nextMeta.alt,
-        etag: etagOf(updated.updatedAt),
+        alt: parseMediaMeta(updated.meta)?.alt ?? null,
+        etag,
       };
     });
 
@@ -411,20 +368,13 @@ export function createMediaRouter(options: MediaRpcOptions) {
     .use(authenticated)
     .input(v.object({ id: v.pipe(v.number(), v.integer(), v.minValue(1)) }))
     .handler(async ({ input, context, errors }): Promise<DeleteResponse> => {
-      const notFound = (): Error =>
-        errors.NOT_FOUND({ data: { kind: "media", id: input.id } });
       const row = await loadMediaRow(context, input.id, errors);
       assertCanDeleteEntry(context, row, errors);
 
       // Row first: a failed storage delete then leaves a sweepable orphan, not
       // a row pointing at a deleted file.
-      const [deleted] = await context.db
-        .delete(entries)
-        .where(eq(entries.id, input.id))
-        .returning();
-      if (!deleted) throw notFound();
+      const deleted = await context.entries.delete(row.id);
 
-      await purgeVariants(context, row);
       const meta = parseMediaMeta(row.meta);
       if (meta && context.storage) {
         try {

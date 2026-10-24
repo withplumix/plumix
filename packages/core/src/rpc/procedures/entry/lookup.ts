@@ -45,6 +45,8 @@ interface EntryLookupRow {
  * widening it to the contract's `HydratedReference`.
  */
 export const entryLookupAdapter = {
+  kind: "entry",
+
   async list(ctx, options) {
     const { conditions, entryTypes } = scopeConditions(options.scope);
     // The scope is caller-supplied, so without this any signed-in principal

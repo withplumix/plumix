@@ -1,4 +1,5 @@
 import type { Capability } from "../access/contract/capability.js";
+import type { HydratedEntityKind } from "../cdn/contract/tags.js";
 import type { AppContext } from "../context/app-context.js";
 import type { ResolvedImage } from "../images/contract/role-images.js";
 
@@ -92,6 +93,12 @@ export interface LookupListOptions<TScope = unknown> {
  * one round-trip regardless of selection size.
  */
 export interface LookupAdapter<TScope = unknown> {
+  /**
+   * The core entity each id names. A page that hydrates an id is stored under
+   * that entity's tag, so the entity's own write purges it.
+   */
+  readonly kind?: HydratedEntityKind;
+
   list(
     ctx: AppContext,
     options: LookupListOptions<TScope>,

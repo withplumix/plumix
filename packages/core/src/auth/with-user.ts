@@ -6,6 +6,7 @@ import type {
 } from "../context/app-context.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import { resolveCapability } from "../access/contract/capability.js";
+import { rebindToPrincipal } from "../context/principal-bound.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
 import { getCapabilityResolver } from "./rbac.js";
 
@@ -35,7 +36,7 @@ export function withUser<TSchema extends Record<string, unknown>>(
   user: AuthenticatedUser,
   tokenScopes: readonly string[] | null = null,
 ): AuthenticatedAppContext<TSchema> {
-  return {
+  const next: AuthenticatedAppContext<TSchema> = {
     ...ctx,
     user,
     tokenScopes,
@@ -48,4 +49,10 @@ export function withUser<TSchema extends Record<string, unknown>>(
       i18n: ctx.config.i18n,
     }),
   };
+  // Onto `next` itself, since the rebound writes close over it.
+  return Object.assign(next, {
+    // Safety: `TSchema` reaches only `db`, and an entry write reads core's
+    // tables, which every site's schema carries.
+    entries: rebindToPrincipal(ctx.entries, next as unknown as AppContext),
+  });
 }
