@@ -56,16 +56,17 @@ export const checkBrief = async (
   runAgentPhase: RunAgentPhase,
   ticket: Ticket,
   tell: (line: string) => void = say,
+  { phase = "check-brief", base = MERGE_BASE } = {},
 ): Promise<AfterBriefCheck> => {
-  const checked = await runAgentPhase("check-brief", BRIEF_CHECKER, {
+  const checked = await runAgentPhase(phase, BRIEF_CHECKER, {
     promptFile: join(PROMPT_DIR, "check-brief.md"),
-    promptArgs: { TICKET: String(ticket.number), BASE: MERGE_BASE },
+    promptArgs: { TICKET: String(ticket.number), BASE: base },
     maxIterations: 1,
     idleTimeoutSeconds: HALF_AN_HOUR_IN_SECONDS,
   });
   const check = await readOrAskAgain(
     runAgentPhase,
-    "check-brief",
+    phase,
     BRIEF_CHECKER,
     checked,
     readBriefCheckTag,
