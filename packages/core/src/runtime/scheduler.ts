@@ -96,7 +96,6 @@ export function createScheduler({
                 : `[plumix] cron "${schedule.expression}" never started: ${report.aborted}`,
             );
           }
-          // A warning: a task that outran its budget is too slow, not broken.
           if (
             report &&
             report.aborted === undefined &&

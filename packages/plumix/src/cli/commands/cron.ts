@@ -203,7 +203,6 @@ async function fireSchedule(
   if (failed.length > 0) {
     throw PlumixCliError.cronRunTasksFailed({ expression: fired, failed });
   }
-  // Not a failure, but the run still did not do its job.
   const timedOut = runReport?.timedOut ?? [];
   if (timedOut.length > 0) {
     throw PlumixCliError.cronRunTasksTimedOut({ expression: fired, timedOut });

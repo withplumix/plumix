@@ -61,7 +61,6 @@ export async function runScheduledTasks(
           s.set("cron.plugin", task.registeredBy);
           if (task.cron !== undefined) s.set("cron.schedule", task.cron);
           const settled = await Promise.race([
-            // Under the task's own context, so `getContext()` sees its signal.
             requestStore
               .run(taskCtx, () => Promise.resolve(task.handler(taskCtx)))
               .then(() => COMPLETED),
@@ -74,7 +73,6 @@ export async function runScheduledTasks(
       if (outcome === TIMED_OUT) {
         timedOut.push(label);
         try {
-          // A warning: the task is too slow, not broken, so it is no error.
           ctx.logger.warn(
             `[plumix] scheduled task "${label}" ${timedOutAfter}`,
             {
