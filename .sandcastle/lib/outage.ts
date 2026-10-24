@@ -94,6 +94,11 @@ export const retryWhatGitHubDropped = async <T>(
   return attempt();
 };
 
+/** Blocks the thread; for the synchronous gh and git calls. */
+export const blockFor = (ms: number): void => {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+};
+
 export const retryWhatGitHubDroppedNow = <T>(
   attempt: () => T,
   pause: (ms: number) => void,
