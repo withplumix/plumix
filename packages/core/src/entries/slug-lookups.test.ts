@@ -10,8 +10,7 @@ import { findAuthorBySlug, findTermBySlug } from "./slug-lookups.js";
 // what it made stale.
 describe("slug lookups after a write in the same request", () => {
   // A miss has no id to be tagged by, so each lookup carries a tag every
-  // write of its kind drops. The term lookup's are the public types' tags, so
-  // a site needs one.
+  // write of its kind drops; the term lookup's need a public type.
   const blog = definePlugin("test-blog", (ctx) => {
     ctx.registerEntryType("post", { label: "Posts", isPublic: true });
     ctx.registerTermTaxonomy("category", {
