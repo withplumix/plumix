@@ -57,4 +57,9 @@ describe("resolveApiTokenPreset", () => {
     expect(scopes).not.toContain("settings:manage");
     expect(scopes).not.toContain("entry:post:edit_any");
   });
+
+  test("a role with no capabilities resolves to an empty list, not to everything", () => {
+    expect(resolveApiTokenPreset("read_only", "nobody", plugins)).toEqual([]);
+    expect(resolveApiTokenPreset("draft_only", "nobody", plugins)).toEqual([]);
+  });
 });

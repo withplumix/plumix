@@ -142,7 +142,7 @@ async function writeGuarded(
 
 /**
  * Where a procedure checks capabilities inside the save: `edit` once the row is
- * loaded, the others once the save is known to publish, schedule or trash it.
+ * loaded, `publish` or `trash` once the save is known to make that move.
  */
 interface EntryUpdateGates {
   readonly edit?: (existing: Entry) => void;
