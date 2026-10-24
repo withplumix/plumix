@@ -63,6 +63,12 @@ describe("listAdminAreas", () => {
     );
   });
 
+  test("moves past an entry whose CLDR chain ends at root without a catalog", () => {
+    expect(listAdminAreas(["apiTokens", "passkeys"], "sr-Latn, de")).toBe(
+      "API tokens und Passkeys",
+    );
+  });
+
   test("skips an entry that is not a language tag", () => {
     expect(listAdminAreas(["apiTokens", "passkeys"], "*, de")).toBe(
       "API tokens und Passkeys",
