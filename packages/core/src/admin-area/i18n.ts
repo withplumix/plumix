@@ -11,6 +11,7 @@ import { messages as zhCnMessages } from "@plumix/core/locales/admin-area-zh-CN"
 import type { CompiledCatalog } from "../blocks/index.js";
 import type { AdminArea } from "../context/runtime-adapter.js";
 import { resolveMessage } from "../blocks/index.js";
+import { catalogLocale } from "../i18n/catalog-locale.js";
 
 const CATALOGS: Readonly<Record<string, CompiledCatalog>> = {
   en: enMessages,
@@ -44,25 +45,37 @@ const M = {
  */
 const MAX_ACCEPT_LANGUAGE_ENTRIES = 16;
 
+const SOURCE_LOCALE = "en";
+
+/** Not a shipped locale, so `catalogLocale` returning it means no catalog serves the entry. */
+const NO_CATALOG = "und";
+
+function languageTag(entry: string): string | undefined {
+  const tag = entry.split(";")[0]?.trim();
+  if (!tag) return undefined;
+  try {
+    return new Intl.Locale(tag).baseName;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
- * The first locale in `acceptLanguage` a catalog ships for, matched by exact
- * tag and then by language (`de-AT` → `de`, `zh` → `zh-CN`); English otherwise.
+ * The catalog locale of the first `acceptLanguage` entry a shipped catalog
+ * serves, the source catalog included; English otherwise.
  */
-function matchLocale(acceptLanguage: string | null): string {
+function negotiateLocale(acceptLanguage: string | null): string {
   const shipped = Object.keys(CATALOGS);
   for (const entry of (acceptLanguage ?? "").split(
     ",",
     MAX_ACCEPT_LANGUAGE_ENTRIES,
   )) {
-    const tag = entry.split(";")[0]?.trim().toLowerCase();
-    if (!tag) continue;
-    const exact = shipped.find((code) => code.toLowerCase() === tag);
-    if (exact) return exact;
-    const language = tag.split("-")[0];
-    const byLanguage = shipped.find((code) => code.split("-")[0] === language);
-    if (byLanguage) return byLanguage;
+    const tag = languageTag(entry);
+    if (tag === undefined) continue;
+    const locale = catalogLocale(tag, shipped, NO_CATALOG);
+    if (locale !== NO_CATALOG) return locale;
   }
-  return "en";
+  return SOURCE_LOCALE;
 }
 
 /**
@@ -73,7 +86,7 @@ export function listAdminAreas(
   areas: readonly AdminArea[],
   acceptLanguage: string | null,
 ): string {
-  const locale = matchLocale(acceptLanguage);
+  const locale = negotiateLocale(acceptLanguage);
   const catalog = CATALOGS[locale] ?? enMessages;
   return new Intl.ListFormat(locale, { type: "conjunction" }).format(
     areas.map((area) => resolveMessage(catalog, M[area])),

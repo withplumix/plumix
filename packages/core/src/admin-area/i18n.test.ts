@@ -42,6 +42,33 @@ describe("listAdminAreas", () => {
     ).toBe("API tokens und Passkeys");
   });
 
+  test.each(["zh-TW", "zh-HK"])(
+    "names the areas in English for %s rather than in Simplified Chinese",
+    (acceptLanguage) => {
+      expect(listAdminAreas(["apiTokens", "passkeys"], acceptLanguage)).toBe(
+        "API tokens and Passkeys",
+      );
+    },
+  );
+
+  test("formats the list in German for an Austrian visitor", () => {
+    expect(listAdminAreas(["apiTokens", "passkeys"], "de-AT, en;q=0.5")).toBe(
+      "API tokens und Passkeys",
+    );
+  });
+
+  test("keeps English for a visitor who accepts English first", () => {
+    expect(listAdminAreas(["apiTokens", "passkeys"], "en-US, de;q=0.5")).toBe(
+      "API tokens and Passkeys",
+    );
+  });
+
+  test("skips an entry that is not a language tag", () => {
+    expect(listAdminAreas(["apiTokens", "passkeys"], "*, de")).toBe(
+      "API tokens und Passkeys",
+    );
+  });
+
   test("falls back to English when no accepted locale is shipped", () => {
     expect(listAdminAreas(["apiTokens", "passkeys"], "fr-FR")).toBe(
       "API tokens and Passkeys",

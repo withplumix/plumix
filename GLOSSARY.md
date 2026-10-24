@@ -406,6 +406,10 @@ The platform-neutral object a runtime adapter produces — a `fetch`, optionally
 **Invocation**:
 What a runtime adapter hands core for one call into the runtime handler: the `env`, an optional `waitUntil`, an optional client address.
 
+**Catalog locale**:
+The locale whose catalog serves an enabled locale, picked from the locales a catalog set ships by one rule: the exact tag, then its CLDR parent or the tag less its last subtag, repeatedly and never across a script, then the source locale. `de` is the catalog locale of `de-AT` when Plumix ships `de` and not `de-AT`; `zh-TW` reads the English source rather than `zh-CN`. See ADR 0054.
+_Avoid_: fallback locale (Lingui's name for a per-message fill, not for the catalog chosen)
+
 **Migration history**:
 The ordered migrations that build the tables one owner declares — core, a plugin, or a site's own tables — shipped and committed with that owner and replayed by every database it reaches. Source its owner alone writes: it only grows, and nothing that applies it ever deletes or rewrites it. A site's database is built from every history its config pulls in, each migration applied once: owner by owner (core, then plugins in config order, then the site), each history in its own order.
 _Avoid_: migrations folder, `drizzle/` (a folder holds a history; it is not the concept)
