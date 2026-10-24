@@ -16,8 +16,9 @@ const REFUSED_PREFIXES = {
   // Registering a passkey creates a credential; signing in with one mints a
   // session.
   passkeys: ["/_plumix/rpc/auth/credentials/", "/_plumix/auth/passkey/"],
-  // The callback links a provider account and mints a session.
-  oauthLinking: ["/_plumix/auth/oauth/"],
+  // The callback links a provider account and mints a session; the account
+  // list and unlink manage those links.
+  oauthLinking: ["/_plumix/auth/oauth/", "/_plumix/rpc/auth/oauthAccounts/"],
   // Each sends a real email, or redeems a link one carried.
   emailDelivery: [
     "/_plumix/rpc/user/invite",

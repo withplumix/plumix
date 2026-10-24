@@ -167,6 +167,43 @@ describe("auth hooks — credentials", () => {
   });
 });
 
+describe("auth hooks — oauth accounts", () => {
+  test("oauth_account:unlinked fires on a successful unlink", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    await h.factory.credential.create({
+      userId: h.user.id,
+      publicKey: Buffer.from([1, 2, 3]),
+    });
+    await h.factory.oauthAccount.create({
+      userId: h.user.id,
+      provider: "github",
+    });
+    const spy = h.spyAction("oauth_account:unlinked");
+
+    await h.client.auth.oauthAccounts.unlink({ provider: "github" });
+
+    spy.assertCalledOnce();
+    const [account, ctx] = spy.lastArgs ?? [];
+    expect(account).toEqual({ provider: "github", userId: h.user.id });
+    expect(ctx?.actor.id).toBe(h.user.id);
+  });
+
+  test("oauth_account:unlinked does NOT fire on the last-sign-in conflict", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    await h.factory.oauthAccount.create({
+      userId: h.user.id,
+      provider: "github",
+    });
+    const spy = h.spyAction("oauth_account:unlinked");
+
+    await expect(
+      h.client.auth.oauthAccounts.unlink({ provider: "github" }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+
+    spy.assertNotCalled();
+  });
+});
+
 describe("auth hooks — sessions", () => {
   test("session:revoked fires with mode=single for sessions.revoke", async () => {
     const h = await createRpcHarness({ authAs: "editor" });

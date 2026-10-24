@@ -60,6 +60,11 @@ const MESSAGES: Readonly<Record<string, MessageDescriptor>> = {
     id: "authClient.error.lastCredential",
     message: "You can't remove your only passkey. Add another first.",
   },
+  last_sign_in_method: {
+    id: "authClient.error.lastSignInMethod",
+    message:
+      "This is your only way to sign in. Add another before removing it.",
+  },
   method_not_registered: {
     id: "authClient.error.methodNotRegistered",
     message: "This sign-in method isn't available here.",
