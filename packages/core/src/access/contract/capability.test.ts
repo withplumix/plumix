@@ -5,6 +5,7 @@ import type { Capability, KnownCapability } from "./capability.js";
 describe("KnownCapability", () => {
   test("names each core capability, so a capability slot autocompletes them", () => {
     expectTypeOf<KnownCapability>().toEqualTypeOf<
+      | "admin:access"
       | "entry:post:read"
       | "entry:post:create"
       | "entry:post:edit_own"
