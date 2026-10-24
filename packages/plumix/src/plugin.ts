@@ -261,6 +261,7 @@ export type {
   PatternManifestEntry,
   PluginAfterSetup,
   PluginAfterSetupContext,
+  PluginCache,
   PluginComponentRef,
   PluginDescriptor,
   PluginI18nManifest,

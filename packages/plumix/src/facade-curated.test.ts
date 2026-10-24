@@ -211,6 +211,7 @@ const CORE_WITHHELD: readonly Withholding[] = [
       "handed its context (#2310).",
     names: [
       "hookStore",
+      "pluginStore",
       "traceStore",
       "txStore",
       "getContext",
