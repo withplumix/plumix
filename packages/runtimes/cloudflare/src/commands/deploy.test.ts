@@ -249,7 +249,9 @@ describe("plumix deploy and plumix preview — targets", () => {
   });
 });
 
-describe("plumix deploy — data migrations", () => {
+// Each deploy, and each read of what it recorded, starts a miniflare instance
+// for the local D1: 2–4s a case alone, past the 5s default on a busy runner.
+describe("plumix deploy — data migrations", { timeout: 30_000 }, () => {
   // One local D1 kept on disk, so a second deploy sees what the first wrote.
   function localD1(): void {
     vi.spyOn(migrationsDeps, "getPlatformProxy").mockImplementation((options) =>
