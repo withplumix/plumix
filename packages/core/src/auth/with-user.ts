@@ -7,6 +7,7 @@ import type {
 import type { PluginRegistry } from "../plugin/manifest.js";
 import { resolveCapability } from "../access/contract/capability.js";
 import { rebindToPrincipal } from "../context/principal-bound.js";
+import { rebindSettings } from "../context/settings-namespace.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
 import { getCapabilityResolver } from "./rbac.js";
 
@@ -48,6 +49,7 @@ export function withUser<TSchema extends Record<string, unknown>>(
       user,
       i18n: ctx.config.i18n,
     }),
+    settings: rebindSettings(ctx.settings, () => coreView(next)),
   };
   // Onto `next` itself, since the rebound writes close over it.
   return Object.assign(next, {
@@ -55,4 +57,12 @@ export function withUser<TSchema extends Record<string, unknown>>(
     // tables, which every site's schema carries.
     entries: rebindToPrincipal(ctx.entries, next as unknown as AppContext),
   });
+}
+
+function coreView<TSchema extends Record<string, unknown>>(
+  ctx: AppContext<TSchema>,
+): AppContext {
+  // Safety: the settings write reaches only core's tables, which every
+  // site's schema carries beside its own.
+  return ctx as unknown as AppContext;
 }

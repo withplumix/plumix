@@ -1,18 +1,18 @@
 import type { BatchItem } from "drizzle-orm/batch";
 
-import type { Db } from "../../../context/app-context.js";
-import type { JsonValue } from "../../../json.js";
-import type { SettingsRow } from "../../../template-deps-core.js";
-import { ConflictError } from "../../../db/concurrency.js";
+import type { Db } from "../context/app-context.js";
+import type { JsonValue } from "../json.js";
+import type { SettingsRow } from "../template-deps-core.js";
+import { ConflictError } from "../db/concurrency.js";
 import {
   and,
   chunkForD1,
   D1_MAX_BOUND_PARAMETERS,
   eq,
   inArray,
-} from "../../../db/index.js";
-import { settings } from "../../../db/schema/settings.js";
-import { SETTINGS_CREATED_KEY } from "../../../template-deps-core.js";
+} from "../db/index.js";
+import { settings } from "../db/schema/settings.js";
+import { SETTINGS_CREATED_KEY } from "../template-deps-core.js";
 
 /**
  * The group's token is the counter its marker row holds. No marker, or one

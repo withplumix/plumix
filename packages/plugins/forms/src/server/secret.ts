@@ -34,7 +34,10 @@ export async function getSecret(
   return typeof row?.value === "string" ? row.value : null;
 }
 
-/** Concurrent first writes converge on one value. */
+/**
+ * Answers what is stored after the write, so two first writes racing each
+ * other diverge only if one re-reads before the other writes.
+ */
 export function getOrCreateSecret(
   ctx: AppContext,
   key: SecretName,
@@ -46,10 +49,7 @@ export function getOrCreateSecret(
     const bytes = new Uint8Array(16);
     crypto.getRandomValues(bytes);
     const secret = toHex(bytes);
-    await ctx.db
-      .insert(settings)
-      .values({ group: GROUP, key, value: secret })
-      .onConflictDoNothing();
+    await ctx.settings.write(GROUP, { [key]: secret });
     return (await getSecret(ctx, key)) ?? secret;
   });
 }

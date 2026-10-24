@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { email, text } from "plumix/fields";
 import { settings } from "plumix/schema";
+import { fakeCdn } from "plumix/test";
 import { describe, expect, test, vi } from "vitest";
 
 import type { FormSubmitEvent } from "../define-form.js";
@@ -445,5 +446,35 @@ describe("the signing secret", () => {
     // The same page renders the same bytes, which is what lets the edge
     // cache one copy of it for every visitor.
     expect(await mint(harness)).toBe(first);
+  });
+
+  // Minting writes a settings group no page reads, so it leaves every stored
+  // page stored, the minting page among them.
+  test("is minted without purging a page that never read it", async () => {
+    const cdn = fakeCdn();
+    const harness = await createFormsHarness([forms({ forms: [subscribe] })], {
+      cdn,
+    });
+    await seedPageWithForm(harness, "subscribe");
+    const author = await harness.seedUser("editor");
+    await harness.factory.entry.create({
+      type: "post",
+      slug: "plain",
+      title: "Plain",
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    await renderPage(harness, "plain");
+    await harness.drainDeferred();
+    cdn.assertStored("/posts/plain");
+
+    const first = await mint(harness);
+    await harness.drainDeferred();
+
+    cdn.assertStored("/posts/plain");
+    cdn.assertStored("/posts/page-with-form");
+    expect(await mint(harness)).toBe(first);
+    expect(await stored(harness)).toHaveLength(1);
   });
 });

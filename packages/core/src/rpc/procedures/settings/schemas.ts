@@ -45,9 +45,8 @@ export const settingsLeaseInputSchema = v.object({
 
 /**
  * Caps keys per request against fan-out from callers iterating untrusted
- * input. 64 KiB per value matches the WP `wp_options` convention.
+ * input.
  */
-const MAX_SETTINGS_VALUE_BYTES = 64 * 1024;
 const MAX_SETTINGS_KEYS_PER_UPSERT = 200;
 
 const SETTINGS_IF_MATCH_MESSAGE =
@@ -72,5 +71,3 @@ export type SettingsGetInput = v.InferOutput<typeof settingsGetInputSchema>;
 export type SettingsUpsertInput = v.InferOutput<
   typeof settingsUpsertInputSchema
 >;
-
-export { MAX_SETTINGS_VALUE_BYTES };

@@ -207,6 +207,21 @@ describe("@plumix/plugin-menu — CDN invalidation", () => {
     s.cdn.assertNotStored(PAGE);
   });
 
+  test("assigning a different menu to a location purges a page rendering it", async () => {
+    const s = await site();
+    await seedMenu(s, "main-nav");
+    await seedMenu(s, "other-nav");
+    await bind(s, "primary", "main-nav");
+    await render(s);
+
+    await rpc(s, "menu/assignLocation", {
+      location: "primary",
+      termSlug: "other-nav",
+    });
+
+    s.cdn.assertNotStored(PAGE);
+  });
+
   test("unbinding a location purges a page rendering it", async () => {
     const s = await site();
     await seedMenu(s, "main-nav");
