@@ -12,6 +12,10 @@ pnpm add @plumix/plugin-comments
 
 Read the [documentation](https://docs.plumix.dev/plugins/comments/) on docs.plumix.dev.
 
+## Outside systems
+
+- Gravatar serves each commenter's avatar, from a URL the plugin builds out of their email (`src/server/gravatar.ts`).
+
 ## Support
 
 Ask questions in [Discussions](https://github.com/withplumix/plumix/discussions) and report bugs in [Issues](https://github.com/withplumix/plumix/issues). Report a security issue privately, as the [security policy](https://github.com/withplumix/plumix/blob/main/SECURITY.md) describes.
