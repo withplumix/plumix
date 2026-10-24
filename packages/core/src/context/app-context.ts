@@ -94,6 +94,20 @@ export type PlumixFetch = (
 ) => Promise<Response>;
 
 /**
+ * A plugin's own data, in a namespace core names after the calling plugin. A
+ * `key` narrows to one item; without one a call covers the whole namespace.
+ */
+export interface PluginCache {
+  /** The current response read this data, so a change to it purges it. */
+  reads(key?: string | number): void;
+  /**
+   * Purges every response that read this data, and drops it from the request
+   * memo now.
+   */
+  changed(key?: string | number): void;
+}
+
+/**
  * Declaration-merge target for helpers a plugin registers with
  * `extendAppContext(key, value)`; augment it so `ctx.<key>` is typed.
  */
@@ -135,6 +149,8 @@ export interface AppContextBase<
    * execution announces one of its tags; an untagged one never does.
    */
   readonly memo: RequestMemo;
+  /** Throws outside a plugin's code, where there is no namespace to name. */
+  readonly cache: PluginCache;
   /**
    * Always present: {@link NOOP_TELEMETRY} when no consumer sampled the
    * request.

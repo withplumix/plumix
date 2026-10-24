@@ -49,6 +49,7 @@ export function createCommentsThreadLoader(
       throw redirectTo(`${ctx.origin}${newestHref}`, 301);
     }
 
+    ctx.cache.reads(resolved.id);
     const thread = await loadThread(ctx, resolved.id, {
       maxDepth: config.maxDepth,
       rootsPerPage: config.rootsPerPage,

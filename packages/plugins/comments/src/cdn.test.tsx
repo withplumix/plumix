@@ -1,29 +1,28 @@
-import type { ConnectedCdn } from "plumix";
 import type { Entry, User } from "plumix/schema";
-import { defineTemplate, defineTheme, entry } from "plumix/theme";
-import { describe, expect, test, vi } from "vitest";
+import type { CdnFake } from "plumix/test";
+import { definePlugin } from "plumix/plugin";
+import { fakeCdn } from "plumix/test";
+import { defineTemplate, defineTheme, entry, entryType } from "plumix/theme";
+import { describe, expect, test } from "vitest";
 
 import type { Harness } from "./test/harness.js";
-import type { CommentsConfig } from "./types.js";
+import type { CommentsConfig, CommentStatus } from "./types.js";
 import { commentFactory } from "./test/factories.js";
 import { harnessWith } from "./test/harness.js";
 
-function cdnStub() {
-  const put = vi.fn<NonNullable<ConnectedCdn["store"]>["put"]>(() =>
-    Promise.resolve(),
-  );
-  const purgeTags = vi.fn<NonNullable<ConnectedCdn["purgeTags"]>>(() =>
-    Promise.resolve(),
-  );
-  const cdn: ConnectedCdn = {
-    decorate: (response) => response,
-    store: { match: () => Promise.resolve(undefined), put },
-    purgeTags,
-  };
-  return { cdn, put, purgeTags };
-}
+/** Posts with an archive at `/posts` that lists each one as a card. */
+const blog = definePlugin("test_blog", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      hasArchive: true,
+      rewrite: { slug: "posts" },
+    });
+  },
+});
 
-/** A permalink template rendering the entry's approved thread. */
+/** A permalink rendering the entry's approved thread, and a card archive. */
 const theme = defineTheme({
   templates: [
     entry(
@@ -38,24 +37,30 @@ const theme = defineTheme({
         ),
       }),
     ),
+    entryType(({ data }) => (
+      <ul>
+        {data.entries.map((card) => (
+          <li key={card.id}>{card.title}</li>
+        ))}
+      </ul>
+    )),
   ],
 });
 
 interface Site {
   readonly h: Harness;
-  readonly put: ReturnType<typeof cdnStub>["put"];
-  readonly purgeTags: ReturnType<typeof cdnStub>["purgeTags"];
+  readonly cdn: CdnFake;
   readonly admin: User;
 }
 
 async function site(config: CommentsConfig = {}): Promise<Site> {
-  const { cdn, put, purgeTags } = cdnStub();
+  const cdn = fakeCdn();
   const h = await harnessWith(
     { entryTypes: ["post"], ...config },
-    { cdn, config: { theme } },
+    { blog, cdn, config: { theme } },
   );
   const admin = await h.seedUser("admin");
-  return { h, put, purgeTags, admin };
+  return { h, cdn, admin };
 }
 
 async function seedPost(s: Site, slug: string): Promise<Entry> {
@@ -73,12 +78,18 @@ function seedComment(
   s: Site,
   attrs: {
     entryId: number;
-    status?: "pending" | "approved";
+    status?: CommentStatus;
     parentId?: number;
     createdAt?: Date;
   },
 ) {
   return commentFactory.transient({ db: s.h.db }).create(attrs);
+}
+
+async function render(s: Site, path: string): Promise<void> {
+  (await s.h.fetch(path)).assertStatus(200);
+  await s.h.drainDeferred();
+  s.cdn.assertStored(path);
 }
 
 async function rpc(s: Site, procedure: string, input: unknown): Promise<void> {
@@ -106,26 +117,8 @@ async function submit(s: Site, entryId: number) {
   return response.json();
 }
 
-function purged(s: Site): readonly string[] {
-  return s.purgeTags.mock.calls.flatMap(([tags]) => [...tags]);
-}
-
-function expectNoTypeTag(s: Site): void {
-  expect(purged(s).filter((tag) => tag.startsWith("t:"))).toEqual([]);
-}
-
-describe("@plumix/plugin-comments — CDN tags", () => {
-  test("rendering an entry permalink stores it under the entry's tag", async () => {
-    const s = await site();
-    const post = await seedPost(s, "hello");
-
-    await s.h.dispatch(new Request("https://cms.example/posts/hello"));
-    await s.h.drainDeferred();
-
-    expect(s.put.mock.calls[0]?.[2]).toContain(`e:${String(post.id)}`);
-  });
-
-  test("approving a comment purges the stored older comment page", async () => {
+describe("@plumix/plugin-comments — CDN", () => {
+  test("approving a comment purges its entry page and the entry's older comment page", async () => {
     const s = await site({ rootsPerPage: 1 });
     const post = await seedPost(s, "hello");
     await seedComment(s, {
@@ -134,71 +127,122 @@ describe("@plumix/plugin-comments — CDN tags", () => {
       createdAt: new Date("2026-06-01T00:00:00Z"),
     });
     const held = await seedComment(s, { entryId: post.id });
-    await s.h.dispatch(
-      new Request("https://cms.example/posts/hello?comments=1780358400_9"),
-    );
-    await s.h.drainDeferred();
+    await render(s, "/posts/hello");
+    await render(s, "/posts/hello?comments=1780358400_9");
 
     await rpc(s, "approve", { id: held.id });
 
-    expect(s.put.mock.calls[0]?.[0].url).toBe(
-      "https://cms.example/posts/hello?comments=1780358400_9",
-    );
-    expect(s.put.mock.calls[0]?.[2]).toContain(`e:${String(post.id)}`);
-    expect(purged(s)).toContain(`e:${String(post.id)}`);
+    s.cdn.assertNotStored("/posts/hello");
+    s.cdn.assertNotStored("/posts/hello?comments=1780358400_9");
   });
 
-  test.each(["approve", "restore", "spam", "trash"])(
-    "%s on a comment purges its entry's tag",
-    async (procedure) => {
+  test("approving a comment leaves another entry's page stored", async () => {
+    const s = await site();
+    const post = await seedPost(s, "hello");
+    await seedPost(s, "other");
+    const held = await seedComment(s, { entryId: post.id });
+    await render(s, "/posts/other");
+
+    await rpc(s, "approve", { id: held.id });
+
+    s.cdn.assertStored("/posts/other");
+  });
+
+  test("approving a comment leaves an archive that shows the entry as a card stored", async () => {
+    const s = await site();
+    const post = await seedPost(s, "hello");
+    const held = await seedComment(s, { entryId: post.id });
+    await render(s, "/posts");
+
+    await rpc(s, "approve", { id: held.id });
+
+    s.cdn.assertStored("/posts");
+  });
+
+  test.each<[string, CommentStatus]>([
+    ["spam", "approved"],
+    ["trash", "approved"],
+    ["restore", "trash"],
+    ["approve", "spam"],
+  ])(
+    "%s on a comment that was %s purges its entry page",
+    async (procedure, status) => {
       const s = await site();
       const post = await seedPost(s, "hello");
-      const comment = await seedComment(s, { entryId: post.id });
+      const comment = await seedComment(s, { entryId: post.id, status });
+      await render(s, "/posts/hello");
 
       await rpc(s, procedure, { id: comment.id });
 
-      expect(purged(s)).toContain(`e:${String(post.id)}`);
-      expectNoTypeTag(s);
+      s.cdn.assertNotStored("/posts/hello");
     },
   );
 
-  test("bulk across two entries purges both entries' tags in one call", async () => {
+  test.each<[string, CommentStatus]>([
+    ["spam", "pending"],
+    ["trash", "pending"],
+    ["trash", "spam"],
+    ["approve", "approved"],
+  ])(
+    "%s on a comment that was %s leaves its entry page stored",
+    async (procedure, status) => {
+      const s = await site();
+      const post = await seedPost(s, "hello");
+      const comment = await seedComment(s, { entryId: post.id, status });
+      await render(s, "/posts/hello");
+
+      await rpc(s, procedure, { id: comment.id });
+
+      s.cdn.assertStored("/posts/hello");
+    },
+  );
+
+  test("bulk approve across two entries purges both entry pages", async () => {
     const s = await site();
     const first = await seedPost(s, "first");
     const second = await seedPost(s, "second");
     const ids = [
       (await seedComment(s, { entryId: first.id })).id,
-      (await seedComment(s, { entryId: first.id })).id,
       (await seedComment(s, { entryId: second.id })).id,
     ];
+    await render(s, "/posts/first");
+    await render(s, "/posts/second");
 
     await rpc(s, "bulk", { ids, action: "approve" });
 
-    expect(s.purgeTags).toHaveBeenCalledOnce();
-    expect(purged(s)).toEqual(
-      expect.arrayContaining([
-        `e:${String(first.id)}`,
-        `e:${String(second.id)}`,
-      ]),
-    );
-    expectNoTypeTag(s);
+    s.cdn.assertNotStored("/posts/first");
+    s.cdn.assertNotStored("/posts/second");
   });
 
-  test("purge on a leaf deletes it, fires comment:deleted and purges its entry's tag", async () => {
+  test("bulk spam of held comments leaves their entry page stored", async () => {
+    const s = await site();
+    const post = await seedPost(s, "hello");
+    const ids = [
+      (await seedComment(s, { entryId: post.id })).id,
+      (await seedComment(s, { entryId: post.id })).id,
+    ];
+    await render(s, "/posts/hello");
+
+    await rpc(s, "bulk", { ids, action: "spam" });
+
+    s.cdn.assertStored("/posts/hello");
+  });
+
+  test("purge on an approved leaf deletes it, fires comment:deleted and purges its entry page", async () => {
     const s = await site();
     const post = await seedPost(s, "hello");
     const leaf = await seedComment(s, { entryId: post.id, status: "approved" });
     const deleted = s.h.spyAction("comment:deleted");
+    await render(s, "/posts/hello");
 
     await rpc(s, "purge", { id: leaf.id });
 
     deleted.assertCalledOnce();
     expect(deleted.lastArgs?.[0]).toEqual(leaf);
-    expect(purged(s)).toContain(`e:${String(post.id)}`);
-    expectNoTypeTag(s);
+    s.cdn.assertNotStored("/posts/hello");
   });
 
-  test("purge on a comment with replies tombstones it, fires comment:deleted and purges its entry's tag", async () => {
+  test("purge on an approved comment with replies tombstones it, fires comment:deleted and purges its entry page", async () => {
     const s = await site();
     const post = await seedPost(s, "hello");
     const parent = await seedComment(s, {
@@ -211,51 +255,66 @@ describe("@plumix/plugin-comments — CDN tags", () => {
       parentId: parent.id,
     });
     const deleted = s.h.spyAction("comment:deleted");
+    await render(s, "/posts/hello");
 
     await rpc(s, "purge", { id: parent.id });
 
     deleted.assertCalledOnce();
     expect(deleted.lastArgs?.[0]).toEqual(parent);
-    expect(purged(s)).toContain(`e:${String(post.id)}`);
-    expectNoTypeTag(s);
+    s.cdn.assertNotStored("/posts/hello");
   });
 
-  test("purge on an unknown id fires nothing and purges nothing", async () => {
+  test("purge on a held comment leaves its entry page stored", async () => {
     const s = await site();
+    const post = await seedPost(s, "hello");
+    const held = await seedComment(s, { entryId: post.id });
+    await render(s, "/posts/hello");
+
+    await rpc(s, "purge", { id: held.id });
+
+    s.cdn.assertStored("/posts/hello");
+  });
+
+  test("purge on an unknown id fires nothing and leaves the entry page stored", async () => {
+    const s = await site();
+    await seedPost(s, "hello");
     const deleted = s.h.spyAction("comment:deleted");
+    await render(s, "/posts/hello");
 
     await rpc(s, "purge", { id: 999 });
 
     deleted.assertNotCalled();
-    expect(s.purgeTags).not.toHaveBeenCalled();
+    s.cdn.assertStored("/posts/hello");
   });
 
-  test("submitting an auto-approved comment purges its entry's tag", async () => {
+  test("submitting an auto-approved comment purges its entry page", async () => {
     const s = await site({ mode: "none" });
     const post = await seedPost(s, "hello");
+    await render(s, "/posts/hello");
 
     expect(await submit(s, post.id)).toEqual({ status: "approved" });
 
-    expect(purged(s)).toContain(`e:${String(post.id)}`);
-    expectNoTypeTag(s);
+    s.cdn.assertNotStored("/posts/hello");
   });
 
-  test("submitting a comment held for moderation purges nothing", async () => {
+  test("submitting a comment held for moderation leaves its entry page stored", async () => {
     const s = await site({ mode: "all" });
     const post = await seedPost(s, "hello");
+    await render(s, "/posts/hello");
 
     expect(await submit(s, post.id)).toEqual({ status: "pending" });
 
-    expect(s.purgeTags).not.toHaveBeenCalled();
+    s.cdn.assertStored("/posts/hello");
   });
 
-  test("submitting a comment a filter demotes to spam purges nothing", async () => {
+  test("submitting a comment a filter demotes to spam leaves its entry page stored", async () => {
     const s = await site({ mode: "none" });
     const post = await seedPost(s, "hello");
     s.h.spyFilter("comment:moderate").override(() => "spam");
+    await render(s, "/posts/hello");
 
     expect(await submit(s, post.id)).toEqual({ status: "spam" });
 
-    expect(s.purgeTags).not.toHaveBeenCalled();
+    s.cdn.assertStored("/posts/hello");
   });
 });

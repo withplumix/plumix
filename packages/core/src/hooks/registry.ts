@@ -9,7 +9,7 @@ import type {
   FilterRest,
   HookOptions,
 } from "./types.js";
-import { hookStore, tryGetContext } from "../context/stores.js";
+import { hookStore, pluginStore, tryGetContext } from "../context/stores.js";
 import { NOOP_TELEMETRY } from "../context/telemetry.js";
 import { HookExecutionError } from "./errors.js";
 import { DEFAULT_HOOK_PRIORITY } from "./types.js";
@@ -310,7 +310,9 @@ function runHandlerTraced<T>(
   return telemetry.span(`hook: ${name}`, (s) => {
     s.set("hook.name", name);
     s.set("hook.plugin", plugin);
-    return hookStore.run({ hook: name, plugin }, fn);
+    return hookStore.run({ hook: name, plugin }, () =>
+      pluginStore.run(plugin, fn),
+    );
   });
 }
 

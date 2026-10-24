@@ -1,11 +1,12 @@
 type ContextErrorCode =
-  "no_request_context" | "app_context_extension_shadows_builtin";
+  | "no_request_context"
+  | "app_context_extension_shadows_builtin"
+  | "cache_outside_plugin";
 
 /**
- * Request/app-context invariant violated. `no_request_context` means an
- * accessor ran outside `requestStore.run()`; the shadow code means a
- * malformed extension map reached context assembly. Named-error convention
- * (#232).
+ * Request/app-context invariant violated: an accessor outside
+ * `requestStore.run()`, a malformed extension map, or `ctx.cache` outside a
+ * plugin's code. Named-error convention (#232).
  */
 export class ContextError extends Error {
   static {
@@ -35,6 +36,14 @@ export class ContextError extends Error {
         `AppContext field. Reserve plugin-scoped names; built-in ` +
         `members like \`db\` and \`auth\` aren't extendable.`,
       key,
+    );
+  }
+
+  static cacheOutsidePlugin(): ContextError {
+    return new ContextError(
+      "cache_outside_plugin",
+      "ctx.cache was called outside a plugin's code, so there is no plugin " +
+        "namespace to name.",
     );
   }
 }

@@ -34,6 +34,7 @@ import { defaultAuthenticator } from "../auth/authenticator.js";
 import { resolveMailer } from "../auth/mailer/resolve.js";
 import { makeAuthCan } from "../auth/with-user.js";
 import { createBlockRegistry } from "../blocks/index.js";
+import { createPluginCache } from "../cdn/plugin-cache.js";
 import { debugBarTelemetryConsumer } from "../dev/debug-bar/consumer.js";
 import { devMail } from "../dev/mail/catcher.js";
 import { debugHistoryConsumer } from "../dev/request-history/writer.js";
@@ -189,6 +190,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     shortcodes: args.shortcodes ?? EMPTY_SHORTCODE_REGISTRY,
     logger,
     memo: createRequestMemo(),
+    cache: createPluginCache(() => base),
     auth: {
       can: makeAuthCan(args.plugins, user, tokenScopes),
     },

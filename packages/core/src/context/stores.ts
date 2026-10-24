@@ -16,6 +16,9 @@ export interface HookFrame {
 
 export const hookStore = new AsyncLocalStorage<HookFrame>();
 
+/** The plugin whose code is running, `null` inside core's. */
+export const pluginStore = new AsyncLocalStorage<string | null>();
+
 export const traceStore = new AsyncLocalStorage<TelemetrySpan>();
 
 export const txStore = new AsyncLocalStorage<unknown>();

@@ -1,13 +1,16 @@
 import type { AppContext } from "plumix/plugin";
-import { HookRegistry, installPlugins } from "plumix/plugin";
+import {
+  createPluginRegistry,
+  HookRegistry,
+  installPlugins,
+} from "plumix/plugin";
 import { createTestContext } from "plumix/test";
 import { describe, expect, test, vi } from "vitest";
 
+import type { ResolvedThreadPage } from "./server/load-thread.js";
 import type { CommentsTestDb } from "./test/db.js";
 import type { CommentsConfig } from "./types.js";
-import { resolveConfig } from "./config.js";
 import { comments } from "./index.js";
-import { createCommentsThreadLoader } from "./server/template-dep.js";
 import { createCommentsTestDb, seedPublishedPost } from "./test/db.js";
 import { commentFactory } from "./test/factories.js";
 
@@ -16,6 +19,24 @@ function ctxWith(
   resolvedEntity: AppContext["resolvedEntity"],
 ): AppContext {
   return { ...createTestContext({ db }), resolvedEntity };
+}
+
+/** Through the registered dep, so the loader runs as the plugin's code. */
+async function loadCurrentThread(
+  config: CommentsConfig,
+  ctx: AppContext,
+): Promise<Readonly<Record<string, ResolvedThreadPage | null | undefined>>> {
+  const registry = createPluginRegistry();
+  await installPlugins({
+    hooks: new HookRegistry(),
+    plugins: [comments(config)],
+    registry,
+  });
+  const dep = registry.templateDeps.get("comments");
+  if (!dep) throw new Error("comments template dep not registered");
+  return dep.load(["current"], ctx) as Promise<
+    Record<string, ResolvedThreadPage | null>
+  >;
 }
 
 async function seedApprovedPost(db: CommentsTestDb) {
@@ -82,13 +103,12 @@ describe("comments() plugin", () => {
     expect(s.rpcRouter).toBe(true);
   });
 
-  // The CDN purge listens always; the moderator email only with an address.
   test("adds a comment:created listener for notifyEmail only when it is set", () => {
     const created = (options: CommentsConfig) =>
       captureSetup(options).actions.filter((name) => name === "comment:created")
         .length;
-    expect(created({})).toBe(1);
-    expect(created({ notifyEmail: "mod@example.test" })).toBe(2);
+    expect(created({})).toBe(0);
+    expect(created({ notifyEmail: "mod@example.test" })).toBe(1);
   });
 });
 
@@ -120,12 +140,8 @@ describe("createCommentsThreadLoader", () => {
   test("loads the current entry's approved thread when enabled", async () => {
     const db = await createCommentsTestDb();
     const entry = await seedApprovedPost(db);
-    const load = createCommentsThreadLoader(
-      resolveConfig({ entryTypes: ["post"] }),
-    );
-
-    const result = await load(
-      { slugs: ["current"] },
+    const result = await loadCurrentThread(
+      { entryTypes: ["post"] },
       ctxWith(db, { kind: "entry", id: entry.id, preview: false }),
     );
 
@@ -136,10 +152,8 @@ describe("createCommentsThreadLoader", () => {
   test("yields nothing for a comment-disabled entry type", async () => {
     const db = await createCommentsTestDb();
     const entry = await seedApprovedPost(db);
-    const load = createCommentsThreadLoader(resolveConfig({}));
-
-    const result = await load(
-      { slugs: ["current"] },
+    const result = await loadCurrentThread(
+      {},
       ctxWith(db, { kind: "entry", id: entry.id, preview: false }),
     );
 
@@ -149,11 +163,10 @@ describe("createCommentsThreadLoader", () => {
   test("yields nothing when there is no resolved entry", async () => {
     const db = await createCommentsTestDb();
     await seedApprovedPost(db);
-    const load = createCommentsThreadLoader(
-      resolveConfig({ entryTypes: ["post"] }),
+    const result = await loadCurrentThread(
+      { entryTypes: ["post"] },
+      ctxWith(db, null),
     );
-
-    const result = await load({ slugs: ["current"] }, ctxWith(db, null));
 
     expect(result.current).toBeUndefined();
   });
