@@ -267,6 +267,7 @@ export async function captureRevisionIfSupported(
   const revision = await snapshotAsRevision(ctx.db, {
     entry: updated,
     authorId: ctx.user.id,
+    apiToken: ctx.apiToken,
   });
   // Prune BEFORE the created hook fires so subscribers see the
   // post-prune list rather than a transient N+1 window.

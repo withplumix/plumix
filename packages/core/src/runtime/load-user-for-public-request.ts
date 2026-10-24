@@ -1,5 +1,6 @@
 import type { AppContext } from "../context/app-context.js";
 import {
+  apiTokenOf,
   authenticateTraced,
   requestHasSession,
   tokenScopesOf,
@@ -19,5 +20,5 @@ export async function loadUserForPublicRequest(
   if (result === null) {
     return ctx;
   }
-  return withUser(ctx, result.user, tokenScopesOf(result));
+  return withUser(ctx, result.user, tokenScopesOf(result), apiTokenOf(result));
 }

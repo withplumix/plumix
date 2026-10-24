@@ -86,6 +86,8 @@ interface RevisionListItem {
    * slice 3 stay legible.
    */
   readonly message: string | null;
+  /** The API token the change was made with, as named when it was made. */
+  readonly tokenName: string | null;
 }
 
 interface RevisionPage {
@@ -377,6 +379,29 @@ function ListSection({
   );
 }
 
+function RevisionAuthor({
+  author,
+  tokenName,
+}: {
+  readonly author: string;
+  readonly tokenName: string | null;
+}): ReactElement {
+  if (tokenName === null) return <span>{author}</span>;
+  return (
+    <span>
+      <Trans
+        id="editor.revisions.sheet.authorViaToken"
+        message="{author} via {tokenName}"
+        values={{
+          author: <bdi>{author}</bdi>,
+          tokenName: <bdi>{tokenName}</bdi>,
+        }}
+        comment="author: the person who made the change; tokenName: the name of the API token they made it with (e.g. 'Claude Desktop')"
+      />
+    </span>
+  );
+}
+
 interface RevisionRowProps {
   readonly revision: RevisionListItem;
   readonly relativeTime: (date: Date) => string;
@@ -433,11 +458,14 @@ function RevisionRow({
         >
           <div className="truncate text-sm font-medium">{revision.title}</div>
           <div className="text-muted-foreground text-xs">
-            <span>
-              {revision.authorName ??
+            <RevisionAuthor
+              author={
+                revision.authorName ??
                 revision.authorEmail ??
-                renderLabel(M.unknownAuthor)}
-            </span>
+                renderLabel(M.unknownAuthor)
+              }
+              tokenName={revision.tokenName}
+            />
             {" · "}
             <span>{relativeTime(revision.updatedAt)}</span>
           </div>

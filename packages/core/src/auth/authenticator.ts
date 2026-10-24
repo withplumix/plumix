@@ -1,4 +1,4 @@
-import type { AppContext } from "../context/app-context.js";
+import type { ApiTokenRef, AppContext } from "../context/app-context.js";
 import type {
   AuthResult,
   RequestAuthenticator,
@@ -71,6 +71,11 @@ export function tokenScopesOf(result: AuthResult): readonly string[] | null {
   return result.credential === "api-token" ? result.tokenScopes : null;
 }
 
+/** The API token a result authenticated with; `null` for a session. */
+export function apiTokenOf(result: AuthResult): ApiTokenRef | null {
+  return result.credential === "api-token" ? result.apiToken : null;
+}
+
 /**
  * Falls back to the `plumix_session` cookie's presence when the authenticator
  * declares no `hasSession`.
@@ -97,6 +102,7 @@ export function apiTokenAuthenticator(): RequestAuthenticator {
         user: validated.user,
         credential: "api-token",
         tokenScopes: validated.token.scopes ?? null,
+        apiToken: { id: validated.token.id, name: validated.token.name },
       };
     },
     // Opted out of public-render auth so cross-site GETs carrying the header

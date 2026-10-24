@@ -1,4 +1,6 @@
+import type { ApiTokenRef } from "../context/app-context.js";
 import type { JsonObject, JsonValue } from "../json.js";
+import { isJsonObject } from "../json.js";
 
 /**
  * The `__plumix_*` meta-key namespace is reserved for framework use —
@@ -14,6 +16,12 @@ export const SNAPSHOT_META_KEY = "__plumix_snapshot";
  * envelope.
  */
 export const REVISION_MESSAGE_META_KEY = "__plumix_revision_message";
+
+/**
+ * The API token a revision was made with, `{ tokenId, tokenName }`. The name is
+ * a snapshot, so renaming or revoking the token leaves history unchanged.
+ */
+export const REVISION_TOKEN_META_KEY = "__plumix_revision_token";
 
 /**
  * Soft cap on author-typed labels. Long enough for one sentence, short
@@ -139,6 +147,25 @@ export function stripReservedMeta(
       ([key]) => kept.has(key) || !key.startsWith(RESERVED_META_PREFIX),
     ),
   );
+}
+
+export function encodeRevisionToken(apiToken: ApiTokenRef | null): JsonObject {
+  return apiToken
+    ? {
+        [REVISION_TOKEN_META_KEY]: {
+          tokenId: apiToken.id,
+          tokenName: apiToken.name,
+        },
+      }
+    : {};
+}
+
+/** The recorded token's name, or `null` for a revision made without one. */
+export function decodeRevisionTokenName(meta: JsonObject): string | null {
+  const raw = meta[REVISION_TOKEN_META_KEY];
+  if (raw === undefined || !isJsonObject(raw)) return null;
+  const { tokenName } = raw;
+  return typeof tokenName === "string" ? tokenName : null;
 }
 
 export function decodeRevisionMessage(meta: JsonObject): string | null {

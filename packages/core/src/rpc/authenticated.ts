@@ -1,6 +1,7 @@
 import type { AuthResult } from "../auth/authenticator.js";
 import type { AppContext } from "../context/app-context.js";
 import {
+  apiTokenOf,
   authenticateSession,
   authenticateTraced,
   tokenScopesOf,
@@ -21,7 +22,12 @@ const resolvedBy = (
     const tokenScopes = tokenScopesOf(result);
     try {
       return await next({
-        context: withUser(context, { id, email, role, meta }, tokenScopes),
+        context: withUser(
+          context,
+          { id, email, role, meta },
+          tokenScopes,
+          apiTokenOf(result),
+        ),
       });
     } catch (error) {
       // A guarded write below, core's or a plugin's, refuses a stale copy by

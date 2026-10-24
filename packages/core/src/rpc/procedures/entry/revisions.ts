@@ -23,6 +23,7 @@ import { decodeRevisionSlug } from "../../../revisions/slug-codec.js";
 import {
   asDraftRow,
   decodeRevisionMessage,
+  decodeRevisionTokenName,
   decodeSnapshotEnvelope,
   REVISION_MESSAGE_MAX_LENGTH,
   REVISION_MESSAGE_META_KEY,
@@ -110,6 +111,7 @@ export const list = base
         authorName: author?.name ?? null,
         authorEmail: author?.email ?? null,
         message: decodeRevisionMessage(r.meta),
+        tokenName: decodeRevisionTokenName(r.meta),
       };
     });
     return { revisions: items, nextCursor: page.nextCursor };

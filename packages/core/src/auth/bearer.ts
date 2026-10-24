@@ -1,6 +1,7 @@
 import type { AppContext } from "../context/app-context.js";
 import {
   apiTokenAuthenticator,
+  apiTokenOf,
   authenticateTraced,
   tokenScopesOf,
 } from "./authenticator.js";
@@ -28,5 +29,10 @@ export async function authenticateBearer(
   const result = await authenticateTraced(ctx, bearerAuthenticator);
   if (!result) return null;
   const { id, email, role, meta } = result.user;
-  return withUser(ctx, { id, email, role, meta }, tokenScopesOf(result));
+  return withUser(
+    ctx,
+    { id, email, role, meta },
+    tokenScopesOf(result),
+    apiTokenOf(result),
+  );
 }

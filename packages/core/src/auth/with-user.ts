@@ -1,5 +1,6 @@
 import type { Capability } from "../access/contract/capability.js";
 import type {
+  ApiTokenRef,
   AppContext,
   AuthenticatedAppContext,
   AuthenticatedUser,
@@ -36,11 +37,13 @@ export function withUser<TSchema extends Record<string, unknown>>(
   ctx: AppContext<TSchema>,
   user: AuthenticatedUser,
   tokenScopes: readonly string[] | null = null,
+  apiToken: ApiTokenRef | null = null,
 ): AuthenticatedAppContext<TSchema> {
   const next: AuthenticatedAppContext<TSchema> = {
     ...ctx,
     user,
     tokenScopes,
+    apiToken,
     auth: {
       can: makeAuthCan(ctx.plugins, user, tokenScopes),
     },

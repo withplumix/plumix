@@ -1,6 +1,6 @@
 import type { User } from "../db/schema/users.js";
 import type { JsonObject } from "../json.js";
-import type { Db } from "./app-context.js";
+import type { ApiTokenRef, Db } from "./app-context.js";
 
 // Not under `auth/contract/`, where naming `Db` forms an import cycle.
 /**
@@ -13,6 +13,7 @@ export type AuthResult =
       readonly user: User;
       readonly credential: "api-token";
       readonly tokenScopes: readonly string[] | null;
+      readonly apiToken: ApiTokenRef;
     };
 
 /**
