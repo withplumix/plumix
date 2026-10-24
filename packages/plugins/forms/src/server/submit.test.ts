@@ -1020,6 +1020,27 @@ describe("the cross-cutting hooks", () => {
     expect(await rows(harness)).toHaveLength(1);
   });
 
+  test("a registered validator's errors re-render the form for a visitor with no JavaScript", async () => {
+    const harness = await withListener(signup, (ctx) => {
+      ctx.registerFormValidator({
+        id: "blocklist",
+        validate: () => [
+          { field: "email", message: "That address is blocked." },
+        ],
+      });
+    });
+
+    const response = await submitSignup(harness);
+
+    response.assertStatus(422);
+    expect(response.headers.get("content-type")).toContain("text/html");
+    const html = await response.text();
+    expect(html).toContain("That address is blocked.");
+    expect(html).toContain('value="ada@example.test"');
+    expect(html).toContain('action="/_plumix/forms/submit"');
+    expect(await rows(harness)).toHaveLength(0);
+  });
+
   test("form:submitted fires with the stored row", async () => {
     const seen: (number | null)[] = [];
     const harness = await withListener(signup, (ctx) => {

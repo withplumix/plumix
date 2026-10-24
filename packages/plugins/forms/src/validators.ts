@@ -19,7 +19,6 @@ export interface FormValidatorRegistration {
    */
   readonly validate: (
     candidate: FormSubmissionCandidate,
-    ctx: AppContext,
   ) => readonly FormFieldError[] | Promise<readonly FormFieldError[]>;
 }
 
@@ -93,7 +92,7 @@ async function runValidator(
   ctx: AppContext,
 ): Promise<readonly FormFieldError[]> {
   try {
-    return await validator.validate(candidate, ctx);
+    return await validator.validate(candidate);
   } catch (error) {
     ctx.logger.error("forms: a form validator threw", {
       form: candidate.form,
