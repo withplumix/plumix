@@ -97,20 +97,8 @@ export interface PluginDescriptor<TState = undefined> {
   readonly adminPeerVersion?: string;
 }
 
-export interface DefinePluginOptions {
+export interface DefinePluginInput<TState> {
   readonly version?: string;
-  readonly schema?: SchemaModule;
-  readonly schemaModule?: string;
-  /** See {@link PluginDescriptor.dataMigrations}. */
-  readonly dataMigrations?: string;
-  readonly adminEntry?: string;
-  readonly adminChunk?: string;
-  readonly adminCss?: string;
-  readonly adminPeerVersion?: string;
-  readonly i18n?: PluginI18nSlot;
-}
-
-export interface DefinePluginInput<TState> extends DefinePluginOptions {
   /** See {@link PluginDescriptor.state}. */
   readonly state?: PluginStateFactory<TState>;
   readonly provides?: PluginProvides<TState>;
@@ -122,6 +110,15 @@ export interface DefinePluginInput<TState> extends DefinePluginOptions {
   readonly mails?: readonly AnyMailDefinition[];
   /** See {@link PluginDescriptor.authMethods}. */
   readonly authMethods?: readonly AuthMethodDefinition[];
+  readonly schema?: SchemaModule;
+  readonly schemaModule?: string;
+  /** See {@link PluginDescriptor.dataMigrations}. */
+  readonly dataMigrations?: string;
+  readonly adminEntry?: string;
+  readonly adminChunk?: string;
+  readonly adminCss?: string;
+  readonly adminPeerVersion?: string;
+  readonly i18n?: PluginI18nSlot;
 }
 
 /** Takes the package name, not the plugin id: the two can diverge
@@ -165,57 +162,27 @@ export function assertValidPluginId(id: string): void {
 export function definePlugin<TState = undefined>(
   id: string,
   input: DefinePluginInput<TState>,
-): PluginDescriptor<TState>;
-/** Last, so `ReturnType<typeof definePlugin>` names a stateless descriptor. */
-export function definePlugin(
-  id: string,
-  setup: PluginSetup,
-  options?: DefinePluginOptions,
-): PluginDescriptor;
-export function definePlugin<TState = undefined>(
-  id: string,
-  setupOrInput: PluginSetup<TState> | DefinePluginInput<TState>,
-  legacyOptions?: DefinePluginOptions,
 ): PluginDescriptor<TState> {
   assertValidPluginId(id);
-  if (typeof setupOrInput === "function") {
-    warnIfSchemaWithoutSchemaModule(id, legacyOptions);
-    return {
-      id,
-      version: legacyOptions?.version,
-      setup: setupOrInput,
-      schema: legacyOptions?.schema,
-      schemaModule: legacyOptions?.schemaModule,
-      dataMigrations: legacyOptions?.dataMigrations,
-      adminEntry: legacyOptions?.adminEntry,
-      adminChunk: legacyOptions?.adminChunk,
-      adminCss: legacyOptions?.adminCss,
-      adminPeerVersion: legacyOptions?.adminPeerVersion,
-      i18n: legacyOptions?.i18n,
-    };
-  }
-  if (legacyOptions !== undefined) {
-    throw PluginDefinitionError.definePluginLegacyThirdArg({ pluginId: id });
-  }
-  warnIfSchemaWithoutSchemaModule(id, setupOrInput);
+  warnIfSchemaWithoutSchemaModule(id, input);
   return {
     id,
-    version: setupOrInput.version,
-    state: setupOrInput.state,
-    provides: setupOrInput.provides,
-    setup: setupOrInput.setup,
-    afterSetup: setupOrInput.afterSetup,
-    shortcodes: setupOrInput.shortcodes,
-    mails: setupOrInput.mails,
-    authMethods: setupOrInput.authMethods,
-    schema: setupOrInput.schema,
-    schemaModule: setupOrInput.schemaModule,
-    dataMigrations: setupOrInput.dataMigrations,
-    adminEntry: setupOrInput.adminEntry,
-    adminChunk: setupOrInput.adminChunk,
-    adminCss: setupOrInput.adminCss,
-    adminPeerVersion: setupOrInput.adminPeerVersion,
-    i18n: setupOrInput.i18n,
+    version: input.version,
+    state: input.state,
+    provides: input.provides,
+    setup: input.setup,
+    afterSetup: input.afterSetup,
+    shortcodes: input.shortcodes,
+    mails: input.mails,
+    authMethods: input.authMethods,
+    schema: input.schema,
+    schemaModule: input.schemaModule,
+    dataMigrations: input.dataMigrations,
+    adminEntry: input.adminEntry,
+    adminChunk: input.adminChunk,
+    adminCss: input.adminCss,
+    adminPeerVersion: input.adminPeerVersion,
+    i18n: input.i18n,
   };
 }
 
@@ -227,10 +194,9 @@ const warnedIds = new Set<string>();
 
 function warnIfSchemaWithoutSchemaModule(
   id: string,
-  opts:
-    { readonly schema?: unknown; readonly schemaModule?: unknown } | undefined,
+  opts: { readonly schema?: unknown; readonly schemaModule?: unknown },
 ): void {
-  if (!opts?.schema || opts.schemaModule) return;
+  if (!opts.schema || opts.schemaModule) return;
   if (warnedIds.has(id)) return;
   warnedIds.add(id);
   console.warn(

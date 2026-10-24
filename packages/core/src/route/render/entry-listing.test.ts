@@ -14,9 +14,11 @@ import { createDispatcherHarness } from "../../test/dispatcher.js";
 import { createTracedContext } from "../../test/traced-context.js";
 import { listEntryPage } from "./entry-listing.js";
 
-const blog = definePlugin("blog", (ctx) => {
-  ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-  ctx.registerEntryType("secret", { label: "Secrets", isPublic: false });
+const blog = definePlugin("blog", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    ctx.registerEntryType("secret", { label: "Secrets", isPublic: false });
+  },
 });
 
 let h: DispatcherHarness;
@@ -202,17 +204,19 @@ describe("listEntryPage paging", () => {
   test("a policied type's listing costs the same fixed number of queries", async () => {
     // Rows are matched by stored key in the listing's own query, so a
     // gated row adds no lookup of its own.
-    const pages = definePlugin("pages", (setup) => {
-      setup.registerEntryType("page", {
-        label: "Pages",
-        isPublic: true,
-        access: {
-          default: anonymousPolicy,
-          policies: [
-            { key: "members", label: "Members", policy: authenticatedPolicy },
-          ],
-        },
-      });
+    const pages = definePlugin("pages", {
+      setup: (setup) => {
+        setup.registerEntryType("page", {
+          label: "Pages",
+          isPublic: true,
+          access: {
+            default: anonymousPolicy,
+            policies: [
+              { key: "members", label: "Members", policy: authenticatedPolicy },
+            ],
+          },
+        });
+      },
     });
     const cost = async (perPage: number): Promise<number> => {
       const traced = await createTracedContext({

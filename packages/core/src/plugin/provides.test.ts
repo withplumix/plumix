@@ -38,8 +38,10 @@ describe("provides phase", () => {
       setup: () => undefined,
     });
 
-    const cart = definePlugin("cart", (ctx) => {
-      ctx.registerMenuItemType("cart-link", { label: "Cart" });
+    const cart = definePlugin("cart", {
+      setup: (ctx) => {
+        ctx.registerMenuItemType("cart-link", { label: "Cart" });
+      },
     });
 
     await installPlugins({
@@ -61,8 +63,10 @@ describe("provides phase", () => {
       setup: () => undefined,
     });
 
-    const cart = definePlugin("cart", (ctx) => {
-      ctx.registerMenuItemType("cart-link", { label: "Cart" });
+    const cart = definePlugin("cart", {
+      setup: (ctx) => {
+        ctx.registerMenuItemType("cart-link", { label: "Cart" });
+      },
     });
 
     await installPlugins({
@@ -84,8 +88,10 @@ describe("provides phase", () => {
       setup: () => undefined,
     });
 
-    const consumer = definePlugin("consumer", (ctx) => {
-      captured = (key) => ctx.media.url(key);
+    const consumer = definePlugin("consumer", {
+      setup: (ctx) => {
+        captured = (key) => ctx.media.url(key);
+      },
     });
 
     await installPlugins({
@@ -383,8 +389,10 @@ describe("provides phase", () => {
   });
 
   test("plugin without provides still installs (back-compat)", async () => {
-    const plain = definePlugin("plain", (ctx) => {
-      ctx.registerCapability("plain:cap", "admin");
+    const plain = definePlugin("plain", {
+      setup: (ctx) => {
+        ctx.registerCapability("plain:cap", "admin");
+      },
     });
 
     const { registry } = await installPlugins({
@@ -392,13 +400,6 @@ describe("provides phase", () => {
       plugins: [plain],
     });
     expect(registry.capabilities.get("plain:cap")?.minRole).toBe("admin");
-  });
-
-  test("passing legacy 3rd-arg options alongside the options-form throws", () => {
-    const callRaw = definePlugin as unknown as (...args: unknown[]) => unknown;
-    expect(() =>
-      callRaw("y", { setup: () => undefined }, { version: "1.0.0" }),
-    ).toThrow(/pass options inside the input object/);
   });
 
   test("async provides callback is awaited before any setup runs", async () => {
@@ -417,9 +418,11 @@ describe("provides phase", () => {
       },
     });
 
-    const cart = definePlugin("cart", (ctx) => {
-      order.push("cart:setup");
-      ctx.registerMenuItemType("link", { label: "L" });
+    const cart = definePlugin("cart", {
+      setup: (ctx) => {
+        order.push("cart:setup");
+        ctx.registerMenuItemType("link", { label: "L" });
+      },
     });
 
     await installPlugins({

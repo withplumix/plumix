@@ -43,8 +43,10 @@ async function bundle(): Promise<TestBundle> {
   await installPlugins({
     hooks,
     plugins: [
-      definePlugin("menu-host", (ctx) => {
-        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      definePlugin("menu-host", {
+        setup: (ctx) => {
+          ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        },
       }),
       menu(),
     ],
@@ -199,12 +201,14 @@ describe("@plumix/plugin-menu — menus template dep loader", () => {
 
 describe("@plumix/plugin-menu — end-to-end SSR", () => {
   test("a menu assigned to a location renders where a template declares that location", async () => {
-    const blogPlugin = definePlugin("blog", (ctx) => {
-      ctx.registerEntryType("post", {
-        label: "Posts",
-        isPublic: true,
-        hasArchive: true,
-      });
+    const blogPlugin = definePlugin("blog", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", {
+          label: "Posts",
+          isPublic: true,
+          hasArchive: true,
+        });
+      },
     });
     const theme = defineTheme({
       templates: [

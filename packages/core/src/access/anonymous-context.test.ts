@@ -18,17 +18,19 @@ import { anonymousContext } from "./anonymous-context.js";
 import { ACCESS_POLICY_META_KEY } from "./contract/meta-key.js";
 import { anonymousPolicy, authenticatedPolicy } from "./policy.js";
 
-const pagesWithAccess = definePlugin("pages-with-access", (ctx) => {
-  ctx.registerEntryType("page", {
-    label: "Pages",
-    isPublic: true,
-    access: {
-      default: anonymousPolicy,
-      policies: [
-        { key: "members", label: "Members", policy: authenticatedPolicy },
-      ],
-    },
-  });
+const pagesWithAccess = definePlugin("pages-with-access", {
+  setup: (ctx) => {
+    ctx.registerEntryType("page", {
+      label: "Pages",
+      isPublic: true,
+      access: {
+        default: anonymousPolicy,
+        policies: [
+          { key: "members", label: "Members", policy: authenticatedPolicy },
+        ],
+      },
+    });
+  },
 });
 
 async function editorContext() {

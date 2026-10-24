@@ -691,7 +691,6 @@ function roleScopeFields(scope: ImageRoleScope): {
 type PluginDefinitionErrorCode =
   | "invalid_plugin_id_length"
   | "invalid_plugin_id_shape"
-  | "define_plugin_legacy_third_arg"
   | "duplicate_plugin_id_in_config"
   | "meta_field_clash_across_boxes"
   | "single_image_role_has_multiple_fields"
@@ -803,18 +802,6 @@ export class PluginDefinitionError extends Error {
       "invalid_plugin_id_shape",
       `Plugin id "${ctx.pluginId}" must match /${ctx.pattern}/ (lowercase ASCII ` +
         `starting with a letter; alphanumerics, hyphens, and underscores).`,
-      ctx,
-    );
-  }
-
-  static definePluginLegacyThirdArg(ctx: {
-    pluginId: string;
-  }): PluginDefinitionError {
-    return new PluginDefinitionError(
-      "define_plugin_legacy_third_arg",
-      `definePlugin("${ctx.pluginId}", input) — pass options inside the input ` +
-        `object (\`setup\`, \`provides\`, \`schema\`, ...) instead of the ` +
-        `legacy third argument.`,
       ctx,
     );
   }

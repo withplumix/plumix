@@ -126,10 +126,12 @@ function contractSite(proxy: PlatformProxy): SyncContractSite {
 
 /** Runs the contract's `sync:after` listeners as a plugin of the site. */
 function siteConfig(hooks: HookRegistry): PlumixConfig {
-  const conformance = definePlugin("conformance", (ctx) => {
-    for (const { fn } of hooks.getActionHandlers("sync:after")) {
-      ctx.addAction("sync:after", fn);
-    }
+  const conformance = definePlugin("conformance", {
+    setup: (ctx) => {
+      for (const { fn } of hooks.getActionHandlers("sync:after")) {
+        ctx.addAction("sync:after", fn);
+      }
+    },
   });
   return {
     ...app.config,
@@ -503,8 +505,10 @@ describe(
       listener: (ctx: AppContext) => Promise<void>,
       binding = "DB",
     ): PlumixConfig {
-      const probe = definePlugin("probe", (ctx) => {
-        ctx.addAction("sync:after", (_event, appCtx) => listener(appCtx));
+      const probe = definePlugin("probe", {
+        setup: (ctx) => {
+          ctx.addAction("sync:after", (_event, appCtx) => listener(appCtx));
+        },
       });
       return {
         ...app.config,

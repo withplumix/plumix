@@ -12,35 +12,40 @@ import {
 } from "../plugin/fields/index.js";
 import { createTracedContext } from "../test/traced-context.js";
 
-const plugin = definePlugin("test-settle-meta", (ctx) => {
-  ctx.registerEntryMetaBox("entry-box", {
-    label: "Entry",
-    entryTypes: ["post"],
-    fields: [
-      toggle("featured"),
-      text("subtitle"),
-      number("rating"),
-      repeater("links").fields([toggle("external"), number("order")]),
-      group("seo").fields([
-        toggle("noindex"),
-        group("card").fields([number("width")]),
-      ]),
-    ],
-  });
-  ctx.registerTermTaxonomy("topic", { label: "Topics", entryTypes: ["post"] });
-  ctx.registerTermMetaBox("term-box", {
-    label: "Term",
-    termTaxonomies: ["topic"],
-    fields: [number("weight")],
-  });
-  ctx.registerUserMetaBox("user-box", {
-    label: "User",
-    fields: [toggle("newsletter")],
-  });
-  ctx.registerSettingsGroup("reading", {
-    label: "Reading",
-    fields: [number("perPage")],
-  });
+const plugin = definePlugin("test-settle-meta", {
+  setup: (ctx) => {
+    ctx.registerEntryMetaBox("entry-box", {
+      label: "Entry",
+      entryTypes: ["post"],
+      fields: [
+        toggle("featured"),
+        text("subtitle"),
+        number("rating"),
+        repeater("links").fields([toggle("external"), number("order")]),
+        group("seo").fields([
+          toggle("noindex"),
+          group("card").fields([number("width")]),
+        ]),
+      ],
+    });
+    ctx.registerTermTaxonomy("topic", {
+      label: "Topics",
+      entryTypes: ["post"],
+    });
+    ctx.registerTermMetaBox("term-box", {
+      label: "Term",
+      termTaxonomies: ["topic"],
+      fields: [number("weight")],
+    });
+    ctx.registerUserMetaBox("user-box", {
+      label: "User",
+      fields: [toggle("newsletter")],
+    });
+    ctx.registerSettingsGroup("reading", {
+      label: "Reading",
+      fields: [number("perPage")],
+    });
+  },
 });
 
 describe("settleMeta", () => {

@@ -12,13 +12,15 @@ import { applyFormsSchema } from "./db.js";
 
 export type FormsHarness = Awaited<ReturnType<typeof createDispatcherHarness>>;
 
-const blog = definePlugin("test_blog", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    isPublic: true,
-    hasArchive: true,
-    rewrite: { slug: "posts" },
-  });
+const blog = definePlugin("test_blog", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      hasArchive: true,
+      rewrite: { slug: "posts" },
+    });
+  },
 });
 
 /**

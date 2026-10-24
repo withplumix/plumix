@@ -61,11 +61,14 @@ async function handlerFor(
 
 const request = () => new Request("https://cms.example/unknown");
 
-const echoClientAddress = definePlugin("echo", (ctx) => {
-  ctx.registerPublicRoute({
-    path: "/whoami",
-    handler: (_request, appCtx) => new Response(appCtx.clientAddress ?? "none"),
-  });
+const echoClientAddress = definePlugin("echo", {
+  setup: (ctx) => {
+    ctx.registerPublicRoute({
+      path: "/whoami",
+      handler: (_request, appCtx) =>
+        new Response(appCtx.clientAddress ?? "none"),
+    });
+  },
 });
 
 /** What a plugin route saw as the client address for this invocation. */
@@ -79,14 +82,16 @@ async function whoami(
 
 /** A route that defers whatever promise the test hands it. */
 const deferring = (work: (appCtx: AppContext) => Promise<unknown>) =>
-  definePlugin("deferring", (ctx) => {
-    ctx.registerPublicRoute({
-      path: "/defer",
-      handler: (_request, appCtx) => {
-        appCtx.defer(work(appCtx));
-        return new Response("deferred");
-      },
-    });
+  definePlugin("deferring", {
+    setup: (ctx) => {
+      ctx.registerPublicRoute({
+        path: "/defer",
+        handler: (_request, appCtx) => {
+          appCtx.defer(work(appCtx));
+          return new Response("deferred");
+        },
+      });
+    },
   });
 
 /** A promise the test settles by hand, so drain timing is deterministic. */
@@ -108,14 +113,16 @@ const drainedWithin = (handler: PlumixHandler, ms = 50) =>
   ]);
 
 /** A route that logs one line through `ctx.logger`. */
-const logging = definePlugin("logging", (ctx) => {
-  ctx.registerPublicRoute({
-    path: "/log",
-    handler: (_request, appCtx) => {
-      appCtx.logger.info("route_hit", { path: "/log" });
-      return new Response("logged");
-    },
-  });
+const logging = definePlugin("logging", {
+  setup: (ctx) => {
+    ctx.registerPublicRoute({
+      path: "/log",
+      handler: (_request, appCtx) => {
+        appCtx.logger.info("route_hit", { path: "/log" });
+        return new Response("logged");
+      },
+    });
+  },
 });
 
 const spyLogger = () => ({
@@ -369,21 +376,23 @@ describe("createPlumixHandler — fetch", () => {
 describe("createPlumixHandler — scheduled", () => {
   test("runs the tasks whose cron matches the fired cron, and every task without one", async () => {
     const ran: string[] = [];
-    const plugin = definePlugin("cron", (ctx) => {
-      ctx.registerScheduledTask({
-        id: "hourly",
-        cron: "0 * * * *",
-        handler: () => void ran.push("hourly"),
-      });
-      ctx.registerScheduledTask({
-        id: "daily",
-        cron: "0 0 * * *",
-        handler: () => void ran.push("daily"),
-      });
-      ctx.registerScheduledTask({
-        id: "always",
-        handler: () => void ran.push("always"),
-      });
+    const plugin = definePlugin("cron", {
+      setup: (ctx) => {
+        ctx.registerScheduledTask({
+          id: "hourly",
+          cron: "0 * * * *",
+          handler: () => void ran.push("hourly"),
+        });
+        ctx.registerScheduledTask({
+          id: "daily",
+          cron: "0 0 * * *",
+          handler: () => void ran.push("daily"),
+        });
+        ctx.registerScheduledTask({
+          id: "always",
+          handler: () => void ran.push("always"),
+        });
+      },
     });
     const handler = await handlerFor({ plugins: [plugin] });
     await handler.scheduled?.(
@@ -418,13 +427,15 @@ describe("createPlumixHandler — scheduled", () => {
   test("a task's ctx.signal follows the invocation's signal", async () => {
     const shutdown = new AbortController();
     let signal: AbortSignal | undefined;
-    const plugin = definePlugin("cron", (ctx) => {
-      ctx.registerScheduledTask({
-        id: "watches",
-        handler: (taskCtx) => {
-          signal = taskCtx.signal;
-        },
-      });
+    const plugin = definePlugin("cron", {
+      setup: (ctx) => {
+        ctx.registerScheduledTask({
+          id: "watches",
+          handler: (taskCtx) => {
+            signal = taskCtx.signal;
+          },
+        });
+      },
     });
     const handler = await handlerFor({ plugins: [plugin] });
 
@@ -440,8 +451,10 @@ describe("createPlumixHandler — scheduled", () => {
 
 describe("createPlumixHandler — run", () => {
   test("hands the work the site's context and returns what it did", async () => {
-    const notes = definePlugin("notes", (ctx) => {
-      ctx.registerEntryType("note", { label: "Notes" });
+    const notes = definePlugin("notes", {
+      setup: (ctx) => {
+        ctx.registerEntryType("note", { label: "Notes" });
+      },
     });
     const handler = await handlerFor({ plugins: [notes] });
     const result = await handler.run?.(
@@ -850,8 +863,10 @@ describe("createPlumixHandler — deferred work", () => {
  */
 const UNCLAIMED_CRON = "0 9 * * MON";
 
-const oneTask = definePlugin("reports", (ctx) => {
-  ctx.registerScheduledTask({ id: "ok", handler: () => undefined });
+const oneTask = definePlugin("reports", {
+  setup: (ctx) => {
+    ctx.registerScheduledTask({ id: "ok", handler: () => undefined });
+  },
 });
 
 /** A database whose per-request seam is whatever the test needs to fail. */
@@ -867,14 +882,16 @@ describe("createPlumixHandler — scheduled reporting", () => {
     onTestFinished(() => error.mockRestore());
     // The report survives the handler's own path — cron routing, the commit,
     // the return — not just `runScheduledTasks`, which is covered on its own.
-    const oneTaskOneFailure = definePlugin("reports", (ctx) => {
-      ctx.registerScheduledTask({ id: "ok", handler: () => undefined });
-      ctx.registerScheduledTask({
-        id: "boom",
-        handler: () => {
-          throw new Error("nope");
-        },
-      });
+    const oneTaskOneFailure = definePlugin("reports", {
+      setup: (ctx) => {
+        ctx.registerScheduledTask({ id: "ok", handler: () => undefined });
+        ctx.registerScheduledTask({
+          id: "boom",
+          handler: () => {
+            throw new Error("nope");
+          },
+        });
+      },
     });
     const handler = await handlerFor({ plugins: [oneTaskOneFailure] });
 
@@ -962,13 +979,15 @@ describe("createPlumixHandler — scheduled reporting", () => {
       vi.useRealTimers();
     });
     const logger = spyLogger();
-    const hangsThenOk = definePlugin("reports", (ctx) => {
-      ctx.registerScheduledTask({
-        id: "stuck",
-        timeoutMs: 1_000,
-        handler: () => new Promise<void>(() => undefined),
-      });
-      ctx.registerScheduledTask({ id: "ok", handler: () => undefined });
+    const hangsThenOk = definePlugin("reports", {
+      setup: (ctx) => {
+        ctx.registerScheduledTask({
+          id: "stuck",
+          timeoutMs: 1_000,
+          handler: () => new Promise<void>(() => undefined),
+        });
+        ctx.registerScheduledTask({ id: "ok", handler: () => undefined });
+      },
     });
     const handler = await handlerFor({ plugins: [hangsThenOk] }, { logger });
 
@@ -1141,14 +1160,16 @@ describe("createRuntimeHandler", () => {
   test("runs prepare once per handler, with the app's hooks, before the first request", async () => {
     const events: string[] = [];
     const prepared: HookRegistry[] = [];
-    const marking = definePlugin("marking", (ctx) => {
-      ctx.registerPublicRoute({
-        path: "/mark",
-        handler: () => {
-          events.push("request");
-          return new Response("ok");
-        },
-      });
+    const marking = definePlugin("marking", {
+      setup: (ctx) => {
+        ctx.registerPublicRoute({
+          path: "/mark",
+          handler: () => {
+            events.push("request");
+            return new Response("ok");
+          },
+        });
+      },
     });
     const app = await appWith(
       {

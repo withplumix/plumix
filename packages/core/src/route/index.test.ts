@@ -7,16 +7,20 @@ import { createTestContext } from "../test/context.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 import { routePublicRequest } from "./index.js";
 
-const blog = definePlugin("blog", (ctx) => {
-  ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+const blog = definePlugin("blog", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+  },
 });
 
 function owner(path: string) {
-  return definePlugin("feeds", (ctx) => {
-    ctx.registerPublicRoute({
-      path,
-      handler: () => new Response("owned", { status: 200 }),
-    });
+  return definePlugin("feeds", {
+    setup: (ctx) => {
+      ctx.registerPublicRoute({
+        path,
+        handler: () => new Response("owned", { status: 200 }),
+      });
+    },
   });
 }
 

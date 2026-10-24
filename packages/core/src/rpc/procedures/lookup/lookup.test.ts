@@ -124,12 +124,14 @@ describe("lookup capability gating", () => {
 });
 
 describe("lookup capability references", () => {
-  const newsPhotos = definePlugin("news-photos", (ctx) => {
-    ctx.registerLookupAdapter({
-      kind: "photo",
-      adapter: photoLookupAdapter,
-      capability: entryCapability("news", "edit_any"),
-    });
+  const newsPhotos = definePlugin("news-photos", {
+    setup: (ctx) => {
+      ctx.registerLookupAdapter({
+        kind: "photo",
+        adapter: photoLookupAdapter,
+        capability: entryCapability("news", "edit_any"),
+      });
+    },
   });
 
   test("gates on the namespace the referenced type pools into", async () => {

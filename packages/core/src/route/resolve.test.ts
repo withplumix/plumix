@@ -26,31 +26,37 @@ import {
 } from "./render/template-builders.js";
 import { resolvePublicRoute } from "./resolve.js";
 
-const blogPlugin = definePlugin("blog", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    isPublic: true,
-    hasArchive: true,
-  });
+const blogPlugin = definePlugin("blog", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      hasArchive: true,
+    });
+  },
 });
 
-const shopPlugin = definePlugin("shop", (ctx) => {
-  ctx.registerEntryType("product", {
-    label: "Products",
-    isPublic: true,
-    hasArchive: true,
-    rewrite: { slug: "shop" },
-  });
+const shopPlugin = definePlugin("shop", {
+  setup: (ctx) => {
+    ctx.registerEntryType("product", {
+      label: "Products",
+      isPublic: true,
+      hasArchive: true,
+      rewrite: { slug: "shop" },
+    });
+  },
 });
 
-const siteTitleShortcodePlugin = definePlugin("site-title", (ctx) => {
-  ctx.registerShortcode({
-    name: "site-title",
-    render: ({ context }) => {
-      const title = context.siteSettings.title;
-      return typeof title === "string" ? title : "";
-    },
-  });
+const siteTitleShortcodePlugin = definePlugin("site-title", {
+  setup: (ctx) => {
+    ctx.registerShortcode({
+      name: "site-title",
+      render: ({ context }) => {
+        const title = context.siteSettings.title;
+        return typeof title === "string" ? title : "";
+      },
+    });
+  },
 });
 
 const YEAR = new Intl.DateTimeFormat("en", { year: "numeric" }).format(
@@ -62,12 +68,14 @@ const TIPTAP_BODY = {
   content: [{ type: "paragraph", content: [{ type: "text", text: "Body." }] }],
 };
 
-const hierarchicalPagesPlugin = definePlugin("pages", (ctx) => {
-  ctx.registerEntryType("page", {
-    label: "Pages",
-    isPublic: true,
-    isHierarchical: true,
-  });
+const hierarchicalPagesPlugin = definePlugin("pages", {
+  setup: (ctx) => {
+    ctx.registerEntryType("page", {
+      label: "Pages",
+      isPublic: true,
+      isHierarchical: true,
+    });
+  },
 });
 
 describe("resolvePublicRoute — hierarchical single", () => {
@@ -778,11 +786,13 @@ describe("resolvePublicRoute — single", () => {
   describe("the resolved entity says whether the autosave was overlaid", () => {
     function entityObserver() {
       const seen: AppContext["resolvedEntity"][] = [];
-      const plugin = definePlugin("entity-observer", (ctx) => {
-        ctx.addFilter("render:document", (manifest, _data, appCtx) => {
-          seen.push(appCtx.resolvedEntity);
-          return manifest;
-        });
+      const plugin = definePlugin("entity-observer", {
+        setup: (ctx) => {
+          ctx.addFilter("render:document", (manifest, _data, appCtx) => {
+            seen.push(appCtx.resolvedEntity);
+            return manifest;
+          });
+        },
       });
       return { plugin, seen };
     }
@@ -1144,10 +1154,12 @@ describe("resolvePublicRoute — archive", () => {
   });
 
   test("pagination counts only what an archive:entries handler leaves", async () => {
-    const hideOne = definePlugin("hide-one", (ctx) => {
-      ctx.addFilter("archive:entries", (query) =>
-        query.where(ne(entries.slug, "p-21")),
-      );
+    const hideOne = definePlugin("hide-one", {
+      setup: (ctx) => {
+        ctx.addFilter("archive:entries", (query) =>
+          query.where(ne(entries.slug, "p-21")),
+        );
+      },
     });
     const h = await createDispatcherHarness({
       config: { plugins: [shopPlugin, hideOne] },
@@ -1212,12 +1224,14 @@ describe("resolvePublicRoute — archive", () => {
   });
 
   test("archive title falls back label → entryType when labels.plural is absent", async () => {
-    const plugin = definePlugin("docs", (ctx) => {
-      ctx.registerEntryType("doc", {
-        label: "Docs",
-        isPublic: true,
-        hasArchive: true,
-      });
+    const plugin = definePlugin("docs", {
+      setup: (ctx) => {
+        ctx.registerEntryType("doc", {
+          label: "Docs",
+          isPublic: true,
+          hasArchive: true,
+        });
+      },
     });
     const h = await createDispatcherHarness({ config: { plugins: [plugin] } });
     const response = await h.dispatch(new Request("https://cms.example/doc"));
@@ -1542,16 +1556,18 @@ describe("resolvePublicRoute — date archive", () => {
   });
 });
 
-const taxonomyPlugin = definePlugin("blog", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    isPublic: true,
-    hasArchive: true,
-  });
-  ctx.registerTermTaxonomy("category", {
-    label: "Categories",
-    entryTypes: ["post"],
-  });
+const taxonomyPlugin = definePlugin("blog", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      hasArchive: true,
+    });
+    ctx.registerTermTaxonomy("category", {
+      label: "Categories",
+      entryTypes: ["post"],
+    });
+  },
 });
 
 describe("resolvePublicRoute — taxonomy", () => {
@@ -1648,13 +1664,15 @@ describe("resolvePublicRoute — taxonomy", () => {
   });
 
   test("cross-entry-type taxonomy includes entries from every attached type", async () => {
-    const multiTypePlugin = definePlugin("multi", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerEntryType("doc", { label: "Docs", isPublic: true });
-      ctx.registerTermTaxonomy("topic", {
-        label: "Topics",
-        entryTypes: ["post", "doc"],
-      });
+    const multiTypePlugin = definePlugin("multi", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerEntryType("doc", { label: "Docs", isPublic: true });
+        ctx.registerTermTaxonomy("topic", {
+          label: "Topics",
+          entryTypes: ["post", "doc"],
+        });
+      },
     });
     const h = await createDispatcherHarness({
       config: { plugins: [multiTypePlugin] },
@@ -1770,17 +1788,19 @@ describe("resolvePublicRoute — taxonomy", () => {
   });
 
   test("hierarchical taxonomy /<base>/parent/leaf resolves the nested term", async () => {
-    const hierarchicalTaxPlugin = definePlugin("geo", (ctx) => {
-      ctx.registerEntryType("post", {
-        label: "Posts",
-        isPublic: true,
-        hasArchive: true,
-      });
-      ctx.registerTermTaxonomy("region", {
-        label: "Regions",
-        isHierarchical: true,
-        entryTypes: ["post"],
-      });
+    const hierarchicalTaxPlugin = definePlugin("geo", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", {
+          label: "Posts",
+          isPublic: true,
+          hasArchive: true,
+        });
+        ctx.registerTermTaxonomy("region", {
+          label: "Regions",
+          isHierarchical: true,
+          entryTypes: ["post"],
+        });
+      },
     });
     const h = await createDispatcherHarness({
       config: { plugins: [hierarchicalTaxPlugin] },
@@ -1818,13 +1838,15 @@ describe("resolvePublicRoute — taxonomy", () => {
   });
 
   test("buildTermArchiveUrl round-trips through the route map", async () => {
-    const hierarchicalTaxPlugin = definePlugin("geo", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerTermTaxonomy("region", {
-        label: "Regions",
-        isHierarchical: true,
-        entryTypes: ["post"],
-      });
+    const hierarchicalTaxPlugin = definePlugin("geo", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerTermTaxonomy("region", {
+          label: "Regions",
+          isHierarchical: true,
+          entryTypes: ["post"],
+        });
+      },
     });
     const h = await createDispatcherHarness({
       config: { plugins: [hierarchicalTaxPlugin] },
@@ -1860,13 +1882,15 @@ describe("resolvePublicRoute — taxonomy", () => {
   });
 
   test("paginated hierarchical taxonomy resolves /region/europe/france/page/2", async () => {
-    const hierarchicalTaxPlugin = definePlugin("geo", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerTermTaxonomy("region", {
-        label: "Regions",
-        isHierarchical: true,
-        entryTypes: ["post"],
-      });
+    const hierarchicalTaxPlugin = definePlugin("geo", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerTermTaxonomy("region", {
+          label: "Regions",
+          isHierarchical: true,
+          entryTypes: ["post"],
+        });
+      },
     });
     const h = await createDispatcherHarness({
       config: { plugins: [hierarchicalTaxPlugin] },
@@ -1913,19 +1937,21 @@ describe("resolvePublicRoute — taxonomy", () => {
   async function seedRegions(
     options: { places?: boolean; basePath?: string } = {},
   ) {
-    const geo = definePlugin("geo", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerTermTaxonomy("region", {
-        label: "Regions",
-        isHierarchical: true,
-        entryTypes: ["post"],
-      });
-      if (options.places === true) {
-        ctx.registerRewriteRule("/places/:term", {
-          kind: "term",
-          taxonomy: "region",
+    const geo = definePlugin("geo", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerTermTaxonomy("region", {
+          label: "Regions",
+          isHierarchical: true,
+          entryTypes: ["post"],
         });
-      }
+        if (options.places === true) {
+          ctx.registerRewriteRule("/places/:term", {
+            kind: "term",
+            taxonomy: "region",
+          });
+        }
+      },
     });
     const h = await createDispatcherHarness({
       config: { plugins: [geo], basePath: options.basePath },
@@ -2072,12 +2098,14 @@ describe("resolvePublicRoute — search query redirect", () => {
 });
 
 describe("resolvePublicRoute — framework routes a site turns off", () => {
-  const rootPagesPlugin = definePlugin("pages", (ctx) => {
-    ctx.registerEntryType("page", {
-      label: "Pages",
-      isPublic: true,
-      rewrite: { slug: "" },
-    });
+  const rootPagesPlugin = definePlugin("pages", {
+    setup: (ctx) => {
+      ctx.registerEntryType("page", {
+        label: "Pages",
+        isPublic: true,
+        rewrite: { slug: "" },
+      });
+    },
   });
 
   async function seedRootPage(h: DispatcherHarness, slug: string) {
@@ -2192,24 +2220,26 @@ describe("resolvePublicRoute — front page", () => {
  * Every built-in archive lists its own entry query (ADR 0008). Each seed here
  * is one the hand-written listings and the feeds used to disagree on.
  */
-const archiveQueriesPlugin = definePlugin("archive-queries", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    isPublic: true,
-    hasArchive: true,
-  });
-  ctx.registerEntryType("page", {
-    label: "Pages",
-    isPublic: true,
-    isHierarchical: true,
-    hasArchive: "all-pages",
-  });
-  ctx.registerEntryType("secret", { label: "Secrets", isPublic: false });
-  ctx.registerTermTaxonomy("topic", {
-    label: "Topics",
-    entryTypes: ["post", "secret"],
-  });
-  ctx.registerTermTaxonomy("tag", { label: "Tags" });
+const archiveQueriesPlugin = definePlugin("archive-queries", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      hasArchive: true,
+    });
+    ctx.registerEntryType("page", {
+      label: "Pages",
+      isPublic: true,
+      isHierarchical: true,
+      hasArchive: "all-pages",
+    });
+    ctx.registerEntryType("secret", { label: "Secrets", isPublic: false });
+    ctx.registerTermTaxonomy("topic", {
+      label: "Topics",
+      entryTypes: ["post", "secret"],
+    });
+    ctx.registerTermTaxonomy("tag", { label: "Tags" });
+  },
 });
 
 describe("resolvePublicRoute — each built-in archive lists its entry query", () => {
@@ -2287,14 +2317,16 @@ describe("resolvePublicRoute — each built-in archive lists its entry query", (
   });
 
   test("a child term of a taxonomy with flat URLs lists at its slug alone", async () => {
-    const flat = definePlugin("flat", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerTermTaxonomy("section", {
-        label: "Sections",
-        entryTypes: ["post"],
-        isHierarchical: true,
-        rewrite: { isHierarchical: false },
-      });
+    const flat = definePlugin("flat", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerTermTaxonomy("section", {
+          label: "Sections",
+          entryTypes: ["post"],
+          isHierarchical: true,
+          rewrite: { isHierarchical: false },
+        });
+      },
     });
     const h = await createDispatcherHarness({ config: { plugins: [flat] } });
     const author = await h.seedUser("admin");
@@ -2369,25 +2401,29 @@ describe("resolvePublicRoute — resolved route", () => {
   // what the route is.
   function routeObserver() {
     const seen: (AppContext["resolvedRoute"] | undefined)[] = [];
-    const plugin = definePlugin("route-observer", (ctx) => {
-      ctx.addFilter("render:document", (manifest, _data, appCtx) => {
-        seen.push(appCtx.resolvedRoute);
-        return manifest;
-      });
+    const plugin = definePlugin("route-observer", {
+      setup: (ctx) => {
+        ctx.addFilter("render:document", (manifest, _data, appCtx) => {
+          seen.push(appCtx.resolvedRoute);
+          return manifest;
+        });
+      },
     });
     return { plugin, seen };
   }
 
   test("a plugin archive's page carries its matched pattern, params and intent", async () => {
     const observer = routeObserver();
-    const events = definePlugin("events", (ctx) => {
-      ctx.registerArchiveType("event-series", {
-        routes: ["/events/:series"],
-        resolve: () => ({
-          data: { kind: "archiveType", name: "event-series" },
-          title: "Series",
-        }),
-      });
+    const events = definePlugin("events", {
+      setup: (ctx) => {
+        ctx.registerArchiveType("event-series", {
+          routes: ["/events/:series"],
+          resolve: () => ({
+            data: { kind: "archiveType", name: "event-series" },
+            title: "Series",
+          }),
+        });
+      },
     });
     const h = await createDispatcherHarness({
       config: { plugins: [events, observer.plugin] },
@@ -2443,16 +2479,18 @@ describe("resolvePublicRoute — resolved route", () => {
 
   test("a path outside the content router has none", async () => {
     let seen: AppContext["resolvedRoute"] | undefined;
-    const probe = definePlugin("probe", (ctx) => {
-      ctx.registerRoute({
-        method: "GET",
-        path: "/probe",
-        auth: "public",
-        handler: (_request, appCtx) => {
-          seen = appCtx.resolvedRoute;
-          return new Response("ok");
-        },
-      });
+    const probe = definePlugin("probe", {
+      setup: (ctx) => {
+        ctx.registerRoute({
+          method: "GET",
+          path: "/probe",
+          auth: "public",
+          handler: (_request, appCtx) => {
+            seen = appCtx.resolvedRoute;
+            return new Response("ok");
+          },
+        });
+      },
     });
     const h = await createDispatcherHarness({ config: { plugins: [probe] } });
     const response = await h.dispatch(
@@ -2466,18 +2504,20 @@ describe("resolvePublicRoute — resolved route", () => {
 describe("resolvePublicRoute — a rewrite rule naming a fixed entry", () => {
   // A page served at a dynamic path: the rule names the entry by slug, and
   // whatever `:id` captured is left for the page's block loaders to read.
-  const comparePlugin = definePlugin("compare", (ctx) => {
-    ctx.registerEntryType("page", {
-      label: "Pages",
-      isPublic: true,
-      isHierarchical: true,
-      rewrite: { slug: "" },
-    });
-    ctx.registerRewriteRule("/compare/:id", {
-      kind: "entry",
-      entryType: "page",
-      slug: "shared-comparison",
-    });
+  const comparePlugin = definePlugin("compare", {
+    setup: (ctx) => {
+      ctx.registerEntryType("page", {
+        label: "Pages",
+        isPublic: true,
+        isHierarchical: true,
+        rewrite: { slug: "" },
+      });
+      ctx.registerRewriteRule("/compare/:id", {
+        kind: "entry",
+        entryType: "page",
+        slug: "shared-comparison",
+      });
+    },
   });
 
   function createPage(
@@ -2545,19 +2585,21 @@ describe("resolvePublicRoute — a rewrite rule naming a fixed entry", () => {
 
   test("a block loader on the entry reads the params the rule captured", async () => {
     const seen: unknown[] = [];
-    const probe = definePlugin("route-probe", (ctx) => {
-      ctx.registerBlock(
-        defineBlock({
-          name: "acme/route-probe",
-          loaders: {
-            params: ({ ctx: appCtx }: BlockLoaderArgs) => {
-              seen.push(appCtx);
-              return Promise.resolve(null);
+    const probe = definePlugin("route-probe", {
+      setup: (ctx) => {
+        ctx.registerBlock(
+          defineBlock({
+            name: "acme/route-probe",
+            loaders: {
+              params: ({ ctx: appCtx }: BlockLoaderArgs) => {
+                seen.push(appCtx);
+                return Promise.resolve(null);
+              },
             },
-          },
-          render: () => null,
-        }),
-      );
+            render: () => null,
+          }),
+        );
+      },
     });
     const { h } = await seedComparison({
       plugins: [probe],
@@ -2705,23 +2747,25 @@ describe("resolvePublicRoute — a rewrite rule naming a fixed entry", () => {
   test.each(["/compare/other", "/versus/other", "/versus/a/b"])(
     "a fixed slug wins over a captured slug or path param at %s",
     async (path) => {
-      const capturing = definePlugin("compare-capturing", (ctx) => {
-        ctx.registerEntryType("page", {
-          label: "Pages",
-          isPublic: true,
-          isHierarchical: true,
-          rewrite: { slug: "" },
-        });
-        ctx.registerRewriteRule("/compare/:slug", {
-          kind: "entry",
-          entryType: "page",
-          slug: "shared-comparison",
-        });
-        ctx.registerRewriteRule("/versus/:path*", {
-          kind: "entry",
-          entryType: "page",
-          slug: "shared-comparison",
-        });
+      const capturing = definePlugin("compare-capturing", {
+        setup: (ctx) => {
+          ctx.registerEntryType("page", {
+            label: "Pages",
+            isPublic: true,
+            isHierarchical: true,
+            rewrite: { slug: "" },
+          });
+          ctx.registerRewriteRule("/compare/:slug", {
+            kind: "entry",
+            entryType: "page",
+            slug: "shared-comparison",
+          });
+          ctx.registerRewriteRule("/versus/:path*", {
+            kind: "entry",
+            entryType: "page",
+            slug: "shared-comparison",
+          });
+        },
       });
       const h = await createDispatcherHarness({
         config: { plugins: [capturing] },

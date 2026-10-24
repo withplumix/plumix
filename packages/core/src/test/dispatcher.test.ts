@@ -42,32 +42,36 @@ describe("createDispatcherHarness db option", () => {
 });
 
 /** A route answering who the request store holds and who the handler was given. */
-const identityProbe = definePlugin("identity-probe", (ctx) => {
-  ctx.registerRoute({
-    method: "GET",
-    path: "/identity",
-    auth: "authenticated",
-    handler: (_request, appCtx) =>
-      Response.json({
-        stored: tryGetContext() !== null,
-        ambient: tryGetContext()?.user?.id ?? null,
-        session: appCtx.user?.id ?? null,
-      }),
-  });
+const identityProbe = definePlugin("identity-probe", {
+  setup: (ctx) => {
+    ctx.registerRoute({
+      method: "GET",
+      path: "/identity",
+      auth: "authenticated",
+      handler: (_request, appCtx) =>
+        Response.json({
+          stored: tryGetContext() !== null,
+          ambient: tryGetContext()?.user?.id ?? null,
+          session: appCtx.user?.id ?? null,
+        }),
+    });
+  },
 });
 
 /** A route answering whether the request carries an "a" cookie and who's signed in. */
-const cookieProbe = definePlugin("cookie-probe", (ctx) => {
-  ctx.registerRoute({
-    method: "GET",
-    path: "/cookie",
-    auth: "authenticated",
-    handler: (request, appCtx) =>
-      Response.json({
-        hasA: (request.headers.get("cookie") ?? "").includes("a=b"),
-        session: appCtx.user?.id ?? null,
-      }),
-  });
+const cookieProbe = definePlugin("cookie-probe", {
+  setup: (ctx) => {
+    ctx.registerRoute({
+      method: "GET",
+      path: "/cookie",
+      auth: "authenticated",
+      handler: (request, appCtx) =>
+        Response.json({
+          hasA: (request.headers.get("cookie") ?? "").includes("a=b"),
+          session: appCtx.user?.id ?? null,
+        }),
+    });
+  },
 });
 
 // The runtime builds the stored context before authentication, so a signed-in
@@ -133,28 +137,32 @@ describe("createDispatcherHarness sign-in", () => {
 });
 
 /** A route answering which bound slots the request context carried. */
-const slotsProbe = definePlugin("slots-probe", (ctx) => {
-  ctx.registerPublicRoute({
-    path: "/slots",
-    handler: (_request, appCtx) =>
-      Response.json({
-        kv: appCtx.kv !== undefined,
-        imageDelivery: appCtx.imageDelivery?.kind ?? null,
-      }),
-  });
+const slotsProbe = definePlugin("slots-probe", {
+  setup: (ctx) => {
+    ctx.registerPublicRoute({
+      path: "/slots",
+      handler: (_request, appCtx) =>
+        Response.json({
+          kv: appCtx.kv !== undefined,
+          imageDelivery: appCtx.imageDelivery?.kind ?? null,
+        }),
+    });
+  },
 });
 
 describe("createDispatcherHarness config", () => {
   test("a handler reads the app's resolved config as ctx.config", async () => {
     const seen: AppContext[] = [];
-    const configProbe = definePlugin("config-probe", (ctx) => {
-      ctx.registerPublicRoute({
-        path: "/config",
-        handler: (_request, appCtx) => {
-          seen.push(appCtx);
-          return new Response(null, { status: 204 });
-        },
-      });
+    const configProbe = definePlugin("config-probe", {
+      setup: (ctx) => {
+        ctx.registerPublicRoute({
+          path: "/config",
+          handler: (_request, appCtx) => {
+            seen.push(appCtx);
+            return new Response(null, { status: 204 });
+          },
+        });
+      },
     });
     const h = await createDispatcherHarness({
       config: { plugins: [configProbe] },
@@ -167,8 +175,10 @@ describe("createDispatcherHarness config", () => {
   });
 });
 
-const blog = definePlugin("blog", (ctx) => {
-  ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+const blog = definePlugin("blog", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+  },
 });
 
 describe("createDispatcherHarness slot binding", () => {

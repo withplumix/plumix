@@ -67,23 +67,27 @@ describe("buildApp — theme:document filter", () => {
   });
 
   test("multiple plugin filters compose in registration order", async () => {
-    const firstPlugin = definePlugin("first", (ctx) => {
-      ctx.addFilter("theme:document", (manifest) => ({
-        ...manifest,
-        meta: [
-          ...(manifest.meta ?? []),
-          { name: "viewport", content: "first" },
-        ],
-      }));
+    const firstPlugin = definePlugin("first", {
+      setup: (ctx) => {
+        ctx.addFilter("theme:document", (manifest) => ({
+          ...manifest,
+          meta: [
+            ...(manifest.meta ?? []),
+            { name: "viewport", content: "first" },
+          ],
+        }));
+      },
     });
-    const secondPlugin = definePlugin("second", (ctx) => {
-      ctx.addFilter("theme:document", (manifest) => ({
-        ...manifest,
-        meta: [
-          ...(manifest.meta ?? []),
-          { name: "viewport", content: "second" },
-        ],
-      }));
+    const secondPlugin = definePlugin("second", {
+      setup: (ctx) => {
+        ctx.addFilter("theme:document", (manifest) => ({
+          ...manifest,
+          meta: [
+            ...(manifest.meta ?? []),
+            { name: "viewport", content: "second" },
+          ],
+        }));
+      },
     });
     const app = await buildApp(
       plumix({
@@ -102,11 +106,13 @@ describe("buildApp — theme:document filter", () => {
 
   test("plugins receive {} when the theme has no `document`", async () => {
     let observedInput: unknown;
-    const probePlugin = definePlugin("probe", (ctx) => {
-      ctx.addFilter("theme:document", (manifest) => {
-        observedInput = manifest;
-        return manifest;
-      });
+    const probePlugin = definePlugin("probe", {
+      setup: (ctx) => {
+        ctx.addFilter("theme:document", (manifest) => {
+          observedInput = manifest;
+          return manifest;
+        });
+      },
     });
     await buildApp(
       plumix({
@@ -139,15 +145,17 @@ describe("buildApp — theme:document filter", () => {
   });
 
   test("validation throws when post-filter `link[]` entry is missing `rel`", async () => {
-    const broken = definePlugin("broken-link", (ctx) => {
-      ctx.addFilter("theme:document", (manifest) => ({
-        ...manifest,
-        link: [
-          ...(manifest.link ?? []),
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- exercise the post-filter validator with a JS-shaped contribution
-          { href: "/orphan.css" } as any,
-        ],
-      }));
+    const broken = definePlugin("broken-link", {
+      setup: (ctx) => {
+        ctx.addFilter("theme:document", (manifest) => ({
+          ...manifest,
+          link: [
+            ...(manifest.link ?? []),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- exercise the post-filter validator with a JS-shaped contribution
+            { href: "/orphan.css" } as any,
+          ],
+        }));
+      },
     });
     await expect(
       buildApp(
@@ -166,11 +174,13 @@ describe("buildApp — theme:document filter", () => {
   });
 
   test("validation throws when post-filter `script[]` has neither src nor inline content", async () => {
-    const broken = definePlugin("broken-script", (ctx) => {
-      ctx.addFilter("theme:document", (manifest) => ({
-        ...manifest,
-        script: [...(manifest.script ?? []), { type: "module" }],
-      }));
+    const broken = definePlugin("broken-script", {
+      setup: (ctx) => {
+        ctx.addFilter("theme:document", (manifest) => ({
+          ...manifest,
+          script: [...(manifest.script ?? []), { type: "module" }],
+        }));
+      },
     });
     await expect(
       buildApp(
@@ -189,10 +199,12 @@ describe("buildApp — theme:document filter", () => {
   });
 
   test("buildApp rejects when a theme:document filter throws", async () => {
-    const explode = definePlugin("explode", (ctx) => {
-      ctx.addFilter("theme:document", () => {
-        throw new Error("filter blew up");
-      });
+    const explode = definePlugin("explode", {
+      setup: (ctx) => {
+        ctx.addFilter("theme:document", () => {
+          throw new Error("filter blew up");
+        });
+      },
     });
     await expect(
       buildApp(
@@ -208,14 +220,16 @@ describe("buildApp — theme:document filter", () => {
   });
 
   test("a single plugin filter merges into app.document", async () => {
-    const seoPlugin = definePlugin("seo", (ctx) => {
-      ctx.addFilter("theme:document", (manifest) => ({
-        ...manifest,
-        meta: [
-          ...(manifest.meta ?? []),
-          { property: "og:site_name", content: "Demo" },
-        ],
-      }));
+    const seoPlugin = definePlugin("seo", {
+      setup: (ctx) => {
+        ctx.addFilter("theme:document", (manifest) => ({
+          ...manifest,
+          meta: [
+            ...(manifest.meta ?? []),
+            { property: "og:site_name", content: "Demo" },
+          ],
+        }));
+      },
     });
     const theme = defineTheme({
       templates: [fallback(() => null)],
@@ -253,11 +267,13 @@ describe("buildApp — core site settings", () => {
   });
 
   test("a plugin cannot re-register the core-reserved `site` group", async () => {
-    const collide = definePlugin("collide", (ctx) => {
-      ctx.registerSettingsGroup("site", {
-        label: "Mine",
-        fields: [{ key: "x", type: "string", inputType: "text", label: "X" }],
-      });
+    const collide = definePlugin("collide", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("site", {
+          label: "Mine",
+          fields: [{ key: "x", type: "string", inputType: "text", label: "X" }],
+        });
+      },
     });
     await expect(
       buildApp(
@@ -307,14 +323,16 @@ describe("buildApp — ctx.theme", () => {
   // A shortcode and a document filter are read by different registries, so
   // the two assertions cover both.
   test("registrations made from the theme reach every registry", async () => {
-    const contributor = definePlugin("contributor", (ctx) => {
-      for (const card of ctx.theme.testCards ?? []) {
-        ctx.registerShortcode({ name: card, render: () => card });
-        ctx.addFilter("theme:document", (manifest) => ({
-          ...manifest,
-          meta: [...(manifest.meta ?? []), { name: "card", content: card }],
-        }));
-      }
+    const contributor = definePlugin("contributor", {
+      setup: (ctx) => {
+        for (const card of ctx.theme.testCards ?? []) {
+          ctx.registerShortcode({ name: card, render: () => card });
+          ctx.addFilter("theme:document", (manifest) => ({
+            ...manifest,
+            meta: [...(manifest.meta ?? []), { name: "card", content: card }],
+          }));
+        }
+      },
     });
 
     const app = await buildApp(
@@ -337,14 +355,16 @@ describe("buildApp — ctx.theme", () => {
 
 describe("ctx.theme — theme-declared data reaching a request", () => {
   const cardsPlugin = () =>
-    definePlugin("cards", (ctx) => {
-      const declared = ctx.theme.testCards ?? [];
-      ctx.registerRoute({
-        method: "GET",
-        path: "/list",
-        auth: "public",
-        handler: () => new Response(declared.join(",")),
-      });
+    definePlugin("cards", {
+      setup: (ctx) => {
+        const declared = ctx.theme.testCards ?? [];
+        ctx.registerRoute({
+          method: "GET",
+          path: "/list",
+          auth: "public",
+          handler: () => new Response(declared.join(",")),
+        });
+      },
     });
 
   test("a route serves the field the theme declared", async () => {

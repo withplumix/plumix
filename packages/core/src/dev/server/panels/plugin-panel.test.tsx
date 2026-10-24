@@ -33,8 +33,10 @@ const demoPanel: DevErrorPanel = {
   ),
 };
 
-const demoPlugin = definePlugin("error-panel-demo", (ctx) => {
-  ctx.addFilter("error_page:panels", (panels) => [...panels, demoPanel]);
+const demoPlugin = definePlugin("error-panel-demo", {
+  setup: (ctx) => {
+    ctx.addFilter("error_page:panels", (panels) => [...panels, demoPanel]);
+  },
 });
 
 const boomTheme = defineTheme({

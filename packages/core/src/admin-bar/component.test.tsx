@@ -8,6 +8,7 @@ import type {
   Logger,
 } from "../context/app-context.js";
 import type { UserRole } from "../db/schema/users.js";
+import type { PluginSetup } from "../plugin/define.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import { createBlockRegistry } from "../blocks/index.js";
 import { PlumixProvider } from "../blocks/renderer/index.js";
@@ -100,12 +101,12 @@ describe("adminBarChrome", () => {
 
 describe("registered admin bar nodes", () => {
   async function renderWithPlugin(
-    register: Parameters<typeof definePlugin>[1],
+    register: PluginSetup,
     logger: Logger = silentLogger,
   ): Promise<string> {
     const { registry } = await installPlugins({
       hooks: new HookRegistry(),
-      plugins: [definePlugin("shop", register)],
+      plugins: [definePlugin("shop", { setup: register })],
     });
     const ctx = createTestContext({
       db: {} as Db,

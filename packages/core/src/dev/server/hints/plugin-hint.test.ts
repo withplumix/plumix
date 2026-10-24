@@ -13,18 +13,20 @@ import { defineTheme } from "../../../theme.js";
  * Core subscribes at priority 10 and appends, so a default-priority
  * subscriber runs after and can place itself first.
  */
-const demoPlugin = definePlugin("error-hint-demo", (ctx) => {
-  ctx.addFilter("error_page:hints", (hints, caught) => {
-    if (!(caught instanceof Error) || !caught.message.includes("posts")) {
-      return hints;
-    }
-    const hint: DevErrorHint = {
-      title: "Create the posts table",
-      body: "The blog's initial migration has not been applied.",
-      docs: [{ label: "Migrations", href: "https://plumix.dev/migrations" }],
-    };
-    return [hint, ...hints];
-  });
+const demoPlugin = definePlugin("error-hint-demo", {
+  setup: (ctx) => {
+    ctx.addFilter("error_page:hints", (hints, caught) => {
+      if (!(caught instanceof Error) || !caught.message.includes("posts")) {
+        return hints;
+      }
+      const hint: DevErrorHint = {
+        title: "Create the posts table",
+        body: "The blog's initial migration has not been applied.",
+        docs: [{ label: "Migrations", href: "https://plumix.dev/migrations" }],
+      };
+      return [hint, ...hints];
+    });
+  },
 });
 
 /**

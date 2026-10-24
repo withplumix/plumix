@@ -275,26 +275,30 @@ describe("an entry type with an access policy", () => {
   beforeAll(async () => {
     policied = await createTestDb();
     registry = await pooledEntryTypeRegistry(
-      definePlugin("pages", (ctx) => {
-        ctx.registerEntryType("page", {
-          label: "Pages",
-          isPublic: true,
-          access: {
-            default: anonymousPolicy,
-            policies: [
-              {
-                key: "members",
-                label: "Members",
-                policy: definePolicy({ resolve: membersResolver }),
-              },
-              {
-                key: "sealed",
-                label: "Sealed",
-                policy: definePolicy({ resolve: () => challenge("forbidden") }),
-              },
-            ],
-          },
-        });
+      definePlugin("pages", {
+        setup: (ctx) => {
+          ctx.registerEntryType("page", {
+            label: "Pages",
+            isPublic: true,
+            access: {
+              default: anonymousPolicy,
+              policies: [
+                {
+                  key: "members",
+                  label: "Members",
+                  policy: definePolicy({ resolve: membersResolver }),
+                },
+                {
+                  key: "sealed",
+                  label: "Sealed",
+                  policy: definePolicy({
+                    resolve: () => challenge("forbidden"),
+                  }),
+                },
+              ],
+            },
+          });
+        },
       }),
     );
     const factory = factoriesFor(policied);
@@ -447,15 +451,19 @@ describe("an entry type whose default admits nobody anonymous", () => {
   beforeAll(async () => {
     gated = await createTestDb();
     registry = await pooledEntryTypeRegistry(
-      definePlugin("members-pages", (ctx) => {
-        ctx.registerEntryType("page", {
-          label: "Pages",
-          isPublic: true,
-          access: {
-            default: authenticatedPolicy,
-            policies: [{ key: "open", label: "Open", policy: anonymousPolicy }],
-          },
-        });
+      definePlugin("members-pages", {
+        setup: (ctx) => {
+          ctx.registerEntryType("page", {
+            label: "Pages",
+            isPublic: true,
+            access: {
+              default: authenticatedPolicy,
+              policies: [
+                { key: "open", label: "Open", policy: anonymousPolicy },
+              ],
+            },
+          });
+        },
       }),
     );
     const factory = factoriesFor(gated);

@@ -42,8 +42,10 @@ function testConfig(): PlumixConfig {
       },
     }),
     plugins: [
-      definePlugin("probe", () => {
-        registrations.push("probe");
+      definePlugin("probe", {
+        setup: () => {
+          registrations.push("probe");
+        },
       }),
     ],
   });

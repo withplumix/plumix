@@ -48,11 +48,13 @@ describe("passkey register — options", () => {
     const h = await createDispatcherHarness({
       config: {
         plugins: [
-          definePlugin("profiles", (ctx) => {
-            ctx.registerUserMetaBox("profile", {
-              label: "Profile",
-              fields: [text("pronouns").default("they/them"), text("bio")],
-            });
+          definePlugin("profiles", {
+            setup: (ctx) => {
+              ctx.registerUserMetaBox("profile", {
+                label: "Profile",
+                fields: [text("pronouns").default("they/them"), text("bio")],
+              });
+            },
           }),
         ],
       },

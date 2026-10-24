@@ -48,24 +48,26 @@ const PLACES: Readonly<Record<string, string>> = {
  * A directory site's shape: one archive type answering at a location and at a
  * catalogue under it, resolved from its own route params.
  */
-const directory = definePlugin("test_directory", (ctx) => {
-  // Ahead of `location`, whose two-segment route would otherwise take it.
-  ctx.registerArchiveType("members", {
-    routes: ["/members/:location"],
-    access: authenticatedPolicy,
-    resolve: resolveLocation("members"),
-  });
-  ctx.registerArchiveType("series", {
-    routes: ["/series/:name"],
-    title: "Series",
-    perPage: 1,
-    entries: (q, params) =>
-      q.ofTypes("post").inTerm("category", params.name ?? ""),
-  });
-  ctx.registerArchiveType("location", {
-    routes: ["/:location", "/:location/:catalogue"],
-    resolve: resolveLocation("location"),
-  });
+const directory = definePlugin("test_directory", {
+  setup: (ctx) => {
+    // Ahead of `location`, whose two-segment route would otherwise take it.
+    ctx.registerArchiveType("members", {
+      routes: ["/members/:location"],
+      access: authenticatedPolicy,
+      resolve: resolveLocation("members"),
+    });
+    ctx.registerArchiveType("series", {
+      routes: ["/series/:name"],
+      title: "Series",
+      perPage: 1,
+      entries: (q, params) =>
+        q.ofTypes("post").inTerm("category", params.name ?? ""),
+    });
+    ctx.registerArchiveType("location", {
+      routes: ["/:location", "/:location/:catalogue"],
+      resolve: resolveLocation("location"),
+    });
+  },
 });
 
 /** The directory's own data: a place's page is stored under its tag. */
@@ -74,14 +76,16 @@ function placeTag(slug: string): string {
 }
 
 /** Stands in for the directory's own edit of a place, which purges its tag. */
-const relocate: AnyPluginDescriptor = definePlugin("test_relocate", (ctx) => {
-  ctx.registerPublicRoute({
-    path: "/relocate/london",
-    handler: (_request, appCtx) => {
-      enqueuePurgeTags(appCtx, [placeTag("london")]);
-      return new Response("ok");
-    },
-  });
+const relocate: AnyPluginDescriptor = definePlugin("test_relocate", {
+  setup: (ctx) => {
+    ctx.registerPublicRoute({
+      path: "/relocate/london",
+      handler: (_request, appCtx) => {
+        enqueuePurgeTags(appCtx, [placeTag("london")]);
+        return new Response("ok");
+      },
+    });
+  },
 });
 
 function resolveLocation(name: "location" | "members" | "open") {
@@ -232,12 +236,14 @@ describe("a plugin archive's card", () => {
   });
 
   test("is advertised and served for an archive whose policy grants anonymous visitors", async () => {
-    const open = definePlugin("test_open", (ctx) => {
-      ctx.registerArchiveType("open", {
-        routes: ["/open/:location"],
-        access: anonymousPolicy,
-        resolve: resolveLocation("open"),
-      });
+    const open = definePlugin("test_open", {
+      setup: (ctx) => {
+        ctx.registerArchiveType("open", {
+          routes: ["/open/:location"],
+          access: anonymousPolicy,
+          resolve: resolveLocation("open"),
+        });
+      },
     });
     const openCard = card.forArchiveType("open").define({
       key: ({ data }) => cardKey.of("open", data.place),

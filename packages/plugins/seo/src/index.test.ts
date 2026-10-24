@@ -8,66 +8,71 @@ import { describe, expect, test } from "vitest";
 import type { SeoOptions } from "./index.js";
 import { seo } from "./index.js";
 
-const blogPlugin = definePlugin("blog", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    isPublic: true,
-    hasArchive: true,
-    supports: ["title", "editor", "excerpt"],
-  });
-  ctx.registerTermTaxonomy("category", {
-    label: "Categories",
-    isHierarchical: false,
-    entryTypes: ["post"],
-  });
+const blogPlugin = definePlugin("blog", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      hasArchive: true,
+      supports: ["title", "editor", "excerpt"],
+    });
+    ctx.registerTermTaxonomy("category", {
+      label: "Categories",
+      isHierarchical: false,
+      entryTypes: ["post"],
+    });
+  },
 });
 
 /**
  * Declared raw rather than via the media plugin: the chain reads only the role
  * and the adapter's image, so this suite stays off a second plugin.
  */
-const photoPlugin = definePlugin("photos", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    isPublic: true,
-    supports: ["title", "editor", "excerpt"],
-  });
-  ctx.registerLookupAdapter({
-    kind: "photo",
-    capability: null,
-    adapter: {
-      list: () => Promise.resolve([]),
-      hydrate: (_appCtx, { ids }) => Promise.resolve(ids.map((id) => ({ id }))),
-      // Only `p1` is described, so one suite covers both an image the head can
-      // name and one a media row left undescribed.
-      image: ({ id }) => ({
-        url: `https://cdn.example/${id}.png`,
-        alt: id === "p1" ? "A hero, described" : null,
-      }),
-    },
-  });
-  ctx.registerEntryMetaBox("appearance", {
-    label: "Appearance",
-    entryTypes: ["post"],
-    fields: [
-      {
-        key: "appearance",
-        label: "Appearance",
-        type: "json",
-        inputType: "group",
-        fields: [
-          {
-            key: "hero",
-            label: "Hero",
-            type: "json",
-            inputType: "media",
-            role: "featured",
-            referenceTarget: { kind: "photo" },
-          },
-        ],
+const photoPlugin = definePlugin("photos", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      supports: ["title", "editor", "excerpt"],
+    });
+    ctx.registerLookupAdapter({
+      kind: "photo",
+      capability: null,
+      adapter: {
+        list: () => Promise.resolve([]),
+        hydrate: (_appCtx, { ids }) =>
+          Promise.resolve(ids.map((id) => ({ id }))),
+        // Only `p1` is described, so one suite covers both an image the head can
+        // name and one a media row left undescribed.
+        image: ({ id }) => ({
+          url: `https://cdn.example/${id}.png`,
+          alt: id === "p1" ? "A hero, described" : null,
+        }),
       },
-    ],
-  });
+    });
+    ctx.registerEntryMetaBox("appearance", {
+      label: "Appearance",
+      entryTypes: ["post"],
+      fields: [
+        {
+          key: "appearance",
+          label: "Appearance",
+          type: "json",
+          inputType: "group",
+          fields: [
+            {
+              key: "hero",
+              label: "Hero",
+              type: "json",
+              inputType: "media",
+              role: "featured",
+              referenceTarget: { kind: "photo" },
+            },
+          ],
+        },
+      ],
+    });
+  },
 });
 
 const theme = defineTheme({ templates: [fallback(() => null)] });
@@ -298,14 +303,16 @@ describe("head meta", () => {
   });
 
   test("another subscriber's tag wins however the config orders the two", async () => {
-    const custom = definePlugin("custom-head", (ctx) => {
-      ctx.addFilter("render:document", (manifest) => ({
-        ...manifest,
-        meta: [
-          ...(manifest.meta ?? []),
-          { name: "description", content: "Written by another plugin" },
-        ],
-      }));
+    const custom = definePlugin("custom-head", {
+      setup: (ctx) => {
+        ctx.addFilter("render:document", (manifest) => ({
+          ...manifest,
+          meta: [
+            ...(manifest.meta ?? []),
+            { name: "description", content: "Written by another plugin" },
+          ],
+        }));
+      },
     });
 
     for (const plugins of [
@@ -345,12 +352,14 @@ describe("head meta", () => {
 });
 
 describe("the og:image chain", () => {
-  const card = definePlugin("og-card-test", (ctx) => {
-    ctx.addFilter("seo:og_image", () => ({
-      url: "https://cms.example/card.png",
-      width: 1200,
-      height: 630,
-    }));
+  const card = definePlugin("og-card-test", {
+    setup: (ctx) => {
+      ctx.addFilter("seo:og_image", () => ({
+        url: "https://cms.example/card.png",
+        width: 1200,
+        height: 630,
+      }));
+    },
   });
 
   test("a subscriber's image outranks the site default", async () => {
@@ -521,10 +530,12 @@ describe("per-entry overrides", () => {
   });
 
   test("an entry social image outranks a generated card and the site default", async () => {
-    const card = definePlugin("og-card-test", (ctx) => {
-      ctx.addFilter("seo:og_image", () => ({
-        url: "https://cms.example/card.png",
-      }));
+    const card = definePlugin("og-card-test", {
+      setup: (ctx) => {
+        ctx.addFilter("seo:og_image", () => ({
+          url: "https://cms.example/card.png",
+        }));
+      },
     });
     const h = await createDispatcherHarness({
       config: { plugins: [blogPlugin, seo(), card], theme: theme },
@@ -1010,15 +1021,17 @@ describe("site verification", () => {
 });
 
 describe("views", () => {
-  const appPlugin = definePlugin("app", (ctx) => {
-    ctx.registerView("compareShare", {
-      routes: ["/compare/:id"],
-      resolve: () => ({ data: null, title: "Comparison" }),
-    });
-    ctx.registerView("account", {
-      routes: ["/account"],
-      resolve: () => ({ data: null, title: "Your account" }),
-    });
+  const appPlugin = definePlugin("app", {
+    setup: (ctx) => {
+      ctx.registerView("compareShare", {
+        routes: ["/compare/:id"],
+        resolve: () => ({ data: null, title: "Comparison" }),
+      });
+      ctx.registerView("account", {
+        routes: ["/account"],
+        resolve: () => ({ data: null, title: "Your account" }),
+      });
+    },
   });
 
   function viewHarness(options?: SeoOptions): Promise<DispatcherHarness> {

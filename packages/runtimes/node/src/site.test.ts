@@ -49,12 +49,14 @@ const CRON = "*/5 * * * *";
 /** `connectScheduledDb`'s request path, which core does not export. */
 const SCHEDULED_PATH = "/_plumix/internal/scheduled";
 
-const failing = definePlugin("failing", (ctx) => {
-  ctx.registerScheduledTask({
-    id: "always-fails",
-    cron: CRON,
-    handler: () => Promise.reject(new Error("boom")),
-  });
+const failing = definePlugin("failing", {
+  setup: (ctx) => {
+    ctx.registerScheduledTask({
+      id: "always-fails",
+      cron: CRON,
+      handler: () => Promise.reject(new Error("boom")),
+    });
+  },
 });
 
 /** A built site logs to stdout; the spy keeps it out of the test output and holds what was written. */
@@ -225,16 +227,18 @@ describe("createNodeSite — scheduled", () => {
   test("stopping the cron aborts a running task's ctx.signal, so it stops instead of being cut off", async () => {
     captureStdout();
     let signal: AbortSignal | undefined;
-    const hung = definePlugin("hung", (ctx) => {
-      ctx.registerScheduledTask({
-        id: "waits",
-        cron: CRON,
-        handler: (taskCtx) =>
-          new Promise<void>((resolve) => {
-            signal = taskCtx.signal;
-            taskCtx.signal.addEventListener("abort", () => resolve());
-          }),
-      });
+    const hung = definePlugin("hung", {
+      setup: (ctx) => {
+        ctx.registerScheduledTask({
+          id: "waits",
+          cron: CRON,
+          handler: (taskCtx) =>
+            new Promise<void>((resolve) => {
+              signal = taskCtx.signal;
+              taskCtx.signal.addEventListener("abort", () => resolve());
+            }),
+        });
+      },
     });
     const { site } = await siteFor({ plugins: [hung] });
     const clock = virtualClock("2026-09-07T02:58:00Z");
@@ -571,29 +575,31 @@ describe("createNodeSite — shutdown", () => {
     const release = gate();
     const deferred = gate();
     let drained = false;
-    const plugin = definePlugin("probes", (ctx) => {
-      ctx.registerPublicRoute({
-        path: "/slow",
-        handler: async () => {
-          arrived.open();
-          await release.opened;
-          return new Response("slow response");
-        },
-      });
-      ctx.registerPublicRoute({
-        path: "/defer",
-        handler: (_request, app) => {
-          app.defer(deferred.opened.then(() => void (drained = true)));
-          return new Response("deferred");
-        },
-      });
-      ctx.registerPublicRoute({
-        path: "/defer-stuck",
-        handler: (_request, app) => {
-          app.defer(new Promise(() => undefined));
-          return new Response("stuck");
-        },
-      });
+    const plugin = definePlugin("probes", {
+      setup: (ctx) => {
+        ctx.registerPublicRoute({
+          path: "/slow",
+          handler: async () => {
+            arrived.open();
+            await release.opened;
+            return new Response("slow response");
+          },
+        });
+        ctx.registerPublicRoute({
+          path: "/defer",
+          handler: (_request, app) => {
+            app.defer(deferred.opened.then(() => void (drained = true)));
+            return new Response("deferred");
+          },
+        });
+        ctx.registerPublicRoute({
+          path: "/defer-stuck",
+          handler: (_request, app) => {
+            app.defer(new Promise(() => undefined));
+            return new Response("stuck");
+          },
+        });
+      },
     });
     return {
       plugin,

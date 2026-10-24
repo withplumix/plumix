@@ -127,14 +127,16 @@ describe("POST /_plumix/api/v1/system/mail/test", () => {
   });
 
   test("a plugin resource that would shadow it is rejected at boot", async () => {
-    const shadow = definePlugin("shadow", (ctx) => {
-      ctx.registerRestResource({
-        method: "POST",
-        path: "/system/mail/{action}",
-        auth: "public",
-        output: v.object({ ok: v.boolean() }),
-        handler: () => ({ ok: true }),
-      });
+    const shadow = definePlugin("shadow", {
+      setup: (ctx) => {
+        ctx.registerRestResource({
+          method: "POST",
+          path: "/system/mail/{action}",
+          auth: "public",
+          output: v.object({ ok: v.boolean() }),
+          handler: () => ({ ok: true }),
+        });
+      },
     });
 
     await expect(

@@ -54,20 +54,22 @@ describe("ctx.settings on a derived context", () => {
   test("a write under a base path is heard with the request the route saw", async () => {
     const seen: string[] = [];
     const heard: string[] = [];
-    const writer = definePlugin("writer", (ctx) => {
-      ctx.addAction("settings:group_changed", (_changes, appCtx) => {
-        heard.push(appCtx.request.url);
-      });
-      ctx.registerRoute({
-        method: "POST",
-        path: "/note",
-        auth: "public",
-        handler: async (request, appCtx) => {
-          seen.push(appCtx.request.url);
-          await appCtx.settings.write("notes", { body: "A" });
-          return new Response(null, { status: 204 });
-        },
-      });
+    const writer = definePlugin("writer", {
+      setup: (ctx) => {
+        ctx.addAction("settings:group_changed", (_changes, appCtx) => {
+          heard.push(appCtx.request.url);
+        });
+        ctx.registerRoute({
+          method: "POST",
+          path: "/note",
+          auth: "public",
+          handler: async (request, appCtx) => {
+            seen.push(appCtx.request.url);
+            await appCtx.settings.write("notes", { body: "A" });
+            return new Response(null, { status: 204 });
+          },
+        });
+      },
     });
     const h = await createDispatcherHarness({
       config: { plugins: [writer], basePath: "/cms" },
@@ -86,20 +88,24 @@ describe("ctx.settings on a derived context", () => {
 
   test("a form post's write is heard without the ambient session it dropped", async () => {
     const heard: boolean[] = [];
-    const writer = definePlugin("writer", (ctx) => {
-      ctx.addAction("settings:group_changed", (_changes, appCtx) => {
-        heard.push(appCtx.authenticator.hasSession?.(appCtx.request) ?? false);
-      });
-      ctx.registerRoute({
-        method: "POST",
-        path: "/note",
-        auth: "public",
-        formPost: true,
-        handler: async (_request, appCtx) => {
-          await appCtx.settings.write("notes", { body: "A" });
-          return new Response(null, { status: 204 });
-        },
-      });
+    const writer = definePlugin("writer", {
+      setup: (ctx) => {
+        ctx.addAction("settings:group_changed", (_changes, appCtx) => {
+          heard.push(
+            appCtx.authenticator.hasSession?.(appCtx.request) ?? false,
+          );
+        });
+        ctx.registerRoute({
+          method: "POST",
+          path: "/note",
+          auth: "public",
+          formPost: true,
+          handler: async (_request, appCtx) => {
+            await appCtx.settings.write("notes", { body: "A" });
+            return new Response(null, { status: 204 });
+          },
+        });
+      },
     });
     const h = await createDispatcherHarness({ config: { plugins: [writer] } });
     const admin = await h.seedUser("admin");

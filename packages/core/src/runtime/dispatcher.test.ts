@@ -812,8 +812,10 @@ describe("dispatcher — auth routes", () => {
 
 describe("dispatcher — error boundary", () => {
   test("public GET resolves a plugin-registered single-post route", async () => {
-    const blog = definePlugin("test-blog", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    const blog = definePlugin("test-blog", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      },
     });
     const h = await createDispatcherHarness({ config: { plugins: [blog] } });
     const author = await h.seedUser("admin");
@@ -848,8 +850,10 @@ describe("dispatcher — error boundary", () => {
   });
 
   test("public GET 404s for an unknown slug", async () => {
-    const blog = definePlugin("test-blog", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    const blog = definePlugin("test-blog", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      },
     });
     const h = await createDispatcherHarness({ config: { plugins: [blog] } });
     const response = await h.dispatch(
@@ -906,8 +910,10 @@ async function seedHelloWorldPost(h: DispatcherHarness): Promise<void> {
 }
 
 describe("dispatcher — user-dependent render caching", () => {
-  const blog = definePlugin("test-blog", (ctx) => {
-    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+  const blog = definePlugin("test-blog", {
+    setup: (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    },
   });
 
   test("marks a signed-in visitor's render private, no-store with a Cookie Vary", async () => {
@@ -942,8 +948,10 @@ describe("dispatcher — user-dependent render caching", () => {
 
 describe("dispatcher — theme reads the auth client's render context", () => {
   test("a theme component reads authClient's methods and base-pathed URLs during a public render", async () => {
-    const blog = definePlugin("test-blog", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    const blog = definePlugin("test-blog", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      },
     });
     // A theme login page renders its controls from `useAuthMethods()` and a
     // plain sign-out form from `url()`; both must carry the render's context.
@@ -988,8 +996,10 @@ describe("dispatcher — theme reads the auth client's render context", () => {
   });
 
   test("a public render shows a signed-in editor the controls their role grants", async () => {
-    const blog = definePlugin("test-blog", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    const blog = definePlugin("test-blog", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      },
     });
     const EditLink = (): ReturnType<typeof createElement> =>
       createElement(
@@ -1020,8 +1030,10 @@ describe("dispatcher — theme reads the auth client's render context", () => {
 describe("dispatcher — asset-shaped 404 short-circuit", () => {
   test("a static-asset miss (/favicon.ico) returns a plain 404 with no resolution and no themed render", async () => {
     const snapshots: TelemetrySnapshot[] = [];
-    const blog = definePlugin("test-blog", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    const blog = definePlugin("test-blog", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      },
     });
     const h = await createDispatcherHarness({
       config: {
@@ -1055,12 +1067,14 @@ describe("dispatcher — asset-shaped 404 short-circuit", () => {
   test("the short-circuit beats a hierarchical catch-all route that would otherwise claim the path", async () => {
     // The #1491 trace: a pages-style `:path+` route matched `favicon.ico` and
     // paid a slug lookup. The extension check must win over the route map.
-    const pages = definePlugin("test-pages", (ctx) => {
-      ctx.registerEntryType("page", {
-        label: "Pages",
-        isPublic: true,
-        isHierarchical: true,
-      });
+    const pages = definePlugin("test-pages", {
+      setup: (ctx) => {
+        ctx.registerEntryType("page", {
+          label: "Pages",
+          isPublic: true,
+          isHierarchical: true,
+        });
+      },
     });
     const h = await createDispatcherHarness({ config: { plugins: [pages] } });
 
@@ -1073,8 +1087,10 @@ describe("dispatcher — asset-shaped 404 short-circuit", () => {
   });
 
   test("a 404 for a client that doesn't accept HTML skips the themed render", async () => {
-    const blog = definePlugin("test-blog", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    const blog = definePlugin("test-blog", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      },
     });
     const h = await createDispatcherHarness({ config: { plugins: [blog] } });
 
@@ -1094,8 +1110,10 @@ describe("dispatcher — asset-shaped 404 short-circuit", () => {
   });
 
   test("a browser-shaped Accept header still gets the themed 404 page", async () => {
-    const blog = definePlugin("test-blog", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    const blog = definePlugin("test-blog", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      },
     });
     const h = await createDispatcherHarness({ config: { plugins: [blog] } });
 
@@ -1228,13 +1246,15 @@ describe("matchPluginRawRoute", () => {
 
 describe("dispatcher — plugin raw routes", () => {
   test("public GET route is dispatched without a session", async () => {
-    const plugin = definePlugin("media", (ctx) => {
-      ctx.registerRoute({
-        method: "GET",
-        path: "/ping",
-        auth: "public",
-        handler: () => new Response("pong", { status: 200 }),
-      });
+    const plugin = definePlugin("media", {
+      setup: (ctx) => {
+        ctx.registerRoute({
+          method: "GET",
+          path: "/ping",
+          auth: "public",
+          handler: () => new Response("pong", { status: 200 }),
+        });
+      },
     });
     const h = await createDispatcherHarness({ config: { plugins: [plugin] } });
 
@@ -1246,13 +1266,15 @@ describe("dispatcher — plugin raw routes", () => {
   });
 
   test("authenticated route rejects anonymous requests with 401", async () => {
-    const plugin = definePlugin("media", (ctx) => {
-      ctx.registerRoute({
-        method: "POST",
-        path: "/upload",
-        auth: "authenticated",
-        handler: () => new Response("ok"),
-      });
+    const plugin = definePlugin("media", {
+      setup: (ctx) => {
+        ctx.registerRoute({
+          method: "POST",
+          path: "/upload",
+          auth: "authenticated",
+          handler: () => new Response("ok"),
+        });
+      },
     });
     const h = await createDispatcherHarness({ config: { plugins: [plugin] } });
 
@@ -1263,14 +1285,16 @@ describe("dispatcher — plugin raw routes", () => {
   });
 
   test("authenticated route dispatches when a valid session is present", async () => {
-    const plugin = definePlugin("media", (ctx) => {
-      ctx.registerRoute({
-        method: "POST",
-        path: "/upload",
-        auth: "authenticated",
-        handler: (_req, c) =>
-          new Response(c.user?.email ?? "", { status: 200 }),
-      });
+    const plugin = definePlugin("media", {
+      setup: (ctx) => {
+        ctx.registerRoute({
+          method: "POST",
+          path: "/upload",
+          auth: "authenticated",
+          handler: (_req, c) =>
+            new Response(c.user?.email ?? "", { status: 200 }),
+        });
+      },
     });
     const h = await createDispatcherHarness({ config: { plugins: [plugin] } });
     const user = await h.seedUser("author");
@@ -1285,14 +1309,16 @@ describe("dispatcher — plugin raw routes", () => {
   });
 
   test("capability gate returns 403 when the role is below the minimum", async () => {
-    const plugin = definePlugin("menus", (ctx) => {
-      ctx.registerCapability("menu:manage", "admin");
-      ctx.registerRoute({
-        method: "POST",
-        path: "/sync",
-        auth: { capability: "menu:manage" },
-        handler: () => new Response("ok"),
-      });
+    const plugin = definePlugin("menus", {
+      setup: (ctx) => {
+        ctx.registerCapability("menu:manage", "admin");
+        ctx.registerRoute({
+          method: "POST",
+          path: "/sync",
+          auth: { capability: "menu:manage" },
+          handler: () => new Response("ok"),
+        });
+      },
     });
     const h = await createDispatcherHarness({ config: { plugins: [plugin] } });
     const user = await h.seedUser("editor");
@@ -1312,13 +1338,15 @@ describe("dispatcher — plugin raw routes", () => {
   });
 
   test("capability gate resolves a reference to the namespace its type pools into", async () => {
-    const plugin = definePlugin("newsroom", (ctx) => {
-      ctx.registerRoute({
-        method: "POST",
-        path: "/sync",
-        auth: { capability: entryCapability("news", "edit_any") },
-        handler: () => new Response("ok"),
-      });
+    const plugin = definePlugin("newsroom", {
+      setup: (ctx) => {
+        ctx.registerRoute({
+          method: "POST",
+          path: "/sync",
+          auth: { capability: entryCapability("news", "edit_any") },
+          handler: () => new Response("ok"),
+        });
+      },
     });
     const h = await createDispatcherHarness({
       config: { plugins: [pooledEntryTypesPlugin, plugin] },
@@ -1343,14 +1371,16 @@ describe("dispatcher — plugin raw routes", () => {
   });
 
   test("capability gate dispatches when the role meets the minimum", async () => {
-    const plugin = definePlugin("menus", (ctx) => {
-      ctx.registerCapability("menu:manage", "admin");
-      ctx.registerRoute({
-        method: "POST",
-        path: "/sync",
-        auth: { capability: "menu:manage" },
-        handler: () => new Response("ok"),
-      });
+    const plugin = definePlugin("menus", {
+      setup: (ctx) => {
+        ctx.registerCapability("menu:manage", "admin");
+        ctx.registerRoute({
+          method: "POST",
+          path: "/sync",
+          auth: { capability: "menu:manage" },
+          handler: () => new Response("ok"),
+        });
+      },
     });
     const h = await createDispatcherHarness({ config: { plugins: [plugin] } });
     const user = await h.seedUser("admin");
@@ -1365,13 +1395,15 @@ describe("dispatcher — plugin raw routes", () => {
   });
 
   test("plugin raw routes inherit the dispatcher-level CSRF gate on write methods", async () => {
-    const plugin = definePlugin("media", (ctx) => {
-      ctx.registerRoute({
-        method: "POST",
-        path: "/upload",
-        auth: "public",
-        handler: () => new Response("ok"),
-      });
+    const plugin = definePlugin("media", {
+      setup: (ctx) => {
+        ctx.registerRoute({
+          method: "POST",
+          path: "/upload",
+          auth: "public",
+          handler: () => new Response("ok"),
+        });
+      },
     });
     const h = await createDispatcherHarness({ config: { plugins: [plugin] } });
 
@@ -1391,13 +1423,15 @@ describe("dispatcher — plugin raw routes", () => {
   });
 
   test("an unknown /_plumix/<pluginId>/* path still returns unknown-plumix-route", async () => {
-    const plugin = definePlugin("media", (ctx) => {
-      ctx.registerRoute({
-        method: "GET",
-        path: "/known",
-        auth: "public",
-        handler: () => new Response("ok"),
-      });
+    const plugin = definePlugin("media", {
+      setup: (ctx) => {
+        ctx.registerRoute({
+          method: "GET",
+          path: "/known",
+          auth: "public",
+          handler: () => new Response("ok"),
+        });
+      },
     });
     const h = await createDispatcherHarness({ config: { plugins: [plugin] } });
 
@@ -1412,14 +1446,16 @@ describe("dispatcher — plugin raw routes", () => {
 // The #2018 opt-out: a plain HTML form cannot set a custom header, so a route
 // that declared `formPost` accepts the submit on the Origin check alone.
 describe("dispatcher — form-post routes (#2018)", () => {
-  const formPostPlugin = definePlugin("forms", (ctx) => {
-    ctx.registerRoute({
-      method: "POST",
-      path: "/submit",
-      auth: "public",
-      formPost: true,
-      handler: () => new Response("received", { status: 200 }),
-    });
+  const formPostPlugin = definePlugin("forms", {
+    setup: (ctx) => {
+      ctx.registerRoute({
+        method: "POST",
+        path: "/submit",
+        auth: "public",
+        formPost: true,
+        handler: () => new Response("received", { status: 200 }),
+      });
+    },
   });
 
   test("a form-post route accepts a POST with no CSRF header", async () => {
@@ -1473,14 +1509,16 @@ describe("dispatcher — form-post routes (#2018)", () => {
   // Nothing reserves `rpc` as a plugin id, so the opt-out could otherwise
   // drop the header gate in front of the RPC router.
   test("the opt-out does not reach a path core answers itself", async () => {
-    const plugin = definePlugin("rpc", (ctx) => {
-      ctx.registerRoute({
-        method: "*",
-        path: "/*",
-        auth: "public",
-        formPost: true,
-        handler: () => new Response("received"),
-      });
+    const plugin = definePlugin("rpc", {
+      setup: (ctx) => {
+        ctx.registerRoute({
+          method: "*",
+          path: "/*",
+          auth: "public",
+          formPost: true,
+          handler: () => new Response("received"),
+        });
+      },
     });
     const h = await createDispatcherHarness({ config: { plugins: [plugin] } });
 
@@ -1502,14 +1540,16 @@ describe("dispatcher — form-post routes (#2018)", () => {
   // An HTML form produces GET or POST and nothing else, so a wildcard-method
   // route does not carry its exemption onto a method no form could have sent.
   test("the opt-out does not extend past POST on a wildcard-method route", async () => {
-    const plugin = definePlugin("forms", (ctx) => {
-      ctx.registerRoute({
-        method: "*",
-        path: "/submit",
-        auth: "public",
-        formPost: true,
-        handler: () => new Response("received"),
-      });
+    const plugin = definePlugin("forms", {
+      setup: (ctx) => {
+        ctx.registerRoute({
+          method: "*",
+          path: "/submit",
+          auth: "public",
+          formPost: true,
+          handler: () => new Response("received"),
+        });
+      },
     });
     const h = await createDispatcherHarness({ config: { plugins: [plugin] } });
 
@@ -1526,33 +1566,35 @@ describe("dispatcher — form-post routes (#2018)", () => {
 
   // Keying the swap on `formPost` alone fails only the second case, which
   // holds the header in the condition.
-  const sessionEchoPlugin = definePlugin("forms", (ctx) => {
-    ctx.registerRoute({
-      method: "POST",
-      path: "/submit",
-      auth: "public",
-      formPost: true,
-      handler: async (request, appCtx) => {
-        // `getContext()` is what a hook listener fired by this handler reads,
-        // and it has to agree with the context the handler was handed.
-        const ambient = getContext();
-        return Response.json({
-          userId:
-            (
-              await appCtx.authenticator.authenticate(request, appCtx.db, {
-                startingUserMeta: {},
-              })
-            )?.user.id ?? null,
-          hasSession: requestHasSession(appCtx.authenticator, request),
-          ambientUserId:
-            (
-              await ambient.authenticator.authenticate(request, ambient.db, {
-                startingUserMeta: {},
-              })
-            )?.user.id ?? null,
-        });
-      },
-    });
+  const sessionEchoPlugin = definePlugin("forms", {
+    setup: (ctx) => {
+      ctx.registerRoute({
+        method: "POST",
+        path: "/submit",
+        auth: "public",
+        formPost: true,
+        handler: async (request, appCtx) => {
+          // `getContext()` is what a hook listener fired by this handler reads,
+          // and it has to agree with the context the handler was handed.
+          const ambient = getContext();
+          return Response.json({
+            userId:
+              (
+                await appCtx.authenticator.authenticate(request, appCtx.db, {
+                  startingUserMeta: {},
+                })
+              )?.user.id ?? null,
+            hasSession: requestHasSession(appCtx.authenticator, request),
+            ambientUserId:
+              (
+                await ambient.authenticator.authenticate(request, ambient.db, {
+                  startingUserMeta: {},
+                })
+              )?.user.id ?? null,
+          });
+        },
+      });
+    },
   });
 
   test("the exempt POST reaches the handler with no session to read", async () => {
@@ -1604,20 +1646,22 @@ describe("dispatcher — form-post routes (#2018)", () => {
   // The opt-out is per route: a sibling that did not take it is still gated,
   // even though the same plugin owns the prefix.
   test("a sibling route without the opt-out still requires the header", async () => {
-    const plugin = definePlugin("forms", (ctx) => {
-      ctx.registerRoute({
-        method: "POST",
-        path: "/submit",
-        auth: "public",
-        formPost: true,
-        handler: () => new Response("received"),
-      });
-      ctx.registerRoute({
-        method: "POST",
-        path: "/purge",
-        auth: "public",
-        handler: () => new Response("purged"),
-      });
+    const plugin = definePlugin("forms", {
+      setup: (ctx) => {
+        ctx.registerRoute({
+          method: "POST",
+          path: "/submit",
+          auth: "public",
+          formPost: true,
+          handler: () => new Response("received"),
+        });
+        ctx.registerRoute({
+          method: "POST",
+          path: "/purge",
+          auth: "public",
+          handler: () => new Response("purged"),
+        });
+      },
     });
     const h = await createDispatcherHarness({ config: { plugins: [plugin] } });
 
@@ -1634,8 +1678,10 @@ describe("dispatcher — form-post routes (#2018)", () => {
 });
 
 describe("dispatcher — basePath (served under a subdirectory)", () => {
-  const blog = definePlugin("test-blog", (ctx) => {
-    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+  const blog = definePlugin("test-blog", {
+    setup: (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    },
   });
 
   test("a public route under the base path renders; the bare path 404s", async () => {
@@ -1785,21 +1831,23 @@ describe("dispatcher — basePath (served under a subdirectory)", () => {
 
 describe("dispatcher — imageDelivery slot wiring", () => {
   test("ctx.imageDelivery is exposed to plugin route handlers when configured", async () => {
-    const plugin = definePlugin("media", (ctx) => {
-      ctx.registerRoute({
-        method: "GET",
-        path: "/transform",
-        auth: "public",
-        handler: (req, c) => {
-          const url = new URL(req.url);
-          const src = url.searchParams.get("src") ?? "";
-          const w = url.searchParams.get("w");
-          const transformed =
-            c.imageDelivery?.url(src, w ? { width: Number(w) } : undefined) ??
-            "no-delivery";
-          return new Response(transformed, { status: 200 });
-        },
-      });
+    const plugin = definePlugin("media", {
+      setup: (ctx) => {
+        ctx.registerRoute({
+          method: "GET",
+          path: "/transform",
+          auth: "public",
+          handler: (req, c) => {
+            const url = new URL(req.url);
+            const src = url.searchParams.get("src") ?? "";
+            const w = url.searchParams.get("w");
+            const transformed =
+              c.imageDelivery?.url(src, w ? { width: Number(w) } : undefined) ??
+              "no-delivery";
+            return new Response(transformed, { status: 200 });
+          },
+        });
+      },
     });
     const h = await createDispatcherHarness({
       config: {
@@ -1823,16 +1871,18 @@ describe("dispatcher — imageDelivery slot wiring", () => {
   });
 
   test("ctx.imageDelivery is undefined when no slot is configured", async () => {
-    const plugin = definePlugin("media", (ctx) => {
-      ctx.registerRoute({
-        method: "GET",
-        path: "/probe",
-        auth: "public",
-        handler: (_req, c) =>
-          new Response(c.imageDelivery === undefined ? "absent" : "present", {
-            status: 200,
-          }),
-      });
+    const plugin = definePlugin("media", {
+      setup: (ctx) => {
+        ctx.registerRoute({
+          method: "GET",
+          path: "/probe",
+          auth: "public",
+          handler: (_req, c) =>
+            new Response(c.imageDelivery === undefined ? "absent" : "present", {
+              status: 200,
+            }),
+        });
+      },
     });
     const h = await createDispatcherHarness({ config: { plugins: [plugin] } });
 
@@ -1900,8 +1950,10 @@ describe("dispatcher — public read-through CDN", () => {
     });
   }
 
-  const blog = definePlugin("blog", (ctx) => {
-    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+  const blog = definePlugin("blog", {
+    setup: (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    },
   });
 
   test("a cacheable public page leaves the origin carrying its freshness and tags", async () => {
@@ -1938,12 +1990,14 @@ describe("dispatcher — public read-through CDN", () => {
   test("a page render's tagCdnEntry from a derived context tags the stored page", async () => {
     const { cdn, put } = cdnStub();
     const author = { id: 1, email: "a@example.com", role: "admin" } as const;
-    const tagging = definePlugin("tagging", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.addFilter("render:document", (document, _data, appCtx) => {
-        tagCdnEntry(withUser(appCtx, { ...author, meta: {} }), ["x:1"]);
-        return document;
-      });
+    const tagging = definePlugin("tagging", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.addFilter("render:document", (document, _data, appCtx) => {
+          tagCdnEntry(withUser(appCtx, { ...author, meta: {} }), ["x:1"]);
+          return document;
+        });
+      },
     });
     const h = await createDispatcherHarness({
       cdn,
@@ -2030,14 +2084,16 @@ describe("dispatcher — public read-through CDN", () => {
   // Stored under no tags, the archive would outlive every purge until its TTL.
   test("a term archive in a taxonomy listing no entry types is stored under the public types' tags", async () => {
     const { cdn, put } = cdnStub();
-    const site = definePlugin("site", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerEntryType("page", {
-        label: "Pages",
-        isPublic: true,
-        isHierarchical: true,
-      });
-      ctx.registerTermTaxonomy("tag", { label: "Tags" });
+    const site = definePlugin("site", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerEntryType("page", {
+          label: "Pages",
+          isPublic: true,
+          isHierarchical: true,
+        });
+        ctx.registerTermTaxonomy("tag", { label: "Tags" });
+      },
     });
     const h = await createDispatcherHarness({
       cdn,
@@ -2066,13 +2122,15 @@ describe("dispatcher — public read-through CDN", () => {
   // lists — yet its permalink still prints the author.
   test("renaming the author of a hierarchical entry purges its cached permalink", async () => {
     const { cdn, put, purgeTags } = cdnStub();
-    const site = definePlugin("site", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerEntryType("page", {
-        label: "Pages",
-        isPublic: true,
-        isHierarchical: true,
-      });
+    const site = definePlugin("site", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerEntryType("page", {
+          label: "Pages",
+          isPublic: true,
+          isHierarchical: true,
+        });
+      },
     });
     const h = await createDispatcherHarness({
       cdn,
@@ -2209,21 +2267,23 @@ describe("dispatcher — embedded reference CDN tags (#1508)", () => {
 
   // A blog whose posts carry a single `featured` entry-reference meta
   // field — resolving it during render is what feeds the accumulator.
-  const featuringBlog = definePlugin("test-featuring-blog", (ctx) => {
-    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-    ctx.registerEntryMetaBox("featuring", {
-      label: "Featuring",
-      entryTypes: ["post"],
-      fields: [
-        {
-          key: "featured",
-          label: "Featured",
-          type: "string",
-          inputType: "entry",
-          referenceTarget: { kind: "entry", scope: { entryTypes: ["post"] } },
-        },
-      ],
-    });
+  const featuringBlog = definePlugin("test-featuring-blog", {
+    setup: (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerEntryMetaBox("featuring", {
+        label: "Featuring",
+        entryTypes: ["post"],
+        fields: [
+          {
+            key: "featured",
+            label: "Featured",
+            type: "string",
+            inputType: "entry",
+            referenceTarget: { kind: "entry", scope: { entryTypes: ["post"] } },
+          },
+        ],
+      });
+    },
   });
 
   test("a permalink embedding a referenced entry carries that entity's tag", async () => {
@@ -2325,35 +2385,39 @@ describe("dispatcher — archive-type CDN (#1693)", () => {
 
   // A plugin-registered archive that opted into caching and contributes the
   // type tags of the content it lists.
-  const cacheableSchools = definePlugin("schools-archive", (ctx) => {
-    ctx.registerArchiveType("schools", {
-      routes: ["/schools/:location"],
-      cacheable: true,
-      resolve: (_ctx, params) => ({
-        data: {
-          kind: "archiveType",
-          name: "schools",
-          location: params.location,
-        },
-        title: `Schools in ${params.location}`,
-        tags: ["t:school", "t:location"],
-      }),
-    });
+  const cacheableSchools = definePlugin("schools-archive", {
+    setup: (ctx) => {
+      ctx.registerArchiveType("schools", {
+        routes: ["/schools/:location"],
+        cacheable: true,
+        resolve: (_ctx, params) => ({
+          data: {
+            kind: "archiveType",
+            name: "schools",
+            location: params.location,
+          },
+          title: `Schools in ${params.location}`,
+          tags: ["t:school", "t:location"],
+        }),
+      });
+    },
   });
 
   // The same archive, left at the default (opted out of caching).
-  const uncachedSchools = definePlugin("schools-archive", (ctx) => {
-    ctx.registerArchiveType("schools", {
-      routes: ["/schools/:location"],
-      resolve: (_ctx, params) => ({
-        data: {
-          kind: "archiveType",
-          name: "schools",
-          location: params.location,
-        },
-        title: `Schools in ${params.location}`,
-      }),
-    });
+  const uncachedSchools = definePlugin("schools-archive", {
+    setup: (ctx) => {
+      ctx.registerArchiveType("schools", {
+        routes: ["/schools/:location"],
+        resolve: (_ctx, params) => ({
+          data: {
+            kind: "archiveType",
+            name: "schools",
+            location: params.location,
+          },
+          title: `Schools in ${params.location}`,
+        }),
+      });
+    },
   });
 
   test("stores an opted-in archive type's rendered response on a miss", async () => {
@@ -2406,15 +2470,17 @@ describe("dispatcher — archive-type CDN (#1693)", () => {
 
   // Core knows which types the query lists, so the plugin need not restate a
   // `tags` array that could disagree.
-  const cacheableTalks = definePlugin("talks-archive", (ctx) => {
-    ctx.registerEntryType("talk", { label: "Talks", isPublic: true });
-    ctx.registerEntryType("workshop", { label: "Workshops", isPublic: true });
-    ctx.registerArchiveType("talks", {
-      routes: ["/talks"],
-      cacheable: true,
-      entries: (q) => q.ofTypes("talk"),
-      title: "Talks",
-    });
+  const cacheableTalks = definePlugin("talks-archive", {
+    setup: (ctx) => {
+      ctx.registerEntryType("talk", { label: "Talks", isPublic: true });
+      ctx.registerEntryType("workshop", { label: "Workshops", isPublic: true });
+      ctx.registerArchiveType("talks", {
+        routes: ["/talks"],
+        cacheable: true,
+        entries: (q) => q.ofTypes("talk"),
+        title: "Talks",
+      });
+    },
   });
 
   test("tags a listed archive with the types its query can list", async () => {
@@ -2465,28 +2531,32 @@ describe("dispatcher — plugin-route CDN (#1959)", () => {
 
   // A content-addressed asset: it opts into the CDN and declares its own
   // immutable freshness, which the provider keeps.
-  const cards = definePlugin("og", (ctx) => {
-    ctx.registerRoute({
-      method: "GET",
-      path: "/card/*",
-      auth: "public",
-      cacheable: true,
-      handler: () =>
-        new Response("PNG", {
-          status: 200,
-          headers: { "cache-control": "public, max-age=31536000, immutable" },
-        }),
-    });
+  const cards = definePlugin("og", {
+    setup: (ctx) => {
+      ctx.registerRoute({
+        method: "GET",
+        path: "/card/*",
+        auth: "public",
+        cacheable: true,
+        handler: () =>
+          new Response("PNG", {
+            status: 200,
+            headers: { "cache-control": "public, max-age=31536000, immutable" },
+          }),
+      });
+    },
   });
 
   // The same route left at the default (opted out).
-  const uncachedCards = definePlugin("og", (ctx) => {
-    ctx.registerRoute({
-      method: "GET",
-      path: "/card/*",
-      auth: "public",
-      handler: () => new Response("PNG", { status: 200 }),
-    });
+  const uncachedCards = definePlugin("og", {
+    setup: (ctx) => {
+      ctx.registerRoute({
+        method: "GET",
+        path: "/card/*",
+        auth: "public",
+        handler: () => new Response("PNG", { status: 200 }),
+      });
+    },
   });
 
   test("stores an opted-in plugin route's response on a miss", async () => {
@@ -2531,14 +2601,16 @@ describe("dispatcher — plugin-route CDN (#1959)", () => {
     );
     // `method: "*"` is the only registration that lets a non-GET reach an
     // opted-in route at all.
-    const anyMethod = definePlugin("og", (ctx) => {
-      ctx.registerRoute({
-        method: "*",
-        path: "/card/*",
-        auth: "public",
-        cacheable: true,
-        handler: () => new Response("REBUILT", { status: 200 }),
-      });
+    const anyMethod = definePlugin("og", {
+      setup: (ctx) => {
+        ctx.registerRoute({
+          method: "*",
+          path: "/card/*",
+          auth: "public",
+          cacheable: true,
+          handler: () => new Response("REBUILT", { status: 200 }),
+        });
+      },
     });
     const h = await createDispatcherHarness({
       cdn,
@@ -2570,17 +2642,19 @@ describe("dispatcher — plugin-route CDN (#1959)", () => {
     const { cdn, put } = cdnStub();
     // What a card route does: it resolves the entry it is answering for, then
     // names that entry in the vocabulary the publish purge already sweeps.
-    const taggedCards = definePlugin("og", (ctx) => {
-      ctx.registerRoute({
-        method: "GET",
-        path: "/card/*",
-        auth: "public",
-        cacheable: true,
-        handler: (_request, appCtx) => {
-          tagCdnEntry(appCtx, entryPurgeTags("post", 7));
-          return new Response("PNG", { status: 200 });
-        },
-      });
+    const taggedCards = definePlugin("og", {
+      setup: (ctx) => {
+        ctx.registerRoute({
+          method: "GET",
+          path: "/card/*",
+          auth: "public",
+          cacheable: true,
+          handler: (_request, appCtx) => {
+            tagCdnEntry(appCtx, entryPurgeTags("post", 7));
+            return new Response("PNG", { status: 200 });
+          },
+        });
+      },
     });
     const h = await createDispatcherHarness({
       cdn,
@@ -2628,11 +2702,13 @@ describe("dispatcher — telemetry consumers", () => {
     seen: () => number | undefined;
   } {
     let spansSeenDuringRender: number | undefined;
-    const plugin = definePlugin("telemetry-observer", (ctx) => {
-      ctx.addFilter("render:document", (manifest, _data, appCtx) => {
-        spansSeenDuringRender = appCtx.telemetry.getSpans().length;
-        return manifest;
-      });
+    const plugin = definePlugin("telemetry-observer", {
+      setup: (ctx) => {
+        ctx.addFilter("render:document", (manifest, _data, appCtx) => {
+          spansSeenDuringRender = appCtx.telemetry.getSpans().length;
+          return manifest;
+        });
+      },
     });
     return { plugin, seen: () => spansSeenDuringRender };
   }
@@ -2640,13 +2716,15 @@ describe("dispatcher — telemetry consumers", () => {
   test("a registered consumer receives the finished snapshot: envelope, span tree, records, dropped counters", async () => {
     const snapshots: TelemetrySnapshot[] = [];
     const seenCtx: AppContext[] = [];
-    const recorder = definePlugin("telemetry-recorder", (ctx) => {
-      ctx.addFilter("render:document", (manifest, _data, appCtx) => {
-        appCtx.telemetry.record("telemetry-recorder", {
-          note: "during render",
+    const recorder = definePlugin("telemetry-recorder", {
+      setup: (ctx) => {
+        ctx.addFilter("render:document", (manifest, _data, appCtx) => {
+          appCtx.telemetry.record("telemetry-recorder", {
+            note: "during render",
+          });
+          return manifest;
         });
-        return manifest;
-      });
+      },
     });
     const h = await createDispatcherHarness({
       config: {
@@ -2696,8 +2774,10 @@ describe("dispatcher — telemetry consumers", () => {
 
   test("db query spans reach the snapshot with sql/params/rows — repeats (N+1) visible", async () => {
     const snapshots: TelemetrySnapshot[] = [];
-    const blog = definePlugin("test-blog", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    const blog = definePlugin("test-blog", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      },
     });
     const h = await createDispatcherHarness({
       config: {
@@ -2743,8 +2823,10 @@ describe("dispatcher — telemetry consumers", () => {
 
   test("phase spans carry attributes: dispatch status, resolve entity+template, render node", async () => {
     const snapshots: TelemetrySnapshot[] = [];
-    const blog = definePlugin("test-blog", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    const blog = definePlugin("test-blog", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      },
     });
     const h = await createDispatcherHarness({
       config: {
@@ -2827,8 +2909,10 @@ describe("dispatcher — telemetry consumers", () => {
 
   test("a themed 404 render appears as a render span — its queries don't dangle under dispatch", async () => {
     const snapshots: TelemetrySnapshot[] = [];
-    const blog = definePlugin("test-blog", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    const blog = definePlugin("test-blog", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      },
     });
     const h = await createDispatcherHarness({
       config: {
@@ -2855,22 +2939,24 @@ describe("dispatcher — telemetry consumers", () => {
 
   test("render interior phases appear as children: deps, head, loaders, react", async () => {
     const snapshots: TelemetrySnapshot[] = [];
-    const probe = definePlugin("test-probe", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerTemplateDep("probe-dep", {
-        keyedBy: "slug",
-        load: ({ slugs }) =>
-          Promise.resolve(
-            Object.fromEntries(slugs.map((s) => [s, { value: s }])),
-          ),
-      });
-      ctx.registerBlock(
-        defineBlock({
-          name: "acme/probe",
-          loaders: { marker: () => Promise.resolve("loaded") },
-          render: () => null,
-        }),
-      );
+    const probe = definePlugin("test-probe", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerTemplateDep("probe-dep", {
+          keyedBy: "slug",
+          load: ({ slugs }) =>
+            Promise.resolve(
+              Object.fromEntries(slugs.map((s) => [s, { value: s }])),
+            ),
+        });
+        ctx.registerBlock(
+          defineBlock({
+            name: "acme/probe",
+            loaders: { marker: () => Promise.resolve("loaded") },
+            render: () => null,
+          }),
+        );
+      },
     });
     const h = await createDispatcherHarness({
       config: {
@@ -2956,8 +3042,10 @@ describe("dispatcher — telemetry consumers", () => {
 
   test("filter execution appears as a hook span attributed with hook name and owning plugin", async () => {
     const snapshots: TelemetrySnapshot[] = [];
-    const decorator = definePlugin("test-decorator", (ctx) => {
-      ctx.addFilter("render:document", (manifest) => manifest);
+    const decorator = definePlugin("test-decorator", {
+      setup: (ctx) => {
+        ctx.addFilter("render:document", (manifest) => manifest);
+      },
     });
     const h = await createDispatcherHarness({
       config: {
@@ -3392,11 +3480,13 @@ describe("dispatcher — ctx.fetch tracing", () => {
   function outboundCaller(
     call: (appCtx: AppContext) => Promise<unknown>,
   ): AnyPluginDescriptor {
-    return definePlugin("outbound-caller", (ctx) => {
-      ctx.addFilter("render:document", async (manifest, _data, appCtx) => {
-        await call(appCtx);
-        return manifest;
-      });
+    return definePlugin("outbound-caller", {
+      setup: (ctx) => {
+        ctx.addFilter("render:document", async (manifest, _data, appCtx) => {
+          await call(appCtx);
+          return manifest;
+        });
+      },
     });
   }
 
@@ -3531,13 +3621,15 @@ const throwingTheme = defineTheme({
 describe("dispatcher — dev surfaces are loopback-only (#2007)", () => {
   afterEach(() => void vi.unstubAllEnvs());
 
-  const devRoute = definePlugin("og", (ctx) => {
-    ctx.registerRoute({
-      method: "GET",
-      path: "/preview",
-      auth: "development",
-      handler: () => new Response("card", { status: 200 }),
-    });
+  const devRoute = definePlugin("og", {
+    setup: (ctx) => {
+      ctx.registerRoute({
+        method: "GET",
+        path: "/preview",
+        auth: "development",
+        handler: () => new Response("card", { status: 200 }),
+      });
+    },
   });
 
   test("the request history is served over loopback", async () => {
@@ -3596,13 +3688,15 @@ describe("dispatcher — dev surfaces are loopback-only (#2007)", () => {
 
   test("a plugin id'd `debug` cannot take the history path from core", async () => {
     vi.stubEnv("PLUMIX_DEV", "1");
-    const plugin = definePlugin("debug", (ctx) => {
-      ctx.registerRoute({
-        method: "GET",
-        path: "/requests",
-        auth: "public",
-        handler: () => new Response("shadowed"),
-      });
+    const plugin = definePlugin("debug", {
+      setup: (ctx) => {
+        ctx.registerRoute({
+          method: "GET",
+          path: "/requests",
+          auth: "public",
+          handler: () => new Response("shadowed"),
+        });
+      },
     });
     const h = await createDispatcherHarness({ config: { plugins: [plugin] } });
 
@@ -3700,15 +3794,17 @@ describe("dispatcher — dev error page", () => {
 
   // The same failure from a plugin route, which the public render's error path
   // never sees — it reaches the dispatcher's own catch instead.
-  const throwingRoute = definePlugin("boom", (ctx) => {
-    ctx.registerRoute({
-      method: "GET",
-      path: "/card",
-      auth: "public",
-      handler: () => {
-        throw new Error("render kaboom");
-      },
-    });
+  const throwingRoute = definePlugin("boom", {
+    setup: (ctx) => {
+      ctx.registerRoute({
+        method: "GET",
+        path: "/card",
+        auth: "public",
+        handler: () => {
+          throw new Error("render kaboom");
+        },
+      });
+    },
   });
 
   test("dev gate on: a throwing template returns the standalone dev error page, not the themed 500", async () => {

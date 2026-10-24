@@ -136,9 +136,8 @@ export function media(options: MediaPluginOptions = {}): PluginDescriptor {
   const acceptedTypes = options.acceptedTypes ?? DEFAULT_ACCEPTED_TYPES;
   const maxUploadSize = options.maxUploadSize ?? DEFAULT_MAX_UPLOAD_SIZE;
 
-  return definePlugin(
-    "media",
-    (ctx) => {
+  return definePlugin("media", {
+    setup: (ctx) => {
       // Media blocks (`media/image`, `media/file`) under the `media/`
       // namespace.
       ctx.registerBlocks(mediaBlocks);
@@ -230,9 +229,7 @@ export function media(options: MediaPluginOptions = {}): PluginDescriptor {
         component: "MediaLibrary",
       });
     },
-    {
-      adminEntry: ADMIN_ENTRY_PATH,
-      i18n: PLUGIN_I18N_SLOT,
-    },
-  );
+    adminEntry: ADMIN_ENTRY_PATH,
+    i18n: PLUGIN_I18N_SLOT,
+  });
 }

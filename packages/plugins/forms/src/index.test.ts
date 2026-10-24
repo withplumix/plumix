@@ -23,8 +23,10 @@ const contact = defineForm("contact", {
   fields: [text("name").label("Your name").required(), email("email")],
 });
 
-const newsletterPlugin = definePlugin("newsletter", (ctx) => {
-  ctx.registerForm(defineForm("newsletter", { fields: [email("email")] }));
+const newsletterPlugin = definePlugin("newsletter", {
+  setup: (ctx) => {
+    ctx.registerForm(defineForm("newsletter", { fields: [email("email")] }));
+  },
 });
 
 async function renderPage(
@@ -107,8 +109,10 @@ describe("forms registration", () => {
   });
 
   test("two forms sharing a slug are rejected at boot, naming both", async () => {
-    const collidingPlugin = definePlugin("newsletter", (ctx) => {
-      ctx.registerForm(defineForm("contact", { fields: [email("email")] }));
+    const collidingPlugin = definePlugin("newsletter", {
+      setup: (ctx) => {
+        ctx.registerForm(defineForm("contact", { fields: [email("email")] }));
+      },
     });
 
     await expect(
@@ -119,12 +123,14 @@ describe("forms registration", () => {
   });
 
   test("a validator listing a slug no form declares is rejected at boot, naming it", async () => {
-    const validating = definePlugin("blocklist", (ctx) => {
-      ctx.registerFormValidator({
-        id: "blocklist",
-        forms: ["contact", "newsleter"],
-        validate: () => [],
-      });
+    const validating = definePlugin("blocklist", {
+      setup: (ctx) => {
+        ctx.registerFormValidator({
+          id: "blocklist",
+          forms: ["contact", "newsleter"],
+          validate: () => [],
+        });
+      },
     });
 
     await expect(
@@ -138,11 +144,15 @@ describe("forms registration", () => {
 
   test("two validators sharing an id are rejected at boot, naming both", async () => {
     const validator = { id: "blocklist", validate: () => [] };
-    const first = definePlugin("spam_guard", (ctx) => {
-      ctx.registerFormValidator(validator);
+    const first = definePlugin("spam_guard", {
+      setup: (ctx) => {
+        ctx.registerFormValidator(validator);
+      },
     });
-    const second = definePlugin("blocklist", (ctx) => {
-      ctx.registerFormValidator(validator);
+    const second = definePlugin("blocklist", {
+      setup: (ctx) => {
+        ctx.registerFormValidator(validator);
+      },
     });
 
     await expect(
@@ -153,12 +163,14 @@ describe("forms registration", () => {
   });
 
   test("a validator may list a form a later plugin registers", async () => {
-    const validating = definePlugin("blocklist", (ctx) => {
-      ctx.registerFormValidator({
-        id: "blocklist",
-        forms: ["newsletter"],
-        validate: () => [],
-      });
+    const validating = definePlugin("blocklist", {
+      setup: (ctx) => {
+        ctx.registerFormValidator({
+          id: "blocklist",
+          forms: ["newsletter"],
+          validate: () => [],
+        });
+      },
     });
 
     await expect(

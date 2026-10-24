@@ -61,14 +61,16 @@ A plugin route that exists only while you are developing declares `auth: "develo
 ```ts
 import { definePlugin } from "plumix/plugin";
 
-export const preview = definePlugin("preview", (ctx) => {
-  if (!process.env.PLUMIX_DEV) return;
-  ctx.registerRoute({
-    method: "GET",
-    path: "/inspect",
-    auth: "development",
-    handler: () => new Response("what the renderer sees"),
-  });
+export const preview = definePlugin("preview", {
+  setup: (ctx) => {
+    if (!process.env.PLUMIX_DEV) return;
+    ctx.registerRoute({
+      method: "GET",
+      path: "/inspect",
+      auth: "development",
+      handler: () => new Response("what the renderer sees"),
+    });
+  },
 });
 ```
 

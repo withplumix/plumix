@@ -147,15 +147,6 @@ describe("extractBlockModules", () => {
     expect(result).toEqual({ ok: true, modules: [ref("./blocks.js")] });
   });
 
-  test("finds blocks in a `definePlugin(id, setup, { … })` legacy-form call", () => {
-    const result = extractBlockModules(
-      `${PLUGIN}
-       import blocks from "./blocks.js";
-       export default definePlugin("media", () => {}, { blocks });`,
-    );
-    expect(result).toEqual({ ok: true, modules: [ref("./blocks.js")] });
-  });
-
   // --- provenance + call selection (senpai findings) ---
 
   test("ignores a nested factory call and keeps the outer config's blocks", () => {
@@ -211,9 +202,9 @@ describe("extractRegisteredBlockModules", () => {
     const modules = extractRegisteredBlockModules(
       `${PLUGIN}
        import { imageBlock } from "./blocks/image.js";
-       export default definePlugin("media", (ctx) => {
+       export default definePlugin("media", { setup: (ctx) => {
          ctx.registerBlock(imageBlock);
-       });`,
+       } });`,
     );
     expect(modules).toEqual([ref("./blocks/image.js", "imageBlock")]);
   });
@@ -223,9 +214,9 @@ describe("extractRegisteredBlockModules", () => {
       `${PLUGIN}
        import image from "./image.js";
        import file from "./file.js";
-       export default definePlugin("media", (ctx) => {
+       export default definePlugin("media", { setup: (ctx) => {
          ctx.registerBlocks([image, file]);
-       });`,
+       } });`,
     );
     expect(modules).toEqual([ref("./image.js"), ref("./file.js")]);
   });
@@ -234,9 +225,9 @@ describe("extractRegisteredBlockModules", () => {
     const modules = extractRegisteredBlockModules(
       `${PLUGIN}
        import { mediaBlocks } from "./media-blocks.js";
-       export default definePlugin("media", (ctx) => {
+       export default definePlugin("media", { setup: (ctx) => {
          ctx.registerBlocks(mediaBlocks);
-       });`,
+       } });`,
     );
     expect(modules).toEqual([ref("./media-blocks.js", "mediaBlocks")]);
   });
@@ -245,10 +236,10 @@ describe("extractRegisteredBlockModules", () => {
     const modules = extractRegisteredBlockModules(
       `${PLUGIN}
        import { imageBlock } from "./image.js";
-       export default definePlugin("media", (ctx) => {
+       export default definePlugin("media", { setup: (ctx) => {
          ctx.registerBlock(imageBlock);
          ctx.registerBlock(makeBlock());
-       });`,
+       } });`,
     );
     expect(modules).toEqual([ref("./image.js", "imageBlock")]);
   });
@@ -264,7 +255,7 @@ describe("extractRegisteredBlockModules", () => {
   test("returns nothing when there are no register calls", () => {
     const modules = extractRegisteredBlockModules(
       `${PLUGIN}
-       export default definePlugin("x", (ctx) => { ctx.registerEntryType("y", {}); });`,
+       export default definePlugin("x", { setup: (ctx) => { ctx.registerEntryType("y", {}); } });`,
     );
     expect(modules).toEqual([]);
   });
@@ -275,9 +266,9 @@ describe("resolveBlockModulePaths", () => {
     const paths = resolveBlockModulePaths(
       `${PLUGIN}
        import { mediaBlocks } from "./media-blocks.js";
-       export default definePlugin("media", (ctx) => {
+       export default definePlugin("media", { setup: (ctx) => {
          ctx.registerBlocks(mediaBlocks);
-       });`,
+       } });`,
       "/pkgs/media/dist/index.js",
     );
     expect(paths).toEqual([

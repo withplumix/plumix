@@ -42,14 +42,16 @@ async function ipHashFor(ctx: AppContext): Promise<string> {
  * The one route a plugin would write over `readVisitorMeta`, so a test reads
  * back what the whole request path — adapter fact to hashed bucket — produced.
  */
-const echoVisitorHash = definePlugin("visitor_echo", (ctx) => {
-  ctx.registerPublicRoute({
-    path: HASH_ROUTE,
-    handler: async (_request, appCtx) =>
-      new Response(
-        (await readVisitorMeta(appCtx, { namespace: NAMESPACE })).ipHash,
-      ),
-  });
+const echoVisitorHash = definePlugin("visitor_echo", {
+  setup: (ctx) => {
+    ctx.registerPublicRoute({
+      path: HASH_ROUTE,
+      handler: async (_request, appCtx) =>
+        new Response(
+          (await readVisitorMeta(appCtx, { namespace: NAMESPACE })).ipHash,
+        ),
+    });
+  },
 });
 
 async function hashThroughHarness(clientAddress?: string): Promise<{

@@ -54,12 +54,14 @@ async function photoRows(ctx: AppContext, ids: readonly string[]) {
  * The user scope with one `featured` role field — what both the author and
  * batch suites need, spelled once because neither varies it.
  */
-export const photoProfilePlugin = definePlugin("test-photo-profile", (ctx) => {
-  ctx.registerLookupAdapter({ kind: "photo", adapter: photoLookupAdapter });
-  ctx.registerUserMetaBox("profile", {
-    label: "Profile",
-    fields: [photoField("portrait", { role: "featured" })],
-  });
+export const photoProfilePlugin = definePlugin("test-photo-profile", {
+  setup: (ctx) => {
+    ctx.registerLookupAdapter({ kind: "photo", adapter: photoLookupAdapter });
+    ctx.registerUserMetaBox("profile", {
+      label: "Profile",
+      fields: [photoField("portrait", { role: "featured" })],
+    });
+  },
 });
 
 /** A media-shaped field pointing at the photo kind. */

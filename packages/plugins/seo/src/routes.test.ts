@@ -46,18 +46,20 @@ const membersOnlyPolicy = definePolicy({
  * A public type beside a gated one: every crawler-facing surface has to keep
  * the first and drop the second.
  */
-const membersOnlyPlugin = definePlugin("members", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    isPublic: true,
-    hasArchive: true,
-  });
-  ctx.registerEntryType("lesson", {
-    label: "Lessons",
-    isPublic: true,
-    hasArchive: true,
-    access: { default: membersOnlyPolicy },
-  });
+const membersOnlyPlugin = definePlugin("members", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      hasArchive: true,
+    });
+    ctx.registerEntryType("lesson", {
+      label: "Lessons",
+      isPublic: true,
+      hasArchive: true,
+      access: { default: membersOnlyPolicy },
+    });
+  },
 });
 
 /** Soft: an anonymous visitor reads a teaser at 200 rather than a refusal. */
@@ -71,18 +73,20 @@ const teaserPolicy = definePolicy({
  * One type whose entries each pick a policy: public by default, members or
  * a teaser on request.
  */
-const eduscopePlugin = definePlugin("eduscope", (ctx) => {
-  ctx.registerEntryType("page", {
-    label: "Pages",
-    isPublic: true,
-    access: {
-      default: anonymousPolicy,
-      policies: [
-        { key: "members", label: "Members", policy: membersOnlyPolicy },
-        { key: "teaser", label: "Teaser", policy: teaserPolicy },
-      ],
-    },
-  });
+const eduscopePlugin = definePlugin("eduscope", {
+  setup: (ctx) => {
+    ctx.registerEntryType("page", {
+      label: "Pages",
+      isPublic: true,
+      access: {
+        default: anonymousPolicy,
+        policies: [
+          { key: "members", label: "Members", policy: membersOnlyPolicy },
+          { key: "teaser", label: "Teaser", policy: teaserPolicy },
+        ],
+      },
+    });
+  },
 });
 
 /** 1,001 public pages, and a members page whose id is the 500th. */
@@ -110,43 +114,49 @@ function locsIn(urlset: string): string[] {
   );
 }
 
-const blogPlugin = definePlugin("blog", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    isPublic: true,
-    hasArchive: true,
-  });
+const blogPlugin = definePlugin("blog", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      hasArchive: true,
+    });
+  },
 });
 
-const taxonomyPlugin = definePlugin("taxo", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    isPublic: true,
-    hasArchive: true,
-  });
-  ctx.registerTermTaxonomy("category", {
-    label: "Categories",
-    isHierarchical: false,
-    entryTypes: ["post"],
-  });
+const taxonomyPlugin = definePlugin("taxo", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      hasArchive: true,
+    });
+    ctx.registerTermTaxonomy("category", {
+      label: "Categories",
+      isHierarchical: false,
+      entryTypes: ["post"],
+    });
+  },
 });
 
 /**
  * A plugin contributing a sitemap scope of its own, through this plugin's
  * `registerSitemap` rather than a core registration.
  */
-const eventsPlugin = definePlugin("events", (ctx) => {
-  ctx.registerSitemap("event-series", {
-    // > SITEMAP_PAGE_SIZE (1000) so the index paginates the scope into two.
-    count: () => 1500,
-    urls: (_ctx, page) => [
-      {
-        loc: `https://cms.example/events/summer?page=${String(page)}`,
-        lastmod: "2026-08-01T00:00:00.000Z",
-      },
-    ],
-    tags: ["events"],
-  });
+const eventsPlugin = definePlugin("events", {
+  setup: (ctx) => {
+    ctx.registerSitemap("event-series", {
+      // > SITEMAP_PAGE_SIZE (1000) so the index paginates the scope into two.
+      count: () => 1500,
+      urls: (_ctx, page) => [
+        {
+          loc: `https://cms.example/events/summer?page=${String(page)}`,
+          lastmod: "2026-08-01T00:00:00.000Z",
+        },
+      ],
+      tags: ["events"],
+    });
+  },
 });
 
 /**
@@ -155,32 +165,34 @@ const eventsPlugin = definePlugin("events", (ctx) => {
  * boxes put it.
  */
 const picturePluginWith = (shareCount: number, hydrate?: LookupHydrate) =>
-  definePlugin("pictures", (ctx) => {
-    ctx.registerImageRole("hero", { single: true });
-    ctx.registerEntryType("post", {
-      label: "Posts",
-      isPublic: true,
-      hasArchive: true,
-    });
-    ctx.registerEntryMetaBox("social", {
-      label: "Social",
-      entryTypes: ["post"],
-      fields: [
-        {
-          key: "appearance",
-          label: "Appearance",
-          type: "json",
-          inputType: "group",
-          fields: [pictureField("hero", "featured")],
-        },
-        pictureField("heroShot", "hero"),
-        pictureField("shareImage", "ogImage"),
-        ...Array.from({ length: shareCount }, (_unused, at) =>
-          pictureField(`share${String(at)}`, "ogImage"),
-        ),
-      ],
-    });
-    registerPictureAdapter(ctx, hydrate);
+  definePlugin("pictures", {
+    setup: (ctx) => {
+      ctx.registerImageRole("hero", { single: true });
+      ctx.registerEntryType("post", {
+        label: "Posts",
+        isPublic: true,
+        hasArchive: true,
+      });
+      ctx.registerEntryMetaBox("social", {
+        label: "Social",
+        entryTypes: ["post"],
+        fields: [
+          {
+            key: "appearance",
+            label: "Appearance",
+            type: "json",
+            inputType: "group",
+            fields: [pictureField("hero", "featured")],
+          },
+          pictureField("heroShot", "hero"),
+          pictureField("shareImage", "ogImage"),
+          ...Array.from({ length: shareCount }, (_unused, at) =>
+            pictureField(`share${String(at)}`, "ogImage"),
+          ),
+        ],
+      });
+      registerPictureAdapter(ctx, hydrate);
+    },
   });
 
 function pictureField(key: string, role: ImageRoleName): MetaBoxField {
@@ -249,18 +261,20 @@ function registerPictureAdapter(
  * accumulator lives; this stands in for the RPC that would normally fire it.
  */
 function settingsSaver(group: string): AnyPluginDescriptor {
-  return definePlugin("settings-saver", (ctx) => {
-    ctx.registerPublicRoute({
-      path: "/fire-settings-change",
-      handler: async (_request, appCtx) => {
-        await appCtx.hooks.doAction(
-          "settings:group_changed",
-          { group, set: { indexable: false }, removed: [] },
-          appCtx,
-        );
-        return new Response("ok");
-      },
-    });
+  return definePlugin("settings-saver", {
+    setup: (ctx) => {
+      ctx.registerPublicRoute({
+        path: "/fire-settings-change",
+        handler: async (_request, appCtx) => {
+          await appCtx.hooks.doAction(
+            "settings:group_changed",
+            { group, set: { indexable: false }, removed: [] },
+            appCtx,
+          );
+          return new Response("ok");
+        },
+      });
+    },
   });
 }
 
@@ -392,11 +406,13 @@ describe("/robots.txt", () => {
   });
 
   test("the seo:robots-txt filter can modify the body", async () => {
-    const sitemapLine = definePlugin("robots-test", (ctx) => {
-      ctx.addFilter(
-        "seo:robots-txt",
-        (body) => `${body}Sitemap: https://cms.example/sitemap.xml\n`,
-      );
+    const sitemapLine = definePlugin("robots-test", {
+      setup: (ctx) => {
+        ctx.addFilter(
+          "seo:robots-txt",
+          (body) => `${body}Sitemap: https://cms.example/sitemap.xml\n`,
+        );
+      },
     });
     const h = await createHarness([blogPlugin, sitemapLine]);
 
@@ -479,13 +495,15 @@ describe("the sitemap index", () => {
   });
 
   test("an entry type and a taxonomy sharing a name each get a sub-sitemap", async () => {
-    const namesake = definePlugin("namesake", (ctx) => {
-      ctx.registerEntryType("topic", { label: "Topics", isPublic: true });
-      ctx.registerTermTaxonomy("topic", {
-        label: "Topics",
-        isHierarchical: false,
-        entryTypes: ["topic"],
-      });
+    const namesake = definePlugin("namesake", {
+      setup: (ctx) => {
+        ctx.registerEntryType("topic", { label: "Topics", isPublic: true });
+        ctx.registerTermTaxonomy("topic", {
+          label: "Topics",
+          isHierarchical: false,
+          entryTypes: ["topic"],
+        });
+      },
     });
     const h = await createHarness([namesake]);
     const author = await h.seedUser("admin");
@@ -580,9 +598,11 @@ describe("the sitemap index", () => {
   test("costs one entries query per entry scope, however many pages it has", async () => {
     // Two entry scopes, so a count of one per scope is told apart from one
     // per index.
-    const twoTypes = definePlugin("two-types", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerEntryType("page", { label: "Pages", isPublic: true });
+    const twoTypes = definePlugin("two-types", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerEntryType("page", { label: "Pages", isPublic: true });
+      },
     });
 
     async function entriesQueries(posts: number): Promise<number> {
@@ -727,12 +747,14 @@ describe("a sub-sitemap", () => {
     // `event` and `event-series` both claim `/sitemap-event-...`. An
     // unconstrained `:page` swallows hyphens, so the `event` route would match
     // `/sitemap-event-series-1.xml` and answer for a page it cannot serve.
-    const eventEntries = definePlugin("event-entries", (ctx) => {
-      ctx.registerEntryType("event", {
-        label: "Events",
-        isPublic: true,
-        hasArchive: true,
-      });
+    const eventEntries = definePlugin("event-entries", {
+      setup: (ctx) => {
+        ctx.registerEntryType("event", {
+          label: "Events",
+          isPublic: true,
+          hasArchive: true,
+        });
+      },
     });
     const h = await createHarness([eventEntries, eventsPlugin]);
 
@@ -793,12 +815,14 @@ describe("a sub-sitemap", () => {
   );
 
   test("a page of nested entries costs the same queries however many it holds", async () => {
-    const pagesPlugin = definePlugin("pages", (ctx) => {
-      ctx.registerEntryType("page", {
-        label: "Pages",
-        isPublic: true,
-        isHierarchical: true,
-      });
+    const pagesPlugin = definePlugin("pages", {
+      setup: (ctx) => {
+        ctx.registerEntryType("page", {
+          label: "Pages",
+          isPublic: true,
+          isHierarchical: true,
+        });
+      },
     });
 
     // Each child sits under its own parent, so a per-row ancestor walk would
@@ -855,11 +879,13 @@ describe("a sub-sitemap", () => {
   });
 
   test("a page of nested terms costs the same queries however many it holds", async () => {
-    const nestedTaxonomyPlugin = definePlugin("nested-taxo", (ctx) => {
-      ctx.registerTermTaxonomy("category", {
-        label: "Categories",
-        isHierarchical: true,
-      });
+    const nestedTaxonomyPlugin = definePlugin("nested-taxo", {
+      setup: (ctx) => {
+        ctx.registerTermTaxonomy("category", {
+          label: "Categories",
+          isHierarchical: true,
+        });
+      },
     });
 
     async function sitemapOfNestedTerms(
@@ -909,8 +935,10 @@ describe("a sub-sitemap", () => {
 
 describe("seo:sitemap:urls", () => {
   test("can drop every URL", async () => {
-    const dropAll = definePlugin("sitemap-drop", (ctx) => {
-      ctx.addFilter("seo:sitemap:urls", () => []);
+    const dropAll = definePlugin("sitemap-drop", {
+      setup: (ctx) => {
+        ctx.addFilter("seo:sitemap:urls", () => []);
+      },
     });
     const h = await createHarness([blogPlugin, dropAll]);
     await seedPost(h);
@@ -921,13 +949,15 @@ describe("seo:sitemap:urls", () => {
   });
 
   test("receives the scope, page and ctx so a subscriber can inject rows", async () => {
-    const injector = definePlugin("injector", (ctx) => {
-      ctx.addFilter("seo:sitemap:urls", (urls, scope, page, appCtx) => [
-        ...urls,
-        {
-          loc: `${appCtx.origin}/injected/${scope.name}?page=${String(page)}`,
-        },
-      ]);
+    const injector = definePlugin("injector", {
+      setup: (ctx) => {
+        ctx.addFilter("seo:sitemap:urls", (urls, scope, page, appCtx) => [
+          ...urls,
+          {
+            loc: `${appCtx.origin}/injected/${scope.name}?page=${String(page)}`,
+          },
+        ]);
+      },
     });
     const h = await createHarness([eventsPlugin, injector]);
 
@@ -938,11 +968,13 @@ describe("seo:sitemap:urls", () => {
 
   test("names an entry type's scope by its kind as well as its name", async () => {
     const seen: SitemapScopeRef[] = [];
-    const recorder = definePlugin("recorder", (ctx) => {
-      ctx.addFilter("seo:sitemap:urls", (urls, scope) => {
-        seen.push(scope);
-        return urls;
-      });
+    const recorder = definePlugin("recorder", {
+      setup: (ctx) => {
+        ctx.addFilter("seo:sitemap:urls", (urls, scope) => {
+          seen.push(scope);
+          return urls;
+        });
+      },
     });
     const h = await createHarness([blogPlugin, recorder]);
     await seedPost(h);
@@ -953,11 +985,13 @@ describe("seo:sitemap:urls", () => {
   });
 
   test("a subscriber typed against a bare scope name does not compile", () => {
-    const stale = definePlugin("stale", (ctx) => {
-      // @ts-expect-error — the scope is a `SitemapScopeRef`, not its name.
-      ctx.addFilter("seo:sitemap:urls", (urls, scope: string) =>
-        scope === "post" ? [] : urls,
-      );
+    const stale = definePlugin("stale", {
+      setup: (ctx) => {
+        // @ts-expect-error — the scope is a `SitemapScopeRef`, not its name.
+        ctx.addFilter("seo:sitemap:urls", (urls, scope: string) =>
+          scope === "post" ? [] : urls,
+        );
+      },
     });
     expect(stale.id).toBe("stale");
   });
@@ -966,18 +1000,20 @@ describe("seo:sitemap:urls", () => {
 describe("a contributed sitemap", () => {
   // A URL space with no archive behind it: the plugin serves these pages
   // from routes of its own, and only the list joins the index.
-  const extraPlugin = definePlugin("extra", (ctx) => {
-    ctx.registerSitemap("extra", {
-      count: () => 2,
-      urls: () => [
-        {
-          loc: "https://cms.example/locations/leeds",
-          changefreq: "daily",
-          priority: 0.9,
-        },
-        { loc: "https://cms.example/locations/york" },
-      ],
-    });
+  const extraPlugin = definePlugin("extra", {
+    setup: (ctx) => {
+      ctx.registerSitemap("extra", {
+        count: () => 2,
+        urls: () => [
+          {
+            loc: "https://cms.example/locations/leeds",
+            changefreq: "daily",
+            priority: 0.9,
+          },
+          { loc: "https://cms.example/locations/york" },
+        ],
+      });
+    },
   });
 
   test("joins the index and serves its URLs with their own values", async () => {
@@ -1037,8 +1073,10 @@ describe("a contributed sitemap", () => {
   });
 
   const contributor = (pluginId: string, name: string) =>
-    definePlugin(pluginId, (ctx) => {
-      ctx.registerSitemap(name, { count: () => 0, urls: () => [] });
+    definePlugin(pluginId, {
+      setup: (ctx) => {
+        ctx.registerSitemap(name, { count: () => 0, urls: () => [] });
+      },
     });
 
   test("two plugins contributing one name fail boot, naming both", async () => {
@@ -1060,12 +1098,14 @@ describe("a contributed sitemap", () => {
   );
 
   test("leaves every term scope's index entry undated", async () => {
-    const tagged = definePlugin("tagged", (ctx) => {
-      ctx.registerTermTaxonomy("tag", {
-        label: "Tags",
-        isHierarchical: false,
-        entryTypes: ["post"],
-      });
+    const tagged = definePlugin("tagged", {
+      setup: (ctx) => {
+        ctx.registerTermTaxonomy("tag", {
+          label: "Tags",
+          isHierarchical: false,
+          entryTypes: ["post"],
+        });
+      },
     });
     const h = await createHarness([taxonomyPlugin, tagged]);
     await h.factory.term.create({
@@ -1083,12 +1123,14 @@ describe("a contributed sitemap", () => {
   });
 
   test("dates its index entry by the source's lastmod, when it has one", async () => {
-    const dated = definePlugin("dated", (ctx) => {
-      ctx.registerSitemap("dated", {
-        count: () => 1,
-        urls: () => [],
-        lastmod: () => "2026-01-01T00:00:00.000Z",
-      });
+    const dated = definePlugin("dated", {
+      setup: (ctx) => {
+        ctx.registerSitemap("dated", {
+          count: () => 1,
+          urls: () => [],
+          lastmod: () => "2026-01-01T00:00:00.000Z",
+        });
+      },
     });
     const h = await createHarness([extraPlugin, dated, taxonomyPlugin]);
     await h.factory.term.create({
@@ -1112,16 +1154,18 @@ describe("a contributed sitemap", () => {
   });
 
   test("is the only way in: an archive registration takes no sitemap", () => {
-    definePlugin("legacy", (ctx) => {
-      ctx.registerArchiveType("location", {
-        routes: ["/locations/:slug"],
-        resolve: () => ({
-          data: { kind: "archiveType", name: "location" },
-          title: "Location",
-        }),
-        // @ts-expect-error — a sitemap is contributed with `registerSitemap`.
-        sitemap: { count: () => 0, urls: () => [] },
-      });
+    definePlugin("legacy", {
+      setup: (ctx) => {
+        ctx.registerArchiveType("location", {
+          routes: ["/locations/:slug"],
+          resolve: () => ({
+            data: { kind: "archiveType", name: "location" },
+            title: "Location",
+          }),
+          // @ts-expect-error — a sitemap is contributed with `registerSitemap`.
+          sitemap: { count: () => 0, urls: () => [] },
+        });
+      },
     });
   });
 
@@ -1149,8 +1193,10 @@ describe("a contributed sitemap", () => {
     function policiedSource(access: SitemapSource["access"]) {
       const count = vi.fn(() => 1);
       const urls = vi.fn(() => [{ loc: "https://cms.example/courses/intro" }]);
-      const plugin = definePlugin("courses", (ctx) => {
-        ctx.registerSitemap("courses", { count, urls, access });
+      const plugin = definePlugin("courses", {
+        setup: (ctx) => {
+          ctx.registerSitemap("courses", { count, urls, access });
+        },
       });
       return { plugin, count, urls };
     }
@@ -1190,17 +1236,19 @@ describe("a contributed sitemap", () => {
     });
 
     test("is answered per sitemap, not once for every contributed one", async () => {
-      const plugin = definePlugin("courses", (ctx) => {
-        ctx.registerSitemap("courses", {
-          count: () => 1,
-          urls: () => [{ loc: "https://cms.example/courses/intro" }],
-          access: anonymousPolicy,
-        });
-        ctx.registerSitemap("lessons", {
-          count: () => 1,
-          urls: () => [{ loc: "https://cms.example/lessons/intro" }],
-          access: authenticatedPolicy,
-        });
+      const plugin = definePlugin("courses", {
+        setup: (ctx) => {
+          ctx.registerSitemap("courses", {
+            count: () => 1,
+            urls: () => [{ loc: "https://cms.example/courses/intro" }],
+            access: anonymousPolicy,
+          });
+          ctx.registerSitemap("lessons", {
+            count: () => 1,
+            urls: () => [{ loc: "https://cms.example/lessons/intro" }],
+            access: authenticatedPolicy,
+          });
+        },
       });
       const h = await createHarness([plugin]);
 
@@ -1238,13 +1286,15 @@ describe("the site's sitemap policy", () => {
   });
 
   // A plugin's contributed scope whose provider sets a priority of its own.
-  const ranked = definePlugin("ranked", (ctx) => {
-    ctx.registerSitemap("location", {
-      count: () => 1,
-      urls: () => [
-        { loc: "https://cms.example/locations/leeds", priority: 0.9 },
-      ],
-    });
+  const ranked = definePlugin("ranked", {
+    setup: (ctx) => {
+      ctx.registerSitemap("location", {
+        count: () => 1,
+        urls: () => [
+          { loc: "https://cms.example/locations/leeds", priority: 0.9 },
+        ],
+      });
+    },
   });
 
   test("a URL's own value beats the site's default for its scope", async () => {
@@ -1259,10 +1309,12 @@ describe("the site's sitemap policy", () => {
   });
 
   test("the seo:sitemap:urls filter has the last word over both", async () => {
-    const overrider = definePlugin("overrider", (ctx) => {
-      ctx.addFilter("seo:sitemap:urls", (urls) =>
-        urls.map((url) => ({ ...url, priority: 0.3 })),
-      );
+    const overrider = definePlugin("overrider", {
+      setup: (ctx) => {
+        ctx.addFilter("seo:sitemap:urls", (urls) =>
+          urls.map((url) => ({ ...url, priority: 0.3 })),
+        );
+      },
     });
     const h = await createHarness([ranked, overrider], {
       seo: { sitemaps: { location: { priority: 0.1 } } },
@@ -1312,9 +1364,11 @@ describe("the site's sitemap policy", () => {
   test("a dropped scope is never asked for its URLs", async () => {
     const urls = vi.fn(() => []);
     const filter = vi.fn((all: readonly unknown[]) => all);
-    const dropped = definePlugin("dropped", (ctx) => {
-      ctx.registerSitemap("location", { count: () => 1, urls });
-      ctx.addFilter("seo:sitemap:urls", (all) => filter(all) as typeof all);
+    const dropped = definePlugin("dropped", {
+      setup: (ctx) => {
+        ctx.registerSitemap("location", { count: () => 1, urls });
+        ctx.addFilter("seo:sitemap:urls", (all) => filter(all) as typeof all);
+      },
     });
     const h = await createHarness([dropped], {
       seo: { sitemaps: { location: false } },
@@ -1407,15 +1461,17 @@ describe("a sitemap at the edge", () => {
     await h.drainDeferred();
   }
 
-  const postsAndPages = definePlugin("taxo-pages", (ctx) => {
-    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-    ctx.registerEntryType("page", { label: "Pages", isPublic: true });
-    ctx.registerEntryType("note", { label: "Notes", isPublic: false });
-    ctx.registerTermTaxonomy("category", {
-      label: "Categories",
-      isHierarchical: false,
-      entryTypes: ["post"],
-    });
+  const postsAndPages = definePlugin("taxo-pages", {
+    setup: (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerEntryType("page", { label: "Pages", isPublic: true });
+      ctx.registerEntryType("note", { label: "Notes", isPublic: false });
+      ctx.registerTermTaxonomy("category", {
+        label: "Categories",
+        isHierarchical: false,
+        entryTypes: ["post"],
+      });
+    },
   });
 
   test("publishing an entry retires its type's scope and only that", async () => {
@@ -1444,14 +1500,16 @@ describe("a sitemap at the edge", () => {
   });
 
   describe("a term write", () => {
-    const taxonomies = definePlugin("taxo-sitemaps", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerTermTaxonomy("category", {
-        label: "Categories",
-        entryTypes: ["post"],
-      });
-      // Lists no entry types, so no type tag could ever reach its sitemap.
-      ctx.registerTermTaxonomy("label", { label: "Labels" });
+    const taxonomies = definePlugin("taxo-sitemaps", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerTermTaxonomy("category", {
+          label: "Categories",
+          entryTypes: ["post"],
+        });
+        // Lists no entry types, so no type tag could ever reach its sitemap.
+        ctx.registerTermTaxonomy("label", { label: "Labels" });
+      },
     });
 
     async function createTerm(
@@ -1779,13 +1837,15 @@ describe("a scope held out of the index leaves the sitemap", () => {
   });
 
   test("a type and a taxonomy sharing a name are told apart", async () => {
-    const namesake = definePlugin("namesake", (ctx) => {
-      ctx.registerEntryType("topic", { label: "Topics", isPublic: true });
-      ctx.registerTermTaxonomy("topic", {
-        label: "Topics",
-        isHierarchical: false,
-        entryTypes: ["topic"],
-      });
+    const namesake = definePlugin("namesake", {
+      setup: (ctx) => {
+        ctx.registerEntryType("topic", { label: "Topics", isPublic: true });
+        ctx.registerTermTaxonomy("topic", {
+          label: "Topics",
+          isHierarchical: false,
+          entryTypes: ["topic"],
+        });
+      },
     });
     const h = await createHarness([namesake]);
     await h.factory.setting.create({
@@ -2019,13 +2079,15 @@ describe("an entry's pictures in the sitemap", () => {
 
   test("a type with no media field costs no hydration", async () => {
     const hydrate = vi.fn(() => Promise.resolve([]));
-    const noFields = definePlugin("no-fields", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerLookupAdapter({
-        kind: "media",
-        capability: null,
-        adapter: { list: () => Promise.resolve([]), hydrate },
-      });
+    const noFields = definePlugin("no-fields", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerLookupAdapter({
+          kind: "media",
+          capability: null,
+          adapter: { list: () => Promise.resolve([]), hydrate },
+        });
+      },
     });
     const h = await createHarness([noFields]);
     await seedPost(h);
@@ -2109,8 +2171,10 @@ describe("AI-crawler rules", () => {
   });
 
   test("reach the seo:robots-txt filter with the rest of the body", async () => {
-    const appender = definePlugin("robots-append", (ctx) => {
-      ctx.addFilter("seo:robots-txt", (body) => `${body}\n# end\n`);
+    const appender = definePlugin("robots-append", {
+      setup: (ctx) => {
+        ctx.addFilter("seo:robots-txt", (body) => `${body}\n# end\n`);
+      },
     });
     const h = await createHarness([blogPlugin, appender]);
     await setSettings(h, "seo", { block_ai_crawlers: true });
@@ -2190,8 +2254,10 @@ describe("/llms.txt", () => {
   });
 
   test("the seo:llms-txt filter can rewrite the body", async () => {
-    const rewrite = definePlugin("llms-test", (ctx) => {
-      ctx.addFilter("seo:llms-txt", (body) => `${body}\n## Docs\n`);
+    const rewrite = definePlugin("llms-test", {
+      setup: (ctx) => {
+        ctx.addFilter("seo:llms-txt", (body) => `${body}\n## Docs\n`);
+      },
     });
     const h = await createHarness([blogPlugin, rewrite]);
 
@@ -2199,17 +2265,19 @@ describe("/llms.txt", () => {
   });
 
   describe("lists the entries anonymous visitors may list", () => {
-    const postsAndPages = definePlugin("posts-and-pages", (ctx) => {
-      ctx.registerEntryType("post", {
-        label: "Post",
-        labels: { plural: "Posts" },
-        isPublic: true,
-      });
-      ctx.registerEntryType("page", {
-        label: "Page",
-        labels: { plural: "Pages" },
-        isPublic: true,
-      });
+    const postsAndPages = definePlugin("posts-and-pages", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", {
+          label: "Post",
+          labels: { plural: "Posts" },
+          isPublic: true,
+        });
+        ctx.registerEntryType("page", {
+          label: "Page",
+          labels: { plural: "Pages" },
+          isPublic: true,
+        });
+      },
     });
 
     async function seedEntry(
@@ -2446,12 +2514,14 @@ describe("/llms.txt", () => {
 
   test("with llmsTxt off, a site plugin serves its own", async () => {
     const filter = vi.fn((body: string) => body);
-    const own = definePlugin("own-llms", (ctx) => {
-      ctx.registerPublicRoute({
-        path: "/llms.txt",
-        handler: () => new Response("# Our own\n"),
-      });
-      ctx.addFilter("seo:llms-txt", filter);
+    const own = definePlugin("own-llms", {
+      setup: (ctx) => {
+        ctx.registerPublicRoute({
+          path: "/llms.txt",
+          handler: () => new Response("# Our own\n"),
+        });
+        ctx.addFilter("seo:llms-txt", filter);
+      },
     });
     const h = await createHarness([blogPlugin, own], {
       seo: { llmsTxt: false },
@@ -2476,22 +2546,24 @@ describe("/llms.txt", () => {
  * context to defer through.
  */
 function lifecycleFirer() {
-  return definePlugin("lifecycle-firer", (ctx) => {
-    ctx.registerPublicRoute({
-      path: "/fire-lifecycle/:slug",
-      handler: async (_request, appCtx, params) => {
-        const [entry] = await appCtx.db
-          .select()
-          .from(entries)
-          .where(eq(entries.slug, params.slug ?? ""));
-        if (entry === undefined) {
-          return new Response("no entry", { status: 404 });
-        }
-        await appCtx.hooks.doAction("entry:updated", entry, entry, appCtx);
-        await appCtx.hooks.doAction("entry:published", entry, appCtx);
-        return new Response("ok");
-      },
-    });
+  return definePlugin("lifecycle-firer", {
+    setup: (ctx) => {
+      ctx.registerPublicRoute({
+        path: "/fire-lifecycle/:slug",
+        handler: async (_request, appCtx, params) => {
+          const [entry] = await appCtx.db
+            .select()
+            .from(entries)
+            .where(eq(entries.slug, params.slug ?? ""));
+          if (entry === undefined) {
+            return new Response("no entry", { status: 404 });
+          }
+          await appCtx.hooks.doAction("entry:updated", entry, entry, appCtx);
+          await appCtx.hooks.doAction("entry:published", entry, appCtx);
+          return new Response("ok");
+        },
+      });
+    },
   });
 }
 

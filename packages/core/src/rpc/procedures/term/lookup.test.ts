@@ -206,13 +206,15 @@ describe("termLookupAdapter", () => {
   });
 
   test("hydrate() over nested terms costs the same queries however many it holds", async () => {
-    const regionsPlugin = definePlugin("regions", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerTermTaxonomy("region", {
-        label: "Regions",
-        entryTypes: ["post"],
-        isHierarchical: true,
-      });
+    const regionsPlugin = definePlugin("regions", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerTermTaxonomy("region", {
+          label: "Regions",
+          entryTypes: ["post"],
+          isHierarchical: true,
+        });
+      },
     });
     const REGION_SCOPE = { termTaxonomies: ["region"] } as const;
 
@@ -259,13 +261,15 @@ describe("termLookupAdapter", () => {
   });
 
   test("list({ ids }) over nested terms costs the same queries however many it holds", async () => {
-    const regionsPlugin = definePlugin("regions", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerTermTaxonomy("region", {
-        label: "Regions",
-        entryTypes: ["post"],
-        isHierarchical: true,
-      });
+    const regionsPlugin = definePlugin("regions", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerTermTaxonomy("region", {
+          label: "Regions",
+          entryTypes: ["post"],
+          isHierarchical: true,
+        });
+      },
     });
     const REGION_SCOPE = { termTaxonomies: ["region"] } as const;
 

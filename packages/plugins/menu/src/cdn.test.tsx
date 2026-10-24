@@ -9,9 +9,11 @@ import type { MenuItemMeta } from "./server/types.js";
 import { menu } from "./index.js";
 import { getMenuByName } from "./server/getMenuByName.js";
 
-const blog = definePlugin("blog", (ctx) => {
-  ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-  ctx.registerEntryType("page", { label: "Pages", isPublic: true });
+const blog = definePlugin("blog", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    ctx.registerEntryType("page", { label: "Pages", isPublic: true });
+  },
 });
 
 /** A permalink template rendering the `primary` location. */
@@ -140,17 +142,19 @@ async function render(s: Site, path: string = PAGE): Promise<void> {
 }
 
 /** A cacheable route resolving the `main-nav` menu by name, not location. */
-const navRoute = definePlugin("nav", (ctx) => {
-  ctx.registerRoute({
-    method: "GET",
-    path: "/nav",
-    auth: "public",
-    cacheable: true,
-    handler: async (_request, appCtx) => {
-      const nav = await getMenuByName(appCtx, "main-nav");
-      return new Response(JSON.stringify(nav), { status: 200 });
-    },
-  });
+const navRoute = definePlugin("nav", {
+  setup: (ctx) => {
+    ctx.registerRoute({
+      method: "GET",
+      path: "/nav",
+      auth: "public",
+      cacheable: true,
+      handler: async (_request, appCtx) => {
+        const nav = await getMenuByName(appCtx, "main-nav");
+        return new Response(JSON.stringify(nav), { status: 200 });
+      },
+    });
+  },
 });
 const NAV = "/_plumix/nav/nav";
 
@@ -307,13 +311,15 @@ describe("@plumix/plugin-menu — location writes", () => {
 
   test("deleting a bound menu announces its unbound locations before the menu's deletion", async () => {
     const heard: string[] = [];
-    const listener = definePlugin("listener", (ctx) => {
-      ctx.addAction("settings:group_changed", (changes) => {
-        heard.push(`${changes.group}: ${changes.removed.join(",")}`);
-      });
-      ctx.addAction("menu:deleted", ({ slug }) => {
-        heard.push(`menu:deleted ${slug}`);
-      });
+    const listener = definePlugin("listener", {
+      setup: (ctx) => {
+        ctx.addAction("settings:group_changed", (changes) => {
+          heard.push(`${changes.group}: ${changes.removed.join(",")}`);
+        });
+        ctx.addAction("menu:deleted", ({ slug }) => {
+          heard.push(`menu:deleted ${slug}`);
+        });
+      },
     });
     const s = await site([listener]);
     const termId = await seedMenu(s, "main-nav");

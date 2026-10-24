@@ -39,14 +39,16 @@ declare module "./blocks/deps.js" {
 
 describe("ctx.registerTemplateDep", () => {
   test("a plugin's registration lands in app.plugins.templateDeps", async () => {
-    const probe = definePlugin("probe", (ctx) => {
-      ctx.registerTemplateDep("test-thing", {
-        keyedBy: "slug",
-        load: ({ slugs }) =>
-          Promise.resolve(
-            Object.fromEntries(slugs.map((s) => [s, { value: s }])),
-          ),
-      });
+    const probe = definePlugin("probe", {
+      setup: (ctx) => {
+        ctx.registerTemplateDep("test-thing", {
+          keyedBy: "slug",
+          load: ({ slugs }) =>
+            Promise.resolve(
+              Object.fromEntries(slugs.map((s) => [s, { value: s }])),
+            ),
+        });
+      },
     });
     const app = await buildApp(
       plumix({
@@ -63,17 +65,21 @@ describe("ctx.registerTemplateDep", () => {
   });
 
   test("two plugins registering the same kind throw at boot", async () => {
-    const first = definePlugin("first", (ctx) => {
-      ctx.registerTemplateDep("test-thing", {
-        keyedBy: "slug",
-        load: () => Promise.resolve({}),
-      });
+    const first = definePlugin("first", {
+      setup: (ctx) => {
+        ctx.registerTemplateDep("test-thing", {
+          keyedBy: "slug",
+          load: () => Promise.resolve({}),
+        });
+      },
     });
-    const second = definePlugin("second", (ctx) => {
-      ctx.registerTemplateDep("test-thing", {
-        keyedBy: "slug",
-        load: () => Promise.resolve({}),
-      });
+    const second = definePlugin("second", {
+      setup: (ctx) => {
+        ctx.registerTemplateDep("test-thing", {
+          keyedBy: "slug",
+          load: () => Promise.resolve({}),
+        });
+      },
     });
     await expect(
       buildApp(
@@ -89,17 +95,21 @@ describe("ctx.registerTemplateDep", () => {
   });
 
   test("different kinds from different plugins coexist", async () => {
-    const a = definePlugin("a", (ctx) => {
-      ctx.registerTemplateDep("test-thing", {
-        keyedBy: "slug",
-        load: () => Promise.resolve({ x: { value: "from-a" } }),
-      });
+    const a = definePlugin("a", {
+      setup: (ctx) => {
+        ctx.registerTemplateDep("test-thing", {
+          keyedBy: "slug",
+          load: () => Promise.resolve({ x: { value: "from-a" } }),
+        });
+      },
     });
-    const b = definePlugin("b", (ctx) => {
-      ctx.registerTemplateDep("test-other", {
-        keyedBy: "slug",
-        load: () => Promise.resolve({ y: 42 }),
-      });
+    const b = definePlugin("b", {
+      setup: (ctx) => {
+        ctx.registerTemplateDep("test-other", {
+          keyedBy: "slug",
+          load: () => Promise.resolve({ y: 42 }),
+        });
+      },
     });
     const app = await buildApp(
       plumix({
@@ -115,21 +125,25 @@ describe("ctx.registerTemplateDep", () => {
   });
 
   test("a location-keyed dep hands its loader the declared keys as `locations`", async () => {
-    const slots = definePlugin("slots", (ctx) => {
-      ctx.registerTemplateDep("test-slot", {
-        keyedBy: "location",
-        load: ({ locations }) =>
-          Promise.resolve(
-            Object.fromEntries(locations.map((l) => [l, { value: l }])),
-          ),
-      });
+    const slots = definePlugin("slots", {
+      setup: (ctx) => {
+        ctx.registerTemplateDep("test-slot", {
+          keyedBy: "location",
+          load: ({ locations }) =>
+            Promise.resolve(
+              Object.fromEntries(locations.map((l) => [l, { value: l }])),
+            ),
+        });
+      },
     });
-    definePlugin("slug-reader", (ctx) => {
-      ctx.registerTemplateDep("test-slot", {
-        keyedBy: "location",
-        // @ts-expect-error -- a location-keyed dep has no `slugs` to read
-        load: ({ slugs: _slugs }) => Promise.resolve({}),
-      });
+    definePlugin("slug-reader", {
+      setup: (ctx) => {
+        ctx.registerTemplateDep("test-slot", {
+          keyedBy: "location",
+          // @ts-expect-error -- a location-keyed dep has no `slugs` to read
+          load: ({ slugs: _slugs }) => Promise.resolve({}),
+        });
+      },
     });
     const app = await buildApp(
       plumix({
@@ -151,14 +165,16 @@ describe("ctx.registerTemplateDep", () => {
   });
 
   test("rejects registration when the dep kind collides with a framework key", async () => {
-    const offender = definePlugin("offender", (ctx) => {
-      // `render` is a framework-reserved key on every template; a dep
-      // kind by that name would silently no-op at request time since
-      // the merger skips it.
-      ctx.registerTemplateDep("render" as never, {
-        keyedBy: "slug",
-        load: () => Promise.resolve({}),
-      });
+    const offender = definePlugin("offender", {
+      setup: (ctx) => {
+        // `render` is a framework-reserved key on every template; a dep
+        // kind by that name would silently no-op at request time since
+        // the merger skips it.
+        ctx.registerTemplateDep("render" as never, {
+          keyedBy: "slug",
+          load: () => Promise.resolve({}),
+        });
+      },
     });
     await expect(
       buildApp(
@@ -291,19 +307,23 @@ describe("loadTemplateDeps", () => {
 
 describe("renderThroughTheme — template deps lifecycle", () => {
   test("a template declaring deps receives the loader's results in render", async () => {
-    const seoPlugin = definePlugin("seo", (ctx) => {
-      ctx.registerEntryType("post", {
-        label: "Posts",
-        isPublic: true,
-        hasArchive: true,
-      });
-      ctx.registerTemplateDep("test-thing", {
-        keyedBy: "slug",
-        load: ({ slugs }) =>
-          Promise.resolve(
-            Object.fromEntries(slugs.map((s) => [s, { value: `loaded-${s}` }])),
-          ),
-      });
+    const seoPlugin = definePlugin("seo", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", {
+          label: "Posts",
+          isPublic: true,
+          hasArchive: true,
+        });
+        ctx.registerTemplateDep("test-thing", {
+          keyedBy: "slug",
+          load: ({ slugs }) =>
+            Promise.resolve(
+              Object.fromEntries(
+                slugs.map((s) => [s, { value: `loaded-${s}` }]),
+              ),
+            ),
+        });
+      },
     });
     const theme = defineTheme({
       templates: [
@@ -356,16 +376,18 @@ describe("renderThroughTheme — template deps lifecycle", () => {
   });
 
   test("a loader throw does not 500 the response", async () => {
-    const broken = definePlugin("broken", (ctx) => {
-      ctx.registerEntryType("post", {
-        label: "Posts",
-        isPublic: true,
-        hasArchive: true,
-      });
-      ctx.registerTemplateDep("test-thing", {
-        keyedBy: "slug",
-        load: () => Promise.reject(new Error("loader exploded")),
-      });
+    const broken = definePlugin("broken", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", {
+          label: "Posts",
+          isPublic: true,
+          hasArchive: true,
+        });
+        ctx.registerTemplateDep("test-thing", {
+          keyedBy: "slug",
+          load: () => Promise.reject(new Error("loader exploded")),
+        });
+      },
     });
     const theme = defineTheme({
       templates: [
@@ -402,12 +424,14 @@ describe("renderThroughTheme — template deps lifecycle", () => {
 
 describe("core settings dep", () => {
   test("settings table rows flow into a template declaring `settings: [...groups]`", async () => {
-    const blogPlugin = definePlugin("blog", (ctx) => {
-      ctx.registerEntryType("post", {
-        label: "Posts",
-        isPublic: true,
-        hasArchive: true,
-      });
+    const blogPlugin = definePlugin("blog", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", {
+          label: "Posts",
+          isPublic: true,
+          hasArchive: true,
+        });
+      },
     });
     const theme = defineTheme({
       templates: [
@@ -471,12 +495,14 @@ function pickString(bag: unknown, key: string): string {
   return typeof value === "string" ? value : "";
 }
 
-const blogTypePlugin = definePlugin("blog", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    isPublic: true,
-    hasArchive: true,
-  });
+const blogTypePlugin = definePlugin("blog", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      hasArchive: true,
+    });
+  },
 });
 
 describe("theme-level flat dep declarations", () => {

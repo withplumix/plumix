@@ -8,9 +8,11 @@ import { installPlugins } from "../runtime/install-plugins.js";
  * Registers `news` pooling its permissions with `post`, so `entry:post:*`
  * reaches news rows and `entry:news:*` is never minted.
  */
-export const pooledEntryTypesPlugin = definePlugin("site", (ctx) => {
-  ctx.registerEntryType("post", { label: "Posts" });
-  ctx.registerEntryType("news", { label: "News", capabilityType: "post" });
+export const pooledEntryTypesPlugin = definePlugin("site", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", { label: "Posts" });
+    ctx.registerEntryType("news", { label: "News", capabilityType: "post" });
+  },
 });
 
 /**

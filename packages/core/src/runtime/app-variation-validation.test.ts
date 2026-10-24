@@ -21,22 +21,24 @@ const stubTheme = defineTheme({ templates: [fallback(() => null)] });
 
 describe("buildApp — block variation boot validation", () => {
   test("rejects a plugin variation whose innerBlocks reference an unknown block", async () => {
-    const badPlugin = definePlugin("bad-variations", (ctx) => {
-      ctx.registerBlock(
-        defineBlock({
-          name: "x-test/group",
-          title: "Test Group",
-          inputs: [{ name: "content", type: "slot" }],
-          render: () => null,
-          variations: [
-            {
-              slug: "with-ghost",
-              title: "With ghost",
-              innerBlocks: [{ id: "g1", name: "core/ghost", attrs: {} }],
-            },
-          ],
-        }),
-      );
+    const badPlugin = definePlugin("bad-variations", {
+      setup: (ctx) => {
+        ctx.registerBlock(
+          defineBlock({
+            name: "x-test/group",
+            title: "Test Group",
+            inputs: [{ name: "content", type: "slot" }],
+            render: () => null,
+            variations: [
+              {
+                slug: "with-ghost",
+                title: "With ghost",
+                innerBlocks: [{ id: "g1", name: "core/ghost", attrs: {} }],
+              },
+            ],
+          }),
+        );
+      },
     });
     await expect(
       buildApp(

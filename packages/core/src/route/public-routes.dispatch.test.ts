@@ -20,11 +20,13 @@ import { createDispatcherHarness } from "../test/dispatcher.js";
  * owns `/feed` and `@plumix/plugin-seo` owns `/robots.txt` and the sitemap.
  */
 function owner(path: string, body = "owned", pluginId = "feeds") {
-  return definePlugin(pluginId, (ctx) => {
-    ctx.registerPublicRoute({
-      path,
-      handler: () => new Response(body, { status: 200 }),
-    });
+  return definePlugin(pluginId, {
+    setup: (ctx) => {
+      ctx.registerPublicRoute({
+        path,
+        handler: () => new Response(body, { status: 200 }),
+      });
+    },
   });
 }
 
@@ -39,12 +41,14 @@ describe("public route dispatch", () => {
   });
 
   test("a URL pattern matches and hands its parameters to the handler", async () => {
-    const plugin = definePlugin("seo", (ctx) => {
-      ctx.registerPublicRoute({
-        path: "/sitemap-:scope-:page.xml",
-        handler: (_request, _ctx, params) =>
-          new Response(`${params.scope}/${params.page}`, { status: 200 }),
-      });
+    const plugin = definePlugin("seo", {
+      setup: (ctx) => {
+        ctx.registerPublicRoute({
+          path: "/sitemap-:scope-:page.xml",
+          handler: (_request, _ctx, params) =>
+            new Response(`${params.scope}/${params.page}`, { status: 200 }),
+        });
+      },
     });
     const harness = await createDispatcherHarness({
       config: { plugins: [plugin] },
@@ -58,8 +62,10 @@ describe("public route dispatch", () => {
     ["the sitemap index", "/sitemap.xml"],
     ["a sub-sitemap", "/sitemap-post-1.xml"],
   ])("shadows core's own %s branch", async (_name, path) => {
-    const blog = definePlugin("blog", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    const blog = definePlugin("blog", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      },
     });
     const harness = await createDispatcherHarness({
       config: { plugins: [blog, owner(path)] },
@@ -80,8 +86,10 @@ describe("public route dispatch", () => {
   });
 
   test("matches ahead of a published entry at the same path", async () => {
-    const blog = definePlugin("blog", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    const blog = definePlugin("blog", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      },
     });
     const harness = await createDispatcherHarness({
       config: { plugins: [blog, owner("/post/hello")] },
@@ -169,15 +177,17 @@ function cdnStub(hit?: Response) {
 describe("public route dispatch — CDN", () => {
   // What the sitemap will be: one document for every visitor, tagged with the
   // content it listed so a publish retires that scope and nothing else.
-  const sitemap = definePlugin("seo", (ctx) => {
-    ctx.registerPublicRoute({
-      path: "/sitemap.xml",
-      cacheable: true,
-      handler: (_request, appCtx) => {
-        tagCdnEntry(appCtx, entryPurgeTags("post", 7));
-        return new Response("<urlset/>", { status: 200 });
-      },
-    });
+  const sitemap = definePlugin("seo", {
+    setup: (ctx) => {
+      ctx.registerPublicRoute({
+        path: "/sitemap.xml",
+        cacheable: true,
+        handler: (_request, appCtx) => {
+          tagCdnEntry(appCtx, entryPurgeTags("post", 7));
+          return new Response("<urlset/>", { status: 200 });
+        },
+      });
+    },
   });
 
   test("an opted-in route stores its response under the tags it declared", async () => {
@@ -255,8 +265,10 @@ describe("public route dispatch — access policy", () => {
         segment: ctx.access?.segment ?? null,
       }),
     );
-    const plugin = definePlugin("feeds", (ctx) => {
-      ctx.registerPublicRoute({ path: "/feed", access, handler, ...options });
+    const plugin = definePlugin("feeds", {
+      setup: (ctx) => {
+        ctx.registerPublicRoute({ path: "/feed", access, handler, ...options });
+      },
     });
     return { plugin, handler };
   }
@@ -386,14 +398,16 @@ describe("public route dispatch — access policy", () => {
   });
 
   test("a soft challenge on a 404 carries no challenge signal", async () => {
-    const plugin = definePlugin("feeds", (ctx) => {
-      ctx.registerPublicRoute({
-        path: "/feed",
-        access: definePolicy({
-          resolve: () => challenge("subscribe", { soft: true }),
-        }),
-        handler: () => new Response("gone", { status: 404 }),
-      });
+    const plugin = definePlugin("feeds", {
+      setup: (ctx) => {
+        ctx.registerPublicRoute({
+          path: "/feed",
+          access: definePolicy({
+            resolve: () => challenge("subscribe", { soft: true }),
+          }),
+          handler: () => new Response("gone", { status: 404 }),
+        });
+      },
     });
     const harness = await createDispatcherHarness({
       config: { plugins: [plugin] },
@@ -406,12 +420,14 @@ describe("public route dispatch — access policy", () => {
   });
 
   test("a route with no policy sees a signed-in reader as themselves", async () => {
-    const plugin = definePlugin("feeds", (ctx) => {
-      ctx.registerPublicRoute({
-        path: "/feed",
-        handler: (_request, appCtx) =>
-          Response.json({ userId: appCtx.user?.id ?? null }),
-      });
+    const plugin = definePlugin("feeds", {
+      setup: (ctx) => {
+        ctx.registerPublicRoute({
+          path: "/feed",
+          handler: (_request, appCtx) =>
+            Response.json({ userId: appCtx.user?.id ?? null }),
+        });
+      },
     });
     const harness = await createDispatcherHarness({
       config: { plugins: [plugin] },

@@ -212,7 +212,8 @@ describe("stagePluginCatalogs — real FS", () => {
   }
 
   function stage(declared: readonly string[]): Promise<void> {
-    const plugin = definePlugin("vendor", () => undefined, {
+    const plugin = definePlugin("vendor", {
+      setup: () => undefined,
       i18n: {
         sourceLocale: "en",
         locales: declared,
@@ -318,14 +319,15 @@ describe("collectPluginCatalogFiles — real FS", () => {
   });
 
   test("lists every declared locale's compiled catalog by locale, marking the source locale and skipping any not on disk", async () => {
-    const vendor = definePlugin("vendor", () => undefined, {
+    const vendor = definePlugin("vendor", {
+      setup: () => undefined,
       i18n: {
         sourceLocale: "en",
         locales: ["en", "de", "uk"],
         catalogPath: "./locales",
       },
     });
-    const bare = definePlugin("bare", () => undefined);
+    const bare = definePlugin("bare", { setup: () => undefined });
 
     const files = await collectPluginCatalogFiles([vendor, bare], projectRoot);
 

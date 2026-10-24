@@ -116,12 +116,14 @@ describe("condition authoring — visibleWhen / orVisibleWhen", () => {
 
   test("visibleWhen rides the manifest wire projection", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("test", (ctx) => {
-      const layout = select("layout").options(["standard", "video"]);
-      ctx.registerSettingsGroup("video", {
-        label: "Video",
-        fields: [layout, url("videoUrl").visibleWhen(layout.is("video"))],
-      });
+    const plugin = definePlugin("test", {
+      setup: (ctx) => {
+        const layout = select("layout").options(["standard", "video"]);
+        ctx.registerSettingsGroup("video", {
+          label: "Video",
+          fields: [layout, url("videoUrl").visibleWhen(layout.is("video"))],
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const manifest = buildManifest(registry);
@@ -135,13 +137,15 @@ describe("condition authoring — visibleWhen / orVisibleWhen", () => {
 
   test("registration rejects a condition whose driver is not in the same box", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("test", (ctx) => {
-      const layout = select("layout").options(["standard", "video"]);
-      ctx.registerSettingsGroup("video", {
-        label: "Video",
-        // `layout` never joins the box — the rule points at a ghost.
-        fields: [url("videoUrl").visibleWhen(layout.is("video"))],
-      });
+    const plugin = definePlugin("test", {
+      setup: (ctx) => {
+        const layout = select("layout").options(["standard", "video"]);
+        ctx.registerSettingsGroup("video", {
+          label: "Video",
+          // `layout` never joins the box — the rule points at a ghost.
+          fields: [url("videoUrl").visibleWhen(layout.is("video"))],
+        });
+      },
     });
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
       /"videoUrl" condition references "layout", which is not a field in the same box/,
@@ -202,12 +206,14 @@ describe("condition authoring — visibleWhen / orVisibleWhen", () => {
 
   test("registration accepts a driver declared after its dependent", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("test", (ctx) => {
-      const layout = select("layout").options(["standard", "video"]);
-      ctx.registerSettingsGroup("video", {
-        label: "Video",
-        fields: [url("videoUrl").visibleWhen(layout.is("video")), layout],
-      });
+    const plugin = definePlugin("test", {
+      setup: (ctx) => {
+        const layout = select("layout").options(["standard", "video"]);
+        ctx.registerSettingsGroup("video", {
+          label: "Video",
+          fields: [url("videoUrl").visibleWhen(layout.is("video")), layout],
+        });
+      },
     });
     await expect(
       installPlugins({ hooks, plugins: [plugin] }),

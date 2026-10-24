@@ -52,7 +52,7 @@ const sitePlugin = (ctx: PluginSetupContext): void => {
 async function registryFrom(setup: (ctx: PluginSetupContext) => void) {
   const { registry } = await installPlugins({
     hooks: new HookRegistry(),
-    plugins: [definePlugin("site", setup)],
+    plugins: [definePlugin("site", { setup })],
   });
   return registry;
 }
@@ -130,7 +130,7 @@ describe("projectImageRoles", () => {
 });
 
 describe("resolveImageRoles", () => {
-  const batchPlugin = definePlugin("batch-site", sitePlugin);
+  const batchPlugin = definePlugin("batch-site", { setup: sitePlugin });
 
   test("hydrates the ids of every stored bag in one query", async () => {
     const { harness, ctx, run, dbQueryCount } = await createTracedContext({

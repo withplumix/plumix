@@ -32,14 +32,16 @@ async function ctx(args: {
   const { registry } = await installPlugins({
     hooks: new HookRegistry(),
     plugins: [
-      definePlugin("entry-access-test", (setup) => {
-        for (const [name, access] of Object.entries(args.entryTypes ?? {})) {
-          setup.registerEntryType(name, {
-            label: name,
-            isPublic: true,
-            access,
-          });
-        }
+      definePlugin("entry-access-test", {
+        setup: (setup) => {
+          for (const [name, access] of Object.entries(args.entryTypes ?? {})) {
+            setup.registerEntryType(name, {
+              label: name,
+              isPublic: true,
+              access,
+            });
+          }
+        },
       }),
     ],
   });

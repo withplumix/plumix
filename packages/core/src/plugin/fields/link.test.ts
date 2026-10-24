@@ -153,13 +153,15 @@ describe("link registers and round-trips the manifest", () => {
     const { installPlugins } = await import("../../runtime/install-plugins.js");
 
     const hooks = new HookRegistry();
-    const plugin = definePlugin("test", (ctx) => {
-      ctx.registerEntryType("post", { label: "Post" });
-      ctx.registerEntryMetaBox("cta", {
-        label: "CTA",
-        entryTypes: ["post"],
-        fields: [link("cta").placeholder("https://…").required()],
-      });
+    const plugin = definePlugin("test", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Post" });
+        ctx.registerEntryMetaBox("cta", {
+          label: "CTA",
+          entryTypes: ["post"],
+          fields: [link("cta").placeholder("https://…").required()],
+        });
+      },
     });
 
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });

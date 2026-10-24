@@ -212,20 +212,22 @@ describe("phantom value typing", () => {
 describe("fluent fields register and round-trip the manifest", () => {
   test("settings group: builder registers and ships the compiled wire shape", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("test", (ctx) => {
-      ctx.registerSettingsGroup("identity", {
-        label: "Site identity",
-        fields: [
-          text("siteTitle")
-            .placeholder("My site")
-            .prepend("« ")
-            .append(" »")
-            .maxLength(60)
-            .span(6)
-            .sanitize((value) => value.trim())
-            .validate(() => true),
-        ],
-      });
+    const plugin = definePlugin("test", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("identity", {
+          label: "Site identity",
+          fields: [
+            text("siteTitle")
+              .placeholder("My site")
+              .prepend("« ")
+              .append(" »")
+              .maxLength(60)
+              .span(6)
+              .sanitize((value) => value.trim())
+              .validate(() => true),
+          ],
+        });
+      },
     });
 
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
@@ -251,13 +253,15 @@ describe("fluent fields register and round-trip the manifest", () => {
 
   test("entry meta box: .span() is accepted as a hint and stripped from the entry wire", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("test", (ctx) => {
-      ctx.registerEntryType("post", { label: "Post" });
-      ctx.registerEntryMetaBox("seo", {
-        label: "SEO",
-        entryTypes: ["post"],
-        fields: [text("metaTitle").span(6).required()],
-      });
+    const plugin = definePlugin("test", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Post" });
+        ctx.registerEntryMetaBox("seo", {
+          label: "SEO",
+          entryTypes: ["post"],
+          fields: [text("metaTitle").span(6).required()],
+        });
+      },
     });
 
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
@@ -279,11 +283,13 @@ describe("fluent fields register and round-trip the manifest", () => {
 
   test("registration-time key validation applies to compiled builders", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("test", (ctx) => {
-      ctx.registerSettingsGroup("broken", {
-        label: "Broken",
-        fields: [text("bad key")],
-      });
+    const plugin = definePlugin("test", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("broken", {
+          label: "Broken",
+          fields: [text("bad key")],
+        });
+      },
     });
 
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(

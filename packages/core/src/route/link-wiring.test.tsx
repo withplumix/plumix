@@ -7,13 +7,18 @@ import { createDispatcherHarness } from "../test/dispatcher.js";
 import { defineTheme } from "../theme.js";
 import { fallback } from "./render/template-builders.js";
 
-const blog = definePlugin("blog", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    isPublic: true,
-    hasArchive: true,
-  });
-  ctx.registerTermTaxonomy("topic", { label: "Topics", entryTypes: ["post"] });
+const blog = definePlugin("blog", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      hasArchive: true,
+    });
+    ctx.registerTermTaxonomy("topic", {
+      label: "Topics",
+      entryTypes: ["post"],
+    });
+  },
 });
 
 /**

@@ -611,12 +611,14 @@ describe("entryLookupAdapter", () => {
   });
 
   test("hydrate() over nested entries costs the same queries however many it holds", async () => {
-    const pagesPlugin = definePlugin("pages", (ctx) => {
-      ctx.registerEntryType("page", {
-        label: "Pages",
-        isPublic: true,
-        isHierarchical: true,
-      });
+    const pagesPlugin = definePlugin("pages", {
+      setup: (ctx) => {
+        ctx.registerEntryType("page", {
+          label: "Pages",
+          isPublic: true,
+          isHierarchical: true,
+        });
+      },
     });
     const PAGE_SCOPE = { entryTypes: ["page"] } as const;
 
@@ -668,12 +670,14 @@ describe("entryLookupAdapter", () => {
   });
 
   test("list({ ids }) over nested entries costs the same queries however many it holds", async () => {
-    const pagesPlugin = definePlugin("pages", (ctx) => {
-      ctx.registerEntryType("page", {
-        label: "Pages",
-        isPublic: true,
-        isHierarchical: true,
-      });
+    const pagesPlugin = definePlugin("pages", {
+      setup: (ctx) => {
+        ctx.registerEntryType("page", {
+          label: "Pages",
+          isPublic: true,
+          isHierarchical: true,
+        });
+      },
     });
     const PAGE_SCOPE = { entryTypes: ["page"] } as const;
 
@@ -729,17 +733,19 @@ describe("entryLookupAdapter", () => {
 });
 
 describe("entryLookupAdapter and an entry's access policy", () => {
-  const pagesWithAccess = definePlugin("pages-with-access", (ctx) => {
-    ctx.registerEntryType("page", {
-      label: "Pages",
-      isPublic: true,
-      access: {
-        default: anonymousPolicy,
-        policies: [
-          { key: "members", label: "Members", policy: authenticatedPolicy },
-        ],
-      },
-    });
+  const pagesWithAccess = definePlugin("pages-with-access", {
+    setup: (ctx) => {
+      ctx.registerEntryType("page", {
+        label: "Pages",
+        isPublic: true,
+        access: {
+          default: anonymousPolicy,
+          policies: [
+            { key: "members", label: "Members", policy: authenticatedPolicy },
+          ],
+        },
+      });
+    },
   });
 
   async function seeded() {

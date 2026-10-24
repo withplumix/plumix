@@ -260,26 +260,30 @@ const membersOnly = definePolicy({
   resolve: (c) => (c.user ? grant("members") : challenge("subscribe")),
 });
 
-const policiedPages = definePlugin("policied-pages", (ctx) => {
-  ctx.registerEntryType("page", {
-    label: "Pages",
-    isPublic: true,
-    access: {
-      default: anonymousPolicy,
-      policies: [
-        { key: "members", label: "Members", policy: membersOnly },
-        {
-          key: "teaser",
-          label: "Teaser",
-          policy: definePolicy({
-            segments: ["members"],
-            resolve: (c) =>
-              c.user ? grant("members") : challenge("paywall", { soft: true }),
-          }),
-        },
-      ],
-    },
-  });
+const policiedPages = definePlugin("policied-pages", {
+  setup: (ctx) => {
+    ctx.registerEntryType("page", {
+      label: "Pages",
+      isPublic: true,
+      access: {
+        default: anonymousPolicy,
+        policies: [
+          { key: "members", label: "Members", policy: membersOnly },
+          {
+            key: "teaser",
+            label: "Teaser",
+            policy: definePolicy({
+              segments: ["members"],
+              resolve: (c) =>
+                c.user
+                  ? grant("members")
+                  : challenge("paywall", { soft: true }),
+            }),
+          },
+        ],
+      },
+    });
+  },
 });
 
 describe("entries under an access policy", () => {

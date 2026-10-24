@@ -20,7 +20,8 @@ const stubTheme = defineTheme({ templates: [fallback(() => null)] });
 
 describe("buildApp — plugin schema collisions", () => {
   test("rejects a plugin that redefines a core table", async () => {
-    const misbehaving = definePlugin("collides", () => undefined, {
+    const misbehaving = definePlugin("collides", {
+      setup: () => undefined,
       schema: { users: { fake: true } },
       schemaModule: "@example/collides/schema",
     });
@@ -39,11 +40,13 @@ describe("buildApp — plugin schema collisions", () => {
   });
 
   test("rejects two plugins that export the same table name", async () => {
-    const a = definePlugin("a", () => undefined, {
+    const a = definePlugin("a", {
+      setup: () => undefined,
       schema: { landing_pages: { fake: "a" } },
       schemaModule: "@example/a/schema",
     });
-    const b = definePlugin("b", () => undefined, {
+    const b = definePlugin("b", {
+      setup: () => undefined,
       schema: { landing_pages: { fake: "b" } },
       schemaModule: "@example/b/schema",
     });

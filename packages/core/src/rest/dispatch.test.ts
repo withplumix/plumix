@@ -25,76 +25,80 @@ import {
 } from "../test/photo-lookup.js";
 import { pooledEntryTypesPlugin } from "../test/pooled-entry-types.js";
 
-const blog = definePlugin("test-blog", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    isPublic: true,
-    isHierarchical: false,
-    supports: ["title", "editor", "excerpt"],
-    termTaxonomies: ["category", "tag"],
-  });
-  ctx.registerTermTaxonomy("category", {
-    label: "Categories",
-    isHierarchical: true,
-    entryTypes: ["post"],
-  });
-  ctx.registerTermTaxonomy("tag", {
-    label: "Tags",
-    isHierarchical: false,
-    entryTypes: ["post"],
-  });
-  ctx.registerTermTaxonomy("secret_tax", {
-    label: "Secret",
-    isPublic: false,
-    isHierarchical: false,
-    entryTypes: ["post"],
-  });
-  ctx.registerEntryMetaBox("seo", {
-    label: "SEO",
-    entryTypes: ["post"],
-    fields: [
-      {
-        key: "featured",
-        label: "Featured",
-        inputType: "checkbox",
-        type: "boolean",
-        showInApi: true,
-      },
-      {
-        key: "internal_note",
-        label: "Internal",
-        inputType: "text",
-        type: "string",
-      },
-      {
-        key: "tone",
-        label: "Tone",
-        inputType: "text",
-        type: "string",
-        showInApi: true,
-        default: "warm",
-      },
-    ],
-  });
+const blog = definePlugin("test-blog", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      isHierarchical: false,
+      supports: ["title", "editor", "excerpt"],
+      termTaxonomies: ["category", "tag"],
+    });
+    ctx.registerTermTaxonomy("category", {
+      label: "Categories",
+      isHierarchical: true,
+      entryTypes: ["post"],
+    });
+    ctx.registerTermTaxonomy("tag", {
+      label: "Tags",
+      isHierarchical: false,
+      entryTypes: ["post"],
+    });
+    ctx.registerTermTaxonomy("secret_tax", {
+      label: "Secret",
+      isPublic: false,
+      isHierarchical: false,
+      entryTypes: ["post"],
+    });
+    ctx.registerEntryMetaBox("seo", {
+      label: "SEO",
+      entryTypes: ["post"],
+      fields: [
+        {
+          key: "featured",
+          label: "Featured",
+          inputType: "checkbox",
+          type: "boolean",
+          showInApi: true,
+        },
+        {
+          key: "internal_note",
+          label: "Internal",
+          inputType: "text",
+          type: "string",
+        },
+        {
+          key: "tone",
+          label: "Tone",
+          inputType: "text",
+          type: "string",
+          showInApi: true,
+          default: "warm",
+        },
+      ],
+    });
+  },
 });
 
 /**
  * A custom public type plus a non-public one, to prove custom types light up
  * automatically and non-public types stay hidden.
  */
-const catalog = definePlugin("test-catalog", (ctx) => {
-  ctx.registerEntryType("book", {
-    label: "Books",
-    isPublic: true,
-    isHierarchical: false,
-    supports: ["title"],
-  });
-  ctx.registerEntryType("ledger", {
-    label: "Ledgers",
-    isPublic: false,
-    isHierarchical: false,
-    supports: ["title"],
-  });
+const catalog = definePlugin("test-catalog", {
+  setup: (ctx) => {
+    ctx.registerEntryType("book", {
+      label: "Books",
+      isPublic: true,
+      isHierarchical: false,
+      supports: ["title"],
+    });
+    ctx.registerEntryType("ledger", {
+      label: "Ledgers",
+      isPublic: false,
+      isHierarchical: false,
+      supports: ["title"],
+    });
+  },
 });
 
 async function seedPublished(
@@ -215,17 +219,19 @@ describe("REST API — entries list", () => {
 });
 
 describe("REST API — an entry's access policy", () => {
-  const pagesWithAccess = definePlugin("pages-with-access", (ctx) => {
-    ctx.registerEntryType("page", {
-      label: "Pages",
-      isPublic: true,
-      access: {
-        default: anonymousPolicy,
-        policies: [
-          { key: "members", label: "Members", policy: authenticatedPolicy },
-        ],
-      },
-    });
+  const pagesWithAccess = definePlugin("pages-with-access", {
+    setup: (ctx) => {
+      ctx.registerEntryType("page", {
+        label: "Pages",
+        isPublic: true,
+        access: {
+          default: anonymousPolicy,
+          policies: [
+            { key: "members", label: "Members", policy: authenticatedPolicy },
+          ],
+        },
+      });
+    },
   });
 
   async function pagesHarness(): Promise<{
@@ -284,23 +290,25 @@ describe("REST API — an entry's access policy", () => {
 });
 
 describe("REST API — a soft-challenged entry", () => {
-  const teaserPages = definePlugin("teaser-pages", (ctx) => {
-    ctx.registerEntryType("page", {
-      label: "Pages",
-      isPublic: true,
-      access: {
-        default: anonymousPolicy,
-        policies: [
-          {
-            key: "teaser",
-            label: "Teaser",
-            policy: definePolicy({
-              resolve: () => challenge("paywall", { soft: true }),
-            }),
-          },
-        ],
-      },
-    });
+  const teaserPages = definePlugin("teaser-pages", {
+    setup: (ctx) => {
+      ctx.registerEntryType("page", {
+        label: "Pages",
+        isPublic: true,
+        access: {
+          default: anonymousPolicy,
+          policies: [
+            {
+              key: "teaser",
+              label: "Teaser",
+              policy: definePolicy({
+                resolve: () => challenge("paywall", { soft: true }),
+              }),
+            },
+          ],
+        },
+      });
+    },
   });
   const BODY = {
     version: "plumix.v2",
@@ -669,25 +677,27 @@ const OK_OUTPUT = v.object({ ok: v.boolean() });
  * Plugin that contributes resources at every auth level. Core owns the 1- and
  * 2-segment collection space, so plugin resources nest deeper.
  */
-const apiPlugin = definePlugin("test-api-plugin", (ctx) => {
-  ctx.registerRestResource({
-    path: "/system/diag/ping",
-    auth: "public",
-    output: v.object({ pong: v.boolean() }),
-    handler: () => ({ pong: true }),
-  });
-  ctx.registerRestResource({
-    path: "/system/diag/whoami",
-    auth: "authenticated",
-    output: v.object({ id: v.number() }),
-    handler: ({ context }) => ({ id: context.user?.id ?? -1 }),
-  });
-  ctx.registerRestResource({
-    path: "/system/diag/privileged",
-    auth: { capability: "entry:post:edit_any" },
-    output: OK_OUTPUT,
-    handler: () => ({ ok: true }),
-  });
+const apiPlugin = definePlugin("test-api-plugin", {
+  setup: (ctx) => {
+    ctx.registerRestResource({
+      path: "/system/diag/ping",
+      auth: "public",
+      output: v.object({ pong: v.boolean() }),
+      handler: () => ({ pong: true }),
+    });
+    ctx.registerRestResource({
+      path: "/system/diag/whoami",
+      auth: "authenticated",
+      output: v.object({ id: v.number() }),
+      handler: ({ context }) => ({ id: context.user?.id ?? -1 }),
+    });
+    ctx.registerRestResource({
+      path: "/system/diag/privileged",
+      auth: { capability: "entry:post:edit_any" },
+      output: OK_OUTPUT,
+      handler: () => ({ ok: true }),
+    });
+  },
 });
 
 describe("REST API — plugin resource seam", () => {
@@ -744,20 +754,22 @@ describe("REST API — plugin resource binding", () => {
       entry: { id: number };
     }) => ({ type: entryType.name, id: entry.id }),
   );
-  const bindingPlugin = definePlugin("test-binding", (ctx) => {
-    ctx.registerRestResource({
-      path: "/{collection}/{entry}/probe",
-      auth: "public",
-      output: v.object({ type: v.string(), id: v.number() }),
-      handler: boundHandler,
-    });
-    ctx.registerRestResource({
-      path: "/system/echo/{entry_id}/raw",
-      auth: "public",
-      input: v.object({ entry_id: v.string() }),
-      output: v.object({ input: v.record(v.string(), v.string()) }),
-      handler: ({ input }: { input: { entry_id: string } }) => ({ input }),
-    });
+  const bindingPlugin = definePlugin("test-binding", {
+    setup: (ctx) => {
+      ctx.registerRestResource({
+        path: "/{collection}/{entry}/probe",
+        auth: "public",
+        output: v.object({ type: v.string(), id: v.number() }),
+        handler: boundHandler,
+      });
+      ctx.registerRestResource({
+        path: "/system/echo/{entry_id}/raw",
+        auth: "public",
+        input: v.object({ entry_id: v.string() }),
+        output: v.object({ input: v.record(v.string(), v.string()) }),
+        handler: ({ input }: { input: { entry_id: string } }) => ({ input }),
+      });
+    },
   });
 
   function bindingHarness(): Promise<DispatcherHarness> {
@@ -878,13 +890,15 @@ describe("REST API — plugin resource binding", () => {
 });
 
 describe("REST API — plugin resource capability references", () => {
-  const newsApi = definePlugin("news-api", (ctx) => {
-    ctx.registerRestResource({
-      path: "/system/news/privileged",
-      auth: { capability: entryCapability("news", "edit_any") },
-      output: OK_OUTPUT,
-      handler: () => ({ ok: true }),
-    });
+  const newsApi = definePlugin("news-api", {
+    setup: (ctx) => {
+      ctx.registerRestResource({
+        path: "/system/news/privileged",
+        auth: { capability: entryCapability("news", "edit_any") },
+        output: OK_OUTPUT,
+        handler: () => ({ ok: true }),
+      });
+    },
   });
 
   test("gates a reference on the namespace its type pools into", async () => {
@@ -907,13 +921,15 @@ describe("REST API — plugin resource capability references", () => {
 
 describe("REST API — plugin resource collisions", () => {
   function resourcePlugin(id: string, path: string) {
-    return definePlugin(id, (ctx) => {
-      ctx.registerRestResource({
-        path,
-        auth: "public",
-        output: OK_OUTPUT,
-        handler: () => ({ ok: true }),
-      });
+    return definePlugin(id, {
+      setup: (ctx) => {
+        ctx.registerRestResource({
+          path,
+          auth: "public",
+          output: OK_OUTPUT,
+          handler: () => ({ ok: true }),
+        });
+      },
     });
   }
 
@@ -1044,14 +1060,16 @@ describe("REST API — CORS by auth mode", () => {
     expect(refused.status).toBe(403);
   });
 
-  const writePlugin = definePlugin("test-write", (ctx) => {
-    ctx.registerRestResource({
-      method: "POST",
-      path: "/system/forms/contact",
-      auth: "public",
-      output: OK_OUTPUT,
-      handler: () => ({ ok: true }),
-    });
+  const writePlugin = definePlugin("test-write", {
+    setup: (ctx) => {
+      ctx.registerRestResource({
+        method: "POST",
+        path: "/system/forms/contact",
+        auth: "public",
+        output: OK_OUTPUT,
+        handler: () => ({ ok: true }),
+      });
+    },
   });
 
   function preflight(path: string): Request {
@@ -1091,21 +1109,23 @@ describe("REST API — CORS by auth mode", () => {
   });
 
   test("a token-authed write resource's method is never listed", async () => {
-    const gatedPlugin = definePlugin("test-gated-write", (ctx) => {
-      ctx.registerRestResource({
-        method: "PUT",
-        path: "/system/forms/contact",
-        auth: { capability: "entry:post:edit_any" },
-        output: OK_OUTPUT,
-        handler: () => ({ ok: true }),
-      });
-      ctx.registerRestResource({
-        method: "DELETE",
-        path: "/system/forms/contact",
-        auth: "authenticated",
-        output: OK_OUTPUT,
-        handler: () => ({ ok: true }),
-      });
+    const gatedPlugin = definePlugin("test-gated-write", {
+      setup: (ctx) => {
+        ctx.registerRestResource({
+          method: "PUT",
+          path: "/system/forms/contact",
+          auth: { capability: "entry:post:edit_any" },
+          output: OK_OUTPUT,
+          handler: () => ({ ok: true }),
+        });
+        ctx.registerRestResource({
+          method: "DELETE",
+          path: "/system/forms/contact",
+          auth: "authenticated",
+          output: OK_OUTPUT,
+          handler: () => ({ ok: true }),
+        });
+      },
     });
     const h = await corsHarness([gatedPlugin]);
 
@@ -1119,14 +1139,16 @@ describe("REST API — CORS by auth mode", () => {
   });
 
   test("a templated public write resource matches a concrete path", async () => {
-    const commentsPlugin = definePlugin("test-comments", (ctx) => {
-      ctx.registerRestResource({
-        method: "POST",
-        path: "/{collection}/{entry}/comments",
-        auth: "public",
-        output: OK_OUTPUT,
-        handler: () => ({ ok: true }),
-      });
+    const commentsPlugin = definePlugin("test-comments", {
+      setup: (ctx) => {
+        ctx.registerRestResource({
+          method: "POST",
+          path: "/{collection}/{entry}/comments",
+          auth: "public",
+          output: OK_OUTPUT,
+          handler: () => ({ ok: true }),
+        });
+      },
     });
     const h = await corsHarness([commentsPlugin]);
 
@@ -1297,19 +1319,21 @@ describe("REST API — term resources", () => {
   });
 
   test("an anonymous term read leaves an unsettled value as stored", async () => {
-    const withTermMeta = definePlugin("test-term-meta", (ctx) => {
-      ctx.registerTermMetaBox("term-box", {
-        label: "Term",
-        termTaxonomies: ["category"],
-        fields: [
-          {
-            key: "weight",
-            label: "Weight",
-            inputType: "number",
-            type: "number",
-          },
-        ],
-      });
+    const withTermMeta = definePlugin("test-term-meta", {
+      setup: (ctx) => {
+        ctx.registerTermMetaBox("term-box", {
+          label: "Term",
+          termTaxonomies: ["category"],
+          fields: [
+            {
+              key: "weight",
+              label: "Weight",
+              inputType: "number",
+              type: "number",
+            },
+          ],
+        });
+      },
     });
     const h = await restHarness({ config: { plugins: [blog, withTermMeta] } });
     const term = await h.factory.term.create({
@@ -1406,21 +1430,23 @@ describe("REST API — meta visibility (default-deny)", () => {
   });
 
   test("a whitelisted reference field projects its hydrated value", async () => {
-    const refs = definePlugin("test-refs", (ctx) => {
-      ctx.registerEntryMetaBox("relations", {
-        label: "Relations",
-        entryTypes: ["post"],
-        fields: [
-          {
-            key: "owner",
-            label: "Owner",
-            inputType: "user",
-            type: "string",
-            referenceTarget: { kind: "user" },
-            showInApi: true,
-          },
-        ],
-      });
+    const refs = definePlugin("test-refs", {
+      setup: (ctx) => {
+        ctx.registerEntryMetaBox("relations", {
+          label: "Relations",
+          entryTypes: ["post"],
+          fields: [
+            {
+              key: "owner",
+              label: "Owner",
+              inputType: "user",
+              type: "string",
+              referenceTarget: { kind: "user" },
+              showInApi: true,
+            },
+          ],
+        });
+      },
     });
     const h = await restHarness({ config: { plugins: [blog, refs] } });
     const owner = await h.factory.user.create({ name: "Owner One" });
@@ -1445,16 +1471,18 @@ describe("REST API — meta visibility (default-deny)", () => {
 
   test("a role appears only when its field opts into the API", async () => {
     const photos = (showInApi: boolean) =>
-      definePlugin("test-photos", (ctx) => {
-        ctx.registerLookupAdapter({
-          kind: "photo",
-          adapter: photoLookupAdapter,
-        });
-        ctx.registerEntryMetaBox("appearance", {
-          label: "Appearance",
-          entryTypes: ["post"],
-          fields: [photoField("cover", { role: "featured", showInApi })],
-        });
+      definePlugin("test-photos", {
+        setup: (ctx) => {
+          ctx.registerLookupAdapter({
+            kind: "photo",
+            adapter: photoLookupAdapter,
+          });
+          ctx.registerEntryMetaBox("appearance", {
+            label: "Appearance",
+            entryTypes: ["post"],
+            fields: [photoField("cover", { role: "featured", showInApi })],
+          });
+        },
       });
 
     const read = async (showInApi: boolean) => {
@@ -1491,22 +1519,27 @@ describe("REST API — meta visibility (default-deny)", () => {
   test("a role inside a group answers for its own field, not the group's", async () => {
     // `meta` is keyed by top-level field, so a group's flag is what exposes
     // the ids under it; a role is addressed by name, so its own flag decides.
-    const nested = definePlugin("test-nested-photos", (ctx) => {
-      ctx.registerLookupAdapter({ kind: "photo", adapter: photoLookupAdapter });
-      ctx.registerEntryMetaBox("appearance", {
-        label: "Appearance",
-        entryTypes: ["post"],
-        fields: [
-          {
-            key: "layout",
-            label: "Layout",
-            type: "json",
-            inputType: "group",
-            showInApi: true,
-            fields: [photoField("cover", { role: "featured" })],
-          },
-        ],
-      });
+    const nested = definePlugin("test-nested-photos", {
+      setup: (ctx) => {
+        ctx.registerLookupAdapter({
+          kind: "photo",
+          adapter: photoLookupAdapter,
+        });
+        ctx.registerEntryMetaBox("appearance", {
+          label: "Appearance",
+          entryTypes: ["post"],
+          fields: [
+            {
+              key: "layout",
+              label: "Layout",
+              type: "json",
+              inputType: "group",
+              showInApi: true,
+              fields: [photoField("cover", { role: "featured" })],
+            },
+          ],
+        });
+      },
     });
     const h = await restHarness({ config: { plugins: [blog, nested] } });
     const photoId = await seedWithMeta(h, {});
@@ -1527,23 +1560,28 @@ describe("REST API — meta visibility (default-deny)", () => {
   });
 
   test("a role inside a group the API hides still answers for itself", async () => {
-    const nested = definePlugin("test-nested-photos", (ctx) => {
-      ctx.registerLookupAdapter({ kind: "photo", adapter: photoLookupAdapter });
-      ctx.registerEntryMetaBox("appearance", {
-        label: "Appearance",
-        entryTypes: ["post"],
-        fields: [
-          {
-            key: "layout",
-            label: "Layout",
-            type: "json",
-            inputType: "group",
-            fields: [
-              photoField("cover", { role: "featured", showInApi: true }),
-            ],
-          },
-        ],
-      });
+    const nested = definePlugin("test-nested-photos", {
+      setup: (ctx) => {
+        ctx.registerLookupAdapter({
+          kind: "photo",
+          adapter: photoLookupAdapter,
+        });
+        ctx.registerEntryMetaBox("appearance", {
+          label: "Appearance",
+          entryTypes: ["post"],
+          fields: [
+            {
+              key: "layout",
+              label: "Layout",
+              type: "json",
+              inputType: "group",
+              fields: [
+                photoField("cover", { role: "featured", showInApi: true }),
+              ],
+            },
+          ],
+        });
+      },
     });
     const h = await restHarness({ config: { plugins: [blog, nested] } });
     const photoId = await seedWithMeta(h, {});

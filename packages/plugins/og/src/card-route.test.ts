@@ -491,18 +491,20 @@ describe("the card route", () => {
 
 describe("a card at the edge", () => {
   // Fires the site group's change, as the settings RPC does on a save.
-  const siteSaver = definePlugin("site-saver", (ctx) => {
-    ctx.registerPublicRoute({
-      path: "/save-site-settings",
-      handler: async (_request, appCtx) => {
-        await appCtx.hooks.doAction(
-          "settings:group_changed",
-          { group: "site", set: { title: "Renamed Site" }, removed: [] },
-          appCtx,
-        );
-        return new Response("ok");
-      },
-    });
+  const siteSaver = definePlugin("site-saver", {
+    setup: (ctx) => {
+      ctx.registerPublicRoute({
+        path: "/save-site-settings",
+        handler: async (_request, appCtx) => {
+          await appCtx.hooks.doAction(
+            "settings:group_changed",
+            { group: "site", set: { title: "Renamed Site" }, removed: [] },
+            appCtx,
+          );
+          return new Response("ok");
+        },
+      });
+    },
   });
 
   async function trashEntry(harness: DispatcherHarness, id: number) {

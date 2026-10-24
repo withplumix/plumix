@@ -23,32 +23,36 @@ function mcpHarness(
   });
 }
 
-const blog = definePlugin("test-blog", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    isPublic: true,
-    isHierarchical: false,
-    supports: ["title", "editor", "excerpt"],
-    termTaxonomies: ["category"],
-  });
-  ctx.registerTermTaxonomy("category", {
-    label: "Categories",
-    isHierarchical: true,
-    entryTypes: ["post"],
-  });
+const blog = definePlugin("test-blog", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      isHierarchical: false,
+      supports: ["title", "editor", "excerpt"],
+      termTaxonomies: ["category"],
+    });
+    ctx.registerTermTaxonomy("category", {
+      label: "Categories",
+      isHierarchical: true,
+      entryTypes: ["post"],
+    });
+  },
 });
 
 /**
  * Not itself a telemetry consumer, so it can't vote into existence the
  * collection it measures.
  */
-const spanProbe = definePlugin("test-span-probe", (ctx) => {
-  ctx.registerMcpTool({
-    name: "probe_spans",
-    description: "Test-only: how many spans the live collector holds.",
-    inputSchema: v.object({}),
-    run: (toolCtx) => ({ spans: toolCtx.telemetry.getSpans().length }),
-  });
+const spanProbe = definePlugin("test-span-probe", {
+  setup: (ctx) => {
+    ctx.registerMcpTool({
+      name: "probe_spans",
+      description: "Test-only: how many spans the live collector holds.",
+      inputSchema: v.object({}),
+      run: (toolCtx) => ({ spans: toolCtx.telemetry.getSpans().length }),
+    });
+  },
 });
 
 interface JsonRpcEnvelope<TResult> {

@@ -24,13 +24,15 @@ const ks2Block = defineBlock({
   },
 });
 
-const schoolPlugin = definePlugin("school", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    isPublic: true,
-    hasArchive: true,
-  });
-  ctx.registerBlock(ks2Block);
+const schoolPlugin = definePlugin("school", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      hasArchive: true,
+    });
+    ctx.registerBlock(ks2Block);
+  },
 });
 
 /** A theme with no dep declarations of its own: the block brings its own. */
@@ -83,17 +85,19 @@ describe("a block that declares its deps", () => {
   });
 
   test("a kind declared in the template's `(prev) => next` form starts from no keys", async () => {
-    const composedPlugin = definePlugin("composed", (ctx) => {
-      ctx.registerBlock(
-        defineBlock({
-          name: "eduscope/composed",
-          deps: { settings: (prev) => [...prev, "school_ks2"] },
-          render: ({ deps }) => {
-            const title = deps.settings.school_ks2?.title;
-            return <h3>{typeof title === "string" ? title : "no copy"}</h3>;
-          },
-        }),
-      );
+    const composedPlugin = definePlugin("composed", {
+      setup: (ctx) => {
+        ctx.registerBlock(
+          defineBlock({
+            name: "eduscope/composed",
+            deps: { settings: (prev) => [...prev, "school_ks2"] },
+            render: ({ deps }) => {
+              const title = deps.settings.school_ks2?.title;
+              return <h3>{typeof title === "string" ? title : "no copy"}</h3>;
+            },
+          }),
+        );
+      },
     });
     const h = await createDispatcherHarness({
       config: { plugins: [schoolPlugin, composedPlugin], theme: plainTheme },
@@ -139,22 +143,24 @@ describe("a block that declares its deps", () => {
         Object.fromEntries(locations.map((l) => [l, `menu:${l}`])),
       ),
     );
-    const menuPlugin = definePlugin("menus", (ctx) => {
-      ctx.registerTemplateDep("block-menus", {
-        keyedBy: "location",
-        load: loadMenus,
-      });
-      ctx.registerBlock(
-        defineBlock({
-          name: "acme/nav",
-          deps: (attrs: { readonly location?: string }) => ({
-            "block-menus": [attrs.location ?? "primary"],
+    const menuPlugin = definePlugin("menus", {
+      setup: (ctx) => {
+        ctx.registerTemplateDep("block-menus", {
+          keyedBy: "location",
+          load: loadMenus,
+        });
+        ctx.registerBlock(
+          defineBlock({
+            name: "acme/nav",
+            deps: (attrs: { readonly location?: string }) => ({
+              "block-menus": [attrs.location ?? "primary"],
+            }),
+            render: ({ attrs, deps }) => (
+              <nav>{deps["block-menus"][attrs.location ?? "primary"]}</nav>
+            ),
           }),
-          render: ({ attrs, deps }) => (
-            <nav>{deps["block-menus"][attrs.location ?? "primary"]}</nav>
-          ),
-        }),
-      );
+        );
+      },
     });
     const h = await createDispatcherHarness({
       config: { plugins: [schoolPlugin, menuPlugin], theme: plainTheme },

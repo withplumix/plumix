@@ -7,41 +7,46 @@ import { createDispatcherHarness } from "../test/dispatcher.js";
 import { archiveAtPath, archiveBaseRoutes } from "./archive-entries.js";
 import { listEntryPage } from "./render/entry-listing.js";
 
-const site = definePlugin("site", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    isPublic: true,
-    hasArchive: true,
-  });
-  ctx.registerEntryType("page", {
-    label: "Pages",
-    isPublic: true,
-    isHierarchical: true,
-    hasArchive: "all-pages",
-  });
-  ctx.registerTermTaxonomy("topic", { label: "Topics", entryTypes: ["post"] });
-  ctx.registerTermTaxonomy("region", {
-    label: "Regions",
-    entryTypes: ["post"],
-    isHierarchical: true,
-  });
-  ctx.registerArchiveType("talks", {
-    routes: ["/talks/:track"],
-    entries: (q, params) =>
-      params.track === "none" ? null : q.inTerm("topic", params.track ?? ""),
-    title: "Talks",
-  });
-  ctx.registerArchiveType("legacy", {
-    routes: ["/legacy/:x"],
-    resolve: () => ({
-      data: { kind: "archiveType", name: "legacy" },
-      title: "L",
-    }),
-  });
-  ctx.registerView("compare", {
-    routes: ["/compare/:id"],
-    resolve: () => ({ data: null, title: "Compare" }),
-  });
+const site = definePlugin("site", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      hasArchive: true,
+    });
+    ctx.registerEntryType("page", {
+      label: "Pages",
+      isPublic: true,
+      isHierarchical: true,
+      hasArchive: "all-pages",
+    });
+    ctx.registerTermTaxonomy("topic", {
+      label: "Topics",
+      entryTypes: ["post"],
+    });
+    ctx.registerTermTaxonomy("region", {
+      label: "Regions",
+      entryTypes: ["post"],
+      isHierarchical: true,
+    });
+    ctx.registerArchiveType("talks", {
+      routes: ["/talks/:track"],
+      entries: (q, params) =>
+        params.track === "none" ? null : q.inTerm("topic", params.track ?? ""),
+      title: "Talks",
+    });
+    ctx.registerArchiveType("legacy", {
+      routes: ["/legacy/:x"],
+      resolve: () => ({
+        data: { kind: "archiveType", name: "legacy" },
+        title: "L",
+      }),
+    });
+    ctx.registerView("compare", {
+      routes: ["/compare/:id"],
+      resolve: () => ({ data: null, title: "Compare" }),
+    });
+  },
 });
 
 let h: DispatcherHarness;
@@ -166,9 +171,11 @@ describe("archiveBaseRoutes", () => {
   });
 
   test("names no front page at the root a rule claims for another archive", async () => {
-    const rooted = definePlugin("rooted", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerRewriteRule("/", { kind: "entryType", entryType: "post" });
+    const rooted = definePlugin("rooted", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerRewriteRule("/", { kind: "entryType", entryType: "post" });
+      },
     });
     const { app } = await createDispatcherHarness({
       config: { plugins: [rooted] },

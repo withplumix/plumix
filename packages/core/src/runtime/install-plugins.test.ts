@@ -75,11 +75,15 @@ describe("installPlugins", () => {
     const { registry } = await installPlugins({
       hooks,
       plugins: [
-        definePlugin("alpha", () => {
-          // id-only plugin; ordering is what this test asserts
+        definePlugin("alpha", {
+          setup: () => {
+            // id-only plugin; ordering is what this test asserts
+          },
         }),
-        definePlugin("beta", () => {
-          // id-only plugin
+        definePlugin("beta", {
+          setup: () => {
+            // id-only plugin
+          },
         }),
       ],
     });
@@ -89,10 +93,12 @@ describe("installPlugins", () => {
 
   test("auto-prefixes plugin-registered filters with the plugin id", async () => {
     const hooks = new HookRegistry();
-    const seo = definePlugin("seo", (ctx) => {
-      ctx.registerFilter("meta_tags", (tags: { readonly title: string }) => ({
-        title: `seo:${tags.title}`,
-      }));
+    const seo = definePlugin("seo", {
+      setup: (ctx) => {
+        ctx.registerFilter("meta_tags", (tags: { readonly title: string }) => ({
+          title: `seo:${tags.title}`,
+        }));
+      },
     });
 
     const { hooks: result } = await installPlugins({ hooks, plugins: [seo] });
@@ -102,11 +108,13 @@ describe("installPlugins", () => {
 
   test("plugins can subscribe to core-owned hooks without prefix", async () => {
     const hooks = new HookRegistry();
-    const stamp = definePlugin("stamp", (ctx) => {
-      ctx.addFilter("entry:before_save", (post) => ({
-        ...post,
-        title: `[stamped] ${post.title}`,
-      }));
+    const stamp = definePlugin("stamp", {
+      setup: (ctx) => {
+        ctx.addFilter("entry:before_save", (post) => ({
+          ...post,
+          title: `[stamped] ${post.title}`,
+        }));
+      },
     });
 
     await installPlugins({ hooks, plugins: [stamp] });
@@ -119,8 +127,10 @@ describe("installPlugins", () => {
 
   test("a plugin installed without a theme sees one declaring nothing", async () => {
     let seen: unknown;
-    const reader = definePlugin("reader", (ctx) => {
-      seen = ctx.theme;
+    const reader = definePlugin("reader", {
+      setup: (ctx) => {
+        seen = ctx.theme;
+      },
     });
 
     await installPlugins({ hooks: new HookRegistry(), plugins: [reader] });
@@ -130,11 +140,13 @@ describe("installPlugins", () => {
 
   test("registers post types into the manifest with plugin attribution", async () => {
     const hooks = new HookRegistry();
-    const blog = definePlugin("blog", (ctx) => {
-      ctx.registerEntryType("landing_page", {
-        label: "Landing Pages",
-        isHierarchical: false,
-      });
+    const blog = definePlugin("blog", {
+      setup: (ctx) => {
+        ctx.registerEntryType("landing_page", {
+          label: "Landing Pages",
+          isHierarchical: false,
+        });
+      },
     });
 
     const { registry } = await installPlugins({ hooks, plugins: [blog] });
@@ -146,30 +158,32 @@ describe("installPlugins", () => {
 
   test("resolves every visibility flag when a type or taxonomy is registered", async () => {
     const hooks = new HookRegistry();
-    const site = definePlugin("site", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts" });
-      ctx.registerEntryType("menu_item", { label: "Items", isPublic: false });
-      ctx.registerEntryType("attachment", {
-        label: "Attachments",
-        showInSidebar: false,
-        excludeFromSearch: true,
-      });
-      ctx.registerEntryType("form", {
-        label: "Forms",
-        isPublic: false,
-        showUI: true,
-      });
-      ctx.registerTermTaxonomy("category", { label: "Categories" });
-      ctx.registerTermTaxonomy("menu", {
-        label: "Menus",
-        isPublic: false,
-        showUI: true,
-      });
-      ctx.registerTermTaxonomy("internal", {
-        label: "Internal",
-        isPublic: false,
-        excludeFromSearch: false,
-      });
+    const site = definePlugin("site", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts" });
+        ctx.registerEntryType("menu_item", { label: "Items", isPublic: false });
+        ctx.registerEntryType("attachment", {
+          label: "Attachments",
+          showInSidebar: false,
+          excludeFromSearch: true,
+        });
+        ctx.registerEntryType("form", {
+          label: "Forms",
+          isPublic: false,
+          showUI: true,
+        });
+        ctx.registerTermTaxonomy("category", { label: "Categories" });
+        ctx.registerTermTaxonomy("menu", {
+          label: "Menus",
+          isPublic: false,
+          showUI: true,
+        });
+        ctx.registerTermTaxonomy("internal", {
+          label: "Internal",
+          isPublic: false,
+          excludeFromSearch: false,
+        });
+      },
     });
 
     const { registry } = await installPlugins({ hooks, plugins: [site] });
@@ -234,9 +248,14 @@ describe("installPlugins", () => {
 
   test("resolves the capability namespace when a type is registered", async () => {
     const hooks = new HookRegistry();
-    const site = definePlugin("site", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts" });
-      ctx.registerEntryType("news", { label: "News", capabilityType: "post" });
+    const site = definePlugin("site", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts" });
+        ctx.registerEntryType("news", {
+          label: "News",
+          capabilityType: "post",
+        });
+      },
     });
 
     const { registry } = await installPlugins({ hooks, plugins: [site] });
@@ -249,11 +268,15 @@ describe("installPlugins", () => {
 
   test("throws on duplicate post-type registration across plugins", async () => {
     const hooks = new HookRegistry();
-    const a = definePlugin("a", (ctx) => {
-      ctx.registerEntryType("docs", { label: "Docs A" });
+    const a = definePlugin("a", {
+      setup: (ctx) => {
+        ctx.registerEntryType("docs", { label: "Docs A" });
+      },
     });
-    const b = definePlugin("b", (ctx) => {
-      ctx.registerEntryType("docs", { label: "Docs B" });
+    const b = definePlugin("b", {
+      setup: (ctx) => {
+        ctx.registerEntryType("docs", { label: "Docs B" });
+      },
     });
 
     await expect(
@@ -263,8 +286,10 @@ describe("installPlugins", () => {
 
   test("auto-derives the capability set from a post type, using the post type name", async () => {
     const hooks = new HookRegistry();
-    const blog = definePlugin("blog", (ctx) => {
-      ctx.registerEntryType("landing_page", { label: "Landing Pages" });
+    const blog = definePlugin("blog", {
+      setup: (ctx) => {
+        ctx.registerEntryType("landing_page", { label: "Landing Pages" });
+      },
     });
 
     const { registry } = await installPlugins({ hooks, plugins: [blog] });
@@ -284,14 +309,21 @@ describe("installPlugins", () => {
 
   test("capabilityType is the cap namespace — shared types pool their permissions", async () => {
     const hooks = new HookRegistry();
-    const a = definePlugin("a", (ctx) => {
-      ctx.registerEntryType("docs", { label: "Docs", capabilityType: "post" });
+    const a = definePlugin("a", {
+      setup: (ctx) => {
+        ctx.registerEntryType("docs", {
+          label: "Docs",
+          capabilityType: "post",
+        });
+      },
     });
-    const b = definePlugin("b", (ctx) => {
-      ctx.registerEntryType("guides", {
-        label: "Guides",
-        capabilityType: "post",
-      });
+    const b = definePlugin("b", {
+      setup: (ctx) => {
+        ctx.registerEntryType("guides", {
+          label: "Guides",
+          capabilityType: "post",
+        });
+      },
     });
     // Two plugins share `capabilityType: 'post'` — derivation must not throw.
     await expect(
@@ -304,19 +336,23 @@ describe("installPlugins", () => {
     // `edit_any` override. Silent first-writer-wins would lock down (or
     // loosen) the pooled cap based on registration order — fail loudly.
     const hooks = new HookRegistry();
-    const strict = definePlugin("strict", (ctx) => {
-      ctx.registerEntryType("docs", {
-        label: "Docs",
-        capabilityType: "post",
-        capabilities: { edit_any: "admin" },
-      });
+    const strict = definePlugin("strict", {
+      setup: (ctx) => {
+        ctx.registerEntryType("docs", {
+          label: "Docs",
+          capabilityType: "post",
+          capabilities: { edit_any: "admin" },
+        });
+      },
     });
-    const lax = definePlugin("lax", (ctx) => {
-      ctx.registerEntryType("guides", {
-        label: "Guides",
-        capabilityType: "post",
-        capabilities: { edit_any: "author" },
-      });
+    const lax = definePlugin("lax", {
+      setup: (ctx) => {
+        ctx.registerEntryType("guides", {
+          label: "Guides",
+          capabilityType: "post",
+          capabilities: { edit_any: "author" },
+        });
+      },
     });
     await expect(
       installPlugins({ hooks, plugins: [strict, lax] }),
@@ -326,19 +362,23 @@ describe("installPlugins", () => {
   test("capabilityType pooling accepts matching overrides between plugins", async () => {
     // Same override, two plugins — safe, no throw.
     const hooks = new HookRegistry();
-    const a = definePlugin("a", (ctx) => {
-      ctx.registerEntryType("docs", {
-        label: "Docs",
-        capabilityType: "post",
-        capabilities: { edit_any: "admin" },
-      });
+    const a = definePlugin("a", {
+      setup: (ctx) => {
+        ctx.registerEntryType("docs", {
+          label: "Docs",
+          capabilityType: "post",
+          capabilities: { edit_any: "admin" },
+        });
+      },
     });
-    const b = definePlugin("b", (ctx) => {
-      ctx.registerEntryType("guides", {
-        label: "Guides",
-        capabilityType: "post",
-        capabilities: { edit_any: "admin" },
-      });
+    const b = definePlugin("b", {
+      setup: (ctx) => {
+        ctx.registerEntryType("guides", {
+          label: "Guides",
+          capabilityType: "post",
+          capabilities: { edit_any: "admin" },
+        });
+      },
     });
     await expect(
       installPlugins({ hooks, plugins: [a, b] }),
@@ -347,11 +387,13 @@ describe("installPlugins", () => {
 
   test("registerCapability accepts the options-object form with defaultGrants", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("menus", (ctx) => {
-      ctx.registerCapability("menu:manage", {
-        minRole: "admin",
-        defaultGrants: ["editor"],
-      });
+    const plugin = definePlugin("menus", {
+      setup: (ctx) => {
+        ctx.registerCapability("menu:manage", {
+          minRole: "admin",
+          defaultGrants: ["editor"],
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const cap = registry.capabilities.get("menu:manage");
@@ -362,11 +404,13 @@ describe("installPlugins", () => {
 
   test("registerCapability sorts + dedupes defaultGrants deterministically", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("media", (ctx) => {
-      ctx.registerCapability("upload:files", {
-        minRole: "admin",
-        defaultGrants: ["editor", "author", "editor"],
-      });
+    const plugin = definePlugin("media", {
+      setup: (ctx) => {
+        ctx.registerCapability("upload:files", {
+          minRole: "admin",
+          defaultGrants: ["editor", "author", "editor"],
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     expect(registry.capabilities.get("upload:files")?.defaultGrants).toEqual([
@@ -377,8 +421,10 @@ describe("installPlugins", () => {
 
   test("taxonomy registration derives the {name}:{action} cap set", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("geo", (ctx) => {
-      ctx.registerTermTaxonomy("region", { label: "Regions" });
+    const plugin = definePlugin("geo", {
+      setup: (ctx) => {
+        ctx.registerTermTaxonomy("region", { label: "Regions" });
+      },
     });
 
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
@@ -392,8 +438,10 @@ describe("installPlugins", () => {
 
   test("registerCapability is the escape hatch for plugin-specific caps", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("seo", (ctx) => {
-      ctx.registerCapability("seo:manage", "editor");
+    const plugin = definePlugin("seo", {
+      setup: (ctx) => {
+        ctx.registerCapability("seo:manage", "editor");
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     expect(registry.capabilities.get("seo:manage")).toEqual({
@@ -405,23 +453,27 @@ describe("installPlugins", () => {
 
   test("registerTermMetaBox rejects a duplicate id across plugins", async () => {
     const hooks = new HookRegistry();
-    const first = definePlugin("a", (ctx) => {
-      ctx.registerTermMetaBox("branding", {
-        label: "A",
-        termTaxonomies: ["category"],
-        fields: [
-          { key: "icon", label: "Icon", type: "string", inputType: "text" },
-        ],
-      });
+    const first = definePlugin("a", {
+      setup: (ctx) => {
+        ctx.registerTermMetaBox("branding", {
+          label: "A",
+          termTaxonomies: ["category"],
+          fields: [
+            { key: "icon", label: "Icon", type: "string", inputType: "text" },
+          ],
+        });
+      },
     });
-    const second = definePlugin("b", (ctx) => {
-      ctx.registerTermMetaBox("branding", {
-        label: "B",
-        termTaxonomies: ["category"],
-        fields: [
-          { key: "icon", label: "Icon", type: "string", inputType: "text" },
-        ],
-      });
+    const second = definePlugin("b", {
+      setup: (ctx) => {
+        ctx.registerTermMetaBox("branding", {
+          label: "B",
+          termTaxonomies: ["category"],
+          fields: [
+            { key: "icon", label: "Icon", type: "string", inputType: "text" },
+          ],
+        });
+      },
     });
     await expect(
       installPlugins({ hooks, plugins: [first, second] }),
@@ -430,14 +482,21 @@ describe("installPlugins", () => {
 
   test("registerEntryMetaBox rejects an invalid field key at registration time", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("bad", (ctx) => {
-      ctx.registerEntryMetaBox("seo", {
-        label: "SEO",
-        entryTypes: ["post"],
-        fields: [
-          { key: "bad key!", label: "Bad", type: "string", inputType: "text" },
-        ],
-      });
+    const plugin = definePlugin("bad", {
+      setup: (ctx) => {
+        ctx.registerEntryMetaBox("seo", {
+          label: "SEO",
+          entryTypes: ["post"],
+          fields: [
+            {
+              key: "bad key!",
+              label: "Bad",
+              type: "string",
+              inputType: "text",
+            },
+          ],
+        });
+      },
     });
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
       /invalid key "bad key!"/,
@@ -446,19 +505,21 @@ describe("installPlugins", () => {
 
   test("registerEntryMetaBox rejects a field key longer than the RPC write path accepts", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("long", (ctx) => {
-      ctx.registerEntryMetaBox("seo", {
-        label: "SEO",
-        entryTypes: ["post"],
-        fields: [
-          {
-            key: "k".repeat(201),
-            label: "Long",
-            type: "string",
-            inputType: "text",
-          },
-        ],
-      });
+    const plugin = definePlugin("long", {
+      setup: (ctx) => {
+        ctx.registerEntryMetaBox("seo", {
+          label: "SEO",
+          entryTypes: ["post"],
+          fields: [
+            {
+              key: "k".repeat(201),
+              label: "Long",
+              type: "string",
+              inputType: "text",
+            },
+          ],
+        });
+      },
     });
     await expect(
       installPlugins({ hooks, plugins: [plugin] }),
@@ -467,19 +528,21 @@ describe("installPlugins", () => {
 
   test("registerEntryMetaBox rejects the reserved __plumix_ key prefix", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("rsv", (ctx) => {
-      ctx.registerEntryMetaBox("snap", {
-        label: "Snap",
-        entryTypes: ["post"],
-        fields: [
-          {
-            key: "__plumix_snapshot",
-            label: "Snapshot",
-            type: "string",
-            inputType: "text",
-          },
-        ],
-      });
+    const plugin = definePlugin("rsv", {
+      setup: (ctx) => {
+        ctx.registerEntryMetaBox("snap", {
+          label: "Snap",
+          entryTypes: ["post"],
+          fields: [
+            {
+              key: "__plumix_snapshot",
+              label: "Snapshot",
+              type: "string",
+              inputType: "text",
+            },
+          ],
+        });
+      },
     });
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
       /reserved `__plumix_` prefix/,
@@ -488,15 +551,17 @@ describe("installPlugins", () => {
 
   test("registerTermMetaBox rejects a duplicate field key within the same box", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("dupe", (ctx) => {
-      ctx.registerTermMetaBox("branding", {
-        label: "Branding",
-        termTaxonomies: ["category"],
-        fields: [
-          { key: "icon", label: "Icon", type: "string", inputType: "text" },
-          { key: "icon", label: "Icon 2", type: "string", inputType: "text" },
-        ],
-      });
+    const plugin = definePlugin("dupe", {
+      setup: (ctx) => {
+        ctx.registerTermMetaBox("branding", {
+          label: "Branding",
+          termTaxonomies: ["category"],
+          fields: [
+            { key: "icon", label: "Icon", type: "string", inputType: "text" },
+            { key: "icon", label: "Icon 2", type: "string", inputType: "text" },
+          ],
+        });
+      },
     });
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
       /declares field "icon" more than once/,
@@ -505,21 +570,25 @@ describe("installPlugins", () => {
 
   test("registerUserMetaBox rejects a duplicate id across plugins", async () => {
     const hooks = new HookRegistry();
-    const first = definePlugin("a", (ctx) => {
-      ctx.registerUserMetaBox("profile", {
-        label: "A",
-        fields: [
-          { key: "bio", label: "Bio", type: "string", inputType: "textarea" },
-        ],
-      });
+    const first = definePlugin("a", {
+      setup: (ctx) => {
+        ctx.registerUserMetaBox("profile", {
+          label: "A",
+          fields: [
+            { key: "bio", label: "Bio", type: "string", inputType: "textarea" },
+          ],
+        });
+      },
     });
-    const second = definePlugin("b", (ctx) => {
-      ctx.registerUserMetaBox("profile", {
-        label: "B",
-        fields: [
-          { key: "bio", label: "Bio", type: "string", inputType: "textarea" },
-        ],
-      });
+    const second = definePlugin("b", {
+      setup: (ctx) => {
+        ctx.registerUserMetaBox("profile", {
+          label: "B",
+          fields: [
+            { key: "bio", label: "Bio", type: "string", inputType: "textarea" },
+          ],
+        });
+      },
     });
     await expect(
       installPlugins({ hooks, plugins: [first, second] }),
@@ -528,18 +597,20 @@ describe("installPlugins", () => {
 
   test("registerUserMetaBox rejects an invalid field key at registration time", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("bad", (ctx) => {
-      ctx.registerUserMetaBox("profile", {
-        label: "Profile",
-        fields: [
-          {
-            key: "bad key!",
-            label: "Bad",
-            type: "string",
-            inputType: "text",
-          },
-        ],
-      });
+    const plugin = definePlugin("bad", {
+      setup: (ctx) => {
+        ctx.registerUserMetaBox("profile", {
+          label: "Profile",
+          fields: [
+            {
+              key: "bad key!",
+              label: "Bad",
+              type: "string",
+              inputType: "text",
+            },
+          ],
+        });
+      },
     });
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
       /invalid key "bad key!"/,
@@ -548,14 +619,21 @@ describe("installPlugins", () => {
 
   test("registerUserMetaBox rejects a duplicate field key within the same box", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("dupe", (ctx) => {
-      ctx.registerUserMetaBox("profile", {
-        label: "Profile",
-        fields: [
-          { key: "bio", label: "Bio", type: "string", inputType: "textarea" },
-          { key: "bio", label: "Bio 2", type: "string", inputType: "textarea" },
-        ],
-      });
+    const plugin = definePlugin("dupe", {
+      setup: (ctx) => {
+        ctx.registerUserMetaBox("profile", {
+          label: "Profile",
+          fields: [
+            { key: "bio", label: "Bio", type: "string", inputType: "textarea" },
+            {
+              key: "bio",
+              label: "Bio 2",
+              type: "string",
+              inputType: "textarea",
+            },
+          ],
+        });
+      },
     });
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
       /declares field "bio" more than once/,
@@ -683,13 +761,15 @@ describe("plugin state", () => {
 
 describe("plugin id validation", () => {
   test("definePlugin rejects an empty id", () => {
-    expect(() => definePlugin("", () => undefined)).toThrow(/between 1 and/);
+    expect(() => definePlugin("", { setup: () => undefined })).toThrow(
+      /between 1 and/,
+    );
   });
 
   test("definePlugin rejects an id longer than 64 chars", () => {
-    expect(() => definePlugin("a".repeat(65), () => undefined)).toThrow(
-      /between 1 and 64/,
-    );
+    expect(() =>
+      definePlugin("a".repeat(65), { setup: () => undefined }),
+    ).toThrow(/between 1 and 64/);
   });
 
   test.each([
@@ -700,7 +780,9 @@ describe("plugin id validation", () => {
     ["contains dot", "plumix.menus"],
     ["contains slash", "foo/bar"],
   ])("definePlugin rejects invalid id: %s", (_name, id) => {
-    expect(() => definePlugin(id, () => undefined)).toThrow(/must match/);
+    expect(() => definePlugin(id, { setup: () => undefined })).toThrow(
+      /must match/,
+    );
   });
 
   test.each([
@@ -710,16 +792,20 @@ describe("plugin id validation", () => {
     ["snake_case", "plumix_media"],
     ["single-letter", "a"],
   ])("definePlugin accepts valid id: %s", (_name, id) => {
-    expect(() => definePlugin(id, () => undefined)).not.toThrow();
+    expect(() => definePlugin(id, { setup: () => undefined })).not.toThrow();
   });
 
   test("installPlugins rejects duplicate plugin ids in config", async () => {
     const hooks = new HookRegistry();
-    const first = definePlugin("menus", (ctx) => {
-      ctx.registerCapability("first:cap", "admin");
+    const first = definePlugin("menus", {
+      setup: (ctx) => {
+        ctx.registerCapability("first:cap", "admin");
+      },
     });
-    const second = definePlugin("menus", (ctx) => {
-      ctx.registerCapability("second:cap", "admin");
+    const second = definePlugin("menus", {
+      setup: (ctx) => {
+        ctx.registerCapability("second:cap", "admin");
+      },
     });
     await expect(
       installPlugins({ hooks, plugins: [first, second] }),
@@ -741,8 +827,10 @@ describe("registerRpcRouter", () => {
   test("stores the router under the plugin id", async () => {
     const hooks = new HookRegistry();
     const sentinel = { list };
-    const plugin = definePlugin("menus", (ctx) => {
-      ctx.registerRpcRouter(sentinel);
+    const plugin = definePlugin("menus", {
+      setup: (ctx) => {
+        ctx.registerRpcRouter(sentinel);
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const stored = registry.rpcRouters.get("menus");
@@ -768,8 +856,10 @@ describe("registerRpcRouter", () => {
     "rejects plugin id `%s` that collides with a core RPC namespace",
     async (pluginId) => {
       const hooks = new HookRegistry();
-      const plugin = definePlugin(pluginId, (ctx) => {
-        ctx.registerRpcRouter({});
+      const plugin = definePlugin(pluginId, {
+        setup: (ctx) => {
+          ctx.registerRpcRouter({});
+        },
       });
       await expect(
         installPlugins({ hooks, plugins: [plugin] }),
@@ -788,8 +878,10 @@ describe("registerMcpTool", () => {
 
   test("stores the tool under its name with plugin attribution", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("media", (ctx) => {
-      ctx.registerMcpTool(tool("media_list"));
+    const plugin = definePlugin("media", {
+      setup: (ctx) => {
+        ctx.registerMcpTool(tool("media_list"));
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     expect(registry.mcpTools.get("media_list")?.registeredBy).toBe("media");
@@ -804,13 +896,15 @@ describe("registerAdminPage nav.group validation", () => {
     ["empty", ""],
   ])("rejects invalid group id: %s", async (_name, id) => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("menus", (ctx) => {
-      ctx.registerAdminPage({
-        path: "/menus",
-        title: "Menus",
-        nav: { group: id, label: "Menus" },
-        component: "MenusPage",
-      });
+    const plugin = definePlugin("menus", {
+      setup: (ctx) => {
+        ctx.registerAdminPage({
+          path: "/menus",
+          title: "Menus",
+          nav: { group: id, label: "Menus" },
+          component: "MenusPage",
+        });
+      },
     });
     await expect(
       installPlugins({ hooks, plugins: [plugin] }),
@@ -827,8 +921,10 @@ describe("registerAdminPage", () => {
 
   test("stores the page keyed by path", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("menus", (ctx) => {
-      ctx.registerAdminPage(page);
+    const plugin = definePlugin("menus", {
+      setup: (ctx) => {
+        ctx.registerAdminPage(page);
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const entry = registry.adminPages.get("/menus");
@@ -850,8 +946,10 @@ describe("registerAdminPage", () => {
     ["fragment inline", "/menus#top"],
   ])("rejects invalid path shape: %s", async (_name, path) => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("menus", (ctx) => {
-      ctx.registerAdminPage({ ...page, path });
+    const plugin = definePlugin("menus", {
+      setup: (ctx) => {
+        ctx.registerAdminPage({ ...page, path });
+      },
     });
     await expect(
       installPlugins({ hooks, plugins: [plugin] }),
@@ -860,11 +958,13 @@ describe("registerAdminPage", () => {
 
   test("rejects empty component ref", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("menus", (ctx) => {
-      ctx.registerAdminPage({
-        ...page,
-        component: "",
-      });
+    const plugin = definePlugin("menus", {
+      setup: (ctx) => {
+        ctx.registerAdminPage({
+          ...page,
+          component: "",
+        });
+      },
     });
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
       /invalid component ref/,
@@ -877,11 +977,13 @@ describe("registerFieldType", () => {
 
   test("stores the field type keyed by type string", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("media", (ctx) => {
-      ctx.registerFieldType({
-        type: "media_picker",
-        component: componentRef,
-      });
+    const plugin = definePlugin("media", {
+      setup: (ctx) => {
+        ctx.registerFieldType({
+          type: "media_picker",
+          component: componentRef,
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     expect(registry.fieldTypes.get("media_picker")).toEqual(
@@ -896,8 +998,10 @@ describe("registerFieldType", () => {
     "accepts %j as a type name",
     async (type) => {
       const hooks = new HookRegistry();
-      const plugin = definePlugin("media", (ctx) => {
-        ctx.registerFieldType({ type, component: componentRef });
+      const plugin = definePlugin("media", {
+        setup: (ctx) => {
+          ctx.registerFieldType({ type, component: componentRef });
+        },
       });
       const { registry } = await installPlugins({ hooks, plugins: [plugin] });
       expect(registry.fieldTypes.has(type)).toBe(true);
@@ -908,8 +1012,10 @@ describe("registerFieldType", () => {
     "rejects %j as a type name",
     async (type) => {
       const hooks = new HookRegistry();
-      const plugin = definePlugin("media", (ctx) => {
-        ctx.registerFieldType({ type, component: componentRef });
+      const plugin = definePlugin("media", {
+        setup: (ctx) => {
+          ctx.registerFieldType({ type, component: componentRef });
+        },
       });
       await expect(
         installPlugins({ hooks, plugins: [plugin] }),
@@ -919,11 +1025,13 @@ describe("registerFieldType", () => {
 
   test("requires a component ref (no optional fallback to dispatcher)", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("media", (ctx) => {
-      ctx.registerFieldType({
-        type: "color",
-        component: "",
-      });
+    const plugin = definePlugin("media", {
+      setup: (ctx) => {
+        ctx.registerFieldType({
+          type: "color",
+          component: "",
+        });
+      },
     });
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
       /invalid component ref/,
@@ -936,19 +1044,21 @@ describe("registerRoute", () => {
 
   test("stores route metadata with the plugin id attached", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("media", (ctx) => {
-      ctx.registerRoute({
-        method: "POST",
-        path: "/upload",
-        auth: "authenticated",
-        handler: noop,
-      });
-      ctx.registerRoute({
-        method: "GET",
-        path: "/storage/*",
-        auth: "public",
-        handler: noop,
-      });
+    const plugin = definePlugin("media", {
+      setup: (ctx) => {
+        ctx.registerRoute({
+          method: "POST",
+          path: "/upload",
+          auth: "authenticated",
+          handler: noop,
+        });
+        ctx.registerRoute({
+          method: "GET",
+          path: "/storage/*",
+          auth: "public",
+          handler: noop,
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     expect(registry.rawRoutes).toEqual([
@@ -969,14 +1079,16 @@ describe("registerRoute", () => {
 
   test("carries the CDN opt-in onto the registered route", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("og", (ctx) => {
-      ctx.registerRoute({
-        method: "GET",
-        path: "/card/*",
-        auth: "public",
-        cacheable: true,
-        handler: noop,
-      });
+    const plugin = definePlugin("og", {
+      setup: (ctx) => {
+        ctx.registerRoute({
+          method: "GET",
+          path: "/card/*",
+          auth: "public",
+          cacheable: true,
+          handler: noop,
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     expect(registry.rawRoutes[0]?.cacheable).toBe(true);
@@ -984,14 +1096,16 @@ describe("registerRoute", () => {
 
   test("rejects the CDN opt-in on a route that is not public", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("og", (ctx) => {
-      ctx.registerRoute({
-        method: "GET",
-        path: "/card/*",
-        auth: "authenticated",
-        cacheable: true,
-        handler: noop,
-      });
+    const plugin = definePlugin("og", {
+      setup: (ctx) => {
+        ctx.registerRoute({
+          method: "GET",
+          path: "/card/*",
+          auth: "authenticated",
+          cacheable: true,
+          handler: noop,
+        });
+      },
     });
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
       /GET \/card\/\* is not public/,
@@ -1002,14 +1116,16 @@ describe("registerRoute", () => {
   // route would serve off-loopback requests ungated.
   test("rejects the CDN opt-in on a development route", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("og", (ctx) => {
-      ctx.registerRoute({
-        method: "GET",
-        path: "/preview/*",
-        auth: "development",
-        cacheable: true,
-        handler: noop,
-      });
+    const plugin = definePlugin("og", {
+      setup: (ctx) => {
+        ctx.registerRoute({
+          method: "GET",
+          path: "/preview/*",
+          auth: "development",
+          cacheable: true,
+          handler: noop,
+        });
+      },
     });
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
       /GET \/preview\/\* is not public/,
@@ -1018,14 +1134,16 @@ describe("registerRoute", () => {
 
   test("carries the form-post opt-out onto the registered route", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("forms", (ctx) => {
-      ctx.registerRoute({
-        method: "POST",
-        path: "/submit",
-        auth: "public",
-        formPost: true,
-        handler: noop,
-      });
+    const plugin = definePlugin("forms", {
+      setup: (ctx) => {
+        ctx.registerRoute({
+          method: "POST",
+          path: "/submit",
+          auth: "public",
+          formPost: true,
+          handler: noop,
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     expect(registry.rawRoutes[0]?.formPost).toBe(true);
@@ -1033,14 +1151,16 @@ describe("registerRoute", () => {
 
   test("rejects the form-post opt-out on a route that is not public", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("forms", (ctx) => {
-      ctx.registerRoute({
-        method: "POST",
-        path: "/submit",
-        auth: "authenticated",
-        formPost: true,
-        handler: noop,
-      });
+    const plugin = definePlugin("forms", {
+      setup: (ctx) => {
+        ctx.registerRoute({
+          method: "POST",
+          path: "/submit",
+          auth: "authenticated",
+          formPost: true,
+          handler: noop,
+        });
+      },
     });
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
       /POST \/submit is not public/,
@@ -1057,13 +1177,15 @@ describe("registerRoute", () => {
     ["wildcard without slash separator", "/prefix*"],
   ])("rejects invalid path shape: %s", async (_name, path) => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("media", (ctx) => {
-      ctx.registerRoute({
-        method: "POST",
-        path,
-        auth: "public",
-        handler: noop,
-      });
+    const plugin = definePlugin("media", {
+      setup: (ctx) => {
+        ctx.registerRoute({
+          method: "POST",
+          path,
+          auth: "public",
+          handler: noop,
+        });
+      },
     });
     await expect(
       installPlugins({ hooks, plugins: [plugin] }),
@@ -1076,13 +1198,15 @@ describe("registerPublicRoute", () => {
 
   test("stores the route with the plugin id attached", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("feeds", (ctx) => {
-      ctx.registerPublicRoute({ path: "/feed", handler: noop });
-      ctx.registerPublicRoute({
-        path: "/sitemap.xml",
-        cacheable: true,
-        handler: noop,
-      });
+    const plugin = definePlugin("feeds", {
+      setup: (ctx) => {
+        ctx.registerPublicRoute({ path: "/feed", handler: noop });
+        ctx.registerPublicRoute({
+          path: "/sitemap.xml",
+          cacheable: true,
+          handler: noop,
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     expect(registry.publicRoutes).toEqual([
@@ -1103,8 +1227,10 @@ describe("registerPublicRoute", () => {
     ["fragment inline", "/feed#top"],
   ])("rejects invalid path shape: %s", async (_name, path) => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("feeds", (ctx) => {
-      ctx.registerPublicRoute({ path, handler: noop });
+    const plugin = definePlugin("feeds", {
+      setup: (ctx) => {
+        ctx.registerPublicRoute({ path, handler: noop });
+      },
     });
     await expect(
       installPlugins({ hooks, plugins: [plugin] }),
@@ -1115,12 +1241,14 @@ describe("registerPublicRoute", () => {
 describe("registerLoginLink", () => {
   test("stores entries with the plugin id attached", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("saml-microsoft", (ctx) => {
-      ctx.registerLoginLink({
-        key: "default",
-        label: "Sign in with Microsoft",
-        href: "/_plumix/saml-microsoft/start",
-      });
+    const plugin = definePlugin("saml-microsoft", {
+      setup: (ctx) => {
+        ctx.registerLoginLink({
+          key: "default",
+          label: "Sign in with Microsoft",
+          href: "/_plumix/saml-microsoft/start",
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     expect(registry.loginLinks).toEqual([
@@ -1135,19 +1263,23 @@ describe("registerLoginLink", () => {
 
   test("two plugins can each contribute one button", async () => {
     const hooks = new HookRegistry();
-    const a = definePlugin("plugin-a", (ctx) => {
-      ctx.registerLoginLink({
-        key: "default",
-        label: "A",
-        href: "/_plumix/plugin-a/start",
-      });
+    const a = definePlugin("plugin-a", {
+      setup: (ctx) => {
+        ctx.registerLoginLink({
+          key: "default",
+          label: "A",
+          href: "/_plumix/plugin-a/start",
+        });
+      },
     });
-    const b = definePlugin("plugin-b", (ctx) => {
-      ctx.registerLoginLink({
-        key: "default",
-        label: "B",
-        href: "/_plumix/plugin-b/start",
-      });
+    const b = definePlugin("plugin-b", {
+      setup: (ctx) => {
+        ctx.registerLoginLink({
+          key: "default",
+          label: "B",
+          href: "/_plumix/plugin-b/start",
+        });
+      },
     });
     const { registry } = await installPlugins({
       hooks,
@@ -1158,17 +1290,19 @@ describe("registerLoginLink", () => {
 
   test("rejects duplicate key from the same plugin", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerLoginLink({
-        key: "default",
-        label: "First",
-        href: "/_plumix/acme/start",
-      });
-      ctx.registerLoginLink({
-        key: "default",
-        label: "Second",
-        href: "/_plumix/acme/start",
-      });
+    const plugin = definePlugin("acme", {
+      setup: (ctx) => {
+        ctx.registerLoginLink({
+          key: "default",
+          label: "First",
+          href: "/_plumix/acme/start",
+        });
+        ctx.registerLoginLink({
+          key: "default",
+          label: "Second",
+          href: "/_plumix/acme/start",
+        });
+      },
     });
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
       /already registered/,
@@ -1183,12 +1317,14 @@ describe("registerLoginLink", () => {
     ["digit start", "1auth"],
   ])("rejects invalid key: %s", async (_name, key) => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerLoginLink({
-        key,
-        label: "x",
-        href: "/_plumix/acme/start",
-      });
+    const plugin = definePlugin("acme", {
+      setup: (ctx) => {
+        ctx.registerLoginLink({
+          key,
+          label: "x",
+          href: "/_plumix/acme/start",
+        });
+      },
     });
     await expect(
       installPlugins({ hooks, plugins: [plugin] }),
@@ -1197,12 +1333,14 @@ describe("registerLoginLink", () => {
 
   test("rejects an empty label", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerLoginLink({
-        key: "default",
-        label: "",
-        href: "/_plumix/acme/start",
-      });
+    const plugin = definePlugin("acme", {
+      setup: (ctx) => {
+        ctx.registerLoginLink({
+          key: "default",
+          label: "",
+          href: "/_plumix/acme/start",
+        });
+      },
     });
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
       /empty label/,
@@ -1211,12 +1349,14 @@ describe("registerLoginLink", () => {
 
   test("rejects a label with CR/LF (header-injection defense)", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerLoginLink({
-        key: "default",
-        label: "Sign in\r\nwith something",
-        href: "/_plumix/acme/start",
-      });
+    const plugin = definePlugin("acme", {
+      setup: (ctx) => {
+        ctx.registerLoginLink({
+          key: "default",
+          label: "Sign in\r\nwith something",
+          href: "/_plumix/acme/start",
+        });
+      },
     });
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
       /CR\/LF/,
@@ -1231,12 +1371,14 @@ describe("registerLoginLink", () => {
     ["relative without leading slash", "_plumix/acme/start"],
   ])("rejects unsafe href: %s", async (_name, href) => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerLoginLink({
-        key: "default",
-        label: "x",
-        href,
-      });
+    const plugin = definePlugin("acme", {
+      setup: (ctx) => {
+        ctx.registerLoginLink({
+          key: "default",
+          label: "x",
+          href,
+        });
+      },
     });
     await expect(
       installPlugins({ hooks, plugins: [plugin] }),
@@ -1245,12 +1387,14 @@ describe("registerLoginLink", () => {
 
   test("accepts an https:// absolute href", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerLoginLink({
-        key: "default",
-        label: "x",
-        href: "https://idp.example.com/saml/login",
-      });
+    const plugin = definePlugin("acme", {
+      setup: (ctx) => {
+        ctx.registerLoginLink({
+          key: "default",
+          label: "x",
+          href: "https://idp.example.com/saml/login",
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     expect(registry.loginLinks[0]?.href).toBe(
@@ -1263,12 +1407,14 @@ describe("registerScheduledTask", () => {
   test("stores entries with the plugin id attached", async () => {
     const hooks = new HookRegistry();
     const handler = () => undefined;
-    const plugin = definePlugin("audit-log", (ctx) => {
-      ctx.registerScheduledTask({
-        id: "retention-purge",
-        cron: "0 3 * * *",
-        handler,
-      });
+    const plugin = definePlugin("audit-log", {
+      setup: (ctx) => {
+        ctx.registerScheduledTask({
+          id: "retention-purge",
+          cron: "0 3 * * *",
+          handler,
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     expect(registry.scheduledTasks).toEqual([
@@ -1283,11 +1429,15 @@ describe("registerScheduledTask", () => {
 
   test("two plugins can each contribute one task", async () => {
     const hooks = new HookRegistry();
-    const a = definePlugin("plugin-a", (ctx) => {
-      ctx.registerScheduledTask({ id: "t", handler: () => undefined });
+    const a = definePlugin("plugin-a", {
+      setup: (ctx) => {
+        ctx.registerScheduledTask({ id: "t", handler: () => undefined });
+      },
     });
-    const b = definePlugin("plugin-b", (ctx) => {
-      ctx.registerScheduledTask({ id: "t", handler: () => undefined });
+    const b = definePlugin("plugin-b", {
+      setup: (ctx) => {
+        ctx.registerScheduledTask({ id: "t", handler: () => undefined });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [a, b] });
     expect(registry.scheduledTasks).toHaveLength(2);
@@ -1299,9 +1449,11 @@ describe("registerScheduledTask", () => {
 
   test("rejects duplicate id from the same plugin", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerScheduledTask({ id: "purge", handler: () => undefined });
-      ctx.registerScheduledTask({ id: "purge", handler: () => undefined });
+    const plugin = definePlugin("acme", {
+      setup: (ctx) => {
+        ctx.registerScheduledTask({ id: "purge", handler: () => undefined });
+        ctx.registerScheduledTask({ id: "purge", handler: () => undefined });
+      },
     });
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
       /already registered/,
@@ -1316,8 +1468,10 @@ describe("registerScheduledTask", () => {
     ["leading dash", "-cleanup"],
   ])("rejects invalid id: %s", async (_name, id) => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerScheduledTask({ id, handler: () => undefined });
+    const plugin = definePlugin("acme", {
+      setup: (ctx) => {
+        ctx.registerScheduledTask({ id, handler: () => undefined });
+      },
     });
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
       /invalid id/,
@@ -1326,11 +1480,13 @@ describe("registerScheduledTask", () => {
 
   test("accepts compound ids with slashes and underscores", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("audit-log", (ctx) => {
-      ctx.registerScheduledTask({
-        id: "retention/daily_purge",
-        handler: () => undefined,
-      });
+    const plugin = definePlugin("audit-log", {
+      setup: (ctx) => {
+        ctx.registerScheduledTask({
+          id: "retention/daily_purge",
+          handler: () => undefined,
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     expect(registry.scheduledTasks[0]?.id).toBe("retention/daily_purge");
@@ -1338,8 +1494,10 @@ describe("registerScheduledTask", () => {
 
   test("cron is optional — task without one still registers", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("p", (ctx) => {
-      ctx.registerScheduledTask({ id: "t", handler: () => undefined });
+    const plugin = definePlugin("p", {
+      setup: (ctx) => {
+        ctx.registerScheduledTask({ id: "t", handler: () => undefined });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     expect(registry.scheduledTasks[0]?.cron).toBeUndefined();
@@ -1349,13 +1507,15 @@ describe("registerScheduledTask", () => {
 describe("registerPattern", () => {
   test("stores the registered pattern keyed by slug, tagged with the plugin id", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerPattern({
-        name: "acme/hero",
-        title: "Hero",
-        category: "hero",
-        content: [],
-      });
+    const plugin = definePlugin("acme", {
+      setup: (ctx) => {
+        ctx.registerPattern({
+          name: "acme/hero",
+          title: "Hero",
+          category: "hero",
+          content: [],
+        });
+      },
     });
 
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
@@ -1367,11 +1527,15 @@ describe("registerPattern", () => {
 
   test("throws when two plugins register the same pattern slug", async () => {
     const hooks = new HookRegistry();
-    const a = definePlugin("a", (ctx) => {
-      ctx.registerPattern({ name: "shared/hero", title: "A", content: [] });
+    const a = definePlugin("a", {
+      setup: (ctx) => {
+        ctx.registerPattern({ name: "shared/hero", title: "A", content: [] });
+      },
     });
-    const b = definePlugin("b", (ctx) => {
-      ctx.registerPattern({ name: "shared/hero", title: "B", content: [] });
+    const b = definePlugin("b", {
+      setup: (ctx) => {
+        ctx.registerPattern({ name: "shared/hero", title: "B", content: [] });
+      },
     });
 
     await expect(installPlugins({ hooks, plugins: [a, b] })).rejects.toThrow(
@@ -1383,11 +1547,13 @@ describe("registerPattern", () => {
 describe("registerShortcode", () => {
   test("stores the registered shortcode keyed by tag, tagged with the plugin id", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("seo", (ctx) => {
-      ctx.registerShortcode({
-        name: "reading-time",
-        render: () => "3 min",
-      });
+    const plugin = definePlugin("seo", {
+      setup: (ctx) => {
+        ctx.registerShortcode({
+          name: "reading-time",
+          render: () => "3 min",
+        });
+      },
     });
 
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
@@ -1420,11 +1586,15 @@ describe("registerShortcode", () => {
 
   test("throws when two plugins register the same shortcode tag", async () => {
     const hooks = new HookRegistry();
-    const a = definePlugin("a", (ctx) => {
-      ctx.registerShortcode({ name: "cite", render: () => "[1]" });
+    const a = definePlugin("a", {
+      setup: (ctx) => {
+        ctx.registerShortcode({ name: "cite", render: () => "[1]" });
+      },
     });
-    const b = definePlugin("b", (ctx) => {
-      ctx.registerShortcode({ name: "cite", render: () => "[2]" });
+    const b = definePlugin("b", {
+      setup: (ctx) => {
+        ctx.registerShortcode({ name: "cite", render: () => "[2]" });
+      },
     });
 
     await expect(installPlugins({ hooks, plugins: [a, b] })).rejects.toThrow(
@@ -1436,8 +1606,10 @@ describe("registerShortcode", () => {
 describe("registerMark", () => {
   test("rejects a plugin mark that reuses a core mark name", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerMark({ name: "bold", title: "Bold" });
+    const plugin = definePlugin("acme", {
+      setup: (ctx) => {
+        ctx.registerMark({ name: "bold", title: "Bold" });
+      },
     });
 
     const install = installPlugins({ hooks, plugins: [plugin] });
@@ -1452,8 +1624,10 @@ describe("registerMark", () => {
     "rejects the core mark name %s",
     async (name) => {
       const hooks = new HookRegistry();
-      const plugin = definePlugin("acme", (ctx) => {
-        ctx.registerMark({ name, title: name });
+      const plugin = definePlugin("acme", {
+        setup: (ctx) => {
+          ctx.registerMark({ name, title: name });
+        },
       });
 
       await expect(
@@ -1466,8 +1640,10 @@ describe("registerMark", () => {
     "registers %s, which only contains a core mark name",
     async (name) => {
       const hooks = new HookRegistry();
-      const plugin = definePlugin("acme", (ctx) => {
-        ctx.registerMark({ name, title: "Warning" });
+      const plugin = definePlugin("acme", {
+        setup: (ctx) => {
+          ctx.registerMark({ name, title: "Warning" });
+        },
       });
 
       const { registry } = await installPlugins({ hooks, plugins: [plugin] });
@@ -1478,12 +1654,14 @@ describe("registerMark", () => {
 });
 
 describe("afterSetup", () => {
-  const blog = definePlugin("blog", (ctx) => {
-    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-    ctx.registerTermTaxonomy("category", {
-      label: "Categories",
-      entryTypes: ["post"],
-    });
+  const blog = definePlugin("blog", {
+    setup: (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerTermTaxonomy("category", {
+        label: "Categories",
+        entryTypes: ["post"],
+      });
+    },
   });
 
   test("reads what every plugin registered, wherever it is installed", async () => {
@@ -1511,7 +1689,9 @@ describe("afterSetup", () => {
       setup: () => void order.push("early:setup"),
       afterSetup: () => void order.push("early:afterSetup"),
     });
-    const late = definePlugin("late", () => void order.push("late:setup"));
+    const late = definePlugin("late", {
+      setup: () => void order.push("late:setup"),
+    });
 
     await installPlugins({ hooks: new HookRegistry(), plugins: [early, late] });
 
@@ -1543,8 +1723,10 @@ describe("afterSetup", () => {
 
   test("is the only phase offered the registry", async () => {
     let offered: boolean | undefined;
-    const reader = definePlugin("reader", (ctx) => {
-      offered = "plugins" in ctx;
+    const reader = definePlugin("reader", {
+      setup: (ctx) => {
+        offered = "plugins" in ctx;
+      },
     });
 
     await installPlugins({ hooks: new HookRegistry(), plugins: [reader] });
@@ -1556,11 +1738,13 @@ describe("afterSetup", () => {
 describe("reserved settings group names", () => {
   test("registerSettingsGroup rejects the `_internal` suffix at boot", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("rsv", (ctx) => {
-      ctx.registerSettingsGroup("rsv_internal", {
-        label: "Private",
-        fields: [],
-      });
+    const plugin = definePlugin("rsv", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("rsv_internal", {
+          label: "Private",
+          fields: [],
+        });
+      },
     });
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
       /reserved for server-only rows/,
@@ -1571,18 +1755,20 @@ describe("reserved settings group names", () => {
 describe("settings group field keys", () => {
   test("registerSettingsGroup rejects a field key longer than the RPC write path accepts", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("long", (ctx) => {
-      ctx.registerSettingsGroup("long", {
-        label: "Long",
-        fields: [
-          {
-            key: "k".repeat(201),
-            label: "Long",
-            type: "string",
-            inputType: "text",
-          },
-        ],
-      });
+    const plugin = definePlugin("long", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("long", {
+          label: "Long",
+          fields: [
+            {
+              key: "k".repeat(201),
+              label: "Long",
+              type: "string",
+              inputType: "text",
+            },
+          ],
+        });
+      },
     });
     await expect(
       installPlugins({ hooks, plugins: [plugin] }),
@@ -2033,11 +2219,15 @@ describe("duplicate registration", () => {
       test("names the plugin that already registered it", async () => {
         const hooks = new HookRegistry();
         const registry = createPluginRegistry();
-        const first = definePlugin("first-owner", (ctx) => {
-          row.register(ctx, "first", "first-owner");
+        const first = definePlugin("first-owner", {
+          setup: (ctx) => {
+            row.register(ctx, "first", "first-owner");
+          },
         });
-        const second = definePlugin("second-owner", (ctx) => {
-          row.register(ctx, "second", "second-owner");
+        const second = definePlugin("second-owner", {
+          setup: (ctx) => {
+            row.register(ctx, "second", "second-owner");
+          },
         });
 
         const install = installPlugins({
@@ -2066,11 +2256,15 @@ describe("duplicate registration", () => {
     (row) => {
       test("lets another plugin reuse the identifier", async () => {
         const hooks = new HookRegistry();
-        const first = definePlugin("first-owner", (ctx) => {
-          row.register(ctx, "first", "first-owner");
+        const first = definePlugin("first-owner", {
+          setup: (ctx) => {
+            row.register(ctx, "first", "first-owner");
+          },
         });
-        const second = definePlugin("second-owner", (ctx) => {
-          row.register(ctx, "second", "second-owner");
+        const second = definePlugin("second-owner", {
+          setup: (ctx) => {
+            row.register(ctx, "second", "second-owner");
+          },
         });
 
         const { registry } = await installPlugins({
@@ -2088,9 +2282,11 @@ describe("duplicate registration", () => {
     test("tells a plugin it already registered it", async () => {
       const hooks = new HookRegistry();
       const registry = createPluginRegistry();
-      const plugin = definePlugin("repeater", (ctx) => {
-        row.register(ctx, "first", "repeater");
-        row.register(ctx, "second", "repeater");
+      const plugin = definePlugin("repeater", {
+        setup: (ctx) => {
+          row.register(ctx, "first", "repeater");
+          row.register(ctx, "second", "repeater");
+        },
       });
 
       const install = installPlugins({ hooks, registry, plugins: [plugin] });
@@ -2116,8 +2312,10 @@ describe("duplicate registration", () => {
   describe.each(coreCases)("$kind", (row) => {
     test("names core when core holds the identifier", async () => {
       const hooks = new HookRegistry();
-      const plugin = definePlugin("rogue", (ctx) => {
-        row.register(ctx);
+      const plugin = definePlugin("rogue", {
+        setup: (ctx) => {
+          row.register(ctx);
+        },
       });
 
       const registry = seededRegistry();
@@ -2141,11 +2339,21 @@ describe("duplicate registration", () => {
   test("checks each spec registerBlocks is given", async () => {
     const hooks = new HookRegistry();
     const registry = createPluginRegistry();
-    const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerBlocks([
-        defineBlock({ name: "acme/hero", title: "first", render: () => null }),
-        defineBlock({ name: "acme/hero", title: "second", render: () => null }),
-      ]);
+    const plugin = definePlugin("acme", {
+      setup: (ctx) => {
+        ctx.registerBlocks([
+          defineBlock({
+            name: "acme/hero",
+            title: "first",
+            render: () => null,
+          }),
+          defineBlock({
+            name: "acme/hero",
+            title: "second",
+            render: () => null,
+          }),
+        ]);
+      },
     });
 
     await expect(
@@ -2160,9 +2368,11 @@ describe("duplicate registration", () => {
 
   test("treats a capability derived from the plugin's own entry type as its own", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("blog", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts" });
-      ctx.registerCapability("entry:post:edit_own", "author");
+    const plugin = definePlugin("blog", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts" });
+        ctx.registerCapability("entry:post:edit_own", "author");
+      },
     });
 
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
@@ -2173,13 +2383,15 @@ describe("duplicate registration", () => {
   test("raises the duplicate before validation that follows the check", async () => {
     const hooks = new HookRegistry();
     const registry = createPluginRegistry();
-    const plugin = definePlugin("menus", (ctx) => {
-      ctx.registerAdminPage({
-        path: "/menus",
-        title: "Menus",
-        component: "MenusPage",
-      });
-      ctx.registerAdminPage({ path: "/menus", title: "Dupe", component: "" });
+    const plugin = definePlugin("menus", {
+      setup: (ctx) => {
+        ctx.registerAdminPage({
+          path: "/menus",
+          title: "Menus",
+          component: "MenusPage",
+        });
+        ctx.registerAdminPage({ path: "/menus", title: "Dupe", component: "" });
+      },
     });
 
     await expect(
@@ -2190,20 +2402,22 @@ describe("duplicate registration", () => {
 
   test("raises validation that precedes the check before the duplicate", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("media", (ctx) => {
-      ctx.registerRoute({
-        method: "POST",
-        path: "/upload",
-        auth: "authenticated",
-        handler: noopHandler,
-      });
-      ctx.registerRoute({
-        method: "POST",
-        path: "/upload",
-        auth: "authenticated",
-        cacheable: true,
-        handler: noopHandler,
-      });
+    const plugin = definePlugin("media", {
+      setup: (ctx) => {
+        ctx.registerRoute({
+          method: "POST",
+          path: "/upload",
+          auth: "authenticated",
+          handler: noopHandler,
+        });
+        ctx.registerRoute({
+          method: "POST",
+          path: "/upload",
+          auth: "authenticated",
+          cacheable: true,
+          handler: noopHandler,
+        });
+      },
     });
 
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(

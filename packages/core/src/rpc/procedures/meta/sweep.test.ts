@@ -16,26 +16,31 @@ import { sweepUnsettledMeta } from "./sweep.js";
  * One field of each scalar shape per store, so every store has a value the
  * write path would settle and one it could not.
  */
-const plugin = definePlugin("test-sweep", (ctx) => {
-  ctx.registerEntryMetaBox("entry-box", {
-    label: "Entry",
-    entryTypes: ["post"],
-    fields: [toggle("sealed"), number("clearance")],
-  });
-  ctx.registerTermTaxonomy("topic", { label: "Topics", entryTypes: ["post"] });
-  ctx.registerTermMetaBox("term-box", {
-    label: "Term",
-    termTaxonomies: ["topic"],
-    fields: [number("weight")],
-  });
-  ctx.registerUserMetaBox("user-box", {
-    label: "User",
-    fields: [toggle("newsletter")],
-  });
-  ctx.registerSettingsGroup("reading", {
-    label: "Reading",
-    fields: [number("perPage")],
-  });
+const plugin = definePlugin("test-sweep", {
+  setup: (ctx) => {
+    ctx.registerEntryMetaBox("entry-box", {
+      label: "Entry",
+      entryTypes: ["post"],
+      fields: [toggle("sealed"), number("clearance")],
+    });
+    ctx.registerTermTaxonomy("topic", {
+      label: "Topics",
+      entryTypes: ["post"],
+    });
+    ctx.registerTermMetaBox("term-box", {
+      label: "Term",
+      termTaxonomies: ["topic"],
+      fields: [number("weight")],
+    });
+    ctx.registerUserMetaBox("user-box", {
+      label: "User",
+      fields: [toggle("newsletter")],
+    });
+    ctx.registerSettingsGroup("reading", {
+      label: "Reading",
+      fields: [number("perPage")],
+    });
+  },
 });
 
 async function seeded() {
@@ -69,11 +74,13 @@ const MANY = Array.from(
   { length: 30 },
   (_, i) => `n${String(i).padStart(2, "0")}`,
 );
-const manySettings = definePlugin("test-many-settings", (ctx) => {
-  ctx.registerSettingsGroup("many", {
-    label: "Many",
-    fields: MANY.map((key) => number(key)),
-  });
+const manySettings = definePlugin("test-many-settings", {
+  setup: (ctx) => {
+    ctx.registerSettingsGroup("many", {
+      label: "Many",
+      fields: MANY.map((key) => number(key)),
+    });
+  },
 });
 
 async function storedMeta<T extends { meta: unknown }>(

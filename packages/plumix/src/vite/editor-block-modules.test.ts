@@ -70,9 +70,9 @@ describe("collectEditorBlockModules", () => {
       "plugin/index.ts",
       `import { definePlugin } from "plumix/plugin";
        import { blocks } from "./blocks.js";
-       export default definePlugin("p", (ctx) => {
+       export default definePlugin("p", { setup: (ctx) => {
          ctx.registerBlocks(blocks);
-       });`,
+       } });`,
     );
     const source = `import { plumix } from "plumix";
        import p from "./plugin";

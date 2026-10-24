@@ -29,8 +29,10 @@ const appWithTaskCron = (cron: string): Promise<unknown> =>
       auth: stubAuth,
       theme: stubTheme,
       plugins: [
-        definePlugin("reports", (ctx) => {
-          ctx.registerScheduledTask({ id: "purge", cron, handler: noop });
+        definePlugin("reports", {
+          setup: (ctx) => {
+            ctx.registerScheduledTask({ id: "purge", cron, handler: noop });
+          },
         }),
       ],
     }),
@@ -66,8 +68,10 @@ describe("buildApp — scheduled task cron validation", () => {
           auth: stubAuth,
           theme: stubTheme,
           plugins: [
-            definePlugin("search", (ctx) => {
-              ctx.registerScheduledTask({ id: "drain", handler: noop });
+            definePlugin("search", {
+              setup: (ctx) => {
+                ctx.registerScheduledTask({ id: "drain", handler: noop });
+              },
             }),
           ],
         }),
