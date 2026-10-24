@@ -55,7 +55,7 @@ export function trackPrincipalReads(ctx: AppContext): AppContext {
   };
 }
 
-/** The check the admin shell makes: the bar has nothing to offer anyone else. */
+/** The bar has nothing to offer a user who cannot open the admin. */
 function adminAccessViewer(
   ctx: Pick<AppContext, "plugins">,
   user: AuthenticatedUser,
