@@ -167,3 +167,50 @@ describe("renderBlockTree edit-aware seam", () => {
     expect(html).not.toContain("data-plumix-add");
   });
 });
+
+describe("renderBlockTree edit-mode unregistered block", () => {
+  const orphan: readonly BlockNode[] = [
+    {
+      id: "hero1",
+      name: "acme/hero",
+      attrs: { title: "Kept", content: [{ id: "inner", name: "core/group" }] },
+    },
+  ];
+
+  test("renders a selectable placeholder naming the block", () => {
+    const html = renderToStaticMarkup(
+      renderBlockTree(orphan, registry, { editing: true }),
+    );
+
+    expect(html).toContain('data-plumix-id="hero1"');
+    expect(html).toContain('data-plumix-block="acme/hero"');
+    expect(html).toContain(
+      "acme/hero isn&#x27;t registered on this site. It&#x27;s kept as-is and not shown on the live site.",
+    );
+  });
+
+  test("renders none of its attributes or descendants", () => {
+    const html = renderToStaticMarkup(
+      renderBlockTree(orphan, registry, { editing: true }),
+    );
+
+    expect(html).not.toContain("Kept");
+    expect(html).not.toContain('data-plumix-id="inner"');
+  });
+
+  test("resolves the placeholder through the catalog", () => {
+    const html = renderToStaticMarkup(
+      renderBlockTree(orphan, registry, {
+        editing: true,
+        catalog: {
+          "blocks.unregistered.placeholder": [
+            ["name"],
+            " n'est pas enregistré sur ce site.",
+          ],
+        },
+      }),
+    );
+
+    expect(html).toContain("acme/hero n&#x27;est pas enregistré sur ce site.");
+  });
+});

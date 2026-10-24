@@ -100,6 +100,12 @@ export const SEED_BLOCKS: readonly BlockNode[] = [
     },
   },
   SEARCH_SEED,
+  // No spec registers it, as after its plugin is uninstalled.
+  {
+    id: "retired-hero",
+    name: "acme/retired-hero",
+    attrs: { title: "From a removed plugin" },
+  },
 ];
 
 export const SEED_PATTERNS: readonly InserterPattern[] = [

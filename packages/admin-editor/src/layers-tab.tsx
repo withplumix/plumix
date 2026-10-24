@@ -40,6 +40,7 @@ import { BlockIcon } from "./block-icon.js";
 import {
   findBlock,
   flattenTree,
+  holdsBlockOutside,
   projectMove,
   rowAfterRemoving,
 } from "./block-tree-ops.js";
@@ -53,7 +54,7 @@ const INDENT_WIDTH = 16;
 type RowAction = "copy" | "paste" | "duplicate" | "delete";
 
 export function LayersTab(): ReactElement {
-  const { registry } = useEditorConfig();
+  const { registry, allowedBlocks } = useEditorConfig();
   const { i18n } = useLingui();
   const storeApi = useEditorStoreApi();
   const tree = useEditorStore((s) => s.tree);
@@ -72,9 +73,10 @@ export function LayersTab(): ReactElement {
         storeApi,
         registry,
         navigator.clipboard,
-        pasteableAtRoot(registry),
+        pasteableAtRoot(registry, allowedBlocks),
+        allowedBlocks,
       ),
-    [storeApi, registry],
+    [storeApi, registry, allowedBlocks],
   );
 
   // After a delete, the row that takes the deleted one's place gets focus, so
@@ -120,6 +122,19 @@ export function LayersTab(): ReactElement {
   const typeLabel = (name: string): string => {
     const spec = registry.get(name);
     return spec?.title != null ? resolveLabel(spec.title, i18n) : name;
+  };
+
+  // Such a block is kept as saved: it can be moved or deleted, nothing else.
+  const keptAsSaved = (id: string): boolean => {
+    const node = findBlock(tree, id, registry);
+    return node ? holdsBlockOutside([node], registry, undefined) : false;
+  };
+
+  // A copy would be a new instance, which a block the site no longer offers
+  // can't have; the block itself stays editable.
+  const copyable = (id: string): boolean => {
+    const node = findBlock(tree, id, registry);
+    return node ? !holdsBlockOutside([node], registry, allowedBlocks) : true;
   };
 
   const excerptOf = (id: string): string | null => {
@@ -175,6 +190,8 @@ export function LayersTab(): ReactElement {
               // block's text tells it from others of its type.
               detail={item.label ? null : excerptOf(item.id)}
               active={item.id === activeId}
+              keptAsSaved={keptAsSaved(item.id)}
+              copyable={copyable(item.id)}
               onSelect={() => select(item.id)}
               onRename={(value) => setBlockLabel(item.id, value)}
               onAction={(action) => runRowAction(item.id, action)}
@@ -192,6 +209,11 @@ interface LayerRowProps {
   readonly label: string;
   readonly detail: string | null;
   readonly active: boolean;
+  /** Holds a block this site doesn't register: only move and delete apply. */
+  readonly keptAsSaved: boolean;
+  /** False when it holds a block the site doesn't offer: no copy, paste or
+   *  duplicate. */
+  readonly copyable: boolean;
   readonly onSelect: () => void;
   readonly onRename: (label: string) => void;
   readonly onAction: (action: RowAction) => void;
@@ -203,6 +225,8 @@ function LayerRow({
   label,
   detail,
   active,
+  keptAsSaved,
+  copyable,
   onSelect,
   onRename,
   onAction,
@@ -246,7 +270,7 @@ function LayerRow({
     if (matchesShortcut("selection.delete", event)) {
       event.preventDefault();
       onAction("delete");
-    } else if (matchesShortcut("layers.rename", event)) {
+    } else if (!keptAsSaved && matchesShortcut("layers.rename", event)) {
       event.preventDefault();
       startEditing();
     }
@@ -283,7 +307,7 @@ function LayerRow({
             data-testid={`layer-${item.id}`}
             aria-current={active ? "true" : undefined}
             onClick={onSelect}
-            onDoubleClick={startEditing}
+            onDoubleClick={keptAsSaved ? undefined : startEditing}
             className="hover:bg-accent aria-[current]:bg-accent flex min-w-0 flex-1 items-center gap-1.5 rounded p-1.5 text-start text-sm"
             {...attributes}
             {...listeners}
@@ -325,38 +349,44 @@ function LayerRow({
                 event.preventDefault();
               }}
             >
-              <DropdownMenuItem
-                data-testid={`layer-rename-action-${item.id}`}
-                onSelect={() => {
-                  renamingFromMenu.current = true;
-                  startEditing();
-                }}
-              >
-                <Pencil />
-                <Trans id="editor.layers.rename" message="Rename" />
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                data-testid={`layer-copy-${item.id}`}
-                onSelect={() => onAction("copy")}
-              >
-                <Copy />
-                <Trans id="editor.layers.copy" message="Copy" />
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                data-testid={`layer-paste-${item.id}`}
-                onSelect={() => onAction("paste")}
-              >
-                <ClipboardPaste />
-                <Trans id="editor.layers.paste" message="Paste" />
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                data-testid={`layer-duplicate-${item.id}`}
-                onSelect={() => onAction("duplicate")}
-              >
-                <CopyPlus />
-                <Trans id="editor.layers.duplicate" message="Duplicate" />
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
+              {keptAsSaved ? null : (
+                <DropdownMenuItem
+                  data-testid={`layer-rename-action-${item.id}`}
+                  onSelect={() => {
+                    renamingFromMenu.current = true;
+                    startEditing();
+                  }}
+                >
+                  <Pencil />
+                  <Trans id="editor.layers.rename" message="Rename" />
+                </DropdownMenuItem>
+              )}
+              {copyable ? (
+                <>
+                  <DropdownMenuItem
+                    data-testid={`layer-copy-${item.id}`}
+                    onSelect={() => onAction("copy")}
+                  >
+                    <Copy />
+                    <Trans id="editor.layers.copy" message="Copy" />
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    data-testid={`layer-paste-${item.id}`}
+                    onSelect={() => onAction("paste")}
+                  >
+                    <ClipboardPaste />
+                    <Trans id="editor.layers.paste" message="Paste" />
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    data-testid={`layer-duplicate-${item.id}`}
+                    onSelect={() => onAction("duplicate")}
+                  >
+                    <CopyPlus />
+                    <Trans id="editor.layers.duplicate" message="Duplicate" />
+                  </DropdownMenuItem>
+                </>
+              ) : null}
+              {keptAsSaved ? null : <DropdownMenuSeparator />}
               <DropdownMenuItem
                 data-testid={`layer-delete-${item.id}`}
                 onSelect={() => onAction("delete")}

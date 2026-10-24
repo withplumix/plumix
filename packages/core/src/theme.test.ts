@@ -1,5 +1,6 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 
+import type { CoreBlockName } from "./blocks/core-blocks.js";
 import type {
   ArchiveTypeData,
   EntryData,
@@ -9,6 +10,7 @@ import type {
   SearchData,
   TermArchiveData,
 } from "./route/contract/resolved-entry.js";
+import type { ThemeDescriptor } from "./theme.js";
 import { auth } from "./auth/config.js";
 import { definePlugin } from "./plugin/define.js";
 import { fallback } from "./route/render/template-builders.js";
@@ -434,5 +436,43 @@ describe("template-data guards", () => {
     expect(all.filter(isFrontPage)).toEqual([frontPage]);
     expect(all.filter(isSearch)).toEqual([search]);
     expect(all.filter(isError)).toEqual([error]);
+  });
+});
+
+describe("defineTheme — allowedBlocks", () => {
+  test("takes the core block names and any other block name", () => {
+    const theme = defineTheme({
+      templates: [fallback(() => null)],
+      allowedBlocks: ["core/rich-text", "core/columns", "forms/form"],
+    });
+
+    expect(theme.allowedBlocks).toEqual([
+      "core/rich-text",
+      "core/columns",
+      "forms/form",
+    ]);
+    // `string & {}` keeps the core names offered while any string is accepted.
+    expectTypeOf<
+      NonNullable<ThemeDescriptor["allowedBlocks"]>[number]
+    >().toEqualTypeOf<CoreBlockName | (string & {})>();
+  });
+
+  test("buildApp resolves the list once, for every request's content check", async () => {
+    const app = await buildApp(
+      plumix({
+        runtime: stubAdapter,
+        database: stubDatabase,
+        auth: stubAuth,
+        theme: defineTheme({
+          templates: [fallback(() => null)],
+          allowedBlocks: ["core/columns"],
+        }),
+      }),
+    );
+
+    expect([...app.allowedBlocks].sort()).toEqual([
+      "core/column",
+      "core/columns",
+    ]);
   });
 });

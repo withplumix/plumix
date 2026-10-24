@@ -29,6 +29,11 @@ msgid "blocks.embed.titleFallback"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/blocks/render-block-tree.ts
+msgid "blocks.unregistered.placeholder"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/blocks/button/index.tsx
 msgid "block.core.button.input.href.label"
 msgstr ""

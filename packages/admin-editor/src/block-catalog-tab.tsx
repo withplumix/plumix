@@ -47,7 +47,7 @@ export function BlockCatalog({
   parentName,
   entryType,
 }: BlockCatalogProps): ReactElement {
-  const { registry, capabilities } = useEditorConfig();
+  const { registry, capabilities, allowedBlocks } = useEditorConfig();
   const { i18n } = useLingui();
   const [query, setQuery] = useState("");
   const insertBlock = useEditorStore((s) => s.insertBlock);
@@ -64,10 +64,19 @@ export function BlockCatalog({
         capabilities,
         query,
         allowed,
+        themeAllowed: allowedBlocks,
         parentName,
         entryType,
       }),
-    [registry, capabilities, query, allowed, parentName, entryType],
+    [
+      registry,
+      capabilities,
+      query,
+      allowed,
+      allowedBlocks,
+      parentName,
+      entryType,
+    ],
   );
   const matchedPatterns = useMemo(
     () => filterPatterns(patterns ?? [], query),

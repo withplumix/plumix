@@ -19,6 +19,26 @@ import {
 } from "./table/index.js";
 import { videoBlock } from "./video/index.js";
 
+/** The names of {@link coreBlocks}, so a theme's `allowedBlocks` autocompletes them. */
+export type CoreBlockName =
+  | "core/rich-text"
+  | "core/separator"
+  | "core/code"
+  | "core/group"
+  | "core/section"
+  | "core/columns"
+  | "core/column"
+  | "core/button"
+  | "core/details"
+  | "core/video"
+  | "core/embed"
+  | "core/html"
+  | "core/table"
+  | "core/table-header-row"
+  | "core/table-body-row"
+  | "core/table-header-cell"
+  | "core/table-cell";
+
 /**
  * `core/html` sat outside this list from #327, on the understanding that a site
  * wanting the raw-HTML escape hatch would register it explicitly. No such route

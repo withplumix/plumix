@@ -199,12 +199,13 @@ export const restore = base
     );
     entryRows(context.db).assertCopyCurrent(input.ifMatch, live);
 
-    // Snapshots survive block deregistration, so a stale revision must pass the
-    // same gate before landing on autosave or live.
+    // The same gate as any save. The revision starts the save alongside live,
+    // so a block unregistered since the snapshot comes back with it.
     assertContentWithinByteCap(revision.content, errors);
     assertContentValidAgainstRegistries(
       revision.content,
-      { blocks: context.blocks },
+      [revision.content, live.content],
+      context,
       errors,
     );
 

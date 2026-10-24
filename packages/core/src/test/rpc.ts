@@ -28,6 +28,7 @@ import { declareAuthMethods } from "../auth/declared-methods.js";
 import { resolvePasskeyConfig } from "../auth/passkey/config.js";
 import { createSession, DEFAULT_SESSION_POLICY } from "../auth/sessions.js";
 import { withUser } from "../auth/with-user.js";
+import { resolveAllowedBlocks } from "../blocks/allowed-blocks.js";
 import { coreBlocks, coreMarks, createBlockRegistry } from "../blocks/index.js";
 import { createAppContext } from "../context/app.js";
 import { HookRegistry as HookRegistryImpl } from "../hooks/registry.js";
@@ -144,6 +145,12 @@ function buildContext(
     hooks,
     plugins,
     blocks,
+    allowedBlocks: new Set(
+      resolveAllowedBlocks(blocks, {
+        themeBlocks: config.theme.blocks ?? [],
+        allowedBlocks: config.theme.allowedBlocks,
+      }),
+    ),
     marks,
     logger: silentLogger,
     authMethods,

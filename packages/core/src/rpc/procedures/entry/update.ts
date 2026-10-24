@@ -145,11 +145,6 @@ export const update = base
     );
 
     assertContentWithinByteCap(filtered.content, errors);
-    assertContentValidAgainstRegistries(
-      filtered.content,
-      { blocks: context.blocks },
-      errors,
-    );
 
     const existing = await loadAuthoredEntry(context.db, filtered.id);
     if (!existing) {
@@ -157,6 +152,22 @@ export const update = base
     }
 
     assertCanEditEntry(context, existing, errors);
+
+    // A draft save bases on the draft's own edits, never live: the editor
+    // sends only changes, and an untouched key must not ride into a bag
+    // publish re-decodes.
+    const currentEdits = await getAutosaveEdits(context.db, {
+      entryId: existing.id,
+      authorId: context.user.id,
+    });
+    // Validated against what the save starts from, so a block whose plugin is
+    // gone survives the save while a new instance of it is refused.
+    assertContentValidAgainstRegistries(
+      filtered.content,
+      [existing.content, currentEdits?.content],
+      context,
+      errors,
+    );
 
     // Checked before either write path so an undeclared key is rejected
     // regardless of the save target.
@@ -199,13 +210,6 @@ export const update = base
           data: { reason: "autosave_requires_published" },
         });
       }
-      // Base on the draft's own edits, never live: the editor sends only
-      // changes, and a key the author never touched must not ride into a bag
-      // publish re-decodes.
-      const currentEdits = await getAutosaveEdits(context.db, {
-        entryId: existing.id,
-        authorId: context.user.id,
-      });
       // Draft-lenient: a work-in-progress save never fails on business rules,
       // which `entry.publish` re-enforces. Conditions are judged against the
       // pending draft, not live.

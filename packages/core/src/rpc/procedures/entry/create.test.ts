@@ -7,6 +7,7 @@ import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { resolveEntryList } from "../../../route/render/resolve-entry-list.js";
 import { forEntryType } from "../../../route/render/template-builders.js";
 import { resolveTemplate } from "../../../route/render/template-hierarchy.js";
+import { defaultTestTheme } from "../../../test/default-theme.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 import { registerCoreLookupAdapters } from "../lookup-adapters.js";
 
@@ -746,6 +747,31 @@ describe("entry.create", () => {
         code: "CONFLICT",
         data: { key: "videoUrl" },
       });
+    });
+  });
+});
+
+describe("entry.create — the blocks the theme allows", () => {
+  test("refuses a node of a block outside the set", async () => {
+    const h = await createRpcHarness({
+      authAs: "contributor",
+      config: { theme: { ...defaultTestTheme, allowedBlocks: ["core/group"] } },
+    });
+
+    await expect(
+      h.client.entry.create({
+        title: "Hello",
+        slug: "hello",
+        content: {
+          version: "plumix.v2",
+          blocks: [{ id: "p1", name: "core/rich-text", attrs: {} }],
+        },
+      }),
+    ).rejects.toMatchObject({
+      code: "INVALID_BLOCK_CONTENT",
+      data: {
+        issues: [expect.objectContaining({ code: "block_not_allowed" })],
+      },
     });
   });
 });

@@ -65,6 +65,7 @@ const MANIFEST_FIELD_IS_ARRAY = {
   blocks: true,
   marks: true,
   patterns: true,
+  allowedBlocks: true,
   tokens: false,
   breakpoints: false,
   i18n: false,
@@ -148,6 +149,14 @@ export function getPatterns(
   source: PlumixManifest = currentManifest(),
 ): readonly PatternManifestEntry[] {
   return source.patterns ?? [];
+}
+
+/** The blocks the theme allows; undefined, allowing every block, when the
+ *  manifest is silent. */
+export function getAllowedBlocks(
+  source: PlumixManifest = currentManifest(),
+): readonly string[] | undefined {
+  return source.allowedBlocks;
 }
 
 export function findEntryTypeBySlug(

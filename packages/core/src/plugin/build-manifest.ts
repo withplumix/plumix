@@ -63,6 +63,7 @@ import {
   spellTermCapability,
 } from "../access/contract/capability.js";
 import { namespacedEntryCapability } from "../access/contract/entry-capabilities.js";
+import { resolveAllowedBlocks } from "../blocks/allowed-blocks.js";
 import {
   coreBlocks,
   createBlockRegistry,
@@ -131,6 +132,8 @@ export function buildManifest(
      * Theme `blocks`; they win a name clash with plugin blocks.
      */
     readonly blocks?: readonly BlockSpec[];
+    /** The theme's `allowedBlocks`; resolved against every registered block. */
+    readonly allowedBlocks?: readonly string[];
     readonly i18n?: ResolvedI18n;
     readonly plugins?: readonly {
       readonly id: string;
@@ -245,6 +248,10 @@ export function buildManifest(
     blocks,
     marks,
     patterns,
+    allowedBlocks: resolveAllowedBlocks(blockSpecs, {
+      themeBlocks: options?.blocks ?? [],
+      allowedBlocks: options?.allowedBlocks,
+    }),
     tokens: options?.tokens ?? {},
     breakpoints: options?.breakpoints ?? DEFAULT_BREAKPOINTS,
     i18n: {

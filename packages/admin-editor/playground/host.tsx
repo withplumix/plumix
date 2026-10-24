@@ -98,6 +98,11 @@ if (params.get("theme") === "dark") {
  * a host-supplied banner standing in for the revision/restore overlay.
  */
 const readOnly = params.has("readonly");
+/**
+ * `?allowed=a,b` stands in for the manifest's `allowedBlocks`, the theme's
+ * list; absent, every block is allowed.
+ */
+const allowedBlocks = params.get("allowed")?.split(",");
 
 /** A stand-in for the admin's revision/share preview banner. */
 function PreviewBannerStub(): ReactElement {
@@ -131,6 +136,7 @@ if (root) {
           defaultValue={defineEntryContent(SEED_BLOCKS)}
           capabilities={new Set()}
           patterns={SEED_PATTERNS}
+          allowedBlocks={allowedBlocks}
           tokens={SEED_TOKENS}
           readOnly={readOnly}
           previewBanner={readOnly ? <PreviewBannerStub /> : undefined}

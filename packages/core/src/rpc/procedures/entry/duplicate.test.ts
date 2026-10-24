@@ -6,6 +6,7 @@ import { entries } from "../../../db/schema/entries.js";
 import { text } from "../../../plugin/fields/index.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { toRegisteredTermTaxonomy } from "../../../plugin/registry.js";
+import { defaultTestTheme } from "../../../test/default-theme.js";
 import { currentEtag } from "../../../test/entry-etag.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
@@ -59,6 +60,62 @@ describe("entry.duplicate", () => {
     });
     expect(persisted?.status).toBe("draft");
     expect(persisted?.authorId).toBe(h.user.id);
+  });
+
+  test("copies an entry holding a block no plugin registers any more", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const content = {
+      version: "plumix.v2" as const,
+      blocks: [{ id: "hero1", name: "acme/hero", attrs: { title: "Hi" } }],
+    };
+    const source = await h.factory.published.create({
+      authorId: h.user.id,
+      content,
+    });
+
+    const copy = await h.client.entry.duplicate({ id: source.id });
+
+    expect(copy.content).toEqual(content);
+  });
+
+  test("copies an entry holding a block the theme no longer allows", async () => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      config: { theme: { ...defaultTestTheme, allowedBlocks: ["core/group"] } },
+    });
+    const content = {
+      version: "plumix.v2" as const,
+      blocks: [{ id: "p1", name: "core/rich-text", attrs: {} }],
+    };
+    const source = await h.factory.published.create({
+      authorId: h.user.id,
+      content,
+    });
+
+    const copy = await h.client.entry.duplicate({ id: source.id });
+
+    expect(copy.content).toEqual(content);
+  });
+
+  test("refuses a source that fails the block checks in another way", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    // `core/column` may only sit under `core/columns`.
+    const source = await h.factory.published.create({
+      authorId: h.user.id,
+      content: {
+        version: "plumix.v2",
+        blocks: [{ id: "col1", name: "core/column", attrs: { content: [] } }],
+      },
+    });
+
+    await expect(
+      h.client.entry.duplicate({ id: source.id }),
+    ).rejects.toMatchObject({
+      code: "INVALID_BLOCK_CONTENT",
+      data: {
+        issues: [expect.objectContaining({ code: "requires_parent" })],
+      },
+    });
   });
 
   test("the copy answers with the etag a save from it sends", async () => {

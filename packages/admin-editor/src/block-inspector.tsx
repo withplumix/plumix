@@ -13,6 +13,7 @@ import { useEditorConfig } from "./editor-config-context.js";
 import { inspectorView } from "./inspector-view.js";
 import { useEditorStore, useLoaderPushRef } from "./provider.js";
 import { deviceBucket } from "./store.js";
+import { UnregisteredBlockNotice } from "./unregistered-block-notice.js";
 
 interface BlockInspectorProps {
   /** When set, a loader-backed block gets a "Refresh data" control. */
@@ -24,7 +25,7 @@ interface BlockInspectorProps {
 export function BlockInspector({
   onRefreshBlockLoader,
 }: BlockInspectorProps): ReactElement {
-  const { registry, resolvePluginFieldType } = useEditorConfig();
+  const { registry, allowedBlocks, resolvePluginFieldType } = useEditorConfig();
   const activeId = useEditorStore((s) => s.activeId);
   const tree = useEditorStore((s) => s.tree);
   const device = useEditorStore((s) => s.device);
@@ -40,8 +41,16 @@ export function BlockInspector({
   const bucket = deviceBucket(device);
   const canRefresh = Boolean(onRefreshBlockLoader);
   const view = useMemo(
-    () => inspectorView(registry, tree, activeId, bucket, canRefresh),
-    [registry, tree, activeId, bucket, canRefresh],
+    () =>
+      inspectorView(
+        registry,
+        tree,
+        activeId,
+        bucket,
+        canRefresh,
+        allowedBlocks,
+      ),
+    [registry, tree, activeId, bucket, canRefresh, allowedBlocks],
   );
   const block = view?.block;
   const tableId = view?.tableId ?? null;
@@ -101,8 +110,28 @@ export function BlockInspector({
     );
   }
 
+  if (view.unregistered) {
+    return (
+      <UnregisteredBlockNotice
+        name={view.block.name}
+        testId="block-inspector-unregistered"
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4 p-4" data-testid="block-inspector">
+      {view.notAllowed ? (
+        <p
+          className="text-muted-foreground text-sm"
+          data-testid="block-inspector-not-allowed"
+        >
+          <Trans
+            id="editor.inspector.notAllowed"
+            message="This site no longer offers this block. You can edit, move or remove it."
+          />
+        </p>
+      ) : null}
       {view.nothingToSet ? (
         <p
           className="text-muted-foreground text-sm"

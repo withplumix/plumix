@@ -474,6 +474,11 @@ msgid "editor.selection.count"
 msgstr "{count} selected"
 
 #. js-lingui-explicit-id
+#: src/unregistered-block-notice.tsx
+msgid "editor.unregistered.notice"
+msgstr "{name} isn't registered on this site, so it can't be edited. It's kept as-is and not shown on the live site."
+
+#. js-lingui-explicit-id
 #: src/editor-command-palette.tsx
 msgid "editor.palette.group.actions"
 msgstr "Actions"
@@ -1204,6 +1209,11 @@ msgstr "This block can't be placed in this slot."
 #: src/block-inspector.tsx
 msgid "editor.inspector.noSettings"
 msgstr "This block has no settings."
+
+#. js-lingui-explicit-id
+#: src/block-inspector.tsx
+msgid "editor.inspector.notAllowed"
+msgstr "This site no longer offers this block. You can edit, move or remove it."
 
 #. js-lingui-explicit-id
 #: src/editor-header.tsx

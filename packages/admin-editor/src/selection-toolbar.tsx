@@ -23,7 +23,9 @@ import type { OverlayBox } from "./overlay.js";
 import {
   canGroupSelection,
   canUngroupBlock,
+  collectBlocks,
   findParentId,
+  holdsBlockOutside,
 } from "./block-tree-ops.js";
 import { useEditorConfig } from "./editor-config-context.js";
 import { px } from "./overlay.js";
@@ -43,7 +45,7 @@ export function SelectionToolbar({
   readonly box: OverlayBox;
 }): ReactElement | null {
   const { i18n } = useLingui();
-  const { registry } = useEditorConfig();
+  const { registry, allowedBlocks } = useEditorConfig();
   const store = useEditorStoreApi();
   const activeId = useEditorStore((s) => s.activeId);
   const selectedCount = useEditorStore((s) => s.selectedIds.size);
@@ -55,6 +57,14 @@ export function SelectionToolbar({
   );
   const canUngroup = useEditorStore((s) =>
     s.activeId ? canUngroupBlock(s.tree, s.activeId, registry) : false,
+  );
+  const canDuplicate = useEditorStore(
+    (s) =>
+      !holdsBlockOutside(
+        collectBlocks(s.tree, s.selectedIds, registry),
+        registry,
+        allowedBlocks,
+      ),
   );
   if (!activeId) return null;
 
@@ -165,15 +175,17 @@ export function SelectionToolbar({
             })}
           />
         ) : null}
-        <IconAction
-          testId="selection-toolbar-duplicate"
-          icon={<Copy className="size-4" />}
-          onClick={act(() => state.duplicateSelected())}
-          label={i18n._({
-            id: "editor.selection.duplicate",
-            message: "Duplicate",
-          })}
-        />
+        {canDuplicate ? (
+          <IconAction
+            testId="selection-toolbar-duplicate"
+            icon={<Copy className="size-4" />}
+            onClick={act(() => state.duplicateSelected())}
+            label={i18n._({
+              id: "editor.selection.duplicate",
+              message: "Duplicate",
+            })}
+          />
+        ) : null}
         <IconAction
           testId="selection-toolbar-delete"
           icon={<Trash2 className="size-4" />}

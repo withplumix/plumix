@@ -332,6 +332,11 @@ export interface PlumixManifest {
   readonly marks?: readonly MarkManifestEntry[];
   readonly patterns?: readonly PatternManifestEntry[];
   /**
+   * The blocks the editor allows, resolved from the theme's `allowedBlocks`.
+   * Unlike the lists above, a reader treats a missing field as every block.
+   */
+  readonly allowedBlocks?: readonly string[];
+  /**
    * Theme tokens from `defineTheme({ tokens })`. Routed through the
    * manifest channel because the precompiled admin shell can't import
    * `plumix.config.ts` at build time.

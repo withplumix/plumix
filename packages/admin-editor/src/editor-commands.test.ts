@@ -112,6 +112,16 @@ describe("buildEditorCommands", () => {
     );
   });
 
+  test("offers no insert command for a block outside the theme's set", () => {
+    const insert = buildEditorCommands(
+      context({ allowedBlocks: new Set(["core/heading"]) }),
+    ).filter((command) => command.group === "insert");
+
+    expect(insert.map((command) => command.id)).toEqual([
+      "insert:core/heading",
+    ]);
+  });
+
   test("inserting appends a fresh block, selects it, and reveals it", () => {
     const ctx = context();
     byId(buildEditorCommands(ctx), "insert:core/heading")?.run();

@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import type { BlockNode } from "@plumix/core/blocks";
 
 import { treeBlocks } from "../test/tree-blocks.js";
-import { createClipboardOps } from "./clipboard-ops.js";
+import { createClipboardOps, pasteableAtRoot } from "./clipboard-ops.js";
 import { parseClipboardBlocks } from "./clipboard.js";
 import { createEditorStore } from "./store.js";
 
@@ -24,8 +24,8 @@ function fakeClipboard(initial = "") {
 }
 
 const seeded = (): readonly BlockNode[] => [
-  { id: "a", name: "core/heading", attrs: { text: "Hi" } },
-  { id: "b", name: "core/text" },
+  { id: "a", name: "acme/team", attrs: { text: "Hi" } },
+  { id: "b", name: "core/group" },
 ];
 
 describe("clipboard ops", () => {
@@ -71,7 +71,7 @@ describe("clipboard ops", () => {
 
     const tree = store.getState().tree;
     expect(tree).toHaveLength(1);
-    expect(tree[0]?.name).toBe("core/heading");
+    expect(tree[0]?.name).toBe("acme/team");
     expect(tree[0]?.id).not.toBe("a");
   });
 
@@ -87,7 +87,7 @@ describe("clipboard ops", () => {
   test("paste drops nodes the canPaste predicate rejects", async () => {
     const clip = fakeClipboard();
     const source = createEditorStore(treeBlocks, {
-      tree: [{ id: "col", name: "core/column" }],
+      tree: [{ id: "col", name: "acme/team" }],
     });
     source.getState().select("col");
     await createClipboardOps(source, treeBlocks, clip).copy();
@@ -98,9 +98,65 @@ describe("clipboard ops", () => {
       store,
       treeBlocks,
       clip,
-      (n) => n.name !== "core/column",
+      (n) => n.name !== "acme/team",
     ).paste();
 
     expect(store.getState().tree).toHaveLength(0);
+  });
+
+  test("copy leaves the clipboard untouched for a selection holding an unregistered block", async () => {
+    const store = createEditorStore(treeBlocks, {
+      tree: [
+        {
+          id: "g",
+          name: "core/group",
+          attrs: { content: [{ id: "o", name: "acme/gone" }] },
+        },
+      ],
+    });
+    store.getState().select("g");
+    const clip = fakeClipboard("prior");
+
+    await createClipboardOps(store, treeBlocks, clip).cut();
+
+    expect(clip.text()).toBe("prior");
+    expect(store.getState().tree.map((n) => n.id)).toEqual(["g"]);
+  });
+
+  test("pasteableAtRoot refuses a block this site doesn't register", () => {
+    const pasteable = pasteableAtRoot(treeBlocks);
+
+    expect(pasteable({ id: "o", name: "acme/gone" })).toBe(false);
+    expect(
+      pasteable({
+        id: "g",
+        name: "core/group",
+        attrs: { content: [{ id: "o", name: "acme/gone" }] },
+      }),
+    ).toBe(false);
+    expect(pasteable({ id: "t", name: "acme/team" })).toBe(true);
+  });
+
+  test("copy leaves the clipboard untouched for a block outside the theme's set", async () => {
+    const store = createEditorStore(treeBlocks, { tree: seeded() });
+    store.getState().select("a");
+    const clip = fakeClipboard("prior");
+
+    await createClipboardOps(
+      store,
+      treeBlocks,
+      clip,
+      undefined,
+      new Set(["core/group"]),
+    ).copy();
+
+    expect(clip.text()).toBe("prior");
+  });
+
+  test("pasteableAtRoot refuses a block outside the theme's set", () => {
+    const pasteable = pasteableAtRoot(treeBlocks, new Set(["core/group"]));
+
+    expect(pasteable({ id: "t", name: "acme/team" })).toBe(false);
+    expect(pasteable({ id: "g", name: "core/group" })).toBe(true);
   });
 });

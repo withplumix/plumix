@@ -22,6 +22,20 @@ A site has one theme, and it arrives through the `theme` slot in `plumix.config.
 - `tokens` are named design values grouped by CSS property, and they are a registry rather than a stylesheet. Plumix emits no CSS for them. Picking a token in the editor writes `var(--plumix-<group>-<slug>, <value>)` into the block's style, where `<group>` is the group name in kebab-case and `<value>` is the token's registered literal, used as the inline fallback. A token registered without a `value` gets the bare reference and no fallback. Your own stylesheet declares the custom property. The known groups are `color`, `spacing`, `fontFamily`, `fontSize`, `fontWeight`, `lineHeight`, `letterSpacing`, `borderWidth`, `borderRadius`, `boxShadow`, `textShadow`, `backgroundImage` and `maxWidth`, and a theme may add a group for any other CSS property.
 - `breakpoints` sets the `tablet` and `mobile` max-widths in pixels, defaulting to 991 and 640. The server style emitter and the editor canvas read the same two numbers, so what an author previews is what ships.
 - `blocks` and `shortcodes` are presentation components the theme owns. They merge into the per-app registries at boot at the highest precedence, so a theme shortcode replaces a plugin or core shortcode of the same name. A theme block only ever settles against a plugin block, because the `core/` namespace is reserved and `defineTheme` throws on a theme block that claims it.
+- `allowedBlocks` lists the blocks the editor allows, site-wide, for a site that offers only its own components and the core blocks it picked. Leave it out and every registered block is allowed. It is an allowlist: a plugin's block is allowed only once the list names it, and a name no one registers is ignored. The theme's own `blocks` are always allowed without being named; set `inserter: false` on one to keep it out of the inserter. A block that only lives inside a parent's slot follows its parent, so `core/columns` brings `core/column` and `core/table` brings its rows and cells. The server holds every writer to the same list, agents included: a save can't add a new instance of a block outside it, while an entry that already holds one keeps it, renders it and saves it. The editor shows such a block with a notice, editable but not duplicated, copied or pasted. Patterns and variations holding a block outside the list are hidden. A block's own `entryTypes` and `capability` narrow the inserter further.
+
+  ```ts
+  defineTheme({
+    templates: [fallback(Page)],
+    allowedBlocks: [
+      "core/rich-text",
+      "core/button",
+      "core/columns",
+      "forms/form",
+    ],
+  });
+  ```
+
 - `redirects` are public-route rules the theme owns, for URL moves that belong to the design rather than to the content model. They lose a tie against `config.redirects` and against plugin-registered rules.
 - `css` lists stylesheet paths. The strings never enter the config module graph. The Vite plugin generates a client entry that imports each one, so Vite emits hashed bundles.
 - `viewTransitions` turns on the browser's animated transitions between pages. Core emits the CSS rule that enables them, and your stylesheet writes every animation. [Page Transitions](/themes/view-transitions/) covers the setting and has recipes to copy.

@@ -220,4 +220,41 @@ describe("inspectorView", () => {
 
     expect(view?.tableId).toBeNull();
   });
+
+  test("marks a block this site doesn't register, with nothing to set", () => {
+    const view = inspectorView(
+      registry,
+      [{ id: "o", name: "acme/gone", attrs: { title: "Kept" } }],
+      "o",
+      "large",
+      true,
+    );
+
+    expect(view).toMatchObject({
+      unregistered: true,
+      inputs: [],
+      nothingToSet: false,
+    });
+  });
+
+  test("marks a block the theme no longer allows, keeping its controls", () => {
+    const tree = [{ id: "o", name: "core/group", attrs: {} }];
+
+    expect(
+      inspectorView(registry, tree, "o", "large", true, new Set(["x/other"])),
+    ).toMatchObject({ unregistered: false, notAllowed: true });
+    expect(
+      inspectorView(
+        registry,
+        tree,
+        "o",
+        "large",
+        true,
+        new Set(["core/group"]),
+      ),
+    ).toMatchObject({ notAllowed: false });
+    expect(inspectorView(registry, tree, "o", "large", true)).toMatchObject({
+      notAllowed: false,
+    });
+  });
 });

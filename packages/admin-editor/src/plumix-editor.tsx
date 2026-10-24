@@ -31,6 +31,7 @@ import type { ResolvePluginFieldType } from "./block-input-control.js";
 import type { PublishActions } from "./editor-header.js";
 import type { RightPanel } from "./store.js";
 import { BlockCatalog } from "./block-catalog-tab.js";
+import { patternsWithin } from "./block-catalog.js";
 import { BlockInspector } from "./block-inspector.js";
 import { CanvasFrame } from "./canvas-frame.js";
 import { EditorCommandPalette } from "./editor-command-palette.js";
@@ -75,6 +76,12 @@ export interface PlumixEditorProps {
   readonly capabilities?: ReadonlySet<string>;
   /** Theme + plugin patterns offered in the inserter alongside the blocks. */
   readonly patterns?: readonly InserterPattern[];
+  /**
+   * The blocks the theme allows (the manifest's `allowedBlocks`); every block
+   * when absent. The inserter offers only these, and hides a pattern holding
+   * any other.
+   */
+  readonly allowedBlocks?: readonly string[];
   /** The entry type being authored (e.g. `"post"`). Selects which `patterns`
    *  qualify as starters for the blank-entry picker; without it, only
    *  type-agnostic starters are offered. */
@@ -150,6 +157,7 @@ export function PlumixEditor({
   registry,
   capabilities = NO_CAPABILITIES,
   patterns,
+  allowedBlocks,
   entryType,
   breakpoints,
   tokens,
@@ -172,10 +180,18 @@ export function PlumixEditor({
   resolvePluginFieldType,
 }: PlumixEditorProps): ReactElement {
   const { i18n } = useLingui();
+  const allowedSet = useMemo(
+    () => (allowedBlocks ? new Set(allowedBlocks) : undefined),
+    [allowedBlocks],
+  );
+  const offeredPatterns = useMemo(
+    () => patternsWithin(patterns ?? [], registry, allowedSet),
+    [patterns, registry, allowedSet],
+  );
   // Starter patterns eligible for this entry type, offered to a blank entry.
   const starterCandidates = useMemo(
-    () => selectStarterPatterns(patterns ?? [], entryType),
-    [patterns, entryType],
+    () => selectStarterPatterns(offeredPatterns, entryType),
+    [offeredPatterns, entryType],
   );
   const seedStarterOpen = shouldOpenStarter(defaultValue, starterCandidates);
 
@@ -190,6 +206,7 @@ export function PlumixEditor({
           registry={registry}
           tokens={tokens ?? NO_TOKENS}
           capabilities={capabilities}
+          allowedBlocks={allowedSet}
           resolvePluginFieldType={resolvePluginFieldType}
         >
           <div
@@ -215,6 +232,7 @@ export function PlumixEditor({
         registry={registry}
         tokens={tokens ?? NO_TOKENS}
         capabilities={capabilities}
+        allowedBlocks={allowedSet}
         resolvePluginFieldType={resolvePluginFieldType}
       >
         {/* shadcn sidebar-16 pattern: a flex-col provider with a full-width
@@ -270,7 +288,10 @@ export function PlumixEditor({
                 </SidebarHeader>
                 <SidebarContent>
                   <TabsContent value="blocks">
-                    <BlockCatalog patterns={patterns} entryType={entryType} />
+                    <BlockCatalog
+                      patterns={offeredPatterns}
+                      entryType={entryType}
+                    />
                   </TabsContent>
                   <TabsContent value="layers">
                     <LayersTab />

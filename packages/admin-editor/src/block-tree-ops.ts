@@ -448,6 +448,25 @@ export function collectBlocks(
 }
 
 /**
+ * Unregistered, or outside `allowed` (none allows all), at any depth. A copy
+ * would be a new instance of it, which a save refuses.
+ */
+export function holdsBlockOutside(
+  nodes: readonly BlockNode[],
+  blocks: BlockSpecLookup,
+  allowed: ReadonlySet<string> | undefined,
+): boolean {
+  return nodes.some(
+    (node) =>
+      !blocks.get(node.name) ||
+      (allowed !== undefined && !allowed.has(node.name)) ||
+      slotChildren(node, blocks).some((children) =>
+        holdsBlockOutside(children, blocks, allowed),
+      ),
+  );
+}
+
+/**
  * Ids are rewritten through each subtree, so repeated pastes stay independent.
  * A null `afterId` appends to the root.
  */

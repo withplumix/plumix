@@ -28,6 +28,7 @@ import {
   accessPoliciesForType,
   entryMetaBoxesForType,
   findEntryTypeBySlug,
+  getAllowedBlocks,
   getPatterns,
   getThemeBreakpoints,
   getThemeTokens,
@@ -111,6 +112,9 @@ const registry = createBlockRegistry([...coreBlocks, ...getRegisteredBlocks()]);
 
 /** Theme + plugin patterns, surfaced in the inserter alongside the blocks. */
 const patterns = getPatterns();
+
+/** The blocks the theme allows; the inserter offers only these. */
+const allowedBlocks = getAllowedBlocks();
 
 /** Theme breakpoints sizing the editor's device-switch canvas widths. */
 const breakpoints = getThemeBreakpoints();
@@ -1070,6 +1074,7 @@ function EntryEditor({
       registry={registry}
       capabilities={capabilitySet}
       patterns={patterns}
+      allowedBlocks={allowedBlocks}
       entryType={entryTypeName}
       breakpoints={breakpoints}
       tokens={themeTokens}

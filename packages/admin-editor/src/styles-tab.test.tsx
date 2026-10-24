@@ -54,6 +54,14 @@ describe("StylesTab", () => {
     );
   });
 
+  test("offers no style controls for a block this site doesn't register", () => {
+    const html = markup([{ id: "o", name: "acme/gone" }], ["o"]);
+
+    expect(html).toContain('data-testid="styles-tab-unregistered"');
+    expect(html).toContain("acme/gone");
+    expect(html).not.toContain('data-testid="styles-tab"');
+  });
+
   test("hides the flex controls while the block isn't a flex container", () => {
     expect(markup([{ id: "a", name: "core/x" }], ["a"])).not.toContain(
       'data-testid="style-flexDirection-row"',

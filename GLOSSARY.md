@@ -40,7 +40,7 @@ A person who composes pages in the visual editor from blocks and design tokens. 
 An anonymous reader of the public site. A kind of person; where access is decided, say principal.
 
 **Agent**:
-An AI client that works in a running site over MCP with an API token, held to that token's capabilities, edit leases, revisions, the block list and the style policy.
+An AI client that works in a running site over MCP with an API token, held to that token's capabilities, edit leases, revisions, the allowed blocks and the style policy.
 
 **API client**:
 Software that reads published content over REST with an API token.
@@ -258,8 +258,8 @@ document stamped by an older roster is distinguishable from a current one — no
 version integer for a block author to keep true. The index rebuild sweeps the stale
 ones.
 
-**Block list**:
-The blocks a theme lets the editor offer and any writer save. An entry that already holds a removed block keeps and renders it; a save cannot add a new one.
+**Allowed blocks**:
+The blocks a theme lets the editor offer and any writer save, from its `allowedBlocks` list: every registered block when it names none. An entry that already holds a block outside them keeps and renders it; a save cannot add a new one.
 
 **Style policy**:
 A theme's rule for style values: custom values allowed, or design tokens only. The editor and the server both enforce it.

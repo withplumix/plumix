@@ -1,6 +1,8 @@
 import { describe, expect, test } from "vitest";
 
 import type { BlockSpec } from "./block-registry.js";
+import type { EntryContent } from "./entry-content.js";
+import type { BlockNode } from "./render-block-tree.js";
 import { createBlockRegistry } from "./block-registry.js";
 import { richTextBlock } from "./rich-text/index.js";
 import {
@@ -293,5 +295,130 @@ describe("validateEntryContent", () => {
       tableRegistry,
     );
     expect(result).toEqual({ ok: true });
+  });
+});
+
+describe("validateEntryContent — the content a save starts from", () => {
+  const v2 = (blocks: readonly BlockNode[]): EntryContent => ({
+    version: "plumix.v2",
+    blocks,
+  });
+  const orphan: BlockNode = { id: "o1", name: "acme/widget", attrs: {} };
+  const rowWith = (cells: readonly BlockNode[]): BlockNode => ({
+    id: "t1",
+    name: "core/table",
+    attrs: {
+      rows: [
+        { id: "r1", name: "core/table-body-row", attrs: { cells: [...cells] } },
+      ],
+    },
+  });
+
+  test("passes a stored node of an unregistered block", () => {
+    expect(
+      validateEntryContent(v2([orphan]), registry, [v2([orphan])]),
+    ).toEqual({ ok: true });
+  });
+
+  test("still checks a stored node against its slot's allowedBlocks", () => {
+    const cell: BlockNode = { id: "c1", name: "acme/widget", attrs: {} };
+    const stored = v2([rowWith([cell])]);
+
+    expect(validateEntryContent(stored, tableRegistry, [stored])).toMatchObject(
+      {
+        ok: false,
+        errors: [
+          { code: "disallowed_child", path: "blocks[0].rows[0].cells[0]" },
+        ],
+      },
+    );
+  });
+
+  test("still checks the new children of a stored node", () => {
+    const group: BlockNode = {
+      id: "g1",
+      name: "core/group",
+      attrs: { content: [orphan] },
+    };
+    const result = validateEntryContent(v2([group]), registry, [
+      v2([{ ...group, attrs: { content: [] } }]),
+    ]);
+
+    expect(result).toMatchObject({
+      ok: false,
+      errors: [{ code: "unknown_block_type", path: "blocks[0].content[0]" }],
+    });
+  });
+
+  test("lets a node shared by two starting contents through once", () => {
+    const result = validateEntryContent(v2([orphan, orphan]), registry, [
+      v2([orphan]),
+      v2([orphan]),
+    ]);
+
+    expect(result).toMatchObject({
+      ok: false,
+      errors: [{ code: "unknown_block_type", path: "blocks[1]" }],
+    });
+  });
+
+  test("lets a node through as often as one starting content holds it", () => {
+    const stored = v2([orphan, orphan]);
+
+    expect(validateEntryContent(stored, registry, [stored])).toEqual({
+      ok: true,
+    });
+  });
+});
+
+describe("validateEntryContent — the blocks the theme allows", () => {
+  const v2 = (blocks: readonly BlockNode[]): EntryContent => ({
+    version: "plumix.v2",
+    blocks,
+  });
+  const allowed: ReadonlySet<string> = new Set(["core/group"]);
+  const text = (id: string): BlockNode => ({
+    id,
+    name: "core/rich-text",
+    attrs: {},
+  });
+
+  test("refuses a new node of a block outside the set", () => {
+    expect(
+      validateEntryContent(v2([text("p1")]), registry, [], allowed),
+    ).toMatchObject({
+      ok: false,
+      errors: [
+        {
+          code: "block_not_allowed",
+          path: "blocks[0]",
+          nodeName: "core/rich-text",
+        },
+      ],
+    });
+  });
+
+  test("passes a stored node of a block outside the set, moved into a parent", () => {
+    const moved = v2([
+      { id: "g1", name: "core/group", attrs: { content: [text("p1")] } },
+    ]);
+
+    expect(
+      validateEntryContent(moved, registry, [v2([text("p1")])], allowed),
+    ).toEqual({ ok: true });
+  });
+
+  test("refuses a stored node of a block outside the set used twice", () => {
+    expect(
+      validateEntryContent(
+        v2([text("p1"), text("p1")]),
+        registry,
+        [v2([text("p1")])],
+        allowed,
+      ),
+    ).toMatchObject({
+      ok: false,
+      errors: [{ code: "block_not_allowed", path: "blocks[1]" }],
+    });
   });
 });

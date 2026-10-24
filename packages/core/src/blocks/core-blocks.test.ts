@@ -1,10 +1,38 @@
 import { describe, expect, test } from "vitest";
 
+import type { CoreBlockName } from "./core-blocks.js";
 import { createBlockRegistry } from "./block-registry.js";
 import { coreBlocks } from "./core-blocks.js";
 import { renderBlockTreeToHtml } from "./test/index.js";
 
 describe("coreBlocks", () => {
+  test("names exactly the blocks `CoreBlockName` lists", () => {
+    // A key missing from or extra to the union fails to type-check.
+    const listed: Record<CoreBlockName, true> = {
+      "core/rich-text": true,
+      "core/separator": true,
+      "core/code": true,
+      "core/group": true,
+      "core/section": true,
+      "core/columns": true,
+      "core/column": true,
+      "core/button": true,
+      "core/details": true,
+      "core/video": true,
+      "core/embed": true,
+      "core/html": true,
+      "core/table": true,
+      "core/table-header-row": true,
+      "core/table-body-row": true,
+      "core/table-header-cell": true,
+      "core/table-cell": true,
+    };
+
+    expect(coreBlocks.map((b) => b.name).sort()).toEqual(
+      Object.keys(listed).sort(),
+    );
+  });
+
   test("includes the canonical typography and layout blocks", () => {
     const names = new Set(coreBlocks.map((b) => b.name));
     expect(names.has("core/rich-text")).toBe(true);

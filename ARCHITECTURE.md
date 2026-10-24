@@ -231,7 +231,7 @@ flowchart LR
     mailc["<b>Mail</b><br/><i>[Component: core mail]</i><br/>Mails declared by name"]
     slots["<b>Config slots</b><br/><i>[Component: core contracts,<br/>runtime packages]</i><br/>Database, storage, key-value, CDN, mailer,<br/>image delivery, telemetry, queue, LLM"]
     theme["<b>Theme</b><br/><i>[Component: site code, React]</i><br/>Templates, blocks, design tokens"]
-    policy["<b>Block list and style policy</b><br/><i>[Component: theme config, core rpc]</i><br/>Which blocks the editor offers;<br/>custom values or design tokens only"]
+    policy["<b>Allowed blocks and style policy</b><br/><i>[Component: theme config, core rpc]</i><br/>Which blocks the editor offers;<br/>custom values or design tokens only"]
     roles["<b>Site-defined roles</b><br/><i>[Component: core access, users]</i><br/>Default roles plus roles a site<br/>declares from capabilities"]
     webhooks["<b>Webhooks</b><br/><i>[Component: core]</i><br/>POSTs a declared payload<br/>on content actions"]
     assistant["<b>In-editor agent</b><br/><i>[Component: core rpc, the llm slot]</i><br/>Drafts and composes pages<br/>for the editor who asks"]
@@ -305,7 +305,7 @@ flowchart LR
   slots -- "Exports traces [the published OTLP consumer]" --> otelsink
   assistant -- "Asks for drafts [the llm slot]" --> slots
   slots -- "Calls the model [provider API]" --> llmsys
-  theme -- "Declares the block list<br/>and style policy" --> policy
+  theme -- "Declares allowedBlocks<br/>and style policy" --> policy
   policy -- "Reaches the editor in the plugin manifest,<br/>built by the Vite plugin" --> adminapp
   surfaces -- "Hold agents' writes to the same<br/>policy, leases and capabilities" --> policy
   authc -- "Resolves roles from the database and config" --> roles
@@ -532,7 +532,7 @@ sequenceDiagram
     P-->>D: Saved as a draft, with the etag unchanged
     D-->>E: Saved
   else allowed and current
-    P->>P: Checks every new block and style value against the block list and style policy
+    P->>P: Checks every new block and style value against the allowed blocks and style policy
     P->>H: Runs the before_save filters
     P->>SL: UPDATE where updated_at matches the etag
     alt zero rows, another save won the race
@@ -624,7 +624,7 @@ sequenceDiagram
   participant P as RPC, REST and MCP (MCP write tool)
   participant A as Auth and access
   participant S as Content services
-  participant PO as Block list and style policy
+  participant PO as Allowed blocks and style policy
   participant H as Plugin system and hooks
   participant SL as Config slots (database)
   G->>RE: Calls a write tool with its token [MCP over HTTPS]
@@ -860,7 +860,7 @@ Agents are users of Plumix twice over: they build sites, and they work inside ru
   and the content model through core's tools and any tools plugins register with `ctx.registerMcpTool`.
   The token's scopes limit what it can do, and in production MCP is off until the config turns it on.
   It writes, composes and publishes through the same procedures as the admin, held to the same
-  rules: its token's capabilities, leases, revisions, the block list and the style policy. What it
+  rules: its token's capabilities, leases, revisions, the allowed blocks and the style policy. What it
   may do is what its token may do; a person steers it by choosing that token. Every change it makes
   is a revision naming the agent and the person whose token it used.
 

@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 
+import type { CoreBlockName } from "./blocks/core-blocks.js";
 import type { TemplateDepDeclarations } from "./blocks/deps.js";
 import type {
   BlockSpec,
@@ -164,6 +165,9 @@ export interface TemplateRule extends TierMatchRule {
   readonly template: TemplateEntry<TemplateData>;
 }
 
+/** A core block name, autocompleted, or any other registered block's name. */
+type BlockName = CoreBlockName | (string & {});
+
 export interface ThemeDescriptor extends TemplateDepDeclarations {
   /**
    * The theme's templates: an array of builder rules (`fallback(...)`,
@@ -176,6 +180,12 @@ export interface ThemeDescriptor extends TemplateDepDeclarations {
    * theme).
    */
   readonly blocks?: readonly BlockSpec[];
+  /**
+   * Site-wide; every registered block when omitted. The theme's own `blocks`
+   * are always allowed, a slot-bound block follows its parent, and an unknown
+   * name is ignored.
+   */
+  readonly allowedBlocks?: readonly BlockName[];
   readonly document?: DocumentManifest;
   readonly tokens?: ThemeTokens;
   /**

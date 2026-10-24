@@ -88,11 +88,7 @@ export const create = base
     }
 
     assertContentWithinByteCap(filtered.content, errors);
-    assertContentValidAgainstRegistries(
-      filtered.content,
-      { blocks: context.blocks },
-      errors,
-    );
+    assertContentValidAgainstRegistries(filtered.content, [], context, errors);
 
     // A new entry starts from its fields' defaults (ADR 0026); the meta the
     // caller sends lands on top of them.

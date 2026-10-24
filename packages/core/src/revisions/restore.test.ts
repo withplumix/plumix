@@ -8,6 +8,7 @@ import { text } from "../plugin/fields/index.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { toRegisteredEntryType } from "../plugin/registry.js";
 import { NAMED_TEMPLATE_META_KEY } from "../route/render/template-builders.js";
+import { defaultTestTheme } from "../test/default-theme.js";
 import { currentEtag } from "../test/entry-etag.js";
 import { editorUser } from "../test/factories.js";
 import { createRpcHarness } from "../test/rpc.js";
@@ -121,6 +122,58 @@ describe("entry.revisions.restore", () => {
       where: eq(entries.id, entryId),
     });
     expect(live?.title).toBe("Second");
+  });
+
+  test("restores a revision holding a block unregistered since", async () => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      plugins: registryWithRevisions(),
+    });
+    const live = await h.factory.draft.create({
+      authorId: h.user.id,
+      content: { version: "plumix.v2", blocks: [] },
+    });
+    // No plugin registers `acme/hero` any more.
+    const content = {
+      version: "plumix.v2" as const,
+      blocks: [{ id: "hero1", name: "acme/hero", attrs: { title: "Hi" } }],
+    };
+    const revision = await h.factory.revision
+      .transient({ of: live })
+      .create({ content });
+
+    const restored = await h.client.entry.revisions.restore({
+      revisionId: revision.id,
+      ifMatch: await currentEtag(h.db, live.id),
+    });
+
+    expect(restored.content).toEqual(content);
+  });
+
+  test("restores a revision holding a block the theme no longer allows", async () => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      plugins: registryWithRevisions(),
+      config: { theme: { ...defaultTestTheme, allowedBlocks: ["core/group"] } },
+    });
+    const live = await h.factory.draft.create({
+      authorId: h.user.id,
+      content: { version: "plumix.v2", blocks: [] },
+    });
+    const content = {
+      version: "plumix.v2" as const,
+      blocks: [{ id: "p1", name: "core/rich-text", attrs: {} }],
+    };
+    const revision = await h.factory.revision
+      .transient({ of: live })
+      .create({ content });
+
+    const restored = await h.client.entry.revisions.restore({
+      revisionId: revision.id,
+      ifMatch: await currentEtag(h.db, live.id),
+    });
+
+    expect(restored.content).toEqual(content);
   });
 
   test("restoring a published revision onto a future-scheduled entry resets publishedAt to now", async () => {

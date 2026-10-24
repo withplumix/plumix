@@ -16,6 +16,11 @@ export interface EditorConfig {
   readonly tokens: ThemeTokens;
   /** Viewer capabilities, gating which blocks the catalog offers. */
   readonly capabilities: ReadonlySet<string>;
+  /**
+   * The blocks the theme allows, from the manifest; absent allows every block.
+   * The inserter offers only these, and a block outside it can't be copied.
+   */
+  readonly allowedBlocks?: ReadonlySet<string>;
   /** Absent in a deployment with no plugin field registry. */
   readonly resolvePluginFieldType?: ResolvePluginFieldType;
 }
@@ -28,12 +33,19 @@ export function EditorConfigProvider({
   registry,
   tokens,
   capabilities,
+  allowedBlocks,
   resolvePluginFieldType,
   children,
 }: EditorConfig & { readonly children: ReactNode }): ReactElement {
   const config = useMemo<EditorConfig>(
-    () => ({ registry, tokens, capabilities, resolvePluginFieldType }),
-    [registry, tokens, capabilities, resolvePluginFieldType],
+    () => ({
+      registry,
+      tokens,
+      capabilities,
+      allowedBlocks,
+      resolvePluginFieldType,
+    }),
+    [registry, tokens, capabilities, allowedBlocks, resolvePluginFieldType],
   );
   return (
     <EditorConfigContext.Provider value={config}>

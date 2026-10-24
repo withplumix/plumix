@@ -21,9 +21,18 @@ export function assertContentWithinByteCap(
   }
 }
 
+/**
+ * `starting` is the stored content the save starts from; a node it already
+ * holds (same `id` and `name`) is kept even when its block is unregistered or
+ * outside `allowedBlocks`.
+ */
 export function assertContentValidAgainstRegistries(
   content: EntryContent | null | undefined,
-  registries: { readonly blocks: BlockRegistry },
+  starting: readonly (EntryContent | null | undefined)[],
+  registries: {
+    readonly blocks: BlockRegistry;
+    readonly allowedBlocks?: ReadonlySet<string>;
+  },
   errors: BlockContentErrors,
 ): void {
   if (content == null) return;
@@ -31,7 +40,12 @@ export function assertContentValidAgainstRegistries(
   // (pre-cutover) bypass — the editor never emits them at this point and
   // the new walker simply renders unknown nodes as nothing.
   if (!isEntryContent(content)) return;
-  const result = validateEntryContent(content, registries.blocks);
+  const result = validateEntryContent(
+    content,
+    registries.blocks,
+    starting.filter((stored) => isEntryContent(stored)),
+    registries.allowedBlocks,
+  );
   if (!result.ok) {
     throw errors.INVALID_BLOCK_CONTENT({
       data: { issues: [...result.errors] },
