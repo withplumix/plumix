@@ -14,9 +14,9 @@ export interface ScheduledFiring {
 }
 
 /**
- * Any failed task fails the firing, matching `plumix cron run`. Only a firing
- * that did no work keeps Cloudflare's retry, since Workers replays the whole
- * handler.
+ * Any failed task fails the firing. A timeout alone does not, unlike
+ * `plumix cron run`. Only a firing that did no work keeps Cloudflare's retry,
+ * since Workers replays the whole handler.
  */
 export function surfaceScheduledFailure(
   report: ScheduledRunReport | void,

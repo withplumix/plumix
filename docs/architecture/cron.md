@@ -42,7 +42,7 @@ flowchart LR
 | `createScheduledRunGuard`, `connectScheduledDb`, `scheduledLeaseScope` | The run guard: a claim per schedule-minute, plus an optional lease                                                 | yes, `plumix/runtime`                                                                             |
 | `plumix cron list` / `plumix cron run "<expr>"`                        | Print schedules and their tasks; fire one now under the run guard                                                  | yes (CLI)                                                                                         |
 | `node({ cron })`                                                       | `false` stops the in-process scheduler so an external cron drives `plumix cron run`                                | yes                                                                                               |
-| `surfaceScheduledFailure(report, firing)`                              | Cloudflare: throw on a failed run, `noRetry()` once any task ran                                                   | yes, `@plumix/runtime-cloudflare`                                                                 |
+| `surfaceScheduledFailure(report, firing)`                              | Cloudflare: throw on a failed run (not on a timeout alone), `noRetry()` once any task ran                          | yes, `@plumix/runtime-cloudflare`                                                                 |
 
 Per runtime:
 

@@ -17,9 +17,9 @@ exchange, author code) relied on the upstream answering (#3266).
 
 - **`timeout` is a Plumix init key.** Core removes it before it calls the
   platform `fetch`, which never sees it.
-- **The caller's signal still works.** Core combines it with the timeout
-  through `AbortSignal.any` and `AbortSignal.timeout`, so the call aborts on
-  whichever fires first. A caller's abort rejects with that signal's reason; a
+- **The caller's signal still works.** Core combines it with the timeout and
+  the context's `ctx.signal` through `AbortSignal.any` and
+  `AbortSignal.timeout`, so the call aborts on whichever fires first. A caller's abort rejects with that signal's reason; a
   `Request` input's own signal counts as the caller's.
 - **No Plumix error class.** A timeout is a `DOMException` named
   `TimeoutError`, the error `AbortSignal.timeout` produces, so existing

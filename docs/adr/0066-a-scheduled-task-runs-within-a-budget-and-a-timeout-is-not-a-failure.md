@@ -35,6 +35,10 @@ after …` message, so error tools and alerting on error logs do not page on a
 - **`ran` counts only tasks that completed.** `plumix cron run` names each
   timed-out task with its budget, prints `N ran · N failed · N timed out`, and
   exits non-zero, as it does on a failure: the run did not do its job.
+- **On Workers a timeout alone does not fail the invocation.**
+  `surfaceScheduledFailure` still throws only for a failed or aborted run, so
+  a timeout there is the warn log and the `timedOut` entry. Whether it should
+  fail the invocation is left open.
 
 ## Considered options
 
