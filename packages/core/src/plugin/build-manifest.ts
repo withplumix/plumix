@@ -19,6 +19,7 @@ import type {
   AccessPolicyChoice,
   AdminNavGroup,
   AdminNavItem,
+  AdminPageManifestEntry,
   BlockManifestEntry,
   BuiltManifest,
   ConfiguredSlots,
@@ -199,6 +200,14 @@ export function buildManifest(
     .sort(byPriorityThen((p) => p.name));
   assertSettingsPageGroupsExist(settingsPages, registry.settingsGroups);
   const adminNav = projectAdminNav(registry, entries, termTaxonomies);
+  const adminPages = Array.from(registry.adminPages.values()).map(
+    (page): AdminPageManifestEntry => ({
+      to: `/pages${page.path}`,
+      component: page.component,
+      title: page.title,
+      capability: shippedCapability(registry, page.capability),
+    }),
+  );
   const dashboardWidgets = Array.from(registry.dashboardWidgets.values())
     .map((widget) => toDashboardWidgetEntry(widget, registry))
     .sort(byPriorityThen((w) => w.id));
@@ -230,6 +239,7 @@ export function buildManifest(
     settingsGroups,
     settingsPages,
     adminNav,
+    adminPages,
     dashboardWidgets,
     fieldTypes,
     blocks,

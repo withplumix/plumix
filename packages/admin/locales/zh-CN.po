@@ -2194,7 +2194,7 @@ msgstr ""
 msgid "dataTable.loading"
 msgstr "加载中"
 
-#. label: the plugin page's registered label (e.g. 'Audit Log')
+#. label: the plugin page's registered title (e.g. 'Audit Log')
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/pages/$.tsx
 msgid "pluginPage.loading.aria"
