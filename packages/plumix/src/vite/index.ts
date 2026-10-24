@@ -36,6 +36,7 @@ import type { DiscoveredIsland } from "./island-transform.js";
 import type { PluginCatalogFile } from "./plugin-catalogs-codegen.js";
 import type { PluginChunkRef } from "./plugin-chunk-scripts.js";
 import { loadConfig } from "../cli/load-config.js";
+import { withAdminCatalogLocales } from "./admin-catalog-locales.js";
 import { assemblePluginAdminBundle } from "./admin-plugin-bundle.js";
 import { generateIslandsRendererEntrySource } from "./auth-method-clients-codegen.js";
 import { generateClientEntrySource } from "./client-entry-codegen.js";
@@ -670,7 +671,11 @@ async function stageAdminInto(
       cssFile: assembled.cssFile,
     });
   }
-  await injectIndexHtml(resolve(dest, "index.html"), manifest, allChunks);
+  await injectIndexHtml(
+    resolve(dest, "index.html"),
+    await withAdminCatalogLocales(dest, manifest),
+    allChunks,
+  );
 }
 
 async function injectIndexHtml(

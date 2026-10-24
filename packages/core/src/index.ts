@@ -31,6 +31,9 @@ export { traceDbBatch, traceDbQuery, traceDbQuerySync } from "./db/trace.js";
 export type { TracedQuery } from "./db/trace.js";
 export * from "./hooks/index.js";
 export * from "./i18n/index.js";
+// Server- and build-side only: admin staging projects the admin's catalogs
+// with it, and the browser `./i18n` subpath stays without the CLDR data.
+export { projectCatalogLocales } from "./i18n/catalog-locale.js";
 export type { JsonObject, JsonValue } from "./json.js";
 // Stored meta, telemetry records and block props are `JsonValue` until
 // narrowed.

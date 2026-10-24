@@ -367,6 +367,12 @@ export interface PlumixManifest {
    */
   readonly pluginI18n?: PluginI18nManifest;
   /**
+   * Each enabled locale's catalog locale, per catalog set the admin bundles.
+   * Admin staging injects it rather than `buildManifest`, since only the
+   * staged admin knows which catalogs it ships.
+   */
+  readonly catalogLocales?: AdminCatalogLocales;
+  /**
    * Fixed at build time, so it rides the manifest: the admin hides a
    * slot-backed surface the deployment can't serve.
    */
@@ -426,17 +432,37 @@ export type PluginI18nManifest = Readonly<
   >
 >;
 
+/** The catalog sets the prebuilt admin bundles: its own, the editor's and
+ *  core's blocks. */
+export type AdminCatalogSet = "admin" | "editor" | "blocks";
+
+export type AdminCatalogLocales = Readonly<
+  Record<AdminCatalogSet, Readonly<Record<string, string>>>
+>;
+
+/** What the admin build writes to its `dist`: the locales each catalog set
+ *  ships, for staging to project a site's enabled locales onto. */
+export interface AdminShippedCatalogs {
+  readonly sourceLocale: string;
+  readonly catalogs: Readonly<Record<AdminCatalogSet, readonly string[]>>;
+}
+
+export const ADMIN_SHIPPED_CATALOGS_FILE = "catalog-locales.json";
+
 export interface I18nManifest {
   readonly defaultLocale: string;
   readonly locales: readonly ResolvedLocale[];
 }
 
 /**
- * What `buildManifest` returns: every slice populated. The all-optional
- * `PlumixManifest` is the wire and fixture shape.
+ * What `buildManifest` returns: every slice populated but `catalogLocales`,
+ * which admin staging adds. The all-optional `PlumixManifest` is the wire and
+ * fixture shape.
  */
 export type BuiltManifest = {
-  readonly [K in keyof PlumixManifest]-?: NonNullable<PlumixManifest[K]>;
+  readonly [
+    K in Exclude<keyof PlumixManifest, "catalogLocales">
+  ]-?: NonNullable<PlumixManifest[K]>;
 };
 
 /** Script tag id that carries the JSON-encoded manifest in the admin HTML. */

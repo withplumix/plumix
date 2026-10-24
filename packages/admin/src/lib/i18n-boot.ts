@@ -1,7 +1,11 @@
 import type { Messages } from "@lingui/core";
 import { i18n } from "@lingui/core";
 
-import type { PluginI18nManifest } from "@plumix/core/manifest";
+import type {
+  AdminCatalogLocales,
+  AdminCatalogSet,
+  PluginI18nManifest,
+} from "@plumix/core/manifest";
 import { setI18nResolver } from "@plumix/core/validation";
 
 import {
@@ -9,6 +13,8 @@ import {
   BLOCKS_CATALOGS,
   EDITOR_CATALOGS,
 } from "./catalog-globs.js";
+import { CATALOG_SET_PREFIXES } from "./catalog-sets.js";
+import { SOURCE_LOCALE } from "./constants.js";
 import { createPluginCatalogLoader } from "./plugin-catalogs.js";
 
 type CatalogMap = Record<string, () => Promise<{ messages: Messages }>>;
@@ -26,13 +32,6 @@ const BUNDLED_CATALOGS: AdminCatalogs = {
   blocks: BLOCKS_CATALOGS,
 };
 
-/**
- * The locale `descriptor.message` strings are authored in, and the fallback
- * for an uncompiled one. Mirrors `lingui.config.ts:sourceLocale`, which the
- * bundle can't import. Guarded by: packages/admin/src/lib/i18n-boot.test.ts
- */
-export const SOURCE_LOCALE = "en";
-
 type PluginCatalogLoader = (pluginId: string, locale: string) => Promise<void>;
 
 const NOOP_LOADER: PluginCatalogLoader = () => Promise.resolve();
@@ -43,39 +42,44 @@ export const pluginCatalogLoaderRef: { current: PluginCatalogLoader } = {
 };
 
 interface BootI18nInput {
-  /** The page's `<html lang>`. */
+  /** The page's `<html lang>`: the enabled locale. */
   readonly lang: string;
   /** The manifest's plugin catalogs. */
   readonly pluginI18n?: PluginI18nManifest;
+  /** The manifest's catalog locale for each enabled locale, per set. */
+  readonly catalogLocales?: AdminCatalogLocales;
   readonly catalogs?: AdminCatalogs;
 }
 
 /**
- * Unknown locales fall back to the source locale. Never throws: a missing
- * catalog leaves Lingui on descriptor messages.
+ * Activates the enabled locale, for `Intl` formatting, with each set's
+ * catalog locale's messages. An unprojected locale, as under the admin's dev
+ * server, reads its own catalog. Never throws.
  */
 export async function bootI18n({
   lang,
   pluginI18n = {},
+  catalogLocales,
   catalogs = BUNDLED_CATALOGS,
 }: BootI18nInput): Promise<void> {
-  const tag = lang.toLowerCase().split("-")[0] ?? "";
-  const requested = catalogs.admin[`../../locales/${tag}.mjs`];
-  const fallback = catalogs.admin[`../../locales/${SOURCE_LOCALE}.mjs`];
-  const adminLoader = requested ?? fallback;
-  if (!adminLoader) return;
-  const locale = requested ? tag : SOURCE_LOCALE;
+  const locale = lang || SOURCE_LOCALE;
+  const catalogLocaleOf = (set: AdminCatalogSet): string =>
+    catalogLocales?.[set][locale] ?? locale;
 
-  const adminMessages = (await adminLoader()).messages;
+  const adminMessages = await loadSourceFallbackCatalog(
+    catalogs.admin,
+    CATALOG_SET_PREFIXES.admin,
+    catalogLocaleOf("admin"),
+  );
   const editorMessages = await loadSourceFallbackCatalog(
     catalogs.editor,
-    "../../../admin-editor/locales/",
-    locale,
+    CATALOG_SET_PREFIXES.editor,
+    catalogLocaleOf("editor"),
   );
   const blocksMessages = await loadSourceFallbackCatalog(
     catalogs.blocks,
-    "../../../core/locales/blocks-",
-    locale,
+    CATALOG_SET_PREFIXES.blocks,
+    catalogLocaleOf("blocks"),
   );
   // Admin chrome last so it wins on collision.
   i18n.load(locale, {

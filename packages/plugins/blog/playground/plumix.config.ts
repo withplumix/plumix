@@ -38,7 +38,8 @@ export default plumix({
   }),
   plugins: [blog()],
   // Ukrainian alongside the default so the e2e can exercise the
-  // locale switcher + the SSR admin bar translation end-to-end.
-  i18n: { defaultLocale: "en", locales: ["en", "uk"] },
+  // locale switcher + the SSR admin bar translation end-to-end, and zh-CN,
+  // the one regional catalog Plumix ships, to open the admin in it.
+  i18n: { defaultLocale: "en", locales: ["en", "uk", "zh-CN"] },
   theme,
 });

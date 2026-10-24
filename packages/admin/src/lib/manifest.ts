@@ -74,6 +74,7 @@ const MANIFEST_FIELD_IS_ARRAY = {
   breakpoints: false,
   i18n: false,
   pluginI18n: false,
+  catalogLocales: false,
   configuredSlots: false,
   refusedAdminAreas: true,
   frameworkRoutes: false,
