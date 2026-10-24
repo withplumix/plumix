@@ -9,7 +9,6 @@ export const AUTH_TOKEN_TYPES = [
   "webauthn_challenge",
   "magic_link",
   "email_verification",
-  "password_reset",
   "invite",
   "oauth_state",
   "preview_link",
