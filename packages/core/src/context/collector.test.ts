@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, onTestFinished, test, vi } from "vitest";
 
 import { createTelemetryCollector } from "./collector.js";
 
@@ -116,6 +116,43 @@ describe("createTelemetryCollector", () => {
     expect(attrCalls).toBe(0);
     expect(telemetry.getSpans()).toHaveLength(2000);
     expect(telemetry.getDropped().spans).toBe(1);
+  });
+
+  test("over the span cap, deferred work still settles before settled() does and a rejection is still reported", async () => {
+    const telemetry = createTelemetryCollector();
+    for (let i = 0; i < 2000; i++) telemetry.span(`s${i}`, () => undefined);
+    const rejected: unknown[] = [];
+    const failure = new Error("purge failed");
+
+    void telemetry.deferred(
+      Promise.reject(failure),
+      (e) => void rejected.push(e),
+    );
+    await telemetry.settled();
+
+    expect(rejected).toEqual([failure]);
+    expect(telemetry.getSpans()).toHaveLength(2000);
+    expect(telemetry.getDropped().spans).toBe(1);
+  });
+
+  test("a span that finishes after spansAt() leaves the earlier copy unfinished", async () => {
+    vi.useFakeTimers();
+    onTestFinished(() => void vi.useRealTimers());
+    const telemetry = createTelemetryCollector();
+    let finish: () => void = () => undefined;
+    const running = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    const work = telemetry.span("slow", () => running);
+
+    const copy = telemetry.spansAt(Date.now() + 250);
+    finish();
+    await work;
+
+    expect(copy.map((s) => [s.name, s.status, s.durationMs])).toEqual([
+      ["slow", "unfinished", 250],
+    ]);
+    expect(telemetry.getSpans()[0]?.status).toBe("ok");
   });
 
   test("dropped counters start at zero", () => {

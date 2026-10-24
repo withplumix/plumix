@@ -1572,15 +1572,11 @@ describe("createPlumixHandler — deferred work in the snapshot", () => {
     inner.resolve();
     await vi.advanceTimersByTimeAsync(0);
     expect(snapshots).toHaveLength(1);
-    const defers: TelemetrySpan[] = [];
-    const collect = (spans: readonly TelemetrySpan[]): void => {
-      for (const span of spans) {
-        if (span.name === "defer") defers.push(span);
-        collect(span.children);
-      }
-    };
-    collect(snapshots[0]?.spans ?? []);
-    expect(defers.map((d) => d.status)).toEqual(["ok", "ok"]);
+    const dispatch = findSpan(snapshots[0]?.spans ?? [], "dispatch");
+    expect(dispatch?.children.map((c) => [c.name, c.status])).toEqual([
+      ["defer", "ok"],
+      ["defer", "ok"],
+    ]);
   });
 
   test("deferred work that never settles is delivered at 10s, its span unfinished and timed to the deadline", async () => {

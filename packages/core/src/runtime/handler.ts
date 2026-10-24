@@ -214,8 +214,8 @@ export function createPlumixHandler(
         }
       };
       await drain();
-      // Every waiting snapshot is delivered now, its open spans unfinished;
-      // the exports that starts are drained in whatever time is left.
+      // Every waiting snapshot is delivered now, its open spans unfinished. The
+      // exports it starts drain in any time left, else count as abandoned.
       shutdown.abort();
       shutdown = new AbortController();
       await drain();
