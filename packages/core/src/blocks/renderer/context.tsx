@@ -30,6 +30,7 @@ export interface RendererUser {
   readonly email: string;
   /** Display name from `users.name`; null when the user never set one. */
   readonly name?: string | null;
+  readonly avatarUrl?: string | null;
   readonly role: string;
   /** The `users.meta` column verbatim; the field pipeline never runs on it. */
   readonly meta: JsonObject;

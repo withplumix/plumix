@@ -29,6 +29,7 @@ import { failure, success } from "./result.js";
 import {
   createSessionStore,
   PENDING,
+  sessionCan,
   sessionEnvelopeSchema,
 } from "./session.js";
 
@@ -271,9 +272,17 @@ export function createAuthClient(env: AuthClientEnv): CreatedAuthClient {
     return success({ redirectTo });
   }
 
+  const useSession = (): Session =>
+    useSyncExternalStore(
+      session.subscribe,
+      session.read,
+      env.renderedSession ?? seed,
+    );
+
   const kernelApi = {
     account: { update: account.update, setLocale: account.setLocale },
     sessions: createAccountSessions(rpc),
+    can: (capability: string) => sessionCan(session.read(), capability),
     useAccount: (): AccountState =>
       useSyncExternalStore(
         account.subscribe,
@@ -281,12 +290,9 @@ export function createAuthClient(env: AuthClientEnv): CreatedAuthClient {
         () => PENDING_ACCOUNT,
       ),
     signOut,
-    useSession: (): Session =>
-      useSyncExternalStore(
-        session.subscribe,
-        session.read,
-        env.renderedSession ?? seed,
-      ),
+    useCan: (capability: string): boolean =>
+      sessionCan(useSession(), capability),
+    useSession,
     useAuthMethods: (): AuthMethods =>
       env.methods?.() ?? { methods: [], oauth: [] },
     url: (target: AuthUrlTarget, options?: RedirectOptions) =>

@@ -129,6 +129,14 @@ type ReservedKernel<
 export type AuthClientKernel = ReservedKernel<{
   readonly account: AuthClientAccount;
   readonly sessions: AuthClientSessions;
+  /**
+   * Whether the session's role grants `capability`: a hint for showing or
+   * hiding UI, never a record's own-or-any rule. The server decides every
+   * write. False while pending or signed out.
+   */
+  can(capability: string): boolean;
+  /** `can` as a hook: it also answers during a server render, where `can` is false. */
+  useCan(capability: string): boolean;
   /** Loaded on first use, never from the server render. */
   useAccount(): AccountState;
   readonly signIn: AuthClientSignIn;

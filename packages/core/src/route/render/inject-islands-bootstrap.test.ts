@@ -102,7 +102,14 @@ describe("injectIslandsBootstrap", () => {
         oauth: [],
       },
       session: {
-        user: { id: 7, email: "jane@example.test", name: null, role: "admin" },
+        user: {
+          id: 7,
+          email: "jane@example.test",
+          name: null,
+          avatarUrl: null,
+          role: "admin",
+          capabilities: ["user:edit_own"],
+        },
         isPending: false,
       },
     };

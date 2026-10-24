@@ -34,6 +34,7 @@ import type { RenderChrome, RenderEnv } from "./render-env.js";
 import type { ResolvedNode } from "./rule-resolver.js";
 import type { TemplateResolution } from "./template-hierarchy.js";
 import { renderWithAuthContext } from "../../auth/client/render-context.js";
+import { sessionUserOf } from "../../auth/session-user.js";
 import {
   BlockLoaderError,
   collectBlockDepKeys,
@@ -588,14 +589,7 @@ function renderTree({
     // On demand: only an `authClient.useSession()` call makes the render personal.
     user: () => {
       const { user } = ctx;
-      return user === null
-        ? null
-        : {
-            id: user.id,
-            email: user.email,
-            name: user.name ?? null,
-            role: user.role,
-          };
+      return user === null ? null : sessionUserOf(user, ctx.plugins);
     },
   };
   const { rendered, session } = ctx.telemetry.span("render: react", () =>
