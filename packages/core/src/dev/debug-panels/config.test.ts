@@ -1,11 +1,8 @@
 import { describe, expect, test } from "vitest";
 
-import type { AppContext } from "../../context/app-context.js";
 import type { DebugPanelsInput } from "../../context/dev-runtime.js";
 import { CORE_DEBUG_PANEL_IDS } from "../../context/dev-runtime.js";
-import { HookRegistry } from "../../hooks/registry.js";
-import { createTestContext } from "../../test/context.js";
-import { createTestDb } from "../../test/harness.js";
+import { createDevRuntime } from "../../runtime/dev.js";
 import { collectDebugPanels } from "./collect.js";
 import { disabledPanelIds } from "./config.js";
 import { registerCoreDebugPanels } from "./core-panels.js";
@@ -15,12 +12,11 @@ import { registerCoreDebugPanels } from "./core-panels.js";
 describe("panel ids are closed", () => {
   // Closed is only worth anything if the closed set is the real one: a
   // registry key with no panel behind it type-checks and hides nothing.
-  test("core's registry ids are exactly the panels core registers", async () => {
-    const hooks = new HookRegistry();
-    registerCoreDebugPanels(hooks);
-    const ctx: AppContext = createTestContext({ db: await createTestDb() });
+  test("core's registry ids are exactly the panels core registers", () => {
+    const dev = createDevRuntime(undefined);
+    registerCoreDebugPanels(dev);
 
-    const registered = collectDebugPanels(hooks, ctx, new Set())
+    const registered = collectDebugPanels(dev)
       .map((p) => p.id)
       .sort();
 

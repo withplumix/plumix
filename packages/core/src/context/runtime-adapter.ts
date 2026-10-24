@@ -4,6 +4,7 @@ import type { RegisteredScheduledTask } from "../plugin/registry.js";
 import type { PlumixEnv } from "../runtime/contract/bindings.js";
 import type { AssetsBinding, SyncRow } from "../runtime/contract/slots.js";
 import type { AppContext, DataMigrationDb } from "./app-context.js";
+import type { DevErrorHintRegistration } from "./dev-runtime.js";
 
 export interface Invocation {
   /** The runtime's configuration bag: bindings, secrets and plain vars. */
@@ -483,8 +484,8 @@ export interface RuntimeHandlerSpec {
   /** Replaces the invocation's address, even when it returns undefined. */
   readonly clientAddress?: (request: Request) => string | undefined;
   /**
-   * One-off setup, run once per handler before its first request: a platform
-   * check that fails fast, or dev error hints registered on the app's hooks.
+   * One-off setup, run once per handler before its first request, such as a
+   * platform check that fails fast.
    */
   readonly prepare?: (hooks: HookRegistry) => void;
   /**
@@ -531,4 +532,10 @@ export interface RuntimeAdapter {
   readonly commandsModule?: string;
   /** Refused whoever is signed in; the admin hides their surfaces. */
   readonly refusedAdminAreas?: readonly AdminArea[];
+  /**
+   * Dev error-page hints for this platform's errors, shown after core's and
+   * before any plugin's. Gate the value on `process.env.PLUMIX_DEV` so it
+   * stays out of a build.
+   */
+  readonly errorHints?: readonly DevErrorHintRegistration[];
 }

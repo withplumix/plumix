@@ -6,7 +6,7 @@ import type {
   RuntimeHandlerSpec,
 } from "plumix/runtime";
 
-import { registerCloudflareErrorHints } from "./dev-hints.js";
+import { bindingErrorHint } from "./dev-hints.js";
 import { generateEntry } from "./entry-codegen.js";
 import { PlumixRuntimeConfigError } from "./errors.js";
 
@@ -33,18 +33,11 @@ function readAssetsBinding(env: PlumixEnv): AssetsBinding | undefined {
 const handler: RuntimeHandlerSpec = {
   assets: readAssetsBinding,
   clientAddress: readClientAddress,
-  prepare: (hooks) => {
+  prepare: () => {
     // Some edge-runtime shims stub the symbol, which would fail cryptically at
     // the first `run()`.
     if (typeof AsyncLocalStorage !== "function") {
       throw PlumixRuntimeConfigError.asyncLocalStorageMissing();
-    }
-
-    // Gated on `PLUMIX_DEV` the way core gates `registerCoreErrorHints`:
-    // Vite substitutes it at bundle time, so this and
-    // `registerCloudflareErrorHints` tree-shake out of a production build.
-    if (process.env.PLUMIX_DEV) {
-      registerCloudflareErrorHints(hooks);
     }
   },
 };
@@ -66,6 +59,9 @@ export function cloudflare(): RuntimeAdapter {
     handler,
     generateEntry,
     commandsModule: "@plumix/runtime-cloudflare/commands",
+    // Vite substitutes `PLUMIX_DEV` at bundle time, so the hint tree-shakes
+    // out of a production build.
+    errorHints: process.env.PLUMIX_DEV ? [bindingErrorHint] : undefined,
   };
 }
 

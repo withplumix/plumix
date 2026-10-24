@@ -35,14 +35,14 @@ export function PlumixDebugBar({
   if (!dev?.bar.enabled) return null;
   const config = dev.bar;
 
-  const panels = collectDebugPanels(ctx.hooks, ctx, dev.panels.disabled);
+  const panels = collectDebugPanels(dev);
   if (panels.length === 0) return null;
 
   const snapshot = projectDebugSnapshot(
     { spans: ctx.telemetry.getSpans(), records: ctx.telemetry.getRecords() },
     ctx,
   );
-  const rendered = renderDebugPanels(panels, snapshot);
+  const rendered = renderDebugPanels(panels, snapshot, ctx.logger);
 
   // The current request isn't captured until request-end, so seed it from the
   // snapshot; it leads the switcher and is pre-selected via the <select>'s

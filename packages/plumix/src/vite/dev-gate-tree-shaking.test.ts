@@ -20,6 +20,7 @@ const GATED_DEV_MODULES = [
   "dev/debug-bar/component.tsx",
   "dev/debug-panels/core-panels.ts",
   "dev/debug-panels/builtin/mail.tsx",
+  "dev/registrations.ts",
   "dev/mail/catcher.ts",
   "dev/mail/gallery.tsx",
   "dev/mail/path.ts",

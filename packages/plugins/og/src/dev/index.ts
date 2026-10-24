@@ -43,9 +43,6 @@ export function registerDevSurfaces(
     }));
     return manifest;
   });
-  ctx.addFilter("debug:panels", (panels) => [
-    ...panels,
-    // The font plan is fixed for the plugin's life, so reading it once is safe.
-    ogDebugPanel({ fonts: inputs().fonts }),
-  ]);
+  // The font plan is fixed for the plugin's life, so reading it once is safe.
+  ctx.registerDebugPanel(ogDebugPanel({ fonts: inputs().fonts }));
 }

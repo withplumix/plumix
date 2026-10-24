@@ -1,10 +1,10 @@
+import type { DebugPanel } from "../../../context/dev-runtime.js";
 import type { TelemetrySpan } from "../../../context/telemetry.js";
 import type {
   ResolutionStep,
   TemplateResolution,
 } from "../../../route/render/template-hierarchy.js";
 import type { DebugSnapshot } from "../../request-history/snapshot.js";
-import type { DebugPanel } from "../types.js";
 import { TEMPLATE_PANEL_ID } from "../../../route/render/template-node-label.js";
 import { DebugKV, DebugSection, DebugTable } from "../primitives.js";
 

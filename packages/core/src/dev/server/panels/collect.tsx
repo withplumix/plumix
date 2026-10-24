@@ -1,65 +1,52 @@
 import { renderToStaticMarkup } from "react-dom/server";
 
 import type { AppContext } from "../../../context/app-context.js";
-import type { HookExecutor } from "../../../hooks/registry.js";
+import type {
+  DevErrorPanel,
+  DevRegistered,
+  DevRuntime,
+} from "../../../context/dev-runtime.js";
 import type { RenderedDevErrorPanel } from "../../ui/index.js";
-import type { DevErrorPanel } from "./types.js";
+import { logErrorSafely } from "../../../context/log.js";
 import { DEFAULT_PANEL_ORDER } from "../../debug-panels/collect.js";
-import { DevErrorEmptyNote } from "../../ui/panel-primitives.js";
-
-import "./types.js";
 
 /**
- * Isolates each `error_page:panels` handler so a throw during collection can't
- * take down the page. Duplicate ids: the last contributor wins.
+ * The registered panels whose `visible` accepts the error, rendered. A panel
+ * whose `visible` or `render` throws is left out and logged, so it can't take
+ * down the page.
  */
 export function collectDevErrorPanels(
-  hooks: HookExecutor,
+  dev: DevRuntime,
   error: unknown,
   ctx: AppContext,
 ): readonly RenderedDevErrorPanel[] {
-  const contributed = hooks.applyFilterIsolated(
-    "error_page:panels",
-    [],
-    error,
-    ctx,
+  const ordered = [...dev.errorPanels.values()].sort(
+    (a, b) =>
+      (a.order ?? DEFAULT_PANEL_ORDER) - (b.order ?? DEFAULT_PANEL_ORDER),
   );
-
-  const byId = new Map<string, DevErrorPanel>();
-  for (const panel of contributed) byId.set(panel.id, panel);
-
-  return [...byId.values()]
-    .sort(
-      (a, b) =>
-        (a.order ?? DEFAULT_PANEL_ORDER) - (b.order ?? DEFAULT_PANEL_ORDER),
-    )
-    .map((panel) => ({
-      id: panel.id,
-      title: panel.title,
-      html: renderPanelHtml(panel, error, ctx),
-    }));
+  const rendered: RenderedDevErrorPanel[] = [];
+  for (const panel of ordered) {
+    try {
+      if (!(panel.visible?.(error) ?? true)) continue;
+      const html = renderToStaticMarkup(<>{panel.render(error, ctx)}</>);
+      rendered.push({ id: panel.id, title: panel.title, html });
+    } catch (failure) {
+      logPanelFailure(ctx, panel, failure);
+    }
+  }
+  return rendered;
 }
 
-/**
- * A panel that throws yields a fallback rather than crashing the host page
- * the error surface is meant to help debug.
- */
-function renderPanelHtml(
-  panel: DevErrorPanel,
-  error: unknown,
+function logPanelFailure(
   ctx: AppContext,
-): string {
-  try {
-    return renderToStaticMarkup(<>{panel.render(error, ctx)}</>);
-  } catch (err) {
-    console.error(
-      `[plumix] dev error panel "${panel.id}" failed to render`,
-      err,
-    );
-    return renderToStaticMarkup(
-      <DevErrorEmptyNote>
-        Panel “{panel.id}” failed to render.
-      </DevErrorEmptyNote>,
-    );
-  }
+  panel: DevRegistered<DevErrorPanel>,
+  failure: unknown,
+): void {
+  const plugin = panel.registeredBy ?? "core";
+  logErrorSafely(
+    ctx.logger,
+    `[plumix] error panel "${panel.id}" failed plugin=${plugin}`,
+    failure,
+    { id: panel.id, plugin: panel.registeredBy },
+  );
 }

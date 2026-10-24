@@ -1,6 +1,5 @@
-import type { RecordedMail } from "../../../context/dev-runtime.js";
+import type { DebugPanel, RecordedMail } from "../../../context/dev-runtime.js";
 import type { DebugSnapshot } from "../../request-history/snapshot.js";
-import type { DebugPanel } from "../types.js";
 import { isJsonObject } from "../../../json.js";
 import { DEBUG_MAIL_PANEL_ID } from "../../mail/path.js";
 import { MailView } from "../../mail/viewer.js";

@@ -126,7 +126,7 @@ What your platform adds to the handler core builds, as a `RuntimeHandlerSpec`. T
 - `assets(env)` resolves the static-asset fetcher for an invocation. Without it the admin SPA answers `admin-not-available`.
 - `disposeTimeoutMs` bounds how long `dispose()` waits for deferred work; five seconds by default.
 - `clientAddress(request)` reads the client address off the request for platforms whose edge reports it there. It replaces whatever the invocation carried, absent included — the Cloudflare adapter reads `cf-connecting-ip` this way.
-- `prepare(hooks)` runs once per handler, before its first request: a platform check that should fail fast, or dev error hints registered on the app's hooks.
+- `prepare(hooks)` runs once per handler, before its first request: a platform check that should fail fast.
 - `wrap(handler, config)` puts the platform's own routing in front of the built handler, as the demo runtime does for its session routes.
 
 ```ts
@@ -212,6 +212,35 @@ declare const base: RuntimeAdapter;
 export const adapter: RuntimeAdapter = {
   ...base,
   refusedAdminAreas: ["apiTokens", "passkeys"],
+};
+```
+
+### `RuntimeAdapter.errorHints`
+
+How-to-fix hints the dev error page shows for your platform's own errors, as `DevErrorHintRegistration`s: an `id`, a `matches(error)` test, and the hint's `title`, `body` and `docs`. They show after core's hints and before any plugin's. An id another hint already holds fails boot.
+
+Gate the value on `process.env.PLUMIX_DEV` inline, so the hints stay out of a production build. The Cloudflare adapter points a missing-binding error at `wrangler.jsonc` this way.
+
+Omit it. A platform whose errors core's hints already cover adds none.
+
+```ts
+import type { RuntimeAdapter } from "plumix";
+
+declare const base: RuntimeAdapter;
+
+export const adapter: RuntimeAdapter = {
+  ...base,
+  errorHints: process.env.PLUMIX_DEV
+    ? [
+        {
+          id: "deno-permission",
+          matches: (error) =>
+            error instanceof Error && error.name === "PermissionDenied",
+          title: "Grant the permission",
+          body: "Run `plumix dev` with the `--allow-*` flag the error names.",
+        },
+      ]
+    : undefined,
 };
 ```
 

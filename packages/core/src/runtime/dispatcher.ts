@@ -660,10 +660,15 @@ function devFailureResponse(
   err: unknown,
   wantsHtml: boolean,
 ): Response | null {
-  if (!process.env.PLUMIX_DEV || !isTrustedDevRequest(ctx.request)) {
+  const dev = ctx.dev;
+  if (
+    !process.env.PLUMIX_DEV ||
+    dev === undefined ||
+    !isTrustedDevRequest(ctx.request)
+  ) {
     return null;
   }
-  return devErrorResponse(ctx, err, wantsHtml);
+  return devErrorResponse(ctx, dev, err, wantsHtml);
 }
 
 // Stricter than `acceptsHtml`: a bare `fetch` sends `*/*` and can't parse a

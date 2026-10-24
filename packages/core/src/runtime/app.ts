@@ -63,6 +63,7 @@ import { registerCorePurgeInvalidator } from "../cdn/purge.js";
 import * as coreSchema from "../db/schema/index.js";
 import { debugBarChrome } from "../dev/debug-bar/component.js";
 import { registerCoreDebugPanels } from "../dev/debug-panels/core-panels.js";
+import { registerDevItem } from "../dev/registrations.js";
 import { registerCoreDevRoutes } from "../dev/routes.js";
 import { registerCoreErrorHints } from "../dev/server/hints/core-hints.js";
 import { HookRegistry } from "../hooks/registry.js";
@@ -256,13 +257,16 @@ export async function buildApp(
   runtime: RuntimeContext = {},
 ): Promise<PlumixApp> {
   const hooks = new HookRegistry();
-  if (process.env.PLUMIX_DEV) {
-    registerCoreDebugPanels(hooks);
-    registerCoreErrorHints(hooks);
-  }
   // `PLUMIX_DEV` must be set before `buildApp`; without a dev object, capture
   // no-ops.
   const dev = process.env.PLUMIX_DEV ? createDevRuntime(config.dev) : undefined;
+  if (process.env.PLUMIX_DEV && dev !== undefined) {
+    registerCoreDebugPanels(dev);
+    registerCoreErrorHints(dev);
+    for (const hint of config.runtime.errorHints ?? []) {
+      registerDevItem(dev.errorHints, "error hint", hint, config.runtime.name);
+    }
+  }
   // Unconditional: the request memo drops what a write announced whether or
   // not a cdn is configured, and without one the purge half accumulates
   // nothing.
@@ -286,6 +290,7 @@ export async function buildApp(
     plugins: config.plugins,
     registry: seededRegistry,
     theme: config.theme,
+    dev,
   });
   // Every role is registered by now, so the index built here is the complete
   // one the request path reads, and a misdeclared role fails this boot.

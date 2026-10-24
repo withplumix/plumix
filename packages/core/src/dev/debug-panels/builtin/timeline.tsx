@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 
+import type { DebugPanel } from "../../../context/dev-runtime.js";
 import type { DebugSnapshot } from "../../request-history/snapshot.js";
 import type { Timeline } from "../timeline-model.js";
-import type { DebugPanel } from "../types.js";
 import { DebugSection } from "../primitives.js";
 import { timelineGeometry } from "../timeline-geometry.js";
 import { buildTimeline } from "../timeline-model.js";

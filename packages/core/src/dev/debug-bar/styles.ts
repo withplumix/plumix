@@ -247,10 +247,6 @@ export const DEBUG_BAR_CSS =
     .plumix-debug-bar__pane > section + section {
       margin-top: 8px;
     }
-    .plumix-debug-bar__error {
-      margin: 0;
-      color: ${t.red};
-    }
     .plumix-debug-bar table {
       width: 100%;
       border-collapse: collapse;

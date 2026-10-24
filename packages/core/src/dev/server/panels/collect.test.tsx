@@ -1,16 +1,16 @@
-import { beforeAll, describe, expect, onTestFinished, test, vi } from "vitest";
+import { beforeAll, describe, expect, test, vi } from "vitest";
 
-import type { AppContext } from "../../../context/app-context.js";
-import type { DevErrorPanel } from "./types.js";
-import { HookRegistry } from "../../../hooks/registry.js";
-import { createTestContext } from "../../../test/context.js";
+import type { Db } from "../../../context/app-context.js";
+import type { DevErrorPanel } from "../../../context/dev-runtime.js";
+import { createDevRuntime } from "../../../runtime/dev.js";
+import { createTestContext, silentLogger } from "../../../test/context.js";
 import { createTestDb } from "../../../test/harness.js";
+import { registerDevItem } from "../../registrations.js";
 import { collectDevErrorPanels } from "./collect.js";
 
-/** Handlers receive the request context; these tests never read it. */
-let ctx: AppContext;
+let db: Db;
 beforeAll(async () => {
-  ctx = createTestContext({ db: await createTestDb() });
+  db = await createTestDb();
 });
 
 function panel(id: string, over: Partial<DevErrorPanel> = {}): DevErrorPanel {
@@ -18,109 +18,120 @@ function panel(id: string, over: Partial<DevErrorPanel> = {}): DevErrorPanel {
 }
 
 describe("collectDevErrorPanels", () => {
-  test("returns an empty array when nothing is subscribed", () => {
-    const hooks = new HookRegistry();
-
-    expect(collectDevErrorPanels(hooks, new Error("boom"), ctx)).toEqual([]);
-  });
-
-  test("passes the thrown error and ctx to each handler and renders its panels", () => {
-    const hooks = new HookRegistry();
-    const seen: unknown[] = [];
-    hooks.addFilter("error_page:panels", (panels, error) => {
-      seen.push(error);
-      return [
-        ...panels,
-        panel("queue", { title: "Queue", render: () => <p>3 jobs</p> }),
-      ];
-    });
-
-    const err = new Error("boom");
-    const rendered = collectDevErrorPanels(hooks, err, ctx);
-
-    expect(rendered).toEqual([
-      { id: "queue", title: "Queue", html: "<p>3 jobs</p>" },
-    ]);
-    expect(seen).toEqual([err]);
-  });
-
-  test("isolates a throwing handler so one bad subscriber can't sink the rest", () => {
-    const error = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => undefined);
-    onTestFinished(() => error.mockRestore());
-    const hooks = new HookRegistry();
-    hooks.addFilter("error_page:panels", () => {
-      throw new Error("subscriber blew up");
-    });
-    hooks.addFilter("error_page:panels", (panels) => [
-      ...panels,
-      panel("survives"),
-    ]);
+  test("returns an empty array when no panel is registered", () => {
+    const ctx = createTestContext({ db });
 
     expect(
-      collectDevErrorPanels(hooks, new Error("boom"), ctx).map((p) => p.id),
-    ).toEqual(["survives"]);
-    expect(error).toHaveBeenCalledWith(
-      "[plumix] error_page:panels handler failed plugin=core",
-      expect.objectContaining({ message: "subscriber blew up" }),
+      collectDevErrorPanels(
+        createDevRuntime(undefined),
+        new Error("boom"),
+        ctx,
+      ),
+    ).toEqual([]);
+  });
+
+  test("renders a registered panel from the caught error", () => {
+    const dev = createDevRuntime(undefined);
+    registerDevItem(
+      dev.errorPanels,
+      "error panel",
+      panel("queue", {
+        title: "Queue",
+        render: (error) => <p>{(error as Error).message}</p>,
+      }),
+      "queue-plugin",
+    );
+    const ctx = createTestContext({ db });
+
+    expect(collectDevErrorPanels(dev, new Error("3 jobs"), ctx)).toEqual([
+      { id: "queue", title: "Queue", html: "<p>3 jobs</p>" },
+    ]);
+  });
+
+  test("leaves out a panel whose `visible` turns the error down", () => {
+    const dev = createDevRuntime(undefined);
+    registerDevItem(
+      dev.errorPanels,
+      "error panel",
+      panel("database", {
+        visible: (error) => (error as Error).message.includes("SQLITE"),
+      }),
+      "db-plugin",
+    );
+    const ctx = createTestContext({ db });
+
+    expect(collectDevErrorPanels(dev, new Error("boom"), ctx)).toEqual([]);
+  });
+
+  test("leaves out and logs a panel whose `visible` throws", () => {
+    const error = vi.fn();
+    const dev = createDevRuntime(undefined);
+    registerDevItem(
+      dev.errorPanels,
+      "error panel",
+      panel("bad", {
+        visible: () => {
+          throw new Error("visible blew up");
+        },
+      }),
+      "bad-plugin",
+    );
+    registerDevItem(dev.errorPanels, "error panel", panel("good"), null);
+    const ctx = createTestContext({ db, logger: { ...silentLogger, error } });
+
+    const rendered = collectDevErrorPanels(dev, new Error("boom"), ctx);
+
+    expect(rendered.map((p) => p.id)).toEqual(["good"]);
+    expect(error).toHaveBeenCalledExactlyOnceWith(
+      '[plumix] error panel "bad" failed plugin=bad-plugin: visible blew up',
+      expect.objectContaining({ id: "bad", plugin: "bad-plugin" }),
     );
   });
 
-  test("renders a panel whose own render throws as a fallback, not a crash", () => {
-    const error = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => undefined);
-    onTestFinished(() => error.mockRestore());
-    const hooks = new HookRegistry();
-    hooks.addFilter("error_page:panels", (panels) => [
-      ...panels,
+  test("leaves out and logs a panel whose render throws", () => {
+    const error = vi.fn();
+    const dev = createDevRuntime(undefined);
+    registerDevItem(
+      dev.errorPanels,
+      "error panel",
       panel("bad", {
         render: () => {
           throw new Error("panel blew up");
         },
       }),
-      panel("good", { render: () => <p>ok</p> }),
-    ]);
+      null,
+    );
+    registerDevItem(dev.errorPanels, "error panel", panel("good"), null);
+    const ctx = createTestContext({ db, logger: { ...silentLogger, error } });
 
-    const rendered = collectDevErrorPanels(hooks, new Error("boom"), ctx);
+    const rendered = collectDevErrorPanels(dev, new Error("boom"), ctx);
 
-    expect(rendered.map((p) => p.id)).toEqual(["bad", "good"]);
-    // The bad panel degrades to a notice naming its id; the good one renders.
-    expect(rendered[0]?.html).toContain("bad");
-    expect(rendered[1]?.html).toBe("<p>ok</p>");
-    expect(error).toHaveBeenCalledWith(
-      `[plumix] dev error panel "bad" failed to render`,
-      expect.objectContaining({ message: "panel blew up" }),
+    expect(rendered.map((p) => p.id)).toEqual(["good"]);
+    expect(error).toHaveBeenCalledExactlyOnceWith(
+      '[plumix] error panel "bad" failed plugin=core: panel blew up',
+      expect.objectContaining({ id: "bad", plugin: null }),
     );
   });
 
-  test("dedupes by id (last contributor wins) and orders by ascending order", () => {
-    const hooks = new HookRegistry();
-    hooks.addFilter("error_page:panels", (panels) => [
-      ...panels,
-      panel("a", { order: 20, render: () => <p>first-a</p> }),
-      panel("b", { order: 10, render: () => <p>b</p> }),
-      panel("a", { order: 20, render: () => <p>second-a</p> }),
-    ]);
-
-    const rendered = collectDevErrorPanels(hooks, new Error("boom"), ctx);
-
-    expect(rendered.map((p) => p.id)).toEqual(["b", "a"]);
-    // Last "a" wins.
-    expect(rendered[1]?.html).toBe("<p>second-a</p>");
-  });
-
   test("sorts unordered panels after every explicitly ordered one", () => {
-    const hooks = new HookRegistry();
-    hooks.addFilter("error_page:panels", (panels) => [
-      ...panels,
-      panel("loose"),
+    const dev = createDevRuntime(undefined);
+    registerDevItem(dev.errorPanels, "error panel", panel("loose"), null);
+    registerDevItem(
+      dev.errorPanels,
+      "error panel",
+      panel("late", { order: 20 }),
+      null,
+    );
+    registerDevItem(
+      dev.errorPanels,
+      "error panel",
       panel("pinned", { order: 5 }),
-    ]);
+      null,
+    );
+    const ctx = createTestContext({ db });
 
     expect(
-      collectDevErrorPanels(hooks, new Error("boom"), ctx).map((p) => p.id),
-    ).toEqual(["pinned", "loose"]);
+      collectDevErrorPanels(dev, new Error("boom"), ctx).map((p) => p.id),
+    ).toEqual(["pinned", "late", "loose"]);
   });
 });

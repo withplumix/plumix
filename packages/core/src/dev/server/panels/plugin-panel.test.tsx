@@ -35,7 +35,17 @@ const demoPanel: DevErrorPanel = {
 
 const demoPlugin = definePlugin("error-panel-demo", {
   setup: (ctx) => {
-    ctx.addFilter("error_page:panels", (panels) => [...panels, demoPanel]);
+    ctx.registerErrorPanel(demoPanel);
+  },
+});
+
+const hiddenPlugin = definePlugin("error-panel-hidden", {
+  setup: (ctx) => {
+    ctx.registerErrorPanel({
+      ...demoPanel,
+      visible: (caught) =>
+        caught instanceof Error && caught.message.includes("database"),
+    });
   },
 });
 
@@ -68,10 +78,23 @@ describe("dev error page plugin panel", () => {
       'data-testid="plumix-dev-error-panel-error-panel-demo"',
     );
     expect(html).toContain("Demo");
-    // The panel read the caught error off the filter's error argument and
+    // The panel read the caught error off its render argument and
     // rendered it through the page's own fact markup.
     expect(html).toContain("template blew up");
     expect(html).toContain('class="plumix-dev-error__fact-label"');
+  });
+
+  test("a panel whose `visible` turns the error down renders no section", async () => {
+    process.env.PLUMIX_DEV = "1";
+    const h = await createDispatcherHarness({
+      config: { plugins: [hiddenPlugin], theme: boomTheme },
+    });
+
+    const res = await h.dispatch(new Request(`${DEV_ORIGIN}/`));
+    const html = await res.text();
+
+    expect(res.status).toBe(500);
+    expect(html).not.toContain('data-testid="plumix-dev-error-panels"');
   });
 
   test("no panel section renders when no plugin contributes one", async () => {

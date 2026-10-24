@@ -1,17 +1,42 @@
-import type { AppContext } from "../../../context/app-context.js";
-import type { HookExecutor } from "../../../hooks/registry.js";
-import type { DevErrorHint } from "../../ui/index.js";
+import type { Logger } from "../../../context/app-context.js";
+import type {
+  DevErrorHint,
+  DevErrorHintRegistration,
+  DevRuntime,
+} from "../../../context/dev-runtime.js";
+import { logErrorSafely } from "../../../context/log.js";
 
-import "./types.js";
+/** The hint as the page shows it, without what registered it. */
+export function toDevErrorHint({
+  title,
+  body,
+  docs,
+}: DevErrorHintRegistration): DevErrorHint {
+  return { title, body, docs };
+}
 
 /**
- * Isolates each `error_page:hints` handler so a throwing subscriber can't sink
- * the rest or take down the dev error page.
+ * Every registered hint that matches the error, core's first. A hint whose
+ * `matches` throws is left out and logged, so it can't take down the page.
  */
 export function collectDevErrorHints(
-  hooks: HookExecutor,
+  dev: DevRuntime,
   error: unknown,
-  ctx: AppContext,
+  logger: Logger,
 ): readonly DevErrorHint[] {
-  return hooks.applyFilterIsolated("error_page:hints", [], error, ctx);
+  const matched: DevErrorHint[] = [];
+  for (const hint of dev.errorHints.values()) {
+    try {
+      if (hint.matches(error)) matched.push(toDevErrorHint(hint));
+    } catch (failure) {
+      const plugin = hint.registeredBy ?? "core";
+      logErrorSafely(
+        logger,
+        `[plumix] error hint "${hint.id}" failed plugin=${plugin}`,
+        failure,
+        { id: hint.id, plugin: hint.registeredBy },
+      );
+    }
+  }
+  return matched;
 }

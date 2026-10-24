@@ -30,24 +30,21 @@ const demoPlugin = definePlugin("debug-demo", {
       appCtx.telemetry.record("debug-demo", { note: "recorded during render" });
       return manifest;
     });
-    ctx.addFilter("debug:panels", (panels) => [
-      ...panels,
-      {
-        id: "debug-demo",
-        title: "Demo",
-        order: 50,
-        render: (snapshot) => (
-          <DebugSection title="Demo">
-            <DebugTable
-              headers={["note"]}
-              rows={(snapshot.records["debug-demo"] ?? []).map((r) => [
-                (r.data as { note: string }).note,
-              ])}
-            />
-          </DebugSection>
-        ),
-      },
-    ]);
+    ctx.registerDebugPanel({
+      id: "debug-demo",
+      title: "Demo",
+      order: 50,
+      render: (snapshot) => (
+        <DebugSection title="Demo">
+          <DebugTable
+            headers={["note"]}
+            rows={(snapshot.records["debug-demo"] ?? []).map((r) => [
+              (r.data as { note: string }).note,
+            ])}
+          />
+        </DebugSection>
+      ),
+    });
   },
 });
 

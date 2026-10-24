@@ -1,18 +1,9 @@
-import { beforeAll, describe, expect, onTestFinished, test, vi } from "vitest";
+import { describe, expect, test } from "vitest";
 
-import type { AppContext } from "../../context/app-context.js";
-import type { DebugPanel } from "./types.js";
-import { HookRegistry } from "../../hooks/registry.js";
-import { createTestContext } from "../../test/context.js";
-import { createTestDb } from "../../test/harness.js";
+import type { DebugPanel } from "../../context/dev-runtime.js";
+import { createDevRuntime } from "../../runtime/dev.js";
+import { registerDevItem } from "../registrations.js";
 import { collectDebugPanels } from "./collect.js";
-
-/** Handlers receive the request context; these tests never read it. */
-let ctx: AppContext;
-beforeAll(async () => {
-  ctx = createTestContext({ db: await createTestDb() });
-});
-const none: ReadonlySet<string> = new Set();
 
 function panel(id: string, order?: number): DebugPanel {
   return { id, title: id, order, render: () => null };
@@ -20,31 +11,17 @@ function panel(id: string, order?: number): DebugPanel {
 
 describe("collectDebugPanels", () => {
   test("returns an empty array when no panels are registered", () => {
-    const hooks = new HookRegistry();
-
-    expect(collectDebugPanels(hooks, ctx, none)).toEqual([]);
-  });
-
-  test("returns panels contributed through the filter", () => {
-    const hooks = new HookRegistry();
-    hooks.addFilter("debug:panels", (panels) => [...panels, panel("request")]);
-
-    expect(collectDebugPanels(hooks, ctx, none).map((p) => p.id)).toEqual([
-      "request",
-    ]);
+    expect(collectDebugPanels(createDevRuntime(undefined))).toEqual([]);
   });
 
   test("orders panels by ascending `order`, unordered last", () => {
-    const hooks = new HookRegistry();
-    hooks.addFilter("debug:panels", (panels) => [
-      ...panels,
-      panel("c", 30),
-      panel("late"),
-      panel("a", 10),
-      panel("b", 20),
-    ]);
+    const dev = createDevRuntime(undefined);
+    registerDevItem(dev.debugPanels, "debug panel", panel("c", 30), null);
+    registerDevItem(dev.debugPanels, "debug panel", panel("late"), null);
+    registerDevItem(dev.debugPanels, "debug panel", panel("a", 10), null);
+    registerDevItem(dev.debugPanels, "debug panel", panel("b", 20), null);
 
-    expect(collectDebugPanels(hooks, ctx, none).map((p) => p.id)).toEqual([
+    expect(collectDebugPanels(dev).map((p) => p.id)).toEqual([
       "a",
       "b",
       "c",
@@ -52,54 +29,27 @@ describe("collectDebugPanels", () => {
     ]);
   });
 
-  test("omits panels whose id is in the disabled denylist", () => {
-    const hooks = new HookRegistry();
-    hooks.addFilter("debug:panels", (panels) => [
-      ...panels,
-      panel("request", 10),
+  test("keeps registration order between panels of one `order`", () => {
+    const dev = createDevRuntime(undefined);
+    registerDevItem(dev.debugPanels, "debug panel", panel("first"), "one");
+    registerDevItem(dev.debugPanels, "debug panel", panel("second"), "two");
+
+    expect(collectDebugPanels(dev).map((p) => p.id)).toEqual([
+      "first",
+      "second",
+    ]);
+  });
+
+  test("omits panels config turns off in `dev.panels`", () => {
+    const dev = createDevRuntime({ panels: { timeline: false } });
+    registerDevItem(dev.debugPanels, "debug panel", panel("request", 10), null);
+    registerDevItem(
+      dev.debugPanels,
+      "debug panel",
       panel("timeline", 20),
-    ]);
-
-    const ids = collectDebugPanels(hooks, ctx, new Set(["timeline"])).map(
-      (p) => p.id,
+      null,
     );
 
-    expect(ids).toEqual(["request"]);
-  });
-
-  test("isolates a handler that throws so other panels survive", () => {
-    const error = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => undefined);
-    onTestFinished(() => error.mockRestore());
-    const hooks = new HookRegistry();
-    hooks.addFilter("debug:panels", (panels) => [...panels, panel("a", 10)]);
-    hooks.addFilter("debug:panels", () => {
-      throw new Error("boom");
-    });
-    hooks.addFilter("debug:panels", (panels) => [...panels, panel("b", 20)]);
-
-    expect(collectDebugPanels(hooks, ctx, none).map((p) => p.id)).toEqual([
-      "a",
-      "b",
-    ]);
-    expect(error).toHaveBeenCalledWith(
-      "[plumix] debug:panels handler failed plugin=core",
-      expect.objectContaining({ message: "boom" }),
-    );
-  });
-
-  test("dedupes by id — last contributor wins", () => {
-    const hooks = new HookRegistry();
-    hooks.addFilter("debug:panels", (panels) => [
-      ...panels,
-      { id: "request", title: "first", order: 10, render: () => null },
-      { id: "request", title: "second", order: 10, render: () => null },
-    ]);
-
-    const result = collectDebugPanels(hooks, ctx, none);
-
-    expect(result).toHaveLength(1);
-    expect(result[0]?.title).toBe("second");
+    expect(collectDebugPanels(dev).map((p) => p.id)).toEqual(["request"]);
   });
 });

@@ -1,6 +1,8 @@
-import type { AppContext } from "../../context/app-context.js";
-import type { HookExecutor } from "../../hooks/registry.js";
-import type { DebugPanel } from "./types.js";
+import type {
+  DebugPanel,
+  DevRegistered,
+  DevRuntime,
+} from "../../context/dev-runtime.js";
 
 /**
  * Unordered panels sort after every explicitly-ordered one. Finite (not
@@ -8,25 +10,14 @@ import type { DebugPanel } from "./types.js";
  */
 export const DEFAULT_PANEL_ORDER = Number.MAX_SAFE_INTEGER;
 
-/**
- * Isolates each `debug:panels` handler so a throw during collection can't take
- * down the bar. A throw from a panel's own `render` is not caught here.
- */
+/** The registered panels config leaves on, by `order` then registration. */
 export function collectDebugPanels(
-  hooks: HookExecutor,
-  ctx: AppContext,
-  disabled: ReadonlySet<string>,
-): readonly DebugPanel[] {
-  const panels = hooks.applyFilterIsolated("debug:panels", [], ctx);
-
-  const byId = new Map<string, DebugPanel>();
-  for (const p of panels) {
-    if (disabled.has(p.id)) continue;
-    byId.set(p.id, p);
-  }
-
-  return [...byId.values()].sort(
-    (a, b) =>
-      (a.order ?? DEFAULT_PANEL_ORDER) - (b.order ?? DEFAULT_PANEL_ORDER),
-  );
+  dev: DevRuntime,
+): readonly DevRegistered<DebugPanel>[] {
+  return [...dev.debugPanels.values()]
+    .filter((panel) => !dev.panels.disabled.has(panel.id))
+    .sort(
+      (a, b) =>
+        (a.order ?? DEFAULT_PANEL_ORDER) - (b.order ?? DEFAULT_PANEL_ORDER),
+    );
 }

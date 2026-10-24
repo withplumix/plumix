@@ -77,7 +77,7 @@ function renderPanelsHtml(
   dev: NonNullable<AppContext["dev"]>,
   snapshot: DebugSnapshot,
 ): string {
-  const panels = collectDebugPanels(ctx.hooks, ctx, dev.panels.disabled);
-  const rendered = renderDebugPanels(panels, snapshot);
+  const panels = collectDebugPanels(dev);
+  const rendered = renderDebugPanels(panels, snapshot, ctx.logger);
   return renderToStaticMarkup(<DebugPanelTabs rendered={rendered} />);
 }

@@ -1,5 +1,11 @@
 # The dev config tree mirrors the dev layers, and only registered panels are nameable
 
+Amended by [ADR 0052](0052-a-plugin-extends-core-through-declared-events-filters-and-registrations.md):
+a plugin adds a panel with `registerDebugPanel`, not the `debug:panels` filter.
+The id stays open, but no plugin can remove another's panel any more, so a
+panel whose plugin ships no `DebugPanelRegistry` augmentation cannot be hidden
+at all.
+
 `plumix.config.ts` takes a `dev` block whose members are the dev debug layers —
 `dev.bar` is the overlay, `dev.panels` is the panel vocabulary both dev surfaces
 render — and each layer normalizes its own slice. Panel ids are closed: core

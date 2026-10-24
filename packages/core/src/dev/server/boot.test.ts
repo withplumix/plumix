@@ -24,7 +24,7 @@ describe("renderDevBootErrorResponse", () => {
     ).text();
 
     // Core's typed matcher recognizes the registration error even though no app
-    // (and so no `error_page:hints` filter) exists at boot.
+    // (and so no registered hint) exists at boot.
     expect(html).toContain('data-testid="plumix-dev-error-hints"');
     expect(html).toMatch(/theme registration/i);
   });

@@ -184,6 +184,7 @@ export type {
   DevErrorFact,
   DevErrorHint,
   DevErrorHintDoc,
+  DevErrorHintRegistration,
   DevErrorPanel,
   EntryArchive,
   EntryCapability,

@@ -275,7 +275,7 @@ export type { RoleImages } from "./images/contract/role-images.js";
 export { isTrustedDevHost } from "./dev/trust.js";
 export { DebugKV, DebugSection } from "./dev/debug-panels/primitives.js";
 export type { DebugKVRow } from "./dev/debug-panels/primitives.js";
-export type { DebugPanel } from "./dev/debug-panels/types.js";
+export type { DebugPanel } from "./context/dev-runtime.js";
 // `DebugPanelId` stays internal: it is `keyof DebugPanelRegistry`.
 export type {
   DebugPanelRegistry,
@@ -294,15 +294,16 @@ export type {
   DebugHistoryStoreOptions,
 } from "./context/dev-runtime.js";
 export type { DebugSnapshot } from "./dev/request-history/snapshot.js";
-// The dev error page's equivalents, for `error_page:hints` and
-// `error_page:panels`: the contribution shapes and the pieces a panel body is
+// The dev error page's equivalents, for `registerErrorHint` and
+// `registerErrorPanel`: the registration shapes and the pieces a panel body is
 // built from.
-export type { DevErrorPanel } from "./dev/server/panels/types.js";
 export type {
-  DevErrorFact,
   DevErrorHint,
   DevErrorHintDoc,
-} from "./dev/ui/contract.js";
+  DevErrorHintRegistration,
+  DevErrorPanel,
+} from "./context/dev-runtime.js";
+export type { DevErrorFact } from "./dev/ui/contract.js";
 export {
   DevErrorEmptyNote,
   DevErrorFacts,
