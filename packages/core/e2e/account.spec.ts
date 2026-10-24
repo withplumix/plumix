@@ -37,15 +37,18 @@ test("a theme's account page renames the signed-in member", async ({
   await expect(page.getByTestId("account-error")).toHaveText("");
 });
 
+// The baseline is restored once per worker, not per test, so each test signs
+// in as its own member.
 async function visitAsSubscriber(
   context: BrowserContext,
   page: Page,
+  email: string,
 ): Promise<Response | null> {
   const db = await openPlaygroundDb({
     cwd: resolve(process.cwd(), "playground"),
   });
   const member = await factoriesFor(db).user.create({
-    email: "can@example.test",
+    email,
     role: "subscriber",
   });
   const { storageState } = await actingAs(db, member);
@@ -60,7 +63,11 @@ test("useCan renders the same on the server and after hydration", async ({
   context,
   page,
 }) => {
-  const response = await visitAsSubscriber(context, page);
+  const response = await visitAsSubscriber(
+    context,
+    page,
+    "can-hydration@example.test",
+  );
 
   expect(await response?.text()).toContain(
     'data-testid="account-can-edit-own">true<',
@@ -71,7 +78,7 @@ test("useCan renders the same on the server and after hydration", async ({
 });
 
 test("useCan turns false on sign-out", async ({ context, page }) => {
-  await visitAsSubscriber(context, page);
+  await visitAsSubscriber(context, page, "can-sign-out@example.test");
   await expect(page.getByTestId("account-name-input")).toBeVisible();
 
   await page.getByTestId("account-sign-out").click();
