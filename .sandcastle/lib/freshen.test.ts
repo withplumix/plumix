@@ -30,10 +30,27 @@ describe("rebaseOntoLatestMain", () => {
     expect(ran).not.toContain("git rebase --abort");
   });
 
-  test("a rebase that conflicts is abandoned, so the branch is pushed as it was gated", async () => {
+  test("a conflicting rebase goes to the resolver, so the branch is never pushed behind a conflict", async () => {
     const ran: string[] = [];
 
-    const outcome = await rebaseOntoLatestMain(sandbox(1, ran), () => {});
+    const outcome = await rebaseOntoLatestMain(
+      sandbox(1, ran),
+      () => {},
+      async () => true,
+    );
+
+    expect(outcome).toBe("resolved");
+    expect(ran).not.toContain("git rebase --abort");
+  });
+
+  test("a conflict the resolver cannot finish is abandoned, so the branch is pushed as it was gated", async () => {
+    const ran: string[] = [];
+
+    const outcome = await rebaseOntoLatestMain(
+      sandbox(1, ran),
+      () => {},
+      async () => false,
+    );
 
     expect(outcome).toBe("kept");
     expect(ran).toContain("git rebase --abort");

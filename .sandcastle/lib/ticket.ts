@@ -14,7 +14,7 @@ import {
   taggedBlock,
 } from "./agent.js";
 import { checkBrief } from "./brief-check.js";
-import { rebaseOntoLatestMain } from "./freshen.js";
+import { rebaseOntoLatestMain, resolveTheRebase } from "./freshen.js";
 import { GATES, runGates } from "./gates.js";
 import {
   assignToSelf,
@@ -553,7 +553,29 @@ const reviewGateAndLand = async (
   if (gates.blocked) return { status: "blocked", reason: gates.blocked };
 
   say("\n--- land ---");
-  const onMain = await rebaseOntoLatestMain(sandbox, syncRepoToMain);
+  const onMain = await rebaseOntoLatestMain(
+    sandbox,
+    syncRepoToMain,
+    async () =>
+      !(
+        await resolveTheRebase(
+          sandbox,
+          runAgentPhase,
+          IMPLEMENTER,
+          ticket.number,
+        )
+      ).unfinished,
+  );
+  if (onMain === "resolved") {
+    const regated = await gatesUntilGreen(
+      sandbox,
+      GATES,
+      journal,
+      fixer,
+      "resolved",
+    );
+    if (regated.blocked) return { status: "blocked", reason: regated.blocked };
+  }
   if (onMain === "kept") {
     say("  the latest main conflicts, so the branch is pushed as it was gated");
   }
