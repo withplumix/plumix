@@ -1,12 +1,8 @@
-import type {
-  AnyPluginDescriptor,
-  CdnStore,
-  ConnectedCdn,
-  JsonValue,
-} from "plumix";
+import type { AnyPluginDescriptor, ConnectedCdn, JsonValue } from "plumix";
 import type { MetaBoxField } from "plumix/fields";
 import type { ImageRoleName, Logger, PluginSetupContext } from "plumix/plugin";
 import type {
+  CdnFake,
   CreateDispatcherHarnessOptions,
   DispatcherHarness,
 } from "plumix/test";
@@ -18,17 +14,16 @@ import {
   definePolicy,
   grant,
 } from "plumix/auth";
-import { entryPurgeTags, eq, etagOf, typeTag } from "plumix/db";
+import { eq, etagOf } from "plumix/db";
 import { definePlugin } from "plumix/plugin";
 import { entries } from "plumix/schema";
-import { createDispatcherHarness } from "plumix/test";
+import { createDispatcherHarness, fakeCdn } from "plumix/test";
 import { defineTheme, fallback } from "plumix/theme";
 import { afterEach, describe, expect, expectTypeOf, test, vi } from "vitest";
 
 import type { SeoOptions, SitemapScopeRef, SitemapSource } from "./index.js";
 import type * as SeoPackage from "./index.js";
 import { seo } from "./index.js";
-import { SITEMAP_TAG } from "./routes.js";
 
 // The sitemap lists every role an entry carries, not a pair core happens to
 // ship — so this suite declares one of its own.
@@ -1369,84 +1364,94 @@ describe("sitemap scopes at boot", () => {
 });
 
 describe("a sitemap at the edge", () => {
-  function cdnStub() {
-    const entries = new Map<string, Response>();
-    const put = vi.fn<CdnStore["put"]>((request, response) => {
-      entries.set(request.url, response);
-      return Promise.resolve();
-    });
-    const match = vi.fn<CdnStore["match"]>((request) =>
-      Promise.resolve(entries.get(request.url)?.clone()),
-    );
-    const purgeTags = vi.fn<NonNullable<ConnectedCdn["purgeTags"]>>(() =>
-      Promise.resolve(),
-    );
-    const cdn: ConnectedCdn = {
-      decorate: (response) => response,
-      store: { match, put },
-      purgeTags,
-    };
-    return { cdn, match, put, purgeTags };
-  }
-
-  function tagsFor(
-    put: ReturnType<typeof cdnStub>["put"],
+  // Render a public GET so the read-through stores it, and check it did.
+  async function render(
+    h: DispatcherHarness,
+    cdn: CdnFake,
     path: string,
-  ): readonly string[] {
-    const call = put.mock.calls.find(
-      ([request]) => new URL(request.url).pathname === path,
-    );
-    return call?.[2] ?? [];
+  ): Promise<void> {
+    (await h.fetch(path)).assertStatus(200);
+    await h.drainDeferred();
+    cdn.assertStored(path);
   }
 
-  test("stores each scope under its own type tag, so a publish retires only that scope", async () => {
-    const { cdn, put } = cdnStub();
-    const h = await createHarness([taxonomyPlugin], { cdn });
-    await seedPost(h);
-
-    await bodyOf(h, "/sitemap-entries-post-1.xml");
-    await bodyOf(h, "/sitemap-terms-category-1.xml");
-    await h.drainDeferred();
-
-    // Asserted against core's purge vocabulary: the set `entry:published`
-    // sweeps must cover what the scope stored under.
-    expect(tagsFor(put, "/sitemap-entries-post-1.xml")).toContain(
-      typeTag("post"),
-    );
-    expect(entryPurgeTags("post", 1)).toEqual(
-      expect.arrayContaining([typeTag("post")]),
-    );
-    expect(tagsFor(put, "/sitemap-terms-category-1.xml")).toEqual(
-      expect.arrayContaining([typeTag("post")]),
-    );
-    // And both carry the set-wide tag the indexing toggle purges by.
-    expect(tagsFor(put, "/sitemap-entries-post-1.xml")).toContain(SITEMAP_TAG);
-  });
-
-  test("stores llms.txt under the set-wide tag and every public type's", async () => {
-    const { cdn, put } = cdnStub();
-    const twoTypes = definePlugin("two-types", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerEntryType("page", { label: "Pages", isPublic: true });
-      ctx.registerEntryType("note", { label: "Notes", isPublic: false });
+  async function publish(
+    h: DispatcherHarness,
+    type: string,
+    slug: string,
+  ): Promise<void> {
+    const admin = await h.seedUser("admin");
+    const created = await h.fetch("/_plumix/rpc/entry/create", {
+      as: admin,
+      json: {
+        json: { type, title: slug, slug, status: "published" },
+        meta: [],
+      },
     });
-    const h = await createHarness([twoTypes], { cdn });
-
-    const res = await h.dispatch(new Request("https://cms.example/llms.txt"));
+    created.assertStatus(200);
     await h.drainDeferred();
+  }
 
-    expect(res.headers.get("cache-control")).toBe(
-      "public, max-age=0, s-maxage=3600",
-    );
-    const tags = tagsFor(put, "/llms.txt");
-    expect(tags).toEqual(
-      expect.arrayContaining([SITEMAP_TAG, typeTag("post"), typeTag("page")]),
-    );
-    expect(tags).not.toContain(typeTag("note"));
+  const postsAndPages = definePlugin("taxo-pages", (ctx) => {
+    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    ctx.registerEntryType("page", { label: "Pages", isPublic: true });
+    ctx.registerEntryType("note", { label: "Notes", isPublic: false });
+    ctx.registerTermTaxonomy("category", {
+      label: "Categories",
+      isHierarchical: false,
+      entryTypes: ["post"],
+    });
   });
+
+  test("publishing an entry retires its type's scopes and only those", async () => {
+    const cdn = fakeCdn();
+    const h = await createHarness([postsAndPages], { cdn });
+    await seedPost(h);
+    await h.factory.term.create({ taxonomy: "category", slug: "news" });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "page",
+      slug: "about",
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    await render(h, cdn, "/sitemap-entries-post-1.xml");
+    await render(h, cdn, "/sitemap-terms-category-1.xml");
+    await render(h, cdn, "/sitemap-entries-page-1.xml");
+
+    await publish(h, "post", "second");
+
+    cdn.assertNotStored("/sitemap-entries-post-1.xml");
+    cdn.assertNotStored("/sitemap-terms-category-1.xml");
+    cdn.assertStored("/sitemap-entries-page-1.xml");
+  });
+
+  test.each([
+    ["post", false],
+    ["page", false],
+    ["note", true],
+  ])(
+    "publishing a %s retires llms.txt unless the type is private",
+    async (type, kept) => {
+      const cdn = fakeCdn();
+      const h = await createHarness([postsAndPages], { cdn });
+      const res = await h.fetch("/llms.txt");
+      expect(res.headers.get("cache-control")).toBe(
+        "public, max-age=0, s-maxage=3600",
+      );
+      await h.drainDeferred();
+      cdn.assertStored("/llms.txt");
+
+      await publish(h, type, "fresh");
+
+      if (kept) cdn.assertStored("/llms.txt");
+      else cdn.assertNotStored("/llms.txt");
+    },
+  );
 
   test("changing an entry from public to members retires its sitemap page and llms.txt", async () => {
-    const { cdn, put, purgeTags } = cdnStub();
+    const cdn = fakeCdn();
     const h = await createHarness([eduscopePlugin], { cdn });
     const admin = await h.seedUser("admin");
     const page = await h.factory.entry.create({
@@ -1458,9 +1463,8 @@ describe("a sitemap at the edge", () => {
       authorId: admin.id,
       publishedAt: new Date(),
     });
-    await bodyOf(h, "/sitemap-entries-page-1.xml");
-    await bodyOf(h, "/llms.txt");
-    await h.drainDeferred();
+    await render(h, cdn, "/sitemap-entries-page-1.xml");
+    await render(h, cdn, "/llms.txt");
 
     const updated = await h.fetch("/_plumix/rpc/entry/update", {
       as: admin,
@@ -1476,39 +1480,30 @@ describe("a sitemap at the edge", () => {
     updated.assertStatus(200);
     await h.drainDeferred();
 
-    const purged = new Set(purgeTags.mock.calls.flatMap(([tags]) => [...tags]));
-    const retired = Object.fromEntries(
-      ["/sitemap-entries-page-1.xml", "/llms.txt"].map((path) => [
-        path,
-        tagsFor(put, path).some((tag) => purged.has(tag)),
-      ]),
-    );
-    expect(retired).toEqual({
-      "/sitemap-entries-page-1.xml": true,
-      "/llms.txt": true,
-    });
+    cdn.assertNotStored("/sitemap-entries-page-1.xml");
+    cdn.assertNotStored("/llms.txt");
   });
 
-  test("names only its own tags, not one per picture it lists", async () => {
+  test("a scope listing pictures is retired by what it lists, not by an unrelated write", async () => {
     // The media adapter declares no embedded cache tag, so a 1,000-entry page
     // carries no per-picture tags.
-    const { cdn, put } = cdnStub();
-    const h = await createHarness([picturePlugin], { cdn });
+    const cdn = fakeCdn();
+    const h = await createHarness([picturePlugin, settingsSaver("mail")], {
+      cdn,
+    });
     await seedPost(h, { meta: { appearance: { hero: "m1" } } });
+    await render(h, cdn, "/sitemap-entries-post-1.xml");
 
-    await bodyOf(h, "/sitemap-entries-post-1.xml");
+    await h.fetch("/fire-settings-change");
     await h.drainDeferred();
+    cdn.assertStored("/sitemap-entries-post-1.xml");
 
-    expect(tagsFor(put, "/sitemap-entries-post-1.xml")).toEqual([
-      SITEMAP_TAG,
-      typeTag("post"),
-      "s:seo",
-      "s:site",
-    ]);
+    await publish(h, "post", "second");
+    cdn.assertNotStored("/sitemap-entries-post-1.xml");
   });
 
   test("declares a shared freshness window and serves the next request from the edge", async () => {
-    const { cdn, match, put } = cdnStub();
+    const cdn = fakeCdn();
     const h = await createHarness([blogPlugin], { cdn });
     await seedPost(h);
 
@@ -1517,6 +1512,8 @@ describe("a sitemap at the edge", () => {
     );
     const firstBody = await first.text();
     await h.drainDeferred();
+    // A factory write fires no action, so nothing retires the stored copy.
+    await seedPost(h, { slug: "unlisted" });
     const second = await h.dispatch(
       new Request("https://cms.example/sitemap-entries-post-1.xml"),
     );
@@ -1525,32 +1522,34 @@ describe("a sitemap at the edge", () => {
       "public, max-age=0, s-maxage=3600",
     );
     expect(await second.text()).toBe(firstBody);
-    expect(put).toHaveBeenCalledOnce();
-    expect(match).toHaveBeenCalledTimes(2);
   });
 
   // Every SEO group changes cached output; content pages purge by type tag
   // since the cdn has no site-wide one.
   test.each([
-    ["the plugin's own group", "seo", true],
-    ["the verification group", "seo_verification", true],
-    ["the robots.txt group", "seo_robots", true],
-    ["the legacy site group", "site", true],
-    ["an unrelated group", "mail", false],
+    ["the plugin's own group", "seo", false],
+    ["the verification group", "seo_verification", false],
+    ["the robots.txt group", "seo_robots", false],
+    ["the legacy site group", "site", false],
+    ["an unrelated group", "mail", true],
   ])(
-    "a settings save on %s %s the cached set",
-    async (_label, group, purged) => {
-      const { cdn, purgeTags } = cdnStub();
+    "a settings save on %s retires the cached set unless unrelated",
+    async (_label, group, kept) => {
+      const cdn = fakeCdn();
       const h = await createHarness([blogPlugin, settingsSaver(group)], {
         cdn,
       });
+      await seedPost(h);
+      await render(h, cdn, "/sitemap-entries-post-1.xml");
+      await render(h, cdn, "/post/hello");
 
       await h.dispatch(new Request("https://cms.example/fire-settings-change"));
       await h.drainDeferred();
 
-      expect(purgeTags.mock.calls.flatMap(([tags]) => [...tags])).toEqual(
-        purged ? [`s:${group}`, SITEMAP_TAG, typeTag("post")] : [`s:${group}`],
-      );
+      for (const path of ["/sitemap-entries-post-1.xml", "/post/hello"]) {
+        if (kept) cdn.assertStored(path);
+        else cdn.assertNotStored(path);
+      }
     },
   );
 

@@ -1,6 +1,7 @@
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import type { AppContext, Db } from "../context/app-context.js";
+import type { CdnFake } from "../test/cdn-fake.js";
 import { withUser } from "../auth/with-user.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
@@ -8,9 +9,16 @@ import {
   toRegisteredEntryType,
   toRegisteredTermTaxonomy,
 } from "../plugin/registry.js";
+import { fakeCdn } from "../test/cdn-fake.js";
 import { createTestContext } from "../test/context.js";
 import { createTestDb } from "../test/harness.js";
-import { userTag } from "./contract/tags.js";
+import {
+  entryPurgeTags,
+  entryTag,
+  settingsTag,
+  typeTag,
+  userTag,
+} from "./contract/tags.js";
 import {
   enqueuePurgeTags,
   flushPurgeTags,
@@ -22,14 +30,43 @@ beforeAll(async () => {
   db = await createTestDb();
 });
 
-function fakeCtx(cdn: "purges" | "cannot-purge" | "absent" = "purges") {
-  const purgeTags = vi.fn<(tags: readonly string[]) => Promise<void>>(() =>
-    Promise.resolve(),
-  );
-  const defer = vi.fn((p: Promise<unknown>) => {
-    void p;
-  });
-  const store = { match: vi.fn(), put: vi.fn() };
+/** One stored page under each tag a write here can reach, keyed by path. */
+const PAGES: Readonly<Record<string, string>> = {
+  "/post": typeTag("post"),
+  "/page": typeTag("page"),
+  "/note": typeTag("note"),
+  "/post/9": entryTag(9),
+  "/post/8": entryTag(8),
+  "/settings/site": settingsTag("site"),
+  "/settings/seo": settingsTag("seo"),
+  "/author/4": userTag(4),
+};
+
+async function storePages(cdn: CdnFake): Promise<void> {
+  for (const [path, tag] of Object.entries(PAGES)) {
+    await cdn.store.put(
+      new Request(`https://cms.example${path}`),
+      new Response(path),
+      [tag],
+    );
+  }
+}
+
+/** Fails naming the first page whose presence is not what the purge implies. */
+function assertOnlyPurged(cdn: CdnFake, purged: readonly string[]): void {
+  for (const path of Object.keys(PAGES)) {
+    if (purged.includes(path)) cdn.assertNotStored(path);
+    else cdn.assertStored(path);
+  }
+}
+
+async function fakeCtx(
+  cdnMode: "purges" | "cannot-purge" | "absent" = "purges",
+) {
+  const cdn = fakeCdn();
+  await storePages(cdn);
+  const { purgeTags: _cannotPurge, ...withoutPurge } = cdn;
+  const deferred: Promise<unknown>[] = [];
   const plugins = createPluginRegistry();
   for (const [name, options] of [
     ["post", { label: "Posts", isPublic: true }],
@@ -53,36 +90,41 @@ function fakeCtx(cdn: "purges" | "cannot-purge" | "absent" = "purges") {
   const ctx = createTestContext({
     db,
     cdn:
-      cdn === "absent"
+      cdnMode === "absent"
         ? undefined
-        : {
-            decorate: vi.fn(),
-            store,
-            ...(cdn === "purges" ? { purgeTags } : {}),
-          },
-    defer,
+        : cdnMode === "purges"
+          ? cdn
+          : withoutPurge,
+    defer: (promise) => {
+      deferred.push(promise);
+    },
     plugins,
   });
-  return { ctx, purgeTags, defer };
+  // Flush as the request's end does, and wait for the purge it deferred.
+  const flush = async () => {
+    flushPurgeTags(ctx);
+    await Promise.all(deferred);
+  };
+  return { ctx, cdn, deferred, flush };
 }
 
 describe("purge accumulator", () => {
-  it("flushes a single de-duplicated purge for tags from multiple enqueues", () => {
-    const { ctx, purgeTags } = fakeCtx();
+  it("flushes a single purge for tags from multiple enqueues", async () => {
+    const { ctx, cdn, deferred, flush } = await fakeCtx();
 
     // Two entries of the same type — the bulk-publish shape.
-    enqueuePurgeTags(ctx, ["t:post", "e:1"]);
-    enqueuePurgeTags(ctx, ["t:post", "e:2"]);
-    flushPurgeTags(ctx);
+    enqueuePurgeTags(ctx, entryPurgeTags("post", 9));
+    enqueuePurgeTags(ctx, entryPurgeTags("post", 8));
+    await flush();
 
-    expect(purgeTags).toHaveBeenCalledTimes(1);
-    expect(purgeTags).toHaveBeenCalledWith(["t:post", "e:1", "e:2"]);
+    expect(deferred).toHaveLength(1);
+    assertOnlyPurged(cdn, ["/post", "/post/9", "/post/8"]);
   });
 
   // Core derives contexts by spreading and the flush reads the outermost one,
   // so a derived context must share the same set.
-  it("flushes tags enqueued against a derived context", () => {
-    const { ctx, purgeTags } = fakeCtx();
+  it("flushes tags enqueued against a derived context", async () => {
+    const { ctx, cdn, flush } = await fakeCtx();
     const derived = withUser(ctx, {
       id: 1,
       email: "u@cms.example",
@@ -90,34 +132,34 @@ describe("purge accumulator", () => {
       meta: {},
     });
 
-    enqueuePurgeTags(derived, ["t:post", "e:1"]);
-    flushPurgeTags(ctx);
+    enqueuePurgeTags(derived, entryPurgeTags("post", 9));
+    await flush();
 
-    expect(purgeTags).toHaveBeenCalledWith(["t:post", "e:1"]);
+    assertOnlyPurged(cdn, ["/post", "/post/9"]);
   });
 
-  it("does nothing on flush when nothing was enqueued", () => {
-    const { ctx, purgeTags, defer } = fakeCtx();
-    flushPurgeTags(ctx);
-    expect(purgeTags).not.toHaveBeenCalled();
-    expect(defer).not.toHaveBeenCalled();
+  it("does nothing on flush when nothing was enqueued", async () => {
+    const { cdn, deferred, flush } = await fakeCtx();
+    await flush();
+    expect(deferred).toHaveLength(0);
+    assertOnlyPurged(cdn, []);
   });
 
-  it("is inert when no cdn is configured", () => {
-    const { ctx, defer } = fakeCtx("absent");
-    enqueuePurgeTags(ctx, ["t:post", "e:1"]);
-    flushPurgeTags(ctx);
-    expect(defer).not.toHaveBeenCalled();
+  it("is inert when no cdn is configured", async () => {
+    const { ctx, deferred, flush } = await fakeCtx("absent");
+    enqueuePurgeTags(ctx, entryPurgeTags("post", 9));
+    await flush();
+    expect(deferred).toHaveLength(0);
   });
 
   // A vendor that cannot invalidate by tag has no `purgeTags` at all, which is
   // the point of its being optional: nothing can call it and report success.
-  it("is inert when the provider cannot purge by tag", () => {
-    const { ctx, defer, purgeTags } = fakeCtx("cannot-purge");
-    enqueuePurgeTags(ctx, ["t:post", "e:1"]);
-    flushPurgeTags(ctx);
-    expect(purgeTags).not.toHaveBeenCalled();
-    expect(defer).not.toHaveBeenCalled();
+  it("is inert when the provider cannot purge by tag", async () => {
+    const { ctx, cdn, deferred, flush } = await fakeCtx("cannot-purge");
+    enqueuePurgeTags(ctx, entryPurgeTags("post", 9));
+    await flush();
+    expect(deferred).toHaveLength(0);
+    assertOnlyPurged(cdn, []);
   });
 });
 
@@ -142,45 +184,45 @@ describe("registerCorePurgeInvalidator", () => {
   ];
 
   it.each(ENTRY_EVENTS)(
-    "%s enqueues the entry's purge tags",
+    "%s purges the entry's pages and its type's",
     async (event, payload) => {
       const hooks = new HookRegistry();
       registerCorePurgeInvalidator(hooks);
-      const { ctx, purgeTags } = fakeCtx();
+      const { ctx, cdn, flush } = await fakeCtx();
 
       await fire(hooks, event, ...payload, ctx);
-      flushPurgeTags(ctx);
+      await flush();
 
-      expect(purgeTags).toHaveBeenCalledWith(["t:post", "e:9"]);
+      assertOnlyPurged(cdn, ["/post", "/post/9"]);
     },
   );
 
   // Any public entry can render its author — a hierarchical `page` permalink
   // included — so every public type is purged; only the private `note` is not.
-  it("user:updated enqueues the tags of every public entry type", async () => {
+  it("user:updated purges the pages of every public entry type", async () => {
     const hooks = new HookRegistry();
     registerCorePurgeInvalidator(hooks);
-    const { ctx, purgeTags } = fakeCtx();
+    const { ctx, cdn, flush } = await fakeCtx();
     const user = { id: 4, name: "Jane", slug: "jane" };
 
     await fire(hooks, "user:updated", user, user, ctx);
-    flushPurgeTags(ctx);
+    await flush();
 
-    expect(purgeTags).toHaveBeenCalledWith(["t:post", "t:page"]);
+    assertOnlyPurged(cdn, ["/post", "/page"]);
   });
 
   // Deleting a user reassigns their entries without firing an entry action, so
   // their cached author feed and every page showing those entries stay stale.
-  it("user:deleted enqueues the tags of every public entry type", async () => {
+  it("user:deleted purges the pages of every public entry type", async () => {
     const hooks = new HookRegistry();
     registerCorePurgeInvalidator(hooks);
-    const { ctx, purgeTags } = fakeCtx();
+    const { ctx, cdn, flush } = await fakeCtx();
     const user = { id: 4, name: "Jane", slug: "jane" };
 
     await fire(hooks, "user:deleted", user, { reassignedTo: 1 }, ctx);
-    flushPurgeTags(ctx);
+    await flush();
 
-    expect(purgeTags).toHaveBeenCalledWith(["t:post", "t:page"]);
+    assertOnlyPurged(cdn, ["/post", "/page"]);
   });
 
   const term = { id: 3, taxonomy: "category" };
@@ -192,49 +234,49 @@ describe("registerCorePurgeInvalidator", () => {
   ];
 
   it.each(TERM_EVENTS)(
-    "%s enqueues purge tags for the taxonomy's entry types",
+    "%s purges the pages of the taxonomy's entry types",
     async (event, payload) => {
       const hooks = new HookRegistry();
       registerCorePurgeInvalidator(hooks);
-      const { ctx, purgeTags } = fakeCtx();
+      const { ctx, cdn, flush } = await fakeCtx();
 
       await fire(hooks, event, ...payload, ctx);
-      flushPurgeTags(ctx);
+      await flush();
 
-      expect(purgeTags).toHaveBeenCalledWith(["t:post"]);
+      assertOnlyPurged(cdn, ["/post"]);
     },
   );
 
   // A taxonomy that lists no entry types still has term feeds, which list every
   // public type attached to the term — so its term changes purge those types.
   it.each(TERM_EVENTS)(
-    "%s in a taxonomy without entryTypes enqueues the public types' tags",
+    "%s in a taxonomy without entryTypes purges the public types' pages",
     async (event, payload) => {
       const hooks = new HookRegistry();
       registerCorePurgeInvalidator(hooks);
-      const { ctx, purgeTags } = fakeCtx();
+      const { ctx, cdn, flush } = await fakeCtx();
       const untyped = payload.map((arg) =>
         arg === term ? { ...term, taxonomy: "tag" } : arg,
       );
 
       await fire(hooks, event, ...untyped, ctx);
-      flushPurgeTags(ctx);
+      await flush();
 
-      expect(purgeTags).toHaveBeenCalledWith(["t:post", "t:page"]);
+      assertOnlyPurged(cdn, ["/post", "/page"]);
     },
   );
 
   // A page that printed a settings group is stored under its tag, so saving
   // the group has to reach the CDN, not only this request's memo.
-  it("settings:group_changed enqueues the group's tag", async () => {
+  it("settings:group_changed purges the pages that printed the group", async () => {
     const hooks = new HookRegistry();
     registerCorePurgeInvalidator(hooks);
-    const { ctx, purgeTags } = fakeCtx();
+    const { ctx, cdn, flush } = await fakeCtx();
 
     await fire(hooks, "settings:group_changed", { group: "site" }, ctx);
-    flushPurgeTags(ctx);
+    await flush();
 
-    expect(purgeTags).toHaveBeenCalledWith(["s:site"]);
+    assertOnlyPurged(cdn, ["/settings/site"]);
   });
 
   const jane = { id: 4, name: "Jane", slug: "jane" };
@@ -261,6 +303,11 @@ describe("registerCorePurgeInvalidator", () => {
     return { loads, read };
   }
 
+  // Every tag a stored page carries, less the memo-only user tag.
+  const STORED_TAGS = Object.entries(PAGES).filter(
+    ([, tag]) => tag !== userTag(jane.id),
+  );
+
   // The memo drop is read off the purge itself, so the two cannot drift into
   // separate lists, and it applies even with no cdn.
   it.each(PURGING_EVENTS)(
@@ -268,21 +315,23 @@ describe("registerCorePurgeInvalidator", () => {
     async (event, payload) => {
       const hooks = new HookRegistry();
       registerCorePurgeInvalidator(hooks);
-      const purging = fakeCtx();
+      const purging = await fakeCtx();
       await fire(hooks, event, ...payload, purging.ctx);
-      flushPurgeTags(purging.ctx);
-      const purged = purging.purgeTags.mock.calls[0]?.[0] ?? [];
-      const { ctx } = fakeCtx("absent");
+      await purging.flush();
+      const purged: string[] = [];
+      for (const [path, tag] of STORED_TAGS) {
+        const request = new Request(`https://cms.example${path}`);
+        if (!(await purging.cdn.store.match(request))) purged.push(tag);
+      }
+      const { ctx } = await fakeCtx("absent");
       const { loads, read } = recordingMemo(ctx);
-      for (const tag of purged) await read(tag, [tag]);
+      for (const [, tag] of STORED_TAGS) await read(tag, [tag]);
       await read("untagged");
-      await read("unrelated", ["e:999"]);
       loads.length = 0;
 
       await fire(hooks, event, ...payload, ctx);
-      for (const tag of purged) await read(tag, [tag]);
+      for (const [, tag] of STORED_TAGS) await read(tag, [tag]);
       await read("untagged");
-      await read("unrelated", ["e:999"]);
 
       expect(purged).not.toHaveLength(0);
       expect(loads).toEqual(purged);
@@ -298,31 +347,30 @@ describe("registerCorePurgeInvalidator", () => {
     async (event, payload, tag) => {
       const hooks = new HookRegistry();
       registerCorePurgeInvalidator(hooks);
-      const { ctx, purgeTags } = fakeCtx();
+      const { ctx, cdn, flush } = await fakeCtx();
       const { loads, read } = recordingMemo(ctx);
       await read("own", [tag]);
       loads.length = 0;
 
       await fire(hooks, event, ...payload, ctx);
       await read("own", [tag]);
-      flushPurgeTags(ctx);
+      await flush();
 
       expect(loads).toEqual(["own"]);
-      const purged = purgeTags.mock.calls.flatMap(([tags]) => tags);
-      expect(purged).not.toContain(tag);
+      cdn.assertStored("/author/4");
     },
   );
 
-  it("batches a bulk publish into one purge call", async () => {
+  it("batches a bulk publish into one purge", async () => {
     const hooks = new HookRegistry();
     registerCorePurgeInvalidator(hooks);
-    const { ctx, purgeTags } = fakeCtx();
+    const { ctx, cdn, deferred, flush } = await fakeCtx();
 
-    await fire(hooks, "entry:published", { id: 1, type: "post" }, ctx);
-    await fire(hooks, "entry:published", { id: 2, type: "post" }, ctx);
-    flushPurgeTags(ctx);
+    await fire(hooks, "entry:published", { id: 9, type: "post" }, ctx);
+    await fire(hooks, "entry:published", { id: 8, type: "post" }, ctx);
+    await flush();
 
-    expect(purgeTags).toHaveBeenCalledTimes(1);
-    expect(purgeTags).toHaveBeenCalledWith(["t:post", "e:1", "e:2"]);
+    expect(deferred).toHaveLength(1);
+    assertOnlyPurged(cdn, ["/post", "/post/9", "/post/8"]);
   });
 });

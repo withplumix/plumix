@@ -1,31 +1,17 @@
-import type { AnyPluginDescriptor, ConnectedCdn } from "plumix";
-import type { DispatcherHarness } from "plumix/test";
+import type { AnyPluginDescriptor } from "plumix";
+import type { CdnFake, DispatcherHarness } from "plumix/test";
 import { definePlugin } from "plumix/plugin";
-import { createDispatcherHarness, plumixRequest } from "plumix/test";
+import { createDispatcherHarness, fakeCdn, plumixRequest } from "plumix/test";
 import { defineTemplate, defineTheme, entry } from "plumix/theme";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test } from "vitest";
 
 import type { MenuItemMeta } from "./server/types.js";
 import { menu } from "./index.js";
 import { getMenuByName } from "./server/getMenuByName.js";
 
-function cdnStub() {
-  const put = vi.fn<NonNullable<ConnectedCdn["store"]>["put"]>(() =>
-    Promise.resolve(),
-  );
-  const purgeTags = vi.fn<NonNullable<ConnectedCdn["purgeTags"]>>(() =>
-    Promise.resolve(),
-  );
-  const cdn: ConnectedCdn = {
-    decorate: (response) => response,
-    store: { match: () => Promise.resolve(undefined), put },
-    purgeTags,
-  };
-  return { cdn, put, purgeTags };
-}
-
 const blog = definePlugin("blog", (ctx) => {
   ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+  ctx.registerEntryType("page", { label: "Pages", isPublic: true });
 });
 
 /** A permalink template rendering the `primary` location. */
@@ -50,19 +36,23 @@ const theme = defineTheme({
 
 interface Site {
   readonly h: DispatcherHarness;
-  readonly put: ReturnType<typeof cdnStub>["put"];
-  readonly purgeTags: ReturnType<typeof cdnStub>["purgeTags"];
+  readonly cdn: CdnFake;
   readonly authorId: number;
 }
 
 async function site(extra: readonly AnyPluginDescriptor[] = []): Promise<Site> {
-  const { cdn, put, purgeTags } = cdnStub();
+  const cdn = fakeCdn();
   const h = await createDispatcherHarness({
     cdn,
     config: {
       plugins: [
         blog,
-        menu({ locations: { primary: { label: "Primary" } } }),
+        menu({
+          locations: {
+            primary: { label: "Primary" },
+            footer: { label: "Footer" },
+          },
+        }),
         ...extra,
       ],
       theme,
@@ -77,7 +67,7 @@ async function site(extra: readonly AnyPluginDescriptor[] = []): Promise<Site> {
     authorId: author.id,
     publishedAt: new Date(),
   });
-  return { h, put, purgeTags, authorId: author.id };
+  return { h, cdn, authorId: author.id };
 }
 
 async function seedMenu(
@@ -120,7 +110,7 @@ async function bind(s: Site, location: string, slug: string): Promise<void> {
 async function rpc(s: Site, path: string, input: unknown): Promise<void> {
   const response = await s.h.dispatch(
     await s.h.authenticateRequest(
-      plumixRequest(`/_plumix/rpc/menu/${path}`, {
+      plumixRequest(`/_plumix/rpc/${path}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ json: input }),
@@ -132,123 +122,124 @@ async function rpc(s: Site, path: string, input: unknown): Promise<void> {
   await s.h.drainDeferred();
 }
 
-function purged(s: Site): readonly string[] {
-  return s.purgeTags.mock.calls.flatMap(([tags]) => [...tags]);
-}
+const PAGE = "/post/hello";
 
-function firstStoredTags(s: Site): readonly string[] {
-  return s.put.mock.calls[0]?.[2] ?? [];
-}
-
-async function storedTags(s: Site): Promise<readonly string[]> {
-  await s.h.dispatch(new Request("https://cms.example/post/hello"));
+/** Render a public GET so the read-through stores it, and check it did. */
+async function render(s: Site, path: string = PAGE): Promise<void> {
+  await s.h.dispatch(plumixRequest(path, { method: "GET" }));
   await s.h.drainDeferred();
-  return firstStoredTags(s);
+  s.cdn.assertStored(path);
 }
 
-describe("@plumix/plugin-menu — CDN tags", () => {
-  test("a page rendering a location is stored under its menu's tag", async () => {
-    const s = await site();
-    const termId = await seedMenu(s, "main-nav");
-    await bind(s, "primary", "main-nav");
-
-    expect(await storedTags(s)).toContain(`menu:${String(termId)}`);
+/** A cacheable route resolving the `main-nav` menu by name, not location. */
+const navRoute = definePlugin("nav", (ctx) => {
+  ctx.registerRoute({
+    method: "GET",
+    path: "/nav",
+    auth: "public",
+    cacheable: true,
+    handler: async (_request, appCtx) => {
+      const nav = await getMenuByName(appCtx, "main-nav");
+      return new Response(JSON.stringify(nav), { status: 200 });
+    },
   });
+});
+const NAV = "/_plumix/nav/nav";
 
-  test("saving a menu purges its tag", async () => {
+describe("@plumix/plugin-menu — CDN invalidation", () => {
+  test("saving a menu purges a page rendering it at a location", async () => {
     const s = await site();
     const termId = await seedMenu(s, "main-nav", []);
+    await bind(s, "primary", "main-nav");
+    await render(s);
 
-    await rpc(s, "save", { termId, ifMatch: "0", items: [] });
+    await rpc(s, "menu/save", { termId, ifMatch: "0", items: [] });
 
-    expect(purged(s)).toContain(`menu:${String(termId)}`);
+    s.cdn.assertNotStored(PAGE);
   });
 
-  test("a cacheable route resolving a menu by name is stored under its tag", async () => {
-    const navRoute = definePlugin("nav", (ctx) => {
-      ctx.registerRoute({
-        method: "GET",
-        path: "/nav",
-        auth: "public",
-        cacheable: true,
-        handler: async (_request, appCtx) => {
-          const nav = await getMenuByName(appCtx, "main-nav");
-          return new Response(JSON.stringify(nav), { status: 200 });
-        },
-      });
-    });
+  test("saving a menu purges a cacheable route that resolved it by name", async () => {
+    const s = await site([navRoute]);
+    const termId = await seedMenu(s, "main-nav", []);
+    await render(s, NAV);
+
+    await rpc(s, "menu/save", { termId, ifMatch: "0", items: [] });
+
+    s.cdn.assertNotStored(NAV);
+  });
+
+  test("deleting an unbound menu purges what rendered it and no location", async () => {
     const s = await site([navRoute]);
     const termId = await seedMenu(s, "main-nav");
+    await render(s, NAV);
+    await render(s);
 
-    await s.h.dispatch(plumixRequest("/_plumix/nav/nav", { method: "GET" }));
-    await s.h.drainDeferred();
+    await rpc(s, "menu/delete", { termId });
 
-    expect(firstStoredTags(s)).toContain(`menu:${String(termId)}`);
+    s.cdn.assertNotStored(NAV);
+    s.cdn.assertStored(PAGE);
   });
 
-  test("deleting a menu purges its tag", async () => {
+  // The page renders only the empty `primary`, so only the location change can
+  // reach it.
+  test("deleting a bound menu purges a page rendering the locations it unbound", async () => {
     const s = await site();
     const termId = await seedMenu(s, "main-nav");
+    await bind(s, "footer", "main-nav");
+    await render(s);
 
-    await rpc(s, "delete", { termId });
+    await rpc(s, "menu/delete", { termId });
 
-    expect(purged(s)).toContain(`menu:${String(termId)}`);
-    expect(purged(s)).not.toContain("s:menu_locations");
+    s.cdn.assertNotStored(PAGE);
   });
 
-  test("deleting a bound menu purges the locations it unbound", async () => {
-    const s = await site();
-    const termId = await seedMenu(s, "main-nav");
-    await bind(s, "primary", "main-nav");
-
-    await rpc(s, "delete", { termId });
-
-    expect(purged(s)).toEqual(
-      expect.arrayContaining([`menu:${String(termId)}`, "s:menu_locations"]),
-    );
-  });
-
-  test("binding a location purges the locations tag", async () => {
+  // Binding a menu there later has to reach the page that printed nothing.
+  test("binding a location purges a page rendering it empty", async () => {
     const s = await site();
     await seedMenu(s, "main-nav");
+    await render(s);
 
-    await rpc(s, "assignLocation", {
+    await rpc(s, "menu/assignLocation", {
       location: "primary",
       termSlug: "main-nav",
     });
 
-    expect(purged(s)).toContain("s:menu_locations");
+    s.cdn.assertNotStored(PAGE);
   });
 
-  test("unbinding a location purges the locations tag", async () => {
+  test("unbinding a location purges a page rendering it", async () => {
     const s = await site();
     await seedMenu(s, "main-nav");
     await bind(s, "primary", "main-nav");
+    await render(s);
 
-    await rpc(s, "assignLocation", { location: "primary", termSlug: null });
+    await rpc(s, "menu/assignLocation", {
+      location: "primary",
+      termSlug: null,
+    });
 
-    expect(purged(s)).toContain("s:menu_locations");
+    s.cdn.assertNotStored(PAGE);
   });
 
-  test("a page rendering a bound location is stored under the locations tag", async () => {
+  test("binding another location purges a page rendering a bound one", async () => {
     const s = await site();
     await seedMenu(s, "main-nav");
     await bind(s, "primary", "main-nav");
+    await render(s);
 
-    expect(await storedTags(s)).toContain("s:menu_locations");
+    await rpc(s, "menu/assignLocation", {
+      location: "footer",
+      termSlug: "main-nav",
+    });
+
+    s.cdn.assertNotStored(PAGE);
   });
 
-  // Binding a menu there later has to reach the page that printed nothing.
-  test("a page rendering an empty location is stored under the locations tag", async () => {
+  test("trashing an entry a menu links purges the page rendering the menu", async () => {
     const s = await site();
-
-    expect(await storedTags(s)).toContain("s:menu_locations");
-  });
-
-  test("a page whose menu links an entry is stored under that entry's tag", async () => {
-    const s = await site();
+    // A page, not a post: trashing a post would purge every post page anyway.
     const linked = await s.h.factory.entry.create({
-      type: "post",
+      type: "page",
       slug: "about",
       title: "About",
       status: "published",
@@ -257,7 +248,10 @@ describe("@plumix/plugin-menu — CDN tags", () => {
     });
     await seedMenu(s, "main-nav", [{ kind: "entry", entryId: linked.id }]);
     await bind(s, "primary", "main-nav");
+    await render(s);
 
-    expect(await storedTags(s)).toContain(`e:${String(linked.id)}`);
+    await rpc(s, "entry/trash", { id: linked.id });
+
+    s.cdn.assertNotStored(PAGE);
   });
 });
