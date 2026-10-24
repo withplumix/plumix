@@ -529,15 +529,22 @@ function withoutForbiddenStyles(
 
 /**
  * Ids are rewritten through each subtree, so repeated pastes stay independent.
- * A null `afterId` appends to the root.
+ * A null `afterId` appends to the root. Like a duplicate, the copies drop what
+ * `stylePolicy` refuses.
  */
 export function pasteBlocks(
   tree: readonly BlockNode[],
   nodes: readonly BlockNode[],
   afterId: string | null,
   blocks: BlockSpecLookup,
+  stylePolicy?: StylePolicy,
 ): { readonly tree: readonly BlockNode[]; readonly newIds: readonly string[] } {
-  const clones = rewriteBlockNodeIds(nodes, blocks);
+  const clones = rewriteBlockNodeIds(
+    stylePolicy
+      ? nodes.map((node) => withoutForbiddenStyles(node, blocks, stylePolicy))
+      : nodes,
+    blocks,
+  );
   if (clones.length === 0) return { tree, newIds: [] };
   const slot = afterId ? siblingsOf(tree, afterId, blocks) : topLevelSlot(tree);
   const siblings = slot.siblings;

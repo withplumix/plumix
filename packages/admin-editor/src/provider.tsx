@@ -51,7 +51,7 @@ export function EditorProvider({
   readonly starterOpen?: boolean;
   /** Seeds the selection (once); the last id is the active block. */
   readonly selection?: readonly string[];
-  /** A duplicate drops the values it refuses. */
+  /** A duplicate or paste drops the values it refuses. */
   readonly stylePolicy?: StylePolicy;
   readonly children: ReactNode;
 }): ReactElement {

@@ -1113,6 +1113,42 @@ describe("ungroupSelected", () => {
   });
 });
 
+describe("pasteBlocks — under a tokens-only style policy", () => {
+  test("drops the pasted copy's forbidden literals and keeps tokens and keywords", () => {
+    const store = createEditorStore(treeBlocks, {
+      tree: [{ id: "a", name: "core/x" }],
+      stylePolicy: {
+        allowCustomStyles: false,
+        tokens: { color: { primary: { value: "#06f" } } },
+      },
+    });
+
+    store.getState().pasteBlocks([
+      {
+        id: "copied",
+        name: "core/x",
+        className: "brand",
+        style: {
+          large: {
+            color: "var(--plumix-color-primary, #06f)",
+            width: "9px",
+            textAlign: "center",
+          },
+        },
+      },
+    ]);
+
+    const pasted = store.getState().tree[1];
+    expect(pasted?.className).toBeUndefined();
+    expect(pasted?.style).toEqual({
+      large: {
+        color: "var(--plumix-color-primary, #06f)",
+        textAlign: "center",
+      },
+    });
+  });
+});
+
 describe("pasteBlocks", () => {
   const copied: BlockNode = {
     id: "a",

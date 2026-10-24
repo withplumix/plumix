@@ -439,7 +439,7 @@ export function createEditorStore(
   > & {
     /** Seeds the selection; the last id is the active block. */
     readonly selection?: readonly string[];
-    /** A duplicate drops the values it refuses; undefined refuses none. */
+    /** A duplicate or paste drops the values it refuses; undefined refuses none. */
     readonly stylePolicy?: StylePolicy;
   },
 ): EditorStoreApi {
@@ -680,6 +680,7 @@ export function createEditorStore(
           nodes,
           afterId,
           blocks,
+          initial?.stylePolicy,
         );
         return commitTreeWithSelection(state, tree, {
           selectedIds: new Set(newIds),
