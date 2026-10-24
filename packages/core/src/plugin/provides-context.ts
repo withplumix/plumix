@@ -57,6 +57,7 @@ const APP_CONTEXT_BASE_KEYS: ReadonlySet<string> = new Set([
   "telemetryConsumers",
   "auth",
   "authenticator",
+  "entries",
   "bootstrapAllowed",
   "authMethods",
   "after",

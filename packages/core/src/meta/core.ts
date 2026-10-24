@@ -21,6 +21,7 @@ import type { ConflictErrors } from "../rpc-errors.js";
 import type { ResolvedMeta } from "./contract/bags.js";
 import type { FieldPipelineMode, MetaFieldError } from "./field-pipeline.js";
 import { declarePageTags } from "../cdn/contract/page-tags.js";
+import { hydratedEntityTags } from "../cdn/contract/tags.js";
 import { memoBatch } from "../context/memo.js";
 import { and, chunkForD1, eq } from "../db/index.js";
 import { metaJsonPath } from "../db/meta-path.js";
@@ -979,8 +980,12 @@ async function resolveGroup(
     const groupKey = referenceGroupKey(target);
     // Tagged by id, so the entity's own write in this request drops the
     // entry — a memoized miss included (#2517).
-    const tagsFor = (id: string): readonly string[] =>
-      adapter.embeddedCacheTags?.(id) ?? [];
+    const tagsFor = (id: string): readonly string[] => [
+      ...(adapter.kind === undefined
+        ? []
+        : hydratedEntityTags(adapter.kind, id)),
+      ...(adapter.embeddedCacheTags?.(id) ?? []),
+    ];
     const payloads = await memoBatch(
       ctx.memo,
       idList,

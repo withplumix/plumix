@@ -62,6 +62,8 @@ declare module "plumix" {
  * `satisfies` keeps `hydrate`'s concrete `MediaReference` return type.
  */
 export const mediaLookupAdapter = {
+  kind: "entry",
+
   async list(ctx, options) {
     const accept = options.scope?.accept;
     let rows: readonly Pick<Entry, "id" | "title" | "meta">[];

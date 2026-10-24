@@ -1,6 +1,8 @@
+import type { AuthenticatedAppContext } from "../../../context/app-context.js";
 import type { NewEntry } from "../../../db/schema/entries.js";
 import type { JsonValue } from "../../../json.js";
 import type { ResolvedMeta } from "../../../meta/contract/bags.js";
+import type { EntryCreate, EntryWritten } from "./writes-shared.js";
 import {
   entryCapabilityNamespace,
   namespacedEntryCapability,
@@ -36,11 +38,12 @@ import {
 } from "./lifecycle.js";
 import { scheduledDateInvalid } from "./publish-scheduled.js";
 import { entryCreateInputSchema } from "./schemas.js";
+import { writeErrors as errors, withStoredMeta } from "./writes-shared.js";
 
 export const create = base
   .use(authenticated)
   .input(entryCreateInputSchema)
-  .handler(async ({ input, context, errors }) => {
+  .handler(async ({ input, context }) => {
     const filtered = await context.hooks.applyFilter(
       "rpc:entry.create:input",
       input,
@@ -68,140 +71,152 @@ export const create = base
       }
     }
 
-    if (scheduledDateInvalid(filtered.status, filtered.publishedAt)) {
-      throw errors.BAD_REQUEST({
-        data: { reason: "scheduled_requires_future_date" },
+    const written = await createEntry(context, filtered);
+    const output = await context.hooks.applyFilter("rpc:entry.create:output", {
+      ...written.entry,
+      meta: written.meta,
+    });
+    return { ...output, etag: written.etag };
+  });
+
+/** `entry.create` past its capability checks, and `ctx.entries.create`. */
+export async function createEntry(
+  context: AuthenticatedAppContext,
+  filtered: EntryCreate,
+): Promise<EntryWritten> {
+  const goesLive =
+    filtered.status === "published" || filtered.status === "scheduled";
+  if (scheduledDateInvalid(filtered.status, filtered.publishedAt)) {
+    throw errors.BAD_REQUEST({
+      data: { reason: "scheduled_requires_future_date" },
+    });
+  }
+
+  if (filtered.parentId != null) {
+    const parent = await loadReadableParent(
+      context,
+      filtered.type,
+      filtered.parentId,
+    );
+    if (!parent) {
+      throw errors.NOT_FOUND({
+        data: { kind: "entry", id: filtered.parentId },
       });
     }
+  }
 
-    if (filtered.parentId != null) {
-      const parent = await loadReadableParent(
-        context,
-        filtered.type,
-        filtered.parentId,
-      );
-      if (!parent) {
-        throw errors.NOT_FOUND({
-          data: { kind: "entry", id: filtered.parentId },
-        });
-      }
+  assertContentWithinByteCap(filtered.content, errors);
+  assertContentValidAgainstRegistries(filtered.content, [], context, errors);
+
+  // A new entry starts from its fields' defaults (ADR 0026); the meta the
+  // caller sends lands on top of them.
+  const starting = startingMeta(
+    listEntryMetaFields(context.plugins, filtered.type),
+  );
+
+  // Validated before the insert so a bad key leaves no row. Drafts are
+  // lenient; creating published or scheduled enforces business rules now.
+  let metaPatch = await sanitizeAndValidateEntryMeta(
+    context,
+    filtered.type,
+    filtered.meta,
+    starting,
+    errors,
+    goesLive ? "strict" : "draft",
+  );
+  // Creating onto the live surface is a publish, so it takes the whole-bag
+  // gate: the patch check judged only the keys sent, and a required field it
+  // omits is missing.
+  if (goesLive) {
+    const resultingMeta: Record<string, JsonValue> = { ...starting };
+    if (metaPatch) {
+      for (const [key, value] of metaPatch.upserts) resultingMeta[key] = value;
+      for (const key of metaPatch.deletes) delete resultingMeta[key];
     }
-
-    assertContentWithinByteCap(filtered.content, errors);
-    assertContentValidAgainstRegistries(filtered.content, [], context, errors);
-
-    // A new entry starts from its fields' defaults (ADR 0026); the meta the
-    // caller sends lands on top of them.
-    const starting = startingMeta(
-      listEntryMetaFields(context.plugins, filtered.type),
-    );
-
-    // Validated before the insert so a bad key leaves no row. Drafts are
-    // lenient; creating published or scheduled enforces business rules now.
-    const metaPatch = await sanitizeAndValidateEntryMeta(
+    await assertPromotedEntryMetaValid(
       context,
       filtered.type,
-      filtered.meta,
-      starting,
+      resultingMeta,
       errors,
-      requiresPublishCap ? "strict" : "draft",
     );
-    // Creating onto the live surface is a publish, so it takes the whole-bag
-    // gate: the patch check judged only the keys sent, and a required field it
-    // omits is missing.
-    if (requiresPublishCap) {
-      const resultingMeta: Record<string, JsonValue> = { ...starting };
-      if (metaPatch) {
-        for (const [key, value] of metaPatch.upserts)
-          resultingMeta[key] = value;
-        for (const key of metaPatch.deletes) delete resultingMeta[key];
-      }
-      await assertPromotedEntryMetaValid(
-        context,
-        filtered.type,
-        resultingMeta,
-        errors,
-      );
-    }
+  }
 
-    // Same up-front validation: a bad term reference shouldn't leave a
-    // half-created entry behind.
-    const termsPatch = filtered.terms;
-    if (termsPatch !== undefined) {
-      await assertTermsPatchValid(
-        context,
-        termsPatch,
-        buildTermsPatchGuards(errors),
-      );
-    }
+  metaPatch = withStoredMeta(metaPatch, filtered.storedMeta);
 
-    // `published` goes live now; `scheduled` carries its future target time;
-    // anything else has no publish time.
-    let publishedAt: Date | null = null;
-    if (filtered.status === "published") {
-      publishedAt = new Date();
-    } else if (filtered.status === "scheduled") {
-      publishedAt = filtered.publishedAt ?? null;
-    }
-
-    const candidate: NewEntry = {
-      type: filtered.type,
-      // Untitled drafts store "" (the column is NOT NULL); read surfaces
-      // render their own localized fallback for the empty title.
-      title: filtered.title ?? "",
-      slug: filtered.slug,
-      content: filtered.content ?? null,
-      excerpt: filtered.excerpt ?? null,
-      status: filtered.status,
-      parentId: filtered.parentId ?? null,
-      sortOrder: filtered.sortOrder,
-      authorId: context.user.id,
-      publishedAt,
-      meta: starting,
-    };
-
-    const prepared = await applyEntryBeforeSave(
+  // Same up-front validation: a bad term reference shouldn't leave a
+  // half-created entry behind.
+  const termsPatch = filtered.terms;
+  if (termsPatch !== undefined) {
+    await assertTermsPatchValid(
       context,
-      filtered.type,
-      candidate,
+      termsPatch,
+      buildTermsPatchGuards(errors),
     );
-    prepared.authorId = context.user.id;
-    prepared.type = filtered.type;
-    // In the insert, not a second write after it, so the row answers with the
-    // token the caller's first save will send.
-    if (metaPatch) prepared.meta = patchedMetaBag(prepared.meta, metaPatch);
+  }
 
-    const [created] = await context.db
-      .insert(entries)
-      .values(prepared)
-      .onConflictDoNothing({ target: [entries.type, entries.slug] })
-      .returning();
+  // `published` goes live now; `scheduled` carries its future target time;
+  // anything else has no publish time.
+  let publishedAt: Date | null = null;
+  if (filtered.status === "published") {
+    publishedAt = new Date();
+  } else if (filtered.status === "scheduled") {
+    publishedAt = filtered.publishedAt ?? null;
+  }
 
-    if (!created) {
-      throw errors.CONFLICT({ data: { reason: "slug_taken" } });
-    }
+  const candidate: NewEntry = {
+    type: filtered.type,
+    // Untitled drafts store "" (the column is NOT NULL); read surfaces
+    // render their own localized fallback for the empty title.
+    title: filtered.title ?? "",
+    slug: filtered.slug,
+    content: filtered.content ?? null,
+    excerpt: filtered.excerpt ?? null,
+    status: filtered.status,
+    parentId: filtered.parentId ?? null,
+    sortOrder: filtered.sortOrder,
+    authorId: context.user.id,
+    publishedAt,
+    meta: starting,
+  };
 
-    if (termsPatch !== undefined) {
-      await applyTermPatch(context, created.id, termsPatch);
-    }
+  const prepared = await applyEntryBeforeSave(
+    context,
+    filtered.type,
+    candidate,
+  );
+  prepared.authorId = context.user.id;
+  prepared.type = filtered.type;
+  // In the insert, not a second write after it, so the row answers with the
+  // token the caller's first save will send.
+  if (metaPatch) prepared.meta = patchedMetaBag(prepared.meta, metaPatch);
 
-    if (metaPatch && !isEmptyMetaPatch(metaPatch)) {
-      await announceEntryMetaChange(context, created, metaPatch);
-    }
-    const meta: ResolvedMeta = await resolveEntryMeta(
-      context,
-      created,
-      created.meta,
-    );
+  const [created] = await context.db
+    .insert(entries)
+    .values(prepared)
+    .onConflictDoNothing({ target: [entries.type, entries.slug] })
+    .returning();
 
-    await fireEntryTransition(context, created, "draft");
-    if (created.status === "published") {
-      await fireEntryPublished(context, created);
-    }
+  if (!created) {
+    throw errors.CONFLICT({ data: { reason: "slug_taken" } });
+  }
 
-    const output = await context.hooks.applyFilter("rpc:entry.create:output", {
-      ...created,
-      meta,
-    });
-    return { ...output, etag: etagOf(created.updatedAt) };
-  });
+  if (termsPatch !== undefined) {
+    await applyTermPatch(context, created.id, termsPatch);
+  }
+
+  if (metaPatch && !isEmptyMetaPatch(metaPatch)) {
+    await announceEntryMetaChange(context, created, metaPatch);
+  }
+  const meta: ResolvedMeta = await resolveEntryMeta(
+    context,
+    created,
+    created.meta,
+  );
+
+  await fireEntryTransition(context, created, "draft");
+  if (created.status === "published") {
+    await fireEntryPublished(context, created);
+  }
+
+  return { entry: created, meta, etag: etagOf(created.updatedAt) };
+}

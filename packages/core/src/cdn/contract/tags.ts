@@ -72,3 +72,25 @@ export function pluginChangedTags(
       : [`${namespace}:${String(key)}`, `${namespace}*`]
   ).map(normalizeTag);
 }
+
+/** The core entity a lookup adapter's ids name. */
+export type HydratedEntityKind = "entry" | "term" | "user";
+
+/**
+ * The tag an id hydrated by a `kind` adapter stores a page under. A term has
+ * no tag of its own, so its ids add none.
+ */
+export function hydratedEntityTags(
+  kind: HydratedEntityKind,
+  id: string,
+): readonly string[] {
+  if (!/^[1-9]\d*$/.test(id)) return [];
+  switch (kind) {
+    case "entry":
+      return [entryTag(Number(id))];
+    case "user":
+      return [userTag(Number(id))];
+    case "term":
+      return [];
+  }
+}

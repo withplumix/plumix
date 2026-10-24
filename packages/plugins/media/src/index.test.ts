@@ -1,10 +1,11 @@
-import { eq, etagOf } from "plumix/db";
+import { eq, etagOf, typeTag } from "plumix/db";
 import { text } from "plumix/fields";
 import {
   buildManifest,
   definePlugin,
   HookRegistry,
   installPlugins,
+  tagCdnEntry,
 } from "plumix/plugin";
 import { memoryStorage } from "plumix/runtime";
 import { entries } from "plumix/schema";
@@ -13,11 +14,13 @@ import {
   createTestContext,
   createTestDb,
   entryFactory,
+  fakeCdn,
   plumixRequest,
   userFactory,
 } from "plumix/test";
 import { describe, expect, test, vi } from "vitest";
 
+import { media as mediaField } from "./builder.js";
 import { DEFAULT_ACCEPTED_TYPES, media } from "./index.js";
 
 async function install() {
@@ -2163,5 +2166,128 @@ describe("@plumix/plugin-media — worker-proxied serve route", () => {
       plumixRequest(`/_plumix/media/serve/${String(seeded.id)}`),
     );
     expect(response.status).toBe(200);
+  });
+});
+
+/** A public post type whose featured image is a media field. */
+const featuredPosts = definePlugin("featured-posts", (ctx) => {
+  ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+  ctx.registerEntryMetaBox("appearance", {
+    label: "Appearance",
+    entryTypes: ["post"],
+    fields: [mediaField("cover").featured()],
+  });
+});
+
+/** A stored post page showing a media item as its featured image. */
+async function storedPageShowingMedia() {
+  const storage = memoryStorage().connect({});
+  const cdn = fakeCdn();
+  const h = await createDispatcherHarness({
+    storage,
+    cdn,
+    config: { plugins: [media(), featuredPosts] },
+  });
+  const owner = await h.seedUser("editor");
+  const item = await seedPublishedMedia(h, storage, owner.id, "cover.png");
+  await h.factory.entry.create({
+    type: "post",
+    slug: "hello",
+    title: "Hello",
+    status: "published",
+    authorId: owner.id,
+    publishedAt: new Date(),
+    meta: { cover: String(item.id) },
+  });
+  (await h.fetch("/post/hello")).assertStatus(200);
+  await h.drainDeferred();
+  cdn.assertStored("/post/hello");
+  return { h, cdn, owner, item };
+}
+
+/** A public read of the media library, stored under the media list's tag. */
+const publicLibrary = definePlugin("public-library", (ctx) => {
+  ctx.registerPublicRoute({
+    path: "/library",
+    cacheable: true,
+    handler: (_request, appCtx) => {
+      tagCdnEntry(appCtx, [typeTag("media")]);
+      return new Response("library", { status: 200 });
+    },
+  });
+});
+
+describe("@plumix/plugin-media — purging the pages that show an item", () => {
+  test("a public read of the media library is not stored after an upload is confirmed", async () => {
+    const storage = memoryStorage().connect({});
+    const cdn = fakeCdn();
+    const h = await createDispatcherHarness({
+      storage,
+      cdn,
+      config: { plugins: [media(), publicLibrary] },
+    });
+    const owner = await h.seedUser("contributor");
+    const created = await rpcDispatch<CreateUploadUrlOutput>(
+      h,
+      "media/createUploadUrl",
+      {
+        filename: "tile.png",
+        contentType: "image/png",
+        size: PNG_1X1_BYTES.byteLength,
+      },
+      owner.id,
+    );
+    if (!created.output) throw new Error("expected createUploadUrl output");
+    await storage.put(created.output.storageKey, PNG_1X1_BYTES, {
+      contentType: "image/png",
+    });
+    (await h.fetch("/library")).assertStatus(200);
+    await h.drainDeferred();
+    cdn.assertStored("/library");
+
+    const confirmed = await rpcDispatch(
+      h,
+      "media/confirm",
+      { id: created.output.mediaId },
+      owner.id,
+    );
+    expect(confirmed.status).toBe(200);
+    await h.drainDeferred();
+
+    cdn.assertNotStored("/library");
+  });
+
+  test("a page whose featured image is the item is not stored after its alt text is updated", async () => {
+    const { h, cdn, owner, item } = await storedPageShowingMedia();
+
+    const updated = await rpcDispatch(
+      h,
+      "media/update",
+      {
+        id: item.id,
+        ifMatch: await mediaEtag(h, item.id, owner.id),
+        alt: "A cover",
+      },
+      owner.id,
+    );
+    expect(updated.status).toBe(200);
+    await h.drainDeferred();
+
+    cdn.assertNotStored("/post/hello");
+  });
+
+  test("a page whose featured image is the item is not stored after the item is deleted", async () => {
+    const { h, cdn, owner, item } = await storedPageShowingMedia();
+
+    const deleted = await rpcDispatch(
+      h,
+      "media/delete",
+      { id: item.id },
+      owner.id,
+    );
+    expect(deleted.status).toBe(200);
+    await h.drainDeferred();
+
+    cdn.assertNotStored("/post/hello");
   });
 });
