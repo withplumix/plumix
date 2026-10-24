@@ -1,7 +1,12 @@
+import { createRouterClient } from "@orpc/server";
 import { describe, expect, test } from "vitest";
 
+import type { AuthenticatedRpcHarness } from "../test/rpc.js";
+import { eq } from "../db/index.js";
+import { apiTokens } from "../db/schema/api_tokens.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { toRegisteredEntryType } from "../plugin/registry.js";
+import { appRouter } from "../rpc/router.js";
 import { currentEtag } from "../test/entry-etag.js";
 import { createRpcHarness } from "../test/rpc.js";
 
@@ -20,6 +25,17 @@ function registryWithRevisions() {
     ),
   );
   return plugins;
+}
+
+/** A client whose every call carries `secret` as its bearer token. */
+function clientWithToken(h: AuthenticatedRpcHarness, secret: string) {
+  const request = new Request("https://cms.example/_plumix/rpc", {
+    method: "POST",
+    headers: { authorization: `Bearer ${secret}` },
+  });
+  return createRouterClient(appRouter, {
+    context: { ...h.context, request },
+  });
 }
 
 describe("entry.revisions.list", () => {
@@ -298,5 +314,104 @@ describe("entry.revisions.get", () => {
     await expect(
       h2.client.entry.revisions.get({ revisionId }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+});
+
+describe("a revision made with an API token", () => {
+  test("keeps the token's owner as author and records the token", async () => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      plugins: registryWithRevisions(),
+    });
+    const created = await h.client.entry.create({ title: "P", slug: "p" });
+    const { secret, row } = await h.factory.apiToken.create({
+      userId: h.user.id,
+      name: "Claude Desktop",
+    });
+
+    await clientWithToken(h, secret).entry.update({
+      id: created.id,
+      title: "P2",
+      ifMatch: await currentEtag(h.db, created.id),
+    });
+
+    const [listed] = (
+      await h.client.entry.revisions.list({ entryId: created.id })
+    ).revisions;
+    expect(listed).toMatchObject({
+      authorId: h.user.id,
+      tokenName: "Claude Desktop",
+    });
+    const revision = await h.client.entry.revisions.get({
+      revisionId: listed?.id ?? 0,
+    });
+    expect(revision.meta).toMatchObject({
+      __plumix_revision_token: { tokenId: row.id, tokenName: "Claude Desktop" },
+    });
+  });
+
+  test("a later session change records no token", async () => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      plugins: registryWithRevisions(),
+    });
+    const created = await h.client.entry.create({ title: "P", slug: "p" });
+    const { secret } = await h.factory.apiToken.create({
+      userId: h.user.id,
+      name: "Claude Desktop",
+    });
+    await clientWithToken(h, secret).entry.update({
+      id: created.id,
+      title: "P2",
+      ifMatch: await currentEtag(h.db, created.id),
+    });
+    const [tokenRevision] = (
+      await h.client.entry.revisions.list({ entryId: created.id })
+    ).revisions;
+    // Restoring copies the token revision's meta onto the live entry.
+    await h.client.entry.revisions.restore({
+      revisionId: tokenRevision?.id ?? 0,
+      ifMatch: await currentEtag(h.db, created.id),
+    });
+
+    await h.client.entry.update({
+      id: created.id,
+      title: "P3",
+      ifMatch: await currentEtag(h.db, created.id),
+    });
+
+    const [newest] = (
+      await h.client.entry.revisions.list({ entryId: created.id })
+    ).revisions;
+    expect(newest).toMatchObject({ title: "P3", tokenName: null });
+  });
+
+  test("keeps the recorded name after the token is renamed and revoked", async () => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      plugins: registryWithRevisions(),
+    });
+    const created = await h.client.entry.create({ title: "P", slug: "p" });
+    const { secret, row } = await h.factory.apiToken.create({
+      userId: h.user.id,
+      name: "Claude Desktop",
+    });
+    await clientWithToken(h, secret).entry.update({
+      id: created.id,
+      title: "P2",
+      ifMatch: await currentEtag(h.db, created.id),
+    });
+
+    // No procedure renames a token, so the row is renamed in place.
+    await h.db
+      .update(apiTokens)
+      .set({ name: "Cursor" })
+      .where(eq(apiTokens.id, row.id));
+    await h.client.auth.apiTokens.revoke({ id: row.id });
+
+    const [listed] = (
+      await h.client.entry.revisions.list({ entryId: created.id })
+    ).revisions;
+    expect(listed?.tokenName).toBe("Claude Desktop");
   });
 });

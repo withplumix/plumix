@@ -46,6 +46,10 @@ export function trackPrincipalReads(ctx: AppContext): AppContext {
       mark();
       return ctx.tokenScopes;
     },
+    get apiToken() {
+      mark();
+      return ctx.apiToken;
+    },
     auth: {
       can: (capability) => {
         mark();

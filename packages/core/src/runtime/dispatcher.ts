@@ -12,6 +12,7 @@ import { PRIVATE_SEGMENT } from "../access/contract/segments.js";
 import { gateToResponse, policyForMatch } from "../access/gate.js";
 import { resolveAccess } from "../access/policy.js";
 import {
+  apiTokenOf,
   authenticateTraced,
   requestHasSession,
   tokenScopesOf,
@@ -898,7 +899,12 @@ async function runPluginRawRoute(
 
   const { id, email, name, role, meta } = result.user;
   const tokenScopes = tokenScopesOf(result);
-  const authedCtx = withUser(ctx, { id, email, name, role, meta }, tokenScopes);
+  const authedCtx = withUser(
+    ctx,
+    { id, email, name, role, meta },
+    tokenScopes,
+    apiTokenOf(result),
+  );
 
   if (gate === "authenticated") {
     return route.handler(authedCtx.request, authedCtx);

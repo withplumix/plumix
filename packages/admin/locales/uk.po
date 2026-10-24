@@ -495,6 +495,12 @@ msgstr "(без назви)"
 msgid "editor.document.template.default"
 msgstr ""
 
+#. author: the person who made the change; tokenName: the name of the API token they made it with (e.g. 'Claude Desktop')
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.authorViaToken"
+msgstr ""
+
 #. browser: e.g. 'Safari', 'Chrome'; os: e.g. 'macOS', 'Windows 11'. Vendor names interpolate verbatim; the connector word is localizable.
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx

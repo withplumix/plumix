@@ -217,6 +217,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     clientAddress: normalizeClientAddress(args.clientAddress),
     user,
     tokenScopes,
+    apiToken: null,
     hooks: args.hooks,
     plugins: args.plugins,
     blocks: args.blocks ?? EMPTY_BLOCK_REGISTRY,

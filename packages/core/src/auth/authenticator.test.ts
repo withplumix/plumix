@@ -90,7 +90,7 @@ describe("apiTokenAuthenticator", () => {
       email: "bot@cms.example",
       role: "editor",
     });
-    const { secret } = await createApiToken(db, {
+    const { secret, row } = await createApiToken(db, {
       userId: seeded.id,
       name: "ci",
       expiresAt: null,
@@ -107,6 +107,7 @@ describe("apiTokenAuthenticator", () => {
     expect(result).toMatchObject({
       credential: "api-token",
       tokenScopes: null,
+      apiToken: { id: row.id, name: "ci" },
     });
   });
 
@@ -417,6 +418,7 @@ describe("authenticateSession", () => {
       user: u,
       credential: "api-token",
       tokenScopes: null,
+      apiToken: { id: "token-hash", name: "ci" },
     }));
     expect(resolved).toBeNull();
   });
@@ -448,13 +450,19 @@ describe("tokenScopesOf", () => {
         user,
         credential: "api-token",
         tokenScopes: ["entry:post:read"],
+        apiToken: { id: "token-hash", name: "ci" },
       }),
     ).toEqual(["entry:post:read"]);
   });
 
   test("an unscoped api token is unrestricted", () => {
     expect(
-      tokenScopesOf({ user, credential: "api-token", tokenScopes: null }),
+      tokenScopesOf({
+        user,
+        credential: "api-token",
+        tokenScopes: null,
+        apiToken: { id: "token-hash", name: "ci" },
+      }),
     ).toBeNull();
   });
 });

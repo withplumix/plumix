@@ -11,7 +11,7 @@ import {
   sql,
 } from "drizzle-orm";
 
-import type { Db } from "../context/app-context.js";
+import type { ApiTokenRef, Db } from "../context/app-context.js";
 import type { Entry, EntryContent, NewEntry } from "../db/schema/entries.js";
 import type { JsonObject } from "../json.js";
 import { ACCESS_POLICY_META_KEY } from "../access/contract/meta-key.js";
@@ -27,8 +27,10 @@ import {
 } from "./slug-codec.js";
 import {
   asDraftRow,
+  encodeRevisionToken,
   encodeSnapshotEnvelope,
   REVISION_MESSAGE_META_KEY,
+  REVISION_TOKEN_META_KEY,
   stripReservedMeta,
 } from "./snapshot-envelope.js";
 
@@ -54,10 +56,19 @@ function generateNanoid(length = 21): string {
 interface SnapshotInput {
   readonly entry: Entry;
   readonly authorId: number;
+  /** The API token the save authenticated with, recorded beside the author. */
+  readonly apiToken?: ApiTokenRef | null;
 }
 
 /** The revision row a save of `entry` writes, with a fresh slug. */
-export function revisionRow({ entry, authorId }: SnapshotInput): NewEntry {
+export function revisionRow({
+  entry,
+  authorId,
+  apiToken = null,
+}: SnapshotInput): NewEntry {
+  // A restore copies a revision's meta onto the entry, its token included, and
+  // that token did not make this save.
+  const { [REVISION_TOKEN_META_KEY]: _restoredToken, ...meta } = entry.meta;
   return {
     type: REVISION_TYPE,
     parentId: null,
@@ -69,8 +80,9 @@ export function revisionRow({ entry, authorId }: SnapshotInput): NewEntry {
     authorId,
     sortOrder: 0,
     meta: {
-      ...entry.meta,
+      ...meta,
       ...encodeSnapshotEnvelope({ slug: entry.slug, parentId: entry.parentId }),
+      ...encodeRevisionToken(apiToken),
     },
     publishedAt: entry.publishedAt,
   };

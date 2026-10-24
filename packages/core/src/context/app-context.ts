@@ -62,6 +62,15 @@ export interface AuthenticatedUser extends RendererUser {
 }
 
 /**
+ * The API token a request authenticated with. `id` is the token row's key (the
+ * secret's hash), so it identifies the token without recovering the secret.
+ */
+export interface ApiTokenRef {
+  readonly id: string;
+  readonly name: string;
+}
+
+/**
  * Not JSON: the canonical payload is `{ error }` carrying a live `Error`, which
  * a structured backend serializes however it likes.
  */
@@ -183,6 +192,8 @@ export interface AppContextBase<
    * token's `scopes`); null means the role's caps apply unrestricted.
    */
   readonly tokenScopes: readonly string[] | null;
+  /** The API token the request authenticated with; null for any other caller. */
+  readonly apiToken: ApiTokenRef | null;
   /**
    * The address the runtime's trusted proxy reported; core reads no forwarding
    * header itself. Advisory: a fact about the network path, not a principal.

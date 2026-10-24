@@ -51,6 +51,7 @@ export type {
   AccessOutcome,
   AccessPolicy,
   AccessResolver,
+  ApiTokenRef,
   AuthenticationOptions,
   AuthenticateScope,
   AuthenticationResponse,

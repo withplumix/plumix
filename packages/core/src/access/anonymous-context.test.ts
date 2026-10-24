@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { AppContext } from "../context/app-context.js";
+import { withUser } from "../auth/with-user.js";
 import {
   declaredPageTags,
   declarePageTags,
@@ -87,6 +88,17 @@ describe("anonymousContext", () => {
     expect(anonymous.auth.can("entry:page:read")).toBe(false);
     expect(anonymous.db).toBe(ctx.db);
     expect(anonymous.plugins).toBe(ctx.plugins);
+  });
+
+  test("drops the API token the request authenticated with", async () => {
+    const ctx = await editorContext();
+    if (!ctx.user) throw new Error("expected an editor");
+    const tokenCtx = withUser(ctx, ctx.user, null, {
+      id: "token-hash",
+      name: "Claude Desktop",
+    });
+
+    expect(anonymousContext(tokenCtx).apiToken).toBeNull();
   });
 
   test("keeps its memo entries apart from the request's", async () => {

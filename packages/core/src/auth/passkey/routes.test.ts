@@ -250,6 +250,7 @@ describe("passkey register — options under a configured authenticator", () => 
       user: u,
       credential: "api-token",
       tokenScopes: null,
+      apiToken: { id: "token-hash", name: "ci" },
     }));
 
     const response = await h.fetch("/_plumix/auth/passkey/register/options", {

@@ -1808,6 +1808,7 @@ test.describe("editor revision preview", () => {
                 authorName: "Ada Lovelace",
                 authorEmail: "ada@example.test",
                 message: null,
+                tokenName: null,
               },
             ],
             nextCursor: null,
@@ -1868,6 +1869,42 @@ test.describe("editor revision preview", () => {
     await expect.poll(() => page.url()).toContain("revision=42");
     await expect(page.getByTestId("revision-preview-banner")).toBeVisible();
     await expect(page.getByTestId("revisions-sheet-list")).toHaveCount(0);
+  });
+
+  test("a revision made with an API token reads as its author via the token", async ({
+    page,
+  }) => {
+    await installPreviewMocks(page);
+    await page.route("**/_plumix/rpc/entry/revisions/list", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          json: {
+            revisions: [
+              {
+                id: 42,
+                title: "Snapshot title",
+                updatedAt: T_REV,
+                authorId: 1,
+                authorName: "Ada Lovelace",
+                authorEmail: "ada@example.test",
+                message: null,
+                tokenName: "Claude Desktop",
+              },
+            ],
+            nextCursor: null,
+          },
+          meta: [[1, "revisions", 0, "updatedAt"]],
+        }),
+      }),
+    );
+    await page.goto("entries/posts/1/edit");
+    await page.getByTestId("revisions-sheet-trigger").click();
+
+    await expect(
+      page.getByTestId("revisions-sheet-item-42-select"),
+    ).toContainText("Ada Lovelace via Claude Desktop");
   });
 
   test("the command palette's Revisions command opens the revisions sheet", async ({
@@ -1976,6 +2013,7 @@ test.describe("editor revision preview", () => {
                 authorName: "Ada Lovelace",
                 authorEmail: "ada@example.test",
                 message: null,
+                tokenName: null,
               },
             ],
             nextCursor: revision.nextCursor,
@@ -2033,6 +2071,7 @@ test.describe("editor revision preview", () => {
                 authorName: "Ada Lovelace",
                 authorEmail: "ada@example.test",
                 message: saved.at(-1)?.message ?? null,
+                tokenName: null,
               },
             ],
             nextCursor: null,

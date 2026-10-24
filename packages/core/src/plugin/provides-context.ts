@@ -47,6 +47,7 @@ const APP_CONTEXT_BASE_KEYS: ReadonlySet<string> = new Set([
   "request",
   "user",
   "tokenScopes",
+  "apiToken",
   "hooks",
   "plugins",
   "logger",

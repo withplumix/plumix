@@ -189,6 +189,7 @@ const CORE_WITHHELD: readonly Withholding[] = [
       "authenticateTraced",
       "authenticateSession",
       "tokenScopesOf",
+      "apiTokenOf",
       "requestHasSession",
       "isSafeMethod",
       "hasCsrfHeader",

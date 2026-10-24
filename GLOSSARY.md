@@ -544,7 +544,7 @@ _Avoid_: email template, notification
 The shared-document cache for anonymous public renders, served read-through: a hit returns the stored response; a miss renders live and stores without blocking the response.
 
 **Personal render**:
-A public render that read the principal during the render phase (`ctx.user`, `ctx.tokenScopes`, `ctx.auth.can()`, `useUser()`), or that carries the admin bar or the principal's own locale. It is never stored in a shared segment's entry and leaves as `private, no-store`; a stored copy of the segment still serves the next principal in it. See ADR 0030.
+A public render that read the principal during the render phase (`ctx.user`, `ctx.tokenScopes`, `ctx.apiToken`, `ctx.auth.can()`, `useUser()`), or that carries the admin bar or the principal's own locale. It is never stored in a shared segment's entry and leaves as `private, no-store`; a stored copy of the segment still serves the next principal in it. See ADR 0030.
 _Avoid_: personalized render, per-user render
 
 **Cache tag**:
