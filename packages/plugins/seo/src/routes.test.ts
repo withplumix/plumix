@@ -1553,7 +1553,7 @@ describe("a sitemap at the edge", () => {
     ["a page head", "seo_verification", "/post/hello", { google: "token" }],
     ["a page head", "site", "/post/hello", { title: "Renamed" }],
     ["a sitemap", "seo", "/sitemap-entries-post-1.xml", { indexable: false }],
-    ["a sitemap", "site", "/sitemap-entries-post-1.xml", { indexable: false }],
+    ["a sitemap", "site", "/sitemap-entries-post-1.xml", { title: "Renamed" }],
     ["llms.txt", "seo", "/llms.txt", { indexable: false }],
   ])(
     "%s is not stored after a save to the %s group it read",
