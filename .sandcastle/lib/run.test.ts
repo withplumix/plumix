@@ -64,6 +64,37 @@ describe("runShipLoop", () => {
     expect(report.parked).toEqual([]);
   });
 
+  test("a PRD whose pull request merged with sub-issues still open is released, so the next batch of its sub-issues can start", async () => {
+    const { ports: p, released } = ports({
+      nextTicket: drainingFrom([{ number: 3241, title: "prd", prd: true }]),
+      ticketClosed: () => false,
+    });
+
+    const report = await runShipLoop(p, allLanes);
+
+    expect(report.merged.map(({ ticket: t }) => t.number)).toEqual([3241]);
+    expect(released).toEqual([3241]);
+  });
+
+  test("a PRD job that shipped nothing is released, not parked, because the sub-issue that stopped it was parked on its own", async () => {
+    const {
+      ports: p,
+      parked,
+      released,
+    } = ports({
+      nextTicket: drainingFrom([{ number: 3241, title: "prd", prd: true }]),
+      ship: async () => ({
+        status: "skipped",
+        reason: "#3242 was parked: its brief contradicts main",
+      }),
+    });
+
+    await runShipLoop(p, allLanes);
+
+    expect(parked).toEqual([]);
+    expect(released).toEqual([3241]);
+  });
+
   test("a confirmation that throws does not lose the other confirmations", async () => {
     const { ports: p, parked } = ports({
       confirm: async (pr) => {

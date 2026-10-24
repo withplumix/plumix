@@ -269,6 +269,13 @@ export const runShipLoop = async (
         return;
       }
 
+      if (outcome.status === "skipped") {
+        ports.releaseClaim(ticket);
+        ports.say(`  #${ticket.number} shipped nothing: ${outcome.reason}`);
+        noteFailure(outcome.reason);
+        return;
+      }
+
       if (outcome.status === "blocked") {
         if (leftAsItWasBecauseTheCheckoutBroke(ticket)) return;
         ports.park(
@@ -322,8 +329,11 @@ export const runShipLoop = async (
     }
 
     if (!ports.ticketClosed(ticket)) {
+      ports.releaseClaim(ticket);
       ports.say(
-        `  warning: #${ticket.number} did not close — check the PR body's Fixes reference`,
+        ticket.prd
+          ? `  #${ticket.number} has sub-issues left; released for the next batch`
+          : `  warning: #${ticket.number} did not close — check the PR body's Fixes reference`,
       );
     }
     merged.push({ ticket, pullRequest });
