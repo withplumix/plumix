@@ -228,7 +228,11 @@ export function createBunSite({
       app,
       env,
       holder: `${machineName()}:${String(process.pid)}`,
-      fire: (cron, scheduledTime) => handler.scheduled({ scheduledTime, cron }),
+      fire: (cron, scheduledTime, signal) =>
+        handler.scheduled(
+          { scheduledTime, cron },
+          { env, ...(signal === undefined ? {} : { signal }) },
+        ),
       logger,
       ...overrides,
     });

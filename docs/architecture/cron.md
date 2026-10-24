@@ -67,7 +67,10 @@ the telemetry snapshot. Each task runs within its budget (`timeoutMs`, five minu
 a context of its own whose `ctx.signal`, and the `ctx.fetch` that follows it, aborts with a
 `TimeoutError` (cause `"timeout"`) when the budget runs out. Core then stops waiting, reports the
 task in `timedOut`, logs a warning, ends its span `cancelled`, and runs the next task; a task that
-ignores its signal keeps running in the background
+ignores its signal keeps running in the background. The signal also follows the invocation's
+`signal`, which the Node and Bun scheduler aborts on `stop()` with an `AbortError` (cause
+`"shutdown"`); such a task is reported in `timedOut` with `shut down` as its reason. Cloudflare passes
+no signal
 ([ADR 0059](../adr/0059-a-scheduled-task-runs-within-a-budget-and-a-timeout-is-not-a-failure.md)).
 
 The in-process scheduler wakes each minute, serialises firings, and runs each through the run
@@ -103,6 +106,7 @@ with its headers and payload, when the queue delivers it.
 - An unfireable cron fails boot rather than never running. `packages/core/src/runtime/app-cron-validation.test.ts`.
 - One task's failure never stops its siblings, and the report names it. `packages/core/src/runtime/scheduled.test.ts`.
 - A task that outruns its budget is reported timed out, not failed, and the next task and the next firing still run. `packages/core/src/runtime/scheduled.test.ts`, `scheduler.test.ts`.
+- Stopping the Node or Bun scheduler aborts a running task's `ctx.signal`. `packages/core/src/runtime/scheduler.test.ts`, `scheduled.test.ts`, `packages/runtimes/node/src/site.test.ts`, `packages/runtimes/bun/src/site.test.ts`.
 - A schedule-minute runs once across replicas that share a database, and a live lease is never taken. `packages/core/src/runtime/scheduled-guard.test.ts`, `scheduled-runner.test.ts`, `scheduler.test.ts`.
 - A scheduled publish purges the CDN like a request does. `packages/core/src/runtime/scheduled-publish-purge.test.ts`.
 - `plumix cron run` never exits green having done nothing. `packages/plumix/src/cli/commands/cron.test.ts`.

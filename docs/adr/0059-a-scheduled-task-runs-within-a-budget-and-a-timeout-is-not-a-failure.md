@@ -26,9 +26,17 @@ overrunning task could not be told apart from a broken one (#3266).
 - **Core stops waiting; it does not kill.** A task that ignores its signal
   keeps running in the background. Only its own work leaks, and the report
   names it.
-- **Only core's budget is a timeout.** A task counts as timed out when its
-  budget ran out, whether or not it then rejected with the signal's reason. A
-  task that throws anything else, an `AbortError` of its own included, failed.
+- **Only core's budget or a shutdown is a timeout.** A task counts as timed
+  out when its budget ran out, whether or not it then rejected with the
+  signal's reason. A task that throws anything else, an `AbortError` of its own
+  included, failed.
+- **A Node or Bun shutdown aborts the running task's signal.** `scheduler.stop()`
+  aborts it at once with a `DOMException` named `AbortError` whose `cause` is
+  `"shutdown"`, through the optional `Invocation.signal` that
+  `handler.scheduled` combines with each task's budget. The task is reported in
+  `timedOut`, and its span and warn log say `shut down` rather than a budget.
+  Cloudflare passes no signal: Workers has no shutdown a cron handler can
+  observe.
 - **A timeout is not an error.** It is a warn log with the task, plugin, cron
   and budget, and the task's span ends with status `cancelled` and a message
   that begins `timed out after`, so error tools and alerting on error logs do

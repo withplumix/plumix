@@ -221,6 +221,34 @@ describe("createNodeSite — scheduled", () => {
 
     expect(connected).toContain(SCHEDULED_PATH);
   });
+
+  test("stopping the cron aborts a running task's ctx.signal, so it stops instead of being cut off", async () => {
+    captureStdout();
+    let signal: AbortSignal | undefined;
+    const hung = definePlugin("hung", (ctx) => {
+      ctx.registerScheduledTask({
+        id: "waits",
+        cron: CRON,
+        handler: (taskCtx) =>
+          new Promise<void>((resolve) => {
+            signal = taskCtx.signal;
+            taskCtx.signal.addEventListener("abort", () => resolve());
+          }),
+      });
+    });
+    const { site } = await siteFor({ plugins: [hung] });
+    const clock = virtualClock("2026-09-07T02:58:00Z");
+
+    const cron = await site.startCron({ lease: false, clock, logger: quiet() });
+    await clock.advanceTo("2026-09-07T03:00:30Z");
+    expect(signal?.aborted).toBe(false);
+
+    expect(await cron.stop({ timeoutMs: 1_000 })).toBe(true);
+    expect(signal?.reason).toMatchObject({
+      name: "AbortError",
+      cause: "shutdown",
+    });
+  });
 });
 
 describe("createNodeSite — logs", () => {

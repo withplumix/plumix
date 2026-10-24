@@ -33,7 +33,9 @@ const appWith = (
 
 function harness(
   tasks: readonly TaskFields[],
-  overrides: { fire?: (cron: string, at: number) => Promise<void> } = {},
+  overrides: {
+    fire?: (cron: string, at: number, signal?: AbortSignal) => Promise<void>;
+  } = {},
 ) {
   const clock = virtualClock("2026-09-07T02:58:00Z");
   const fired: { cron: string; at: number }[] = [];
@@ -42,9 +44,9 @@ function harness(
     app: appWith(tasks),
     clock,
     logger: { info: vi.fn(), warn, error: vi.fn() },
-    fire: async (cron, at) => {
+    fire: async (cron, at, signal) => {
       fired.push({ cron, at });
-      await overrides.fire?.(cron, at);
+      await overrides.fire?.(cron, at, signal);
     },
   });
   return { clock, fired, warn, scheduler };
@@ -219,6 +221,33 @@ describe("createScheduler", () => {
     const stopping = scheduler.stop({ timeoutMs: 1000 });
     settle();
     expect(await stopping).toBe(true);
+  });
+
+  test("stop() aborts the firing in flight with an AbortError caused by shutdown", async () => {
+    let fireSignal: AbortSignal | undefined;
+    const { clock, scheduler } = harness(
+      [{ id: "slow", cron: "*/5 * * * *", registeredBy: "demo" }],
+      {
+        fire: async (_cron, _at, signal) => {
+          fireSignal = signal;
+          await clock.sleep(60 * 60_000);
+        },
+      },
+    );
+    void scheduler.start();
+    await clock.advanceTo("2026-09-07T03:00:30Z");
+    expect(fireSignal?.aborted).toBe(false);
+
+    // Aborted before the wait, not after it: the budget is the task's to stop
+    // in.
+    void scheduler.stop({ timeoutMs: 10 });
+
+    expect(fireSignal?.reason).toBeInstanceOf(DOMException);
+    expect(fireSignal?.reason).toMatchObject({
+      name: "AbortError",
+      message: "shut down",
+      cause: "shutdown",
+    });
   });
 });
 

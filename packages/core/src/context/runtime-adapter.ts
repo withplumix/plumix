@@ -18,6 +18,12 @@ export interface Invocation {
    * header.
    */
   readonly clientAddress?: string;
+  /**
+   * Aborts when the process shuts down. Only `scheduled` reads it, as each
+   * task's `ctx.signal` alongside its budget; a runtime with no shutdown a cron
+   * handler can observe omits it.
+   */
+  readonly signal?: AbortSignal;
 }
 
 export interface DisposeOptions {
@@ -45,13 +51,13 @@ export interface ScheduledEvent {
  */
 export type ScheduledRunReport =
   | {
-      /** How many tasks completed without throwing or timing out. */
+      /** How many tasks completed without throwing, timing out or being shut down. */
       readonly ran: number;
       /** `plugin:task` for each that threw, in the order they ran. */
       readonly failed: readonly string[];
       /**
-       * `plugin:task` for each that outran its budget, in the order they ran.
-       * Kept apart from `failed`: a timeout is not a failure.
+       * `plugin:task` for each that outran its budget or was shut down, in the
+       * order they ran. Kept apart from `failed`: neither is a failure.
        */
       readonly timedOut: readonly string[];
       /**

@@ -138,7 +138,7 @@ Keep that file beside `package.json` wherever a Bun command runs, in a container
 
 Run directly, the entry serves `dist/client` from disk ahead of the site, with hashed assets under `/assets/` marked immutable, and the image route after that; everything else goes to Plumix. There is exactly one listener: Bun serves a module's default export by itself when it has a `fetch`, so the entry default-exports the `Server` it started instead of the site. Imported rather than run, it starts nothing and its default export is the portable `{ fetch, scheduled }` handler, to mount in a `Bun.serve` of your own.
 
-A rolling deploy that sends `SIGTERM` and waits ten seconds loses nothing that can finish in that window: the process stops accepting, lets in-flight responses finish, stops the scheduler and drains deferred work such as telemetry delivery, then exits `0`. Whatever is still running at the ten-second deadline is cut, and the process exits `1` saying what it abandoned. A second signal exits at once.
+A rolling deploy that sends `SIGTERM` and waits ten seconds loses nothing that can finish in that window: the process stops accepting, lets in-flight responses finish, stops the scheduler (aborting a running task's `ctx.signal`, so a task that checks it stops between batches) and drains deferred work such as telemetry delivery, then exits `0`. Whatever is still running at the ten-second deadline is cut, and the process exits `1` saying what it abandoned. A second signal exits at once.
 
 ## Logs
 

@@ -21,11 +21,13 @@ export interface ScheduledRunnerOptions {
   readonly env: PlumixEnv;
   /**
    * Fires one schedule. Narrowing away the report would silence every failed
-   * run: it is what the scheduler's failure logging reads (#2303).
+   * run: it is what the scheduler's failure logging reads (#2303). `signal`
+   * aborts when the runner is stopped.
    */
   readonly fire: (
     cron: string,
     scheduledTime: number,
+    signal?: AbortSignal,
   ) => Promise<void | ScheduledRunReport>;
   /**
    * Names this process in the lease row, for reading it back — a runtime

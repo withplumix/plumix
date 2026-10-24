@@ -703,6 +703,38 @@ describe("the site's cron", () => {
 
     expect(fired).toEqual([]);
   });
+
+  test("stopping the cron aborts a running task's ctx.signal, so it stops instead of being cut off", async () => {
+    vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    const { promise: started, resolve: start } =
+      Promise.withResolvers<AbortSignal>();
+    const hung = definePlugin("hung", (ctx) => {
+      ctx.registerScheduledTask({
+        id: "waits",
+        cron: "* * * * *",
+        handler: (taskCtx) =>
+          new Promise<void>((resolve) => {
+            taskCtx.signal.addEventListener("abort", () => resolve());
+            start(taskCtx.signal);
+          }),
+      });
+    });
+    const site = siteFor({}, [hung]);
+    // A minute of its own: the run guard records each minute it ran in the
+    // file the other tests here share.
+    const clock = virtualClock("2026-10-13T11:00:30Z");
+    const cron = await site.startCron({ lease: false, clock });
+    cleanups.push(() => site.dispose().then(() => undefined));
+    await clock.advanceTo("2026-10-13T11:01:00Z");
+    const signal = await started;
+    expect(signal.aborted).toBe(false);
+
+    expect(await cron.stop({ timeoutMs: 1_000 })).toBe(true);
+    expect(signal.reason).toMatchObject({
+      name: "AbortError",
+      cause: "shutdown",
+    });
+  });
 });
 
 describe("loadEnvFileWhenMain", () => {
