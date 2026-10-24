@@ -115,20 +115,9 @@ function runInit(ctx: CommandContext): void {
   );
 }
 
-const LINGUI_CONFIG_TEMPLATE = `import { defineConfig } from "@lingui/cli";
-import { formatter } from "@lingui/format-po";
+const LINGUI_CONFIG_TEMPLATE = `import { defineLinguiConfig } from "plumix/lingui";
 
-export default defineConfig({
-  sourceLocale: "en",
-  locales: ["en"],
-  catalogs: [
-    {
-      path: "<rootDir>/locales/{locale}",
-      include: ["src"],
-    },
-  ],
-  format: formatter({ lineNumbers: false }),
-});
+export default defineLinguiConfig({ rootDir: import.meta.dirname });
 `;
 
 type PackageJsonShape = Readonly<{
@@ -180,7 +169,6 @@ function mergePackageJson(pkg: PackageJsonShape): {
   };
   const newDeps: Record<string, string> = {
     "@lingui/cli": LINGUI_DEP_RANGE,
-    "@lingui/format-po": LINGUI_DEP_RANGE,
   };
   const scripts: Record<string, string> = { ...newScripts, ...pkg.scripts };
   const devDependencies: Record<string, string> = {

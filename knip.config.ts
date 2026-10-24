@@ -209,6 +209,9 @@ const config: KnipConfig = {
         "src/cdn/cloudflare.ts",
         "src/fields/index.ts",
         "src/i18n/index.ts",
+        // `plumix/lingui` is imported by a plugin's `lingui.config.ts`, which
+        // the `@lingui/cli` binary loads — never an import knip follows.
+        "src/lingui.ts",
         "src/schema/index.ts",
         "src/test/index.ts",
         "src/test/playwright.ts",

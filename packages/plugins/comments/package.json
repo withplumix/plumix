@@ -91,7 +91,6 @@
     "@orpc/server": "catalog:orpc",
     "@playwright/test": "catalog:",
     "@plumix/eslint-config": "workspace:*",
-    "@plumix/lingui-config": "workspace:*",
     "@plumix/plugin-blog": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
     "@plumix/runtime-cloudflare": "workspace:*",

@@ -1,3 +1,3 @@
-import { defineLinguiConfig } from "@plumix/lingui-config";
+import { defineLinguiConfig } from "plumix/lingui";
 
-export default defineLinguiConfig();
+export default defineLinguiConfig({ rootDir: import.meta.dirname });
