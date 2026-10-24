@@ -21,12 +21,6 @@ const CONTENT_TYPE: Record<FeedFormat, string> = {
  */
 const FEED_CACHE_CONTROL = "public, max-age=0, s-maxage=3600";
 
-/**
- * Carried by every feed, because channel metadata comes from site settings and
- * a save there must retire every feed.
- */
-export const FEED_TAG = "feeds:feed";
-
 /** The `t:<type>` tags an entry mutation purges. */
 function typeTags(
   plugins: PluginRegistry,
@@ -47,7 +41,7 @@ export async function handleFeed(
   // archive lookup reads a path too.
   const pathname = new URL(ctx.request.url).pathname;
   const target = feedAt(ctx, route, pathname);
-  tagCdnEntry(ctx, [FEED_TAG, ...typeTags(ctx.plugins, target)]);
+  tagCdnEntry(ctx, typeTags(ctx.plugins, target));
   const site = await loadSiteSettings(ctx);
   // A private site is held out of syndication. (The sitemap returns an empty
   // 200 instead — there's no "valid but empty because private" feed idiom, so
