@@ -48,7 +48,7 @@ sequenceDiagram
 | `ctx.memo(key, load, tags?)`, `memoBatch`                                                                                             | `AppContext`, `plumix/plugin`                                           | public   |
 | `readThrough`, `readThroughRoute`, `cdnBypassReason`, `pageTags`, `declarePageTags`, `registerCorePurgeInvalidator`, `flushPurgeTags` | `packages/core/src/cdn/`                                                | internal |
 
-Tag vocabulary (`packages/core/src/cdn/contract/tags.ts`): `t:<type>`, `e:<id>`, `s:<group>`, `u:<id>`, which only drops a memoized user row, and a plugin's namespace: `p:<plugin>` on everything `ctx.cache.reads` declared, `p:<plugin>:<key>` on a keyed read and `p:<plugin>*` on a whole-namespace read. `normalizeTag` lower-cases every tag.
+Tag vocabulary (`packages/core/src/cdn/contract/tags.ts`): `t:<type>`, `e:<id>`, `s:<group>`, `u:<id>`, which author resolution declares and any write to that user purges, `u:slugs`, which only drops the memo's author slug lookups, and a plugin's namespace: `p:<plugin>` on everything `ctx.cache.reads` declared, `p:<plugin>:<key>` on a keyed read and `p:<plugin>*` on a whole-namespace read. `normalizeTag` lower-cases every tag.
 
 What fills the slot on each runtime:
 

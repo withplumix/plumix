@@ -1,16 +1,13 @@
 import type { AppContext } from "../context/app-context.js";
 import type { RequestMemo } from "../context/memo.js";
 import type { HookRegistry } from "../hooks/registry.js";
-import {
-  publicEntryTypeNames,
-  termPageEntryTypeNames,
-} from "../plugin/registry.js";
+import { termPageEntryTypeNames } from "../plugin/registry.js";
 import {
   entryPurgeTags,
   normalizeTag,
   settingsTag,
   termPurgeTags,
-  usersPurgeTags,
+  userSlugsTag,
   userTag,
 } from "./contract/tags.js";
 
@@ -78,14 +75,22 @@ export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
     onEntry(entry, ctx),
   );
 
-  // A delete reassigns entries without an entry action, so the public types'
-  // tags are what reaches the pages that printed the author.
+  // Only the pages that rendered the user. The slug lookup has no id to be
+  // tagged by, so any user write drops it from the memo.
   const onUser = (user: { readonly id: number }, ctx: AppContext): void => {
-    enqueuePurgeTags(ctx, usersPurgeTags(publicEntryTypeNames(ctx.plugins)));
-    ctx.memo.invalidate([userTag(user.id)]);
+    enqueuePurgeTags(ctx, [userTag(user.id)]);
+    ctx.memo.invalidate([userSlugsTag()]);
   };
   hooks.addAction("user:updated", (user, _previous, ctx) => onUser(user, ctx));
-  hooks.addAction("user:deleted", (user, _deletion, ctx) => onUser(user, ctx));
+  hooks.addAction("user:meta_changed", (user, _changes, ctx) =>
+    onUser(user, ctx),
+  );
+  // The deleted user's entries now render the user they went to, whose pages
+  // never heard an entry action for them.
+  hooks.addAction("user:deleted", (user, { reassignedTo }, ctx) => {
+    onUser(user, ctx);
+    if (reassignedTo !== null) onUser({ id: reassignedTo }, ctx);
+  });
 
   // A term archive is stored under its taxonomy's entry types' `t:<type>` tags.
   const onTerm = (

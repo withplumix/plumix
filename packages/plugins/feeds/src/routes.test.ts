@@ -2080,6 +2080,62 @@ describe("a feed at the edge", () => {
   });
 });
 
+// The author feed is the author archive the cdn stores.
+describe("an author feed at the edge", () => {
+  async function site() {
+    const cdn = fakeCdn();
+    const h = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [blogPlugin, feeds()] },
+    });
+    const admin = await h.seedUser("admin");
+    const jane = await h.factory.author.create({ name: "Jane", slug: "jane" });
+    const render = async (path: string) => {
+      (await h.fetch(path)).assertStatus(200);
+      await h.drainDeferred();
+      cdn.assertStored(path);
+    };
+    const rpc = async (path: string, json: Record<string, unknown>) => {
+      const response = await h.fetch(`/_plumix/rpc/${path}`, {
+        as: admin,
+        json: { json, meta: [] },
+      });
+      response.assertStatus(200);
+      await h.drainDeferred();
+    };
+    return { h, cdn, admin, jane, render, rpc };
+  }
+
+  test("is purged when its author changes their slug", async () => {
+    const { cdn, jane, render, rpc } = await site();
+    await render("/authors/jane/feed");
+
+    await rpc("user/update", {
+      id: jane.id,
+      ifMatch: etagOf(jane.updatedAt),
+      slug: "janet",
+    });
+
+    cdn.assertNotStored("/authors/jane/feed");
+  });
+
+  test("is purged when a deleted author's posts are reassigned to its author", async () => {
+    const { h, cdn, admin, jane, render, rpc } = await site();
+    for (const author of [jane, admin]) {
+      await h.factory.entry.create({
+        type: "post",
+        status: "published",
+        authorId: author.id,
+      });
+    }
+    await render(`/authors/${admin.slug}/feed`);
+
+    await rpc("user/delete", { id: jane.id, reassignTo: admin.id });
+
+    cdn.assertNotStored(`/authors/${admin.slug}/feed`);
+  });
+});
+
 describe("without the plugin installed", () => {
   test("nothing serves a feed and no page advertises one", async () => {
     const h = await createDispatcherHarness({

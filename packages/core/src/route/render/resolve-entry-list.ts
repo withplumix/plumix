@@ -12,6 +12,7 @@ import type {
   ResolvedTerm,
 } from "../contract/resolved-entry.js";
 import { expandShortcodes, isEntryContent } from "../../blocks/index.js";
+import { declarePageTags } from "../../cdn/contract/page-tags.js";
 import { userTag } from "../../cdn/contract/tags.js";
 import { memoBatch } from "../../context/memo.js";
 import { entryTerm } from "../../db/schema/entry_term.js";
@@ -62,19 +63,20 @@ export async function resolveAuthorRow(
     authorMemoKey,
     async () =>
       new Map((await resolveAuthors(ctx, [row])).map((a) => [a.id, a])),
-    authorMemoTags,
+    authorTags,
   );
+  // After the memo, so a header answered from it is tagged too.
+  declarePageTags(ctx, authorTags(row.id));
   // memoBatch answers one entry per id, and the loader has the row in hand.
   return author ?? publicAuthor(row, {});
 }
 
 const authorMemoKey = (id: number): string => `core:author:${String(id)}`;
 /**
- * The author's own tag rather than the public types' tags every user change
- * also purges: an entry publish announces those, and must not drop an author
- * it did not touch.
+ * The author's own tag rather than a type's: an entry publish must not drop
+ * an author it did not touch.
  */
-const authorMemoTags = (id: number): readonly string[] => [userTag(id)];
+const authorTags = (id: number): readonly string[] => [userTag(id)];
 
 /**
  * The projection itself — never spread the user row, which carries email and
@@ -188,7 +190,7 @@ export async function resolveEntries(
         const authors = await resolveAuthors(ctx, rows);
         return new Map(authors.map((a) => [a.id, a]));
       },
-      authorMemoTags,
+      authorTags,
     ),
     ctx.db
       .select({
@@ -211,6 +213,9 @@ export async function resolveEntries(
     // shape — one level deep; a summary carries no meta of its own.
     resolveEntriesMeta(ctx, rows),
   ]);
+  // Declared here rather than in the loader, so a page answered from the memo
+  // is stored under its authors' tags too.
+  declarePageTags(ctx, authorIds.flatMap(authorTags));
   // Not inside the Promise.all: the bags key off the join rows. A term
   // set with no reference fields costs no extra query.
   const termMetaBags = await resolveTermsMeta(ctx, joinRows);

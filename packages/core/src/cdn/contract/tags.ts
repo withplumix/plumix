@@ -1,6 +1,7 @@
 /**
- * Archives carry `t:<type>`, permalinks `e:<id>`, pages that read a settings
- * group `s:<group>`; a write purges the matching tags.
+ * Archives carry `t:<type>`, permalinks `e:<id>`, pages that resolved a user
+ * `u:<id>`, pages that read a settings group `s:<group>`; a write purges the
+ * matching tags.
  */
 export function typeTag(entryType: string): string {
   return normalizeTag(`t:${entryType}`);
@@ -28,20 +29,17 @@ export function termPurgeTags(taxonomyEntryTypes: readonly string[]): string[] {
   return taxonomyEntryTypes.map(typeTag);
 }
 
-/**
- * Every public entry page prints its author, so any user change purges all
- * public types.
- */
-export function usersPurgeTags(publicEntryTypes: readonly string[]): string[] {
-  return publicEntryTypes.map(typeTag);
+/** A page that read a user, an author's byline or archive, carries it. */
+export function userTag(userId: number): string {
+  return `u:${String(userId)}`;
 }
 
 /**
- * No page is stored under it; it only drops that user's memoized row from the
- * request memo.
+ * No page is stored under it; it only drops the request memo's slug lookups,
+ * whose misses have no user id to be tagged by.
  */
-export function userTag(userId: number): string {
-  return `u:${String(userId)}`;
+export function userSlugsTag(): string {
+  return "u:slugs";
 }
 
 export function settingsTag(group: string): string {

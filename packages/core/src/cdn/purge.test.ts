@@ -1,17 +1,28 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
 import type { AppContext, Db } from "../context/app-context.js";
+import type { User } from "../db/schema/users.js";
 import type { CdnFake } from "../test/cdn-fake.js";
 import { withUser } from "../auth/with-user.js";
+import { eq } from "../db/index.js";
+import { users } from "../db/schema/users.js";
 import { HookRegistry } from "../hooks/registry.js";
+import { definePlugin } from "../plugin/define.js";
+import { toggle } from "../plugin/fields/toggle.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import {
   toRegisteredEntryType,
   toRegisteredTermTaxonomy,
 } from "../plugin/registry.js";
+import { resolveListingPage } from "../route/render/page-data.js";
+import { resolveAuthorRow } from "../route/render/resolve-entry-list.js";
+import { sweepUnsettledMeta } from "../rpc/procedures/meta/sweep.js";
 import { fakeCdn } from "../test/cdn-fake.js";
 import { createTestContext } from "../test/context.js";
+import { createDispatcherHarness } from "../test/dispatcher.js";
 import { createTestDb } from "../test/harness.js";
+import { photoProfilePlugin } from "../test/photo-lookup.js";
+import { currentUserEtag } from "../test/user-etag.js";
 import {
   entryPurgeTags,
   entryTag,
@@ -28,6 +39,9 @@ import {
 let db: Db;
 beforeAll(async () => {
   db = await createTestDb();
+  // The RPC handler's graph loads on the first RPC, ~800ms cold; loading it
+  // here keeps that out of a test.
+  await import("../rpc/build-handler.js");
 });
 
 /** One stored page under each tag a write here can reach, keyed by path. */
@@ -200,34 +214,6 @@ describe("registerCorePurgeInvalidator", () => {
     },
   );
 
-  // Any public entry can render its author — a hierarchical `page` permalink
-  // included — so every public type is purged; only the private `note` is not.
-  it("user:updated purges the pages of every public entry type", async () => {
-    const hooks = new HookRegistry();
-    registerCorePurgeInvalidator(hooks);
-    const { ctx, cdn, flush } = await fakeCtx();
-    const user = { id: 4, name: "Jane", slug: "jane" };
-
-    await fire(hooks, "user:updated", user, user, ctx);
-    await flush();
-
-    assertOnlyPurged(cdn, ["/post", "/page"]);
-  });
-
-  // Deleting a user reassigns their entries without firing an entry action, so
-  // their cached author feed and every page showing those entries stay stale.
-  it("user:deleted purges the pages of every public entry type", async () => {
-    const hooks = new HookRegistry();
-    registerCorePurgeInvalidator(hooks);
-    const { ctx, cdn, flush } = await fakeCtx();
-    const user = { id: 4, name: "Jane", slug: "jane" };
-
-    await fire(hooks, "user:deleted", user, { reassignedTo: 1 }, ctx);
-    await flush();
-
-    assertOnlyPurged(cdn, ["/post", "/page"]);
-  });
-
   const term = { id: 3, taxonomy: "category" };
   const TERM_EVENTS: readonly (readonly [string, readonly unknown[]])[] = [
     ["term:created", [term]],
@@ -287,6 +273,7 @@ describe("registerCorePurgeInvalidator", () => {
     ...ENTRY_EVENTS,
     ...TERM_EVENTS,
     ["user:updated", [jane, jane]],
+    ["user:meta_changed", [jane, changes]],
     ["user:deleted", [jane, { reassignedTo: 1 }]],
     ["settings:group_changed", [{ group: "site" }]],
   ];
@@ -306,11 +293,6 @@ describe("registerCorePurgeInvalidator", () => {
     return { loads, read };
   }
 
-  // Every tag a stored page carries, less the memo-only user tag.
-  const STORED_TAGS = Object.entries(PAGES).filter(
-    ([, tag]) => tag !== userTag(jane.id),
-  );
-
   // The memo drop is read off the purge itself, so the two cannot drift into
   // separate lists, and it applies even with no cdn.
   it.each(PURGING_EVENTS)(
@@ -322,45 +304,22 @@ describe("registerCorePurgeInvalidator", () => {
       await fire(hooks, event, ...payload, purging.ctx);
       await purging.flush();
       const purged: string[] = [];
-      for (const [path, tag] of STORED_TAGS) {
+      for (const [path, tag] of Object.entries(PAGES)) {
         const request = new Request(`https://cms.example${path}`);
         if (!(await purging.cdn.store.match(request))) purged.push(tag);
       }
       const { ctx } = await fakeCtx("absent");
       const { loads, read } = recordingMemo(ctx);
-      for (const [, tag] of STORED_TAGS) await read(tag, [tag]);
+      for (const [, tag] of Object.entries(PAGES)) await read(tag, [tag]);
       await read("untagged");
       loads.length = 0;
 
       await fire(hooks, event, ...payload, ctx);
-      for (const [, tag] of STORED_TAGS) await read(tag, [tag]);
+      for (const [, tag] of Object.entries(PAGES)) await read(tag, [tag]);
       await read("untagged");
 
       expect(purged).not.toHaveLength(0);
       expect(loads).toEqual(purged);
-    },
-  );
-
-  // A tag no page is stored under: the memo drops it, the CDN never hears.
-  it.each([
-    ["user:updated", [jane, jane], userTag(jane.id)],
-    ["user:deleted", [jane, { reassignedTo: 1 }], userTag(jane.id)],
-  ] as const)(
-    "%s drops its memo-only tag without purging it",
-    async (event, payload, tag) => {
-      const hooks = new HookRegistry();
-      registerCorePurgeInvalidator(hooks);
-      const { ctx, cdn, flush } = await fakeCtx();
-      const { loads, read } = recordingMemo(ctx);
-      await read("own", [tag]);
-      loads.length = 0;
-
-      await fire(hooks, event, ...payload, ctx);
-      await read("own", [tag]);
-      await flush();
-
-      expect(loads).toEqual(["own"]);
-      cdn.assertStored("/author/4");
     },
   );
 
@@ -375,5 +334,204 @@ describe("registerCorePurgeInvalidator", () => {
 
     expect(deferred).toHaveLength(1);
     assertOnlyPurged(cdn, ["/post", "/post/9", "/post/8"]);
+  });
+});
+
+describe("a write to a user", () => {
+  const blog = definePlugin("test-user-purge", (ctx) => {
+    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    ctx.registerUserMetaBox("newsletter", {
+      label: "Newsletter",
+      fields: [toggle("newsletter")],
+    });
+    ctx.registerPublicRoute({
+      path: "/byline/:id",
+      cacheable: true,
+      handler: async (request, appCtx) => {
+        const id = Number(new URL(request.url).pathname.split("/").pop());
+        const page = await resolveListingPage(appCtx, { kind: "author", id });
+        if (page === null || !("author" in page.data)) {
+          return new Response(null, { status: 404 });
+        }
+        return new Response(page.data.author.name);
+      },
+    });
+    ctx.registerPublicRoute({
+      path: "/header/:id",
+      cacheable: true,
+      handler: async (request, appCtx) => {
+        const id = Number(new URL(request.url).pathname.split("/").pop());
+        const row = await appCtx.db.query.users.findFirst({
+          where: eq(users.id, id),
+        });
+        if (row === undefined) return new Response(null, { status: 404 });
+        const author = await resolveAuthorRow(appCtx, row);
+        return new Response(author.images.featured?.url ?? "");
+      },
+    });
+    // Stands in for `plumix meta settle`, which runs the same sweep.
+    ctx.registerRoute({
+      method: "POST",
+      path: "/settle",
+      auth: "authenticated",
+      handler: async (_request, appCtx) => {
+        await sweepUnsettledMeta(appCtx, { write: true });
+        return new Response(null, { status: 204 });
+      },
+    });
+  });
+
+  async function site() {
+    const cdn = fakeCdn();
+    const h = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [blog, photoProfilePlugin] },
+    });
+    const admin = await h.seedUser("admin");
+    const [before, after] = await Promise.all([
+      h.factory.entry.create({ type: "post", authorId: admin.id }),
+      h.factory.entry.create({ type: "post", authorId: admin.id }),
+    ]);
+    const jane = await h.factory.author.create({
+      name: "Jane",
+      slug: "jane",
+      meta: { portrait: String(before.id) },
+    });
+    const post = (slug: string, authorId: number) =>
+      h.factory.entry.create({
+        type: "post",
+        slug,
+        title: slug,
+        status: "published",
+        authorId,
+        publishedAt: new Date(),
+      });
+    const render = async (path: string) => {
+      (await h.fetch(path)).assertStatus(200);
+      await h.drainDeferred();
+      cdn.assertStored(path);
+    };
+    const rpc = async (
+      path: string,
+      json: Record<string, unknown>,
+      as: User = admin,
+    ) => {
+      const response = await h.fetch(`/_plumix/rpc/${path}`, {
+        as,
+        json: { json, meta: [] },
+      });
+      response.assertStatus(200);
+      await h.drainDeferred();
+    };
+    return { h, cdn, admin, jane, photo: after, post, render, rpc };
+  }
+
+  it("a meta-only save of an author purges an entry page showing them", async () => {
+    const { h, cdn, jane, photo, post, render, rpc } = await site();
+    await post("by-jane", jane.id);
+    await render("/post/by-jane");
+
+    await rpc("user/update", {
+      id: jane.id,
+      ifMatch: await currentUserEtag(h.db, jane.id),
+      meta: { portrait: String(photo.id) },
+    });
+
+    cdn.assertNotStored("/post/by-jane");
+  });
+
+  it("an author's locale change purges an entry page showing them", async () => {
+    const { cdn, jane, post, render, rpc } = await site();
+    await post("by-jane", jane.id);
+    await render("/post/by-jane");
+
+    await rpc("user/setLocale", { code: "en" }, jane);
+
+    cdn.assertNotStored("/post/by-jane");
+  });
+
+  it("a read that heals an author's meta purges an entry page showing them", async () => {
+    const { h, cdn, jane, post, render, rpc } = await site();
+    await h.db
+      .update(users)
+      .set({ meta: { newsletter: "true" } })
+      .where(eq(users.id, jane.id));
+    await post("by-jane", jane.id);
+    await render("/post/by-jane");
+
+    await rpc("user/get", { id: jane.id });
+
+    cdn.assertNotStored("/post/by-jane");
+  });
+
+  it("a meta sweep that rewrites an author's meta purges an entry page showing them", async () => {
+    const { h, cdn, admin, jane, post, render } = await site();
+    await h.db
+      .update(users)
+      .set({ meta: { newsletter: "true" } })
+      .where(eq(users.id, jane.id));
+    await post("by-jane", jane.id);
+    await render("/post/by-jane");
+
+    const settled = await h.fetch("/_plumix/test-user-purge/settle", {
+      method: "POST",
+      as: admin,
+    });
+    settled.assertStatus(204);
+    await h.drainDeferred();
+
+    cdn.assertNotStored("/post/by-jane");
+  });
+
+  it.each([
+    [
+      "a meta-only save",
+      (photo: number) => ({ meta: { portrait: String(photo) } }),
+    ],
+    ["a profile save", () => ({ name: "Janet" })],
+  ] as const)(
+    "%s of an author keeps an entry page by a different author stored",
+    async (_save, changes) => {
+      const { h, cdn, admin, jane, photo, post, render, rpc } = await site();
+      await post("by-jane", jane.id);
+      await post("by-admin", admin.id);
+      await render("/post/by-jane");
+      await render("/post/by-admin");
+
+      await rpc("user/update", {
+        id: jane.id,
+        ifMatch: await currentUserEtag(h.db, jane.id),
+        ...changes(photo.id),
+      });
+
+      cdn.assertNotStored("/post/by-jane");
+      cdn.assertStored("/post/by-admin");
+    },
+  );
+
+  it("a profile save of an author purges a page that resolved them by id", async () => {
+    const { h, cdn, jane, render, rpc } = await site();
+    await render(`/byline/${String(jane.id)}`);
+
+    await rpc("user/update", {
+      id: jane.id,
+      ifMatch: await currentUserEtag(h.db, jane.id),
+      name: "Janet",
+    });
+
+    cdn.assertNotStored(`/byline/${String(jane.id)}`);
+  });
+
+  it("a meta-only save of an author purges a page that resolved only their header", async () => {
+    const { h, cdn, jane, photo, render, rpc } = await site();
+    await render(`/header/${String(jane.id)}`);
+
+    await rpc("user/update", {
+      id: jane.id,
+      ifMatch: await currentUserEtag(h.db, jane.id),
+      meta: { portrait: String(photo.id) },
+    });
+
+    cdn.assertNotStored(`/header/${String(jane.id)}`);
   });
 });
