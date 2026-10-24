@@ -26,10 +26,9 @@ export interface ActingAsResult {
 }
 
 /**
- * Seed a user and session in the playground D1 and return it as a Playwright
- * `storageState`. Skips the passkey ceremony, so call it only from test setup.
- *
- * @experimental
+ * Seed a user and session in the playground database `openPlaygroundDb`
+ * returns, and return it as a Playwright `storageState`. Skips the passkey
+ * ceremony, so call it only from test setup.
  */
 export async function actingAs(
   db: PlaygroundDb,

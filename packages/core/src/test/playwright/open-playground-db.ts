@@ -14,8 +14,6 @@ export interface OpenPlaygroundDbOptions {
  * Open the playground server's on-disk SQLite, located through the runtime's
  * `plumix.e2e` block. WAL mode plus a 5s `busy_timeout` lets test writes
  * coexist with the running server.
- *
- * @experimental
  */
 export async function openPlaygroundDb(
   options: OpenPlaygroundDbOptions = {},
