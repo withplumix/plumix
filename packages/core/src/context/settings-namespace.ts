@@ -6,11 +6,17 @@ import type {
   SettingsWriteGuard,
 } from "./app-context.js";
 
+/** How `ctx.settings` asked for the write: from a copy, or only where absent. */
+export interface SettingsWriteMode {
+  readonly guard?: SettingsWriteGuard;
+  readonly ifAbsent?: boolean;
+}
+
 type SettingsWrite = (
   ctx: AppContext,
   group: string,
   values: SettingsPatch,
-  guard?: SettingsWriteGuard,
+  mode: SettingsWriteMode,
 ) => Promise<SettingsGroupCopy>;
 
 /**
@@ -25,7 +31,9 @@ export function bindSettings(
   ctx: () => AppContext,
 ): SettingsNamespace {
   const namespace: SettingsNamespace = {
-    write: (group, values, guard) => write(ctx(), group, values, guard),
+    write: (group, values, guard) => write(ctx(), group, values, { guard }),
+    writeIfAbsent: (group, values) =>
+      write(ctx(), group, values, { ifAbsent: true }),
   };
   writes.set(namespace, write);
   return namespace;

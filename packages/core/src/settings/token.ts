@@ -150,3 +150,21 @@ export async function writeSettingsKeys(
   }
   for (const statement of statements) await statement;
 }
+
+/** Inserts each row whose key the group lacks; answers the keys it inserted. */
+export async function insertAbsentSettingsKeys(
+  db: Db,
+  group: string,
+  rows: readonly { readonly key: string; readonly value: JsonValue }[],
+): Promise<string[]> {
+  const inserted: string[] = [];
+  for (const { key, value } of rows) {
+    const landed = await db
+      .insert(settings)
+      .values({ group, key, value })
+      .onConflictDoNothing()
+      .returning({ key: settings.key });
+    if (landed.length > 0) inserted.push(key);
+  }
+  return inserted;
+}

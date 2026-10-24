@@ -123,12 +123,21 @@ export type SettingsPatch = Readonly<Record<string, unknown>>;
 export interface SettingsNamespace {
   /**
    * Leaves unmentioned keys alone, and fires `settings:group_changed` when
-   * anything changed. Unguarded, it moves the group's token unchecked.
+   * anything changed in a public group. Unguarded, it moves the token of a
+   * group already saved, unchecked.
    */
   write(
     group: string,
     values: SettingsPatch,
     guard?: SettingsWriteGuard,
+  ): Promise<SettingsGroupCopy>;
+  /**
+   * Stores only the keys `group` does not hold yet, so racing first writers
+   * converge on the first; answers the group as it stands.
+   */
+  writeIfAbsent(
+    group: string,
+    values: SettingsPatch,
   ): Promise<SettingsGroupCopy>;
 }
 

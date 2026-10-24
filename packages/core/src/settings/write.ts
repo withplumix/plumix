@@ -2,13 +2,16 @@ import type {
   AppContext,
   SettingsGroupCopy,
   SettingsPatch,
-  SettingsWriteGuard,
 } from "../context/app-context.js";
+import type { SettingsWriteMode } from "../context/settings-namespace.js";
 import type { JsonValue } from "../json.js";
 import type { MetaFieldError } from "../meta/field-pipeline.js";
+import { settingsTag } from "../cdn/contract/tags.js";
+import { enqueuePurgeTags } from "../cdn/purge.js";
 import { assertWritable } from "../db/edit-lease.js";
 import { eq } from "../db/index.js";
 import { settings } from "../db/schema/settings.js";
+import { isPrivateSettingsGroup } from "../db/settings-groups.js";
 import { decodeJsonValue } from "../meta/coerce.js";
 import { runFieldPipeline } from "../meta/field-pipeline.js";
 import { isConditionHidden } from "../plugin/fields/condition.js";
@@ -21,6 +24,7 @@ import { SettingsWriteError } from "./errors.js";
 import {
   bumpSettingsGroup,
   claimSettingsGroup,
+  insertAbsentSettingsKeys,
   settingsGroupEtag,
   settingsGroupResource,
   writeSettingsKeys,
@@ -39,7 +43,7 @@ export async function writeSettingsGroup(
   ctx: AppContext,
   groupName: string,
   input: SettingsPatch,
-  guard?: SettingsWriteGuard,
+  { guard, ifAbsent = false }: SettingsWriteMode,
 ): Promise<SettingsGroupCopy> {
   // Registered fields go through the meta write pipeline. Condition-hidden
   // fields are dropped first: a value the editor cannot see must not persist.
@@ -124,7 +128,17 @@ export async function writeSettingsGroup(
     }
   }
 
-  const changed = upsertRows.length > 0 || deletes.length > 0;
+  let set = upsertRows;
+  let removed = deletes;
+  if (ifAbsent) {
+    // An absent key stays absent, so there is nothing to remove.
+    const inserted = new Set(
+      await insertAbsentSettingsKeys(ctx.db, groupName, upsertRows),
+    );
+    set = upsertRows.filter((row) => inserted.has(row.key));
+    removed = [];
+  }
+  const changed = set.length > 0 || removed.length > 0;
   if (guard) {
     await assertWritable(
       ctx.db,
@@ -138,7 +152,9 @@ export async function writeSettingsGroup(
   } else if (changed) {
     await bumpSettingsGroup(ctx.db, groupName);
   }
-  await writeSettingsKeys(ctx.db, groupName, upsertRows, deletes);
+  if (!ifAbsent) {
+    await writeSettingsKeys(ctx.db, groupName, upsertRows, deletes);
+  }
 
   // Re-read the authoritative bag, so the caller gets the final shape.
   const fresh = await ctx.db
@@ -154,16 +170,21 @@ export async function writeSettingsGroup(
   // Fire only when the call actually changed state — an empty
   // `values: {}` payload is a no-op and shouldn't wake up
   // cache-invalidators / audit-log subscribers.
-  if (changed) {
-    await ctx.hooks.doAction(
-      "settings:group_changed",
-      {
-        group: groupName,
-        set: Object.fromEntries(upsertRows.map((r) => [r.key, r.value])),
-        removed: deletes,
-      },
-      ctx,
-    );
+  if (!changed) return copy;
+  if (isPrivateSettingsGroup(groupName)) {
+    // Its values are server-side secrets, so no subscriber hears them; core's
+    // listener would have purged, so the purge is made here instead.
+    enqueuePurgeTags(ctx, [settingsTag(groupName)]);
+    return copy;
   }
+  await ctx.hooks.doAction(
+    "settings:group_changed",
+    {
+      group: groupName,
+      set: Object.fromEntries(set.map((r) => [r.key, r.value])),
+      removed,
+    },
+    ctx,
+  );
   return copy;
 }

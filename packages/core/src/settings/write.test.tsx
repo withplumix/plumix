@@ -35,11 +35,14 @@ function writer(heard: Heard[]) {
     });
     ctx.registerRoute({
       method: "POST",
-      path: "/site-info",
+      path: "/write",
       auth: "authenticated",
       handler: async (request, appCtx) => {
+        const group = new URL(request.url).searchParams.get("group");
         const values = (await request.json()) as Record<string, unknown>;
-        return Response.json(await appCtx.settings.write("site_info", values));
+        return Response.json(
+          await appCtx.settings.write(group ?? "site_info", values),
+        );
       },
     });
   });
@@ -50,10 +53,16 @@ const theme = defineTheme({
     fallback(() => null),
     entry(
       defineTemplate({
-        settings: ["site_info"],
+        settings: ["site_info", "writer_internal"],
         render: (args) => {
           const title = args.settings?.site_info?.title;
-          return <h1>{typeof title === "string" ? title : "Untitled"}</h1>;
+          const motto = args.settings?.writer_internal?.motto;
+          return (
+            <h1>
+              {typeof title === "string" ? title : "Untitled"}
+              {typeof motto === "string" ? motto : ""}
+            </h1>
+          );
         },
       }),
     ),
@@ -78,8 +87,11 @@ async function site() {
     authorId: admin.id,
     publishedAt: new Date(),
   });
-  const write = async (values: Record<string, unknown>) => {
-    const response = await h.fetch("/_plumix/writer/site-info", {
+  const write = async (
+    values: Record<string, unknown>,
+    group = "site_info",
+  ) => {
+    const response = await h.fetch(`/_plumix/writer/write?group=${group}`, {
       method: "POST",
       json: values,
       as: admin,
@@ -116,6 +128,21 @@ describe("ctx.settings.write", () => {
         userId: s.admin.id,
       },
     ]);
+  });
+
+  // A private group holds server-side secrets, so its values reach no
+  // subscriber; a page that printed it is still purged.
+  test("a private group's write is announced to no one, and still purges", async () => {
+    const s = await site();
+    (await s.h.fetch(PAGE)).assertStatus(200);
+    await s.h.drainDeferred();
+    s.cdn.assertStored(PAGE);
+
+    (await s.write({ motto: "Secret" }, "writer_internal")).assertStatus(200);
+
+    expect(s.heard).toEqual([]);
+    s.cdn.assertNotStored(PAGE);
+    expect(await (await s.h.fetch(PAGE)).text()).toContain("Secret");
   });
 
   // A plugin's write is not made from a copy, so it moves the token unchecked
@@ -227,5 +254,39 @@ describe("ctx.settings.write, called from a plugin's own code", () => {
     const copy = await h.context.settings.write("blog", { tagline: "Mine" });
 
     expect(copy.values).toEqual({ tagline: "Mine" });
+  });
+
+  // Two first writers racing converge: the later one stores nothing and
+  // answers what the earlier one stored.
+  test("writeIfAbsent stores only the keys the group lacks", async () => {
+    const { h } = await harness();
+    await h.context.settings.write("notes", { title: "First" });
+    const spy = h.spyAction("settings:group_changed");
+
+    const copy = await h.context.settings.writeIfAbsent("notes", {
+      title: "Second",
+      body: "B",
+    });
+
+    expect(copy.values).toEqual({ title: "First", body: "B" });
+    const [changes] = spy.lastArgs ?? [];
+    expect(changes).toEqual({
+      group: "notes",
+      set: { body: "B" },
+      removed: [],
+    });
+  });
+
+  test("writeIfAbsent changes nothing when every key is stored", async () => {
+    const { h, save } = await harness();
+    const { etag } = await save("notes", { title: "First" });
+    const spy = h.spyAction("settings:group_changed");
+
+    const copy = await h.context.settings.writeIfAbsent("notes", {
+      title: "Second",
+    });
+
+    expect(copy).toEqual({ etag, values: { title: "First" } });
+    spy.assertNotCalled();
   });
 });

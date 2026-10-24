@@ -395,6 +395,10 @@ declare module "../hooks/types.js" {
       ctx: AppContext,
     ) => void | Promise<void>;
 
+    /**
+     * Not fired for a private (`_internal`) group, whose values are
+     * server-side secrets.
+     */
     "settings:group_changed": (
       changes: {
         readonly group: string;

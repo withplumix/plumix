@@ -34,10 +34,7 @@ export async function getSecret(
   return typeof row?.value === "string" ? row.value : null;
 }
 
-/**
- * The last write wins, so a racing first write can sign with a secret the
- * other then replaces.
- */
+/** Concurrent first writes converge on one value: the first stored wins. */
 export function getOrCreateSecret(
   ctx: AppContext,
   key: SecretName,
@@ -49,7 +46,10 @@ export function getOrCreateSecret(
     const bytes = new Uint8Array(16);
     crypto.getRandomValues(bytes);
     const secret = toHex(bytes);
-    await ctx.settings.write(GROUP, { [key]: secret });
-    return (await getSecret(ctx, key)) ?? secret;
+    const { values } = await ctx.settings.writeIfAbsent(GROUP, {
+      [key]: secret,
+    });
+    const stored = values[key];
+    return typeof stored === "string" ? stored : secret;
   });
 }
