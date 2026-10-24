@@ -23,6 +23,7 @@ import {
 import { resolveListingPage } from "../route/render/page-data.js";
 import { resolveAuthorRow } from "../route/render/resolve-entry-list.js";
 import { sweepUnsettledMeta } from "../rpc/procedures/meta/sweep.js";
+import { taxonomyTermRows } from "../terms/listing.js";
 import { fakeCdn } from "../test/cdn-fake.js";
 import { createTestContext } from "../test/context.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
@@ -33,6 +34,7 @@ import {
   entryPurgeTags,
   entryTag,
   settingsTag,
+  taxonomyListTag,
   termTag,
   typeTag,
   userTag,
@@ -62,6 +64,8 @@ const PAGES: Readonly<Record<string, string>> = {
   "/settings/seo": settingsTag("seo"),
   "/author/4": userTag(4),
   "/term/3": termTag(3),
+  "/category/terms": taxonomyListTag("category"),
+  "/tag/terms": taxonomyListTag("tag"),
 };
 
 async function storePages(cdn: CdnFake): Promise<void> {
@@ -247,7 +251,7 @@ describe("registerCorePurgeInvalidator", () => {
   );
 
   it.each(TERM_LIST_EVENTS)(
-    "%s purges the pages of the taxonomy's entry types",
+    "%s purges the term's pages and its taxonomy's term lists",
     async (event, payload) => {
       const hooks = new HookRegistry();
       registerCorePurgeInvalidator(hooks);
@@ -256,14 +260,13 @@ describe("registerCorePurgeInvalidator", () => {
       await fire(hooks, event, ...payload, ctx);
       await flush();
 
-      assertOnlyPurged(cdn, ["/post"]);
+      assertOnlyPurged(cdn, ["/term/3", "/category/terms"]);
     },
   );
 
-  // A taxonomy that lists no entry types still has term feeds, which list every
-  // public type attached to the term — so its term changes purge those types.
+  // A taxonomy that lists no entry types has term lists all the same.
   it.each(TERM_LIST_EVENTS)(
-    "%s in a taxonomy without entryTypes purges the public types' pages",
+    "%s in a taxonomy without entryTypes purges its term lists",
     async (event, payload) => {
       const hooks = new HookRegistry();
       registerCorePurgeInvalidator(hooks);
@@ -275,7 +278,7 @@ describe("registerCorePurgeInvalidator", () => {
       await fire(hooks, event, ...untyped, ctx);
       await flush();
 
-      assertOnlyPurged(cdn, ["/post", "/page"]);
+      assertOnlyPurged(cdn, ["/term/3", "/tag/terms"]);
     },
   );
 
@@ -596,6 +599,20 @@ describe("a write to a term", () => {
         return new Response(String(rows.length));
       },
     });
+    // Lists a taxonomy's terms and renders none of them.
+    ctx.registerPublicRoute({
+      path: "/term-names/:taxonomy",
+      cacheable: true,
+      handler: async (request, appCtx) => {
+        const taxonomy = new URL(request.url).pathname.split("/").pop() ?? "";
+        const rows = await appCtx.db
+          .select({ name: terms.name })
+          .from(terms)
+          .where(taxonomyTermRows(appCtx, taxonomy))
+          .orderBy(terms.name);
+        return new Response(rows.map((row) => row.name).join(","));
+      },
+    });
   });
 
   async function site() {
@@ -647,7 +664,15 @@ describe("a write to a term", () => {
       response.assertStatus(200);
       await h.drainDeferred();
     };
-    return { h, cdn, news, post, render, update };
+    const rpc = async (procedure: string, input: Record<string, unknown>) => {
+      const response = await h.fetch(`/_plumix/rpc/term/${procedure}`, {
+        as: admin,
+        json: { json: input, meta: [] },
+      });
+      response.assertStatus(200);
+      await h.drainDeferred();
+    };
+    return { h, cdn, news, post, render, update, rpc };
   }
 
   it("a rename purges an entry page that shows the term's chip", async () => {
@@ -703,6 +728,41 @@ describe("a write to a term", () => {
     cdn.assertNotStored("/post/filed");
     cdn.assertNotStored("/category/news");
     cdn.assertStored("/post/unfiled");
+  });
+
+  it("a delete purges an entry page that showed the term's chip", async () => {
+    const { cdn, news, post, render, rpc } = await site();
+    await post("filed", [news.id]);
+    await render("/post/filed");
+
+    await rpc("delete", { id: news.id });
+
+    cdn.assertNotStored("/post/filed");
+  });
+
+  it("a create purges a response that listed the taxonomy's terms", async () => {
+    const { h, cdn, render, rpc } = await site();
+    await h.factory.term.create({ taxonomy: "tag", name: "Elsewhere" });
+    await render("/term-names/category");
+
+    await rpc("create", { taxonomy: "category", name: "Sport", slug: "sport" });
+
+    cdn.assertNotStored("/term-names/category");
+    expect(await (await h.fetch("/term-names/category")).text()).toBe(
+      "News,Sport",
+    );
+  });
+
+  it("a create keeps the taxonomy's posts and archives stored", async () => {
+    const { cdn, news, post, render, rpc } = await site();
+    await post("filed", [news.id]);
+    await render("/post/filed");
+    await render("/category/news");
+
+    await rpc("create", { taxonomy: "category", name: "Sport", slug: "sport" });
+
+    cdn.assertStored("/post/filed");
+    cdn.assertStored("/category/news");
   });
 
   it("a rename keeps a post that never showed the term stored", async () => {

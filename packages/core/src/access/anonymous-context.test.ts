@@ -1,6 +1,10 @@
 import { describe, expect, test } from "vitest";
 
 import type { AppContext } from "../context/app-context.js";
+import {
+  declaredPageTags,
+  declarePageTags,
+} from "../cdn/contract/page-tags.js";
 import { asc } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { publicEntryRows } from "../entries/visibility.js";
@@ -115,5 +119,13 @@ describe("anonymousContext", () => {
     const seen = await anonymous.memo("test:two", () => Promise.resolve("two"));
 
     expect(seen).toBe("two");
+  });
+
+  test("stores the request's response under a tag declared through it", async () => {
+    const ctx = await editorContext();
+
+    declarePageTags(anonymousContext(ctx), ["read-by-the-reader"]);
+
+    expect(declaredPageTags(ctx)).toEqual(["read-by-the-reader"]);
   });
 });

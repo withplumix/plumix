@@ -465,7 +465,7 @@ Seo asks that policy for an anonymous visitor, whoever requests the sitemap. Whe
 
 ### Caching
 
-Sitemap responses declare `public, max-age=0, s-maxage=3600` and go through the CDN when one is configured. Each scope stores under its own tags — `t:<type>` for an entry type, the `t:<type>` tags of a taxonomy's entry types for a taxonomy — so publishing a post retires the post scope and leaves the rest of the set alone. Saving the settings group purges all of them, since the indexing toggle decides whether any of them have URLs at all. `/llms.txt` declares the same header and is stored under the set-wide tag and the `t:<type>` tag of every public entry type, so an entry write, a change of access choice included, retires it with the sitemap page that lists the entry.
+Sitemap responses declare `public, max-age=0, s-maxage=3600` and go through the CDN when one is configured. Each scope stores under its own tags — `t:<type>` for an entry type, the taxonomy's `tx:<taxonomy>` for a taxonomy — so publishing a post retires the post scope, and creating or deleting a category retires the category scope, and each leaves the rest of the set alone. Saving the settings group purges all of them, since the indexing toggle decides whether any of them have URLs at all. `/llms.txt` declares the same header and is stored under the set-wide tag and the `t:<type>` tag of every public entry type, so an entry write, a change of access choice included, retires it with the sitemap page that lists the entry.
 
 A scope with no tags to contribute rides the one-hour window instead of a purge: a taxonomy registered with no `entryTypes` has none to name, and so does a contributed source that omits `tags`. Declare `tags` on a source whose content changes more often than that.
 

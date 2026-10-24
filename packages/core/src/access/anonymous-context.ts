@@ -1,5 +1,6 @@
 import type { AppContext } from "../context/app-context.js";
 import type { RequestMemo } from "../context/memo.js";
+import { declareThrough } from "../cdn/contract/page-tags.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
 
 /**
@@ -33,11 +34,16 @@ export function anonymousContext(ctx: AppContext): AppContext {
 
 const ANONYMOUS_MEMO = "anonymous:";
 
-/** Shares the store and its invalidation, so a write still drops the entry. */
+/**
+ * Shares the store and its invalidation, so a write still drops the entry, and
+ * the request's page tags, so what it reads still tags the response.
+ */
 function namespaced(memo: RequestMemo, prefix: string): RequestMemo {
-  return Object.assign(
+  const reader = Object.assign(
     <T>(key: string, load: () => Promise<T>, tags?: readonly string[]) =>
       memo(`${prefix}${key}`, load, tags),
     { invalidate: (tags: readonly string[]) => memo.invalidate(tags) },
   );
+  declareThrough(reader, memo);
+  return reader;
 }

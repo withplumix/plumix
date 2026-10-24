@@ -128,7 +128,7 @@ export const recipes = definePlugin("recipes", {
 });
 ```
 
-You declare the pairing from both sides, and each side does a different job. `termTaxonomies` on the entry type puts the cuisine and diet pickers on the recipe editor. `entryTypes` on the taxonomy is what the cache purge reads when a term is created or deleted. Editing the Sicilian term purges only the stored pages that showed it, not every recipe page.
+You declare the pairing from both sides, and each side does a different job. `termTaxonomies` on the entry type puts the cuisine and diet pickers on the recipe editor. `entryTypes` on the taxonomy decides which entries a term archive lists. Editing the Sicilian term purges only the stored pages that showed it, not every recipe page.
 
 Hierarchy also shapes the term URLs: `/cuisine/italian/sicilian` for the nested taxonomy, `/diet/vegetarian` for the flat one, each with a `/page/:page` variant.
 

@@ -1418,7 +1418,7 @@ describe("a sitemap at the edge", () => {
     });
   });
 
-  test("publishing an entry retires its type's scopes and only those", async () => {
+  test("publishing an entry retires its type's scope and only that", async () => {
     const cdn = fakeCdn();
     const h = await createHarness([postsAndPages], { cdn });
     await seedPost(h);
@@ -1438,8 +1438,109 @@ describe("a sitemap at the edge", () => {
     await publish(h, "post", "second");
 
     cdn.assertNotStored("/sitemap-entries-post-1.xml");
-    cdn.assertNotStored("/sitemap-terms-category-1.xml");
+    // It lists terms, not entries, even of a taxonomy for posts.
+    cdn.assertStored("/sitemap-terms-category-1.xml");
     cdn.assertStored("/sitemap-entries-page-1.xml");
+  });
+
+  describe("a term write", () => {
+    const taxonomies = definePlugin("taxo-sitemaps", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerTermTaxonomy("category", {
+        label: "Categories",
+        entryTypes: ["post"],
+      });
+      // Lists no entry types, so no type tag could ever reach its sitemap.
+      ctx.registerTermTaxonomy("label", { label: "Labels" });
+    });
+
+    async function createTerm(
+      h: DispatcherHarness,
+      taxonomy: string,
+      slug: string,
+    ): Promise<void> {
+      const admin = await h.seedUser("admin");
+      const created = await h.fetch("/_plumix/rpc/term/create", {
+        as: admin,
+        json: { json: { taxonomy, name: slug, slug }, meta: [] },
+      });
+      created.assertStatus(200);
+      await h.drainDeferred();
+    }
+
+    async function deleteTerm(h: DispatcherHarness, id: number): Promise<void> {
+      const admin = await h.seedUser("admin");
+      const deleted = await h.fetch("/_plumix/rpc/term/delete", {
+        as: admin,
+        json: { json: { id }, meta: [] },
+      });
+      deleted.assertStatus(200);
+      await h.drainDeferred();
+    }
+
+    test("creating a term in a taxonomy with no entry types retires its sitemap", async () => {
+      const cdn = fakeCdn();
+      const h = await createHarness([taxonomies], { cdn });
+      await h.factory.term.create({ taxonomy: "label", slug: "red" });
+      await render(h, cdn, "/sitemap-terms-label-1.xml");
+
+      await createTerm(h, "label", "blue");
+
+      cdn.assertNotStored("/sitemap-terms-label-1.xml");
+    });
+
+    test("creating a term in a taxonomy with no entry types retires the index", async () => {
+      const cdn = fakeCdn();
+      const h = await createHarness([taxonomies], { cdn });
+      await render(h, cdn, "/sitemap.xml");
+
+      await createTerm(h, "label", "blue");
+
+      cdn.assertNotStored("/sitemap.xml");
+    });
+
+    test("creating a term in a taxonomy that lists entry types retires its sitemap", async () => {
+      const cdn = fakeCdn();
+      const h = await createHarness([taxonomies], { cdn });
+      await h.factory.term.create({ taxonomy: "category", slug: "news" });
+      await render(h, cdn, "/sitemap-terms-category-1.xml");
+
+      await createTerm(h, "category", "sport");
+
+      cdn.assertNotStored("/sitemap-terms-category-1.xml");
+    });
+
+    test.each(["label", "category"])(
+      "deleting a term from %s retires its sitemap",
+      async (taxonomy) => {
+        const cdn = fakeCdn();
+        const h = await createHarness([taxonomies], { cdn });
+        await h.factory.term.create({ taxonomy, slug: "kept" });
+        const doomed = await h.factory.term.create({ taxonomy, slug: "gone" });
+        await render(h, cdn, `/sitemap-terms-${taxonomy}-1.xml`);
+
+        await deleteTerm(h, doomed.id);
+
+        cdn.assertNotStored(`/sitemap-terms-${taxonomy}-1.xml`);
+      },
+    );
+
+    test.each([
+      ["label", "category"],
+      ["category", "label"],
+    ])(
+      "creating a term in %s keeps the %s sitemap stored",
+      async (written, other) => {
+        const cdn = fakeCdn();
+        const h = await createHarness([taxonomies], { cdn });
+        await h.factory.term.create({ taxonomy: other, slug: "kept" });
+        await render(h, cdn, `/sitemap-terms-${other}-1.xml`);
+
+        await createTerm(h, written, "fresh");
+
+        cdn.assertStored(`/sitemap-terms-${other}-1.xml`);
+      },
+    );
   });
 
   test.each(["post", "page"])(

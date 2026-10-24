@@ -85,6 +85,7 @@ export {
   publicEntryRows,
   readVisitorMeta,
   settleMeta,
+  taxonomyTermRows,
   termPurgeTags,
   tokenizeSearchQuery,
   typeTag,

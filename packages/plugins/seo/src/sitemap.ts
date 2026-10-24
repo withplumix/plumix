@@ -3,7 +3,14 @@ import type { AccessPolicy } from "plumix/auth";
 import type { SQL } from "plumix/db";
 import type { AppContext } from "plumix/plugin";
 import { policyAdmits } from "plumix/auth";
-import { and, eq, publicEntryRows, sql, typeTag } from "plumix/db";
+import {
+  and,
+  eq,
+  publicEntryRows,
+  sql,
+  taxonomyTermRows,
+  typeTag,
+} from "plumix/db";
 import { buildEntryPermalinks, buildTermArchiveUrls } from "plumix/plugin";
 import { entries, terms } from "plumix/schema";
 import { withBasePath, xmlEscape } from "plumix/support";
@@ -279,8 +286,8 @@ export async function listedEntriesOf(
   return and(listed, eq(entries.type, type), entryIsIndexable) ?? null;
 }
 
-function listedTermsOf(taxonomy: string) {
-  return and(eq(terms.taxonomy, taxonomy), termIsIndexable);
+function listedTermsOf(ctx: AppContext, taxonomy: string) {
+  return and(taxonomyTermRows(ctx, taxonomy), termIsIndexable);
 }
 
 /** One query for the whole scope; a query per page would grow with the site. */
@@ -356,7 +363,7 @@ async function termCount(ctx: AppContext, taxonomy: string): Promise<number> {
   const [row] = await ctx.db
     .select({ n: sql<number>`count(*)` })
     .from(terms)
-    .where(listedTermsOf(taxonomy));
+    .where(listedTermsOf(ctx, taxonomy));
   return row?.n ?? 0;
 }
 
@@ -372,7 +379,7 @@ async function termUrls(
       parentId: terms.parentId,
     })
     .from(terms)
-    .where(listedTermsOf(taxonomy))
+    .where(listedTermsOf(ctx, taxonomy))
     .orderBy(terms.id)
     .limit(SITEMAP_PAGE_SIZE)
     .offset(offsetFor(page));
@@ -424,8 +431,8 @@ export function sitemapScopes(
   for (const taxonomy of publicTargets(plugins.termTaxonomies)) {
     add({
       ref: { kind: "terms", name: taxonomy.name },
-      // A term change purges its taxonomy's entry-type tags.
-      tags: (taxonomy.entryTypes ?? []).map(typeTag),
+      // Its reads through `taxonomyTermRows` tag it.
+      tags: [],
       // A term stores no modification time, so its pages carry no lastmod.
       pages: async (ctx) => undatedPages(await termCount(ctx, taxonomy.name)),
       urls: (ctx, page) => termUrls(ctx, taxonomy.name, page),

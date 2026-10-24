@@ -6,16 +6,32 @@ import { normalizeTag } from "./tags.js";
  */
 const pending = new WeakMap<WeakKey, Set<string>>();
 
+/** A memo wrapping another, mapped to the request memo it wraps. */
+const wrapped = new WeakMap<WeakKey, WeakKey>();
+
+/**
+ * Tags declared through `memo` go on `requestMemo`'s response: a reader with a
+ * memo of its own still reads for the request.
+ */
+export function declareThrough(memo: WeakKey, requestMemo: WeakKey): void {
+  wrapped.set(memo, requestMemo);
+}
+
+function requestMemoOf(memo: WeakKey): WeakKey {
+  return wrapped.get(memo) ?? memo;
+}
+
 /** Add `tags` to what this request's response is stored under. */
 export function declarePageTags(
   ctx: { readonly memo: WeakKey },
   tags: readonly string[],
 ): void {
   if (tags.length === 0) return;
-  let set = pending.get(ctx.memo);
+  const memo = requestMemoOf(ctx.memo);
+  let set = pending.get(memo);
   if (set === undefined) {
     set = new Set();
-    pending.set(ctx.memo, set);
+    pending.set(memo, set);
   }
   for (const tag of tags) set.add(normalizeTag(tag));
 }
@@ -24,6 +40,6 @@ export function declarePageTags(
 export function declaredPageTags(ctx: {
   readonly memo: WeakKey;
 }): readonly string[] {
-  const set = pending.get(ctx.memo);
+  const set = pending.get(requestMemoOf(ctx.memo));
   return set === undefined ? [] : [...set];
 }

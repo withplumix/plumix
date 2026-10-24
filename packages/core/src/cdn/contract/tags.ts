@@ -1,7 +1,7 @@
 /**
- * Archives carry `t:<type>`, permalinks `e:<id>`, pages that rendered a term
- * `tm:<id>`, pages that resolved a user `u:<id>`, pages that read a settings
- * group `s:<group>`; a write purges the matching tags.
+ * Archives carry `t:<type>`, permalinks `e:<id>`, rendered terms `tm:<id>`,
+ * term lists `tx:<taxonomy>`, resolved users `u:<id>`, read settings groups
+ * `s:<group>`; a write purges the matching tags.
  */
 export function typeTag(entryType: string): string {
   return normalizeTag(`t:${entryType}`);
@@ -32,6 +32,14 @@ export function termPurgeTags(taxonomyEntryTypes: readonly string[]): string[] {
 /** A page that rendered a term, its archive or an entry's chip, carries it. */
 export function termTag(termId: number): string {
   return `tm:${String(termId)}`;
+}
+
+/**
+ * A response that listed a taxonomy's terms carries it; a term create or
+ * delete purges it.
+ */
+export function taxonomyListTag(taxonomy: string): string {
+  return normalizeTag(`tx:${taxonomy}`);
 }
 
 /**
