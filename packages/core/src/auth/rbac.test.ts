@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 
+import type { CoreCapability } from "./rbac.js";
 import { deriveEntryTypeCapabilities } from "../access/contract/rbac.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { toRegisteredEntryType } from "../plugin/registry.js";
@@ -33,6 +34,17 @@ describe("createCapabilityResolver", () => {
     const resolver = createCapabilityResolver(emptyRegistry);
     expect(resolver.hasCapability("admin", "nope:nothing")).toBe(false);
     expect(resolver.requiredRole("nope:nothing")).toBeNull();
+  });
+
+  test("a name on Object's prototype is not a capability", () => {
+    const resolver = createCapabilityResolver(emptyRegistry);
+    expect(resolver.requiredRole("constructor")).toBeNull();
+    expect(resolver.hasCapability("admin", "constructor")).toBe(false);
+  });
+
+  test("requiredRole names a core capability's minimum role", () => {
+    const resolver = createCapabilityResolver(emptyRegistry);
+    expect(resolver.requiredRole("entry:post:publish")).toBe("author");
   });
 
   test("plugin-registered capabilities are looked up alongside core", () => {
@@ -93,7 +105,7 @@ describe("CORE_CAPABILITIES baseline", () => {
       "user:promote",
       "user:delete",
       "settings:manage",
-    ]) {
+    ] satisfies CoreCapability[]) {
       expect(CORE_CAPABILITIES[name]).toBeDefined();
     }
   });
