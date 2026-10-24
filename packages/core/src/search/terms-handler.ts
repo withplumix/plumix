@@ -23,9 +23,9 @@ const SCAN_LIMIT = 50;
 const PRIORITY_BASE = 100;
 
 /**
- * Core's search over the `terms` domain. Matches
- * name+slug (LIKE) across every taxonomy the caller can read, in a single
- * query, and returns one group per taxonomy.
+ * Core's search over the `terms` domain. Matches name+slug (LIKE) across every
+ * taxonomy the caller can read, in a single query, and returns one group per
+ * taxonomy.
  */
 export async function termsSearchHandler(
   input: AdminSearchInput,

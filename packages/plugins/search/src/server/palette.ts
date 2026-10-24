@@ -22,8 +22,7 @@ const SCAN_LIMIT = 50;
 
 /**
  * Ranks on **edit** reach, stricter than core: `read` reaches subscribers, who
- * could probe hidden bodies word by word. Answers `early`, so core's provider
- * fills behind it.
+ * could probe hidden bodies word by word.
  */
 export function registerAdminSearch(
   ctx: PluginSetupContext,
