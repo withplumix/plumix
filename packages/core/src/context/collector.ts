@@ -1,5 +1,5 @@
 import type { JsonValue } from "../json.js";
-import type { LogMeta } from "./app-context.js";
+import type { DeferFn, LogMeta } from "./app-context.js";
 import type {
   TelemetryCollector,
   TelemetryRecord,
@@ -53,6 +53,30 @@ function toAttributes(meta: LogMeta | undefined): Record<string, JsonValue> {
 const MAX_SPANS = 2000;
 const MAX_RECORDS_PER_NAMESPACE = 1000;
 const MAX_LOGS = 1000;
+
+/** What delivering a sampled request's snapshot reads beyond its collector. */
+export interface TelemetryDelivery {
+  /**
+   * Settles once every piece of the request's deferred work has, work that
+   * work deferred in turn included.
+   */
+  settled(): Promise<void>;
+  /**
+   * A copy of the span tree as of `at`, which later work cannot change. A span
+   * still open is `unfinished`, timed up to `at`.
+   */
+  spansAt(at: number): TelemetrySpan[];
+  /**
+   * The runtime's own `defer`, undefined when it gave none: what it is handed
+   * opens no span and is not deferred work the snapshot waits for.
+   */
+  readonly defer: DeferFn | undefined;
+  /**
+   * Fires when a shutdown needs every waiting snapshot delivered now. A
+   * snapshot it holds is not handed to `defer` while it waits.
+   */
+  readonly shutdown: AbortSignal | undefined;
+}
 
 /** What core reads of a request's collector beyond the public one. */
 export interface RequestTelemetryCollector extends TelemetryCollector {

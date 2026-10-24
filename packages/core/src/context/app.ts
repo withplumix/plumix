@@ -30,13 +30,12 @@ import type {
   Logger,
   LogMeta,
 } from "./app-context.js";
-import type { RequestTelemetryCollector } from "./collector.js";
-import type { DevRuntime } from "./dev-runtime.js";
 import type {
-  TelemetryCollector,
-  TelemetryConsumer,
+  RequestTelemetryCollector,
   TelemetryDelivery,
-} from "./telemetry.js";
+} from "./collector.js";
+import type { DevRuntime } from "./dev-runtime.js";
+import type { TelemetryCollector, TelemetryConsumer } from "./telemetry.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
 import { resolveMailer } from "../auth/mailer/resolve.js";
 import { makeAuthCan } from "../auth/with-user.js";

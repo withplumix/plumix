@@ -32,13 +32,10 @@ import type {
   ImageDelivery,
 } from "../runtime/contract/slots.js";
 import type { RequestAuthenticator } from "./authenticator.js";
+import type { TelemetryDelivery } from "./collector.js";
 import type { DevRuntime } from "./dev-runtime.js";
 import type { RequestMemo } from "./memo.js";
-import type {
-  TelemetryCollector,
-  TelemetryConsumer,
-  TelemetryDelivery,
-} from "./telemetry.js";
+import type { TelemetryCollector, TelemetryConsumer } from "./telemetry.js";
 
 /**
  * Mapped, not `typeof coreSchema`: a namespace type prints in a plugin's
