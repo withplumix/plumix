@@ -138,6 +138,7 @@ export type {
   AdminNavGroup,
   AdminNavGroupRef,
   AdminNavItem,
+  AdminPageManifestEntry,
   AdminPageOptions,
   AnyMailDefinition,
   AdminSearchInput,

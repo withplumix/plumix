@@ -7,7 +7,10 @@ import type {
   EntryMenuIcon,
   InfrastructureSlot,
 } from "./manifest.js";
-import { entryCapability } from "../access/contract/capability.js";
+import {
+  entryCapability,
+  termCapability,
+} from "../access/contract/capability.js";
 import {
   anonymousPolicy,
   definePolicy,
@@ -2004,5 +2007,72 @@ describe("buildManifest capability references", () => {
       .adminNav.flatMap((group) => group.items)
       .find((item) => item.to === "/pages/gazette");
     expect(gazette?.capability).toBe("entry:post:read");
+  });
+});
+
+describe("buildManifest adminPages projection", () => {
+  test("lists every admin page, with or without nav, while adminNav keeps only nav pages", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("audit", (ctx) => {
+      ctx.registerAdminPage({
+        path: "/audit-log",
+        title: "Audit Log",
+        nav: { group: "management", label: "Audit" },
+        capability: "audit:read",
+        component: "AuditLog",
+      });
+      ctx.registerAdminPage({
+        path: "/audit-detail",
+        title: "Audit Detail",
+        capability: "audit:read",
+        component: "AuditDetail",
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const manifest = buildManifest(registry);
+    expect(manifest.adminPages).toEqual([
+      {
+        to: "/pages/audit-log",
+        component: "AuditLog",
+        title: "Audit Log",
+        capability: "audit:read",
+      },
+      {
+        to: "/pages/audit-detail",
+        component: "AuditDetail",
+        title: "Audit Detail",
+        capability: "audit:read",
+      },
+    ]);
+    const navTargets = manifest.adminNav.flatMap((g) =>
+      g.items.map((i) => i.to),
+    );
+    expect(navTargets).toContain("/pages/audit-log");
+    expect(navTargets).not.toContain("/pages/audit-detail");
+  });
+
+  test("ships a capability reference as its spelled string, with or without nav", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("audit", (ctx) => {
+      ctx.registerAdminPage({
+        path: "/audit-log",
+        title: "Audit Log",
+        nav: { group: "management", label: "Audit" },
+        capability: termCapability("topic", "edit"),
+        component: "AuditLog",
+      });
+      ctx.registerAdminPage({
+        path: "/audit-detail",
+        title: "Audit Detail",
+        capability: termCapability("topic", "edit"),
+        component: "AuditDetail",
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const manifest = buildManifest(registry);
+    expect(manifest.adminPages.map((page) => page.capability)).toEqual([
+      "term:topic:edit",
+      "term:topic:edit",
+    ]);
   });
 });

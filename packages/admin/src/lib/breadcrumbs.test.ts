@@ -53,10 +53,22 @@ const FIXTURE: PlumixManifest = {
       items: [
         {
           to: "/pages/media",
-          label: "Media Library",
+          label: "Media",
           component: "media:MediaLibrary",
         },
       ],
+    },
+  ],
+  adminPages: [
+    {
+      to: "/pages/media",
+      component: "media:MediaLibrary",
+      title: "Media Library",
+    },
+    {
+      to: "/pages/media-detail",
+      component: "media:MediaDetail",
+      title: "Media Detail",
     },
   ],
 };
@@ -172,11 +184,17 @@ describe("pathToCrumbs", () => {
     ]);
   });
 
-  test("a registered plugin page resolves to its declared label with no parent", () => {
+  test("a registered plugin page resolves to its title with no parent", () => {
     // No synthetic "Pages" parent: it would collide with the entry-type
     // Pages surface in the user's sidebar.
     expect(labels(pathToCrumbs("/pages/media", FIXTURE))).toEqual([
       { label: "Media Library" },
+    ]);
+  });
+
+  test("a plugin page with no nav entry resolves to its title", () => {
+    expect(labels(pathToCrumbs("/pages/media-detail", FIXTURE))).toEqual([
+      { label: "Media Detail" },
     ]);
   });
 

@@ -3,7 +3,7 @@ import type { ThemeBreakpoints, ThemeTokens } from "@plumix/core/blocks";
 import type {
   AccessPolicyChoice,
   AdminNavGroup,
-  AdminNavItem,
+  AdminPageManifestEntry,
   ConfiguredSlots,
   DashboardWidgetManifestEntry,
   EntryMetaBoxManifestEntry,
@@ -59,6 +59,7 @@ const MANIFEST_FIELD_IS_ARRAY = {
   settingsGroups: true,
   settingsPages: true,
   adminNav: true,
+  adminPages: true,
   dashboardWidgets: true,
   fieldTypes: true,
   blocks: true,
@@ -344,18 +345,12 @@ export function visibleAdminNav(
 }
 
 /**
- * Look up the plugin component a `/p/<path>` URL should render. Walks
- * `manifest.adminNav` for a matching `to` and returns its `component`
- * ref — the catch-all route uses this to resolve plugin pages.
+ * The plugin page a `/pages/<path>` URL renders, `nav` or not. The catch-all
+ * route and the breadcrumbs resolve plugin pages through it.
  */
 export function findPluginPageByPath(
   to: string,
   source: PlumixManifest = currentManifest(),
-): AdminNavItem | undefined {
-  for (const group of source.adminNav ?? []) {
-    for (const item of group.items) {
-      if (item.to === to && item.component) return item;
-    }
-  }
-  return undefined;
+): AdminPageManifestEntry | undefined {
+  return source.adminPages?.find((page) => page.to === to);
 }

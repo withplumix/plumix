@@ -12,6 +12,7 @@ import {
   accessPoliciesForType,
   entryMetaBoxesForType,
   findEntryTypeBySlug,
+  findPluginPageByPath,
   findSettingsGroupByName,
   findSettingsPageByName,
   findTermTaxonomyByName,
@@ -80,6 +81,19 @@ describe("parseManifest", () => {
     };
     const text = JSON.stringify({ configuredSlots });
     expect(parseManifest(text).configuredSlots).toEqual(configuredSlots);
+  });
+
+  test("carries the admin page list through to consumers", () => {
+    const adminPages = [
+      {
+        to: "/pages/audit-detail",
+        component: "AuditDetail",
+        title: "Audit Detail",
+        capability: "audit:read",
+      },
+    ];
+    const text = JSON.stringify({ adminPages });
+    expect(parseManifest(text).adminPages).toEqual(adminPages);
   });
 
   test("empty payload falls back to empty manifest", () => {
@@ -219,6 +233,31 @@ describe("findEntryTypeBySlug", () => {
 
   test("returns undefined when no entry matches", () => {
     expect(findEntryTypeBySlug("nope", source)).toBeUndefined();
+  });
+});
+
+describe("findPluginPageByPath", () => {
+  const manifest: PlumixManifest = {
+    adminNav: [],
+    adminPages: [
+      {
+        to: "/pages/audit-detail",
+        component: "AuditDetail",
+        title: "Audit Detail",
+      },
+    ],
+  };
+
+  test("finds a page that has no adminNav entry", () => {
+    expect(findPluginPageByPath("/pages/audit-detail", manifest)).toEqual({
+      to: "/pages/audit-detail",
+      component: "AuditDetail",
+      title: "Audit Detail",
+    });
+  });
+
+  test("returns undefined for a path no page registered", () => {
+    expect(findPluginPageByPath("/pages/unknown", manifest)).toBeUndefined();
   });
 });
 

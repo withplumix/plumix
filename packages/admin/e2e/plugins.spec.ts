@@ -56,6 +56,14 @@ test.describe("plugin catch-all route (/pages/$)", () => {
         ],
       },
     ],
+    adminPages: [
+      {
+        to: "/pages/menus",
+        component: "MenusPage",
+        title: "Menus",
+        capability: "menu:manage",
+      },
+    ],
   };
 
   test("unknown plugin path falls through to the TanStack Router not-found handler", async ({
@@ -111,6 +119,14 @@ test.describe("plugin runtime alias seam", () => {
             component: "MediaLibrary",
           },
         ],
+      },
+    ],
+    adminPages: [
+      {
+        to: "/pages/__runtime-proof",
+        component: "MediaLibrary",
+        title: "Runtime Proof",
+        capability: PROOF_CAPABILITY,
       },
     ],
   };
@@ -199,6 +215,66 @@ test.describe("plugin runtime alias seam", () => {
       "data-shared",
       "true",
     );
+  });
+});
+
+test.describe("plugin page without a nav entry", () => {
+  const PROOF_CAPABILITY = "plugin:runtime-proof";
+
+  // The runtime-proof plugin registers its component at `/__runtime-proof`;
+  // here the manifest lists that page with no `adminNav` item for it, beside
+  // a nav page that shows the menu rendered.
+  const MANIFEST: PlumixManifest = {
+    adminNav: [
+      {
+        id: "appearance",
+        label: "Appearance",
+        items: [
+          {
+            to: "/pages/menus",
+            label: "Menus",
+            coreIcon: "puzzle",
+            component: "MenusPage",
+          },
+        ],
+      },
+    ],
+    adminPages: [
+      { to: "/pages/menus", component: "MenusPage", title: "Menus" },
+      {
+        to: "/pages/__runtime-proof",
+        component: "MediaLibrary",
+        title: "Runtime Proof",
+        capability: PROOF_CAPABILITY,
+      },
+    ],
+  };
+
+  test("renders its component and has no menu item", async ({ page }) => {
+    await mockManifest(page, MANIFEST);
+    await mockSession(page, withCapabilities(AUTHED_ADMIN, PROOF_CAPABILITY));
+
+    await page.goto("pages/__runtime-proof");
+
+    await expect(page.getByTestId("runtime-proof")).toBeVisible();
+    await expect(
+      page.getByTestId("app-sidebar-nav-/pages/menus"),
+    ).toBeVisible();
+    await expect(
+      page.getByTestId("app-sidebar-nav-/pages/__runtime-proof"),
+    ).toHaveCount(0);
+  });
+
+  test("redirects a user without its capability to the dashboard", async ({
+    page,
+  }) => {
+    await mockManifest(page, MANIFEST);
+    await mockSession(page, AUTHED_ADMIN);
+
+    await page.goto("pages/__runtime-proof");
+
+    await expect(page.getByTestId("dashboard-welcome-heading")).toBeVisible();
+    await expect(page).toHaveURL(/\/$/);
   });
 });
 

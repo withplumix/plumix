@@ -15,7 +15,7 @@ const M = {
   loadingAria: defineMessage({
     id: "pluginPage.loading.aria",
     message: "Loading {label}",
-    comment: "label: the plugin page's registered label (e.g. 'Audit Log')",
+    comment: "label: the plugin page's registered title (e.g. 'Audit Log')",
   }),
 } satisfies Record<string, MessageDescriptor>;
 
@@ -26,31 +26,31 @@ export const Route = createFileRoute("/_authenticated/pages/$")({
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
       throw notFound();
     }
-    const item = findPluginPageByPath(`/pages/${splat}`);
-    if (!item) {
+    const pluginPage = findPluginPageByPath(`/pages/${splat}`);
+    if (!pluginPage) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
       throw notFound();
     }
     if (
-      item.capability &&
-      !hasCap(context.user.capabilities, item.capability)
+      pluginPage.capability &&
+      !hasCap(context.user.capabilities, pluginPage.capability)
     ) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
       throw redirect({ to: "/" });
     }
-    return { navItem: item };
+    return { pluginPage };
   },
   component: PluginPageRoute,
 });
 
 function PluginPageRoute(): ReactNode {
-  const { navItem } = Route.useRouteContext();
+  const { pluginPage } = Route.useRouteContext();
   const { i18n } = useLingui();
   const renderLabel = useLabel();
-  const labelText = renderLabel(navItem.label);
-  // navItem.to is `/pages/<plugin-path>` — derive the plugin's own
+  const labelText = renderLabel(pluginPage.title);
+  // pluginPage.to is `/pages/<plugin-path>` — derive the plugin's own
   // path for registry lookup.
-  const pluginPath = navItem.to.replace(/^\/pages/, "");
+  const pluginPath = pluginPage.to.replace(/^\/pages/, "");
   const Component = getPluginPage(pluginPath);
   if (!Component) {
     return <PluginNotLoaded path={pluginPath} />;

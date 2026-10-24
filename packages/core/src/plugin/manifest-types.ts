@@ -234,7 +234,8 @@ export interface SettingsPageManifestEntry {
 
 /**
  * At most one of `icon` and `coreIcon` is set. `component` is set only for
- * plugin pages, which the admin's `/p/$` catch-all renders.
+ * plugin pages; the admin's `/pages/$` catch-all resolves them from
+ * `adminPages`, not from here.
  */
 export interface AdminNavItem {
   readonly to: string;
@@ -247,6 +248,17 @@ export interface AdminNavItem {
   readonly exact?: boolean;
   /** Synonyms the command palette matches in addition to `label`. */
   readonly keywords?: readonly Label[];
+}
+
+/**
+ * One per registered admin page, `nav` or not. The admin's `/pages/$` catch-all
+ * resolves its route from these; `adminNav` only feeds the menu.
+ */
+export interface AdminPageManifestEntry {
+  readonly to: string;
+  readonly component: PluginComponentRef;
+  readonly title: Label;
+  readonly capability?: string;
 }
 
 export interface AdminNavGroup {
@@ -313,6 +325,7 @@ export interface PlumixManifest {
   readonly settingsGroups?: readonly SettingsGroupManifestEntry[];
   readonly settingsPages?: readonly SettingsPageManifestEntry[];
   readonly adminNav?: readonly AdminNavGroup[];
+  readonly adminPages?: readonly AdminPageManifestEntry[];
   readonly dashboardWidgets?: readonly DashboardWidgetManifestEntry[];
   readonly fieldTypes?: readonly FieldTypeManifestEntry[];
   readonly blocks?: readonly BlockManifestEntry[];
@@ -448,6 +461,7 @@ export function emptyManifest(): PlumixManifest {
     settingsGroups: [],
     settingsPages: [],
     adminNav: [],
+    adminPages: [],
     dashboardWidgets: [],
     fieldTypes: [],
     blocks: [],

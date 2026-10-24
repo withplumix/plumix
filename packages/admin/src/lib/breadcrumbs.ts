@@ -119,8 +119,8 @@ function pluginPagesCrumbs(
 ): readonly Crumb[] {
   // No parent crumb: "Pages > X" would collide with the "Pages" entry type.
   const path = `/${parts.join("/")}`;
-  const item = findPluginPageByPath(path, source);
-  if (item) return [{ label: item.label }];
+  const page = findPluginPageByPath(path, source);
+  if (page) return [{ label: page.title }];
   // Unknown plugin path — keep the URL slug as a placeholder so the
   // user doesn't see an opaque "Admin" header during a 404.
   const tail = parts[parts.length - 1];
