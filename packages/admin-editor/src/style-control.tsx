@@ -71,8 +71,9 @@ export function StyleControl({
   });
   if (field.hidden) return null;
   const isCustom = field.mode === "custom";
-  // A refused value with no tokens to replace it offers only the clear.
-  const showsInput = field.forbiddenText === null || field.hasTokens;
+  const refusedWithoutReplacement =
+    field.forbiddenText !== null && !field.hasTokens;
+  const showsInput = !refusedWithoutReplacement;
 
   return (
     <Field size="sm" data-testid={testId}>

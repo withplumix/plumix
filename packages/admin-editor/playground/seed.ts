@@ -100,7 +100,7 @@ export const SEED_BLOCKS: readonly BlockNode[] = [
     },
   },
   SEARCH_SEED,
-  // Values a tokens-only theme refuses, stored before it said so.
+  // Values a tokens-only theme refuses.
   {
     id: "legacy-styled",
     name: "core/rich-text",

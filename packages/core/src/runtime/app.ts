@@ -201,7 +201,7 @@ export interface PlumixApp {
    * `allowedBlocks`. The plugin manifest carries the same set to the editor.
    */
   readonly allowedBlocks: ReadonlySet<string>;
-  /** The theme's `allowCustomStyles` and tokens; the manifest carries the same. */
+  /** The theme's `allowCustomStyles` and tokens. */
   readonly stylePolicy: StylePolicy;
   /**
    * Manifest only: rendering uses the hardcoded `renderInline` walker, not a

@@ -97,7 +97,6 @@ function normalize(value: unknown): PlumixManifest {
       : Boolean(raw) && typeof raw === "object";
     if (matches) result[key] = raw;
   }
-  // The one field that may be a boolean or an array.
   const policy = v.allowCustomStyles;
   if (typeof policy === "boolean" || Array.isArray(policy)) {
     result.allowCustomStyles = policy;

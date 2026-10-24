@@ -43,8 +43,7 @@ export function resolveStylePolicy(theme: {
 
 /**
  * The one gate for whether a category accepts custom values. With no
- * category, whether every category does, which raw CSS declarations and class
- * names need.
+ * category, whether every category does.
  */
 export function allowsCustomStyles(
   policy: StylePolicy,
@@ -109,11 +108,12 @@ function isDeclaredToken(
   if (id === null || !Object.hasOwn(tokens, category)) return false;
   const group = tokens[category];
   if (!group || !Object.hasOwn(group, id)) return false;
-  // `tokenCssVar` is `var(--plumix-<category>-<id>)`; past it sits `)` or `, …)`.
-  const rest = value.slice(tokenCssVar(id, category).length - 1);
-  if (rest === ")") return true;
+  const afterId = value.slice(tokenCssVar(id, category).length - 1);
+  if (afterId === ")") return true;
   return (
-    rest.startsWith(",") && rest.endsWith(")") && balanced(rest.slice(1, -1))
+    afterId.startsWith(",") &&
+    afterId.endsWith(")") &&
+    balanced(afterId.slice(1, -1))
   );
 }
 

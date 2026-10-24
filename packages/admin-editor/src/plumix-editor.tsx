@@ -83,10 +83,7 @@ export interface PlumixEditorProps {
    * any other.
    */
   readonly allowedBlocks?: readonly string[];
-  /**
-   * The theme's `allowCustomStyles` (the manifest's); `true` when absent. The
-   * style controls, the inserter and a duplicate follow it.
-   */
+  /** The theme's `allowCustomStyles`; `true` when absent. */
   readonly allowCustomStyles?: AllowCustomStyles;
   /** The entry type being authored (e.g. `"post"`). Selects which `patterns`
    *  qualify as starters for the blank-entry picker; without it, only
