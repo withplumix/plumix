@@ -35,6 +35,24 @@ describe("defineLinguiConfig", () => {
 
     expect(config.fallbackLocales).toMatchObject({ "zh-Hant": [] });
   });
+
+  // A line number in a reference rewrites the `.po` on every extract that
+  // moves a line, so the diff carries no translation work.
+  test("writes a message's source file without its line number", async () => {
+    const { format } = defineLinguiConfig({ rootDir: dir });
+
+    const po = await format?.serialize(
+      { save: { message: "Save", origin: [["src/editor.ts", 12]] } },
+      {
+        locale: "en",
+        sourceLocale: "en",
+        filename: "en.po",
+        existing: undefined,
+      },
+    );
+
+    expect(po).toContain("#: src/editor.ts\n");
+  });
 });
 
 describe("a package compiled through defineLinguiConfig", () => {
